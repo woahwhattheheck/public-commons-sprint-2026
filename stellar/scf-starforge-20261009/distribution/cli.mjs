@@ -154,6 +154,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   duckdb-workspace / duckdb-workbench         Author and operate a retained data merchant
   sqlite-init / sqlite-inspect                Prepare or inspect a SQLite source
   sqlite-workbench                           Author and export the original SQLite merchant
+  snowflake / snowflake-workspace            Capture original SQL API editions, review precise data and publish retained merchants
   sqlite-publisher                           Review and publish retained SQLite data products
   commerce-console                           Browser workspace for a prepared commerce session
   dataset-refresh                            Publish and select retained dataset versions

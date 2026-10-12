@@ -77,6 +77,10 @@
       "manifest": "stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/workspace/browser-assets.json"
     },
     {
+      "server": "stellar/scf-starforge-20261009/sf30-seller-sdk/snowflake/server.mjs",
+      "manifest": "stellar/scf-starforge-20261009/sf30-seller-sdk/snowflake/browser-assets.json"
+    },
+    {
       "server": "stellar/scf-starforge-20261009/sf101-merchant-recovery/workspace/server.mjs",
       "manifest": "stellar/scf-starforge-20261009/sf101-merchant-recovery/workspace/browser-assets.json"
     },
@@ -240,6 +244,8 @@
     "sqlite-init": "stellar/scf-starforge-20261009/sf30-seller-sdk/sqlite/create-example.mjs",
     "sqlite-inspect": "stellar/scf-starforge-20261009/sf30-seller-sdk/sqlite/inspect.mjs",
     "sqlite-workbench": "stellar/scf-starforge-20261009/sf30-seller-sdk/sqlite/workbench/server.mjs",
+    "snowflake": "stellar/scf-starforge-20261009/sf30-seller-sdk/snowflake/cli.mjs",
+    "snowflake-workspace": "stellar/scf-starforge-20261009/sf30-seller-sdk/snowflake/server.mjs",
     "sqlite-publisher": "stellar/scf-starforge-20261009/sf30-seller-sdk/sqlite/publisher/cli.mjs",
     "merchant": "stellar/scf-starforge-20261009/sf30-seller-sdk/operations/merchant-launch.mjs",
     "delivery": "stellar/scf-starforge-20261009/sf98-merchant-delivery/deliver.mjs",
@@ -547,6 +553,15 @@
     "./seller/sqlite/config": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sqlite/config.mjs",
     "./seller/sqlite/workbench": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sqlite/workbench/model.mjs",
     "./seller/sqlite/workbench/server": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sqlite/workbench/server.mjs",
+    "./seller/snowflake": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/snowflake/source.mjs",
+    "./seller/snowflake/declaration": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/snowflake/declaration.mjs",
+    "./seller/snowflake/store": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/snowflake/store.mjs",
+    "./seller/snowflake/edition": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/snowflake/edition.mjs",
+    "./seller/snowflake/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/snowflake/workspace.mjs",
+    "./seller/snowflake/server": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/snowflake/server.mjs",
+    "./seller/snowflake/publisher": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/snowflake/publisher.mjs",
+    "./seller/snowflake/transfer": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/snowflake/transfer.mjs",
+    "./seller/snowflake/cloud-delivery": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/snowflake/cloud-delivery.mjs",
     "./seller/sqlite/publisher": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sqlite/publisher/model.mjs",
     "./buyer/inbox": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/queue.mjs",
     "./seller/delivery": "./source/stellar/scf-starforge-20261009/sf98-merchant-delivery/outbox.mjs",
