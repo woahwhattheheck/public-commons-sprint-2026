@@ -116,6 +116,20 @@ export const ROLES = Object.freeze({
     "command": "git clone --depth 1 \\\n  https://github.com/woahwhattheheck/public-commons-sprint-2026.git\ncd public-commons-sprint-2026\n\ncd stellar/scf-starforge-20261009/sf30-seller-sdk\nnpm ci --prefix postgres --omit=dev --ignore-scripts --no-audit --no-fund\n\n# Point to your existing private connection/source declaration.\nnode postgres/workspace/server.mjs \\\n  --source /private/existing-source.json \\\n  --output /private/merchant-packages",
     "result": "The original workspace reads the configured database catalog, validates the selected projection and exports source.json, service.json and launch guidance. Saved packages preserve the original database role and source limits; a changed schema requires a new selection and review."
   },
+  "opensearch": {
+    "meta": "OPENSEARCH / SEARCH WORKSPACE",
+    "title": "Turn selected index searches into a merchant.",
+    "description": "Author named queries, inspect native mappings, keep result editions and export the original merchant and customer client.",
+    "checklist": [
+      "Use Node.js 22.16+ with an existing OpenSearch 3.3+ cluster and the current toolkit source.",
+      "Prepare the private source and merchant plan from the OpenSearch guide; load the selected endpoint and credentials into the launching environment.",
+      "Open the local workspace, save a draft, inspect and capture its search, then prepare the merchant and give customers its generated client."
+    ],
+    "docs": "https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/main/stellar/scf-starforge-20261009/sf30-seller-sdk/opensearch/workspace/README.md",
+    "label": "TERMINAL / OPENSEARCH WORKSPACE",
+    "command": "# From the current toolkit source checkout:\nnode stellar/scf-starforge-20261009/distribution/cli.mjs opensearch-workspace \\\n  --source /private/search/source.json \\\n  --plan /private/search/merchant-plan.json \\\n  --workspace /private/search/workspace --port 0\n\n# Open the printed local URL. Save a draft, inspect its native source,\n# capture a result edition, and prepare the original merchant package.\n# An installed toolkit uses the same arguments with:\n# npx --no-install starforge opensearch-workspace",
+    "result": "Each search captures one native point-in-time result with exact document identities and integer metadata. Saved editions reopen and compare by their query and cluster scope; merchant preparation exports the original service, OpenAPI and customer client."
+  },
   "s3": {
     "meta": "S3 / PRIVATE OBJECT DELIVERY",
     "title": "Offer an existing private file or dataset.",

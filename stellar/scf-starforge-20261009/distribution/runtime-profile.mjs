@@ -65,6 +65,12 @@ async function sourceFile(root, path) {
   const bytes = await readFile(filename);
   return { data: JSON.parse(bytes.toString('utf8')), descriptor: { path, bytes: bytes.length, sha256: sha256(bytes) } };
 }
+function nativeKind(name, probe, value) {
+  if (value === undefined) return null;
+  if (value !== 'sqlite' || name !== 'better-sqlite3' || probe !== name)
+    throw new TypeError('Unsupported native runtime preparation: ' + name);
+  return value;
+}
 function dependencies(definitions, group, sourcePath) {
   if (!plain(definitions) || !Object.keys(definitions).length)
     throw new TypeError('Runtime dependencies missing for ' + group);
@@ -76,7 +82,9 @@ function dependencies(definitions, group, sourcePath) {
         value.probe.split('/').some(part => part === '..' || part === '.'))
       throw new TypeError('Invalid original import probe: ' + name);
     requirement(value.version);
-    return { name, requested: value.version, probe: value.probe, group, sourcePath };
+    const native = nativeKind(name, value.probe, value.native);
+    return { name, requested: value.version, probe: value.probe, group, sourcePath,
+      ...(native ? { native } : {}) };
   });
 }
 
@@ -96,7 +104,9 @@ export async function runtimeCatalog({ sourceRoot = ownRoot } = {}) {
     inputFiles.push(file.descriptor);
     if (!plain(file.data.dependencies)) throw new TypeError('Runtime dependencies missing: ' + path);
     featurePeers[group] = Object.fromEntries(Object.entries(file.data.dependencies).map(([name, requested]) =>
-      [name, { version: requested, probe: spec.featurePeers?.[group]?.[name]?.probe ?? name }]));
+      [name, { version: requested, probe: spec.featurePeers?.[group]?.[name]?.probe ?? name,
+        ...(spec.featurePeers?.[group]?.[name]?.native !== undefined ?
+          { native: spec.featurePeers[group][name].native } : {}) }]));
     engines[group] = file.data.engines?.node ?? null;
   }
   for (const [group, definitions] of Object.entries(featurePeers)) {
@@ -127,7 +137,9 @@ export async function runtimeCatalog({ sourceRoot = ownRoot } = {}) {
 function runtimePackage(deps, node) {
   return { name: '@tokenjunkielabs/starforge-runtime', version: '0.0.0', private: true,
     type: 'module', engines: { node },
-    dependencies: Object.fromEntries(deps.map(dep => [dep.name, dep.version])) };
+    dependencies: Object.fromEntries(deps.map(dep => [dep.name, dep.version])),
+    ...(deps.some(dep => dep.native) ?
+      { allowScripts: Object.fromEntries(deps.filter(dep => dep.native).map(dep => [dep.name, true])) } : {}) };
 }
 function profileBody(profile) {
   return Object.fromEntries(Object.entries(profile).filter(([key]) => key !== 'profileId'));
@@ -161,7 +173,8 @@ export async function resolveRuntimeProfile({ sourceRoot = ownRoot, native = fal
       declarations.every(item => item.requested === chosen) ? 'SOURCE_PIN' : 'DECLARED_BASELINE',
       requested: [...new Set(declarations.map(item => item.requested))].sort(),
       groups: [...new Set(declarations.map(item => item.group))].sort(),
-      probes: declarations.map(({ group, sourcePath, probe }) => ({ group, sourcePath, probe })) };
+      probes: declarations.map(({ group, sourcePath, probe }) => ({ group, sourcePath, probe })),
+      ...(declarations.some(item => item.native) ? { native: declarations.find(item => item.native).native } : {}) };
   });
   let nodeMinimum = '22.16.0';
   for (const group of groups) {
@@ -218,6 +231,9 @@ export function verifyRuntimeProfile(profile) {
         dependency.groups.some(group => !selectedGroups.has(group)))
       throw new TypeError('Invalid runtime dependency record');
     version(dependency.version);
+    if (dependency.native !== undefined) {
+      for (const probe of dependency.probes) nativeKind(dependency.name, probe.probe, dependency.native);
+    }
     names.add(dependency.name);
     for (const probe of dependency.probes) if (!seen.has(probe.sourcePath) || !dependency.groups.includes(probe.group) ||
         !(probe.probe === dependency.name || probe.probe.startsWith(dependency.name + '/')) ||
@@ -300,8 +316,36 @@ async function loadEntries(entries) {
   const program = `const entries = JSON.parse(process.argv[1]);
 const results = [];
 for (const entry of entries) {
-  try { await import(entry.url); results.push({ key: entry.key, state: 'LOADED' }); }
-  catch (error) { results.push({ key: entry.key, state: 'LOAD_FAILED', code: error.code ?? error.name }); }
+  let result;
+  try {
+    const loaded = await import(entry.url);
+    result = { key: entry.key, state: 'LOADED' };
+    if (entry.native === 'sqlite') {
+      let database;
+      try {
+        database = new loaded.default(':memory:');
+        database.exec('CREATE TABLE runtime_readiness (value TEXT NOT NULL)');
+        const row = database.transaction(() => {
+          database.prepare('INSERT INTO runtime_readiness (value) VALUES (?)').run('native-ready');
+          return database.prepare('SELECT value FROM runtime_readiness').get();
+        })();
+        if (row?.value !== 'native-ready') throw new Error('SQLITE_NATIVE_RESULT_MISMATCH');
+        const sqliteVersion = database.prepare('SELECT sqlite_version() AS version').get().version;
+        database.close();
+        database = null;
+        result.native = { state: 'READY', kind: 'sqlite', sqliteVersion,
+          node: process.versions.node, modules: process.versions.modules,
+          platform: process.platform, arch: process.arch };
+      } catch (error) {
+        result.native = { state: 'NATIVE_FAILED', kind: 'sqlite', code: error.code ?? error.name };
+      } finally {
+        if (database) try { database.close(); } catch {}
+      }
+    }
+  } catch (error) {
+    result = { key: entry.key, state: 'LOAD_FAILED', code: error.code ?? error.name };
+  }
+  results.push(result);
 }
 process.stdout.write('\\nSTARFORGE_RUNTIME_LOAD=' + JSON.stringify(results) + '\\n');`;
   try {
@@ -362,7 +406,8 @@ export async function inspectRuntimeProfile(profile, { directory, sourceRoot, lo
         const check = { group: probe.group, probe: probe.probe, resolutionBase: base, entry,
           ...identity, state: identity.version === dependency.version ? 'MATCHED' : 'VERSION_MISMATCH' };
         checks.push(check);
-        if (load && check.state === 'MATCHED') entries.push({ key, url: pathToFileURL(entry).href });
+        if ((load || dependency.native) && check.state === 'MATCHED')
+          entries.push({ key, url: pathToFileURL(entry).href, ...(dependency.native ? { native: dependency.native } : {}) });
       } catch (error) {
         checks.push({ group: probe.group, probe: probe.probe, resolutionBase: base,
           state: ['MODULE_NOT_FOUND', 'ERR_MODULE_NOT_FOUND', 'ERR_PACKAGE_PATH_NOT_EXPORTED'].includes(error.code) ? 'MISSING' : 'INSPECTION_FAILED',
@@ -370,19 +415,27 @@ export async function inspectRuntimeProfile(profile, { directory, sourceRoot, lo
       }
     }
     findings.push({ name: dependency.name, expectedVersion: dependency.version, requested: dependency.requested,
-      ready: checks.every(check => check.state === 'MATCHED'), checks });
+      ready: checks.every(check => check.state === 'MATCHED'), checks,
+      ...(dependency.native ? { native: dependency.native } : {}) });
   }
-  const imports = load ? await loadEntries(entries) : new Map();
+  // Declared native readiness always operates the binding. Ordinary package
+  // imports remain optional; importing better-sqlite3 alone cannot load its ABI.
+  const imports = await loadEntries(entries);
   for (const finding of findings) for (const check of finding.checks) {
     if (check.state !== 'MATCHED') continue;
     const result = imports.get(finding.name + ':' + check.group);
-    check.importState = load ? result?.state ?? 'LOAD_FAILED' : 'NOT_REQUESTED';
+    check.importState = load || finding.native ? result?.state ?? 'LOAD_FAILED' : 'NOT_REQUESTED';
     if (result?.code) check.importCode = result.code;
-    if (load && check.importState !== 'LOADED') finding.ready = false;
+    if ((load || finding.native) && check.importState !== 'LOADED') finding.ready = false;
+    if (finding.native) {
+      check.native = result?.native ?? { state: 'UNAVAILABLE', kind: finding.native };
+      if (check.native.state !== 'READY') finding.ready = false;
+    }
   }
   const host = hostStatus(profile.host, python);
   const ready = host.ready && findings.every(finding => finding.ready);
   return { schema: 'stellar-forge.runtime-inspection.v1', profileId: profile.profileId,
     state: ready ? 'READY' : 'INCOMPLETE', directory: installation, source,
-    loadRequested: load, dependencies: findings, host, ready };
+    loadRequested: load, nativeRequired: profile.dependencies.some(dependency => dependency.native),
+    dependencies: findings, host, ready };
 }

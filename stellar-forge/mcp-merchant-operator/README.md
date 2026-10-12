@@ -32,6 +32,23 @@ review survives reopen and is checked at native startup. See
 [Retained facilitator workflow](../../stellar/scf-starforge-20261009/sf82-seller-pilot/FACILITATORS.md)
 for the three MCP tools, console and CLI commands.
 
+## Operate existing WooCommerce stores
+
+Connect the current SF104 merchant operator using
+`init-woocommerce --dir NEW_HOST --connection WOO_CONNECTION_JSON`,
+or attach `--woocommerce` to ordinary merchant initialization. The 20
+`merchant_woo_*` tools use its original Application Password client,
+native receipt review, selected-order completion and verified refund operators.
+Agents retain the inspected source and review hashes, confirm the exact order,
+recover interrupted results from the same native records, and retrieve complete
+original exports through the existing file reader. The host connection names
+receipt aliases and the original accounting export roots; the original accounting
+adjustment workflow supplies the verified return export.
+
+See [WOO_COMMERCE.md](WOO_COMMERCE.md) for configuration, the full order and refund
+workflow, exact tool arguments, partial refunds, download access behavior,
+export recovery and the same HTTP/stdio receiving setup.
+
 ## Review pricing and retain seller changes
 
 Attach an original SF97 workspace with `init-pricing --dir NEW_HOST --pricing
@@ -54,6 +71,18 @@ revision; and stop or reopen the saved fleet. The original gateway, release
 stores and sessions own these operations. See [FLEET.md](FLEET.md) for the full
 host configuration, all 13 fleet tools, and recovery workflow. Existing merchant
 initialization can include the same fleet with `--fleet-plan`.
+
+## Operate a Tenderly simulation merchant
+
+Use `init-tenderly-workspaces --dir NEW_OPERATOR_DIRECTORY --connection CONNECTION.json`
+to bind an existing private Tenderly workspace, or a new empty private directory.
+The same MCP opens its original browser, reviews and saves merchant profiles,
+prepares the product, issues original customer request tickets, and starts or
+drains the seller. Saved provider simulations can be retrieved, reviewed and
+applied to the original merchant operation through its current generation.
+Full plan, request, merchant response and provider response files use the shared
+SHA256-pinned resumable reader. See [TENDERLY-WORKSPACE.md](TENDERLY-WORKSPACE.md)
+for the complete setup, 26 tools, customer handoff, histories and recovery flow.
 
 ## Prepare a merchant
 
@@ -264,6 +293,14 @@ Python workers.
 The [Python release guide](../../stellar/scf-starforge-20261009/sf82-seller-pilot/RELEASES.md#release-a-python-project)
 also describes direct terminal operation and the retained project layout.
 
+## Prepare a PostgreSQL merchant
+
+Use the original PostgreSQL prepare or browser-exported package with `--postgres-package` when initializing this provider. A configured source alias uses `postgresPackage` and the existing `runtime` selections. The package must declare its intended public HTTPS origin; host configuration selects the package path while MCP calls select its alias.
+
+`merchant_sources` returns the public query contract, exact offers, input/source/query/binding/connection-policy/CA hashes and credential environment names. It does not return SQL, database address/user fields, private defaults or credential values. Original `merchant_stage`, compare, exact digest/generation selection, owned start/restart/stop, Operations, catalog publication, retained customer SDK delivery and rollback all use the same controller.
+
+The [complete PostgreSQL release workflow](../../stellar/scf-starforge-20261009/sf82-seller-pilot/POSTGRES_RELEASES.md) includes the direct workspace handoff and recovery. PostgreSQL contents remain live: reverting a configuration restores its named queries against the current database. Availability is durable for each retained release and starts with the default policy for a new release. Customer export and file download continue through the original [retained SDK delivery](CLIENT_EXPORTS.md).
+
 ## Prepare a MySQL merchant
 
 Initialize this same provider with a package from the original MySQL CLI or browser:
@@ -467,3 +504,31 @@ tools, host configuration, replay, comparison, export and browser handoff.
 
 The same provider now operates original PostgreSQL, SQLite and MySQL publisher workspaces: approved saved query and typed candidate, native review/publication, recurring maintenance, retained buyer configuration and restart recovery. Use `init-publishers --dir NEW_DIRECTORY --connection PUBLISHER_CONNECTION.json` or add the host `publisherConnection` to an existing merchant. [PUBLISHERS.md](PUBLISHERS.md) gives complete setup, agent operations, seller/customer handoff and shutdown.
 
+
+
+## Author CKAN data products
+
+Attach an existing CKAN project with `init-ckan-workspaces --dir NEW_HOST
+--connection CKAN_CONNECTION.json`; select `--workspace ALIAS` when the connection
+contains multiple projects. Initialization binds the original project's
+`seller-releases` to this merchant operator. Agents use the same capture, typed
+projection, edition comparison, original publisher and portable merchant model as
+the CKAN workbench, then activate and run its release with the normal merchant
+tools. Each change returns the original operation identity for status and
+lost-response recovery. The original buyer configuration and merchant archives
+are available through SHA-pinned file reads. Both HTTP and stdio expose the same
+source tools and release lifecycle. The [complete CKAN agent and operator guide](../../stellar/scf-starforge-20261009/sf30-seller-sdk/ckan/MCP_WORKFLOW.md)
+covers host configuration, the joined source-to-customer workflow and reopening.
+
+## Socrata source and customer workspaces
+
+[SOCRATA_WORKSPACES.md](./SOCRATA_WORKSPACES.md) connects this same merchant MCP to
+the original Socrata source application. Host-declared aliases cover real
+provider capture, typed editions, native queries, complete portable exports,
+dataset publication, release operation and customer acquisition.
+
+Use `init-socrata-workspaces --dir NEW_DIRECTORY --connection CONNECTION_JSON`,
+or add `socrataWorkspaceConnection` to the existing merchant configuration.
+The `merchant_socrata_*` tools use the original source and publisher objects.
+Their industrial browser borrows that same operator, and complete customer files
+use the existing verified retained-file reader.

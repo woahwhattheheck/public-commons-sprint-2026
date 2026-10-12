@@ -11,15 +11,22 @@ import { createSellerServiceConfig } from '../../stellar/scf-starforge-20261009/
 import { preparePythonRelease } from '../../stellar/scf-starforge-20261009/sf82-seller-pilot/release-python.mjs';
 import { prepareDuckdbRelease, selectDuckdbInterpreter } from '../../stellar/scf-starforge-20261009/sf82-seller-pilot/release-duckdb.mjs';
 import { prepareS3Release } from '../../stellar/scf-starforge-20261009/sf82-seller-pilot/release-s3.mjs';
+import { preparePostgresRelease } from '../../stellar/scf-starforge-20261009/sf82-seller-pilot/release-postgres.mjs';
 import { prepareMysqlRelease } from '../../stellar/scf-starforge-20261009/sf82-seller-pilot/release-mysql.mjs';
 import { prepareJsonrpcRelease } from '../../stellar/scf-starforge-20261009/sf82-seller-pilot/release-jsonrpc.mjs';
 import { prepareSqliteRelease, sqliteSnapshotOptions } from '../../stellar/scf-starforge-20261009/sf82-seller-pilot/release-sqlite.mjs';
+import { prepareClickHouseRelease } from '../../stellar/scf-starforge-20261009/sf82-seller-pilot/release-clickhouse.mjs';
 import { readFleetReleasePlan } from '../../stellar/scf-starforge-20261009/merchant-fleet-gateway/release-operator.mjs';
 import { readReceivingConfiguration } from './receiving.mjs';
 import { readPythonWorkspaceConfiguration } from './python-workspace.mjs';
 import { readS3WorkspaceConfiguration } from './s3-workspace.mjs';
+import { readSocrataWorkspaceConfiguration } from './socrata-workspace.mjs';
+import { readSheetsWorkspaceConfiguration } from './sheets-workspace.mjs';
+import { readCkanWorkspaceConfiguration } from './ckan-workspace.mjs';
+import { readTenderlyWorkspaceConfiguration } from './tenderly-workspace.mjs';
 import { normalizeAccountingConfig, readAccountingConfig } from './accounting.mjs';
 import { readPricingConfiguration } from './pricing.mjs';
+import { readWooCommerceConfiguration } from './woocommerce.mjs';
 
 export const CONFIG_SCHEMA = 'stellar-forge.merchant-mcp.v1';
 export const SUPPORT_CONFIG_SCHEMA = 'stellar-forge.merchant-support-connection.v1';
@@ -105,8 +112,8 @@ export async function readPublisherConfiguration(path) {
   for (const [alias, input] of Object.entries(raw.workspaces)) {
     identifier(alias, 'Publisher alias');
     exact(input, ['label', 'kind', 'directory', 'seller', 'resource'], ['kind', 'directory']);
-    if (!['postgres', 'sqlite', 'mysql', 'mongodb', 'sheets'].includes(input.kind))
-      throw failure('CONFIGURATION_ERROR', 'Publisher kind must be postgres, sqlite, mysql, mongodb or sheets.');
+    if (!['postgres', 'sqlite', 'mysql', 'mongodb', 'sheets', 'sheetbest', 'sftp', 'arcgis'].includes(input.kind))
+      throw failure('CONFIGURATION_ERROR', 'Publisher kind must be postgres, sqlite, mysql, mongodb, sheets, sheetbest, sftp or arcgis.');
     const directory = hostPath(input.directory, base), info = await lstat(directory);
     if (!info.isDirectory() || info.isSymbolicLink() || process.platform !== 'win32' && (info.mode & 0o077))
       throw failure('CONFIGURATION_ERROR', 'Bind an existing private original publisher directory (0700).');
@@ -138,7 +145,7 @@ export function duckdbSourceView(duckdb) {
   return { ...metadata, interpreter: { configured: true, selectionSha256: hash(interpreter) } };
 }
 function sourceDefinition(source, base, alias) {
-  exact(source, ['label', 'spec', 'selections', 'bindings', 'workspace', 'upstreams', 'python', 'pythonRoot', 'duckdbPackage', 'duckdbPython', 's3Package', 'jsonrpcPackage', 'sqlitePackage', 'sqliteSnapshotMaxBytes', 'sqliteSnapshotTimeoutMs', 'mysqlPackage', 'runtime']);
+  exact(source, ['label', 'spec', 'selections', 'bindings', 'workspace', 'upstreams', 'python', 'pythonRoot', 'duckdbPackage', 'duckdbPython', 's3Package', 'jsonrpcPackage', 'sqlitePackage', 'sqliteSnapshotMaxBytes', 'sqliteSnapshotTimeoutMs', 'postgresPackage', 'mysqlPackage', 'clickhousePackage', 'clickhouseColumnTypes', 'runtime']);
   const runtime = structuredClone(source.runtime ?? {});
   exact(runtime, ['port', 'handlers', 'facilitator', 'allowLocalFacilitator', 'allowLoopbackUpstream']);
   for (const flag of ['allowLocalFacilitator', 'allowLoopbackUpstream'])
@@ -153,7 +160,20 @@ function sourceDefinition(source, base, alias) {
     throw failure('CONFIGURATION_ERROR', 'A DuckDB interpreter selection requires a prepared DuckDB package.');
   if (source.sqlitePackage === undefined && (source.sqliteSnapshotMaxBytes !== undefined || source.sqliteSnapshotTimeoutMs !== undefined))
     throw failure('CONFIGURATION_ERROR', 'SQLite snapshot selections require a SQLite workbench package.');
-  if (source.mysqlPackage !== undefined) {
+  if (source.clickhouseColumnTypes !== undefined && source.clickhousePackage === undefined)
+    throw failure('CONFIGURATION_ERROR', 'A reviewed ClickHouse column map requires its original prepared package.');
+  if (source.clickhousePackage !== undefined) {
+    if (Object.keys(source).some(key => !['label', 'clickhousePackage', 'clickhouseColumnTypes', 'runtime'].includes(key) && source[key] !== undefined) ||
+        runtime.handlers !== undefined || runtime.allowLoopbackUpstream)
+      throw failure('CONFIGURATION_ERROR', 'Choose the original prepared ClickHouse package or another source. ClickHouse owns its native typed query bindings.');
+    result.clickhousePackage = hostPath(source.clickhousePackage, base);
+    if (source.clickhouseColumnTypes !== undefined) result.clickhouseColumnTypes = structuredClone(source.clickhouseColumnTypes);
+  } else if (source.postgresPackage !== undefined) {
+    if (Object.keys(source).some(key => !['label', 'postgresPackage', 'runtime'].includes(key) && source[key] !== undefined) ||
+        runtime.handlers !== undefined || runtime.allowLoopbackUpstream)
+      throw failure('CONFIGURATION_ERROR', 'Choose the original PostgreSQL package or another source. PostgreSQL owns its named query bindings.');
+    result.postgresPackage = hostPath(source.postgresPackage, base);
+  } else if (source.mysqlPackage !== undefined) {
     if (Object.keys(source).some(key => !['label', 'mysqlPackage', 'runtime'].includes(key) && source[key] !== undefined) ||
         runtime.handlers !== undefined || runtime.allowLoopbackUpstream)
       throw failure('CONFIGURATION_ERROR', 'Choose a prepared MySQL package or another source. The package owns its original query bindings.');
@@ -205,6 +225,33 @@ function sourceDefinition(source, base, alias) {
 }
 /** Inspect configured source through the ORIGINAL workspace and upstream readers. */
 export async function inspectMerchantSource(source) {
+  if (source.clickhousePackage) {
+    const prepared = await prepareClickHouseRelease(source.clickhousePackage, { columnTypes: source.clickhouseColumnTypes }), { clickhouse } = prepared;
+    return { source: source.alias, label: source.label, sourceType: 'CLICKHOUSE_MERCHANT_PACKAGE',
+      mode: source.runtime.facilitator ? 'NATIVE_X402' : 'CHALLENGE_ONLY',
+      sourceDigests: { package: clickhouse.packageSha256, declaration: clickhouse.sourceConfigSha256,
+        plan: clickhouse.planSha256, queries: clickhouse.querySha256, execution: clickhouse.executionSha256 },
+      inputPackage: { schema: clickhouse.schema, packageSha256: clickhouse.packageSha256 },
+      application: { type: 'CLICKHOUSE_MERCHANT_PACKAGE', ...clickhouse },
+      environment: Object.values(prepared.environment), credentialValuesChecked: false,
+      routes: prepared.service.routes.map(route => ({ method: route.offer.extensions.bazaar.info.input.method,
+        path: route.path, publicPath: route.path, resource: route.offer.resource, accepts: route.offer.accepts })) };
+  }
+  if (source.postgresPackage) {
+    const { postgres, service } = await preparePostgresRelease(source.postgresPackage);
+    return { source: source.alias, label: source.label, sourceType: 'POSTGRES_MERCHANT_PACKAGE',
+      mode: source.runtime.facilitator ? 'NATIVE_X402' : 'CHALLENGE_ONLY',
+      sourceDigests: { package: postgres.inputManifestSha256, declaration: postgres.sourceConfigSha256,
+        originalSource: postgres.originalSourceConfigSha256, originalService: postgres.originalServiceConfigSha256,
+        queries: postgres.queryDefinitionSha256, bindings: postgres.bindingsSha256,
+        connectionPolicy: postgres.connectionPolicySha256, databaseCa: postgres.databaseCaSha256,
+        execution: postgres.executionSha256 },
+      inputPackage: { inputKind: postgres.inputKind, manifestSha256: postgres.inputManifestSha256 },
+      application: { type: 'POSTGRES_MERCHANT_PACKAGE', ...postgres },
+      environment: postgres.credentialReferences, credentialValuesChecked: false,
+      routes: service.routes.map(route => ({ method: route.offer.extensions.bazaar.info.input.method,
+        path: route.path, publicPath: route.path, resource: route.offer.resource, accepts: route.offer.accepts })) };
+  }
   if (source.sqlitePackage) {
     const prepared = await prepareSqliteRelease(source.sqlitePackage);
     return { source: source.alias, label: source.label, sourceType: 'SQLITE_MERCHANT_PACKAGE',
@@ -313,7 +360,7 @@ export async function inspectMerchantSource(source) {
 export async function readMerchantConfig(path) {
   path = resolve(path);
   const raw = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(await fileBytes(path, 1024 * 1024)));
-  exact(raw, ['schema', 'name', 'releaseStore', 'exportsDirectory', 'sources', 'catalogConnection', 'facilitatorConnection', 'fleet', 'accounting', 'supportConnection', 'receivingConnection', 'pythonWorkspaceConnection', 'publisherConnection', 's3WorkspaceConnection', 'pricingConnection'], ['schema', 'name', 'releaseStore', 'exportsDirectory', 'sources']);
+  exact(raw, ['schema', 'name', 'releaseStore', 'exportsDirectory', 'sources', 'catalogConnection', 'facilitatorConnection', 'fleet', 'accounting', 'supportConnection', 'receivingConnection', 'pythonWorkspaceConnection', 'publisherConnection', 's3WorkspaceConnection', 'socrataWorkspaceConnection', 'sheetsWorkspaceConnection', 'ckanWorkspaceConnection', 'tenderlyWorkspaceConnection', 'pricingConnection', 'woocommerceConnection'], ['schema', 'name', 'releaseStore', 'exportsDirectory', 'sources']);
   if (raw.schema !== CONFIG_SCHEMA || !plain(raw.sources) || Object.keys(raw.sources).length > 32)
     throw failure('CONFIGURATION_ERROR', 'Expected a merchant MCP configuration with up to 32 named sources.');
   const base = dirname(path), sources = Object.create(null);
@@ -333,23 +380,33 @@ export async function readMerchantConfig(path) {
       : await readReceivingConfiguration(hostPath(raw.receivingConnection, base)),
     pythonWorkspaces: raw.pythonWorkspaceConnection === undefined ? null
       : await readPythonWorkspaceConfiguration(hostPath(raw.pythonWorkspaceConnection, base)),
+    socrataWorkspaces: raw.socrataWorkspaceConnection === undefined ? null
+      : await readSocrataWorkspaceConfiguration(hostPath(raw.socrataWorkspaceConnection, base)),
     publishers: raw.publisherConnection === undefined ? null
       : await readPublisherConfiguration(hostPath(raw.publisherConnection, base)),
     pricing: raw.pricingConnection === undefined ? null
-      : await readPricingConfiguration(hostPath(raw.pricingConnection, base)) };
+      : await readPricingConfiguration(hostPath(raw.pricingConnection, base)),
+    woocommerce: raw.woocommerceConnection === undefined ? null
+      : await readWooCommerceConfiguration(hostPath(raw.woocommerceConnection, base)) };
   await readReleaseState(config.releaseStore);
   config.s3Workspaces = raw.s3WorkspaceConnection === undefined ? null
     : await readS3WorkspaceConfiguration(hostPath(raw.s3WorkspaceConnection, base), { releaseStore: config.releaseStore });
+  config.sheetsWorkspaces = raw.sheetsWorkspaceConnection === undefined ? null
+    : await readSheetsWorkspaceConfiguration(hostPath(raw.sheetsWorkspaceConnection, base));
+  config.ckanWorkspaces = raw.ckanWorkspaceConnection === undefined ? null
+    : await readCkanWorkspaceConfiguration(hostPath(raw.ckanWorkspaceConnection, base));
+  config.tenderlyWorkspaces = raw.tenderlyWorkspaceConnection === undefined ? null
+    : await readTenderlyWorkspaceConfiguration(hostPath(raw.tenderlyWorkspaceConnection, base));
   config.fleet = await fleetDefinition(raw.fleet, base, config.releaseStore);
   config.accounting = normalizeAccountingConfig(raw.accounting, base);
   if (!(await lstat(config.exportsDirectory)).isDirectory()) throw failure('CONFIGURATION_ERROR', 'Customer export directory must be a real directory.');
-  if (config.support || config.receiving || config.pythonWorkspaces || config.s3Workspaces) await privateSupportDirectory(config.exportsDirectory);
+  if (config.support || config.receiving || config.pythonWorkspaces || config.s3Workspaces || config.socrataWorkspaces || config.sheetsWorkspaces || config.ckanWorkspaces || config.tenderlyWorkspaces || config.woocommerce) await privateSupportDirectory(config.exportsDirectory);
   return config;
 }
-export async function initializeMerchant({ directory, name = 'Starforge merchant', spec, selections, bindings, workspace, upstreams, python, pythonRoot, duckdbPackage, duckdbPython, s3Package, mysqlPackage, jsonrpcPackage, sqlitePackage, sqliteSnapshotMaxBytes, sqliteSnapshotTimeoutMs, runtime = {}, catalog, facilitators, fleetPlan, accounting, support, receiving, pythonWorkspaces, pricing, releaseStore }) {
+export async function initializeMerchant({ directory, name = 'Starforge merchant', spec, selections, bindings, workspace, upstreams, python, pythonRoot, duckdbPackage, duckdbPython, s3Package, postgresPackage, mysqlPackage, jsonrpcPackage, sqlitePackage, sqliteSnapshotMaxBytes, sqliteSnapshotTimeoutMs, clickhousePackage, clickhouseColumnTypes, runtime = {}, catalog, facilitators, fleetPlan, accounting, support, receiving, pythonWorkspaces, ckanWorkspaces, pricing, woocommerce, releaseStore }) {
   const root = resolve(directory);
   name = line(name, 'Merchant name');
-  const source = sourceDefinition({ label: 'Initial merchant configuration', spec, selections, bindings, workspace, upstreams, python, pythonRoot, duckdbPackage, duckdbPython, s3Package, mysqlPackage, jsonrpcPackage, sqlitePackage, sqliteSnapshotMaxBytes, sqliteSnapshotTimeoutMs, runtime }, process.cwd(), 'initial');
+  const source = sourceDefinition({ label: 'Initial merchant configuration', spec, selections, bindings, workspace, upstreams, python, pythonRoot, duckdbPackage, duckdbPython, s3Package, postgresPackage, mysqlPackage, jsonrpcPackage, sqlitePackage, sqliteSnapshotMaxBytes, sqliteSnapshotTimeoutMs, clickhousePackage, clickhouseColumnTypes, runtime }, process.cwd(), 'initial');
   if (source.pythonRoot) {
     const sourceRoot = await realpath(source.pythonRoot);
     const destination = join(await realpath(dirname(root)), basename(root));
@@ -371,9 +428,22 @@ export async function initializeMerchant({ directory, name = 'Starforge merchant
   if (receivingConnection) await readReceivingConfiguration(receivingConnection);
   const pythonWorkspaceConnection = pythonWorkspaces === undefined ? undefined : hostPath(pythonWorkspaces, process.cwd());
   if (pythonWorkspaceConnection) await readPythonWorkspaceConfiguration(pythonWorkspaceConnection);
+  const ckanWorkspaceConnection = ckanWorkspaces === undefined ? undefined : hostPath(ckanWorkspaces, process.cwd());
+  const ckanWorkspaceSelection = ckanWorkspaceConnection ? await readCkanWorkspaceConfiguration(ckanWorkspaceConnection) : null;
   const pricingConnection = pricing === undefined ? undefined : hostPath(pricing, process.cwd());
   if (pricingConnection) await readPricingConfiguration(pricingConnection);
+  const woocommerceConnection = woocommerce === undefined ? undefined : hostPath(woocommerce, process.cwd());
+  if (woocommerceConnection) await readWooCommerceConfiguration(woocommerceConnection);
   const existingReleaseStore = releaseStore === undefined ? undefined : hostPath(releaseStore, process.cwd());
+  if (ckanWorkspaceConnection && !existingReleaseStore)
+    throw failure('CONFIGURATION_ERROR', 'Attach CKAN with its existing project seller-releases as --release-store, or use init-ckan-workspaces.');
+  if (ckanWorkspaceSelection) {
+    const selectedStore = await realpath(existingReleaseStore);
+    const originalStores = await Promise.all(Object.values(ckanWorkspaceSelection.workspaces)
+      .map(async entry => join(await realpath(entry.directory), 'seller-releases')));
+    if (!originalStores.includes(selectedStore))
+      throw failure('CONFIGURATION_ERROR', 'CKAN --release-store must be an original seller-releases store belonging to a configured CKAN project.');
+  }
   if (existingReleaseStore) await readReleaseState(existingReleaseStore);
   await mkdir(root, { mode: 0o700 });
   if (!existingReleaseStore) await initReleaseStore(join(root, 'releases'));
@@ -387,10 +457,15 @@ export async function initializeMerchant({ directory, name = 'Starforge merchant
     ...(supportConnection ? { supportConnection } : {}),
     ...(receivingConnection ? { receivingConnection } : {}),
     ...(pythonWorkspaceConnection ? { pythonWorkspaceConnection } : {}),
+    ...(ckanWorkspaceConnection ? { ckanWorkspaceConnection } : {}),
     ...(pricingConnection ? { pricingConnection } : {}),
+    ...(woocommerceConnection ? { woocommerceConnection } : {}),
     ...(planFile ? { fleet: { planFile, directory: './fleet' } } : {}), sources: {
       initial: { label: source.label, runtime: source.runtime,
-        ...(source.mysqlPackage ? { mysqlPackage: source.mysqlPackage }
+        ...(source.clickhousePackage ? { clickhousePackage: source.clickhousePackage,
+          ...(source.clickhouseColumnTypes === undefined ? {} : { clickhouseColumnTypes: source.clickhouseColumnTypes }) }
+          : source.postgresPackage ? { postgresPackage: source.postgresPackage }
+          : source.mysqlPackage ? { mysqlPackage: source.mysqlPackage }
           : source.sqlitePackage ? { sqlitePackage: source.sqlitePackage, sqliteSnapshotMaxBytes: source.sqliteSnapshotMaxBytes,
           sqliteSnapshotTimeoutMs: source.sqliteSnapshotTimeoutMs }
           : source.jsonrpcPackage ? { jsonrpcPackage: source.jsonrpcPackage }
@@ -402,7 +477,7 @@ export async function initializeMerchant({ directory, name = 'Starforge merchant
     } });
   await readMerchantConfig(path);
   return { schema: CONFIG_SCHEMA, configuration: path, sourceAlias: 'initial', state: 'INITIALIZED',
-    catalogConfigured: Boolean(catalogConnection), facilitatorsConfigured: Boolean(facilitatorConnection), fleetConfigured: Boolean(planFile), accountingConfigured: Boolean(accountingConfig), supportConfigured: Boolean(supportConnection), receivingConfigured: Boolean(receivingConnection), pythonWorkspacesConfigured: Boolean(pythonWorkspaceConnection), pricingConfigured: Boolean(pricingConnection),
+    catalogConfigured: Boolean(catalogConnection), facilitatorsConfigured: Boolean(facilitatorConnection), fleetConfigured: Boolean(planFile), accountingConfigured: Boolean(accountingConfig), supportConfigured: Boolean(supportConnection), receivingConfigured: Boolean(receivingConnection), pythonWorkspacesConfigured: Boolean(pythonWorkspaceConnection), ckanWorkspacesConfigured: Boolean(ckanWorkspaceConnection), pricingConfigured: Boolean(pricingConnection), woocommerceConfigured: Boolean(woocommerceConnection),
     sourceType: preview.sourceType, sourceDigests: preview.sourceDigests, inputPackage: preview.inputPackage,
     environment: preview.environment, credentialValuesChecked: false };
 }
@@ -532,4 +607,102 @@ export async function initializeS3WorkspaceMerchant({ directory, connection, nam
   return { schema: CONFIG_SCHEMA, configuration, state: 'INITIALIZED', s3WorkspacesConfigured: true,
     workspaces: Object.entries(selection.workspaces).map(([workspace, entry]) => ({ workspace, label: entry.label })),
     authoring: 'OPENED_BY_MERCHANT_S3_OPEN' };
+}
+
+/** Attach the original Sheets source model and browser to this same merchant operator. */
+export async function initializeSheetsWorkspaceMerchant({ directory, connection, name = 'Starforge Sheets authoring' }) {
+  const root = resolve(directory), sheetsWorkspaceConnection = hostPath(connection, process.cwd());
+  name = line(name, 'Merchant name');
+  const selection = await readSheetsWorkspaceConfiguration(sheetsWorkspaceConnection);
+  await mkdir(root, { mode: 0o700 });
+  await initReleaseStore(join(root, 'releases'));
+  await mkdir(join(root, 'customer-exports'), { mode: 0o700 });
+  const configuration = join(root, 'merchant-mcp.json');
+  await writePrivate(configuration, { schema: CONFIG_SCHEMA, name, releaseStore: './releases',
+    exportsDirectory: './customer-exports', sources: {}, sheetsWorkspaceConnection });
+  await readMerchantConfig(configuration);
+  return { schema: CONFIG_SCHEMA, configuration, state: 'INITIALIZED', sheetsWorkspacesConfigured: true,
+    workspaces: Object.entries(selection.workspaces).map(([workspace, entry]) => ({ workspace, label: entry.label })),
+    authoring: 'OPENED_BY_MERCHANT_SHEETS_OPEN' };
+}
+
+/** Initialize a merchant MCP around original host-declared Tenderly operator workspaces. */
+export async function initializeTenderlyWorkspaceMerchant({ directory, connection, name = 'Starforge Tenderly merchant' }) {
+  const root = resolve(directory), tenderlyWorkspaceConnection = hostPath(connection, process.cwd());
+  name = line(name, 'Merchant name');
+  const selection = await readTenderlyWorkspaceConfiguration(tenderlyWorkspaceConnection);
+  await mkdir(root, { mode: 0o700 });
+  await initReleaseStore(join(root, 'releases'));
+  await mkdir(join(root, 'customer-exports'), { mode: 0o700 });
+  const configuration = join(root, 'merchant-mcp.json');
+  await writePrivate(configuration, { schema: CONFIG_SCHEMA, name, releaseStore: './releases',
+    exportsDirectory: './customer-exports', sources: {}, tenderlyWorkspaceConnection });
+  await readMerchantConfig(configuration);
+  return { schema: CONFIG_SCHEMA, configuration, state: 'INITIALIZED', tenderlyWorkspacesConfigured: true,
+    workspaces: Object.entries(selection.workspaces).map(([workspace, entry]) => ({ workspace, label: entry.label })),
+    authoring: 'OPENED_BY_MERCHANT_TENDERLY_OPEN' };
+}
+
+/** Attach existing Woo stores to the original provider without a separate seller. */
+export async function initializeWooCommerceMerchant({ directory, connection, name = 'Starforge Woo merchant' }) {
+  const root = resolve(directory), woocommerceConnection = hostPath(connection, process.cwd());
+  const configured = await readWooCommerceConfiguration(woocommerceConnection);
+  name = line(name, 'Merchant name');
+  await mkdir(root, { mode: 0o700 });
+  await initReleaseStore(join(root, 'releases'));
+  await mkdir(join(root, 'customer-exports'), { mode: 0o700 });
+  const configuration = join(root, 'merchant-mcp.json');
+  await writePrivate(configuration, { schema: CONFIG_SCHEMA, name, releaseStore: './releases',
+    exportsDirectory: './customer-exports', sources: {}, woocommerceConnection });
+  await readMerchantConfig(configuration);
+  return { schema: CONFIG_SCHEMA, configuration, state: 'INITIALIZED',
+    woocommerceStores: Object.keys(configured.stores), credentials: 'RESOLVED_BY_EXPLICIT_NATIVE_OPERATION' };
+}
+
+
+/** Bind CKAN authoring and merchant release controls to the same original project store. */
+export async function initializeCkanWorkspaceMerchant({ directory, connection, workspace, name = 'Starforge CKAN authoring' }) {
+  const root = resolve(directory), ckanWorkspaceConnection = hostPath(connection, process.cwd());
+  name = line(name, 'Merchant name');
+  const selection = await readCkanWorkspaceConfiguration(ckanWorkspaceConnection);
+  const aliases = Object.keys(selection.workspaces);
+  const selected = workspace === undefined && aliases.length === 1 ? aliases[0] : workspace;
+  if (typeof selected !== 'string' || !Object.hasOwn(selection.workspaces, selected))
+    throw failure('CONFIGURATION_ERROR', 'Choose --workspace from the configured CKAN aliases when the connection has more than one workspace.');
+  identifier(selected, 'CKAN workspace alias');
+  const releaseStore = join(await realpath(selection.workspaces[selected].directory), 'seller-releases');
+  await mkdir(root, { mode: 0o700 });
+  try { await lstat(releaseStore); }
+  catch (error) {
+    if (error.code !== 'ENOENT') throw error;
+    try { await initReleaseStore(releaseStore); }
+    catch (created) { if (created.code !== 'EEXIST') throw created; }
+  }
+  await readReleaseState(releaseStore);
+  await mkdir(join(root, 'customer-exports'), { mode: 0o700 });
+  const configuration = join(root, 'merchant-mcp.json');
+  await writePrivate(configuration, { schema: CONFIG_SCHEMA, name, releaseStore,
+    exportsDirectory: './customer-exports', sources: {}, ckanWorkspaceConnection });
+  await readMerchantConfig(configuration);
+  return { schema: CONFIG_SCHEMA, configuration, state: 'INITIALIZED', ckanWorkspacesConfigured: true,
+    workspace: selected, releaseStore,
+    workspaces: Object.entries(selection.workspaces).map(([workspace, entry]) => ({ workspace, label: entry.label })),
+    authoring: 'OPENED_BY_MERCHANT_CKAN_OPEN' };
+}
+
+/** Connect original Socrata source, publisher and customer workspaces to this MCP. */
+export async function initializeSocrataWorkspaceMerchant({ directory, connection, name = 'Starforge Socrata operator' }) {
+  const root = resolve(directory), socrataWorkspaceConnection = hostPath(connection, process.cwd());
+  name = line(name, 'Merchant name');
+  const selected = await readSocrataWorkspaceConfiguration(socrataWorkspaceConnection);
+  await mkdir(root, { mode: 0o700 });
+  await initReleaseStore(join(root, 'releases'));
+  await mkdir(join(root, 'customer-exports'), { mode: 0o700 });
+  const configuration = join(root, 'merchant-mcp.json');
+  await writePrivate(configuration, { schema: CONFIG_SCHEMA, name, releaseStore: './releases',
+    exportsDirectory: './customer-exports', sources: {}, socrataWorkspaceConnection });
+  await readMerchantConfig(configuration);
+  return { schema: CONFIG_SCHEMA, configuration, state: 'INITIALIZED', socrataWorkspacesConfigured: true,
+    workspaces: Object.entries(selected.workspaces).map(([workspace, item]) => ({ workspace, label: item.label })),
+    authoring: 'OPENED_BY_MERCHANT_SOCRATA_OPEN' };
 }

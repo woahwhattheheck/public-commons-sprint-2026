@@ -3,6 +3,31 @@ import { join } from 'node:path';
 import { shellWord as q } from './host.mjs';
 import { retainedOperations } from './retained-runbook.mjs';
 
+function oauthRunbook(p, root) {
+  const entries = p.oauthConnections ?? [];
+  if (!entries.length) return '';
+  const cli = q(p.node) + ' ' + q(join(root, 'sf30-seller-sdk/oauth-connections/cli.mjs'));
+  return [
+    '## Authorize the selected private upstream connections', '',
+    'Provision the following separate private stores under the actual service account. Their tokens remain outside the source, merchant recovery roots and this deployment bundle.', '',
+    '```sh',
+    ...entries.map(entry => 'install -d -m 0700 -o ' + p.serviceUser + ' -g ' + p.serviceGroup + ' ' + q(entry.directory)),
+    '```', '',
+    'For a new store, use the original connection init and connect commands in the service account\'s private environment:', '',
+    '```sh',
+    cli + ' init --directory ' + q(entries[0].directory) + ' --profile /private/provider-profile.json',
+    cli + ' connect --directory ' + q(entries[0].directory) + ' --port 8255 --actor merchant-operator --reference receiving-host-authorization',
+    '```', '',
+    'The profile must describe the actual registered provider, selected OpenAPI source, scopes and backend origins. Register its exact printed loopback callback and explicitly review the returned grant. See sf30-seller-sdk/oauth-connections/HOST.md for remote-host port forwarding and workspace configuration.', '',
+    'Set these directory environment references in the original private EnvironmentFile to their exact reviewed paths:', '',
+    ...entries.map(entry => '- ' + entry.directoryEnv + ': ' + entry.directory),
+    '',
+    'If the approved receiving grant differs from the staged application, save/stage that current grant through the original workspace/release flow and regenerate this host bundle. Existing approved stores reopen through status; do not initialize them again.', '',
+    'The generated seller preflight runs under this account and its actual environment. It checks the selected profile/grant, source origin, scopes, private ownership and directory before listening. It sends no OAuth request. Systemd grants the seller explicit write access for renewal; the original container adds an exact writable bind for each store.', '',
+    'Keep these stores under their separate credential lifecycle. The original merchant backup/restore does not include them or roll rotating token state backward. On a new host, authorize the actual receiving connection and stage its new grant.', '',
+  ].join('\n');
+}
+
 export function renderRunbook(p, bundle) {
   const root = join(p.sourceRoot, 'stellar/scf-starforge-20261009');
   const cli = `${q(p.node)} ${q(join(root, 'sf99-merchant-deploy/cli.mjs'))}`;
@@ -40,6 +65,7 @@ assignments, without shell export commands. The original worker and receiver use
 SF98_WEBHOOK_SECRET, the same 32–1024-byte key; upstream configuration uses its own
 named environment values. The generator does not read, copy or print those values.
 Keep configuration, bearer claim tokens and recovery passphrases private.\n` : 'This profile does not select a shared environment file.\n'}
+${oauthRunbook(p, root)}
 ${p.receiverState ? `The receiver service initializes its original SQLite schema idempotently before
 serving. Checkout state is ${p.receiverState}; original delivery outbox is ${p.outbox}.
 Enroll approved real files through the ORIGINAL checkout.mjs workflow and retain

@@ -3,6 +3,13 @@ const $ = id => document.getElementById(id);
 const token = location.hash.slice(1) || sessionStorage.getItem('sf30.s3.token:' + location.origin) || '';
 sessionStorage.setItem('sf30.s3.token:' + location.origin, token);
 if (location.hash) history.replaceState(null, '', location.pathname);
+addEventListener('hashchange', () => {
+  const replacement = location.hash.slice(1);
+  if (!replacement) return;
+  sessionStorage.setItem('sf30.s3.token:' + location.origin, replacement);
+  history.replaceState(null, '', location.pathname);
+  if (replacement !== token) location.reload();
+});
 const text = value => JSON.stringify(value, null, 2);
 let state, model, expectedRevision = 0, loadedRevision = null, selectedObject = 0, dirty = false,
   sourceJsonDirty = false, selectedReview = null, historyRows = [], nextBeforeRevision = null, pending = {};

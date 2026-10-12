@@ -1,0 +1,228 @@
+// MIT. Private industrial operator workspace and a separate loopback merchant listener.
+import { createServer } from 'node:http';
+import { randomBytes, timingSafeEqual, randomUUID } from 'node:crypto';
+import { readFile, open } from 'node:fs/promises';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { privateDirectory } from '../distribution/runtime-workspace/storage.mjs';
+import { openWorkspace, requireValue, now, json } from './storage.mjs';
+import { merchantConfig, buyerConfig, MAX_BODY, absolute } from './config.mjs';
+import { createMerchant, storedResponse } from './merchant.mjs';
+import { preparePurchase, executePurchase, finalizePurchase, purchaseView } from './buyer.mjs';
+import { versions } from './runtime.mjs';
+import { merchantContract, contractOpenAPI } from './customer/contract.mjs';
+import { createCustomerBundle } from './customer/export.mjs';
+
+const uiRoot=new URL('./public/',import.meta.url);
+function portNumber(value) {
+  requireValue(Number.isInteger(value) && value>=0 && value<=65535,'MPP_PORT_INVALID'); return value;
+}
+async function readBody(request) {
+  const chunks=[];let length=0;
+  for await(const chunk of request) {
+    length+=chunk.length;requireValue(length<=MAX_BODY,'MPP_REQUEST_TOO_LARGE',413);chunks.push(chunk);
+  }
+  return Buffer.concat(chunks);
+}
+async function send(response,output) {
+  response.statusCode=output.status;
+  for(const [name,value] of output.headers) response.setHeader(name,value);
+  if(output.body) {
+    const reader=output.body.getReader();
+    try {
+      while(true) {
+        const chunk=await reader.read();if(chunk.done) break;
+        if(!response.write(Buffer.from(chunk.value))) await new Promise(resolve=>response.once('drain',resolve));
+      }
+    } finally {reader.releaseLock();}
+  }
+  response.end();
+}
+function errorResponse(error) {
+  return Response.json({error:error.code??'MPP_OPERATION_FAILED'},{
+    status:Number.isInteger(error.status)?error.status:500,headers:{'cache-control':'no-store'}});
+}
+export async function serveMerchant({workspace,profile,port=8788,environment=process.env}) {
+  const merchant=await createMerchant({workspace,profile,environment});
+  let listeningPort=portNumber(port);
+  const server=createServer({maxHeaderSize:65536},async(request,response)=>{
+    try {
+      requireValue(typeof request.url==='string' && request.url.startsWith('/') && !request.url.startsWith('//') &&
+        ['127.0.0.1:'+listeningPort,new URL(merchant.config.publicOrigin).host].includes(request.headers.host),
+        'MPP_MERCHANT_HOST_INVALID');
+      const url=new URL(request.url,merchant.config.publicOrigin);
+      requireValue(url.origin===merchant.config.publicOrigin,'MPP_MERCHANT_ORIGIN_INVALID');
+      if(request.method==='GET' && url.pathname==='/_mpp/health') {
+        await send(response,Response.json({status:'ready',title:merchant.config.title,profileId:merchant.profileId}));return;
+      }
+      if(request.method==='GET' && ['/_mpp/contract','/_mpp/openapi.json'].includes(url.pathname)) {
+        const contract=merchantContract(merchant.config);
+        const document=url.pathname==='/_mpp/contract'?contract:contractOpenAPI(contract);
+        await send(response,Response.json(document,{headers:{'etag':'"'+contract.sha256+'"',
+          'cache-control':'public, max-age=0, must-revalidate','x-content-type-options':'nosniff'}}));return;
+      }
+      if(request.method==='GET' && url.pathname==='/_mpp/offers') {
+        await send(response,Response.json({schema:'stellar-forge.mpp-offers.v1',title:merchant.config.title,
+          offers:merchant.config.routes.map(route=>({id:route.id,method:route.method,
+            url:merchant.config.publicOrigin+route.path,description:route.description,payment:route.payment}))}));return;
+      }
+      const body=await readBody(request);
+      const headers=new Headers();
+      for(const [name,value] of Object.entries(request.headers)) if(typeof value==='string') headers.set(name,value);
+      const nativeRequest=new Request(url,{method:request.method,headers,
+        ...(!['GET','HEAD'].includes(request.method) && (body.length || request.headers['content-length']==='0')?{body}:{})});
+      await send(response,await merchant.handle(nativeRequest));
+    } catch(error){if(!response.headersSent) await send(response,errorResponse(error));else response.destroy();}
+  });
+  server.requestTimeout=360000;server.headersTimeout=30000;
+  await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(listeningPort,'127.0.0.1',resolve);});
+  listeningPort=server.address().port;
+  return {merchant,port:listeningPort,close:async()=>{
+    await new Promise(resolve=>server.close(resolve));await merchant.drain();
+  }};
+}
+function deliveryView(row) {
+  return {id:row.id,state:row.state,routeId:row.routeId,profileId:row.profileId,url:row.url,method:row.method,
+    createdAt:row.createdAt,updatedAt:row.updatedAt,payer:row.payer,transaction:row.transaction,receipt:row.receipt,
+    failure:row.failure,response:row.response?{status:row.response.status,bytes:row.response.bytes,sha256:row.response.sha256}:null};
+}
+export async function exportResponse({workspace,group='purchases',recordId,destination}) {
+  requireValue(['purchases','deliveries'].includes(group),'MPP_EXPORT_GROUP_INVALID');
+  const record=await workspace.read(group,recordId);
+  requireValue(record?.response,'MPP_RESPONSE_UNAVAILABLE',404);
+  const response=storedResponse(record.response),bytes=Buffer.from(await response.arrayBuffer());
+  absolute(destination);await privateDirectory(dirname(destination));
+  const handle=await open(destination,'wx',0o600);
+  try{await handle.writeFile(bytes);await handle.sync();}finally{await handle.close();}
+  return {path:destination,bytes:bytes.length,sha256:record.response.sha256,status:record.response.status};
+}
+export async function serveWorkspace({directory,port=8787,environment=process.env}) {
+  const workspace=await openWorkspace(directory);
+  const token=randomBytes(32).toString('hex'),tokenBytes=Buffer.from(token);
+  const jobs=new Map();let merchantServer=null,merchantTransition=false,origin,closed=false;
+  function authorized(request) {
+    requireValue(request.headers.authorization?.startsWith('Bearer '),'MPP_WORKSPACE_AUTH_REQUIRED',401);
+    const candidate=Buffer.from(request.headers.authorization.slice(7));
+    requireValue(candidate.length===tokenBytes.length && timingSafeEqual(candidate,tokenBytes),'MPP_WORKSPACE_AUTH_REQUIRED',401);
+    requireValue(!request.headers.origin || request.headers.origin===origin,'MPP_WORKSPACE_ORIGIN_INVALID',403);
+  }
+  async function snapshot() {
+    return {schema:'stellar-forge.mpp-console.v1',metadata:await workspace.metadata(),versions,
+      profiles:{merchant:await workspace.profile('merchant'),buyer:await workspace.profile('buyer')},
+      merchant:merchantServer?{port:merchantServer.port,profileId:merchantServer.merchant.profileId,
+        active:merchantServer.merchant.active()}:null,
+      purchases:(await workspace.list('purchases')).map(purchaseView),
+      deliveries:(await workspace.list('deliveries')).map(deliveryView),
+      jobs:[...jobs.values()].map(({promise,...job})=>job)};
+  }
+  function startJob(kind,work) {
+    requireValue([...jobs.values()].filter(job=>job.state==='RUNNING').length<8,'MPP_OPERATOR_QUEUE_FULL',409);
+    const job={id:randomUUID(),kind,state:'RUNNING',createdAt:now()};
+    jobs.set(job.id,job);
+    job.promise=Promise.resolve().then(work).then(
+      result=>{job.state='COMPLETE';job.result=result;job.updatedAt=now();},
+      error=>{job.state='FAILED';job.error=error.code??'MPP_OPERATION_FAILED';job.updatedAt=now();}
+    );
+    return {id:job.id,state:job.state};
+  }
+  const server=createServer({maxHeaderSize:16384},async(request,response)=>{
+    try {
+      requireValue(request.headers.host===new URL(origin).host,'MPP_WORKSPACE_HOST_INVALID',403);
+      const url=new URL(request.url,origin);
+      requireValue(url.origin===origin,'MPP_WORKSPACE_ORIGIN_INVALID',403);
+      if(request.method==='GET' && ['/','/app.js','/style.css'].includes(url.pathname)) {
+        const name=url.pathname==='/'?'index.html':url.pathname.slice(1);
+        const body=await readFile(new URL(name,uiRoot));
+        await send(response,new Response(body,{headers:{
+          'content-type':name.endsWith('.html')?'text/html; charset=utf-8':name.endsWith('.js')?'text/javascript; charset=utf-8':'text/css; charset=utf-8',
+          'content-security-policy':"default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'",
+          'x-content-type-options':'nosniff','referrer-policy':'no-referrer','cache-control':'no-store'
+        }}));return;
+      }
+      authorized(request);
+      if(request.method==='GET' && url.pathname==='/api/state') {await send(response,Response.json(await snapshot()));return;}
+      if(request.method==='GET' && ['/api/customer','/api/customer/contract','/api/customer/openapi','/api/customer/package'].includes(url.pathname)) {
+        requireValue([...url.searchParams.keys()].every(key=>key==='profileId') &&
+          url.searchParams.getAll('profileId').length<=1,'MPP_CUSTOMER_SELECTION_INVALID');
+        const profile=merchantServer?.merchant.config??await workspace.profile('merchant');
+        requireValue(profile,'MPP_MERCHANT_PROFILE_REQUIRED',409);
+        const contract=merchantContract(profile),selected=url.searchParams.get('profileId');
+        requireValue(!selected || selected===contract.profileId,'MPP_CUSTOMER_PROFILE_CHANGED',409);
+        const profileSource=merchantServer?'active':'saved';
+        if(url.pathname==='/api/customer') {
+          await send(response,Response.json({profileSource,contract,publicContract:contract.origin+'/_mpp/contract',
+            publicOpenAPI:contract.origin+'/_mpp/openapi.json'},{headers:{'cache-control':'no-store'}}));return;
+        }
+        const kind=url.pathname.split('/').at(-1);
+        const document=kind==='contract'?contract:kind==='openapi'?contractOpenAPI(contract):
+          await createCustomerBundle({contract});
+        const name='mpp-'+kind+'-'+contract.sha256.slice(0,12)+'.json';
+        await send(response,new Response(json(document),{headers:{'content-type':'application/json; charset=utf-8',
+          'content-disposition':'attachment; filename="'+name+'"','cache-control':'private, no-store',
+          'x-content-type-options':'nosniff'}}));return;
+      }
+      const download=/^\/api\/(purchases|deliveries)\/([^/]+)\/response$/.exec(url.pathname);
+      if(request.method==='GET' && download) {
+        const record=await workspace.read(download[1],decodeURIComponent(download[2]));
+        requireValue(record?.response,'MPP_RESPONSE_UNAVAILABLE',404);
+        const output=storedResponse(record.response);
+        await send(response,new Response(output.body,{headers:{
+          'content-type':'application/octet-stream','content-disposition':'attachment; filename="response.bin"',
+          'x-content-type-options':'nosniff','cache-control':'no-store'
+        }}));return;
+      }
+      requireValue(request.method==='POST' && request.headers['content-type']?.split(';')[0]==='application/json',
+        'MPP_JSON_POST_REQUIRED',405);
+      const body=JSON.parse((await readBody(request)).toString('utf8'));
+      let result;
+      if(url.pathname==='/api/profile') {
+        requireValue(!(merchantServer || merchantTransition) || body.kind!=='merchant','MPP_STOP_MERCHANT_TO_EDIT',409);
+        const profile=body.kind==='merchant'?merchantConfig(body.profile):buyerConfig(body.profile);
+        result=await workspace.configure(body.kind,profile,body.revision);
+      } else if(url.pathname==='/api/merchant/start') {
+        requireValue(!merchantServer && !merchantTransition,'MPP_MERCHANT_ALREADY_RUNNING',409);
+        merchantTransition=true;
+        try {
+          const profile=await workspace.profile('merchant');requireValue(profile,'MPP_MERCHANT_PROFILE_REQUIRED');
+          merchantServer=await serveMerchant({workspace,profile,port:portNumber(body.port??8788),environment});
+          result={port:merchantServer.port,profileId:merchantServer.merchant.profileId};
+        } finally {merchantTransition=false;}
+      } else if(url.pathname==='/api/merchant/stop') {
+        requireValue(merchantServer && !merchantTransition,'MPP_MERCHANT_NOT_RUNNING',409);
+        merchantTransition=true;
+        try {await merchantServer.close();merchantServer=null;result={status:'STOPPED'};}
+        finally {merchantTransition=false;}
+      } else if(url.pathname==='/api/purchase/prepare') {
+        const profile=await workspace.profile('buyer');requireValue(profile,'MPP_BUYER_PROFILE_REQUIRED');
+        result=startJob('Prepare purchase',()=>preparePurchase({workspace,profile,challengeId:body.challengeId}));
+      } else if(url.pathname==='/api/purchase/execute') {
+        result=startJob('Execute purchase',()=>executePurchase({workspace,purchaseId:body.id,environment,resume:false}));
+      } else if(url.pathname==='/api/purchase/resume') {
+        result=startJob('Recover purchase',()=>executePurchase({workspace,purchaseId:body.id,environment,resume:true}));
+      } else if(url.pathname==='/api/purchase/finalize') {
+        result=startJob('Reconcile transfer',()=>finalizePurchase({workspace,purchaseId:body.id,environment}));
+      } else if(url.pathname==='/api/delivery/recover') {
+        result=startJob('Recover delivery',async()=>{
+          const row=await workspace.read('deliveries',body.id);
+          requireValue(row,'MPP_DELIVERY_NOT_FOUND',404);
+          const profile=await workspace.read('profiles',row.profileId);
+          requireValue(profile,'MPP_ORIGINAL_MERCHANT_PROFILE_REQUIRED',409);
+          const merchant=await createMerchant({workspace,profile,environment});
+          return deliveryView(await merchant.recover(body.id));
+        });
+      } else requireValue(false,'MPP_WORKSPACE_ROUTE_NOT_FOUND',404);
+      await send(response,Response.json(result,{status:202,headers:{'cache-control':'no-store'}}));
+    } catch(error){if(!response.headersSent) await send(response,errorResponse(error));else response.destroy();}
+  });
+  server.requestTimeout=30000;server.headersTimeout=10000;
+  try {
+    await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(portNumber(port),'127.0.0.1',resolve);});
+    origin='http://127.0.0.1:'+server.address().port;
+    return {workspace,url:origin+'/#'+token,origin,snapshot,close:async()=>{
+      if(closed) return;closed=true;
+      await new Promise(resolve=>server.close(resolve));
+      await Promise.allSettled([...jobs.values()].map(job=>job.promise));
+      await merchantServer?.close();await workspace.close();
+    }};
+  } catch(error){await workspace.close();throw error;}
+}

@@ -8,6 +8,7 @@ const object = value => value !== null && typeof value === 'object' && !Array.is
 const own = (value, key) => Object.hasOwn(value, key);
 const token = location.hash.slice(1);
 let inventory, selected, draft, editorBase = null, queryName, routeIndex = 0, review, release, busy = false, dirty = false, rawDirty = false;
+let stagePreparedId = null;
 function el(tag, text, className) {
   const element = document.createElement(tag);
   if (text !== undefined && text !== null) element.textContent = String(text);
@@ -54,6 +55,11 @@ async function api(path, input, download = false) {
       WORKSPACE_BUSY: 'Another operator action is still finishing. Its status is visible under Prepared merchants.',
       WORKSPACE_CAPABILITY_REQUIRED: 'Open the complete private workspace URL printed by the launching terminal, including its fragment.',
       WORKSPACE_PREPARED_FILES_CHANGED: 'This retained merchant has changed on disk. Open its saved revision, review it and prepare a fresh merchant.',
+      WORKSPACE_RELEASE_ID_ALREADY_USED: 'That release ID already names different retained work. Choose a new release ID to stage this version.',
+      WORKSPACE_CLOSE_RELEASE_CONSOLE_FIRST: 'The release console owns merchant launches. Use it to operate a release, or close those controls before starting a prepared merchant directly.',
+      WORKSPACE_RELEASE_MANAGER_RUNNING: 'An original release manager is running this merchant. Stop it in its owning release console or terminal before starting a direct merchant.',
+      WORKSPACE_RELEASE_FACILITATOR_REQUIRED: 'This embedded workspace uses a custom native factory. Supply its explicit host releaseRuntime facilitator configuration before staging a child process, or launch the normal workspace CLI with --facilitator.',
+      WORKSPACE_STOP_CURRENT_MERCHANT_FIRST: 'Stop the direct merchant above before opening retained release controls.',
     };
     const message = messages[issue?.error] ?? issue?.detail ?? issue?.error ?? ('Request failed: ' + response.status);
     throw Error(message + (issue?.field ? ' Field: ' + issue.field + '.' : ''));
@@ -61,7 +67,7 @@ async function api(path, input, download = false) {
   if (!download) return response.json();
   const blob = await response.blob(), digest = [...new Uint8Array(await crypto.subtle.digest('SHA-256', await blob.arrayBuffer()))]
     .map(byte => byte.toString(16).padStart(2, '0')).join('');
-  if (digest !== response.headers.get('x-content-sha256')) throw Error('The customer download did not match the returned bytes. Request the same retained client again.');
+  if (digest !== response.headers.get('x-content-sha256')) throw Error('The downloaded file did not match the returned bytes. Request the same retained file again.');
   const filename = /filename="([^"]+)"/.exec(response.headers.get('content-disposition') ?? '')?.[1] ?? 'clickhouse-customer.tar.gz';
   const url = URL.createObjectURL(blob), anchor = el('a'); anchor.href = url; anchor.download = filename;
   document.body.append(anchor); anchor.click(); anchor.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000);
@@ -81,9 +87,13 @@ function controls() {
   $('preview-run').disabled = busy || dirty || !review;
   $('draft-state').textContent = dirty ? 'Unsaved changes' : selected ? 'Saved · ' + short(selected.id) : 'Unsaved draft';
   for (const element of document.querySelectorAll('[data-start-release]'))
-    element.disabled = busy || Boolean(inventory?.runtime);
+    element.disabled = busy || Boolean(inventory?.runtime || inventory?.releases?.console) ||
+      Boolean(inventory?.releases?.status && inventory.releases.status.runtime.state !== 'STOPPED');
   for (const element of document.querySelectorAll('[data-stop-run]'))
     element.disabled = busy || inventory?.runtime?.state !== 'RUNNING';
+  $('stage-release').disabled = busy || !release || !inventory?.releases?.configured;
+  $('open-release-console').disabled = busy || Boolean(inventory?.runtime);
+  $('close-release-console').disabled = busy || !inventory?.releases?.console;
 }
 function changed() { dirty = true; controls(); }
 function show(view) {
@@ -366,6 +376,7 @@ function renderPrepared() {
       }));
     }
   }
+  renderRetainedReleases();
 }
 function renderRelease() {
   if (!release) return;
@@ -387,12 +398,54 @@ function renderRelease() {
       notice('Downloaded ' + result.filename + ' · ' + result.bytes.toLocaleString() + ' bytes. This customer package contains the generated client and public API description.');
     }));
   panel.append(actions, el('p', 'The private source, SQL, probe values and environment references stay in the merchant folder. Customer downloads contain only the original generated client and public OpenAPI.', 'hint'));
+  panel.append(button('Download fleet source', async () => {
+    const result = await api('fleet-source', { releaseId: release.id }, true);
+    notice('Downloaded ' + result.filename + '. Import it into a registered source in the fleet setup workbench.');
+  }), el('p', 'The fleet source file preserves this merchant’s host package path, reviewed output columns and selected facilitator settings for your fleet.', 'hint'));
   const reopen = button('Open its saved revision', async () => {
     if (dirty && !confirm('Discard unsaved changes and open this merchant’s saved revision?')) return;
     const result = await api('checkout', { revision: release.revision, baseRevision: editorBase });
     await adopt(result.revision); show('editor'); notice('Opened the merchant’s retained source and plan.');
   });
-  panel.append(reopen); $('merchant-detail').append(panel, ...offerPanels(release.routes)); controls();
+  panel.append(reopen); $('merchant-detail').append(panel, ...offerPanels(release.routes));
+  renderRetainedReleases(); controls();
+}
+function renderRetainedReleases() {
+  const retained = inventory?.releases, status = retained?.status;
+  if (!retained) return;
+  $('retained-release-state').replaceChildren(metadata([
+    ['Release store', retained.directory], ['Selected release', status?.state.active ?? 'None'],
+    ['Selection generation', status?.state.generation ?? 0], ['Seller state', status?.runtime.state ?? 'STOPPED'],
+    ['Launch mode', retained.runtime?.facilitator ? 'Native x402 · ' + retained.runtime.facilitator : retained.configured ? 'CHALLENGE_ONLY' : 'Host runtime configuration required'],
+    ['Seller port', retained.runtime?.port === 0 ? 'Assigned on start' : retained.runtime?.port],
+  ]));
+  if (release && stagePreparedId !== release.id) {
+    stagePreparedId = release.id; value('retained-release-id', 'clickhouse-' + short(release.revision));
+    value('retained-release-label', release.label);
+  }
+  $('release-console-links').replaceChildren();
+  if (retained.console) {
+    const link = el('a', 'Open the private release console'); link.href = retained.console.url;
+    link.target = '_blank'; link.rel = 'noopener'; $('release-console-links').append(link);
+  }
+  const list = $('retained-release-list'); list.replaceChildren();
+  for (const item of status?.releases ?? []) {
+    if (!item.clickhouse) continue;
+    const row = el('section', null, 'term'); row.append(el('strong', item.label + ' · ' + item.id),
+      el('p', item.routes.length + ' routes · ' + item.clickhouse.queryCount + ' named queries · ' + item.mode +
+        (status.state.active === item.id ? ' · selected for the next start' : ''), 'hint'));
+    const actions = el('div', null, 'toolbar');
+    for (const [kind, label] of [['client', 'Download retained client'], ['openapi', 'Download retained OpenAPI']])
+      actions.append(button(label, async () => {
+        const result = await api('export', { merchantReleaseId: item.id, kind }, true);
+        notice('Downloaded ' + result.filename + ' from the verified retained release.');
+      }));
+    row.append(actions, button('Download retained fleet source', async () => {
+      const result = await api('fleet-source', { merchantReleaseId: item.id }, true);
+      notice('Downloaded ' + result.filename + ' from this retained release. Import it into the fleet setup workbench.');
+    })); list.append(row);
+  }
+  for (const error of status?.errors ?? []) list.append(el('p', error.id + ': ' + error.message, 'hint'));
 }
 async function adopt(revision) {
   selected = revision; editorBase = revision.id;
@@ -434,6 +487,21 @@ $('save').addEventListener('click', () => act(async () => {
   collect(); const result = await api('save', { baseRevision: editorBase, ...draft, label: value('revision-label') });
   await adopt(result.revision); notice(result.reused ? 'The unchanged source and plan reused their existing retained revision.' : 'Saved revision ' + short(result.revision.id) + '. Continue to Native review.');
 }, 'Saving and validating the source and complete merchant plan…'));
+$('stage-release').addEventListener('click', () => act(async () => {
+  if (!release) return;
+  const result = await api('stage-release', { preparedId: release.id, id: value('retained-release-id').trim(), label: value('retained-release-label').trim() });
+  inventory.releases = result.releases; renderRetainedReleases();
+  notice(result.reused ? 'Reopened the same retained release. Its source and selected runtime already match.'
+    : 'Staged ' + result.release.id + '. Open release controls to compare, select and start this version.');
+}, 'Retaining the original source, full payment contract and customer files…'));
+$('open-release-console').addEventListener('click', () => act(async () => {
+  inventory.releases = await api('release-console', {}); renderRetainedReleases();
+  notice('Release controls are ready. Open the private console link to compare, activate, start, drain or roll back.');
+}));
+$('close-release-console').addEventListener('click', () => act(async () => {
+  inventory.releases = await api('close-release-console', {}); renderRetainedReleases();
+  notice('The original release controls closed and drained their owned seller. Retained versions and selection history remain.');
+}, 'Draining the release console’s owned seller and closing its controls…'));
 $('example').addEventListener('click', () => act(loadExample));
 for (const key of ['source', 'plan']) $(key + '-file').addEventListener('change', () => act(async () => {
   const input = $(key + '-file'), file = input.files?.[0]; if (!file) return;

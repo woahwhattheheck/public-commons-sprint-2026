@@ -10,6 +10,7 @@ import { createOperatorApproval, checkOperatorTerminal } from '../sf81-buyer-ope
 import { analyzeOne } from '../sf52-buyer-outcomes/outcomes.mjs';
 import { canonical, digest, inspectDatasetPage, object, validateDatasetQuery } from './dataset-page.mjs';
 import { MAX_DATASET_PAGE_BYTES, MAX_DATASET_PAGES } from '../sf100-buyer-dataset-delivery/deliver.mjs';
+import {pendingUnpaidContinuation,inspectUnpaidContinuation,continueUnpaidPage} from './dataset-unpaid.mjs';
 
 const VERSION = 'stellar-forge.sf88.dataset-session.v1';
 const MAX_ATOMIC = 170141183460469231731687303715884105727n;
@@ -217,6 +218,16 @@ async function inspectUnlocked(directory) {
     const cfg = pageConfig(definition, index, previous?.nextCursor ?? null, allocated);
     const dir = join(directory, 'pages', indexName(index));
     await privateDirectory(dir);
+    const pending = await pendingUnpaidContinuation(dir,cfg);
+    if(pending) {
+      report.status='RECONCILIATION_REQUIRED';
+      report.capAllocatedAtomic=(allocated+BigInt(cfg.operation.expect.maxAtomic)).toString();
+      report.stoppedPage={index,intentId:cfg.operation.intentId,
+        code:'DATASET_UNPAID_CONTINUATION_PENDING',responsePath:cfg.responseFile.destination};
+      report.unpaidContinuation=pending;
+      report.next='Continue this reviewed unpaid page with its retained attempt SHA-256.';
+      return report;
+    }
     const savedCfg = await readJson(join(dir, 'config.json'), 262144, true);
     const attempt = await readJson(join(dir, 'attempt.json'), 8192, true);
     const resultMetadata = await auxiliaryJson(join(dir, 'result.json'), 262144);
@@ -244,7 +255,10 @@ async function inspectUnlocked(directory) {
       report.status = 'RECONCILIATION_REQUIRED';
       report.stoppedPage = {index, intentId:cfg.operation.intentId, code:safeCode(error),
         originalExecutionError:failure?.code ?? null, responsePath:cfg.responseFile.destination};
-      report.next = 'Inspect this intent in the original SF36 ledger and SF82 evidence. recover only reads existing files; it never repeats this attempt.';
+      report.unpaidContinuation=await inspectUnpaidContinuation(dir,cfg,attempt,result);
+      report.next = report.unpaidContinuation
+        ? 'Review the retained unsigned attempt, then explicitly continue it with retryUnpaid and its attempt SHA-256. Original approval and ledger checks run again.'
+        : 'Inspect this intent in the original SF36 ledger and SF82 evidence. recover only reads existing files; it never repeats this attempt.';
       return report;
     }
     const recoveryWarnings = [resultMetadata.warning,failureMetadata.warning].filter(Boolean);
@@ -284,29 +298,67 @@ async function originalPreflight(cfg, environment) {
   createOperatorApproval({...cfg.operator, environment});
   await checkOperatorTerminal(cfg.operation.intentId);
 }
+async function executionContext(definition,{workspace,environment,executePage}) {
+  let operatorEnvironment = environment, evidenceRpcEndpoint;
+  if (definition.workspaceDirectory !== undefined) {
+    const {openWorkspace} = await import('./workspace.mjs');
+    const workspace = await openWorkspace(['--dir', definition.workspaceDirectory],
+      {execute:executePage === execute, environment});
+    need(digest(canonical(workspace.config)) === definition.configurationSha256,
+      'DATASET_WORKSPACE_CHANGED_REVIEW_REQUIRED');
+    if (executePage === execute) operatorEnvironment = workspace.operatorEnvironment;
+  }
+  if (workspace !== undefined && definition.workspaceDirectory === undefined) {
+    // Query-specific configs still use the selected original workspace's
+    // keys, current cap and evidence RPC. Keep executePage unchanged so its
+    // original terminal preflight remains before the durable attempt marker.
+    const queue = await import('./queue.mjs');
+    if (executePage === execute) {
+      const selected = await queue.workspaceExecution(definition.config, workspace);
+      operatorEnvironment = selected.environment;
+      evidenceRpcEndpoint = selected.evidenceRpcEndpoint;
+    } else await queue.workspaceConfiguration(workspace, {configuration:definition.config});
+  }
+  return {operatorEnvironment,evidenceRpcEndpoint};
+}
 /** Trusted host seam: CLI always supplies the original SF88 execute function. */
 export async function runDatasetSession(directory, {signal, executePage = execute, onPage = () => {},
-  environment = process.env, emitPageSummaries = true} = {}) {
+  environment = process.env, emitPageSummaries = true, workspace,
+  retryUnpaid = false, expectedAttemptSha256} = {}) {
   need(signal === undefined || signal instanceof AbortSignal, 'INVALID_ABORT_SIGNAL');
   need(typeof executePage === 'function' && typeof onPage === 'function', 'DATASET_EXECUTOR_INVALID');
   need(typeof emitPageSummaries === 'boolean', 'INVALID_SUMMARY_OUTPUT_OPTION');
+  need(typeof retryUnpaid==='boolean'&&
+    (retryUnpaid?/^[a-f0-9]{64}$/.test(expectedAttemptSha256??''):expectedAttemptSha256===undefined),
+    'DATASET_UNPAID_ATTEMPT_REVIEW_REQUIRED');
+  if(retryUnpaid)need(executePage===execute,'DATASET_UNPAID_CONTINUATION_REQUIRES_ORIGINAL_EXECUTOR');
   const release = await lock(directory);
   try {
     const definition = validateDefinition(await readJson(join(directory, 'session.json')), directory);
+    need(workspace === undefined || typeof workspace === 'string' && isAbsolute(workspace) &&
+      resolve(workspace) === workspace, 'DATASET_ABSOLUTE_WORKSPACE_REQUIRED');
+    need(workspace === undefined || definition.workspaceDirectory === undefined ||
+      workspace === definition.workspaceDirectory, 'DATASET_SAVED_WORKSPACE_MISMATCH');
     let report = await inspectUnlocked(directory);
+    if(retryUnpaid) {
+      need(report.status==='RECONCILIATION_REQUIRED'&&report.unpaidContinuation&&
+        report.unpaidContinuation.attemptSha256===expectedAttemptSha256,
+        'DATASET_UNPAID_ATTEMPT_CHANGED');
+      const index=report.completedPages+1,previous=report.pages.at(-1);
+      need(report.unpaidContinuation.index===index,'DATASET_UNPAID_PAGE_CHANGED');
+      const allocated=report.pages.reduce((total,page)=>total+BigInt(page.capAllocatedAtomic),0n);
+      const cfg=pageConfig(definition,index,previous?.nextCursor??null,allocated);
+      const {operatorEnvironment}=await executionContext(definition,{workspace,environment,executePage});
+      await originalPreflight(cfg,operatorEnvironment);
+      await continueUnpaidPage(join(directory,'pages',indexName(index)),cfg,
+        {expectedAttemptSha256,environment:operatorEnvironment,signal});
+      report=await inspectUnlocked(directory);
+    }
     while (report.status === 'READY' && !signal?.aborted) {
       const index = report.completedPages + 1;
       const previous = report.pages.at(-1);
       const cfg = pageConfig(definition, index, previous?.nextCursor ?? null, BigInt(report.capAllocatedAtomic));
-      let operatorEnvironment = environment;
-      if (definition.workspaceDirectory !== undefined) {
-        const {openWorkspace} = await import('./workspace.mjs');
-        const workspace = await openWorkspace(['--dir', definition.workspaceDirectory],
-          {execute:executePage === execute, environment});
-        need(digest(canonical(workspace.config)) === definition.configurationSha256,
-          'DATASET_WORKSPACE_CHANGED_REVIEW_REQUIRED');
-        if (executePage === execute) operatorEnvironment = workspace.operatorEnvironment;
-      }
+      const {operatorEnvironment,evidenceRpcEndpoint}=await executionContext(definition,{workspace,environment,executePage});
       if (executePage === execute) await originalPreflight(cfg, operatorEnvironment);
       const dir = join(directory, 'pages', indexName(index));
       try { await mkdir(dir, {mode:0o700}); } catch (e) { if (e.code !== 'EEXIST') throw e; }
@@ -315,13 +367,14 @@ export async function runDatasetSession(directory, {signal, executePage = execut
       if (!savedCfg) await createJson(join(dir, 'config.json'), cfg);
       else need(equal(savedCfg, cfg), 'DATASET_PAGE_CONFIG_CHANGED');
       if (signal?.aborted) break;
-      // This marker is durable BEFORE any execution. Recovery never calls a marked page again.
+      // This marker is durable BEFORE execution. Only an explicit authenticated
+      // unsigned continuation can archive an earlier marker; recover stays read-only.
       await createJson(join(dir, 'attempt.json'), {schema:'stellar-forge.sf88.dataset-attempt.v1',
         index, intentId:cfg.operation.intentId, configurationSha256:digest(canonical(cfg)),
         capAtomic:cfg.operation.expect.maxAtomic, startedAt:new Date().toISOString()});
       try {
         const summary = await executePage(cfg, {signal, environment:operatorEnvironment,
-          emitSummary:emitPageSummaries});
+          emitSummary:emitPageSummaries, ...(evidenceRpcEndpoint === undefined ? {} : {evidenceRpcEndpoint})});
         await createJson(join(dir, 'result.json'), {schema:'stellar-forge.sf88.dataset-attempt-result.v1', summary});
       } catch (error) {
         await createJson(join(dir, 'failure.json'), {code:safeCode(error), at:new Date().toISOString()});

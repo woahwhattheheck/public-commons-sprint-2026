@@ -7,6 +7,7 @@ import { mkdir, lstat, chmod } from 'node:fs/promises';
 import { join } from 'node:path';
 import { absolute, directory, requireValue, digest, verifyFile } from './files.mjs';
 import { readSource } from './source.mjs';
+import { collectionStore } from './collections.mjs';
 
 function processStart(pid) {
   try { const stat = readFileSync(`/proc/${pid}/stat`,'utf8'); return stat.slice(stat.lastIndexOf(')')+2).split(' ')[19]; }
@@ -57,7 +58,7 @@ export async function openLibrary({state, kind, source, roots,
     db.exec('BEGIN IMMEDIATE');
     let config = getSetting('config');
     if (!config) {
-      requireValue(['inbox','snapshot'].includes(kind), 'SOURCE_KIND_REQUIRED');
+      requireValue(['inbox','snapshot','collection','paid-jobs'].includes(kind), 'SOURCE_KIND_REQUIRED');
       requireValue(Array.isArray(roots) && roots.length > 0 && roots.length <= 32, 'FILES_ROOT_REQUIRED');
       config = {schema:'stellar-forge.sf88.resource-library.v1',kind,source:absolute(source),
         roots:[...new Set(await Promise.all(roots.map(p => directory(p))))].sort(),
@@ -86,15 +87,17 @@ export async function openLibrary({state, kind, source, roots,
       try { const value = fn(); db.exec('COMMIT'); return value; }
       catch (e) { db.exec('ROLLBACK'); throw e; }
     }
-    function annotation(id) {
+    function annotation(id, inherited) {
       return parse(db.prepare('SELECT content FROM annotations WHERE id=? ORDER BY revision DESC LIMIT 1').get(id)?.content)
-        ?? {id,revision:0,note:'',tags:[],starred:false,updatedAt:null};
+        ?? {id,revision:0,note:inherited?.note ?? '',tags:inherited?.tags ?? [],starred:inherited?.starred ?? false,
+          updatedAt:null,...(inherited ? {inheritedRevision:inherited.revision} : {})};
     }
     function resource(id) {
       requireValue(/^[a-f0-9]{64}$/.test(id ?? ''), 'RESOURCE_ID_INVALID');
       const row = db.prepare('SELECT metadata FROM records WHERE generation=? AND id=?').get(current()?.generation ?? '',id);
       requireValue(row, 'RESOURCE_NOT_IN_CURRENT_SOURCE',404);
-      return {...parse(row.metadata),annotation:annotation(id)};
+      const record = parse(row.metadata);
+      return {...record,annotation:annotation(id,record.inheritedAnnotation)};
     }
     function status() {
       return {config,scan:current(),activity:active ? {...active.progress} : null,
@@ -182,7 +185,7 @@ export async function openLibrary({state, kind, source, roots,
       let where = 'r.generation=?';
       if (match) { where += ' AND search MATCH ?'; binds.push(match); }
       if (filter) { where += " AND json_extract(r.metadata,'$.status')=?"; binds.push(filter); }
-      if (starred) where += " AND EXISTS(SELECT 1 FROM annotations a WHERE a.id=r.id AND a.revision=(SELECT MAX(b.revision) FROM annotations b WHERE b.id=a.id) AND json_extract(a.content,'$.starred')=1)";
+      if (starred) where += " AND COALESCE((SELECT json_extract(a.content,'$.starred') FROM annotations a WHERE a.id=r.id ORDER BY a.revision DESC LIMIT 1),json_extract(r.metadata,'$.inheritedAnnotation.starred'),0)=1";
       const from = ' FROM records r JOIN search ON search.generation=r.generation AND search.id=r.id WHERE ' + where;
       const total = db.prepare('SELECT COUNT(*) AS total' + from).get(...binds).total;
       const snippets = match ? ",snippet(search,3,'[',']',' … ',24) AS snippet" : ",'' AS snippet";
@@ -190,7 +193,7 @@ export async function openLibrary({state, kind, source, roots,
         .all(...binds,limit,offset);
       return {total,offset,limit,scan:current(),items:rows.map(row => {
         const record = parse(row.metadata);
-        return {...record,snippet:row.snippet,annotation:annotation(record.id)};
+        return {...record,snippet:row.snippet,annotation:annotation(record.id,record.inheritedAnnotation)};
       })};
     }
     async function preview(id,{signal} = {}) {
@@ -216,7 +219,7 @@ export async function openLibrary({state, kind, source, roots,
         if (existing) {
           requireValue(existing.digest === hash,'OPERATION_ID_CONFLICT',409); return parse(existing.result);
         }
-        const record = resource(id), before = annotation(id);
+        const record = resource(id), before = record.annotation;
         requireValue(before.revision === expectedRevision,'ANNOTATION_REVISION_CONFLICT',409);
         const result = {id,revision:before.revision+1,note,tags:input.tags,starred,updatedAt:clock(),
           source:{intentId:record.intentId,sha256:record.sha256,configSha256:record.configSha256,
@@ -241,7 +244,8 @@ export async function openLibrary({state, kind, source, roots,
       return result;
       } catch (e) { db.exec('ROLLBACK'); throw e; }
     }
-    return Object.freeze({state,config,status,scan,search,resource,preview,download,saveAnnotation,revisions,exportReview,
+    const collections = collectionStore({db,transaction,resource,current});
+    return Object.freeze({state,config,status,scan,search,resource,preview,download,saveAnnotation,revisions,exportReview,collections,
       select(id) { if (id !== null) resource(id); putSetting('selection',id); return {id}; },
       cancelScan() { active?.controller.abort(new Error('SCAN_CANCELLED')); return status(); },
       async close() {
