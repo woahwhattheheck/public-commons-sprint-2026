@@ -3,7 +3,7 @@ import {
   PLAN_FIELDS, TASK_STATUSES, RECEIVING_OUTCOMES, MAX_MATERIAL_BYTES,
   newCommissioning, validateCommissioning, applyCommissioningCommand,
   previewCommissioningWorkorder, commissioningWorkorder, commissioningSummary,
-  commissioningComparisons, commissioningOriginalFiles, commissioningFileBytes,
+  commissioningComparisons, commissioningOriginalFiles, commissioningFileBytes, commissioningSourceFiles,
   commissioningReport, commissioningTasksCsv, encodeCommissioningBytes, commissioningReceivingMatches,
 } from './commissioning.mjs';
 
@@ -67,7 +67,7 @@ function restoreFormDraft(form,values) {
   }
 }
 
-export function mountCommissioningDesk({root,onChange=()=>{}}) {
+export function mountCommissioningDesk({root,onChange=()=>{},sourceFileUrl=null}) {
   let state=null,candidate=null,preview=null,epoch=0,busy=false,destroyed=false,page=0;
   let receivedEpoch=0;
   root.replaceChildren();root.id='implementation';root.classList.add('commissioning-desk');
@@ -89,8 +89,41 @@ export function mountCommissioningDesk({root,onChange=()=>{}}) {
   const planRoot=section('Implementation plan',true),workRoot=section('Assigned work',true),
     materialsRoot=section('Deliverables and original files'),receivingRoot=section('Technical and customer receiving'),
     measurementsRoot=section('Before, installed and recurring effort'),historyRoot=section('Workorders, history and handover');
+  const sourceRoot=section('Source delivery and receiving',true);
   const say=(text,error=false)=>{notice.textContent=text;notice.classList.toggle('error',error);};
   function ensureState() {if(!state)state=newCommissioning();return state;}
+  async function downloadOriginal(original,name,mediaType='application/octet-stream') {
+    const stamp=epoch;
+    try {
+      if(!original)throw Error('Choose an original file from this case.');
+      if(!original.sourceFile) {
+        download(name,commissioningFileBytes(state,original.sha256),mediaType);return;
+      }
+      if(typeof sourceFileUrl!=='function')throw Error('Open Source delivery and receive the original bundle for this case.');
+      const result=await sourceFileUrl(copy(original));
+      if(destroyed||stamp!==epoch)return;
+      const url=new URL(typeof result==='string'?result:result?.url,window.location.href);
+      if(url.origin!==window.location.origin||!['http:','https:'].includes(url.protocol)||url.username||url.password)
+        throw Error('The original file reader must belong to this Support application.');
+      const link=document.createElement('a');link.href=url.href;link.download=name;link.click();
+      say('The original source file is downloading from its retained delivery.');
+    } catch(error){if(!destroyed&&stamp===epoch)say(error.message,true);}
+  }
+  async function reviewRetainedEdition(editionId) {
+    const stamp=++receivedEpoch,caseEpoch=epoch;
+    try {
+      const retained=commissioningWorkorder(state,editionId);
+      const result={packet:retained.packet,
+        html:new TextDecoder('utf-8',{fatal:true}).decode(commissioningFileBytes(state,retained.edition.html)),
+        checklist:new TextDecoder('utf-8',{fatal:true}).decode(commissioningFileBytes(state,retained.edition.checklist))};
+      const reviewed=await previewCommissioningWorkorder(state,result);
+      if(destroyed||stamp!==receivedEpoch||caseEpoch!==epoch)return false;
+      candidate={editionId};preview=reviewed;renderPending();
+      say('Review the retained workorder and its proposed task changes, then use this edition.');
+      pending.scrollIntoView({block:'center'});return true;
+    } catch(error){if(!destroyed&&stamp===receivedEpoch)say(error.message,true);return false;}
+  }
+
   function edited() {
     ensureState().revision++;epoch++;onChange();renderSummary();
     say('Implementation changes are in this case draft. Save case to retain them.');
@@ -129,7 +162,7 @@ export function mountCommissioningDesk({root,onChange=()=>{}}) {
   function renderPending() {
     pending.replaceChildren();
     if(!candidate||!preview)return;
-    el(pending,'h3','Use generated workorder: '+preview.workOrderRef);
+    el(pending,'h3',(candidate.editionId?'Use retained workorder: ':'Use generated workorder: ')+preview.workOrderRef);
     el(pending,'p',preview.newTasks.length+' new tasks · '+preview.changedTasks.length+
       ' changed source tasks · '+preview.removedTasks.length+' no longer in this source.');
     if(preview.scopeChanges.length)table(pending,['Scope field','Previous value','New value'],
@@ -138,7 +171,8 @@ export function mountCommissioningDesk({root,onChange=()=>{}}) {
       el(pending,'p','Your edited titles and acceptance text stay in place. Changed source text appears beside the assigned task for selective adoption.');
     button(pending,preview.recordedEdition?'Use retained edition':'Use this workorder',async()=>{
       const selected=candidate;
-      const next=await command('record_workorder',selected);
+      const next=selected.editionId?await command('select_workorder',{editionId:selected.editionId}):
+        await command('record_workorder',selected);
       if(next){candidate=null;preview=null;renderAll();body.querySelector('details').open=true;}
     });
   }
@@ -237,10 +271,38 @@ export function mountCommissioningDesk({root,onChange=()=>{}}) {
       renderMaterials(true);renderReceiving();renderMeasurements();renderHistory();
     });
     restoreFormDraft(form,draft);
+    const sourceFiles=commissioningSourceFiles(state);
+    if(sourceFiles.length) {
+      const sourceForm=el(materialsRoot,'form',undefined,'commissioning-form');
+      el(sourceForm,'h3','Link a file from the original source delivery');
+      const sourceGrid=el(sourceForm,'div',undefined,'commissioning-grid');
+      const sourceFile=field(sourceGrid,'File from source delivery',{options:sourceFiles.map(file=>
+        [file.path,file.path+' · '+file.bytes+' bytes'])});
+      const sourceKind=field(sourceGrid,'Source file purpose',{value:'source',options:[
+        ['source','Original source'],['deliverable','Customer deliverable'],['installation','Installation / configuration'],
+        ['observation','Receiving observation'],['guide','Operating guide']]});
+      const sourceDescription=field(sourceGrid,'What this source file delivers',{type:'textarea'});
+      const sourceReference=field(sourceGrid,'Source file reference');
+      const sourceTasks=selectMany(sourceGrid,'Related source tasks',state.tasks);
+      const sourceSubmit=el(sourceForm,'button','Link original source file');sourceSubmit.type='submit';
+      sourceForm.addEventListener('submit',async event=>{
+        event.preventDefault();if(busy)return;
+        const selected=sourceFiles.find(file=>file.path===sourceFile.value);if(!selected)return;
+        const name=selected.path.split('/').at(-1);
+        const mediaType=name.endsWith('.json')?'application/json':name.endsWith('.html')?'text/html':
+          name.endsWith('.csv')?'text/csv':name.endsWith('.md')?'text/markdown':'application/octet-stream';
+        const next=await command('add_material',{id:'material-'+crypto.randomUUID(),name,mediaType,
+          editionId:selected.editionId,sourceFile:selected.sourceFile,kind:sourceKind.value,
+          description:sourceDescription.value,reference:sourceReference.value,taskIds:selections(sourceTasks)});
+        if(next){renderMaterials(true);renderReceiving();renderMeasurements();renderHistory();}
+      });
+      restoreFormDraft(sourceForm,draft);
+    }
     const rows=table(materialsRoot,['File','Purpose / reference','Recorded','Download'],state.materials.map(row=>[
       row.name,row.description+(row.reference?'\n'+row.reference:''),row.recordedAt+'\n'+row.actor,'']));
     [...rows.rows].forEach((tr,i)=>{const material=state.materials[i];
-      button(tr.cells[3],'Download original',()=>download(material.name,commissioningFileBytes(state,material.sha256),material.mediaType));
+      const original=commissioningOriginalFiles(state).find(file=>file.name==='materials/'+material.id+'/'+material.name);
+      button(tr.cells[3],'Download original',()=>downloadOriginal(original,material.name,material.mediaType));
     });
   }
   function renderReceiving(reset=false) {
@@ -343,31 +405,21 @@ export function mountCommissioningDesk({root,onChange=()=>{}}) {
     const toolbar=el(historyRoot,'div',undefined,'commissioning-toolbar');
     button(toolbar,'Download implementation report',()=>download('merchant-implementation.html',commissioningReport(state),'text/html'));
     button(toolbar,'Download task table',()=>download('merchant-implementation-tasks.csv',commissioningTasksCsv(state),'text/csv'));
-    button(toolbar,'Download complete implementation',()=>download('merchant-commissioning.json',JSON.stringify(state,null,2)+'\n'));
-    el(historyRoot,'p','Save case and use the existing complete case handoff to carry source captures, workorders, implementation, receiving and original deliverable bytes together.');
+    button(toolbar,'Download implementation record',()=>download('merchant-commissioning.json',JSON.stringify(state,null,2)+'\n'));
+    el(historyRoot,'p',state.editions.some(edition=>edition.sourceBundle)?
+      'Save case and use Source delivery to carry the complete original packages, workplan and receiving to the next operator. Each retained edition keeps its original file inventory.':
+      'Save case and use the existing complete case handoff to carry source captures, workorders, implementation, receiving and original deliverable bytes together.');
     const rows=table(historyRoot,['Workorder','Generated / recorded by','Exact packet','Selection'],
       state.editions.map(row=>{const packet=commissioningWorkorder(state,row.id).packet;return [
         packet.workOrderRef+'\n'+row.id,packet.generatedAt+'\n'+row.actor,row.packet,''];}));
     [...rows.rows].forEach((tr,i)=>{const edition=state.editions[i];
       if(edition.id===state.activeEditionId)el(tr.cells[3],'span','Selected');
-      else button(tr.cells[3],'Review and use this edition',async()=>{
-        const retained=commissioningWorkorder(state,edition.id),inputs={};
-        for(const [key,sha] of Object.entries(edition.inputs)) {
-          const bytes=commissioningFileBytes(state,sha);
-          inputs[key]=key==='supportText'?new TextDecoder('utf-8',{fatal:true}).decode(bytes):encodeCommissioningBytes(bytes);
-        }
-        if(edition.runtimeMapping)inputs.inputs=copy(edition.runtimeMapping);
-        await receiveWorkorder({packet:retained.packet,
-          html:new TextDecoder('utf-8',{fatal:true}).decode(commissioningFileBytes(state,edition.html)),
-          checklist:new TextDecoder('utf-8',{fatal:true}).decode(commissioningFileBytes(state,edition.checklist))},
-          inputs,edition.sourceCase);
-        pending.scrollIntoView({block:'center'});
-      });
+      else button(tr.cells[3],'Review and use this edition',()=>reviewRetainedEdition(edition.id));
     });
     const originals=commissioningOriginalFiles(state);
     const files=table(historyRoot,['Original file','Bytes','Download'],originals.map(row=>[row.name,row.bytes,'']));
-    [...files.rows].forEach((tr,i)=>{const file=originals[i];button(tr.cells[2],'Download',()=>download(file.name.split('/').at(-1),
-      commissioningFileBytes(state,file.sha256),'application/octet-stream'));});
+    [...files.rows].forEach((tr,i)=>{const file=originals[i];button(tr.cells[2],'Download',()=>
+      downloadOriginal(file,file.name.split('/').at(-1)));});
     const events=el(historyRoot,'details');el(events,'summary',state.events.length+' retained implementation operations');
     table(events,['Recorded','Operator','Operation','Request'],state.events.slice().reverse().map(row=>[row.recordedAt,row.actor,readable(row.type),row.id]));
   }
@@ -387,12 +439,15 @@ export function mountCommissioningDesk({root,onChange=()=>{}}) {
   }
   renderAll();
   return {
+    sourceRoot,
+    currentActor(){return actor.value.trim();},
     read(){return copy(state);},
     async prepare(value){return validateCommissioning(value);},
     apply(value){epoch++;receivedEpoch++;state=copy(value);candidate=null;preview=null;page=0;renderWork.search='';renderWork.retired=false;
       if(!actor.value&&state?.plan.implementationOwner)actor.value=state.plan.implementationOwner;
       renderAll(true);say(state?'Retained implementation and receiving reopened.':'Generate a workorder above, then use it here.');},
     receiveWorkorder,
+    configureSourceDelivery({fileUrl}={}){if(typeof fileUrl!=='function')throw Error('Supply the original source file reader');sourceFileUrl=fileUrl;},
     invalidateWorkorder(){receivedEpoch++;candidate=null;preview=null;renderPending();},
     async mergeSaved(value,{canReplace=()=>true}={}) {
       // The original case writer may add later immutable history during restore.
