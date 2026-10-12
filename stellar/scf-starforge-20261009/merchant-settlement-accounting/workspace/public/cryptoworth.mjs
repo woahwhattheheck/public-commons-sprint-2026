@@ -198,6 +198,7 @@ function planFiles(target,id,list,{captureId}={}){
 async function openPlan(id,{select=true}={}){
  if(!id)throw problem('Choose a saved import plan.');
  const generation=++planGeneration,value=await api('/plans/'+enc(id));if(generation!==planGeneration)return;
+ for(const kind of ['capture','return','rollback'])if(previews[kind]&&previews[kind].planId!==id)await invalidate(kind);
  selectedPlan=id;planDetail=value;
  if(select){$('saved-plan').value=id;$('capture-plan').value=id;}
  const plan=value.plan??{},record=value.record??{};
@@ -254,7 +255,7 @@ function lookupFor(kind,value){
  if(kind==='plan')return {path:'/plans/'+enc(value.request.id),id:value.request.id,kind};
  if(kind==='capture')return {path:'/plans/'+enc(value.planId)+'/captures/'+enc(value.request.id),id:value.request.id,planId:value.planId,kind};
  if(kind==='return'||kind==='rollback')return {path:'/plans/'+enc(value.planId),id:value.request.id,planId:value.planId,list:kind==='return'?'returns':'rollbacks',kind};
- if(kind==='packet'){const id=value.inspection?.planId??value.inspection?.plan?.id??value.inspection?.summary?.planId;return {path:id?'/plans/'+enc(id):null,id,planId:id,kind};}
+ if(kind==='packet'){const id=value.inspection?.planId;return {path:id?'/plans/'+enc(id):null,id,planId:id,sha256:value.inspection?.sha256,packetSha256:value.inspection?.packetSha256,kind};}
  throw problem('This save kind is not supported.');
 }
 async function verifyWorkspace(){const next=await api('');if(next.workspaceId!==scope)throw problem('The local address now serves a different workspace. Refresh it before saving.',409,'WORKSPACE_REPLACED');return next;}
@@ -274,10 +275,23 @@ async function findPending(){
  if(!pending)return {found:false};await verifyWorkspace();
  if(!pending.lookup.path)return {found:false,unresolved:true};
  let value;try{value=await api(pending.lookup.path);}catch(error){if(error.status===404)return {found:false};throw error;}
- if(pending.lookup.list){const record=(value[pending.lookup.list]??value.record?.[pending.lookup.list]??[]).find(item=>item.id===pending.lookup.id);return {found:!!record,value:record};}
+ if(pending.kind==='packet'){
+  if(!pending.lookup.sha256||!pending.lookup.packetSha256)return {found:false,unresolved:true};
+  const record=(value.record?.receivedPackets??value.receivedPackets??[]).find(item=>item.sha256===pending.lookup.sha256&&item.packetSha256===pending.lookup.packetSha256);
+  return {found:!!record,value};
+ }
+ if(pending.lookup.list){
+  const record=(value[pending.lookup.list]??value.record?.[pending.lookup.list]??[]).find(item=>item.id===pending.lookup.id);
+  if(!record)return {found:false};
+  if(pending.kind==='return'){
+   if(record.previewSha256!==pending.previewSha256)throw problem('This accountant return belongs to different reviewed bytes. The original request remains retained.',409,'SAVED_REQUEST_CONFLICT');
+   return {found:record.status==='COMMITTED',unresolved:record.status!=='COMMITTED',value:record};
+  }
+  return {found:true,value:record};
+ }
  const original=value.profile??value.plan??value.capture??value.comparison??value;
  const observed=original.integrity?.sha256;
- if(pending.previewSha256&&observed&&observed!==pending.previewSha256)throw problem('This saved identity belongs to different reviewed bytes. The retained request is preserved for inspection.',409,'SAVED_REQUEST_CONFLICT');
+ if(pending.previewSha256&&observed!==pending.previewSha256)throw problem('This saved identity belongs to different reviewed bytes. The retained request is preserved for inspection.',409,'SAVED_REQUEST_CONFLICT');
  return {found:true,value};
 }
 async function finishPending(value){
@@ -297,6 +311,11 @@ async function sendPending(){
   const rejected=error.status>=400&&error.status<500&&error.code&&error.code!=='WORKSPACE_OPERATION_FAILED'&&!/ENOSPC|EIO|FAILED|INTERRUPT|REPLACED/.test(error.code);
   if(rejected&&!observation?.unresolved){const kind=pending.kind;await writeStored('pending',undefined);pending=null;await invalidate(kind);await refresh();tell(error.message+'\nYour form and source files remain available. Review the corrected request again.',true);return;}
   tell(error.message+'\nThe exact request is retained. Check its saved outcome or continue the same request.',true);updateControls();return;
+ }
+ if(pending?.kind==='return'||pending?.kind==='packet'){
+  const observation=await findPending();
+  if(!observation.found){tell('The original request is saved and its receiving work is still incomplete. Continue that same request.');updateControls();return;}
+  result=observation.value;
  }
  await finishPending(result);
 }
@@ -346,6 +365,7 @@ bind('profile-use','click',async()=>{
  const id=field('profile-existing');if(!id)throw problem('Choose a saved mapping.');const value=await api('/profiles/'+enc(id)),profile=value.profile??value;
  await loadSavedProfileFile(id,profile,value);
  draft.previousProfileId=profile.id;draft.template=profile.template;draft.columns=profile.columns;draft.constants=profile.constants??{};
+ $('profile-constants').replaceChildren();
  $('profile-name').value=(profile.name??'Mapping')+' · next edition';
  for(const [id,key]of [['target-entity-name','entityName'],['target-entity-id','entityId'],['target-connection-name','connectionName'],['target-connection-id','connectionId'],['target-merchant','merchantAccount']])$(id).value=profile.target?.[key]??'';
  $('profile-date').value=profile.date?.format??'';$('profile-zone').value=profile.date?.timeZone??'';$('template-delimiter').value=profile.template?.delimiter??'';

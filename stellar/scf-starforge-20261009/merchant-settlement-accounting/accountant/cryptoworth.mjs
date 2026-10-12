@@ -340,7 +340,7 @@ export function cryptoworthComparisonCsv(capture){
 }
 export function normalizeCryptoworthReturn(value){
   return {...who(value),captureId:id(value.captureId),status:value.status,bookRef:text(value.bookRef??'','external book reference',200,true),
-    accountCode:value.accountCode===undefined?null:text(value.accountCode,'external account code',160,true),note:text(value.note??'','accountant note',3000,true),
+    accountCode:value.accountCode==null?null:text(value.accountCode,'external account code',160,true),note:text(value.note??'','accountant note',3000,true),
     expectedParentId:value.expectedParentId? id(value.expectedParentId):null};
 }
 const needsEscape=value=>/^['\t\r\n]/.test(value)||/^\s*[=+\-@]/u.test(value)||(/^(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+\-]?\d+)?$/.test(value)&&value.replace(/\D/g,'').length>15);
