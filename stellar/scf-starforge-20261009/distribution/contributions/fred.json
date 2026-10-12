@@ -15,5 +15,8 @@
     "./seller/fred/project": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/fred/project.mjs",
     "./seller/fred/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/fred/workspace.mjs",
     "./seller/fred/receiver": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/fred/receiver.mjs"
+  },
+  "applicationProviders": {
+    "fred": "stellar/scf-starforge-20261009/distribution/runtime-workspace/providers/fred.mjs"
   }
 }

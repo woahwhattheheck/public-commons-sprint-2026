@@ -15,5 +15,8 @@
     "./seller/webdav/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/webdav/workspace.mjs",
     "./seller/webdav/server": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/webdav/server.mjs",
     "./seller/webdav/packet": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/webdav/packet.mjs"
+  },
+  "applicationProviders": {
+    "webdav": "stellar/scf-starforge-20261009/distribution/runtime-workspace/providers/webdav.mjs"
   }
 }

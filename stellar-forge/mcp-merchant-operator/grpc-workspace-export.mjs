@@ -5,7 +5,9 @@ export { grpcCanonical };
 
 export const GRPC_EXPORT_SCHEMA = 'stellar-forge.grpc-workspace-export.v1';
 export const GRPC_EXPORT_MANIFEST = 'grpc-workspace-export.json';
-export const GRPC_EXPORT_MAX_BYTES = 64 * 1024 * 1024;
+export const GRPC_STREAM_EXPORT_MAX_BYTES = 1024 * 1024 * 1024;
+export const GRPC_EXPORT_MAX_BYTES = GRPC_STREAM_EXPORT_MAX_BYTES + 40 * 1024 * 1024;
+const ORDINARY_EXPORT_MAX_BYTES = 64 * 1024 * 1024;
 export const GRPC_CUSTOMER_FILES = Object.freeze([
   { path: 'methods.json', maximum: 4 * 1024 * 1024 },
   { path: 'openapi.json', maximum: 16 * 1024 * 1024 },
@@ -31,7 +33,7 @@ export function parseGrpcExportManifest(bytes, exportId) {
   if (!plain(manifest) || Object.keys(manifest).some(key => !['schema', 'exportId', 'workspace', 'kind', 'original', 'files'].includes(key)) ||
       manifest.schema !== GRPC_EXPORT_SCHEMA || !SHA.test(manifest.exportId ?? '') ||
       exportId !== undefined && manifest.exportId !== exportId || !ALIAS.test(manifest.workspace ?? '') ||
-      !['customer', 'revision', 'attempt', 'result'].includes(manifest.kind) || !plain(manifest.original) ||
+      !['customer', 'revision', 'attempt', 'stream', 'result'].includes(manifest.kind) || !plain(manifest.original) ||
       !Array.isArray(manifest.files) || manifest.files.length < 1 || manifest.files.length > 7 ||
       grpcExportIdentity(manifest) !== manifest.exportId) invalid();
   const original = manifest.original;
@@ -42,8 +44,11 @@ export function parseGrpcExportManifest(bytes, exportId) {
       original.topic !== undefined && (typeof original.topic !== 'string' || original.topic.length > 160)) invalid();
   if (manifest.kind === 'customer' && (!original.preparation || !original.revision) ||
       manifest.kind === 'revision' && !original.revision ||
-      manifest.kind === 'attempt' && (!original.operationId || !original.revision)) invalid();
+      ['attempt', 'stream'].includes(manifest.kind) && (!original.operationId || !original.revision)) invalid();
+  const stream = manifest.kind === 'stream' || manifest.kind === 'attempt' && manifest.files.length === 2;
   const expected = manifest.kind === 'customer' ? GRPC_CUSTOMER_FILES
+    : stream ? [{ path: 'grpc-attempt.json', maximum: 40 * 1024 * 1024 },
+      { path: 'grpc-stream.ndjson', maximum: GRPC_STREAM_EXPORT_MAX_BYTES }]
     : [{ path: manifest.kind === 'revision' ? 'grpc-revision.json' : manifest.kind === 'attempt' ? 'grpc-attempt.json' : 'grpc-result.json', maximum: 40 * 1024 * 1024 }];
   if (manifest.files.length !== expected.length) invalid();
   let total = 0;
@@ -56,6 +61,6 @@ export function parseGrpcExportManifest(bytes, exportId) {
         !/^[a-z][a-z0-9.+-]*\/[a-z0-9.+-]+(?:; charset=utf-8)?$/.test(file.contentType)) invalid();
     total += file.bytes;
   }
-  if (total > GRPC_EXPORT_MAX_BYTES) invalid();
+  if (total > (stream ? GRPC_EXPORT_MAX_BYTES : ORDINARY_EXPORT_MAX_BYTES)) invalid();
   return manifest;
 }

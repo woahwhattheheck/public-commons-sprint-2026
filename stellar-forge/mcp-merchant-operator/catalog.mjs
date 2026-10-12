@@ -1,4 +1,6 @@
 import { merchantProviderConfigured } from './providers.mjs';
+import { stacWorkspaceTools } from './catalog/stac-workspace.mjs';
+import { fredWorkspaceTools } from './catalog/fred-workspace.mjs';
 import { apiPassWorkspaceTools } from './api-pass-protocol.mjs';
 // MIT. Original tool metadata; provider runtimes load only when selected.
 import { CLIENT_EXPORT_MANIFEST, CLIENT_EXPORT_FILES } from '../../stellar/scf-starforge-20261009/sf30-seller-sdk/developer/client-export-contracts.mjs';
@@ -18,6 +20,7 @@ import { odataWorkspaceTools } from './catalog/odata-workspace.mjs';
 import { worldbankWorkspaceTools } from './catalog/worldbank-workspace.mjs';
 import { fiscalDataWorkspaceTools } from './catalog/fiscaldata-workspace.mjs';
 import { geocodioWorkspaceTools } from './catalog/geocodio-workspace.mjs';
+import { censusGeocoderWorkspaceTools } from './catalog/census-geocoder-workspace.mjs';
 import { webDavWorkspaceTools } from './catalog/webdav-tools.mjs';
 import { edgarWorkspaceTools } from './catalog/sec-edgar-tools.mjs';
 import { sheetsWorkspaceTools } from './catalog/sheets-workspace.mjs';
@@ -36,11 +39,14 @@ import { clinicalTrialsWorkspaceTools } from './catalog/clinicaltrials-workspace
 import { baserowWorkspaceTools } from './catalog/baserow-workspace.mjs';
 import { usgsWorkspaceTools } from './catalog/usgs-workspace.mjs';
 import { feedsWorkspaceTools } from './catalog/feeds-workspace.mjs';
+import { dspaceOperatorTools } from './catalog/dspace-operators.mjs';
+import { grantWorkspaceTools } from './catalog/grant-workspace.mjs';
 import { grpcWorkspaceTools } from './catalog/grpc-workspace.mjs';
 import { datasetLifecycleTools } from './catalog/dataset-lifecycle.mjs';
 import { openapiWorkspaceTools } from './catalog/openapi-workspace.mjs';
 import { harWorkspaceTools } from './catalog/har-workspace.mjs';
 import { n8nWorkspaceTools } from './catalog/n8n-workspace.mjs';
+import { paidJobWorkspaceTools } from './catalog/paid-jobs.mjs';
 import { publisherTools } from './catalog/publisher.mjs';
 import { arcgisWorkspaceTools } from './catalog/arcgis-workspace.mjs';
 import { pricingTools } from './catalog/pricing.mjs';
@@ -66,6 +72,8 @@ function tool(name, description, properties = {}, required = [], { readOnly = fa
 }
 
 const familyTools = {
+  fredWorkspaces: fredWorkspaceTools(tool),
+  stacWorkspaces: stacWorkspaceTools(tool),
   apiPassWorkspaces: apiPassWorkspaceTools(tool),
   discovery: discoveryTools(tool),
   cache: cacheControlTools(tool),
@@ -82,6 +90,7 @@ const familyTools = {
   worldbankWorkspaces: worldbankWorkspaceTools(tool),
   fiscalDataWorkspaces: fiscalDataWorkspaceTools(tool),
   geocodioWorkspaces: geocodioWorkspaceTools(tool),
+  censusGeocoderWorkspaces: censusGeocoderWorkspaceTools(tool),
   webdavWorkspaces: webDavWorkspaceTools(tool),
   edgarWorkspaces: edgarWorkspaceTools(tool),
   sheetsWorkspaces: sheetsWorkspaceTools(tool),
@@ -100,11 +109,14 @@ const familyTools = {
   baserowWorkspaces: baserowWorkspaceTools(tool),
   usgsWorkspaces: usgsWorkspaceTools(tool),
   feedsWorkspaces: feedsWorkspaceTools(tool),
+  dspaceOperators: dspaceOperatorTools(tool),
+  grantWorkspaces: grantWorkspaceTools,
   grpcWorkspaces: grpcWorkspaceTools(tool),
   dataset: datasetLifecycleTools(tool),
   openapiWorkspaces: openapiWorkspaceTools(tool),
   harWorkspaces: harWorkspaceTools(tool),
   n8nWorkspaces: n8nWorkspaceTools(tool),
+  paidJobWorkspaces: paidJobWorkspaceTools(tool),
   publishers: publisherTools(tool),
   arcgisWorkspaces: arcgisWorkspaceTools(tool),
   pricing: pricingTools(tool),
@@ -159,6 +171,8 @@ const MERCHANT_TOOLS = [
     { exportId: idSchema, readId: { type: 'string' } }, ['exportId', 'readId'], { readOnly: true, idempotent: true }),
   tool('merchant_operations', 'Open the original merchant operations, retained history and private availability controls for this process-owned running instance. The control link grants availability changes; keep it in the operator session.',
     { instanceId: instanceSchema }, ['instanceId'], { readOnly: true, idempotent: true }),
+  ...familyTools.stacWorkspaces,
+  ...familyTools.fredWorkspaces,
   ...familyTools.apiPassWorkspaces,
   ...familyTools.discovery,
   ...familyTools.cache,
@@ -175,6 +189,7 @@ const MERCHANT_TOOLS = [
   ...familyTools.worldbankWorkspaces,
   ...familyTools.fiscalDataWorkspaces,
   ...familyTools.geocodioWorkspaces,
+  ...familyTools.censusGeocoderWorkspaces,
   ...familyTools.webdavWorkspaces,
   ...familyTools.edgarWorkspaces,
   ...familyTools.sheetsWorkspaces,
@@ -193,11 +208,14 @@ const MERCHANT_TOOLS = [
   ...familyTools.baserowWorkspaces,
   ...familyTools.usgsWorkspaces,
   ...familyTools.feedsWorkspaces,
+  ...familyTools.dspaceOperators,
+  ...familyTools.grantWorkspaces,
   ...familyTools.grpcWorkspaces,
   ...familyTools.dataset,
   ...familyTools.openapiWorkspaces,
   ...familyTools.harWorkspaces,
   ...familyTools.n8nWorkspaces,
+  ...familyTools.paidJobWorkspaces,
   ...familyTools.publishers,
   ...familyTools.arcgisWorkspaces,
   ...familyTools.pricing,
