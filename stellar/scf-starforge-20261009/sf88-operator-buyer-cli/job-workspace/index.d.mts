@@ -1,6 +1,6 @@
 import type { Server } from 'node:http';
 import type { Library, Resource, Scan } from '../resource-library/library.mjs';
-import type { JobIntake, IntakeStatus } from './intake/index.mjs';
+import type { JobIntake, IntakeStatus, InputStorageLimits } from './intake/index.mjs';
 export * from './intake/index.mjs';
 
 export type JobState = 'PREPARED' | 'AWAITING_SETTLEMENT' | 'QUEUED' | 'RUNNING' |
@@ -73,6 +73,7 @@ export interface WorkspaceOptions {
   transport?: {mode: 'explicit-connect'; origin: string} & (
     {proxyUrl: string; proxyEnv?: never} | {proxyUrl?: never; proxyEnv: string});
   fetchImpl?: typeof fetch; requestTimeoutMs?: number; maxConcurrent?: number; checkout?: CheckoutOptions;
+  inputFileStorage?: InputStorageLimits; transferTimeoutMs?: number;
 }
 export function openJobWorkspace(options: WorkspaceOptions): Promise<JobWorkspace>;
 export type JobWorkspaceLanding = 'request' | 'checkout' | 'jobs' | 'library' | 'collections';

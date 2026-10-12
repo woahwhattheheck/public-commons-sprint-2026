@@ -504,6 +504,12 @@ Execution continues through the original SF88 launcher, SF31 response writer, se
 Focused local composition check (Node 22.3+ with module mocks): `node --experimental-test-module-mocks --test stellar/scf-starforge-20261009/sf88-operator-buyer-cli/test/response-delivery.test.mjs`. It uses original SF31 transport/writer and SF82 evidence with a substituted privileged SF81 constructor and local Response streams; it does not execute terminal approval, a signer, network or payment.
 
 
+
+The same Dataset runner now supports a stopped, expired and untransferred native
+reservation through its [original-generation recovery workflow](DATASETS.md#continue-an-expired-untransferred-reservation).
+It retains the old attempt, authenticates the governor release and requires fresh
+consent for the same request before the original signer can continue.
+
 ## Interrupted native transport
 
 Normal execution now saves the original signing and HTTP boundaries in the private evidence directory. The Node operation's `inspect()` result includes a read-only `transportCheckpoint` with kernel-writer state, original file hashes and retained response-header status. See [Recovering an interrupted native buyer transport](ATTEMPT_RECOVERY.md) for the exact phases and the original lost-output consumer interface.
