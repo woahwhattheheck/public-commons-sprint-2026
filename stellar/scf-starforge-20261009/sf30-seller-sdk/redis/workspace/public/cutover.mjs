@@ -259,7 +259,7 @@ async function sendAction(name,body){
   if(pending)throw new Error('Read or continue the original retained request before starting another mutation.');
   pending={workspaceId:storageId,directory:state.directory,edition:state.edition,action:name,body:copy(body),
     operationId:state.operationId,inputCanonicalSha256:state.inputCanonicalSha256,inputSha256:state.inputSha256,
-    resultSha256:state.resultSha256,createdAt:new Date().toISOString()};
+    resultSha256:state.resultSha256,previousAttemptId:state.progress?.attemptId??null,createdAt:new Date().toISOString()};
   await pendingSave();
   return dispatchPending();
 }
@@ -308,7 +308,8 @@ async function reconcilePending(continueIt=false){
   const mode=pending.body.mode;
   const complete=!current.attached&&!current.lastFailure&&(mode==='handover'
     ?current.handover?.state==='READY'&&current.handover.resultSha256===pending.resultSha256
-    :current.progress?.mode===mode&&current.progress.inputSha256===current.inputSha256&&current.progress.state==='COMPLETED');
+    :current.progress?.mode===mode&&current.progress.inputSha256===current.inputSha256&&
+      current.progress.state==='COMPLETED'&&current.progress.attemptId!==pending.previousAttemptId);
   if(complete){
     pending=null;await pendingSave();renderState();status('Original '+mode+' outcome retained: '+(mode==='handover'?'HANDOVER READY':current.result?.status??current.progress.outcome));
     await refreshHistory();return;
