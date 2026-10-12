@@ -79,10 +79,10 @@ export async function odataProcessIdentity(pid = process.pid) {
     process.kill(pid, 0);
     return { pid, ppid: pid === process.pid ? process.ppid : null, start: null };
   }
-  const raw = await readFile('/proc/' + pid + '/stat', 'utf8');
+  const raw = await readFile(pid === process.pid ? '/proc/self/stat' : '/proc/' + pid + '/stat', 'utf8');
   const fields = raw.slice(raw.lastIndexOf(')') + 2).trim().split(/\s+/);
   need(fields.length >= 20 && /^[0-9]+$/.test(fields[19]), 'The original OData process changed.');
-  return { pid, ppid: Number(fields[1]), start: fields[19] };
+  return { pid, ppid: pid === process.pid ? process.ppid : Number(fields[1]), start: fields[19] };
 }
 
 export async function prepareODataLaunch({ workspace, expectedIdentity, liveId, expectedLive } = {}) {

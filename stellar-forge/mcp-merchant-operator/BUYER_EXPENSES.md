@@ -198,3 +198,9 @@ The capture and period-close responses were deliberately discarded after success
 The trusted receiver reopened all 14 native tables and 18 project members with the included Python application. It recovered the same capture and close without changing revision 22, adding a capture, or creating a payment. This was an internal continuation of the existing purchase and operator review.
 
 The retained complete project is 87,394 bytes, SHA256 `9156505408514205f52caa6dcd2b5c57a1b20f79a321b3ff7bdd7a43cd3018bb`. The native workflow ran the reviewed expense source at `dccba68845a93420f409d76ce7f28cb40e02717a`; subsequent shared-host composition preserves the current Redis and source-workspace integrations. All owned services closed on completion.
+
+### Original remote-MCP source joined to the same case
+
+The subsequent original-purchase continuation reached revision 29 through `mcp_register`, source acceptance, allocation, period review/close and retained export. Four existing MySQL HPD quotes produced one exact-bound 50,000-atomic-unit expense, one separately carried unresolved signed quote and two unsigned rejections. The original D173 allocation and 10,000-unit unsent reservation remained intact; the new issued expense total was 60,000 atomic units in the same original testnet asset.
+
+The complete receiving project retained both native source kinds, all 14 tables, 14 committed requests and 24 project members, including the read-only quote-reader closure. The same case and issued edition reopened with no new source capture or payment. The original buyer's native reconciliation reused its existing optional Stellar SDK runtime; the expense capture itself required only Node's standard library. Desktop and mobile inspection of the included source completed with no page errors, and all owned processes closed.
