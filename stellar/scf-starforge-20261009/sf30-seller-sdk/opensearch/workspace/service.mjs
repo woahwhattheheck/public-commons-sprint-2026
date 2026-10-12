@@ -201,10 +201,14 @@ class OpenSearchWorkspace {
     return { type: name.endsWith('.json') ? 'application/json; charset=utf-8' : 'application/octet-stream',
       filename: basename(name), body: raw };
   }
-  async close() {
-    if (this.closed) return;
+  close() {
+    if (this.closeTask) return this.closeTask;
     this.closed = true;
-    await Promise.allSettled([...this.active.values()]);
-    try { await this.deployment.close(); } finally { this.store.close(); }
+    this.closeTask = (async () => {
+      await Promise.allSettled([...this.active.values()]);
+      await this.deployment.close();
+      this.store.close();
+    })().catch(error => { this.closeTask = null; throw error; });
+    return this.closeTask;
   }
 }
