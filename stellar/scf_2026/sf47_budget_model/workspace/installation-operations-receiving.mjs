@@ -34,9 +34,10 @@ async function exactFile(filename,bytes){
   const old=await optional(filename);
   if(old){need(old.equals(bytes),'Existing original file differs: '+filename);return;}
   const temporary=filename+'.pending-'+randomUUID(),fd=await open(temporary,'wx',0o600);
-  try{await fd.writeFile(bytes);await fd.sync();}finally{await fd.close();}
-  try{try{await link(temporary,filename);}catch(error){if(error.code!=='EEXIST')throw error;
-    need((await readFile(filename)).equals(bytes),'Concurrent original file differs: '+filename);}
+  try{
+    try{await fd.writeFile(bytes);await fd.sync();}finally{await fd.close();}
+    try{await link(temporary,filename);}catch(error){if(error.code!=='EEXIST')throw error;
+      need((await readFile(filename)).equals(bytes),'Concurrent original file differs: '+filename);}
     const parent=await open(dirname(filename),'r');try{await parent.sync();}finally{await parent.close();}
   }finally{await unlink(temporary).catch(()=>{});}
 }
@@ -78,7 +79,8 @@ async function main(){
         label:'Original SCF operating case v37',mediaType:'application/zip'}}:{}}]))};
   const connectionFile=join(options.work,'connection.json');await exactFile(connectionFile,json(connection));
   const configured=await readGrantWorkspaceConfiguration(connectionFile);
-  const provider=new MerchantGrantWorkspaces({grantWorkspaces:configured,exportsDirectory:join(options.work,'exports')});
+  const providerOptions={grantWorkspaces:configured,exportsDirectory:join(options.work,'exports')};
+  let provider=new MerchantGrantWorkspaces(providerOptions);
   const phaseRoot=join(options.work,'phases');
   async function originalBytes(snapshot){
     need(snapshot.retention?.state==='COMPLETE'&&snapshot.id,'The native response must retain its complete original bytes.');
@@ -126,8 +128,8 @@ async function main(){
   try{
     const workspaces=await provider.call('merchant_grant_workspaces');
     await exactFile(join(options.work,'native-source-bindings-'+sha(json(workspaces))+'.json'),json(workspaces));
-    for(const workspace of workspaces.workspaces)
-      await provider.call('merchant_grant_open',{workspace:workspace.workspace,expectedSelectionSha256:workspace.selectionSha256});
+    const sourceBinding=workspaces.workspaces.find(value=>value.workspace==='source');
+    await provider.call('merchant_grant_open',{workspace:'source',expectedSelectionSha256:sourceBinding.selectionSha256});
     const imported=await call('import-original-case','case_import',{workspace:'source',input:{hostInput:'original_case'},
       expectedInputSha256:ORIGINAL_SHA,name:'Routescan customer Installation operating case — original SCF source',
       requestId:requestId('import-original-case'),actor:ACTOR});
@@ -232,6 +234,10 @@ async function main(){
     const export2=await call('export-edition-2','export',{...sourceArgs(caseId),kind:'installation',installationId,revision:2},true);
     const edition2Zip=join(options.work,'delivery','Routescan_Installation_Edition_2.zip');
     await exactFile(edition2Zip,export2.bytes);
+    await provider.close();
+    provider=new MerchantGrantWorkspaces(providerOptions);
+    const receivingBinding=workspaces.workspaces.find(value=>value.workspace==='receiving');
+    await provider.call('merchant_grant_open',{workspace:'receiving',expectedSelectionSha256:receivingBinding.selectionSha256});
     const received=await call('receive-selected-edition','case_import',{workspace:'receiving',
       input:{snapshotId:export2.snapshot.id,sourceWorkspace:'source'},expectedInputSha256:export2.snapshot.file.sha256,
       name:'Routescan Installation — complete received operating case',requestId:requestId('receive-selected-edition'),actor:ACTOR});
@@ -285,8 +291,6 @@ async function main(){
   const bytes=await readFile(cliZip);
   delivery.cli={showSha256:cliShow.sha256,historyEditions:cliHistory.editions.length,export:cliExport};
   delivery.files.push({name:'Routescan_Installation_CLI_Export.zip',path:cliZip,bytes:bytes.length,sha256:sha(bytes)});
-  const finished=join(options.work,'result.json');
-  await exactFile(finished,json({...delivery,state:'COMPLETE'}));
   const openText='# Routescan Installation operating handover\n\n'+
     'Open Routescan_Installation_Edition_2.zip and its installation.html for the full operating instructions. '+
     'Import that entire ZIP through Delivery operations → Import complete case. The selected second edition, first edition, '+
@@ -297,6 +301,12 @@ async function main(){
     'operation-input.json, phase requests and native snapshots preserve the original save and receiving identities.\n\n'+
     'Source query: '+QUERY+'\n\nOperation: '+OPERATION+'\n';
   await exactFile(join(options.work,'delivery','OPEN_Routescan_Installation.md'),Buffer.from(openText));
+  for(const name of ['Routescan_Installation_CLI_Reopen.json','Routescan_Installation_CLI_History.json','OPEN_Routescan_Installation.md']){
+    const path=join(options.work,'delivery',name),raw=await readFile(path);
+    delivery.files.push({name,path,bytes:raw.length,sha256:sha(raw)});
+  }
+  const finished=join(options.work,'result.json');
+  await exactFile(finished,json({...delivery,state:'COMPLETE'}));
   process.stdout.write(JSON.stringify({operation:OPERATION,state:'COMPLETE',result:finished,
     sourceCaseId:delivery.sourceCaseId,receivingCaseId:delivery.receivingCaseId,installationId:delivery.installationId,
     editions:delivery.editions,files:delivery.files},null,2)+'\n');
