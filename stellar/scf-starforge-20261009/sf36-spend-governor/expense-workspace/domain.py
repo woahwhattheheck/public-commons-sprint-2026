@@ -239,7 +239,7 @@ def period_view(period, items, sources, centers, dispositions, closed_transfers=
             ref = row["network"] + "/" + ref.lower()
         return (row["network"], row["asset"], ref)
 
-    receipt_groups, exact_transfers = {}, {}
+    receipt_groups, exact_transfers, exact_spending = {}, {}, {}
     for item in items:
         row = item["row"]
         if row["state"] == "settled" and row.get("receipt_ref") and not item["missing"]:
@@ -248,6 +248,9 @@ def period_view(period, items, sources, centers, dispositions, closed_transfers=
             transfer = row.get("native_detail", {}).get("transfer_identity")
             if transfer:
                 exact_transfers.setdefault(transfer, []).append(item)
+            spending_key = item_reservation_key(item)
+            if spending_key is not None:
+                exact_spending.setdefault(spending_key, []).append(item)
 
     for item in items:
         row, coding = item["row"], item.get("coding")
@@ -353,6 +356,13 @@ def period_view(period, items, sources, centers, dispositions, closed_transfers=
                                    "native_payment": row.get("native_detail")})
         group = receipt_groups.get(receipt_key(row), [])
         exact = exact_transfers.get(row.get("native_detail", {}).get("transfer_identity"), [])
+        # The same original ledger row can be exposed directly and through its
+        # governed quote. Its physical ledger and complete request identity make
+        # this an exact duplicate even when the direct statement has no RPC object.
+        spending_key = item_reservation_key(item)
+        if spending_key is not None:
+            exact = list({entry["id"]: entry for entry in
+                [*exact, *exact_spending.get(spending_key, [])]}.values())
         exclude = False
         if len(group) > 1:
             same_transfer = len(exact) > 1
@@ -368,7 +378,7 @@ def period_view(period, items, sources, centers, dispositions, closed_transfers=
 
     # Two source rows with the same original native event cannot both become expense.
     included = {line["item_id"] for line in candidates}
-    for values in exact_transfers.values():
+    for values in [*exact_transfers.values(), *exact_spending.values()]:
         selected = included.intersection(item["id"] for item in values)
         if len(selected) > 1:
             for shared in issues:
