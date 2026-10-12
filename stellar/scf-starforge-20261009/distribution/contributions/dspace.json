@@ -34,5 +34,8 @@
   "commandDescriptions": {
     "dspace": "Select repository data, publish reviewed editions and receive complete customer output",
     "dspace-workspace": "Review repository metadata, compare editions and transfer complete projects in the browser"
+  },
+  "applicationProviders": {
+    "dspace": "stellar/scf-starforge-20261009/distribution/runtime-workspace/providers/dspace.mjs"
   }
 }
