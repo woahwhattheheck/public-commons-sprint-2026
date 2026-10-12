@@ -26,6 +26,10 @@ in their original HTTP servers and the source collector. The same guide is inclu
 at `source/stellar/scf-starforge-20261009/distribution/BROWSER_ASSETS.md` inside the
 installed package.
 
+## Product source selections
+
+Build `--selection water-operations` or `--selection woo-merchant` for a complete product with its original runtime, Applications and customer receiving. The default build retains the full toolkit. [Product source selections](SOURCE_SELECTIONS.md) explains committed recipes, installation, exact-source resume and measured package comparisons.
+
 ## Add and inspect source registrations
 
 Independent source capabilities register their commands, exports, runtime features
