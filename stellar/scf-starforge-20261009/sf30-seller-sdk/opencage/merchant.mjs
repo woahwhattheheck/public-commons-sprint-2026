@@ -125,13 +125,17 @@ export async function stageGeocodePackage(releaseRoot,applicationRoot,directory,
       'export const '+handlerName(product.id,true)+'=source.handlers['+JSON.stringify(handlerName(product.id,true))+'];',
     ]),'',
   ].join('\n');
-  const entryPath=join(app,bundle.manifest.identity+'.mjs');await putOnce(entryPath,Buffer.from(entry));
+  const entryBytes=Buffer.from(entry),handlerSha256=digest(entryBytes);
+  // The portable package can be opened by another installed source directory.
+  // Its generated entry also binds that exact directory; retain both identities.
+  const entryPath=join(app,bundle.manifest.identity+'-'+handlerSha256+'.mjs');
+  await putOnce(entryPath,entryBytes);
   await ensureReleaseStore(resolve(releaseRoot));
   const result=await stageRelease(resolve(releaseRoot),{id,label,
     spec:join(bundle.directory,'spec.json'),config:join(bundle.directory,'selections.json'),
     bindings:join(bundle.directory,'bindings.json'),
     runtime:{handlers:entryPath,port,...(facilitator?{facilitator}: {})}});
-  return {packageIdentity:bundle.manifest.identity,handlerSha256:digest(Buffer.from(entry)),result};
+  return {packageIdentity:bundle.manifest.identity,handlerSha256,result};
 }
 export { initReleaseStore,inspectRelease,compareReleases,listReleases,releaseStatus,activateRelease,rollbackRelease,runActiveRelease };
 export const exampleTerms=()=>({schema:TERMS,publicOrigin:'https://locations.example',

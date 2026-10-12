@@ -23,6 +23,9 @@ def main():
     parser.add_argument("--original-workspace",required=True,help="Original closed/guarded four-feature ArcGIS customer")
     parser.add_argument("--operation-dir",required=True)
     parser.add_argument("--spatial-extension",required=True,help="Installed signed spatial extension matching DuckDB1.5.6")
+    parser.add_argument("--chromium",help="Continue the same completed customer in an existing Chromium runtime")
+    parser.add_argument("--node",help="Existing Node executable for browser continuation")
+    parser.add_argument("--playwright",help="Existing Playwright index.js for browser continuation")
     args=parser.parse_args()
     package=Path(args.package).resolve(strict=True)
     original=Path(args.original_workspace).resolve(strict=True)
@@ -35,6 +38,26 @@ def main():
     from stellar_forge_buyer.duckdb_agent import copy_sparse
     from stellar_forge_buyer.storage import lock,dump,digest,private_directory
     result_file=operation/"native-gis-result.json"
+    def finish_browser():
+        if not args.chromium:return 0
+        command=[sys.executable,"-B",str(Path(__file__).with_name("native_spatial_browser.py")),
+                 "--operation-dir",str(operation),"--chromium",args.chromium]
+        if args.node:command += ["--node",args.node]
+        if args.playwright:command += ["--playwright",args.playwright]
+        try:
+            receiving=subprocess.run(command,capture_output=True,text=True,timeout=300)
+            if receiving.stdout:print(receiving.stdout,flush=True)
+            if receiving.stderr:print(receiving.stderr,file=sys.stderr,flush=True)
+            return receiving.returncode
+        except Exception as error:
+            print(json.dumps({"state":"BROWSER_INTERRUPTED","native_result":str(result_file),
+                              "detail":str(error)}),flush=True)
+            return 1
+    source_files={}
+    for module in sorted((package/"stellar_forge_buyer").glob("*.py")):
+        raw=module.read_bytes()
+        source_files[str(module.relative_to(package))]=hashlib.sha1(
+            b"blob "+str(len(raw)).encode()+b"\0"+raw).hexdigest()
     result={"schema":"stellar-forge.duckdb-gis.native-operation.v1","operation":"SCF-DUCKDB-GIS-CUSTOMER-5EEE-20261012",
             "started_at":datetime.now(timezone.utc).isoformat(),"original_workspace":str(original),
             "package":str(package),"extension":str(Path(args.spatial_extension).resolve()),"stages":[]}
@@ -43,6 +66,12 @@ def main():
         if previous.get("operation")!=result["operation"] or previous.get("original_workspace")!=str(original):
             raise RuntimeError("Native operation destination belongs to another source")
         result=previous
+        if result.get("state")=="COMPLETE":
+            print(json.dumps({"state":"REUSED_COMPLETE_NATIVE","result":str(result_file)}),flush=True)
+            return finish_browser()
+    revisions=result.setdefault("source_revisions",[])
+    if not revisions or revisions[-1]["files"]!=source_files:
+        revisions.append({"at":datetime.now(timezone.utc).isoformat(),"files":source_files})
     completed={s["name"]:s["value"] for s in result["stages"]}
     def reuse(name,operation):
         if name in completed:return completed[name]
@@ -169,7 +198,7 @@ def main():
         result.pop("error",None)
         result.update(state="COMPLETE",completed_at=datetime.now(timezone.utc).isoformat())
         dump(result_file,result);print(json.dumps({"state":"COMPLETE","result":str(result_file),"stages":len(result["stages"])}),flush=True)
-        return 0
+        return finish_browser()
     except BaseException as exc:
         result.update(state="INTERRUPTED",error={"type":type(exc).__name__,"code":getattr(exc,"code",None),
                       "detail":str(exc),"traceback":traceback.format_exc()},updated_at=datetime.now(timezone.utc).isoformat())

@@ -136,3 +136,4 @@ def copy_sparse(source, target, chunk_size=1024 * 1024):
             target.write(chunk)
         remaining -= len(chunk)
     target.truncate(size)
+

@@ -167,3 +167,35 @@ The continuation covers reviewed geometry/CRS, immutable layers, native area and
 - Spatial functions and GDAL readers: https://duckdb.org/docs/current/core_extensions/spatial/functions
 - GDAL COPY and CRS metadata: https://duckdb.org/docs/current/core_extensions/spatial/gdal
 - GeoParquet COPY options: https://duckdb.org/docs/current/sql/statements/copy
+
+
+## Continue the same customer in a browser
+
+The complete example in `examples/native_spatial_operation.py` can continue
+directly into the original local GIS page after native file receiving finishes.
+Pass an existing browser runtime; the operation records the exact customer,
+source files, map, query and download identities in its retained result.
+
+```bash
+python -B examples/native_spatial_operation.py \
+  --package /absolute/checkout/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python \
+  --original-workspace /absolute/original-customer/arcgis/workspace \
+  --operation-dir /absolute/private/gis-operation \
+  --spatial-extension /absolute/private/runtime/spatial.duckdb_extension \
+  --chromium /absolute/existing/chromium \
+  --node /absolute/existing/node \
+  --playwright /absolute/existing/node_modules/playwright/index.js
+```
+
+The browser opens the retained original review and native-coordinate map, uses
+the explicit projected-area and source-extent selection/clip controls, reopens
+the original saved recipe, and receives the same complete GeoPackage and
+GeoParquet exports. It then reopens the original export recipe and saved layer
+after a page reload, with desktop and mobile captures.
+
+A completed native result is reused when this command is resumed. A browser
+continuation can also be invoked directly with
+`examples/native_spatial_browser.py --operation-dir … --chromium … --playwright …`.
+Its `browser/browser-result.json` retains each completed screen action,
+complete file hashes and actual close/reopen result. The original workspace
+and native GIS result remain selected throughout the continuation.

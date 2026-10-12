@@ -1,6 +1,6 @@
 // MIT. Persistent acquisition using original SF88 execution and SF30 page contracts.
 import { constants } from 'node:fs';
-import { open, mkdir, lstat, readdir, realpath, unlink, stat } from 'node:fs/promises';
+import { open, mkdir, lstat, readdir, realpath, unlink, stat, rename } from 'node:fs/promises';
 import { dirname, join, resolve, isAbsolute } from 'node:path';
 import { hostname } from 'node:os';
 import { randomUUID } from 'node:crypto';
@@ -167,7 +167,12 @@ export async function createDatasetSession({directory, configPath, workspaceDire
   await privateDirectory(directory);
   await mkdir(join(directory, 'pages'), {mode:0o700});
   await mkdir(join(directory, 'evidence'), {mode:0o700});
-  await createJson(join(directory, 'session.json'), definition);
+  // mkdir above exclusively owns this NEW private session directory. Publish
+  // only a complete, synced definition; a failed write leaves the temporary
+  // file and no final session.json, without altering any existing session.
+  const pendingDefinition = join(directory, '.session-' + randomUUID() + '.json');
+  await createJson(pendingDefinition, definition);
+  await rename(pendingDefinition, join(directory, 'session.json'));
   await syncDirectory(directory);
   return inspectDatasetSession(directory);
 }

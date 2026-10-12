@@ -290,6 +290,9 @@ class DuckDBOperator:
                     expected_revision=_integer(body.get("expected_revision", 0), "revision"))
             if route in {"/api/exports", "/api/source-handoffs", "/api/handoffs"}:
                 return self._retained_action(route, body)
+            if route == "/api/compare-meanings":
+                _fields(body, ("before_id", "after_id"))
+                return self.workspace.compare_semantics(_identifier(body["before_id"]), _identifier(body["after_id"]))
             if route == "/api/compare":
                 _fields(body, ("before_id", "after_id"), ("keys", "max_rows"))
                 return self.workspace.compare(_identifier(body["before_id"]), _identifier(body["after_id"]),
@@ -363,12 +366,12 @@ def serve(workspace, *, port=0, export_root=None, handoff_root=None, spatial_ext
                 safe = re.sub(r'[^A-Za-z0-9_.-]', "_", name)
                 self.send_header("Content-Disposition", 'attachment; filename="' + safe + '"')
 
-        def _reply(self, status, body, mime="application/json;charset=utf-8"):
+        def _reply(self, status, body, mime="application/json;charset=utf-8", *, filename=None):
             payload = body if isinstance(body, bytes) else _json(body).encode()
             self.send_response(status)
             self.send_header("Content-Type", mime)
             self.send_header("Content-Length", str(len(payload)))
-            self._headers()
+            self._headers(filename)
             self.end_headers()
             if self.command != "HEAD":
                 self.wfile.write(payload)
@@ -433,6 +436,15 @@ def serve(workspace, *, port=0, export_root=None, handoff_root=None, spatial_ext
                         return self._reply(200, spatial_http.get(operator, url.path))
                 if url.path == "/api/state":
                     return self._reply(200, operator.state())
+                if len(parts) == 4 and parts[:2] == ["api", "editions"] and parts[3] in {"semantics", "semantics-file"}:
+                    with operator.mutex:
+                        edition_id = _identifier(parts[2])
+                        if parts[3] == "semantics":
+                            return self._reply(200, workspace.semantics(edition_id))
+                        raw = workspace.semantics_bytes(edition_id)
+                        if raw is None:
+                            return self._reply(404, {"error": "DUCKDB_EDITION_NO_SEMANTICS"})
+                        return self._reply(200, raw, filename="semantics.json")
                 if len(parts) == 3 and parts[:2] == ["api", "editions"]:
                     with operator.mutex:
                         return self._reply(200, workspace.edition(_identifier(parts[2])))
