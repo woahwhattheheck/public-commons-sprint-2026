@@ -69,14 +69,15 @@ export async function haystackStartup(request, text) {
   need(live.schema === STARTUP && live.workspaceId === expectedId && live.workspaceCreatedAt === state.createdAt &&
     live.instanceId === ready.instanceId && live.directory === directory && live.url === ready.url,
     "The live original Haystack application differs from the selected workspace.");
-  return { url: url.href, workspaceId: expectedId, original: live };
+  return { url: url.href, workspaceId: expectedId, original: live,
+    links: [{ label: "Point-list modelling", url: new URL("/semantic.html", url).href }] };
 }
 export default {
   schema: APPLICATION_PROVIDER_SCHEMA, id: "haystack-workspace", order: 395,
   catalog({ common, field }) {
-    return [{ id: "haystack-workspace", command: "haystack", title: "Haystack building turnover",
+    return [{ id: "haystack-workspace", command: "haystack", title: "Haystack building turnover and point modelling",
       terminal: false, requiredSource: ROOT + "cli.mjs",
-      description: "Import native building grids, inspect equipment and points, review complete typed tag proposals, compare saved editions and deliver editable operator workspaces.",
+      description: "Operate native building grids and corrective work, map original point lists, review saved semantic models and native Brick reports, and receive complete contractor workspaces. Use the shared environment file for the selected offline validator.",
       fields: [
         field("workspaceDirectory", "Haystack workspace", "path", true, "Select an initialized or received building-turnover workspace."),
         field("tokenFile", "Private access token", "path", false, "Optional private file containing the existing workspace access token."),
