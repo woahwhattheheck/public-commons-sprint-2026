@@ -159,7 +159,7 @@ export function mountGrpcHealth({ root, json, work, notice, storageKey, savedCur
     historyOffset = offset; historySnapshot = value.snapshot; listPage = value;
     E('health-history').replaceChildren();
     for (const row of value.items) {
-      const item = node('div', undefined, 'item');
+      const item = node('div', undefined, 'item'); item.dataset.operationId = row.id;
       item.append(node('strong', row.kind.toUpperCase() + ' · ' + (row.kind === 'list' ? row.services + ' services' : row.service || 'whole server')),
         node('p', row.phase + ' · ' + (row.reportedStatus ?? row.reason) + ' · ' + row.createdAt),
         action('Open original observation', () => work(() => openOriginal(row.id))));

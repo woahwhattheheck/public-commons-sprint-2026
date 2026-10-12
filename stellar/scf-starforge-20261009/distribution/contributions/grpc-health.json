@@ -13,7 +13,8 @@
     "stellar/scf-starforge-20261009/sf30-seller-sdk/grpc/health/health.proto",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/grpc/health/LICENSE",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/grpc/health/PROTOCOL.md",
-    "stellar-forge/mcp-merchant-operator/GRPC_HEALTH.md"
+    "stellar-forge/mcp-merchant-operator/GRPC_HEALTH.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/grpc/examples/health-server.mjs"
   ],
   "exports": {
     "./seller/grpc/health": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/grpc/health.mjs",
@@ -21,6 +22,7 @@
     "./seller/grpc/health-record": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/grpc/health-record.mjs",
     "./seller/grpc/health-receiving": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/grpc/health-receiving.mjs",
     "./merchant/mcp/grpc/health": "./source/stellar-forge/mcp-merchant-operator/grpc-health.mjs",
-    "./merchant/mcp/grpc/health-receiving": "./source/stellar-forge/mcp-merchant-operator/grpc-health-download.mjs"
+    "./merchant/mcp/grpc/health-receiving": "./source/stellar-forge/mcp-merchant-operator/grpc-health-download.mjs",
+    "./seller/grpc/health-example": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/grpc/examples/health-server.mjs"
   }
 }
