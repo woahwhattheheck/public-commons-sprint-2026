@@ -1,3 +1,5 @@
+import { createAutomationView } from './automation.mjs';
+
 const $ = selector => document.querySelector(selector);
 const all = selector => [...document.querySelectorAll(selector)];
 const list = value => Array.isArray(value) ? value : [];
@@ -9,7 +11,7 @@ const human = value => String(value ?? '').replace(/[_-]/g, ' ').replace(/\b\w/g
 const time = value => !value ? 'Not recorded' : Number.isFinite(Date.parse(value)) ? new Date(value).toLocaleString() : String(value);
 const short = value => String(value ?? '').slice(0, 12);
 const count = value => Array.isArray(value) ? value.length : value ?? 0;
-const tabs = [['overview','Manager overview'],['sources','Original CRM sources'],['config','Pipeline definitions'],['runs','Saved monitoring runs'],['attention','Daily attention'],['cohorts','Cohorts & trends'],['actions','Follow-up work'],['handoff','History & handover']];
+const tabs = [['overview','Manager overview'],['sources','Original CRM sources'],['config','Pipeline definitions'],['automation','Continuous monitoring'],['runs','Saved monitoring runs'],['attention','Daily attention'],['cohorts','Cohorts & trends'],['actions','Follow-up work'],['handoff','History & handover']];
 const reasonNames = {
   OVERDUE_DECLARED_NEXT_ACTION:'Declared next action is overdue',
   NO_PARSEABLE_DECLARED_NEXT_ACTION_DATE:'Next action date is missing or unreadable',
@@ -127,6 +129,7 @@ function selectProject(id) {
   captureDrafts(); ui.projectId=id; ui.data=null; ui.schema=null; ui.snapshotId=''; ui.snapshot=null; ui.deals=null; ui.dealOffset=0;
   ui.runId=''; ui.run=null; ui.report=null; ui.alerts=null; ui.alertOffset=0; ui.alertDetail=null; ui.cohorts=null; ui.cohortOffset=0;
   ui.compareId=''; ui.comparison=null; ui.actionId=''; ui.actionDetail=null;
+  automation.reset();
 }
 async function loadDetails() {
   if(!project()) return;
@@ -153,6 +156,7 @@ async function loadDetails() {
     if(ui.compareId&&ui.report&&['runs','cohorts'].includes(ui.tab)) ui.comparison=await request('/api/runs/'+uri(ui.runId)+'/compare?baseline='+uri(ui.compareId));
   } else if(!ui.runId) { ui.run=null; ui.report=null; }
   if(ui.actionId&&ui.tab==='actions') ui.actionDetail=await request('/api/actions/'+uri(ui.actionId));
+  if(ui.tab==='automation') await automation.load();
 }
 async function reloadData() {
   ui.index=await request('/api/state');
@@ -189,12 +193,12 @@ function jobsActive(data=ui.data) {
   return list(data?.jobs).some(j=>['queued','running','waiting','retry_wait','retrying'].includes(j.status)) ||
     list(data?.runs).some(r=>r.status==='queued') || list(data?.actions).some(a=>a.status==='executing'||a.reconciling);
 }
-function schedulePoll() { clearTimeout(ui.poll); if(jobsActive()) ui.poll=setTimeout(poll,1500); }
+function schedulePoll() { clearTimeout(ui.poll); if(ui.projectId&&(jobsActive()||automation.needsPolling())) ui.poll=setTimeout(poll,jobsActive()?1500:5000); }
 async function poll() {
   if(ui.busy) return schedulePoll();
   try {
     const latest=await request(base());
-    if(isEditing()||ui.pending) { ui.incoming=latest.project.revision!==project().revision; ui.data.jobs=latest.jobs; ui.data.actions=latest.actions; ui.data.runs=latest.runs; rememberCollections(); renderIncoming(); }
+    if(isEditing()||ui.pending) { ui.incoming=ui.incoming||latest.project.revision!==project().revision||automation.fingerprint(latest.automation)!==automation.fingerprint(ui.data.automation); ui.data.jobs=latest.jobs; ui.data.actions=latest.actions; ui.data.runs=latest.runs; ui.data.automation=latest.automation; rememberCollections(); renderIncoming(); }
     else { ui.data=latest; rememberCollections(); await loadDetails(); render(); }
   } catch(error) { tell(error.message+' Refresh to retrieve retained work.'); }
   finally { schedulePoll(); }
@@ -225,13 +229,16 @@ async function mutate(build, options={}, frozen=null) {
       if(options.projectRevision!==false&&project()) payload.revision=project().revision;
       sent={url:built.url,options:{method:'POST',headers:{'Content-Type':'application/json','X-Workspace-Request':'1'},body:JSON.stringify(payload)}};
     }
+    if(options.beforeSend) await options.beforeSend(sent);
     const result=await request(sent.url,sent.options); written=result; ui.pending=null; ui.incoming=false;
+    if(options.afterSaved) await options.afterSaved(result);
     if(options.draftKey) drafts.delete(options.draftKey);
     if(options.after) await options.after(result);
     await reloadData(); render(); tell(options.message||'Saved.'); return result;
   } catch(error) {
+    if(!written&&options.afterRejected) options.afterRejected(error);
     if(written) { ui.pending=null; tell('The operation was saved. Refresh the current view to continue: '+error.message); renderConflict(); }
-    else if(error.status===409&&['STALE_REVISION','STALE_PROJECT','STALE_REVIEW','STALE_ACTION'].includes(error.code)) { ui.pending={kind:'conflict',build,options,error:error.message,inspected:false}; renderConflict(); tell('Newer work is saved. Your draft remains available.'); }
+    else if(error.status===409&&['STALE_REVISION','STALE_PROJECT','STALE_REVIEW','STALE_ACTION','STALE_AUTOMATION'].includes(error.code)) { ui.pending={kind:'conflict',build,options,error:error.message,inspected:false}; renderConflict(); tell('Newer work is saved. Your draft remains available.'); }
     else if(error.transport&&sent) { ui.pending={kind:'uncertain',build,options,frozen:sent,error:error.message,inspected:false}; renderConflict(); tell('Inspect saved work, then retrieve the same operation using its retained request identifier.'); }
     else { tell(error.message); if($('#dialog').open) { const notice=document.createElement('div'); notice.className='notice'; notice.textContent=error.message; $('#dialog-body').prepend(notice); } }
   } finally { busy(false); schedulePoll(); }
@@ -386,10 +393,11 @@ function handoffPage() {
   return heading('History and handover','Keep the complete operating project together: original CRM bytes, versioned monitoring, manager decisions and native outcomes.')+
     `<div class="grid"><section class="card"><h2>Prepare a complete operating handover</h2><form data-action="export" data-draft="${esc(key)}">${field('name','Handover name',d.name,{required:true})}${select('runId','Featured monitoring run',[['','Complete project without a featured run'],...rows('runs').map(r=>[r.id,r.name||r.id])],d.runId)}<button class="primary">Create complete handover</button></form><p class="help">The portable recovery contains the full retained project, including its original source files and decision history. Keep it with the project’s authorised operators.</p></section>${restorePanel}</div><section class="card"><h2>Retained handovers</h2>${table(rows('exports'),[{label:'Handover',key:'name'},{label:'Created',render:e=>esc(time(e.createdAt))},{label:'Featured run',render:e=>esc(runName(e.runId))},{label:'Download',render:e=>link('Complete project recovery','/api/exports/'+uri(e.id)+'/download',true)}])}${moreButton('exports')}</section><section class="card"><h2>Operating history</h2>${table(rows('history'),[{label:'Time',render:e=>esc(time(e.at||e.createdAt||e.timestamp))},{label:'Operator',render:e=>esc(e.actor||'')},{label:'Operation',render:e=>esc(human(e.kind||e.type||e.action||e.event||''))},{label:'Retained outcome',render:e=>`<details><summary>Inspect original event</summary><pre>${esc(json(e))}</pre></details>`}])}</section>`;
 }
+const automation = createAutomationView({ ui, esc, uri, time, human, json, button, link, badge, empty, field, select, check, heading, metrics, kv, table, draft, values, mutate, openDialog, closeDialog, project, base, request, render, tell, openRun });
 function render() {
   $('#nav').innerHTML=tabs.map(([id,label])=>`<button type="button" data-tab="${id}" aria-current="${ui.tab===id?'page':'false'}">${esc(label)}</button>`).join('');
   $('#scope').innerHTML=scope();
-  const views={overview,sources:sourcesPage,config:configPage,runs:runsPage,attention:attentionPage,cohorts:cohortsPage,actions:actionsPage,handoff:handoffPage};
+  const views={overview,sources:sourcesPage,config:configPage,automation:automation.render,runs:runsPage,attention:attentionPage,cohorts:cohortsPage,actions:actionsPage,handoff:handoffPage};
   $('#content').innerHTML=views[ui.tab](); renderIncoming(); renderConflict();
 }
 async function go(tab) { if(ui.busy) return; captureDrafts(); busy(true); ui.tab=tab; try { await loadDetails(); render(); window.scrollTo(0,0); } finally { busy(false); schedulePoll(); } }
@@ -408,6 +416,7 @@ function reviewValues(d,current) {
 }
 async function handleButton(control) {
   captureDrafts(); const act=control.dataset.act,id=control.dataset.id;
+  if(act?.startsWith('monitor-')) return automation.handleButton(control);
   if(act==='tab') return go(control.dataset.tab);
   if(act==='new-project') return projectDialog();
   if(act==='close-dialog') return closeDialog();
@@ -461,6 +470,7 @@ async function handleButton(control) {
 }
 async function submitForm(form) {
   captureForm(form); const action=form.dataset.action,key=form.dataset.draft,id=form.dataset.id,projectId=ui.projectId;
+  if(action?.startsWith('monitor-')) return automation.submitForm(form);
   if(action==='project') return mutate(()=>({url:'/api/projects',data:{name:values(key).name}}),{projectRevision:false,draftKey:key,after:r=>{closeDialog();selectProject(r.project.id);ui.tab='sources';},message:'Manager project created.'});
   if(action==='config') return mutate(()=>{const d=values(key),edited=buildConfig(d); return {url:base()+'/config',data:{config:mergeChanged(d.originalConfig,edited,project().config)}};},
     {draftKey:key,inspect:()=>project()?.config,message:'Pipeline definitions saved. Earlier monitoring runs retain their original settings.'});
