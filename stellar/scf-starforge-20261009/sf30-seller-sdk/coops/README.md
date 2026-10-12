@@ -109,6 +109,34 @@ Back up or relocate the **complete closed workspace**, including native JSON, ob
 
 The additive contribution registers commands, browser assets, source exports and the Applications/merchant providers. It does not replace shared runtime or peer-product code.
 
+Source-edition selection and request-plan preview use the same retained-request effect. Replaying a completed selection restores the exact immutable edition. A preview is restored only if the original capture draft token, fields, mode and station profile still match; later inputs keep it invalidated. The browser stores that preview and selection with its existing workspace journal.
+
+## Connected receiving and project handoff
+
+[RECEIVING.md](RECEIVING.md) provides the one existing-page capture → actual independent review → complete source/model-input receiving → original SF30 query → serial historical capture → same-origin reopen continuation. It creates no server or browser. [DELIVERY.md](DELIVERY.md) separates implemented source capabilities, required actual receiving evidence and project-specific engineering decisions.
+
+
+### Import and receive an existing model-input convention
+
+Select **Model-input mappings → Select mapping file**. Choose one nonempty UTF-8 JSON file up to 64 KiB: the published example, a plain saved mapping, or a native `stellar-forge.coops-model-input-mapping-file.v1` download. The inspector uses the same native mapping validation as saving.
+
+Choose **Distinct new mapping** or explicitly select a saved receiving mapping, record the responsible model owner and intake decision, then inspect the complete convention beside the current target and current draft. An ID or revision inside the file is source provenance only. **Open reviewed file as draft** does not save. The normal editor can adjust receiving headings; **Save mapping revision** commits those explicit fields.
+
+The saved revision retains the exact uploaded filename/bytes/SHA, declared source mapping, original normalized convention, intake decision and adaptations. Its original input file remains in the native object store; later revisions retain their own evidence and the complete earlier mapping history. Earlier exports stay pinned to their original mapping revision. **Revisions / input file** downloads each exact original file, including after reopen.
+
+If another operator changes the selected target after inspection, recompare before applying the file. Polling does not silently rebase the draft. An interrupted save keeps its original operation and incoming file; exact replay applies the saved ID to the originating draft while retaining later edits.
+
+A downloaded convention can return through the same intake. Staff select its receiving target explicitly and review it as a new revision. The file adapter rejects a requested transformation that differs from the native field-selection/renaming contract. It does not evaluate an engineering model or infer the customer's headings.
+
+Read-only CLI inspection and original-file receiving use the running console:
+
+```sh
+node coops/cli.mjs --session /private/coops-startup.json inspect-mapping --file /selected/model-input.json
+node coops/cli.mjs --session /private/coops-startup.json mapping-source --mapping-id mapping-ORIGINAL_ID --mapping-revision 1 --output /new/received-mapping.json
+```
+
+Agent access uses the same `merchant_coops_mapping_file` inspector and `mapping.save` payload with optional `mappingSource: {filename, base64, decision}`. The existing retained-file transfer accepts `kind: "mapping-source"` and the exact mapping revision as `page`. Keep its transfer receipt with the data export.
+
 ## Coastal residual workbook
 
 Open a retained edition and choose **Build coastal workbook**, or open the
