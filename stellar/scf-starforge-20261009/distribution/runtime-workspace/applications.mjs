@@ -10,6 +10,7 @@ import { jobCheckoutApplication, validateJobCheckoutSelection, prepareJobCheckou
 import { datasetBuyerApplication, prepareDatasetBuyerApplication } from './application-dataset-buyer.mjs';
 import { eventFeedApplications, prepareEventFeedApplication } from './application-event-feed.mjs';
 import { tenderlyApplication, prepareTenderlyApplication } from './application-tenderly.mjs';
+import { browserWalletApplication, prepareBrowserWalletApplication } from './application-browser-wallet.mjs';
 import { inspectMerchantRuntime } from '../../sf46-release/runtime-package.mjs';
 import { managedState, openManagedHome, reviewManagedAdoption } from './managed-workspace.mjs';
 import { applicationEnvironment, readApplicationTerminal, sendApplicationTerminal } from './application-command.mjs';
@@ -44,6 +45,7 @@ export const APPLICATION_CATALOG = Object.freeze([
   jobCheckoutApplication(common),
   datasetBuyerApplication(common),
   tenderlyApplication(common),
+  browserWalletApplication(common),
   { id: 'xml', command: 'dataset', requiredSource: 'stellar/scf-starforge-20261009/sf30-seller-sdk/xml/cli.mjs',
     title: 'XML dataset onboarding', terminal: false,
     description: 'Reopen an initialized XML workspace with its original sources, mappings, native datasets, comparison and portable editions.',
@@ -214,6 +216,9 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
   } else if (type.id === 'dataset-buyer') {
     const prepared = await prepareDatasetBuyerApplication(settings, { inputPath, selectedExecutable, runtimeDirectory });
     args.push(...prepared.args); inputs.push(...prepared.inputs); createDirectories.push(...prepared.createDirectories);
+  } else if (type.id === 'browser-wallet') {
+    const original = await prepareBrowserWalletApplication(settings, inputPath, runtimeDirectory);
+    args.push(...original.args); inputs.push(...original.inputs);
   } else if (type.id === 'tenderly') {
     const original = await prepareTenderlyApplication(settings, inputPath, runtimeDirectory);
     args.push(...original.args); inputs.push(...original.inputs);
