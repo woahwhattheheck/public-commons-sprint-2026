@@ -32,7 +32,7 @@ export async function startRequestStreamExample({ port = 0,
         receivedMessages++;
         if (record.delay_ms) await pause(record.delay_ms, undefined, { signal: controller.signal });
         if (record.reject) throw error(grpc.status.UNAVAILABLE, 'Deliberate local request-stream failure.');
-        bytes += record.payload?.length ?? 0;
+        bytes += record.payload === undefined ? 0 : Buffer.from(record.payload, 'base64').length;
         if (callback) records.push(record);
         else if (!call.write(record)) await new Promise((done, reject) => {
           const finish = issue => {
