@@ -1,5 +1,7 @@
 # Starforge merchant operations through MCP
 
+Native Stellar MPP customer operations use the existing private console and original payment records. The [MPP guide](./MPP.md) covers host connections, retained customer reviews, native jobs, recovery, and complete resumable response or customer-package downloads through this same operator.
+
 Create and revise OpenAPI merchants through this same operator. Attach the host's
 existing API consoles, review original source and payment terms, save or reopen
 retained drafts, apply cache changes, and save those policies into a revised
