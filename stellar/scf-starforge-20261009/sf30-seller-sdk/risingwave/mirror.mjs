@@ -1,6 +1,7 @@
 // MIT. Durable keyed rows and complete-boundary change deltas.
 // Replay compares exact per-key event multiplicities, not ordering between native keys.
 import { DatabaseSync } from 'node:sqlite';
+import { chmodSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { fail, canonical, identity, epochMs, now } from './common.mjs';
 import { rowKey, matchesFilters, projectRecord } from './scalars.mjs';
@@ -9,6 +10,7 @@ export class RisingWaveMirror {
     this.query=query;this.fields=fields;this.closed=false;
     this.db=new DatabaseSync(filename);this.statements=new Map();
     try{
+      chmodSync(filename,0o600);
       this.db.exec('PRAGMA journal_mode=DELETE; PRAGMA synchronous=FULL; PRAGMA busy_timeout=5000;');
       if(create){
         this.db.exec('CREATE TABLE meta (key TEXT PRIMARY KEY,value TEXT NOT NULL);'+

@@ -131,7 +131,7 @@ export function createRisingWaveQuerySource(raw,{env=process.env,captureDirector
       const release=await acquireWorkspace(history);
       try{
         const head=await optionalJson(join(history,'latest.json')),pending=await optionalJson(join(history,'pending.json'));
-        const captureRequest={query:name,input:normalized,extraction:options,baseCaptureDirectory:pending?.request?.baseCaptureDirectory??head?.directory??null},
+        const captureRequest={query:name,input:normalized,extraction:options,baseCaptureDirectory:pending?pending.request.baseCaptureDirectory:(head?.directory??null)},
           key=identity(captureRequest);
         let selected;
         if(pending){
