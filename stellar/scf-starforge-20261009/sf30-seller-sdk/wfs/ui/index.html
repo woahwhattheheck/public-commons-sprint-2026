@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>WFS feature workspace</title><link rel="stylesheet" href="/style.css"></head>
+<body>
+<header><div><p class="eyebrow">STELLAR FORGE · DATA OPERATIONS</p><h1>WFS feature workspace</h1><p id="project-title">Opening project…</p></div>
+<div class="header-actions"><span id="revision">Revision —</span><button id="refresh" type="button">Refresh</button></div></header>
+<div id="notice" role="status" aria-live="polite">Connecting to the project.</div>
+<div class="shell"><nav aria-label="Workspace sections">
+<button data-section="services" aria-current="page">Services <span id="source-count">0</span></button>
+<button data-section="queries">Saved queries <span id="query-count">0</span></button>
+<button data-section="orders">Download orders <span id="order-count">0</span></button>
+<button data-section="comparison">Compare editions</button>
+<button data-section="publication">Publish &amp; query <span id="publication-count">0</span></button>
+<button data-section="customer">Customer acquisitions</button>
+<button data-section="transfer">Project handover</button>
+<button data-section="history">Operation history</button>
+<div class="nav-footer"><p id="auth-state">Source access: public</p><p id="buyer-state">Buyer: not configured</p></div>
+</nav><main>
+<section id="services" class="panel">
+<div class="section-heading"><div><h2>Services and feature schemas</h2><p>Capture a service catalog, choose a feature type, and retain its original schema.</p></div></div>
+<form id="service-form" class="card">
+<div class="form-grid"><label>Service name<input id="service-name" maxlength="128" required autocomplete="off"></label>
+<label class="wide">WFS endpoint<input id="service-endpoint" type="url" placeholder="https://host/geoserver/wfs" required></label>
+<label class="full">Source terms and attribution<textarea id="service-terms" rows="2" maxlength="16384" placeholder="Record the provider’s source terms and attribution."></textarea></label></div>
+<div class="toolbar"><button type="submit" class="primary">Read service catalog</button><span>WFS 2.0.0 · Original XML retained</span></div></form>
+<div class="table-scroll"><table><thead><tr><th>Service</th><th>Feature types</th><th>Captured</th><th>Actions</th></tr></thead><tbody id="services-body"></tbody></table></div>
+<div id="catalog-panel" class="card" hidden><div class="section-heading"><h3 id="catalog-title">Service catalog</h3>
+<button id="capabilities-download" type="button">Download original XML</button></div>
+<div id="catalog-summary" class="facts"></div><label>Find a feature type<input id="type-filter" type="search" placeholder="Name or title"></label>
+<div class="table-scroll"><table><thead><tr><th>Feature type</th><th>Title</th><th>Default CRS</th><th>Action</th></tr></thead><tbody id="types-body"></tbody></table></div></div>
+<div id="schema-panel" class="card" hidden><div class="section-heading"><h3 id="schema-title">Feature schema</h3><button id="schema-download" type="button">Download original XSD</button></div>
+<div class="table-scroll"><table><thead><tr><th>Property</th><th>Source type</th><th>Occurs</th><th>Nullable</th><th>Geometry</th></tr></thead><tbody id="schema-body"></tbody></table></div>
+<button id="use-schema" type="button">Build a query from this schema</button></div>
+</section>
+<section id="queries" class="panel" hidden>
+<div class="section-heading"><div><h2>Saved source queries</h2><p>Keep the exact feature type, coordinate representation, ordering and source filter with each download.</p></div></div>
+<form id="query-form" class="card"><div class="form-grid">
+<label>Query name<input id="query-name" maxlength="128" required></label><label class="wide">Captured feature schema<select id="query-schema" required></select></label>
+<label>Response CRS<select id="query-crs" required></select></label><label>Page size<input id="query-size" type="number" min="1" max="10000" value="1000" required></label>
+<label class="wide">Sort properties<input id="query-sort" placeholder="source_key A, secondary_key A" required></label>
+<label class="full">CQL filter <span class="optional">optional</span><input id="query-cql" maxlength="16384" placeholder="A source-supported CQL expression"></label>
+<label class="wide">Bounding box <span class="optional">optional</span><input id="query-bbox" placeholder="minimum axis 1, minimum axis 2, maximum axis 1, maximum axis 2"></label>
+<label>Bounding box CRS<select id="query-bbox-crs"></select></label></div>
+<p class="help">Choose consistent source ordering, including a unique source key when available. Coordinate values remain in the order returned by the service.</p>
+<button type="submit" class="primary">Save query</button></form>
+<div class="table-scroll"><table><thead><tr><th>Query</th><th>Feature type</th><th>CRS</th><th>Sort</th><th>Action</th></tr></thead><tbody id="queries-body"></tbody></table></div>
+</section>
+<section id="orders" class="panel" hidden>
+<div class="section-heading"><div><h2>Download orders</h2><p>Acquire complete feature results and continue an interrupted order from its retained pages.</p></div></div>
+<form id="order-form" class="card"><div class="form-grid"><label class="wide">Saved query<select id="order-query" required></select></label>
+<label class="wide">Order name<input id="order-name" maxlength="128" required></label></div>
+<details><summary>Acquisition capacity</summary><div class="form-grid">
+<label>Maximum page bytes<input id="order-page-bytes" type="number" min="1" max="67108864" placeholder="16777216"></label>
+<label>Maximum total bytes<input id="order-total-bytes" type="number" min="1" max="2147483648" placeholder="268435456"></label>
+<label>Maximum pages<input id="order-max-pages" type="number" min="1" max="1000000" placeholder="100000"></label>
+<label>Request timeout, ms<input id="order-timeout" type="number" min="1" max="600000" placeholder="60000"></label></div></details>
+<button type="submit" class="primary">Acquire complete order</button></form>
+<div class="table-scroll"><table><thead><tr><th>Order</th><th>State</th><th>Rows</th><th>Pages</th><th>Actions</th></tr></thead><tbody id="orders-body"></tbody></table></div>
+<div id="order-panel" class="card" hidden><div class="section-heading"><h3 id="order-title">Order</h3><button id="features-download" type="button">Download complete features</button></div>
+<div id="order-summary" class="facts"></div><div class="viewer"><div><canvas id="geometry" width="720" height="390" aria-label="Feature geometry in original source coordinates"></canvas><p id="geometry-caption" class="help"></p></div>
+<label>Selected original feature<textarea id="feature-json" rows="14" readonly spellcheck="false"></textarea></label></div>
+<div class="toolbar"><button id="features-previous" type="button">Previous</button><span id="features-page"></span><button id="features-next" type="button">Next</button></div>
+<div class="table-scroll"><table><thead id="feature-head"></thead><tbody id="feature-body"></tbody></table></div>
+<div class="toolbar"><label class="inline">Original page index<input id="raw-page-index" type="number" min="0" value="0"></label><button id="raw-page-download" type="button">Download original response</button></div></div>
+</section>
+<section id="comparison" class="panel" hidden>
+<div class="section-heading"><div><h2>Compare complete editions</h2><p>Review changes by source key, with duplicate and missing keys kept visible.</p></div></div>
+<form id="compare-form" class="card"><div class="form-grid"><label>Earlier order<select id="compare-before" required></select></label>
+<label>Later order<select id="compare-after" required></select></label><label>Source key pointer<input id="compare-key" value="/id" required></label></div>
+<button type="submit" class="primary">Compare editions</button></form>
+<div class="table-scroll"><table><thead><tr><th>Comparison</th><th>Added</th><th>Removed</th><th>Changed</th><th>Unchanged</th><th>Actions</th></tr></thead><tbody id="comparisons-body"></tbody></table></div>
+<div id="comparison-panel" class="card" hidden><div id="comparison-summary" class="facts"></div>
+<div class="toolbar"><label class="inline">Change group<select id="comparison-group"><option value="changed">Changed</option><option value="added">Added</option><option value="removed">Removed</option><option value="ambiguous">Duplicate keys</option><option value="missingBefore">Missing earlier keys</option><option value="missingAfter">Missing later keys</option></select></label>
+<button id="comparison-previous" type="button">Previous</button><span id="comparison-page"></span><button id="comparison-next" type="button">Next</button><button id="comparison-download" type="button">Download full comparison</button></div>
+<div class="table-scroll"><table><thead><tr><th>Key</th><th>Earlier feature</th><th>Later feature</th></tr></thead><tbody id="comparison-body"></tbody></table></div></div>
+</section>
+<section id="publication" class="panel" hidden>
+<div class="section-heading"><div><h2>Publish and query a dataset</h2><p>Create a complete dataset with its original source pages, then open the data workspace or start its configured merchant.</p></div></div>
+<form id="publication-form" class="card"><div class="form-grid"><label class="wide">Complete download order<select id="publication-order" required></select></label>
+<div class="field-action"><button id="load-plan" type="button">Load suggested columns</button></div>
+<label class="full">Dataset projection plan<textarea id="publication-plan" rows="9" spellcheck="false" placeholder="Load the suggested complete properties and geometry columns, then review the queryable fields."></textarea></label></div>
+<label class="check"><input id="publication-paid" type="checkbox">Configure merchant payment and complete project source delivery</label>
+<div id="payment-fields" class="form-grid" hidden><label class="wide">Public merchant origin<input id="publication-origin" type="url" placeholder="https://data.example"></label>
+<label>Feature route<input id="publication-path" value="/features"></label>
+<label class="full">Configured native payment terms<textarea id="publication-payment" rows="5" spellcheck="false" placeholder="Paste the configured scheme, network, asset, payTo, amount and timeout JSON."></textarea></label></div>
+<button type="submit" class="primary">Create complete dataset edition</button></form>
+<div class="table-scroll"><table><thead><tr><th>Edition</th><th>Rows</th><th>Snapshot</th><th>Actions</th></tr></thead><tbody id="publications-body"></tbody></table></div>
+<div id="publication-panel" class="card" hidden><h3 id="publication-title">Selected edition</h3><div id="publication-summary" class="facts"></div>
+<div class="toolbar"><button id="publication-open" type="button">Open data workspace</button><button id="merchant-start" type="button">Start configured merchant</button><button id="merchant-stop" type="button">Stop merchant</button></div>
+<form id="preview-form"><div class="form-grid"><label class="wide">Native dataset query<input id="preview-query" placeholder="limit=50"></label>
+<label>Product<select id="preview-kind"><option value="rows">Feature rows</option><option value="sources">Complete source files</option></select></label></div><button type="submit">Preview query</button></form>
+<pre id="preview-result" class="output"></pre></div>
+</section>
+<section id="customer" class="panel" hidden>
+<div class="section-heading"><div><h2>Customer acquisitions</h2><p>Prepare native requests, acquire complete datasets and reopen delivered project sources.</p></div></div>
+<div class="card"><div class="form-grid"><label class="wide">Merchant edition<select id="customer-publication"></select></label>
+<label>Product<select id="customer-kind"><option value="rows">Feature rows</option><option value="sources">Complete project source files</option></select></label>
+<label class="full">Initial query<input id="customer-query" placeholder="limit=4"></label></div>
+<div class="subsection"><h3>Single request</h3><div class="form-grid"><label class="wide">Original request ID<input id="customer-intent" maxlength="96"></label><div class="field-action"><button id="new-intent" type="button">New request ID</button></div></div>
+<div class="toolbar"><button id="purchase-prepare" type="button">Prepare request</button><button id="purchase-buy" type="button">Execute prepared request</button><button id="purchase-recover" type="button">Recover request</button><button id="purchase-download" type="button">Download response</button></div></div>
+<div class="subsection"><h3>Complete dataset</h3><div class="form-grid"><label class="wide">Original acquisition ID<input id="customer-dataset" maxlength="96"></label><div class="field-action"><button id="new-dataset" type="button">New acquisition ID</button></div>
+<label>Maximum pages<input id="customer-max-pages" type="number" min="1" max="4096" value="512"></label><label>Maximum rows<input id="customer-max-rows" type="number" min="1" max="1000000" value="1000000"></label>
+<label class="wide">Maximum total payment, atomic units<input id="customer-max-atomic" inputmode="numeric" placeholder="Set the original acquisition budget"></label></div>
+<div class="toolbar"><button id="dataset-prepare" type="button">Prepare acquisition</button><button id="dataset-run" type="button">Acquire remaining pages</button><button id="dataset-inspect" type="button">Inspect</button><button id="dataset-recover" type="button">Recover</button><button id="dataset-deliver" type="button">Produce complete delivery</button><button id="dataset-receive" type="button">Receive &amp; reopen sources</button></div>
+<div class="toolbar"><label class="inline">Delivered file<select id="dataset-file"><option>dataset.csv</option><option>dataset.jsonl</option><option>review.html</option><option>manifest.json</option><option>semantics.json</option></select></label><button id="dataset-download" type="button">Download file</button><button id="dataset-accounting" type="button">Payment accounting</button><button id="dataset-finalize" type="button">Finalize acquisition</button></div></div>
+<pre id="customer-result" class="output"></pre></div>
+<div class="card"><h3>Saved customer requests</h3><div class="table-scroll"><table><thead><tr><th>ID</th><th>Acquisition</th><th>Product</th><th>Action</th></tr></thead><tbody id="customer-history"></tbody></table></div></div>
+</section>
+<section id="transfer" class="panel" hidden>
+<div class="section-heading"><div><h2>Project handover</h2><p>Transfer complete source documents, feature pages, saved queries, comparisons and dataset editions together.</p></div></div>
+<div class="card"><h3>Export this project</h3><p>The receiving workspace keeps the original source bytes and project identities. The handover can reopen without contacting the source service.</p><button id="project-download" type="button" class="primary">Download complete project</button></div>
+<div class="card"><h3>Receive a project</h3><label>Complete project file<input id="project-file" type="file" accept=".json,application/json"></label>
+<div class="toolbar"><button id="project-receive" type="button">Receive project</button><button id="project-open" type="button" disabled>Open received project</button></div><pre id="transfer-result" class="output"></pre></div>
+</section>
+<section id="history" class="panel" hidden>
+<div class="section-heading"><div><h2>Operation history</h2><p>Resume a saved operation with its existing inputs and inspect completed work.</p></div></div>
+<div id="pending-panel" class="card" hidden><h3>Current source operation</h3><div id="pending-summary" class="facts"></div>
+<div class="toolbar"><button id="pending-resume" type="button">Resume original operation</button><button id="pending-cancel" type="button">Cancel running action</button></div>
+<label>Note for abandoning this operation<input id="abandon-note" maxlength="128"></label><button id="pending-abandon" type="button">Abandon operation and retain source files</button></div>
+<div class="table-scroll"><table><thead><tr><th>Operation</th><th>Action</th><th>Completed</th><th>Details</th></tr></thead><tbody id="history-body"></tbody></table></div></section>
+<details class="result-details"><summary>Operation details</summary><pre id="operation-result" class="output"></pre></details>
+<div id="window-links" class="window-links"></div>
+</main></div><script type="module" src="/app.js"></script></body></html>
