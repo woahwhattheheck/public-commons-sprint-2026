@@ -840,7 +840,8 @@
     "./seller/nocodb/declaration": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/nocodb/declaration.mjs",
     "./seller/nocodb/capture": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/nocodb/capture.mjs",
     "./seller/nocodb/publisher": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/nocodb/publisher/model.mjs",
-    "./seller/nocodb/deployment": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/nocodb/deployment.mjs"
+    "./seller/nocodb/deployment": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/nocodb/deployment.mjs",
+    "./buyer/research-dossiers/crossref-workspace": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/crossref-workspace.mjs"
   },
   "nativePeers": {
     "@x402/core": {

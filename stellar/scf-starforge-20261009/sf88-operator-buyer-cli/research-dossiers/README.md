@@ -167,6 +167,21 @@ const imported = await receiveOpenAlexEdition(dossiers, current.id, {
 existing object. Its caller retains the original workspace lifetime; the
 launch command closes the object it opens when the server stops.
 
+## Review Crossref metadata in the existing question
+
+Add `--crossref-state /absolute/private/crossref-source` to the same workspace
+launch to enable the **DOI metadata** tab. It prepares the exact DOI-bearing
+evidence in an existing question, acquires original metadata and registered
+updates, retains stop/resume progress, and lets the operator receive a reviewed
+edition into this dossier.
+
+The flag alone uses the public API. Optional
+`--crossref-config /absolute/existing-crossref-merchant.json` reuses the
+original merchant account and source settings. The local launcher owns these
+paths and configuration; the browser selects questions and reviewed operations.
+See [Crossref operation, recovery and receiving](CROSSREF.md) for the complete
+operator workflow and preservation contract.
+
 ## Attach the original Valyu research edition
 
 The maintained [Valyu merchant and customer workspace](../../sf30-seller-sdk/valyu/)
@@ -290,8 +305,8 @@ question-specific finding references.
 
 ## Runtime Applications launch contract
 
-The `research-workspace` command serves the same private dossier store used by this SDK and CLI. The runtime Applications entry supplies `--dir`, optional `--edition-adapter`, optional `--openalex-workspace` and `--openalex-module`, and the selected local port. An existing directory reopens the retained questions, source editions, selections, findings and history.
+The `research-workspace` command serves the same private dossier store used by this SDK and CLI. The runtime Applications entry supplies `--dir`, optional `--edition-adapter`, optional `--openalex-workspace` and `--openalex-module`, optional `--crossref-state` and `--crossref-config`, and the selected local port. An existing directory reopens the retained questions, source editions, selections, findings and history.
 
-Startup writes one JSON line containing `mode: "RESEARCH_DOSSIER_WORKSPACE"`, the exact selected `directory`, the actual private `url`, configured `providers`, and `openalexConfigured`. Managed consumers should accept this URL only from this command and the matching `--dir` input. Use the returned URL; its fragment supplies the original capability. SIGINT or SIGTERM closes the HTTP server and the original configured OpenAlex workspace.
+Startup writes one JSON line containing `mode: "RESEARCH_DOSSIER_WORKSPACE"`, the exact selected `directory`, the actual private `url`, configured `providers`, `openalexConfigured`, and `crossrefConfigured`. Managed consumers should accept this URL only from this command and the matching `--dir` input. Use the returned URL; its fragment supplies the original capability. SIGINT or SIGTERM stops and retains Crossref acquisition progress, closes the HTTP server, and closes the original source workspaces opened by the launcher.
 
 An OpenAlex workspace must already contain its original queries and editions. Without an explicit module override, it is opened by the original `research/workspace.mjs` in the same selected source. The Applications configuration retains the chosen directory and module paths; the research application controls source intake, review and exports.

@@ -68,15 +68,13 @@ export function compareCrossrefMetadata(before,after,{dois}={}){
   for(const [doi,value] of left)if(!right.has(doi))removed.push({doi,sourceId:value.sourceId});
   return {schema:'stellar-forge.crossref-metadata-comparison.v1',before:before.revision,after:after.revision,added,removed,changed};
 }
-/** Original source caching retains progress if a long acquisition meets a revision conflict.
- * Retrying with the current dossier revision reuses these exact captures. */
-export async function enrichCrossrefDossier(dossiers,id,{source,questionId,expectedRevision,selectedOnly=true,
-  includeUpdates=true,label='Crossref DOI enrichment',maxUpdatePages=1000,signal,onCapture}={}){
+/** Acquire one reviewed DOI scope. Capture observers may persist original progress; their failures remain caller failures. */
+export async function collectCrossrefEdition({source,dois,query,label='Crossref DOI enrichment',
+  includeUpdates=true,maxUpdatePages=1000,refresh=false,signal,onCapture}={}){
   need(source&&typeof source.request==='function','CROSSREF_SOURCE_REQUIRED');
-  need(typeof selectedOnly==='boolean'&&typeof includeUpdates==='boolean'&&(onCapture===undefined||typeof onCapture==='function'),'CROSSREF_ENRICH_OPTIONS_INVALID');
+  need(typeof includeUpdates==='boolean'&&typeof refresh==='boolean'&&(onCapture===undefined||typeof onCapture==='function'),'CROSSREF_ENRICH_OPTIONS_INVALID');
   need(Number.isSafeInteger(maxUpdatePages)&&maxUpdatePages>=1&&maxUpdatePages<=10000,'CROSSREF_UPDATE_PAGE_LIMIT_INVALID');
-  const before=await dossiers.get(id);need(before.revision===expectedRevision,'REVISION_CONFLICT');
-  const dois=selectedCrossrefDois(before,{questionId,selectedOnly});
+  dois=doiList(dois);
   const captures=[],receipts=[],errors=[];
   const acquisition={schema:'stellar-forge.crossref-acquisition.v1',metadata:true,updates:includeUpdates,failures:errors};
   let requests=0,capacityReached=false;
@@ -90,7 +88,7 @@ export async function enrichCrossrefDossier(dossiers,id,{source,questionId,expec
     }
     requests++;
     let result;
-    try{signal?.throwIfAborted();result=await source.request(kind,input,{signal});}
+    try{signal?.throwIfAborted();result=await source.request(kind,input,{signal,refresh});}
     catch(error){
       if(signal?.aborted)throw error;
       const code=typeof error.code==='string'&&/^[A-Z][A-Z0-9_]{0,100}$/.test(error.code)?error.code:'CROSSREF_SOURCE_UNAVAILABLE';
@@ -123,7 +121,19 @@ export async function enrichCrossrefDossier(dossiers,id,{source,questionId,expec
       if(capacityReached)break;
     }
   }
-  const imported=await receiveCrossrefEdition(dossiers,id,{questionId,label,captures,dois,expectedRevision,acquisition,
+  const envelope=buildCrossrefEdition({captures,dois,query,label,acquisition});
+  return {envelope,captures,receipts,errors};
+}
+/** Original source caching retains progress if acquisition meets a revision conflict. */
+export async function enrichCrossrefDossier(dossiers,id,{source,questionId,expectedRevision,selectedOnly=true,
+  includeUpdates=true,label='Crossref DOI enrichment',maxUpdatePages=1000,refresh=false,signal,onCapture}={}){
+  need(typeof selectedOnly==='boolean','CROSSREF_ENRICH_OPTIONS_INVALID');
+  const before=await dossiers.get(id);need(before.revision===expectedRevision,'REVISION_CONFLICT');
+  const question=before.questions.find(item=>item.id===questionId);need(question,'QUESTION_NOT_FOUND');
+  const dois=selectedCrossrefDois(before,{questionId,selectedOnly});
+  const collected=await collectCrossrefEdition({source,dois,query:question.text,label,includeUpdates,maxUpdatePages,refresh,signal,onCapture});
+  const imported=await receiveCrossrefEdition(dossiers,id,{questionId,label,captures:collected.captures,dois,expectedRevision,
+    acquisition:collected.envelope.usage.acquisition,
     sourceReference:'https://www.crossref.org/documentation/retrieve-metadata/rest-api/'});
-  return {...imported,receipts,errors,comparison:compareCrossrefMetadata(before,imported.dossier,{dois})};
+  return {...imported,receipts:collected.receipts,errors:collected.errors,comparison:compareCrossrefMetadata(before,imported.dossier,{dois})};
 }
