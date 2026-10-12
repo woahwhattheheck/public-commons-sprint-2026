@@ -2,7 +2,7 @@
 import {createHash} from 'node:crypto';
 import {join} from 'node:path';
 import {gzipSync,gunzipSync} from 'node:zlib';
-import {runbookCanonical,runbookAssignment,RUNBOOK_PACKET_BYTES,ensureRunbookDirectory,readRunbookBytes,publishRunbookBlob} from './runbooks-workspace.mjs';
+import {runbookCanonical,runbookAssignment,runbookProfileSelection,RUNBOOK_PACKET_BYTES,ensureRunbookDirectory,readRunbookBytes,publishRunbookBlob} from './runbooks-workspace.mjs';
 import {allocatePortfolioCalendar,normalizePortfolioStaff,portfolioDate} from './portfolio-schedule.mjs';
 
 export const PORTFOLIO_SCHEMA='stellar-forge.accounting-client-portfolio.v1';
@@ -25,8 +25,8 @@ const empty=()=>({schema:PORTFOLIO_SCHEMA,firmEditions:[],latestFirmEditionId:nu
 const actionMap={save:['edition_saved','save'],create:['cycle_created','createCycle'],assign:['assignment_changed','assign'],
   work:['procedure_saved','saveWork'],submit:['preparation_submitted','submit'],review:['review_saved','review']};
 const fields={
-  save:['runbookId','expectedEditionId','name','client','description','steps','resources'],
-  create:['runbookId','editionId','label','preparer','reviewer','dueDate','previousCycleId','sourceKind','sourceFileIds','sourceLabel','sourceNote','handoffId','accountantRevisionId','periodCloseId'],
+  save:['runbookId','expectedEditionId','name','client','description','steps','resources','profiles'],
+  create:['runbookId','editionId','profileId','label','preparer','reviewer','dueDate','previousCycleId','sourceKind','sourceFileIds','sourceLabel','sourceNote','handoffId','accountantRevisionId','periodCloseId'],
   assign:['cycleId','expectedAssignmentSha256','preparer','reviewer','dueDate','note'],
   work:['cycleId','stepId','status','note','fileIds'],submit:['cycleId','note'],review:['cycleId','decision','note','acceptedExceptions']
 };
@@ -35,6 +35,7 @@ const sourceFields=['sourceKind','sourceFileIds','sourceLabel','sourceNote','han
 const stripCommand=row=>({id:row.id,clientId:row.clientId,commissionId:row.commissionId,alias:row.alias,action:row.action,target:row.target,
   planId:row.planId,rowId:row.rowId,createdAt:row.createdAt,actor:row.actor,originWorkspaceId:row.originWorkspaceId,
   nativeRequestId:row.nativeRequest.requestId,clientWorkspaceId:row.clientWorkspaceId,clientRevision:row.nativeRequest.revision,
+  ...(row.action==='create'&&row.nativeRequest.profileId!=null?{profileId:row.nativeRequest.profileId}:{}),
   commandSha256:row.commandSha256,nativeRequestSha256:row.nativeRequestSha256});
 const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const csv=value=>'"'+String(value??'').replace(/^[\s]*[=+@-]|^[\t\r]/,"'$&").replace(/"/g,'""')+'"';
@@ -156,7 +157,7 @@ export class PortfolioWorkspace{
     if(previous)need(!this.state.plans.some(row=>row.previousPlanId===previous.id),'PORTFOLIO_PLAN_CHANGED','Revise the latest saved calendar in this series.',409);
     const currentPlans=this.state.plans.filter(row=>!this.state.plans.some(next=>next.previousPlanId===row.id)&&row.id!==previous?.id);
     const booked=currentPlans.flatMap(plan=>plan.calendar.allocations.map(row=>({...row,planId:plan.id})));
-    const rows=[],groups=new Map();
+    const rows=[],groups=new Map(),selections=new Map();
     for(const inputRow of input.rows){
       need(plain(inputRow),'PORTFOLIO_PLAN_ROW','Describe every client period.');
       const commission=clone(this.commissionRow(inputRow.clientId));
@@ -167,6 +168,7 @@ export class PortfolioWorkspace{
         preparationMinutes:inputRow.preparationMinutes,reviewMinutes:inputRow.reviewMinutes,backupMinutes:inputRow.backupMinutes??0,
         runbookId:commission.runbookId,editionId:commission.editionId,clientWorkspaceId:commission.clientWorkspaceId,
         cycleId:inputRow.cycleId??null,previousCycleId:inputRow.previousCycleId??null,source:inputRow.source?clone(inputRow.source):null};
+      if(Object.hasOwn(inputRow,'profileId'))selections.set(row,inputRow.profileId??null);
       if(row.cycleId)uid(row.cycleId,'client period');if(row.previousCycleId)uid(row.previousCycleId,'previous client period');
       if(row.source){noUnknown(row.source,sourceFields,'original close source');need(['files','accountant'].includes(row.source.sourceKind),'PORTFOLIO_CLOSE_SOURCE','Choose original client files or an exact accountant handoff.');}
       rows.push(row);if(!groups.has(row.alias))groups.set(row.alias,[]);groups.get(row.alias).push(row);
@@ -178,7 +180,15 @@ export class PortfolioWorkspace{
         need(edition,'PORTFOLIO_EDITION_NOT_FOUND','Choose an existing commissioned client edition.',404);
         row.clientRevision=runbooks.workspace.state.revision;row.editionSha256=hash(edition);
         if(row.previousCycleId)exact(runbooks.cycle(row.previousCycleId).runbookId,row.runbookId,'PORTFOLIO_PREVIOUS_PERIOD','Choose the previous period for this same client runbook.');
-        if(row.cycleId){const cycle=runbooks.cycle(row.cycleId);exact(cycle.runbookId,row.runbookId,'PORTFOLIO_PERIOD_CHANGED','Choose a period of this commissioned runbook.');row.editionId=cycle.editionId;row.editionSha256=hash(cycle.edition);row.assignment=runbookAssignment(cycle);}
+        let selectedEdition=edition,profileId=selections.get(row)??null;
+        if(row.cycleId){
+          const cycle=runbooks.cycle(row.cycleId);exact(cycle.runbookId,row.runbookId,'PORTFOLIO_PERIOD_CHANGED','Choose a period of this commissioned runbook.');
+          if(selections.has(row))exact(profileId,cycle.profileId??null,'PORTFOLIO_PROFILE_CHANGED','Use the procedure set frozen in the selected client period.');
+          selectedEdition=cycle.edition;profileId=cycle.profileId??null;
+          row.editionId=cycle.editionId;row.editionSha256=hash(cycle.edition);row.assignment=runbookAssignment(cycle);
+        }
+        const selection=runbookProfileSelection(selectedEdition,profileId);
+        if(selection.profile)Object.assign(row,{profileId:selection.profile.id,profileName:selection.profile.name,selectedStepCount:selection.steps.length});
         if(row.source?.sourceKind==='files'){
           need(Array.isArray(row.source.sourceFileIds)&&row.source.sourceFileIds.length>0&&new Set(row.source.sourceFileIds).size===row.source.sourceFileIds.length,'PORTFOLIO_CLOSE_SOURCE','Select distinct original close files.');
           row.source.sourceFileIds.forEach(id=>runbooks.fileRow(id));
@@ -224,6 +234,8 @@ export class PortfolioWorkspace{
         const people=new Map(plan.firm.staff.map(person=>[person.id,person.name]));
         const fixed={runbookId:row.runbookId,editionId:row.editionId,label:row.label,preparer:people.get(row.preparerId),
           reviewer:people.get(row.reviewerId),dueDate:row.closeDate,previousCycleId:row.previousCycleId};
+        if(Object.hasOwn(parameters,'profileId'))exact(parameters.profileId??null,row.profileId??null,'PORTFOLIO_PLAN_REQUEST_CHANGED','The prepared client period must use the procedure set selected in the calendar.');
+        if(row.profileId!==undefined)fixed.profileId=row.profileId;else delete parameters.profileId;
         for(const [name,value] of Object.entries(fixed))if(Object.hasOwn(parameters,name))exact(parameters[name],value,'PORTFOLIO_PLAN_REQUEST_CHANGED','The prepared client period must use the selected calendar row.');
         parameters={...(row.source??{}),...parameters,...fixed};
       }else if(row.cycleId&&parameters.cycleId)exact(parameters.cycleId,row.cycleId,'PORTFOLIO_PLAN_PERIOD_CHANGED','Choose the client period selected by this calendar row.');
@@ -488,14 +500,16 @@ export class PortfolioWorkspace{
   }
   async calendarCsv(id){
     await this.workspace.tail;const plan=clone(this.planRow(id)),staff=new Map(plan.firm.staff.map(row=>[row.id,row.name])),rows=new Map(plan.rows.map(row=>[row.id,row]));
-    const output=[['Calendar','Date','Person','Role','Minutes','Client','Period','Close date','Review date','Plan ID','Plan row ID','Client ID','Client workspace ID','Commission ID','Runbook ID','Edition ID','Period ID']];
+    const profiled=plan.rows.some(row=>row.profileId!==undefined);
+    const output=[['Calendar','Date','Person','Role','Minutes','Client','Period','Close date','Review date','Plan ID','Plan row ID','Client ID','Client workspace ID','Commission ID','Runbook ID','Edition ID','Period ID',
+      ...(profiled?['Procedure set ID','Procedure set','Selected procedures']:[])]];
     for(const entry of plan.calendar.allocations){const row=rows.get(entry.rowId);output.push([plan.label,entry.date,staff.get(entry.staffId)??entry.staffId,entry.role,entry.minutes,row.name,row.label,
-      row.closeDate,row.reviewDate,plan.id,row.id,row.clientId,row.clientWorkspaceId,row.commissionId,row.runbookId,row.editionId,row.cycleId??'']);}
+      row.closeDate,row.reviewDate,plan.id,row.id,row.clientId,row.clientWorkspaceId,row.commissionId,row.runbookId,row.editionId,row.cycleId??'',...(profiled?[row.profileId??'',row.profileName??'',row.selectedStepCount??'']:[])]);}
     return {bytes:Buffer.from(output.map(row=>row.map(csv).join(',')).join('\r\n')+'\r\n'),name:'client-portfolio-'+plan.id+'-calendar.csv',type:'text/csv; charset=utf-8'};
   }
   async print(id){
     await this.workspace.tail;const plan=clone(this.planRow(id));
-    const sections=plan.rows.map(row=>'<section><h2>'+escape(row.name)+' — '+escape(row.label)+'</h2><p>Close '+escape(row.closeDate)+' · Review '+escape(row.reviewDate)+'</p><dl>'+
+    const sections=plan.rows.map(row=>'<section><h2>'+escape(row.name)+' — '+escape(row.label)+'</h2>'+(row.profileId?'<p>Procedure set '+escape(row.profileName)+' · '+escape(row.profileId)+' · '+escape(row.selectedStepCount)+' selected procedures</p>':'')+'<p>Close '+escape(row.closeDate)+' · Review '+escape(row.reviewDate)+'</p><dl>'+
       ['clientId','clientWorkspaceId','commissionId','runbookId','editionId','cycleId'].map(field=>'<dt>'+escape(field)+'</dt><dd>'+escape(row[field])+'</dd>').join('')+'</dl><p>Preparer '+escape(row.preparerId)+' · Backup '+escape(row.backupId)+' · Reviewer '+escape(row.reviewerId)+'</p>'+
       '<table><thead><tr><th>Date</th><th>Person</th><th>Work</th><th>Minutes</th></tr></thead><tbody>'+
       plan.calendar.allocations.filter(entry=>entry.rowId===row.id).map(entry=>'<tr><td>'+escape(entry.date)+'</td><td>'+escape(plan.firm.staff.find(person=>person.id===entry.staffId)?.name??entry.staffId)+'</td><td>'+escape(entry.role)+'</td><td>'+entry.minutes+'</td></tr>').join('')+'</tbody></table></section>').join('');
