@@ -6,7 +6,7 @@
   "use strict";
   const hashTools = (function () {
 function ascii(s){const a=new Uint8Array(s.length);for(let i=0;i<s.length;i++){const c=s.charCodeAt(i);if(c>127)throw Error("Expected original ASCII bytes");a[i]=c;}return a;}
-function sha256(a){const K=[0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2];const h=[0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19];if(a.length>=0x20000000)throw Error("Hash input too large");const b=new Uint8Array(Math.ceil((a.length+9)/64)*64);b.set(a);b[a.length]=128;const bits=a.length*8;for(let j=0;j<4;j++)b[b.length-1-j]=(bits>>>(j*8))&255;const ro=(v,n)=>(v>>>n)|(v<<(32-n));const w=new Uint32Array(64);for(let off=0;off<b.length;off+=64){for(let i=0;i<16;i++){const p=off+i*4;w[i]=((b[p]<<24)|(b[p+1]<<16)|(b[p+2]<<8)|b[p+3])>>>0;}for(let i=16;i<64;i++){let v=w[i-15],u=w[i-2];w[i]=((ro(v,7)^ro(v,18)^(v>>>3))+w[i-16]+(ro(u,17)^ro(u,19)^(u>>>10))+w[i-7])>>>0;}let [A,B,C,D,E,F,G,H]=h;for(let i=0;i<64;i++){const t1=(H+(ro(E,6)^ro(E,11)^ro(E,25))+((E&F)^((~E)&G))+K[i]+w[i])>>>0;const t2=((ro(A,2)^ro(A,13)^ro(A,22))+((A&B)^(A&C)^(B&C)))>>>0;H=G;G=F;F=E;E=(D+t1)>>>0;D=C;C=B;B=A;A=(t1+t2)>>>0;}for(const [i,v]of [A,B,C,D,E,F,G,H].entries())h[i]=(h[i]+v)>>>0;}return h.map(v=>v.toString(16).padStart(8,"0")).join("");}
+function sha256(a){const K=[0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2];const h=[0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19];if(a.length>=0x20000000)throw Error("Hash input too large");const complete=a.length-a.length%64,remaining=a.length-complete,tail=new Uint8Array(remaining<56?64:128);tail.set(a.subarray(complete));tail[remaining]=128;const bits=a.length*8;for(let j=0;j<4;j++)tail[tail.length-1-j]=(bits>>>(j*8))&255;const ro=(v,n)=>(v>>>n)|(v<<(32-n));const w=new Uint32Array(64);for(let off=0;off<complete+tail.length;off+=64){const b=off<complete?a:tail,base=off<complete?off:off-complete;for(let i=0;i<16;i++){const p=base+i*4;w[i]=((b[p]<<24)|(b[p+1]<<16)|(b[p+2]<<8)|b[p+3])>>>0;}for(let i=16;i<64;i++){let v=w[i-15],u=w[i-2];w[i]=((ro(v,7)^ro(v,18)^(v>>>3))+w[i-16]+(ro(u,17)^ro(u,19)^(u>>>10))+w[i-7])>>>0;}let [A,B,C,D,E,F,G,H]=h;for(let i=0;i<64;i++){const t1=(H+(ro(E,6)^ro(E,11)^ro(E,25))+((E&F)^((~E)&G))+K[i]+w[i])>>>0;const t2=((ro(A,2)^ro(A,13)^ro(A,22))+((A&B)^(A&C)^(B&C)))>>>0;H=G;G=F;F=E;E=(D+t1)>>>0;D=C;C=B;B=A;A=(t1+t2)>>>0;}for(const [i,v]of [A,B,C,D,E,F,G,H].entries())h[i]=(h[i]+v)>>>0;}return h.map(v=>v.toString(16).padStart(8,"0")).join("");}
 const crcTable=Array.from({length:256},(_,i)=>{let c=i;for(let k=0;k<8;k++)c=c&1?0xedb88320^(c>>>1):c>>>1;return c>>>0;});
 function crc32(a){let c=0xffffffff;for(const v of a)c=crcTable[(c^v)&255]^(c>>>8);return (c^0xffffffff)>>>0;}
 function cat(parts){const out=new Uint8Array(parts.reduce((n,p)=>n+p.length,0));let pos=0;for(const p of parts){out.set(p,pos);pos+=p.length;}return out;}
@@ -18,13 +18,44 @@ function utf8(s){if(typeof TextEncoder!=="undefined")return new TextEncoder().en
 function sha1(data){const length=data.length,n=Math.ceil((length+9)/64)*64,b=new Uint8Array(n);b.set(data);b[length]=128;let bitLength=length*8;for(let i=0;i<8;i++){b[n-1-i]=bitLength&255;bitLength=Math.floor(bitLength/256);}let h=[0x67452301,0xefcdab89,0x98badcfe,0x10325476,0xc3d2e1f0];const rol=(x,n)=>(x<<n)|(x>>>(32-n));for(let off=0;off<n;off+=64){const w=new Int32Array(80);for(let i=0;i<16;i++)w[i]=(b[off+4*i]<<24)|(b[off+4*i+1]<<16)|(b[off+4*i+2]<<8)|b[off+4*i+3];for(let i=16;i<80;i++)w[i]=rol(w[i-3]^w[i-8]^w[i-14]^w[i-16],1);let[a,c,d,e,f]=h;for(let i=0;i<80;i++){const fn=i<20?((c&d)|(~c&e)):i<40?(c^d^e):i<60?((c&d)|(c&e)|(d&e)):(c^d^e),k=i<20?0x5a827999:i<40?0x6ed9eba1:i<60?0x8f1bbcdc:0xca62c1d6;const temp=(rol(a,5)+fn+f+k+w[i])|0;f=e;e=d;d=rol(c,30);c=a;a=temp;}h=[(h[0]+a)|0,(h[1]+c)|0,(h[2]+d)|0,(h[3]+e)|0,(h[4]+f)|0];}return h.map(x=>(x>>>0).toString(16).padStart(8,"0")).join("");}
   const digest = text => hashTools.sha256(utf8(text));
   const own = (obj, key) => Object.prototype.hasOwnProperty.call(obj, key);
-  function canonical(value) {
-    if (Array.isArray(value)) return "[" + value.map(canonical).join(",") + "]";
-    if (value && typeof value === "object") return "{" + Object.keys(value).sort().map(k => JSON.stringify(k) + ":" + canonical(value[k])).join(",") + "}";
-    const out = JSON.stringify(value);
-    if (out === undefined) throw new Error("Case contains an unsupported value.");
-    return out;
+  function textBuffer() {
+    const chunks = []; let parts = [], pending = 0, length = 0;
+    const flush = () => { if (parts.length) { chunks.push(parts.join("")); parts = []; pending = 0; } };
+    return {
+      write(text) { parts.push(text); pending += text.length; length += text.length; if (pending >= 65536) flush(); },
+      get length() { return length; },
+      finish() { flush(); const text = chunks.join(""); chunks.length = 0; return text; }
+    };
   }
+  function canonicalText(value, rootFields) {
+    const out = textBuffer();
+    function visit(item, depth) {
+      if (Array.isArray(item)) {
+        out.write("[");
+        for (let i = 0; i < item.length; i++) {
+          if (i) out.write(",");
+          // Preserve the original array serializer's handling of an absent slot.
+          if (i in item) visit(item[i], depth + 1);
+        }
+        out.write("]");
+      } else if (item && typeof item === "object") {
+        out.write("{"); let first = true;
+        for (const key of Object.keys(item).sort()) {
+          if (!first) out.write(",");
+          if (depth === 0 && rootFields) rootFields.set(key, out.length);
+          out.write(JSON.stringify(key)); out.write(":"); visit(item[key], depth + 1); first = false;
+        }
+        out.write("}");
+      } else {
+        const text = JSON.stringify(item);
+        if (text === undefined) throw new Error("Case contains an unsupported value.");
+        out.write(text);
+      }
+    }
+    visit(value, 0);
+    return out.finish();
+  }
+  function canonical(value) { return canonicalText(value); }
   function fail(message) { throw new Error(message); }
   function json(text, path) {
     try { return JSON.parse(text); } catch (error) { fail("Cannot read JSON in " + path + ": " + error.message); }
@@ -66,7 +97,7 @@ function sha1(data){const length=data.length,n=Math.ceil((length+9)/64)*64,b=new
     for (const path of Object.keys(texts)) if (!seen.has(path)) fail("Unlisted source file: " + path);
     return sourceIdentity(manifest);
   }
-  function makeCase(manifest, sourceTexts, createdAt) {
+  function makeWorkspace(manifest, sourceTexts, createdAt) {
     validateSources(manifest, sourceTexts);
     const result = {
       schema: "survey-release-case/v1",
@@ -76,18 +107,21 @@ function sha1(data){const length=data.length,n=Math.ceil((length+9)/64)*64,b=new
       source_texts: Object.assign({}, sourceTexts),
       review_events: []
     };
-    buildModel(result, true);
-    return result;
+    return {savedCase: result, model: buildModel(result, true)};
   }
-  function openCase(input) {
+  function makeCase(manifest, sourceTexts, createdAt) {
+    return makeWorkspace(manifest, sourceTexts, createdAt).savedCase;
+  }
+  function openWorkspace(input) {
     const result = typeof input === "string" ? json(input, "saved case") : JSON.parse(canonical(input));
     if (!result || result.schema !== "survey-release-case/v1") fail("Choose a Survey Release Workbench case.");
     const actual = validateSources(result.manifest, result.source_texts);
     if (result.case_id !== actual) fail("Case identifier differs from its original sources.");
     const model = buildModel(result, true);
     validateReview(result, model);
-    return result;
+    return {savedCase: result, model};
   }
+  function openCase(input) { return openWorkspace(input).savedCase; }
   function buildModel(savedCase, sourcesAlreadyChecked) {
     if (!sourcesAlreadyChecked) validateSources(savedCase.manifest, savedCase.source_texts);
     const p = savedCase.manifest.profile, read = path => {
@@ -279,16 +313,18 @@ function sha1(data){const length=data.length,n=Math.ceil((length+9)/64)*64,b=new
   }
   function release(savedCase, model, filters) {
     validateReview(savedCase, model);
-    const state = reviewState(savedCase), chosen = selectedRows(model, savedCase, filters), excluded = [], rows = [];
-    for (const row of chosen) {
+    const state = reviewState(savedCase), excluded = [], rows = [];
+    for (const row of model.rows) {
+      if (!matches(model, row, filters, state)) continue;
       const decision = state.get(row.id), out = publicRow(model, row, decision);
-      if (decision && decision.disposition === "exclude") excluded.push(out); else rows.push(out);
+      const cells = columns.map(column => out[column]);
+      if (decision && decision.disposition === "exclude") excluded.push(cells); else rows.push(cells);
     }
     const payload = {
       schema: "survey-publication/v1", case_id: savedCase.case_id, source_id: sourceIdentity(savedCase.manifest),
       review_revision: savedCase.review_events.length ? savedCase.review_events[savedCase.review_events.length - 1].event_id : savedCase.case_id,
       title: savedCase.manifest.title, source_commit: savedCase.manifest.commit, filters: filters || {},
-      columns: columns.slice(), rows: rows.map(row => columns.map(c => row[c])), exclusions: excluded.map(row => columns.map(c => row[c])),
+      columns: columns.slice(), rows, exclusions: excluded,
       dictionary: {
         indicators: [...model.indicators.values()].map(i => ({id:i.IndicatorID,name:i.IndicatorName,description:i.IndicatorDescription})),
         measures: [...model.measures.entries()].map(([key,m]) => ({key:JSON.parse(key),definition:m})),
@@ -304,20 +340,32 @@ function sha1(data){const length=data.length,n=Math.ceil((length+9)/64)*64,b=new
         "No weighting, confidence interval, p-value or complex-survey estimate is calculated by this workbench."
       ]
     };
-    const edition = "edition-" + digest(canonical(payload)).slice(0, 24);
-    const csv = columns.map(csvCell).join(",") + "\r\n" + rows.map(row => columns.map(c => csvCell(row[c])).join(",")).join("\r\n") + (rows.length ? "\r\n" : "");
-    const output = Object.assign({edition_id: edition}, payload);
-    const jsonText = canonical(output) + "\n";
+    // Record top-level boundaries while serializing each publication value once.
+    const fields = new Map(), payloadText = canonicalText(payload, fields);
+    const edition = "edition-" + digest(payloadText).slice(0, 24);
+    const nextField = [...fields.keys()].find(key => key > "edition_id");
+    const insertion = nextField === undefined ? payloadText.length - 1 : fields.get(nextField);
+    const editionField = JSON.stringify("edition_id") + ":" + JSON.stringify(edition);
+    const jsonText = payloadText.slice(0, insertion) +
+      (nextField === undefined ? (fields.size ? "," : "") + editionField : editionField + ",") +
+      payloadText.slice(insertion) + "\n";
+    const csvText = textBuffer(); csvText.write(columns.map(csvCell).join(",") + "\r\n");
+    for (const cells of rows) csvText.write(cells.map(csvCell).join(",") + "\r\n");
+    const csv = csvText.finish(), output = Object.assign({edition_id: edition}, payload);
     const codebookColumns = ["indicator_id","indicator","measure_id","measure","measurement_type","display_type","how_calculated","source","trend_no_compare"];
     const codebookRows = [...model.measures.entries()].map(([key,m]) => {
       const [indicator_id, measure_id] = JSON.parse(key);
       return {indicator_id, indicator:model.indicators.get(String(indicator_id)).IndicatorName, measure_id, measure:m.MeasureName, measurement_type:m.MeasurementType, display_type:m.DisplayType || "", how_calculated:m.how_calculated, source:m.Sources, trend_no_compare:m.TrendNoCompare || ""};
     });
     const codebook = codebookColumns.map(csvCell).join(",") + "\r\n" + codebookRows.map(row => codebookColumns.map(c => csvCell(row[c])).join(",")).join("\r\n") + "\r\n";
+    const identity = (path, text) => {
+      const bytes = utf8(text);
+      return {path, bytes: bytes.length, sha256: hashTools.sha256(bytes)};
+    };
     return {edition_id: edition, json: jsonText, csv, codebook, manifest: {
       schema: "survey-release-edition/v1", edition_id: edition, case_id: savedCase.case_id,
       review_revision: payload.review_revision, rows: rows.length, exclusions: excluded.length,
-      files: [{path:"release.csv", bytes:utf8(csv).length, sha256:digest(csv)}, {path:"release.json", bytes:utf8(jsonText).length, sha256:digest(jsonText)}, {path:"codebook.csv",bytes:utf8(codebook).length,sha256:digest(codebook)}]
+      files: [identity("release.csv", csv), identity("release.json", jsonText), identity("codebook.csv", codebook)]
     }, publication: output};
   }
   function compareRows(model, left, right) {
@@ -367,17 +415,17 @@ function sha1(data){const length=data.length,n=Math.ceil((length+9)/64)*64,b=new
     const seen=new Set();
     for(const f of files){
       if(!safePath(f.name)||!/^[\x20-\x7e]+$/.test(f.name)||seen.has(f.name))fail("Invalid or repeated delivery filename.");
-      seen.add(f.name);const name=utf8(f.name),raw=typeof f.content==="string"?utf8(f.content):f.content;
+      seen.add(f.name);const name=utf8(f.name),content=f.content,raw=typeof content==="string"?utf8(content):content;
       const compressed=deflate?deflate(raw):raw,packed=compressed.length<raw.length?compressed:raw,method=packed===raw?0:8,crc=hashTools.crc32(raw),head=[];
       put32(head,0x04034b50);for(const v of [20,0,method,0,33])put16(head,v);
       for(const v of [crc,packed.length,raw.length])put32(head,v);put16(head,name.length);put16(head,0);
-      const local=join([Uint8Array.from(head),name,packed]);parts.push(local);
+      const header=Uint8Array.from(head);parts.push(header,name,packed);
       const c=[];put32(c,0x02014b50);for(const v of [788,20,0,method,0,33])put16(c,v);
       for(const v of [crc,packed.length,raw.length])put32(c,v);for(const v of [name.length,0,0,0,0])put16(c,v);
-      put32(c,(0o100644<<16)>>>0);put32(c,offset);directory.push(join([Uint8Array.from(c),name]));offset+=local.length;
+      put32(c,(0o100644<<16)>>>0);put32(c,offset);directory.push(join([Uint8Array.from(c),name]));offset+=header.length+name.length+packed.length;
     }
     const central=join(directory),end=[];put32(end,0x06054b50);for(const v of [0,0,files.length,files.length])put16(end,v);
     put32(end,central.length);put32(end,offset);put16(end,0);return join([...parts,central,Uint8Array.from(end)]);
   }
-  return {zipFiles,canonical,digest,utf8,safePath,validateSources,sourceIdentity,makeCase,openCase,buildModel,recordReview,reviewState,validateReview,describe,selectedRows,summary,publicRow,release,compareRows,compareCases};
+  return {zipFiles,canonical,digest,utf8,safePath,validateSources,sourceIdentity,makeCase,openCase,makeWorkspace,openWorkspace,buildModel,recordReview,reviewState,validateReview,describe,selectedRows,summary,publicRow,release,compareRows,compareCases};
 });

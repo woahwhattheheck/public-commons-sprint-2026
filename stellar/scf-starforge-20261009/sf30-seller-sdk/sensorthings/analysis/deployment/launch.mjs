@@ -11,6 +11,7 @@ export const HELP=[
   'node analysis/deployment/launch.mjs serve --workspace ABSOLUTE_DIRECTORY',
   '  --session-file ABSOLUTE_PRIVATE_URL_FILE [--host 127.0.0.1|::1] [--port NUMBER]',
   '  [--expected-workspace-id ORIGINAL_UUID] [--source-inbox ABSOLUTE_DIRECTORY]',
+  '  [--buyer-workspace ABSOLUTE_DIRECTORY] [--merchant-runtime ABSOLUTE_PRIVATE_JSON]',
   '',
   'This delegates the original CLI, store lease, listener and saved private session.',
   'The startup record contains the origin and session-file path, never the token.',
@@ -28,7 +29,7 @@ export async function main(argv=process.argv.slice(2),{emit=value=>process.stdou
     if(!record||record.ownership!=='ORIGINAL_SENSORTHINGS_WORKSPACE'||!record.sessionFile)
       throw fault('VIEWER_LAUNCH','The original listener did not retain its selected private session file.',409);
     emit({schema:'stellar-forge.sensorthings-analysis-startup.v1',workspaceId:record.workspaceId,origin:record.origin,
-      pid:record.pid,sessionFile:record.sessionFile,analysisPath:'/analysis/',ownership:record.ownership,fileReads:record.fileReads,
+      pid:record.pid,sessionFile:record.sessionFile,merchantRuntime:record.merchantRuntime??null,analysisPath:'/analysis/',ownership:record.ownership,fileReads:record.fileReads,
       session:'Use the existing local operator and the private session file. No bearer token is included in this startup record.'});
   }});
 }

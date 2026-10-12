@@ -1,4 +1,4 @@
-import sys,tty,json,tempfile,pathlib,hashlib,subprocess,os,base64,zipfile,io,gzip,traceback,re,urllib.request,urllib.parse,urllib.error,datetime
+import sys,tty,json,tempfile,pathlib,hashlib,subprocess,os,base64,zipfile,gzip,traceback,re,urllib.request,urllib.parse,urllib.error,datetime
 if sys.stdin.isatty():
     tty.setraw(sys.stdin.fileno())
 print("OPEN311_NATIVE_READY",flush=True)
@@ -14,7 +14,10 @@ archive_filename=packet.get("archiveFilename","helsinki-collection-reporting-wor
 if not isinstance(archive_filename,str) or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,180}\.zip",archive_filename):
     raise RuntimeError("Use a plain ZIP archive filename.")
 manifest=[]
-zipbytes=b""
+archive_record=None
+archive_phases={}
+archives=root/"archives"
+archives.mkdir(mode=0o700)
 node=os.environ.get("CODEX_PRIMARY_RUNTIME_NODE") or "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node"
 modules=os.environ.get("CODEX_PRIMARY_RUNTIME_NODE_MODULES") or "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/node_modules"
 runtimeenv=os.environ.copy()
@@ -73,38 +76,78 @@ def run_node(runner,configuration,timeout):
     except OSError as error:
         return {"exitCode":None,"stdout":"","stderr":"","timedOut":False,
             "error":{"name":type(error).__name__,"message":str(error)}}
+def fsync_directory(path):
+    descriptor=os.open(path,os.O_RDONLY)
+    try: os.fsync(descriptor)
+    finally: os.close(descriptor)
+def write_record(path,value):
+    temporary=path.with_name(path.name+".pending-"+str(os.getpid()))
+    data=(json.dumps(value,ensure_ascii=False,indent=2)+"\n").encode("utf-8")
+    descriptor=os.open(temporary,os.O_WRONLY|os.O_CREAT|os.O_EXCL,0o600)
+    try:
+        with os.fdopen(descriptor,"wb") as stream:
+            stream.write(data);stream.flush();os.fsync(stream.fileno())
+        os.replace(temporary,path);fsync_directory(path.parent)
+    finally:
+        if temporary.exists(): temporary.unlink()
+def whole_hash(path):
+    digest=hashlib.sha256();size=0
+    with path.open("rb") as stream:
+        for block in iter(lambda:stream.read(1024*1024),b""):
+            size+=len(block);digest.update(block)
+    return size,digest.hexdigest()
 def archive_descriptor():
-    return {"filename":archive_filename,
-        "bytes":len(zipbytes),"sha256":hashlib.sha256(zipbytes).hexdigest()}
-def refresh_archive():
-    global zipbytes
-    artifact=io.BytesIO()
-    with zipfile.ZipFile(artifact,"w",compression=zipfile.ZIP_DEFLATED,compresslevel=9) as archive:
-        delivery=root/"delivery"
-        if delivery.exists():
-            for path in sorted(delivery.rglob("*")):
-                if path.is_file():
-                    archive.write(path,str(path.relative_to(delivery)))
-        archive.writestr("source-manifest.json",json.dumps({"sourceHead":packet["edition"],
-            "coreEdition":packet["coreEdition"],"files":manifest},indent=2))
-        archive.writestr("commission-collection.mjs",packet["runner"])
-        archive.writestr("input/retained-originals.json",canonical(packet["retained"]))
-        archive.writestr("input/connection.json",canonical(packet["connection"]))
-        for entry in manifest:
-            archive.write(repo/entry["path"],"source/"+entry["path"])
-        for name in ["collection-stdout.log","collection-stderr.log"]:
-            if (root/name).exists():
-                archive.write(root/name,name)
-        index=[]
-        for request_id,operation in reporting_operations.items():
-            directory=pathlib.Path(operation["directory"])
-            index.append({key:value for key,value in operation.items() if key!="directory"})
-            if directory.exists():
-                for path in sorted(directory.rglob("*")):
+    if archive_record is None:
+        raise RuntimeError("The complete native archive has not been saved.")
+    return dict(archive_record)
+def refresh_archive(phase="collection"):
+    global archive_record
+    if not isinstance(phase,str) or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]{0,160}",phase):
+        raise RuntimeError("Use the original collection or reporting phase identity.")
+    if phase in archive_phases:
+        raise RuntimeError("The completed phase already has an immutable archive.")
+    directory=archives/phase;directory.mkdir(mode=0o700)
+    partial=directory/(archive_filename+".partial")
+    complete=directory/archive_filename
+    descriptor=os.open(partial,os.O_WRONLY|os.O_CREAT|os.O_EXCL,0o600)
+    with os.fdopen(descriptor,"wb") as artifact:
+        with zipfile.ZipFile(artifact,"w",compression=zipfile.ZIP_DEFLATED,compresslevel=9) as archive:
+            delivery=root/"delivery"
+            if delivery.exists():
+                for path in sorted(delivery.rglob("*")):
                     if path.is_file():
-                        archive.write(path,"reporting/"+request_id+"/"+str(path.relative_to(directory)))
-        archive.writestr("reporting-index.json",json.dumps(index,indent=2))
-    zipbytes=artifact.getvalue()
+                        archive.write(path,str(path.relative_to(delivery)))
+            archive.writestr("source-manifest.json",json.dumps({"sourceHead":packet["edition"],
+                "coreEdition":packet["coreEdition"],"files":manifest},indent=2))
+            archive.writestr("commission-collection.mjs",packet["runner"])
+            archive.writestr("input/retained-originals.json",canonical(packet["retained"]))
+            archive.writestr("input/connection.json",canonical(packet["connection"]))
+            for entry in manifest:
+                archive.write(repo/entry["path"],"source/"+entry["path"])
+            for name in ["collection-stdout.log","collection-stderr.log"]:
+                if (root/name).exists():
+                    archive.write(root/name,name)
+            index=[]
+            for request_id,operation in reporting_operations.items():
+                operation_directory=pathlib.Path(operation["directory"])
+                index.append({key:value for key,value in operation.items() if key!="directory"})
+                if operation_directory.exists():
+                    for path in sorted(operation_directory.rglob("*")):
+                        if path.is_file():
+                            archive.write(path,"reporting/"+request_id+"/"+str(path.relative_to(operation_directory)))
+            archive.writestr("reporting-index.json",json.dumps(index,indent=2))
+        artifact.flush();os.fsync(artifact.fileno())
+    size,sha=whole_hash(partial)
+    os.chmod(partial,0o400)
+    os.link(partial,complete);partial.unlink();fsync_directory(directory)
+    selected={"schema":"commons.native.archive.v1","path":str(complete),"filename":archive_filename,
+        "bytes":size,"sha256":sha,"jobId":packet.get("jobId",root.name),"phase":phase}
+    selected["descriptorPath"]=str(directory/"archive-descriptor.json")
+    write_record(directory/"archive-descriptor.json",selected)
+    archive_record=selected;archive_phases[phase]=dict(selected)
+    write_record(archives/"index.json",{"schema":"commons.native.archive-checkpoints.v1",
+        "jobId":selected["jobId"],"phases":list(archive_phases.values())})
+    write_record(root/"latest-archive.json",selected)
     return archive_descriptor()
 def reporting(command):
     request_id=command.get("requestId")
@@ -162,7 +205,7 @@ def reporting(command):
         operation["result"]={"state":"failed","error":{"name":type(error).__name__,
             "message":str(error),"traceback":traceback.format_exc()}}
     write_private(directory/"operation-result.json",canonical(operation))
-    refreshed=refresh_archive()
+    refreshed=refresh_archive("reporting-"+request_id)
     print("OPEN311_REPORTING_RESULT "+json.dumps({"requestId":request_id,"replayed":False,
         "operation":operation,"archive":refreshed},separators=(",",":")),flush=True)
 def upload_archive(command):
@@ -195,25 +238,29 @@ def upload_archive(command):
     archive_uploads[upload_id]=record
     operation_dir=root/"archive-uploads"/upload_id
     write_private(operation_dir/"intent.json",canonical({"uploadId":upload_id,"payloadHash":payload_hash,
-        "uploadUrl":target,"method":"POST","archive":descriptor}))
+        "method":"POST","archive":descriptor}))
     class NoRedirect(urllib.request.HTTPRedirectHandler):
         def redirect_request(self,request,fp,code,msg,headers,newurl):
             return None
-    request=urllib.request.Request(target,data=zipbytes,method="POST",headers={
-        "Content-Type":"application/zip","Content-Length":str(len(zipbytes))})
     try:
-        with urllib.request.build_opener(NoRedirect()).open(request,timeout=60) as response:
-            record["status"]=response.status
-            record["providerResponse"]=response.read(4096).decode("utf-8",errors="replace")
-            record["state"]="UPLOADED" if 200<=response.status<300 else "REJECTED"
-            record["uncertain"]=False
+        selected=pathlib.Path(descriptor["path"])
+        if whole_hash(selected)!=(descriptor["bytes"],descriptor["sha256"]):
+            raise RuntimeError("The saved native archive changed before upload.")
+        with selected.open("rb") as stream:
+            request=urllib.request.Request(target,data=stream,method="POST",headers={
+                "Content-Type":"application/zip","Content-Length":str(descriptor["bytes"])})
+            with urllib.request.build_opener(NoRedirect()).open(request,timeout=60) as response:
+                record["status"]=response.status
+                record["providerResponse"]=response.read(4096).decode("utf-8",errors="replace")
+                record["state"]="UPLOADED" if 200<=response.status<300 else "REJECTED"
+                record["uncertain"]=False
     except urllib.error.HTTPError as error:
         record["status"]=error.code
         record["providerResponse"]=error.read(4096).decode("utf-8",errors="replace")
         record["state"]="REJECTED";record["uncertain"]=False
     except Exception as error:
         record["state"]="UNCERTAIN"
-        record["error"]={"name":type(error).__name__,"message":str(error)}
+        record["error"]={"name":type(error).__name__,"message":"Reconcile this original prepared upload before another attempt."}
     record["completedAt"]=utcnow()
     write_private(operation_dir/"result.json",canonical(record))
     print("OPEN311_NATIVE_UPLOADED "+json.dumps({"replayed":False,**record},separators=(",",":")),flush=True)
@@ -262,11 +309,13 @@ try:
                 if command.get("archiveSha256") and command["archiveSha256"]!=archive_descriptor()["sha256"]:
                     raise RuntimeError("ARCHIVE_CHANGED: select the latest complete archive SHA256.")
                 offset=int(command.get("offset",0));limit=int(command.get("limit",49152))
-                if offset<0 or limit<1 or limit>49152 or offset>len(zipbytes):
+                selected=archive_descriptor()
+                if offset<0 or limit<1 or limit>49152 or offset>selected["bytes"]:
                     raise RuntimeError("Invalid artifact range")
-                chunk=zipbytes[offset:offset+limit]
+                with pathlib.Path(selected["path"]).open("rb") as stream:
+                    stream.seek(offset);chunk=stream.read(limit)
                 print("OPEN311_NATIVE_CHUNK "+json.dumps({"offset":offset,"bytes":len(chunk),
-                    "nextOffset":offset+len(chunk) if offset+len(chunk)<len(zipbytes) else None,
+                    "nextOffset":offset+len(chunk) if offset+len(chunk)<selected["bytes"] else None,
                     "archiveSha256":archive_descriptor()["sha256"],
                     "body":base64.b64encode(chunk).decode("ascii")},separators=(",",":")),flush=True)
             elif command.get("op")=="original":

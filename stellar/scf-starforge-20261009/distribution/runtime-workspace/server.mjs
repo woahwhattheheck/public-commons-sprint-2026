@@ -56,6 +56,18 @@ export async function startRuntimeWorkspace({ directory, port = 8465, openApiSet
     ['/python.mjs', 'python.mjs', 'text/javascript; charset=utf-8'],
     ['/source-build.mjs', 'source-build.mjs', 'text/javascript; charset=utf-8'],
   ].map(async ([path, name, type]) => [path, { bytes: await readFile(new URL('./public/' + name, import.meta.url)), type }])));
+  assets.set('/product-catalog/catalog.mjs', {
+    bytes: await readFile(new URL('../product-catalog/catalog.mjs', import.meta.url)),
+    type: 'text/javascript; charset=utf-8',
+  });
+  assets.set('/product-requirements.mjs', {
+    bytes: await readFile(new URL('../discovery/product-requirements.mjs', import.meta.url)),
+    type: 'text/javascript; charset=utf-8',
+  });
+  assets.set('/source-catalog.css', {
+    bytes: await readFile(new URL('./public/source-catalog.css', import.meta.url)),
+    type: 'text/css; charset=utf-8',
+  });
   let origin, host, closing = false;
   const sockets = new Set(), imageDownloads = new Map(), transferDownloads = new Map(), pythonDownloads = new Map(), sourceBuildDownloads = new Map();
   const server = createServer(async (req, res) => {
@@ -176,6 +188,8 @@ export async function startRuntimeWorkspace({ directory, port = 8465, openApiSet
       need(req.method === 'POST' && req.headers.origin === origin, 'RUNTIME_WORKSPACE_ORIGIN_REQUIRED', undefined, 403);
       if (url.pathname === '/api/source-builds/catalog')
         return send(200, await model.sourceBuildsCatalog(await body(req, ['repository', 'ref', 'offline'])));
+      if (url.pathname === '/api/source-builds/product')
+        return send(200, await model.sourceBuildsProduct(await body(req, ['repository', 'ref', 'selection', 'offline', 'python'])));
       if (url.pathname === '/api/source-builds/review')
         return send(201, await model.sourceBuildsReview(await body(req, ['repository', 'ref', 'selection', 'offline', 'python'])));
       if (url.pathname === '/api/source-builds/recover') {

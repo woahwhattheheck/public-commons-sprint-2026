@@ -30,6 +30,7 @@ function errorInfo(error){
     message:String(error?.message??'The original operation could not finish.').slice(0,2000),
     outcomeUnknown:error?.outcomeUnknown===true,at:now()};
 }
+function retainedInput(input){const {signal,...value}=input;return value;}
 function request(input,method){
   need(input&&typeof input==='object'&&!Array.isArray(input),'FLOWABLE_INPUT_INVALID');requestId(input.requestId);
   const {signal,...args}=input;
@@ -262,11 +263,19 @@ export async function openFlowableWorkspace({directory,connections=[],environmen
   async function captureNativePortfolio(kind,input,operationSignal){
     const decision=kind==='decisionPortfolio',method=decision?'captureDecisionPortfolio':'capturePortfolio';
     const native=adapterFor(kind),collections=decision?DECISION_COLLECTIONS:COLLECTIONS;
-    const{prior}=await replay(input,method,true);if(prior)return prior;
-    const{connection,record:target}=await lookupConnection(input.connectionId);
-    let record=await initial(kind,input,method,{label:field(input.label??(decision?'Decision portfolio':'Engine portfolio'),300,true),
-      connectionId:target.id,configurationSha256:target.value.configurationSha256,connection,
-      phase:'CAPTURING',state:'CAPTURING',startedAt:now()});
+    const{prior}=await replay(input,method,true);
+    if(prior&&!['CAPTURING','INTERRUPTED'].includes(prior.value.phase))return prior;
+    let record=prior,connection;
+    if(prior){
+      connection=await sameConfiguration(prior);
+      record=await store.revise(prior,{...prior.value,phase:'CAPTURING',state:'CAPTURING',
+        captureInput:prior.value.captureInput??await store.putJSON(retainedInput(input)),failure:null,resumedAt:now()});
+    }else{
+      const selected=await lookupConnection(input.connectionId);connection=selected.connection;
+      record=await initial(kind,input,method,{label:field(input.label??(decision?'Decision portfolio':'Engine portfolio'),300,true),
+        connectionId:selected.record.id,configurationSha256:selected.record.value.configurationSha256,connection,
+        captureInput:await store.putJSON(retainedInput(input)),phase:'CAPTURING',state:'CAPTURING',startedAt:now()});
+    }
     try{
       const inventory=await native.capture(transport(connection,operationSignal,kind),await sinks(record.id));
       need(collections.every(key=>inventory.collections?.[key]?.complete===true),
@@ -281,23 +290,33 @@ export async function openFlowableWorkspace({directory,connections=[],environmen
   const capturePortfolio=(input,operationSignal)=>captureNativePortfolio('portfolio',input,operationSignal);
   const captureDecisionPortfolio=(input,operationSignal)=>captureNativePortfolio('decisionPortfolio',input,operationSignal);
   async function prepareOperation(kind,input,operationSignal){
-    const method='prepare'+kind[0].toUpperCase()+kind.slice(1),{prior}=await replay(input,method,true);if(prior)return prior;
-    need(EXPECTED_ACTIONS[kind]?.includes(input.selection?.action),'FLOWABLE_OPERATION_SELECTION_INVALID');
-    const{record:target,connection}=await lookupConnection(input.connectionId),selection=input.selection;
-    const native=adapterFor(kind),plan=native.plan(connection,selection),planSha256=textHash(plan);
-    const requestBody=Buffer.from(plan.bodyBase64??'','base64');
-    need(requestBody.toString('base64')===(plan.bodyBase64??''),'FLOWABLE_NATIVE_BODY_INVALID');
-    let sourceResource;
-    if(selection.resource){
-      const bytes=Buffer.from(selection.resource.contentBase64,'base64');
-      sourceResource={filename:selection.resource.filename,reference:await store.putBlob(bytes,selection.resource.contentType??'application/octet-stream')};
+    const method='prepare'+kind[0].toUpperCase()+kind.slice(1),{prior}=await replay(input,method,true);
+    const native=adapterFor(kind);let record=prior,connection,selection,plan;
+    if(prior){
+      if(prior.value.dispatchedAt||!['PREPARING','INTERRUPTED','PREPARE_FAILED'].includes(prior.value.phase))return prior;
+      connection=await sameConfiguration(prior);
+      selection=await store.getJSON(prior.value.selection);plan=await store.getJSON(prior.value.plan);
+      need(textHash(plan)===prior.value.planSha256&&textHash(native.plan(connection,selection))===prior.value.planSha256,
+        'FLOWABLE_NATIVE_PLAN_CHANGED');
+      record=await store.revise(prior,{...prior.value,phase:'PREPARING',state:'PREPARING',
+        preparationInput:prior.value.preparationInput??await store.putJSON(retainedInput(input)),failure:null,resumedAt:now()});
+    }else{
+      need(EXPECTED_ACTIONS[kind]?.includes(input.selection?.action),'FLOWABLE_OPERATION_SELECTION_INVALID');
+      const selected=await lookupConnection(input.connectionId);connection=selected.connection;selection=input.selection;
+      plan=native.plan(connection,selection);const planSha256=textHash(plan),requestBody=Buffer.from(plan.bodyBase64??'','base64');
+      need(requestBody.toString('base64')===(plan.bodyBase64??''),'FLOWABLE_NATIVE_BODY_INVALID');
+      let sourceResource;
+      if(selection.resource){
+        const bytes=Buffer.from(selection.resource.contentBase64,'base64');
+        sourceResource={filename:selection.resource.filename,reference:await store.putBlob(bytes,selection.resource.contentType??'application/octet-stream')};
+      }
+      record=await initial(kind,input,method,{label:field(input.label??'Flowable '+kind,300,true),note:field(input.note??'',20000),
+        phase:'PREPARING',state:'PREPARING',connectionId:selected.record.id,connection,configurationSha256:selected.record.value.configurationSha256,
+        preparationInput:await store.putJSON(retainedInput(input)),selection:await store.putJSON(selection),plan:await store.putJSON(plan),planSha256,
+        requestBody:await store.putBlob(requestBody,plan.contentType??'application/octet-stream'),
+        ...(sourceResource?{sourceResource}:{}),
+        summary:{action:plan.action,method:plan.method,path:plan.path,bodyBytes:requestBody.length}});
     }
-    let record=await initial(kind,input,method,{label:field(input.label??'Flowable '+kind,300,true),note:field(input.note??'',20000),
-      phase:'PREPARING',state:'PREPARING',connectionId:target.id,connection,configurationSha256:target.value.configurationSha256,
-      selection:await store.putJSON(selection),plan:await store.putJSON(plan),planSha256,
-      requestBody:await store.putBlob(requestBody,plan.contentType??'application/octet-stream'),
-      ...(sourceResource?{sourceResource}:{}),
-      summary:{action:plan.action,method:plan.method,path:plan.path,bodyBytes:requestBody.length}});
     try{
       const client=transport(connection,operationSignal,kind),callbacks=await sinks(record.id);
       const before=await native.read(client,plan,callbacks),beforeRef=await store.putJSON(before);
@@ -374,13 +393,17 @@ export async function openFlowableWorkspace({directory,connections=[],environmen
   }
   async function reconcileOperation(input,operationSignal){
     need(OPERATION_KINDS.includes(input.kind),'FLOWABLE_OPERATION_KIND_INVALID');
-    const resumed=await replay(input,'reconcileOperation',true);if(resumed.prior)return resumed.prior;
-    let record=await store.get(input.kind,recordId(input.id));
+    const resumed=await replay(input,'reconcileOperation',true);
+    if(resumed.prior&&!['UNKNOWN','DISPATCHED','READBACK'].includes(resumed.prior.value.state))return resumed.prior;
+    let record=resumed.prior??await store.get(input.kind,recordId(input.id));
     need(record.value.dispatchedAt&&record.value.before,'FLOWABLE_DISPATCH_REQUIRED','This saved request has not been dispatched.',409);
-    if(input.expectedRevision!=null)need(record.revision===input.expectedRevision,'FLOWABLE_RECORD_CONFLICT',undefined,409);
+    if(!resumed.prior&&input.expectedRevision!=null)need(record.revision===input.expectedRevision,'FLOWABLE_RECORD_CONFLICT',undefined,409);
     const connection=await sameConfiguration(record);
-    record=await store.commit(input.kind,record.id,{expectedRevision:record.revision,requestId:resumed.selected.id,
-      requestSha256:resumed.selected.sha256,value:{...record.value,phase:'READBACK',state:'READBACK',reconcileRequestId:input.requestId}});
+    const value={...record.value,phase:'READBACK',state:'READBACK',reconcileRequestId:input.requestId};
+    // A saved readback may be retried; the original native dispatch remains unchanged.
+    record=resumed.prior?await store.revise(record,{...value,resumedAt:now()}):
+      await store.commit(input.kind,record.id,{expectedRevision:record.revision,requestId:resumed.selected.id,
+        requestSha256:resumed.selected.sha256,value});
     try{
       if(!record.value.response){
         const retained=await store.journal(record.id);

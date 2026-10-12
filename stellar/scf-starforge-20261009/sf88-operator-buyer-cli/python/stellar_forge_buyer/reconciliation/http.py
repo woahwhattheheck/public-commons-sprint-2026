@@ -78,8 +78,9 @@ def get(operator, path, parameters):
         return getattr(native, {"runs": "run", "reports": "report", "requests": "request"}[parts[0]])(parts[1])
     if len(parts) == 3 and parts[0] == "runs":
         run_id, kind = parts[1:]
-        if kind in {"groups", "rows"}:
-            allowed = ("category", "duplicates") if kind == "groups" else ("side", "status", "group_id")
+        if kind in {"groups", "rows", "fields"}:
+            allowed = (("category", "duplicates") if kind == "groups" else ("group_id", "column_name", "state")
+                       if kind == "fields" else ("side", "status", "group_id"))
             values = _parameters(parameters, ("offset", "limit", *allowed))
             options = _paging(values)
             for name in allowed:

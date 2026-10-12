@@ -109,6 +109,10 @@ The JavaScript entry point is openFlowableWorkspace({directory, connections, env
 
 ## Recovery and complete receiving
 
+Interrupted portfolio capture or preparation resumes when the same requestId and identical input are submitted again. The continuation keeps the original connection, native request and saved record; successful captures and completed preparations reuse their retained result. The browser exposes **Resume original capture** and **Resume original preparation** on interrupted records that retain their original input. Read the refreshed preparation before dispatching its current revision.
+
+A saved reconciliation request in UNKNOWN or READBACK can also be submitted again to read its current native outcome. The saved native dispatch remains unchanged. Prior source, failures and exchanges remain in record revisions and journals, including after a complete export and cold receiving.
+
 A native mutation is journaled before transport. Saved original exchanges let reconciliation identify a deployment, process or task result after an interrupted reply. The same requestId and identical input reopen the saved operation. Changes in the prepared target state return a stale review that can be prepared again from current state.
 
 Handover exports all saved connection and operation revisions, original source resources, native request and response bytes, journals and receiving lineage. Download the complete saved delivery:

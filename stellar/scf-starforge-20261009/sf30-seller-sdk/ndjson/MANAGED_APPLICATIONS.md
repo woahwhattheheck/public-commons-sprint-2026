@@ -36,7 +36,7 @@ native snapshot and build identity are reconstructed by that original receiver.
 ## Review, save, start and reopen
 
 1. **Review application** reads the original workspace marker and SQLite identity,
-   selected Python and fourteen source/console files. This read leaves the
+   selected Python and fifteen source/console files. This read leaves the
    original workspace writer available.
 2. **Save application** uses the existing managed adoption for that selected
    runtime. Its original release and operation stay visible in Applications.
@@ -72,8 +72,11 @@ The running application is the original industrial source console. It supports:
   continuation cursors.
 - Comparing keyed editions and downloading the complete original change file.
 - Exporting native CSV, dataset configuration and source lineage.
-- Preparing the original merchant, its reviewed payment terms and generated
-  customer SDK from a selected saved build.
+- Preparing and retaining the original merchant, its reviewed payment terms and
+  generated customer SDK from a selected saved build; selecting, verifying and
+  downloading that same complete package again without another compilation.
+- Receiving a complete saved merchant package through the original NDJSON source,
+  mapping and native build receiver.
 - Exporting and receiving the complete original project in another source console.
 
 Large integer identifiers, decimal text, nested JSON and missing/null/empty values
@@ -89,10 +92,12 @@ The same process removes its own connection when it stops.
 
 Select that file through the original merchant
 [source-workspace connection](../../../../stellar-forge/mcp-merchant-operator/SOURCE_WORKSPACES.md).
-The existing eighteen source-workspace tools then use this same running console
+The original source-workspace tools use this same running console
 for source intake, mapping, query, comparison, merchant preparation and retained
 file delivery. Applications keeps the console process; the merchant MCP borrows
-its connection.
+its connection. Saved-package tools retain the same selection and package IDs;
+see [retained merchant packages](MERCHANT_PACKAGES.md) for exact commands and
+receiving behavior.
 
 If a connection file already exists, use the original running console or choose
 a new file. After a terminated host has been reconciled, the host operator can

@@ -117,6 +117,22 @@ A source may own several commands, exports and runtime groups. Their
 profile through the existing runtime profile and installer when preparing a
 runtime; `starforge doctor --feature NAME` inspects available dependencies.
 
+
+## Products covering required capabilities
+
+Use **Build a product** in the original Runtime workspace to select a complete capability requirement and compare maintained recipes. The original product catalog supplies search and comparison; the requirements extension adds exact coverage, source owners, committed runtime versions and native build review request exports.
+
+~~~sh
+starforge discover requirements --repository /srv/starforge/source \
+  --require command:grant-workspace --require command:grant-source-tables
+
+starforge discover review-request grant-operations \
+  --repository /srv/starforge/source --out grant-review-request.json \
+  --require command:grant-workspace --require command:grant-source-tables
+~~~
+
+[Choose a product by required capabilities](./PRODUCT_REQUIREMENTS.md) explains exact IDs, complete and partial coverage, dependency locks, native review handoff and typed APIs.
+
 ## JavaScript and TypeScript
 
 The installed package exposes the dependency-free projection and search API:

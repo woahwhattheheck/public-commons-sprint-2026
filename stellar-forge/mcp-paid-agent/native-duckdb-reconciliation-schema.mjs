@@ -8,16 +8,27 @@ const text={type:'string'};
 const page={offset:{type:'integer',minimum:0},limit:{type:'integer',minimum:1,maximum:100}};
 const map={type:'array',maxItems:10000,items:{type:'object',additionalProperties:false,required:['original','canonical'],
  properties:{original:{type:'string',maxLength:4096},canonical:{type:'string',maxLength:4096}}}};
+export const reconciliationNumericRule=Object.freeze({
+ type:'object',additionalProperties:false,required:['mode','absolute','relative','unit','nulls','basis'],
+ properties:{mode:{const:'numeric-tolerance'},
+  absolute:{type:'string',minLength:1,maxLength:256,pattern:'^[+]?(?:[0-9]+(?:\\.[0-9]*)?|\\.[0-9]+)(?:[eE][+-]?[0-9]+)?$'},
+  relative:{type:'string',minLength:1,maxLength:256,pattern:'^[+]?(?:[0-9]+(?:\\.[0-9]*)?|\\.[0-9]+)(?:[eE][+-]?[0-9]+)?$'},
+  unit:{type:'string',minLength:1,maxLength:240},nulls:{enum:['equal','uncomparable']},
+  basis:{type:'string',minLength:1,maxLength:4000}},
+ description:'Explicit native numeric VALUE rule only; finite nonnegative decimal strings, exponent magnitude<=256, relative<=1. Difference <= absolute + relative*max(abs(source),abs(target)); source unit is reviewed, never converted. Unique pairs only; duplicate multiplicities stay exact.'
+});
+export const reconciliationFieldStates=Object.freeze(['EXACT_EQUAL','EXACT_DIFFERENT','NULLS_EQUAL','WITHIN_TOLERANCE',
+ 'OUTSIDE_TOLERANCE','NULL_NOT_COMPARABLE','NON_FINITE_NOT_COMPARABLE','DUPLICATE_NOT_PAIRED','ONE_SIDED','QUARANTINED']);
 export const reconciliationDefinition=Object.freeze({
  type:'object',additionalProperties:false,required:['name','label','source_edition','target_edition','columns'],
  properties:{name,label:{type:'string',minLength:1,maxLength:240},source_edition:id,target_edition:id,
   columns:{type:'array',minItems:1,maxItems:64,items:{type:'object',additionalProperties:false,
    required:['name','source','target','role'],properties:{name,source:text,target:text,role:{enum:['key','value']},
-    meaning:text,source_map:map,target_map:map}}},
+    meaning:text,source_map:map,target_map:map,comparison:reconciliationNumericRule}}},
   window_column:{anyOf:[name,{type:'null'}]},windows:{type:'array',maxItems:32,items:{type:'object',additionalProperties:false,
    required:['id','start','end','basis'],properties:{id:name,start:text,end:text,basis:{enum:['native','lexical']}}}},
   notes:text},
- description:'Exact source/target field and SQL-type matching, at least one key. Empty value maps preserve identity; explicit VARCHAR maps quarantine every unmapped non-null value. Windows are nonoverlapping half-open intervals; no implicit trimming, rounding, units, timezone or tolerance conversion.'
+ description:'Exact source/target field and SQL-type matching, at least one key. Empty value maps preserve identity; explicit VARCHAR maps quarantine every unmapped non-null value. Windows are nonoverlapping half-open intervals; no implicit trimming, rounding, units or timezone conversion. Optional numeric value comparison rules require explicit exact-string allowances, source unit, null policy and basis.'
 });
 const subject={oneOf:[
  {type:'object',additionalProperties:false,required:['kind','group_id'],properties:{kind:{const:'group'},group_id:{type:'integer',minimum:1}}},
@@ -36,13 +47,15 @@ export const nativeDuckDBReconciliationOperations=Object.freeze({
  'reconcile-run':spec(['run_id'],{run_id:id},'Read exact full row accounting, category totals and current engineer decision revision.'),
  'reconcile-execute':spec(['request_id','pair_id','expected_revision','definition_sha256'],
   {request_id:requestId,pair_id:id,expected_revision:{type:'integer',minimum:1},definition_sha256:id},
-  'Account for EVERY row in the exact reviewed immutable pair; equal multiset multiplicity never chooses an arbitrary duplicate pairing.'),
+  'Account for EVERY row in the exact reviewed immutable pair; equal multiset multiplicity never chooses an arbitrary duplicate pairing. Explicit rules apply only to unique native numeric value pairs, retaining all raw values/differences.'),
  'reconcile-groups':spec(['run_id'],{run_id:id,...page,
-  category:{enum:['MATCHED','SOURCE_ONLY','TARGET_ONLY','VALUE_DIFFERENCE','MULTISET_DIFFERENCE','NOT_COMPARABLE']},duplicates:{type:'boolean'}},
+  category:{enum:['MATCHED','SOURCE_ONLY','TARGET_ONLY','VALUE_DIFFERENCE','MULTISET_DIFFERENCE','NOT_COMPARABLE','TOLERANCE_MATCHED']},duplicates:{type:'boolean'}},
   'Page complete known-key group results with duplicate/quarantine counts and current engineer dispositions.'),
  'reconcile-rows':spec(['run_id'],{run_id:id,...page,side:{enum:['source','target']},
   status:{enum:['INCLUDED','QUARANTINED','EXCLUDED_WINDOW']},group_id:{type:'integer',minimum:1}},
   'Page every original observation, including quarantined and outside-window rows; offsets are display controls only.'),
+ 'reconcile-fields':spec(['run_id'],{run_id:id,...page,group_id:{type:'integer',minimum:1},column_name:name,
+  state:{enum:reconciliationFieldStates}},'Page every retained per-field native value, exact signed/absolute difference and reviewed allowance for a rule-enabled run. No duplicate row pairing; original runs without recorded rules return FIELDS_NOT_RECORDED.'),
  'reconcile-row':spec(['run_id','side','row'],{run_id:id,side:{enum:['source','target']},row:{type:'integer',minimum:1}},
   'Read the original retained native row and its exact canonical interpretation.'),
  'reconcile-decisions':spec(['run_id'],{run_id:id,...page},'Page append-only engineer decisions and their exact revision sequence.'),
@@ -61,5 +74,5 @@ export const nativeDuckDBReconciliationOperations=Object.freeze({
  'reconcile-resume':spec(['request_id'],{request_id:requestId},'Explicitly resume exactly the retained original body under its native writer; never choose a replacement ID.'),
  'reconcile-export-manifest':spec(['export_id'],{export_id:id},'Read the small exact manifest descriptor for a complete reconciliation handoff, including packages whose full file list exceeds the tool response size. Read its original bytes with file.'),
  'reconcile-export':spec(['request_id','report_id'],{request_id:requestId,report_id:id},
-  'Export complete CSV/Parquet for all frozen recipes, exact original sources, guide/report and original sparse warehouse handoff. Use original operation/resume for this export journal, and export-read/file for all declared bytes.')
+  'Export complete CSV/Parquet for all frozen recipes (including fields for numeric-rule reports), exact original sources, guide/report and original sparse warehouse handoff. Use original operation/resume for this export journal, and export-read/file for all declared bytes.')
 });

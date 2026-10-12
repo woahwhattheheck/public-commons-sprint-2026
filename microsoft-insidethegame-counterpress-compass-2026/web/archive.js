@@ -89,8 +89,7 @@ export function createArchiveUI({snapshot, onSaved, onDeleted, onOpen, onJump, o
   }
   function review() {
     const state = snapshot();
-    return {...(current ? structuredClone(current.review) : {}),
-      title: current ? el('archiveTitle').value : (state.label || state.match.scenario) + ' · ' + state.match.seed,
+    return {...(current ? structuredClone(current.review) : {}), title: current ? el('archiveTitle').value : (state.label || state.match.scenario) + ' · ' + state.match.seed,
       notes: current ? el('archiveNotes').value : '', bookmarks: structuredClone(bookmarks),
       insights: structuredClone(state.insights || []),
       cursor: state.cursor, view: state.view, selectedMomentId: state.selectedMomentId, filters: state.filters, recap: state.recap};

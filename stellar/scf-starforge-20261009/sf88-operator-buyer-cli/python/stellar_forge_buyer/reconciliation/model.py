@@ -11,6 +11,7 @@ from ..duckdb_dataset import _hex, _json, _now, _qid, _wire
 from ..duckdb_agent import read_identity
 from .. import duckdb_semantics
 from ..storage import parse
+from .comparison_rules import FEATURE_SCHEMA, FIELD_STATES, materialize as materialize_rules
 from .contracts import (SCHEMA, OUTCOMES, CATEGORIES, STATUSES, bound_review, fail,
                         fields, integer, literal, page, pair_key, request_id, sha,
                         selected_rows, subject, table, text)
@@ -41,7 +42,7 @@ class Reconciliation:
     @staticmethod
     def _exists(db):
         row = db.execute("SELECT value FROM sf_workspace WHERE key='reconciliation_schema'").fetchone()
-        if row and row[0] != SCHEMA:
+        if row and row[0] not in {SCHEMA, FEATURE_SCHEMA}:
             fail("SCHEMA_CHANGED")
         return row is not None
 
@@ -138,6 +139,7 @@ class Reconciliation:
             result = {"schema": SCHEMA, "workspace_id": read_identity(db),
                       "pair_count": 0, "run_count": 0, "report_count": 0}
             if self._exists(db):
+                result["feature_schema"] = db.execute("SELECT value FROM sf_workspace WHERE key='reconciliation_schema'").fetchone()[0]
                 for kind in ("pairs", "runs", "reports"):
                     result[kind[:-1] + "_count"] = db.execute("SELECT count(*) FROM " + _TABLES[kind]).fetchone()[0]
             return result
@@ -225,6 +227,10 @@ class Reconciliation:
             prior = decoded(row[1])
             if prior["definition_sha256"] == review["review_sha256"]:
                 return prior
+        if review.get("comparison_rules"):
+            # Older writers must not silently export a rule-aware run as exact.
+            # Promote only this feature, in the same original pair transaction.
+            db.execute("UPDATE sf_workspace SET value=? WHERE key='reconciliation_schema'", [FEATURE_SCHEMA])
         record = {"schema": SCHEMA, "pair_id": identity, "name": review["definition"]["name"],
                   "label": review["definition"]["label"], "revision": revision + 1,
                   "definition_sha256": review["review_sha256"], "definition": review["definition"],
@@ -298,12 +304,16 @@ class Reconciliation:
         db.execute("ALTER TABLE " + rows + " ADD COLUMN group_id BIGINT")
         db.execute("UPDATE " + rows + " r SET group_id=g.group_id FROM " + groups +
                    " g WHERE " + self._key_equal(review, "r", "g"))
+        if review.get("comparison_rules"):
+            materialize_rules(db, identity, review)
         summary = self._summary_on(db, identity, review)
         record = {"schema": SCHEMA, "run_id": identity, "pair_id": pair["pair_id"],
                   "pair_revision": pair["revision"], "definition_sha256": pair["definition_sha256"],
                   "review_revision": 0, "review": review, "summary": summary,
                   "source_edition": review["source"]["edition_id"], "target_edition": review["target"]["edition_id"],
                   "created_at": _now(), "comparison_basis": review["comparison_basis"]}
+        if review.get("comparison_rules"):
+            record["comparison_rules"] = deepcopy(review["comparison_rules"])
         db.execute("INSERT INTO sf_reconciliation_runs VALUES(?,?,?,?,?)",
                    [identity, pair["pair_id"], pair["revision"], 0, _json(record)])
         return self._run_on(db, identity)
@@ -325,13 +335,31 @@ class Reconciliation:
             result[side] = {"total": total, "included": included, "quarantined": quarantined,
                             "excluded": excluded, "matched": bags[0], "unmatched": bags[index + 1]}
         counts = dict(db.execute("SELECT category,count(*) FROM " + groups + " GROUP BY category").fetchall())
-        result["groups"] = {name: counts.get(name, 0) for name in CATEGORIES}
+        categories = CATEGORIES if review.get("comparison_rules") else tuple(x for x in CATEGORIES if x != "TOLERANCE_MATCHED")
+        result["groups"] = {name: counts.get(name, 0) for name in categories}
         result["groups"]["total"] = sum(counts.values())
         result["groups"]["duplicate_groups"] = db.execute("SELECT count(*) FROM " + groups + " WHERE duplicate_key").fetchone()[0]
+        if review.get("comparison_rules"):
+            counts_ = db.execute("SELECT coalesce(sum(canonical_matched_count),0)::BIGINT,"
+                                 "coalesce(sum(exact_matched_count),0)::BIGINT,"
+                                 "coalesce(sum(tolerance_matched_count),0)::BIGINT FROM " + groups).fetchone()
+            for side in ("source", "target"):
+                result[side].update(canonical_matched=counts_[0], exact_matched=counts_[1], tolerance_matched=counts_[2])
+                if result[side]["matched"] != counts_[1] + counts_[2]:
+                    fail("RULE_ACCOUNTING_CHANGED")
+            field_counts = dict(db.execute("SELECT state,count(*) FROM " + _qid(table("fields", identity)) +
+                                           " GROUP BY state").fetchall())
+            result["fields"] = {state: field_counts.get(state, 0) for state in FIELD_STATES}
+            result["fields"]["total"] = sum(field_counts.values())
         result["accounting_balanced"] = True
         result["scope_note"] = ("SOURCE_ONLY and TARGET_ONLY describe known canonical keys within the selected windows. "
                                 "Rows with unresolved keys remain separately quarantined; their correspondence is not inferred. "
                                 "Matched multiplicity counts equal canonical values and never assigns an arbitrary duplicate row pairing.")
+        if review.get("comparison_rules"):
+            result["scope_note"] += (" Unique numeric value pairs also retain explicit exact/within/outside allowance results. "
+                                     "Only exact or policy-matched unique pairs contribute to matched; both counts are separate. "
+                                     "Nonexact tolerance matches remain in the engineer decision queue. "
+                                     "Every original value and calculated difference remains in fields/rows and full exports.")
         return result
 
     @staticmethod
@@ -430,6 +458,8 @@ class Reconciliation:
         projection = ["r.group_id", "r.category", "r.duplicate_key", "r.window_id"] + self._projected(run["review"], True)
         projection += ["r." + x for x in ("source_count", "target_count", "source_quarantined", "target_quarantined",
                                           "matched_count", "source_unmatched", "target_unmatched")]
+        if run.get("comparison_rules"):
+            projection += ["r." + x for x in ("canonical_matched_count", "exact_matched_count", "tolerance_matched_count")]
         sql = "SELECT " + ",".join(projection) + " FROM " + _qid(table("groups", run["run_id"])) + " r"
         if revision is not None:
             sql = ("SELECT " + ",".join(projection) + ",d.record AS decision_json FROM " +
@@ -437,7 +467,14 @@ class Reconciliation:
                    ") d ON d.subject='group:'||CAST(r.group_id AS VARCHAR)")
         return sql
 
-    def grid(self, identity, kind, *, offset=0, limit=25, side=None, status=None, group_id=None, category=None, duplicates=None):
+    @staticmethod
+    def _fields_sql(run):
+        if not run.get("comparison_rules"):
+            fail("FIELDS_NOT_RECORDED")
+        return "SELECT * FROM " + _qid(table("fields", run["run_id"]))
+
+    def grid(self, identity, kind, *, offset=0, limit=25, side=None, status=None, group_id=None,
+             category=None, duplicates=None, column_name=None, state=None):
         offset, limit = page(offset, limit)
         with self.workspace._guard(), self.workspace._connection() as db:
             if not self._exists(db):
@@ -446,6 +483,8 @@ class Reconciliation:
             try:
                 run = self._run_on(db, identity)
                 where, parameters = [], []
+                if kind != "fields" and (column_name is not None or state is not None):
+                    fail("FIELD_FILTER_INVALID")
                 if kind == "groups":
                     if side is not None or status is not None or group_id is not None:
                         fail("GROUP_FILTER_INVALID")
@@ -479,6 +518,24 @@ class Reconciliation:
                         parameters.append(integer(group_id, minimum=1))
                     sql = self._rows_sql(run, run["review_revision"])
                     order = 'side,"row"'
+                elif kind == "fields":
+                    if side is not None or status is not None or category is not None or duplicates is not None:
+                        fail("FIELD_FILTER_INVALID")
+                    if group_id is not None:
+                        where.append("group_id=?")
+                        parameters.append(integer(group_id, minimum=1))
+                    if column_name is not None:
+                        if column_name not in {c["name"] for c in run["review"]["definition"]["columns"] if c["role"] == "value"}:
+                            fail("FIELD_COLUMN_INVALID")
+                        where.append("column_name=?")
+                        parameters.append(column_name)
+                    if state is not None:
+                        if state not in FIELD_STATES:
+                            fail("FIELD_STATE_INVALID")
+                        where.append("state=?")
+                        parameters.append(state)
+                    sql = self._fields_sql(run)
+                    order = "group_id,column_index"
                 else:
                     fail("GRID_INVALID")
                 sql = "SELECT * FROM (" + sql + ")" + (" WHERE " + " AND ".join(where) if where else "") + " ORDER BY " + order
@@ -575,20 +632,36 @@ class Reconciliation:
             # cannot establish UNCHANGED, even when the category/counts match.
             changed_content = "NULL::BOOLEAN"
             change = "true"
+        rules_equal = a.get("comparison_rules") == b.get("comparison_rules")
+        if not rules_equal:
+            # A policy revision can change the meaning even if every observed
+            # value happens to retain the same classification and counts.
+            change = "(" + change + ") OR true"
         category = ("CASE WHEN a.group_id IS NULL THEN 'ADDED_TO_REPORT' WHEN b.group_id IS NULL THEN 'ABSENT_FROM_REPORT'"
                     " WHEN " + change + " THEN 'CHANGED' ELSE 'UNCHANGED' END")
         projected = [category + " AS change", "a.group_id AS before_group_id", "b.group_id AS after_group_id",
                      ("true" if comparable else "false") + " AS canonical_schema_equal",
                      changed_content + " AS canonical_content_changed",
-                     changed_counts + " AS classification_or_counts_changed"] + projected
+                     changed_counts + " AS classification_or_counts_changed",
+                     ("true" if rules_equal else "false") + " AS comparison_rules_equal"] + projected
         projected += [side + "." + x + " AS " + side_name + "_" + x
                       for x in compared for side, side_name in (("a", "before"), ("b", "after"))]
         sql = (prefix + "SELECT " + ",".join(projected) + " FROM " + _qid(table("groups", before["run_id"])) +
                " a FULL OUTER JOIN " + _qid(table("groups", after["run_id"])) + " b ON " + " AND ".join(joins) + content_join)
         counts = dict(db.execute("SELECT change,count(*) FROM (" + sql + ") GROUP BY change").fetchall())
+        if before.get("comparison_rules") or after.get("comparison_rules"):
+            for item, fallback in (("canonical_matched_count", "matched_count"),
+                                   ("exact_matched_count", "matched_count"), ("tolerance_matched_count", None)):
+                for alias, label, run in (("a", "before", before), ("b", "after", after)):
+                    value = alias + "." + item if run.get("comparison_rules") else alias + "." + fallback if fallback else "0::BIGINT"
+                    projected.append(value + " AS " + label + "_" + item)
+            sql = (prefix + "SELECT " + ",".join(projected) + " FROM " + _qid(table("groups", before["run_id"])) +
+                   " a FULL OUTER JOIN " + _qid(table("groups", after["run_id"])) + " b ON " + " AND ".join(joins) + content_join)
         scope = {
             "before_run_id": before["run_id"], "after_run_id": after["run_id"],
-            "mapping_equal": a["definition"]["columns"] == b["definition"]["columns"],
+            "mapping_equal": [{k: v for k, v in c.items() if k != "comparison"} for c in a["definition"]["columns"]] ==
+                             [{k: v for k, v in c.items() if k != "comparison"} for c in b["definition"]["columns"]],
+            "comparison_rules_equal": rules_equal,
             "canonical_schema_equal": comparable,
             "content_basis": "Exact native typed canonical value/side/status/reason multiplicities for every known-key group.",
             "windows_equal": (a["definition"]["windows"], a["definition"]["window_column"]) ==
@@ -622,6 +695,8 @@ class Reconciliation:
                           "record AS decision_json FROM sf_reconciliation_decisions WHERE run_id=" + literal(run["run_id"]) +
                           " AND sequence<=" + str(revision) + " ORDER BY sequence"),
         }
+        if run.get("comparison_rules"):
+            statements["fields"] = self._fields_sql(run) + " ORDER BY group_id,column_index"
         comparison = None
         if before_id:
             before = self._run_on(db, before_id)

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from collections import Counter
+from contextlib import contextmanager
 import hashlib
 import json
 from pathlib import Path
@@ -111,6 +112,18 @@ class PortfolioWorkspace:
         original = self.read_edition(edition["parent_id"])
         project = self._project(original)
         return self.native.apply_corrections(project, recipe["corrections"])
+
+    @contextmanager
+    def native_project(self, edition_id):
+        """Reopen this immutable edition's original native file/correction recipe.
+
+        The caller receives the maintained MPXJ object only while its original
+        processwide native lock is held. This read leaves the saved model and
+        edition identities unchanged.
+        """
+        with self.native.locked():
+            edition = self.read_edition(checked_id(edition_id))
+            yield self._project(edition)
 
     def review(self, edition_id, *, target_profile, mappings=None, decisions=None, corrections=None):
         edition = self.read_edition(edition_id)

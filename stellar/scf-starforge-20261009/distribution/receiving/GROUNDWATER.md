@@ -26,7 +26,7 @@ The product source now retains the corrected BAS6 legacy-namefile grammar and at
 
 Use Linux with the Node and Python versions required by the packaged profile, Git, flock, npm and sufficient private storage for the selected source, both installations and transfer parts. Python must be at least 3.11 for the original operator tools. Use a current Git that supports the original reader's --no-lazy-fetch option.
 
-Check out the exact intended Merchant commit in its own directory. Run the caller from that checkout, with every tracked distribution file matching the chosen commit. The caller verifies those bytes against the original Git object reader before creating a build. Its output directory must be separate from the repository and npm cache.
+Check out the exact intended Merchant commit in its own directory. Run the caller from that checkout, with every tracked distribution file matching the chosen commit. The caller verifies those bytes against the original Git object reader before creating a build and before reading a completed result on replay. It compares that execution-source inventory with the first saved executor-source.json. Its output directory must be separate from the repository and npm cache.
 
 Select an existing npm cache directory. Initial installation may fetch the reviewed public dependencies when offlineInstall is false. The transfer then carries the actual lock-bound package bytes; the independent installation always uses its received cache with offline installation enabled. An offline native build also needs matching local Node headers when the selected profile requires them. Pass the actual header prefix in nodeHeaders.
 
@@ -62,7 +62,13 @@ Offline-transfer partials remain with the transfer engine. It validates the orig
 
     starforge runtime-transfer recover --directory RECEIVER --from RETAINED_TARGET --runtime NEW_TARGET
 
-Preserve both targets and their original receipts. A receiving call never initializes another scientific database to replace a missing model.
+The full caller performs that native recovery itself when it receives the exact PREPARATION_INTERRUPTED result. It first saves a request under received-installations/, binding the new target, original recoverFrom target, transfer manifest, source, profile and dependency lock. It follows that same selected request after a lost response. A second interrupted recovery gets its own linked successor request while every earlier target remains retained. Each invocation dispatches at most one newly selected recovery; a further interruption leaves the next exact request ready for the next invocation.
+
+The first successful native result is kept beside its original request. Final runtime inspection and the completed-result replay verify the same source, profile, installation ID and lock. result.json names the selected received directory and includes every original request and native result as a hashed deliverable. Do not run a separate ad hoc recovery and expect this parent to adopt an unselected target.
+
+Preserve all targets and their original receipts. A receiving call never initializes another scientific database to replace a missing model.
+
+Source-build and preparation workers are owned by the maintained Runtime Workspace and may outlive its HTTP server. The caller keeps its own kernel lease and waits on the exact original operation IDs and their native worker leases before finishing or returning a stopped invocation. A timeout or SIGTERM stops new caller work; it does not prove that a detached worker has finished. While those original workers are active, queued or cannot be observed, OWNED_WORKER_DRAIN reports the pending identities and keeps the producing process alive. Preserve that process and inspect the original worker log instead of archiving mutable work.
 
 An interrupted creation of the Runtime Workspace remains at its original path and is reported explicitly. Do not remove it to turn a continued request into a new workspace. The underlying workspace initialization must be completed by its maintained owner before using that path again.
 

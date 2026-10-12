@@ -1,5 +1,6 @@
 // MIT. Compose the maintained SCF application into the existing reviewer page.
 import { readFile, writeFile } from 'node:fs/promises';
+import { applyGrantDeliveryPlan } from './grant-delivery-plan.mjs';
 import { resolve, dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { createHash } from 'node:crypto';
@@ -183,7 +184,7 @@ export function composeGrantApplication({
 }) {
   need(typeof fredCommit === 'string' && /^[a-f0-9]{40}$/.test(fredCommit), 'Select the actual merged economic product commit.');
   need(coopsCommit === null || (typeof coopsCommit === 'string' && /^[a-f0-9]{40}$/.test(coopsCommit)), 'Select the actual merged coastal product commit.');
-  const application = projectGrantMarkdown(applicationMarkdown, { application: true });
+  const application = projectGrantMarkdown(applyGrantDeliveryPlan(applicationMarkdown), { application: true });
   const companion = projectGrantMarkdown(productAndFinanceMarkdown);
   const datasetteSelection = datasetteSourceSelection({ analysisCommit: datasetteCommit, publisherCommit: datasettePublisherCommit });
   if (datasetteSelection) need(companion.includes('## Datasette editions and customer analysis\n'), 'Retain the selected complete Datasette installation with its source commits.');
@@ -281,13 +282,14 @@ function argumentsFor(argv) {
 
 export async function runGrantComposition(argv = process.argv.slice(2)) {
   const options = argumentsFor(argv), directory = resolve(options['--directory'] || DEFAULT_DIRECTORY);
-  const [applicationMarkdown, productAndFinanceMarkdown, templateHtml, indexText, composerSource, customerSource] = await Promise.all([
+  const [applicationMarkdown, productAndFinanceMarkdown, templateHtml, indexText, composerSource, customerSource, deliverySource] = await Promise.all([
     readFile(join(directory, 'grant-data/application.md'), 'utf8'),
     readFile(join(directory, 'grant-data/product-and-finance.md'), 'utf8'),
     readFile(join(directory, 'grant.html'), 'utf8'),
     readFile(join(directory, 'grant-data/source-index.json'), 'utf8'),
     readFile(fileURLToPath(import.meta.url), 'utf8'),
     readFile(new URL('./grant-customers.mjs', import.meta.url), 'utf8'),
+    readFile(new URL('./grant-delivery-plan.mjs', import.meta.url), 'utf8'),
   ]);
   const index = JSON.parse(indexText);
   const manuscript = options['--manuscript'] ? await readFile(resolve(options['--manuscript']), 'utf8') : null;
@@ -304,7 +306,7 @@ export async function runGrantComposition(argv = process.argv.slice(2)) {
   const selectedApplication = manuscript ? extractReviewerApplication(manuscript) : applicationMarkdown;
   index.narrative_source = { ...index.narrative_source, composition: {
     ...index.narrative_source?.composition,
-    renderer_git_blob: gitBlob(composerSource), projector_git_blob: gitBlob(customerSource),
+    renderer_git_blob: gitBlob(composerSource), projector_git_blob: gitBlob(customerSource), delivery_plan_git_blob: gitBlob(deliverySource),
     ...(manuscript ? { canonical_front_sha256: digest(selectedApplication), canonical_front_bytes: bytes(selectedApplication) } : {}),
   } };
   const result = composeGrantApplication({

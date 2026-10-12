@@ -212,7 +212,8 @@ async function renderAll(){
     ['Human tasks',latest?.summary?.tasks??0],['Saved operations',FLOWABLE_OPERATION_KINDS.reduce((sum,kind)=>sum+forEngine(records(kind)).length,0)]]){
     const metric=node('div',null,{class:'metric'});metric.append(node('strong',value),node('span',label));metrics.append(metric);
   }
-  const recent=FLOWABLE_OPERATION_KINDS.flatMap(kind=>forEngine(records(kind))).sort((a,b)=>b.updatedAt.localeCompare(a.updatedAt));
+  const recent=['portfolio','decisionPortfolio',...FLOWABLE_OPERATION_KINDS]
+    .flatMap(kind=>forEngine(records(kind))).sort((a,b)=>b.updatedAt.localeCompare(a.updatedAt));
   table($('#recent-records'),[{label:'Type',key:'kind'},...recordColumns()],recent);
   for(const kind of FLOWABLE_OPERATION_KINDS)table($('#'+kind+'-records'),recordColumns(kind),forEngine(records(kind)));
   table($('#delivery-records'),recordColumns('delivery'),records('delivery'));
@@ -366,6 +367,14 @@ async function openRecord(kind,id){
         await reload();await openRecord(kind,id);notice('Saved '+kind+' outcome: '+result.value.state+'.');
       },{primary:true}));
     }
+    if(!review.dispatchedAt&&['INTERRUPTED','PREPARE_FAILED'].includes(review.phase)&&record.value.preparationInput){
+      toolbar.append(button('Resume original preparation',async()=>{
+        const original=await api('readSource',{reference:record.value.preparationInput});
+        const method='prepare'+kind[0].toUpperCase()+kind.slice(1);
+        const result=await write(method,original.value);
+        await reload();await openRecord(kind,id);notice('Original preparation: '+result.value.state+'.');
+      },{primary:true}));
+    }
     if(review.dispatchedAt)toolbar.append(button('Refresh native outcome',async()=>{
       await write('reconcileOperation',{kind,id,expectedRevision:record.revision});await reload();await openRecord(kind,id);
     }));
@@ -393,6 +402,23 @@ async function openRecord(kind,id){
     jsonSection(container,'Native state before the request',review.before);
     jsonSection(container,'Native state after the request',review.after);
     jsonSection(container,'Original response',review.response);
+  }else if(['portfolio','decisionPortfolio'].includes(kind)){
+    if(record.value.state==='CAPTURED')container.append(button('Open saved native portfolio',async()=>{
+      state.engine=record.value.connectionId;
+      if(kind==='portfolio')state.portfolio=id;else state.decisionPortfolio=id;
+      await reload();switchPage(kind==='portfolio'?'definitions':'decisions');$('#detail').hidden=true;
+    },{primary:true}));
+    if(record.value.phase==='INTERRUPTED'&&record.value.captureInput)container.append(button('Resume original capture',async()=>{
+      const original=await api('readSource',{reference:record.value.captureInput});
+      const result=await write(kind==='decisionPortfolio'?'captureDecisionPortfolio':'capturePortfolio',original.value);
+      if(result.value.state==='CAPTURED'){
+        state.engine=record.value.connectionId;
+        if(kind==='portfolio')state.portfolio=id;else state.decisionPortfolio=id;
+      }
+      await reload();await openRecord(kind,id);notice('Original capture: '+result.value.state+'.');
+    },{primary:true}));
+    if(record.value.failure)container.append(node('p',record.value.failure.message));
+    jsonSection(container,'Saved native portfolio',record.value,{open:true});
   }else if(kind==='delivery'){
     if(record.value.state==='EXPORTED')container.append(node('a','Download complete handover',
       {class:'button',href:'/api/delivery?id='+encodeURIComponent(id),download:''}));
@@ -521,7 +547,8 @@ $('#portfolio-select').addEventListener('change',()=>busy('Read saved portfolio'
 $('#capture').addEventListener('click',()=>busy('Capture complete native engine portfolio',async()=>{
   const result=await write('capturePortfolio',{connectionId:requireEngine(),label:'Engine portfolio '+new Date().toISOString()});
   if(result.value.state==='CAPTURED')state.portfolio=result.id;
-  await reload();notice(result.value.state==='CAPTURED'?'Original definitions, active work and history captured.':
+  await reload();if(result.value.state!=='CAPTURED')await openRecord('portfolio',result.id);
+  notice(result.value.state==='CAPTURED'?'Original definitions, active work and history captured.':
     result.value.failure?.message??'Capture state: '+result.value.state,result.value.state==='CAPTURED'?'info':'error');
 }));
 $('#decision-portfolio-select').addEventListener('change',()=>busy('Read saved decision portfolio',async()=>{
@@ -530,7 +557,8 @@ $('#decision-portfolio-select').addEventListener('change',()=>busy('Read saved d
 $('#capture-decisions').addEventListener('click',()=>busy('Capture complete native decision portfolio',async()=>{
   const result=await write('captureDecisionPortfolio',{connectionId:requireEngine(),label:'Decision portfolio '+new Date().toISOString()});
   if(result.value.state==='CAPTURED')state.decisionPortfolio=result.id;
-  await reload();notice(result.value.state==='CAPTURED'?'Original decision definitions, resources and execution history captured.':
+  await reload();if(result.value.state!=='CAPTURED')await openRecord('decisionPortfolio',result.id);
+  notice(result.value.state==='CAPTURED'?'Original decision definitions, resources and execution history captured.':
     result.value.failure?.message??'Decision capture state: '+result.value.state,result.value.state==='CAPTURED'?'info':'error');
 }));
 $('#refresh').addEventListener('click',()=>busy('Reload saved workspace',reload));

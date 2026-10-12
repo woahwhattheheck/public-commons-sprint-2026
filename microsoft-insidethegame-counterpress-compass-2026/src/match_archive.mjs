@@ -236,8 +236,8 @@ export async function createMatchArchiveStore({directory, maxArchives = 256, max
         if (document.owner !== owner) throw fail(403, 'Save a copy to edit this shared match');
         if (revision !== document.revision) throw fail(409, 'This review changed in another tab; reload it or save a copy');
         const incoming = {...object(review, 'Review')};
-        // A player writing its own fields retains an independently authored rundown.
-        // Explicit null remains an intentional clear through the original revision.
+        // Older player clients keep an independently authored broadcast when
+        // saving their own review fields. Explicit null still clears it.
         if (!Object.hasOwn(incoming, 'broadcast') && Object.hasOwn(document.review, 'broadcast'))
           incoming.broadcast = document.review.broadcast;
         document.review = reviewData(incoming, document.match);

@@ -5,12 +5,13 @@ const C=require("./core.cjs"),ROOT=__dirname;
 function arg(name,fallback){const n=process.argv.indexOf("--"+name);if(n<0)return fallback;if(n+1>=process.argv.length||process.argv[n+1].startsWith("--"))throw Error("Missing --"+name+" value");return process.argv[n+1];}
 function readText(filename){return fs.readFileSync(filename,"utf8");}
 function readJSON(filename){return JSON.parse(readText(filename));}
-function readBundledCase(){
+function readBundledWorkspace(){
  const dir=path.resolve(arg("data",path.join(ROOT,"data"))),manifest=readJSON(path.join(dir,"source-manifest.json")),texts={};
  for(const f of manifest.files){if(!C.safePath(f.path))throw Error("Invalid source path");texts[f.path]=readText(path.join(dir,f.path));}
- return C.makeCase(manifest,texts,manifest.snapshot_at);
+ return C.makeWorkspace(manifest,texts,manifest.snapshot_at);
 }
-function inputCase(){const filename=arg("case",null);return filename?C.openCase(readText(path.resolve(filename))):readBundledCase();}
+function inputWorkspace(){const filename=arg("case",null);return filename?C.openWorkspace(readText(path.resolve(filename))):readBundledWorkspace();}
+function inputCase(){return inputWorkspace().savedCase;}
 function standalone(savedCase){
  const embed=value=>value.replace(/</g,"\\u003c").replace(/\u2028/g,"\\u2028").replace(/\u2029/g,"\\u2029");
  let html=readText(path.join(ROOT,"index.html"));
@@ -45,23 +46,29 @@ function ensureFile(filename,bytes){
 
 }
 function publish(){
- const savedCase=inputCase(),model=C.buildModel(savedCase,true),filterFile=arg("filters",null),filters=filterFile?readJSON(path.resolve(filterFile)):{};
- const result=C.release(savedCase,model,filters),outputRoot=path.resolve(arg("out",path.join(ROOT,"output")));
+ const workspace=inputWorkspace(),savedCase=workspace.savedCase,filterFile=arg("filters",null),filters=filterFile?readJSON(path.resolve(filterFile)):{};
+ const result=C.release(savedCase,workspace.model,filters),summary=C.summary(workspace.model,savedCase);
+ const editionId=result.edition_id,manifest=result.manifest,outputRoot=path.resolve(arg("out",path.join(ROOT,"output")));
+ // Packaging needs the exact text files, not another retained publication/model graph.
+ delete result.publication;workspace.model=null;
  fs.mkdirSync(outputRoot,{recursive:true});
+ const entry=(name,read)=>({name,get content(){return read();}});
+ const take=key=>{const text=result[key];delete result[key];return text;};
  const entries=[
-  {name:"release.csv",content:result.csv},{name:"release.json",content:result.json},{name:"codebook.csv",content:result.codebook},
-  {name:"edition.json",content:C.canonical(result.manifest)+"\n"},{name:"source-case.json",content:C.canonical(savedCase)+"\n"},
-  {name:"review-history.json",content:C.canonical(savedCase.review_events)+"\n"},{name:"workbench.html",content:standalone(savedCase)}
+  entry("release.csv",()=>take("csv")),entry("release.json",()=>take("json")),entry("codebook.csv",()=>take("codebook")),
+  entry("edition.json",()=>C.canonical(manifest)+"\n"),entry("source-case.json",()=>C.canonical(savedCase)+"\n"),
+  entry("review-history.json",()=>C.canonical(savedCase.review_events)+"\n"),entry("workbench.html",()=>standalone(savedCase))
  ];
  for(const filename of ["core.cjs","cli.cjs","index.html","app.js","style.css","README.md","SOURCE_NOTES.md"]){
-  const location=path.join(ROOT,filename);if(fs.existsSync(location))entries.push({name:"application/"+filename,content:readText(location)});
+  const location=path.join(ROOT,filename);if(fs.existsSync(location))entries.push(entry("application/"+filename,()=>readText(location)));
  }
- entries.push({name:"application/data/source-manifest.json",content:C.canonical(savedCase.manifest)+"\n"});
- for(const f of savedCase.manifest.files)entries.push({name:"application/data/"+f.path,content:savedCase.source_texts[f.path]});
- const zipped=Buffer.from(C.zipFiles(entries,raw=>zlib.deflateRawSync(raw,{level:6})));
- const zipPath=path.join(outputRoot,result.edition_id+".zip"),state=ensureFile(zipPath,zipped);
- const outcome={schema:"survey-delivery-result/v1",edition_id:result.edition_id,case_id:savedCase.case_id,output:zipPath,state,
-  bytes:zipped.length,sha256:sha(zipped),members:entries.length,summary:C.summary(model,savedCase),release:result.manifest};
+ entries.push(entry("application/data/source-manifest.json",()=>C.canonical(savedCase.manifest)+"\n"));
+ for(const f of savedCase.manifest.files)entries.push(entry("application/data/"+f.path,()=>savedCase.source_texts[f.path]));
+ const archive=C.zipFiles(entries,raw=>zlib.deflateRawSync(raw,{level:6}));
+ const zipped=Buffer.from(archive.buffer,archive.byteOffset,archive.byteLength);
+ const zipPath=path.join(outputRoot,editionId+".zip"),state=ensureFile(zipPath,zipped);
+ const outcome={schema:"survey-delivery-result/v1",edition_id:editionId,case_id:savedCase.case_id,output:zipPath,state,
+  bytes:zipped.length,sha256:sha(zipped),members:entries.length,summary,release:manifest};
  process.stdout.write(JSON.stringify(outcome,null,2)+"\n");
 }
 function serve(){
@@ -82,7 +89,7 @@ function serve(){
  for(const signal of ["SIGINT","SIGTERM"])process.on(signal,()=>server.close(()=>process.exit(0)));
 }
 function inspect(){
- const c=inputCase(),m=C.buildModel(c,true);
+ const {savedCase:c,model:m}=inputWorkspace();
  process.stdout.write(JSON.stringify({case_id:c.case_id,source_commit:c.manifest.commit,summary:C.summary(m,c)},null,2)+"\n");
 }
 function main(){

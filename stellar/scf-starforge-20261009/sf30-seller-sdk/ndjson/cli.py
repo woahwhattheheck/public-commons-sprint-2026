@@ -87,6 +87,20 @@ def main(argv=None):
     merchant.add_argument("--origin", required=True)
     merchant.add_argument("--path", default="/data")
     merchant.add_argument("--out", required=True)
+    save = sub.add_parser("merchant-save", help="Retain one complete original merchant for repeat receiving and download")
+    save.add_argument("--build", required=True)
+    save.add_argument("--payment", required=True)
+    save.add_argument("--origin", required=True)
+    save.add_argument("--path", default="/data")
+    save.add_argument("--request-id", help="Optional stable operation ID; changed input requires a new ID")
+    sub.add_parser("merchants", help="List retained complete merchant packages")
+    show = sub.add_parser("merchant-show", help="Verify and reopen the complete saved merchant")
+    show.add_argument("--id", required=True)
+    download = sub.add_parser("merchant-download", help="Copy the exact retained ZIP without recompiling")
+    download.add_argument("--id", required=True)
+    download.add_argument("--out", required=True)
+    receive_merchant = sub.add_parser("merchant-receive", help="Receive and rebuild the complete original merchant ZIP")
+    receive_merchant.add_argument("--file", required=True)
     serve = sub.add_parser("serve", help="Open the private industrial source console")
     serve.add_argument("--port", type=int, default=0)
     serve.add_argument("--connection-file", help="Atomically create a private one-line console URL for the merchant MCP")
@@ -130,6 +144,17 @@ def main(argv=None):
         elif c == "merchant":
             result = ws.prepare_merchant(args.build, load_json(Path(args.payment).read_bytes()),
                                          args.origin, args.path, args.out)
+        elif c == "merchant-save":
+            result = ws.save_merchant(args.build, load_json(Path(args.payment).read_bytes()),
+                                      args.origin, args.path, args.request_id)
+        elif c == "merchants":
+            result = {"merchants": ws.merchant_packages()}
+        elif c == "merchant-show":
+            result = ws.merchant_package(args.id)
+        elif c == "merchant-download":
+            result = ws.export_merchant(args.id, args.out)
+        elif c == "merchant-receive":
+            result = ws.receive_merchant(args.file)
         elif c == "serve":
             if not 0 <= args.port <= 65535:
                 raise InputError("Port must be from 0 to 65535")

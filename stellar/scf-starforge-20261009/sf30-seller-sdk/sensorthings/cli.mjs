@@ -11,19 +11,20 @@ import {createFileAccess} from './files.mjs';
 import {MerchantSensorThingsWorkspaces,readSensorThingsWorkspaceConfiguration} from './mcp.mjs';
 import {inspectSensorThingsFiles,downloadSensorThingsFiles} from './download.mjs';
 import {STARTUP_SCHEMA} from './schema.mjs';
+import {readMerchantRuntime} from './analysis/merchant/runtime.mjs';
 import {json,plain,fault} from './contract.mjs';
 import {readOwned,privateDirectory,syncDir} from '../stellar-expert/store.mjs';
 import {parseExactJSON} from '../stellar-expert/exact-json.mjs';
 
 const MAX_INPUT=2*1024*1024;
 const COMMANDS=Object.freeze({
-  serve:['workspace','host','port','session-file','expected-workspace-id','source-inbox','buyer-workspace'],
+  serve:['workspace','host','port','session-file','expected-workspace-id','source-inbox','buyer-workspace','merchant-runtime'],
   schema:['workspace'],view:['workspace'],
   catalog:['workspace','id','offset','limit'],edition:['workspace','id'],summary:['workspace','id'],
   rows:['workspace','id','table','offset','limit'],capture:['workspace','id','part','task-id','offset','limit','expected-revision'],
   operation:['workspace','id'],release:['workspace','id'],publisher:['workspace','id'],
   files:['workspace','selection'],'file-read':['workspace','input'],
-  action:['workspace','input','source-inbox','buyer-workspace'],
+  action:['workspace','input','source-inbox','buyer-workspace','merchant-runtime'],
   connect:['config','alias','tool','input'],
   'inspect-download':['config','alias','selection'],
   download:['config','alias','selection','directory','expected-manifest-sha256','export-id','chunk-size','progress']
@@ -32,7 +33,7 @@ export const HELP=[
   'SensorThings observation operations in the original native workspace.',
   '',
   'serve --workspace DIR [--host 127.0.0.1|::1] [--port N] [--session-file PRIVATE_URL_FILE]',
-  '      [--expected-workspace-id UUID] [--source-inbox DIR] [--buyer-workspace DIR]',
+  '      [--expected-workspace-id UUID] [--source-inbox DIR] [--buyer-workspace DIR] [--merchant-runtime PRIVATE_JSON]',
   'schema|view --workspace DIR',
   'catalog --workspace DIR --id ID [--offset N] [--limit N]',
   'edition|summary|operation|release|publisher --workspace DIR --id ID',
@@ -137,25 +138,27 @@ async function connected(options,operation){
   finally{try{await client.close();}finally{await signals.finish();}}
 }
 async function start(options,emit){
+  const merchant=options['merchant-runtime']?await readMerchantRuntime(path(options,'merchant-runtime')):null;
   const running=await serveSensorThingsWorkspace({directory:path(options,'workspace'),host:options.host??'127.0.0.1',
     port:number(options,'port',0,0,65535),expectedWorkspaceId:options['expected-workspace-id'],
-    sourceInboxDirectory:path(options,'source-inbox',{optional:true}),buyerWorkspaceDirectory:path(options,'buyer-workspace',{optional:true})});
+    sourceInboxDirectory:path(options,'source-inbox',{optional:true}),buyerWorkspaceDirectory:path(options,'buyer-workspace',{optional:true}),analysisMerchantRuntime:merchant?.runtime??{}});
   let end;const stopped=new Promise(resolve=>{end=resolve;});const signals=shutdown(async()=>{try{await running.close();}finally{end();}});
   try{
     const sessionFile=path(options,'session-file',{optional:true});
     if(sessionFile)await writeSessionFile(sessionFile,running.url);
     const record={schema:STARTUP_SCHEMA,workspaceId:running.workspaceId,origin:running.origin,url:running.url,pid:process.pid,
-      sessionFile:sessionFile??null,ownership:'ORIGINAL_SENSORTHINGS_WORKSPACE',fileReads:'SAME_NATIVE_HELD_FILE_OWNER'};
+      sessionFile:sessionFile??null,merchantRuntime:merchant?.identity??null,ownership:'ORIGINAL_SENSORTHINGS_WORKSPACE',fileReads:'SAME_NATIVE_HELD_FILE_OWNER'};
     emit(record);await stopped;return null;
   }finally{try{await running.close();}finally{await signals.finish();}}
 }
 async function direct(options){
   let request;if(options.command==='action'){
     request=await inputJSON(required(options,'input'));
-    if(request?.action==='release.start')throw argumentError('Use connect against the running original listener for release.start; its seller process must outlive this one-shot command.');
+    if(request?.action==='release.start'||request?.action==='analysis.merchant.start')throw argumentError('Use connect against the running original listener for release.start; its seller process must outlive this one-shot command.');
   }
+  const merchant=options['merchant-runtime']?await readMerchantRuntime(path(options,'merchant-runtime')):null;
   const workspace=await openSensorThingsWorkspace({directory:path(options,'workspace'),
-    sourceInboxDirectory:path(options,'source-inbox',{optional:true}),buyerWorkspaceDirectory:path(options,'buyer-workspace',{optional:true})}),
+    sourceInboxDirectory:path(options,'source-inbox',{optional:true}),buyerWorkspaceDirectory:path(options,'buyer-workspace',{optional:true}),analysisMerchantRuntime:merchant?.runtime??{}}),
     files=createFileAccess(workspace),signals=shutdown(()=>workspace.close());
   try{
     const id=options.id,range={offset:number(options,'offset',0,0,Number.MAX_SAFE_INTEGER),limit:number(options,'limit',100,1,500)};
