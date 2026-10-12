@@ -7,6 +7,7 @@ import {TOOL_PREFIX,SHA,ALIAS,plain,need,canonical} from './contracts.mjs';
 
 export const directoryNativeContract=JSON.parse(readFileSync(new URL('../directory-schema.json',import.meta.url),'utf8'));
 export const directorySourceContract=JSON.parse(readFileSync(new URL('../directory-source-schema.json',import.meta.url),'utf8'));
+export const directoryConformanceContract=JSON.parse(readFileSync(new URL('../directory-conformance-schema.json',import.meta.url),'utf8'));
 export const directoryInputSchemas=directoryNativeContract.inputSchemas;
 export const directorySourceInputSchemas=directorySourceContract.inputSchemas;
 const sourceRoutes=[
@@ -79,7 +80,8 @@ const page=directorySourceInputSchemas.page.properties;
 const selected={workspace:alias};
 export const directoryCollections=Object.freeze([
   'connections','discoveries','requests','importProfiles','sources','editions','comparisons','operations',
-  'mappings','mappingPreviews','sourceConversions','selections','referralJoins','handoffs','exports','receivingReviews','receives'
+  'mappings','mappingPreviews','sourceConversions','selections','referralJoins','handoffs','exports','receivingReviews','receives',
+  ...directoryConformanceContract.recordKinds
 ]);
 function tool(action,description,properties={},required=[],options={}){
   return {name:TOOL_PREFIX+action,description,
@@ -164,6 +166,25 @@ const added=[
   tool('directory_selection_candidates','Read every candidate, its original schedule and capacity interpretation, and the retained selection disposition.',{
     selectionId:hash('Original service selection ID.'),...directoryInputSchemas.page.properties
   },['selectionId']),
+  tool('directory_conformance_findings','Read complete assessment findings with exact original row and requirement references; follow every native page.',{
+    assessmentId:hash('Saved immutable conformance assessment ID.'),offset:page.offset,limit:page.limit,
+    severity:str('Exact finding severity.',{enum:['error','warning','not-evaluated']}),
+    table:str('Exact original table or resource type.',{maxLength:128}),
+    code:str('Exact retained rule code.',{maxLength:200}),
+    sourceId:hash('Filter by an original source ID.'),recordId:hash('Filter by an original source record ID.')
+  },['assessmentId']),
+  tool('directory_conformance_finding','Read one complete immutable finding, its original value and selected requirement source.',{
+    assessmentId:hash('Saved conformance assessment ID.'),findingId:hash('Exact finding ID in this assessment.')
+  },['assessmentId','findingId']),
+  tool('directory_conformance_rows','Read every assessed original row and its complete rule outcome counts.',{
+    assessmentId:hash('Saved conformance assessment ID.'),offset:page.offset,limit:page.limit,
+    table:str('Exact original table or resource type.',{maxLength:128})
+  },['assessmentId']),
+  tool('directory_conformance_file','Retain the full selected report, finding index, original row file, rule catalogue or complete conformance package.',{
+    collection:str('Original conformance file collection.',{enum:['assessments','reviews','comparisons']}),
+    recordId:hash('Exact saved conformance record ID.'),
+    fileKind:str('Select a file declared in this record’s files map.',{enum:directoryConformanceContract.fileKinds})
+  },['collection','recordId','fileKind']),
   tool('directory_handoff_file','Retain the full selected directory handoff with editable workspace and original source custody.',{
     handoffId:hash('Original handoff ID.')
   },['handoffId']),

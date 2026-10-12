@@ -152,3 +152,77 @@ export async function importHumanServicesDirectorySource({
     throw error;
   }
 }
+
+/** Save a complete conformance plan, then assess its selected original population. */
+export async function assessHumanServicesDirectoryConformance({
+  client,workspace,plan,planId,assessment,requestOptions
+}={}){
+  checked(workspace,ALIAS,'workspace alias');
+  need(client&&typeof client.call==='function','HUMAN_SERVICES_DIRECTORY_CLIENT_REQUIRED');
+  need((plan!==undefined)!==(planId!==undefined),'HUMAN_SERVICES_DIRECTORY_CONFORMANCE_SELECTION',
+    'Select a complete plan input or an existing conformance plan ID.');
+  let planResult;
+  if(plan!==undefined){
+    planResult=retained(await client.call('directory_conformance_plan',{workspace,conformance_plan:plan},requestOptions));
+    need(planResult.native?.ok,'HUMAN_SERVICES_DIRECTORY_CONFORMANCE_PLAN_REJECTED',
+      'Read the retained native response for this conformance plan.',{planExportId:planResult.exportId});
+    const saved=await readHumanServicesDirectoryValue({workspace,result:planResult,client});
+    planId=checked(saved.id,SHA,'saved conformance plan ID');
+  }else checked(planId,SHA,'saved conformance plan ID');
+  try{
+    const result=retained(await client.call('directory_conformance_assess',{
+      workspace,conformance_assess:{...assessment,planId}},requestOptions));
+    need(result.native?.ok,'HUMAN_SERVICES_DIRECTORY_CONFORMANCE_ASSESSMENT_REJECTED',
+      'Read the retained response and continue with the same saved conformance plan.',{planId,assessmentExportId:result.exportId});
+    const value=await readHumanServicesDirectoryValue({workspace,result,client});
+    return {planId,...(planResult?{planResult}:{}),result,assessment:value};
+  }catch(error){
+    if(error&&typeof error==='object')error.details={...(error.details??{}),
+      directoryConformance:{workspace,planId,...(planResult?{planExportId:planResult.exportId}:{})}};
+    throw error;
+  }
+}
+/** Iterate complete native pages without loading an entire assessment into memory. */
+export async function* iterateHumanServicesDirectoryConformance({
+  client,workspace,assessmentId,kind='findings',filters={},limit=100,requestOptions
+}={}){
+  checked(workspace,ALIAS,'workspace alias');checked(assessmentId,SHA,'conformance assessment ID');
+  need(client&&typeof client.call==='function','HUMAN_SERVICES_DIRECTORY_CLIENT_REQUIRED');
+  need(kind==='findings'||kind==='rows','HUMAN_SERVICES_DIRECTORY_CONFORMANCE_SELECTION');
+  const allowed=kind==='findings'?['severity','table','code','sourceId','recordId']:['table'];
+  need(filters&&typeof filters==='object'&&!Array.isArray(filters)&&
+    Object.keys(filters).every(key=>allowed.includes(key)),'HUMAN_SERVICES_DIRECTORY_CONFORMANCE_FILTERS');
+  let offset=0,total;
+  while(true){
+    const result=retained(await client.call('directory_conformance_'+kind,
+      {workspace,assessmentId,...filters,offset,limit},requestOptions));
+    need(result.native?.ok,'HUMAN_SERVICES_DIRECTORY_CONFORMANCE_PAGE_REJECTED',
+      'Read the complete retained native finding or row response.',{exportId:result.exportId,assessmentId,offset});
+    const page=await readHumanServicesDirectoryValue({workspace,result,client});
+    need(page.assessmentId===assessmentId&&page.offset===offset&&page.limit===limit&&
+      Number.isSafeInteger(page.total)&&page.total>=0&&Array.isArray(page.rows)&&
+      page.rows.length<=limit&&(total===undefined||page.total===total),
+      'HUMAN_SERVICES_DIRECTORY_CONFORMANCE_PAGE_CHANGED');
+    total=page.total;
+    const next=offset+page.rows.length;
+    need(next<=total&&(page.nextOffset===null?next===total:
+      page.rows.length>0&&page.nextOffset===next&&next<total),
+      'HUMAN_SERVICES_DIRECTORY_CONFORMANCE_PAGE_CHANGED');
+    yield {page,result};
+    if(page.nextOffset===null)return;
+    offset=page.nextOffset;
+  }
+}
+/** Receive the full selected native conformance file using the standard retained downloader. */
+export async function downloadHumanServicesDirectoryConformance({
+  client,workspace,collection,recordId,fileKind='package',requestOptions,...downloadOptions
+}={}){
+  need(client&&typeof client.call==='function','HUMAN_SERVICES_DIRECTORY_CLIENT_REQUIRED');
+  const result=retained(await client.call('directory_conformance_file',
+    {workspace,collection,recordId,fileKind},requestOptions));
+  need(result.native?.ok,'HUMAN_SERVICES_DIRECTORY_CONFORMANCE_FILE_REJECTED',
+    'Choose a file declared by the selected saved conformance record.',{exportId:result.exportId});
+  const receipt=await downloadHumanServicesDirectoryExport({...downloadOptions,workspace,client,
+    exportId:result.exportId,expectedManifestSha256:result.manifestSha256});
+  return {result,receipt};
+}
