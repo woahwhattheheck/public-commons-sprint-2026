@@ -42,7 +42,7 @@ process.once('message', async message => {
       originalOffersSha256: report.originalOffersSha256,
       originalServiceConfigSha256: report.originalServiceConfigSha256,
       listener: session.url, mode: session.mode, cacheControlAvailable: control !== null,
-      ...((session.jsonrpc || session.postgres || session.clickhouse) && session.operations ? { operations: {
+      ...((session.jsonrpc || session.postgres || session.clickhouse || session.grpc) && session.operations ? { operations: {
         url: session.operations.url, availability: session.operations.availabilityUrl,
         availabilityControl: session.operations.availabilityControlUrl,
       } } : {}) }) + '\n');
@@ -53,7 +53,11 @@ process.once('message', async message => {
       ? 'FACILITATOR_REVIEW_CHANGED: Review the current native payment requirements and stage a new release.\n'
       : code === 'SELLER_FLOW_OUTSIDE_FACILITATOR_POLICY'
         ? 'SELLER_FLOW_OUTSIDE_FACILITATOR_POLICY: The configured facilitator does not advertise this merchant payment flow.\n'
-      : 'RELEASE_CHILD_START_FAILED\n'); process.exitCode = 1;
+      : JSON.stringify({ error: 'RELEASE_CHILD_START_FAILED', cause: {
+        name: String(error?.name ?? 'Error').slice(0, 80),
+        ...(typeof error?.code === 'string' ? { code: error.code.slice(0, 120) } : {}),
+        message: String(error?.message ?? 'Startup failed').slice(0, 1600),
+      } }) + '\n'); process.exitCode = 1;
   }
 });
 // No application import or listener is permitted before the original manager
