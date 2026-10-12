@@ -360,7 +360,7 @@ class Workflow:
             table = '"' + version["table"].replace('"', '""') + '"'
             count = ws.database.query("SELECT COUNT(*) AS row_count FROM " + table, max_rows=1,
                                       expected_views=ws.state()["views"])
-            need(count["rows"][0][0] == version["row_count"], "DOCUMENT_WORKBOOK_RESTORED_ROWS_CHANGED")
+            need(count.rows[0][0] == version["row_count"], "DOCUMENT_WORKBOOK_RESTORED_ROWS_CHANGED")
             native_files = retained_document_files(ws.database.directory, complete["source_document_id"])
             need(native_files == complete["source_files"], "DOCUMENT_WORKBOOK_RESTORED_SOURCE_CHANGED")
             source = ResearchDocumentSource(document_path(ws.database.directory, complete["source_document_id"]).parent)

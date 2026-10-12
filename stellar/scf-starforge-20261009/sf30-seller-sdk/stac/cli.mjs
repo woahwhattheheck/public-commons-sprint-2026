@@ -59,6 +59,15 @@ Original merchant/customer controller:
   customer-deliver --directory DIR --buyer-config JSON_FILE --out DIR
   customer-open    --directory DIR
 
+Native vector delivery from retained source:
+  vector-help
+  vector-capabilities --python EXISTING_FIONA_PYTHON
+  vector-serve --root OWNED_DATA_ROOT --python EXISTING_FIONA_PYTHON
+  vector-capture|vector-export|vector-open|vector-receive|vector-compare
+  vector-bundle|vector-receive-bundle
+  vector-help lists the complete original source, profile and receiving flags.
+  The same complete workflow is installed as starforge stac-vector COMMAND.
+
 Native QGIS project receiving:
   qgis-export --directory RECEIVED_DIR --out QGIS_SOURCE_DIR
   qgis-open   --directory QGIS_SOURCE_DIR [--expected-manifest-sha256 SHA256]
@@ -135,7 +144,7 @@ async function keepOpen(close){
 }
 export async function runStacCLI(argv=process.argv.slice(2)){
   const {flags,positionals}=parseArgs(argv),command=positionals[0]||'help';
-  if(command==='help'||flags.help){process.stdout.write(STAC_HELP);return;}
+  if(command==='help'||flags.help&&!command.startsWith('vector-')){process.stdout.write(STAC_HELP);return;}
   if(flags['managed-selection']&&!flags['startup-json'])throw Object.assign(new Error('--managed-selection requires --startup-json.'),{code:'STAC_MANAGED_STARTUP_FLAG_REQUIRED'});
   let managed,managedSelection;
   if(flags['startup-json']){
@@ -149,6 +158,19 @@ export async function runStacCLI(argv=process.argv.slice(2)){
     }catch(error){if(close)await close().catch(()=>{});throw error;}
     if(close)await keepOpen(close);
   };
+  if(command.startsWith('vector-')) {
+    const {runVectorCommandCLI}=await import('./vector/cli.mjs');
+    const answer=await runVectorCommandCLI({command,flags});
+    try{
+      if(answer.text)process.stdout.write(answer.text);
+      else{
+        if(typeof answer.outputJson!=='string')throw new TypeError('The native vector command did not return its original JSON output.');
+        process.stdout.write(answer.outputJson+'\n');
+      }
+    }catch(error){if(answer.close)await answer.close().catch(()=>{});throw error;}
+    if(answer.close)await keepOpen(answer.close);
+    return;
+  }
   if(command.startsWith('qgis-')) {
     const {runQgisCommand}=await import('./qgis/cli.mjs');
     const answer=await runQgisCommand({command,flags});
