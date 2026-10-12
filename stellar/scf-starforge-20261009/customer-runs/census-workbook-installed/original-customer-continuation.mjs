@@ -83,7 +83,7 @@ export const receivePublishedWorkbook = async function receivePublishedWorkbook(
       exportDirectory:join(run,'customer-query-export'),portableExportDirectory:join(run,'customer-query-portable')}};
   await fs.writeFile(join(run,'customer-ready.json'),JSON.stringify(ready,null,2)+'\n',{mode:0o600});
   const helper=join(root,'sf30-seller-sdk/dataset-refresh/workbook-customer/examples/run-workbook-receiver.mjs'),bytes=await fs.readFile(helper);
-  assert.equal(createHash('sha1').update(Buffer.concat([Buffer.from('blob '+bytes.length+'\0'),bytes])).digest('hex'),'b4514f7340185a8cf382a0a39c570d8a6210e468');
+  assert.equal(createHash('sha1').update(Buffer.concat([Buffer.from('blob '+bytes.length+'\0'),bytes])).digest('hex'),'854fc42c67bb5cc5b03dc83f7c99176fb70791e1');
   const {runWorkbookReceiver}=await import(pathToFileURL(helper));await runWorkbookReceiver(ready,{progress:info=>console.log(JSON.stringify({phase:'customer-receiving',info}))});
   return{acquisition,receiver:JSON.parse(await fs.readFile(ready.resultFile,'utf8')),receiverResultFile:ready.resultFile,
     readyFile:join(run,'customer-ready.json')};
