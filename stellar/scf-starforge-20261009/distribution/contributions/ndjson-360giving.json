@@ -6,9 +6,11 @@
     "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/360giving"
   ],
   "commands": {
-    "dataset-360giving": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/360giving/cli.mjs"
+    "dataset-360giving": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/360giving/cli.mjs",
+    "dataset-360giving-workspace": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/360giving/operator/cli.mjs"
   },
   "commandDescriptions": {
-    "dataset-360giving": "Prepare, review, correct, export and receive complete 360Giving publisher editions; example runs both retained SCVO funds"
+    "dataset-360giving": "Prepare, review, correct, export and receive complete 360Giving publisher editions; example runs both retained SCVO funds",
+    "dataset-360giving-workspace": "Save publisher reviews and candidates, operate original native grant datasets, and export or receive complete customer handoffs; example runs both original SCVO funds"
   }
 }
