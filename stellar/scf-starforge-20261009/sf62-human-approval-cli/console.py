@@ -92,11 +92,16 @@ def review_payload(intent: dict, request: dict) -> tuple[dict, str]:
     return data, 'APPROVE ' + digest[:16]
 
 
-def reserve_interactive(intent: dict, request: dict, *, policy_path: Path,
-                        ledger_path: Path, terminal) -> dict:
-    """Authorize only the exact reviewed request, with real native SF36 accounting."""
-    if terminal is None:
-        raise Denied('CONTROLLING_TERMINAL_REQUIRED')
+def reserve_reviewed(intent: dict, request: dict, *, policy_path: Path,
+                     ledger_path: Path, confirm_review) -> dict:
+    """Trusted host review channel over the original SF36/SF59 reservation.
+
+    The channel receives the native mapped request and current policy estimate.
+    It must return this exact request digest after the operator's decision.
+    Construction of the channel is privileged host configuration.
+    """
+    if not callable(confirm_review):
+        raise Denied('OPERATOR_REVIEW_CHANNEL_REQUIRED')
     check_ledger_path(ledger_path)
     policy = load_json(policy_path)
     ck = key_from_environment('SF36_CONSENT_KEY_B64')
@@ -107,17 +112,16 @@ def reserve_interactive(intent: dict, request: dict, *, policy_path: Path,
     governor = Governor(str(ledger_path), policy, ck, ak, ok)
     try:
         estimate = governor.estimate(request)
-        review, confirmation = review_payload(intent, request)
-        print(json.dumps({'review': review, 'current_native_budget_estimate': estimate},
-                         sort_keys=True, indent=2, ensure_ascii=True))
+        review, _ = review_payload(intent, request)
         if not estimate.get('approved'):
             raise Denied('SPEND_POLICY_ESTIMATE_DENIED')
-        print('A reserve is NOT a payment, a signature or a finalized receipt.', flush=True)
-        print('To authorize ONE fresh reservation, type exactly: ' + confirmation, flush=True)
-        answer = terminal.readline(100)
-        if answer.rstrip('\r\n') != confirmation:
-            raise Denied('EXPLICIT_OPERATOR_CONSENT_NOT_GIVEN')
         digest = review['request_sha256']
+        # Pass a detached JSON projection so a host renderer cannot mutate the
+        # reviewed digest, original request or estimate while displaying them.
+        presented = json.loads(json.dumps({'review': review,
+            'current_native_budget_estimate': estimate}, ensure_ascii=True))
+        if confirm_review(presented) != digest:
+            raise Denied('EXPLICIT_OPERATOR_CONSENT_NOT_GIVEN')
 
         def operator_issue(mapped: dict) -> str:
             if mapped != request or hashlib.sha256(canonical(mapped)).hexdigest() != digest:
@@ -149,6 +153,24 @@ def reserve_interactive(intent: dict, request: dict, *, policy_path: Path,
         }
     finally:
         governor.close()
+
+
+def reserve_interactive(intent: dict, request: dict, *, policy_path: Path,
+                        ledger_path: Path, terminal) -> dict:
+    """Original controlling-terminal presentation of the shared native gate."""
+    if terminal is None:
+        raise Denied('CONTROLLING_TERMINAL_REQUIRED')
+
+    def confirm(presented: dict) -> str | None:
+        digest = presented['review']['request_sha256']
+        confirmation = 'APPROVE ' + digest[:16]
+        print(json.dumps(presented, sort_keys=True, indent=2, ensure_ascii=True))
+        print('A reserve is NOT a payment, a signature or a finalized receipt.', flush=True)
+        print('To authorize ONE fresh reservation, type exactly: ' + confirmation, flush=True)
+        return digest if terminal.readline(100).rstrip('\r\n') == confirmation else None
+
+    return reserve_reviewed(intent, request, policy_path=policy_path,
+                            ledger_path=ledger_path, confirm_review=confirm)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -187,3 +209,4 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == '__main__':
     raise SystemExit(main())
+

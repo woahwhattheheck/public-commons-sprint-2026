@@ -1,0 +1,53 @@
+{
+  "schema": "market.published-example.v1",
+  "original_url": "https://hr.fsu.edu/sites/default/files/PDF/Staff%20Pay%20Administration%20Guidelines.pdf",
+  "original_title": "Staff Pay Administration Guidelines",
+  "printed_page": 22,
+  "pdf_page": 23,
+  "retrieved_date": "2026-10-11",
+  "basis": "Reconstruction of the university's published two-survey market-pricing illustration.",
+  "files": {
+    "jobs.csv": "One source illustration position and its published client average.",
+    "surveys.csv": "The two original published percentile rows and original illustrative survey labels."
+  },
+  "units": {
+    "source": "$ thousands; guideline salaries are annualized",
+    "receiving_currency": "USD",
+    "currency_basis": "Explicit U.S. dollar interpretation of the U.S. university's dollar-denominated illustration",
+    "amount_scale": "1000",
+    "period": "annual"
+  },
+  "survey_effective_dates": null,
+  "target_date": null,
+  "date_basis": "The worked table does not provide effective dates for its two specific rows. The separate preceding aging-method example is not assigned to these rows.",
+  "matching": {
+    "source": "The published table pairs both listed surveys with the client position.",
+    "weight": [
+      "1",
+      "1"
+    ],
+    "scope_adjustment_pct": [
+      "0",
+      "0"
+    ],
+    "professional_use": "Commissioned matches must be reviewed against the original job descriptions."
+  },
+  "expected_unrounded_annual_consensus": {
+    "p25": "35200",
+    "p50": "37950",
+    "p75": "43950"
+  },
+  "reference_annual": "38600",
+  "published_display": {
+    "p25_thousands": "35.2",
+    "p50_thousands": "38.0",
+    "p75_thousands": "44.0",
+    "reference_percent": {
+      "p25": "109.7",
+      "p50": "101.7",
+      "p75": "87.8"
+    }
+  },
+  "source_context": "The guideline's historical survey-source list and comparison groups are separate background. The current ITN6857-6 controls the solicitation requirements."
+}
+
