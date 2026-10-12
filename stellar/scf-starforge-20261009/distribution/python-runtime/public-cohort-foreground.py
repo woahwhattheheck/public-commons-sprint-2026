@@ -137,6 +137,38 @@ def drain_owned(child):
         child.wait()
 
 
+def attempt_diagnostics(root, producer):
+    phase = producer.get("phase")
+    if phase not in ("resolve", "inspect", "bundle"):
+        return None
+    attempt = Path(producer["attempt"])
+    need(attempt.is_absolute() and not attempt.is_symlink()
+         and attempt.resolve(strict=True).parent == root
+         and attempt.name.startswith("attempt-"), "original_attempt_outside_operation")
+    result = {"phase": phase, "attempt": str(attempt), "files": {}}
+    for label, suffix in (("stdout", ".json"), ("stderr", ".stderr"),
+                          ("progress", "-progress.json")):
+        path = attempt / (phase + suffix)
+        try:
+            result["files"][label] = {"path": str(path), "exists": path.exists(), **tail(path)}
+        except (OSError, ValueError) as error:
+            result["files"][label] = {"path": str(path), "error": str(error)}
+    progress_path = attempt / (phase + "-progress.json")
+    if progress_path.is_file() and progress_path.stat().st_size <= MAX_RESULT:
+        try:
+            progress_value = json.loads(progress_path.read_bytes())
+            if isinstance(progress_value, dict) and progress_value.get("log"):
+                log = regular(progress_value["log"])
+                need(log.resolve(strict=True).is_relative_to(root),
+                     "original_stage_log_outside_operation")
+                result["stage_log"] = {"path": str(log),
+                    "stage": progress_value.get("stage"),
+                    "state": progress_value.get("state"), **tail(log)}
+        except (OSError, ValueError, KeyError, TypeError) as error:
+            result["stage_log_error"] = str(error)
+    return result
+
+
 def run_wrapper(plan, root, control, lock_fd):
     stdout_path, stderr_path = root / "producer.stdout", root / "producer.stderr"
     started = time.time()
@@ -188,6 +220,11 @@ def run_wrapper(plan, root, control, lock_fd):
         try:
             value = json.loads(stdout_path.read_bytes())
             result["producer"] = value
+            if isinstance(value, dict) and value.get("state") == "FAILED":
+                try:
+                    result["engine_diagnostics"] = attempt_diagnostics(root, value)
+                except (OSError, ValueError, KeyError, TypeError) as error:
+                    result["engine_diagnostics_error"] = str(error)
             if code == 0:
                 need(value.get("state") == "COMPLETED" and value.get("candidate") == CANDIDATE and
                      value.get("source", {}).get("id") == SOURCE_ID,
