@@ -26,16 +26,17 @@ function checkedFile(value){
 }
 /** Build one explicitly qualified receipt from the two complete returned connector objects.
  * These clocks are when this receiver observed the tool results, not FEMA response times.
- * The complete original download content remains unchanged in the evidence and body.
+ * Unobserved intermediate request/upload clocks remain null; the download observation is required.
+ * Known clocks retain their chronological order. Complete original content stays unchanged.
  */
-export function recordConnectorResponse({url,requestedAt,uploadReceivedAt,downloadReceivedAt,
+export function recordConnectorResponse({url,requestedAt=null,uploadReceivedAt=null,downloadReceivedAt,
   responseIndex,sourceSlot,createAttachment,downloadAttachment}={}){
   const target=new URL(url);
   if(target.origin!=='https://www.fema.gov'||!target.pathname.startsWith('/api/open/')||
      target.username||target.password||target.hash)
     throw fail('OPENFEMA_RECORDED_URL','Record an exact original public OpenFEMA API URL.');
-  if(!iso(requestedAt)||!iso(uploadReceivedAt)||!iso(downloadReceivedAt)||!plain(downloadAttachment))
-    throw fail('OPENFEMA_RECORDED_CLOCK','Retain the actual request and receiving clocks with both original connector results.');
+  if(!(requestedAt===null||iso(requestedAt))||!(uploadReceivedAt===null||iso(uploadReceivedAt))||!iso(downloadReceivedAt)||!plain(downloadAttachment))
+    throw fail('OPENFEMA_RECORDED_CLOCK','Retain the actual download observation and both original connector results; unobserved intermediate clocks remain null.');
   const text=downloadAttachment.content;
   if(typeof text!=='string')throw fail('OPENFEMA_RECORDED_TEXT','The complete original connector download content is required.');
   const bytes=Buffer.from(text,'utf8');

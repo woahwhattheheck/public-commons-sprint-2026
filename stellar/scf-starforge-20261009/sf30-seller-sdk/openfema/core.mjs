@@ -7,6 +7,8 @@ import {analyzePortfolio,validatePortfolio,validateAnnotation,comparePortfolios,
 import {WORKSPACE_SCHEMA,ACTIONS,workspaceSchema} from './schema.mjs';
 import {preparePortfolioDataset,queryNativeDataset,nativePublishers,prepareNativeRelease,inspectNativeRelease,controlNativeRelease,inspectBuyer,receiveBuyer,readBuyerOutput} from './dataset.mjs';
 import {workspaceArchive,portfolioReport} from './exports.mjs';
+import {zipEntries} from './zip.mjs';
+import {mappingIdentity,projectDelivery,reconcileCustomer,compareProjectDeliveries,deliveryReport,reviewBaseline} from './delivery.mjs';
 const hash=value=>createHash('sha256').update(typeof value==='string'?value:stable(value)).digest('hex');
 const idOf=(state,operationId)=>hash({workspaceId:state.workspaceId,operationId}).slice(0,24);
 const choose=(list,id,label)=>{const selected=list.find(x=>x.id===id);if(!selected)throw fault('OPENFEMA_SELECTION','Select a retained '+label+'.',404);return selected;};
@@ -18,7 +20,7 @@ function publicError(error){
 export async function openOpenFemaWorkspace({directory,inboxDirectory,releaseRuntime={port:0},fetchImpl=fetch,userAgent='Commons OpenFEMA portfolio/1.0'}={}){
   const store=await openWorkspaceStore(directory,{schema:WORKSPACE_SCHEMA,initialState:{portfolios:[],portfolioVersions:[],reviews:[],acceptances:[],comparisons:[],selectedPortfolioId:null,selectedVersionId:null}});
   const capture=createOpenFemaCapture({store,fetchImpl,userAgent}),publishers=nativePublishers(store),running=new Map(),controllers=new Map(),cache=new Map();
-  await store.mutate(s=>{for(const c of s.captures)if(['RUNNING','IMPORTING'].includes(c.state)){c.state='PAUSED';c.error={code:'OPENFEMA_SESSION_REOPENED',message:'Continue the retained capture in this reopened workspace.'};}});
+  await store.mutate(s=>{for(const key of ['deliveryMappings','deliveryMappingReviews','projectDeliveries','deliveryReconciliations','deliveryReviewImports','deliveryComparisons'])s[key]??=[];for(const c of s.captures)if(['RUNNING','IMPORTING'].includes(c.state)){c.state='PAUSED';c.error={code:'OPENFEMA_SESSION_REOPENED',message:'Continue the retained capture in this reopened workspace.'};}});
   let closed=false,closePromise=null,tail=Promise.resolve();
   const releaseCapability=()=>({mode:releaseRuntime.facilitator?'NATIVE_X402':'CHALLENGE_ONLY',port:releaseRuntime.port??0,facilitatorConfigured:Boolean(releaseRuntime.facilitator),allowLocalFacilitator:releaseRuntime.allowLocalFacilitator===true});
   const schema=()=>workspaceSchema({workspaceId:store.read().workspaceId,inboxConfigured:Boolean(inboxDirectory),releaseRuntime:releaseCapability(),userAgent});
@@ -40,6 +42,7 @@ export async function openOpenFemaWorkspace({directory,inboxDirectory,releaseRun
     return {schema:'stellar-forge.openfema-workspace-view.v1',workspaceId:s.workspaceId,revision:s.revision,createdAt:s.createdAt,restoredFrom:s.restoredFrom??null,
       captures:s.captures.map(c=>({id:c.id??c.captureId,label:c.label,scope:c.scope,state:c.state??c.status,createdAt:c.createdAt,updatedAt:c.updatedAt,editionId:c.editionId,error:c.error,retryAt:c.retryAt,datasets:c.datasets?Object.fromEntries(Object.entries(c.datasets).map(([kind,d])=>[kind,{entity:d.entity,version:d.version,state:d.state,rowCount:d.rowCount,sourceCount:d.sourceCount,pages:d.pages?.length??0,filterBatches:d.filterBatches?.map(b=>({sourceCount:b.sourceCount,rowCount:b.rowCount,skip:b.skip,complete:b.complete}))}])):null,progress:c.progress})),
       editions:await editions(),portfolios:s.portfolios,versions:s.portfolioVersions,reviews:s.reviews,acceptances:s.acceptances,comparisons:s.comparisons,
+      deliveryMappings:s.deliveryMappings,deliveryMappingReviews:s.deliveryMappingReviews,projectDeliveries:s.projectDeliveries,deliveryReconciliations:s.deliveryReconciliations,deliveryReviewImports:s.deliveryReviewImports,deliveryComparisons:s.deliveryComparisons,
       selectedPortfolioId:s.selectedPortfolioId,selectedVersionId:s.selectedVersionId,datasets:s.datasets,releases:s.releases,receipts:s.receipts,exports:s.exports,
       operations:Object.values(s.operations).slice(-100).reverse().map(({payload,context,...op})=>op),capabilities:{inboxConfigured:Boolean(inboxDirectory),releaseRuntime:releaseCapability()}};
   }
@@ -72,6 +75,12 @@ export async function openOpenFemaWorkspace({directory,inboxDirectory,releaseRun
     if(!payload||typeof payload!=='object'||Array.isArray(payload)||Object.keys(payload).some(k=>!ACTIONS[action].includes(k)))throw fault('OPENFEMA_ACTION_FIELDS','This action contains an unknown field.');
     if(action==='source.import'){
       const saved=await store.putObject(jsonBytes(payload.bundle));payload={bundleSha256:saved.sha256};
+    }
+    if(action==='delivery.reconcile'){
+      const file=payload.customerFile;
+      if(!file||typeof file!=='object'||Array.isArray(file)||Object.keys(file).some(k=>!['name','content'].includes(k))||typeof file.content!=='string'||Buffer.byteLength(file.content,'utf8')>16*1024*1024)throw fault('OPENFEMA_CUSTOMER_FILE','Receive the complete original UTF-8 customer CSV within 16 MiB.');
+      string(file.name,'customer CSV filename',240);
+      const saved=await store.putObject(jsonBytes(file));payload={deliveryId:payload.deliveryId,customerFileObjectSha256:saved.sha256};
     }
     const selectionSha256=hash({action,payload});
     return store.mutate(s=>{
@@ -172,6 +181,116 @@ export async function openOpenFemaWorkspace({directory,inboxDirectory,releaseRun
       case 'buyer.receive':{
         result=await receiveBuyer(store,op.context.inboxDirectory,p.intentIds,'buyer-'+op.id);
         await store.mutate(n=>{if(!n.receipts.some(r=>r.id===result.id))n.receipts.push(result);});break;
+      }
+      case 'delivery.mapping.save':{
+        const identity=mappingIdentity(p.mapping);
+        if(p.previousMappingId)choose(s.deliveryMappings,p.previousMappingId,'previous delivery mapping');
+        const saved=await store.putObject(jsonBytes(identity.mapping));
+        const record={id:'mapping-'+op.id,name:identity.mapping.name,targetName:identity.mapping.target.name,targetKind:identity.mapping.target.kind,
+          mappingSha256:identity.sha256,schemaSha256:identity.schemaSha256,objectSha256:saved.sha256,bytes:saved.bytes,
+          previousMappingId:p.previousMappingId??null,columns:identity.mapping.columns.length,createdAt:op.createdAt};
+        await store.mutate(n=>{if(!n.deliveryMappings.some(x=>x.id===record.id))n.deliveryMappings.push(record);});
+        result=record;break;
+      }
+      case 'delivery.mapping.review':{
+        const mapping=choose(s.deliveryMappings,p.mappingId,'delivery mapping');
+        if(mapping.mappingSha256!==p.expectedMappingSha256)throw fault('OPENFEMA_DELIVERY_MAPPING_CHANGED','Review the selected exact mapping.',409);
+        const record={id:'mapping-review-'+op.id,mappingId:mapping.id,mappingSha256:mapping.mappingSha256,
+          reviewer:string(p.reviewer,'mapping reviewer',200),note:string(p.note,'mapping review note',12000),createdAt:op.createdAt};
+        await store.mutate(n=>{if(!n.deliveryMappingReviews.some(x=>x.id===record.id))n.deliveryMappingReviews.push(record);});
+        result=record;break;
+      }
+      case 'delivery.export':{
+        const mappingRecord=choose(s.deliveryMappings,p.mappingId,'delivery mapping');
+        const mapping=JSON.parse((await store.object(mappingRecord.objectSha256)).toString('utf8'));
+        const review=[...s.deliveryMappingReviews].reverse().find(x=>x.mappingId===mappingRecord.id&&x.mappingSha256===mappingRecord.mappingSha256);
+        if(!review)throw fault('OPENFEMA_DELIVERY_REVIEW','Record the destination field review for this exact mapping.');
+        const selected=await version(p.versionId);let customerReconciliation=null,customerFile=null;
+        if(p.customerReconciliationId){
+          const retained=choose(s.deliveryReconciliations,p.customerReconciliationId,'customer reconciliation');
+          customerReconciliation=JSON.parse((await store.object(retained.documentSha256)).toString('utf8'));
+          customerFile=JSON.parse((await store.object(retained.customerFileObjectSha256)).toString('utf8'));
+        }
+        const delivered=projectDelivery({portfolio:selected.portfolio,version:selected.record,mapping,mappingReview:review,customerReconciliation,createdAt:op.createdAt});
+        const object=await store.putObject(jsonBytes(delivered));
+        const entries=[{path:'projects-target.csv',text:delivered.targetCsv},{path:'delivery.json',bytes:jsonBytes(delivered.manifest)},
+          {path:'mapping.json',bytes:jsonBytes(mapping)},{path:'mapping-review.json',bytes:jsonBytes(review)},
+          {path:'portfolio.json',bytes:jsonBytes(selected.portfolio)},{path:'report.html',text:deliveryReport('delivery',delivered.manifest)},
+          {path:'TARGET_SCHEMA.txt',text:mapping.target.evidence.content},
+          {path:'START_HERE.txt',text:'Open report.html for the complete mapped project register and source scope. projects-target.csv is the exact machine-import projection of the reviewed mapping; delivery.json binds every row to its original source. The four USD amount measures remain separate. Customer-source differences and pre-obligation records are retained through Data integration / Receive customer CSV. The original workspace ZIP carries every source response and all operation history.\n'}];
+        if(customerFile)entries.push({path:'customer-original.csv',text:customerFile.content},{path:'customer-reconciliation.json',bytes:jsonBytes(customerReconciliation)});
+        const exported=await saveExport(op,{bytes:zipEntries(entries),name:'OpenFEMA_Project_Delivery_'+selected.record.id.slice(0,12)+'.zip',type:'application/zip',format:'zip',versionId:selected.record.id,table:'projects',kind:'project-delivery'});
+        const record={id:'delivery-'+op.id,mappingId:mappingRecord.id,mappingSha256:mappingRecord.mappingSha256,mappingReviewId:review.id,
+          portfolioId:selected.record.portfolioId,versionId:selected.record.id,editionId:selected.record.editionId,
+          documentSha256:object.sha256,documentBytes:object.bytes,summary:delivered.manifest.summary,
+          customerReconciliationId:p.customerReconciliationId??null,export:exported,createdAt:op.createdAt};
+        await store.mutate(n=>{if(!n.projectDeliveries.some(x=>x.id===record.id))n.projectDeliveries.push(record);});
+        result=record;break;
+      }
+      case 'delivery.reconcile':{
+        const delivery=choose(s.projectDeliveries,p.deliveryId,'project delivery');
+        const original=JSON.parse((await store.object(delivery.documentSha256)).toString('utf8'));
+        const customerFile=JSON.parse((await store.object(p.customerFileObjectSha256)).toString('utf8'));
+        const reconciled=reconcileCustomer({delivery:original.manifest,csvText:customerFile.content,filename:customerFile.name,createdAt:op.createdAt});
+        const object=await store.putObject(jsonBytes(reconciled));
+        const exported=await saveExport(op,{bytes:zipEntries([{path:'customer-original.csv',text:customerFile.content},
+          {path:'reconciliation.json',bytes:jsonBytes(reconciled)},{path:'reconciliation.html',text:deliveryReport('reconciliation',reconciled)},
+          {path:'original-delivery.json',bytes:jsonBytes(original.manifest)},{path:'mapping.json',bytes:jsonBytes(original.manifest.mapping)},
+          {path:'original-portfolio.json',bytes:jsonBytes(original.portfolio)}]),
+          name:'OpenFEMA_Customer_Reconciliation_'+op.id+'.zip',type:'application/zip',format:'zip',versionId:delivery.versionId,table:'projects',kind:'customer-reconciliation'});
+        const record={id:'reconciliation-'+op.id,deliveryId:delivery.id,portfolioId:delivery.portfolioId,versionId:delivery.versionId,
+          mappingId:delivery.mappingId,mappingSha256:delivery.mappingSha256,editionId:delivery.editionId,
+          documentSha256:object.sha256,documentBytes:object.bytes,customerFileObjectSha256:p.customerFileObjectSha256,
+          file:reconciled.file,summary:reconciled.summary,export:exported,createdAt:op.createdAt};
+        await store.mutate(n=>{if(!n.deliveryReconciliations.some(x=>x.id===record.id))n.deliveryReconciliations.push(record);});
+        result=record;break;
+      }
+      case 'delivery.review.apply':{
+        const existing=s.deliveryReviewImports.find(x=>x.id==='delivery-review-'+op.id);
+        if(existing){result=existing;break;}
+        const receiving=choose(s.deliveryReconciliations,p.reconciliationId,'customer reconciliation');
+        const current=choose(s.portfolios,receiving.portfolioId,'original portfolio');
+        if(current.currentVersionId!==p.versionId)throw fault('OPENFEMA_PORTFOLIO_CHANGED','Choose the current portfolio version before applying selected analyst decisions.',409);
+        const previous=await version(current.currentVersionId);
+        if(previous.record.editionId!==receiving.editionId)throw fault('OPENFEMA_DELIVERY_EDITION_CHANGED','Reconcile the customer file against the current source edition before applying its analyst decisions.',409);
+        const document=JSON.parse((await store.object(receiving.documentSha256)).toString('utf8'));
+        if(!Array.isArray(p.rowNumbers)||!p.rowNumbers.length||p.rowNumbers.length>10000||p.rowNumbers.some(x=>!Number.isSafeInteger(x)||x<2)||new Set(p.rowNumbers).size!==p.rowNumbers.length)throw fault('OPENFEMA_DELIVERY_ROWS','Select the original customer row numbers to apply.');
+        const reviewer=string(p.reviewer,'receiving analyst',200),note=string(p.note,'receiving decision',12000),reviews=[];
+        let annotations=copy(previous.portfolio.annotations);
+        for(const rowNumber of p.rowNumbers){
+          const proposal=document.reviewProposals.find(x=>x.rowNumber===rowNumber);
+          if(!proposal)throw fault('OPENFEMA_DELIVERY_PROPOSAL','The selected customer row has no valid analyst-review proposal.');
+          const project=previous.portfolio.projects.find(x=>x.subject===proposal.subject);
+          if(!project||stable(reviewBaseline(project))!==stable(proposal.originalAnnotation))throw fault('OPENFEMA_DELIVERY_REVIEW_CHANGED','The analyst decision for customer row '+rowNumber+' changed after export. Reconcile its current version.',409);
+          const review={...validateAnnotation(proposal.annotation),id:'review-'+op.id+'-'+rowNumber,portfolioId:current.id,basedOnVersionId:current.currentVersionId,
+            createdAt:op.createdAt,importedFrom:{reconciliationId:receiving.id,customerFileSha256:document.file.sha256,rowNumber,reviewer,note}};
+          reviews.push(review);annotations=annotations.filter(x=>x.subject!==review.subject);annotations.push(review);
+        }
+        const record=await makeVersion({portfolioId:current.id,editionId:previous.record.editionId,criteria:previous.portfolio.criteria,annotations,
+          versionId:deterministicVersion,createdAt:op.createdAt,number:current.number+1,previousVersionId:current.currentVersionId,reason:'Reviewed customer-file analyst decisions'});
+        const imported={id:'delivery-review-'+op.id,reconciliationId:receiving.id,portfolioId:current.id,beforeVersionId:current.currentVersionId,
+          versionId:record.id,rowNumbers:copy(p.rowNumbers),applied:reviews.length,reviewer,note,customerFileSha256:document.file.sha256,createdAt:op.createdAt};
+        await store.mutate(n=>{
+          const portfolio=choose(n.portfolios,current.id,'portfolio');
+          if(portfolio.currentVersionId!==p.versionId)throw fault('OPENFEMA_PORTFOLIO_CHANGED','This portfolio advanced during customer review.',409);
+          n.portfolioVersions.push(record);n.reviews.push(...reviews);n.deliveryReviewImports.push(imported);
+          Object.assign(portfolio,{number:record.number,currentVersionId:record.id,updatedAt:op.createdAt});n.selectedPortfolioId=current.id;n.selectedVersionId=record.id;
+        });
+        result=imported;break;
+      }
+      case 'delivery.compare':{
+        const before=choose(s.projectDeliveries,p.beforeDeliveryId,'earlier delivery'),after=choose(s.projectDeliveries,p.afterDeliveryId,'later delivery');
+        const left=JSON.parse((await store.object(before.documentSha256)).toString('utf8')),right=JSON.parse((await store.object(after.documentSha256)).toString('utf8'));
+        const comparison=compareProjectDeliveries(left,right),object=await store.putObject(jsonBytes(comparison));
+        const exported=await saveExport(op,{bytes:zipEntries([{path:'comparison.json',bytes:jsonBytes(comparison)},{path:'comparison.html',text:deliveryReport('comparison',comparison)},
+          {path:'before/delivery.json',bytes:jsonBytes(left.manifest)},{path:'before/portfolio.json',bytes:jsonBytes(left.portfolio)},
+          {path:'after/delivery.json',bytes:jsonBytes(right.manifest)},{path:'after/portfolio.json',bytes:jsonBytes(right.portfolio)}]),
+          name:'OpenFEMA_Delivery_Comparison_'+op.id+'.zip',type:'application/zip',format:'zip',versionId:after.versionId,table:'projects',kind:'delivery-comparison'});
+        const record={id:'delivery-comparison-'+op.id,beforeDeliveryId:before.id,afterDeliveryId:after.id,
+          sameScope:comparison.sameScope,sameMapping:comparison.sameMapping,summary:comparison.summary,
+          documentSha256:object.sha256,documentBytes:object.bytes,export:exported,createdAt:op.createdAt};
+        await store.mutate(n=>{if(!n.deliveryComparisons.some(x=>x.id===record.id))n.deliveryComparisons.push(record);});
+        result=record;break;
       }
       case 'export.create':{
         const selected=await version(p.versionId),table=p.table??'projects',format=p.format??'json';
