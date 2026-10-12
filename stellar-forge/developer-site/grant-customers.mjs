@@ -6,6 +6,7 @@ const REFERRAL = '## Referral implementation: source changes, returned outcomes 
 const RISINGWAVE = '## Recurring subscription delivery and streaming-data commissioning';
 const OPENLINEAGE = '## OpenLineage service operations and complete customer receiving';
 const JOURNEY = '# 9A. Current demonstration and operator journey';
+const INSTALLATION_USE = '## Product selection, installation and recurring buyer work';
 const BILLING = '## Merchant settlement, customer billing and accountant receiving';
 const DEDICATED = new Set(['## Recurring economic-report installation', '## Coastal model-input installation', '## Datasette editions and customer analysis']);
 const OPENFN_PARAGRAPHS = [
@@ -134,6 +135,11 @@ export function receiveGrantCustomerSources(index, companion) {
     if (previous.url && previous.url !== url) delete source.git_blob;
     if (at < 0) index.sources.push(source); else index.sources[at] = source;
   };
+  const installationUse = section(companion, INSTALLATION_USE)?.text || '';
+  receive('customer-use-calendar', 'Saved customer-use calendar and complete editable receiving',
+    /https:\/\/github\.com\/woahwhattheheck\/tjlabs-stellar-merchant-workspace\/blob\/([a-f0-9]{40})\/(stellar\/scf_2026\/sf47_budget_model\/workspace\/CUSTOMER_USE_CALENDAR\.md)/, installationUse);
+  receive('customer-use-installations', 'Original Installation selection, preview, immutable editions and receiving',
+    /https:\/\/github\.com\/woahwhattheheck\/tjlabs-stellar-merchant-workspace\/blob\/([a-f0-9]{40})\/(stellar\/scf_2026\/sf47_budget_model\/workspace\/INSTALLATIONS\.md)/, installationUse);
   const federal = section(companion, FEDERAL)?.text || '';
   receive('federal-awards-readme', 'Federal awards complete product guide',
     /https:\/\/github\.com\/woahwhattheheck\/tjlabs-stellar-merchant-workspace\/blob\/([a-f0-9]{40})\/(products\/federal-awards\/README\.md)/, federal);
