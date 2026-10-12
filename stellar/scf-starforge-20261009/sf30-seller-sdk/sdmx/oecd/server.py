@@ -51,7 +51,9 @@ class Handler(original.Handler):
                 location = workspace.report_file(ident, name)
                 media = {"briefing.html": "text/html; charset=utf-8",
                          "briefing.json": "application/json; charset=utf-8",
-                         "observations.csv": "text/csv; charset=utf-8"}[name]
+                         "observations.csv": "text/csv; charset=utf-8",
+                         "SOURCE_RIGHTS.json": "application/json; charset=utf-8",
+                         "SOURCE_RIGHTS.md": "text/markdown; charset=utf-8"}[name]
                 raw = location.read_bytes()
                 self._headers(200, media, len(raw), name)
                 self.wfile.write(raw)
