@@ -10,6 +10,7 @@ import {ELIGIBILITY_COMMANDS,main as eligibilityMain} from './eligibility-cli.mj
 import {RISK_OF_BIAS_COMMANDS,main as riskOfBiasMain} from './risk-of-bias/cli.mjs';
 import {CUSTOMER_UPDATE_COMMANDS,main as customerUpdateMain} from './customer-updates/cli.mjs';
 import {STUDY_EXTRACTION_COMMANDS,main as extractionMain} from './study-extraction-cli.mjs';
+import {TEMPLATE_EXCHANGE_COMMANDS,main as templateMain} from './template-exchange/template-workspace-cli.mjs';
 import {parseJson,need,safeCode} from '../node/store.mjs';
 
 const usage=String.raw`Research workspace client
@@ -97,6 +98,16 @@ Operate source-bound study extraction and authored evidence tables:
 Run extraction-help for complete form/result/reviewer actions, original saved-request
 recovery, full source/report exports and table-publication history.
 
+Exchange complete client workbooks with frozen evidence and the original reviewer:
+  template-help
+  template-view|template-record|template-publication|template-operation
+  template-stage-template|template-stage-mapping|template-stage-release|template-stage-return
+  template-stage-return-review|template-review|template-prepare-extraction-draft
+  template-accept-extraction-draft|template-download
+
+Run template-help for complete files, explicit cell mapping, client return decisions,
+original extraction requests, whole downloads and exact saved-request recovery.
+
 Operate source-bound appraisals and independent review:
   risk-help
   risk-view|risk-prepare|risk-review|risk-export
@@ -172,6 +183,7 @@ export async function main(argv=process.argv.slice(2),{output=process.stdout}={}
   if(ELIGIBILITY_COMMANDS.includes(argv[0]))return eligibilityMain(argv,{output});
   if(RISK_OF_BIAS_COMMANDS.includes(argv[0]))return riskOfBiasMain(argv,{output});
   if(STUDY_EXTRACTION_COMMANDS.includes(argv[0]))return extractionMain(argv,{output});
+  if(TEMPLATE_EXCHANGE_COMMANDS.includes(argv[0]))return templateMain(argv,{output});
   const [command,...args]=argv;
   if(!command||['help','--help','-h'].includes(command)){output.write(usage);return;}
   need(Object.hasOwn(commandOptions,command),'COMMAND_UNKNOWN');

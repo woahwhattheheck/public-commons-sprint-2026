@@ -31,7 +31,7 @@ export async function startZoteroWorkspace({directory,researchDirectory=null,dos
   need(Number.isInteger(port)&&port>=0&&port<=65535,'ZOTERO_PORT_INVALID');
   const workspace=await openZoteroWorkspace({directory,researchDirectory,dossierStore,fetchImpl,environment,transport});
   const instanceId=randomUUID(),token=randomBytes(32).toString('hex'),requests=new Set(),children=new Map(),opening=new Map();
-  let server,origin,url,closing=false,closed,connectionPath=connectionFile??join(directory,'connection.json');
+  let server,origin,url,closing=false,closed,stopped,stopTimer,closedAt,connectionPath=connectionFile??join(directory,'connection.json');
   try{
     need(isAbsolute(connectionPath)&&resolve(connectionPath)===connectionPath,'ZOTERO_CONNECTION_PATH_INVALID');
     const authenticate=req=>{
@@ -52,8 +52,10 @@ export async function startZoteroWorkspace({directory,researchDirectory=null,dos
         need(marker.status==='COMPLETE','ZOTERO_RECEIVING_INCOMPLETE');
         const child=await startZoteroWorkspace({directory:childDirectory,
           researchDirectory:marker.research?.length?join(childDirectory,'research'):null});
-        if(closing){await child.close();throw Object.assign(new Error('ZOTERO_WORKSPACE_CLOSING'),{code:'ZOTERO_WORKSPACE_CLOSING'});}
-        children.set(name,child);return child;
+        // Register ownership before checking a close that raced with startup.
+        // The parent then retains this child even if its first close fails.
+        children.set(name,child);
+        need(!closing,'ZOTERO_WORKSPACE_CLOSING');return child;
       })();opening.set(name,work);work.finally(()=>opening.delete(name)).catch(()=>{});return work;
     }
     async function route(req,res) {
@@ -136,20 +138,27 @@ export async function startZoteroWorkspace({directory,researchDirectory=null,dos
       if(closed)return closed;closing=true;
       closed=(async()=>{
         const errors=[];
-        const stopped=new Promise((yes,no)=>server.close(error=>error?no(error):yes()));
-        server.closeIdleConnections?.();
-        const timer=setTimeout(()=>server.closeAllConnections?.(),5000);timer.unref();
-        const settled=await Promise.allSettled([...requests,...opening.values()]);
-        errors.push(...settled.filter(r=>r.status==='rejected').map(r=>r.reason));
-        for(const child of children.values()){try{await child.close();}catch(error){errors.push(error);}}
-        try{await stopped;}catch(error){errors.push(error);}finally{clearTimeout(timer);}
-        try{
-          const current=await readJson(connectionPath);
-          if(current.instanceId===instanceId)await writeJson(connectionPath,{...connection,url:origin+'/',active:false,closedAt:new Date().toISOString()});
-        }catch(error){errors.push(error);}
-        try{await workspace.close();}catch(error){errors.push(error);}
+        if(!stopped){
+          stopped=new Promise(yes=>server.close(error=>yes(error??null)));
+          server.closeIdleConnections?.();
+          stopTimer=setTimeout(()=>server.closeAllConnections?.(),5000);stopTimer.unref();
+        }
+        // Each request retains its own outcome. Drain it before closing its stores.
+        // An opening child is registered above before its closing response can reject.
+        await Promise.allSettled([...requests,...opening.values()]);
+        for(const [name,child]of children){
+          try{await child.close();children.delete(name);}catch(error){errors.push(error);}
+        }
+        const stopError=await stopped;clearTimeout(stopTimer);
+        if(stopError&&stopError.code!=='ERR_SERVER_NOT_RUNNING')errors.push(stopError);
+        // Keep the parent writer and failed children available to this same close caller.
         if(errors.length)throw new AggregateError(errors,'ZOTERO_SERVER_CLOSE_FAILED');
-      })();return closed;
+        await workspace.close();
+        closedAt??=new Date().toISOString();
+        const current=await readJson(connectionPath);
+        if(current.instanceId===instanceId)await writeJson(connectionPath,{...connection,url:origin+'/',active:false,closedAt});
+      })();
+      closed.catch(()=>{closed=null;});return closed;
     }
     return {workspace,instanceId,origin,url,connectionFile:connectionPath,get active(){return !closing;},close};
   }catch(error){server?.closeAllConnections?.();server?.close();await workspace.close().catch(()=>{});throw error;}

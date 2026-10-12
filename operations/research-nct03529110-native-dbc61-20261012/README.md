@@ -2,7 +2,7 @@
 
 This delivery installs the complete original Research programme and its retained study inputs for operation `DBC61-SCF-STUDY-EXTRACTION-20261012`. It combines the original complete Research/Developer/Zotero/Python dependency closure with the merged customer, workbook and appraisal product from PR2320.
 
-The selected source is 622 complete files / 9,218,034 bytes. The three original input documents add 123,479 bytes. The complete source envelope is 9,793,396 UTF-8 bytes, SHA256 `2db679fe90edc0f251a62536ec2fd94f5ccd07174b1f3628fcddc50b51ffeab3`. Its canonical product source is commit `48005bd19bb02b132c282b213294d991891f9651`, merged as `550bcb80a96652459f61b01737ed3ec489da9a7a`.
+The selected source is 634 complete files / 9,893,988 bytes. The seven retained base parts supply 622 original files; `source-supplement.json` supplies the 12 original eligibility, Routescan and BCG reference dependencies. The three original input documents add 123,479 bytes. The complete source envelope is 9,793,396 UTF-8 bytes, SHA256 `2db679fe90edc0f251a62536ec2fd94f5ccd07174b1f3628fcddc50b51ffeab3`. Its canonical product source is commit `48005bd19bb02b132c282b213294d991891f9651`, merged as `550bcb80a96652459f61b01737ed3ec489da9a7a`.
 
 ## Complete programme
 
@@ -22,7 +22,11 @@ All of these stages belong to the same original operation and programme director
 
 `materialize-study-extraction-source.py` validates every selected source and original input member, installs them in the selected private NCT source directory and reads them back. Repeating it against the same exact directory reuses identical members. It preserves preceding Research source directories.
 
-`INSTALLATION.json` contains the complete source selection, original input identities, helper hashes and all seven actual Git part identities.
+`source-supplement.json` retains all 12 additional original files from commit `c17faa14faa346061842505c520e194f13e20b20`: the eligibility CLI and browser modules, Routescan primitives, and the complete BCG reference sources, metadata and 518,660-byte original paper. It is 867,421 UTF-8 bytes, SHA256 `9ccc11c1c5ab48cf73c835180ce4b9d2dc4f1591042e6fc4d9e91c6f4b22d691`. Its decoded source adds 675,954 bytes. Each member carries its original Git identity, byte length and SHA256. The original PDF is carried as canonical Base64 and is installed as its exact binary bytes.
+
+The receiver binds the supplement to this exact original base envelope, rejects replacement or duplicate members, verifies every decoded body and writes the complete combined manifest. All three original study inputs remain pinned in the receiver.
+
+`INSTALLATION.json` contains the complete source selection, original input identities, helper hashes, supplement identity and all seven actual Git part identities.
 
 ## Equipped runtime
 
@@ -42,22 +46,25 @@ The joined output must be new. If the same exact joined file is already retained
   --source-envelope "$NCT_ROOT/source-envelope.json" \
   --expected-bytes 9793396 \
   --expected-sha256 2db679fe90edc0f251a62536ec2fd94f5ccd07174b1f3628fcddc50b51ffeab3 \
-  --directory "$NCT_ROOT/source"
+  --source-supplement "$NCT_PACKAGE/source-supplement.json" \
+  --supplement-bytes 867421 \
+  --supplement-sha256 9ccc11c1c5ab48cf73c835180ce4b9d2dc4f1591042e6fc4d9e91c6f4b22d691 \
+  --directory "$NCT_ROOT/source-complete"
 ```
 
-The materializer returns its actual source root, original entry, three input paths and `.study-extraction-source-materialization.json`. Preserve this result alongside the existing operation record.
+The commands use the original operation's `source-complete` directory, preserving an earlier 622-file source installation if present. They keep the same `programme` directory and original request/checkpoint history. The materializer returns 634 source files, three input files, its actual source root, original entry, three input paths and `.study-extraction-source-materialization.json`. Preserve this result alongside the existing operation record.
 
 ## Run the original programme
 
 Dispatch this command through the accepting owner's existing native controller, using operation `DBC61-SCF-STUDY-EXTRACTION-20261012` and the original `NCT_ROOT/programme` directory. The entry itself owns the original application locks, persisted requests, checkpoints, listeners and child cancellation.
 
 ```bash
-"$NCT_NODE" "$NCT_ROOT/source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/study-extraction-workflow.mjs" \
+"$NCT_NODE" "$NCT_ROOT/source-complete/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/study-extraction-workflow.mjs" \
   --operation DBC61-SCF-STUDY-EXTRACTION-20261012 \
   --run-directory "$NCT_ROOT/programme" \
-  --study-file "$NCT_ROOT/source/native-inputs/nct03529110/registry-study.json" \
-  --provenance-file "$NCT_ROOT/source/native-inputs/nct03529110/registry-provenance.json" \
-  --projection-file "$NCT_ROOT/source/native-inputs/nct03529110/extraction-projection.json" \
+  --study-file "$NCT_ROOT/source-complete/native-inputs/nct03529110/registry-study.json" \
+  --provenance-file "$NCT_ROOT/source-complete/native-inputs/nct03529110/registry-provenance.json" \
+  --projection-file "$NCT_ROOT/source-complete/native-inputs/nct03529110/extraction-projection.json" \
   --playwright-module "$NCT_PLAYWRIGHT" \
   --chromium "$NCT_CHROMIUM" \
   --python "$NCT_PYTHON"

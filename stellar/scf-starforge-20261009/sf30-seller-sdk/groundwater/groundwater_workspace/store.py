@@ -304,6 +304,15 @@ class Workbench:
                 if prior["request_sha256"] != request_sha:
                     raise Problem("operation_mismatch","This operation ID already belongs to different original request bytes.")
                 result, created, replayed = json.loads(prior["result"]),prior["created"],True
+                # A commit can precede runtime inspection and dispatch. Replaying
+                # its exact request may finish that never-dispatched side effect.
+                # A prior dispatched attempt still requires explicit run.resume.
+                if action in ("run.execute","run.resume"):
+                    from .native import run_directory
+                    run=self._record(db,payload["id"],"run")
+                    attempt=run_directory(self,run["id"])/"attempts"/str(run.get("attempt",0))
+                    if run["state"]=="queued" and not (attempt/"dispatch.json").exists():
+                        effect=("run",run["id"],{"retry_incomplete":False})
             else:
                 current = int(self._meta(db)["version"])
                 if normalized["expected_version"] != current:

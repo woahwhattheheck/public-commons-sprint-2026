@@ -39,3 +39,8 @@ export {createTemplateExchange,validateTemplateExchangeState,validateTemplateExc
 export {RISK_STUDY_CASE_SCHEMA,loadRiskOfBiasStudyPacket,bindRiskOfBiasStudyCase} from './risk-of-bias/study-case.mjs';
 export {RISK_RECEIVING_SCHEMA,receiveRiskOfBiasStudy,verifyRiskOfBiasReceiving,continueRiskOfBiasReceiving} from './risk-of-bias/receiving.mjs';
 export {RISK_OF_BIAS_TRANSPORT_RECEIVING_SCHEMA,receiveRiskOfBiasTransports} from './risk-of-bias/receiving-transports.mjs';
+
+export {STUDY_PROTOCOL_SCHEMA, STUDY_PROTOCOL_REGISTRY, selectRegisteredStudyProtocol, captureStudyProtocol, inspectStudyProtocolCapture} from './study-protocol-source.mjs';
+export {STUDY_PROTOCOL_METHODS} from './study-protocol-methods.mjs';
+export {STUDY_PROTOCOL_PROGRAM_FILES, receiveStudyProtocol, inspectStudyProtocolReceiving} from './study-protocol-receiving.mjs';
+export {runStudyProtocolCommand} from './study-protocol-cli.mjs';

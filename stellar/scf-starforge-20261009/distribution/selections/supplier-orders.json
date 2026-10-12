@@ -2,7 +2,7 @@
   "schema": "stellar-forge.distribution-source-selection.v1",
   "id": "supplier-orders",
   "title": "Supplier orders and document delivery",
-  "description": "Original Unite openTRANS 1.0 supplier order operations, exact confirmations/dispatches/invoices, private browser, CLI, merchant MCP and complete customer receiving.",
+  "description": "Complete openTRANS 1.0 supplier orders with retained Unite or declared customer profiles, exact confirmation/dispatch/invoice review, HTTPS delivery, browser/CLI/40-tool merchant client and portable receiving.",
   "base": {
     "commands": [
       "installation",
@@ -68,14 +68,16 @@
     "stellar/scf-starforge-20261009/distribution/selections/SUPPLIER_ORDERS.md",
     "stellar-forge/mcp-merchant-operator/SUPPLIER_ORDERS.md",
     "stellar-forge/mcp-merchant-operator/supplier-order-client.d.mts",
-    "stellar/scf-starforge-20261009/sf30-seller-sdk/supplier-orders/receiving/SUPPLIER_ORDERS_NATIVE.md"
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/supplier-orders/receiving/SUPPLIER_ORDERS_NATIVE.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/supplier-orders/PROFILES.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/supplier-orders/examples/customer-profile.json"
   ],
   "excludeFiles": [
     "stellar/scf-starforge-20261009/distribution/index.mjs"
   ],
   "product": {
     "schema": "stellar-forge.merchant-product-package.v1",
-    "description": "Original supplier orders, exact confirmations, dispatches and invoices, merchant MCP and complete customer receiving.",
+    "description": "Supplier profiles, exact source documents, reviewed HTTPS delivery and complete customer receiving.",
     "readme": "stellar/scf-starforge-20261009/distribution/selections/SUPPLIER_ORDERS.md"
   }
 }

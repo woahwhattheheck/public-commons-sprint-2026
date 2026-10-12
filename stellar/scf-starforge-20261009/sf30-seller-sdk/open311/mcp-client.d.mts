@@ -44,7 +44,9 @@ export interface RetainedChunk {
 export interface SourceProfileSummary {
   profile: string; connectionId: string; name: string; baseUrl: string; jurisdictionId: string;
   statusValues: string[]; responseLimit: number; responseLimitParameter: string | null; pagination: boolean; extendedAttributes: boolean;
-  queryExtensions: string[]; attribution: Open311Connection['attribution'] | null;
+  queryExtensions: string[]; queryDateRanges: NonNullable<Open311Connection['queryDateRanges']>;
+  apiKeyTransport: 'query' | 'bearer'; minimumRequestIntervalMs: number;
+  attribution: Open311Connection['attribution'] | null;
 }
 export interface WorkspaceAliases {
   workspace: string; label: string;

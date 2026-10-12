@@ -4,20 +4,44 @@ const $=id=>document.getElementById(id),q=new URLSearchParams(location.search),d
 // Keep it in memory and same-origin navigation only; never persist it in workspace data.
 const token=new URLSearchParams(location.hash.slice(1)).get('token')??'';
 const hasSession=/^[a-f0-9]{64}$/.test(token);
-const api=createTemplateExchangeClient({baseUrl:location.origin,dossierId:dossierId??'',
- headers:hasSession?{Authorization:'Bearer '+token}:{}});
+const sessionHeaders=hasSession?{Authorization:'Bearer '+token}:{};
+const api=createTemplateExchangeClient({baseUrl:location.origin,dossierId:dossierId??'',headers:sessionHeaders});
+let workspaceId=null,instanceId=null,storageKey=null,lastConflict=null,initialized=false;
 const researchHome=new URL('/',location.origin);
 if(hasSession)researchHome.hash=new URLSearchParams({token,dossier:dossierId??'',view:'study-extraction'}).toString();
 $('research-home').href=researchHome.toString();
-const storageKey='research-template-exchange:'+location.origin+':'+dossierId;
 let revision=null,overview=null,records={},stage=null,publicationRows=[],selectedReturn=null,selectedReview=null,nativeDraft=null,busy=false;
-let saved;try{saved=JSON.parse(localStorage.getItem(storageKey)||'{}');}catch{saved={};}
-let pending=saved.pending??null;
-$('dossier').value=dossierId??'';$('actor-id').value=saved.actor?.id??'';$('actor-name').value=saved.actor?.name??'';
+let pending=null;
+$('dossier').value=dossierId??'';
+async function initialize(){
+ const response=await fetch('/api/status',{headers:sessionHeaders,credentials:'same-origin',redirect:'error'});
+ let status;try{status=await response.json();}catch{throw Error('The Research session did not return its workspace identity.');}
+ if(!response.ok)throw Error(typeof status.error==='string'?status.error:'The original Research session could not be opened.');
+ if(!/^research_[a-f0-9]{64}$/.test(status.workspaceId)||typeof status.instanceId!=='string'||!status.instanceId)
+   throw Error('The Research workspace identity is unavailable.');
+ if(q.has('workspaceId')&&q.get('workspaceId')!==status.workspaceId)throw Error('This link belongs to a different Research workspace.');
+ if(q.has('instanceId')&&q.get('instanceId')!==status.instanceId)throw Error('Reopen workbook exchange from the current Research session.');
+ if(!status.api?.templateExchange)throw Error('This Research installation does not yet include workbook exchange.');
+ workspaceId=status.workspaceId;instanceId=status.instanceId;
+ sessionHeaders['X-Research-Workspace-Id']=workspaceId;sessionHeaders['X-Research-Instance-Id']=instanceId;
+ storageKey='research-template-exchange:'+workspaceId+':'+dossierId;
+ let saved={};const raw=localStorage.getItem(storageKey);
+ if(raw){try{saved=JSON.parse(raw);}catch{throw Error('The saved workbook request could not be read; its original local record is preserved.');}
+   if(saved.schema!=='sf88-template-browser-request/v1'||saved.workspaceId!==workspaceId||saved.dossierId!==dossierId)
+     throw Error('The saved workbook request belongs to a different workspace or dossier.');}
+ pending=saved.pending??null;lastConflict=saved.lastConflict??null;
+ $('actor-id').value=saved.actor?.id??'';$('actor-name').value=saved.actor?.name??'';
+ document.documentElement.dataset.researchWorkspaceId=workspaceId;
+ initialized=true;await refresh();
+}
 const id=()=>crypto.randomUUID();
 const value=id=>$(id).value.trim();
 const actor=()=>{const result={id:value('actor-id'),name:value('actor-name')};if(!result.id||!result.name)throw Error('Enter the assigned reviewer ID and name.');return result;};
-const persist=()=>localStorage.setItem(storageKey,JSON.stringify({actor:{id:value('actor-id'),name:value('actor-name')},pending}));
+const persist=()=>{
+ if(!initialized||!storageKey)throw Error('Open the original Research workspace before saving a request.');
+ localStorage.setItem(storageKey,JSON.stringify({schema:'sf88-template-browser-request/v1',workspaceId,dossierId,
+  actor:{id:value('actor-id'),name:value('actor-name')},pending,lastConflict}));
+};
 const message=(text,error=false)=>{$('message').textContent=text;$('message').className=error?'error':'';};
 const node=(tag,text,cls)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(cls)e.className=cls;return e;};
 const json=value=>JSON.stringify(value,null,2);
@@ -26,15 +50,28 @@ function download(name,body,type='application/json'){
  const url=URL.createObjectURL(new Blob([body],{type})),a=node('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
 function renderPending(){
- $('pending').hidden=!pending;
+ $('pending').hidden=!pending&&!lastConflict;
+ $('pending-title').textContent=pending?'A saved request needs reconciliation':'Previous uncommitted request';
+ $('retry').disabled=busy||!pending;$('reconcile').disabled=busy||!pending;
+ $('download-request').disabled=busy||(!pending&&!lastConflict);
  if(pending)$('pending-description').textContent=(pending.kind==='native'?'Original extraction request ':'Template review request ')+
    (pending.request.requestId??pending.request.request?.requestId)+' is retained exactly. Retry it to recover its committed result or finish the native receipt.';
+ else if(lastConflict)$('pending-description').textContent='The dossier advanced before the last reviewed action committed. Its unchanged request is available here; prepare a new review against the current revision.';
 }
+const disabledBeforeWork=new WeakMap();
 function setBusy(active){
- busy=active;for(const button of document.querySelectorAll('button'))button.disabled=active;
+ busy=active;
+ for(const button of document.querySelectorAll('button')){
+  if(active){disabledBeforeWork.set(button,button.disabled);button.disabled=true;}
+  else if(disabledBeforeWork.has(button)){button.disabled=disabledBeforeWork.get(button);disabledBeforeWork.delete(button);}
+ }
  if(!active)renderPending();
 }
-async function run(fn){if(busy)return;setBusy(true);try{await fn();}catch(error){message(error.message||error.code||String(error),true);}finally{setBusy(false);}}
+async function run(fn,{startup=false}={}){
+ if(busy)return;
+ if(!initialized&&!startup){message('Open workbook exchange from the original Research session.',true);return;}
+ setBusy(true);try{await fn();}catch(error){message(error.message||error.code||String(error),true);}finally{setBusy(false);}
+}
 function panel(name){
  for(const e of document.querySelectorAll('.panel'))e.hidden=e.id!==name;
  for(const e of document.querySelectorAll('nav button'))e.classList.toggle('active',e.dataset.panel===name);
@@ -75,6 +112,7 @@ function refreshSelectors(){
  recordList($('template-list'),editions);recordList($('release-list'),releases);historyChoices();
 }
 async function refresh(){
+ if(!workspaceId)throw Error('The original Research workspace is still opening.');
  overview=await api.page();revision=overview.revision;$('revision').textContent='Dossier revision '+revision;
  const sections=['templates','template-editions','mappings','releases','returns','return-reviews','drafts','operations'];
  const values=await Promise.all(sections.map(s=>all(s)));records=Object.fromEntries(sections.map((s,i)=>[s,values[i]]));
@@ -84,7 +122,10 @@ function showStage(prepared,title,summary){
  stage=prepared;$('stage').hidden=false;$('stage-title').textContent=title;$('stage-summary').replaceChildren(node('p',summary));
  details($('stage-json'),prepared.preview??prepared);$('commit-reason').value='';$('stage').scrollIntoView({behavior:'smooth',block:'start'});
 }
-function noPending(){if(pending)throw Error('Reconcile the exact saved request before starting another mutation.');}
+function noPending(){
+ if(!initialized)throw Error('Open the original Research workspace first.');
+ if(pending)throw Error('Reconcile the exact saved request before starting another mutation.');
+}
 async function bodyFile(input){
  const file=input.files[0];if(!file)throw Error('Choose the complete original file.');
  if(file.size>32*1024*1024)throw Error('This workbook exceeds the 32 MiB intake limit.');
@@ -95,30 +136,45 @@ async function bodyFile(input){
 async function commitPending(){
  if(!pending)throw Error('No saved request is pending.');
  const current=pending;
+ // Persist the original complete request before every first send or replay.
+ persist();renderPending();
  let result;
  try{result=current.kind==='native'?await api.acceptExtractionDraft(current.request):await api.review(current.request);}
  catch(error){
   if(current.kind==='review'&&error.code==='REVISION_CONFLICT'){
-   localStorage.setItem(storageKey+':last-conflict',json(current));pending=null;persist();renderPending();
-   await refresh();throw Error('The dossier advanced before this action committed. The uncommitted request was retained locally; prepare a new review against revision '+revision+'.');
+   lastConflict=current;pending=null;
+   try{persist();}catch(storageError){pending=current;throw storageError;}
+   renderPending();await refresh();
+   throw Error('The dossier advanced before this action committed. Download the unchanged request if needed, then prepare a new review against revision '+revision+'.');
   }
   throw error;
  }
- // Preserve an independently edited newer browser request, if any.
- if(pending===current){pending=null;persist();}
- stage=null;nativeDraft=null;$('stage').hidden=true;$('native-preview').hidden=true;
+ // The response is authoritative even if browser storage or a later refresh fails.
  window.templateExchangeLastAccepted=result;
- message(current.kind==='native'?'The original extraction draft and its return receipt are saved. Submit and resolve it in the original extraction workflow.':'The reviewed action is saved in the dossier.');
- await refresh();return result;
+ let storageWarning='';
+ if(pending===current){
+  pending=null;
+  try{persist();}catch{pending=current;storageWarning=' The browser could not clear its local request; replaying this exact request recovers the saved result.';}
+ }
+ stage=null;nativeDraft=null;$('stage').hidden=true;$('native-preview').hidden=true;
+ const accepted=current.kind==='native'?'The original extraction draft and its return receipt are saved. Submit and resolve it in the original extraction workflow.':'The reviewed action is saved in the dossier.';
+ try{await refresh();message(accepted+storageWarning);}
+ catch(error){message(accepted+storageWarning+' The view could not refresh: '+(error.message||error.code)+'. Use Refresh to reopen the saved revision.',true);}
+ renderPending();return result;
 }
 $('commit-stage').onclick=()=>run(async()=>{
  noPending();if(!stage)throw Error('Prepare an action first.');
  const reason=value('commit-reason');if(!reason)throw Error('Record a reason before accepting this action.');
  const request={requestId:'template-'+id(),expectedRevision:stage.expectedRevision,actor:actor(),action:stage.action,data:{...stage.data,reason}};
- pending={kind:'review',request};persist();renderPending();await commitPending();
+ pending={kind:'review',request};renderPending();await commitPending();
 });
 $('discard-stage').onclick=()=>{stage=null;$('stage').hidden=true;};
 $('retry').onclick=()=>run(commitPending);
+$('download-request').onclick=()=>{
+ const retained=pending??lastConflict;if(!retained)return;
+ const requestId=retained.request.requestId??retained.request.request?.requestId;
+ download('template-request-'+requestId+'.json',json({schema:'sf88-template-browser-request/v1',workspaceId,dossierId,...retained})+'\n');
+};
 $('reconcile').onclick=()=>run(async()=>{
  if(!pending)return;
  const requestId=pending.kind==='native'?pending.request.receiptRequestId:pending.request.requestId;
@@ -127,7 +183,7 @@ $('reconcile').onclick=()=>run(async()=>{
  else message('No completed template operation with this request ID is present. Retry the exact request; the original native request retains its own recovery identity.');
 });
 $('refresh').onclick=()=>run(refresh);
-for(const name of ['actor-id','actor-name'])$(name).addEventListener('change',persist);
+for(const name of ['actor-id','actor-name'])$(name).addEventListener('change',()=>{try{persist();}catch(error){message(error.message,true);}});
 $('template-choice').onchange=()=>{
  const current=records.templates?.find(r=>r.id===$('template-choice').value);$('template-name').value=current?.name??'';$('template-name').disabled=Boolean(current);
 };
@@ -247,7 +303,7 @@ $('native-accept').onclick=()=>run(async()=>{
  noPending();if(!nativeDraft)throw Error('Prepare an original request first.');
  pending={kind:'native',request:{reviewId:nativeDraft.reviewId,request:nativeDraft.request,requestBlob:nativeDraft.blob,
   receiptRequestId:nativeDraft.request.requestId+'-receipt',reason:'Recorded client-return draft through the original assigned extraction reviewer.'}};
- persist();renderPending();await commitPending();
+ renderPending();await commitPending();
 });
 function historyChoices(){
  const kind=$('history-kind').value,key={edition:'template-editions',mapping:'mappings',release:'releases',return:'returns',review:'return-reviews',draft:'drafts'}[kind];
@@ -261,5 +317,12 @@ $('history-open').onclick=()=>run(async()=>{
  if(result.record.workbook){const get=node('button','Download original workbook');get.onclick=()=>run(async()=>{
   const bytes=await api.blob(result.record.workbook.sha256,{revision,filename:result.record.filename});download(result.record.filename,bytes);});$('history-summary').append(get);}
 });
-window.templateExchangeApp={api,refresh,selectPanel:panel,get revision(){return revision;},get records(){return records;}};
-renderPending();if(!dossierId)message('Open this page from a selected Research dossier.',true);else if(!hasSession)message('Open workbook exchange from your original Research session.',true);else run(refresh);
+window.templateExchangeApp={api,refresh,selectPanel:panel,get revision(){return revision;},get records(){return records;},
+ get workspaceId(){return workspaceId;},get instanceId(){return instanceId;}};
+window.addEventListener('beforeunload',event=>{
+ if(stage||nativeDraft){event.preventDefault();event.returnValue='';}
+});
+renderPending();
+if(!dossierId)message('Open this page from a selected Research dossier.',true);
+else if(!hasSession)message('Open workbook exchange from your original Research session.',true);
+else window.templateExchangeApp.ready=run(initialize,{startup:true});

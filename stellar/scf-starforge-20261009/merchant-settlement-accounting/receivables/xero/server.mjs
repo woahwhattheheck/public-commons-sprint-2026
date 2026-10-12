@@ -4,7 +4,7 @@ import {readFile} from 'node:fs/promises';
 import {resolve} from 'node:path';
 import {openAccountingWorkspace} from '../../workspace/store.mjs';
 import {ReceivablesWorkspace} from '../store.mjs';
-import {createReceivablesHandler} from '../server.mjs';
+import {createReceivablesHttpHandler} from '../server.mjs';
 import {renderCustomerTar} from '../core.mjs';
 import {CustomerStatementWorkspace} from '../../customer-statements/store.mjs';
 import {readBrowserAssets} from '../../../distribution/browser-assets.mjs';
@@ -250,8 +250,8 @@ export async function prepareXeroReceivablesServer(options = {}) {
       if (options.includeCustomerStatements !== false) {
         statements = await new CustomerStatementWorkspace(workspace).init();
       }
-      originalHandler = await createReceivablesHandler(receivables, {
-        apiPath: receivablesApiPath, uiPath: receivablesUiPath, statements, port: port || undefined,
+      originalHandler = await createReceivablesHttpHandler(workspace, {
+        ...options, apiPath: receivablesApiPath, uiPath: receivablesUiPath, statements, port: port || undefined,
       });
     }
     handler = async (request, response) =>

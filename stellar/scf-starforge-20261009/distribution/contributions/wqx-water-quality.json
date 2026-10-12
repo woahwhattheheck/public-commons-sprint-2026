@@ -68,7 +68,16 @@
     "stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/standardized-analysis/browser-receiving.mjs",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/standardized-analysis/RECEIVING.md",
     "stellar-forge/mcp-merchant-operator/WQX_SCIENTIFIC.md",
-    "stellar-forge/mcp-merchant-operator/wqx-scientific-receiving.mjs"
+    "stellar-forge/mcp-merchant-operator/wqx-scientific-receiving.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/jobs/README.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/jobs/PAIRED_SCIENTIFIC.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/jobs/merchant.example.json",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/jobs/input.example.json",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/jobs/choices.example.json",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/jobs/scientific-input.example.json",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/jobs/receive.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/jobs/receive-scientific.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/jobs/verify-result.py"
   ],
   "merchantProviders": {
     "wqx-water-quality": "stellar-forge/mcp-merchant-operator/providers/wqx-water-quality.mjs"
