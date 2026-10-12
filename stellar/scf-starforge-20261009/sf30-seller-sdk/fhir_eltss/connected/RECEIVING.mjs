@@ -180,6 +180,17 @@ async function call(action,args={},label=action,{once=false}={}){
   let request=once?journal.actions[label]:null;
   if(request){
     need(request.action===action&&same(request.arguments,args),'ELTSS_CONNECTED_REQUEST_CHANGED',label);
+    // JSON journal reloads duplicate object references. Rebind the original call
+    // by its retained identity, keeping the same ordinal and every saved attempt.
+    const matches=journal.calls.map((row,index)=>({row,index})).filter(({row})=>
+      row.key===request.key&&row.action===request.action&&row.startedAt===request.startedAt&&
+      same(row.arguments,request.arguments));
+    need(matches.length===1,'ELTSS_CONNECTED_ORIGINAL_CALL_REQUIRED',label);
+    const sequence=matches[0].index+1;
+    need(request.sequence===undefined||request.sequence===sequence,
+      'ELTSS_CONNECTED_CALL_SEQUENCE_CHANGED',label);
+    request.sequence=sequence;journal.calls[sequence-1]=request;journal.actions[label]=request;
+    await checkpoint();
     if(request.state==='COMPLETE')return checkedJSON(request.original);
     // Read the actual native state before replaying the exact original
     // content-addressed input, archive hash or retained receiving UUID.
@@ -187,7 +198,7 @@ async function call(action,args={},label=action,{once=false}={}){
     need(current.retention?.state==='COMPLETE'&&current.native?.ok,'ELTSS_CONNECTED_RECOVERY_READ_REQUIRED');
     request.reconciliation=current;await checkpoint();
   }else{
-    request={key:label,action,arguments:args,startedAt:now(),state:'REQUESTED',attempts:[]};
+    request={sequence:journal.calls.length+1,key:label,action,arguments:args,startedAt:now(),state:'REQUESTED',attempts:[]};
     if(once)journal.actions[label]=request;
     journal.calls.push(request);await checkpoint();
   }
@@ -198,7 +209,7 @@ async function call(action,args={},label=action,{once=false}={}){
     need(result.state==='COMPLETED'&&result.retention?.state==='COMPLETE'&&result.native?.ok,
       'ELTSS_CONNECTED_NATIVE_ACTION_FAILED',action+' returned '+JSON.stringify(result));
     const value=await readEltssValue({client,result});
-    request.original=await privateJSON('call-'+String(journal.calls.indexOf(request)+1).padStart(4,'0')+'.json',{result,value});
+    request.original=await privateJSON('call-'+String(request.sequence).padStart(4,'0')+'.json',{result,value});
     request.state='COMPLETE';await checkpoint();return {result,value};
   }catch(error){
     request.state='INTERRUPTED';attempt.error={code:error.code??null,message:error.message};
