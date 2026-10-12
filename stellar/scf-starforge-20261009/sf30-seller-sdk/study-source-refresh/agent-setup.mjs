@@ -5,7 +5,7 @@ import { dirname, join, resolve } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { STUDY_CONNECTION_SCHEMA } from './agent-contracts.mjs';
 import { STUDY_HERE, STUDY_MAX_PACKET_BYTES, plain, need, exact, identifier, text, sha, absolute,
-  readFile, decode, immutable, json, privateDirectory, inspectStudyBinding } from './agent-local.mjs';
+  readFile, decode, immutable, json, canonical, privateDirectory, inspectStudyBinding } from './agent-local.mjs';
 
 export async function readStudyWorkspaceConfiguration(filename) {
   filename = absolute(filename);
@@ -66,7 +66,7 @@ export async function initializeStudyWorkspaceMerchant(options) {
     exportsDirectory:'./customer-exports',sources:{},studyWorkspaceConnection:connection};
   try {
     const old=decode(await readFile(configuration,1024*1024,true));
-    need(JSON.stringify(old)===JSON.stringify(expected),'STUDY_SETUP_CONFLICT','The existing Merchant directory has another configuration.');
+    need(canonical(old)===canonical(expected),'STUDY_SETUP_CONFLICT','The existing Merchant directory has another configuration.');
     const {readMerchantConfig}=await import('../../../../stellar-forge/mcp-merchant-operator/config.mjs');
     await readMerchantConfig(configuration);
     return {schema:expected.schema,configuration,state:'REOPENED',workspaces:Object.keys(selected.workspaces)};

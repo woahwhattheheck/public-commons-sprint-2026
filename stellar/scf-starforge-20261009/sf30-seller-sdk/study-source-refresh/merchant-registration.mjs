@@ -7,7 +7,7 @@ export default defineMerchantProvider({
   configuration:{input:'studyWorkspaceConnection',privateExports:true,
     read:async(value,{hostPath})=>(await import('./agent-setup.mjs')).readStudyWorkspaceConfiguration(hostPath(value))},
   tools:()=>studyWorkspaceTools,load:()=>import('./merchant-provider.mjs'),
-  create:(module,config,options)=>new module.MerchantStudyWorkspaces(config,{environment:options.environment}),
+  create:(module,config,options={})=>new module.MerchantStudyWorkspaces(config,{environment:options.environment}),
   initialize:async options=>(await import('./agent-setup.mjs')).initializeStudyWorkspaceMerchant(options),
   maxRequestBytes:4*1024*1024+128*1024,concurrency:'provider',shutdown:'drain',
   instructions:[{prefix:'merchant_study_',text:

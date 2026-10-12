@@ -17,7 +17,7 @@ import webbrowser
 
 from application import call
 from delivery import extract_package, import_package
-from model import ROOT, StudyError, dump, fail, member, parse, private_directory, read
+from model import ROOT, StudyError, dump, fail, hash_id, member, parse, private_directory, read
 from workspace import Workspace, close_active_intakes, file_identity
 from operator_runtime import operator_lease
 
@@ -190,6 +190,11 @@ class Handler(BaseHTTPRequestHandler):
         if self.headers.get_content_type() != "application/zip":
             fail("ZIP_PACKAGE_REQUIRED")
         size = self.body_length(512 * 1024 * 1024)
+        selected_hashes = self.headers.get_all("X-Content-SHA256") or []
+        if len(selected_hashes) > 1:
+            fail("PACKAGE_INPUT_HASH_REQUIRED")
+        expected_hash = hash_id(selected_hashes[0]) if selected_hashes else None
+        digest = hashlib.sha256()
         directory = Path(tempfile.mkdtemp(prefix=".upload-", dir=self.server.directory))
         try:
             path = directory / "packet.zip"
@@ -201,7 +206,10 @@ class Handler(BaseHTTPRequestHandler):
                     if not raw:
                         fail("REQUEST_INCOMPLETE")
                     output.write(raw)
+                    digest.update(raw)
                     remaining -= len(raw)
+            if expected_hash is not None and digest.hexdigest() != expected_hash:
+                fail("PACKAGE_INPUT_CHANGED", expected_sha256=expected_hash, actual_sha256=digest.hexdigest())
             unpacked = directory / "packet"
             extract_package(path, unpacked)
             workspace = Workspace(self.server.directory)
