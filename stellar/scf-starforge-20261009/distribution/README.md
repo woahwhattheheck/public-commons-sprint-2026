@@ -22,6 +22,14 @@ in their original HTTP servers and the source collector. The same guide is inclu
 at `source/stellar/scf-starforge-20261009/distribution/BROWSER_ASSETS.md` inside the
 installed package.
 
+## Add and inspect source registrations
+
+Independent source capabilities register their commands, exports, runtime features
+and original browser assets in [contribution files](CONTRIBUTIONS.md). The package
+builder, installed CLI, doctor and runtime profiles use the same combined inventory.
+Run `starforge registrations` to inspect its sources, or
+`starforge registrations --command mssql` to locate one maintained command.
+
 ## Install the source archive
 
 Use Node 22.16 or later. From a new application directory, install the supplied

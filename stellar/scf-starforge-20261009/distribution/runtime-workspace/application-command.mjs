@@ -510,8 +510,10 @@ export function observeApplicationOutput(request, directory, context = {}) {
       try {
         const ready = JSON.parse(text);
         const directoryIndex = request.args.indexOf('--dir');
+        const crossrefSelected = request.args.includes('--crossref-state');
         if (ready.mode === 'RESEARCH_DOSSIER_WORKSPACE' && directoryIndex >= 0 &&
-            ready.directory === request.args[directoryIndex + 1] && typeof ready.url === 'string')
+            ready.directory === request.args[directoryIndex + 1] &&
+            (!crossrefSelected || ready.crossrefConfigured === true) && typeof ready.url === 'string')
           candidate = ready.url;
       } catch {}
     }
