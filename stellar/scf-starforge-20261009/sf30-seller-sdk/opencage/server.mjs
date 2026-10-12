@@ -1,7 +1,7 @@
 // MIT. Private loopback operator over the retained workspace; no credential entry or payment engine.
 import {createServer} from 'node:http';
 import {readFile} from 'node:fs/promises';
-import {randomBytes,timingSafeEqual} from 'node:crypto';
+import {randomBytes,randomUUID,timingSafeEqual} from 'node:crypto';
 import {join} from 'node:path';
 import {inspectGeocodePackage} from './merchant.mjs';
 import {readBundle,relativeFile} from '../twelvedata/files.mjs';
@@ -21,9 +21,12 @@ async function readInput(request) {
   if(!value || typeof value!=='object' || Array.isArray(value))fail('GEOCODE_JSON_OBJECT_REQUIRED');
   return value;
 }
-export async function createGeocodeServer({workspace=null,delivery=null,port=0}={}) {
+export async function createGeocodeServer({workspace=null,delivery=null,port=0,managedLaunch=null}={}) {
   if(Boolean(workspace)===Boolean(delivery))throw new TypeError('Choose one workspace or one reopened customer delivery');
   if(!Number.isInteger(port)||port<0||port>65535)throw new TypeError('Invalid loopback port');
+  if(managedLaunch!==null&&(!workspace||typeof managedLaunch!=='object'||Array.isArray(managedLaunch)))
+    throw new TypeError('Managed launch needs the original operator workspace');
+  const managedStartup=managedLaunch===null?null:Object.freeze({...structuredClone(managedLaunch),instanceId:randomUUID(),pid:process.pid});
   const token=randomBytes(32).toString('hex'),tokenBytes=Buffer.from('Bearer '+token);
   let origin,closing=false,closePromise;
   const sockets=new Set(),pending=new Set();
@@ -52,6 +55,7 @@ export async function createGeocodeServer({workspace=null,delivery=null,port=0}=
     }
     const id=url.searchParams.get('id');
     if(request.method==='GET'){
+      if(url.pathname==='/api/managed-launch'&&managedStartup){send(response,200,managedStartup);return;}
       if(url.pathname==='/api/workspace'){
         send(response,200,delivery?{readOnly:true,delivery:delivery.inspect()}:await workspace.overview());return;
       }
@@ -130,5 +134,5 @@ export async function createGeocodeServer({workspace=null,delivery=null,port=0}=
     await Promise.allSettled([...pending]);await workspace?.close();
     for(const socket of sockets)socket.destroy();await stopped;
   })();
-  return {server,origin,url:origin+'/#'+token,token,close};
+  return {server,origin,url:origin+'/#'+token,token,close,managedStartup};
 }
