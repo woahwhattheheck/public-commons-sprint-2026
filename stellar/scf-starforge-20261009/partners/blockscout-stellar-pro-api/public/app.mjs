@@ -314,7 +314,7 @@ $('use-latest-revision').addEventListener('click', () => {
 const PRO_PROVIDER_ORIGIN = 'https://api.blockscout.com';
 const PRO_PROVIDER_SOURCE = 'https://docs.blockscout.com/api-reference/tokens/retrieve-detailed-information-about-a-specific-token';
 let connectionSource, connectionReview, displayedConnectionReview, connectionChanges, connectionPackage;
-let connectionRevision = 0, connectionSourceEpoch = 0, connectionHistoryEpoch = 0, connectionNext = '';
+let connectionRevision = 0, connectionSourceEpoch = 0, connectionHistoryEpoch = 0, connectionNext = '', connectionBusy = false;
 function changedConnection() {
   connectionRevision++; connectionReview = null; displayedConnectionReview = null; connectionChanges = null;
   $('connection-review').hidden = true; $('connection-prepared').hidden = true;
@@ -331,8 +331,12 @@ function connectionMode() {
     : 'PRO usage counts the configured credit cost for each provider attempt. Review the endpoint tariff and shared account allowance before choosing these ceilings.';
 }
 async function loadConnection() {
-  const epoch = ++connectionSourceEpoch, result = await request('/api/connection');
-  if (epoch !== connectionSourceEpoch) return;
+  if (connectionBusy) return;
+  const epoch = ++connectionSourceEpoch; changedConnection();
+  const revision = connectionRevision; $('connection-fields').disabled = true;
+  try {
+  const result = await request('/api/connection');
+  if (epoch !== connectionSourceEpoch || revision !== connectionRevision) return;
   connectionSource = result; changedConnection();
   const c = result.connection, p = result.plan;
   $('connection-current').textContent = c.providerName + ' · ' + c.origin + ' · account ' + p.accountAlias +
@@ -352,6 +356,9 @@ async function loadConnection() {
   }
   if (c.chainId) $('connection-chain').value = c.chainId;
   $('connection-fields').disabled = false; connectionMode();
+  } finally {
+    if (epoch === connectionSourceEpoch) { $('connection-fields').disabled = !connectionSource; connectionMode(); }
+  }
 }
 function selectedConnectionChanges() {
   const instance = $('connection-mode').value === 'instance', kind = $('connection-auth').value;
@@ -424,7 +431,10 @@ async function readConnectionPackage(id, expected) {
   return { bytes, value, sha256: actual };
 }
 async function openConnectionPackage(id, expected) {
+  if (connectionBusy) return;
+  changedConnection(); const revision = connectionRevision;
   const saved = await readConnectionPackage(id, expected);
+  if (revision !== connectionRevision) return;
   connectionReview = null; connectionChanges = null;
   showConnectionReview(saved.value.review, true);
   showConnectionPackage({ status: 'SAVED_PACKAGE_REOPENED', id, planSha256: saved.value.review.planSha256,
@@ -472,7 +482,9 @@ $('connection-form').addEventListener('change', event => {
 $('connection-review-time').addEventListener('click', () => {
   changedConnection(); $('connection-reviewed-at').value = new Date().toISOString();
 });
-$('reload-connection').addEventListener('click', () => action($('reload-connection'), loadConnection));
+$('reload-connection').addEventListener('click', () => {
+  if (!connectionBusy) action($('reload-connection'), loadConnection);
+});
 $('connection-form').addEventListener('submit', event => {
   event.preventDefault();
   action(event.submitter, async () => {
@@ -486,20 +498,20 @@ $('connection-form').addEventListener('submit', event => {
 });
 $('prepare-connection').addEventListener('click', () => action($('prepare-connection'), async () => {
   const reviewed = connectionReview, changes = connectionChanges;
-  if (!reviewed || !changes) return;
-  $('connection-fields').disabled = true;
+  if (!reviewed || !changes || connectionBusy) return;
+  connectionBusy = true; $('connection-fields').disabled = true;
   try {
     let result;
     try {
       result = await request('/api/connection/prepare', { sourcePlanSha256: reviewed.sourcePlanSha256,
         changes, reviewSha256: reviewed.reviewSha256 });
     } catch (original) {
-      try { await openConnectionPackage(reviewed.reviewSha256); await loadConnections(true); return; }
+      try { connectionBusy = false; await openConnectionPackage(reviewed.reviewSha256); await loadConnections(true); return; }
       catch { throw original; }
     }
     showConnectionPackage(result); await loadConnections(true);
     message('The complete deployment package is saved and ready to receive on the selected installation.');
-  } finally { $('connection-fields').disabled = false; connectionMode(); }
+  } finally { connectionBusy = false; $('connection-fields').disabled = false; connectionMode(); }
 }));
 $('download-connection-review').addEventListener('click', () => {
   if (displayedConnectionReview) download(json(displayedConnectionReview), 'blockscout-connection-review-' + displayedConnectionReview.reviewSha256 + '.json');

@@ -45,7 +45,8 @@ export async function startBlockscoutDesk({ application, seller, operations, dir
     res.writeHead(status, { ...SECURITY, 'content-type': 'application/json; charset=utf-8', 'content-length': bytes.length, ...headers });
     res.end(bytes);
   };
-  const server = createServer(async (req, res) => {
+  const activeRequests = new Set();
+  async function handle(req, res) {
     const cancel = new AbortController();
     const abort = () => { if (!res.writableEnded) cancel.abort(); };
     req.once('aborted', abort); res.once('close', abort);
@@ -165,6 +166,10 @@ export async function startBlockscoutDesk({ application, seller, operations, dir
         { error: typeof e.code === 'string' && /^BLOCKSCOUT_[A-Z0-9_]+$/.test(e.code) ? e.code : 'BLOCKSCOUT_OPERATOR_REQUEST_FAILED',
           ...(e.code === 'BLOCKSCOUT_RECONCILIATION_REVISION_CHANGED' ? { currentRevision: e.currentRevision } : {}) });
     }
+  }
+  const server = createServer((req, res) => {
+    const run = handle(req, res); activeRequests.add(run);
+    run.finally(() => activeRequests.delete(run)).catch(() => {});
   });
   server.requestTimeout = 70000; server.headersTimeout = 8000; server.keepAliveTimeout = 2000;
   await new Promise((done, fail) => { server.once('error', fail); server.listen(port, HOST, done); });
@@ -175,9 +180,16 @@ export async function startBlockscoutDesk({ application, seller, operations, dir
   origin = new URL('http://' + HOST + ':' + listenerPort).origin;
   return { server, url: origin, controlUrl: origin + '/#' + token,
     close() {
-      if (!closing) { closed = true; closing = new Promise((done, fail) => {
-        server.close(e => e ? fail(e) : done()); server.closeIdleConnections?.();
-      }); }
+      if (!closing) {
+        closed = true;
+        closing = (async () => {
+          try {
+            await new Promise((done, fail) => {
+              server.close(e => e ? fail(e) : done()); server.closeIdleConnections?.();
+            });
+          } finally { await Promise.allSettled([...activeRequests]); }
+        })();
+      }
       return closing;
     } };
 }
