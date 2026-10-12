@@ -1,6 +1,7 @@
 // MIT. Research tool metadata; the selected provider loads its runtime on demand.
 import {MAX_RETAINED_CHUNK_BYTES} from '../retained-file-contracts.mjs';
 import {researchCitationReviewTools} from './research-citation-updates.mjs';
+import {researchEuropePmcTools,RESEARCH_EUROPE_PMC_EXPORTS,RESEARCH_EUROPE_PMC_EXPORT_FIELDS} from './research-europe-pmc.mjs';
 import {researchDocumentTools,RESEARCH_DOCUMENT_EXPORTS,RESEARCH_DOCUMENT_EXPORT_FIELDS} from './research-documents.mjs';
 import {researchClinicalTrialsTools,RESEARCH_CLINICALTRIALS_EXPORTS,RESEARCH_CLINICALTRIALS_CRITERIA} from './research-clinicaltrials.mjs';
 import {RESEARCH_SECTIONS,RESEARCH_COMPARISON_SECTIONS} from '../../../stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/workspace-contracts.mjs';
@@ -24,6 +25,7 @@ export const RESEARCH_EXPORTS=Object.freeze({
   'source-content':{extension:'bin'},'source-record':{extension:'json'},'source-file':{extension:'bin'},
   ...RESEARCH_CLINICALTRIALS_EXPORTS,
   ...RESEARCH_DOCUMENT_EXPORTS,
+  ...RESEARCH_EUROPE_PMC_EXPORTS,
 });
 const exportKind={type:'string',enum:Object.keys(RESEARCH_EXPORTS)};
 export function researchWorkspaceTools(tool){
@@ -91,12 +93,12 @@ export function researchWorkspaceTools(tool){
     tool('merchant_research_crossref_receive','Receive the exact reviewed Crossref edition into the original question using its plan hash, edition hash and current dossier revision. The native receiver reconciles a lost committed reply.',{
       ...operation,expectedRevision:revision,expectedPlanSha256:digest,expectedEditionSha256:digest},
       ['workspace','dossierId','operationId','expectedRevision','expectedPlanSha256','expectedEditionSha256'],{idempotent:true}),
-    tool('merchant_research_export','Stream and retain a complete portable dossier, report, edition, comparison, original occurrence content/record or selected bundle file. Select revision for exact previous/reviewed/current HTML, Markdown or portable history. Source kinds bind editionId/key; source-file also requires original fileName and expectedSha256. Returns the same content-addressed export ID for reads and restart recovery.',{
+    tool('merchant_research_export','Stream and retain a complete portable dossier, report, edition, comparison, original occurrence content/record or selected bundle file. Select revision for exact previous/reviewed/current HTML, Markdown or portable history. Source kinds bind editionId/key; source-file also requires original fileName and expectedSha256. Europe PMC exports require library and their native operationId or workspace requestId; omit dossierId for those library-wide exports. Returns the same content-addressed export ID for reads and restart recovery.',{
       ...dossier,kind:exportKind,operationId:nativeId,editionId:nativeId,before:revision,after:revision,
-      ...RESEARCH_DOCUMENT_EXPORT_FIELDS,revision,
+      ...RESEARCH_DOCUMENT_EXPORT_FIELDS,...RESEARCH_EUROPE_PMC_EXPORT_FIELDS,revision,
       key:{type:'string',pattern:'^(0|[1-9][0-9]{0,8})$'},fileName:{type:'string',minLength:1,maxLength:1024},
       sourceId:{type:'string',pattern:'^ctsrc_[a-f0-9]{64}$'},criteria:RESEARCH_CLINICALTRIALS_CRITERIA,expectedSha256:digest},
-      ['workspace','dossierId','kind'],{}),
+      ['workspace','kind'],{}),
     tool('merchant_research_exports','Page complete exports already retained by this attachment. Recover a lost export reply by its original dossier ID, content hash and saved export receipt.',{
       ...workspace,dossierId:nativeId,offset,limit,snapshot:digest},['workspace'],read),
     tool('merchant_research_file_read','Read a retained complete export as SHA-pinned base64 chunks. Continue with the same kind/exportId/readId and nextOffset; after expiry or restart omit readId and retain exportId plus offset.',{
@@ -110,6 +112,7 @@ export function researchWorkspaceTools(tool){
       ['workspace'],{idempotent:true}),
     ...researchClinicalTrialsTools(tool),
     ...researchDocumentTools(tool),
-    ...researchCitationReviewTools(tool)
+    ...researchCitationReviewTools(tool),
+    ...researchEuropePmcTools(tool)
   ];
 }
