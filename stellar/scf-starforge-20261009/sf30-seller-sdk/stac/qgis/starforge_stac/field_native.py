@@ -449,6 +449,8 @@ def commission_native(workspace, original, config, stage, progress=None):
         r = q["QgsRelation"]()
         r.setId(relation["id"])
         r.setName(relation["name"])
+        r.setStrength(q["Qgis"].RelationshipStrength.Composition if relation["strength"] == "composition"
+                      else q["Qgis"].RelationshipStrength.Association)
         r.setReferencedLayer(parent.id())
         r.setReferencingLayer(child.id())
         for pair in relation["fieldPairs"]:
@@ -860,7 +862,9 @@ def inspect_field_project(workspace, project_id, progress=None):
     ids = {layer.id(): original_id for original_id, layer in _binding(project).items()}
     for r in project.relationManager().relations().values():
         if r.referencedLayerId() in ids and r.referencingLayerId() in ids:
-            result["relations"].append({"id": r.id(), "name": r.name(), "parentLayerId": ids[r.referencedLayerId()],
+            result["relations"].append({"id": r.id(), "name": r.name(),
+                "strength": "composition" if r.strength() == q["Qgis"].RelationshipStrength.Composition else "association",
+                "parentLayerId": ids[r.referencedLayerId()],
                 "childLayerId": ids[r.referencingLayerId()], "fieldPairs": [
                     {"parentField": parent, "childField": child} for child, parent in r.fieldPairs().items()]})
     result["readback"] = readback

@@ -376,12 +376,15 @@ class RelationDialog(QDialog):
         form = QFormLayout()
         layout.addLayout(form)
         self.name = QLineEdit()
+        self.strength = QComboBox()
+        self.strength.addItem("Association — independently managed related records", "association")
+        self.strength.addItem("Composition — native child duplication and deletion", "composition")
         self.parent_layer, self.child_layer = QComboBox(), QComboBox()
         self.parent_field, self.child_field = QComboBox(), QComboBox()
         for row in layers:
             self.parent_layer.addItem(row["label"], row["layerId"])
             self.child_layer.addItem(row["label"], row["layerId"])
-        for title, widget in (("Relation name", self.name), ("Parent layer", self.parent_layer),
+        for title, widget in (("Relation name", self.name), ("Native behavior", self.strength), ("Parent layer", self.parent_layer),
                               ("Parent key", self.parent_field), ("Child inspection table/layer", self.child_layer),
                               ("Child foreign key", self.child_field)):
             form.addRow(title, widget)
@@ -401,7 +404,7 @@ class RelationDialog(QDialog):
             require(self.name.text().strip() and self.parent_field.currentData() and self.child_field.currentData(),
                     "FIELD_RELATION", "Choose the relation name and both native keys.")
             return {"id": "field-relation-" + uuid.uuid4().hex, "name": self.name.text().strip(),
-                    "parentLayerId": self.parent_layer.currentData(), "childLayerId": self.child_layer.currentData(),
+                    "strength": self.strength.currentData(), "parentLayerId": self.parent_layer.currentData(), "childLayerId": self.child_layer.currentData(),
                     "fieldPairs": [{"parentField": self.parent_field.currentData(), "childField": self.child_field.currentData()}]}
         value = _dialog_error(self, collect)
         if value is not None:
@@ -472,8 +475,8 @@ class CommissionDialog(QDialog):
         self.tabs.addTab(devices, "Devices")
         relations = QWidget()
         relations_layout = QVBoxLayout(relations)
-        self.relation_rows = QTableWidget(0, 5)
-        self.relation_rows.setHorizontalHeaderLabels(["Use", "Relation", "Parent", "Child", "Key pairs"])
+        self.relation_rows = QTableWidget(0, 6)
+        self.relation_rows.setHorizontalHeaderLabels(["Use", "Relation", "Native behavior", "Parent", "Child", "Key pairs"])
         self.relation_rows.horizontalHeader().setStretchLastSection(True)
         relations_layout.addWidget(self.relation_rows)
         controls = QHBoxLayout()
@@ -524,7 +527,7 @@ class CommissionDialog(QDialog):
             check = _checked(previous.get(row["id"], True))
             self.relation_enabled[row["id"]] = check
             self.relation_rows.setCellWidget(i, 0, check)
-            values = [row["name"], names.get(row["parentLayerId"], row["parentLayerId"]),
+            values = [row["name"], row.get("strength", "association").capitalize(), names.get(row["parentLayerId"], row["parentLayerId"]),
                       names.get(row["childLayerId"], row["childLayerId"]),
                       "; ".join(p["parentField"] + " ← " + p["childField"] for p in row["fieldPairs"])]
             for j, value in enumerate(values, 1):
