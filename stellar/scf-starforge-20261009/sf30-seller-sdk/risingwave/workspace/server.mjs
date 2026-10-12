@@ -90,6 +90,15 @@ export async function startRisingWaveWorkbench({ port = 0, ...options } = {}) {
         else if (/^\/api\/subscriptions\/[a-z][a-z0-9-]+$/.test(url.pathname)) {
           queryFields(url, []); result = await model.subscriptionRecord(url.pathname.split('/').at(-1));
         }
+        else if (url.pathname === '/api/comparisons') {
+          queryFields(url, ['limit', 'offset']); result = await model.comparisons({
+            limit: url.searchParams.has('limit') ? Number(url.searchParams.get('limit')) : 20,
+            offset: url.searchParams.has('offset') ? Number(url.searchParams.get('offset')) : 0 });
+        } else if (/^\/api\/comparisons\/[a-z][a-z0-9-]+(?:\/files\/[a-z]+)?$/.test(url.pathname)) {
+          queryFields(url, []); const parts = url.pathname.split('/');
+          if (parts[4] === 'files') return download(res, await model.comparisonFile(parts[3], parts[5]));
+          result = await model.comparisonRecord(parts[3]);
+        }
         else if (url.pathname === '/api/captures') {
           queryFields(url, ['limit', 'offset']); result = await model.captures({
             limit: url.searchParams.has('limit') ? Number(url.searchParams.get('limit')) : 20,
@@ -125,6 +134,8 @@ export async function startRisingWaveWorkbench({ port = 0, ...options } = {}) {
         else if (url.pathname === '/api/subscription/prepare') result = await model.subscriptionPrepare(value);
         else if (url.pathname === '/api/subscription/create') result = await model.subscriptionCreate(value);
         else if (url.pathname === '/api/capture') result = await model.capture(value);
+        else if (url.pathname === '/api/capture/resume') result = await model.resumeCapture(value.id);
+        else if (url.pathname === '/api/comparison/read') result = await model.comparisonChunk(value.id,value.file,{offset:value.offset,limit:value.limit});
         else if (url.pathname === '/api/capture/recover') result = await model.recoverCapture(value.id);
         else if (url.pathname === '/api/capture/read') result = await model.captureChunk(value.id,value.file,{offset:value.offset,limit:value.limit});
         else if (url.pathname === '/api/capture/cancel') result = await model.cancelCapture(value.id);

@@ -1,6 +1,7 @@
 // MIT. One tool catalogue over the original browser-owned RisingWave workbench.
 const object={type:'object'},id={type:'string',pattern:'^[a-z][a-z0-9-]{0,100}$'},revision={type:'integer',minimum:0};
 const text={type:'string'},page={limit:{type:'integer',minimum:1,maximum:100},offset:{type:'integer',minimum:0}};
+const extraction={type:'object',additionalProperties:false,properties:{maxRows:{type:'integer',minimum:1},maxBytes:{type:'integer',minimum:1024},maxRowBytes:{type:'integer',minimum:1024,maximum:33554432},batchSize:{type:'integer',minimum:1},timeoutSeconds:{type:'integer',minimum:1},maxDurationMs:{type:'integer',minimum:1000}}};
 const tool=(name,description,properties,required,readOnly=false)=>({name,description,inputSchema:{type:'object',properties,required,additionalProperties:false},
   annotations:{readOnlyHint:readOnly,destructiveHint:false,idempotentHint:readOnly,openWorldHint:!readOnly}});
 export const RISINGWAVE_TOOLS=Object.freeze([
@@ -15,13 +16,18 @@ export const RISINGWAVE_TOOLS=Object.freeze([
   tool('risingwave_subscriptions','Read all retained subscription reviews and original operation results.',{},[],true),
   tool('risingwave_subscription_status','Read one original saved subscription review and result.',{requestId:id},['requestId'],true),
   tool('risingwave_preview','Preview one saved report using exact typed parameter values.',{expectedRevision:revision,query:text,input:object},['expectedRevision','query','input']),
-  tool('risingwave_capture','Start a complete native snapshot or incremental edition from the retained original checkpoint. Explicit onGap controls rebuilding after retention expiry; the previous edition is preserved. Repeat captureId to inspect the original request.',{expectedRevision:revision,query:text,input:object,captureId:id,mode:{enum:['full','changes','auto']},baseCaptureId:id,onGap:{enum:['error','rebuild']},extraction:object},['expectedRevision','query','input','captureId']),
+  tool('risingwave_capture','Start a complete native snapshot or incremental edition from the retained original checkpoint. Explicit onGap controls rebuilding after retention expiry; the previous edition is preserved. Repeat captureId to inspect the original request.',{expectedRevision:revision,query:text,input:object,captureId:id,mode:{enum:['full','changes','auto']},baseCaptureId:id,onGap:{enum:['error','rebuild']},extraction},['expectedRevision','query','input','captureId']),
   tool('risingwave_captures','Page all complete, active and interrupted original capture records.',page,[],true),
   tool('risingwave_capture_status','Read one original capture, its full metadata and file identities.',{captureId:id},['captureId'],true),
   tool('risingwave_capture_cancel','Cancel the named original in-flight source read and retain its state and partial files.',{captureId:id},['captureId']),
+  tool('risingwave_capture_resume','Resume the original interrupted native capture from its retained complete epoch. An unfinished initial snapshot restarts inside the same capture directory and retains its earlier attempt.',{captureId:id},['captureId']),
   tool('risingwave_capture_recover','Reattach a completed native capture after a lost workbench response using only retained files.',{captureId:id},['captureId']),
   tool('risingwave_capture_file','Read exact original file bytes in base64 ranges. Continue nextOffset to null; every range retains the complete file SHA-256.',{captureId:id,file:{enum:['json','ndjson','csv','events','checkpoint','state','manifest']},offset:{type:'integer',minimum:0},limit:{type:'integer',minimum:1,maximum:196608}},['captureId','file'],true),
-  tool('risingwave_compare_captures','Compare every retained row in two complete editions using unique identity fields or ordered row positions.',{before:id,after:id,keys:{type:'array',items:text},sampleLimit:{type:'integer',minimum:1,maximum:1000}},['before','after']),
+  tool('risingwave_compare_captures','Compare every retained row using unique identity fields and retain complete added, removed and changed NDJSON files. Samples are bounded only for display.',{before:id,after:id,comparisonId:id,keys:{type:'array',items:text},sampleLimit:{type:'integer',minimum:1,maximum:1000}},['before','after']),
+  tool('risingwave_comparisons','Page retained complete comparison identities and every-row counts.',page,[],true),
+  tool('risingwave_comparison_status','Reopen a complete comparison, all counts, samples and full file identities.',{comparisonId:id},['comparisonId'],true),
+  tool('risingwave_comparison_file','Read full difference file bytes in base64 ranges with the original SHA-256. Continue nextOffset to null.',{comparisonId:id,file:{enum:['added','removed','changed','manifest']},offset:{type:'integer',minimum:0},limit:{type:'integer',minimum:1,maximum:196608}},['comparisonId','file'],true),
+  tool('risingwave_receive_comparison','Receive all three complete difference streams and their manifest, resuming the original partial transfer and verifying every file.',{comparisonId:id,directory:text},['comparisonId','directory']),
   tool('risingwave_receive_capture','Receive every complete original capture file into the selected private directory and reopen the native capture. Reuses the same partial transfer.',{captureId:id,directory:text},['captureId','directory']),
   tool('risingwave_publication_create','Bind one saved report and its exact merchant choices to a versioned dataset product.',{expectedRevision:revision,query:text,path:text,publicationId:id},['expectedRevision','query','path']),
   tool('risingwave_publication_status','Read the original product, candidate runs, target, schedule and customer requests.',{publicationId:id},['publicationId'],true),
@@ -45,8 +51,11 @@ export async function callRisingWaveTool(client,name,input={}){
     risingwave_subscription_status:()=>client.subscriptionRecord(input.requestId),
     risingwave_discover:()=>client.discover(input),risingwave_preview:()=>client.preview(input),risingwave_capture:()=>client.capture(input),
     risingwave_captures:()=>client.captures(input),risingwave_capture_status:()=>client.captureRecord(input.captureId),
-    risingwave_capture_cancel:()=>client.cancelCapture(input.captureId),risingwave_capture_recover:()=>client.recoverCapture(input.captureId),
+    risingwave_capture_cancel:()=>client.cancelCapture(input.captureId),risingwave_capture_resume:()=>client.resumeCapture(input.captureId),risingwave_capture_recover:()=>client.recoverCapture(input.captureId),
     risingwave_capture_file:()=>client.captureChunk(input.captureId,input.file,{offset:input.offset,limit:input.limit}),
+    risingwave_comparisons:()=>client.comparisons(input),risingwave_comparison_status:()=>client.comparisonRecord(input.comparisonId),
+    risingwave_comparison_file:()=>client.comparisonChunk(input.comparisonId,input.file,{offset:input.offset,limit:input.limit}),
+    risingwave_receive_comparison:()=>client.receiveComparison(input),
     risingwave_compare_captures:()=>client.compareCaptures(input),risingwave_receive_capture:()=>client.receiveCapture(input),
     risingwave_publication_create:()=>client.createPublication(input),risingwave_publication_status:()=>client.publication(input.publicationId),
     risingwave_publication_action:()=>client.publicationCommand(input.publicationId,input.action,input.input??{}),

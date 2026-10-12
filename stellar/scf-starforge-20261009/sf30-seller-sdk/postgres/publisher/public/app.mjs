@@ -55,9 +55,69 @@ function buttons() {
   $('saved-plan').textContent = state.plan ? `Saved plan ${state.plan}${state.dirty ? ' · unsaved edits' : ' · ready to extract'}` : 'Save a plan before extraction.';
 }
 function inputChanged() { state.dirty = true; buttons(); }
+function nativeSubscriptionSource() { return Array.isArray(state.source?.extraction?.modes); }
+function nativeOrderSource() { return state.source?.extraction?.order === 'query' || nativeSubscriptionSource(); }
+function renderNativeExtraction(saved) {
+  let controls=$('native-subscription-controls');
+  if(!nativeSubscriptionSource()){if(controls)controls.hidden=true;return;}
+  const declaration=state.source.extraction,defaults=declaration.defaults;
+  if(!defaults)throw new Error('Reload the source extraction defaults before preparing this plan.');
+  if(!controls){
+    controls=node('div','',{id:'native-subscription-controls',class:'form-grid'});
+    for(const[id,label,choices]of [
+      ['native-mode','Edition mode',declaration.modes],
+      ['native-gap','After subscription retention expires',declaration.onGap],
+      ['native-batch','FETCH batch size'],
+      ['native-fetch-timeout','FETCH timeout (seconds)'],
+      ['native-row-bytes','Maximum bytes per complete row']]){
+      const wrapper=node('label',label),input=document.createElement(choices?'select':'input');input.id=id;
+      if(choices)for(const value of choices)input.append(node('option',value,{value}));
+      else{input.type='number';input.min='1';input.step='1';}
+      input.addEventListener('change',inputChanged);wrapper.append(input);controls.append(wrapper);
+    }
+    controls.append(node('p','Capture budgets cover the complete native source before report filters. A FETCH timeout does not complete an edition. The overall timeout applies to the entire edition.',{class:'muted'}));
+    $('order').closest('label').after(controls);
+  }
+  controls.hidden=false;
+  const extraction=saved?.extraction??defaults;
+  for(const[id,key]of [['native-mode','mode'],['native-gap','onGap'],['native-batch','batchSize'],['native-fetch-timeout','timeoutSeconds'],['native-row-bytes','maxRowBytes']])
+    $(id).value=extraction[key]??defaults[key];
+  if(!saved){
+    $('max-rows').value=defaults.maxRows;$('max-mib').value=defaults.maxBytes/1048576;
+    $('timeout').value=defaults.maxDurationMs/1000;
+  }
+}
+function exactParameter(spec,value) {
+  if(value===null)return null;
+  if(spec.type==='boolean'){
+    if(value===true||value==='true')return true;if(value===false||value==='false')return false;
+    throw new Error('Use true or false for a boolean parameter.');
+  }
+  if(spec.type==='integer'){
+    if(!/^-?(?:0|[1-9][0-9]*)$/.test(String(value))||!Number.isSafeInteger(Number(value)))throw new Error('Enter an exact safe integer; use bigint for larger native values.');
+    return Number(value);
+  }
+  if(spec.type==='number'){
+    if(String(value).trim()===''||!Number.isFinite(Number(value)))throw new Error('Enter a finite numeric parameter.');
+    return Number(value);
+  }
+  if(typeof value!=='string')throw new Error('Keep exact native values as strings, including values inside arrays.');
+  return value;
+}
+function readParameter(element) {
+  const spec=state.query.parameters[element.dataset.parameter];
+  if(spec.array){
+    let value;try{value=JSON.parse(element.value);}catch{throw new Error('Enter parameter arrays as JSON. Quote large integers, decimals and temporal values.');}
+    if(!Array.isArray(value))throw new Error('Enter a JSON array for this parameter.');
+    return value.map(item=>exactParameter(spec,item));
+  }
+  return nativeSubscriptionSource()?exactParameter(spec,element.value):spec.type==='boolean'?element.value==='true':element.value;
+}
 function renderQuery(definition, saved) {
   state.query = definition;
-  const nativeOrder = state.source?.extraction?.order === 'query';
+  const nativeOrder = nativeOrderSource(), nativeSubscription = nativeSubscriptionSource();
+  const columnNames = Array.isArray(definition.columns) ? definition.columns : Object.keys(definition.columns ?? {});
+  renderNativeExtraction(saved);
   $('order').closest('label').hidden = nativeOrder;
   if (!$('native-csv-option') && state.source?.extraction?.includeNativeCsv) {
     const label = node('label', 'Retain separate native CSV export '), box = document.createElement('input');
@@ -69,20 +129,22 @@ function renderQuery(definition, saved) {
   $('source-sql').textContent = typeof definition.sql === 'string' ? definition.sql : JSON.stringify(definition.serviceQuery && typeof definition.serviceQuery === 'object' && !Array.isArray(definition.serviceQuery) ? definition.serviceQuery : definition.path ? {
     path: definition.path, format: definition.format, recordsPointer: definition.recordsPointer,
     expectedSha256: definition.expectedSha256, mapping: definition.mapping, where: definition.where,
-  } : { collection: definition.collection, pipeline: definition.pipeline, readConcern: definition.readConcern }, null, 2);
+  } : definition.relation ? { relation: definition.relation, subscription: definition.subscription, key: definition.key,
+    columns: definition.columns, parameters: definition.parameters, filters: definition.filters } :
+    { collection: definition.collection, pipeline: definition.pipeline, readConcern: definition.readConcern }, null, 2);
   $('source-hash').textContent = 'Source ' + short(state.editorHash);
   clear($('parameters'));
   for (const [name, spec] of Object.entries(definition.parameters)) {
     const label = node('label', name), wrapper = node('div');
-    const input = spec.type === 'boolean' || spec.enum ? document.createElement('select') : document.createElement('input');
+    const input = !spec.array && (spec.type === 'boolean' || spec.enum) ? document.createElement('select') : document.createElement('input');
     input.dataset.parameter = name; input.dataset.type = spec.type;
     if (input.tagName === 'SELECT') {
       const choices = spec.type === 'boolean' ? ['true', 'false'] : spec.enum;
       for (const value of choices) input.append(node('option', String(value), { value: String(value) }));
     } else { input.type = 'text'; input.autocomplete = 'off'; }
-    const value = saved?.input && Object.hasOwn(saved.input, name) ? saved.input[name] :
+    const value = saved ? (Object.hasOwn(saved.input, name) ? saved.input[name] : undefined) :
       definition.probe && Object.hasOwn(definition.probe, name) ? definition.probe[name] : spec.default;
-    input.value = value === null || value === undefined ? '' : String(value);
+    input.value = value === null || value === undefined ? '' : spec.array ? JSON.stringify(value) : String(value);
     label.append(input); wrapper.append(label);
     if (spec.required === false) {
       const useLabel = node('label', 'Use parameter '), use = document.createElement('input');
@@ -94,7 +156,7 @@ function renderQuery(definition, saved) {
       });
       useLabel.append(use); wrapper.append(useLabel);
     }
-    if (spec.nullable) {
+    if (spec.nullable || nativeSubscription) {
       const nullLabel = node('label', 'Use NULL '), box = document.createElement('input');
       box.type = 'checkbox'; box.dataset.nullParameter = name; box.checked = value === null;
       box.addEventListener('change', () => { input.disabled = box.checked || wrapper.querySelector('[data-use-parameter]')?.checked === false; inputChanged(); });
@@ -103,7 +165,7 @@ function renderQuery(definition, saved) {
     $('parameters').append(wrapper);
   }
   clear($('columns'));
-  for (const name of definition.columns) {
+  for (const name of columnNames) {
     const row = node('tr'); row.dataset.column = name;
     const enabled = document.createElement('input'); enabled.type = 'checkbox'; enabled.dataset.role = 'expose';
     enabled.checked = !saved || Object.hasOwn(saved.dataset.columns, name); enabled.setAttribute('aria-label', 'Expose ' + name);
@@ -111,9 +173,10 @@ function renderQuery(definition, saved) {
     const type = document.createElement('select'); type.dataset.role = 'type'; type.setAttribute('aria-label', name + ' type');
     for (const [value, label] of [['string', 'Text'], ['integer', 'Integer'], ['number', 'Float'], ['boolean', 'Boolean']])
       type.append(node('option', label, { value }));
-    const declared = definition.columnTypes?.find(column => column.name === name);
+    const declared = definition.columnTypes?.find(column => column.name === name) ?? (Array.isArray(definition.columns) ? undefined : definition.columns[name]);
     const spec = saved?.dataset.columns[name] ?? (!saved ? declared ?? (nativeOrder ? { type: 'string', nullable: true } : undefined) : undefined);
-    type.value = typeof spec === 'string' ? spec : spec?.type ?? 'string';
+    const selectedType = typeof spec === 'string' ? spec : spec?.type ?? 'string';
+    type.value = ['string','integer','number','boolean'].includes(selectedType) ? selectedType : 'string';
     const typeCell = node('td'); typeCell.append(type); row.append(typeCell);
     for (const role of ['nullable', 'filters', 'ranges', 'sorts']) {
       const cell = node('td'), box = document.createElement('input'); box.type = 'checkbox'; box.dataset.role = role;
@@ -123,7 +186,7 @@ function renderQuery(definition, saved) {
     }
     $('columns').append(row);
   }
-  $('order').value = saved ? (saved.extraction.order ?? []).map(item => (item.direction === 'desc' ? '-' : '') + item.column).join(', ') : nativeOrder ? '' : definition.columns[0];
+  $('order').value = saved ? (saved.extraction.order ?? []).map(item => (item.direction === 'desc' ? '-' : '') + item.column).join(', ') : nativeOrder ? '' : columnNames[0];
 }
 async function freshPlan() {
   if (state.dirty && !window.confirm('Discard the unsaved extraction plan edits and start a new plan?')) return;
@@ -135,7 +198,7 @@ async function freshPlan() {
   $('plan-form').hidden = !definition;
   if (!definition) { state.query = null; clear($('columns')); clear($('parameters')); buttons(); return; }
   renderQuery(definition);
-  if (state.source.extraction?.order === 'query') {
+  if (state.source.extraction?.order === 'query' && !nativeSubscriptionSource()) {
     $('max-rows').value = 1000000; $('max-mib').value = 64;
     $('timeout').value = Math.max(120, (definition.timeoutMs ?? 30000) / 1000);
   }
@@ -147,7 +210,7 @@ function planInput() {
     const useBox = [...$('parameters').querySelectorAll('[data-use-parameter]')].find(box => box.dataset.useParameter === element.dataset.parameter);
     if (useBox && !useBox.checked) continue;
     const nullBox = [...$('parameters').querySelectorAll('[data-null-parameter]')].find(box => box.dataset.nullParameter === element.dataset.parameter);
-    input[element.dataset.parameter] = nullBox?.checked ? null : element.dataset.type === 'boolean' ? element.value === 'true' : element.value;
+    input[element.dataset.parameter] = nullBox?.checked ? null : readParameter(element);
   }
   const columns = {}, filters = [], ranges = [], sorts = [];
   for (const row of $('columns').children) {
@@ -161,8 +224,10 @@ function planInput() {
       defaultLimit: Number($('default-limit').value), maxLimit: Number($('max-limit').value),
       ...($('max-cell-chars') ? { maxCellChars: Number($('max-cell-chars').value) } : {}) },
     extraction: { maxRows: Number($('max-rows').value), maxBytes: Number($('max-mib').value) * 1048576,
-      maxRowBytes: 1048576, timeoutMs: Number($('timeout').value) * 1000,
-      ...(state.source?.extraction?.order === 'query' ? {} : { order: $('order').value.split(',').map(value => value.trim()).filter(Boolean).map(value => ({
+      maxRowBytes: nativeSubscriptionSource() ? Number($('native-row-bytes').value) : 1048576, timeoutMs: Number($('timeout').value) * 1000,
+      ...(nativeSubscriptionSource() ? { mode: $('native-mode').value, onGap: $('native-gap').value,
+        batchSize: Number($('native-batch').value), timeoutSeconds: Number($('native-fetch-timeout').value) } : {}),
+      ...(nativeOrderSource() ? {} : { order: $('order').value.split(',').map(value => value.trim()).filter(Boolean).map(value => ({
         column: value.startsWith('-') ? value.slice(1) : value, direction: value.startsWith('-') ? 'desc' : 'asc' })) }),
       ...(state.source?.extraction?.includeNativeCsv ? { includeNativeCsv: $('native-csv-option')?.checked ?? false } : {}) } };
 }
@@ -173,7 +238,7 @@ async function choosePlan(id) {
   if (![...$('query-name').options].some(option => option.value === value.query)) $('query-name').append(node('option', value.query, { value: value.query }));
   $('query-name').value = value.query; $('plan-title').value = value.title; $('dataset-name').value = value.dataset.name;
   $('max-rows').value = value.extraction.maxRows; $('max-mib').value = value.extraction.maxBytes / 1048576;
-  $('timeout').value = value.extraction.timeoutMs / 1000; $('default-limit').value = value.dataset.defaultLimit; $('max-limit').value = value.dataset.maxLimit;
+  $('timeout').value = (value.extraction.maxDurationMs ?? value.extraction.timeoutMs) / 1000; $('default-limit').value = value.dataset.defaultLimit; $('max-limit').value = value.dataset.maxLimit;
   $('plan-form').hidden = false;
   if ($('max-cell-chars')) $('max-cell-chars').value = value.dataset.maxCellChars ?? 65536;
   renderQuery(value.sourceQuery, value); renderLists(); buttons();
