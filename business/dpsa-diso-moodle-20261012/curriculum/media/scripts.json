@@ -1,0 +1,743 @@
+{
+  "schema": "dpsa.diso.media.v1",
+  "language": "en-ZA",
+  "videos": [
+    {
+      "id": "M01-VIDEO",
+      "moduleId": "M01",
+      "title": "Protect the service, clarify the responsibility",
+      "sourceIds": [
+        "DPSA-IS-2022",
+        "CASE-SARS-2025",
+        "POPIA",
+        "PAIA"
+      ],
+      "scenes": [
+        {
+          "id": "M01-S01",
+          "heading": "Begin with the resident",
+          "onScreen": [
+            "Public purpose",
+            "Accurate decisions",
+            "Usable services"
+          ],
+          "narration": "Imagine a resident applying for a benefit. The department needs the right information, a dependable decision and a way to correct an error. Information security supports that whole service. SARS reported completing 5.8 million auto-assessments in July 2025. That documented scale invites practical questions: who may see a record, how are its values checked, and can the person use the correction channel? Begin your security assessment with the service and the people affected.",
+          "durationSeconds": 37
+        },
+        {
+          "id": "M01-S02",
+          "heading": "Give each objective a consequence",
+          "onScreen": [
+            "Confidentiality: appropriate access",
+            "Integrity: trustworthy information",
+            "Availability: usable when needed"
+          ],
+          "narration": "Suppose a benefits file reaches the wrong recipient, a bank-account value changes without authority, or an office cannot retrieve approved applications. These are different failures, with different consequences. Confidentiality concerns appropriate access and disclosure. Integrity concerns trustworthy information and authorised change. Availability concerns access when the service needs it. One control may help several objectives, but you should still describe the particular failure it is intended to prevent or detect.",
+          "durationSeconds": 35
+        },
+        {
+          "id": "M01-S03",
+          "heading": "Work through the actual roles",
+          "onScreen": [
+            "Business owner: purpose and service",
+            "GITO and DISO: assigned ICT responsibilities",
+            "Information Officer: statutory functions"
+          ],
+          "narration": "The business owner understands the information purpose and the service outcome. The Government Information Technology Officer carries assigned ICT responsibilities. Under the Information Security Directive, the delegated DISO is accountable to the GITO and advises on information-security matters. The Information Officer has distinct statutory responsibilities. A useful DISO brings these people together around a concrete decision, records the agreed responsibilities, and follows the control through to its operation.",
+          "durationSeconds": 34
+        },
+        {
+          "id": "M01-S04",
+          "heading": "Make a first-month service map",
+          "onScreen": [
+            "Choose one real service",
+            "Follow the information",
+            "Agree the next decision"
+          ],
+          "narration": "For your first-month exercise, choose one departmental service. Trace the information from collection through use, transfer, storage and disposal. Include paper files, suppliers and recovery arrangements. Name the service owner and the people who can approve access or change. Then select one consequential gap. Explain its likely effect, recommend a practical treatment and identify the person who must decide. Your completed map should help colleagues act, rather than merely list systems.",
+          "durationSeconds": 36
+        }
+      ]
+    },
+    {
+      "id": "M02-VIDEO",
+      "moduleId": "M02",
+      "title": "Use the right authority for the decision",
+      "sourceIds": [
+        "DPSA-IS-2022",
+        "POPIA",
+        "PAIA",
+        "NARSSA-DISPOSAL",
+        "IR-NOTIFICATION"
+      ],
+      "scenes": [
+        {
+          "id": "M02-S01",
+          "heading": "Build an authority map",
+          "onScreen": [
+            "Law",
+            "Directive and policy",
+            "Departmental procedure"
+          ],
+          "narration": "A sound security recommendation starts by identifying its authority. An Act, a government directive, a policy framework and a departmental procedure serve different purposes. Record the current source, the relevant provision, the affected service and the responsible person. Then describe what the requirement means in practice. This approach makes a recommendation easier to review and update when the law, receiving process or service changes.",
+          "durationSeconds": 33
+        },
+        {
+          "id": "M02-S02",
+          "heading": "Resolve the actual information decision",
+          "onScreen": [
+            "Purpose and lawful processing",
+            "Access decision",
+            "Retention and disposal"
+          ],
+          "narration": "Consider a request for a file containing personal information. Privacy responsibilities, access-to-information rules and records duties all matter. The authorised decision-maker must consider the applicable facts and provisions. A security classification alone does not settle every access request. Nor does a wish to reduce storage establish disposal authority. The DISO contributes the information flow, risks and available safeguards so the authorised officers can make and record a reasoned decision.",
+          "durationSeconds": 35
+        },
+        {
+          "id": "M02-S03",
+          "heading": "Turn notification into an operating process",
+          "onScreen": [
+            "Detect and preserve facts",
+            "Engage the authorised officers",
+            "Use the current reporting route"
+          ],
+          "narration": "The Information Regulator introduced its eServices security-compromise reporting route from April 2025. A department therefore needs more than a notification paragraph in a policy: it needs authorised people, current access to the receiving channel and a record of submissions. POPIA distinguishes the operator's notification to the responsible party from the responsible party's duties under section 22. Use the actual provisions and facts; avoid replacing them with a generic seventy-two-hour rule.",
+          "durationSeconds": 35
+        },
+        {
+          "id": "M02-S04",
+          "heading": "Prepare a source-linked requirement register",
+          "onScreen": [
+            "Provision and source edition",
+            "Operational action and owner",
+            "Review trigger"
+          ],
+          "narration": "In the application exercise, translate a supplier arrangement into a short requirement register. State the processing purpose, permitted information, access arrangements, security responsibilities, incident route and end-of-service return or disposal process. Cite the controlling source for each legal or policy statement. Mark a technical recommendation as a recommendation. Finally, name the change that would require review, such as a new purpose, a new supplier or a different reporting route.",
+          "durationSeconds": 35
+        }
+      ]
+    },
+    {
+      "id": "M03-VIDEO",
+      "moduleId": "M03",
+      "title": "Make the Information Security Directive operational",
+      "sourceIds": [
+        "DPSA-IS-2022",
+        "CASE-DPSA-PROGRESS"
+      ],
+      "scenes": [
+        {
+          "id": "M03-S01",
+          "heading": "Connect the issued instrument to work",
+          "onScreen": [
+            "Requirement",
+            "Operating control",
+            "Observed result"
+          ],
+          "narration": "DPSA's 2023 progress account described implementation of public-service ICT norms, including information security. The departmental task is to turn the issued requirements into work that people can perform and management can assess. Choose one requirement and identify the risk it addresses. Name the owner, the operating procedure, the evidence produced and the action taken when the control fails. This creates a useful line from policy to service protection.",
+          "durationSeconds": 34
+        },
+        {
+          "id": "M03-S02",
+          "heading": "Design a control that can be assessed",
+          "onScreen": [
+            "Scope and frequency",
+            "Responsible operator",
+            "Exception handling"
+          ],
+          "narration": "An access review is useful only when its scope and decisions are clear. Which accounts and permissions are included? Who can confirm the business need? How are departures, changed roles and unusual privileges handled? Keep the actual review population and record the changes made. If a control covers only part of the service, show that boundary. A signed checklist without an understood population cannot establish that every relevant account was reviewed.",
+          "durationSeconds": 36
+        },
+        {
+          "id": "M03-S03",
+          "heading": "Handle urgent access deliberately",
+          "onScreen": [
+            "Minimum necessary authority",
+            "Known expiry",
+            "Independent follow-through"
+          ],
+          "narration": "An urgent incident may require temporary elevated access. The immediate need should be described and approved through the department's authorised process. Limit the authority to the task, use a known end point, record the activity and ensure the permission is removed or reviewed. The urgency changes the operating sequence; it does not remove the need to know who acted, what changed and who accepted the resulting service risk.",
+          "durationSeconds": 34
+        },
+        {
+          "id": "M03-S04",
+          "heading": "Close one improvement through operation",
+          "onScreen": [
+            "Choose a consequential gap",
+            "Implement with the owner",
+            "Check the changed outcome"
+          ],
+          "narration": "Your unit application turns a gap into an improvement plan. Include the service consequence, the required change, the accountable owner, the resources and the completion criterion. For example, a supplier account that remains active after contract termination needs an end-of-service control linked to the actual contract and access records. Finish by checking that the account was removed and that the process catches the next termination. Completion means a changed operating condition.",
+          "durationSeconds": 36
+        }
+      ]
+    },
+    {
+      "id": "M04-VIDEO",
+      "moduleId": "M04",
+      "title": "Classify and handle records throughout their life",
+      "sourceIds": [
+        "MISS",
+        "DPSA-IS-2022",
+        "NARSSA-RECORDS",
+        "NARSSA-DISPOSAL",
+        "CASE-DHA-RECORDS"
+      ],
+      "scenes": [
+        {
+          "id": "M04-S01",
+          "heading": "Keep the source schemes clear",
+          "onScreen": [
+            "Identify the applicable instrument",
+            "Assess disclosure consequences",
+            "Record the decision"
+          ],
+          "narration": "The Minimum Information Security Standards and the 2022 Information Security Directive contain classification terminology that must be read in its own context. Preserve the applicable source and the authority for the classification decision. Assess what unauthorised disclosure could do, and apply the required handling controls. Classification supports an accountable decision about information. It should not become a convenient label for avoiding scrutiny or concealing misconduct.",
+          "durationSeconds": 33
+        },
+        {
+          "id": "M04-S02",
+          "heading": "Link classification to handling",
+          "onScreen": [
+            "Need-to-know",
+            "Authorised transfer",
+            "Traceable receipt"
+          ],
+          "narration": "Imagine a confidential personnel record moving between offices. The label should lead to specific handling: the authorised recipient, a suitable transfer method, confirmation of receipt and protection while stored or used. The same care applies to paper and digital copies. A courier receipt proves a package moved; it may not prove the intended officer received the correct record. Design the handover so the information identity and recipient can be checked.",
+          "durationSeconds": 35
+        },
+        {
+          "id": "M04-S03",
+          "heading": "Digitisation adds responsibilities",
+          "onScreen": [
+            "Original record identity",
+            "Image and metadata quality",
+            "Continuing retention authority"
+          ],
+          "narration": "Home Affairs reported more than 49 million civic records digitised since 2023 in its July 2025 budget speech. This is a useful public-service example of digitisation at scale. A department undertaking similar work must preserve the relationship between the original record, its digital image and its metadata. Quality, access and future retrieval still need attention. The creation of a digital copy is a separate decision from authorised disposal of the original.",
+          "durationSeconds": 36
+        },
+        {
+          "id": "M04-S04",
+          "heading": "Create a usable handling instruction",
+          "onScreen": [
+            "Receive, use and transfer",
+            "Review classification changes",
+            "Dispose under authority"
+          ],
+          "narration": "In your application, write a handling instruction for one real record class. Cover receipt, access, copying, transfer, storage and the point at which retention or classification is reviewed. Keep a link to the applicable records schedule or disposal authority. Describe what an officer should do when a label is unclear or a recipient changes. A practical instruction lets staff protect the record while continuing the service for which it exists.",
+          "durationSeconds": 35
+        }
+      ]
+    },
+    {
+      "id": "M05-VIDEO",
+      "moduleId": "M05",
+      "title": "Govern security through accountable decisions",
+      "sourceIds": [
+        "CGICT-2022",
+        "DPSA-IS-2022",
+        "CASE-WC-TREASURY"
+      ],
+      "scenes": [
+        {
+          "id": "M05-S01",
+          "heading": "Ask the governance question",
+          "onScreen": [
+            "What decision is needed?",
+            "Who has authority?",
+            "How will the outcome be reviewed?"
+          ],
+          "narration": "Security governance gives management a way to direct, oversee and correct the work. The Western Cape Provincial Treasury reported a twelfth consecutive clean audit for 2024/25. That outcome provides a useful setting for discussing dependable records and sustained accountability. For a particular security question, however, you still need relevant evidence about the control and service concerned. A governance forum should know exactly which decision it is being asked to make.",
+          "durationSeconds": 35
+        },
+        {
+          "id": "M05-S02",
+          "heading": "Separate contribution from accountability",
+          "onScreen": [
+            "Service owner",
+            "Control operator",
+            "Independent assurance"
+          ],
+          "narration": "Several people may contribute to a security decision. The service owner explains the consequence for the public. The technical team describes the available controls and their operating limits. The DISO analyses the information-security risk. An assurance function evaluates relevant evidence. Make the accountable decision-maker explicit, particularly where residual risk or resources are involved. Broad participation improves the decision when it complements clear responsibility.",
+          "durationSeconds": 32
+        },
+        {
+          "id": "M05-S03",
+          "heading": "Manage exceptions as real decisions",
+          "onScreen": [
+            "Reason and scope",
+            "Compensating control",
+            "Expiry and review"
+          ],
+          "narration": "A legacy system may be unable to meet a policy requirement immediately. A useful exception records the specific gap, the affected service, the residual risk and the authorised decision. It also identifies a compensating control, an owner and a review or expiry point. When the scope changes, the old decision needs reconsideration. An exception register becomes valuable when its entries cause action, rather than quietly becoming permanent permission.",
+          "durationSeconds": 34
+        },
+        {
+          "id": "M05-S04",
+          "heading": "Bring a complete decision to the forum",
+          "onScreen": [
+            "Options and consequences",
+            "Resource and owner",
+            "Acceptance and follow-through"
+          ],
+          "narration": "For the application exercise, prepare a short governance submission. Describe the service problem in plain language, compare feasible options and recommend one. Include the resource requirement, the person who will deliver it and the evidence that will show whether it worked. Ask for a precise decision, such as approval of a treatment or acceptance of a defined residual risk. Record the decision and return with its operating outcome.",
+          "durationSeconds": 34
+        }
+      ]
+    },
+    {
+      "id": "M06-VIDEO",
+      "moduleId": "M06",
+      "title": "Connect ICT investment to public value",
+      "sourceIds": [
+        "CGICT-2022",
+        "CGICT-DIRECTIVE",
+        "CASE-COURT-ONLINE"
+      ],
+      "scenes": [
+        {
+          "id": "M06-S01",
+          "heading": "Govern the service investment",
+          "onScreen": [
+            "Public outcome",
+            "ICT capability",
+            "Accountable benefit owner"
+          ],
+          "narration": "The Corporate Governance of ICT framework connects ICT to the department's wider governance. Consider Court Online, whose rollout and performance appear in official government reporting. Deploying a system is an observable output. The department also needs to understand the service benefits: who can use it, whether staff are ready and whether the justice process improves. Name the owner of those benefits before approving the investment.",
+          "durationSeconds": 33
+        },
+        {
+          "id": "M06-S02",
+          "heading": "Evaluate the whole lifecycle",
+          "onScreen": [
+            "Acquisition and integration",
+            "Operation and support",
+            "Recovery and exit"
+          ],
+          "narration": "A procurement price captures only part of a service's cost. Include migration, interfaces, staff learning, support, security operations, continuity and eventual exit. Ask which dependencies the department will control and which depend on a supplier. Then compare realistic options against the same service objectives. A lower initial price can lead to a higher operating burden, while a more complex solution may demand skills the department does not yet have.",
+          "durationSeconds": 35
+        },
+        {
+          "id": "M06-S03",
+          "heading": "Set conditions that can be checked",
+          "onScreen": [
+            "Readiness criteria",
+            "Service acceptance",
+            "Benefit measures"
+          ],
+          "narration": "Before rollout, specify what must be ready and who will judge it. An acceptance condition might require an actual end-to-end service transaction, a usable correction route, trained staff and a demonstrated recovery process. Keep security acceptance connected to those service conditions. Define the baseline for expected benefits so later reporting can compare meaningful evidence. A target without a baseline or owner is difficult to govern.",
+          "durationSeconds": 33
+        },
+        {
+          "id": "M06-S04",
+          "heading": "Review the realised outcome",
+          "onScreen": [
+            "Compare against the baseline",
+            "Explain changed assumptions",
+            "Decide the next adjustment"
+          ],
+          "narration": "Your application asks you to evaluate an ICT investment and its post-implementation review. Start with the intended public outcome and the original assumptions. Identify which benefits have been observed, which remain uncertain and which costs changed. Explain the implication for the next decision. Management may need to improve adoption, adjust the operating model or change the service design. Governance continues after the installation has finished.",
+          "durationSeconds": 33
+        }
+      ]
+    },
+    {
+      "id": "M07-VIDEO",
+      "moduleId": "M07",
+      "title": "Turn a risk assessment into a treatment decision",
+      "sourceIds": [
+        "DPSA-IS-2022",
+        "CGICT-2022",
+        "CASE-SARS-AR"
+      ],
+      "scenes": [
+        {
+          "id": "M07-S01",
+          "heading": "Describe a risk people can act on",
+          "onScreen": [
+            "Cause or exposure",
+            "Possible event",
+            "Service consequence"
+          ],
+          "narration": "A useful risk statement connects an exposure to an event and its service consequence. For example, an unreviewed supplier account could permit an unauthorised change to approved payment details, causing loss and delayed service. This is more actionable than a broad label such as cyber risk. SARS's annual report describes risk-based selection in its compliance work. Use that example to ask how a clear selection method directs scarce attention.",
+          "durationSeconds": 35
+        },
+        {
+          "id": "M07-S02",
+          "heading": "Keep the assessments distinct",
+          "onScreen": [
+            "Inherent exposure",
+            "Current residual risk",
+            "Target after treatment"
+          ],
+          "narration": "Assess the exposure before the relevant controls, then consider the controls that actually operate. That produces a current residual-risk view. A planned improvement may support a lower target risk, but its expected benefit should remain distinct until implementation and assessment. Record the likelihood and consequence reasoning, including uncertainty. This makes it possible for a reviewer to understand why two apparently similar services received different priorities.",
+          "durationSeconds": 33
+        },
+        {
+          "id": "M07-S03",
+          "heading": "Choose and own the treatment",
+          "onScreen": [
+            "Avoid, reduce, share or accept",
+            "Address the actual cause",
+            "Assign the decision and work"
+          ],
+          "narration": "Compare treatments that address the described risk. Removing an unnecessary data transfer may avoid an exposure. Restricting and reviewing access may reduce it. A contractual arrangement may allocate responsibilities while leaving important obligations with the department. Acceptance requires an authorised decision about the remaining risk and its conditions. Record who will deliver the treatment, who can accept the outcome and what change would trigger another review.",
+          "durationSeconds": 33
+        },
+        {
+          "id": "M07-S04",
+          "heading": "Confirm the changed operating condition",
+          "onScreen": [
+            "Implementation evidence",
+            "Remaining risk",
+            "Review trigger"
+          ],
+          "narration": "In your application, select a service risk and prepare its treatment decision. Include a clear completion criterion. If the treatment is an access control, show that the intended permissions now apply and that the review process handles a changed role. If it is continuity, demonstrate the relevant recovery step. Update the residual-risk assessment using the observed result. The purpose of the register is to direct and sustain useful action.",
+          "durationSeconds": 35
+        }
+      ]
+    },
+    {
+      "id": "M08-VIDEO",
+      "moduleId": "M08",
+      "title": "Read the service architecture as a set of decisions",
+      "sourceIds": [
+        "DPSA-IS-2022",
+        "NIST-ZTA",
+        "NIST-AUTH-2025",
+        "NCSC-PDNS",
+        "CASE-NCSC-PDNS",
+        "CONTINUITY-2022"
+      ],
+      "scenes": [
+        {
+          "id": "M08-S01",
+          "heading": "Draw the trust boundaries",
+          "onScreen": [
+            "People and services",
+            "Information movement",
+            "Decisions at each boundary"
+          ],
+          "narration": "A useful architecture picture shows who or what requests access, where information moves and which decision allows it. Include the identity service, application, records, supplier connections and recovery environment. The NCSC's Protective DNS service offers a public-sector example of a shared control operating at scale. Its place in an architecture is specific: other threats and service decisions still need their own controls. Start by describing the boundaries your service actually crosses.",
+          "durationSeconds": 36
+        },
+        {
+          "id": "M08-S02",
+          "heading": "Distinguish identity from permission",
+          "onScreen": [
+            "Authenticate the claimant",
+            "Authorise the requested action",
+            "Record the accountable event"
+          ],
+          "narration": "Successful sign-in establishes an authentication result. The application must still decide whether that identity may perform this action on this record. A staff member authorised to read an application may have no authority to alter a payment. Multi-factor authentication uses distinct factor categories; two passwords or a CAPTCHA do not create that distinction. Follow the request through the permission check and the resulting record of activity.",
+          "durationSeconds": 33
+        },
+        {
+          "id": "M08-S03",
+          "heading": "Check the operating dependencies",
+          "onScreen": [
+            "Restricted supplier scope",
+            "Protected and recoverable keys",
+            "Useful monitoring"
+          ],
+          "narration": "A supplier connection needs an explicit permitted scope and an accountable owner. Encryption depends on appropriate key access and recovery. Monitoring depends on relevant events, protected records and somebody able to respond. Consider a restored database whose keys remain unavailable, or an alert stream that no team reviews. The control's name is less important than whether its complete operating chain protects the service in the circumstances that matter.",
+          "durationSeconds": 34
+        },
+        {
+          "id": "M08-S04",
+          "heading": "Review a whole service path",
+          "onScreen": [
+            "Normal transaction",
+            "Changed privilege",
+            "Recovery during outage"
+          ],
+          "narration": "The architecture application asks you to review a real transaction through its boundaries. State the expected decision at sign-in, at record access and at a privileged action. Include supplier support and an outage scenario. For each boundary, identify the owner and an observation that would demonstrate the control. The diagram exercise reinforces these distinct responsibilities. Use the completed review to recommend improvements that preserve a usable, recoverable service.",
+          "durationSeconds": 34
+        }
+      ]
+    },
+    {
+      "id": "M09-VIDEO",
+      "moduleId": "M09",
+      "title": "Respond to an incident and restore trustworthy service",
+      "sourceIds": [
+        "DPSA-IS-2022",
+        "POPIA",
+        "IR-NOTIFICATION",
+        "CONTINUITY-2022",
+        "CASE-TRANSNET"
+      ],
+      "scenes": [
+        {
+          "id": "M09-S01",
+          "heading": "Start with a usable incident picture",
+          "onScreen": [
+            "Observed facts",
+            "Possible consequences",
+            "Immediate decisions"
+          ],
+          "narration": "In July 2021, government reported the restoration of Transnet's NAVIS N4 terminal system after a cyber incident. Between disruption and recovery, an organisation must make a series of decisions with incomplete information. Begin your incident record with what was observed, when it happened, the affected service and the evidence available. Keep confirmed facts separate from hypotheses so new information can change the response without obscuring earlier decisions.",
+          "durationSeconds": 34
+        },
+        {
+          "id": "M09-S02",
+          "heading": "Contain and coordinate",
+          "onScreen": [
+            "Limit continuing harm",
+            "Preserve relevant evidence",
+            "Maintain essential service"
+          ],
+          "narration": "Suppose an account may be altering approved applications. The response team needs to limit continuing harm, preserve relevant activity records and assess which transactions may be affected. The service owner explains the operational consequence of containment. Technical, legal, information-officer and communications responsibilities should proceed through their authorised routes. Record urgent decisions and their reasons, including the conditions for restoring access or changing the containment action.",
+          "durationSeconds": 33
+        },
+        {
+          "id": "M09-S03",
+          "heading": "Reconcile before declaring recovery",
+          "onScreen": [
+            "Trusted system state",
+            "Transaction status",
+            "Service-owner acceptance"
+          ],
+          "narration": "A restored application can still contain incomplete or uncertain transactions. If a payment request lost its response, check its original identifier and authoritative payment status before repeating it. Reconcile temporary paper records and work completed during the outage. Verify the integrity of the recovered information, essential access and the service path that residents use. A service owner should understand the remaining backlog and risks when accepting the return to operation.",
+          "durationSeconds": 35
+        },
+        {
+          "id": "M09-S04",
+          "heading": "Communicate and improve",
+          "onScreen": [
+            "Useful information for affected people",
+            "Decision timeline",
+            "Owned corrective actions"
+          ],
+          "narration": "Your incident application combines a decision log, a recovery check and a short communication. Explain what affected people should do, what service is available and when the next update will be issued. Apply the relevant legal notification provisions through authorised officers. After stabilisation, examine why the event became possible and how the response worked. Assign the improvements and follow them to an observed result, including any changes to training or continuity arrangements.",
+          "durationSeconds": 36
+        }
+      ]
+    },
+    {
+      "id": "M10-VIDEO",
+      "moduleId": "M10",
+      "title": "Make secure work understandable and achievable",
+      "sourceIds": [
+        "DPSA-IS-2022",
+        "CASE-NCSC-EXERCISE",
+        "NCSC-EXERCISE-GUIDE"
+      ],
+      "scenes": [
+        {
+          "id": "M10-S01",
+          "heading": "Understand the work before designing learning",
+          "onScreen": [
+            "Role and decision",
+            "Pressure and available tools",
+            "A workable secure action"
+          ],
+          "narration": "An officer asked to release an urgent file needs a practical way to verify the request and continue the service. Awareness begins with that real work. Identify the decision, the pressure, the tools and the consequences of delay. A learning message is useful when it explains what to do and provides a route that staff can actually use. Listen for process weaknesses as well as gaps in knowledge.",
+          "durationSeconds": 34
+        },
+        {
+          "id": "M10-S02",
+          "heading": "Practise verification under pressure",
+          "onScreen": [
+            "Use a known contact route",
+            "Check authority and scope",
+            "Report uncertainty early"
+          ],
+          "narration": "Consider an urgent message that appears to come from a senior official. The officer should have a known way to verify the request independently, check the relevant authority and limit the information to the approved purpose. The procedure must also explain how to escalate uncertainty without losing the service deadline. Practise the conversation, not merely the recognition of suspicious wording. An accurate-looking message can still ask for an unauthorised action.",
+          "durationSeconds": 35
+        },
+        {
+          "id": "M10-S03",
+          "heading": "Rehearse with the people who decide",
+          "onScreen": [
+            "Realistic scenario",
+            "Safe discussion",
+            "Actions carried into operation"
+          ],
+          "narration": "The NCSC reports that Exercise in a Box is used by local government and emergency services. This illustrates a practical form of public-service rehearsal. In a departmental exercise, give participants the decisions their roles would actually face, including missing information and conflicting priorities. Keep the exercise safe, explain how observations will be used and identify improvements to the process. The value comes from carrying those improvements into everyday work.",
+          "durationSeconds": 35
+        },
+        {
+          "id": "M10-S04",
+          "heading": "Measure useful learning",
+          "onScreen": [
+            "Decision quality",
+            "Reporting and response",
+            "Follow-through"
+          ],
+          "narration": "For your application, build a role-specific learning activity with a clear decision objective. Provide an exercise, a suggested response and a way to ask questions. Assess whether participants can use the correct route and explain their choice. Interpret reporting measures carefully: an increase in reports may reflect greater confidence in the process. Combine learning observations with response quality and completion of improvements so the programme supports secure service delivery.",
+          "durationSeconds": 35
+        }
+      ]
+    },
+    {
+      "id": "M11-VIDEO",
+      "moduleId": "M11",
+      "title": "Report measures that management can interpret",
+      "sourceIds": [
+        "DPSA-IS-2022",
+        "CGICT-2022",
+        "CASE-RIA-SOC"
+      ],
+      "scenes": [
+        {
+          "id": "M11-S01",
+          "heading": "Start with the management decision",
+          "onScreen": [
+            "Service and consequence",
+            "Measure definition",
+            "Responsible owner"
+          ],
+          "narration": "A security measure should help somebody make a decision. Estonia's RIA launched an operations centre in June 2025, connecting monitoring, service observability, customer experience and management processes. The example shows how operational information can support a wider service view. For your department, begin with the decision: which service needs attention, what consequence matters and who can act? Then define the measure needed to inform that choice.",
+          "durationSeconds": 33
+        },
+        {
+          "id": "M11-S02",
+          "heading": "Read the denominator and the unknowns",
+          "onScreen": [
+            "Numerator",
+            "Population and period",
+            "Missing observations"
+          ],
+          "narration": "A report saying ninety per cent of accounts were reviewed needs more detail. Ninety per cent of which accounts, over what period and using which source? If newly discovered accounts are omitted, the percentage may hide an important gap. Show the population, the reviewed count and records whose status is unknown. When coverage changes, preserve the original definition so readers can distinguish an operational change from a measurement change.",
+          "durationSeconds": 35
+        },
+        {
+          "id": "M11-S03",
+          "heading": "Make trends comparable",
+          "onScreen": [
+            "Same definition",
+            "Comparable cohort",
+            "Visible scope changes"
+          ],
+          "narration": "A lower incident count does not automatically indicate a safer service. Reporting routes, detection coverage and the service population may have changed. Where useful, compare both the current whole population and a stable cohort over time. Explain the source edition and any changed counting rules. Use distributions or examples when an average conceals a serious delay. The aim is a fair account of the service, including uncertainty that affects the decision.",
+          "durationSeconds": 36
+        },
+        {
+          "id": "M11-S04",
+          "heading": "Ask for a specific response",
+          "onScreen": [
+            "Finding and implication",
+            "Recommended action",
+            "Owner and review point"
+          ],
+          "narration": "Your application turns operational data into an executive report. Present a small set of defined measures, explain their service consequence and identify the decision required. A prolonged access-removal delay might need a change to the departure process, rather than another awareness message. Recommend an owner, a completion condition and a review point. Keep the supporting source available so the report can be checked and the next edition can preserve its meaning.",
+          "durationSeconds": 36
+        }
+      ]
+    },
+    {
+      "id": "M12-VIDEO",
+      "moduleId": "M12",
+      "title": "Recover the public service and its records",
+      "sourceIds": [
+        "CONTINUITY-2022",
+        "CASE-ESTONIA-EMBASSY"
+      ],
+      "scenes": [
+        {
+          "id": "M12-S01",
+          "heading": "Set the minimum service first",
+          "onScreen": [
+            "Public obligation",
+            "Time-sensitive consequence",
+            "Minimum operating capability"
+          ],
+          "narration": "Continuity planning starts with the public obligation. Identify which service must continue, how the consequence grows over time and the minimum capability people need. Estonia's established Data Embassy holds copies of selected critical datasets outside its ordinary location. It provides a concrete example of planning for severe disruption. For a department, the appropriate design follows its own legal, governance and service requirements, including the dependencies needed to make those copies usable.",
+          "durationSeconds": 36
+        },
+        {
+          "id": "M12-S02",
+          "heading": "Use recovery objectives accurately",
+          "onScreen": [
+            "RTO: recovery time objective",
+            "RPO: tolerable data-loss window",
+            "Dependencies and capacity"
+          ],
+          "narration": "Recovery time objective concerns the target time for restoring the required capability. Recovery point objective concerns the point to which information must be recovered, expressed as a tolerable data-loss window. They answer different questions. A daily backup may not support a short data-loss objective. A backup that can be restored quickly may still depend on unavailable identities or encryption keys. Test the objectives against the complete service and its capacity.",
+          "durationSeconds": 35
+        },
+        {
+          "id": "M12-S03",
+          "heading": "Exercise the actual recovery route",
+          "onScreen": [
+            "Independent access",
+            "Verified information",
+            "Reconciled work"
+          ],
+          "narration": "A useful exercise includes the people, access, records and decisions required during disruption. Restore the selected source, check the recovered information and perform an essential service transaction. Include work captured through temporary channels and transactions with uncertain outcomes. Record observed timings and unresolved dependencies. This gives the service owner evidence about the proposed recovery route and shows which assumptions need correction before a real incident.",
+          "durationSeconds": 33
+        },
+        {
+          "id": "M12-S04",
+          "heading": "Return to normal deliberately",
+          "onScreen": [
+            "Service acceptance",
+            "Backlog and temporary records",
+            "Closure of recovery actions"
+          ],
+          "narration": "In your application, prepare a recovery decision for a disrupted service. State what is operational, what remains restricted and how the backlog will be handled. Reconcile temporary records into the authoritative process and retain their original identity. The return to normal should be an authorised management decision with clear responsibilities. Afterwards, revise the plan using the observed results and confirm that the improvements are carried through to the next exercise.",
+          "durationSeconds": 35
+        }
+      ]
+    },
+    {
+      "id": "M13-VIDEO",
+      "moduleId": "M13",
+      "title": "Lead a coherent information-security programme",
+      "sourceIds": [
+        "DPSA-IS-2022",
+        "CGICT-2022",
+        "CONTINUITY-2022",
+        "CASE-DHA-PARTNERSHIP"
+      ],
+      "scenes": [
+        {
+          "id": "M13-S01",
+          "heading": "Lead from the public purpose",
+          "onScreen": [
+            "Service outcome",
+            "Information responsibility",
+            "Practical improvement"
+          ],
+          "narration": "The DISO's influence grows when advice helps colleagues deliver their public mandate. Home Affairs reported extending Smart ID services through hundreds of participating bank branches in 2026. That delivered channel illustrates the reach of a partnership and the need for clear responsibilities across organisations. Begin a security roadmap with the service outcome, the information involved and the decisions required to sustain reliable, fair access.",
+          "durationSeconds": 33
+        },
+        {
+          "id": "M13-S02",
+          "heading": "Prioritise a programme that can be delivered",
+          "onScreen": [
+            "Consequential risk",
+            "Dependencies and resources",
+            "Operating owner"
+          ],
+          "narration": "Combine the assessment findings into a coherent programme. Address consequential gaps, sequence dependencies and include the people who will operate the resulting controls. An identity improvement may support several projects; a new monitoring tool may be ineffective until ownership and response procedures exist. Include lifecycle resources and explain the trade-offs. A realistic programme makes the relationship between risk, work and public value visible to management.",
+          "durationSeconds": 33
+        },
+        {
+          "id": "M13-S03",
+          "heading": "Make partnership responsibilities explicit",
+          "onScreen": [
+            "Purpose and permitted use",
+            "Incident and recovery routes",
+            "Change and exit"
+          ],
+          "narration": "A partner can provide expertise, access or scale while the department retains important responsibilities. Define the service purpose, permitted information, decision authority and operational boundaries. Agree how changes, incidents, recovery and exit will be handled. Keep the relevant legal and policy sources available. When a disagreement arises, use a concrete service scenario to compare options and bring a clear recommendation to the authorised decision-maker.",
+          "durationSeconds": 33
+        },
+        {
+          "id": "M13-S04",
+          "heading": "Hand over an operating capability",
+          "onScreen": [
+            "Usable procedures and records",
+            "Demonstrated service paths",
+            "Owners and next review"
+          ],
+          "narration": "The final application brings the course together. Prepare a leadership submission and a handover for one departmental improvement. Include the service map, authority, risk decision, control design, training, monitoring and recovery arrangements. Demonstrate the essential operating path and identify the owners who will sustain it. Explain the remaining decisions and their review triggers. Your work is complete when the department can use, maintain and improve the capability with a clear understanding of its responsibilities.",
+          "durationSeconds": 37
+        }
+      ]
+    }
+  ]
+}
