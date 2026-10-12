@@ -1059,6 +1059,21 @@ async function actualExecutable(value,name) {
   }
   fail('RUNTIME_BUILD_TOOL_REQUIRED',{tool:name,requested:value});
 }
+async function prepareBuildToolBindings(buildDirectory,tools) {
+  // Lifecycle scripts call the ordinary tool names again. Resolve those names
+  // to the same verified executables as the outer native command, rather than
+  // inheriting an unrelated launcher from the host's PATH.
+  const root=path.join(buildDirectory,'tools');
+  await fs.mkdir(root,{recursive:true,mode:0o700});await directory(root);
+  for(const[name,executable]of Object.entries(tools)) {
+    const target=path.join(root,name),existing=await lstatMaybe(target);
+    if(existing) {
+      if(!existing.isSymbolicLink()||await fs.realpath(target)!==executable)
+        fail('RUNTIME_BUILD_TOOL_BINDING_CHANGED',{tool:name});
+    }else await fs.symlink(executable,target,'file');
+  }
+  return root;
+}
 async function buildToolVersion(executable) {
   const env={...process.env};delete env.NODE_OPTIONS;
   try {
@@ -1360,7 +1375,8 @@ export async function buildFuulRuntime({installationDirectory,directory:selected
       node:process.versions.node,npm:npmVersion,platform:process.platform,architecture:process.arch};
     if(operation.tools&&(canonical(operation.tools)!==canonical(tools)||canonical(operation.toolchain)!==canonical(toolchain)))
       fail('RUNTIME_BUILD_TOOLCHAIN_CHANGED');
-    operation={...operation,tools,toolchain,toolDirectories:[...new Set(Object.values(tools).map(value=>path.dirname(value)))],status:'BUILDING'};
+    const toolBindings=await prepareBuildToolBindings(buildDirectory,tools);
+    operation={...operation,tools,toolchain,toolDirectories:[toolBindings,...new Set(Object.values(tools).map(value=>path.dirname(value)))],status:'BUILDING'};
     await atomicBytes(buildDirectory,'operation.json',jsonBytes(operation));
     await prepareBuildSource(privateSource,checked,selectedSource);
     const stages=[

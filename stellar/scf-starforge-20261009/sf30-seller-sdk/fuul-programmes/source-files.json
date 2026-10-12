@@ -135,8 +135,8 @@
     },
     {
       "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/fuul-programmes/lossless-json.mjs",
-      "bytes": 13122,
-      "sha256": "9158138556763128039da51a860fda326ca57d973a8c635b12d23aa80ed2e193",
+      "bytes": 13219,
+      "sha256": "58725e1d9eae2da272ccd9fa222902923a1fea5234c350d254890c533eeaf64c",
       "contentType": "text/javascript"
     },
     {
@@ -171,8 +171,8 @@
     },
     {
       "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/fuul-programmes/runtime.mjs",
-      "bytes": 103626,
-      "sha256": "49adc12d19cb29061a4f64342708970fe4e1da950a0d7ebc1f5356b05444c118",
+      "bytes": 104484,
+      "sha256": "29beffa1843adbbb1c0af9e8d087b1a4168c767f0571583e0d862b6ad88295b9",
       "contentType": "text/javascript"
     },
     {

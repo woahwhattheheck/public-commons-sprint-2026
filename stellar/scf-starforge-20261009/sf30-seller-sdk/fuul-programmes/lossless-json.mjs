@@ -167,6 +167,7 @@ export function jsonNative(value,seen=new Set()){
     if(value instanceof Map)return {entries:[...value].map(([key,item])=>[jsonNative(key,seen),jsonNative(item,seen)])};
     if(Array.isArray(value))return value.map(item=>jsonNative(item,seen));
     if(value instanceof Date)return value.toISOString();
+    if(typeof value.toXdr==='function')return {encoding:'xdr-base64',xdr:value.toXdr('base64')};
     if(typeof value.toXDR==='function')return {encoding:'xdr-base64',xdr:value.toXDR('base64')};
     if(typeof value.contractId==='function')return value.contractId();
     return Object.fromEntries(Object.entries(value).map(([key,item])=>[key,jsonNative(item,seen)]));
