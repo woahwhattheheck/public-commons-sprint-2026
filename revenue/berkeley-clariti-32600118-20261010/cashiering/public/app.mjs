@@ -32,7 +32,7 @@ function details(title,value,open=false){return '<details'+(open?' open':'')+'><
 function field(key,title,control,help='',wide=false){return '<div class="field'+(wide?' wide':'')+'"><label for="'+h(key)+'">'+h(title)+'</label>'+control+(help?'<p class="help">'+h(help)+'</p>':'')+'</div>';}
 function textInput(key,value='',attrs=''){return '<input id="'+h(key)+'" name="'+h(key)+'" value="'+h(value??'')+'" '+attrs+'>';}
 function textArea(key,value='',attrs=''){return '<textarea id="'+h(key)+'" name="'+h(key)+'" data-initial-text="'+h(encodeURIComponent(String(value??'')))+'" '+attrs+'></textarea>';}
-function hydrate(root=document){for(const textarea of $('textarea[data-initial-text]',root)){textarea.value=decodeURIComponent(textarea.dataset.initialText);delete textarea.dataset.initialText;}}
+function hydrate(root=document){for(const textarea of $$('textarea[data-initial-text]',root)){textarea.value=decodeURIComponent(textarea.dataset.initialText);delete textarea.dataset.initialText;}}
 function selectInput(key,options,value='',attrs=''){
   return '<select id="'+h(key)+'" name="'+h(key)+'" '+attrs+'>'+options.map(option=>{
     const row=typeof option==='object'?option:{value:option,label:label(option)};
