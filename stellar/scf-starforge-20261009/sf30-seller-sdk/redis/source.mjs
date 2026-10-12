@@ -1,8 +1,9 @@
 // MIT. Native Redis/Valkey execution with an exclusively owned connection per read.
 import { createHash } from 'node:crypto';
-import { compileRedisQueries, bindRedisQuery, describeRedisQueries, QueryInputError } from './declaration.mjs';
+import { compileRedisQueries, bindRedisQuery, describeRedisQueries, redisScanCursor, QueryInputError } from './declaration.mjs';
 import { READ_SCRIPT } from './read-script.mjs';
 import { createUpstashRestClient, RedisHttpError } from './upstash-rest.mjs';
+import { createRedisConnectionFactory, RedisConnectionError } from './connection.mjs';
 export class RedisSourceError extends Error {
   constructor(code, query) { super(code); this.name = 'RedisSourceError'; this.code = code; if (query) this.query = query; }
 }
@@ -23,6 +24,7 @@ function scalar(value) {
 }
 function safeError(issue, name) {
   if (issue instanceof RedisSourceError || issue instanceof QueryInputError) return issue;
+  if (issue instanceof RedisConnectionError) return fail(issue.code, name);
   if (issue instanceof RedisHttpError) {
     const mapped = fail(issue.code, name);
     if (issue.retryAfter) mapped.retryAfter = issue.retryAfter;
@@ -30,23 +32,33 @@ function safeError(issue, name) {
   }
   const message = typeof issue?.message === 'string' ? issue.message : '';
   if (message.includes('SF30_RESULT_TOO_LARGE')) return fail('QUERY_RESULT_TOO_LARGE', name);
+  if (message.includes('SF30_SCAN_PAGE_TOO_MANY_ROWS')) return fail('QUERY_SCAN_PAGE_TOO_LARGE', name);
   if (message.includes('WRONGTYPE')) return fail('QUERY_SOURCE_TYPE_CHANGED', name);
   if (/NOPERM|NOAUTH|WRONGPASS/.test(message)) return fail('SOURCE_ACCESS_DENIED', name);
   if (/unknown command.*EVAL_RO/i.test(message)) return fail('SOURCE_REQUIRES_READONLY_SCRIPTING', name);
   return fail('QUERY_UNAVAILABLE', name);
 }
 function resultOf(name, query, bound, raw) {
-  if (!Array.isArray(raw) || raw.length !== 2 || ![0, 1].includes(raw[0]) || !Array.isArray(raw[1]) || raw[1].length > query.maxRows)
+  if (!Array.isArray(raw) || raw.length !== (query.kind === 'set' ? 3 : 2) || ![0, 1].includes(raw[0]) || !Array.isArray(raw[1]) || raw[1].length > query.maxRows)
     throw fail('QUERY_RESULT_INVALID', name);
   const rows = raw[1].map(row => {
     if (!Array.isArray(row) || row.length !== query.columns.length) throw fail('QUERY_RESULT_INVALID', name);
     return Object.fromEntries(query.columns.map((column, index) => [column, scalar(row[index])]));
   });
+  let cursor;
+  if (query.kind === 'set') {
+    try { cursor = redisScanCursor(scalar(raw[2]), query.cursor); }
+    catch { throw fail('QUERY_RESULT_INVALID', name); }
+    if ((cursor === '0') !== (raw[0] === 0)) throw fail('QUERY_RESULT_INVALID', name);
+  }
   const output = { schema: 'stellar-forge.redis-result.v1', query: name, kind: query.kind,
     columns: [...query.columns], rows, rowCount: rows.length, truncated: raw[0] === 1,
     valueEncoding: 'utf8-or-base64-object', nullEncoding: 'json-null',
     readConsistency: 'single-native-read-script',
-    ...(query.kind === 'stream' ? { duplicateFieldProjection: 'last-value' } : {}) };
+    ...(query.kind === 'stream' ? { duplicateFieldProjection: 'last-value' } : {}),
+    ...(query.kind === 'list' ? { order: 'list-index', pageOffset: bound.position } : {}),
+    ...(query.kind === 'set' ? { scanCursor: cursor, scanComplete: cursor === '0', scanCount: query.scanCount,
+      iterationConsistency: 'native-sscan', memberOrder: 'unspecified', duplicatesPossible: true } : {}) };
   if (output.truncated && query.offset) {
     const next = BigInt(bound.position) + BigInt(rows.length);
     if (next <= BigInt(query.parameters[query.offset].maximum))
@@ -54,6 +66,8 @@ function resultOf(name, query, bound, raw) {
     else output.continuationUnavailable = 'OFFSET_LIMIT';
   }
   if (output.truncated && query.after && rows.length) output.nextInput = { ...bound.values, [query.after]: rows.at(-1).id };
+  if (output.truncated && query.cursor)
+    output.nextInput = { ...bound.values, [query.cursor]: cursor };
   if (output.nextInput) {
     try { bindRedisQuery(query, output.nextInput); }
     catch (issue) {
@@ -68,57 +82,70 @@ function resultOf(name, query, bound, raw) {
 export async function createRedisQuerySource({ connection, queries, maxConnections = 4, maxPending = 32,
   connectTimeoutMs = 5000, idleTimeoutMs = 30000, startupTimeoutMs = 10000 } = {}) {
   const http = connection?.transport === 'upstash-rest';
-  if (!connection || typeof connection !== 'object' || !http && !connection.socket) throw new TypeError('REDIS_CONNECTION_REQUIRED');
+  if (!connection || typeof connection !== 'object') throw new TypeError('REDIS_CONNECTION_REQUIRED');
   maxConnections = number(maxConnections, 1, 32, 'maxConnections');
   maxPending = number(maxPending, maxConnections, 256, 'maxPending');
   connectTimeoutMs = number(connectTimeoutMs, 100, 30000, 'connectTimeoutMs');
   idleTimeoutMs = number(idleTimeoutMs, 1000, 300000, 'idleTimeoutMs');
   startupTimeoutMs = number(startupTimeoutMs, 100, 60000, 'startupTimeoutMs');
   const compiled = compileRedisQueries(queries);
-  let makeClient;
-  if (http) makeClient = () => createUpstashRestClient(connection);
-  else {
-    let createClient, RESP_TYPES;
-    try { ({ createClient, RESP_TYPES } = await import('@redis/client')); }
-    catch { throw fail('REDIS_DRIVER_UNAVAILABLE'); }
-    makeClient = () => createClient({ ...connection, RESP: 2, disableClientInfo: true, disableOfflineQueue: true,
-      commandsQueueMaxLength: 16, commandOptions: { timeout: 0, typeMapping: { [RESP_TYPES.BLOB_STRING]: Buffer } },
-      socket: { ...connection.socket, connectTimeout: connectTimeoutMs, reconnectStrategy: false } });
+  let factory;
+  try {
+    factory = http
+      ? { create: () => createUpstashRestClient(connection), topology: 'standalone', driver: 'Upstash REST' }
+      : await createRedisConnectionFactory(connection, { connectTimeoutMs,
+        maxQueryTimeoutMs: Math.max(...Object.values(compiled).map(query => query.timeoutMs)) });
+  } catch (issue) {
+    if (issue instanceof RedisConnectionError) throw safeError(issue);
+    throw issue;
   }
-  const connections = new Set(), idle = [], ownership = new Map(), timers = new Map();
+  const connections = new Set(), idle = [], timers = new Map();
+  const retirement = new WeakMap(), retiring = new Set();
   const pending = new Set(), queue = [], running = new Set();
   let active = 0, closed = false, closing, completed = 0, failures = 0;
   function retire(client) {
-    if (!client) return;
+    if (!client) return Promise.resolve();
+    if (retirement.has(client)) return retirement.get(client);
     const index = idle.indexOf(client); if (index >= 0) idle.splice(index, 1);
-    clearTimeout(timers.get(client)); timers.delete(client); ownership.delete(client); connections.delete(client);
-    try { if (client.isOpen) client.destroy(); } catch { /* Already closed by the native client. */ }
+    clearTimeout(timers.get(client)); timers.delete(client); connections.delete(client);
+    let stopped;
+    try { stopped = client.destroy(); } catch { /* Already closed by the native client. */ }
+    // Sentinel destroy() returns a promise. Retain it even after the client has
+    // left the available pool; cancellation must not outpace native cleanup.
+    const cleanup = Promise.resolve(stopped).catch(() => {});
+    retirement.set(client, cleanup); retiring.add(cleanup);
+    cleanup.then(() => retiring.delete(cleanup));
+    return cleanup;
   }
   function release(client) {
     if (!client) return;
-    ownership.delete(client);
-    if (closed || !client.isReady) { retire(client); return; }
+    if (closed || !client.isReady) return retire(client);
     idle.push(client);
-    const timer = setTimeout(() => retire(client), idleTimeoutMs); timer.unref?.(); timers.set(client, timer);
+    const timer = setTimeout(() => { void retire(client); }, idleTimeoutMs);
+    timer.unref?.(); timers.set(client, timer);
   }
   async function acquire(job) {
     let client;
     while (idle.length && !client) {
       const candidate = idle.pop(); clearTimeout(timers.get(candidate)); timers.delete(candidate);
-      if (candidate.isReady) client = candidate; else retire(candidate);
+      if (candidate.isReady) client = candidate; else await retire(candidate);
+      if (job.done || closed) {
+        await retire(client); throw fail('QUERY_ABORTED', job.name);
+      }
     }
     if (!client) {
-      client = makeClient();
-      connections.add(client);
-      client.on?.('error', () => {
-        const owner = ownership.get(client);
-        if (typeof owner?.reject === 'function') cancel(owner, 'QUERY_UNAVAILABLE');
-        else retire(client);
-      });
+      // Count clients which are still closing toward capacity. An idle expiry
+      // must not temporarily double a Sentinel socket pool during rediscovery.
+      while (connections.size + retiring.size >= maxConnections && retiring.size) {
+        await Promise.race([...retiring]);
+        if (job.done || closed) throw fail('QUERY_ABORTED', job.name);
+      }
+      if (job.done || closed) throw fail('QUERY_ABORTED', job.name);
+      client = factory.create(); connections.add(client);
     }
-    job.client = client; ownership.set(client, job);
+    job.client = client;
     if (!client.isOpen) await client.connect();
-    if (job.done || closed) { retire(client); throw fail('QUERY_ABORTED', job.name); }
+    if (job.done || closed) { await retire(client); throw fail('QUERY_ABORTED', job.name); }
     return client;
   }
   const definition = name => {
@@ -136,23 +163,31 @@ export async function createRedisQuerySource({ connection, queries, maxConnectio
     if (job.done) return;
     const index = queue.indexOf(job); if (index >= 0) queue.splice(index, 1);
     const issue = fail(code, job.name);
-    finish(job, issue); job.interrupt(issue); retire(job.client); job.client = null; pump();
+    finish(job, issue); job.interrupt(issue); void retire(job.client); pump();
   }
   async function execute(job) {
-    let healthy = false;
+    let healthy = false, acquisition;
     try {
       const wait = promise => Promise.race([promise, job.interrupted]);
-      const client = await wait(acquire(job));
+      acquisition = acquire(job);
+      const client = await wait(acquisition);
       if (job.done) return;
       const q = definition(job.name);
       const raw = await wait(client.sendCommand(['EVAL_RO', READ_SCRIPT, '1', job.bound.key,
-        q.kind, String(q.maxRows), String(q.maxBytes), job.bound.position, ...Object.values(q.fields)],
-        http ? { maxResponseBytes: q.maxBytes + 16 * q.maxRows * (q.columns.length + 1) + 1024 } : undefined));
+        q.kind, String(q.maxRows), String(q.maxBytes), job.bound.position, ...(q.kind === 'set' ? [String(q.scanCount)] : Object.values(q.fields))],
+        http ? { maxResponseBytes: q.maxBytes + 16 * q.maxRows * (q.columns.length + 1) + 1024 } : { key: job.bound.key }));
       if (job.done || closed) throw fail('QUERY_ABORTED', job.name);
       const result = resultOf(job.name, q, job.bound, raw); healthy = true; finish(job, null, result);
     } catch (issue) { if (!job.done) finish(job, safeError(issue, job.name)); }
     finally {
-      if (healthy) release(job.client); else retire(job.client);
+      if (healthy) await release(job.client);
+      else {
+        // Cancellation can win while acquire() is awaiting a closing client or
+        // native discovery. Join that same acquisition before releasing its slot.
+        const cleanup = retire(job.client);
+        if (acquisition) await acquisition.catch(() => {});
+        await cleanup; await retire(job.client);
+      }
       job.client = null; active--; pump();
     }
   }
@@ -161,7 +196,7 @@ export async function createRedisQuerySource({ connection, queries, maxConnectio
     while (active < maxConnections && queue.length) {
       const job = queue.shift(); if (job.done) continue;
       active++; const task = execute(job); running.add(task);
-      task.finally(() => running.delete(task));
+      task.then(() => running.delete(task), () => running.delete(task));
     }
   }
   function query(name, input, { signal } = {}) {
@@ -209,7 +244,7 @@ export async function createRedisQuerySource({ connection, queries, maxConnectio
           if (issue instanceof QueryInputError) return invalid(issue);
           return { status: issue.code === 'QUERY_TIMEOUT' ? 504 :
             ['SOURCE_BUSY', 'SOURCE_RATE_LIMITED', 'SOURCE_QUOTA_EXCEEDED'].includes(issue.code) ? 429 :
-            issue.code === 'QUERY_RESULT_TOO_LARGE' ? 413 : 503,
+            ['QUERY_RESULT_TOO_LARGE', 'QUERY_SCAN_PAGE_TOO_LARGE'].includes(issue.code) ? 413 : 503,
             ...(issue.retryAfter ? { headers: { 'retry-after': issue.retryAfter } } : {}),
             body: { error: issue instanceof RedisSourceError ? issue.code : 'QUERY_UNAVAILABLE' } };
         }
@@ -219,28 +254,36 @@ export async function createRedisQuerySource({ connection, queries, maxConnectio
   function close() {
     if (closing) return closing;
     closed = true; for (const job of [...pending]) cancel(job, 'SOURCE_CLOSED'); queue.length = 0;
-    for (const client of [...connections]) retire(client);
-    closing = (async () => { await Promise.allSettled([...running]); })();
+    for (const client of [...connections]) void retire(client);
+    closing = (async () => {
+      await Promise.allSettled([...running]);
+      while (retiring.size) await Promise.allSettled([...retiring]);
+    })();
     return closing;
   }
   // Check the real read-only scripting capability without reading merchant data.
   const startup = { done: false, name: undefined };
   let timer;
   const deadline = new Promise((_, reject) => { timer = setTimeout(() => {
-    startup.done = true; retire(startup.client); reject(fail('SOURCE_START_TIMEOUT'));
+    startup.done = true; void retire(startup.client); reject(fail('SOURCE_START_TIMEOUT'));
   }, startupTimeoutMs); });
   startup.interrupt = () => {};
   // Startup has its own error path; it is not an admitted customer job.
+  const startupAcquisition = acquire(startup);
   try {
-    const client = await Promise.race([acquire(startup), deadline]); ownership.delete(client);
+    const client = await Promise.race([startupAcquisition, deadline]);
     await Promise.race([client.sendCommand(['EVAL_RO', "return redis.call('PING')", '0']), deadline]);
-    release(client); startup.client = null;
-  } catch (issue) { retire(startup.client); await close(); throw safeError(issue); }
+    await release(client); startup.client = null;
+  } catch (issue) {
+    startup.done = true; void retire(startup.client);
+    await startupAcquisition.catch(() => {}); await close(); throw safeError(issue);
+  }
   finally { clearTimeout(timer); }
   return Object.freeze({ query, validate, route, close,
     describe: () => describeRedisQueries(compiled),
-    inspect: () => ({ schema: 'stellar-forge.redis-inspection.v1', driver: http ? 'Upstash REST' : '@redis/client@6.2.1',
+    inspect: () => ({ schema: 'stellar-forge.redis-inspection.v1', driver: factory.driver, topology: factory.topology,
       protocol: http ? 'HTTPS_RESP2' : 'RESP2', scriptSha256, readConsistency: 'single-native-read-script', queries: describeRedisQueries(compiled) }),
     status: () => ({ schema: 'stellar-forge.redis-status.v1', state: closed ? 'CLOSED' : 'READY', active,
-      pending: pending.size, connections: connections.size, idle: idle.length, maxConnections, maxPending, completed, failures }) });
+      pending: pending.size, connections: connections.size, retiring: retiring.size, idle: idle.length,
+      topology: factory.topology, maxConnections, maxPending, completed, failures }) });
 }

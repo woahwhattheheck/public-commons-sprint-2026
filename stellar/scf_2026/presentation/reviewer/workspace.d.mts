@@ -29,6 +29,7 @@ export interface GrantDemoReceipt {
 export interface GrantDemoExport {
   schema:'stellar-forge.grant-reviewer-packet.v1'; packetId:string; sourcePacketId:string;
   exportedAt:string; path:string; bytes:number; sha256:string; quotes:NativeQuote[];
+  requestId?:string; reused?:boolean;
 }
 export interface GrantDemoApplication {
   address:string; consoleUrl:string; directory:string; packetId:string;
@@ -43,6 +44,6 @@ export function inspectGrantDemo(options?:PacketOptions):Promise<GrantDemoInspec
 export function receiveGrantDemo(options:WorkspaceOptions & PacketOptions):Promise<GrantDemoReceipt>;
 export function inspectGrantDemoWorkspace(options:WorkspaceOptions):
   Promise<Omit<GrantDemoInspection,'quotes'> & {directory:string;receivedAt:string;quotes:NativeQuote[]}>;
-export function exportGrantDemo(options:WorkspaceOptions & {output:string}):Promise<GrantDemoExport>;
+export function exportGrantDemo(options:WorkspaceOptions & {output:string;requestId?:string;exportedAt?:string}):Promise<GrantDemoExport>;
 export function startGrantDemo(options:WorkspaceOptions & {port?:number;accessToken?:string}):Promise<GrantDemoApplication>;
 

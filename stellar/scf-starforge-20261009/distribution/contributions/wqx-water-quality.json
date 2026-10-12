@@ -1,14 +1,16 @@
 {
   "schema": "stellar-forge.merchant-distribution-contribution.v1",
   "id": "wqx-water-quality",
-  "description": "WQX scientific review, managed projects, Open Waters receiving and file-backed analysis jobs",
+  "description": "WQX scientific review, managed projects, Open Waters receiving, bulk receiving decisions and file-backed analysis jobs",
   "commands": {
     "water-quality": "stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/cli.mjs",
-    "water-quality-managed": "stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/managed.mjs"
+    "water-quality-managed": "stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/managed.mjs",
+    "water-quality-decisions": "stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/review-sheet/cli.mjs"
   },
   "commandDescriptions": {
     "water-quality": "Review WQX samples, detection limits and complete paid data editions",
-    "water-quality-managed": "Open, receive and manage the original private water-quality project"
+    "water-quality-managed": "Open, receive and manage the original private water-quality project",
+    "water-quality-decisions": "Review complete source-bound receiving choices, exchange editable tables and receive full projects"
   },
   "exports": {
     "./seller/water-quality": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/merchant.mjs",
@@ -19,12 +21,18 @@
     "./seller/water-quality/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/workspace.mjs",
     "./seller/water-quality/managed": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/managed.mjs",
     "./seller/water-quality/open-waters": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/openwaters.mjs",
-    "./seller/water-quality/jobs": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/jobs/application.mjs"
+    "./seller/water-quality/jobs": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/jobs/application.mjs",
+    "./seller/water-quality/decisions": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/review-sheet/workflow.mjs",
+    "./seller/water-quality/decisions/model": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/review-sheet/model.mjs",
+    "./seller/water-quality/decisions/table": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/review-sheet/csv.mjs"
   },
   "browserAssets": [
     {
       "server": "stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/workspace.mjs",
       "manifest": "stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/browser-assets.json"
     }
-  ]
+  ],
+  "applicationProviders": {
+    "wqx-water-quality": "stellar/scf-starforge-20261009/distribution/runtime-workspace/providers/wqx-water-quality.mjs"
+  }
 }

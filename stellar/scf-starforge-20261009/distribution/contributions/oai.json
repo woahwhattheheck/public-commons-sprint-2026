@@ -9,5 +9,8 @@
   "commandDescriptions": {
     "oai": "Capture, review, query and reopen original repository metadata editions.",
     "oai-publisher": "Publish a reviewed repository source through the original dataset, merchant and customer workflow."
+  },
+  "applicationProviders": {
+    "oai": "stellar/scf-starforge-20261009/distribution/runtime-workspace/providers/oai.mjs"
   }
 }

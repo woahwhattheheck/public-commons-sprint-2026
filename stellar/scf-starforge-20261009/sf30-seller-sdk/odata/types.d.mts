@@ -118,11 +118,13 @@ export interface ODataDatasetField {
 }
 export interface ODataDatasetDescription {
   name: string; snapshot: string; rowCount: number; defaultLimit: number; maxLimit: number; order: 'csv-record-order';
+  semanticSchema?: 'stellar-forge.odata-semantics.v1' | 'stellar-forge.ckan-semantics.v1';
   columns: Array<{ name: string; type: 'integer' | 'number' | 'boolean' | 'string'; nullable: boolean;
     filterable: boolean; rangeFilterable?: boolean; sortable?: boolean }>;
 }
 export interface ODataDatasetPage {
   schema: 'stellar-forge.dataset-page.v1'; dataset: ODataDatasetDescription; fields: string[];
+  semantics?: ODataSemanticDocument;
   filters: Record<string, string | number | boolean | null>;
   ranges?: Array<{ column: string; operator: string; value: string | number | boolean | null }>;
   order?: { column: string; direction: 'asc' | 'desc'; nulls: 'last'; ties: 'csv-record-order' };
@@ -134,6 +136,7 @@ export type ODataDatasetResponse = { status: 200; headers: Record<string, string
 export interface ODataExport {
   id: string; editionId: string; directory: string; createdAt: string; dataset: ODataDatasetDescription;
   mapping: ODataDatasetField[]; merchant: boolean; files: string[];
+  semantics?: ODataSemanticBinding & { file: 'semantics.json' };
 }
 export interface ODataLiveProfile {
   schema: 'stellar-forge.odata-live-profile.v1'; id: string; name: string; planId: string; operation: string;
@@ -159,3 +162,46 @@ export interface ODataPayment {
   network: 'stellar:testnet' | 'stellar:pubnet'; asset: string; payTo: string; maxTimeoutSeconds: number;
 }
 export interface ODataDatasetPayment extends ODataPayment { scheme: 'exact'; amount: string }
+
+export interface ODataSemanticBinding {
+  schema: 'stellar-forge.odata-semantics.v1'; sha256: string;
+  definitionSha256: string; captureManifestSha256: string;
+}
+export interface ODataSemanticSource {
+  provider: 'odata4'; serviceUrl: string; schemaUrl: string; schemaSha256: string;
+  protocolVersion: '4.0' | '4.01'; entityContainer: string; entitySet: string; entityType: string;
+}
+export interface ODataCsdlClosure {
+  entityType: string; inheritance: string[]; structuredTypes: Record<string, ODataStructuralType>;
+  typeDefinitions: ODataMetadata['typeDefinitions']; enumTypes: ODataMetadata['enumTypes'];
+}
+export interface ODataSourceSemantics {
+  schema: 'stellar-forge.odata-source-semantics.v1'; source: ODataSemanticSource;
+  keyFields: string[]; fields: Array<ODataField & { underlyingType: string; kind: 'scalar' | 'complex' | 'enum' }>;
+  csdl: ODataCsdlClosure;
+}
+export interface ODataSemanticIssue { code: string; message: string; field?: string; property?: string }
+export interface ODataSemanticColumn {
+  name: string; sourceField: string; role: 'value' | 'state';
+  type: 'integer' | 'number' | 'boolean' | 'string'; nullable: boolean;
+  encoding: 'native' | 'text' | 'json'; stateColumn?: string; valueColumn?: string;
+  dictionary: { label: string; notes: string }; sourceDefinition: Record<string, unknown>;
+  projectedDefinition: Record<string, unknown> & { name: string };
+  issues: ODataSemanticIssue[];
+}
+export interface ODataSemanticDocument {
+  schema: 'stellar-forge.odata-semantics.v1'; sha256: string; definitionSha256: string;
+  source: ODataSemanticSource & { captureManifestSha256: string };
+  columns: ODataSemanticColumn[]; primaryKey: { source: string[]; projected: string[]; complete: boolean };
+  aboutUrl: { source: null; projected: null }; virtualColumns: [];
+  issues: ODataSemanticIssue[]; csdl: ODataCsdlClosure;
+  csvw: { '@context': 'http://www.w3.org/ns/csvw'; url: 'dataset.csv';
+    tableSchema: { columns: Array<ODataSemanticColumn['projectedDefinition']>; primaryKey?: string[] } };
+}
+export interface ODataCaptureManifest {
+  schema: 'stellar-forge.odata-capture-manifest.v1'; editionId: string; serviceUrl: string;
+  entitySet: string; entityType: string; catalogHash: string; query: ODataNormalizedPlan; queryUrl: string;
+  keyFields: string[]; sourceCount: string | null; rowCount: number;
+  completedAt: string | null; contentHash: string;
+  receipts: ODataCatalog['receipts']; pages: ODataRetainedPage[];
+}

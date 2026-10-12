@@ -15,7 +15,7 @@ export { inspectDistributionBuild };
 
 const json = value => JSON.stringify(value, null, 2) + '\n';
 const digest = data => createHash('sha256').update(data).digest('hex');
-const supported = /\.(?:mjs|js|cjs|ts|mts|py|php|go|rs|java|json|toml|md|html|css|txt|sql|csv|tsv|xml|xsd|yaml|yml|svg|png|woff2|service|proto)$/i;
+const supported = /\.(?:mjs|js|cjs|ts|mts|py|rb|rbs|php|go|rs|java|json|jsonl|toml|md|html|css|txt|sql|csv|tsv|xml|xsd|yaml|yml|svg|png|woff2|service|proto)$/i;
 const excludedName = /(?:^test[_.-]|[.]test[.]|[.]spec[.]|(?:^|[-_])acceptance(?:[-_.]|$)|(?:^|[-_])focused[-_]?check[.]|_check[.])/i;
 const excludedDirs = new Set(['test', 'tests', 'fixtures', 'snapshots', 'node_modules', '__pycache__']);
 
@@ -98,7 +98,7 @@ export async function buildDistribution({ repository = fileURLToPath(new URL('..
   const product = productPackageMetadata(spec.product);
   if (spec.schema !== 'stellar-forge.merchant-distribution.v1') throw new TypeError('Unsupported distribution specification');
   const excluded = new Set(spec.excludeFiles ?? []);
-  const explicitRuntime = new Set([...spec.supportFiles, ...specificationPaths]);
+  const explicitRuntime = new Set([...spec.supportFiles, ...specificationPaths, ...Object.values(spec.applicationProviders ?? {}), ...Object.values(spec.merchantProviders ?? {})]);
   // Explicit support files include maintained ZIP data and can override a
   // test-like filename. Undeclared archives remain outside source selection;
   // directory, explicit exclusion and regular-file checks still apply.
@@ -108,7 +108,8 @@ export async function buildDistribution({ repository = fileURLToPath(new URL('..
     if (!selected.some(item => item.path.startsWith(root + '/'))) throw new TypeError('Missing component: ' + root);
   const names = new Set(selected.map(item => item.path));
   const required = [...Object.values(spec.commands), ...Object.values(product.bin), product.readme,
-    ...valuesDeep(spec.exports).filter(path => path.startsWith('./source/')).map(path => path.slice(9))];
+    ...valuesDeep(spec.exports).filter(path => path.startsWith('./source/')).map(path => path.slice(9)),
+    ...Object.values(spec.applicationProviders ?? {}), ...Object.values(spec.merchantProviders ?? {})];
   for (const path of [...required, ...spec.supportFiles, ...specificationPaths, ...Object.values(spec.runtimePackageManifests ?? {})])
     if (!names.has(path)) throw new TypeError('Missing packaged entry: ' + path);
   const sources = new Map();

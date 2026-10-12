@@ -1,0 +1,30 @@
+{
+  "schema": "starforge.prescient-profile/v1",
+  "name": "Customer imagery workspace",
+  "endpoint": "https://customer.example.invalid/prescient/",
+  "authMode": "api-key",
+  "identityProvider": null,
+  "bindingId": "customer-primary",
+  "allowedOrigins": [
+    "https://customer.example.invalid"
+  ],
+  "collections": [
+    "customer-collection"
+  ],
+  "allowedS3": [
+    {
+      "bucket": "customer-imagery",
+      "prefix": "approved-project/",
+      "region": "us-west-2",
+      "requesterPays": false
+    }
+  ],
+  "maxAssetBytes": 67108864,
+  "rights": {
+    "basis": "customer-licensed",
+    "reference": "Customer agreement and selected collection license",
+    "purpose": "Review and deliver the agreed imagery selection",
+    "allowPortableAssets": true
+  },
+  "refreshSkewSeconds": 120
+}

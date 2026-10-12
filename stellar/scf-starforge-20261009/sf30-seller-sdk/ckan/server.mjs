@@ -1,11 +1,14 @@
 // MIT. Loopback UI for one locked CKAN project.
 import http from 'node:http';
-import { readFile } from 'node:fs/promises';
+import { readFile, open, unlink, rename } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { randomBytes, timingSafeEqual } from 'node:crypto';
+import { randomBytes, randomUUID, timingSafeEqual, createHash } from 'node:crypto';
 import { spawn } from 'node:child_process';
-import { readPrivate, fault } from '../postgres/publisher/files.mjs';
+import { constants } from 'node:fs';
+import { Transform } from 'node:stream';
+import { pipeline } from 'node:stream/promises';
+import { readPrivate, hashPrivate, privateDirectory, syncDirectory, fault } from '../postgres/publisher/files.mjs';
 
 const assets = new Map([['/', ['index.html', 'text/html; charset=utf-8']],
   ['/app.mjs', ['app.mjs', 'text/javascript; charset=utf-8']], ['/style.css', ['style.css', 'text/css; charset=utf-8']]]);
@@ -29,6 +32,64 @@ async function body(request) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw fault('CKAN_JSON_OBJECT_REQUIRED');
   return value;
 }
+async function receiveArchiveUpload(request, workbench, expectedSha256) {
+  if (!/^[a-f0-9]{64}$/.test(expectedSha256 ?? '') ||
+      request.headers['content-type'] !== 'application/octet-stream')
+    throw fault('CKAN_ARCHIVE_UPLOAD_INVALID', 'Choose a workspace archive and its complete SHA-256.', 415);
+  const root = join(workbench.directory, 'workspace-incoming');
+  await privateDirectory(root, true);
+  const temporary = join(root, '.upload-' + randomUUID()), file = join(root, expectedSha256 + '.ckanw');
+  const handle = await open(temporary, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW, 0o600);
+  const hash = createHash('sha256'); let count = 0, closed = false;
+  try {
+    for await (const chunk of request) {
+      count += chunk.length;
+      if (count > 8657043456) throw fault('CKAN_ARCHIVE_UPLOAD_TOO_LARGE', 'This listener accepts workspace transfers up to 8 GiB.', 413);
+      hash.update(chunk); let offset = 0;
+      while (offset < chunk.length) {
+        const written = await handle.write(chunk, offset, chunk.length - offset);
+        if (!written.bytesWritten) throw fault('CKAN_ARCHIVE_UPLOAD_FAILED');
+        offset += written.bytesWritten;
+      }
+    }
+    if (hash.digest('hex') !== expectedSha256) throw fault('CKAN_WORKSPACE_ARCHIVE_HASH_MISMATCH');
+    await handle.sync(); await handle.close(); closed = true;
+    let previous;
+    try { previous = await hashPrivate(file, count); } catch (error) { if (error.code !== 'ENOENT') throw error; }
+    if (previous) {
+      if (previous.hash !== expectedSha256 || previous.bytes !== count) throw fault('CKAN_ARCHIVE_UPLOAD_CHANGED');
+    } else await rename(temporary, file);
+    await syncDirectory(root); return file;
+  } finally {
+    if (!closed) await handle.close();
+    await unlink(temporary).catch(error => { if (error.code !== 'ENOENT') throw error; });
+  }
+}
+async function downloadWorkspaceArchive(response, selected) {
+  const { handle, stat } = await (async () => {
+    const handle = await open(selected.file, constants.O_RDONLY | constants.O_NOFOLLOW);
+    try {
+      const stat = await handle.stat();
+      if (!stat.isFile() || stat.nlink !== 1 || stat.mode & 0o077 || stat.size !== selected.bytes)
+        throw fault('CKAN_WORKSPACE_ARCHIVE_CHANGED');
+      return { handle, stat };
+    } catch (error) { await handle.close(); throw error; }
+  })();
+  const hash = createHash('sha256'); let count = 0;
+  try {
+    response.writeHead(200, { 'content-type': 'application/vnd.stellar-forge.ckan-workspace',
+      'content-length': selected.bytes, 'x-archive-sha256': selected.sha256,
+      'content-disposition': 'attachment; filename="ckan-workspace-' + selected.id + '.ckanw"' });
+    const meter = new Transform({ transform(chunk, encoding, done) {
+      hash.update(chunk); count += chunk.length; done(null, chunk);
+    } });
+    await pipeline(handle.createReadStream({ autoClose: false, start: 0 }), meter, response);
+    const after = await handle.stat();
+    if (count !== selected.bytes || hash.digest('hex') !== selected.sha256 ||
+        after.ino !== stat.ino || after.dev !== stat.dev || after.mtimeMs !== stat.mtimeMs || after.ctimeMs !== stat.ctimeMs)
+      throw fault('CKAN_WORKSPACE_ARCHIVE_CHANGED');
+  } finally { await handle.close(); }
+}
 function bearer(request, token) {
   const received = Buffer.from(String(request.headers.authorization ?? ''));
   const expected = Buffer.from('Bearer ' + token);
@@ -39,10 +100,11 @@ function lookup(workbench, collection, id) {
   if (!item) throw fault('CKAN_ITEM_NOT_FOUND', 'Choose an existing project item.', 404);
   return item;
 }
-export async function startCkanServer({ workbench, port = 0, token = randomBytes(32).toString('base64url') } = {}) {
-  if (!workbench || !Number.isInteger(port) || port < 0 || port > 65535 || typeof token !== 'string' || token.length < 32)
+export async function startCkanServer({ workbench, port = 0, token = randomBytes(32).toString('base64url'), instanceId = randomUUID() } = {}) {
+  if (!workbench || !Number.isInteger(port) || port < 0 || port > 65535 || typeof token !== 'string' || token.length < 32 ||
+      !/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(instanceId))
     throw fault('CKAN_SERVER_OPTIONS');
-  let origin, closing;
+  let origin, closing, uploading = false;
   const server = http.createServer(async (request, response) => {
     response.setHeader('cache-control', 'no-store');
     response.setHeader('x-content-type-options', 'nosniff');
@@ -63,6 +125,18 @@ export async function startCkanServer({ workbench, port = 0, token = randomBytes
         throw fault('CKAN_PROJECT_ACCESS_REQUIRED', 'Open the project link printed by the command.', 401);
       const parts = pathname.slice(5).split('/').map(decodeURIComponent);
       if (request.method === 'GET') {
+        if (parts[0] === 'launch' && parts.length === 1) {
+          const state = workbench.status();
+          return json(response, { schema: 'stellar-forge.ckan-workbench-listener.v1', instanceId,
+            pid: process.pid, directory: workbench.directory, project: {
+              schema: state.schema, createdAt: state.createdAt, catalogOrigin: state.catalogOrigin,
+              ...(state.authTokenEnv ? { authTokenEnv: state.authTokenEnv } : {}),
+            } });
+        }
+        if (parts[0] === 'workspace' && parts[1] === 'archives' && parts.length === 2)
+          return json(response, await workbench.workspaceArchives());
+        if (parts[0] === 'workspace' && parts[1] === 'archives' && parts.length === 3)
+          return await downloadWorkspaceArchive(response, await workbench.workspaceArchive(parts[2]));
         if (parts[0] === 'status' && parts.length === 1) return json(response, workbench.status());
         if (parts[0] === 'search' && parts.length === 1)
           return json(response, await workbench.search({ q: url.searchParams.get('q') ?? '',
@@ -114,12 +188,23 @@ export async function startCkanServer({ workbench, port = 0, token = randomBytes
           return;
         }
       }
+      if (request.method === 'POST' && parts[0] === 'workspace' && parts[1] === 'receive' && parts.length === 2) {
+        if (uploading || workbench.status().active) throw fault('CKAN_PROJECT_BUSY', 'Finish the current project operation before receiving another workspace.', 409);
+        uploading = true;
+        try {
+          const expectedSha256 = request.headers['x-archive-sha256'];
+          const file = await receiveArchiveUpload(request, workbench, expectedSha256);
+          const result = workbench.receiveWorkspace({ file, expectedSha256, name: url.searchParams.get('name') });
+          return json(response, { operationId: result.id }, 202);
+        } finally { uploading = false; }
+      }
       if (request.method === 'POST') {
         const input = await body(request);
         if (parts[0] === 'editions' && parts[2] === 'semantics' && parts.length === 3)
           return json(response, await workbench.previewSemantics(parts[1], input.projection));
         let result;
-        if (parts[0] === 'capture' && parts.length === 1) result = workbench.startCapture(input);
+        if (parts[0] === 'workspace' && parts[1] === 'archives' && parts.length === 2) result = workbench.archiveWorkspace({});
+        else if (parts[0] === 'capture' && parts.length === 1) result = workbench.startCapture(input);
         else if (parts[0] === 'editions' && parts[2] === 'resume' && parts.length === 3) result = workbench.resumeCapture(parts[1], input);
         else if (parts[0] === 'editions' && parts[2] === 'sources' && parts.length === 3) result = workbench.saveSource(parts[1], input);
         else if (parts[0] === 'sources' && parts[2] === 'publications' && parts.length === 3) result = workbench.createPublication(parts[1], input);
@@ -142,10 +227,10 @@ export async function startCkanServer({ workbench, port = 0, token = randomBytes
         Number.isInteger(error.status) ? error.status : 400);
     }
   });
-  server.requestTimeout = 30000; server.headersTimeout = 15000; server.keepAliveTimeout = 5000;
+  server.requestTimeout = 300000; server.headersTimeout = 15000; server.keepAliveTimeout = 5000;
   await new Promise((resolve, reject) => { server.once('error', reject); server.listen(port, '127.0.0.1', resolve); });
   origin = 'http://127.0.0.1:' + server.address().port;
-  return { server, origin, token, url: origin + '/#' + token,
+  return { server, origin, token, instanceId, url: origin + '/#' + token,
     close() { return closing ??= new Promise(resolve => { server.close(resolve); server.closeIdleConnections?.(); }); } };
 }
 

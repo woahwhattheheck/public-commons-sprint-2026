@@ -1,0 +1,516 @@
+{
+  "basis": "Town FY27 Job Titles and Pay Ranges, physical pages 2 and 4; all published ranges are for 1.0 FTE. The reference column is the source's Market Salary. It is not the arithmetic midpoint. Published annual values are used directly; rounded hourly values do not establish an employee's annual hours. The authorization coversheet specifies the first full pay period in July 2026, without its calendar date. These are the existing published grades, prior to the new RFP's study recommendations.",
+  "edition": "FY2026-2027 / June 23 council source / captured 2026-10-12",
+  "name": "Apex RFP listed source roles",
+  "rows": [
+    {
+      "current_grade_id": "F100",
+      "department": "Fire & Rescue",
+      "description": "",
+      "grade_id": "F100",
+      "id": "apex-fire-rescue-firefighter-cadet",
+      "rationale": "RFP position-list items: F5 Existing published grade F100; full-time annual salary basis. Job duties and professional classification rationale are supplied by the Town and consulting study in a new retained edition.",
+      "source_refs": [
+        {
+          "as_of": "2026-10-12",
+          "label": "CN19-A1 FY27 Job Titles and Pay Ranges",
+          "note": "Original title retained; source row pay-plan-p2-l22",
+          "page": "2",
+          "sha256": "684bef5023a621e8fb4c26892c8ec0864bb2a5fab0048566b6cc5acfa57f54a2",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-6954dd454cca4733bcafedfd1d792f0f.pdf"
+        }
+      ],
+      "title": "Firefighter Cadet"
+    },
+    {
+      "current_grade_id": "F102",
+      "department": "Fire & Rescue",
+      "description": "",
+      "grade_id": "F102",
+      "id": "apex-fire-rescue-community-risk-reduction-coordinator-i-ii",
+      "rationale": "RFP position-list items: F9 Existing published grade F102; full-time annual salary basis. Job duties and professional classification rationale are supplied by the Town and consulting study in a new retained edition.",
+      "source_refs": [
+        {
+          "as_of": "2026-10-12",
+          "label": "CN19-A1 FY27 Job Titles and Pay Ranges",
+          "note": "Original title retained; source row pay-plan-p2-l23",
+          "page": "2",
+          "sha256": "684bef5023a621e8fb4c26892c8ec0864bb2a5fab0048566b6cc5acfa57f54a2",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-6954dd454cca4733bcafedfd1d792f0f.pdf"
+        }
+      ],
+      "title": "Community Risk Reduction Coordinator I, II"
+    },
+    {
+      "current_grade_id": "F102",
+      "department": "Fire & Rescue",
+      "description": "",
+      "grade_id": "F102",
+      "id": "apex-fire-rescue-firefighter",
+      "rationale": "RFP position-list items: F5 Existing published grade F102; full-time annual salary basis. Job duties and professional classification rationale are supplied by the Town and consulting study in a new retained edition.",
+      "source_refs": [
+        {
+          "as_of": "2026-10-12",
+          "label": "CN19-A1 FY27 Job Titles and Pay Ranges",
+          "note": "Original title retained; source row pay-plan-p2-l25",
+          "page": "2",
+          "sha256": "684bef5023a621e8fb4c26892c8ec0864bb2a5fab0048566b6cc5acfa57f54a2",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-6954dd454cca4733bcafedfd1d792f0f.pdf"
+        }
+      ],
+      "title": "Firefighter"
+    },
+    {
+      "current_grade_id": "F103",
+      "department": "Fire & Rescue",
+      "description": "",
+      "grade_id": "F103",
+      "id": "apex-fire-rescue-senior-firefighter",
+      "rationale": "RFP position-list items: F5 Existing published grade F103; full-time annual salary basis. Job duties and professional classification rationale are supplied by the Town and consulting study in a new retained edition.",
+      "source_refs": [
+        {
+          "as_of": "2026-10-12",
+          "label": "CN19-A1 FY27 Job Titles and Pay Ranges",
+          "note": "Original title retained; source row pay-plan-p2-l26",
+          "page": "2",
+          "sha256": "684bef5023a621e8fb4c26892c8ec0864bb2a5fab0048566b6cc5acfa57f54a2",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-6954dd454cca4733bcafedfd1d792f0f.pdf"
+        }
+      ],
+      "title": "Senior Firefighter"
+    },
+    {
+      "current_grade_id": "F104",
+      "department": "Fire & Rescue",
+      "description": "",
+      "grade_id": "F104",
+      "id": "apex-fire-rescue-fire-engineer-i-ii",
+      "rationale": "RFP position-list items: F4 Existing published grade F104; full-time annual salary basis. Job duties and professional classification rationale are supplied by the Town and consulting study in a new retained edition.",
+      "source_refs": [
+        {
+          "as_of": "2026-10-12",
+          "label": "CN19-A1 FY27 Job Titles and Pay Ranges",
+          "note": "Original title retained; source row pay-plan-p2-l27",
+          "page": "2",
+          "sha256": "684bef5023a621e8fb4c26892c8ec0864bb2a5fab0048566b6cc5acfa57f54a2",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-6954dd454cca4733bcafedfd1d792f0f.pdf"
+        }
+      ],
+      "title": "Fire Engineer I, II"
+    },
+    {
+      "current_grade_id": "F104",
+      "department": "Fire & Rescue",
+      "description": "",
+      "grade_id": "F104",
+      "id": "apex-fire-rescue-fire-inspector-i-ii-iii",
+      "rationale": "RFP position-list items: F8 Existing published grade F104; full-time annual salary basis. Job duties and professional classification rationale are supplied by the Town and consulting study in a new retained edition.",
+      "source_refs": [
+        {
+          "as_of": "2026-10-12",
+          "label": "CN19-A1 FY27 Job Titles and Pay Ranges",
+          "note": "Original title retained; source row pay-plan-p2-l28",
+          "page": "2",
+          "sha256": "684bef5023a621e8fb4c26892c8ec0864bb2a5fab0048566b6cc5acfa57f54a2",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-6954dd454cca4733bcafedfd1d792f0f.pdf"
+        }
+      ],
+      "title": "Fire Inspector I, II, III"
+    },
+    {
+      "current_grade_id": "F107",
+      "department": "Fire & Rescue",
+      "description": "",
+      "grade_id": "F107",
+      "id": "apex-fire-rescue-deputy-fire-marshal-i-ii",
+      "rationale": "RFP position-list items: F7 Existing published grade F107; full-time annual salary basis. Job duties and professional classification rationale are supplied by the Town and consulting study in a new retained edition.",
+      "source_refs": [
+        {
+          "as_of": "2026-10-12",
+          "label": "CN19-A1 FY27 Job Titles and Pay Ranges",
+          "note": "Original title retained; source row pay-plan-p2-l29",
+          "page": "2",
+          "sha256": "684bef5023a621e8fb4c26892c8ec0864bb2a5fab0048566b6cc5acfa57f54a2",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-6954dd454cca4733bcafedfd1d792f0f.pdf"
+        }
+      ],
+      "title": "Deputy Fire Marshal I, II"
+    },
+    {
+      "current_grade_id": "F107",
+      "department": "Fire & Rescue",
+      "description": "",
+      "grade_id": "F107",
+      "id": "apex-fire-rescue-fire-captain-i",
+      "rationale": "RFP position-list items: F3 Existing published grade F107; full-time annual salary basis. Job duties and professional classification rationale are supplied by the Town and consulting study in a new retained edition.",
+      "source_refs": [
+        {
+          "as_of": "2026-10-12",
+          "label": "CN19-A1 FY27 Job Titles and Pay Ranges",
+          "note": "Original title retained; source row pay-plan-p2-l30",
+          "page": "2",
+          "sha256": "684bef5023a621e8fb4c26892c8ec0864bb2a5fab0048566b6cc5acfa57f54a2",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-6954dd454cca4733bcafedfd1d792f0f.pdf"
+        }
+      ],
+      "title": "Fire Captain I"
+    },
+    {
+      "current_grade_id": "F107",
+      "department": "Fire & Rescue",
+      "description": "",
+      "grade_id": "F107",
+      "id": "apex-fire-rescue-fire-training-coordinator-i-ii",
+      "rationale": "RFP position-list items: F10 Existing published grade F107; full-time annual salary basis. Job duties and professional classification rationale are supplied by the Town and consulting study in a new retained edition.",
+      "source_refs": [
+        {
+          "as_of": "2026-10-12",
+          "label": "CN19-A1 FY27 Job Titles and Pay Ranges",
+          "note": "Original title retained; source row pay-plan-p2-l31",
+          "page": "2",
+          "sha256": "684bef5023a621e8fb4c26892c8ec0864bb2a5fab0048566b6cc5acfa57f54a2",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-6954dd454cca4733bcafedfd1d792f0f.pdf"
+        }
+      ],
+      "title": "Fire Training Coordinator I, II"
+    },
+    {
+      "current_grade_id": "F108",
+      "department": "Fire & Rescue",
+      "description": "",
+      "grade_id": "F108",
+      "id": "apex-fire-rescue-fire-captain-ii",
+      "rationale": "RFP position-list items: F3 Existing published grade F108; full-time annual salary basis. Job duties and professional classification rationale are supplied by the Town and consulting study in a new retained edition.",
+      "source_refs": [
+        {
+          "as_of": "2026-10-12",
+          "label": "CN19-A1 FY27 Job Titles and Pay Ranges",
+          "note": "Original title retained; source row pay-plan-p2-l32",
+          "page": "2",
+          "sha256": "684bef5023a621e8fb4c26892c8ec0864bb2a5fab0048566b6cc5acfa57f54a2",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-6954dd454cca4733bcafedfd1d792f0f.pdf"
+        }
+      ],
+      "title": "Fire Captain II"
+    },
+    {
+      "current_grade_id": "F109",
+      "department": "Fire & Rescue",
+      "description": "",
+      "grade_id": "F109",
+      "id": "apex-fire-rescue-fire-battalion-chief",
+      "rationale": "RFP position-list items: F2 Existing published grade F109; full-time annual salary basis. Job duties and professional classification rationale are supplied by the Town and consulting study in a new retained edition.",
+      "source_refs": [
+        {
+          "as_of": "2026-10-12",
+          "label": "CN19-A1 FY27 Job Titles and Pay Ranges",
+          "note": "Original title retained; source row pay-plan-p2-l33",
+          "page": "2",
+          "sha256": "684bef5023a621e8fb4c26892c8ec0864bb2a5fab0048566b6cc5acfa57f54a2",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-6954dd454cca4733bcafedfd1d792f0f.pdf"
+        }
+      ],
+      "title": "Fire Battalion Chief"
+    },
+    {
+      "current_grade_id": "F109",
+      "department": "Fire & Rescue",
+      "description": "",
+      "grade_id": "F109",
+      "id": "apex-fire-rescue-fire-marshal",
+      "rationale": "RFP position-list items: F6 Existing published grade F109; full-time annual salary basis. Job duties and professional classification rationale are supplied by the Town and consulting study in a new retained edition.",
+      "source_refs": [
+        {
+          "as_of": "2026-10-12",
+          "label": "CN19-A1 FY27 Job Titles and Pay Ranges",
+          "note": "Original title retained; source row pay-plan-p2-l34",
+          "page": "2",
+          "sha256": "684bef5023a621e8fb4c26892c8ec0864bb2a5fab0048566b6cc5acfa57f54a2",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-6954dd454cca4733bcafedfd1d792f0f.pdf"
+        }
+      ],
+      "title": "Fire Marshal"
+    },
+    {
+      "current_grade_id": "M14",
+      "department": "Fire & Rescue",
+      "description": "",
+      "grade_id": "M14",
+      "id": "apex-fire-rescue-assistant-fire-chief",
+      "rationale": "RFP position-list items: F1 Existing published grade M14; full-time annual salary basis. Job duties and professional classification rationale are supplied by the Town and consulting study in a new retained edition.",
+      "source_refs": [
+        {
+          "as_of": "2026-10-12",
+          "label": "CN19-A1 FY27 Job Titles and Pay Ranges",
+          "note": "Original title retained; source row pay-plan-p2-l38",
+          "page": "2",
+          "sha256": "684bef5023a621e8fb4c26892c8ec0864bb2a5fab0048566b6cc5acfa57f54a2",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-6954dd454cca4733bcafedfd1d792f0f.pdf"
+        }
+      ],
+      "title": "Assistant Fire Chief"
+    },
+    {
+      "current_grade_id": "M06",
+      "department": "Police",
+      "description": "",
+      "grade_id": "M06",
+      "id": "apex-police-telecommunicator-i-ii-5-increase",
+      "rationale": "RFP position-list items: P8 Existing published grade M06; full-time annual salary basis. Job duties and professional classification rationale are supplied by the Town and consulting study in a new retained edition.",
+      "source_refs": [
+        {
+          "as_of": "2026-10-12",
+          "label": "CN19-A1 FY27 Job Titles and Pay Ranges",
+          "note": "Original title retained; source row pay-plan-p4-l26",
+          "page": "4",
+          "sha256": "684bef5023a621e8fb4c26892c8ec0864bb2a5fab0048566b6cc5acfa57f54a2",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-6954dd454cca4733bcafedfd1d792f0f.pdf"
+        }
+      ],
+      "title": "Telecommunicator I, II (5% increase)"
+    },
+    {
+      "current_grade_id": "M07",
+      "department": "Police",
+      "description": "",
+      "grade_id": "M07",
+      "id": "apex-police-senior-telecommunicator",
+      "rationale": "RFP position-list items: P8 Existing published grade M07; full-time annual salary basis. Job duties and professional classification rationale are supplied by the Town and consulting study in a new retained edition.",
+      "source_refs": [
+        {
+          "as_of": "2026-10-12",
+          "label": "CN19-A1 FY27 Job Titles and Pay Ranges",
+          "note": "Original title retained; source row pay-plan-p4-l28",
+          "page": "4",
+          "sha256": "684bef5023a621e8fb4c26892c8ec0864bb2a5fab0048566b6cc5acfa57f54a2",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-6954dd454cca4733bcafedfd1d792f0f.pdf"
+        }
+      ],
+      "title": "Senior Telecommunicator"
+    },
+    {
+      "current_grade_id": "M09",
+      "department": "Police",
+      "description": "",
+      "grade_id": "M09",
+      "id": "apex-police-civilian-traffic-crash-investigator",
+      "rationale": "RFP position-list items: P9 Existing published grade M09; full-time annual salary basis. Job duties and professional classification rationale are supplied by the Town and consulting study in a new retained edition.",
+      "source_refs": [
+        {
+          "as_of": "2026-10-12",
+          "label": "CN19-A1 FY27 Job Titles and Pay Ranges",
+          "note": "Original title retained; source row pay-plan-p4-l34",
+          "page": "4",
+          "sha256": "684bef5023a621e8fb4c26892c8ec0864bb2a5fab0048566b6cc5acfa57f54a2",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-6954dd454cca4733bcafedfd1d792f0f.pdf"
+        }
+      ],
+      "title": "Civilian Traffic Crash Investigator"
+    },
+    {
+      "current_grade_id": "M09",
+      "department": "Police",
+      "description": "",
+      "grade_id": "M09",
+      "id": "apex-police-communications-shift-supervisor",
+      "rationale": "RFP position-list items: P7 Existing published grade M09; full-time annual salary basis. Job duties and professional classification rationale are supplied by the Town and consulting study in a new retained edition.",
+      "source_refs": [
+        {
+          "as_of": "2026-10-12",
+          "label": "CN19-A1 FY27 Job Titles and Pay Ranges",
+          "note": "Original title retained; source row pay-plan-p4-l35",
+          "page": "4",
+          "sha256": "684bef5023a621e8fb4c26892c8ec0864bb2a5fab0048566b6cc5acfa57f54a2",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-6954dd454cca4733bcafedfd1d792f0f.pdf"
+        }
+      ],
+      "title": "Communications Shift Supervisor"
+    },
+    {
+      "current_grade_id": "M12",
+      "department": "Police",
+      "description": "",
+      "grade_id": "M12",
+      "id": "apex-police-communications-center-manager",
+      "rationale": "RFP position-list items: P6 Existing published grade M12; full-time annual salary basis. Job duties and professional classification rationale are supplied by the Town and consulting study in a new retained edition.",
+      "source_refs": [
+        {
+          "as_of": "2026-10-12",
+          "label": "CN19-A1 FY27 Job Titles and Pay Ranges",
+          "note": "Original title retained; source row pay-plan-p4-l40",
+          "page": "4",
+          "sha256": "684bef5023a621e8fb4c26892c8ec0864bb2a5fab0048566b6cc5acfa57f54a2",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-6954dd454cca4733bcafedfd1d792f0f.pdf"
+        }
+      ],
+      "title": "Communications Center Manager"
+    },
+    {
+      "current_grade_id": "M16",
+      "department": "Police",
+      "description": "",
+      "grade_id": "M16",
+      "id": "apex-police-deputy-police-chief",
+      "rationale": "RFP position-list items: P1 Existing published grade M16; full-time annual salary basis. Job duties and professional classification rationale are supplied by the Town and consulting study in a new retained edition.",
+      "source_refs": [
+        {
+          "as_of": "2026-10-12",
+          "label": "CN19-A1 FY27 Job Titles and Pay Ranges",
+          "note": "Original title retained; source row pay-plan-p4-l42",
+          "page": "4",
+          "sha256": "684bef5023a621e8fb4c26892c8ec0864bb2a5fab0048566b6cc5acfa57f54a2",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-6954dd454cca4733bcafedfd1d792f0f.pdf"
+        }
+      ],
+      "title": "Deputy Police Chief"
+    },
+    {
+      "current_grade_id": "P200",
+      "department": "Police",
+      "description": "",
+      "grade_id": "P200",
+      "id": "apex-police-police-officer-i",
+      "rationale": "RFP position-list items: P5 Existing published grade P200; full-time annual salary basis. Job duties and professional classification rationale are supplied by the Town and consulting study in a new retained edition.",
+      "source_refs": [
+        {
+          "as_of": "2026-10-12",
+          "label": "CN19-A1 FY27 Job Titles and Pay Ranges",
+          "note": "Original title retained; source row pay-plan-p4-l44",
+          "page": "4",
+          "sha256": "684bef5023a621e8fb4c26892c8ec0864bb2a5fab0048566b6cc5acfa57f54a2",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-6954dd454cca4733bcafedfd1d792f0f.pdf"
+        }
+      ],
+      "title": "Police Officer I"
+    },
+    {
+      "current_grade_id": "P201",
+      "department": "Police",
+      "description": "",
+      "grade_id": "P201",
+      "id": "apex-police-police-officer-ii",
+      "rationale": "RFP position-list items: P5 Existing published grade P201; full-time annual salary basis. Job duties and professional classification rationale are supplied by the Town and consulting study in a new retained edition.",
+      "source_refs": [
+        {
+          "as_of": "2026-10-12",
+          "label": "CN19-A1 FY27 Job Titles and Pay Ranges",
+          "note": "Original title retained; source row pay-plan-p4-l45",
+          "page": "4",
+          "sha256": "684bef5023a621e8fb4c26892c8ec0864bb2a5fab0048566b6cc5acfa57f54a2",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-6954dd454cca4733bcafedfd1d792f0f.pdf"
+        }
+      ],
+      "title": "Police Officer II"
+    },
+    {
+      "current_grade_id": "P202",
+      "department": "Police",
+      "description": "",
+      "grade_id": "P202",
+      "id": "apex-police-police-officer-iii",
+      "rationale": "RFP position-list items: P5 Existing published grade P202; full-time annual salary basis. Job duties and professional classification rationale are supplied by the Town and consulting study in a new retained edition.",
+      "source_refs": [
+        {
+          "as_of": "2026-10-12",
+          "label": "CN19-A1 FY27 Job Titles and Pay Ranges",
+          "note": "Original title retained; source row pay-plan-p4-l46",
+          "page": "4",
+          "sha256": "684bef5023a621e8fb4c26892c8ec0864bb2a5fab0048566b6cc5acfa57f54a2",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-6954dd454cca4733bcafedfd1d792f0f.pdf"
+        }
+      ],
+      "title": "Police Officer III"
+    },
+    {
+      "current_grade_id": "P203",
+      "department": "Police",
+      "description": "",
+      "grade_id": "P203",
+      "id": "apex-police-senior-police-officer",
+      "rationale": "RFP position-list items: P5 Existing published grade P203; full-time annual salary basis. Job duties and professional classification rationale are supplied by the Town and consulting study in a new retained edition.",
+      "source_refs": [
+        {
+          "as_of": "2026-10-12",
+          "label": "CN19-A1 FY27 Job Titles and Pay Ranges",
+          "note": "Original title retained; source row pay-plan-p4-l47",
+          "page": "4",
+          "sha256": "684bef5023a621e8fb4c26892c8ec0864bb2a5fab0048566b6cc5acfa57f54a2",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-6954dd454cca4733bcafedfd1d792f0f.pdf"
+        }
+      ],
+      "title": "Senior Police Officer"
+    },
+    {
+      "current_grade_id": "P204",
+      "department": "Police",
+      "description": "",
+      "grade_id": "P204",
+      "id": "apex-police-police-corporal",
+      "rationale": "RFP position-list items: P4 Existing published grade P204; full-time annual salary basis. Job duties and professional classification rationale are supplied by the Town and consulting study in a new retained edition.",
+      "source_refs": [
+        {
+          "as_of": "2026-10-12",
+          "label": "CN19-A1 FY27 Job Titles and Pay Ranges",
+          "note": "Original title retained; source row pay-plan-p4-l48",
+          "page": "4",
+          "sha256": "684bef5023a621e8fb4c26892c8ec0864bb2a5fab0048566b6cc5acfa57f54a2",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-6954dd454cca4733bcafedfd1d792f0f.pdf"
+        }
+      ],
+      "title": "Police Corporal"
+    },
+    {
+      "current_grade_id": "P206",
+      "department": "Police",
+      "description": "",
+      "grade_id": "P206",
+      "id": "apex-police-police-lieutenant",
+      "rationale": "RFP position-list items: P3 Existing published grade P206; full-time annual salary basis. Job duties and professional classification rationale are supplied by the Town and consulting study in a new retained edition.",
+      "source_refs": [
+        {
+          "as_of": "2026-10-12",
+          "label": "CN19-A1 FY27 Job Titles and Pay Ranges",
+          "note": "Original title retained; source row pay-plan-p4-l50",
+          "page": "4",
+          "sha256": "684bef5023a621e8fb4c26892c8ec0864bb2a5fab0048566b6cc5acfa57f54a2",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-6954dd454cca4733bcafedfd1d792f0f.pdf"
+        }
+      ],
+      "title": "Police Lieutenant"
+    },
+    {
+      "current_grade_id": "P207",
+      "department": "Police",
+      "description": "",
+      "grade_id": "P207",
+      "id": "apex-police-police-captain",
+      "rationale": "RFP position-list items: P2 Existing published grade P207; full-time annual salary basis. Job duties and professional classification rationale are supplied by the Town and consulting study in a new retained edition.",
+      "source_refs": [
+        {
+          "as_of": "2026-10-12",
+          "label": "CN19-A1 FY27 Job Titles and Pay Ranges",
+          "note": "Original title retained; source row pay-plan-p4-l51",
+          "page": "4",
+          "sha256": "684bef5023a621e8fb4c26892c8ec0864bb2a5fab0048566b6cc5acfa57f54a2",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-6954dd454cca4733bcafedfd1d792f0f.pdf"
+        }
+      ],
+      "title": "Police Captain"
+    }
+  ],
+  "source_refs": [
+    {
+      "as_of": "2026-10-12",
+      "label": "CN19-A1 FY27 Job Titles and Pay Ranges",
+      "sha256": "684bef5023a621e8fb4c26892c8ec0864bb2a5fab0048566b6cc5acfa57f54a2",
+      "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-6954dd454cca4733bcafedfd1d792f0f.pdf"
+    },
+    {
+      "as_of": "2026-10-12",
+      "label": "Public Safety Classification and Compensation Plan RFP, issued October 5, 2026",
+      "page": "6",
+      "sha256": "f8f7680b7d771e4f766856a74bb4f58ff0e327b74ce48b4c75118209d38c33a5",
+      "url": "https://apexnc.org/DocumentCenter/View/56664"
+    }
+  ]
+}

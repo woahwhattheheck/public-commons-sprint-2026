@@ -5,15 +5,27 @@
   "commands": {
     "dataset-ndjson": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/cli.mjs",
     "dataset-ndjson-merchant": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/merchant.mjs",
-    "dataset-ndjson-customer": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/consumer/cli.mjs"
+    "dataset-ndjson-customer": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/consumer/cli.mjs",
+    "dataset-ndjson-job": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/jobs/cli.mjs",
+    "source-monitoring": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/opensanctions/cli.mjs"
   },
   "commandDescriptions": {
     "dataset-ndjson": "Retain JSON Lines sources, map fields, build and query datasets, and open the source console.",
     "dataset-ndjson-merchant": "Prepare, inspect and serve NDJSON merchants, and package their dataset releases.",
-    "dataset-ndjson-customer": "Receive acquired NDJSON releases or delivery rooms and restore their reviewed source edition."
+    "dataset-ndjson-customer": "Receive acquired NDJSON releases or delivery rooms and restore their reviewed source edition.",
+    "dataset-ndjson-job": "Receive a complete file preparation job, reconstruct its original datasets, and resume interrupted delivery.",
+    "source-monitoring": "Receive original OpenSanctions data, review complete updates and native screening, and carry the customer source and case history to another installation."
   },
   "exports": {
     "./seller/ndjson-merchant": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/merchant.mjs",
-    "./seller/ndjson/release": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/release.mjs"
+    "./seller/ndjson/release": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/release.mjs",
+    "./seller/ndjson/jobs": {
+      "types": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/jobs/index.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/jobs/application.mjs"
+    }
+  },
+  "applicationProviders": {
+    "ndjson": "stellar/scf-starforge-20261009/distribution/runtime-workspace/providers/ndjson.mjs",
+    "opensanctions": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/opensanctions/application-provider.mjs"
   }
 }
