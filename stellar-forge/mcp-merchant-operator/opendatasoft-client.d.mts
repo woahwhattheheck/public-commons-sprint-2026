@@ -16,17 +16,18 @@ export interface RowNote { rowIndex: number; text: string }
 export interface SourceIdentity {
   catalogOrigin: string; datasetId: string; datasetUid: string; editionId: string;
   captureSha256: string; notesRevision: number; rowCount: number; merchantManifestSha256?: string; tenantManifestSha256?: string;
+  facilitatorReviewId?: string; facilitatorReviewSha256?: string; facilitatorSourceSha256?: string;
 }
 export interface FileIdentity { name: string; bytes: number; sha256: string; contentType: string }
 export interface ExportManifest {
   schema: 'stellar-forge.opendatasoft-agent-export.v1'; exportId: string; workspace: string;
   createdAt: string; source: SourceIdentity;
-  selection: { geometryField?: string; sourceId?: string; merchantExportId?: string; buyerRequestId?: string; tenantExportId?: string };
+  selection: { geometryField?: string; sourceId?: string; merchantExportId?: string; buyerRequestId?: string; tenantExportId?: string; facilitatorReviewId?: string };
   files: FileIdentity[];
 }
 export interface ExportInput extends Scope {
   exportId: string; editionId: string; expectedCaptureSha256: string; expectedNotesRevision: number;
-  geometryField?: string; sourceId?: string; merchantExportId?: string; buyerRequestId?: string; tenantExportId?: string;
+  geometryField?: string; sourceId?: string; merchantExportId?: string; buyerRequestId?: string; tenantExportId?: string; facilitatorReviewId?: string;
 }
 export interface Operation {
   id: string; kind: string; state: 'RUNNING' | 'COMPLETE' | 'FAILED' | 'CANCELLED' | 'INTERRUPTED';
@@ -41,7 +42,36 @@ export interface TenantPlanInput {
   changes?:Partial<Record<'fields'|'processors'|'users'|'groups'|'schedules',Array<{id?:string;body:NativeResult}>>>;
   acceptance?:{mode?:'source-match'|'reviewed-output';expectedRows?:number;fieldMap?:Record<string,string>;allowAdditionalRows?:boolean};
 }
+export interface FacilitatorProfile {
+  alias:string; label:string; url:string; timeoutMs:number; allowLocalFacilitator:boolean;
+}
+export interface FacilitatorReview {
+  schema:'stellar-forge.seller-facilitator-review.v1'; id:string; observedAt:string;
+  nativeSdk:string; generation:number; activeRelease:string|null;
+  source:NativeResult & {releaseId:string;releaseDigest:string;publicOrigin:string};
+  proposed:{id:string;label:string;provider:FacilitatorProfile};
+  compatible:boolean; supportedSha256:string|null; supported:unknown;
+  nativePayments:Array<NativeResult & {storedPayment:unknown[];nativePayment:unknown[];changes:NativeResult[]}>;
+  error:{code:string;message:string}|null;
+}
+export interface FacilitatorSource {
+  schema:'stellar-forge.opendatasoft-facilitator-source.v1'; reviewId:string; observedAt:string;
+  workbench:{catalogOrigin:string;createdAt:string};
+  merchantExportId:string;merchantManifestSha256:string;handlerSha256:string;resource:string;
+  capture:{catalogOrigin:string;datasetId:string;datasetUid:string;manifestSha256:string;rowCount:number};
+  dataset:{snapshot:string;rowCount:number};
+  sourceRelease:{id:string;digest:string;serviceConfigSha256:string};proposedReleaseId:string;
+}
+export interface FacilitatorInspection {
+  review:FacilitatorReview;source:FacilitatorSource;
+  staged:{state:'NOT_STAGED'|'STAGED'|'CONFLICT';release:NativeResult|null};
+}
 export interface Inputs {
+  facilitators:Scope;
+  facilitator_history:Scope & {after?:string;limit?:number};
+  facilitator_inspect:Scope & {reviewId:string};
+  facilitator_review:Scope & {merchantExportId:string;provider:string;releaseId:string;id:string;label?:string};
+  facilitator_stage:Scope & {reviewId:string};
   tenant_targets:Scope;
   tenant_datasets:Scope & {target:string;query?:{dataset_id?:string;offset?:number;limit?:number}};
   tenant_prepare:Scope & ({plan:TenantPlanInput;planJson?:never} | {planJson:string;plan?:never});
@@ -88,11 +118,12 @@ export interface Inputs {
 }
 export type OperationStarted = { operationId: string; editionId?: string };
 export interface ManifestResult { state: 'MANIFEST_RETAINED'; exportId: string; manifest: ExportManifest; manifestSha256: string; manifestFile: FileIdentity }
-export type StartedAction = 'tenant_prepare' | 'tenant_inspect' | 'tenant_review' | 'tenant_apply' | 'tenant_recover' | 'tenant_status' | 'tenant_receive' | 'tenant_export' | 'capture' | 'resume' | 'import' | 'notes' | 'source_save' | 'publication_create' | 'publication_review' | 'publication_recover' | 'publication_publish' | 'merchant_export' | 'merchant_stage' | 'buyer_prepare';
+export type StartedAction = 'facilitator_review' | 'facilitator_stage' | 'tenant_prepare' | 'tenant_inspect' | 'tenant_review' | 'tenant_apply' | 'tenant_recover' | 'tenant_status' | 'tenant_receive' | 'tenant_export' | 'capture' | 'resume' | 'import' | 'notes' | 'source_save' | 'publication_create' | 'publication_review' | 'publication_recover' | 'publication_publish' | 'merchant_export' | 'merchant_stage' | 'buyer_prepare';
 export type Result<K extends keyof Inputs> =
   K extends StartedAction ? OperationStarted :
   K extends 'operation' ? { workspace: string; operation: Operation } :
   K extends 'manifest' | 'export' ? ManifestResult :
+  K extends 'facilitator_inspect' ? FacilitatorInspection :
   K extends 'rows' ? { records: NativeResult[]; page: { offset: number; limit: number; returned: number; total: number; next: number | null } } :
   K extends 'file' ? { exportId: string; manifestSha256: string; file: FileIdentity; readId: string; offset: number; bytesRead: number; nextOffset: number | null; encoding: 'base64'; data: string } :
   NativeResult;
