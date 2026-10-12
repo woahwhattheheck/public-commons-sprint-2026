@@ -371,13 +371,14 @@ export async function openSourceEditionDelivery({
         else await atomicJson(join(folder,'request.json'),request);
         const previous=await optionalJson(join(folder,'result.json'),8*MAX_JSON);
         if(previous)return {attachment:previous,transfer:await view(id)};
-        const checked=await inspectSourceEditionWorkorder({directory:saved.directory});
+        const nativeInput=await sourceEditionWorkorderInput({directory:saved.directory});
+        const checked=nativeInput.summary;
         ensure(checked.bundleId===request.bundleId&&checked.manifestSha256===request.manifestSha256,
           'SF49_DELIVERY_ORIGINAL_CHANGED');
         abort(signal);
         const result=await attachBundle({caseId,expectedRevision,requestId,actor,signal,
           descriptor:saved.record.descriptor,directory:saved.directory,
-          loadWorkorder:()=>sourceEditionWorkorderInput({directory:saved.directory})});
+          loadWorkorder:async()=>nativeInput});
         ensure(result&&typeof result==='object'&&!Array.isArray(result)&&
           Buffer.byteLength(JSON.stringify(result))<=MAX_JSON,'SF49_DELIVERY_CASE_ATTACHMENT_RESULT_REQUIRED');
         const retained={requestId,caseId,bundleId:request.bundleId,manifestSha256:request.manifestSha256,
