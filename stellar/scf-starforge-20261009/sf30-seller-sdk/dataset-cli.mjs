@@ -5,6 +5,7 @@ import { pathToFileURL } from 'node:url';
 import { loadDatasetConfig } from './dataset-handler.mjs';
 
 const USAGE = `Usage:
+  node dataset-cli.mjs dspace --help  Repository source, reviewed datasets and complete customer receiving
   node dataset-cli.mjs grants --help   Grants.gov source, qualification, merchant and complete receiving
   node dataset-cli.mjs frictionless --help  Retained data packages, reviewed fields and original merchant releases
   node dataset-cli.mjs feeds --help   Retained RSS/Atom editions, operator workspace and merchant handoff
@@ -71,6 +72,7 @@ export async function buildDatasetSellerConfig(dataset, { payment, origin, path 
 }
 
 export async function main(args = process.argv.slice(2)) {
+  if (args[0] === 'dspace') return (await import('./dspace/cli.mjs')).main(args.slice(1));
   if (args[0] === 'grants') { const { main } = await import('./grantsgov/cli.mjs'); return main(args.slice(1)); }
   if (args[0] === 'frictionless') return (await import('./frictionless/cli.mjs')).main(args.slice(1));
   if (args[0] === 'feeds') return (await import('./feeds/cli.mjs')).main(args.slice(1));

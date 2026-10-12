@@ -255,6 +255,9 @@ export async function runFredNativeHost({ directory, configFile, phase = 'run', 
       setEnv(policy.signers[0].secretEnv, custody.accounts.fee.secret);
       for (const [key, value] of Object.entries(active.operatorEnvironment)) setEnv(key, value);
       setEnv('SF36_OBSERVER_USE_SYSTEM_CA', '1');
+      // SF88 starts a new Node executable without inheriting this process's execArgv.
+      // Carry the original host's trust selection into native signer/RPC children.
+      setEnv('NODE_OPTIONS', ((process.env.NODE_OPTIONS ?? '') + ' --use-system-ca').trim());
       facilitator = await createNativeFacilitator(policy, { environment: process.env });
       const listener = await optionalJson(join(selected.directory, 'facilitator-listener.json'), 65536);
       let requestedPort = listener?.port ?? 0;

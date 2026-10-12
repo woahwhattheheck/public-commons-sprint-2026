@@ -58,6 +58,51 @@ async function bounded(path, limit = MAX_INPUT) {
   return raw;
 }
 
+
+// The CKAN meaning document travels unchanged with original typed pages. Its
+// two identities distinguish this retained edition from value-independent meaning.
+const canonicalValue = value => Array.isArray(value) ? value.map(canonicalValue) :
+  obj(value) ? Object.fromEntries(Object.keys(value).sort().map(key => [key, canonicalValue(value[key])])) : value;
+const semanticIdentity = value => sha(JSON.stringify(canonicalValue(value)));
+function checkSemantics(value, columns) {
+  if (value === undefined) return null;
+  need(obj(value) && value.schema === 'stellar-forge.ckan-semantics.v1' &&
+    DIGEST.test(value.sha256 ?? '') && DIGEST.test(value.definitionSha256 ?? '') &&
+    obj(value.source) && DIGEST.test(value.source.captureManifestSha256 ?? '') &&
+    (value.source.schemaSha256 === null || DIGEST.test(value.source.schemaSha256 ?? '')) &&
+    Array.isArray(value.columns) && value.columns.length === columns.length &&
+    obj(value.primaryKey) && Array.isArray(value.primaryKey.source) &&
+    Array.isArray(value.primaryKey.projected) && typeof value.primaryKey.complete === 'boolean' &&
+    obj(value.aboutUrl) && Array.isArray(value.virtualColumns) && Array.isArray(value.issues) &&
+    obj(value.csvw) && obj(value.csvw.tableSchema) && Array.isArray(value.csvw.tableSchema.columns),
+    'Invalid retained CKAN semantic document');
+  const { sha256, definitionSha256, ...payload } = value;
+  need(semanticIdentity({ ...payload, definitionSha256 }) === sha256,
+    'Retained CKAN semantic document digest changed');
+  const { captureManifestSha256, schemaSha256, ...sourceMeaning } = payload.source;
+  need(semanticIdentity({ ...payload, source: sourceMeaning }) === definitionSha256,
+    'Retained CKAN semantic definition digest changed');
+  for (let i = 0; i < columns.length; i++) {
+    const meaning = value.columns[i], physical = columns[i];
+    need(obj(meaning) && meaning.name === physical.name && meaning.type === physical.type &&
+      meaning.nullable === physical.nullable && typeof meaning.sourceField === 'string' &&
+      meaning.sourceField.length > 0 && ['native','text','json'].includes(meaning.encoding) &&
+      obj(meaning.projectedDefinition) && meaning.projectedDefinition.name === physical.name &&
+      Array.isArray(meaning.issues),
+      'Retained CKAN semantic columns differ from the original dataset');
+  }
+  const expectedDefinitions = [...value.columns.map(column => column.projectedDefinition),
+    ...value.virtualColumns.map(column => {
+      need(obj(column) && (column.projectedDefinition === null || obj(column.projectedDefinition)),
+        'Invalid retained CKAN virtual column');
+      return column.projectedDefinition;
+    }).filter(Boolean)];
+  need(semanticIdentity(expectedDefinitions) === semanticIdentity(value.csvw.tableSchema.columns),
+    'Retained CKAN CSVW definitions differ from the reviewed columns');
+  return { schema: value.schema, sha256, definitionSha256,
+    captureManifestSha256: value.source.captureManifestSha256 };
+}
+
 function checkPage(page) {
   need(obj(page) && page.schema === 'stellar-forge.dataset-page.v1',
     'Expected an ORIGINAL SF30 dataset-page.v1 response');
@@ -132,6 +177,7 @@ function checkPage(page) {
     for (const field of page.fields)
       need(own(row, field) && typed(row[field], names.get(field)), 'Row type mismatch: ' + field);
   }
+  const semantics = checkSemantics(page.semantics, d.columns);
   const advanced = triples.length > 0 || order !== null;
   const query = { fields: page.fields,
     filters: Object.entries(page.filters).sort(([a], [b]) => compareText(a, b)),
@@ -139,11 +185,12 @@ function checkPage(page) {
   // Keep the original signature and cursor bytes when no advanced query is selected.
   const signature = [d, page.fields, page.filters, meta.total];
   if (advanced) signature.push({ ranges: triples, sort: order });
+  if (semantics) signature.push({ semantics });
   return { signature: sha(compact(signature)),
     fields: page.fields, snapshot: d.snapshot, total: meta.total,
     name: d.name, filters: page.filters,
     ranges: triples.map(([column, operator, value]) => ({ column, operator, value })),
-    order, query, queryHash: sha(compact(query)) };
+    order, query, queryHash: sha(compact(query)), ...(semantics ? { semantics } : {}) };
 }
 
 function typed(value, col) {
@@ -172,7 +219,7 @@ function continuation(state, payload, requestCursor) {
   } else {
     need(state.nextCursor !== null, 'Original source pagination is already complete');
     need(requestCursor === state.nextCursor && check.signature === state.pages[0].signature,
-      'Page query, snapshot or request cursor drift');
+      'Page query, snapshot, semantics or request cursor drift');
   }
   const count = state.count + payload.rows.length;
   need(count <= check.total, 'Page overruns original total');
@@ -186,6 +233,9 @@ function continuation(state, payload, requestCursor) {
   } else need(count === check.total, 'Original source ended pagination prematurely');
   let exportBytes = state.exportBytes + (state.pages.length === 0
     ? Buffer.byteLength(check.fields.map(csvCell).join(',') + '\r\n') : 0);
+  if (state.pages.length === 0 && check.semantics)
+    exportBytes += Buffer.byteLength(JSON.stringify(payload.semantics, null, 2) + '\n');
+  need(exportBytes <= MAX_EXPORT, 'Dataset and semantic dictionary exceed the private output byte limit');
   for (const row of payload.rows) {
     exportBytes += Buffer.byteLength(JSON.stringify(row) + '\n') +
       Buffer.byteLength(check.fields.map(field => csvCell(row[field])).join(',') + '\r\n');
@@ -199,6 +249,7 @@ function acceptRecord(state, archive, next, archiveBytes, retainPayload) {
   Object.assign(state, { count: next.count, total: check.total, name: check.name,
     snapshot: check.snapshot, fields: check.fields, filters: check.filters,
     ranges: check.ranges, order: check.order, queryHash: check.queryHash,
+    semantics: check.semantics ?? null, semanticDocument: check.semantics ? archive.payload.semantics : null,
     nextCursor: next.nextCursor, exportBytes: next.exportBytes,
     chain: archive.chain, archiveBytes: state.archiveBytes + archiveBytes });
   if (retainPayload) state.pages.push(archive);
@@ -238,6 +289,7 @@ async function scan(out, { retainPayload = true } = {}) {
     'Page directory must contain contiguous append-only numbered records');
   const state = { out, session, pages: [], count: 0, total: null, name: null,
     snapshot: null, fields: null, filters: null, ranges: [], order: null, queryHash: null,
+    semantics: null, semanticDocument: null,
     nextCursor: null, chain: null, archiveBytes: 0, exportBytes: 0,
     finalized: (await readdir(out)).includes('manifest.json') };
   const intents = new Set(), sourceHashes = new Set();
@@ -314,7 +366,7 @@ function summary(state, action) {
     pages: state.pages.length, rows: state.count, total: state.total,
     complete: state.pages.length > 0 && state.nextCursor === null,
     nextCursor: state.nextCursor, finalized: state.finalized,
-    lastRecordDigest: state.chain };
+    lastRecordDigest: state.chain, ...(state.semantics ? { semantics: state.semantics } : {}) };
 }
 
 function csvCell(value) {
@@ -335,6 +387,9 @@ function html(state, manifest) {
     ['Result order', state.order ? compact(state.order) : 'csv-record-order'],
     ['Original query hash', state.queryHash],
     ['Data files', 'dataset.jsonl · dataset.csv'],
+    ...(state.semantics ? [['Reviewed CKAN meaning', state.semantics.sha256],
+      ['Meaning definition', state.semantics.definitionSha256],
+      ['Retained data dictionary', 'semantics.json — full published column meanings, units, keys and URI templates']] : []),
     ['Acceptance', 'Operator review only; source response and digest are not chain finality'],
   ];
   const lines = details.map(([k, v]) => '<div><dt>' + escapeHtml(k) + '</dt><dd>' + escapeHtml(v) + '</dd></div>').join('');
@@ -353,7 +408,8 @@ async function finalize(out) {
   const state = await scan(out, { retainPayload: false });
   need(!state.finalized && state.pages.length > 0 && state.nextCursor === null &&
     state.count === state.total, 'All original pages must be present and not yet finalized');
-  const files = ['dataset.jsonl', 'dataset.csv', 'review.html', 'manifest.json'];
+  const files = ['dataset.jsonl', 'dataset.csv', 'review.html', 'manifest.json',
+    ...(state.semantics ? ['semantics.json'] : [])];
   need(!(await readdir(out)).some(f => files.includes(f)), 'A prior export exists');
   const jsonPath = join(out, files[0]), csvPath = join(out, files[1]);
   let jsonHandle, csvHandle, jsonBytes = 0, csvBytes = 0;
@@ -412,6 +468,17 @@ async function finalize(out) {
       paymentStatus: 'NOT_INFERRED_FROM_SOURCE_HTTP_OR_LOCAL_HASHES',
       nextStep: 'Owner reviews independent original SF88 evidence and settlement before any paid-delivery claim',
     };
+    if (state.semantics) {
+      const dictionary = JSON.stringify(state.semanticDocument, null, 2) + '\n';
+      const bytes = Buffer.byteLength(dictionary);
+      need(bytes <= MAX_INPUT && jsonBytes + csvBytes + bytes <= MAX_EXPORT,
+        'Retained semantic dictionary exceeds the private output byte limit');
+      await writeOutput(join(out, 'semantics.json'), dictionary);
+      manifest.semantics = { ...state.semantics, file: 'semantics.json',
+        selectedFields: state.fields,
+        scope: 'PUBLISHED_DATASET', typedRowsFile: 'dataset.jsonl' };
+      manifest.outputs['semantics.json'] = { sha256: sha(dictionary), bytes };
+    }
     const review = html(state, manifest);
     await writeOutput(join(out, 'review.html'), review);
     manifest.outputs['review.html'] = { sha256:sha(review), bytes:Buffer.byteLength(review) };

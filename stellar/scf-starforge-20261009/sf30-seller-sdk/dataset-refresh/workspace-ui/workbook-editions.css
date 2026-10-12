@@ -38,3 +38,12 @@
 #we-form-status{overflow-wrap:anywhere}
 @media(max-width:1050px){.we-source-grid{grid-template-columns:1fr 1fr}.we-source-grid>button{justify-self:start}.we-selection-grid{grid-template-columns:1fr 1fr}.we-plan-grid{grid-template-columns:1fr 1fr}.we-counts{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:560px){.we-source-grid,.we-selection-grid,.we-plan-grid,.we-policy-grid,.we-field-map{grid-template-columns:1fr;gap:12px}.we-field-map{gap:8px}.we-field{padding:12px}.we-selection-grid>button{justify-self:start}.we-result-tools{align-items:stretch;flex-direction:column;gap:10px}.we-result-tools>div:first-child{max-width:100%}.we-counts>div{padding:10px}.we-counts strong{font-size:18px}#workbook-editions-panel>.section-head{flex-wrap:wrap}.we-field>.section-head{align-items:flex-start;gap:10px}.we-field>.section-head .wb-check{white-space:normal;flex-shrink:0}.we-counts span{font-size:10px}}
+
+/* Preserve comparison columns on narrow screens; the parent owns horizontal scrolling. */
+#we-rows{min-width:700px}
+#we-rows th:first-child,#we-rows td:first-child{min-width:110px;white-space:nowrap}
+#we-rows td:nth-child(3),#we-rows td:nth-child(4){white-space:nowrap}
+
+#we-cell-body table,#we-column-changes table,#we-history{min-width:640px}
+#we-cell-body tbody th{min-width:130px}
+#we-cell-body td:nth-child(2),#we-cell-body td:nth-child(3){min-width:190px}
