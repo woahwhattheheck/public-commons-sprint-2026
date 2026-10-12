@@ -17,11 +17,14 @@ const find=(items,id,label)=>{const item=items.find(x=>x.id===id);if(!item)throw
 const errorInfo=e=>({code:e.code??'SENSORTHINGS_OPERATION_FAILED',message:e.message??'The original operation failed.',
   status:e.status??503,details:e.details??{},retryable:e.code==='SENSORTHINGS_REQUEST_INTERRUPTED'||(e.status??503)>=500});
 const short=(label,op)=>label+'-'+identity({operationId:op.operationId,requestSha256:op.requestSha256}).slice(0,24);
-export async function openSensorThingsWorkspace({directory,inboxDirectory=null,sourceInboxDirectory=null,buyerWorkspaceDirectory=null,releaseRuntime={port:0},
+export async function openSensorThingsWorkspace({directory,inboxDirectory=null,sourceInboxDirectory=null,buyerWorkspaceDirectory=null,releaseRuntime={port:0},analysisMerchantRuntime={},
   fetchImpl=fetch,environment=process.env,transport=null,onProgress=()=>{}}={}){
   const store=await openWorkspaceStore(directory,{schema:WORKSPACE_SCHEMA,initialState:{sources:[],catalogs:[],plans:[],reviews:[],comparisons:[],sourceReceipts:[]}}),
     publishers=nativePublishers(store),running=new Map(),controllers=new Map(),operations=new Map();
-  const analysis=createAnalysisManager({store,edition,inboxDirectory:sourceInboxDirectory});
+  let analysis;
+  try{analysis=createAnalysisManager({store,edition,inboxDirectory:sourceInboxDirectory,
+    buyerInboxDirectory:buyerWorkspaceDirectory??inboxDirectory,merchantRuntime:analysisMerchantRuntime});}
+  catch(error){await publishers.close().catch(()=>{});await store.close().catch(()=>{});throw error;}
   let closing=false,closePromise=null;
   const schema=()=>workspaceSchema(store.read().workspaceId);
   async function view(){
@@ -123,7 +126,7 @@ export async function openSensorThingsWorkspace({directory,inboxDirectory=null,s
       }
       if(action==='release.prepare')op.context.releaseRuntime=structuredClone(releaseRuntime);
       if(action.startsWith('buyer.')||action.startsWith('publisher.buyer.'))op.context.buyerWorkspaceDirectory=buyerWorkspaceDirectory??inboxDirectory;
-      if(action.startsWith('analysis.'))op.context.analysis=analysisContext(s,op,{inboxDirectory:sourceInboxDirectory});
+      if(action.startsWith('analysis.'))op.context.analysis=analysisContext(s,op,{inboxDirectory:sourceInboxDirectory,buyerInboxDirectory:buyerWorkspaceDirectory??inboxDirectory});
       s.operations[operationId]=structuredClone(op);
     });return op;
   }
@@ -316,7 +319,47 @@ export async function openSensorThingsWorkspace({directory,inboxDirectory=null,s
     await store.immutable(join(directory,'comparison.json'),json(report));
     return complete(op,report,s=>{if(!s.comparisons.some(c=>c.id===id))s.comparisons.push(report);});
   }
+  async function resumeMerchant(op){
+    const captured=op.context.analysis.merchant.original;
+    let original=structuredClone(store.read().operations[captured.operationId]);
+    if(!original||original.operationId===op.operationId||original.action!==captured.action||
+      original.requestSha256!==captured.requestSha256||identity(original.context)!==captured.contextSha256||original.createdAt!==captured.createdAt)
+      throw fault('ANALYSIS_MERCHANT_ORIGINAL_REQUEST','The original local delivery request/context changed.',409);
+    let executed=false;
+    if(original.state!=='COMPLETE'){
+      let pending=operations.get(original.operationId);
+      if(!pending){
+        await store.mutate(state=>{
+          const current=state.operations[original.operationId];
+          if(current.requestSha256!==captured.requestSha256||identity(current.context)!==captured.contextSha256)
+            throw fault('ANALYSIS_MERCHANT_ORIGINAL_REQUEST','The original local delivery request changed.',409);
+          current.merchantResumptions??=[];
+          if(!current.merchantResumptions.some(x=>x.operationId===op.operationId))current.merchantResumptions.push({
+            operationId:op.operationId,actor:op.payload.actor,reason:op.payload.reason,createdAt:op.createdAt,
+            previousState:current.state,previousError:current.error??null});
+          current.state='RUNNING';current.error=null;original=structuredClone(current);
+        });
+        pending=execute(original);operations.set(original.operationId,pending);executed=true;
+        try{await pending;}
+        catch(error){const info=errorInfo(error);await store.mutate(state=>{
+          const current=state.operations[original.operationId];
+          if(current.state!=='COMPLETE'){current.state='FAILED';current.error=info;current.failedAt=now();}
+        });throw error;}
+        finally{operations.delete(original.operationId);}
+      }else await pending;
+      original=structuredClone(store.read().operations[original.operationId]);
+    }
+    if(original.state!=='COMPLETE')throw fault('ANALYSIS_MERCHANT_ORIGINAL_UNRESOLVED','The original delivery request has not completed.',409);
+    const originalResult=JSON.parse((await store.object(original.resultSha256)).toString('utf8'));
+    await analysis.verifyMerchantResult(originalResult);
+    return complete(op,{schema:'stellar-forge.sensorthings-analysis-merchant-resume.v1',operationId:op.operationId,
+      originalOperationId:original.operationId,originalRequestSha256:original.requestSha256,
+      originalResultSha256:original.resultSha256,originalResult,executed,
+      meaning:executed?'Continued the same original request and phase IDs.':'Recovered the original completed result without another execution.'});
+  }
+
   async function execute(op){
+    if(op.action==='analysis.merchant.resume')return resumeMerchant(op);
     if(op.action.startsWith('analysis.'))return analysis.execute(op,(result,change)=>complete(op,result,change));
     const p=op.payload,s=store.read();
     if(op.action==='source.add'){
@@ -481,7 +524,11 @@ export async function openSensorThingsWorkspace({directory,inboxDirectory=null,s
     let op;
     try{
       op=await reserve(request);
-      if(op.state==='COMPLETE')return {operationId:op.operationId,reused:true,result:JSON.parse((await store.object(op.resultSha256)).toString('utf8')),view:await view()};
+      if(op.state==='COMPLETE'){
+        const result=JSON.parse((await store.object(op.resultSha256)).toString('utf8'));
+        if(op.action.startsWith('analysis.merchant.'))await analysis.verifyMerchantResult(result);
+        return {operationId:op.operationId,reused:true,result,view:await view()};
+      }
       if(operations.has(op.operationId))return {operationId:op.operationId,state:'RUNNING',reused:true,view:await view()};
       if(op.state==='FAILED')throw Object.assign(new Error(op.error.message),op.error);
       const pending=execute(op);operations.set(op.operationId,pending);
