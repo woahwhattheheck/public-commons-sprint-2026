@@ -63,6 +63,12 @@ LIBNOVA_APPLICATION = (
     "research/preservation/LIBNOVA_PROVIDER_CONTRACT.md",
     "research/preservation/libnova-requirements.txt",
 )
+ARCHIVEMATICA_APPLICATION = (
+    "research/preservation/archivematica.py",
+    "research/preservation/archivematica_client.py",
+    "research/preservation/ARCHIVEMATICA.md",
+    "research/preservation/ARCHIVEMATICA_PROVIDER_CONTRACT.md",
+)
 
 
 class Problem(Exception):
@@ -313,6 +319,16 @@ def load_libnova():
     return libnova, libnova_client
 
 
+def load_archivematica():
+    module_path = Path(__file__).with_name("archivematica.py")
+    client_path = Path(__file__).with_name("archivematica_client.py")
+    if not module_path.is_file() or not client_path.is_file():
+        return None, None
+    import archivematica
+    import archivematica_client
+    return archivematica, archivematica_client
+
+
 def selected_provider(provider):
     if provider == "preservica":
         producer, client = load_preservica()
@@ -320,6 +336,9 @@ def selected_provider(provider):
     elif provider == "libnova":
         producer, client = load_libnova()
         label = "LIBNOVA"
+    elif provider == "archivematica":
+        producer, client = load_archivematica()
+        label = "Archivematica"
     else:
         raise Problem("DESTINATION", "Select an original saved provider.")
     if producer is None or client is None:
@@ -330,8 +349,15 @@ def selected_provider(provider):
 def provider_templates():
     producer, client = load_preservica()
     libnova, libnova_client = load_libnova()
+    archivematica, archivematica_client = load_archivematica()
     agreement = roda.agreement_template()
     return {
+        "archivematica": {"label": "Archivematica",
+            "available": archivematica is not None and archivematica_client is not None,
+            "settings": archivematica.settings_template() if archivematica else None,
+            "configuration": archivematica_client.configuration_template() if archivematica_client else None,
+            "reconciliationTemplates": {kind: archivematica_client.reconciliation_template(kind)
+                for kind in archivematica_client.RECONCILIATION_KINDS} if archivematica_client else {}},
         "roda": {
             "label": "RODA", "available": True,
             "settings": agreement,
@@ -508,7 +534,7 @@ class Workbench:
         root = self.operations / operation_id
         value = read_json(root / "selection.json")
         if (value.get("schema") != SCHEMA + ".operation" or value.get("id") != operation_id
-                or value.get("provider") not in {"roda", "preservica", "libnova"}):
+                or value.get("provider") not in {"roda", "preservica", "libnova", "archivematica"}):
             raise Problem("OPERATION", "The saved destination selection is invalid.")
         selected_review(value.get("selection"))
         expected = value.get("requestSha256")
@@ -608,21 +634,22 @@ class Workbench:
             raise Problem("DESTINATION", "A destination requires its complete saved source and configuration.")
         operation_id = identifier(request["id"])
         provider = request["provider"]
-        if provider not in {"roda", "preservica", "libnova"}:
-            raise Problem("DESTINATION", "Select RODA, Preservica or LIBNOVA.")
+        if provider not in {"roda", "preservica", "libnova", "archivematica"}:
+            raise Problem("DESTINATION", "Select Archivematica, RODA, Preservica or LIBNOVA.")
         selected_review(request["selection"])
         p.text(request["label"], "destination label", empty=False)
         if not isinstance(request["settings"], dict) or not isinstance(request["configuration"], dict):
             raise Problem("DESTINATION", "Settings and configuration must be complete JSON objects.")
         if provider == "roda" and not isinstance(request["jobTemplate"], dict):
             raise Problem("DESTINATION", "Select the complete RODA ingest job template.")
-        if provider in {"preservica", "libnova"} and request["jobTemplate"] is not None:
+        if provider in {"preservica", "libnova", "archivematica"} and request["jobTemplate"] is not None:
             raise Problem("DESTINATION", "This destination does not use a RODA job template.")
-        if provider == "libnova":
+        if provider in {"libnova", "archivematica"}:
             producer, client = selected_provider(provider)
             request = json.loads(json.dumps(request))
             prevent_literal_credentials(request["configuration"])
-            request["settings"] = producer.normalize_mapping(request["settings"])
+            request["settings"] = (producer.normalize_settings(request["settings"]) if provider == "archivematica"
+                                   else producer.normalize_mapping(request["settings"]))
             request["configuration"] = client.normalize_configuration(request["configuration"])
         root = self.operations / operation_id
         expected = p.digest(p.canonical(request))
@@ -659,16 +686,16 @@ class Workbench:
             p.build(frozen, bag, request["selection"]["revision"], zipped=True)
             roda.prepare(bag, root / "settings.json", prepared)
             roda_client.plan(prepared, root / "configuration.json", root / "job-template.json")
-        elif provider == "libnova":
+        elif provider in {"libnova", "archivematica"}:
             producer, client = selected_provider(provider)
             bag = root / "original-transfer.zip"
             p.build(frozen, bag, request["selection"]["revision"], zipped=True)
             producer.prepare(bag, prepared, request["settings"])
             client.plan(prepared, request["configuration"], operation_id)
-            self.artifact(bag, "libnova-original-bagit", request["selection"], operation_id)
+            self.artifact(bag, provider + "-original-bagit", request["selection"], operation_id)
             report = prepared / "report.html"
             if report.is_file():
-                self.artifact(report, "libnova-source-review", request["selection"], operation_id)
+                self.artifact(report, provider + "-source-review", request["selection"], operation_id)
         else:
             producer, client = load_preservica()
             producer.prepare(frozen, prepared, request["selection"]["revision"], settings=request["settings"])
@@ -676,15 +703,23 @@ class Workbench:
         package = prepared / "transfer.zip"
         if package.is_file():
             self.artifact(package, provider, request["selection"], operation_id)
-        if provider == "libnova":
-            self.libnova_receiving_artifacts(operation_id)
+        if provider in {"libnova", "archivematica"}:
+            self.receiving_artifacts(operation_id)
         return self.migration_status(operation_id)
 
     def libnova_receiving_artifacts(self, operation_id):
-        root, selected = self.operation(operation_id)
+        _, selected = self.operation(operation_id)
         if selected["provider"] != "libnova":
             raise Problem("DESTINATION", "Select the original LIBNOVA destination.")
-        producer, client = selected_provider("libnova")
+        return self.receiving_artifacts(operation_id)
+
+    def receiving_artifacts(self, operation_id):
+        root, selected = self.operation(operation_id)
+        provider = selected["provider"]
+        if provider not in {"libnova", "archivematica"}:
+            raise Problem("DESTINATION", "Select the original receiving destination.")
+        label = {"libnova": "LIBNOVA", "archivematica": "Archivematica"}[provider]
+        producer, client = selected_provider(provider)
         prepared = root / "prepared"
         with producer.lock(prepared):
             progress = client.show(prepared, operation_id)
@@ -697,23 +732,23 @@ class Workbench:
                     or not isinstance(proof["sha256"], str) or not HASH.fullmatch(proof["sha256"])
                     or proof["path"] != "receiving/" + proof["sha256"] + ".json"
                     or state.get("report") != "receiving/" + proof["sha256"] + ".html"):
-                raise Problem("RECEIVING_EVIDENCE", "The saved LIBNOVA receiving identity is invalid.")
+                raise Problem("RECEIVING_EVIDENCE", "The saved " + label + " receiving identity is invalid.")
             operation_root = prepared / "operations" / operation_id
             proof_path = operation_root / proof["path"]
             if file_digest(proof_path) != {"bytes": proof["bytes"], "sha256": proof["sha256"]}:
                 raise Problem("RECEIVING_EVIDENCE", "The original receiving evidence changed.")
             evidence = read_json(proof_path, MAX_SNAPSHOT_MEMBER)
-            if (evidence.get("schema") != "stellar-forge.libnova-operation.v1.receiving"
+            if (evidence.get("schema") != "stellar-forge." + provider + "-operation.v1.receiving"
                     or evidence.get("operationId") != operation_id
                     or evidence.get("packageId") != progress["operation"]["packageId"]
                     or evidence.get("summary") != state.get("summary")
-                    or evidence.get("job") != state.get("job")):
+                    or provider == "libnova" and evidence.get("job") != state.get("job")):
                 raise Problem("RECEIVING_EVIDENCE", "The receiving report belongs to different saved results.")
             report_path = operation_root / state["report"]
             regular(report_path)
             return [
-                self.artifact(proof_path, "libnova-receiving-evidence", selected["selection"], operation_id),
-                self.artifact(report_path, "libnova-receiving-report", selected["selection"], operation_id),
+                self.artifact(proof_path, provider + "-receiving-evidence", selected["selection"], operation_id),
+                self.artifact(report_path, provider + "-receiving-report", selected["selection"], operation_id),
             ]
 
     def continue_migration(self, operation_id, action, evidence=None):
@@ -745,10 +780,14 @@ class Workbench:
                 if not isinstance(evidence, dict):
                     raise Problem("ORIGINAL_ID", "Original request evidence must be a JSON object.")
                 result = client.reconcile(prepared, operation_id, evidence)
+            elif action == "decide" and selected["provider"] == "archivematica":
+                if not isinstance(evidence, dict):
+                    raise Problem("INGEST_CHOICE", "Choose an observed option for the original Archivematica job.")
+                result = client.decide(prepared, operation_id, evidence)
             else:
                 raise Problem("ACTION", "Unknown saved migration action.")
-        if selected["provider"] == "libnova":
-            self.libnova_receiving_artifacts(operation_id)
+        if selected["provider"] in {"libnova", "archivematica"}:
+            self.receiving_artifacts(operation_id)
         return {"operationId": operation_id, "result": result,
                 "migration": self.migration_status(operation_id)}
 
@@ -815,7 +854,8 @@ def snapshot_manifest(archive):
     required = {"workspace/project.json", "workspace/prepared.json", "workspace/current.json",
                 "operator/jobs.json", "operator/artifacts.json"}
     required.update("application/" + name for name in APPLICATION)
-    provider_groups = {"preservica": PRESERVICA_APPLICATION, "libnova": LIBNOVA_APPLICATION}
+    provider_groups = {"preservica": PRESERVICA_APPLICATION, "libnova": LIBNOVA_APPLICATION,
+                       "archivematica": ARCHIVEMATICA_APPLICATION}
     for source_group in provider_groups.values():
         provider_names = {"application/" + name for name in source_group}
         if provider_names & set(descriptors):
@@ -832,7 +872,7 @@ def snapshot_manifest(archive):
         saved = p.parse_json(archive.read(name))
         request_fields = ("id", "provider", "label", "selection", "settings", "configuration", "jobTemplate")
         if (not isinstance(saved, dict) or saved.get("schema") != SCHEMA + ".operation"
-                or saved.get("id") != operation_id or saved.get("provider") not in {"roda", "preservica", "libnova"}
+                or saved.get("id") != operation_id or saved.get("provider") not in {"roda", "preservica", "libnova", "archivematica"}
                 or any(field not in saved for field in request_fields)):
             raise Problem("SNAPSHOT_OPERATION", "The snapshot destination selection is invalid.", member=name)
         selected_review(saved["selection"])
@@ -865,14 +905,17 @@ def export_workspace(app, output):
         selection = {"sourceManifestSha256": project["binding"]["manifestSha256"],
                      "revision": current["revision"], "reviewSha256": current["reviewSha256"]}
         libnova_operations = set()
+        archivematica_operations = set()
         for operation_root in sorted(app.operations.iterdir()):
             if operation_root.is_dir() and not operation_root.name.startswith("."):
                 _, selected = app.operation(operation_root.name)
                 if selected["provider"] == "libnova":
                     libnova_operations.add(operation_root.name)
+                elif selected["provider"] == "archivematica":
+                    archivematica_operations.add(operation_root.name)
                 if (operation_root / "prepared").is_dir():
-                    if selected["provider"] == "libnova":
-                        producer, _ = selected_provider("libnova")
+                    if selected["provider"] in {"libnova", "archivematica"}:
+                        producer, _ = selected_provider(selected["provider"])
                         locks.enter_context(producer.lock(operation_root / "prepared"))
                     else:
                         locks.enter_context(p.project_lock(operation_root / "prepared"))
@@ -887,11 +930,15 @@ def export_workspace(app, output):
                     parts[2:] == ["prepared", ".libnova.lock"]
                     or len(parts) == 3 and re.fullmatch(r"\.libnova-output-[0-9a-f]{32}\.lock", parts[2])))
             if (name == "server.lock" or name.endswith(("/workspace.lock", "/operation.lock"))
-                    or name.startswith("deliveries/") or libnova_runtime_lock):
+                    or name.startswith("deliveries/") or libnova_runtime_lock
+                    or len(parts) == 3 and parts[0] == "operations"
+                    and parts[1] in archivematica_operations
+                    and re.fullmatch(r"\.archivematica-output-[0-9a-f]{32}\.lock", parts[2])):
                 continue
             members["operator/" + name] = path
         source_names = list(APPLICATION)
-        for label, source_group in (("Preservica", PRESERVICA_APPLICATION), ("LIBNOVA", LIBNOVA_APPLICATION)):
+        for label, source_group in (("Preservica", PRESERVICA_APPLICATION), ("LIBNOVA", LIBNOVA_APPLICATION),
+                                    ("Archivematica", ARCHIVEMATICA_APPLICATION)):
             present = [(application_root / name).is_file() for name in source_group]
             if any(present):
                 if not all(present):
@@ -1058,6 +1105,10 @@ def validated_destination(app, body):
         producer, client = selected_provider("libnova")
         request["configuration"] = client.normalize_configuration(request["configuration"])
         request["settings"] = producer.normalize_mapping(request["settings"])
+    elif request["provider"] == "archivematica":
+        producer, client = selected_provider("archivematica")
+        request["configuration"] = client.normalize_configuration(request["configuration"])
+        request["settings"] = producer.normalize_settings(request["settings"])
     elif request["provider"] == "roda":
         roda.validate_agreement(p.canonical(request["settings"]))
         if not isinstance(request["configuration"], dict):
@@ -1069,7 +1120,7 @@ def validated_destination(app, body):
             write_json(path, request["configuration"])
             roda_client._config(path)
     else:
-        raise Problem("DESTINATION", "Select RODA, Preservica or LIBNOVA.")
+        raise Problem("DESTINATION", "Select Archivematica, RODA, Preservica or LIBNOVA.")
     return request
 
 
@@ -1271,9 +1322,9 @@ class Handler(http.server.BaseHTTPRequestHandler):
                     {"operationId": selected["id"], "provider": selected["provider"],
                      "selection": selected["selection"], "requestSha256": selected["requestSha256"]},
                     lambda job: self.app.prepare_migration(request))
-            elif path in {"/api/run", "/api/refresh", "/api/reconcile"}:
+            elif path in {"/api/run", "/api/refresh", "/api/reconcile", "/api/decide"}:
                 action = path.rsplit("/", 1)[1]
-                allowed = {"operationId", "evidence"} if action == "reconcile" else {"operationId"}
+                allowed = {"operationId", "evidence"} if action in {"reconcile", "decide"} else {"operationId"}
                 if set(body) != allowed:
                     raise Problem("OPERATION", "Submit the selected original operation and its requested action.")
                 operation_id = identifier(body["operationId"])
@@ -1336,7 +1387,8 @@ def managed_binding(workspace):
                          "sourceRecords": len(prepared["records"])})
     source_root = Path(__file__).resolve().parents[2]
     names = list(APPLICATION)
-    for label, source_group in (("Preservica", PRESERVICA_APPLICATION), ("LIBNOVA", LIBNOVA_APPLICATION)):
+    for label, source_group in (("Preservica", PRESERVICA_APPLICATION), ("LIBNOVA", LIBNOVA_APPLICATION),
+                                    ("Archivematica", ARCHIVEMATICA_APPLICATION)):
         optional = [(source_root / name).exists() for name in source_group]
         if any(optional):
             if not all(optional):

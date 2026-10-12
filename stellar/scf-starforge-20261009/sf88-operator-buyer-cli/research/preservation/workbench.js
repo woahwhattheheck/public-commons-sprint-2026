@@ -18,6 +18,7 @@ const S = {
   destinationDrafts: {}, provider: "roda", destinationEpoch: 0,
   destinationTouched: false, selectedMigration: null, pendingSelection: null, destinationViewEpoch: 0,
   migrationSeq: 0, migration: null, migrationBusy: false,
+  archivematicaDecisionDrafts: {}, archivematicaDecisionView: "",
   renderedMigrations: "", renderedArtifacts: "", renderedActivity: "",
   renderedHistory: "", externalReview: false, timer: null, searchTimer: null
 };
@@ -272,6 +273,10 @@ function renderControls() {
   $("export-workspace").disabled = !initialized || !S.connected || busy || dirty;
   for (const id of ["run-migration", "refresh-migration", "resume-preparation", "reconcile-migration"]) {
     $(id).disabled = !S.selectedMigration || !S.connected || busy;
+  }
+  for (const control of $("archivematica-decisions").querySelectorAll("button,input,select,textarea")) {
+    control.disabled = !S.selectedMigration || !S.connected || busy ||
+      control.getAttribute("data-unavailable") === "true";
   }
   $("previous-page").disabled = !S.preview || S.offset === 0;
   $("next-page").disabled = !S.preview || S.offset + S.preview.limit >= S.preview.total;
@@ -564,8 +569,10 @@ function showDestinationDraft() {
   $("destination-provider").value = S.provider;
   $("job-template-field").hidden = S.provider !== "roda";
   $("destination-settings-label").textContent = ({roda: "RODA submission agreement",
-    preservica: "Preservica OPEX package settings", libnova: "LIBNOVA Dublin Core descriptor mapping"})[S.provider] || "Package settings";
+    preservica: "Preservica OPEX package settings", libnova: "LIBNOVA Dublin Core descriptor mapping",
+    archivematica: "Archivematica transfer and receiving settings"})[S.provider] || "Package settings";
   $("destination-settings-help").textContent = ({
+    archivematica: "Select the existing transfer-source location and ZIP path, processing configuration, pipeline and receiving locations. The original ZIP is staged through the mounted source named in the client configuration. Ingest and backlog choices remain attached to this saved operation.",
     roda: "Use the repository agreement for this existing RODA ingest workflow.",
     preservica: "Select the original archival parent, security tag, metadata scope and agreed OPEX ingest settings.",
     libnova: "Replace example descriptor codes and types with the existing target schema. Unmapped Dublin Core values stay in the unchanged BagIt. Preparation saves this exact mapping before any upload."
@@ -638,7 +645,10 @@ function selectMigration(operation) {
   $("migration-progress-message").hidden = true;
   $("transfer-uuid").value = ""; $("job-id").value = ""; $("reconcile-json").value = "{}";
   $("libnova-reconcile-json").value = "{}";
+  $("archivematica-reconcile-json").value = "{}";
   $("libnova-evidence").hidden = true; $("libnova-saved-help").hidden = true;
+  $("archivematica-evidence").hidden = true; $("archivematica-saved-help").hidden = true;
+  $("archivematica-decisions").hidden = true; S.archivematicaDecisionView = "";
   replace("migration-summary", []);
   renderDestinationList(true); renderControls();
   refreshMigration().catch(report);
@@ -668,8 +678,8 @@ function renderMigration() {
   const migration = S.migration;
   if (!migration || migration.id !== S.selectedMigration) return;
   const retained = migration.progress || {};
-  const libnova = migration.provider === "libnova";
-  const progress = libnova && retained.state && typeof retained.state === "object"
+  const libnova = migration.provider === "libnova", archivematica = migration.provider === "archivematica";
+  const progress = (libnova || archivematica) && retained.state && typeof retained.state === "object"
     ? retained.state : retained;
   const state = findScalar(progress, ["state", "status"]) || "PREPARED";
   $("migration-label").textContent = migration.label;
@@ -715,6 +725,31 @@ function renderMigration() {
     if (progress.previousVerifiedObservation) pairs.push(["Earlier verified observation",
       date(progress.previousVerifiedObservation.updatedAt) + " · retained in the complete progress record"]);
   }
+  if (archivematica) {
+    const settings = migration.settings || {}, summary = progress.summary || {};
+    for (const [label, paths] of [
+      ["Transfer UUID", ["transferUuid", "transfer.uuid"]],
+      ["SIP UUID", ["sipUuid", "ingest.sipUuid"]],
+      ["AIP UUID", ["aip.uuid", "aipUuid"]],
+      ["DIP UUID", ["dip.uuid", "dipUuid"]],
+      ["Transfer status", ["transfer.status"]],
+      ["Ingest status", ["ingest.status"]]
+    ]) {
+      const value = findScalar(progress, paths);
+      if (value) pairs.push([label, value]);
+    }
+    if (settings.processingConfiguration) pairs.push(["Processing configuration", settings.processingConfiguration]);
+    if (settings.pipelineUuid) pairs.push(["Selected pipeline", settings.pipelineUuid]);
+    if (settings.aipLocationUuid) pairs.push(["Selected AIP location", settings.aipLocationUuid]);
+    for (const [label, field] of [["Source records", "sourceRecords"],
+      ["Received included records", "includedRecords"], ["Excluded by saved review", "excludedRecords"],
+      ["Verified original files", "verifiedOriginalFiles"], ["Verified metadata records", "verifiedMetadataRecords"]]) {
+      if (Number.isFinite(summary[field])) pairs.push([label, summary[field]]);
+    }
+    if (progress.proof?.sha256) pairs.push(["Receiving report SHA-256", progress.proof.sha256]);
+    if (Array.isArray(progress.pendingChoices) && progress.pendingChoices.length)
+      pairs.push(["Jobs awaiting an entered choice", progress.pendingChoices.length]);
+  }
   const retry = findScalar(progress, ["retryAt"]);
   if (retry) pairs.push(["Repository retry time", date(retry)]);
   if (progress.updatedAt) pairs.push(["Saved observation", date(progress.updatedAt)]);
@@ -732,12 +767,125 @@ function renderMigration() {
     "Package details are available after the original preparation completes.";
   $("roda-evidence").hidden = migration.provider !== "roda";
   $("preservica-evidence").hidden = migration.provider !== "preservica";
+  $("archivematica-evidence").hidden = !archivematica;
+  $("archivematica-saved-help").hidden = !archivematica;
+  $("archivematica-saved-help").textContent = state === "VERIFIED"
+    ? "The original records and AIP receiving results are saved. Open Delivery for the complete receiving report and original results."
+    : "Continue transfer and receiving stages the saved ZIP and advances its original transfer. Check repository progress reads the current transfer, ingest and stored-package status. Choose an observed ingest option below when a job needs your decision.";
+  $("run-migration").textContent = archivematica ? "Continue transfer and receiving" : "Continue original transfer";
+  renderArchivematicaDecisions(migration, progress);
   $("libnova-evidence").hidden = !libnova;
   $("libnova-saved-help").hidden = !libnova;
   $("libnova-saved-help").textContent = state === "VERIFIED"
     ? "The original content bytes and mapped metadata were verified. The receiving report and complete evidence are available in Delivery."
     : "Check repository progress to observe the original upload, metadata and Function job. Reconciliation below is for a retained Function response or its original job ID.";
   renderControls();
+}
+function renderArchivematicaDecisions(migration, progress) {
+  const host = $("archivematica-decisions");
+  if (migration.provider !== "archivematica") { host.hidden = true; return; }
+  const pending = Array.isArray(progress.pendingChoices) ? progress.pendingChoices : [];
+  const backlog = progress.pendingBacklog && typeof progress.pendingBacklog === "object"
+    ? progress.pendingBacklog : null;
+  host.hidden = !pending.length && !backlog;
+  const view = stable([migration.id, pending, backlog, migration.settings?.backlog]);
+  if (view === S.archivematicaDecisionView) return;
+  S.archivematicaDecisionView = view;
+  host.replaceChildren(element("h3", "Ingest decisions"));
+  const decisionField = (form, label, control) => {
+    const field = element("div", null, {class: "field"}), title = element("label", label);
+    if (control.id) title.htmlFor = control.id;
+    field.append(title, control); form.append(field);
+  };
+  pending.forEach((item, index) => {
+    if (!item || item.kind !== "processing-choice" || !item.observation?.sha256 ||
+        !Array.isArray(item.choices)) return;
+    const key = stable([migration.id, item.unitUuid, item.jobUuid, item.observation.sha256]);
+    const draft = S.archivematicaDecisionDrafts[key] ||= {choiceId: "", note: ""};
+    const form = element("form", null, {class: "panel", "data-archivematica-decision": "processing-choice"});
+    form.append(element("h4", (item.unitType || "Ingest") + " · " + item.jobUuid),
+      element("p", "Original unit " + item.unitUuid, {class: "meta mono"}));
+    const select = element("select", null, {id: "archivematica-choice-" + index, required: true});
+    select.append(element("option", "Choose the returned ingest option", {value: ""}));
+    for (const choice of item.choices) {
+      if (typeof choice.choiceId !== "string" || typeof choice.label !== "string") continue;
+      select.append(element("option", choice.label, {value: choice.choiceId}));
+    }
+    select.value = draft.choiceId;
+    select.addEventListener("change", () => { draft.choiceId = select.value; });
+    decisionField(form, "Observed options", select);
+    const note = element("textarea", null, {id: "archivematica-choice-note-" + index,
+      rows: 2, required: true, maxlength: 10000});
+    note.value = draft.note;
+    note.addEventListener("input", () => { draft.note = note.value; });
+    decisionField(form, "Reason for this ingest choice", note);
+    form.append(element("button", "Apply selected ingest choice", {type: "submit", class: "primary"}));
+    form.addEventListener("submit", event => {
+      event.preventDefault();
+      const current = S.migration?.progress?.state;
+      const observed = current?.pendingChoices?.find(row => row.jobUuid === item.jobUuid &&
+        row.unitUuid === item.unitUuid && row.observation?.sha256 === item.observation.sha256);
+      if (S.selectedMigration !== migration.id || !observed ||
+          !observed.choices.some(choice => choice.choiceId === select.value)) {
+        report(new Error("This job has a newer observation. Read the current progress and select its returned choice."));
+        return;
+      }
+      submitArchivematicaDecision(migration.id, {
+        schema: "stellar-forge.archivematica-operation.v1.decision", kind: "processing-choice",
+        unitUuid: item.unitUuid, jobUuid: item.jobUuid, choiceId: select.value,
+        observationSha256: item.observation.sha256, note: note.value
+      }, key).catch(report);
+    });
+    host.append(form);
+  });
+  if (backlog?.transferUuid && backlog.observation?.sha256) {
+    const key = stable([migration.id, "backlog", backlog.transferUuid, backlog.observation.sha256]);
+    const draft = S.archivematicaDecisionDrafts[key] ||= {arrangePath: "", note: ""};
+    const form = element("form", null, {class: "panel", "data-archivematica-decision": "arrange-backlog"});
+    form.append(element("h4", "Continue the original backlog transfer"),
+      element("p", "Transfer " + backlog.transferUuid +
+        (backlog.packageUuid ? " · Package " + backlog.packageUuid : ""), {class: "meta mono"}));
+    if (backlog.sourcePath) form.append(element("p", "Stored source " + backlog.sourcePath, {class: "meta mono"}));
+    const allowed = migration.settings?.backlog?.policy === "arrange";
+    if (!allowed) {
+      form.append(element("p", "This saved selection pauses at the backlog. The original transfer and stored package remain available in Archivematica for arrangement.", {class: "muted"}));
+    } else {
+      const arrange = element("input", null, {id: "archivematica-arrange-path", required: true,
+        placeholder: "/arrange/research-edition/", spellcheck: "false", autocomplete: "off"});
+      arrange.value = draft.arrangePath;
+      arrange.addEventListener("input", () => { draft.arrangePath = arrange.value; });
+      decisionField(form, "Arrangement path", arrange);
+      const note = element("textarea", null, {id: "archivematica-arrange-note", rows: 2,
+        required: true, maxlength: 10000});
+      note.value = draft.note;
+      note.addEventListener("input", () => { draft.note = note.value; });
+      decisionField(form, "Reason for this arrangement", note);
+      form.append(element("p", "Use one selected name below /arrange/. This action continues the original saved SIP.", {class: "muted"}));
+      form.append(element("button", "Arrange original backlog transfer", {type: "submit", class: "primary"}));
+      form.addEventListener("submit", event => {
+        event.preventDefault();
+        const current = S.migration?.progress?.state?.pendingBacklog;
+        if (S.selectedMigration !== migration.id || current?.transferUuid !== backlog.transferUuid ||
+            current?.observation?.sha256 !== backlog.observation.sha256) {
+          report(new Error("This backlog transfer has a newer observation. Read its current progress before arranging."));
+          return;
+        }
+        submitArchivematicaDecision(migration.id, {
+          schema: "stellar-forge.archivematica-operation.v1.decision", kind: "arrange-backlog",
+          transferUuid: backlog.transferUuid, observationSha256: backlog.observation.sha256,
+          arrangePath: arrange.value, note: note.value
+        }, key).catch(report);
+      });
+    }
+    host.append(form);
+  }
+}
+async function submitArchivematicaDecision(operationId, evidence, key) {
+  if (!evidence.note.trim()) throw new Error("Enter the reason for this receiving decision.");
+  await mutation("/api/decide", {operationId, evidence});
+  delete S.archivematicaDecisionDrafts[key];
+  S.archivematicaDecisionView = "";
+  await refreshState(); await refreshMigration();
 }
 async function prepareDestination(event) {
   event.preventDefault();
@@ -781,6 +929,8 @@ async function reconcileMigration(event) {
     evidence = {};
     if (transferUuid) evidence.transferUuid = transferUuid;
     if (jobId) evidence.jobId = jobId;
+  } else if (migration.provider === "archivematica") {
+    evidence = parseObject($("archivematica-reconcile-json").value, "Original Archivematica request evidence");
   } else if (migration.provider === "libnova") {
     evidence = parseObject($("libnova-reconcile-json").value, "Original LIBNOVA Function evidence");
     if (!Object.keys(evidence).length) throw new Error("Enter the original Function response or job ID for this LIBNOVA operation.");
@@ -981,6 +1131,15 @@ on("load-libnova-evidence-template", "click", () => {
   $("libnova-reconcile-json").value = pretty(clone(template));
 });
 
+on("load-archivematica-evidence-template", "click", () => {
+  const migration = S.migration, kind = $("archivematica-reconcile-kind").value;
+  const template = S.data?.providers?.archivematica?.reconciliationTemplates?.[kind];
+  if (!migration || migration.id !== S.selectedMigration || migration.provider !== "archivematica" || !template)
+    throw new Error("Load the original Archivematica operation and its response template.");
+  if ($("archivematica-reconcile-json").value.trim() !== "{}" &&
+      !window.confirm("Replace the entered response JSON with the selected original request template?")) return;
+  $("archivematica-reconcile-json").value = pretty(clone(template));
+});
 on("build-package", "click", async () => {
   const selection = savedSelection("package-revision");
   await mutation("/api/package", {selection}); await refreshState();

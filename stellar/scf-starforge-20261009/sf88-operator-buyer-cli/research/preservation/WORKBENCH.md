@@ -56,6 +56,12 @@ require those dependencies to open the workbench or use the existing RODA
 and Preservica operators. The complete export and managed source binding
 retain all five LIBNOVA files together.
 
+Archivematica adds `archivematica.py`, `archivematica_client.py`, `ARCHIVEMATICA.md`
+and `ARCHIVEMATICA_PROVIDER_CONTRACT.md`. All four travel together in complete
+exports and the managed source binding. This destination uses the standard
+library and the original configured Dashboard/Storage accounts and mounted
+transfer-source directory.
+
 ### Credentials
 
 Destination forms contain environment-variable names. Set the corresponding
@@ -237,6 +243,38 @@ Continuing the original preparation uses the original saved choices.
 A saved destination shows its source manifest, review revision, original
 transfer and ingest identifiers, provider state and retained progress. The
 detail sections expose the actual prepared package and configuration.
+
+### Archivematica
+
+Select **Archivematica** to prepare and operate the complete original BagIt
+transfer. The [operator guide](ARCHIVEMATICA.md) describes the exact deployment
+and source selections; the [provider contract](ARCHIVEMATICA_PROVIDER_CONTRACT.md)
+records the pinned Dashboard 1.18.0 and Storage Service 0.24.0 APIs.
+
+The saved settings select the existing transfer-source location and relative ZIP
+path, processing configuration, pipeline/AIP location, DIP policy and backlog
+policy. The connection uses API-key environment references plus the existing
+Dashboard session/CSRF environment references for manual processing choices.
+Its transfer-source-root environment name identifies the actual authorized
+mounted/shared source directory.
+
+**Prepare saved destination** retains the original ZIP, all BagIt members and
+the unchanged source record-mapping array. **Continue transfer and receiving**
+stages that exact ZIP and continues the same transfer/SIP, requested storage
+retrieval and entered fixity actions. **Check repository progress** reads the
+current provider observations.
+
+Jobs awaiting input display their actual returned options. Select an option,
+enter its reason and apply that original ingest choice. The action includes
+the saved job, unit and observation; a newer observation requires a newly selected
+option. For a saved arrangement policy, the original backlog transfer can be
+continued into its planned SIP using an explicitly entered arrangement path.
+
+The received AIP is checked through actual METS/PREMIS original-file and
+descriptive-metadata associations. Its verified receiving report and complete
+result JSON appear in **Delivery**. Request-response recovery uses the original
+start/action template and retained request identity. The complete export retains
+the source package, full operation history and all provider source/guide files.
 
 ### RODA
 
@@ -520,6 +558,7 @@ Host/origin checks restrict the application to its printed local origin.
 | `POST /api/run` | Continue the same original provider operation |
 | `POST /api/refresh` | Observe original repository progress |
 | `POST /api/reconcile` | Reconcile original provider request evidence |
+| `POST /api/decide` | Apply an observed Archivematica ingest choice or arrange the original backlog transfer |
 | `POST /api/export` | Export the complete current saved workspace |
 | `GET /download?id=ARTIFACT_ID` | Download a retained original artifact |
 | `GET /review` | Open the saved preservation review report |
