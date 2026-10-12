@@ -43,6 +43,7 @@
     "stellar/scf-starforge-20261009/sf30-seller-sdk/study-source-refresh/PROPERTY_RESEARCH.md",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/study-source-refresh/AGENT.md",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/study-source-refresh/README.md",
-    "stellar/scf-starforge-20261009/sf30-seller-sdk/study-source-refresh/examples/property_source_journey.py"
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/study-source-refresh/examples/property_source_journey.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/study-source-refresh/examples/agent_receive.mjs"
   ]
 }
