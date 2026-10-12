@@ -8,6 +8,7 @@ import { randomBytes, timingSafeEqual } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { openSupplierOrderWorkspace, MAX_SOURCE_BYTES, MAX_PACKAGE_BYTES } from './workspace.mjs';
 import { data, fail } from './core.mjs';
+import { serveSupplierOrderHttpsIntake } from './https-intake.mjs';
 
 const API='/api/supplier-orders',MAX_JSON_BYTES=256*1024*1024,TRANSFER_IDLE_MS=30000;
 const outgoingTimeout=new WeakMap();
@@ -62,7 +63,7 @@ function metadata(request){
   if(!Number.isSafeInteger(value.expectedBytes??value.bytes)||!String(value.expectedSha256??value.sha256??'').match(/^[a-f0-9]{64}$/i))fail('ORDER_HTTP_FILE_IDENTITY_REQUIRED','Include the complete original file byte length and SHA-256.',400);
   return value;
 }
-function query(url){return Object.fromEntries(['query','status','kind','orderId','offset','limit'].filter(key=>url.searchParams.has(key)).map(key=>[key,url.searchParams.get(key)]));}
+function query(url){return Object.fromEntries(['query','status','kind','orderId','offset','limit','direction','state'].filter(key=>url.searchParams.has(key)).map(key=>[key,url.searchParams.get(key)]));}
 function safeEqual(received,expected){
   const a=Buffer.from(received??''),b=Buffer.from(expected);return a.length===b.length&&timingSafeEqual(a,b);
 }
@@ -97,12 +98,12 @@ async function sendFile(request,response,file){
     const stream=handle.createReadStream({start,end,autoClose:false});await pipeline(stream,response);
   }finally{await handle.close();}
 }
-export async function serveSupplierOrderWorkspace({directory,workspace,host='127.0.0.1',port=0,token}={}){
+export async function serveSupplierOrderWorkspace({directory,workspace,transportConfigPath,httpsIntake=false,host='127.0.0.1',port=0,token}={}){
   if(!['127.0.0.1','::1','localhost'].includes(host))fail('ORDER_SERVER_LOOPBACK_REQUIRED','Bind the private supplier-order operator to a loopback interface.');
   if(!Number.isSafeInteger(port)||port<0||port>65535)fail('ORDER_SERVER_PORT_INVALID','Choose an available TCP port.');
   if(token!==undefined&&(typeof token!=='string'||token.length<32||token.length>512))fail('ORDER_SERVER_TOKEN_INVALID','Use a private token of at least 32 characters.');
-  const owned=!workspace,current=workspace??await openSupplierOrderWorkspace({directory}),secret=token??randomBytes(32).toString('base64url');
-  let origin=null,closing=false,closePromise,stopped;
+  const owned=!workspace,current=workspace??await openSupplierOrderWorkspace({directory,transportConfigPath}),secret=token??randomBytes(32).toString('base64url');
+  let origin=null,closing=false,closePromise,stopped,intake;
   const active=new Set();
   const handle=async(request,response)=>{
     commonHeaders(response);
@@ -122,6 +123,23 @@ export async function serveSupplierOrderWorkspace({directory,workspace,host='127
       if(!url.pathname.startsWith(API+'/'))fail('ORDER_HTTP_NOT_FOUND','Workspace route not found.',404);
       if(!safeEqual(request.headers.authorization,'Bearer '+secret))fail('ORDER_SERVER_AUTH_REQUIRED','Open the original private workspace URL.',401);
       const parts=routePath(url.pathname.slice(API.length)),method=request.method;
+      if(parts[0]==='transport'){
+        if(method==='GET'&&parts[1]==='channels'&&parts.length===2)return json(response,current.transport.channels());
+        if(method==='GET'&&parts[1]==='transmissions'){
+          if(parts.length===2)return json(response,current.transport.list(query(url)));
+          if(parts.length===3)return json(response,current.transport.get({transmissionId:parts[2]}));
+          if(parts.length===4&&parts[3]==='history')return json(response,current.transport.history({...query(url),transmissionId:parts[2]}));
+        }
+        if(method==='POST'){
+          const selected=await jsonBody(request);
+          if(parts.length===2&&parts[1]==='prepare')return json(response,await current.transport.prepare(selected));
+          if(parts.length===4&&parts[1]==='transmissions'&&['send','retry','resolve','cancel'].includes(parts[3])){
+            if(selected.transmissionId!==undefined&&selected.transmissionId!==parts[2])fail('ORDER_TRANSMISSION_ID_DIFFERS','The selected original transmission differs from this route.',409);
+            return json(response,await current.transport[parts[3]]({...selected,transmissionId:parts[2]}));
+          }
+        }
+        fail('ORDER_HTTP_NOT_FOUND','Supplier transport route not found.',404);
+      }
       if(method==='GET'&&parts.length===1){
         if(parts[0]==='state')return json(response,current.state());
         if(parts[0]==='orders')return json(response,current.orders(query(url)));
@@ -170,6 +188,7 @@ export async function serveSupplierOrderWorkspace({directory,workspace,host='127
     stopped??=new Promise((resolve,reject)=>server.close(error=>error&&error.code!=='ERR_SERVER_NOT_RUNNING'?reject(error):resolve()));
     server.closeIdleConnections();
     const task=(async()=>{
+      if(intake)await intake.close();
       // A disconnected HTTP client can leave its original native operation running.
       // Retain that handler and store ownership through the actual original outcome.
       await Promise.all([stopped,(async()=>{while(active.size)await Promise.allSettled([...active]);})()]);
@@ -177,6 +196,8 @@ export async function serveSupplierOrderWorkspace({directory,workspace,host='127
     })();
     closePromise=task.catch(error=>{closePromise=null;throw error;});return closePromise;
   };
-  return{server,workspace:current,origin,token:secret,url:origin+'/public/index.html#token='+encodeURIComponent(secret),
+  try{if(httpsIntake)intake=await serveSupplierOrderHttpsIntake({workspace:current});}
+  catch(error){await close();throw error;}
+  return{server,workspace:current,intake,origin,token:secret,url:origin+'/public/index.html#token='+encodeURIComponent(secret),
     get activeRequests(){return active.size;},close};
 }

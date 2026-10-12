@@ -326,6 +326,79 @@ starforge supplier-order-client call close --url http://127.0.0.1:3211/mcp --wor
 
 These commands do not implicitly close an alias after every page. The host owns its original workspace lifetime until the explicit close or host shutdown.
 
+## Configured HTTPS delivery
+
+The supplier workspace can receive and send the retained openTRANS XML through a host-configured HTTPS channel. The complete native setup, TLS listener, credentials and negotiated acknowledgment contract are described in [the HTTPS transport guide](../../stellar/scf-starforge-20261009/sf30-seller-sdk/supplier-orders/TRANSPORT.md). The operator and client select a declared channel by its ID and SHA-256; the native host supplies its endpoint and credentials.
+
+Add the optional configuration path to the existing private connection file. Relative paths resolve beside that connection file:
+
+~~~json
+{
+  "schema": "stellar-forge.supplier-order-workspace-connection.v1",
+  "workspaces": {
+    "supplier": {
+      "directory": "/srv/supplier-orders/supplier",
+      "transportConfigPath": "./unite-https.json",
+      "inputs": {}
+    }
+  }
+}
+~~~
+
+Use the connection schema and surrounding structure shown in the configuration section above if the connection file already contains other services. The host reads a private, owned JSON configuration with schema `stellar-forge.supplier-order-https-config.v1`. `transportChannels` exposes the declared supplier, agreement reference, test or live mode, supported document endpoints, acknowledgment rules and credential variable names. Credential values remain in the native host.
+
+### Browser delivery desk
+
+Open **EDI deliveries** from the workspace header. The **Channels** tab shows each declared channel and its setup requirements. Receive incoming HTTPS orders through the dedicated TLS listener; their original XML, selected orders and transport history appear in this same workspace. Open an incoming document to review the order. A later incoming revision remains in history until the operator selects the appropriate current contribution.
+
+Prepare the complete outgoing XML in the ordinary draft editor. Use **Prepare delivery** on the prepared result or its document detail. The preparation dialog keeps the reviewed document and channel hashes, asks for a reason, and creates a `READY` delivery. Review that record and use **Send** to dispatch its retained bytes once. Delivery preparation and sending each retain their own request ID.
+
+The delivery desk supports direction, state and exact order filters, paged results, complete event history, original XML downloads, and the retained HTTP response body. Its delivery state and recipient-processing record are separate fields. An agreed HTTP acknowledgment records transport acceptance; commercial processing follows the recipient's actual response.
+
+When a send returns `UNKNOWN`, use the provider's actual readback to record `ACKNOWLEDGED` or `NOT_ACCEPTED`, with the provider reference, reason and an optional retained evidence file and SHA-256. The desk can select its existing HTTP response as that evidence. A rejected, cancelled or confirmed unaccepted delivery can be returned to `READY` with a reason and sent through the separate **Send** action. Each action checks the reviewed transmission revision.
+
+The original request journal remains available throughout the desk. Reopen an interrupted request by its original ID to recover its saved result. **Review current revisions** reloads the current document/channel or transmission while preserving the operator's reason and provider evidence for another deliberate review.
+
+### Typed client and installed CLI
+
+The client exposes all nine transport operations through the same configured workspace and request journal:
+
+~~~js
+const declared = await client.transportChannels();
+const channel = declared.channels.find(value => value.id === retained.channelId);
+if (!channel) throw new Error('Select a declared supplier channel.');
+const document = await client.document({ id: retained.documentRecordId });
+const prepared = await client.prepareTransmission({
+  requestId: retained.prepareRequestId,
+  documentId: document.id,
+  expectedDocumentSha256: document.sha256,
+  channelId: channel.id,
+  expectedChannelSha256: channel.sha256,
+  reason: retained.reason
+});
+~~~
+
+Inspect the operation's `state`, `error` and `result` before using its result. After reviewing the prepared delivery, read its current transmission and send with that revision:
+
+~~~js
+const transmission = await client.transmission({
+  transmissionId: prepared.result.transmissionId
+});
+const sent = await client.sendTransmission({
+  requestId: retained.sendRequestId,
+  transmissionId: transmission.id,
+  expectedRevision: transmission.revision
+});
+~~~
+
+A completed native operation can retain an `ACKNOWLEDGED`, `REJECTED` or `UNKNOWN` transmission; inspect `result.transmission.state` for the transport outcome. Repeating the original request ID reopens its saved result. The full transmission and history remain addressable by the retained transmission ID even when a large operation reply is summarized.
+
+Use the existing installed CLI `call` command with `transportChannels`, `prepareTransmission`, `sendTransmission`, `retryTransmission`, `resolveTransmission` or `cancelTransmission` and the ordinary complete JSON argument file. `pages transmissions` and `pages transmissionHistory` use the same paging and stable-history checks as the typed client. Arguments select record IDs, reviewed revisions and declared channel hashes; the endpoint and credential configuration is owned by the native host.
+
+### Customer receiving
+
+The whole customer workspace carries the retained XML, HTTP response files, delivery records and event history. A received transmission retains its original workspace identity. The recipient can inspect that history and prepare a new local delivery from the retained outgoing document using its own declared channel. The browser offers **Prepare local delivery** for this continuation.
+
 ## Complete method map
 
 All native names below begin `merchant_supplier_order_`.
@@ -355,6 +428,15 @@ All native names below begin `merchant_supplier_order_`.
 | `receive` | `receive` | Exact original XML intake |
 | `receiveWorkspace` | `receive_workspace` | Inspect/merge a complete native customer ZIP |
 | `exportWorkspace` | `export_workspace` | Retain a full native customer ZIP |
+| `transportChannels` | `transport_channels` | Declared HTTPS channels and their reviewed hashes |
+| `transmissions` | `transmissions` | Paged incoming and outgoing delivery records |
+| `transmission` | `transmission` | Complete retained delivery record |
+| `transmissionHistory` | `transmission_history` | Paged history pinned to the selected transmission revision |
+| `prepareTransmission` | `prepare_transmission` | Retain a reviewed document and declared channel as a ready delivery |
+| `sendTransmission` | `send_transmission` | Send the selected ready delivery once through its configured HTTPS contract |
+| `retryTransmission` | `retry_transmission` | Reasoned return of an eligible delivery to ready |
+| `resolveTransmission` | `resolve_transmission` | Record the provider's readback for an unknown outcome |
+| `cancelTransmission` | `cancel_transmission` | Cancel the reviewed eligible delivery |
 | `operation` | `operation` | Reopen the original saved operation |
 | `exportManifest` | `export_manifest` | Exact original file manifest |
 | `exportFile` | `export_file` | Original byte chunk with read identity/hash |
