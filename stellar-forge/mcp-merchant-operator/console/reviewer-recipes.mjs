@@ -22,7 +22,7 @@ export function buildReviewerCustomerRecipe({definitions,mode='deliver'}={}){
   const inputs=[
     input('/destinationWorkspace','Receiving workspace','string','An independently configured original workbench alias.'),
     input('/title','Receiving title','string','The name retained with the original receiving review.'),
-    input('/actions','Original action IDs','object','Keep UUIDs for review, receive, receivingOpen and receivingClose throughout this run; delivery also uses sourceOpen and sourceExport.')
+    input('/actions','Original action IDs','object','Keep UUIDs for review, receive, receivingOpen and receivingClose throughout this run; delivery also uses sourceOpen, sourceClose and sourceExport.')
   ];
   if(mode==='deliver'){
     inputs.unshift(
@@ -31,8 +31,6 @@ export function buildReviewerCustomerRecipe({definitions,mode='deliver'}={}){
       input('/selectionRevision','Received revision','integer','Its current inspected native selection revision.'),
       input('/quoteId','Saved quote','string','The exact original quote whose complete result will be retained.')
     );
-    step('source-open','Connect original source','workbench_open',{workspace:'source'},
-      [binding('/workspace','/sourceWorkspace')]);
     step('source-selection','Inspect original received packet','selection',{workspace:'source',selectionId:placeholder},
       [binding('/workspace','/sourceWorkspace'),binding('/selectionId','/selectionId')],retained,true);
     step('source-buyer','Open original saved Buyer','buyer_open',{workspace:'source',selectionId:placeholder,expectedRevision:2,requestId:placeholder},
@@ -42,7 +40,10 @@ export function buildReviewerCustomerRecipe({definitions,mode='deliver'}={}){
       [binding('/workspace','/sourceWorkspace')],retained);
     step('source-result','Retain complete saved result','buyer_result',{workspace:'source',quoteId:'original-quote'},
       [binding('/workspace','/sourceWorkspace'),binding('/quoteId','/quoteId')],retained,true);
-    step('source-export','Close Buyer and export original packet','export',
+    step('source-close','Drain original Buyer before export','buyer_close',{workspace:'source',requestId:placeholder},
+      [binding('/workspace','/sourceWorkspace'),binding('/requestId','/actions/sourceClose')],
+      [...retained,{pointer:'/value/buyer/active',equals:false}]);
+    step('source-export','Retain the original closed packet export','export',
       {workspace:'source',selectionId:placeholder,expectedRevision:2,requestId:placeholder},
       [binding('/workspace','/sourceWorkspace'),binding('/selectionId','/selectionId'),binding('/expectedRevision','/selectionRevision'),binding('/requestId','/actions/sourceExport')],
       [...retained,{pointer:'/kind',equals:'reviewer-packet'}]);
@@ -75,7 +76,8 @@ export function buildReviewerCustomerRecipe({definitions,mode='deliver'}={}){
     {workspace:'receiver',tool:'bazaar_history',arguments:{}},[binding('/workspace','/destinationWorkspace')],retained,true);
   step('receiver-close','Drain receiving Buyer and retain workspace','buyer_close',
     {workspace:'receiver',requestId:placeholder},
-    [binding('/workspace','/destinationWorkspace'),binding('/requestId','/actions/receivingClose')],retained);
+    [binding('/workspace','/destinationWorkspace'),binding('/requestId','/actions/receivingClose')],
+    [...retained,{pointer:'/value/buyer/active',equals:false}]);
   return sealWorkflowRecipe({
     schema:'stellar-forge.merchant-workflow-recipe.v1',source:null,
     name:mode==='deliver'?'Original reviewer customer delivery':'Receive an original reviewer packet',

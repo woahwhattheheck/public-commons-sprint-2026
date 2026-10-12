@@ -368,5 +368,5 @@ export function createWorkflowPage({state,$,node,text,pretty,when,tag,properties
   $('workflow-recovery-form').addEventListener('submit',event=>{event.preventDefault();busy(event.submitter,()=>mutate(resolveStep));});
   $('workflow-handover-form').addEventListener('submit',event=>{event.preventDefault();busy(event.submitter,()=>mutate(()=>handover()));});
   action($('workflow-retry-start'),()=>mutate(()=>start(true)));action($('workflow-retry-handover'),()=>mutate(()=>handover(true)));
-  return{refresh,profileChanged,reset,sync,get hasActive(){return own.runs.some(run=>run.active);}};
+  return{refresh,profileChanged,reset,sync,useRecipe:(recipe,inputs)=>recipes.useRecipe(recipe,inputs),get hasActive(){return own.runs.some(run=>run.active);}};
 }

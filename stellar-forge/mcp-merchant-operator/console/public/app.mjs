@@ -1,5 +1,6 @@
 // MIT. Operator UI over the original authenticated host and retained native calls.
 import { createWorkflowPage } from './workflows.mjs';
+import {createReviewerCustomerPage,reviewerCustomerSelection} from './customer-reviewer.mjs';
 const $=id=>document.getElementById(id);
 const state={token:'',host:null,profiles:[],profile:null,details:null,page:'host',tools:[],tool:null,
   definition:null,draft:null,dirty:false,offset:0,next:null,total:0,call:null,recovery:new Map(),customer:null,
@@ -61,7 +62,7 @@ function setPage(name){
   document.querySelectorAll('[data-page]').forEach(value=>name===value.dataset.page?value.setAttribute('aria-current','page'):value.removeAttribute('aria-current'));
 }
 function syncControls(){
-  updateRun();workflowPage.sync();
+  updateRun();workflowPage.sync();reviewerPage.sync();
   for(const id of ['rename-profile','export-profile','native-status'])$(id).disabled=!state.profile;
   $('previous-tools').disabled=state.offset===0;$('next-tools').disabled=state.next===null;
   if(state.customer){$('resume-customer').disabled=Boolean(state.customer.active);$('pause-customer').disabled=!state.customer.active;$('download-customer').disabled=!state.customer.localFiles;}
@@ -123,6 +124,7 @@ async function loadProfiles(selectId=state.profile?.id){
   const chosen=packet.profiles.find(value=>value.id===selectId)??packet.profiles[0];
   if(state.profile?.id!==chosen?.id)state.profileEpoch++;
   state.profile=chosen??null;$('profiles').value=chosen?.id??'';
+  workflowPage.profileChanged();reviewerPage.profileChanged();
   renderHost();await loadProfile();
 }
 async function loadProfile(){
@@ -135,7 +137,7 @@ async function loadProfile(){
 function renderProfile(){
   const packet=state.details??{drafts:[],calls:[],deliveries:[]};
   text($('request-count'),packet.calls.length);text($('customer-count'),packet.deliveries.length);
-  renderBinding();renderDrafts();renderCalls();renderCustomers();workflowPage.profileChanged();
+  renderBinding();renderDrafts();renderCalls();renderCustomers();workflowPage.profileChanged();reviewerPage.profileChanged();
   if(state.customer){const current=packet.deliveries.find(value=>value.id===state.customer.id);if(current){state.customer=current;renderCustomer();}}
   schedulePoll();
 }
@@ -167,7 +169,7 @@ function disconnect(){
   $('connected').hidden=true;$('connect-panel').hidden=false;$('disconnect').hidden=true;text($('connection-state'),'Disconnected');
   $('connection-state').removeAttribute('data-state');notice('');$('access-token').value='';
   for(const id of ['call-result','call-arguments','customer-json'])$(id).textContent='';
-  $('native-arguments').value='';workflowPage.reset();
+  $('native-arguments').value='';workflowPage.reset();reviewerPage.reset();
 }
 function profileForm(mode){
   state.profileMode=mode;$('profile-form').hidden=false;$('profile-name').value=mode==='rename'?requireProfile().name:'';$('profile-name').focus();
@@ -342,6 +344,7 @@ async function nativeStatus(){
   await runDraft();
 }
 function customerSelection(call,result){
+  const reviewer=reviewerCustomerSelection(call,result);if(reviewer)return reviewer;
   const args=JSON.parse(call.argumentsJson),family=call.tool.startsWith('merchant_opensearch_deployment_')?'opensearch':call.tool.startsWith('merchant_client_export')?'core':null;
   if(!family||!result)return null;
   const values=[result,result.result,result.export,result.client,result.manifest].filter(plain);
@@ -352,7 +355,7 @@ function customerSelection(call,result){
 }
 function fillCustomer(value){
   $('customer-family').value=value.family;$('customer-workspace').value=value.workspace??'';$('customer-export').value=value.exportId;$('customer-sha').value=value.expectedManifestSha256;
-  $('customer-workspace-field').hidden=value.family!=='opensearch';$('customer-workspace').required=value.family==='opensearch';setPage('customers');
+  const workspace=['opensearch','grant-reviewer'].includes(value.family);$('customer-workspace-field').hidden=!workspace;$('customer-workspace').required=workspace;setPage('customers');
 }
 async function receiveCustomer(selection){
   const profile=requireProfile(),epoch=state.sessionEpoch,profileSelection=state.profileEpoch,customerId=state.customer?.id??null;
@@ -386,12 +389,15 @@ function renderCustomer(){
     button.disabled=!value.localFiles;action(button,()=>download('customer-file/'+encodeURIComponent(value.id)+'?'+new URLSearchParams({file:file.name}),file.name));actionCell.append(button);
     row.append(node('td',file.name),node('td',file.bytes),hash,actionCell);return row;
   }));
-  text($('customer-json'),pretty(value));renderCustomers();
+  text($('customer-json'),pretty(value));
+  if(value.identity.family==='grant-reviewer')text($('download-customer'),value.manifest?.kind==='reviewer-packet'?'Download original receiving packet':'Download complete original file');
+  else text($('download-customer'),'Download original customer archive');
+  renderCustomers();reviewerPage.sync();
 }
 $('connect-form').addEventListener('submit',event=>{event.preventDefault();busy(event.submitter,connect);});
 action($('disconnect'),disconnect);
 document.querySelectorAll('[data-page]').forEach(button=>action(button,()=>setPage(button.dataset.page)));
-$('profiles').addEventListener('change',async()=>{try{state.profileEpoch++;state.profile=state.profiles.find(value=>value.id===$('profiles').value)??null;workflowPage.profileChanged();state.draft=null;state.call=null;state.customer=null;await loadProfile();renderTools();$('call-detail').hidden=true;$('call-empty').hidden=false;renderCustomer();}catch(error){notice(error.message,true);}});
+$('profiles').addEventListener('change',async()=>{try{state.profileEpoch++;state.profile=state.profiles.find(value=>value.id===$('profiles').value)??null;workflowPage.profileChanged();reviewerPage.profileChanged();state.draft=null;state.call=null;state.customer=null;await loadProfile();renderTools();$('call-detail').hidden=true;$('call-empty').hidden=false;renderCustomer();}catch(error){notice(error.message,true);}});
 action($('new-profile'),()=>profileForm('new'));action($('rename-profile'),()=>profileForm('rename'));action($('cancel-profile'),()=>{$('profile-form').hidden=true;});
 $('profile-form').addEventListener('submit',event=>{event.preventDefault();busy(event.submitter,saveProfile);});
 action($('bind-profile'),bindProfile);action($('export-profile'),()=>download('export/'+encodeURIComponent(requireProfile().id),requireProfile().id+'-operator-profile.json'));
@@ -410,13 +416,17 @@ action($('reopen-draft'),async()=>{const packet=await api('draft/'+encodeURIComp
 action($('download-result'),()=>download('result/'+encodeURIComponent(state.call.id),state.call.id+'-result.json'));
 action($('use-customer'),()=>fillCustomer(state.customerSelection));
 action($('prepare-recovery'),async()=>{const selection=state.recovery.get($('recovery-tools').value);if(!selection)return;await chooseTool(selection.definition.name,{arguments:selection.arguments,recoveryOf:state.call.id});$('draft-name').value=selection.kind+' '+state.call.id.slice(0,8)+' · '+selection.definition.name.replace(/^merchant_/,'');notice('Prepared the original native '+selection.kind.toLowerCase()+'. Review its identifiers and save the linked draft.');});
-$('customer-family').addEventListener('change',()=>{$('customer-workspace-field').hidden=$('customer-family').value!=='opensearch';$('customer-workspace').required=$('customer-family').value==='opensearch';});
-$('customer-form').addEventListener('submit',event=>{event.preventDefault();busy(event.submitter,()=>receiveCustomer({family:$('customer-family').value,...($('customer-family').value==='opensearch'?{workspace:$('customer-workspace').value}:{}),exportId:$('customer-export').value,expectedManifestSha256:$('customer-sha').value}));});
+$('customer-family').addEventListener('change',()=>{const required=['opensearch','grant-reviewer'].includes($('customer-family').value);$('customer-workspace-field').hidden=!required;$('customer-workspace').required=required;});
+$('customer-form').addEventListener('submit',event=>{event.preventDefault();busy(event.submitter,()=>receiveCustomer({family:$('customer-family').value,...(['opensearch','grant-reviewer'].includes($('customer-family').value)?{workspace:$('customer-workspace').value}:{}),exportId:$('customer-export').value,expectedManifestSha256:$('customer-sha').value}));});
 action($('refresh-customers'),()=>loadProfile());
 action($('resume-customer'),()=>receiveCustomer(state.customer.identity));
 action($('pause-customer'),async()=>{await api('customer-pause',{method:'POST',body:{id:state.customer.id}});await loadProfile();notice('Pause requested at the original receiving checkpoint.');});
-action($('download-customer'),()=>download('customer-archive/'+encodeURIComponent(state.customer.id),state.customer.identity.exportId+'.tar.gz'));
+action($('download-customer'),()=>download('customer-archive/'+encodeURIComponent(state.customer.id),
+  state.customer.identity.family==='grant-reviewer'?(state.customer.manifest?.kind==='reviewer-packet'?'grant-reviewer-packet.json':state.customer.manifest?.files?.[0]?.name??'original-file'):state.customer.identity.exportId+'.tar.gz'));
 const workflowPage=createWorkflowPage({state,$,node,text,pretty,when,tag,properties,selectionList,action,busy,api,notice,uid,
   requireProfile,loadProfile,openCall,chooseTool,download,schedulePoll});
+const reviewerPage=createReviewerCustomerPage({state,$,node,text,pretty,when,properties,action,busy,api,notice,uid,
+  requireProfile,loadProfile,openCall,fillCustomer,receiveCustomer,download,setPage,
+  useRecipe:(recipe,inputs)=>workflowPage.useRecipe(recipe,inputs)});
 const bootstrap=new URLSearchParams(location.hash.slice(1)).get('token');
 if(bootstrap){history.replaceState(null,'',location.pathname+location.search);$('access-token').value=bootstrap;busy($('connect-form').querySelector('button'),connect);}
