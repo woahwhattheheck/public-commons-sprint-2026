@@ -172,7 +172,12 @@ export async function openCoopsWorkspace({directory,inboxDirectory,releaseRuntim
      op.context={profile:structuredClone(profile),query:makeQuery(profile,payload)};
     }
    }
-   if(action==='mapping.save'){op.payload=structuredClone(payload);delete op.payload.mappingSource;op.context={mappingSource:structuredClone(mappingSource)};}
+   if(action==='mapping.save'){
+    const prior=payload.mappingId?selected(s.mappings,payload.mappingId,'model-input mapping'):null,targetId=prior?.id??'mapping-'+key(operationId);
+    if(!prior&&s.mappings.some(m=>m.id===targetId))throw fault('COOPS_MAPPING_TARGET','The original creation identity already belongs to a saved mapping. Inspect that record before choosing a new request.',409);
+    op.payload=structuredClone(payload);delete op.payload.mappingSource;
+    op.context={mappingSource:structuredClone(mappingSource),mappingTarget:{id:targetId,revision:prior?.revision??null,recordSha256:prior?hashBytes(Buffer.from(stable(prior))):null}};
+   }
    if(action==='export.create')op.context={annotations:structuredClone(s.annotations.filter(a=>a.editionId===payload.editionId)),mapping:payload.mappingId?structuredClone(selected(s.mappings,payload.mappingId,'model-input mapping')):null};
    if(action==='backfill.export'){const b=selected(s.backfills,payload.backfillId,'backfill');op.context={backfill:structuredClone(b),annotations:structuredClone(s.annotations.filter(a=>b.parts.some(p=>p.editionId===a.editionId))),mapping:payload.mappingId?structuredClone(selected(s.mappings,payload.mappingId,'model-input mapping')):null};}
    if(action==='release.prepare')op.context={releaseRuntime:structuredClone(releaseRuntime)};
@@ -192,7 +197,11 @@ export async function openCoopsWorkspace({directory,inboxDirectory,releaseRuntim
    case'backfill.resume':result=await local(op,s=>{const b=selected(s.backfills,p.backfillId,'backfill');b.pauseRequested=false;return{backfillId:b.id,state:b.state==='COMPLETE'?'COMPLETE':'QUEUED'};});if(result.state!=='COMPLETE')backfillId=p.backfillId;break;
    case'backfill.pause':result=await local(op,s=>{const b=selected(s.backfills,p.backfillId,'backfill');b.pauseRequested=true;return{backfillId:b.id,state:'PAUSING',captureIds:b.parts.filter(p=>p.state==='RUNNING').map(p=>p.captureId)};});for(const cid of result.captureIds)controllers.get(cid)?.abort();break;
    case'mapping.save':{const value=mappingValue(p);result=await local(op,s=>{
-    const prior=p.mappingId?selected(s.mappings,p.mappingId,'model-input mapping'):null,original=op.context?.mappingSource??prior?.sourceFile??null,
+    const target=op.context?.mappingTarget;
+    if(!target)throw fault('COOPS_MAPPING_REVIEW_REQUIRED','This unfinished request predates retained mapping comparison. Review the current mapping and preserve this request before issuing a new save.',409);
+    const prior=s.mappings.find(m=>m.id===target.id)??null,currentSha256=prior?hashBytes(Buffer.from(stable(prior))):null;
+    if(currentSha256!==target.recordSha256)throw fault('COOPS_MAPPING_CHANGED','The selected mapping changed after this request was reserved. Review its current revision and the retained draft before issuing a new save.',409,{mappingId:target.id,comparedRevision:target.revision,currentRevision:prior?.revision??null});
+    const original=op.context?.mappingSource??prior?.sourceFile??null,
      sourceFile=original?{...structuredClone(original),retainedAt:original.retainedAt??op.createdAt,appliedMappingSha256:hashBytes(Buffer.from(stable(value))),adaptations:mappingChanges(original.mapping,value)}:null,
      m={id:prior?.id??'mapping-'+id,...value,sourceFile,revision:(prior?.revision??0)+1,createdAt:prior?.createdAt??op.createdAt,updatedAt:op.createdAt,
       history:prior?[...(prior.history??[]),Object.fromEntries(Object.entries(prior).filter(([k])=>k!=='history'))]:[]};
