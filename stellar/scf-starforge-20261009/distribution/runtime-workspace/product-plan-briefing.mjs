@@ -1,6 +1,7 @@
 // MIT. Readable product delivery from the existing saved plan and original catalog.
 import { readFileSync } from 'node:fs';
 import { productSourceSummary } from '../product-catalog/catalog.mjs';
+import { productPlanInstallationSummary } from './product-plan-runtime.mjs';
 
 export const PRODUCT_PLAN_BRIEFING_SCHEMA = 'stellar-forge.product-plan-briefing.v1';
 export const PRODUCT_PLAN_BRIEFING_FORMATS = Object.freeze(['json', 'markdown', 'html']);
@@ -18,7 +19,7 @@ const packageState = value => value ? {
 } : null;
 
 /** Project only the declared delivery fields from a locally opened, validated plan. */
-export function productPlanBriefing(view, { generatedAt = new Date().toISOString() } = {}) {
+export function productPlanBriefing(view, { generatedAt = new Date().toISOString(), installation } = {}) {
   need(plain(view) && view.plan?.schema === 'stellar-forge.runtime-product-plan.v1',
     'Open a saved product plan before preparing its briefing.');
   const plan = view.plan, selected = list(view.origins).find(origin => origin.originId === view.bindingId && origin.local);
@@ -93,6 +94,7 @@ export function productPlanBriefing(view, { generatedAt = new Date().toISOString
       selectionSha256: view.review.selectionSha256, reviewedAt: view.review.reviewedAt,
       bindingId: view.bindingId, inspectedAt: selected.createdAt },
     build: packageState(selected.currentBuild), origins, observations,
+    installation: installation === undefined ? null : productPlanInstallationSummary(view, installation),
   };
 }
 const md = value => text(value).replace(/[\\\x60*_[\]<>]/g, '\\$&').replace(/\|/g, '\\|').replace(/\r?\n/g, ' / ');
@@ -135,6 +137,28 @@ function documentSections(value) {
       ]) }] },
   ];
   const appendices = [];
+  if (value.installation) {
+    const installed = value.installation;
+    sections.push({ title: 'Installed runtime', paragraphs: [installed.label + ' · ' + installed.status],
+      tables: [{ headers: ['Field', 'Value'], rows: pairs([
+        ['Runtime', installed.runtimeId], ['Original installation', installed.installationId],
+        ['Adapter profile', installed.profileId], ['Inspected', installed.observedAt],
+        ['Source manifest SHA-256', installed.sourceManifestSha256],
+        ['Installed archive SHA-256', installed.archiveSha256], ['Installed dependency lock SHA-256', installed.lockSha256],
+        ['Original source verification', installed.sourceVerified ? 'Complete' : 'Pending'],
+      ]) }, ...(installed.dependencies.length ? [{
+        title: 'Installed package versions', headers: ['Package', 'Selected version', 'Observed versions', 'Runtime result'],
+        rows: installed.dependencies.map(item => [item.name, item.expectedVersion,
+          [...new Set(item.checks.map(check => check.version).filter(Boolean))].join(', '),
+          item.ready ? 'Ready' : 'Needs continuation']),
+      }] : [])] });
+    if (installed.dependencies.length) appendices.push({ title: 'Installed dependency inspection', appendix: true,
+      tables: [{ headers: ['Package', 'Runtime group', 'Probe', 'Version', 'Resolution', 'Import / native binding'],
+        rows: installed.dependencies.flatMap(item => item.checks.map(check => [
+          item.name, check.group, check.probe, check.version, check.state,
+          check.native ? (check.native.kind ?? item.native ?? 'Native') + ': ' + check.native.state : check.importState,
+        ])) }] });
+  }
   for (const group of value.dependencies) {
     const paragraphs = [lockStatus(group.status)];
     if (group.reason) paragraphs.push(group.reason);
@@ -227,14 +251,16 @@ export function formatProductPlanBriefingHTML(value) {
     '</h1><p class="meta">Prepared ' + html(value.generatedAt) + ' · Plan ' + html(value.plan.planId) +
     '</p></header>' + parts + '</main></body></html>\n';
 }
-export function exportProductPlanBriefing(view, { format = 'markdown', generatedAt } = {}) {
+export function exportProductPlanBriefing(view, { format = 'markdown', generatedAt, installation } = {}) {
   need(PRODUCT_PLAN_BRIEFING_FORMATS.includes(format), 'Choose json, markdown or html for the product briefing.');
-  const briefing = productPlanBriefing(view, { ...(generatedAt === undefined ? {} : { generatedAt }) });
+  const briefing = productPlanBriefing(view, { ...(generatedAt === undefined ? {} : { generatedAt }), installation });
   const content = format === 'json' ? JSON.stringify(briefing, null, 2) + '\n' :
     format === 'html' ? formatProductPlanBriefingHTML(briefing) : formatProductPlanBriefingMarkdown(briefing);
   return { schema: PRODUCT_PLAN_BRIEFING_SCHEMA, planId: briefing.plan.planId, bindingId: briefing.review.bindingId,
     sourceCommit: briefing.product.sourceCommit, generatedAt: briefing.generatedAt, format,
-    filename: 'product-plan-' + briefing.plan.planId + '-briefing.' + (format === 'markdown' ? 'md' : format),
+    ...(briefing.installation ? { runtimeId: briefing.installation.runtimeId } : {}),
+    filename: 'product-plan-' + briefing.plan.planId + (briefing.installation ? '-runtime-' + briefing.installation.runtimeId : '') +
+      '-briefing.' + (format === 'markdown' ? 'md' : format),
     mimeType: format === 'html' ? 'text/html; charset=utf-8' :
       format === 'json' ? 'application/json; charset=utf-8' : 'text/markdown; charset=utf-8',
     content };
