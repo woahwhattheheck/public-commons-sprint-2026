@@ -12,6 +12,7 @@ import { pathToFileURL } from 'node:url';
 import { blockscoutApplication, prepareBlockscoutApplication } from './application-blockscout.mjs';
 import { mppApplication, prepareMppApplication } from './application-mpp.mjs';
 import { ndjsonApplication, prepareNdjsonApplication } from './application-ndjson.mjs';
+import { kafkaApplication, prepareKafkaApplication } from './application-kafka.mjs';
 import { cheesecakeApplication, prepareCheesecakeApplication } from './application-cheesecake.mjs';
 import { odataApplication, prepareODataApplication } from '../../sf30-seller-sdk/odata/live/applications.mjs';
 import { secEdgarApplication, prepareSecEdgarApplication } from './application-sec-edgar.mjs';
@@ -78,6 +79,7 @@ export const APPLICATION_CATALOG = Object.freeze([
   blockscoutApplication(common),
   mppApplication(common),
   ndjsonApplication(common),
+  kafkaApplication(common),
   cheesecakeApplication(common),
   odataApplication(common),
   secEdgarApplication(common),
@@ -374,6 +376,11 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
       inputPath, selectedExecutable, runtimeDirectory, applicationEnvironment,
     });
     args.push(...original.args); inputs.push(...original.inputs);
+  } else if (type.id === 'kafka') {
+    const prepared = await prepareKafkaApplication(settings, {
+      inputPath, selectedExecutable, runtimeDirectory, applicationEnvironment,
+    });
+    args.push(...prepared.args); inputs.push(...prepared.inputs);
   } else if (type.id === 'ndjson') {
     const prepared = await prepareNdjsonApplication(settings, {
       inputPath, selectedExecutable, runtimeDirectory, applicationEnvironment,
@@ -531,8 +538,9 @@ function resourceKey(type, settings) {
   if (type.id === 'arcgis-agent') return hash({ family: 'merchant-mcp', directory: settings.configurationFile });
   const value = settings.outputParent ?? settings.workspaceDirectory ?? settings.directory ??
     settings.outputDirectory ?? settings.stateDirectory ?? settings.datasetFile;
-  // Feeds, repository metadata and XML retain the same original SQLite workspace and writer.
-  const family = ['rss-atom', 'oai-repository'].includes(type.id) ? 'xml' : type.id.endsWith('-publisher') ? 'publisher' : type.id;
+  // Source applications share the original SQLite workspace and its sole writer.
+  const family = ['rss-atom', 'oai-repository'].includes(type.id) ? 'xml' : type.id === 'kafka' ? 'ndjson' :
+    type.id.endsWith('-publisher') ? 'publisher' : type.id;
   return hash({ family, directory: value });
 }
 async function application(root, id) {
