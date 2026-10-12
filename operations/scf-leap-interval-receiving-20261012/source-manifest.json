@@ -65,6 +65,24 @@
   ],
   "files": [
     {
+      "path": "operations/scf-leap-interval-receiving-20261012/FUNCTIONAL_INPUT.md",
+      "bytes": 3014,
+      "sha256": "9ae72b5e8780b4e9a1be985b3b895ee22dca57e408b7d25387f6ed2facdf57bc",
+      "gitBlob": "d8c06d63d7d25a62f14ab8a4d88f175c44600af9"
+    },
+    {
+      "path": "operations/scf-leap-interval-receiving-20261012/functional-input.cjs",
+      "bytes": 10268,
+      "sha256": "d77a6fb9fafb4e81d979bc5946d5d0e030622c34b370d5d256434838804ce11a",
+      "gitBlob": "e2e69e0301d7de52846b05622b42953604005687"
+    },
+    {
+      "path": "operations/scf-leap-interval-receiving-20261012/generate-functional-input.mjs",
+      "bytes": 1985,
+      "sha256": "c3bbe9f4772c209acb8adee0ce363f7e2b2d8d6a3ae714df7dc20c4cdda84162",
+      "gitBlob": "15e4768f016d30f5e4b9a957f999084051adb88c"
+    },
+    {
       "path": "operations/scf-leap-interval-receiving-20261012/README.md",
       "bytes": 17130,
       "sha256": "421aafc717b26c8bebf40eac4e9869176362fe41081e1c4e5205cfd938bd2fe2",
@@ -72,9 +90,9 @@
     },
     {
       "path": "operations/scf-leap-interval-receiving-20261012/run-browser.mjs",
-      "bytes": 27224,
-      "sha256": "6bf4b1d9683b1e2010cb16d9050528aea8ba1a116e06538a81e1fba32082cbef",
-      "gitBlob": "c8a66050fe1ef07e6a475338dc7c21b66c8e2d65"
+      "bytes": 27407,
+      "sha256": "19ab8347130478ab3292b9958c8abcc37dc7b1fc3d838ab0d7e6439185d4cc65",
+      "gitBlob": "8288c5248b665491b059e17178c7f9e06df59794"
     },
     {
       "path": "operations/scf-leap-interval-receiving-20261012/run-receiving.py",

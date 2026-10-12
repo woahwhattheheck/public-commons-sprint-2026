@@ -132,7 +132,10 @@ export async function runLeapBrowser(options){
    const waiting=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/list'&&new URL(r.url()).searchParams.get('collection')===collection,{timeout:180000});waiting.catch(()=>{});
    await next.click();await waiting;
   }
-  if(collection==='batches')await page.waitForFunction(value=>document.querySelector('#batch-id')?.textContent===value,id);
+  if(collection==='batches'){
+   await page.waitForFunction(value=>document.querySelector('#batch-id')?.textContent===value,id);
+   await page.waitForFunction(value=>{try{return JSON.parse(document.querySelector('#batch-detail details pre')?.textContent??'null')?.id===value;}catch{return false;}},id);
+  }
   if(collection==='imports')await page.waitForFunction(value=>document.querySelector('#import-id')?.textContent===value,id);
   await renderReady();
  }
