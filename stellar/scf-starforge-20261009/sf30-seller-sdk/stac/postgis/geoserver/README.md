@@ -182,7 +182,7 @@ starforge geoserver prepare --connection /absolute/private/geoserver-operator/co
   --request /absolute/private/publication-request.json
 ```
 
-Preparation reads the complete original receipt and every member, verifies the actual current native database edition and read-only role, checks full role-visible row digests and GeoTools key metadata, and captures the current GeoServer resources. It produces the original `reviewSha256`.
+Preparation reads the complete original receipt and every member, verifies the actual current native database edition and read-only role, checks full role-visible row digests and GeoTools key metadata, and captures the current GeoServer resources. It passes exactly the selected original layer IDs to the maintained PostGIS verifier and binds the returned selected-layer observations. A datastore reader can therefore receive its authorized selected views from a larger accepted receipt without being required to read unrelated views. It produces the original `reviewSha256`.
 
 ```sh
 starforge geoserver apply --connection /absolute/private/geoserver-operator/console-connection.json \
