@@ -93,8 +93,24 @@ export async function prepareGrantPortfolioApplication(settings,{
     '--expected-binding',sha256,'--startup-format','json'];
   if(settings.connectionFile){
     const connection=await inputPath(settings.connectionFile,'file',true,true);
-    need(!connection.exists,'APPLICATION_GRANT_PORTFOLIO_CONNECTION_EXISTS',
-      'Select a new private connection file; the existing original console owns its current connection.');
+    if(connection.exists){
+      let retained;
+      try{
+        const output=await run(python.executable,[join(sourceRoot,'grant-portfolio','cli.py'),
+          '--workspace',workspace.path,'connection','--file',connection.path],
+          {encoding:'utf8',maxBuffer:65536,timeout:15000,windowsHide:true,env:environment});
+        retained=JSON.parse(output.stdout);
+      }catch(error){need(false,'APPLICATION_GRANT_PORTFOLIO_CONNECTION_CHANGED',
+        'Inspect the original connection and its workspace before reopening: '+
+        String(error.stderr||error.message||error).trim().slice(0,1000));}
+      need(retained?.schema==='stellar-forge.grant-portfolio-connection-state.v1'&&
+        retained.exists===true&&retained.path===connection.path&&
+        retained.workspace===workspace.path&&retained.workspaceId===observed.workspaceId&&
+        retained.bindingSha256===sha256&&retained.sha256===connection.sha256,
+      'APPLICATION_GRANT_PORTFOLIO_CONNECTION_CHANGED');
+      need(retained.writerActive===false,'APPLICATION_GRANT_PORTFOLIO_CONNECTION_ACTIVE',
+        'Open or stop the existing original portfolio console before starting another writer.');
+    }
     inputs.push(connection);args.push('--connection-file',connection.path);
   }
   return {args,inputs,createDirectories:[],binding:observed};
