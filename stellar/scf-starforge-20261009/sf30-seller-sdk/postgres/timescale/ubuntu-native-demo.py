@@ -210,6 +210,52 @@ def graphql_package(runtime):
     return destination, {"registry": metadata_url, "url": url, "integrity": integrity,
                          **observed, "members": members}
 
+def postgres_owner_execution(uid, gid, owner, runtime_parent):
+    """Receive the actual selected owner's execution and runtime-parent access."""
+    parent = Path(runtime_parent).resolve(strict=True)
+    result = {"uid": uid, "gid": gid, "runtimeParent": str(parent),
+              "checkedAt": now(), "ready": False}
+    for name in ("uid_map", "gid_map"):
+        try:
+            result[name] = Path("/proc/self", name).read_text()
+        except OSError as error:
+            result[name] = {"error": type(error).__name__, "errno": error.errno}
+    # Use the same user/group arguments as initdb/pg_ctl. These ordinary Ubuntu
+    # executables need neither a new account nor a user-namespace mapping.
+    command = (
+        'uid=$(/usr/bin/id -u) || exit 11; '
+        'gid=$(/usr/bin/id -g) || exit 12; '
+        'groups=$(/usr/bin/id -G) || exit 13; '
+        'printf "%s\\n%s\\n%s\\n" "$uid" "$gid" "$groups"; '
+        'if [ -d "$1" ] && [ -x "$1" ]; then printf "SEARCHABLE\\n"; '
+        'else printf "UNSEARCHABLE\\n"; exit 14; fi'
+    )
+    try:
+        observed = subprocess.run(
+            ["/bin/sh", "-c", command, "postgres-owner-execution", str(parent)],
+            cwd="/", env={"PATH": "/usr/bin:/bin", "LC_ALL": "C"},
+            capture_output=True, text=True, timeout=15, **owner)
+        result.update(exitCode=observed.returncode,
+                      stdout=observed.stdout[-2000:], stderr=observed.stderr[-2000:])
+        lines = observed.stdout.splitlines()
+        if len(lines) == 4 and lines[0].isdigit() and lines[1].isdigit():
+            result["actual"] = {"uid": int(lines[0]), "gid": int(lines[1]),
+                                "groups": lines[2], "runtimeParentSearchable": lines[3] == "SEARCHABLE"}
+            result["ready"] = (observed.returncode == 0 and int(lines[0]) == uid
+                               and int(lines[1]) == gid and uid != 0
+                               and lines[3] == "SEARCHABLE")
+        if not result["ready"]:
+            result["error"] = {"type": "PostgresOwnerUnavailable",
+                               "message": "The selected nonroot owner or runtime-parent access differs"}
+    except OSError as error:
+        result["error"] = {"type": type(error).__name__, "errno": error.errno,
+                           "message": str(error)}
+    except subprocess.TimeoutExpired:
+        result["error"] = {"type": "TimeoutExpired",
+                           "message": "The selected ordinary owner did not return within 15 seconds"}
+    return result
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--repository", required=True, type=Path)
@@ -279,6 +325,15 @@ def main():
             with previous_path.open("xb") as out:
                 out.write(record_path.read_bytes())
             previous_path.chmod(0o600)
+    owner_execution = postgres_owner_execution(pg_uid, pg_gid, pg_owner, runtime.parent)
+    print(json.dumps({"phase": "POSTGRES_OWNER_EXECUTION",
+                      "state": "COMPLETE" if owner_execution["ready"] else "FAILED",
+                      "owner": owner_execution}), flush=True)
+    if not owner_execution["ready"]:
+        raise RuntimeError(
+            "The selected PostgreSQL owner cannot execute or traverse this runtime parent. "
+            "Use the existing ordinary nonroot Ubuntu host, or its mapped uid65534 with "
+            "a searchable task-owned runtime parent; preserve this operation and source.")
     node_version = subprocess.check_output([str(args.node), "--version"], text=True).strip()
     if not node_version.startswith("v24."):
         raise ValueError("The original source selects installed Node24")
@@ -306,6 +361,7 @@ def main():
               "operation": args.operation_id, "source": args.source,
               "repository": str(repo), "runtime": str(runtime), "nodeVersion": node_version,
               "postgresOwner": {"uid": pg_uid, "gid": pg_gid},
+              "postgresOwnerExecution": owner_execution,
               "remediationReceiver": str(args.remediation_receiver) if args.remediation_receiver else None,
               "createdAt": now(), "packages": [], "dependencies": [],
               "stages": [], "complete": False}
