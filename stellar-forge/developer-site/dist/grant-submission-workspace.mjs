@@ -1,8 +1,10 @@
 // MIT. Uses the maintained application source and original shared IndexedDB drafts.
 import {SCHEMA,ENVELOPE,MAX_BYTES,ANSWERS,REQUIREMENTS,OFFICIAL,makeSource,createDraft,validateDraft,
   retainVersion,restoreVersion,compareSource,receiveSource,useSourceAnswer,newField,rebuildField,
-  outputText,measureText,fieldStatus,applicationOutput,importFormMap,exportFormMap} from './grant-submission-core.mjs';
+  outputText,measureText,fieldStatus,applicationOutput,importFormMap,exportFormMap,receivePlanningSource} from './grant-submission-core.mjs';
 import {listDrafts,loadDraft,saveDraft} from './drafts.mjs';
+import {MAX_PLAN_BYTES,receivePlanningFile,verifyPlanningSource} from './grant-plan-source.mjs';
+import {renderPlanning} from './grant-plan-workspace.mjs';
 const $=id=>document.getElementById(id);
 const node=(tag,text,cls)=>{const value=document.createElement(tag);if(text!==undefined)value.textContent=String(text);if(cls)value.className=cls;return value;};
 const uid=()=>crypto.randomUUID();
@@ -25,7 +27,7 @@ function input(label,value,onChange,{type='text',placeholder='',area=false,class
   field.addEventListener('input',()=>onChange(field.value));wrap.append(caption,field);return {wrap,field};
 }
 function select(label,value,options,onChange){
-  const wrap=node('label',undefined,'field'),s=node('select');
+  const wrap=node('label',undefined,'field'),s=node('select');s.setAttribute('aria-label',label);
   for(const [key,text]of options){const option=node('option',text);option.value=key;s.append(option);}
   s.value=value;s.addEventListener('change',()=>onChange(s.value));wrap.append(node('span',label),s);return {wrap,field:s};
 }
@@ -49,7 +51,7 @@ async function verifySource(source){
   framed.set(prefix);framed.set(bytes,prefix.length);
   if(bytes.length!==source.bytes||await sha(bytes)!==source.sha256||await sha(framed,'SHA-1')!==source.gitBlob)throw new Error('The complete application does not match its retained source edition. Reopen the original source or draft file.');
 }
-async function verifyDraft(value){validateDraft(value);for(const source of value.sources)await verifySource(source);return value;}
+async function verifyDraft(value){validateDraft(value);for(const source of value.sources)await verifySource(source);for(const source of value.planSources||[])await verifyPlanningSource(source);return value;}
 async function envelope(value){
   validateDraft(value);const body=JSON.stringify(value);
   return JSON.stringify({schema:ENVELOPE,exportedAt:new Date().toISOString(),sha256:await sha(body),draft:value})+'\n';
@@ -90,13 +92,20 @@ async function save(copy=false){
   draft=record.input;savedId=record.id;savedRevision=record.revision;dirty=false;
   render();status('Saved browser revision '+savedRevision+' with all source editions and '+draft.versions.length+' versions.');
 }
-function chooseFile(purpose){filePurpose=purpose;$('file-input').value='';$('file-input').click();}
+function chooseFile(purpose){filePurpose=purpose;$('file-input').accept=purpose==='plan'?'.json,.zip,application/json,application/zip':'.json,application/json';$('file-input').value='';$('file-input').click();}
 async function readFile(file){
   if(!file)throw new Error('Choose a complete JSON file.');
   if(file.size>MAX_BYTES*2+65536)throw new Error('This encoded file exceeds the 32 MiB receiving allowance for a 16 MiB logical draft.');
   return new TextDecoder('utf-8',{fatal:true,ignoreBOM:true}).decode(await file.arrayBuffer());
 }
 async function openFile(file){
+  if(filePurpose==='plan'){
+    if(!draft)throw new Error('Open the application first.');
+    if(!file||file.size>MAX_PLAN_BYTES)throw new Error('Choose the complete native plan JSON or planning ZIP, at most 32 MiB.');
+    const source=await receivePlanningFile(new Uint8Array(await file.arrayBuffer()),{filename:file.name});
+    const next=receivePlanningSource(draft,source);draft=next;$('view').value='planning';touch();render();
+    status('Received '+source.document.revisions.length+' native plan revisions. Review the complete budget and roadmap before applying the preview.');return;
+  }
   const text=await readFile(file);
   if(filePurpose==='form'){
     if(!draft)throw new Error('Open the application first.');
@@ -136,6 +145,9 @@ function nav(){
     b.setAttribute('aria-current',String(view()==='answers'&&selectedAnswer===id));
     b.append(node('span',measureText(outputText(answer.text,format())).words+' words'+(answer.text!==answer.baseText?' · edited':'')));root.append(b);
   }
+  const planButton=button('Planning edition',()=>{$('view').value='planning';render();},'nav-answer');
+  planButton.setAttribute('aria-current',String(view()==='planning'));
+  planButton.append(node('span',(draft.planSources?.length||0)+' retained native planning files'));root.append(planButton);
   if(draft.fields.length){root.append(node('h3','Form fields'));for(const field of draft.fields){
     const b=button(field.label||'Unlabeled field',()=>{$('view').value='fields';selectedField=field.id;render();},'nav-answer');
     b.setAttribute('aria-current',String(view()==='fields'&&selectedField===field.id));root.append(b);
@@ -228,6 +240,12 @@ function sourceView(root){
     root.append(details);
   }
 }
+function planningView(root){
+  renderPlanning(root,{node,button,input,select,link,touch,render,work,download,copy,uid,chooseFile,status,format,editorTools,
+    getDraft:()=>draft,setDraft:value=>{draft=value;},
+    showAnswer:id=>{selectedAnswer=id;$('view').value='answers';render();},
+    showField:id=>{selectedField=id;$('view').value='fields';render();}});
+}
 function historyView(root){
   root.append(node('h2','Saved versions'),node('p','Each version retains the complete working answers, issuer mapping and review notes. Restoring one also keeps the current work as a preceding version.'));
   if(!draft.versions.length){root.append(node('p','Save a version to retain this working state.','empty'));return;}
@@ -257,7 +275,7 @@ function render(){
     if(view()==='saved')savedView(root);return;}
   $('draft-title').value=draft.title;
   $('copy-all').textContent=view()==='fields'?'Copy all form fields':'Copy all answers';
-  ({answers:answerView,fields:fieldView,review:reviewView,source:sourceView,history:historyView,saved:savedView}[view()]||answerView)(root);updateStats();
+  ({answers:answerView,fields:fieldView,review:reviewView,source:sourceView,planning:planningView,history:historyView,saved:savedView}[view()]||answerView)(root);updateStats();
 }
 async function refreshSource(){
   published=await readPublished();
