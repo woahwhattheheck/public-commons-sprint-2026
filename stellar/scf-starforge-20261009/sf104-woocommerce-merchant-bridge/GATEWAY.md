@@ -29,8 +29,12 @@ Keep these files together in the installed `starforge-sf98-woo` plugin folder:
 - `OPERATIONS.md`: the merchant's operating and recovery guide.
 - `merchant-operator.php`: authenticated native review and selected-order release.
 - `NATIVE_REVIEW.md`: the complete retained chain review and operator CLI guide.
+- `merchant-refunds.php`, `merchant-refunds.js` and `merchant-refunds.css`:
+  verified-return review, native Woo credits and same-refund recovery.
+- `refund-networks.json`: the release's canonical Stellar network profiles.
+- `REFUNDS.md`: the verified refund, store-credit and operator CLI guide.
 
-Keep all nine files when upgrading an existing installation; the original
+Keep all 14 files when upgrading an existing installation; the original
 plugin loads the console PHP and its matching browser assets. The maintained
 [Site setup tool](../../../stellar-forge/developer-site/dist/woo.html) copies
 the complete plugin from its selected toolkit source.
@@ -343,6 +347,15 @@ review and the original locked transaction recovery.
 This source integration does not assert a deployed store, a funded network
 transaction, a received sale or a customer contract. It provides the complete
 order/setup/buyer/admission/notice path using the maintained original modules.
+
+## Credit an independently verified return
+
+The released order's **Refunds** tab imports its original verified accounting
+adjustment. The merchant reviews the explicit amount in the Woo order's own
+currency, then records the matching credit through the native Woo refund
+lifecycle. The same operation can be reopened and recovered by its original
+adjustment UUID. See [REFUNDS.md](REFUNDS.md) for the complete console and CLI
+workflow, combined partial-credit limits and download-access behavior.
 
 ## Official implementation references
 

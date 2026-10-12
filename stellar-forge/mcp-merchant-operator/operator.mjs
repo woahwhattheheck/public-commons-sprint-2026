@@ -14,10 +14,14 @@ import { MerchantSupport, supportTools } from './support.mjs';
 import { MerchantReceiving, receivingTools } from './receiving.mjs';
 import { MerchantPythonWorkspaces, pythonWorkspaceTools } from './python-workspace.mjs';
 import { MerchantS3Workspaces, s3WorkspaceTools } from './s3-workspace.mjs';
+import { MerchantSocrataWorkspaces, socrataWorkspaceTools } from './socrata-workspace.mjs';
 import { MerchantSheetsWorkspaces, sheetsWorkspaceTools } from './sheets-workspace.mjs';
+import { MerchantCkanWorkspaces, ckanWorkspaceTools } from './ckan-workspace.mjs';
+import { MerchantTenderlyWorkspaces, tenderlyWorkspaceTools } from './tenderly-workspace.mjs';
 import { MerchantPublisher, publisherTools } from './publisher.mjs';
 import { createReleaseFacilitatorControl } from '../../stellar/scf-starforge-20261009/sf82-seller-pilot/release-facilitator.mjs';
 import { MerchantPricing, pricingTools } from './pricing.mjs';
+import { MerchantWooCommerce, woocommerceTools } from './woocommerce.mjs';
 
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 const idSchema = { type: 'string', pattern: '^[a-z0-9][a-z0-9_-]{0,63}$' };
@@ -83,9 +87,13 @@ export const MERCHANT_TOOLS = [
   ...receivingTools(tool),
   ...pythonWorkspaceTools(tool),
   ...s3WorkspaceTools(tool),
+  ...socrataWorkspaceTools(tool),
   ...sheetsWorkspaceTools(tool),
+  ...ckanWorkspaceTools(tool),
+  ...tenderlyWorkspaceTools(tool),
   ...publisherTools(tool),
   ...pricingTools(tool),
+  ...woocommerceTools(tool),
 ];
 const definitions = new Map(MERCHANT_TOOLS.map(value => [value.name, value]));
 const mutations = new Set(MERCHANT_TOOLS.filter(value => !value.annotations.readOnlyHint).map(value => value.name));
@@ -118,9 +126,9 @@ function expectedDigest(value) {
 }
 
 export class MerchantReleaseOperator {
-  #config; #managed = null; #busy = false; #closing = false; #active = Promise.resolve(); #close; #lastFailure = null; #discovery; #fleet; #accounting; #support; #receiving; #pythonWorkspaces; #s3Workspaces; #sheetsWorkspaces; #publishers; #pricing;
-  #clientExports; #facilitators;
-  constructor(config) { this.#config = config; this.#clientExports = new MerchantClientExports({ directory: config.exportsDirectory }); this.#discovery = new MerchantDiscovery(config); this.#fleet = new MerchantFleet(config.fleet); this.#accounting = new MerchantAccounting(config); this.#support = new MerchantSupport(config); this.#receiving = new MerchantReceiving(config); this.#pythonWorkspaces = new MerchantPythonWorkspaces(config); this.#s3Workspaces = new MerchantS3Workspaces(config); this.#sheetsWorkspaces = new MerchantSheetsWorkspaces(config); this.#publishers = new MerchantPublisher(config); this.#facilitators = createReleaseFacilitatorControl(config.releaseStore, config.facilitators); this.#pricing = new MerchantPricing(config); }
+  #config; #managed = null; #busy = false; #closing = false; #active = Promise.resolve(); #close; #lastFailure = null; #discovery; #fleet; #accounting; #support; #receiving; #pythonWorkspaces; #s3Workspaces; #socrataWorkspaces; #sheetsWorkspaces; #ckanWorkspaces; #tenderlyWorkspaces; #publishers; #pricing;
+  #clientExports; #facilitators; #woocommerce;
+  constructor(config, { woocommerce } = {}) { this.#config = config; this.#clientExports = new MerchantClientExports({ directory: config.exportsDirectory }); this.#discovery = new MerchantDiscovery(config); this.#fleet = new MerchantFleet(config.fleet); this.#accounting = new MerchantAccounting(config); this.#support = new MerchantSupport(config); this.#receiving = new MerchantReceiving(config); this.#pythonWorkspaces = new MerchantPythonWorkspaces(config); this.#s3Workspaces = new MerchantS3Workspaces(config); this.#socrataWorkspaces = new MerchantSocrataWorkspaces(config); this.#sheetsWorkspaces = new MerchantSheetsWorkspaces(config); this.#ckanWorkspaces = new MerchantCkanWorkspaces(config); this.#tenderlyWorkspaces = new MerchantTenderlyWorkspaces(config); this.#publishers = new MerchantPublisher(config); this.#facilitators = createReleaseFacilitatorControl(config.releaseStore, config.facilitators); this.#pricing = new MerchantPricing(config); this.#woocommerce = new MerchantWooCommerce(config, woocommerce); }
   get tools() { return structuredClone(MERCHANT_TOOLS); }
   async status() {
     const result = await releaseStatus(this.#config.releaseStore);
@@ -128,7 +136,7 @@ export class MerchantReleaseOperator {
       state: result.state, releases: result.releases.map(releaseView), errors: result.errors,
       runtime: runtimeView(result.runtime), operator: { managesRunningSeller: Boolean(this.#managed),
         instanceId: this.#managed?.observation.instanceId ?? null, busy: this.#busy,
-        closing: this.#closing, lastFailure: this.#lastFailure, discovery: this.#discovery.summary, fleet: this.#fleet.summary, accounting: this.#accounting.summary, support: this.#support.summary, receiving: this.#receiving.summary, pythonWorkspaces: this.#pythonWorkspaces.summary, s3Workspaces: this.#s3Workspaces.summary, sheetsWorkspaces: this.#sheetsWorkspaces.summary, publishers: this.#publishers.summary, pricing: this.#pricing.summary, clientExports: this.#clientExports.summary } };
+        closing: this.#closing, lastFailure: this.#lastFailure, discovery: this.#discovery.summary, fleet: this.#fleet.summary, accounting: this.#accounting.summary, support: this.#support.summary, receiving: this.#receiving.summary, pythonWorkspaces: this.#pythonWorkspaces.summary, s3Workspaces: this.#s3Workspaces.summary, socrataWorkspaces: this.#socrataWorkspaces.summary, sheetsWorkspaces: this.#sheetsWorkspaces.summary, ckanWorkspaces: this.#ckanWorkspaces.summary, tenderlyWorkspaces: this.#tenderlyWorkspaces.summary, publishers: this.#publishers.summary, pricing: this.#pricing.summary, woocommerce: this.#woocommerce.summary, clientExports: this.#clientExports.summary } };
   }
   #owned(instanceId) {
     if (typeof instanceId !== 'string' || !this.#managed || instanceId !== this.#managed.observation.instanceId)
@@ -174,11 +182,15 @@ export class MerchantReleaseOperator {
   async #execute(name, args) {
     if (name.startsWith('merchant_client_export_')) return this.#clientExports.call(name, args);
     if (name.startsWith('merchant_accounting_')) return this.#accounting.call(name, args);
+    if (name.startsWith('merchant_woo_')) return this.#woocommerce.call(name, args);
     if (name.startsWith('merchant_pricing_')) return this.#pricing.call(name, args);
     if (name.startsWith('merchant_receiving_')) return this.#receiving.call(name, args);
     if (name.startsWith('merchant_python_')) return this.#pythonWorkspaces.call(name, args);
     if (name.startsWith('merchant_s3_')) return this.#s3Workspaces.call(name, args);
+    if (name.startsWith('merchant_socrata_')) return this.#socrataWorkspaces.call(name, args);
     if (name.startsWith('merchant_sheets_')) return this.#sheetsWorkspaces.call(name, args);
+    if (name.startsWith('merchant_ckan_')) return this.#ckanWorkspaces.call(name, args);
+    if (name.startsWith('merchant_tenderly_')) return this.#tenderlyWorkspaces.call(name, args);
     if (name === 'merchant_publishers' || name.startsWith('merchant_publisher_')) return this.#publishers.call(name, args);
     if (name.startsWith('merchant_fleet_')) return this.#fleet.call(name, args);
     const root = this.#config.releaseStore;
@@ -273,7 +285,7 @@ export class MerchantReleaseOperator {
     this.#fleet.cancelStaging();
     this.#close = (async () => {
       await this.#active;
-      const outcomes = await Promise.allSettled([this.#fleet.close(), this.#accounting.close(), this.#support.close(), this.#receiving.close(), this.#pythonWorkspaces.close(), this.#s3Workspaces.close(), this.#sheetsWorkspaces.close(), this.#publishers.close(), this.#facilitators.close(), this.#pricing.close(), this.#clientExports.close(),
+      const outcomes = await Promise.allSettled([this.#fleet.close(), this.#accounting.close(), this.#support.close(), this.#receiving.close(), this.#pythonWorkspaces.close(), this.#s3Workspaces.close(), this.#socrataWorkspaces.close(), this.#sheetsWorkspaces.close(), this.#ckanWorkspaces.close(), this.#tenderlyWorkspaces.close(), this.#publishers.close(), this.#facilitators.close(), this.#pricing.close(), this.#woocommerce.close(), this.#clientExports.close(),
         this.#managed ? this.#stop(this.#managed.observation.instanceId) : Promise.resolve()]);
       if (outcomes.some(result => result.status === 'rejected'))
         throw failure('OPERATOR_SHUTDOWN_INCOMPLETE', 'One or more original owned runtimes reported an incomplete shutdown.');
@@ -281,6 +293,6 @@ export class MerchantReleaseOperator {
     return this.#close;
   }
 }
-export async function openMerchantOperator(configPath) {
-  return new MerchantReleaseOperator(await readMerchantConfig(configPath));
+export async function openMerchantOperator(configPath, options) {
+  return new MerchantReleaseOperator(await readMerchantConfig(configPath), options);
 }

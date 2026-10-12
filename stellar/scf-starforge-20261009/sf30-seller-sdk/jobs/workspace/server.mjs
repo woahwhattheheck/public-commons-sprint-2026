@@ -72,7 +72,7 @@ export async function startJobsWorkspace({ model, port = 0 } = {}) {
         const supplied = Buffer.from(String(req.headers.authorization ?? ''));
         if (supplied.length !== expected.length || !timingSafeEqual(supplied, expected))
           throw fault('WORKSPACE_AUTH_REQUIRED', 'Open the complete private launch address from your terminal.', 401);
-        const match = /^\/api\/jobs\/([^/?#]+)(?:\/(preview|result|cancel|retry))?$/.exec(url.pathname);
+        const match = /^\/api\/jobs\/([^/?#]+)(?:\/(preview|result|cancel|retry|renew-claim))?$/.exec(url.pathname);
         if (match) {
           let id;
           try { id = decodeURIComponent(match[1]); } catch { throw fault('NOT_FOUND', 'This job was not found.', 404); }
@@ -127,13 +127,14 @@ export async function startJobsWorkspace({ model, port = 0 } = {}) {
           }
           return send(200, await snapshot());
         }
-        if (match && ['cancel', 'retry'].includes(match[2])) {
+        if (match && ['cancel', 'retry', 'renew-claim'].includes(match[2])) {
           fields(input, ['expectedRevision', 'reason']);
           if (!Number.isSafeInteger(input.expectedRevision) || input.expectedRevision < 1)
             throw fault('REVISION_REQUIRED', 'Refresh and select the current job revision.', 409);
           if (typeof input.reason !== 'string' || !input.reason.trim() || input.reason.length > 500)
             throw fault('REASON_REQUIRED', 'Enter a reason of 1 to 500 characters.');
-          return send(200, await model[match[2]]({ id: match[1], ...input }));
+          const method = match[2] === 'renew-claim' ? 'renewClaim' : match[2];
+          return send(200, await model[method]({ id: match[1], ...input }));
         }
         throw fault('NOT_FOUND', 'This endpoint was not found.', 404);
       } catch (error) {
