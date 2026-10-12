@@ -1,4 +1,5 @@
 // MIT. Exact private host inputs for the original managed commissioner.
+import { normalizeWarehouseProfiles } from './warehouse/bridge.mjs';
 import { normalizeConnection } from './commissioning/agreement.mjs';
 import { odkNeed, odkReadPrivateJson } from './connection.mjs';
 
@@ -28,4 +29,16 @@ export async function readCentralCommissioningInputs({connection,connectionFile,
       if(assigned&&process.env[assigned.name]===assigned.value)delete process.env[assigned.name];
       assigned=null;
     }};
+}
+
+/** Load the original private warehouse profile selection before opening its owner. */
+export async function readCentralWarehouseProfiles({profiles,profilesFile}={}) {
+  odkNeed(!(profiles!==undefined&&profilesFile),'ODK_WAREHOUSE_PROFILES',
+    'Choose the original warehouse profiles or their private host file.');
+  const source=profilesFile?await odkReadPrivateJson(profilesFile,1024*1024):null;
+  const value=source?source.value:profiles??[];
+  const selected=Array.isArray(value)?value:
+    value?.schema==='stellar-forge.central-warehouse-profiles.v1'?value.profiles:null;
+  return {profiles:normalizeWarehouseProfiles(selected),
+    source:source?{path:source.path,sha256:source.sha256}:null};
 }
