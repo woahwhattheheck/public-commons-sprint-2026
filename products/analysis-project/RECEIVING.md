@@ -20,7 +20,7 @@ The installed entrypoint inventory must contain `stellar-forge-analysis-project`
 
 ## Run the retained installed journey
 
-After the original runtime is ready, use the included program with its actual selectors. Select either an existing original Python installation or the actual Python executable for commissioning.
+After the original runtime is ready, use the included program with its actual selectors. Select the existing private Runtime workspace, or initialize it once with the original `runtime-workspace init` command in [OPERATING.md](OPERATING.md#install-the-selected-product). The program attaches the same installed runtime to that workspace and preserves its current operations. Select either an existing original Python installation or the actual Python executable for commissioning.
 
 ~~~sh
 node products/analysis-project/receiving.mjs \
