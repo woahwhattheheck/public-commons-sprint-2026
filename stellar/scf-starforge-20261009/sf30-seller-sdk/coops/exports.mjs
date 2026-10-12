@@ -98,10 +98,14 @@ export async function retainedExport(store,item){
  if(!ID.test(item.id)||item.relativeFile!=='exports/'+item.id+'.body')throw fault('COOPS_EXPORT_FILE','Use the original retained export path.',409);
  const path=join(store.root,item.relativeFile);await same(path,item);return{item,path,stream:()=>createReadStream(path)};
 }
+export function tableProjection(mapping,table){
+ if(mapping&&mapping.table!==table)throw fault('COOPS_MAPPING_TABLE','The selected model-input mapping belongs to another table.');
+ const columns=mapping?mapping.columns.map(c=>c.heading):COLUMNS,fields=mapping?mapping.columns.map(c=>c.source):COLUMNS;
+ return{columns,fields,project:row=>Object.fromEntries(columns.map((heading,i)=>[heading,row[fields[i]]]))};
+}
 export async function writeTableExport(store,{id,editions,annotations,table,format,mapping=null,createdAt,backfill=null}){
  if(!['json','jsonl','csv'].includes(format))throw fault('COOPS_EXPORT','Choose JSON, JSONL or CSV for a streamed table.');
- if(mapping&&mapping.table!==table)throw fault('COOPS_MAPPING_TABLE','The selected model-input mapping belongs to another table.');
- const columns=mapping?mapping.columns.map(c=>c.heading):COLUMNS,fields=mapping?mapping.columns.map(c=>c.source):COLUMNS,
+ const {columns,project}=tableProjection(mapping,table),
   metadata={schema:'stellar-forge.coops-table-export.v1',editionIds:editions.map(e=>e.id),sourceIdentities:editions.map(e=>({id:e.id,query:e.query,sourceSha256:e.sourceSha256})),table,columns,mapping,annotations,backfill,source:SOURCE_CONTRACT},
   item={id,kind:'edition',editionId:editions.length===1?editions[0].id:null,backfillId:backfill?.id??null,editionIds:metadata.editionIds,table,format,
    mappingId:mapping?.id??null,mapping:structuredClone(mapping),metadata,createdAt,name:'coops-'+(backfill?.id??editions[0].id).slice(0,20)+'.'+table+'.'+format,
@@ -111,7 +115,7 @@ export async function writeTableExport(store,{id,editions,annotations,table,form
   if(format==='json')yield JSON.stringify(metadata).slice(0,-1)+',"rows":[';
   let first=true;
   for(const edition of editions)for await(const row of iterateEditionRows(store,edition,{table})){
-   const selected=Object.fromEntries(columns.map((heading,i)=>[heading,row[fields[i]]]));
+   const selected=project(row);
    if(format==='csv')yield columns.map(c=>cell(selected[c])).join(',')+'\r\n';
    else if(format==='jsonl')yield JSON.stringify(selected)+'\n';
    else{if(!first)yield',';yield JSON.stringify(selected);first=false;}

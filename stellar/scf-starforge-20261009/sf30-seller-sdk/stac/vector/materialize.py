@@ -10,12 +10,14 @@ import re
 import shutil
 import sqlite3
 from pathlib import Path
+from decimal import Decimal
 from .common import (CAPTURE, EXPORT, PROFILE, VectorError, need, require_id, canonical,
     json_bytes, digest, read_json, member, private_directory, atomic_json, atomic_bytes,
     claim, verify_manifest, verify_file, file_record, all_files, clone_capture,
-    read_catalog, geometry_equal, safe_name, fsync_directory)
+    read_catalog, geometry_equal, safe_name, fsync_directory, parse_json, number_decimal)
 from .driver import (FORMATS, capabilities, vector_environment, crs, same_crs,
                     transform_geometry, writer, reopen)
+from .capture import open_capture
 
 RESERVED = {"sf_key", "sf_part", "fid", "geom", "geometry", "rowid", "_rowid_", "oid"}
 PHYSICAL = re.compile(r"^(?:str(?::[1-9][0-9]*)?|int(?:32|64)?(?::[1-9][0-9]*)?|float(?::[1-9][0-9]*(?:\.[0-9]+)?)?|date|datetime)$")
@@ -24,7 +26,7 @@ def profile_contract(profile, layer_ids):
     if profile is None:
         profile = {"schema": PROFILE, "formats": list(FORMATS)}
     need(isinstance(profile, dict) and profile.get("schema") == PROFILE, "VECTOR_PROFILE_REQUIRED")
-    result = json.loads(canonical(profile))
+    result = parse_json(canonical(profile))
     formats = result.setdefault("formats", list(FORMATS))
     need(isinstance(formats, list) and formats and len(set(formats)) == len(formats) and
          set(formats).issubset(FORMATS), "VECTOR_EXPORT_FORMAT_INVALID")
@@ -102,6 +104,8 @@ def choose_codec(stat, driver, rule, profile):
             codec, physical, reason = "native", "int64" if driver == "GPKG" else "int:18", "Native integral storage."
         else:
             codec, physical, reason = "json", "str", "Exact JSON text preserves integers beyond the target native range."
+    elif kinds.issubset({"integer", "number"}) and stat.get("requiresExactNumber"):
+        codec, physical, reason = "json", "str", "Exact JSON text preserves fractional values beyond native double precision."
     elif kinds.issubset({"integer", "number"}) and driver == "GPKG":
         max_integer = max(abs(int(stat["minInteger"] or 0)), abs(int(stat["maxInteger"] or 0)))
         if max_integer <= 2**53:
@@ -159,6 +163,14 @@ def attribute_value(field, feature):
         return None
     value = props[field["sourceName"]]
     if field["codec"] in ("native", "date", "datetime"):
+        if isinstance(value, Decimal):
+            try:
+                converted = float(value)
+            except (ValueError, OverflowError) as exc:
+                raise VectorError("VECTOR_NATIVE_NUMBER_REQUIRES_EXACT_CODEC", canonical(value)) from exc
+            need(math.isfinite(converted) and number_decimal(converted) == value,
+                 "VECTOR_NATIVE_NUMBER_REQUIRES_EXACT_CODEC", canonical(value))
+            return converted
         return value
     if field["codec"] == "boolean":
         need(type(value) is bool, "VECTOR_BOOLEAN_VALUE_CHANGED")
@@ -182,8 +194,10 @@ def ordinate_dimensions(geometry):
         if isinstance(value, (list, tuple)):
             if value and not isinstance(value[0], (list, tuple)):
                 need(len(value) in (2, 3), "VECTOR_ORDINATE_DIMENSION_UNSUPPORTED", len(value))
-                need(all(type(item) in (int, float) and math.isfinite(item) for item in value),
+                need(all(type(item) in (int, float, Decimal) for item in value),
                      "VECTOR_COORDINATE_INVALID")
+                for item in value:
+                    number_decimal(item)
                 found.add(len(value))
             else:
                 for child in value:
@@ -265,10 +279,16 @@ def value_equal(left, right, codec):
     if codec == "datetime":
         parse = lambda value: datetime.datetime.fromisoformat(str(value).replace("Z", "+00:00"))
         return parse(left) == parse(right)
+    if type(left) in (int, float, Decimal) and type(right) in (int, float, Decimal):
+        return number_decimal(left) == number_decimal(right)
     return left == right and (not isinstance(left, str) or isinstance(right, str))
 
 def native_reopen(root, native_manifest, profile, source_catalog=None, native_ids_path=None):
     """Reopen native files and bind every row to the retained original source."""
+    with vector_environment():
+        return _native_reopen(root, native_manifest, profile, source_catalog, native_ids_path)
+
+def _native_reopen(root, native_manifest, profile, source_catalog=None, native_ids_path=None):
     import tempfile
     root = Path(root)
     catalog_path = Path(source_catalog) if source_catalog else root / "source" / "catalog.sqlite"
@@ -288,7 +308,7 @@ def native_reopen(root, native_manifest, profile, source_catalog=None, native_id
         ids = Path(native_ids_path).open("wb")
         os.chmod(native_ids_path, 0o600)
     try:
-        metadata = {row["id"]: json.loads(row["metadata_json"])
+        metadata = {row["id"]: parse_json(row["metadata_json"])
                     for row in source.execute("SELECT * FROM layers")}
         by_layer = {layer["id"]: layer for layer in native_manifest["layers"]}
         need(len(by_layer) == len(native_manifest["layers"]), "VECTOR_NATIVE_LAYER_DUPLICATE")
@@ -297,6 +317,16 @@ def native_reopen(root, native_manifest, profile, source_catalog=None, native_id
         need(native_manifest["formats"] == profile["formats"], "VECTOR_NATIVE_FORMATS_CHANGED")
         for layer in by_layer.values():
             meta = metadata[layer["sourceLayerId"]]
+            projection = layer_crs(meta, profile["layers"].get(meta["id"], {}), profile)
+            retained_projection = layer.get("crsMapping", {})
+            for key in ("original", "assigned", "action", "coordinateOrder"):
+                need(retained_projection.get(key) == projection.get(key),
+                     "VECTOR_NATIVE_CRS_MAPPING_CHANGED", {"layer": layer["id"], "field": key})
+            for key in ("source", "target"):
+                need(same_crs(retained_projection.get(key), projection.get(key)),
+                     "VECTOR_NATIVE_CRS_MAPPING_CHANGED", {"layer": layer["id"], "field": key})
+            need(same_crs(layer.get("crsWkt"), projection["target"]),
+                 "VECTOR_NATIVE_TARGET_CRS_CHANGED", layer["id"])
             original_mapping = field_mapping(meta, layer["driver"],
                                               profile["layers"].get(meta["id"], {}), profile)
             need(len(original_mapping) == len(layer["fields"]), "VECTOR_FIELD_MAPPING_CHANGED")
@@ -307,12 +337,12 @@ def native_reopen(root, native_manifest, profile, source_catalog=None, native_id
                  layer["sourceId"] == meta["sourceId"], "VECTOR_NATIVE_SOURCE_COUNT_CHANGED")
         with member(root, native_manifest["sourceFeatures"]["path"]).open("rb") as stream:
             for line in stream:
-                item = json.loads(line)
+                item = parse_json(line)
                 row = source.execute("SELECT * FROM features WHERE row_key=?", (item.get("rowKey"),)).fetchone()
                 need(row is not None, "VECTOR_ORIGINAL_FEATURE_UNKNOWN")
                 expected = {"rowKey": row["row_key"], "layerId": row["layer_id"],
-                            "sourcePosition": row["position"], "identity": json.loads(row["identity_json"]),
-                            "occurrence": row["occurrence"], **json.loads(row["record_json"])}
+                            "sourcePosition": row["position"], "identity": parse_json(row["identity_json"]),
+                            "occurrence": row["occurrence"], **parse_json(row["record_json"])}
                 need(canonical(expected) == canonical(item), "VECTOR_ORIGINAL_FEATURE_CHANGED", row["row_key"])
                 conn.execute("INSERT INTO source_seen VALUES(?)", (row["row_key"],))
         need(conn.execute("SELECT count(*) FROM source_seen").fetchone()[0] ==
@@ -320,13 +350,13 @@ def native_reopen(root, native_manifest, profile, source_catalog=None, native_id
              "VECTOR_ORIGINAL_FEATURES_MISSING")
         with member(root, native_manifest["bindings"]["path"]).open("rb") as stream:
             for line in stream:
-                item = json.loads(line)
+                item = parse_json(line)
                 layer = by_layer.get(item.get("layerId"))
                 need(layer is not None, "VECTOR_NATIVE_LAYER_UNKNOWN")
                 row = source.execute("SELECT * FROM features WHERE row_key=?", (item.get("rowKey"),)).fetchone()
                 need(row is not None and row["layer_id"] == item.get("sourceLayerId") == layer["sourceLayerId"],
                      "VECTOR_NATIVE_SOURCE_BINDING_CHANGED")
-                feature = json.loads(row["record_json"])["feature"]
+                feature = parse_json(row["record_json"])["feature"]
                 path = item.get("partPath")
                 need(isinstance(path, list) and all(type(index) is int and index >= 0 for index in path),
                      "VECTOR_NATIVE_PART_PATH_INVALID")
@@ -337,7 +367,8 @@ def native_reopen(root, native_manifest, profile, source_catalog=None, native_id
                                    for field in layer["fields"] if field["targetName"]})
                 need(canonical(properties) == canonical(item["properties"]),
                      "VECTOR_NATIVE_ATTRIBUTES_NOT_FROM_SOURCE", row["row_key"])
-                geometry = feature.get("geometry")
+                geometry = transform_geometry(feature.get("geometry"),
+                    layer["crsMapping"]["source"], layer["crsMapping"]["target"])
                 for index in path:
                     need(geometry is not None and geometry["type"] == "GeometryCollection" and
                          index < len(geometry.get("geometries", [])), "VECTOR_NATIVE_PART_NOT_IN_SOURCE")
@@ -345,9 +376,8 @@ def native_reopen(root, native_manifest, profile, source_catalog=None, native_id
                 if layer["driver"] == "ESRI Shapefile" and geometry is not None and \
                         geometry["type"] == "GeometryCollection" and not geometry.get("geometries"):
                     geometry = None
-                if layer["crsMapping"]["action"] != "transform":
-                    need(geometry_equal(geometry, item["geometry"]),
-                         "VECTOR_NATIVE_GEOMETRY_NOT_FROM_SOURCE", row["row_key"])
+                need(geometry_equal(geometry, item["geometry"]),
+                     "VECTOR_NATIVE_GEOMETRY_NOT_FROM_SOURCE", row["row_key"])
                 conn.execute("INSERT INTO expected(layer_id,row_key,part_key,body) VALUES(?,?,?,?)",
                              (item["layerId"], item["rowKey"], item["partKey"], canonical(item)))
                 conn.execute("INSERT OR IGNORE INTO coverage VALUES(?,?)", (item["rowKey"], layer["driver"]))
@@ -383,7 +413,7 @@ def native_reopen(root, native_manifest, profile, source_catalog=None, native_id
                             (layer["id"], row_key, part_key)).fetchone()
                         need(original is not None and not original[1], "VECTOR_NATIVE_IDENTITY_CHANGED",
                              {"layer": layer["id"], "rowKey": row_key, "partKey": part_key})
-                        expected = json.loads(original[0])
+                        expected = parse_json(original[0])
                         for name, value in expected["properties"].items():
                             codec = fields[name]["codec"] if name in fields else "native"
                             need(value_equal(value, values.get(name), codec), "VECTOR_NATIVE_PROPERTY_CHANGED",
@@ -444,8 +474,8 @@ def build_native(root, source_capture, capture_file, profile, request_sha):
             os.chmod(temporary / "native-bindings.ndjson", 0o600)
             for row in rows(connection):
                 write_json_line(originals, {"rowKey": row["row_key"], "layerId": row["layer_id"],
-                    "sourcePosition": row["position"], "identity": json.loads(row["identity_json"]),
-                    "occurrence": row["occurrence"], **json.loads(row["record_json"])})
+                    "sourcePosition": row["position"], "identity": parse_json(row["identity_json"]),
+                    "occurrence": row["occurrence"], **parse_json(row["record_json"])})
             for layer_id, meta in layer_metadata.items():
                 layer_profile = profile["layers"].get(layer_id, {})
                 projection = layer_crs(meta, layer_profile, profile)
@@ -462,7 +492,7 @@ def build_native(root, source_capture, capture_file, profile, request_sha):
                     groups = {}
                     dimensions, kinds = set(), set()
                     for row in rows(connection, layer_id):
-                        feature = json.loads(row["record_json"])["feature"]
+                        feature = parse_json(row["record_json"])["feature"]
                         geometry = transform_geometry(feature.get("geometry"), projection["source"], projection["target"])
                         dimensions.update(ordinate_dimensions(geometry))
                         if geometry is not None:
@@ -502,7 +532,7 @@ def build_native(root, source_capture, capture_file, profile, request_sha):
                             output_layers[group] = item
                             schema_layers.append(item)
                         for row in rows(connection, layer_id):
-                            record = json.loads(row["record_json"])
+                            record = parse_json(row["record_json"])
                             feature = record["feature"]
                             geometry = transform_geometry(feature.get("geometry"), projection["source"], projection["target"])
                             pieces = [((), geometry)] if format_name == "GPKG" else list(
@@ -532,7 +562,7 @@ def build_native(root, source_capture, capture_file, profile, request_sha):
               "requestSha256": request_sha, "formats": profile["formats"], "layers": schema_layers,
               "bindings": {"path": "native/native-bindings.ndjson"},
               "sourceFeatures": {"path": "native/source-features.ndjson"}}
-    staged = json.loads(canonical(native))
+    staged = parse_json(canonical(native))
     for item in staged["layers"]:
         item["path"] = item["path"].removeprefix("native/")
     staged["bindings"]["path"] = "native-bindings.ndjson"
@@ -565,8 +595,8 @@ def build_native(root, source_capture, capture_file, profile, request_sha):
 
 def export_capture(capture_directory, directory, profile, operation_id):
     require_id(operation_id, "operationId")
-    captured, capture_file = verify_manifest(capture_directory, "capture.json", CAPTURE)
-    inspection = read_json(Path(capture_directory) / "inspection.json")
+    original = open_capture(capture_directory)
+    captured, capture_file, inspection = original["manifest"], original["manifestFile"], original["inspection"]
     profile = profile_contract(profile, [layer["id"] for layer in inspection["layers"]])
     request = {"schema": "starforge.vector-export-request.v1", "operationId": operation_id,
                "captureSha256": capture_file["sha256"], "profile": profile}
@@ -575,7 +605,7 @@ def export_capture(capture_directory, directory, profile, operation_id):
             manifest, record = verify_manifest(root, "vector-export.json", EXPORT)
             need(manifest["requestSha256"] == digest(request), "VECTOR_ORIGINAL_REQUEST_CONFLICT")
             return {"directory": str(root), "manifest": manifest, "manifestFile": record, "replayed": True}
-        clone_capture(capture_directory, root / "source")
+        clone_capture(capture_directory, root / "source", capture_file["sha256"])
         checkpoint = root / "native" / "complete.json"
         if checkpoint.exists():
             saved = read_json(checkpoint)
@@ -601,8 +631,8 @@ def export_capture(capture_directory, directory, profile, operation_id):
 
 def open_vector_export(directory, expected_manifest_sha256=None, native=True):
     manifest, record = verify_manifest(directory, "vector-export.json", EXPORT, expected_manifest_sha256)
-    captured, capture_file = verify_manifest(Path(directory) / "source", "capture.json", CAPTURE,
-                                             manifest["sourceCapture"]["sha256"])
+    original = open_capture(Path(directory) / "source", manifest["sourceCapture"]["sha256"])
+    captured, capture_file = original["manifest"], original["manifestFile"]
     declared = {item["path"]: item for item in manifest["files"]}
     source_record = {**capture_file, "path": "source/capture.json"}
     need(manifest["sourceCapture"] == source_record and declared.get(source_record["path"]) == source_record,

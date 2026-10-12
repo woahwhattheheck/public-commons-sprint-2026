@@ -14,7 +14,9 @@ import { openCaseStore, caseMetadata, CASE_STATUSES } from '../../stellar/scf-st
 import { parseWorkspace, serializeWorkspace, MAX_WORKSPACE_BYTES } from '../../stellar/scf-starforge-20261009/sf74-merchant-support-console/workspace-file.mjs';
 import { importRuntimeHandoff, exportRuntimeHandoff, reviewRuntime, MAX_HANDOFF_BYTES } from '../../stellar/scf-starforge-20261009/sf74-merchant-support-console/runtime-support.mjs';
 import { termsDraftFromDocument, termsDocumentFromDraft } from '../../stellar/scf-starforge-20261009/sf74-merchant-support-console/terms-editor.mjs';
-import { workorderFromSources } from '../../stellar/scf-starforge-20261009/sf74-merchant-support-console/server.mjs';
+import { workorderFromSources } from '../../stellar/scf-starforge-20261009/sf74-merchant-support-console/workorder-source.mjs';
+import {inspectCaseCommissioning,prepareCaseCommissioning,operateCaseCommissioning} from '../../stellar/scf-starforge-20261009/sf74-merchant-support-console/case-commissioning.mjs';
+import {commissioningSummary,commissioningReport,commissioningTasksCsv} from '../../stellar/scf-starforge-20261009/sf74-merchant-support-console/commissioning.mjs';
 import { failure, exact, identifier, writePrivate, privateSupportDirectory } from './config.mjs';
 import { RetainedFileReads, MAX_RETAINED_CHUNK_BYTES } from './retained-file-reads.mjs';
 
@@ -104,6 +106,7 @@ async function caseView(record) {
   return { ...summary, workorderSource: workspace.workorderSource ?? 'diagnostic', baselineOnly: workspace.baselineOnly,
     workspaceSha256: sha(workspaceText), supportSha256: supportText === null ? null : sha(supportText),
     terms, termsIssue, termsText: workspace.termsText,
+    ...(workspace.commissioning?{implementation:commissioningSummary(workspace.commissioning)}:{}),
     runtimeReview: supportText === null ? null : reviewRuntime(supportText, workspace.inputs) };
 }
 
@@ -132,10 +135,12 @@ export function parseSupportExportManifest(bytes, exportId) {
       manifest.files.find(file => file.name === 'merchant-workspace.json').sha256 !== manifest.case.workspaceSha256 ||
       ['merchant-support.json', 'support.html'].some(name => names.has(name) !== (manifest.case.supportSha256 !== null)) ||
       ['owner-terms.json', 'packet.json', 'seller-packet.html', 'acceptance-checklist.md'].some(name => names.has(name) !== manifest.workorderIncluded)) invalid();
+  const implementationFiles=['merchant-commissioning.json','merchant-implementation.html','merchant-implementation-tasks.csv'];
+  if(implementationFiles.some(name=>names.has(name))&&!implementationFiles.every(name=>names.has(name)))invalid();
   return manifest;
 }
 function exportFileType(name) {
-  return name.endsWith('.json') ? 'application/json' : name.endsWith('.html') ? 'text/html; charset=utf-8' : 'text/markdown; charset=utf-8';
+  return name.endsWith('.json') ? 'application/json' : name.endsWith('.html') ? 'text/html; charset=utf-8' : name.endsWith('.csv') ? 'text/csv; charset=utf-8' : 'text/markdown; charset=utf-8';
 }
 
 export class MerchantSupport {
@@ -275,7 +280,8 @@ export class MerchantSupport {
     const metadata = args.metadata === undefined ? record.metadata : caseMetadata({ ...record.metadata, ...args.metadata });
     if (args.metadata !== undefined) exact(args.metadata, Object.keys(metadataSchema.properties));
     const next = { name: workspace.name, inputs: workspace.inputs, sources: workspace.sources, termsText: workspace.termsText,
-      baselineOnly: args.baselineOnly ?? workspace.baselineOnly, workorderSource: args.workorderSource ?? workspace.workorderSource ?? 'diagnostic' };
+      baselineOnly: args.baselineOnly ?? workspace.baselineOnly, workorderSource: args.workorderSource ?? workspace.workorderSource ?? 'diagnostic',
+      ...(workspace.commissioning?{commissioning:workspace.commissioning}:{}) };
     if (args.terms !== undefined) next.termsText = ownerDraft(args.terms);
     // Keep the original save timestamp: metadata/terms updates do not change source observations,
     // and an identical request can use the original case writer's lost-response retry handling.
@@ -294,6 +300,9 @@ export class MerchantSupport {
       const handoff = await exportRuntimeHandoff({ workspaceText, supportText, metadata: record.metadata });
       files.push(['merchant-support.json', handoff.handoff], ['support.html', handoff.html]);
     }
+    if(workspace.commissioning)files.push(['merchant-commissioning.json',json(workspace.commissioning)],
+      ['merchant-implementation.html',commissioningReport(workspace.commissioning)],
+      ['merchant-implementation-tasks.csv',commissioningTasksCsv(workspace.commissioning)]);
     if (generated) files.push(['owner-terms.json', json(generated.terms)], ['packet.json', json(generated.packet)],
       ['seller-packet.html', generated.html], ['acceptance-checklist.md', generated.checklist]);
     const exportId = identifier(args.exportId, 'Export ID'), root = await privateSupportDirectory(this.#config.exportsDirectory), folder = join(root, exportId);
@@ -441,6 +450,9 @@ export class MerchantSupport {
           const record = await this.#selected(args), workspace = await parseWorkspace(record.workspaceText);
           return { case: { id: record.id, revision: record.revision }, packet: sourcePacket(record, workspace).packet };
         }
+        case 'merchant_case_implementation': return inspectCaseCommissioning(await this.#cases(),args);
+        case 'merchant_case_implementation_prepare': return prepareCaseCommissioning(await this.#cases(),args);
+        case 'merchant_case_implementation_apply': return operateCaseCommissioning(await this.#cases(),args);
         case 'merchant_case_export': return this.#export(args);
         case 'merchant_support_export_status': return this.#exportStatus(args.exportId);
         case 'merchant_support_export_manifest': return this.#exportManifest(args.exportId);

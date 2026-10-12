@@ -74,10 +74,13 @@ def copy_delivery(source, destination):
 
 def parser():
     p = argparse.ArgumentParser(description="Save publisher reviews, build complete native grants datasets, and receive their full handoff")
-    p.add_argument("--workspace", required=True, help="Original private operator workspace")
+    location = p.add_mutually_exclusive_group(required=True)
+    location.add_argument("--workspace", help="Original private operator workspace")
+    location.add_argument("--connection", help="Original console or saved Applications connection file")
     sub = p.add_subparsers(dest="command", required=True)
     sub.add_parser("init")
     sub.add_parser("state")
+    sub.add_parser("binding")
     upload = sub.add_parser("upload")
     upload.add_argument("--file", required=True)
     review = sub.add_parser("review")
@@ -127,14 +130,29 @@ def parser():
     changes.add_argument("--comparison", required=True)
     changes.add_argument("--offset", type=int, default=0)
     changes.add_argument("--limit", type=int, default=50)
+    full_changes = sub.add_parser("changes-file")
+    full_changes.add_argument("--dataset", required=True)
+    full_changes.add_argument("--comparison", required=True)
+    full_changes.add_argument("--out", required=True)
     serve = sub.add_parser("serve")
     serve.add_argument("--port", type=int, default=0)
+    serve.add_argument("--expected-binding", help="Retain the exact reviewed Applications source and workspace")
     serve.add_argument("--connection-file", help="Create one private console connection file")
     return p
 
 
 def main(argv=None):
     args = parser().parse_args(argv)
+    if args.connection:
+        from client import remote_command
+        print(publisher.exact(remote_command(args, copy_delivery)), flush=True)
+        return 0
+    if args.command in {"binding", "serve"}:
+        from managed import require_binding, launch_record
+        selected_binding = require_binding(args.workspace, getattr(args, "expected_binding", None))
+        if args.command == "binding":
+            print(publisher.exact(selected_binding), flush=True)
+            return 0
     with PublisherWorkspace(args.workspace, create=args.command == "init") as ws:
         def upload(path):
             with Path(path).expanduser().open("rb") as source:
@@ -157,17 +175,25 @@ def main(argv=None):
             result = ws.native_state(args.dataset)
         elif command == "changes":
             result = ws.changes(args.dataset, args.comparison, args.offset, args.limit)
+        elif command == "changes-file":
+            with ws.mutex:
+                native = ws._dataset(args.dataset)
+                selected = next((item for item in native.state()["comparisons"] if item["id"] == args.comparison), None)
+                if selected is None:
+                    raise InputError("Select an original saved comparison")
+                destination = copy_delivery(native.comparison_file(args.comparison), args.out)
+                result = {"comparison": selected, "copiedTo": destination, **file_info(destination)}
         elif command == "serve":
+            selected_binding = require_binding(args.workspace, selected_binding["sha256"])
             server = OperatorServer(ws, args.port)
+            server.launch_record = launch_record(server, selected_binding)
             old = signal.getsignal(signal.SIGTERM)
             def stop(*_):
                 raise KeyboardInterrupt
             signal.signal(signal.SIGTERM, stop)
             try:
                 with connection_file(args.connection_file, server.url):
-                    print(publisher.exact({"schema": "stellar-forge.360giving-console.v1",
-                        "workspace": str(ws.root), "workspaceId": ws.binding["id"],
-                        "pid": os.getpid(), "url": server.url}), flush=True)
+                    print(publisher.exact(server.launch_record), flush=True)
                     server.serve_forever(poll_interval=0.25)
             except KeyboardInterrupt:
                 pass

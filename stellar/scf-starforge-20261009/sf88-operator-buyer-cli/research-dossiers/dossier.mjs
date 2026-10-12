@@ -10,6 +10,8 @@ import { normalizeResponse, normalizeProjection, sourceView, compareViews } from
 import { markdownReport, htmlReport } from './report.mjs';
 import { portableEntries, encodePortable } from './portable.mjs';
 import {inspectSourceBundle} from './source-bundles.mjs';
+import {CITATION_REVIEW_SCHEMA,citationDigest,citationUpdateModel,citationUpdatePage,citationReviewInput,
+  recordCitationReview,validateCitationReviewState,validateCitationReviewTransition} from './citation-updates.mjs';
 
 const DOCUMENT = 'sf88-research-dossier-v1';
 const PORTABLE = 'sf88-research-dossier-portable-v1';
@@ -30,7 +32,7 @@ const summary = state => ({
   createdAt: state.createdAt, updatedAt: state.updatedAt,
   questionCount: state.questions.length, editionCount: state.editions.length,
   selectedCount: state.selections.filter(selection => selection.selected).length,
-  findingCount: state.findings.length,
+  findingCount: state.findings.length, citationReviewCount:(state.citationReviews??[]).length,
 });
 const referenceKeys = new Set(['id', 'editionId', 'queryId', 'workspaceId', 'operationId']);
 function referenceValue(reference) {
@@ -138,11 +140,11 @@ export async function openDossierStore(directory, { providers = {} } = {}) {
     catch (error) { if (error.code === 'EEXIST') throw new BuyerError('REVISION_CONFLICT'); throw error; }
     return projection === 'metadata' ? metadata(next) : get(id);
   }
-  async function projections(state, { references = true } = {}) {
+  async function projections(state, { references = true, readContent = blob } = {}) {
     const views = new Map();
     for (const edition of state.editions) {
       if (edition.mode === 'retained') {
-        const normalized = normalizeResponse(await blob(edition.raw), edition.provider);
+        const normalized = normalizeResponse(await readContent(edition.raw), edition.provider);
         views.set(edition.id, normalized);
       } else if (edition.mode === 'reference') {
         let projection = { status: references ? 'ADAPTER_UNAVAILABLE' : 'ORIGINAL_EDITION_REFERENCE', items: [] };
@@ -223,7 +225,7 @@ export async function openDossierStore(directory, { providers = {} } = {}) {
     const id = newId('d'), now = timestamp();
     const state = { schema: DOCUMENT, id, title, description, revision: 1,
       previous: null, createdAt: now, updatedAt: now, change: 'Created dossier',
-      questions: [], editions: [], selections: [], findings: [] };
+      questions: [], editions: [], selections: [], findings: [], citationReviews: [] };
     await writeJson(join(await revisionsDirectory(id, true), filename(1)),
       { sha256: digest(jsonBytes(state)), state }, { exclusive: true });
     return projection === 'metadata' ? getMetadata(id) : get(id);
@@ -420,9 +422,44 @@ export async function openDossierStore(directory, { providers = {} } = {}) {
     return compareViews(await view(left.state, { includeHistory: false }), await view(right.state, { includeHistory: false }));
   };
 
-  async function exportDossier(id, { format = 'json' } = {}) {
+
+  async function citationUpdates(id,{revision,noticeId,offset=0,limit=30,status='all'}={}){
+    need(offset===0||revision!==undefined,'RESEARCH_PAGE_REVISION_REQUIRED');
+    const {state}=await head(id,revision);
+    return citationUpdatePage(state,citationUpdateModel(state,await projections(state,{references:false})),
+      {noticeId,offset,limit,status});
+  }
+  async function reviewCitationUpdate(id,{projection='metadata',...value}={}){
+    need(['metadata','full'].includes(projection),'RESEARCH_PROJECTION_INVALID');
+    const request=citationReviewInput(value),requestSha256=citationDigest(request);
+    const current=await head(id);
+    async function recovered(state){
+      const existing=(state.citationReviews??[]).find(item=>item.requestId===request.requestId);
+      if(!existing)return null;
+      need(existing.requestSha256===requestSha256,'CITATION_REVIEW_REQUEST_CHANGED');
+      return {dossier:projection==='metadata'?metadata(state):await get(id),
+        review:clone(existing),duplicate:true};
+    }
+    const prior=await recovered(current.state);if(prior)return prior;
+    let review;
+    try{
+      const dossier=await commit(id,request.expectedRevision,'Reviewed citation update',async (state,previous)=>{
+        const projected=await projections(previous,{references:false});
+        review=recordCitationReview(state,projected,request,timestamp());
+      },{projection});
+      return {dossier,review:clone(review),duplicate:false};
+    }catch(error){
+      if(error.code==='REVISION_CONFLICT'){
+        const saved=await recovered((await head(id)).state);if(saved)return saved;
+      }
+      throw error;
+    }
+  }
+
+  async function exportDossier(id, { format = 'json', revision } = {}) {
     need(['json', 'md', 'html'].includes(format), 'EXPORT_FORMAT_INVALID');
-    const versions = await history(id), current = versions.at(-1).state;
+    const selected=(await head(id,revision)).state.revision;
+    const versions = (await history(id)).filter(item=>item.state.revision<=selected), current = versions.at(-1).state;
     if (format === 'json') {
       const metadata = new Map(versions.flatMap(envelope => envelope.state.editions
         .filter(edition => edition.mode === 'retained').map(edition => [edition.raw.sha256, edition.raw])));
@@ -435,12 +472,18 @@ export async function openDossierStore(directory, { providers = {} } = {}) {
       }
       const body = jsonBytes({ schema: PORTABLE, id, exportedAt: timestamp(), versions, blobs: contents });
       need(body.length <= MAX_PORTABLE, 'PORTABLE_SIZE_LIMIT');
-      return { filename: id + '.research.json', revision:current.revision, contentType: 'application/json; charset=utf-8', body };
+      return { filename: id + (revision!==undefined?'-r'+selected:'') + '.research.json', revision:current.revision, contentType: 'application/json; charset=utf-8', body };
     }
     // Reference-only editions contribute operator notes and original handles.
     // Their provider projection is never embedded in a durable report.
     const report = await view(current, { references: false });
-    return { filename: id + '.' + format, revision:current.revision,
+    report.revisions=report.revisions.filter(value=>value.revision<=current.revision);
+    report.citationReviews=clone(current.citationReviews??[]);
+    const citationModel=citationUpdateModel(current,await projections(current,{references:false}));
+    report.citationUpdates=citationModel.notices.map(({noticeId,noticeDoi,targetDoi,title,type,date,status,lastReview})=>
+      ({noticeId,noticeDoi,targetDoi,title,type,date,status,lastReview}));
+    report.citationCoverage=citationModel.coverage;
+    return { filename: id + (revision===undefined?'':'-r'+current.revision) + '.' + format, revision:current.revision,
       contentType: format === 'md' ? 'text/markdown; charset=utf-8' : 'text/html; charset=utf-8',
       body: format === 'md' ? markdownReport(report) : htmlReport(report) };
   }
@@ -503,6 +546,7 @@ export async function openDossierStore(directory, { providers = {} } = {}) {
           need(knownOccurrences.get(selection.occurrenceId) === selection.questionId, 'PORTABLE_SELECTION_REFERENCE_INVALID');
         knownOccurrences.set(selection.occurrenceId, selection.questionId);
       }
+      validateCitationReviewState(state,editions);
       const findings = new Set();
       for (const finding of state.findings) {
         need(object(finding) && typeof finding.id === 'string' && /^f_[a-f0-9-]{36}$/.test(finding.id) &&
@@ -519,6 +563,12 @@ export async function openDossierStore(directory, { providers = {} } = {}) {
             'PORTABLE_FINDING_REFERENCE_INVALID');
         }
       }
+  }
+
+  async function validateCitationTransition(previous,state,readContent){
+    const hasNew=(state.citationReviews?.length??0)>(previous?.citationReviews?.length??0);
+    const projected=hasNew&&previous?await projections(previous,{references:false,readContent}):undefined;
+    validateCitationReviewTransition(previous,state,projected);
   }
 
   async function reopen(portable) {
@@ -543,10 +593,15 @@ export async function openDossierStore(directory, { providers = {} } = {}) {
       content.set(entry.sha256, bytes);
     }
     const occurrenceCache = new Map();
-    for (const envelope of incoming) await validatePortableState(envelope.state, async metadata => {
+    const readContent = async metadata => {
       need(content.has(metadata.sha256), 'PORTABLE_BLOB_MISSING');
       return content.get(metadata.sha256);
-    }, occurrenceCache);
+    };
+    for (let index=0;index<incoming.length;index++){
+      const state=incoming[index].state,prior=index?incoming[index-1].state:null;
+      await validatePortableState(state,readContent,occurrenceCache);
+      await validateCitationTransition(prior,state,readContent);
+    }
     let existing = [];
     try { existing = await history(id); }
     catch (error) { if (error.code !== 'DOSSIER_NOT_FOUND') throw error; }
@@ -565,9 +620,10 @@ export async function openDossierStore(directory, { providers = {} } = {}) {
     return get(id);
   }
 
-  async function exportStream(id, {compression = 'none'} = {}) {
+  async function exportStream(id, {compression = 'none', revision} = {}) {
     need(['none', 'gzip'].includes(compression), 'PORTABLE_COMPRESSION_INVALID');
-    const all = await numbers(id);
+    const selected=(await head(id,revision)).state.revision;
+    const all = (await numbers(id)).filter(value=>value<=selected);
     need(all.length > 0, 'DOSSIER_NOT_FOUND');
     const exportedAt = timestamp();
     async function* chunks() {
@@ -598,7 +654,7 @@ export async function openDossierStore(directory, { providers = {} } = {}) {
       }
       yield Buffer.from(']}\n');
     }
-    return {filename: id + '.research.json' + (compression === 'gzip' ? '.gz' : ''),
+    return {filename: id + (revision!==undefined?'-r'+selected:'') + '.research.json' + (compression === 'gzip' ? '.gz' : ''),
       contentType: compression === 'gzip' ? 'application/gzip' : 'application/json; charset=utf-8',
       body: encodePortable(chunks(), {compression}), revision: all.at(-1)};
   }
@@ -650,7 +706,7 @@ export async function openDossierStore(directory, { providers = {} } = {}) {
         need(bytes.length === entry.bytes && digest(bytes) === entry.sha256, 'PORTABLE_BLOB_CHANGED');
         return bytes;
       };
-      let previous = null;
+      let previous = null, previousState=null;
       const occurrenceCache = new Map();
       let existing = [];
       try { existing = await numbers(id); }
@@ -660,6 +716,7 @@ export async function openDossierStore(directory, { providers = {} } = {}) {
         need(envelope.state.previous === previous, 'PORTABLE_HISTORY_CHANGED');
         previous = envelope.sha256;
         await validatePortableState(envelope.state, readContent, occurrenceCache);
+        await validateCitationTransition(previousState,envelope.state,readContent);previousState=envelope.state;
         if (revision <= existing.length)
           need((await readRevision(id, revision)).sha256 === envelope.sha256, 'PORTABLE_HISTORY_CONFLICT');
       }
@@ -681,5 +738,6 @@ export async function openDossierStore(directory, { providers = {} } = {}) {
   }
 
   return Object.freeze({ directory, list, create, get, getMetadata, readRetainedEdition, listRevisions, update, addQuestion, updateQuestion,
-    receive, previewSourceBundle, receiveSourceBundle, receiveBuyerResult, receiveReference, selectEvidence, updateSelection, addFinding, updateFinding, compare, exportDossier, exportStream, reopen, reopenStream });
+    receive, previewSourceBundle, receiveSourceBundle, receiveBuyerResult, receiveReference, selectEvidence, updateSelection, addFinding, updateFinding,
+    citationUpdates,reviewCitationUpdate,compare, exportDossier, exportStream, reopen, reopenStream });
 }
