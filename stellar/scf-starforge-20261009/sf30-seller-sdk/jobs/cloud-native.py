@@ -109,8 +109,32 @@ def save(path, value):
 
 def immutable(path, data):
     path = Path(path)
-    descriptor, temporary = tempfile.mkstemp(prefix=".immutable-", dir=path.parent)
+    prefix = ".immutable-" + digest(path.name.encode("utf-8") + b"\0" + data) + "-"
+    directory = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+    temporary = None
     try:
+        # Directory flock adds no file to the strict original carrier inventory.
+        # It also excludes another live publisher while owned staging is recovered.
+        fcntl.flock(directory, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        for pending in path.parent.iterdir():
+            if not pending.name.startswith(prefix):
+                continue
+            info = pending.lstat()
+            require(stat.S_ISREG(info.st_mode) and info.st_uid == os.getuid() and
+                    not info.st_mode & 0o077 and info.st_nlink in (1, 2),
+                    "ORIGINAL_IMMUTABLE_STAGING_CHANGED:" + str(pending))
+            prior = regular(pending, len(data))
+            require(data.startswith(prior), "ORIGINAL_IMMUTABLE_STAGING_BYTES_CHANGED:" + str(pending))
+            pending.unlink()
+        try:
+            existing = regular(path)
+        except FileNotFoundError:
+            existing = None
+        if existing is not None:
+            require(existing == data, "RETAINED_INPUT_CHANGED:" + str(path))
+            os.fsync(directory)
+            return
+        descriptor, temporary = tempfile.mkstemp(prefix=prefix, dir=path.parent)
         with os.fdopen(descriptor, "wb") as stream:
             stream.write(data)
             stream.flush()
@@ -119,10 +143,14 @@ def immutable(path, data):
             os.link(temporary, path, follow_symlinks=False)
         except FileExistsError:
             require(regular(path) == data, "RETAINED_INPUT_CHANGED:" + str(path))
-        sync_directory(path.parent)
+        os.fsync(directory)
     finally:
-        if os.path.exists(temporary):
-            os.unlink(temporary)
+        try:
+            if temporary and os.path.exists(temporary):
+                os.unlink(temporary)
+                os.fsync(directory)
+        finally:
+            os.close(directory)
 
 
 def emit(value):
