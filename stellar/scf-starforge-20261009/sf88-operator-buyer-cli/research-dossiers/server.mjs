@@ -10,6 +10,9 @@ import {RESEARCH_WORKSPACE_API,RESEARCH_WORKSPACE_CONNECTION,researchWorkspaceId
 import { openDossierStore } from './dossier.mjs';
 import {handleEligibilityRoute,ELIGIBILITY_REVIEW_LIMIT} from './eligibility-routes.mjs';
 import {handleCustomerUpdateRoute} from './customer-updates/routes.mjs';
+import {ResearchWorkspaceClient} from './workspace-client.mjs';
+import {openResearchCustomerCommerce} from './customer-commerce/controller.mjs';
+import {handleResearchCommerceRoute,readResearchCommerceAsset} from './customer-commerce/routes.mjs';
 import {handleRiskOfBiasRoute,readRiskOfBiasAsset,RISK_OF_BIAS_REQUEST_LIMIT} from './risk-of-bias/routes.mjs';
 import {handleStudyExtractionRoute,STUDY_EXTRACTION_REVIEW_LIMIT} from './study-extraction-routes.mjs';
 import {createTemplateExchangeDispatcher,TEMPLATE_POST_ACTIONS} from './template-exchange/http.mjs';
@@ -77,6 +80,50 @@ const requireValue = (condition, code) => { if (!condition) fail(code); };
 const plain = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 const safeCode = error => typeof error?.code === 'string' && /^[A-Z0-9_]{1,100}$/.test(error.code) ? error.code : 'DOSSIER_OPERATION_FAILED';
 
+// Complete only successfully closed owners; the original failed handles stay retryable.
+function researchOwners() {
+  const owners=[];let closing;
+  const add=(name,close,order=50)=>{
+    requireValue(typeof close==='function','RESEARCH_OWNER_CLOSE_REQUIRED');
+    owners.push({name,close,order,closed:false});
+  };
+  const close=()=>{
+    if(closing)return closing;
+    return closing=(async()=>{
+      const failures=[];
+      for(const owner of [...owners].sort((a,b)=>a.order-b.order)){
+        if(owner.closed)continue;
+        try{await owner.close();owner.closed=true;}
+        catch(error){failures.push({name:owner.name,error});}
+      }
+      if(failures.length){
+        const primary=failures[0].error;
+        try{
+          primary.researchCloseFailures=failures.map(({name,error})=>({name,code:safeCode(error)}));
+          if(failures.length>1)primary.researchAdditionalCloseErrors=failures.slice(1).map(row=>row.error);
+        }catch{}
+        throw primary;
+      }
+    })().catch(error=>{closing=null;throw error;});
+  };
+  const preserve=async primary=>{
+    // A native initializer can itself return a retained partially opened owner.
+    if(typeof primary?.close==='function')add('incomplete-initialization',primary.close.bind(primary),-1);
+    try{await close();}
+    catch(cleanup){
+      if(primary&&typeof primary==='object'){
+        try{
+          primary.researchCleanupError=cleanup;
+          primary.researchCloseFailures=cleanup.researchCloseFailures??[{name:'cleanup',code:safeCode(cleanup)}];
+          Object.defineProperty(primary,'close',{configurable:true,value:close});
+        }catch{}
+      }
+    }
+    return primary;
+  };
+  return {add,close,preserve};
+}
+
 async function readJson(req, limit) {
   const type = (req.headers['content-type'] || '').split(';')[0].trim().toLowerCase();
   requireValue(type === 'application/json', 'JSON_BODY_REQUIRED');
@@ -143,7 +190,7 @@ export async function loadEditionAdapters(modulePath) {
 
 /** Reuses the existing SF88 loopback / fragment-token operator convention. */
 export async function startDossierWorkspace({directory, port = 0, providers = {}, openalexWorkspace = null,
-  crossrefSource = null, crossrefIdentity = null, documentSource = null, pipelineSource = null, objectStateDirectory = null, clinicalTrialsInputs = null, clinicalTrialsPython = 'python3', europePmcRateDirectory = null, extractionPython = clinicalTrialsPython, extractionSignal, zoteroStateDirectory = null} = {}) {
+  crossrefSource = null, crossrefIdentity = null, documentSource = null, pipelineSource = null, objectStateDirectory = null, clinicalTrialsInputs = null, clinicalTrialsPython = 'python3', europePmcRateDirectory = null, extractionPython = clinicalTrialsPython, extractionSignal, zoteroStateDirectory = null, customerCommerceConfiguration = null} = {}) {
   requireValue(typeof directory === 'string' && isAbsolute(directory) && resolve(directory) === directory,
     'WORKSPACE_ABSOLUTE_PATH_REQUIRED');
   requireValue(Number.isInteger(port) && port >= 0 && port <= 65535, 'WORKSPACE_PORT_INVALID');
@@ -158,19 +205,24 @@ export async function startDossierWorkspace({directory, port = 0, providers = {}
     typeof extractionSignal.throwIfAborted==='function'&&typeof extractionSignal.addEventListener==='function'&&
     typeof extractionSignal.removeEventListener==='function','EXTRACTION_SIGNAL_REQUIRED');
   extractionSignal?.throwIfAborted();
+  const owners=researchOwners();
+  try {
   const store = await openDossierStore(directory, {providers,extractionOptions:{python:extractionPython,signal:extractionSignal}});
   const templateExchange=createTemplateExchangeDispatcher({templateExchange:store.templateExchange});
   const zotero=zoteroStateDirectory===null?null:openZoteroResearchBridge({directory:zoteroStateDirectory,dossierStore:store});
+  if(zotero)owners.add('zotero',()=>zotero.close(),10);
   const workspaceId = researchWorkspaceId(store.directory), instanceId = randomUUID();
   const api = {schema:RESEARCH_WORKSPACE_API,metadata:true,revisionPages:true,streamedPortable:true,sourceBundles:true,sourceInspection:true,
     studyExtraction:true,studyExtractionRequestLimit:STUDY_EXTRACTION_REVIEW_LIMIT,extractionPublications:true,zoteroBridge:zotero!==null,
     customerUpdates:true,customerUpdateRequestLimit:16*1024*1024,
+    customerCommerce:true,customerCommerceConfigured:customerCommerceConfiguration!==null,customerCommerceRequestLimit:2*1024*1024,
     templateExchange:true,templateExchangeRequestLimit:MAX_TEMPLATE_REVIEW_BODY,templateWorkbookBytesLimit:MAX_WORKBOOK_BYTES,
     europePmcWorkspaces:true,citationUpdateReview:true,citationReviewRequestLimit:MAX_CITATION_REVIEW_BODY,
     eligibilityReview:true,eligibilityReviewRequestLimit:ELIGIBILITY_REVIEW_LIMIT,
     riskOfBiasReview:true,riskOfBiasRequestLimit:RISK_OF_BIAS_REQUEST_LIMIT,revisionReports:true,savedCrossrefOperations:crossrefSource!==null,originalObjectInputs:objectStateDirectory!==null};
   await store.list();
   const unstructured = await openUnstructuredWorkspace({dossiers:store,...(documentSource ?? {})});
+  owners.add('unstructured',()=>unstructured.clear(),70);
   if (unstructured.provider) {
     requireValue(!Object.hasOwn(providers, 'unstructured'), 'DOCUMENT_PROVIDER_ALREADY_CONFIGURED');
     providers.unstructured = unstructured.provider;
@@ -180,24 +232,28 @@ export async function startDossierWorkspace({directory, port = 0, providers = {}
     const {openCrossrefWorkspace} = await import('./crossref-workspace.mjs');
     crossref = await openCrossrefWorkspace({directory:join(directory,'crossref'),dossiers:store,
       source:crossrefSource,identity:crossrefIdentity});
+    owners.add('crossref',()=>crossref.close(),60);
   }
-  let objectInputs=null,pipelines;
-  try {
-    if(objectStateDirectory!==null)objectInputs=await openResearchObjectSource({
-      directory,objectWorkspaceDirectory:objectStateDirectory});
-    pipelines=await openUnstructuredPipelineWorkspace({dossiers:store,source:pipelineSource,objectSource:objectInputs});
-  } catch(error) {await objectInputs?.close();await crossref?.close();throw error;}
-  let clinicalTrials;
-  try {
-    clinicalTrials = await openClinicalTrialsWorkspace({directory:join(directory,'clinical-trials'),
-      dossiers:store,inputs:clinicalTrialsInputs,python:clinicalTrialsPython});
-  } catch (error) {unstructured.clear(); await objectInputs?.close(); await pipelines.close(); await crossref?.close(); throw error;}
-  let europePmc;
-  try {europePmc=await openEuropePmcController({directory:join(directory,'europe-pmc'),dossiers:store,rateDirectory:europePmcRateDirectory});}
-  catch(error){unstructured.clear();await clinicalTrials.close();await objectInputs?.close();await pipelines.close();await crossref?.close();throw error;}
+  let objectInputs=null;
+  if(objectStateDirectory!==null){
+    objectInputs=await openResearchObjectSource({directory,objectWorkspaceDirectory:objectStateDirectory});
+    owners.add('object-inputs',()=>objectInputs.close(),40);
+  }
+  const pipelines=await openUnstructuredPipelineWorkspace({dossiers:store,source:pipelineSource,objectSource:objectInputs});
+  owners.add('pipelines',()=>pipelines.close(),30);
+  const clinicalTrials=await openClinicalTrialsWorkspace({directory:join(directory,'clinical-trials'),
+    dossiers:store,inputs:clinicalTrialsInputs,python:clinicalTrialsPython});
+  owners.add('clinical-trials',()=>clinicalTrials.close(),50);
+  const europePmc=await openEuropePmcController({directory:join(directory,'europe-pmc'),dossiers:store,rateDirectory:europePmcRateDirectory});
+  owners.add('europe-pmc',()=>europePmc.close(),20);
   const token = randomBytes(32).toString('hex');
   const expectedAuthorization = Buffer.from('Bearer ' + token);
   let origin;
+  const customerCommerce=await openResearchCustomerCommerce({directory:join(store.directory,'customer-commerce'),workspaceId,
+    configurationFile:customerCommerceConfiguration,
+    client:()=>new ResearchWorkspaceClient({url:origin+'/#token='+token,directory:store.directory,expectedWorkspaceId:workspaceId})});
+  // Its accepted receiving calls use this original listener and original source owners.
+  owners.add('customer-commerce',()=>customerCommerce.close(),0);
   const server = createServer(async (req, res) => {
     const headers = {
       'Cache-Control': 'no-store',
@@ -245,6 +301,14 @@ export async function startDossierWorkspace({directory, port = 0, providers = {}
           return;
         }
       }
+      if(req.method==='GET'||req.method==='HEAD'){
+        const asset=await readResearchCommerceAsset(path);
+        if(asset){
+          if(req.method==='HEAD'){res.writeHead(200,{...headers,'Content-Type':asset.contentType,'Content-Length':asset.body.length});res.end();}
+          else send(200,asset.body,asset.contentType);
+          return;
+        }
+      }
       const auth = Buffer.from(req.headers.authorization || '');
       requireValue(auth.length === expectedAuthorization.length && timingSafeEqual(auth, expectedAuthorization),
         'AUTH_REQUIRED');
@@ -272,6 +336,7 @@ export async function startDossierWorkspace({directory, port = 0, providers = {}
         }else send(200,result.body);
         return;
       }
+      if (await handleResearchCommerceRoute({req,res,url,send,readJson,controller:customerCommerce,headers})) return;
       if (await handleCustomerUpdateRoute({req,res,url,send,readJson,store,europePmc})) return;
       if (await handleEuropePmcRoute({req,res,url,send,readJson,controller:europePmc})) return;
       if(req.method==='GET'&&path==='/api/zotero'){
@@ -634,28 +699,21 @@ export async function startDossierWorkspace({directory, port = 0, providers = {}
   server.requestTimeout = 60000;
   server.headersTimeout = 15000;
   server.keepAliveTimeout = 5000;
-  try {
-    extractionSignal?.throwIfAborted();
-    await new Promise((accept, reject) => {
-      server.once('error', reject);
-      server.listen(port, '127.0.0.1', accept);
-    });
-  } catch (error) {await zotero?.close();await europePmc?.close();unstructured.clear(); await clinicalTrials.close(); await objectInputs?.close(); await pipelines.close(); await crossref?.close(); throw error;}
+  owners.add('listener',()=>new Promise((accept,reject)=>{
+    server.close(error=>error&&error.code!=='ERR_SERVER_NOT_RUNNING'?reject(error):accept());
+    server.closeIdleConnections();
+  }),100);
+  extractionSignal?.throwIfAborted();
+  await new Promise((accept,reject)=>{
+    const failed=error=>{server.removeListener('listening',listening);reject(error);};
+    const listening=()=>{server.removeListener('error',failed);accept();};
+    server.once('error',failed);server.once('listening',listening);
+    server.listen(port,'127.0.0.1');
+  });
   origin = 'http://127.0.0.1:' + server.address().port;
-  let closing;
-  return {server, origin, url: origin + '/#token=' + token, token, workspaceId, instanceId, api, crossref, unstructured, pipelines, objectInputs, clinicalTrials, europePmc, zotero,
-    close: () => closing ??= (async () => {
-      unstructured.clear();
-      await zotero?.close();
-      await europePmc.close();
-      await objectInputs?.close();
-      await pipelines.close();
-      await clinicalTrials.close();
-      await crossref?.close();
-      await new Promise((accept, reject) => {
-        server.close(error => error ? reject(error) : accept()); server.closeIdleConnections();
-      });
-    })()};
+  return {server, origin, url: origin + '/#token=' + token, token, workspaceId, instanceId, api, crossref, unstructured,
+    pipelines, objectInputs, clinicalTrials, europePmc, zotero, customerCommerce, close:owners.close};
+  } catch(error) {await owners.preserve(error);throw error;}
 }
 
 function parseOptions(args) {
@@ -663,7 +721,7 @@ function parseOptions(args) {
   const options = {};
   for (let index = 0; index < args.length; index += 2) {
     const key = args[index];
-    requireValue(['--dir', '--port', '--edition-adapter', '--openalex-workspace', '--openalex-module', '--crossref-config', '--crossref-state', '--document-source', '--pipeline-source', '--connection-file', '--object-state', '--clinical-trials-python','--europe-pmc-rate-state','--extraction-python','--zotero-state'].includes(key) && !Object.hasOwn(options, key) &&
+    requireValue(['--dir', '--port', '--edition-adapter', '--openalex-workspace', '--openalex-module', '--crossref-config', '--crossref-state', '--document-source', '--pipeline-source', '--connection-file', '--object-state', '--clinical-trials-python','--europe-pmc-rate-state','--extraction-python','--zotero-state','--customer-commerce-host'].includes(key) && !Object.hasOwn(options, key) &&
       typeof args[index + 1] === 'string' && args[index + 1].length > 0, 'ARGUMENT_INVALID_OR_REPEATED');
     options[key] = args[index + 1];
   }
@@ -674,20 +732,44 @@ function parseOptions(args) {
   return {directory: options['--dir'], port: Number(rawPort), adapter: options['--edition-adapter'],
     openalexDirectory:options['--openalex-workspace'], openalexModule:options['--openalex-module'],
     crossrefConfig:options['--crossref-config'],crossrefDirectory:options['--crossref-state'],
-    documentSourceConfig:options['--document-source'],pipelineSourceConfig:options['--pipeline-source'],connectionFile:options['--connection-file'],objectStateDirectory:options['--object-state']??null,clinicalTrialsPython:options['--clinical-trials-python']??'python3',europePmcRateDirectory:options['--europe-pmc-rate-state']??null,extractionPython:options['--extraction-python']??options['--clinical-trials-python']??'python3',zoteroStateDirectory:options['--zotero-state']??null};
+    documentSourceConfig:options['--document-source'],pipelineSourceConfig:options['--pipeline-source'],connectionFile:options['--connection-file'],objectStateDirectory:options['--object-state']??null,clinicalTrialsPython:options['--clinical-trials-python']??'python3',europePmcRateDirectory:options['--europe-pmc-rate-state']??null,extractionPython:options['--extraction-python']??options['--clinical-trials-python']??'python3',zoteroStateDirectory:options['--zotero-state']??null,customerCommerceConfiguration:options['--customer-commerce-host']??null};
 }
 async function main(args) {
   if (args.length === 0 || args.length === 1 && ['--help', '-h'].includes(args[0])) {
-    process.stdout.write('Usage: node server.mjs --dir /absolute/private/workspace [--port 8846] [--edition-adapter /absolute/provider-adapters.mjs] [--openalex-workspace /absolute/original/workspace] [--openalex-module /absolute/original/research/workspace.mjs] [--crossref-state /absolute/private/crossref-source] [--crossref-config /absolute/crossref-merchant.json] [--document-source /absolute/private/document-source.json] [--connection-file /absolute/private/research-connection.json] [--pipeline-source /absolute/private/pipeline-source.json] [--object-state /absolute/private/object-buyer] [--clinical-trials-python /absolute/python3] [--europe-pmc-rate-state /absolute/private/shared-rate] [--extraction-python /absolute/python3] [--zotero-state /absolute/private/zotero]\n');
+    process.stdout.write('Usage: node server.mjs --dir /absolute/private/workspace [--port 8846] [--edition-adapter /absolute/provider-adapters.mjs] [--openalex-workspace /absolute/original/workspace] [--openalex-module /absolute/original/research/workspace.mjs] [--crossref-state /absolute/private/crossref-source] [--crossref-config /absolute/crossref-merchant.json] [--document-source /absolute/private/document-source.json] [--connection-file /absolute/private/research-connection.json] [--pipeline-source /absolute/private/pipeline-source.json] [--object-state /absolute/private/object-buyer] [--clinical-trials-python /absolute/python3] [--europe-pmc-rate-state /absolute/private/shared-rate] [--extraction-python /absolute/python3] [--zotero-state /absolute/private/zotero] [--customer-commerce-host /absolute/private/research-commerce.json]\n');
     return;
   }
   const options = parseOptions(args);
   const providers = options.adapter ? await loadEditionAdapters(options.adapter) : {};
-  const openalexWorkspace = options.openalexDirectory ? await openSavedOpenAlexWorkspace({
-    directory:options.openalexDirectory, modulePath:options.openalexModule,
-  }) : null;
-  let app, crossrefSource = null, crossrefIdentity = null, documentSource = null, pipelineSource = null;
+  const owners=researchOwners();
+  let app,openalexWorkspace=null,crossrefSource=null,crossrefIdentity=null,documentSource=null,pipelineSource=null;
+  let stopped=false,closing,opened;
+  const opening=new Promise(resolveOpening=>{opened=resolveOpening;});
+  const reportClose=error=>{
+    process.exitCode=1;
+    process.stderr.write(JSON.stringify({error:safeCode(error),
+      ...(error.researchCloseFailures?{closeFailures:error.researchCloseFailures}:{})})+'\n');
+  };
+  const stop=()=>{
+    stopped=true;
+    if(closing)return closing;
+    return closing=(async()=>{
+      await opening;
+      await owners.close();
+      process.removeListener('SIGINT',onSignal);process.removeListener('SIGTERM',onSignal);
+      if(process.exitCode===undefined)process.exitCode=0;
+    })().catch(error=>{closing=null;process.exitCode=1;throw error;});
+  };
+  const onSignal=()=>{void stop().catch(reportClose);};
+  const active=()=>requireValue(!stopped,'RESEARCH_WORKSPACE_STOPPED_DURING_STARTUP');
+  process.on('SIGINT',onSignal);process.on('SIGTERM',onSignal);
   try {
+    active();
+    if(options.openalexDirectory){
+      openalexWorkspace=await openSavedOpenAlexWorkspace({directory:options.openalexDirectory,modulePath:options.openalexModule});
+      owners.add('openalex-source',()=>openalexWorkspace.close(),30);
+    }
+    active();
     if (options.crossrefDirectory) {
       requireValue(isAbsolute(options.crossrefDirectory) && (!options.crossrefConfig || isAbsolute(options.crossrefConfig)), 'CROSSREF_ABSOLUTE_PATHS_REQUIRED');
       const [{createCrossrefSource},{sha256,json}] = await Promise.all([
@@ -704,40 +786,46 @@ async function main(args) {
         configSha256 = compiled.inputSha256;
       }
       crossrefSource = await createCrossrefSource(sourceOptions);
+      owners.add('crossref-source',()=>crossrefSource.close(),20);
+      active();
       const snapshot = await crossrefSource.snapshot();
       crossrefIdentity = {configSha256,account:snapshot.account,mode:snapshot.mode};
     }
+    active();
     if (options.documentSourceConfig) documentSource = await openSavedDocumentBuyerSource(options.documentSourceConfig);
-    if (options.pipelineSourceConfig) pipelineSource = await openSavedPipelineSource(options.pipelineSourceConfig);
+    active();
+    if (options.pipelineSourceConfig){
+      pipelineSource = await openSavedPipelineSource(options.pipelineSourceConfig);
+      // After successful host construction the original pipeline workspace owns this closer.
+      owners.add('unclaimed-pipeline-source',()=>app?undefined:pipelineSource.operations.close(),10);
+    }
+    active();
     app = await startDossierWorkspace({...options, providers, openalexWorkspace,crossrefSource,crossrefIdentity,documentSource,pipelineSource});
-  } catch (error) {await pipelineSource?.operations.close();await crossrefSource?.close();await openalexWorkspace?.close();throw error;}
+    owners.add('research-workspace',()=>app.close(),0);
+    active();
   const startup={schema:RESEARCH_WORKSPACE_CONNECTION,mode:'RESEARCH_DOSSIER_WORKSPACE',
     directory:options.directory,url:app.url,workspaceId:app.workspaceId,instanceId:app.instanceId};
-  try {
-    if(options.connectionFile){
-      requireValue(isAbsolute(options.connectionFile)&&resolve(options.connectionFile)===options.connectionFile,
-        'RESEARCH_CONNECTION_ABSOLUTE_PATH_REQUIRED');
-      await privateDirectory(dirname(options.connectionFile));
-      await writeJson(options.connectionFile,startup);
-    }
-  } catch(error) {
-    await app.close().catch(()=>{});
-    await crossrefSource?.close();await openalexWorkspace?.close();
-    throw error;
+  if(options.connectionFile){
+    requireValue(isAbsolute(options.connectionFile)&&resolve(options.connectionFile)===options.connectionFile,
+      'RESEARCH_CONNECTION_ABSOLUTE_PATH_REQUIRED');
+    await privateDirectory(dirname(options.connectionFile));
+    await writeJson(options.connectionFile,startup);
   }
+  active();
   process.stdout.write(JSON.stringify({...startup,mode: 'RESEARCH_DOSSIER_WORKSPACE', directory: options.directory,
     url: app.url, providers: Object.keys(providers), openalexConfigured:openalexWorkspace !== null,
     crossrefConfigured:crossrefSource !== null, documentSourceConfigured:documentSource !== null,
     documentWorkspaceId:documentSource?.workspaceId ?? null,clinicalTrialsConfigured:true,
     pipelineSourceConfigured:pipelineSource !== null,pipelineWorkspaceId:pipelineSource?.workspaceId ?? null,
     objectSourceConfigured:options.objectStateDirectory!==null,objectWorkspaceId:app.objectInputs?.source().workspaceId??null}) + '\n');
-  let closing;
-  const stop = () => closing ??= (async () => {
-    try {await app.close();} finally {
-      try {await crossrefSource?.close();} finally {await openalexWorkspace?.close();process.exitCode = 0;}
+  } catch(error) {
+    await owners.preserve(error);
+    process.exitCode=1;
+    if(typeof error?.close!=='function'){
+      process.removeListener('SIGINT',onSignal);process.removeListener('SIGTERM',onSignal);
     }
-  })();
-  process.once('SIGINT', stop); process.once('SIGTERM', stop);
+    throw error;
+  } finally {opened();}
 }
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   main(process.argv.slice(2)).catch(error => {
