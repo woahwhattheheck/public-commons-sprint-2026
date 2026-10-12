@@ -69,6 +69,12 @@ workspace identity. The complete saved review and operation live in the
 workspace independently of browser storage. The normal **Recover last request**
 control also preserves an uncertain original build request.
 
+If request publication stopped after creating its private directory, **Continue
+saving build** finishes the same saved request under its existing worker lease.
+If the request exists but its initial state is absent, continuation writes only
+that original unstarted state. Existing malformed or different records remain an
+error; they are never replaced with a new request.
+
 For a failed or interrupted operation, choose **Continue original build**.
 Continuation acquires the original workspace worker lease and checks the
 builder's original lock. If the package worker still owns that lock, the existing

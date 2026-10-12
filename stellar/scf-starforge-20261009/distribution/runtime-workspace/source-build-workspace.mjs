@@ -26,6 +26,49 @@ export const sourceBuildOperationFields = Object.freeze({
 async function exists(path) {
   try { return await lstat(path); } catch (error) { if (error.code === 'ENOENT') return null; throw error; }
 }
+async function optionalRecord(path) {
+  try { return await readJSON(path); }
+  catch (error) { if (error.code === 'ENOENT') return undefined; throw error; }
+}
+function validBuildState(value) {
+  need(plain(value) && ['QUEUED', 'RUNNING', 'SUCCEEDED', 'FAILED'].includes(value.phase),
+    'SOURCE_BUILD_OPERATION_STATE_INVALID');
+  return value;
+}
+function sameBuildRequest(value, expected) {
+  need(plain(value), 'SOURCE_BUILD_REQUEST_CHANGED');
+  const { requestHash, createdAt, ...definition } = value;
+  need(value.operation === 'source-build' && identity(definition) === requestHash &&
+    requestHash === expected.requestHash, 'SOURCE_BUILD_REQUEST_CHANGED');
+}
+/** Finish only absent original records after a crash during request publication. */
+export async function initializeSourceBuildRequest(root, id, value) {
+  operationId(id); sameBuildRequest(value, value);
+  const review = await readSourceBuildReview(root, value.reviewId);
+  need(id === review.requestId && value.selectionSha256 === review.selectionSha256,
+    'SOURCE_BUILD_REVIEW_CHANGED');
+  const directory = await ensurePrivate(jobPath(root, id));
+  const requestFile = join(directory, 'request.json'), stateFile = join(directory, 'state.json');
+  const previousRequest = await optionalRecord(requestFile), previousState = await optionalRecord(stateFile);
+  if (previousRequest !== undefined) sameBuildRequest(previousRequest, value);
+  if (previousState !== undefined) validBuildState(previousState);
+  if (previousRequest !== undefined && previousState !== undefined)
+    return { reopened: true, needsSpawn: false };
+  const lease = await operationLease(join(directory, 'worker.lock'));
+  try {
+    const saved = await optionalRecord(requestFile), state = await optionalRecord(stateFile);
+    if (saved !== undefined) sameBuildRequest(saved, value);
+    if (state !== undefined) {
+      validBuildState(state);
+      need(saved !== undefined, 'SOURCE_BUILD_REQUEST_MISSING');
+      return { reopened: true, needsSpawn: false };
+    }
+    if (saved === undefined) await saveJSON(requestFile, value);
+    await saveJSON(stateFile, { phase: 'QUEUED', updatedAt: now() });
+    return { reopened: saved !== undefined, needsSpawn: true };
+  } finally { await lease.close(); }
+}
+
 async function ensurePrivate(path) {
   try { return await makePrivate(path); }
   catch (error) { if (error.code !== 'EEXIST') throw error; return privateDirectory(path); }
@@ -166,7 +209,8 @@ export async function sourceBuildWorkspaceState(root) {
   const names = (await readdir(join(base, 'reviews'))).filter(name => /^[a-f0-9]{24}\.json$/.test(name));
   const builds = await Promise.all(names.map(async name => {
     const id = name.slice(0, -5), review = await readSourceBuildReview(root, id);
-    const state = await readJSON(join(jobPath(root, review.requestId), 'state.json'), true);
+    const state = await optionalRecord(join(jobPath(root, review.requestId), 'state.json'));
+    if (state !== undefined) validBuildState(state);
     const receipt = state?.result?.build ?? state?.sourceBuildReceipt ?? null;
     return { reviewId: id, selectionSha256: review.selectionSha256, requestId: review.requestId,
       title: review.title, selection: review.selection, repository: review.repository,
@@ -275,7 +319,12 @@ export async function recoverSourceBuildOperation(root, id) {
     const output = join(buildPath(join(root, 'source-builds'), review.reviewId), 'output');
     if (await exists(output)) need(!await operationRunning(join(output, 'build.lock')),
       'DISTRIBUTION_BUILD_ALREADY_RUNNING', 'The original package worker still owns this build.', 409);
-    const state = await readJSON(join(directory, 'state.json'));
+    let state = await optionalRecord(join(directory, 'state.json'));
+    if (state === undefined) {
+      state = { phase: 'QUEUED', updatedAt: now() };
+      await saveJSON(join(directory, 'state.json'), state);
+    }
+    validBuildState(state);
     if (state.phase === 'SUCCEEDED') return { operationId: id, completed: true, result: state.result };
     need(['FAILED', 'RUNNING', 'QUEUED'].includes(state.phase), 'SOURCE_BUILD_OPERATION_STATE_INVALID');
     if (state.phase !== 'QUEUED') {
