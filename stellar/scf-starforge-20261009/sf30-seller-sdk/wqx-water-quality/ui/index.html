@@ -33,7 +33,7 @@
 <section class="panel"><h2>Saved reviews</h2><div id="reviews" class="record-list"></div></section>
 </aside>
 <div class="content">
-<nav class="tabs" aria-label="Workspace sections"><button type="button" data-tab="analysis" aria-current="page">Results &amp; review</button><button type="button" data-tab="source" aria-current="false">Original source</button><button type="button" data-tab="merchant" aria-current="false">Merchant &amp; customer</button><button type="button" data-tab="open-waters" aria-current="false">Open Waters</button><button type="button" data-tab="review-sheets" aria-current="false">Bulk decisions</button></nav>
+<nav class="tabs" aria-label="Workspace sections"><button type="button" data-tab="analysis" aria-current="page">Results &amp; review</button><button type="button" data-tab="source" aria-current="false">Original source</button><button type="button" data-tab="merchant" aria-current="false">Merchant &amp; customer</button><button type="button" data-tab="open-waters" aria-current="false">Open Waters</button><button type="button" data-tab="review-sheets" aria-current="false">Bulk decisions</button><button type="button" data-tab="standardized-analysis" aria-current="false">Scientific editions</button></nav>
 <section id="tab-analysis" class="tab-panel">
 <div class="panel">
 <div class="section-head"><h2>Comparable sample results</h2><span id="analysis-status" class="tag">Choose a capture</span></div>
@@ -238,6 +238,50 @@
 </div>
 </div>
 </fieldset>
+</section>
+
+
+<section id="tab-standardized-analysis" class="tab-panel" hidden>
+<div class="panel"><div class="section-head"><h2>Reporting-unit scientific reviews</h2><span id="sa-state" class="tag">Select complete decisions</span></div>
+<p>Analyze original measurements and reviewed reporting units together. Retain every selected result, qualification and reported limit, then compare a later scientific edition with its original source.</p>
+<fieldset id="sa-controls">
+<form id="sa-form">
+<div class="two"><label>Complete receiving decision review<select id="sa-decision" required><option value="">Select saved decisions</option></select></label><label>Compare with a saved scientific edition<select id="sa-previous"><option value="">No previous edition</option></select></label></div>
+<div class="two"><label>Scientific review name<input id="sa-id" required pattern="[A-Za-z0-9][A-Za-z0-9_-]{0,95}" maxlength="96" autocomplete="off" placeholder="potomac-q1-reporting-units"></label><label>Review title<input id="sa-title" required maxlength="240" value="Water-quality reporting-unit review"></label></div>
+<div class="two"><label>Selected period from<input id="sa-start" type="date"></label><label>Through<input id="sa-end" type="date"></label></div>
+<div class="two"><label>Within-source baseline from<input id="sa-baseline-start" type="date"></label><label>Through<input id="sa-baseline-end" type="date"></label></div>
+<details><summary>Scientific scope and numeric inclusion</summary>
+<div class="two"><label>Characteristics<textarea id="sa-characteristics" rows="3"></textarea><small>One exact source name per line; blank selects all.</small></label><label>Monitoring location identifiers<textarea id="sa-sites" rows="3"></textarea><small>One original location identifier per line; blank selects all.</small></label></div>
+<label class="check"><input id="sa-estimated" type="checkbox">Include source-labelled estimates in arithmetic summaries</label>
+<label>Additional accepted source qualifiers<textarea id="sa-qualifiers" rows="2"></textarea><small>One exact qualifier per line. Results with other qualifications remain visible and excluded from arithmetic.</small></label>
+<p class="caption">Native method, site, fraction, speciation, sample context and unit distinctions remain separate. Censored values and their reporting thresholds remain visible; thresholds do not become measured values.</p>
+</details>
+<label>Review note<textarea id="sa-note" rows="3" maxlength="4000"></textarea></label>
+<div class="actions"><button id="sa-preview" type="submit">Preview full scientific review</button><button id="sa-save" type="button" disabled>Save this preview</button><button id="sa-new" type="button">Use as a new review</button></div>
+<p id="sa-selection" class="caption">Select a complete receiving decision review.</p>
+</form>
+<details><summary>Receive a complete scientific review</summary><form id="sa-receive-form"><label>Complete scientific review bundle<input id="sa-receive-file" type="file" accept=".json,application/json" required></label><p class="caption">The bundle includes current and selected previous source data, complete receiving choices and both scientific analyses. The previous source is retained in its own private source project.</p><button type="submit">Receive and reopen complete review</button></form></details>
+</fieldset>
+<div id="sa-saved" class="record-list"></div>
+</div>
+<div id="sa-output" hidden>
+<div class="panel"><div class="section-head"><h2 id="sa-output-title">Scientific review</h2><span id="sa-result-state" class="tag"></span></div><p id="sa-draft-note" class="caption"></p>
+<div id="sa-metrics" class="metrics"></div><div id="sa-downloads" class="actions"></div>
+<details><summary>Exact source and review identities</summary><pre id="sa-identities"></pre></details></div>
+<div class="panel"><div class="section-head"><h2>Comparable groups</h2><label>Representation<select id="sa-group-representation"><option value="reviewed">Reviewed reporting units</option><option value="original">Original source units</option></select></label></div>
+<div class="table-wrap"><table><thead><tr><th>Characteristic / site</th><th>Method / context</th><th>Unit</th><th>Arithmetic count</th><th>Mean</th><th>Minimum / maximum</th><th>Original groups</th></tr></thead><tbody id="sa-groups"></tbody></table></div>
+<div class="pagination"><button id="sa-groups-prev" type="button">Previous</button><span id="sa-groups-page"></span><button id="sa-groups-next" type="button">Next</button></div></div>
+<div class="panel"><h2>Original and reporting observations</h2><div class="two"><label>Find a result<input id="sa-search" type="search" placeholder="Characteristic, site or source result ID"></label><label>Observation selection<select id="sa-row-filter"><option value="all">Every selected result</option><option value="converted">Reviewed concentration choices</option><option value="censored">Censored results</option><option value="qualified">Qualified results</option><option value="included">Included in arithmetic</option><option value="excluded">Excluded from arithmetic</option></select></label></div>
+<div class="table-wrap"><table><thead><tr><th>Sample / site</th><th>Characteristic</th><th>Original value / unit</th><th>Reporting value / unit</th><th>Classification / arithmetic</th><th>Reported limits</th><th>Original source</th></tr></thead><tbody id="sa-observations"></tbody></table></div>
+<div class="pagination"><button id="sa-rows-prev" type="button">Previous</button><span id="sa-rows-page"></span><button id="sa-rows-next" type="button">Next</button></div>
+<details id="sa-row-detail" hidden><summary>Complete selected result, limits and review choices</summary><pre id="sa-row-json"></pre></details>
+</div>
+<div id="sa-period" class="panel" hidden><h2>Reporting-window comparison</h2><p class="caption">Original scientific dimensions and selected reporting units must match. Absolute changes retain their units; relative changes are shown only on an appropriate ratio scale.</p><div class="table-wrap"><table><thead><tr><th>Group</th><th>Unit</th><th>Current / baseline count</th><th>Current / baseline mean</th><th>Absolute change</th><th>Relative change / basis</th></tr></thead><tbody id="sa-period-rows"></tbody></table></div></div>
+<div id="sa-comparison" class="panel" hidden><h2>Change from the previous scientific edition</h2><p id="sa-comparison-options" class="caption"></p><div id="sa-change-counts" class="metrics"></div>
+<div class="table-wrap"><table><thead><tr><th>Original result</th><th>Source</th><th>Choices</th><th>Representation</th><th>Original source parts</th></tr></thead><tbody id="sa-changes"></tbody></table></div>
+<div class="pagination"><button id="sa-changes-prev" type="button">Previous</button><span id="sa-changes-page"></span><button id="sa-changes-next" type="button">Next</button></div>
+<p class="caption">Changed windows can add or remove selected records. Unit conversions and descriptive differences do not establish a trend. The complete comparison export retains both scientific selections and every source identity.</p></div>
+</div>
 </section>
 
 <section id="tab-merchant" class="tab-panel" hidden>

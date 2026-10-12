@@ -191,7 +191,7 @@ try {
 
 For an existing native MCP consumer, construct `new WqxWorkspaceClient({client: originalAdapter, workspace: 'water'})`. Its `call(name, args, options)` returns the original structured tool payload and identifies the existing endpoint. `openMerchantFileClient` already implements that contract. Closing this WQX client cancels its own pending reads/waits; native workspace operations preserve their original state.
 
-All 37 tools have named methods. The complete project/capture/analysis/review/plan/edition/merchant/customer methods take `{request: ORIGINAL_REQUEST}` or `{inputRef: COMPLETE_INPUT_REFERENCE}`. Their exact keys come from `WQX_NATIVE_OPERATIONS` in `catalog/wqx-workspace.mjs`. For example:
+All 39 tools have named methods. The complete project/capture/analysis/review/plan/edition/merchant/customer methods take `{request: ORIGINAL_REQUEST}` or `{inputRef: COMPLETE_INPUT_REFERENCE}`. Their exact keys come from `WQX_NATIVE_OPERATIONS` in `catalog/wqx-workspace.mjs`. For example:
 
 ```js
 const analysis = await client.analyze({
@@ -225,3 +225,9 @@ The client does not automatically replay changing native operations after arbitr
 `concentrationUnits` reads one immutable plan's exact source groups. `concentrationPrepare` takes a complete document or input reference and one of `fromUnit`, `resultIds`, or `reportedLimitsOnly: true`. Its PREPARED result includes the directly reusable `documentRef`, complete `documentFile`, original JSON proposal `file` and native `reportCsvFile`. The existing input and download methods transfer every byte. `concentrationReport` reopens a saved review's complete JSON or CSV after a project restart or independent receiving.
 
 The corresponding CLI commands are `concentration-units`, `concentration-prepare` and `concentration-report`. The [complete concentration guide](WQX_CONCENTRATIONS.md) provides exact commands and the full source-cohort receiving operation, including blank results, independent limit units and native source/choice binding.
+
+## Paired scientific editions and complete comparisons
+
+`scientificPreview({request})` and `scientificSave({request})` compose the original reporting-unit scientific review. The CLI commands are `scientific-preview` and `scientific-save`. Use inventory kind `scientific`, record/file family `scientific`, and receive kind `scientific` for complete saved editions, all seven native formats and both retained source editions. Every complete native response uses the existing file transport.
+
+[WQX_SCIENTIFIC.md](WQX_SCIENTIFIC.md) documents the exact preview/save request, original source and reporting representations, scientific options, typed methods, CLI, complete receiving and cold reopen. These two operations bring the provider to 39 tools while preserving its 128 MiB complete-file and 65,536-byte chunk limits.
