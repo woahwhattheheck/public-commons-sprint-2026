@@ -613,6 +613,8 @@ export async function operateGravityBrowser({
         await fill(form, 'note', 'Complete original application data and source-native receiving history retained for the explicit local recipient.');
         return submit('handoff-form', R + '/handoffs');
       });
+      need(selected.files?.['Edition_Lineage.json'] && selected.files?.['Lineage_Exchange_History.json'],
+        'GRAVITY_BROWSER_COMPLETE_RECORDED_LINEAGE_REQUIRED');
       await nav('receiving'); const savedRow = rowByLabel(selected.label);
       need(await savedRow.count() === 1, 'GRAVITY_BROWSER_HANDOFF_REQUIRED');
       const packet = await download('authored-handoff',

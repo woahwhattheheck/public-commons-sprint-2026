@@ -25,7 +25,7 @@ export function lineageWorkspaceTools(tool) {
       ...workspace, input: alias, expectedSha256: hash
     }, ["workspace", "input"], read),
     tool("merchant_lineage_import_file", "Import the complete original JSON/NDJSON file selected by the host. Preserve input alias, SHA-256, operation ID, and expected revision for recovery.", {
-      ...workspace, ...operation, input: alias, expectedSha256: hash, sourceUrl: { type: "string" }
+      ...workspace, ...operation, input: alias, expectedSha256: hash, sourceUrl: { type: "string" }, contentEncoding: { enum: ["identity", "gzip"] }
     }, ["workspace", "operationId", "expectedRevision", "input", "expectedSha256"], change),
     tool("merchant_lineage_attach_file", "Attach a complete host-selected result file to original entities and a saved edition. The source reference and full result remain in workspace exports.", {
       ...workspace, ...operation, input: alias, expectedSha256: hash,

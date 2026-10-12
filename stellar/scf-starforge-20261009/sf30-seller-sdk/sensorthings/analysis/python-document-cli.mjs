@@ -18,8 +18,8 @@ async function main(){
     throw new Error('Use the absolute existing workspace and retained request file.');
   await privateDirectory(options['--workspace'],{create:false});
   const request=JSON.parse((await readOwned(options['--request'],1024*1024)).toString('utf8'));
-  if(request.action!=='analysis.python.prepare')
-    throw new Error('This command selects the original analysis.python.prepare action.');
+  if(!['analysis.python.prepare','analysis.python.components.prepare'].includes(request.action))
+    throw new Error('Select analysis.python.prepare or the explicit saved-version analysis.python.components.prepare action.');
   const workspace=await openSensorThingsWorkspace({directory:options['--workspace']});
   try{
     const response=await workspace.action(request);

@@ -3,6 +3,7 @@ import {join,dirname,resolve,isAbsolute,basename} from 'node:path';
 import {realpath,unlink} from 'node:fs/promises';
 import {fileURLToPath} from 'node:url';
 import {spawn} from 'node:child_process';
+import {request as httpRequest} from 'node:http';
 import {privateSupportDirectory} from '../../../../../stellar-forge/mcp-merchant-operator/host-files.mjs';
 import {readSourceFile,fileIdentity,responseBytes,responseFile,inputSnapshot,streamFile} from './files.mjs';
 import {CONNECTION_SCHEMA,OPERATOR_SCHEMA,WORKSPACE_SCHEMA,MAX_RESPONSE_BYTES,MAX_PACKET_BYTES,MAX_JSON_INPUT,
@@ -23,6 +24,72 @@ async function identity(directory){
     'Initialize the original FHIR workspace or receive its complete archive before connecting it.');
   return checked(id.workspaceId,UUID,'native workspace ID');
 }
+/**
+ * Use Node's native HTTP stream for the authenticated loopback operator.
+ * A closing native response may finish while a private-file write applies
+ * backpressure. Bundled fetch versions affected by nodejs/undici#5360 abort
+ * the process in that case; IncomingMessage retains normal stream errors.
+ * The caller still enforces the original response/file byte and hash limits.
+ */
+function operatorHttpResponse(url,{method='GET',headers={},body,signal}={}){
+  need(url instanceof URL && url.protocol==='http:' && url.hostname==='127.0.0.1' &&
+    !url.username && !url.password && !url.hash,'FHIR_BULK_ROUTE_INVALID');
+  return new Promise((resolve,reject)=>{
+    let incoming,uploadError,settleUpload;
+    const streaming=body!==undefined && body!==null && typeof body.pipe==='function',
+      uploaded=streaming?new Promise(done=>{settleUpload=done;}):null;
+    const request=httpRequest(url,{method,agent:false,signal,
+      headers:{'accept-encoding':'identity',...headers}},message=>{
+      incoming=message;
+      // An error can arrive before the consumer opens its file. The async
+      // iterator subsequently observes the same stream's errored state.
+      message.on('error',()=>{});
+      const status=message.statusCode??0,ok=status>=200 && status<300;
+      if(!ok && streaming && !request.writableEnded){
+        // The native guard may reject before reading an upload (401/413).
+        // Stop sending it, but retain the original received error body.
+        body.unpipe(request);body.pause();request.end();
+      }
+      if(status>=300 && status<400){
+        const error=failure('FHIR_BULK_REDIRECT_REFUSED','The original private operator must not redirect a request.');
+        message.destroy();request.destroy(error);reject(error);return;
+      }
+      const observedHeaders=new Headers();
+      for(let i=0;i<message.rawHeaders.length;i+=2)
+        observedHeaders.append(message.rawHeaders[i],message.rawHeaders[i+1]);
+      const stream={
+        async *[Symbol.asyncIterator](){
+          try{
+            for await(const chunk of message)yield chunk;
+            need(message.complete,'FHIR_BULK_RESPONSE_INCOMPLETE','The original HTTP response ended before completion.');
+          }finally{if(!message.complete)message.destroy();}
+        },
+        async cancel(){message.destroy();request.destroy();}
+      };
+      resolve({ok,status,headers:observedHeaders,body:stream,uploaded});
+    });
+    request.once('error',error=>{
+      uploadError=error;settleUpload?.({complete:false,error});
+      // IncomingMessage owns response-body errors. In particular, a write
+      // failure after a native rejection must not discard that original reply.
+      if(!incoming)reject(error);
+    });
+    if(streaming){
+      request.once('finish',()=>settleUpload({complete:body.readableEnded && !uploadError,error:uploadError}));
+      request.once('close',()=>settleUpload({complete:false,error:uploadError}));
+      const onError=error=>{
+        uploadError=error;settleUpload({complete:false,error});
+        if(incoming && (incoming.statusCode<200 || incoming.statusCode>=300)){
+          body.unpipe(request);body.pause();if(!request.writableEnded)request.end();
+        }else request.destroy(error);
+      };
+      body.once('error',onError);
+      body.once('close',()=>body.off('error',onError));
+      body.pipe(request);
+    }else request.end(body);
+  });
+}
+
 /** All filesystem paths and launch permissions are private host configuration. */
 export async function readFhirConfiguration(filename){
   filename=resolve(filename);
@@ -79,7 +146,7 @@ export class FhirConnection {
       // The native state read waits for the original import mutex. A lost POST
       // reply therefore reconciles the selected complete archive before an ID
       // change can be adopted, even when the descriptor was refreshed meanwhile.
-      const observed=await fetch(new URL('/api/state',url),{redirect:'error',signal:AbortSignal.timeout(600000),
+      const observed=await operatorHttpResponse(new URL('/api/state',url),{signal:AbortSignal.timeout(600000),
         headers:{authorization:'Bearer '+saved.accessToken,accept:'application/json'}});
       const state=decode(await responseBytes(observed,MAX_RESPONSE_BYTES));
       need(observed.ok && Array.isArray(state.receives),'FHIR_BULK_IMPORT_RECONCILIATION_REQUIRED');
@@ -97,7 +164,7 @@ export class FhirConnection {
     need(current===saved.workspaceId && (adoptIdentity || current===this.#knownId),'FHIR_BULK_WORKSPACE_CHANGED',
       'The connected directory now contains another workspace. Reopen its private host configuration.');
     let response;
-    try{response=await fetch(new URL('/api/operator',url),{redirect:'error',signal:AbortSignal.timeout(5000),
+    try{response=await operatorHttpResponse(new URL('/api/operator',url),{signal:AbortSignal.timeout(5000),
       headers:{authorization:'Bearer '+saved.accessToken,accept:'application/json'}});}
     catch{return null;}
     const actual=decode(await responseBytes(response,65536));
@@ -188,18 +255,19 @@ export class FhirConnection {
     }
     let response;
     try{
-      response=await fetch(new URL(path,original.url),{method,redirect:'error',signal:AbortSignal.timeout(600000),
+      response=await operatorHttpResponse(new URL(path,original.url),{method,signal:AbortSignal.timeout(600000),
         headers:{authorization:'Bearer '+original.accessToken,accept:'application/json',...headers,
           ...(body===undefined?{}:{'content-type':upload?'application/octet-stream':'application/json',
-            ...(upload?{'content-length':String(upload.bytes)}:{})})},
-        ...(body===undefined?{}:{body,...(upload?{duplex:'half'}:{})})});
+            'content-length':String(upload?upload.bytes:Buffer.byteLength(body))})},
+        ...(body===undefined?{}:{body})});
     }catch(error){
+      if(stream){stream.body.destroy();await stream.close();}
       throw failure(mutates?'FHIR_BULK_REQUEST_UNCERTAIN':'FHIR_BULK_CONNECTION_UNAVAILABLE',
         mutates?'Read the original saved operation or content identity before continuing this request.':
           'Reopen the original operator before reading.',
         {workspaceId:original.workspaceId,instanceId:original.instanceId,method,path,
           ...(operationId?{operationId}:{}),cause:error.code??error.name});
-    }finally{if(stream){stream.body.destroy();await stream.close();}}
+    }
     const contentType=response.headers.get('content-type')??'application/octet-stream',
       json=/^application\/json(?:;|$)/i.test(contentType),meta={ok:response.ok,status:response.status,
         contentType,workspaceId:original.workspaceId,instanceId:original.instanceId,headers:Object.fromEntries(
@@ -210,6 +278,11 @@ export class FhirConnection {
       else{
         const bytes=await responseBytes(response,MAX_RESPONSE_BYTES);result={...meta,bytes};
         if(json)result.value=decode(bytes);
+      }
+      if(response.ok && response.uploaded){
+        const sent=await response.uploaded;
+        need(sent.complete,'FHIR_BULK_UPLOAD_INCOMPLETE','The original upload did not finish before its native response.',
+          {cause:sent.error?.code??sent.error?.name});
       }
       if(adoptWorkspace){
         const current=await this.#live({adoptIdentity:true});
@@ -222,7 +295,7 @@ export class FhirConnection {
         mutates?'The original mutation returned or is retained. Read its saved operation before a new action.':error.message,
         {workspaceId:original.workspaceId,instanceId:original.instanceId,method,path,
           ...(operationId?{operationId}:{}),cause:error.code??error.name});
-    }
+    }finally{if(stream){stream.body.destroy();await stream.close();}}
   }
   async close(){
     if(this.#closed)return;

@@ -274,6 +274,8 @@ function renderControls() {
   for (const id of ["run-migration", "refresh-migration", "resume-preparation", "reconcile-migration"]) {
     $(id).disabled = !S.selectedMigration || !S.connected || busy;
   }
+  $("export-archivematica-destination").disabled = !S.selectedMigration || !S.connected || busy ||
+    S.migration?.provider !== "archivematica" || !S.migration?.package;
   for (const control of $("archivematica-decisions").querySelectorAll("button,input,select,textarea")) {
     control.disabled = !S.selectedMigration || !S.connected || busy ||
       control.getAttribute("data-unavailable") === "true";
@@ -743,10 +745,14 @@ function renderMigration() {
     if (settings.aipLocationUuid) pairs.push(["Selected AIP location", settings.aipLocationUuid]);
     for (const [label, field] of [["Source records", "sourceRecords"],
       ["Received included records", "includedRecords"], ["Excluded by saved review", "excludedRecords"],
-      ["Verified original files", "verifiedOriginalFiles"], ["Verified metadata records", "verifiedMetadataRecords"]]) {
+      ["Verified original files", "originalMembers"]]) {
       if (Number.isFinite(summary[field])) pairs.push([label, summary[field]]);
     }
-    if (progress.proof?.sha256) pairs.push(["Receiving report SHA-256", progress.proof.sha256]);
+    if (Number.isFinite(summary.originalMemberBytes)) pairs.push(["Verified original bytes", size(summary.originalMemberBytes)]);
+    if (summary.allMappedMetadataVerified === true) pairs.push(["Reviewed metadata", "Verified"]);
+    if (summary.allStoredBagitPayloadVerified === true) pairs.push(["Stored BagIt payload", "Verified"]);
+    if (Array.isArray(progress.dipUuids) && progress.dipUuids.length) pairs.push(["Related DIP UUIDs", progress.dipUuids.join(", ")]);
+    if (progress.proof?.sha256) pairs.push(["Receiving evidence SHA-256", progress.proof.sha256]);
     if (Array.isArray(progress.pendingChoices) && progress.pendingChoices.length)
       pairs.push(["Jobs awaiting an entered choice", progress.pendingChoices.length]);
   }
@@ -769,6 +775,7 @@ function renderMigration() {
   $("preservica-evidence").hidden = migration.provider !== "preservica";
   $("archivematica-evidence").hidden = !archivematica;
   $("archivematica-saved-help").hidden = !archivematica;
+  $("archivematica-delivery").hidden = !archivematica;
   $("archivematica-saved-help").textContent = state === "VERIFIED"
     ? "The original records and AIP receiving results are saved. Open Delivery for the complete receiving report and original results."
     : "Continue transfer and receiving stages the saved ZIP and advances its original transfer. Check repository progress reads the current transfer, ingest and stored-package status. Choose an observed ingest option below when a job needs your decision.";
@@ -803,8 +810,8 @@ function renderArchivematicaDecisions(migration, progress) {
     const key = stable([migration.id, item.unitUuid, item.jobUuid, item.observation.sha256]);
     const draft = S.archivematicaDecisionDrafts[key] ||= {choiceId: "", note: ""};
     const form = element("form", null, {class: "panel", "data-archivematica-decision": "processing-choice"});
-    form.append(element("h4", (item.unitType || "Ingest") + " · " + item.jobUuid),
-      element("p", "Original unit " + item.unitUuid, {class: "meta mono"}));
+    form.append(element("h4", item.label || (item.unitType || "Ingest") + " decision"),
+      element("p", "Job " + item.jobUuid + " · Original unit " + item.unitUuid, {class: "meta mono"}));
     const select = element("select", null, {id: "archivematica-choice-" + index, required: true});
     select.append(element("option", "Choose the returned ingest option", {value: ""}));
     for (const choice of item.choices) {
@@ -982,6 +989,19 @@ function renderActivity() {
     item.append(title, element("div", "Original job " + job.id + " · " + date(job.createdAt), {class: "meta mono"}));
     if (job.arguments?.operationId) item.append(element("div", "Destination " + job.arguments.operationId, {class: "meta"}));
     if (job.error) item.append(element("p", job.error.message || pretty(job.error), {class: "meta"}));
+    if (["complete-export", "destination-export"].includes(job.kind) &&
+        ["INTERRUPTED", "FAILED"].includes(job.state)) {
+      const recover = element("button", "Recover completed export", {type: "button", "data-recover-export": job.id});
+      recover.disabled = !S.connected || !!data.active;
+      recover.addEventListener("click", async () => {
+        try {
+          recover.disabled = true;
+          await mutation("/api/recover-export", {jobId: job.id});
+          await refreshState();
+        } catch (error) { report(error); recover.disabled = !S.connected || !!S.data?.active; }
+      });
+      item.append(recover);
+    }
     if (job.persistenceError) item.append(element("p", "Saving the outcome requires attention: " +
       (job.persistenceError.message || pretty(job.persistenceError)), {class: "meta"}));
     const details = element("details");
@@ -1143,6 +1163,12 @@ on("load-archivematica-evidence-template", "click", () => {
 on("build-package", "click", async () => {
   const selection = savedSelection("package-revision");
   await mutation("/api/package", {selection}); await refreshState();
+});
+on("export-archivematica-destination", "click", async () => {
+  const selected = S.migration;
+  if (!selected || selected.id !== S.selectedMigration || selected.provider !== "archivematica")
+    throw new Error("Choose the original Archivematica receiving operation.");
+  await mutation("/api/export-destination", {operationId: selected.id}); await refreshState();
 });
 on("export-workspace", "click", async () => {
   completeDraft();

@@ -1,0 +1,26 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "datasette-analysis",
+  "description": "Datasette customer editions, original Python Analysis and workbook delivery in the installed Applications workspace",
+  "components": [
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/datasette-analysis",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli",
+    "stellar/scf-starforge-20261009/distribution/python-runtime"
+  ],
+  "supportFiles": [
+    "stellar/scf-starforge-20261009/distribution/runtime-workspace/application-datasette-analysis.mjs",
+    "stellar/scf-starforge-20261009/distribution/runtime-workspace/providers/datasette-analysis.mjs"
+  ],
+  "commands": {
+    "datasette-analysis": "stellar/scf-starforge-20261009/sf30-seller-sdk/datasette-analysis/cli.mjs"
+  },
+  "commandDescriptions": {
+    "datasette-analysis": "Receive Datasette source editions, operate original Analysis and deliver editable customer workspaces"
+  },
+  "exports": {
+    "./seller/datasette-analysis/cli": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/datasette-analysis/cli.mjs"
+  },
+  "applicationProviders": {
+    "datasette-analysis": "stellar/scf-starforge-20261009/distribution/runtime-workspace/providers/datasette-analysis.mjs"
+  }
+}

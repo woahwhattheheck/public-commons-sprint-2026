@@ -40,6 +40,9 @@ async function startTimescaleWorkspaceServer({workspace,port=8446,ownsWorkspace=
     async handle({req,res,url,send}){
       if(!url.pathname.startsWith('/api/timescale/'))return false;
       const path=url.pathname,query=url.searchParams;
+      const requestedWorkspace=[req.headers['x-timescale-workspace'],query.has('workspace')?query.get('workspace'):undefined];
+      if(requestedWorkspace.some(value=>value!==undefined&&value!==workspace.settings.id))
+        throw fault('TIMESCALE_WORKSPACE_CHANGED','This request belongs to another retained Timescale workspace. Reopen its original listener.',409);
       if(await handleRemediation({req,res,url,send}))return true;
       if(await handleCommissioning({req,res,url,send}))return true;
       if(req.method==='GET'){

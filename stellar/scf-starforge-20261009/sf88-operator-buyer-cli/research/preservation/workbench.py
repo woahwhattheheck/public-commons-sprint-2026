@@ -68,6 +68,7 @@ ARCHIVEMATICA_APPLICATION = (
     "research/preservation/archivematica_client.py",
     "research/preservation/ARCHIVEMATICA.md",
     "research/preservation/ARCHIVEMATICA_PROVIDER_CONTRACT.md",
+    "research/preservation/archivematica-requirements.txt",
 )
 
 
@@ -496,6 +497,83 @@ class Workbench:
             raise
         return {"queued": True, "job": dict(job)}
 
+    def recover_export(self, job_id):
+        """Adopt the exact archive published by an interrupted original local job."""
+        with self.guard:
+            if self.closing or self.active:
+                raise Problem("BUSY", "Finish the active workspace operation before recovering an export.")
+            job = next((item for item in self.jobs if item["id"] == job_id), None)
+            if job is None or job["kind"] not in {"complete-export", "destination-export"}:
+                raise Problem("EXPORT_JOB", "Select the original complete export job.")
+            if job["state"] == "COMPLETED":
+                artifact = job.get("result", {}).get("artifact", {})
+                self.artifact_path(artifact.get("id"))
+                return {"job": json.loads(json.dumps(job)), "recovered": True}
+            if job["state"] not in {"INTERRUPTED", "FAILED"}:
+                raise Problem("EXPORT_ACTIVE", "The original export is still running.")
+            operation_id = None
+            if job["kind"] == "destination-export":
+                operation_id = identifier(job["arguments"].get("operationId"))
+                operation_root, selected = self.operation(operation_id)
+                if selected["provider"] != "archivematica":
+                    raise Problem("DESTINATION", "Select the original Archivematica export.")
+                output = self.deliveries / ("Archivematica_Complete_" + operation_id + "_" + job["id"] + ".zip")
+                kind = "archivematica-complete-destination"
+            else:
+                if job["arguments"]:
+                    raise Problem("EXPORT_JOB", "The saved complete export arguments changed.")
+                output = self.deliveries / ("Research_Preservation_Complete_" + job["id"] + ".zip")
+                kind = "complete-workspace"
+            if not output.exists():
+                raise Problem("EXPORT_INCOMPLETE", "The original export did not publish a complete archive.",
+                              jobId=job["id"])
+            original = file_digest(output)
+            with zipfile.ZipFile(output) as archive:
+                if operation_id is not None:
+                    producer, _ = selected_provider("archivematica")
+                    manifest = producer.verify_snapshot(archive)
+                    prepared = operation_root / "prepared"
+                    saved = producer.verify(prepared)
+                    member = next((row for row in manifest["members"]
+                                   if row["path"] == "workspace/manifest.json"), None)
+                    if (manifest["packageId"] != saved["packageId"] or member is None
+                            or {key: member[key] for key in ("bytes", "sha256")}
+                            != producer.file_identity(prepared / "manifest.json")):
+                        raise Problem("EXPORT_CHANGED", "The archive belongs to another original receiving package.")
+                    selection = selected["selection"]
+                    result = {"operationId": operation_id,
+                              "receiving": {"path": str(output), **original, "manifest": manifest, "reused": True}}
+                else:
+                    manifest = snapshot_manifest(archive)
+                    archived_jobs = p.parse_json(archive.read("operator/jobs.json")).get("jobs", [])
+                    archived = [item for item in archived_jobs if item.get("id") == job["id"]]
+                    if (len(archived) != 1 or any(archived[0].get(key) != job.get(key)
+                            for key in ("id", "kind", "arguments", "createdAt"))
+                            or archived[0].get("state") not in {"QUEUED", "RUNNING"}):
+                        raise Problem("EXPORT_CHANGED", "The archive does not retain this original export job.")
+                    selection = manifest["selection"]
+                    result = {"selection": selection, "members": len(manifest["files"]) + 1,
+                              "sourceRecords": manifest["sourceRecords"],
+                              "includedRecords": manifest["includedRecords"]}
+            if file_digest(output) != original:
+                raise Problem("EXPORT_CHANGED", "The original export changed during recovery.")
+            result["artifact"] = self.artifact(output, kind, selection, operation_id)
+            recovered_at = p.utc()
+            previous = json.loads(json.dumps(job))
+            job["recovery"] = {"at": recovered_at, "previousState": job["state"],
+                               "archive": original, "manifestSha256": p.digest(p.canonical(manifest)),
+                               "method": "original-published-archive"}
+            job.update({"state": "COMPLETED", "completedAt": recovered_at, "result": result})
+            for key in ("error", "message", "persistenceError"):
+                job.pop(key, None)
+            try:
+                self.persist_jobs()
+            except BaseException:
+                job.clear()
+                job.update(previous)
+                raise
+            return {"job": json.loads(json.dumps(job)), "recovered": True}
+
     def artifact(self, path, kind, selection=None, operation_id=None):
         path = Path(path)
         rel = p.safe_name(path.relative_to(self.control).as_posix())
@@ -727,14 +805,16 @@ class Workbench:
             if state.get("state") != "VERIFIED":
                 return []
             proof = state.get("proof")
+            proof_prefix = ("operations/" + operation_id + "/" if provider == "archivematica" else "")
+            receiving_prefix = proof_prefix + "receiving/"
             if (not isinstance(proof, dict) or set(proof) != {"path", "bytes", "sha256"}
                     or type(proof["bytes"]) is not int or proof["bytes"] < 0
                     or not isinstance(proof["sha256"], str) or not HASH.fullmatch(proof["sha256"])
-                    or proof["path"] != "receiving/" + proof["sha256"] + ".json"
-                    or state.get("report") != "receiving/" + proof["sha256"] + ".html"):
+                    or proof["path"] != receiving_prefix + proof["sha256"] + ".json"
+                    or state.get("report") != receiving_prefix + proof["sha256"] + ".html"):
                 raise Problem("RECEIVING_EVIDENCE", "The saved " + label + " receiving identity is invalid.")
-            operation_root = prepared / "operations" / operation_id
-            proof_path = operation_root / proof["path"]
+            proof_root = prepared if provider == "archivematica" else prepared / "operations" / operation_id
+            proof_path = proof_root / proof["path"]
             if file_digest(proof_path) != {"bytes": proof["bytes"], "sha256": proof["sha256"]}:
                 raise Problem("RECEIVING_EVIDENCE", "The original receiving evidence changed.")
             evidence = read_json(proof_path, MAX_SNAPSHOT_MEMBER)
@@ -744,7 +824,7 @@ class Workbench:
                     or evidence.get("summary") != state.get("summary")
                     or provider == "libnova" and evidence.get("job") != state.get("job")):
                 raise Problem("RECEIVING_EVIDENCE", "The receiving report belongs to different saved results.")
-            report_path = operation_root / state["report"]
+            report_path = proof_root / state["report"]
             regular(report_path)
             return [
                 self.artifact(proof_path, provider + "-receiving-evidence", selected["selection"], operation_id),
@@ -1250,7 +1330,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
                     root, selected = self.app.operation(operation_id)
                     progress = {"status": "OPERATOR_RUNNING",
                                 "message": "The original operator action is still running. Its saved identifiers remain selected."}
-                    if selected["provider"] in {"preservica", "libnova"} and (root / "prepared").is_dir():
+                    if selected["provider"] in {"preservica", "libnova", "archivematica"} and (root / "prepared").is_dir():
                         _, client = selected_provider(selected["provider"])
                         if client is not None:
                             try:
@@ -1335,6 +1415,28 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 result = self.app.queue("migration-" + action,
                     {"operationId": operation_id, "evidence": evidence} if evidence is not None else {"operationId": operation_id},
                     lambda job: self.app.continue_migration(operation_id, action, evidence))
+            elif path == "/api/export-destination":
+                if set(body) != {"operationId"}:
+                    raise Problem("OPERATION", "Choose the saved Archivematica receiving operation.")
+                operation_id = identifier(body["operationId"])
+                operation_root, selected = self.app.operation(operation_id)
+                if selected["provider"] != "archivematica":
+                    raise Problem("DESTINATION", "Choose an Archivematica receiving operation.")
+                prepared = operation_root / "prepared"
+                if not prepared.is_dir():
+                    raise Problem("PREPARATION_PENDING", "Complete the saved source preparation before exporting.")
+                def export_destination(job):
+                    producer, _ = selected_provider(selected["provider"])
+                    output = self.app.deliveries / ("Archivematica_Complete_" + operation_id + "_" + job["id"] + ".zip")
+                    received = producer.export(prepared, output)
+                    return {"artifact": self.app.artifact(output, "archivematica-complete-destination",
+                                                         selected["selection"], operation_id),
+                            "operationId": operation_id, "receiving": received}
+                result = self.app.queue("destination-export", {"operationId": operation_id}, export_destination)
+            elif path == "/api/recover-export":
+                if set(body) != {"jobId"}:
+                    raise Problem("EXPORT_JOB", "Choose the original export job ID.")
+                result = self.app.recover_export(identifier(body["jobId"]))
             elif path == "/api/export":
                 if body:
                     raise Problem("EXPORT", "Export uses the current complete saved workspace.")

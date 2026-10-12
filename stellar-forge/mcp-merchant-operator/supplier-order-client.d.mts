@@ -175,9 +175,10 @@ export interface Operation<T=OperationResult> {
 export interface RetainedOperationSummary extends Pick<Operation,'id'|'kind'|'state'|'requestSha256'|'requestContentSha256'|'createdAt'|'updatedAt'|'error'> {
   resultSummary:true;fullResultRetained:true;requestRetained?:true;
   result:{
-    documentId?:RecordId;draftId?:RecordId;revision?:number;orderIds?:OrderId[];orderCount?:number;
+    documentId?:RecordId;draftId?:RecordId;transmissionId?:RecordId;revision?:number;orderIds?:OrderId[];orderCount?:number;
     file?:NativeFile;document?:Pick<DocumentRecord,'id'|'kind'|'documentId'|'revision'|'sha256'>;
     draft?:Pick<SavedDraft,'id'|'kind'|'title'|'revision'|'sha256'>;
+    transmission?:Pick<Transmission,'id'|'revision'|'workspaceId'|'direction'|'state'|'documentId'|'recipientProcessing'|'historyCount'>;
   };
   receiving:{tool:'merchant_supplier_order_export_workspace';originalRequestId:RecordId;note:string};
 }
@@ -219,6 +220,73 @@ export interface ReceiveArguments {
 }
 export interface PrepareArguments {requestId:RecordId;draftId:RecordId;expectedRevision:number}
 export interface SelectArguments {requestId:RecordId;id:RecordId;orderId:OrderId;expectedOrderRevision:number;reason:string}
+
+export type TransmissionState='READY'|'SENDING'|'ACKNOWLEDGED'|'UNKNOWN'|'REJECTED'|'NOT_ACCEPTED'|'CANCELLED'|'RECEIVING'|'RECEIVED';
+export type TransmissionDirection='incoming'|'outgoing';
+export interface TransportAuthentication {
+  type:'basic'|'bearer';
+  /** Environment variable names only; credential values stay in the configured host. */
+  credentialRefs:string[];
+}
+export interface TransportChannel {
+  id:RecordId;title:string;mode:'test'|'live';supplierId:string;sha256:Sha256;
+  agreement:{reference:string};
+  incoming?:{
+    url:string;authentication:TransportAuthentication;messageIdHeader?:string;
+    acknowledgment:{statusCode:number;contentType:string;body:string};
+  };
+  outgoing?:{
+    endpoints:Partial<Record<DraftKind,string>>;authentication:TransportAuthentication;contentType?:'application/xml'|'text/xml';
+    acknowledgment:{acceptedStatusCodes:number[];rejectedStatusCodes:number[];receiptHeader?:string;exactBodySha256?:Sha256};
+    timeoutMs:number;maxResponseBytes:number;
+  };
+}
+export interface TransportChannels {schema:string;configured:boolean;channels:TransportChannel[]}
+export interface TransmissionSource {fileId:RecordId;name:string;bytes:number;sha256:Sha256}
+export interface TransmissionHttp {
+  statusCode:number|null;complete:boolean;headers:Record<string,string|string[]>;observedBytes?:number;
+  response?:TransmissionSource&{mimeType:string};
+}
+export interface Transmission {
+  schema:'stellar-forge.supplier-order-transmission.v1';id:RecordId;revision:number;
+  direction:TransmissionDirection;workspaceId:string;foreign:boolean;
+  channel:Pick<TransportChannel,'id'|'title'|'mode'|'supplierId'|'sha256'|'agreement'>;
+  kind:DocumentKind;documentId:RecordId|null;orderIds:OrderId[];source:TransmissionSource;
+  state:TransmissionState;requestId:RecordId;createdAt:string;updatedAt:string;attemptCount:number;
+  lastAttempt?:Record<string,unknown>;http?:TransmissionHttp;providerReceipt?:string|null;
+  /** HTTPS delivery does not declare commercial acceptance or payment. */
+  recipientProcessing:'NOT_REPORTED'|'REVIEW'|'RETAINED';
+  resolution?:Record<string,unknown>|null;error?:OperationError|null;historyCount:number;
+  [originalField:string]:unknown;
+}
+export interface TransmissionHistoryEntry {
+  revision:number;at:string;state:TransmissionState;action?:string;requestId?:RecordId;reason?:string;
+  http?:TransmissionHttp;providerReference?:string;evidence?:TransmissionSource;
+  [originalField:string]:unknown;
+}
+export interface TransmissionsArguments extends PageArguments {
+  direction?:TransmissionDirection;state?:TransmissionState;orderId?:OrderId;
+}
+export interface TransmissionHistoryPage extends Page<TransmissionHistoryEntry> {
+  transmissionId:RecordId;revision:number;
+}
+export interface PrepareTransmissionArguments {
+  requestId:RecordId;documentId:RecordId;expectedDocumentSha256:Sha256;
+  channelId:RecordId;expectedChannelSha256:Sha256;reason:string;
+}
+export interface TransmissionMutationArguments {
+  requestId:RecordId;transmissionId:RecordId;expectedRevision:number;
+}
+export interface ReasonedTransmissionArguments extends TransmissionMutationArguments {reason:string}
+export interface ResolveTransmissionArguments extends ReasonedTransmissionArguments {
+  outcome:'ACKNOWLEDGED'|'NOT_ACCEPTED';providerReference:string;
+  /** Supply the original file identity and its SHA together when attaching retained evidence. */
+  evidenceFileId?:RecordId;expectedEvidenceSha256?:Sha256;
+}
+export interface TransmissionMutationResult extends OperationResult {
+  transmissionId:RecordId;transmission:Transmission;
+}
+
 export interface ExportManifest {
   schema:'stellar-forge.supplier-order-export.v1';exportId:RecordId;workspaceId:string;
   kind:string;createdAt:string;
@@ -272,6 +340,15 @@ export interface SupplierOrderClientMethods {
   receive(args:ReceiveArguments,options?:CallOptions):Promise<OperationReply>;
   receiveWorkspace(args:{requestId:RecordId;inputId:string;mode:'inspect'|'merge'},options?:CallOptions):Promise<OperationReply>;
   exportWorkspace(args:{requestId:RecordId},options?:CallOptions):Promise<OperationReply>;
+  transportChannels(args?:Record<string,never>,options?:CallOptions):Promise<TransportChannels>;
+  transmissions(args?:TransmissionsArguments,options?:CallOptions):Promise<Page<Transmission>>;
+  transmission(args:{transmissionId:RecordId},options?:CallOptions):Promise<Transmission>;
+  transmissionHistory(args:{transmissionId:RecordId}&PageArguments,options?:CallOptions):Promise<TransmissionHistoryPage>;
+  prepareTransmission(args:PrepareTransmissionArguments,options?:CallOptions):Promise<OperationReply<TransmissionMutationResult>>;
+  sendTransmission(args:TransmissionMutationArguments,options?:CallOptions):Promise<OperationReply<TransmissionMutationResult>>;
+  retryTransmission(args:ReasonedTransmissionArguments,options?:CallOptions):Promise<OperationReply<TransmissionMutationResult>>;
+  resolveTransmission(args:ResolveTransmissionArguments,options?:CallOptions):Promise<OperationReply<TransmissionMutationResult>>;
+  cancelTransmission(args:ReasonedTransmissionArguments,options?:CallOptions):Promise<OperationReply<TransmissionMutationResult>>;
   operation(args:{requestId:RecordId;includeRequest?:boolean},options?:CallOptions):Promise<OperationReply>;
   exportManifest(args:{exportId:RecordId},options?:CallOptions):Promise<ManifestReceipt>;
   exportFile(args:FileReadArguments,options?:CallOptions):Promise<FileChunk>;
@@ -289,6 +366,8 @@ export declare class SupplierOrderClient {
   pages(method:'documentLines',args:{id:RecordId}&PageArguments,options?:CallOptions):AsyncGenerator<DocumentLinePage>;
   pages(method:'drafts',args?:DraftsArguments,options?:CallOptions):AsyncGenerator<Page<DraftSummary>>;
   pages(method:'draftLines',args:{draftId:RecordId}&PageArguments,options?:CallOptions):AsyncGenerator<DraftLinePage>;
+  pages(method:'transmissions',args?:TransmissionsArguments,options?:CallOptions):AsyncGenerator<Page<Transmission>>;
+  pages(method:'transmissionHistory',args:{transmissionId:RecordId}&PageArguments,options?:CallOptions):AsyncGenerator<TransmissionHistoryPage>;
   inspectExport(exportId:RecordId):Promise<{manifest:ExportManifest;manifestSha256:Sha256}>;
   downloadExport(args:DownloadArguments):Promise<DownloadResult>;
 }

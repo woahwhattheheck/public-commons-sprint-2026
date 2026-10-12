@@ -92,3 +92,12 @@ The owner then calls `hosted-artifact-retention.py` on the sealed archive. The o
 
 
 The maintained keeper also accepts a complete observed normal host-create receipt for the same sealed path. Its `reconcile` command applies the original metadata handler without another transfer/finalization, preserves an already started prepared file identity, and returns only after the same artifact's local metadata is applied. See the complete receipt-reconciliation contract in `HOSTED_RETENTION.md`.
+
+
+## Following source-bundle receiving
+
+The completed native case can continue through the maintained source-bundle receiver using `receive-reviewed-source-bundle.mjs` and `hosted-ottawa-receiving.py`. The complete current 19-module engine is retained separately in `ottawa-runtime-source.json`, with each original path and Git/source identity, so this following stage preserves the frozen client journey and receives the reviewed study through the current atomic API.
+
+The receiving operation preserves the original dossier, question, revision history, selections, findings and review models. It receives the original source groups and full findings together, exports every original study file with readable reports, and independently reopens the complete portable history. The producing owner retains the actual application outcome and one sealed archive through the existing artifact keeper. It can also restore the preceding operation's exact completed saved return into the original private case paths before continuing this stage.
+
+See [OTTAWA_RECEIVING.md](OTTAWA_RECEIVING.md) for the complete reviewed-input contract, current source pins, saved-case restoration, selected output and same-file continuation. The private case input and original source-bundle data remain with their existing receiving operation.

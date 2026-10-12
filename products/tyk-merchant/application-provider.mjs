@@ -103,7 +103,8 @@ export async function tykProductStartup(request, text) {
   if (!plain(value) || value.schema !== SESSION || value.state !== 'OPEN') return null;
   const selected = requested(request), raw = applicationPrivateUrl(value.browserUrl);
   need(raw && value.directory === selected.directory && value.bindingSha256 === selected.bindingSha256 &&
-    value.port === selected.port && value.connectionFile === join(selected.directory, 'connection.json') &&
+    Number.isInteger(value.port) && value.port > 0 && value.port <= 65535 &&
+    (selected.port === 0 || value.port === selected.port) && value.connectionFile === join(selected.directory, 'connection.json') &&
     value.browserUrlFile === join(selected.directory, 'browser-url.txt') && HASH.test(value.resourceId ?? '') &&
     HASH.test(value.sourceSha256 ?? '') && UUID.test(value.productId ?? '') &&
     UUID.test(value.instanceId ?? '') && UUID.test(value.workspaceId ?? ''),
@@ -111,7 +112,7 @@ export async function tykProductStartup(request, text) {
   const browser = new URL(raw);
   need(browser.protocol === 'http:' && browser.hostname === '127.0.0.1' && browser.pathname === '/' &&
     !browser.search && HASH.test(browser.hash.slice(1)) &&
-    (selected.port === 0 || Number(browser.port || 80) === selected.port), 'APPLICATION_TYK_PRODUCT_STARTUP_CHANGED');
+    Number(browser.port || 80) === value.port, 'APPLICATION_TYK_PRODUCT_STARTUP_CHANGED');
   const retained = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(
     await readSf61HostFile(value.connectionFile, 65536, { privateFile: true })));
   need(isDeepStrictEqual(retained, value), 'APPLICATION_TYK_PRODUCT_INSTANCE_CHANGED');

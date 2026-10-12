@@ -181,6 +181,8 @@ export class WqxWorkspaceClient {
   receive(args, options) { return this.call('merchant_wqx_receive',args,options); }
   projectSave(args, options) { return this.call('merchant_wqx_project_save',args,options); }
   captureStart(args, options) { return this.call('merchant_wqx_capture_start',args,options); }
+  scientificPreview(args, options) { return this.call('merchant_wqx_scientific_preview',args,options); }
+  scientificSave(args, options) { return this.call('merchant_wqx_scientific_save',args,options); }
   analyze(args, options) { return this.call('merchant_wqx_analyze',args,options); }
   reviewSave(args, options) { return this.call('merchant_wqx_review_save',args,options); }
   planPreview(args, options) { return this.call('merchant_wqx_plan_preview',args,options); }

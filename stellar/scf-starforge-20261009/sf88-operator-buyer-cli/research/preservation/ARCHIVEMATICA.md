@@ -10,7 +10,17 @@ complete application.
 The supported provider profile is Dashboard **1.18.0** and Storage Service
 **0.24.0**. The exact source revisions and endpoint behavior are recorded in
 [the provider contract](ARCHIVEMATICA_PROVIDER_CONTRACT.md). The workbench uses
-Python 3.11 or later and the standard library for this destination.
+Python 3.11 or later. ZIP and TAR AIPs use its standard library. AIPs stored as
+7z use the declared `py7zr==1.1.3` dependency, loaded when that archive is opened.
+Install the retained requirements in the same Python environment selected for
+the application:
+
+~~~sh
+python3 -m pip install -r research/preservation/archivematica-requirements.txt
+~~~
+
+The producer, client, two guides and requirements file travel together in the
+complete application and both portable exports.
 
 ## Open the original research workspace
 
@@ -217,6 +227,13 @@ If preparation stopped after the destination selection was saved, use
 settings and configuration and adopts the matching original prepared package.
 
 ## Deliver and reopen the complete workspace
+
+In **Destinations**, open the saved Archivematica operation and choose
+**Export this Archivematica operation**. Its complete archive appears in
+**Delivery** and contains the original prepared ZIP, selected settings, saved
+operation, requests, responses, receiving files and the complete Archivematica
+application. Another engineer can receive it through the standalone route below.
+The saved receiving state remains available during this local export.
 
 Choose **Delivery → Export complete workspace**. The delivery contains the
 application source and guides, original research source, every retained review,

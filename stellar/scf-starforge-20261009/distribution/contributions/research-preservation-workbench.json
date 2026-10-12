@@ -32,7 +32,8 @@
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research/preservation/archivematica.py",
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research/preservation/archivematica_client.py",
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research/preservation/ARCHIVEMATICA.md",
-    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research/preservation/ARCHIVEMATICA_PROVIDER_CONTRACT.md"
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research/preservation/ARCHIVEMATICA_PROVIDER_CONTRACT.md",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research/preservation/archivematica-requirements.txt"
   ],
   "commands": {
     "preservation-workspace": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research/preservation/cli.mjs"
