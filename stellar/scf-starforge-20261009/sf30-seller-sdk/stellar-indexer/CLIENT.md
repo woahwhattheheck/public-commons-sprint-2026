@@ -68,10 +68,10 @@ npm install --save-exact '@stellar-indexer/stellar-indexer-sdk@npm:@jsr/stellar-
 Pass that actual project to the operator:
 
 ~~~sh
-stellar-indexer open \\
-  --workspace /absolute/private/client-workspace \\
-  --installation-directory /absolute/private/stellar-sdk-project \\
-  --connections-file /absolute/private/indexer-connections.json \\
+stellar-indexer open \
+  --workspace /absolute/private/client-workspace \
+  --installation-directory /absolute/private/stellar-sdk-project \
+  --connections-file /absolute/private/indexer-connections.json \
   --event-connections-file /absolute/private/event-connections.json
 ~~~
 
