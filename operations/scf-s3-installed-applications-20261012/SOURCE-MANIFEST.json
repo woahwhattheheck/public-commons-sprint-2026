@@ -1,0 +1,123 @@
+{
+  "schema": "stellar-forge.s3-installed-operating-source.v1",
+  "sourceCommit": "db3d9cb3d64f2aee6c1e968606bf21eb0e6ef00e",
+  "originalOperation": "scf-s3-applications-installed-99d0-20261012",
+  "originalSourceCapsule": "F0C8JMFQN3B",
+  "originalCapsuleSha256": "d17c8103cd29b0c70ddc2f07c15cde58b94050b77de85b0f59341354ad48e457",
+  "files": [
+    {
+      "path": "installed-receiving/install-and-receive.mjs",
+      "bytes": 10198,
+      "sha256": "3e87d16c6b46fbac00f1486708a804f7b09d560b8ec6e72317da7df970c03a45",
+      "origin": "Original receiving with atomic complete checkpoint publication",
+      "originalSha256": "223ac5b1e03def7b9a38d17007b73ca85a6eaf3001d2133f45e46391ed24faad"
+    },
+    {
+      "path": "installed-receiving/receive-original-offline-inputs.py",
+      "bytes": 13134,
+      "sha256": "0069a53ef07977bacf48395f07a0c7c9a65955a5a9b3e05866d1b1031655ca39",
+      "origin": "Retained original receiving source",
+      "originalSha256": "0069a53ef07977bacf48395f07a0c7c9a65955a5a9b3e05866d1b1031655ca39"
+    },
+    {
+      "path": "installed-receiving/node_lockfile_cache.py",
+      "bytes": 22472,
+      "sha256": "0a3fec3104494d95232009351dc9eda281bd6871d1b70d1d6979e5266307da1c",
+      "origin": "Unchanged Commons Apache-2.0 host/node_lockfile_cache.py",
+      "originalSha256": "0a3fec3104494d95232009351dc9eda281bd6871d1b70d1d6979e5266307da1c",
+      "originalGitBlob": "661566492bb0ae8e44b40b349187c3036b23451e"
+    },
+    {
+      "path": "installed-receiving/node_package_cache.py",
+      "bytes": 16433,
+      "sha256": "b3a009e936c8200bcc8e7a9fd15685cba51f9b15de5c0707bbd98386a5532325",
+      "origin": "Unchanged Commons Apache-2.0 host/node_package_cache.py",
+      "originalSha256": "b3a009e936c8200bcc8e7a9fd15685cba51f9b15de5c0707bbd98386a5532325",
+      "originalGitBlob": "20b224d96f453de5b7de71c2cb386a3871005a9e"
+    },
+    {
+      "path": "installed-receiving/bootstrap/runtime-install.mjs",
+      "bytes": 35598,
+      "sha256": "2a26ae9777cefa2cde8615c56293dbb70e70ad10727d2f7da658ce0b2fea64bd",
+      "origin": "Unchanged public db3d9cb3d64f2aee6c1e968606bf21eb0e6ef00e distribution source",
+      "originalSha256": "2a26ae9777cefa2cde8615c56293dbb70e70ad10727d2f7da658ce0b2fea64bd"
+    },
+    {
+      "path": "installed-receiving/bootstrap/runtime-profile.mjs",
+      "bytes": 25916,
+      "sha256": "56e0100812ffb62d05ff71fd9354fe529299ccad62fd9b6309982a197318dfdc",
+      "origin": "Unchanged public db3d9cb3d64f2aee6c1e968606bf21eb0e6ef00e distribution source",
+      "originalSha256": "56e0100812ffb62d05ff71fd9354fe529299ccad62fd9b6309982a197318dfdc"
+    },
+    {
+      "path": "installed-receiving/bootstrap/specification.mjs",
+      "bytes": 17677,
+      "sha256": "6f1d5af4c377a1458c21b19300fc7b2d0240e50310df5cadfc0814f223170c48",
+      "origin": "Unchanged public db3d9cb3d64f2aee6c1e968606bf21eb0e6ef00e distribution source",
+      "originalSha256": "6f1d5af4c377a1458c21b19300fc7b2d0240e50310df5cadfc0814f223170c48"
+    },
+    {
+      "path": "installed-receiving/bootstrap/runtime-transfer-lock.mjs",
+      "bytes": 12890,
+      "sha256": "fb2a235cb9492a6f8b236ad3400665cfb2643319535e1d76d86e3d3f22a5684c",
+      "origin": "Unchanged public db3d9cb3d64f2aee6c1e968606bf21eb0e6ef00e distribution source",
+      "originalSha256": "fb2a235cb9492a6f8b236ad3400665cfb2643319535e1d76d86e3d3f22a5684c"
+    },
+    {
+      "path": "installed-receiving/bootstrap/runtime-unpack.py",
+      "bytes": 9201,
+      "sha256": "44396f1a6424ad65bf796b854250f097b7aaf75a9424cce91951343d7d734b02",
+      "origin": "Unchanged public db3d9cb3d64f2aee6c1e968606bf21eb0e6ef00e distribution source",
+      "originalSha256": "44396f1a6424ad65bf796b854250f097b7aaf75a9424cce91951343d7d734b02"
+    },
+    {
+      "path": "receive-s3-merchant-application.mjs",
+      "bytes": 29234,
+      "sha256": "8d1a778c7fec758b0daec23894e4a93a7c1b578c1562c381187e134b1de64648",
+      "origin": "Original receiving with atomic complete checkpoint publication",
+      "originalSha256": "4e46d41f7cc09c089bab29bf504384d2c0f20af26684f9774df18e21a4d9d02d"
+    },
+    {
+      "path": "retained-files.mjs",
+      "origin": "New shared complete-file publication for the original receiving",
+      "bytes": 2040,
+      "sha256": "f9a055af66e8b0f8dd4f7d638b5922ed173533c0ee994f2a91380e50791f0bef"
+    },
+    {
+      "path": "installed-receiving/launch-installed-receiving.py",
+      "origin": "Portable first-use wrapper of original native foreground",
+      "bytes": 3903,
+      "sha256": "6494cc35f8ef867cbe87b5d38e1f19ae7226aabaca141e8f04e00a7fc1bdc343"
+    },
+    {
+      "path": "installed-receiving/resume-installed-receiving.py",
+      "origin": "Existing native foreground exact-failure and queued continuation",
+      "bytes": 2601,
+      "sha256": "370764ed268c0f0e049985caffab7e9b11c0f46b2b8c23c1a331b0bad2333505"
+    },
+    {
+      "path": "installed-receiving/input.example.json",
+      "origin": "Private configuration example for the original selected source",
+      "bytes": 885,
+      "sha256": "9785039a7605e0e61111de0ac720358472187ad4f9b7165add7e0aac162b5594"
+    },
+    {
+      "path": "README.md",
+      "origin": "Complete original installation, managed merchant, customer and recovery guide",
+      "bytes": 10081,
+      "sha256": "702b7babb6269cb0007f59aa409d6a2f6739e916646dc02262b859c867e658b4"
+    },
+    {
+      "path": "LICENSE.commons",
+      "origin": "Original Commons repository Apache-2.0 license",
+      "bytes": 11358,
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+    },
+    {
+      "path": "NOTICE.md",
+      "bytes": 1203,
+      "sha256": "16536a92aae6095d778518a6cc6c3bc25f40fc0e5fe7be443c9a39d765b5d82b",
+      "origin": "Source provenance and licensing notices"
+    }
+  ]
+}
