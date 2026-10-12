@@ -15,23 +15,20 @@ import threading
 import json
 from pathlib import Path
 import stat
-import sys
 import zipfile
- 
-# Source checkouts keep qgis beside migration; received software may keep
-# starforge_stac directly beside migration. Prefer that complete paired source.
-_source_parent = Path(__file__).resolve().parent.parent
-for _candidate in (_source_parent / "qgis", _source_parent):
-    if (_candidate / "starforge_stac" / "model.py").is_file():
-        sys.path.insert(0, str(_candidate))
-        break
 
-from starforge_stac.model import (
-    CHUNK, HASH, MAX_JSON, PACKAGE_SCHEMA, REQUEST, SNAPSHOT_SCHEMA,
-    QgisWorkspace, descriptor, directory, file_digest, json_bytes, member,
-    receive_package, relative_name, require, sha_bytes, value_sha,
+# Share the exact original modules selected by the migration workspace loader.
+from .native import files as native_files, model as original_model, qgis_project as original_qgis
+from .native import VectorReceivingSource
+
+CHUNK, HASH, MAX_JSON = original_model.CHUNK, original_model.HASH, original_model.MAX_JSON
+PACKAGE_SCHEMA, REQUEST, SNAPSHOT_SCHEMA = (
+    original_model.PACKAGE_SCHEMA, original_model.REQUEST, original_model.SNAPSHOT_SCHEMA,
 )
-from starforge_stac.vector_source import VectorReceivingSource
+QgisWorkspace, descriptor, directory = original_model.QgisWorkspace, original_model.descriptor, original_model.directory
+file_digest, json_bytes, member = original_model.file_digest, original_model.json_bytes, original_model.member
+receive_package, relative_name, require = original_model.receive_package, original_model.relative_name, original_model.require
+sha_bytes, value_sha = original_model.sha_bytes, original_model.value_sha
 
 BUILD_SCHEMA = "starforge.migration-project-build.v1"
 INSPECTION_SCHEMA = "starforge.migration-handover-inspection.v1"
@@ -45,9 +42,8 @@ def _native_operation(function):
     """Own an offscreen application only when the caller has no QGIS app."""
     @wraps(function)
     def wrapped(*args, **kwargs):
-        from starforge_stac.qgis_project import native
         from qgis.PyQt.QtCore import QThread
-        core = native()
+        core = original_qgis.native()
         application = core.QgsApplication.instance()
         own_application = None
         if application is None:
@@ -122,6 +118,41 @@ def _edition(workspace, edition_id):
     return edition, source_root
 
 
+def _native_definitions(definitions):
+    """Project display controls use QGIS native types; original JSON stays bound."""
+    projected = []
+    for definition in definitions:
+        options = {}
+        for layer_id, selected in definition.get("layerOptions", {}).items():
+            row = {}
+            for key, value in selected.items():
+                if key == "opacity":
+                    exact = native_files.number_decimal(value)
+                    require(0 <= exact <= 1, "MIGRATION_LAYER_OPACITY", "Choose an opacity from zero to one.")
+                    row[key] = float(exact)
+                elif key == "visible":
+                    require(type(value) is bool, "MIGRATION_LAYER_VISIBILITY", "Choose visible or hidden.")
+                    row[key] = value
+                elif key == "styleFile":
+                    row[key] = descriptor(value) if value is not None else None
+                elif key == "styleDependencies":
+                    require(isinstance(value, list), "MIGRATION_LAYER_RESOURCES", "Retain the complete style resource list.")
+                    row[key] = [descriptor(item) for item in value]
+                elif key == "crsOverride" and value is None:
+                    row[key] = None
+                else:
+                    require(isinstance(value, str), "MIGRATION_LAYER_DISPLAY_TYPE",
+                            "Use the original native text display control.", field=key)
+                    row[key] = value
+            options[layer_id] = row
+        projected.append({
+            "id": definition["id"], "title": definition["title"],
+            "format": definition.get("format", "GPKG"), "projectCrs": definition.get("projectCrs"),
+            "sourceLayerIds": list(definition["sourceLayerIds"]), "layerOptions": options,
+        })
+    return projected
+
+
 def _layers(source, definition):
     rows = source.asset_rows()
     selected = []
@@ -147,9 +178,8 @@ def build_projects(workspace, edition_id, *, request_id, actor, expected_revisio
     preceding original committed revision. A retry never adopts an unrelated
     newer workspace revision.
     """
-    from starforge_stac.qgis_project import (
-        add_to_project, capture_styles, native, reopen_project, save_project,
-    )
+    add_to_project, capture_styles = original_qgis.add_to_project, original_qgis.capture_styles
+    native, reopen_project, save_project = original_qgis.native, original_qgis.reopen_project, original_qgis.save_project
     require(isinstance(request_id, str) and REQUEST.fullmatch(request_id),
             "MIGRATION_REQUEST", "Use one stable request ID for the complete project build.")
     require(type(expected_revision) is int and expected_revision >= 0,
@@ -159,12 +189,17 @@ def build_projects(workspace, edition_id, *, request_id, actor, expected_revisio
     state = workspace.read()
     original = VectorReceivingSource(source_root, edition["vector"]["manifestSha256"],
                                      verify=False, progress=progress)
-    definitions = copy.deepcopy(edition["projectDefinitions"])
+    original_definitions_json = native_files.canonical(edition["projectDefinitions"])
+    definitions = _native_definitions(edition["projectDefinitions"])
+    edition_row = next(row for row in state["migration"]["editions"] if row["id"] == edition_id)
+    edition_file = descriptor(edition_row["file"])
+    file_digest(member(workspace.root, edition_file["path"]), expected=edition_file)
     prepared_layers = [_layers(original, definition) for definition in definitions]
     core = native()
     binding = {
         "schema": BUILD_SCHEMA, "workspaceId": state["id"], "requestId": request_id,
-        "actor": actor, "editionId": edition_id, "editionSha256": value_sha(edition),
+        "actor": actor, "editionId": edition_id, "editionSha256": native_files.digest(edition),
+        "editionFile": edition_file, "projectDefinitionsJson": original_definitions_json,
         "sourcePath": edition["vector"]["path"], "sourceManifestSha256": original.id,
         "expectedRevision": expected_revision, "projectDefinitions": definitions,
     }
@@ -235,6 +270,8 @@ def build_projects(workspace, edition_id, *, request_id, actor, expected_revisio
         "schema": BUILD_SCHEMA, "requestId": request_id, "inputSha256": signature,
         "workspaceId": state["id"], "editionId": edition_id, "sourceId": original.id,
         "sourceManifestSha256": original.id, "expectedRevision": expected_revision,
+        "editionSha256": binding["editionSha256"], "editionFile": edition_file,
+        "projectDefinitionsJson": original_definitions_json,
         "projectDefinitions": definitions, "projects": projects,
         "finalProjectRevision": cursor, "operations": operations,
     }
@@ -374,8 +411,7 @@ def export_handover(workspace, destination, *, expected_revision, expected_sha25
 
 def _native_available():
     try:
-        from starforge_stac.qgis_project import native
-        native()
+        original_qgis.native()
     except ModuleNotFoundError as error:
         if error.name in ("qgis", "qgis.core"):
             return False
@@ -385,8 +421,9 @@ def _native_available():
 
 @_native_operation
 def reopen_handover(workspace, *, progress=None):
-    """Reopen every saved original map, including maps from earlier editions."""
-    from starforge_stac.qgis_project import native_version, reopen_project
+    """Reopen every original map and retained cartographic publication."""
+    from .cartography import reopen_publications
+    native_version, reopen_project = original_qgis.native_version, original_qgis.reopen_project
     workspace.verify_migration()
     snapshot = workspace.snapshot()
     readbacks = []
@@ -399,10 +436,11 @@ def reopen_handover(workspace, *, progress=None):
         if progress:
             progress({"phase": "native-reopen", "projectId": record["id"],
                       "completedProjects": index, "totalProjects": len(snapshot["state"]["projects"])})
+    publications = reopen_publications(workspace, progress=progress)
     require(workspace.snapshot() == snapshot, "MIGRATION_RECEIVING_CHANGED",
-            "The workspace changed while its complete project set was reopening.")
+            "The workspace changed while its complete projects and publications were reopening.")
     return {"available": True, "native": native_version(), "workspaceId": snapshot["state"]["id"],
-            "revision": snapshot["state"]["revision"], "projects": readbacks}
+            "revision": snapshot["state"]["revision"], "projects": readbacks, "publications": publications}
 
 
 def receive(archive_path, destination, *, expected_sha256, progress=None, native_reopen="auto"):

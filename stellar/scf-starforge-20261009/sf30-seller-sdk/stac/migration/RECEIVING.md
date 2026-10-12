@@ -21,6 +21,8 @@ The complete project action performs these native operations in order:
 
 The project definition's title is retained in the migration delivery. The maintained native writer uses the workspace title inside each QGZ.
 
+The build binds the complete original edition with the vector engine's exact canonical serializer. `editionFile` retains the original edition document's byte count and SHA-256; `editionSha256` records its canonical document identity. `projectDefinitionsJson` retains the complete exact original definition JSON inside the ordinary QGIS journal. The accompanying `projectDefinitions` contains only the declared QGIS display arguments: visibility is a boolean, opacity is the native double required by QGIS, style files remain original descriptors, and native text controls remain strings. Source coordinates, exact numeric field values, keys, original manifests and source-row sidecars stay in their original retained files and original vector representation.
+
 Keep the complete archive outside the active workspace. Select its original revision when exporting. A successful export returns the archive's exact byte count, SHA-256, manifest SHA-256, workspace ID and revision.
 
 ## Correct an edition
@@ -47,7 +49,7 @@ The source package supports ordinary Python inspection and receiving:
 
 A provider, style or resource error from an installed QGIS runtime is returned by the native operation. Only a missing QGIS module is treated as unavailable in auto mode.
 
-The received archive includes the complete application under `software/`. Open the received workspace through that application, then choose any original saved map. All retained source data and style resources resolve inside the received workspace. The complete received workspace can itself be exported and received onward with the same source, mapping, project and operation identities.
+The migration workspace retains complete application editions in `state.migration.software`. Each original `{id, path, source, files}` record identifies its complete file inventory under `migration/software/<closure SHA>/stac/`. This source includes the migration operator, original vector engine, paired QGIS engine, guides and the independent receiving entrypoint. The QGIS writer also carries its own original `software/starforge_stac/` files; both sets remain in the same complete archive. Open the received workspace through the selected migration application, then choose any original saved map. All retained source data and style resources resolve inside the received workspace. The complete received workspace can itself be exported and received onward with the same source, mapping, project and operation identities.
 
 ## Python interface
 
@@ -98,6 +100,9 @@ maps = reopen_handover(received["workspace"])
 | --- | --- |
 | `projectBuild` | Immutable build input identity and complete saved project records |
 | `projectBuild.inputSha256` | Canonical identity of the edition, source, definitions, actor and starting revision |
+| `projectBuild.editionFile` and `editionSha256` | Exact original edition bytes and the vector engine's canonical document identity |
+| `projectBuild.projectDefinitionsJson` | Complete original definition JSON, including exact source numeric values |
+| `projectBuild.projectDefinitions` | Declared native QGIS display arguments used to create the maps |
 | `projectBuild.projects` | Every native project ID, exact file, source IDs, original layer/style definitions and native saved readback |
 | `projectBuild.operations` | Ordered original subrequest IDs, actions and committed revisions |
 | `replayed` | Whether the final original build request already existed |
@@ -107,7 +112,9 @@ maps = reopen_handover(received["workspace"])
 
 `export_handover` calls the original archive writer. If a complete file already exists after a lost response, it verifies that archive and requires the same workspace and selected revision before returning its original identity.
 
-`receive` returns the original receiving fields, the reopened migration `workspace`, migration verification result, current revision and native readbacks. A retry of the same archive reuses the original received workspace. Existing legitimate subsequent workspace edits stay in that workspace.
+`reopen_handover` reopens every saved map and calls the original cartographic publication receiver for all retained publications. Its `publications` field preserves the complete original publication readback, including the retained QGZ, QPT, PDF, PNG, plan and receipt bindings. Prepare or correct publications through the existing cartography operator before the complete handover is frozen. That operator retains its own original request, actor, revision, corrected-source comparison and publication status.
+
+`receive` returns the original receiving fields, the reopened migration `workspace`, migration verification result, current revision and native map/publication readbacks. A retry of the same archive reuses the original received workspace. Existing legitimate subsequent workspace edits stay in that workspace.
 
 ## Complete native receiving journey
 
@@ -146,7 +153,9 @@ Run the existing selected QGIS Python:
 
 This one operation builds the complete selected edition sequence, verifies each completed request's replay, retains full adjacent-edition comparisons, reopens all maps, exports and inspects the complete archive, receives it twice at the same destination, and checks the exact original snapshot.
 
-It then starts a separate selected-QGIS process using the **received application's own source** to reopen every saved map. It exports that received workspace onward and repeats the independent native reopen at the onward location. The helper checks that the loaded migration and QGIS model modules came from each received software directory.
+It then starts a separate selected-QGIS process using the **received application's own source** to reopen every saved map. It exports that received workspace onward and repeats the independent native reopen at the onward location. The helper resolves the entrypoint from the chosen `state.migration.software` record and verifies every declared file before starting the child. It then checks that the child's migration, vector and QGIS modules, including the entrypoint and publication receiver, are exact declared members of that independently received application. The output retains the selected software ID, metadata identity, entrypoint descriptor and loaded source-file descriptors. The onward receiver uses the same software ID.
+
+If the workspace retains several application editions, the helper selects the one whose complete source matches its running installation. Set `softwareId` in the original configuration when choosing another retained edition or when no single edition matches. This is an original software identity, not a filesystem path. A direct independent reopen accepts `--software-id` with that same retained ID. All application bytes and recorded source paths remain relative to the workspace.
 
 The resulting output directory contains:
 
@@ -159,9 +168,9 @@ The resulting output directory contains:
 | `comparisons/` | Complete original source/native edition comparisons |
 | `complete-migration.zip` | Full source, mapping, native data, maps, styles, resources, history and application |
 | `received-workspace/` | Independently restored editable workspace |
-| `independent-reopen.json` | Actual received-source module identities and native map readbacks |
+| `independent-reopen.json` | Original software selection, exact received-source modules, native maps and complete publication readbacks |
 | `onward-migration.zip` and `onward-workspace/` | Complete onward handover and restored workspace |
-| `onward-independent-reopen.json` | Native readbacks using the onward receiver's own source |
+| `onward-independent-reopen.json` | Native map/publication readbacks using the same original software edition at the onward receiver |
 | `result.json` | Completed original operation, exact archives, editions, projects and receiving identities |
 
 Keep the original configuration and output directory when resuming. Each build's start event binds its initial revision; each following subrequest uses the preceding committed revision. If another editor changes the workspace between unfinished steps, the original CAS check reports that change. Review the current workspace before choosing a new build request.
@@ -201,6 +210,8 @@ For an operation created by an earlier helper that has no `workspace-input.json`
 
 - Maintained original QGIS model: `qgis/starforge_stac/model.py`, including `QgisWorkspace`, complete package export and `receive_package`.
 - Original native project and styles: `qgis/starforge_stac/qgis_project.py`.
+- Exact vector canonical values and retained original source: `vector/common.py`.
+- Original cartographic publication and correction receiver: `migration/cartography.py` and `migration/CARTOGRAPHY.md`.
 - Exact vector input adapter: `qgis/starforge_stac/vector_source.py` and `qgis/VECTOR_RECEIVING.md`.
 - [QGIS project and style file formats](https://docs.qgis.org/3.44/en/docs/user_manual/appendices/qgis_file_formats.html).
 - [PyQGIS loading and saving projects](https://docs.qgis.org/3.44/en/docs/pyqgis_developer_cookbook/loadproject.html).
