@@ -933,6 +933,28 @@ process identities and error. On the same host boot, reconcile that exact launch
 and native operation before another start; an empty later PID lookup alone does
 not replace the missing descendant-closure result.
 
+### Mounted process identity
+
+The launcher supports hosts whose mounted proc filesystem exposes a different
+PID namespace from native process calls. It derives the caller's namespace
+column from its own `NSpid` values and retains both the syscall PID and the
+mounted-proc PID with the original parent and birth ticks. Native wait and
+pidfd operations continue to use the caller's PID.
+
+For a known child, the original pidfd's `fdinfo` supplies its mounted-proc
+identity when available. The launcher normally reads its native task child
+list. On kernels that omit that interface, it examines numeric proc stat
+records for this exact original parent's children, then verifies each selected
+child's PID namespace, parent and birth ticks. It reads no process commands or
+resource census and sends no signal to an unrelated process. Browser children
+may enter another namespace; their caller identity uses the retained caller
+column rather than the descendant's final namespace column.
+
+The same observations cover adopted children after an abnormal driver exit.
+Before any pidfd signal, the launcher rereads the selected process identity
+and confirms its actual current parent and original birth ticks. The original
+leader stays reserved until its complete owned process family is closed.
+
 ### Original host identity and recovery
 
 Before dispatch, the launcher reads the native Linux machine ID and the DMI
