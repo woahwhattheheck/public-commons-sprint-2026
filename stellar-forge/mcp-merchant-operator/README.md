@@ -1,5 +1,16 @@
 # Starforge merchant operations through MCP
 
+Operate a complete Baserow source and merchant through the same browser workspace. Capture native rows and files, review source versions, run the original publisher and refresh schedule, stage the merchant, and deliver the complete original source to a customer. Manifest-pinned downloads resume after MCP restart, and the recipient reopens the same native import offline. See [Baserow source, merchant and customer operations](BASEROW_WORKSPACE.md) for all 20 tools, host setup and the original-source continuation.
+
+Federal grant opportunity research uses this same host's 36 original-workspace
+tools. Open retained source captures, qualify full notices, save immutable
+editions and workshares, prepare and publish the native dataset, complete
+original customer sessions, and download/reopen every source byte after
+interruption. The installed **Grants.gov opportunities** application opens the
+same research model. See [Grants.gov research, publication and complete
+receiving](GRANTSGOV_WORKSPACE.md) for host setup, Applications, all tools and
+the original receiving commands.
+
 Native Stellar MPP customer operations use the existing private console and original payment records. The [MPP guide](./MPP.md) covers host connections, retained customer reviews, native jobs, recovery, and complete resumable response or customer-package downloads through this same operator.
 
 Create and revise OpenAPI merchants through this same operator. Attach the host's
@@ -633,8 +644,12 @@ contains multiple projects. Initialization binds the original project's
 `seller-releases` to this merchant operator. Agents use the same capture, typed
 projection, edition comparison, original publisher and portable merchant model as
 the CKAN workbench, then activate and run its release with the normal merchant
-tools. Each change returns the original operation identity for status and
-lost-response recovery. The original buyer configuration and merchant archives
+tools. The 28 CKAN tools include read-only `merchant_ckan_semantics_preview`
+for a proposed field projection and `merchant_ckan_source_semantics` for the
+saved reviewed dictionary, including after project reopen. A live capture can
+select its original CSVW document with `schemaUrl`; source meaning stays bound
+through publication, merchant packaging and customer pages. Each change returns
+the original operation identity for status and lost-response recovery. The original buyer configuration and merchant archives
 are available through SHA-pinned file reads. Both HTTP and stdio expose the same
 source tools and release lifecycle. The [complete CKAN agent and operator guide](../../stellar/scf-starforge-20261009/sf30-seller-sdk/ckan/MCP_WORKFLOW.md)
 covers host configuration, the joined source-to-customer workflow and reopening.

@@ -3,6 +3,7 @@ import { constants } from 'node:fs';
 import { open } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { dirname, resolve } from 'node:path';
+import { merchantQuickBooksRecoverySources } from './accounting-quickbooks-oauth.mjs';
 import { RetainedFileReads } from './retained-file-reads.mjs';
 import { adjustmentDefinitions, MerchantAdjustments } from './accounting-adjustments.mjs';
 import { statementDefinitions, statementFileNames, statementFileSelectors, MerchantCustomerStatements } from './accounting-statements.mjs';
@@ -358,7 +359,18 @@ export class MerchantAccounting {
     const definition = this.#definition(key), record = { workspace: null, collection: null, accountant: null, bitwave: null, adjustments: null, statements: null, platforms: null, maintenance: null, closing: false, calls: new Set() };
     this.#sessions.set(key, record);
     record.opening = (async () => {
-      record.maintenance = await openAccountingMaintenance({ directory: definition.directory, ...definition.recovery,
+      const oauth = definition.platforms?.qbo?.oauth;
+      const hostSources = oauth ? merchantQuickBooksRecoverySources(oauth, {
+        environment: this.#platformOptions.environment, allowLoopback: this.#platformOptions.quickbooksOAuth.allowLoopback,
+        onPaths: roots => {
+          for (const root of roots) {
+            if (!this.#substitutions.some(([path]) => path === root.path))
+              this.#substitutions.push([root.path, 'accounting://' + key + '/recovery/host/' + root.name]);
+          }
+          this.#substitutions.sort((a,b) => b[0].length - a[0].length);
+        },
+      }) : undefined;
+      record.maintenance = await openAccountingMaintenance({ directory: definition.directory, ...definition.recovery, hostSources,
         openRuntime: () => this.#openRuntime(key, record), closeRuntime: runtime => this.#closeRuntime(key, record, runtime) });
     })();
     try { await record.opening; return this.#safe(this.#sessionState(key, record)); }

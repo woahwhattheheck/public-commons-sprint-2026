@@ -238,6 +238,116 @@ The page limit or total allocation ceiling stops further calls and retains
 completed pages. These limits are fixed when the session is created; they are
 not silently expanded on restart.
 
+
+## Continue an expired, untransferred reservation
+
+A stopped native attempt can leave the original SF36 reservation held even when
+its authorization expired before any transfer. The privileged recovery worker
+uses the original approved request, immutable attempt/configuration, stopped-owner
+receipt, original native facilitator configuration and a retained pre-attempt
+chain observation. Its first supported profile is native XLM on Stellar testnet
+with the exact installed `@x402/stellar 2.28.0` source and one original facilitator
+submitter. The configured payer, asset, recipient, request digest and account
+identities remain the original ones.
+
+Prepare the private source descriptor through the original attempt custodian.
+It uses schema `stellar-forge.sf36.expired-authorization-source.v1` and these
+original inputs:
+
+| Field | Retained input |
+| --- | --- |
+| `sourceKind` | `dataset` for the original page |
+| `approvedRequest`, `requestSha256` | Complete original SF54/SF36 request and its canonical SHA-256 |
+| `configurationFile`, `attemptFile`, `facilitatorConfigurationFile` | Absolute original private files |
+| `files` | Exact role/path/byte-count/SHA-256 entries; explicitly absent outputs use `state:"ABSENT", bytes:0` |
+| `attemptStartedAt`, `executionStopped` | Original attempt time and stopped-owner receipt, including its exact file and SHA-256 |
+| `payer`, `feePayer` | Original payer and the single submitter derived from the native facilitator configuration |
+| `sdkRoot`, `signingAnchorLedger` | Installed original SDK and an actual closed ledger after the stopped-owner observation |
+| `chainBaseline` | Original completed pre-attempt chain source, its named manifest role, field paths and original receipt URL |
+
+The file roles include `configuration`, `attempt`, `facilitator`,
+`prior-chain`, and each existing `body`, `response`, `result`, `failure`,
+`evidence`, `response-lock` and `response-partial`. The `chainBaseline.fields`
+object selects `network`, `payer`, `feePayer`, `observedLedger`,
+`transaction`, `transactionLedger` and `transactionSource` from that complete
+original source using arrays of literal JSON field names. The prior transaction
+must belong to the same configured submitter and precede this attempt. The
+stopped-owner receipt binds its `intentId`, exact `attemptSha256`,
+`state:"STOPPED"`, `observedAt` and original `providerReceipt`. Keep this source
+and its containing directory private.
+
+Use the original operator environment containing `SF36_CONSENT_KEY_B64`,
+`SF36_AUDIT_KEY_B64` and `SF36_OPERATOR_KEY_B64`. The worker takes those same
+keys through the environment. It retains source bytes and actual Horizon
+responses, observes the authorization's ledger expiry and brackets historical
+transactions with current account-state reads. The original submitter's
+sequence must still equal the sequence consumed by its selected pre-attempt
+transaction. Its fresh account states carry Horizon's actual
+`Latest-Ledger`; historical transaction-list headers are retained as returned.
+
+```sh
+python3 -I -B stellar/scf-starforge-20261009/sf36-spend-governor/expired_authorization.py observe \
+  --source /private/recovery/original-source.json \
+  --ledger /private/dataset-buyer/reservations.sqlite \
+  --policy /private/dataset-buyer/policy.json \
+  --payer ORIGINAL_PUBLIC_PAYER \
+  --node /absolute/path/to/node \
+  --expected-request-sha ORIGINAL_APPROVAL_SHA256 \
+  --reports /private/recovery/reports
+```
+
+For a host that supplies an HTTPS CONNECT proxy, add
+`--https-proxy "$HTTPS_PROXY"` explicitly. The worker retains the fixed Horizon
+origin and normal TLS certificate verification. By default it uses direct
+HTTPS and excludes ambient proxy settings.
+
+Read the retained result, then run the same worker arguments with the
+`release` action. Release is idempotent for the exact request and reservation
+generation. It appends the original governor's `expire_untransferred` journal
+event and restores that reservation's allocation. The retained actual amount is
+zero, and the row becomes `expired`. The original request, release event and
+source hashes remain in the ledger/archive.
+
+Continue the same Dataset page through its original command:
+
+```sh
+node stellar/scf-starforge-20261009/sf88-operator-buyer-cli/dataset-cli.mjs run \
+  --session /private/purchases/east-region \
+  --workspace /private/dataset-buyer \
+  --retry-expired /private/recovery/original-source.json \
+  --expiry-reports /private/recovery/reports \
+  --request-sha ORIGINAL_APPROVAL_SHA256 \
+  --expect-attempt ORIGINAL_ATTEMPT_SHA256 \
+  --resume-permit-file /private/recovery/resume-permit.json
+```
+
+The Dataset runner authenticates the saved release, archives every selected
+original attempt/output/lock byte under
+`pages/NNNNNN/expired-history/ORIGINAL_ATTEMPT_SHA256`, then removes only the
+matching old runtime files. The attempt marker is removed last. A partial
+archive is completed from the same immutable plan; a finished archive without
+a new attempt reports `ARCHIVED_AWAITING_REAPPROVAL`. Repeat the same explicit
+command to continue that state. Repeated expiry follows the original governor's
+audited predecessor-release chain, so a later archived generation supersedes its
+own predecessor without relying on directory order or timestamps.
+
+For wire-backed attempts, include each original wire event in the same expiry source selection as `wire-<event-name>` (and `wire-source` for `source.json`). After the authenticated expiry release, the runner verifies that complete selection through the original wire reader, retains a wire archive plan, and moves the entire stopped wire directory—including its held original lock—into the page's existing expiry history before removing the page attempt. Reopening the same operation finishes an interrupted rename from that exact plan. The original response, ledger generation, and every archived authorization byte remain bound to the same release.
+
+The runner obtains a private, short-lived operator permit bound to the release
+journal MAC. Original SF62 terminal or structured approval asks for fresh
+consent over the current complete request. That new consent is independently
+bound to the same release generation. Original SF36 rechecks the current
+policy and shared budgets atomically, then creates a new reservation generation
+for the same request ID. Original SF59 allows the native signer to proceed only
+after the outcome is `RESERVED`. A prior approval token or a different request
+cannot authorize this continuation.
+
+Once the new attempt marker exists, it owns normal execution and recovery.
+Completed pages, subsequent per-page approvals, original accounting and SF100
+delivery continue through the commands above. Use `recover` first when an
+original same-host run lock belongs to a process that has ended; the existing
+lock recovery keeps an active owner intact.
+
 ## Build the CSV and data room
 
 After status reports COMPLETE, delegate the complete export directly to the
@@ -326,3 +436,7 @@ SF100 export. This acquisition extension reuses its exact checkPage and
 appendMany implementation. Its request mapping and batch process boundary were
 reviewed against those current native contracts; that prior run is not a claim
 that a new paid acquisition or this new boundary has been executed.
+
+### Continue an interrupted fresh approval
+
+If the released page has already been archived and its next original approval was interrupted before a new reservation, keep that successor's exact attempt and native wire records. The same `run --retry-expired` command accepts `--expect-unapproved-attempt ORIGINAL_UNSIGNED_SUCCESSOR_SHA256` in addition to the released parent's `--expect-attempt` and source/report/request inputs. The original wire reader must report a stopped unsigned attempt, and the authenticated Governor journal must still have the same released generation. The helper retains the successor under the parent's `expired-history/<parent>/unapproved/<successor>` directory, including its entire original wire directory and lock, then resumes the same fresh approval. A successor that was reserved, entered signing, or dispatched needs its own original reconciliation. An interrupted archive resumes from its saved plan and exact file hashes.

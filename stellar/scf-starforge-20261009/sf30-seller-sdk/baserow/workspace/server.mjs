@@ -55,6 +55,10 @@ export async function serveBaserowAuthoring({ workspace, port = 8462 } = {}) {
           for (const key of ['limit', 'capturesOffset', 'versionsOffset', 'discoveriesOffset']) if (url.searchParams.has(key)) options[key] = Number(url.searchParams.get(key));
           return send(200, await workspace.status(options));
         }
+        if (path === '/api/publisher/state') {
+          const input = url.searchParams.has('input') ? JSON.parse(url.searchParams.get('input')) : {};
+          return send(200, await workspace.publisherState({ action: url.searchParams.get('action') ?? 'status', input }));
+        }
         if (path === '/api/deployment/status') {
           const options = {};
           for (const key of ['limit', 'runsOffset', 'operationsOffset']) if (url.searchParams.has(key)) options[key] = Number(url.searchParams.get(key));
@@ -106,6 +110,8 @@ export async function serveBaserowAuthoring({ workspace, port = 8462 } = {}) {
       if (path === '/api/select') return send(200, await workspace.selectVersion(input));
       if (path === '/api/publisher/start') return send(200, await workspace.openPublisher(input));
       if (path === '/api/publisher/stop') return send(200, await workspace.closePublisher(input));
+      if (path === '/api/publisher/state') return send(200, await workspace.publisherState(input));
+      if (path === '/api/publisher/command') return send(200, await workspace.publisherCommand(input));
       if (path === '/api/deployment/review') return send(200, await workspace.reviewDeployment(input));
       if (path === '/api/deployment/prepare') return send(201, await workspace.prepareDeployment(input));
       if (path === '/api/deployment/stage') return send(201, await workspace.stageDeployment(input));

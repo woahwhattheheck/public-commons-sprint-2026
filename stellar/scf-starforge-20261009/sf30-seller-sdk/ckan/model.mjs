@@ -8,6 +8,7 @@ import { object, bytes, digest, identity, readJson, createFile, atomicJson, priv
 import { catalogOrigin, captureSelection, captureCkanResource, ExactCkanNumber, readCkanCapture, requestCkan, searchCkan } from './capture.mjs';
 import { compileQueries, readCkanSourceFile } from './declaration.mjs';
 import { bindCkanCapture, projectCkanValue } from './source.mjs';
+import { describeCkanSemantics, projectCkanSemantics, checkCkanSemanticReview, compareCkanSemantics } from './semantics.mjs';
 import { openCkanPublisher } from './publisher/model.mjs';
 import { exportCkanMerchantPackage, stageCkanMerchantRelease, readCkanMerchantBuyerOffer,
   prepareCkanMerchantBuyer } from './publisher/release.mjs';
@@ -23,7 +24,8 @@ function captureSummary(capture) {
   const m = capture.manifest;
   return { manifestSha256: capture.manifestSha256, rowCount: m.rowCount, pageCount: m.pages.length,
     packageId: m.packageId, resourceId: m.resourceId, packageTitle: m.packageTitle, resourceTitle: m.resourceTitle,
-    license: m.license, consistency: m.consistency, startedAt: m.startedAt, completedAt: m.completedAt };
+    license: m.license, consistency: m.consistency, startedAt: m.startedAt, completedAt: m.completedAt,
+    semanticSchemaSha256: m.semanticSchema?.sha256 ?? null, semanticConsistency: m.semanticConsistency ?? null };
 }
 // Presentation values cross a browser JSON parser; stringify structured values
 // and exact numeric tokens here so the displayed source value cannot be rounded.
@@ -35,6 +37,7 @@ function sampleValue(value) {
 const sampleRow = row => Object.fromEntries(Object.entries(row).map(([name, value]) => [name, sampleValue(value)]));
 function columnSuggestions(capture) {
   const used = new Set();
+  const semanticFields = new Map(describeCkanSemantics(capture).fields.map(field => [field.sourceField, field]));
   return capture.fields.map(field => {
     let alias = field.id === '_id' ? 'record_id' : field.id.replace(/[^A-Za-z0-9_]/g, '_').replace(/_+/g, '_').slice(0, 42);
     if (!/^[A-Za-z]/.test(alias)) alias = 'field_' + alias;
@@ -54,6 +57,7 @@ function columnSuggestions(capture) {
     if (!nonnull.length) { type = 'string'; encoding = 'json'; }
     if (encoding === 'json') type = 'string';
     return { field: field.id, alias, providerType: field.type ?? null, providerInfo: field.info ?? null,
+      sourceDefinition: semanticFields.get(field.id)?.sourceDefinition ?? null,
       type, encoding, nullable: encoding === 'json' ? false : nulls > 0, nulls, empty, missing,
       sample: nonnull.slice(0, 3).map(sampleValue) };
   });
@@ -133,7 +137,7 @@ export async function openCkanWorkbench({ directory, create = false, origin, aut
       }
       const capture = await selectedCapture(value);
       return { ...entry, fields: capture.fields, suggestions: columnSuggestions(capture),
-        sample: capture.rows.slice(0, 20).map(sampleRow), source: capture.manifest };
+        semantics: describeCkanSemantics(capture), sample: capture.rows.slice(0, 20).map(sampleRow), source: capture.manifest };
     }
     async function capture(entry, signal, progress) {
       entry.state = 'CAPTURING'; entry.error = null; await persist();
@@ -215,26 +219,41 @@ export async function openCkanWorkbench({ directory, create = false, origin, aut
         }
         for (const [value, row] of right) if (!left.has(value)) { added++; if (changes.length < 100) changes.push({ key: row[key], kind: 'added', after: row }); }
         return { before: captureSummary(before), after: captureSummary(after), key, added, removed, changed, unchanged,
-          fieldsChanged: identity(before.fields) !== identity(after.fields), changes, shown: changes.length };
+          fieldsChanged: identity(before.fields) !== identity(after.fields),
+          semanticChanges: compareCkanSemantics(before, after), changes, shown: changes.length };
+      },
+      async previewSemantics(editionId, projection) {
+        const capture = await selectedCapture(editionId);
+        const query = compileQueries({ dataset: { projection } }).dataset;
+        return projectCkanSemantics(capture, query.projection);
       },
       saveSource(editionId, input) {
         return launch('save field selection', async () => {
           const capture = await selectedCapture(editionId);
           if (input.expectedCaptureSha256 !== capture.manifestSha256) throw fault('CKAN_REVIEWED_EDITION_CHANGED');
           const query = input.query ?? 'dataset', queries = compileQueries({ [query]: { projection: input.projection } });
+          const semantics = projectCkanSemantics(capture, queries[query].projection);
+          const semanticReview = semantics ? { sha256: semantics.sha256, definitionSha256: semantics.definitionSha256 } : null;
           const config = { schema: 'stellar-forge.ckan-source.v1', catalogOrigin: state.catalogOrigin,
             packageId: capture.manifest.packageId, resourceId: capture.manifest.resourceId,
             connection: { kind: 'capture', file: captureFile(editionId), sha256: capture.manifestSha256 },
-            queries: { [query]: { projection: input.projection } } };
+            queries: { [query]: { projection: input.projection, ...(semanticReview ? { semanticReview } : {}) } } };
           bindCkanCapture(capture, config, queries[query]);
           const preview = capture.rows.slice(0, 20).map(row => Object.fromEntries(Object.entries(queries[query].projection)
             .map(([alias, spec]) => [alias, projectCkanValue(row[spec.field], spec)])));
           const value = randomUUID(), file = join(directory, 'sources', value + '.json'), raw = bytes(config);
           await createFile(file, raw);
           const entry = { id: value, title: text(input.title ?? capture.manifest.packageTitle, 'a data product title', 128),
-            editionId, query, file, sha256: digest(raw), createdAt: stamp(), projection: queries[query].projection };
-          state.sources.push(entry); await persist(); return { ...entry, preview };
+            editionId, query, file, sha256: digest(raw), createdAt: stamp(), projection: queries[query].projection,
+            ...(semanticReview ? { semanticReview, semanticIssues: semantics.issues } : {}) };
+          state.sources.push(entry); await persist(); return { ...entry, preview, semantics };
         });
+      },
+      async sourceSemantics(sourceId) {
+        const source = find('sources', sourceId), selected = await readCkanSourceFile(source.file);
+        const capture = await readCkanCapture(selected.captureFile, selected.config.connection.sha256);
+        bindCkanCapture(capture, selected.config, selected.queries[source.query]);
+        return checkCkanSemanticReview(capture, selected.queries[source.query]);
       },
       createPublication(sourceId, input = {}) {
         return launch('prepare dataset candidate', async (signal, progress) => {
