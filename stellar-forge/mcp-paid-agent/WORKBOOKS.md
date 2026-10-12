@@ -164,8 +164,13 @@ For each selected completed file, call `workbook-file` with:
 ~~~
 
 The supported files are `workbook.xlsx`, `handoff.zip` and `manifest.json`.
-The adapter checks the original COMPLETE build, its expected workspace and
-directory, definition identity, current manifest and chosen file digest.
+The adapter checks the original COMPLETE build, selected workspace identity,
+definition identity, current manifest and chosen file digest. It derives the
+local file directory from the host-registered customer database and validated
+build ID. A copied customer's original job keeps its producer directory as
+provenance; the adapter never opens that earlier path. Retain the complete
+original `analysis-workbooks/BUILD_ID` directory alongside the copied database
+to reopen its saved files without rebuilding.
 It shares the native SavedFileReader cache: a changed descriptor is verified
 before use, and subsequent calls read only the requested bytes. It does not
 download the entire file through HTTP for each chunk.

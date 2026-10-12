@@ -195,13 +195,17 @@ export function createNativeAnalysis({manifest,completedDataset,isClosed=()=>fal
         contentType:file.mime??(job.kind==='backup'?'application/vnd.sqlite3':null)},args)};
   }
   async function queryExportFile(record,connection,args,signal){
-    const job=await request(connection,'/api/jobs/'+id(args.id),undefined,signal);
-    need(job.status==='COMPLETE'&&job.kind==='query-export'&&object(job.result),
+    const identifier=id(args.id),job=await request(connection,'/api/jobs/'+identifier,undefined,signal);
+    need(job.id===identifier&&job.status==='COMPLETE'&&job.kind==='query-export'&&object(job.result),
       'MCP_ANALYSIS_COMPLETE_QUERY_EXPORT_REQUIRED');
     need(['rows.jsonl','rows.csv','rows.sqlite3','manifest.json'].includes(args.filename),
       'MCP_ANALYSIS_FILE_NAME_INVALID');
-    const native=job.result,expected=join(record.database,'analysis-query-exports',job.id);
-    need(native.schema==='stellar-forge.analysis-query-export.v1'&&native.directory===expected,
+    const native=job.result,expected=join(record.database,'analysis-query-exports',identifier);
+    // A received workspace keeps the producer location in its original result.
+    // Resolve only this host's selected database and the original validated ID.
+    need(native.schema==='stellar-forge.analysis-query-export.v1'&&typeof native.directory==='string'&&
+      native.source_query?.id===job.request?.query_id&&
+      native.source_query?.result_sha256===job.request?.result_sha256,
       'MCP_ANALYSIS_EXPORT_BELONGS_TO_OTHER_WORKSPACE');
     await directory(join(record.database,'analysis-query-exports'));await directory(expected);
     const manifest=native.files?.find(file=>file.name==='manifest.json');
