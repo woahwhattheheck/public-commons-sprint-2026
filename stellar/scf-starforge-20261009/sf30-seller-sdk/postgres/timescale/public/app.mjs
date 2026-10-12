@@ -46,9 +46,9 @@ submitButton('Prepare native refresh',windowForm,'refresh');submitButton('Save a
 const native=details('Explore all captured native tables');
 field('table','Captured table',{tag:'select'},native);field('search','Search every row',{type:'search'},native);
 const tableView=node('div','',{class:'table-wrap'}),tableNav=node('nav','',{class:'pagination'});native.append(tableView,tableNav);
-button('rows-prev','Previous rows',tableNav,async()=>{state.tableOffset=Math.max(0,state.tableOffset-40);renderTable();});
+button('rows-prev','Previous rows',tableNav,async()=>{state.tableOffset=Math.max(0,state.tableOffset-40);renderTable();persist();});
 const tableCount=node('span');tableNav.append(tableCount);
-button('rows-next','Next rows',tableNav,async()=>{state.tableOffset+=40;renderTable();});
+button('rows-next','Next rows',tableNav,async()=>{state.tableOffset+=40;renderTable();persist();});
 const second=node('div','',{class:'ts-grid'});panel.append(second);
 const planned=section('Apply a saved operation',second);
 field('plan','Saved plan',{tag:'select'},planned);
@@ -97,7 +97,7 @@ async function api(path,input){
 function persist(){
   if(!state.storage)return;
   const fields=Object.fromEntries(Object.entries(controls).filter(([,x])=>['INPUT','TEXTAREA','SELECT'].includes(x.tagName)).map(([key,x])=>[key,{value:x.value,checked:x.type==='checkbox'?x.checked:undefined}]));
-  try{sessionStorage.setItem(state.storage,JSON.stringify({pending:state.pending,lastOperation:state.lastOperation,editionId:state.edition?.value.id,planId:state.plan?.id,fields}));}catch{}
+  try{sessionStorage.setItem(state.storage,JSON.stringify({pending:state.pending,lastOperation:state.lastOperation,editionId:state.edition?.value.id,planId:state.plan?.id,fields,tableOffset:state.tableOffset,columns:[...projected.querySelectorAll('input:checked')].map(x=>x.value)}));}catch{}
 }
 function optionsFor(control,rows,text,value){
   const previous=control.value;control.replaceChildren(node('option','Select…',{value:''}));
@@ -172,6 +172,7 @@ function renderTable(){
   const captured=state.edition?.value.tables[controls.table.value];tableView.replaceChildren();if(!captured)return;
   const needle=controls.search.value.toLocaleLowerCase();
   const rows=needle?captured.rows.filter(row=>row.some(v=>v!==null&&v.toLocaleLowerCase().includes(needle))):captured.rows;
+  state.tableOffset=Math.min(state.tableOffset,Math.max(0,Math.ceil(rows.length/40)-1)*40);
   tableView.append(table(captured.columns.map(x=>x.name),rows.slice(state.tableOffset,state.tableOffset+40)));
   tableCount.textContent=(rows.length?state.tableOffset+1:0)+'–'+Math.min(state.tableOffset+40,rows.length)+' of '+rows.length;
   controls['rows-prev'].disabled=state.tableOffset===0;controls['rows-next'].disabled=state.tableOffset+40>=rows.length;
@@ -251,6 +252,8 @@ await action(async()=>{
     if(saved.editionId)await loadEdition(saved.editionId);
     const aggregateId=saved.fields?.aggregate?.value;if(aggregateId){controls.aggregate.value=aggregateId;renderAggregate();}
     for(const[key,value]of Object.entries(saved.fields??{})){const control=controls[key];if(control){control.value=value.value;if(value.checked!==undefined)control.checked=value.checked;}}
+    if(Array.isArray(saved.columns))for(const input of projected.querySelectorAll('input'))input.checked=saved.columns.includes(input.value);
+    state.tableOffset=Number.isSafeInteger(saved.tableOffset)&&saved.tableOffset>=0&&saved.tableOffset%40===0?saved.tableOffset:0;renderTable();
     if(saved.planId)await loadPlan(saved.planId);
     if(state.pending)notice.textContent='Continue the saved request with its original identity.';
     await refresh();

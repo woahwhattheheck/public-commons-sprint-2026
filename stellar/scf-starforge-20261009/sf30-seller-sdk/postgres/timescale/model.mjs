@@ -148,7 +148,7 @@ async function openTimescaleWorkspace({directory,create=false,sourceFile,mainten
       transaction(()=>{
         const now=stamp();
         if(existing)db.prepare("UPDATE operations SET state='RUNNING',updated=?,attempts=attempts+1 WHERE id=?").run(now,input.requestId);
-        else db.prepare('INSERT INTO operations VALUES(?,?,?,?,?,?,?,?,?,?)').run(input.requestId,kind,'RUNNING',inputDigest,JSON.stringify(stable),now,now,1,'{}');
+        else db.prepare('INSERT INTO operations VALUES(?,?,?,?,?,?,?,?,?)').run(input.requestId,kind,'RUNNING',inputDigest,JSON.stringify(stable),now,now,1,'{}');
         event(existing?'OPERATION_CONTINUED':'OPERATION_STARTED',input.requestId,{kind,inputDigest});
       });
       active=current;
