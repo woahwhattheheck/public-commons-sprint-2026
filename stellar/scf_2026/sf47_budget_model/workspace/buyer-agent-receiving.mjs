@@ -14,7 +14,7 @@ const need = (test,message) => {if(!test)throw Object.assign(new Error(message),
 const PINNED = {
   'stellar/scf_2026/sf47_budget_model/workspace/agent-contracts.mjs':'9bed2f1855649c5dc07d205a704e1932edb55467',
   'stellar/scf_2026/sf47_budget_model/workspace/agent-client.mjs':'a6fe73a2e59adfd95c13edd3b68264d50b7aae1c',
-  'stellar-forge/mcp-merchant-operator/grant-workspace.mjs':'1e1c90e2a9c2b51ef568f564e656aefa3e9d5573',
+  'stellar-forge/mcp-merchant-operator/grant-workspace.mjs':'6eb6a763f8886894f6ed8a0f7d36958ef6acfc76',
   'stellar-forge/mcp-merchant-operator/catalog/grant-workspace.mjs':'ae644bd15fa7c72c5ced90ceaac47d974484a1cc'
 };
 async function regular(file) {
