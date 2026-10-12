@@ -65,3 +65,46 @@ The private input's optional `previousReceiving` selection contains the exact or
 Before a new accounting command, this receiving path exports its verified lineage to `Receiving_Continuation.json`. It creates that command only when the original view still selects the exact closed failed command and has no complete result. If a later complete accounting result already exists, the original recovery API reopens it. A different unfinished command remains selected for explicit reconciliation. No Buyer execution, signer, payment, workspace initialization or Governor policy edit occurs in this receiving example.
 
 `financialSourceDirectory` and `outputDirectory` select the explicit successor directories. Both native requests keep their own immutable inline receiver and source hashes. A final completion is reported only after the original accounting result, fresh-process reopen, complete export and all unchanged original source checks succeed.
+
+## Completed receiving of the original free response
+
+The linked receiving operation `scf-node-operation-accounting-free-02-a39c-20261012`
+completed on 2026-10-12 at 12:57:11 UTC with exit code 0. Its original native
+record is `ce79e07251f1a637be41421268824dd6fc27d2f5a627249da03f33e96bdb8203`.
+The native artifact collector retained 25 files / 182,772 bytes with no collection
+errors. All 25 files were independently read and compared with that manifest.
+
+This operation consumed the existing intent
+`scf-opencage-native-customer-a39c-20261011`. Its original attempt, configuration,
+evidence and 2,785-byte response remained unchanged. The response SHA256 is
+`94831ba4c34acf608585d242baa998c4ee58a190bf1e4ed3040897800f5797dd`.
+
+The original accounting command `finalize-o4ICVV` completed with
+`kind: UNPAID_RESPONSE`, `outcome: NO_PAYMENT_REQUIRED` and
+`recordAuthority: ORIGINAL_UNSIGNED_RESPONSE`. It has no approved payment
+request. This is an observed free resource result; it is not evidence of a paid
+reservation or financial settlement. The receiving command reopened the result
+through a fresh original CLI process, exported the complete accounting record,
+then verified the exported context and original source bytes.
+
+| Retained file | Bytes | SHA256 |
+| --- | ---: | --- |
+| Native request.json | 30,777 | `899c52bf1db15da532f0c6e5568722adf6cdd48e111e2cbf0a2ebce2f5a604b9` |
+| Native result.json | 2,213 | `26a909693b61743748f053025e4e7d9a5f409eb47405137dfeac57d5918ac706` |
+| Native artifacts.json | 10,461 | `67023612d2c670df5617d859a8dc802a32a78cebe915af6c4d192c6915731f62` |
+| Operation_Accounting.json | 13,091 | `ce131cd54fa451222ece006ffae9c22a9139f2f9877ca91bc35450876b5b2297` |
+| Accounting_View.json | 7,246 | `04b0ade8ed9696ff56c7e6f0c111a637c9e4391b6a7d6fbbc44b5577b93b2e78` |
+| Receiving_Continuation.json | 1,822 | `5364fb2c376f096b1bfa96c2a5183156327b25636d3cb0fa535629e915e5bb23` |
+
+The SDK selection is `c8e546df7fa468a02a1d48999aaab6c277b159cd`; the selected
+financial source is `b52c196dbeb270aa0ea16eaf95d8f6a4770f86e4`. Their complete
+70-file receiving manifest has SHA256
+`6748889172993a61dd7b44e203bd68704dfadafa2c3d698365911ce4bcf77f20`.
+
+The prior native operation `048feb905cca77f447fa3f877708d2d036f38bf4d2d68847b721c33f9bb5300b`
+and closed accounting command `finalize-Hoj0mD` remain retained. That command
+ended before financial work because its selected installation omitted the original
+SF86 `networks.json` runtime asset. The continuation preserved its entire
+69-file source selection and closed command evidence, added only the exact
+original asset, and created a new accounting command for the same existing
+response. It did not repeat the Buyer execution.
