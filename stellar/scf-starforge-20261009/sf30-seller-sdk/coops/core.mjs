@@ -1,10 +1,10 @@
 // MIT. Coastal source operations over the original workspace, publisher and receiver.
 import {makeBackfillPlan} from './history.mjs';
-import {mappingValue,materializeExport,retainedExport,writeTableExport,writeSourcePackage} from './exports.mjs';
+import {mappingValue,materializeExport,retainedExport,writeTableExport,writeSourcePackage,writeComparisonExport} from './exports.mjs';
 import {openWorkspaceStore,jsonBytes,stable} from '../stellar-expert/store.mjs';
 import {WORKSPACE_SCHEMA,workspaceSchema,ACTIONS,SOURCE_CONTRACT} from './schema.mjs';
 import {normaliseStation,makeQuery,requestPlan,metadataTasks,decodeSource,fetchCoopsResponse,normaliseBundle,importedResponse,text,fault,hashBytes} from './provider.mjs';
-import {editionRows,summarizeEdition,compareEditions,exportEdition} from './domain.mjs';
+import {editionRows,summarizeEdition,exportEdition} from './domain.mjs';
 import {prepareCoastalDataset,queryNativeDataset,nativePublishers,prepareNativeRelease,inspectNativeRelease,controlNativeRelease,inspectBuyer,receiveBuyer,readBuyerOutput} from './dataset.mjs';
 const selected=(rows,id,label)=>{const r=rows.find(x=>x.id===id);if(!r)throw fault('COOPS_SELECTION','Choose a saved '+label+'.',404);return r;};
 const key=value=>hashBytes(Buffer.from(value)).slice(0,24),now=()=>new Date().toISOString();
@@ -201,10 +201,9 @@ export async function openCoopsWorkspace({directory,inboxDirectory,releaseRuntim
    case'capture.pause':controllers.get(p.captureId)?.abort();result=await local(op,s=>{const c=selected(s.captures,p.captureId,'capture');c.pauseRequested=true;return{captureId:c.id,state:'PAUSING'};});break;
    case'edition.select':{const edition=await store.edition(p.editionId);result=await local(op,s=>{if(!s.editionIds.includes(edition.id))throw fault('COOPS_EDITION','Choose a saved edition.',404);s.selectedEditionId=edition.id;return{editionId:edition.id};});break;}
    case'edition.compare':{
-    const full=await compareEditions(store,await store.edition(p.leftId),await store.edition(p.rightId),p.table),object=await retain(jsonBytes(full)),
-     item={id:'comparison-'+id,kind:'comparison',editionId:p.rightId,table:p.table,format:'json',name:'coops-comparison-'+id+'.json',type:'application/json; charset=utf-8',...object,createdAt:op.createdAt,downloadUrl:'/api/exports/comparison-'+id};
+    const {comparison,exported:item}=await writeComparisonExport(store,{id:'comparison-'+id,left:await store.edition(p.leftId),right:await store.edition(p.rightId),table:p.table,createdAt:op.createdAt});
     await local(op,s=>{if(!s.exports.some(e=>e.id===item.id))s.exports.push(item);return item;});
-    result={...full,...Object.fromEntries(['added','removed','changed','ambiguous','scopeAdded','scopeRemoved'].map(k=>[k,full[k].slice(0,200)])),export:item};break;
+    result={...comparison,export:item};break;
    }
    case'annotation.save':{await store.edition(p.editionId);const subject=text(p.subject,'a review subject',300),note=text(p.note,'a review note',12000,true);if(!['open','reviewed','follow_up'].includes(p.status))throw fault('COOPS_REVIEW','Choose open, reviewed or follow_up.');result=await local(op,s=>{const prior=s.annotations.find(a=>a.editionId===p.editionId&&a.subject===subject),a={id:prior?.id??id,editionId:p.editionId,subject,note,status:p.status,updatedAt:op.createdAt,history:prior?[...(prior.history??[]),{note:prior.note,status:prior.status,updatedAt:prior.updatedAt}]:[]};s.annotations=s.annotations.filter(x=>x.id!==a.id);s.annotations.push(a);return a;});break;}
    case'dataset.prepare':result=await prepareCoastalDataset(store,{edition:await store.edition(p.editionId),table:p.table,name:p.name,beginDate:p.beginDate,endDate:p.endDate,products:p.products,id:'dataset-'+id});await local(op,s=>{if(!s.datasets.some(d=>d.id===result.id))s.datasets.push(result);return result;});break;
@@ -244,6 +243,7 @@ export async function openCoopsWorkspace({directory,inboxDirectory,releaseRuntim
  }
  for(const c of store.read().captures)if(c.pages.length&&!c.editionId)await seal(c.id);
  return{store,schema,view,action,editions,
+  async operation(operationId){const op=store.read().operations[operationId];if(!op)return{operationId,state:'NOT_RESERVED'};const {payload,context,materializedResult,...record}=op;return{...record,result:op.resultSha256?JSON.parse((await store.object(op.resultSha256)).toString('utf8')):undefined};},
   async edition(id){if(!store.read().editionIds.includes(id))throw fault('COOPS_EDITION','Choose a retained edition.',404);return store.edition(id);},
   rows:(id,options)=>store.edition(id).then(e=>editionRows(store,e,options)),
   async raw(id,index){const e=await store.edition(id);if(!Number.isSafeInteger(index)||index<0||index>=e.pages.length)throw fault('COOPS_SOURCE_PAGE','Choose an original response page.');const receipt=e.pages[index];return{receipt,bytes:await store.object(receipt.sha256),type:'application/json; charset=utf-8'};},

@@ -1,0 +1,51 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "coops",
+  "description": "Original NOAA coastal sources, multi-year capture, source review, model-input exchange and native merchant/customer delivery",
+  "commands": {
+    "coops-workspace": "stellar/scf-starforge-20261009/sf30-seller-sdk/coops/workspace.mjs",
+    "coops": "stellar/scf-starforge-20261009/sf30-seller-sdk/coops/cli.mjs",
+    "coops-mcp": "stellar/scf-starforge-20261009/sf30-seller-sdk/coops/mcp-client.mjs"
+  },
+  "commandDescriptions": {
+    "coops-workspace": "Operate retained coastal observations, datum evidence, historical studies, analyst decisions and native delivery",
+    "coops": "Capture, resume, review and export original NOAA coastal source work",
+    "coops-mcp": "Use the same coastal workspace through native merchant tools and complete retained-file receiving"
+  },
+  "exports": {
+    "./seller/coops": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/coops/core.mjs",
+    "./seller/coops/provider": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/coops/provider.mjs",
+    "./seller/coops/domain": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/coops/domain.mjs",
+    "./seller/coops/dataset": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/coops/dataset.mjs",
+    "./seller/coops/schema": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/coops/schema.mjs",
+    "./seller/coops/history": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/coops/history.mjs",
+    "./seller/coops/exports": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/coops/exports.mjs",
+    "./seller/coops/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/coops/workspace.mjs",
+    "./seller/coops/cli": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/coops/cli.mjs",
+    "./merchant-mcp/coops": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/coops/mcp.mjs",
+    "./merchant-mcp/coops/client": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/coops/mcp-client.mjs",
+    "./merchant-mcp/coops/protocol": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/coops/mcp-protocol.mjs",
+    "./merchant-mcp/coops/provider": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/coops/merchant-provider.mjs",
+    "./merchant-mcp/coops/setup": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/coops/merchant-setup.mjs",
+    "./applications/coops": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/coops/application.mjs"
+  },
+  "browserAssets": [
+    {
+      "server": "stellar/scf-starforge-20261009/sf30-seller-sdk/coops/workspace.mjs",
+      "manifest": "stellar/scf-starforge-20261009/sf30-seller-sdk/coops/browser-assets.json"
+    }
+  ],
+  "applicationProviders": {
+    "coops-coastal-sources": "stellar/scf-starforge-20261009/sf30-seller-sdk/coops/application-provider.mjs"
+  },
+  "merchantProviders": {
+    "coops-workspaces": "stellar/scf-starforge-20261009/sf30-seller-sdk/coops/merchant-provider.mjs"
+  },
+  "supportFiles": [
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/coops/README.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/coops/MCP.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/coops/MANAGED.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/coops/examples/la-jolla-reference.json",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/coops/examples/model-input-columns.json"
+  ]
+}
