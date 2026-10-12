@@ -294,9 +294,14 @@ export async function openDatasetteWorkspace({
           const key = edition.review.key.columns.map(name =>
             Object.entries(edition.review.projection).find(([, field]) => field.column === name)?.[0]).filter(Boolean);
           const order = (key.length ? key : query.columns.slice(0, 1)).map(column => ({ column, direction: 'asc' }));
+          const numeric = types.filter(field => ['integer', 'number'].includes(field.type)).map(field => field.name);
+          const categorical = types.filter(field => ['string', 'boolean'].includes(field.type)).map(field => field.name);
+          // The original dataset offer allows eight fields per capability group
+          // and 32 total query parameters. All reviewed columns remain in the dataset.
           const dataset = input.dataset ?? { name: edition.edition.name, columns,
-            filters: Object.keys(columns), sorts: Object.keys(columns),
-            ranges: Object.keys(columns).filter(name => ['integer', 'number'].includes(columns[name].type)) };
+            filters: [...new Set([...key, ...categorical])].slice(0, 8),
+            sorts: [...new Set([...key, ...numeric, ...categorical])].slice(0, 8),
+            ranges: numeric.slice(0, 4) };
           return value.savePlan({ title: text(input.title, 'a publication plan title', 128),
             query: queryName, input: input.input ?? {}, dataset,
             extraction: { order, ...(input.extraction ?? {}) }, sourceHash: input.sourceHash ?? source.hash },
