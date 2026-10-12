@@ -8,6 +8,7 @@ import { openCentralStore } from './store.mjs';
 import { digest, fault, formatted, identifier, now, stable } from '../odata/state.mjs';
 import { analyzeCapture, compareCaptures, exportCentralDataset, createCentralReport } from './analysis.mjs';
 import { createCentralArchive } from './archive.mjs';
+import { openODataPublisher } from '../odata/publisher.mjs';
 
 const copy = value => structuredClone(value);
 const keyFor = value => digest(stable(value));
@@ -22,14 +23,15 @@ function array(value,label) {
   return value;
 }
 function summary(capture) {
-  const {forms,tables,...value}=capture;
-  return {...value,forms:forms.map(({catalog,versions,generations,metadata,...form})=>({...form,formVersionCount:versions?.length??0})),
+  const {forms,tables,quality,decisions,...value}=capture;
+  return {...value,quality:quality?{issueCount:quality.issues.length,history:quality.history,formHistory:quality.formHistory}:null,
+    decision:decisions?.at(-1)?{id:decisions.at(-1).id,decision:decisions.at(-1).decision,note:decisions.at(-1).note}:null,forms:forms.map(({catalog,versions,generations,metadata,...form})=>({...form,formVersionCount:versions?.length??0})),
     tables:tables.map(({query,...table})=>({...table,fieldCount:query.fields.length})),
     rowCount:tables.reduce((sum,table)=>sum+table.rowCount,0)};
 }
 export async function openCentralWorkspace({directory,fetchImpl=globalThis.fetch}={}) {
   const store=await openCentralStore(directory),root=store.directory,running=new Map(),operations=new Set();
-  let closed=false,closing=null;
+  let closed=false,closing=null,publisher=null;
   for(const capture of store.list('capture'))if(capture.status==='CAPTURING')
     store.update('capture',capture.id,value=>({...value,status:'PAUSED',error:null,resumeReason:'The previous owner ended; continue the retained capture.'}));
   function ensureOpen(){if(closed)throw fault('CENTRAL_CLOSED','Reopen the Central workspace.');}
@@ -38,7 +40,9 @@ export async function openCentralWorkspace({directory,fetchImpl=globalThis.fetch
     const identity=store.identity();
     return {schema:identity.schema,id:identity.workspaceId,revision:Number(identity.revision),createdAt:identity.createdAt,
       connections:store.list('connection'),plans:store.list('plan'),captures:store.list('capture').map(summary),
-      reviews:store.list('review'),exports:store.list('export'),reports:store.list('report'),archives:store.list('archive'),running:[...running.keys()]};
+      reviews:store.list('review').map(({quality,findings,indicators,...record})=>record),
+      exports:store.list('export').map(({receipts,mapping,...record})=>record),
+      reports:store.list('report').map(({receipts,indicators,...record})=>record),archives:store.list('archive'),running:[...running.keys()]};
   }
   async function connect(input={}) {
     ensureOpen();const id=identifier(input.id||randomUUID(),'connection ID');
@@ -199,9 +203,12 @@ export async function openCentralWorkspace({directory,fetchImpl=globalThis.fetch
           unavailable:listing.outcome==='missing'||versions.length===0,
           missingAttachments:versions.reduce((sum,version)=>sum+version.media.missing.length,0),
           missingXml:versions.filter(version=>version.xml.outcome!=='retained').length};
-        store.saveSubmission(captureId,form.key,row.__id,record);
-        store.update('capture',captureId,value=>({...value,submissionCount:value.submissionCount+1,
-          progress:{stage:'submission-history',form:form.formId,instanceId:row.__id}}));
+        store.transaction(()=>{
+          store.saveSubmission(captureId,form.key,row.__id,record);
+          const value=store.get('capture',captureId);
+          store.writeRecord('capture',captureId,{...value,submissionCount:value.submissionCount+1,
+            progress:{stage:'submission-history',form:form.formId,instanceId:row.__id}},value.revision);
+        });
       }
       if(!page.next)break;after=page.next;
     }
@@ -300,21 +307,24 @@ export async function openCentralWorkspace({directory,fetchImpl=globalThis.fetch
     const record=store.get('export',id,false)??store.get('report',id,false)??store.get('archive',id,false);
     if(!record||!record.files.includes(path))throw fault('CENTRAL_EXPORT_FILE','Choose an original retained export file.',404);
     const directory=record.kind==='report'?'reports':record.kind==='archive'?'transfers':'exports';
-    return {path:join(root,directory,record.id,path),name:path.split('/').at(-1)};
+    return {path:join(root,directory,record.id,path),name:path.split('/').at(-1),...(record.receipts?.[path]??{})};
   }
+  const getPublisher=()=>publisher??=(openODataPublisher({workspace}).catch(error=>{publisher=null;throw error;}));
   const workspace={directory:root,state,connect,projects,forms,createPlan,capture,resume,pause,wait,edition,quality,review,
     rows:({id,tableId,...options})=>{store.get('capture',id);return store.rows(id,tableId,options);},
     row:({id,tableId,rowId})=>{const value=store.row(id,tableId,rowId),capture=store.get('capture',id),table=capture.tables.find(item=>item.id===tableId);
       return {row:value,history:table.name==='Submissions'?store.submission(id,table.formKey,rowId):null};},
     resources:({id,...options})=>{store.get('capture',id);return store.resourceList(id,options);},
     compare:options=>compareCaptures(store,options),exportDataset:options=>exportCentralDataset(store,options),
-    report:options=>createCentralReport(store,options),backup:()=>createCentralArchive(store),
+    report:options=>createCentralReport(store,options),backup:options=>createCentralArchive(store,options),
     sourceFile:({hash})=>store.sourceFile(hash),exportFile,
+    prepareRelease:async input=>(await getPublisher()).prepare(input),releaseStatus:async()=>(await getPublisher()).status(),
+    activateRelease:async input=>(await getPublisher()).activate(input),rollbackRelease:async input=>(await getPublisher()).rollback(input),
     async close(){if(closing)return closing;closed=true;closing=(async()=>{
       const entries=[...running.values()];for(const entry of entries)entry.controller.abort();
       await Promise.allSettled([...entries.map(entry=>entry.promise),...operations]);await store.close();
     })();return closing;}};
-  for(const name of ['connect','projects','forms','exportDataset','report','backup']){
+  for(const name of ['connect','projects','forms','exportDataset','report','backup','prepareRelease','releaseStatus','activateRelease','rollbackRelease']){
     const method=workspace[name];
     workspace[name]=(...args)=>{ensureOpen();const operation=Promise.resolve().then(()=>method(...args));operations.add(operation);
       return operation.finally(()=>operations.delete(operation));};

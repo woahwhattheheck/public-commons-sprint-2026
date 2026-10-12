@@ -5,7 +5,7 @@ import { createReadStream } from 'node:fs';
 import { chmod, link, mkdir, open, readFile, stat, unlink } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { acquireReleaseLease } from '../../sf82-seller-pilot/release-process.mjs';
-import { digest, fault, formatted, now, retain, stable, writeNew } from '../odata/state.mjs';
+import { digest, fault, formatted, identifier, now, retain, stable, writeNew } from '../odata/state.mjs';
 
 export const WORKSPACE_SCHEMA = 'stellar-forge.odk-central-workspace.v1';
 const hashPattern = /^[a-f0-9]{64}$/;
@@ -190,10 +190,14 @@ export async function openCentralStore(directory) {
     for(const item of db.prepare(sql).iterate(right,left,tableId,left,right,tableId))
       yield {...item,before:item.before===null?null:JSON.parse(item.before),after:item.after===null?null:JSON.parse(item.after)};
   }
-  async function snapshot() {
-    assertOpen();const id=randomUUID(),directory=join(root,'transfers',id);
-    await mkdir(directory,{mode:0o700});
-    const path=join(directory,'central.sqlite');await sqliteBackup(db,path);await chmod(path,0o600);
+  async function snapshot(id=randomUUID()) {
+    assertOpen();identifier(id,'archive operation ID');const directory=join(root,'transfers',id);
+    await mkdir(directory,{recursive:true,mode:0o700});
+    const path=join(directory,'central.sqlite');
+    try{await stat(path);return {id,directory,path};}catch(error){if(error.code!=='ENOENT')throw error;}
+    const temporary=path+'.'+randomUUID()+'.part';
+    try{await sqliteBackup(db,temporary);await chmod(temporary,0o600);await link(temporary,path);}
+    finally{await unlink(temporary).catch(error=>{if(error.code!=='ENOENT')throw error;});}
     return {id,directory,path};
   }
   return {directory:root,db,get,list,put,update,writeRecord,transaction,resource,saveResource,retainStream,raw,sourceFile,
