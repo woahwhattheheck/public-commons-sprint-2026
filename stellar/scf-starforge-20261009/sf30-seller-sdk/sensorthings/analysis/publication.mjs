@@ -4,6 +4,7 @@ import {validateSourceEdition,openPrivateFile,hashHeldFile} from '../portable.mj
 import {selectedRows,selectedCSV,numericEligibility} from './model.mjs';
 import {ANALYSIS_MEANING,ANALYSIS_SCHEMA} from './schema.mjs';
 import {retainBytes,retainStream,retainedPath,safeFile} from './artifacts.mjs';
+import {createComponentPublication,captureComponentPublication,finishComponentPublication,componentPublicationCSV,componentPublicationHTML} from './component-publication.mjs';
 
 export const PUBLICATION_SCHEMA='stellar-forge.sensorthings-analysis-publication.v1';
 const RENDER_SCHEMA='stellar-forge.sensorthings-analysis-source-rendering.v1',
@@ -28,7 +29,8 @@ function sourceRef(ref){
   return code(ref.sha256)+'<br>'+code(ref.jsonPointer??'')+(ref.url?'<br>'+link(ref.url):'');
 }
 function categories(stream){
-  return Object.entries(stream.categories??{}).sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0]));
+  const values=Array.isArray(stream.categories?.values)?stream.categories.values.filter(x=>x.state==='string').map(x=>[x.value,x.count]):Object.entries(stream.categories??{});
+  return values.sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0]));
 }
 function displayValue(row){return row.result_state==='value'?row.result:row.result_state==='null'?'null':'[missing result]';}
 function laneKey(row){
@@ -90,7 +92,7 @@ function eventChart(summary,selection,render){
   }
   return out+'</g></svg>';
 }
-function preferredCount(stream){return Object.keys(stream.categories??{}).length;}
+function preferredCount(stream){return categories(stream).length;}
 function numericChart(summary,selection,render){
   const blocks=summary.streams.filter(s=>render.streams.get(s.key).numeric.length),time=bounds(summary,selection);
   const height=100+blocks.length*260,width=1120,left=135,right=1085;
@@ -227,7 +229,7 @@ function briefHTML(meta,render,charts,files,evidenceFiles,images){
   for(const stream of s.streams){
     out+='<h3>'+esc(stream.name??stream.key)+'</h3>'+
       table(['Original stream key','Typed source ID','Observation type','Unit','Occurrences'],[[
-        code(stream.key),pre(stream.id),code(stream.observationType),pre(stream.unit),number(stream.rows)]])+
+        code(stream.sourceStreamKey??stream.key),pre(stream.id),code(stream.observationType),pre(stream.unit),number(stream.rows)]])+
       table(['Numeric-eligible original instants','Excluded from numeric view','Source-time forms','Quality-field presence'],[[
         number(stream.numericEligibleRows),pre(stream.numericExclusionReasons),pre(stream.timeKinds),pre(stream.qualityStates)]])+
       '<details><summary>Original stream metadata, geometry and native compatibility</summary>'+pre(stream)+'</details>';
@@ -238,7 +240,7 @@ function briefHTML(meta,render,charts,files,evidenceFiles,images){
   out+='</section><section id="views"><h2>Source-derived views</h2>'+
     para('The views below are generated from the selected original data. Supplied native Helgoland output is listed separately in the evidence section.')+
     para('Preview order follows the retained source. Each stream shows at most '+PREVIEW_PER_STREAM+' placed events and '+PREVIEW_PER_STREAM+' eligible numeric points; the CSV and NDJSON include all '+number(s.totalOccurrences)+' selected occurrences.')+
-    charts.events+charts.numeric+charts.map+
+    charts.events+charts.numeric+charts.map+(charts.components??'')+
     '<h3>Original row preview</h3>'+para('First '+render.rows.length+' retained occurrences; all original fields and rows are included in observations.csv and observations.ndjson.')+
     para('Quality-field presence counts describe whether a field was supplied, null or missing. The declarations below are the exact publisher-supplied resultQuality payloads; they are not independent quality approval.')+
     table(['Stream / observation','Phenomenon time','Result / type','Publisher quality declaration / presence','Original source position'],render.rows.map(r=>[
@@ -325,14 +327,15 @@ export async function preparePublication(store,{version,edition,summary,comparis
     comparisons:structuredClone(comparisons),evidence:structuredClone(evidence),review:structuredClone(review),createdAt,title,actor,note:note??''},
     basis={versionId,editionId:edition.id,summarySha256:sha(json(summary)),reviewSha256:identity(review),
       comparisonIds:comparisons.map(c=>c.id),evidenceIds:evidence.map(e=>e.id),title,actor,note:note??''},
-    files=[],render=initRendering(summary);
+    files=[],render=initRendering(summary),componentRender=createComponentPublication(summary,version.selection);
   const put=async(filename,body,type)=>{const f=await retainBytes(store,body,{operationId,createdAt,filename,type,inputIdentity:basis});files.push(f);return f;};
   files.push(await retainStream(store,selectedCSV(store,edition,version.selection),{operationId,createdAt,filename:'observations.csv',
     type:'text/csv; charset=utf-8',inputIdentity:basis}));
   async function* rows(){
     for await(const {row,original,streamKey}of selectedRows(store,edition,version.selection)){
-      captureRendering(render,row,streamKey);
-      yield Buffer.from(JSON.stringify({row:{...row,stream_key:streamKey},source:original.sourceRef,occurrenceId:original.occurrenceId,semanticHash:original.semanticHash})+'\n');
+      captureRendering(render,row,streamKey);captureComponentPublication(componentRender,{row,original,streamKey});
+      yield Buffer.from(JSON.stringify({row:{...row,stream_key:streamKey},source:original.sourceRef,occurrenceId:original.occurrenceId,semanticHash:original.semanticHash,
+        ...(original.componentSourceRef?{componentSource:original.componentSourceRef,componentOccurrenceId:original.componentOccurrenceId,parentSemanticHash:original.parentSemanticHash}:{} )})+'\n');
     }
   }
   // A completed retainStream may return before consuming the iterator. Rebuild
@@ -340,12 +343,25 @@ export async function preparePublication(store,{version,edition,summary,comparis
   const rowFile=await retainStream(store,rows(),{operationId,createdAt,filename:'observations.ndjson',type:'application/x-ndjson; charset=utf-8',inputIdentity:basis});
   files.push(rowFile);
   if(render.total===0&&summary.totalOccurrences>0)
-    for await(const {row,streamKey}of selectedRows(store,edition,version.selection))captureRendering(render,row,streamKey);
+    for await(const value of selectedRows(store,edition,version.selection)){
+      captureRendering(render,value.row,value.streamKey);captureComponentPublication(componentRender,value);
+    }
   if(render.total!==summary.totalOccurrences)throw fault('ANALYSIS_PUBLICATION','The saved summary and complete original rows differ.',409);
   const charts={events:eventChart(summary,version.selection,render),numeric:numericChart(summary,version.selection,render),map:mapChart(summary)};
   await put('events.svg',Buffer.from(charts.events),'image/svg+xml');
   await put('numeric.svg',Buffer.from(charts.numeric),'image/svg+xml');
   await put('locations.svg',Buffer.from(charts.map),'image/svg+xml');
+  const componentReport=finishComponentPublication(componentRender,{version,edition,createdAt});
+  if(componentReport){
+    await put('component-report.json',json(componentReport),'application/json');
+    charts.components=componentPublicationHTML(componentReport);
+    for(const kind of ['summary','days','duplicates','gaps']){
+      async function* componentBytes(){for(const part of componentPublicationCSV(componentReport,kind))yield Buffer.from(part);}
+      files.push(await retainStream(store,componentBytes(),{operationId,createdAt,filename:'component-'+kind+'.csv',
+        type:'text/csv; charset=utf-8',inputIdentity:basis}));
+    }
+    for(const figure of componentReport.figures)await put(figure.filename,Buffer.from(figure.svg),'image/svg+xml');
+  }
   await put('selected-view.json',json({schema:'stellar-forge.sensorthings-analysis-publication-selection.v1',version,edition,summary,review,
     rendering:renderingSummary(render),meaning:ANALYSIS_MEANING}),'application/json');
   for(const c of comparisons)await put('comparison-'+c.id+'.json',json(c),'application/json');
