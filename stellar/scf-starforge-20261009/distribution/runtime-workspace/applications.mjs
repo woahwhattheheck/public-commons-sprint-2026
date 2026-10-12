@@ -2,6 +2,9 @@
 import { readDistributionSpecification } from '../specification.mjs';
 import { grpcApplication, prepareGrpcApplication } from './application-grpc.mjs';
 import { coingeckoApplication, prepareCoingeckoApplication } from './application-coingecko.mjs';
+import { oaiApplication, prepareOaiApplication } from './application-oai.mjs';
+import { fiscalDataApplication, prepareFiscalDataApplication } from './application-fiscaldata.mjs';
+import { databentoApplication, prepareDatabentoApplication } from './application-databento.mjs';
 import { readdir, lstat, realpath, access } from 'node:fs/promises';
 import { constants } from 'node:fs';
 import { join, dirname, basename } from 'node:path';
@@ -62,6 +65,9 @@ const common = [
 ];
 export const APPLICATION_CATALOG = Object.freeze([
   coingeckoApplication(common),
+  oaiApplication(common),
+  fiscalDataApplication(common),
+  databentoApplication(common),
   grpcApplication(common),
   atlasApplication(common),
   n8nApplication(common),
@@ -259,6 +265,14 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
     const original = await prepareGrpcApplication(settings, inputPath, runtimeDirectory);
     args.push(...original.args); inputs.push(...original.inputs);
     createDirectories.push(...original.createDirectories);
+  } else if (type.id === 'databento-migration') {
+    const original = await prepareDatabentoApplication(settings, { inputPath, runtimeDirectory });
+    args.push(...original.args); inputs.push(...original.inputs);
+    createDirectories.push(...original.createDirectories); selectedResourceKey = original.resourceKey;
+  } else if (type.id === 'fiscaldata') {
+    const original = await prepareFiscalDataApplication(settings, { inputPath, runtimeDirectory });
+    args.push(...original.args); inputs.push(...original.inputs);
+    createDirectories.push(...original.createDirectories); selectedResourceKey = original.resourceKey;
   } else if (type.id === 'fred') {
     const original = await prepareFredApplication(settings, { inputPath, runtimeDirectory });
     args.push(...original.args); inputs.push(...original.inputs);
@@ -343,6 +357,11 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
     args.push(...original.args); inputs.push(...original.inputs); createDirectories.push(...original.createDirectories);
   } else if (type.id === 'n8n-merchant') {
     const original = await prepareN8nApplication(settings, inputPath, runtimeDirectory);
+    args.push(...original.args); inputs.push(...original.inputs);
+  } else if (type.id === 'oai-repository') {
+    const original = await prepareOaiApplication(settings, {
+      inputPath, selectedExecutable, runtimeDirectory, applicationEnvironment,
+    });
     args.push(...original.args); inputs.push(...original.inputs);
   } else if (type.id === 'rss-atom') {
     const original = await prepareRssAtomApplication(settings, {
@@ -506,8 +525,8 @@ function resourceKey(type, settings) {
   if (type.id === 'arcgis-agent') return hash({ family: 'merchant-mcp', directory: settings.configurationFile });
   const value = settings.outputParent ?? settings.workspaceDirectory ?? settings.directory ??
     settings.outputDirectory ?? settings.stateDirectory ?? settings.datasetFile;
-  // Feeds and XML retain the same original SQLite workspace and writer.
-  const family = type.id === 'rss-atom' ? 'xml' : type.id.endsWith('-publisher') ? 'publisher' : type.id;
+  // Feeds, repository metadata and XML retain the same original SQLite workspace and writer.
+  const family = ['rss-atom', 'oai-repository'].includes(type.id) ? 'xml' : type.id.endsWith('-publisher') ? 'publisher' : type.id;
   return hash({ family, directory: value });
 }
 async function application(root, id) {
