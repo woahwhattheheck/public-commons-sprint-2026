@@ -18,6 +18,7 @@ import { secEdgarApplication, prepareSecEdgarApplication } from './application-s
 import { jobResultReceiverApplication, prepareJobResultReceiverApplication } from './application-job-result-receiver.mjs';
 import { sheetsApplication, prepareSheetsApplication } from './application-sheets.mjs';
 import { nocodbApplication, prepareNocoDBApplication } from './application-nocodb.mjs';
+import { cocartApplication, prepareCocartApplication } from './application-cocart.mjs';
 import { stellarExpertApplication, prepareStellarExpertApplication } from './application-stellar-expert.mjs';
 import { atlasApplication, prepareAtlasApplication } from './application-atlas.mjs';
 import { n8nApplication, prepareN8nApplication } from './application-n8n.mjs';
@@ -85,6 +86,7 @@ export const APPLICATION_CATALOG = Object.freeze([
   jobResultReceiverApplication(common),
   sheetsApplication(common),
   nocodbApplication(common),
+  cocartApplication(common),
   stellarExpertApplication(common),
   redisApplication(common),
   arcgisAgentApplication(common),
@@ -298,6 +300,10 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
       inputPath, runtimeDirectory, applicationEnvironment,
     });
     args.push(...original.args); inputs.push(...original.inputs); jobResultReceiver = original.identity;
+  } else if (type.id === 'cocart-workspace') {
+    const original = await prepareCocartApplication(settings, { inputPath, runtimeDirectory });
+    args.push(...original.args); inputs.push(...original.inputs); createDirectories.push(...original.createDirectories);
+    selectedResourceKey = original.resourceKey;
   } else if (type.id === 'nocodb-authoring') {
     const original = await prepareNocoDBApplication(settings, { inputPath, runtimeDirectory });
     args.push(...original.args); inputs.push(...original.inputs); createDirectories.push(...original.createDirectories);
