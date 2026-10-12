@@ -35,7 +35,8 @@ export function validateGrpcHealthEvent(event, operation, sequence, previousSha2
   if (!closed(event, ['schema', 'operationId', 'sequence', 'observedAt', 'kind', 'data', 'previousSha256', 'sha256']) ||
       event.schema !== GRPC_HEALTH_EVENT_SCHEMA || event.operationId !== operation.id ||
       event.sequence !== sequence || event.previousSha256 !== previousSha256 || !date(event.observedAt) ||
-      !['native', 'lifecycle', 'result'].includes(event.kind) || !plain(event.data)) changed();
+      !['native', 'lifecycle', 'result', 'control'].includes(event.kind) || !plain(event.data)) changed();
+  if (event.kind === 'control' && !['stop', 'workspace_close'].includes(event.data.action)) changed();
   if (event.kind === 'native' && !['opening', 'status', 'terminal', 'retry'].includes(event.data.type)) changed();
   if (event.kind === 'lifecycle' && (!phases.includes(event.data.phase) || typeof event.data.reason !== 'string')) changed();
   if (event.kind === 'result' && (!phases.includes(event.data.phase) ||
@@ -53,7 +54,7 @@ export function grpcHealthSummary(operation, events) {
       endedAt = phase === 'RUNNING' || phase === 'PREPARED' ? null : event.observedAt;
       if (phase === 'RUNNING') epochs++;
       if (event.kind === 'result') result = event.data.result;
-    } else {
+    } else if (event.kind === 'native') {
       nativeEvents++; lastNative = event.data;
       if (event.data.type === 'opening') connections++;
       if (event.data.type === 'retry') retries++;

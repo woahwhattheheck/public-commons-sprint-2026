@@ -93,6 +93,7 @@ export function mountGrpcHealth({ root, json, work, notice, storageKey, savedCur
   }
   function eventDetail(event) {
     const d = event.data;
+    if (event.kind === 'control') return 'Close requested · ' + d.action;
     if (event.kind !== 'native') return d.phase + ' · ' + d.reason;
     if (d.type === 'status') return Array.isArray(d.statuses) ? d.statuses.length + ' reported services' :
       (d.service || 'whole server') + ' · ' + (d.status?.name ?? 'UNKNOWN');
