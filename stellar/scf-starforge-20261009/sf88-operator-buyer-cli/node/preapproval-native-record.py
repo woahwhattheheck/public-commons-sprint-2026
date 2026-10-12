@@ -4,7 +4,10 @@
 This read-only helper supplies process evidence to the original authenticated
 Governor check. It neither grants approval nor establishes absence of payment.
 The caller pins its private operation, review, attempt and installed native
-runtime. No shell, remote service, wallet or replacement operation is invoked.
+runtime. Workspace-backed proofs retain their original contract. Direct-config
+records require the captured kernel identity or a definitive pre-spawn receipt,
+and any changed runtime must match the retained plan, review and later attempt.
+No shell, remote service, wallet or replacement operation is invoked.
 """
 from __future__ import annotations
 
@@ -182,7 +185,7 @@ def result_base(intent_id, config_sha, bindings, directory, workspace):
     return {"schema": SCHEMA, "outcome": "ORIGINAL_ATTEMPT_PROCESS_ABSENT",
             "observedAt": datetime.now(timezone.utc).isoformat(), "intentId": intent_id,
             "configSha256": config_sha, "attemptSha256": bindings["attempt"]["sha256"],
-            "operationDirectory": str(directory), "nativeWorkspace": str(workspace),
+            "operationDirectory": str(directory), "nativeWorkspace": str(workspace) if workspace is not None else None,
             "bindings": bindings,
             "authority": "PROCESS_OBSERVATION_ONLY_ORIGINAL_GOVERNOR_AND_FRESH_APPROVAL_REQUIRED"}
 
@@ -230,11 +233,174 @@ def compact_json(value):
                       separators=(",", ":"), allow_nan=False).encode("utf-8")
 
 
-def reserved_start_command(command, operation, bindings, expected_args):
+def runtime_source_binding(source, runtime, bindings, binding_name="reservedRuntimeManifest"):
+    fields = {"schema", "directory", "sourceDirectory", "sourceManifestFile",
+              "sourceManifestSha256", "sourceManifestBytes", "filesSha256",
+              "fileCount", "sourceBytes", "sha256"}
+    need(isinstance(source, dict) and set(source) == fields and
+         source.get("schema") == "stellar-forge.node-successor-runtime-binding.v1" and
+         all(isinstance(source.get(name), str) and SHA.fullmatch(source[name])
+             for name in ("sha256", "sourceManifestSha256", "filesSha256")) and
+         all(type(source.get(name)) is int and source[name] > 0
+             for name in ("sourceManifestBytes", "fileCount", "sourceBytes")) and
+         source.get("directory") == str(runtime) and
+         hashlib.sha256(compact_json({key: value for key, value in source.items()
+                                     if key != "sha256"})).hexdigest() == source["sha256"],
+         "ORIGINAL_RESERVED_RUNTIME_BINDING_CHANGED")
+    source_directory = absolute(source["sourceDirectory"])
+    need(source_directory.is_dir() and contained(runtime, source_directory),
+         "ORIGINAL_RESERVED_RUNTIME_ROOT_CHANGED")
+    manifest_path = absolute(source["sourceManifestFile"])
+    manifest_raw, bindings[binding_name] = stable_bytes(
+        manifest_path, source["sourceManifestSha256"], limit=4 * 1024 * 1024)
+    manifest = parse(manifest_raw)
+    files = manifest.get("files")
+    need(set(manifest) == {"schema", "sourceDirectory", "runtimeDirectory", "files"} and
+         manifest.get("schema") == "stellar-forge.node-successor-runtime-source.v1" and
+         manifest.get("sourceDirectory") == str(source_directory) and
+         manifest.get("runtimeDirectory") == str(runtime) and
+         len(manifest_raw) == source["sourceManifestBytes"] and
+         isinstance(files, list) and 0 < len(files) <= 10000 and len(files) == source["fileCount"] and
+         all(isinstance(item, dict) and set(item) == {"path", "bytes", "sha256"} and
+             isinstance(item["path"], str) and item["path"] and
+             not Path(item["path"]).is_absolute() and "\0" not in item["path"] and "\\" not in item["path"] and
+             all(part not in ("", ".", "..") for part in item["path"].split("/")) and
+             type(item["bytes"]) is int and 0 <= item["bytes"] <= 64 * 1024 * 1024 and
+             isinstance(item["sha256"], str) and SHA.fullmatch(item["sha256"]) for item in files) and
+         len({item["path"] for item in files}) == len(files) and
+         sum(item["bytes"] for item in files) == source["sourceBytes"] and
+         hashlib.sha256(compact_json(files)).hexdigest() == source["filesSha256"],
+         "ORIGINAL_RESERVED_RUNTIME_MANIFEST_CHANGED")
+    # Retain the original manifest bytes in this process observation. The
+    # existing runtime's workspace check verifies every selected source file
+    # again before the authenticated ledger audit and original approval path.
+
+
+def direct_operator_paths(config, review, operation):
+    operator = config.get("operator")
+    need(isinstance(operator, dict), "ORIGINAL_DIRECT_OPERATOR_REQUIRED")
+    paths = {
+        "policy": absolute(operator.get("policy")),
+        "ledger": absolute(operator.get("ledger")),
+        "signerModule": absolute(config.get("signerModule")),
+    }
+    need(all(path.is_file() for path in paths.values()),
+         "ORIGINAL_DIRECT_OPERATOR_FILES_REQUIRED")
+    native = review.get("native", {})
+    need(native.get("operatorId") == operator.get("actor") and
+         native.get("serviceId") == operator.get("service") and
+         native.get("signerFilename") == paths["signerModule"].name and
+         native.get("bodySha256") == operation.get("bodySha256"),
+         "ORIGINAL_DIRECT_REVIEW_OPERATOR_DIFFERS")
+    return {name: str(path) for name, path in paths.items()}
+
+
+def selected_execution_runtime(selected, operation, review, attempt, bindings, directory):
+    selection = attempt.get("executionRuntime")
+    need(("executionRuntime" not in selected or selected["executionRuntime"] == selection) and
+         review.get("executionRuntime") == selection,
+         "ORIGINAL_EXECUTION_RUNTIME_REVIEW_DIFFERS")
+    if selection is None:
+        need("executionRuntime" not in attempt and "executionRuntime" not in review,
+             "ORIGINAL_EXECUTION_RUNTIME_SELECTION_REQUIRED")
+        return None
+    need(isinstance(selection, dict) and set(selection) ==
+         {"schema", "originalRuntimeDirectory", "runtimeSource", "nativeFileReservation"} and
+         selection.get("schema") == "stellar-forge.node-preapproval-runtime-selection.v1" and
+         selection.get("originalRuntimeDirectory") == operation.get("runtimeDirectory"),
+         "ORIGINAL_EXECUTION_RUNTIME_SELECTION_INVALID")
+    original_runtime = absolute(operation.get("runtimeDirectory"))
+    need(original_runtime.is_dir(), "ORIGINAL_RUNTIME_DIRECTORY_REQUIRED")
+    source = selection.get("runtimeSource")
+    need(isinstance(source, dict), "ORIGINAL_EXECUTION_RUNTIME_SOURCE_REQUIRED")
+    runtime = absolute(source.get("directory"))
+    need(runtime.is_dir(), "ORIGINAL_SELECTED_RUNTIME_DIRECTORY_REQUIRED")
+
+    # The source choice is retained in the same immutable plan and reviewed
+    # record as this later attempt. An input-only selection cannot replace it.
+    history = Path(bindings["attempt"]["path"]).parent
+    recovery = attempt.get("preapprovalRecovery")
+    need(history.parent == directory / "preapproval-history" and SHA.fullmatch(history.name) and
+         isinstance(recovery, dict) and recovery.get("sourceAttemptSha256") == history.name and
+         isinstance(recovery.get("planSha256"), str) and SHA.fullmatch(recovery["planSha256"]),
+         "ORIGINAL_EXECUTION_RUNTIME_PLAN_REQUIRED")
+    raw, bindings["executionRuntimePlan"] = stable_bytes(
+        history / "plan.json", recovery["planSha256"], limit=262144)
+    plan = parse(raw)
+    need(plan.get("schema") == "stellar-forge.node-preapproval-recovery.v1" and
+         plan.get("intentId") == operation.get("intentId") and
+         plan.get("operationDirectory") == str(directory) and plan.get("directory") == str(history) and
+         plan.get("sourceAttemptSha256") == history.name and
+         plan.get("configSha256") == operation.get("configSha256") and
+         plan.get("bodySha256") == operation.get("bodySha256") and
+         plan.get("ticketSha256") == operation.get("ticketSha256") and
+         plan.get("nativeWorkspace") == operation.get("nativeWorkspace") and
+         plan.get("reviewSha256") == bindings["review"]["sha256"] and
+         plan.get("review") == review and plan.get("executionRuntime") == selection,
+         "ORIGINAL_EXECUTION_RUNTIME_PLAN_DIFFERS")
+    runtime_source_binding(source, runtime, bindings, "executionRuntimeManifest")
+    provider = selection.get("nativeFileReservation")
+    if provider is not None:
+        need(isinstance(provider, dict) and set(provider) ==
+             {"schema", "executable", "executableSha256", "timeoutMs"} and
+             provider.get("schema") == "stellar-forge.sf88.file-reservation.v1" and
+             isinstance(provider.get("executableSha256"), str) and SHA.fullmatch(provider["executableSha256"]) and
+             type(provider.get("timeoutMs")) is int and 0 < provider["timeoutMs"] <= 60000,
+             "ORIGINAL_SELECTED_ALLOCATION_DESCRIPTOR_INVALID")
+        executable = absolute(provider["executable"])
+        _, bindings["executionRuntimeAllocator"] = stable_bytes(executable, provider["executableSha256"])
+        info = executable.stat(follow_symlinks=False)
+        binding = bindings["executionRuntimeAllocator"]
+        need(stat.S_ISREG(info.st_mode) and info.st_mode & 0o111 and info.st_mode & 0o022 == 0 and
+             info.st_dev == binding["device"] and info.st_ino == binding["inode"],
+             "ORIGINAL_SELECTED_ALLOCATION_EXECUTABLE_CHANGED")
+    return selection
+
+
+def bound_native_command(command_record, operation, bindings, workspace, execution_runtime=None,
+                         *, started=False):
+    need(isinstance(command_record, dict), "ORIGINAL_NATIVE_COMMAND_RECORD_REQUIRED")
+    command = command_record.get("command")
+    direct = workspace is None
+    normal_length = 5 if direct else 9
+    need(isinstance(command, list) and len(command) in (4, normal_length) and
+         all(isinstance(arg, str) and "\0" not in arg and len(arg) <= 16384 for arg in command) and
+         Path(command[0]).is_absolute() and Path(command[1]).is_absolute(),
+         "ORIGINAL_NATIVE_START_COMMAND_REQUIRED")
+    ticket = operation.get("ticketSha256")
+    need(ticket is None or isinstance(ticket, str) and SHA.fullmatch(ticket),
+         "ORIGINAL_NATIVE_START_TICKET_INVALID")
+    expected_args = (["--execute", "--config", bindings["config"]["path"]] if direct else
+                     ["execute-workspace", "--dir", str(workspace), "--config",
+                      bindings["config"]["path"], "--ticket-sha", ticket or "none"])
+    runtime = absolute(execution_runtime["runtimeSource"]["directory"] if execution_runtime else
+                       operation.get("runtimeDirectory"))
+    need(runtime.is_dir(), "ORIGINAL_SELECTED_RUNTIME_DIRECTORY_REQUIRED")
+    entry_relative = "cli.mjs" if direct else "python/bridge.mjs"
+    encoded = (json.dumps(command, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
+    expected_sha = command_record.get("commandSha256")
+    need(isinstance(expected_sha, str) and SHA.fullmatch(expected_sha) and
+         hashlib.sha256(encoded).hexdigest() == expected_sha,
+         "ORIGINAL_NATIVE_START_COMMAND_SHA256_DIFFERS")
+    if len(command) == 4:
+        reserved_start_command(command, operation, bindings, expected_args, runtime=runtime,
+                               entry_relative=entry_relative, execution_runtime=execution_runtime)
+    else:
+        need(command[2:] == expected_args, "ORIGINAL_NATIVE_START_COMMAND_BINDINGS_DIFFER")
+        entry = absolute(command[1])
+        need(entry == (runtime / entry_relative).resolve(strict=True),
+             "ORIGINAL_NATIVE_ENTRY_PATH_DIFFERS")
+        _, bindings["executionEntry"] = stable_bytes(entry)
+        need(not (started and execution_runtime and execution_runtime["nativeFileReservation"]),
+             "ORIGINAL_SELECTED_RUNTIME_BOOTSTRAP_REQUIRED")
+
+
+def reserved_start_command(command, operation, bindings, expected_args, *, runtime=None,
+                           entry_relative="python/bridge.mjs", execution_runtime=None):
     runtime_name = operation.get("runtimeDirectory")
     need(isinstance(runtime_name, str) and Path(runtime_name).is_absolute() and
          "\0" not in runtime_name, "ORIGINAL_RESERVED_RUNTIME_REQUIRED")
-    runtime = Path(runtime_name).resolve(strict=True)
+    runtime = Path(runtime_name).resolve(strict=True) if runtime is None else runtime
     need(runtime.is_dir(), "ORIGINAL_RESERVED_RUNTIME_REQUIRED")
     bootstrap = absolute(command[1])
     need(bootstrap == (runtime / "node" / "reserved-entry.mjs").resolve(strict=True),
@@ -262,7 +428,7 @@ def reserved_start_command(command, operation, bindings, expected_args):
          isinstance(request.get("entrySha256"), str) and SHA.fullmatch(request["entrySha256"]),
          "ORIGINAL_RESERVED_ENTRY_BINDINGS_DIFFER")
     entry = absolute(request.get("entryFile"))
-    need(entry == (runtime / "python" / "bridge.mjs").resolve(strict=True),
+    need(entry == (runtime / entry_relative).resolve(strict=True),
          "ORIGINAL_RESERVED_ENTRY_PATH_DIFFERS")
     _, bindings["reservedEntry"] = stable_bytes(entry, request["entrySha256"])
 
@@ -283,52 +449,17 @@ def reserved_start_command(command, operation, bindings, expected_args):
          executable_stat.st_ino == executable_binding["inode"],
          "ORIGINAL_RESERVED_ALLOCATOR_CHANGED")
 
+    if execution_runtime is not None:
+        need(request.get("nativeFileReservation") == execution_runtime["nativeFileReservation"] and
+             request.get("nativeRuntimeSource") == execution_runtime["runtimeSource"],
+             "ORIGINAL_SELECTED_RESERVED_RUNTIME_DIFFERS")
     if "nativeRuntimeSource" not in request:
         return
-    source = request["nativeRuntimeSource"]
-    fields = {"schema", "directory", "sourceDirectory", "sourceManifestFile",
-              "sourceManifestSha256", "sourceManifestBytes", "filesSha256",
-              "fileCount", "sourceBytes", "sha256"}
-    need(isinstance(source, dict) and set(source) == fields and
-         source.get("schema") == "stellar-forge.node-successor-runtime-binding.v1" and
-         all(isinstance(source.get(name), str) and SHA.fullmatch(source[name])
-             for name in ("sha256", "sourceManifestSha256", "filesSha256")) and
-         all(type(source.get(name)) is int and source[name] > 0
-             for name in ("sourceManifestBytes", "fileCount", "sourceBytes")) and
-         source.get("directory") == str(runtime) and
-         hashlib.sha256(compact_json({key: value for key, value in source.items()
-                                     if key != "sha256"})).hexdigest() == source["sha256"],
-         "ORIGINAL_RESERVED_RUNTIME_BINDING_CHANGED")
-    source_directory = absolute(source["sourceDirectory"])
-    need(source_directory.is_dir() and contained(runtime, source_directory),
-         "ORIGINAL_RESERVED_RUNTIME_ROOT_CHANGED")
-    manifest_path = absolute(source["sourceManifestFile"])
-    manifest_raw, bindings["reservedRuntimeManifest"] = stable_bytes(
-        manifest_path, source["sourceManifestSha256"], limit=4 * 1024 * 1024)
-    manifest = parse(manifest_raw)
-    files = manifest.get("files")
-    need(set(manifest) == {"schema", "sourceDirectory", "runtimeDirectory", "files"} and
-         manifest.get("schema") == "stellar-forge.node-successor-runtime-source.v1" and
-         manifest.get("sourceDirectory") == str(source_directory) and
-         manifest.get("runtimeDirectory") == str(runtime) and
-         len(manifest_raw) == source["sourceManifestBytes"] and
-         isinstance(files, list) and 0 < len(files) <= 10000 and len(files) == source["fileCount"] and
-         all(isinstance(item, dict) and set(item) == {"path", "bytes", "sha256"} and
-             isinstance(item["path"], str) and item["path"] and
-             not Path(item["path"]).is_absolute() and "\0" not in item["path"] and "\\" not in item["path"] and
-             all(part not in ("", ".", "..") for part in item["path"].split("/")) and
-             type(item["bytes"]) is int and 0 <= item["bytes"] <= 64 * 1024 * 1024 and
-             isinstance(item["sha256"], str) and SHA.fullmatch(item["sha256"]) for item in files) and
-         len({item["path"] for item in files}) == len(files) and
-         sum(item["bytes"] for item in files) == source["sourceBytes"] and
-         hashlib.sha256(compact_json(files)).hexdigest() == source["filesSha256"],
-         "ORIGINAL_RESERVED_RUNTIME_MANIFEST_CHANGED")
-    # Retain the original manifest bytes in this process observation. The
-    # existing runtime's workspace check verifies every selected source file
-    # again before the authenticated ledger audit and original approval path.
+    runtime_source_binding(request["nativeRuntimeSource"], runtime, bindings)
 
 
-def not_dispatched_proof(attempt, operation, bindings, directory, workspace, intent_id, config_sha):
+def not_dispatched_proof(attempt, operation, bindings, directory, workspace, intent_id, config_sha,
+                         execution_runtime=None):
     receipt = attempt.get("nativeStart")
     need(attempt.get("state") == "NOT_DISPATCHED" and attempt.get("pid") is None and
          not (isinstance(attempt.get("processIdentity"), dict) and
@@ -342,26 +473,29 @@ def not_dispatched_proof(attempt, operation, bindings, directory, workspace, int
          "ORIGINAL_NATIVE_START_RECEIPT_REQUIRED")
     need(instant(receipt["observedAt"]) >= instant(attempt["startedAt"]),
          "ORIGINAL_NATIVE_START_RECEIPT_ORDER_DIFFERS")
-    command = receipt.get("command")
-    need(isinstance(command, list) and len(command) in (4, 9) and
-         all(isinstance(arg, str) and "\0" not in arg and len(arg) <= 16384 for arg in command) and
-         Path(command[0]).is_absolute() and Path(command[1]).is_absolute(),
-         "ORIGINAL_NATIVE_START_COMMAND_REQUIRED")
-    ticket = operation.get("ticketSha256")
-    need(ticket is None or isinstance(ticket, str) and SHA.fullmatch(ticket),
-         "ORIGINAL_NATIVE_START_TICKET_INVALID")
-    expected_args = ["execute-workspace", "--dir", str(workspace), "--config",
-                     bindings["config"]["path"], "--ticket-sha", ticket or "none"]
-    if len(command) == 9:
-        need(command[2:] == expected_args, "ORIGINAL_NATIVE_START_COMMAND_BINDINGS_DIFFER")
-    # store.mjs jsonBytes uses JSON.stringify(value, null, 2) plus one newline.
-    # The argv consists only of strings, so this reproduces those exact bytes.
-    encoded = (json.dumps(command, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
-    need(isinstance(receipt.get("commandSha256"), str) and SHA.fullmatch(receipt["commandSha256"]) and
-         hashlib.sha256(encoded).hexdigest() == receipt["commandSha256"],
-         "ORIGINAL_NATIVE_START_COMMAND_SHA256_DIFFERS")
-    if len(command) == 4:
-        reserved_start_command(command, operation, bindings, expected_args)
+    if workspace is None or execution_runtime is not None:
+        bound_native_command(receipt, operation, bindings, workspace, execution_runtime)
+    else:
+        command = receipt.get("command")
+        need(isinstance(command, list) and len(command) in (4, 9) and
+             all(isinstance(arg, str) and "\0" not in arg and len(arg) <= 16384 for arg in command) and
+             Path(command[0]).is_absolute() and Path(command[1]).is_absolute(),
+             "ORIGINAL_NATIVE_START_COMMAND_REQUIRED")
+        ticket = operation.get("ticketSha256")
+        need(ticket is None or isinstance(ticket, str) and SHA.fullmatch(ticket),
+             "ORIGINAL_NATIVE_START_TICKET_INVALID")
+        expected_args = ["execute-workspace", "--dir", str(workspace), "--config",
+                         bindings["config"]["path"], "--ticket-sha", ticket or "none"]
+        if len(command) == 9:
+            need(command[2:] == expected_args, "ORIGINAL_NATIVE_START_COMMAND_BINDINGS_DIFFER")
+        # store.mjs jsonBytes uses JSON.stringify(value, null, 2) plus one newline.
+        # The argv consists only of strings, so this reproduces those exact bytes.
+        encoded = (json.dumps(command, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
+        need(isinstance(receipt.get("commandSha256"), str) and SHA.fullmatch(receipt["commandSha256"]) and
+             hashlib.sha256(encoded).hexdigest() == receipt["commandSha256"],
+             "ORIGINAL_NATIVE_START_COMMAND_SHA256_DIFFERS")
+        if len(command) == 4:
+            reserved_start_command(command, operation, bindings, expected_args)
     # A settled runtime return before any spawn event is retained atomically in
     # this same pinned attempt. A missing receipt never implies no child.
     confirm_bindings(bindings)
@@ -379,7 +513,7 @@ def inspect_request(request_path):
     need(isinstance(intent_id, str) and 0 < len(intent_id) <= 512, "ORIGINAL_INTENT_REQUIRED")
     directory = absolute(selected["operationDirectory"])
     need(directory.name == hashlib.sha256(intent_id.encode()).hexdigest(), "ORIGINAL_OPERATION_DIRECTORY_MISMATCH")
-    workspace = absolute(selected["nativeWorkspace"])
+    workspace = None if selected.get("nativeWorkspace") is None else absolute(selected["nativeWorkspace"])
     bindings = {"proofRequest": request_binding}
     documents = {}
     attempt_directory = None
@@ -403,24 +537,48 @@ def inspect_request(request_path):
          all(value.get("intentId") == intent_id for value in (operation, config.get("operation", {}), review, attempt)) and
          all(value.get("configSha256") == config_sha for value in (operation, review, attempt)),
          "ORIGINAL_OPERATION_BINDINGS_DIFFER")
-    need(operation.get("nativeWorkspace") == str(workspace) == review.get("nativeWorkspace") and
+    workspace_name = str(workspace) if workspace is not None else None
+    need(operation.get("nativeWorkspace") == workspace_name == review.get("nativeWorkspace") and
          review.get("native", {}).get("mode") == "OFFLINE_REVIEW" and
          review["native"].get("intentId") == intent_id and
          all(value.get("bodySha256") == operation.get("bodySha256") for value in (review, attempt)),
          "ORIGINAL_REVIEW_BINDINGS_DIFFER")
     need(instant(operation["createdAt"]) <= instant(attempt["startedAt"]), "ORIGINAL_ATTEMPT_ORDER_DIFFERS")
-    need(config.get("operator", {}).get("ledger") == str(workspace / "reservations.sqlite") and
-         config["operator"].get("policy") == str(workspace / "policy.json") and
-         config.get("signerModule") == str(workspace / "signer.mjs"), "ORIGINAL_NATIVE_WORKSPACE_BINDINGS_DIFFER")
+    operator_paths = None
+    if workspace is None:
+        operator_paths = direct_operator_paths(config, review, operation)
+    else:
+        need(config.get("operator", {}).get("ledger") == str(workspace / "reservations.sqlite") and
+             config["operator"].get("policy") == str(workspace / "policy.json") and
+             config.get("signerModule") == str(workspace / "signer.mjs"), "ORIGINAL_NATIVE_WORKSPACE_BINDINGS_DIFFER")
+    execution_runtime = selected_execution_runtime(selected, operation, review, attempt, bindings, directory)
+
+    def finish(result):
+        if workspace is None:
+            result.update(executionMode="DIRECT_CONFIG", operatorPaths=operator_paths)
+        if execution_runtime is not None:
+            result["executionRuntime"] = execution_runtime
+        return result
 
     if attempt.get("state") == "NOT_DISPATCHED":
-        return not_dispatched_proof(attempt, operation, bindings, directory, workspace, intent_id, config_sha)
+        return finish(not_dispatched_proof(attempt, operation, bindings, directory, workspace,
+                                           intent_id, config_sha, execution_runtime))
     need(attempt.get("state") in ("STARTED", "INTERRUPTED_OR_START_FAILED", "NATIVE_RESULT_UNAVAILABLE") and
          type(attempt.get("pid")) is int and attempt["pid"] > 0, "ORIGINAL_STARTED_ATTEMPT_REQUIRED")
 
+    if workspace is None or execution_runtime is not None:
+        need(isinstance(attempt.get("processIdentity"), dict) and
+             attempt["processIdentity"].get("status") == "RECORDED",
+             "ORIGINAL_DIRECT_RECORDED_IDENTITY_REQUIRED")
+        bound_native_command(attempt.get("nativeCommand"), operation, bindings, workspace,
+                             execution_runtime, started=True)
     if isinstance(attempt.get("processIdentity"), dict) and attempt["processIdentity"].get("status") == "RECORDED":
-        return recorded_identity_proof(selected, attempt, bindings, directory, workspace, intent_id, config_sha)
+        return finish(recorded_identity_proof(selected, attempt, bindings, directory, workspace,
+                                              intent_id, config_sha))
 
+    # Legacy worker/PID inference remains limited to the original workspace path.
+    need(workspace is not None and execution_runtime is None,
+         "ORIGINAL_DIRECT_RECORDED_IDENTITY_REQUIRED")
     selection = selected["nativeRecord"]
     root = absolute(selection["directory"])
     host = absolute(selection["hostRoot"])

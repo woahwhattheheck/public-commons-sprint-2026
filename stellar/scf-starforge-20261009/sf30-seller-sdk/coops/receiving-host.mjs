@@ -81,7 +81,7 @@ export async function runCoopsReceivingHost(input={}){
   const exact=await identity(record.result.path);assert(exact.sha256===record.result.sha256&&exact.bytes===record.result.bytes,'The completed original receiving result changed.');
   return{...json(exact.path,128*1024*1024),hostRecordPath:recordPath,runtimeClosure:record.closure};
  }
- const sourceFiles=['receiving-host.mjs','receiving.mjs','workspace.mjs','core.mjs','provider.mjs','domain.mjs','schema.mjs','history.mjs','exports.mjs','dataset.mjs','web/app.js','study.mjs','study-exchange.mjs','web/study.js','web/index.html','web/style.css','browser-assets.json','analysis/retained.mjs','analysis/core.mjs','analysis/bundle.mjs'];
+ const sourceFiles=['receiving-host.mjs','receiving.mjs','workspace.mjs','core.mjs','provider.mjs','domain.mjs','schema.mjs','history.mjs','exports.mjs','dataset.mjs','web/app.js','study.mjs','study-exchange.mjs','study-dataset.mjs','web/study.js','web/index.html','web/style.css','browser-assets.json','analysis/retained.mjs','analysis/core.mjs','analysis/bundle.mjs'];
  const source=await Promise.all(sourceFiles.map(async path=>({path,...await identity(join(here,path),8*1024*1024)})));
  const sourceSha256=sha(stable(source.map(({path,bytes,sha256})=>({path:relative(here,path),bytes,sha256}))));
  if(record.sourceHistory.length&&record.sourceHistory.at(-1).sha256!==sourceSha256)assert(String(input.continuationNote??'').trim(),'Record the concrete source correction before continuing this incomplete operation.');
