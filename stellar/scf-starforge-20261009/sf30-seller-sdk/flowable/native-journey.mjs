@@ -7,6 +7,7 @@ import {fileURLToPath,pathToFileURL} from 'node:url';
 import {startFlowableWorkspaceServer} from './workspace/server.mjs';
 import {FlowableWorkspaceHttpClient} from './workspace/http-client.mjs';
 import {normalizeFlowableConnection} from './native.mjs';
+import {runFlowableDmnNativeJourney} from './dmn-native-journey.mjs';
 import {operationLease} from '../../distribution/runtime-workspace/storage.mjs';
 
 const SCHEMA='stellar-forge.flowable-native-journey.v1';
@@ -46,7 +47,8 @@ export async function runFlowableNativeJourney(configPath,outputDirectory,{fetch
     'Retain the original engine and installed source revision.');
   need(typeof config.adminUserId==='string'&&typeof config.reviewerUserId==='string',
     'Use the actual native administrator and reviewer identities.');
-  const connection=normalizeFlowableConnection(config.connection),root=resolve(outputDirectory);
+  const connection=normalizeFlowableConnection(config.connection),dmnConnection=normalizeFlowableConnection(config.dmnConnection),root=resolve(outputDirectory);
+  need(dmnConnection.id!==connection.id,'Keep the original process and DMN REST services as separate native connections.');
   await privateDirectory(root);await privateDirectory(join(root,'downloads'));await privateDirectory(join(root,'screenshots'));
   const lease=await operationLease(join(root,'operation.lock'));
   let sender,receiver,browser,terminalError,state,persistTail=Promise.resolve();
@@ -106,7 +108,7 @@ export async function runFlowableNativeJourney(configPath,outputDirectory,{fetch
       return response;
     };
     async function openHost(name){
-      const host=await startFlowableWorkspaceServer({directory:join(root,name),connections:name==='sender'?[connection]:[],
+      const host=await startFlowableWorkspaceServer({directory:join(root,name),connections:name==='sender'?[connection,dmnConnection]:[],
         environment:process.env,fetch:nativeFetch,signal,timeoutMs:config.nativeTimeoutMs??120000,
         maximumResponseBytes:config.maximumResponseBytes??64*1024*1024});
       const client=new FlowableWorkspaceHttpClient({url:host.url,workspaceId:host.workspaceId,signal});
@@ -134,9 +136,9 @@ export async function runFlowableNativeJourney(configPath,outputDirectory,{fetch
       const result={record:reference(record),review:await hashFile(reviewPath),originals};
       state.reviews[key]=result;await persist();return result;
     }
-    async function prepare(label,kind,selection){
+    async function prepare(label,kind,selection,connectionId=state.connectionRecordId){
       const method='prepare'+kind[0].toUpperCase()+kind.slice(1);
-      const input=await freeze(label+':prepare',{requestId:requestId(label+':prepare'),connectionId:state.connectionRecordId,
+      const input=await freeze(label+':prepare',{requestId:requestId(label+':prepare'),connectionId,
         label:config.operation+' '+label,selection});
       const prepared=await call(method,input);
       need(prepared.value.phase==='PREPARED'||prepared.value.dispatchedAt,
@@ -153,8 +155,8 @@ export async function runFlowableNativeJourney(configPath,outputDirectory,{fetch
         label+' native dispatch rejected its prepared source: '+JSON.stringify(record.value.failure??record.value.summary));
       await retainReview(await current(record));return{record,input};
     }
-    async function operation(label,kind,selection){
-      const prepared=await prepare(label,kind,selection),dispatched=await dispatch(label,kind,prepared);
+    async function operation(label,kind,selection,connectionId=state.connectionRecordId){
+      const prepared=await prepare(label,kind,selection,connectionId),dispatched=await dispatch(label,kind,prepared);
       if(dispatched.record.value.dispatchedAt&&['UNKNOWN','DISPATCHED','READBACK'].includes(dispatched.record.value.state)){
         const recoveryLabel=label+':reconcile:'+dispatched.record.revision;
         dispatched.record=await call('reconcileOperation',await freeze(recoveryLabel,
@@ -192,7 +194,10 @@ export async function runFlowableNativeJourney(configPath,outputDirectory,{fetch
     sender=await openHost('sender');
     const view=await call('view'),target=view.connections.find(item=>item.connection.id===connection.id);
     need(target&&target.credentialAvailable,'The original native Flowable credentials must be available to the engine transport.');
-    state.connectionRecordId=target.id;state.sourceWorkspaceId=view.workspaceId;await persist();
+    state.connectionRecordId=target.id;state.sourceWorkspaceId=view.workspaceId;
+    const dmnTarget=view.connections.find(item=>item.connection.id===dmnConnection.id);
+    need(dmnTarget&&dmnTarget.credentialAvailable,'Use the original native DMN service and its actual host credentials.');
+    state.dmnConnectionRecordId=dmnTarget.id;await persist();
     const catalog=JSON.parse(await readFile(new URL('./examples/process-catalog.json',import.meta.url),'utf8'));
     need(catalog.families.length===3&&catalog.resources.length===6,'Use the complete original three-family process catalog.');
     const initial=await step('original-engine-and-empty-portfolio',async()=>{
@@ -384,6 +389,9 @@ export async function runFlowableNativeJourney(configPath,outputDirectory,{fetch
         'All three original native process cases must complete their human work.');
       return{browserVersion:version,screenshots,portfolio,completedProcessIds:Object.values(started.cases).map(item=>item.id)};
     });
+    const decisions=await runFlowableDmnNativeJourney({configuration:config,directory:root,
+      connectionId:state.dmnConnectionRecordId,call,source,operation,prepare,dispatch,retainReview,
+      step,freeze,requestId,client:sender.client,browserUrl:sender.host.url,signal});
     const complete=await step('complete-native-process-history-export-and-cold-receiving',async()=>{
       const finalPortfolio=await capture('complete original process history'),variables=await collection(finalPortfolio,'historicVariables');
       need(variables.some(item=>item.variable?.name==='caseNumber'||item.name==='caseNumber'),
@@ -415,7 +423,7 @@ export async function runFlowableNativeJourney(configPath,outputDirectory,{fetch
         manifestSha256:inspection.value.manifestSha256}));
       need(adoption.value.state==='ADOPTED','The complete native history must be adopted by the original receiving workspace.');
       await closeHost(receiver);receiver=null;receiver=await openHost('receiver');
-      for(const kind of ['connection','portfolio','release','process','task','migration']){
+      for(const kind of ['connection','portfolio','release','process','task','migration','decisionPortfolio','decisionRelease','decisionEvaluation']){
         let offset=0,total=0;
         do{
           const original=await call('listRecords',{kind,offset,limit:37});
@@ -459,7 +467,7 @@ export async function runFlowableNativeJourney(configPath,outputDirectory,{fetch
       processFamilies:3,releaseVersions:6,completedProcesses:browserResult.completedProcessIds,
       nativeMutations:state.nativeRequests.filter(item=>['POST','PUT','DELETE'].includes(item.method)&&
         !item.path.endsWith('/validate-migration')).length,workspace:complete.laterDownload,
-      browser:browserResult,installed};await persist();
+      browser:browserResult,decisions,installed};await persist();
     return{schema:SCHEMA,state:state.state,scope:SCOPE,operation:config.operation,
       sourceRevision:config.sourceRevision,result:state.result,stateFile:await hashFile(statePath)};
   }catch(error){
