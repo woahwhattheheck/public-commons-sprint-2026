@@ -97,7 +97,37 @@ node wqx-water-quality/openwaters-journey.mjs \
   --browser
 ```
 
-Use `--capture /private/original-capture` to reuse an existing complete capture. A browser runtime can be selected with `--playwright-module` and `--browser-executable`. Keep the same operation directory when resuming. The result, original exports, receiving project and browser outputs are retained there.
+Use `--capture /private/original-capture` to reuse an existing complete capture. A browser runtime can be selected with `--playwright-module` and `--browser-executable`.
+
+### Continue a prepared operation
+
+The maintained command runs preparation, browser/receiving, and final receiving verification in serial Node processes. Preparation completes and closes its source model before Chromium starts. Its small `open-waters-native-result.json` checkpoint records the original configuration, capture/review/plan hashes, all six output lengths and hashes, and native preparation checks. Each later process consumes that exact checkpoint.
+
+After an interrupted browser or receiver, keep the same directory:
+
+```sh
+node wqx-water-quality/openwaters-journey.mjs \
+  --directory /private/open-waters-receiving --resume --browser
+```
+
+This opens the saved immutable plan and verifies its retained exports. The browser opens that plan directly, inspects the original identities, limits and receiving requirements, downloads the six files, then receives the full bundle in the operation’s existing receiving project. A saved successful browser result is reused. The final process verifies the receiving review, capture and all six regenerated receiving-file hashes.
+
+Use `--native-only` to finish preparation and retain the completed native checkpoint for another process. A pre-checkpoint operation that already has its complete saved project and six exports can use the same `--resume` command; adoption records the actual retained file verification and preserves any original progress record.
+
+### Move the completed receiving phase to another host
+
+The complete bundle contains the original private review, capture graph, mapping plan and exact five companion files. Extract the delivery ZIP and give its complete JSON member to the receiving command:
+
+```sh
+node wqx-water-quality/openwaters-journey.mjs \
+  --directory /private/open-waters-receiving \
+  --prepared-bundle /private/delivery/receiving/potomac-quarter-open-waters-01-complete-open-waters.json \
+  --resume --browser
+```
+
+The import uses the original project’s complete-bundle receiver, verifies the source and mapping identities, and copies the bundle’s exact exported members. It retains the same capture, review and plan rather than acquiring another source cohort. Supply `--options` only when those options exactly match the saved choices.
+
+The operation retains `open-waters-native-result.json`, `open-waters-receiving-result.json`, `open-waters-result.json`, stage/error records, original exports, the receiving project, and browser downloads/screenshots. The native checkpoint remains available if a later process is interrupted.
 
 ## Published interface
 

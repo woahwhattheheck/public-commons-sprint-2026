@@ -13,7 +13,7 @@ const equal = (actual, expected, label) => assert.equal(canonicalJson(actual), c
 const FORMATS = ['locations', 'results', 'crosswalk', 'report', 'bundle', 'references'];
 
 export async function runOpenWatersBrowserJourney({ directory, outputDirectory, receiverDirectory, reviewId, options,
-  planId = 'potomac-open-waters-browser', workspace: suppliedWorkspace, playwrightModule, browserExecutable } = {}) {
+  planId = 'potomac-open-waters-browser', workspace: suppliedWorkspace, resume = false, expectedPlanSha256, playwrightModule, browserExecutable } = {}) {
   assert(directory && outputDirectory && reviewId, 'Provide the retained native project, output directory, and saved review.');
   assert(options?.organizationId && options?.projectId, 'Provide the exact receiving organization and project for this plan.');
   outputDirectory = await privateDirectory(resolve(outputDirectory));
@@ -27,7 +27,11 @@ export async function runOpenWatersBrowserJourney({ directory, outputDirectory, 
   }
   try {
     workspace ??= await startWaterQualityWorkspace({ directory, transport: retainedSource });
-    const originalReview = await workspace.project.readReview(reviewId);
+    const originalReview = await (async () => {
+      const review = await workspace.project.readReview(reviewId);
+      return { captureId: review.captureId, reviewSha256: review.reviewSha256, note: review.note,
+        selectedRows: review.analysis.inventory.selectedRows, analysisSha256: hash(canonicalJson(review.analysis)) };
+    })();
     const originalCapture = await workspace.project.capture(originalReview.captureId);
     browser = await chromium.launch({
       headless: true,
@@ -63,6 +67,15 @@ export async function runOpenWatersBrowserJourney({ directory, outputDirectory, 
       await target.screenshot({ path: file, ...(target === page ? { fullPage: true } : {}) }); screenshots.push(file);
     }
     const page = await pageAt(workspace.url);
+    let preview;
+    if (resume) {
+      await progress('reopen-prepared-native-plan');
+      await page.waitForFunction(id => [...document.getElementById('ow-saved-plan').options].some(item => item.value === id), planId);
+      preview = await openPlan(page, planId);
+      if (expectedPlanSha256) assert.equal(preview.planSha256, expectedPlanSha256);
+      equal(preview.options, options, 'Resume the exact prepared mapping choices.');
+      assert.equal(preview.reviewSha256, originalReview.reviewSha256);
+    } else {
     await page.waitForFunction(id => [...document.getElementById('ow-review').options].some(item => item.value === id), reviewId);
     await page.selectOption('#ow-review', reviewId);
     const editor = page.locator('details').filter({ has: page.locator('#ow-options-json') });
@@ -71,14 +84,15 @@ export async function runOpenWatersBrowserJourney({ directory, outputDirectory, 
     assert.equal(await page.inputValue('#ow-organization'), options.organizationId);
     assert.equal(await page.inputValue('#ow-project'), options.projectId);
     await progress('preview-original-selection');
-    const preview = await submit(page, '#ow-preview', '/api/open-waters/preview'); await idle(page);
+    preview = await submit(page, '#ow-preview', '/api/open-waters/preview'); await idle(page);
+    }
     assert.equal(preview.captureSha256, originalCapture.captureSha256);
     assert.equal(preview.reviewId, reviewId);
-    assert.equal(preview.summary.selectedResults, originalReview.analysis.inventory.selectedRows);
+    assert.equal(preview.summary.selectedResults, originalReview.selectedRows);
     assert.equal(preview.results.length, preview.summary.selectedResults);
     assert.equal(preview.options.organizationId, options.organizationId);
     assert.equal(preview.options.projectId, options.projectId);
-    assert.equal(await page.locator('#ow-save').isEnabled(), true);
+    assert.equal(await page.locator('#ow-save').isEnabled(), !resume);
     if (preview.options.identityMode === 'compact')
       assert(preview.activities.every(row => [...row.destinationId].length <= 35), 'All compact activity identities fit the native field.');
     assert.equal(await page.locator('#ow-locations tr').count(), Math.max(1, Math.min(25, preview.locations.length)));
@@ -130,10 +144,10 @@ export async function runOpenWatersBrowserJourney({ directory, outputDirectory, 
     }
 
     await progress('save-or-reopen-original-plan');
-    const existing = (await workspace.view()).openWaters.find(item => item.planId === planId);
+    const existing = resume ? { planId } : (await workspace.view()).openWaters.find(item => item.planId === planId);
     let saved;
     if (existing) {
-      saved = await openPlan(page, planId);
+      saved = resume ? preview : await openPlan(page, planId);
       equal(saved.options, preview.options, 'An existing immutable plan must match this exact receiving operation.');
       assert.equal(saved.reviewSha256, preview.reviewSha256);
     } else {
@@ -146,6 +160,9 @@ export async function runOpenWatersBrowserJourney({ directory, outputDirectory, 
     assert.equal(saved.captureSha256, preview.captureSha256);
     equal(saved.options, preview.options, 'Saved options match the complete native preview.');
     equal(saved.files.map(file => file.format).sort(), [...FORMATS].sort(), 'The complete plan exposes all six native receiving files.');
+    saved = { planId: saved.planId, planSha256: saved.planSha256, reviewSha256: saved.reviewSha256,
+      captureSha256: saved.captureSha256, options: saved.options, files: saved.files, summary: saved.summary };
+    preview = null;
     await progress('download-complete-native-plan');
     let bundleFile;
     for (const file of saved.files) {
@@ -164,9 +181,12 @@ export async function runOpenWatersBrowserJourney({ directory, outputDirectory, 
     }
     assert(bundleFile, 'The full native bundle is downloadable.');
     await page.locator('#ow-new').click(); await openPlan(page, planId);
-    const reopenedResponse = await page.request.get(workspace.url + '/api/open-waters/' + encodeURIComponent(planId));
-    assert(reopenedResponse.ok()); const reopened = await reopenedResponse.json();
-    assert.equal(reopened.planSha256, saved.planSha256); equal(reopened.files, saved.files, 'Original immutable plan files reopen unchanged.');
+    {
+      const reopenedResponse = await page.request.get(workspace.url + '/api/open-waters/' + encodeURIComponent(planId));
+      assert(reopenedResponse.ok()); const reopened = await reopenedResponse.json();
+      assert.equal(reopened.planSha256, saved.planSha256); equal(reopened.files, saved.files, 'Original immutable plan files reopen unchanged.');
+      await reopenedResponse.dispose();
+    }
     await page.locator('[data-ow-pane="results"]').click();
     await shot(page, 'open-waters-results');
     await page.setViewportSize({ width: 390, height: 844 });
@@ -174,6 +194,8 @@ export async function runOpenWatersBrowserJourney({ directory, outputDirectory, 
     assert(mobile.content <= mobile.viewport, 'The complete receiving workspace fits the mobile viewport.');
     await shot(page, 'open-waters-mobile');
 
+    await page.close();
+    if (!suppliedWorkspace) { await workspace.close(); workspace = null; }
     await progress('receive-complete-bundle-in-fresh-workspace');
     const receivingDirectory = receiverDirectory ? resolve(receiverDirectory) : join(outputDirectory, 'received-workspace');
     receiver = await startWaterQualityWorkspace({ directory: receivingDirectory, transport: retainedSource });
@@ -195,7 +217,7 @@ export async function runOpenWatersBrowserJourney({ directory, outputDirectory, 
     equal(received.options, saved.options, 'Portable receiving preserves every mapping decision.');
     equal(received.files, saved.files, 'Portable receiving preserves all six exact output members.');
     const receivedReview = await receiver.project.readReview(reviewId);
-    equal(receivedReview.analysis, originalReview.analysis, 'The original saved scientific review reopens in the receiving workspace.');
+    assert.equal(hash(canonicalJson(receivedReview.analysis)), originalReview.analysisSha256, 'The original saved scientific review reopens in the receiving workspace.');
     assert.equal(receivedReview.note, originalReview.note);
     assert.equal((await receiver.project.capture(originalReview.captureId)).captureSha256, originalCapture.captureSha256);
     const deliveredAgain = await receivingPage.request.get(receiver.url + '/api/open-waters/' + encodeURIComponent(planId) + '/results');
@@ -205,7 +227,7 @@ export async function runOpenWatersBrowserJourney({ directory, outputDirectory, 
     await shot(receivingPage, 'open-waters-received');
     assert.equal(errors.length, 0, JSON.stringify(errors));
     assert(mutations.every(path => ['/api/open-waters/preview', '/api/open-waters', '/api/open-waters/receive'].includes(path)), 'This receiving operation uses the original Open Waters workspace lifecycle.');
-    const result = { status: 'PASS', planId, planSha256: saved.planSha256, captureSha256: originalCapture.captureSha256,
+    const result = { status: 'PASS', mode: resume ? 'retained-plan' : 'prepare-plan', planId, planSha256: saved.planSha256, captureSha256: originalCapture.captureSha256,
       reviewId, reviewSha256: saved.reviewSha256, summary: saved.summary, originalLimitTypes: limitTypes,
       nativeReferenceFamilies: families, receivingDirectory, mobile, downloads, screenshots, browserErrors: errors, mutations };
     await atomicJson(outputDirectory, 'open-waters-browser-result.json', result); await progress('complete'); return result;
