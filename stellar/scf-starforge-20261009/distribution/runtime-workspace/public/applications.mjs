@@ -105,8 +105,7 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
   relatedApplications.hidden = true;
   const reviewStart = button('Review start', () => act(async () => {
     const app = selected(); if (!app) return;
-    startReview = await api('/api/applications/start-review', { applicationId: app.id,
-      ...(app.kind === 'woo-merchant' ? { navigationOrigin: location.origin } : {}) });
+    startReview = await api('/api/applications/start-review', { applicationId: app.id });
     renderStartReview();
   }));
   const stop = button('Stop application', () => act(async () => {
