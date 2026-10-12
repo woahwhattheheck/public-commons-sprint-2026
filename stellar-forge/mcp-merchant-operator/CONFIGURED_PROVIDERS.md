@@ -164,16 +164,45 @@ HTTP and stdio forward this limit to the original transport. Provider-specific
 limits, retained-file chunk sizes and argument validation still apply within
 an accepted request.
 
-Changes remain serialized through the operator. Every accepted call, including
-reads and in-flight imports, is tracked for shutdown. `close()` rejects new
-calls, cancels already loaded fleet staging, drains accepted work and closes
-loaded owners and the process-owned seller. Repeated calls share the same close
-operation. Unused providers are not imported to close the host.
+Release changes and ordinary provider mutations retain the host's change lock.
+A provider that already serializes its own native writes can declare
+`concurrency: 'provider'` in its registry entry. That family keeps its original
+revision, lease and operation guards. A narrower `concurrentTools` array permits
+only named controls, such as capture cancellation or closing an owned workspace,
+to enter while another host change is running. All advertised-tool and argument
+checks still apply.
 
-Await `close()` before discarding the process or reopening native writer
-directories. An incomplete original shutdown returns
-`OPERATOR_SHUTDOWN_INCOMPLETE`; the owning provider's retained state and recovery
-operation remain authoritative.
+Every accepted call, including reads and in-flight imports, is tracked.
+`operator.activity` and the same field in `merchant_status.operator` show each
+accepted tool, provider, start time and elapsed time, without copying its
+arguments. The existing `busy` field describes the host's change lock; source-owned
+families can have active work while that lock is free.
+
+`close()` stops new host calls. Providers declaring `shutdown: 'provider'` begin
+their original close before the host waits for operation results. Their close
+method owns cancellation and draining. The host first admits every accepted
+lazy call into the original provider, so an import finishing during shutdown
+cannot skip its owner’s close path. Ordinary providers close after accepted host
+work settles. A `requestClose` registry function can signal an original owner
+before draining; fleet uses its original `cancelStaging()` signal.
+
+Dependencies close after their borrowers. ArcGIS therefore finishes before its
+shared publisher. If a borrower cannot close, its dependency remains owned and
+appears as `DEPENDENCY_WAIT`; the host retains both original objects.
+`operator.providerShutdown` and `merchant_status.operator.shutdown` expose each
+attempt's `OPEN`, `DRAINING`, `CLOSING`, `CLOSED`, `FAILED` or
+`DEPENDENCY_WAIT` state. The pure operator console can read these getters during
+and after shutdown.
+
+Concurrent calls to `close()` share the current attempt. If that attempt returns
+`OPERATOR_SHUTDOWN_INCOMPLETE`, correct the original owner's reported condition
+and call `close()` again on the same operator. Failed owners retry; successfully
+closed owners remain closed. The process-owned seller is also retained until its
+original close succeeds. The host continues rejecting new operations while
+shutdown is incomplete.
+
+Await successful close before discarding the process or reopening native writer
+directories. Unused providers are never imported merely to close a host.
 
 ## Add a provider
 
@@ -193,6 +222,12 @@ and their original `close()`. The operator dispatches advertised metadata to the
 matching family; an ordinary provider needs no additional prefix branch.
 Release, cache, dataset, discovery and facilitator controls retain their
 specialized paths.
+
+Declare source-owned concurrency only when that original provider enforces its
+own mutation and workspace guards. Declare provider-owned shutdown only when its
+close method cancels and drains all accepted work, including pending workspace
+opens, and retains incomplete ownership for retry. The host delegates those
+native semantics; it does not replace the provider's operation journal.
 
 Scope provider guidance to an advertised prefix in `instructions.mjs`. Keep its
 original documentation and receiving workflow beside the implementation. The
