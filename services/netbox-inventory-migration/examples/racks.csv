@@ -1,0 +1,3 @@
+source_key,match_id,name,site_key,location_id,u_height,width,status
+rack-a,201,A01,site-a,301,42,19,active
+rack-b,202,B01,site-b,302,42,19,active
