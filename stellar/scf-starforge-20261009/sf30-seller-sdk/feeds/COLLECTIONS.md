@@ -33,7 +33,7 @@ Folder order, hierarchy, category text, comments and source attributes remain at
 
 Include/link outlines stay in the original document and its structural view. Acquisition follows the explicitly selected RSS subscription entries. Original source URLs are compared as exact strings with registered feed URLs; mapping preserves path, case and query distinctions.
 
-The workspace supports original OPML up to 16 MiB and 10,000 outlines, and a collection can enable up to 250 distinct feeds. These are product capacity choices. Original XML parsing rejects DTDs and external entities.
+The workspace supports original OPML up to 16 MiB and 10,000 outlines, and a collection can enable up to 100 distinct feeds. These are product capacity choices. Original XML parsing rejects DTDs and external entities.
 
 | Download | Contents |
 |---|---|
