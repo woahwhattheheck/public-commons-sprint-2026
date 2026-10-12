@@ -24,9 +24,11 @@ const FIXTURE = JSON.parse(await readFile(join(ROOT, 'data', 'events.json'), 'ut
 validateFixture(FIXTURE);
 const TYPES = {'/':'text/html; charset=utf-8', '/app.js':'text/javascript; charset=utf-8', '/archive.js':'text/javascript; charset=utf-8', '/player-recap.js':'text/javascript; charset=utf-8', '/player_recap.mjs':'text/javascript; charset=utf-8', '/player_coaching.mjs':'text/javascript; charset=utf-8', '/engine.mjs':'text/javascript; charset=utf-8', '/style.css':'text/css; charset=utf-8',
   '/coach-review':'text/html; charset=utf-8', '/coach-review.js':'text/javascript; charset=utf-8', '/coach-review.css':'text/css; charset=utf-8',
+  '/insight-review':'text/html; charset=utf-8', '/insight-review.js':'text/javascript; charset=utf-8', '/insight-review.css':'text/css; charset=utf-8',
   '/broadcast-handover':'text/html; charset=utf-8', '/broadcast-handover.js':'text/javascript; charset=utf-8', '/broadcast-handover.css':'text/css; charset=utf-8', '/rundown-builder.js':'text/javascript; charset=utf-8'};
 const ROUTES = {'/': 'index.html', '/app.js': 'app.js', '/archive.js': 'archive.js', '/player-recap.js': 'player-recap.js', '/player_recap.mjs': '../src/player_recap.mjs', '/player_coaching.mjs': '../src/player_coaching.mjs', '/engine.mjs': '../src/engine.mjs', '/style.css': 'style.css',
   '/coach-review':'coach-review.html', '/coach-review.js':'coach-review.js', '/coach-review.css':'coach-review.css',
+  '/insight-review':'insight-review.html', '/insight-review.js':'insight-review.js', '/insight-review.css':'insight-review.css',
   '/broadcast-handover':'broadcast-handover.html', '/broadcast-handover.js':'broadcast-handover.js', '/broadcast-handover.css':'broadcast-handover.css', '/rundown-builder.js':'rundown-builder.js'};
 const DEFAULT_PORT = 3167;
 // Existing local replay remains free; admitted paid attempts count even on failure.

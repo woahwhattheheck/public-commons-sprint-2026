@@ -206,16 +206,16 @@ export function broadcastHtml(report, matchPackage) {
   };
   const displayTime = second => second === null ? '—' : matchClock(second);
   const rows = events => events.map(event => '<tr><td>' + html(matchClock(event.second)) +
-    '</td><td>' + html(event.id) + '</td><td>' + html(event.player) + '</td><td>' +
+    '</td><td>' + html(event.id) + '</td><td>' + html(event.team) + '</td><td>' + html(event.player) + '</td><td>' +
     html(ACTIONS[report.broadcast.view.locale][event.type]) + '</td><td>' +
     html(ZONES[report.broadcast.view.locale][event.zone]) + '</td></tr>').join('');
   const cues = report.cues.map((cue, i) =>
     '<article><h2>' + String(i + 1).padStart(2, '0') + ' · ' + html(cue.caption) + '</h2>' +
-    '<p>' + html(W.match) + ' ' + html(cue.matchClock) + ' · ' + html(W.video) + ' ' +
+    '<p>' + html(cue.team) + ' · ' + html(W.match) + ' ' + html(cue.matchClock) + ' · ' + html(W.video) + ' ' +
     html(cue.video ? cue.video.in + ' – ' + cue.video.out : W.untimed) + '</p>' +
     '<button class="jump" type="button" data-count="' + cue.count + '">' + html(W.at) + ' ' + cue.count + '</button>' +
     '<details><summary>' + html(W.evidence) + '</summary><div class="table"><table><thead><tr><th>' +
-    html(W.match) + '</th><th>ID</th><th>' + html(W.player) + '</th><th>' + html(W.action) +
+    html(W.match) + '</th><th>ID</th><th>' + html(W.team) + '</th><th>' + html(W.player) + '</th><th>' + html(W.action) +
     '</th><th>' + html(W.zone) + '</th></tr></thead><tbody>' + rows(cue.evidence) +
     (cue.watermark ? rows([cue.watermark]) : '') + '</tbody></table></div></details></article>').join('');
   const payload = {package: matchPackage, report, words: W, actions: ACTIONS[report.broadcast.view.locale],

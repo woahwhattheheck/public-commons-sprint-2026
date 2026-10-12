@@ -142,3 +142,13 @@ The stateless `/api/analyze` and historical `/api/evidence-export` routes remain
 ## Attribution
 
 Original 2026 source authored in the TokenJunkieLabs Commons swarm for the owner's competition exploration. Preserve the human entrant's actual legal ownership, rights and collaborator provenance when publishing or entering. The source is MIT licensed. Teams, players, events and presentation artwork are original synthetic material.
+
+## Saved explanation review and broadcaster handover
+
+Open **Inspect saved explanations** from the saved-match section or the result in the player. The dedicated review shows the exact retained answer, its original source plays, the executed tools and the recorded provider turns. Each source link reopens that saved match at the selected event. See [Saved explanations](docs/SAVED_EXPLANATIONS.md).
+
+Open **Broadcast handover** to turn a saved match into an editable production rundown. Choose source events or counterpress sequences, follow a player, edit the captions, and attach video in/out times independently of the match clock. A local recording can preview the timed captions. Save the rundown with the existing match, then export a complete editable JSON, timed WebVTT, or a standalone HTML with original-event replay. Each cue retains its own team, including mixed-team selections and attempts closed by a later opposing event. See [Broadcast handover](BROADCAST_HANDOVER.md).
+
+The player recap, bookmarks, coaching notes, retained explanations and broadcast draft are preserved together through original-match saves and portable import/export. The broadcaster composes a newer non-broadcast review revision only while the broadcaster draft itself remains unchanged in the saved base.
+
+The [complete recorder](demo/README.md) follows player → saved explanation → H10 recap/replay → coach comparison → automatic story draft → broadcaster editing → standalone delivery. It records the actual browser, closes it before encoding, restarts the persistent application, attaches the actual encoded clip and receives the complete editable review in an independent browser collection.
