@@ -478,7 +478,8 @@ export async function receiveQgisAnalyst(input, {signal, onProgress = value => p
     }
     async function mapPane(session) {
       await page.getByRole('button', {name: 'Maps', exact: true}).click();
-      await page.getByLabel('Saved native project', {exact: true}).selectOption(project.id);
+      const selection = page.getByLabel('Saved native project', {exact: true});
+      if (await selection.inputValue() !== project.id) await selection.selectOption(project.id);
     }
     await mapPane(primary);
     const reopened = await originalAction(primary, 'native-reopen', () => page.getByRole('button', {name: 'Reopen and verify native map', exact: true}).click());
