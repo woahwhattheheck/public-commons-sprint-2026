@@ -272,3 +272,47 @@ export after reopening. Record the real original workspace/edition/dossier IDs,
 source coverage, export hash and native application outcome with the shared
 delivery. Keep any existing capture, buyer intent and payment operation attached
 to its original owner while joining the agent interface.
+
+## Run the complete native receiving example
+
+The maintained example uses the original fifteen-award AI and IT collection,
+including its retained query response, all award-detail bodies and receipts.
+Its known source totals are obligations USD 29,461,170.92, exercised value
+USD 29,465,539.92 and all-options value USD 105,824,144.08.
+All fifteen total-outlay values remain null.
+
+Run from the complete repository or distribution source with Node 22.16 or later:
+
+```sh
+node stellar-forge/mcp-merchant-operator/examples/usaspending-native.mjs \\
+  --source /private/source/source/recent-ai-v2-details.json \\
+  --out /private/usaspending-native \\
+  --operation federal-award-receiving
+```
+
+The example opens both original applications and calls the configured merchant
+adapter's normal tools to import the collection, save a query and analyst
+review, select and compare editions, and prepare the original SF30 merchant.
+It reads all three original dataset pages, finalizes their SF100 delivery,
+adopts it and repeats adoption against the same saved delivery.
+
+It receives the delivered awards under two dossier questions, adds the complete
+original source and writes three findings with their original source citations.
+It then downloads eleven complete exports, closes and reopens the application
+partway through the dossier download, and resumes the same SHA256 export at the
+saved byte offset. Finally, it restores the original research workspace,
+analyst review and portable dossier into receiving directories and reads them
+through the same adapter.
+
+The private output directory contains `operation.json`, both original browser
+HTML responses, the original dataset pages and delivery, complete downloaded
+exports, and the reopened receiving stores. The operation journal checkpoints
+accepted native steps and export IDs. Continue an interrupted run with the same
+source file, output directory and operation ID; it reads the saved native state
+and retained bytes before continuing.
+
+The completed original run restored all nineteen immutable editions, fifteen
+award rows, the original analyst review and all three cited findings. The
+1,799,497-byte portable dossier resumed at byte 65,536 and retained its complete
+export hash through reopening and receiving. The native run also exercised the
+receiver's page-count binding against each retained page's `payload.rows.length`.

@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Request collections · Starforge</title>
+  <link rel="stylesheet" href="/style.css">
+  <script type="module" src="/app.mjs"></script>
+</head>
+<body>
+  <a class="skip" href="#workspace">Skip to workspace</a>
+  <header class="masthead">
+    <div><span class="brand">STARFORGE</span><h1>Request collections</h1></div>
+    <div class="header-actions"><span id="connection-state">Connecting</span><button id="lock" type="button" hidden>Lock workspace</button></div>
+  </header>
+  <p class="lede">Review requests together, retain their inputs, and follow every delivery.</p>
+  <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
+  <section id="connection" class="panel narrow" hidden>
+    <h2>Open your private workspace</h2>
+    <p>Use the complete URL printed by the collections command, or paste its session key below.</p>
+    <form id="connect-form">
+      <label for="session-key">Session key</label>
+      <input id="session-key" type="password" autocomplete="off" spellcheck="false" required>
+      <button type="submit">Connect</button>
+    </form>
+  </section>
+  <main id="workspace" hidden>
+    <aside class="sidebar">
+      <div class="section-heading"><h2>Collections</h2><button id="refresh" type="button">Refresh</button></div>
+      <label for="filter" class="sr-only">Filter collections</label>
+      <input id="filter" type="search" placeholder="Find a collection">
+      <div id="collection-list" class="collection-list" aria-label="Saved collections"></div>
+      <button id="new-collection" class="wide primary" type="button">New collection</button>
+      <details class="workspace-paths"><summary>Workspace locations</summary><dl id="locations"></dl></details>
+    </aside>
+    <div class="content">
+      <section id="empty" class="panel empty">
+        <span class="eyebrow">BUYER OPERATIONS</span>
+        <h2>A clear view of work in progress</h2>
+        <p>Group your prepared requests into a named collection. Review the total limits, keep the inputs together, and export a single results index.</p>
+        <button id="empty-create" class="primary" type="button">Create a collection</button>
+      </section>
+      <section id="create-panel" class="panel" hidden>
+        <div class="section-heading"><div><span class="eyebrow">NEW COLLECTION</span><h2>Choose the requests</h2></div><button id="close-create" type="button">Close</button></div>
+        <p>Enter the absolute paths of existing operator request configurations, one per line. The review shows each request and its spending limit.</p>
+        <form id="preview-form">
+          <div class="form-grid">
+            <div><label for="collection-name">Name</label><input id="collection-name" maxlength="160" placeholder="October source review" required></div>
+            <div><label for="collection-id">Collection ID</label><input id="collection-id" maxlength="80" spellcheck="false" required></div>
+          </div>
+          <label for="config-files">Request configuration paths</label>
+          <textarea id="config-files" rows="6" spellcheck="false" placeholder="/absolute/path/request-one.json&#10;/absolute/path/request-two.json" required></textarea>
+          <div class="form-actions"><button id="preview-button" class="primary" type="submit">Review requests</button><span id="preview-hint" class="muted">The source files are read when you review.</span></div>
+        </form>
+        <section id="preview-panel" class="review" hidden>
+          <h3>Collection limits</h3>
+          <p class="muted">Each total is separate for its network, asset, recipient and payment flow. Amounts use atomic units.</p>
+          <div id="preview-totals"></div>
+          <h3>Included requests</h3><div id="preview-items"></div>
+          <details><summary>Source review fingerprint</summary><code id="preview-hash"></code></details>
+          <div class="form-actions"><button id="save-collection" class="primary" type="button">Save reviewed collection</button><p class="muted">Request inputs are retained with the collection.</p></div>
+        </section>
+      </section>
+      <section id="detail-panel" hidden>
+        <div class="panel">
+          <div class="section-heading"><div><span class="eyebrow">SAVED COLLECTION</span><h2 id="detail-name"></h2><p id="detail-meta" class="muted"></p></div><span id="detail-state" class="state"></span></div>
+          <div id="progress" class="progress-row"></div>
+          <h3>Collection limits</h3><div id="detail-totals"></div>
+          <div class="toolbar">
+            <button id="enqueue" class="primary" type="button">Queue retained requests</button>
+            <button id="export" type="button">Export results</button>
+            <button id="refresh-detail" type="button">Refresh status</button>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="section-heading"><h3>Requests</h3><span id="selection-count" class="muted">0 selected</span></div>
+          <div class="selection-toolbar">
+            <button id="select-remaining" type="button">Select queued requests</button>
+            <button id="clear-selection" type="button">Clear selection</button>
+            <span class="toolbar-spacer"></span>
+            <button id="recover" type="button">Recover selected</button>
+            <button id="cancel" type="button">Cancel selected</button>
+            <button id="run-command" class="primary" type="button">Prepare terminal command</button>
+          </div>
+          <div id="detail-items"></div>
+          <p class="muted footnote">Run the prepared command in a terminal to approve each selected request through the existing buyer workflow. This page tracks its progress when refreshed.</p>
+        </div>
+        <section id="command-panel" class="panel" hidden>
+          <div class="section-heading"><h3>Run selected requests</h3><button id="copy-command" type="button">Copy command</button></div>
+          <p>Use a separate terminal on this host. Review and approve each request there. The command stops when a request needs attention.</p>
+          <pre id="command"></pre><p id="command-selection" class="muted"></p>
+        </section>
+        <section id="export-panel" class="panel" hidden>
+          <h3>Saved results export</h3><p id="export-location" class="mono"></p>
+          <div id="export-files" class="export-files"></div>
+          <p class="muted">The results index references the original retained delivery files. These files also remain available at the saved export location.</p>
+        </section>
+        <details class="panel"><summary>Request details and run history</summary><div id="request-details"></div><h3>Runs</h3><div id="run-history"></div><h3>Manifest fingerprint</h3><code id="manifest-hash"></code></details>
+      </section>
+    </div>
+  </main>
+  <footer>Starforge · Private buyer workspace</footer>
+</body>
+</html>

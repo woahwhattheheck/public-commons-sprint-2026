@@ -2,6 +2,7 @@ import { initImageWorkspace, imageOperationRecovery } from './image.mjs';
 import { createRuntimeTransferView } from './transfer.mjs';
 import { createManagedWorkspaceView } from './managed.mjs';
 import { createApplicationsWorkspaceView } from './applications.mjs';
+import { createPythonWorkspaceView } from './python.mjs';
 // MIT. Industrial operator presentation; original runtime records remain authoritative.
 const $ = id => document.getElementById(id);
 const make = (tag, text, className) => { const node = document.createElement(tag); if (text !== undefined) node.textContent = text; if (className) node.className = className; return node; };
@@ -34,6 +35,7 @@ function switchView(name) {
   if (name === 'managed') managed.refresh().catch(error);
   if (name === 'applications') applications.refresh().catch(error);
   if (name === 'transfers') transfers.refresh().catch(error);
+  if (name === 'python') python.refresh().catch(error);
 }
 document.querySelectorAll('[data-view]').forEach(node => node.addEventListener('click', () => switchView(node.dataset.view)));
 function facts(container, rows) {
@@ -130,7 +132,7 @@ function renderOperations() {
       [job.cacheTransferId ? 'Runtime source transfer' : 'Image transfer', job.transferDirectory], ['Container output', job.containerDirectory]])
       if (path) article.append(make('p', label + ': ' + path));
     if (job.error) article.append(make('p', job.error.code + ': ' + job.error.message));
-    if (job.displayPhase === 'INTERRUPTED' && !job.homeId && !job.cacheTransferId) article.append(make('p', job.imageId || job.transferId
+    if (job.displayPhase === 'INTERRUPTED' && !job.homeId && !job.cacheTransferId && !job.operation.startsWith('python-')) article.append(make('p', job.imageId || job.transferId
       ? imageOperationRecovery(job)
       : 'The workspace worker ended. Open its retained runtime and resume installation or recover into a new directory.', 'note'));
     const actions = make('div', undefined, 'actions');
@@ -138,6 +140,14 @@ function renderOperations() {
       const openApplication = make('button', 'Open application'); openApplication.type = 'button';
       openApplication.addEventListener('click', () => applications.choose(job.applicationId).catch(error));
       actions.append(openApplication);
+    }
+    if (job.operation.startsWith('python-')) {
+      if (job.pythonStage) article.append(make('p', 'Python stage: ' + job.pythonStage));
+      if (['FAILED', 'QUEUED'].includes(job.phase) || job.displayPhase === 'INTERRUPTED') {
+        const recover = make('button', 'Continue original Python operation'); recover.type = 'button';
+        recover.addEventListener('click', () => api('/api/python/recover', { operationId: job.id }).then(() => refresh()).catch(error));
+        actions.append(recover);
+      }
     }
     if (job.homeId) {
       const home = make('button', 'Open managed home'); home.type = 'button';
@@ -169,7 +179,7 @@ function renderOperations() {
     }
     const log = make('button', selectedLog === job.id ? 'Refresh selected worker log' : 'Open worker log'); log.type = 'button';
     log.addEventListener('click', () => openLog({ operationId: job.id }).catch(error)); actions.append(log);
-    if (job.phase === 'QUEUED') {
+    if (job.phase === 'QUEUED' && !job.operation.startsWith('python-')) {
       const resume = make('button', 'Start retained request'); resume.type = 'button';
       resume.addEventListener('click', () => api('/api/resume-queued', { operationId: job.id }).then(() => refresh()).catch(error)); actions.append(resume);
     }
@@ -192,7 +202,7 @@ async function refresh({ quiet = false } = {}) {
         if (saved?.selectedId && value.runtimes.some(item => item.id === saved.selectedId)) {
           selectedId = saved.selectedId; value = await api(query('/api/state', { runtimeId: selectedId }));
         }
-        if (['runtime', 'profile', 'operations', 'deployment', 'managed', 'images', 'applications', 'transfers'].includes(saved?.view) && view === requestedView) view = saved.view;
+        if (['runtime', 'profile', 'operations', 'deployment', 'managed', 'images', 'applications', 'transfers', 'python'].includes(saved?.view) && view === requestedView) view = saved.view;
         logSelection = saved?.logSelection ?? null;
       } catch {}
     }
@@ -397,6 +407,18 @@ const managed = createManagedWorkspaceView({ api, getState: () => state, operati
   openLog, switchView, message, error });
 const applications = createApplicationsWorkspaceView({ root: $('applications-workspace'), api, getState: () => state,
   refreshWorkspace: refresh, switchView, message, error });
+const python = createPythonWorkspaceView({ api, getState: () => state, operation, refreshWorkspace: refresh,
+  openLog, switchView, message, error,
+  openApplication: descriptor => applications.beginPython(descriptor),
+  upload: async (file, sha256) => {
+    const response = await fetch('/api/python/upload?' + new URLSearchParams({ sha256 }), {
+      method: 'POST', headers: { 'x-runtime-workspace-token': token, 'content-type': 'application/octet-stream' }, body: file,
+    });
+    const value = await response.json();
+    if (!response.ok) throw Object.assign(new Error(value.message ?? value.error), { code: value.error, status: response.status });
+    return value;
+  },
+});
 window.addEventListener('hashchange', () => {
   if (!location.hash) return;
   token = location.hash.slice(1); sessionStorage.setItem(tokenKey, token);
@@ -405,6 +427,7 @@ window.addEventListener('hashchange', () => {
   managed.reset();
   applications.reset();
   transfers.reset();
+  python.reset();
   initial = true; state = undefined; selectedId = null; selectedArchive = null;
   profileReview = null; handoff = null; logSelection = null; view = 'runtime';
   $('handoff').hidden = true; $('comparison').hidden = true; $('profile-review').hidden = true;
