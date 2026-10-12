@@ -28,8 +28,21 @@ export async function createEchoBrowser({getServer,sourceCommit,sourcePackageFil
   executablePath:process.env.EPA_ECHO_CHROMIUM_EXECUTABLE??'/workspace/scratch/705ebf077387/browser-runtime/chrome-headless-shell-linux64/chrome-headless-shell',
   headless:true,env:environment,args:['--no-sandbox','--disable-dev-shm-usage','--disable-gpu','--disable-background-networking','--renderer-process-limit=1']
  });
- const context=await browser.newContext({viewport:{width:1280,height:900},acceptDownloads:true});
- const page=await context.newPage();page.setDefaultTimeout(30000);
+ let context,page;
+ try{
+  context=await browser.newContext({viewport:{width:1280,height:900},acceptDownloads:true});
+  page=await context.newPage();page.setDefaultTimeout(30000);
+ }catch(error){
+  const cleanupErrors=[];
+  try{await browser.close();}catch(closeError){
+   cleanupErrors.push({resource:'browser initialization',code:closeError.code??'EPA_ECHO_BROWSER_CLOSE_FAILED',message:closeError.message});
+  }
+  error.cleanupErrors=[...(error.cleanupErrors??[]),...cleanupErrors];
+  journal.state='CONTINUABLE';
+  journal.initializationError={code:error.code??'EPA_ECHO_BROWSER_INITIALIZATION_FAILED',message:error.message,cleanupErrors:error.cleanupErrors,at:new Date().toISOString()};
+  try{await save(journalFile,journal);}catch(saveError){error.journalSaveError={code:saveError.code,message:saveError.message};}
+  throw error;
+ }
  page.on('pageerror',e=>journal.errors.push({message:e.message,at:new Date().toISOString()}));
  const settled=()=>page.waitForFunction(()=>typeof S!=='undefined'&&S.schema&&S.view&&!S.refreshing&&!S.operationBusy&&!S.modal?.busy);
  const current=()=>page.evaluate(async()=>{const r=await fetch('/api/view',{headers:{authorization:'Bearer '+sessionStorage.getItem('epa-echo:session:'+location.origin)},cache:'no-store'});if(!r.ok)throw Error('Original workspace view '+r.status);return r.json();});

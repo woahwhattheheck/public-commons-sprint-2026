@@ -218,8 +218,9 @@ try{
  await checkpoint('ORIGINAL_EPA_MCP_AND_ALL_FILES_COMPLETE');
  }
  if(facilitatorServer){
-  journey.facilitatorFinal=facilitator.status();journey.facilitatorDrain=await facilitatorServer.close();facilitatorServer=null;facilitator=null;
+  journey.facilitatorFinal=facilitator.status();journey.facilitatorDrain=await facilitatorServer.close();
   must(journey.facilitatorDrain.drained===true,'ORIGINAL_FACILITATOR_DRAIN_REQUIRED');
+  facilitatorServer=null;facilitator=null;
  }
  delete process.env.SCF_ROUTESCAN_BUYER_SECRET;delete process.env.SCF_ROUTESCAN_FEE_SECRET;
  const {runEchoApplications}=await import('./applications-receiving.mjs');
