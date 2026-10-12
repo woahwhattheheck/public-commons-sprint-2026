@@ -4,6 +4,7 @@ import {createUnstructuredPanel} from './unstructured.js';
 import {createUnstructuredPipelinesPanel} from './unstructured-pipelines.js';
 import {createClinicalTrialsPanel} from './clinical-trials.js';
 import {createSourceBundlePanel,renderSourceBundleFiles} from './source-bundles.js';
+import {createStudyProtocolPanel} from './study-protocol.js';
 import {renderInspectedSource,renderOriginalRecordControl} from './source-inspection.js';
 import {createCitationReviewPanel} from './citation-review.js';
 import {createEligibilityPanel} from './eligibility.js';
@@ -101,6 +102,7 @@ import {installZoteroResearchControl} from './zotero-browser.mjs';
     pipelinePanel.updateBusy();
     clinicalTrialsPanel.updateBusy();
     sourceBundlePanel.updateBusy();
+    studyProtocolPanel.updateBusy();
     citationReviewPanel.updateBusy();
     eligibilityPanel.updateBusy();
     studyExtractionPanel.updateBusy();
@@ -211,6 +213,7 @@ import {installZoteroResearchControl} from './zotero-browser.mjs';
     pipelinePanel.setDossier(view);
     clinicalTrialsPanel.setDossier(view);
     sourceBundlePanel.setDossier(view);
+    studyProtocolPanel.setDossier(view);
     citationReviewPanel.setDossier(view);
     eligibilityPanel.setDossier(view);
     studyExtractionPanel.setDossier(view);
@@ -730,6 +733,9 @@ import {installZoteroResearchControl} from './zotero-browser.mjs';
   const sourceBundlePanel=createSourceBundlePanel({root:$('source-bundle-dialog'),openButton:$('source-bundle-open'),
     api,task,notify,getDossier:()=>state.dossier,isBusy:()=>state.busy,
     onReceived:async view=>{applyDossier(view);await refreshList();}});
+  const studyProtocolPanel=createStudyProtocolPanel({openButton:$('study-protocol-open'),
+    api,task,notify,getDossier:()=>state.dossier,isBusy:()=>state.busy,
+    onReceived:async view=>{applyDossier(view);await refreshList();}});
   const citationReviewPanel=createCitationReviewPanel({root:$('view-citation-review'),tab:$('citation-review-tab'),
     api,task,notify,getDossier:()=>state.dossier,isBusy:()=>state.busy,
     onReceived:async view=>{applyDossier(view);await refreshList();}});
@@ -916,6 +922,8 @@ import {installZoteroResearchControl} from './zotero-browser.mjs';
     if(state.busy||!state.dossier||!state.token)return;
     const destination=new URL('/template-exchange.html',location.origin);
     destination.searchParams.set('dossierId',state.dossier.id);
+    if(state.workspaceId)destination.searchParams.set('workspaceId',state.workspaceId);
+    if(state.instanceId)destination.searchParams.set('instanceId',state.instanceId);
     destination.hash=new URLSearchParams({token:state.token}).toString();
     location.assign(destination.href);
   });
@@ -940,7 +948,7 @@ import {installZoteroResearchControl} from './zotero-browser.mjs';
     }, form);
   });
   window.addEventListener('beforeunload', event => {
-    if (state.noteDrafts.size > 0 || citationReviewPanel.hasUnsaved() || eligibilityPanel.hasUnsaved() || studyExtractionPanel.hasUnsaved() || riskOfBiasPanel.hasUnsaved()) {event.preventDefault(); event.returnValue = '';}
+    if (state.noteDrafts.size > 0 || studyProtocolPanel.hasUnsaved() || citationReviewPanel.hasUnsaved() || eligibilityPanel.hasUnsaved() || studyExtractionPanel.hasUnsaved() || riskOfBiasPanel.hasUnsaved()) {event.preventDefault(); event.returnValue = '';}
   });
   window.addEventListener('pagehide', event => {
     if (!event.persisted) riskOfBiasPanel.close();

@@ -694,27 +694,7 @@ def packet_files(state, packet_id):
     if any(template.count(marker) != 1 for marker in ("__REVIEW_STYLE__", "__REVIEW_DATA__", "__REVIEW_SCRIPT__")):
         raise ValueError("The installed reviewer template is incomplete.")
     page = template.replace("__REVIEW_STYLE__", style).replace("__REVIEW_DATA__", encoded).replace("__REVIEW_SCRIPT__", script)
-    readme = """CONSULTATION / CONSULTATION
-
-Open reviewer.html in a current browser. The English and French text and worked
-cases belong to the exact frozen packet identified in packet.json.
-Read the instructions and the recorded return route. Write comments against a
-clause or the whole document. Export your response JSON and send it through that
-route. No response is sent by this page. Save a local draft file before closing;
-browser storage is optional and may be unavailable for local files.
-
-Ouvrez reviewer.html dans un navigateur actuel. Les textes anglais et français
-et les cas portent sur le dossier figé identifié dans packet.json.
-Lisez les instructions et le mode de retour indiqué. Rédigez des commentaires
-sur une clause ou sur le document entier. Exportez la réponse JSON et transmettez-la
-par ce mode de retour. Cette page n'envoie aucune réponse. Enregistrez un fichier
-de brouillon avant de fermer; le stockage du navigateur peut être indisponible.
-
-The form records the identity and timestamps you enter or your browser supplies.
-Its content hashes identify files; they are not signatures or voting credentials.
-Les identités et dates sont déclarées. Les empreintes identifient le contenu;
-elles ne constituent ni signatures ni droits de vote.
-"""
+    readme = (ROOT / "web" / "reviewer-guide.txt").read_text(encoding="utf-8")
     return {"reviewer.html": page.encode(), "packet.json": (engine.canonical(payload) + "\n").encode(),
             "READ-ME.txt": readme.encode()}
 

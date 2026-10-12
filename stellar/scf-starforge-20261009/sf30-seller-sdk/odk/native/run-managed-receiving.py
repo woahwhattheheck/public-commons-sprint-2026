@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """MIT. Execute one original installed ODK managed receiving with an OS-owned lock."""
 import argparse
+import ctypes
 import fcntl
 import hashlib
 import json
@@ -10,8 +11,8 @@ import signal
 import stat
 import subprocess
 import sys
+import tempfile
 import time
-import uuid
 
 OPERATION = "CB57-ODK-MANAGED-RECEIVING"
 
@@ -29,8 +30,10 @@ def private_directory(raw):
 
 def write_json(path, value):
     data = (json.dumps(value, indent=2, ensure_ascii=False) + "\n").encode()
-    temporary = path.with_name(path.name + ".tmp-" + uuid.uuid4().hex)
-    fd = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    # The same receiving host can reuse a PID after an interrupted invocation.
+    # Keep each unpublished temporary unique while preserving the original target.
+    fd, temporary_name = tempfile.mkstemp(prefix=path.name + ".tmp-", dir=path.parent)
+    temporary = Path(temporary_name)
     try:
         with os.fdopen(fd, "wb") as stream:
             stream.write(data)
@@ -45,53 +48,199 @@ def write_json(path, value):
     finally:
         temporary.unlink(missing_ok=True)
 
-def observe_original(child, timeout):
-    # WNOWAIT keeps this exact session leader's PID reserved until cleanup.
+class OriginalClosureError(RuntimeError):
+    def __init__(self, message, remaining=None):
+        super().__init__(message)
+        self.remaining = remaining
+
+
+def enable_native_custody():
+    """The existing Linux launcher owns adopted children, including detached browsers."""
+    if not sys.platform.startswith("linux") or not hasattr(os, "pidfd_open") or not hasattr(signal, "pidfd_send_signal"):
+        raise RuntimeError("Use the original Linux host with Python 3.11+, procfs and pidfd process signalling.")
+    libc = ctypes.CDLL(None, use_errno=True)
+    if libc.prctl(36, 1, 0, 0, 0) != 0:  # PR_SET_CHILD_SUBREAPER, this process only.
+        raise OSError(ctypes.get_errno(), "Cannot retain the original native child custody.")
+    enabled = ctypes.c_int()
+    if libc.prctl(37, ctypes.byref(enabled), 0, 0, 0) != 0 or enabled.value != 1:
+        raise RuntimeError("The original native child custody was not enabled.")
+    return Path("/proc/sys/kernel/random/boot_id").read_text().strip()
+
+
+def process_identity(pid, boot_id):
+    try:
+        raw = Path("/proc") / str(pid) / "stat"
+        value = raw.read_text()
+    except FileNotFoundError:
+        return None
+    # The parenthesized comm may itself contain spaces and parentheses.
+    fields = value[value.rfind(")") + 2:].split()
+    if len(fields) < 20:
+        raise OriginalClosureError("The original process identity is incomplete.")
+    return {"pid": pid, "parentPid": int(fields[1]), "processGroup": int(fields[2]),
+            "session": int(fields[3]), "state": fields[0], "startTicks": fields[19],
+            "bootId": boot_id}
+
+
+def owned_children(boot_id):
+    """Read this launcher's kernel-owned child list, never select processes by name."""
+    filename = Path("/proc") / str(os.getpid()) / "task" / str(os.getpid()) / "children"
+    children = []
+    for value in filename.read_text().split():
+        identity = process_identity(int(value), boot_id)
+        if identity is not None and identity["parentPid"] == os.getpid():
+            children.append(identity)
+    return children
+
+
+def observe_original(child):
+    # WNOWAIT keeps this exact child unreaped, so its PID cannot be reassigned.
+    observed = os.waitid(os.P_PID, child.pid, os.WEXITED | os.WNOHANG | os.WNOWAIT)
+    if observed is None:
+        return None
+    return observed.si_status if observed.si_code == os.CLD_EXITED else -observed.si_status
+
+
+def wait_original(child, timeout):
     deadline = time.monotonic() + timeout
     while True:
-        result = os.waitid(os.P_PID, child.pid, os.WEXITED | os.WNOHANG | os.WNOWAIT)
-        if result is not None:
-            return result
-        remaining = deadline - time.monotonic()
-        if remaining <= 0:
+        code = observe_original(child)
+        if code is not None:
+            return code
+        if time.monotonic() >= deadline:
             raise subprocess.TimeoutExpired(child.args, timeout)
-        time.sleep(min(0.05, remaining))
+        time.sleep(0.1)
 
-def original_exit_code(result):
-    return result.si_status if result.si_code == os.CLD_EXITED else -result.si_status
 
-def signal_original(child, signum, *, group=False):
-    # This Popen has not been reaped; its PID cannot belong to another process.
+def signal_owned_child(identity, signum, boot_id):
+    """Pin an actual current child before signalling; PID reuse cannot retarget it."""
     try:
-        if group:
-            os.killpg(child.pid, signum)
-        else:
-            os.kill(child.pid, signum)
+        descriptor = os.pidfd_open(identity["pid"], 0)
     except ProcessLookupError:
-        pass
-
-def stop_original(child):
-    if child.returncode is not None:
-        return child.returncode
+        return
     try:
-        result = observe_original(child, 0)
-    except subprocess.TimeoutExpired:
-        # Let Node close its exact Playwright and managed owners first.
-        signal_original(child, signal.SIGTERM)
+        current = process_identity(identity["pid"], boot_id)
+        if (current is None or current["parentPid"] != os.getpid() or
+                current["startTicks"] != identity["startTicks"]):
+            return
         try:
-            result = observe_original(child, 55)
-        except subprocess.TimeoutExpired:
-            signal_original(child, signal.SIGTERM, group=True)
+            signal.pidfd_send_signal(descriptor, signum, None, 0)
+        except ProcessLookupError:
+            pass
+    finally:
+        os.close(descriptor)
+
+
+def reap_finished_descendants(child, boot_id):
+    for identity in owned_children(boot_id):
+        if identity["pid"] != child.pid and identity["state"] in ("Z", "X"):
             try:
-                result = observe_original(child, 5)
-            except subprocess.TimeoutExpired:
-                signal_original(child, signal.SIGKILL, group=True)
-                result = observe_original(child, 10)
-    if original_exit_code(result) != 0:
-        # An interrupted Node cannot finish its descendant cleanup. Retain the
-        # unreaped session leader while terminating only its original group.
-        signal_original(child, signal.SIGKILL, group=True)
-    return child.wait(timeout=10)
+                os.waitpid(identity["pid"], os.WNOHANG)
+            except ChildProcessError:
+                pass
+
+
+def live_owned_children(child, boot_id):
+    reap_finished_descendants(child, boot_id)
+    return [identity for identity in owned_children(boot_id) if identity["state"] not in ("Z", "X")]
+
+
+def stop_original(child, boot_id):
+    retained = getattr(child, "_original_closed", None)
+    if retained is not None:
+        return retained
+    if child.returncode is not None:
+        raise OriginalClosureError("The original leader was reaped before its native child custody closed.")
+    # First let the original Node driver close its application and Playwright itself.
+    if observe_original(child) is None:
+        identity = process_identity(child.pid, boot_id)
+        if identity is not None:
+            signal_owned_child(identity, signal.SIGTERM, boot_id)
+        deadline = time.monotonic() + 55
+        while observe_original(child) is None and time.monotonic() < deadline:
+            time.sleep(0.1)
+    # An abnormal Node exit reparents even detached/session-owning browsers here.
+    # Their kernel parent plus pidfd, not a process-name/PID scan, owns every signal.
+    for signum, seconds in ((signal.SIGTERM, 5), (signal.SIGKILL, 10)):
+        deadline = time.monotonic() + seconds
+        while True:
+            remaining = live_owned_children(child, boot_id)
+            if not remaining:
+                break
+            for identity in remaining:
+                signal_owned_child(identity, signum, boot_id)
+            if time.monotonic() >= deadline:
+                break
+            time.sleep(0.1)
+        if not live_owned_children(child, boot_id):
+            break
+    remaining = live_owned_children(child, boot_id)
+    if remaining:
+        raise OriginalClosureError("The original native children are still closing.", remaining)
+    reap_finished_descendants(child, boot_id)
+    # Reap the reserved leader only after every admitted descendant has exited.
+    code = child.wait(timeout=1)
+    remaining = owned_children(boot_id)
+    if remaining:
+        raise OriginalClosureError("The original native child custody is not empty.", remaining)
+    result = {"exitCode": code, "closed": True, "custody": "linux-subreaper-pidfd-v1",
+              "remainingChildren": []}
+    child._original_closed = result
+    return result
+
+
+def reconcile_previous_closure(private, boot_id):
+    """Preserve an incomplete native custody result instead of relaunching over it."""
+    result_path = private / "launch-result.json"
+    if not result_path.exists():
+        return
+    original_bytes = result_path.read_bytes()
+    result = json.loads(original_bytes)
+    if result.get("operationId") != OPERATION:
+        raise ValueError("Use the original matching native receiving result.")
+    if result.get("closed") is True:
+        return
+    previous_boot = (result.get("parentIdentity") or {}).get("bootId")
+    if isinstance(previous_boot, str) and previous_boot and previous_boot != boot_id:
+        prior_sha256 = hashlib.sha256(original_bytes).hexdigest()
+        closure_key = hashlib.sha256(original_bytes + b"\0" + boot_id.encode()).hexdigest()
+        closure_path = private / ("launch-closure-" + closure_key + ".json")
+        observation = {"originalBootId": previous_boot, "currentBootId": boot_id}
+        if closure_path.exists():
+            closed = json.loads(closure_path.read_bytes())
+            if (closed.get("operationId") != OPERATION or closed.get("closed") is not True or
+                    closed.get("closureReason") != "original-host-reboot" or
+                    closed.get("reconciledFromSha256") != prior_sha256 or
+                    closed.get("closureObservation") != observation):
+                raise ValueError("The retained original reboot closure has changed.")
+            result = closed
+        else:
+            result["priorClosure"] = {"state": result.get("state"),
+                                      "remainingChildren": result.get("remainingChildren"),
+                                      "cleanupError": result.get("cleanupError")}
+            result.update({"closed": True, "state": "CLOSED", "remainingChildren": [],
+                           "closureReason": "original-host-reboot", "closureReconciledAt": time.time(),
+                           "closureObservation": observation, "reconciledFromSha256": prior_sha256})
+            # Retain this closure before a later launch replaces launch-result.json.
+            # Reuse its first observed timestamp after an interrupted publication.
+            write_json(closure_path, result)
+        write_json(result_path, result)
+        return
+    observed = []
+    for identity in result.get("remainingChildren") or []:
+        if identity.get("bootId") != boot_id:
+            continue
+        current = process_identity(identity["pid"], boot_id)
+        if current is not None and current["startTicks"] == identity.get("startTicks"):
+            observed.append(current)
+    result["closureObservation"] = {"observedAt": time.time(), "originalIdentities": observed}
+    write_json(result_path, result)
+    # Loss of the parent can also lose the complete descendant set. A later empty
+    # PID observation cannot prove that original detached children were closed.
+    raise OriginalClosureError(
+        "The original native custody has no complete closure. Reconcile its retained launch-owner, "
+        "launch-result and native operation on the same host before another start.", observed)
+
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -119,11 +268,15 @@ def main():
     child = None
     original_handlers = {}
     disposition = {}
+    summary = None
+    boot_id = None
     try:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         info = os.fstat(lock)
         if not stat.S_ISREG(info.st_mode) or info.st_uid != os.getuid() or info.st_mode & 0o077:
             raise ValueError("Keep the original private lock file.")
+        boot_id = enable_native_custody()
+        reconcile_previous_closure(private, boot_id)
         selection = {
             "schema": "stellar-forge.odk-managed-receiving-launch.v1",
             "operationId": OPERATION,
@@ -140,11 +293,18 @@ def main():
                 raise ValueError("Continue the original source, host and input selection.")
         else:
             write_json(selection_path, selection)
-        owner = {"operationId": OPERATION, "pid": os.getpid(), "startedAt": time.time(), "selection": selection}
+        owner = {"operationId": OPERATION, "pid": os.getpid(), "startedAt": time.time(), "selection": selection,
+                 "custody": "linux-subreaper-pidfd-v1", "parentIdentity": process_identity(os.getpid(), boot_id),
+                 "launchIdentity": str(os.getpid()) + ":" + str(time.time_ns())}
         os.ftruncate(lock, 0)
         os.write(lock, (json.dumps(owner) + "\n").encode())
         os.fsync(lock)
+        interruption = {"deferred": False, "pending": None}
         def interrupted(signum, _frame):
+            if interruption["deferred"]:
+                if interruption["pending"] is None:
+                    interruption["pending"] = signum
+                return
             raise KeyboardInterrupt("Original receiving stopped by signal " + str(signum))
         for signum in (signal.SIGINT, signal.SIGTERM, signal.SIGHUP):
             original_handlers[signum] = signal.signal(signum, interrupted)
@@ -157,22 +317,45 @@ def main():
                 open(private / "programme.stderr", "ab", buffering=0) as stderr:
             os.chmod(private / "programme.stdout", 0o600)
             os.chmod(private / "programme.stderr", 0o600)
-            child = subprocess.Popen(command, stdin=subprocess.DEVNULL, stdout=stdout, stderr=stderr,
-                                     env=environment, start_new_session=True)
-            owner["childPid"] = child.pid
-            write_json(private / "launch-owner.json", owner)
-            code = original_exit_code(observe_original(child, args.timeout_seconds))
-        disposition = {"operationId": OPERATION, "childPid": child.pid, "exitCode": code, "closed": True}
+            # Keep handled cancellation pending until Popen has assigned this exact
+            # child and its owner/result are durable; the child inherits no new mask.
+            interruption["deferred"] = True
+            try:
+                # Retain this dispatch before a child can start; an old successful result
+                # must never stand in for an unobserved later launch.
+                write_json(private / "launch-owner.json", owner)
+                disposition = {"operationId": OPERATION, "launchIdentity": owner["launchIdentity"],
+                               "parentIdentity": owner["parentIdentity"], "state": "DISPATCHING",
+                               "closed": False, "remainingChildren": None}
+                write_json(private / "launch-result.json", disposition)
+                try:
+                    child = subprocess.Popen(command, stdin=subprocess.DEVNULL, stdout=stdout, stderr=stderr,
+                                             env=environment, start_new_session=True)
+                except OSError:
+                    disposition.update({"state": "NOT_STARTED", "closed": True, "remainingChildren": []})
+                    write_json(private / "launch-result.json", disposition)
+                    raise
+                owner["childPid"] = child.pid
+                owner["childIdentity"] = process_identity(child.pid, boot_id)
+                write_json(private / "launch-owner.json", owner)
+                disposition.update({"childPid": child.pid, "childIdentity": owner["childIdentity"], "state": "RUNNING"})
+                write_json(private / "launch-result.json", disposition)
+            finally:
+                interruption["deferred"] = False
+                if interruption["pending"] is not None and sys.exc_info()[0] is None:
+                    raise KeyboardInterrupt("Original receiving stopped by signal " + str(interruption["pending"]))
+            code = wait_original(child, args.timeout_seconds)
+        disposition.update({"operationId": OPERATION, "childPid": child.pid, "exitCode": code, "closed": False})
         if code:
             raise RuntimeError("Original managed receiving exited " + str(code) + ". Read its retained stderr and operation.json.")
         result_path = root / "delivery" / "managed-receiving.json"
         result = json.loads(result_path.read_text())
         if result.get("status") != "COMPLETE" or result.get("operationId") != OPERATION:
             raise ValueError("The original programme has no complete matching result.")
-        print(json.dumps({"operationId": OPERATION, "status": result["status"], "result": str(result_path),
-                          "resultSha256": hashlib.sha256(result_path.read_bytes()).hexdigest(),
-                          "workspaceId": result["originalWorkspaceId"], "archive": result["archive"],
-                          "exitCode": code}))
+        summary = {"operationId": OPERATION, "status": result["status"], "result": str(result_path),
+                   "resultSha256": hashlib.sha256(result_path.read_bytes()).hexdigest(),
+                   "workspaceId": result["originalWorkspaceId"], "archive": result["archive"],
+                   "exitCode": code}
     finally:
         # Do not allow a second cancellation to skip closure of this exact child.
         for signum in original_handlers:
@@ -181,11 +364,20 @@ def main():
         cleanup_error = None
         try:
             if child is not None:
-                code = stop_original(child)
-                disposition.update({"operationId": OPERATION, "childPid": child.pid, "exitCode": code, "closed": True})
+                closure = stop_original(child, boot_id)
+                disposition.update({"operationId": OPERATION, "childPid": child.pid, "state": "CLOSED", **closure})
                 write_json(private / "launch-result.json", disposition)
         except Exception as error:
             cleanup_error = error
+            if child is not None:
+                disposition.update({"operationId": OPERATION, "childPid": child.pid, "closed": False,
+                                    "custody": "linux-subreaper-pidfd-v1", "state": "CLOSURE_UNRESOLVED",
+                                    "remainingChildren": getattr(error, "remaining", None),
+                                    "cleanupError": {"type": type(error).__name__, "message": str(error)}})
+                try:
+                    write_json(private / "launch-result.json", disposition)
+                except Exception as save_error:
+                    print(json.dumps({"operationId": OPERATION, "closureSaveError": str(save_error)}), file=sys.stderr)
         finally:
             for signum, handler in original_handlers.items():
                 signal.signal(signum, handler)
@@ -195,6 +387,9 @@ def main():
                 raise cleanup_error
             print(json.dumps({"operationId": OPERATION, "cleanupError": {
                 "type": type(cleanup_error).__name__, "message": str(cleanup_error)}}), file=sys.stderr)
+
+    if summary is not None:
+        print(json.dumps(summary))
 
 if __name__ == "__main__":
     try:
