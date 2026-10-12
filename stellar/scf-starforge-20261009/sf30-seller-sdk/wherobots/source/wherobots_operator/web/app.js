@@ -84,14 +84,14 @@ async function refreshState() {
     }
   } finally { refreshing = false; }
 }
-async function show(kind, id) {
+async function show(kind, id, dataset = null) {
   const sameOperation = kind === "operation" && selection?.kind === kind && selection?.id === id;
   const requested = ++navigationSequence;
   selection = {kind,id}; sessionStorage.setItem("wherobots_selection",JSON.stringify(selection));
   const record = await api(({workflow:"workflows",operation:"operations",edition:"editions"})[kind] + "/" + encodeURIComponent(id));
   if (requested !== navigationSequence) return;
   selectedRecord = record;
-  rowOffset = 0; rowDataset = null;
+  rowOffset = 0; rowDataset = dataset;
   if (!sameOperation) {
     operationDetail = null; logCapture = null; logOffset = 0; lastLogs = null;
     eventCursor = 0; eventRows = []; eventHasMore = false;
@@ -132,6 +132,7 @@ function outputForm(output, index) {
     "</div></details></section>";
 }
 function renderWorkflow() {
+  if (draft.schema !== "starforge.wherobots.workflow.v1") return renderRetainedSourceWorkflow();
   const account = draft.account, job = draft.job, script = job.script;
   $("content").innerHTML = '<div class="section-title"><div><h2>' + esc(draft.title || "New workflow") + '</h2><p class="muted">Save the source and output definition, review a run, then operate it from its retained record.</p></div>' +
     (selectedRecord ? '<button class="secondary" data-action="export">Export complete handover</button>' : "") + '</div><form id="workflow-form"><div class="grid">' +
@@ -157,6 +158,83 @@ function renderWorkflow() {
     '<div class="toolbar"><button type="submit">Save workflow</button>' + (selectedRecord ? '<button type="button" class="secondary" data-action="review-view">Review a native run</button>' : "") + "</div></form>" +
     (draft.adoption ? '<details><summary>Original customer intake</summary><p>' + sourceLink(draft.adoption.original_input,draft.id+"-original-input.json","Download unchanged customer document") + '</p><pre>' + esc(pretty(draft.adoption)) + "</pre></details>" : "");
 }
+function datasetId(dataset) { return dataset.id || dataset.dataset_id; }
+function originalFile(ref, filename, label) {
+  if (!ref?.sha256) return "";
+  return '<p>' + sourceLink(ref, filename, label || filename) + '<br><span class="identity">' +
+    esc(ref.sha256) + ' · ' + esc(ref.bytes) + ' bytes</span></p>';
+}
+function sourceOrigin(uri) {
+  try {
+    const parsed = new URL(uri);
+    if (["https:", "http:"].includes(parsed.protocol))
+      return '<a href="' + esc(parsed.href) + '" target="_blank" rel="noopener noreferrer">' + esc(uri) + '</a>';
+  } catch {}
+  return esc(uri || "");
+}
+function editionLinks(editions, dataset = null) {
+  if (!editions.length) return '<p class="empty">No received editions are saved for this selection.</p>';
+  return '<div class="table-scroll"><table><thead><tr><th>Edition</th><th>Source operation</th><th>Received</th></tr></thead><tbody>' +
+    editions.map((edition) => '<tr><td><button class="link-button" data-select="edition" data-id="' + esc(edition.id) + '"' +
+      (dataset ? ' data-dataset="' + esc(dataset) + '"' : "") + '>' + esc(edition.id) + '</button></td><td>' +
+      esc(edition.operation_id || "") + '</td><td>' + esc(edition.created_at || "") + '</td></tr>').join("") + '</tbody></table></div>';
+}
+function renderRetainedSourceWorkflow() {
+  const definition = draft, script = definition.job?.script;
+  const editions = state.editions.filter((edition) => edition.workflow_id === selectedRecord.id);
+  const operations = state.operations.filter((operation) => operation.workflow_id === selectedRecord.id);
+  $("content").innerHTML = '<div class="section-title"><div><h2>' + esc(definition.title || definition.id) +
+    '</h2><p class="muted">Open the retained source collection, its transformation and every received output edition.</p></div>' +
+    '<button class="secondary" data-action="export">Export complete handover</button></div>' +
+    '<dl><dt>Workflow</dt><dd class="identity">' + esc(selectedRecord.id) + '</dd><dt>Source profile</dt><dd>' +
+    esc(definition.schema) + '</dd><dt>Saved revision</dt><dd class="identity">' + esc(selectedRecord.revision_sha256) +
+    '</dd></dl><h3>Original source and transformation</h3>' +
+    originalFile(script?.object, script?.filename || "source.py", script?.filename || "Original transformation") +
+    originalFile(definition.input_manifest?.object, "source-manifest.json", "Original source manifest") +
+    (Array.isArray(definition.sources) && definition.sources.length ?
+      '<div class="table-scroll"><table><thead><tr><th>Source</th><th>Original location</th><th>Retained file</th></tr></thead><tbody>' +
+      definition.sources.map((source) => '<tr><td>' + esc(source.id || source.title || "") + '</td><td>' +
+        sourceOrigin(source.uri || source.url) + (source.git_blob_sha ? '<p class="identity">Git blob ' + esc(source.git_blob_sha) + '</p>' : "") +
+        '</td><td>' + originalFile(source.object, source.filename || source.id || "original-source", "Download original bytes") +
+        '</td></tr>').join("") + '</tbody></table></div>' : '<p class="empty">This retained definition has no separate source file collection.</p>') +
+    '<h3>Output datasets</h3>' + (definition.outputs || []).map((dataset) => '<section class="source"><h3>' +
+      esc(dataset.title || datasetId(dataset)) + '</h3><dl><dt>Dataset</dt><dd>' + esc(datasetId(dataset)) +
+      '</dd><dt>Format</dt><dd>' + esc(dataset.format) + '</dd><dt>Comparison key</dt><dd>' +
+      esc(dataset.primary_key?.join(", ") || "Complete row multiset") + '</dd>' +
+      (dataset.geometry_column ? '<dt>Geometry</dt><dd>' + esc(dataset.geometry_column + (dataset.geometry_encoding ? " · " + dataset.geometry_encoding : "")) + '</dd>' : "") +
+      '</dl><details><summary>Complete dataset definition</summary><pre>' + esc(pretty(dataset)) + '</pre></details>' +
+      editionLinks(editions, datasetId(dataset)) + '</section>').join("") +
+    '<h3>Received editions</h3>' + editionLinks(editions) +
+    '<h3>Source operations</h3>' + (operations.map((operation) => '<p><button class="link-button" data-select="operation" data-id="' +
+      esc(operation.id) + '">' + esc(operation.id) + '</button> · ' + esc(operation.state) + '</p>').join("") ||
+      '<p class="empty">No source operations are saved for this collection.</p>') +
+    '<details><summary>Complete retained workflow definition</summary><pre>' + esc(pretty(definition)) + '</pre></details>';
+}
+function renderRetainedSourceOperation() {
+  const operation = selectedRecord, definition = operation.reviewed_definition || {};
+  const editions = state.editions.filter((edition) => edition.operation_id === operation.id);
+  $("content").innerHTML = '<div class="section-title"><div><h2>Source receiving operation</h2><p class="identity">' +
+    esc(operation.id) + '</p></div><span class="pill">' + esc(operation.state) + '</span></div>' +
+    '<dl><dt>Workflow</dt><dd><button class="link-button" data-select="workflow" data-id="' + esc(operation.workflow_id) +
+    '">' + esc(definition.title || operation.workflow_id) + '</button></dd><dt>Source profile</dt><dd>' +
+    esc(definition.schema || operation.schema) + '</dd><dt>Source definition</dt><dd class="identity">' + esc(operation.review_sha256) +
+    '</dd><dt>Last update</dt><dd>' + esc(operation.updated_at) + '</dd></dl>' +
+    originalFile(definition.job?.script?.object, definition.job?.script?.filename || "source.py", "Original source transformation") +
+    '<div class="toolbar"><button class="secondary" data-action="export">Export complete handover</button>' +
+    '<button class="secondary" data-action="show-events">Open receiving progress</button></div>' +
+    '<h3>Received editions</h3>' + editionLinks(editions) +
+    '<details><summary>Complete original operation</summary><pre>' + esc(pretty(operation)) + '</pre></details><div id="operation-detail"></div>';
+}
+function renderComparisons(comparisons) {
+  return comparisons.map((comparison) => '<section class="source"><h3>Complete edition comparison</h3><dl><dt>Earlier edition</dt><dd class="identity">' +
+    esc(comparison.left_edition_id) + '</dd><dt>Later edition</dt><dd class="identity">' + esc(comparison.right_edition_id) + '</dd></dl>' +
+    renderTable(comparison.datasets || [], ["dataset_id", "before_rows", "after_rows", "added", "removed", "changed", "unchanged", "schema_changed", "geometry_changed"]) +
+    originalFile(comparison.report_object, comparison.id + "-comparison.json", "Download complete comparison report") +
+    originalFile(comparison.changes_object, comparison.id + "-changes.ndjson", "Download every row change") +
+    '<details><summary>Row change preview</summary>' + renderTable(comparison.preview || []) + '</details>' +
+    '<details><summary>Original comparison metadata</summary><pre>' + esc(pretty(comparison)) + '</pre></details></section>').join("");
+}
+
 function collectWorkflow() {
   const form = $("workflow-form");
   const get = (name) => form.elements.namedItem(name)?.value ?? "";
@@ -199,6 +277,7 @@ function renderReview() {
 }
 function renderOperation() {
   const op=selectedRecord, def=op.reviewed_definition;
+  if (def?.schema !== "starforge.wherobots.workflow.v1") return renderRetainedSourceOperation();
   $("content").innerHTML='<div class="section-title"><div><h2>Native operation</h2><p class="identity">'+esc(op.id)+'</p></div><span class="pill">'+esc(op.native_status || op.state)+'</span></div>'+
     '<dl><dt>Workflow</dt><dd><button class="link-button" data-select="workflow" data-id="'+esc(op.workflow_id)+'">'+esc(def.title)+'</button></dd><dt>Native run</dt><dd>'+esc(op.native_run_id || "Awaiting submission or attachment")+'</dd><dt>Runtime</dt><dd>'+esc(def.account.region+" · "+def.account.runtime)+'</dd><dt>Native job name</dt><dd>'+esc(op.native_name)+'</dd><dt>Original script</dt><dd>'+sourceLink(def.job.script.object,def.job.script.filename)+'</dd><dt>Reviewed by</dt><dd>'+esc(op.reviewed_by)+'</dd><dt>Last update</dt><dd>'+esc(op.updated_at)+'</dd></dl>'+
     '<div class="toolbar">'+(op.mode==="submit" && !op.native_run_id?'<button data-action="native" data-native="submit">Submit reviewed run</button>':"")+
@@ -243,24 +322,27 @@ async function loadEvents() {
 
 async function renderEdition() {
   const edition=selectedRecord, datasets=edition.datasets || [];
-  rowDataset=rowDataset || datasets[0]?.dataset_id;
+  if (!datasets.some((dataset) => datasetId(dataset) === rowDataset)) rowDataset=datasetId(datasets[0] || {});
   const others=state.editions.filter((x)=>x.workflow_id===edition.workflow_id && x.id!==edition.id);
   $("content").innerHTML='<div class="section-title"><div><h2>Received output edition</h2><p class="identity">'+esc(edition.id)+'</p></div><button class="secondary" data-action="export">Export complete handover</button></div>'+
-    '<dl><dt>Native run</dt><dd>'+esc(edition.native_run_id)+'</dd><dt>Source binding</dt><dd class="identity">'+esc(edition.source_binding_sha256)+'</dd></dl>'+
-    '<label>Dataset<select id="dataset-select">'+datasets.map((d)=>option(d.dataset_id,rowDataset,d.dataset_id+" · "+d.row_count+" rows")).join("")+'</select></label>'+
+    '<dl><dt>'+(edition.native_run_id?'Native run':'Source operation')+'</dt><dd>'+esc(edition.native_run_id || edition.operation_id)+'</dd><dt>Source binding</dt><dd class="identity">'+esc(edition.source_binding_sha256)+'</dd></dl>'+
+    '<label>Dataset<select id="dataset-select">'+datasets.map((d)=>option(datasetId(d),rowDataset,(d.definition?.title || datasetId(d))+" · "+d.row_count+" rows")).join("")+'</select></label>'+
     '<div id="dataset-summary"></div><div id="rows"></div><div class="pagination"><button class="secondary" data-action="previous-rows">Previous</button><span id="row-position"></span><button class="secondary" data-action="next-rows">Next</button></div>'+
     '<div class="divider"></div><h3>Compare complete editions</h3>'+
     (others.length?'<form id="compare-form"><label>Earlier edition<select name="left_id">'+others.map((e)=>option(e.id,others[0].id)).join("")+'</select></label><button type="submit">Compare every row</button></form>':'<p class="empty">Receive a corrected output edition to compare schema, geometry and every record.</p>')+
     '<div id="comparison"></div><details><summary>Complete edition metadata</summary><pre>'+esc(pretty(edition))+'</pre></details>';
   await loadRows();
-  if (edition.comparisons?.length) $("comparison").innerHTML='<pre>'+esc(pretty(edition.comparisons))+'</pre>';
+  if (selection?.kind === "edition" && selection.id === edition.id && edition.comparisons?.length) $("comparison").innerHTML=renderComparisons(edition.comparisons);
 }
 async function loadRows() {
   if (!rowDataset) return;
-  const dataset=selectedRecord.datasets.find((d)=>d.dataset_id===rowDataset);
+  const editionId=selectedRecord.id, datasetSelection=rowDataset, requestedOffset=rowOffset;
+  const dataset=selectedRecord.datasets.find((d)=>datasetId(d)===datasetSelection);
   $("dataset-summary").innerHTML='<dl><dt>Rows</dt><dd>'+esc(dataset.row_count)+'</dd><dt>Original files</dt><dd>'+dataset.files.length+'</dd><dt>Comparison key</dt><dd>'+esc(dataset.primary_key?.join(", ") || "Complete row multiset")+'</dd></dl>'+
     '<details><summary>Original output parts and metadata</summary><ul>'+dataset.files.map((p)=>'<li>'+sourceLink(p.object,p.relative_path,p.relative_path)+' · '+p.object.bytes+' bytes · '+esc(p.role)+'</li>').join("")+'</ul><pre>'+esc(pretty({columns:dataset.columns,geometry:dataset.geometry}))+'</pre></details>';
-  lastRows=await api("editions/"+encodeURIComponent(selectedRecord.id)+"/rows?dataset="+encodeURIComponent(rowDataset)+"&offset="+rowOffset+"&limit=100");
+  const result=await api("editions/"+encodeURIComponent(editionId)+"/rows?dataset="+encodeURIComponent(datasetSelection)+"&offset="+requestedOffset+"&limit=100");
+  if (selection?.kind !== "edition" || selection.id !== editionId || rowDataset !== datasetSelection || rowOffset !== requestedOffset) return;
+  lastRows=result;
   $("rows").innerHTML=renderTable(lastRows.rows,lastRows.columns);
   $("row-position").textContent=lastRows.total ? (rowOffset+1)+"–"+(rowOffset+lastRows.rows.length)+" of "+lastRows.total : "0 rows";
   document.querySelector('[data-action="previous-rows"]').disabled=rowOffset===0;
@@ -299,7 +381,7 @@ document.addEventListener("click",async(event)=>{
   const button=event.target.closest("button");
   if (!button) return;
   try {
-    if (button.dataset.select) { await show(button.dataset.select,button.dataset.id);return; }
+    if (button.dataset.select) { await show(button.dataset.select,button.dataset.id,button.dataset.dataset || null);return; }
     if (button.dataset.task) {
       const task=await api("tasks/"+encodeURIComponent(button.dataset.task));
       notice(pretty(task));return;
@@ -350,7 +432,7 @@ document.addEventListener("submit",async(event)=>{
       const right=selectedRecord.id,left=new FormData(form).get("left_id");
       notice("Comparing complete editions.");
       const result=await waitTask(await api("compare",{left_id:left,right_id:right,request_id:uid()}));
-      if(selection.kind==="edition" && selection.id===right){await show("edition",right);$("comparison").innerHTML='<h3>Complete comparison</h3><pre>'+esc(pretty(result))+'</pre>';}
+      if(selection.kind==="edition" && selection.id===right){await show("edition",right);$("comparison").innerHTML=renderComparisons([result]);}
       notice("Complete edition comparison saved.");
     } else if(form.id==="intake-form") {
       if(!intake || !intakeObject)throw new Error("Select the original workflow document.");
