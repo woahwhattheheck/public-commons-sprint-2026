@@ -203,14 +203,14 @@ The client tracks complete upload/download tasks and their file handles, includi
 
 ## Original customer continuation
 
-The installed source includes `grpc/native-transfer/journey.mjs`. Run it after the same package\'s completed original operations receiving, with that original workspace and journal:
+The installed source includes `grpc/native-transfer/journey.mjs`. Run it after the same package's completed original operations receiving, with that original workspace and journal:
 
 ```sh
-node /opt/starforge/source/stellar/scf-starforge-20261009/sf30-seller-sdk/grpc/native-transfer/journey.mjs \\
-  --source-root /opt/starforge/source --source-commit SELECTED_GIT_COMMIT \\
-  --work /srv/grpc/migration-receiving --workspace /srv/grpc/original \\
-  --operations-run /srv/grpc/operations-receiving/journey.json \\
-  --chromium /opt/native-browser/chrome-headless-shell \\
+node /opt/starforge/source/stellar/scf-starforge-20261009/sf30-seller-sdk/grpc/native-transfer/journey.mjs \
+  --source-root /opt/starforge/source --source-commit SELECTED_GIT_COMMIT \
+  --work /srv/grpc/migration-receiving --workspace /srv/grpc/original \
+  --operations-run /srv/grpc/operations-receiving/journey.json \
+  --chromium /opt/native-browser/chrome-headless-shell \
   --playwright-modules /opt/native-browser/node_modules
 ```
 

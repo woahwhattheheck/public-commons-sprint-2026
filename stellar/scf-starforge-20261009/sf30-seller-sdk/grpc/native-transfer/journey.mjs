@@ -227,6 +227,13 @@ export async function main(argv = process.argv.slice(2)) {
         operatorWorkspaceId: ready.operatorWorkspaceId });
       session.nativeInstanceId = ready.nativeInstanceId; await save();
       const request = (action, body) => client.request(action, body, { signal: runController.signal });
+      async function installed(args) {
+        // The CLI reads the same selected token environment as a normal process
+        // launch. Scope it to this owned invocation and restore the caller value.
+        const previous = process.env[tokenEnv]; process.env[tokenEnv] = environment[tokenEnv];
+        try { return await productMain(args); }
+        finally { if (previous === undefined) delete process.env[tokenEnv]; else process.env[tokenEnv] = previous; }
+      }
       async function completeFiles(owner, capture) {
         const rows = []; let offset = 0, snapshot;
         for (;;) {
@@ -255,7 +262,7 @@ export async function main(argv = process.argv.slice(2)) {
           'Include the original complete reviewed incident history.');
         await remember('capture', captured);
         const pages = await completeFiles(client, captured);
-        const viaCli = await productMain(['transfer', 'read', '--dir', directories.product, '--id', captured.id,
+        const viaCli = await installed(['transfer', 'read', '--dir', directories.product, '--id', captured.id,
           '--output', join(input.work, 'installed-capture.json')]);
         need(same(archiveOf(viaCli), archiveOf(captured)), 'Forward the original native capture through the installed CLI.');
         return { ...captureResult(captured), ...pages, installedCli: true };
@@ -443,7 +450,7 @@ export async function main(argv = process.argv.slice(2)) {
           same(received.originalReceiving, repeated.originalReceiving) &&
           received.originalReceiving?.operationId === body.operationId,
           'Reuse the same full merchant download and original native receipt.');
-        const viaCli = await productMain(['receive-workspace', '--dir', directories.product, '--export-id', exported.exportId,
+        const viaCli = await installed(['receive-workspace', '--dir', directories.product, '--export-id', exported.exportId,
           '--out', directories.merchantDownload, '--destination', directories.customer, '--id', body.operationId,
           '--manifest-sha256', exported.manifestSha256, '--transfer-manifest-sha256', selected.manifestSha256,
           '--archive-sha256', selected.sha256, '--archive-bytes', String(selected.bytes)]);
