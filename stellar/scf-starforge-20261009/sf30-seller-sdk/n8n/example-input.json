@@ -1,0 +1,19 @@
+{
+  "invoiceId": "EXAMPLE-INVOICE-001",
+  "currency": "USD",
+  "lines": [
+    {
+      "description": "Document preparation",
+      "quantity": 3,
+      "unitPriceMinor": 12500
+    },
+    {
+      "description": "Data export",
+      "quantity": 2,
+      "unitPriceMinor": 4500
+    }
+  ],
+  "discountMinor": 1500,
+  "taxBasisPoints": 750
+}
+

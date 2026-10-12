@@ -256,7 +256,7 @@ configured collection. TLS certificate verification stays enabled.
 | `mapping.save` | `{captureId,expectedCaptureSha256,projection}` | Exact saved public projection and projection hash |
 | `edition.build` | `{mappingId,dataset,review}` | Immutable native CSV edition, snapshot, counts and review |
 | `merchant.save` | `{editionId,origin,path,payment,reviewer,note?}` | Original native-compatible merchant terms |
-| `edition.export` | `{editionId,merchantId,reviewer,note?}` | Complete original four-file merchant export and manifest |
+| `edition.export` | `{editionId,merchantId,reviewer,note?}` | Original merchant entrypoints, complete declared source files and manifest |
 | `source.packet` | `{}` | Create-only portable source ZIP with byte/hash receipt |
 | `publisher.prepare` | `{exportId,productId?,title?}` | Original publisher preparation plus product UUID |
 | `publisher.act` | `{productId,action,input}` | Unchanged original publisher result and publisher state |
@@ -276,7 +276,7 @@ Each entry has:
   href, originalHref, relativeHref, name,
   kind: "collection" | "file" | "unknown",
   etag, contentLength, contentLengthText, lastModified, contentType,
-  fileId, instanceFileId, propertyStatus, properties, issues, accessible
+  fileId, instanceFileId, reportedEtag, etagEncoding, propertyStatus, properties, issues, accessible
 }
 ```
 
@@ -286,7 +286,11 @@ fields. Absent lengths remain null, while exact length text is retained even
 when it exceeds a safe JavaScript integer. Failed resources, duplicate hrefs,
 duplicate properties and malformed metadata stay visible with issues and cannot
 be selected as accessible file versions. Original XML remains downloadable even
-when parsing fails.
+when parsing fails. `reportedEtag` retains the exact DAV property text. `etag` is
+its HTTP entity-tag encoding: already-quoted values remain unchanged;
+WsgiDAV-style bare opaque values receive HTTP quotes (`etagEncoding` is
+`quoted-bare-property`). Weak values are never upgraded, malformed properties
+remain issues, and the actual GET ETag must match the selected condition.
 
 ### Capture binding and continuation
 
@@ -306,7 +310,8 @@ A selection is:
 
 The capture ID is separate from the workspace operation ID and remains unchanged
 during capture continuation. It binds the normalized source and exact selection.
-HTTP metadata and ETags are retained as received; an ETag is not treated as a
+Original HTTP metadata and reported DAV ETag text are retained as received;
+only the explicit DAV-to-HTTP quote encoding above is applied. An ETag is not treated as a
 content hash.
 
 The reader requests identity encoding. It uses the original strong ETag for
@@ -404,8 +409,11 @@ exact relative paths, byte lengths and SHA256 values:
 
 - `dataset.csv`: reviewed public values;
 - `dataset.json`: original native typed schema and query limits;
-- `source.json`: original WebDAV capture/projection/review lineage;
-- `seller.json`: original compiled merchant terms.
+- `source.json`: original WebDAV capture/projection/review lineage with the shared `sourceFiles` array;
+- `seller.json`: original compiled merchant terms;
+- `webdav/`: exact source declaration, completed capture and attempt/checkpoint receipts, retained collection XML and property responses, mapping, merchant review, and complete original reviewed edition.
+
+`sourceFiles` lists each original member as `{path,bytes,sha256}`. The unmodified edition provenance is retained at `webdav/edition/source.json`. The export manifest's `files` covers all four entrypoints and every declared original member; `sourceClosure` reports its member and byte totals. The original shared SF82 helpers verify, copy, stage and reopen that same source closure. Use the sourceFiles runtime merged through PR1409 or a maintained successor.
 
 `publisher.prepare` passes the retained export directory directly to the
 unchanged Socrata publisher. A new product defaults to the operation UUID;
@@ -462,7 +470,7 @@ service remains owned by it and is drained when it closes.
 | listing | Listing UUID | `xml` or `json` | `sourceId` is required |
 | capture | Capture UUID | `body.bin` or `receipt.json` | None |
 | edition | Edition UUID | `dataset.csv`, `dataset.json`, `source.json`, `edition.json` | None |
-| export | Export UUID | One original four-file name or `manifest.json` | None |
+| export | Export UUID | A declared manifest `files[].path`, including `webdav/...`, or `manifest.json` | None |
 | packet | Complete source.packet operation UUID | Omit | None |
 
 Source downloads are hash-checked against their retained declaration/receipt
@@ -502,16 +510,20 @@ The limits are 8,000 members, 256 MiB per member, 512 MiB expanded bytes and
 create-only output after fsync; it does not materialize a second whole archive
 buffer in the JavaScript process.
 
-A fresh import retains the original source workspace projection as
+A fresh import retains the exact incoming source workspace projection as
 `imported-workspace.json` and writes a separate `source-packet-import.json`
 receipt. It preserves original source/capture/mapping/edition/export IDs.
-Incomplete imports remain at their create-only destination with an incomplete
-receipt so the operator can inspect them. Existing recipient directories are
-never replaced.
+Every created intermediate directory is private (0700); each retained regular
+file is private (0600). Incomplete imports remain at their create-only
+destination with an incomplete receipt so the operator can inspect them.
+Existing recipient directories are never replaced.
 
 Native publisher, release, buyer, account, key and ledger directories stay with
 their original host/workspace and are not transplanted by this source packet.
-Original product references remain in the handoff. At a fresh recipient, select
+The active received workspace has `products: []` and `activeProductId: null`.
+Original product references in exact exports or an older incoming workspace
+projection remain in the retained source records, but cannot become active
+products without their original publisher state. At a fresh recipient, select
 a retained reviewed export and prepare it through the original publisher.
 Use that publisher's existing native receiving/recovery workflow for a customer
 or release transfer. This packet makes source preparation portable without

@@ -69,6 +69,19 @@ def register(subparsers, common):
     target.add_argument("--file", required=True)
     target.add_argument("--name", required=True)
     mutation(target)
+    target = command("forecast-preview", "Calculate a dated forecast from current original records", case=True, output=True)
+    target.add_argument("--inputs", required=True, help="Forecast input JSON file")
+    target.add_argument("--expected-version", type=int, required=True)
+    target = command("forecast-save", "Save exactly the reviewed forecast and its original source snapshot", case=True, output=True)
+    mutation(target, version=True)
+    target.add_argument("--inputs", required=True, help="Same forecast input JSON used for preview")
+    target.add_argument("--expected-preview-sha256", required=True)
+    command("forecasts", "List immutable saved forecasts", case=True, output=True)
+    target = command("forecast-show", "Reopen the complete original saved forecast", case=True, output=True)
+    target.add_argument("--forecast", required=True)
+    target = command("forecast-export", "Download the complete saved forecast and dated cash/work CSVs", case=True)
+    target.add_argument("--forecast", required=True)
+    target.add_argument("--output", required=True)
     target = command("intake", "Import a supplied original pre-award source packet without inferring receipts")
     selection(target); mutation(target)
     target.add_argument("--file", required=True)
@@ -116,6 +129,23 @@ def operate(workspace, args):
         result = ops.read(args.case) if action == "show" else ops.report(args.case)
     elif action == "history":
         result = ops.history(args.case, args.after, args.limit)
+    elif action == "forecasts":
+        result = {"forecasts": ops.list_forecasts(args.case)}
+    elif action == "forecast-show":
+        result = ops.forecast(args.case, args.forecast)
+    elif action == "forecast-export":
+        return {"forecastId": args.forecast, "output": publish(args.output, ops.export_forecast(args.case, args.forecast))}
+    elif action in ("forecast-preview", "forecast-save"):
+        try:
+            inputs = json.loads(read_bytes(args.inputs, MAX_SOURCE))
+        except (UnicodeError, ValueError) as exc:
+            raise Problem("Forecast input must be a UTF-8 JSON object.", 422, "INVALID_JSON") from exc
+        if action == "forecast-preview":
+            result = ops.preview_forecast(args.case, {"expectedVersion": args.expected_version, "inputs": inputs})
+        else:
+            result = ops.command(args.case, {"expectedVersion": args.expected_version, "actor": args.actor,
+                "requestId": args.request_id, "note": args.note, "action": "forecast.save",
+                "data": {"inputs": inputs, "expectedPreviewSha256": args.expected_preview_sha256}})
     elif action == "review":
         result = ops.review(args.case, args.review)
     elif action in ("create", "intake"):
