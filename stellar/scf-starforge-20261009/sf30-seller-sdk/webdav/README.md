@@ -160,6 +160,9 @@ Only successful individual properties supply the selected file metadata:
 
 - a missing content length remains unknown, not zero;
 - a weak ETag remains weak;
+- the exact DAV ETag property is retained separately from its HTTP encoding;
+  a bare opaque property, as returned by WsgiDAV, is quoted for If-Match and
+  must still equal the actual HTTP response's strong ETag;
 - a 404 property is not treated as a missing resource if the other successful
   resource properties identify a usable file;
 - duplicate response hrefs are marked unselectable on both occurrences;
@@ -179,9 +182,13 @@ Selecting a file creates an explicit capture UUID bound to:
 
 - the normalized source declaration;
 - original href;
-- exact reported ETag, when present;
+- the selected HTTP ETag, with its exact reported DAV property retained;
 - known content length and last-modified value;
 - an optional separately known expected SHA-256.
+
+WsgiDAV's documented `get_etag`/HTTP convention is [described in its original
+provider API](https://wsgidav.readthedocs.io/en/latest/_autosummary/wsgidav.util.checked_etag.html).
+The complete original XML remains the source for this normalization.
 
 A strong selected ETag is sent as If-Match. A complete bounded response can also
 be captured without a strong ETag; its receipt identifies that weaker
@@ -296,14 +303,15 @@ The reviewed merchant export contains:
 | --- | --- |
 | dataset.csv | Exact public dataset bytes |
 | dataset.json | Original native dataset configuration |
-| source.json | Original file/capture/projection/review provenance |
+| source.json | Original file/capture/projection/review provenance plus the explicit shared sourceFiles inventory |
 | seller.json | Original compiled seller definition |
-| manifest.json | Export identity, review and exact four-file byte hashes |
+| webdav/ | Exact original declaration, capture and transfer history, collection XML/property receipts, mapping, merchant review, and complete reviewed edition |
+| manifest.json | Export identity, review, source-closure totals and every file's byte length and hash |
 
 Prepare the export into a new or existing product. The existing Socrata publisher
 holds its original draft store, dataset version store, release packages and buyer
 sessions beneath publishers/PRODUCT_UUID. This use is independent of the source
-protocol: the four-file publisher contract is unchanged.
+protocol: the four original entrypoints remain compatible. The shared sourceFiles extension, merged through PR1409, carries the declared original provider bytes into the same publisher package and SF82 release. It requires the current matching source runtime; keep the complete exported directory together. The edition's unmodified source.json remains under webdav/edition/source.json.
 
 The publisher view provides the original command set and current native
 parameters. Useful sequence:
@@ -399,7 +407,7 @@ source families:
 - cache/captures original intent, checkpoints, bytes, transfer receipts and tails;
 - mappings;
 - completed and retained incomplete editions;
-- merchants and four-file exports.
+- merchants and complete source-bearing exports, including every declared webdav/ member.
 
 Source packets exclude native publisher directories, operation journals, active
 leases, packet archives and transient atomic-write files. They do not move an
@@ -511,7 +519,7 @@ account data.
   [publisher row encoder](../sftp/publisher/plan.mjs).
 - [Original PostgreSQL publisher file/lease helpers](../postgres/publisher/files.mjs).
 - [Original XML parser](../xml/xml_source.py).
-- [Original four-file publisher workflow](../socrata/PUBLISHING.md).
+- [Original publisher and complete-source workflow](../socrata/PUBLISHING.md).
 
 The product does not claim a deployment into a user's Nextcloud instance merely
 because a standards-compatible WebDAV server or local source workflow completes.

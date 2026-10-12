@@ -11,6 +11,8 @@ Applications opens the original merchant and buyer tools from a selected READY r
 | Redis and Valkey merchant authoring | redis workspace open | Saved products, source profiles, live previews, customer packages and managed release controls |
 | Dataset preview | dataset-workspace | A dataset configuration file or retained dataset state, native query and preview |
 | Dataset buyer | buyer-dataset-workspace | Original acquisitions, received rows and files, private customer history and Python analysis |
+| Request collections | buyer-collections-workspace | Grouped request review, original approvals and runs, retained outcomes and verified customer file downloads |
+| Grant planning and delivery | grant-workspace serve | Retained grant plans and revisions, contributor delivery, invoices, allocations, cash records and original exports |
 | PostgreSQL publisher | postgres-publisher serve | Plans, extraction, candidate review, publication, schedules and buyer handoff |
 | Google Sheets publisher | sheets-publisher serve | Original authorization/source, range plans, extraction, review and recurring publication |
 | PostgreSQL authoring | postgres-workspace | Original database inspection, query contracts, merchant package and release |
@@ -20,6 +22,7 @@ Applications opens the original merchant and buyer tools from a selected READY r
 | Paid application jobs | job-workspace serve | Prepared job checkout, original review and execution, verified results, customer library and collections |
 | Object buyer workspace | buyer-object-workspace | Original sessions, receiving, chunk or whole acquisition, verified downloads and managed analysis |
 | GoldRush wallet research | goldrush workbench | Retained wallets, requests, source comparisons, notes and original buyer approval |
+| Freighter buyer wallet | browser-wallet serve | Original payer connection, exact native authorization, retained request recovery and private wallet history |
 | Research dossiers | research-workspace | Questions, saved source editions, findings, comparison and portable reports |
 | Buyer expenses | buyer-expenses | Statement captures, allocation, period review and accountant editions |
 | Blockscout token merchant | blockscout serve | Original provider desk, seller operations, quota and attempt recovery |
@@ -56,6 +59,21 @@ For a new PostgreSQL or Sheets publisher, select **Initialize a new publisher** 
 Once its workspace.json exists with the reviewed source and target, a later launch reopens without --create. The original database, plans, candidates, review/publication history and schedules remain in that workspace. An incomplete or different directory is retained and reports the original error; Applications does not recreate or erase it.
 
 Source configurations can retain their existing environment references and renewable credential files. Applications does not add provider credentials to source packages or replace the original OAuth/database connection manager.
+
+## Request collections
+
+Choose **Applications → New application → Request collections**. Select the
+private collection store and its existing initialized SF88 inbox. A new store
+requires that inbox; an existing store remembers the same original binding.
+Review, save and start through the existing managed lifecycle, then open its
+announced private URL.
+
+The current source runs selected original requests through its native browser
+approval, retains the owned run across lost responses, supports Pause and original
+recovery, and downloads saved customer responses alongside complete collection
+exports. Older selected collection runtimes retain their original terminal
+command. Follow [Request collections in Applications](COLLECTIONS_APPLICATIONS.md)
+for the complete source selection, setup, operating and reopening workflow.
 
 ## Object buyer receiving and reopening
 
@@ -308,3 +326,42 @@ The original startup record contains schema stellar-forge.redis-workspace-startu
 **Open application** exposes the original product editor, full merchant terms, source review, saved revisions, real database preview and native next-page inputs. Prepare customer OpenAPI/client files from a saved revision, stage the prepared package, then open the original release controls for seller start, stop, upgrade, rollback and customer handoff.
 
 **Stop application** closes that original authoring server and its owned release console. After it has stopped, a new reviewed start reopens the same workspace ID, saved revisions, requests, customer packages and release store with a fresh private URL. The Redis workspace's own Continue action resumes an original interrupted request; launching Applications preserves its normal recovery semantics.
+
+## Freighter buyer wallet
+
+Prepare the wallet once through the original [browser-wallet workflow](../../sf103-native-buyer-signer/browser-wallet/README.md), from the existing initialized SF88 operator configuration. Its original wallet.json, provider.mjs, native/buyer.json and native/signer.json retain the operation and signing bindings. The runtime needs the original native dependencies and **freighter-wallet** feature; the wallet browser needs Freighter, session storage and Web Locks.
+
+Choose **Freighter buyer wallet** and select that existing private wallet directory. **Review application** binds the original operator configuration, wallet identity, native configuration and provider hashes. **Save application** and **Review start → Start reviewed application** use the existing managed release. At actual dispatch the helper rereads the same original immutable start review and requires those file hashes to match before starting **browser-wallet serve**. An intervening configuration change requires a new review.
+
+The original CLI's startup is a multiline JSON record. The observer assembles that bounded record, matches the selected directory and original wallet/launch/process-lock identities, and verifies its actual loopback URL and requested port. **Open application** appears only for that current original instance. The capability remains private in the existing managed operation; no URL is inferred from the configured port.
+
+Connect the payer account in the original wallet page. Execute through the original buyer's separate terminal or maintained structured approval customer flow. Opening this wallet application does not execute a buyer or send terminal approval. Its original SF81 approval, SF36 reservation/ledger and SF103 native signing remain separate phases of that same operation.
+
+If a claim response is lost before Freighter opens, **Continue reserved request** uses the same claim. A **PROMPTED** draft never opens a second prompt. If Freighter has returned a signature, **Return saved signature** rechecks the original account/network and returns those same bytes. A completed service result is read from the original history. Only the owning browser tab sends its connection heartbeat; duplicated tabs do not inherit prompt ownership.
+
+Use **Stop application** to close the original service. Reopen a live Applications run to recover its retained URL; after a completed stop, review a new start with the same wallet to retain all original request history. The wallet's existing **recover-lock** command reconciles a confirmed dead process by its exact instance ID. No wallet, ledger or request is copied or recreated by this application entry.
+
+The headless application-review request uses the existing schema:
+
+~~~json
+{
+  "runtimeId": "ORIGINAL_READY_RUNTIME_ID",
+  "kind": "browser-wallet",
+  "label": "Merchant buyer wallet",
+  "settings": {
+    "workspaceDirectory": "/private/merchant/wallet",
+    "port": 0
+  }
+}
+~~~
+
+Pass that private file to **runtime-workspace application-review**, then preserve the returned review ID and the same original save/start request UUIDs through the CLI commands above. The generic Applications UI, output, Stop, Continue and recovery controls require no separate frontend.
+
+
+## Grant planning and delivery
+
+Choose **Grant planning and delivery** to reopen the original SF47 planning and delivery workspace. Select its private directory, an explicit Python executable when needed, and an optional original scenario for an empty workspace. Applications reviews the installed source and starts the original grant command through the maintained managed release.
+
+The original launch keeps the selected runtime source identity and verifies the adopted execution copy before opening SQLite. Open comes from the matching private launch record and authenticated original listener. Stop removes readiness, drains existing requests and closes the original workspace lock; the next reviewed start reopens the same saved plans, revisions and operating cases.
+
+Follow [Grant planning and delivery in Applications](GRANT_APPLICATIONS.md) for the complete selection, operating, export, Stop/reopen and original CLI workflow.

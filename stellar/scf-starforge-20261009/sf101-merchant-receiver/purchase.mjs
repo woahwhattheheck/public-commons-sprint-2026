@@ -50,10 +50,10 @@ export async function preparePurchase({handoff:raw, configuration, output}) {
  * exact merchant delivery path, injected only into the trusted transport call.
  * It is never a caller-supplied SF31 payment Authorization header.
  */
-function claimTransport(handoff, token, timeoutMs = 30000) {
+function claimTransport(handoff, token, timeoutMs = 30000, trustedProxy = null) {
   const delivery = new URL(handoff.deliveryUrl);
   const hostname = delivery.hostname.toLowerCase().replace(/\.$/, '');
-  return createPublicHttpsFetch({timeoutMs, requestImpl:(options, callback) => {
+  return createPublicHttpsFetch({timeoutMs, trustedProxy, requestImpl:(options, callback) => {
     need(options.hostname === hostname && options.path === delivery.pathname && options.method === 'GET',
       'CLAIM_TOKEN_DESTINATION_MISMATCH');
     return httpsRequest({...options, headers:{...options.headers, authorization:'Bearer ' + token}}, callback);
@@ -97,10 +97,12 @@ async function deliveryReceipt(path, handoff, saved, source) {
 }
 
 /** fetchImpl is a trusted embedding seam for actual local service acceptance.
- * The normal CLI always uses the original public HTTPS connection controls.
+ * trustedProxy selects the original explicit CONNECT transport while keeping
+ * the claim token scoped to this exact delivery path inside claimTransport.
+ * Choose one transport configuration. The normal CLI uses public DNS/TLS.
  */
 export async function retrieveFile({handoff:raw, destination:requestedDestination, token, signal, fetchImpl,
-  resume = process.platform === 'linux', timeoutMs = 30000}) {
+  resume = process.platform === 'linux', timeoutMs = 30000, trustedProxy = null}) {
   const handoff = validateHandoff(raw);
   const destination = await canonicalDeliveryPath(requestedDestination);
   need(typeof resume === 'boolean', 'DELIVERY_RESUME_OPTION_INVALID');
@@ -116,10 +118,11 @@ export async function retrieveFile({handoff:raw, destination:requestedDestinatio
   try { await lstat(receiptPath); throw new Error('DELIVERY_RECEIPT_WITHOUT_FILE'); }
   catch (error) { if (error.code !== 'ENOENT') throw error; }
   need(fetchImpl === undefined || typeof fetchImpl === 'function', 'TRUSTED_DOWNLOAD_FETCH_REQUIRED');
+  need(fetchImpl === undefined || trustedProxy === null, 'DELIVERY_TRANSPORT_CONFIGURATION_CONFLICT');
   async function fetchDelivery(headers, requestSignal) {
     need(typeof token === 'string' && Buffer.byteLength(token) >= 32 && Buffer.byteLength(token) <= 1024 &&
       !/[\x00-\x20\x7f]/.test(token), 'PRIVATE_CLAIM_TOKEN_REQUIRED');
-    const transport = fetchImpl ?? claimTransport(handoff, token, timeoutMs);
+    const transport = fetchImpl ?? claimTransport(handoff, token, timeoutMs, trustedProxy);
     return transport(handoff.deliveryUrl, {method:'GET', redirect:'manual',
       ...(requestSignal ? {signal:requestSignal} : {}),
       headers:{...headers, ...(fetchImpl ? {authorization:'Bearer ' + token, 'accept-encoding':'identity'} : {})}});

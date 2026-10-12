@@ -7,7 +7,7 @@ import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { abs, buyerTransport, config, execution, need, operation, operator, requestTimeoutMs, InputError } from './config.mjs';
 import { resolveBuyerProxy } from '../sf31-buyer-client/public-transport.mjs';
-import { checkOperatorTerminal } from '../sf81-buyer-operator-bridge/bridge.mjs';
+import { checkOperatorChannel, operatorApprovalEnvironment } from '../sf81-buyer-operator-bridge/bridge.mjs';
 import { loadOperationTicket, operationTicketView } from './operation-ticket.mjs';
 import { NETWORKS } from '../sf86-rpc-transfer-reconcile/terms.mjs';
 import { readRequestBody } from './request-body.mjs';
@@ -329,8 +329,11 @@ export async function openWorkspace(args, { execute = false, accounting = false,
     const stored = await privateJson(join(storage, manifest.keys), 16384);
     need(stored.schema === SCHEMA && schemaObject(stored.keys) &&
       Object.keys(stored.keys).length === KEY_NAMES.length, 'WORKSPACE_KEY_FILE_INVALID');
-    // SF81 accepts only these three values; do not copy unrelated credentials.
-    operatorEnvironment = keys(stored.keys).values;
+    // The three journal keys come from the original private workspace. Only
+    // execution receives SF81's validated, ephemeral host approval transport;
+    // it is never read from the manifest or written into operator-keys.json.
+    operatorEnvironment = {...keys(stored.keys).values,
+      ...(execute ? operatorApprovalEnvironment(environment) : {})};
   }
   return {config:cfg, configPath, manifest, operatorEnvironment};
 }
@@ -347,11 +350,14 @@ export async function diagnoseWorkspace(args, {environment = process.env} = {}) 
     ? error.code : 'WORKSPACE_RUNTIME_UNAVAILABLE';
   const pins = validateNativeSignerConfiguration(manifest.signer);
   const transport = buyerTransport(workspace.config);
+  const browserSelected = environment.SF81_APPROVAL_SOCKET !== undefined ||
+    environment.SF81_APPROVAL_TOKEN !== undefined;
+  const approvalCheck = browserSelected ? 'operator-browser' : 'operator-terminal';
   try {
-    await checkOperatorTerminal(workspace.config.operation.intentId);
-    checks.push({check:'operator-terminal', status:'AVAILABLE'});
+    await checkOperatorChannel(workspace.config.operation.intentId, {environment});
+    checks.push({check:approvalCheck, status:'AVAILABLE'});
   } catch (error) {
-    checks.push({check:'operator-terminal', status:'UNAVAILABLE', code:code(error)});
+    checks.push({check:approvalCheck, status:'UNAVAILABLE', code:code(error)});
   }
   if (transport !== null) {
     try {
@@ -386,7 +392,7 @@ export async function diagnoseWorkspace(args, {environment = process.env} = {}) 
     signerSource:provider === undefined ? 'ENVIRONMENT' : 'TRUSTED_SEP43_PROVIDER',
     rpcOrigin:new URL(pins.rpcUrl).origin, buyerTransport:buyerTransport(workspace.config),
     requestTimeoutMs:requestTimeoutMs(workspace.config), sdk, checks,
-    next:ready ? 'Review the operation, then use --execute-workspace for original terminal approval.' :
+    next:ready ? 'Review the operation, then use --execute-workspace for original operator approval.' :
       'Resolve the listed runtime requirements and diagnose this same workspace again.'};
 }
 
