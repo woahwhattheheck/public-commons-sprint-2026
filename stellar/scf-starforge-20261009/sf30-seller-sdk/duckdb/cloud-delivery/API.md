@@ -9,13 +9,13 @@ store, query author and package/runtime controller.
 - Repository: `woahwhattheheck/public-commons-sprint-2026`.
 - Branch: `scf/coinmetrics-cloud-workspace-26b1`, initially main
   `b9d40f9f99a99ec0aec1e9211536f7fc7adab597`.
-- Shared authoring root: `/dev/shm/26b1-coinmetrics/source/stellar/scf-starforge-20261009`.
+- Source root relative to a repository checkout: `stellar/scf-starforge-20261009`.
 - New core: `sf30-seller-sdk/duckdb/cloud-delivery/`.
 - Original host: `sf30-seller-sdk/duckdb/workspace/{model,store,server,cli}.mjs`.
 - Root owns `cloud-delivery/public/{app.mjs,style.css}` and original
   `workspace/public/{app.mjs,index.html,style.css}` UI joins. Core owner owns host joins.
-- The seven shared files are independent writable copies. Other runtime dependency
-  files are hardlinks and must be atomically replaced if an actual change is needed.
+- The maintained source, query author, compiler and runtime dependencies remain in
+  that same repository. Run the original workspace CLI against a private state directory.
 
 ## Host and client convention
 
@@ -212,13 +212,32 @@ Timestamp mappings support per-side `leftTimeUnit` and `rightTimeUnit` of
 `iso`, `ns`, `us`, `ms`, or `s`. A file-specific UTC declaration applies only
 to that file. Comparison `scope` records actual mapped time bounds, rows outside
 the declared interval, and observed gaps against an explicitly declared frequency.
-Intervals default to an exclusive scope end; set `scope.endInclusive:true` when
-that is the actual source request. These observations do not fill or synthesize rows.
+Intervals default to an inclusive start and exclusive end; set
+`scope.startInclusive` and `scope.endInclusive` to match the actual source request.
+Manifest bounds retain nanosecond precision, including a single instant when both
+ends are explicitly inclusive. These observations do not fill or synthesize rows.
 
-Text-source materialization retains present-column and original row identity in
-`__cloud_row_lineage`, keyed by table name and the immutable table's native rowid.
-This keeps absent fields distinguishable from SQL null values. Parquet columns
-keep their original native types and their complete original file inventory.
+For API candle and reference-rate coverage, the first original URL must match
+the native endpoint and each declared market/asset/metric/frequency/time bound.
+The original API defaults for start/end inclusion and query timezone are checked
+against the declared scope; use `scope.timezone` to record an explicit request zone.
+The native timezone interprets wall-clock request fields, while response times stay
+UTC. An ambiguous or nonexistent local-time boundary remains a visible coverage
+mismatch. Additional requested assets or metrics cannot count as the single
+declared population. Full page continuation remains bound to original URLs/tokens.
+
+All selected formats retain original file IDs, one-based source rows and present
+columns in `__cloud_row_lineage`. Its key is table name plus a zero-based insertion
+ordinal; file order follows the relation manifest, then original native row order.
+Parquet is inserted directly through the native reader, with its exact native types
+and explicit insertion-order preservation. Each source file and final table row
+count is matched to inspection before publication.
+
+For SQL provenance joins, calculate `row_number() OVER () - 1` from the complete
+immutable table in a subquery *before* filtering or joining. This also works when
+an original source column is named `rowid`; no source column is renamed or overwritten.
+Per-table metadata supplies that ordinal expression and the retained lineage count.
+Absent source fields remain distinguishable from SQL null values.
 
 Native work has one OS-released SQLite ownership lock per retained operation and
 immutable attempt inputs/results. A failed or interrupted local attempt can resume;

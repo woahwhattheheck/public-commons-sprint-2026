@@ -49,7 +49,9 @@ async function regularOrMissing(path) {
   try {
     const file = await lstat(path);
     if (!file.isFile() || file.isSymbolicLink()) throw new WorkspaceError('WORKSPACE_FILE_INVALID');
+    return file;
   } catch (error) { if (error.code !== 'ENOENT') throw error; }
+  return null;
 }
 
 /** Read the retained selection before the normal workspace acquires its ownership lock. */
@@ -57,7 +59,7 @@ export async function readSavedWorkspaceSource(directory) {
   const root = resolve(directory), filename = resolve(root, 'workspace.sqlite');
   if (await realpath(root) !== root || !(await lstat(root)).isDirectory())
     throw new WorkspaceError('PRIVATE_WORKSPACE_DIRECTORY_REQUIRED');
-  await regularOrMissing(filename);
+  if (!await regularOrMissing(filename)) throw new WorkspaceError('SAVED_WORKSPACE_SOURCE_REQUIRED', 404);
   let db;
   try {
     db = new DatabaseSync(filename, { readOnly: true });
