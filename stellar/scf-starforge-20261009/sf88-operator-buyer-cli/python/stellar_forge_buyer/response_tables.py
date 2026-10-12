@@ -66,7 +66,7 @@ try {
  }
  const file=store.file(quote);
  await file.verify();
- process.stdout.write(JSON.stringify({saved:original,localPath:file.metadata.path}));
+ process.stdout.write(JSON.stringify({saved:file.metadata}));
 } finally {await store.close();}
 """
 
@@ -262,19 +262,20 @@ def _read_source(input_kind, paths, format, checkout, node, cache_dir):
         if process.returncode or len(process.stdout) > 1_048_576:
             raise StateError("RESPONSE_NATIVE_MCP_FILE_NOT_VERIFIED")
         verified = parse(process.stdout)
-        saved = verified["saved"]
         quote = manifest["quote"]
-        if saved != quote.get("result", {}).get("responseFile"):
+        saved = quote.get("result", {}).get("responseFile")
+        if not isinstance(saved, dict):
             raise StateError("RESPONSE_NATIVE_MCP_FILE_CHANGED")
+        expected = saved
         if paths.get("retained"):
             local_path = str(Path(paths["retained"]) / (quote["quoteId"] + ".json"))
-            if verified.get("localPath") != local_path:
-                raise StateError("RESPONSE_NATIVE_MCP_FILE_CHANGED")
-            file = _file({**saved, "path": local_path, "destination": local_path}, local_path, saved["maxBytes"])
-        else:
-            if verified.get("localPath") != saved.get("path"):
-                raise StateError("RESPONSE_NATIVE_MCP_FILE_CHANGED")
-            file = _file(saved, saved["destination"], saved["maxBytes"])
+            expected = {**saved, "path": local_path, "destination": local_path,
+                        "manifestPath": str(Path(paths["manifest"]).expanduser().absolute())}
+        # Compare the native store's actual validated metadata, allowing only
+        # the selected relocation. Original context and identity use saved.
+        if verified.get("saved") != expected:
+            raise StateError("RESPONSE_NATIVE_MCP_FILE_CHANGED")
+        file = _file(expected, expected["destination"], expected["maxBytes"])
         context = {"nativeKind": "SF32_MCP_RESULT", "quoteId": quote["quoteId"],
                    "invocationSha256": saved["invocationSha256"], "nativeStatus": quote["status"],
                    "paymentStatus": quote["status"], "paidAttempted": quote["result"].get("paidAttempted"),
