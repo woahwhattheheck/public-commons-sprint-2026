@@ -11,8 +11,9 @@ const state = {
   workspace:null,identity:null,busy:false,screen:'pairs',db:null,storageError:null,
   pairs:page('pairs'),runs:page('runs'),reports:page('reports'),operations:page('operations'),
   pair:null,run:null,report:null,export:null,runTab:'groups',runPairFilter:'',
-  groups:page('rows'),rows:page('rows'),decisions:page('decisions'),changes:page('rows'),
+  groups:page('rows'),rows:page('rows'),fields:page('rows'),decisions:page('decisions'),changes:page('rows'),
   filters:{category:'',duplicates:'',side:'',status:'',group_id:''},
+  fieldFilters:{group_id:'',column_name:'',state:''},fieldDetail:null,
   subject:null,rowDetail:null,decisionActor:'',decisionReason:'',decisionOutcome:'REQUIRES_CORRECTION',
   beforeRunId:'',baselines:[],editions:[],editionCursor:null,editionCatalogStarted:false,editionDetails:new Map(),
   draft:null,draftVersion:0,draftTimer:null,preview:null,previewDefinition:null,
@@ -130,7 +131,7 @@ function listItem(title,meta,operation,selected=false) {
 }
 function grid(columns,rows,rowActions) {
   const box=el('div',undefined,'table-scroll'),table=el('table'),head=el('thead'),tr=el('tr'),body=el('tbody');
-  columns.forEach(col=>{const th=el('th',typeof col==='string'?col:col.name);if(col.type)th.title=col.type;tr.append(th);});
+  columns.forEach(col=>{const th=el('th',typeof col==='string'?col:(col.label||col.name));if(col.type)th.title=col.type;tr.append(th);});
   if(rowActions)tr.append(el('th','Review'));
   head.append(tr);table.append(head,body);box.append(table);
   for(const row of rows) {
@@ -145,7 +146,7 @@ function grid(columns,rows,rowActions) {
       if(col.type)cell.title=col.type;
       line.append(cell);
     });
-    if(rowActions) { const td=el('td',undefined,'action-cell');td.append(rowActions(object));line.append(td); }
+    if(rowActions) { const td=el('td',undefined,'action-cell');td.append(rowActions(object,row));line.append(td); }
     body.append(line);
   }
   if(!rows.length){const line=el('tr'),td=el('td','No rows in this selection.','muted');td.colSpan=columns.length+(rowActions?1:0);line.append(td);body.append(line);}
@@ -360,7 +361,7 @@ function renderPairs() {
       const result=await retained(API+'/run',{workspace_id:state.workspace,pair_id:p.pair_id,expected_revision:p.revision,definition_sha256:p.definition_sha256});
       await receiveResult(API+'/run',result);await loadStatus();notice('Reconciliation completed. Every source row is accounted for.','success');
     },{primary:true}),button('Show runs',async()=>{state.runPairFilter=p.pair_id;await loadRuns(0);show('runs');}));
-    split.append(panel(p.label||p.name,facts([['Name',p.name],['Pair',p.pair_id],['Revision',p.revision],['Source edition',p.definition.source_edition],['Target edition',p.definition.target_edition],['Saved',when(p.created_at)]]),actions,history,details('Complete saved definition',p.definition),details('Original mapping review',p.review)));
+    split.append(panel(p.label||p.name,facts([['Name',p.name],['Pair',p.pair_id],['Revision',p.revision],['Source edition',p.definition.source_edition],['Target edition',p.definition.target_edition],['Saved',when(p.created_at)]]),actions,history,comparisonRulesView(p.definition,p.review?.comparison_rules),details('Complete saved definition',p.definition),details('Original mapping review',p.review)));
   }else split.append(panel('Selected pair',empty('Open a saved pair to review its definition, edit a revision or start a run.')));
   root.append(split);
 }
@@ -422,6 +423,123 @@ function renderValueMap(row,side) {
   },{small:true,disabled:values.length>=10000})));
   return section;
 }
+
+const FIELD_STATES = {
+  EXACT_EQUAL:['Exact equality','The original compared values are equal under this field’s native comparison.'],
+  EXACT_DIFFERENT:['Exact difference','The original compared values differ and this field has no tolerance rule.'],
+  NULLS_EQUAL:['Both NULL, accepted','Both values are SQL NULL and the reviewed rule explicitly treats two NULLs as equal.'],
+  WITHIN_TOLERANCE:['Within tolerance','The exact absolute difference is within the allowance from this reviewed rule.'],
+  OUTSIDE_TOLERANCE:['Outside tolerance','The exact absolute difference exceeds the allowance from this reviewed rule.'],
+  NULL_NOT_COMPARABLE:['NULL, not comparable','A value is SQL NULL and the reviewed rule does not establish an accepted comparison.'],
+  NON_FINITE_NOT_COMPARABLE:['Nonfinite, not comparable','A native numeric value is nonfinite, so this rule cannot establish a comparison.'],
+  DUPLICATE_NOT_PAIRED:['Duplicate group','This group retains exact multiset accounting. Open all group rows to inspect every observation.'],
+  ONE_SIDED:['One side only','The known key is present on only one side. No counterpart or numeric difference is inferred.'],
+  QUARANTINED:['Quarantined','The original row or group is quarantined. Open the original rows to inspect its recorded reason.']
+};
+const FIELD_COLUMNS = [
+  ['group_id','Group'],['column_name','Field'],['source_value_text','Source value'],
+  ['target_value_text','Target value'],['state','Comparison result'],['absolute_difference','Absolute difference'],
+  ['allowed_difference','Allowed difference'],['unit','Source unit']
+].map(([name,label])=>({name,label}));
+function hasRecordedFields(run=state.run) { return Boolean(run?.comparison_rules); }
+function nativeGridObjects(record) {
+  const names=(record.columns||[]).map(column=>typeof column==='string'?column:column.name);
+  return (record.rows||[]).map(row=>Array.isArray(row)?Object.fromEntries(names.map((name,index)=>[name,row[index]])):row);
+}
+function numericRuleEligible(row) {
+  const source=mappingType('source',row.source),target=mappingType('target',row.target);
+  return row.role==='value'&&source===target&&/^(?:BIGINT|HUGEINT|DOUBLE|DECIMAL(?:\([0-9]+,\s*[0-9]+\))?)$/.test(source);
+}
+function comparisonEditor(row,index) {
+  const section=el('details',undefined,'comparison-rule');
+  section.dataset.comparisonColumn=String(index);
+  const present=Object.hasOwn(row,'comparison'),rule=row.comparison;
+  const known=present&&rule&&typeof rule==='object'&&!Array.isArray(rule)&&rule.mode==='numeric-tolerance';
+  section.open=present;
+  section.append(el('summary','Comparison rule · '+(present?'Reviewed numeric tolerance':'Exact native values')));
+  const eligible=numericRuleEligible(row),options=[['exact','Exact native comparison'],['numeric-tolerance','Reviewed numeric tolerance']];
+  if(present&&!known)options.push(['unrecognized','Unrecognized retained rule']);
+  const mode=select(options,present?(known?'numeric-tolerance':'unrecognized'):'exact',value=>{
+    if(value==='exact')delete row.comparison;
+    else if(value==='numeric-tolerance'){
+      if(!numericRuleEligible(row))throw new Error('Choose a compared value with identical native numeric types before adding its rule.');
+      row.comparison={mode:'numeric-tolerance',absolute:'0',relative:'0',unit:'',nulls:'',basis:''};
+    }else return;
+    edited();renderEditor();
+  });
+  for(const option of mode.options)if(option.value==='unrecognized'||(option.value==='numeric-tolerance'&&!eligible))option.disabled=true;
+  section.append(field('Comparison mode',mode,
+    'Matching keys remain exact. Numeric tolerances apply to compared values with identical BIGINT, HUGEINT, DECIMAL or DOUBLE types.'));
+  if(!present)return section;
+  if(!known){
+    section.append(el('p','The complete imported rule is retained. Choose exact comparison to remove it, or correct the full definition and review it.','hint'),details('Retained comparison object',rule));
+    return section;
+  }
+  if(!eligible)section.append(el('p','This retained rule no longer matches the selected role or native types. Choose compatible compared-value columns, or explicitly change its mode to exact comparison.','notice'));
+  const fields=el('div',undefined,'fields three spacer');
+  const coefficient=key=>{const control=input(rule[key],{maxLength:256,onInput:value=>{rule[key]=value;edited();}});control.inputMode='decimal';return control;};
+  fields.append(
+    field('Absolute allowance',coefficient('absolute'),'Nonnegative decimal text, in the reviewed source unit.'),
+    field('Relative fraction',coefficient('relative'),'A fraction from 0 to 1. For example, 0.005 means 0.5%.'),
+    field('Source unit',input(rule.unit,{maxLength:240,onInput:value=>{rule.unit=value;edited();}}),'Record the common unit already used by both native columns.'),
+    field('Two SQL NULL values',select([['','Choose the missing-value rule'],['equal','Treat two NULLs as equal'],['uncomparable','Leave two NULLs not comparable']],rule.nulls,value=>{rule.nulls=value;edited();})));
+  const basis=textarea(rule.basis,value=>{rule.basis=value;edited();},3);basis.maxLength=4000;
+  fields.append(field('Review basis',basis,'Explain the source specification or engineering decision behind this allowance.'));
+  section.append(fields,el('p','Accepted when |source − target| ≤ absolute + relative × max(|source|, |target|).','comparison-formula'),
+    el('p','The native comparison keeps the original numbers and your literal coefficient text. One NULL or a nonfinite numeric value is not comparable. Duplicate groups use their original exact multiset accounting.','hint'));
+  return section;
+}
+function comparisonRulesView(definition,contract) {
+  const columns=definition?.columns||[],rules=contract?.columns||
+    columns.flatMap((column,index)=>Object.hasOwn(column,'comparison')?[{index,name:column.name,comparison:column.comparison}]:[]);
+  if(!rules.length)return null;
+  const box=el('section',undefined,'comparison-summary');
+  box.append(el('h4','Reviewed numeric rules'),el('p',
+    'Accepted when |source − target| ≤ absolute + relative × max(|source|, |target|). Coefficients below retain their original text.','hint'));
+  box.append(grid(['Field','Native type','Absolute allowance','Relative fraction','Source unit','Two NULLs','Review basis'],
+    rules.map(column=>{const rule=column.comparison||{};return [column.name,column.type||'',rule.absolute,rule.relative,rule.unit,
+      rule.nulls==='equal'?'Accepted as equal':rule.nulls==='uncomparable'?'Not comparable':rule.nulls,rule.basis];})));
+  box.append(el('p','Matching keys and fields without a rule compare exactly. Duplicate groups retain exact multiplicity; no tolerance-based row pairing is created.','hint'));
+  if(contract)box.append(details('Complete frozen comparison rules',contract));
+  return box;
+}
+async function loadFields(offset=0) {
+  if(!hasRecordedFields()){state.fields={...page('rows'),unavailable:true};renderRunTable();return;}
+  const group=state.fieldFilters.group_id===''?undefined:indexValue(state.fieldFilters.group_id,'group');
+  try{
+    state.fields={...page('rows'),...await api(runPath('fields')+query({offset,limit:PAGE_SIZE,
+      group_id:group,column_name:state.fieldFilters.column_name,state:state.fieldFilters.state}))};
+  }catch(error){
+    if(error.code!=='FIELDS_NOT_RECORDED')throw error;
+    state.fields={...page('rows'),unavailable:true};
+  }
+  renderRunTable();
+}
+async function groupFields(object) {
+  state.fieldFilters={group_id:String(indexValue(object.group_id,'group')),column_name:'',state:''};
+  state.runTab='fields';await loadFields(0);renderRunDetail();notice('Every recorded value field in this key group opened.');
+}
+async function chooseField(object) {
+  state.subject=groupSubject(object);state.rowDetail=null;state.fieldDetail=clone(object);
+  renderSubject();renderDecisionEditor();
+  notice('The complete recorded field is open. Review decisions apply to its original key group.');
+  $('selected-subject')?.scrollIntoView({block:'nearest'});
+}
+function fieldInspection(object) {
+  const result=String(scalar(object.state)),meaning=FIELD_STATES[result],box=el('section',undefined,'field-inspection');
+  box.append(el('h4',nativeText(object.column_name)+' · '+(meaning?.[0]||result)),el('p',meaning?.[1]||'Read the complete original field record.','hint'));
+  box.append(facts([['Native SQL type',object.sql_type],['Source column',object.source_column],['Target column',object.target_column],
+    ['Source observations',object.source_count],['Target observations',object.target_count],['Source row',object.source_row],['Target row',object.target_row]]));
+  box.append(el('div',undefined,'spacer'),grid(['Quantity','Exact recorded value'],[
+    ['Source value',object.source_value_text],['Target value',object.target_value_text],
+    ['Signed difference (target − source)',object.signed_difference],['Absolute difference',object.absolute_difference],
+    ['Relative scale: max(|source|, |target|)',object.relative_scale],['Allowed difference',object.allowed_difference],['Source unit',object.unit]]));
+  if(scalar(object.rule_json)!==null)box.append(details('Reviewed field rule',scalar(object.rule_json)));
+  box.append(details('Exact native numeric representation',{source:object.source_exact_numeric,target:object.target_exact_numeric}),
+    details('Complete recorded field',object),toolbar(button('All group rows',()=>groupRows(object),{small:true})));
+  return box;
+}
+
 function mappingTable() {
   const box=el('div',undefined,'table-scroll'),table=el('table'),head=el('thead'),header=el('tr'),body=el('tbody');
   ['Canonical field','Source column','Target column','Role','Meaning',''].forEach(name=>header.append(el('th',name)));
@@ -430,10 +548,10 @@ function mappingTable() {
     const tr=el('tr'),name=el('td'),source=el('td'),target=el('td'),role=el('td'),meaning=el('td'),actions=el('td');
     name.append(input(row.name,{maxLength:120,required:true,onInput:v=>{row.name=v;edited();}}));
     const sourceType=el('span',mappingType('source',row.source),'type-label');
-    source.append(select(columnOptions('source',row.source),row.source,v=>{row.source=v;sourceType.textContent=mappingType('source',v);edited();}),sourceType);
+    source.append(select(columnOptions('source',row.source),row.source,v=>{row.source=v;sourceType.textContent=mappingType('source',v);edited();renderEditor();}),sourceType);
     const targetType=el('span',mappingType('target',row.target),'type-label');
-    target.append(select(columnOptions('target',row.target),row.target,v=>{row.target=v;targetType.textContent=mappingType('target',v);edited();}),targetType);
-    role.append(select([['key','Matching key'],['value','Compared value']],row.role,v=>{row.role=v;edited();}));
+    target.append(select(columnOptions('target',row.target),row.target,v=>{row.target=v;targetType.textContent=mappingType('target',v);edited();renderEditor();}),targetType);
+    role.append(select([['key','Matching key'],['value','Compared value']],row.role,v=>{row.role=v;edited();renderEditor();}));
     meaning.append(textarea(row.meaning,v=>{row.meaning=v;edited();},2));
     actions.append(button('Remove',async()=>{state.draft.definition.columns.splice(index,1);edited();renderEditor();},{small:true}));
     tr.append(name,source,target,role,meaning,actions);body.append(tr);
@@ -442,7 +560,7 @@ function mappingTable() {
     d.open=row.source_map.length+row.target_map.length>0;
     const maps=el('div',undefined,'equal-columns spacer');maps.append(renderValueMap(row,'source'),renderValueMap(row,'target'));
     d.append(summary,el('p','Value maps apply only to VARCHAR fields. With a map, every non-null original string needs an explicit entry; missing values are quarantined. Spaces, case and empty strings are preserved. Native NULL stays NULL.','hint'),maps);
-    cell.append(d);detailRow.append(cell);body.append(detailRow);
+    cell.append(comparisonEditor(row,index),d);detailRow.append(cell);body.append(detailRow);
   });
   if(!state.draft.definition.columns.length){const tr=el('tr'),td=el('td','Add the fields to compare. Choose at least one matching key.','muted');td.colSpan=6;tr.append(td);body.append(tr);}
   return box;
@@ -497,6 +615,7 @@ function renderMappingReview() {
   if(!review){root.append(el('p','Review the current mapping to see its exact native types, row scope and omitted fields.','muted'));return;}
   root.append(facts([['Source rows',review.source?.row_count],['Target rows',review.target?.row_count],['Reviewed fields',review.comparison_columns?.length]]));
   root.append(el('div',undefined,'spacer'),grid(['Canonical field','Native SQL type','Role'],(review.comparison_columns||[]).map(c=>[c.name,c.type,c.role])));
+  const rules=comparisonRulesView(review.definition,review.comparison_rules);if(rules)root.append(rules);
   const omitted=el('div',undefined,'equal-columns spacer');
   for(const side of ['source','target']) {
     const rows=review.omitted?.[side]||[],box=panel(side==='source'?'Omitted source fields':'Omitted target fields');
@@ -558,7 +677,9 @@ function renderEditor() {
 
 async function openRun(id) {
   if(!ID64.test(id||''))throw new Error('Choose a complete saved run identifier.');
-  state.run=await api(API+'/runs/'+id);state.subject=null;state.rowDetail=null;state.decisionReason='';
+  state.run=await api(API+'/runs/'+id);state.subject=null;state.rowDetail=null;state.fieldDetail=null;state.decisionReason='';
+  state.fields=page('rows');state.fieldFilters={group_id:'',column_name:'',state:''};
+  if(!hasRecordedFields()){if(state.runTab==='fields')state.runTab='groups';if(state.filters.category==='TOLERANCE_MATCHED')state.filters.category='';}
   state.groups=page('rows');state.rows=page('rows');state.decisions=page('decisions');
   await loadRunTab(0);renderRuns();show('runs');notice('Complete saved reconciliation run opened.');
 }
@@ -585,18 +706,26 @@ async function loadRunTab(offset=0) {
   if(!state.run)return;
   if(state.runTab==='groups')await loadGroups(offset);
   else if(state.runTab==='rows')await loadRows(offset);
+  else if(state.runTab==='fields')await loadFields(offset);
   else await loadDecisions(offset);
 }
 function summaryView(summary) {
   const wrapper=el('div'),rows=[];
-  for(const key of ['total','included','quarantined','excluded','matched','unmatched'])
-    rows.push([({total:'Original rows',included:'Included in comparison',quarantined:'Quarantined',excluded:'Outside declared windows',matched:'Matched rows',unmatched:'Unmatched included rows'})[key],summary?.source?.[key],summary?.target?.[key]]);
+  const labels={total:'Original rows',included:'Included in comparison',quarantined:'Quarantined',excluded:'Outside declared windows',
+    canonical_matched:'Canonical exact matches',exact_matched:'Accepted exact matches',tolerance_matched:'Accepted tolerance matches',
+    matched:'Matched rows',unmatched:'Unmatched included rows'};
+  for(const key of ['total','included','quarantined','excluded','canonical_matched','exact_matched','tolerance_matched','matched','unmatched']){
+    if(['canonical_matched','exact_matched','tolerance_matched'].includes(key)&&summary?.source?.[key]===undefined&&summary?.target?.[key]===undefined)continue;
+    rows.push([labels[key],summary?.source?.[key],summary?.target?.[key]]);
+  }
   const table=grid(['Row accounting','Source','Target'],rows);table.classList.add('summary-table');wrapper.append(table);
   const groups=summary?.groups||{},metrics=el('div',undefined,'metric-line');
-  for(const name of ['MATCHED','SOURCE_ONLY','TARGET_ONLY','VALUE_DIFFERENCE','MULTISET_DIFFERENCE','NOT_COMPARABLE'])
+  for(const name of ['MATCHED','TOLERANCE_MATCHED','SOURCE_ONLY','TARGET_ONLY','VALUE_DIFFERENCE','MULTISET_DIFFERENCE','NOT_COMPARABLE'])
     if(groups[name]!==undefined)metrics.append(el('span',name.replaceAll('_',' ')+' '+count(groups[name]),'tag'));
   if(groups.duplicate_groups!==undefined)metrics.append(el('span','DUPLICATE KEY GROUPS '+count(groups.duplicate_groups),'tag'));
   wrapper.append(metrics);
+  if(summary?.source?.tolerance_matched!==undefined||summary?.target?.tolerance_matched!==undefined)
+    wrapper.append(el('p','Matched rows = accepted exact matches + accepted tolerance matches. Canonical exact matches retain the original value multiplicities before the reviewed numeric and NULL rules.','hint'));
   wrapper.append(el('p',summary?.accounting_balanced===true?'Native row accounting is balanced. Quarantined and excluded rows remain available for review.':'Read the complete native accounting result before interpreting the comparison.','hint'));
   if(summary?.scope_note)wrapper.append(el('p',summary.scope_note,'hint'));
   if(summary?.decisions)wrapper.append(details('Decision counts',summary.decisions));
@@ -634,17 +763,18 @@ function renderRunDetail() {
   const summary=panel('Saved comparison',facts([['Run',run.run_id],['Pair',run.pair_id],['Pair revision',run.pair_revision],['Decision revision',run.review_revision],['Saved',when(run.created_at)]]),
     el('div',undefined,'spacer'),summaryView(run.summary),
     toolbar(button('Open pair definition',()=>openPair(run.pair_id,run.pair_revision))),
-    details('Complete run record',run));
+    comparisonRulesView(null,run.comparison_rules),details('Complete run record',run));
   root.append(summary);
   const review=panel('Review groups and rows'),tabs=el('div',undefined,'tabs');tabs.setAttribute('role','tablist');
-  for(const [key,label] of [['groups','Key groups'],['rows','Original rows'],['decisions','Decision history']]){
+  for(const [key,label] of [['groups','Key groups'],...(hasRecordedFields()?[['fields','Field differences']]:[]),['rows','Original rows'],['decisions','Decision history']]){
     const b=button(label,async()=>{state.runTab=key;await loadRunTab(0);renderRunDetail();notice(label+' opened.');});
     b.setAttribute('role','tab');b.setAttribute('aria-selected',String(state.runTab===key));tabs.append(b);
   }
   review.append(tabs);
+  if(!hasRecordedFields())review.append(el('p','Per-field differences were not recorded for this run. Its complete key groups and original rows remain available.','hint'));
   const filters=el('div',undefined,'filters');
   if(state.runTab==='groups'){
-    const category=select([['','All categories'],...['MATCHED','SOURCE_ONLY','TARGET_ONLY','VALUE_DIFFERENCE','MULTISET_DIFFERENCE','NOT_COMPARABLE'].map(v=>[v,v.replaceAll('_',' ')])],state.filters.category);
+    const category=select([['','All categories'],...['MATCHED',...(hasRecordedFields()?['TOLERANCE_MATCHED']:[]),'SOURCE_ONLY','TARGET_ONLY','VALUE_DIFFERENCE','MULTISET_DIFFERENCE','NOT_COMPARABLE'].map(v=>[v,v.replaceAll('_',' ')])],state.filters.category);
     const duplicates=select([['','All key groups'],['true','Duplicate keys'],['false','Without duplicate keys']],state.filters.duplicates);
     filters.append(field('Category',category),field('Key multiplicity',duplicates),button('Apply group filters',async()=>{
       state.filters.category=category.value;state.filters.duplicates=duplicates.value;await loadGroups(0);notice('Key group selection updated.');
@@ -657,6 +787,18 @@ function renderRunDetail() {
       if(group.value.trim())indexValue(group.value.trim(),'group');
       state.filters.side=side.value;state.filters.status=status.value;state.filters.group_id=group.value.trim();await loadRows(0);notice('Original row selection updated.');
     }),button('All original rows',async()=>{state.filters.side='';state.filters.status='';state.filters.group_id='';await loadRows(0);renderRunDetail();}));
+  }else if(state.runTab==='fields'){
+    const group=input(state.fieldFilters.group_id,{placeholder:'All groups'});
+    const column=input(state.fieldFilters.column_name,{placeholder:'Every compared value field'});
+    const result=select([['','All recorded states'],...Object.entries(FIELD_STATES).map(([key,value])=>[key,value[0]])],state.fieldFilters.state);
+    filters.append(field('Field group identifier',group),field('Canonical value field',column),field('Field result',result),
+      button('Apply field filters',async()=>{
+        if(group.value.trim())indexValue(group.value.trim(),'group');
+        state.fieldFilters={group_id:group.value.trim(),column_name:column.value,state:result.value};
+        await loadFields(0);notice('Recorded field selection updated.');
+      }),button('All recorded fields',async()=>{
+        state.fieldFilters={group_id:'',column_name:'',state:''};await loadFields(0);renderRunDetail();notice('All recorded fields opened.');
+      }));
   }
   review.append(filters);const table=el('div');table.id='run-grid';const paging=el('div');paging.id='run-grid-pager';review.append(table,paging);root.append(review);
   const selected=el('div');selected.id='selected-subject';root.append(selected);
@@ -673,7 +815,7 @@ function rowSubject(object) {
   return {kind:'row',side,row:indexValue(object.row,'row')};
 }
 async function chooseGroup(object) {
-  state.subject=groupSubject(object);state.rowDetail=null;renderSubject();renderDecisionEditor();
+  state.subject=groupSubject(object);state.rowDetail=null;state.fieldDetail=null;renderSubject();renderDecisionEditor();
   notice('Key group '+state.subject.group_id+' selected for an explicit review decision.');
   $('selected-subject')?.scrollIntoView({block:'nearest'});
 }
@@ -686,7 +828,7 @@ async function chooseRow(object) {
   const subject=rowSubject(object);
   const detail=await api(runPath('row')+query({side:subject.side,row:subject.row}));
   if(detail.side!==subject.side||indexValue(detail.row,'row')!==subject.row)throw new Error('The returned original row differs from the selected side and row index.');
-  state.subject=subject;state.rowDetail=detail;renderSubject();renderDecisionEditor();
+  state.subject=subject;state.rowDetail=detail;state.fieldDetail=null;renderSubject();renderDecisionEditor();
   notice('Complete '+subject.side+' row '+subject.row+' opened.');$('selected-subject')?.scrollIntoView({block:'nearest'});
 }
 function renderRunTable() {
@@ -694,11 +836,19 @@ function renderRunTable() {
   root.replaceChildren();paging.replaceChildren();
   if(state.runTab==='groups'){
     root.append(grid(state.groups.columns||[],state.groups.rows||[],object=>toolbar(
-      button('Review group',()=>chooseGroup(object),{small:true}),button('All group rows',()=>groupRows(object),{small:true}))));
+      button('Review group',()=>chooseGroup(object),{small:true}),button('All group rows',()=>groupRows(object),{small:true}),
+      hasRecordedFields()?button('Field differences',()=>groupFields(object),{small:true}):null)));
     paging.append(pager(state.groups,loadGroups));
   }else if(state.runTab==='rows'){
     root.append(grid(state.rows.columns||[],state.rows.rows||[],object=>toolbar(button('Open full row',()=>chooseRow(object),{small:true}))));
     paging.append(pager(state.rows,loadRows));
+  }else if(state.runTab==='fields'){
+    if(state.fields.unavailable){root.append(empty('Per-field differences were not recorded for this original run. Reopen its key groups or original rows.'));return;}
+    root.append(el('p','Inspect a field for its full rule, exact numeric representations and signed difference. Duplicate groups retain all original observations without a chosen row pairing.','hint'),
+      grid(FIELD_COLUMNS,nativeGridObjects(state.fields),(visible,original)=>toolbar(
+        button('Inspect field',()=>chooseField(original),{small:true}),
+        button('Review group',()=>chooseGroup(original),{small:true}),button('All group rows',()=>groupRows(original),{small:true}))));
+    paging.append(pager(state.fields,loadFields));
   }else {
     const list=el('div',undefined,'item-list');
     for(const decision of state.decisions.decisions||[]){
@@ -707,7 +857,7 @@ function renderRunTable() {
         el('p',decision.reason||'','wrap'),details('Complete saved decision',decision));
       const subject=decision.subject;
       if(subject)p.append(toolbar(button('Review this subject',async()=>{
-        state.subject=clone(subject);state.rowDetail=null;
+        state.subject=clone(subject);state.rowDetail=null;state.fieldDetail=null;
         if(subject.kind==='row')state.rowDetail=await api(runPath('row')+query({side:subject.side,row:subject.row}));
         renderSubject();renderDecisionEditor();notice('Original decision subject selected.');
       },{small:true})));
@@ -721,6 +871,7 @@ function renderSubject() {
   const root=$('selected-subject');if(!root)return;
   root.replaceChildren();if(!state.subject)return;
   const subject=state.subject,selected=panel(subject.kind==='group'?'Selected key group '+subject.group_id:'Selected '+subject.side+' row '+subject.row);
+  if(state.fieldDetail&&subject.kind==='group'&&indexValue(state.fieldDetail.group_id,'group')===subject.group_id)selected.append(fieldInspection(state.fieldDetail));
   if(state.rowDetail){
     selected.append(facts([['Original edition',state.rowDetail.edition_id],['Side',state.rowDetail.side],['Row index',state.rowDetail.row]]));
     const original=state.rowDetail.original||{},canonical=state.rowDetail.canonical||{};
@@ -728,7 +879,7 @@ function renderSubject() {
       el('h4','Canonical comparison values','spacer'),grid(['Canonical field','Native value'],Object.entries(canonical)),
       details('Complete original and canonical row',state.rowDetail));
   }else selected.append(el('p','The decision applies to this complete key group. Open All group rows to inspect both sides and every duplicate.','muted'));
-  selected.append(toolbar(button('Clear selection',async()=>{state.subject=null;state.rowDetail=null;renderSubject();renderDecisionEditor();notice('Review selection cleared.');},{small:true})));
+  selected.append(toolbar(button('Clear selection',async()=>{state.subject=null;state.rowDetail=null;state.fieldDetail=null;renderSubject();renderDecisionEditor();notice('Review selection cleared.');},{small:true})));
   root.append(selected);
 }
 function renderDecisionEditor() {
@@ -891,7 +1042,7 @@ function renderReports() {
       }),button('Prepare complete handover',async()=>{
         const result=await retained(API+'/exports',{report_id:report.report_id});await receiveResult(API+'/exports',result);notice('Full native report export and warehouse handover prepared.','success');
       },{primary:true})),
-      details('Complete frozen definition',report.definition),details('Complete immutable report',report)));
+      comparisonRulesView(report.definition,report.review?.comparison_rules),details('Complete frozen definition',report.definition),details('Complete immutable report',report)));
     if(report.before_run_id){
       const changes=panel('Changes from the previous run',
         el('p','These are the complete native group comparisons. Absence remains explicit, and decisions stay attached to the run where they were made.','muted'),
@@ -900,7 +1051,9 @@ function renderReports() {
     }
     const queries=panel('Original saved query recipes');
     for(const q of report.queries||[]){
-      queries.append(panel(q.kind||q.name,facts([['Query name',q.name],['Query',q.query_id],['Revision',q.revision]]),
+      queries.append(panel(q.kind==='fields'?'Complete field differences':q.kind||q.name,
+        q.kind==='fields'?el('p','The complete handover includes every recorded field, raw value, exact difference, allowance and rule in the original CSV and Parquet query exports.','hint'):null,
+        facts([['Query name',q.name],['Query',q.query_id],['Revision',q.revision]]),
         details('Complete saved SQL and parameters',{sql:q.sql,parameters_text:q.parameters_text}),details('Full native query record',q)));
     }
     right.append(queries);

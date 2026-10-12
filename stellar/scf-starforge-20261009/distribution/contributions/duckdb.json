@@ -1,7 +1,7 @@
 {
   "schema": "stellar-forge.merchant-distribution-contribution.v1",
   "id": "duckdb",
-  "description": "DuckDB and Parquet data products with complete Timescale commissioning intake, paired reconciliation, review decisions and native customer handover",
+  "description": "DuckDB and Parquet data products with complete Timescale intake, reviewed numeric reconciliation, engineer decisions and native customer handover",
   "commands": {
     "duckdb": "stellar/scf-starforge-20261009/sf30-seller-sdk/duckdb/start.mjs",
     "duckdb-inspect": "stellar/scf-starforge-20261009/sf30-seller-sdk/duckdb/inspect.mjs",
@@ -92,7 +92,9 @@
     "stellar-forge/mcp-paid-agent/duckdb-timescale-client.d.mts",
     "stellar-forge/mcp-paid-agent/duckdb-timescale-receiving.mjs",
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/duckdb_semantics.py",
-    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/timescale_intake/browser-receiving.mjs"
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/timescale_intake/browser-receiving.mjs",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/reconciliation/comparison_rules.py",
+    "stellar-forge/mcp-paid-agent/duckdb-reconciliation-client.d.mts"
   ],
   "merchantProviders": {
     "coinmetrics-cloud-workspaces": "stellar/scf-starforge-20261009/sf30-seller-sdk/duckdb/cloud-delivery/merchant-provider.mjs"

@@ -264,12 +264,84 @@ export async function runReconciliationBrowserReceiving({url,input,outputDirecto
   });
   await idle();
   need((await page.getByLabel('Pair name',{exact:true}).inputValue())===input.definition.name,'The complete original definition was not imported.');
+  const observedRules=[];
+  for(const [index,column] of input.definition.columns.entries()){
+   const rule=column.comparison;if(!plain(rule)||rule.mode!=='numeric-tolerance')continue;
+   const controls=page.locator('[data-comparison-column="'+index+'"]');
+   need(await controls.count()===1,'The original numeric field rule is absent from the visible definition.');
+   const values={
+    mode:await controls.getByLabel(/^Comparison mode(?:\s|$)/).inputValue(),
+    absolute:await controls.getByLabel(/^Absolute allowance(?:\s|$)/).inputValue(),
+    relative:await controls.getByLabel(/^Relative fraction(?:\s|$)/).inputValue(),
+    unit:await controls.getByLabel(/^Source unit(?:\s|$)/).inputValue(),
+    nulls:await controls.getByLabel('Two SQL NULL values',{exact:true}).inputValue(),
+    basis:await controls.getByLabel(/^Review basis(?:\s|$)/).inputValue()
+   };
+   need(stable(values)===stable(rule),'The visible numeric rule changed its original literal values.');
+   observedRules.push({column_index:index,column_name:column.name,comparison:values});
+  }
+  if(observedRules.length){record.observed_rule_controls=observedRules;await save();}
   await visibleAction(page.getByRole('button',{name:'Review mapping',exact:true}));
   const review=await detail('Complete native mapping review',page.locator('#mapping-review'));
   need(review.workspace_id===input.workspace_id&&review.definition.source_edition===input.definition.source_edition&&
    review.definition.target_edition===input.definition.target_edition&&ID.test(review.review_sha256??''),
    'The visible mapping review changed its original source editions.');
   return {workspace_id:input.workspace_id,expected_revision:0,definition:review.definition,review_sha256:review.review_sha256};
+ }
+ async function observeFieldsUI(run){
+  if(!run.comparison_rules)return;
+  if(record.observed_fields?.complete){
+   need(record.observed_fields.run_id===run.run_id&&
+    stable(record.observed_fields.comparison_rules)===stable(run.comparison_rules),
+    'The original recorded field observation belongs to another run or rule set.');
+   return;
+  }
+  record.phase='FIELDS';await save();
+  await reopen(record.steps.run,'reconciliation');
+  await visibleAction(page.getByRole('tab',{name:'Field differences',exact:true}));
+  const visibleColumns=['group_id','column_name','source_value_text','target_value_text','state','absolute_difference','allowed_difference','unit'];
+  const scalar=value=>plain(value)&&Object.hasOwn(value,'text')&&Object.hasOwn(value,'type')?(value.type==='null'?null:value.text):value;
+  const displayed=value=>{const raw=scalar(value);return raw===null||raw===undefined?'NULL':raw===''?'EMPTY STRING':typeof raw==='object'?JSON.stringify(raw):String(raw);};
+  const digest=createHash('sha256'),states={};let offset=0,rows=0,pages=0,total=null,first=null;
+  for(;;){
+   const native=await get(API+'/runs/'+run.run_id+'/fields?offset='+offset+'&limit=50');
+   need(native.run_id===run.run_id&&Array.isArray(native.columns)&&Array.isArray(native.rows),
+    'The original field page has a different run binding.');
+   const names=native.columns.map(column=>typeof column==='string'?column:column.name);
+   need(visibleColumns.every(name=>names.includes(name)),'The native field page lacks an original displayed field.');
+   const objects=native.rows.map(row=>Array.isArray(row)?Object.fromEntries(names.map((name,index)=>[name,row[index]])):row);
+   const visible=await page.locator('#run-grid tbody tr').evaluateAll(lines=>lines.map(line=>Array.from(line.querySelectorAll('td.value')).map(cell=>cell.textContent)).filter(cells=>cells.length));
+   need(stable(visible)===stable(objects.map(row=>visibleColumns.map(name=>displayed(row[name])))),
+    'The visible field page differs from its complete native values.');
+   if(total===null)total=native.total;
+   need(native.total===total,'The original immutable field total changed while reading.');
+   digest.update(stable(native.rows)+'\n');pages++;rows+=objects.length;
+   if(!first&&objects.length)first=objects[0];
+   for(const row of objects){const key=String(scalar(row.state));states[key]=(states[key]||0)+1;}
+   if(native.next_offset===null||native.next_offset===undefined)break;
+   need(Number.isSafeInteger(native.next_offset)&&native.next_offset>offset,'The original field continuation did not advance.');
+   await visibleAction(page.locator('#run-grid-pager').getByRole('button',{name:'Next',exact:true}));
+   offset=native.next_offset;
+  }
+  need(rows===total,'The recorded field continuation did not include every native row.');
+  if(first){
+   await page.getByLabel('Field group identifier',{exact:true}).fill(String(scalar(first.group_id)));
+   await page.getByLabel('Canonical value field',{exact:true}).fill(String(scalar(first.column_name)));
+   await page.getByLabel('Field result',{exact:true}).selectOption(String(scalar(first.state)));
+   await visibleAction(page.getByRole('button',{name:'Apply field filters',exact:true}));
+   const inspect=page.locator('#run-grid').getByRole('button',{name:'Inspect field',exact:true});
+   need(await inspect.count()===1,'The original group/field/state selection did not retain its exact field.');
+   await visibleAction(inspect);
+   const observed=await detail('Complete recorded field',page.locator('#selected-subject'));
+   need(stable(observed)===stable(first),'The full visible field record changed an original value, rule or difference.');
+   await visibleAction(page.locator('#selected-subject').getByRole('button',{name:'All group rows',exact:true}));
+   need(await page.getByRole('tab',{name:'Original rows',exact:true}).getAttribute('aria-selected')==='true',
+    'The recorded field did not reopen its original group observations.');
+  }
+  record.observed_fields={complete:true,run_id:run.run_id,comparison_rules:run.comparison_rules,
+   total,rows,pages,states,ordered_page_rows_sha256:digest.digest('hex'),
+   inspected_original_field:first,completed_at:new Date().toISOString()};
+  await save();
  }
  async function prepareDecisionUI(runId){
   await reopen(record.steps.run,'reconciliation');
@@ -325,6 +397,7 @@ export async function runReconciliationBrowserReceiving({url,input,outputDirecto
    });
   need(ID.test(run.run_id??'')&&run.pair_id===pair.pair_id&&run.summary?.accounting_balanced===true,
    'The native run did not account for all original rows.');
+  await observeFieldsUI(run);
   // OPEN records an actual observation without inventing a correction.
   let preparedDecision=null;
   if(!record.steps.decision)preparedDecision=await prepareDecisionUI(run.run_id);
@@ -390,6 +463,7 @@ export async function runReconciliationBrowserReceiving({url,input,outputDirecto
    original_file_count:exported.files.length,original_total_bytes:exported.files.reduce((sum,file)=>sum+file.bytes,0),
    source_edition:input.definition.source_edition,target_edition:input.definition.target_edition,
    browser_errors:errors,screenshots,directory:root,
+   ...(record.observed_fields?{observed_fields:record.observed_fields}:{}),
    continuation:'Receive every original export file through the same native typed client, then reopen the original report from the separate sparse working warehouse.'};
   await save();return record.result;
  }catch(error){

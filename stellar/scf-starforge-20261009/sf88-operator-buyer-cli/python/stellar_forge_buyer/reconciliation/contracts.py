@@ -7,12 +7,13 @@ import re
 from ..duckdb_dataset import _convert, _hex, _json, _name, _qid
 from ..errors import StateError
 from ..storage import digest
+from .comparison_rules import validate_rule, manifest as rules_manifest
 
 SCHEMA = "stellar-forge.duckdb-reconciliation.v1"
 REQUEST = re.compile(r"^[0-9a-f]{32}$")
 OUTCOMES = ("OPEN", "ACCEPTED_DIFFERENCE", "REQUIRES_CORRECTION", "DEFERRED")
 CATEGORIES = ("MATCHED", "SOURCE_ONLY", "TARGET_ONLY", "VALUE_DIFFERENCE",
-              "MULTISET_DIFFERENCE", "NOT_COMPARABLE")
+              "MULTISET_DIFFERENCE", "NOT_COMPARABLE", "TOLERANCE_MATCHED")
 STATUSES = ("INCLUDED", "QUARANTINED", "EXCLUDED_WINDOW")
 MAX_COLUMNS = 64
 MAX_MAP = 10000
@@ -93,7 +94,7 @@ def definition(value, source, target):
     columns, used, seen = [], {"source": set(), "target": set()}, set()
     for item in value["columns"]:
         fields(item, ("name", "source", "target", "role"),
-               ("meaning", "source_map", "target_map"))
+               ("meaning", "source_map", "target_map", "comparison"))
         canonical = _name(item["name"])
         if canonical.casefold() in seen:
             fail("CANONICAL_COLUMN_DUPLICATE")
@@ -111,9 +112,11 @@ def definition(value, source, target):
         maps = {side + "_map": mapping(item.get(side + "_map", [])) for side in ("source", "target")}
         if any(maps.values()) and a["type"] != "VARCHAR":
             fail("EXACT_VARCHAR_MAP_REQUIRED")
+        rule = ({"comparison": validate_rule(item["comparison"], item["role"], a["type"])}
+                if "comparison" in item else {})
         columns.append({"name": canonical, "source": item["source"], "target": item["target"],
                         "role": item["role"], "meaning": text(item.get("meaning", ""), empty=True),
-                        **maps})
+                        **maps, **rule})
     if not any(x["role"] == "key" for x in columns):
         fail("KEY_COLUMNS_REQUIRED")
     selected = {x["name"]: originals["source"][x["source"]] for x in columns}
@@ -176,6 +179,12 @@ def bound_review(value, source, target, source_meanings, target_meanings, worksp
               "target": public_edition(target, target_meanings),
               "comparison_columns": types, "omitted": omitted,
               "comparison_basis": "Exact original SQL types and reviewed literal VARCHAR maps; no implicit rounding, tolerance, unit or timezone conversion."}
+    rules = rules_manifest(normalized, types)
+    if rules:
+        review["comparison_rules"] = rules
+        review["comparison_basis"] = ("Exact native keys and source units; explicitly reviewed numeric value allowances: " +
+                                     rules["formula"] + ". Duplicate groups retain exact multiset accounting. " +
+                                     "No implicit rounding, unit or timezone conversion.")
     return {**review, "review_sha256": sha(review)}
 
 
@@ -223,7 +232,7 @@ def pair_key(review):
 
 def table(kind, identity):
     _hex(identity)
-    if kind not in {"rows", "values", "groups"}:
+    if kind not in {"rows", "values", "groups", "fields"}:
         fail("TABLE_KIND_INVALID")
     return "sf_reconciliation_" + kind + "_" + identity
 
