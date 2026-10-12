@@ -56,6 +56,13 @@ PRESERVICA_APPLICATION = (
     "research/preservation/PRESERVICA.md",
     "research/preservation/PRESERVICA_PROVIDER_CONTRACT.md",
 )
+LIBNOVA_APPLICATION = (
+    "research/preservation/libnova.py",
+    "research/preservation/libnova_client.py",
+    "research/preservation/LIBNOVA.md",
+    "research/preservation/LIBNOVA_PROVIDER_CONTRACT.md",
+    "research/preservation/libnova-requirements.txt",
+)
 
 
 class Problem(Exception):
@@ -296,8 +303,33 @@ def load_preservica():
     return preservica, preservica_client
 
 
+def load_libnova():
+    module_path = Path(__file__).with_name("libnova.py")
+    client_path = Path(__file__).with_name("libnova_client.py")
+    if not module_path.is_file() or not client_path.is_file():
+        return None, None
+    import libnova
+    import libnova_client
+    return libnova, libnova_client
+
+
+def selected_provider(provider):
+    if provider == "preservica":
+        producer, client = load_preservica()
+        label = "Preservica"
+    elif provider == "libnova":
+        producer, client = load_libnova()
+        label = "LIBNOVA"
+    else:
+        raise Problem("DESTINATION", "Select an original saved provider.")
+    if producer is None or client is None:
+        raise Problem("APPLICATION_SOURCE", "Install the complete " + label + " producer, client and guides.")
+    return producer, client
+
+
 def provider_templates():
     producer, client = load_preservica()
+    libnova, libnova_client = load_libnova()
     agreement = roda.agreement_template()
     return {
         "roda": {
@@ -316,6 +348,11 @@ def provider_templates():
             "configuration": client.configuration_template() if client else None,
             "reconciliationTemplates": {kind: client.reconciliation_template(kind)
                 for kind in ("original-response", "progress-observation", "process-observation")} if client else {}},
+        "libnova": {"label": "LIBNOVA", "available": libnova is not None and libnova_client is not None,
+            "settings": libnova.mapping_template() if libnova else None,
+            "configuration": libnova_client.configuration_template() if libnova_client else None,
+            "reconciliationTemplates": {kind: libnova_client.reconciliation_template(kind)
+                for kind in ("original-function-response", "original-job-id")} if libnova_client else {}},
     }
 
 
@@ -471,7 +508,7 @@ class Workbench:
         root = self.operations / operation_id
         value = read_json(root / "selection.json")
         if (value.get("schema") != SCHEMA + ".operation" or value.get("id") != operation_id
-                or value.get("provider") not in {"roda", "preservica"}):
+                or value.get("provider") not in {"roda", "preservica", "libnova"}):
             raise Problem("OPERATION", "The saved destination selection is invalid.")
         selected_review(value.get("selection"))
         expected = value.get("requestSha256")
@@ -497,9 +534,7 @@ class Workbench:
                 result["package"] = roda.show(prepared)
                 result["progress"] = roda_client.status(prepared)
             else:
-                producer, client = load_preservica()
-                if producer is None:
-                    raise Problem("APPLICATION_SOURCE", "Install the complete Preservica application source.")
+                producer, client = selected_provider(value["provider"])
                 result["package"] = producer.show(prepared)
                 result["progress"] = client.show(prepared, operation_id)
         except BaseException as error:
@@ -573,16 +608,22 @@ class Workbench:
             raise Problem("DESTINATION", "A destination requires its complete saved source and configuration.")
         operation_id = identifier(request["id"])
         provider = request["provider"]
-        if provider not in {"roda", "preservica"}:
-            raise Problem("DESTINATION", "Select RODA or Preservica.")
+        if provider not in {"roda", "preservica", "libnova"}:
+            raise Problem("DESTINATION", "Select RODA, Preservica or LIBNOVA.")
         selected_review(request["selection"])
         p.text(request["label"], "destination label", empty=False)
         if not isinstance(request["settings"], dict) or not isinstance(request["configuration"], dict):
             raise Problem("DESTINATION", "Settings and configuration must be complete JSON objects.")
         if provider == "roda" and not isinstance(request["jobTemplate"], dict):
             raise Problem("DESTINATION", "Select the complete RODA ingest job template.")
-        if provider == "preservica" and request["jobTemplate"] is not None:
-            raise Problem("DESTINATION", "Preservica destination does not use a RODA job template.")
+        if provider in {"preservica", "libnova"} and request["jobTemplate"] is not None:
+            raise Problem("DESTINATION", "This destination does not use a RODA job template.")
+        if provider == "libnova":
+            producer, client = selected_provider(provider)
+            request = json.loads(json.dumps(request))
+            prevent_literal_credentials(request["configuration"])
+            request["settings"] = producer.normalize_mapping(request["settings"])
+            request["configuration"] = client.normalize_configuration(request["configuration"])
         root = self.operations / operation_id
         expected = p.digest(p.canonical(request))
         if root.exists():
@@ -599,9 +640,7 @@ class Workbench:
                     roda.validate_agreement(p.canonical(request["settings"]))
                     roda_client._config(stage / "configuration.json")
                 else:
-                    producer, client = load_preservica()
-                    if producer is None:
-                        raise Problem("APPLICATION_SOURCE", "Install the complete Preservica application source.")
+                    producer, client = selected_provider(provider)
                 write_json(stage / "selection.json", {
                     "schema": SCHEMA + ".operation", **request,
                     "requestSha256": expected, "createdAt": p.utc()})
@@ -620,6 +659,16 @@ class Workbench:
             p.build(frozen, bag, request["selection"]["revision"], zipped=True)
             roda.prepare(bag, root / "settings.json", prepared)
             roda_client.plan(prepared, root / "configuration.json", root / "job-template.json")
+        elif provider == "libnova":
+            producer, client = selected_provider(provider)
+            bag = root / "original-transfer.zip"
+            p.build(frozen, bag, request["selection"]["revision"], zipped=True)
+            producer.prepare(bag, prepared, request["settings"])
+            client.plan(prepared, request["configuration"], operation_id)
+            self.artifact(bag, "libnova-original-bagit", request["selection"], operation_id)
+            report = prepared / "report.html"
+            if report.is_file():
+                self.artifact(report, "libnova-source-review", request["selection"], operation_id)
         else:
             producer, client = load_preservica()
             producer.prepare(frozen, prepared, request["selection"]["revision"], settings=request["settings"])
@@ -627,7 +676,45 @@ class Workbench:
         package = prepared / "transfer.zip"
         if package.is_file():
             self.artifact(package, provider, request["selection"], operation_id)
+        if provider == "libnova":
+            self.libnova_receiving_artifacts(operation_id)
         return self.migration_status(operation_id)
+
+    def libnova_receiving_artifacts(self, operation_id):
+        root, selected = self.operation(operation_id)
+        if selected["provider"] != "libnova":
+            raise Problem("DESTINATION", "Select the original LIBNOVA destination.")
+        producer, client = selected_provider("libnova")
+        prepared = root / "prepared"
+        with producer.lock(prepared):
+            progress = client.show(prepared, operation_id)
+            state = progress["state"]
+            if state.get("state") != "VERIFIED":
+                return []
+            proof = state.get("proof")
+            if (not isinstance(proof, dict) or set(proof) != {"path", "bytes", "sha256"}
+                    or type(proof["bytes"]) is not int or proof["bytes"] < 0
+                    or not isinstance(proof["sha256"], str) or not HASH.fullmatch(proof["sha256"])
+                    or proof["path"] != "receiving/" + proof["sha256"] + ".json"
+                    or state.get("report") != "receiving/" + proof["sha256"] + ".html"):
+                raise Problem("RECEIVING_EVIDENCE", "The saved LIBNOVA receiving identity is invalid.")
+            operation_root = prepared / "operations" / operation_id
+            proof_path = operation_root / proof["path"]
+            if file_digest(proof_path) != {"bytes": proof["bytes"], "sha256": proof["sha256"]}:
+                raise Problem("RECEIVING_EVIDENCE", "The original receiving evidence changed.")
+            evidence = read_json(proof_path, MAX_SNAPSHOT_MEMBER)
+            if (evidence.get("schema") != "stellar-forge.libnova-operation.v1.receiving"
+                    or evidence.get("operationId") != operation_id
+                    or evidence.get("packageId") != progress["operation"]["packageId"]
+                    or evidence.get("summary") != state.get("summary")
+                    or evidence.get("job") != state.get("job")):
+                raise Problem("RECEIVING_EVIDENCE", "The receiving report belongs to different saved results.")
+            report_path = operation_root / state["report"]
+            regular(report_path)
+            return [
+                self.artifact(proof_path, "libnova-receiving-evidence", selected["selection"], operation_id),
+                self.artifact(report_path, "libnova-receiving-report", selected["selection"], operation_id),
+            ]
 
     def continue_migration(self, operation_id, action, evidence=None):
         root, selected = self.operation(operation_id)
@@ -649,9 +736,7 @@ class Workbench:
             else:
                 raise Problem("ACTION", "Unknown saved migration action.")
         else:
-            producer, client = load_preservica()
-            if producer is None:
-                raise Problem("APPLICATION_SOURCE", "Install the complete Preservica application source.")
+            producer, client = selected_provider(selected["provider"])
             if action == "run":
                 result = client.run(prepared, operation_id)
             elif action == "refresh":
@@ -662,6 +747,8 @@ class Workbench:
                 result = client.reconcile(prepared, operation_id, evidence)
             else:
                 raise Problem("ACTION", "Unknown saved migration action.")
+        if selected["provider"] == "libnova":
+            self.libnova_receiving_artifacts(operation_id)
         return {"operationId": operation_id, "result": result,
                 "migration": self.migration_status(operation_id)}
 
@@ -728,9 +815,30 @@ def snapshot_manifest(archive):
     required = {"workspace/project.json", "workspace/prepared.json", "workspace/current.json",
                 "operator/jobs.json", "operator/artifacts.json"}
     required.update("application/" + name for name in APPLICATION)
-    provider_names = {"application/" + name for name in PRESERVICA_APPLICATION}
-    if provider_names & set(descriptors):
-        required.update(provider_names)
+    provider_groups = {"preservica": PRESERVICA_APPLICATION, "libnova": LIBNOVA_APPLICATION}
+    for source_group in provider_groups.values():
+        provider_names = {"application/" + name for name in source_group}
+        if provider_names & set(descriptors):
+            required.update(provider_names)
+    # The retained destination also requires its provider even if an archive
+    # omits every member of that optional source group.
+    for name in descriptors:
+        match = re.fullmatch(r"operator/operations/([^/]+)/selection\.json", name)
+        if match is None or match.group(1).startswith("."):
+            continue
+        operation_id = identifier(match.group(1))
+        if descriptors[name]["bytes"] > BODY_LIMIT:
+            raise Problem("SNAPSHOT_LIMIT", "The saved destination selection exceeds its receiving limit.")
+        saved = p.parse_json(archive.read(name))
+        request_fields = ("id", "provider", "label", "selection", "settings", "configuration", "jobTemplate")
+        if (not isinstance(saved, dict) or saved.get("schema") != SCHEMA + ".operation"
+                or saved.get("id") != operation_id or saved.get("provider") not in {"roda", "preservica", "libnova"}
+                or any(field not in saved for field in request_fields)):
+            raise Problem("SNAPSHOT_OPERATION", "The snapshot destination selection is invalid.", member=name)
+        selected_review(saved["selection"])
+        if p.digest(p.canonical({field: saved[field] for field in request_fields})) != saved.get("requestSha256"):
+            raise Problem("SNAPSHOT_OPERATION", "The original destination choices changed.", member=name)
+        required.update("application/" + item for item in provider_groups.get(saved["provider"], ()))
     if not required <= set(descriptors):
         raise Problem("SNAPSHOT_MANIFEST", "The complete application/workspace closure is incomplete.")
     for name, expected in descriptors.items():
@@ -756,25 +864,39 @@ def export_workspace(app, output):
         current, saved = p.current_review(app.root, prepared)
         selection = {"sourceManifestSha256": project["binding"]["manifestSha256"],
                      "revision": current["revision"], "reviewSha256": current["reviewSha256"]}
+        libnova_operations = set()
         for operation_root in sorted(app.operations.iterdir()):
             if operation_root.is_dir() and not operation_root.name.startswith("."):
+                _, selected = app.operation(operation_root.name)
+                if selected["provider"] == "libnova":
+                    libnova_operations.add(operation_root.name)
                 if (operation_root / "prepared").is_dir():
-                    locks.enter_context(p.project_lock(operation_root / "prepared"))
+                    if selected["provider"] == "libnova":
+                        producer, _ = selected_provider("libnova")
+                        locks.enter_context(producer.lock(operation_root / "prepared"))
+                    else:
+                        locks.enter_context(p.project_lock(operation_root / "prepared"))
         members = {}
         for name, path in tree_files(app.root).items():
             if name != "workspace.lock":
                 members["workspace/" + name] = path
         for name, path in tree_files(app.control).items():
+            parts = name.split("/")
+            libnova_runtime_lock = (len(parts) >= 3 and parts[0] == "operations"
+                and parts[1] in libnova_operations and (
+                    parts[2:] == ["prepared", ".libnova.lock"]
+                    or len(parts) == 3 and re.fullmatch(r"\.libnova-output-[0-9a-f]{32}\.lock", parts[2])))
             if (name == "server.lock" or name.endswith(("/workspace.lock", "/operation.lock"))
-                    or name.startswith("deliveries/")):
+                    or name.startswith("deliveries/") or libnova_runtime_lock):
                 continue
             members["operator/" + name] = path
         source_names = list(APPLICATION)
-        present = [(application_root / name).is_file() for name in PRESERVICA_APPLICATION]
-        if any(present):
-            if not all(present):
-                raise Problem("APPLICATION_SOURCE", "Install all Preservica source and guide members before exporting.")
-            source_names.extend(PRESERVICA_APPLICATION)
+        for label, source_group in (("Preservica", PRESERVICA_APPLICATION), ("LIBNOVA", LIBNOVA_APPLICATION)):
+            present = [(application_root / name).is_file() for name in source_group]
+            if any(present):
+                if not all(present):
+                    raise Problem("APPLICATION_SOURCE", "Install all " + label + " source and guide members before exporting.")
+                source_names.extend(source_group)
         for name in source_names:
             path = application_root / name
             regular(path)
@@ -932,6 +1054,10 @@ def validated_destination(app, body):
             raise Problem("APPLICATION_SOURCE", "Install the complete Preservica application source.")
         request["configuration"] = client.validate_configuration(request["configuration"])
         request["settings"] = producer.validate_settings(request["settings"])
+    elif request["provider"] == "libnova":
+        producer, client = selected_provider("libnova")
+        request["configuration"] = client.normalize_configuration(request["configuration"])
+        request["settings"] = producer.normalize_mapping(request["settings"])
     elif request["provider"] == "roda":
         roda.validate_agreement(p.canonical(request["settings"]))
         if not isinstance(request["configuration"], dict):
@@ -943,7 +1069,7 @@ def validated_destination(app, body):
             write_json(path, request["configuration"])
             roda_client._config(path)
     else:
-        raise Problem("DESTINATION", "Select RODA or Preservica.")
+        raise Problem("DESTINATION", "Select RODA, Preservica or LIBNOVA.")
     return request
 
 
@@ -1035,7 +1161,10 @@ class Handler(http.server.BaseHTTPRequestHandler):
                     (after.st_size, after.st_mtime_ns, after.st_ctime_ns)):
                 raise Problem("ARTIFACT_CHANGED", "The saved delivery file differs from its original identity.")
             incoming.seek(0)
-            self.response_headers(200, info.st_size, "application/zip", item["name"])
+            content_type = {".zip": "application/zip", ".json": "application/json; charset=utf-8",
+                            ".html": "text/html; charset=utf-8", ".csv": "text/csv; charset=utf-8"}.get(
+                                Path(item["name"]).suffix.lower(), "application/octet-stream")
+            self.response_headers(200, info.st_size, content_type, item["name"])
             self.send_header("X-Content-SHA256", item["sha256"])
             self.end_headers()
             with contextlib.suppress(BrokenPipeError, ConnectionResetError):
@@ -1070,8 +1199,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
                     root, selected = self.app.operation(operation_id)
                     progress = {"status": "OPERATOR_RUNNING",
                                 "message": "The original operator action is still running. Its saved identifiers remain selected."}
-                    if selected["provider"] == "preservica" and (root / "prepared").is_dir():
-                        _, client = load_preservica()
+                    if selected["provider"] in {"preservica", "libnova"} and (root / "prepared").is_dir():
+                        _, client = selected_provider(selected["provider"])
                         if client is not None:
                             try:
                                 progress = client.show(root / "prepared", operation_id)
@@ -1207,11 +1336,12 @@ def managed_binding(workspace):
                          "sourceRecords": len(prepared["records"])})
     source_root = Path(__file__).resolve().parents[2]
     names = list(APPLICATION)
-    optional = [(source_root / name).exists() for name in PRESERVICA_APPLICATION]
-    if any(optional):
-        if not all(optional):
-            raise Problem("APPLICATION_SOURCE", "Retain the complete original Preservica source and guides.")
-        names.extend(PRESERVICA_APPLICATION)
+    for label, source_group in (("Preservica", PRESERVICA_APPLICATION), ("LIBNOVA", LIBNOVA_APPLICATION)):
+        optional = [(source_root / name).exists() for name in source_group]
+        if any(optional):
+            if not all(optional):
+                raise Problem("APPLICATION_SOURCE", "Retain the complete original " + label + " source and guides.")
+            names.extend(source_group)
     hashes = {name: file_digest(source_root / name, BODY_LIMIT)["sha256"] for name in names}
     current_parent = parent.stat()
     if (parent_info.st_dev, parent_info.st_ino) != (current_parent.st_dev, current_parent.st_ino):
