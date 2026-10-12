@@ -3,7 +3,6 @@ import { constants } from 'node:fs';
 import { open, lstat, readFile, realpath, link, unlink, rename } from 'node:fs/promises';
 import { dirname, join, relative } from 'node:path';
 import { randomUUID, createHash } from 'node:crypto';
-import { createInterface } from 'node:readline';
 import { spawn } from 'node:child_process';
 import {
   absolute, privateDirectory, readJson, readPrivate, hashPrivate, bytes, digest, identity,
@@ -174,26 +173,38 @@ async function rowPages(root,report,source,add) {
       renderRowPage(report,buffers[category],category,page,report.pages[category].length),'text/html; charset=utf-8'));
     buffers[category]=[];
   }
-  let lines;
+  async function consume(line) {
+    need(line.length>0&&line.length<=8*MiB,'BRIEFING_ROW_INVALID');
+    let row;try{row=JSON.parse(line);}catch{throw fault('BRIEFING_ROW_INVALID');}
+    need(object(row)&&row.ordinal===counts.all&&categories.includes(row.status)&&row.status!=='all'&&
+      object(row.key)&&Array.isArray(row.changes)&&
+      (row.left===null||object(row.left))&&(row.right===null||object(row.right)),
+    'BRIEFING_ROW_INVALID');
+    for(const category of ['all',row.status]) {
+      counts[category]++;buffers[category].push(row);
+      if(buffers[category].length===report.rowsPerPage)await flush(category);
+    }
+  }
   try {
     const before=await handle.stat();
     need(before.isFile()&&before.nlink===1&&!(before.mode&0o077)&&before.size===source.size,'BRIEFING_ROWS_CHANGED');
-    const stream=handle.createReadStream({autoClose:false});
     const hash=createHash('sha256');let size=0;
-    stream.on('data',chunk=>{hash.update(chunk);size+=chunk.length;});
-    lines=createInterface({input:stream,crlfDelay:Infinity});
-    for await(const line of lines) {
-      need(line.length>0&&line.length<=8*MiB,'BRIEFING_ROW_INVALID');
-      let row;try{row=JSON.parse(line);}catch{throw fault('BRIEFING_ROW_INVALID');}
-      need(object(row)&&row.ordinal===counts.all&&categories.includes(row.status)&&row.status!=='all'&&
-        object(row.key)&&Array.isArray(row.changes)&&
-        (row.left===null||object(row.left))&&(row.right===null||object(row.right)),
-      'BRIEFING_ROW_INVALID');
-      for(const category of ['all',row.status]) {
-        counts[category]++;buffers[category].push(row);
-        if(buffers[category].length===report.rowsPerPage)await flush(category);
+    const decoder=new TextDecoder('utf-8',{fatal:true});let pending='';
+    // Await page publication before asking the original file stream for another block.
+    // readline's event queue can otherwise retain a large complete source while disk writes wait.
+    for await(const block of handle.createReadStream({autoClose:false})) {
+      hash.update(block);size+=block.length;
+      need(size<=source.size,'BRIEFING_ROWS_CHANGED');
+      pending+=decoder.decode(block,{stream:true});
+      let newline;
+      while((newline=pending.indexOf('\n'))!==-1) {
+        let line=pending.slice(0,newline);pending=pending.slice(newline+1);
+        if(line.endsWith('\r'))line=line.slice(0,-1);
+        await consume(line);
       }
+      need(pending.length<=8*MiB,'BRIEFING_ROW_INVALID');
     }
+    pending+=decoder.decode();if(pending)await consume(pending);
     const after=await handle.stat();
     need(size===source.size&&hash.digest('hex')===source.sha256&&before.size===after.size&&
       before.mtimeMs===after.mtimeMs&&before.ctimeMs===after.ctimeMs,'BRIEFING_ROWS_CHANGED');
@@ -204,7 +215,7 @@ async function rowPages(root,report,source,add) {
           counts[category]===report.comparison.summary[category]),'BRIEFING_ROW_COUNT_CHANGED');
     }
     return counts;
-  } finally { lines?.close();await handle.close(); }
+  } finally { await handle.close(); }
 }
 async function archive(root,manifest,files) {
   const path=join(root,'briefing.tar.gz'),part=path+'.part',receiptPath=join(root,'archive.json');
