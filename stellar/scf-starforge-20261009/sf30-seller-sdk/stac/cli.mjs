@@ -17,7 +17,7 @@ Usage:
 
 Analyst workspace:
   init       --title TEXT --endpoint URL [--transport JSON_FILE]
-  serve      [--port 0] [--max-request-bytes NUMBER]
+  serve      [--port 0] [--max-request-bytes NUMBER] [--startup-json]
              [--processing-workspace DIR [--processing-config JSON_FILE]]
   state
   discover   [--operation-id ID] [--expected-revision NUMBER]
@@ -130,14 +130,27 @@ async function keepOpen(close){
 export async function runStacCLI(argv=process.argv.slice(2)){
   const {flags,positionals}=parseArgs(argv),command=positionals[0]||'help';
   if(command==='help'||flags.help){process.stdout.write(STAC_HELP);return;}
+  if(flags['managed-selection']&&!flags['startup-json'])throw Object.assign(new Error('--managed-selection requires --startup-json.'),{code:'STAC_MANAGED_STARTUP_FLAG_REQUIRED'});
+  let managed,managedSelection;
+  if(flags['startup-json']){
+    managed=await import('./managed.mjs');
+    managedSelection=await managed.prepareStacManagedStartup({command,flags});
+  }
+  const present=async(result,close)=>{
+    try{
+      if(managedSelection)process.stdout.write(JSON.stringify(await managed.createStacManagedStartup({selection:managedSelection,result}))+'\n');
+      else stdout(result);
+    }catch(error){if(close)await close().catch(()=>{});throw error;}
+    if(close)await keepOpen(close);
+  };
   if(command.startsWith('prescient-')) {
     const {runPrescientCommand}=await import('./prescient/cli.mjs');
-    const {result,close}=await runPrescientCommand({command,flags});stdout(result);if(close)await keepOpen(close);return;
+    const {result,close}=await runPrescientCommand({command,flags});await present(result,close);return;
   }
   if(command.startsWith('eoapi-')) {
     const {runEoapiCommand}=await import('./eoapi/cli.mjs');
     const {result,close,exitCode}=await runEoapiCommand({command,flags});
-    stdout(result);if(exitCode)process.exitCode=exitCode;if(close)await keepOpen(close);return;
+    if(exitCode)process.exitCode=exitCode;await present(result,close);return;
   }
   if(command.startsWith('merchant-')||command.startsWith('customer-')){
     const {runStacCommercialCommand}=await import('./customer.mjs');
@@ -175,8 +188,7 @@ export async function runStacCLI(argv=process.argv.slice(2)){
           ...(flags['processing-config']?{config:await readJSON(required(flags,'processing-config'))}:{})});
       }
       const running=await startStacServer({workspace,...(processingController?{processing:processingController}:{}),port:number(flags,'port',0),...(flags['max-request-bytes']?{maxRequestBytes:number(flags,'max-request-bytes')}:{} )});
-      stdout({url:running.url,workspaceId:(await workspace.getState()).id});
-      await keepOpen(running.close);return;
+      await present({url:running.url,workspaceId:(await workspace.getState()).id,directory},running.close);return;
     }
     if(command==='discover'){stdout(await workspace.discover({operationId,expectedRevision}));return;}
     if(command==='query-save'){

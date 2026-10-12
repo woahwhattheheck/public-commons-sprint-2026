@@ -1,5 +1,7 @@
 import {mountEoapi} from './eoapi/ui.mjs';
 let eoapiMount=null,eoapiElement=null,eoapiWorkspaceId=null;
+function disposeEoapiView(){eoapiMount?.destroy();eoapiMount=null;eoapiElement=null;eoapiWorkspaceId=null;}
+window.addEventListener('pagehide',disposeEoapiView);
 const root=document.querySelector('#app');
 const state={workspace:null,jobs:[],queryId:null,editionId:null,tab:'search',mode:'table',page:0,pageSize:25,filter:'',statusFilter:'all',draft:null,detail:null,csrf:null,maxRequestBytes:128*1024*1024,dialog:null,notice:null,comparison:null,comparisonIds:null,pendingJobs:new Set(),busy:new Set()};
 const array=value=>Array.isArray(value)?value:value&&typeof value==='object'?Object.values(value):[];
@@ -259,6 +261,7 @@ window.addEventListener('pagehide',disposePrescientView);
 
 function renderApp(){
   if(!state.workspace)return;
+  if(state.tab==='eoapi'&&!state.eoapi)state.tab=state.editionId?'scenes':'search';
   if(!state.prescientEnabled){disposePrescientView();if(state.tab==='prescient')state.tab='search';}
   if(state.tab==='processing'&&!state.processingCapabilities)state.tab=state.editionId?'scenes':'search';
   if(state.tab!=='processing')disposeProcessingView();
@@ -278,7 +281,7 @@ function renderApp(){
   for(const [key,label]of [['search','Catalog & query'],['scenes','Scenes & assets'],['compare','Compare editions'],['review','Selections & handover'],...(state.eoapi?[['eoapi','Customer operations']]:[]),...(state.processingCapabilities?[['processing','Processing history']]:[]),...(state.prescientEnabled?[['prescient','Prescient access']]:[])]){
     tabs.append(button(label,()=>{state.tab=key;renderApp();},{role:'tab','aria-selected':state.tab===key}));
   }
-  if(state.tab!=='eoapi'||eoapiWorkspaceId!==workspace.id){eoapiMount?.destroy();eoapiMount=null;eoapiElement=null;eoapiWorkspaceId=null;}
+  if(!state.eoapi||eoapiWorkspaceId!==workspace.id)disposeEoapiView();
   const main=node('main',{class:'workspace',id:'main'},title,tabs);
   if(state.tab==='eoapi'){
     if(!eoapiMount){eoapiElement=node('div');eoapiWorkspaceId=workspace.id;eoapiMount=mountEoapi(eoapiElement,{api,workspace:state.workspace,editionId:state.editionId});}
