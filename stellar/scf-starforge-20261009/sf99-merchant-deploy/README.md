@@ -223,7 +223,8 @@ node stellar/scf-starforge-20261009/sf99-merchant-deploy/cli.mjs check \
   --bundle /private/deployments/merchant-release-001
 ```
 
-The generated directory must be new and separate from source, inputs and state.
+The generated directory must be separate from source, inputs and state. Ordinary
+generation selects a new directory; `--resume` rejoins an original private one.
 Keep it at its generated path; units refer to its preflight. `RUNBOOK.md` contains
 the actual names, configuration paths, systemd/Caddy installation commands,
 local/public smoke, maintenance order and original backup/restore commands. Each
@@ -234,6 +235,37 @@ its preflight files. Keep the selected source release immutable: digests cover
 the configuration and service entrypoints rather than every transitive import.
 Changing those tracked bytes requires a new bundle and review. These digests
 detect changed bytes, not publication authority.
+
+### Continue an interrupted generation
+
+On the selected Linux host, use the same complete source release, original plan
+and output directory:
+
+```sh
+node stellar/scf-starforge-20261009/sf99-merchant-deploy/cli.mjs generate \
+  --plan /private/merchant/config/host.json \
+  --out /private/deployments/merchant-release-001 --resume
+```
+
+The maintained Linux file lease gives the preparation one writer. It is released
+when the command exits or its process terminates, so the next command can
+continue the original directory. Wait for an older producing command to finish
+before adopting a partial bundle written by source that predates this lease.
+
+The generator first compares every retained file with the exact output of the
+selected plan and source. It preserves complete files, appends only the missing
+suffix of a matching partial file, and creates missing files. Changed bytes,
+unrelated files, symbolic links and a different saved selection return a concrete
+conflict at the original path. The private `generation.json` records the expected
+manifest and every generated file's byte count and SHA-256. Files and directory
+entries are synced before the original `deployment.json` is completed last.
+
+The result's `generation` fields report complete-file reuse, partial-file
+continuation, newly created files and bytes written. A second call with the same
+source and plan reuses the completed bundle. Keep the directory at 0700 and its
+files at 0600 while generation is active. Once the runbook transfers the finished
+bundle to the installed service group, use `check` and the original operating
+commands to reopen that installed bundle.
 
 The source release is inferred from this module's actual location, so running
 the original optional `forge.mjs run deploy -- ...` command selects that installed

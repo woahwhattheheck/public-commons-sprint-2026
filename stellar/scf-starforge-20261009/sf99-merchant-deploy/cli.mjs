@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { generate, prepare, checkBundle } from './host.mjs';
 import { retainedRuntimeCheck } from './retained-release.mjs';
 
-const HELP = `node cli.mjs generate --plan PRIVATE_HOST.json --out NEW_PRIVATE_DIRECTORY
+const HELP = `node cli.mjs generate --plan PRIVATE_HOST.json --out PRIVATE_DIRECTORY [--resume]
 node cli.mjs inspect --plan PRIVATE_HOST.json
 node cli.mjs check --bundle PRIVATE_DIRECTORY
 node cli.mjs smoke --bundle PRIVATE_DIRECTORY [--public]
@@ -15,8 +15,10 @@ node cli.mjs maintenance --help
 Generate Caddy/systemd for original API sellers, retained SF82 releases with signed
 discovery, or the original paid-file checkout/receiver and continuous SF98 delivery.
 The bundle includes exact operating and
-recovery commands. Generation reads the selected config and writes a new bundle;
-it does not install/reload services, read environment values or execute payments.`;
+recovery commands. Generation writes a new private bundle. On the selected Linux
+host, --resume continues the same exact plan and original private directory after
+an interrupted generation. Complete files are reused; matching prefixes resume.
+Generation does not install/reload services, read environment values or execute payments.`;
 
 export async function smoke(bundle, { publicOrigin = false } = {}) {
   const p = await checkBundle(bundle);
@@ -64,17 +66,17 @@ export async function main(args = process.argv.slice(2)) {
   if (args[0] === 'container') return (await import('./container-cli.mjs')).main(args.slice(1));
   if (args[0] === 'maintenance') return (await import('./maintenance-cli.mjs')).main(args.slice(1));
   const [command, ...rest] = args;
-  const allowed = { generate: ['--plan','--out'], inspect: ['--plan'], check: ['--bundle'], smoke: ['--bundle','--public'] }[command];
+  const allowed = { generate: ['--plan','--out','--resume'], inspect: ['--plan'], check: ['--bundle'], smoke: ['--bundle','--public'] }[command];
   if (!allowed) throw new Error(HELP);
   const values = {};
   for (let i = 0; i < rest.length; i++) {
     const key = rest[i];
     if (!allowed.includes(key) || values[key] !== undefined) throw new Error(HELP);
-    if (key === '--public') values[key] = true;
+    if (key === '--public' || key === '--resume') values[key] = true;
     else { if (!rest[i + 1] || rest[i + 1].startsWith('--')) throw new Error(HELP); values[key] = rest[++i]; }
   }
   let result;
-  if (command === 'generate' && values['--plan'] && values['--out']) result = await generate(values['--plan'], values['--out']);
+  if (command === 'generate' && values['--plan'] && values['--out']) result = await generate(values['--plan'], values['--out'], { resume: values['--resume'] === true });
   else if (command === 'inspect' && values['--plan']) {
     const p = await prepare(values['--plan']);
     result = { merchant: p.merchant, kind: p.kind, mode: p.mode, origin: p.publicOrigin,
