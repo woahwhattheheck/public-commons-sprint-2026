@@ -29,7 +29,8 @@
     },
     "./merchant-mcp/openfema/provider": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/openfema/merchant-provider.mjs",
     "./merchant-mcp/openfema/setup": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/openfema/merchant-setup.mjs",
-    "./applications/openfema": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/openfema/application.mjs"
+    "./applications/openfema": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/openfema/application.mjs",
+    "./seller/openfema/recorded-source": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/openfema/recorded-source.mjs"
   },
   "browserAssets": [
     {
@@ -47,6 +48,7 @@
     "stellar/scf-starforge-20261009/sf30-seller-sdk/openfema/README.md",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/openfema/MCP.md",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/openfema/MANAGED.md",
-    "stellar/scf-starforge-20261009/sf30-seller-sdk/openfema/mcp-client.d.mts"
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/openfema/mcp-client.d.mts",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/openfema/RECORDED_SOURCE.md"
   ]
 }
