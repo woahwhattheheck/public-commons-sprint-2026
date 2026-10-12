@@ -1,5 +1,5 @@
 const $ = (id) => document.getElementById(id);
-const views = new Set(['requests','reviews','catalog','changes','connections','handover']);
+const views = new Set(['requests','collections','reviews','catalog','changes','connections','handover']);
 const reviewLabels = {new:'New',assigned:'Assigned',in_progress:'In progress',done:'Done'};
 const preferencesKey = 'commons.open311.preferences.v1';
 const pendingKey = 'commons.open311.pending.v1:' + location.origin;
@@ -9,6 +9,15 @@ let preferences = readLocal(preferencesKey, {});
 let connectionId = typeof preferences.connectionId === 'string' ? preferences.connectionId : '';
 let captureId = typeof preferences.captureId === 'string' ? preferences.captureId : '';
 let view = views.has(preferences.view) ? preferences.view : 'requests';
+let requestSource = preferences.requestSource === 'collection' ? 'collection' : 'capture';
+let collectionId = typeof preferences.collectionId === 'string' ? preferences.collectionId : '';
+let collectionPage = {collection:null,connection:null,items:[],total:0,offset:0,limit:100,nextOffset:null};
+let collectionOffset = 0;
+let collectionSequence = 0;
+let collectionFormContext = '';
+let collectionRefreshTimer = null;
+let pauseCommand = null;
+let pauseBusy = false;
 let offset = 0;
 let page = {items:[],total:0,offset:0,limit:50};
 let selected = null;
@@ -37,7 +46,7 @@ function readSession(key, fallback) {
   try { return JSON.parse(sessionStorage.getItem(key)) ?? fallback; } catch { return fallback; }
 }
 function savePreferences() {
-  preferences = {view,connectionId,captureId};
+  preferences = {view,connectionId,captureId,requestSource,collectionId};
   try { localStorage.setItem(preferencesKey, JSON.stringify(preferences)); } catch {}
 }
 function element(tag, text, className) {
@@ -165,12 +174,13 @@ async function openCommandDatabase() {
   });
   return dbPromise;
 }
-async function pendingStorage(action, value) {
+async function pendingStorage(action, value, slot = '') {
+  const storageKey = slot ? pendingKey + ':' + slot : pendingKey;
   const database = await openCommandDatabase();
   if (database) return new Promise((resolve,reject) => {
     const transaction = database.transaction('commands',action === 'read' ? 'readonly' : 'readwrite');
     const store = transaction.objectStore('commands');
-    const request = action === 'read' ? store.get(pendingKey) : action === 'delete' ? store.delete(pendingKey) : store.put(value,pendingKey);
+    const request = action === 'read' ? store.get(storageKey) : action === 'delete' ? store.delete(storageKey) : store.put(value,storageKey);
     let result = null;
     request.onsuccess = () => { result = request.result; };
     transaction.oncomplete = () => resolve(result);
@@ -178,9 +188,9 @@ async function pendingStorage(action, value) {
     transaction.onabort = () => reject(transaction.error || new Error('The browser cancelled operation retention.'));
   });
   try {
-    if (action === 'read') return readLocal(pendingKey,null);
-    if (action === 'delete') localStorage.removeItem(pendingKey);
-    else localStorage.setItem(pendingKey,JSON.stringify(value));
+    if (action === 'read') return readLocal(storageKey,null);
+    if (action === 'delete') localStorage.removeItem(storageKey);
+    else localStorage.setItem(storageKey,JSON.stringify(value));
   } catch {
     throw new Error('The browser cannot retain this command. Free space in this browser’s local storage, then submit the same form again.');
   }
@@ -215,11 +225,14 @@ function setBusy(value) {
   for (const node of $('catalog-query-fields').querySelectorAll('input')) node.disabled = value;
   $('catalog-query-reset').disabled = value;
   renderPending();
+  renderPause();
+  renderCollectionControls();
 }
 function assertWriteReady() {
   if (!workspace) throw new Error('Open the saved workspace before making a change.');
   if (busy) throw new Error('The current operation is still running.');
   if (pending) throw new Error('Reconcile the retained operation shown above before preparing another write.');
+  if (pauseCommand || pauseBusy) throw new Error('Reconcile the retained pause request before preparing another write.');
 }
 async function mutate(endpoint, input) {
   assertWriteReady();
@@ -234,9 +247,12 @@ async function mutate(endpoint, input) {
     createdAt:new Date().toISOString(),
     state:'prepared'
   };
-  await pendingStorage('write',command);
   pending = command;
+  setBusy(true);
   renderPending();
+  try{await pendingStorage('write',command);}
+  catch(error){pending=null;renderPending();throw error;}
+  finally{setBusy(false);}
   return sendPending();
 }
 async function sendPending() {
@@ -245,6 +261,7 @@ async function sendPending() {
   let acceptedResult = null;
   setBusy(true);
   notify('Running the original saved command…');
+  if (command.endpoint === '/api/collection-run') scheduleCollectionRefresh(1200);
   try {
     const result = await api(command.endpoint,{
       method:'POST',
@@ -336,9 +353,10 @@ function downloadCsv(headers,rows,name) {
   const content = '\uFEFF' + [headers,...rows].map((row) => row.map(csvValue).join(',')).join('\r\n') + '\r\n';
   downloadBlob(new Blob([content],{type:'text/csv;charset=utf-8'}),name);
 }
-async function downloadExport(kind,id = captureId) {
-  if (kind !== 'workspace' && !id) throw new Error('Select a saved capture to export.');
-  const path = queryPath('/api/export',{kind,capture:kind === 'workspace' ? undefined : id});
+async function downloadExport(kind,id = captureId,sourceKind = 'capture') {
+  if (kind !== 'workspace' && !id) throw new Error('Select a saved source to export.');
+  if (kind === 'source' && sourceKind === 'collection') throw new Error('Open the collection’s source windows to download an exact original, or export collection JSON for every retained original together.');
+  const path = queryPath('/api/export',{kind,capture:kind === 'workspace' || sourceKind === 'collection' ? undefined : id,collection:kind === 'workspace' || sourceKind !== 'collection' ? undefined : id});
   const response = await fetch(path,{credentials:'same-origin',cache:'no-store'});
   if (!response.ok) {
     const result = await response.json().catch(() => null);
@@ -376,6 +394,8 @@ function switchView(next) {
   }
   savePreferences();
   if (view === 'reviews') renderQueue();
+  if (view === 'collections') safely(loadCollection);
+  else if (!busy) clearTimeout(collectionRefreshTimer);
   if (view === 'catalog') safely(loadCatalog);
   if (view === 'changes') renderDiffSelectors();
   if (view === 'handover') renderHandover();
@@ -386,6 +406,9 @@ async function refreshState() {
   if (!workspace.connections.some((item) => item.id === connectionId)) connectionId = workspace.connections[0]?.id || '';
   const captures = capturesFor(connectionId,true);
   if (!captures.some((item) => item.id === captureId)) captureId = captures[0]?.id || '';
+  const collections = collectionsFor();
+  if (!collections.some((item) => item.id === collectionId)) collectionId = collections[0]?.id || '';
+  if (requestSource === 'collection' && !collectionId) requestSource = 'capture';
   text('workspace-name','Workspace ' + short(workspace.workspaceId,16));
   $('workspace-name').title = workspace.workspaceId || '';
   text('workspace-revision','Saved revision ' + workspace.revision);
@@ -394,6 +417,7 @@ async function refreshState() {
   renderCaptureSelectors();
   renderConnections();
   renderCaptureHistory();
+  renderCollectionSelectors();
   renderQueue();
   renderHandover();
   renderDiffSelectors();
@@ -401,6 +425,7 @@ async function refreshState() {
   savePreferences();
   await loadRequests();
   if (view === 'catalog') await loadCatalog();
+  if (view === 'collections') await loadCollection();
 }
 function renderConnectionContext() {
   const current = connection();
@@ -414,7 +439,9 @@ function renderConnectionContext() {
   $('capture-page-size').max = current?.responseLimit || 1000;
   $('capture-page').value = '1';
   const extensionFields = document.createDocumentFragment();
+  const reservedQueryFields=new Set(['service_request_id','page','page_size','per_page','start_date','end_date','service_code','status','extensions',sourcePageSizeParameter(current)]);
   for (const key of current?.queryExtensions || []) {
+    if(reservedQueryFields.has(key))continue;
     const label = element('label',null,'field');
     label.append(element('span',key));
     const input = element('input');
@@ -424,24 +451,26 @@ function renderConnectionContext() {
     extensionFields.append(label);
   }
   $('capture-extension-fields').replaceChildren(extensionFields);
-  text('capture-scope-help',current ? 'This provider is configured for ' + (current.pagination ? 'page / page_size pagination' : 'a single returned collection') + ' with response limit ' + (current.responseLimit || 1000) + '. The capture retains its exact query and returned source.' : 'Choose a connection to capture its source.');
+  text('capture-scope-help',current ? 'This provider is configured for ' + (current.pagination ? 'page / '+sourcePageSizeParameter(current)+' pagination' : 'a single returned response') + ' with response limit ' + (current.responseLimit || 1000) + '. The capture retains its exact query and returned source.'+(current.minimumRequestIntervalMs ? ' Source calls are spaced by at least '+current.minimumRequestIntervalMs+' milliseconds.' : '') : 'Choose a connection to capture its source.');
   renderStatusOptions();
   renderCaptureKind();
+  renderCollectionForm();
 }
 function renderStatusOptions() {
-  const values = new Set(['open','closed',...(connection()?.statusValues || []),...(selectedCapture()?.statuses || []),...page.items.map((item) => status(item))]);
+  const values = new Set(['open','closed',...(connection()?.statusValues || []),...(selectedCapture()?.statuses || []),...(selectedCollection()?.statuses || []),...page.items.map((item) => status(item))]);
   $('source-statuses').replaceChildren(...[...values].filter((value) => value && value !== '—').sort().map((value) => { const item=element('option');item.value=String(value);return item; }));
 }
 function renderCaptureSelectors() {
-  const captures = capturesFor(connectionId,true);
-  const entries = captures.map((item) => ({value:item.id,label:captureLabel(item)}));
-  options('request-capture',entries,captureId,captures.length ? 'Choose a capture' : 'No saved request captures');
-  options('export-capture',entries,$('export-capture').value || captureId,captures.length ? 'Choose a capture' : 'No saved request captures');
-  text('nav-request-count',selectedCapture()?.rowCount ?? '');
-  const current = selectedCapture();
-  text('capture-context',current ? coverage(current) + ' · ' + date(current.capturedAt) + ' · query ' + objectText(current.query || {}) + (current.scope?.fixed === false ? ' · Rolling or provider-default source selection' : '') : 'Select a connection and capture its requests.');
-  $('inspect-capture').disabled = !current;
-  $('download-source').disabled = !current;
+  const entries=sourceEntries();
+  options('request-capture',entries,sourceChoice(requestSource,requestSource === 'collection' ? collectionId : captureId),entries.length ? 'Choose a saved source' : 'No saved request sources');
+  const isCollection=requestSource==='collection';
+  const current=isCollection ? selectedCollection() : selectedCapture();
+  text('nav-request-count',isCollection ? current?.counts?.uniqueRequests ?? '' : current?.rowCount ?? '');
+  text('capture-context',current ? isCollection ? collectionLabel(current)+' · '+collectionCoverage(current)+' · query '+objectText(current.query || {}) : coverage(current) + ' · ' + date(current.capturedAt) + ' · query ' + objectText(current.query || {}) + (current.scope?.fixed === false ? ' · Rolling or provider-default source selection' : '') : 'Select a connection and capture its requests or run a saved source collection.');
+  text('inspect-capture',isCollection ? 'Open collection' : 'Inspect capture');
+  text('download-source',isCollection ? 'Collection and originals' : 'Original source');
+  $('inspect-capture').disabled=!current;
+  $('download-source').disabled=!current;
 }
 function renderCaptureHistory() {
   const items = capturesFor();
@@ -464,6 +493,11 @@ async function chooseConnection(id) {
   connectionId = id;
   $('active-connection').value = id;
   captureId = capturesFor(id,true)[0]?.id || '';
+  requestSource='capture';
+  collectionId=collectionsFor(id)[0]?.id || '';
+  collectionOffset=0;collectionSequence++;
+  collectionPage={collection:null,connection:null,items:[],total:0,offset:0,limit:100,nextOffset:null};
+  clearTimeout(collectionRefreshTimer);
   selected = null;
   catalog = {items:[],capture:null};
   comparison = null;
@@ -477,31 +511,34 @@ async function chooseConnection(id) {
   renderConnectionContext();
   renderCaptureSelectors();
   renderCaptureHistory();
+  renderCollectionSelectors();
   renderDiffSelectors();
   renderQueue();
   renderHandover();
   savePreferences();
   await loadRequests();
   if (view === 'catalog') { renderCatalog(); await loadCatalog(); }
+  if (view === 'collections') await loadCollection();
 }
 async function loadRequests() {
   const sequence=++requestSequence;
-  if (!captureId) {
+  if (!(requestSource === 'collection' ? collectionId : captureId)) {
     page={items:[],total:0,offset:0,limit:Number($('filter-limit').value)};
-    emptyRows('request-rows',5,'Capture a request collection or choose a saved capture to open the worklist.');
-    text('request-range','No capture selected');
+    emptyRows('request-rows',5,'Capture a source or run a saved collection to open the worklist.');
+    text('request-range','No saved source selected');
     $('request-prev').disabled=true;
     $('request-next').disabled=true;
     return;
   }
   text('request-range','Opening saved requests…');
   const result=await api(queryPath('/api/requests',{
-    capture:captureId,status:$('filter-status').value.trim(),service:$('filter-service').value.trim(),
+    capture:requestSource==='collection' ? undefined : captureId,collection:requestSource==='collection' ? collectionId : undefined,status:$('filter-status').value.trim(),service:$('filter-service').value.trim(),
     q:$('filter-q').value.trim(),offset,limit:$('filter-limit').value
   }));
   if(sequence!==requestSequence)return;
   page={items:result.items || [],total:Number(result.total || 0),offset:Number(result.offset ?? offset),limit:Number(result.limit || $('filter-limit').value)};
   offset=page.offset;
+  if(result.collection) updateCollectionSummary(result.collection);
   renderRequestRows();
   renderStatusOptions();
 }
@@ -516,6 +553,7 @@ function renderRequestRows() {
     const identity=cell(row);
     identity.append(button(String(requestId(item)),()=>openRequest(requestId(item)),'link-button'));
     identity.append(element('span',serviceName(item) || serviceCode(item) || 'Service unspecified','muted small'));
+    if(item.collectionId) identity.append(element('span',(item.observationCount ?? 1)+' source observations · '+(item.versionCount ?? 1)+' retained versions','muted small'));
     cell(row,status(item));
     const address=cell(row,item.address || 'Address unspecified');
     if(item.description)address.append(element('span',item.description,'muted small'));
@@ -535,11 +573,13 @@ function renderRequestRows() {
 async function openRequest(id, settings={}) {
   const sequence=++detailSequence;
   const selectedConnection=settings.connectionId || connectionId;
-  const selectedCaptureId=settings.latest ? '' : (settings.captureId ?? captureId);
-  const result=await api(queryPath('/api/request',{capture:selectedCaptureId,connection:selectedConnection,id}));
+  const selectedCollectionId=settings.latest || settings.captureId ? '' : (settings.collectionId ?? (requestSource==='collection' ? collectionId : ''));
+  const selectedCaptureId=settings.latest || selectedCollectionId ? '' : (settings.captureId ?? captureId);
+  const sourceSelection=selectedCollectionId ? {collection:selectedCollectionId} : selectedCaptureId ? {capture:selectedCaptureId} : {connection:selectedConnection};
+  const result=await api(queryPath('/api/request',{...sourceSelection,id}));
   if(sequence!==detailSequence)return;
   if(!result.item)throw new Error('This saved request was not found in the selected source.');
-  selected={...result,id:String(requestId(result.item) || id),connectionId:result.item.connectionId || selectedConnection,viewedCaptureId:selectedCaptureId};
+  selected={...result,id:String(requestId(result.item) || id),connectionId:result.item.connectionId || selectedConnection,viewedCaptureId:selectedCaptureId,viewedCollectionId:selectedCollectionId};
   renderDetail();
   renderRequestRows();
   $('request-detail').hidden=false;
@@ -568,6 +608,24 @@ function clearDraft(key=draftId()) {
   delete draftCache[key];
   try{sessionStorage.setItem(draftsKey,JSON.stringify(draftCache));}catch{}
 }
+function renderSourceNotes(item) {
+  const source=item?.source || {},fragment=document.createDocumentFragment();
+  if(source.status_notes!==undefined && source.status_notes!==null && source.status_notes!==''){
+    const note=element('section',null,'source-note');
+    note.append(element('strong','Source status note'),element('p',objectText(source.status_notes)));
+    fragment.append(note);
+  }
+  if(Array.isArray(source.notes))for(const original of source.notes){
+    const note=element('section',null,'source-note');
+    const object=original && typeof original==='object' ? original : null;
+    note.append(element('strong',object?.datetime ? 'Public note · '+date(object.datetime) : 'Public source note'));
+    note.append(element('p',object?.description===undefined ? objectText(original) : objectText(object.description)));
+    note.append(button('Original note',()=>showInspector('Original public source note',original,'Retained from request '+selected.id+' in this exact source edition.')));
+    fragment.append(note);
+  }
+  if(!fragment.childNodes.length)fragment.append(element('p','No public notes were returned in this source edition.','small muted'));
+  $('detail-source-notes').replaceChildren(fragment);
+}
 function renderDetail() {
   if(!selected)return;
   const item=selected.item;
@@ -586,12 +644,18 @@ function renderDetail() {
   addFact(facts,'Latitude',item.latitude);
   addFact(facts,'Longitude',item.longitude);
   addFact(facts,'Source SHA-256',item.sourceSha256);
+  addFact(facts,'Collection',selected.collection?.name || (item.collectionId ? short(item.collectionId,16) : null));
+  addFact(facts,'Source observations',item.observationCount);
+  addFact(facts,'Retained versions',item.versionCount);
+  addFact(facts,'Selected source capture',item.captureId);
   $('detail-facts').replaceChildren(facts);
+  renderSourceNotes(item);
   text('detail-source',json(item.source ?? item));
   const links=[];
   for(const [label,value] of [['Source record',item.source?.service_request_url || item.source?.url],['Source media',item.source?.media_url]]){
     const anchor=sourceLink(label,value);if(anchor)links.push(anchor);
   }
+  if(item.captureId) links.push(button('Selected original source',()=>downloadExport('source',item.captureId)));
   links.push(button('Download request JSON',()=>downloadJson(selected,'open311-request-'+filename(selected.id,'record')+'.json')));
   $('detail-links').replaceChildren(...links);
   const saved=selected.review || reviewFor(item);
@@ -629,7 +693,7 @@ function renderDetail() {
 async function saveReview() {
   if(!selected)throw new Error('Open a saved request first.');
   assertWriteReady();
-  const currentSelection={connectionId:selected.connectionId,id:selected.id};
+  const currentSelection={connectionId:selected.connectionId,id:selected.id,captureId:selected.item.captureId || selected.viewedCaptureId,sourceSha256:selected.item.sourceSha256,collectionId:selected.viewedCollectionId};
   const key=draftId();
   const mine=readReviewForm();
   const base=draftCache[key]?.baseReview || reviewFields(selected.review);
@@ -647,17 +711,17 @@ async function saveReview() {
   }
   workspace=fresh;
   const commit=async()=>{
-    await mutate('/api/reviews',{connectionId:currentSelection.connectionId,serviceRequestId:currentSelection.id,review:merged});
+    await mutate('/api/reviews',{connectionId:currentSelection.connectionId,serviceRequestId:currentSelection.id,review:merged,...(currentSelection.captureId && currentSelection.sourceSha256 ? {captureId:currentSelection.captureId,expectedSourceSha256:currentSelection.sourceSha256} : {})});
     clearDraft(key);
     $('inspector').close();
-    if (selected && selected.connectionId===currentSelection.connectionId && selected.id===currentSelection.id) await openRequest(currentSelection.id,{connectionId:currentSelection.connectionId,latest:true,scroll:false});
+    if (selected && selected.connectionId===currentSelection.connectionId && selected.id===currentSelection.id) await openRequest(currentSelection.id,{connectionId:currentSelection.connectionId,...(currentSelection.collectionId ? {collectionId:currentSelection.collectionId} : currentSelection.captureId ? {captureId:currentSelection.captureId} : {latest:true}),scroll:false});
     renderQueue();
     notify('Review saved for request '+currentSelection.id+'.');
   };
   if(conflicts.length){
     showInspector('Review changed while you were editing',{fields:conflicts,original:base,saved:current,yourDraft:mine,proposed:merged},'Your unchanged fields keep the currently saved values. Choose whether to apply your edited values or reopen the saved review.',[
       button('Apply my edited values',commit),
-      button('Reopen saved review',async()=>{clearDraft(key);$('inspector').close();await openRequest(currentSelection.id,{connectionId:currentSelection.connectionId,latest:true,scroll:false});})
+      button('Reopen saved review',async()=>{clearDraft(key);$('inspector').close();await openRequest(currentSelection.id,{connectionId:currentSelection.connectionId,...(currentSelection.collectionId ? {collectionId:currentSelection.collectionId} : currentSelection.captureId ? {captureId:currentSelection.captureId} : {latest:true}),scroll:false});})
     ]);
     return;
   }
@@ -832,7 +896,7 @@ async function captureSource() {
     if(start)query.start_date=start;
     if(end)query.end_date=end;
     if(connection().extendedAttributes && $('capture-extended').checked)query.extensions=true;
-    if(connection().pagination){query.page=Number($('capture-page').value);query.page_size=Number($('capture-page-size').value);}
+    if(connection().pagination){query.page=Number($('capture-page').value);query[sourcePageSizeParameter(connection())]=Number($('capture-page-size').value);}
     for(const input of $('capture-extension-fields').querySelectorAll('[data-query-extension]'))if(input.value.trim())query[input.dataset.queryExtension]=input.value.trim();
   }
   const input={connectionId:targetConnection,kind,query};
@@ -841,37 +905,510 @@ async function captureSource() {
   if(connectionId!==targetConnection){notify('Saved source capture for '+connectionName(targetConnection)+'.');return;}
   const id=resultCaptureId(result,kind);
   if(id && ['requests','request'].includes(kind)){
-    captureId=id;offset=0;selected=null;$('request-detail').hidden=true;
+    requestSource='capture';captureId=id;offset=0;selected=null;$('request-detail').hidden=true;
     renderCaptureSelectors();savePreferences();await loadRequests();
   }else if(id)await inspectCapture(id);
   $('capture-panel').hidden=true;
 }
+function collectionsFor(id = connectionId) {
+  return (workspace?.collections || []).filter((item)=>item.connectionId===id).sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt)) || String(b.id).localeCompare(String(a.id)));
+}
+function selectedCollection() { return workspace?.collections?.find((item)=>item.id===collectionId) || null; }
+function collectionTimeBasis(item) { return item?.policy?.timeBasis==='updated' ? 'updated' : 'created'; }
+function collectionStrategy(item) { return item?.policy?.strategy==='pages' ? 'pages' : 'windows'; }
+function collectionRangeFields(basis) {
+  return basis==='updated' ? {start:'updated_after',end:'updated_before',label:'Updated'} : {start:'start_date',end:'end_date',label:'Created'};
+}
+function supportsUpdatedCollection(value) {
+  const fields=new Set(value?.queryExtensions || []);
+  for(const range of value?.queryDateRanges || []){fields.add(range.start);fields.add(range.end);}
+  return fields.has('updated_after') && fields.has('updated_before');
+}
+function sourcePageSizeParameter(value) {
+  return value?.responseLimitParameter || (value?.pagination ? 'page_size' : '');
+}
+function collectionSizeParameter(value,strategy) {
+  return value?.responseLimitParameter || (strategy==='pages' && value?.pagination ? 'page_size' : '');
+}
+function localUtcValue(value) {
+  if(!value)return '';
+  const instant=new Date(value);
+  return Number.isNaN(instant.getTime()) ? '' : instant.toISOString().replace(/Z$/,'');
+}
+function renderCollectionModes(resetAdditional=false) {
+  const current=connection(),basis=$('collection-time-basis').value,strategy=$('collection-strategy').value;
+  const fields=collectionRangeFields(basis),other=collectionRangeFields(basis==='updated' ? 'created' : 'updated');
+  $('collection-time-basis').querySelector('option[value="updated"]').disabled=!supportsUpdatedCollection(current);
+  $('collection-strategy').querySelector('option[value="pages"]').disabled=!current?.pagination;
+  text('collection-start-label',fields.label+' since · UTC');text('collection-end-label',fields.label+' until · UTC');
+  text('collection-other-start-label','Additional '+other.label.toLowerCase()+' since · UTC');
+  text('collection-other-end-label','Additional '+other.label.toLowerCase()+' until · UTC');
+  $('collection-additional-range').hidden=basis==='created' && !supportsUpdatedCollection(current);
+  if(resetAdditional){$('collection-other-start').value='';$('collection-other-end').value='';}
+  const parameter=collectionSizeParameter(current,strategy);
+  $('collection-source-size-field').hidden=!parameter;
+  text('collection-source-size-label',strategy==='pages' ? 'Results per source page' : 'Results per source response');
+  text('collection-source-size-help',parameter ? 'Original '+parameter+' parameter; at most '+(current?.responseLimit || 1000)+'.' : '');
+  $('collection-source-size').max=String(current?.responseLimit || 1000);
+  text('collection-refinement-help',strategy==='pages'
+    ? 'Maximum size, overlap and query precision define the initial date intervals. Full responses continue by source page; the saved minimum refinement applies to window traversal.'
+    : 'A response at its source limit refines into smaller intervals using this precision, minimum size and overlap.');
+  text('collection-traversal-help',strategy==='pages'
+    ? 'Page traversal keeps the same date bounds and original numbered pages. A full page leads to its successor; a short page ends the sequence. A repeated complete page remains visible as limited.'
+    : 'Window traversal retains each capped response and refines its interval using the saved precision and overlap.');
+  const spacing=current?.minimumRequestIntervalMs ? ' Source calls are spaced by at least '+current.minimumRequestIntervalMs+' milliseconds.' : '';
+  text('collection-policy-help',current
+    ? 'The saved '+fields.label.toLowerCase()+' period uses '+current.name+' with declared response limit '+(current.responseLimit || 1000)+'. Every original response and source edition remains retained.'+spacing
+    : 'Save a jurisdiction connection before planning a source collection.');
+}
+function collectionLabel(item) {
+  return (item.name || short(item.id,16))+' · '+(item.state || 'PLANNED')+' · '+(item.counts?.uniqueRequests ?? 0)+' requests';
+}
+function collectionCoverage(item) {
+  const pages=collectionStrategy(item)==='pages',members=pages ? 'source pages' : 'source windows';
+  if(item.state==='COMPLETE' && item.capResolved===true)return pages
+    ? 'Every planned source-page sequence reached a short response'
+    : 'All planned source windows resolved within the declared response limit';
+  if(item.state==='LIMITED')return 'Retained selection includes '+(item.counts?.limitedWindows ?? 0)+' unresolved '+members;
+  if(item.state==='COMPLETE')return 'All planned '+members+' retained; inspect the recorded coverage';
+  return (item.counts?.capturedWindows ?? 0)+' completed '+members+' · '+(item.counts?.pendingWindows ?? 0)+' pending · '+(item.counts?.activeWindows ?? 0)+' active';
+}
+
+function sourceChoice(kind,id) { return id ? kind+':'+id : ''; }
+function parseSourceChoice(value) {
+  if(value.startsWith('collection:'))return {kind:'collection',id:value.slice(11)};
+  return {kind:'capture',id:value.startsWith('capture:') ? value.slice(8) : value};
+}
+function sourceEntries() {
+  return [
+    ...collectionsFor().map((item)=>({value:sourceChoice('collection',item.id),label:'Collection · '+collectionLabel(item)})),
+    ...capturesFor(connectionId,true).map((item)=>({value:sourceChoice('capture',item.id),label:'Capture · '+captureLabel(item)}))
+  ];
+}
+function updateCollectionSummary(summary) {
+  if(!workspace || !summary?.id)return;
+  const values=workspace.collections || [];
+  workspace.collections=values.some((item)=>item.id===summary.id) ? values.map((item)=>item.id===summary.id ? summary : item) : [...values,summary];
+}
+function renderCollectionForm() {
+  const current=connection();
+  text('collection-connection',current?.name || 'No connection selected');
+  const context=JSON.stringify([connectionId,current?.queryExtensions,current?.queryDateRanges,current?.extendedAttributes,current?.responseLimit,current?.responseLimitParameter,current?.pagination,current?.minimumRequestIntervalMs]);
+  if(collectionFormContext===context)return;
+  collectionFormContext=context;
+  const previous=capturesFor().find((item)=>item.kind==='requests')?.query || {};
+  const fragment=document.createDocumentFragment();
+  const reserved=new Set(['service_request_id','page','page_size','per_page','start_date','end_date','updated_after','updated_before','service_code','status','extensions',sourcePageSizeParameter(current)]);
+  for(const key of current?.queryExtensions || []){
+    if(reserved.has(key))continue;
+    const label=element('label',null,'field');label.append(element('span',key));
+    const input=element('input');input.dataset.collectionExtension=key;input.autocomplete='off';
+    input.value=previous[key]===undefined ? '' : String(previous[key]);
+    label.append(input);fragment.append(label);
+  }
+  $('collection-extension-fields').replaceChildren(fragment);
+  $('collection-service').value=previous.service_code || '';
+  $('collection-status').value=previous.status || '';
+  $('collection-time-basis').value='created';$('collection-strategy').value='windows';
+  $('collection-other-start').value='';$('collection-other-end').value='';
+  const parameter=sourcePageSizeParameter(current);
+  $('collection-source-size').value=String(previous[parameter] || current?.responseLimit || 1000);
+  $('collection-extended-field').hidden=!current?.extendedAttributes;
+  $('collection-extended').checked=!!current?.extendedAttributes && previous.extensions!=='false';
+  $('collection-editor').hidden=true;
+  renderCollectionModes();
+}
+
+function renderCollectionSelectors() {
+  const entries=collectionsFor().map((item)=>({value:item.id,label:collectionLabel(item)}));
+  options('collection-choice',entries,collectionId,entries.length ? 'Choose a saved collection' : 'No saved collections');
+  text('nav-collection-count',entries.length || '');
+  renderCollectionControls();
+}
+function renderCollectionControls() {
+  const current=selectedCollection();
+  const unresolved=!!pending || !!pauseCommand;
+  const writable=!!workspace && !!connectionId && !busy && !pauseBusy && !unresolved;
+  $('collection-new').disabled=!connectionId || busy;
+  $('collection-create').disabled=!writable;
+  $('collection-create-run').disabled=!writable;
+  $('collection-reload').disabled=!collectionId;
+  $('collection-open').disabled=!current;
+  const resumeTime=current?.resumeAt ? Date.parse(current.resumeAt) : NaN;
+  const waiting=Number.isFinite(resumeTime) && resumeTime>Date.now();
+  $('collection-run').disabled=!current || !writable || !['PLANNED','PAUSED','INTERRUPTED'].includes(current.state) || waiting;
+  text('collection-run',current?.state==='PLANNED' ? 'Run collection' : 'Resume collection');
+  $('collection-recover').hidden=!current?.runRequestId || current.state!=='RUNNING';
+  $('collection-recover').disabled=!writable;
+  $('collection-pause').disabled=!current || current.state!=='RUNNING' || current.pauseRequested===true || pauseBusy || !!pauseCommand;
+  text('collection-pause',current?.pauseRequested ? 'Pause requested' : 'Pause after current source');
+  for(const id of ['collection-inspect','collection-copy','collection-export-report','collection-export-csv','collection-export-json','collection-export-workspace'])$(id).disabled=!current;
+  if(waiting)text('collection-run-help','The saved source outcome gives a resume time of '+date(current.resumeAt)+'. The original progress remains available below.');
+  else if(current?.state==='LIMITED')text('collection-run-help',collectionStrategy(current)==='pages' ? 'The source repeated a full page or reached a saved traversal limit. Inspect the original page and problem, then copy this plan with a useful source filter when appropriate; the current originals stay available.' : 'These minimum-size source windows still reached the declared cap. Copy this plan to choose a finer supported query precision or a more specific source filter; the current originals stay available.');
+  else if(current?.state==='RUNNING')text('collection-run-help','This original run is collecting the saved period. Pause retains the current source response before stopping. Progress refreshes from the local journal.');
+  else text('collection-run-help','Run processes this saved plan. A paused or interrupted run resumes its remaining source members through a new retained run command after the original outcome is reconciled.');
+}
+function scheduleCollectionRefresh(delay=2500) {
+  clearTimeout(collectionRefreshTimer);
+  if(!collectionId || !workspace)return;
+  collectionRefreshTimer=setTimeout(()=>safely(()=>loadCollection({poll:true})),delay);
+}
+async function loadCollection(settings={}) {
+  const sequence=++collectionSequence;
+  if(!collectionId){
+    collectionPage={collection:null,connection:null,items:[],total:0,offset:0,limit:100,nextOffset:null};
+    $('collection-detail').hidden=true;
+    text('collection-context','Create a plan for the selected jurisdiction to collect a fixed source period.');
+    renderCollectionSelectors();
+    return;
+  }
+  const id=collectionId;
+  if(!settings.poll)text('collection-context','Opening the saved collection and its original source windows…');
+  const result=await api(queryPath('/api/collection',{id,offset:collectionOffset,limit:100}));
+  if(sequence!==collectionSequence || id!==collectionId)return;
+  if(!result.collection || !Array.isArray(result.items))throw new Error('The collection response is missing its saved plan or source windows.');
+  collectionPage={...result,total:Number(result.total || 0),offset:Number(result.offset || 0),limit:Number(result.limit || 100),nextOffset:result.nextOffset ?? null};
+  collectionOffset=collectionPage.offset;
+  updateCollectionSummary(result.collection);
+  renderCollectionSelectors();
+  renderCollectionDetail();
+  if(requestSource==='collection')renderCaptureSelectors();
+  const current=result.collection;
+  const resumePending=current.resumeAt && Date.parse(current.resumeAt)>Date.now();
+  const ownRun=pending?.endpoint==='/api/collection-run' && pending.payload?.collectionId===id && !['completed','rejected'].includes(pending.state);
+  if((view==='collections' || ownRun) && (current.state==='RUNNING' || resumePending || ownRun && busy))scheduleCollectionRefresh();
+  else clearTimeout(collectionRefreshTimer);
+}
+function renderCollectionDetail() {
+  const current=collectionPage.collection;
+  if(!current || current.id!==collectionId){$('collection-detail').hidden=true;return;}
+  $('collection-detail').hidden=false;
+  const pages=collectionStrategy(current)==='pages',range=collectionRangeFields(collectionTimeBasis(current));
+  text('collection-context',(current.name || short(current.id))+' · '+range.label+' '+date(current.query?.[range.start])+' through '+date(current.query?.[range.end])+' · '+(pages ? 'Source pages' : 'Source windows')+' · '+connectionName(current.connectionId));
+  text('collection-state',current.state);
+  const outcomes={
+    PLANNED:'The fixed source period and provider settings are saved. Run this plan to collect its original responses.',
+    RUNNING:'Collecting the saved '+(pages ? 'source pages' : 'source windows')+'. Every completed response is retained as progress is made.',
+    PAUSED:'The requested pause is saved after retaining the current source response. Resume continues the remaining '+(pages ? 'pages' : 'windows')+'.',
+    INTERRUPTED:'The run retained its progress and source outcome. Inspect the saved error and resume the remaining source members when its cause is resolved.',
+    COMPLETE:collectionCoverage(current)+'.',
+    LIMITED:collectionCoverage(current)+'. Inspect those members and their exact source responses.'
+  };
+  text('collection-outcome',outcomes[current.state] || String(current.state || 'Saved collection'));
+  const counts=current.counts || {};
+  $('collection-counts').replaceChildren(...[
+    ['Unique requests',counts.uniqueRequests],
+    ['Original captures',counts.originalCaptureCount],
+    [pages ? 'Pending pages' : 'Pending windows',counts.pendingWindows],
+    ['Unresolved source members',counts.limitedWindows]
+  ].map(([label,value])=>{const node=element('div',null,'summary-item');node.append(element('strong',value ?? 0),element('span',label));return node;}));
+  const facts=document.createDocumentFragment();
+  addFact(facts,'Created',date(current.createdAt));
+  addFact(facts,'Saved progress',date(current.updatedAt));
+  addFact(facts,'Returned source rows',counts.returnedRows);
+  addFact(facts,'Repeated observations',counts.duplicateObservations);
+  addFact(facts,'Requests with versions',counts.changedRequests);
+  addFact(facts,'Collection date basis',range.label+' time');
+  addFact(facts,'Traversal',pages ? 'Original numbered pages' : 'Refined date windows');
+  addFact(facts,'Outside selected '+range.label.toLowerCase()+' period',counts.outOfWindowRows);
+  addFact(facts,'Unspecified source date',counts.unknownDateRows);
+  addFact(facts,pages ? 'Full pages continued' : 'Windows refined',pages ? counts.pagedWindows : counts.splitWindows);
+  addFact(facts,'Failed source members',counts.failedWindows);
+  addFact(facts,'Recorded source population',current.interpretation);
+  addFact(facts,'Pause requested',current.pauseRequested ? 'Yes; the current response is retained first' : null);
+  addFact(facts,'Resume time',current.resumeAt ? date(current.resumeAt) : null);
+  $('collection-facts').replaceChildren(facts);
+  text('collection-plan-json',json({id:current.id,connection:collectionPage.connection,query:current.query,policy:current.policy}));
+  $('collection-error').hidden=!current.lastError;
+  text('collection-error-json',current.lastError ? json(current.lastError) : '');
+  text('collection-window-total',collectionPage.total+' saved '+(pages ? 'pages' : 'windows')+' · '+(counts.activeWindows || 0)+' active');
+  const nodes=collectionPage.items;
+  if(!nodes.length)emptyRows('collection-windows',6,'The saved collection currently has no source members.');
+  else $('collection-windows').replaceChildren(...nodes.map((item)=>{
+    const row=element('tr');
+    const period=cell(row,item.page ? 'Page '+item.page+' · '+date(item.startDate) : date(item.startDate));
+    period.append(element('span','to '+date(item.endDate),'muted small'));
+    if(item.parentId)period.append(element('div',(pages ? 'Continued from ' : 'Refined from ')+short(item.parentId,14),'collection-refinement'));
+    if(item.children?.length)period.append(element('div',pages ? 'Next source page retained in plan' : item.children.length+' retained child windows','collection-refinement'));
+    if(item.problem)period.append(element('div',item.problem==='REPEATED_SOURCE_PAGE' ? 'The source repeated a complete page; retained as limited.' : item.problem,'small'));
+    cell(row).append(element('span',item.state,'badge'));
+    const capture=item.capture;
+    cell(row,capture?.rowCount ?? '—');
+    const limit=capture?.receipt?.coverage?.documentedLimit ?? capture?.responseLimit ?? collectionPage.connection?.responseLimit;
+    const cap=cell(row,limit ?? '—');
+    if(capture?.saturated || capture?.receipt?.coverage?.mayBeTruncated)cap.append(element('span',pages ? 'Full source page' : 'Returned at limit','small muted'));
+    cell(row,Array.isArray(item.attempts) ? item.attempts.length : item.attempts ?? 0);
+    const actions=element('div',null,'collection-member-actions');
+    actions.append(button(pages ? 'Page' : 'Window',()=>showInspector((pages ? 'Source page '+item.page+' · ' : 'Source window ')+short(item.id),item,'Saved date bounds, original source page, attempts, continuation and source metadata.')));
+    if(capture?.id){
+      actions.append(button('Receipt',()=>inspectCapture(capture.id)),button('Original',()=>downloadExport('source',capture.id)));
+    }
+    cell(row).append(actions);
+    return row;
+  }));
+  text('collection-window-range',collectionPage.total ? (collectionPage.offset+1)+'–'+Math.min(collectionPage.offset+nodes.length,collectionPage.total)+' of '+collectionPage.total+(pages ? ' source pages' : ' source windows') : '0 source members');
+  $('collection-window-prev').disabled=collectionPage.offset<=0;
+  $('collection-window-next').disabled=collectionPage.nextOffset===null;
+  renderCollectionControls();
+}
+async function chooseCollection(id) {
+  collectionSequence++;
+  collectionId=id;
+  collectionOffset=0;
+  collectionPage={collection:null,connection:null,items:[],total:0,offset:0,limit:100,nextOffset:null};
+  clearTimeout(collectionRefreshTimer);
+  renderCollectionSelectors();
+  if(requestSource==='collection'){offset=0;selected=null;detailSequence++;$('request-detail').hidden=true;}
+  savePreferences();
+  await loadCollection();
+  if(requestSource==='collection')await loadRequests();
+}
+function collectionFormValue() {
+  const current=connection();if(!current)throw new Error('Select a saved jurisdiction connection.');
+  const name=$('collection-name').value.trim(),basis=$('collection-time-basis').value,strategy=$('collection-strategy').value;
+  if(!['created','updated'].includes(basis) || !['windows','pages'].includes(strategy))throw new Error('Select a source date basis and traversal.');
+  if(basis==='updated' && !supportsUpdatedCollection(current))throw new Error('This connection must declare updated_after and updated_before before collecting by update time.');
+  if(strategy==='pages' && !current.pagination)throw new Error('Page traversal requires a connection with declared pagination.');
+  const start=utcInput($('collection-start').value),end=utcInput($('collection-end').value);
+  if(!name || !start || !end)throw new Error('Enter a collection name and the complete fixed UTC period.');
+  if(start>=end)throw new Error('The collection Until timestamp must be later than Since.');
+  const policy={
+    maxWindowDays:Number($('collection-max-days').value),
+    minimumWindowMs:Number($('collection-min-ms').value),
+    boundaryOverlapMs:Number($('collection-overlap-ms').value),
+    queryQuantumMs:Number($('collection-quantum-ms').value)
+  };
+  if(basis==='updated')policy.timeBasis='updated';
+  if(strategy==='pages')policy.strategy='pages';
+  if(!Number.isSafeInteger(policy.maxWindowDays) || policy.maxWindowDays<1 || policy.maxWindowDays>90)throw new Error('Choose a whole number from 1 to 90 days for the maximum initial window.');
+  if(!Number.isSafeInteger(policy.queryQuantumMs) || policy.queryQuantumMs<1 || policy.queryQuantumMs>86400000)throw new Error('Choose a positive whole-millisecond query precision of at most one day.');
+  if(!Number.isSafeInteger(policy.minimumWindowMs) || policy.minimumWindowMs<policy.queryQuantumMs || policy.minimumWindowMs>policy.maxWindowDays*86400000 || policy.minimumWindowMs%policy.queryQuantumMs!==0)throw new Error('The minimum window must be a positive multiple of the selected query precision within the maximum initial window.');
+  if(!Number.isSafeInteger(policy.boundaryOverlapMs) || policy.boundaryOverlapMs<0 || policy.boundaryOverlapMs>=policy.maxWindowDays*86400000/2 || policy.boundaryOverlapMs%policy.queryQuantumMs!==0)throw new Error('Boundary overlap must be a multiple of the selected query precision below half the maximum initial window.');
+  const query=Object.create(null);
+  for(const node of $('collection-extension-fields').querySelectorAll('[data-collection-extension]'))if(node.value.trim())query[node.dataset.collectionExtension]=node.value.trim();
+  if($('collection-service').value.trim())query.service_code=$('collection-service').value.trim();
+  if($('collection-status').value.trim())query.status=$('collection-status').value.trim();
+  const fields=collectionRangeFields(basis);query[fields.start]=start;query[fields.end]=end;
+  if(!$('collection-additional-range').hidden){
+    const otherStart=utcInput($('collection-other-start').value),otherEnd=utcInput($('collection-other-end').value);
+    if(!!otherStart!==!!otherEnd)throw new Error('Enter both ends of the additional source-date filter, or leave both empty.');
+    if(otherStart && otherEnd){
+      if(otherStart>=otherEnd)throw new Error('The additional source-date filter must end after it starts.');
+      const other=collectionRangeFields(basis==='updated' ? 'created' : 'updated');
+      query[other.start]=otherStart;query[other.end]=otherEnd;
+    }
+  }
+  const sizeParameter=collectionSizeParameter(current,strategy);
+  if(sizeParameter){
+    const size=Number($('collection-source-size').value),cap=current.responseLimit || 1000;
+    if(!Number.isSafeInteger(size) || size<1 || size>cap)throw new Error('Choose a source response size from 1 to '+cap+'.');
+    query[sizeParameter]=size;
+  }
+  if(current.extendedAttributes && $('collection-extended').checked)query.extensions=true;
+  return {connectionId,name,query,policy};
+}
+
+async function createCollection(runNow=false) {
+  if(!$('collection-form').reportValidity())return;
+  const input=collectionFormValue();
+  const result=await mutate('/api/collections',input);
+  const id=result?.collection?.id || result?.collectionId || result?.result?.collection?.id || result?.result?.collectionId || result?.id;
+  if(!id)throw new Error('The saved collection result did not include its identity. Inspect the original operation before running a plan.');
+  if(connectionId!==input.connectionId){notify('Saved collection '+input.name+' for '+connectionName(input.connectionId)+'.');return;}
+  await chooseCollection(id);
+  $('collection-editor').hidden=true;
+  notify('Saved collection '+input.name+'.');
+  if(runNow)await runCollection();
+}
+async function runCollection() {
+  const current=selectedCollection();
+  if(!current)throw new Error('Select a saved source collection.');
+  if(!['PLANNED','PAUSED','INTERRUPTED'].includes(current.state))throw new Error('This collection has state '+current.state+'. Open its retained progress before preparing another run.');
+  if(current.resumeAt && Date.parse(current.resumeAt)>Date.now())throw new Error('The saved source outcome requests resuming at '+date(current.resumeAt)+'.');
+  const id=current.id;
+  await mutate('/api/collection-run',{collectionId:id});
+  if(collectionId===id)await loadCollection();
+  const latest=workspace.collections?.find((item)=>item.id===id);
+  notify('Collection '+(latest?.name || short(id))+' · '+(latest?.state || 'saved')+' · '+(latest?.counts?.uniqueRequests ?? 0)+' retained request identities.');
+}
+async function recoverCollectionRun() {
+  assertWriteReady();
+  const current=selectedCollection();
+  if(!current?.runRequestId)throw new Error('This collection has no original run request to recover.');
+  const result=await api(queryPath('/api/operation',{requestId:current.runRequestId}));
+  const operation=result?.operation ?? result;
+  const input=operation?.intent;
+  if(operation?.kind!=='collection-run' || operation.requestId!==current.runRequestId || input?.requestId!==operation.requestId || input.collectionId!==current.id || !Number.isSafeInteger(input.expectedRevision))throw new Error('The saved journal did not return the complete original run input for this collection.');
+  if(operation.state==='SUCCEEDED'){
+    await refreshState();
+    showInspector('Original collection run completed',operation,'The original result is saved with this collection.');
+    return;
+  }
+  assertWriteReady();
+  const command={
+    schema:'commons.open311.browser-command.v1',
+    origin:location.origin,workspaceId:workspace.workspaceId,requestId:operation.requestId,
+    endpoint:'/api/collection-run',payload:JSON.parse(JSON.stringify(input)),
+    createdAt:operation.createdAt,state:'uncertain',
+    restoredAt:new Date().toISOString(),restoredFrom:'Original workspace operation journal'
+  };
+  pending=command;setBusy(true);
+  try{await pendingStorage('write',command);}
+  catch(error){pending=null;throw error;}
+  finally{setBusy(false);renderPending();}
+  $('pending-panel').scrollIntoView({behavior:'smooth',block:'start'});
+  notify('Recovered the complete original run command. Inspect its current outcome or retry the same saved request to continue its remaining windows.');
+}
+function copyCollectionPlan() {
+  const current=selectedCollection();if(!current)return;
+  $('collection-editor').hidden=false;$('collection-name').value=(current.name || 'Collection')+' — next selection';
+  const basis=collectionTimeBasis(current),fields=collectionRangeFields(basis),other=collectionRangeFields(basis==='updated' ? 'created' : 'updated');
+  $('collection-time-basis').value=basis;$('collection-strategy').value=collectionStrategy(current);
+  $('collection-start').value=localUtcValue(current.query[fields.start]);$('collection-end').value=localUtcValue(current.query[fields.end]);
+  $('collection-other-start').value=localUtcValue(current.query[other.start]);$('collection-other-end').value=localUtcValue(current.query[other.end]);
+  $('collection-service').value=current.query.service_code || '';$('collection-status').value=current.query.status || '';
+  for(const node of $('collection-extension-fields').querySelectorAll('[data-collection-extension]'))node.value=current.query[node.dataset.collectionExtension] ?? '';
+  $('collection-extended').checked=current.query.extensions===true || current.query.extensions==='true';
+  $('collection-max-days').value=current.policy.maxWindowDays;$('collection-min-ms').value=current.policy.minimumWindowMs;
+  $('collection-overlap-ms').value=current.policy.boundaryOverlapMs;$('collection-quantum-ms').value=current.policy.queryQuantumMs ?? 1000;
+  const parameter=sourcePageSizeParameter(connection());
+  $('collection-source-size').value=String(current.query[parameter] || connection()?.responseLimit || 1000);
+  renderCollectionModes();
+  $('collection-editor').scrollIntoView({behavior:'smooth',block:'start'});$('collection-name').focus();
+}
+
+async function openCollectionRequests() {
+  if(!selectedCollection())throw new Error('Select a saved source collection.');
+  requestSource='collection';
+  offset=0;selected=null;detailSequence++;
+  $('request-detail').hidden=true;
+  renderCaptureSelectors();savePreferences();switchView('requests');
+  await loadRequests();
+}
+function renderPause() {
+  $('pause-panel').hidden=!pauseCommand;
+  if(!pauseCommand)return;
+  const rejected=pauseCommand.state==='rejected';
+  const resolved=['completed','rejected','absent'].includes(pauseCommand.state);
+  text('pause-description',rejected ? 'The service returned this saved rejection. A revision conflict can prepare a new pause at the current saved revision; the original run stays retained.' : pauseCommand.state==='completed' ? 'This pause request has a saved outcome. Reopen the collection to read its current progress.' : 'This pause has its own retained original ID and input. Inspect its saved outcome after a lost response, or retry the same pause command.');
+  text('pause-request-id',pauseCommand.requestId);
+  text('pause-json',json(pauseCommand));
+  $('pause-inspect').disabled=pauseBusy;
+  $('pause-retry').disabled=pauseBusy || ['completed','rejected'].includes(pauseCommand.state);
+  $('pause-current').hidden=!(rejected && pauseCommand.lastError?.code==='REVISION_CONFLICT');
+  $('pause-current').disabled=pauseBusy;
+  $('pause-dismiss').hidden=!resolved;
+  $('pause-dismiss').disabled=pauseBusy;
+  $('pause-download').disabled=pauseBusy;
+}
+async function prepareCollectionPause() {
+  if(pauseBusy)throw new Error('The original pause request is still being prepared or sent.');
+  const previous=pauseCommand;
+  if(previous && !(previous.state==='rejected' && previous.lastError?.code==='REVISION_CONFLICT'))throw new Error('Reconcile the retained pause request before preparing another pause.');
+  const target=previous?.payload?.collectionId || collectionId;
+  let prepared=false;
+  pauseBusy=true;renderPause();renderCollectionControls();
+  try{
+    const current=await api('/api/state');
+    const plan=current.collections?.find((item)=>item.id===target);
+    if(!plan || plan.state!=='RUNNING')throw new Error('This collection has no active source run to pause. Refresh its saved progress.');
+    if(plan.pauseRequested){
+      workspace=current;renderCollectionSelectors();
+      await loadCollection();
+      notify('This collection already has a saved pause request.');
+      return;
+    }
+    const id=crypto.randomUUID();
+    const command={
+      schema:'commons.open311.browser-command.v1',
+      origin:location.origin,workspaceId:current.workspaceId,requestId:id,
+      endpoint:'/api/collection-pause',payload:{requestId:id,expectedRevision:current.revision,collectionId:target},
+      createdAt:new Date().toISOString(),state:'prepared',
+      ...(previous ? {supersedes:previous} : {})
+    };
+    await pendingStorage('write',command,'pause');
+    pauseCommand=command;
+    prepared=true;
+  }finally{
+    pauseBusy=false;renderPause();renderCollectionControls();
+  }
+  if(prepared)await sendCollectionPause();
+}
+async function sendCollectionPause() {
+  if(!pauseCommand || pauseBusy)return;
+  const command=pauseCommand;
+  pauseBusy=true;renderPause();renderCollectionControls();
+  let saved=false;
+  try{
+    const result=await api(command.endpoint,{method:'POST',headers:{'Content-Type':'application/json','X-Open311-Workspace':command.workspaceId},body:JSON.stringify(command.payload)});
+    pauseCommand={...command,state:'completed',result};
+    await pendingStorage('write',pauseCommand,'pause').catch(()=>{});
+    saved=true;
+    await pendingStorage('delete',undefined,'pause');
+    pauseCommand=null;
+    notify('Pause requested. The active source response is retained before this collection stops.');
+  }catch(error){
+    const definite=!error.uncertain && error.status>=400 && error.status<500 && ![408,429].includes(error.status) && !['OPERATION_RUNNING','OPERATION_PENDING'].includes(error.code);
+    pauseCommand={...command,state:saved ? 'completed' : definite ? 'rejected' : 'uncertain',lastError:{message:error.message,code:error.code || null,status:error.status || null,at:new Date().toISOString()}};
+    await pendingStorage('write',pauseCommand,'pause').catch(()=>{});
+    notify(saved ? 'The pause is saved; its local retained command remains available for reconciliation.' : error.message,'error');
+  }finally{
+    pauseBusy=false;renderPause();renderCollectionControls();
+  }
+  if(saved)await loadCollection();
+}
+async function inspectCollectionPause() {
+  if(!pauseCommand || pauseBusy)return;
+  let result;
+  try{result=await api(queryPath('/api/operation',{requestId:pauseCommand.requestId}));}
+  catch(error){if(error.status===404 && error.code==='OPERATION_NOT_FOUND')result=null;else throw error;}
+  const operation=result?.operation ?? result;
+  if(!operation?.requestId)pauseCommand={...pauseCommand,state:pauseCommand.state==='rejected' ? 'rejected' : 'absent',inspection:{at:new Date().toISOString(),operation:null}};
+  else{
+    const state=String(operation.state || '').toUpperCase();
+    pauseCommand={...pauseCommand,state:['SUCCEEDED','COMPLETED'].includes(state) ? 'completed' : ['FAILED','REJECTED'].includes(state) ? 'rejected' : 'uncertain',inspection:{at:new Date().toISOString(),operation}};
+  }
+  await pendingStorage('write',pauseCommand,'pause');
+  renderPause();renderCollectionControls();
+  await loadCollection();
+}
+async function dismissCollectionPause() {
+  if(!pauseCommand || !['completed','rejected','absent'].includes(pauseCommand.state))return;
+  await pendingStorage('delete',undefined,'pause');
+  pauseCommand=null;
+  renderPause();renderCollectionControls();
+  await refreshState();
+}
+
 function renderDiffSelectors() {
-  const values=capturesFor(connectionId,true);
+  const kind=$('diff-source').value;
+  const values=kind==='collection' ? collectionsFor() : capturesFor(connectionId,true);
   const oldBefore=$('diff-before').value;
   const oldAfter=$('diff-after').value;
-  const entries=values.map((item)=>({value:item.id,label:captureLabel(item)}));
-  options('diff-before',entries,values.some((item)=>item.id===oldBefore) ? oldBefore : values[1]?.id || '',values.length ? 'Choose earlier capture' : 'No saved captures');
-  options('diff-after',entries,values.some((item)=>item.id===oldAfter) ? oldAfter : values[0]?.id || '',values.length ? 'Choose later capture' : 'No saved captures');
+  const entries=values.map((item)=>({value:item.id,label:kind==='collection' ? collectionLabel(item) : captureLabel(item)}));
+  options('diff-before',entries,values.some((item)=>item.id===oldBefore) ? oldBefore : values[1]?.id || '',values.length ? 'Choose earlier source' : 'No saved sources');
+  options('diff-after',entries,values.some((item)=>item.id===oldAfter) ? oldAfter : values[0]?.id || '',values.length ? 'Choose later source' : 'No saved sources');
 }
 async function compareCaptures() {
   const sequence=++comparisonSequence;
   const targetConnection=connectionId;
   const before=$('diff-before').value,after=$('diff-after').value;
-  if(!before || !after)throw new Error('Choose an earlier and a later saved request capture.');
-  if(before===after)throw new Error('Choose two different captures.');
-  const first=workspace.captures.find((item)=>item.id===before),second=workspace.captures.find((item)=>item.id===after);
+  const kind=$('diff-source').value;
+  if(!before || !after)throw new Error('Choose an earlier and a later saved request source.');
+  if(before===after)throw new Error('Choose two different sources.');
+  const values=kind==='collection' ? workspace.collections : workspace.captures;
+  const first=values.find((item)=>item.id===before),second=values.find((item)=>item.id===after);
   if(first?.capturedAt && second?.capturedAt && first.capturedAt>second.capturedAt)throw new Error('The Earlier capture must precede the Later capture.');
-  const result=await api(queryPath('/api/diff',{before,after}));
+  const result=await api(queryPath('/api/diff',{before,after,kind:kind==='collection' ? 'collection' : undefined}));
   if(sequence!==comparisonSequence || targetConnection!==connectionId)return;
   comparison=result;
-  comparisonIds={before,after,connectionId};
+  comparisonIds={before,after,connectionId,kind};
   comparisonOffset=0;
   const comparable=comparison.scopeComparable;
-  text('diff-context',comparable===true ? 'Both captures have comparable source selections. An absent record stays retained in the earlier capture.' : 'The captures have different or unspecified source selections. Read their saved query and coverage alongside records absent from the later capture.');
+  text('diff-context',kind==='collection' ? (comparable===true ? 'Both collections have matching fully queried scopes. Records absent from the later selection remain retained with the earlier source.' : 'Read the saved source scopes and coverage alongside this collection comparison. Each earlier request remains retained with its original observations.') : comparable===true ? 'Both captures have comparable source selections. An absent record stays retained in the earlier capture.' : 'The captures have different or unspecified source selections. Read their saved query and coverage alongside records absent from the later capture.');
   $('diff-summary').hidden=false;
   $('diff-toolbar').hidden=false;
-  $('diff-summary').replaceChildren(...[['Added',comparison.added],['Changed',comparison.changed],['Absent in later capture',comparison.missingFromCapture],['Unchanged',comparison.unchanged]].map(([label,rows])=>{
+  $('diff-summary').replaceChildren(...[['Added',comparison.added],['Changed',comparison.changed],['Absent in later source',comparison.missingFromCapture],['Unchanged',comparison.unchanged]].map(([label,rows])=>{
     const block=element('div',null,'summary-item');block.append(element('strong',Array.isArray(rows) ? rows.length : 0),element('span',label));return block;
   }));
   renderComparison();
@@ -907,7 +1444,7 @@ function renderComparison() {
     cell(row,entry.before ? status(entry.before) : '—');
     cell(row,entry.after ? status(entry.after) : '—');
     cell(row,fieldNames(entry.fields) || '—');
-    cell(row).append(button('Inspect',()=>showInspector('Request '+entry.id+' · '+entry.label,{...comparisonIds,...entry},'Complete retained before and after values.',[button('Open source request',async()=>{$('inspector').close();switchView('requests');await openRequest(entry.id,{connectionId:comparisonIds.connectionId,captureId:entry.after ? comparisonIds.after : comparisonIds.before});})])));
+    cell(row).append(button('Inspect',()=>showInspector('Request '+entry.id+' · '+entry.label,{...comparisonIds,...entry},'Complete retained before and after values.',[button('Open source request',async()=>{$('inspector').close();switchView('requests');await openRequest(entry.id,{connectionId:comparisonIds.connectionId,...(comparisonIds.kind==='collection' ? {collectionId:entry.after ? comparisonIds.after : comparisonIds.before} : {captureId:entry.after ? comparisonIds.after : comparisonIds.before})});})])));
     return row;
   }));
   text('diff-range',rows.length ? (comparisonOffset+1)+'–'+Math.min(comparisonOffset+shown.length,rows.length)+' of '+rows.length+' comparison rows' : '0 comparison rows');
@@ -915,11 +1452,11 @@ function renderComparison() {
   $('diff-next').disabled=comparisonOffset+shown.length>=rows.length;
 }
 function exportComparison(kind) {
-  if(!comparison)throw new Error('Compare two saved captures first.');
+  if(!comparison)throw new Error('Compare two saved request sources first.');
   const name='open311-comparison-'+short(comparisonIds.before)+'-'+short(comparisonIds.after);
-  if(kind==='json'){downloadJson({schema:'commons.open311.capture-comparison-export.v1',workspaceId:workspace.workspaceId,...comparisonIds,comparison},name+'.json');return;}
+  if(kind==='json'){downloadJson({schema:comparisonIds.kind==='collection' ? 'commons.open311.collection-comparison-export.v1' : 'commons.open311.capture-comparison-export.v1',workspaceId:workspace.workspaceId,...comparisonIds,comparison},name+'.json');return;}
   const rows=comparisonRows();
-  downloadCsv(['change','service_request_id','service_code','service_name','before_status','after_status','changed_fields','before_capture_id','after_capture_id'],rows.map((entry)=>{
+  downloadCsv(['change','service_request_id','service_code','service_name','before_status','after_status','changed_fields',comparisonIds.kind==='collection' ? 'before_collection_id' : 'before_capture_id',comparisonIds.kind==='collection' ? 'after_collection_id' : 'after_capture_id'],rows.map((entry)=>{
     const item=entry.after || entry.before || {};
     return [entry.kind,entry.id,serviceCode(item),serviceName(item),entry.before ? status(entry.before) : '',entry.after ? status(entry.after) : '',fieldNames(entry.fields),comparisonIds.before,comparisonIds.after];
   }),name+'.csv');
@@ -933,7 +1470,7 @@ function renderConnections() {
     const identity=cell(row,item.name || item.id);identity.append(element('span',item.id,'small muted'));
     const endpoint=cell(row);const link=sourceLink(item.baseUrl,item.baseUrl);endpoint.append(link || element('span',item.baseUrl));
     cell(row,item.jurisdictionId || 'Provider default');
-    cell(row,[(item.pagination ? 'Paginated' : 'Single collection'),'limit '+(item.responseLimit || 1000),item.extendedAttributes ? 'extended attributes' : '',item.apiKeyEnv ? 'key: '+item.apiKeyEnv : ''].filter(Boolean).join(' · '));
+    cell(row,[(item.pagination ? 'Paged source' : 'Single response'),'limit '+(item.responseLimit || 1000)+(item.responseLimitParameter ? ' via '+item.responseLimitParameter : ''),item.extendedAttributes ? 'extended attributes' : '',item.minimumRequestIntervalMs ? 'spacing '+item.minimumRequestIntervalMs+' ms' : '',item.apiKeyEnv ? (item.apiKeyTransport==='bearer' ? 'Bearer key: ' : 'key: ')+item.apiKeyEnv : ''].filter(Boolean).join(' · '));
     const actions=element('div',null,'actions');
     actions.append(button('Use',async()=>{await chooseConnection(item.id);$('active-connection').value=item.id;switchView('requests');}));
     actions.append(button('Edit',()=>editConnection(item.id)));
@@ -951,7 +1488,7 @@ function editConnection(id='') {
   $('connection-id').readOnly=!!editConnectionId;
   $('connection-url').value=value.baseUrl || '';
   $('connection-jurisdiction').value=value.jurisdictionId || '';
-  const identityFixed=!!value.id && capturesFor(value.id).length>0;
+  const identityFixed=!!value.id && (capturesFor(value.id).length>0 || collectionsFor(value.id).length>0);
   $('connection-url').readOnly=identityFixed;
   $('connection-jurisdiction').readOnly=identityFixed;
   $('connection-identity-help').hidden=!identityFixed;
@@ -960,6 +1497,10 @@ function editConnection(id='') {
   $('connection-discovery-url').value=value.discoveryUrl || '';
   $('connection-key-parameter').value=value.apiKeyParameter || '';
   $('connection-key-env').value=value.apiKeyEnv || '';
+  $('connection-key-transport').value=value.apiKeyTransport || 'query';
+  $('connection-request-spacing').value=value.minimumRequestIntervalMs ?? 0;
+  $('connection-limit-parameter').value=value.responseLimitParameter || '';
+  $('connection-date-ranges').value=value.queryDateRanges?.length ? json(value.queryDateRanges) : '';
   $('connection-response-limit').value=value.responseLimit || 1000;
   $('connection-statuses').value=(value.statusValues || []).join(', ');
   $('connection-query-extensions').value=(value.queryExtensions || []).join(', ');
@@ -987,11 +1528,23 @@ async function saveConnection() {
     extendedAttributes:$('connection-extended').checked,
     responseLimit:Number($('connection-response-limit').value)
   };
-  for(const [key,input] of [['apiKeyEnv','connection-key-env'],['discoveryUrl','connection-discovery-url'],['apiKeyParameter','connection-key-parameter'],['statusValues','connection-statuses'],['queryExtensions','connection-query-extensions']]){
+  for(const [key,input] of [['apiKeyEnv','connection-key-env'],['discoveryUrl','connection-discovery-url'],['apiKeyParameter','connection-key-parameter'],['responseLimitParameter','connection-limit-parameter'],['statusValues','connection-statuses'],['queryExtensions','connection-query-extensions']]){
     const entered=$(input).value.trim();
     if(entered)value[key]=['statusValues','queryExtensions'].includes(key) ? commaValues(entered) : entered;
     else delete value[key];
   }
+  const transport=$('connection-key-transport').value;
+  if(!['query','bearer'].includes(transport))throw new Error('Choose query parameter or Bearer header credential transport.');
+  if(transport==='bearer')value.apiKeyTransport=transport;else delete value.apiKeyTransport;
+  const spacing=Number($('connection-request-spacing').value);
+  if(!Number.isSafeInteger(spacing) || spacing<0)throw new Error('Source request spacing must be a nonnegative whole number of milliseconds.');
+  if(spacing>0)value.minimumRequestIntervalMs=spacing;else delete value.minimumRequestIntervalMs;
+  const rangeText=$('connection-date-ranges').value.trim();
+  if(rangeText){
+    let ranges;try{ranges=JSON.parse(rangeText);}catch{throw new Error('Enter source date-range declarations as a complete JSON array.');}
+    if(!Array.isArray(ranges) || ranges.some(range=>!range || Array.isArray(range) || typeof range!=='object' || Object.keys(range).some(key=>!['start','end','maxDays'].includes(key)) || typeof range.start!=='string' || !range.start.trim() || typeof range.end!=='string' || !range.end.trim() || range.start===range.end || typeof range.maxDays!=='number' || !Number.isFinite(range.maxDays) || range.maxDays<=0))throw new Error('Each date range needs distinct start/end field names and a positive maxDays number.');
+    if(ranges.length)value.queryDateRanges=ranges;else delete value.queryDateRanges;
+  }else delete value.queryDateRanges;
   const attribution={...(old.attribution || {})};
   for(const key of ['publisher','title','license','licenseUrl','sourceUrl']){
     const entered=$('connection-attribution-'+key)?.value.trim();
@@ -1006,13 +1559,19 @@ async function saveConnection() {
   notify('Saved '+value.name+'. Capture its service catalog or request collection to begin.');
 }
 function isEmptyWorkspace() {
-  return !!workspace && (workspace.connections || []).length===0 && (workspace.captures || []).length===0 && (workspace.reviews || []).length===0;
+  return !!workspace && (workspace.connections || []).length===0 && (workspace.captures || []).length===0 && (workspace.reviews || []).length===0 && (workspace.collections || []).length===0;
+}
+function renderHandoverSource() {
+  const selected=parseSourceChoice($('export-capture').value);
+  $('handover-source-export').hidden=selected.kind==='collection';
 }
 function renderHandover() {
   if(!workspace)return;
-  const entries=capturesFor(connectionId,true).map((item)=>({value:item.id,label:captureLabel(item)}));
+  const entries=sourceEntries();
   const previous=$('export-capture').value;
-  options('export-capture',entries,entries.some((item)=>item.value===previous) ? previous : captureId,entries.length ? 'Choose a saved capture' : 'No saved request captures');
+  const selectedSource=sourceChoice(requestSource,requestSource==='collection' ? collectionId : captureId);
+  options('export-capture',entries,entries.some((item)=>item.value===previous) ? previous : selectedSource,entries.length ? 'Choose a saved source' : 'No saved request sources');
+  renderHandoverSource();
   const empty=isEmptyWorkspace();
   text('receive-context',empty ? 'This destination is empty. Select the complete original workspace handover, inspect its identity, then receive and reopen it.' : 'To reopen another handover, start the installed workspace command with a new empty data directory. This running workspace already contains saved work.');
   $('receive-file').disabled=!empty || busy;
@@ -1045,6 +1604,8 @@ async function previewReceive() {
   const file=$('receive-file').files[0];
   if(!file)return;
   const bundle=await readJsonFile(file);
+  const supportedSchemas=new Set(['commons.open311.workspace-export.v1','commons.open311.workspace-export.v2']);
+  if(!supportedSchemas.has(bundle.schema))throw new Error('Choose a complete Open311 workspace export (v1 or v2).');
   const payload=bundle.payload || bundle;
   const original=payload.workspace || bundle.workspace || bundle.state || bundle;
   const preview={
@@ -1057,6 +1618,7 @@ async function previewReceive() {
     captures:bundle.manifest?.captureCount ?? (Array.isArray(payload.captures) ? payload.captures.length : undefined),
     reviews:bundle.manifest?.reviewCount ?? (Array.isArray(payload.reviews) ? payload.reviews.length : undefined),
     operations:bundle.manifest?.operationCount,
+    collections:bundle.manifest?.collectionCount ?? (Array.isArray(payload.collections) ? payload.collections.length : undefined),
     payloadSha256:bundle.manifest?.payloadSha256
   };
   receiveBundle=bundle;
@@ -1078,13 +1640,23 @@ async function receiveWorkspace() {
   switchView('requests');
 }
 async function restoreOriginalCommand() {
-  assertWriteReady();
+  if(!workspace)throw new Error('Open the saved workspace before restoring its original command.');
   const file=$('command-file').files[0];
   if(!file)return;
   const value=await readJsonFile(file);
-  const endpoints=new Set(['/api/connections','/api/capture','/api/reviews','/api/receive']);
+  const endpoints=new Set(['/api/connections','/api/capture','/api/reviews','/api/receive','/api/collections','/api/collection-run','/api/collection-pause']);
   if(value.schema!=='commons.open311.browser-command.v1' || !endpoints.has(value.endpoint) || !value.payload || typeof value.requestId!=='string' || value.payload.requestId!==value.requestId || !Number.isInteger(value.payload.expectedRevision) || value.payload.expectedRevision<0)throw new Error('This file is not a complete original Open311 browser command.');
   if(value.workspaceId!==workspace.workspaceId)throw new Error('Open the command’s original workspace '+value.workspaceId+' before restoring this request.');
+  if(value.endpoint==='/api/collection-pause'){
+    if(pauseCommand || pauseBusy)throw new Error('Reconcile the existing retained pause before restoring another pause command.');
+    pauseCommand={...value,state:'uncertain',restoredAt:new Date().toISOString(),restoredFrom:file.name};
+    await pendingStorage('write',pauseCommand,'pause');
+    renderPause();renderCollectionControls();
+    $('pause-panel').scrollIntoView({behavior:'smooth',block:'start'});
+    notify('Original pause command restored. Inspect its saved outcome before selecting a retry.');
+    return;
+  }
+  if(pending || busy)throw new Error('Reconcile the existing original command before restoring another workspace command.');
   pending={...value,state:'uncertain',restoredAt:new Date().toISOString(),restoredFrom:file.name};
   await pendingStorage('write',pending);
   renderPending();
@@ -1101,7 +1673,7 @@ function invalidateComparison() {
   $('diff-prev').disabled=true;$('diff-next').disabled=true;
 }
 function bind() {
-  for(const node of document.querySelectorAll('[data-view]'))node.addEventListener('click',()=>{switchView(node.dataset.view);$('main').focus({preventScroll:true});});
+  for(const node of document.querySelectorAll('[data-view]'))node.addEventListener('click',()=>safely(async()=>{switchView(node.dataset.view);$('main').focus({preventScroll:true});if(view==='requests')await loadRequests();}));
   $('reload-state').addEventListener('click',()=>safely(async()=>{await refreshState();notify('Reloaded saved revision '+workspace.revision+'.');}));
   $('active-connection').addEventListener('change',()=>safely(()=>chooseConnection($('active-connection').value)));
   $('toggle-capture').addEventListener('click',()=>{$('capture-panel').hidden=!$('capture-panel').hidden;if(!$('capture-panel').hidden)renderCaptureKind();});
@@ -1109,11 +1681,14 @@ function bind() {
   $('capture-kind').addEventListener('change',renderCaptureKind);
   $('capture-form').addEventListener('submit',(event)=>{event.preventDefault();safely(captureSource);});
   $('request-capture').addEventListener('change',()=>safely(async()=>{
-    captureId=$('request-capture').value;offset=0;selected=null;$('request-detail').hidden=true;detailSequence++;
+    const choice=parseSourceChoice($('request-capture').value);
+    requestSource=choice.kind;
+    if(choice.kind==='collection')collectionId=choice.id;else captureId=choice.id;
+    offset=0;selected=null;$('request-detail').hidden=true;detailSequence++;
     renderCaptureSelectors();savePreferences();await loadRequests();
   }));
-  $('inspect-capture').addEventListener('click',()=>safely(()=>inspectCapture(captureId)));
-  $('download-source').addEventListener('click',()=>safely(()=>downloadExport('source')));
+  $('inspect-capture').addEventListener('click',()=>safely(async()=>{if(requestSource==='collection'){switchView('collections');}else await inspectCapture(captureId);}));
+  $('download-source').addEventListener('click',()=>safely(()=>requestSource==='collection' ? downloadExport('json',collectionId,'collection') : downloadExport('source')));
   $('request-filters').addEventListener('submit',(event)=>{event.preventDefault();offset=0;safely(loadRequests);});
   $('clear-filters').addEventListener('click',()=>safely(async()=>{$('filter-q').value='';$('filter-status').value='';$('filter-service').value='';offset=0;await loadRequests();}));
   $('filter-limit').addEventListener('change',()=>{offset=0;safely(loadRequests);});
@@ -1125,7 +1700,7 @@ function bind() {
   $('review-form').addEventListener('input',persistDraft);
   $('review-form').addEventListener('change',persistDraft);
   $('review-form').addEventListener('submit',(event)=>{event.preventDefault();safely(saveReview);});
-  $('discard-review-draft').addEventListener('click',()=>safely(async()=>{if(!selected)return;const current=selected;clearDraft();await openRequest(current.id,{connectionId:current.connectionId,latest:true,scroll:false});}));
+  $('discard-review-draft').addEventListener('click',()=>safely(async()=>{if(!selected)return;const current=selected;clearDraft();await openRequest(current.id,{connectionId:current.connectionId,...(current.viewedCollectionId ? {collectionId:current.viewedCollectionId} : current.viewedCaptureId ? {captureId:current.viewedCaptureId} : {latest:true}),scroll:false});}));
   for(const id of ['queue-connection','queue-status'])$(id).addEventListener('change',renderQueue);
   $('queue-search').addEventListener('input',renderQueue);
   $('queue-export').addEventListener('click',exportQueue);
@@ -1140,6 +1715,7 @@ function bind() {
     notify('Saved service catalog for '+connectionName(targetConnection)+'.');
   }));
   $('catalog-inspect').addEventListener('click',()=>safely(()=>inspectCapture(catalog.capture?.id)));
+  $('diff-source').addEventListener('change',()=>{invalidateComparison();renderDiffSelectors();});
   $('diff-form').addEventListener('submit',(event)=>{event.preventDefault();safely(compareCaptures);});
   for(const id of ['diff-before','diff-after'])$(id).addEventListener('change',invalidateComparison);
   $('diff-kind').addEventListener('change',()=>{comparisonOffset=0;renderComparison();});
@@ -1156,12 +1732,35 @@ function bind() {
     $('connection-identity-help').hidden=true;$('connection-clone').hidden=true;text('connection-editor-title','Add a connection using these settings');$('connection-name').focus();
   });
   $('connection-form').addEventListener('submit',(event)=>{event.preventDefault();safely(saveConnection);});
-  for(const node of document.querySelectorAll('[data-export]'))node.addEventListener('click',()=>safely(()=>downloadExport(node.dataset.export,$('export-capture').value)));
+  $('export-capture').addEventListener('change',renderHandoverSource);
+  for(const node of document.querySelectorAll('[data-export]'))node.addEventListener('click',()=>safely(()=>{const choice=parseSourceChoice($('export-capture').value);return downloadExport(node.dataset.export,choice.id,choice.kind);}));
   $('receive-file').addEventListener('change',()=>safely(previewReceive));
   $('receive-submit').addEventListener('click',()=>safely(receiveWorkspace));
   $('operation-inspect').addEventListener('click',()=>safely(()=>inspectOperation($('operation-id').value.trim())));
   $('operation-id').addEventListener('keydown',(event)=>{if(event.key==='Enter'){event.preventDefault();safely(()=>inspectOperation($('operation-id').value.trim()));}});
   $('command-file').addEventListener('change',()=>safely(restoreOriginalCommand));
+  $('collection-new').addEventListener('click',()=>{$('collection-editor').hidden=false;$('collection-name').focus();});
+  $('collection-cancel').addEventListener('click',()=>{$('collection-editor').hidden=true;});
+  $('collection-time-basis').addEventListener('change',()=>renderCollectionModes(true));
+  $('collection-strategy').addEventListener('change',()=>renderCollectionModes());
+  $('collection-form').addEventListener('submit',(event)=>{event.preventDefault();safely(()=>createCollection(false));});
+  $('collection-create-run').addEventListener('click',()=>safely(()=>createCollection(true)));
+  $('collection-choice').addEventListener('change',()=>safely(()=>chooseCollection($('collection-choice').value)));
+  $('collection-reload').addEventListener('click',()=>safely(refreshState));
+  $('collection-open').addEventListener('click',()=>safely(openCollectionRequests));
+  $('collection-run').addEventListener('click',()=>safely(runCollection));
+  $('collection-pause').addEventListener('click',()=>safely(prepareCollectionPause));
+  $('collection-recover').addEventListener('click',()=>safely(recoverCollectionRun));
+  $('collection-copy').addEventListener('click',()=>safely(copyCollectionPlan));
+  $('collection-inspect').addEventListener('click',()=>{if(collectionPage.collection)showInspector('Saved source collection',{collection:collectionPage.collection,connection:collectionPage.connection},'Original plan, provider configuration, recorded progress and coverage.',[button('Download collection with all originals',()=>downloadExport('json',collectionId,'collection'))]);});
+  $('collection-window-prev').addEventListener('click',()=>safely(async()=>{collectionOffset=Math.max(0,collectionPage.offset-collectionPage.limit);await loadCollection();}));
+  $('collection-window-next').addEventListener('click',()=>safely(async()=>{if(collectionPage.nextOffset===null)return;collectionOffset=collectionPage.nextOffset;await loadCollection();}));
+  for(const kind of ['report','csv','json','workspace'])$('collection-export-'+kind).addEventListener('click',()=>safely(()=>downloadExport(kind,collectionId,'collection')));
+  $('pause-inspect').addEventListener('click',()=>safely(inspectCollectionPause));
+  $('pause-retry').addEventListener('click',()=>safely(sendCollectionPause));
+  $('pause-current').addEventListener('click',()=>safely(prepareCollectionPause));
+  $('pause-dismiss').addEventListener('click',()=>safely(dismissCollectionPause));
+  $('pause-download').addEventListener('click',()=>{if(pauseCommand)downloadJson(pauseCommand,'open311-pause-command-'+filename(pauseCommand.requestId,'original')+'.json');});
   $('pending-inspect').addEventListener('click',()=>safely(inspectPending));
   $('pending-retry').addEventListener('click',()=>safely(sendPending));
   $('pending-download').addEventListener('click',()=>{if(pending)downloadJson(pending,'open311-command-'+filename(pending.requestId,'original')+'.json');});
@@ -1174,8 +1773,8 @@ async function start() {
   emptyRows('request-rows',5,'Opening the saved workspace…');
   emptyRows('catalog-rows',5,'Choose a connection to inspect its saved catalog.');
   invalidateComparison();
-  pending=await pendingStorage('read');
-  renderPending();
+  [pending,pauseCommand]=await Promise.all([pendingStorage('read'),pendingStorage('read',undefined,'pause')]);
+  renderPending();renderPause();
   await refreshState();
   if(!workspace.connections.length){switchView('connections');editConnection();}
 }

@@ -4,6 +4,8 @@ import { open, lstat, readdir, realpath } from 'node:fs/promises';
 import { resolve, dirname, relative, join } from 'node:path';
 import { createHash } from 'node:crypto';
 import { createInterface } from 'node:readline';
+import { Readable } from 'node:stream';
+import { createCloudUploads, CLOUD_UPLOAD_CHUNK_BYTES } from './uploads.mjs';
 import { operationId, revisionNumber, json, sha256 } from '../workspace/store.mjs';
 import { readDuckdbSourceFile } from '../config.mjs';
 import { prepareWorkbenchSource } from '../workbench/bootstrap.mjs';
@@ -23,7 +25,7 @@ export async function emptyCloudSource(directory) {
 }
 
 export async function createCloudDelivery({ workspaceStore, python = 'python3', environment = process.env,
-  currentSource, canSelect, inspectPackage, packageDirectory } = {}) {
+  currentSource, canSelect, inspectPackage, packageDirectory, packageDraft, signal } = {}) {
   const store = workspaceStore.extension(createCloudStore), directory = workspaceStore.directory;
   const root = await privateDirectory(resolve(directory, 'cloud'));
   const at = () => new Date().toISOString();
@@ -43,7 +45,8 @@ export async function createCloudDelivery({ workspaceStore, python = 'python3', 
     throw issue('CLOUD_RETAINED_PATH_MISSING', undefined, 409);
   };
   const editionInput = value => ({ root: selectedPath(value), manifest: value.manifest, inspection: value.inspection });
-  const native = (input, where) => runNative(input, { directory: where, python, environment });
+  const native = (input, where) => runNative(input, { directory: where, python, environment, signal });
+  const chunkUploads=createCloudUploads();
   const publicEdition = record => ({ id: record.id, label: record.manifest.label, transport: record.manifest.transport,
     capturedAt: record.manifest.capturedAt, createdAt: record.createdAt, state: record.state,
     manifestSha256: record.manifestSha256, files: record.manifest.files.length,
@@ -275,9 +278,10 @@ export async function createCloudDelivery({ workspaceStore, python = 'python3', 
       const selected = store.list('selection').find(item => item.state === 'READY' && editionIds.has(item.selection.editionId)) ?? null;
       const originalPackage = request.packageId ? await inspectPackage(request.packageId) : null;
       value = store.reserve('delivery', request.operationId, request, 'EXPORTING',
-        { snapshot: { editions, comparisons, selected, originalPackage } }).record;
+        { snapshot: { editions, comparisons, selected, originalPackage,
+          originalDraft: originalPackage && packageDraft ? await packageDraft(request.packageId) : null } }).record;
     }
-    const { editions, comparisons, selected, originalPackage } = value.snapshot;
+    const { editions, comparisons, selected, originalPackage, originalDraft = null } = value.snapshot;
     const out = await privateDirectory(pathFor('deliveries', request.operationId)), destination = join(out, 'handover.zip');
     try {
       let manifest;
@@ -306,7 +310,8 @@ export async function createCloudDelivery({ workspaceStore, python = 'python3', 
         }
         manifest = { schema: DELIVERY_SCHEMA, id: request.operationId, createdAt: value.createdAt,
           originalWorkspaceId: workspaceStore.workspaceId, request, editions, comparisons,
-          selection: selected, originalPackage, files: [...files.values()].sort((a, b) => a.path < b.path ? -1 : a.path > b.path ? 1 : 0),
+          selection: selected, originalPackage, originalDraft,
+          originalDraftSha256: originalDraft ? identity(originalDraft) : null, files: [...files.values()].sort((a, b) => a.path < b.path ? -1 : a.path > b.path ? 1 : 0),
           contracts: CONTRACTS };
         await atomicJson(join(out, 'handover.json'), manifest);
       }
@@ -361,10 +366,23 @@ export async function createCloudDelivery({ workspaceStore, python = 'python3', 
         item.storagePath = relative(directory, resolve(destination, relativePath(item.storagePath)));
         delete item.findingsIdentity;
       }
+      if (manifest.originalDraft) {
+        if (identity(manifest.originalDraft)!==manifest.originalDraftSha256 || !manifest.originalPackage ||
+            manifest.originalDraft.revision!==manifest.originalPackage.revision ||
+            sha256(json(manifest.originalDraft.plan))!==manifest.originalDraft.planSha256 ||
+            !Array.isArray(manifest.originalDraft.authoring))
+          throw issue('CLOUD_RECEIVED_DRAFT_INVALID');
+        const planEntry=manifest.files.find(item=>item.path==='packages/'+manifest.originalPackage.id+'/plan.json');
+        if(!planEntry||planEntry.sha256!==manifest.originalDraft.planSha256)
+          throw issue('CLOUD_RECEIVED_DRAFT_PACKAGE_MISMATCH');
+      }
       const delivery = { id: manifest.id, ...pin, receivedFrom: origin, manifest: { schema: manifest.schema, files: manifest.files.length } };
       const received = { editions: manifest.editions.map(item => item.id), comparisons: manifest.comparisons.map(item => item.id),
-        originalPackage: manifest.originalPackage ?? null, sourceSelectionRequired: true };
-      store.update('receiving', value.id, 'READY', { delivery, received, storagePath: relative(directory, out) }, 'handover-received', () => {
+        originalPackage: manifest.originalPackage ?? null, sourceSelectionRequired: true,
+        originalDraftSha256: manifest.originalDraftSha256 ?? null };
+      store.update('receiving', value.id, 'READY', { delivery, received,
+        originalDraft: manifest.originalDraft ?? null, originalDraftSha256: manifest.originalDraftSha256 ?? null,
+        storagePath: relative(directory, out) }, 'handover-received', () => {
         for (const item of manifest.editions) store.importRecord('edition', item, origin);
         for (const item of manifest.comparisons) store.importRecord('comparison', item, origin);
       });
@@ -372,6 +390,37 @@ export async function createCloudDelivery({ workspaceStore, python = 'python3', 
     } catch (error) {
       store.update('receiving', value.id, 'FAILED', { error: error.code ?? 'CLOUD_RECEIVE_FAILED' }, 'handover-receive-failed'); throw error;
     }
+  }
+  function uploadSelection(editionId,fileId) {
+    const value=store.get('edition',identifier(editionId))??store.get('upload',editionId);
+    if(!value)throw issue('CLOUD_EDITION_NOT_FOUND',undefined,404);
+    const file=(value.archive?[value.archive]:value.manifest.files).find(item=>item.id===fileId);
+    if(!file)throw issue('CLOUD_FILE_NOT_DECLARED',undefined,404);
+    const declared=value.archive?value.request.archive:file;
+    return {value,file,declared,base:value.archive?pathFor('uploads',value.id):selectedPath(value)};
+  }
+  async function chunkInput(editionId,fileId) {
+    const selection=uploadSelection(editionId,fileId),{value,file,declared,base}=selection;
+    return {...selection,input:{
+      directory:resolve(root,'transfer-inputs',value.id,identity({fileId})),
+      target:await within(base,file.path,true),expectedSha256:file.sha256,
+      selection:{editionId:value.id,fileId:file.id,bytes:file.bytes,...(declared.sha256?{sha256:declared.sha256}:{})}
+    }};
+  }
+  async function retainedReport({id}) {
+    const value=comparisonFor(id);
+    if(value.state!=='READY')throw issue('CLOUD_COMPARISON_NOT_READY',undefined,409);
+    const findings=await checkFindings(value),prefix=Buffer.from(value.reportHeader);
+    const expected={bytes:String(BigInt(value.findings.bytes)+BigInt(prefix.length)),sha256:value.reportSha256};
+    const path=join(selectedPath(value),'report-complete.jsonl');
+    try {
+      const found=await fileDigest(path,LIMITS.totalBytes);
+      if(found.bytes!==expected.bytes||found.sha256!==expected.sha256)throw issue('CLOUD_COMPARISON_CHANGED',undefined,409);
+    } catch(error) {
+      if(error.code!=='ENOENT')throw error;
+      await acceptStream(path,Readable.from((async function*(){yield prefix;yield* createReadStream(findings);})()),expected,{signal});
+    }
+    return {path,filename:id+'.jsonl',type:'application/x-ndjson',...expected};
   }
   return {
     state() { return { schema: WORKSPACE_SCHEMA, revision: store.revision(), contracts: CONTRACTS,
@@ -382,7 +431,40 @@ export async function createCloudDelivery({ workspaceStore, python = 'python3', 
       selection: store.list('selection').find(item => item.state === 'READY')?.selection ?? null,
       events: store.history() }; },
     intake, commit, import: importPacket, edition: editionDetail, compare: comparison, comparison: comparisonPage,
-    review, select, export: exportDelivery, receive,
+    review, select, export: exportDelivery, receive, retainedReport,
+    operation({operationId:id}) {
+      operationId(id);const value=store.operation(id);
+      if(!value)throw issue('CLOUD_OPERATION_NOT_FOUND',undefined,404);
+      return {kind:value.kind,id:value.id,state:value.state,request:value.request,requestSha256:value.requestSha256,
+        createdAt:value.createdAt,updatedAt:value.updatedAt,error:value.error??null,revision:store.revision()};
+    },
+    receivedDraft({receivingId}) {
+      const value=store.get('receiving',operationId(receivingId));
+      if(value?.state!=='READY')throw issue('CLOUD_RECEIVING_NOT_READY',undefined,409);
+      if(!value.originalDraft)throw issue('CLOUD_RECEIVED_DRAFT_NOT_INCLUDED',undefined,404);
+      if(identity(value.originalDraft)!==value.originalDraftSha256)throw issue('CLOUD_RECEIVED_DRAFT_CHANGED',undefined,409);
+      return {receivingId:value.id,delivery:value.delivery,editionIds:value.received.editions,
+        originalDraft:value.originalDraft,originalDraftSha256:value.originalDraftSha256,sourceSelectionRequired:true};
+    },
+    async uploadStatus({editionId,fileId}) {
+      const {input,value,file}=await chunkInput(editionId,fileId),result=await chunkUploads.status(input);
+      if(result.state==='COMPLETE'&&value.archive&&!value.archive.sha256)store.update('upload',value.id,'UPLOADED',
+        {archive:{...value.archive,sha256:result.sha256}},'archive-uploaded');
+      return {...result,editionId:value.id,fileId:file.id,revision:store.revision()};
+    },
+    async uploadChunk({editionId,fileId,offset,data,sha256:chunkSha256}) {
+      if(typeof data==='string'){
+        if(data.length>Math.ceil(CLOUD_UPLOAD_CHUNK_BYTES/3)*4)throw issue('CLOUD_UPLOAD_CHUNK_LIMIT');
+        const decoded=Buffer.from(data,'base64');
+        if(decoded.toString('base64')!==data)throw issue('CLOUD_UPLOAD_BASE64_INVALID');
+        data=decoded;
+      }
+      const {input,value,file}=await chunkInput(editionId,fileId);
+      const result=await chunkUploads.append(input,{offset,data,sha256:chunkSha256,signal});
+      if(result.state==='COMPLETE'&&value.archive&&!value.archive.sha256)store.update('upload',value.id,'UPLOADED',
+        {archive:{...value.archive,sha256:result.sha256}},'archive-uploaded');
+      return {...result,editionId:value.id,fileId:file.id,revision:store.revision()};
+    },
     async upload({ editionId, fileId, stream, signal }) {
       const value = store.get('edition', identifier(editionId)) ?? store.get('upload', editionId);
       if (!value) throw issue('CLOUD_EDITION_NOT_FOUND', undefined, 404);
@@ -399,7 +481,7 @@ export async function createCloudDelivery({ workspaceStore, python = 'python3', 
       if (!file) throw issue('CLOUD_FILE_NOT_FOUND', undefined, 404);
       const path = await within(selectedPath(value), file.path), pin = await fileDigest(path);
       if (pin.sha256 !== file.sha256 || pin.bytes !== file.bytes) throw issue('CLOUD_ORIGINAL_FILE_CHANGED', undefined, 409);
-      return { path, filename: file.path.split('/').pop(), type: 'application/octet-stream', bytes: pin.bytes };
+      return { path, filename: file.path.split('/').pop(), type: 'application/octet-stream', ...pin };
     },
     async report({ id, kind }) {
       const value = comparisonFor(id);
@@ -413,7 +495,7 @@ export async function createCloudDelivery({ workspaceStore, python = 'python3', 
       if (value?.state !== 'READY') throw issue('CLOUD_DELIVERY_NOT_READY', undefined, 409);
       const path = join(selectedPath(value), 'handover.zip'), pin = await fileDigest(path, LIMITS.totalBytes);
       if (pin.sha256 !== value.delivery.sha256 || pin.bytes !== value.delivery.bytes) throw issue('CLOUD_HANDOVER_CHANGED', undefined, 409);
-      return { path, filename: value.delivery.filename, type: 'application/zip', bytes: pin.bytes };
+      return { path, filename: value.delivery.filename, type: 'application/zip', ...pin };
     },
   };
 }

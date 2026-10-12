@@ -268,3 +268,17 @@ node source/stellar/scf-starforge-20261009/sf30-seller-sdk/supplier-orders/recei
 ~~~
 
 Both original programs must report PASS with closed lifetimes. The following intake verifies their complete report and artifact identities, then receives the operator's whole producer and final customer packages through the original portable importer. Those original workspaces and the signed installer remain unchanged. For an already fulfilled order, the local transport journey prepares a reviewed revision of an existing selected dispatch and invoice; it preserves their business IDs and quantity contributions.
+
+## Customer profile binding
+
+The complete customer declaration is selected before business intake and retained
+with original documents and package histories. A customer-profile channel must add
+`profileSha256` with the exact current declaration hash to its existing host-owned
+channel object. The optional field remains absent for legacy implicit Unite channels,
+preserving their original configuration hash and replay identities. The native engine
+checks the profile pin at prepare, send and incoming intake. Transport lists apply the
+selected order-ID limit; full events retain the source document and profile identity.
+
+See [PROFILES.md](PROFILES.md) for complete browser/CLI/40-tool selection, declared
+rules, original source preservation and explicit empty-customer package adoption.
+Changing a profile never auto-retries a possibly delivered original message.

@@ -45,12 +45,13 @@ function tls(value,base){
   return Object.fromEntries(Object.entries(value).map(([k,v])=>[k,resolve(base,text(v,'TLS file',4096))]));
 }
 function normalizedChannel(value,base){
-  keys(value,['id','title','mode','supplierId','agreement','incoming','outgoing'],'channel');
+  keys(value,['id','title','mode','supplierId','profileSha256','agreement','incoming','outgoing'],'channel');
   const id=identifier(value.id,'Channel ID'),title=text(value.title,'Channel title',200),supplierId=text(value.supplierId,'Original supplier identity',250);
   if(!['test','live'].includes(value.mode))fail('ORDER_TRANSPORT_MODE_REQUIRED','Declare test or live for this exact channel.');
   keys(value.agreement,['reference'],'negotiated agreement');
   const agreement={reference:text(value.agreement.reference,'Connection sheet or onboarding reference',2048)};
-  const internal={id,title,mode:value.mode,supplierId,agreement},visible={...internal};
+  if(value.profileSha256!==undefined&&!SHA.test(value.profileSha256))fail('ORDER_TRANSPORT_PROFILE_INVALID','Declare the exact selected customer profile SHA-256.');
+  const internal={id,title,mode:value.mode,supplierId,agreement,...(value.profileSha256?{profileSha256:value.profileSha256}:{})},visible={...internal};
   if(value.incoming){
     keys(value.incoming,['url','auth','messageIdHeader','acknowledgment'],'incoming channel');
     const incoming=value.incoming,authentication=auth(incoming.auth),ack=incoming.acknowledgment;

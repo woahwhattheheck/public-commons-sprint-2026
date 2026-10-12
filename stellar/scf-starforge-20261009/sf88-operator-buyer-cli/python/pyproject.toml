@@ -37,5 +37,9 @@ stellar-forge-synthesis = "stellar_forge_buyer.synthesis_cli:main"
 stellar-forge-worldbank-analysis = "stellar_forge_buyer.worldbank_analysis:main"
 
 [tool.setuptools]
-packages = ["stellar_forge_buyer"]
+packages = ["stellar_forge_buyer", "stellar_forge_buyer.reconciliation", "stellar_forge_buyer.timescale_intake"]
 
+
+[tool.setuptools.package-data]
+"stellar_forge_buyer.reconciliation" = ["OPERATING.md", "public/*.html", "public/*.js", "public/*.css", "browser-receiving.mjs"]
+"stellar_forge_buyer.timescale_intake" = ["OPERATING.md", "public/*.html", "public/*.js", "public/*.css", "browser-receiving.mjs"]

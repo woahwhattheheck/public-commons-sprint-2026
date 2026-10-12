@@ -6,6 +6,7 @@
   <meta name="color-scheme" content="light">
   <title>Socrata workspace · Starforge</title>
   <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/property.css">
   <script type="module" src="/app.mjs"></script>
 </head>
 <body>
@@ -26,6 +27,7 @@
         <button type="button" data-section="merchant"><span>05</span> Merchant</button>
         <button type="button" data-section="publisher"><span>06</span> Publisher &amp; buyer</button>
         <button type="button" data-section="exports"><span>07</span> Export &amp; recovery</button>
+        <button type="button" data-section="property"><span>08</span> Property operations</button>
       </nav>
       <div class="sidebar-summary"><div class="eyebrow">CURRENT WORKSPACE</div><strong id="workspace-name">No source configured</strong><p id="workspace-summary">Choose a source or restore a package.</p><span id="edition-summary" class="mono"></span></div>
     </aside>
@@ -165,6 +167,7 @@
 
 
       <section id="section-publisher" class="publisher-section" data-panel="publisher" aria-labelledby="publisher-title" hidden>
+        <div class="panel"><label>Resource for this original publisher<select id="publisher-resource-scope"></select></label><p id="publisher-resource-note" class="help"></p></div>
         <div class="section-heading"><div><div class="eyebrow">06 / PUBLISHER &amp; BUYER</div><h2 id="publisher-title">Publish and deliver the dataset</h2><p>Use the retained export with the original dataset publisher, seller release and customer acquisition.</p></div><button id="pub-open" type="button" data-write>Open publisher</button></div>
         <div id="pub-state-summary" class="panel muted">Open the publisher to inspect its retained versions, releases and customer sessions.</div>
         <nav class="publisher-nav" aria-label="Publication workflow">
@@ -286,6 +289,11 @@
           <p id="package-import-status" class="help"></p>
         </div>
         <details class="panel"><summary>Current workspace record</summary><pre id="workspace-details">Connecting.</pre></details>
+      </section>
+
+      <section id="section-property" data-panel="property" aria-labelledby="property-title" hidden>
+        <div class="section-heading"><div><div class="eyebrow">08 / PROPERTY OPERATIONS</div><h2 id="property-title">Source, inspection and delivery</h2><p>Review exact property identities across the original HPD source, vendor report editions and the receiving account.</p></div></div>
+        <div id="property-root"></div>
       </section>
 
       <details id="action-result-panel" class="panel result-panel">

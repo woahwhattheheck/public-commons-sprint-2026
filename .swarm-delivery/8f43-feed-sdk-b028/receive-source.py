@@ -14,9 +14,9 @@ import urllib.request
 
 HOST = Path("/workspace/scratch/b0285b3810b3/native-shared-queue/current-host")
 DECODER_BLOB = "533bfef89138d6685f059bcc2256a380810f05ba"
-PACKET_BLOB = "96acd68fbf461ee6b5809a592f0f4de04f1065d4"
-PACKET_BYTES = 179947
-PREPARATION_BLOB = "92667ebfdda549d8ebd69afeade7b6f8ec5c681b"
+PACKET_BLOB = "fe1b46df17427216376bf6709ddb37aa6139bd77"
+PACKET_BYTES = 165372
+PREPARATION_BLOB = "a8eb2c0e427fc7c3dda73e67dc438479c3785b61"
 PACKET_PATH = ".swarm-delivery/8f43-feed-sdk-b028/source-packet.json"
 REPOSITORY = "woahwhattheheck/public-commons-sprint-2026"
 

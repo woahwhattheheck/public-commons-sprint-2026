@@ -38,7 +38,7 @@ const safeCloudPath = path => {
 const mappingKinds = ['text', 'integer', 'decimal', 'timestamp-ns', 'boolean', 'json'];
 const timeUnits = ['iso', 'ns', 'us', 'ms', 's'];
 
-export function mountCloudDelivery(host, { api, download, onSelected, perform, getWorkspace = () => ({}), beforeSelect = async () => {} }) {
+export function mountCloudDelivery(host, { api, download, onSelected, onReceivedDraft, perform, getWorkspace = () => ({}), beforeSelect = async () => {} }) {
   if (!host || typeof api !== 'function') throw new TypeError('A workspace host and its authenticated API are required.');
   let state = null, busy = false, message = '', messageError = false, disposed = false, storageName = '';
   let pending = {}, mutationContext = null;
@@ -50,7 +50,7 @@ export function mountCloudDelivery(host, { api, download, onSelected, perform, g
     leftEditionId: '', rightEditionId: '', leftRelationId: '', rightRelationId: '', family: '',
     mappings: [], omissions: [], compareNote: '', comparisonId: '', comparison: null, findingsOffset: 0,
     reviewNote: '', reviewDecision: 'accepted', exportEditions: new Set(), exportComparisons: new Set(),
-    exportPackage: '', exportNote: '', receivePath: '', archiveFile: null, receiveIntake: null, lastDelivery: null
+    exportPackage: '', exportNote: '', receivePath: '', archiveFile: null, receiveIntake: null, lastDelivery: null, receivedDraftChoice: 'save'
   };
   const getEdition = id => editions.get(id) ?? state?.editions?.find(item => item.id === id);
   const relations = id => list(getEdition(id)?.inspection?.relations);
@@ -474,7 +474,10 @@ export function mountCloudDelivery(host, { api, download, onSelected, perform, g
       '<section class="cloud-panel"><h3>Retained handovers</h3>' +
       (list(state.deliveries).length ? list(state.deliveries).map(item => '<div class="cloud-delivery-row"><div><strong>' + esc(item.filename ?? item.id) +
         '</strong><small>' + esc(stamp(item.createdAt)) + ' · ' + esc(byteLabel(item.bytes)) + '</small></div>' +
-        action('open-delivery', 'Open handover', { id: item.id }) + '</div>').join('') : empty('Completed exports and received handovers appear here.')) + '</section>';
+        action('open-delivery', 'Open handover', { id: item.id }) + '</div>').join('') : empty('Completed exports and received handovers appear here.')) + '</section>' +
+      '<section class="cloud-panel"><h3>Received source and editable draft</h3><p>Select the received edition as the merchant source, then open its original draft for review. Saving creates a new local revision with the receiving identity retained.</p>' +
+      selection('receivedDraftChoice','Unsaved merchant edits',[{value:'save',label:'Save current edits first'},{value:'discard',label:'Discard current unsaved edits'}],ui.receivedDraftChoice) +
+      (list(state.receivings).length?list(state.receivings).map(item=>'<div class="cloud-delivery-row"><div><strong>'+esc(item.id)+'</strong><small>'+esc(item.state)+' · '+esc(item.originalDraftSha256??'No editable draft in this original archive')+'</small></div>'+action('open-received-draft','Open draft in merchant editor',{id:item.id},item.state!=='READY'||!item.originalDraftSha256||!onReceivedDraft)+'</div>').join(''):empty('Completed receiving operations appear here.'))+'</section>';
   }
   function contractView() {
     const contracts = state.contracts ?? {};
@@ -507,6 +510,27 @@ export function mountCloudDelivery(host, { api, download, onSelected, perform, g
       '</nav><div class="cloud-view">' + (views[ui.tab] ?? editionView)() + '</div>';
     for (const node of host.querySelectorAll('button,input,textarea,select')) node.disabled = busy || node.dataset.disabled === 'true';
   }
+  async function uploadRetainedFile(editionId,fileId,file,onProgress=()=>{}){
+    const query='edition='+encodeURIComponent(editionId)+'&file='+encodeURIComponent(fileId);
+    const status=await api('/api/cloud/upload-status?'+query);
+    if(String(status.bytes)!==String(file.size))throw new Error('The selected file differs from the retained upload size.');
+    const maximum=8*1024*1024,retained=Number(status.offset),size=file.size;
+    // Browser digest() has no streaming accumulator. Re-read and prove each
+    // retained prefix chunk, rather than trust a same-name replacement File.
+    let offset=0,result=status;
+    do{
+      const end=Math.min(size,offset+maximum);
+      const chunk=await file.slice(offset,end).arrayBuffer();
+      const sum=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',chunk)),n=>n.toString(16).padStart(2,'0')).join('');
+      onProgress((offset<retained?'Verifying retained prefix ':'Uploading ')+byteLabel(end)+' / '+byteLabel(size));
+      result=await api('/api/cloud/upload-chunk?'+query+'&offset='+offset+'&sha256='+sum,new Blob([chunk]),{method:'PUT',binary:true});
+      if(result.editionId!==editionId||result.fileId!==fileId||Number(result.offset)<end)
+        throw new Error('The retained upload returned a different file or range identity.');
+      offset=end;
+    }while(offset<size);
+    if(result.state!=='COMPLETE'||String(result.offset)!==String(size))throw new Error('The complete source upload is not yet retained.');
+    return result;
+  }
   async function uploadSources() {
     if (!ui.manifest) throw new Error('Choose the actual source manifest first.');
     if (!fileMatches().every(item => item.valid)) throw new Error('Select each missing source file with its exact declared path and byte size.');
@@ -521,7 +545,7 @@ export function mountCloudDelivery(host, { api, download, onSelected, perform, g
       if (!item.upload?.url) throw new Error('The workspace did not return an upload URL for ' + item.declared.id + '. Reopen this intake.');
       ui.progress.set(item.declared.id, 'Uploading'); paint();
       try {
-        await api(safeCloudPath(item.upload.url), item.file, { method: 'PUT', binary: true });
+        await uploadRetainedFile(editionId,item.declared.id,item.file,label=>{ui.progress.set(item.declared.id,label);paint();});
         item.upload.present = true; ui.progress.set(item.declared.id, 'Retained');
       } catch (error) {
         ui.progress.set(item.declared.id, 'Transfer interrupted; reopen intake to resume');
@@ -579,7 +603,7 @@ export function mountCloudDelivery(host, { api, download, onSelected, perform, g
     if (!upload?.url) throw new Error('The archive intake did not return its original upload URL.');
     if (intake.archive?.name && intake.archive.name !== file.name || upload.bytes && String(upload.bytes) !== String(file.size))
       throw new Error('Choose the same archive retained by this receiving intake.');
-    if (!upload.present) await api(safeCloudPath(upload.url), file, { method: 'PUT', binary: true });
+    if (!upload.present) await uploadRetainedFile(intake.id??intake.intakeId,upload.id??'archive',file,label=>{notice(label);paint();});
     await refreshCloud({ selected: false });
     await submit('receive', '/api/cloud/receive', operationPayload({ intakeId: intake.id ?? intake.intakeId }));
     notice('The handover is received. Open its source editions and deliberately select the source for the merchant.');
@@ -652,6 +676,12 @@ export function mountCloudDelivery(host, { api, download, onSelected, perform, g
     },
     'receive-local': async () => { await submit('receive', '/api/cloud/receive', operationPayload({ archivePath: ui.receivePath.trim() })); notice('Received source editions and review lineage. Inspect them before choosing the merchant source.'); },
     'receive-upload': receiveUpload,
+    'open-received-draft':async node=>{
+      const original=await api('/api/cloud/received-draft?receivingId='+encodeURIComponent(node.dataset.cloudId));
+      if(!state.selection||!original.editionIds.includes(state.selection.editionId))throw new Error('Select one of this handover’s received editions before opening its merchant draft.');
+      await onReceivedDraft?.(original,{dirtyChoice:ui.receivedDraftChoice});
+      notice('The original draft is open for editing. Review source relations and terms, then save a new local revision.');
+    },
     'resume-archive': async node => {
       const result = await api('/api/cloud/intake?id=' + encodeURIComponent(node.dataset.cloudId));
       ui.receiveIntake = archiveIntake(result); ui.archiveFile = null; rememberArchiveIntake();

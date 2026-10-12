@@ -20,7 +20,7 @@ const downloads=createRetainedDownload({
 const pageIdentity={
   orderItems:['orderId','revision','stateSha256'],orderHistory:['orderId','revision','stateSha256'],
   documentLines:['id','revision','sha256'],draftLines:['draftId','revision','sha256'],
-  transmissionHistory:['transmissionId','revision']
+  transmissionHistory:['transmissionId','revision'],profileHistory:['profileSha256','revision']
 };
 /** One explicit alias. Construction does not open its native workspace. */
 export class SupplierOrderClient {
@@ -50,7 +50,7 @@ export class SupplierOrderClient {
   /** Yield complete pages and reject a changed selected order/draft during a line/history walk. */
   async *pages(method,args={},options){
     if(!SUPPLIER_ORDER_PAGED_METHODS.includes(method))
-      fail('SUPPLIER_ORDER_CLIENT_PAGINATION','Choose an original paged order, document, draft or transmission method.');
+      fail('SUPPLIER_ORDER_CLIENT_PAGINATION','Choose an original paged profile, order, document, draft or transmission method.');
     const selected={...args};let firstIdentity;
     while(true){
       const page=await this[method](selected,options);

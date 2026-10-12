@@ -95,20 +95,29 @@ async function verifyNative(delivery,document,result,signal,{baseline=false}={})
     equal({code:view.nativePreparation.error.code,message:view.nativePreparation.error.message},error,'The native preparation refusal changed.');
   }else{
     equal(view.nativePreparation.status,'PREPARED','The completed native preparation was not delivered.');
-    equal(view.prepared.map(file=>({filename:file.filename,bytes:file.bytes.length,sha256:file.sha256})),
-      prepared.map(file=>({filename:file.filename,bytes:file.size,sha256:file.sha256})),'The actual native receiving files differ from the source-bound renderer.');
+    const preparedIdentity=file=>({filename:file.filename,bytes:file.bytes.length,sha256:file.sha256,
+      ...(file.formatConversion?{sourceFile:file.sourceFile,formatConversion:file.formatConversion}:{})});
+    equal(view.prepared.map(preparedIdentity),prepared.map(preparedIdentity),
+      'The actual native receiving files and conversion bindings differ from the source-bound renderer.');
   }
   if(view.nativePreparation.status==='PREPARED'){
     const nativeDelivery=await inspectDelivery(view.prepared.map(file=>({filename:file.filename,bytes:file.bytes})),delivery.profile,
       {encoding:delivery.source.textEncoding??'utf-8',signal});
-    const fieldRows=tables=>tables.map(table=>({filename:table.filename,headers:table.headers,keys:table.keys,
-      sheetName:table.origin?.sheetName??null,sheetIndex:table.origin?.sheetIndex??null,
-      rows:table.rows.map(row=>({rowNumber:row.rowNumber,fields:row.fields}))}));
-    equal(fieldRows(nativeDelivery.tables),fieldRows(preview.tables),'The native prepared files changed an original or explicitly selected field value.');
+    const originalNames=new Map(prepared.filter(file=>file.formatConversion)
+      .map(file=>[file.filename,file.sourceFile.filename]));
+    const fieldRows=(tables,names=new Map())=>tables.map(table=>({filename:names.get(table.filename)??table.filename,
+      headers:table.headers,keys:table.keys,sheetName:table.origin?.sheetName??null,
+      sheetIndex:table.origin?.sheetIndex??null,rows:table.rows.map(row=>({rowNumber:row.rowNumber,fields:row.fields}))}))
+      .sort((a,b)=>{const x=canonicalJson([a.filename,a.sheetIndex,a.sheetName]),y=canonicalJson([b.filename,b.sheetIndex,b.sheetName]);return x<y?-1:x>y?1:0;});
+    equal(fieldRows(nativeDelivery.tables,originalNames),fieldRows(preview.tables),
+      'The native prepared files changed an original or explicitly selected field value.');
     if(!document.decisions.some(choice=>choice.action!=='keep')){
-      equal(view.prepared.map(file=>({filename:file.filename,sha256:file.sha256})),
-        delivery.originals.map(file=>({filename:file.filename,sha256:file.sha256})),
-        'An unchanged receiving file differs from its complete original bytes.');
+      for(const file of view.prepared){
+        if(file.formatConversion)continue;
+        const original=delivery.originals.find(item=>item.filename===file.filename);
+        if(!original)throw Error('An unchanged native member lost its original filename.');
+        equal(file.sha256,original.sha256,'An unchanged receiving file differs from its complete original bytes.');
+      }
     }
   }
   for(const format of ['csv','tsv']){

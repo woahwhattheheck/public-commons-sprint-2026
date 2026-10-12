@@ -17,7 +17,7 @@ sys.dont_write_bytecode=True
 APPLICATION=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(APPLICATION))
 from groundwater_workspace import Workbench
-from groundwater_workspace.common import Problem,Lock,digest,file_info,inventory,json_text,now,read_json,verify_file,write_json,lock_active
+from groundwater_workspace.common import Problem,Lock,digest,file_info,inventory,json_text,now,read_json,verify_file,write_json,lock_active,text,timestamp
 from groundwater_workspace.delivery import inspect_package,receive_package,restore_workspace
 from groundwater_workspace.native import completed_result,run_directory
 from groundwater_workspace.sources import FINDINGS
@@ -55,7 +55,7 @@ def dispositions(findings):
     return choices
 
 class Journey:
-    def __init__(self,config):
+    def __init__(self,config,source_revision=None):
         self.config=config
         require(Path(config["work_directory"]).is_absolute(),"Work directory must be absolute.")
         self.root=Path(config["work_directory"]).resolve()
@@ -68,13 +68,37 @@ class Journey:
         self.requests=self.root/"requests";self.requests.mkdir(exist_ok=True)
         self.output=self.root/"output";self.output.mkdir(exist_ok=True)
         source=inventory(APPLICATION)
-        # The input and full executable source closure are one retained original selection.
+        # Preserve the original input and every queued worker. A reviewed caller
+        # correction is an additional immutable selection, never an input rewrite.
         intent={"schema":"starforge.groundwater-publisher-journey.v1","config":config,"application_files":source,"application_sha256":digest(source)}
         intent_path=self.root/"journey-input.json"
+        self.application_sha256=intent["application_sha256"]
+        self.source_head=config.get("source_head")
+        self.source_revision=None
         if intent_path.exists():
-            require(read_json(intent_path)==intent,"Continue the exact original configuration and full reviewed source; the journey input differs.")
+            initial=read_json(intent_path)
+            require(initial.get("schema")==intent["schema"] and initial.get("config")==config,"Continue the exact original configuration; the journey input differs.")
+            require(initial.get("application_sha256")==digest(initial.get("application_files",[])),"The retained original application manifest changed.")
+            if initial!=intent:
+                revision_path=self.root/"application-revisions"/(self.application_sha256+".json")
+                require(source_revision is not None or revision_path.is_file(),"Select the complete reviewed source revision for this original journey with --source-revision.")
+                revision=read_json(source_revision if source_revision is not None else revision_path)
+                require(revision.get("schema")=="starforge.groundwater-journey-source-revision.v1","Select a complete original source revision record.")
+                require(revision.get("operation_id")==self.operation and revision.get("initial_input_sha256")==digest(initial),"The source revision belongs to another original journey.")
+                require(revision.get("application_files")==source and revision.get("application_sha256")==self.application_sha256,"The source revision differs from the complete currently installed application.")
+                head=revision.get("source_head","")
+                require(isinstance(head,str) and len(head)==40 and all(c in "0123456789abcdef" for c in head),"The source revision must name its full reviewed Git commit.")
+                require(revision.get("actor")==config["actor"],"The original operator must attribute the source continuation.")
+                text(revision.get("reason"),"Source continuation reason",8000,True)
+                timestamp(revision.get("created"),"Source continuation time")
+                write_json(revision_path,revision,create_only=True)
+                self.source_revision=revision
+                self.source_head=head
         else:
+            require(source_revision is None,"A source revision continues an existing original journey.")
             write_json(intent_path,intent,create_only=True)
+            initial=intent
+        self.initial_application_sha256=initial["application_sha256"]
         initial_id=str(uuid.uuid5(uuid.NAMESPACE_URL,"starforge:groundwater:"+self.operation))
         self.work=Workbench(self.root/"workspace",APPLICATION,initial_workspace_id=initial_id)
         self.actor=config["actor"]
@@ -94,6 +118,10 @@ class Journey:
                 raise
             self.work.dispatch(request)
             prior=self.work.operation(request["operation_id"])
+        else:
+            if action in ("run.execute","run.resume"):
+                self.work.dispatch(request)
+                prior=self.work.operation(request["operation_id"])
         require(prior["request"]==request,"Original operation readback changed.",phase=phase)
         write_json(self.output/(phase+"-operation.json"),prior,create_only=True)
         return prior["result"]
@@ -162,7 +190,7 @@ class Journey:
             for row in rows:
                 require(digest(archive.read("ex-gwf-twri01/"+row["path"]))==row["sha256"],"A re-imported native model original changed.",path=row["path"])
         receiving=self.root/"receiving";receiving.mkdir(exist_ok=True)
-        handoff={"schema":"starforge.groundwater-browser-handoff.v1","operation_id":self.operation,"application":str(APPLICATION),"source_head":self.config.get("source_head"),"workspace":str(self.work.directory),"workspace_id":self.work.state()["workspace"]["id"],"project_id":project_id,"source_id":source_id,"baseline_edition_id":baseline_id,"baseline_run_id":baseline_run,"reference_edition_id":aligned,"reference_run_id":reference_run,"actor":self.actor,"receiving_actor":self.config["receiving_actor"],"receiver_directory":str(receiving),"output_directory":str(self.output),"browser_journal":str(self.root/"browser"),"runtime":self.config["runtime"],"node_executable":self.config["node_executable"],"playwright_module":self.config["playwright_module"],"browser_executable":self.config["browser_executable"],"port":int(self.config.get("port",8894)),"run_timeout_seconds":int(self.config.get("run_timeout_seconds",7200)),"source_finding_reasons":SOURCE_REASONS,"native_package":{"path":str(package_path),**file_info(package_path),"mf6_namefile":"ex-gwf-twri01/mfsim.nam","legacy_namefile":"ex-gwf-twri01/mf2005/ex-gwf-twri01.nam"}}
+        handoff={"schema":"starforge.groundwater-browser-handoff.v1","operation_id":self.operation,"application":str(APPLICATION),"source_head":self.source_head,"application_sha256":self.application_sha256,"initial_application_sha256":self.initial_application_sha256,"source_revision":self.source_revision,"workspace":str(self.work.directory),"workspace_id":self.work.state()["workspace"]["id"],"project_id":project_id,"source_id":source_id,"baseline_edition_id":baseline_id,"baseline_run_id":baseline_run,"reference_edition_id":aligned,"reference_run_id":reference_run,"actor":self.actor,"receiving_actor":self.config["receiving_actor"],"receiver_directory":str(receiving),"output_directory":str(self.output),"browser_journal":str(self.root/"browser"),"runtime":self.config["runtime"],"node_executable":self.config["node_executable"],"playwright_module":self.config["playwright_module"],"browser_executable":self.config["browser_executable"],"port":int(self.config.get("port",8894)),"run_timeout_seconds":int(self.config.get("run_timeout_seconds",7200)),"source_finding_reasons":SOURCE_REASONS,"native_package":{"path":str(package_path),**file_info(package_path),"mf6_namefile":"ex-gwf-twri01/mfsim.nam","legacy_namefile":"ex-gwf-twri01/mf2005/ex-gwf-twri01.nam"}}
         write_json(self.root/"browser-handoff.json",handoff,create_only=True)
         print(json_text({"phase":"prepared","handoff":str(self.root/"browser-handoff.json"),"baseline_run_id":baseline_run,"reference_run_id":reference_run}),flush=True)
         return handoff
@@ -238,7 +266,7 @@ class Journey:
         full_handoff={**handoff,"restored_workspace":restored["workspace"],"report_id":browser["report_id"],"scenario_run_id":browser["scenario_run_id"],"backup":{**{k:backup[k] for k in ("path","filename","bytes","sha256")}}}
         write_json(self.root/"restored-browser-handoff.json",full_handoff,create_only=True)
         restored_browser=self.browser(full_handoff,"restored")
-        result={"schema":"starforge.groundwater-publisher-native.v1","state":"complete","operation_id":self.operation,"workspace_id":handoff["workspace_id"],"source_head":handoff.get("source_head"),"application_sha256":read_json(self.root/"journey-input.json")["application_sha256"],"runs":[{"id":r["run_id"],"edition_id":r["edition_id"],"result_sha256":digest(r),"runtime_sha256":r["runtime_sha256"],"units":{k:v["units"] for k,v in r["engines"].items()},"native_executions":r["native_executions"]} for r in results],"browser":browser,"restored_browser":restored_browser,"report":{"id":browser["report_id"],"archive":{k:archive[k] for k in ("path","filename","bytes","sha256")},"manifest_sha256":package["manifest_sha256"],"files":package["files"]},"independent_receiving":received["receipt"],"delivery_id":browser["delivery_id"],"backup":full_handoff["backup"],"restore":restored,"all_owned_services_closed":True,"completed_at":now()}
+        result={"schema":"starforge.groundwater-publisher-native.v1","state":"complete","operation_id":self.operation,"workspace_id":handoff["workspace_id"],"source_head":handoff.get("source_head"),"application_sha256":self.application_sha256,"initial_application_sha256":self.initial_application_sha256,"source_revision":self.source_revision,"runs":[{"id":r["run_id"],"edition_id":r["edition_id"],"result_sha256":digest(r),"runtime_sha256":r["runtime_sha256"],"units":{k:v["units"] for k,v in r["engines"].items()},"native_executions":r["native_executions"]} for r in results],"browser":browser,"restored_browser":restored_browser,"report":{"id":browser["report_id"],"archive":{k:archive[k] for k in ("path","filename","bytes","sha256")},"manifest_sha256":package["manifest_sha256"],"files":package["files"]},"independent_receiving":received["receipt"],"delivery_id":browser["delivery_id"],"backup":full_handoff["backup"],"restore":restored,"all_owned_services_closed":True,"completed_at":now()}
         result_path=self.output/"native-result.json"
         if result_path.exists():
             prior=read_json(result_path)
@@ -253,6 +281,7 @@ def main():
     parser.add_argument("input")
     parser.add_argument("--phase",choices=("all","prepare","complete"),default="all")
     parser.add_argument("--retry-run",action="append",default=[])
+    parser.add_argument("--source-revision",help="Explicit reviewed source continuation record; original input and queued workers remain unchanged")
     args=parser.parse_args()
     config=read_json(args.input)
     require(config.get("schema")=="starforge.groundwater-publisher-input.v1","Select the complete original publisher input schema.")
@@ -260,7 +289,7 @@ def main():
         require(bool(config.get(name)),"Original input field is required.",field=name)
     for signum in (signal.SIGTERM,signal.SIGINT):
         signal.signal(signum,stop)
-    journey=Journey(config)
+    journey=Journey(config,args.source_revision)
     with Lock(journey.root/"journey.lock",blocking=False):
         if args.phase in ("all","prepare"):
             handoff=journey.prepare(set(args.retry_run))

@@ -302,7 +302,7 @@ export async function runRedisValkeyCutoverJourney({directory,redisServer=proces
   check(binaries.baseline!==binaries.candidate,'Select two actual Redis and Valkey engine executables.');
   const environment={...process.env,[envNames.baseline]:randomBytes(24).toString('hex'),
     [envNames.candidate]:randomBytes(24).toString('hex')};
-  const engines={},closure={};let facilitator;const phases=[];
+  const engines={},closure={};let facilitator,browserJourney;const phases=[];
   const phase=async(name,detail={})=>{phases.push({name,at:new Date().toISOString(),...detail});await onProgress(phases.at(-1));};
   try{
     engines.baseline=await startEngine({directory:join(root,'redis-data'),binary:binaries.baseline,
@@ -329,8 +329,14 @@ export async function runRedisValkeyCutoverJourney({directory,redisServer=proces
     const input=await selectedInput({operationId:'native-redis-valkey-corrected',engines,migration,runtime:facilitator.runtime});
     const mismatch=await selectedInput({operationId:'native-redis-valkey-mismatch',engines,migration,runtime:facilitator.runtime});
     await save(join(root,'corrected-input.json'),input);await save(join(root,'mismatch-input.json'),mismatch);
+    if(process.env.SF30_REDIS_CUTOVER_BROWSER==='1'){
+      const {createRedisCutoverBrowserJourney}=await import('./cutover-journey.mjs');
+      browserJourney=await createRedisCutoverBrowserJourney({directory:root,environment});
+    }
     await changeCandidate(engines.candidate.client,false);
-    const difference=await receiveRedisCutover({input:mismatch,directory:join(root,'mismatch'),environment,mode:'receive'});
+    const difference=browserJourney
+      ?await browserJourney.receive({input:mismatch,directory:join(root,'mismatch'),interrupt:true})
+      :await receiveRedisCutover({input:mismatch,directory:join(root,'mismatch'),environment,mode:'receive'});
     assert.equal(difference.status,'CONTRACT_MISMATCH');assert.equal(difference.release,null);
     assert.deepEqual(difference.comparisons.filter(value=>!value.matched).map(value=>value.checkId).sort(),
       ['catalog','list_feed','member_catalog']);
@@ -338,7 +344,9 @@ export async function runRedisValkeyCutoverJourney({directory,redisServer=proces
     await phase('ORIGINAL_MISMATCH_RETAINED',{queries:difference.comparisons.filter(value=>!value.matched).map(value=>value.query),
       directory:difference.directory});
     await changeCandidate(engines.candidate.client,true);
-    const corrected=await receiveRedisCutover({input,directory:join(root,'corrected'),environment,mode:'receive'});
+    const corrected=browserJourney
+      ?await browserJourney.receive({input,directory:join(root,'corrected')})
+      :await receiveRedisCutover({input,directory:join(root,'corrected'),environment,mode:'receive'});
     assert.equal(corrected.status,'RECEIVED');assert.equal(corrected.comparisons.length,6);
     assert.equal(corrected.release.releaseId,'valkey-candidate');
     const native={};
@@ -375,6 +383,13 @@ export async function runRedisValkeyCutoverJourney({directory,redisServer=proces
     await facilitator.close();facilitator.closed=true;
     await phase('OWNED_NATIVE_ENGINES_CLOSED',{closure});
     const reopened=await coldReceiving(root,input,environment);
+    let browserReceiving;
+    if(browserJourney){
+      await browserJourney.cold({input:mismatch,directory:join(root,'mismatch')});
+      await browserJourney.cold({input,directory:join(root,'corrected'),createEdition:true});
+      browserReceiving=clone(browserJourney.records);await browserJourney.close();browserJourney=null;
+      await phase('COMPLETE_ORIGINAL_BROWSER_CUTOVER',{records:browserReceiving.length});
+    }
     const result={schema:SCHEMA,result:'PASS',directory:root,retainedWorkDirectory:root,
       runtime:{node:process.version,platform:process.platform,architecture:process.arch,nativeClient:'@redis/client@'+clientPackage.version},
       engineIdentities:Object.fromEntries(Object.entries(engines).map(([side,value])=>[side,value.identity])),
@@ -383,7 +398,7 @@ export async function runRedisValkeyCutoverJourney({directory,redisServer=proces
       consistency:input.consistency,phases,native,
       customer:Object.fromEntries(Object.entries(customers).map(([side,value])=>[side,{...value,data:undefined}])),
       nativeVerifies:facilitator.counts.verified,nativeSettlements:facilitator.counts.settled,
-      facilitator:'LOCAL_PROTOCOL_FIXTURE',coldReceiving:reopened,closure};
+      facilitator:'LOCAL_PROTOCOL_FIXTURE',coldReceiving:reopened,closure,...(browserReceiving?{browserReceiving}:{})};
     await phase('COMPLETE_SAME_SOURCE_COLD_REOPEN',{comparedProducts:reopened.compared.length});
     await save(join(root,'native-cutover.json'),result);
     return result;
@@ -393,6 +408,7 @@ export async function runRedisValkeyCutoverJourney({directory,redisServer=proces
     throw error;
   }finally{
     const errors=[];
+    if(browserJourney)try{await browserJourney.close();}catch(error){errors.push(error);}
     for(const side of ['candidate','baseline'])try{if(engines[side])await stopEngine(engines[side]);}catch(error){errors.push(error);}
     if(facilitator&&!facilitator.closed)try{await facilitator.close();}catch(error){errors.push(error);}
     if(errors.length)await save(join(root,'native-cutover-cleanup.json'),{errors:errors.map(errorView)}).catch(()=>{});

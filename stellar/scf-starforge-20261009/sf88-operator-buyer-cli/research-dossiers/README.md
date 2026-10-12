@@ -468,3 +468,11 @@ Open the current dossier's Template exchange view, or use the [complete operatin
 [Paid delivery](customer-commerce/OPERATING.md) publishes an original frozen customer delivery through an existing Stellar merchant, carries the complete archive through the original Buyer approval and paid-file workflow, and receives the editable dossier, original source workspace and four exact frozen reports. Open **Paid delivery** in this workspace or use `research-client commerce-help` / the installed `research-commerce` command.
 
 The original launcher selects private merchant and Buyer aliases with `--customer-commerce-host`. Complete reviews, native orders and approvals, whole-file downloads, independent working forms and exact saved-request replay stay with the original Research and Buyer workspaces. The [typed client](customer-commerce/client.d.mts), retained terminal operators and full archive receiver use those same native engines. Later customer corrections preserve the purchased delivery and its original completed receiving result.
+
+## Registered protocol and page-linked methods
+
+Open **Protocol and methods** in the original dossier to inspect the complete registered NCT03529110 source, read its original PDF pages and planned methods, preview the selected question, and recover the same saved SourceBundle request after an interrupted reply. Full drafts and requests remain available across browser navigation and storage conflicts. Saved-revision reports and the editable dossier use the existing Research downloads.
+
+The installed `starforge research-protocol-review` command provides complete source inspection, immutable review preparation, original receive and read-only reconciliation; `ResearchWorkspaceClient.studyProtocol()` exposes those same operations on the original attachment. The existing `starforge research-study-protocol` command continues to own registered capture and the complete source-inclusive handover with the selected current engine.
+
+See [Protocol operator and receiving](./STUDY-PROTOCOL-OPERATOR.md) for the complete browser, terminal, SDK and interrupted-operation flow, and [Complete protocol delivery](./STUDY-PROTOCOL-RECEIVING.md) for packaging and fresh original-engine reopen. The indexed observations remain planned protocol methods; the original appraisal and extraction workflows retain their reviewed decisions.

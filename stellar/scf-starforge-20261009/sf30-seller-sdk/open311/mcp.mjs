@@ -52,11 +52,18 @@ function operationView(operation) {
   if (!operation.error?.raw) return operation;
   return { ...operation, error: { ...operation.error, raw: byteManifest(operation.error.raw) } };
 }
+function oneSelection(input, fields) {
+  const supplied = fields.filter(key => input[key] !== undefined);
+  need(supplied.length === 1, 'Select exactly one of ' + fields.join(', ') + '.');
+  return supplied[0];
+}
 function selection(input) {
   const chosen = pick(input, Object.keys(open311FileSelection)), kind = chosen.kind;
   const selected = kind === 'workspace' ? [] : kind === 'operation' ? ['operationId']
-    : kind === 'comparison' ? ['before', 'after'] : ['capture'];
-  exact(chosen, ['kind', 'expectedRevision', ...selected], ['kind', ...selected]);
+    : kind === 'comparison' ? ['before', 'after']
+    : [oneSelection(chosen, kind === 'source' ? ['capture'] : ['capture', 'collection'])];
+  exact(chosen, ['kind', 'expectedRevision', ...selected,
+    ...(kind === 'comparison' ? ['comparisonKind'] : [])], ['kind', ...selected]);
   if (['workspace', 'json', 'csv', 'report'].includes(kind))
     need(Number.isSafeInteger(chosen.expectedRevision), 'Pin the observed workspace revision for this derived file.');
   return chosen;
@@ -87,8 +94,11 @@ export class MerchantOpen311Workspaces {
       connectionProfiles: Object.entries(entry.connectionProfiles).map(([profile, item]) =>
         ({ profile, connectionId: item.id, name: item.name, baseUrl: item.baseUrl,
           jurisdictionId: item.jurisdictionId ?? '', statusValues: item.statusValues ?? ['open', 'closed'],
-          responseLimit: item.responseLimit ?? 1000, pagination: item.pagination === true,
+          responseLimit: item.responseLimit ?? 1000, responseLimitParameter: item.responseLimitParameter ?? null,
+          pagination: item.pagination === true,
           extendedAttributes: item.extendedAttributes === true, queryExtensions: item.queryExtensions ?? [],
+          queryDateRanges: item.queryDateRanges ?? [], apiKeyTransport: item.apiKeyTransport ?? 'query',
+          minimumRequestIntervalMs: item.minimumRequestIntervalMs ?? 0,
           attribution: item.attribution ?? null })) };
   }
   #atRevision(store, expectedRevision, work) {
@@ -106,9 +116,9 @@ export class MerchantOpen311Workspaces {
       return { ...this.summary, workspaces: Object.keys(this.#config?.workspaces ?? {}).map(alias => this.#aliases(alias)) };
     const alias = args.workspace, entry = this.#entry(alias), store = this.#store(alias);
     if (name === 'merchant_open311_status') {
-      const state = store.state(), { connections, captures, reviews, operations, ...metadata } = state;
+      const state = store.state(), { connections, captures, collections, reviews, operations, ...metadata } = state;
       return { ...metadata, workspace: alias, label: entry.label,
-        counts: { connections: connections.length, captures: captures.length, reviews: reviews.length },
+        counts: { connections: connections.length, captures: captures.length, collections: collections.length, reviews: reviews.length },
         recentOperations: operations, ...this.#reads.status(alias) };
     }
     if (name === 'merchant_open311_records') {
@@ -123,6 +133,17 @@ export class MerchantOpen311Workspaces {
     }
     if (name === 'merchant_open311_capture')
       return store.capture(pick(args, ['requestId', 'expectedRevision', 'connectionId', 'kind', 'query', 'resourceId']));
+    if (name === 'merchant_open311_collection_create')
+      return store.createCollection(pick(args, ['requestId', 'expectedRevision', 'connectionId', 'name', 'query', 'policy']));
+    if (name === 'merchant_open311_collection_run')
+      return store.runCollection(pick(args, ['requestId', 'expectedRevision', 'collectionId']));
+    if (name === 'merchant_open311_collection_pause')
+      return store.pauseCollection(pick(args, ['requestId', 'expectedRevision', 'collectionId']));
+    if (name === 'merchant_open311_collection_info') {
+      const read = this.#atRevision(store, args.expectedRevision,
+        () => store.collectionInfo({ id: args.id, offset: args.offset ?? 0, limit: args.limit ?? 25 }));
+      return { ...read.result, returned: read.result.items.length };
+    }
     if (name === 'merchant_open311_capture_info') {
       const result = store.captureInfo({ id: args.id });
       return { capture: result.capture, receipt: result.receipt, raw: byteManifest(result.raw),
@@ -134,26 +155,28 @@ export class MerchantOpen311Workspaces {
         ...page(read.result.items, args) };
     }
     if (name === 'merchant_open311_requests') {
+      oneSelection(args, ['capture', 'collection']);
       const read = this.#atRevision(store, args.expectedRevision,
-        () => store.requests({ ...pick(args, ['capture', 'status', 'service', 'q', 'offset', 'sort', 'order']), limit: args.limit ?? 25 }));
+        () => store.requests({ ...pick(args, ['capture', 'collection', 'status', 'service', 'q', 'offset', 'sort', 'order', 'changedOnly', 'reviewStatus', 'assignee']), limit: args.limit ?? 25 }));
       const result = read.result, next = result.offset + result.items.length;
       return { workspaceId: read.workspaceId, revision: read.revision, capture: args.capture, ...result,
         returned: result.items.length, nextOffset: next < result.total ? next : null };
     }
     if (name === 'merchant_open311_request') {
-      need(Boolean(args.capture) !== Boolean(args.connection), 'Select exactly one capture or connection for this case.');
+      oneSelection(args, ['capture', 'connection', 'collection']);
       const read = this.#atRevision(store, args.expectedRevision,
-        () => store.request(pick(args, ['id', 'capture', 'connection'])));
+        () => store.request(pick(args, ['id', 'capture', 'connection', 'collection'])));
       return { workspaceId: read.workspaceId, revision: read.revision, ...read.result };
     }
     if (name === 'merchant_open311_diff') {
-      const diff = store.diff({ before: args.before, after: args.after }), section = args.section ?? 'changed';
-      return { before: diff.before, after: diff.after, scopeComparable: diff.scopeComparable, section,
+      const diff = store.diff({ kind: args.kind ?? 'capture', before: args.before, after: args.after }), section = args.section ?? 'changed';
+      return { before: diff.before, after: diff.after, kind: args.kind ?? 'capture', scopeComparable: diff.scopeComparable, section,
+        ...(diff.coverage ? { coverage: diff.coverage, interpretation: diff.interpretation } : {}),
         counts: Object.fromEntries(['added', 'changed', 'unchanged', 'missingFromCapture'].map(key => [key, diff[key].length])),
         ...page(diff[section], args) };
     }
     if (name === 'merchant_open311_review_put')
-      return store.putReview(pick(args, ['requestId', 'expectedRevision', 'connectionId', 'serviceRequestId', 'review']));
+      return store.putReview(pick(args, ['requestId', 'expectedRevision', 'connectionId', 'serviceRequestId', 'review', 'captureId', 'expectedSourceSha256']));
     if (name === 'merchant_open311_operation') return operationView(store.operation(args.requestId));
     if (name === 'merchant_open311_input') {
       const found = await readOpen311HostInput(entry, args.input);
@@ -180,7 +203,7 @@ export class MerchantOpen311Workspaces {
             filename: 'open311-comparison-' + chosen.before + '-' + chosen.after + '.json',
             contentType: 'application/json; charset=utf-8',
             body: canonicalJson({ schema: 'commons.open311.comparison-export.v1',
-              ...store.diff({ before: chosen.before, after: chosen.after }) }) + '\n',
+              ...store.diff({ kind: chosen.comparisonKind ?? 'capture', before: chosen.before, after: chosen.after }) }) + '\n',
           };
           else if (chosen.kind === 'operation') exported = {
             filename: 'open311-operation-' + chosen.operationId + '.json',
@@ -188,7 +211,7 @@ export class MerchantOpen311Workspaces {
             body: canonicalJson({ schema: 'commons.open311.operation-export.v1',
               operation: store.operation(chosen.operationId) }) + '\n',
           };
-          else exported = store.export(pick(chosen, ['kind', 'capture']));
+          else exported = store.export(pick(chosen, ['kind', 'capture', 'collection']));
           return { name: exported.filename, type: exported.contentType,
             bytes: Buffer.isBuffer(exported.body) ? exported.body : Buffer.from(exported.body, 'utf8') };
         }).result,

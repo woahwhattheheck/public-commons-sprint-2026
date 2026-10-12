@@ -1,12 +1,12 @@
 {
   "schema": "stellar-forge.merchant-distribution-contribution.v1",
   "id": "fred-workspace-agent",
-  "description": "Original economic-edition typed client, installed agent workflow and exact-source analyst briefings",
+  "description": "Original economic-edition typed client, complete analyst briefings and recurring report editions",
   "commands": {
     "fred-workspace": "stellar-forge/mcp-merchant-operator/fred-workspace-cli.mjs"
   },
   "commandDescriptions": {
-    "fred-workspace": "Import, author briefings, publish, purchase, recover and receive original economic editions"
+    "fred-workspace": "Import, author recurring briefings, publish, purchase, recover and receive original economic editions"
   },
   "exports": {
     "./buyer/fred/workspace-client": {
@@ -51,7 +51,11 @@
     "stellar/scf-starforge-20261009/sf30-seller-sdk/fred/examples/briefing-20261012/macro-source.capture.json",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/fred/examples/briefing-20261012/review.json",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/fred/examples/briefing-20261012/review-note.txt",
-    "stellar/scf-starforge-20261009/sf30-seller-sdk/fred/examples/briefing-20261012/README.md"
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/fred/examples/briefing-20261012/README.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/fred/TEMPLATES.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/fred/briefing/templates.d.mts",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/fred/examples/briefing-template-window.json",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/fred/briefing/template-cli.mjs"
   ],
   "merchantProviders": {
     "fred-workspaces": "stellar-forge/mcp-merchant-operator/providers/fred-workspaces.mjs"

@@ -9,6 +9,44 @@ const RECEIPT_HEADERS = new Set(['content-type', 'content-length', 'content-enco
   'x-correlation-id', 'x-ratelimit-limit', 'x-ratelimit-remaining', 'x-ratelimit-reset']);
 const own = (value, key) => Object.prototype.hasOwnProperty.call(value, key);
 
+// Share provider pacing across clients created by this process, including separate
+// workspace aliases. A source 429 also defers later requests in the same queue.
+const providerQueues = new Map();
+function waitForSource(milliseconds, signal) {
+  if (signal?.aborted) return Promise.reject(signal.reason ?? new Error('Source request cancelled'));
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(done, milliseconds);
+    function done() { signal?.removeEventListener('abort', cancelled); resolve(); }
+    function cancelled() { clearTimeout(timer); signal?.removeEventListener('abort', cancelled); reject(signal.reason ?? new Error('Source request cancelled')); }
+    signal?.addEventListener('abort', cancelled, { once: true });
+  });
+}
+function providerQueue(key) {
+  let queue = providerQueues.get(key);
+  if (!queue) { queue = { tail: Promise.resolve(), nextAt: 0, notBefore: 0 }; providerQueues.set(key, queue); }
+  return queue;
+}
+async function admitSource(queue, interval, signal) {
+  const admitted = queue.tail.then(async () => {
+    for (;;) {
+      if (signal?.aborted) throw signal.reason ?? new Error('Source request cancelled');
+      const remaining = Math.max(queue.nextAt, queue.notBefore) - Date.now();
+      if (remaining <= 0) break;
+      await waitForSource(Math.min(remaining, 2147483647), signal);
+    }
+    queue.nextAt = Date.now() + interval;
+  });
+  queue.tail = admitted.catch(() => {});
+  return admitted;
+}
+function retainSourceDelay(queue, response) {
+  if (!queue || response.status !== 429) return;
+  const value = response.headers.get('retry-after');
+  if (value == null) return;
+  const until = /^\d+$/.test(value.trim()) ? Date.now() + Number(value) * 1000 : Date.parse(value);
+  if (Number.isFinite(until)) queue.notBefore = Math.max(queue.notBefore, until);
+}
+
 export class Open311Error extends Error {
   constructor(code, message, result = null) {
     super(message);
@@ -120,6 +158,14 @@ export function createClient(config, { fetchImpl = globalThis.fetch } = {}) {
     apiKey = process.env[config.apiKeyEnv];
     if (!apiKey) throw new Open311Error('CREDENTIAL_UNAVAILABLE', 'Configured API key environment variable is not set');
   }
+  const apiKeyTransport = config.apiKeyTransport ?? 'query';
+  if (!['query', 'bearer'].includes(apiKeyTransport)) throw new TypeError('apiKeyTransport must be query or bearer');
+  if (apiKey && /[\r\n\u0000]/u.test(apiKey)) throw new TypeError('API key contains an invalid control character');
+  const minimumRequestIntervalMs = config.minimumRequestIntervalMs ?? 0;
+  if (!Number.isSafeInteger(minimumRequestIntervalMs) || minimumRequestIntervalMs < 0)
+    throw new TypeError('minimumRequestIntervalMs must be a nonnegative integer');
+  const queue = minimumRequestIntervalMs > 0 ? providerQueue(base.href + '|' +
+    (apiKey ? createHash('sha256').update(apiKey).digest('hex') : 'public')) : null;
   const timeoutMs = positive(config.timeoutMs, 30_000, 'timeoutMs');
   const maxResponseBytes = positive(config.maxResponseBytes, 16 * 1024 * 1024, 'maxResponseBytes');
   const responseLimit = positive(config.responseLimit, 1000, 'responseLimit');
@@ -131,6 +177,23 @@ export function createClient(config, { fetchImpl = globalThis.fetch } = {}) {
         key === apiKeyParameter || /key|token|secret|password|signature|authorization/iu.test(key))
       throw new TypeError('queryExtensions must name noncredential provider-specific parameters');
   }
+  const queryDateRanges = config.queryDateRanges ?? [];
+  if (!Array.isArray(queryDateRanges)) throw new TypeError('queryDateRanges must be an array');
+  for (const range of queryDateRanges) {
+    object(range, 'queryDateRanges entry');
+    if (range.start === range.end || !queryExtensions.has(range.start) || !queryExtensions.has(range.end) ||
+        !Number.isFinite(range.maxDays) || range.maxDays <= 0)
+      throw new TypeError('Each queryDateRanges entry requires two declared extension names and positive maxDays');
+  }
+  const responseLimitParameter = config.responseLimitParameter ?? null;
+  if (responseLimitParameter != null && !queryExtensions.has(responseLimitParameter))
+    throw new TypeError('responseLimitParameter must name a declared provider-specific query parameter');
+  const effectiveLimit = query => {
+    const requested = responseLimitParameter && query[responseLimitParameter] != null
+      ? positive(query[responseLimitParameter], responseLimit, responseLimitParameter) : responseLimit;
+    if (requested > responseLimit) throw new TypeError(responseLimitParameter + ' must be at most ' + responseLimit);
+    return Math.min(responseLimit, query.page_size ? positive(query.page_size, responseLimit, 'page_size') : responseLimit, requested);
+  };
   const pagination = config.pagination === true;
   const extendedAttributes = config.extendedAttributes === true;
 
@@ -148,7 +211,7 @@ export function createClient(config, { fetchImpl = globalThis.fetch } = {}) {
     url.pathname = base.pathname.replace(/\/+$/u, '') + '/' + resource;
     if (jurisdiction != null) url.searchParams.set('jurisdiction_id', jurisdiction);
     for (const [key, value] of Object.entries(query)) url.searchParams.set(key, value);
-    if (apiKey) url.searchParams.set(apiKeyParameter, apiKey);
+    if (apiKey && apiKeyTransport === 'query') url.searchParams.set(apiKeyParameter, apiKey);
     return url;
   }
   function extraQuery(query = {}, allowedCore = false) {
@@ -159,6 +222,12 @@ export function createClient(config, { fetchImpl = globalThis.fetch } = {}) {
       if (allowedCore && (CORE_QUERY.has(key) || EXTENSION_QUERY.has(key))) continue;
       if (!queryExtensions.has(key)) throw new TypeError('Unsupported query parameter: ' + key);
       result[key] = scalar(value, key);
+    }
+    for (const range of queryDateRanges) {
+      const start = result[range.start] == null ? null : dateTime(result[range.start], range.start);
+      const end = result[range.end] == null ? null : dateTime(result[range.end], range.end);
+      if (start !== null && end !== null && (end < start || end - start > range.maxDays * DAY))
+        throw new TypeError(range.start + '/' + range.end + ' must be ordered and span at most ' + range.maxDays + ' days');
     }
     return result;
   }
@@ -225,17 +294,24 @@ export function createClient(config, { fetchImpl = globalThis.fetch } = {}) {
     } finally { reader.releaseLock(); }
   }
   async function get(url, { kind, query = {}, signal } = {}) {
-    const startedAt = new Date().toISOString();
-    const started = performance.now();
+    let startedAt = new Date().toISOString();
+    let started = performance.now();
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), timeoutMs);
-    timer.unref?.();
+    let timer;
     const requestSignal = signal ? AbortSignal.any([signal, controller.signal]) : controller.signal;
     let response;
     try {
+      if (queue) await admitSource(queue, minimumRequestIntervalMs, requestSignal);
+      startedAt = new Date().toISOString(); started = performance.now();
+      timer = setTimeout(() => controller.abort(), timeoutMs); timer.unref?.();
+      const headers = { Accept: 'application/json' };
+      if (apiKey && apiKeyTransport === 'bearer' && url.origin === base.origin &&
+          url.pathname.startsWith(base.pathname.replace(/\/+$/u, '') + '/'))
+        headers.Authorization = 'Bearer ' + apiKey;
       response = await fetchImpl(url.href, {
-        method: 'GET', headers: { Accept: 'application/json' }, redirect: 'manual', signal: requestSignal,
+        method: 'GET', headers, redirect: 'manual', signal: requestSignal,
       });
+      retainSourceDelay(queue, response);
     } catch {
       const receipt = { method: 'GET', url: redactedUrl(url), status: null, statusText: '',
         headers: {}, startedAt, observedAt: new Date().toISOString(),
@@ -279,7 +355,7 @@ export function createClient(config, { fetchImpl = globalThis.fetch } = {}) {
           : Array.isArray(value?.service_requests) ? value.service_requests
           : Array.isArray(value?.service_requests?.request) ? value.service_requests.request : null;
         const selectedIds = Boolean(query.service_request_id);
-        const limit = query.page_size ? Math.min(Number(query.page_size), responseLimit) : responseLimit;
+        const limit = effectiveLimit(query);
         receipt.coverage = { returned: rows?.length ?? null, documentedLimit: limit,
           mayBeTruncated: rows ? rows.length >= limit : null, singlePage: true,
           paginationDeclared: pagination, page: query.page ? Number(query.page) : null,
@@ -291,6 +367,11 @@ export function createClient(config, { fetchImpl = globalThis.fetch } = {}) {
   }
 
   return Object.freeze({
+    prepareRequests: (query = {}) => {
+      const selected = requestQuery(query);
+      return { query: selected, url: redactedUrl(urlFor('requests.json', selected)),
+        documentedLimit: effectiveLimit(selected), paginationDeclared: pagination };
+    },
     services: (query = {}, options = {}) => get(urlFor('services.json', extraQuery(query)),
       { ...options, kind: 'services', query: extraQuery(query) }),
     service: (code, query = {}, options = {}) => get(
@@ -298,6 +379,7 @@ export function createClient(config, { fetchImpl = globalThis.fetch } = {}) {
       { ...options, kind: 'service', query: extraQuery(query) }),
     requests: (query = {}, options = {}) => {
       const selected = requestQuery(query);
+      effectiveLimit(selected);
       return get(urlFor('requests.json', selected), { ...options, kind: 'requests', query: selected });
     },
     request: (id, query = {}, options = {}) => {
@@ -325,3 +407,13 @@ export function createClient(config, { fetchImpl = globalThis.fetch } = {}) {
     },
   });
 }
+
+/** Pure request description: validates the original query without resolving a live credential or fetching. */
+export function describeRequests(config, query = {}) {
+  const selected = { ...config };
+  const hasCredential = selected.apiKey != null || Boolean(selected.apiKeyEnv);
+  delete selected.apiKeyEnv;
+  if (hasCredential) selected.apiKey = '[redacted]';
+  return createClient(selected).prepareRequests(query);
+}
+export const sourceDateTime = dateTime;
