@@ -136,6 +136,7 @@ final class Starforge_SF104_Checkout {
 
     static function cart_mapping() {
         $cart = function_exists('WC') && WC() ? WC()->cart : null;
+        if ($cart && Starforge_SF104_Basket::needs_basket($cart->get_cart(), true)) return Starforge_SF104_Basket::cart_mapping($cart);
         if (!$cart || count($cart->get_cart()) !== 1 || $cart->needs_shipping() ||
             $cart->get_applied_coupons() || $cart->get_fees()) {
             throw new RuntimeException('Use a single mapped digital item without coupons, fees or shipping.');
@@ -155,6 +156,8 @@ final class Starforge_SF104_Checkout {
 
     // Uses the actual order line, never current product pricing, for restart/drift checks.
     static function order_shape($order) {
+        $saved = $order->get_meta(self::SNAPSHOT_META, true);
+        if (is_array($saved) && ($saved['handoff']['schema'] ?? '') === Starforge_SF104_Basket::SCHEMA) return Starforge_SF104_Basket::order_shape($order);
         $items = $order->get_items('line_item');
         if (count($items) !== 1 || $order->get_items('shipping') || $order->get_items('fee') ||
             $order->get_coupon_codes() || self::decimal($order->get_discount_total()) !== '0') {
@@ -215,13 +218,14 @@ final class Starforge_SF104_Checkout {
         $content = $record;
         unset($content['digest']);
         if (!hash_equals($digest, self::digest($content)) ||
-            $record['handoff']['schema'] !== self::HANDOFF_SCHEMA ||
+            !in_array($record['handoff']['schema'], [self::HANDOFF_SCHEMA, Starforge_SF104_Basket::SCHEMA], true) ||
             $record['handoff']['orderReference'] !== (string) $order->get_id() ||
             $order->get_payment_method() !== self::ID ||
             $record['shape'] !== self::order_shape($order) ||
             ($require_binding && !self::binding_matches($order->get_meta(Starforge_SF98_Woo::META_READY, true), $record['binding']))) {
             throw new RuntimeException('The order or approved payment binding differs from its saved checkout.');
         }
+        if ($record['handoff']['schema'] === Starforge_SF104_Basket::SCHEMA) Starforge_SF104_Basket::validate_snapshot($order, $record);
         return $record;
     }
 
@@ -240,7 +244,8 @@ final class Starforge_SF104_Checkout {
         $handoff = $record['handoff'];
         $base = self::seller_url(explode('?', $handoff['operation']['url'], 2)[0]);
         $handoff['attemptGeneration'] = $generation;
-        $handoff['operation']['url'] = $base . '?sf98_order=' . $handoff['orderReference'] . '&sf104_attempt=' . $generation;
+        $handoff['operation']['url'] = $base . '?sf98_order=' . $handoff['orderReference'] . '&sf104_attempt=' . $generation .
+            ($handoff['schema'] === Starforge_SF104_Basket::SCHEMA ? '&sf104_basket=' . $handoff['basketDigest'] : '');
         return $handoff;
     }
 
@@ -259,6 +264,9 @@ final class Starforge_SF104_Checkout {
                 if ($order->get_meta(Starforge_SF98_Woo::META_READY, true)) {
                     throw new RuntimeException('This order already has a separate merchant payment binding.');
                 }
+                if (Starforge_SF104_Basket::needs_basket($order->get_items('line_item'))) {
+                    $record = Starforge_SF104_Basket::record($order);
+                } else {
                 $shape = self::order_shape($order);
                 $item = array_values($order->get_items('line_item'))[0];
                 $map = self::product_mapping($item->get_product());
@@ -285,6 +293,7 @@ final class Starforge_SF104_Checkout {
                 ];
                 $record = ['handoff' => $handoff, 'binding' => $binding, 'shape' => $shape];
                 $record['digest'] = self::digest($record);
+                }
                 // Save the immutable record first. A crash can repair the original binding from this same record.
                 $order->update_meta_data(self::SNAPSHOT_META, $record);
                 $order->save();
@@ -354,6 +363,7 @@ final class Starforge_SF104_Checkout {
                 'key' => $order->get_order_key()], admin_url('admin-post.php'));
             echo '<p>Your order is awaiting payment. Download its payment instructions, then use Stellar Forge to review and authorize the exact merchant payment.</p>';
             echo '<p><strong>' . esc_html($h['operation']['expect']['maxAtomic']) . ' atomic units</strong> on ' . esc_html($h['operation']['expect']['network']) . '.</p>';
+            Starforge_SF104_Basket::render_summary($h);
             echo '<p><a class="button" rel="noreferrer" href="' . esc_url($link) . '">Download payment instructions</a></p>';
             echo '<p>The same order retains the same payment terms. If payment was already attempted, resume that existing operation before starting another. The store will release your product after confirming settlement.</p>';
         } catch (Throwable $e) {
@@ -446,7 +456,12 @@ function starforge_sf104_register_gateway() {
                 'enabled' => ['title' => 'Enable', 'type' => 'checkbox', 'label' => 'Enable Stellar checkout for explicitly mapped digital products', 'default' => 'no'],
                 'title' => ['title' => 'Checkout label', 'type' => 'text', 'default' => 'Stellar x402'],
                 'description' => ['title' => 'Customer instructions', 'type' => 'textarea', 'default' => 'Place your order, then download payment instructions for Stellar Forge. Your product is released after the store confirms settlement.'],
-            ];
+            ] + Starforge_SF104_Basket::fields();
+        }
+        function process_admin_options() {
+            $result = parent::process_admin_options();
+            Starforge_SF104_Basket::settings_saved();
+            return $result;
         }
         function is_available() {
             if ($this->enabled !== 'yes' || Starforge_SF98_Woo::secret() === null) return false;
@@ -486,7 +501,7 @@ function starforge_sf104_register_blocks($registry) {
             function is_active() { return ($this->settings['enabled'] ?? 'no') === 'yes' && Starforge_SF98_Woo::secret() !== null; }
             function get_payment_method_script_handles() {
                 $handle = 'sf104-checkout-blocks';
-                wp_register_script($handle, false, ['wc-blocks-registry', 'wc-settings', 'wp-element'], '0.4.0', true);
+                wp_register_script($handle, false, ['wc-blocks-registry', 'wc-settings', 'wp-element'], '0.6.0', true);
                 wp_add_inline_script($handle, <<<'JS'
 (function () {
 const settings = window.wc.wcSettings.getSetting('sf104_native_data', {});
@@ -498,6 +513,18 @@ window.wc.wcBlocksRegistry.registerPaymentMethod({
     canMakePayment: function (context) {
         const q = settings.quote, cart = context.cart || {}, totals = context.cartTotals || {};
         const items = cart.cartItems || cart.items || [];
+        if (settings.basketEnabled) {
+            const catalog = settings.basketCatalog;
+            if (!catalog || context.cartNeedsShipping || !items.length || items.length > catalog.maxLines || totals.currency_code !== catalog.currency) return false;
+            const prices = new Map(catalog.products.map(p => [p.productId, p.unitMinor]));
+            const seen = new Set(); let units = 0, amount = 0n;
+            for (const item of items) {
+                const id = String(item.id), quantity = String(item.quantity);
+                if (!prices.has(id) || seen.has(id) || !/^[1-9][0-9]{0,2}$/.test(quantity)) return false;
+                seen.add(id); units += Number(quantity); amount += BigInt(prices.get(id)) * BigInt(quantity);
+            }
+            return units <= catalog.maxUnits && amount.toString() === String(totals.total_price).replace(/^0+(?=\d)/, '');
+        }
         if (!q || context.cartNeedsShipping || items.length !== 1 || Number(items[0].quantity) !== 1 || String(items[0].id) !== q.productId) return false;
         return totals.currency_code === q.currency && String(totals.total_price).replace(/^0+(?=\d)/, '') === q.minorTotal;
     },
@@ -509,7 +536,8 @@ JS
                 return [$handle];
             }
             function get_payment_method_data() {
-                $quote = null;
+                $quote = null; $basket_catalog = null;
+                try { $basket_catalog = Starforge_SF104_Basket::client_catalog(); } catch (Throwable $e) {}
                 try {
                     Starforge_SF104_Checkout::store_origin();
                     $c = Starforge_SF104_Checkout::cart_mapping();
@@ -518,11 +546,12 @@ JS
                     $fraction = $parts[1] ?? '';
                     if (strlen($fraction) > $places) throw new RuntimeException('Unsupported store precision.');
                     $minor = ltrim($parts[0] . str_pad($fraction, $places, '0'), '0');
-                    $quote = ['productId' => $c['productId'], 'currency' => $c['mapping']['storefront']['currency'], 'minorTotal' => $minor ?: '0'];
+                    if (empty($c['basket'])) $quote = ['productId' => $c['productId'], 'currency' => $c['mapping']['storefront']['currency'], 'minorTotal' => $minor ?: '0'];
                 } catch (Throwable $e) { /* Server order checks remain authoritative. */ }
                 return ['title' => $this->settings['title'] ?? 'Stellar x402',
                     'description' => $this->settings['description'] ?? 'Place your order, then download payment instructions for Stellar Forge. Your product is released after the store confirms settlement.',
-                    'supports' => ['products'], 'quote' => $quote];
+                    'supports' => ['products'], 'quote' => $quote,
+                    'basketEnabled' => ($this->settings['basket_enabled'] ?? 'no') === 'yes', 'basketCatalog' => $basket_catalog];
             }
         }
     }
@@ -530,6 +559,8 @@ JS
 }
 
 
+require_once __DIR__ . '/checkout-basket.php';
 require_once __DIR__ . '/checkout-admission.php';
 Starforge_SF104_Checkout::boot();
+
 
