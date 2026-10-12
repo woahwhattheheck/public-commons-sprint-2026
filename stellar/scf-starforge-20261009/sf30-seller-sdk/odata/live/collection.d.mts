@@ -64,7 +64,8 @@ export declare function restoreCollection(input: {
   sourceManifest: string; directory: string; expectedSha256?: string;
 }): Promise<ODataCollection & { restoredFrom: { bytes: number; sha256: string } }>;
 export declare function readCollectionRows(directory: string, options?: {offset?: number; limit?: number}): Promise<{
-  collectionSha256: string; offset: number; total: number; rows: ODataLivePage['items']; nextOffset: number | null;
+  collectionSha256: string; sourceBinding: string; operation: string; metadataSha256: string; serviceRoot: string; merchantOrigin: string;
+  offset: number; total: number; rows: ODataLivePage['items']; nextOffset: number | null;
 }>;
 export declare function collectionAnalysisMapping(collection: ODataCollectionManifest, input: {
   source: string; sourceRevision: number;

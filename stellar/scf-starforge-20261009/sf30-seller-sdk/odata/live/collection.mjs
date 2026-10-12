@@ -638,7 +638,9 @@ export async function readCollectionRows(directory,{offset=0,limit=100}={}) {
   }
   pending+=decoder.decode();need(!pending,'ROWS_FRAMING','The complete collection row framing changed.');
   need(count===collection.rows,'ROWS_COUNT','The collection row count changed.');
-  return {collectionSha256:collection.manifestSha256,offset,total:count,rows,nextOffset:offset+rows.length<count?offset+rows.length:null};
+  return {collectionSha256:collection.manifestSha256,sourceBinding:collection.sourceBinding,operation:collection.operation,
+    metadataSha256:collection.metadataSha256,serviceRoot:collection.serviceRoot,merchantOrigin:collection.merchantOrigin,
+    offset,total:count,rows,nextOffset:offset+rows.length<count?offset+rows.length:null};
 }
 
 /** Original Analysis response-preview input for the retained source registration. */
