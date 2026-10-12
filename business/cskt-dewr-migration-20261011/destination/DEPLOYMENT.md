@@ -107,6 +107,41 @@ node destination/cli.mjs rollback --config destination.json --release RELEASE_ID
 
 The adapter recognizes an Optimole transform only when its host was retained in the original media record and its embedded upload URL is the exact reviewed file whose bytes were verified. Thus the captured Crow image’s 300 × 194 and 702 × 453 source forms resolve to the retained original PNG. Unselected images keep their original URLs. A responsive set whose selected variants all resolve to that one original loses the obsolete derivative-width descriptors; the original HTML remains in the immutable release. Native readback reports `mappedImageTransforms` and `collapsedSourceSets` with the original and published HTML hashes.
 
+Some source pages keep the real image in `data-opt-src`, `data-src` or `data-lazy-src` while `src` contains a transparent placeholder. The destination promotes the retained real HTTP(S) image into `src`, including when WordPress has already removed the placeholder's `data:` scheme. It also restores a retained `old-srcset` to an empty native `srcset`; it does not invent missing variants. Readback records `promotedLazyImages` and `promotedSourceSets` for the exact published content. An accepted earlier release and its operation result stay immutable. To adopt a mapper change on existing content, review a successor release that retains any later staff edits, then inspect its native content and actual image URL.
+
 A later release can update a child page without republishing its parent. The destination must already hold the parent’s explicit original-source binding and matching hierarchical WordPress type. Preview records the actual parent post and fingerprint; apply rechecks that same parent before writing. Two original content records cannot silently write the same native post, and a content record cannot interchange its binding with an attachment. Those conditions return specific preview conflicts.
 
 The destination checks the actual WordPress database before retaining or applying a release: SQLite is supported; on MySQL/MariaDB, all content, metadata, taxonomy and option tables participating in the operation must use InnoDB. Readback lists incomplete uploads with their original item, operation, SHA-256, total bytes and actual retained byte count, so interrupted transfers can continue from their original journal. Conflicted publish attempts are retained under their original operation ID. Rollback preflights current content and route/source bindings before restoring any affected item, retaining a changed child’s parent where necessary to preserve its native hierarchy.
+
+## Publish retained original captures
+
+The destination accepts a retained capture when the reviewed document includes its exact source URL, SHA-256, byte count and MIME type. This is useful when the original site is unavailable, when a migration runs with restricted outbound networking, or when the migration has already retained the original response. The original media stays attached to its captured URL and response identity.
+
+The public module exports:
+
+    stageReleaseAssets(config, {
+      manifestBytes, sha256, operationId,
+      files: [{
+        itemId, file, sourceUrl, finalUrl,
+        responseContentType, sha256, bytes
+      }]
+    })
+
+Here, the outer SHA-256 identifies the immutable release bytes. Each inner SHA-256 and byte count must equal the reviewed document fields. The file is an absolute ordinary local file; the source URL must equal the reviewed URL byte for byte. The final URL and response content type are the retained original HTTP response metadata. The function copies one file at a time into a private temporary spool, hashes all its bytes, and only then sends the existing native begin/chunk/commit requests. The selected file never travels as a filesystem path to WordPress.
+
+The same upload operation resumes its retained prefix only after the prefix hash matches the original bytes. WordPress verifies the complete upload, checks the actual PDF/image/MP4 signature, and deduplicates matching attachments by their complete source hash. Completed assets are scoped to the retained release and original item; each partial upload additionally retains its stable operation ID. Content apply consumes those completed native assets.
+
+For the CLI, create a JSON file with schema "cskt.migration.captured-assets.v1" and a "files" array containing the fields above. Paths in that array may be absolute or relative to that JSON file. First preview the immutable release so WordPress retains its manifest and destination plan. Then run:
+
+    node destination/cli.mjs stage-assets \
+      --config /private/destination.json \
+      --manifest /private/release.json \
+      --sha256 RELEASE_SHA256 \
+      --operation ORIGINAL_ASSET_OPERATION_ID \
+      --assets /private/captured-assets.json \
+      --out /private/staged-assets.json
+
+Retain the operation ID and result before proceeding. The result has schema "cskt.migration.asset-stage.v1", status "STAGED", the exact release ID/hash, each original item and the actual verified native attachment/readback. Run the existing apply command with the operator's retained apply operation and displayed plan hash. A completed upload does not publish content, change the release manifest, or replace the destination's content/route bindings.
+
+When a source file differs from the reviewed hash or byte count, staging returns a source conflict. When an earlier selected file has already reached WordPress, its verified original asset remains in that release and the same input can continue the remaining uploads. Existing native attachments are read back before reuse; their original bytes must still match. The normal direct-source download path continues to validate public HTTPS source and redirect addresses before fetching uncaptured media.
+
