@@ -20,7 +20,8 @@ export async function startGeocoderServer({ workspace, port = 0, closeWorkspace 
     throw new TypeError('Open a geocoder workspace and choose a valid local port.');
   const assets = new Map(await Promise.all([
     ['/', 'index.html', 'text/html; charset=utf-8'], ['/app.mjs', 'app.mjs', 'text/javascript; charset=utf-8'],
-    ['/style.css', 'style.css', 'text/css; charset=utf-8']
+    ['/style.css', 'style.css', 'text/css; charset=utf-8'],
+    ['/customer-intake.mjs', 'customer-intake.mjs', 'text/javascript; charset=utf-8']
   ].map(async ([path, name, type]) => [path, { bytes: await readFile(new URL('./public/' + name, import.meta.url)), type }])));
   const token = randomBytes(32).toString('hex'), authorization = Buffer.from('Bearer ' + token);
   let origin, closing;

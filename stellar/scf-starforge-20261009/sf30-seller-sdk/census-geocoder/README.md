@@ -26,6 +26,130 @@ Open the printed **operatorUrl** on that host. It contains the private session t
 
 The process owns the original publisher and any seller it starts. Ctrl-C drains accepted operations, closes the original seller and publisher, then releases the workspace. Reopen the same directory; do not create a replacement workspace to recover a retained response or customer attempt. The **Open / reopen publisher** button reacquires the original publisher after a cold restart.
 
+## Customer CSV mapping and result delivery
+
+**Map an existing customer CSV** opens the customer workflow in this same operator. It accepts UTF-8 files with 1–10,000 data records, at most 5,000,000 bytes, and up to 256 columns. Retaining the source precedes address validation, so a file with duplicate business IDs or incomplete addresses can be saved and corrected without losing its original columns.
+
+1. Retain the original file with its explicit header choice. The file label and SHA-256 appear in saved history. Column positions remain visible even when names are duplicated or blank.
+2. Choose **Use values from an original ID column** or **Use stable row-000001 IDs**. Column indices in JSON are zero-based. Source record numbers and row decisions are one-based and exclude the optional header. A quoted multiline record counts once.
+3. Map street, city, state and ZIP; urbanization is optional. Missing columns map to empty strings. The original Census address parser determines whether each included address is valid. City and state, or ZIP, are required; urbanization retains the original Puerto Rico rule.
+4. Preview address exceptions. A duplicate selected address ID is reported on every affected included row. The application never silently drops duplicates or invalid rows. Select an original row and replace only the checked address fields, or explicitly exclude it with a reason. Original business cells remain unchanged. A checked empty correction clears that submitted field.
+5. Save the reviewed mapping. Its state is **READY** or **REVIEW_REQUIRED**. Both states survive reopening, including all correction and exclusion reasons. After an edit, preview and save a new immutable mapping version. A batch requires READY and the current preview digest.
+6. Choose the official benchmark/vintage in **Address intake**, then **Retain mapped Census batch**. The mapping creates the original batch and records its exact submitted-address binding. Submit that batch through the existing capture action. If the addresses were already captured, **Bind mapping to existing submitted records** verifies the complete ordered native ID/address records and keeps the actual original submitted bytes and HTTP response; it issues no request.
+7. Save the ordinary match review. In **Dataset editions**, explicitly choose the bound mapping in **Join original customer records**. Build with the intended existing merchant profile if seller terms are needed. Customer CSV and JSON downloads then appear beside the original dataset and provenance.
+
+The joined result includes every original customer row, including explicit exclusions and rows omitted from the public match review. Each row has its original cells, source-record number, SUBMITTED or EXCLUDED state, exclusion reason, actual Census result or null, and a selected-by-review flag. EXCLUDED rows do not become invented No_Match results. The JSON also retains the exact field corrections and the submitted address. The CSV appends original native geocoder fields to the customer columns. Leading zeros and repeated business IDs remain text.
+
+The default appended-column prefix is census_. If that would collide with an original column, choose another explicit prefix; original names are not renamed. With no original header, joined CSV columns are named column_1, column_2, and so on. The original file is also retained byte for byte, including its header choice and non-address fields. The UI shortens displayed cell text; downloaded members contain the full source and joined values.
+
+### CLI mapping, native batch and joined edition
+
+Every action runs through the existing workspace writer. Replace the uppercase IDs/digests below with the actual returned values. The original CSV stays in a host file.
+
+~~~json
+{"label":"Customer locations","header":true}
+~~~
+
+Save that as source.json:
+
+~~~sh
+starforge dataset geocoder --workspace /absolute/private/census-operations \
+  customer.source --input source.json --csv customers.csv
+~~~
+
+For columns account,location_id,street,city,state,zip,segment, a mapping preview can be:
+
+~~~json
+{
+  "sourceId":"SOURCE_UUID",
+  "plan":{
+    "idMode":"column",
+    "columns":{"id":1,"street":2,"city":3,"state":4,"zip":5,"urbanization":null},
+    "outputPrefix":"census_",
+    "corrections":[
+      {"row":3,"values":{"zip":"02108"},"reason":"Use the address owner's supplied ZIP."}
+    ],
+    "exclusions":[
+      {"row":7,"reason":"The owner has not supplied a street address for this row."}
+    ]
+  },
+  "offset":0,
+  "limit":20,
+  "filter":"exceptions"
+}
+~~~
+
+Include only decisions for rows actually present in the file. For stable source-row identity use idMode:"row" and columns.id:null; the original account/location columns remain in the customer file. Review all pages returned by next; filters are all, exceptions, excluded and corrected.
+
+~~~sh
+starforge dataset geocoder --workspace /absolute/private/census-operations \
+  customer.preview --input mapping-preview.json
+~~~
+
+To save, use the same sourceId and plan plus expectedReviewSha256 from that response; omit offset, limit and filter:
+
+~~~sh
+starforge dataset geocoder --workspace /absolute/private/census-operations \
+  customer.mapping --input mapping-save.json
+~~~
+
+The mapping action returns its original UUID, review digest and READY/REVIEW_REQUIRED state. Repeating the exact save reuses the same version. Read it with customer.inspect using mappingId, offset, limit and filter. Download customer-mapping to reopen the full JSON decisions in another client; the response preview is intentionally bounded.
+
+For a new mapped batch, customer-batch.json uses:
+
+~~~json
+{
+  "mappingId":"MAPPING_UUID",
+  "expectedReviewSha256":"CURRENT_PREVIEW_SHA256",
+  "label":"Customer locations / reviewed mapping",
+  "discoveryId":"BENCHMARK_DISCOVERY_UUID",
+  "benchmark":"4",
+  "vintagesId":"VINTAGE_DISCOVERY_UUID",
+  "vintage":"4",
+  "returnType":"geographies"
+}
+~~~
+
+Benchmark and vintage values must come from the exact official metadata already retained in this workspace; the values above are illustrative selectors, not a replacement for that discovery.
+
+~~~sh
+starforge dataset geocoder --workspace /absolute/private/census-operations \
+  customer.batch --input customer-batch.json
+~~~
+
+The operation retains its batch UUID before writing files. Repeating identical inputs finishes or returns that same batch; it does not create another request. The ordinary batch.capture operation remains a separate, explicit action.
+
+To join an already captured batch, use customer.bind with mappingId, expectedReviewSha256 and batchId. The complete ordered native address records must equal the saved mapping. CSV quoting differences are allowed only when the parsed records are identical; the original submitted SHA-256 remains the actual request's SHA-256.
+
+Add mappingId to the existing edition.build input with the original reviewId and optional origin/path/payment. The edition identity includes the immutable mapping and batch-binding digests. A mapping from another batch cannot be substituted.
+
+### One portable customer edition
+
+A joined edition adds these members to the original edition manifest:
+
+| Member | Retained meaning |
+| --- | --- |
+| source/customer-input.csv | Exact original customer bytes |
+| source/customer-mapping.json | Source identity, positional mapping, reviewed corrections/exclusions and preview digest |
+| source/customer-binding.json | Mapping-to-batch identity and actual submitted CSV digest |
+| customer-results.csv | Original customer columns plus prefixed source/result columns, in source-row order |
+| customer-results.json | Original cells, explicit decisions, submitted addresses, native results and match-review selection |
+
+The public dataset.csv and seller continue to expose the explicitly reviewed native geocoder columns. The full customer join belongs to the private edition and authenticated receiving path.
+
+~~~sh
+starforge dataset geocoder --workspace /absolute/private/census-operations \
+  download --kind customer-results --id EDITION_UUID --out customer-results.csv
+starforge dataset geocoder --workspace /absolute/private/census-operations \
+  download --kind customer-results-json --id EDITION_UUID --out customer-results.json
+starforge dataset geocoder --workspace /absolute/private/census-operations \
+  download --kind customer-mapping --id MAPPING_UUID --out retained-mapping.json
+~~~
+
+The existing edition.export and reopen commands carry these files without a second package. Reopen verifies every original manifest member, recompiles the source mapping with the original Census parser, checks the exact submitted-record binding, and recomputes the customer join from the retained response and native match review. The result bytes and customer identity must match. Existing editions without a customer mapping keep their original identity and files.
+
+The original merchant publisher, SF82 release review and SF88 buyer workflow below continue to operate the selected native dataset. The same edition can be received through the maintained census-geocoder-download command; no replacement upload/download protocol is needed.
+
 ## 1. Select the official benchmark and vintage
 
 **Read current benchmarks** retains the actual JSON and HTTP metadata from:
