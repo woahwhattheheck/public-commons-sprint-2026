@@ -6,6 +6,8 @@ The original composer turns the selected application Markdown and detailed compa
 
 Use the complete current developer-site checkout. Keep the accepted nine-answer application, detailed product and finance companion, page shell and source index together under `dist/`. Select the full current canonical manuscript when receiving new text; a subsection or earlier donor page is not a replacement for the cumulative edition.
 
+The original customer projection receives the accepted complete Webhook and OpenFn sections and keeps meaningful correspondence labels in the public reader. Its source-index projection retains the selected public source identities and measured file metadata. Use that same maintained projection when receiving the current manuscript.
+
 The economic and coastal selections each use one actual merged product commit. Datasette uses two: its original source/publisher commit and its customer Analysis commit. Those commits belong to separate maintained contributions. After the first selection, the source index retains them for subsequent composition.
 
 ## Receive a manuscript edition
@@ -25,7 +27,7 @@ node stellar-forge/developer-site/grant-compose.mjs \
 
 Omit `--manuscript` when rendering edits already saved in the application and companion downloads. Omit a product's commit flags to retain its selection from the source index. The two Datasette commits are required together for a new selection.
 
-Composition preserves all nine original answer headings and every unrelated companion section. Selected installation subsections are replaced once, and the existing tenth section receives the product entry. Source identifiers and hashes are refreshed from the complete result. Repeating the same composition produces identical files.
+Composition preserves all nine original answer headings and every unrelated companion section. Selected installation subsections are replaced once, and the existing tenth section receives the product entry. Source identifiers and hashes are refreshed from the complete result. The guided product opening and submission navigation are then composed into the same edition. Repeating the same composition produces identical files.
 
 ## Receive the four reader files
 
@@ -40,6 +42,21 @@ The original receiving callback accepts the four Git blob overrides emitted by `
 
 Pass that object as `sourcePins` to the original `inspectGrantApplication` callback, along with its selected source commit and receiving directory. Its other declared original routes stay selected. Additional product assets have their own file selection; they do not change this four-reader override contract.
 
+The result also reports `reviewerEntry` and `submissionWorkspace`. These describe the selected opening anchors and submission route; the submission descriptor binds the same application SHA-256 and Git blob that the editor reads. They do not add routes to `sourcePins`.
+
+The declared browser manifest includes the original routes and six complete component assets:
+
+| Route | Use |
+|---|---|
+| `/grant-entry-browser.mjs` | Prepare the original installed/source command and opening guide |
+| `/grant-entry.css` | Responsive product opening |
+| `/grant-submission.html` | Full answer and issuer-field workspace |
+| `/grant-submission.css` | Original workspace layout |
+| `/grant-submission-core.mjs` | Complete source, answer, form and version model |
+| `/grant-submission-workspace.mjs` | Original draft-store editing and receiving controls |
+
+The workspace uses the existing `/drafts.mjs` and the same application/source-index files. Its complete source travels under the original developer-site component in the grant-reviewer product.
+
 The HTML reader and downloadable Markdown have different relative locations. The composer adjusts the companion link only in the rendered HTML. Markdown sibling links remain relative to `grant-data/`.
 
 ## Use the existing local command and Site
@@ -50,7 +67,9 @@ The selected source checkout opens through:
 node stellar-forge/developer-site/grant.mjs --port 8787
 ~~~
 
-The installed product opens through `starforge grant-application --port 8787`. Use the actual origin returned by that listener. An already-running original source server can serve the same declared routes; no second listener is needed.
+The installed product opens through `starforge grant-application --port 8787`. Use the actual origin returned by that listener; its result also supplies the submission-workspace URL. An already-running original source server can serve the same declared routes; no second listener is needed.
+
+Start with **Explore the working product**. The [reviewer-opening guide](GRANT_ENTRY.md) covers the original film/report, Applications, quoted host command and complete purchase handover. Then choose **Prepare submission** to edit the nine answers, map the actual issuer fields and limits, save complete versions and receive a later source edition. The [submission guide](GRANT_SUBMISSION.md) covers exact copy counts, complete draft export/reopen, source comparisons and preservation of manual edits.
 
 The source publisher applies the complete selected files to the existing Site project and keeps its current audience. The manuscript owner supplies accepted content, the cumulative writer supplies the current public source projection, and the same-account publisher supplies the actual saved version and deployment result.
 
