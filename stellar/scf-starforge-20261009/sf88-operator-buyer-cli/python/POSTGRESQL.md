@@ -24,6 +24,11 @@ that already supplies that Psycopg version can install the base package and use
 its existing driver. This receiver uses PostgreSQL COPY, transactions, native
 constraints and views; it does not install a database server.
 
+For a complete receiving operation on an isolated development host, the
+[PostgreSQL runtimes guide](../runtime/postgres/README.md) provides pinned
+native-server and streaming PGlite launchers, exact driver dependencies, and
+an orderly database restart with the same receiving commands.
+
 Use the receiving host's existing libpq service or connection settings through
 an environment variable. For example, when the host already has a configured
 `customer_warehouse` libpq service:

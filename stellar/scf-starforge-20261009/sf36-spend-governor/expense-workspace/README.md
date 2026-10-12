@@ -140,6 +140,12 @@ The original retained Stellar testnet buyer statement was exercised through this
 
 The included-source receiving project reopened the same workspace at revision 15 with the original exact amounts and native projection unchanged. Receiving created no source capture or payment. The desktop and mobile operator views completed with no browser page errors. An initial exact-control lookup exposed a combined label/help accessible name; the shared field renderer now separates the accessible name from its description, and the same retained case continued successfully. This is an internal operator workflow over an existing testnet purchase; it does not count as an independent external adoption.
 
+### Original MCP purchase continuation
+
+On 2026-10-12, the same case continued from revision 22 to 29 with the existing MySQL HPD buyer's four original quotes. The original buyer's signer-free reconciliation saved a native `TRANSFER_MATCHED` observation for its existing 50,000-base-unit purchase. Source acceptance retained that matched quote, a separate indeterminate signed quote and two unsigned signing rejections. The original result remained recorded as 53,468 bytes with its SHA-256; its body stayed in the original buyer workspace.
+
+The new allocation split that original purchase 35,000 / 15,000. The issued period kept the earlier D173 8,000 / 2,000 allocation, producing 60,000 settled atomic units while retaining the separate 10,000-unit unsent reservation and the named unresolved MCP quote. Restart and trusted receiving reopened the same case, both source types, all four native quote outcomes, 14 native tables and 14 committed customer requests. The included-source desktop and mobile views rendered the retained source and issued report; receiving added no capture or payment. Earlier issued editions remained unchanged.
+
 ## Customer requests and native receiving
 
 The same Store now supports an optional `request_id` on the existing POST envelope. It fingerprints the exact fixed route, payload and expected workspace revision, and saves the successful response in the same SQLite transaction as the original operation. Recover through `GET /api/requests/ID`; `GET /api/requests?offset=0&limit=50` pages committed request identities. Exact retry returns the original response before another source capture or close. A changed payload under that ID is a conflict. Calls without the optional field retain their original behavior.
