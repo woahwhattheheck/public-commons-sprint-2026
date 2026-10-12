@@ -40,6 +40,24 @@ export async function openPostgisIntake({connection, profile: inputProfile, dire
     });
   }
 
+  async function operationHistory({limit = 100, offset = 0} = {}) {
+    integer(limit, 'history limit', 1); integer(offset, 'history offset');
+    need(limit <= 500, 'POSTGIS_HISTORY_PAGE_TOO_LARGE');
+    return db.transaction(async client => {
+      const current = await db.project(client);
+      if (!current) return {projectId: profile.projectId, revision: 0, total: '0', offset, operations: []};
+      const total = (await client.query('SELECT count(*)::text AS count FROM ' + db.q(META.operations) +
+        ' WHERE project_id=$1', [profile.projectId])).rows[0].count;
+      const rows = (await client.query('SELECT operation_id,kind,request_sha256,request_json::text,result_json::text,' +
+        'committed_at::text FROM ' + db.q(META.operations) + ' WHERE project_id=$1 ORDER BY committed_at DESC,operation_id' +
+        ' LIMIT $2 OFFSET $3', [profile.projectId, limit, offset])).rows;
+      return {projectId: profile.projectId, revision: current.revision, total, offset,
+        operations: rows.map(row => ({operationId: row.operation_id, kind: row.kind,
+          requestSha256: row.request_sha256, committedAt: row.committed_at,
+          request: parseExactJSON(row.request_json), result: parseExactJSON(row.result_json)}))};
+    }, {repeatable: true});
+  }
+
   async function stage({operationId, sourceDirectory, expectedManifestSha256}) {
     id(operationId, 'operationId'); hash(expectedManifestSha256);
     const request = {schema: 'starforge.postgis-stage-request.v1', operationId,
@@ -199,11 +217,18 @@ export async function openPostgisIntake({connection, profile: inputProfile, dire
         const row = (await client.query("SELECT (to_jsonb(t)-'geom')::text AS attributes, " +
           "encode(ST_AsEWKB(geom),'hex') AS geometry_ewkb,ST_AsGeoJSON(geom,17,0) AS geometry_json, " +
           db.rowHashSQL('t') + ' AS row_hash FROM ' + db.q(table) + ' t WHERE sf_key=$1', [rowKey])).rows[0];
-        return row ? {attributes: parseExactJSON(row.attributes), geometryEWKB: row.geometry_ewkb,
-          geometry: row.geometry_json === null ? null : parseExactJSON(row.geometry_json), rowHash: row.row_hash} : null;
+        return row ? {attributes: parseExactJSON(row.attributes), attributesJSON: row.attributes, geometryEWKB: row.geometry_ewkb,
+          geometryJSON: row.geometry_json, geometry: row.geometry_json === null ? null : parseExactJSON(row.geometry_json), rowHash: row.row_hash} : null;
       };
+      const project = await db.project(client);
+      const active = project.activeEditionId ? await db.edition(client, project.activeEditionId) : null;
+      const activeLayer = active?.layers.find(item => item.id === layerId);
       return {projectId: profile.projectId, editionId, layerId, rowKey,
-        baseline: await get(layer.baselineTable), current: await get(layer.liveTable)};
+        activeEditionId: project.activeEditionId, currentRevision: project.revision,
+        baseline: await get(layer.baselineTable), current: await get(layer.liveTable),
+        comparison: {previousBaseline: await get(activeLayer?.baselineTable),
+          customerCurrent: await get(activeLayer?.liveTable), incoming: await get(layer.baselineTable)}};
+
     }, {repeatable: true});
   }
 
@@ -355,6 +380,6 @@ export async function openPostgisIntake({connection, profile: inputProfile, dire
     return restoreDatabaseBackup({db, profile, root, sourceOptions, operationId,
       directory: source, expectedManifestSha256});
   }
-  return {inspect, stage, review, readRow, promote, rollback, exportReceiving, exportBackup, restoreBackup,
+  return {inspect, operationHistory, stage, review, readRow, promote, rollback, exportReceiving, exportBackup, restoreBackup,
     close: () => db.close(), profile, directory: root};
 }
