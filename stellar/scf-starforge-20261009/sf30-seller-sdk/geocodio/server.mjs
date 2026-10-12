@@ -5,6 +5,7 @@ import {createReadStream} from 'node:fs';
 import {randomBytes,timingSafeEqual} from 'node:crypto';
 import {resolve,join} from 'node:path';
 import {openGeocodioWorkspace} from './workspace.mjs';
+import {readBrowserAssets} from '../../distribution/browser-assets.mjs';
 export const GEOCODIO_ACTIONS=new Set(['status','intake.import','provider.import','provider.prepare','provider.request','provider.run',
   'policy.save','review.list','review.query','review.decide','review.acceptQualified','edition.build','edition.activate',
   'dataset.query','merchant.configure','package.export','package.import',
@@ -92,9 +93,11 @@ export async function startGeocodioWorkspace({directory,port=0,operator:supplied
   const workspace=suppliedOperator??await openGeocodioOperator({...options,directory,
     workspace:suppliedWorkspace,publisher:suppliedPublisher,apiKey});
   let assets;
-  try{assets=await Promise.all([
-    ...['index.html','app.mjs','style.css'].map(file=>readFile(new URL('./public/'+file,import.meta.url))),
-    readFile(new URL('../socrata/public/publisher.mjs',import.meta.url))]);}
+  try{
+    const routes=await readBrowserAssets(new URL('./browser-assets.json',import.meta.url));
+    assets=new Map(await Promise.all([...routes].map(async([path,{url,type}])=>
+      [path,{bytes:await readFile(url),type}])));
+  }
   catch(error){if(ownsWorkspace)await workspace.close().catch(()=>{});throw error;}
   const token=randomBytes(32).toString('base64url'),expected=Buffer.from('Bearer '+token);
   let origin,closing=false;
@@ -110,10 +113,8 @@ export async function startGeocodioWorkspace({directory,port=0,operator:supplied
       if(!origin||request.headers.host!==new URL(origin).host)return send(421,{message:'Use this operator’s original local address.'});
       if(request.headers.origin&&request.headers.origin!==origin)return send(403,{message:'Use the original operator session.'});
       if(request.method==='GET'){
-        if(request.url==='/')return send(200,assets[0],'text/html; charset=utf-8');
-        if(request.url==='/app.mjs')return send(200,assets[1],'text/javascript; charset=utf-8');
-        if(request.url==='/style.css')return send(200,assets[2],'text/css; charset=utf-8');
-        if(request.url==='/publisher.mjs')return send(200,assets[3],'text/javascript; charset=utf-8');
+        const asset=assets.get(request.url);
+        if(asset)return send(200,asset.bytes,asset.type);
       }
       const authorization=Buffer.from(request.headers.authorization??'');
       if(authorization.length!==expected.length||!timingSafeEqual(authorization,expected))

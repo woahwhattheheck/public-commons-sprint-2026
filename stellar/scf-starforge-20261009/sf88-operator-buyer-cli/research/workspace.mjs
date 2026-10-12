@@ -525,7 +525,8 @@ export function createBuyerPageFetcher({buyer,requestForPage,buyerOptions={}}){
       for(const key of ['url','method','expect'])check(canonical(config.operation[key]??null)===canonical(proposed[key]??null),'NATIVE_PAGE_REQUEST_CHANGED',undefined,409);
       // Follow only a successor explicitly prepared by the original SDK operator.
       // The logical page intent, request and edition cursor remain unchanged.
-      if(typeof operation.followUnpaidContinuation==='function')operation=await operation.followUnpaidContinuation();
+      if(typeof operation.followContinuation==='function')operation=await operation.followContinuation();
+      else if(typeof operation.followUnpaidContinuation==='function')operation=await operation.followUnpaidContinuation();
       result=await operation.recover();
       if(result===null){
         const state=await operation.inspect();

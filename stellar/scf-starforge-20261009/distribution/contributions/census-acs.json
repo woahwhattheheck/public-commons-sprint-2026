@@ -1,0 +1,17 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "census-acs",
+  "description": "Census ACS data products",
+  "commands": {
+    "census-publisher": "stellar/scf-starforge-20261009/sf30-seller-sdk/census-acs/publisher/cli.mjs"
+  },
+  "commandDescriptions": {
+    "census-publisher": "Publish Census ACS observations and complete original source deliveries"
+  },
+  "exports": {
+    "./seller/census-acs": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/census-acs/source.mjs",
+    "./seller/census-acs/publisher": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/census-acs/publisher/model.mjs",
+    "./seller/census-acs/publisher/plan": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/census-acs/publisher/plan.mjs",
+    "./seller/census-acs/release": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/census-acs/release.mjs"
+  }
+}

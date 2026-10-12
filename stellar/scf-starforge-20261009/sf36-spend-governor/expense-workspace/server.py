@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import argparse
+import errno
 import hmac
 import json
 import secrets
 import signal
+import sqlite3
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -29,8 +31,8 @@ class Server(ThreadingHTTPServer):
     block_on_close = True
     allow_reuse_address = False
 
-    def __init__(self, directory, port=0):
-        self.store = Store(directory)
+    def __init__(self, directory, port=0, node_executable=None):
+        self.store = Store(directory, node_executable=node_executable)
         self.token = secrets.token_urlsafe(32)
         try:
             super().__init__(("127.0.0.1", port), Handler)
@@ -143,15 +145,32 @@ class Handler(BaseHTTPRequestHandler):
             return self.send(value)
         except Problem as exc:
             self.send({"error": {"code": exc.code, "message": str(exc)}}, exc.status)
-        except (ValueError, TypeError, OSError) as exc:
+        except (sqlite3.Error, OSError) as exc:
+            if getattr(exc, "sqlite_errorcode", None) == sqlite3.SQLITE_FULL or getattr(exc, "errno", None) == errno.ENOSPC:
+                self.send({"error": {"code": "STORAGE_FULL", "message": "The workspace needs free storage. Retain the same request identity and recover its result before retrying."}}, 507)
+            elif isinstance(exc, OSError):
+                self.send({"error": {"code": "INPUT_OR_SOURCE_ERROR", "message": str(exc)}}, 400)
+            else:
+                self.send({"error": {"code": "WORKSPACE_OPERATION_FAILED", "message": "The operation did not return a completion. Recover its saved request before retrying; retained state remains available."}}, 500)
+        except (ValueError, TypeError) as exc:
             self.send({"error": {"code": "INPUT_OR_SOURCE_ERROR", "message": str(exc)}}, 400)
         except Exception:
-            self.send({"error": {"code": "WORKSPACE_OPERATION_FAILED", "message": "The operation failed without issuing a new period. Retained state remains available."}}, 500)
+            self.send({"error": {"code": "WORKSPACE_OPERATION_FAILED", "message": "The operation did not return a completion. Recover its saved request before retrying; retained state remains available."}}, 500)
 
     def read(self, path, parts, query):
         store = self.server.store
         if path == "/api/state":
             return self.send(store.state())
+        if path == "/api/refund-packets":
+            return self.send(store.refund_packets(**self.paging(query)))
+        if path == "/api/credits":
+            return self.send(store.credits(**self.paging(query)))
+        if len(parts) == 3 and parts[:2] == ["api", "credits"]:
+            return self.send(store.credit(parts[2]))
+        if len(parts) == 3 and parts[:2] == ["api", "refund-packets"]:
+            return self.send(store.refund_packet(parts[2]))
+        if len(parts) == 4 and parts[:2] == ["api", "refund-packets"] and parts[3] == "original":
+            return self.send(store.refund_original(parts[2]), content_type="application/zip", filename="original-buyer-refund-packet.zip")
         if path == "/api/expenses":
             return self.send(store.expenses(query=query.get("q", [""])[0], source=query.get("source", [""])[0],
                                             status=query.get("status", [""])[0], **self.paging(query)))
@@ -196,12 +215,16 @@ class Handler(BaseHTTPRequestHandler):
 
     def change(self, path, parts, payload, expected):
         store = self.server.store
-        fixed = {"/api/sources": store.register_source, "/api/centers": store.save_center,
+        fixed = {"/api/sources": store.register_source, "/api/refund-packets": store.capture_refund, "/api/centers": store.save_center,
                  "/api/labels": store.save_labels, "/api/periods": store.save_period}
         if path in fixed:
             return (fixed[path](payload, expected))
         if len(parts) == 4 and parts[0] == "api":
             group, ident, action = parts[1:]
+            if group == "refund-packets" and action == "decision":
+                return store.decide_refund(ident, payload, expected)
+            if group == "credits" and action == "coding":
+                return store.save_credit_coding(ident, payload, expected)
             if group == "sources":
                 if action == "capture":
                     return (store.capture(ident, expected))
@@ -222,10 +245,11 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--state", required=True, help="Private expense workspace directory, separate from the original buyer ledger")
     parser.add_argument("--port", type=int, default=0)
+    parser.add_argument("--node", help="Host Node 22.13+ or 24 executable for original MCP quote captures")
     args = parser.parse_args()
     if not 0 <= args.port <= 65535:
         parser.error("--port must be from 0 to 65535")
-    server = Server(args.state, args.port)
+    server = Server(args.state, args.port, node_executable=args.node)
     stopping = threading.Event()
     def stop(*_):
         if not stopping.is_set():

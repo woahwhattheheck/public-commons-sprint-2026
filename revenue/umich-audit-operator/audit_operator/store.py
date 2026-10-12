@@ -285,12 +285,13 @@ class Store:
             row = self.db.execute(
                 "SELECT g.body,s.expires_at FROM sessions s JOIN grants g ON g.id=s.grant_id WHERE s.token_sha256=?",
                 (digest(token.encode()),)).fetchone()
-        if not row or row["expires_at"] <= now():
-            return None
-        body = json.loads(row["body"])
-        if not body.get("active") or body.get("expires_at") and body["expires_at"] <= now():
-            return None
-        return body
+            if not row or row["expires_at"] <= now():
+                return None
+            body = json.loads(row["body"])
+            if not body.get("active") or body.get("expires_at") and body["expires_at"] <= now():
+                return None
+            identity = getattr(self, "institutional_access", None)
+            return identity.session_actor(token, body) if identity else body
 
     def end_session(self, token):
         with self.lock, self.db:
@@ -570,7 +571,9 @@ class Store:
     def selection_hash(self):
         with self.lock:
             return fingerprint([{"kind": r["kind"], "id": r["id"], "revision": r["revision"], "sha256": r["sha256"]}
-                                for r in self.db.execute("SELECT r.* FROM revisions r JOIN heads h USING(kind,id,revision) ORDER BY kind,id")])
+                                for r in self.db.execute("SELECT r.* FROM revisions r JOIN heads h USING(kind,id,revision) ORDER BY kind,id")
+                                if r["kind"] not in {"identity_provider", "identity_rule", "identity_account",
+                                                     "identity_delegation", "identity_attestation"}])
 
     def operations(self, before=None, limit=100):
         limit = max(1, min(int(limit), 1000))
