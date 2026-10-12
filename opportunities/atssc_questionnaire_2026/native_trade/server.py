@@ -14,7 +14,8 @@ from urllib.parse import parse_qs,urlparse
 from questionnaire_workspace import OperationError,Workspace
 
 SOURCE = Path(__file__).resolve().parent
-RESPONDENT_METHODS = {"get_respondent","workbook_answers","submit_revision","import_workbook","inspect_workbook"}
+RESPONDENT_METHODS = {"get_respondent","workbook_answers","submit_revision","save_progress","import_workbook","inspect_workbook"}
+REPORT_MIMES = {"json":"application/json; charset=utf-8","csv":"text/csv; charset=utf-8","html":"text/html; charset=utf-8","pdf":"application/pdf","docx":"application/vnd.openxmlformats-officedocument.wordprocessingml.document"}
 
 
 def main():
@@ -75,13 +76,22 @@ def main():
                     key,separator,fmt = suffix.partition(".")
                     fmt = fmt if separator else "html"
                     data = workspace.report_bytes(key,"public",fmt,public=True)
-                    return self.send(200,data,{"json":"application/json; charset=utf-8","csv":"text/csv; charset=utf-8","html":"text/html; charset=utf-8"}[fmt])
+                    return self.send(200,data,REPORT_MIMES[fmt])
+                if path.startswith("/api/respondents/"):
+                    record = self.session()
+                    parts = path.removeprefix("/api/respondents/").split("/")
+                    if len(parts)!=4 or parts[1]!="documents": return self.send(404,{"error":"Response document endpoint not found"})
+                    key,_,edition,fmt = parts
+                    if not record or record["role"]!="operator" and record.get("respondent_id")!=key:
+                        return self.send(401,{"error":"Open the respondent's own session"})
+                    data = workspace.response_bytes(key,edition,fmt)
+                    return self.send(200,data,REPORT_MIMES[fmt],{"Content-Disposition":"attachment; filename="+edition+"-response."+fmt})
                 if path.startswith("/api/reports/"):
                     record = self.session()
                     if not record or record["role"] != "operator": return self.send(401,{"error":"Operator session required"})
                     key,edition,fmt = path.removeprefix("/api/reports/").split("/")
                     data = workspace.report_bytes(key,edition,fmt)
-                    return self.send(200,data,{"json":"application/json; charset=utf-8","csv":"text/csv; charset=utf-8","html":"text/html; charset=utf-8"}[fmt],{"Content-Disposition":"attachment; filename="+edition+"."+fmt})
+                    return self.send(200,data,REPORT_MIMES[fmt],{"Content-Disposition":"attachment; filename="+edition+"."+fmt})
                 return self.send(404,{"error":"Page not found"})
             except Exception as e: self.send(404 if getattr(e,"code","") == "NOT_FOUND" else 400,{"error":{"code":getattr(e,"code","REQUEST"),"message":str(e)}})
 
@@ -115,12 +125,17 @@ def main():
                 method,params = data.get("method"),data.get("params",{})
                 if record["role"] == "respondent":
                     if method not in RESPONDENT_METHODS: return self.send(403,{"error":"This operation requires the operator"})
-                    if method in {"get_respondent","workbook_answers","submit_revision"}:
+                    if method in {"get_respondent","workbook_answers","submit_revision","save_progress"}:
                         if params.get("respondent_id") != record["respondent_id"]: return self.send(403,{"error":"Open this respondent's own record"})
                     if method in {"inspect_workbook","workbook_answers"} and params.get("sha256") not in record["workbooks"]: return self.send(403,{"error":"Use an original workbook uploaded in this session"})
                     if method == "submit_revision" and params.get("workbook_sha256") and params["workbook_sha256"] not in record["workbooks"]: return self.send(403,{"error":"Upload this respondent's own workbook before submitting"})
+                params["_actor"] = {"role":record["role"],"respondent_id":record.get("respondent_id")}
                 result = workspace.invoke(method,params)
                 if method == "import_workbook": record["workbooks"].add(result["sha256"])
+                if method == "get_respondent" and record["role"] == "respondent":
+                    result["revisions"] = result["revisions"][-1:]
+                    for revision in result["revisions"]:
+                        revision["comparison"] = {"answerChanges":[],"answerChangeCount":0}
                 return self.send(200,{"result":result})
             except Exception as e:
                 self.send(409 if getattr(e,"code","") == "VERSION_CONFLICT" else 400,{"error":{"code":getattr(e,"code","REQUEST"),"message":str(e),"detail":getattr(e,"detail",None)}})
