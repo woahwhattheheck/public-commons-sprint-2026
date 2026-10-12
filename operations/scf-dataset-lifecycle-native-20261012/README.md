@@ -54,3 +54,30 @@ Source preparation leaves the selected version-store directory absent until
 explicit initialization. Repeated preparation reuses the exact retained package.
 A live initialization reuses the running original instance, and a stopped-store
 initialization preserves its current snapshot and revision.
+
+## Completed native run
+
+The original operation `SCF-NDJSON-DATASET-LIFECYCLE-3AD791-20261012` completed on
+12 October 2026 at 04:09:17 UTC with exit code 0, using source commit
+`c82eb8c7123cf5cecef9d9f9ff35b450a3b431fe`. Its complete
+[native outcome](native-outcome.json) comes directly from the running merchant
+and customer workflow. The selected source contained 1,050 files totaling
+14,553,280 bytes; the operation retained all 178 output files totaling 1,010,808
+bytes.
+
+The run completed both source editions and finalized data rooms; preserved the
+original controller, old cursor, current edition and stopped-store state across
+publication and reopening; rejected stale revisions; and restored a retained
+edition. Both customer packages reconstructed their original source and mapping.
+The exact-number query, keyed comparison and exported-project reopening
+completed. The comparison contains one added, one removed, one changed and one
+unchanged record.
+
+The retained output contains the original `source-workspace`,
+`customer-workspace`, `project-reopened`, complete merchant releases and
+`native-outcome.json`. To continue with the
+[Applications receiving operation](../scf-ndjson-applications-native-20261012/README.md),
+copy that output into a private working directory and select its
+`native-outcome.json` and `source-workspace` in the receiving input. The
+Applications operation reviews that live workspace against the installed
+runtime's selected Python and source files.
