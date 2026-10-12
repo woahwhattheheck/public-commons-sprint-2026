@@ -20,6 +20,7 @@ import { n8nApplication, prepareN8nApplication } from './application-n8n.mjs';
 import { redisApplication, prepareRedisApplication } from './application-redis.mjs';
 import { openApiApplication, prepareOpenApiApplication } from './application-openapi.mjs';
 import { arcgisAgentApplication, prepareArcgisAgentApplication } from './application-arcgis.mjs';
+import { s3MerchantApplication, prepareS3MerchantApplication } from './application-s3-merchant.mjs';
 import { jobCheckoutApplication, validateJobCheckoutSelection, prepareJobCheckoutApplication } from './application-job-checkout.mjs';
 import { datasetBuyerApplication, prepareDatasetBuyerApplication } from './application-dataset-buyer.mjs';
 import { pricingApplication, validatePricingSelection, preparePricingApplication } from './application-pricing.mjs';
@@ -76,6 +77,7 @@ export const APPLICATION_CATALOG = Object.freeze([
   stellarExpertApplication(common),
   redisApplication(common),
   arcgisAgentApplication(common),
+  s3MerchantApplication(common),
   jobCheckoutApplication(common),
   datasetBuyerApplication(common),
   pricingApplication(common),
@@ -295,6 +297,10 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
   } else if (type.id === 'redis') {
     const original = await prepareRedisApplication(settings, inputPath, runtimeDirectory);
     args.push(...original.args); inputs.push(...original.inputs);
+  } else if (type.id === 's3-merchant') {
+    const original = await prepareS3MerchantApplication(settings, { ...context, inputPath, runtimeDirectory });
+    args.push(...original.args); inputs.push(...original.inputs);
+    createDirectories.push(...original.createDirectories);
   } else if (type.id === 'arcgis-agent') {
     const original = await prepareArcgisAgentApplication(settings, inputPath, runtimeDirectory);
     args.push(...original.args); inputs.push(...original.inputs);
