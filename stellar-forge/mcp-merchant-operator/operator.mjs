@@ -276,7 +276,8 @@ export class MerchantReleaseOperator {
     const definition = this.#definitions.get(name);
     if (!definition) throw failure('TOOL_NOT_FOUND', 'Choose a tool advertised by this configured merchant.');
     exact(args, Object.keys(definition.inputSchema.properties), definition.inputSchema.required);
-    const changing = this.#mutations.has(name);
+    // Cancellation must reach its exact active RPC while the initiating call owns the mutation guard.
+    const changing = this.#mutations.has(name) && name !== 'merchant_grpc_cancel_call';
     if (changing && this.#busy) throw failure('OPERATOR_BUSY', 'Another merchant change is running. Read merchant_status before continuing.');
     if (changing) { this.#busy = true; this.#lastFailure = null; }
     let done;
