@@ -349,13 +349,65 @@ node stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_bulk/connected/RECEIVIN
   --chromium /absolute/existing/chromium
 ~~~
 
-It keeps the browser open during connected reads, receives complete dataset,
-source and workspace files, restores separate native workspace/customer targets,
-reopens the merchant and checks the original records and dataset totals.
-It uses the same completed provider exports.
+The default original workspace is the exact directory recorded in the native
+result. The receiver reads the original private operator through the maintained
+`FhirConnection`, including native HTTP response handling and live
+workspace/instance verification. It keeps the browser open during connected
+reads, receives complete dataset, source and workspace files, restores separate
+native workspace/customer targets, reopens the merchant and checks the original
+records and dataset totals. It uses the same completed provider exports.
 
-The selected source/runtime supplies Node22+, Python, the original merchant
-dependencies, Linux flock and Playwright/Chromium. The operation saves complete
-request results, downloads, screenshots, source identities and its restartable
-journal. `OPERATED_CONNECTED_FHIR.json` is emitted when the whole journey
-finishes.
+### Receive that completed workspace on another host
+
+Carry the complete original native result and editable workspace ZIP with their
+saved byte counts and SHA256 values. Use the original native importer to restore
+the selected archive into the receiving host's private directory:
+
+~~~sh
+python3 stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_bulk/cli.py workspace-import \
+  --workspace /private/received-fhir-workspace \
+  --file /private/received/fhir-editable-workspace.zip
+
+node stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_bulk/connected/RECEIVING.mjs \
+  --receiving /private/received/OPERATED_FHIR_BULK.json \
+  --workspace /private/received-fhir-workspace \
+  --out /private/received/fhir-connected-journey \
+  --playwright /absolute/existing/playwright/index.mjs \
+  --chromium /absolute/existing/chromium
+~~~
+
+`--workspace` selects the actual restored directory. The complete native result
+bytes and their SHA256 remain the original receiving input. The selected
+workspace must carry the result's original UUID, source IDs, accepted completed
+operations, builds, reviewed plan, discovery and retained Group pages. The
+receiver verifies those native records after opening the authenticated operator.
+Its final result retains both the original recorded directory and the selected
+receiving directory.
+
+`--playwright` selects an existing absolute module path on that host. Without it,
+the receiver resolves the installed `playwright` package or the declared
+`CODEX_PRIMARY_RUNTIME_NODE_MODULES` dependency. `--chromium` selects the existing
+browser executable. `--credentials-file` retains its original meaning as a
+private local authentication-profile file.
+
+### Continue an interrupted connected journey
+
+Repeat the command with the same native result path, selected workspace,
+credential-file selection and output directory. The existing
+`CONNECTED_JOURNEY.json` must match the complete native result hash, original
+workspace UUID and selected private paths. Original defaults produce the same
+journal binding as earlier versions. A new host starts its connected journal in
+its own output directory after the original native archive has been restored.
+
+Saved complete exports reopen by their original manifest hashes. Full file
+downloads resume through the maintained reader, and customer/source/workspace
+intake reuses the same complete original content and native receiving state.
+Code changes append the actual source edition to the existing journal.
+Each invocation also records its selected Node executable/version, Playwright
+module, browser and original/receiving workspace paths.
+
+The selected source/runtime supplies Node22+, Python, the complete original
+merchant dependencies, Linux flock and Playwright/Chromium. The operation saves
+complete request results, downloads, screenshots, source identities and its
+restartable journal. `OPERATED_CONNECTED_FHIR.json` is emitted when the whole
+journey finishes.

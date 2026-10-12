@@ -280,3 +280,8 @@ The existing Applications interface opens the original economic project with its
 The same economic project now authors complete source-bound analyst briefings: exact prior-period, year-earlier and previous-observation comparisons, explicit relative percentages, source missing values, full offline HTML/CSV/JSON/manifest, native paid file delivery and complete report export/reopen. The original source-only review and edition formats retain their identities.
 
 Start with [the full briefing workflow](BRIEFINGS.md), [the actual finished three-series report](examples/briefing-20261012/briefing.html), and [the complete source capture](examples/briefing-20261012/macro-source.capture.json). The retained 2,219-observation UNRATE/CPIAUCSL/GDP source produces a ready 75-observation reporting window with 150 exact comparisons. The private UI, native `fred` CLI, installed typed `fred-workspace` client and 30-tool merchant agent expose the same saved reports and original customer recovery.
+
+
+### Recurring analyst briefings
+
+Use [Recurring briefings](TEMPLATES.md) to save a reviewed series and calculation selection, apply its calendar window to a later retained source, inspect period and baseline revisions, and save a linked successor. The browser, native CLI and merchant client use the same original project transactions. Complete v3 project exports carry the template and successor history together with every original capture, review and briefing file.

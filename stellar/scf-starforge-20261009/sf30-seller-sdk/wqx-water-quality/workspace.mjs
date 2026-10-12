@@ -12,6 +12,9 @@ import { reviewSheetCsv, reviewSheetTsv, parseReviewSheetCsv, parseReviewSheetTs
 import { previewReviewSheet, saveReviewSheet, listReviewSheets, readReviewSheet,
   exportReviewSheet, receiveReviewSheet } from './review-sheet/workflow.mjs';
 
+import { previewStandardizedReview, saveStandardizedReview, readStandardizedReview, listStandardizedReviews,
+  exportStandardizedReview, receiveStandardizedReview } from './standardized-analysis/workflow.mjs';
+
 import { concentrationSourceGroups, prepareConcentrationChoices, concentrationReportForDocument,
   concentrationReportCsv } from './review-sheet/concentrations.mjs';
 
@@ -21,7 +24,8 @@ const STATIC = new Map([['/', ['ui/index.html', 'text/html; charset=utf-8']],
   ['/style.css', ['ui/style.css', 'text/css; charset=utf-8']],
   ['/openwaters.mjs', ['ui/openwaters.mjs', 'text/javascript; charset=utf-8']],
   ['/review-sheet.mjs', ['ui/review-sheet.mjs', 'text/javascript; charset=utf-8']],
-  ['/concentrations.mjs', ['ui/concentrations.mjs', 'text/javascript; charset=utf-8']]]);
+  ['/concentrations.mjs', ['ui/concentrations.mjs', 'text/javascript; charset=utf-8']],
+  ['/standardized-analysis.mjs', ['ui/standardized-analysis.mjs', 'text/javascript; charset=utf-8']]]);
 const json = value => JSON.stringify(value, null, 2) + '\n';
 function fail(message, code = 'WQX_WORKSPACE_INVALID', status = 400) { throw Object.assign(new Error(message), { code, status }); }
 function sameToken(value, expected) {
@@ -74,7 +78,7 @@ export async function startWaterQualityWorkspace({ directory, port = 0, merchant
   async function view() {
     return { project: await project.read(), captures: await project.listCaptures(), reviews: await project.listReviews(),
       editions: await project.listEditions(), openWaters: await project.listOpenWaters(), runtime: plainRuntime(activeMerchant, activeEditionId),
-      buyerConfigured: Boolean(buyer), reviewSheets: await listReviewSheets({ project }), jobs: [...jobs.values()].map(({ promise, ...row }) => row), token };
+      buyerConfigured: Boolean(buyer), reviewSheets: await listReviewSheets({ project }), standardizedReviews: await listStandardizedReviews({ project }), jobs: [...jobs.values()].map(({ promise, ...row }) => row), token };
   }
   function startJob(id, work) {
     if (jobs.get(id)?.status === 'RUNNING') fail('This operation is already running.', 'WQX_OPERATION_ACTIVE', 409);
@@ -100,6 +104,13 @@ export async function startWaterQualityWorkspace({ directory, port = 0, merchant
       if (request.method === 'GET' && path === '/api/status')
         return send(response, 200, { captures: await project.listCaptures(), runtime: plainRuntime(activeMerchant, activeEditionId),
           jobs: [...jobs.values()].map(({ promise, ...row }) => row) });
+      if (request.method === 'GET' && path === '/api/standardized-analysis')
+        return send(response, 200, await listStandardizedReviews({ project }));
+      if (request.method === 'GET' && (match = /^\/api\/standardized-analysis\/([A-Za-z0-9_-]+)(?:\/(json|observations|observations-tsv|groups|changes|report|bundle))?$/.exec(path))) {
+        if (!match[2]) return send(response, 200, await readStandardizedReview({ project, reviewId: match[1] }));
+        const file = await exportStandardizedReview({ project, reviewId: match[1], format: match[2] });
+        return send(response, 200, file.bytes, file.mime, file.filename);
+      }
       if (request.method === 'GET' && path === '/api/review-sheets')
         return send(response, 200, await listReviewSheets({ project }));
       if (request.method === 'GET' && (match = /^\/api\/review-sheets\/source\/([A-Za-z0-9_-]+)(?:\/(targets|concentrations))?$/.exec(path))) {
@@ -167,6 +178,8 @@ export async function startWaterQualityWorkspace({ directory, port = 0, merchant
       if (request.method !== 'POST') fail('Workspace route not found.', 'WQX_ROUTE_NOT_FOUND', 404);
       if (!sameToken(request.headers['x-workspace-token'], token)) fail('Refresh the workspace before making a change.', 'WQX_TOKEN_MISMATCH', 403);
       const input = await body(request,
+        path === '/api/standardized-analysis/receive' ? 128 * 1024 * 1024 :
+        path.startsWith('/api/standardized-analysis') ? 1024 * 1024 :
         ['/api/open-waters/receive', '/api/review-sheets/receive'].includes(path) ? 128 * 1024 * 1024 :
         path.startsWith('/api/review-sheets') ? 64 * 1024 * 1024 : path === '/api/receive' ? 96 * 1024 * 1024 : undefined);
       if (path === '/api/captures') {
@@ -177,6 +190,9 @@ export async function startWaterQualityWorkspace({ directory, port = 0, merchant
       if (path === '/api/analysis') return send(response, 200, await project.analyze(input));
       if (path === '/api/open-waters/preview') return send(response, 200, await project.previewOpenWaters(input));
       const result = await serial(async () => {
+        if (path === '/api/standardized-analysis/preview') return previewStandardizedReview({ ...input, project });
+        if (path === '/api/standardized-analysis') return saveStandardizedReview({ ...input, project });
+        if (path === '/api/standardized-analysis/receive') return receiveStandardizedReview({ project, bundle: input.bundle });
         if (path === '/api/review-sheets/concentrations') return prepareConcentrationChoices({project, document:input.document,
           resultIds:input.resultIds, targetUnit:input.targetUnit, reason:input.reason});
         if (path === '/api/review-sheets/concentrations/csv') return {filename:input.report?.source?.sourcePlanId + '-concentration-report.csv',

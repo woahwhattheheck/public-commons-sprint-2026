@@ -2,13 +2,13 @@
 
 This delivery connects the original SensorThings source workspace to the existing Python Analysis application. It provides complete source-table imports, editable SQL recipes, full typed query exports, a published report, Excel workbooks, a portable workspace, and an actual continuation of that workspace after receiving.
 
-The source engine, AnalysisWorkspace, DatasetDatabase, report engine, workbook engine, source-document store, and portable receiver keep their existing ownership. The integration adds one source-preparation action, a small command for that action, and one complete Python receiving programme. It does not capture a provider, create another analysis database format, or add an account or session gate.
+The source engine, AnalysisWorkspace, DatasetDatabase, report engine, workbook engine, source-document store, and portable receiver keep their existing ownership. The integration provides the original source-preparation action and an explicit saved-component preparation action, one existing command for either action, and the complete original Python receiving programme. It does not capture a provider, create another analysis database format, or add an account or session gate.
 
 ## Whole workflow
 
 1. Finish an original SensorThings capture and retain its immutable source edition.
 2. Complete the original edition.export action. Retain the returned result.id. That source-export ID is different from the caller's operationId.
-3. Call analysis.python.prepare in the same workspace, selecting the exact editionId and returned exportId.
+3. Call analysis.python.prepare for the complete scalar/raw-source document, or analysis.python.components.prepare for an explicit saved MultiDatastream analysis version. Both select the exact editionId and returned exportId; the component action also selects the actual immutable analysisVersionId.
 4. Receive the complete preparation through the existing file downloader, or use its retained source directory on the same host. The normal downloader keeps numbered flat names and their original selectors in sensorthings-download.json. The complete source archive travels as ordered content-addressed parts, accompanied by the original edition and export receipt.
 5. Run the installed Python programme with each complete receiving manifest and its SHA-256, or with the original intake.json and its SHA-256 when using a retained source directory.
 6. Receive full tables, source and time summaries, categorical occurrence counts, exact numeric summaries, original semantic-key comparisons, complete query exports, a report, and workbooks.
@@ -156,6 +156,100 @@ The scalar release's existing native owner supplies the actual completed Hamburg
 The Hamburg record is categorical. The BGS June 1 pressure window is numeric. They deliberately exercise different source meanings in the same retained-source application. No native edition ID, source-export receipt, database result or receiving result should be replaced by an expected value in this guide.
 
 Run the original source receiving, preparation actions and this whole Python programme in the existing owned native execution. Inspect the actual report, workbook and reopened app. Use the current original package, including the B9D2 response-intake recovery changes. The programmer-facing Python and Node syntax checks are separate from this full native receiving result.
+
+
+## Explicit saved MultiDatastream components
+
+The component path extends the same original document intake, SQL application, report engine, workbook engine and portable receiver. It retains all five existing source tables, then adds four complete component tables. The ordinary scalar action and its five-table format remain supported.
+
+First save the actual component analysis in the existing SensorThings UI. Select each original zero-based position, its exact edition-bound metadata identity and the required issue acknowledgments. A numeric-json interpretation needs its explicit attributed note; it does not change or certify the publisher's declared observation type. A revised source edition requires its own actual binding IDs. Do not reuse a prior edition's binding IDs.
+
+Open that saved version, then use **Receive, export and reopen → Python analysis handover**. Select its exact source edition and original source export. In **Explicit analysis selection**, choose the opened saved component version. The default keeps the ordinary complete-source path; no component is selected automatically.
+
+The same action is available from the existing authenticated listener, typed merchant client and source command:
+
+    {
+      "action": "analysis.python.components.prepare",
+      "operationId": "one-retained-component-preparation-id",
+      "expectedRevision": 0,
+      "payload": {
+        "editionId": "actual immutable source edition SHA-256",
+        "exportId": "actual returned source-export result ID",
+        "analysisVersionId": "actual saved component analysis version SHA-256",
+        "actor": "the current attributed operator"
+      }
+    }
+
+Replace expectedRevision with the current original workspace revision. Preserve the entire exact request and operationId through an interrupted call. The source command accepts that same reviewed request file:
+
+    node analysis/python-document-cli.mjs \
+      --workspace /absolute/existing/sensorthings-workspace \
+      --request /absolute/retained/component-preparation-request.json
+
+The normal installed sensorthings-python-source command selects the same source CLI. There is no second queue, database, provider request or credential. The existing operation result/read endpoint resolves a lost reply; a new request ID is not a substitute for recovery.
+
+### Component handover contract
+
+The receipt remains stellar-forge.sensorthings-python-source.v1, so the original file selector and manifest-bound downloader continue to receive it. Its optional componentAnalysis field records the immutable version, project, selection, ordered binding IDs and complete binding-manifest identity.
+
+The component intake.json declares stellar-forge.sensorthings-python-component-intake.v1. Its complete source document contains:
+
+| Collection | Retained meaning |
+|---|---|
+| observations | Every original parent observation occurrence, source value/type/state, time, quality and JSON. |
+| components | The original source engine's complete positional raw table; it is not limited to the selected analysis. |
+| entities | Complete retained entity metadata, source pointers and opening/closing capture phases. |
+| observation_index | Original typed parent record keys and semantic hashes. |
+| numeric_eligibility | Original scalar classifier and every excluded reason. |
+| selected_components | Every explicitly selected component, full unchanged parent context, actual selected value and source-pointer fallback. |
+| component_index | Selected occurrence/key/semantic identity and the independent parent semantic identity. |
+| component_eligibility | Separate exact-arithmetic and finite-browser eligibility, including both original reasons. |
+| component_bindings | Original position, typed stream, selected property/unit/type, interpretation and complete ordered metadata binding. |
+
+Two additional complete originals accompany the same source document: the actual saved component analysis version and its full ordered binding manifest. The original source edition, source export receipt, meaning record and all ordered archive parts also remain present. All document cells are text; original JSON numeric lexemes are never rounded into spreadsheet numbers.
+
+The native preparer uses the existing selectedComponentRows, validateComponentBindings, componentExactEligibility and componentNumericEligibility implementations. It streams the complete tables within the original Analysis source limits. The receiving programme accepts a full original preparation directory or the original flat numbered download manifest exactly as described above.
+
+The Python receiver validates the entire file/archive closure before its first workspace mutation. It also checks the saved version and ordered metadata identities, coverage of every selected parent/position, each selected value against the original JSON vector, and both classifier results. The receiver independently reconstructs the selected MultiDatastream's own ObservedProperties relation from retained entity roots and the original edition's page order. Inline property arrays retain their original positions; navigation pages retain their original root ordinals and nested relation order. Every complete property source reference must match that reconstructed list, so membership elsewhere in the source closure cannot substitute for positional meaning. Missing, null, non-array and short-vector values remain distinct. A present selected element cites /result/index; an absent element retains the actual array/parent pointer instead of inventing a nonexistent JSON Pointer.
+
+Neither a prepared file nor a passing source check is evidence that the subsequent Python programme, workbook receiving or browser run has executed. Actual operation records and the final programme-result.json supply that evidence.
+
+### Queries, statistics and comparisons
+
+Run the same stellar_forge_buyer.sensorthings_analysis programme with the complete source-selection descriptors. A source entry may use the same source edition with a different explicitly saved analysis version; duplicate selections of the same edition and version are rejected. Every source entry retains a distinct source label. Optional comparison pairs reference those exact labels.
+
+All source and derived tables get full original query-export JSONL and CSV files and workbook sheets. The report adds explicit selection/meaning, time/duplicate/separation, exact sample statistics, category, quality, eligibility and observed-code-change sections.
+
+Exact component statistics use actual original JSON numbers with verified positional alignment, explicit source instants and the selected source-declared or numeric-json interpretation. Their canonical decimal exponents must stay within the existing ±4,096 exact-arithmetic bound. They do not inherit the browser finite-number or underflow exclusions. The report keeps both counts and all exclusion reasons.
+
+Minimum and maximum retain original source number literals. Sum, mean and median use exact Fraction arithmetic over Decimal source tokens. mean_decimal_34 alone is rounded to 34 significant digits. Distinct component bindings, units, properties and original declarations are never pooled. All eligible occurrences have equal sample weight, including coincident timestamps. No time-weighted mean, interpolation, cadence, outage or coverage percentage is inferred.
+
+The report and full data retain:
+
+- Every source occurrence at a duplicate instant, with parent and component IDs and exact citations.
+- Every separation between adjacent distinct source instants, with all endpoint occurrences and exact nanoseconds/rational seconds.
+- The full separation distribution and selected-window/time extent distinction.
+- Literal categories, original value states and quality declarations.
+- Explicit intervals and unplaced or unresolved source times.
+
+Comparison queries preserve independently selected bindings on both sides. They distinguish same, selectedComponentChanged, componentMeaningChanged, unselectedParentContextChanged, ambiguous, unkeyed and observedOnlyLeft/Right. Source query, selected positions, period and interpretation compatibility are displayed separately. The selectedComponentChanged classification concerns the complete selected observation semantic context, including value, time, quality, parameters and attributed interpretation; it does not assert that the numeric value alone changed. Changing an unselected vector element can change the parent identity without changing that selected semantic context. Observed-only rows do not establish source insertions/deletions or an atomic provider snapshot.
+
+### Actual receiving and revision two
+
+The existing programme imports into the original AnalysisWorkspace, saves queries, publishes its report, generates complete original workbook deliveries, exports the whole workspace and uses the existing restore_archive operation in a separate receiving directory.
+
+For a component input, it then performs an additional real revision of component_time_coverage in the restored workspace. Revision 1 retains the complete component event/separation summary. Revision 2 selects the retained daily UTC component-count table, including distinct instants, coincident occurrences and separate exact/browser counts. The same report section and first workbook sheet are revised, and the whole continued workspace is exported again.
+
+The original stream_coverage revision-two flow also remains. Both scalar and component query histories are read back. programme-result.json records the actual original imports/jobs, immutable component version/binding IDs, report and workbook revisions, both workspace archives and all file hashes. The generated receiving guide explains the exact source interpretation and continuing workflow.
+
+A component-selection edit belongs to a new explicit version in the original SensorThings analyst UI, followed by its own preparation and a new Python programme operation. Reopening an existing operation recovers its exact original selection and executed source; it does not change those inputs. Completed original source files, archives and earlier query/report/workbook revisions remain available.
+
+### Maintained source composition
+
+This successor adds analysis/python-components.mjs and its paired declaration, plus stellar_forge_buyer/sensorthings_components.py. It extends the existing python-document.mjs, source CLI, sensorthings_analysis.py, action metadata, original analysis manager, typed contract and original UI. The source-owned normal distribution contribution exposes the new helper and preserves the complete Desk, managed launch and both original startup-schema bindings.
+
+The AnalysisWorkspace, DatasetDatabase, response-document implementation, workbook/report engines and archive receiver are unchanged. The complete calculation programme and component-verification companion are retained with the derived document. Use the selected normal application release and its already-owned native receiving operation; do not build a manually reduced dependency tree.
+
 
 ## Maintainer composition
 

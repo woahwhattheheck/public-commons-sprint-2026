@@ -18,6 +18,7 @@
   <div class="header-controls">
     <span id="revision-label" class="meta">Connecting…</span>
     <button type="button" id="refresh-button">Refresh</button>
+    <button type="button" id="producer-button" aria-haspopup="dialog">Producers</button>
     <button type="button" id="connection-button" aria-haspopup="dialog">Connection</button>
   </div>
 </header>
@@ -68,11 +69,32 @@
   </form>
 </dialog>
 
+<dialog id="producer-dialog" class="producer-dialog" aria-labelledby="producer-title">
+  <div>
+    <header class="dialog-header"><h2 id="producer-title">Producer connections</h2><button type="button" class="icon-button" data-close="producer-dialog" aria-label="Close producer connections">×</button></header>
+    <p>Send OpenLineage events from an existing Python or Java client into this workspace.</p>
+    <div class="producer-status-heading"><h3>Receiving status</h3><button type="button" id="producer-refresh" class="small">Refresh status</button></div>
+    <section id="producer-status" class="producer-status" aria-label="Current producer status" aria-busy="true"><p class="muted" role="status">Reading producer status…</p></section>
+    <form id="producer-config-form" class="producer-config" method="dialog" autocomplete="off">
+      <h3>Download client configuration</h3>
+      <p class="field-help">The complete JSON file uses this server's address and pins the workspace. The connection continues to work after this server restarts on the same address.</p>
+      <label>Client<select id="producer-client"><option value="python">Python OpenLineage client</option><option value="java">Java OpenLineage client</option></select></label>
+      <label>Producer token<input id="producer-token" type="password" autocomplete="off" spellcheck="false" maxlength="8192" aria-describedby="producer-token-help"></label>
+      <p id="producer-token-help" class="field-help">Read the current receiving status to see the token requirement.</p>
+      <p class="field-help">This token stays in the form and the downloaded private configuration file. Closing this dialog clears the field.</p>
+      <p id="producer-feedback" class="form-feedback" role="status" aria-live="polite"></p>
+      <div class="dialog-actions"><button type="button" data-close="producer-dialog">Close</button><button type="submit" id="producer-download" class="primary" disabled>Download configuration</button></div>
+    </form>
+  </div>
+</dialog>
+
 <dialog id="import-dialog" aria-labelledby="import-title">
   <form id="import-form">
     <header class="dialog-header"><h2 id="import-title">Import original source</h2><button type="button" class="icon-button" data-close="import-dialog" aria-label="Close source import">×</button></header>
-    <p>Choose a JSON object, JSON array, or NDJSON event file. Original file bytes and event details remain available in Sources.</p>
-    <label>Source file<input id="source-file" type="file" accept=".json,.jsonl,.ndjson,application/json,application/x-ndjson,text/plain"></label>
+    <p>Choose a JSON object, JSON array, or NDJSON event file, including gzip files. Original file bytes and complete event details remain available in Sources.</p>
+    <label>Source file<input id="source-file" type="file" accept=".json,.jsonl,.ndjson,.gz,application/json,application/x-ndjson,application/gzip,text/plain"></label>
+    <label>File compression<select id="source-encoding" aria-describedby="source-encoding-help"><option value="auto">Detect from the original filename</option><option value="identity">Uncompressed JSON or NDJSON</option><option value="gzip">Gzip</option></select></label>
+    <p id="source-encoding-help" class="field-help">A .gz filename selects gzip. The original compressed file is retained, and decoded events are verified during import.</p>
     <details class="paste-option"><summary>Paste JSON or NDJSON instead</summary><label>Pasted events<textarea id="source-text" rows="8" spellcheck="false" placeholder='{"eventTime": "…", "run": {…}, "job": {…}}'></textarea></label></details>
     <div class="form-grid">
       <label>Source name<input id="source-name" maxlength="240" placeholder="events.ndjson"></label>

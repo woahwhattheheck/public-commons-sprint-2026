@@ -60,6 +60,8 @@ export async function openMerchantFileClient({ url, tokenEnv = 'MCP_ACCESS_TOKEN
         const error = failure(/^[A-Z][A-Z0-9_]+$/.test(value?.code ?? '') ? value.code : errorPrefix + '_DOWNLOAD_TOOL_FAILED',
           typeof value?.reason === 'string' ? value.reason : 'The original retained-file operation failed.');
         if (value?.applied === false) error.applied = false;
+        if (plain(value?.details)) error.details = value.details;
+        if (plain(value?.recovery)) error.recovery = value.recovery;
         throw error;
       }
       if (!plain(value)) throw failure(errorPrefix + '_DOWNLOAD_REPLY_INVALID', 'The retained-file tool returned no structured result.');
@@ -71,10 +73,13 @@ export async function openMerchantFileClient({ url, tokenEnv = 'MCP_ACCESS_TOKEN
 export function createRetainedDownload({ manifestName, parseManifest, maximumBytes, stateSchema,
   resultSchema, toolPrefix, errorPrefix, clientName, describe = () => ({}), connect: openClient = openMerchantFileClient, nestedFiles = false, readLease = true,
   validateExportId = value => identifier(value, 'Export ID'),
-  maximumManifestBytes = 65000, maximumCheckpointBytes = 65000 }) {
+  maximumManifestBytes = 65000, maximumCheckpointBytes = 65000, fileRequestTimeoutMs = 120000 }) {
   if (!Number.isSafeInteger(maximumManifestBytes) || maximumManifestBytes < 1 || maximumManifestBytes > 64 * 1024 * 1024 ||
       !Number.isSafeInteger(maximumCheckpointBytes) || maximumCheckpointBytes < 1 || maximumCheckpointBytes > 128 * 1024 * 1024)
     throw failure(errorPrefix + '_DOWNLOAD_CONFIGURATION', 'Choose explicit original manifest and checkpoint byte limits.');
+  const validFileTimeout = value => Number.isSafeInteger(value) && value >= 1 && value <= 86400000;
+  if (typeof fileRequestTimeoutMs !== 'function' && !validFileTimeout(fileRequestTimeoutMs))
+    throw failure(errorPrefix + '_DOWNLOAD_CONFIGURATION', 'Choose a native file request timeout of 1–86400000 milliseconds.');
 
   async function connect(provided, options) {
     if (provided === undefined) return openClient({ ...options, errorPrefix, clientName });
@@ -314,6 +319,13 @@ export function createRetainedDownload({ manifestName, parseManifest, maximumByt
   }
 
   async function persistFile(context, client, file, { chunkSize, signal, onProgress }) {
+    // Only the owning source adapter selects this deadline. An immutable native
+    // file may need its complete bounded-memory hash before it returns a readId.
+    const timeoutMs = typeof fileRequestTimeoutMs === 'function'
+      ? fileRequestTimeoutMs({ manifest: context.manifest, file }) : fileRequestTimeoutMs;
+    if (!validFileTimeout(timeoutMs))
+      throw failure(errorPrefix + '_DOWNLOAD_CONFIGURATION', 'The native file adapter selected an invalid request timeout.');
+    const requestOptions = { timeoutMs, ...(signal ? { requestSignal: signal } : {}) };
     await ensureNativeParents(context, file.name);
     const destination = join(context.root, file.name), partial = join(context.stateDirectory, partialName(file));
     try {
@@ -346,10 +358,10 @@ export function createRetainedDownload({ manifestName, parseManifest, maximumByt
         const args = { exportId: context.exportId, file: file.name, expectedManifestSha256: context.manifestSha256,
           expectedSha256: file.sha256, offset, limit: chunkSize, ...(readId ? { readId } : {}) };
         let result;
-        try { result = await client.call(toolPrefix + '_file', args); }
+        try { result = await client.call(toolPrefix + '_file', args, requestOptions); }
         catch (error) {
           if (error.code !== errorPrefix + '_READ_NOT_FOUND' || !readId) throw error;
-          readId = null; delete args.readId; result = await client.call(toolPrefix + '_file', args);
+          readId = null; delete args.readId; result = await client.call(toolPrefix + '_file', args, requestOptions);
         }
         const bytes = chunkBytes(result, file, offset, chunkSize, context.exportId, context.manifestSha256, readId);
         readId = result.nextOffset === null ? null : result.readId;

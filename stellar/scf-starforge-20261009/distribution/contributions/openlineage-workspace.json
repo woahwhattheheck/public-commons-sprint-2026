@@ -19,7 +19,11 @@
     "./seller/openlineage/mcp": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/openlineage-workspace/protocol.mjs",
     "./seller/openlineage/merchant": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/openlineage-workspace/mcp.mjs",
     "./seller/openlineage/merchant-client": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/openlineage-workspace/mcp-client.mjs",
-    "./seller/openlineage/catalog": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/openlineage-workspace/catalog.mjs"
+    "./seller/openlineage/catalog": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/openlineage-workspace/catalog.mjs",
+    "./seller/openlineage/producer": {
+      "types": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/openlineage-workspace/producer.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/openlineage-workspace/producer.mjs"
+    }
   },
   "applicationProviders": {
     "openlineage-workspace": "stellar/scf-starforge-20261009/sf30-seller-sdk/openlineage-workspace/application-provider.mjs"

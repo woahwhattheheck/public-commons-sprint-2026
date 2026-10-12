@@ -71,6 +71,20 @@
         "public/transport.mjs",
         "text/javascript; charset=utf-8"
       ]
+    ],
+    [
+      "/profile.mjs",
+      [
+        "public/profile.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/public/profile.mjs",
+      [
+        "public/profile.mjs",
+        "text/javascript; charset=utf-8"
+      ]
     ]
   ]
 }

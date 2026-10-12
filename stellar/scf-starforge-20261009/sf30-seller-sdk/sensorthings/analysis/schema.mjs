@@ -8,6 +8,7 @@ export const NUMERIC_OBSERVATION_TYPES=Object.freeze([
 export const ANALYSIS_LIMITS=Object.freeze({streams:20,rows:250000,annotations:1000,versions:2000,pageRows:500});
 export const ANALYSIS_ACTIONS=Object.freeze({
   'analysis.python.prepare':['editionId','exportId','actor'],
+  'analysis.python.components.prepare':['editionId','exportId','analysisVersionId','actor'],
   'analysis.create':['title','editionId','selection','actor','note'],
   'analysis.revise':['projectId','baseVersionId','title','editionId','selection','actor','reason'],
   'analysis.annotate':['projectId','baseVersionId','annotation','actor','reason'],

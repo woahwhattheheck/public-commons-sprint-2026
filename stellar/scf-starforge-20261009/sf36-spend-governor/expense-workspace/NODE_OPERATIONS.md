@@ -115,4 +115,18 @@ After receiving, opening the included Python app reads retained state only. New 
 
 ## Operating status and original source custody
 
-This implementation composes the original producer released in PR2082. The original A39C OpenCage operation reported an HTTP 200 unpaid response; its exact completed accounting-export locator is still with the original producer. The separately owned paid profile is not an intake prerequisite and is not represented here as completed. This guide describes the implemented workflow; it does not claim that an unavailable original export has been imported or that a new purchase was performed.
+The original producer released in PR2082 has delivered its complete A39C OpenCage accounting carrier. The original accounting command completed on 12 October 2026 at 12:57:11 UTC; the producer posted the original file in the existing Python/Node buyer thread at 13:07:57 UTC.
+
+| Original field | Retained value |
+| --- | --- |
+| File | `Operation_Accounting.json` |
+| Bytes | `13091` |
+| SHA-256 | `ce131cd54fa451222ece006ffae9c22a9139f2f9877ca91bc35450876b5b2297` |
+| Intent | `scf-opencage-native-customer-a39c-20261011` |
+| Accounting command | `finalize-o4ICVV` |
+| Native kind and outcome | `UNPAID_RESPONSE` / `NO_PAYMENT_REQUIRED` |
+| Record authority | `ORIGINAL_UNSIGNED_RESPONSE` |
+
+The carrier retains the original successful HTTP 200 observation and its producing attempt/evidence bytes. The original record reports body capture as `NOT_REQUESTED`; it does not contain the response body. Its approved request, paid amount, receipt and payment workspace are null. Import this original file through the source workflow above. The retained unpaid row has no payment asset, settled units or spending reservation; existing issued financial editions keep their original amounts.
+
+The original source delivery is recorded in the existing buyer thread: https://tokenjunkielabs.slack.com/archives/C0BTB4SUCP9/p1791810477350419?thread_ts=1791730510.712909. Subsequent consumer work belongs to the existing expense workspace and its retained request history. The separately owned paid-profile operation remains with that operation's owner. This carrier does not add a paid purchase or an independent customer.

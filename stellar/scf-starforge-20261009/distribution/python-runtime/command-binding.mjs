@@ -13,6 +13,7 @@ const MODULES=Object.freeze({
   postgres:'stellar_forge_buyer.postgres_cli',
   workbooks:'stellar_forge_buyer.analysis_workbooks',
   workbookDelivery:'stellar_forge_buyer.workbook_client',
+  synthesis:'stellar_forge_buyer.synthesis_cli',
 });
 export const PYTHON_APPLICATION_COMMANDS=Object.freeze([
   {id:'stellar-forge-dbnomics-analysis',kind:'script',title:'DBnomics economic analysis and workbook receiving'},
@@ -26,6 +27,9 @@ export const PYTHON_APPLICATION_COMMANDS=Object.freeze([
     description:'Use the original workbook build, receive, inspect and copy commands.'},
   {id:'workbookDelivery',kind:'module',title:'Workbook delivery',module:MODULES.workbookDelivery,
     description:'Run the original recipe against its selected analysis database and delivery operation.'},
+  {id:'synthesis',kind:'module',title:'Evidence synthesis',module:MODULES.synthesis,
+    description:'Review retained study publications, run saved synthesis protocols and receive complete original reports.'},
+  {id:'stellar-forge-synthesis',kind:'script',title:'Evidence synthesis command'},
   {id:'stellar-forge-duckdb',kind:'script',title:'DuckDB dataset command'},
   {id:'stellar-forge-postgres',kind:'script',title:'PostgreSQL receiving command'},
   {id:'stellar-forge-buyer',kind:'script',title:'Original buyer command'},
@@ -44,6 +48,7 @@ function requiredExtras(command,args) {
   if(['duckdb','stellar-forge-duckdb'].includes(command))return ['duckdb'];
   if(['postgres','stellar-forge-postgres'].includes(command))return ['postgres'];
   if(command==='stellar-forge-agent')return ['agents'];
+  if(['synthesis','stellar-forge-synthesis'].includes(command))return ['synthesis'];
   if(['workbookDelivery','stellar-forge-workbook-deliver'].includes(command))return ['workbooks'];
   if(['workbooks','stellar-forge-workbook'].includes(command) && !['receive','inspect','copy','--help'].includes(args[0]))return ['workbooks'];
   return [];
@@ -74,6 +79,17 @@ export async function bindPythonApplicationCommand(root,{
   need(extras.every(extra=>installation.extras.includes(extra)),'PYTHON_APPLICATION_EXTRA_REQUIRED',
     'Install the declared '+extras.join(', ')+' extra for this original command.');
   if(command==='stellar-forge-dbnomics-analysis')exactOption(originalArgs,'--checkout',binding.sourceRoot);
+  if(['synthesis','stellar-forge-synthesis'].includes(command)){
+    const checkout=argumentValue(originalArgs,'--checkout');
+    need(checkout===undefined || checkout===binding.sourceRoot,'PYTHON_APPLICATION_SOURCE_CHANGED',
+      'Keep the original complete source selected for this synthesis installation.',409);
+    if(!originalArgs.includes('--help') && !originalArgs.includes('-h') && !originalArgs.includes('engine')){
+      const database=argumentValue(originalArgs,'--database');
+      need(typeof database==='string','PYTHON_APPLICATION_DATABASE_REQUIRED',
+        'Select the original private Analysis database directory with --database.');
+      absolute(database);
+    }
+  }
   let argv,entrypoint=null,module=null;
   if(selected.kind==='module'){
     module=MODULES[command];

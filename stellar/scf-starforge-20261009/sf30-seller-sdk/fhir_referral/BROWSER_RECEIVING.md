@@ -57,3 +57,5 @@ await operateGravityBrowser({
 The supplied page is already open on the current private operator. Its existing origin-scoped capability stays private. Results expose workspacePacket and downloads.workspace as {file,bytes,sha256}, a screens map, receivedWorkspace with the actual reopen result, and finalWorkspace for a later Applications start.
 
 Read-only connected receiving uses body[data-ready="true"], #content[aria-busy="false"] and no body busy state. Navigation uses [data-nav="queue"], [data-nav="datasets"] and [data-nav="receiving"]. #dataset-query-form contains buildId and the exact scalar-string query JSON; the actual response route is /api/builds/{id}/query.
+
+The complete handoff phase requires the recorded edition-lineage and original lineage-exchange files before it downloads the packet. The original selected-edition history and every existing frozen handoff remain preserved.
