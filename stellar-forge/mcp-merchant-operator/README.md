@@ -1,5 +1,14 @@
 # Starforge merchant operations through MCP
 
+Create and revise OpenAPI merchants through this same operator. Attach the host's
+existing API consoles, review original source and payment terms, save or reopen
+retained drafts, apply cache changes, and save those policies into a revised
+package. Complete package exports resume after either service restarts, preserve
+original source and compiled files, and receive into another console for SF82
+release staging. The browser and MCP client share the original package and
+runtime state. See [OpenAPI merchant authoring and receiving](OPENAPI_WORKSPACES.md)
+for setup, all 31 tools and the complete receiving workflow.
+
 Federal award research is available through the same merchant interface. Open
 host-declared USAspending workspaces, operate the original provider capture jobs,
 review award and recipient data, prepare the native merchant dataset, receive
