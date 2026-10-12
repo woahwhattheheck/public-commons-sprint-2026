@@ -81,8 +81,12 @@ async function writeExact(path,bytes){
   catch(error){if(error.code!=='EEXIST')throw error;assert.deepEqual(await readSourceFile(path,{privateFile:true}),bytes);}
 }
 async function configure(){
-  const packet=await readSourceFile(originalPacket.path,{privateFile:true});
+  // The browser download is the original public packet, with browser-selected
+  // file permissions. Its private native export supplies the second exact copy.
+  const packet=await readSourceFile(originalPacket.path);
   assert.equal(packet.length,originalPacket.export.bytes);assert.equal(digest(packet),originalPacket.export.sha256);
+  const nativePacket=await readSourceFile(originalPacket.export.path,{privateFile:true});
+  assert.deepEqual(packet,nativePacket,'The browser download must equal its original private native export.');
   const source=decode(await readSourceFile(join(senderDirectory,'workbench.json'),{privateFile:true})),
     receiver=decode(await readSourceFile(join(receiverDirectory,'workbench.json'),{privateFile:true}));
   await writeExact(configurationFile,encode({schema:CONNECTION_SCHEMA,workspaces:{
