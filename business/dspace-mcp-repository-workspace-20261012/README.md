@@ -56,10 +56,12 @@ node scripts/cli.mjs state --workspace /absolute/path/to/repository-workspace
 node scripts/cli.mjs import-source --workspace /absolute/path/to/repository-workspace --source source-captures/public-reader-source.json --actor "Repository operator" --operation-id source-intake-001
 node scripts/cli.mjs action --workspace /absolute/path/to/repository-workspace --action prepare-plan --input reviewed-request.json
 node scripts/cli.mjs read --workspace /absolute/path/to/repository-workspace --kind plans --id PLAN_ID
-node scripts/cli.mjs export --workspace /absolute/path/to/repository-workspace --kind handoff --id current --output /absolute/path/to/DSpace_Workspace.json.gz
+node scripts/cli.mjs export --workspace /absolute/path/to/repository-workspace --kind handoff --id current --output /absolute/path/to/DSpace_Workspace.sqlite
 ```
 
-An action input file contains actor, stable operationId, revision, and the actual action payload. Reuse that exact file after an uncertain client response; do not generate another operation ID. The command line can also hydrate a native source manifest's relative body/file paths, verifies its original digests, and retains the original manifest text and hash.
+An action input file contains actor, stable operationId, revision, and the actual action payload. Reuse that exact file after an uncertain client response; do not generate another operation ID. For browser receiving from a native collector, use `node scripts/cli.mjs assemble-source --source /absolute/path/to/manifest.json --output /absolute/path/to/native-source.json`. Native archives reopen through `node scripts/cli.mjs restore --workspace /absolute/path/to/fresh-workspace --source /absolute/path/to/DSpace_Workspace.sqlite --actor "Receiving operator" --operation-id receive-001`.
+
+The command line can also hydrate a native source manifest's relative body/file paths, verifies its original digests, and retains the original manifest text and hash.
 
 See [API.md](API.md) for the same documented programmatic contract.
 

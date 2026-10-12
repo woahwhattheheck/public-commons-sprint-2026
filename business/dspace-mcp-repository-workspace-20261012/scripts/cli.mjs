@@ -35,8 +35,12 @@ function hydrate(filename){
 }
 let workspace;
 try{
- workspace=await openWorkspace({directory:path.resolve(required('workspace'))});
  let result;
+ if(command==='assemble-source'){
+  const bytes=hydrate(required('source')),target=path.resolve(required('output'));
+  fs.writeFileSync(target,bytes,{mode:0o600,flag:'wx'});result={file:target,bytes:bytes.length,sha256:digest(bytes)};
+ }else{
+ workspace=await openWorkspace({directory:path.resolve(required('workspace'))});
  if(command==='state')result=workspace.state();
  else if(command==='read')result=workspace.read(required('kind'),required('id'),{offset:Number(options.offset||0),limit:Number(options.limit||50)});
  else if(command==='action'){
@@ -51,6 +55,7 @@ try{
   else {fs.writeFileSync(target,file.bytes,{mode:0o600,flag:'wx'});result={file:target,bytes:file.bytes.length,sha256:digest(file.bytes)};}
  }else if(command==='restore')result=await workspace.restoreFile({actor:required('actor'),operationId:required('operation-id'),revision:workspace.state().revision,filename:path.basename(required('source'))},path.resolve(options.source));
  else throw new Error('Use state, read, action, import-source, export, or restore.');
+ }
  process.stdout.write(JSON.stringify(result,null,2)+'\n');
 }catch(error){process.stderr.write(JSON.stringify({error:error.code||'CLI_FAILED',message:error.message,current_revision:error.current_revision})+'\n');process.exitCode=1;}
 finally{await workspace?.close();}
