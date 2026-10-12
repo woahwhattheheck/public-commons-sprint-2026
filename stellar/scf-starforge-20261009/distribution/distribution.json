@@ -394,7 +394,8 @@
     "browser-wallet": "stellar/scf-starforge-20261009/sf103-native-buyer-signer/browser-wallet/cli.mjs",
     "frictionless": "stellar/scf-starforge-20261009/sf30-seller-sdk/frictionless/cli.mjs",
     "mcp-analysis-archive": "stellar-forge/mcp-paid-agent/native-analysis-archive-download.mjs",
-    "geocodio": "stellar/scf-starforge-20261009/sf30-seller-sdk/geocodio/cli.mjs"
+    "geocodio": "stellar/scf-starforge-20261009/sf30-seller-sdk/geocodio/cli.mjs",
+    "bls-publisher": "stellar/scf-starforge-20261009/sf30-seller-sdk/bls-labor/publisher/cli.mjs"
   },
   "exports": {
     "./seller/openalex": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/openalex/merchant.mjs",
@@ -912,7 +913,11 @@
     "./seller/geocodio/source": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/geocodio/source.mjs",
     "./seller/geocodio/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/geocodio/workspace.mjs",
     "./seller/geocodio/server": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/geocodio/server.mjs",
-    "./merchant/mcp/opensearch": "./source/stellar-forge/mcp-merchant-operator/opensearch-workspace.mjs"
+    "./merchant/mcp/opensearch": "./source/stellar-forge/mcp-merchant-operator/opensearch-workspace.mjs",
+    "./seller/bls-labor": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/bls-labor/source.mjs",
+    "./seller/bls-labor/publisher": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/bls-labor/publisher/model.mjs",
+    "./seller/bls-labor/publisher/plan": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/bls-labor/publisher/plan.mjs",
+    "./seller/bls-labor/release": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/bls-labor/release.mjs"
   },
   "nativePeers": {
     "@x402/core": {
