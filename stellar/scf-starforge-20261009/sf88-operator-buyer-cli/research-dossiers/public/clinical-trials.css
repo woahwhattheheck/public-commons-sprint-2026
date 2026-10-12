@@ -10,3 +10,5 @@
 #view-clinical-trials td:first-child{min-width:220px}
 #view-clinical-trials .table-wrap{overflow:auto;max-width:100%}
 @media(max-width:640px){.ct-form{grid-template-columns:minmax(0,1fr)}.ct-wide{grid-column:auto}.ct-actions button{max-width:100%}#view-clinical-trials .view-heading{display:block}}
+
+#ct-analysis{scroll-margin-top:16px}#ct-analysis .ct-analysis-filters{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:16px 0}#ct-analysis .ct-wide{grid-column:1/-1}#ct-analysis select[multiple]{min-height:100px}#ct-analysis code{overflow-wrap:anywhere}#ct-analysis-rows td{max-width:28em;overflow-wrap:anywhere}@media(max-width:650px){#ct-analysis .ct-analysis-filters{grid-template-columns:minmax(0,1fr)}}

@@ -1,3 +1,7 @@
+import {mountEoapi} from './eoapi/ui.mjs';
+let eoapiMount=null,eoapiElement=null,eoapiWorkspaceId=null;
+function disposeEoapiView(){eoapiMount?.destroy();eoapiMount=null;eoapiElement=null;eoapiWorkspaceId=null;}
+window.addEventListener('pagehide',disposeEoapiView);
 const root=document.querySelector('#app');
 const state={workspace:null,jobs:[],queryId:null,editionId:null,tab:'search',mode:'table',page:0,pageSize:25,filter:'',statusFilter:'all',draft:null,detail:null,csrf:null,maxRequestBytes:128*1024*1024,dialog:null,notice:null,comparison:null,comparisonIds:null,pendingJobs:new Set(),busy:new Set()};
 const array=value=>Array.isArray(value)?value:value&&typeof value==='object'?Object.values(value):[];
@@ -35,7 +39,7 @@ function externalLink(href,label){
 }
 const jsonDetails=(label,value)=>node('details',{},node('summary',{},label),node('pre',{},JSON.stringify(value,null,2)));
 function sourceLine({sha,receivedAt}={}){
-  return node('div',{class:'source-line'},externalLink('https://element84.com/earth-search/','Earth Search by Element 84'),receivedAt?node('span',{},'Received '+stamp(receivedAt)):null,sha?node('code',{},'SHA256 '+sha):null);
+  return node('div',{class:'source-line'},state.prescientEnabled?node('span',{},'Retained Prescient source'):externalLink('https://element84.com/earth-search/','Earth Search by Element 84'),receivedAt?node('span',{},'Received '+stamp(receivedAt)):null,sha?node('code',{},'SHA256 '+sha):null);
 }
 function toast(message,error=false){
   state.notice={message:String(message),error};document.querySelector('.status-line')?.remove();
@@ -46,11 +50,11 @@ async function safely(action){
   try{return await action();}
   catch(error){toast(error.message||String(error),true);}
 }
-async function api(path,{method='GET',body,raw=false}={}){
+async function api(path,{method='GET',body,raw=false,signal}={}){
   const headers={};if(body!==undefined)headers['content-type']='application/json';
   if(method!=='GET'&&method!=='HEAD'&&state.csrf)headers['x-csrf-token']=state.csrf;
-  const response=await fetch(path,{method,headers,credentials:'same-origin',...(body===undefined?{}:{body:JSON.stringify(body)})});
-  if(!response.ok){let data;try{data=await response.json();}catch{}const error=new Error(data?.error?.message||'The local operator returned HTTP '+response.status+'.');error.code=data?.error?.code;error.status=response.status;throw error;}
+  const response=await fetch(path,{method,headers,credentials:'same-origin',signal,...(body===undefined?{}:{body:JSON.stringify(body)})});
+  if(!response.ok){let data;try{data=await response.json();}catch{}const error=new Error(data?.error?.message||(typeof data?.error==='string'?data.error.replaceAll('_',' '):'The local operator returned HTTP '+response.status+'.'));error.code=typeof data?.error==='string'?data.error:data?.error?.code;error.field=data?.field;error.status=response.status;throw error;}
   return raw?response:response.json();
 }
 function downloadBlob(bytes,filename,mime='application/octet-stream'){
@@ -69,8 +73,9 @@ function defaultDraft(value){
 }
 function currentDraft(){return state.draft||(state.draft=defaultDraft(query()));}
 async function refresh({render=true,detail=true}={}){
-  const result=await api('/api/state');state.workspace=result.workspace;state.jobs=result.jobs||[];
+  const result=await api('/api/state');state.workspace=result.workspace;state.jobs=result.jobs||[];state.eoapi=result.eoapi===true;
   state.processingCapabilities=result.capabilities?.processing?.enabled?result.capabilities.processing:null;
+  state.prescientEnabled=result.capabilities?.prescient?.enabled===true;
   if(state.queryId&&!byId(state.workspace.queries,state.queryId)){state.queryId=null;state.editionId=null;state.draft=null;}
   if(!state.queryId&&array(state.workspace.queries).length&&!state.draft){state.queryId=array(state.workspace.queries)[0].id;}
   const editions=queryEditions();
@@ -161,7 +166,7 @@ function paginationControls(total){
 function rememberFocus(){
   const element=document.activeElement;
   if(!element||!root.contains(element))return null;
-  const retained=state.processingView?.root.contains(element);
+  const retained=state.processingView?.root.contains(element)||eoapiElement?.contains(element)||state.prescientView?.root.contains(element);
   if(!element.id&&!retained)return null;
   return {id:element.id,element:retained?element:null,start:element.selectionStart,end:element.selectionEnd};
 }
@@ -229,12 +234,39 @@ function renderProcessing(){
   instance.context=processingContext();void updateProcessingView(instance);return instance.root;
 }
 
+
+function disposePrescientView(){
+  const value=state.prescientView;if(!value)return;state.prescientView=null;value.disposed=true;
+  if(value.handle)Promise.resolve(value.handle.dispose()).catch(error=>toast(error.message,true));
+}
+function renderPrescient(){
+  let value=state.prescientView;
+  if(!value){
+    value={root:node('div',{},node('p',{},'Opening Prescient customer access…')),handle:null,disposed:false,pending:false};
+    state.prescientView=value;
+    if(!document.querySelector('link[data-prescient-style]'))document.head.append(node('link',{rel:'stylesheet',href:'/prescient/view.css','data-prescient-style':'true'}));
+    void import('/prescient/view.mjs').then(async module=>{
+      if(value.disposed)return;
+      const handle=await module.mountPrescientView({root:value.root,api,context:value.context});
+      if(value.disposed){await handle.dispose();return;}
+      value.handle=handle;
+    }).catch(error=>{if(!value.disposed)value.root.replaceChildren(node('p',{role:'alert'},error.message));});
+  }
+  value.context={workspace:state.workspace,editionId:state.editionId,jobs:state.jobs};
+  if(value.handle&&!value.pending){value.pending=true;Promise.resolve(value.handle.update(value.context))
+    .catch(error=>toast(error.message,true)).finally(()=>{value.pending=false;});}
+  return value.root;
+}
+window.addEventListener('pagehide',disposePrescientView);
+
 function renderApp(){
   if(!state.workspace)return;
+  if(state.tab==='eoapi'&&!state.eoapi)state.tab=state.editionId?'scenes':'search';
+  if(!state.prescientEnabled){disposePrescientView();if(state.tab==='prescient')state.tab='search';}
   if(state.tab==='processing'&&!state.processingCapabilities)state.tab=state.editionId?'scenes':'search';
   if(state.tab!=='processing')disposeProcessingView();
   const savedFocus=rememberFocus(),workspace=state.workspace;
-  const header=node('header',{class:'app-header'},node('div',{class:'brand'},node('span',{class:'eyebrow'},'Scene selection and delivery'),node('h1',{},'Earth Search operations')),node('div',{class:'header-actions'},button('Refresh saved state',()=>refresh(),{class:'small'}),button('Import handover',openImport,{class:'small'})));
+  const header=node('header',{class:'app-header'},node('div',{class:'brand'},node('span',{class:'eyebrow'},'Scene selection and delivery'),node('h1',{},state.prescientEnabled?'Prescient scene operations':'Earth Search operations')),node('div',{class:'header-actions'},button('Refresh saved state',()=>refresh(),{class:'small'}),button('Import handover',openImport,{class:'small'})));
   const bar=node('div',{class:'workspace-bar'},node('span',{},workspace.title||'Satellite imagery workspace'),node('span',{},'Revision '+workspace.revision+' · '+workspace.id));
   const list=node('div',{class:'query-list'});
   for(const value of array(workspace.queries)){
@@ -243,18 +275,25 @@ function renderApp(){
     const card=list.lastElementChild;card.append(node('strong',{},value.name||value.id),node('span',{class:'meta'},array(value.collections).join(', ')||'No collection selected'),node('span',{class:'meta'},editions.length+' saved '+(editions.length===1?'edition':'editions')));
   }
   if(!array(workspace.queries).length)list.append(node('p',{class:'help'},'Save a query to begin a scene review.'));
-  const sidebar=node('aside',{class:'sidebar','aria-label':'Saved searches'},node('div',{class:'sidebar-header'},node('h3',{},'Saved queries'),button('New',()=>{state.queryId=null;state.editionId=null;state.detail=null;state.draft=defaultDraft(null);state.tab='search';renderApp();},{class:'small'})),list,node('div',{class:'sidebar-footer'},externalLink('https://element84.com/earth-search/','Earth Search by Element 84'),node('p',{},'Collection rights and source metadata travel with the saved review.')));
+  const sidebar=node('aside',{class:'sidebar','aria-label':'Saved searches'},node('div',{class:'sidebar-header'},node('h3',{},'Saved queries'),button('New',()=>{state.queryId=null;state.editionId=null;state.detail=null;state.draft=defaultDraft(null);state.tab='search';renderApp();},{class:'small'})),list,node('div',{class:'sidebar-footer'},state.prescientEnabled?node('span',{},'Prescient customer catalog'):externalLink('https://element84.com/earth-search/','Earth Search by Element 84'),node('p',{},'Collection rights and source metadata travel with the saved review.')));
   const title=node('div',{class:'workspace-title'},node('div',{},node('h2',{},query()?.name||'Prepare a scene query'),node('p',{class:'muted'},query()?array(query().collections).join(' · '):'Choose a collection, an area and an observation window.')),query()?badge(queryEditions().length+' editions'):null);
   const tabs=node('nav',{class:'tabs','aria-label':'Workspace views'});
-  for(const [key,label]of [['search','Catalog & query'],['scenes','Scenes & assets'],['compare','Compare editions'],['review','Selections & handover'],...(state.processingCapabilities?[['processing','Processing history']]:[])]){
+  for(const [key,label]of [['search','Catalog & query'],['scenes','Scenes & assets'],['compare','Compare editions'],['review','Selections & handover'],...(state.eoapi?[['eoapi','Customer operations']]:[]),...(state.processingCapabilities?[['processing','Processing history']]:[]),...(state.prescientEnabled?[['prescient','Prescient access']]:[])]){
     tabs.append(button(label,()=>{state.tab=key;renderApp();},{role:'tab','aria-selected':state.tab===key}));
   }
+  if(!state.eoapi||eoapiWorkspaceId!==workspace.id)disposeEoapiView();
   const main=node('main',{class:'workspace',id:'main'},title,tabs);
+  if(state.tab==='eoapi'){
+    if(!eoapiMount){eoapiElement=node('div');eoapiWorkspaceId=workspace.id;eoapiMount=mountEoapi(eoapiElement,{api,workspace:state.workspace,editionId:state.editionId});}
+    else void eoapiMount.refresh().catch(error=>toast(error.message,true));
+    main.append(eoapiElement);
+  }
   if(state.tab==='search')main.append(renderSearch());
   if(state.tab==='scenes')main.append(renderScenes());
   if(state.tab==='compare')main.append(renderCompare());
   if(state.tab==='review')main.append(renderSelections());
   if(state.tab==='processing')main.append(renderProcessing());
+  if(state.tab==='prescient')main.append(renderPrescient());
   const jobs=renderJobs();if(jobs)main.append(jobs);
   main.append(node('p',{class:'footer-note'},'Scene footprints use the saved STAC geometry. Asset retrieval and selection decisions remain attached to their original catalog and scene edition.'));
   root.replaceChildren(header,bar,node('div',{class:'app-shell'},sidebar,main));

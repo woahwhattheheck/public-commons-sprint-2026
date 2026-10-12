@@ -2,6 +2,16 @@
 
 Applications opens the original merchant and buyer tools from a selected READY runtime. It retains the runtime binding, installed release, data paths, exact argv, original process operation and private session URL. The existing managed worker owns the process. Closing the runtime browser or its web server leaves that process available for reopening.
 
+Buyer receiving: [complete setup, acquisition, Stop and reopen guide](BUYER_RECEIVING_APPLICATIONS.md).
+
+## Source-owned application inventory
+
+The catalog and original startup adapters are discovered from the same maintained
+source contributions as merchant commands. Each product owns its registration;
+Review, Save, Start, Open, Stop and recovery remain the original shared lifecycle.
+The [Applications provider guide](APPLICATION_PROVIDERS.md) explains source
+selection, the provider inventory, exact original adapters and installed receiving.
+
 ## Available original tools
 
 | Application | Maintained command | Original workflow |
@@ -33,6 +43,7 @@ Applications opens the original merchant and buyer tools from a selected READY r
 | DuckDB customer and agent | mcp-native serve | Original running customer warehouse, reviewed source reports, saved SQL, complete CSV/Parquet and portable receiving through the same browser and agent connection |
 | Dataset preview | dataset-workspace | A dataset configuration file or retained dataset state, native query and preview |
 | Dataset buyer | buyer-dataset-workspace | Original acquisitions, received rows and files, private customer history and Python analysis |
+| Buyer receiving | buyer-runbook workspace | Original SDK, request and paid-file intake, local buyer setup, browser approvals, acquired resources, accounting and recovery |
 | Request collections | buyer-collections-workspace | Grouped request review, original approvals and runs, retained outcomes and verified customer file downloads |
 | Baserow source authoring | baserow-workspace serve | Original field discovery, retained rows and files, versioned projections, dataset publishing and customer handover |
 | Grant planning and delivery | grant-workspace serve | Retained grant plans and revisions, contributor delivery, invoices, allocations, cash records and original exports |
@@ -645,3 +656,11 @@ Complete historical source editions, inspect field mappings, perform the named r
 Choose **World Bank economic data** with the original private merchant configuration and a declared World Bank workspace alias. Review and Save retain both connection files, the workspace directory and the installed launcher. Start opens one original merchant MCP host and its World Bank model; the same model serves the authenticated browser. Open checks the running model and browser identities against the saved request and original configuration binding.
 
 Use the browser or agent to capture complete indicator pages, compare editions, record the review, publish the native dataset, operate the merchant and export the customer handover. Closing and reopening the Applications console reconnects to the same running operation. A saved start request can resume through the original recovery action; Stop closes the owned host and browser while retaining the workspace. The complete [World Bank Applications guide](WORLDBANK_APPLICATIONS.md) covers configuration, installed receiving, source and merchant operations, recovery, customer download and reopening.
+
+## DSpace repository data
+
+**DSpace repository data** reopens the original private repository operator with its complete sources, metadata, editions, reviews, comparisons and received projects. Select the private operator folder and, for a new operator, an optional existing repository workspace; Review, Save, Start and Open use the ordinary Applications lifecycle.
+
+The agent host attaches to that same original listener through its private launch file. Explicit operator, process, project and workspace scope prevents a stale agent request from following a browser project switch. Stop releases the original writer; Start reopens the saved project with a fresh process instance.
+
+See [the complete DSpace Applications guide](APPLICATION_DSPACE.md) for setup, source selection, agent attachment, full-project receiving and saved-workspace reopening.

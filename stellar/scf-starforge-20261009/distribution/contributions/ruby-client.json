@@ -1,0 +1,13 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "ruby-client",
+  "description": "Generate and deliver complete Ruby and Rails customer packages over the original seller and buyer",
+  "supportFiles": [
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/developer/ruby-client/seller_client.rb",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/developer/ruby-client/rails_receiving.rb",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/developer/ruby-client/examples/customer.rb"
+  ],
+  "exports": {
+    "./seller/client-ruby": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/developer/ruby-client/export.mjs"
+  }
+}

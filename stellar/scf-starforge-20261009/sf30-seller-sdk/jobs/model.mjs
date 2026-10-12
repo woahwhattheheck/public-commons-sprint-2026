@@ -5,6 +5,7 @@ import { validateJobInput, digest, JOB_ID, HASH, jobError, plain } from './confi
 import { readJobMerchantSource } from './source-binding.mjs';
 import { openJobStore } from './store.mjs';
 import { openInputStore } from './inputs/store.mjs';
+import { openJobResolution } from './resolution/service.mjs';
 import { executeJob } from './execution.mjs';
 import { openOutbox, instrumentNativeSettlement, SCHEMA as NATIVE_EVENT_SCHEMA } from '../../sf98-merchant-delivery/outbox.mjs';
 
@@ -42,12 +43,13 @@ function summary(row) {
     error: row.error, attempts: row.attempts.length };
 }
 
-export async function openJobMerchant({ configPath, directory, env = process.env } = {}) {
+export async function openJobMerchant({ configPath, directory, env = process.env, resolution: resolutionOptions = {} } = {}) {
   if (typeof configPath !== 'string') fail('JOB_CONFIG_PATH_REQUIRED');
   // Read the current physical binding while the original store lease is held.
   const store = await openJobStore(directory, () => readJobMerchantSource({ configPath, directory }));
   const source = store.source;
-  let outbox;
+  const resolutionBorrow = Symbol('job-resolution-drain');
+  let resolution, outbox;
   try { outbox = await openOutbox(join(directory, 'outbox')); }
   catch (error) { await store.close(); throw error; }
   const preparingInputs = new Map();
@@ -65,9 +67,11 @@ export async function openJobMerchant({ configPath, directory, env = process.env
   let workerRunning = false, pumping = null, pumpAgain = false, closed = false, closing = null;
   let mode = 'STOPPED', sellerUrl = null, lastWorkerError = null, lastNativeError = null;
   let eventExceptions = [];
-  function assertOpen() { if (closed || closing) fail('JOB_MERCHANT_CLOSED', 503); }
-  function rowFor(id) {
-    assertOpen(); if (typeof id !== 'string' || !JOB_ID.test(id)) fail('JOB_NOT_FOUND', 404);
+  function assertOpen(borrow) {
+    if (closed || closing && borrow !== resolutionBorrow) fail('JOB_MERCHANT_CLOSED', 503);
+  }
+  function rowFor(id, borrow) {
+    assertOpen(borrow); if (typeof id !== 'string' || !JOB_ID.test(id)) fail('JOB_NOT_FOUND', 404);
     return store.get(id);
   }
   function urls(id) {
@@ -98,8 +102,8 @@ export async function openJobMerchant({ configPath, directory, env = process.env
         url: urls(row.id).resultUrl } : null,
       error: row.error ? { code: row.error.code } : null };
   }
-  function customerRow(id, token) {
-    const row = rowFor(id);
+  function customerRow(id, token, borrow) {
+    const row = rowFor(id, borrow);
     if (!tokenMatches(row, token)) fail('JOB_NOT_FOUND', 404);
     return row;
   }
@@ -244,8 +248,9 @@ export async function openJobMerchant({ configPath, directory, env = process.env
 
   const model = {
     directory, configPath: source.configPath, configuration: source.compiled, inputs,
-    async snapshot() {
-      assertOpen();
+    get resolution() { return resolution; },
+    async snapshot(borrow) {
+      assertOpen(borrow);
       const rows = store.rows(), counts = {};
       for (const row of rows) counts[row.state] = (counts[row.state] ?? 0) + 1;
       return { schema: 'stellar-forge.job-workspace.v1', revision: rows.reduce((sum, row) => sum + row.revision, 0),
@@ -258,8 +263,8 @@ export async function openJobMerchant({ configPath, directory, env = process.env
         jobs: rows.sort((a, b) => b.createdAt.localeCompare(a.createdAt) || a.id.localeCompare(b.id)).map(summary),
         counts, eventExceptions: structuredClone(eventExceptions) };
     },
-    async get(id) {
-      const { claimTokenHash, ...row } = rowFor(id);
+    async get(id, borrow) {
+      const { claimTokenHash, ...row } = rowFor(id, borrow);
       return { ...row, ...urls(id), nativeSettlement: row.settlement ? { id: row.settlement.id, at: row.settlement.at } : null };
     },
     async createJob({ functionId, input, label: requestedLabel, reference, claimToken, signal } = {}) {
@@ -376,8 +381,8 @@ export async function openJobMerchant({ configPath, directory, env = process.env
     reconcile,
     async startWorker() { assertOpen(); await reconcile(); lastWorkerError = null; workerRunning = true; schedule(); return model.snapshot(); },
     stopWorker,
-    async cancel({ id, expectedRevision, reason: why } = {}) {
-      assertOpen(); revision(expectedRevision); reason(why);
+    async cancel({ id, expectedRevision, reason: why } = {}, borrow) {
+      assertOpen(borrow); revision(expectedRevision); reason(why);
       const row = await store.update(id, expectedRevision, current => {
         if (current.state === 'COMPLETED') fail('JOB_ALREADY_COMPLETED', 409);
         if (current.state === 'CANCELLED') return null;
@@ -385,10 +390,10 @@ export async function openJobMerchant({ configPath, directory, env = process.env
         return history(current, 'cancel-requested', { reason: why });
       });
       active.get(id)?.controller.abort(jobError('JOB_EXECUTION_CANCELLED', 409));
-      return model.get(row.id);
+      return model.get(row.id, borrow);
     },
-    async retry({ id, expectedRevision, reason: why } = {}) {
-      assertOpen(); revision(expectedRevision); reason(why);
+    async retry({ id, expectedRevision, reason: why } = {}, borrow) {
+      assertOpen(borrow); revision(expectedRevision); reason(why);
       const row = await store.update(id, expectedRevision, current => {
         if (!['FAILED', 'INTERRUPTED', 'CANCELLED'].includes(current.state) || !current.settlement || current.result || active.has(id))
           fail('JOB_RETRY_NOT_AVAILABLE', 409);
@@ -396,16 +401,16 @@ export async function openJobMerchant({ configPath, directory, env = process.env
         current.state = 'QUEUED'; current.error = null;
         return history(current, 'retry-requested', { reason: why });
       });
-      schedule(); return model.get(row.id);
+      schedule(); return model.get(row.id, borrow);
     },
     async result(id) { return output(rowFor(id)); },
-    async customerStatus({ id, token } = {}) { return customerView(customerRow(id, token)); },
+    async customerStatus({ id, token } = {}, borrow) { return customerView(customerRow(id, token, borrow)); },
     async customerResult({ id, token } = {}) { return output(customerRow(id, token)); },
     async close() {
       if (closing) return closing;
       closing = (async () => {
         const errors = [];
-        for (const stop of [() => stopWorker(), () => inputs?.close(), () => store.close()])
+        for (const stop of [() => resolution?.close(), () => stopWorker(), () => inputs?.close(), () => store.close()])
           try { await stop(); } catch (error) { errors.push(error); }
         closed = true;
         if (errors.length) throw new AggregateError(errors, 'JOB_MERCHANT_CLOSE_FAILED');
@@ -414,5 +419,23 @@ export async function openJobMerchant({ configPath, directory, env = process.env
       return closing;
     },
   };
+  // Only this child receives the closure-private capability. Public admission
+  // stops immediately while its existing same-store operations drain.
+  const drainingModel = Object.freeze({
+    directory,
+    snapshot: () => model.snapshot(resolutionBorrow),
+    get: id => model.get(id, resolutionBorrow),
+    customerStatus: input => model.customerStatus(input, resolutionBorrow),
+    retry: input => model.retry(input, resolutionBorrow),
+    cancel: input => model.cancel(input, resolutionBorrow),
+  });
+  try {
+    resolution = await openJobResolution({ model, drainingModel,
+      accounting: resolutionOptions.accounting, fetchImpl: resolutionOptions.fetchImpl });
+  } catch (error) {
+    try { await model.close(); }
+    catch (cleanup) { throw new AggregateError([error, cleanup], 'JOB_MERCHANT_OPEN_FAILED'); }
+    throw error;
+  }
   return Object.freeze(model);
 }

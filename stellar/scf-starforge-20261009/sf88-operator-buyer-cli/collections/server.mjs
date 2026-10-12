@@ -11,7 +11,7 @@ import { openCollectionRecovery } from './recovery-jobs.mjs';
 import { collectionBundleFiles } from './recovery.mjs';
 import { createCollectionBrowserRunner } from './browser-run.mjs';
 import { sendCollectionFile } from './download.mjs';
-import { collectionsWorkspaceLaunch } from './launch.mjs';
+import { collectionsWorkspaceLaunch, collectionsRecoveryWorkspaceLaunch } from './launch.mjs';
 import { createBrowserApprovalBroker } from '../../sf81-buyer-operator-bridge/browser-approval.mjs';
 import { initializationDirectory, initializationBytes } from '../initialization.mjs';
 
@@ -507,8 +507,9 @@ export async function main(args = process.argv.slice(2)) {
   });
   if (startupFormat === 'json') console.log(JSON.stringify(workspace.collections ? collectionsWorkspaceLaunch({
     directory: workspace.collections.directory, queueRoot: workspace.collections.queueRoot, approvalMode,
-  }, workspace.url) : { schema: 'stellar-forge.sf88.collection-recovery-workspace-launch.v1',
-    state: 'LISTENING', receivingDirectory: workspace.recovery.directory, pid: process.pid, url: workspace.url }));
+  }, workspace.url) : collectionsRecoveryWorkspaceLaunch({
+    receivingDirectory: workspace.recovery.directory,
+  }, workspace.url)));
   else {
     console.log('Request collections: ' + workspace.url);
     console.log('Keep this terminal open while requests run. Use Pause in the workspace to stop remaining work.');
