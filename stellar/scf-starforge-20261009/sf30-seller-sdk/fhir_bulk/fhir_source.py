@@ -184,7 +184,13 @@ def http_url(value, label="URL", base=False):
 
 def origin(value):
     parsed = urlsplit(http_url(value))
-    return parsed.scheme + "://" + parsed.netloc.lower()
+    host = parsed.hostname.lower()
+    if ":" in host:
+        host = "[" + host + "]"
+    port = parsed.port
+    if port is not None and port != (443 if parsed.scheme == "https" else 80):
+        host += ":" + str(port)
+    return parsed.scheme + "://" + host
 
 
 def validate_connection(raw):
@@ -352,8 +358,8 @@ def request_matches(expected, actual):
             else:
                 output.append((key, value))
         return sorted(output)
-    return (left.scheme.lower(), left.netloc.lower(), left.path, query(left)) == \
-           (right.scheme.lower(), right.netloc.lower(), right.path, query(right))
+    return (origin(expected), left.path, query(left)) == \
+           (origin(actual), right.path, query(right))
 
 
 def manifest_value(raw, export, previous=None):

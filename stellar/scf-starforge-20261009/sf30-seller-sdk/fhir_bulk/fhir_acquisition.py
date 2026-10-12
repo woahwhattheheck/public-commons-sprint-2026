@@ -160,7 +160,8 @@ class Credentials:
             if not isinstance(origins, list) or not origins or len(origins) > 32:
                 raise InputError("A configured authentication profile needs its explicit allowed origins")
             for item in origins:
-                if http_url(item).rstrip("/") != origin(item):
+                parsed = urlsplit(http_url(item))
+                if parsed.path not in {"", "/"} or parsed.query:
                     raise InputError("Credential origins must be exact scheme/host/port origins")
             if raw["type"] == "bearer":
                 token = text(raw.get("token"), "Configured bearer token", 65536, False)
