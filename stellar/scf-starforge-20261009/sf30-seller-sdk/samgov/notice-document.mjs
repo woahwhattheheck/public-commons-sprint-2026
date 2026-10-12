@@ -1,6 +1,6 @@
 // MIT. Original SAM website notice, attachment index and history representations.
 import {
-  plain,copy,canonical,sha,text,identifier,requireThat,cleanSourceUrl,noticeRow,
+  plain,copy,canonical,sha,text,identifier,requireThat,cleanSourceUrl,publicNoticeUrl,noticeRow,
 } from './core.mjs';
 
 export const NOTICE_DOCUMENT_FORMAT='samgov_notice_document.v1';
@@ -87,7 +87,9 @@ function originalResourceUrl(item){
   if(item.deletedFlag==='1' || item.deletedFlag===true || item.deletedDate)return null;
   if(item.type==='file' && item.resourceId)
     return 'https://sam.gov/api/prod/opps/v3/opportunities/resources/files/'+item.resourceId+'/download';
-  if(item.type==='link' && typeof item.url==='string')return cleanSourceUrl(item.url);
+  if(item.type==='link' && typeof item.url==='string'){
+    const projected=publicNoticeUrl(item.url);return projected?cleanSourceUrl(projected):null;
+  }
   return null;
 }
 export function noticeDocumentRow(document,source,resources=[]){

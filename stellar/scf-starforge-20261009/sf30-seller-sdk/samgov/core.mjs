@@ -127,13 +127,33 @@ export function searchRequest(definition, offset = 0, selectedEndpoint = SAM_END
   url.searchParams.set('limit', String(q.pageSize)); url.searchParams.set('offset', String(offset));
   return {method: 'GET', url: url.href, offset, limit: q.pageSize};
 }
+export function credentialQueryKey(value) {
+  let key=String(value).replace(/\\u([a-f0-9]{4})/gi,(_match,hex)=>String.fromCharCode(parseInt(hex,16)));
+  for(let count=0;count<3;count++){
+    try{const decoded=decodeURIComponent(key.replace(/\+/g,' '));if(decoded===key)break;key=decoded;}
+    catch{break;}
+  }
+  key=key.toLowerCase().replace(/[-_.\s]/g,'');
+  return /^(?:api(?:key|token)|(?:access|refresh|id|session|security|auth)?token|auth|authorization|password|passphrase|secret|clientsecret|sig|signature|credentials?|key|subscriptionkey|ocpapimsubscriptionkey|awsaccesskeyid|awssecretaccesskey|googleaccessid|keypairid|policy|sharedaccesssignature|sastoken)$/.test(key) ||
+    /^(?:xamz|xgoog)(?:algorithm|credential|date|expires|signedheaders|signature|securitytoken)$/.test(key);
+}
+export function redactCredentialQueryText(value) {
+  let replacements=0;
+  const text=String(value).replace(
+    /((?:&amp;|\\u00(?:26|3f|23)|%(?:26|3f|23)|[?&#]))((?:\\u[a-f0-9]{4}|[^&#"'\\\s<>?=]){1,300}?)((?:\\u003d|%3d|=))((?:(?!\\u00(?:26|23)|%(?:26|23))[^&#"'\\\s<>])*)/gi,
+    (whole,separator,key,equals,secret)=>{
+      if(!credentialQueryKey(key) || /^(?:\[REDACTED(?:_SAM_CREDENTIAL)?\]|%5BREDACTED(?:_SAM_CREDENTIAL)?%5D)$/i.test(secret))return whole;
+      replacements++;return separator+key+equals+'[REDACTED_SAM_CREDENTIAL]';
+    });
+  return {text,replacements};
+}
 export function cleanSourceUrl(value, name = 'Source URL') {
   text(value, name, 12000);
   let url; try { url = new URL(value); } catch { throw new SamError('SOURCE_URL_INVALID', name + ' must be an HTTPS URL.'); }
   requireThat(url.protocol === 'https:' && !url.username && !url.password && !url.hash &&
     (!url.port || url.port === '443'), 'SOURCE_URL_INVALID', name + ' must be a public HTTPS URL without credentials.');
   for (const key of url.searchParams.keys())
-    requireThat(!/^(?:api[_-]?key|access[_-]?token|authorization|password|secret)$/i.test(key),
+    requireThat(!credentialQueryKey(key),
       'SOURCE_URL_CREDENTIAL', 'Retained source URLs must omit credentials.');
   return url.href;
 }
@@ -192,21 +212,23 @@ function first(row, fields) {
   for (const field of fields) if (Object.hasOwn(row, field)) return row[field];
   return null;
 }
-function suppliedUrl(value) {
+export function publicNoticeUrl(value) {
   if(typeof value!=='string' || !value.trim() || value==='null')return null;
   try{
     const url=new URL(value);
+    if(!['https:','http:'].includes(url.protocol))return null;
+    url.username='';url.password='';url.hash='';
     // Public notice projections omit a credential query key. The complete
     // original bytes remain in the separately identified private source.
     for(const key of [...url.searchParams.keys()])
-      if(/^(?:api[_-]?key|access[_-]?token|authorization|password|secret)$/i.test(key))url.searchParams.delete(key);
+      if(credentialQueryKey(key))url.searchParams.delete(key);
     return url.href;
-  }catch{return value;}
+  }catch{return null;}
 }
 export function noticeRow(raw, source, resources = []) {
   requireThat(plain(raw), 'NOTICE_INVALID');
   const noticeId = identifier(raw.noticeId, 'Original notice ID');
-  const links = Array.isArray(raw.resourceLinks) ? raw.resourceLinks.filter(item => typeof item === 'string').map(suppliedUrl).filter(Boolean) : [];
+  const links = Array.isArray(raw.resourceLinks) ? raw.resourceLinks.filter(item => typeof item === 'string').map(publicNoticeUrl).filter(Boolean) : [];
   const award = plain(raw.award) ? raw.award : {};
   const awardee = plain(award.awardee) ? award.awardee : {};
   const result = {
@@ -219,7 +241,7 @@ export function noticeRow(raw, source, resources = []) {
     naicsCode: nullable(raw.naicsCode), classificationCode: nullable(raw.classificationCode),
     setAsideCode: nullable(first(raw,['typeOfSetAside','setAsideCode'])),
     setAsideDescription: nullable(first(raw,['typeOfSetAsideDescription','setAside'])),
-    descriptionUrl: suppliedUrl(raw.description), uiUrl: suppliedUrl(raw.uiLink) ||
+    descriptionUrl: publicNoticeUrl(raw.description), uiUrl: publicNoticeUrl(raw.uiLink) ||
       'https://sam.gov/workspace/contract/opp/' + encodeURIComponent(noticeId) + '/view',
     resourceLinks: links, awardAmount: nullable(award.amount), awardNumber: nullable(award.number),
     awardDate: nullable(award.date), awardeeName: nullable(awardee.name), awardeeUei: nullable(awardee.ueiSAM),
