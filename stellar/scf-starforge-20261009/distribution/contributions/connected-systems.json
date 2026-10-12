@@ -46,6 +46,9 @@
     "stellar/scf-starforge-20261009/sf30-seller-sdk/connected-systems/sources/publisher-request-evidence.json",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/connected-systems/examples/ogc-room-temperature-native-result.json",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/connected-systems/examples/ogc-room-temperature.connected-systems.zip",
-    "stellar/scf-starforge-20261009/sf30-seller-sdk/connected-systems/examples/ogc-room-temperature.connected-systems"
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/connected-systems/examples/ogc-room-temperature.connected-systems",
+    "stellar/scf-starforge-20261009/distribution/selections/connected-systems.json",
+    "stellar/scf-starforge-20261009/distribution/selections/CONNECTED_SYSTEMS.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/connected-systems/delivery/installed-receive.mjs"
   ]
 }
