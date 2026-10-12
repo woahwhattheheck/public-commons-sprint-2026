@@ -26,6 +26,7 @@ import { readWebDavWorkspaceConfiguration } from './webdav-tools.mjs';
 import { readSheetsWorkspaceConfiguration } from './sheets-workspace.mjs';
 import { readCkanWorkspaceConfiguration } from './ckan-workspace.mjs';
 import { readTenderlyWorkspaceConfiguration } from './tenderly-workspace.mjs';
+import { readRedisWorkspaceConfiguration } from './redis-workspace.mjs';
 import { readUSASpendingWorkspaceConfiguration } from './usaspending-workspace.mjs';
 import { readSourceWorkspaceConfiguration } from './source-workspace.mjs';
 import { normalizeAccountingConfig, readAccountingConfig } from './accounting.mjs';
@@ -364,7 +365,7 @@ export async function inspectMerchantSource(source) {
 export async function readMerchantConfig(path) {
   path = resolve(path);
   const raw = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(await fileBytes(path, 1024 * 1024)));
-  exact(raw, ['schema', 'name', 'releaseStore', 'exportsDirectory', 'sources', 'catalogConnection', 'facilitatorConnection', 'fleet', 'accounting', 'supportConnection', 'receivingConnection', 'pythonWorkspaceConnection', 'publisherConnection', 's3WorkspaceConnection', 'opensearchWorkspaceConnection', 'socrataWorkspaceConnection', 'webdavWorkspaceConnection', 'sheetsWorkspaceConnection', 'ckanWorkspaceConnection', 'tenderlyWorkspaceConnection', 'usaSpendingWorkspaceConnection', 'sourceWorkspaceConnection', 'pricingConnection', 'woocommerceConnection'], ['schema', 'name', 'releaseStore', 'exportsDirectory', 'sources']);
+  exact(raw, ['schema', 'name', 'releaseStore', 'exportsDirectory', 'sources', 'catalogConnection', 'facilitatorConnection', 'fleet', 'accounting', 'supportConnection', 'receivingConnection', 'pythonWorkspaceConnection', 'publisherConnection', 's3WorkspaceConnection', 'opensearchWorkspaceConnection', 'socrataWorkspaceConnection', 'webdavWorkspaceConnection', 'sheetsWorkspaceConnection', 'ckanWorkspaceConnection', 'tenderlyWorkspaceConnection', 'redisWorkspaceConnection', 'usaSpendingWorkspaceConnection', 'sourceWorkspaceConnection', 'pricingConnection', 'woocommerceConnection'], ['schema', 'name', 'releaseStore', 'exportsDirectory', 'sources']);
   if (raw.schema !== CONFIG_SCHEMA || !plain(raw.sources) || Object.keys(raw.sources).length > 32)
     throw failure('CONFIGURATION_ERROR', 'Expected a merchant MCP configuration with up to 32 named sources.');
   const base = dirname(path), sources = Object.create(null);
@@ -405,6 +406,8 @@ export async function readMerchantConfig(path) {
     : await readCkanWorkspaceConfiguration(hostPath(raw.ckanWorkspaceConnection, base));
   config.tenderlyWorkspaces = raw.tenderlyWorkspaceConnection === undefined ? null
     : await readTenderlyWorkspaceConfiguration(hostPath(raw.tenderlyWorkspaceConnection, base));
+  config.redisWorkspaces = raw.redisWorkspaceConnection === undefined ? null
+    : await readRedisWorkspaceConfiguration(hostPath(raw.redisWorkspaceConnection, base), { releaseStore: config.releaseStore });
   config.usaSpendingWorkspaces = raw.usaSpendingWorkspaceConnection === undefined ? null
     : await readUSASpendingWorkspaceConfiguration(hostPath(raw.usaSpendingWorkspaceConnection, base));
   config.sourceWorkspaces = raw.sourceWorkspaceConnection === undefined ? null
@@ -412,7 +415,7 @@ export async function readMerchantConfig(path) {
   config.fleet = await fleetDefinition(raw.fleet, base, config.releaseStore);
   config.accounting = normalizeAccountingConfig(raw.accounting, base);
   if (!(await lstat(config.exportsDirectory)).isDirectory()) throw failure('CONFIGURATION_ERROR', 'Customer export directory must be a real directory.');
-  if (config.support || config.receiving || config.pythonWorkspaces || config.s3Workspaces || config.opensearchWorkspaces || config.socrataWorkspaces || config.webdavWorkspaces || config.sheetsWorkspaces || config.ckanWorkspaces || config.tenderlyWorkspaces || config.usaSpendingWorkspaces || config.sourceWorkspaces || config.woocommerce) await privateSupportDirectory(config.exportsDirectory);
+  if (config.support || config.receiving || config.pythonWorkspaces || config.s3Workspaces || config.opensearchWorkspaces || config.socrataWorkspaces || config.webdavWorkspaces || config.sheetsWorkspaces || config.ckanWorkspaces || config.tenderlyWorkspaces || config.redisWorkspaces || config.usaSpendingWorkspaces || config.sourceWorkspaces || config.woocommerce) await privateSupportDirectory(config.exportsDirectory);
   return config;
 }
 export async function initializeMerchant({ directory, name = 'Starforge merchant', spec, selections, bindings, workspace, upstreams, python, pythonRoot, duckdbPackage, duckdbPython, s3Package, postgresPackage, mysqlPackage, jsonrpcPackage, sqlitePackage, sqliteSnapshotMaxBytes, sqliteSnapshotTimeoutMs, clickhousePackage, clickhouseColumnTypes, runtime = {}, catalog, facilitators, fleetPlan, accounting, support, receiving, pythonWorkspaces, sourceWorkspaces, ckanWorkspaces, pricing, woocommerce, releaseStore }) {
@@ -758,6 +761,33 @@ export async function initializeCkanWorkspaceMerchant({ directory, connection, w
     workspace: selected, releaseStore,
     workspaces: Object.entries(selection.workspaces).map(([workspace, entry]) => ({ workspace, label: entry.label })),
     authoring: 'OPENED_BY_MERCHANT_CKAN_OPEN' };
+}
+
+/** Bind the original Redis browser, agent and merchant controls to one saved release store. */
+export async function initializeRedisWorkspaceMerchant({ directory, connection, workspace, name = 'Starforge Redis merchant' }) {
+  const root = resolve(directory), redisWorkspaceConnection = hostPath(connection, process.cwd());
+  name = line(name, 'Merchant name');
+  const selection = await readRedisWorkspaceConfiguration(redisWorkspaceConnection);
+  const aliases = Object.keys(selection.workspaces);
+  const selected = workspace === undefined && aliases.length === 1 ? aliases[0] : workspace;
+  if (typeof selected !== 'string' || !Object.hasOwn(selection.workspaces, selected))
+    throw failure('CONFIGURATION_ERROR', 'Choose --workspace from the configured Redis aliases when more than one workspace is declared.');
+  const { openRedisAuthoringWorkspace } = await import('../../stellar/scf-starforge-20261009/sf30-seller-sdk/redis/workspace/model.mjs');
+  const binding = selection.workspaces[selected];
+  const original = await openRedisAuthoringWorkspace(binding.directory, { expectedWorkspaceId: binding.workspaceId, expectedProfileSha256: binding.profileSha256 });
+  let releaseStore;
+  try { releaseStore = await original.ensureReleaseStore(); }
+  finally { await original.close(); }
+  await mkdir(root, { mode: 0o700 });
+  await mkdir(join(root, 'customer-exports'), { mode: 0o700 });
+  const configuration = join(root, 'merchant-mcp.json');
+  await writePrivate(configuration, { schema: CONFIG_SCHEMA, name, releaseStore,
+    exportsDirectory: './customer-exports', sources: {}, redisWorkspaceConnection });
+  const configured = await readMerchantConfig(configuration);
+  return { schema: CONFIG_SCHEMA, configuration, state: 'INITIALIZED', redisWorkspacesConfigured: true,
+    workspace: selected, releaseStore,
+    workspaces: Object.entries(configured.redisWorkspaces.workspaces).map(([workspace, entry]) =>
+      ({ workspace, label: entry.label, workspaceId: entry.workspaceId, profileSha256: entry.profileSha256, releaseBound: entry.releaseBound })) };
 }
 
 /** Connect original Socrata source, publisher and customer workspaces to this MCP. */

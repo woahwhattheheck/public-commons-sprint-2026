@@ -21,6 +21,7 @@ import { MerchantWebDavWorkspaces, webDavWorkspaceTools } from './webdav-tools.m
 import { MerchantSheetsWorkspaces, sheetsWorkspaceTools } from './sheets-workspace.mjs';
 import { MerchantCkanWorkspaces, ckanWorkspaceTools } from './ckan-workspace.mjs';
 import { MerchantTenderlyWorkspaces, tenderlyWorkspaceTools } from './tenderly-workspace.mjs';
+import { MerchantRedisWorkspaces, redisWorkspaceTools } from './redis-workspace.mjs';
 import { MerchantUSASpendingWorkspaces, usaSpendingWorkspaceTools } from './usaspending-workspace.mjs';
 import { MerchantSourceWorkspaces, sourceWorkspaceTools } from './source-workspace.mjs';
 import { MerchantPublisher, publisherTools } from './publisher.mjs';
@@ -98,6 +99,7 @@ export const MERCHANT_TOOLS = [
   ...sheetsWorkspaceTools(tool),
   ...ckanWorkspaceTools(tool),
   ...tenderlyWorkspaceTools(tool),
+  ...redisWorkspaceTools(tool),
   ...usaSpendingWorkspaceTools(tool),
   ...sourceWorkspaceTools(tool),
   ...publisherTools(tool),
@@ -115,7 +117,7 @@ function releaseView(release) {
   const { handlers, ...options } = runtime;
   return { ...rest, ...(rest.python ? { python: pythonSourceView(rest.python) } : {}),
     ...(rest.duckdb ? { duckdb: duckdbSourceView(rest.duckdb) } : {}),
-    runtime: { ...options, applicationConfigured: Boolean(handlers || runtime.upstreams || rest.python || rest.duckdb || rest.mysql || rest.postgres || rest.s3 || rest.jsonrpc || rest.sqlite || rest.clickhouse) },
+    runtime: { ...options, applicationConfigured: Boolean(handlers || runtime.upstreams || rest.python || rest.duckdb || rest.mysql || rest.postgres || rest.s3 || rest.jsonrpc || rest.sqlite || rest.clickhouse || rest.redis) },
     handlerEntry: handlerEntry ? { sha256: handlerEntry.sha256, bytes: handlerEntry.bytes, scope: handlerEntry.scope } : null };
 }
 function runtimeView(runtime) {
@@ -135,9 +137,9 @@ function expectedDigest(value) {
 }
 
 export class MerchantReleaseOperator {
-  #config; #managed = null; #busy = false; #closing = false; #active = Promise.resolve(); #close; #lastFailure = null; #discovery; #fleet; #accounting; #support; #receiving; #pythonWorkspaces; #s3Workspaces; #opensearchWorkspaces; #socrataWorkspaces; #webdavWorkspaces; #sheetsWorkspaces; #ckanWorkspaces; #tenderlyWorkspaces; #usaSpendingWorkspaces; #sourceWorkspaces; #publishers; #pricing;
+  #config; #managed = null; #busy = false; #closing = false; #active = Promise.resolve(); #close; #lastFailure = null; #discovery; #fleet; #accounting; #support; #receiving; #pythonWorkspaces; #s3Workspaces; #opensearchWorkspaces; #socrataWorkspaces; #webdavWorkspaces; #sheetsWorkspaces; #ckanWorkspaces; #tenderlyWorkspaces; #redisWorkspaces; #usaSpendingWorkspaces; #sourceWorkspaces; #publishers; #pricing;
   #clientExports; #facilitators; #woocommerce;
-  constructor(config, { woocommerce, opensearch } = {}) { this.#config = config; this.#clientExports = new MerchantClientExports({ directory: config.exportsDirectory }); this.#discovery = new MerchantDiscovery(config); this.#fleet = new MerchantFleet(config.fleet); this.#accounting = new MerchantAccounting(config); this.#support = new MerchantSupport(config); this.#receiving = new MerchantReceiving(config); this.#pythonWorkspaces = new MerchantPythonWorkspaces(config); this.#s3Workspaces = new MerchantS3Workspaces(config); this.#opensearchWorkspaces = new MerchantOpenSearchWorkspaces(config, opensearch); this.#socrataWorkspaces = new MerchantSocrataWorkspaces(config); this.#webdavWorkspaces = new MerchantWebDavWorkspaces(config); this.#sheetsWorkspaces = new MerchantSheetsWorkspaces(config); this.#ckanWorkspaces = new MerchantCkanWorkspaces(config); this.#tenderlyWorkspaces = new MerchantTenderlyWorkspaces(config); this.#usaSpendingWorkspaces = new MerchantUSASpendingWorkspaces(config); this.#sourceWorkspaces = new MerchantSourceWorkspaces(config); this.#publishers = new MerchantPublisher(config); this.#facilitators = createReleaseFacilitatorControl(config.releaseStore, config.facilitators); this.#pricing = new MerchantPricing(config); this.#woocommerce = new MerchantWooCommerce(config, woocommerce); }
+  constructor(config, { woocommerce, opensearch } = {}) { this.#config = config; this.#clientExports = new MerchantClientExports({ directory: config.exportsDirectory }); this.#discovery = new MerchantDiscovery(config); this.#fleet = new MerchantFleet(config.fleet); this.#accounting = new MerchantAccounting(config); this.#support = new MerchantSupport(config); this.#receiving = new MerchantReceiving(config); this.#pythonWorkspaces = new MerchantPythonWorkspaces(config); this.#s3Workspaces = new MerchantS3Workspaces(config); this.#opensearchWorkspaces = new MerchantOpenSearchWorkspaces(config, opensearch); this.#socrataWorkspaces = new MerchantSocrataWorkspaces(config); this.#webdavWorkspaces = new MerchantWebDavWorkspaces(config); this.#sheetsWorkspaces = new MerchantSheetsWorkspaces(config); this.#ckanWorkspaces = new MerchantCkanWorkspaces(config); this.#tenderlyWorkspaces = new MerchantTenderlyWorkspaces(config); this.#redisWorkspaces = new MerchantRedisWorkspaces(config); this.#usaSpendingWorkspaces = new MerchantUSASpendingWorkspaces(config); this.#sourceWorkspaces = new MerchantSourceWorkspaces(config); this.#publishers = new MerchantPublisher(config); this.#facilitators = createReleaseFacilitatorControl(config.releaseStore, config.facilitators); this.#pricing = new MerchantPricing(config); this.#woocommerce = new MerchantWooCommerce(config, woocommerce); }
   get tools() { return structuredClone(MERCHANT_TOOLS); }
   get maxRequestBytes() { return this.#config.opensearchWorkspaces ? 2 * 1024 * 1024 : 128 * 1024; }
   async status() {
@@ -146,7 +148,7 @@ export class MerchantReleaseOperator {
       state: result.state, releases: result.releases.map(releaseView), errors: result.errors,
       runtime: runtimeView(result.runtime), operator: { managesRunningSeller: Boolean(this.#managed),
         instanceId: this.#managed?.observation.instanceId ?? null, busy: this.#busy,
-        closing: this.#closing, lastFailure: this.#lastFailure, discovery: this.#discovery.summary, fleet: this.#fleet.summary, accounting: this.#accounting.summary, support: this.#support.summary, receiving: this.#receiving.summary, pythonWorkspaces: this.#pythonWorkspaces.summary, s3Workspaces: this.#s3Workspaces.summary, opensearchWorkspaces: this.#opensearchWorkspaces.summary, socrataWorkspaces: this.#socrataWorkspaces.summary, webdavWorkspaces: this.#webdavWorkspaces.summary, sheetsWorkspaces: this.#sheetsWorkspaces.summary, ckanWorkspaces: this.#ckanWorkspaces.summary, tenderlyWorkspaces: this.#tenderlyWorkspaces.summary, usaSpendingWorkspaces: this.#usaSpendingWorkspaces.summary, sourceWorkspaces: this.#sourceWorkspaces.summary, publishers: this.#publishers.summary, pricing: this.#pricing.summary, woocommerce: this.#woocommerce.summary, clientExports: this.#clientExports.summary } };
+        closing: this.#closing, lastFailure: this.#lastFailure, discovery: this.#discovery.summary, fleet: this.#fleet.summary, accounting: this.#accounting.summary, support: this.#support.summary, receiving: this.#receiving.summary, pythonWorkspaces: this.#pythonWorkspaces.summary, s3Workspaces: this.#s3Workspaces.summary, opensearchWorkspaces: this.#opensearchWorkspaces.summary, socrataWorkspaces: this.#socrataWorkspaces.summary, webdavWorkspaces: this.#webdavWorkspaces.summary, sheetsWorkspaces: this.#sheetsWorkspaces.summary, ckanWorkspaces: this.#ckanWorkspaces.summary, tenderlyWorkspaces: this.#tenderlyWorkspaces.summary, redisWorkspaces: this.#redisWorkspaces.summary, usaSpendingWorkspaces: this.#usaSpendingWorkspaces.summary, sourceWorkspaces: this.#sourceWorkspaces.summary, publishers: this.#publishers.summary, pricing: this.#pricing.summary, woocommerce: this.#woocommerce.summary, clientExports: this.#clientExports.summary } };
   }
   #owned(instanceId) {
     if (typeof instanceId !== 'string' || !this.#managed || instanceId !== this.#managed.observation.instanceId)
@@ -203,6 +205,7 @@ export class MerchantReleaseOperator {
     if (name.startsWith('merchant_sheets_')) return this.#sheetsWorkspaces.call(name, args);
     if (name.startsWith('merchant_ckan_')) return this.#ckanWorkspaces.call(name, args);
     if (name.startsWith('merchant_tenderly_')) return this.#tenderlyWorkspaces.call(name, args);
+    if (name.startsWith('merchant_redis_')) return this.#redisWorkspaces.call(name, args);
     if (name.startsWith('merchant_usaspending_')) return this.#usaSpendingWorkspaces.call(name, args);
     if (name.startsWith('merchant_source_')) return this.#sourceWorkspaces.call(name, args);
     if (name === 'merchant_publishers' || name.startsWith('merchant_publisher_')) return this.#publishers.call(name, args);
@@ -303,7 +306,7 @@ export class MerchantReleaseOperator {
     this.#fleet.cancelStaging();
     this.#close = (async () => {
       await this.#active;
-      const outcomes = await Promise.allSettled([this.#fleet.close(), this.#accounting.close(), this.#support.close(), this.#receiving.close(), this.#pythonWorkspaces.close(), this.#s3Workspaces.close(), this.#opensearchWorkspaces.close(), this.#socrataWorkspaces.close(), this.#webdavWorkspaces.close(), this.#sheetsWorkspaces.close(), this.#ckanWorkspaces.close(), this.#tenderlyWorkspaces.close(), this.#usaSpendingWorkspaces.close(), this.#sourceWorkspaces.close(), this.#publishers.close(), this.#facilitators.close(), this.#pricing.close(), this.#woocommerce.close(), this.#clientExports.close(),
+      const outcomes = await Promise.allSettled([this.#fleet.close(), this.#accounting.close(), this.#support.close(), this.#receiving.close(), this.#pythonWorkspaces.close(), this.#s3Workspaces.close(), this.#opensearchWorkspaces.close(), this.#socrataWorkspaces.close(), this.#webdavWorkspaces.close(), this.#sheetsWorkspaces.close(), this.#ckanWorkspaces.close(), this.#tenderlyWorkspaces.close(), this.#redisWorkspaces.close(), this.#usaSpendingWorkspaces.close(), this.#sourceWorkspaces.close(), this.#publishers.close(), this.#facilitators.close(), this.#pricing.close(), this.#woocommerce.close(), this.#clientExports.close(),
         this.#managed ? this.#stop(this.#managed.observation.instanceId) : Promise.resolve()]);
       if (outcomes.some(result => result.status === 'rejected'))
         throw failure('OPERATOR_SHUTDOWN_INCOMPLETE', 'One or more original owned runtimes reported an incomplete shutdown.');

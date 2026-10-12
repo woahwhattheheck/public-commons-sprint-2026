@@ -23,6 +23,7 @@ const help = `Starforge merchant toolkit
   starforge runtime-transfer --help
 
 Native commands (arguments pass unchanged to the maintained implementation):
+  frictionless                              Capture table packages, review fields and publish original merchant editions
   sdmx                                      Retain SDMX sources, publish exact editions and receive original buyer pages
   buyer-collections                         Review, retain and operate original paid request collections
   buyer-collections-workspace               Review collections, original queue states and result exports in a private browser
@@ -32,6 +33,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   weather-operations                        Operate weather sources, decisions, frozen reports and original recovery
   usgs-water                                Acquire USGS observations, review hydrology and operate paid editions
   water-quality                             Review WQX samples, detection limits and complete paid data editions
+  fred                                      Acquire, review and operate retained economic data editions
   webhook-feed                              Receive signed webhooks and sell reviewed event feeds
   buyer-event-feed                          Collect, recover and export original paid event pages
   mercury-feed                              Operate original Mercury events, paid feeds and joined recovery
@@ -60,6 +62,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   jobs                                      Prepare and operate durable paid application jobs
   jobs-buyer                                Receive accepted jobs, follow execution and retrieve saved results
   job-workspace                             Receive paid jobs, retrieve results and organize research collections
+  upstream-tls                               Review supplier certificate references and inspect local TLS credentials
   supplier-quotas                            Review supplier account configuration and inspect retained call allowances
   cache-operations                          Review cache activity, change retention and recover saved operations
   openapi     OpenAPI seller import            pilot       OpenAPI pilot + operations
@@ -71,12 +74,14 @@ Native commands (arguments pass unchanged to the maintained implementation):
   commerce    Merchant + buyer session        inbox       Durable selected requests
   merchant-mcp                               Operate native merchant releases from an MCP client
   mcp-native                                Prepare and operate the original native buyer MCP workspace
+  mcp-oauth                                 Configure, discover and receive the original OAuth MCP resource
   mcp-buyer                                 Run the existing private HTTP buyer and operator console
   mcp-results                               Read, export and recover original saved MCP results
   mcp-data                                  Serve prepared SQLite/PostgreSQL/DuckDB/ClickHouse queries over MCP
   mcp-stdio / mcp-client-config              Run and register that buyer with a local MCP host
   merchant-mcp-stdio / merchant-mcp-client-config  Run and register original merchant MCP tools locally
   native-signer  Native buyer configuration   facilitator Native fee-sponsoring backend
+  browser-wallet                            Connect Freighter, review native transfers and execute the original buyer
   client      Export a JS/TypeScript client   releases    Review and operate seller releases
   merchant-host                             Install, observe and recover the original Linux merchant group
   merchant-recovery                         Create, verify and cold-restore original encrypted merchant snapshots
