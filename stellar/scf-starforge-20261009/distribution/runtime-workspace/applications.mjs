@@ -1,5 +1,6 @@
 // MIT. Application lifecycle over the original READY runtime and managed-command worker.
 import { readDistributionSpecification } from '../specification.mjs';
+import { wqxWaterQualityApplication, prepareWqxWaterQualityApplication } from './application-wqx-water-quality.mjs';
 import { grpcApplication, prepareGrpcApplication } from './application-grpc.mjs';
 import { coingeckoApplication, prepareCoingeckoApplication } from './application-coingecko.mjs';
 import { oaiApplication, prepareOaiApplication } from './application-oai.mjs';
@@ -37,6 +38,7 @@ import { collectionsApplication, prepareCollectionsApplication } from './applica
 import { baserowApplication, prepareBaserowApplication } from './application-baserow.mjs';
 import { grantApplication, prepareGrantApplication } from './application-grant.mjs';
 import { dspaceApplication, prepareDspaceApplication } from './application-dspace.mjs';
+import { buyerRunbookApplication, prepareBuyerRunbookApplication } from './application-buyer-runbook.mjs';
 import { grantsgovApplication, prepareGrantsgovApplication } from './application-grantsgov.mjs';
 import { fredApplication, prepareFredApplication } from './application-fred.mjs';
 import { worldbankAgentApplication, prepareWorldBankAgentApplication } from './application-worldbank.mjs';
@@ -72,6 +74,7 @@ const common = [
   field('environmentFile', 'Private environment JSON', 'path', false, 'Optional private file containing environment names and string values. Values stay on this host.'),
 ];
 export const APPLICATION_CATALOG = Object.freeze([
+  wqxWaterQualityApplication(common),
   coingeckoApplication(common),
   oaiApplication(common),
   fiscalDataApplication(common),
@@ -107,6 +110,7 @@ export const APPLICATION_CATALOG = Object.freeze([
   baserowApplication(common),
   grantApplication(common),
   dspaceApplication(common),
+  buyerRunbookApplication(common),
   grantsgovApplication(common),
   fredApplication(common),
   worldbankAgentApplication(common),
@@ -267,13 +271,17 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
     ...context, runtimeDirectory, inputPath, selectedExecutable, applicationEnvironment,
   });
   const inputs = [], createDirectories = [], args = [];
-  let terminalPython, eventFeed, apiPassWorkspace, mppBinding, selectedResourceKey, jobResultReceiver, stellarApplication, openapi;
+  let terminalPython, eventFeed, apiPassWorkspace, mppBinding, selectedResourceKey, jobResultReceiver, stellarApplication, openapi, buyerRunbook;
   const path = async (name, kind = 'directory', missing = false, privateOnly = false) => {
     if (!settings[name]) return;
     const value = await inputPath(settings[name], kind, missing, privateOnly); inputs.push(value); return value;
   };
   const option = (name, value) => { if (value !== undefined && value !== '') args.push(name, String(value)); };
-  if (type.id === 'webdav') {
+  if (type.id === 'wqx-water-quality') {
+    const original = await prepareWqxWaterQualityApplication(settings, { inputPath, runtimeDirectory });
+    args.push(...original.args); inputs.push(...original.inputs);
+    createDirectories.push(...original.createDirectories); selectedResourceKey = original.resourceKey;
+  } else if (type.id === 'webdav') {
     const original = await prepareWebDavApplication(settings, { inputPath, runtimeDirectory });
     args.push(...original.args); inputs.push(...original.inputs);
     createDirectories.push(...original.createDirectories);
@@ -378,6 +386,10 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
     const prepared = await prepareGrantsgovApplication(settings, { inputPath, runtimeDirectory });
     args.push(...prepared.args); inputs.push(...prepared.inputs);
     createDirectories.push(...prepared.createDirectories);
+  } else if (type.id === 'buyer-runbook') {
+    const prepared = await prepareBuyerRunbookApplication(settings, { inputPath, runtimeDirectory });
+    args.push(...prepared.args); inputs.push(...prepared.inputs);
+    createDirectories.push(...prepared.createDirectories); buyerRunbook = prepared.identity;
   } else if (type.id === 'dspace-workspace') {
     const prepared = await prepareDspaceApplication(settings, { inputPath, runtimeDirectory });
     args.push(...prepared.args); inputs.push(...prepared.inputs);
@@ -562,6 +574,7 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
     ...(openapi ? { openapi } : {}),
     ...(stellarApplication ? { stellarApplication } : {}),
     ...(jobResultReceiver ? { jobResultReceiver } : {}),
+    ...(buyerRunbook ? { buyerRunbook } : {}),
     ...(selectedResourceKey ? { resourceKey: selectedResourceKey } : {}),
     ...(type.terminal ? { terminalPython } : {}),
     ...(settings.environmentFile ? { environmentFile: settings.environmentFile, environmentSha256: environment.sha256 } : {}) };
@@ -813,6 +826,7 @@ export async function prepareApplicationStart(root, { applicationId, requestId, 
       terminal: current.terminal, ...(current.terminalPython ? { terminalPython: current.terminalPython } : {}),
       ...(current.pythonCommand ? { pythonCommand: current.pythonCommand } : {}),
       ...(current.jobResultReceiver ? { jobResultReceiver: current.jobResultReceiver } : {}),
+      ...(current.buyerRunbook ? { buyerRunbook: current.buyerRunbook } : {}),
       ...(current.stellarApplication ? { stellarApplication: current.stellarApplication } : {}),
       ...(current.environmentFile ? { environmentFile: current.environmentFile, environmentSha256: current.environmentSha256 } : {}) };
     const value = { schema: 'stellar-forge.application-run.v1', id: requestId, applicationId: id,
