@@ -860,6 +860,7 @@
     "./seller/crossref/source": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/crossref/source.mjs",
     "./seller/crossref/metadata": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/crossref/metadata.mjs",
     "./buyer/research-dossiers/crossref": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/crossref.mjs",
+    "./buyer/research-dossiers/crossref-workspace": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/crossref-workspace.mjs",
     "./seller/fiscaldata": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/fiscaldata/workspace-model.mjs",
     "./seller/fiscaldata/server": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/fiscaldata/workspace-server.mjs",
     "./seller/fiscaldata/source": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/fiscaldata/capture.mjs",
