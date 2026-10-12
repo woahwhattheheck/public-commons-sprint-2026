@@ -45,6 +45,8 @@ node remote-cli.mjs ${COMMANDS.list.usage}
 node remote-cli.mjs ${COMMANDS.pull.usage}
 node remote-cli.mjs ${COMMANDS.restore.usage}
 node remote-cli.mjs ${COMMANDS.status.usage}
+node remote-cli.mjs workspace serve --config ABS_HOST_CONFIG --directory ABS_PRIVATE_STATE [--port 8481]
+node remote-cli.mjs workspace show --config ABS_HOST_CONFIG --directory ABS_PRIVATE_STATE
 
 push     Verify and transfer an existing original encrypted snapshot; publish its
          immutable completion descriptor after every object is available.
@@ -52,6 +54,7 @@ list     Return one page of completed snapshots and its continuation cursor.
 pull     Retrieve the selected snapshot and verify it with the original engine.
 restore  Retrieve, verify and restore the selected snapshot into a new directory.
 status   Read the retained local operation without a bucket configuration.
+workspace Open the host-declared browser recovery workspace or read its saved state.
 
 Use the same operation ID and paths to resume an interrupted transfer. Select a
 snapshot ID returned by list or a completed push. --pass-env names an existing
@@ -120,6 +123,14 @@ export function parseRemoteArguments(argv) {
 
 /** Returns an exit status; the facade owns journals, provider calls and recovery. */
 export async function main(argv = process.argv.slice(2), { run, output = process.stdout } = {}) {
+  if (Array.isArray(argv) && argv[0] === 'workspace') {
+    await (await import('./workspace/cli.mjs')).main(argv.slice(1), { output });
+    return 0;
+  }
+  if (Array.isArray(argv) && argv.length === 2 && argv[0] === 'help' && argv[1] === 'workspace') {
+    await (await import('./workspace/cli.mjs')).main(['--help'], { output });
+    return 0;
+  }
   const options = parseRemoteArguments(argv);
   if (options.help) { output.write(options.help + '\n'); return 0; }
   const operation = run ?? (await import('./remote.mjs')).runRemote;
@@ -144,4 +155,3 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     process.exitCode = 1;
   });
 }
-

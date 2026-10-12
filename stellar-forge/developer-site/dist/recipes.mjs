@@ -116,6 +116,21 @@ export const ROLES = Object.freeze({
     "command": "git clone --depth 1 \\\n  https://github.com/woahwhattheheck/public-commons-sprint-2026.git\ncd public-commons-sprint-2026\n\ncd stellar/scf-starforge-20261009/sf30-seller-sdk\nnpm ci --prefix postgres --omit=dev --ignore-scripts --no-audit --no-fund\n\n# Point to your existing private connection/source declaration.\nnode postgres/workspace/server.mjs \\\n  --source /private/existing-source.json \\\n  --output /private/merchant-packages",
     "result": "The original workspace reads the configured database catalog, validates the selected projection and exports source.json, service.json and launch guidance. Saved packages preserve the original database role and source limits; a changed schema requires a new selection and review."
   },
+  "opensearch": {
+    "meta": "OPENSEARCH / SEARCH AND RELEVANCE",
+    "title": "Turn selected index searches into a merchant.",
+    "description": "Author native searches, retain result editions, compare judged query variants and export the merchant and customer report.",
+    "checklist": [
+      "Use Node.js 22.16+ with an existing OpenSearch 3.3+ cluster and the current toolkit source.",
+      "Prepare the private source and merchant plan from the OpenSearch guide; load the selected endpoint and credentials into the launching environment.",
+      "Save and capture query drafts. In Search relevance, add cases, judge original document identities and evaluate the saved query variants.",
+      "Review the native outcomes, export the customer report and open the chosen variant as a merchant draft for the original preparation flow."
+    ],
+    "docs": "https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/main/stellar/scf-starforge-20261009/sf30-seller-sdk/opensearch/workspace/README.md",
+    "label": "TERMINAL / OPENSEARCH WORKSPACE",
+    "command": "# From the current toolkit source checkout:\nnode stellar/scf-starforge-20261009/distribution/cli.mjs opensearch-workspace \\\n  --source /private/search/source.json \\\n  --plan /private/search/merchant-plan.json \\\n  --workspace /private/search/workspace --port 0\n\n# Open the printed local URL. Save a draft, inspect its native source,\n# capture a result edition, and prepare the original merchant package.\n# An installed toolkit uses the same arguments with:\n# npx --no-install starforge opensearch-workspace",
+    "result": "Search editions and relevance evaluations retain their original query revisions, document identities, judgments and cluster scope. The chosen variant prepares through the original seller compiler and generated customer client."
+  },
   "s3": {
     "meta": "S3 / PRIVATE OBJECT DELIVERY",
     "title": "Offer an existing private file or dataset.",
@@ -199,6 +214,20 @@ export const ROLES = Object.freeze({
     "label": "TERMINAL / LOCAL TOOLKIT RELEASE",
     "command": "git clone --depth 1 \\\n  https://github.com/woahwhattheheck/public-commons-sprint-2026.git\ncd public-commons-sprint-2026\n\nnode stellar/scf-starforge-20261009/distribution/build.mjs \\\n  --out /absolute/new-release-directory --ref HEAD\n\n# Use the archive path printed by the build.\ncd /absolute/path/to/your-application\nnpm install --ignore-scripts --offline --omit=optional \\\n  /absolute/path/to/the-package.tgz\nnpx --no-install starforge doctor",
     "result": "The maintained builder creates the local toolkit archive and release metadata. This is a private npm-compatible source distribution; a public registry publication is not required. Keep application workspaces outside the installed toolkit directory."
+  },
+  "coingecko": {
+    "meta": "COINGECKO / MARKET OPERATIONS",
+    "title": "Run a CoinGecko market workspace.",
+    "description": "Capture original market responses, organize request collections, compare saved observations and operate purchases through the existing native buyer.",
+    "checklist": [
+      "Install the maintained toolkit archive with Node.js 24 or later.",
+      "Start the private workspace and open the loopback URL printed in the terminal.",
+      "Import original responses or configure an existing native buyer using the complete operator guide."
+    ],
+    "docs": "https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/main/stellar/scf-starforge-20261009/partners/coingecko-stellar-market/README.md",
+    "label": "TERMINAL / PRIVATE MARKET WORKSPACE",
+    "command": "# From the directory containing the installed toolkit, with Node.js 24+:\nnpx --no-install starforge coingecko --help\nnpx --no-install starforge coingecko serve \\\n  --state /absolute/private/coingecko-market --port 0\n\n# Open the loopback URL printed at startup.\n# To use an existing buyer profile, add to the serve command:\n#   --config /absolute/private/operator-config.json",
+    "result": "The complete workspace opens with request authoring, original-source intake, collections, market comparisons, notes and portable handover. Configured buyer profiles use the original retained purchase and recovery workflow."
   }
 });
 

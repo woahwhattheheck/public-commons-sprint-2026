@@ -463,7 +463,8 @@ class AlliumWorkspace {
       await this._stop();
       let versions = null, publisherUnlock = null;
       try {
-        if (!(await absent(join(this._versionDirectory(), 'state.json')))) versions = await openDatasetVersions({ directory: this._versionDirectory() });
+        if (!(await absent(join(this._versionDirectory(), 'state.json')))) versions = await openDatasetVersions({
+          directory: this._versionDirectory(), collectOnOpen: false });
         if (!(await absent(this._publisherDirectory()))) publisherUnlock = await acquireWorkspace(this._publisherDirectory());
         const files = await portableFiles(this.directory);
         return { schema: BUNDLE, id: 'export-' + randomUUID(), workspaceId: this.current.id, createdAt: stamp(),

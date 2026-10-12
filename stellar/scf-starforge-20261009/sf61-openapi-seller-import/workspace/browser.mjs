@@ -8,6 +8,7 @@ import { createPostmanPanel, mergePostmanMerchantPlan } from '/postman-browser.m
 const $=id=>document.getElementById(id);
 const countLabel=(n,label)=>n+' '+label+(n===1?'':'s');
 const token=location.hash.slice(1);
+$('migration-link').href='/migrations/#'+token;
 let specText='', inspection=null, routeFields=[], selectedPackage=null, busy=false, customerOpen=false, revisionDesk=null, connections=null, postmanPanel=null;
 const notice=(message,error=false)=>{$('notice').textContent=message;$('notice').classList.toggle('error',error);};
 const make=(tag,text,cls)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(cls)e.className=cls;return e;};
@@ -19,6 +20,11 @@ async function api(path,body) {
   return value;
 }
 function available() {
+  const cacheNavigation=$('cache-workspace-navigation');cacheNavigation.replaceChildren();
+  if(selectedPackage) {
+    const link=make('a','Open cache operations');link.href='/cache-operations?name='+encodeURIComponent(selectedPackage)+'#'+token;
+    cacheNavigation.append(link,make('p','Review saved cache activity, apply retention changes and restore prior settings.','small'));
+  }
   $('preview').disabled=busy||!specText;
   $('save').disabled=busy||!specText;
   $('start-preview').disabled=busy||!selectedPackage||customerOpen;
@@ -57,6 +63,60 @@ function selectField(label,values,value) {
   const container=make('label',label),input=make('select');
   for(const [key,text] of values){const o=make('option',text);o.value=String(key);input.append(o);}
   input.value=String(value??values[0]?.[0]??'');container.append(input);return {container,input};
+}
+function createQuerySettings(op,previous) {
+  const saved=structuredClone(previous?.querySerialization??{});
+  const declared=new Map((op.queryParameters??[]).filter(p=>typeof p.name==='string').map(p=>[p.name,p]));
+  const arrays=[...declared.values()].filter(p=>p.type==='array');
+  const names=[...new Set([...arrays.map(p=>p.name),...Object.keys(saved)])];
+  const element=make('details',undefined,'wide'),fields=make('div',undefined,'fields'),inputs=new Map();
+  element.hidden=!names.length;
+  element.append(make('summary','Array query format'),
+    make('p','Choose how the provider receives each list: repeated keys or one comma-separated value. Use source keeps the declared format. Explicit choices are retained with this merchant package.','hint'),fields);
+  for(const name of names) {
+    const parameter=declared.get(name),original=saved[name];
+    const source=parameter?(parameter.style==='form'?(parameter.explode?'repeated keys':'comma-separated'):'style '+parameter.style):null;
+    const choices=[['source',parameter?'Use source ('+source+')':'Remove saved override'],
+      ['repeat','Repeated keys: field=a&field=b'],['comma','Comma-separated: field=a,b']];
+    let value='source';
+    if(Object.hasOwn(saved,name)) {
+      if(original?.style==='form'&&typeof original.explode==='boolean')value=original.explode?'repeat':'comma';
+      else {choices.push(['retain','Keep saved format']);value='retain';}
+    }
+    const control=selectField(name,choices,value);control.input.setAttribute('aria-label','Query format for '+name);
+    control.input.dataset.queryParameter=name;
+    if(parameter?.description)control.container.append(make('span',parameter.description,'hint'));
+    if(parameter?.error)control.container.append(make('span','Source declaration: '+parameter.error,'hint'));
+    if(!parameter)control.container.append(make('span','This saved setting is absent from the current source inventory. It remains in the plan until you remove it.','hint'));
+    if(value==='retain')control.container.append(make('span',JSON.stringify(original),'hint'));
+    fields.append(control.container);inputs.set(name,control.input);
+  }
+  let enabled=false,bulk=null,apply=null;
+  if(arrays.length>1) {
+    bulk=selectField('Apply one format to this operation’s array parameters',
+      [['','Choose a format'],['source','Use each source setting'],['repeat','Repeated keys'],['comma','Comma-separated']],'');
+    bulk.container.className='wide';apply=make('button','Apply to array parameters');apply.type='button';
+    const bulkControls=make('div',undefined,'fields wide');
+    bulkControls.append(bulk.container,apply);element.insertBefore(bulkControls,fields);
+    bulk.input.addEventListener('change',()=>{apply.disabled=!enabled||!bulk.input.value;});
+    apply.addEventListener('click',()=>{
+      if(!enabled||!bulk.input.value)return;
+      for(const parameter of arrays)inputs.get(parameter.name).value=bulk.input.value;
+      dirty();
+    });
+  }
+  return {element,setEnabled(value) {
+    enabled=value;
+    for(const input of inputs.values())input.disabled=!enabled;
+    if(bulk){bulk.input.disabled=!enabled;apply.disabled=!enabled||!bulk.input.value;}
+  },read() {
+    const parameters=structuredClone(saved);
+    for(const [name,input] of inputs) {
+      if(input.value==='source')delete parameters[name];
+      else if(input.value==='repeat'||input.value==='comma')parameters[name]={style:'form',explode:input.value==='repeat'};
+    }
+    return Object.keys(parameters).length?{querySerialization:parameters}:{};
+  }};
 }
 const customerPanel=createStreamCustomerPanel({container:$('stream-customer-content'),make,field,selectField,api,act,notice});
 postmanPanel=createPostmanPanel({container:$('postman-intake'),api,act,notice,
@@ -144,6 +204,7 @@ function drawRoutes(saved=[]) {
           make('p','Enable only when this API result may be reused by different buyers. Native payment remains per delivery. Origin privacy and freshness rules can shorten or prevent reuse.','hint'),cacheFields);
         settings.append(section);
       }
+      const query=createQuerySettings(op,previous);settings.append(query.element);
       const operation=createOperationSettings({make,field},previous,op.method);
       if(operation)settings.append(operation.element);
       const controls=[server.input,amount.input,description.input,requestInput,validation.input,headerInput,security.input,mode.input,timeout.input,size.input,requestSize.input,capacity.input,forwarded.input,guard.input];
@@ -156,6 +217,7 @@ function drawRoutes(saved=[]) {
         stream.setEnabled(check.checked,mode.input.value);
         guardControls.forEach(c=>{c.disabled=!check.checked||!guard.input.checked;});
         authentication.toggle(check.checked);
+        query.setEnabled(check.checked);
         operation?.setEnabled(check.checked&&!streaming);
         if(cache){cache.enabled.disabled=!check.checked||streaming;Object.values(cache.values).forEach(c=>{c.disabled=!check.checked||!cache.enabled.checked||streaming;});}
       };
@@ -164,7 +226,7 @@ function drawRoutes(saved=[]) {
       cache?.enabled.addEventListener('change',toggle);toggle();
       routeFields.push({op,previous,check,server:server.input,amount:amount.input,description:description.input,request:requestInput,validation:validation.input,headers:headerInput,security:security.input,
         mode:mode.input,timeout:timeout.input,size:size.input,requestSize:requestSize.input,capacity:capacity.input,forwarded:forwarded.input,
-        guard:guard.input,failureThreshold:failureThreshold.input,resetAfter:resetAfter.input,maxResetAfter:maxResetAfter.input,cache,authentication,operation,stream});
+        guard:guard.input,failureThreshold:failureThreshold.input,resetAfter:resetAfter.input,maxResetAfter:maxResetAfter.input,cache,authentication,operation,stream,query});
     }
     $('routes').append(card);
   }
@@ -178,6 +240,7 @@ function planFromForm() {
       ...(r.previous?.id?{id:r.previous.id}:{}),serverIndex:Number(r.server.value),amountAtomic:r.amount.value.trim(),headerEnv:JSON.parse(r.headers.value),
       publicDescription:r.description.value.trim(),responseValidation:r.validation.value,
       ...(r.request.value.trim()?{requestExample:JSON.parse(r.request.value)}:{}),
+      ...r.query.read(),
       ...r.authentication.toPlan(),
       ...(!isStreamFormat(r.mode.value)&&r.operation?.read()?{idempotency:r.operation.read()}:{}),
       securityAlternative:Number(r.security.value),responseMode:r.mode.value,timeoutMs:Number(r.timeout.value),
@@ -324,6 +387,14 @@ $('stop').addEventListener('click',()=>act(async()=>{runtime(await api('stop',{}
 $('check-routes').addEventListener('click',()=>act(async()=>{const result=await api('accept',{});runtime(result);notice('Original route check completed and saved in this package.');}));
 $('refresh').addEventListener('click',()=>act(async()=>{await refresh();notice('Projects refreshed.');}));
 if(!/^[0-9a-f]{64}$/.test(token))notice('Open the complete local workspace URL, including its fragment, printed by the launcher.',true);
-else act(async()=>{await refresh();notice('Ready. Load an OpenAPI description or reopen a saved project.');});
+else act(async()=>{
+  await refresh();
+  const selected=new URLSearchParams(location.search), migration=selected.get('migration'), source=selected.get('source');
+  if(migration&&source) {
+    const retained=await api('migrations/source?project='+encodeURIComponent(migration)+'&ref='+encodeURIComponent(source));
+    await loadSource(retained.content);
+    notice('Loaded '+retained.metadata.name+' from migration '+migration+'. Select its routes and enter your merchant terms.');
+  } else notice('Ready. Load an OpenAPI description or reopen a saved project.');
+});
 setInterval(()=>{if(!busy&&token)api('status').then(runtime).catch(()=>{});},10000);
 

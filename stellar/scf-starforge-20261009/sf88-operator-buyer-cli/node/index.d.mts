@@ -85,6 +85,8 @@ export interface BuyerStreamEvent {
 }
 export interface ImportOptions {
   body?: string | Uint8Array;
+  /** Stops preparation and its original offline review before an operation is returned. */
+  signal?: AbortSignal;
   operatorProfile?: OperatorProfile | string;
   /** The Node application owns the fixed private destination. */
   responseFile?: ResponseCaptureOptions;
@@ -96,7 +98,6 @@ export interface WorkspaceImportOptions extends Omit<ImportOptions, 'operatorPro
   configuration?: string | JsonObject;
   /** Explicit new intent for the selected request; never inferred during recovery. */
   intentId?: string;
-  signal?: AbortSignal;
 }
 export interface Review {
   readonly intentId: string;
@@ -197,11 +198,31 @@ export class Operation {
   readonly directory: string;
   readonly configPath: string;
   constructor(buyer: Buyer, intentId: string);
-  review(): Promise<Review>;
+  /** Stops the original offline review child; the prepared operation remains available. */
+  review(options?: { signal?: AbortSignal }): Promise<Review>;
   execute(options: { review: Review; signal?: AbortSignal }): Promise<BuyerResult>;
   /** Reads saved output only. This method never launches a native buyer. */
   recover(): Promise<BuyerResult | null>;
   inspect(): Promise<OperationStatus>;
+  /** Inspect the original definitive unpaid result and any explicit successor; read-only. */
+  inspectUnpaidContinuation(): Promise<UnpaidContinuationStatus>;
+  /** Prepare one selected successor. Does not execute or authorize a payment. */
+  prepareUnpaidContinuation(options: {
+    intentId: string; expectedResultSha256: string; reason: string; signal?: AbortSignal;
+  }): Promise<Operation>;
+  /** Follow an already-prepared explicit lineage; no preparation or execution. */
+  followUnpaidContinuation(): Promise<Operation>;
+}
+export interface UnpaidContinuationStatus {
+  intentId: string; eligible: boolean; reason: string; resultSha256: string | null;
+  source: {
+    intentId: string; operationSha256: string; configSha256: string; bodySha256: string;
+    ticketSha256: string | null; requestSha256: string; attemptSha256: string;
+    resultSha256: string; stdoutSha256: string; evidenceSha256: string; nativeWorkspace: string | null;
+  } | null;
+  continuation: {
+    intentId: string; reason: string; createdAt: string; state: 'PREPARING' | 'PREPARED'; choiceSha256: string;
+  } | null;
 }
 export class BuyerResult extends VerifiedFile {
   readonly record: ResultRecord;

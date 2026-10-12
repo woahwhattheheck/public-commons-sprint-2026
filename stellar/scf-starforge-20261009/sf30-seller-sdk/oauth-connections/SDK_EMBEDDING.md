@@ -1,13 +1,15 @@
 # Embed the authorization connection SDK
 
-The installed package exposes the maintained OAuth implementations through three
-typed ESM paths:
+The installed package exposes the maintained OAuth implementations through typed
+ESM paths:
 
 | Import | Runtime implementation | Declaration |
 | --- | --- | --- |
 | `@tokenjunkielabs/starforge-merchant/seller/oauth-connections` | `connection.mjs` | `connection.d.mts` |
 | `@tokenjunkielabs/starforge-merchant/seller/oauth-connections/profile` | `profile.mjs` | `profile.d.mts` |
 | `@tokenjunkielabs/starforge-merchant/seller/oauth-connections/host` | `host.mjs` | `host.d.mts` |
+| `@tokenjunkielabs/starforge-merchant/seller/oauth-connections/provider` | `provider.mjs` | `provider.d.mts` |
+| `@tokenjunkielabs/starforge-merchant/seller/oauth-connections/quickbooks` | `quickbooks.mjs` | `quickbooks.d.mts` |
 
 Use TypeScript's `NodeNext` module and module-resolution settings in an ESM
 consumer. The package's existing conditional exports select `types` for
@@ -193,3 +195,104 @@ The core's `discard` is synchronous. Registry `discard` is asynchronous
 because it first rechecks the alias's private directory identity. Both core and
 registry `close` return promises and wait for their owned exchanges/saves.
 
+
+## Native QuickBooks company and accounting owner
+
+The typed `@tokenjunkielabs/starforge-merchant/seller/oauth-connections/quickbooks` export connects this registry to the original native QuickBooks accounting controller. Use `previewQuickBooksSelection({registry,...reviewedIdentity})` to read CompanyInfo, Preferences and all Account pages, then `saveQuickBooksSelection(directory,{registry,selection,previewSha256,expectedSelectionSha256})` to persist the reviewed company.
+
+`openQuickBooksOAuthClient({registry,selection,...runtime})` returns the original native client and an owned token provider. Inject its `client` into `startAccountingWorkspace({...,qboClient:client})`. Drain accounting before closing that client owner, and retain the original host's ownership of a shared registry. The integrated `startQuickBooksAccountingWorkspace` launcher performs these steps and exposes the actual original runtime as `accounting`.
+
+The full [QuickBooks guide](./QUICKBOOKS.md) covers registered callbacks, consent, persistent company selection, automatic grant renewal, native posting recovery, and complete CLI/SDK examples.
+
+## Connect an existing protected-resource application
+
+The installed `/seller/oauth-connections/provider` path exports
+`createOAuthConnectionProvider(binding, runtimeOptions)`. It is the same
+provider used by the original SF30 handlers. Construction compiles the public
+binding and selects the named host directory; private grant reads and token
+requests begin when the application asks for headers.
+
+`examples/embedding.mts` also exports `withReviewedResourceConnection`. It
+performs the same original provision, consent and grant-review flow, then gives
+the host callback a `credentialProvider` alongside its registry, binding and
+retained-command dispatcher. Consent and renewal use one initial environment
+snapshot.
+
+```ts
+import { withReviewedResourceConnection } from './embedding.mjs';
+
+const outcome = await withReviewedResourceConnection(hostOptions,
+  async ({ credentialProvider, binding, registry, alias, run }) => {
+    // These receiving-host interfaces belong to the existing application.
+    const application = await existingApplication.open({
+      binding,
+      credentialProvider,
+      onConnectionCommand: run,
+    });
+    try {
+      return await existingOperatorUI.operate({
+        application,
+        connection: () => registry.status(alias),
+        provider: () => credentialProvider.snapshot(),
+      });
+    } finally {
+      await application.close(); // Drain resource requests before leaving this callback.
+    }
+  });
+```
+
+The helper drains the credential provider after the application callback
+settles, then drains the original registry. A primary operation failure and a
+later shutdown failure remain visible together. The callback must not return a
+still-running application that keeps using the provider.
+
+The private request seam is `await credentialProvider.headers({signal})`,
+returning an `authorization` header for the selected grant. Send it only to the
+original selected resource. Read `snapshot()` for operator status; the header
+is not a status response or export. `generation()` belongs to this provider
+instance and changes on acquired credentials, invalidation and close; it is
+not the saved grant's generation.
+
+After a resource rejects a bearer, call
+`invalidate(rejectedAuthorization)` with the exact rejected header. A later
+application request can obtain a renewed credential. Invalidation performs no
+resource request and does not repeat the rejected operation. Original payment,
+idempotency and business-operation recovery remain with the receiving
+application.
+
+## Host-owned transport and shutdown
+
+`OAuthConnectionOptions`, `OAuthRegistryOptions` and
+`OAuthConnectionProviderOptions` accept an optional Node HTTP(S) `agent`.
+Original connection options reach code exchange, explicit and automatic
+renewal, and remote revocation. The host registry forwards the same runtime
+option to every selected connection. `SourceHostOptions.agent` supplies it to
+both registry and provider in the embedding lifetime.
+
+The Agent is a trusted host implementation whose protocol must match the
+selected endpoint. Keep the object, proxy values, sockets and credentials in
+that host. Profiles, host-connection files, bindings, browser plans, saved
+connection records and public snapshots keep their existing serializable
+schemas.
+
+The caller owns the Agent. The registry and provider do not destroy a borrowed
+transport. Keep it alive through application requests, provider renewal and
+connection shutdown, then destroy it after the embedding promise settles:
+
+```ts
+try {
+  return await withReviewedResourceConnection({
+    ...hostOptions,
+    agent: existingHostTransport,
+  }, operateExistingApplication);
+} finally {
+  existingHostTransport.destroy();
+}
+```
+
+Omitting `agent` retains the original direct transport. The optional `lookup`
+hook remains a runtime function. Direct connections retain the original
+address policy; endpoint, TLS, response-size, timeout and credential-state
+rules remain in the maintained OAuth transport. The original SF30 upstream
+launcher selects configured egress through trusted host configuration; neither
+this example nor an operator request body chooses a proxy.

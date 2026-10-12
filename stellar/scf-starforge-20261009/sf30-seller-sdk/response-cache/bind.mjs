@@ -5,6 +5,36 @@ const OPTIONS = new Set(['shareAcrossBuyers', 'ttlMs', 'maxEntries', 'maxBytes',
   'maxEntryBytes', 'maxResponseBytes', 'maxSourceInFlight', 'maxWaiters', 'sourceTimeoutMs', 'varyHeaders']);
 const plain = x => x !== null && typeof x === 'object' && !Array.isArray(x);
 
+/** Reuse one runtime controller for named handlers or declarative upstreams. */
+export function createCacheControlBinding(controls, { routeIds = {} } = {}) {
+  const caches = controls instanceof Map ? new Map(controls) :
+    plain(controls) ? new Map(Object.entries(controls)) : null;
+  if (!caches || caches.size > 64 || !plain(routeIds)) throw new TypeError('Cache controls required');
+  for (const [name, cache] of caches) {
+    if (typeof name !== 'string' || !name || name.length > 128 ||
+        !['stats', 'inspect', 'invalidate', 'configure', 'close'].every(key => typeof cache?.[key] === 'function') ||
+        routeIds[name] !== undefined && (!Array.isArray(routeIds[name]) ||
+          routeIds[name].some(id => typeof id !== 'string' || !id || id.length > 128))) {
+      throw new TypeError('Named original cache controls required');
+    }
+  }
+  const selected = id => {
+    if (id !== undefined && !caches.has(id)) throw new TypeError('Unknown cached route');
+    return [...caches].filter(([name]) => id === undefined || id === name);
+  };
+  return Object.freeze({
+    stats: () => Object.fromEntries([...caches].map(([id, cache]) => [id, cache.stats()])),
+    inspect: id => Object.fromEntries(selected(id).map(([name, cache]) => [name,
+      { ...cache.inspect(), ...(routeIds[name] ? { routeIds: [...routeIds[name]] } : {}) }])),
+    configure: (id, policy) => {
+      if (id === undefined) throw new TypeError('Choose one cache route to configure');
+      return { [id]: selected(id)[0][1].configure(policy) };
+    },
+    invalidate: id => Object.fromEntries(selected(id).map(([name, cache]) => [name, cache.invalidate()])),
+    close: options => Promise.all([...caches.values()].map(cache => cache.close(options))),
+  });
+}
+
 export function bindResponseCaches({ config, handlers, policy } = {}) {
   if (!plain(config) || config.schema !== 'stellar-forge.seller-service.v1' ||
       !Array.isArray(config.routes) || !plain(handlers) || !plain(policy) ||
@@ -33,15 +63,5 @@ export function bindResponseCaches({ config, handlers, policy } = {}) {
     route.handler = handlerName; route.admit = admissionName; caches.set(route.id, cached);
   }
   for (const id of Object.keys(policy.routes)) if (!caches.has(id)) throw new TypeError('Cache policy references an absent route');
-  return Object.freeze({ config: boundConfig, handlers: boundHandlers,
-    stats: () => Object.fromEntries([...caches].map(([id, cache]) => [id, cache.stats()])),
-    invalidate: id => {
-      if (id !== undefined) {
-        if (!caches.has(id)) throw new TypeError('Unknown cached route');
-        return { [id]: caches.get(id).invalidate() };
-      }
-      return Object.fromEntries([...caches].map(([name, cache]) => [name, cache.invalidate()]));
-    },
-    close: options => Promise.all([...caches.values()].map(cache => cache.close(options))),
-  });
+  return Object.freeze({ config: boundConfig, handlers: boundHandlers, ...createCacheControlBinding(caches) });
 }
