@@ -225,10 +225,31 @@ before continuing the same order. The public handoff includes labels only.
 This protects the configured file identity; a mutable file's bytes remain the
 merchant's storage responsibility.
 
+## Review the complete basket in the original console
+
+Open **WooCommerce → Stellar merchant operations**, select the original order,
+and choose **Terms and source**. The frozen basket table shows each product,
+quantity, tax-inclusive storefront unit and line amount, and exact native
+atomic unit and line amount. Catalog, basket and snapshot digests identify the
+saved commercial terms.
+
+The same view compares every original line with the current saved Woo order,
+including separate net totals and taxes. Expand a product's delivery definition
+to compare exact file IDs, labels and paths, virtual/downloadable flags, download
+limit and expiry. Current product unit mappings are shown separately: a later
+price or catalog change applies to new orders and does not reprice this order.
+The original snapshot validator remains the release precondition.
+
+**Print handoff** includes the frozen basket lines and identities with the
+original lifecycle and full selected source. The JSON handoff preserves these
+same merchant observations without product-editor links or export nonces. It
+is for the merchant's operating handover; customers still receive the separate
+private-order-key-protected payment instructions.
+
 ## Recovery and order changes
 
-Use **WooCommerce → Stellar merchant operations** for the existing order,
-attempt, notice and review history. A reservation remains reserved if a native
+Use the same order's **Review and recovery** tab for its existing attempt,
+notice and review history. A reservation remains reserved if a native
 outcome is interrupted or unknown. Recover the original buyer and outbox result;
 do not initiate another purchase merely because the browser did not return.
 
