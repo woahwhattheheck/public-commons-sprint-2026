@@ -35,6 +35,7 @@ function available() {
   $('start-native').disabled=busy||!selectedPackage||customerOpen||!$('facilitator').value.trim();
   revisionDesk?.available(busy);connections?.available(busy);postmanPanel?.refresh(busy);harPanel?.refresh(busy);
   transportPanel?.available(busy);transportDelivery?.available(busy);routeSheet?.available(busy);
+  if(!busy)for(const route of routeFields)route.toggle();
 }
 function dirty() {
   routeSheet?.changed();
@@ -264,7 +265,7 @@ function drawRoutes(saved=[]) {
       check.addEventListener('change',toggle);guard.input.addEventListener('change',toggle);
       mode.input.addEventListener('change',()=>{if(mode.input.value!=='json')validation.input.value='none';toggle();});
       cache?.enabled.addEventListener('change',toggle);toggle();
-      routeFields.push({op,previous,check,card,transport,server:server.input,amount:amount.input,description:description.input,request:requestInput,validation:validation.input,headers:headerInput,security:security.input,
+      routeFields.push({op,previous,check,card,toggle,transport,server:server.input,amount:amount.input,description:description.input,request:requestInput,validation:validation.input,headers:headerInput,security:security.input,
         mode:mode.input,timeout:timeout.input,size:size.input,requestSize:requestSize.input,capacity:capacity.input,forwarded:forwarded.input,
         guard:guard.input,failureThreshold:failureThreshold.input,resetAfter:resetAfter.input,maxResetAfter:maxResetAfter.input,cache,authentication,operation,stream,query});
     }
