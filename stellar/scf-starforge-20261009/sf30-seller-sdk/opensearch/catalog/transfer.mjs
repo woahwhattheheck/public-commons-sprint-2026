@@ -163,7 +163,8 @@ function validateClosure(db, header, completedSources) {
   if (count(db, 'SELECT COUNT(*) n FROM catalog_catalogs') !== 1) fail('CATALOG_BUNDLE_CATALOG_REQUIRED', 'The handover must contain one complete catalog.');
   const catalog = parse(db.prepare('SELECT record_json FROM catalog_catalogs').get());
   if (catalog.revision !== header.catalogRevision ||
-      count(db, 'SELECT COUNT(*) n FROM catalog_history') !== catalog.revision)
+      count(db, 'SELECT COUNT(*) n FROM catalog_history') !== catalog.revision ||
+      count(db, 'SELECT COUNT(*) n FROM catalog_history WHERE revision<1 OR revision>?', catalog.revision))
     fail('CATALOG_BUNDLE_HISTORY_INCOMPLETE', 'The original catalog revision history is incomplete.');
   const latest = parse(db.prepare('SELECT record_json FROM catalog_history WHERE catalog_id=? AND revision=?').get(catalog.id, catalog.revision));
   if (!latest || canonical(latest) !== canonical(catalog)) fail('CATALOG_BUNDLE_HISTORY_CHANGED', 'The current catalog differs from its retained revision.');
@@ -205,7 +206,8 @@ function validateClosure(db, header, completedSources) {
     fail('CATALOG_BUNDLE_FOREIGN_MATERIALS', 'The handover contains materials outside its retained editions.');
   for (const row of db.prepare('SELECT record_json FROM catalog_decisions').iterate()) {
     const decision = parse(row);
-    if (count(db, 'SELECT COUNT(*) n FROM catalog_decision_history WHERE decision_id=?', decision.id) !== decision.revision)
+    if (count(db, 'SELECT COUNT(*) n FROM catalog_decision_history WHERE decision_id=?', decision.id) !== decision.revision ||
+        count(db, 'SELECT COUNT(*) n FROM catalog_decision_history WHERE decision_id=? AND (revision<1 OR revision>?)', decision.id, decision.revision))
       fail('CATALOG_BUNDLE_DECISION_HISTORY_MISSING', 'A customer decision is missing its original revisions.');
     const saved = parse(db.prepare('SELECT record_json FROM catalog_decision_history WHERE decision_id=? AND revision=?').get(decision.id, decision.revision));
     if (!saved || canonical(saved) !== canonical(decision)) fail('CATALOG_BUNDLE_DECISION_HISTORY_CHANGED', 'A current decision differs from its retained revision.');
@@ -258,12 +260,22 @@ export function importCatalogBundle(workspace, meta, iterable) {
     if (!info.isDirectory() || info.isSymbolicLink()) fail('CATALOG_BUNDLE_STAGE_INVALID', 'Use the original private receiving directory.');
     const databasePath = join(directory, 'catalog.sqlite3');
     const created = await open(databasePath, 'wx', 0o600); await created.close();
-    const db = new DatabaseSync(databasePath);
+    const db = new DatabaseSync(databasePath); let liveSource;
+    try {
     db.exec('PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL;'); stageTables(db);
-    const hash = createHash('sha256'); let frames = 0, header, footer, liveSource, sourceBytes = 0;
+    const hash = createHash('sha256'); let frames = 0, header, footer, sourceBytes = 0;
     const rowCounts = Object.fromEntries(Object.keys(CATALOG_TABLES).map(name => [name, 0]));
     const completedSources = new Set();
-    try {
+    let pendingRows = [], pendingBytes = 0;
+    const inserts = Object.fromEntries(Object.entries(CATALOG_TABLES).map(([table, columns]) => [table,
+      db.prepare('INSERT INTO ' + table + '(' + columns.join(',') + ') VALUES(' + columns.map(() => '?').join(',') + ')')]));
+    const flushRows = () => {
+      if (!pendingRows.length) return;
+      db.exec('BEGIN IMMEDIATE');
+      try { for (const item of pendingRows) inserts[item.table].run(...item.values); db.exec('COMMIT'); }
+      catch (error) { db.exec('ROLLBACK'); throw error; }
+      pendingRows = []; pendingBytes = 0;
+    };
       for await (const raw of lines(bundle)) {
         let frame; try { frame = JSON.parse(raw); } catch { fail('CATALOG_BUNDLE_JSON_INVALID', 'The handover contains an invalid JSON record.'); }
         if (footer) fail('CATALOG_BUNDLE_TRAILING_CONTENT', 'The handover contains records after completion.');
@@ -273,6 +285,7 @@ export function importCatalogBundle(workspace, meta, iterable) {
           identifier(frame.catalogId); catalogText(frame.tenantId, 'Tenant ID', 256);
           header = frame;
         } else if (frame.type === 'complete') {
+          flushRows();
           if (liveSource || frame.schema !== CATALOG_BUNDLE_SCHEMA || frame.catalogId !== header.catalogId ||
               frame.frames !== frames || canonical(frame.rows) !== canonical(rowCounts) || frame.sourceBytes !== sourceBytes ||
               frame.payloadSha256 !== hash.digest('hex'))
@@ -281,10 +294,11 @@ export function importCatalogBundle(workspace, meta, iterable) {
         } else if (frame.type === 'record') {
           if (liveSource) fail('CATALOG_BUNDLE_SOURCE_INTERLEAVED', 'Complete each original source stream before the next record.');
           validateRow(frame.table, frame.values, header);
-          const columns = CATALOG_TABLES[frame.table];
-          db.prepare('INSERT INTO ' + frame.table + '(' + columns.join(',') + ') VALUES(' + columns.map(() => '?').join(',') + ')').run(...frame.values);
+          pendingRows.push(frame); pendingBytes += Buffer.byteLength(raw);
           rowCounts[frame.table]++;
+          if (pendingRows.length >= 1000 || pendingBytes >= 2 * 1024 * 1024) flushRows();
         } else if (frame.type === 'source-start') {
+          flushRows();
           if (liveSource || completedSources.has(frame.id)) fail('CATALOG_BUNDLE_SOURCE_REPEATED', 'Each source must have one original byte stream.');
           identifier(frame.id);
           const expected = parse(db.prepare('SELECT record_json FROM catalog_sources WHERE id=?').get(frame.id));
@@ -293,9 +307,10 @@ export function importCatalogBundle(workspace, meta, iterable) {
           liveSource = { expected, path, hash: createHash('sha256'), bytes: 0, file: await open(path, 'wx', 0o600) };
         } else if (frame.type === 'source-chunk') {
           if (!liveSource || frame.id !== liveSource.expected.id || frame.offset !== liveSource.bytes ||
-              typeof frame.base64 !== 'string' || frame.base64.length > 524288 || !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(frame.base64))
+              typeof frame.base64 !== 'string' || frame.base64.length > 524288)
             fail('CATALOG_BUNDLE_SOURCE_CHUNK_INVALID', 'The source byte stream has an invalid identity, offset or encoding.');
           const bytes = Buffer.from(frame.base64, 'base64');
+          if (bytes.toString('base64') !== frame.base64) fail('CATALOG_BUNDLE_SOURCE_ENCODING_INVALID', 'Use the exact original base64 source encoding.');
           liveSource.bytes += bytes.length;
           if (liveSource.bytes > liveSource.expected.bytes) fail('CATALOG_BUNDLE_SOURCE_TOO_LONG', 'The source stream exceeds its original byte count.');
           liveSource.hash.update(bytes); await liveSource.file.writeFile(bytes);

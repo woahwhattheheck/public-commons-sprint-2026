@@ -60,7 +60,7 @@ export function catalogQuery(catalog, index, { variant = 'identifiers', facet, p
     fields: ['catalog_id','tenant_id','edition_id','material_key','material_id','part_number','reference_values',
       'title','description','manufacturer','category','unit','original_unit','sales_unit','original_sales_unit',
       'sales_to_base','references','attributes','material_sha256'],
-    sort: [], pageSize: 100, maxHits: 1000, maxBytes: 8 * 1024 * 1024, timeoutMs: 15000,
+    sort: [], pageSize: 100, maxHits: 1000, maxBytes: 917504, timeoutMs: 15000,
     probe: { term: probe, ...(facet ? { [facet]: 'SELECT_ORIGINAL_FACET_VALUE' } : {}) } };
 }
 function selected(workspace, catalogId, options) {
