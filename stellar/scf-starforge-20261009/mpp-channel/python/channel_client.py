@@ -19,6 +19,7 @@ SCHEMA = "stellar-forge.mpp-channel-python-bridge.v1"
 MAX_REQUEST_BYTES = 4 * 1024 * 1024
 MAX_REPLY_BYTES = 32 * 1024 * 1024
 ACTIONS = frozenset({
+    "opening-template", "opening-prepare", "opening-execute", "opening-resume", "opening-reconcile", "opening-cancel",
     "task-template", "task-save", "task-authorize", "task-authority-resume", "task-stop",
     "purchase-prepare", "purchase-execute", "purchase-resume", "purchase-refresh",
     "purchase-cancel", "merchant-save", "merchant-start", "merchant-stop",
@@ -65,7 +66,7 @@ def _operation_ids(method: str, value: Mapping[str, Any]) -> dict[str, str]:
         return {}
     return {
         key: item for key, item in selected.items()
-        if key in {"taskId", "purchaseId", "settlementId", "fundingId", "handoverId", "id"}
+        if key in {"taskId", "purchaseId", "settlementId", "fundingId", "openingId", "handoverId", "id"}
         and isinstance(item, str)
     }
 
@@ -295,8 +296,8 @@ class ChannelClient:
         return self.call("state")
 
     def record(self, kind: str, identifier: str) -> dict[str, Any]:
-        if kind not in {"tasks", "purchases", "contracts", "funders", "funding", "settlements", "observations"}:
-            raise ValueError("record kind must be tasks, purchases or contracts")
+        if kind not in {"tasks", "purchases", "contracts", "funders", "funding", "settlements", "observations", "openings"}:
+            raise ValueError("select an original task, purchase, contract, financial operation, opening or observation record")
         return self.call("record", {"kind": kind, "id": identifier})
 
     def task(self, task_id: str) -> dict[str, Any]:
@@ -321,6 +322,24 @@ class ChannelClient:
             raise ValueError("wait_ms must be an integer from 0 to 3600000")
         return self.call("operate", {"action": action, "arguments": dict(arguments or {}), "waitMs": wait_ms},
                          timeout=timeout if timeout is not None else min(86400, self.timeout + wait_ms / 1000))
+
+    def opening(self, opening_id: str) -> dict[str, Any]:
+        return self.record("openings", opening_id)
+
+    def prepare_opening(self, opening_id: str, profile: Mapping[str, Any], **options: Any) -> dict[str, Any]:
+        return self.invoke("opening-prepare", {"openingId": opening_id, "profile": dict(profile)}, **options)
+
+    def execute_opening(self, opening_id: str, **options: Any) -> dict[str, Any]:
+        return self.invoke("opening-execute", {"openingId": opening_id}, **options)
+
+    def resume_opening(self, opening_id: str, **options: Any) -> dict[str, Any]:
+        return self.invoke("opening-resume", {"openingId": opening_id}, **options)
+
+    def reconcile_opening(self, opening_id: str, *, rpc_url: str | None = None, **options: Any) -> dict[str, Any]:
+        value = {"openingId": opening_id}
+        if rpc_url is not None:
+            value["rpcUrl"] = rpc_url
+        return self.invoke("opening-reconcile", value, **options)
 
     def prepare_purchase(self, task_id: str, purchase_id: str, request: Mapping[str, Any], **options: Any) -> dict[str, Any]:
         return self.invoke("purchase-prepare", {"taskId": task_id, "purchaseId": purchase_id, "request": dict(request)}, **options)
