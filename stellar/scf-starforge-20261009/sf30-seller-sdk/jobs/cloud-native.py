@@ -3,7 +3,8 @@
 
 The existing CloudJobs/native operator owns submission, process custody and
 artifact transport. This foreground payload installs one complete source cut,
-uses its original runtime profile, and invokes its three original drivers.
+uses its original runtime profile, and invokes its original drivers. A completed
+core capsule adopts the earlier actual result before customer/checkout continuation.
 """
 from __future__ import annotations
 
@@ -12,6 +13,7 @@ import fcntl
 import gzip
 import hashlib
 import io
+import importlib.util
 import json
 import os
 from pathlib import Path, PurePosixPath
@@ -246,6 +248,37 @@ def unpack_capsule(archive, expected, workspace):
     return manifest
 
 
+def completed_capsule_header(archive, expected):
+    """Read the exact transferred identity before selecting the existing source helper."""
+    raw = regular(archive)
+    require(digest(raw) == expected, "COMPLETED_INPUT_CAPSULE_SHA256_MISMATCH")
+    with tarfile.open(fileobj=io.BytesIO(raw), mode="r:gz") as tar:
+        entries = tar.getmembers()
+        require(len(entries) <= 50000 and all(entry.isfile() for entry in entries),
+                "COMPLETED_INPUT_REGULAR_MEMBERS_REQUIRED")
+        names = [entry.name for entry in entries]
+        require(len(names) == len(set(names)) and names.count("capsule.json") == 1,
+                "COMPLETED_INPUT_MANIFEST_REQUIRED")
+        member = tar.getmember("capsule.json")
+        require(member.size <= 4 * 1024 * 1024, "COMPLETED_INPUT_MANIFEST_LIMIT")
+        manifest = json.load(tar.extractfile(member))
+    require(manifest.get("schema") == "stellar-forge.paid-job-native-completed-core.v1" and
+            manifest.get("operation") == OPERATION, "COMPLETED_INPUT_OPERATION_CHANGED")
+    retained = Path(manifest["retainedDirectory"])
+    require(retained.is_absolute() and retained.resolve() == retained and
+            retained.name == "sf30-paid-jobs-CKQrif", "COMPLETED_ORIGINAL_DIRECTORY_REQUIRED")
+    return manifest
+
+
+def completed_capsule_tools(source):
+    path = source / SOURCE / "sf30-seller-sdk/jobs/native_capsule.py"
+    require(path.is_file() and not path.is_symlink(), "ORIGINAL_COMPLETED_CAPSULE_SOURCE_REQUIRED")
+    spec = importlib.util.spec_from_file_location("scf_paid_jobs_original_capsule", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
 def source_checkout(workspace, commit, logs):
     source = workspace / "source"
     if not source.exists():
@@ -277,6 +310,9 @@ def source_checkout(workspace, commit, logs):
                 SOURCE / "sf62-human-approval-cli/console.py",
                 SOURCE / "sf36-spend-governor/governor.py",
                 Path("stellar-forge/payment-auto-catalog/package.json")]
+    capsule_source = SOURCE / 'sf30-seller-sdk/jobs/native_capsule.py'
+    if (source / capsule_source).is_file():
+        required.append(capsule_source)
     hashes = {path.as_posix(): digest(regular(source / path)) for path in required}
     return source, hashes
 
@@ -331,7 +367,7 @@ def install_runtime(source, workspace, node, npm, python, logs, offline):
             "lockSha256": digest(regular(runtime / "package-lock.json")), "inspection": report}
 
 
-def completed(path, phase):
+def completed(path, phase, approval='terminal'):
     if not path.is_file():
         return None
     value = read_json(path)
@@ -345,8 +381,16 @@ def completed(path, phase):
         require(value.get("operation") == "SCF-JOB-CUSTOMER-WORKSPACE-0B8D-20261011" and
                 value.get("originalSettlementEvents") == 2, "ORIGINAL_CUSTOMER_RESULT_REQUIRED")
     else:
-        require(value.get("operation") == "SCF-JOB-CHECKOUT-CONTINUATION-0B8D-20261012" and
+        operation = "SCF-JOB-BROWSER-APPROVAL-0B8D-20261012" if approval == "browser" else (
+            "SCF-JOB-CHECKOUT-CONTINUATION-0B8D-20261012")
+        require(value.get("operation") == operation and
                 value.get("operatorLedger", {}).get("reservations") == 1, "ORIGINAL_CHECKOUT_RESULT_REQUIRED")
+        if approval == "browser":
+            intake = value.get("selfService", {})
+            require(intake.get("reference") == "browser-checkout:2026.10" and
+                    intake.get("phase") == "IMPORTED" and intake.get("reopened") is True and
+                    value.get("approvalMode") == "ORIGINAL_BROWSER_BROKER",
+                    "ORIGINAL_BROWSER_INTAKE_RESULT_REQUIRED")
     return value
 
 
@@ -416,12 +460,15 @@ def package_outputs(out):
 
 
 def main():
+    global RETAINED
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--workspace", required=True, type=Path)
     parser.add_argument("--out", required=True, type=Path)
     parser.add_argument("--source-commit", required=True)
     parser.add_argument("--capsule", required=True, type=Path)
     parser.add_argument("--sha256", required=True)
+    parser.add_argument("--input-mode", choices=("prepared", "completed-core"), default="prepared")
+    parser.add_argument("--approval", choices=("terminal", "browser"), default="terminal")
     parser.add_argument("--node", default=shutil.which("node"))
     parser.add_argument("--npm", default=shutil.which("npm"))
     parser.add_argument("--offline", action="store_true", help="Use the worker's existing npm cache.")
@@ -429,6 +476,10 @@ def main():
     require(re.fullmatch(r"[0-9a-f]{40}", args.source_commit) and
             re.fullmatch(r"[0-9a-f]{64}", args.sha256), "IMMUTABLE_SOURCE_AND_INPUT_HASH_REQUIRED")
     require(sys.version_info >= (3, 11) and sys.platform == "linux", "ORIGINAL_LINUX_PYTHON_311_REQUIRED")
+    input_header = None
+    if args.input_mode == "completed-core":
+        input_header = completed_capsule_header(args.capsule, args.sha256)
+        RETAINED = Path(input_header["retainedDirectory"])
     workspace, out = private_directory(args.workspace), private_directory(args.out)
     require(out != workspace and out.is_relative_to(workspace), "OUTPUTS_BELONG_IN_NATIVE_PROJECT")
     logs = private_directory(out / "logs")
@@ -437,9 +488,13 @@ def main():
     state_path = out / "run-result.json"
     state = {"schema": RUN_SCHEMA, "operation": OPERATION, "sourceCommit": args.source_commit,
              "workspace": str(workspace), "outputDirectory": str(out), "retainedDirectory": str(RETAINED),
-             "inputCapsuleSha256": args.sha256, "phases": {}, "status": "RUNNING"}
+             "inputCapsuleSha256": args.sha256, "inputMode": args.input_mode,
+             "approvalMode": args.approval, "phases": {}, "status": "RUNNING"}
     previous = read_json(state_path) if state_path.exists() else None
     if previous:
+        require(previous.get("inputMode", "prepared") == args.input_mode and
+                previous.get("approvalMode", "terminal") == args.approval,
+                "ORIGINAL_NATIVE_CONTINUATION_MODE_CHANGED")
         require(all(previous.get(key) == state[key] for key in
                     ("schema", "operation", "workspace", "outputDirectory", "retainedDirectory", "inputCapsuleSha256")),
                 "ORIGINAL_NATIVE_OPERATION_CHANGED")
@@ -450,6 +505,7 @@ def main():
         signal.signal(getattr(signal, name), stop)
     save(state_path, state)
     restored = False
+    completed_tools = None
     try:
         require(args.node and args.npm, "WORKER_NODE_AND_NPM_REQUIRED")
         node = str(Path(args.node).resolve())
@@ -462,9 +518,35 @@ def main():
         for command in ("git", "flock", "openssl"):
             require(shutil.which(command), "WORKER_COMPONENT_REQUIRED:" + command)
         state["runtime"] = {"node": version, "python": sys.version.split()[0], "platform": sys.platform}
-        state["input"] = unpack_capsule(args.capsule, args.sha256, workspace)
-        restored = True
-        source, hashes = source_checkout(workspace, args.source_commit, logs)
+        if args.input_mode == "completed-core":
+            source, hashes = source_checkout(workspace, args.source_commit, logs)
+            completed_tools = completed_capsule_tools(source)
+            capsule = completed_tools.read_completed_capsule(args.capsule, args.sha256)
+            require(capsule["manifest"] == input_header, "COMPLETED_INPUT_HEADER_CHANGED")
+            state["input"] = completed_tools.restore_completed_capsule(capsule, workspace)
+            restored = True
+            # Copy the exact earlier native result, preserving its actual paths,
+            # hashes, source identity and completed payment count.
+            immutable(out / "baseline.json", capsule["coreResultBytes"])
+            require(completed(out / "baseline.json", "baseline") is not None,
+                    "ORIGINAL_COMPLETED_BASELINE_REQUIRED")
+            state["phases"]["baseline"] = {
+                **state["phases"].get("baseline", {}), "status": "COMPLETED", "adopted": True,
+                "reused": True, "resultSha256": digest(capsule["coreResultBytes"]),
+                "originalCore": state["input"]["coreResult"], "executedOnThisWorker": False,
+            }
+            state["completedCore"] = {"retainedDirectory": str(RETAINED),
+                                      "application": state["input"]["application"],
+                                      "originalCore": state["input"]["coreResult"],
+                                      "jobs": state["input"]["jobs"]}
+            save(state_path, state)
+            emit({"operation": OPERATION, "phase": "baseline", "status": "ADOPTED_COMPLETED",
+                  "resultSha256": digest(capsule["coreResultBytes"])})
+            del capsule
+        else:
+            state["input"] = unpack_capsule(args.capsule, args.sha256, workspace)
+            restored = True
+            source, hashes = source_checkout(workspace, args.source_commit, logs)
         state["sourceFiles"] = hashes
         state["installation"] = install_runtime(source, workspace, node, npm, sys.executable, logs, args.offline)
         env = dict(os.environ)
@@ -479,11 +561,12 @@ def main():
             "customer": [node, source / SOURCE / "sf88-operator-buyer-cli/job-workspace/continuation.mjs",
                          "--retained", RETAINED, "--out", out / "customer.json"],
             "checkout": [sys.executable, source / SOURCE / "sf88-operator-buyer-cli/job-workspace/checkout/native-continuation.py",
-                         "--retained", RETAINED, "--node", node, "--out", out / "checkout.json"],
+                         "--retained", RETAINED, "--node", node, "--out", out / "checkout.json",
+                         "--approval", args.approval],
         }
         for phase in PHASES:
             result_path = out / (phase + ".json")
-            result = completed(result_path, phase)
+            result = completed(result_path, phase, args.approval)
             if result is not None:
                 entry = state["phases"].get(phase, {})
                 state["phases"][phase] = {**entry, "status": "COMPLETED", "reused": True,
@@ -504,7 +587,7 @@ def main():
             if command["exitCode"]:
                 state["phases"][phase]["status"] = "FAILED"
                 raise RuntimeError("ORIGINAL_" + phase.upper() + "_FAILED")
-            require(completed(result_path, phase) is not None, "ORIGINAL_PHASE_OUTPUT_REQUIRED:" + phase)
+            require(completed(result_path, phase, args.approval) is not None, "ORIGINAL_PHASE_OUTPUT_REQUIRED:" + phase)
             state["phases"][phase].update({"status": "COMPLETED", "reused": False,
                                           "resultSha256": digest(regular(result_path))})
             save(state_path, state)
@@ -518,7 +601,23 @@ def main():
     finally:
         if restored:
             try:
-                state["retainedArchive"] = capture_retained(out / "retained-state.tar.gz")
+                if args.input_mode == "completed-core":
+                    pending = out / (".completed-state-" + str(time.time_ns()) + ".tar.gz")
+                    try:
+                        captured = completed_tools.capture_completed_core(
+                            retained=RETAINED, result_path=out / "baseline.json",
+                            result_sha256=state["input"]["coreResult"]["sha256"], output=pending,
+                            native_record=Path(state["input"]["coreResult"]["nativeRecordDirectory"]))
+                        returned_state = out / "retained-state.tar.gz"
+                        os.replace(pending, returned_state)
+                        sync_directory(out)
+                        state["retainedArchive"] = {key: value for key, value in captured.items() if key != "manifest"}
+                        state["retainedArchive"]["path"] = str(returned_state)
+                    finally:
+                        if pending.exists():
+                            pending.unlink()
+                else:
+                    state["retainedArchive"] = capture_retained(out / "retained-state.tar.gz")
             except Exception as error:
                 state["artifactError"] = {"type": type(error).__name__, "message": str(error)}
                 state["status"] = "FAILED"
