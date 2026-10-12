@@ -119,15 +119,31 @@ async function originalSource(){
     assert.equal(edition.selection.pageSize,selection.pageSize);assert.equal(edition.selection.sortBy,manifest.selection.sortBy);
     assert.equal(edition.numberMatched,edition.numberReturned);assert.equal(edition.uniqueFeatureIds,edition.numberMatched);
     assert(edition.pages.length>=2,'Use the original multipage source intake.');
-    const index=new Map();let offset=0;
+    const index=new Map();let offset=0,expectedNext=wfsItemsUrl(manifest.endpoint,selection);
     for(const page of edition.pages){
-      assert.equal(page.startIndex,offset);assert.equal(page.numberMatched,edition.numberMatched);
+      assert.equal(page.startIndex,offset);
+      assert(page.numberMatched===null||page.numberMatched===undefined||page.numberMatched===edition.numberMatched);
+      assert(Number.isSafeInteger(page.numberReturned)&&page.numberReturned>=0&&page.numberReturned<=selection.pageSize);
+      assert.equal(page.response.requestedUrl,expectedNext);
       const requested=new URL(wfsItemsUrl(manifest.endpoint,selection));
       requested.searchParams.set('startIndex',String(offset));requested.searchParams.sort();
-      assert.equal(page.response.requestedUrl,requested.href);assert(!index.has(requested.href));
-      index.set(requested.href,loaded.get(page.response.key));offset+=page.numberReturned;
+      const actual=new URL(page.response.requestedUrl),parameters=url=>{
+        const value=Object.create(null);
+        for(const [key,entry]of url.searchParams){
+          const folded=key.toLowerCase();assert(!Object.hasOwn(value,folded),'The original source repeats a WFS parameter.');
+          value[folded]=entry;
+        }
+        return value;
+      };
+      assert.equal(actual.origin,requested.origin);assert.equal(actual.pathname,requested.pathname);
+      assert(!actual.username&&!actual.password&&!actual.hash);
+      assert.deepEqual(parameters(actual),parameters(requested));
+      assert(!index.has(page.response.requestedUrl));
+      index.set(page.response.requestedUrl,loaded.get(page.response.key));offset+=page.numberReturned;
+      assert(offset<=edition.numberMatched);assert(page.next===null||typeof page.next==='string');
+      expectedNext=page.next;
     }
-    assert.equal(offset,edition.numberMatched);
+    assert.equal(offset,edition.numberMatched);assert.equal(expectedNext,null);
     assert.equal(edition.startedAt,edition.pages[0].response.fetchedAt);assert.equal(edition.completedAt,edition.pages.at(-1).response.fetchedAt);
     pages.push(index);
   }
