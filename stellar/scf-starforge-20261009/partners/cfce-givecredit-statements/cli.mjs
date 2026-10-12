@@ -53,6 +53,11 @@ Registry capture retains all original organization pages and later impact relati
 Ledger capture uses the original ^16.3.0 Stellar SDK peer, whole transaction XDR and
 the public RPC/Horizon/archive sources. OPTIONS.json accepts network, contractId,
 transactionHashes, accounts, source dates, original endpoints and ledger bounds.
+originalLedgerSources retains complete original public ledger JSON responses as
+{format:"stellar-expert-ledger-json",sourceUrl,ledger,content,retrievedAt?,acquisition?}.
+The native reader preserves original envelope/result/meta and provider provenance
+when the live indexes have pruned an older transaction. Whole retained sources can
+be prepared with the companion carbon-native-receiving/prepare-ledger-inputs.mjs.
 --registry-edition adds every original Stellar receipt payment hash in that edition.
 A failed acquisition saves its exact native checkpoint for --resume.
 
