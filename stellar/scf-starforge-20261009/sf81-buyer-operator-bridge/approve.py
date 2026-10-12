@@ -1,6 +1,7 @@
 """SF81 trusted POSIX host: pipe SF31 intent to the unchanged SF62 operator.
 
-stdin is data, never approval. Review and response both use the controlling TTY.
+Default review and response use the controlling TTY. The trusted browser host
+can select a framed pipe review with an exact native-request-digest decision.
 This subprocess is an integration boundary, NOT a sandbox against its parent.
 """
 from __future__ import annotations
@@ -14,10 +15,25 @@ import os
 from pathlib import Path
 import sys
 
+# Capability discovery runs before SF62 is imported. It consumes no intent or
+# operator arguments and never opens private keys, policy, ledger, TTY or socket.
+_CAPABILITIES = {
+    'schema': 'stellar-forge.sf81.capabilities.v1',
+    'review_channels': ['terminal', 'pipe'],
+    'review_schema': 'stellar-forge.sf81.review.v1',
+    'decision_schema': 'stellar-forge.sf81.decision.v1',
+    'approval_schema': 'stellar-forge.sf81.approval.v1',
+    'operator_review_schema': 'stellar-forge.sf62.operator-review.v1',
+}
+if __name__ == '__main__' and sys.argv[1:] == ['--capabilities']:
+    print(json.dumps(_CAPABILITIES, separators=(',', ':'), ensure_ascii=True),
+          flush=True)
+    raise SystemExit(0)
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'sf62-human-approval-cli'))
 from console import (Denied, ReservationApprovalDenied,  # noqa: E402
                      buyer_intent_to_governor_request, check_ledger_path,
-                     reserve_interactive)
+                     reserve_interactive, reserve_reviewed)
 
 
 def unique_object(pairs: list[tuple]) -> dict:
@@ -30,14 +46,18 @@ def unique_object(pairs: list[tuple]) -> dict:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(description=__doc__, epilog=(
+        'Read-only helper capabilities: --capabilities alone. '
+        'This query opens no operator state.'))
     parser.add_argument('--actor', required=True)
     parser.add_argument('--service', required=True)
     parser.add_argument('--policy', type=Path, required=True)
     parser.add_argument('--ledger', type=Path, required=True)
+    parser.add_argument('--review-channel', choices=('terminal', 'pipe'), default='terminal')
     args = parser.parse_args()
     try:
-        raw = sys.stdin.buffer.read(65_537)
+        raw = (sys.stdin.buffer.readline(65_538).rstrip(b'\n')
+               if args.review_channel == 'pipe' else sys.stdin.buffer.read(65_537))
         if len(raw) > 65_536:
             raise Denied('INTENT_TOO_LARGE')
         def nonfinite(_):
@@ -46,6 +66,7 @@ def main() -> int:
                             parse_constant=nonfinite)
         request = buyer_intent_to_governor_request(intent, actor=args.actor,
                                                    service=args.service)
+        input_digest = hashlib.sha256(raw).hexdigest()
         check_ledger_path(args.ledger)
         # Serialize interactive users of this ledger, including other processes.
         # Never follow a preplaced symlink for the lock and never hold SQLite
@@ -58,15 +79,37 @@ def main() -> int:
                 fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
             except BlockingIOError as exc:
                 raise Denied('OPERATOR_BUSY') from exc
-            # Separate streams avoid seeking/buffering surprises on a terminal.
-            with open('/dev/tty', 'r', encoding='utf-8') as answer, \
-                    open('/dev/tty', 'w', encoding='utf-8', buffering=1) as review:
-                with redirect_stdout(review):
-                    native = reserve_interactive(intent, request,
-                        policy_path=args.policy, ledger_path=args.ledger,
-                        terminal=answer)
+            if args.review_channel == 'pipe':
+                def confirm(presented: dict) -> str | None:
+                    print(json.dumps({'schema': 'stellar-forge.sf81.review.v1',
+                        'input_sha256': input_digest, **presented},
+                        separators=(',', ':'), ensure_ascii=True), flush=True)
+                    line = sys.stdin.buffer.readline(4097)
+                    if not line.endswith(b'\n') or len(line) > 4096:
+                        raise Denied('OPERATOR_DECISION_FRAME_INVALID')
+                    decision = json.loads(line.decode('utf-8'),
+                        object_pairs_hook=unique_object, parse_constant=nonfinite)
+                    if (type(decision) is not dict or set(decision) !=
+                            {'schema', 'input_sha256', 'request_sha256', 'decision'} or
+                            decision.get('schema') != 'stellar-forge.sf81.decision.v1' or
+                            decision.get('input_sha256') != input_digest or
+                            decision.get('request_sha256') != presented['review']['request_sha256'] or
+                            decision.get('decision') not in ('approve', 'reject')):
+                        raise Denied('OPERATOR_DECISION_MISMATCH')
+                    return decision['request_sha256'] if decision['decision'] == 'approve' else None
+
+                native = reserve_reviewed(intent, request, policy_path=args.policy,
+                    ledger_path=args.ledger, confirm_review=confirm)
+            else:
+                # Separate streams avoid seeking/buffering surprises on a terminal.
+                with open('/dev/tty', 'r', encoding='utf-8') as answer, \
+                        open('/dev/tty', 'w', encoding='utf-8', buffering=1) as review:
+                    with redirect_stdout(review):
+                        native = reserve_interactive(intent, request,
+                            policy_path=args.policy, ledger_path=args.ledger,
+                            terminal=answer)
         print(json.dumps({'schema': 'stellar-forge.sf81.approval.v1',
-            'input_sha256': hashlib.sha256(raw).hexdigest(), 'reservation': native},
+            'input_sha256': input_digest, 'reservation': native},
             separators=(',', ':'), ensure_ascii=True), flush=True)
         return 0
     except (Denied, ReservationApprovalDenied, OSError, ValueError, TypeError,
@@ -83,3 +126,4 @@ def main() -> int:
 
 if __name__ == '__main__':
     raise SystemExit(main())
+

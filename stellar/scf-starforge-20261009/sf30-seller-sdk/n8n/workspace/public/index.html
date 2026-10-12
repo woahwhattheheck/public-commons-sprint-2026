@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <title>Automation merchant · Stellar Forge</title>
+  <link rel="stylesheet" href="/style.css">
+  <script type="module" src="/app.mjs"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to workspace</a>
+  <header class="topbar">
+    <div>
+      <p class="eyebrow">STELLAR FORGE / OPERATIONS</p>
+      <h1>Automation merchant</h1>
+      <p id="service-name" class="muted">Loading the original merchant configuration…</p>
+    </div>
+    <div class="topbar-actions">
+      <span id="connection" class="connection">Connecting</span>
+      <button id="refresh" type="button">Refresh</button>
+      <button id="export" type="button" disabled>Export job records</button>
+    </div>
+  </header>
+
+  <nav class="section-nav" aria-label="Workspace sections">
+    <a href="#queue">Jobs</a><a href="#prepare">Prepare a job</a><a href="#detail">Selected job</a><a href="#configuration">Configuration</a>
+    <span id="last-updated" class="muted small">Waiting for the host</span>
+  </nav>
+
+  <main id="main">
+    <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
+    <div id="error" class="notice error" role="alert" hidden></div>
+
+    <section class="summary-grid" aria-label="Current merchant totals">
+      <div class="metric"><span>Awaiting purchase</span><strong id="count-payment">—</strong><small>Prepared or awaiting settlement</small></div>
+      <div class="metric"><span>Queued</span><strong id="count-queued">—</strong><small>Ready for the local worker</small></div>
+      <div class="metric"><span>In progress</span><strong id="count-running">—</strong><small>Active local attempts</small></div>
+      <div class="metric"><span>Needs attention</span><strong id="count-attention">—</strong><small>Interrupted jobs or workflow recovery</small></div>
+      <div class="metric"><span>Completed</span><strong id="count-completed">—</strong><small>Retained customer results</small></div>
+    </section>
+
+    <section class="worker-strip" aria-label="Merchant worker">
+      <div><strong>Local worker</strong><p id="worker-status" class="muted small">Loading worker state…</p><p class="muted small">Draining pauses new local work while current jobs finish. Use Stop local job to end an individual local attempt.</p></div>
+      <div class="row">
+        <button id="worker-start" type="button" disabled>Start local worker</button>
+        <button id="worker-stop" type="button" disabled>Drain local worker</button>
+      </div>
+    </section>
+    <div id="operational-alerts" class="notice error" role="status" hidden></div>
+
+    <section class="panel" id="queue" aria-labelledby="queue-heading">
+      <div class="panel-heading">
+        <div><p class="eyebrow">MONITOR</p><h2 id="queue-heading">Merchant jobs</h2></div>
+        <p id="queue-count" class="muted small">Loading…</p>
+      </div>
+      <div class="filters">
+        <label class="grow">Find a job
+          <input id="job-search" type="search" placeholder="Label, reference, automation or execution ID" autocomplete="off">
+        </label>
+        <label>Local state<select id="job-filter"><option value="">All states</option></select></label>
+        <label>Workflow state<select id="dispatch-filter"><option value="">All workflow states</option><option value="NOT_DISPATCHED">Not dispatched</option></select></label>
+      </div>
+      <div class="table-scroll">
+        <table class="job-table">
+          <thead><tr><th>Job</th><th>Automation</th><th>Local job</th><th>n8n execution</th><th>Settlement</th><th>Updated</th></tr></thead>
+          <tbody id="job-rows"></tbody>
+        </table>
+      </div>
+      <p id="queue-empty" class="empty" hidden>There are no jobs yet. Prepare the first customer handoff below.</p>
+      <div class="pager">
+        <button id="previous" type="button" disabled>Previous</button><span id="page-label" class="muted small"></span><button id="next" type="button" disabled>Next</button>
+      </div>
+    </section>
+
+    <section class="panel" id="prepare" aria-labelledby="prepare-heading">
+      <div class="panel-heading">
+        <div><p class="eyebrow">PREPARE</p><h2 id="prepare-heading">Create a customer handoff</h2></div>
+        <span class="pill">Original paid-job contract</span>
+      </div>
+      <p class="section-intro">Choose a configured automation and its input. Preparation saves the job and downloads its private purchase handoff. The native settlement receipt admits the job to the worker.</p>
+      <div class="preparation-layout">
+        <form id="prepare-form">
+          <label>Automation<select id="function" required disabled><option value="">Loading automations…</option></select></label>
+          <p id="function-description" class="muted small"></p>
+          <div class="two-columns">
+            <label>Customer or job label<input id="job-label" maxlength="300" autocomplete="off" placeholder="A useful name for this job"></label>
+            <label>Job reference <span class="optional">optional</span><input id="job-reference" maxlength="80" pattern="[A-Za-z0-9][A-Za-z0-9._:\-]{0,79}" autocomplete="off" placeholder="Generated when left empty"></label>
+          </div>
+          <div class="label-row"><label for="job-input">Automation input · JSON</label><div class="row"><button id="load-example" class="small-button" type="button" disabled>Use example</button><button id="format-input" class="small-button" type="button">Format JSON</button></div></div>
+          <textarea id="job-input" class="code-input" rows="13" spellcheck="false" aria-describedby="input-status" required>{}</textarea>
+          <p id="input-status" class="muted small">Input is validated against the configured schema when prepared.</p>
+          <button id="prepare-job" class="primary" type="submit" disabled>Prepare job &amp; download handoff</button>
+        </form>
+        <aside class="function-card" aria-label="Selected automation contract">
+          <h3>Automation contract</h3>
+          <dl id="function-facts" class="facts"></dl>
+          <h3>Input fields</h3>
+          <div id="field-guide" class="field-guide"></div>
+          <details><summary>Complete input schema</summary><pre id="input-schema" class="json-block"></pre></details>
+          <details><summary>Payment terms</summary><pre id="function-payment" class="json-block"></pre></details>
+        </aside>
+      </div>
+      <div id="handoff-panel" class="handoff-panel" hidden>
+        <div><h3>Customer handoff downloaded</h3><p id="handoff-summary"></p><p class="muted small">This private JSON carries the original job claim and purchase request. Share it with the intended customer through your normal delivery route.</p></div>
+        <div class="row"><button id="handoff-download" type="button">Download again</button><button id="handoff-select" type="button">Open this job</button><button id="prepare-another" type="button">Prepare another job</button><button id="handoff-hide" type="button">Dismiss</button></div>
+      </div>
+    </section>
+
+    <section class="panel" id="detail" aria-labelledby="detail-heading">
+      <div class="panel-heading">
+        <div><p class="eyebrow">REVIEW &amp; RECOVER</p><h2 id="detail-heading">Selected job</h2><p id="detail-id" class="mono muted small"></p></div>
+        <div id="detail-badges" class="row"></div>
+      </div>
+      <p id="detail-empty" class="empty">Select a job from the table to review its execution, native settlement and output.</p>
+      <div id="detail-content" hidden>
+        <div class="detail-grid">
+          <section class="detail-card">
+            <h3>Local paid job</h3><p id="local-explanation" class="muted small"></p>
+            <dl id="job-facts" class="facts"></dl>
+            <div id="job-error" class="inline-error" hidden></div>
+          </section>
+          <section class="detail-card">
+            <h3>Original n8n execution</h3><p id="execution-explanation" class="muted small"></p>
+            <dl id="execution-facts" class="facts"></dl>
+            <div id="execution-error" class="inline-error" hidden></div>
+          </section>
+          <section class="detail-card">
+            <h3>Native settlement</h3><p id="settlement-explanation" class="muted small"></p>
+            <dl id="settlement-facts" class="facts"></dl>
+            <details><summary>Original settlement record</summary><pre id="settlement-json" class="json-block"></pre></details>
+          </section>
+        </div>
+
+        <section id="result-panel" class="result-panel" hidden>
+          <div><h3>Completed result</h3><p id="result-description"></p><p id="result-hash" class="mono small muted"></p></div>
+          <div class="row"><button id="result-download" class="primary" type="button">Download original result</button><button id="result-preview" type="button">Preview output</button></div>
+          <div id="result-preview-panel" class="full-width" hidden><p id="result-preview-note" class="muted small"></p><pre id="result-text" class="json-block result-text" tabindex="0"></pre></div>
+        </section>
+
+        <div class="recovery-grid">
+          <section class="recovery-card">
+            <h3>Local job controls</h3>
+            <p class="muted small">Stopping the local job stops its local attempt. An already-dispatched n8n workflow keeps its own execution state.</p>
+            <label>Reason<input id="local-reason" maxlength="500" autocomplete="off" placeholder="Record the reason for this operation"></label>
+            <div class="row"><button id="retry-job" type="button" disabled>Resume local job</button><button id="cancel-job" type="button" disabled>Stop local job</button></div>
+            <button id="renew-claim" type="button" disabled>Renew &amp; download purchase handoff</button>
+            <p id="local-control-note" class="muted small"></p>
+          </section>
+          <section class="recovery-card">
+            <h3>Reconcile the original execution</h3>
+            <p class="muted small">Read the existing execution from n8n. If its acknowledgment was lost, enter that original execution ID to associate it with this job.</p>
+            <label>Original n8n execution ID<input id="execution-id" maxlength="128" autocomplete="off" spellcheck="false" placeholder="Execution ID from n8n"></label>
+            <label>Association or review reason<input id="execution-reason" maxlength="500" autocomplete="off" placeholder="Required when associating an execution"></label>
+            <button id="reconcile-job" type="button" disabled>Recheck original execution</button>
+            <p id="reconcile-note" class="muted small"></p>
+          </section>
+          <section class="recovery-card">
+            <h3>Authorize another workflow run</h3>
+            <p class="muted small">This creates a new n8n execution for the same already-paid job after its prior execution failed or dispatch was rejected. The original execution is rechecked before a failed run can be replaced.</p>
+            <label>Reason for a new execution<input id="rerun-reason" maxlength="500" autocomplete="off" placeholder="Explain why another workflow execution is needed"></label>
+            <button id="authorize-rerun" type="button" disabled>Recheck &amp; authorize new workflow run</button>
+            <p id="rerun-note" class="muted small"></p>
+          </section>
+        </div>
+
+        <div class="history-grid">
+          <section><h3>Workflow dispatches</h3><div id="dispatch-history" class="dispatch-history"></div><button id="dispatch-older" class="small-button" type="button" hidden>Show earlier dispatches</button></section>
+          <section><h3>Local job history</h3><ol id="job-history" class="history"></ol><button id="job-history-older" class="small-button" type="button" hidden>Show earlier events</button></section>
+          <section><h3>Workflow recovery history</h3><ol id="workflow-history" class="history"></ol><button id="workflow-history-older" class="small-button" type="button" hidden>Show earlier events</button></section>
+        </div>
+        <div class="source-details">
+          <details><summary>Original input</summary><pre id="detail-input" class="json-block"></pre></details>
+          <details><summary>Original local job record</summary><pre id="detail-job-json" class="json-block"></pre></details>
+          <details><summary>Original workflow dispatch record</summary><pre id="detail-dispatch-json" class="json-block"></pre></details>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" id="configuration" aria-labelledby="configuration-heading">
+      <div class="panel-heading"><div><p class="eyebrow">CONFIGURATION</p><h2 id="configuration-heading">Connected merchant</h2></div><span id="environment-summary" class="pill">Loading</span></div>
+      <div class="configuration-grid">
+        <section><h3>Service addresses</h3><dl id="service-links" class="facts"></dl></section>
+        <section><h3>Credential references</h3><p class="muted small">Availability is reported by the merchant host.</p><ul id="environment-list" class="environment-list"></ul></section>
+        <section><h3>Workflow connection</h3><dl id="connection-facts" class="facts"></dl></section>
+      </div>
+      <details class="configuration-source"><summary>Compiled configuration</summary><p id="configuration-hash" class="mono small"></p><pre id="configuration-json" class="json-block"></pre></details>
+    </section>
+    <footer><span>Stellar Forge · Merchant operations</span><span id="refresh-policy">Live state refreshes while this page is visible.</span></footer>
+  </main>
+</body>
+</html>
+
