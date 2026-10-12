@@ -17,9 +17,9 @@ The native receiving product is merged in PR1680, and the dictionary mapping pag
 
 The project directory is `/workspace/scratch/d1ccf784531e/scf-native-semantic-receiving`. The failed original result stays at `operation/results.json`, and the original database, native MCP workspace, source fingerprints and private environment remain in `operation/`. The remaining operation writes its own progress and downloads to `operation-remaining1/`.
 
-The source composer selects commit `82b6d91a6aac4a555809ed464652c04b6f83d38c` through the original `scf-following-release/source.git` cache. It uses the full distribution specification and follows the original transitive browser and module dependencies. The selector's exact source blobs are recorded in `source-inputs.json`; the source-selection body stops before the original builder's package-creation stage.
+The source composer selects commit `db3d9cb3d64f2aee6c1e968606bf21eb0e6ef00e` through the original `scf-following-release/source.git` cache. It composes the full base specification and every original source-owned registration through the exact maintained `specification.mjs`, then follows the original transitive browser and module dependencies. The historical 82b6 selector found a Geocodio browser alias whose declaration was added in this later completed source cut; the continuation adopts that complete cut. It does not add a fictitious sibling file or remove the component. The selector's exact source blobs are recorded in `source-inputs.json`; the source-selection body stops before the original builder's package-creation stage. The unchanged specification helper is retained locally with its exact Git blob before import; the final closure also records each original contribution input.
 
-The composer preserves the entire hash-bound retained Python and native MCP components, the four existing shared semantic joins, and authored paths absent from the selected upstream tree. It verifies every retained overlay against the original closure. The resulting `source-complete82/` tree reuses existing identical bytes where possible and writes changed source create-only. Its `source-closure-complete82.json` records every file's bytes, mode, SHA256, Git blob and origin. Existing mismatched files cause an explicit refusal; the previous source and closure remain intact.
+The composer preserves the entire hash-bound retained Python and native MCP components, the four existing shared semantic joins, and authored paths absent from the selected upstream tree. It verifies every retained overlay against the original closure. The resulting `source-complete-db3d/` tree reuses existing identical bytes where possible and writes changed source create-only. Its `source-closure-db3d.json` records every file's bytes, mode, SHA256, Git blob and origin. Existing mismatched files cause an explicit refusal; the previous source and closure remain intact.
 
 This is the original same-filesystem receiving entry. A different host must first receive the original source and data with their identities preserved. A newer source donor can supply only files whose selected blob, mode and size agree; substituting an arbitrary newer bridge or a partial list of imports recreates the original mismatch.
 
@@ -39,7 +39,7 @@ Run the one focused link check:
 
 ```sh
 node --experimental-vm-modules check-source-link.mjs \
-  /workspace/scratch/d1ccf784531e/scf-native-semantic-receiving/source-closure-complete82.json \
+  /workspace/scratch/d1ccf784531e/scf-native-semantic-receiving/source-closure-db3d.json \
   CLOSURE_SHA
 ```
 
