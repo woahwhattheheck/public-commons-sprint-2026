@@ -3,52 +3,18 @@ import { DatabaseSync } from 'node:sqlite';
 import { mkdirSync, lstatSync, chmodSync, realpathSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 import { randomUUID } from 'node:crypto';
-import { validateHostComposition } from '../host-profile.mjs';
 
 export const CONSOLE_SCHEMA = 'stellar-forge.merchant-operator-console.v1';
-export const ARCHIVE_SCHEMA = 'stellar-forge.merchant-operator-profile.v1';
-export const HOST_BINDING_SCHEMA = 'stellar-forge.merchant-host-binding.v1';
-import { canonical, digest, fail } from './records.mjs';
+import { canonical, digest, fail,
+  plainConsoleRecord as plain, consoleIdentifier as id, consoleRecordTitle as title, consoleRevision as revision, consoleSha256 as sha } from './records.mjs';
 export { canonical, digest, fail } from './records.mjs';
 import { installWorkflowTables, archiveWorkflowRows, validateWorkflowRows, importWorkflowRows, reserveWorkflowNative, settleWorkflowNative } from './workflow-records.mjs';
 import { installWorkflowRecipeTables, archiveWorkflowRecipeRows, validateWorkflowRecipeRows, importWorkflowRecipeRows } from './workflow-recipes.mjs';
+import { ARCHIVE_SCHEMA, HOST_BINDING_SCHEMA, validateConsoleArchive } from './archive-contract.mjs';
+export { ARCHIVE_SCHEMA, HOST_BINDING_SCHEMA, validateConsoleArchive } from './archive-contract.mjs';
 const json = value => JSON.stringify(value);
 const parse = value => JSON.parse(value);
 const now = () => new Date().toISOString();
-const plain = value => Boolean(value && typeof value === 'object' && !Array.isArray(value));
-const id = value => {
-  if (typeof value !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/.test(value))
-    throw fail('CONSOLE_ID', 'Use the original record identifier.', 400);
-  return value;
-};
-const title = value => {
-  if (typeof value !== 'string' || !value.trim() || value.length > 160 || /[\u0000-\u001f]/.test(value))
-    throw fail('CONSOLE_NAME', 'Use a name from 1 to 160 characters.', 400);
-  return value.trim();
-};
-const revision = value => {
-  if (!Number.isSafeInteger(value) || value < 1) throw fail('CONSOLE_REVISION', 'Use the displayed revision.', 400);
-  return value;
-};
-const sha = value => {
-  if (typeof value !== 'string' || !/^[a-f0-9]{64}$/.test(value)) throw fail('CONSOLE_DIGEST', 'Use the displayed SHA-256.', 400);
-  return value;
-};
-const toolName = value => {
-  if (typeof value !== 'string' || !/^[-A-Za-z0-9_.]{1,128}$/.test(value)) throw fail('CONSOLE_TOOL', 'Use the original native tool name.', 400);
-  return value;
-};
-const timestamp = value => {
-  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(value) || !Number.isFinite(Date.parse(value)))
-    throw fail('CONSOLE_ARCHIVE', 'Retain the original UTC record timestamp.', 400);
-  return value;
-};
-function objectText(text, label) {
-  if (typeof text !== 'string') throw fail('CONSOLE_ARCHIVE', label + ' must be retained JSON text.', 400);
-  let value; try { value = parse(text); } catch { throw fail('CONSOLE_ARCHIVE', label + ' is not valid JSON.', 400); }
-  if (!plain(value)) throw fail('CONSOLE_ARCHIVE', label + ' must be a JSON object.', 400);
-  return value;
-}
 export class MerchantConsoleStore {
   constructor(directory) {
     this.directory = resolve(directory);this.dispatcherId=randomUUID();
@@ -302,91 +268,7 @@ export class MerchantConsoleStore {
     });
   }
   import(packet, { isActiveCall = () => false } = {}) {
-    if (!plain(packet) || packet.schema !== ARCHIVE_SCHEMA || !plain(packet.profile) ||
-        !Array.isArray(packet.drafts) || !Array.isArray(packet.calls) || !Array.isArray(packet.deliveries) || packet.deliveries.length>1000 || packet.drafts.length > 10000 || packet.calls.length > 10000)
-      throw fail('CONSOLE_ARCHIVE', 'Receive a complete original operator profile archive.', 400);
-    const { contentSha256, ...body } = packet;
-    if (digest(canonical(body)) !== sha(contentSha256)) throw fail('CONSOLE_ARCHIVE_CHANGED', 'The profile archive differs from its saved digest.', 400);
-    const profile = packet.profile;
-    id(packet.sourceWorkspaceId); id(profile.id); revision(profile.revision); title(profile.name); sha(profile.hostFingerprint);
-    timestamp(profile.createdAt); timestamp(profile.updatedAt);
-    if (!Array.isArray(profile.favorites) || profile.favorites.length > 200) throw fail('CONSOLE_ARCHIVE', 'Retain the saved native tool favorites.', 400);
-    profile.favorites.forEach(toolName);
-    if (!plain(profile.host) || profile.host.configurationFingerprint !== profile.hostFingerprint)
-      throw fail('CONSOLE_ARCHIVE', 'The profile must retain its original host binding.', 400);
-    try{validateHostComposition(profile.host.composition,digest);}catch(error){throw fail('CONSOLE_ARCHIVE',error.message,400);}
-    const bindings=packet.bindings??[],bindingKeys=new Map();
-    if(!Array.isArray(bindings)||bindings.length>10000)throw fail('CONSOLE_ARCHIVE','Receive the complete retained host-binding history.',400);
-    for(const binding of bindings) {
-      if(!plain(binding)||binding.schema!==HOST_BINDING_SCHEMA||binding.profileId!==profile.id||
-          !plain(binding.host)||binding.host.configurationFingerprint!==binding.hostFingerprint||
-          !['PROFILE_CREATED','PROFILE_BOUND','LEGACY_PROFILE'].includes(binding.origin))
-        throw fail('CONSOLE_ARCHIVE','Retain each original host-binding identity.',400);
-      id(binding.workspaceId);revision(binding.revision);timestamp(binding.recordedAt);sha(binding.hostFingerprint);
-      if(bindingKeys.has(binding.revision)||binding.revision>profile.revision)
-        throw fail('CONSOLE_ARCHIVE','Receive unique host bindings within their original profile revisions.',400);
-      const {bindingSha256,...original}=binding;
-      if(digest(canonical(original))!==sha(bindingSha256))throw fail('CONSOLE_ARCHIVE_CHANGED','A retained host binding changed.',400);
-      try{validateHostComposition(binding.host.composition,digest);}catch(error){throw fail('CONSOLE_ARCHIVE',error.message,400);}
-      bindingKeys.set(binding.revision,binding);
-    }
-    if(bindings.length) {
-      const active=bindingKeys.get(revision(profile.bindingRevision));
-      if(!active||active.hostFingerprint!==profile.hostFingerprint||canonical(active.host)!==canonical(profile.host))
-        throw fail('CONSOLE_ARCHIVE_CHANGED','The current profile must retain its selected original host binding.',400);
-    } else if(profile.bindingRevision!==undefined)
-      throw fail('CONSOLE_ARCHIVE','Include the current profile’s retained host-binding history.',400);
-    const draftKeys = new Map(), callKeys = new Set(), deliveryKeys = new Set();
-    for (const draft of packet.drafts) {
-      if (!plain(draft)) throw fail('CONSOLE_ARCHIVE', 'Receive original draft objects.', 400);
-      id(draft.id); revision(draft.revision); title(draft.name); toolName(draft.tool); timestamp(draft.createdAt); timestamp(draft.updatedAt);
-      if (draft.recoveryOf !== undefined) id(draft.recoveryOf);
-      if (draft.profileId !== profile.id || draftKeys.has(draft.id + ':' + draft.revision))
-        throw fail('CONSOLE_ARCHIVE', 'Receive unique original draft revisions.', 400);
-      draftKeys.set(draft.id + ':' + draft.revision, draft);
-      objectText(draft.argumentsJson, 'Draft arguments');
-      if (digest(draft.argumentsJson) !== sha(draft.argumentsSha256)) throw fail('CONSOLE_ARCHIVE_CHANGED', 'Draft arguments changed.', 400);
-      sha(draft.toolSchemaSha256);
-    }
-    for (const call of packet.calls) {
-      if (!plain(call)) throw fail('CONSOLE_ARCHIVE', 'Receive original call objects.', 400);
-      id(call.id); id(call.workspaceId); toolName(call.tool); timestamp(call.startedAt); sha(call.hostFingerprint);
-      if (call.completedAt !== null) timestamp(call.completedAt);
-      if ((call.state === 'RUNNING') !== (call.completedAt === null) || (call.state === 'FAILED' ? !plain(call.error) || typeof call.error.code !== 'string' || typeof call.error.message !== 'string' : call.error !== null))
-        throw fail('CONSOLE_ARCHIVE', 'Retain the original call completion and error state.', 400);
-      if (call.profileId !== profile.id || callKeys.has(call.id) ||
-          !['RUNNING','COMPLETE','FAILED'].includes(call.state) || !draftKeys.has(call.draftId + ':' + call.draftRevision))
-        throw fail('CONSOLE_ARCHIVE', 'Receive unique calls with their original draft revision.', 400);
-      const originalDraft = draftKeys.get(call.draftId + ':' + call.draftRevision);
-      if (['tool','toolSchemaSha256','argumentsJson','argumentsSha256'].some(key => call[key] !== originalDraft[key]))
-        throw fail('CONSOLE_ARCHIVE_CHANGED', 'The call must retain its exact saved native draft.', 400);
-      callKeys.add(call.id); objectText(call.argumentsJson, 'Call arguments');
-      if (digest(call.argumentsJson) !== sha(call.argumentsSha256)) throw fail('CONSOLE_ARCHIVE_CHANGED', 'Call arguments changed.', 400);
-      const request = Object.fromEntries(['id','profileId','draftId','draftRevision','tool','toolSchemaSha256','argumentsJson','argumentsSha256','hostFingerprint'].map(key => [key,call[key]]));
-      if (digest(canonical(request)) !== sha(call.requestSha256)) throw fail('CONSOLE_ARCHIVE_CHANGED', 'The original call changed.', 400);
-      if (call.state === 'COMPLETE') {
-        try { parse(call.resultJson); } catch { throw fail('CONSOLE_ARCHIVE', 'Receive the full original result JSON.', 400); }
-        if (typeof call.resultJson !== 'string' || digest(call.resultJson) !== sha(call.resultSha256))
-          throw fail('CONSOLE_ARCHIVE_CHANGED', 'The returned native result changed.', 400);
-      } else if (call.resultJson !== null || call.resultSha256 !== null) throw fail('CONSOLE_ARCHIVE', 'An unfinished call cannot carry a completed result.', 400);
-    }
-    for(const value of packet.deliveries){
-      if (!plain(value)) throw fail('CONSOLE_ARCHIVE','Receive original customer records.',400);
-      id(value.id); id(value.workspaceId); sha(value.identitySha256); timestamp(value.startedAt); timestamp(value.updatedAt);
-      if (deliveryKeys.has(value.id) || !['DOWNLOADING','PAUSED','FAILED','COMPLETE'].includes(value.state)) throw fail('CONSOLE_ARCHIVE','Receive unique customer records with their original receiving state.',400);
-      deliveryKeys.add(value.id);
-      if(value.profileId!==profile.id||!plain(value.identity)||value.identity.profileId!==profile.id||!['core','opensearch'].includes(value.identity.family)||!value.identity.exportId||digest(canonical(value.identity))!==value.identitySha256)
-        throw fail('CONSOLE_ARCHIVE_CHANGED','The retained customer selection changed.',400);
-      id(value.identity.exportId); sha(value.identity.expectedManifestSha256); sha(value.identity.hostFingerprint);
-      if(value.identity.family==='opensearch') id(value.identity.workspace);
-      if(value.state==='COMPLETE') {
-        timestamp(value.completedAt);
-        if(!Array.isArray(value.files) || !plain(value.manifest)) throw fail('CONSOLE_ARCHIVE','Retain the complete original customer manifest.',400);
-        for(const file of value.files) if(!plain(file)||typeof file.name!=='string'||!Number.isSafeInteger(file.bytes)||file.bytes<0) throw fail('CONSOLE_ARCHIVE','Retain each original customer file identity.',400); else sha(file.sha256);
-      }
-    }
-    const workflowData=validateWorkflowRows(packet.workflowData,{profile,drafts:packet.drafts,calls:packet.calls});
-    const workflowRecipeData=validateWorkflowRecipeRows(packet.workflowRecipeData,{profile,drafts:packet.drafts,workflowData});
+    const {profile,contentSha256,workflowData,workflowRecipeData,bindings}=validateConsoleArchive(packet);
     return this.transaction(() => {
       const imported = this.db.prepare('SELECT profile_id FROM imports WHERE sha=?').get(contentSha256);
       if (imported) return { profile: this.profile(imported.profile_id), reused: true, contentSha256 };

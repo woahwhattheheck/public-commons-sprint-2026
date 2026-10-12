@@ -594,8 +594,8 @@ async function receiveUnlocked(root,prepared,input) {
 /** Complete ordered requests/responses, preserving the original buyer and source. */
 export async function receiveCollection(prepared,input) {
   need(plain(input)&&typeof input.directory==='string','DIRECTORY','Choose a private receiving directory.');
-  const root=await privateDirectory(input.directory),lease=await acquireReleaseLease(root,'collection.lock');
-  try{return await receiveUnlocked(root,prepared,input);}finally{await lease.close();}
+  const root=await privateDirectory(input.directory),lease=await acquireReleaseLease(root,'state.lock');
+  try{return await receiveUnlocked(root,prepared,input);}finally{await lease?.close();}
 }
 /** Reopen all original pages, compiled meaning, exact outputs and Analysis custody. */
 export async function openCollection(directory) {
@@ -609,7 +609,7 @@ export async function restoreCollection({sourceManifest,directory,expectedSha256
   need(typeof sourceManifest==='string'&&typeof directory==='string','RESTORE','Select the retained Analysis source manifest and a receiving directory.');
   const selectedPath=resolve(sourceManifest),sourceRoot=dirname(selectedPath),sourceRaw=await readRequestFile(selectedPath,1048576);
   if(expectedSha256!==undefined)need(HASH.test(expectedSha256)&&digest(sourceRaw)===expectedSha256,'RESTORE_IDENTITY','The selected analytical source manifest changed.');
-  const checked=await verifyDocument(sourceRoot,sourceRaw),root=await privateDirectory(directory),lease=await acquireReleaseLease(root,'collection.lock');
+  const checked=await verifyDocument(sourceRoot,sourceRaw),root=await privateDirectory(directory),lease=await acquireReleaseLease(root,'state.lock');
   try{
     await verifyDocument(sourceRoot,sourceRaw,null,async(path,raw)=>{await writeSame(root,path,raw);});
     for(const file of checked.uniqueFiles)await copySame(root,'analysis/'+file.path,await documentPayloadPath(sourceRoot,file),file);
@@ -623,7 +623,7 @@ export async function restoreCollection({sourceManifest,directory,expectedSha256
       exchanges:retainedExchanges(root,checked.manifest),allowLoopback});
     need(result.manifestSha256===digest(checked.manifestRaw),'RESTORE_CHANGED','The receiving collection differs from its complete original.');
     return {...result,restoredFrom:{sha256:digest(sourceRaw),bytes:sourceRaw.length}};
-  }finally{await lease.close();}
+  }finally{await lease?.close();}
 }
 /** Read a useful page while exhausting the original saved-file hash reader. */
 export async function readCollectionRows(directory,{offset=0,limit=100}={}) {

@@ -187,9 +187,23 @@ def main() -> int:
             config["functions"]["analyze"]["payment"]["asset"] == "UNVERIFIED_DEMO_ASSET" and
             config["functions"]["analyze"]["payment"]["payTo"] == "UNVERIFIED_DEMO_RECIPIENT",
             "ORIGINAL_DISPOSABLE_PAID_JOB_FIXTURE_REQUIRED")
-    application = (retained / config["application"]).resolve(strict=True)
-    application_bytes = private_read(application, 4194304)
     original_source = json.loads(private_read(retained / "merchant-state" / "source.json"))
+    binding_path = retained / "merchant-state" / "source-binding.json"
+    if binding_path.exists():
+        # The original merchant adapter already selects this physical source.
+        # Keep its historical config/source bytes while reading the same executable.
+        binding = json.loads(private_read(binding_path, 65536))
+        require(binding.get("schema") == "stellar-forge.job-source-binding.v1" and
+                binding.get("source") == original_source["source"] and
+                binding.get("directory") == str(retained / "merchant-state") and
+                binding.get("configPath") == str(retained / "merchant.json"),
+                "ORIGINAL_MERCHANT_SOURCE_BINDING_CHANGED")
+        application = Path(binding["applicationPath"])
+        require(application.is_absolute() and application.resolve(strict=True) == application,
+                "ORIGINAL_PHYSICAL_APPLICATION_CHANGED")
+    else:
+        application = (retained / config["application"]).resolve(strict=True)
+    application_bytes = private_read(application, 4194304)
     original = {
         "configSha256": hashlib.sha256(original_config).hexdigest(),
         "applicationSha256": hashlib.sha256(application_bytes).hexdigest(),

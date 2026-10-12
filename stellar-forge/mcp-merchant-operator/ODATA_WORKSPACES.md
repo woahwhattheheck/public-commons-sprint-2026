@@ -412,3 +412,7 @@ Source pins and current installed receiving adoption remain in the [original ODa
 ## Pause an awaited import or close its host
 
 The default capture returns while the original import continues. With wait:true, the call stays open until its selected page budget completes. An explicit capture pause or exact-instance workspace close can interrupt that awaited import through the original AbortSignal path. The committed source prefix and original next link remain available for resume. Closing the enclosing merchant host requests the same pause before draining its active call, then closes its owned browsers, merchants and files.
+
+## Complete customer download and receiving command
+
+The installed `starforge odata-collection-customer` command lists and inspects the original saved collections, downloads their exact source document and every declared analytical/source file, resumes durable byte checkpoints, and invokes the original native collection restore. It also reopens received rows and generates the native Analysis preview mapping from the actual registered source revision. See [Complete OData customer receiving](ODATA_COLLECTION_CUSTOMER.md) for the full CLI, JavaScript API, offline receiving and Analysis/report/workbook continuation. Its source-owned contribution keeps this workflow in the same installed merchant product.

@@ -4,6 +4,8 @@ import {constants} from 'node:fs';
 import {link,lstat,mkdir,open,rm} from 'node:fs/promises';
 import {join} from 'node:path';
 import {accountingWorkspaceBinding} from './binding.mjs';
+import {normalizeRunbookProfiles,runbookProfileSelection,runbookCycleSteps,runbookProfileFields} from './public/runbook-profiles.mjs';
+export {runbookProfileSelection,runbookCycleSteps,runbookProfileFields} from './public/runbook-profiles.mjs';
 import {createHandoff,isBuyerHandoff,validateHandoff,validateRevision,inspectHandoff} from '../accountant/engine.mjs';
 
 export const RUNBOOK_SCHEMA='stellar-forge.accounting-runbooks.v1';
@@ -91,11 +93,17 @@ async function publishBlob(directory,name,bytes){
 }
 const emptyState=()=>({schema:RUNBOOK_SCHEMA,books:[],cycles:[],files:[],operations:[],received:[]});
 function stepSummary(cycle){
-  const result={total:cycle.edition.steps.length,complete:0,blocked:0,pending:0,notApplicable:0};
-  for(const step of cycle.edition.steps){const status=cycle.work[step.id]?.status??'PENDING';if(status==='COMPLETE')result.complete++;else if(status==='BLOCKED')result.blocked++;else if(status==='NOT_APPLICABLE')result.notApplicable++;else result.pending++;}
+  const result={total:runbookCycleSteps(cycle).length,complete:0,blocked:0,pending:0,notApplicable:0};
+  for(const step of runbookCycleSteps(cycle)){const status=cycle.work[step.id]?.status??'PENDING';if(status==='COMPLETE')result.complete++;else if(status==='BLOCKED')result.blocked++;else if(status==='NOT_APPLICABLE')result.notApplicable++;else result.pending++;}
   return result;
 }
-function cycleSummary(cycle){return {id:cycle.id,runbookId:cycle.runbookId,editionId:cycle.editionId,label:cycle.label,phase:cycle.phase,preparer:cycle.preparer,reviewer:cycle.reviewer,dueDate:cycle.dueDate,updatedAt:cycle.updatedAt,readOnly:cycle.readOnly===true,source:clone(cycle.source),progress:stepSummary(cycle)};}
+export function runbookAssignment(cycle){
+  const value={cycleId:cycle.id,runbookId:cycle.runbookId,editionId:cycle.editionId,...(cycle.profileId===undefined?{}:{profileId:cycle.profileId}),
+    preparer:cycle.preparer,reviewer:cycle.reviewer,dueDate:cycle.dueDate,phase:cycle.phase,
+    workSha256:hash(cycle.work),handoverId:cycle.handovers?.at(-1)?.id??null};
+  return {...value,sha256:hash(value)};
+}
+function cycleSummary(cycle){return {...runbookProfileFields(cycle),assignmentSha256:runbookAssignment(cycle).sha256,handoverCount:cycle.handovers?.length??0,id:cycle.id,runbookId:cycle.runbookId,editionId:cycle.editionId,label:cycle.label,phase:cycle.phase,preparer:cycle.preparer,reviewer:cycle.reviewer,dueDate:cycle.dueDate,updatedAt:cycle.updatedAt,readOnly:cycle.readOnly===true,source:clone(cycle.source),progress:stepSummary(cycle)};}
 function stripCycle(cycle){const result=clone(cycle);delete result.receivedPacket;return result;}
 const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const paragraphs=value=>escape(value).replace(/\n/g,'<br>');
@@ -114,7 +122,7 @@ export class RunbookWorkspace{
     return this.envelope({runbooks:this.state.books.map(book=>{const latest=book.editions.find(row=>row.id===book.latestEditionId);return {id:book.id,name:latest.name,client:latest.client,latestEditionId:book.latestEditionId,editionCount:book.editions.length,updatedAt:book.updatedAt};}),cycles:this.state.cycles.map(cycleSummary),files:clone(this.state.files)});
   }
   async detail(id){await this.workspace.tail;return this.envelope({runbook:clone(this.book(id))});}
-  async cycleDetail(id){await this.workspace.tail;return this.envelope({cycle:stripCycle(this.cycle(id))});}
+  async cycleDetail(id){await this.workspace.tail;const cycle=this.cycle(id);return this.envelope({cycle:stripCycle(cycle),assignment:runbookAssignment(cycle)});}
   async sources(){
     await this.workspace.tail;const current=this.accountant.view();
     return this.envelope({handoffs:current.handoffs.map(row=>({id:row.id,name:row.name,runId:row.source.runId,sourceKind:row.source.kind==='buyer-expense-period'?'buyer-expense-period':'merchant-settlement',buyerWorkspaceId:row.source.buyer?.workspaceId??null,createdAt:row.createdAt,closeId:row.source.periodClose?.id??null,revisions:[{id:'initial',label:'Original handoff'},...row.revisions.map(item=>({id:item.id,label:item.name,createdAt:item.createdAt}))]})),closes:current.closes.map(row=>({id:row.id,label:row.name??row.label??row.id,runId:row.runId}))});
@@ -170,7 +178,8 @@ export class RunbookWorkspace{
       return {id:key(step.id,'procedure'),title:text(step.title,'procedure title',240),instructions:text(step.instructions,'procedure instructions',32_000,{trim:false}),required:step.required,resourceIds};
     });
     need(new Set(steps.map(row=>row.id)).size===steps.length,'RUNBOOK_DUPLICATE_STEP','Give each procedure a distinct identifier.');
-    return {name:text(input.name,'runbook name',240),client:text(input.client,'client name',240),description:text(input.description??'','description',16_000,{empty:true,trim:false}),steps,resources:selected};
+    const profiles=normalizeRunbookProfiles(input.profiles,steps);
+    return {...(profiles===undefined?{}:{profiles}),name:text(input.name,'runbook name',240),client:text(input.client,'client name',240),description:text(input.description??'','description',16_000,{empty:true,trim:false}),steps,resources:selected};
   }
   async save(input){return this.mutate('edition_saved',input,async(state,actor)=>{
     const contents=this.normalizeEdition(input,state.files),createdAt=now();let book;
@@ -226,8 +235,9 @@ export class RunbookWorkspace{
       source={kind,originWorkspaceId:this.workspaceId,handoffId:record.id,handoffName:record.name,accountantRevisionId:revisionId,accountantRevisionName:selected?.name??'Original handoff',runId:record.source.runId,periodCloseId:record.source.periodClose?.id??null,source:clone(detail.source),summary:clone(detail.summary),files};
     }
     if(input.previousCycleId){const previous=this.cycle(input.previousCycleId);need(previous.runbookId===book.id,'RUNBOOK_PREVIOUS_PERIOD_MISMATCH','Choose a previous period for this client runbook.');}
-    const work={};for(const step of edition.steps)work[step.id]={status:'PENDING',note:'',fileIds:[],actor:'',updatedAt:null};
-    const createdAt=now(),cycle={id:input.requestId,runbookId:book.id,editionId:edition.id,label:text(input.label,'period label',240),preparer:text(input.preparer,'preparer',160),reviewer:text(input.reviewer,'reviewer',160),dueDate:date(input.dueDate),previousCycleId:input.previousCycleId??null,phase:'DRAFT',readOnly:false,edition:clone(edition),source,work,submissions:[],reviews:[],history:[{at:createdAt,actor,action:'created'}],createdAt,updatedAt:createdAt,originWorkspaceId:this.workspaceId};
+    const {profile,steps}=runbookProfileSelection(edition,input.profileId);
+    const work={};for(const step of steps)work[step.id]={status:'PENDING',note:'',fileIds:[],actor:'',updatedAt:null};
+    const createdAt=now(),cycle={id:input.requestId,runbookId:book.id,editionId:edition.id,...(profile?{profileId:profile.id}:{}),label:text(input.label,'period label',240),preparer:text(input.preparer,'preparer',160),reviewer:text(input.reviewer,'reviewer',160),dueDate:date(input.dueDate),previousCycleId:input.previousCycleId??null,phase:'DRAFT',readOnly:false,edition:clone(edition),source,work,submissions:[],reviews:[],history:[{at:createdAt,actor,action:'created',...(profile?{profileId:profile.id}:{})}],createdAt,updatedAt:createdAt,originWorkspaceId:this.workspaceId};
     state.cycles.unshift(cycle);return {runbookId:cycle.runbookId,editionId:cycle.editionId,cycleId:cycle.id};
   });}
   writable(cycle,phases){
@@ -239,9 +249,30 @@ export class RunbookWorkspace{
     for(const id of ids)this.fileRow(id);
     return ids;
   }
+  async assign(id,input){return this.mutate('assignment_changed',input,async(_state,actor)=>{
+    const cycle=this.cycle(id);this.writable(cycle,['DRAFT','CHANGES_REQUESTED','IN_REVIEW']);
+    const observed=runbookAssignment(cycle);
+    need(input.expectedAssignmentSha256===observed.sha256,'RUNBOOK_ASSIGNMENT_CHANGED','Refresh the actual responsibility and prepared work before recording this handover.',409);
+    const from={preparer:cycle.preparer,reviewer:cycle.reviewer,dueDate:cycle.dueDate};
+    const to={preparer:text(input.preparer??from.preparer,'receiving preparer',160),
+      reviewer:text(input.reviewer??from.reviewer,'receiving reviewer',160),dueDate:date(input.dueDate??from.dueDate)};
+    need(hash(from)!==hash(to),'RUNBOOK_ASSIGNMENT_UNCHANGED','Choose the changed responsibility or agreed close date.');
+    const note=text(input.note,'handover and open-items note',16_000,{trim:false});
+    need((cycle.handovers?.length??0)<2000,'RUNBOOK_HANDOVER_LIMIT','This period already retains 2000 responsibility changes.');
+    cycle.initialAssignments??=clone(from);cycle.handovers??=[];
+    const at=now(),handover={id:input.requestId,at,actor,from:clone(from),to:clone(to),note,
+      phase:cycle.phase,work:clone(cycle.work),workSha256:observed.workSha256,
+      previousHandoverId:observed.handoverId,beforeSha256:observed.sha256};
+    cycle.handovers.push(handover);Object.assign(cycle,to);cycle.updatedAt=at;
+    handover.afterSha256=runbookAssignment(cycle).sha256;
+    cycle.history.push({at,actor,action:'assigned',handoverId:handover.id,
+      beforeSha256:handover.beforeSha256,afterSha256:handover.afterSha256});
+    return {runbookId:cycle.runbookId,editionId:cycle.editionId,cycleId:cycle.id,handoverId:handover.id,
+      assignment:runbookAssignment(cycle)};
+  },id);}
   async saveWork(id,input){return this.mutate('procedure_saved',input,async(_state,actor)=>{
     const cycle=this.cycle(id);this.writable(cycle,['DRAFT','CHANGES_REQUESTED']);
-    const step=cycle.edition.steps.find(row=>row.id===input.stepId);need(step,'RUNBOOK_STEP_NOT_FOUND','Choose a procedure in this saved edition.',404);
+    const step=runbookCycleSteps(cycle).find(row=>row.id===input.stepId);need(step,'RUNBOOK_STEP_NOT_FOUND','Choose a procedure selected for this period.',404);
     need(WORK_STATES.has(input.status),'RUNBOOK_INVALID_STATUS','Choose the procedure progress.');
     const note=text(input.note??'','work note',32_000,{empty:true,trim:false});
     need(!['BLOCKED','NOT_APPLICABLE'].includes(input.status)||note.trim(),'RUNBOOK_REASON_REQUIRED','Describe the open item or why this procedure does not apply.');
@@ -251,7 +282,7 @@ export class RunbookWorkspace{
   },id);}
   async submit(id,input){return this.mutate('preparation_submitted',input,async(_state,actor)=>{
     const cycle=this.cycle(id);this.writable(cycle,['DRAFT','CHANGES_REQUESTED']);
-    const pending=cycle.edition.steps.filter(step=>step.required&&cycle.work[step.id].status==='PENDING');
+    const pending=runbookCycleSteps(cycle).filter(step=>step.required&&cycle.work[step.id].status==='PENDING');
     need(!pending.length,'RUNBOOK_PREPARATION_INCOMPLETE','Complete required procedures or document their open items before handing this period to the reviewer.',409);
     need(cycle.submissions.length<2000,'RUNBOOK_PREPARATION_LIMIT','This period retains 2000 preparation rounds.');
     const at=now(),note=text(input.note??'','preparer handover note',16_000,{empty:true,trim:false}),work=clone(cycle.work);
@@ -263,10 +294,10 @@ export class RunbookWorkspace{
     const cycle=this.cycle(id);this.writable(cycle,['IN_REVIEW']);
     need(input.decision==='APPROVE'||input.decision==='RETURN','RUNBOOK_INVALID_DECISION','Approve this handover or return it with corrections.');
     const note=text(input.note??'','review note',16_000,{empty:true,trim:false}),accepted=uniqueList(input.acceptedExceptions??[],'accepted open items');
-    need(accepted.every(id=>cycle.edition.steps.some(step=>step.id===id&&cycle.work[id].status==='BLOCKED')),'RUNBOOK_EXCEPTION_CHANGED','Select current open items for this review.');
+    need(accepted.every(id=>runbookCycleSteps(cycle).some(step=>step.id===id&&cycle.work[id].status==='BLOCKED')),'RUNBOOK_EXCEPTION_CHANGED','Select current open items for this review.');
     if(input.decision==='RETURN')need(note.trim(),'RUNBOOK_REVIEW_NOTE_REQUIRED','Describe the corrections needed by the preparer.');
     if(input.decision==='APPROVE'){
-      const unresolved=cycle.edition.steps.filter(step=>step.required&&['PENDING','BLOCKED'].includes(cycle.work[step.id].status));
+      const unresolved=runbookCycleSteps(cycle).filter(step=>step.required&&['PENDING','BLOCKED'].includes(cycle.work[step.id].status));
       need(unresolved.every(step=>cycle.work[step.id].status==='BLOCKED'&&accepted.includes(step.id)),'RUNBOOK_OPEN_ITEMS_REQUIRE_REVIEW','Resolve required open items or explicitly accept them in this review.',409);
       need(!accepted.length||note.trim(),'RUNBOOK_REVIEW_NOTE_REQUIRED','Explain the accepted open items and responsibility for follow-up.');
     }else need(!accepted.length,'RUNBOOK_REVIEW_SELECTION_INVALID','Return corrections without accepting open items.');
@@ -299,6 +330,7 @@ export class RunbookWorkspace{
     const selected=new Set(cycle.edition.resources.filter(row=>row.kind==='file').map(row=>row.fileId));
     for(const item of Object.values(cycle.work))for(const id of item.fileIds)selected.add(id);
     for(const submission of cycle.submissions)for(const item of Object.values(submission.work))for(const id of item.fileIds)selected.add(id);
+    for(const handover of cycle.handovers??[])for(const item of Object.values(handover.work))for(const id of item.fileIds)selected.add(id);
     if(cycle.source.kind==='files')for(const file of cycle.source.files)selected.add(file.id);
     for(const item of cycle.history)for(const id of item.work?.fileIds??[])selected.add(id);
     const attachments=[];let used=Buffer.byteLength(JSON.stringify(stripCycle(cycle)))+Buffer.byteLength(JSON.stringify(cycle.edition))+4096;
@@ -328,7 +360,7 @@ export class RunbookWorkspace{
     });
     need(new Set(attachments.map(item=>item.row.id)).size===attachments.length,'RUNBOOK_DUPLICATE_FILE','The packet repeats a supporting file ID.');
     const normalized=this.normalizeEdition(edition,attachments.map(item=>item.row));
-    need(hash(normalized)===hash({name:edition.name,client:edition.client,description:edition.description,steps:edition.steps,resources:edition.resources}),'RUNBOOK_INVALID_PACKET','The packet procedure content is not normalized.');
+    need(hash(normalized)===hash({name:edition.name,client:edition.client,description:edition.description,steps:edition.steps,resources:edition.resources,...(edition.profiles===undefined?{}:{profiles:edition.profiles})}),'RUNBOOK_INVALID_PACKET','The packet procedure content is not normalized.');
     text(edition.actor,'edition author',160);instant(edition.createdAt,'edition date');
     need(Number.isSafeInteger(edition.number)&&edition.number>0&&edition.number<1_000_000_000,'RUNBOOK_INVALID_PACKET','The procedure edition number is invalid.');
     text(edition.originWorkspaceId,'edition workspace',240);
@@ -338,9 +370,12 @@ export class RunbookWorkspace{
     need(plain(cycle.source)&&Array.isArray(cycle.source.files)&&cycle.source.files.length<=100&&plain(cycle.work)&&Array.isArray(cycle.submissions)&&cycle.submissions.length<=2000&&Array.isArray(cycle.reviews)&&cycle.reviews.length<=2000&&Array.isArray(cycle.history)&&cycle.history.length<=20_000,'RUNBOOK_INVALID_PACKET','The period is missing its source or preparation history.');
     need(['accountant','files'].includes(cycle.source.kind),'RUNBOOK_INVALID_SOURCE_KIND','Choose a packet with an original accountant handoff or client close files.');
     need(cycle.source.originWorkspaceId===packet.originWorkspaceId,'RUNBOOK_SOURCE_CHANGED','The accountant source belongs to another workspace.',409);
+    need(!own(cycle,'profileId')||(typeof cycle.profileId==='string'&&KEY.test(cycle.profileId)),'RUNBOOK_INVALID_PROFILE','The period needs its original named procedure set.');
+    const {profile,steps:periodSteps}=runbookProfileSelection(edition,cycle.profileId);
+    if(profile){const created=cycle.history.filter(item=>item?.action==='created');need(created.length===1&&created[0].profileId===profile.id&&created[0].at===cycle.createdAt,'RUNBOOK_PROFILE_CHANGED','The period must retain the procedure set selected at creation.',409);}
     const validateWork=work=>{
-      need(plain(work)&&Object.keys(work).length===edition.steps.length,'RUNBOOK_INVALID_PACKET','The preparation must include every procedure.');
-      for(const step of edition.steps){
+      need(plain(work)&&Object.keys(work).length===periodSteps.length,'RUNBOOK_INVALID_PACKET','The preparation must include exactly the procedures selected for this period.');
+      for(const step of periodSteps){
         const item=work[step.id];
         need(own(work,step.id)&&plain(item)&&WORK_STATES.has(item.status),'RUNBOOK_INVALID_PACKET','A procedure has invalid progress.');
         text(item.note,'work note',32_000,{empty:true,trim:false});
@@ -353,12 +388,33 @@ export class RunbookWorkspace{
       }
     };
     validateWork(cycle.work);
+    if(cycle.handovers!==undefined||cycle.initialAssignments!==undefined){
+      need(Array.isArray(cycle.handovers)&&cycle.handovers.length>0&&cycle.handovers.length<=2000&&plain(cycle.initialAssignments),'RUNBOOK_INVALID_HANDOVER','The period needs its complete original responsibility and handover history.');
+      const validateAssignment=value=>{need(plain(value),'RUNBOOK_INVALID_HANDOVER','Describe the complete assignment.');text(value.preparer,'assigned preparer',160);text(value.reviewer,'assigned reviewer',160);date(value.dueDate);return {preparer:value.preparer,reviewer:value.reviewer,dueDate:value.dueDate};};
+      let previous=validateAssignment(cycle.initialAssignments);const priorHandovers=[],handoverIds=new Set();
+      for(const item of cycle.handovers){
+        need(plain(item),'RUNBOOK_INVALID_HANDOVER','Describe every retained responsibility change.');
+        uuid(item.id,'handover');need(!handoverIds.has(item.id),'RUNBOOK_INVALID_HANDOVER','The period repeats a handover identity.');handoverIds.add(item.id);
+        text(item.actor,'handover operator',160);instant(item.at,'handover date');text(item.note,'handover and open-items note',16_000,{trim:false});
+        need(['DRAFT','CHANGES_REQUESTED','IN_REVIEW'].includes(item.phase),'RUNBOOK_INVALID_HANDOVER','A responsibility change must name its actual working or review phase.');
+        const from=validateAssignment(item.from),to=validateAssignment(item.to);validateWork(item.work);
+        need(hash(from)===hash(previous)&&hash(from)!==hash(to)&&item.previousHandoverId===(priorHandovers.at(-1)?.id??null),'RUNBOOK_HANDOVER_CHANGED','The responsibility changes lost their original order.',409);
+        need(item.workSha256===hash(item.work),'RUNBOOK_HANDOVER_CHANGED','The handed-over work changed.',409);
+        const before=runbookAssignment({...cycle,...from,phase:item.phase,work:item.work,handovers:priorHandovers});
+        need(before.sha256===item.beforeSha256,'RUNBOOK_HANDOVER_CHANGED','The original assignment no longer matches the handover.',409);
+        priorHandovers.push(item);
+        const after=runbookAssignment({...cycle,...to,phase:item.phase,work:item.work,handovers:priorHandovers});
+        need(after.sha256===item.afterSha256&&cycle.history.some(row=>row.action==='assigned'&&row.handoverId===item.id&&row.at===item.at&&row.actor===item.actor&&row.beforeSha256===item.beforeSha256&&row.afterSha256===item.afterSha256),'RUNBOOK_HANDOVER_CHANGED','The changed assignment needs its original history entry.',409);
+        previous=to;
+      }
+      need(hash(previous)===hash({preparer:cycle.preparer,reviewer:cycle.reviewer,dueDate:cycle.dueDate}),'RUNBOOK_HANDOVER_CHANGED','The current responsibility differs from its retained handover.',409);
+    }
     const submissionIds=new Set(),reviewIds=new Set(),reviewed=new Set();
     for(const item of cycle.submissions){
       need(plain(item),'RUNBOOK_INVALID_PACKET','Describe each preparation round.');uuid(item.id,'submission');
       need(!submissionIds.has(item.id),'RUNBOOK_INVALID_PACKET','The packet repeats a preparation round.');submissionIds.add(item.id);
       text(item.actor,'preparer',160);instant(item.at,'preparation date');text(item.note,'handover note',16_000,{empty:true,trim:false});validateWork(item.work);
-      need(!edition.steps.some(step=>step.required&&item.work[step.id].status==='PENDING'),'RUNBOOK_PREPARATION_INCOMPLETE','A submitted preparation has unfinished required procedures.');
+      need(!periodSteps.some(step=>step.required&&item.work[step.id].status==='PENDING'),'RUNBOOK_PREPARATION_INCOMPLETE','A submitted preparation has unfinished required procedures.');
       need(item.workSha256===hash(item.work),'RUNBOOK_SUBMISSION_CHANGED','A retained preparation round changed.',409);
     }
     for(const item of cycle.reviews){
@@ -368,14 +424,14 @@ export class RunbookWorkspace{
       const submission=cycle.submissions.find(sub=>sub.id===item.submissionId&&sub.workSha256===item.workSha256);
       need(['APPROVE','RETURN'].includes(item.decision)&&submission,'RUNBOOK_REVIEW_CHANGED','A review lost its original preparation.',409);
       const accepted=uniqueList(item.acceptedExceptions,'accepted open items');
-      need(accepted.every(id=>edition.steps.some(step=>step.id===id&&submission.work[id].status==='BLOCKED')),'RUNBOOK_REVIEW_CHANGED','Accepted open items must belong to the reviewed preparation.',409);
+      need(accepted.every(id=>periodSteps.some(step=>step.id===id&&submission.work[id].status==='BLOCKED')),'RUNBOOK_REVIEW_CHANGED','Accepted open items must belong to the reviewed preparation.',409);
       if(item.decision==='RETURN')need(item.note.trim()&&!accepted.length,'RUNBOOK_REVIEW_CHANGED','A returned preparation needs corrections and no accepted exceptions.',409);
       else {
         need(!accepted.length||item.note.trim(),'RUNBOOK_REVIEW_CHANGED','Accepted open items need the reviewer’s explanation.',409);
-        need(edition.steps.every(step=>!step.required||!['PENDING','BLOCKED'].includes(submission.work[step.id].status)||accepted.includes(step.id)),'RUNBOOK_REVIEW_CHANGED','The approval must account for required open items.',409);
+        need(periodSteps.every(step=>!step.required||!['PENDING','BLOCKED'].includes(submission.work[step.id].status)||accepted.includes(step.id)),'RUNBOOK_REVIEW_CHANGED','The approval must account for required open items.',409);
       }
     }
-    for(const item of cycle.history){need(plain(item),'RUNBOOK_INVALID_PACKET','Describe each preparation history item.');instant(item.at,'history date');text(item.actor,'history operator',160);text(item.action,'history action',80);}
+    for(const item of cycle.history){need(plain(item),'RUNBOOK_INVALID_PACKET','Describe each preparation history item.');instant(item.at,'history date');text(item.actor,'history operator',160);text(item.action,'history action',80);if(item.action==='procedure_saved')need(periodSteps.some(step=>step.id===item.stepId),'RUNBOOK_PROFILE_CHANGED','Retained work must belong to this period’s selected procedures.',409);}
     const lastSubmission=cycle.submissions.at(-1),lastReview=cycle.reviews.at(-1);
     if(cycle.phase==='DRAFT')need(!lastSubmission&&!lastReview,'RUNBOOK_PHASE_CHANGED','Draft preparation cannot contain a submitted review.',409);
     if(cycle.phase==='IN_REVIEW')need(lastSubmission&&!reviewed.has(lastSubmission.id)&&lastSubmission.workSha256===hash(cycle.work),'RUNBOOK_PHASE_CHANGED','The reviewer must receive the current complete preparation.',409);
@@ -456,18 +512,20 @@ export class RunbookWorkspace{
   });}
   async tasksCsv(id){
     await this.workspace.tail;const cycle=clone(this.cycle(id));
-    const rows=[['Client','Period','Procedure','Preparer','Reviewer','Due date','Required','Status','Instructions','Result and open items','Supporting resources','Review stage','Runbook ID','Edition ID','Period ID','Task ID']];
-    for(const step of cycle.edition.steps){
+    const profile=runbookProfileSelection(cycle.edition,cycle.profileId).profile;
+    const rows=[['Client','Period','Procedure','Preparer','Reviewer','Due date','Required','Status','Instructions','Result and open items','Supporting resources','Review stage','Runbook ID','Edition ID','Period ID','Task ID',...(profile?['Procedure set ID','Procedure set name']:[])]];
+    for(const step of runbookCycleSteps(cycle)){
       const work=cycle.work[step.id],resources=step.resourceIds.map(id=>cycle.edition.resources.find(row=>row.id===id)).map(row=>row.kind==='link'?row.title+' '+row.url:row.title);
-      rows.push([cycle.edition.client,cycle.label,step.title,cycle.preparer,cycle.reviewer,cycle.dueDate,step.required?'Yes':'No',work.status,step.instructions,work.note,resources.join('\n'),cycle.phase,cycle.runbookId,cycle.editionId,cycle.id,step.id]);
+      rows.push([cycle.edition.client,cycle.label,step.title,cycle.preparer,cycle.reviewer,cycle.dueDate,step.required?'Yes':'No',work.status,step.instructions,work.note,resources.join('\n'),cycle.phase,cycle.runbookId,cycle.editionId,cycle.id,step.id,...(profile?[profile.id,profile.name]:[])]);
     }
     return {bytes:Buffer.from(rows.map(row=>row.map(csvCell).join(',')).join('\r\n')+'\r\n'),name:'client-close-'+cycle.id+'-tasks.csv',type:'text/csv; charset=utf-8'};
   }
   async print(id){
-    await this.workspace.tail;const cycle=clone(this.cycle(id)),edition=cycle.edition;
-    const html='<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>'+escape(edition.client+' — '+cycle.label)+'</title><style>body{font:15px/1.55 system-ui,sans-serif;color:#202020;max-width:1000px;margin:40px auto;padding:0 24px}h1{font-size:28px}h2{font-size:21px;margin-top:34px}h3{font-size:17px}table{width:100%;border-collapse:collapse}th,td{text-align:left;vertical-align:top;padding:9px;border-bottom:1px solid #ccc}th{width:180px}section{break-inside:avoid;border-top:1px solid #aaa;padding-top:12px;margin-top:20px}.meta{color:#555}.text{white-space:pre-wrap;overflow-wrap:anywhere}a{color:#222;text-decoration:underline}@media print{body{margin:0;max-width:none}a{color:#000}}</style></head><body><p class="meta">Client close handover</p><h1>'+escape(edition.client+' — '+cycle.label)+'</h1><p>'+escape(edition.name)+' · Edition '+escape(edition.number)+'</p><p class="text">'+escape(edition.description)+'</p><table><tr><th>Preparer</th><td>'+escape(cycle.preparer)+'</td></tr><tr><th>Reviewer</th><td>'+escape(cycle.reviewer)+'</td></tr><tr><th>Due</th><td>'+escape(cycle.dueDate)+'</td></tr><tr><th>Stage</th><td>'+escape(cycle.phase)+'</td></tr><tr><th>Close source</th><td>'+escape(cycle.source.kind==='files'?cycle.source.label:cycle.source.handoffName)+' · '+escape(cycle.source.kind==='files'?cycle.source.note:cycle.source.accountantRevisionName)+'</td></tr></table><h2>Procedures and completed work</h2>'+
-      edition.steps.map(step=>{const work=cycle.work[step.id];return '<section><h3>'+escape(step.title)+'</h3><p class="meta">'+escape(work.status)+' · '+(step.required?'Required procedure':'Supporting procedure')+'</p><div class="text">'+escape(step.instructions)+'</div><h4>Preparation</h4><div class="text">'+escape(work.note||'No work note retained.')+'</div><p class="meta">'+escape(work.actor)+(work.updatedAt?' · '+escape(work.updatedAt):'')+'</p>'+step.resourceIds.map(id=>{const row=edition.resources.find(item=>item.id===id);return row.kind==='link'?'<p><a rel="noreferrer noopener" href="'+escape(row.url)+'">'+escape(row.title)+'</a></p>':row.kind==='note'?'<p><strong>'+escape(row.title)+'</strong></p><div class="text">'+escape(row.text)+'</div>':'<p>Supporting file: '+escape(row.title)+' (included in the portable packet)</p>';}).join('')+'</section>';}).join('')+
-      '<h2>Preparation and review history</h2>'+cycle.submissions.map(sub=>'<section><h3>Preparation handed over</h3><p class="meta">'+escape(sub.actor)+' · '+escape(sub.at)+'</p><div class="text">'+escape(sub.note)+'</div>'+cycle.reviews.filter(review=>review.submissionId===sub.id).map(review=>'<h4>'+escape(review.decision==='APPROVE'?'Approved':'Corrections returned')+'</h4><p class="meta">'+escape(review.actor)+' · '+escape(review.at)+'</p><div class="text">'+escape(review.note)+'</div>'+(review.acceptedExceptions.length?'<p>Accepted open items: '+review.acceptedExceptions.map(id=>escape(edition.steps.find(step=>step.id===id)?.title??id)).join(', ')+'</p>':'')).join('')+'</section>').join('')+
+    await this.workspace.tail;const cycle=clone(this.cycle(id)),edition=cycle.edition,{profile,steps}=runbookProfileSelection(edition,cycle.profileId);
+    const html='<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>'+escape(edition.client+' — '+cycle.label)+'</title><style>body{font:15px/1.55 system-ui,sans-serif;color:#202020;max-width:1000px;margin:40px auto;padding:0 24px}h1{font-size:28px}h2{font-size:21px;margin-top:34px}h3{font-size:17px}table{width:100%;border-collapse:collapse}th,td{text-align:left;vertical-align:top;padding:9px;border-bottom:1px solid #ccc}th{width:180px}section{break-inside:avoid;border-top:1px solid #aaa;padding-top:12px;margin-top:20px}.meta{color:#555}.text{white-space:pre-wrap;overflow-wrap:anywhere}a{color:#222;text-decoration:underline}@media print{body{margin:0;max-width:none}a{color:#000}}</style></head><body><p class="meta">Client close handover</p><h1>'+escape(edition.client+' — '+cycle.label)+'</h1><p>'+escape(edition.name)+' · Edition '+escape(edition.number)+'</p>'+(profile?'<p><strong>Procedure set:</strong> '+escape(profile.name)+'</p><p class="text">'+escape(profile.description)+'</p>':'')+'<p class="text">'+escape(edition.description)+'</p><table><tr><th>Preparer</th><td>'+escape(cycle.preparer)+'</td></tr><tr><th>Reviewer</th><td>'+escape(cycle.reviewer)+'</td></tr><tr><th>Due</th><td>'+escape(cycle.dueDate)+'</td></tr><tr><th>Stage</th><td>'+escape(cycle.phase)+'</td></tr><tr><th>Close source</th><td>'+escape(cycle.source.kind==='files'?cycle.source.label:cycle.source.handoffName)+' · '+escape(cycle.source.kind==='files'?cycle.source.note:cycle.source.accountantRevisionName)+'</td></tr></table><h2>Procedures and completed work</h2>'+
+      steps.map(step=>{const work=cycle.work[step.id];return '<section><h3>'+escape(step.title)+'</h3><p class="meta">'+escape(work.status)+' · '+(step.required?'Required procedure':'Supporting procedure')+'</p><div class="text">'+escape(step.instructions)+'</div><h4>Preparation</h4><div class="text">'+escape(work.note||'No work note retained.')+'</div><p class="meta">'+escape(work.actor)+(work.updatedAt?' · '+escape(work.updatedAt):'')+'</p>'+step.resourceIds.map(id=>{const row=edition.resources.find(item=>item.id===id);return row.kind==='link'?'<p><a rel="noreferrer noopener" href="'+escape(row.url)+'">'+escape(row.title)+'</a></p>':row.kind==='note'?'<p><strong>'+escape(row.title)+'</strong></p><div class="text">'+escape(row.text)+'</div>':'<p>Supporting file: '+escape(row.title)+' (included in the portable packet)</p>';}).join('')+'</section>';}).join('')+
+      '<h2>Preparation and review history</h2>'+cycle.submissions.map(sub=>'<section><h3>Preparation handed over</h3><p class="meta">'+escape(sub.actor)+' · '+escape(sub.at)+'</p><div class="text">'+escape(sub.note)+'</div>'+cycle.reviews.filter(review=>review.submissionId===sub.id).map(review=>'<h4>'+escape(review.decision==='APPROVE'?'Approved':'Corrections returned')+'</h4><p class="meta">'+escape(review.actor)+' · '+escape(review.at)+'</p><div class="text">'+escape(review.note)+'</div>'+(review.acceptedExceptions.length?'<p>Accepted open items: '+review.acceptedExceptions.map(id=>escape(steps.find(step=>step.id===id)?.title??id)).join(', ')+'</p>':'')).join('')+'</section>').join('')+
+      ((cycle.handovers??[]).length?'<h2>Responsibility and schedule changes</h2>'+cycle.handovers.map(handover=>'<section><h3>Recorded handover</h3><p class="meta">'+escape(handover.actor)+' · '+escape(handover.at)+' · '+escape(handover.phase)+'</p><p>Preparer: '+escape(handover.from.preparer)+' → '+escape(handover.to.preparer)+'<br>Reviewer: '+escape(handover.from.reviewer)+' → '+escape(handover.to.reviewer)+'<br>Due date: '+escape(handover.from.dueDate)+' → '+escape(handover.to.dueDate)+'</p><div class="text">'+escape(handover.note)+'</div><table><thead><tr><th>Procedure</th><th>Handed-over status</th><th>Work and open items</th></tr></thead><tbody>'+runbookCycleSteps(cycle).map(step=>'<tr><td>'+escape(step.title)+'</td><td>'+escape(handover.work[step.id].status)+'</td><td class="text">'+escape(handover.work[step.id].note)+'</td></tr>').join('')+'</tbody></table></section>').join(''):'')+
       '<h2>Original source files</h2><p>The portable JSON handover carries these original close files and selected supporting files with their retained content.</p><ul>'+cycle.source.files.map(file=>'<li>'+escape(file.name)+' · '+escape(file.bytes)+' bytes</li>').join('')+'</ul><p class="meta">Period '+escape(cycle.id)+' · Original workspace '+escape(cycle.originWorkspaceId)+'</p></body></html>';
     return {bytes:Buffer.from(html),name:'client-close-'+cycle.id+'.html',type:'text/html; charset=utf-8'};
   }
@@ -487,6 +545,7 @@ export async function handleRunbookRequest(runbooks,{method,path,query={},value}
   if(parts[2]==='cycles'&&parts[3]){
     if(parts.length===4&&method==='GET')return {value:await runbooks.cycleDetail(parts[3])};
     if(parts.length===5&&method==='POST'){
+      if(parts[4]==='assign')return {value:await runbooks.assign(parts[3],value)};
       if(parts[4]==='work')return {value:await runbooks.saveWork(parts[3],value)};
       if(parts[4]==='submit')return {value:await runbooks.submit(parts[3],value)};
       if(parts[4]==='review')return {value:await runbooks.review(parts[3],value)};
@@ -499,3 +558,6 @@ export async function handleRunbookRequest(runbooks,{method,path,query={},value}
   }
   need(false,'NOT_FOUND','This client-runbook operation was not found.',404);
 }
+
+// Shared by the portfolio handover; these are the original private file operations.
+export {privateDir as ensureRunbookDirectory,readExact as readRunbookBytes,publishBlob as publishRunbookBlob};

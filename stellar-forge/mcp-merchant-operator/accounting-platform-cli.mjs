@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// MIT. Prepared customer operations for the original QuickBooks and Xero controllers.
+// MIT. Prepared buyer startup and customer operations for original accounting controllers.
 import { constants } from 'node:fs';
 import { open, mkdir, lstat, realpath, rename, unlink } from 'node:fs/promises';
 import { createHash, randomUUID } from 'node:crypto';
@@ -191,7 +191,7 @@ export async function runAccountingPlatformOperation({ directory, execute = fals
 }
 
 export const downloadAccountingPlatformFile = downloadAccountingMaintenanceFile;
-const HELP = "Starforge QuickBooks and Xero customer operations\n\n  actions --platform qbo|xero\n  sources|open|close --url MCP_URL --workspace ALIAS --platform qbo|xero [--token-env NAME]\n  status ... [--view NATIVE_VIEW] [--offset N] [--limit N]\n  plan ... --plan-id UUID [--view NATIVE_VIEW] [--offset N] [--limit N] [--journal-index N]\n  read ... --action NATIVE_READ_ACTION [--request PRIVATE_ARGUMENTS_JSON]\n  preview ... --action ACTION --request PRIVATE_ARGUMENTS_JSON --out NEW_PRIVATE_PREVIEW_JSON\n  prepare --dir PRIVATE_OPERATION --url MCP_URL --workspace ALIAS --platform qbo|xero\n      --preview PRIVATE_PREVIEW_JSON [--token-env NAME]\n  execute|reconcile --dir PRIVATE_OPERATION [--wait-ms N] [--poll-ms N]\n  download ... --selection PRIVATE_JSON --sha256 SHA256 --out NEW_PRIVATE_FILE [--chunk-bytes N]\n\nQuickBooks preview actions: create, review, cancel, response-save, response-resume,\npost and post-resume.\nXero preview actions: context-import, context-capture, create, cancel, operate,\nresponse-import, return-apply, return-resume. Read action names use hyphens,\nfor example connection, company-fetch, company-preview, handoff, context, source,\ncomparison and operation.\nactions prints the complete actual input fields. Each platform keeps its native phases.\n\nNative previews return the exact command and binding. Inline review/cancel/operate/\nresume/capture choices inspect the original records and retain the caller's exact\narguments; they create no accounting job. IDs, source aliases, digests, tenant and\nparent choices are explicit. prepare is local and never submits a merchant command.\nAn existing preparation can reopen only its same exact preview/destination.\n\nexecute first reconciles original IDs, then may send the retained command.\nreconcile creates no new plan, import, provider request or journal operation.\nA pending native QuickBooks post-resume needs explicit execute; reconcile never\ninvokes that provider continuation. An existing BOOKED native post is only adopted.\nEither mode may finish the same retained PENDING QuickBooks accountant response or\nXero return intent; that recovery command is recorded separately before dispatch.\nAfter an ambiguous native Xero context capture, the same operation directory only\nlooks for its existing context. It never repeats that provider read automatically.\nXero RUNNING/COMPLETE/FAILED/INTERRUPTED describe the original operation, not whether\neach journal was posted. Read its native comparison and accountant-return outcome.\nQuickBooks response FAULT/PENDING/SAVED and plan DRAFT/REVIEWED/BOOKED/CANCELLED stay\nnative. Native posting PREPARED/RUNNING/UNCERTAIN/RETRYABLE/RECEIVED needs observation\nor explicit resume; BOOKED is retained completion and FAULT/CONFLICT needs review.\n\nOrdinary commands disconnect only caller-owned file readers. Explicit close drains\nand closes the original workspace, whose controller owns its native operations.\nKeep tokens in their named environment variable. Output files are private; existing\ndownloads and previews are not replaced. Save the whole private operation directory.\nExit 0: preparation/read/observed; 3: pending/not observed; 2: native fault/error.\n";
+const HELP = "Starforge buyer, QuickBooks and Xero customer operations\n\n  actions --platform buyer|qbo|xero\n  sources|open|close --url MCP_URL --workspace ALIAS --platform buyer|qbo|xero [--token-env NAME]\n  status ... [--view NATIVE_VIEW] [--offset N] [--limit N]\n  source ... --platform buyer --source ALIAS [--sha256 SHA256] [--view VIEW] [--offset N] [--limit N]\n  startup ... --platform buyer\n  retained-source ... --platform buyer --sha256 SHA256 [--view VIEW] [--offset N] [--limit N]\n  plan ... --plan-id UUID [--view NATIVE_VIEW] [--offset N] [--limit N] [--journal-index N]\n  read ... --action NATIVE_READ_ACTION [--request PRIVATE_ARGUMENTS_JSON]\n  preview ... --action ACTION --request PRIVATE_ARGUMENTS_JSON --out NEW_PRIVATE_PREVIEW_JSON\n  prepare --dir PRIVATE_OPERATION --url MCP_URL --workspace ALIAS --platform buyer|qbo|xero\n      --preview PRIVATE_PREVIEW_JSON [--token-env NAME]\n  execute|reconcile --dir PRIVATE_OPERATION [--wait-ms N] [--poll-ms N]\n  download ... --selection PRIVATE_JSON --sha256 SHA256 --out NEW_PRIVATE_FILE [--chunk-bytes N]\n\nBuyer source views: summary, allocations, outstanding, captures. Page size is 1–200.\nBuyer preview actions: initialize and handoff. Source preview reads a host-declared\noriginal file; startup and retained-source inspect the retained buyer workspace.\nInitialization binds exact source bytes, name and operator. Handoff uses the native\nstartup UUID, reviewed source and revision; it generates no new financial identity.\nBuyer downloads select kind buyer-source or accountant. Exact original bytes and\ncomplete SHA256 are checked by the maintained retained-file reader.\n\nQuickBooks preview actions: create, review, cancel, response-save, response-resume,\npost and post-resume.\nXero preview actions: context-import, context-capture, create, cancel, operate,\nresponse-import, return-apply, return-resume. Read action names use hyphens,\nfor example connection, company-fetch, company-preview, handoff, context, source,\ncomparison and operation.\nactions prints the complete actual input fields. Each platform keeps its native phases.\n\nNative previews return the exact command and binding. Client source/record reviews\nretain the caller's arguments and actual original identities. Preview performs no\ninitialization, handoff or provider request. prepare is local and never submits.\nAn existing preparation can reopen only its same exact preview/destination.\n\nexecute first reconciles original IDs, then may send the retained command.\nreconcile creates no initialization, handoff, plan, import, provider request or\njournal operation. Accepted buyer initialization is recovered from its retained\nsource even when its former import file is unavailable. The original handoff is\nmatched by source, workspace, UUID and exact native create-request digest.\nA pending native QuickBooks post-resume needs explicit execute; reconcile never\ninvokes that provider continuation. An existing BOOKED native post is only adopted.\nEither mode may finish the same retained PENDING QuickBooks accountant response or\nXero return intent; that recovery command is recorded separately before dispatch.\nAfter an ambiguous native Xero context capture, the same operation directory only\nlooks for its existing context. It never repeats that provider read automatically.\nXero RUNNING/COMPLETE/FAILED/INTERRUPTED describe the original operation, not whether\neach journal was posted. Read its native comparison and accountant-return outcome.\nQuickBooks response FAULT/PENDING/SAVED and plan DRAFT/REVIEWED/BOOKED/CANCELLED stay\nnative. Native posting PREPARED/RUNNING/UNCERTAIN/RETRYABLE/RECEIVED needs observation\nor explicit resume; BOOKED is retained completion and FAULT/CONFLICT needs review.\n\nOrdinary commands disconnect only caller-owned file readers. Explicit close drains\nand closes the original workspace, whose controller owns its native operations.\nKeep tokens in their named environment variable. Output files are private; existing\ndownloads and previews are not replaced. Save the whole private operation directory.\nExit 0: preparation/read/observed; 3: pending/not observed; 2: native fault/error.\n";
 function options(args, allowed) {
   const values = new Map();
   for (let index = 0; index < args.length; index += 2) {
@@ -224,11 +224,13 @@ export async function main(args = process.argv.slice(2)) {
     result = await runAccountingPlatformOperation({ directory: required(values, '--dir'), execute: command === 'execute',
       maxWaitMs: numeric(values, '--wait-ms', 30000), pollMs: numeric(values, '--poll-ms', 1000) });
   } else {
-    const extra = { sources: [], open: [], close: [], status: ['--view', '--offset', '--limit'],
+    const extra = { sources: [], open: [], close: [], startup: [], status: ['--view', '--offset', '--limit'],
+      source: ['--source', '--sha256', '--view', '--offset', '--limit'],
+      'retained-source': ['--sha256', '--view', '--offset', '--limit'],
       plan: ['--plan-id', '--view', '--offset', '--limit', '--journal-index'],
       read: ['--action', '--request'], preview: ['--action', '--request', '--out'],
       download: ['--selection', '--sha256', '--out', '--chunk-bytes'] }[command];
-    need(extra !== undefined, 'Choose actions, sources, open, close, status, plan, read, preview, prepare, execute, reconcile or download.');
+    need(extra !== undefined, 'Choose actions, sources, open, close, status, source, startup, retained-source, plan, read, preview, prepare, execute, reconcile or download.');
     const values = options(rest, [...connectionFields, ...extra]);
     const client = await connectAccountingPlatformClient({ url: required(values, '--url'), workspace: required(values, '--workspace'),
       platform: required(values, '--platform'), tokenEnv: values.get('--token-env') ?? 'MCP_ACCESS_TOKEN' });
@@ -237,7 +239,28 @@ export async function main(args = process.argv.slice(2)) {
       if (command === 'sources') result = await client.sources();
       if (command === 'open') result = await client.open();
       if (command === 'close') result = await client.close();
-      if (command === 'status') result = await client.status({ view: values.get('--view') ?? 'summary', ...page(values) });
+      if (command === 'startup' || command === 'source' || command === 'retained-source') {
+        need(client.platform === 'buyer', 'Choose --platform buyer for the issued-source startup commands.');
+        if (command === 'startup') result = await client.startup();
+        else {
+          const request = { view: values.get('--view') ?? 'summary', ...page(values) };
+          if (command === 'source') {
+            request.source = required(values, '--source');
+            if (values.has('--sha256')) request.sourceSha256 = values.get('--sha256');
+            result = await client.sourcePreview(request);
+          } else {
+            request.sourceSha256 = required(values, '--sha256');
+            result = await client.prepareSource(request);
+          }
+        }
+      }
+      if (command === 'status') {
+        if (client.platform === 'buyer') {
+          need(!values.has('--offset') && !values.has('--limit') && (!values.has('--view') || values.get('--view') === 'summary'),
+            'Buyer status inspects startup. Use source or retained-source to page original rows.');
+          result = await client.startup();
+        } else result = await client.status({ view: values.get('--view') ?? 'summary', ...page(values) });
+      }
       if (command === 'plan') result = await client.plan({ planId: required(values, '--plan-id'), view: values.get('--view') ?? 'summary', ...page(values),
         ...(values.has('--journal-index') ? { journalIndex: numeric(values, '--journal-index') } : {}) });
       if (command === 'read') result = await client.read(required(values, '--action'),

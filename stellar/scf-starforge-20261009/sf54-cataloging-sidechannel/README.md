@@ -65,3 +65,17 @@ settlement authority facts. Fixtures do not establish network transactions,
 production uptime, fees, real users, SCF eligibility, grants or revenue.
 Current RFP and round applicability remain founder-held. MIT; no secrets,
 wallet, outbound requests, GitHub Actions workflow or external registration.
+
+## Native durable composition
+
+The [native facilitator catalog](../native-facilitator/CATALOG.md) now calls
+`processSettledAsync()` with the original SF25 validator over the owned SF60
+journal. Both processing methods share the same sibling-header preflight. The
+async method waits for the durable catalog outcome before encoding the header.
+The original synchronous `processSettled()` contract remains available for
+synchronous SF25 catalogs.
+
+`header.mjs` provides dependency-free validation of the original base64 JSON
+header for SF58. The gateway preserves a valid trusted upstream header alongside
+the unchanged settlement body. A malformed optional header is dropped so it
+cannot turn successful settlement into an HTTP retry error.

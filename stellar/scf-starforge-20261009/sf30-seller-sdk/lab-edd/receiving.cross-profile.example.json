@@ -1,0 +1,28 @@
+{
+  "schema": "starforge.lab-edd-receiving-config.v1",
+  "operationId": "MCCAMPBELL-CROSS-PROFILE-RECONCILIATION-20261012",
+  "merchantFile": "./merchant.example.json",
+  "families": [
+    {
+      "name": "equis4-from-equis3",
+      "profile": "equis-lab-4",
+      "sourceFile": "./examples/mccampbell/Equis4_CSV.zip",
+      "sourceUrl": "https://www.mccampbell.com/EDDs/Equis4_CSV.zip",
+      "sourceSha256": "a57c18f4bf8054503155e1c8ccdb0bf7b736e4cc5eefef5e8d4c61a145ed2879",
+      "sourceBytes": 10432,
+      "sourceKind": "published supplier examples",
+      "baselineProfile": "equis-lab-3",
+      "baselineFile": "./examples/mccampbell/Equis3.zip",
+      "reconciliationFile": "./examples/mccampbell/cross-profile-decisions.json",
+      "encoding": "utf-8",
+      "baselineEncoding": "utf-8",
+      "tableScope": "issues"
+    }
+  ],
+  "browser": {
+    "playwrightModule": "/absolute/installed/playwright",
+    "executablePath": "/absolute/installed/chromium",
+    "args": [],
+    "tempDirectory": "/absolute/private-browser-temp"
+  }
+}

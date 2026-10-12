@@ -1,0 +1,139 @@
+{
+  "schema": "stellar-forge.opentrans-source.v1",
+  "profileId": "unite-opentrans-1.0",
+  "source": {
+    "url": "https://www.digital.iao.fraunhofer.de/content/dam/iao/ikt/de/documents/openTRANS_1_0_complete_eng.zip",
+    "finalUrl": "https://www.digital.iao.fraunhofer.de/content/dam/iao/ikt/de/documents/openTRANS_1_0_complete_eng.zip",
+    "capturedAt": "2026-10-12T11:16:34Z",
+    "bytes": 4161866,
+    "sha256": "baae9ea0e1363f98aa2323570456fdc384423af330ca95fa27e3769075cb521a",
+    "gitBlob": "536d15c2c3285677c52ceff6bf81aa801c0293ea",
+    "headers": {
+      "Content-Type": "application/zip",
+      "Content-Length": "4161866",
+      "Last-Modified": "Wed, 08 May 2019 12:55:12 GMT"
+    }
+  },
+  "dtds": {
+    "ORDER": {
+      "path": "openTRANS_1_0_eng/DTDs/openTRANS_ORDER_1_0.dtd",
+      "systemIds": [
+        "openTRANS_ORDER_1_0.dtd",
+        "opentrans_order_1_0.dtd"
+      ]
+    },
+    "ORDERRESPONSE": {
+      "path": "openTRANS_1_0_eng/DTDs/openTRANS_ORDERRESPONSE_1_0.dtd",
+      "systemIds": [
+        "openTRANS_ORDERRESPONSE_1_0.dtd",
+        "opentrans_orderresponse_1_0.dtd"
+      ]
+    },
+    "DISPATCHNOTIFICATION": {
+      "path": "openTRANS_1_0_eng/DTDs/openTRANS_DISPATCHNOTIFICATION_1_0.dtd",
+      "systemIds": [
+        "openTRANS_DISPATCHNOTIFICATION_1_0.dtd",
+        "opentrans_dispatchnotification_1_0.dtd"
+      ]
+    },
+    "INVOICE": {
+      "path": "openTRANS_1_0_eng/DTDs/openTRANS_INVOICE_1_0.dtd",
+      "systemIds": [
+        "openTRANS_INVOICE_1_0.dtd",
+        "opentrans_invoice_1_0.dtd"
+      ]
+    }
+  },
+  "files": [
+    {
+      "path": "openTRANS_1_0_eng/DTDs/openbase_1_0.dtd",
+      "role": "dtd-dependency",
+      "bytes": 24119,
+      "sha256": "b71783a6c48644c4ec3b21fbd7e1e35bb572d467c8e1588ed4ce3d903f3f327b",
+      "gitBlob": "0c61545c69059c519633ab03a253f33d0bd30d69"
+    },
+    {
+      "path": "openTRANS_1_0_eng/DTDs/openTRANS_ORDER_1_0.dtd",
+      "role": "dtd",
+      "bytes": 1640,
+      "sha256": "21cec3e7475ad38d72a978e6a91378900c81a820032008f45350bbb336397bae",
+      "gitBlob": "f68b6f8726c5096f357cd19961d05d6db6db312b"
+    },
+    {
+      "path": "openTRANS_1_0_eng/DTDs/openTRANS_ORDERRESPONSE_1_0.dtd",
+      "role": "dtd",
+      "bytes": 1835,
+      "sha256": "0d8e363f4c2bdb99122e031e4a43e80ec5d91d851ddc38f05f6566b1cc267dae",
+      "gitBlob": "82a08e651b620a23c01af8db762a0571da91ecde"
+    },
+    {
+      "path": "openTRANS_1_0_eng/DTDs/openTRANS_DISPATCHNOTIFICATION_1_0.dtd",
+      "role": "dtd",
+      "bytes": 2141,
+      "sha256": "f1a68ee02e652cb9239ef9b8218a3811fb71d00db8c4b55a57c6a6c77010ecd5",
+      "gitBlob": "e258e34c3fea43d2b67a9373bbb714beb697fb40"
+    },
+    {
+      "path": "openTRANS_1_0_eng/DTDs/openTRANS_INVOICE_1_0.dtd",
+      "role": "dtd",
+      "bytes": 1987,
+      "sha256": "584750e17736de0116850d61effdc2f3c0f067f22cf756072fff94890f123160",
+      "gitBlob": "9f90e44f0c3d8df60a8dd7963f3cfa1eaf76f371"
+    },
+    {
+      "path": "ReadMe.txt",
+      "role": "notice",
+      "bytes": 2740,
+      "sha256": "f3339a9fa64ded1982ced60443a486533366f78d90820cc508c33c20051fa685",
+      "gitBlob": "e8a6db47a9ae9baae1ee02ec0e9d35772dedccb7"
+    },
+    {
+      "path": "openTRANS_1_0_eng/Examples/DTD/openTRANS_ORDER_1_0_example.xml",
+      "role": "example",
+      "bytes": 25539,
+      "sha256": "0f8fc4a1ffacbf8431e811de21c1e2c60bbc0bae01e4f2a60fab7b7b2cd3c894",
+      "gitBlob": "2278307149a1e35eb10871e062b8b87f974ce804"
+    },
+    {
+      "path": "openTRANS_1_0_eng/Examples/DTD/openTRANS_ORDERRESPONSE_1_0_example.xml",
+      "role": "example",
+      "bytes": 10960,
+      "sha256": "d20da738c7259d1d45cfd544d9732fdd85029341cff766d9b68b7b15ef1fbbb6",
+      "gitBlob": "25903cc9858d54f77821df9443255fb99230713e"
+    },
+    {
+      "path": "openTRANS_1_0_eng/Examples/DTD/openTRANS_DISPATCHNOTIFICATION_1_0_example.xml",
+      "role": "example",
+      "bytes": 9444,
+      "sha256": "958102496d4d0f1a7aab4625a72e3e430495865d03f3643fa314cae8b7ce285e",
+      "gitBlob": "235c6e1add55e07e838966768de34fe289828c5c"
+    },
+    {
+      "path": "openTRANS_1_0_eng/Examples/DTD/openTRANS_INVOICE_1_0_example.xml",
+      "role": "example",
+      "bytes": 12516,
+      "sha256": "267aa6d427730f887b05d046bba7034d881f2434a48ce8170203a63f0590d304",
+      "gitBlob": "23df398574a891e79bcde79a4cea06d262d0ae82"
+    }
+  ],
+  "sourceDiscrepancies": [
+    {
+      "path": "ORDERRESPONSE_INFO/ORDERRESPONSE_DATE",
+      "original": "Actual author 1.0 DTD and XML use ORDERRESPONSE_DATE.",
+      "other": "Current Unite HTML and the printed English table use ORDER_RESPONSE_DATE.",
+      "rule": "The captured DTD controls structural parsing and output. Preserve the complete vendor source when it arrives."
+    },
+    {
+      "path": "DELIVERY_REFERENCE/DELIVERY_NOTE_ID",
+      "original": "Actual author 1.0 DTD and XML use DELIVERY_NOTE_ID.",
+      "other": "The printed English table uses DELIVERYNOTE_ID.",
+      "rule": "Use the captured native spelling; normalized deliveryReferences[].documentId preserves its exact scalar value."
+    }
+  ],
+  "license": {
+    "path": "ReadMe.txt",
+    "sha256": "f3339a9fa64ded1982ced60443a486533366f78d90820cc508c33c20051fa685",
+    "copyright": "Copyright 2000–2001 and 2003, Fraunhofer IAO Stuttgart and Universitaet Essen BLI.",
+    "implementation": "Authored supplier-orders implementation is separate from the unchanged publisher specification and examples."
+  }
+}

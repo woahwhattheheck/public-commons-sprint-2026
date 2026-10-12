@@ -1,0 +1,107 @@
+{
+  "schema": "stellar-forge.provider-lifecycle-receiving.v1",
+  "startedAt": "2026-10-12T11:41:50.635Z",
+  "node": "v24.19.0",
+  "state": "COMPLETE",
+  "stages": [
+    {
+      "name": "published-source-identity",
+      "state": "COMPLETE",
+      "elapsedMs": 22.166,
+      "sourceCommit": "6668e417044170e9c2291afe9e50e7ef14c3d97d",
+      "files": 93,
+      "bytes": 939909,
+      "sourceIdentitySha256": "f2cb15b7db0bcda116b1ac505d71d22a7e8397a88fbd66cc80ccca41ecf116f7"
+    },
+    {
+      "name": "original-grpc-controls-and-cancel",
+      "state": "COMPLETE",
+      "elapsedMs": 36.934,
+      "adapter": "MerchantGrpcWorkspaces",
+      "transport": "loopback HTTP receiving endpoint",
+      "routes": [
+        {
+          "method": "POST",
+          "path": "/api/call",
+          "inputBytes": 171
+        },
+        {
+          "method": "POST",
+          "path": "/api/stop",
+          "inputBytes": 2
+        }
+      ],
+      "nativeControlReachedDuringMutation": true,
+      "callOutcome": {
+        "status": "rejected",
+        "code": "GRPC_OPERATION_INTERRUPTED"
+      },
+      "shutdownMs": 4.653,
+      "lateImportAcceptedAndClosed": true,
+      "shutdown": [
+        {
+          "name": "grpcWorkspaces",
+          "state": "CLOSED",
+          "starting": 0,
+          "attempts": 1
+        }
+      ]
+    },
+    {
+      "name": "native-file-ownership-and-close-retry",
+      "state": "COMPLETE",
+      "elapsedMs": 7.047,
+      "source": "original RetainedFileReads and native fs FileHandles with injected EBUSY close failures",
+      "pendingBorrowerPreventedEarlyOwnerClose": true,
+      "retained": [
+        {
+          "name": "parent",
+          "state": "DEPENDENCY_WAIT",
+          "starting": 0,
+          "attempts": 0,
+          "error": {
+            "code": "PROVIDER_DEPENDENCY_ACTIVE"
+          }
+        },
+        {
+          "name": "child",
+          "state": "FAILED",
+          "starting": 0,
+          "attempts": 1,
+          "error": {
+            "code": "RECEIVING_CLOSE_INCOMPLETE"
+          }
+        }
+      ],
+      "readerRetained": {
+        "activeFileReads": 1,
+        "pendingFileCloses": 1,
+        "snapshotBytes": 0,
+        "immutableFileBytes": 21
+      },
+      "closeSequence": [
+        "child:1",
+        "child:2",
+        "parent:1"
+      ],
+      "final": [
+        {
+          "name": "parent",
+          "state": "CLOSED",
+          "starting": 0,
+          "attempts": 1
+        },
+        {
+          "name": "child",
+          "state": "CLOSED",
+          "starting": 0,
+          "attempts": 2
+        }
+      ],
+      "unpublishedDescriptorRetained": true,
+      "failedScopeBlocksNewReadsUntilSuccessfulRetry": true,
+      "failedAttempts": 2
+    }
+  ],
+  "finishedAt": "2026-10-12T11:41:50.704Z"
+}

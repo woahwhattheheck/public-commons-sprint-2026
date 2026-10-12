@@ -1,3 +1,4 @@
+import {mergeServiceHistory} from './service-commitments.mjs';
 import { CASE_STATUSES } from './case-statuses.mjs';
 export { CASE_STATUSES } from './case-statuses.mjs';
 // MIT. Optional private case persistence for the original SF74 workspace.
@@ -6,7 +7,7 @@ import {mkdir, lstat, open, readdir, rename, unlink, link, readlink, readFile} f
 import {resolve, join, isAbsolute, dirname} from 'node:path';
 import {createHash, randomUUID} from 'node:crypto';
 import {hostname} from 'node:os';
-import {parseWorkspace, serializeWorkspace, MAX_WORKSPACE_BYTES} from './workspace-file.mjs';
+import {parseWorkspace, serializeWorkspace, workspaceDraft, MAX_WORKSPACE_BYTES} from './workspace-file.mjs';
 import {mergeCommissioningHistory} from './commissioning.mjs';
 import {parseRuntime, MAX_RUNTIME_BYTES} from './runtime-support.mjs';
 
@@ -116,6 +117,15 @@ async function writeOnce(path, bytes) {
     if (error.code !== 'EEXIST') throw error;
     await sameBytes(path, bytes);
   }
+}
+
+/** Publish one complete private delivery artifact through the original atomic writer. */
+export async function retainCaseArtifact(path,bytes) {
+  if(typeof path!=='string'||!isAbsolute(path)||!(bytes instanceof Uint8Array)||bytes.length<1)
+    throw fail('CASE_ARTIFACT_INVALID','Choose an absolute private artifact path and its complete bytes.');
+  await directory(dirname(path));
+  await writeOnce(path,bytes);await syncDirectory(dirname(path));
+  return {bytes:bytes.length,sha256:digest(bytes)};
 }
 
 function privateRoot(path) {
@@ -341,7 +351,7 @@ export async function openCaseStore(path) {
     if (input.expectedRevision !== null) revision(input.expectedRevision);
     const metadata = caseMetadata(input.metadata);
     let workspace = await parseWorkspace(input.workspaceText), workspaceText=input.workspaceText;
-    let workspaceBytes = encoder.encode(workspaceText), workspaceSha256 = digest(workspaceBytes), commissioningChanged=false;
+    let workspaceBytes = encoder.encode(workspaceText), workspaceSha256 = digest(workspaceBytes), commissioningChanged=false, serviceChanged=false;
     // Omitted preserves a support attachment for existing API clients; explicit
     // null removes it from this new version without erasing retained history.
     const hasSupport=Object.hasOwn(input,'supportText');
@@ -355,17 +365,16 @@ export async function openCaseStore(path) {
       try { currentRevision = await head(id); current = await version(id,currentRevision); }
       catch (error) { if (error.code !== 'ENOENT') throw error; }
       const runtimeSupport=hasSupport?suppliedSupport:current?.runtimeSupport??null;
-      if(current&&(current.sources?.commissioning||workspace.commissioning)) {
+      if(current&&(current.sources?.commissioning||workspace.commissioning||current.sources?.service||workspace.service)) {
         const retainedRecord=await read(id,currentRevision),retained=await parseWorkspace(retainedRecord.workspaceText);
         const commissioning=await mergeCommissioningHistory(workspace.commissioning,retained.commissioning);
-        if(JSON.stringify(commissioning)!==JSON.stringify(workspace.commissioning??null)) {
-          const draft={name:workspace.name,inputs:workspace.inputs,sources:workspace.sources,
-            termsText:workspace.termsText,baselineOnly:workspace.baselineOnly,
-            ...(workspace.workorderSource?{workorderSource:workspace.workorderSource}:{}),
-            ...(commissioning?{commissioning}:{})};
-          workspaceText=await serializeWorkspace(draft,{now:workspace.savedAt});
+        const service=await mergeServiceHistory(workspace.service,retained.service);
+        commissioningChanged=JSON.stringify(commissioning)!==JSON.stringify(workspace.commissioning??null);
+        serviceChanged=JSON.stringify(service)!==JSON.stringify(workspace.service);
+        if(commissioningChanged||serviceChanged) {
+          workspaceText=await serializeWorkspace(workspaceDraft(workspace,{commissioning,service}),{now:workspace.savedAt});
           workspace=await parseWorkspace(workspaceText);workspaceBytes=encoder.encode(workspaceText);
-          workspaceSha256=digest(workspaceBytes);commissioningChanged=true;
+          workspaceSha256=digest(workspaceBytes);
         }
       }
       // Retrying the same request after a lost HTTP response returns its existing revision.
@@ -373,7 +382,8 @@ export async function openCaseStore(path) {
           JSON.stringify(current.runtimeSupport??null)===JSON.stringify(runtimeSupport) &&
           [currentRevision,current.previousRevision].includes(input.expectedRevision))
         return {case:summary(current,currentRevision), unchanged:true,
-          ...(commissioningChanged?{commissioning:workspace.commissioning??null}:{})};
+          ...(commissioningChanged?{commissioning:workspace.commissioning??null}:{}),
+          ...(serviceChanged?{service:workspace.service??null}:{})};
       if (input.expectedRevision !== currentRevision)
         throw Object.assign(fail('CASE_CONFLICT', 'A newer case version exists. Open it or save your draft as a separate case.', 409), {currentRevision});
       if (!current && (await readdir(root)).filter(name=>ID.test(name)).length >= CASE_LIMIT)
@@ -399,7 +409,8 @@ export async function openCaseStore(path) {
       await rename(temp,join(folder,'head.json')); temp = null;
       await syncDirectory(folder); await syncDirectory(root);
       return {case:summary(value,newRevision), unchanged:false,
-        ...(commissioningChanged?{commissioning:workspace.commissioning??null}:{})};
+        ...(commissioningChanged?{commissioning:workspace.commissioning??null}:{}),
+          ...(serviceChanged?{service:workspace.service??null}:{})};
     } finally {
       if (temp) await unlink(temp).catch(()=>{});
       await releaseWriter(lock);

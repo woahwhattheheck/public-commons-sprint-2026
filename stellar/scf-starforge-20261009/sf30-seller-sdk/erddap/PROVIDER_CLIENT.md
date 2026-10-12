@@ -186,6 +186,40 @@ Both inputs are complete retained files. The profile is the direct stellar-forge
 
 The operation emits handoff-profile.json for the existing browser owner. Continue that same closed workspace with --handoff-profile "$PROVIDER_OPERATION/handoff-profile.json"; the browser retains the actual review disposition and receives both complete original bundles. A ready export is attempted only when the original core reports readiness. All original source, review, received bundle and checkpoint identities remain under the selected operation directory.
 
+### Keep the source edition and provider review decisions
+
+Two saved fields carry the original response choice:
+
+| Interface | Recorded field | Default and reviewed choice |
+| --- | --- | --- |
+| Native dataset mapping and browser build | `csvPolicy` | `require-equivalent`; explicitly select `canonical-json` after inspecting both originals. |
+| Complete provider profile | `dataEdition` | `require-equivalent`; save an explicit `canonical-json` successor against its exact current review head. |
+
+The receiving owners accept `--csv-policy` with those same two values. This option controls the dataset mapping and the visible browser mapping selector; it does not alter the profile supplied with `--profile` or rewrite the automatically prepared source-bound NDBC profile. Edit a complete copy of that profile through the ordinary review workflow when selecting its provider edition.
+
+For the retained NDBC 46042 source, inspection of all 144 rows found 46 numeric spelling differences and no numeric value differences. The maintained Decimal comparison reports those equivalent spellings separately. Original lexical review findings stay in their earlier saved revisions. The original JSON tokens remain the selected values; the original CSV and all 98 missing-value representations remain available. This interpretation performs no rescaling, rounding or hidden filtering.
+
+Use the ordinary commands for the explicit reviewed successor:
+
+~~~sh
+starforge erddap provider-handoff --workspace "$PROVIDER_OPERATION/workspace" \
+  preview "$SOURCE_ID" "$REVIEWED_DIRECT_PROFILE"
+starforge erddap provider-handoff --workspace "$PROVIDER_OPERATION/workspace" \
+  save "$SOURCE_ID" "$REVIEWED_DIRECT_PROFILE" --expected-head "$CURRENT_REVIEW"
+starforge erddap provider-handoff --workspace "$PROVIDER_OPERATION/workspace" \
+  export "$SAVED_REVIEW" --mode review --output "$DELIVERY/provider-review.zip"
+~~~
+
+Keep the original profile and previously accepted bundles. The new profile changes `dataEdition` explicitly and retains the source identity and scientific contact disclosure. Pass that same complete profile into the original browser owner together with `--csv-policy canonical-json`. A source question that still prevents ready export remains in the delivered review.
+
+## Review versions and exact retries
+
+New review records include `evaluation` with schema `stellar-forge.erddap-provider-evaluation.v1`, readiness version `1.0.0` and CSV comparison `decimal-v1`. That declaration is part of the new revision hash and the full report/manifest. The supported historical comparator is `lexical-v1`; unknown declarations fail.
+
+Existing unversioned records keep their original IDs and exact bytes. The receiving engine deterministically reproduces the whole record under the two known earlier comparators, then compares every complete exported member. It never accepts changed scientific findings merely because an incoming manifest was rehashed.
+
+Retry the same source/profile/expected-head request to recover its existing saved review after an upgrade. A deliberate reevaluation uses the current saved head as its parent and produces a new version-bound revision. The `show`, historical `export`, interrupted export receipt adoption, `receive` and `received-export` operations preserve that distinction. Do not replace a previously accepted profile or ZIP in place.
+
 ## Installed source and delivery
 
 The maintained distribution contribution includes both installed commands, the original server/browser/CLI and all provider core/store/client source. Its provider SDK export is ./provider/erddap. The original ./client/erddap, ./merchant/erddap, ./seller/erddap and ./buyer/erddap exports remain available.

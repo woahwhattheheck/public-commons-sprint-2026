@@ -21,11 +21,13 @@ starforge gdelt serve --project ABS [--port N] [--merchant-port N]
   [--expected-binding-sha256 SHA] [--connection-file PRIVATE_JSON]
 starforge gdelt binding --project ABS [--buyer-config PRIVATE_JSON]
   [--facilitator URL] [--merchant-port N] [--allow-local-facilitator]
-starforge gdelt discover --project ABS [--history] [--out MANIFEST_JSON]
-starforge gdelt capture --project ABS --id ID --revision N [--batch UTC14] [--manifest MANIFEST_JSON | --discovery SHA]
-starforge gdelt discovery --project ABS --id SHA
+starforge gdelt discover --project ABS [--format events-mentions|gkg] [--history] [--out MANIFEST_JSON]
+starforge gdelt capture --project ABS --id ID --revision N [--format events-mentions|gkg]
+  [--batch UTC14] [--manifest MANIFEST_JSON | --discovery SHA]
+starforge gdelt discovery --project ABS --id SHA [--format events-mentions|gkg]
 starforge gdelt import --project ABS --id ID --revision N --source CAPTURE_JSON
 starforge gdelt select --project ABS --id ID --revision N --capture SHA
+starforge gdelt fields --project ABS [--table TABLE]
 starforge gdelt rows --project ABS --captures SHA,SHA [--policy JSON] [--offset N] [--limit N]
 starforge gdelt review --project ABS --id ID --revision N --captures SHA,SHA
   --name TEXT [--policy JSON] [--note TEXTFILE]
@@ -68,8 +70,8 @@ const operator=['buyer-config','facilitator','allow-local-facilitator','merchant
 const recording=['id','revision'];
 const allowed={
   init:['title'],show:[],binding:operator,serve:[...operator,'port','connection-file'],
-  discover:['history'],discovery:['id'],capture:[...recording,'batch','manifest','discovery'],import:[...recording,'source'],
-  select:[...recording,'capture'],rows:['captures','policy','offset','limit'],
+  discover:['history','format'],discovery:['id','format'],capture:[...recording,'batch','manifest','discovery','format'],import:[...recording,'source'],
+  select:[...recording,'capture'],fields:['table'],rows:['captures','policy','offset','limit'],
   review:[...recording,'captures','policy','note','name'],compare:['before','after'],
   publish:[...recording,'review','origin','payment','path'],publication:selected,
   merchant:[...selected,...operator],preview:[...selected,'kind','query'],
@@ -162,12 +164,13 @@ export async function main(args=process.argv.slice(2)){
       const onAbort=()=>{void application.close().catch(()=>{});};abort.signal.addEventListener('abort',onAbort,{once:true});
       if(abort.signal.aborted){await application.close();abort.signal.throwIfAborted();}
       switch(command){
-        case'discover':result=await application.action({action:'discover',history:f.history===true});break;
-        case'discovery':result=await application.query('discovery',{id:f.id});break;
+        case'discover':result=await application.action({action:'discover',history:f.history===true,format:f.format});break;
+        case'discovery':result=await application.query('discovery',{id:f.id,format:f.format});break;
         case'capture':{let manifest=f.manifest?await readJson(f.manifest,2*1024*1024):undefined;if(manifest?.manifest)manifest=manifest.manifest;
-          result=await application.action({action:'capture',...recorded(),batch:f.batch,manifest,discoveryId:f.discovery});break;}
+          result=await application.action({action:'capture',...recorded(),batch:f.batch,manifest,discoveryId:f.discovery,format:f.format});break;}
         case'import':result=await application.action({action:'import',...recorded(),capture:await readJson(f.source)});break;
         case'select':result=await application.action({action:'select',...recorded(),captureId:f.capture});break;
+        case'fields':result=await application.query('fields',{table:f.table});break;
         case'rows':result=await application.query('rows',{captureIds:captures(),policy:f.policy?await readJson(f.policy,65536):{},
           offset:integer(f.offset,'Offset',0),limit:integer(f.limit,'Limit',100)});break;
         case'review':result=await application.action({action:'review',...recorded(),captureIds:captures(),

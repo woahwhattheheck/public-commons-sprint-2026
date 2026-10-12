@@ -2,6 +2,24 @@
 
 MIT. **Runnable service, not a protocol fork.** Official SCF x402 RFP requires an `@x402/stellar`-based facilitator on BOTH `stellar:testnet` and `stellar:pubnet`. The first-party [`stellar/x402-stellar` facilitator example](https://github.com/stellar/x402-stellar/blob/main/examples/facilitator/src/app.ts) registers one configured network per instance. SF58 provides the missing *bounded routing edge* for two **separately operated original facilitator instances** without duplicating their settlement implementation or touching signing keys.
 
+## Native catalog and extension transport
+
+The [native settlement catalog](../native-facilitator/CATALOG.md) connects the
+actual SDK settlement to SF25 validation, SF54 extension outcomes and the original
+SF60 journal. SF58 preserves the selected backend's valid `EXTENSION-RESPONSES`
+header while returning its original payment response bytes and status.
+
+`GET /discovery/resources` and `GET /discovery/search` route to one backend
+selected by exactly one `network=stellar:testnet` or `network=stellar:pubnet`
+query parameter. The complete query, original catalog response and network-owned
+cursor stay together. These routes use the existing gateway authentication,
+capacity, response-size and upstream-deadline controls.
+
+`SF58_UPSTREAM_TIMEOUT_MS` configures the launcher's upstream deadline (default
+`12000`). For native settlement, size this deadline for the actual RPC and
+durable catalog work and align the operator ingress deadline. The inbound body
+deadline remains independently controlled by `SF58_BODY_TIMEOUT_MS`.
+
 ## Working interface
 
 - `POST /verify` and `POST /settle`: read the **original** x402 v2 `paymentPayload` + `paymentRequirements`, require their `accepted.network` and `network` to agree and resolve exactly one of the two Stellar networks, require matching scheme, forward raw original UTF-8 request bytes to that configured network's actual `/verify` or `/settle` backend, and return its JSON response/status without editing payment signatures or amounts. The upstream original `@x402/stellar` implementation remains responsible for authentic cryptographic validation, replay rejection, fee sponsorship and actual chain settlement.

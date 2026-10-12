@@ -9,6 +9,8 @@ import webbrowser
 
 from .duckdb_dataset import DuckDBWorkspace
 from . import spatial_cli
+from .reconciliation import cli as reconciliation_cli
+from .timescale_intake import cli as timescale_intake_cli
 from .errors import BuyerError
 from .storage import parse, read
 
@@ -47,6 +49,8 @@ def parser():
     result.add_argument("--spatial-extension", help="Installed signed DuckDB spatial extension; may also use STARFORGE_DUCKDB_SPATIAL_EXTENSION")
     commands = result.add_subparsers(dest="command", required=True)
     spatial_cli.add_parser(commands)
+    reconciliation_cli.add_parser(commands)
+    timescale_intake_cli.add_parser(commands)
     commands.add_parser("status", help="Read editions, active views, import reviews, saved queries and exports")
 
     inspect = commands.add_parser("inspect-delivery", help="Review an existing native delivery report")
@@ -135,6 +139,10 @@ def main(argv=None):
                 "queries": workspace.queries(),
                 "exports": workspace.exports(),
             }
+        elif args.command == "timescale-intake":
+            output = timescale_intake_cli.dispatch(workspace, args)
+        elif args.command == "reconcile":
+            output = reconciliation_cli.dispatch(workspace, args)
         elif args.command == "spatial":
             output = spatial_cli.dispatch(workspace, args)
         elif args.command == "inspect-delivery":

@@ -195,15 +195,24 @@ export async function runDirectusBrowser({input,directory}={}){
       destination:join(directory,'prepared-buyer.json')}))await field('buyer-form',name).fill(value);
     const buyer=await clickPost('#prepare-buyer','/api/buyer');assert.equal(buyer.snapshot,edition.snapshot);
 
-    for(const [name,value]of Object.entries({directory:join(customerDirectory,'merchant-package'),
-      sessionDirectory:join(customerDirectory,'buyer-session'),destination:join(directory,'customer-delivery')}))
-      await field('receive-buyer-form',name).fill(value);
+    current=await refreshed();
+    const acquiredSession=current.project_runtime.sessions.find(item=>item.snapshot===customer.snapshot);
+    assert.ok(acquiredSession,'The complete customer project includes its original acquisition.');
+    await page.locator('[data-project-session="'+acquiredSession.id+'"]').click();
+    assert.equal(await field('receive-buyer-form','sessionDirectory').inputValue(),acquiredSession.directory);
+    await field('save-session-form','buyerId').selectOption(acquiredSession.buyerId);
+    await field('save-session-form','directory').fill(acquiredSession.directory);
+    const savedSession=await submit('save-session-form','/api/buyer');
+    assert.equal(savedSession.id,acquiredSession.id);
+    const originalSessionStatus=await clickPost('[data-project-session-inspect="'+acquiredSession.id+'"]','/api/buyer');
+    assert.equal(originalSessionStatus.status,'COMPLETE');assert.equal(originalSessionStatus.snapshot,customer.snapshot);
+    await field('receive-buyer-form','destination').fill(join(directory,'customer-delivery'));
     await field('receive-buyer-form','includeSourceCaptures').check();
     const delivery=await submit('receive-buyer-form','/api/buyer');
     assert.equal(delivery.manifest.sha256,customer.delivery_sha256);
     const inspected=await clickPost('#inspect-delivery','/api/buyer');assert.equal(inspected.manifest.sha256,delivery.manifest.sha256);
     await step('browser-merchant-and-customer',{snapshot:edition.snapshot,offerSha256:offer.offerSha256,
-      receivedOriginalCustomerSha256:delivery.manifest.sha256,rows:delivery.manifest.rows,pages:delivery.manifest.pages});
+      receivedOriginalCustomerSha256:delivery.manifest.sha256,rows:delivery.manifest.acquisition.rows,pages:delivery.manifest.acquisition.pages});
     await screenshot('directus-publishing-desktop',1440,'#receive-buyer-form');
     await clickPost('#stop-seller','/api/merchant');
 
@@ -216,7 +225,7 @@ export async function runDirectusBrowser({input,directory}={}){
     await step('mobile-and-keyboard',{viewport:390,focus,images:images.length});
 
     await page.setViewportSize({width:1440,height:1000});
-    current=await state();
+    current=await refreshed();
     const downloadEvent=page.waitForEvent('download');await page.locator('#project-download').click();
     const download=await downloadEvent,downloadPath=await download.path(),raw=await readFile(downloadPath);
     assert.equal(await download.failure(),null);
@@ -232,8 +241,40 @@ export async function runDirectusBrowser({input,directory}={}){
     assert.ok(transferred.operator.selected.startsWith('received-'));
     await field('query-form','editionId').selectOption(edition.id);const reopenedQuery=await submit('query-form','/api/query');
     assert.equal(reopenedQuery.dataset.snapshot,edition.snapshot);
+    const retainedCounts=Object.fromEntries(['merchant-packages','buyer-configurations','customer-deliveries','buyer-sessions']
+      .map(kind=>{assert.equal(transferred[kind].length,current[kind].length);return [kind,transferred[kind].length];}));
+    const originalPublisher=transferred.project_runtime.merchants.find(item=>item.edition.snapshot===customer.snapshot);
+    const originalDelivery=transferred.project_runtime.deliveries.find(item=>item.deliverySha256===customer.delivery_sha256);
+    const savedBuyer=transferred.project_runtime.buyers[0];assert.ok(originalPublisher&&originalDelivery&&savedBuyer);
+    const receivedSession=transferred.project_runtime.sessions.find(item=>item.id===acquiredSession.id);
+    assert.ok(receivedSession);assert.notEqual(receivedSession.directory,acquiredSession.directory);
+    await page.locator('[data-project-session="'+receivedSession.id+'"]').click();
+    assert.equal(await field('receive-buyer-form','sessionDirectory').inputValue(),receivedSession.directory);
+    const receivedSessionStatus=await clickPost('[data-project-session-inspect="'+receivedSession.id+'"]','/api/buyer');
+    assert.equal(receivedSessionStatus.sessionId,originalSessionStatus.sessionId);
+    assert.equal(receivedSessionStatus.status,'COMPLETE');
+    assert.equal(receivedSessionStatus.completedPages,originalSessionStatus.completedPages);
+    const oldPublisher=current.project_runtime.merchants.find(item=>item.id===originalPublisher.id);
+    assert.notEqual(originalPublisher.versionDirectory,oldPublisher.versionDirectory);
+    await page.locator('[data-project-merchant="'+originalPublisher.id+'"]').click();
+    assert.equal(await field('serve-form','directory').inputValue(),originalPublisher.directory);
+    const receivedSeller=await submit('serve-form','/api/merchant');
+    assert.equal(receivedSeller.current.current,customer.successor_snapshot);
+    const receivedDelivery=await clickPost('[data-project-delivery="'+originalDelivery.id+'"]','/api/buyer');
+    assert.equal(receivedDelivery.manifest.sha256,customer.delivery_sha256);
+    const buyerDownloadEvent=page.waitForEvent('download');
+    await page.locator('[data-project-buyer="'+savedBuyer.id+'"]').click();
+    const buyerDownload=await buyerDownloadEvent;assert.equal(await buyerDownload.failure(),null);
+    const downloadedBuyer=await readFile(await buyerDownload.path()),originalBuyer=await readFile(savedBuyer.configuration);
+    assert.deepEqual(downloadedBuyer,originalBuyer);
+    await screenshot('directus-received-publishing-desktop',1440,'#project-merchants');
+    await screenshot('directus-received-publishing-mobile',390,'#project-merchants');
+    await clickPost('#stop-seller','/api/merchant');
     await step('complete-project-download-receive',{projectSha256:project.sha256,projectBytes:project.bytes,
-      workspaceId:transferred.id,revision:transferred.revision,nativeEvents:transferred['native-events'].length});
+      workspaceId:transferred.id,revision:transferred.revision,nativeEvents:transferred['native-events'].length,
+      retainedArtifacts:retainedCounts,receivedServingSnapshot:receivedSeller.current.current,
+      receivedSessionId:receivedSession.id,receivedSessionPages:receivedSessionStatus.completedPages,
+      receivedDeliverySha256:receivedDelivery.manifest.sha256,downloadedBuyerSha256:digest(downloadedBuyer)});
 
     await context.close();context=null;await browser.close();browser=null;
     await service.close();service=null;

@@ -3,7 +3,8 @@ import { mkdir, readdir, lstat, realpath } from 'node:fs/promises';
 import { join, dirname, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawn } from 'node:child_process';
-import { applicationEnvironment } from './application-command.mjs';
+import { applicationEnvironment } from './application-environment.mjs';
+import { validateApplicationProviderBinding } from './application-providers.mjs';
 import { validatePythonManagedCommand, pythonManagedLaunch } from '../python-runtime/application-lifecycle.mjs';
 import { activate, rollback, doctor } from '../../sf46-release/product.mjs';
 import { inspectMerchantRuntime, adoptMerchantRuntime, inspectInstalledRuntime } from '../../sf46-release/runtime-package.mjs';
@@ -18,7 +19,7 @@ export const managedOperationFields = Object.freeze({
   'managed-inspect': ['homeId', 'releaseId', 'load'],
   'managed-doctor': ['homeId', 'releaseId', 'requireNative', 'requiredFeatures'],
   'managed-config-save': ['homeId', 'path', 'content', 'expectedSha256'],
-  'managed-run': ['homeId', 'releaseId', 'command', 'args', 'expectedRevision', 'applicationId', 'terminal', 'terminalPython', 'environmentFile', 'environmentSha256', 'pythonCommand', 'buyerRunbook', 'jobResultReceiver', 'stellarApplication'],
+  'managed-run': ['homeId', 'releaseId', 'command', 'args', 'expectedRevision', 'applicationId', 'terminal', 'terminalPython', 'environmentFile', 'environmentSha256', 'pythonCommand', 'buyerRunbook', 'jobResultReceiver', 'stellarApplication', 'applicationProvider'],
 });
 const TYPES = ['managed-homes', 'managed-reviews', 'managed-observations'];
 const pathFor = (root, type, id) => join(root, type, recordId(id) + '.json');
@@ -246,6 +247,11 @@ export async function normalizeManagedOperation(root, request) {
   if (request.operation === 'managed-run') {
     need(request.terminal === undefined || typeof request.terminal === 'boolean', 'MANAGED_TERMINAL_BOOLEAN_REQUIRED');
     if (request.applicationId !== undefined) recordId(request.applicationId);
+    if (request.applicationProvider !== undefined) {
+      need(request.applicationId !== undefined, 'MANAGED_APPLICATION_REQUIRED');
+      validateApplicationProviderBinding(request.applicationProvider);
+      need(request.applicationProvider.command === request.command, 'APPLICATION_PROVIDER_REQUEST_CHANGED');
+    }
     if (request.terminalPython !== undefined) { need(request.terminal === true, 'MANAGED_TERMINAL_REQUIRED'); absolute(request.terminalPython); }
     if (request.environmentFile !== undefined) {
       absolute(request.environmentFile);

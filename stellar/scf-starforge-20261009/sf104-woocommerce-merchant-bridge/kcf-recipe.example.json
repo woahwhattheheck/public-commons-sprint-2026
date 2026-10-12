@@ -1,0 +1,112 @@
+{
+  "operationId": "connector-recipe-20261012-001",
+  "expectedRevision": 1,
+  "sourceEditionId": "SOURCE_EDITION_SHA",
+  "baseMapId": "CURRENT_ORIGINAL_ERP_MAP_SHA",
+  "label": "Reviewed product and incoming address map",
+  "assignments": [
+    {
+      "target": {
+        "table": "productBindings",
+        "sourceKey": "product:42",
+        "field": "inventoryId"
+      },
+      "rule": {
+        "receiptId": "PRODUCT_RECEIPT_SHA",
+        "pointer": "/products/0/inventory_id",
+        "conversion": "preserve",
+        "values": []
+      }
+    },
+    {
+      "target": {
+        "table": "productBindings",
+        "sourceKey": "product:42",
+        "field": "uom"
+      },
+      "rule": {
+        "receiptId": "PRODUCT_RECEIPT_SHA",
+        "pointer": "/products/0/unit",
+        "conversion": "preserve",
+        "values": []
+      }
+    },
+    {
+      "target": {
+        "table": "productBindings",
+        "sourceKey": "product:42",
+        "field": "taxCategory"
+      },
+      "rule": {
+        "receiptId": "PRODUCT_RECEIPT_SHA",
+        "pointer": "/products/0/tax_category",
+        "conversion": "preserve",
+        "values": []
+      }
+    },
+    {
+      "target": {
+        "table": "productBindings",
+        "sourceKey": "product:42",
+        "field": "warehouseId"
+      },
+      "rule": {
+        "receiptId": "PRODUCT_RECEIPT_SHA",
+        "pointer": "/products/0/warehouse",
+        "conversion": "preserve",
+        "values": []
+      }
+    }
+  ],
+  "removals": [],
+  "substitutions": {
+    "unmappedCountries": "preserve",
+    "unmappedStates": "preserve",
+    "countries": [
+      {
+        "connectorCountry": {
+          "receiptId": "COUNTRY_RECEIPT_SHA",
+          "pointer": "/countries/0/connector_country",
+          "conversion": "preserve",
+          "values": []
+        },
+        "acumaticaCountry": {
+          "receiptId": "COUNTRY_RECEIPT_SHA",
+          "pointer": "/countries/0/acumatica_country",
+          "conversion": "preserve",
+          "values": []
+        }
+      }
+    ],
+    "states": [
+      {
+        "connectorCountry": {
+          "receiptId": "STATE_RECEIPT_SHA",
+          "pointer": "/states/0/connector_country",
+          "conversion": "preserve",
+          "values": []
+        },
+        "acumaticaCountry": {
+          "receiptId": "STATE_RECEIPT_SHA",
+          "pointer": "/states/0/acumatica_country",
+          "conversion": "preserve",
+          "values": []
+        },
+        "connectorState": {
+          "receiptId": "STATE_RECEIPT_SHA",
+          "pointer": "/states/0/connector_state",
+          "conversion": "preserve",
+          "values": []
+        },
+        "acumaticaState": {
+          "receiptId": "STATE_RECEIPT_SHA",
+          "pointer": "/states/0/acumatica_state",
+          "conversion": "preserve",
+          "values": []
+        }
+      }
+    ]
+  },
+  "acknowledgeLookupPriority": true,
+  "reason": "Replace illustrative IDs with actual source receipts, Woo ID and reviewed native ERP base map. Record the actual mapping decision."
+}

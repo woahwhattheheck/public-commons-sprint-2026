@@ -326,6 +326,8 @@ export class MerchantCoopsWorkspaces {
     const session=await this.#session(definition);
     if(name==='merchant_coops_schema')return this.#wrap(workspace,definition,{ok:true,httpStatus:200,native:session.schema});
     if(name==='merchant_coops_mapping_file')return this.#wrap(workspace,definition,await this.#request(session,'/api/mapping-file',{body:input}));
+    if(name==='merchant_coops_study_preview')return this.#wrap(workspace,definition,await this.#request(session,'/api/study-preview',{body:input}));
+    if(name==='merchant_coops_study_rows')return this.#wrap(workspace,definition,await this.#request(session,'/api/study-rows?'+new URLSearchParams(Object.entries(input).map(([k,v])=>[k,String(v)]))));
     if(name==='merchant_coops_view')return this.#wrap(workspace,definition,await this.#view(session));
     if(name==='merchant_coops_operation')return this.#wrap(workspace,definition,await this.#request(session,'/api/operation?operationId='+encodeURIComponent(input.operationId)));
     if(name==='merchant_coops_edition')return this.#wrap(workspace,definition,await this.#edition(session,input.editionId));
@@ -384,7 +386,7 @@ export class MerchantCoopsWorkspaces {
       body={...request,payload:{...nativePayload,bundle:new TextDecoder('utf-8',{fatal:true}).decode(bytes)}};
       selectedSource={alias:sourcePackage,label:selected.label,sha256:selected.sha256,bytes:bytes.length};
     }
-    if(Buffer.byteLength(JSON.stringify(body))>(actionId==='capture.import'?MAX_IMPORT:actionId==='mapping.save'?512*1024:128*1024))
+    if(Buffer.byteLength(JSON.stringify(body))>(actionId==='capture.import'?MAX_IMPORT:actionId==='study.return.chunk'?2*1024*1024:actionId==='mapping.save'?512*1024:128*1024))
       throw fail('INVALID_PARAMS','The original action exceeds its declared request size.');
     try{
       const response=await this.#request(session,'/api/action',{body});

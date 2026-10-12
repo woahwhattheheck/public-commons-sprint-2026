@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Care plan workbench</title><link rel="stylesheet" href="/style.css"></head>
+<body><header><div><strong>Care plan workbench</strong><span class="subtle">eLTSS source, review and receiving</span></div>
+<div class="host-state"><span id="section-title">Overview</span><span id="connection-state" role="status">Connecting</span><button data-action="refresh">Refresh</button></div></header>
+<div class="shell"><aside><nav aria-label="Workspace sections">
+<button data-view="overview">Overview</button><button data-view="sources">Sources</button>
+<button data-view="acquisition">Acquisition</button><button data-view="careplans">Care plans</button>
+<button data-view="requirements">Field review</button><button data-view="review">Assessment</button>
+<button data-view="corrections">Corrections</button><button data-view="datasets">Datasets</button>
+<button data-view="delivery">Delivery</button></nav><div id="workspace-identity" class="workspace-identity"></div></aside>
+<main><div id="notice" role="status" aria-live="polite"></div><div id="error" role="alert" hidden></div>
+<div id="content" tabindex="-1" aria-busy="true"><h1>Opening workspace</h1><p>Reading the saved care-plan workspace.</p></div></main></div>
+<dialog id="record-dialog"><div class="dialog-heading"><h2 id="record-title">Original record</h2><button data-action="close-record">Close</button></div><div id="record-body"></div></dialog>
+<script type="module" src="/app.js"></script></body></html>

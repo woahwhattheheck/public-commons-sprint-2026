@@ -161,3 +161,62 @@ node examples/workspace_customer.mjs review \
 
 Only its explicit `execute` stage can start a buyer attempt. Operator credentials
 remain in the existing private environment, never in the example arguments.
+
+## Direct operation accounting and a separately reviewed signer
+
+The same direct operation can now complete the original accounting lifecycle
+without first moving it into an inbox:
+
+```js
+const saved = buyer.operation(originalIntentId);
+const result = await saved.recover();
+const finalized = await saved.finalize();
+const reopened = await saved.recoverAccounting({commandId: finalized.commandId});
+await saved.exportAccounting('/srv/private/customer-accounting.json', {
+  commandId: finalized.commandId,
+});
+```
+
+The workspace retained by `fromWorkspace` supplies its original accounting
+custody. For an already executed `fromConfig` operation, pass
+`workspaceDirectory` to `finalize()`. This supports the original SF103 setup
+workflow: a separately reviewed buyer/signer profile can retain a different
+request ceiling while using the existing operator, policy, ledger and payer.
+It does not amend the historical workspace or generate another signer during
+accounting. The actual SF62 approved request and authenticated reservation supply
+the amount and receipt being reconciled.
+
+Finalization compares the exact retained Node input, body, ticket, attempt and
+SF82 evidence to the original accounting workspace. The privileged child loads
+keys only through `openWorkspace(..., {accounting:true})`, then calls the
+existing SF36 one-record finality worker. A current wallet secret, terminal
+approval or new merchant request is unnecessary for this accounting stage.
+The original explicit proxy environment may still be needed for the SF86 RPC
+observation. If that host transport has ended, reopen it through its existing
+owned host workflow before another finality observation.
+
+`accounting()`, `recoverAccounting()` and `exportAccounting()` read the saved
+command and its exact snapshots. They do not load accounting keys, connect to
+RPC or change the ledger. A later incomplete command cannot hide an earlier
+finalized view. The selected preapproval continuation is resolved through the
+original preapproval reader; delegated inbox attempts continue through their
+existing inbox finalizer. Evidence-absence recovery continues to use the
+existing lost-output APIs.
+
+For a receiving script, the complete example has an explicit one-operation
+interface:
+
+```sh
+node examples/operation_accounting.mjs finalize \
+  --runtime /srv/starforge/source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli \
+  --state /srv/private/customer-app --intent original-request-id \
+  --workspace /srv/private/operator \
+  --view-file /srv/private/accounting-native.json
+node examples/operation_accounting.mjs recover \
+  --runtime /srv/starforge/source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli \
+  --state /srv/private/customer-app --intent original-request-id
+```
+
+Every exported view names its original command, producing runtime and selected
+accounting implementation. Preserve those source and operation directories with
+the existing customer handoff.

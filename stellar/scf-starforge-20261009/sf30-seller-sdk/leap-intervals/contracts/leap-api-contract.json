@@ -1,0 +1,2315 @@
+{
+  "schema": "stellar-forge.leap-api-contract.v1",
+  "prepared_at": "2026-10-12T10:38:30Z",
+  "author": "TokenJunkieLabs",
+  "purpose": "Derived functional interface projection for the Leap device-interval product.",
+  "projection": {
+    "basis": "Current first-party endpoint OpenAPI blocks and original CSV/device guides.",
+    "omitted_openapi_annotations": [
+      "description",
+      "summary",
+      "example",
+      "examples",
+      "title",
+      "tags",
+      "externalDocs",
+      "contact"
+    ],
+    "provider_license_declared": false,
+    "full_provider_documentation_republished": false,
+    "required_lists": "Preserved exactly, including the two explicit inconsistencies recorded below."
+  },
+  "sources": [
+    {
+      "id": "status",
+      "url": "https://developer.leap.energy/reference/listintervaldatauploads.md",
+      "updated_at": "2026-08-12T15:01:16.000Z",
+      "bytes": 13282,
+      "sha256": "6604552f95d42360eb3dca301b8c5198f37b12ddb72a89ce1299971f516e38a7",
+      "kind": "official_openapi_markdown",
+      "openapi_json": {
+        "bytes": 12973,
+        "sha256": "449181427fb92cdf5e358c77b41adfe7050ada3f886a4d5a23a6552ab76228ef",
+        "license_declared": false
+      }
+    },
+    {
+      "id": "upload",
+      "url": "https://developer.leap.energy/reference/uploadintervaldata.md",
+      "updated_at": "2026-07-30T19:19:03.000Z",
+      "bytes": 5171,
+      "sha256": "e8fed743b276148bd5c265181f65f7d2fb8941e644e0c1718d07d29a90d374b4",
+      "kind": "official_openapi_markdown",
+      "openapi_json": {
+        "bytes": 4758,
+        "sha256": "d579334c772ff2ea00cd0760ae8babbe466fc52a15b87efe43e1de894f61e37a",
+        "license_declared": false
+      }
+    },
+    {
+      "id": "errors",
+      "url": "https://developer.leap.energy/reference/listintervaldatauploaderrors.md",
+      "updated_at": "2026-08-12T15:01:16.000Z",
+      "bytes": 10773,
+      "sha256": "8a07aeef0462e895d8a9d73f00b9d154c538c4940642078716519dad92aa4c8c",
+      "kind": "official_openapi_markdown",
+      "openapi_json": {
+        "bytes": 10370,
+        "sha256": "3c1e1031aa1fcdb2cf208e4f08a9e2688b2651dc51bd810e1477b0e7dffbe4cf",
+        "license_declared": false
+      }
+    },
+    {
+      "id": "missing",
+      "url": "https://developer.leap.energy/reference/searchmissingintervaldata.md",
+      "updated_at": "2026-07-30T19:19:23.000Z",
+      "bytes": 12393,
+      "sha256": "6328afa57e925b6829f6e667f8bf8d69ee6897a5d669c2b71c1490c41c3de490",
+      "kind": "official_openapi_markdown",
+      "openapi_json": {
+        "bytes": 11940,
+        "sha256": "a6c8d3742f743b2737bd79ae99c25be879038f9ed0b439120dedb5aadf7eb33b",
+        "license_declared": false
+      }
+    },
+    {
+      "id": "meter",
+      "url": "https://developer.leap.energy/reference/getmeterdetails.md",
+      "updated_at": "2026-05-28T00:03:05.000Z",
+      "bytes": 51123,
+      "sha256": "593b6c5626fccb5af178625692515f5fe5b15e086d7196478b8a182d864fa427",
+      "kind": "official_openapi_markdown",
+      "openapi_json": {
+        "bytes": 50872,
+        "sha256": "c00f10385aec154945ac0425387e4b8cf2768280920864a07ef6024b53f52928",
+        "license_declared": false
+      }
+    },
+    {
+      "id": "original_file",
+      "url": "https://developer.leap.energy/reference/intervaldatapresignedurl.md",
+      "updated_at": "2026-07-27T17:19:56.000Z",
+      "bytes": 4850,
+      "sha256": "1cb9c34480a1126077b824906b853f47c4abd62ded005dd925f226c9d91925c5",
+      "kind": "official_openapi_markdown",
+      "openapi_json": {
+        "bytes": 4371,
+        "sha256": "0f23ab672aa2d04537ffcb4457c4fee3ea993d448bfa9757a707a2b9a1c044a0",
+        "license_declared": false
+      }
+    },
+    {
+      "id": "file_preview",
+      "url": "https://developer.leap.energy/reference/intervaldatafilepreview.md",
+      "updated_at": "2026-07-27T17:19:56.000Z",
+      "bytes": 6644,
+      "sha256": "1b9686056e50253eaf29a1667777739fce0f4e9d6b3253355ad8df28aeba68c9",
+      "kind": "official_openapi_markdown",
+      "openapi_json": {
+        "bytes": 6265,
+        "sha256": "f60a370d3b613f97b10347bb8a8a72c709ca1b31942d4cdfe935efd4c2d17bdc",
+        "license_declared": false
+      }
+    },
+    {
+      "id": "csv",
+      "url": "https://developer.leap.energy/docs/upload-interval-data-sftp.md",
+      "updated_at": "2026-08-03T23:34:49.000Z",
+      "bytes": 13935,
+      "sha256": "4cfc56dc40d50a821b239b1b84a15d3f3c2ca1e2953794b0fca8585e9b0caafe",
+      "kind": "official_guide_markdown"
+    },
+    {
+      "id": "meter_types",
+      "url": "https://developer.leap.energy/docs/utility-meters-vs-devices.md",
+      "updated_at": "2026-09-16T19:29:18.000Z",
+      "bytes": 5989,
+      "sha256": "db710096fdd1c9589dc766863827538ec31d4da2284e68c8c7079f5e26fadc64",
+      "kind": "official_guide_markdown"
+    }
+  ],
+  "servers": {
+    "staging": "https://api.staging.leap.energy",
+    "production": "https://api.leap.energy"
+  },
+  "authentication": {
+    "header": "Authorization",
+    "scheme": "Bearer",
+    "credential": "Existing Leap API key for the selected environment",
+    "exchange_required": false,
+    "source_url": "https://developer.leap.energy/docs/api-key-authentication",
+    "openapi_bearer_format": "JWT",
+    "note": "The primary authentication guide permits API keys directly; the OpenAPI bearerFormat label does not require exchanging an API key for a JWT.",
+    "credential_creation": "Leap-provisioned partner account",
+    "environment_keys_distinct": true
+  },
+  "load_csv": {
+    "source_ids": [
+      "csv",
+      "errors"
+    ],
+    "required_identity_columns": [
+      "meter_id",
+      "interval_start_time_utc",
+      "interval_end_time_utc"
+    ],
+    "energy_columns": [
+      "energy_net_kwh",
+      "energy_consumed_kwh",
+      "energy_generated_kwh"
+    ],
+    "permitted_energy_value_sets": [
+      [
+        "energy_net_kwh"
+      ],
+      [
+        "energy_consumed_kwh",
+        "energy_generated_kwh"
+      ],
+      [
+        "energy_net_kwh",
+        "energy_consumed_kwh",
+        "energy_generated_kwh"
+      ]
+    ],
+    "optional_columns": {
+      "final": {
+        "values": [
+          "true",
+          "false"
+        ]
+      },
+      "region": {
+        "pattern": "^[A-Z]{2}$",
+        "provider_validation": "REG_0003 also checks that the region is a valid state."
+      }
+    },
+    "units": "kWh",
+    "all_three_equation": "energy_consumed_kwh - energy_generated_kwh = energy_net_kwh",
+    "numeric_rules": {
+      "consumed_generated": {
+        "negative_rejected": true,
+        "zero_in_official_example": true,
+        "guide_wording": "positive",
+        "evidence_codes": [
+          "CON_0002",
+          "CON_0003",
+          "GEN_0002",
+          "GEN_0003"
+        ]
+      },
+      "net": {
+        "numeric_required": true,
+        "negative_rejection_not_declared": true,
+        "evidence_code": "NET_0002",
+        "signed_net_interpretation": "Signed net is consistent with the stated subtraction equation; a separate sign range is not specified."
+      },
+      "precision_or_equality_tolerance": "Not specified in the retrieved contract."
+    },
+    "time_rules": {
+      "format": "ISO-8601 UTC",
+      "duration_seconds": 900,
+      "aligned_15_minute_boundaries": true,
+      "both_endpoints_in_past": true,
+      "maximum_age_years": 2,
+      "maximum_age_arithmetic": "The guide states two years without specifying calendar versus fixed-day arithmetic.",
+      "evidence_codes": [
+        "STM_0001",
+        "STM_0002",
+        "STM_0003",
+        "ETM_0001",
+        "ETM_0002",
+        "ETM_0003",
+        "DTR_0003"
+      ]
+    },
+    "meter_rules": {
+      "existing_leap_uuid": true,
+      "created_via": [
+        "Create Meters API",
+        "Portal CSV upload"
+      ],
+      "utility_authorized_excluded": true,
+      "within_partner_at_upload": true,
+      "within_partner_during_original_interval": true
+    },
+    "whole_file_failure": {
+      "rejects_entire_file": true,
+      "retry_requires_corrected_entire_file": true,
+      "original_file_retained_by_provider": true
+    },
+    "product_scope": {
+      "meter_type": "DEVICE",
+      "utility_meter_type_not_selected": true,
+      "source_note": "The general meter guide describes some partner-created UTILITY_METER programs. DEVICE-only is this product's narrower scope; it is not a claim that all partner-created utility meters are globally unsupported."
+    }
+  },
+  "meter_verification": {
+    "source_ids": [
+      "meter",
+      "meter_types",
+      "csv"
+    ],
+    "response_property_paths": {
+      "id": "meter_id",
+      "type": "meter_type",
+      "partner_reference": "partner_reference",
+      "archived": "is_archived",
+      "created_by": "audit.created_by",
+      "created_at": "audit.created_at",
+      "updated_at": "audit.updated_at",
+      "device": "device",
+      "site": "site",
+      "utility": "utility"
+    },
+    "type_enum": [
+      "UTILITY_METER",
+      "DEVICE"
+    ],
+    "historical_partner_ownership_field_declared": false,
+    "created_by_is_ownership_proof": false,
+    "visibility_is_historical_ownership_proof": false,
+    "source_note": "Retain explicit original partner evidence for historical custody; creation time and creator do not establish the owner at each interval."
+  },
+  "pagination": {
+    "uploads": {
+      "response_rows": "uploads",
+      "next_token": "next_page_token",
+      "request_token": "page_token",
+      "page_size_default": 50,
+      "page_size_min": 1,
+      "page_size_max": 500,
+      "bounds_source": "The parameter description states 1–500; its schema omits bounds."
+    },
+    "missing": {
+      "response_rows": "missing_intervals",
+      "next_token": "next_page_token",
+      "request_token": "page_token",
+      "page_size_default": 500,
+      "page_size_min": 1,
+      "page_size_max": 500
+    },
+    "errors": {
+      "pagination_declared": false
+    },
+    "token_semantics": "A next_page_token may indicate more records; follow the exact opaque value until absent."
+  },
+  "recovery": {
+    "documented_upload_parameters": [
+      "schema"
+    ],
+    "filename_parameter_declared": false,
+    "content_disposition_parameter_declared": false,
+    "idempotency_header_declared": false,
+    "duplicate_submission_policy_declared": false,
+    "upload_acknowledgement": {
+      "http_status": 200,
+      "required_field": "job_id",
+      "completion_implied": false
+    },
+    "upload_identity_fields": [
+      "last_job_id",
+      "uploaded_file_path",
+      "current_file_path",
+      "uploaded_at_date_time",
+      "status"
+    ],
+    "candidates": {
+      "query_by_job_id": true,
+      "query_by_original_sftp_path": true,
+      "query_from_inclusive": true,
+      "query_to_inclusive": true
+    },
+    "original_file": {
+      "api": "original_file",
+      "http_status": 302,
+      "url_header": "Location",
+      "cache_header": "Cache-Control",
+      "url_description": "Temporary S3 URI",
+      "host_allowlist_declared": false,
+      "url_lifetime_declared": false,
+      "error_line_filter_declared": false,
+      "source_inconsistency": "The page summary mentions filtering error lines, but the operation declares only job_id."
+    },
+    "preview": {
+      "api": "file_preview",
+      "rows_field": "file_data",
+      "limited_field": "is_limited",
+      "full_byte_equivalence_not_established_by_limited_preview": true
+    },
+    "application_decisions": [
+      "Retain the exact submitted bytes and all response evidence before any new request.",
+      "An unknown upload outcome stays unresolved until provider evidence identifies its job.",
+      "Compare complete original-file bytes when adopting a candidate job; do not treat a matching timestamp, filename or limited preview alone as proof.",
+      "Do not forward the Leap API Authorization header to a signed file-download URL.",
+      "Preserve each original last_job_id and original/current path separately."
+    ],
+    "missing_statuses": {
+      "OPEN": "Needs submission.",
+      "PENDING": "Already submitted and processing; no further submission is called for."
+    },
+    "completion_layers": [
+      "Upload acknowledgement",
+      "Ingestion status",
+      "Subsequent program baseline/performance processing"
+    ],
+    "later_processing_max_in_guide": "The accepted-file guide says subsequent processing may take up to one day."
+  },
+  "schema_inconsistencies": [
+    {
+      "source_id": "errors",
+      "pointer": "#/components/schemas/GetUploadIngestionErrorsResponse/required",
+      "declared": [
+        "errors",
+        "job_id",
+        "summary"
+      ],
+      "properties_use": "error_summary",
+      "handling": "Retain the actual response and error_summary. Do not synthesize an undocumented summary value or discard a useful response solely because this required list is inconsistent."
+    },
+    {
+      "source_id": "errors",
+      "pointer": "#/components/schemas/IntervalDataUploadIngestionError/required",
+      "declared": [
+        "code",
+        "errors",
+        "line",
+        "message"
+      ],
+      "undeclared_property": "errors",
+      "handling": "Retain rows with the documented line/column/code/message properties; preserve the inconsistent original schema for provenance."
+    },
+    {
+      "source_ids": [
+        "csv",
+        "errors"
+      ],
+      "field": "energy_consumed_kwh / energy_generated_kwh",
+      "conflict": "Guide says positive; original example includes zero; error-code descriptions identify negative values as invalid.",
+      "handling": "Make the chosen zero handling explicit and retain original numeric values."
+    },
+    {
+      "source_ids": [
+        "meter",
+        "meter_types"
+      ],
+      "field": "meter_type",
+      "conflict": "Current OpenAPI enums use uppercase UTILITY_METER and DEVICE; narrative guide uses lower-case names.",
+      "handling": "Use the exact current OpenAPI wire enum."
+    }
+  ],
+  "api_contracts": {
+    "status": {
+      "source_id": "status",
+      "openapi_version": "3.0.1",
+      "api_version": "1.1",
+      "servers": [
+        "https://api.staging.leap.energy",
+        "https://api.leap.energy"
+      ],
+      "paths": {
+        "/v1.1/jobs/interval-data-uploads": {
+          "get": {
+            "operationId": "listIntervalDataUploads",
+            "parameters": [
+              {
+                "explode": false,
+                "in": "query",
+                "name": "job_id",
+                "required": false,
+                "schema": {
+                  "items": {
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "style": "form"
+              },
+              {
+                "explode": true,
+                "in": "query",
+                "name": "from",
+                "required": false,
+                "schema": {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                "style": "form"
+              },
+              {
+                "explode": true,
+                "in": "query",
+                "name": "to",
+                "required": false,
+                "schema": {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                "style": "form"
+              },
+              {
+                "explode": true,
+                "in": "query",
+                "name": "file_path",
+                "required": false,
+                "schema": {
+                  "maxLength": 1024,
+                  "minLength": 1,
+                  "pattern": "^/interval-data/[A-Za-z0-9._/-]+$",
+                  "type": "string"
+                },
+                "style": "form"
+              },
+              {
+                "explode": true,
+                "in": "query",
+                "name": "status",
+                "required": false,
+                "schema": {
+                  "$ref": "#/components/schemas/JobStatus"
+                },
+                "style": "form"
+              },
+              {
+                "explode": true,
+                "in": "query",
+                "name": "page_size",
+                "required": false,
+                "schema": {
+                  "default": 50,
+                  "type": "integer"
+                },
+                "style": "form"
+              },
+              {
+                "explode": true,
+                "in": "query",
+                "name": "page_token",
+                "required": false,
+                "schema": {
+                  "type": "string"
+                },
+                "style": "form"
+              }
+            ],
+            "responses": {
+              "200": {
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "$ref": "#/components/schemas/GetUploadsResponse"
+                    }
+                  }
+                }
+              },
+              "400": {
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "$ref": "#/components/schemas/ErrorResponseBadRequest"
+                    }
+                  }
+                }
+              },
+              "401": {
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "$ref": "#/components/schemas/ErrorResponseUnauthorized"
+                    }
+                  }
+                }
+              },
+              "403": {
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "$ref": "#/components/schemas/ErrorResponseForbidden"
+                    }
+                  }
+                }
+              },
+              "500": {
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "$ref": "#/components/schemas/ErrorResponseInternalServerError"
+                    }
+                  }
+                }
+              }
+            },
+            "security": [
+              {
+                "http": []
+              }
+            ]
+          }
+        }
+      },
+      "components": {
+        "schemas": {
+          "JobStatus": {
+            "enum": [
+              "QUEUED",
+              "PROCESSING",
+              "COMPLETED",
+              "FAILED"
+            ],
+            "type": "string"
+          },
+          "GetUploadsResponse": {
+            "properties": {
+              "uploads": {
+                "items": {
+                  "$ref": "#/components/schemas/IntervalDataUpload"
+                },
+                "type": "array"
+              },
+              "next_page_token": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "uploads"
+            ],
+            "type": "object"
+          },
+          "IntervalDataUpload": {
+            "properties": {
+              "last_job_id": {
+                "format": "uuid",
+                "type": "string"
+              },
+              "uploaded_file_path": {
+                "type": "string"
+              },
+              "current_file_path": {
+                "type": "string"
+              },
+              "uploaded_at_date_time": {
+                "format": "date-time",
+                "type": "string"
+              },
+              "status": {
+                "$ref": "#/components/schemas/JobStatus"
+              },
+              "feedback_csv_file_path": {
+                "type": "string"
+              },
+              "error_csv_file_path": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "current_file_path",
+              "last_job_id",
+              "status",
+              "uploaded_at_date_time",
+              "uploaded_file_path"
+            ],
+            "type": "object"
+          },
+          "ErrorResponseBadRequest": {
+            "type": "object"
+          },
+          "ErrorResponseUnauthorized": {
+            "type": "object"
+          },
+          "ErrorResponseForbidden": {
+            "type": "object"
+          },
+          "ErrorResponseInternalServerError": {
+            "type": "object"
+          }
+        },
+        "securitySchemes": {
+          "http": {
+            "bearerFormat": "JWT",
+            "scheme": "bearer",
+            "type": "http"
+          }
+        }
+      }
+    },
+    "upload": {
+      "source_id": "upload",
+      "openapi_version": "3.0.1",
+      "api_version": "1.1",
+      "servers": [
+        "https://api.staging.leap.energy",
+        "https://api.leap.energy"
+      ],
+      "paths": {
+        "/v1.1/interval-data": {
+          "post": {
+            "operationId": "uploadIntervalData",
+            "parameters": [
+              {
+                "explode": true,
+                "in": "query",
+                "name": "schema",
+                "required": true,
+                "schema": {
+                  "enum": [
+                    "load",
+                    "runtime",
+                    "performance"
+                  ],
+                  "type": "string"
+                },
+                "style": "form"
+              }
+            ],
+            "requestBody": {
+              "content": {
+                "text/csv": {
+                  "schema": {
+                    "type": "string"
+                  }
+                }
+              },
+              "required": true
+            },
+            "responses": {
+              "200": {
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "$ref": "#/components/schemas/IngestionResponse"
+                    }
+                  }
+                }
+              },
+              "400": {
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "$ref": "#/components/schemas/ErrorResponseBadRequest"
+                    }
+                  }
+                }
+              },
+              "401": {
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "$ref": "#/components/schemas/ErrorResponseUnauthorized"
+                    }
+                  }
+                }
+              },
+              "403": {
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "$ref": "#/components/schemas/ErrorResponseForbidden"
+                    }
+                  }
+                }
+              },
+              "500": {
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "$ref": "#/components/schemas/ErrorResponseInternalServerError"
+                    }
+                  }
+                }
+              }
+            },
+            "security": [
+              {
+                "http": []
+              }
+            ]
+          }
+        }
+      },
+      "components": {
+        "schemas": {
+          "ErrorResponseBadRequest": {
+            "type": "object"
+          },
+          "ErrorResponseUnauthorized": {
+            "type": "object"
+          },
+          "ErrorResponseForbidden": {
+            "type": "object"
+          },
+          "ErrorResponseInternalServerError": {
+            "type": "object"
+          },
+          "IngestionResponse": {
+            "properties": {
+              "job_id": {
+                "format": "uuid",
+                "type": "string"
+              }
+            },
+            "required": [
+              "job_id"
+            ],
+            "type": "object"
+          }
+        },
+        "securitySchemes": {
+          "http": {
+            "bearerFormat": "JWT",
+            "scheme": "bearer",
+            "type": "http"
+          }
+        }
+      }
+    },
+    "errors": {
+      "source_id": "errors",
+      "openapi_version": "3.0.1",
+      "api_version": "1.1",
+      "servers": [
+        "https://api.staging.leap.energy",
+        "https://api.leap.energy"
+      ],
+      "paths": {
+        "/v1.1/jobs/interval-data-uploads/{job_id}": {
+          "get": {
+            "operationId": "listIntervalDataUploadErrors",
+            "parameters": [
+              {
+                "explode": false,
+                "in": "path",
+                "name": "job_id",
+                "required": true,
+                "schema": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "style": "simple"
+              }
+            ],
+            "responses": {
+              "200": {
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "$ref": "#/components/schemas/GetUploadIngestionErrorsResponse"
+                    }
+                  }
+                }
+              },
+              "400": {
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "$ref": "#/components/schemas/ErrorResponseBadRequest"
+                    }
+                  }
+                }
+              },
+              "401": {
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "$ref": "#/components/schemas/ErrorResponseUnauthorized"
+                    }
+                  }
+                }
+              },
+              "403": {
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "$ref": "#/components/schemas/ErrorResponseBadRequest"
+                    }
+                  }
+                }
+              },
+              "404": {
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "$ref": "#/components/schemas/ErrorResponseBadRequest"
+                    }
+                  }
+                }
+              },
+              "500": {
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "$ref": "#/components/schemas/ErrorResponseInternalServerError"
+                    }
+                  }
+                }
+              }
+            },
+            "security": [
+              {
+                "http": []
+              }
+            ]
+          }
+        }
+      },
+      "components": {
+        "schemas": {
+          "ErrorResponseBadRequest": {
+            "type": "object"
+          },
+          "ErrorResponseUnauthorized": {
+            "type": "object"
+          },
+          "ErrorResponseInternalServerError": {
+            "type": "object"
+          },
+          "GetUploadIngestionErrorsResponse": {
+            "properties": {
+              "job_id": {
+                "format": "uuid",
+                "type": "string"
+              },
+              "error_csv_file_path": {
+                "type": "string"
+              },
+              "error_summary": {
+                "items": {
+                  "$ref": "#/components/schemas/IntervalDataUploadIngestionErrorSummary"
+                },
+                "type": "array"
+              },
+              "errors": {
+                "items": {
+                  "$ref": "#/components/schemas/IntervalDataUploadIngestionError"
+                },
+                "type": "array"
+              }
+            },
+            "required": [
+              "errors",
+              "job_id",
+              "summary"
+            ],
+            "type": "object"
+          },
+          "IntervalDataUploadIngestionErrorSummary": {
+            "properties": {
+              "column": {
+                "type": "string"
+              },
+              "code": {
+                "type": "string"
+              },
+              "count": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "code",
+              "count"
+            ],
+            "type": "object"
+          },
+          "IntervalDataUploadIngestionError": {
+            "properties": {
+              "line": {
+                "format": "int32",
+                "type": "integer"
+              },
+              "column": {
+                "type": "string"
+              },
+              "code": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "code",
+              "errors",
+              "line",
+              "message"
+            ],
+            "type": "object"
+          }
+        },
+        "securitySchemes": {
+          "http": {
+            "bearerFormat": "JWT",
+            "scheme": "bearer",
+            "type": "http"
+          }
+        }
+      }
+    },
+    "missing": {
+      "source_id": "missing",
+      "openapi_version": "3.0.1",
+      "api_version": "1.1",
+      "servers": [
+        "https://api.staging.leap.energy",
+        "https://api.leap.energy"
+      ],
+      "paths": {
+        "/v1.1/missing-interval-data/search": {
+          "post": {
+            "operationId": "searchMissingIntervalData",
+            "requestBody": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/SearchMissingIntervalDataRequest"
+                  }
+                }
+              },
+              "required": false
+            },
+            "responses": {
+              "200": {
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "$ref": "#/components/schemas/SearchMissingIntervalDataResponse"
+                    }
+                  }
+                }
+              },
+              "400": {
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "$ref": "#/components/schemas/ErrorResponseBadRequest"
+                    }
+                  }
+                }
+              },
+              "401": {
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "$ref": "#/components/schemas/ErrorResponseUnauthorized"
+                    }
+                  }
+                }
+              },
+              "403": {
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "$ref": "#/components/schemas/ErrorResponseForbidden"
+                    }
+                  }
+                }
+              },
+              "500": {
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "$ref": "#/components/schemas/ErrorResponseInternalServerError"
+                    }
+                  }
+                }
+              }
+            },
+            "security": [
+              {
+                "http": []
+              }
+            ]
+          }
+        }
+      },
+      "components": {
+        "schemas": {
+          "ErrorResponseBadRequest": {
+            "type": "object"
+          },
+          "ErrorResponseUnauthorized": {
+            "type": "object"
+          },
+          "ErrorResponseForbidden": {
+            "type": "object"
+          },
+          "ErrorResponseInternalServerError": {
+            "type": "object"
+          },
+          "SearchMissingIntervalDataRequest": {
+            "properties": {
+              "meter_ids": {
+                "items": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "status": {
+                "$ref": "#/components/schemas/MissingIntervalStatus"
+              },
+              "missing_interval_window_start_date_time_utc": {
+                "format": "date-time",
+                "type": "string"
+              },
+              "missing_interval_window_end_date_time_utc": {
+                "format": "date-time",
+                "type": "string"
+              },
+              "submission_deadline_window_start_date_time_utc": {
+                "format": "date-time",
+                "type": "string"
+              },
+              "submission_deadline_window_end_date_time_utc": {
+                "format": "date-time",
+                "type": "string"
+              },
+              "page_token": {
+                "type": "string"
+              },
+              "page_size": {
+                "default": 500,
+                "format": "int32",
+                "maximum": 500,
+                "minimum": 1,
+                "type": "integer"
+              }
+            },
+            "type": "object"
+          },
+          "SearchMissingIntervalDataResponse": {
+            "properties": {
+              "missing_intervals": {
+                "items": {
+                  "$ref": "#/components/schemas/MissingInterval"
+                },
+                "type": "array"
+              },
+              "next_page_token": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "missing_intervals"
+            ],
+            "type": "object"
+          },
+          "MissingInterval": {
+            "properties": {
+              "meter_id": {
+                "format": "uuid",
+                "type": "string"
+              },
+              "data_type": {
+                "$ref": "#/components/schemas/IntervalDataType"
+              },
+              "start_date_time_utc": {
+                "format": "date-time",
+                "type": "string"
+              },
+              "end_date_time_utc": {
+                "format": "date-time",
+                "type": "string"
+              },
+              "submission_deadline_date_time_utc": {
+                "format": "date-time",
+                "type": "string"
+              },
+              "status": {
+                "$ref": "#/components/schemas/MissingIntervalStatus"
+              }
+            },
+            "type": "object"
+          },
+          "IntervalDataType": {
+            "enum": [
+              "LOAD_DATA",
+              "RUNTIME_DATA",
+              "PERFORMANCE_DATA"
+            ],
+            "type": "string"
+          },
+          "MissingIntervalStatus": {
+            "enum": [
+              "OPEN",
+              "PENDING"
+            ],
+            "type": "string"
+          }
+        },
+        "securitySchemes": {
+          "http": {
+            "bearerFormat": "JWT",
+            "scheme": "bearer",
+            "type": "http"
+          }
+        }
+      }
+    },
+    "meter": {
+      "source_id": "meter",
+      "openapi_version": "3.0.2",
+      "api_version": "2",
+      "servers": [
+        "https://api.staging.leap.energy",
+        "https://api.leap.energy"
+      ],
+      "security": [
+        {
+          "Bearer": []
+        }
+      ],
+      "paths": {
+        "/v2/meters/{meter_id}": {
+          "get": {
+            "operationId": "getMeterDetails",
+            "parameters": [
+              {
+                "in": "path",
+                "name": "meter_id",
+                "required": true,
+                "schema": {
+                  "format": "uuid",
+                  "type": "string"
+                }
+              }
+            ],
+            "responses": {
+              "200": {
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "$ref": "#/components/schemas/MeterDetailsResponse"
+                    }
+                  }
+                }
+              },
+              "400": {
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "$ref": "#/components/schemas/ErrorResponse"
+                    }
+                  }
+                }
+              },
+              "401": {
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "$ref": "#/components/schemas/ErrorResponse"
+                    }
+                  }
+                }
+              },
+              "403": {
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "$ref": "#/components/schemas/ErrorResponse"
+                    }
+                  }
+                }
+              },
+              "404": {
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "$ref": "#/components/schemas/ErrorResponse"
+                    }
+                  }
+                }
+              },
+              "500": {
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "components": {
+        "schemas": {
+          "MeterDetailsResponse": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MeterIdentifiers"
+              },
+              {
+                "$ref": "#/components/schemas/CommonMeter"
+              },
+              {
+                "$ref": "#/components/schemas/ReadUtility"
+              },
+              {
+                "$ref": "#/components/schemas/AuditInfo"
+              }
+            ],
+            "required": [
+              "audit",
+              "meter_id"
+            ],
+            "type": "object"
+          },
+          "ErrorResponse": {
+            "properties": {
+              "title": {
+                "maxLength": 2000,
+                "minLength": 1,
+                "type": "string"
+              },
+              "status": {
+                "type": "integer"
+              },
+              "details": {
+                "type": "object"
+              }
+            },
+            "type": "object"
+          },
+          "MeterIdentifiers": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MeterId"
+              },
+              {
+                "$ref": "#/components/schemas/AssetIdentifiers"
+              },
+              {
+                "$ref": "#/components/schemas/ExtendedMeterIdentifiers"
+              }
+            ],
+            "required": [
+              "is_archived"
+            ],
+            "type": "object"
+          },
+          "MeterId": {
+            "properties": {
+              "meter_id": {
+                "format": "uuid",
+                "type": "string"
+              }
+            }
+          },
+          "AssetIdentifiers": {
+            "properties": {
+              "partner_reference": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/PartnerReference"
+                  }
+                ],
+                "type": "string"
+              },
+              "transmission_region": {
+                "$ref": "#/components/schemas/transmission_region"
+              },
+              "customer_classification": {
+                "$ref": "#/components/schemas/CustomerClassification"
+              },
+              "load_types": {
+                "items": {
+                  "$ref": "#/components/schemas/load_type"
+                },
+                "minItems": 1,
+                "type": "array"
+              },
+              "meter_type": {
+                "$ref": "#/components/schemas/MeterType"
+              },
+              "customer_group": {
+                "maxLength": 128,
+                "minLength": 1,
+                "pattern": "^[’'+#\\\"@()/&.,;A-Za-z\\u00C0-\\u024F\\u1E00-\\u1EFF0-9\\s_\\-]+$",
+                "type": "string"
+              }
+            }
+          },
+          "ExtendedMeterIdentifiers": {
+            "properties": {
+              "connection_references": {
+                "items": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/PartnerReference"
+                    }
+                  ],
+                  "type": "string"
+                },
+                "type": "array",
+                "uniqueItems": true
+              },
+              "tags": {
+                "items": {
+                  "pattern": "^[’'+#\"@()/&.,;\\sA-Za-zÀ-ɏḀ-ỿ0-9\\-|\\\\]{1,128}$",
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "is_archived": {
+                "type": "boolean"
+              }
+            }
+          },
+          "CommonMeter": {
+            "properties": {
+              "customer": {
+                "$ref": "#/components/schemas/Customer"
+              },
+              "device": {
+                "$ref": "#/components/schemas/Device"
+              },
+              "site": {
+                "$ref": "#/components/schemas/Site"
+              },
+              "caiso": {
+                "$ref": "#/components/schemas/Caiso"
+              },
+              "isone": {
+                "$ref": "#/components/schemas/Isone"
+              },
+              "nyiso": {
+                "$ref": "#/components/schemas/Nyiso"
+              }
+            },
+            "required": [
+              "customer",
+              "meter_type",
+              "transmission_region"
+            ],
+            "type": "object"
+          },
+          "Customer": {
+            "properties": {
+              "street_1": {
+                "maxLength": 128,
+                "minLength": 1,
+                "pattern": "^[’'+#\"@()/&.,;\\sA-Za-zÀ-ɏḀ-ỿ0-9\\-|\\\\]{1,128}$",
+                "type": "string"
+              },
+              "street_2": {
+                "maxLength": 128,
+                "minLength": 1,
+                "pattern": "^[’'+#\"@()/&.,;\\sA-Za-zÀ-ɏḀ-ỿ0-9\\-|\\\\]{1,128}$",
+                "type": "string"
+              },
+              "postal_code": {
+                "pattern": "^[0-9]{5}(?:-[0-9]{4})?$",
+                "type": "string"
+              },
+              "city": {
+                "maxLength": 128,
+                "minLength": 1,
+                "pattern": "^[’'+#\"@()/&.,;\\sA-Za-zÀ-ɏḀ-ỿ0-9\\-]{1,128}$",
+                "type": "string"
+              },
+              "state_or_province_code": {
+                "maxLength": 2,
+                "minLength": 2,
+                "type": "string"
+              },
+              "country_code": {
+                "default": "US",
+                "maxLength": 2,
+                "minLength": 2,
+                "type": "string"
+              },
+              "end_customer_name": {
+                "maxLength": 128,
+                "minLength": 1,
+                "pattern": "^(?!.*[�\\u00A0\\uFFFD?])[\\s\\S]{1,128}$",
+                "type": "string"
+              },
+              "end_customer_title": {
+                "maxLength": 15,
+                "minLength": 1,
+                "pattern": "^[’'+#\"@()/&.,;\\sA-Za-zÀ-ɏḀ-ỿ0-9\\-]{1,128}$",
+                "type": "string"
+              },
+              "end_customer_email": {
+                "format": "email",
+                "maxLength": 128,
+                "minLength": 3,
+                "type": "string"
+              },
+              "end_customer_phone_number": {
+                "maxLength": 32,
+                "minLength": 3,
+                "type": "string"
+              },
+              "end_customer_company_name": {
+                "maxLength": 128,
+                "minLength": 1,
+                "pattern": "^[’'+#\"@()/&.,;\\sA-Za-zÀ-ɏḀ-ỿ0-9\\-]{1,128}$",
+                "type": "string"
+              },
+              "partner_offering_name": {
+                "maxLength": 128,
+                "minLength": 1,
+                "type": "string"
+              },
+              "partner_offering_date": {
+                "format": "date",
+                "type": "string"
+              },
+              "is_in_wholesale_capacity_market": {
+                "type": "boolean"
+              },
+              "dispatch_option": {
+                "$ref": "#/components/schemas/DispatchOption"
+              },
+              "billing": {
+                "$ref": "#/components/schemas/Customer_billing"
+              },
+              "partner_customer_reference": {
+                "maxLength": 256,
+                "minLength": 3,
+                "pattern": "^[^\\/\\\\?\\]\\[{}!#$%^&*()<>|]{3,256}$",
+                "type": "string"
+              }
+            },
+            "required": [
+              "city",
+              "country_code",
+              "postal_code",
+              "state_or_province_code",
+              "street_1"
+            ],
+            "type": "object"
+          },
+          "Device": {
+            "properties": {
+              "device_type": {
+                "$ref": "#/components/schemas/DeviceType"
+              },
+              "device_serial_number": {
+                "maxLength": 256,
+                "minLength": 1,
+                "type": "string"
+              },
+              "device_model": {
+                "maxLength": 128,
+                "minLength": 1,
+                "type": "string"
+              },
+              "device_manufacturer": {
+                "maxLength": 128,
+                "minLength": 1,
+                "type": "string"
+              },
+              "install_date": {
+                "format": "date",
+                "type": "string"
+              },
+              "battery_power_capacity_kw": {
+                "maximum": 999999,
+                "minimum": 0,
+                "type": "number"
+              },
+              "battery_energy_capacity_kwh": {
+                "maximum": 999999,
+                "minimum": 0,
+                "type": "number"
+              },
+              "battery_duration_hours": {
+                "format": "int32",
+                "maximum": 100,
+                "minimum": 0,
+                "type": "integer"
+              },
+              "permission_to_operate_date": {
+                "format": "date",
+                "type": "string"
+              },
+              "battery_max_discharge_rate_kw": {
+                "maximum": 999999,
+                "minimum": 0,
+                "type": "number"
+              },
+              "battery_max_charge_rate_kw": {
+                "maximum": 999999,
+                "minimum": 0,
+                "type": "number"
+              },
+              "battery_max_state_of_charge_percentage": {
+                "maximum": 100,
+                "minimum": 2,
+                "type": "number"
+              },
+              "battery_min_state_of_charge_percentage": {
+                "maximum": 100,
+                "minimum": 0,
+                "type": "number"
+              },
+              "installer": {
+                "maxLength": 256,
+                "minLength": 1,
+                "type": "string"
+              },
+              "is_connected_to_solar": {
+                "type": "boolean"
+              }
+            },
+            "type": "object"
+          },
+          "Site": {
+            "properties": {
+              "load_zone": {
+                "maxLength": 128,
+                "minLength": 1,
+                "type": "string"
+              },
+              "number_of_devices": {
+                "format": "int32",
+                "maximum": 99,
+                "minimum": 0,
+                "type": "integer"
+              },
+              "on_site_fossil_generator": {
+                "type": "boolean"
+              },
+              "renewable_generator": {
+                "type": "boolean"
+              },
+              "generator_capacity_kw": {
+                "deprecated": true,
+                "maximum": 999999,
+                "minimum": 0,
+                "type": "number"
+              },
+              "generator_model_year": {
+                "deprecated": true,
+                "format": "int32",
+                "maximum": 2100,
+                "minimum": 1900,
+                "type": "integer"
+              },
+              "generator_manufacturer": {
+                "deprecated": true,
+                "maxLength": 128,
+                "minLength": 1,
+                "type": "string"
+              },
+              "generator_fuel_type": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/FuelType"
+                  }
+                ],
+                "deprecated": true
+              },
+              "generator_serial_number": {
+                "deprecated": true,
+                "maxLength": 256,
+                "minLength": 1,
+                "type": "string"
+              },
+              "site_devices": {
+                "items": {
+                  "$ref": "#/components/schemas/DeviceInfo"
+                },
+                "minItems": 0,
+                "type": "array"
+              }
+            },
+            "type": "object"
+          },
+          "DeviceInfo": {
+            "properties": {
+              "device_type": {
+                "$ref": "#/components/schemas/DeviceType"
+              },
+              "model": {
+                "maxLength": 128,
+                "minLength": 1,
+                "type": "string"
+              },
+              "manufacturer": {
+                "maxLength": 128,
+                "minLength": 1,
+                "type": "string"
+              },
+              "serial_number": {
+                "maxLength": 256,
+                "minLength": 1,
+                "type": "string"
+              },
+              "energy_capacity_kwh": {
+                "maximum": 999999,
+                "minimum": 0,
+                "type": "number"
+              },
+              "power_capacity_kw": {
+                "maximum": 999999,
+                "minimum": 0,
+                "type": "number"
+              },
+              "energy_capacity_duration_hours": {
+                "format": "int32",
+                "maximum": 100,
+                "minimum": 0,
+                "type": "integer"
+              },
+              "voltage_level": {
+                "enum": [
+                  "EVSE_LEVEL_1",
+                  "EVSE_LEVEL_2"
+                ],
+                "type": "string"
+              },
+              "model_year": {
+                "format": "int32",
+                "maximum": 2100,
+                "minimum": 1900,
+                "type": "integer"
+              },
+              "fuel_type": {
+                "$ref": "#/components/schemas/FuelType"
+              },
+              "battery_max_discharge_rate_kw": {
+                "maximum": 999999,
+                "minimum": 0,
+                "type": "number"
+              },
+              "battery_max_charge_rate_kw": {
+                "maximum": 999999,
+                "minimum": 0,
+                "type": "number"
+              },
+              "battery_max_state_of_charge_percentage": {
+                "maximum": 100,
+                "minimum": 2,
+                "type": "number"
+              },
+              "battery_min_state_of_charge_percentage": {
+                "maximum": 100,
+                "minimum": 0,
+                "type": "number"
+              },
+              "installer": {
+                "maxLength": 256,
+                "minLength": 1,
+                "type": "string"
+              },
+              "is_connected_to_solar": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "device_type"
+            ],
+            "type": "object"
+          },
+          "Caiso": {
+            "properties": {
+              "is_receiving_sgip_funding": {
+                "type": "boolean"
+              },
+              "nem_type": {
+                "$ref": "#/components/schemas/NemType"
+              }
+            },
+            "type": "object"
+          },
+          "Isone": {
+            "properties": {
+              "in_connected_solutions": {
+                "type": "boolean"
+              }
+            },
+            "type": "object"
+          },
+          "Nyiso": {
+            "properties": {
+              "cbl_method": {
+                "$ref": "#/components/schemas/customer_baseline_load_verification_methodology"
+              },
+              "company_type": {
+                "$ref": "#/components/schemas/company_type"
+              },
+              "existing_nyiso_resource_id": {
+                "type": "string"
+              },
+              "partner_nyiso_resource_name": {
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "ReadUtility": {
+            "properties": {
+              "utility": {
+                "$ref": "#/components/schemas/ReadUtility_utility"
+              }
+            }
+          },
+          "CommonUtility": {
+            "properties": {
+              "utility_name": {
+                "$ref": "#/components/schemas/utility"
+              },
+              "load_serving_entity": {
+                "maxLength": 128,
+                "minLength": 1,
+                "type": "string"
+              },
+              "electric_service_account_number": {
+                "maxLength": 128,
+                "minLength": 1,
+                "type": "string"
+              },
+              "tariff": {
+                "maxLength": 128,
+                "minLength": 1,
+                "type": "string"
+              },
+              "voltage": {
+                "maxLength": 128,
+                "minLength": 1,
+                "type": "string"
+              },
+              "utility_meter_serial_number": {
+                "maxLength": 256,
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "AuditInfo": {
+            "properties": {
+              "audit": {
+                "$ref": "#/components/schemas/AuditInfo_audit"
+              }
+            }
+          },
+          "transmission_region": {
+            "enum": [
+              "CAISO",
+              "ERCOT",
+              "NYISO",
+              "ISONE",
+              "PJM",
+              "SERC",
+              "WECC_SW",
+              "WECC_PC"
+            ],
+            "type": "string"
+          },
+          "CustomerClassification": {
+            "enum": [
+              "RESIDENTIAL",
+              "COMMERCIAL"
+            ],
+            "type": "string"
+          },
+          "PartnerReference": {
+            "maxLength": 256,
+            "minLength": 3,
+            "pattern": "^[^\\/\\\\?\\]\\[{}!#$%^&*()<>|]{3,256}$",
+            "type": "string"
+          },
+          "MeterType": {
+            "enum": [
+              "UTILITY_METER",
+              "DEVICE"
+            ],
+            "type": "string"
+          },
+          "load_type": {
+            "enum": [
+              "HVAC",
+              "EV_CHARGING",
+              "BATTERY_STORAGE",
+              "COLD_STORAGE",
+              "PUMPING",
+              "WATER_HEATING",
+              "BUILDING_AUTOMATION",
+              "GENERATION",
+              "MANUFACTURING",
+              "LIGHTING",
+              "OTHER"
+            ],
+            "type": "string"
+          },
+          "DispatchOption": {
+            "enum": [
+              "DAILY",
+              "TARGETED"
+            ],
+            "type": "string"
+          },
+          "DeviceType": {
+            "enum": [
+              "BATTERY",
+              "GENERATOR",
+              "EV",
+              "EV_CHARGER",
+              "BIDIRECTIONAL_EV_CHARGER",
+              "SMART_THERMOSTAT",
+              "AIR_CONDITIONER",
+              "HEAT_PUMP"
+            ],
+            "type": "string"
+          },
+          "FuelType": {
+            "enum": [
+              "DIESEL",
+              "NATURAL_GAS",
+              "DUAL_FUEL",
+              "CO_GEN",
+              "ENERGY_STORAGE",
+              "OTHER"
+            ],
+            "type": "string"
+          },
+          "NemType": {
+            "enum": [
+              "NEM2",
+              "NEM3"
+            ],
+            "type": "string"
+          },
+          "customer_baseline_load_verification_methodology": {
+            "enum": [
+              "AVERAGE_DAY",
+              "WEATHER_ADJUSTED"
+            ],
+            "type": "string"
+          },
+          "company_type": {
+            "enum": [
+              "INDIVIDUAL_OR_SOLE_PROPRIETOR",
+              "LIMITED_LIABILITY_COMPANY",
+              "PARTNERSHIP",
+              "CORPORATION",
+              "OTHER",
+              "EXEMPT_PAYEE"
+            ],
+            "type": "string"
+          },
+          "utility": {
+            "enum": [
+              "PGE",
+              "SCE",
+              "SDGE",
+              "SMUD",
+              "LADWP",
+              "SVP",
+              "CECONY",
+              "ORU",
+              "PSEGLI",
+              "NYS",
+              "RIE",
+              "EVERSOURCE",
+              "NATGRID",
+              "UNITIL",
+              "PPL",
+              "CAPELIGHT",
+              "UPLIGHT",
+              "UNITED_ILLUMINATING",
+              "SMT",
+              "AEP_CENTRAL",
+              "AEP_NORTH",
+              "NUECES_ELECTRIC",
+              "ONCOR",
+              "CENTERPOINT",
+              "ENTERGY_GULF",
+              "SWEPCO",
+              "TNMP",
+              "DEMO",
+              "DEMO2",
+              "LEAP_TEST_CAISO",
+              "LEAP_TEST_NYISO",
+              "COMED",
+              "BGE",
+              "PECO",
+              "METED",
+              "PENELEC",
+              "PSEG",
+              "DOMINION",
+              "WESTPENN",
+              "PENNPOWER",
+              "PEPCO",
+              "PJM_DEMO",
+              "OTHER",
+              "NES",
+              "MLGW",
+              "KUB",
+              "NPU",
+              "MTEMC",
+              "PRECC",
+              "HSVU",
+              "SRP",
+              "PSE",
+              "TVA"
+            ],
+            "type": "string"
+          },
+          "Customer_billing": {
+            "properties": {
+              "street_1": {
+                "maxLength": 128,
+                "minLength": 1,
+                "pattern": "^[’'+#\"@()/&.,;\\sA-Za-zÀ-ɏḀ-ỿ0-9\\-\\\\|]{1,128}$",
+                "type": "string"
+              },
+              "street_2": {
+                "maxLength": 128,
+                "minLength": 1,
+                "pattern": "^[’'+#\"@()/&.,;\\sA-Za-zÀ-ɏḀ-ỿ0-9\\-\\\\|]{1,128}$",
+                "type": "string"
+              },
+              "postal_code": {
+                "pattern": "^[0-9]{5}(?:-[0-9]{4})?$",
+                "type": "string"
+              },
+              "city": {
+                "maxLength": 128,
+                "minLength": 1,
+                "pattern": "^[’'+#\"@()/&.,;\\sA-Za-zÀ-ɏḀ-ỿ0-9\\-]{1,128}$",
+                "type": "string"
+              },
+              "state_or_province_code": {
+                "maxLength": 2,
+                "minLength": 2,
+                "type": "string"
+              },
+              "country_code": {
+                "default": "US",
+                "maxLength": 2,
+                "minLength": 2,
+                "type": "string"
+              }
+            },
+            "required": [
+              "city",
+              "country_code",
+              "postal_code",
+              "state_or_province_code",
+              "street_1"
+            ],
+            "type": "object"
+          },
+          "ReadUtility_utility": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CommonUtility"
+              },
+              {
+                "properties": {
+                  "bill_service_agreement_number": {
+                    "type": "string"
+                  },
+                  "bill_customer_account_number": {
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              }
+            ]
+          },
+          "AuditInfo_audit": {
+            "properties": {
+              "created_by": {
+                "enum": [
+                  "PARTNER",
+                  "LEAP",
+                  "UTILITY"
+                ],
+                "type": "string"
+              },
+              "created_at": {
+                "format": "date-time",
+                "type": "string"
+              },
+              "updated_at": {
+                "format": "date-time",
+                "type": "string"
+              }
+            }
+          }
+        },
+        "securitySchemes": {
+          "Bearer": {
+            "scheme": "bearer",
+            "type": "http"
+          }
+        }
+      }
+    },
+    "original_file": {
+      "source_id": "original_file",
+      "openapi_version": "3.0.1",
+      "api_version": "1.1",
+      "servers": [
+        "https://api.staging.leap.energy",
+        "https://api.leap.energy"
+      ],
+      "paths": {
+        "/v1.1/jobs/interval-data-uploads/presigned-url/{job_id}": {
+          "get": {
+            "operationId": "intervalDataPresignedUrl",
+            "parameters": [
+              {
+                "explode": false,
+                "in": "path",
+                "name": "job_id",
+                "required": true,
+                "schema": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "style": "simple"
+              }
+            ],
+            "responses": {
+              "302": {
+                "content": {},
+                "headers": {
+                  "Location": {
+                    "explode": false,
+                    "schema": {
+                      "type": "string"
+                    },
+                    "style": "simple"
+                  },
+                  "Cache-Control": {
+                    "explode": false,
+                    "schema": {
+                      "type": "string"
+                    },
+                    "style": "simple"
+                  }
+                }
+              },
+              "400": {
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "$ref": "#/components/schemas/ErrorResponseBadRequest"
+                    }
+                  }
+                }
+              },
+              "401": {
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "$ref": "#/components/schemas/ErrorResponseUnauthorized"
+                    }
+                  }
+                }
+              },
+              "403": {
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "$ref": "#/components/schemas/ErrorResponseBadRequest"
+                    }
+                  }
+                }
+              },
+              "404": {
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "$ref": "#/components/schemas/ErrorResponseBadRequest"
+                    }
+                  }
+                }
+              },
+              "500": {
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "$ref": "#/components/schemas/ErrorResponseInternalServerError"
+                    }
+                  }
+                }
+              }
+            },
+            "security": [
+              {
+                "http": []
+              }
+            ]
+          }
+        }
+      },
+      "components": {
+        "schemas": {
+          "ErrorResponseBadRequest": {
+            "type": "object"
+          },
+          "ErrorResponseUnauthorized": {
+            "type": "object"
+          },
+          "ErrorResponseInternalServerError": {
+            "type": "object"
+          }
+        },
+        "securitySchemes": {
+          "http": {
+            "bearerFormat": "JWT",
+            "scheme": "bearer",
+            "type": "http"
+          }
+        }
+      }
+    },
+    "file_preview": {
+      "source_id": "file_preview",
+      "openapi_version": "3.0.1",
+      "api_version": "1.1",
+      "servers": [
+        "https://api.staging.leap.energy",
+        "https://api.leap.energy"
+      ],
+      "paths": {
+        "/v1.1/jobs/interval-data-uploads/file-preview/{job_id}": {
+          "get": {
+            "operationId": "intervalDataFilePreview",
+            "parameters": [
+              {
+                "explode": false,
+                "in": "path",
+                "name": "job_id",
+                "required": true,
+                "schema": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "style": "simple"
+              }
+            ],
+            "responses": {
+              "200": {
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "$ref": "#/components/schemas/GetIntervalDataFilePreviewResponse"
+                    }
+                  }
+                }
+              },
+              "400": {
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "$ref": "#/components/schemas/ErrorResponseBadRequest"
+                    }
+                  }
+                }
+              },
+              "401": {
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "$ref": "#/components/schemas/ErrorResponseUnauthorized"
+                    }
+                  }
+                }
+              },
+              "403": {
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "$ref": "#/components/schemas/ErrorResponseBadRequest"
+                    }
+                  }
+                }
+              },
+              "404": {
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "$ref": "#/components/schemas/ErrorResponseBadRequest"
+                    }
+                  }
+                }
+              },
+              "500": {
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "$ref": "#/components/schemas/ErrorResponseInternalServerError"
+                    }
+                  }
+                }
+              }
+            },
+            "security": [
+              {
+                "http": []
+              }
+            ]
+          }
+        }
+      },
+      "components": {
+        "schemas": {
+          "JobStatus": {
+            "enum": [
+              "QUEUED",
+              "PROCESSING",
+              "COMPLETED",
+              "FAILED"
+            ],
+            "type": "string"
+          },
+          "ErrorResponseBadRequest": {
+            "type": "object"
+          },
+          "ErrorResponseUnauthorized": {
+            "type": "object"
+          },
+          "ErrorResponseInternalServerError": {
+            "type": "object"
+          },
+          "GetIntervalDataFilePreviewResponse": {
+            "properties": {
+              "file_data": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "job_id": {
+                "format": "uuid",
+                "type": "string"
+              },
+              "status": {
+                "$ref": "#/components/schemas/JobStatus"
+              },
+              "created_at": {
+                "format": "date-time",
+                "type": "string"
+              },
+              "updated_at": {
+                "format": "date-time",
+                "type": "string"
+              },
+              "is_limited": {
+                "type": "boolean"
+              }
+            },
+            "type": "object"
+          }
+        },
+        "securitySchemes": {
+          "http": {
+            "bearerFormat": "JWT",
+            "scheme": "bearer",
+            "type": "http"
+          }
+        }
+      }
+    }
+  }
+}

@@ -16,7 +16,8 @@ const HELP = 'Baserow source and retained dataset publisher\n\n' +
   '  freeze --source PRIVATE_SOURCE.json --capture ORIGINAL_CAPTURE.json --out NEW_PRIVATE_SOURCE.json\n' +
   '  attachments --capture ORIGINAL_CAPTURE.json --out NEW_PRIVATE_DELIVERY_DIRECTORY\n' +
   '  publisher --help\n' +
-  '  deployment --help\n\n' +
+  '  deployment --help\n' +
+  '  customer --help\n\n' +
   'Discover reads the original public-view or authorized table field metadata; queries may be empty while selecting actual field IDs.\n' +
   'Capture retains original metadata, all original pages, the closing observation and selected files.\n' +
   'Import copies one complete original capture without changing its provider history.\n' +
@@ -42,6 +43,7 @@ export async function main(argv = process.argv.slice(2)) {
   if (argv.length === 1 && argv[0] === '--help') { process.stdout.write(HELP); return; }
   if (argv[0] === 'publisher') return publisherMain(argv.slice(1));
   if (argv[0] === 'deployment') return (await import('./deployment-cli.mjs')).main(argv.slice(1));
+  if (argv[0] === 'customer') return (await import('./customer/cli.mjs')).main(argv.slice(1));
   const { command, options } = parse(argv);
   if (command === 'attachments') {
     const result = await exportBaserowAttachments(options['--capture'], options['--out']);

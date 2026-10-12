@@ -1,0 +1,17 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "odata-collection-customer",
+  "description": "Download and resume complete original OData analytical sources, restore the original customer collection and continue Analysis.",
+  "commands": {
+    "odata-collection-customer": "stellar-forge/mcp-merchant-operator/odata-collection-cli.mjs"
+  },
+  "commandDescriptions": {
+    "odata-collection-customer": "Download, resume, inspect and receive a complete original OData collection from its merchant MCP service."
+  },
+  "exports": {
+    "./operator/odata-collection-client": {
+      "types": "./source/stellar-forge/mcp-merchant-operator/odata-collection-client.d.mts",
+      "import": "./source/stellar-forge/mcp-merchant-operator/odata-collection-client.mjs"
+    }
+  }
+}

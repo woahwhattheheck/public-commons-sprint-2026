@@ -1,4 +1,5 @@
 // MIT. Coastal actions use the same native writer as the staff console.
+import {constants} from 'node:fs';
 import {readFile,open} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 import {resolve,basename} from 'node:path';
@@ -16,6 +17,10 @@ const HELP=[
  'collect | backfill --profile-id ID --operation-id ID --begin YYYY-MM-DD --end YYYY-MM-DD --products water_level[,predictions] --units metric|english --time-zone gmt|lst|lst_ldt --datum MLLW [--prediction-interval 6|h|hilo] [--label NAME]',
  'import-source --profile-id ID --operation-id ID --file ORIGINAL_SOURCE_PACKAGE',
  'rows --edition-id ID --table observations|predictions|metadata|coverage [--offset 0] [--limit 100] [--begin YYYY-MM-DD] [--end YYYY-MM-DD]',
+ 'study-preview --file STUDY_SELECTION_JSON',
+ 'study-dataset --study-release-id ORIGINAL_RELEASE --name DATASET_NAME --operation-id ORIGINAL_ID',
+ 'study-rows --study-id ID --study-revision N [--offset 0] [--limit 100]',
+ 'study-return --study-release-id ID --format csv|jsonl --file ORIGINAL_RETURN --operation-id ORIGINAL_PREFIX [--note ACTUAL_SOURCE_NOTE]',
  'inspect-mapping --file ORIGINAL_MAPPING_JSON',
  'mapping-source --mapping-id ID --mapping-revision N --output NEW_FILE',
  'source --edition-id ID --page INDEX --output NEW_FILE',
@@ -30,6 +35,7 @@ const HELP=[
  'A running console owns the original workspace. Use its startup JSON with --session.',
  'Collect/import/backfill wait for the original capture or backfill; a stopped source remains explicitly partial.',
  'Every write needs its original operationId. The native journal reconciles exact replay before revision checks.',
+ 'study-dataset uses the exact complete released CSV, recorded review and source provenance; native capacity is 250000 rows / 256 MiB. Narrower data requires a separately reviewed release.',
  'dataset.prepare action payload may include mappingId; its exact saved revision and original file stay with native query/release provenance.',
  'Download files are created exclusively and streamed; an existing or partial selected path is preserved.'
 ].join('\n');
@@ -40,7 +46,7 @@ function argumentsOf(args){
   if(a.startsWith('--')){if(values[a]!==undefined||!args[i+1]||args[i+1].startsWith('--'))throw new TypeError('Use paired unique options.');values[a]=args[++i];}
   else if(command)throw new TypeError('Choose one command.');else command=a;
  }
- const fields=['--workspace','--session','--inbox','--release-runtime','--user-agent','--request','--profile-id','--capture-id','--operation-id','--begin','--end','--products','--units','--time-zone','--datum','--prediction-interval','--label','--file','--edition-id','--table','--offset','--limit','--page','--output','--export-id','--receipt-id','--name','--mapping-id','--mapping-revision'];
+ const fields=['--workspace','--session','--inbox','--release-runtime','--user-agent','--request','--profile-id','--capture-id','--operation-id','--begin','--end','--products','--units','--time-zone','--datum','--prediction-interval','--label','--file','--edition-id','--table','--offset','--limit','--page','--output','--export-id','--receipt-id','--name','--mapping-id','--mapping-revision','--study-id','--study-revision','--study-release-id','--format','--note'];
  if(Object.keys(values).some(k=>!fields.includes(k)))throw new TypeError('An option is not supported; see --help.');
  if(Boolean(values['--workspace'])===Boolean(values['--session']))throw new TypeError('Choose one private workspace or original session file.');
  return{values,command};
@@ -56,6 +62,9 @@ async function sessionClient(filename){
  const query=(path,v)=>path+'?'+new URLSearchParams(Object.entries(v).filter(([,v])=>v!==undefined).map(([k,v])=>[k,String(v)]));
  const original=async path=>{const response=await request(path);return{stream:()=>response.body};};
  return{schema:async()=>(await request('/api/schema')).json(),view:async()=>(await request('/api/view')).json(),
+  operation:async id=>(await request(query('/api/operation',{operationId:id}))).json(),
+  studyPreview:async value=>(await request('/api/study-preview',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(value)})).json(),
+  studyRows:async(id,revision,options)=>(await request(query('/api/study-rows',{studyId:id,revision,...options}))).json(),
   action:async value=>(await request('/api/action',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(value)})).json(),
   rows:async(id,o)=>(await request(query('/api/rows',{editionId:id,...o}))).json(),
   inspectMappingFile:async value=>(await request('/api/mapping-file',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(value)})).json(),
@@ -83,16 +92,71 @@ async function waitOriginal(app,result){
   await new Promise(done=>setTimeout(done,750));
  }
 }
+
+async function studyAction(app,action,payload,operationId){
+ let response=await app.action({action,payload,operationId,expectedRevision:(await app.view()).revision});
+ if(response.state!=='RUNNING')return response;
+ for(;;){const operation=await app.operation(operationId);
+  if(operation.state==='COMPLETE')return{operationId,reused:true,result:operation.result,view:await app.view()};
+  if(operation.state==='FAILED')throw Object.assign(new Error(operation.error?.message??'The original study operation did not complete.'),operation.error,{operationId});
+  await new Promise(resolve=>setTimeout(resolve,750));
+ }
+}
+async function returnStudyFile(app,v){
+ const prefix=v['--operation-id'],filename=v['--file'],releaseId=v['--study-release-id'],format=v['--format'];
+ if(!/^[A-Za-z0-9_-]{8,64}$/.test(prefix??'')||!filename||!releaseId||!['csv','jsonl'].includes(format))throw new TypeError('Use --operation-id (8–64 original characters), --study-release-id, --format csv|jsonl and --file.');
+ const path=resolve(filename),file=await open(path,constants.O_RDONLY|constants.O_NOFOLLOW),before=await file.stat({bigint:true});
+ const stamp=s=>[s.dev,s.ino,s.size,s.mtimeNs,s.ctimeNs].map(String).join(':');
+ try{
+  if(!before.isFile()||before.size>1073741824n)throw new TypeError('Select one regular returned file up to 1 GiB.');
+  const started=await studyAction(app,'study.return.start',{releaseId,filename:basename(path),format,bytes:Number(before.size),note:v['--note']??''},prefix+'-start');
+  let upload=started.result;
+  if(upload.state==='COMPLETE')return{reused:true,result:(await app.view()).studyReturns.find(r=>r.id===upload.returnId)};
+  upload=(await app.view()).studyUploads.find(u=>u.id===upload.id);
+  if(!upload)throw new TypeError('The original returned-file intake is unavailable.');
+  if(upload.state==='COMPLETE')return{reused:true,result:(await app.view()).studyReturns.find(r=>r.id===upload.returnId)};
+  if(upload.state==='COMPARING'){
+   const op=await app.operation(upload.finishingOperationId);
+   if(!op.resumeRequest||op.resumeRequest.payload.uploadId!==upload.id)throw new TypeError('The original comparison request is unavailable; preserve this intake.');
+   return studyAction(app,'study.return.finish',op.resumeRequest.payload,op.operationId);
+  }
+  const digest=createHash('sha256');let offset=0;
+  while(offset<Number(before.size)){
+   const buffer=Buffer.alloc(Math.min(1048576,Number(before.size)-offset));let count=0;
+   while(count<buffer.length){const r=await file.read(buffer,count,buffer.length-count,offset+count);if(!r.bytesRead)throw new TypeError('The selected original file became shorter. Preserve its retained chunks.');count+=r.bytesRead;}
+   digest.update(buffer);const hash=createHash('sha256').update(buffer).digest('hex'),existing=upload.chunks.find(c=>c.offset===offset);
+   if(existing){if(existing.bytes!==buffer.length||existing.sha256!==hash)throw new TypeError('The reselected file differs from its retained prefix. Start a separate intake for changed bytes.');}
+   else{
+    await studyAction(app,'study.return.chunk',{uploadId:upload.id,offset,base64:buffer.toString('base64')},prefix+'-chunk-'+Math.floor(offset/1048576));
+    upload=(await app.view()).studyUploads.find(u=>u.id===upload.id);
+   }
+   offset+=buffer.length;
+  }
+  if(stamp(before)!==stamp(await file.stat({bigint:true})))throw new TypeError('The original file changed during intake. Its chunks remain unsealed for inspection.');
+  const result=await studyAction(app,'study.return.finish',{uploadId:upload.id},prefix+'-finish');
+  if(result.result.original.sha256!==digest.digest('hex')||result.result.original.bytes!==Number(before.size))throw new TypeError('The retained returned bytes differ from the selected complete file.');
+  return result;
+ }finally{await file.close();}
+}
+
 export async function main(args=process.argv.slice(2)){
  const parsed=argumentsOf(args);if(parsed.help){console.log(HELP);return;}
  const {values:v,command}=parsed;
- if(!['schema','view','stations','action','analyse','collect','backfill','import-source','rows','source','capture-source','download','receive-file','inspect-mapping','mapping-source'].includes(command))throw new TypeError('Choose a listed command; see --help.');
+ if(!['schema','view','stations','action','analyse','collect','backfill','import-source','rows','source','capture-source','download','receive-file','inspect-mapping','mapping-source','study-preview','study-rows','study-return','study-dataset'].includes(command))throw new TypeError('Choose a listed command; see --help.');
  const app=v['--session']?await sessionClient(v['--session']):await openCoopsWorkspace({directory:resolve(v['--workspace']),inboxDirectory:v['--inbox']?resolve(v['--inbox']):undefined,userAgent:v['--user-agent'],releaseRuntime:v['--release-runtime']?await readReleaseRuntime(v['--release-runtime']):undefined});
  try{
   let result;
   if(command==='schema')result=await app.schema();
   else if(command==='view')result=await app.view();
   else if(command==='stations')result=(await app.view()).stations;
+  else if(command==='study-preview'){if(!v['--file'])throw new TypeError('--file is required.');result=await app.studyPreview(await json(v['--file']));}
+  else if(command==='study-rows'){const revision=Number(v['--study-revision']);if(!v['--study-id']||!Number.isSafeInteger(revision)||revision<1)throw new TypeError('Choose the exact study ID and revision.');result=await app.studyRows(v['--study-id'],revision,{offset:Number(v['--offset']??0),limit:Number(v['--limit']??100)});}
+  else if(command==='study-return')result=await returnStudyFile(app,v);
+  else if(command==='study-dataset'){
+   if(!v['--study-release-id']||!v['--name']||!v['--operation-id'])throw new TypeError('Choose an original reviewed study release, dataset name and stable operation ID.');
+   const current=await app.view();
+   result=await app.action({action:'study.dataset.prepare',payload:{releaseId:v['--study-release-id'],name:v['--name']},operationId:v['--operation-id'],expectedRevision:current.revision});
+  }
   else if(command==='inspect-mapping'){if(!v['--file'])throw new TypeError('--file is required.');const file=await open(resolve(v['--file']),'r');let bytes;try{const info=await file.stat();if(!info.isFile()||info.size>65536)throw new TypeError('Select an original mapping JSON file up to 64 KiB.');bytes=await file.readFile();}finally{await file.close();}result=await app.inspectMappingFile({filename:basename(v['--file']),base64:bytes.toString('base64')});}
   else if(command==='action'){
    if(!v['--request'])throw new TypeError('--request is required.');const request=await json(v['--request']);

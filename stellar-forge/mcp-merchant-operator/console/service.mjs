@@ -4,8 +4,11 @@ import { basename, dirname, resolve, join } from 'node:path';
 import { timingSafeEqual } from 'node:crypto';
 import { merchantToolFamily } from '../catalog.mjs';
 import { compareHostProfiles } from '../host-profile.mjs';
-import { createConsoleCustomers } from './customers.mjs';
+import { createConsoleCustomers, customerAccess } from './customers.mjs';
+import { buildReviewerCustomerRecipe } from './reviewer-recipes.mjs';
+import { buildGrpcCustomerRecipe } from './grpc-recipes.mjs';
 import { createMerchantWorkflows } from './workflows.mjs';
+import { createMerchantWorkflowReports, MAX_WORKFLOW_REPORT_REQUEST_BYTES } from './workflow-reports.mjs';
 import { createMerchantWorkflowRecipes, MAX_WORKFLOW_RECIPE_REQUEST_BYTES } from './workflow-recipes.mjs';
 import { MerchantConsoleStore, CONSOLE_SCHEMA, canonical, digest, fail } from './store.mjs';
 
@@ -14,7 +17,13 @@ const assets = new Map([
   ['/operator/', ['index.html', 'text/html; charset=utf-8']],
   ['/operator/app.mjs', ['app.mjs', 'text/javascript; charset=utf-8']],
   ['/operator/workflows.mjs', ['workflows.mjs', 'text/javascript; charset=utf-8']],
+  ['/operator/workflow-reports.mjs', ['workflow-reports.mjs', 'text/javascript; charset=utf-8']],
+  ['/operator/workflow-report-format.mjs', ['workflow-report-format.mjs', 'text/javascript; charset=utf-8']],
   ['/operator/workflow-recipes.mjs', ['workflow-recipes.mjs', 'text/javascript; charset=utf-8']],
+  ['/operator/customer-reviewer.mjs', ['customer-reviewer.mjs', 'text/javascript; charset=utf-8']],
+  ['/operator/customer-grpc.mjs', ['customer-grpc.mjs', 'text/javascript; charset=utf-8']],
+  ['/operator/operations.mjs', ['../../../../stellar/scf-starforge-20261009/sf30-seller-sdk/grpc/workspace/public/operations.mjs', 'text/javascript; charset=utf-8']],
+  ['/operator/operations.css', ['../../../../stellar/scf-starforge-20261009/sf30-seller-sdk/grpc/workspace/public/operations.css', 'text/css; charset=utf-8']],
   ['/operator/style.css', ['style.css', 'text/css; charset=utf-8']]
 ]);
 const equal = (a,b) => typeof a === 'string' && typeof b === 'string' &&
@@ -100,11 +109,7 @@ export async function createMerchantConsole({operator,configPath,directory,autho
     if (authorization) try { await authorization.authorizeTool(context,name,args); }
     catch(error){error.merchantConsoleAuthorization=true;throw error;}
   }
-  const deliveryAccess = value => {
-    const selection=value.identity;
-    return {name:(selection.family==='core'?'merchant_client_export':'merchant_opensearch_deployment')+'_manifest',
-      args:{exportId:selection.exportId,...(selection.workspace?{workspace:selection.workspace}:{})}};
-  };
+  const deliveryAccess = value => customerAccess(value.identity);
   const bindingView = value => {
     const {host,...rest}=value;
     return {...rest,merchant:host.merchant,toolCount:host.capabilities?.tools??null,
@@ -160,6 +165,7 @@ export async function createMerchantConsole({operator,configPath,directory,autho
   const workflows=createMerchantWorkflows({store,definitions,getHost:snapshot,startCall,requireTool,
     isCallActive:id=>active.has(id),waitCall:async id=>{await active.get(id);return store.call(id);}});
   const recipes=createMerchantWorkflowRecipes({store,definitions,getHost:snapshot,requireTool,requireOpen});
+  const reports=createMerchantWorkflowReports({store,requireTool,requireOpen,isActiveCall:call=>active.has(call.id)});
   function handler(req,res) {
     let url;try{url=new URL(req.url,'http://127.0.0.1');}catch{return Promise.resolve(false);}
     if(url.pathname!=='/operator'&&!url.pathname.startsWith('/operator/'))return Promise.resolve(false);
@@ -196,11 +202,35 @@ export async function createMerchantConsole({operator,configPath,directory,autho
     try{
       requireOpen();
       if(req.method==='GET'&&route.startsWith('customer-file/')){
-        const value=await customers.file(decodeURIComponent(route.slice(14)),url.searchParams.get('file'),req);
+        const id=decodeURIComponent(route.slice(14)),file=url.searchParams.get('file');
+        if(await customers.streamFile(id,file,req,res))return true;
+        const value=await customers.file(id,file,req);
         attachment(res,value.file.name,value.bytes,'application/octet-stream');return true;
       }
       if(req.method==='GET'&&route.startsWith('customer-archive/')){
         await customers.archive(decodeURIComponent(route.slice(17)),req,res);return true;
+      }
+      if(req.method==='GET'&&route.startsWith('reviewer-value/')){
+        const record=store.call(decodeURIComponent(route.slice('reviewer-value/'.length)));
+        await requireTool(context,record.tool,JSON.parse(record.argumentsJson));
+        const {readReviewerConsoleCall}=await import('./customer-reviewer.mjs');
+        send(res,200,await readReviewerConsoleCall({record,operator,authorize:authorizeRequest,request:req}));return true;
+      }
+      if(req.method==='GET'&&route.startsWith('grpc-operations-value/')){
+        const record=store.call(decodeURIComponent(route.slice('grpc-operations-value/'.length)));
+        await requireTool(context,record.tool,JSON.parse(record.argumentsJson));
+        const {readGrpcOperationsConsoleCall}=await import('./grpc-operations.mjs');
+        send(res,200,await readGrpcOperationsConsoleCall({record,operator,authorize:authorizeRequest,request:req}));return true;
+      }
+      if(req.method==='GET'&&route==='grpc-recipe'){
+        const recipe=buildGrpcCustomerRecipe({definitions,mode:url.searchParams.get('mode')??'customer'});
+        send(res,200,{recipe});return true;
+      }
+      if(req.method==='GET'&&route==='reviewer-recipe'){
+        const recipe=buildReviewerCustomerRecipe({definitions,mode:url.searchParams.get('mode')??'deliver'});
+        // This is a source recipe, not an invocation. The maintained recipe review and install
+        // authorize its resolved original workspace inputs before any native action.
+        send(res,200,{recipe});return true;
       }
       if(req.method==='GET'&&route==='host'){send(res,200,snapshot());return true;}
       if(req.method==='GET'&&route==='tools'){
@@ -222,6 +252,9 @@ export async function createMerchantConsole({operator,configPath,directory,autho
       }
       if(req.method==='GET'&&route.startsWith('workflow-recipe-install/')){
         send(res,200,await recipes.installation(decodeURIComponent(route.slice('workflow-recipe-install/'.length)),context));return true;
+      }
+      if(req.method==='GET'&&route==='workflow-report'){
+        send(res,200,await reports.view({runId:url.searchParams.get('run'),baselineRunId:url.searchParams.get('baseline')},context));return true;
       }
       if(req.method==='GET'&&route==='workflows'){
         send(res,200,await workflows.list(url.searchParams.get('profile'),context));return true;
@@ -301,18 +334,19 @@ export async function createMerchantConsole({operator,configPath,directory,autho
       // The console's draft metadata must fit around a full original native packet.
       // Dispatch still checks the exact original MCP envelope against maxRequestBytes.
       let input;entry.reading=true;
-      try{input=await body(req,route==='import'?128*1024*1024:route.startsWith('workflow-recipe-')?MAX_WORKFLOW_RECIPE_REQUEST_BYTES:operator.maxRequestBytes+8192);}
+      try{input=await body(req,route==='import'?128*1024*1024:route.startsWith('workflow-report-')?MAX_WORKFLOW_REPORT_REQUEST_BYTES:route.startsWith('workflow-recipe-')?MAX_WORKFLOW_RECIPE_REQUEST_BYTES:operator.maxRequestBytes+8192);}
       finally{entry.reading=false;}
       requireOpen();
       if(!input||typeof input!=='object'||Array.isArray(input))throw fail('CONSOLE_JSON','Supply an operator request object.',400);
       if(route==='customers'){send(res,202,{delivery:await customers.start(input,req)});return true;}
       if(route==='customer-pause'){
-        const record=store.delivery(input.id),selection=record.identity;
-        await requireTool(context,(selection.family==='core'?'merchant_client_export':'merchant_opensearch_deployment')+'_manifest',
-          {exportId:selection.exportId,...(selection.workspace?{workspace:selection.workspace}:{})});
+        const record=store.delivery(input.id),access=deliveryAccess(record);
+        await requireTool(context,access.name,access.args);
         requireOpen();
         send(res,200,{delivery:customers.pause(input.id)});return true;
       }
+      if(route==='workflow-report-review'){send(res,200,await reports.review(input,context));return true;}
+      if(route==='workflow-report-receive'){send(res,200,await reports.receive(input,context));return true;}
       if(route==='workflow-recipe-export'){send(res,200,await recipes.export(input,context));return true;}
       if(route==='workflow-recipe-review'){send(res,200,await recipes.review(input,context));return true;}
       if(route==='workflow-recipe-install'){send(res,200,await recipes.install(input,context));return true;}
@@ -347,7 +381,7 @@ export async function createMerchantConsole({operator,configPath,directory,autho
     }
   }
   return {
-    store,handler,snapshot,startCall,workflows,recipes,
+    store,handler,snapshot,startCall,workflows,recipes,reports,
     beginClose,
     close(){
       if(!closed){

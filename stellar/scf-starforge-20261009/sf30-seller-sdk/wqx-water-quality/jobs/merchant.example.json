@@ -17,7 +17,7 @@
   "functions": {
     "waterQualityReview": {
       "path": "/water-quality-review",
-      "description": "Recompute a complete original WQX scientific review and its selected Open Waters receiving plan; deliver the exact source, decisions and every native output in one portable archive.",
+      "description": "Recompute an original WQX review/Open Waters plan or independently receive a complete paired scientific edition; deliver the exact sealed source, saved choices and every native output in one portable archive.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -25,7 +25,8 @@
             "type": "string",
             "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,95}$",
             "minLength": 1,
-            "maxLength": 96
+            "maxLength": 96,
+            "description": "New review name in review mode; exact already-saved scientific review name in scientific mode."
           },
           "planId": {
             "type": "string",
@@ -44,6 +45,21 @@
             "pattern": "^[0-9a-f]{64}$",
             "minLength": 64,
             "maxLength": 64
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "review",
+              "scientific"
+            ],
+            "description": "review retains the original review/Open Waters job; scientific receives the exact complete saved paired edition."
+          },
+          "expectedScientificReviewSha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$",
+            "minLength": 64,
+            "maxLength": 64,
+            "description": "Required for scientific mode; exact saved scientific review identity inside the sealed source."
           }
         },
         "required": [
@@ -58,22 +74,22 @@
         "slots": {
           "source": {
             "required": true,
-            "description": "Complete native WQX review bundle or Open Waters bundle, with its original capture and saved reviewer choices.",
+            "description": "Complete original WQX review/Open Waters bundle (review mode, up to 64 MiB), or complete native paired scientific bundle (scientific mode, up to 128 MiB).",
             "mediaTypes": [
               "application/json"
             ],
-            "maxBytes": 67108864
+            "maxBytes": 134217728
           },
           "choices": {
             "required": false,
-            "description": "Optional starforge.wqx-job-choices.v1 JSON bound to the source review SHA, with explicit replacement scientific options, note or Open Waters choices.",
+            "description": "Optional original starforge.wqx-job-choices.v1 replacements for review mode. Scientific mode carries the complete already-reviewed selection in its source bundle and does not take this slot.",
             "mediaTypes": [
               "application/json"
             ],
             "maxBytes": 2097152
           }
         },
-        "maxTotalBytes": 69206016
+        "maxTotalBytes": 136314880
       },
       "payment": {
         "scheme": "exact",

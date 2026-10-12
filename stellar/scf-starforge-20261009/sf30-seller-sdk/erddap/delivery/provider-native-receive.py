@@ -212,6 +212,8 @@ def main(argv=None):
     group.add_argument("--profile", type=Path)
     group.add_argument("--ndbc-2023-reference", action="store_true")
     parser.add_argument("--temporary-root", type=Path)
+    parser.add_argument("--csv-policy", choices=["require-equivalent", "canonical-json"], default="require-equivalent",
+        help="Explicit original JSON/CSV edition decision carried into the retained native mapping")
     args = parser.parse_args(argv)
     def interrupted(signum, frame):
         raise KeyboardInterrupt("Original provider-native owner interrupted")
@@ -264,7 +266,7 @@ def main(argv=None):
             print(json.dumps({"status": report["status"], "result": str(result_path),
                 "sourceId": capture.id, "profile": profile_output["file"], "ready": report["review"]["ready"]}), flush=True)
             return 0
-        generation = {"startedAt": now(), "pid": os.getpid(), "state": "starting",
+        generation = {"startedAt": now(), "pid": os.getpid(), "state": "starting", "csvPolicy": args.csv_policy,
             "sourceFiles": {name: file_identity(source_root / name) for name in SOURCE_NAMES}}
         report["generations"].append(generation); report["status"] = "RUNNING"
         atomic(result_path, report)
@@ -291,7 +293,7 @@ def main(argv=None):
                     command = [sys.executable, "-B", str(source_root / "delivery/native-receive.py"),
                         "--source-root", str(source_root), "--operation-root", str(operation),
                         "--workspace", str(original), "--source-packet", selected_capture["file"],
-                        "--temporary-root", str(temporary_root)]
+                        "--temporary-root", str(temporary_root), "--csv-policy", args.csv_policy]
                     with (output / "dataset-native.log").open("ab") as log:
                         child = subprocess.Popen(command, stdout=log, stderr=subprocess.STDOUT, start_new_session=True)
                         code = child.wait()

@@ -104,6 +104,7 @@
     "api-route-worksheet",
     "buyer-runbook",
     "merchant-console",
+    "merchant-openapi-workflows",
     "merchant-operation-policies",
     "merchant-provider-cache",
     "merchant-provider-discovery",

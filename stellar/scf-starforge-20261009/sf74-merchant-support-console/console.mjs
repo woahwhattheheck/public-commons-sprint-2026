@@ -3,14 +3,22 @@ import {mountTermsEditor} from './terms-editor.mjs';
 import {mountWorkspaceFiles} from './workspace-files.mjs';
 import {decodeSource, sourceDigest} from './workspace-file.mjs';
 import {mountCaseDesk} from './case-desk.mjs';
+import {mountCasePackageDesk} from './case-package-desk.mjs';
 import {mountHandoffDesk} from './handoff-desk.mjs';
 import {mountIncidentDesk} from './incident-desk.mjs';
 import {mountRuntimeDesk} from './runtime-desk.mjs';
+import {mountServiceDesk} from './service-desk.mjs';
+import {createServiceRecord} from './service-commitments.mjs';
 import {mountCommissioningDesk} from './commissioning-desk.mjs';
+import {mountSourceBundlePanel} from '/commissioning-source/panel.mjs';
 
 let caseDesk = null;
 let runtimeDesk = null;
+let serviceDesk = null;
+let currentServiceRecord = createServiceRecord();
 let commissioningDesk = null;
+let sourceBundlePanel = null;
+let casePackageDesk = null;
 
 const $ = id => document.getElementById(id);
 const form = $('intake-form');
@@ -491,8 +499,10 @@ const emptyTermsDraft = termsEditor.readDraft();
 const workspaceRoot = document.createElement('div');
 const caseRoot = document.createElement('div');
 const handoffRoot = document.createElement('section');
+const casePackageRoot = document.createElement('section');
 const incidentRoot = document.createElement('section');
 const runtimeRoot = document.createElement('section');
+const serviceRoot = document.createElement('section');
 const commissioningRoot = document.createElement('section');
 $('workorder').after(commissioningRoot);
 const portableFiles = document.createElement('details');
@@ -502,6 +512,8 @@ portableSummary.textContent = 'Portable workspace files · import or download';
 portableFiles.append(portableSummary,workspaceRoot);
 $('diagnose').before(caseRoot,incidentRoot,handoffRoot,portableFiles);
 $('review').before(runtimeRoot);
+commissioningRoot.after(serviceRoot);
+serviceRoot.after(casePackageRoot);
 const sourceText = value => new TextDecoder('utf-8', {fatal: true, ignoreBOM: true}).decode(decodeSource(value));
 const isRecord = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 function checkDisplayReport(report, kind) {
@@ -526,6 +538,7 @@ function checkDisplayReport(report, kind) {
 async function readCase() {
   if (termsImportPending) throw new Error('Finish importing the selected terms file before saving the case.');
   // Snapshot everything before the first await; file selections may change during encoding.
+  const service = serviceDesk.read();
   const inputs = Object.fromEntries(new FormData(form).entries());
   inputs.credentialed = $('credentialed').checked;
   const termsText = JSON.stringify({schema: 'stellar-forge.merchant-terms-draft.v1', values: termsEditor.readDraft()});
@@ -538,7 +551,7 @@ async function readCase() {
     [field, file ? await encodedFile(file) : null])));
   sources.intake = current ? encodeBytes(new TextEncoder().encode(current)) : null;
   sources.preflight = browser ? encodeBytes(new TextEncoder().encode(browser)) : null;
-  return {inputs, sources, termsText, baselineOnly,workorderSource,...(commissioning?{commissioning}:{})};
+  return {service, inputs, sources, termsText, baselineOnly,workorderSource,...(commissioning?{commissioning}:{})};
 }
 async function applyCase(state, {canReplace = ()=>true} = {}) {
   const commissioning=await commissioningDesk.prepare(state.commissioning??null);
@@ -577,7 +590,9 @@ async function applyCase(state, {canReplace = ()=>true} = {}) {
       observedAt: report.observedAt}];
   });
   if (!canReplace()) throw new Error('The current draft changed while this case was opening.');
-  // Retire all previous result owners before replacing case state. No request is made here.
+  const service = await serviceDesk.load(state.service, {canReplace});
+  currentServiceRecord = service;
+  // Retire previous diagnostic result owners before replacing the original case state.
   intakeRevision++; intakeOperation++; clearPreflight(); invalidateComparison(); invalidateWorkorder();
   termsImportRevision++; termsImportPending = false; $('terms-file').value = '';
   for (const [field] of files) clearSource(field);
@@ -625,19 +640,76 @@ runtimeDesk = mountRuntimeDesk({root:runtimeRoot,
   exportCase:()=>caseDesk.exportSnapshot(),
   importCase:(state,files)=>caseDesk.importWorkspace(state,files),
 });
+serviceDesk = mountServiceDesk({root:serviceRoot,readRecord:()=>currentServiceRecord,
+  writeRecord:next=>{currentServiceRecord=next;caseDesk?.changed({user:true,source:false});}});
 caseDesk = mountCaseDesk({root:caseRoot,readState:readCase,
   applyState:async (state,options)=>{await applyCase(state,options);portable.setName(state.name);},
   readSupport:()=>runtimeDesk.getText(),
   applySavedCommissioning:(value,options)=>commissioningDesk.mergeSaved(value,options),
+  applySavedService:async(value,{canReplace})=>{
+    if(!canReplace())return false;
+    try {
+      const normalized=await serviceDesk.load(value,{canReplace});
+      currentServiceRecord=normalized;return true;
+    } catch(error) {
+      if(!canReplace())return false;
+      throw error;
+    }
+  },
   prepareSupport:(text,inputs)=>runtimeDesk.prepare(text,inputs),
   applySupport:(text,review)=>{runtimeDesk.apply(text,review);syncSources();},
   onDraftChange:()=>{runtimeDesk.inputsChanged();invalidateWorkorder();},
-  onNameChange:name=>portable.setName(name)});
+  onNameChange:name=>portable.setName(name),
+  onCurrentCaseChange:()=>{void sourceBundlePanel?.caseChanged().catch(()=>{});casePackageDesk?.refreshCase();}});
+sourceBundlePanel=mountSourceBundlePanel({root:commissioningDesk.sourceRoot,
+  getCase:()=>{
+    const selected=caseDesk.deliveryContext();
+    return selected?{...selected,dirty:selected.dirty||selected.busy,
+      actor:commissioningDesk.currentActor()||selected.actor}:null;
+  },
+  onAttached:async attachment=>{
+    const result=attachment?.result;
+    if(result?.caseId&&caseDesk.currentCase()?.id===result.caseId)
+      await caseDesk.openSavedCase(result.caseId);
+  },
+});
+commissioningDesk.configureSourceDelivery({fileUrl:async original=>{
+  const identity=original?.sourceFile;
+  if(!identity)throw new Error('Choose a retained original source file.');
+  const response=await fetch('/api/commissioning/source-file?'+new URLSearchParams(identity),
+    {credentials:'omit',cache:'no-store'});
+  const result=await response.json();
+  if(!response.ok)throw new Error(result.detail||result.error||'The original source file is unavailable.');
+  return result;
+}});
+window.addEventListener('pagehide',event=>{if(!event.persisted)sourceBundlePanel.close();});
+casePackageDesk=mountCasePackageDesk({root:casePackageRoot,
+  caseContext:()=>caseDesk.deliveryContext(),saveCase:()=>caseDesk.saveForDelivery(),
+  onOpenCase:id=>caseDesk.openSavedCase(id)});
+window.addEventListener('pagehide',event=>{if(!event.persisted)casePackageDesk.destroy();});
 mountHandoffDesk({root:handoffRoot,onOpenCase:id=>caseDesk.openSavedCase(id)});
 mountIncidentDesk({root:incidentRoot,exportCase:()=>caseDesk.exportSnapshot(),
   importCase:(state,files)=>caseDesk.importWorkspace(state,files)});
 for (const event of ['input','change']) document.querySelector('main').addEventListener(event,e=>{
-  if (caseRoot.contains(e.target) || incidentRoot.contains(e.target) || handoffRoot.contains(e.target) || workspaceRoot.contains(e.target) || runtimeRoot.contains(e.target) || commissioningRoot.contains(e.target) ||
+  if (caseRoot.contains(e.target) || incidentRoot.contains(e.target) || handoffRoot.contains(e.target) || casePackageRoot.contains(e.target) || workspaceRoot.contains(e.target) || runtimeRoot.contains(e.target) || serviceRoot.contains(e.target) || commissioningRoot.contains(e.target) ||
       ['permission','post-permission'].includes(e.target.id)) return;
   caseDesk.changed({user:true});
+});
+
+async function openLinkedCase() {
+  const url = new URL(location.href);
+  const selected = url.searchParams.getAll('case');
+  if (selected.length === 0) return;
+  if (selected.length !== 1 ||
+      !/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/.test(selected[0]))
+    throw new TypeError('The case link must name one saved case UUID.');
+  const id = selected[0];
+  const opened = await caseDesk.openSavedCase(id);
+  if (!opened || caseDesk.currentCase()?.id !== id) return;
+  const destination = url.hash === '#implementation' ? commissioningRoot :
+    url.hash === '#case-packages' ? casePackageRoot : null;
+  if (destination) destination.scrollIntoView({block: 'start'});
+}
+void openLinkedCase().catch(error => {
+  message('status', 'The linked case could not be opened: ' + String(error?.message ?? error).slice(0, 280), 'error');
 });

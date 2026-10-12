@@ -82,8 +82,8 @@ export class MerchantGdeltWorkspaces {
       return {revision:project.revision,total:values.length,offset,returned:items.length,nextOffset:offset+items.length<values.length?offset+items.length:null,items};
     }
     if(name==='merchant_gdelt_query')return client.query(args.kind,args.input??{});
-    if(name==='merchant_gdelt_discover')return discoveryView(await client.action({action:'discover',history:args.history??false}));
-    if(name==='merchant_gdelt_discovery')return discoveryView({...await client.query('discovery',{id:args.id}),discoveryId:args.id});
+    if(name==='merchant_gdelt_discover')return discoveryView(await client.action({action:'discover',history:args.history??false,format:args.format}));
+    if(name==='merchant_gdelt_discovery')return discoveryView({...await client.query('discovery',{id:args.id,format:args.format}),discoveryId:args.id});
     if(name==='merchant_gdelt_input'){
       const found=await readGdeltHostInput(entry,args.input);
       return {workspace:alias,input:args.input,kind:found.input.kind,name:basename(found.input.path),

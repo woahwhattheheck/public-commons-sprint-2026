@@ -232,3 +232,11 @@ Monthly amounts retain the selected reconciliation period. Each group and month 
 ### Customer-directory report consistency
 
 The customer directory uses the same sanitized customer report and invoice projection in either a customer-only or complete operator handoff. Customer error summaries retain the source error code/count and row identity without copying private original-path/error text. Full input diagnostics, mapping/correction source and review notes stay in the original operator files and native preview. An exception while opening a comparison retains a customer-visible comparison error code with its detailed message available to the operator.
+
+## Original XLSX intake extension
+
+`edition.workbooks` retains source-owned workbook intake descriptors separately from the original four-ledger sources. `inspect_workbook({periodId?,editionId?,workbookId?,sheet?,offset?,limit?,query?,row?})` returns `tj.records-workbook-inspection.v1`: exact workbook metadata, attributed intake assessment, complete paged original rows and an eligible `custodySource` only after the declared review. The full descriptor, row/source hash, context, custody-acknowledgment and export schemas are specified in [WORKBOOKS.md](WORKBOOKS.md).
+
+The original `edition.sources` additionally accepts `format:"xlsx"` only for the `cartons` table, referencing the exact `workbookId` and current `workbookBindingSha256` returned by this review. Its original file identity and canonical mapping are verified again on compilation. Workbook evidence is retained in `_source.workbook` and original sheet/cell provenance. Invalid or stale promotion is an input correction, not an empty custody population. The original engine and customer projection are unchanged.
+
+`report.workbooks` gives selected intake counts and status. Complete operator exports add `workbook-intakes.json` and `workbook-rows.ndjson`, with `completeWorkbookRowExport` and `workbookInputErrorCount` in their manifest. The separate original-workbook handoff includes every selected physical row, original binary file and document even when financial inputs or custody admission are incomplete. Source adoption, native declaration and complete application closure use the original workspace CAS/history.

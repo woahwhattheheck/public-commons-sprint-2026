@@ -1,0 +1,97 @@
+{
+  "schema": "stellar-forge.distribution-source-selection.v1",
+  "id": "mpp-merchant",
+  "title": "Native MPP merchant and customer workspace",
+  "description": "Complete original native MPP merchant/customer console, terminal approval, managed Applications, merchant MCP, customer source export and retained receiving",
+  "base": {
+    "commands": [
+      "installation",
+      "runtime-profile",
+      "runtime-install",
+      "runtime-workspace",
+      "runtime-transfer",
+      "mpp",
+      "merchant-mcp",
+      "merchant-mcp-stdio",
+      "merchant-mcp-client-config"
+    ],
+    "exports": [
+      "./runtime-profile",
+      "./installation",
+      "./installation/cli",
+      "./installation/product",
+      "./installation/runtime",
+      "./runtime-install",
+      "./runtime-transfer",
+      "./runtime-workspace",
+      "./runtime-workspace/server",
+      "./mpp",
+      "./mpp/merchant",
+      "./mpp/buyer",
+      "./mpp/workspace",
+      "./mpp/customer",
+      "./merchant/mcp",
+      "./merchant/mcp/server",
+      "./merchant/mcp/stdio",
+      "./merchant/mcp/client-config",
+      "./merchant/mcp/mpp",
+      "./merchant/mcp/mpp-download",
+      "./package.json",
+      "./manifest.json"
+    ],
+    "features": [
+      "mcp"
+    ],
+    "applicationProviders": [],
+    "merchantProviders": [],
+    "browserAssets": []
+  },
+  "contributions": [
+    "mpp",
+    "merchant-provider-mpp"
+  ],
+  "components": [
+    "stellar/scf-starforge-20261009/mpp-charge",
+    "stellar/scf-starforge-20261009/sf36-spend-governor",
+    "stellar/scf-starforge-20261009/sf54-buyer-governor-intent",
+    "stellar/scf-starforge-20261009/sf59-operator-reservation-gate",
+    "stellar/scf-starforge-20261009/sf62-human-approval-cli",
+    "stellar/scf-starforge-20261009/sf86-rpc-transfer-reconcile",
+    "stellar/scf-starforge-20261009/sf46-release",
+    "stellar/scf-starforge-20261009/distribution/runtime-workspace/public",
+    "stellar/scf-starforge-20261009/distribution/python-runtime",
+    "stellar/scf-starforge-20261009/sf82-seller-pilot"
+  ],
+  "supportFiles": [
+    "stellar/scf-starforge-20261009/distribution/cli.mjs",
+    "stellar/scf-starforge-20261009/distribution/build.mjs",
+    "stellar/scf-starforge-20261009/distribution/git-source.mjs",
+    "stellar/scf-starforge-20261009/distribution/build-state.mjs",
+    "stellar/scf-starforge-20261009/distribution/runtime-unpack.py",
+    "stellar/scf-starforge-20261009/distribution/runtime-workspace/application-terminal.py",
+    "stellar/scf-starforge-20261009/distribution/runtime-workspace/managed-command.mjs",
+    "stellar/scf-starforge-20261009/distribution/runtime-workspace/worker.mjs",
+    "stellar/scf-starforge-20261009/distribution/runtime-workspace/MPP_APPLICATIONS.md",
+    "stellar/scf-starforge-20261009/distribution/runtime-workspace/APPLICATIONS.md",
+    "stellar/scf-starforge-20261009/distribution/runtime-workspace/APPLICATION_PROVIDERS.md",
+    "stellar/scf-starforge-20261009/distribution/runtime-workspace/README.md",
+    "stellar/scf-starforge-20261009/distribution/RUNTIME_INSTALL.md",
+    "stellar/scf-starforge-20261009/distribution/RUNTIME_TRANSFER.md",
+    "stellar/scf-starforge-20261009/distribution/RUNTIME.md",
+    "stellar/scf-starforge-20261009/distribution/receiving/mpp-managed-reception.mjs",
+    "stellar/scf-starforge-20261009/distribution/receiving/MPP_MANAGED_RECEIVING.md",
+    "stellar-forge/mcp-merchant-operator/mpp-config.mjs",
+    "stellar-forge/mcp-merchant-operator/mpp-console.mjs",
+    "stellar-forge/mcp-merchant-operator/mpp-files.mjs",
+    "stellar-forge/mcp-merchant-operator/mpp-download.mjs",
+    "stellar-forge/mcp-merchant-operator/MPP.md"
+  ],
+  "excludeFiles": [
+    "stellar/scf-starforge-20261009/distribution/index.mjs"
+  ],
+  "product": {
+    "schema": "stellar-forge.merchant-product-package.v1",
+    "description": "Native MPP merchant and customer operations with managed Applications and complete original client receiving",
+    "readme": "stellar/scf-starforge-20261009/distribution/selections/MPP_MERCHANT.md"
+  }
+}

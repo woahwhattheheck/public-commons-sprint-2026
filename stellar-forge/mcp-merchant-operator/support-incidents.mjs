@@ -6,12 +6,13 @@ import { incidentStatus } from '../../stellar/scf-starforge-20261009/sf93-seller
 import { resolveDestination } from '../../stellar/scf-starforge-20261009/sf93-seller-support-bundle/notifications.mjs';
 import { inspectSlackDestination } from '../../stellar/scf-starforge-20261009/sf93-seller-support-bundle/notifications-slack.mjs';
 import { failure } from './host-files.mjs';
+import {readServiceIncidentSnapshot} from '../../stellar/scf-starforge-20261009/sf74-merchant-support-console/service-source.mjs';
 
 const SCHEMA='stellar-forge.merchant-support-incident-sources.v1';
 const sourceNames=new Set(['merchant_support_profiles','merchant_support_configure','merchant_support_watch_status',
   'merchant_support_watch_start','merchant_support_watch_stop','merchant_notifications','merchant_incident_notify',
   'merchant_notification_update','merchant_incidents','merchant_incident_ack','merchant_incident_case']);
-const addedNames=new Set(['merchant_support_incident_sources','merchant_support_destination','merchant_incident_view']);
+const addedNames=new Set(['merchant_support_incident_sources','merchant_support_destination','merchant_incident_view','merchant_support_service_snapshot']);
 const UUID=/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/;
 const statuses=['OPEN','ACKNOWLEDGED','RECOVERED','RETIRED'];
 const notificationStates=['PENDING','RETRY','IN_FLIGHT','PAUSED','EXHAUSTED','DELIVERED','CANCELLED'];
@@ -159,7 +160,13 @@ export class MerchantSupportIncidentSources {
       :{accepted:true,reason:'WEBHOOK_CONFIGURATION_RESOLVED',destinationId:selected.binding.id};
     return {configRevision:state.configRevision,configHash:state.configHash,...result};
   }
+  async serviceSnapshot(args){
+    const manager=await this.#open(),source=this.#source(args);
+    return manager?manager.serviceSnapshot(source.id,{merchantId:args.merchantId}):
+      readServiceIncidentSnapshot({directory:this.#directory(source),source:{id:'legacy',label:'Original incident store'},merchantId:args.merchantId});
+  }
   async call(name,args={}){
+    if(name==='merchant_support_service_snapshot')return {snapshot:await this.serviceSnapshot(args)};
     const manager=await this.#open();
     if(name==='merchant_support_incident_sources')return {schema:SCHEMA,...this.summary};
     const source=this.#source(args),selected=publicSource(source);

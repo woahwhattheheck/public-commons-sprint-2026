@@ -66,7 +66,7 @@ async function selectedDirectory(selected,identifier) {
   return directory;
 }
 async function withCollection(selected,identifier,operation) {
-  const directory=await selectedDirectory(selected,identifier),lease=await acquireReleaseLease(directory,'collection.lock');
+  const directory=await selectedDirectory(selected,identifier),lease=await acquireReleaseLease(directory,'state.lock');
   try{return await operation(directory,bound(await openCollection(directory),selected));}
   finally{await lease?.close();}
 }
@@ -209,7 +209,7 @@ export async function openServiceCollections({directory,profile,sequence}={}) {
   }
   async function rows(identifier,options={}) {
     const selected=await current(),directory=await selectedDirectory(selected,id(identifier));
-    const lease=await acquireReleaseLease(directory,'collection.lock');
+    const lease=await acquireReleaseLease(directory,'state.lock');
     try{const result=await readCollectionRows(directory,options);bound(result,selected);return result;}
     finally{await lease?.close();}
   }

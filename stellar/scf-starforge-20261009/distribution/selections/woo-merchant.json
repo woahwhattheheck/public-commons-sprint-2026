@@ -90,6 +90,7 @@
     "merchant-provider-receiving",
     "merchant-provider-tools",
     "merchant-provider-woocommerce",
+    "woo-catalog",
     "woo-managed"
   ],
   "components": [

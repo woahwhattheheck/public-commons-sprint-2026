@@ -1,7 +1,14 @@
 // MIT. Borrow the original Research HTTP workspace without taking its listener lifecycle.
 import {isAbsolute,resolve} from 'node:path';
 import {Readable} from 'node:stream';
+import {createEuropePmcClient} from './europe-pmc-client.mjs';
+import {createRisSourceClient} from './ris-source/client.mjs';
+import {createCustomerUpdatesClient} from './customer-updates/client.mjs';
+import {createResearchCommerceClient} from './customer-commerce/client.mjs';
 import {createClinicalTrialsClient} from './clinical-trials-client.mjs';
+import {createStudyExtractionClient} from './study-extraction-client.mjs';
+import {createStudyProtocolClient} from './study-protocol-client.mjs';
+import {createTemplateExchangeClient} from './template-exchange/client.mjs';
 import {createDocumentWorkspaceClient,createPipelineWorkspaceClient,sendPipelineFiles} from './document-workspace-client.mjs';
 import {BuyerError,need,object,parseJson,safeCode} from '../node/store.mjs';
 import {writePortableFile,PORTABLE_LIMIT} from './portable.mjs';
@@ -42,6 +49,17 @@ async function readResponse(response,maximum=RESEARCH_CONTROL_LIMIT){
     size+=chunk.length;need(size<=maximum,'RESEARCH_RESPONSE_TOO_LARGE');chunks.push(chunk);
   }
   return Buffer.concat(chunks,size);
+}
+function downloadFilename(disposition){
+  const encoded=/^attachment(?:;|$)/i.test(disposition)?
+    disposition.match(/(?:^|;)\s*filename\*=UTF-8''([^;]*)/i)?.[1]:undefined;
+  if(encoded!==undefined){
+    let value;try{value=decodeURIComponent(encoded);}catch{need(false,'RESEARCH_DOWNLOAD_FILENAME_INVALID');}
+    need(typeof value==='string'&&value.length>0&&value.length<=240&&!/[\u0000-\u001f\u007f/\\]/.test(value),
+      'RESEARCH_DOWNLOAD_FILENAME_INVALID');
+    return value;
+  }
+  return disposition.match(/^attachment; filename="([A-Za-z0-9][A-Za-z0-9._-]{0,179})"$/)?.[1]??'research.json';
 }
 function connectionDescriptor(options){
   need(object(options),'RESEARCH_CONNECTION_INVALID');
@@ -89,7 +107,11 @@ export class ResearchWorkspaceClient{
       if(!response.ok){
         let detail={};try{detail=parseJson(await readResponse(response,65536));}catch{}
         throw new BuyerError(safeCode(detail.error,'RESEARCH_HTTP_REJECTED'),{status:response.status,
-          ...(detail.openAlexImport?{openAlexImport:detail.openAlexImport}:{})});
+          ...(detail.openAlexImport?{openAlexImport:detail.openAlexImport}:{}),
+          ...(typeof detail.outcomeUnknown==='boolean'?{outcomeUnknown:detail.outcomeUnknown}:{}),
+          ...(detail.researchCommerce?{researchCommerce:detail.researchCommerce}:{}),
+          ...(detail.requestId?{requestId:detail.requestId}:{}),
+          ...(detail.closeError?{researchCommerceClose:detail.closeError}:{})});
       }
       return await consume(response);
     }catch(error){
@@ -110,12 +132,13 @@ export class ResearchWorkspaceClient{
   #json(route,body,options={}){
     return this.#run(async()=>{
       const bytes=body===undefined?undefined:JSON.stringify(body);
-      const maximum=/^\/api\/dossiers\/[^/]+\/citation-updates\/reviews(?:\?projection=metadata)?$/.test(route)?16*1024*1024:
+      const templateRoute=/^\/api\/research\/dossiers\/[^/]+\/template-exchange(?:\/|\?|$)/.test(route);
+      const maximum=route.startsWith('/api/customer-commerce/')?2*1024*1024:templateRoute?48*1024*1024:/^\/api\/dossiers\/[^/]+\/(?:citation-updates|eligibility|extraction(?:\/publications)?|risk-of-bias|customer-updates)\/reviews(?:\?projection=metadata)?$/.test(route)?16*1024*1024:
         /^\/api\/dossiers\/[^/]+\/source-bundles\/(?:preview|receive)(?:\?projection=metadata)?$/.test(route)
         ?128*1024*1024+65536:96*1024*1024+65536;
       need(bytes===undefined||Buffer.byteLength(bytes)<=maximum,'RESEARCH_REQUEST_TOO_LARGE');
       return this.#request(route,{...options,body:bytes,headers:{...(options.headers??{}),
-        ...(bytes===undefined?{}:{'Content-Type':'application/json'})}},async response=>parseJson(await readResponse(response)));
+        ...(bytes===undefined?{}:{'Content-Type':'application/json'})}},async response=>parseJson(await readResponse(response,templateRoute?PORTABLE_LIMIT:(route.startsWith('/api/europe-pmc')||route.startsWith('/api/customer-commerce/')||/^\/api\/dossiers\/[^/]+\/(?:customer-updates|ris-sources)(?:\/|\?|$)/.test(route))?64*1024*1024:RESEARCH_CONTROL_LIMIT)));
     });
   }
   async status(options={}){
@@ -195,6 +218,29 @@ export class ResearchWorkspaceClient{
       },id,input,options)),
     });
   }
+  risSources(){return createRisSourceClient({request:(route,body,options)=>this.#json(route,body,options),
+    download:(route,file,options)=>this.#download(route,file,options)});}
+  customerCommerce(){
+    return createResearchCommerceClient({
+      request:(route,body,options)=>this.#json(route,body,options),
+      download:(route,file,options)=>this.#download(route,file,options),
+    });
+  }
+  customerUpdates(){
+    return createCustomerUpdatesClient({
+      request:(route,body,options)=>this.#json(route,body,options),
+      download:(route,file,options)=>this.#download(route,file,options),
+    });
+  }
+  europePmc(){
+    return createEuropePmcClient({
+      request:(route,body,options)=>this.#json(route,body,options),
+      download:(route,file,options)=>this.#download(route,file,options),
+      upload:(route,source,options)=>this.#run(()=>this.#request(route,{...options,method:'POST',body:source.stream,
+        headers:{...(options?.headers??{}),'Content-Type':'application/octet-stream'}},
+        async response=>parseJson(await readResponse(response)))),
+    });
+  }
   clinicalTrials(){
     return createClinicalTrialsClient({
       request:(route,body,options)=>this.#json(route,body,options),
@@ -216,6 +262,41 @@ export class ResearchWorkspaceClient{
   startCrossref(id,operationId,{expectedPlanSha256}={}){return this.#json(operationPath(id,operationId)+'/start',{expectedPlanSha256});}
   stopCrossref(id,operationId){return this.#json(operationPath(id,operationId)+'/stop',{});}
   receiveCrossref(id,operationId,input){return this.#json(operationPath(id,operationId)+'/receive?projection=metadata',input);}
+  studyProtocol(){return createStudyProtocolClient({client:this,run:work=>this.#run(work)});}
+  studyExtraction(){return createStudyExtractionClient({request:(route,body,options)=>this.#json(route,body,options),
+    download:(route,file,options)=>this.#download(route,file,options)});}
+  extraction(id,options={}){return this.studyExtraction().extraction(id,options);}
+  extractionSourceValues(id,options={}){return this.studyExtraction().extractionSourceValues(id,options);}
+  reviewExtraction(id,input,options={}){return this.studyExtraction().reviewExtraction(id,input,options);}
+  exportExtraction(id,options={}){return this.studyExtraction().exportExtraction(id,options);}
+  extractionPublications(id,options={}){return this.studyExtraction().extractionPublications(id,options);}
+  reviewExtractionPublication(id,input,options={}){return this.studyExtraction().reviewExtractionPublication(id,input,options);}
+  exportExtractionPublication(id,options={}){return this.studyExtraction().exportExtractionPublication(id,options);}
+  /** @returns {import('./template-exchange/client.mjs').TemplateExchangeClient} */
+  templateExchange(dossierId){
+    return createTemplateExchangeClient({dossierId,
+      request:(route,body,options)=>this.#json(route,body,options),
+      readBlob:(route,options)=>this.#run(()=>this.#request(route,options,
+        async response=>new Uint8Array(await readResponse(response,PORTABLE_LIMIT)))),
+      download:(route,file,options)=>this.#download(route,file,options),
+    });
+  }
+  zoteroStatus(options={}){return this.#json('/api/zotero',undefined,options);}
+  openZotero(options={}){return this.#json('/api/zotero/open',{},options);}
+  riskOfBias(id,options={}){return this.#json(dossierPath(id)+'/risk-of-bias'+parameters(options));}
+  reviewRiskOfBias(id,input){return this.#json(dossierPath(id)+'/risk-of-bias/reviews?projection=metadata',input);}
+  exportRiskOfBias(id,{file,reviewId,assessmentId,assessmentEditionId,actorId,revision,
+    format='json',section='overview',...options}={}){
+    need(['json','csv','md','html'].includes(format),'RISK_OF_BIAS_EXPORT_FORMAT_INVALID');
+    return this.#download(dossierPath(id)+'/risk-of-bias/export'+parameters({
+      reviewId,assessmentId,assessmentEditionId,actorId,revision,format,section}),file,options);
+  }
+  eligibility(id,options={}){return this.#json(dossierPath(id)+'/eligibility'+parameters(options));}
+  reviewEligibility(id,input){return this.#json(dossierPath(id)+'/eligibility/reviews?projection=metadata',input);}
+  exportEligibility(id,{file,reviewId,workSetId,revision,format='json',section='queue',...options}={}){
+    need(['json','csv'].includes(format),'ELIGIBILITY_EXPORT_FORMAT_INVALID');
+    return this.#download(dossierPath(id)+'/eligibility/export'+parameters({reviewId,workSetId,revision,format,section}),file,options);
+  }
   citationUpdates(id,options={}){return this.#json(dossierPath(id)+'/citation-updates'+parameters(options));}
   reviewCitationUpdate(id,input){return this.#json(dossierPath(id)+'/citation-updates/reviews?projection=metadata',input);}
 
@@ -238,14 +319,14 @@ export class ResearchWorkspaceClient{
     return this.#json(dossierPath(id)+'/pipelines/operations/'+pathId(operationId),undefined,options);
   }
 
-  async #download(route,file,{signal,expectedSha256,request}={}){
+  async #download(route,file,{signal,expectedSha256,request,headers={}}={}){
     const body=request===undefined?undefined:JSON.stringify(request);
     need(body===undefined||Buffer.byteLength(body)<=RESEARCH_CONTROL_LIMIT,'RESEARCH_REQUEST_TOO_LARGE');
-    return this.#run(()=>this.#request(route,{signal,readOnly:true,...(body===undefined?{}:{
-      body,method:'POST',headers:{'Content-Type':'application/json'}
+    return this.#run(()=>this.#request(route,{signal,readOnly:true,headers,...(body===undefined?{}:{
+      body,method:'POST',headers:{...headers,'Content-Type':'application/json'}
     })},async response=>{
       const disposition=response.headers.get('content-disposition')??'';
-      const filename=disposition.match(/^attachment; filename="([A-Za-z0-9][A-Za-z0-9._-]{0,179})"$/)?.[1]??'research.json';
+      const filename=downloadFilename(disposition);
       const contentType=response.headers.get('content-type')??'application/octet-stream';
       const declared=response.headers.get('content-length');let count=0;
       if(declared!==null)need(/^[0-9]+$/.test(declared)&&Number(declared)<=PORTABLE_LIMIT,'RESEARCH_DOWNLOAD_SIZE_INVALID');

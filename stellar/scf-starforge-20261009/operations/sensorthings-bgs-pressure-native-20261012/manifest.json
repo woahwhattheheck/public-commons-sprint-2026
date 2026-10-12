@@ -1,0 +1,544 @@
+{
+  "schema": "stellar-forge.sensorthings-numeric-source-package.v1",
+  "operationId": "SCF_SENSORTHINGS_BGS_PRESSURE_1B40_20261012",
+  "createdAt": "2026-10-12T12:20:53Z",
+  "repository": "woahwhattheheck/public-commons-sprint-2026",
+  "sourcePath": "stellar/scf-starforge-20261009/operations/sensorthings-bgs-pressure-native-20261012",
+  "sourceRepresentation": "COMPLETE_CONNECTOR_UTF8_TEXT",
+  "provenance": "All selected and qualification source bodies are actual complete connector downloads; each full original upload/download response is preserved in a separate source receipt.",
+  "providerHttp": {
+    "method": null,
+    "status": null,
+    "headers": null,
+    "requestClocks": null
+  },
+  "selected": {
+    "serviceUrl": "https://sensors.bgs.ac.uk/FROST-Server/v1.1/",
+    "datastreamId": {
+      "type": "number",
+      "value": "1"
+    },
+    "name": "GGERFS_01 Barometric Pressure",
+    "observationType": "http://www.opengis.net/def/observationType/OGC-OM/2.0/OM_Measurement",
+    "unitOfMeasurement": {
+      "name": "Millibar",
+      "symbol": "mbar",
+      "definition": "http://vocab.nerc.ac.uk/collection/P06/current/UPBB"
+    },
+    "window": {
+      "id": "bgs-1-20260601",
+      "start": "2026-06-01T00:00:00Z",
+      "endExclusive": "2026-06-02T00:00:00Z",
+      "firstUrl": "https://sensors.bgs.ac.uk/FROST-Server/v1.1/Datastreams(1)/Observations?%24filter=phenomenonTime+ge+2026-06-01T00%3A00%3A00Z+and+phenomenonTime+lt+2026-06-02T00%3A00%3A00Z&%24orderby=phenomenonTime+asc&%24top=64&%24count=true&%24expand=FeatureOfInterest",
+      "pages": 2,
+      "rows": 96,
+      "next": null
+    },
+    "observedRows": 96,
+    "uniqueObservationIds": 96,
+    "completeObservationPageChain": true,
+    "nativeRoles": [
+      "bgs-selected-stream",
+      "bgs-observed-property",
+      "bgs-sensor",
+      "bgs-thing",
+      "bgs-service-root",
+      "bgs-locations",
+      "bgs-native-catalogue",
+      "bgs-selected-page-000",
+      "bgs-selected-page-001",
+      "bgs-selected-stream-end"
+    ],
+    "openingClosingStreamBytesUnchanged": true,
+    "snapshot": "not_established"
+  },
+  "qualification": {
+    "roles": [
+      "numeric-catalogue",
+      "bgs-catalogue",
+      "bgs-window-page-000",
+      "bgs-month-page-000"
+    ],
+    "descriptions": {
+      "numeric-catalogue": "Complete returned Hamburg numeric qualification response; its explicit test stream is not the selected real numerical source.",
+      "bgs-catalogue": "Original three-row BGS discovery page; exact URL differs from the separately captured native catalogue query.",
+      "bgs-window-page-000": "Complete separate 30 June one-day query containing one point; excluded from the selected 1 June window.",
+      "bgs-month-page-000": "Incomplete June-month qualification: first64 of reported2785 with a remaining nextLink. No whole-month claim."
+    }
+  },
+  "counts": {
+    "originalBodies": 14,
+    "originalReceiptDocuments": 14,
+    "nativeRecordingResponses": 10,
+    "selectedObservations": 96,
+    "selectedPages": 2,
+    "sourceFiles": 33
+  },
+  "recording": {
+    "filename": "native-recording.json",
+    "bytes": 313277,
+    "sha256": "e04a3932da707a2a90a68fc87b97c4af72337c09ec5a23f7c072b933a1b855ac"
+  },
+  "sourceObservations": [
+    {
+      "role": "numeric-catalogue",
+      "path": "originals/hamburg-numeric-catalogue.json",
+      "filename": "hamburg-numeric-catalogue.json",
+      "url": "https://iot.hamburg.de/v1.1/Datastreams?$filter=observationType%20eq%20'http%3A%2F%2Fwww.opengis.net%2Fdef%2FobservationType%2FOGC-OM%2F2.0%2FOM_Measurement'&$orderby=id%20asc&$top=3&$count=true",
+      "bytes": 755,
+      "sha256": "051d8f012db1da025a0d4e8141a14e5ae6ec97f2581751a06dd8155f5d2e4eb0",
+      "capturedAt": "2026-10-12T11:59:41Z",
+      "receipt": {
+        "path": "receipts/numeric-catalogue.json",
+        "bytes": 3048,
+        "sha256": "88da9759dfd3391f6a1f76bdd533dcee41ec5d8c6e9ee57c59b229634d23f98c"
+      }
+    },
+    {
+      "role": "bgs-catalogue",
+      "path": "originals/bgs-datastreams-catalogue.json",
+      "filename": "bgs-datastreams-catalogue.json",
+      "url": "https://sensors.bgs.ac.uk/FROST-Server/v1.1/Datastreams?$orderby=id%20asc&$top=3&$count=true",
+      "bytes": 4115,
+      "sha256": "4add8256192ecd4cf07718b5820910b59edd9de435a80ffab03a2e0c8be1cd02",
+      "capturedAt": "2026-10-12T12:00:53Z",
+      "receipt": {
+        "path": "receipts/bgs-catalogue.json",
+        "bytes": 6863,
+        "sha256": "40915ca249a6c609017ff026e4c25512fa7cbbafee13b40fc6722eec25436e63"
+      }
+    },
+    {
+      "role": "bgs-selected-stream",
+      "path": "originals/bgs-datastream-1-opening.json",
+      "filename": "bgs-datastream-1-opening.json",
+      "url": "https://sensors.bgs.ac.uk/FROST-Server/v1.1/Datastreams(1)",
+      "bytes": 1316,
+      "sha256": "3acc2e72a1d71d4b8f5b1653429b58a6e13c184bb1d6612263d120256b87baed",
+      "capturedAt": "2026-10-12T12:01:20Z",
+      "receipt": {
+        "path": "receipts/bgs-selected-stream.json",
+        "bytes": 3446,
+        "sha256": "0fc00c51ab90df961d49bea0c4417b377d1b6775597b0277fb6c35cf99041397"
+      }
+    },
+    {
+      "role": "bgs-observed-property",
+      "path": "originals/bgs-datastream-1-observed-property.json",
+      "filename": "bgs-datastream-1-observed-property.json",
+      "url": "https://sensors.bgs.ac.uk/FROST-Server/v1.1/Datastreams(1)/ObservedProperty",
+      "bytes": 483,
+      "sha256": "080f2c4613706fb01ffefcb35572337233907bf1b38f741081a8efc21cafeed5",
+      "capturedAt": "2026-10-12T12:01:29Z",
+      "receipt": {
+        "path": "receipts/bgs-observed-property.json",
+        "bytes": 2542,
+        "sha256": "e8a1198279cd3cc2d5fce4f5719a799bbeb08e624c6226b70b817432ba7bfded"
+      }
+    },
+    {
+      "role": "bgs-sensor",
+      "path": "originals/bgs-datastream-1-sensor.json",
+      "filename": "bgs-datastream-1-sensor.json",
+      "url": "https://sensors.bgs.ac.uk/FROST-Server/v1.1/Datastreams(1)/Sensor",
+      "bytes": 574,
+      "sha256": "cb209de90407f1b23ec3ff0d86332a914f7db23c524e9688f76213f7ccf0fc77",
+      "capturedAt": "2026-10-12T12:01:36Z",
+      "receipt": {
+        "path": "receipts/bgs-sensor.json",
+        "bytes": 2582,
+        "sha256": "4eef85c8a439cf6d2dd7a1a67ed377ecdf7f7e195b9de6aa6aec0242dec4adc7"
+      }
+    },
+    {
+      "role": "bgs-thing",
+      "path": "originals/bgs-datastream-1-thing.json",
+      "filename": "bgs-datastream-1-thing.json",
+      "url": "https://sensors.bgs.ac.uk/FROST-Server/v1.1/Datastreams(1)/Thing",
+      "bytes": 1419,
+      "sha256": "2fa3030002383525e730003d1dbf242bde18d5895a0c82200c7a675e8489ef3c",
+      "capturedAt": "2026-10-12T12:01:43Z",
+      "receipt": {
+        "path": "receipts/bgs-thing.json",
+        "bytes": 3657,
+        "sha256": "56092ab6ed91e1768538edde9bdab95f414aa73bd7d9aa65348940db4bc9f01c"
+      }
+    },
+    {
+      "role": "bgs-service-root",
+      "path": "originals/bgs-service-root.json",
+      "filename": "bgs-service-root.json",
+      "url": "https://sensors.bgs.ac.uk/FROST-Server/v1.1/",
+      "bytes": 2505,
+      "sha256": "cbf72b9a15d3568ab5e6f7227b72e0e926cf297bca472f705644b924b0e5cfb0",
+      "capturedAt": "2026-10-12T12:02:38Z",
+      "receipt": {
+        "path": "receipts/bgs-service-root.json",
+        "bytes": 4680,
+        "sha256": "25222cf352031fa574b7d0069b8be9c9a12c9acc5d40ee2659d69fa90b973079"
+      }
+    },
+    {
+      "role": "bgs-locations",
+      "path": "originals/bgs-thing-8-locations.json",
+      "filename": "bgs-thing-8-locations.json",
+      "url": "https://sensors.bgs.ac.uk/FROST-Server/v1.1/Things(8)/Locations",
+      "bytes": 753,
+      "sha256": "7ace37241c5d6691e0f5d229c3487b093279b6d9b096bc4a78a2d3f626127dd2",
+      "capturedAt": "2026-10-12T12:02:47Z",
+      "receipt": {
+        "path": "receipts/bgs-locations.json",
+        "bytes": 2800,
+        "sha256": "52942c722239555cfff922e78c3a56eef5fd764737d31877ee1e8a8c1f20ee5b"
+      }
+    },
+    {
+      "role": "bgs-window-page-000",
+      "path": "originals/bgs-stream-1-20260630-page-000.json",
+      "filename": "bgs-stream-1-20260630-page-000.json",
+      "url": "https://sensors.bgs.ac.uk/FROST-Server/v1.1/Datastreams(1)/Observations?%24filter=phenomenonTime+ge+2026-06-30T00%3A00%3A00Z+and+phenomenonTime+lt+2026-07-01T00%3A00%3A00Z&%24orderby=phenomenonTime+asc&%24top=64&%24count=true&%24expand=FeatureOfInterest",
+      "bytes": 1032,
+      "sha256": "2695606608f709b82c616668d902defb9dd95a0932702c487a07253bfa5d2452",
+      "capturedAt": "2026-10-12T12:02:54Z",
+      "receipt": {
+        "path": "receipts/bgs-window-page-000.json",
+        "bytes": 3612,
+        "sha256": "f04862df3f56241c3f1480e313849387b8f03c3af6130404707ad18852ee2939"
+      }
+    },
+    {
+      "role": "bgs-native-catalogue",
+      "path": "originals/bgs-native-catalogue.json",
+      "filename": "bgs-native-catalogue.json",
+      "url": "https://sensors.bgs.ac.uk/FROST-Server/v1.1/Datastreams?%24orderby=id+asc&%24top=3&%24count=true",
+      "bytes": 4115,
+      "sha256": "4add8256192ecd4cf07718b5820910b59edd9de435a80ffab03a2e0c8be1cd02",
+      "capturedAt": "2026-10-12T12:04:04Z",
+      "receipt": {
+        "path": "receipts/bgs-native-catalogue.json",
+        "bytes": 6858,
+        "sha256": "febde2ba174db7369f3765a477a30f4295d4d68bd633d10468310093551ff8c7"
+      }
+    },
+    {
+      "role": "bgs-month-page-000",
+      "path": "originals/bgs-stream-1-202606-page-000.json",
+      "filename": "bgs-stream-1-202606-page-000.json",
+      "url": "https://sensors.bgs.ac.uk/FROST-Server/v1.1/Datastreams(1)/Observations?%24filter=phenomenonTime+ge+2026-06-01T00%3A00%3A00Z+and+phenomenonTime+lt+2026-07-01T00%3A00%3A00Z&%24orderby=phenomenonTime+asc&%24top=64&%24count=true&%24expand=FeatureOfInterest",
+      "bytes": 64766,
+      "sha256": "c725edefd3044e8059d6daf86a128ad53510472aad0bc00fb641876d5a2d0711",
+      "capturedAt": "2026-10-12T12:04:11Z",
+      "receipt": {
+        "path": "receipts/bgs-month-page-000.json",
+        "bytes": 85496,
+        "sha256": "fefb01ca96a9c1f9380d9aee57eec7ba730b252529a05b4a81f6dc2513bcf167"
+      }
+    },
+    {
+      "role": "bgs-selected-page-000",
+      "path": "originals/bgs-stream-1-20260601-page-000.json",
+      "filename": "bgs-stream-1-20260601-page-000.json",
+      "url": "https://sensors.bgs.ac.uk/FROST-Server/v1.1/Datastreams(1)/Observations?%24filter=phenomenonTime+ge+2026-06-01T00%3A00%3A00Z+and+phenomenonTime+lt+2026-06-02T00%3A00%3A00Z&%24orderby=phenomenonTime+asc&%24top=64&%24count=true&%24expand=FeatureOfInterest",
+      "bytes": 64764,
+      "sha256": "938c0477a310e2eff91625a70f09425e0d103f7d9afb2b5b45b7294801da6603",
+      "capturedAt": "2026-10-12T12:04:57Z",
+      "receipt": {
+        "path": "receipts/bgs-selected-page-000.json",
+        "bytes": 85505,
+        "sha256": "d5817104458e75dba8fdf8f080b3ce94511f3f64793f54c0e7197f8477a5e627"
+      }
+    },
+    {
+      "role": "bgs-selected-page-001",
+      "path": "originals/bgs-stream-1-20260601-page-001.json",
+      "filename": "bgs-stream-1-20260601-page-001.json",
+      "url": "https://sensors.bgs.ac.uk/FROST-Server/v1.1/Datastreams(1)/Observations?$top=64&$skip=64&$filter=%28%28phenomenonTime+ge+2026-06-01T00%3A00%3A00Z%29+and+%28phenomenonTime+lt+2026-06-02T00%3A00%3A00Z%29%29&$expand=FeatureOfInterest&$orderby=phenomenonTime+asc,%40iot.id+asc&$count=true&$skipFilter=%28phenomenonTime+gt+2026-06-01T15%3A45%3A00Z%29",
+      "bytes": 32213,
+      "sha256": "ce70210575736620d2491437e0c3fc394c56393a2c42180e26cb2301b4ba3985",
+      "capturedAt": "2026-10-12T12:05:23Z",
+      "receipt": {
+        "path": "receipts/bgs-selected-page-001.json",
+        "bytes": 43910,
+        "sha256": "91fa1801a065b5d660c797a151e37d92573d857f88b46962086ea34fa791d9a7"
+      }
+    },
+    {
+      "role": "bgs-selected-stream-end",
+      "path": "originals/bgs-datastream-1-closing.json",
+      "filename": "bgs-datastream-1-closing.json",
+      "url": "https://sensors.bgs.ac.uk/FROST-Server/v1.1/Datastreams(1)",
+      "bytes": 1316,
+      "sha256": "3acc2e72a1d71d4b8f5b1653429b58a6e13c184bb1d6612263d120256b87baed",
+      "capturedAt": "2026-10-12T12:05:30Z",
+      "receipt": {
+        "path": "receipts/bgs-selected-stream-end.json",
+        "bytes": 3450,
+        "sha256": "2b56f31b58dfc296f72ea2572fd18b2012ee29cd9756a64153ebe138093169a2"
+      }
+    }
+  ],
+  "sourceCode": [
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/sensorthings/domain.mjs",
+      "gitBlob": "eb8077f9e6c5f259561c969108722ae5a55ab8ff",
+      "bytes": 15915,
+      "sha256": "833b1bddfa4c2653b3fd50cf16127ce05ed5adb9b93b825d35a58cc5e27b8e72",
+      "role": "preserve-original-inline-page-context"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/sensorthings/receive-bgs.mjs",
+      "gitBlob": "6043d9b7b709b87b2209ea7de1d92ed27b6179ac",
+      "bytes": 12719,
+      "sha256": "d673e4891f3d21d32d6ea64135f436734038b50515ad649f98bc1fed7be7dc20",
+      "role": "original-native-receiving-driver"
+    }
+  ],
+  "sourceCodeBaseline": {
+    "commit": "b602d5b5e220f8c9d06b82bcd55decbc9d013e1c",
+    "domainOriginalBlob": "0ac1c13882246622792af570d66a03f44d5154cc",
+    "domainCorrection": "Preserve the retained parent page on inline relationship child records. No source or network changes."
+  },
+  "nativeExecution": {
+    "state": "PENDING",
+    "editionId": null,
+    "captureId": null,
+    "reviewId": null,
+    "datasetId": null,
+    "sourceExportId": null,
+    "viewerResult": null
+  },
+  "files": [
+    {
+      "path": "originals/hamburg-numeric-catalogue.json",
+      "bytes": 755,
+      "sha256": "051d8f012db1da025a0d4e8141a14e5ae6ec97f2581751a06dd8155f5d2e4eb0",
+      "gitBlob": "3284db575b1e5ce2a21149d7b24ffe8826a4e9c1",
+      "role": "original-source:numeric-catalogue"
+    },
+    {
+      "path": "receipts/numeric-catalogue.json",
+      "bytes": 3048,
+      "sha256": "88da9759dfd3391f6a1f76bdd533dcee41ec5d8c6e9ee57c59b229634d23f98c",
+      "gitBlob": "699e669fb15ea1eb86273dc906cd327c125a2a42",
+      "role": "complete-connector-receipt:numeric-catalogue"
+    },
+    {
+      "path": "originals/bgs-datastreams-catalogue.json",
+      "bytes": 4115,
+      "sha256": "4add8256192ecd4cf07718b5820910b59edd9de435a80ffab03a2e0c8be1cd02",
+      "gitBlob": "ece37903b82c31c6fe492a1f2bae36f7d82d55a5",
+      "role": "original-source:bgs-catalogue"
+    },
+    {
+      "path": "receipts/bgs-catalogue.json",
+      "bytes": 6863,
+      "sha256": "40915ca249a6c609017ff026e4c25512fa7cbbafee13b40fc6722eec25436e63",
+      "gitBlob": "f4fb7d748b792f3b1b228756a59d904e90838915",
+      "role": "complete-connector-receipt:bgs-catalogue"
+    },
+    {
+      "path": "originals/bgs-datastream-1-opening.json",
+      "bytes": 1316,
+      "sha256": "3acc2e72a1d71d4b8f5b1653429b58a6e13c184bb1d6612263d120256b87baed",
+      "gitBlob": "e8f2935e00596153e86792b512a1cfdaa66a9395",
+      "role": "original-source:bgs-selected-stream"
+    },
+    {
+      "path": "receipts/bgs-selected-stream.json",
+      "bytes": 3446,
+      "sha256": "0fc00c51ab90df961d49bea0c4417b377d1b6775597b0277fb6c35cf99041397",
+      "gitBlob": "1327cbf6eeefc782e84dc33572732f644244682f",
+      "role": "complete-connector-receipt:bgs-selected-stream"
+    },
+    {
+      "path": "originals/bgs-datastream-1-observed-property.json",
+      "bytes": 483,
+      "sha256": "080f2c4613706fb01ffefcb35572337233907bf1b38f741081a8efc21cafeed5",
+      "gitBlob": "61e78af4377025e040607a4d2107d9ad1c42ad6a",
+      "role": "original-source:bgs-observed-property"
+    },
+    {
+      "path": "receipts/bgs-observed-property.json",
+      "bytes": 2542,
+      "sha256": "e8a1198279cd3cc2d5fce4f5719a799bbeb08e624c6226b70b817432ba7bfded",
+      "gitBlob": "5052028170c9e91cdca9885d500d086e7f77729b",
+      "role": "complete-connector-receipt:bgs-observed-property"
+    },
+    {
+      "path": "originals/bgs-datastream-1-sensor.json",
+      "bytes": 574,
+      "sha256": "cb209de90407f1b23ec3ff0d86332a914f7db23c524e9688f76213f7ccf0fc77",
+      "gitBlob": "629d598ff05ce8c87720cdb9185c2590cd578161",
+      "role": "original-source:bgs-sensor"
+    },
+    {
+      "path": "receipts/bgs-sensor.json",
+      "bytes": 2582,
+      "sha256": "4eef85c8a439cf6d2dd7a1a67ed377ecdf7f7e195b9de6aa6aec0242dec4adc7",
+      "gitBlob": "6cbfb49abe80fd8ced0473f4e7b77bc720ba8a25",
+      "role": "complete-connector-receipt:bgs-sensor"
+    },
+    {
+      "path": "originals/bgs-datastream-1-thing.json",
+      "bytes": 1419,
+      "sha256": "2fa3030002383525e730003d1dbf242bde18d5895a0c82200c7a675e8489ef3c",
+      "gitBlob": "bc928967557ba084945bdb92cd4d6afc5a3c61c0",
+      "role": "original-source:bgs-thing"
+    },
+    {
+      "path": "receipts/bgs-thing.json",
+      "bytes": 3657,
+      "sha256": "56092ab6ed91e1768538edde9bdab95f414aa73bd7d9aa65348940db4bc9f01c",
+      "gitBlob": "c48922f23e617ecb4903cc159689a508509352ab",
+      "role": "complete-connector-receipt:bgs-thing"
+    },
+    {
+      "path": "originals/bgs-service-root.json",
+      "bytes": 2505,
+      "sha256": "cbf72b9a15d3568ab5e6f7227b72e0e926cf297bca472f705644b924b0e5cfb0",
+      "gitBlob": "5b56c2df8b0417df55df7452802190b0ddb9f143",
+      "role": "original-source:bgs-service-root"
+    },
+    {
+      "path": "receipts/bgs-service-root.json",
+      "bytes": 4680,
+      "sha256": "25222cf352031fa574b7d0069b8be9c9a12c9acc5d40ee2659d69fa90b973079",
+      "gitBlob": "795813466e82ce68b2dab7cf74190f2722298efa",
+      "role": "complete-connector-receipt:bgs-service-root"
+    },
+    {
+      "path": "originals/bgs-thing-8-locations.json",
+      "bytes": 753,
+      "sha256": "7ace37241c5d6691e0f5d229c3487b093279b6d9b096bc4a78a2d3f626127dd2",
+      "gitBlob": "d41b4c471cadf9a3519b7c5abd478a22b1515540",
+      "role": "original-source:bgs-locations"
+    },
+    {
+      "path": "receipts/bgs-locations.json",
+      "bytes": 2800,
+      "sha256": "52942c722239555cfff922e78c3a56eef5fd764737d31877ee1e8a8c1f20ee5b",
+      "gitBlob": "51f822832675a61df11a8cd9c5d3152fa3f75a1e",
+      "role": "complete-connector-receipt:bgs-locations"
+    },
+    {
+      "path": "originals/bgs-stream-1-20260630-page-000.json",
+      "bytes": 1032,
+      "sha256": "2695606608f709b82c616668d902defb9dd95a0932702c487a07253bfa5d2452",
+      "gitBlob": "ef01b51f19f208255ac49a91dd16bace4c35f2b1",
+      "role": "original-source:bgs-window-page-000"
+    },
+    {
+      "path": "receipts/bgs-window-page-000.json",
+      "bytes": 3612,
+      "sha256": "f04862df3f56241c3f1480e313849387b8f03c3af6130404707ad18852ee2939",
+      "gitBlob": "8726539a074c0387f21d4ee91624f40823f846f9",
+      "role": "complete-connector-receipt:bgs-window-page-000"
+    },
+    {
+      "path": "originals/bgs-native-catalogue.json",
+      "bytes": 4115,
+      "sha256": "4add8256192ecd4cf07718b5820910b59edd9de435a80ffab03a2e0c8be1cd02",
+      "gitBlob": "ece37903b82c31c6fe492a1f2bae36f7d82d55a5",
+      "role": "original-source:bgs-native-catalogue"
+    },
+    {
+      "path": "receipts/bgs-native-catalogue.json",
+      "bytes": 6858,
+      "sha256": "febde2ba174db7369f3765a477a30f4295d4d68bd633d10468310093551ff8c7",
+      "gitBlob": "cc17a61e22b20f05d3e4323afb019c280585fe35",
+      "role": "complete-connector-receipt:bgs-native-catalogue"
+    },
+    {
+      "path": "originals/bgs-stream-1-202606-page-000.json",
+      "bytes": 64766,
+      "sha256": "c725edefd3044e8059d6daf86a128ad53510472aad0bc00fb641876d5a2d0711",
+      "gitBlob": "c8d458a9322bd331204cf29352323d385425c3ef",
+      "role": "original-source:bgs-month-page-000"
+    },
+    {
+      "path": "receipts/bgs-month-page-000.json",
+      "bytes": 85496,
+      "sha256": "fefb01ca96a9c1f9380d9aee57eec7ba730b252529a05b4a81f6dc2513bcf167",
+      "gitBlob": "dcdd288961637c6bdff15e06619e9ee967bf0034",
+      "role": "complete-connector-receipt:bgs-month-page-000"
+    },
+    {
+      "path": "originals/bgs-stream-1-20260601-page-000.json",
+      "bytes": 64764,
+      "sha256": "938c0477a310e2eff91625a70f09425e0d103f7d9afb2b5b45b7294801da6603",
+      "gitBlob": "a857d863e2536c85a8b0791e59033e11ce4ed7a1",
+      "role": "original-source:bgs-selected-page-000"
+    },
+    {
+      "path": "receipts/bgs-selected-page-000.json",
+      "bytes": 85505,
+      "sha256": "d5817104458e75dba8fdf8f080b3ce94511f3f64793f54c0e7197f8477a5e627",
+      "gitBlob": "0bba32889f531ceb3d8f0be1ccdb28eed527323d",
+      "role": "complete-connector-receipt:bgs-selected-page-000"
+    },
+    {
+      "path": "originals/bgs-stream-1-20260601-page-001.json",
+      "bytes": 32213,
+      "sha256": "ce70210575736620d2491437e0c3fc394c56393a2c42180e26cb2301b4ba3985",
+      "gitBlob": "ada08f860938e353765b45ce716c1d9a76cbdf52",
+      "role": "original-source:bgs-selected-page-001"
+    },
+    {
+      "path": "receipts/bgs-selected-page-001.json",
+      "bytes": 43910,
+      "sha256": "91fa1801a065b5d660c797a151e37d92573d857f88b46962086ea34fa791d9a7",
+      "gitBlob": "983104eac04cba18eb8aebcd70e35de52257ace3",
+      "role": "complete-connector-receipt:bgs-selected-page-001"
+    },
+    {
+      "path": "originals/bgs-datastream-1-closing.json",
+      "bytes": 1316,
+      "sha256": "3acc2e72a1d71d4b8f5b1653429b58a6e13c184bb1d6612263d120256b87baed",
+      "gitBlob": "e8f2935e00596153e86792b512a1cfdaa66a9395",
+      "role": "original-source:bgs-selected-stream-end"
+    },
+    {
+      "path": "receipts/bgs-selected-stream-end.json",
+      "bytes": 3450,
+      "sha256": "2b56f31b58dfc296f72ea2572fd18b2012ee29cd9756a64153ebe138093169a2",
+      "gitBlob": "304de5e6ffa93d89f24acb71eaa7311d0810555f",
+      "role": "complete-connector-receipt:bgs-selected-stream-end"
+    },
+    {
+      "path": "numeric-window.json",
+      "bytes": 103396,
+      "sha256": "33b1a03890f86cbac67490c12603605a54de7f1b595422bfc7e41cfb34d61e8b",
+      "gitBlob": "b0a723f2d28625e9f0cad1261ccaf78d3d06fbd6",
+      "role": "complete-source-linked-numeric-window"
+    },
+    {
+      "path": "native-recording.json",
+      "bytes": 313277,
+      "sha256": "e04a3932da707a2a90a68fc87b97c4af72337c09ec5a23f7c072b933a1b855ac",
+      "gitBlob": "302ef4a805f6802df742f304cb256982343b9f71",
+      "role": "complete-recorded-connector-responses"
+    },
+    {
+      "path": "recipe.json",
+      "bytes": 5347,
+      "sha256": "8b6a0390952b087fecad5cff0cd434ce002528825429d6b3540fc4c673e335b5",
+      "gitBlob": "388d76ada890cf856bc21725c47a718b73682b98",
+      "role": "exact-native-receiving-recipe"
+    },
+    {
+      "path": "README.md",
+      "bytes": 8445,
+      "sha256": "f8b251c8a2ca25c733d75ddb3b42c1c8f239f4251c6c8186221d0ef70fed5b3b",
+      "gitBlob": "e434b238c247fae275d092bafc97b36bc5d1f7a3",
+      "role": "source-qualification-and-operating-result"
+    },
+    {
+      "path": "NATIVE_RECEIVING.md",
+      "bytes": 10217,
+      "sha256": "ff947379436339ff1c22ea590c78b7d89d6a13e79e60d42c82d73b891324f6fb",
+      "gitBlob": "b87d5d5b3c449667ec08f65a73a7fd733feba161",
+      "role": "complete-original-receiving-guide"
+    }
+  ],
+  "manifestSelf": "This inventory hashes every companion source file listed above; the Git blob identity of this manifest is retained by its containing immutable source commit."
+}

@@ -93,6 +93,20 @@
     </section>
 
     <section id="tab-handoff" class="tab-panel" hidden>
+      <section class="card">
+        <div class="section-heading"><h2>Whole workspace handover</h2><button id="portable-review" type="button">Review saved workspace</button></div>
+        <p>Move the same operator workspace to another machine with every saved revision, every imported edition and the original SEC captures.</p>
+        <p id="portable-scope" class="help">Save your current edits, then review the complete retained workspace.</p>
+        <div class="fields two"><label>Export name<input id="portable-export-id" maxlength="64" pattern="[a-z0-9][a-z0-9_-]{0,63}" placeholder="Review the saved workspace or enter an existing export name"></label></div>
+        <div class="form-actions"><button id="portable-export" type="button" class="primary" disabled>Save complete handover</button><button id="portable-reopen" type="button">Open retained export</button></div>
+        <section id="portable-result" hidden>
+          <h3>Portable workspace</h3><p id="portable-result-scope" class="help"></p>
+          <div class="form-actions"><a id="portable-archive" download="sec-edgar-workspace.zip">Download complete ZIP</a><a id="portable-manifest" download="sec-edgar-workspace-manifest.json">Download source manifest</a></div>
+          <p class="help">Archive SHA-256</p><pre id="portable-digest" class="code"></pre>
+          <p>Install the SEC EDGAR product on the receiving machine, then receive and open this workspace:</p><pre id="portable-receive" class="code"></pre>
+          <p class="help">Receiving preserves the original workspace identity. Repeating an older handover keeps later saved work already present on the receiving machine.</p>
+        </section>
+      </section>
       <section class="card"><div class="section-heading"><h2>Buyer handoff</h2><span id="handoff-revision" class="tag"></span></div><p>Export the saved product configuration, endpoint contract and source editions for the original seller and buyer workflow.</p><div class="form-actions"><button type="button" data-download="config">Merchant configuration</button><button type="button" data-download="openapi">OpenAPI document</button><button type="button" data-download="handoff" class="primary">Complete buyer handoff</button></div><p id="handoff-dirty" class="help"></p><div id="handoff-products" class="handoff-products"></div></section>
     </section>
 

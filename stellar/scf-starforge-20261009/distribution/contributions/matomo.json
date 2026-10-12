@@ -6,13 +6,15 @@
     "matomo-source": "stellar/scf-starforge-20261009/sf30-seller-sdk/matomo/cli.mjs",
     "matomo-workspace": "stellar/scf-starforge-20261009/sf30-seller-sdk/matomo/launch.mjs",
     "matomo-customer": "stellar/scf-starforge-20261009/sf30-seller-sdk/matomo/customer-cli.mjs",
-    "matomo-remote": "stellar/scf-starforge-20261009/sf30-seller-sdk/matomo/client-cli.mjs"
+    "matomo-remote": "stellar/scf-starforge-20261009/sf30-seller-sdk/matomo/client-cli.mjs",
+    "matomo-product": "stellar/scf-starforge-20261009/sf30-seller-sdk/matomo/product-cli.mjs"
   },
   "commandDescriptions": {
     "matomo-source": "Capture and review native Matomo reports, publish original SQLite data products, and receive complete source handovers.",
     "matomo-workspace": "Launch the original saved Matomo browser with exact workspace/source identity and authenticated listener verification.",
     "matomo-customer": "Receive or reopen complete original Matomo handovers and stream exact source-linked report rows through the maintained Python customer.",
-    "matomo-remote": "Use the original Matomo MCP tools, reconcile retained operations, resume exact artifact downloads and receive them with the original customer."
+    "matomo-remote": "Use the original Matomo MCP tools, reconcile retained operations, resume exact artifact downloads and receive them with the original customer.",
+    "matomo-product": "Export a closed original Matomo workspace, verify its full archive, receive an independently editable source workspace, and inspect or open its original history."
   },
   "exports": {
     "./seller/matomo": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/matomo/provider.mjs",
@@ -26,7 +28,9 @@
     "./customer/matomo": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/matomo/customer-cli.mjs",
     "./seller/matomo/client": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/matomo/client.mjs",
     "./seller/matomo/remote-download": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/matomo/remote-download.mjs",
-    "./customer/matomo/remote": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/matomo/client-cli.mjs"
+    "./customer/matomo/remote": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/matomo/client-cli.mjs",
+    "./seller/matomo/product": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/matomo/workspace-transfer.mjs",
+    "./customer/matomo/product": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/matomo/product-cli.mjs"
   },
   "applicationProviders": {
     "matomo": "stellar/scf-starforge-20261009/sf30-seller-sdk/matomo/application-provider.mjs"

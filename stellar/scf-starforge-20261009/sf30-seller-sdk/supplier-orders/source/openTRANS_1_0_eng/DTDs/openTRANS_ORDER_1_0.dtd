@@ -1,0 +1,45 @@
+<!--
+
+  Name:                 opentrans_order_1_0.dtd
+  Version:              1.0
+  Unchange since:       0.98
+  Date:                 07.09.2001
+  Authors:              Oliver Kelkar (olk),  Fraunhofer IAO Stuttgart
+                        Boris Otto (bo),      Fraunhofer IAO Stuttgart
+                        Volker Schmitz (stz), Universitaet Essen BLI
+			
+
+  Copyright 2000-2001, All Rights Reserved
+  Fraunhofer IAO Stuttgart, Universitaet Essen BLI
+  
+  // Namespace = http://www.opentrans.org/opentrans/1.0/opentrans_order   
+        
+  This DTD module is identified by the PUBLIC and SYSTEM identifiers:
+        
+  PUBLIC "-//OPENTRANS//DTD OPENTRANS ORDER 1.0//EN"
+  SYSTEM "opentrans_order_1_0.dtd"
+  
+-->
+
+
+<!ENTITY % OPENBASE SYSTEM "openbase_1_0.dtd">
+
+%OPENBASE;
+
+  <!ELEMENT ORDER (ORDER_HEADER , ORDER_ITEM_LIST , ORDER_SUMMARY)>
+    <!ATTLIST ORDER  
+                     version  CDATA  #FIXED "1.0"
+                     xmlns    CDATA  #FIXED 'http://www.opentrans.org/opentrans/1.0/opentrans_order'
+                     type     (standard | express | release | consignment )  'standard' >
+
+  <!ELEMENT ORDER_HEADER (CONTROL_INFO? , SOURCING_INFO? , ORDER_INFO)>
+
+  <!ELEMENT ORDER_INFO (ORDER_ID , ALT_CUSTOMER_ORDER_ID* , 
+                     ORDER_DATE , DELIVERY_DATE? , ORDER_PARTIES , PRICE_CURRENCY? , 
+                     PAYMENT? , TERMS_AND_CONDITIONS? , PARTIAL_SHIPMENT_ALLOWED? , 
+                     TRANSPORT? , INTERNATIONAL_RESTRICTIONS* , REMARK*)>
+
+  <!ELEMENT ORDER_ITEM_LIST (ORDER_ITEM+)>
+
+  <!ELEMENT ORDER_SUMMARY (TOTAL_ITEM_NUM, TOTAL_AMOUNT?)>
+

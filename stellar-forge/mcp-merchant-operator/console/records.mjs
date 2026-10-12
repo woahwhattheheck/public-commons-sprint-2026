@@ -14,3 +14,24 @@ export function canonical(value) {
   if (result === undefined) throw fail('CONSOLE_JSON', 'Use JSON values.', 400);
   return result;
 }
+
+// Scalar contracts used by both the original store and complete archive validation.
+export const plainConsoleRecord = value => Boolean(value && typeof value === 'object' && !Array.isArray(value));
+export const consoleIdentifier = value => {
+  if (typeof value !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/.test(value))
+    throw fail('CONSOLE_ID', 'Use the original record identifier.', 400);
+  return value;
+};
+export const consoleRecordTitle = value => {
+  if (typeof value !== 'string' || !value.trim() || value.length > 160 || /[\u0000-\u001f]/.test(value))
+    throw fail('CONSOLE_NAME', 'Use a name from 1 to 160 characters.', 400);
+  return value.trim();
+};
+export const consoleRevision = value => {
+  if (!Number.isSafeInteger(value) || value < 1) throw fail('CONSOLE_REVISION', 'Use the displayed revision.', 400);
+  return value;
+};
+export const consoleSha256 = value => {
+  if (typeof value !== 'string' || !/^[a-f0-9]{64}$/.test(value)) throw fail('CONSOLE_DIGEST', 'Use the displayed SHA-256.', 400);
+  return value;
+};

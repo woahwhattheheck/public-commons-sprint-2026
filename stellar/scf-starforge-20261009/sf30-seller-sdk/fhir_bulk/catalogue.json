@@ -240,5 +240,40 @@
     "nativeEngine": "../xml/native.mjs",
     "seller": "../dataset-cli.mjs"
   },
-  "apiVersion": 1
+  "apiVersion": 1,
+  "recoveryActions": [
+    {
+      "name": "adopt-status",
+      "label": "Receive original status URL",
+      "fields": [
+        {
+          "name": "statusUrl",
+          "type": "url",
+          "required": true
+        },
+        {
+          "name": "reason",
+          "type": "text",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "receive-capture",
+      "label": "Receive complete retained capture",
+      "fields": [
+        {
+          "name": "sourceId",
+          "type": "source_reference",
+          "required": true
+        },
+        {
+          "name": "reason",
+          "type": "text",
+          "required": true
+        }
+      ],
+      "description": "Validate a saved complete original capture against its accepted operation, then retain the original source and finish that same operation."
+    }
+  ]
 }

@@ -5,6 +5,7 @@ import { resolve, join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { VERSION, SEARCH_PATH, ORIGIN, COLUMNS, requireThat, plain, canonical, sha, copy, now, id, string, integer, queryDefinition, sourceFilters, searchRequest, sourceJSON, normalizeAward, publicRow, compareRows, addDecimals, decimal, awardKey } from './core.mjs';
 import { USAspendingClient } from './transport.mjs';
+import { AwardTransactions, TRANSACTION_TABLES } from './transactions/store.mjs';
 
 function processIdentity(pid=process.pid) {
   try { const s=readFileSync('/proc/'+pid+'/stat','utf8'); return String(pid)+':'+s.slice(s.lastIndexOf(')')+2).split(' ')[19]; }
@@ -61,6 +62,7 @@ export class AwardWorkspace {
     this.db.prepare('INSERT OR IGNORE INTO workspace_meta(key,value) VALUES(?,?)').run('id','WR-'+randomUUID());
     this.db.prepare('INSERT OR IGNORE INTO workspace_meta(key,value) VALUES(?,?)').run('schema',VERSION);
     requireThat(this.db.prepare('SELECT value FROM workspace_meta WHERE key=?').get('schema').value===VERSION,'WORKSPACE_SCHEMA_UNSUPPORTED');
+    this.transactions=new AwardTransactions(this,{processIdentity});
   }
   close(){requireThat(this.active.size===0,'OPERATIONS_ACTIVE','Stop or finish active provider operations before closing',409);this.db.close();}
   tx(fn){this.db.exec('BEGIN IMMEDIATE');try{const value=fn();this.db.exec('COMMIT');return value;}catch(error){this.db.exec('ROLLBACK');throw error;}}
@@ -72,7 +74,7 @@ export class AwardWorkspace {
       editions:this.db.prepare('SELECT * FROM editions ORDER BY created_at DESC').all().map(decode),
       reviews:this.db.prepare('SELECT * FROM reviews ORDER BY updated_at DESC').all().map(decode),
       publications:this.db.prepare('SELECT * FROM publications ORDER BY created_at DESC').all().map(decode),
-      active:[...this.active.keys()],reviewStatuses:REVIEW_STATUSES,columns:COLUMNS,
+      transactions:this.transactions.state(),active:[...this.active.keys()],reviewStatuses:REVIEW_STATUSES,columns:COLUMNS,
       operationCount:this.db.prepare('SELECT count(*) AS count FROM operations').get().count};
   }
   saveQuery({queryId,expectedRevision=0,definition}){
@@ -353,7 +355,7 @@ export class AwardWorkspace {
   sourcePage(cid,page){this.captureRecord(cid);integer(page,'Page',1,1000000);const r=this.db.prepare('SELECT * FROM source_pages WHERE capture_id=? AND page=?').get(cid,page);requireThat(r,'SOURCE_PAGE_NOT_FOUND',undefined,404);return {...r,request:JSON.parse(r.request),receipt:JSON.parse(r.receipt),response:Buffer.from(r.response)};}
   exportPacket(){
     requireThat(!this.active.size,'CAPTURE_ACTIVE','Finish or pause provider capture before portable export',409);
-    const tables=['workspace_meta','queries','captures','source_pages','capture_rows','editions','edition_rows','details','reviews','review_history','operations','publications','native_deliveries','imports'];
+    const tables=['workspace_meta','queries','captures','source_pages','capture_rows','editions','edition_rows','details','reviews','review_history','operations','publications','native_deliveries','imports',...TRANSACTION_TABLES];
     this.db.exec('BEGIN');try{
       const data={};for(const table of tables)data[table]=this.db.prepare('SELECT * FROM '+table).all().map(row=>Object.fromEntries(Object.entries(row).map(([k,v])=>[k,v instanceof Uint8Array?{encoding:'base64',bytes:Buffer.from(v).toString('base64')}:v])));
       const value={schema:VERSION+'.backup',createdAt:now(),tables:data};this.db.exec('COMMIT');return {...value,sha256:sha(value)};
@@ -361,8 +363,9 @@ export class AwardWorkspace {
   }
   restorePacket(packet){
     requireThat(plain(packet)&&packet.schema===VERSION+'.backup'&&plain(packet.tables),'BACKUP_SCHEMA_INVALID');const {sha256:expected,...value}=packet;requireThat(expected===sha(value),'BACKUP_DIGEST_MISMATCH');
-    requireThat(this.state().queries.length===0&&this.state().editions.length===0&&this.state().captures.length===0,'RESTORE_TARGET_NOT_EMPTY','Restore into a new workspace',409);
+    requireThat(this.state().queries.length===0&&this.state().editions.length===0&&this.state().captures.length===0&&this.transactions.state().captures.length===0,'RESTORE_TARGET_NOT_EMPTY','Restore into a new workspace',409);
     const allowed=['workspace_meta','queries','captures','source_pages','capture_rows','editions','edition_rows','details','reviews','review_history','operations','publications','native_deliveries','imports'];
+    const hasTransactions=TRANSACTION_TABLES.some(t=>Object.hasOwn(packet.tables,t));if(hasTransactions)allowed.push(...TRANSACTION_TABLES);
     requireThat(Object.keys(packet.tables).length===allowed.length&&allowed.every(t=>Array.isArray(packet.tables[t])),'BACKUP_TABLES_INVALID');
     return this.tx(()=>{
       this.db.exec('DELETE FROM workspace_meta');
@@ -378,6 +381,7 @@ export class AwardWorkspace {
       for(const table of ['source_pages','details'])for(const row of this.db.prepare('SELECT * FROM '+table).all())requireThat(sha(Buffer.from(row.response))===(row.response_sha256??row.sha256),'BACKUP_SOURCE_DIGEST_MISMATCH');
       for(const native of this.db.prepare('SELECT data FROM native_deliveries').all()){const delivery=JSON.parse(native.data);requireThat(sha(Buffer.from(delivery.manifestBase64,'base64'))===delivery.manifestSha256,'BACKUP_NATIVE_MANIFEST_DIGEST_MISMATCH');for(const archive of delivery.archives)requireThat(sha(Buffer.from(archive.bytesBase64,'base64'))===archive.sha256,'BACKUP_NATIVE_ARCHIVE_DIGEST_MISMATCH');}
       this.db.prepare('UPDATE captures SET owner=NULL,status=CASE WHEN status=? THEN ? ELSE status END').run('capturing','paused');
+      this.transactions.verifyRestored();
       this.operation('workspace_restored',expected,{originalCreatedAt:packet.createdAt});return {restored:true,sourceSha256:expected,editions:this.db.prepare('SELECT count(*) AS count FROM editions').get().count};
     });
   }

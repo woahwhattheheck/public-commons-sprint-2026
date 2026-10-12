@@ -186,10 +186,13 @@ class Store:
             self.event("save", f"{kind}/{entity_id}/{revision}", {"previous_revision": current, "actor": actor})
         return self.get(kind, entity_id, revision)
 
-    def begin_operation(self, operation_id, action, request):
+    def begin_operation(self, operation_id, action, request, *, resume_uncommitted=False):
         identifier(operation_id)
         request_hash = digest(encoded(request).encode())
         with self.lock, self.db:
+            if resume_uncommitted:
+                # Serialize the original receipt and record check before restarting local work.
+                self.db.execute("BEGIN IMMEDIATE")
             row = self.db.execute("SELECT * FROM operations WHERE id=?", (operation_id,)).fetchone()
             if row:
                 if row["request_digest"] != request_hash or row["action"] != action:
@@ -205,6 +208,14 @@ class Store:
                                     (encoded(result), now(), operation_id))
                     self.event("operation_recovered", operation_id, {"kind": result["kind"], "id": result["id"], "revision": result["revision"]})
                     return result
+                if resume_uncommitted and row["state"] in ("running", "failed"):
+                    # The exact request has no committed record. Its caller has selected only
+                    # replayable local source/plan work; existing objects are content-addressed.
+                    self.db.execute("UPDATE operations SET state='running',result=NULL,error=NULL,updated=? WHERE id=?",
+                                    (now(), operation_id))
+                    self.event("operation_resumed", operation_id,
+                               {"action": action, "previous_state": row["state"], "request_digest": request_hash})
+                    return None
                 raise Conflict(f"This operation is {row['state']}. Inspect it before starting another explicit operation.")
             self.db.execute("INSERT INTO operations VALUES(?,?,?,?,?,?,?,?)",
                             (operation_id, action, request_hash, "running", None, None, now(), now()))

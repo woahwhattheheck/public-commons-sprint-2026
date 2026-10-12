@@ -47,6 +47,10 @@ module Starforge
         Files.need(original["provider"] == "odata4", "RUBY_NATIVE_DATASET_PROVIDER_CHANGED")
         {"provider"=>"odata4","service_url"=>original["serviceUrl"],
          "entity_container"=>original["entityContainer"],"entity_set"=>original["entitySet"]}
+      when "stellar-forge.superset-semantics.v1"
+        return superset_provider_identity(semantics)
+      when "stellar-forge.directus-semantics.v1"
+        return directus_provider_identity(semantics)
       else
         raise Error, "RUBY_NATIVE_DATASET_SEMANTICS_INVALID"
       end
@@ -54,6 +58,71 @@ module Starforge
         item.valid_encoding? && item.bytesize <= 16_384 }, "RUBY_NATIVE_DATASET_PROVIDER_CHANGED")
       value
     end
+
+    # The producer already normalizes this URL. Retain its complete reverse-proxy
+    # path and reject a different URL representation instead of silently changing
+    # a saved resource's logical membership.
+    def self.provider_base(value)
+      Files.need(value.is_a?(String) && !value.empty? && value.valid_encoding? &&
+        value.bytesize <= 16_384, "RUBY_NATIVE_DATASET_PROVIDER_CHANGED")
+      uri = URI.parse(value)
+      Files.need(uri.is_a?(URI::HTTP) && %w[http https].include?(uri.scheme) &&
+        uri.host.is_a?(String) && !uri.host.empty? && uri.userinfo.nil? &&
+        uri.query.nil? && uri.fragment.nil? && uri.path.end_with?("/") &&
+        uri.normalize.to_s == value, "RUBY_NATIVE_DATASET_PROVIDER_CHANGED")
+      value
+    rescue URI::InvalidURIError
+      raise Error, "RUBY_NATIVE_DATASET_PROVIDER_CHANGED"
+    end
+
+    def self.provider_text(value)
+      Files.need(value.is_a?(String) && !value.empty? && value.valid_encoding? &&
+        value.bytesize <= 16_384, "RUBY_NATIVE_DATASET_PROVIDER_CHANGED")
+      value
+    end
+
+    def self.provider_integer(value, minimum: 0)
+      Files.need(value.is_a?(Integer) && value.between?(minimum,9_007_199_254_740_991),
+        "RUBY_NATIVE_DATASET_PROVIDER_CHANGED")
+      value
+    end
+
+    def self.superset_provider_identity(semantics)
+      source,query = semantics.fetch("source"),semantics["query"]
+      Files.need(source["provider"] == "apache-superset" && source["protocolVersion"] == "6.1" &&
+        HASH.match?(source["queryContextSha256"].to_s) &&
+        HASH.match?(source["principalSha256"].to_s) && query.is_a?(Hash) &&
+        query["savedContextSha256"] == source["queryContextSha256"],
+        "RUBY_NATIVE_DATASET_PROVIDER_CHANGED")
+      chart_uuid = source["chartUuid"]
+      provider_text(chart_uuid) unless chart_uuid.nil?
+      row_limit = query["rowLimit"]
+      provider_integer(row_limit) unless row_limit.nil?
+      {"provider"=>"apache-superset","protocol_version"=>source["protocolVersion"],
+       "server_url"=>provider_base(source["baseUrl"]),
+       "chart_id"=>provider_integer(source["chartId"],minimum: 1),"chart_uuid"=>chart_uuid,
+       "query_ordinal"=>provider_integer(source["queryOrdinal"]),
+       "query_context_sha256"=>source["queryContextSha256"],
+       "principal_sha256"=>source["principalSha256"],
+       "row_limit"=>row_limit,"row_offset"=>provider_integer(query["rowOffset"])}
+    end
+
+    def self.directus_provider_identity(semantics)
+      source = semantics.fetch("source")
+      query,principal = source["query"],source["principal"]
+      Files.need(source["provider"] == "directus" && source["protocolVersion"] == "12.5" &&
+        query.is_a?(Hash) && query["fields"].is_a?(Array) && query["sort"].is_a?(Array) &&
+        principal.is_a?(Hash), "RUBY_NATIVE_DATASET_PROVIDER_CHANGED")
+      provider_text(principal["id"])
+      {"provider"=>"directus","protocol_version"=>source["protocolVersion"],
+       "server_url"=>provider_base(source["baseUrl"]),
+       "collection"=>provider_text(source["collection"]),
+       "primary_field"=>provider_text(source["primaryField"]),
+       "source_principal"=>principal,"source_query"=>query}
+    end
+
+    private_class_method :provider_base, :provider_text, :provider_integer,
+      :superset_provider_identity, :directus_provider_identity
 
     # Validate the original receiver envelope before following any original path.
     # Every returned file must resolve to the selected room and native filename.

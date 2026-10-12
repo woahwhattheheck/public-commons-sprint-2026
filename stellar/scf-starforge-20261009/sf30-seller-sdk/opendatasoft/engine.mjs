@@ -13,6 +13,7 @@ import { exportOpendatasoftMerchantPackage, stageOpendatasoftMerchantRelease, re
   prepareOpendatasoftMerchantBuyer } from './publisher/release.mjs';
 
 import { createOpendatasoftAutomationWorkspace } from './automation/workspace.mjs';
+import { openOpendatasoftFacilitators } from './publisher/facilitators.mjs';
 
 const ID = /^[a-f0-9-]{36}$/;
 const id = value => { if (typeof value !== 'string' || !ID.test(value)) throw fault('ODS_ITEM_NOT_FOUND', 'Choose an existing project item.', 404); return value; };
@@ -149,7 +150,7 @@ function editionExport(capture, notes, format, input = {}) {
   throw fault('ODS_EXPORT_FORMAT_INVALID');
 }
 
-export async function openOpendatasoftWorkbench({ directory, create = false, origin, authTokenEnv, automationConnection, environment = process.env } = {}) {
+export async function openOpendatasoftWorkbench({ directory, create = false, origin, authTokenEnv, automationConnection, facilitatorConnection, environment = process.env } = {}) {
   directory = resolve(directory);
   if (create && await exists(join(directory, 'workbench.json'))) throw fault('ODS_PROJECT_EXISTS');
   await privateDirectory(dirname(directory));
@@ -238,11 +239,18 @@ export async function openOpendatasoftWorkbench({ directory, create = false, ori
         await persist(); throw error;
       }
     }
+    const facilitators = await openOpendatasoftFacilitators({ directory, connectionFile:facilitatorConnection, currentState:() => state });
     const tenant = createOpendatasoftAutomationWorkspace({ directory, connectionFile:automationConnection, environment,
       state,persist,selectedCapture,selectedEdition:value => find('editions',value) });
     await tenant.reconcile();
     const api = {
       directory,
+      facilitators: () => facilitators.status(),
+      facilitatorHistory: (input = {}) => facilitators.history(input),
+      facilitatorReview: value => facilitators.inspect(value),
+      facilitatorFiles: value => facilitators.files(value),
+      reviewFacilitator: input => launch('review seller facilitator',() => facilitators.review(input)),
+      stageFacilitator: value => launch('stage reviewed seller facilitator',() => facilitators.stage(value)),
       tenantTargets: () => tenant.targets(),
       tenantDatasets: (alias,input = {}) => tenant.datasets(alias,input),
       tenantPlan: value => tenant.plan(value),

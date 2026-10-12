@@ -36,7 +36,7 @@ Copy the complete merchant plugin folder when installing or upgrading. Its exist
 - `merchant-erp-acumatica.php`: the installed contract, native document and detail receiving adapter.
 - `merchant-erp-console.php`, `merchant-erp.js` and `merchant-erp.css`: the integrated WordPress operating workspace.
 
-Keep `ERP.md` and `erp-map.example.json` with the package. The desktop operator also uses `merchant-erp-client.mjs` and `merchant-erp-cli.mjs` from the complete toolkit dependency closure. Do not copy only the plugin entry file: it loads these runtime modules directly.
+Also retain the complete `merchant-kcf*` source, UI and client files described in [KCF.md](KCF.md); the plugin entry loads that integrated source workspace. Keep `ERP.md`, `KCF.md` and their examples with the package. The desktop operator also uses `merchant-erp-client.mjs` and `merchant-erp-cli.mjs` from the complete toolkit dependency closure. Do not copy only the plugin entry file: it loads these runtime modules directly.
 
 Use the plugin's existing WordPress/WooCommerce installation and source closure. The ERP PHP modules use PHP 8+, the normal WordPress database API, and the native Woo order objects. No additional PHP package, Node package, schema service, queue, scheduler, or hosted CI workflow is required.
 
@@ -90,6 +90,10 @@ The request disables automatic discount updates and sets manual line pricing/dis
 A tax difference is an operating exception. It does not become an accepted order because the HTTP write returned 200.
 
 The current operating limits are 250 order lines, 5,000 rows per binding table, 0–4 currency decimal places, and 0–8 unit-price decimal places. Negative fees, returns, credit documents, foreign-exchange conversion, and automatic account/catalog creation require their own approved flows. Original Woo refund IDs are retained as source context; this extension does not create an ERP credit from them.
+
+## Connector source review
+
+**Connector sources** freezes actual configuration/schema/data exports, compiles explicit source-to-map recipes, compares complete declared scopes and shows affected original order editions. Reviewed incoming country/state substitutions use the optional `addressSubstitutions` field. They apply to `order_override`, preserve original Woo addresses and pin the source edition in the map digest. Maps without that field retain their behavior. See [KCF.md](KCF.md) for complete intake, CLI/client commands and private recovery.
 
 ## Operate an original order
 
@@ -169,7 +173,7 @@ The full CLI includes paged orders/maps, mapping read/save/check, prepare, inspe
 
 ## Reopen with another engineer
 
-A complete export contains the original operation, all referenced mapping revisions, source editions, approved requests, responses, receiving comparisons, native line crosswalks, operator decisions and import history. It includes customer/address data and environment **names**, but no resolved credential values.
+A complete export contains the original operation, all referenced mapping revisions, source editions, approved requests, responses, receiving comparisons, native line crosswalks, operator decisions and import history. It includes customer/address data and environment **names**, but no resolved live credential values. A source-linked map also includes connector source companions; uploaded original files can contain sensitive configuration and remain private.
 
 Retain the original Woo database and plugin source with the export. The ERP export is not a Woo database backup and does not recreate Woo orders.
 

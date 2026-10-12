@@ -7,14 +7,16 @@
     "huwise": "stellar/scf-starforge-20261009/sf30-seller-sdk/opendatasoft/cli.mjs",
     "merchant-opendatasoft": "stellar-forge/mcp-merchant-operator/opendatasoft-cli.mjs",
     "merchant-huwise": "stellar-forge/mcp-merchant-operator/opendatasoft-cli.mjs",
-    "merchant-huwise-receive": "stellar-forge/mcp-merchant-operator/examples/opendatasoft-receiving.mjs"
+    "merchant-huwise-receive": "stellar-forge/mcp-merchant-operator/examples/opendatasoft-receiving.mjs",
+    "merchant-huwise-facilitators-receive": "stellar-forge/mcp-merchant-operator/examples/opendatasoft-facilitator-receiving.mjs"
   },
   "commandDescriptions": {
     "opendatasoft": "Discover, retain, ingest and publish Huwise data with complete receiving",
     "huwise": "Alias for the same Opendatasoft data workspace",
     "merchant-opendatasoft": "Operate the shared merchant agent and receive complete original Huwise files",
     "merchant-huwise": "Alias for the same complete Huwise merchant agent client",
-    "merchant-huwise-receive": "Capture a complete original Huwise dataset and receive every analyst file"
+    "merchant-huwise-receive": "Capture a complete original Huwise dataset and receive every analyst file",
+    "merchant-huwise-facilitators-receive": "Commission retained native Huwise facilitator reviews and receive complete client/browser/customer files"
   },
   "exports": {
     "./seller/opendatasoft": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opendatasoft/source.mjs",
@@ -31,12 +33,17 @@
     },
     "./seller/opendatasoft/automation": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opendatasoft/automation/client.mjs",
     "./seller/opendatasoft/automation/contract": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opendatasoft/automation/contract.mjs",
-    "./seller/opendatasoft/automation/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opendatasoft/automation/workspace.mjs"
+    "./seller/opendatasoft/automation/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opendatasoft/automation/workspace.mjs",
+    "./seller/opendatasoft/facilitators": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opendatasoft/publisher/facilitators.mjs",
+    "./merchant/mcp/opendatasoft/facilitator-receiving": "./source/stellar-forge/mcp-merchant-operator/examples/opendatasoft-facilitator-receiving.mjs"
   },
   "merchantProviders": {
     "opendatasoft-workspaces": "stellar-forge/mcp-merchant-operator/providers/opendatasoft-workspaces.mjs"
   },
   "supportFiles": [
-    "stellar/scf-starforge-20261009/sf30-seller-sdk/opendatasoft/automation/UPSTREAM_LICENSE.txt"
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/opendatasoft/automation/UPSTREAM_LICENSE.txt",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/opendatasoft/FACILITATORS.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/opendatasoft/facilitators.example.json",
+    "stellar-forge/mcp-merchant-operator/FACILITATOR_RECEIVING.md"
   ]
 }

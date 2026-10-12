@@ -23,11 +23,26 @@ Commands supplied by this contribution:
 | Command | Original operation |
 | --- | --- |
 | `starforge sensorthings` | Original workspace CLI, capture/edition/operation reads and explicit actions |
+| `starforge sensorthings-desk` | Complete Operations Desk on the same native listener, with source receiving and managed Start/Open/Stop |
 | `starforge sensorthings-setup connection --options FILE` | Create or reuse a private, reference-only connection file |
 | `starforge sensorthings-setup merchant --options FILE` | Initialize or reopen the standard merchant host |
 | `starforge merchant-providers init sensorthings-workspaces --options FILE` | The same initializer through the maintained registry |
 
-Managed Applications and browser asset registration use their original source declarations in this same contribution. The managed launch retains the original server and workspace; it does not create an independent MCP data store.
+Managed Applications and browser asset registration use their original source declarations in this same contribution. The application provider is `sensorthings`, and its application kind and installed command are `sensorthings-desk`. The original Desk server and its complete browser asset manifest are packaged with the command; the provider retains the existing server and workspace.
+
+The complete standalone source selection is `sensorthings-operator`. Build it with the maintained composer from the complete selected Git commit:
+
+```sh
+node stellar/scf-starforge-20261009/distribution/build.mjs \
+  --repo /absolute/original-checkout \
+  --ref <actual-complete-source-commit> \
+  --selection sensorthings-operator \
+  --out /absolute/selected-distribution
+```
+
+The source recipe and its installation guide remain under `distribution/selections/`. Continue an interrupted build against the same output with the original builder's `--resume` option. The manifest identifies the actual package and source; this documentation does not claim that a receiving host has run a build.
+
+The installed [Desk operator guide](./desk/OPERATOR.md) describes source intake, review, publishing, delivery and saved-request recovery. Its **Analysis & reports** control opens the already-composed analyst interface on this same listener in a separate private tab. It carries the current session only in that original same-origin fragment and leaves the Desk open. Reconcile a pending Desk action before using this control; refresh the Desk after analysis changes the shared workspace revision.
 
 ## 2. Select the actual running workspace
 
@@ -51,7 +66,7 @@ starforge sensorthings schema --workspace /absolute/private/sensorthings-workspa
 
 Do not run a direct workspace command while its managed or command-line listener owns the writer; use its browser or connected client instead.
 
-The original private startup record has schema `stellar-forge.sensorthings-workspace-startup.v1` and fields `workspaceId`, `origin`, `url` and `pid`. Its URL contains the private fragment credential. Keep that record and the session file private. Do not paste the URL into the source contribution, a tool argument, a shared report or a customer package.
+The direct CLI listener returns `stellar-forge.sensorthings-workspace-startup.v1`. The Operations Desk returns its actual `stellar-forge.sensorthings-desk-startup.v1` record with `status: SENSORTHINGS_DESK_READY`. Both retain the persistent `workspaceId`, origin, private URL and actual process identity. Keep the complete record and any session file private. Do not paste the URL into the source contribution, a tool argument, a shared report or a customer package.
 
 ## 3. Create the reference configuration
 
@@ -91,7 +106,14 @@ References inside a connection options file resolve relative to the destination 
 
 For `consoleUrlEnv`, provide only the environment variable name. The setup never reads or exports its value. Ensure the real merchant process inherits that variable; the generated MCP registration does not copy arbitrary process environment or credentials.
 
-For a managed Applications connection, the URL record must contain the original private `url` and `original.schema` equal to `stellar-forge.sensorthings-workspace-startup.v1`, with `original.workspaceId` matching the declared UUID. Select the URL-record filename returned by the original managed launcher. A browser link, a guessed filename or a record for another application is not an equivalent binding.
+For `applicationUrlFile`, select the exact private URL-record filename returned by the maintained Applications launcher. The MCP reader supports both actual source-owned startup formats:
+
+| Retained startup | Required managed binding |
+| --- | --- |
+| `original.schema: stellar-forge.sensorthings-workspace-startup.v1` | The declared original `workspaceId` and outer private `url` |
+| `original.schema: stellar-forge.sensorthings-desk-startup.v1` | Outer `schema: stellar-forge.application-url.v1`, `command: sensorthings-desk`, original `status: SENSORTHINGS_DESK_READY`, the declared original `workspaceId` and outer private `url` |
+
+The shared observer removes `url` from the inner `original` object and retains it on the outer record. Keep this real shape unchanged; do not rewrite a Desk announcement as a generic workspace startup. The provider checks the selected loopback session and authenticates `/api/schema` against the same workspace UUID on every connection. A browser link, a guessed filename or another application's record is not an equivalent binding.
 
 Publishing is create-only. Repeating the same normalized connection options reuses identical bytes. A different existing file is preserved and rejected. To change which workspace an alias selects, create an explicitly selected new connection and merchant setup rather than silently replacing the original binding.
 
@@ -277,3 +299,17 @@ The following existing source contracts define the installed behavior:
 - The original managed Applications, desk, portable-file and provider guides in the same composed source edition: actual listener startup, receiving and source operations.
 
 The one integrated native receiving operation should use the retained original source capture and its actual writer. Configuration source checks are not a claim that a provider or native process has executed. Record real source, workspace, operation, edition and downloaded-file identities when that operation completes.
+
+## 9. Reviewed publication delivery
+
+The same selected SensorThings contribution includes the complete [Publication delivery desk](analysis/merchant/OPERATOR.md). It consumes an existing accepted analysis publication and the full original project export. The native SF30 asset bundle, original SF88 preparation and saved-output readers, optional existing SF47 Operations case, and original analysis project transfer retain their respective operation and evidence identities.
+
+The installed commands are **starforge sensorthings-analysis-delivery** and **starforge sensorthings-analysis-delivery-native**. The first opens or calls the existing workspace and delegates verified downloads to the maintained SensorThings downloader. The native command attaches to one owner-selected existing Chromium page; the existing browser owner's programme can instead call **runMerchantDelivery** from the **./sensorthings/analysis/merchant/native** export. Neither entry point initializes another capture, buyer queue, browser or workspace.
+
+The selected distribution retains the [API and typed entry point](analysis/merchant/API.md), [runtime schema](analysis/merchant/runtime.schema.json), [runtime example](analysis/merchant/runtime.example.json), and complete [same-operation native receiving guide](analysis/merchant/NATIVE_RUN.md). The native guide includes both the original publication input and the later actual buyer-output receiving input. These are templates: workspace UUIDs, publication/export hashes, native buyer receipts and operation identifiers must come from the original operating workspaces.
+
+All merchant assets are declared in the contribution's additional browser asset manifest and mounted in the original authenticated listener. The analysis page links to this desk and passes only its current in-memory session through the same-origin window binding. The original managed Applications provider remains the application owner. Use its maintained configuration/start/stop flow, or the explicit original analysis launcher with **--merchant-runtime ABSOLUTE_PRIVATE_CONFIG**. The optional native seller factory is an operator-selected, hash-bound installed module; credentials and factory runtime configuration remain outside public source and customer project archives.
+
+The desk separates an offer bundle, a prepared buyer review, a running native seller, an actual saved buyer output, project receiving and Operations receiving. Only the original returned native evidence establishes the latter outcomes. A completed portable project retains its original merchant records, request phases and file hashes; importing it preserves historical phases without authorizing them to execute in the receiving workspace.
+
+The complete native continuation consumes the existing publication, records visible form requests before dispatch, downloads the original handover through **inspectSensorThingsFiles/downloadSensorThingsFiles**, and imports that same complete project into an already existing independently selected workspace. It binds the first completed result and downloaded bytes before reporting later current workspace state separately. Actual source, buyer and browser ownership remain with the original operating programme.

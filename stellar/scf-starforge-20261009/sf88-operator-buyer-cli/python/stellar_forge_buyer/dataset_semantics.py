@@ -7,13 +7,17 @@ page continuity; it does not reserialize JSON to invent a second digest scheme.
 from __future__ import annotations
 
 import re
+from urllib.parse import urlsplit, urlunsplit
 
 from .errors import DeliveryError
 from .storage import digest, parse
 
 SCHEMA = "stellar-forge.ckan-semantics.v1"
 ODATA_SCHEMA = "stellar-forge.odata-semantics.v1"
-SCHEMAS = frozenset({SCHEMA, ODATA_SCHEMA})
+SUPERSET_SCHEMA = "stellar-forge.superset-semantics.v1"
+DIRECTUS_SCHEMA = "stellar-forge.directus-semantics.v1"
+SCHEMAS = frozenset({SCHEMA, ODATA_SCHEMA, SUPERSET_SCHEMA, DIRECTUS_SCHEMA})
+_PAIRED_SCHEMAS = frozenset({ODATA_SCHEMA, SUPERSET_SCHEMA, DIRECTUS_SCHEMA})
 SQL_SCHEMA = "stellar-forge.python-dataset-semantics.v1"
 MAX_BYTES = 2 * 1024 * 1024
 _HEX = re.compile(r"[a-f0-9]{64}")
@@ -36,6 +40,132 @@ def same_json(first, second):
     return first == second
 
 
+def _text(value):
+    return isinstance(value, str) and bool(value)
+
+
+def _sha256(value):
+    return isinstance(value, str) and _HEX.fullmatch(value) is not None
+
+
+def _safe_integer(value, minimum=0):
+    return type(value) is int and minimum <= value <= 9007199254740991
+
+
+def _member(value, key):
+    return value.get(key) if isinstance(value, dict) else None
+
+
+def _canonical_base_url(value):
+    if not _text(value) or any(character in value for character in "\r\n\t"):
+        return False
+    try:
+        parsed = urlsplit(value)
+        port = parsed.port
+        return (parsed.scheme in ("http", "https") and bool(parsed.hostname)
+                and parsed.username is None and parsed.password is None
+                and (port is None or 1 <= port <= 65535)
+                and not parsed.query and not parsed.fragment and parsed.path.endswith("/")
+                and urlunsplit(parsed) == value)
+    except ValueError:
+        return False
+
+
+def _presence_pairs(columns, code):
+    """Use the source's reciprocal names; Directus has independent value/state aliases."""
+    _require(len(columns) % 2 == 0, code)
+    pairs = []
+    for index in range(0, len(columns), 2):
+        value, state = columns[index:index + 2]
+        _require(value.get("role") == "value" and state.get("role") == "state"
+                 and value.get("stateColumn") == state["name"]
+                 and state.get("valueColumn") == value["name"]
+                 and state["sourceField"] == value["sourceField"]
+                 and state["type"] == "string" and state["nullable"] is False
+                 and state["encoding"] == "native"
+                 and isinstance(value.get("sourceDefinition"), dict)
+                 and isinstance(state.get("sourceDefinition"), dict)
+                 and state["sourceDefinition"].get("role") == "source-presence"
+                 and same_json(state["sourceDefinition"].get("values"), ["value", "null", "missing"]),
+                 code)
+        pairs.append((value, state))
+    return pairs
+
+
+def _paired_primary(primary, values, code):
+    source, projected = primary["source"], primary["projected"]
+    _require(all(_text(name) for name in source) and len(source) == len(set(source))
+             and all(_text(name) and name in values for name in projected)
+             and len(projected) == len(set(projected))
+             and (not primary["complete"] or bool(source) and len(source) == len(projected)
+                  and all(values[name]["sourceField"] == original
+                          for name, original in zip(projected, source))),
+             code)
+
+
+def _superset_columns(document, columns, primary):
+    pairs = _presence_pairs(columns, "DATASET_SUPERSET_STATE_COLUMNS_CHANGED")
+    native_names, native_ordinals, values = set(), set(), {}
+    for value, state in pairs:
+        definition, presence = value["sourceDefinition"], state["sourceDefinition"]
+        name, ordinal = definition.get("sourceName"), definition.get("sourceOrdinal")
+        native_type = definition.get("nativeType")
+        _require(name == value["sourceField"] and name not in native_names
+                 and _safe_integer(ordinal) and ordinal not in native_ordinals
+                 and _safe_integer(native_type, -9007199254740991)
+                 and presence.get("sourceName") == name
+                 and same_json(presence.get("sourceOrdinal"), ordinal)
+                 and same_json(presence.get("nativeType"), native_type),
+                 "DATASET_SUPERSET_NATIVE_COLUMN_CHANGED")
+        native_names.add(name)
+        native_ordinals.add(ordinal)
+        values[value["name"]] = value
+    _paired_primary(primary, values, "DATASET_SUPERSET_PRIMARY_KEY_CHANGED")
+
+
+def _directus_columns(document, columns, primary):
+    source, native = document["source"], document["directus"]
+    fields = {}
+    for field in native["fields"]:
+        _require(isinstance(field, dict) and field.get("collection") == source["collection"]
+                 and _text(field.get("field")) and field["field"] not in fields,
+                 "DATASET_DIRECTUS_NATIVE_FIELDS_CHANGED")
+        fields[field["field"]] = field
+    keys = [field for field in fields.values() if _member(field.get("schema"), "is_primary_key") is True]
+    _require(len(keys) == 1 and keys[0]["field"] == source["primaryField"],
+             "DATASET_DIRECTUS_NATIVE_KEY_CHANGED")
+    values, selected = {}, set()
+    for value, state in _presence_pairs(columns, "DATASET_DIRECTUS_STATE_COLUMNS_CHANGED"):
+        name = value["sourceField"]
+        field = fields.get(name)
+        _require(field is not None and name not in selected and value["type"] == "string"
+                 and value["nullable"] is False and value["encoding"] == "json",
+                 "DATASET_DIRECTUS_VALUE_PROJECTION_CHANGED")
+        nullable = _member(field.get("schema"), "is_nullable")
+        definition = {
+            "collection": source["collection"], "field": name, "sourcePath": name,
+            "type": field.get("type") if field.get("type") is not None else "unknown",
+            "nullable": nullable if type(nullable) is bool else None,
+            "schema": field.get("schema"), "meta": field.get("meta"),
+            "relations": [relation for relation in native["relations"]
+                          if (relation.get("collection") == source["collection"] and relation.get("field") == name)
+                          or (relation.get("related_collection") == source["collection"]
+                              and _member(relation.get("meta"), "one_field") == name)],
+        }
+        presence = {"sourcePath": name, "role": "source-presence",
+                    "sourceNullable": definition["nullable"], "values": ["value", "null", "missing"]}
+        _require(same_json(value["sourceDefinition"], definition)
+                 and same_json(state["sourceDefinition"], presence),
+                 "DATASET_DIRECTUS_NATIVE_DEFINITION_CHANGED")
+        selected.add(name)
+        values[value["name"]] = value
+    _paired_primary(primary, values, "DATASET_DIRECTUS_PRIMARY_KEY_CHANGED")
+    _require(same_json(primary["source"], [source["primaryField"]])
+             and all(values[name]["sourceField"] == source["primaryField"] for name in primary["projected"])
+             and primary["complete"] == (len(primary["projected"]) == 1),
+             "DATASET_DIRECTUS_PRIMARY_KEY_CHANGED")
+
+
 def identity(document):
     source = document.get("source") if isinstance(document, dict) else None
     _require(isinstance(source, dict), "DATASET_SEMANTIC_SOURCE_INVALID")
@@ -54,6 +184,35 @@ def identity(document):
                  and _HEX.fullmatch(source["schemaSha256"])
                  and isinstance(document.get("csdl"), dict),
                  "DATASET_ODATA_SOURCE_FORMAT_INVALID")
+    if result["schema"] == SUPERSET_SCHEMA:
+        query = document.get("query")
+        _require(source.get("provider") == "apache-superset"
+                 and source.get("protocolVersion") == "6.1"
+                 and _canonical_base_url(source.get("baseUrl"))
+                 and _safe_integer(source.get("chartId"), 1)
+                 and (source.get("chartUuid") is None or _text(source.get("chartUuid")))
+                 and _safe_integer(source.get("queryOrdinal"))
+                 and all(_sha256(source.get(key)) for key in
+                         ("queryContextSha256", "principalSha256", "schemaSha256"))
+                 and isinstance(query, dict)
+                 and query.get("savedContextSha256") == source["queryContextSha256"]
+                 and (query.get("rowLimit") is None or _safe_integer(query.get("rowLimit")))
+                 and _safe_integer(query.get("rowOffset")),
+                 "DATASET_SUPERSET_SOURCE_FORMAT_INVALID")
+    if result["schema"] == DIRECTUS_SCHEMA:
+        query, principal, native = source.get("query"), source.get("principal"), document.get("directus")
+        _require(source.get("provider") == "directus" and source.get("protocolVersion") == "12.5"
+                 and all(_text(source.get(key)) for key in ("baseUrl", "collection", "primaryField"))
+                 and _sha256(source.get("schemaSha256"))
+                 and source.get("definitionNumericEncoding") == "original-json-number-lexemes"
+                 and isinstance(query, dict) and isinstance(query.get("fields"), list)
+                 and isinstance(query.get("sort"), list)
+                 and isinstance(principal, dict) and _text(principal.get("id"))
+                 and isinstance(native, dict) and isinstance(native.get("collection"), dict)
+                 and native["collection"].get("collection") == source["collection"]
+                 and isinstance(native.get("fields"), list) and isinstance(native.get("relations"), list)
+                 and all(isinstance(relation, dict) for relation in native["relations"]),
+                 "DATASET_DIRECTUS_SOURCE_FORMAT_INVALID")
     return result
 
 
@@ -115,6 +274,10 @@ def validate_document(document, fields):
                  and len(primary["projected"]) == len(set(primary["projected"]))
                  and (not primary["complete"] or len(primary["source"]) == len(primary["projected"])),
                  "DATASET_ODATA_PRIMARY_KEY_CHANGED")
+    if binding["schema"] == SUPERSET_SCHEMA:
+        _superset_columns(document, columns, primary)
+    if binding["schema"] == DIRECTUS_SCHEMA:
+        _directus_columns(document, columns, primary)
     definitions = [column["projectedDefinition"] for column in columns]
     for column in virtual:
         _require(isinstance(column, dict) and (column.get("projectedDefinition") is None
@@ -181,7 +344,7 @@ def validate_page_semantics(payload, receiving):
                  for key in ("name", "type", "nullable")),
                  "DATASET_NATIVE_SEMANTIC_COLUMNS_CHANGED")
 
-    if expected["schema"] == ODATA_SCHEMA:
+    if expected["schema"] in _PAIRED_SCHEMAS:
         selected = payload.get("fields")
         rows = payload.get("rows")
         _require(isinstance(selected, list) and isinstance(rows, list)
@@ -191,7 +354,8 @@ def validate_page_semantics(payload, receiving):
                   if column["role"] == "state" and column["name"] in selected]
         _require(all(row.get(name) in ("value", "null", "missing")
                      for row in rows for name in states),
-                 "DATASET_ODATA_STATE_VALUE_CHANGED")
+                 "DATASET_ODATA_STATE_VALUE_CHANGED" if expected["schema"] == ODATA_SCHEMA
+                 else "DATASET_SOURCE_STATE_VALUE_CHANGED")
 
 
 def sql_descriptor(receiving, fields, mapped):

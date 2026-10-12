@@ -102,6 +102,8 @@ def main():
     parser.add_argument("--operation-root",type=Path,required=True)
     parser.add_argument("--workspace",type=Path)
     parser.add_argument("--source-packet",type=Path,action="append",default=[])
+    parser.add_argument("--csv-policy",choices=("require-equivalent","canonical-json"),default="require-equivalent",
+                        help="Explicit original JSON/CSV policy for the native dataset mapping")
     parser.add_argument("--handoff-profile",type=Path,action="append",default=[],
                         help="Complete original provider profile JSON, bound to a retained source")
     parser.add_argument("--temporary-root",type=Path)
@@ -125,7 +127,7 @@ def main():
     child=None;servers=[];workspaces=[]
     public_path=output/"owner-result.json"
     public=load(public_path,{"schema":"stellar-forge.erddap-browser-owner.v1","generations":[]})
-    generation={"startedAt":datetime.datetime.now(datetime.timezone.utc).isoformat(),"pid":os.getpid(),"state":"starting"}
+    generation={"startedAt":datetime.datetime.now(datetime.timezone.utc).isoformat(),"pid":os.getpid(),"state":"starting","csvPolicy":args.csv_policy}
     public["generations"].append(generation)
     with tempfile.TemporaryDirectory(prefix="erddap-browser-",dir=temporary_base) as scratch_name:
         scratch=Path(scratch_name)
@@ -157,7 +159,8 @@ def main():
                 if sha in seen:continue
                 seen.add(sha)
                 inputs.append({"path":str(p),"name":p.name,"label":p.stem,"sha256":sha,"bytes":p.stat().st_size})
-            input_identity=hashlib.sha256(encoded([{"sha256":x["sha256"],"bytes":x["bytes"],"name":x["name"]} for x in inputs])).hexdigest()
+            input_identity=hashlib.sha256(encoded({"csvPolicy":args.csv_policy,
+                "sources":[{"sha256":x["sha256"],"bytes":x["bytes"],"name":x["name"]} for x in inputs]})).hexdigest()
             handoff_inputs=[];handoff_sources=set();handoffs=HandoffStore(original)
             for filename in args.handoff_profile:
                 profile_path=filename.resolve()
@@ -176,6 +179,10 @@ def main():
                 retained_ids={item["id"] for item in original.state()["sources"]}
                 preview=handoffs.preview(source_id,profile) if source_id in retained_ids else None
                 chosen=preview["profile"] if preview else profile
+                if profile.get("dataEdition") not in ("require-equivalent","canonical-json"):
+                    raise ValueError("The complete provider profile must retain its explicit source edition policy")
+                if chosen.get("dataEdition")!=profile["dataEdition"]:
+                    raise ValueError("Provider preview changed the supplied source edition policy")
                 handoff_inputs.append({"path":str(profile_path),"name":profile_path.name,"bytes":len(raw),
                     "sha256":hashlib.sha256(raw).hexdigest(),"sourceId":source_id,"profile":chosen,
                     "profileSha256":hashlib.sha256(encoded(chosen)).hexdigest(),"review":preview["review"] if preview else None})
@@ -191,7 +198,7 @@ def main():
             ready={"schema":"stellar-forge.erddap-browser-ready.v1","workspace":str(workspace),"receiverWorkspace":str(receiver),
                    "workspaceId":original_server.workspace_id,"receiverWorkspaceId":receiver_server.workspace_id,
                    "original":original_server.startup(),"receiver":receiver_server.startup(),
-                   "inputs":inputs,"inputManifestSha256":input_identity,"sourceFiles":source_manifest(root),
+                   "inputs":inputs,"inputManifestSha256":input_identity,"csvPolicy":args.csv_policy,"sourceFiles":source_manifest(root),
                    "handoffProfiles":handoff_inputs,"handoffManifestSha256":handoff_identity,
                    "outputDirectory":str(output),"screenshots":args.screenshots}
             save(output/"ready.private.json",ready)
@@ -201,7 +208,7 @@ def main():
                                    env=os.environ.copy(),start_new_session=True)
             code=child.wait()
             result=load(output/"browser-result.json",{})
-            if code or result.get("status")!="ERDDAP_BROWSER_COMPLETE":
+            if code or result.get("status")!="ERDDAP_BROWSER_COMPLETE" or result.get("csvPolicy")!=args.csv_policy:
                 raise RuntimeError("The retained browser phase did not complete; inspect browser/browser-result.json")
             generation["exports"]=verify_exports(output,result)
             # Shut down HTTP first; no subsequent request may borrow either
@@ -241,7 +248,7 @@ def main():
                               "sha256":digest(output/"browser-result.json")}
             save(public_path,public)
             print(json.dumps({"status":public["status"],"result":str(public_path),"sources":len(inputs),
-                              "builds":len(result["builds"]),"receiverReopened":len(reopened),"providerBundlesReopened":len(handoff_reopened)}),flush=True)
+                              "builds":len(result["builds"]),"csvPolicy":args.csv_policy,"receiverReopened":len(reopened),"providerBundlesReopened":len(handoff_reopened)}),flush=True)
         except BaseException as error:
             generation.update(state="failed",error={"type":type(error).__name__,"message":str(error)[:1600]},
                               endedAt=datetime.datetime.now(datetime.timezone.utc).isoformat())

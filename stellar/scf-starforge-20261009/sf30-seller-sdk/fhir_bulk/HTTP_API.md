@@ -210,3 +210,19 @@ POST /api/workspace/packet (raw whole workspace ZIP; fresh workspace only)
 Connect or receive original workspace → inspect capabilities/Groups → choose explicit full native export → save request → run/reopen same operation → inspect resources/identities/original outcomes and source fields → review projection → build/query the original native dataset → compare observed editions or compose retained resource state from explicit native deltas → export original merchant input, original SF88 customer packet, or whole editable workspace. Source, mapping and operation detail expose original identities without making hashes the primary UI.
 
 Merchant/customer CLI uses the original SF30 dataset release store and original SF88 dataset buyer. It does not introduce a second payment implementation or classify healthcare data through invented labels. The original public operating example keeps its publisher's sample-data classification through source, export and receiving.
+
+### Complete retained capture receiving
+
+POST /api/operations/:operation_id/receive-capture
+JSON body: {"sourceId":"<original source ID returned by source-add>","reason":"<reviewed receiving reason>"}
+
+Calls Workspace.receive_capture(operation_id, body) and returns the original operation object directly, matching advance/adopt-status/operation. On completion state and phase are "complete"; sourceId is the exact complete retained source ZIP hash. captureReceivings[] records the original source ID, reason, actual receiving time, file bytes/count, native manifest identities and prior operation state. files[] retains exact original descriptors and adds retainedSource:{sourceId,member}; these original members are read via the existing source-member route. Existing HTTP receipts and pending-step identity remain retained.
+
+Requires an existing accepted original operation with statusUrl, the same operation UUID, exact saved connection and full export definition, complete native manifest chain, matching accepted status URL and transactionTime, all original output/error/deleted files with verified byte identities, and the original reviewed byte budget. Previously observed file identities and already received file hashes must agree. Materialized/composed sources cannot be used here. A completed operation reopens only the same exact source. Cancelled/cancellation-unknown operations are resolved through their existing native cancellation flow first. This action performs no provider request.
+
+CLI:
+python3 cli.py --workspace ABS source-add --file ABS_CAPTURE_ZIP
+python3 cli.py --workspace ABS receive-capture --operation ORIGINAL_UUID --source ORIGINAL_SOURCE_ID --reason 'Receive the retained complete original export files'
+python3 cli.py --workspace ABS run --export ORIGINAL_EXPORT_ID --operation ORIGINAL_UUID
+
+The standard run command reopens the completed same UUID. Complete workspace export/import retains the captureReceivings join and every original source member.

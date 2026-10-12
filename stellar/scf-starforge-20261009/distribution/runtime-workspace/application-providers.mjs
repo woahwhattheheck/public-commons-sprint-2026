@@ -55,7 +55,7 @@ function validateCatalog(entries, provider, kinds) {
     return retained;
   });
 }
-async function originalProvider(distribution, id, path) {
+async function originalProvider(distribution, id, path, expected = null) {
   const root = distribution.sourceRoot, filename = await realpath(resolve(root, path));
   const inside = relative(root, filename);
   ensure(inside && !isAbsolute(inside) && inside !== '..' && !inside.startsWith('../') && !inside.startsWith('..\\'),
@@ -69,6 +69,9 @@ async function originalProvider(distribution, id, path) {
     first.mtimeMs === after.mtimeMs && first.ctimeMs === after.ctimeMs,
   'APPLICATION_PROVIDER_SOURCE_CHANGED', 'Applications provider changed during source reading: ' + path);
   const sha256 = digest(bytes);
+  if (expected) ensure(expected.id === id && expected.path === path &&
+    expected.bytes === bytes.length && expected.sha256 === sha256,
+    'APPLICATION_PROVIDER_SOURCE_CHANGED', 'The reviewed Applications provider source changed: ' + id);
   if (distribution.manifest) {
     const expected = distribution.manifest.files.find(entry => entry.path === path);
     ensure(expected && expected.bytes === bytes.length && expected.sha256 === sha256,
@@ -88,8 +91,29 @@ async function originalProvider(distribution, id, path) {
   } };
 }
 
-/** The same explicit declarations and original paths work in a checkout and a READY archive. */
-export async function readApplicationProviders(options = {}) {
+export const APPLICATION_PROVIDER_BINDING_SCHEMA = 'stellar-forge.runtime-application-provider-binding.v1';
+
+/** A retained request binds the selected adapter before any provider module executes. */
+export function validateApplicationProviderBinding(value) {
+  ensure(plain(value) && value.schema === APPLICATION_PROVIDER_BINDING_SCHEMA &&
+    Object.keys(value).length === 7 &&
+    ['schema', 'id', 'kind', 'path', 'bytes', 'sha256', 'command'].every(key => Object.hasOwn(value, key)) &&
+    idPattern.test(value.id ?? '') && idPattern.test(value.kind ?? '') &&
+    typeof value.path === 'string' && value.path.endsWith('.mjs') &&
+    !value.path.includes('\\') && !isAbsolute(value.path) &&
+    value.path.split('/').every(part => part && part !== '.' && part !== '..') &&
+    Number.isSafeInteger(value.bytes) && value.bytes > 0 && value.bytes <= 4 * 1024 * 1024 &&
+    /^[a-f0-9]{64}$/.test(value.sha256 ?? '') &&
+    typeof value.command === 'string' && value.command.length > 0 && value.command.length <= 200,
+  'APPLICATION_PROVIDER_BINDING_INVALID', 'Expected the retained application kind, command and original provider source.');
+  return value;
+}
+function bindingFor(source, entry) {
+  return Object.freeze({ schema: APPLICATION_PROVIDER_BINDING_SCHEMA,
+    id: source.id, kind: entry.id, command: entry.command,
+    path: source.path, bytes: source.bytes, sha256: source.sha256 });
+}
+async function declarationsFor(options) {
   const distribution = await readDistributionSpecification(options);
   const declarations = Object.entries(distribution.spec.applicationProviders ?? {});
   ensure(declarations.length > 0, 'APPLICATION_PROVIDERS_MISSING',
@@ -101,17 +125,85 @@ export async function readApplicationProviders(options = {}) {
       'One Applications module is registered with multiple provider IDs: ' + path);
     paths.add(path);
   }
-  const loaded = [];
-  // Keep original module loading ordered and observable; declarations do not execute at package-build time.
-  for (const [id, path] of declarations) loaded.push(await originalProvider(distribution, id, path));
+  return { distribution, declarations };
+}
+function missingSource(error) {
+  const seen = new Set();
+  while (error && !seen.has(error)) {
+    seen.add(error);
+    if (['ENOENT', 'ERR_MODULE_NOT_FOUND', 'MODULE_NOT_FOUND'].includes(error.code)) return true;
+    error = error.cause;
+  }
+  return false;
+}
+const unavailableView = (id, path, distribution, error) => Object.freeze({
+  id, path, contributions: [...(distribution.origins.applicationProviders?.[id] ?? [])],
+  available: false, error: { code: error.code ?? 'APPLICATION_PROVIDER_LOAD_FAILED',
+    message: String(error.message ?? error).slice(0, 2000) },
+});
+
+/** Load the one source-bound adapter selected by the original application review. */
+export async function readApplicationProvider({ id, kind, expected = null, ...options } = {}) {
+  ensure(idPattern.test(id ?? '') && idPattern.test(kind ?? ''),
+    'APPLICATION_PROVIDER_SELECTION_INVALID', 'Expected the selected provider and application kind.');
+  if (expected) {
+    validateApplicationProviderBinding(expected);
+    ensure(expected.id === id && expected.kind === kind, 'APPLICATION_PROVIDER_SELECTION_CHANGED',
+      'The retained application kind belongs to a different provider.');
+  }
+  const { distribution, declarations } = await declarationsFor(options);
+  const declaration = declarations.find(entry => entry[0] === id);
+  ensure(declaration, 'APPLICATION_PROVIDER_ID_UNKNOWN', 'Provider ' + id + ' is not declared in this source.');
+  const { provider, source } = await originalProvider(distribution, id, declaration[1], expected);
+  const kinds = new Map();
+  const catalog = validateCatalog(await provider.catalog({
+    common: copy(applicationCommonFields), field: applicationField,
+  }), provider, kinds);
+  const entry = catalog.find(value => value.id === kind);
+  ensure(entry, 'APPLICATION_PROVIDER_KIND_UNKNOWN', 'Provider ' + id + ' does not declare application ' + kind);
+  const binding = bindingFor(source, entry);
+  if (expected) ensure(JSON.stringify(binding) === JSON.stringify({
+    schema: expected.schema, id: expected.id, kind: expected.kind, command: expected.command,
+    path: expected.path, bytes: expected.bytes, sha256: expected.sha256,
+  }), 'APPLICATION_PROVIDER_BINDING_CHANGED', 'The retained provider command or source changed.');
+  return Object.freeze({ provider, entry, binding,
+    source: Object.freeze({ ...source, order: provider.order ?? 1000, kinds: catalog.map(value => value.id) }),
+    sourceRoot: distribution.sourceRoot, sourceCommit: distribution.manifest?.sourceCommit ?? null });
+}
+
+/**
+ * Complete catalog discovery remains available for callers that ask for it.
+ * The operator overview can retain usable providers alongside an unavailable source.
+ */
+export async function readApplicationProviders({ allowUnavailable = false, ...options } = {}) {
+  ensure(typeof allowUnavailable === 'boolean', 'APPLICATION_PROVIDER_OPTION_INVALID',
+    'allowUnavailable must be a boolean.');
+  const { distribution, declarations } = await declarationsFor(options);
+  const loaded = [], unavailable = [];
+  for (const [id, path] of declarations) {
+    try { loaded.push(await originalProvider(distribution, id, path)); }
+    catch (error) {
+      if (!allowUnavailable || !missingSource(error)) throw error;
+      unavailable.push(unavailableView(id, path, distribution, error));
+    }
+  }
   loaded.sort((a, b) => (a.provider.order ?? 1000) - (b.provider.order ?? 1000) ||
     a.provider.id.localeCompare(b.provider.id));
-  const kinds = new Map(), catalog = [];
-  for (const { provider } of loaded) {
-    const entries = await provider.catalog({ common: copy(applicationCommonFields), field: applicationField });
-    catalog.push(...validateCatalog(entries, provider, kinds));
+  let kinds = new Map();
+  const catalog = [], available = [];
+  for (const selected of loaded) {
+    const { provider, source } = selected, nextKinds = new Map(kinds);
+    try {
+      const entries = validateCatalog(await provider.catalog({
+        common: copy(applicationCommonFields), field: applicationField,
+      }), provider, nextKinds);
+      catalog.push(...entries); kinds = nextKinds; available.push(selected);
+    } catch (error) {
+      if (!allowUnavailable || !missingSource(error)) throw error;
+      unavailable.push(unavailableView(provider.id, source.path, distribution, error));
+    }
   }
-  const sources = Object.freeze(loaded.map(({ source, provider }) => Object.freeze({
+  const sources = Object.freeze(available.map(({ source, provider }) => Object.freeze({
     ...source, order: provider.order ?? 1000,
     kinds: catalog.filter(entry => kinds.get(entry.id) === provider).map(entry => entry.id),
   })));
@@ -119,16 +211,20 @@ export async function readApplicationProviders(options = {}) {
     schema: 'stellar-forge.runtime-application-providers.v1',
     sourceRoot: distribution.sourceRoot,
     sourceCommit: distribution.manifest?.sourceCommit ?? null,
-    catalog: Object.freeze(catalog), sources,
+    catalog: Object.freeze(catalog), sources, unavailable: Object.freeze(unavailable),
     forKind(kind) {
       const provider = kinds.get(kind);
       ensure(provider, 'APPLICATION_PROVIDER_KIND_UNKNOWN', 'Unknown original application kind: ' + kind);
       return provider;
     },
+    bindingForKind(kind) {
+      const provider = this.forKind(kind);
+      return bindingFor(sources.find(value => value.id === provider.id), catalog.find(value => value.id === kind));
+    },
     forRequest(request) {
       ensure(plain(request), 'APPLICATION_PROVIDER_REQUEST_INVALID', 'Expected the original managed application request.');
       if (!request.applicationId) return null;
-      const matches = loaded.map(entry => entry.provider).filter(provider => provider.matchRequest(request) === true);
+      const matches = available.map(entry => entry.provider).filter(provider => provider.matchRequest(request) === true);
       ensure(matches.length > 0, 'APPLICATION_PROVIDER_COMMAND_UNKNOWN',
         'No original Applications provider accepts managed command ' + request.command);
       ensure(matches.length === 1, 'APPLICATION_PROVIDER_COMMAND_AMBIGUOUS',
@@ -137,7 +233,24 @@ export async function readApplicationProviders(options = {}) {
     },
   });
 }
-let installed;
-export function defaultApplicationProviders() {
-  return installed ??= readApplicationProviders();
+let installed, availableInstalled;
+export function defaultApplicationProviders({ allowUnavailable = false } = {}) {
+  if (allowUnavailable) return availableInstalled ??= readApplicationProviders({ allowUnavailable: true }).catch(error => {
+    availableInstalled = undefined; throw error;
+  });
+  return installed ??= readApplicationProviders().catch(error => { installed = undefined; throw error; });
+}
+
+/** Older saved applications retain their kind; their original revision selects the adapter. */
+export async function applicationProviderForKind(kind, { id = null, expected = null } = {}) {
+  if (expected) {
+    validateApplicationProviderBinding(expected);
+    ensure(expected.kind === kind && (!id || expected.id === id), 'APPLICATION_PROVIDER_SELECTION_CHANGED',
+      'The retained provider selection differs from the original application.');
+    return readApplicationProvider({ id: expected.id, kind, expected });
+  }
+  if (id) return readApplicationProvider({ id, kind });
+  const catalog = await defaultApplicationProviders({ allowUnavailable: true });
+  const provider = catalog.forKind(kind);
+  return readApplicationProvider({ id: provider.id, kind });
 }

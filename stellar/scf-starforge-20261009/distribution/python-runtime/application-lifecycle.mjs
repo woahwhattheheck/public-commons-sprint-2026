@@ -1,7 +1,7 @@
 // MIT. Python applications in the original managed runtime lifecycle.
 import { constants } from 'node:fs';
-import { open } from 'node:fs/promises';
-import { join } from 'node:path';
+import { open, lstat } from 'node:fs/promises';
+import { join, dirname } from 'node:path';
 import { spawn } from 'node:child_process';
 import { StringDecoder } from 'node:string_decoder';
 import { absolute, canonical, digest, json, need, plain, saveJSON, now } from '../runtime-workspace/storage.mjs';
@@ -15,6 +15,13 @@ const environment=field('environmentFile','Private environment JSON','path');
 const original='stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/';
 const key=value=>digest(json(canonical(value)));
 export const PYTHON_APPLICATION_CATALOG=Object.freeze([
+  {id:'python-dbnomics',python:true,command:'stellar-forge-dbnomics-analysis',terminal:false,
+    requiredSource:original+'dbnomics.py',title:'DBnomics analysis and workbook receiving',
+    description:'Prepare the complete economic source, produce briefings and workbooks, review returned records and reopen the original editable workspace.',
+    fields:[installation,field('argumentsJSON','Original economic-analysis arguments','json',true,
+      'JSON array beginning with --operation and its original directory, followed by prepare, receive, finish, return-workbook, return-review, accept-return, adopt-notes, reopen or inspect.'),
+      field('nodeExecutable','Original Node executable','path',false,'Defaults to this managed runtime worker’s Node executable.'),environment]},
+
   {id:'python-postgres',python:true,command:'postgres',terminal:false,
     requiredSource:original+'postgres_http.py',title:'PostgreSQL receiving workspace',
     description:'Review source mappings, import complete dataset editions, compare changes and manage the customer application SQL view.',
@@ -29,10 +36,32 @@ export const PYTHON_APPLICATION_CATALOG=Object.freeze([
       field('port','Local port','port',false,'Use 0 to select an available loopback port.'),
       field('exportRoot','Query export directory','path',false,'Optional private sibling parent for new query exports.'),
       field('handoffRoot','Workspace handoff directory','path',false,'Optional private sibling parent for portable handoffs.'),environment]},
+  {id:'python-analysis-project',python:true,command:'stellar-forge-analysis-project',terminal:false,
+    requiredSource:original+'analysis_projects.py',title:'Open Analysis project',
+    description:'Verify a complete project ZIP or directory, receive its editable workspace and open the original Analysis application.',
+    fields:[installation,field('projectPath','Complete project ZIP or directory','path',true),
+      field('databaseDirectory','Private customer database directory','path',true),
+      field('projectCache','Retained project directory','path',false,'For ZIP input; defaults to a private sibling selected by the project manifest.'),
+      field('projectSha256','Project ZIP SHA256','text',false,'Optional digest supplied with the complete delivery.'),
+      field('operationId','Original receiving operation','text',false,'Optional UUID32. Keep the same operation for a receiving continuation.'),
+      field('nodeExecutable','Original Node executable','path',false,'Defaults to this managed runtime worker’s Node executable.'),
+      field('port','Local port','port',false,'Use 0 for an available loopback port.'),environment]},
+  {id:'python-analysis-project-export',python:true,command:'stellar-forge-analysis-project',terminal:false,
+    requiredSource:original+'analysis_projects.py',title:'Export complete Analysis project',
+    description:'Save the current customer database, reports, workbooks and retained source in a complete editable project with its offline reader.',
+    fields:[installation,field('projectPath','Original complete project ZIP or directory','path',true),
+      field('databaseDirectory','Current private customer database','path',true),
+      field('outputDirectory','Complete following-delivery directory','path',true),
+      field('projectCache','Retained project directory','path',false),
+      field('projectSha256','Project ZIP SHA256','text',false),
+      field('operationId','Original archive operation','text',false,'Leave empty to bind the archive to this source, database and output directory; an existing UUID32 resumes that exact export.'),
+      field('title','Project title','text',false),
+      field('nodeExecutable','Original Node executable','path',false),environment]},
   {id:'python-analysis',python:true,command:'analysis',terminal:false,
     requiredSource:original+'analysis_workspace.py',title:'Analysis and workbook workspace',
     description:'Open the original analysis database, workbook sources, refresh review, reports and deliveries with its installed Python environment.',
     fields:[installation,field('databaseDirectory','Analysis database directory','path',true),
+      field('lineageConnectionsFile','Lineage collector connections','path',false,'Private named collector configuration; selects original startup files and producer-token references.'),
       field('nodeExecutable','Original Node executable','path',false,'Defaults to this managed runtime worker’s Node executable.'),
       field('port','Local port','port',false,'Use 0 to select an available loopback port.'),environment]},
   {id:'python-workbooks',python:true,command:'workbooks',terminal:false,
@@ -61,13 +90,67 @@ function option(args,name) {
   need(values.length<=1,'PYTHON_APPLICATION_ARGUMENTS_INVALID','Select '+name+' once.');
   return values[0];
 }
+async function dbnomicsRetainedReturn(args,directory,inputPath) {
+  const id=option(args,'--id'),sha256=option(args,'--sha256');
+  need(typeof id==='string' && /^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$/.test(id) &&
+    typeof sha256==='string' && /^[a-f0-9]{64}$/.test(sha256),'PYTHON_DBNOMICS_RETURN_BINDING_REQUIRED');
+  const operationFile=join(directory,'returns',id,'operation.json'),inputs=[];
+  let operation;
+  try{operation=await privateControl(operationFile);}
+  catch(error){if(error.code==='ENOENT')return {args,inputs};throw error;}
+  const workflowFile=join(directory,'operation.json'),workflow=await privateControl(workflowFile);
+  need(workflow.schema==='stellar-forge.dbnomics-economic-workflow.v1' &&
+    operation.schema==='stellar-forge.dbnomics-workbook-return.v1' &&
+    operation.id===id && operation.workflow_id===workflow.id &&
+    operation.source_document_id===workflow.source?.document_id &&
+    operation.returned_file?.sha256===sha256,'PYTHON_DBNOMICS_RETURN_CHANGED');
+  inputs.push(await inputPath(operationFile,'file',false,true),
+    await inputPath(workflowFile,'file',false,true));
+  const retained=join(directory,'returns',id,'returned.xlsx');
+  let handle;
+  try{handle=await open(retained,constants.O_RDONLY|constants.O_NOFOLLOW);}
+  catch(error){if(error.code==='ENOENT')return {args,inputs};throw error;}
+  await handle.close();
+  // The same returned bytes are already retained by the original workflow.
+  // Bind that file instead of requiring an external input that may have moved.
+  const selected=[...args];
+  const index=selected.findIndex(value=>value==='--file'||value.startsWith('--file='));
+  need(index>=0 && option(selected,'--file')!==undefined,'PYTHON_DBNOMICS_RETURN_FILE_REQUIRED');
+  if(selected[index]==='--file')selected[index+1]=retained;
+  else selected[index]='--file='+retained;
+  return {args:selected,inputs};
+}
 export function pythonApplicationResource(type,settings) {
   if(type.command==='duckdb')return key({family:'python-duckdb',directory:settings.workspaceDirectory});
   if(type.command==='postgres')return key({family:'python-postgres',directory:settings.workspaceDirectory});
-  if(type.command==='analysis')return key({family:'python-analysis',directory:settings.databaseDirectory});
+  if(['analysis','stellar-forge-analysis-project'].includes(type.command))return key({family:'python-analysis',directory:settings.databaseDirectory});
   const args=argumentsFrom(settings);
+  if(type.command==='stellar-forge-dbnomics-analysis')return key({family:'python-dbnomics',
+    directory:option(args,'--operation')});
   return key({family:'python-workbook',directory:option(args,'--operation')??option(args,'--destination')??
     option(args,'--delivery')??option(args,'--database')??null,args});
+}
+async function inspectAnalysisProject(root,options) {
+  const descriptor=await bindPythonApplicationCommand(root,options);
+  const child=spawn(descriptor.python,descriptor.argv,{cwd:descriptor.cwd,shell:false,
+    env:{...process.env,PYTHONDONTWRITEBYTECODE:'1'},stdio:['ignore','pipe','pipe']});
+  let bytes=Buffer.alloc(0),errorText='',oversized=false;
+  child.stdout.on('data',value=>{if(bytes.length+value.length>262144){oversized=true;child.kill('SIGTERM');}else bytes=Buffer.concat([bytes,value]);});
+  child.stderr.on('data',value=>{if(errorText.length<4096)errorText+=value.toString('utf8');});
+  const timer=setTimeout(()=>child.kill('SIGTERM'),120000);
+  try{
+    const result=await new Promise((accept,reject)=>{child.once('error',reject);child.once('close',(code,signal)=>accept({code,signal}));});
+    need(result.code===0 && !oversized,'PYTHON_ANALYSIS_PROJECT_VERIFICATION_FAILED',
+      'The complete original project could not be verified.'+(errorText?' '+errorText.slice(0,1600):''));
+    let inspected;
+    try{inspected=JSON.parse(bytes.toString('utf8'));}catch{need(false,'PYTHON_ANALYSIS_PROJECT_INSPECTION_INVALID');}
+    need(inspected.schema==='stellar-forge.analysis-project-command.v1' && inspected.state==='VERIFIED' &&
+      ['zip','directory'].includes(inspected.kind) && /^[a-f0-9]{64}$/.test(inspected.manifest_sha256??'') &&
+      /^[a-f0-9]{32}$/.test(inspected.workspace_id??'') &&
+      (inspected.kind!=='zip' || /^[a-f0-9]{64}$/.test(inspected.archive?.sha256??'')),
+      'PYTHON_ANALYSIS_PROJECT_INSPECTION_INVALID');
+    return inspected;
+  }finally{clearTimeout(timer);}
 }
 export async function pythonApplicationCommand(root,type,settings,{
   runtimeId,runtimeDirectory,inputPath,selectedExecutable,applicationEnvironment,
@@ -98,8 +181,83 @@ export async function pythonApplicationCommand(root,type,settings,{
     inputs.push(await inputPath(settings.databaseDirectory,'directory',true,true));
     const node=await selectedExecutable(settings.nodeExecutable??process.execPath);
     inputs.push(...node.inputs);
+    const lineageConnections=settings.lineageConnectionsFile?absolute(settings.lineageConnectionsFile):null;
+    if(lineageConnections)inputs.push(await inputPath(lineageConnections,'file',false,true));
     args=['--database',settings.databaseDirectory,'--checkout',binding.sourceRoot,'--node',node.executable,
+      ...(lineageConnections?['--lineage-connections',lineageConnections]:[]),
       'serve','--port',String(settings.port??0)];
+  }else if(type.command==='stellar-forge-analysis-project'){
+    const project=absolute(settings.projectPath),info=await lstat(project);
+    need(info.isFile() || info.isDirectory(),'PYTHON_ANALYSIS_PROJECT_REQUIRED');
+    inputs.push(await inputPath(project,info.isDirectory()?'directory':'file',false,false));
+    const inspectArgs=['--checkout',binding.sourceRoot,'--project',project];
+    if(settings.projectSha256){
+      need(/^[a-f0-9]{64}$/.test(settings.projectSha256),'PYTHON_ANALYSIS_PROJECT_DIGEST_INVALID');
+      inspectArgs.push('--project-sha256',settings.projectSha256);
+    }
+    inspectArgs.push('inspect');
+    const inspection=await inspectAnalysisProject(root,{
+      runtimeId,runtimeDirectory,installationId:settings.installationId,
+      command:type.command,args:inspectArgs,
+    });
+    const exporting=type.id==='python-analysis-project-export';
+    inputs.push(await inputPath(settings.databaseDirectory,'directory',!exporting,true));
+    const node=await selectedExecutable(settings.nodeExecutable??process.execPath);
+    inputs.push(...node.inputs);
+    args=['--checkout',binding.sourceRoot,'--project',project,'--database',settings.databaseDirectory,
+      '--manifest-sha256',inspection.manifest_sha256,'--workspace-id',inspection.workspace_id,
+      '--node',node.executable];
+    if(inspection.archive)args.push('--project-sha256',inspection.archive.sha256);
+    if(inspection.kind==='zip'){
+      const cache=settings.projectCache||join(dirname(settings.databaseDirectory),'analysis-project-'+inspection.manifest_sha256);
+      inputs.push(await inputPath(cache,'directory',true,true));
+      args.push('--project-cache',cache);
+    }
+    const operation=settings.operationId||(exporting?key({
+      schema:'stellar-forge.analysis-project-archive-selection.v1',
+      workspaceId:inspection.workspace_id,manifestSha256:inspection.manifest_sha256,
+      databaseDirectory:absolute(settings.databaseDirectory),outputDirectory:absolute(settings.outputDirectory),
+    }).slice(0,32):null);
+    if(operation!==null)need(/^[a-f0-9]{32}$/.test(operation),'PYTHON_ANALYSIS_PROJECT_OPERATION_INVALID');
+    if(exporting){
+      inputs.push(await inputPath(settings.outputDirectory,'directory',true,true));
+      const title=settings.title||'Analysis project';
+      need(typeof title==='string' && title.trim().length>0 && title.length<=240,'PYTHON_ANALYSIS_PROJECT_TITLE_INVALID');
+      args.push('export','--operation',operation,'--output',settings.outputDirectory,'--title',title);
+    }else{
+      args.push('serve','--port',String(settings.port??0));
+      if(operation)args.push('--operation',operation);
+    }
+  }else if(type.command==='stellar-forge-dbnomics-analysis'){
+    args=argumentsFrom(settings);
+    need(option(args,'--checkout')===undefined && option(args,'--node')===undefined,
+      'PYTHON_DBNOMICS_RUNTIME_SELECTED','The installed application supplies its original source and Node executable.');
+    let subcommand=null;
+    for(let index=0;index<args.length;index++){
+      if(['--operation','--wait-seconds'].includes(args[index])){index++;continue;}
+      if(args[index].startsWith('--operation=')||args[index].startsWith('--wait-seconds='))continue;
+      subcommand=args[index];break;
+    }
+    need(subcommand!=='serve','PYTHON_DBNOMICS_USE_ANALYSIS_APPLICATION',
+      'Open this operation’s analysis directory with the original Analysis and workbook workspace application.');
+    const directory=option(args,'--operation');
+    need(typeof directory==='string','PYTHON_DBNOMICS_OPERATION_REQUIRED');
+    inputs.push(await inputPath(absolute(directory),'directory',true,true));
+    if(subcommand==='return-workbook'){
+      const resumed=await dbnomicsRetainedReturn(args,absolute(directory),inputPath);
+      args=resumed.args;inputs.push(...resumed.inputs);
+    }
+    for(const [flag,kind,missing] of [
+      ['--source','directory',false],['--bundle','file',false],['--selection','file',false],
+      ['--project','directory',false],['--file','file',false],['--target','directory',true],
+      ['--source-project','directory',true],['--source-receiving-project','directory',true],
+    ]){
+      const selected=option(args,flag);
+      if(selected!==undefined)inputs.push(await inputPath(absolute(selected),kind,missing,true));
+    }
+    const node=await selectedExecutable(settings.nodeExecutable??process.execPath);
+    inputs.push(...node.inputs);
+    args=['--checkout',binding.sourceRoot,'--node',node.executable,...args];
   }else{
     args=argumentsFrom(settings);
     for(const [flag,kind,missing,privateOnly] of [
@@ -148,7 +306,7 @@ export function assertPythonManagedLaunch(request,launch) {
   need(typeof createdAt==='string' && key(body)===key(launchBody(request)),
     'PYTHON_MANAGED_LAUNCH_CHANGED');
 }
-export const pythonManagedStopSignal=request=>['analysis','duckdb','postgres'].includes(request.pythonCommand?.command)?'SIGINT':'SIGTERM';
+export const pythonManagedStopSignal=request=>['analysis','stellar-forge-analysis-project','duckdb','postgres'].includes(request.pythonCommand?.command)?'SIGINT':'SIGTERM';
 export async function preparePythonManagedChild(root,request,environment,{leaseFd=3}={}) {
   const command=await preparePythonApplicationCommand(root,request.pythonCommand,{leaseFd});
   return {executable:command.executable,args:command.args,
@@ -227,7 +385,8 @@ export function observePythonApplicationOutput(request,directory,{pid}={}) {
       identityFields={workspaceDirectory:control.directory};
     }else{
       const identity=await originalAnalysisIdentity(descriptor);
-      need(identity.schema===ready.schema && identity.workspace_id===control.workspace_id,
+      need(identity.schema===ready.schema && identity.workspace_id===control.workspace_id &&
+        (ready.expectedWorkspaceId===undefined || ready.expectedWorkspaceId===control.workspace_id),
         'PYTHON_APPLICATION_DATABASE_CHANGED');
       source='original-analysis-private-launch';
       identityFields={workspaceId:control.workspace_id};

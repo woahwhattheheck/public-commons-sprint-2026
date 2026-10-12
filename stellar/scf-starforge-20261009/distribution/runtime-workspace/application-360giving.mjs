@@ -24,7 +24,7 @@ const required = [...shared, ...['publisher.py', 'operator/publisher_workspace.p
   .map(name => 'ndjson/360giving/' + name)];
 const sourcePath = name => typeof name === 'string' && !name.includes('\\') &&
   !name.includes(':') && !name.split('/').some(part => !part || part === '.' || part === '..') &&
-  (shared.has(name) || name.startsWith('ndjson/360giving/'));
+  (shared.has(name) || name === 'stellar-expert/exact-json.mjs' || name.startsWith('ndjson/360giving/'));
 const field = (name, label, type = 'path', required = false, description = '') =>
   ({ name, label, type, required, description });
 

@@ -54,6 +54,23 @@ def serve(warehouse, directory, *, port=0):
             if self.command != "HEAD":
                 self.wfile.write(payload)
 
+        def _report(self, request_id):
+            with operator.report_stream(request_id) as opened:
+                stream, artifact = opened
+                self.send_response(200)
+                self.send_header("Content-Type", "application/zip")
+                self.send_header("Content-Length", str(artifact["bytes"]))
+                self.send_header("Content-Disposition", 'attachment; filename="' + artifact["filename"] + '"')
+                self.send_header("X-Content-SHA256", artifact["sha256"])
+                self.send_header("Cache-Control", "no-store")
+                self.send_header("X-Content-Type-Options", "nosniff")
+                self.send_header("Referrer-Policy", "no-referrer")
+                self.send_header("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'")
+                self.end_headers()
+                if self.command != "HEAD":
+                    while chunk := stream.read(1024 * 1024):
+                        self.wfile.write(chunk)
+
         def _dispatch(self):
             origin = "http://127.0.0.1:" + str(self.server.server_port)
             if (self.headers.get_all("Host") != [origin[7:]]
@@ -96,6 +113,8 @@ def serve(warehouse, directory, *, port=0):
                         return self._reply(200, operator.review_record(parts[2]))
                     if len(parts) == 3 and parts[:2] == ["api", "requests"] and not values:
                         return self._reply(200, operator.request_record(parts[2]))
+                    if len(parts) == 4 and parts[:2] == ["api", "period-reports"] and parts[3] == "archive" and not values:
+                        return self._report(parts[2])
                     if url.path == "/api/current":
                         fields(values, ("name",))
                         return self._reply(200, warehouse.current(values["name"]))

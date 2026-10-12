@@ -89,6 +89,32 @@ final class Starforge_SF104_ERP_Store {
             return $record;
         });
     }
+    /** Retain exact original maps for recovery without selecting or authorizing them. */
+    static function retain_maps($records) {
+        $m = Starforge_SF104_ERP_Map::class; $prepared = [];
+        foreach ($records as $record) {
+            $mapping = $m::compile($record['mapping'] ?? null); $id = $m::digest($mapping);
+            $m::need(($record['id'] ?? '') === $id, 'The retained original mapping digest does not match.');
+            $prepared[$id] = $record;
+        }
+        return Starforge_SF104_Checkout::with_order_lock('erp-mapping', static function () use ($prepared,$m) {
+            global $wpdb; $ids = [];
+            foreach ($prepared as $id=>$map) {
+                $existing = self::map($id);
+                if ($existing) {
+                    $m::need($m::digest($existing['mapping']) === $id, 'The installed mapping contains different original content.');
+                } else {
+                    $map['checkHistory'] = $map['checkHistory'] ?? [];
+                    if ($map['check'] ?? null) $map['checkHistory'][] = $map['check'];
+                    $map['check'] = null; $map['importedAt'] = gmdate('c');
+                    if ($wpdb->insert(self::table('maps'), ['map_id'=>$id,'data'=>$m::json($map),'created_at'=>gmdate('Y-m-d H:i:s')]) !== 1)
+                        throw new RuntimeException('An original mapping could not be retained for recovery.',503);
+                }
+                $ids[] = $id;
+            }
+            return $ids;
+        });
+    }
     static function record_check($id, $check) {
         return Starforge_SF104_Checkout::with_order_lock('erp-mapping', static function () use ($id, $check) {
             global $wpdb; $record = self::map($id);

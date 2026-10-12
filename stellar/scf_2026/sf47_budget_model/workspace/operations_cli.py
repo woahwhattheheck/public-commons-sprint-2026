@@ -90,6 +90,63 @@ def register(subparsers, common):
     deployment = target.add_mutually_exclusive_group(required=True)
     deployment.add_argument("--deployment", help="Original deployment ID from this operations case")
     deployment.add_argument("--deployment-file", help="JSON fields for a new original deployment")
+    target = command("implementation-source", "Read the complete original SF74 implementation and selected observation cutoff", case=True, output=True)
+    target.add_argument("--source", required=True, help="Original attached source ID")
+    target.add_argument("--as-of", required=True, help="Canonical UTC observation cutoff including milliseconds")
+    target.add_argument("--expected-version", type=int, required=True)
+    for verb in ("implementation-preview", "implementation-prepare"):
+        target = command(verb, "Review or freeze exact original implementation observations and explicit case links", case=True, output=True)
+        target.add_argument("--inputs", required=True, help="Explicit reviewed implementation inputs JSON")
+        if verb == "implementation-prepare":
+            mutation(target, version=True)
+            target.add_argument("--expected-preview-sha256", required=True)
+        else:
+            target.add_argument("--expected-version", type=int, required=True)
+    target = command("implementation-export", "Export a complete frozen implementation review and all original files", case=True)
+    target.add_argument("--review", required=True)
+    target.add_argument("--output", required=True)
+    target = command("implementation-original", "Download one exact embedded original from the retained implementation source", case=True)
+    target.add_argument("--source", required=True)
+    target.add_argument("--sha256", required=True)
+    target.add_argument("--output", required=True)
+    target = command("cohort-seed", "Open the original proposed 7/14-day acceptance rule and explicit input", case=True, output=True)
+    target.add_argument("--tranche", type=int, choices=(2, 3), required=True)
+    target.add_argument("--expected-version", type=int, required=True)
+    for verb in ("cohort-preview", "cohort-prepare"):
+        target = command(verb, "Review or freeze the original intent cohort and retained source coverage", case=True, output=True)
+        target.add_argument("--inputs", required=True, help="Explicit reviewed cohort inputs JSON")
+        if verb == "cohort-prepare":
+            mutation(target, version=True)
+            target.add_argument("--expected-preview-sha256", required=True)
+        else:
+            target.add_argument("--expected-version", type=int, required=True)
+    target = command("cohort-export", "Export the complete frozen cohort and its original sources", case=True)
+    target.add_argument("--review", required=True)
+    target.add_argument("--output", required=True)
+    command("installations", "List current saved customer installation editions", case=True, output=True)
+    target = command("installation-seed", "Prepare a complete installation from the original funded work packages", case=True, output=True)
+    target.add_argument("--expected-version", type=int, required=True)
+    target = command("installation-show", "Reopen one whole saved installation and its selected original records", case=True, output=True)
+    target.add_argument("--installation", required=True)
+    target.add_argument("--revision", type=int, help="Exact saved edition; omission opens the latest")
+    target = command("installation-history", "Page the original saved installation editions", case=True, output=True)
+    target.add_argument("--installation", required=True)
+    target.add_argument("--before", type=int)
+    target.add_argument("--limit", type=int, default=25)
+    for verb in ("installation-preview", "installation-save"):
+        target = command(verb, "Review or save one complete customer installation edition", case=True, output=True)
+        target.add_argument("--document", required=True, help="UTF-8 JSON installation document from seed or an edited saved edition")
+        target.add_argument("--installation", help="Original installation ID; omit for the first edition")
+        target.add_argument("--expected-revision", type=int, required=True, help="Zero for a new installation; current saved edition otherwise")
+        if verb == "installation-save":
+            mutation(target, version=True)
+            target.add_argument("--expected-preview-sha256", required=True)
+        else:
+            target.add_argument("--expected-version", type=int, required=True)
+    target = command("installation-export", "Export the selected edition, readable handover and entire original operating case", case=True)
+    target.add_argument("--installation", required=True)
+    target.add_argument("--revision", type=int, required=True)
+    target.add_argument("--output", required=True)
     target = command("completion-calendar", "Read payment-derived completion clocks and original award dates", case=True, output=True)
     target.add_argument("--as-of", help="Explicit YYYY-MM-DD calendar date; defaults to current UTC date")
     target = command("completion-seed", "Open the original tranche assignments without saving", case=True, output=True)
@@ -226,6 +283,64 @@ def operate(workspace, args):
                     raise Problem("New deployment fields must be a UTF-8 JSON object.", 422, "INVALID_JSON") from exc
             result = ops.command(args.case, {"expectedVersion": args.expected_version, "actor": args.actor,
                 "requestId": args.request_id, "note": args.note, "action": "support.receive", "data": data})
+    elif action == "implementation-source":
+        result = ops.seed_implementation(args.case, {"expectedVersion": args.expected_version,
+            "sourceId": args.source, "asOfAt": args.as_of})
+    elif action == "implementation-export":
+        return {"reviewId": args.review, "output": publish(args.output, ops.export_implementation(args.case, args.review))}
+    elif action == "implementation-original":
+        metadata, raw = ops.implementation_original(args.case, args.source, args.sha256)
+        return {"original": metadata, "output": publish(args.output, raw)}
+    elif action in ("implementation-preview", "implementation-prepare"):
+        try:
+            inputs = json.loads(read_bytes(args.inputs, MAX_SOURCE))
+        except (UnicodeError, ValueError) as exc:
+            raise Problem("Implementation inputs must be a complete UTF-8 JSON object.", 422, "INVALID_JSON") from exc
+        if action == "implementation-preview":
+            result = ops.preview_implementation(args.case, {"expectedVersion": args.expected_version, "inputs": inputs})
+        else:
+            result = ops.command(args.case, {"expectedVersion": args.expected_version, "actor": args.actor,
+                "requestId": args.request_id, "note": args.note, "action": "implementation.prepare",
+                "data": {"inputs": inputs, "expectedPreviewSha256": args.expected_preview_sha256}})
+    elif action == "cohort-seed":
+        result = ops.seed_cohort(args.case, {"expectedVersion": args.expected_version, "tranche": args.tranche})
+    elif action == "cohort-export":
+        return {"reviewId": args.review, "output": publish(args.output, ops.export_cohort(args.case, args.review))}
+    elif action in ("cohort-preview", "cohort-prepare"):
+        try:
+            inputs = json.loads(read_bytes(args.inputs, MAX_SOURCE))
+        except (UnicodeError, ValueError) as exc:
+            raise Problem("Cohort inputs must be an original UTF-8 JSON object.", 422, "INVALID_JSON") from exc
+        if action == "cohort-preview":
+            result = ops.preview_cohort(args.case, {"expectedVersion": args.expected_version, "inputs": inputs})
+        else:
+            result = ops.command(args.case, {"expectedVersion": args.expected_version, "actor": args.actor,
+                "requestId": args.request_id, "note": args.note, "action": "cohort.prepare",
+                "data": {"inputs": inputs, "expectedPreviewSha256": args.expected_preview_sha256}})
+    elif action == "installations":
+        result = {"installations": ops.list_installations(args.case)}
+    elif action == "installation-seed":
+        result = ops.seed_installation(args.case, {"expectedVersion": args.expected_version})
+    elif action == "installation-show":
+        result = ops.installation(args.case, args.installation, args.revision)
+    elif action == "installation-history":
+        result = ops.installation_history(args.case, args.installation, args.before, args.limit)
+    elif action == "installation-export":
+        return {"installationId": args.installation, "revision": args.revision,
+                "output": publish(args.output, ops.export_installation(args.case, args.installation, args.revision))}
+    elif action in ("installation-preview", "installation-save"):
+        from operations_installations import MAX_DOCUMENT_BYTES
+        try:
+            document = json.loads(read_bytes(args.document, MAX_DOCUMENT_BYTES))
+        except (UnicodeError, ValueError) as exc:
+            raise Problem("Installation input must be a complete UTF-8 JSON document.", 422, "INVALID_JSON") from exc
+        selected = {"installationId": args.installation, "expectedRevision": args.expected_revision, "document": document}
+        if action == "installation-preview":
+            result = ops.preview_installation(args.case, {"expectedVersion": args.expected_version, **selected})
+        else:
+            result = ops.command(args.case, {"expectedVersion": args.expected_version, "actor": args.actor,
+                "requestId": args.request_id, "note": args.note, "action": "installation.save",
+                "data": {**selected, "expectedPreviewSha256": args.expected_preview_sha256}})
     elif action == "completion-calendar":
         result = ops.completion_calendar(args.case, args.as_of)
     elif action == "completion-seed":

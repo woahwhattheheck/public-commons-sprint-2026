@@ -12,7 +12,7 @@ export const OPENDATASOFT_EXPORT_SCHEMA = 'stellar-forge.opendatasoft-agent-expo
 export const OPENDATASOFT_MAX_FILE_BYTES = 512 * 1024 * 1024;
 const SHA = /^[a-f0-9]{64}$/, ID = /^[a-f0-9-]{36}$/;
 const NAMES = new Set(['data.json','data.csv','data.geojson','review.html','DATASET-RECEIVING.md',
-  'source-declaration.json','merchant.tar.gz','MERCHANT-RECEIVING.md','buyer-request.json','tenant.tar.gz','TENANT-INGESTION.md']);
+  'source-declaration.json','merchant.tar.gz','MERCHANT-RECEIVING.md','buyer-request.json','tenant.tar.gz','TENANT-INGESTION.md','facilitator-review.json','facilitator-source.json','FACILITATORS.md']);
 export const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
 const encode = value => Buffer.from(JSON.stringify(value, null, 2) + '\n');
 const decode = bytes => new TextDecoder('utf-8', { fatal: true }).decode(bytes);
@@ -45,6 +45,16 @@ export function parseOpendatasoftExport(bytes, exportId) {
   if (!['data.json','data.csv','data.geojson','review.html','DATASET-RECEIVING.md'].every(name => names.has(name)) ||
       names.has('merchant.tar.gz') !== names.has('MERCHANT-RECEIVING.md') || names.has('tenant.tar.gz') !== names.has('TENANT-INGESTION.md'))
     throw fail('EXPORT_INVALID', 'The export must include every analyst format and the selected merchant receiving guide.');
+  const providerFiles = ['facilitator-review.json','facilitator-source.json','FACILITATORS.md'];
+  const withProvider = providerFiles.some(name => names.has(name));
+  if (withProvider || value.selection.facilitatorReviewId !== undefined) {
+    if (!providerFiles.every(name => names.has(name)) || !names.has('merchant.tar.gz') ||
+        !SHA.test(value.selection.facilitatorReviewId ?? '') ||
+        value.source.facilitatorReviewId !== value.selection.facilitatorReviewId ||
+        value.files.find(file => file.name === 'facilitator-review.json').sha256 !== value.source.facilitatorReviewSha256 ||
+        value.files.find(file => file.name === 'facilitator-source.json').sha256 !== value.source.facilitatorSourceSha256)
+      throw fail('EXPORT_INVALID','Include the complete native provider review, source binding and guide with its original merchant package.');
+  }
   return value;
 }
 async function privateDirectory(path, create = false) {

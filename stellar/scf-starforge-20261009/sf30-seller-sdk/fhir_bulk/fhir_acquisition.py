@@ -26,7 +26,7 @@ import zipfile
 from fhir_source import (InputError, MAX_SOURCE, MAX_FILES, MAX_MANIFEST, MAX_LINE, SOURCE_SCHEMA,
     CONNECTION_SCHEMA, EXPORT_SCHEMA, jbytes, sha, json_value, text, exact, integer, identity,
     operation_id, http_url, origin, instant, epoch, validate_connection, validate_export,
-    request_matches, manifest_value, member_name, descriptor, file_identity)
+    request_matches, manifest_value, member_name, descriptor, file_identity, Packet)
 from fhir_runtime import original_workspace
 
 HERE = Path(__file__).resolve().parent
@@ -882,6 +882,100 @@ class Acquisition:
             op.pop("_pending", None)
             op.setdefault("statusReceivings", []).append({"at": now(), "statusUrl": status_url, "reason": reason})
             return self._save(op, "actual-status-url-received")
+
+    def receive_capture(self, op_id, body):
+        """Join complete retained originals to their existing accepted operation."""
+        exact(body, {"sourceId", "reason"}, "Retained capture receiving")
+        source_id = identity(body.get("sourceId"))
+        reason = text(body.get("reason"), "Retained capture receiving reason", 4096, False)
+        with self.ws.mutex:
+            op = self.operation(op_id)
+            export = self.ws.export_plan(op["exportId"])["export"]
+            connection = self.ws.connection(op["connectionId"])["connection"]
+            if op["state"] in {"cancelled", "cancel_unknown"}:
+                raise ConflictError("Reopen the original cancellation before receiving its source")
+            if op["state"] == "complete" and op.get("sourceId") != source_id:
+                raise ConflictError("This original operation already received another complete source")
+            if not op.get("statusUrl"):
+                raise ConflictError("Receive the actual accepted status URL before joining retained source files")
+            saved = self.ws.source(source_id)
+            with self.ws.source_path(source_id).open("rb") as stream, Packet(stream) as packet:
+                if packet.mode != "capture" or packet.manifest.get("operationId") != op["operationId"]:
+                    raise ConflictError("Select the complete original capture for this operation UUID")
+                if jbytes(packet.connection) != jbytes(connection) or jbytes(packet.export) != jbytes(export):
+                    raise ConflictError("The retained capture belongs to another reviewed connection or export")
+                if packet.source_id != source_id:
+                    raise InputError("The complete retained source packet changed its content identity")
+                manifest = packet.manifest
+                pages = manifest["manifests"]
+                if not request_matches(op["statusUrl"], pages[0].get("url", "")):
+                    raise ConflictError("The retained manifest belongs to another accepted provider job")
+                if op.get("transactionTime") and op["transactionTime"] != manifest["transactionTime"]:
+                    raise ConflictError("The retained capture changed the original export transaction time")
+                total = sum(info.file_size for info in packet.infos.values())
+                if total > export["limits"]["maxBytes"]:
+                    raise InputError("Complete retained originals exceed the reviewed export byte budget")
+                for name in packet.members:
+                    packet.verify(name)
+                original_pages = []
+                for index, page in enumerate(pages):
+                    with packet.open(page["name"]) as member:
+                        raw = member.read(MAX_MANIFEST + 1)
+                    if len(raw) > MAX_MANIFEST:
+                        raise InputError("The retained native manifest exceeds its supported byte budget")
+                    value = json_value(raw)
+                    prior = op.get("_manifestChain", [])
+                    if index < len(prior):
+                        old = json_value(safe_read(self.directory(op["operationId"]) / prior[index]["path"]))
+                        for key in ["transactionTime", "request", "requiresAccessToken", "outputOrganizedBy",
+                                    "error", "extension"]:
+                            if old.get(key) != value.get(key):
+                                raise ConflictError("The retained capture changed an observed manifest's " + key)
+                    original_pages.append({"id": sha(raw), "sha256": sha(raw), "bytes": len(raw),
+                        "url": page["url"], "status": page.get("status"),
+                        "exportStatus": page.get("exportStatus", page.get("status")),
+                        "transactionTime": value["transactionTime"],
+                        "nextUrl": value.get("link", [{}])[0].get("url") if value.get("link") else None,
+                        "sourceId": source_id, "member": page["name"]})
+                current = {item["id"]: item for item in op["files"]}
+                received = {item["id"]: item for item in packet.files}
+                if not set(current).issubset(received):
+                    raise ConflictError("The complete retained capture omitted an already observed original file")
+                for ident, previous in current.items():
+                    incoming = received[ident]
+                    for key in ["kind", "type", "count", "continuesInFile"]:
+                        if previous.get(key) != incoming.get(key):
+                            raise ConflictError("The retained capture changed an observed original file's " + key)
+                    if previous.get("state") == "complete" and any(
+                            previous.get(key) != incoming.get(key) for key in ["bytes", "sha256"]):
+                        raise ConflictError("A received original file differs from the already retained bytes")
+                if op["state"] == "complete":
+                    return op
+                stats = {item["id"]: item for item in saved["inventory"]["files"]}
+                files = []
+                for item in packet.files:
+                    previous = current.get(item["id"], {})
+                    row = {**previous, **item, "state": "complete",
+                           "lineCount": stats[item["id"]]["lines"],
+                           "retainedSource": {"sourceId": source_id, "member": item["name"]}}
+                    if previous.get("name") and previous["name"] != item["name"]:
+                        row["previousNativeName"] = previous["name"]
+                    files.append(row)
+                receiving = {"at": now(), "sourceId": source_id, "reason": reason,
+                    "kind": "complete-retained-source-packet", "fileCount": len(files),
+                    "bytes": sum(item["bytes"] for item in files),
+                    "manifests": [{"sha256": page["sha256"], "bytes": page["bytes"],
+                                  "url": page["url"], "member": page["member"]} for page in original_pages],
+                    "previousState": op["state"], "previousPhase": op["phase"],
+                    "previousError": op.get("error"), "previousPending": op.get("_pending")}
+                op.setdefault("captureReceivings", []).append(receiving)
+                op.update({"state": "complete", "phase": "complete", "notBefore": None, "error": None,
+                    "transactionTime": manifest["transactionTime"], "files": files, "manifests": original_pages,
+                    "sourceId": source_id,
+                    "source": {key: saved[key] for key in ["id", "label", "name", "bytes", "created"]},
+                    "_manifestComplete": True, "_nextManifest": None})
+                op.pop("_pending", None)
+                return self._save(op, "retained-source-packet-received")
 
     def cancel(self, op_id, request_id):
         request_id = operation_id(request_id)

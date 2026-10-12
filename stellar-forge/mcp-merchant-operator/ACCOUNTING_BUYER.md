@@ -225,3 +225,7 @@ The [original buyer CLI](../../stellar/scf-starforge-20261009/merchant-settlemen
 and managed Applications source binding use this same retained startup.
 Their normal close/reopen does not create another buyer period, handoff or
 accounting source.
+
+## Customer SDK and saved CLI operations
+
+Use the existing `starforge merchant-accounting-platforms` command with `--platform buyer` for source review, initialization, retained-source paging, exact first-handoff recovery and original source/accountant downloads. The complete private `request.json` / `state.json` workflow and SDK examples are in [ACCOUNTING-PLATFORMS-CLIENT.md](ACCOUNTING-PLATFORMS-CLIENT.md#buyer-issued-source-startup-and-receiving). Initialization and handoff stay explicit; `reconcile` only observes their original native identities. The original buyer mode, Store, Xero and encrypted receiving remain this guide's configuration.

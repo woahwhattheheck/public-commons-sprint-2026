@@ -129,6 +129,8 @@ class Handler(BaseHTTPRequestHandler):
             except ValueError as exc:
                 raise Problem("INVALID_BODY_LENGTH", "Invalid JSON body length") from exc
             maximum = 90_000_000 if len(parts) == 4 and parts[:2] == ["api", "closes"] and parts[3] in ("accountant-preview", "accountant-return") else 2_000_000
+            if path in ("/api/node-operations", "/api/node-operations/preview"):
+                maximum = 24_000_000
             if not 0 <= length <= maximum:
                 raise Problem("BODY_TOO_LARGE", "The JSON body exceeds this operation's supported size", 413)
             raw = self.rfile.read(length)
@@ -162,6 +164,8 @@ class Handler(BaseHTTPRequestHandler):
         store = self.server.store
         if path == "/api/state":
             return self.send(store.state())
+        if len(parts) == 4 and parts[:2] == ["api", "captures"] and parts[3] == "node-original":
+            return self.send(store.node_operation_original(parts[2]), filename="original-node-accounting-export.json")
         if path == "/api/refund-packets":
             return self.send(store.refund_packets(**self.paging(query)))
         if path == "/api/credits":
@@ -231,6 +235,10 @@ class Handler(BaseHTTPRequestHandler):
 
     def change(self, path, parts, payload, expected):
         store = self.server.store
+        if path == "/api/node-operations/preview":
+            return store.preview_node_operation(payload)
+        if path == "/api/node-operations":
+            return store.capture_node_operation(payload, expected)
         fixed = {"/api/sources": store.register_source, "/api/refund-packets": store.capture_refund, "/api/adjustment-packets": store.capture_adjustments, "/api/centers": store.save_center,
                  "/api/labels": store.save_labels, "/api/periods": store.save_period}
         if path in fixed:

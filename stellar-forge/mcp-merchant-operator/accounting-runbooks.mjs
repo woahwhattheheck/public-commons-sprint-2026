@@ -1,6 +1,6 @@
 // MIT. Installed client-runbook operations share the original accounting writer.
 import {createHash,randomUUID} from 'node:crypto';
-import {RunbookWorkspace,runbookCanonical,RUNBOOK_FILE_BYTES,RUNBOOK_PACKET_BYTES} from '../../stellar/scf-starforge-20261009/merchant-settlement-accounting/workspace/runbooks-workspace.mjs';
+import {RunbookWorkspace,runbookCanonical,runbookAssignment,runbookCycleSteps,runbookProfileFields,RUNBOOK_FILE_BYTES,RUNBOOK_PACKET_BYTES} from '../../stellar/scf-starforge-20261009/merchant-settlement-accounting/workspace/runbooks-workspace.mjs';
 import {RUNBOOK_TOOL_PREFIX,RUNBOOK_HOST_REQUEST_SCHEMA,RUNBOOK_ACTIONS,RUNBOOK_INPUT_FIELDS,RUNBOOK_FILE_SELECTORS,runbookDefinitions,runbookWireHash,runbookHostBinding,runbookHostRequest,runbookOperationMatches} from './accounting-runbooks-contract.mjs';
 export {runbookDefinitions};
 export const runbookFileSelectors=RUNBOOK_FILE_SELECTORS;
@@ -25,19 +25,20 @@ function page(items,args,view,project=value=>value){
   return {view,items:copy(selected),offset,limit,total:items.length,nextOffset:next<items.length?next:null};
 }
 function editionHeader(edition){
-  const {steps,resources,...header}=edition;
-  return {...copy(header),stepCount:steps.length,resourceCount:resources.length};
+  const {steps,resources,profiles,...header}=edition;
+  return {...copy(header),stepCount:steps.length,resourceCount:resources.length,...(profiles===undefined?{}:{profileCount:profiles.length})};
 }
 function sourceHeader(source){
   if(source.kind==='files')return {kind:'files',originWorkspaceId:source.originWorkspaceId,label:source.label,note:source.note,sha256:source.sha256,fileCount:source.files.length};
   const {files,...header}=source;return {...copy(header),fileCount:files.length};
 }
 function cycleHeader(cycle){
-  const progress={total:cycle.edition.steps.length,pending:0,complete:0,blocked:0,notApplicable:0};
-  for(const step of cycle.edition.steps){const state=cycle.work[step.id]?.status??'PENDING';progress[({PENDING:'pending',COMPLETE:'complete',BLOCKED:'blocked',NOT_APPLICABLE:'notApplicable'})[state]]++;}
-  return {id:cycle.id,runbookId:cycle.runbookId,editionId:cycle.editionId,label:cycle.label,phase:cycle.phase,
+  const progress={total:runbookCycleSteps(cycle).length,pending:0,complete:0,blocked:0,notApplicable:0};
+  for(const step of runbookCycleSteps(cycle)){const state=cycle.work[step.id]?.status??'PENDING';progress[({PENDING:'pending',COMPLETE:'complete',BLOCKED:'blocked',NOT_APPLICABLE:'notApplicable'})[state]]++;}
+  return {...runbookProfileFields(cycle),id:cycle.id,runbookId:cycle.runbookId,editionId:cycle.editionId,label:cycle.label,phase:cycle.phase,
     preparer:cycle.preparer,reviewer:cycle.reviewer,dueDate:cycle.dueDate,previousCycleId:cycle.previousCycleId,
     readOnly:cycle.readOnly===true,originWorkspaceId:cycle.originWorkspaceId,createdAt:cycle.createdAt,updatedAt:cycle.updatedAt,
+    assignmentSha256:runbookAssignment(cycle).sha256,handoverCount:cycle.handovers?.length??0,
     source:sourceHeader(cycle.source),progress,submissionCount:cycle.submissions.length,reviewCount:cycle.reviews.length,historyCount:cycle.history.length};
 }
 function bookHeader(book){
@@ -74,7 +75,7 @@ export class MerchantRunbooks{
     const route=RUNBOOK_ACTIONS[args.action];
     need(route&&plain(args.input)&&Object.keys(args.input).every(key=>RUNBOOK_INPUT_FIELDS[args.action].includes(key)),
       'RUNBOOK_INVALID_REQUEST','Supply actor and this action’s native fields; preparation supplies workspaceId, revision and requestId.');
-    need(route.target?UUID.test(args.cycleId??''):args.cycleId===undefined,'RUNBOOK_INVALID_SELECTION','Choose a period only for work, submit or review.');
+    need(route.target?UUID.test(args.cycleId??''):args.cycleId===undefined,'RUNBOOK_INVALID_SELECTION','Choose a period only for work, assign, submit or review.');
     const withFile=['attach','receive'].includes(args.action);
     need(withFile?plain(args.file):args.file===undefined,'RUNBOOK_INVALID_SELECTION','Attach and receive select one original configured file.');
     // Capture the revision first. A concurrent edit during input reading keeps this
@@ -162,27 +163,38 @@ export class MerchantRunbooks{
         need(edition,'RUNBOOK_EDITION_NOT_FOUND','Choose an immutable edition from this client book.');
         const header={runbook:bookHeader(book),edition:editionHeader(edition)};
         if(view==='summary')return this.result(header);
-        const entries={editions:book.editions,steps:edition.steps,resources:edition.resources}[view];
-        need(entries,'RUNBOOK_INVALID_VIEW','Choose editions, steps or resources.');
+        const entries={editions:book.editions,steps:edition.steps,profiles:edition.profiles??[],resources:edition.resources}[view];
+        need(entries,'RUNBOOK_INVALID_VIEW','Choose editions, steps, profiles or resources.');
         return this.result({...header,page:page(entries,args,view,view==='editions'?editionHeader:value=>value)});
       }
       case 'cycle':{
-        const cycle=this.controller.cycle(args.cycleId),view=args.view??'summary',header={cycle:cycleHeader(cycle),edition:editionHeader(cycle.edition)};
-        if(view==='summary')return this.result(header);
+        const cycle=this.controller.cycle(args.cycleId),view=args.view??'summary',header={cycle:cycleHeader(cycle),edition:editionHeader(cycle.edition),assignment:runbookAssignment(cycle)};
+        if(view==='summary'||view==='assignment'){
+          need(args.submissionId===undefined&&args.handoverId===undefined,'RUNBOOK_INVALID_SELECTION','Choose a saved preparation or handover only for its work view.');
+          return this.result({...header,initialAssignments:copy(cycle.initialAssignments??{preparer:cycle.preparer,reviewer:cycle.reviewer,dueDate:cycle.dueDate})});
+        }
         let entries,project=value=>value;
-        if(view==='steps'){entries=cycle.edition.steps;project=step=>({...step,work:cycle.work[step.id]});}
+        if(view==='steps'){entries=runbookCycleSteps(cycle);project=step=>({...step,work:cycle.work[step.id]});}
         else if(view==='resources')entries=cycle.edition.resources;
         else if(view==='source_files')entries=cycle.source.files;
         else if(view==='submissions'){entries=cycle.submissions;project=row=>{const {work,...head}=row;return {...head,workCount:Object.keys(work).length};};}
         else if(view==='submission_work'){
           id(args.submissionId,'preparation round');const submission=cycle.submissions.find(row=>row.id===args.submissionId);
           need(submission,'RUNBOOK_SUBMISSION_NOT_FOUND','Choose a saved preparation round in this period.');
-          entries=cycle.edition.steps;project=step=>({stepId:step.id,title:step.title,work:submission.work[step.id]});
+          entries=runbookCycleSteps(cycle);project=step=>({stepId:step.id,title:step.title,work:submission.work[step.id]});
           header.submission={id:submission.id,at:submission.at,actor:submission.actor,note:submission.note,workSha256:submission.workSha256};
+        }else if(view==='handovers'){
+          entries=cycle.handovers??[];project=row=>{const {work,...head}=row;return {...head,workCount:Object.keys(work).length};};
+        }else if(view==='handover_work'){
+          id(args.handoverId,'responsibility handover');const handover=(cycle.handovers??[]).find(row=>row.id===args.handoverId);
+          need(handover,'RUNBOOK_HANDOVER_NOT_FOUND','Choose a saved handover in this original period.');
+          entries=runbookCycleSteps(cycle);project=step=>({stepId:step.id,title:step.title,work:handover.work[step.id]});
+          const {work,...head}=handover;header.handover={...copy(head),workCount:Object.keys(work).length};
         }else if(view==='reviews')entries=cycle.reviews;
         else if(view==='history')entries=cycle.history;
         need(entries,'RUNBOOK_INVALID_VIEW','Choose a supported original period view.');
         need(view==='submission_work'||args.submissionId===undefined,'RUNBOOK_INVALID_SELECTION','Select a preparation round only for its saved work.');
+        need(view==='handover_work'||args.handoverId===undefined,'RUNBOOK_INVALID_SELECTION','Select a responsibility handover only for its saved work.');
         return this.result({...header,page:page(entries,args,view,project)});
       }
       case 'operation':return this.controller.operation(args.requestId);

@@ -1,0 +1,8 @@
+# The official 360Giving DataGetter conversion environment is separate from the native publisher.
+# DataGetter getter/get.py blob3d3356d32ce8e23cc12a7de53c96420d78678e42;
+# original DataGetter requirements blob5f4aaa08035fd7eb4ef2181b66c73207320af5e4.
+flattentool==0.28.0
+libcove==0.31.0
+jsonref==1.1.0
+openpyxl==3.1.5
+jsonschema==3.2.0

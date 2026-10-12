@@ -6,6 +6,8 @@
  *
  * node operations/governed_receiving.mjs --handoff ORIGINAL_PRIVATE_HANDOFF --work NEW_PRIVATE_DIRECTORY --python ABSOLUTE_PYTHON
  * Retains the full resulting application/state and receiving.json in --work.
+ * Add --resume-with EXACT_CORRECTED_SOURCE_ROOT to continue the saved project phase
+ * from the same --work, original request UUIDs, snapshot and result bytes.
  */
 import assert from 'node:assert/strict';
 import {mkdir,writeFile,readFile,stat,lstat,realpath,rename,link} from 'node:fs/promises';
@@ -17,7 +19,7 @@ import {runNativeMcpSpendingRecoveryReceiving} from '../../../../../stellar-forg
 import {inspectHandoff} from '../application.mjs';
 import {loadApplication} from '../configuration.mjs';
 import {initializeInstalledApplication,inspectInstalledApplication,startInstalledApplication} from '../installed.mjs';
-import {receiveApplicationProject,openReceivedApplicationProject,withRestoredApplicationProject} from '../project-receive.mjs';
+import {receiveApplicationProject,openReceivedApplicationProject,withRestoredApplicationProject,verifyApplicationProject} from '../project-receive.mjs';
 import {createApplicationServer} from '../server.mjs';
 
 const progress=stage=>process.stderr.write(JSON.stringify({receivingStage:stage})+'\n');
@@ -107,7 +109,7 @@ function argumentsFor(args) {
   assert.equal(args.length%2,0);
   const out={};
   for(let i=0;i<args.length;i+=2){
-    assert.ok(['--handoff','--work','--python'].includes(args[i])&&!out[args[i]]);
+    assert.ok(['--handoff','--work','--python','--resume-with'].includes(args[i])&&!out[args[i]]);
     assert.ok(isAbsolute(args[i+1])&&resolve(args[i+1])===args[i+1]);out[args[i]]=args[i+1];
   }
   assert.ok(out['--handoff']&&out['--work']&&out['--python']);return out;
@@ -115,6 +117,7 @@ function argumentsFor(args) {
 export async function main(args=process.argv.slice(2)) {
   const o=argumentsFor(args),work=o['--work'],handoff=o['--handoff'];
   assert.equal(await realpath(handoff),handoff);
+  if(o['--resume-with'])return resumeReceiving({work,handoff,python:o['--python'],receiverSource:o['--resume-with']});
   const original=await inspectHandoff(handoff),httpIds=[...original.requests.keys()];
   assert.ok(httpIds.length>0);
   await mkdir(work,{mode:0o700});
@@ -241,6 +244,18 @@ export async function main(args=process.argv.slice(2)) {
     assert.equal(result.result.structuredContent.result.file.sha256,saved.result.file.sha256);
     await server.close();server=null;
     loaded=await loadApplication(prepared.configFile,{environment});
+    const finishing=loaded;loaded=null;
+    return await finishProjectReceiving({loaded:finishing,work,httpIds,context,environment,prepared,token,headers,
+      paid,saved,bytes,originalReviews,original,passphraseEnv});
+  }finally{await server?.close();await loaded?.close();}
+}
+
+async function finishProjectReceiving({loaded,work,httpIds,context,environment,prepared,token,headers,
+  paid,saved,bytes,originalReviews,original,passphraseEnv,expectedSigning=1,expectedSigned=1,
+  receiverSource=null,continuation=null,
+  runtime={receiveApplicationProject,openReceivedApplicationProject,withRestoredApplicationProject,verifyApplicationProject,createApplicationServer}}) {
+  let server;
+  try{
     progress('project-inspection');
     const sourceRoot=loaded.sourceRoot,projectId='original-application-recovery';
     const inspection=await loaded.application.project(loaded.context,'inspect');
@@ -256,12 +271,23 @@ export async function main(args=process.argv.slice(2)) {
     await loaded.close();loaded=null;
     const receiverDirectory=join(work,'received-project');
     progress('receive-project');
-    const received=await receiveApplicationProject({bundle:snapshot.bundle,directory:receiverDirectory,sourceRoot,
+    let received;
+    let retainedReceiver;
+    try{retainedReceiver=JSON.parse(await readFile(join(receiverDirectory,'receiver.json'),'utf8'));}
+    catch(error){if(error.code!=='ENOENT')throw error;}
+    if(retainedReceiver){
+      assert.equal(retainedReceiver.recordSha256,snapshot.recordSha256);
+      assert.equal(retainedReceiver.manifestSha256,snapshot.manifestSha256);
+      assert.equal(retainedReceiver.operationId,projectId);
+      await runtime.verifyApplicationProject({bundle:join(receiverDirectory,'backup'),sourceRoot,passphraseEnv,
+        expectedRecordSha256:snapshot.recordSha256,expectedManifestSha256:snapshot.manifestSha256,environment});
+      received={...retainedReceiver,status:'APPLICATION_PROJECT_RECEIVED'};
+    }else received=await runtime.receiveApplicationProject({bundle:snapshot.bundle,directory:receiverDirectory,sourceRoot,
       passphraseEnv,expectedManifestSha256:snapshot.manifestSha256,environment});
     assert.equal(received.status,'APPLICATION_PROJECT_RECEIVED');
     assert.equal(received.recordSha256,snapshot.recordSha256);
     progress('offline-complete-results');
-    const offline=await openReceivedApplicationProject({directory:receiverDirectory,sourceRoot,
+    const offline=await runtime.openReceivedApplicationProject({directory:receiverDirectory,sourceRoot,
       subject:context.subject,authorize:authorizeFixture,environment,passphraseEnv});
     try{
       assert.equal(offline.readOnly,true);
@@ -270,13 +296,16 @@ export async function main(args=process.argv.slice(2)) {
       assert.equal(copy.partial,false);
       assert.equal(hash(Buffer.from(copy.data,'base64')),saved.result.file.sha256);
       const offlineExport=join(work,'received-complete-result.json');
-      await offline.call(context,'export','remote-paid',{destination:offlineExport});
+      let retainedExport;
+      try{retainedExport=await readFile(offlineExport);}catch(error){if(error.code!=='ENOENT')throw error;}
+      if(retainedExport)assert.equal(hash(retainedExport),saved.result.file.sha256);
+      else await offline.call(context,'export','remote-paid',{destination:offlineExport});
       assert.equal(hash(await readFile(offlineExport)),saved.result.file.sha256);
       assert.equal((await offline.call(context,'recover','remote-paid')).binding.quoteId,paid.binding.quoteId);
     }finally{await offline.close();}
     progress('received-http-and-mcp');
     const receivingOpens=control.opens;
-    server=await createApplicationServer({receivedDirectory:receiverDirectory,sourceRoot,
+    server=await runtime.createApplicationServer({receivedDirectory:receiverDirectory,sourceRoot,
       subject:context.subject,environment,passphraseEnv,bearerToken:token,port:0});
     assert.equal(server.identity.project.mode,'RECEIVED');assert.equal(server.identity.readOnly,true);
     const receivingReview=await fetch(server.origin+'/api/project',{headers});
@@ -303,11 +332,11 @@ export async function main(args=process.argv.slice(2)) {
       assert.equal((await reopened.application.call(reopened.context,'spending','remote-paid')).spending.reservation.amount,'60');
       const result=await reopened.application.call(reopened.context,'read','remote-paid',{format:'base64',limitBytes:2097152});
       assert.equal(hash(Buffer.from(result.data,'base64')),saved.result.file.sha256);
-      assert.equal(control.signing,1);assert.equal(control.signed,1);
+      assert.equal(control.signing,expectedSigning);assert.equal(control.signed,expectedSigned);
       return {status:reopened.recovery.status,quoteId:replay.binding.quoteId,resultSha256:saved.result.file.sha256};
     };
     progress('original-owner-reattach');
-    const reattached=await withRestoredApplicationProject({...settings,mode:'reattach'},verifyOriginal);
+    const reattached=await runtime.withRestoredApplicationProject({...settings,mode:'reattach'},verifyOriginal);
     assert.equal(reattached.status,'APPLICATION_PROJECT_CURRENT_HOST_VERIFIED');
     const originalState=join(work,'before-original-restore');await mkdir(originalState,{mode:0o700});
     for(const name of ['application','native-spending-host.json','policy.json','spending.sqlite','governed','fixture-environment.json'])
@@ -317,7 +346,7 @@ export async function main(args=process.argv.slice(2)) {
     for(const key of Object.keys(control.keys))delete restoreEnvironment[key];
     control.keys=null;
     progress('original-owner-restore');
-    const restored=await withRestoredApplicationProject({...settings,mode:'restore',environment:restoreEnvironment},verifyOriginal);
+    const restored=await runtime.withRestoredApplicationProject({...settings,mode:'restore',environment:restoreEnvironment},verifyOriginal);
     assert.equal(restored.status,'APPLICATION_PROJECT_RESTORED');
     assert.equal((await stat(prepared.configFile)).mode&0o077,0);
     const project={operationId:projectId,recordSha256:snapshot.recordSha256,manifestSha256:snapshot.manifestSha256,
@@ -330,6 +359,8 @@ export async function main(args=process.argv.slice(2)) {
     assert.equal(nativeRecovery.status,'PASSED');
     const sourcePaths=['application.mjs','configuration.mjs','remote-mcp.mjs','server.mjs','cli.mjs','installed.mjs','project.mjs','project-receive.mjs','project-files.mjs','ui/app.js'];
     const files=await Promise.all(sourcePaths.map(async path=>({path,sha256:hash(await readFile(new URL('../'+path,import.meta.url)))})));
+    const receiverSourceFiles=receiverSource?await Promise.all(sourcePaths.map(async path=>({
+      path,sha256:hash(await readFile(join(receiverSource,'stellar/scf-starforge-20261009/partners/cheesecake-stellar-agent',path)))}))):null;
     const report={outcome:'PASS',operation:'cheesecake-governed-receiving-f232-20261012',
       scope:'original application/MCP SDK/SQLite/SF36 with local provider and payment fixtures',
       node:process.version,python:control.python,originalHandoffId:original.manifest.handoffId,
@@ -337,11 +368,83 @@ export async function main(args=process.argv.slice(2)) {
       reservedAmount:'60',resultBytes:bytes.length,resultSha256:hash(bytes),
       factoryInstances:control.opens,approvalCancellation:true,grantRevocation:true,
       originalRestartQuoteId:paid.binding.quoteId,httpDownload:true,mcpRead:true,project,nativeRecovery,
-      sourceFiles:files,workspace:work};
+      sourceFiles:files,workspace:work,...(continuation?{continuation,receiverSource,receiverSourceFiles}: {})};
     await writeFile(join(work,'receiving.json'),JSON.stringify(report,null,2)+'\n',{mode:0o600,flag:'wx'});
     process.stdout.write(JSON.stringify(report)+'\n');return report;
   }finally{await server?.close();await loaded?.close();}
 }
+
+/** Continue the retained project phase without issuing another native purchase. */
+export async function resumeReceiving({work,handoff,python,receiverSource}) {
+  for(const path of [work,handoff,receiverSource]){
+    assert.ok(isAbsolute(path)&&resolve(path)===path);
+    assert.equal(await realpath(path),path);
+  }
+  assert.equal((await lstat(work)).mode&0o077,0);
+  const environmentFile=JSON.parse(await readFile(join(work,'fixture-environment.json'),'utf8'));
+  const passphraseEnv='F232_PROJECT_PASSPHRASE';
+  assert.equal(typeof environmentFile[passphraseEnv],'string');
+  const keys=Object.fromEntries(['CONSENT','AUDIT','OPERATOR'].map(name=>{
+    const key='SF36_'+name+'_KEY_B64';assert.equal(typeof environmentFile[key],'string');
+    return[key,environmentFile[key]];
+  }));
+  Object.assign(control,{configured:true,authorized:true,work,python,keys,host:join(work,'native-spending-host.json')});
+  const appRoot=join(receiverSource,'stellar/scf-starforge-20261009/partners/cheesecake-stellar-agent');
+  const [configuration,projects,servers]=await Promise.all([
+    import(pathToFileURL(join(appRoot,'configuration.mjs'))),
+    import(pathToFileURL(join(appRoot,'project-receive.mjs'))),
+    import(pathToFileURL(join(appRoot,'server.mjs'))),
+  ]);
+  const environment={...process.env,...environmentFile};
+  const prepared={configFile:join(work,'application/application.json')};
+  const receipt=JSON.parse(await readFile(join(work,'project-archives/original-application-recovery.receipt.json'),'utf8'));
+  assert.equal(receipt.status,'APPLICATION_PROJECT_CREATED');
+  assert.equal(receipt.operationId,'original-application-recovery');
+  const original=await inspectHandoff(handoff),httpIds=[...original.requests.keys()];
+  let loaded=await configuration.loadApplication(prepared.configFile,{environment});
+  try{
+    assert.equal(loaded.config.handoffDirectory,handoff);
+    const app=loaded.application,context=loaded.context;
+    const listing=await app.requests(context);
+    assert.equal(listing.requests.length,httpIds.length+4);
+    const originalReviews=[];
+    for(const intentId of httpIds){
+      const view=await app.retainedReview(context,intentId);
+      assert.equal(view.binding.bodySha256,original.requests.get(intentId).view.bodySha256);
+      originalReviews.push({intentId,bodySha256:view.binding.bodySha256});
+    }
+    const paid=await app.call(context,'recover','remote-paid');
+    assert.equal(paid.operation.state,'CONFIRMED_BY_SERVER');
+    assert.equal(paid.operation.signedRequestDispatched,true);
+    assert.equal(paid.quote.attempts,1);
+    for(const name of ['cancel','revoked'])
+      assert.equal((await app.call(context,'status','remote-'+name)).operation.state,'CANCELLED');
+    assert.equal((await app.call(context,'status','remote-free')).operation.state,'FREE_SUCCESS');
+    assert.equal((await app.call(context,'spending','remote-paid')).spending.reservation.amount,'60');
+    const saved=await app.call(context,'read','remote-paid',{format:'json'});
+    assert.equal(saved.data.content[0].text,largeText);
+    const bytes=await readFile(join(work,'complete-native-result.json'));
+    assert.equal(bytes.length,saved.result.file.bytes);
+    assert.equal(hash(bytes),saved.result.file.sha256);
+    assert.equal(control.signing,0);assert.equal(control.signed,0);
+    const token=randomBytes(24).toString('hex');
+    const headers={authorization:'Bearer '+token,'content-type':'application/json'};
+    const continuation={status:'ORIGINAL_RETAINED_PROJECT',priorOperation:'cheesecake-governed-receiving-f232-20261012',
+      quoteId:paid.binding.quoteId,priorNativeAttempts:paid.quote.attempts,priorSignedRequestDispatched:true,
+      priorRecordSha256:receipt.recordSha256,priorManifestSha256:receipt.manifestSha256,
+      priorResultSha256:saved.result.file.sha256,priorResultBytes:bytes.length};
+    progress('retained-original-project');
+    const current=loaded;loaded=null;
+    return await finishProjectReceiving({loaded:current,work,httpIds,context,environment,prepared,token,headers,
+      paid,saved,bytes,originalReviews,original,passphraseEnv,expectedSigning:0,expectedSigned:0,receiverSource,continuation,
+      runtime:{receiveApplicationProject:projects.receiveApplicationProject,
+        openReceivedApplicationProject:projects.openReceivedApplicationProject,
+        withRestoredApplicationProject:projects.withRestoredApplicationProject,
+        verifyApplicationProject:projects.verifyApplicationProject,
+        createApplicationServer:servers.createApplicationServer}});
+  }finally{await loaded?.close();}
+}
+
 if(process.argv[1]&&pathToFileURL(resolve(process.argv[1])).href===import.meta.url)
   main().catch(error=>{process.stderr.write(JSON.stringify({outcome:'FAILED',code:error.code??error.name,
     message:error.message,stack:error.stack})+'\n');process.exitCode=1;});

@@ -7,6 +7,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { acquirePrivateDirectoryWriter } from '../../operations/history.mjs';
 import { normalizeRedisCommissioning, commissionRedis, redisCommissioningTemplate } from './commission.mjs';
 import { openRedisAuthoringWorkspace, redisWorkspaceBinding } from './model.mjs';
+import {redisCutoverFileDigest} from './cutover-files.mjs';
 
 export const REDIS_CUTOVER_SCHEMA='stellar-forge.redis-cutover-input.v1';
 const plain=v=>v!==null&&typeof v==='object'&&!Array.isArray(v);
@@ -248,7 +249,7 @@ async function verifyReceivedPackage(workspace,report){
   return {requestId:op.id,directory:op.result.directory,manifestSha256:op.result.manifestSha256,
     customerFiles:clone(received)};
 }
-async function compareSaved(root,selected,reports,environment){
+async function compareSaved(root,selected,reports,environment,{persist=true,stage=true,retained,onProgress=async()=>{},onVerified}={}){
   const workspaces={},result=[];
   try{
     for(const side of ['baseline','candidate']){
@@ -262,6 +263,7 @@ async function compareSaved(root,selected,reports,environment){
         throw fail('REDIS_CUTOVER_REVISION_CHANGED','The retained receiving revision differs from the selected application contract.');
     }
     for(const rule of selected.comparisons){
+      await onProgress({phase:'comparing',checkId:rule.checkId,query:rule.query});
       const check=selected.baseline.checks.find(c=>c.id===rule.checkId);
       const baseline=collectCheck(workspaces.baseline,reports.baseline,check,selected.baseline.setup.source.queries[check.query],selected.maxComparisonBytes);
       const candidate=collectCheck(workspaces.candidate,reports.candidate,check,selected.candidate.setup.source.queries[check.query],selected.maxComparisonBytes-baseline.bytes);
@@ -269,7 +271,10 @@ async function compareSaved(root,selected,reports,environment){
       const full={schema:'stellar-forge.redis-cutover-difference.v1',...rule,
         baselineColumns:baseline.columns,candidateColumns:candidate.columns,
         baselineExpected:baseline.expected,candidateExpected:candidate.expected,...difference};
-      const file='difference-'+rule.checkId+'.json';await writeJson(root,file,full);
+      const file='difference-'+rule.checkId+'.json';
+      if(persist)await writeJson(root,file,full);
+      else if((await redisCutoverFileDigest(join(root,file))).sha256!==hash(encode(full)))
+        throw fail('REDIS_CUTOVER_DIFFERENCE_CHANGED','The complete saved difference file differs from its original native rows.',{checkId:rule.checkId});
       result.push({...rule,matched:difference.matched,
         expectationsMatch:baseline.expected.matched&&candidate.expected.matched,
         baselineRows:difference.baselineRows,candidateRows:difference.candidateRows,
@@ -281,7 +286,8 @@ async function compareSaved(root,selected,reports,environment){
     for(const side of ['baseline','candidate'])packages[side]=await verifyReceivedPackage(workspaces[side],reports[side]);
     const match=result.every(r=>r.matched&&r.expectationsMatch)&&Object.values(reports).every(r=>r.status==='RECEIVED');
     let release=null;
-    if(match&&selected.input.release){
+    if(match&&selected.input.release&&stage){
+      await onProgress({phase:'staging',side:'candidate',packageId:reports.candidate.package?.requestId});
       const w=workspaces.candidate,report=reports.candidate;
       if(report.status!=='RECEIVED'||!report.package?.requestId)
         throw fail('REDIS_CUTOVER_PACKAGE_REQUIRED','Complete the original candidate customer package before staging.');
@@ -296,46 +302,139 @@ async function compareSaved(root,selected,reports,environment){
       if(op.status!=='COMPLETED')throw fail('REDIS_CUTOVER_RELEASE_INCOMPLETE','Continue the original candidate release operation.',{requestId:op.id,status:op.status,error:op.error});
       release={requestId:op.id,...op.result};
     }
-    return {comparisons:result,packages,release,status:match?'RECEIVED':'CONTRACT_MISMATCH',
+    if(!stage&&retained?.release){
+      const requestId='cutover-'+hash(selected.input.operationId+'\nstage').slice(0,48);
+      const original=workspaces.candidate.operation(requestId);
+      if(!match||!selected.input.release||original.kind!=='stage'||original.status!=='COMPLETED'||
+          stable(original.input)!==stable({requestId,packageId:reports.candidate.package.requestId,...selected.input.release})||
+          stable(retained.release)!==stable({requestId,...original.result}))
+        throw fail('REDIS_CUTOVER_RELEASE_CHANGED','Keep the exact completed candidate release and its original package.');
+      release=clone(retained.release);
+    }
+    const compared={comparisons:result,packages,release,status:match?'RECEIVED':'CONTRACT_MISMATCH',
       workspaceBindings:Object.fromEntries(Object.entries(workspaces).map(([side,w])=>[side,redisWorkspaceBinding(w.metadata())]))};
+    if(onVerified)await onVerified({selected,reports,workspaces,result:compared});
+    return compared;
   }finally{
     const errors=[];
     for(const w of Object.values(workspaces).reverse())try{await w.close();}catch(error){errors.push(error);}
     if(errors.length)throw new AggregateError(errors,'Close the original cutover workspace handles.');
   }
 }
-export async function receiveRedisCutover({input,inputSha256,directory,environment=process.env,mode='review'}={}){
+/** Progress belongs to this original cutover directory and operation. A pause
+ * stops between retained native child operations; it never replaces their IDs. */
+export async function receiveRedisCutover({input,inputSha256,directory,environment=process.env,mode='review',
+  onProgress=async()=>{},signal,expectedSelection}={}){
   if(!['review','create','receive','compare'].includes(mode))
     throw fail('REDIS_CUTOVER_MODE_INVALID','Choose review, create, receive or compare.');
+  if(typeof onProgress!=='function'||signal!==undefined&&typeof signal.aborted!=='boolean')
+    throw new TypeError('Use a progress callback and an optional AbortSignal.');
+  if(expectedSelection!==undefined){
+    fields(expectedSelection,['boundSha256','draftSha256'],'reviewed input files');
+    for(const key of ['boundSha256','draftSha256'])
+      if(expectedSelection[key]!==null&&!/^[a-f0-9]{64}$/.test(expectedSelection[key]??''))
+        throw fail('REDIS_CUTOVER_SELECTION_INVALID','Retain the reviewed complete input-file preimages.');
+  }
   const selected=normalizeRedisCutover(input,environment),identity=inputSha256??hash(stable(input));
   if(!/^[a-f0-9]{64}$/.test(identity))throw fail('REDIS_CUTOVER_DIGEST_INVALID','Use the complete selected input SHA256.');
   const initial={schema:'stellar-forge.redis-cutover-result.v1',operationId:input.operationId,
     inputSha256:identity,mode,review:selected.review};
   if(mode==='review')return {...initial,status:'REVIEWED'};
   const root=await privateRoot(directory),lease=await acquirePrivateDirectoryWriter(root);
+  let progress;
+  const emit=async change=>{
+    progress={schema:'stellar-forge.redis-cutover-progress.v1',operationId:input.operationId,inputSha256:identity,
+      mode,attemptId:progress?.attemptId??randomUUID(),startedAt:progress?.startedAt??new Date().toISOString(),
+      ...progress,...change,updatedAt:new Date().toISOString()};
+    await writeJson(root,'cutover-progress.json',progress);await onProgress(clone(progress));
+    if(signal?.aborted&&progress.state==='RUNNING')
+      throw fail('REDIS_CUTOVER_PAUSED','The original cutover is paused after its retained native operation.',
+        {lastOperationId:progress.lastOperationId??null,side:progress.side??null});
+  };
   try{
+    if(expectedSelection){
+      for(const [key,name] of [['boundSha256','cutover-input.json'],['draftSha256','cutover-draft.json']]){
+        const current=await readJson(join(root,name)).catch(error=>{if(error.code==='ENOENT')return null;throw error;});
+        if((current?.sha256??null)!==expectedSelection[key])
+          throw fail('REDIS_CUTOVER_REVIEW_CHANGED','The original saved input changed after review. Reload it before binding this operation.');
+      }
+    }
     await bindInput(root,input,identity);const reports={};
+    await emit({state:'RUNNING',phase:'opening',side:null,lastOperationId:null,error:null});
     for(const side of ['baseline','candidate']){
+      await emit({state:'RUNNING',phase:mode==='compare'?'reading-saved':'opening-workspace',side,
+        checkId:null,checkIndex:null,pageCount:0,rowCount:0,lastOperationId:null});
       if(mode==='compare')reports[side]=(await readJson(join(root,side+'-receiving.json'))).value;
       else{
         reports[side]=await commissionRedis({input:input[side],inputSha256:hash(stable(input[side])),
-          directory:join(root,side),environment,mode:mode==='create'?'create':'receive'});
+          directory:join(root,side),environment,mode:mode==='create'?'create':'receive',
+          onProgress:value=>emit({...value,state:'RUNNING',side})});
         await writeJson(root,side+(mode==='create'?'-created.json':'-receiving.json'),reports[side]);
+        await emit({state:'RUNNING',phase:'workspace-received',side,outcome:reports[side].status,
+          workspace:reports[side].workspace});
       }
     }
     if(mode==='create'){
       const result={...initial,status:'CREATED',directory:root,
         workspaceBindings:Object.fromEntries(Object.entries(reports).map(([side,r])=>[side,r.workspace]))};
-      await writeJson(root,'cutover-created.json',result);return result;
+      await writeJson(root,'cutover-created.json',result);
+      await emit({state:'COMPLETED',phase:'created',side:null,outcome:result.status});return result;
     }
-    const compared=await compareSaved(root,selected,reports,environment);
+    const compared=await compareSaved(root,selected,reports,environment,{onProgress:value=>emit({...value,state:'RUNNING'})});
     const result={...initial,...compared,directory:root};
-    await writeJson(root,'cutover-result.json',result);return result;
+    await writeJson(root,'cutover-result.json',result);
+    await emit({state:'COMPLETED',phase:'complete',side:null,outcome:result.status});return result;
   }catch(error){
-    await writeJson(root,'cutover-error.json',{schema:'stellar-forge.redis-cutover-error.v1',
+    const saved={schema:'stellar-forge.redis-cutover-error.v1',
       operationId:input.operationId,inputSha256:identity,observedAt:new Date().toISOString(),
-      error:{code:error.code??'REDIS_CUTOVER_FAILED',message:error.message,details:error.details??null}}).catch(()=>{});
+      error:{code:error.code??'REDIS_CUTOVER_FAILED',message:error.message,details:error.details??null}};
+    // A conflicting selection must not replace the original operation's history.
+    if(progress){
+      await writeJson(root,'cutover-error.json',saved).catch(()=>{});
+      await emit({state:error.code==='REDIS_CUTOVER_PAUSED'?'PAUSED':'FAILED',phase:progress.phase,error:saved.error}).catch(()=>{});
+    }
     throw error;
+  }finally{await lease.release();}
+}
+/** These helpers operate on the existing cutover files; the operator adds no store. */
+export {privateRoot as privateRedisCutoverDirectory,readJson as readRedisCutoverJson,
+  writeJson as writeRedisCutoverJson,stable as redisCutoverStable};
+
+/** Verify every retained native page, both generated packages and the complete
+ * difference files while the original pair/workspace writers are held.
+ * This path reads the existing stage receipt and never starts a release. */
+export async function withVerifiedRedisCutover({directory,environment=process.env,onProgress=async()=>{}}={},consume=async()=>{}){
+  const root=await privateRoot(directory),lease=await acquirePrivateDirectoryWriter(root);
+  try{
+    const selectedFile=await readJson(join(root,'cutover-input.json'));
+    const selection=selectedFile.value;
+    if(selection?.schema!=='stellar-forge.redis-cutover-selection.v1'||!/^[a-f0-9]{64}$/.test(selection.inputSha256??''))
+      throw fail('REDIS_CUTOVER_SELECTION_INVALID','Open the original complete cutover selection.');
+    const selected=normalizeRedisCutover(selection.input,environment);
+    const resultFile=await readJson(join(root,'cutover-result.json')),retained=resultFile.value;
+    if(retained.schema!=='stellar-forge.redis-cutover-result.v1'||
+        retained.operationId!==selection.input.operationId||retained.inputSha256!==selection.inputSha256||
+        retained.review?.contractSha256!==selected.review.contractSha256||
+        !['RECEIVED','CONTRACT_MISMATCH'].includes(retained.status))
+      throw fail('REDIS_CUTOVER_RESULT_CHANGED','Use the saved result for this exact original application contract.');
+    const reports=Object.fromEntries(await Promise.all(['baseline','candidate'].map(async side=>
+      [side,(await readJson(join(root,side+'-receiving.json'))).value])));
+    let value;
+    await compareSaved(root,selected,reports,environment,{persist:false,stage:false,retained,onProgress,
+      onVerified:async context=>{
+        const expected=context.result;
+        for(const key of ['status','comparisons','packages','release'])
+          if(stable(expected[key])!==stable(retained[key]))
+            throw fail('REDIS_CUTOVER_RESULT_CHANGED','The retained cutover result differs from its original '+key+'.');
+        for(const side of ['baseline','candidate'])
+          if(expected.workspaceBindings[side].workspaceId!==retained.workspaceBindings?.[side]?.workspaceId||
+              expected.workspaceBindings[side].profileSha256!==retained.workspaceBindings?.[side]?.profileSha256)
+            throw fail('REDIS_CUTOVER_BINDING_CHANGED','The saved cutover belongs to different original workspaces.');
+        if(retained.status==='RECEIVED'&&selection.input.release&&!retained.release)
+          throw fail('REDIS_CUTOVER_RELEASE_CHANGED','The received cutover must retain its original candidate stage receipt.');
+        value=await consume({...context,root,selection,selectedFile,resultFile,retained});
+      }});
+    return value;
   }finally{await lease.release();}
 }
 export async function redisCutoverTemplate(){

@@ -2,7 +2,7 @@
 import type {MatomoClient,MatomoArtifactFile} from './client.mjs';
 export const MATOMO_TRANSFER_SCHEMA:'stellar-forge.matomo-artifact-transfer.v1';
 export const MATOMO_TRANSFER_MANIFEST:'matomo-transfer.json';
-export type MatomoArtifact = 'capture'|'edition'|'database'|'comparison'|'delivery'|'handover'|'source';
+export type MatomoArtifact = 'capture'|'edition'|'database'|'comparison'|'delivery'|'handover'|'source'|'workspace-origin'|'workspace-archive'|'workspace-original';
 export type MatomoArtifactKind = 'csv'|'config'|'manifest'|'archive'|'scan';
 export interface MatomoArtifactSelection {
  workspace:string;artifact:MatomoArtifact;id:string;kind?:MatomoArtifactKind;expectedSha256?:string;

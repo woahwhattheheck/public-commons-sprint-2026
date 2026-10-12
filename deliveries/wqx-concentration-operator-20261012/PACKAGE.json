@@ -1,0 +1,35 @@
+{
+  "schema": "tjlabs.complete-software-delivery.v1",
+  "name": "WQX Water Quality Concentration Operator",
+  "edition": "2026-10-12",
+  "sourceCommit": "93cbd37394aaffbefc8d2df940b46148011e6a3d",
+  "operationId": "WQX-CONCENTRATION-POTOMAC-9F77-20261012",
+  "applicationSourceFiles": 653,
+  "applicationSourceBytes": 7614354,
+  "operatorTools": 37,
+  "start": "START_HERE.md",
+  "sourceManifest": "APPLICATION_SOURCE.json",
+  "receiving": "RECEIVING.md",
+  "configuration": "configuration.example.json",
+  "nativeSourceObservations": {
+    "results": 1035,
+    "limits": 1112,
+    "supportedConvertedRecords": 749,
+    "supportedConvertedLimits": 1089,
+    "blankResultUnitPairs": 452
+  },
+  "runtime": {
+    "node": "24.19.0",
+    "platform": "linux",
+    "builtInModulesOnlyForSelectedProfile": true
+  },
+  "nativeParser": {
+    "modules": 9,
+    "complete": true
+  },
+  "originalExactCalculation": {
+    "file": "original-source-execution.json",
+    "runtime": "connected V8",
+    "comparisons": 1387
+  }
+}

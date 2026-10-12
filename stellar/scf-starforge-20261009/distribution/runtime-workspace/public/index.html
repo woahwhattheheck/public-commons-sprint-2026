@@ -17,7 +17,7 @@
   <button id="retry-request" type="button" hidden>Recover last request</button>
 </aside>
 <main>
-  <nav aria-label="Workspace views"><button data-view="runtime" aria-current="page">Selected runtime</button><button data-view="profile">Source &amp; profile</button><button data-view="operations">Operations</button><button data-view="deployment">Deployment</button><button data-view="managed">Managed releases</button><button data-view="images">Images</button><button data-view="applications">Applications</button><button type="button" data-view="transfers">Offline transfers</button><button type="button" data-view="python">Python &amp; workbooks</button></nav>
+  <nav aria-label="Workspace views"><button data-view="runtime" aria-current="page">Selected runtime</button><button type="button" data-view="source-builds">Build a product</button><button data-view="profile">Source &amp; profile</button><button data-view="operations">Operations</button><button data-view="deployment">Deployment</button><button data-view="managed">Managed releases</button><button data-view="images">Images</button><button data-view="applications">Applications</button><button type="button" data-view="transfers">Offline transfers</button><button type="button" data-view="python">Python &amp; workbooks</button></nav>
   <section data-pane="runtime">
     <div class="section-title"><div><p class="eyebrow">SELECTED INSTALLATION</p><h2 id="selected-name">Open a runtime to begin</h2></div><span id="selected-phase" class="status">EMPTY</span></div>
     <p id="selected-version" class="muted">Open an existing installation or prepare a source archive.</p>
@@ -34,9 +34,11 @@
     </div>
     <details><summary>Original source and dependency paths</summary><dl id="runtime-paths" class="paths"></dl></details>
   </section>
+  <section data-pane="source-builds" hidden><div id="source-build-workspace"></div></section>
   <section data-pane="profile" hidden>
     <div class="section-title"><div><p class="eyebrow">ORIGINAL SOURCE</p><h2>Choose the release and adapter profile</h2></div></div>
     <p class="muted">Dependency choices come from the selected original archive. Review the exact versions before preparing a runtime.</p>
+    <div class="actions"><button type="button" data-view="source-builds">Build a product from committed source</button></div>
     <label>Source archive<select id="archive-select"><option value="">Import an archive or open an existing runtime</option></select></label>
     <p id="archive-detail" class="note"></p>
     <div class="panel"><h3>Adapter selection</h3><div class="checks"><label><input id="native" type="checkbox">Native payment runtime</label><label><input id="operator" type="checkbox" checked>Linux operator tools</label></div><fieldset><legend>Optional adapters in this release</legend><div id="features" class="feature-grid"><p class="note">Choose an archive to load its declarations.</p></div></fieldset>

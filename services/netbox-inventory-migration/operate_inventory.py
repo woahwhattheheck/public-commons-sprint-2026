@@ -463,7 +463,7 @@ def report(directory):
         "<dt>Tenant ID</dt><dd>" + esc(manifest["tenant_id"]) + "</dd><dt>Source payload SHA-256</dt><dd>" + esc(manifest["payload_sha256"]) + "</dd>",
         "<dt>Reviewed digest</dt><dd>" + esc((result or {}).get("review_digest", "Awaiting native review")) + "</dd>",
         "<dt>Native NetBox version</dt><dd>" + esc((result or {}).get("netbox_version", "Awaiting native review")) + "</dd></dl>",
-        "<p>Counts describe mapped inventory rows and additional affected child devices. The complete JSON includes "
+        "<p>Counts describe mapped inventory rows, affected child devices and native cable effects. The complete JSON includes "
         "the original native catalogue and all generated component values and relations.</p>",
         "<h2>Original source files</h2><ul>",
     ]
@@ -477,7 +477,12 @@ def report(directory):
                   "the retained resolved IDs identify the original objects to update.</p>",
                   "<script>document.getElementById('find').addEventListener('input',e=>{const q=e.target.value.toLowerCase();"
                   "for(const r of document.querySelectorAll('#changes tbody tr'))r.hidden=!r.textContent.toLowerCase().includes(q)});</script></html>"]
+    from network_report import network_csv, network_html, network_inventory
+    network = network_inventory(result)
     export = root / "exports"
+    write_atomic(export / "network-commissioning.json", json_bytes(network))
+    write_atomic(export / "network-commissioning.csv", network_csv(network))
+    write_atomic(export / "network-commissioning.html", network_html(network))
     write_atomic(export / "inventory-review.html", "".join(documents).encode("utf-8"))
     write_atomic(export / "status.json", json_bytes(status))
     if result:
@@ -491,7 +496,10 @@ def report(directory):
     write_atomic(export / "resolved-objects.csv", output.getvalue().encode("utf-8"))
     return {"state": status["state"], "report": str(export / "inventory-review.html"),
             "native_result": str(export / "native-inventory-result.json") if result else None,
-            "resolved_objects": str(export / "resolved-objects.csv"), "objects": len(resolved)}
+            "resolved_objects": str(export / "resolved-objects.csv"), "objects": len(resolved),
+            "network_report": str(export / "network-commissioning.html"),
+            "network_json": str(export / "network-commissioning.json"),
+            "network_csv": str(export / "network-commissioning.csv"), "network_counts": network["counts"]}
 
 
 def handover(directory):
@@ -512,7 +520,7 @@ def handover(directory):
                 if candidate.is_file() and candidate.suffix != ".zip":
                     files.append((candidate, candidate.relative_to(root).as_posix()))
     source_root = Path(__file__).resolve().parent
-    for name in ("inventory_migration.py", "prepare_inventory.py", "operate_inventory.py", "README.md",
+    for name in ("inventory_migration.py", "prepare_inventory.py", "operate_inventory.py", "network_report.py", "README.md",
                  "workspace/model.py", "workspace/actions.py", "workspace/server.py", "workspace/README.md",
                  "workspace/web/index.html", "workspace/web/app.js", "workspace/web/style.css"):
         path = source_root / name

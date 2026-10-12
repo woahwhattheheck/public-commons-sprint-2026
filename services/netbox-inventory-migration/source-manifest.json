@@ -33,6 +33,46 @@
       "bytes": 4069
     },
     {
+      "path": "examples/network-cables.csv",
+      "git_blob": "8f2a623e52caac82cbd74b2491cd00259bd3932b",
+      "bytes": 214
+    },
+    {
+      "path": "examples/network-interfaces.csv",
+      "git_blob": "5b0146c81fe2450bc55a11122308ab1d19eed723",
+      "bytes": 515
+    },
+    {
+      "path": "examples/network-ip_addresses.csv",
+      "git_blob": "500646190e63b6a2d53cb9ededade9ed97661bf2",
+      "bytes": 386
+    },
+    {
+      "path": "examples/network-mapping.json",
+      "git_blob": "0d5be5bcebc5070381d87f7a9a7efde06a68c19e",
+      "bytes": 8534
+    },
+    {
+      "path": "examples/network-prefixes.csv",
+      "git_blob": "8aaef19aa438b7c4d1f415667badd3ffd67bd007",
+      "bytes": 433
+    },
+    {
+      "path": "examples/network-route_targets.csv",
+      "git_blob": "dad457af19a6155ae6b89e8c0743820dd96595cf",
+      "bytes": 137
+    },
+    {
+      "path": "examples/network-vlans.csv",
+      "git_blob": "16d15e18ed3c537bf4ee2c0782f21a3155751431",
+      "bytes": 254
+    },
+    {
+      "path": "examples/network-vrfs.csv",
+      "git_blob": "7006eea8e4634c112bca4c8b3775bf3b85b9f6e6",
+      "bytes": 250
+    },
+    {
       "path": "examples/racks.csv",
       "git_blob": "24a80e45f7285f5b9d1489cf0951007ee39b9db9",
       "bytes": 146
@@ -44,33 +84,33 @@
     },
     {
       "path": "inventory_migration.py",
-      "git_blob": "7f8f2c48c63619fffa63f703a2fe7841a797ef54",
-      "bytes": 47099
+      "git_blob": "7f9a9f78be0bf42eba35eff25651f0dcc875d525",
+      "bytes": 84186
     },
     {
       "path": "native/desk_receiving.mjs",
-      "git_blob": "51792bdde212521a3043a366d46521eda17073c0",
-      "bytes": 25254
+      "git_blob": "d123882673d90895590aa13bb7ebf64cf48c6837",
+      "bytes": 63340
     },
     {
       "path": "native/native_fixture.py",
-      "git_blob": "afb72f8b2279d0e99b637d8d4e5a15d5bd32f5b4",
-      "bytes": 11287
+      "git_blob": "18872572335f81e72e508a164c87bc0a9f8d24fd",
+      "bytes": 28314
     },
     {
       "path": "native/provision_instance.py",
-      "git_blob": "543ed212786e1ce9dc1d2731132769834dab86e5",
-      "bytes": 5825
+      "git_blob": "0f27234ece177eee69ab7d285a003854b5955845",
+      "bytes": 10083
     },
     {
       "path": "native/README.md",
-      "git_blob": "6424911fafd6dbf31ca56aedcd8f76f2f2c76eaf",
-      "bytes": 16335
+      "git_blob": "8a74b48a14fc7d22cc49eb5add52a3936362dad4",
+      "bytes": 30316
     },
     {
       "path": "native/receive_host.py",
-      "git_blob": "ec53ee50ac6b8bcf4e3aa9d5d2d4ab79edfa5d09",
-      "bytes": 44230
+      "git_blob": "12cf73aebf1bb5224fd87700bf7fadee19b80aa8",
+      "bytes": 61584
     },
     {
       "path": "native/run_native.py",
@@ -83,19 +123,24 @@
       "bytes": 3138
     },
     {
+      "path": "network_report.py",
+      "git_blob": "31c6b685eb8542602c300f8a1cc4b048afb3be18",
+      "bytes": 14546
+    },
+    {
       "path": "operate_inventory.py",
-      "git_blob": "307f3e07159379504e291ab548e3910eaaba5043",
-      "bytes": 47092
+      "git_blob": "bae65bc9ae5e595dbcfc4ac5a00ccad5f982c70b",
+      "bytes": 47726
     },
     {
       "path": "prepare_inventory.py",
-      "git_blob": "13c8423c2e23ebe159cebead89b7394e9605466f",
-      "bytes": 18917
+      "git_blob": "da397ce49becc9dd89e97c09174ced23b4ade0c2",
+      "bytes": 20735
     },
     {
       "path": "README.md",
-      "git_blob": "26444148474c3098b849e6f7f2669ccb989d64f4",
-      "bytes": 18259
+      "git_blob": "3897564a50be97d75386e07fc1ad533918d59be8",
+      "bytes": 25615
     },
     {
       "path": "workspace/actions.py",
@@ -104,13 +149,13 @@
     },
     {
       "path": "workspace/model.py",
-      "git_blob": "206002ca6ab809c8c9f407dce47685fd2be2886a",
-      "bytes": 47132
+      "git_blob": "941b3d9d0cd765a7b6d0c0fbffc1037e249015c5",
+      "bytes": 48090
     },
     {
       "path": "workspace/README.md",
-      "git_blob": "e6fbcd913663abf880ba54eee7638ce47b471aa5",
-      "bytes": 13018
+      "git_blob": "80c747e028e02c0dda7ba1a54b67f0bed03aac4f",
+      "bytes": 15371
     },
     {
       "path": "workspace/server.py",
@@ -119,8 +164,8 @@
     },
     {
       "path": "workspace/web/app.js",
-      "git_blob": "236bfc9dd43107ee37f1cf06e3aa4f80cf6831dd",
-      "bytes": 67051
+      "git_blob": "7157491278ca972d1b4e070819bb0f70ba1bb3be",
+      "bytes": 77725
     },
     {
       "path": "workspace/web/index.html",
@@ -129,8 +174,8 @@
     },
     {
       "path": "workspace/web/style.css",
-      "git_blob": "899bcb69c092e7a68843cc17f736dd81484310ea",
-      "bytes": 16478
+      "git_blob": "85b6f92aad72ac8fb726440f0905b5dbe33f096f",
+      "bytes": 17039
     }
   ]
 }

@@ -129,4 +129,5 @@ export function labReviewEditor() {
   $('lineage').textContent=JSON.stringify(data.report.lineage,null,2);
   $('comparison').textContent=data.comparison?JSON.stringify(data.comparison,null,2):'No earlier delivery was selected for this result.';
   renderRows();renderIssues();renderChanges();show(active);
+  if(location.hash.startsWith('#record=')){try{const id=decodeURIComponent(location.hash.slice(8));if(byId.has(id)){show('records');openRow(id);}}catch{}}
 }

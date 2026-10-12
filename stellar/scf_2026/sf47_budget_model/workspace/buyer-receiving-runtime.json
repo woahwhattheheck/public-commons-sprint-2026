@@ -1,11 +1,28 @@
 {
   "schema": "sf47.native-buyer-source-manifest.v1",
   "repository": "woahwhattheheck/public-commons-sprint-2026",
-  "head": "3afca9599b602b67a8b722043061100e2efef294",
+  "head": "b21c26fafff9c1c1c2ef8c8b57a22de730fb696d",
+  "source_selection": {
+    "mode": "explicit_git_blobs",
+    "original_buyer_runtime_head": "3afca9599b602b67a8b722043061100e2efef294",
+    "original_receiving_source_commit": "32d73b8fe38c6b3aeed2c39816202d2bad456126",
+    "original_receiving_merge_commit": "78884931550d54401939b9befd59244c168e8144",
+    "cohort_application_head": "5771cd96dc13e80d3a630fecd2bf03b954482c60",
+    "identity_rule": "The exact path and git_blob_sha entries are authoritative. The head identifies the receiving recovery source cut. The original buyer/runtime and complete Grant Operations, Installation, SF74 producer and MCP reader source selections remain explicit. Requests and phase bindings recover the same original native operation; this source descriptor does not select private inputs or create an execution.",
+    "initial_cohort_application_head": "704df543668351f125f7beb0222789724a657127",
+    "maintained_grant_owner_source_commit": "98555147a15f0ab6fb947e243b199abe588fcc73",
+    "implementation_application_head": "9b99fb339612ebd9f60e8b9312a2b6445ce99b1f",
+    "implementation_base_commit": "4be8edbc781351a4ed4fc220fbd6aea8f2a1edd7",
+    "prior_receiver_manifest_git_blob": "5f93a001a8cf5ea296251b29b100f89d32d00038",
+    "maintained_implementation_producer_commit": "d3edec679cc41ae373143ea3241d1a463d51fbd0",
+    "scope": "The same original operating-case continuation; no private case, source observations, purchase result or execution request is included.",
+    "receiving_request_recovery_head": "b21c26fafff9c1c1c2ef8c8b57a22de730fb696d",
+    "implementation_application_merge": "8e8b52d60b3b04abb8c4fe5085e72f5598df4f74"
+  },
   "files": [
     {
       "path": "stellar-forge/mcp-merchant-operator/catalog/grant-workspace.mjs",
-      "git_blob_sha": "3c7f267dd00b4cee0d934f05817d8b8193d72ed4"
+      "git_blob_sha": "a4acaf72fd694a76971143f616fd3a9ffb6dbc3c"
     },
     {
       "path": "stellar-forge/mcp-merchant-operator/GRANT_WORKSPACES.md",
@@ -13,7 +30,19 @@
     },
     {
       "path": "stellar-forge/mcp-merchant-operator/grant-workspace.mjs",
-      "git_blob_sha": "b646d6daf70f2d977b170a94f238cbe52d82eeaa"
+      "git_blob_sha": "adc2259b35d619acfa6da2816a8fe2de974b524d"
+    },
+    {
+      "path": "stellar-forge/mcp-merchant-operator/host-files.mjs",
+      "git_blob_sha": "a366cc4aa3e3ee3dfb7cb88320b84fcb00ab2fad"
+    },
+    {
+      "path": "stellar-forge/mcp-merchant-operator/retained-file-contracts.mjs",
+      "git_blob_sha": "16dbce5411cddc372ac93cbe4813c373b9d81457"
+    },
+    {
+      "path": "stellar-forge/mcp-merchant-operator/retained-file-reads.mjs",
+      "git_blob_sha": "0cc3502779b193521cd1d177e8d23b76ab625df2"
     },
     {
       "path": "stellar/scf_2026/sf47_budget_model/budget.py",
@@ -25,15 +54,15 @@
     },
     {
       "path": "stellar/scf_2026/sf47_budget_model/workspace/agent-client.mjs",
-      "git_blob_sha": "ac45bca63b29804f069c140f21b834d60def33ee"
+      "git_blob_sha": "e19692e4c6bda4dd08a768f7a858744ae8c700d9"
     },
     {
       "path": "stellar/scf_2026/sf47_budget_model/workspace/agent-contracts.mjs",
-      "git_blob_sha": "461e936a3e89d84174c8d7fc3682f651facb9336"
+      "git_blob_sha": "23048278cdb0a16f2333be709ee585a284da781c"
     },
     {
       "path": "stellar/scf_2026/sf47_budget_model/workspace/AGENT.md",
-      "git_blob_sha": "9c204af1ec6c72e863bcbd84de16163e33e52d70"
+      "git_blob_sha": "80fface183d8ca786d6d3081600befdfe5fc27db"
     },
     {
       "path": "stellar/scf_2026/sf47_budget_model/workspace/app.mjs",
@@ -45,15 +74,31 @@
     },
     {
       "path": "stellar/scf_2026/sf47_budget_model/workspace/BUYER_OPERATIONS.md",
-      "git_blob_sha": "14f360c5c52d19f291f16ce72808061e3f3dac05"
+      "git_blob_sha": "23c5221ceee0ba690f5bc27a39fdf589522ae6f8"
+    },
+    {
+      "path": "stellar/scf_2026/sf47_budget_model/workspace/BUYER_RECEIVING_JOURNEY.md",
+      "git_blob_sha": "368e4c269e6526a7c4e30734b9947779223608f5"
+    },
+    {
+      "path": "stellar/scf_2026/sf47_budget_model/workspace/buyer-agent-receiving.mjs",
+      "git_blob_sha": "17a8798d44ca92505708f8427e79371442a36e91"
+    },
+    {
+      "path": "stellar/scf_2026/sf47_budget_model/workspace/buyer-operations-receiving.mjs",
+      "git_blob_sha": "36e01acf398b90d6a1f1af8a7f2d6878fe040a13"
     },
     {
       "path": "stellar/scf_2026/sf47_budget_model/workspace/CLI.md",
-      "git_blob_sha": "02428aaf3eb1c04512d22b70d31b65d5c8c1755f"
+      "git_blob_sha": "6d56dd9c8d05fc8de9c3b781f7f249537aa75fa2"
     },
     {
       "path": "stellar/scf_2026/sf47_budget_model/workspace/cli.py",
       "git_blob_sha": "a1670199ea622852edf41e5fff356d8d76ca2072"
+    },
+    {
+      "path": "stellar/scf_2026/sf47_budget_model/workspace/cohort-operations-receiving.mjs",
+      "git_blob_sha": "72c80bb8de5358e327d5e331da71599dd7722791"
     },
     {
       "path": "stellar/scf_2026/sf47_budget_model/workspace/COMPLETION.md",
@@ -76,12 +121,32 @@
       "git_blob_sha": "de00036456829bc1ac395403c20262ced95700aa"
     },
     {
+      "path": "stellar/scf_2026/sf47_budget_model/workspace/IMPLEMENTATION_EVIDENCE.md",
+      "git_blob_sha": "7683a99ff73af97c795f63eefe3722211e8743f7"
+    },
+    {
+      "path": "stellar/scf_2026/sf47_budget_model/workspace/implementation_handoff.mjs",
+      "git_blob_sha": "5d429829d19d2e5110d8d53d921e64c7ff27973e"
+    },
+    {
+      "path": "stellar/scf_2026/sf47_budget_model/workspace/implementation-operations-receiving.mjs",
+      "git_blob_sha": "ef3c4be3d06f9369fafb30fb92a62551c80f4251"
+    },
+    {
       "path": "stellar/scf_2026/sf47_budget_model/workspace/index.html",
       "git_blob_sha": "d4263d58474b8e2b95119be72b38402fb705ebf2"
     },
     {
+      "path": "stellar/scf_2026/sf47_budget_model/workspace/installation-operations-receiving.mjs",
+      "git_blob_sha": "2cab21185997ffc0d9905c2a73d8574a8bc67310"
+    },
+    {
+      "path": "stellar/scf_2026/sf47_budget_model/workspace/INSTALLATIONS.md",
+      "git_blob_sha": "10054168f2fd2b804f781094e65b787a11df60d9"
+    },
+    {
       "path": "stellar/scf_2026/sf47_budget_model/workspace/launch.mjs",
-      "git_blob_sha": "3f6bf070f4aa27c24421f684c8eefee446cb47c9"
+      "git_blob_sha": "7e998dad3d8c5195abe2691c8ad78f4dbe43a519"
     },
     {
       "path": "stellar/scf_2026/sf47_budget_model/workspace/launcher.mjs",
@@ -89,7 +154,7 @@
     },
     {
       "path": "stellar/scf_2026/sf47_budget_model/workspace/managed_launch.py",
-      "git_blob_sha": "09b13e7b1674567130c3a945c641c8aec5368800"
+      "git_blob_sha": "b0768ad0904f175952d13fd54c86517f1a96bed2"
     },
     {
       "path": "stellar/scf_2026/sf47_budget_model/workspace/model.py",
@@ -109,7 +174,19 @@
     },
     {
       "path": "stellar/scf_2026/sf47_budget_model/workspace/operations_cli.py",
-      "git_blob_sha": "a2a4ad5871be6260cae546e3d1c405c8fc380262"
+      "git_blob_sha": "cf1f2f48fe3230b882d2e851fbffc93e6d5e3069"
+    },
+    {
+      "path": "stellar/scf_2026/sf47_budget_model/workspace/operations_cohort.css",
+      "git_blob_sha": "c60db3e3584c36616ba4d62f9e7811adecd89b90"
+    },
+    {
+      "path": "stellar/scf_2026/sf47_budget_model/workspace/operations_cohort.mjs",
+      "git_blob_sha": "12f7f6feea6ed740058c91881754b3726341a2c6"
+    },
+    {
+      "path": "stellar/scf_2026/sf47_budget_model/workspace/operations_cohort.py",
+      "git_blob_sha": "5cdedac79c1c8e168a0966fc1e58a31d9b16171d"
     },
     {
       "path": "stellar/scf_2026/sf47_budget_model/workspace/operations_completion.css",
@@ -117,19 +194,43 @@
     },
     {
       "path": "stellar/scf_2026/sf47_budget_model/workspace/operations_completion.mjs",
-      "git_blob_sha": "9f2b35fd7357a11716755449675b532529addd50"
+      "git_blob_sha": "53d903581f7f4f40e7873d1f0df24d392f9e245f"
     },
     {
       "path": "stellar/scf_2026/sf47_budget_model/workspace/operations_completion.py",
-      "git_blob_sha": "e2e90ecb9155052e121b102dd35c19a6829d3c20"
+      "git_blob_sha": "64298cf17809b5fb6a856ce4e220c6e8174cbf81"
     },
     {
       "path": "stellar/scf_2026/sf47_budget_model/workspace/operations_domain.py",
-      "git_blob_sha": "c0f5bd36a6a49a7636832bee2607657b75ef8dea"
+      "git_blob_sha": "fa6f62711808988e2a3c9a82f936f46dc914500c"
     },
     {
       "path": "stellar/scf_2026/sf47_budget_model/workspace/operations_http.py",
-      "git_blob_sha": "e7bbe2620ae9f9578459db5fe8d5f093ee9a6c24"
+      "git_blob_sha": "3db34e45adcc7141cfaef0f6f145573c96ffb86c"
+    },
+    {
+      "path": "stellar/scf_2026/sf47_budget_model/workspace/operations_implementation.css",
+      "git_blob_sha": "f57578a5218f9fb091b360c6ff5f412e6dede08b"
+    },
+    {
+      "path": "stellar/scf_2026/sf47_budget_model/workspace/operations_implementation.mjs",
+      "git_blob_sha": "7efa002425d7adcba5a747cc5274f1226c889fa8"
+    },
+    {
+      "path": "stellar/scf_2026/sf47_budget_model/workspace/operations_implementation.py",
+      "git_blob_sha": "a3f1bfaacaf05b32052fbff0c7a8a1d03714759c"
+    },
+    {
+      "path": "stellar/scf_2026/sf47_budget_model/workspace/operations_installations.css",
+      "git_blob_sha": "fa0aeceb849013bde5b6a00049d9ef54d02e757a"
+    },
+    {
+      "path": "stellar/scf_2026/sf47_budget_model/workspace/operations_installations.mjs",
+      "git_blob_sha": "41c43402e2ee1d4b470e975b5bd956f30ae86ffc"
+    },
+    {
+      "path": "stellar/scf_2026/sf47_budget_model/workspace/operations_installations.py",
+      "git_blob_sha": "6df92c8812adc83b4e0111acb2ae34bf3c1477d1"
     },
     {
       "path": "stellar/scf_2026/sf47_budget_model/workspace/operations_intake.py",
@@ -149,7 +250,11 @@
     },
     {
       "path": "stellar/scf_2026/sf47_budget_model/workspace/OPERATIONS-API.md",
-      "git_blob_sha": "cc8c0a0dcbf4d8478d6e754e0c97e37a22afbc92"
+      "git_blob_sha": "3d1dc18ed20c20a082804731a0c8ba5c3f5538f2"
+    },
+    {
+      "path": "stellar/scf_2026/sf47_budget_model/workspace/OPERATIONS-COHORT.md",
+      "git_blob_sha": "04d04676025edd850b0768d99fcd04cd6bf1548b"
     },
     {
       "path": "stellar/scf_2026/sf47_budget_model/workspace/operations.css",
@@ -157,15 +262,15 @@
     },
     {
       "path": "stellar/scf_2026/sf47_budget_model/workspace/OPERATIONS.md",
-      "git_blob_sha": "cfe741e21eb3b7551a273e2013e7b187125090ca"
+      "git_blob_sha": "348f04e0e2431e5ac9d259c30fa19df1c5478773"
     },
     {
       "path": "stellar/scf_2026/sf47_budget_model/workspace/operations.mjs",
-      "git_blob_sha": "39bb14251ca4fb3605d62dd82116cedc9eaf54b6"
+      "git_blob_sha": "3b34e47fc88fd09ee8708e270800d34390c0cf77"
     },
     {
       "path": "stellar/scf_2026/sf47_budget_model/workspace/operations.py",
-      "git_blob_sha": "05fceae90b2609abccba9b23983f2358ea5fc624"
+      "git_blob_sha": "0b3f80a5cd123cfdc0f516ebfc8d93928cda0972"
     },
     {
       "path": "stellar/scf_2026/sf47_budget_model/workspace/portfolio_schedule.py",
@@ -189,7 +294,7 @@
     },
     {
       "path": "stellar/scf_2026/sf47_budget_model/workspace/README.md",
-      "git_blob_sha": "da4b9101b42271ed500006d61e22d2441ec6254a"
+      "git_blob_sha": "12e5c680f1fe904feb4fb1bbdfa0217beb99d69e"
     },
     {
       "path": "stellar/scf_2026/sf47_budget_model/workspace/server.py",
@@ -276,12 +381,24 @@
       "git_blob_sha": "1b45b4b4085f32aeaee6fcaeb9f7716eef044c5b"
     },
     {
+      "path": "stellar/scf-starforge-20261009/sf74-merchant-support-console/commissioning.mjs",
+      "git_blob_sha": "1e3b75293a2bc53a03ad94f51a4cdda4a735ab71"
+    },
+    {
       "path": "stellar/scf-starforge-20261009/sf74-merchant-support-console/runtime-support.mjs",
-      "git_blob_sha": "d64dd59d5c8451842381a3d6f3ce21d628b14741"
+      "git_blob_sha": "ac55755cd69cabdb74a1ae8a30fa2fd51083ef18"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf74-merchant-support-console/service-commitments.mjs",
+      "git_blob_sha": "6b2a7f9c97625fb7af45c969d2e948868aa19dee"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf74-merchant-support-console/source-bundle-reference.mjs",
+      "git_blob_sha": "8444cf673c6a92eb4f84d73d3ea2c9bb04d3efd2"
     },
     {
       "path": "stellar/scf-starforge-20261009/sf74-merchant-support-console/workspace-file.mjs",
-      "git_blob_sha": "9d5cf903f85fd8dd59fa68bd6a5401c1b68c1321"
+      "git_blob_sha": "7c35a1546ae46b7685f8f827ffa61a80b7c92ad4"
     },
     {
       "path": "stellar/scf-starforge-20261009/sf81-buyer-operator-bridge/bridge.mjs",
@@ -752,5 +869,5 @@
       "git_blob_sha": "8f1a472958e6f6128d0954655f54ed15935f9484"
     }
   ],
-  "purpose": "Exact original runtime source for the single SDK, browser and agent buyer receiving continuation; no private input or execution result."
+  "purpose": "Complete selected original SDK, browser, typed client, MCP, CLI, cohort, Installation and implementation-evidence receiving source for the same operating case. Optional implementation receiving uses actual producer source/observation/member identities, the original command journal and complete case export/reopen."
 }

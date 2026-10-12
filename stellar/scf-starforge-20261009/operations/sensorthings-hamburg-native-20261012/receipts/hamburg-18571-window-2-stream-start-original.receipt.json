@@ -1,0 +1,42 @@
+{
+  "schema": "stellar-forge.sensorthings-connector-source-receipt.v1",
+  "operationId": "SCF_SENSORTHINGS_HAMBURG_NATIVE_1B40_20261012",
+  "role": "window-2-stream-start",
+  "sourceUrl": "https://iot.hamburg.de/v1.1/Datastreams(18571)",
+  "receivedAt": "2026-10-12T10:51:29Z",
+  "timestampBasis": "Clock read after complete connector download returned; provider HTTP request times are not exposed.",
+  "body": {
+    "filename": "hamburg-18571-window-2-stream-start-original.json",
+    "bytes": 1313,
+    "sha256": "f7e21cbabb3a35cf036264c61cb9ff8c4a5c1822141ba2e6fcfb3fe395e19aaa"
+  },
+  "representation": "COMPLETE_CONNECTOR_UTF8_TEXT",
+  "sourceHttpStatus": null,
+  "sourceHttpHeaders": null,
+  "method": "Notion create_attachment(source_url), then download_attachment(file_upload_id)",
+  "request": {
+    "source_url": "https://iot.hamburg.de/v1.1/Datastreams(18571)",
+    "filename": "hamburg-18571-window-2-stream-start-original.json",
+    "content_type": "application/json"
+  },
+  "connector": {
+    "attachment": {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"file_upload_id\":\"3f7dd772-3100-81fc-ba4a-00b25cfc2eca\",\"filename\":\"hamburg-18571-window-2-stream-start-original.json\",\"content_type\":\"application/json; charset=utf-8\",\"content_length\":1313,\"status\":\"uploaded\",\"markdown_source\":\"file-upload://3f7dd772-3100-81fc-ba4a-00b25cfc2eca\",\"suggested_markdown\":\"<file src=\\\"file-upload://3f7dd772-3100-81fc-ba4a-00b25cfc2eca\\\"></file>\"}"
+        }
+      ],
+      "isError": false
+    },
+    "download": {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"file_upload_id\":\"3f7dd772-3100-81fc-ba4a-00b25cfc2eca\",\"filename\":\"hamburg-18571-window-2-stream-start-original.json\",\"content_type\":\"application/json; charset=utf-8\",\"content_length\":1313,\"content\":\"{\\\"@iot.selfLink\\\":\\\"https://iot.hamburg.de/v1.1/Datastreams(18571)\\\",\\\"@iot.id\\\":18571,\\\"name\\\":\\\"Ladepunkt DE*HHM*E1011*02\\\",\\\"description\\\":\\\"Availability status of connector at a charge-station\\\",\\\"observationType\\\":\\\"http://www.opengis.net/def/observationType/OGC-OM/2.0/OM_CategoryObservation\\\",\\\"unitOfMeasurement\\\":{\\\"name\\\":null,\\\"symbol\\\":null,\\\"definition\\\":null},\\\"observedArea\\\":{\\\"type\\\":\\\"Point\\\",\\\"coordinates\\\":[10.015795,53.568083]},\\\"phenomenonTime\\\":\\\"2026-04-12T07:47:15.371Z/2026-10-12T07:43:27.123Z\\\",\\\"properties\\\":{\\\"chargingProtocol\\\":\\\"MODE3\\\",\\\"connectorType\\\":\\\"S_TYPE_2\\\",\\\"current\\\":\\\"AC\\\",\\\"infoLastUpdate\\\":\\\"2024-07-18T13:12:06.629204Z\\\",\\\"layerName\\\":\\\"Status_E-Ladepunkt\\\",\\\"metadata\\\":\\\"https://registry.gdi-de.org/id/de.hh/84b8b24e-300d-48d3-a711-aadc472f886d\\\",\\\"ownerData\\\":\\\"Freie und Hansestadt Hamburg\\\",\\\"resultNature\\\":\\\"primary\\\",\\\"serviceName\\\":\\\"HH_STA_E-Ladestationen\\\",\\\"topic\\\":\\\"Transport und Verkehr\\\"},\\\"resultTime\\\":\\\"2026-04-12T07:47:15.557764Z/2026-10-12T07:43:27.364859Z\\\",\\\"ObservedProperty@iot.navigationLink\\\":\\\"https://iot.hamburg.de/v1.1/Datastreams(18571)/ObservedProperty\\\",\\\"Sensor@iot.navigationLink\\\":\\\"https://iot.hamburg.de/v1.1/Datastreams(18571)/Sensor\\\",\\\"Thing@iot.navigationLink\\\":\\\"https://iot.hamburg.de/v1.1/Datastreams(18571)/Thing\\\",\\\"Observations@iot.navigationLink\\\":\\\"https://iot.hamburg.de/v1.1/Datastreams(18571)/Observations\\\"}\"}"
+        }
+      ],
+      "isError": false
+    }
+  }
+}

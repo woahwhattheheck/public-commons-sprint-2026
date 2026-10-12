@@ -5,6 +5,7 @@ original response and numeric token, records explicit metadata decisions, and
 prepares a station intake CSV without applying scientific quality control.
 """
 from __future__ import annotations
+import copy
 import csv
 import datetime as dt
 import io
@@ -22,6 +23,8 @@ REPORT = "stellar-forge.erddap-provider-readiness.v1"
 BUNDLE = "stellar-forge.erddap-provider-bundle.v1"
 RECEIVED = "stellar-forge.erddap-provider-received.v1"
 VERSION = "1.0.0"
+EVALUATION_SCHEMA = "stellar-forge.erddap-provider-evaluation.v1"
+CURRENT_EVALUATION = {"schema": EVALUATION_SCHEMA, "readiness": "1.0.0", "csvComparison": "decimal-v1"}
 MAX_HANDOFF = 4 * source.MAX_SOURCE + 8 * 1024 * 1024
 MAX_PROFILE = 2 * 1024 * 1024
 MAX_STATIONS = 10000
@@ -73,6 +76,26 @@ def _csv(rows):
     writer.writerows(rows)
     return out.getvalue().encode("utf-8")
 
+
+def evaluation(value):
+    """A closed, declared evaluator identity; unknown versions are never guessed."""
+    if not isinstance(value, dict) or set(value) != {"schema", "readiness", "csvComparison"}:
+        raise InputError("Provider evaluation requires its exact schema and supported versions")
+    if value["schema"] != EVALUATION_SCHEMA or value["readiness"] != "1.0.0" or value["csvComparison"] not in {"lexical-v1", "decimal-v1"}:
+        raise InputError("Unsupported provider evaluation or original comparison version")
+    return dict(value)
+
+def _evaluation_capture(original, declared, legacy_comparison=None):
+    """Re-evaluate the same parsed original without changing its shared source."""
+    c = capture(original)
+    selected = copy.copy(c)
+    selected.evaluation = evaluation(declared) if declared is not None else None
+    version = selected.evaluation["csvComparison"] if selected.evaluation is not None else legacy_comparison
+    if version not in {"lexical-v1", "decimal-v1"}:
+        raise InputError("Original review comparison version is missing")
+    selected.comparison = source.csv_comparison(c.originals["data.csv"], c.table, comparison_version=version)
+    return selected
+
 class Capture:
     """A complete original capture parsed by the maintained ERDDAP source engine."""
     def __init__(self, value):
@@ -101,7 +124,9 @@ class Capture:
             self.columns.append({"name": name, "type": self.table["columnTypes"][i],
                 "units": self.table["columnUnits"][i], "metadata": by.get(name, {}),
                 "missing": missing[i], "emptyStrings": empty[i], "samples": samples[i]})
-        self.comparison = source.csv_comparison(self.originals["data.csv"], self.table)
+        self.evaluation = evaluation(CURRENT_EVALUATION)
+        self.comparison = source.csv_comparison(self.originals["data.csv"], self.table,
+            comparison_version=self.evaluation["csvComparison"])
 
     def summary(self):
         m = self.manifest
@@ -521,6 +546,8 @@ def analyze(original, profile):
             "Numeric tokens are copied without binary floating-point conversion.",
             "Missing and empty-string cells are distinguished by one-based row ordinals in data/missing-values.json.",
             "Original station values and quality flags remain in the observation data."]}
+    if c.evaluation is not None:
+        report["evaluation"] = evaluation(c.evaluation)
     writable = columns_ok and aliases_ok and time_ok and all(t is not None for t in normalized_times) and c.manifest["protocol"] == "tabledap"
     return p, report, {"times": normalized_times, "writable": writable}
 
@@ -528,10 +555,59 @@ def review(original, profile):
     p, report, unused = analyze(original, profile)
     return {"profile": p, "review": report}
 
-def revision_id(profile, parent=None):
+def revision_id(profile, parent=None, evaluated=None):
     if parent is not None and (not isinstance(parent, str) or not source.HEX.fullmatch(parent)):
         raise InputError("Expected a full preceding review identity")
-    return source.sha(source.jbytes({"schema": REVIEW, "sourceId": profile["sourceId"], "parent": parent, "profile": profile}))
+    if not isinstance(profile, dict) or not isinstance(profile.get("sourceId"), str) or not source.HEX.fullmatch(profile["sourceId"]):
+        raise InputError("Provider profile is missing its original source identity")
+    material = {"schema": REVIEW, "sourceId": profile["sourceId"], "parent": parent, "profile": profile}
+    if evaluated is not None:
+        material["evaluation"] = evaluation(evaluated)
+    return source.sha(source.jbytes(material))
+
+def _record(c, profile, report, parent):
+    value = {"schema": REVIEW, "id": revision_id(profile, parent, c.evaluation),
+        "sourceId": c.id, "parent": parent, "profile": profile, "review": report}
+    if c.evaluation is not None:
+        value["evaluation"] = evaluation(c.evaluation)
+    return value
+
+def record_revision_id(record):
+    required = {"schema", "id", "sourceId", "parent", "profile", "review"}
+    if not isinstance(record, dict) or not required <= set(record) or set(record) - (required | {"evaluation"}):
+        raise InputError("Provider review record has missing or unknown fields")
+    if record["schema"] != REVIEW or not isinstance(record["review"], dict) or record["review"].get("schema") != REPORT or record["review"].get("version") != VERSION:
+        raise InputError("Unsupported original provider review record")
+    if not isinstance(record["profile"], dict) or record["profile"].get("sourceId") != record["sourceId"]:
+        raise InputError("Provider review profile belongs to another original source")
+    declared = evaluation(record["evaluation"]) if "evaluation" in record else None
+    return revision_id(record["profile"], record["parent"], declared)
+
+def validate_record(original, record):
+    """Reproduce the entire saved review under its supported original evaluator."""
+    c = capture(original)
+    if record_revision_id(record) != record["id"] or record["sourceId"] != c.id:
+        raise InputError("Provider review identity differs from its original source and profile")
+    if "evaluation" in record:
+        candidates = [(record["evaluation"], None)]
+    else:
+        # The parser advanced during the original unversioned 1.0.0 interval.
+        # Try only its two known evaluators and compare every canonical byte.
+        # Incoming report flags do not select or define evaluator behavior.
+        candidates = [(None, version) for version in ["lexical-v1", "decimal-v1"]]
+    encoded = source.jbytes(record)
+    for declared, legacy in candidates:
+        selected = _evaluation_capture(c, declared, legacy)
+        profile, report, unused = analyze(selected, record["profile"])
+        expected = _record(selected, profile, report, record["parent"])
+        if encoded == source.jbytes(expected):
+            return selected, expected
+    raise InputError("Provider review differs from every supported original evaluation")
+
+def make_review_record(original, profile, parent=None):
+    c = capture(original)
+    p, report, unused = analyze(c, profile)
+    return _record(c, p, report, parent)
 
 def _readme(c, p, report, mode, has_csv):
     lines = ["# " + p["title"].replace("\n", " "), "",
@@ -575,14 +651,18 @@ def _readme(c, p, report, mode, has_csv):
         "", p["notes"], ""]
     return "\n".join(lines).encode("utf-8")
 
-def bundle_files(original, profile, mode="review", parent=None):
+def bundle_files(original, profile, mode="review", parent=None, *, record=None):
     c = capture(original)
     if mode not in {"review", "ready"}: raise InputError("Choose review or ready export")
+    if record is not None:
+        c, saved = validate_record(c, record)
+        if parent != saved["parent"] or source.jbytes(profile) != source.jbytes(saved["profile"]):
+            raise InputError("Export request differs from the original reviewed profile")
     p, report, context = analyze(c, profile)
     if mode == "ready" and not report["ready"]:
         raise InputError("Complete the reported intake fields before creating a ready bundle")
-    revision = revision_id(p, parent)
-    record = {"schema": REVIEW, "id": revision, "sourceId": c.id, "parent": parent, "profile": p, "review": report}
+    record = _record(c, p, report, parent)
+    revision = record["id"]
     columns = {x["name"]: x for x in c.columns}
     fields = ["sourceValue", "id", "name", "latitude", "longitude", "depth", "depthUnits", "depthPositive",
         "platformType", "positionKind", "expectedStart", "expectedEnd", "institutions", "attribution", "links",
@@ -636,13 +716,15 @@ def bundle_files(original, profile, mode="review", parent=None):
             "protocol": c.manifest["protocol"], "selection": c.manifest["selection"],
             "query": c.manifest["query"], "completeness": c.manifest["completeness"]},
         "files": {name: {"bytes": len(raw), "sha256": source.sha(raw)} for name,raw in sorted(files.items())}}
+    if c.evaluation is not None:
+        manifest["evaluation"] = evaluation(c.evaluation)
     files["manifest.json"] = source.jbytes(manifest)
     if sum(len(b) for b in files.values()) > MAX_HANDOFF:
         raise InputError("Provider bundle exceeds the supported handoff budget; retain the original source and choose a smaller explicit selection")
     return files, manifest, report
 
-def build_bundle(original, profile, mode="review", parent=None):
-    files, manifest, report = bundle_files(original, profile, mode, parent)
+def build_bundle(original, profile, mode="review", parent=None, *, record=None):
+    files, manifest, report = bundle_files(original, profile, mode, parent, record=record)
     out = io.BytesIO()
     with zipfile.ZipFile(out, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=6) as z:
         for name, raw in sorted(files.items()):
@@ -682,15 +764,18 @@ def receive_bundle(value):
     if not isinstance(record, dict) or record.get("schema") != REVIEW:
         raise InputError("Provider review record is missing")
     c = Capture(received["original/capture.erddap.zip"])
-    expected, canonical, report = bundle_files(c, record.get("profile"), manifest.get("mode"), record.get("parent"))
+    expected, canonical, report = bundle_files(c, record.get("profile"), manifest.get("mode"), record.get("parent"), record=record)
     if set(received) != set(expected):
         raise InputError("Provider bundle members differ from its complete reviewed export")
     for name, body in expected.items():
         if received[name] != body:
             raise InputError("Provider bundle content differs from its reviewed source: " + name)
-    return {"schema": RECEIVED, "status": "received", "version": VERSION, "bytes": len(raw),
+    result = {"schema": RECEIVED, "status": "received", "version": VERSION, "bytes": len(raw),
         "sha256": source.sha(raw), "revision": canonical["revision"], "sourceId": c.id,
         "profileId": canonical["profileId"], "mode": canonical["mode"], "ready": report["ready"],
         "rowCount": report["rowCount"], "stationCount": report["stationCount"],
         "fileCount": len(received), "hasObservationCsv": canonical["hasObservationCsv"],
         "source": canonical["source"], "review": report}
+    if "evaluation" in canonical:
+        result["evaluation"] = evaluation(canonical["evaluation"])
+    return result

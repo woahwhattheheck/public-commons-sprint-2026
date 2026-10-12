@@ -351,11 +351,17 @@ def open_receiving_source(root, expected_manifest_sha256=None, progress=None, ve
     """Select the complete original manifest without changing either source kind."""
     root = directory(root)
     vector_name = "vector-export.json"
-    selected = [name for name in (MANIFEST_NAME, vector_name)
+    selected = [name for name in (MANIFEST_NAME, vector_name, "postgis-receiving.json", "parcel-map-source.json")
                 if (root / name).exists() or (root / name).is_symlink()]
     require(len(selected) == 1, "RECEIVING_MANIFEST_SELECTION",
-            "Select one complete original qgis-receiving.json or vector-export.json directory.",
+            "Select one complete original STAC, vector, PostGIS or reviewed parcel-map receiving directory.",
             manifests=selected)
+    if selected[0] == "parcel-map-source.json":
+        from .parcels.projection import ParcelMapSource
+        return ParcelMapSource(root, expected_manifest_sha256, progress=progress, verify=verify)
+    if selected[0] == "postgis-receiving.json":
+        from .postgis.source import PostgisReceivingSource
+        return PostgisReceivingSource(root, expected_manifest_sha256, progress=progress, verify=verify)
     if selected[0] == vector_name:
         from .vector_source import VectorReceivingSource
         return VectorReceivingSource(root, expected_manifest_sha256, progress=progress, verify=verify)
@@ -363,6 +369,9 @@ def open_receiving_source(root, expected_manifest_sha256=None, progress=None, ve
 
 
 def compare_sources(left, right):
+    if left.sourceKind == "postgis" or right.sourceKind == "postgis":
+        from .postgis.source import compare_sources as compare_postgis_sources
+        return compare_postgis_sources(left, right)
     scenes = []
     for key in sorted(set(left.scenes) | set(right.scenes)):
         old, new = left.scenes.get(key), right.scenes.get(key)
@@ -556,6 +565,8 @@ class QgisWorkspace:
 
     @staticmethod
     def _validate_state(state):
+        from .parcels.state import validate_parcels
+        validate_parcels(state)
         require(state.get("schema") == WORKSPACE_SCHEMA and isinstance(state.get("sources"), list) and
                 isinstance(state.get("layers"), list) and isinstance(state.get("projects"), list) and
                 isinstance(state.get("reviews"), list), "WORKSPACE_SCHEMA", "The complete project state is invalid.")
@@ -586,7 +597,9 @@ class QgisWorkspace:
         source_id = source_id or state["activeSourceId"]
         row = next((x for x in state["sources"] if x["id"] == source_id), None)
         require(row is not None, "SOURCE_NOT_SELECTED", "Select an imported source edition.")
-        return open_receiving_source(self.root / row["path"], row["manifestSha256"], progress=progress, verify=verify)
+        source = open_receiving_source(self.root / row["path"], row["manifestSha256"], progress=progress, verify=verify)
+        if source.sourceKind == "parcel": source.validate_workspace(state)
+        return source
 
     def import_source(self, source_root, *, revision, request_id, actor, expected_manifest_sha256=None, progress=None):
         if expected_manifest_sha256 is not None:
@@ -594,6 +607,7 @@ class QgisWorkspace:
             if previous:
                 return previous
         source = open_receiving_source(source_root, expected_manifest_sha256, progress=progress)
+        if source.sourceKind == "parcel": source.validate_workspace(self.read())
         payload = {"sourceId": source.id}
         previous = self.operation(request_id, "source.imported", payload)
         if previous:
@@ -640,7 +654,7 @@ class QgisWorkspace:
             source = cached[row["sourceId"]]
             require(row.get("kind") in ("footprints", "raster", "vector"), "LAYER_KIND",
                     "Select footprints, a retained raster, or a retained vector layer.")
-            require(source.sourceKind != "vector" or row["kind"] == "vector", "VECTOR_LAYER_KIND",
+            require(source.sourceKind not in ("vector", "parcel") or row["kind"] == "vector", "VECTOR_LAYER_KIND",
                     "Choose the original native vector output for this vector source.")
             row["label"] = str(row.get("label") or ("Scene footprints" if row["kind"] == "footprints" else row.get("assetKey", "Layer"))).strip()
             require(0 < len(row["label"]) <= 512, "LAYER_LABEL", "Use a layer label of up to 512 characters.")
@@ -648,7 +662,10 @@ class QgisWorkspace:
             row.setdefault("opacity", 1.0)
             require(type(row["visible"]) is bool and type(row["opacity"]) in (int, float) and 0 <= row["opacity"] <= 1,
                     "LAYER_DISPLAY", "Choose visible or hidden and opacity from 0 to 1.")
-            if row["kind"] == "footprints":
+            if source.sourceKind == "postgis":
+                from .postgis.source import normalize_layer as normalize_postgis_layer
+                row = normalize_postgis_layer(source, row)
+            elif row["kind"] == "footprints":
                 row.setdefault("allScenes", True)
                 require(type(row["allScenes"]) is bool, "SCENE_SCOPE", "Choose all scenes or an explicit scene list.")
                 keys = list(source.scenes) if row["allScenes"] else row.get("sceneKeys")
@@ -745,7 +762,10 @@ class QgisWorkspace:
             elif choice == "update":
                 row = copy.deepcopy(old)
                 row["sourceId"] = right_id
-                if row["kind"] == "footprints":
+                if old.get("postgis"):
+                    from .postgis.source import successor_layer
+                    row = successor_layer(left, right, old, decision.get("connection"))
+                elif row["kind"] == "footprints":
                     row["sceneKeys"] = list(right.scenes) if row.get("allScenes") else [k for k in row["sceneKeys"] if k in right.scenes]
                 else:
                     key = asset_key(row.get("collection"), row["itemId"], row["assetKey"])
@@ -802,7 +822,13 @@ class QgisWorkspace:
             events = [json.loads(row[0]) for row in db.execute("SELECT body FROM events ORDER BY revision")]
             requests = [{"requestId": row[0], "inputSha256": row[1], "result": json.loads(row[2])}
                         for row in db.execute("SELECT request_id,input_sha256,result FROM requests ORDER BY request_id")]
-        return {"schema": SNAPSHOT_SCHEMA, "state": state, "events": events, "requests": requests}
+            from .analyst_state import analyst_snapshot
+            analyst_requests = analyst_snapshot(db)
+        snapshot = {"schema": SNAPSHOT_SCHEMA, "state": state, "events": events, "requests": requests}
+        # Existing snapshots keep their exact shape until an analyst request is retained.
+        if analyst_requests:
+            snapshot["analystRequests"] = analyst_requests
+        return snapshot
 
 
     def project_files(self, snapshot=None):
@@ -817,6 +843,7 @@ class QgisWorkspace:
             records[record["path"]] = record
         for row in state["sources"]:
             source = open_receiving_source(self.root / row["path"], row["manifestSha256"], verify=False)
+            if source.sourceKind == "parcel": source.validate_workspace(state)
             for name, value in source.files.items():
                 add({"path": row["path"] + "/" + name, "bytes": value["bytes"], "sha256": value["sha256"]})
             add({"path": row["path"] + "/" + source.manifest_name, "bytes": len(source.manifest_body), "sha256": source.id})
@@ -832,6 +859,15 @@ class QgisWorkspace:
             for dependency in layer.get("styleDependencies", []):
                 add(dependency)
         for record in historical_style_refs(snapshot):
+            add(record)
+        from .field import field_file_refs
+        for record in field_file_refs(snapshot):
+            add(record)
+        from .analyst_state import analyst_file_refs
+        for record in analyst_file_refs(snapshot):
+            add(record)
+        from .parcels.state import parcel_file_refs
+        for record in parcel_file_refs(snapshot):
             add(record)
         return [records[name] for name in sorted(records)]
 
@@ -849,18 +885,24 @@ class QgisWorkspace:
         records.insert(0, {"path": "workspace-snapshot.json", "bytes": len(snapshot_body), "sha256": sha_bytes(snapshot_body)})
         software = {}
         plugin_root = Path(__file__).resolve().parent
-        for name in ("__init__.py", "model.py", "vector_source.py", "qgis_project.py", "plugin.py", "cli.py", "metadata.txt"):
+        for name in ("__init__.py", "model.py", "vector_source.py", "qgis_project.py", "plugin.py", "cli.py",
+                     "field.py", "field_native.py", "field_bridge.py", "field_ui.py", "metadata.txt"):
             path = plugin_root / name
             require(path.is_file() and not path.is_symlink(), "PLUGIN_SOURCE_MISSING",
                     "Keep the complete installed QGIS plugin with the project handover.", path=name)
             body = path.read_bytes()
             software["software/starforge_stac/" + name] = body
-        for name in ("OPERATIONS.md", "VECTOR_RECEIVING.md", "LICENSE"):
+        for name in ("OPERATIONS.md", "VECTOR_RECEIVING.md", "FIELD_OPERATIONS.md", "LICENSE"):
             path = plugin_root / name
             if not path.is_file():
                 path = plugin_root.parent / name
             require(path.is_file(), "PLUGIN_GUIDE_MISSING", "Keep the operator guide and license with the plugin.", path=name)
             software["software/starforge_stac/" + name] = path.read_bytes()
+        from .postgis import software_files
+        for name, body in software_files().items():
+            software["software/starforge_stac/postgis/" + name] = body
+        from .analyst_state import analyst_software_files
+        software.update({"software/" + name: body for name, body in analyst_software_files(plugin_root).items()})
         for name, body in software.items():
             records.append({"path": name, "bytes": len(body), "sha256": sha_bytes(body)})
         records.sort(key=lambda x: x["path"])
@@ -919,11 +961,102 @@ class QgisWorkspace:
                 "revision": manifest["revision"], "fileCount": len(records) + 1, "totalDecodedBytes": manifest["totalBytes"]}
 
 
+
+def read_package_manifest(archive):
+    """Read the original package manifest and validate its complete member headers."""
+    names = archive.namelist()
+    require(len(names) == len(set(names)) and len(names) <= 1000000, "PACKAGE_MEMBERS",
+            "The complete archive contains duplicate members or exceeds the supported member count.")
+    require("qgis-package.json" in names, "PACKAGE_MANIFEST", "The original project package manifest is missing.")
+    info = archive.getinfo("qgis-package.json")
+    require(info.file_size <= MAX_JSON, "PACKAGE_MANIFEST_LIMIT", "The complete package manifest exceeds the supported size.")
+    manifest_body = archive.read(info)
+    manifest = json.loads(manifest_body.decode("utf-8"))
+    require(manifest.get("schema") == PACKAGE_SCHEMA and isinstance(manifest.get("files"), list),
+            "PACKAGE_SCHEMA", "Select a complete Starforge QGIS project package.")
+    records = {}
+    for raw in manifest["files"]:
+        record = descriptor(raw)
+        require(record["path"] not in records, "PACKAGE_MEMBERS", "The package declares a duplicate file.")
+        records[record["path"]] = record
+    require(set(names) == set(records) | {"qgis-package.json"} and "workspace-snapshot.json" in records,
+            "PACKAGE_CLOSURE", "Every package member must have its original exact descriptor.")
+    # All member/type/length decisions precede extraction.
+    for name in names:
+        relative_name(name)
+        info = archive.getinfo(name)
+        mode = (info.external_attr >> 16) & 0xFFFF
+        require(not info.is_dir() and not stat.S_ISLNK(mode) and
+                (not stat.S_IFMT(mode) or stat.S_ISREG(mode)),
+                "PACKAGE_MEMBER_TYPE", "The complete project package accepts ordinary files only.", path=name)
+        if name in records:
+            require(info.file_size == records[name]["bytes"], "PACKAGE_MEMBER_SIZE",
+                    "A package member differs from the retained size.", path=name)
+    require(type(manifest.get("totalBytes")) is int and
+            manifest["totalBytes"] == sum(record["bytes"] for record in records.values()),
+            "PACKAGE_TOTAL_BYTES", "The package total differs from its exact member descriptors.")
+    return manifest, manifest_body, records
+
+@contextmanager
+def opened_package_archive(archive_path, *, expected_sha256=None, progress=None):
+    """Own one regular descriptor for the archive digest and complete ZIP reads."""
+    path = Path(archive_path).expanduser().absolute()
+    flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
+    fd = os.open(path, flags)
+    with os.fdopen(fd, "rb") as stream:
+        before = os.fstat(stream.fileno())
+        require(stat.S_ISREG(before.st_mode), "FILE_REQUIRED",
+                "Select an ordinary project archive.", path=str(path))
+        identity = (before.st_dev, before.st_ino, before.st_size,
+                    before.st_mtime_ns, before.st_ctime_ns)
+
+        def assert_unchanged():
+            after = os.fstat(stream.fileno())
+            try:
+                named = path.lstat()
+            except FileNotFoundError:
+                require(False, "PACKAGE_CHANGED_DURING_READ",
+                        "The selected archive path changed during receiving.", path=str(path))
+            require(stat.S_ISREG(named.st_mode) and not stat.S_ISLNK(named.st_mode) and
+                    identity == (after.st_dev, after.st_ino, after.st_size,
+                                 after.st_mtime_ns, after.st_ctime_ns) and
+                    identity == (named.st_dev, named.st_ino, named.st_size,
+                                 named.st_mtime_ns, named.st_ctime_ns),
+                    "PACKAGE_CHANGED_DURING_READ",
+                    "The selected archive descriptor or path changed during receiving.", path=str(path))
+
+        assert_unchanged()
+        digest, count = hashlib.sha256(), 0
+        while True:
+            block = stream.read(CHUNK)
+            if not block:
+                break
+            count += len(block)
+            require(count <= before.st_size, "PACKAGE_CHANGED_DURING_READ",
+                    "The project archive changed while hashing.", path=str(path))
+            digest.update(block)
+            if progress:
+                progress({"phase": "archive", "path": str(path),
+                          "completedBytes": count, "totalBytes": before.st_size})
+        require(count == before.st_size, "PACKAGE_CHANGED_DURING_READ",
+                "The project archive changed while hashing.", path=str(path))
+        measured = {"bytes": count, "sha256": digest.hexdigest()}
+        require(expected_sha256 is None or measured["sha256"] == expected_sha256,
+                "PACKAGE_HASH_CHANGED", "The complete archive differs from its selected transfer.")
+        assert_unchanged()
+        stream.seek(0)
+        with zipfile.ZipFile(stream) as archive:
+            yield archive, measured, assert_unchanged
+            assert_unchanged()
+
 def receive_package(archive_path, destination, *, expected_sha256=None, progress=None):
-    archive_path = Path(archive_path).expanduser().absolute()
-    measured = file_digest(archive_path, progress=progress, phase="archive")
-    require(expected_sha256 is None or measured["sha256"] == expected_sha256,
-            "PACKAGE_HASH_CHANGED", "The complete received archive differs from its transfer receipt.")
+    with opened_package_archive(archive_path, expected_sha256=expected_sha256,
+                                progress=progress) as (archive, measured, assert_archive):
+        return _receive_opened_package(archive, destination, measured,
+                                       assert_archive, progress=progress)
+
+
+def _receive_opened_package(archive, destination, measured, assert_archive, *, progress=None):
     target = Path(destination).expanduser().absolute()
     if target.exists():
         require(target.is_dir() and not target.is_symlink(), "NEW_WORKSPACE_DIRECTORY", "Select an ordinary project directory.")
@@ -935,138 +1068,124 @@ def receive_package(archive_path, destination, *, expected_sha256=None, progress
             workspace = QgisWorkspace(target)
             for record in workspace.project_files():
                 file_digest(member(target, record["path"]), expected=record, progress=progress, name=record["path"])
+            assert_archive()
             return {"workspace": workspace, "receipt": prior, "replayed": True}
         require(not (target / "workspace.sqlite").exists() or (target / "receiving-operation.json").is_file(),
                 "WORKSPACE_EXISTS", "Choose a new receiving directory for the complete project.")
     target.mkdir(mode=0o700, parents=True, exist_ok=True)
     directory(target)
-    with zipfile.ZipFile(archive_path) as archive:
-        names = archive.namelist()
-        require(len(names) == len(set(names)) and len(names) <= 1000000, "PACKAGE_MEMBERS",
-                "The complete archive contains duplicate members or exceeds the supported member count.")
-        require("qgis-package.json" in names, "PACKAGE_MANIFEST", "The original project package manifest is missing.")
-        info = archive.getinfo("qgis-package.json")
-        require(info.file_size <= MAX_JSON, "PACKAGE_MANIFEST_LIMIT", "The complete package manifest exceeds the supported size.")
-        manifest_body = archive.read(info)
-        manifest = json.loads(manifest_body.decode("utf-8"))
-        require(manifest.get("schema") == PACKAGE_SCHEMA and isinstance(manifest.get("files"), list),
-                "PACKAGE_SCHEMA", "Select a complete Starforge QGIS project package.")
-        records = {}
-        for raw in manifest["files"]:
-            record = descriptor(raw)
-            require(record["path"] not in records, "PACKAGE_MEMBERS", "The package declares a duplicate file.")
-            records[record["path"]] = record
-        require(set(names) == set(records) | {"qgis-package.json"} and "workspace-snapshot.json" in records,
-                "PACKAGE_CLOSURE", "Every package member must have its original exact descriptor.")
-        # All member/type/length decisions precede extraction.
-        for name in names:
-            relative_name(name)
-            info = archive.getinfo(name)
-            mode = (info.external_attr >> 16) & 0xFFFF
-            require(not info.is_dir() and not stat.S_ISLNK(mode) and
-                    (not stat.S_IFMT(mode) or stat.S_ISREG(mode)),
-                    "PACKAGE_MEMBER_TYPE", "The complete project package accepts ordinary files only.", path=name)
-            if name in records:
-                require(info.file_size == records[name]["bytes"], "PACKAGE_MEMBER_SIZE",
-                        "A package member differs from the retained size.", path=name)
-        marker = {"sha256": measured["sha256"], "manifestSha256": sha_bytes(manifest_body)}
-        marker_path = target / "receiving-operation.json"
-        if marker_path.exists():
-            old, _ = read_json(marker_path)
-            require(old == marker, "RECEIVING_OPERATION_CHANGED",
-                    "Continue the same complete archive in this receiving directory.")
-        else:
-            require(not any(target.iterdir()), "NEW_WORKSPACE_DIRECTORY", "Choose an empty receiving directory.")
-            retain_bytes(target, "receiving-operation.json", json_bytes(marker))
-        for index, (name, record) in enumerate(records.items(), 1):
-            path = member(target, name, existing=False)
-            if path.exists():
-                file_digest(path, expected=record, progress=progress, name=name)
-                continue
-            path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
-            fd, temporary = tempfile.mkstemp(prefix=".qgis-receive-", dir=path.parent)
-            digest, count = hashlib.sha256(), 0
+    manifest, manifest_body, records = read_package_manifest(archive)
+    marker = {"sha256": measured["sha256"], "manifestSha256": sha_bytes(manifest_body)}
+    marker_path = target / "receiving-operation.json"
+    if marker_path.exists():
+        old, _ = read_json(marker_path)
+        require(old == marker, "RECEIVING_OPERATION_CHANGED",
+                "Continue the same complete archive in this receiving directory.")
+    else:
+        require(not any(target.iterdir()), "NEW_WORKSPACE_DIRECTORY", "Choose an empty receiving directory.")
+        assert_archive()
+        retain_bytes(target, "receiving-operation.json", json_bytes(marker))
+    for index, (name, record) in enumerate(records.items(), 1):
+        path = member(target, name, existing=False)
+        if path.exists():
+            file_digest(path, expected=record, progress=progress, name=name)
+            continue
+        path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+        fd, temporary = tempfile.mkstemp(prefix=".qgis-receive-", dir=path.parent)
+        digest, count = hashlib.sha256(), 0
+        try:
+            with archive.open(name) as source, os.fdopen(fd, "wb") as output:
+                while True:
+                    block = source.read(CHUNK)
+                    if not block:
+                        break
+                    count += len(block)
+                    require(count <= record["bytes"], "PACKAGE_MEMBER_SIZE", "The member expands beyond its declared size.", path=name)
+                    digest.update(block)
+                    output.write(block)
+                    if progress:
+                        progress({"phase": "receive", "path": name, "completedBytes": count,
+                                  "totalBytes": record["bytes"], "completedFiles": index - 1, "totalFiles": len(records)})
+                output.flush()
+                os.fsync(output.fileno())
+            require(count == record["bytes"] and digest.hexdigest() == record["sha256"],
+                    "PACKAGE_MEMBER_HASH", "The original member bytes changed.", path=name)
             try:
-                with archive.open(name) as source, os.fdopen(fd, "wb") as output:
-                    while True:
-                        block = source.read(CHUNK)
-                        if not block:
-                            break
-                        count += len(block)
-                        require(count <= record["bytes"], "PACKAGE_MEMBER_SIZE", "The member expands beyond its declared size.", path=name)
-                        digest.update(block)
-                        output.write(block)
-                        if progress:
-                            progress({"phase": "receive", "path": name, "completedBytes": count,
-                                      "totalBytes": record["bytes"], "completedFiles": index - 1, "totalFiles": len(records)})
-                    output.flush()
-                    os.fsync(output.fileno())
-                require(count == record["bytes"] and digest.hexdigest() == record["sha256"],
-                        "PACKAGE_MEMBER_HASH", "The original member bytes changed.", path=name)
-                try:
-                    os.link(temporary, path)
-                except FileExistsError:
-                    file_digest(path, expected=record, name=name)
-            finally:
-                Path(temporary).unlink(missing_ok=True)
-        snapshot, snapshot_body = read_json(member(target, "workspace-snapshot.json"))
-        require(sha_bytes(snapshot_body) == records["workspace-snapshot.json"]["sha256"] and
-                snapshot.get("schema") == SNAPSHOT_SCHEMA and
-                snapshot["state"]["id"] == manifest.get("workspaceId") and
-                snapshot["state"]["revision"] == manifest.get("revision"),
-                "SNAPSHOT_IDENTITY", "The complete workspace snapshot differs from the package.")
-        QgisWorkspace._validate_state(snapshot["state"])
-        require([x["revision"] for x in snapshot["events"]] == list(range(1, snapshot["state"]["revision"] + 1)),
-                "HISTORY_INCOMPLETE", "The project must retain every original history revision.")
-        require(len({x["requestId"] for x in snapshot["requests"]}) == len(snapshot["requests"]),
-                "REQUEST_HISTORY", "The original operation history contains a duplicate identity.")
-        # Bind all nested source and project/style references before publishing the database.
-        for source in snapshot["state"]["sources"]:
-            open_receiving_source(target / source["path"], source["manifestSha256"], verify=False)
-        referenced = []
-        for project in snapshot["state"]["projects"]:
-            referenced.append(project["file"])
-            referenced.extend(project.get("derivedFiles", []))
-        for row in snapshot["state"]["layers"] + [layer for project in snapshot["state"]["projects"] for layer in project.get("layers", [])]:
-            if row.get("styleFile"):
-                referenced.append(row["styleFile"])
-            referenced.extend(row.get("styleDependencies", []))
-        referenced.extend(historical_style_refs(snapshot))
-        for raw in referenced:
-            record = descriptor(raw)
-            require(record["path"] in records and all(records[record["path"]][k] == record[k] for k in ("bytes", "sha256")),
-                    "SNAPSHOT_FILE_CLOSURE", "The project snapshot references a missing or changed native file.", path=record["path"])
-        if (target / "workspace.sqlite").exists():
-            # Resume only our already-published exact snapshot after a lost receipt write.
-            current = QgisWorkspace(target).snapshot()
-            require(current == snapshot, "RECEIVED_WORKSPACE_CHANGED",
-                    "The received project changed before completion. Preserve it and use a new receiving directory.")
-        else:
-            fd, pending_db = tempfile.mkstemp(prefix=".qgis-db-", suffix=".sqlite", dir=target)
-            os.close(fd)
+                os.link(temporary, path)
+            except FileExistsError:
+                file_digest(path, expected=record, name=name)
+        finally:
+            Path(temporary).unlink(missing_ok=True)
+    snapshot, snapshot_body = read_json(member(target, "workspace-snapshot.json"))
+    require(sha_bytes(snapshot_body) == records["workspace-snapshot.json"]["sha256"] and
+            snapshot.get("schema") == SNAPSHOT_SCHEMA and
+            snapshot["state"]["id"] == manifest.get("workspaceId") and
+            snapshot["state"]["revision"] == manifest.get("revision"),
+            "SNAPSHOT_IDENTITY", "The complete workspace snapshot differs from the package.")
+    QgisWorkspace._validate_state(snapshot["state"])
+    require([x["revision"] for x in snapshot["events"]] == list(range(1, snapshot["state"]["revision"] + 1)),
+            "HISTORY_INCOMPLETE", "The project must retain every original history revision.")
+    require(len({x["requestId"] for x in snapshot["requests"]}) == len(snapshot["requests"]),
+            "REQUEST_HISTORY", "The original operation history contains a duplicate identity.")
+    # Bind all nested source and project/style references before publishing the database.
+    for source in snapshot["state"]["sources"]:
+        opened = open_receiving_source(target / source["path"], source["manifestSha256"], verify=False)
+        if opened.sourceKind == "parcel": opened.validate_workspace(snapshot["state"])
+    referenced = []
+    for project in snapshot["state"]["projects"]:
+        referenced.append(project["file"])
+        referenced.extend(project.get("derivedFiles", []))
+    for row in snapshot["state"]["layers"] + [layer for project in snapshot["state"]["projects"] for layer in project.get("layers", [])]:
+        if row.get("styleFile"):
+            referenced.append(row["styleFile"])
+        referenced.extend(row.get("styleDependencies", []))
+    referenced.extend(historical_style_refs(snapshot))
+    from .field import field_file_refs
+    referenced.extend(field_file_refs(snapshot))
+    from .analyst_state import validate_analyst_snapshot, analyst_file_refs, restore_analyst_snapshot
+    validate_analyst_snapshot(snapshot, records=records)
+    referenced.extend(analyst_file_refs(snapshot))
+    from .parcels.state import validate_parcels, parcel_file_refs
+    validate_parcels(snapshot["state"], records=records)
+    referenced.extend(parcel_file_refs(snapshot))
+    for raw in referenced:
+        record = descriptor(raw)
+        require(record["path"] in records and all(records[record["path"]][k] == record[k] for k in ("bytes", "sha256")),
+                "SNAPSHOT_FILE_CLOSURE", "The project snapshot references a missing or changed native file.", path=record["path"])
+    if (target / "workspace.sqlite").exists():
+        # Resume only our already-published exact snapshot after a lost receipt write.
+        current = QgisWorkspace(target).snapshot()
+        require(current == snapshot, "RECEIVED_WORKSPACE_CHANGED",
+                "The received project changed before completion. Preserve it and use a new receiving directory.")
+    else:
+        fd, pending_db = tempfile.mkstemp(prefix=".qgis-db-", suffix=".sqlite", dir=target)
+        os.close(fd)
+        try:
+            db = sqlite3.connect(pending_db)
             try:
-                db = sqlite3.connect(pending_db)
-                try:
-                    db.executescript("""
-                        CREATE TABLE workspace (id INTEGER PRIMARY KEY CHECK(id=1), body TEXT NOT NULL);
-                        CREATE TABLE events (revision INTEGER PRIMARY KEY, body TEXT NOT NULL);
-                        CREATE TABLE requests (request_id TEXT PRIMARY KEY, input_sha256 TEXT NOT NULL, result TEXT NOT NULL);
-                    """)
-                    with db:
-                        db.execute("INSERT INTO workspace VALUES(1,?)", (json.dumps(snapshot["state"], ensure_ascii=False),))
-                        db.executemany("INSERT INTO events VALUES(?,?)",
-                                       [(e["revision"], json.dumps(e, ensure_ascii=False)) for e in snapshot["events"]])
-                        db.executemany("INSERT INTO requests VALUES(?,?,?)",
-                                       [(r["requestId"], r["inputSha256"], json.dumps(r["result"], ensure_ascii=False))
-                                        for r in snapshot["requests"]])
-                finally:
-                    db.close()
-                os.link(pending_db, target / "workspace.sqlite")
+                db.executescript("""
+                    CREATE TABLE workspace (id INTEGER PRIMARY KEY CHECK(id=1), body TEXT NOT NULL);
+                    CREATE TABLE events (revision INTEGER PRIMARY KEY, body TEXT NOT NULL);
+                    CREATE TABLE requests (request_id TEXT PRIMARY KEY, input_sha256 TEXT NOT NULL, result TEXT NOT NULL);
+                """)
+                with db:
+                    db.execute("INSERT INTO workspace VALUES(1,?)", (json.dumps(snapshot["state"], ensure_ascii=False),))
+                    db.executemany("INSERT INTO events VALUES(?,?)",
+                                   [(e["revision"], json.dumps(e, ensure_ascii=False)) for e in snapshot["events"]])
+                    db.executemany("INSERT INTO requests VALUES(?,?,?)",
+                                   [(r["requestId"], r["inputSha256"], json.dumps(r["result"], ensure_ascii=False))
+                                    for r in snapshot["requests"]])
+                    restore_analyst_snapshot(db, snapshot)
             finally:
-                Path(pending_db).unlink(missing_ok=True)
+                db.close()
+            assert_archive()
+            os.link(pending_db, target / "workspace.sqlite")
+        finally:
+            Path(pending_db).unlink(missing_ok=True)
     receipt = {"schema": "starforge.stac-qgis-project-received.v1", **marker,
                "workspaceId": manifest["workspaceId"], "revision": manifest["revision"],
                "receivedAt": utc_now(), "bytes": measured["bytes"], "files": len(records)}
+    assert_archive()
     retain_bytes(target, "received-package.json", json_bytes(receipt))
     workspace = QgisWorkspace(target)
     return {"workspace": workspace, "receipt": receipt, "replayed": False}

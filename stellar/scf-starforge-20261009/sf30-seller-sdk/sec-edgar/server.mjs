@@ -7,6 +7,7 @@ import { openEdgarWorkspace } from './workspace.mjs';
 const assets = new Map([
   ['/', ['index.html', 'text/html; charset=utf-8']],
   ['/app.mjs', ['app.mjs', 'text/javascript; charset=utf-8']],
+  ['/portable.mjs', ['portable.mjs', 'text/javascript; charset=utf-8']],
   ['/style.css', ['style.css', 'text/css; charset=utf-8']],
 ]);
 const POLICY = "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; base-uri 'none'; frame-ancestors 'none'; form-action 'self'";
@@ -120,6 +121,24 @@ export async function startEdgarWorkspace({ directory, storeDirectory, workspace
         return reply(req, res, 200, await workspace.readRaw(id), 'application/json; charset=utf-8',
           { 'content-disposition': 'attachment; filename="' + id.replace(/[^A-Za-z0-9._-]/g, '_') + '-source.json"' });
       }
+      if (path === '/api/portable/review' && req.method === 'GET')
+        return reply(req, res, 200, await workspace.reviewPortable());
+      if (path === '/api/portable/export' && req.method === 'POST') {
+        const selected = await workspace.exportPortable(await body(req, 4096));
+        return reply(req, res, 200, selected);
+      }
+      const portable = path.match(/^\/api\/portable\/exports\/([a-z0-9][a-z0-9_-]{0,63})\/(archive|manifest|status)$/);
+      if (portable && req.method === 'GET') {
+        if (portable[2] === 'status') return reply(req, res, 200, await workspace.portableExport(portable[1]));
+        if (portable[2] === 'manifest') {
+          const selected = await workspace.portableManifest(portable[1]);
+          return reply(req, res, 200, selected.bytes, 'application/json; charset=utf-8',
+            { 'content-disposition': 'attachment; filename="sec-edgar-workspace-manifest.json"' });
+        }
+        const selected = await workspace.portableExport(portable[1]);
+        const { streamEdgarOperatorArchive } = await import('./receiving/http.mjs');
+        return await streamEdgarOperatorArchive(req, res, selected, { 'content-security-policy': POLICY });
+      }
       const download = path.match(/^\/api\/download\/(config|openapi|handoff)$/);
       if (download && req.method === 'GET') {
         const values = { config: () => workspace.exportConfig(), openapi: () => workspace.exportOpenApi(), handoff: () => workspace.buyerHandoff() };
@@ -128,6 +147,7 @@ export async function startEdgarWorkspace({ directory, storeDirectory, workspace
       }
       throw failure(404, 'EDGAR_ROUTE_NOT_FOUND', 'This workspace action does not exist.');
     } catch (cause) {
+      if (res.headersSent) { res.destroy(cause); return; }
       const proposed = Number(cause.status ?? cause.statusCode ?? cause.httpStatus);
       const status = proposed >= 400 && proposed <= 599 ? proposed : cause.code === 'ENOENT' ? 404 : 400;
       const code = /^[A-Z0-9_]{1,120}$/.test(cause.code ?? '') ? cause.code : 'EDGAR_OPERATION_FAILED';

@@ -86,6 +86,33 @@
 <div class="optional"><span data-i18n="agentTitle">AI match insight with tools</span> <button id="opusAgent" type="button" disabled>Not configured</button><div id="opusAgentResult" aria-live="polite"></div></div>
 </aside>
 </div>
+<section class="card recap-panel" id="playerRecap" aria-labelledby="recapHeading">
+<div class="recap-heading"><h2 id="recapHeading" data-recap-i18n="heading">Player recap and replay playlist</h2><span id="recapClub" class="note"></span></div>
+<p class="note" data-recap-i18n="help">Follow a player, compare the halves and replay the original sequences. Your recap keeps the plays you have already watched when you seek backward.</p>
+<div class="recap-controls">
+<div class="field"><label for="recapPlayer" data-recap-i18n="player">Player</label><select id="recapPlayer"><option value="" data-recap-i18n="everyone">Whole club</option></select></div>
+<div class="field"><label for="recapPeriod" data-recap-i18n="period">Match half</label><select id="recapPeriod"><option value="all" data-recap-i18n="all">All observed</option><option value="first" data-recap-i18n="first">First half</option><option value="second" data-recap-i18n="second">Second half</option></select></div>
+<div class="field"><label for="recapOutcome" data-recap-i18n="outcome">Sequence outcome</label><select id="recapOutcome"><option value="all" data-recap-i18n="outcomes">All outcomes</option><option value="success" data-recap-i18n="success">Won back</option><option value="expired" data-recap-i18n="expired">8 seconds elapsed</option><option value="interrupted" data-recap-i18n="interrupted">Interrupted</option><option value="not_attempted" data-recap-i18n="not_attempted">No pressure observed</option><option value="pending" data-recap-i18n="pending">Open sequence</option></select></div>
+</div>
+<p id="recapCoverage" class="note"></p>
+<p class="note" data-recap-i18n="sourceNote">The clock and action coverage are shown separately. A final clock event does not imply that every intervening play was recorded.</p>
+<div class="recap-columns">
+<section aria-labelledby="recapActionsHeading"><h3 id="recapActionsHeading" data-recap-i18n="summary">Recorded actions</h3><p id="recapScope" class="note"></p><dl id="recapStats" class="recap-stats"></dl><div id="recapNarrative" class="recap-narrative"></div></section>
+<section aria-labelledby="recapComparisonHeading"><h3 id="recapComparisonHeading" data-recap-i18n="comparison">How the club changed between halves</h3>
+<div class="recap-table"><table><thead><tr><th scope="col" data-recap-i18n="metric">Measure</th><th scope="col" data-recap-i18n="first">First half</th><th scope="col" data-recap-i18n="second">Second half</th></tr></thead><tbody id="recapComparison"></tbody></table></div>
+<p id="recapComparisonText" class="note"></p><p class="note" data-recap-i18n="sequenceHelp">Sequences are grouped by the half of the original loss. Press frequency uses observed losses; regain efficiency uses successful and expired attempts.</p></section>
+</div>
+<div class="recap-heading"><h3 data-recap-i18n="playlist">Replay playlist</h3><span id="recapCount" class="note"></span></div>
+<div class="recap-actions">
+<button id="recapPrevious" type="button" data-recap-i18n="previous" disabled>Previous sequence</button><button id="recapNext" type="button" data-recap-i18n="next" disabled>Next sequence</button>
+<button id="recapSavePlaylist" type="button" data-recap-i18n="save" disabled>Save playlist moments</button>
+<button id="recapJson" type="button" data-recap-i18n="downloadJson" disabled>Download recap JSON</button><button id="recapHtml" type="button" data-recap-i18n="downloadHtml" disabled>Download printable recap</button>
+</div>
+<p id="recapReplayPosition" class="note"></p><p id="recapSelected" class="note"></p>
+<ol id="recapSequences" class="recap-sequences plain"></ol>
+<div class="recap-pagination"><button id="recapPreviousPage" type="button" data-recap-i18n="previousPage" disabled>Previous page</button><span id="recapPage" class="note"></span><button id="recapNextPage" type="button" data-recap-i18n="nextPage" disabled>Next page</button></div>
+<p id="recapStatus" class="note" role="status" aria-live="polite"></p>
+</section>
 <section class="card archive-panel" id="savedMatches" aria-labelledby="archiveHeading">
 <h2 id="archiveHeading" data-archive-i18n="heading">Saved matches</h2>
 <p class="note"><a href="/coach-review">Compare saved matches · Comparar partidos guardados</a></p>

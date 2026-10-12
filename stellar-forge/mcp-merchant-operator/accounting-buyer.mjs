@@ -41,10 +41,14 @@ export function buyerAccountingCapabilities(definition){
 export function buyerAccountingState(workspace){
  requireBuyerAccounting({sourceMode:accountingSourceMode(workspace.state)});
  const binding=accountingWorkspaceBinding(workspace.directory,workspace.state);
+ const source=buyerStartupView(workspace.directory,workspace.state);
+ const records=new Map((workspace.state.accountantHandoffs??[]).map(row=>[row.id,row]));
+ source.handoffs=source.handoffs.map(row=>({...row,requestSha256:records.get(row.id).requestSha256,
+  sourceSha256:records.get(row.id).source.reportSha256}));
  return {schema:'stellar-forge.buyer-accounting-operation.v1',sourceMode:'buyer',
   binding:{schema:binding.schema,workspaceId:binding.workspaceId,sourcesSha256:binding.sourcesSha256,
    sourceMode:'buyer',sourceSha256:binding.sources.buyerSourceSha256,sourceBytes:binding.sources.buyerSourceBytes},
-  workspaceRevision:workspace.state.revision,source:briefStartup(buyerStartupView(workspace.directory,workspace.state))};
+  workspaceRevision:workspace.state.revision,source:briefStartup(source)};
 }
 export function buyerStartupProjection(value){return briefStartup(value);}
 function sourceReview(inspected,args={}){

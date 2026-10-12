@@ -1,0 +1,13 @@
+/* Original quotation shell, with neutral native receiving sections. */
+.cqr-desk{max-width:1160px}.cqr-section{margin:24px 0;padding:20px 0;border-top:1px solid #c8c8c8}
+.cqr-section h4{font-size:1rem;margin:0 0 12px}.cqr-section p{max-width:86ch;line-height:1.55}
+.cqr-section fieldset{border:0;padding:0;margin:0;min-width:0}.cqr-section fieldset[disabled]{opacity:.7}
+.cqr-received{margin:16px 0;padding:16px;background:#f5f5f5;border:1px solid #c8c8c8}
+.cqr-received dl{display:grid;grid-template-columns:minmax(140px,190px) 1fr;gap:8px 18px;margin:12px 0}
+.cqr-received dt{font-weight:600}.cqr-received dd{margin:0;overflow-wrap:anywhere}
+.cqr-details{margin:12px 0}.cqr-details summary{cursor:pointer;font-weight:600;padding:8px 0}
+.cqr-details pre{max-height:440px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;padding:12px;background:#fff;border:1px solid #ccc;font-size:.82rem}
+.cqr-status:empty{display:none}.cqr-status p{padding:10px 12px;margin:10px 0;background:#f1f1f1;border-left:3px solid #444}
+.cqr-section button{margin:8px 8px 8px 0}.cqr-link{display:inline-block;margin-right:16px}
+.cqr-desk input,.cqr-desk textarea,.cqr-desk select{max-width:100%}
+@media(max-width:640px){.cqr-section{margin:18px 0;padding:16px 0}.cqr-received{padding:12px}.cqr-received dl{grid-template-columns:1fr;gap:4px}.cqr-received dd{margin-bottom:8px}}

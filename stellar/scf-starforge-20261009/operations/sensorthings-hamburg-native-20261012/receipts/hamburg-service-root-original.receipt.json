@@ -1,0 +1,42 @@
+{
+  "schema": "stellar-forge.sensorthings-connector-source-receipt.v1",
+  "operationId": "SCF_SENSORTHINGS_HAMBURG_NATIVE_1B40_20261012",
+  "role": "service-root",
+  "sourceUrl": "https://iot.hamburg.de/v1.1/",
+  "receivedAt": "2026-10-12T10:48:34Z",
+  "timestampBasis": "Clock read after complete connector download returned; provider HTTP request times are not exposed.",
+  "body": {
+    "filename": "hamburg-service-root-original.json",
+    "bytes": 2355,
+    "sha256": "66e7e9aefcc4b3bffbaca988f3ae5fea76861fc8ade6ce61796f046ae404185d"
+  },
+  "representation": "COMPLETE_CONNECTOR_UTF8_TEXT",
+  "sourceHttpStatus": null,
+  "sourceHttpHeaders": null,
+  "method": "Notion create_attachment(source_url), then download_attachment(file_upload_id)",
+  "request": {
+    "source_url": "https://iot.hamburg.de/v1.1/",
+    "filename": "hamburg-service-root-original.json",
+    "content_type": "application/json"
+  },
+  "connector": {
+    "attachment": {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"file_upload_id\":\"3f7dd772-3100-81f0-8045-00b23dd91864\",\"filename\":\"hamburg-service-root-original.json\",\"content_type\":\"application/json; charset=utf-8\",\"content_length\":2355,\"status\":\"uploaded\",\"markdown_source\":\"file-upload://3f7dd772-3100-81f0-8045-00b23dd91864\",\"suggested_markdown\":\"<file src=\\\"file-upload://3f7dd772-3100-81f0-8045-00b23dd91864\\\"></file>\"}"
+        }
+      ],
+      "isError": false
+    },
+    "download": {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"file_upload_id\":\"3f7dd772-3100-81f0-8045-00b23dd91864\",\"filename\":\"hamburg-service-root-original.json\",\"content_type\":\"application/json; charset=utf-8\",\"content_length\":2355,\"content\":\"{\\\"value\\\":[{\\\"name\\\":\\\"Datastreams\\\",\\\"url\\\":\\\"https://iot.hamburg.de/v1.1/Datastreams\\\"},{\\\"name\\\":\\\"FeaturesOfInterest\\\",\\\"url\\\":\\\"https://iot.hamburg.de/v1.1/FeaturesOfInterest\\\"},{\\\"name\\\":\\\"HistoricalLocations\\\",\\\"url\\\":\\\"https://iot.hamburg.de/v1.1/HistoricalLocations\\\"},{\\\"name\\\":\\\"Locations\\\",\\\"url\\\":\\\"https://iot.hamburg.de/v1.1/Locations\\\"},{\\\"name\\\":\\\"MultiDatastreams\\\",\\\"url\\\":\\\"https://iot.hamburg.de/v1.1/MultiDatastreams\\\"},{\\\"name\\\":\\\"Observations\\\",\\\"url\\\":\\\"https://iot.hamburg.de/v1.1/Observations\\\"},{\\\"name\\\":\\\"ObservedProperties\\\",\\\"url\\\":\\\"https://iot.hamburg.de/v1.1/ObservedProperties\\\"},{\\\"name\\\":\\\"Sensors\\\",\\\"url\\\":\\\"https://iot.hamburg.de/v1.1/Sensors\\\"},{\\\"name\\\":\\\"Things\\\",\\\"url\\\":\\\"https://iot.hamburg.de/v1.1/Things\\\"}],\\\"serverSettings\\\":{\\\"conformance\\\":[\\\"http://www.opengis.net/spec/iot_sensing/1.1/req/batch-request/batch-request\\\",\\\"http://www.opengis.net/spec/iot_sensing/1.1/req/create-observations-via-mqtt/observations-creation\\\",\\\"http://www.opengis.net/spec/iot_sensing/1.1/req/create-update-delete\\\",\\\"http://www.opengis.net/spec/iot_sensing/1.1/req/data-array/data-array\\\",\\\"http://www.opengis.net/spec/iot_sensing/1.1/req/datamodel\\\",\\\"http://www.opengis.net/spec/iot_sensing/1.1/req/multi-datastream\\\",\\\"http://www.opengis.net/spec/iot_sensing/1.1/req/receive-updates-via-mqtt/receive-updates\\\",\\\"http://www.opengis.net/spec/iot_sensing/1.1/req/request-data\\\",\\\"http://www.opengis.net/spec/iot_sensing/1.1/req/resource-path/resource-path-to-entities\\\",\\\"https://fraunhoferiosb.github.io/FROST-Server/extensions/DeepSelect.html\\\",\\\"https://fraunhoferiosb.github.io/FROST-Server/extensions/GeoJSON-ResultFormat.html\\\",\\\"https://fraunhoferiosb.github.io/FROST-Server/extensions/JsonBatchRequest.html\\\",\\\"https://fraunhoferiosb.github.io/FROST-Server/extensions/MqttExpand.html\\\",\\\"https://fraunhoferiosb.github.io/FROST-Server/extensions/OpenAPI.html\\\",\\\"https://fraunhoferiosb.github.io/FROST-Server/extensions/ResponseMetadata.html\\\",\\\"https://fraunhoferiosb.github.io/FROST-Server/extensions/SelectDistinct.html\\\",\\\"https://github.com/INSIDE-information-systems/SensorThingsAPI/blob/master/CSV-ResultFormat/CSV-ResultFormat.md\\\"],\\\"http://www.opengis.net/spec/iot_sensing/1.1/req/create-observations-via-mqtt/observations-creation\\\":{\\\"endpoints\\\":[\\\"mqtt://iot.hamburg.de:1883\\\"]},\\\"http://www.opengis.net/spec/iot_sensing/1.1/req/receive-updates-via-mqtt/receive-updates\\\":{\\\"endpoints\\\":[\\\"mqtt://iot.hamburg.de:1883\\\"]}}}\"}"
+        }
+      ],
+      "isError": false
+    }
+  }
+}

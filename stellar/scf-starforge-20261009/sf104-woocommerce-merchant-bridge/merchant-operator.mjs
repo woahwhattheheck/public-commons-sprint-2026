@@ -6,6 +6,8 @@ import {fields, publicUrl, reference} from './buyer.mjs';
 import {openOutbox, SCHEMA as OUTBOX_SCHEMA} from '../sf98-merchant-delivery/outbox.mjs';
 import {createPublicHttpsFetch} from '../sf31-buyer-client/public-transport.mjs';
 import {createErpMethods} from './merchant-erp-client.mjs';
+import {createConnectorMethods} from './merchant-kcf-client.mjs';
+import {createCatalogMethods} from './catalog-client.mjs';
 import {reconcileRpc, reconcileReportedReceipt} from '../sf86-rpc-transfer-reconcile/verify.mjs';
 import {checkOriginalTerms, checkReportedTerms, networkProfile} from '../sf86-rpc-transfer-reconcile/terms.mjs';
 import {originalRecordFromEvidence} from '../sf86-rpc-transfer-reconcile/cli.mjs';
@@ -125,6 +127,8 @@ export function createMerchantClient(config, {env = process.env, fetchImpl} = {}
   };
   return Object.freeze({
     ...createErpMethods({requestUrl,siteUrl:config.siteUrl}),
+    ...createConnectorMethods({requestUrl,siteUrl:config.siteUrl}),
+    ...createCatalogMethods({requestUrl,siteUrl:config.siteUrl}),
     consoleStatus, orders,
     inspect:order => request(order), release:(order, body) => request(order, body),
     inspectRefunds:order => request(order, undefined, '/refunds', validateRefundOrder),

@@ -1,0 +1,13 @@
+<% id = @detail.dig("selection","id") %>
+<div class="heading"><div><h2>Committed edition history</h2><p>Original editions for stream <%= @detail.dig("selection","candidate","stream_id") %></p></div><%= link_to "Review overview",action: :show,id: id %></div>
+<div class="scroll"><table><thead><tr><th>Edition</th><th>Committed</th><th>Inserted</th><th>Updated</th><th>Unchanged</th><th>Removed</th><th>Complete source receipt</th></tr></thead><tbody>
+  <% @history["items"].each do |item| %><% receipt = item["receipt"] %><tr>
+    <td><%= item["revision"] %></td><td><%= receipt["committed_at"] %></td>
+    <% %w[inserted updated unchanged removed].each do |name| %><td class="number"><%= receipt.dig("counts",name) %></td><% end %>
+    <td><%= link_to "Download JSON",action: :receipt,id: id,edition_id: item["id"] %>
+      <details><summary>Source and operation</summary><p class="mono">Source <%= receipt["source_sha256"] %></p><p class="mono">Manifest <%= receipt["manifest_sha256"] %></p><p class="mono">Receipt <%= item["receipt_sha256"] %></p><p class="mono">Operation <%= receipt["operation_sha256"] %></p></details>
+    </td>
+  </tr><% end %>
+</tbody></table></div>
+<% if @history["items"].empty? %><p class="empty">This stream has no committed editions yet.</p><% end %>
+<% if @history["next_before"] %><p><%= link_to "Earlier editions",action: :history,id: id,before: @history["next_before"] %></p><% end %>

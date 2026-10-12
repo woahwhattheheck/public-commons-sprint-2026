@@ -1,0 +1,112 @@
+/* Original migration operator: neutral print-publication workspace. */
+.cartography {
+  --cartography-ink: #202124;
+  --cartography-muted: #5b5e63;
+  --cartography-line: #c8cacf;
+  --cartography-paper: #ffffff;
+  --cartography-wash: #f3f4f5;
+  color: var(--cartography-ink);
+  background: #f8f8f9;
+  font: 14px/1.5 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  padding: 20px;
+  min-width: 0;
+}
+.cartography, .cartography * { box-sizing: border-box; }
+.cartography [hidden] { display: none !important; }
+.cartography h2, .cartography h3, .cartography h4 { line-height: 1.25; margin: 0; color: var(--cartography-ink); }
+.cartography h2 { font-size: 22px; font-weight: 650; }
+.cartography h3 { font-size: 16px; font-weight: 650; }
+.cartography h4 { font-size: 15px; font-weight: 650; }
+.cartography p { margin: 8px 0; overflow-wrap: anywhere; }
+.cartography small { display: block; color: var(--cartography-muted); font-size: 12px; }
+.cartography button, .cartography input, .cartography textarea, .cartography select { font: inherit; }
+.cartography button {
+  min-height: 42px;
+  color: var(--cartography-ink);
+  background: var(--cartography-paper);
+  border: 1px solid #9b9da3;
+  border-radius: 3px;
+  padding: 8px 12px;
+  cursor: pointer;
+  text-align: left;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.cartography button:hover:not(:disabled) { background: #e9eaec; border-color: #5b5e63; }
+.cartography button:disabled { cursor: default; opacity: .5; }
+.cartography :is(button,input,textarea,select,summary):focus-visible { outline: 2px solid #27292d; outline-offset: 3px; }
+.cartography input:not([type=checkbox]):not([type=radio]),
+.cartography select, .cartography textarea {
+  width: 100%;
+  min-width: 0;
+  min-height: 42px;
+  padding: 8px;
+  border: 1px solid var(--cartography-line);
+  border-radius: 3px;
+  background: var(--cartography-paper);
+  color: var(--cartography-ink);
+}
+.cartography textarea { resize: vertical; }
+.cartography input[type=checkbox], .cartography input[type=radio] { width: 18px; height: 18px; margin: 1px 0 0; flex: 0 0 auto; accent-color: #34363b; }
+.cartography label { display: grid; gap: 5px; min-width: 0; font-weight: 550; }
+.cartography fieldset { min-width: 0; border: 1px solid var(--cartography-line); padding: 12px; margin: 16px 0; }
+.cartography legend { padding: 0 5px; font-weight: 650; }
+.cartography-header, .cartography-section-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.cartography-header { margin-bottom: 8px; }
+.cartography-header > div { min-width: 0; max-width: 780px; }
+.cartography-header > button { flex: 0 0 auto; }
+.cartography-header p, .cartography-context, .cartography-help, .cartography-empty { color: var(--cartography-muted); }
+.cartography-context { font-size: 12px; }
+.cartography-columns { display: grid; grid-template-columns: minmax(240px, 280px) minmax(0, 1fr); gap: 16px; margin-top: 16px; align-items: start; }
+.cartography-library, .cartography-work { display: grid; gap: 16px; min-width: 0; }
+.cartography-card { min-width: 0; background: var(--cartography-paper); border: 1px solid var(--cartography-line); border-radius: 3px; padding: 16px; }
+.cartography-card > h3, .cartography-card > .cartography-section-heading { margin-bottom: 14px; }
+.cartography-section-heading > span { color: var(--cartography-muted); font-size: 12px; white-space: nowrap; }
+.cartography-section-heading > button { min-height: 34px; padding: 5px 8px; font-size: 12px; }
+.cartography-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.cartography-wide { grid-column: 1 / -1; }
+.cartography-coordinates { margin-top: 12px; }
+.cartography .cartography-check { display: flex; align-items: flex-start; gap: 9px; margin: 8px 0; font-weight: 400; }
+.cartography-help { font-size: 12px; }
+.cartography-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.cartography [data-action=save-plan], .cartography [data-action=render] { background: #2d2f34; color: #fff; border-color: #2d2f34; }
+.cartography [data-action=save-plan]:hover:not(:disabled), .cartography [data-action=render]:hover:not(:disabled) { background: #46494e; color: #fff; }
+.cartography-list-item { display: block; width: 100%; margin: 8px 0 0; border-color: var(--cartography-line) !important; }
+.cartography-list-item[aria-current=true] { border-left: 4px solid #34363b !important; background: var(--cartography-wash); padding-left: 9px; }
+.cartography-operation { border-top: 1px solid var(--cartography-line); padding-top: 10px; margin-top: 12px; }
+.cartography-operation p { margin: 4px 0; font-size: 12px; }
+.cartography-operation button { font-size: 12px; min-height: 34px; padding: 5px 8px; }
+.cartography-notice, .cartography-pending { margin: 12px 0; padding: 12px 14px; border: 1px solid #a4a7ad; border-left: 4px solid #55585e; border-radius: 3px; background: var(--cartography-wash); overflow-wrap: anywhere; }
+.cartography-notice:empty { display: none; }
+.cartography-notice[data-kind=error], .cartography-error { font-weight: 600; }
+.cartography-table { width: 100%; min-width: 0; overflow-x: auto; margin: 12px 0; }
+.cartography table { border-collapse: collapse; width: 100%; font-size: 13px; }
+.cartography th { text-align: left; background: var(--cartography-wash); font-weight: 650; }
+.cartography th, .cartography td { vertical-align: top; border-bottom: 1px solid var(--cartography-line); padding: 9px; overflow-wrap: anywhere; }
+.cartography details { margin: 8px 0; min-width: 0; }
+.cartography summary { cursor: pointer; font-weight: 550; overflow-wrap: anywhere; padding: 3px 0; }
+.cartography-data { max-height: 380px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; margin: 8px 0 0; padding: 12px; background: var(--cartography-wash); border: 1px solid var(--cartography-line); font: 12px/1.5 ui-monospace, SFMono-Regular, Consolas, monospace; }
+.cartography-issues { border-left: 3px solid #5b5e63; background: var(--cartography-wash); padding: 10px 10px 10px 30px; }
+.cartography-preview img { display: block; max-width: 100%; height: auto; margin-top: 16px; border: 1px solid var(--cartography-line); background: white; }
+.cartography [data-role=layers] { max-height: 360px; overflow: auto; padding: 0 3px; }
+@media (max-width: 1050px) {
+  .cartography-columns { grid-template-columns: minmax(200px, 240px) minmax(0, 1fr); }
+  .cartography { padding: 14px; }
+  .cartography-card { padding: 12px; }
+}
+@media (max-width: 780px) {
+  .cartography-columns { display: flex; flex-direction: column; }
+  .cartography-library, .cartography-work { width: 100%; }
+  .cartography-work { order: 1; }
+  .cartography-library { order: 2; }
+  .cartography-header { display: block; }
+  .cartography-header > button { margin-top: 6px; }
+}
+@media (max-width: 440px) {
+  .cartography { padding: 10px; }
+  .cartography-fields { grid-template-columns: minmax(0, 1fr); }
+  .cartography-wide { grid-column: auto; }
+  .cartography-actions > button { flex: 1 1 140px; }
+  .cartography-section-heading { gap: 8px; flex-wrap: wrap; }
+  .cartography th, .cartography td { padding: 7px; }
+}

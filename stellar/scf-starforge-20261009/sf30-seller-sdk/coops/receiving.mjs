@@ -1,9 +1,10 @@
 // MIT. One connected operator journey in an existing original CO-OPS console.
 // The caller owns the server, browser, admission record and private session URL.
 import fs from 'node:fs';
-import {resolve,join} from 'node:path';
+import {resolve,join,basename} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {createHash,randomUUID} from 'node:crypto';
+import {createInterface} from 'node:readline';
 
 const stable=value=>value===null||typeof value!=='object'?JSON.stringify(value):Array.isArray(value)?'['+value.map(stable).join(',')+']':'{'+Object.keys(value).sort().map(k=>JSON.stringify(k)+':'+stable(value[k])).join(',')+'}';
 const hash=value=>createHash('sha256').update(value).digest('hex');
@@ -24,6 +25,12 @@ function atomic(path,bytes){
  try{fd=fs.openSync(temporary,fs.constants.O_WRONLY|fs.constants.O_CREAT|fs.constants.O_EXCL|fs.constants.O_NOFOLLOW,0o600);fs.writeFileSync(fd,bytes);fs.fsyncSync(fd);fs.closeSync(fd);fd=null;fs.renameSync(temporary,path);const parent=fs.openSync(resolve(path,'..'),fs.constants.O_RDONLY);try{fs.fsyncSync(parent);}finally{fs.closeSync(parent);}}
  finally{if(fd!==null&&fd!==undefined)fs.closeSync(fd);try{fs.unlinkSync(temporary);}catch(error){if(error.code!=='ENOENT')throw error;}}
 }
+async function firstReleasedRows(path,limit){
+ regular(path,1024*1024*1024);const stream=fs.createReadStream(path),lines=createInterface({input:stream,crlfDelay:Infinity}),rows=[];
+ try{for await(const line of lines){if(!line)continue;assert(Buffer.byteLength(line)<=2*1024*1024,'The selected original JSONL row exceeds the native receiving limit.');rows.push(JSON.parse(line));if(rows.length===limit)break;}}
+ finally{lines.close();stream.destroy();}
+ return rows;
+}
 function readJSON(path){regular(path);return JSON.parse(fs.readFileSync(path,'utf8'));}
 function selectedURL(value){
  const url=new URL(value);assert(url.protocol==='http:'&&['127.0.0.1','localhost','[::1]'].includes(url.hostname)&&!url.username&&!url.password&&!url.search,'Use the original loopback console URL, with its private session only in the fragment.');
@@ -38,6 +45,50 @@ function captureSelection(value){
  return selected;
 }
 
+
+function studySelection(value){
+ if(value===undefined||value===null||value===false)return null;
+ assert(value&&typeof value==='object'&&!Array.isArray(value),'Choose an explicit study receiving configuration.');
+ const allowed=['name','project','question','owner','note','basisPolicy','additionalEditionIds','mappingFile'];
+ assert(Object.keys(value).every(k=>allowed.includes(k)),'Use the declared original study configuration fields.');
+ const extra=value.additionalEditionIds??[];
+ assert(Array.isArray(extra)&&extra.length<=61&&extra.every(id=>typeof id==='string'&&/^[a-z0-9-]{8,100}$/.test(id))&&new Set(extra).size===extra.length,'Select distinct already-retained additional edition IDs.');
+ const result={name:value.name??'Public coastal source study',project:value.project??'Authored public-reference coastal source handoff',
+  question:value.question??'Which exact observed source windows and native measurement conventions are retained for a receiving model, and does the returned file preserve their original mapped values and identities?',
+  owner:value.owner??'Internal coastal source receiving',note:value.note??'Public-reference delivery over the original captured editions. No project-boundary suitability, private model, client acceptance or vertical-datum conversion is assumed.',
+  basisPolicy:value.basisPolicy??'uniform_requests',additionalEditionIds:extra,mappingFile:value.mappingFile??fileURLToPath(new URL('./examples/study-input-columns.json',import.meta.url))};
+ assert(['uniform_requests','mixed_native'].includes(result.basisPolicy),'Choose the explicit original request-basis policy.');
+ for(const key of ['name','project','question','owner','note','mappingFile'])assert(typeof result[key]==='string'&&result[key].trim(),'Retain a nonempty declared study '+key+'.');
+ return result;
+}
+async function verifyStudyArchive(file,manifest){
+ const descriptor=await identity(file),fd=fs.openSync(file,fs.constants.O_RDONLY|fs.constants.O_NOFOLLOW),expected=new Map(manifest.files.map(f=>[f.path,f])),seen=new Set();
+ let offset=0,ended=false,manifestSeen=false,totalBytes=0;
+ const read=(size,position)=>{const value=Buffer.alloc(size);let used=0;while(used<size){const n=fs.readSync(fd,value,used,size-used,position+used);assert(n>0,'The original study archive ended inside a retained member.');used+=n;}return value;};
+ const text=(header,begin,end)=>header.subarray(begin,end).toString('utf8').split('\0')[0];
+ const octal=(header,begin,end)=>{const value=text(header,begin,end).trim();assert(/^[0-7]*$/.test(value),'Use the native original TAR number fields.');return value?parseInt(value,8):0;};
+ try{
+  while(offset<descriptor.bytes){
+   const header=read(512,offset);offset+=512;
+   if(header.every(b=>b===0)){assert(!ended,'The native TAR contains unexpected extra zero blocks.');ended=true;assert(offset+512===descriptor.bytes&&read(512,offset).every(b=>b===0),'The native archive must end with its original two zero blocks.');offset+=512;break;}
+   assert(!ended,'No member may follow the original archive terminator.');
+   const name=(text(header,345,500)?text(header,345,500)+'/':'')+text(header,0,100),size=octal(header,124,136),type=header[156];
+   assert(name&&!name.startsWith('/')&&!name.split('/').some(p=>p===''||p==='.'||p==='..')&&!seen.has(name),'Retain each native archive path exactly once.');
+   assert(type===0||type===48,'The study handoff must contain regular data members only.');
+   let check=0;for(let i=0;i<512;i++)check+=i>=148&&i<156?32:header[i];assert(check===octal(header,148,156),'The native source archive header changed.');
+   const h=createHash('sha256');let position=0,manifestParts=[];
+   while(position<size){const part=read(Math.min(65536,size-position),offset+position);h.update(part);if(name==='manifest.json'){assert(size<=16*1024*1024,'Retain the bounded original delivery manifest.');manifestParts.push(part);}position+=part.length;}
+   const digest=h.digest('hex');seen.add(name);totalBytes+=size;
+   if(name==='manifest.json'){assert(stable(JSON.parse(Buffer.concat(manifestParts).toString('utf8')))===stable(manifest),'The archive carries another original manifest.');manifestSeen=true;}
+   else{const selected=expected.get(name);assert(selected&&selected.bytes===size&&selected.sha256===digest,'The complete source archive member differs from its immutable delivery receipt: '+name);}
+   const padding=(512-size%512)%512;if(padding)assert(read(padding,offset+size).every(b=>b===0),'The native TAR member padding changed.');
+   offset+=size+padding;
+  }
+  assert(ended&&offset===descriptor.bytes&&manifestSeen&&seen.size===expected.size+1&&[...expected.keys()].every(k=>seen.has(k)),'The complete source archive must carry every declared original member.');
+ }finally{fs.closeSync(fd);}
+ return{...descriptor,members:seen.size,decodedMemberBytes:totalBytes,originalManifestVerified:true,allMemberHashesVerified:true};
+}
+
 /**
  * @param initialPage Existing Playwright Page in the caller's retained browser.
  * @param options workspaceUrl, outputDirectory, reviewEdition, restart are required.
@@ -45,12 +96,16 @@ function captureSelection(value){
  * restart receives a stable phaseKey and same-origin identity and returns
  * {workspaceUrl, page?}; it must reuse its original restart intent after interruption.
  * historical defaults to the declared two-year hourly study; pass null to omit it.
+ * study is an optional explicit same-workspace study receiving configuration. When
+ * selected, reviewStudy must return an actual independent decision on its packet.
  */
 export async function runCoopsOperatorJourney(initialPage,options={}){
  assert(initialPage&&typeof initialPage.goto==='function','Supply the existing native browser page.');
  assert(typeof options.outputDirectory==='string'&&options.outputDirectory,'Supply one retained operator output directory.');
  assert(typeof options.reviewEdition==='function','Supply the independent source-review callback; there is no default approval.');
  assert(typeof options.restart==='function','Supply the original same-origin restart callback.');
+ const study=studySelection(options.study);
+ if(study)assert(typeof options.reviewStudy==='function','The selected study flow requires its actual independent review callback.');
  let page=initialPage,sessionURL=selectedURL(options.workspaceUrl??page.url());
  const origin=sessionURL.origin,output=resolve(options.outputDirectory),checkpointPath=join(output,'coops-operator-checkpoint.json'),resultPath=join(output,'coops-operator-result.json');
  fs.mkdirSync(output,{recursive:true,mode:0o700});assert(fs.lstatSync(output).isDirectory()&&!fs.lstatSync(output).isSymbolicLink(),'Use the original physical operator output directory.');
@@ -58,6 +113,7 @@ export async function runCoopsOperatorJourney(initialPage,options={}){
  const mappingFile=resolve(options.mappingFile??fileURLToPath(new URL('./examples/model-input-columns.json',import.meta.url))),mappingFileIdentity=await identity(mappingFile);
  assert(mappingFileIdentity.bytes>0&&mappingFileIdentity.bytes<=65536,'Select the exact bounded original mapping example or declared input convention.');
  const selected={capture:selection,historical,mappingFile:mappingFileIdentity,role:'public_reference',operator:String(options.operator??'Internal coastal source receiving')};
+ if(study){const exact=await identity(resolve(study.mappingFile));assert(exact.bytes>0&&exact.bytes<=65536,'Keep the complete bounded original study mapping file.');selected.study={...clone(study),mappingFile:exact};}
  const selectedSha256=hash(stable(selected)),moduleIdentity=await identity(fileURLToPath(import.meta.url));
  let cp=fs.existsSync(checkpointPath)?readJSON(checkpointPath):{schema:'stellar-forge.coops-operator-checkpoint.v1',id:randomUUID(),origin,selected,selectedSha256,workspaceId:null,createdAt:new Date().toISOString(),status:'IN_PROGRESS',phases:{},issued:{},restarts:{},ids:{},artifacts:{},sourceHistory:[]};
  assert(cp.schema==='stellar-forge.coops-operator-checkpoint.v1'&&cp.origin===origin&&cp.selectedSha256===selectedSha256,'Reopen the same original operator selection, output and origin.');
@@ -101,17 +157,53 @@ export async function runCoopsOperatorJourney(initialPage,options={}){
  function compactResponse(value,status=200){return{operationId:value.operationId,reused:value.reused===true,state:value.state??null,result:value.result??null,status};}
  async function settleIssued(key,{fresh=false}={}){
   const entry=cp.issued[key];assert(entry?.request,'The original UI request must remain retained for '+key);
-  const record=await waitUntil(async()=>{const r=await nativeOperation(entry);if(r.state==='FAILED'||r.state==='NOT_RESERVED')throw new Error('Original '+entry.request.action+' is '+r.state+': '+(r.error?.message??'inspect the saved browser request before retrying'));return r.state==='COMPLETE'?r:null;},'Waiting for original '+entry.request.action);
-  if(fresh)await waitUntil(async()=>{const p=(await browserState())?.pending;return !p||['uncertain','rejected','running'].includes(p.state);},'Completing the visible native reply');
-  const journal=await browserState(),pending=journal?.pending;
-  if(pending){
-   assert(pending.request.operationId===entry.request.operationId&&stable(pending.request)===stable(entry.request),'A different original browser request is pending.');
+  const same=p=>p?.request?.operationId===entry.request.operationId&&stable(p.request)===stable(entry.request);
+  const visibleReply=()=>waitUntil(async()=>{const p=(await browserState())?.pending;return !p||['uncertain','rejected','running'].includes(p.state);},'Completing the visible native reply');
+  const current=async()=>{
+   const r=await nativeOperation(entry);assert(r.operationId===entry.request.operationId,'The inspected native operation changed its original identity.');
+   if(r.state==='FAILED'&&!r.error?.retryable)throw new Error('Original '+entry.request.action+' failed: '+(r.error?.message??'inspect its retained native error before changing any inputs'));
+   assert(['NOT_RESERVED','RUNNING','FAILED','COMPLETE'].includes(r.state),'Inspect the actual original operation state before continuing.');
+   return r;
+  };
+  function preserveLaterRequest(record,pending){
+   if(!pending||same(pending))return false;
+   // A phase resumes in order: its earlier completed actions must leave a
+   // later original browser request intact until that action is reached.
+   assert(typeof pending.request?.operationId==='string'&&pending.request.operationId&&pending.request.operationId!==entry.request.operationId&&record.state==='COMPLETE'&&entry.state==='COMPLETE'&&entry.native?.operationId===record.operationId&&stable(entry.result)===stable(record.result),'A different original browser request is pending before this action has an exact completed result.');
+   return true;
+  }
+  async function retry(before){
+   const pending=(await browserState())?.pending;
+   assert(same(pending),'The original pending browser request is required; preserve any different request or later draft.');
    await closeDialog();
    const responsePromise=page.waitForResponse(response=>response.request().method()==='POST'&&new URL(response.url()).pathname==='/api/action'&&response.request().postDataJSON()?.operationId===entry.request.operationId,{timeout:operationTimeout});
    await page.locator('[data-cmd="retry"]').click();const response=await responsePromise,value=await response.json();
-   assert(response.ok()&&value.operationId===entry.request.operationId&&value.reused===true,'Exact retry must return the original saved operation.');
-   entry.replay=compactResponse(value,response.status());persist();
-   await waitUntil(async()=>!(await browserState())?.pending,'Completing the original browser request journal');
+   assert(response.ok()&&value.operationId===entry.request.operationId&&value.view?.workspaceId===cp.workspaceId,'The original retry must retain its exact operation and workspace.');
+   if(before.state!=='NOT_RESERVED')assert(value.reused===true,'The reserved request must return its original native operation.');
+   const receipt=compactResponse(value,response.status());entry.replay=receipt;entry.replays??=[];entry.replays.push({...receipt,priorState:before.state});persist();
+   await visibleReply();return value;
+  }
+  if(fresh)await visibleReply();
+  let record=await current(),pending=(await browserState())?.pending;
+  if(preserveLaterRequest(record,pending))return entry.result;
+  if(pending)assert(same(pending),'A different original browser request is pending; preserve it before continuing this phase.');
+  if(record.state!=='COMPLETE'){
+   // An interrupted request may never have reached reservation, or may retain
+   // unfinished native work. Only the same saved UI request can resume it.
+   assert(pending,'The incomplete original operation has no matching pending browser request. Keep its native identity and restore its original browser journal.');
+   await retry(record);
+   record=await waitUntil(async()=>{
+    const r=await current();
+    if(r.state==='FAILED'||r.state==='NOT_RESERVED')throw new Error('The original retry remains '+r.state+': '+(r.error?.message??'inspect its actual retained result'));
+    return r.state==='COMPLETE'?r:null;
+   },'Waiting for the resumed original '+entry.request.action);
+  }
+  pending=(await browserState())?.pending;
+  if(preserveLaterRequest(record,pending))return entry.result;
+  if(pending){
+   assert(same(pending),'A different original request must not be replaced after completion.');
+   await retry(record);
+   await waitUntil(async()=>!(await browserState())?.pending,'Retaining the completed original browser reply');
   }
   entry.result=clone(record.result);entry.native={operationId:record.operationId,state:record.state,resultSha256:record.resultSha256??null,completedAt:record.completedAt??null};entry.state='COMPLETE';persist();return entry.result;
  }
@@ -285,6 +377,81 @@ export async function runCoopsOperatorJourney(initialPage,options={}){
   assert(result.page.total===dataset.rows&&result.rows.length===result.page.returned,'The native dataset page changed its saved row identity.');return result;
  }
 
+
+
+ async function openStudy(id,revision){
+  await navigate('studies');
+  if(revision===undefined)await page.locator('[data-cmd="study-open"][data-id="'+id+'"]').click();
+  else{
+   await page.locator('[data-cmd="study-history"][data-id="'+id+'"]').click();
+   await page.locator('#dialog[open] [data-cmd="study-version"][data-id="'+id+'"][data-revision="'+revision+'"]').click();
+  }
+ }
+ async function previewStudy(){
+  const pending=page.waitForResponse(r=>r.request().method()==='POST'&&new URL(r.url()).pathname==='/api/study-preview',{timeout:operationTimeout});
+  await page.locator('#study-preview').click();const response=await pending,value=await response.json();
+  assert(response.ok()&&value.valid,'The actual selected source study needs correction before saving.');
+  await waitUntil(async()=>{const d=(await browserState())?.drafts;return d?.studyPreview?.value?.sha256===value.sha256;},'Retaining the exact original study preview');
+  return value;
+ }
+ async function recoverStudyIntake(intent){
+  const pending=(await browserState())?.pending;if(!pending)return;
+  const request=pending.request,body=request.payload;
+  assert(request.action==='study.return.start'&&body.releaseId===intent.releaseId&&body.filename===intent.filename&&body.bytes===intent.bytes||
+   request.action==='study.return.chunk'&&body.uploadId===cp.ids.studyUpload,'Preserve the different original pending request before resuming study intake.');
+  const before=await api('/api/operation?operationId='+encodeURIComponent(request.operationId));
+  assert(before.state!=='FAILED','The original returned-file operation failed; retain its actual error for correction.');
+  await closeDialog();
+  const responsePromise=page.waitForResponse(r=>r.request().method()==='POST'&&new URL(r.url()).pathname==='/api/action'&&r.request().postDataJSON()?.operationId===request.operationId,{timeout:operationTimeout});
+  await page.locator('[data-cmd="retry"]').click();const response=await responsePromise,value=await response.json();
+  assert(response.ok()&&value.operationId===request.operationId,'The pending original file action must retain its operation ID.');
+  if(before.state!=='NOT_RESERVED')assert(value.reused===true,'The reserved file operation must replay its exact original result.');
+  await waitUntil(async()=>!(await browserState())?.pending,'Retaining the original file-action reply');
+  const record=await api('/api/operation?operationId='+encodeURIComponent(request.operationId));assert(record.state==='COMPLETE','The original file-action result must finish before its next chunk.');
+  cp.studyUploadRecoveries??=[];cp.studyUploadRecoveries.push({operationId:request.operationId,action:request.action,requestSha256:hash(stable(request)),priorState:before.state,reused:value.reused===true,resultSha256:record.resultSha256??null});persist();
+ }
+ async function retainStudyReturn(release,file){
+  await navigate('studies');
+  const original={releaseId:release.id,filename:basename(file.path),bytes:file.bytes,sha256:file.sha256,format:'jsonl',
+   note:'Internal receiving of the exact complete JSONL downloaded from this native public-reference study release. The file is unchanged; this records a source handoff and makes no claim of a client model run or client acceptance.'};
+  if(!cp.studyReturnIntent){
+   assert(!(await browserState())?.pending,'Resolve the existing original request before selecting a returned file.');
+   await page.locator('[data-cmd="study-return-open"][data-id="'+release.id+'"]').click();
+   await input('studyReturn','format','jsonl');await input('studyReturn','note',original.note);
+   const j=await browserState();cp.studyReturnIntent={...original,draftToken:j.draftTokens.studyReturn};persist();
+  }
+  const intent=cp.studyReturnIntent;
+  assert(Object.entries(original).every(([k,v])=>intent[k]===v),'Keep the original released file and declared receiving purpose after interruption.');
+  let j=await browserState();assert(j.draftTokens.studyReturn===intent.draftToken&&j.drafts.studyReturn.releaseId===release.id,'A different later receiving draft is open; preserve it rather than rebase this intake.');
+  if(j.drafts.studyReturn.uploadId){cp.ids.studyUpload=j.drafts.studyReturn.uploadId;persist();}
+  await recoverStudyIntake(intent);j=await browserState();
+  if(j.drafts.studyReturn.uploadId){cp.ids.studyUpload=j.drafts.studyReturn.uploadId;persist();}
+  let upload=cp.ids.studyUpload?(await api('/api/view')).studyUploads.find(u=>u.id===cp.ids.studyUpload):null;
+  if(upload){assert(upload.releaseId===release.id&&upload.filename===original.filename&&upload.bytes===original.bytes&&upload.format==='jsonl','The original selected upload changed.');if(upload.receivedBytes===upload.bytes)return upload;}
+  const actual=await identity(file.path);assert(actual.bytes===original.bytes&&actual.sha256===original.sha256,'The retained original JSONL changed before re-selection.');
+  await page.locator('#study-return-file').setInputFiles(file.path);
+  await page.locator('#study-upload').click();
+  upload=await waitUntil(async()=>{
+   const current=await browserState();assert(current.draftTokens.studyReturn===intent.draftToken,'Preserve the later opened receiving draft.');
+   if(current.drafts.studyReturn.uploadId&&!cp.ids.studyUpload){cp.ids.studyUpload=current.drafts.studyReturn.uploadId;persist();}
+   const pending=current.pending;
+   if(pending&&['uncertain','rejected'].includes(pending.state))throw new Error('The original returned-file action needs its exact pending-request recovery; continue this same saved intake.');
+   const view=await api('/api/view'),u=cp.ids.studyUpload?view.studyUploads.find(x=>x.id===cp.ids.studyUpload):null;
+   if(!u)return null;assert(u.releaseId===release.id&&u.bytes===original.bytes&&u.filename===original.filename,'A different source file entered this original intake.');
+   return u.receivedBytes===u.bytes&&!pending?u:null;
+  },'Retaining every original returned-file chunk',captureTimeout);
+  assert(upload.chunks.reduce((n,c)=>n+c.bytes,0)===original.bytes,'Every selected returned byte must be retained exactly once.');
+  return upload;
+ }
+ async function verifyCompleteStudyComparison(file,summary){
+  let tail='',rows=0;const counts={unchanged:0,changed:0,added:0,missing:0,ambiguous:0};
+  for await(const chunk of fs.createReadStream(file,{encoding:'utf8'})){
+   const lines=(tail+chunk).split('\n');tail=lines.pop();assert(tail.length<=36*1024*1024,'The complete comparison record exceeds the receiving bound for both original 16 MiB partitions.');
+   for(const line of lines)if(line){const entry=JSON.parse(line);assert(Object.hasOwn(counts,entry.kind),'The selected same-file comparison must contain resolved native record groups.');counts[entry.kind]++;rows++;}
+  }
+  assert(!tail&&stable(counts)===stable(summary.counts),'The complete original comparison must include every native record group.');
+  return{rows,counts,completeFileVerified:true};
+ }
 
  async function ensurePreview(key,query,mode,label){
   const prefix=mode==='backfill'?'backfill':'capture';
@@ -579,8 +746,229 @@ export async function runCoopsOperatorJourney(initialPage,options={}){
    await navigate('backfills');await screenshot('historical-study-desktop');await screenshot('historical-study-mobile',390,844);await page.setViewportSize({width:1365,height:1000});
    return{backfillId:study.id,selectedWindow:{beginDate:study.plan.beginDate,endDate:study.plan.endDate},children,rows,jsonl,csv,coverage:'Native actual child summaries are retained; request completion does not imply complete valid measurements.'};
   });
+
+  if(study)await phase('prepare_selected_coastal_study',async()=>{
+   const inputFile=cp.selected.study.mappingFile,document=readJSON(inputFile.path);
+   await navigate('mappings');
+   const mapping=await action('study-mapping-file-save','mapping.save',async()=>{
+    await page.locator('[data-cmd="new-mapping"]').click();await page.locator('[data-cmd="mapping-file-open"]').click();
+    await page.locator('#mapping-file').setInputFiles(inputFile.path);await page.locator('#mapping-file-target').selectOption('');
+    await page.locator('#mapping-file-note').fill('Explicit public-reference study convention. Keep all mapped source identities, string values, quality flags and native time/datum/unit basis. No private client headings are supplied.');
+    await page.locator('#mapping-file-import-form button[type="submit"]').click();await page.locator('#dialog[open] [data-cmd="mapping-file-apply"]').waitFor();
+    const j=await browserState();assert(j.mappingImport.preview.source.sha256===inputFile.sha256&&!j.mappingImport.targetId,'The study mapping intake must bind its original file and a distinct draft.');
+    await page.locator('#dialog[open] [data-cmd="mapping-file-apply"]').click();
+    await input('mapping','name','Original public study convention '+cp.id.slice(0,8));
+    await page.locator('#mapping-form button[type="submit"]').click();
+   });
+   assert(mapping.revision===1&&mapping.sourceFile.sha256===inputFile.sha256&&stable(mapping.columns)===stable(document.mapping.columns),'The native saved study mapping differs from the complete selected original.');
+   cp.ids.studyMapping=mapping.id;persist();await saveJSON('study-selected-mapping','Study_Selected_Mapping.json',mapping);
+   const editionIds=[...new Set([cp.ids.edition,...(cp.ids.historicalEditions??[]),...study.additionalEditionIds])],editions=[];
+   for(const id of editionIds)editions.push(await api('/api/edition?editionId='+encodeURIComponent(id)));
+   assert(editions.every(e=>e.workspaceId===cp.workspaceId),'Use source editions already retained by this original workspace.');
+   await navigate('studies');
+   let preview=cp.studyPreview??null;
+   const saved=await action('study-selection-save','study.save',async()=>{
+    await page.locator('[data-cmd="study-new"]').click();
+    for(const [key,value]of Object.entries({name:study.name,project:study.project,question:study.question,owner:study.owner,table:'observations',basisPolicy:study.basisPolicy,mappingId:mapping.id,note:study.note}))await input('study',key,value);
+    let members=await page.locator('select[data-study-member]').count();
+    while(members>editions.length){await page.locator('[data-cmd="study-member-remove"][data-id="'+(members-1)+'"]').click();members--;}
+    while(members<editions.length){await page.locator('[data-cmd="study-member-add"]').click();members++;}
+    for(let i=0;i<editions.length;i++){
+     const e=editions[i],control=()=>page.locator('select[data-study-member="'+i+'"][data-member-field="editionId"]');
+     while(!await control().locator('option[value="'+e.id+'"]').count()){
+      const older=page.locator('[data-cmd="older-editions"]');assert(await older.isEnabled(),'The selected original edition is not available in the retained edition picker.');
+      const previous=await control().locator('option').count();await older.click();
+      await waitUntil(async()=>await control().locator('option').count()>previous,'Loading the next original edition page');
+     }
+     await control().selectOption(e.id);
+     for(const [field,value]of [['beginDate',e.query.beginDate],['endDate',e.query.endDate],['products',e.query.products.filter(p=>p!=='predictions').join(',')]])await page.locator('input[data-study-member="'+i+'"][data-member-field="'+field+'"]').fill(value);
+    }
+    preview=await previewStudy();cp.studyPreview=clone(preview);persist();
+    await page.locator('#study-save').click();
+   });
+   assert(saved.selection.mapping.id===mapping.id&&saved.selection.mapping.revision===mapping.revision&&saved.selection.members.length===editions.length,'The study must preserve every selected source and exact mapping version.');
+   assert(saved.sha256===preview.sha256&&saved.selection.members.every((m,i)=>m.editionId===editions[i].id),'The saved study differs from the reviewed ordered selection.');
+   cp.ids.study=saved.id;cp.ids.studyRevision=saved.revision;persist();
+   await saveJSON('study-selection-preview','Study_Selection_Preview.json',preview);
+   await saveJSON('study-selected-record','Study_Selected_Record.json',saved);
+   await openStudy(saved.id);
+   const rowsPromise=page.waitForResponse(r=>r.request().method()==='GET'&&new URL(r.url()).pathname==='/api/study-rows',{timeout:operationTimeout});
+   await page.locator('[data-cmd="study-rows"][data-id="'+saved.id+'"][data-revision="'+saved.revision+'"]').click();
+   const rows=await (await rowsPromise).json();assert(rows.studyId===saved.id&&rows.revision===saved.revision&&rows.sha256===saved.sha256,'The visible row page must retain the exact study revision.');
+   await saveJSON('study-original-row-page','Study_Original_Row_Page.json',rows);await screenshot('study-selected-rows-desktop');await closeDialog();
+   await screenshot('study-selection-mobile',390,844);await page.setViewportSize({width:1365,height:1000});
+   return{study:saved,mapping,editionIds,preview,rowPage:rows};
+  });
+  if(study)await phase('independent_study_review_and_immutable_delivery',async()=>{
+   const selected=cp.phases.prepare_selected_coastal_study.result.study,sources=[];
+   for(let i=0;i<selected.selection.members.length;i++){
+    const member=selected.selection.members[i],edition=await api('/api/edition?editionId='+encodeURIComponent(member.editionId));
+    const editionFile=await saveJSON('study-member-'+i,'Study_Original_Edition_'+i+'.json',edition);
+    assert(editionFile.sha256===member.editionSha256&&edition.sourceSha256===member.sourceSha256,'The review must use the complete original source edition selected by the study.');
+    const source=await exportFile('study-review-member-'+i,edition.id,'source-package',{name:'Study_Original_Source_'+i+'.json'});
+    const verified=verifySourcePackage(source.artifact,edition);
+    sources.push({memberId:member.id,editionId:edition.id,editionSha256:editionFile.sha256,sourceSha256:edition.sourceSha256,edition:editionFile,source:source.artifact,verified});
+   }
+   const packet={schema:'stellar-forge.coops-study-review-packet.v1',operationId:cp.id,workspaceId:cp.workspaceId,study:selected,
+    originalMapping:cp.selected.study.mappingFile,sourceEvidence:sources,
+    receivingPurpose:'Review the exact selected original windows, full source receipts and bodies, requested time/datum/unit basis, product separation, quality coverage and explicit receiving headings. This source-level decision does not establish a client model, a common physical vertical datum or project-boundary suitability.'};
+   const packetFile=await saveJSON('study-review-packet','Study_Review_Packet.json',packet);
+   if(!cp.studyReview){
+    const response=await options.reviewStudy({operationId:cp.id,workspaceId:cp.workspaceId,studyId:selected.id,studyRevision:selected.revision,studySha256:selected.sha256,packet,packetPath:packetFile.path,packetSha256:packetFile.sha256,
+     files:{packet:packetFile,mapping:cp.selected.study.mappingFile,sources:clone(sources)}});
+    assert(response&&response.packetSha256===packetFile.sha256&&response.studyId===selected.id&&response.studyRevision===selected.revision&&response.studySha256===selected.sha256,'The independent study decision must bind the exact retained source packet.');
+    assert(['reviewed','follow_up'].includes(response.status)&&typeof response.reviewer==='string'&&response.reviewer.trim()&&typeof response.note==='string'&&response.note.trim()&&typeof response.performedAt==='string'&&Number.isFinite(Date.parse(response.performedAt))&&Array.isArray(response.acknowledgedWarnings),'Retain the actual independent study decision, reviewer, time and explicit warning acknowledgements.');
+    cp.studyReview=clone(response);persist();
+   }
+   const decision=cp.studyReview;assert(decision.packetSha256===packetFile.sha256,'Preserve the original accepted study-review packet.');
+   await saveJSON('study-review-response','Study_Review_Response.json',decision);
+   await openStudy(selected.id,selected.revision);
+   const review=await action('study-independent-review-save','study.review',async()=>{
+    await page.locator('[data-cmd="study-review-open"][data-id="'+selected.id+'"][data-revision="'+selected.revision+'"]').click();
+    const key='study-review:'+selected.id+':'+selected.revision;
+    await input(key,'actor',decision.reviewer);await input(key,'status',decision.status);
+    await input(key,'note',decision.note+'\nReviewed packet SHA-256: '+decision.packetSha256+'\nActual review performed: '+decision.performedAt);
+    const acknowledgements=new Set(decision.acknowledgedWarnings);assert([...acknowledgements].every(id=>selected.selection.warnings.some(w=>w.id===id)),'The study warning acknowledgements belong to another source selection.');
+    for(const warning of selected.selection.warnings)await page.locator('#study-review-form [data-study-warning="'+warning.id+'"]').setChecked(acknowledgements.has(warning.id));
+    await page.locator('#study-review-form button[type="submit"]').click();
+   });
+   cp.ids.studyReview=review.id;persist();await saveJSON('study-native-review','Study_Native_Review.json',review);
+   assert(review.status==='reviewed','The actual study review requires follow-up; its source packet and original decision remain saved for that work.');
+   await openStudy(selected.id,selected.revision);
+   const released=await action('study-complete-release','study.export',()=>page.locator('[data-cmd="study-release"][data-id="'+selected.id+'"][data-revision="'+selected.revision+'"]').click());
+   assert(released.studySha256===selected.sha256&&released.studyRevision===selected.revision&&released.review.id===review.id,'The complete release changed its reviewed study or source mapping.');
+   cp.ids.studyRelease=released.id;persist();await saveJSON('study-native-release','Study_Native_Release.json',released);
+   const files={};
+   for(const item of released.files){
+    const name=item.format==='source-archive'?'Study_Complete_Original_Sources.tar':item.format==='manifest'?'Study_Complete_Manifest.json':item.format==='report'?'Study_Reviewed_Scope.html':'Study_Model_Input.'+item.format;
+    files[item.format]=await downloaded('study-release-'+item.format,async()=>{await navigate('exports');await page.locator('[data-cmd="download-export"][data-id="'+item.id+'"]').click();},name,item);
+   }
+   const manifest=readJSON(files.manifest.path);assert(stable(manifest)===stable(released.manifest),'The original manifest download differs from the native release.');
+   const archive=await verifyStudyArchive(files['source-archive'].path,manifest);
+   await saveJSON('study-archive-verification','Study_Archive_Receiving.json',archive);
+   await openStudy(selected.id,selected.revision);await screenshot('study-reviewed-delivery-desktop');await screenshot('study-reviewed-delivery-mobile',390,844);await page.setViewportSize({width:1365,height:1000});
+   return{studyId:selected.id,studyRevision:selected.revision,review,release:released,files,archive,packet:packetFile,actualDecision:decision};
+  });
+  if(study)await phase('retain_original_study_return_and_record_receiving',async()=>{
+   const released=cp.phases.independent_study_review_and_immutable_delivery.result,original=released.files.jsonl;
+   const laterKeys=['study-original-return-comparison','study-file-receiving-decision'],laterIssued=laterKeys.some(key=>cp.issued[key]?.request);
+   let pending=(await browserState())?.pending;
+   if(laterIssued&&pending){
+    const key=laterKeys.find(key=>cp.issued[key]?.request?.operationId===pending.request.operationId&&stable(cp.issued[key].request)===stable(pending.request));
+    assert(key,'Preserve the unrelated original request or later receiving draft before resuming this completed file intake.');
+    await settleIssued(key);pending=(await browserState())?.pending;
+    assert(!pending,'The original later study action must be reconciled before continuing its phase.');
+   }
+   let upload;
+   if(laterIssued){
+    upload=cp.studyCompleteUpload;assert(upload&&upload.id===cp.ids.studyUpload,'Keep the retained complete-upload receipt behind the original comparison.');
+    const retained=(await api('/api/view')).studyUploads.find(u=>u.id===upload.id);
+    assert(retained&&retained.releaseId===released.release.id&&retained.filename===basename(original.path)&&retained.bytes===original.bytes&&retained.format==='jsonl'&&retained.receivedBytes===retained.bytes&&stable(retained.chunks)===stable(upload.chunks),'The exact retained complete file differs from its original comparison input.');
+    if(retained.finishingOperationId)assert(retained.finishingOperationId===cp.issued['study-original-return-comparison']?.request?.operationId,'A different comparison owns this original returned file.');
+   }else upload=await retainStudyReturn(released.release,original);
+   cp.ids.studyUpload=upload.id;cp.studyCompleteUpload??=clone(upload);persist();await saveJSON('study-return-upload','Study_Original_Return_Upload.json',cp.studyCompleteUpload);
+   await navigate('studies');
+   const returned=await action('study-original-return-comparison','study.return.finish',async()=>{
+    await page.locator('[data-cmd="study-return-finish"][data-id="'+upload.id+'"]').click();
+   });
+   assert(returned.releaseId===released.release.id&&returned.original.sha256===original.sha256&&returned.original.bytes===original.bytes,'The returned file changed its exact original delivery or bytes.');
+   assert(returned.summary.valid&&returned.summary.complete,'The actual returned file remains unresolved; its raw bytes and native comparison must stay available for follow-up.');
+   assert(returned.summary.counts.changed===0&&returned.summary.counts.added===0&&returned.summary.counts.missing===0,'The exact original return has a concrete native comparison difference.');
+   assert(returned.summary.expectedRows===released.release.counts.rows&&returned.summary.returnedRows===released.release.counts.rows,'The comparison must inspect every row from the complete original release.');
+   cp.ids.studyReturn=returned.id;persist();await saveJSON('study-retained-return','Study_Retained_Return.json',returned);
+   const files={};for(const item of returned.files)files[item.format]=await downloaded('study-return-'+item.format,async()=>{await navigate('exports');await page.locator('[data-cmd="download-export"][data-id="'+item.id+'"]').click();},item.format==='comparison'?'Study_Complete_Return_Comparison.jsonl':item.format==='return-summary'?'Study_Return_Summary.json':'Study_Returned_Original.jsonl',item);
+   const comparison=await verifyCompleteStudyComparison(files.comparison.path,returned.summary);
+   const accepted=returned.summary.counts.ambiguous===0,status=accepted?'accepted':'follow_up';
+   const note=accepted?
+    'Internal receiving inspected the unchanged original JSONL, its exact release/return SHA-256 and the complete comparison. Every mapped row and original source identity was retained. This accepts this internal file transfer only; it establishes no private client model calculation or project-boundary suitability.':
+    'The exact original JSONL bytes and complete comparison are retained, including duplicate source identities. Those ambiguous groups require explicit follow-up and are not assigned by occurrence or treated as accepted model rows. Original NOAA sources remain unchanged.';
+   await navigate('studies');
+   const receiving=await action('study-file-receiving-decision','study.receive',async()=>{
+    await page.locator('[data-cmd="study-return-detail"][data-id="'+returned.id+'"]').click();
+    const key='study-receive:'+returned.id;await input(key,'actor',cp.selected.operator);await input(key,'status',status);await input(key,'note',note);
+    await page.locator('#study-receiving-form button[type="submit"]').click();
+   });
+   assert(receiving.returnId===returned.id&&receiving.comparisonSha256===returned.comparisonSha256&&receiving.status===status,'The receiving decision changed its exact original comparison.');
+   cp.ids.studyReceiving=receiving.id;persist();await saveJSON('study-receiving-decision','Study_Receiving_Decision.json',receiving);
+   await page.locator('[data-cmd="study-return-detail"][data-id="'+returned.id+'"]').click();await screenshot('study-return-receiving-desktop');await screenshot('study-return-receiving-mobile',390,844);await page.setViewportSize({width:1365,height:1000});await closeDialog();
+   return{upload:cp.studyCompleteUpload,returned,files,comparison,receiving,sourceEffect:'No original provider response, edition, mapping version or release was modified.'};
+  });
+  if(study)await phase('released_study_native_dataset_and_query',async()=>{
+   const release=cp.phases.independent_study_review_and_immutable_delivery.result.release,csv=release.files.find(f=>f.format==='csv'),
+    key='study-dataset:'+release.id,name=('Reviewed coastal study '+cp.id).slice(0,128);
+   const schema=await api('/api/schema');assert(release.counts.rows<=schema.studyDataset.maximumRows&&csv.bytes<=schema.studyDataset.maximumBytes,'This selected study exceeds native query capacity. Retain it and explicitly select/review a narrower complete study before native query preparation.');
+   await navigate('studies');
+   const dataset=await action('prepare-reviewed-study-native-dataset','study.dataset.prepare',async()=>{
+    await page.locator('[data-cmd="study-dataset"][data-id="'+release.id+'"]').click();
+    await input(key,'name',name);
+    await page.locator('#study-dataset-form button[type="submit"]').click();
+   },{loseResponse:true});
+   const replayed=await settleIssued('prepare-reviewed-study-native-dataset');
+   assert(stable(replayed)===stable(dataset),'Original response recovery changed the selected study dataset.');
+   const journal=await browserState();
+   assert(journal.drafts[key]?.preparedDatasetId===dataset.id&&journal.drafts[key]?.preparedName===name,'The original study preparation reply was not attached to its retained draft after replay.');
+   assert(dataset.sourceKind==='reviewed-study'&&dataset.mode==='ORIGINAL_SF30_DATASET'&&dataset.editionId===null&&dataset.profileId===null,'A multi-edition study must keep its own identity rather than claim one source edition/profile.');
+   assert(dataset.studyReleaseId===release.id&&dataset.studyId===release.studyId&&dataset.studyRevision===release.studyRevision&&dataset.studySha256===release.studySha256,'The native dataset changed its immutable selected study.');
+   assert(dataset.csvSha256===csv.sha256&&dataset.csvBytes===csv.bytes&&dataset.rows===release.counts.rows,'The native query package did not retain the exact complete released CSV.');
+   assert(dataset.review.id===release.review.id&&dataset.studyManifestSha256===release.manifestSha256,'The native dataset lost the recorded source review or original delivery manifest.');
+   const originalMapping=release.manifest.mapping;
+   assert(dataset.mapping.id===originalMapping.id&&dataset.mapping.revision===originalMapping.revision&&stable(dataset.mapping.columns)===stable(originalMapping.columns)&&dataset.mapping.sourceFileSha256===(originalMapping.sourceFile?.sha256??null),'The prepared study dataset changed its original receiving mapping.');
+   cp.ids.studyDataset=dataset.id;persist();await saveJSON('study-native-dataset-receipt','Study_Native_Dataset_Receipt.json',dataset);
+   const files={};
+   for(const file of dataset.files){
+    files[file.format]=await downloaded('study-'+file.format,async()=>{await navigate('exports');await page.locator('[data-cmd="download-export"][data-id="'+file.id+'"]').click();},
+     file.format==='dataset-source'?'Study_Native_Source_Manifest.json':'Study_Native_Dataset_Config.json',file);
+   }
+   const source=readJSON(files['dataset-source'].path),config=readJSON(files['dataset-config'].path);
+   assert(files['dataset-source'].sha256===dataset.sourceManifestSha256&&files['dataset-config'].sha256===dataset.sourceConfigSha256,'Downloaded native metadata differs from the dataset receipt.');
+   assert(source.schema==='stellar-forge.coops-study-dataset-source.v1'&&source.csv.sha256===csv.sha256&&source.csv.exportId===csv.id&&source.csv.rows===dataset.rows,'The native source manifest changed the exact released CSV.');
+   assert(source.reviewFile.sha256===dataset.review.sha256&&source.manifestFile.sha256===release.manifestSha256&&source.mappingFile.sha256===dataset.mapping.sha256,'The native package did not preserve its review, study manifest and mapping file identities.');
+   assert(stable(source.selection.members)===stable(release.manifest.selection)&&source.selection.reviewId===release.review.id&&source.selection.studyReleaseId===release.id,'The native source selection changed its original study windows.');
+   assert(stable(source.mapping)===stable(originalMapping)&&source.sourceFiles.every(f=>/^provenance\/[A-Za-z0-9_.-]+$/.test(f.path)&&Number.isSafeInteger(f.bytes)&&/^[a-f0-9]{64}$/.test(f.sha256)),'Native publisher provenance must contain flat original byte descriptors and the exact mapping.');
+   const responses=new Map(source.responseFiles.map(f=>[f.sha256,f]));
+   assert(responses.size===release.manifest.sourceResponses.length&&release.manifest.sourceResponses.every(f=>responses.get(f.sha256)?.bytes===f.bytes&&stable(responses.get(f.sha256)?.uses)===stable(f.uses)),'The native handoff omitted an original accepted/failed source response.');
+   assert(Object.keys(config.columns).join('\n')===release.manifest.columns.join('\n')&&Object.values(config.columns).every(v=>v==='string')&&config.maxRows===250000&&config.maxBytes===268435456,'The selected native query config changed its complete mapped fields or original capacity limits.');
+   await closeDialog();await navigate('studies');
+   await page.locator('[data-cmd="study-dataset"][data-id="'+release.id+'"]').click();
+   const before=(await api('/api/view')).datasets.length;
+   await page.locator('#study-dataset-form button[type="submit"]').click();
+   await waitUntil(async()=>await page.locator('#dataset-form').count()===1,'Opening the original prepared study dataset');
+   assert((await api('/api/view')).datasets.length===before,'Opening the same prepared study name issued a duplicate dataset.');
+   const first=await queryDataset('query-reviewed-study-first-page',dataset,'limit=20');
+   const originals=await firstReleasedRows(cp.phases.independent_study_review_and_immutable_delivery.result.files.jsonl.path,20);
+   assert(stable(first.rows)===stable(originals),'The original SF30 first page changed released values, headings or row order.');
+   await saveJSON('study-native-query-first','Study_Native_Query_First.json',first);
+   let next=null;
+   if(first.page.nextCursor){next=await queryDataset('query-reviewed-study-next-page',dataset,'limit=20&cursor='+encodeURIComponent(first.page.nextCursor));await saveJSON('study-native-query-next','Study_Native_Query_Next.json',next);}
+   await closeDialog();await navigate('datasets');await screenshot('study-native-dataset-desktop');await screenshot('study-native-dataset-mobile',390,844);await page.setViewportSize({width:1365,height:1000});
+   return{dataset,first,next,files,recordedReviewPreserved:true,completeReleasedCSVPreserved:true,originalRequestReplayed:cp.issued['prepare-reviewed-study-native-dataset'].replay?.reused===true,
+    responseLossInjected:cp.issued['prepare-reviewed-study-native-dataset'].lossInjected===true,unchangedNamedPreparationReopened:true};
+  });
+
+  if(study)await phase('later_study_preparation_preserves_prior_delivery',async()=>{
+   const original=cp.phases.prepare_selected_coastal_study.result.study,release=cp.phases.independent_study_review_and_immutable_delivery.result.release;
+   await navigate('studies');
+   const later=await action('study-next-preparation-save','study.save',async()=>{
+    await page.locator('[data-cmd="study-edit"][data-id="'+original.id+'"]').click();
+    await input('study','note',original.selection.note+'\n\nLater internal preparation: retain this selected corpus for the next source and receiving review. The earlier delivered revision and its actual review remain immutable; this new working revision has no new review or release.');
+    await previewStudy();await page.locator('#study-save').click();
+   });
+   const historical=later.history.find(s=>s.revision===original.revision),{history,...originalRecord}=original;
+   assert(later.id===original.id&&later.revision===original.revision+1&&stable(historical)===stable(originalRecord),'The later study edit changed an earlier exact selection.');
+   const view=await api('/api/view');assert(stable(view.studyReleases.find(r=>r.id===release.id))===stable(release),'A later preparation changed the original released package.');
+   assert(!view.studyReviews.some(r=>r.studyId===later.id&&r.studyRevision===later.revision),'The earlier review must not become an approval of the new working revision.');
+   const dataset=cp.phases.released_study_native_dataset_and_query.result.dataset;
+   assert(stable(view.datasets.find(d=>d.id===dataset.id))===stable(dataset),'A later study edit changed the original query dataset receipt.');
+   const query=await queryDataset('query-study-after-later-preparation',dataset,'limit=20');
+   assert(stable(query)===stable(cp.phases.released_study_native_dataset_and_query.result.first),'A later study revision changed the released native query.');
+   await saveJSON('study-query-after-later-preparation','Study_Query_After_Later_Preparation.json',query);
+   cp.ids.studyRevision=later.revision;persist();await saveJSON('study-later-preparation','Study_Later_Preparation.json',later);await openStudy(later.id);
+   return{currentStudy:later,originalStudyRevision:original.revision,releaseId:release.id,oldReleaseUnchanged:true,oldNativeStudyDatasetUnchanged:true,newRevisionUnreviewed:true};
+  });
+
   await phase('same_origin_reopen_and_saved_receiving',async()=>{
    const before=await api('/api/view'),pins={workspaceId:before.workspaceId,stationId:cp.ids.station,editionId:cp.ids.edition,receivedEditionId:cp.ids.importedEdition,mapping:before.mappings.find(m=>m.id===cp.ids.mapping),annotation:before.annotations.find(a=>a.id===cp.ids.annotation),dataset:before.datasets.find(d=>d.id===cp.ids.dataset),exports:before.exports.filter(e=>[...Object.values(cp.phases.complete_reviewed_model_input_handoff.result.files),cp.phases.returned_mapping_file_and_versioned_handoff.result.current].some(f=>f.item.id===e.id)),historicalEditionIds:cp.ids.historicalEditions??[]};
+   if(study)pins.study={current:before.studies.find(s=>s.id===cp.ids.study),review:before.studyReviews.find(r=>r.id===cp.ids.studyReview),release:before.studyReleases.find(r=>r.id===cp.ids.studyRelease),returned:before.studyReturns.find(r=>r.id===cp.ids.studyReturn),receiving:before.studyReceivings.find(r=>r.id===cp.ids.studyReceiving),dataset:before.datasets.find(d=>d.id===cp.ids.studyDataset)};
    await saveJSON('before-reopen-source-pins','before-reopen-source-pins.json',pins);
    await restart('after-complete-source-and-query-handoff');
    const after=await api('/api/view');assert(after.workspaceId===pins.workspaceId,'Reopen changed the original workspace UUID.');
@@ -588,6 +976,16 @@ export async function runCoopsOperatorJourney(initialPage,options={}){
    assert(stable(after.datasets.find(d=>d.id===cp.ids.dataset))===stable(pins.dataset),'Reopen changed the native dataset receipt.');
    for(const item of pins.exports)assert(stable(after.exports.find(e=>e.id===item.id))===stable(item),'Reopen changed an earlier immutable source export.');
    for(const id of [pins.editionId,pins.receivedEditionId,...pins.historicalEditionIds])assert((await api('/api/edition?editionId='+id)).id===id,'Reopen lost a retained source edition.');
+   if(study){
+    const retained={current:after.studies.find(s=>s.id===cp.ids.study),review:after.studyReviews.find(r=>r.id===cp.ids.studyReview),release:after.studyReleases.find(r=>r.id===cp.ids.studyRelease),returned:after.studyReturns.find(r=>r.id===cp.ids.studyReturn),receiving:after.studyReceivings.find(r=>r.id===cp.ids.studyReceiving),dataset:after.datasets.find(d=>d.id===cp.ids.studyDataset)};
+    assert(stable(retained)===stable(pins.study),'Reopen changed a pinned study, original delivery, returned file or receiving decision.');
+    const rows=await api('/api/study-rows?'+new URLSearchParams({studyId:cp.ids.study,revision:String(pins.study.release.studyRevision),offset:'0',limit:'100'}));
+    assert(stable(rows)===stable(cp.phases.prepare_selected_coastal_study.result.rowPage),'The earlier released row selection changed after a later preparation and native reopen.');
+    const query=await queryDataset('query-study-after-reopen',retained.dataset,'limit=20');
+    assert(stable(query)===stable(cp.phases.released_study_native_dataset_and_query.result.first),'Native reopen changed the original reviewed study query.');
+    await saveJSON('study-query-after-reopen','Study_Query_After_Reopen.json',query);
+    await saveJSON('study-after-reopen','Study_After_Reopen.json',{...retained,rowPage:rows,query});
+   }
    const journal=await browserState();assert(journal?.drafts.station.note===cp.stationLaterNote&&journal.drafts.station.profileId===cp.ids.station,'The original later station draft was lost across the complete workflow.');
    const query=await queryDataset('query-original-sf30-after-reopen',pins.dataset,'limit=20&sort=timestampUtc');
    assert(stable(query)===stable(cp.phases.prepare_and_query_original_sf30_dataset.result.first),'The saved native dataset query changed after same-origin reopen.');
@@ -596,7 +994,7 @@ export async function runCoopsOperatorJourney(initialPage,options={}){
    return{workspaceId:after.workspaceId,revision:after.revision,originalSourceAndReviewPreserved:true,mappingAndNativeDatasetPreserved:true,earlierExportsPreserved:true,laterUnsavedDraftPreserved:true};
   });
   const finalView=await api('/api/view'),result={schema:'stellar-forge.coops-operator-result.v1',status:'PASS',operationId:cp.id,workspaceId:cp.workspaceId,completedAt:new Date().toISOString(),resultPath,checkpointPath,
-   scope:'Actual original NOAA capture, independent source review, explicit mapping-file intake/versioned complete model-input handoff, retained-package receiving/comparison, mapped native SF30 cursor/query preserved across a later mapping revision, declared serial historical capture and same-origin saved-workspace reopen.',
+   scope:'Actual original NOAA capture, independent source review, explicit mapping-file intake/versioned complete model-input handoff, retained-package receiving/comparison, mapped native SF30 cursor/query preserved across a later mapping revision, declared serial historical capture and same-origin saved-workspace reopen.'+(study?' The same original flow also completes exact study selection, independent review, complete release, native returned-file comparison and receiving, and its exact CSV in the original SF30 query with a complete SF82 source handoff, while preserving a later working revision.':''),
    sourceModule:moduleIdentity,selected:cp.selected,ids:cp.ids,reviewStatus:cp.review.status,sourceCoverage:cp.phases.capture_original_reference.result.actualCoverage,finalRevision:finalView.revision,
    checks:Object.fromEntries(Object.entries(cp.phases).map(([key,value])=>[key,value.result])),artifacts:cp.artifacts,
    nativeOperations:Object.fromEntries(Object.entries(cp.issued).map(([key,value])=>[key,{action:value.action,operationId:value.request?.operationId,state:value.state,native:value.native??null,replayed:value.replay?.reused===true}])),
