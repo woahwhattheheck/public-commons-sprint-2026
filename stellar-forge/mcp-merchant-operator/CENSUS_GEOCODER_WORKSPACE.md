@@ -308,6 +308,8 @@ The native parser reports address exceptions. No invalid or duplicated row is au
 
 After the original completed capture and match review, pass mappingId to merchant_census_geocoder_edition with the original reviewId and optional public merchant profile. The mapping must already be bound to that review's exact batch. The edition contains all original customer rows, exact mapping/binding files, and joined CSV/JSON results. EXCLUDED input rows retain null provider results, and the original match-review selection is a separate flag. The public native dataset and its payment terms still use the original reviewed geocoder columns.
 
+The full edition is a private operator or customer handover: it includes every original customer column, the original input, row corrections and joined results. Give it only to the intended recipient through the existing authenticated/private receiving workflow. Keep the operator MCP token with the operator; a public query buyer uses the merchant offer and original SF88 buyer session instead. Published dataset routes and SF88 query-page exports contain the reviewed geocoder columns, while the complete private edition receiver retains the raw customer members.
+
 Receive the complete joined edition through the already maintained receiver:
 
 ~~~sh

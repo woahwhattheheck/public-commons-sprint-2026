@@ -140,7 +140,7 @@ export function createCustomerIntake({ api, perform, download, options, node, no
     const saved = JSON.parse(await file.blob.text());
     if (revision !== observed || value('customer-mapping') !== id || value('customer-source') !== selectedSource) return;
     if (saved.id !== id || saved.sourceId !== selectedSource) throw new Error('The selected mapping belongs to a different original file.');
-    applyPlan(saved); savedId = id; offset = 0;
+    applyPlan(saved.plan); savedId = id; offset = 0;
     const result = await perform('customer.inspect', { mappingId: id, offset: 0, limit: 20, filter: value('customer-filter') });
     if (revision !== observed || value('customer-source') !== selectedSource) return;
     preview = result; previewRevision = observed; $('customer-plan-note').textContent = 'Reopened exact saved mapping ' + id; renderPreview();
