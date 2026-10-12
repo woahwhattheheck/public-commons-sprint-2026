@@ -81,7 +81,7 @@ async function work(action, message) {
 }
 function buttons() {
   healthPanel.update(inventory, !dirty && !routeDirty && !planDirty);
-  operationsPanel.update(inventory);
+  operationsPanel.update(inventory, inventory.stateDirectory);
   $('save').disabled = !protoSource || planDirty || routeDirty;
   $('checkout').disabled = !adopted || adopted.id === inventory?.currentRevision || dirty || routeDirty || planDirty;
   for (const name of ['review', 'prepare']) $(name).disabled = !adopted || dirty || routeDirty || planDirty ||

@@ -17,9 +17,10 @@ export function mountGrpcOperations({root,json,api,work,notice,storageKey='grpc-
   function button(parent,key,label,fn){const b=el(key,'button',parent,label);b.type='button';b.onclick=()=>perform(fn,label);return b;}
   function section(parent,title){const value=node('section',undefined,'ops-panel');value.append(node('h3',title));parent.append(value);return value;}
   function actions(parent){const value=node('div',undefined,'ops-actions');parent.append(value);return value;}
-  function storage(name,value){try{if(value===undefined)return JSON.parse(sessionStorage.getItem(storageKey+':operations:'+String(own.binding??'native')+':'+name));sessionStorage.setItem(storageKey+':operations:'+name,JSON.stringify(value));}
+  const storageName=name=>storageKey+':operations:'+String(own.binding??'native')+':'+name;
+  function storage(name,value){try{if(value===undefined)return JSON.parse(sessionStorage.getItem(storageName(name)));sessionStorage.setItem(storageName(name),JSON.stringify(value));}
     catch(error){if(value!==undefined)throw new Error('Keep this tab’s private session storage available before saving an operation. '+error.message);return null;}}
-  function removeStorage(name){try{sessionStorage.removeItem(storageKey+':operations:'+name);}catch{}}
+  function removeStorage(name){try{sessionStorage.removeItem(storageName(name));}catch{}}
   function current(epoch){if(epoch!==own.epoch)throw new Error('The selected workspace or operations case changed. Reopen the saved original operation.');}
   async function perform(fn,label){
     return work(async()=>{if(own.pending)return;own.pending=true;root.inert=true;
@@ -42,6 +43,7 @@ export function mountGrpcOperations({root,json,api,work,notice,storageKey='grpc-
   el('captureId','p',capturePanel).className='ops-identity';
   const library=section(top,'Saved captures and incidents');
   const libraryActions=actions(library);button(libraryActions,'refresh','Refresh saved work',()=>refresh());
+  el('pendingOperations','div',library).className='ops-list';
   const lists=el('lists','div',library);lists.className='ops-columns';
   const captures=section(lists,'Captures'),cases=section(lists,'Incidents');
   el('captures','div',captures).className='ops-list';const cp=actions(captures);
@@ -226,12 +228,43 @@ export function mountGrpcOperations({root,json,api,work,notice,storageKey='grpc-
       const text=await file.text();try{input={bundle:JSON.parse(text)};}catch{throw new Error('The selected file is not complete JSON.');}
       signature=input.bundle.exportSha256;if(!/^[a-f0-9]{64}$/.test(signature??''))throw new Error('Choose a complete original operations export.');
     }else{const value=ui.receiveValue.value.trim();if(!value)throw new Error('Select the original export ID or declared operations file.');input={[ui.receiveKind.value]:value};signature=JSON.stringify(input);}
-    let intent=storage('receive');if(!intent||intent.signature!==signature)intent={signature,operationId:crypto.randomUUID()};
+    let intent=storage('receive');if(!intent||intent.signature!==signature)intent={signature,operationId:crypto.randomUUID(),
+      ...(receiveMode==='file'?{}:{input})};
     storage('receive',intent);const body={operationId:intent.operationId,...input},epoch=own.epoch,result=onReceive?await onReceive(body):await json('operations-receive',body);current(epoch);
     removeStorage('receive');ui.receiveInfo.textContent='Received original incident '+result.caseId+' through v'+result.receivedVersion+' · capture '+result.captureId;
     await refresh();if(discard()){own.dirty=false;await openCase(result.caseId);}notice('Complete incident history received into this original workspace.');
   }
+  function pendingOperations(){
+    ui.pendingOperations.replaceChildren();if(own.binding===false)return;
+    for(const kind of ['capture','save','receive']){
+      const intent=storage(kind);if(!intent)continue;
+      const id=kind==='capture'?intent.id:kind==='save'?intent.body?.operationId:intent.operationId;
+      const row=node('div',undefined,'ops-linked');row.append(node('span','Saved '+kind+' operation '+String(id),'ops-identity'));
+      if(kind==='receive'&&receiveMode==='file')row.append(node('p','Choose the same original JSON file below to continue this receiving operation.','ops-hint'));
+      else{const b=node('button','Continue saved '+(kind==='save'?'incident save':kind));b.type='button';
+        b.disabled=own.pending;b.onclick=()=>perform(()=>resumePending(kind),'Continue original saved operation');row.append(b);}
+      ui.pendingOperations.append(row);
+    }
+  }
+  async function resumePending(kind){
+    if(!discard())return;
+    const intent=storage(kind);if(!intent)throw new Error('This original saved operation is already complete.');
+    const epoch=own.epoch;let result;
+    if(kind==='capture'){
+      result=await json('operations-capture',{id:intent.id,selection:intent.selection});current(epoch);removeStorage(kind);
+      own.dirty=false;await selectCapture(result.id,true);await captureList();
+    }else if(kind==='save'){
+      result=await json('operations-save',intent.body);current(epoch);removeStorage(kind);
+      own.dirty=false;await openCase(result.case.id,result.revision.version);await caseList();
+    }else{
+      if(!intent.input)throw new Error('Choose the same original JSON file below to continue receiving.');
+      const body={operationId:intent.operationId,...intent.input};result=onReceive?await onReceive(body):await json('operations-receive',body);
+      current(epoch);removeStorage(kind);own.dirty=false;await refresh();await openCase(result.caseId);
+    }
+    notice('Continued the original saved '+kind+' operation and opened its retained result.');return result;
+  }
   function sync(){
+    pendingOperations();
     ui.capture.disabled=own.pending||own.binding===false;ui.capture.setAttribute('aria-disabled',String(ui.capture.disabled));
     ui.capturesPrevious.disabled=!own.capturePage?.offset;ui.capturesNext.disabled=own.capturePage?.nextOffset===null||!own.capturePage;
     ui.casesPrevious.disabled=!own.casesPage?.offset;ui.casesNext.disabled=own.casesPage?.nextOffset===null||!own.casesPage;
