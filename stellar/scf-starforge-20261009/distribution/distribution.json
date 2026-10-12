@@ -211,6 +211,7 @@
     "chainstack-buyer": "stellar/scf-starforge-20261009/partners/chainstack-stellar/installed-buyer.mjs",
     "operations": "stellar/scf-starforge-20261009/sf30-seller-sdk/operations/launch.mjs",
     "jobs": "stellar/scf-starforge-20261009/sf30-seller-sdk/jobs/cli.mjs",
+    "n8n-merchant": "stellar/scf-starforge-20261009/sf30-seller-sdk/n8n/cli.mjs",
     "jobs-buyer": "stellar/scf-starforge-20261009/sf30-seller-sdk/jobs/buyer.mjs",
     "job-workspace": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/job-workspace/cli.mjs",
     "dataset": "stellar/scf-starforge-20261009/sf30-seller-sdk/dataset-cli.mjs",
@@ -464,6 +465,14 @@
     "./seller/http": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/resource-server.mjs",
     "./seller/streaming": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/stream-response.mjs",
     "./seller/native": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/native-factory.mjs",
+    "./merchant/n8n": {
+      "types": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/n8n/index.d.ts",
+      "import": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/n8n/index.mjs"
+    },
+    "./merchant/n8n/config": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/n8n/config.mjs",
+    "./merchant/n8n/prepare": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/n8n/prepare.mjs",
+    "./merchant/n8n/runtime": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/n8n/runtime.mjs",
+    "./merchant/n8n/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/n8n/workspace/server.mjs",
     "./seller/jobs": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/jobs/model.mjs",
     "./seller/jobs/merchant": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/jobs/merchant.mjs",
     "./seller/jobs/customer": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/jobs/customer.mjs",

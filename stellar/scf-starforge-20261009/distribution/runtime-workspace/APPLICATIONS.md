@@ -7,10 +7,12 @@ Applications opens the original merchant and buyer tools from a selected READY r
 | Application | Maintained command | Original workflow |
 | --- | --- | --- |
 | Catalog Atlas | atlas | Retained catalog intake, offer comparison, exact native buyer preparation and complete workspace receiving |
+| Stellar agent application | stellar-application serve | Selected HTTP and remote MCP requests, current application authorization, native approval, aggregate spending and complete retained results |
 | API merchant authoring | openapi-workspace | Source intake, paid routes, saved packages, seller preview and operations |
 | Redis and Valkey merchant authoring | redis workspace open | Saved products, source profiles, live previews, customer packages and managed release controls |
 | Dataset preview | dataset-workspace | A dataset configuration file or retained dataset state, native query and preview |
 | Dataset buyer | buyer-dataset-workspace | Original acquisitions, received rows and files, private customer history and Python analysis |
+| Request collections | buyer-collections-workspace | Grouped request review, original approvals and runs, retained outcomes and verified customer file downloads |
 | PostgreSQL publisher | postgres-publisher serve | Plans, extraction, candidate review, publication, schedules and buyer handoff |
 | Google Sheets publisher | sheets-publisher serve | Original authorization/source, range plans, extraction, review and recurring publication |
 | PostgreSQL authoring | postgres-workspace | Original database inspection, query contracts, merchant package and release |
@@ -49,6 +51,18 @@ The runtime console and original application have separate capability URLs. The 
 
 The complete [managed Atlas workflow](../../sf61-bazaar-explorer/APPLICATIONS.md) covers new and retained directories, reviewed installed source, original private launch, stop/reopen, native buyer continuation and whole-workspace receiving.
 
+## Stellar agent application
+
+Use the [installed application guide](../../partners/cheesecake-stellar-agent/INSTALLED.md) to initialize the original private application configuration from its original merchant handoff. Its selected runtime must contain `stellar-application`, the native operator dependencies and the original MCP feature when selected remote tools are configured.
+
+Choose **Stellar agent application**, select that `application.json`, and provide the original private environment JSON containing `STELLAR_APP_ACCESS_TOKEN`. The token is passed to the original process; enter it in that application's existing browser connection field. The optional terminal Python path supports the original payment approval prompt.
+
+**Review application** inspects the selected original configuration, handoff, private state, authorization and remote-tool source references without opening the signer or provider. The saved application's exclusive resource is its original private state directory. Two configuration filenames referring to the same state therefore share the same running-operation check. If the configuration is moved to another state directory, review and save that application before starting it.
+
+**Save application**, **Review start** and **Start reviewed application** use the existing managed release and worker. The installed command receives the exact reviewed configuration hash and selected original source. It checks all nine executed application files against the adopted release copy and announces the actual original source, launched source, native runtime, process and private server after the application opens. **Open application** uses that original startup record.
+
+The original browser provides selected HTTP and remote MCP requests, review, live authorization, native terminal approval, aggregate spending, cancellation, original payment reconciliation and complete retained result downloads. Closing and restarting through Applications keeps the same private application state, request identities, results and configured operator ledger. **Stop application** closes the original server and its owned operator instance; a later reviewed start opens that same configuration and retained work.
+
 ## Publisher initialization and reopening
 
 For a new PostgreSQL or Sheets publisher, select **Initialize a new publisher** and provide a new publisher directory, the original source configuration and target dataset state. The first launch passes --create to the original publisher.
@@ -56,6 +70,21 @@ For a new PostgreSQL or Sheets publisher, select **Initialize a new publisher** 
 Once its workspace.json exists with the reviewed source and target, a later launch reopens without --create. The original database, plans, candidates, review/publication history and schedules remain in that workspace. An incomplete or different directory is retained and reports the original error; Applications does not recreate or erase it.
 
 Source configurations can retain their existing environment references and renewable credential files. Applications does not add provider credentials to source packages or replace the original OAuth/database connection manager.
+
+## Request collections
+
+Choose **Applications → New application → Request collections**. Select the
+private collection store and its existing initialized SF88 inbox. A new store
+requires that inbox; an existing store remembers the same original binding.
+Review, save and start through the existing managed lifecycle, then open its
+announced private URL.
+
+The current source runs selected original requests through its native browser
+approval, retains the owned run across lost responses, supports Pause and original
+recovery, and downloads saved customer responses alongside complete collection
+exports. Older selected collection runtimes retain their original terminal
+command. Follow [Request collections in Applications](COLLECTIONS_APPLICATIONS.md)
+for the complete source selection, setup, operating and reopening workflow.
 
 ## Object buyer receiving and reopening
 
