@@ -86,7 +86,7 @@ function configuration(value) {
   const required = ['schema', 'operationId', 'sourceRoot', 'repository', 'sourceCommit',
     'directory', 'outputDirectory', 'publisher', 'publisherNotice', 'actor',
     'pythonExecutable', 'npmExecutable', 'chromiumExecutable', 'playwrightModule'];
-  const allowed = new Set([...required, 'sourceOffline', 'dependencyOffline', 'sourceReceiving']);
+  const allowed = new Set([...required, 'sourceOffline', 'dependencyOffline', 'sourceReceiving', 'publisherFiles']);
   need(required.every(key => Object.hasOwn(value, key)) && Object.keys(value).every(key => allowed.has(key)),
     'IATI_COMPLETE_CONFIGURATION_FIELDS');
   need(typeof value.operationId === 'string' && /^[A-Za-z0-9][A-Za-z0-9._-]{0,100}$/.test(value.operationId) &&
@@ -104,6 +104,22 @@ function configuration(value) {
     typeof value.publisher.fetchedAt === 'string' && /(?:Z|[+-]\d\d:\d\d)$/.test(value.publisher.fetchedAt) &&
     Number.isFinite(Date.parse(value.publisher.fetchedAt)), 'IATI_COMPLETE_ORIGINAL_PUBLISHER_REQUIRED');
   absolute(value.publisher.path, 'publisher.path');
+  if (value.publisherFiles !== undefined) {
+    need(Array.isArray(value.publisherFiles) && value.publisherFiles.length <= 32,
+      'IATI_COMPLETE_PUBLISHER_FILES_INVALID');
+    const names = new Set(), paths = new Set([value.publisher.path]);
+    for (const file of value.publisherFiles) {
+      need(plain(file) && same(Object.keys(file).sort(), ['bytes', 'name', 'path', 'sha256']) &&
+        typeof file.name === 'string' && /^[A-Za-z0-9][A-Za-z0-9._-]{0,119}\.(?:json|md|txt)$/.test(file.name) &&
+        SHA.test(file.sha256 ?? '') && Number.isSafeInteger(file.bytes) && file.bytes >= 0 &&
+        file.bytes <= 64 * 1024 * 1024, 'IATI_COMPLETE_PUBLISHER_FILE_IDENTITY_REQUIRED');
+      absolute(file.path, 'publisherFiles.path');
+      need(!names.has(file.name.toLowerCase()) && !paths.has(file.path) &&
+        !inside(file.path, value.directory) && !inside(file.path, value.outputDirectory),
+      'IATI_COMPLETE_PUBLISHER_FILES_DISTINCT_SOURCE_REQUIRED');
+      names.add(file.name.toLowerCase()); paths.add(file.path);
+    }
+  }
   need(typeof value.publisherNotice === 'string' && value.publisherNotice.trim() && value.publisherNotice.length <= 32000,
     'IATI_COMPLETE_PUBLISHER_ATTRIBUTION_REQUIRED');
   for (const key of ['sourceOffline', 'dependencyOffline'])
@@ -175,6 +191,7 @@ export async function runCompleteIatiReceiving(input, { onProgress = () => {} } 
   try {
     await immutable(join(output, 'input.json'), selected);
     await verifyFile(selected.publisher);
+    for (const file of selected.publisherFiles ?? []) await verifyFile(file);
     progress = await record(progressPath, true) ?? { schema: SCHEMA, operationId: selected.operationId,
       createdAt: new Date().toISOString(), stages: {} };
     need(progress.schema === SCHEMA && progress.operationId === selected.operationId && plain(progress.stages),
@@ -262,6 +279,8 @@ export async function runCompleteIatiReceiving(input, { onProgress = () => {} } 
       { ...await verifyFile(packet), name: 'portfolio/iati-portfolio.zip' },
       { ...await verifyFile(report), name: 'reports/iati-report.zip' },
     ];
+    for (const file of selected.publisherFiles ?? [])
+      customerFiles.push({ ...await verifyFile(file), name: 'publisher/metadata/' + file.name });
     for (const dataset of core.datasets)
       for (const [name, file] of Object.entries(dataset.files))
         customerFiles.push({ ...await verifyFile(file), name: 'merchant-datasets/' + dataset.collection + '/' + name });
@@ -297,10 +316,12 @@ export async function runCompleteIatiReceiving(input, { onProgress = () => {} } 
     stage = 'COMPLETE';
     const files = [...new Map([customerArchive, prepared.archive, core.report, core.packet,
       ...operated.files, ...core.datasets.flatMap(dataset => Object.values(dataset.files))]
+      .concat(selected.publisherFiles ?? [])
       .map(file => [file.path, { path: file.path, bytes: file.bytes, sha256: file.sha256 }])).values()];
     const result = { schema: SCHEMA, state: 'COMPLETE', operationId: selected.operationId,
       sourceCommit: selected.sourceCommit, completedAt: new Date().toISOString(), actor: selected.actor,
       publisher: selected.publisher, publisherNotice: selected.publisherNotice,
+      ...(selected.publisherFiles === undefined ? {} : { publisherFiles: selected.publisherFiles }),
       runtime: prepared, core, operator: operated, handover, customerArchive, files };
     await immutable(join(output, 'result.json'), result);
     await checkpoint({ state: 'COMPLETE', customerArchive, portfolio: customerInput.portfolio });
