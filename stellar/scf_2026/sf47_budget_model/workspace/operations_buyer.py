@@ -262,28 +262,37 @@ def receive(operations, context, data, actor, version):
                                                  previous_deployment, actor, version)
     changes, links = [], []
     for row, previous in staged:
-        candidate = {**deepcopy(previous or {}), **row["purchase"], "deploymentId": saved_deployment["id"]}
-        # A later retained source may omit earlier known facts. It does not erase them.
-        if previous:
-            for key in OPTIONAL_FACTS:
-                if candidate.get(key) in (None, "") and previous.get(key) not in (None, ""):
-                    candidate[key] = previous[key]
-            if candidate["amountStroops"] == "0" and int(previous["amountStroops"]) > 0:
-                candidate["amountStroops"] = previous["amountStroops"]
-            # Viewing the same received source never manufactures a later observation.
-            association = original.get("buyerHandoff", {})
-            old_link = next((value for value in association.get("rows", [])
-                             if value.get("jobId") == row["jobId"] and value.get("purchaseId") == previous["id"]
-                             and value.get("sourceRecordSha256") == row["sourceRecordSha256"]), None)
-            if old_link:
-                candidate["observedAt"] = previous["observedAt"]
-        candidate["sourceIds"] = list(dict.fromkeys([*(previous or {}).get("sourceIds", []), *source_ids]))
-        note = "Original SF88 intent " + row["intentId"] + "; retained source " + reviewed["source"]["sha256"] + "."
-        if row["issues"]:
-            note += " Review items: " + "; ".join(row["issues"]) + "."
-        old_note = (previous or {}).get("sourceNote", "")
-        candidate["sourceNote"] = old_note if note in old_note else (old_note + "\n" + note).strip()
-        saved, changed = _saved(operations, context, "purchases", candidate, previous, actor, version)
+        association = original.get("buyerHandoff", {})
+        old_link = next((value for value in association.get("rows", [])
+                         if previous and value.get("jobId") == row["jobId"]
+                         and value.get("purchaseId") == previous["id"]
+                         and value.get("deploymentId") == previous["deploymentId"]
+                         and value.get("intentId") == row["intentId"]
+                         and value.get("configSha256") == row["configSha256"]
+                         and value.get("sourceRecordSha256") == row["sourceRecordSha256"]), None)
+        if old_link:
+            # This exact received association is historical evidence. A later
+            # source may already have changed the current purchase observation.
+            # Reopening it must preserve that current record, including its clock.
+            saved, changed = deepcopy(previous), False
+        else:
+            candidate = {**deepcopy(previous or {}), **row["purchase"], "deploymentId": saved_deployment["id"]}
+            # A later retained source may omit earlier known facts. It does not erase them.
+            if previous:
+                # The Inbox observes payment/output, not the merchant order lifecycle.
+                candidate["orderStatus"] = previous["orderStatus"]
+                for key in OPTIONAL_FACTS:
+                    if candidate.get(key) in (None, "") and previous.get(key) not in (None, ""):
+                        candidate[key] = previous[key]
+                if candidate["amountStroops"] == "0" and int(previous["amountStroops"]) > 0:
+                    candidate["amountStroops"] = previous["amountStroops"]
+            candidate["sourceIds"] = list(dict.fromkeys([*(previous or {}).get("sourceIds", []), *source_ids]))
+            note = "Original SF88 intent " + row["intentId"] + "; retained source " + reviewed["source"]["sha256"] + "."
+            if row["issues"]:
+                note += " Review items: " + "; ".join(row["issues"]) + "."
+            old_note = (previous or {}).get("sourceNote", "")
+            candidate["sourceNote"] = old_note if note in old_note else (old_note + "\n" + note).strip()
+            saved, changed = _saved(operations, context, "purchases", candidate, previous, actor, version)
         changes.append({"jobId": row["jobId"], "before": previous, "after": saved, "changed": changed})
         links.append({"jobId": row["jobId"], "intentId": row["intentId"], "configSha256": row["configSha256"],
             "sourceRecordSha256": row["sourceRecordSha256"], "purchaseId": saved["id"], "deploymentId": saved_deployment["id"]})

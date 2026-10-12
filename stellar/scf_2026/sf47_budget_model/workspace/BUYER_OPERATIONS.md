@@ -53,11 +53,12 @@ A definite case-version conflict preserves the source and draft for a fresh revi
 | Attempt | Signed evidence, the original payment-sent result, or finality establishes an attempted payment. Unknown signing state remains explicitly unresolved. A started local command alone is not counted as a known signed intent. |
 | Settlement | Original SF52 chain evidence or the saved SF36 finalization view; the receiver makes no fresh RPC or ledger request. Seller-reported settlement remains pending without that evidence. |
 | Output | `COMPLETE` requires the exporter to verify the exact saved response bytes and hash through the original native response reader. This is verification at capture time. The receiving machine need not have the private response path. |
+| Merchant order | The Inbox reader does not observe the merchant order lifecycle. A new purchase starts with `NOT_APPLICABLE`; later captures preserve any order status independently recorded on that purchase. |
 | Observation time | The actual capture timestamp. The original attempt start remains separate. Terminal, recovery or accounting timestamps are not substituted for chain settlement or response-completion times. |
 | Operator / participant class | Explicit reviewed deployment attribution. Later observations retain the class originally recorded for the purchase. |
 | Grant or commercial state | Buyer receiving does not record an award, grant payment, cash receipt, customer agreement or issuer acceptance. Those remain their original sourced Operations actions. |
 
-The existing report computes counts and denominators from its original purchase records. Selected observations do not turn unselected jobs into completed purchases. An exact repeated source/association reopens without advancing the case version. An original atomic amount outside the existing Operations field bound is reported for review and is never rounded or truncated.
+The existing report computes counts and denominators from its original purchase records. Selected observations do not turn unselected jobs into completed purchases. An exact repeated source/association reopens without advancing the case version and retains the current purchase unchanged. If a later capture has updated the payment or output observation, reopening an older received source preserves that later state and its observation time. A new capture can record a fresh output verification while keeping the original purchase identity and independently recorded merchant order status. An original atomic amount outside the existing Operations field bound is reported for review and is never rounded or truncated.
 
 ## CLI receiving
 
