@@ -7,6 +7,11 @@ response downloads, generated customer clients, seller configuration releases,
 database and object sources, merchant fleet operations, revenue reconciliation,
 challenge capture, and private support export.
 
+Versioned SEC Company Facts and filings are available through `starforge sec-edgar`.
+The [installed SEC EDGAR workflow](SEC_EDGAR.md) covers original JSON capture,
+source review, operator drafts, native serving, complete export and receiving,
+plus the six installed JavaScript interfaces.
+
 The package preserves the original source paths and bytes. Its command interface
 starts those modules directly. It contains no alternative payment implementation,
 install hooks, test suites or GitHub Actions configuration.
