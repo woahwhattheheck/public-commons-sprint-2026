@@ -276,6 +276,67 @@ for the complete portable document. The operator's individual source-upload
 control accepts 16 MiB; use the CLI or Node API for a larger allowed original
 response. Typed source content is not shortened by report or portable export.
 
+### Stream a complete dossier archive
+
+Choose **Export → Portable archive** to download a gzip-compressed file with
+the same complete v1 portable JSON, original source bytes and revision chain.
+**Open dossier file** accepts either that archive or an existing uncompressed
+portable JSON file. The browser uploads the selected file directly, without
+parsing and serializing another complete copy.
+
+The CLI streams both JSON and gzip exports. The output is published atomically
+as a new file after the complete stream is written and synchronized:
+
+```sh
+node stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/cli.mjs export \
+  --store /private/research-workspace --id DOSSIER_ID \
+  --format json.gz --out /private/dossier.research.json.gz
+
+node stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/cli.mjs reopen \
+  --store /private/receiving-workspace --file /private/dossier.research.json.gz \
+  --projection metadata
+```
+
+Omit the projection option for the existing complete source view. Metadata
+returns the saved questions, editions, selections, findings and revision without
+loading every rendered source. Gzip detection uses the input bytes, so renamed
+original archives remain readable.
+
+The receiver stages one original revision or source blob at a time. It validates
+the complete archive, revision chain, source hashes and references before
+extending the saved project. Repeated source editions reuse their normalized
+occurrence index during history validation. Existing matching revisions are
+preserved; a matching continuation appends through the original exclusive
+revision writer. Interrupted reading removes only its temporary staging
+directory, and the complete input can be reopened again.
+
+The original `exportDossier` and object-based `reopen` APIs remain available.
+SDK consumers can use the streaming file helpers through the same index:
+
+```js
+import {
+  openDossierStore, openPortableFile, writePortableFile,
+} from './research-dossiers/index.mjs';
+
+const original = await openDossierStore('/private/research-workspace');
+const download = await original.exportStream(existingDossierId, {compression: 'gzip'});
+const saved = await writePortableFile('/private/dossier.research.json.gz', download);
+
+const receiving = await openDossierStore('/private/receiving-workspace');
+const reopened = await receiving.reopenStream(await openPortableFile(saved.file), {
+  projection: 'metadata',
+});
+```
+
+`exportStream` also supplies an asynchronous readable body for an existing
+HTTP or object-store writer. The local operator streams JSON/gzip downloads on
+its original export route and accepts raw JSON/gzip bytes at
+`POST /api/reopen-stream`, using the same operator session. The original
+`POST /api/reopen` object envelope remains supported. The 256 MiB portable
+limit applies to the complete uncompressed document, with the existing 8 MiB
+revision and 64 MiB source limits. The archive contains every original permitted
+retained source and provider reference under the existing source terms.
+
 ## Native operation
 
 The application was operated through its real Node HTTP server on

@@ -70,6 +70,19 @@ Programmatic receiving accepts `{version: "commons.retained-public-table-set.v1"
 
 Each customer row keeps that series' own public-table retrieval date. The manifest retains each original full retrieval timestamp plus a collection window; the edition's summary date is the latest collection date. The original source JSON contains every table's text and digest. The complete project export and receiving operation carry the combined edition and its selected original captures together.
 
+
+## Run the complete native receiving operation
+
+The [executable receiver](RECEIVER.md) drives the same original source, saved review, configured native seller and Buyer, two actual cursor pages, complete source/CSV deliveries, original intent recovery, project export and received-project reopen:
+
+```sh
+starforge fred receiver --project /absolute/private/economic-project \
+  --config /absolute/private/fred-receiver.json
+```
+
+The private configuration selects the existing operator resources. The included complete UNRATE table is the default input; the macro source starter can compose all three original series. The receiver retains the original project and selected native intents at every step. After an interrupted host, repeat the same command or use `--phase browser` to finish the actual browser/download/reopen portion of a completed native operation. Browser settings can change independently of the retained payment operation.
+
+
 ## Select the source and vintage
 
 The source selection has this format:
@@ -252,3 +265,11 @@ Every project mutation supplies the revision the operator reviewed. A concurrent
 | `./seller/fred/workspace` | `startFredWorkspace` |
 
 All return values use the retained original source and application identities. `source.mjs` accepts an explicit transport for existing host integration; ordinary acquisition uses `fetch` against the fixed official FRED origin. The original source URLs are retained beside every response.
+
+## Managed Applications
+
+The existing Applications interface opens the original economic project with its configured buyer and routed merchant port. Use Review/Save/adopt/Start/Open/Stop/Reopen to continue source review, publication and the same customer requests. See [Economic data editions in Applications](../../distribution/runtime-workspace/FRED_APPLICATIONS.md) for operator selection, complete starter inputs and the native receiving continuation.
+
+## Original native host
+
+`starforge fred receiver-host --project ABS --config PRIVATE_HOST_JSON` connects the complete receiver to the existing operator, original native facilitator, HTTPS/CONNECT route and real approval terminal. It finalizes each original customer intent through SF88/SF36 and drains the shared native services before browser receiving. See [Native host receiving](NATIVE_HOST.md) for the original host selection, existing receiver adoption and same-operation continuation.

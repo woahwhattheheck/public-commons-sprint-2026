@@ -40,7 +40,9 @@ export function rebaseGrpcSchema(value, prefix) {
   if (value === null || typeof value !== 'object' || Array.isArray(value)) return structuredClone(value);
   const result = Object.create(null);
   for (const [key, child] of Object.entries(value)) {
-    if (key === '$id' || key === '$schema') continue;
+    // Keep descriptor annotations in methods.json; Bazaar receives executable assertions.
+    // contentEncoding is an annotation; the original canonical base64 pattern remains.
+    if (key === '$id' || key === '$schema' || key === 'contentEncoding' || key.startsWith('x-protobuf-')) continue;
     if (key === '$ref') {
       if (typeof child !== 'string' || child !== '#' && !child.startsWith('#/')) fail('GRPC_LOCAL_SCHEMA_REFERENCE_REQUIRED');
       result[key] = prefix + child.slice(1);

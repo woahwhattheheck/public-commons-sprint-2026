@@ -1,0 +1,147 @@
+{
+  "schema": "stellar-forge.n8n-merchant.v1",
+  "serviceName": "Invoice automation example",
+  "publicOrigin": "https://automation-merchant.example",
+  "workerCount": 2,
+  "maxPending": 128,
+  "maxJobs": 10000,
+  "memoryLimitMb": 256,
+  "n8n": {
+    "apiBaseUrl": "https://n8n.example/api/v1",
+    "apiKeyEnvironment": "SF_N8N_API_KEY",
+    "requestTimeoutMs": 30000,
+    "pollIntervalMs": 2000,
+    "maxExecutionBytes": 16777216
+  },
+  "automations": {
+    "invoiceSummary": {
+      "path": "/invoice-summary",
+      "description": "Summarize invoice lines, a fixed discount and invoice-level tax in integer minor units.",
+      "workflowId": "REPLACE_WITH_WRAPPER_WORKFLOW_ID",
+      "webhookUrl": "https://n8n.example/webhook/starforge-invoice-summary",
+      "webhookHeader": {
+        "name": "x-starforge-webhook-token",
+        "environment": "SF_N8N_WEBHOOK_TOKEN"
+      },
+      "webhookNode": "Starforge Request",
+      "resultNode": "Starforge Public Result",
+      "resultFields": [
+        "invoiceId",
+        "currency",
+        "lineCount",
+        "totalQuantity",
+        "subtotalMinor",
+        "discountMinor",
+        "taxableMinor",
+        "taxBasisPoints",
+        "taxMinor",
+        "totalMinor",
+        "rounding",
+        "lines"
+      ],
+      "resultMode": "single",
+      "maxResultItems": 1,
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "invoiceId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,99}$",
+            "description": "Your invoice reference."
+          },
+          "currency": {
+            "type": "string",
+            "pattern": "^[A-Z]{3}$",
+            "description": "Three-letter currency label; all monetary inputs use its minor unit."
+          },
+          "lines": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 200,
+            "items": {
+              "type": "object",
+              "properties": {
+                "description": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 200,
+                  "description": "Description of this invoice line."
+                },
+                "quantity": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 10000,
+                  "description": "Number of whole units."
+                },
+                "unitPriceMinor": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991,
+                  "description": "Price of one unit in integer minor units."
+                }
+              },
+              "required": [
+                "description",
+                "quantity",
+                "unitPriceMinor"
+              ],
+              "additionalProperties": false
+            },
+            "description": "From 1 to 200 invoice lines."
+          },
+          "discountMinor": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991,
+            "description": "Invoice discount in integer minor units; defaults to zero."
+          },
+          "taxBasisPoints": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10000,
+            "description": "Invoice-level tax rate in basis points; defaults to zero. 750 means 7.5 percent."
+          }
+        },
+        "required": [
+          "invoiceId",
+          "currency",
+          "lines"
+        ],
+        "additionalProperties": false
+      },
+      "example": {
+        "invoiceId": "EXAMPLE-INVOICE-001",
+        "currency": "USD",
+        "lines": [
+          {
+            "description": "Document preparation",
+            "quantity": 3,
+            "unitPriceMinor": 12500
+          },
+          {
+            "description": "Data export",
+            "quantity": 2,
+            "unitPriceMinor": 4500
+          }
+        ],
+        "discountMinor": 1500,
+        "taxBasisPoints": 750
+      },
+      "payment": {
+        "scheme": "exact",
+        "network": "stellar:testnet",
+        "asset": "CONFIGURE_STELLAR_ASSET",
+        "payTo": "CONFIGURE_STELLAR_RECIPIENT",
+        "amount": "10000",
+        "maxTimeoutSeconds": 60
+      },
+      "timeoutMs": 300000,
+      "maxInputBytes": 262144,
+      "maxOutputBytes": 1048576,
+      "filename": "invoice-summary.json"
+    }
+  }
+}
+

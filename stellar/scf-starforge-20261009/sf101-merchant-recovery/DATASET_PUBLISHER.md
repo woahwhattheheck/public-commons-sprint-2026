@@ -280,6 +280,7 @@ is no separate server or unauthenticated rebinding route.
 | `preparePublisherRecoveryPlan(input)` | Same selection plus create-only `planFile`; returns original plan, plan SHA and source summary |
 | `inspectPublisherRecoveryPlan(planFile)` | Rechecks the selected plan against the current quiesced source before existing capture |
 | `withPublisherRecoveryCapture({planFile, expectedPlanSha256}, callback)` | Holds the original dataset and publisher leases across fresh source matching, the consumer's existing capture/verification block, and a final match; returns the callback result unchanged |
+| `inspectCapturedPublisherManifest({planBytes, manifest})` | Synchronous typed comparison after original authentication; returns `DATASET_PUBLISHER_RECOVERY_CAPTURE_MATCHED`, `planSha256`, `profileSha256` and `captureId` without reading the former source |
 | `capturePublisherRecovery(input)` | `planFile`, `bundleDirectory`, `passphraseEnv`, optional `expectedPlanSha256` and `captureId`; calls original snapshot/verify while both source leases are held and returns the exact capture/manifest/plan identities |
 | `inspectRestoredPublisher(input)` | `bundleDirectory`, `restoreDirectory`, `passphraseEnv`, optional `expectedManifestSha256`; returns `reviewSha256`, `operationId`, `paths`, `summary` and retained preparation status |
 | `prepareRestoredPublisher(input)` | Same receiving selection plus `expectedReviewSha256`; returns `RESTORED_PUBLISHER_PREPARED` and the native paths/relocation receipt |
@@ -294,6 +295,19 @@ result. A bundle already completed under that operation must remain on the
 consumer's original verify/adopt path; do not require its live source to match
 again. This distinction preserves lost-response recovery after the merchant
 continues working.
+
+Before adopting an already completed typed capture, authenticate it with the
+original SF101 verifier and confirm that its manifest bytes stayed unchanged.
+Then pass the parsed authenticated manifest and the exact reviewed plan bytes
+retained in the consumer's private operation to
+`inspectCapturedPublisherManifest({planBytes, manifest})`. Require its returned
+capture ID and plan SHA to equal that original operation, and retain its profile
+SHA alongside the verified manifest SHA. The function compares the encrypted
+plan member, named roots and every captured source tree against the embedded
+profile. It does not authenticate a caller-supplied JSON object by itself.
+It needs neither the former plan path nor the live dataset or publisher.
+Do not reacquire those source writers or create another capture to adopt a
+verified completed bundle.
 
 The standalone `capture` command is create-only and uses the same original
 engine. Shared workspaces use the callback instead of adding a second capture
