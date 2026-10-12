@@ -1,0 +1,25 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "supplier-accounts",
+  "description": "Original supplier account configuration, reviewed source changes and retained operator receiving",
+  "commands": {
+    "supplier-accounts": "stellar/scf-starforge-20261009/sf30-seller-sdk/supplier-quota/workspace/cli.mjs"
+  },
+  "commandDescriptions": {
+    "supplier-accounts": "Configure shared account limits, review and recover source changes, and reopen the original private account workspace"
+  },
+  "exports": {
+    "./seller/supplier-accounts": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/supplier-quota/workspace/model.mjs",
+    "./seller/supplier-accounts/server": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/supplier-quota/workspace/server.mjs",
+    "./seller/supplier-accounts/application": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/supplier-quota/workspace/application-provider.mjs"
+  },
+  "browserAssets": [
+    {
+      "server": "stellar/scf-starforge-20261009/sf30-seller-sdk/supplier-quota/workspace/server.mjs",
+      "manifest": "stellar/scf-starforge-20261009/sf30-seller-sdk/supplier-quota/workspace/browser-assets.json"
+    }
+  ],
+  "applicationProviders": {
+    "supplier-accounts": "stellar/scf-starforge-20261009/sf30-seller-sdk/supplier-quota/workspace/application-provider.mjs"
+  }
+}
