@@ -56,6 +56,19 @@ export function publisherExportId(workspace, kind, selection) {
   check(workspace.alias, PUBLISHER_ALIAS, 'workspace alias'); check(workspace.id, PUBLISHER_UUID, 'publisher workspace UUID');
   return digest(encode({ schema: PUBLISHER_MANIFEST_SCHEMA, workspace, kind, selection: sourceSelection(kind, selection) }));
 }
+/** Preserve an existing request's exact input while matching only native optional defaults. */
+export function originalPublisherInput(original, action, input) {
+  if (!plain(original) || original.schema !== 'stellar-forge.360giving-operator.v1.request' ||
+      original.action !== action || !plain(original.input) || !plain(input)) return input;
+  const selection = value => {
+    const result = { ...value };
+    if (action === 'intake' && !Object.hasOwn(result, 'label')) result.label = result.dataset;
+    const optional = { intake: ['capture','transport'], build: ['candidate'], export: ['decision','candidate'] }[action] ?? [];
+    for (const field of optional) if (result[field] === null) delete result[field];
+    return JSON.stringify(ordered(result));
+  };
+  return selection(original.input) === selection(input) ? original.input : input;
+}
 export function publisherManifest(value) {
   exact(value, ['schema','exportId','workspace','kind','selection','original','files'],
     ['schema','exportId','workspace','kind','selection','original','files']);
@@ -73,10 +86,13 @@ export function publisherManifest(value) {
   check(file.sha256, PUBLISHER_SHA, 'complete file SHA256');
   if (handoff) {
     const original = value.original;
-    if (original.id !== selection.requestId || original.workspaceId !== value.workspace.id || original.action !== 'export' ||
+    if (original.schema !== 'stellar-forge.360giving-operator.v1.request' || original.id !== selection.requestId ||
+        original.workspaceId !== value.workspace.id || original.action !== 'export' ||
         original.status !== 'complete' || original.input?.edition !== selection.edition ||
         (original.input.decision ?? null) !== selection.decision || (original.input.candidate ?? null) !== selection.candidate ||
-        original.result?.sha256 !== file.sha256 || counter(original.result?.bytes, 'Native archive bytes', PUBLISHER_MAX_FILE) !== file.bytes ||
+        original.result?.file !== selection.requestId || original.result?.sha256 !== file.sha256 ||
+        counter(original.result?.bytes, 'Native archive bytes', PUBLISHER_MAX_FILE) !== file.bytes ||
+        original.result?.manifest?.schema !== 'stellar-forge.360giving-operator.v1.handoff' ||
         original.result?.manifest?.workspaceId !== value.workspace.id || original.result?.manifest?.request !== selection.requestId)
       throw failure('MANIFEST_CHANGED', 'The full native export request differs from its complete delivery.');
   } else if (value.original.id !== selection.comparison || value.original.changesSha256 !== file.sha256) {

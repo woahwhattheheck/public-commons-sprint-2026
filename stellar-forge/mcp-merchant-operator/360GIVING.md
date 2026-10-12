@@ -107,7 +107,10 @@ continuation enters the original queue.
 A transport failure can happen after admission. Read the original ID before
 deciding whether another submission is needed. Reusing the same ID and exact
 input reaches the original record. A changed input under that ID is an actual
-conflict reported by the publisher.
+conflict reported by the publisher. When a merchant reaches a request originally
+created by the SDK, it compares the native optional defaults, then resubmits the
+exact retained input object. Omitted optional keys therefore continue to work
+alongside CLI records that explicitly saved those keys as null.
 
 Query parameters are scalar strings. Follow every `response.body.page.nextCursor`.
 For comparisons, follow every `nextOffset` from `changes` or download the

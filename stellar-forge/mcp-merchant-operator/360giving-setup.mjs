@@ -1,5 +1,6 @@
 // MIT. Reopenable host setup for existing saved publisher consoles and complete file handles.
-import { mkdir, lstat, readdir } from 'node:fs/promises';
+import { constants } from 'node:fs';
+import { mkdir, lstat, readdir, realpath } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
 import { exact, line, privateSupportDirectory, writePrivate } from './host-files.mjs';
 import { encode, failure } from './360giving-contract.mjs';
@@ -9,12 +10,24 @@ import { open } from 'node:fs/promises';
 async function existing(path) {
   try { await lstat(path); return true; } catch (error) { if (error.code !== 'ENOENT') throw error; return false; }
 }
+const stamp = value => [value.dev,value.ino,value.size,value.mtimeNs,value.ctimeNs].map(String).join('/');
 async function privateBytes(path) {
-  const handle = await open(path, 'r');
+  const handle = await open(path, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0) | (constants.O_NONBLOCK ?? 0));
   try {
-    const stat = await handle.stat();
-    if (!stat.isFile() || stat.size > 65536 || (stat.mode & 0o077)) throw failure('CONFIGURATION', 'Retain the original private setup record.');
-    const bytes = await handle.readFile(); if (bytes.length > 65536) throw failure('CONFIGURATION', 'The original setup record grew.');
+    const before = await handle.stat({ bigint: true });
+    if (!before.isFile() || before.size > 65536n || (before.mode & 0o077n) ||
+        typeof process.getuid === 'function' && before.uid !== BigInt(process.getuid()))
+      throw failure('CONFIGURATION', 'Retain the original private setup record.');
+    const bytes = Buffer.alloc(Number(before.size)); let offset = 0;
+    while (offset < bytes.length) {
+      const result = await handle.read(bytes, offset, bytes.length - offset, offset);
+      if (!result.bytesRead) throw failure('CONFIGURATION_CHANGED', 'The original setup record ended during reading.');
+      offset += result.bytesRead;
+    }
+    const extra = await handle.read(Buffer.alloc(1), 0, 1, offset);
+    if (extra.bytesRead || stamp(await handle.stat({ bigint: true })) !== stamp(before) ||
+        stamp(await lstat(path, { bigint: true })) !== stamp(before))
+      throw failure('CONFIGURATION_CHANGED', 'The original setup record changed during reading.');
     return bytes;
   } finally { await handle.close(); }
 }
@@ -36,6 +49,9 @@ export async function initialize360GivingPublisherMerchant(options = {}) {
     releaseStore: releases, ownsReleaseStore: options.releaseStore === undefined });
   if (!await existing(root)) await mkdir(root, { mode: 0o700 });
   await privateSupportDirectory(root);
+  const rootInfo = await lstat(root);
+  if (await realpath(root) !== root || typeof process.getuid === 'function' && rootInfo.uid !== process.getuid())
+    throw failure('CONFIGURATION', 'Use this operator’s original private merchant directory.');
   if (!await existing(intentPath) && (await readdir(root)).length)
     throw failure('CONFIGURATION', 'Choose an empty directory or the original saved publisher merchant setup.');
   await retain(intentPath, intent);
