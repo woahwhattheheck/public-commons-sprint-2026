@@ -31,3 +31,11 @@ dialog.transport-desk{max-width:min(1180px,calc(100vw - 32px));width:1180px}
 #transport-prepare-document{margin-bottom:16px}
 @media(max-width:850px){.transport-filters{grid-template-columns:repeat(2,minmax(0,1fr))}.transport-channels{grid-template-columns:1fr}}
 @media(max-width:500px){dialog.transport-desk{padding:14px;max-width:calc(100vw - 16px)}.transport-filters{grid-template-columns:1fr}.transport-desk>header{align-items:start}.transport-desk>header .actions{justify-content:flex-end}.transport-desk dl.metadata{grid-template-columns:1fr;gap:3px}.transport-desk dl.metadata dd{margin-bottom:7px}}
+
+/* Complete customer interface selection and retained declaration. */
+.profile-desk{width:min(1020px,96vw)}
+.profile-desk fieldset{border:1px solid var(--line,#cbd5e1);border-radius:8px;padding:1rem;margin:1rem 0}
+.profile-desk legend{font-weight:650;padding:0 .4rem}
+.profile-desk pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:32rem;overflow:auto}
+#profile-inline{font-size:.82rem;overflow-wrap:anywhere}
+#package-inspection pre{max-height:28rem;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere}

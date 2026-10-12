@@ -44,7 +44,14 @@ def path_allowed(name):
 
 def manifest_valid(manifest):
     require(isinstance(manifest, dict) and manifest.get("schema") == SCHEMA, "Unsupported supplier-order package schema.")
-    require(manifest.get("profileId") == PROFILE, "The package uses a different original document profile.")
+    profile_id = manifest.get("profileId")
+    require(isinstance(profile_id, str) and re.fullmatch(r"[a-z0-9][a-z0-9._-]{0,95}", profile_id), "Missing retained document profile identity.")
+    if profile_id != PROFILE:
+        profile = manifest.get("profile")
+        require(isinstance(profile, dict) and profile.get("schema") == "stellar-forge.supplier-order-profile.v1" and profile.get("id") == profile_id and profile.get("format") == "openTRANS" and profile.get("version") == "1.0", "Retain the complete selected openTRANS 1.0 profile.")
+        require(isinstance(manifest.get("profileSha256"), str) and re.fullmatch(r"[a-f0-9]{64}", manifest["profileSha256"]), "Missing retained profile SHA-256.")
+        require(len(json.dumps(profile, ensure_ascii=False, separators=(",", ":")).encode("utf-8")) <= 32768, "The declared profile exceeds 32 KiB.")
+    # Native workspace receiving validates the complete declaration, SHA, selection and every source projection.
     require(isinstance(manifest.get("workspaceId"), str) and 0 < len(manifest["workspaceId"]) <= 200, "Missing original workspace identity.")
     entries = manifest.get("entries")
     require(isinstance(entries, list) and 1 <= len(entries) < MAX_ENTRIES, "Missing or excessive complete package entries.")

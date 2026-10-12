@@ -6,6 +6,8 @@ import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import { OpenTransError, projectOpenTransTree, editOpenTransTree, serializeOpenTransTree } from './opentrans-tree.mjs';
 
+import { normalizeSupplierOrderProfile, supplierOrderDocumentProfile } from './profiles.mjs';
+
 export { OpenTransError, openTransSerials, semanticXmlTree } from './opentrans-tree.mjs';
 export const OPENTRANS_PROFILE_ID='unite-opentrans-1.0';
 export const OPENTRANS_MAX_XML_BYTES=64*1024*1024;
@@ -118,16 +120,17 @@ function keepLayout(value){
     throw new OpenTransError('OPENTRANS_DTD_LAYOUT','The installed original DTD did not return its complete layout.',503);
   return layout;
 }
-export async function parseOpenTransDocument(bytes,{name,provenance=null,signal}={}){
+export async function parseOpenTransDocument(bytes,{name,provenance=null,signal,profile:profileValue}={}){
+  const profile=normalizeSupplierOrderProfile(profileValue);
   const selected=sourceBytes(bytes),selectedName=inputName(name),origin=snapshot(provenance,'Original provenance');
   const parsed=await native(selected,{signal});
   if(parsed?.source?.bytes!==selected.length||parsed?.source?.sha256!==sha(selected))
     throw new OpenTransError('OPENTRANS_INPUT_IDENTITY','The native parser result does not match the complete selected source bytes.',503);
   keepLayout(parsed);
-  return projectOpenTransTree(parsed,{name:selectedName,provenance:origin});
+  return projectOpenTransTree(parsed,{name:selectedName,provenance:origin,profile});
 }
 export async function renderOpenTransDocument(document,{name,provenance,signal}={}){
-  const selected=snapshot(document,'The complete selected document');
+  const selected=snapshot(document,'The complete selected document'),profile=supplierOrderDocumentProfile(selected);
   signal?.throwIfAborted();
   const described=await native(Buffer.alloc(0),{signal,describe:selected.kind}),layout=keepLayout(described);
   if(selected.raw&&selected.validation?.manifestSha256&&selected.validation.manifestSha256!==layout.manifestSha256)
@@ -136,8 +139,8 @@ export async function renderOpenTransDocument(document,{name,provenance,signal}=
   if(bytes.length>OPENTRANS_MAX_XML_BYTES)throw new OpenTransError('OPENTRANS_XML_BYTES','The complete prepared document exceeds 64 MiB.',413);
   const emitted=await parseOpenTransDocument(bytes,{
     name:name??selected.source?.name??selected.kind+'.xml',
-    provenance:provenance??{kind:'derived-original-document',profileId:OPENTRANS_PROFILE_ID,source:selected.source??null},
-    signal
+    provenance:provenance??{kind:'derived-original-document',profileId:profile.id,source:selected.source??null},
+    signal,profile
   });
   return{bytes,document:emitted,findings:[...edited.findings,...emitted.findings]};
 }
