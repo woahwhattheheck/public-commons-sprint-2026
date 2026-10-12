@@ -136,9 +136,10 @@ separate receiving operation.
    links and full/filtered counts remain visible. No replacement UI is generated.
 
 If neither original input exposes an interrupted prefix before finishing,
-the operation preserves both completed deliveries and records that actual
-condition. It never rewrites staged records or manufactures an interrupted
-source.
+the operation continues the completed customer delivery and records
+interrupted_prefix_observed:false in its final result. It never rewrites staged
+records or claims that an interruption occurred. A native SIGTERM retains the
+same checkpoint and closes any owned receiving child before the next continuation.
 
 ## Retained outputs
 
