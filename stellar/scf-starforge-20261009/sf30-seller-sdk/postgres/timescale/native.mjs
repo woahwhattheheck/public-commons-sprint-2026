@@ -1,7 +1,7 @@
 // MIT. Native TimescaleDB operations use the existing PostgreSQL connection resolver.
 import { readPostgresSourceFile, resolvePostgresConnection } from '../config.mjs';
 import { identity, fault, stamp } from '../publisher/files.mjs';
-import { catalog, selectedAggregate, tableRows, nativeTarget, relationName, identifier, jobDefinition, only, checkText } from './contracts.mjs';
+import { catalog, selectedAggregate, tableRows, nativeTarget, sameNativeTarget, relationName, identifier, jobDefinition, only, checkText } from './contracts.mjs';
 const TEXT_TYPES = Object.freeze({getTypeParser:()=>value=>value});
 const VIEW_ORDER = Object.freeze({
   hypertables:'hypertable_schema, hypertable_name',
@@ -81,9 +81,9 @@ async function connection(sourceFile,{environment=process.env,signal,timeoutMs=6
     return {client,close,declaration};
   }catch(issue){await close().catch(()=>{});throw nativeError(issue);}
 }
-async function captureOn(client,{id,title,note,sourceDigest,signal,onProgress}={}) {
+async function captureOn(client,{id,title,note,sourceDigest,signal,onProgress}={}, {ownsTransaction=true}={}) {
   const tables={},startedAt=stamp();
-  await client.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');
+  if(ownsTransaction)await client.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');
   try {
     tables.identity=await table(client,IDENTITY_SQL);
     const extensionSQL="SELECT e.extname,e.extversion,n.nspname AS extension_schema FROM pg_catalog.pg_extension e JOIN pg_catalog.pg_namespace n ON n.oid=e.extnamespace ORDER BY e.extname";
@@ -107,11 +107,11 @@ async function captureOn(client,{id,title,note,sourceDigest,signal,onProgress}={
     tables.job_schedules=await table(client,'SELECT id,timezone FROM _timescaledb_catalog.bgw_job ORDER BY id');
     tables.columns=await table(client,COLUMNS_SQL);
     tables.procedures=await table(client,PROCEDURES_SQL);
-    await client.query('COMMIT');
+    if(ownsTransaction)await client.query('COMMIT');
     return {schema:'stellar-forge.timescale-edition.v1',id,title,note,sourceDigest,startedAt,completedAt:stamp(),
       complete:true,transaction:{isolation:'REPEATABLE READ',readOnly:true},
       visibility:'Native metadata and job history visible to the selected database role.',tables};
-  }catch(issue){await client.query('ROLLBACK').catch(()=>{});throw nativeError(issue);}
+  }catch(issue){if(ownsTransaction)await client.query('ROLLBACK').catch(()=>{});throw nativeError(issue);}
 }
 async function captureTimescale(sourceFile,options={}) {
   const active=await connection(sourceFile,options);
@@ -131,7 +131,7 @@ function procedure(edition,name,argument=null) {
   return identifier(matches[0].schema_name)+'.'+identifier(name);
 }
 function validateOriginal(edition,plan) {
-  if(identity(nativeTarget(edition))!==identity(plan.target))throw fault('TIMESCALE_NATIVE_TARGET_CHANGED','The database no longer matches the selected source.',409);
+  if(!sameNativeTarget(nativeTarget(edition),plan.target))throw fault('TIMESCALE_NATIVE_TARGET_CHANGED','The database no longer matches the selected source.',409);
   const aggregate=selectedAggregate(edition,plan.aggregateKey);
   if(aggregate.definitionDigest!==plan.definitionDigest)throw fault('TIMESCALE_AGGREGATE_CHANGED','Capture and review the current aggregate definition.',409);
   return aggregate;
@@ -165,13 +165,21 @@ async function runNativeRefresh(sourceFile,plan,{beforeDispatch,...options}={}) 
 async function verifyAggregate(sourceFile,plan,{beforeDispatch,...options}={}) {
   const active=await connection(sourceFile,{...options,timezone:plan.window.timezone});
   try {
-    const current=await captureOn(active.client,{id:options.captureId,title:'Verification metadata',note:plan.note,sourceDigest:options.sourceDigest});
+    await active.client.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');
+    // Lock the selected view before the first snapshot read. Native ACCESS SHARE
+    // preserves its definition through metadata validation and both comparisons,
+    // while allowing ordinary writers to proceed under repeatable-read visibility.
+    await active.client.query('LOCK TABLE '+relationName(plan.relation)+' IN ACCESS SHARE MODE');
+    const current=await captureOn(active.client,{id:options.captureId,title:'Verification metadata',
+      note:plan.note,sourceDigest:options.sourceDigest,signal:options.signal},{ownsTransaction:false});
     const aggregate=validateOriginal(current,plan),window=await normalizeWindow(active.client,plan.window);
     const columns=aggregate.columns.map(column=>identifier(column.name));
-    let definition=aggregate.definition.trim().replace(/;\s*$/,'');
+    const definition=aggregate.definition.trim().replace(/;\s*$/,'');
     if(!definition)throw fault('TIMESCALE_NATIVE_DEFINITION_REQUIRED');
     const predicate=identifier(window.timeColumn)+' >= $1::'+window.timeType+' AND '+identifier(window.timeColumn)+' < $2::'+window.timeType;
-    const names=columns.join(', '),casts=columns.map(name=>name+'::text AS '+name).join(', ');
+    // Compare exact native text, including strings whose declared collation may
+    // otherwise consider distinct byte sequences equal.
+    const names=columns.join(', '),casts=columns.map(name=>name+'::text COLLATE "C" AS '+name).join(', ');
     const cte='WITH expected_native('+names+') AS ('+definition+'), expected AS (SELECT '+casts+
       ' FROM expected_native WHERE '+predicate+'), actual AS (SELECT '+casts+' FROM '+relationName(aggregate)+
       ' WHERE '+predicate+'), missing AS (SELECT * FROM expected EXCEPT ALL SELECT * FROM actual), extra AS '+
@@ -180,20 +188,18 @@ async function verifyAggregate(sourceFile,plan,{beforeDispatch,...options}={}) {
       '(SELECT count(*) FROM actual)::text AS actual_rows,(SELECT count(*) FROM missing)::text AS missing_rows,'+
       '(SELECT count(*) FROM extra)::text AS extra_rows';
     await beforeDispatch?.({statementDigest:identity(countsSql),startedAt:stamp()});
-    await active.client.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');
-    try{
-      const counts=await table(active.client,countsSql,[window.start,window.end]);
-      const mismatchSQL=cte+"SELECT 'missing'::text AS direction, to_jsonb(missing)::text AS row FROM missing "+
-        "UNION ALL SELECT 'extra'::text,to_jsonb(extra)::text FROM extra";
-      const differences=await table(active.client,mismatchSQL,[window.start,window.end]);
-      await active.client.query('COMMIT');
-      const count=tableRows(counts)[0];
-      return {schema:'stellar-forge.timescale-aggregate-verification.v1',completedAt:stamp(),window,
-        definitionDigest:plan.definitionDigest,materializedOnly:aggregate.materializedOnlyText,
-        counts,differences,matches:count.missing_rows==='0'&&count.extra_rows==='0',
-        interpretation:'Compared the selected complete aggregate rows with its original native definition in the same read-only repeatable-read snapshot. This measures this window and capture only.'};
-    }catch(issue){await active.client.query('ROLLBACK').catch(()=>{});throw issue;}
-  }catch(issue){throw nativeError(issue);}finally{await active.close();}
+    const counts=await table(active.client,countsSql,[window.start,window.end]);
+    const mismatchSQL=cte+"SELECT 'missing'::text AS direction, to_jsonb(missing)::text AS row FROM missing "+
+      "UNION ALL SELECT 'extra'::text,to_jsonb(extra)::text FROM extra";
+    const differences=await table(active.client,mismatchSQL,[window.start,window.end]);
+    await active.client.query('COMMIT');
+    const count=tableRows(counts)[0];
+    return {schema:'stellar-forge.timescale-aggregate-verification.v1',completedAt:stamp(),window,
+      definitionDigest:plan.definitionDigest,materializedOnly:aggregate.materializedOnlyText,
+      counts,differences,matches:count.missing_rows==='0'&&count.extra_rows==='0',
+      interpretation:'Compared the selected complete aggregate rows with its original native definition in the same read-only repeatable-read snapshot. This measures this window and capture only.'};
+  }catch(issue){await active.client.query('ROLLBACK').catch(()=>{});throw nativeError(issue);}
+  finally{await active.close();}
 }
 const JOB_FIELDS=Object.freeze({schedule_interval:'interval',max_runtime:'interval',max_retries:'integer',
   retry_period:'interval',scheduled:'boolean',config:'jsonb',next_start:'timestamptz',fixed_schedule:'boolean',
@@ -230,7 +236,7 @@ async function runNativeJobChange(sourceFile,plan,{beforeDispatch,...options}={}
   const active=await connection(sourceFile,options);
   try{
     const before=await captureOn(active.client,{id:options.captureId,title:'Before job change',note:plan.note,sourceDigest:options.sourceDigest});
-    if(identity(nativeTarget(before))!==identity(plan.target))throw fault('TIMESCALE_NATIVE_TARGET_CHANGED');
+    if(!sameNativeTarget(nativeTarget(before),plan.target))throw fault('TIMESCALE_NATIVE_TARGET_CHANGED');
     const row=tableRows(before.tables.jobs).find(item=>item.job_id===plan.jobId);
     const schedule=tableRows(before.tables.job_schedules).find(item=>item.id===plan.jobId);
     if(!row||identity(jobDefinition(row,schedule))!==plan.beforeDigest)throw fault('TIMESCALE_JOB_CHANGED','Review the current job settings first.',409);
