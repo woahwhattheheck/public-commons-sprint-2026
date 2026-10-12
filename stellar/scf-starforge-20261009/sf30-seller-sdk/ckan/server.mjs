@@ -73,6 +73,12 @@ export async function startCkanServer({ workbench, port = 0, token = randomBytes
           return json(response, await workbench.compare(url.searchParams.get('before'), url.searchParams.get('after'), url.searchParams.get('key') ?? '_id'));
         if (parts[0] === 'publications' && parts.length === 2)
           return json(response, await workbench.publication(parts[1], url.searchParams.get('query') ?? ''));
+        if (parts[0] === 'sources' && parts[2] === 'semantics' && parts.length === 3) {
+          const semantics = await workbench.sourceSemantics(parts[1]);
+          if (!semantics) throw fault('CKAN_SEMANTICS_NOT_REVIEWED', 'This saved source has no reviewed semantic schema.', 404);
+          response.setHeader('content-disposition', 'attachment; filename="ckan-semantics.json"');
+          return json(response, semantics);
+        }
         if (parts[0] === 'sources' && parts[2] === 'download' && parts.length === 3) {
           const entry = lookup(workbench, 'sources', parts[1]);
           response.setHeader('content-disposition', 'attachment; filename="ckan-source-' + entry.id + '.json"');
@@ -110,6 +116,8 @@ export async function startCkanServer({ workbench, port = 0, token = randomBytes
       }
       if (request.method === 'POST') {
         const input = await body(request);
+        if (parts[0] === 'editions' && parts[2] === 'semantics' && parts.length === 3)
+          return json(response, await workbench.previewSemantics(parts[1], input.projection));
         let result;
         if (parts[0] === 'capture' && parts.length === 1) result = workbench.startCapture(input);
         else if (parts[0] === 'editions' && parts[2] === 'resume' && parts.length === 3) result = workbench.resumeCapture(parts[1], input);
