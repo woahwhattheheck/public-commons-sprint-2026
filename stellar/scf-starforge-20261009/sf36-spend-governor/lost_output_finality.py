@@ -222,10 +222,18 @@ def observation_facts(native, terms, binding, endpoint):
             type(proof.get('ledger')) is int and proof['ledger'] > 0 and
             isinstance(proof.get('eventId'), str) and 1 <= len(proof['eventId']) <= 512,
             'LOST_OUTPUT_ORIGINAL_SF43_TRANSFER_MISMATCH')
+    created_at = proof.get('createdAt')
+    require(isinstance(created_at, str) and re.fullmatch(r'[1-9][0-9]{0,12}', created_at),
+            'LOST_OUTPUT_TRANSACTION_TIME_REQUIRED')
+    # Stellar RPC reports inclusion time in whole Unix seconds; compare the
+    # original attempt at the same resolution, without an invented grace window.
+    require(int(created_at) >= int(as_time(binding['attemptStartedAt']).timestamp()),
+            'LOST_OUTPUT_TRANSACTION_PREDATES_ORIGINAL_ATTEMPT')
     return {'schema': 'stellar-forge.sf36.verified-facts.v1', 'intentId': binding['intentId'],
             'transaction': binding['transaction'], 'network': terms['network'], 'asset': terms['asset'],
             'payer': terms['payer'], 'recipient': terms['payTo'], 'atomicAmount': terms['amount'],
-            'request_sha256': binding['requestSha256'], 'ledger': proof['ledger'], 'eventId': proof['eventId']}
+            'request_sha256': binding['requestSha256'], 'ledger': proof['ledger'],
+            'eventId': proof['eventId'], 'transactionCreatedAt': created_at}
 
 
 def check_observation(observed, binding, terms):
@@ -234,7 +242,8 @@ def check_observation(observed, binding, terms):
             'LOST_OUTPUT_OBSERVATION_BINDING_CONFLICT')
     facts = observation_facts(observed['observation'], terms, binding, observed.get('rpcEndpoint'))
     require(observed.get('verifiedFacts') == facts and
-            as_time(observed['observedAt']) >= as_time(binding['attemptStartedAt']),
+            as_time(observed['observedAt']) >= as_time(binding['attemptStartedAt']) and
+            int(facts['transactionCreatedAt']) <= int(as_time(observed['observedAt']).timestamp()),
             'LOST_OUTPUT_OBSERVATION_FACTS_CONFLICT')
     return facts
 
