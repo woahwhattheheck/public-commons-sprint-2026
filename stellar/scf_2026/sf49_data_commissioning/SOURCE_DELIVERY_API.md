@@ -81,7 +81,7 @@ The callback result is compact JSON, at most 2 MiB. It contains the resulting ca
 }
 ~~~
 
-This is a server-side bridge to the original commissioning model. Its `terms` encoding matches the original `record_workorder` input. The native handoff can be 224 MiB, so the host must store its source as a compact external reference when it exceeds the model's inline limit. Retain the original support/workspace SHA, file role, bundle ID, manifest SHA and relative file identity in that reference. Do not put its Base64 representation into the 64 MiB case JSON.
+This is a server-side bridge to the original commissioning model. Its `terms` encoding matches the original `record_workorder` input. The native handoff uses the installed SF74 `MAX_HANDOFF_BYTES`, including the current workspace's commissioning and Service content, so the host must store its source as a compact external reference when it exceeds the model's inline limit. Retain the original support/workspace SHA, file role, bundle ID, manifest SHA and relative file identity in that reference. Do not put its Base64 representation into the commissioning record or the saved case JSON.
 
 The descriptor schema is `stellar-forge.sf49.source-bundle-reference.v1`:
 
@@ -174,13 +174,16 @@ For `reopen` and `attach`, the nested and outer request IDs are identical. These
 |---|---|
 | Original source attachment | At most 8 GiB per file, 64 files. |
 | Original SF49 input allowance | 16 GiB including its conservative handoff/terms allowance. |
-| Native support handoff | Original 224 MiB limit. |
+| Native support handoff | Original exported `MAX_HANDOFF_BYTES`: `2 × (MAX_RUNTIME_BYTES + MAX_WORKSPACE_BYTES) + 1 MiB`. |
 | Owner terms | Original 1 MiB limit. |
-| Source archive expanded inventory | 16 GiB plus 256 MiB, at most 72 ZIP members. |
-| Source archive uploaded bytes | At most 16 GiB plus 272 MiB. |
+| Source archive expanded inventory | 16 GiB plus `MAX_HANDOFF_BYTES` plus 6 MiB, at most 72 ZIP members. |
+| Source archive uploaded bytes | Expanded inventory ceiling plus 16 MiB ZIP allowance. |
 | Original commissioning inline material | Its own 48 MiB limit, unchanged. |
-| Original case JSON | Its own 64 MiB limit, unchanged. |
+| Original commissioning record | Its own 64 MiB limit, unchanged. |
+| Complete saved case | Original `MAX_WORKSPACE_BYTES`, including existing commissioning and Service fields. |
 | HTTP metadata | 2 MiB. Raw file bodies bypass this parser. |
+
+The state response's `limits` reports the derived `handoffBytes`, `termsBytes`, `expandedBytes`, and `archiveBytes`. New source selections reserve the current original handoff and terms allowances within 16 GiB. Reopening an already accepted selection validates its actual retained source/terms pins and total rather than applying a new conservative reservation to the old request.
 
 ZIP64 is used for large original members. The archive contains a distinct SF49 envelope, the byte-identical original `manifest.json`, and every original declared file. The existing Cloud archive wrappers retain their separate Cloud schema and 8 GiB limits.
 
