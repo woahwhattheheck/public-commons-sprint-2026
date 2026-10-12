@@ -1,5 +1,5 @@
 import {createHash} from 'node:crypto';
-import {META, need, canonical, digest, parseExactJSON, qi, ql, relation, geometryType, viewContract} from './contract.mjs';
+import {META, need, canonical, digest, parseExactJSON, qi, ql, relation, geometryType, viewContract, physicalName} from './contract.mjs';
 
 const TEXT_TYPES = {getTypeParser: () => value => value};
 const PRIVILEGES = ['select', 'insert', 'update', 'delete'];
@@ -27,7 +27,10 @@ export async function createDatabase(connection, profile) {
     environment = {profileId: profile.database.profileId, name: row.name, schema: profile.database.schema,
       postgresVersion: row.version, postgisVersion: native.version, metadataRelation: META.projects,
       owner, extensionSchema};
-  } finally { first.release(); }
+  } catch (error) {
+    first.release(); await pool.end(); throw error;
+  }
+  first.release();
   function q(name) { return relation(profile.database.schema, name); }
   async function setup(client) {
     await client.query("SET standard_conforming_strings=on");
@@ -60,27 +63,28 @@ export async function createDatabase(connection, profile) {
     const rights = (await client.query("SELECT has_schema_privilege(current_user,$1,'USAGE') AS usage, " +
       "has_schema_privilege(current_user,$1,'CREATE') AS can_create", [profile.database.schema])).rows[0];
     need(rights.usage === 't' && rights.can_create === 't', 'POSTGIS_SCHEMA_COMMISSIONING_PERMISSION_REQUIRED');
-    await client.query('CREATE TABLE IF NOT EXISTS ' + q(META.projects) + ' (' +
-      'project_id text PRIMARY KEY, product_version integer NOT NULL DEFAULT 1, ' +
-      'profile_sha256 text NOT NULL, profile_json jsonb NOT NULL, revision bigint NOT NULL DEFAULT 0, ' +
-      'active_edition_id text, created_at timestamptz NOT NULL DEFAULT clock_timestamp(), ' +
-      'updated_at timestamptz NOT NULL DEFAULT clock_timestamp())');
-    await client.query('CREATE TABLE IF NOT EXISTS ' + q(META.editions) + ' (' +
-      'project_id text NOT NULL REFERENCES ' + q(META.projects) + '(project_id), edition_id text NOT NULL, ' +
-      'request_sha256 text NOT NULL, source_json jsonb NOT NULL, profile_json jsonb NOT NULL, layers_json jsonb NOT NULL, ' +
-      "state text NOT NULL CHECK (state IN ('staged','accepted')), " +
-      'created_at timestamptz NOT NULL DEFAULT clock_timestamp(), accepted_at timestamptz, ' +
-      'PRIMARY KEY(project_id,edition_id))');
-    await client.query('CREATE TABLE IF NOT EXISTS ' + q(META.operations) + ' (' +
-      'project_id text NOT NULL REFERENCES ' + q(META.projects) + '(project_id), operation_id text NOT NULL, ' +
-      'kind text NOT NULL, request_sha256 text NOT NULL, request_json jsonb NOT NULL, result_json jsonb NOT NULL, ' +
-      'committed_at timestamptz NOT NULL DEFAULT clock_timestamp(), PRIMARY KEY(project_id,operation_id))');
-    await client.query('CREATE TABLE IF NOT EXISTS ' + q(META.identities) + ' (' +
-      'project_id text NOT NULL REFERENCES ' + q(META.projects) + '(project_id), layer_id text NOT NULL, row_key text NOT NULL, ' +
-      'sf_id bigint GENERATED ALWAYS AS IDENTITY UNIQUE, PRIMARY KEY(project_id,layer_id,row_key))');
-    await client.query('CREATE SEQUENCE IF NOT EXISTS ' + q('_sf_intake_operator_ids') + ' AS bigint');
-    for (const table of Object.values(META)) await client.query('REVOKE ALL ON TABLE ' + q(table) + ' FROM PUBLIC');
-    await client.query('REVOKE ALL ON SEQUENCE ' + q('_sf_intake_operator_ids') + ' FROM PUBLIC');
+    if (!await initialized(client)) {
+      await client.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))', ['starforge.postgis-bootstrap:' + profile.database.schema]);
+      await client.query('CREATE TABLE IF NOT EXISTS ' + q(META.projects) + ' (' +
+        'project_id text PRIMARY KEY, product_version integer NOT NULL DEFAULT 1, ' +
+        'profile_sha256 text NOT NULL, profile_json jsonb NOT NULL, revision bigint NOT NULL DEFAULT 0, ' +
+        'active_edition_id text, created_at timestamptz NOT NULL DEFAULT clock_timestamp(), ' +
+        'updated_at timestamptz NOT NULL DEFAULT clock_timestamp())');
+      await client.query('CREATE TABLE IF NOT EXISTS ' + q(META.editions) + ' (' +
+        'project_id text NOT NULL REFERENCES ' + q(META.projects) + '(project_id), edition_id text NOT NULL, ' +
+        'request_sha256 text NOT NULL, source_json jsonb NOT NULL, profile_json jsonb NOT NULL, layers_json jsonb NOT NULL, ' +
+        "state text NOT NULL CHECK (state IN ('staged','accepted')), " +
+        'created_at timestamptz NOT NULL DEFAULT clock_timestamp(), accepted_at timestamptz, ' +
+        'PRIMARY KEY(project_id,edition_id))');
+      await client.query('CREATE TABLE IF NOT EXISTS ' + q(META.operations) + ' (' +
+        'project_id text NOT NULL REFERENCES ' + q(META.projects) + '(project_id), operation_id text NOT NULL, ' +
+        'kind text NOT NULL, request_sha256 text NOT NULL, request_json jsonb NOT NULL, result_json jsonb NOT NULL, ' +
+        'committed_at timestamptz NOT NULL DEFAULT clock_timestamp(), PRIMARY KEY(project_id,operation_id))');
+      await client.query('CREATE TABLE IF NOT EXISTS ' + q(META.identities) + ' (' +
+        'project_id text NOT NULL REFERENCES ' + q(META.projects) + '(project_id), layer_id text NOT NULL, row_key text NOT NULL, ' +
+        'sf_id bigint GENERATED ALWAYS AS IDENTITY, PRIMARY KEY(project_id,layer_id,row_key), UNIQUE(project_id,layer_id,sf_id))');
+      for (const table of Object.values(META)) await client.query('REVOKE ALL ON TABLE ' + q(table) + ' FROM PUBLIC');
+    }
     let current = await project(client);
     if (!current) {
       // Existing customer relations are not adopted as this project's views.
@@ -178,10 +182,13 @@ export async function createDatabase(connection, profile) {
     need(result.size === ids.length && [...result.values()].every(Boolean), 'POSTGIS_REGISTERED_SRID_REQUIRED');
     return result;
   }
+  const operatorSequence = layerId => physicalName(profile.projectId, 'operator', layerId, 'seq');
   async function createFeatureTable(client, table, layer) {
+    await client.query('CREATE SEQUENCE IF NOT EXISTS ' + q(operatorSequence(layer.id)) + ' AS bigint');
+    await client.query('REVOKE ALL ON SEQUENCE ' + q(operatorSequence(layer.id)) + ' FROM PUBLIC');
     const fields = layer.fields.map(field => qi(field.name) + ' ' + field.type + (field.nullable ? '' : ' NOT NULL'));
     const columns = [
-      'sf_id bigint PRIMARY KEY DEFAULT (-nextval(' + ql(q('_sf_intake_operator_ids')) + '::regclass))',
+      'sf_id bigint PRIMARY KEY DEFAULT (-nextval(' + ql(q(operatorSequence(layer.id))) + '::regclass))',
       "sf_key text NOT NULL UNIQUE DEFAULT ('operator:' || gen_random_uuid()::text)",
       '_sf_source jsonb',
       ...fields,
@@ -226,7 +233,7 @@ export async function createDatabase(connection, profile) {
       await client.query('GRANT ' + permission.toUpperCase() +
         (permission === 'insert' || permission === 'update' ? '(' + columns + ')' : '') +
         ' ON TABLE ' + q(target) + ' TO ' + qi(role.name));
-      if (permission === 'insert') await client.query('GRANT USAGE ON SEQUENCE ' + q('_sf_intake_operator_ids') + ' TO ' + qi(role.name));
+      if (permission === 'insert') await client.query('GRANT USAGE ON SEQUENCE ' + q(operatorSequence(layer.id)) + ' TO ' + qi(role.name));
     }
   }
   async function projectRoleAccess(client, selectedProfile, previousProfile = null) {
@@ -403,5 +410,5 @@ export async function createDatabase(connection, profile) {
   return {pool, environment, owner, q, transaction, initialized, ensure, project, edition, savedOperation,
     mutate, checkRoles, projectRoleAccess, primaryKeyMappings, sridDefinitions, createFeatureTable, lockTables, userColumns, allColumns,
     rowHashSQL, copyFeatureRows, installRoles, grantLayer, switchViews, observeRoles, cursorRows,
-    tableDigest, assertView, describeLayers, close: () => pool.end()};
+    tableDigest, assertView, describeLayers, operatorSequence, close: () => pool.end()};
 }
