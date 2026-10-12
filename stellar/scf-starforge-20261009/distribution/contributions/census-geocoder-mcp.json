@@ -3,14 +3,20 @@
   "id": "census-geocoder-mcp",
   "description": "Operate the original Census source, publisher and customer workspace through one managed browser and MCP owner",
   "commands": {
-    "census-geocoder-agent": "stellar-forge/mcp-merchant-operator/census-geocoder-workspace-launcher.mjs"
+    "census-geocoder-agent": "stellar-forge/mcp-merchant-operator/census-geocoder-workspace-launcher.mjs",
+    "census-geocoder-download": "stellar-forge/mcp-merchant-operator/census-geocoder-download-cli.mjs"
   },
   "commandDescriptions": {
-    "census-geocoder-agent": "Inspect, open and reopen Census address operations with the original browser, merchant MCP and approval terminal"
+    "census-geocoder-agent": "Inspect, open and reopen Census address operations with the original browser, merchant MCP and approval terminal",
+    "census-geocoder-download": "Receive a complete original Census edition, resume its files and query the native dataset locally"
   },
   "exports": {
     "./merchant/mcp/census-geocoder": "./source/stellar-forge/mcp-merchant-operator/census-geocoder-workspace.mjs",
-    "./merchant/mcp/census-geocoder/server": "./source/stellar-forge/mcp-merchant-operator/census-geocoder-workspace-launcher.mjs"
+    "./merchant/mcp/census-geocoder/server": "./source/stellar-forge/mcp-merchant-operator/census-geocoder-workspace-launcher.mjs",
+    "./merchant/mcp/census-geocoder/download": {
+      "types": "./source/stellar-forge/mcp-merchant-operator/census-geocoder-download.d.mts",
+      "default": "./source/stellar-forge/mcp-merchant-operator/census-geocoder-download.mjs"
+    }
   },
   "supportFiles": [
     "stellar/scf-starforge-20261009/distribution/runtime-workspace/application-census-geocoder.mjs",
@@ -18,7 +24,8 @@
     "stellar/scf-starforge-20261009/sf30-seller-sdk/census-geocoder/public/index.html",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/census-geocoder/public/app.mjs",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/census-geocoder/public/style.css",
-    "stellar/scf-starforge-20261009/sf30-seller-sdk/census-geocoder/example-addresses.csv"
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/census-geocoder/example-addresses.csv",
+    "stellar-forge/mcp-merchant-operator/census-geocoder-download.d.mts"
   ],
   "applicationProviders": {
     "census-geocoder": "stellar/scf-starforge-20261009/distribution/runtime-workspace/providers/census-geocoder.mjs"
