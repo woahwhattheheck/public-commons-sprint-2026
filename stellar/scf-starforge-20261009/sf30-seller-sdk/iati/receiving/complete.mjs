@@ -271,6 +271,12 @@ export async function runCompleteIatiReceiving(input, { onProgress = () => {} } 
       [IATI + 'receiving/HANDOVER.md', 'guides/HANDOVER.md'],
       [DISTRIBUTION + 'selections/IATI_OPERATOR.md', 'guides/INSTALLATION.md'],
     ]) customerFiles.push({ ...await identity(join(prepared.sourceRoot, path)), name });
+    const researchMetadata = await record(join(prepared.sourceRoot, IATI, 'receiving/aiddata-nigeria.json'), true);
+    if (researchMetadata?.source?.sha256 === selected.publisher.sha256 &&
+        researchMetadata.source.bytes === selected.publisher.bytes) {
+      for (const name of ['AIDDATA_NIGERIA.md', 'aiddata-nigeria.json'])
+        customerFiles.push({ ...await identity(join(prepared.sourceRoot, IATI, 'receiving', name)), name: 'publisher/' + name });
+    }
     const handoverDirectory = await directory(join(output, 'handover'), true);
     const customerInput = { schema: 'stellar-forge.iati-customer-handover.v1', operationId: selected.operationId,
       output: join(handoverDirectory, 'IATI_Customer_Handover.zip'), sourceCommit: selected.sourceCommit,
