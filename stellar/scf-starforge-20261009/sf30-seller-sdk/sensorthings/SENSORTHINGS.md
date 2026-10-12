@@ -244,7 +244,7 @@ Read the schema for exact action fields; the CLI, browser and MCP all consume th
 | `GET /api/editions/:id/metadata` | Complete immutable edition. |
 | `GET /api/editions/:id/summary` | Source/result/time/quality interpretation counts. |
 | `GET /api/editions/:id/rows` | One normalized table page. |
-| `GET /api/captures/:id` | Original capture/attempt state. |
+| `GET /api/captures/:id` | Original full capture, or explicit same-revision journal pages with `part`. |
 | `GET /api/operations/:id` | Original journal outcome, including a completed result after a lost reply. |
 | `GET /api/releases/:id` | Original native release. |
 | `GET /api/publishers/:datasetId` | Original publisher/customer state. |
@@ -267,6 +267,29 @@ The merchant tools attach to the running original listener. Each connection chec
 MCP action requests are sent once. If transport loses the reply, `MCP_OUTCOME_UNCERTAIN` carries the original operation ID. Read that operation through the same workspace and keep its exact payload. Do not generate a new ID merely because the caller timed out.
 
 A held-file read ID belongs to the native client instance and selected file/SHA. A one-shot CLI connection closes its owned read on exit; the returned receipt preserves what was read, and the next invocation resumes the same selector/SHA/offset without that expired ID. The complete downloader keeps one client for the whole transfer and uses the original receiver’s persistent checkpoint across process restarts.
+
+### Large capture journals
+
+The complete local capture journal remains unchanged. The operating view shows its first 100 issues with exact `issueCount` and `issuesTruncated`; all remaining original issues are available through their capture pages. For a large request history, use the same capture ID with `part=summary`, `tasks`, `pages`, `issues`, `attempts` or `parents` on `GET /api/captures/:id`. The fourteen-tool MCP catalog exposes these same optional fields on `merchant_sensorthings_capture`; the CLI exposes `capture --part PART`.
+
+A paged reply has schema `stellar-forge.sensorthings-capture-page.v1`, the original workspace UUID, capture ID and local `revision`, a compact `summary`, then `rows:[{index,record}]`, `total` and `nextOffset` for row parts. `summary` has no row limit or offset. Each row page contains at most 500 entries and eight MiB of serialized row bodies. The full legacy read remains available when `part` is omitted.
+
+Task rows retain their original request ID, URL, state and latest attempt, with `attemptCount` and `parentCount`. Their complete attempt and relationship-parent entries are available through `part=attempts` or `part=parents` with that original `taskId`. Those choices do not create a request or alter its source.
+
+Retain the first reply's `revision` as `expectedRevision` for later offsets. A changed local journal returns `SENSORTHINGS_CAPTURE_READ_CHANGED`; start a new first-page read, or pause the same capture before a complete journal review. This consistency check does not claim an atomic upstream snapshot and does not freeze ongoing provider requests.
+
+For example, on the existing running connection:
+
+```json
+{
+  "captureId": "<actual-original-capture-id>",
+  "part": "tasks",
+  "offset": 0,
+  "limit": 100
+}
+```
+
+Use this as the tool input with the original CLI `connect --alias ALIAS --tool merchant_sensorthings_capture --input FILE`. A subsequent input uses the returned `nextOffset` and `expectedRevision`; it retains the same capture ID. A closed-workspace read uses `capture --workspace DIR --id ID --part tasks --offset N --limit N --expected-revision REV`.
 
 ## Native acceptance and evidence
 

@@ -1,5 +1,6 @@
 // MIT. Pure source-owned SensorThings metadata. No native runtime imports.
 import {MAX_RETAINED_CHUNK_BYTES} from '../../../../stellar-forge/mcp-merchant-operator/retained-file-contracts.mjs';
+export const CAPTURE_READ_PARTS=Object.freeze(['summary','tasks','pages','issues','attempts','parents']);
 export const WORKSPACE_SCHEMA='stellar-forge.sensorthings-workspace.v1';
 export const EDITION_SCHEMA='stellar-forge.sensorthings-edition.v1';
 export const SOURCE_CONTRACT=Object.freeze({
@@ -45,6 +46,8 @@ export const ACTIONS=Object.freeze({
 export function workspaceSchema(workspaceId){
   return {schema:'stellar-forge.sensorthings-schema.v1',workspaceSchema:WORKSPACE_SCHEMA,workspaceId,
     sourceContract:SOURCE_CONTRACT,actions:ACTIONS,tables:['observations','components','entities'],
+    captureReads:{parts:CAPTURE_READ_PARTS,defaultPart:'full',maxRows:500,maxRowBytes:8*1024*1024,
+      paging:'Retain the returned workspace revision for later offsets. A changed revision requires a new first page; this does not freeze a running capture.'},
     operation:'Use one stable operationId and the displayed expectedRevision. Reopen the same operation after a lost reply.',
     limits:{maxPageBytes:16*1024*1024,maxNativeDatasetBytes:256*1024*1024,maxNativeRows:250000,maxFileChunkBytes:MAX_RETAINED_CHUNK_BYTES,defaultFileChunkBytes:65536}};
 }
