@@ -220,6 +220,13 @@ export class Operation {
   recoverLostOutput(options: NodeLostOutputRecoveryOptions): Promise<NodeLostOutputFinalization>;
   readLostOutputRecovery(options?: NodeLostOutputReadOptions): Promise<NodeLostOutputFinalization | null>;
   exportLostOutputProof(options: NodeLostOutputReadOptions & { output: string }): Promise<NodeLostOutputProofExport>;
+  /** Inspect a selected expired-attempt continuation and its retained evidence; read-only. */
+  inspectExpiredContinuation(): Promise<ExpiredContinuationStatus>;
+  prepareExpiredContinuation(options: ExpiredContinuationOptions): Promise<Operation>;
+  inspectUndispatchedContinuation(): Promise<UndispatchedContinuationStatus>;
+  prepareUndispatchedContinuation(options: UndispatchedContinuationOptions): Promise<Operation>;
+  /** Follow already-selected unpaid, expired or undispatched authorization lineages without preparing or executing. */
+  followContinuation(): Promise<Operation>;
   /** Inspect the original definitive unpaid result and any explicit successor; read-only. */
   inspectUnpaidContinuation(): Promise<UnpaidContinuationStatus>;
   /** Prepare one selected successor. Does not execute or authorize a payment. */
@@ -1305,5 +1312,105 @@ export interface NodeLostOutputProofExport {
     intentId: string; transaction: string; requestSha256: string;
     network: string; asset: string; payer: string; recipient: string; atomicAmount: string;
     ledger: number; sealedRecoverySha256: string;
+  };
+}
+
+
+/** Explicit operator-selected successor; the existing reservation remains in its original ledger. */
+export interface ExpiredContinuationOptions {
+  intentId: string;
+  expectedRequestSha256: string;
+  expectedAttemptId: string;
+  expectedConfigSha256?: string;
+  reason: string;
+  workspace?: string;
+  approvedRequest?: NodeLostOutputApprovedRequest;
+  approvedRequestFile?: string;
+  expiryEvidence: {
+    boundFile: string;
+    observationFile: string;
+    expectedFeeAccount: string;
+    providerSourceFile?: string;
+    sdkSourceIndexFile?: string;
+  };
+  signal?: AbortSignal;
+  node?: string;
+  environment?: Record<string, string | undefined>;
+}
+export interface AuthorizationExpiryLedgerPoint {
+  sequence: number; closed_at: string; hash: string;
+}
+export interface AuthorizationExpiryEvidence {
+  schema: 'stellar-forge.sf88.authorization-expiry-evidence.v1';
+  kind: 'SOURCE_BOUND_LEDGER_UPPER_BOUND';
+  binding: {
+    intentId: string; requestSha256: string; feeAccount: string;
+    acceptedMaxTimeoutSeconds: number; attemptStartedAt: string;
+  };
+  bound: {
+    providerCompletedAt: string; signingLedgerUpperBound: number;
+    maximumAdditionalLedgers: number; authorizationExpiryLedgerUpperBound: number;
+    lastClosedBeforeCompletion: AuthorizationExpiryLedgerPoint;
+    firstClosedAfterCompletion: AuthorizationExpiryLedgerPoint;
+  };
+  observation: {
+    networkPassphrase: string; historyLedger: number; coreLedger: number; ingestLedger: number;
+    historyLedgerClosedAt: string; feeAccountSequence: string; lastModifiedLedger: number;
+    lastModifiedAt: string; historyCount: number; historyLimit: number; completeReturnedPage: true;
+    transactionsAfterAttemptStart: Array<{ hash: string; ledger: number; createdAt: string; successful: boolean }>;
+    knownPriorPayments: string[]; observedAt: string;
+    sourceWindows: Array<{ role: string; requestStartedAt: string; retrievedAt: string; responseDate: string }>;
+  };
+  sdk: {
+    package: '@x402/stellar'; version: '2.28.0';
+    formula: {
+      authorizationExpiry: string; estimatedLedgerSeconds: string;
+      fallbackSeconds: 5; minimumFinitePositiveIntegerSeconds: 1;
+    };
+    sourceHashes: { package: string; client: string; estimator: string };
+  };
+  provider: {
+    account: string; selectedPage: number; completedNativePages: number;
+    originalCallsForUtcDay: number; originalSettledCreditsForUtcDay: number;
+    remainingAtResponse: number; completedAtPointer: '/lastResponseAt';
+  };
+  scope: {
+    exactSignedAuthorizationRetained: false; clockBasis: string;
+    historyScope: 'original_fee_account'; providerAssociation: 'ORIGINAL_SERIAL_NATIVE_COHORT';
+    providerAssociationScope: string; observationConsistency: string; inferenceCondition: string;
+  };
+  files: Array<{ role: string; path: string; bytes: number; sha256: string }>;
+  sha256: string;
+}
+export interface ExpiredContinuationStatus {
+  intentId: string;
+  continuation: null | {
+    intentId: string; reason: string; state: 'PREPARING' | 'PREPARED'; createdAt: string;
+    choiceSha256: string; source: NodeLostOutputAttempt & { requestIdentity: string };
+    expiry: AuthorizationExpiryEvidence;
+    reservation: Record<string, unknown> & { request_id: string; request_digest: string; state: 'reserved'; actual: '0'; amount: string; sourceSha256: string; recordAuthority: string };
+    accounting: 'ORIGINAL_RESERVATION_RETAINED; SUCCESSOR_REQUIRES_ORIGINAL_APPROVAL';
+  };
+}
+
+/** Exact original authorization has no durable signed-dispatch record. */
+export interface UndispatchedContinuationOptions extends Omit<ExpiredContinuationOptions,'expiryEvidence'> {}
+export interface UndispatchedAuthorizationEvidence {
+  schema: 'stellar-forge.sf88.undispatched-authorization-evidence.v1';
+  kind: 'ORIGINAL_AUTHORIZATION_NOT_DISPATCHED';
+  binding: Record<string, unknown> & {intentId: string; requestSha256: string; attemptId: string; configSha256: string};
+  wire: Record<string, unknown> & {writerActive: false; signedDispatchRecorded: false};
+  signerSources: Record<string, {path: string; bytes: number; sha256: string}>;
+  scope: Record<string, unknown>;
+  sha256: string;
+}
+export interface UndispatchedContinuationStatus {
+  intentId: string;
+  continuation: null | {
+    intentId: string; reason: string; state: 'PREPARING' | 'PREPARED'; createdAt: string;
+    choiceSha256: string; source: NodeLostOutputAttempt & {requestIdentity: string};
+    authorization: UndispatchedAuthorizationEvidence;
+    reservation: Record<string, unknown> & {request_id: string; request_digest: string; state: 'reserved'; actual: '0'; amount: string; sourceSha256: string; recordAuthority: string};
+    accounting: 'ORIGINAL_RESERVATION_RETAINED; SUCCESSOR_REQUIRES_ORIGINAL_APPROVAL';
   };
 }

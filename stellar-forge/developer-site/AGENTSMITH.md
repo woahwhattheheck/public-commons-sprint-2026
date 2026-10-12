@@ -1,6 +1,6 @@
 # AgentSmith buyer receiving page
 
-The existing Stellar Forge site exposes **/agentsmith.html**. It turns the retained AgentSmith HTTP source into a complete portable preparation and runs the maintained buyer and Freighter wallet from that preparation.
+The public [AgentSmith receiving page](https://agentsmith-receiving.tokenjunkielabs.chatgpt.site) turns the retained AgentSmith HTTP source into a complete portable preparation and runs the maintained buyer and Freighter wallet from that preparation.
 
 ## Product flow
 
@@ -117,12 +117,16 @@ The additive receiving assets live in the existing **dist/** tree:
 
 The page imports the existing offer.mjs and onboarding.mjs. Shared styles come from style.css. The home navigation adds the same-origin AgentSmith buyer route. The page uses the existing grayscale industrial layout, explicit form labels, responsive panels, text-only source display, and local draft/ZIP downloads.
 
-Publishing consumes the complete current developer-site tree through the original Sites project and its existing audience. The nonsecret .openai/hosting.json remains its project binding. The original publisher can assemble these additive assets with the current WooCommerce, Fleet, CoinGecko, OpenSearch and merchant workspace edition.
+The standalone customer receiving page is published at **https://agentsmith-receiving.tokenjunkielabs.chatgpt.site** under the Bryce / TokenJunkieLabs Sites account, public project **appgprj_6acc430d195c8191a124909673496433**. Its first deployed source is **6f4ec6a14ff9f62464d2e356c5d5751289c9ab8c**, version **appgver_b6c72a5528308191a33f0bc44c2b89c6**. The receiving assets use the same original source as merged **9fec9b4df3d6933221aa4dae87a2b8866de80fd1**; its root page and navigation form the standalone customer destination.
+
+The existing developer-site copy remains available for an owner of that separate project to publish with its complete current merchant edition. Future AgentSmith customer page updates use the dedicated receiving project's original source and hosting binding. Send customers the branded receiving URL.
 
 ## Validation
 
-The original HTTP source completed restore, native SF88 prepare, review and reopen at the original source release with all commands exiting 0. The buyer retained the exact 21-byte request, source offer, stable intent and response destination. The browser wallet's owning engineering lane completed its native SDK/provider lifecycle on the maintained wallet source.
+The generated nine-file customer packet completed original native **prepare → review → prepare → inspect** at **2026-10-12T02:25:33Z**, with every command exiting 0. Draft import reproduced the identical 66,463-byte ZIP. The complete original source, exact 21-byte request, stable intent, native review and saved receiving files remained unchanged on reopen.
 
-The receiving page's three ESM files passed V8 syntax parsing. Every directly referenced UI ID exists and all HTML IDs are unique. Exact capture and HTTP bundle content match their retained original source. The native nine-file packet operation and browser layout review belong to the receiving/publishing run on the original equipped host.
+The original interruption/recovery operation also completed at **2026-10-12T02:25:31Z**. It resumed after committed payment-required.json and after committed native review.json, continued through the original SF88 preparer and reviewer, and rejected a changed intent while retaining the original operation. All 15 original native source blobs and the customer receiving assets were checked before execution.
+
+The compact outcome and compressed complete native stdout are retained at **.swarm-delivery/8f43-agentsmith/customer-native-result.json** and **customer-native-result.json.gz**. The complete receiving modules passed original Acorn parsing, and the page's referenced UI IDs and source assets were checked during preparation.
 
 TokenJunkieLabs. Preserve the original MIT license in distributed packets.

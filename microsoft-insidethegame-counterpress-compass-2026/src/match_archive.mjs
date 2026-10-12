@@ -4,6 +4,7 @@ import {constants} from 'node:fs';
 import {lstat, mkdir, open, readdir, rename, unlink} from 'node:fs/promises';
 import {join, resolve} from 'node:path';
 import {validateFixture} from './engine.mjs';
+import {normalizeRetainedInsights} from './retained_insight.mjs';
 import {parseCount, parseView} from './live_sessions.mjs';
 import {parseScenario, parseSeed, SCENARIOS} from './scenarios.mjs';
 
@@ -78,7 +79,8 @@ function reviewData(raw, match) {
     return {eventId: item.eventId, count, label: text(item.label, 100, 'Moment title', item.eventId),
       note: text(item.note, 1000, 'Moment note')};
   }).sort((a, b) => a.count - b.count);
-  return {title, notes, cursor, view, selectedMomentId, filters: normalizedFilters, bookmarks};
+  return {title, notes, cursor, view, selectedMomentId, filters: normalizedFilters, bookmarks,
+    insights: normalizeRetainedInsights(raw.insights, match)};
 }
 function storedData(raw) {
   object(raw, 'Saved match');
@@ -100,6 +102,13 @@ function summary(document) {
 function present(document, libraryKey) {
   const canEdit = typeof libraryKey === 'string' && /^[0-9a-f]{64}$/.test(libraryKey) && archiveOwner(libraryKey) === document.owner;
   return {...summary(document), canEdit, review: document.review};
+}
+
+// The application and completed-worker receiver produce the same portable
+// match schema through the original event and review normalizers.
+export function createMatchPackage(originalMatch, originalReview = {}) {
+  const match = matchData(originalMatch);
+  return {format: MATCH_PACKAGE_FORMAT, match, review: reviewData(originalReview, match)};
 }
 
 export async function createMatchArchiveStore({directory, maxArchives = 256, maxPerOwner = 64} = {}) {
@@ -202,7 +211,7 @@ export async function createMatchArchiveStore({directory, maxArchives = 256, max
     },
     async exportPackage(id) {
       const document = await read(id);
-      return {format: MATCH_PACKAGE_FORMAT, match: document.match, review: document.review};
+      return createMatchPackage(document.match, document.review);
     },
     async update(id, revision, review, libraryKey) {
       const owner = archiveOwner(libraryKey);

@@ -39,7 +39,7 @@ catch (error) { if (error.code !== 'ENOENT') throw error; }
 if (report && report.operation !== operation) throw new Error('The retained receiving report belongs to another operation.');
 report ??= { schema: 'stellar-forge.opensearch-deployment-journey.v1', operation, startedAt: now(),
   originalJourneySha256: hash(await readFile(originalPath)), originalResultSha256, stages: [], attempts: [], artifacts: [] };
-report.state = 'RUNNING'; delete report.error; delete report.completedAt;
+report.state = 'RUNNING'; delete report.error; delete report.completedAt; delete report.cleanupError;
 report.attempts.push({ startedAt: now(), runtime: process.version, nativeDirectory });
 async function save() {
   const temporary = reportPath + '.tmp';
@@ -340,7 +340,8 @@ try {
   } else edition = await api('/api/editions/' + edition.id);
   assert.equal(edition.result.hitCount, 6);
   assert.equal(edition.result.hits.length, 6);
-  assert.equal(edition.result.pages, 3);
+  // Three two-hit pages plus the native one-hit truncation lookahead.
+  assert.equal(edition.result.pages, 4);
   assert.equal(edition.result.snapshotReleased, true);
   const upgradedRaw = await bytes('/api/editions/' + edition.id + '/result.json');
   await artifact('customer/upgrade-original-result.json', upgradedRaw);

@@ -15,3 +15,12 @@ def capture_ledger(path):
     stat = resolved.stat()
     return {"path": str(resolved), "identity": {"device": str(stat.st_dev), "inode": str(stat.st_ino)},
             "snapshot": snapshot, "report": report}
+
+
+def capture_source(path, kind="sf36_ledger", node=None):
+    if kind == "sf36_ledger":
+        return capture_ledger(path)
+    if kind == "mcp_quote":
+        from native_mcp import capture_mcp_quotes
+        return capture_mcp_quotes(path, node=node)
+    raise ValueError("Choose an original SF36 ledger or native MCP quote workspace")

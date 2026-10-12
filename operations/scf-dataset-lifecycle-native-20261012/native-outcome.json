@@ -1,0 +1,771 @@
+{
+  "schema": "stellar-forge.ndjson-release-native-operation.v1",
+  "preparation": [
+    {
+      "source": "31aca80a817ef759087db060a4823226318daf861764295cde824dfe2e6b281f",
+      "plan": "95ac00d5900d32d670ef42100a77cbcb3aff1e3546f944b30f1752987a5f945e",
+      "build": "f54435870d75d7909cda62ce81b2ef57e056706835213ceed86156c55cf910bd",
+      "snapshot": "c07fd13878678218fed08892e44af100320fad016e190dfefb2ab1c580d560fa",
+      "sourceFiles": [
+        {
+          "path": "customer/README.md",
+          "bytes": 5883,
+          "sha256": "73bb0c8ce31a27f69c6a2ceae33a1082f551c601891e1a8c4ac363d4c394726e"
+        },
+        {
+          "path": "customer/client-export.json",
+          "bytes": 1251,
+          "sha256": "98dec7fb52fd10aa4d4731bbffb38b9cb5eb0e2573cb848986f8b754cbcf8586"
+        },
+        {
+          "path": "customer/package.json",
+          "bytes": 391,
+          "sha256": "dc44daf7662d3e52bd9401eba9aa2d83bb7f2781d865278633cbac2939fd27e0"
+        },
+        {
+          "path": "customer/seller-client.d.mts",
+          "bytes": 5352,
+          "sha256": "1240c7fae01d5c356bd38bed76a5d2b6ec0308f95d42e08f59b4afc2929beb3e"
+        },
+        {
+          "path": "customer/seller-client.mjs",
+          "bytes": 29227,
+          "sha256": "a524ff48603f689977d62d813899b86014b199df5529e432f83b7877f5881139"
+        },
+        {
+          "path": "customer/seller-openapi.json",
+          "bytes": 27109,
+          "sha256": "d93e3849bab6eb42bc38f7ab36ce740f65bf8fdf208799d319ad558ed35b36c3"
+        },
+        {
+          "path": "openapi.json",
+          "bytes": 27109,
+          "sha256": "d93e3849bab6eb42bc38f7ab36ce740f65bf8fdf208799d319ad558ed35b36c3"
+        },
+        {
+          "path": "source/ndjson-lineage.json",
+          "bytes": 2329,
+          "sha256": "7cd502317ff72e9ad5933f5f0d40bc161d3cf5f203d6836cf604c4e578d0ab13"
+        },
+        {
+          "path": "source/plan.json",
+          "bytes": 1244,
+          "sha256": "95ac00d5900d32d670ef42100a77cbcb3aff1e3546f944b30f1752987a5f945e"
+        },
+        {
+          "path": "source/source.ndjson",
+          "bytes": 501,
+          "sha256": "31aca80a817ef759087db060a4823226318daf861764295cde824dfe2e6b281f"
+        }
+      ],
+      "customer": {
+        "manifest": "customer/client-export.json",
+        "filesSha256": "4ab5d33907fd7ec105265ff5353049bee83f15c65e8afe50b461185b1d62ba52"
+      }
+    },
+    {
+      "source": "11daacca762d9708dbb4260a17d16da8a602c3b24f648dec9844b7ec39db9c9e",
+      "plan": "95ac00d5900d32d670ef42100a77cbcb3aff1e3546f944b30f1752987a5f945e",
+      "build": "5a678f4854f06fc09a5e6beaf3a61773b54fcc86e6b184dba74e4b140b0a8161",
+      "snapshot": "26665c344dae2e638465b4473a74025d6cc617fb528dbe421c18e160d068fcc0",
+      "sourceFiles": [
+        {
+          "path": "customer/README.md",
+          "bytes": 5883,
+          "sha256": "73bb0c8ce31a27f69c6a2ceae33a1082f551c601891e1a8c4ac363d4c394726e"
+        },
+        {
+          "path": "customer/client-export.json",
+          "bytes": 1251,
+          "sha256": "3615394bc5332543490344fb01ece371fd1c5d82d24259e03cfb9ce3a26daf8f"
+        },
+        {
+          "path": "customer/package.json",
+          "bytes": 391,
+          "sha256": "dc44daf7662d3e52bd9401eba9aa2d83bb7f2781d865278633cbac2939fd27e0"
+        },
+        {
+          "path": "customer/seller-client.d.mts",
+          "bytes": 5352,
+          "sha256": "1240c7fae01d5c356bd38bed76a5d2b6ec0308f95d42e08f59b4afc2929beb3e"
+        },
+        {
+          "path": "customer/seller-client.mjs",
+          "bytes": 29227,
+          "sha256": "a524ff48603f689977d62d813899b86014b199df5529e432f83b7877f5881139"
+        },
+        {
+          "path": "customer/seller-openapi.json",
+          "bytes": 27109,
+          "sha256": "d93e3849bab6eb42bc38f7ab36ce740f65bf8fdf208799d319ad558ed35b36c3"
+        },
+        {
+          "path": "openapi.json",
+          "bytes": 27109,
+          "sha256": "d93e3849bab6eb42bc38f7ab36ce740f65bf8fdf208799d319ad558ed35b36c3"
+        },
+        {
+          "path": "source/ndjson-lineage.json",
+          "bytes": 2329,
+          "sha256": "4b8f04f71074860dace281b578d2726bf3a1ad4913bf581102197f73558a7726"
+        },
+        {
+          "path": "source/plan.json",
+          "bytes": 1244,
+          "sha256": "95ac00d5900d32d670ef42100a77cbcb3aff1e3546f944b30f1752987a5f945e"
+        },
+        {
+          "path": "source/source.ndjson",
+          "bytes": 528,
+          "sha256": "11daacca762d9708dbb4260a17d16da8a602c3b24f648dec9844b7ec39db9c9e"
+        }
+      ],
+      "customer": {
+        "manifest": "customer/client-export.json",
+        "filesSha256": "4ab5d33907fd7ec105265ff5353049bee83f15c65e8afe50b461185b1d62ba52"
+      }
+    }
+  ],
+  "staticPreparationPreservedAbsentStore": true,
+  "packageReopened": true,
+  "lifecycle": {
+    "schema": "stellar-forge.dataset-lifecycle-native.v1",
+    "deliveries": {
+      "first": {
+        "directory": "/dev/scf-ndjson-3ad791-20261012/source/.ndjson-native-output/operator/deliveries/first",
+        "manifestSha256": "d875bc0579ba125ddbcec31f730aaa3723980655d938e27ee581521ed7524e17"
+      },
+      "next": {
+        "directory": "/dev/scf-ndjson-3ad791-20261012/source/.ndjson-native-output/operator/deliveries/next",
+        "manifestSha256": "3cb612380d319781a000f46521578a0fe971eb11a2c212870c61854b69157e7c"
+      }
+    },
+    "first": {
+      "releaseId": "ndjson-first",
+      "releaseDigest": "800413e88b7a8e1c0acf47bfe2c63c6e80bed14c86b8e8882b7fc2e78b2ea7e4",
+      "snapshot": "c07fd13878678218fed08892e44af100320fad016e190dfefb2ab1c580d560fa"
+    },
+    "next": {
+      "releaseId": "ndjson-next",
+      "releaseDigest": "cb031285d241bbdb3a407c5e549341cf3a2975857afcb02500fbe52415afb59c",
+      "snapshot": "26665c344dae2e638465b4473a74025d6cc617fb528dbe421c18e160d068fcc0",
+      "revision": 4
+    },
+    "native": {
+      "challengeStatus": 402,
+      "originalControllerReused": true,
+      "cursorContinuedAcrossPublication": true,
+      "staleRevisionRejected": true,
+      "retainedDataRollback": true,
+      "sellerRestartPreservedCurrentEdition": true,
+      "sourceClosure": {
+        "files": 10,
+        "bytes": 100423,
+        "sha256": "8febda626c2ab68c09a6dbb6d6c0e94ffc50cce876e49b6dd11a13c213de53e8"
+      },
+      "stoppedInitializationPreservedCurrentEdition": true,
+      "mcpReopenPreservedCurrentAndCursor": true
+    },
+    "state": "COMPLETE"
+  },
+  "receiving": [
+    {
+      "schema": "stellar-forge.ndjson-received.v1",
+      "workspace": "/dev/scf-ndjson-3ad791-20261012/source/.ndjson-native-output/customer-workspace",
+      "releaseDirectory": "/dev/scf-ndjson-3ad791-20261012/source/.ndjson-native-output/release-first",
+      "source": "31aca80a817ef759087db060a4823226318daf861764295cde824dfe2e6b281f",
+      "plan": "95ac00d5900d32d670ef42100a77cbcb3aff1e3546f944b30f1752987a5f945e",
+      "build": "f54435870d75d7909cda62ce81b2ef57e056706835213ceed86156c55cf910bd",
+      "snapshot": "c07fd13878678218fed08892e44af100320fad016e190dfefb2ab1c580d560fa",
+      "rowCount": 3,
+      "reused": false,
+      "query": {
+        "id": 2,
+        "ok": true,
+        "engineBlob": "7496dd29c59c23b3bc16c7d24a327a30b867625f",
+        "dataset": {
+          "name": "Merchant inventory",
+          "snapshot": "c07fd13878678218fed08892e44af100320fad016e190dfefb2ab1c580d560fa",
+          "rowCount": 3,
+          "columns": [
+            {
+              "name": "id",
+              "type": "string",
+              "nullable": false,
+              "filterable": true,
+              "rangeFilterable": false,
+              "sortable": false
+            },
+            {
+              "name": "sku",
+              "type": "string",
+              "nullable": false,
+              "filterable": true,
+              "rangeFilterable": false,
+              "sortable": true
+            },
+            {
+              "name": "quantity",
+              "type": "integer",
+              "nullable": false,
+              "filterable": false,
+              "rangeFilterable": true,
+              "sortable": true
+            },
+            {
+              "name": "unitPrice",
+              "type": "string",
+              "nullable": false,
+              "filterable": false,
+              "rangeFilterable": false,
+              "sortable": false
+            },
+            {
+              "name": "active",
+              "type": "boolean",
+              "nullable": false,
+              "filterable": true,
+              "rangeFilterable": false,
+              "sortable": false
+            },
+            {
+              "name": "note",
+              "type": "string",
+              "nullable": true,
+              "filterable": false,
+              "rangeFilterable": false,
+              "sortable": false
+            },
+            {
+              "name": "noteState",
+              "type": "string",
+              "nullable": false,
+              "filterable": true,
+              "rangeFilterable": false,
+              "sortable": false
+            },
+            {
+              "name": "dimensions",
+              "type": "string",
+              "nullable": false,
+              "filterable": false,
+              "rangeFilterable": false,
+              "sortable": false
+            },
+            {
+              "name": "tags",
+              "type": "string",
+              "nullable": false,
+              "filterable": false,
+              "rangeFilterable": false,
+              "sortable": false
+            }
+          ],
+          "defaultLimit": 50,
+          "maxLimit": 250,
+          "order": "csv-record-order"
+        },
+        "response": {
+          "status": 200,
+          "headers": {
+            "content-type": "application/json; charset=utf-8",
+            "x-dataset-snapshot": "c07fd13878678218fed08892e44af100320fad016e190dfefb2ab1c580d560fa"
+          },
+          "body": {
+            "schema": "stellar-forge.dataset-page.v1",
+            "dataset": {
+              "name": "Merchant inventory",
+              "snapshot": "c07fd13878678218fed08892e44af100320fad016e190dfefb2ab1c580d560fa",
+              "rowCount": 3,
+              "columns": [
+                {
+                  "name": "id",
+                  "type": "string",
+                  "nullable": false,
+                  "filterable": true,
+                  "rangeFilterable": false,
+                  "sortable": false
+                },
+                {
+                  "name": "sku",
+                  "type": "string",
+                  "nullable": false,
+                  "filterable": true,
+                  "rangeFilterable": false,
+                  "sortable": true
+                },
+                {
+                  "name": "quantity",
+                  "type": "integer",
+                  "nullable": false,
+                  "filterable": false,
+                  "rangeFilterable": true,
+                  "sortable": true
+                },
+                {
+                  "name": "unitPrice",
+                  "type": "string",
+                  "nullable": false,
+                  "filterable": false,
+                  "rangeFilterable": false,
+                  "sortable": false
+                },
+                {
+                  "name": "active",
+                  "type": "boolean",
+                  "nullable": false,
+                  "filterable": true,
+                  "rangeFilterable": false,
+                  "sortable": false
+                },
+                {
+                  "name": "note",
+                  "type": "string",
+                  "nullable": true,
+                  "filterable": false,
+                  "rangeFilterable": false,
+                  "sortable": false
+                },
+                {
+                  "name": "noteState",
+                  "type": "string",
+                  "nullable": false,
+                  "filterable": true,
+                  "rangeFilterable": false,
+                  "sortable": false
+                },
+                {
+                  "name": "dimensions",
+                  "type": "string",
+                  "nullable": false,
+                  "filterable": false,
+                  "rangeFilterable": false,
+                  "sortable": false
+                },
+                {
+                  "name": "tags",
+                  "type": "string",
+                  "nullable": false,
+                  "filterable": false,
+                  "rangeFilterable": false,
+                  "sortable": false
+                }
+              ],
+              "defaultLimit": 50,
+              "maxLimit": 250,
+              "order": "csv-record-order"
+            },
+            "fields": [
+              "id",
+              "sku",
+              "quantity",
+              "unitPrice",
+              "active",
+              "note",
+              "noteState",
+              "dimensions",
+              "tags"
+            ],
+            "filters": {
+              "id": "9007199254740993"
+            },
+            "rows": [
+              {
+                "id": "9007199254740993",
+                "sku": "SHOP-001",
+                "quantity": 7,
+                "unitPrice": "0.123456789012345678901",
+                "active": true,
+                "note": null,
+                "noteState": "null",
+                "dimensions": "{\"width\":12.50,\"unit\":\"cm\"}",
+                "tags": "[\"parts\",\"standard\"]"
+              }
+            ],
+            "page": {
+              "limit": 50,
+              "total": 1,
+              "returned": 1,
+              "nextCursor": null
+            }
+          }
+        }
+      },
+      "project": {
+        "file": "/dev/scf-ndjson-3ad791-20261012/source/.ndjson-native-output/received-first.zip",
+        "bytes": 2847,
+        "sha256": "289eb925bc69f344cfd358d5fb61c1b1e1322bc574ad695d8261ea760122a33a",
+        "build": "f54435870d75d7909cda62ce81b2ef57e056706835213ceed86156c55cf910bd",
+        "reused": false
+      },
+      "sourceDelivery": {
+        "schema": "stellar-forge.ndjson-source-delivery.v1",
+        "directory": "/dev/scf-ndjson-3ad791-20261012/source/.ndjson-native-output/operator/deliveries/first",
+        "manifestSha256": "d875bc0579ba125ddbcec31f730aaa3723980655d938e27ee581521ed7524e17",
+        "snapshot": "c07fd13878678218fed08892e44af100320fad016e190dfefb2ab1c580d560fa",
+        "rows": 3,
+        "fields": [
+          "id",
+          "sku",
+          "quantity",
+          "unitPrice",
+          "active",
+          "note",
+          "noteState",
+          "dimensions",
+          "tags"
+        ],
+        "pages": 1,
+        "complete": true,
+        "finalized": true,
+        "chainDigest": "9e75cfa255063838ed618535d2f51351d5d68441b0456466a05063d85258109b",
+        "sourcePages": [
+          {
+            "index": 0,
+            "intent": "3e0e20fc-94aa-4f5c-b5a7-366fe7f8271a",
+            "sourceSha256": "570c56b404239e030dfd787d69a1d6f82df02d7289f5d4d0938c383d0d08ffb6",
+            "evidenceSha256": "68597d8eee86a4580f559071881ccfdef6c89ccf6fc3e70dcfb05263e32ed928",
+            "recordDigest": "9e75cfa255063838ed618535d2f51351d5d68441b0456466a05063d85258109b",
+            "rows": 3,
+            "requestedCursor": null
+          }
+        ],
+        "outputs": {
+          "manifest.json": {
+            "path": "/dev/scf-ndjson-3ad791-20261012/source/.ndjson-native-output/operator/deliveries/first/manifest.json",
+            "bytes": 1757,
+            "sha256": "d875bc0579ba125ddbcec31f730aaa3723980655d938e27ee581521ed7524e17"
+          },
+          "dataset.jsonl": {
+            "path": "/dev/scf-ndjson-3ad791-20261012/source/.ndjson-native-output/operator/deliveries/first/dataset.jsonl",
+            "bytes": 597,
+            "sha256": "8b699b54035df4caae725a07584466382a1c0b3c3b735a0069655dae6117f9f4"
+          },
+          "dataset.csv": {
+            "path": "/dev/scf-ndjson-3ad791-20261012/source/.ndjson-native-output/operator/deliveries/first/dataset.csv",
+            "bytes": 431,
+            "sha256": "f72709df31189373d7707424e636e31f7eb51e09d6bbe67b91b40153c0448896"
+          },
+          "review.html": {
+            "path": "/dev/scf-ndjson-3ad791-20261012/source/.ndjson-native-output/operator/deliveries/first/review.html",
+            "bytes": 2205,
+            "sha256": "17d42fecea09c1046ee2a8c194017b331f98a35584ed0ea1a7dbf9da4e831e68"
+          }
+        },
+        "paymentStatus": "NOT_INFERRED_FROM_SOURCE_HTTP_OR_LOCAL_HASHES"
+      }
+    },
+    {
+      "schema": "stellar-forge.ndjson-received.v1",
+      "workspace": "/dev/scf-ndjson-3ad791-20261012/source/.ndjson-native-output/customer-workspace",
+      "releaseDirectory": "/dev/scf-ndjson-3ad791-20261012/source/.ndjson-native-output/release-next",
+      "source": "11daacca762d9708dbb4260a17d16da8a602c3b24f648dec9844b7ec39db9c9e",
+      "plan": "95ac00d5900d32d670ef42100a77cbcb3aff1e3546f944b30f1752987a5f945e",
+      "build": "5a678f4854f06fc09a5e6beaf3a61773b54fcc86e6b184dba74e4b140b0a8161",
+      "snapshot": "26665c344dae2e638465b4473a74025d6cc617fb528dbe421c18e160d068fcc0",
+      "rowCount": 3,
+      "reused": false,
+      "query": {
+        "id": 2,
+        "ok": true,
+        "engineBlob": "7496dd29c59c23b3bc16c7d24a327a30b867625f",
+        "dataset": {
+          "name": "Merchant inventory",
+          "snapshot": "26665c344dae2e638465b4473a74025d6cc617fb528dbe421c18e160d068fcc0",
+          "rowCount": 3,
+          "columns": [
+            {
+              "name": "id",
+              "type": "string",
+              "nullable": false,
+              "filterable": true,
+              "rangeFilterable": false,
+              "sortable": false
+            },
+            {
+              "name": "sku",
+              "type": "string",
+              "nullable": false,
+              "filterable": true,
+              "rangeFilterable": false,
+              "sortable": true
+            },
+            {
+              "name": "quantity",
+              "type": "integer",
+              "nullable": false,
+              "filterable": false,
+              "rangeFilterable": true,
+              "sortable": true
+            },
+            {
+              "name": "unitPrice",
+              "type": "string",
+              "nullable": false,
+              "filterable": false,
+              "rangeFilterable": false,
+              "sortable": false
+            },
+            {
+              "name": "active",
+              "type": "boolean",
+              "nullable": false,
+              "filterable": true,
+              "rangeFilterable": false,
+              "sortable": false
+            },
+            {
+              "name": "note",
+              "type": "string",
+              "nullable": true,
+              "filterable": false,
+              "rangeFilterable": false,
+              "sortable": false
+            },
+            {
+              "name": "noteState",
+              "type": "string",
+              "nullable": false,
+              "filterable": true,
+              "rangeFilterable": false,
+              "sortable": false
+            },
+            {
+              "name": "dimensions",
+              "type": "string",
+              "nullable": false,
+              "filterable": false,
+              "rangeFilterable": false,
+              "sortable": false
+            },
+            {
+              "name": "tags",
+              "type": "string",
+              "nullable": false,
+              "filterable": false,
+              "rangeFilterable": false,
+              "sortable": false
+            }
+          ],
+          "defaultLimit": 50,
+          "maxLimit": 250,
+          "order": "csv-record-order"
+        },
+        "response": {
+          "status": 200,
+          "headers": {
+            "content-type": "application/json; charset=utf-8",
+            "x-dataset-snapshot": "26665c344dae2e638465b4473a74025d6cc617fb528dbe421c18e160d068fcc0"
+          },
+          "body": {
+            "schema": "stellar-forge.dataset-page.v1",
+            "dataset": {
+              "name": "Merchant inventory",
+              "snapshot": "26665c344dae2e638465b4473a74025d6cc617fb528dbe421c18e160d068fcc0",
+              "rowCount": 3,
+              "columns": [
+                {
+                  "name": "id",
+                  "type": "string",
+                  "nullable": false,
+                  "filterable": true,
+                  "rangeFilterable": false,
+                  "sortable": false
+                },
+                {
+                  "name": "sku",
+                  "type": "string",
+                  "nullable": false,
+                  "filterable": true,
+                  "rangeFilterable": false,
+                  "sortable": true
+                },
+                {
+                  "name": "quantity",
+                  "type": "integer",
+                  "nullable": false,
+                  "filterable": false,
+                  "rangeFilterable": true,
+                  "sortable": true
+                },
+                {
+                  "name": "unitPrice",
+                  "type": "string",
+                  "nullable": false,
+                  "filterable": false,
+                  "rangeFilterable": false,
+                  "sortable": false
+                },
+                {
+                  "name": "active",
+                  "type": "boolean",
+                  "nullable": false,
+                  "filterable": true,
+                  "rangeFilterable": false,
+                  "sortable": false
+                },
+                {
+                  "name": "note",
+                  "type": "string",
+                  "nullable": true,
+                  "filterable": false,
+                  "rangeFilterable": false,
+                  "sortable": false
+                },
+                {
+                  "name": "noteState",
+                  "type": "string",
+                  "nullable": false,
+                  "filterable": true,
+                  "rangeFilterable": false,
+                  "sortable": false
+                },
+                {
+                  "name": "dimensions",
+                  "type": "string",
+                  "nullable": false,
+                  "filterable": false,
+                  "rangeFilterable": false,
+                  "sortable": false
+                },
+                {
+                  "name": "tags",
+                  "type": "string",
+                  "nullable": false,
+                  "filterable": false,
+                  "rangeFilterable": false,
+                  "sortable": false
+                }
+              ],
+              "defaultLimit": 50,
+              "maxLimit": 250,
+              "order": "csv-record-order"
+            },
+            "fields": [
+              "id",
+              "sku",
+              "quantity",
+              "unitPrice",
+              "active",
+              "note",
+              "noteState",
+              "dimensions",
+              "tags"
+            ],
+            "filters": {
+              "id": "9007199254740993"
+            },
+            "rows": [
+              {
+                "id": "9007199254740993",
+                "sku": "SHOP-001",
+                "quantity": 6,
+                "unitPrice": "0.123456789012345678902",
+                "active": true,
+                "note": null,
+                "noteState": "null",
+                "dimensions": "{\"width\":12.50,\"unit\":\"cm\"}",
+                "tags": "[\"parts\",\"standard\"]"
+              }
+            ],
+            "page": {
+              "limit": 50,
+              "total": 1,
+              "returned": 1,
+              "nextCursor": null
+            }
+          }
+        }
+      },
+      "comparison": {
+        "schema": "stellar-forge.ndjson-comparison.v1",
+        "id": "0547d8a76d2e25b10e4428c411b93db69f569bedff2add63b43361723dc25ff6",
+        "before": "f54435870d75d7909cda62ce81b2ef57e056706835213ceed86156c55cf910bd",
+        "after": "5a678f4854f06fc09a5e6beaf3a61773b54fcc86e6b184dba74e4b140b0a8161",
+        "plan": "95ac00d5900d32d670ef42100a77cbcb3aff1e3546f944b30f1752987a5f945e",
+        "keys": [
+          "id"
+        ],
+        "semantics": "exact projected CSV cells; record order changes are not field changes",
+        "counts": {
+          "added": 1,
+          "removed": 1,
+          "changed": 1,
+          "unchanged": 1
+        },
+        "changesSha256": "18f3f6c551f8771a7dc64fda6cea8e520db2b276efe60e19753a0f0017e8ee3c"
+      },
+      "project": {
+        "file": "/dev/scf-ndjson-3ad791-20261012/source/.ndjson-native-output/received-next.zip",
+        "bytes": 2852,
+        "sha256": "26cfedfe4a1cf68623f02ca2224370a2ba52ac8ece55101ca70d669f2ea81197",
+        "build": "5a678f4854f06fc09a5e6beaf3a61773b54fcc86e6b184dba74e4b140b0a8161",
+        "reused": false
+      },
+      "sourceDelivery": {
+        "schema": "stellar-forge.ndjson-source-delivery.v1",
+        "directory": "/dev/scf-ndjson-3ad791-20261012/source/.ndjson-native-output/operator/deliveries/next",
+        "manifestSha256": "3cb612380d319781a000f46521578a0fe971eb11a2c212870c61854b69157e7c",
+        "snapshot": "26665c344dae2e638465b4473a74025d6cc617fb528dbe421c18e160d068fcc0",
+        "rows": 3,
+        "fields": [
+          "id",
+          "sku",
+          "quantity",
+          "unitPrice",
+          "active",
+          "note",
+          "noteState",
+          "dimensions",
+          "tags"
+        ],
+        "pages": 1,
+        "complete": true,
+        "finalized": true,
+        "chainDigest": "b974d660600714c4521ee6673f666d53670fbdf1dad6b963c2835405c3697419",
+        "sourcePages": [
+          {
+            "index": 0,
+            "intent": "64741b42-bc1e-4831-aacb-f43f5bf699f0",
+            "sourceSha256": "763a424da98e13ef943cb54e0c036f2baf5e1b66988dcdb1242d0c9426f2d444",
+            "evidenceSha256": "7c9da614b257f92f5887b383392bc9b71d37c43b544655b6b3b38378753cae48",
+            "recordDigest": "b974d660600714c4521ee6673f666d53670fbdf1dad6b963c2835405c3697419",
+            "rows": 3,
+            "requestedCursor": null
+          }
+        ],
+        "outputs": {
+          "manifest.json": {
+            "path": "/dev/scf-ndjson-3ad791-20261012/source/.ndjson-native-output/operator/deliveries/next/manifest.json",
+            "bytes": 1757,
+            "sha256": "3cb612380d319781a000f46521578a0fe971eb11a2c212870c61854b69157e7c"
+          },
+          "dataset.jsonl": {
+            "path": "/dev/scf-ndjson-3ad791-20261012/source/.ndjson-native-output/operator/deliveries/next/dataset.jsonl",
+            "bytes": 612,
+            "sha256": "edf8ecad0620e7f772cd0ba68451fcb5b8136a431e88acc69421a7b2f751aee8"
+          },
+          "dataset.csv": {
+            "path": "/dev/scf-ndjson-3ad791-20261012/source/.ndjson-native-output/operator/deliveries/next/dataset.csv",
+            "bytes": 450,
+            "sha256": "760677ccc6baf5f88fb34b4fbaa565208116ebf9b7831ce83b0e14ba9feecd10"
+          },
+          "review.html": {
+            "path": "/dev/scf-ndjson-3ad791-20261012/source/.ndjson-native-output/operator/deliveries/next/review.html",
+            "bytes": 2205,
+            "sha256": "ab90f9e697a73ee844b177e701a8ca55d64958cd1edd78f096abdde116fed2ed"
+          }
+        },
+        "paymentStatus": "NOT_INFERRED_FROM_SOURCE_HTTP_OR_LOCAL_HASHES"
+      }
+    }
+  ],
+  "comparison": {
+    "added": 1,
+    "removed": 1,
+    "changed": 1,
+    "unchanged": 1
+  },
+  "workspaceReopened": true,
+  "projectReopened": "5a678f4854f06fc09a5e6beaf3a61773b54fcc86e6b184dba74e4b140b0a8161"
+}

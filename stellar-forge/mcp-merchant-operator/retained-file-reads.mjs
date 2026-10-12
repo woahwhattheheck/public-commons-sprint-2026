@@ -1,10 +1,12 @@
 // MIT. Original accounting read snapshots, shared by the native retained-file owners.
 import { open, mkdtemp, unlink, rmdir } from 'node:fs/promises';
+import { constants } from 'node:fs';
 import { createHash, randomUUID } from 'node:crypto';
-import { join } from 'node:path';
+import { isAbsolute, join } from 'node:path';
 
 const MEMORY_SNAPSHOT_LIMIT = 32 * 1024;
-const SNAPSHOT_BYTES_LIMIT = 256_000_000;
+const DEFAULT_SNAPSHOT_BYTES_LIMIT = 256_000_000;
+const COPY_CHUNK_BYTES = 1024 * 1024;
 const SNAPSHOT_COUNT_LIMIT = 4;
 const SNAPSHOT_IDLE_MS = 120_000;
 export const MAX_RETAINED_CHUNK_BYTES = 196608;
@@ -12,13 +14,21 @@ const digest = bytes => createHash('sha256').update(bytes).digest('hex');
 
 /**
  * The native owner selects the file and verifies its original manifest in load().
- * This reader owns only temporary verified bytes. Scope/key/directory are trusted
- * host values, never a client-selected path. Each owner has its own lifecycle.
+ * An owner with a retained file can instead provide loadFile(), its exact byte
+ * count and expectedSha256. That path is streamed once into the same private
+ * snapshot. Scope/key/directory/source paths and maximum size are trusted host
+ * values, never client-selected paths. Each owner has its own lifecycle.
  */
 export class RetainedFileReads {
   #reads = new Map(); #readTail = Promise.resolve(); #readStats = new Map();
-  #prefix; #closing = false; #close;
-  constructor({ errorPrefix = 'RETAINED' } = {}) { this.#prefix = errorPrefix; }
+  #prefix; #closing = false; #close; #maxSnapshotBytes;
+  #opening = new Map(); #scopeClosures = new Map();
+  constructor({ errorPrefix = 'RETAINED', maxSnapshotBytes = DEFAULT_SNAPSHOT_BYTES_LIMIT } = {}) {
+    this.#prefix = errorPrefix;
+    if (!Number.isSafeInteger(maxSnapshotBytes) || maxSnapshotBytes < 1)
+      throw this.#fail('INVALID_CAPACITY', 'Use an explicit positive safe-integer snapshot byte budget.');
+    this.#maxSnapshotBytes = maxSnapshotBytes;
+  }
   #fail(code, message) { return Object.assign(new Error(message), { code: this.#prefix + '_' + code }); }
   get summary() { return { activeFileReads: this.#reads.size,
     snapshotBytes: [...this.#reads.values()].reduce((sum, read) => sum + read.size, 0) }; }
@@ -52,44 +62,136 @@ export class RetainedFileReads {
     }
     await read.release;
   }
-  async closeScope(scope) {
-    await Promise.allSettled([...this.#reads.values()].filter(read => read.scope === scope).map(read => this.release(scope, read.id)));
+  closeScope(scope) {
+    if (!this.#scopeClosures.has(scope)) {
+      // Include admitted loaders, which may not have published their snapshot
+      // yet. New admissions to this scope wait for an explicit later reopen.
+      const closing = (async () => {
+        await Promise.allSettled([...(this.#opening.get(scope) ?? [])]);
+        await Promise.allSettled([...this.#reads.values()].filter(read => read.scope === scope)
+          .map(read => this.release(scope, read.id)));
+      })().finally(() => { this.#scopeClosures.delete(scope); });
+      this.#scopeClosures.set(scope, closing);
+    }
+    return this.#scopeClosures.get(scope);
   }
-  #open({ scope, key, kind, directory, load, expectedSha256 }) {
-    // Only one original loader's large Buffer is live here at a time. Later
-    // chunks reuse its immutable snapshot and do not invoke that loader again.
-    const pending = this.#readTail.then(async () => {
-      if (this.#closing) throw this.#fail('CLOSING', 'Retained file reads are closing.');
-      if (this.#reads.size >= SNAPSHOT_COUNT_LIMIT) throw this.#fail('READ_CAPACITY', 'Finish or release an existing file read before opening another.');
-      this.#readStats.set(scope, (this.#readStats.get(scope) ?? 0) + 1);
-      const original = await load(), bytes = original.bytes, sha = digest(bytes);
-      if (expectedSha256 && sha !== expectedSha256) throw this.#fail('FILE_CHANGED', 'The original file differs from the requested SHA256.');
-      if (bytes.length > SNAPSHOT_BYTES_LIMIT - this.summary.snapshotBytes)
-        throw this.#fail('READ_CAPACITY', 'Finish or release existing reads to make room within the 256 MB verified-snapshot budget.');
-      const read = { id: randomUUID(), key, scope, kind, size: bytes.length, tail: Promise.resolve(),
-        closed: false, memory: null, handle: null,
-        metadata: { name: original.name, contentType: original.type ?? (original.name.endsWith('.json') ? 'application/json'
-          : original.name.endsWith('.tar') ? 'application/x-tar' : 'application/octet-stream'), bytes: bytes.length, sha256: sha } };
-      if (bytes.length <= MEMORY_SNAPSHOT_LIMIT) read.memory = bytes;
-      else {
-        // Already verified original bytes, not a second export. Unlink the
-        // private descriptor immediately; process exit releases it as well.
-        const temporary = await mkdtemp(join(directory, '.mcp-read-')), path = join(temporary, 'snapshot');
-        try {
-          read.handle = await open(path, 'wx+', 0o600);
-          await read.handle.writeFile(bytes); await unlink(path); await rmdir(temporary);
-        } catch (error) {
-          await read.handle?.close(); await unlink(path).catch(() => {}); await rmdir(temporary).catch(() => {}); throw error;
+  #capacity(bytes) {
+    if (!Number.isSafeInteger(bytes) || bytes < 0)
+      throw this.#fail('INVALID_FILE', 'The original file must declare its exact nonnegative byte count.');
+    if (bytes > this.#maxSnapshotBytes - this.summary.snapshotBytes)
+      throw this.#fail('READ_CAPACITY', 'Finish or release existing reads to make room within the original owner snapshot byte budget.');
+  }
+  async #snapshotHandle(directory) {
+    const temporary = await mkdtemp(join(directory, '.mcp-read-')), path = join(temporary, 'snapshot');
+    let handle;
+    try {
+      handle = await open(path, 'wx+', 0o600);
+      // Keep only the private descriptor during the copy and all later ranges.
+      await unlink(path); await rmdir(temporary);
+      return handle;
+    } catch (error) {
+      await handle?.close().catch(() => {});
+      await unlink(path).catch(() => {}); await rmdir(temporary).catch(() => {}); throw error;
+    }
+  }
+  async #copyOriginalFile(original, directory, expectedSha256) {
+    if (!original || typeof original !== 'object' || typeof original.path !== 'string' || !isAbsolute(original.path) ||
+        typeof original.name !== 'string' || !original.name || original.name.length > 255 ||
+        /[\\/\u0000-\u001f\u007f]/.test(original.name))
+      throw this.#fail('INVALID_FILE', 'The original owner must select an absolute retained file and its download name.');
+    this.#capacity(original.bytes);
+    let source, snapshot;
+    try {
+      source = await open(original.path, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0) | (constants.O_NONBLOCK ?? 0));
+      const before = await source.stat({ bigint: true });
+      if (!before.isFile() || typeof process.getuid !== 'function' || before.uid !== BigInt(process.getuid()) ||
+          (before.mode & 0o077n) !== 0n)
+        throw this.#fail('INVALID_FILE', 'Select an owned private regular source file.');
+      if (before.size !== BigInt(original.bytes))
+        throw this.#fail('FILE_CHANGED', 'The retained source size differs from its original manifest.');
+      snapshot = await this.#snapshotHandle(directory);
+      const hash = createHash('sha256'), buffer = Buffer.alloc(Math.min(COPY_CHUNK_BYTES, Math.max(original.bytes, 1)));
+      let position = 0;
+      while (position < original.bytes) {
+        if (this.#closing || this.#scopeClosures.has(original.scope))
+          throw this.#fail('CLOSING', 'Retained file reads are closing.');
+        const result = await source.read(buffer, 0, Math.min(buffer.length, original.bytes - position), position);
+        if (!result.bytesRead) throw this.#fail('FILE_CHANGED', 'The retained source ended before its declared size.');
+        const chunk = buffer.subarray(0, result.bytesRead);
+        let written = 0;
+        while (written < chunk.length) {
+          const result = await snapshot.write(chunk, written, chunk.length - written, position + written);
+          if (!result.bytesWritten) throw this.#fail('SNAPSHOT_UNAVAILABLE', 'The private snapshot could not retain the original bytes.');
+          written += result.bytesWritten;
         }
+        hash.update(chunk); position += chunk.length;
       }
-      this.#reads.set(read.id, read); this.#touch(read); return read;
+      if ((await source.read(buffer, 0, 1, position)).bytesRead)
+        throw this.#fail('FILE_CHANGED', 'The retained source grew beyond its original manifest.');
+      const after = await source.stat({ bigint: true });
+      if (['dev', 'ino', 'size', 'mtimeNs', 'ctimeNs', 'mode', 'uid'].some(key => before[key] !== after[key]))
+        throw this.#fail('FILE_CHANGED', 'The original source changed during its snapshot copy.');
+      const sha256 = hash.digest('hex');
+      if (sha256 !== expectedSha256)
+        throw this.#fail('FILE_CHANGED', 'The original file differs from the requested SHA256.');
+      await source.close(); source = null;
+      const handle = snapshot; snapshot = null;
+      return { handle, sha256, size: original.bytes };
+    } finally {
+      await Promise.allSettled([source?.close(), snapshot?.close()].filter(Boolean));
+    }
+  }
+  #open({ scope, key, kind, directory, load, loadFile, expectedSha256 }) {
+    // Serialize original acquisition, then serve each owner's independent
+    // immutable snapshot. Range reads never rerun the original exporter.
+    const pending = this.#readTail.then(async () => {
+      if (this.#closing || this.#scopeClosures.has(scope))
+        throw this.#fail('CLOSING', 'Retained file reads are closing.');
+      if (this.#reads.size >= SNAPSHOT_COUNT_LIMIT)
+        throw this.#fail('READ_CAPACITY', 'Finish or release an existing file read before opening another.');
+      if (typeof load === 'function' && loadFile !== undefined || typeof loadFile === 'function' && load !== undefined ||
+          typeof load !== 'function' && typeof loadFile !== 'function')
+        throw this.#fail('INVALID_FILE', 'Select exactly one original Buffer loader or retained-file loader.');
+      if (loadFile && !expectedSha256)
+        throw this.#fail('INVALID_FILE', 'Retained-file acquisition requires its original expectedSha256.');
+      this.#readStats.set(scope, (this.#readStats.get(scope) ?? 0) + 1);
+      const original = await (loadFile ?? load)();
+      let size, sha, memory = null, handle = null;
+      try {
+        if (loadFile) {
+          const copied = await this.#copyOriginalFile({ ...original, scope }, directory, expectedSha256);
+          size = copied.size; sha = copied.sha256; handle = copied.handle;
+        } else {
+          if (!Buffer.isBuffer(original?.bytes) || typeof original?.name !== 'string')
+            throw this.#fail('INVALID_FILE', 'The original Buffer loader must return bytes and a download name.');
+          const bytes = original.bytes;
+          this.#capacity(bytes.length); size = bytes.length; sha = digest(bytes);
+          if (expectedSha256 && sha !== expectedSha256)
+            throw this.#fail('FILE_CHANGED', 'The original file differs from the requested SHA256.');
+          if (bytes.length <= MEMORY_SNAPSHOT_LIMIT) memory = Buffer.from(bytes);
+          else { handle = await this.#snapshotHandle(directory); await handle.writeFile(bytes); }
+        }
+        if (this.#closing || this.#scopeClosures.has(scope))
+          throw this.#fail('CLOSING', 'Retained file reads are closing.');
+        const read = { id: randomUUID(), key, scope, kind, size, tail: Promise.resolve(),
+          closed: false, memory, handle,
+          metadata: { name: original.name, contentType: original.type ?? (original.name.endsWith('.json') ? 'application/json'
+            : original.name.endsWith('.tar') ? 'application/x-tar' : 'application/octet-stream'), bytes: size, sha256: sha } };
+        this.#reads.set(read.id, read); handle = null; this.#touch(read); return read;
+      } finally {
+        await handle?.close().catch(() => {});
+      }
     });
-    this.#readTail = pending.then(() => {}, () => {});
+    let opening = this.#opening.get(scope);
+    if (!opening) { opening = new Set(); this.#opening.set(scope, opening); }
+    opening.add(pending);
+    const remove = () => { opening.delete(pending); if (!opening.size) this.#opening.delete(scope); };
+    this.#readTail = pending.then(remove, remove);
     return pending;
   }
   async read(options) {
     const { scope, key, readId, expectedSha256, offset = 0, limit = 65536 } = options;
-    if (this.#closing) throw this.#fail('CLOSING', 'Retained file reads are closing.');
+    if (this.#closing || this.#scopeClosures.has(scope)) throw this.#fail('CLOSING', 'Retained file reads are closing.');
     if (!Number.isSafeInteger(offset) || offset < 0 || !Number.isSafeInteger(limit) || limit < 1 || limit > MAX_RETAINED_CHUNK_BYTES ||
         expectedSha256 !== undefined && !/^[0-9a-f]{64}$/.test(expectedSha256))
       throw this.#fail('INVALID_CHUNK', 'Use a nonnegative byte offset, a bounded chunk and an exact SHA256.');
