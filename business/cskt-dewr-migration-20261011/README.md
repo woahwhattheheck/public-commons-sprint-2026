@@ -12,6 +12,7 @@ The project is grounded in the [CSKT DEWR website RFP](https://csktwatercompact.
 - **GIS:** original published ArcGIS item and app records, source-page lineage, native map/layer information, published-resource selection and a reviewed text equivalent for each attached map.
 - **Releases:** exact approved revisions, source capture identities, named reviewer decisions, destination paths and validated 301/410 routes.
 - **WordPress delivery:** native destination preview, original target bindings, per-item journal, actual media transfer, apply/readback and rollback that preserves later staff edits. Native WordPress content controls let staff select document files and edit version details, map descriptions, notices and archive status.
+- **Public engagement:** project- and notice-bound contact forms, reviewed public comments, confirmed newsletter sign-up, event registration and waiting lists, native staff correspondence, private receipts and complete receiving.
 - **Operations:** grayscale responsive UI, stable request recovery, operating export, native SQLite backup/restore and complete staff and destination guides.
 
 The application runs on Node.js 24 or later and uses built-in HTTP, SQLite, cryptography and compression. Its `package.json` has no external application dependencies. The included destination plugin extends the selected WordPress CMS.
@@ -27,6 +28,12 @@ node cli.mjs serve --database /private/dewr/workspace.sqlite --sources /private/
 ```
 
 Open the reported URL, sign in, review content and prepare the first release. [OPERATIONS.md](OPERATIONS.md) covers the complete source-to-destination workflow, production origin configuration, staff access, file versions, GIS review and recovery. [source/CONTRACT.md](source/CONTRACT.md) describes the repeatable capture and original response contracts. [destination/DEPLOYMENT.md](destination/DEPLOYMENT.md) covers the native WordPress installation and delivery commands.
+
+## Native public engagement
+
+WordPress **Engagement** extends the same destination with the RFP's contact, comment, newsletter and optional event-registration workflows. Staff select an existing native resource, prepare its information-use and consent text, review original submissions and release approved responses or public comments. Newsletter confirmation, unsubscribe, RSVP capacity, cancellation and waiting-list promotion retain the original participant record and native correspondence.
+
+The complete form, consent, review and mail history travels through normal WordPress backups or selected-form export and receiving. [destination/ENGAGEMENT.md](destination/ENGAGEMENT.md) covers installation, staff and public workflows, the original destination CLI and complete receiving. The maintained source ZIP includes all components. The existing commercial migration scope remains in `commercial/`; an engagement implementation can be scoped with the qualified prime.
 
 ## Original source basis
 

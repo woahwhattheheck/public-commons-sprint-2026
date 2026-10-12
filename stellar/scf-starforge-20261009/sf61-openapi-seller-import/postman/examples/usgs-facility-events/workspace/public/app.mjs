@@ -1,4 +1,5 @@
 // MIT. Complete customer operating workflow over the retained original reporter.
+import { createCollectionPanel } from './collections.mjs';
 const $=selector=>document.querySelector(selector),all=selector=>[...document.querySelectorAll(selector)];
 const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const uid=()=>crypto.randomUUID(),clone=value=>JSON.parse(JSON.stringify(value));
@@ -73,6 +74,8 @@ function downloadUrl(suffix,query={}){
   url.searchParams.set('token',token);return url.pathname+url.search;
 }
 function fileLink(suffix,title,query={},blank=false){return '<a href="'+escape(downloadUrl(suffix,query))+'"'+(blank?' target="_blank" rel="noopener"':'')+'>'+escape(title)+'</a>';}
+const buyerCollections=createCollectionPanel({projectId:()=>projectId,state:()=>state,api,route,fileLink,clearDraft,clearOperation,
+  clearFileDraft:(form,name)=>fileDrafts.delete(draftKey(form)+':'+name),refresh,render,notice,adoptSources,controls});
 function smallDownload(name,text,type='application/json'){
   const url=URL.createObjectURL(new Blob([text],{type})),anchor=document.createElement('a');
   anchor.href=url;anchor.download=name;document.body.append(anchor);anchor.click();anchor.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
@@ -191,6 +194,7 @@ function sourcesPage(){
     '<div class="actions"><button type="submit">Retain selected response files</button></div></form><p class="hint">Each original response is retained byte for byte. Select up to 16 responses for one report edition.</p>'+
     '<details><summary>Original historical example</summary><p>The original source contains the 2014 South Napa earthquake and three illustrative city-centre sites. It provides a complete saved-report and receiving walkthrough.</p><div class="actions"><button data-action="historical-example">Open historical example project</button></div></details>'+
     '<p>'+external('https://earthquake.usgs.gov/fdsnws/event/1/','USGS event service')+' · '+external('https://earthquake.usgs.gov/earthquakes/feed/v1.0/geojson.php','Published GeoJSON feeds')+'</p></section></div>'+
+    buyerCollections.page()+
     '<section class="panel"><div class="panel-title"><h2>Source captures</h2><button data-action="refresh-sources">Refresh capture progress</button></div><div id="capture-list"></div></section>'+
     '<section class="panel"><div class="panel-title"><h2>Retained response editions</h2><button data-page="editions">Prepare report from selected sources</button></div><p id="selected-source-count" class="hint"></p><div id="source-list"></div></section>';
 }
@@ -214,8 +218,9 @@ function sourcePieces(){
     '<details><summary>Original query and HTTP observations</summary><pre>'+escape(JSON.stringify(job.plan,null,2))+'</pre>'+job.observations.map(item=>'<p>'+escape(item.kind)+' · HTTP '+item.status+' · '+count(item.bytes)+' bytes · '+escape(stamp(item.receivedAt))+'<br>'+external(item.url,'Original USGS request')+' · '+fileLink('observations/'+job.id+'/'+item.id,'Download original response')+'<br><span class="mono">'+escape(item.bodySha256)+'</span></p>').join('')+'</details></article>').join(''):empty('Capture progress and retained HTTP observations will appear here.');
   $('#selected-source-count').textContent=chosenSources.size+' responses selected for the next report (maximum 16).';
   const sources=state.sources.slice().reverse(),visible=sources.slice(sourceOffset,sourceOffset+50);
-  $('#source-list').innerHTML=sources.length?'<div class="table-wrap"><table><thead><tr><th>Use</th><th>Original response</th><th class="numeric">Rows / bytes</th><th>Received (UTC)</th><th>Selection</th><th>Original file</th></tr></thead><tbody>'+visible.map(source=>'<tr><td><input type="checkbox" data-source="'+source.id+'" aria-label="Use '+escape(source.name)+'"'+(chosenSources.has(source.id)?' checked':'')+'></td><td>'+escape(source.name)+'<small>'+escape(short(source.bodySha256))+' · HTTP '+source.status+'</small></td><td class="numeric">'+count(source.returnedFeatures)+' rows<br>'+count(source.bytes)+' B</td><td>'+escape(stamp(source.receivedAt))+'</td><td>'+escape(source.plan?source.plan.mode==='feed'?source.plan.magnitude+' / '+source.plan.period:source.window?.starttime+' to '+source.window?.endtime:'Retained original file')+
+  $('#source-list').innerHTML=sources.length?'<div class="table-wrap"><table><thead><tr><th>Use</th><th>Original response</th><th class="numeric">Rows / bytes</th><th>Received (UTC)</th><th>Selection</th><th>Original file</th></tr></thead><tbody>'+visible.map(source=>'<tr><td><input type="checkbox" data-source="'+source.id+'" aria-label="Use '+escape(source.name)+'"'+(chosenSources.has(source.id)?' checked':'')+'></td><td>'+escape(source.name)+'<small>'+escape(short(source.bodySha256))+' · HTTP '+source.status+'</small></td><td class="numeric">'+count(source.returnedFeatures)+' rows<br>'+count(source.bytes)+' B</td><td>'+escape(stamp(source.receivedAt))+'</td><td>'+escape(source.plan?source.plan.mode==='feed'?source.plan.magnitude+' / '+source.plan.period:source.window?.starttime+' to '+source.window?.endtime:source.acquisition?'Saved buyer collection':'Retained original file')+
     (source.counts?'<small>Count before '+source.counts.before+' / after '+source.counts.after+'</small>':'')+((state.coverage?.[source.id]??[]).length?'<details><summary>Site selection notes</summary>'+state.coverage[source.id].map(note=>'<p>'+escape(note)+'</p>').join('')+'</details>':'')+
+    (source.acquisition?'<p>Received by '+escape(source.receivedBy)+' · '+fileLink('sources/'+source.id+'/acquisition','Original buyer member and collection')+'</p>':'')+
     '<details><summary>Source identity</summary><dl><dt>SHA-256</dt><dd class="mono">'+escape(source.bodySha256)+'</dd><dt>Original URL</dt><dd>'+external(source.url)+'</dd><dt>Note</dt><dd>'+escape(source.note??'')+'</dd></dl><pre>'+escape(JSON.stringify(source.metadata,null,2))+'</pre></details></td><td>'+fileLink('sources/'+source.id+'/raw','Download')+'</td></tr>').join('')+'</tbody></table></div>'+pagination('sources',sourceOffset,50,sources.length):empty('Receive an original source response or capture a public source to prepare the first report.');
   controls();
 }
@@ -297,8 +302,9 @@ function deliveryPage(){
     '<div class="actions">'+fileLink('editions/'+current.id+'/handover.html','Open printable customer handover',{},true)+'</div><div class="actions">'+fileLink('editions/'+current.id+'/report.json','Original report JSON')+fileLink('editions/'+current.id+'/report.csv','Full matched-event CSV')+'</div>'+
     '<div class="actions">'+fileLink('work.csv','Selected-edition operating decisions CSV',{edition:current.id})+fileLink('rosters/'+current.rosterId+'/raw','Exact report facility input')+'</div>'+
     '<details><summary>Edition and report identities</summary><dl><dt>Edition</dt><dd class="mono">'+escape(current.id)+'</dd><dt>Report SHA-256</dt><dd class="mono">'+escape(current.reportSha256)+'</dd><dt>Roster</dt><dd>'+escape(sites?.label)+'</dd><dt>Prepared by</dt><dd>'+escape(current.operator)+'</dd></dl></details>':empty('Prepare and select a report edition to create a customer handover.'))+'</section>'+
-    '<section class="panel"><h2>Complete operating workspace</h2><p>The portable file includes all original response bytes, saved facility rosters, source queries, report editions, capture observations, attributed reviews and assignment history.</p>'+
+    '<section class="panel"><h2>Complete operating workspace</h2><p>The portable file includes all original response bytes, complete received buyer archives and manifests, saved facility rosters, source queries, report editions, capture observations, attributed reviews and assignment history.</p>'+
     '<div class="actions">'+fileLink('export','Export complete workspace')+fileLink('work.csv','Full operating queue CSV')+'</div><p>Receive the file into this or another local workspace to continue from the retained sources. Every report is recomputed during receiving.</p><div class="actions"><button data-action="receive">Receive and reopen a handover</button></div></section></div>'+
+    buyerCollections.delivery()+
     '<section class="panel"><h2>Original sources for the selected report</h2>'+(current?'<div class="table-wrap"><table><thead><tr><th>Original response</th><th>Received (UTC)</th><th>SHA-256</th><th>Download</th></tr></thead><tbody>'+
     current.sourceIds.map(id=>{const source=state.sources.find(item=>item.id===id);return '<tr><td>'+escape(source.name)+'<small>'+count(source.returnedFeatures)+' rows · '+count(source.bytes)+' bytes</small></td><td>'+escape(stamp(source.receivedAt))+'</td><td class="mono">'+escape(source.bodySha256)+'</td><td>'+fileLink('sources/'+source.id+'/raw','Original file')+'</td></tr>';}).join('')+'</tbody></table></div>':empty('The selected report’s original response files will be listed here.'))+'</section>'+
     '<section class="panel"><h2>Installed customer workflow</h2><p>Open the same private workspace through the installed <strong>Facility operations</strong> application or its <code>usgs-facility-events</code> command. The retained-file, report and receiving paths operate from the saved data.</p><details><summary>Command examples</summary><pre>starforge usgs-facility-events --workspace /private/facility-desk\n\nstarforge usgs-facility-events export --workspace /private/facility-desk --project '+escape(project.id)+' --out /delivery/customer-workspace.ndjson\n\nstarforge usgs-facility-events import --workspace /private/received-desk --input /delivery/customer-workspace.ndjson</pre></details>'+
@@ -412,6 +418,7 @@ document.addEventListener('submit',event=>{
   event.preventDefault();if(busy)return;
   act('Saving the retained workspace…',async()=>{
     const id=form.id,input=values(form),op=operation(form);
+    if(await buyerCollections.submit(form,input,op))return;
     if(id==='new-project-form'){
       const result=await api('/api/projects',{method:'POST',data:{...input,operationId:op}});
       clearDraft(form);form.reset();$('#project-dialog').close();await refreshInfo();await chooseProject(result.projectId);page='overview';render();notice('Customer project created.');return;
@@ -477,6 +484,7 @@ document.addEventListener('click',event=>{
   if(action==='receive'){$('#receive-dialog').showModal();return;}
   if(action==='close-dialog'){target.closest('dialog').close();return;}
   act('Updating the retained workspace…',async()=>{
+    if(await buyerCollections.click(target))return;
     if(action==='save-roster'){
       const value=takeRoster(),op=operation(target);
       await api(route('rosters'),{method:'POST',data:{...value,revision:state.project.revision,operationId:op}});
@@ -539,6 +547,7 @@ document.addEventListener('change',event=>{
   const input=event.target,form=input.closest('form');
   if(input.id==='project-select'){act('Opening customer project…',async()=>{if(page==='facilities')takeFacility();await chooseProject(input.value);page='overview';render();notice('Customer project reopened.');});return;}
   if(form){remember(form);clearOperation(form);if(input.type==='file')fileDrafts.set(draftKey(form)+':'+input.name,[...input.files]);}
+  if(buyerCollections.change(input))return;
   if(form?.id==='query-form'){queryVisibility();controls();}
   if(form?.id==='edition-form'&&input.name==='sourceIds')chosenSources=new Set([...input.selectedOptions].map(value=>value.value));
   if(input.dataset.source){const selected=new Set(chosenSources);if(input.checked)selected.add(input.dataset.source);else selected.delete(input.dataset.source);adoptSources([...selected]);$('#selected-source-count').textContent=chosenSources.size+' responses selected for the next report (maximum 16).';}

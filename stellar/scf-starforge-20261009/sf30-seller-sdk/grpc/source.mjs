@@ -1,10 +1,12 @@
-// MIT. Official grpc-js single-request calls behind the ORIGINAL SF30 admission/lifecycle.
+// MIT. Official grpc-js calls behind the ORIGINAL SF30 admission/lifecycle.
 import * as grpc from '@grpc/grpc-js';
 import { createGrpcConnection } from './connection.mjs';
 import { compileProtoSource } from './proto.mjs';
-import { normalizeGrpcRequest, normalizeGrpcResponse, serializeGrpcRequest } from './values.mjs';
+import { normalizeGrpcResponse, serializeGrpcRequest } from './values.mjs';
 import { fail, readJson } from './common.mjs';
 import { grpcServerStream } from './stream.mjs';
+import { prepareGrpcInput } from './request-series.mjs';
+import { writeGrpcRequestSeries } from './client-stream.mjs';
 
 export class GrpcSourceError extends Error {
   constructor(code, grpcCode, status = 503) {
@@ -27,17 +29,13 @@ export async function createGrpcSource(configInput, protoSource, { env = process
   function method(path) {
     const selected = contract.methods[path];
     if (!selected) fail('GRPC_METHOD_NOT_FOUND');
-    if (selected.requestStream) fail('GRPC_SINGLE_REQUEST_METHOD_REQUIRED');
+    if (selected.requestStream && !config.limits.requestStream) fail('GRPC_REQUEST_STREAM_LIMITS_REQUIRED');
     if (selected.responseStream && !config.limits.stream) fail('GRPC_STREAM_LIMITS_REQUIRED');
     return selected;
   }
   function request(path, input) {
     const selected = method(path);
-    const value = normalizeGrpcRequest(contract, path, input);
-    if (Buffer.byteLength(JSON.stringify(value)) > config.limits.maxJsonRequestBytes) fail('GRPC_JSON_REQUEST_TOO_LARGE', 413);
-    const bytes = serializeGrpcRequest(contract, path, value);
-    if (bytes.length > config.limits.maxRequestBytes) fail('GRPC_REQUEST_TOO_LARGE', 413);
-    return { selected, value };
+    return { selected, ...prepareGrpcInput(contract, path, input, { limits: config.limits }) };
   }
   async function ready({ signal } = {}) {
     if (closing || signal?.aborted) throw new GrpcSourceError('GRPC_SOURCE_CLOSED', 'CANCELLED');
@@ -52,7 +50,7 @@ export async function createGrpcSource(configInput, protoSource, { env = process
     });
     return inspect();
   }
-  function call(path, input, { signal } = {}) {
+  function call(path, input, { signal, onRequestStream } = {}) {
     let prepared;
     try {
       prepared = request(path, input);
@@ -60,6 +58,7 @@ export async function createGrpcSource(configInput, protoSource, { env = process
       if (closing || signal?.aborted) throw new GrpcSourceError('GRPC_SOURCE_CLOSED', 'CANCELLED');
       if (active.size >= config.limits.maxInFlight) throw new GrpcSourceError('GRPC_SOURCE_BUSY', 'RESOURCE_EXHAUSTED', 429);
     } catch (issue) { return Promise.reject(issue); }
+    if (prepared.selected.requestStream) return callRequestSeries(path, prepared, { signal, onRequestStream });
     let nativeCall, settle;
     const job = { cancel: () => nativeCall?.cancel(), promise: new Promise(done => { settle = done; }) };
     active.add(job);
@@ -87,29 +86,79 @@ export async function createGrpcSource(configInput, protoSource, { env = process
       }
     });
   }
+  function callRequestSeries(path, prepared, { signal, onRequestStream } = {}) {
+    let nativeCall, writer, settle, finalized = false;
+    const job = { cancel: () => writer ? writer.cancel() : nativeCall?.cancel(),
+      promise: new Promise(done => { settle = done; }) };
+    active.add(job);
+    return new Promise((done, reject) => {
+      const finish = (issue, response) => { void Promise.resolve().then(async () => {
+        if (finalized) return;
+        finalized = true;
+        let value, problem, inputState;
+        try {
+          if (issue) throw callError(issue);
+          await writer.finished;
+          value = normalizeGrpcResponse(contract, path, response);
+          if (Buffer.byteLength(JSON.stringify(value)) > config.limits.maxJsonResponseBytes)
+            throw new GrpcSourceError('GRPC_JSON_RESPONSE_TOO_LARGE', 'RESOURCE_EXHAUSTED', 502);
+        } catch (error) { problem = error; }
+        try {
+          inputState = await writer.close();
+          if (onRequestStream) onRequestStream(inputState);
+        } catch (error) { problem ??= error; }
+        nativeCall.destroy();
+        active.delete(job); settle();
+        if (problem) { failures++; if (inputState) problem.requestStream = inputState; reject(problem); }
+        else { completed++; done(value); }
+      }); };
+      try {
+        nativeCall = client.makeClientStreamRequest(path, value => serializeGrpcRequest(contract, path, value),
+          prepared.selected.definition.responseDeserialize, metadata.clone(),
+          { deadline: Date.now() + config.limits.timeoutMs }, finish);
+        writer = writeGrpcRequestSeries({ nativeCall, messages: prepared.messages, signal, mapError: callError });
+      } catch (issue) {
+        finalized = true;
+        nativeCall?.on('error', () => {}); nativeCall?.cancel(); nativeCall?.destroy();
+        active.delete(job); settle(); failures++; reject(issue);
+      }
+    });
+  }
   function stream(path, input, { signal } = {}) {
     const prepared = request(path, input);
     if (!prepared.selected.responseStream) fail('GRPC_SERVER_STREAM_METHOD_REQUIRED');
     if (closing || signal?.aborted) throw new GrpcSourceError('GRPC_SOURCE_CLOSED', 'CANCELLED');
     if (active.size >= config.limits.maxInFlight)
       throw new GrpcSourceError('GRPC_SOURCE_BUSY', 'RESOURCE_EXHAUSTED', 429);
-    let opened, nativeCall, settle;
+    let opened, nativeCall, writer, settle;
     const job = { cancel: () => opened?.close(), promise: new Promise(done => { settle = done; }) };
     active.add(job);
     try {
-      nativeCall = client.makeServerStreamRequest(path, value => serializeGrpcRequest(contract, path, value),
-        prepared.selected.definition.responseDeserialize, prepared.value, metadata.clone(),
-        { deadline: Date.now() + config.limits.timeoutMs });
+      nativeCall = prepared.selected.requestStream
+        ? client.makeBidiStreamRequest(path, value => serializeGrpcRequest(contract, path, value),
+          prepared.selected.definition.responseDeserialize, metadata.clone(),
+          { deadline: Date.now() + config.limits.timeoutMs })
+        : client.makeServerStreamRequest(path, value => serializeGrpcRequest(contract, path, value),
+          prepared.selected.definition.responseDeserialize, prepared.value, metadata.clone(),
+          { deadline: Date.now() + config.limits.timeoutMs });
+      if (prepared.selected.requestStream)
+        writer = writeGrpcRequestSeries({ nativeCall, messages: prepared.messages, signal, mapError: callError });
       opened = grpcServerStream({ nativeCall,
         normalize: value => normalizeGrpcResponse(contract, path, value),
         limits: config.limits, signal, mapError: callError,
-        onClose(outcome) { active.delete(job); settle(); if (outcome.complete) completed++; else failures++; },
+        ...(writer ? { beforeComplete: () => writer.finished } : {}),
+        async onClose(outcome) {
+          if (writer) await writer.close();
+          active.delete(job); settle(); if (outcome.complete) completed++; else failures++;
+        },
       });
-      return opened;
+      return writer ? Object.freeze({ ...opened, snapshot: () => ({ ...opened.snapshot(), requestStream: writer.snapshot() }) }) : opened;
     } catch (issue) {
       // If adapter construction fails, this owner still cancels the created RPC.
       nativeCall?.on('error', () => {}); nativeCall?.cancel(); nativeCall?.destroy();
-      active.delete(job); settle(); failures++; throw issue;
+      if (writer) void writer.close().finally(() => { active.delete(job); settle(); });
+      else { active.delete(job); settle(); }
+      failures++; throw issue;
     }
   }
   function inspect() {
