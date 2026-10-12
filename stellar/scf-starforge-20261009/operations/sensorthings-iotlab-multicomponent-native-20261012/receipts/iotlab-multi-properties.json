@@ -1,0 +1,39 @@
+{
+  "schema": "stellar-forge.sensorthings-connector-acquisition.v1",
+  "role": "iotlab-multi-properties",
+  "sourceUrl": "https://frost.iotlab.com/sensorthings/v1.1/MultiDatastreams(23)/ObservedProperties",
+  "requestedFilename": "iotlab-multi-properties.json",
+  "requestedAt": "2026-10-12T12:53:01.740Z",
+  "uploadCompletedAt": "2026-10-12T12:53:09.471Z",
+  "downloadRequestedAt": "2026-10-12T12:53:09.471Z",
+  "downloadCompletedAt": "2026-10-12T12:53:10.187Z",
+  "originalHttp": {
+    "method": null,
+    "status": null,
+    "headers": null
+  },
+  "originalBody": {
+    "path": "originals/iotlab-multi-properties.json",
+    "bytes": 1959,
+    "sha256": "1f368e786578022bf975b386640fdea9b663d3d06d157c09333e083975778b9d",
+    "gitSha": "b28470f6f3516da121fe39de38e189493e754716"
+  },
+  "uploadToolResponse": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"file_upload_id\":\"3f7dd772-3100-819b-88fa-00b291de7fc1\",\"filename\":\"iotlab-multi-properties.json\",\"content_type\":\"application/json; charset=utf-8\",\"content_length\":1959,\"status\":\"uploaded\",\"markdown_source\":\"file-upload://3f7dd772-3100-819b-88fa-00b291de7fc1\",\"suggested_markdown\":\"<file src=\\\"file-upload://3f7dd772-3100-819b-88fa-00b291de7fc1\\\"></file>\"}"
+      }
+    ],
+    "isError": false
+  },
+  "downloadToolResponse": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"file_upload_id\":\"3f7dd772-3100-819b-88fa-00b291de7fc1\",\"filename\":\"iotlab-multi-properties.json\",\"content_type\":\"application/json; charset=utf-8\",\"content_length\":1959,\"content\":\"{\\\"@iot.count\\\":4,\\\"value\\\":[{\\\"@iot.selfLink\\\":\\\"https://frost.iotlab.com/sensorthings/v1.1/ObservedProperties(14)\\\",\\\"@iot.id\\\":14,\\\"definition\\\":\\\"https://qudt.org/vocab/unit/SEC\\\",\\\"description\\\":\\\"Seconds since the first measurement.\\\",\\\"name\\\":\\\"seconds\\\",\\\"Datastreams@iot.navigationLink\\\":\\\"https://frost.iotlab.com/sensorthings/v1.1/ObservedProperties(14)/Datastreams\\\",\\\"MultiDatastreams@iot.navigationLink\\\":\\\"https://frost.iotlab.com/sensorthings/v1.1/ObservedProperties(14)/MultiDatastreams\\\"},{\\\"@iot.selfLink\\\":\\\"https://frost.iotlab.com/sensorthings/v1.1/ObservedProperties(15)\\\",\\\"@iot.id\\\":15,\\\"definition\\\":\\\"https://saref.etsi.org/saref4watr/Temperature\\\",\\\"description\\\":\\\"Water temperature in Celsius\\\",\\\"name\\\":\\\"temperature\\\",\\\"Datastreams@iot.navigationLink\\\":\\\"https://frost.iotlab.com/sensorthings/v1.1/ObservedProperties(15)/Datastreams\\\",\\\"MultiDatastreams@iot.navigationLink\\\":\\\"https://frost.iotlab.com/sensorthings/v1.1/ObservedProperties(15)/MultiDatastreams\\\"},{\\\"@iot.selfLink\\\":\\\"https://frost.iotlab.com/sensorthings/v1.1/ObservedProperties(16)\\\",\\\"@iot.id\\\":16,\\\"definition\\\":\\\"https://saref.etsi.org/saref4watr/Conductivity\\\",\\\"description\\\":\\\"Conductivity at 25 Celsius water temperature in uS/cm\\\",\\\"name\\\":\\\"specific conductivity\\\",\\\"Datastreams@iot.navigationLink\\\":\\\"https://frost.iotlab.com/sensorthings/v1.1/ObservedProperties(16)/Datastreams\\\",\\\"MultiDatastreams@iot.navigationLink\\\":\\\"https://frost.iotlab.com/sensorthings/v1.1/ObservedProperties(16)/MultiDatastreams\\\"},{\\\"@iot.selfLink\\\":\\\"https://frost.iotlab.com/sensorthings/v1.1/ObservedProperties(17)\\\",\\\"@iot.id\\\":17,\\\"definition\\\":\\\"https://saref.etsi.org/saref4watr/TotalDissolvedSolids\\\",\\\"description\\\":\\\"The amount of total suspended solids, calculated from conductivity.\\\",\\\"name\\\":\\\"total dissolved solids\\\",\\\"Datastreams@iot.navigationLink\\\":\\\"https://frost.iotlab.com/sensorthings/v1.1/ObservedProperties(17)/Datastreams\\\",\\\"MultiDatastreams@iot.navigationLink\\\":\\\"https://frost.iotlab.com/sensorthings/v1.1/ObservedProperties(17)/MultiDatastreams\\\"}]}\"}"
+      }
+    ],
+    "isError": false
+  }
+}
