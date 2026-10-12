@@ -10,7 +10,7 @@ const time = value => Number.isFinite(value) ? new Date(value).toLocaleString() 
 const size = bytes => Number.isFinite(bytes) ? bytes.toLocaleString() + ' bytes' : '—';
 const state = {connected:false, serial:0, view:'discover', resources:[], searchArgs:null, searchCursor:null,
   description:null, quote:null, history:[], historyCursor:null, results:[], resultCursor:null,
-  result:null, reading:null, spending:null, selection:0, describing:0, executing:new Set(), uncertain:new Set(), urls:new Set()};
+  result:null, reading:null, spending:null, spendingRead:0, selection:0, describing:0, executing:new Set(), uncertain:new Set(), urls:new Set()};
 
 function node(tag, {text, className, ...attrs} = {}, children = []) {
   const element = document.createElement(tag);
@@ -214,24 +214,24 @@ async function loadResults(more = false) {
 async function openQuote(quoteId, scroll = true) {
   const serial = state.serial, selection = ++state.selection, quote = await client.call('bazaar_status', {quoteId});
   if (serial !== state.serial || selection !== state.selection) return false;
-  selectQuote(quote); state.uncertain.delete(quoteId); renderQuote();
+  selectQuote(quote); state.spending = null; state.spendingRead++; state.uncertain.delete(quoteId); renderQuote();
   if (scroll) $('quote-detail').scrollIntoView({behavior:'smooth', block:'start'});
   return true;
 }
 function selectQuote(quote) {
   if (state.quote?.quoteId !== quote.quoteId) {
-    state.spending = null;
+    state.spending = null; state.spendingRead++;
     revokeDownloads(); state.result = null; $('result-detail').replaceChildren(); $('result-detail').hidden = true;
   }
   state.quote = quote;
 }
 async function executeQuote(quoteId) {
-  const serial = state.serial; state.spending = null; state.executing.add(quoteId); renderQuote();
+  const serial = state.serial; state.spending = null; state.spendingRead++; state.executing.add(quoteId); renderQuote();
   notice('Host approval requested for ' + quoteId + '. Refresh status or cancel this original quote while the host responds.');
   try {
     const quote = await client.call('bazaar_execute_approved', {quoteId});
     if (serial !== state.serial) return;
-    if (state.quote?.quoteId === quoteId) state.quote = quote;
+    if (state.quote?.quoteId === quoteId) { state.quote = quote; state.spending = null; state.spendingRead++; }
     state.uncertain.delete(quoteId);
     notice('Original quote ' + quoteId + ' returned ' + quote.status + '.');
   } catch (error) {
@@ -247,7 +247,7 @@ async function executeQuote(quoteId) {
 async function quoteAction(name, quoteId, additional = {}) {
   const serial = state.serial, quote = await client.call(name, {...additional,quoteId});
   if (serial !== state.serial) return;
-  if (state.quote?.quoteId === quoteId) { state.quote = quote; renderQuote(); }
+  if (state.quote?.quoteId === quoteId) { state.quote = quote; state.spending = null; state.spendingRead++; renderQuote(); }
   notice(name === 'bazaar_reconcile_payment'
     ? 'Transaction observation: ' + (quote.transactionObservation ?? quote.result.reconciliation).outcome +
       (quote.transactionObservation ? '. Observation was not saved; inspect and download its details. Original quote remains ' : '. Original quote: ') + quote.status + '.'
@@ -294,15 +294,16 @@ function paymentInspection(q, active) {
   return panel;
 }
 async function inspectSpending(quoteId) {
-  const serial = state.serial, selection = state.selection;
+  const serial = state.serial, selection = state.selection, reading = ++state.spendingRead;
   const report = await client.call('bazaar_spending_status', {quoteId});
-  if (serial !== state.serial || selection !== state.selection || state.quote?.quoteId !== quoteId) return;
+  if (serial !== state.serial || selection !== state.selection || reading !== state.spendingRead ||
+      state.quote?.quoteId !== quoteId) return;
   state.spending = {quoteId,report,checkedAt:new Date().toISOString()};
   renderQuote(); notice('Spending ledger read for the selected quote.');
 }
 function spendingInspection(q) {
   const saved = state.spending?.quoteId === q.quoteId ? state.spending : null;
-  const finalized = q.result?.reconciliation?.spending;
+  const finalized = (q.transactionObservation ?? q.result?.reconciliation)?.spending;
   const report = saved?.report ?? finalized;
   const panel = node('section', {className:'content-block', id:'spending-inspection'}, [
     node('h4', {text:'Spending ledger'}),

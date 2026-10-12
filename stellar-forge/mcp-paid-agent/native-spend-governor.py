@@ -16,6 +16,7 @@ from pathlib import Path
 import re
 import stat
 import sys
+import tempfile
 from datetime import datetime, timedelta, timezone
 
 ROOT = Path(__file__).resolve().parents[2] / 'stellar' / 'scf-starforge-20261009'
@@ -64,21 +65,30 @@ def read_record(path, *, private=True):
 
 
 def write_new(path, value):
-    """Retain one complete record before SF36 changes its original ledger."""
+    """Publish a complete create-only record before changing the original ledger."""
     raw = canonical(value) + b'\n'
     if len(raw) > MAX_INPUT:
         raise Denied('MCP_SPENDING_RECORD_TOO_LARGE')
-    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
-    with os.fdopen(fd, 'wb') as stream:
-        stream.write(raw)
-        stream.flush()
-        os.fsync(stream.fileno())
-    parent = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+    fd, temporary = tempfile.mkstemp(prefix='.mcp-spending-', dir=path.parent)
     try:
-        os.fsync(parent)
+        with os.fdopen(fd, 'wb') as stream:
+            stream.write(raw)
+            stream.flush()
+            os.fsync(stream.fileno())
+        # Hard-link publication is atomic and refuses an existing destination.
+        # A killed writer can leave a private temporary, never partial JSON at
+        # the canonical configuration, invocation or finality pathname.
+        os.link(temporary, path, follow_symlinks=False)
+        parent = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+        try:
+            os.fsync(parent)
+        finally:
+            os.close(parent)
     finally:
-        os.close(parent)
-
+        try:
+            os.unlink(temporary)
+        except FileNotFoundError:
+            pass
 
 def selected_id(value):
     if type(value) is not str or not UUID.fullmatch(value):
@@ -322,10 +332,10 @@ def main():
             info = os.fstat(lock.fileno())
             if not stat.S_ISREG(info.st_mode) or info.st_uid != os.geteuid() or info.st_mode & 0o077:
                 raise Denied('MCP_SPENDING_PRIVATE_REGULAR_LOCK_REQUIRED')
-            try:
-                fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-            except BlockingIOError as error:
-                raise Denied('MCP_SPENDING_BUSY') from error
+            # The owning Node call supplies timeout/cancellation and drains this
+            # process. Queue on the private file lock so a simultaneous status
+            # read cannot reject an otherwise valid approved purchase as busy.
+            fcntl.flock(lock, fcntl.LOCK_EX)
             configuration = {'schema': SCHEMA, 'actor': args.actor, 'service': args.service,
                 'policy': str(args.policy), 'ledger': str(args.ledger)}
             configuration_path = args.state_directory / 'configuration.json'

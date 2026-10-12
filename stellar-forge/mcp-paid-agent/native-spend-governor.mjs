@@ -276,8 +276,18 @@ export async function createGovernedNativeMcpOperator({spending,
         return {...observation,spending:{schema:SCHEMA,outcome:'RESERVATION_RETAINED',
           request_id:input.quoteId,request_sha256:retained.request_sha256,
           reservation:retained.reservation}};
-      const spendingResult = await client.finalize(input.quoteId,observation,{signal:input.signal});
-      return {...observation,spending:spendingResult};
+      try {
+        const {binding:privateBinding,...spendingResult} = await client.finalize(
+          input.quoteId,observation,{signal:input.signal});
+        return {...observation,spending:spendingResult};
+      } catch (error) {
+        // Keep the original chain observation useful if local ledger I/O fails.
+        // The retained reservation remains authoritative until finalization succeeds.
+        return {...observation,spending:{schema:SCHEMA,outcome:'FINALIZATION_REQUIRED',
+          request_id:input.quoteId,request_sha256:retained.request_sha256,
+          error:error?.code ?? 'MCP_SPENDING_FINALIZATION_FAILED',
+          reservation:retained.reservation}};
+      }
     },
     close() {
       if (closing) return closing;

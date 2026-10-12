@@ -4,6 +4,7 @@ import {readSupportBundle,readLocal} from './bundle.mjs';
 import {openIncidentStore} from './incident-store.mjs';
 import {applyObservation,validateDelivery} from './incident-model.mjs';
 import {destinationForEvent,deliverNotification,applyDelivery,updateIncidentNotificationState} from './notifications.mjs';
+import {prepareSlackRequest} from './notifications-slack.mjs';
 
 async function collectMerchant(merchant,signal) {
   let packet;
@@ -44,6 +45,31 @@ async function drainNotifications(store,env,signal) {
       const options={...state.config.notification,maxAttempts:event.attemptLimit};
       if(event.attempts>=options.maxAttempts){event.status='EXHAUSTED';event.lastReason='ATTEMPT_LIMIT';updateIncidentNotificationState(state,event);continue;}
       if(jobs.length>=4)continue;
+      if (destination.transport === 'slack') {
+        // One original event at a time for the selected Slack channel. Later
+        // transitions wait for the incident's earlier unfinished event, so an
+        // acknowledgment cannot race its opening message into a second thread.
+        const earlier = state.notifications.slice(0,state.notifications.indexOf(event));
+        if (earlier.some(item => item.incidentId === event.incidentId &&
+            item.notificationConfigHash === event.notificationConfigHash &&
+            JSON.stringify(item.binding) === JSON.stringify(event.binding) &&
+            !['DELIVERED','EXHAUSTED','CANCELLED'].includes(item.status))) continue;
+        const cooldowns = state.slackCooldowns ??= {};
+        for (const [key,until] of Object.entries(cooldowns))
+          if (Date.parse(until) <= now) delete cooldowns[key];
+        const endpoint = destination.binding.endpointHash;
+        if (Date.parse(cooldowns[endpoint] ?? '') > now || jobs.some(job => job.destination.transport === 'slack') ||
+            state.notifications.some(item => item !== event && item.status === 'IN_FLIGHT' &&
+              item.binding?.endpointHash === endpoint)) continue;
+        if (!Object.hasOwn(event,'slackThreadTs')) {
+          const thread = state.incidents.find(item => item.id === event.incidentId)?.notificationThread;
+          event.slackThreadTs = thread?.notificationConfigHash === event.notificationConfigHash &&
+            thread.endpointHash === endpoint && thread.receipt.teamId === destination.teamId &&
+            thread.receipt.channelId === destination.channelId ? thread.receipt.threadTs : null;
+        }
+        if (!Object.hasOwn(event,'slackRequestBody')) Object.assign(event,prepareSlackRequest(event,destination));
+        cooldowns[endpoint] = new Date(now + options.minIntervalMs).toISOString();
+      }
       event.attempts++;event.status='IN_FLIGHT';event.attemptId=randomUUID();
       event.inFlightUntil=new Date(now+options.timeoutMs+1000).toISOString();
       updateIncidentNotificationState(state,event);
@@ -61,6 +87,21 @@ async function drainNotifications(store,env,signal) {
       const job=jobs[i],event=state.notifications.find(item=>item.id===job.event.id);
       if(!event||event.status!=='IN_FLIGHT'||event.attemptId!==job.event.attemptId)continue;
       applyDelivery(event,results[i],job.options,Date.now());
+      if (job.destination.transport === 'slack') {
+        const endpoint = job.destination.binding.endpointHash, result = results[i];
+        const cooldowns = state.slackCooldowns ??= {};
+        cooldowns[endpoint] = new Date(Math.max(Date.parse(cooldowns[endpoint] ?? '') || 0,
+          Date.now() + Math.max(job.options.minIntervalMs,result.retryAfterMs ?? 0))).toISOString();
+        if (event.providerReceipt) {
+          const incident = state.incidents.find(item => item.id === event.incidentId);
+          const scope = incident?.notificationScope;
+          if (scope?.notificationConfigHash === event.notificationConfigHash && scope.binding?.endpointHash === endpoint &&
+              (incident.notificationThread?.notificationConfigHash !== event.notificationConfigHash ||
+                incident.notificationThread?.endpointHash !== endpoint))
+            incident.notificationThread = {notificationConfigHash:event.notificationConfigHash,
+              endpointHash:endpoint,receipt:structuredClone(event.providerReceipt)};
+        }
+      }
       updateIncidentNotificationState(state,event);
     }
   });
@@ -114,3 +155,4 @@ export async function runIncidentWatch({directory,environment=process.env,signal
     } finally {await lease.close();}
   }
 }
+
