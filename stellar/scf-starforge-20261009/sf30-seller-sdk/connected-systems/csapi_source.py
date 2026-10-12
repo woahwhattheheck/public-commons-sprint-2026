@@ -287,13 +287,15 @@ class Capture:
             self.system=json_value(self.read(resources["system"]),True) if "system" in resources else None
             self.conformance=json_value(self.read(resources["conformance"])) if "conformance" in resources else None
             selection=m["selection"]
-            exact(selection,{"datastreamUrl","schemaUrl","observationsUrl","systemUrl","params","obsFormat","limits","observationResource"},"source selection",
+            exact(selection,{"datastreamUrl","schemaUrl","observationsUrl","systemUrl","params","obsFormat","limits","observationResource","schemaUrlPolicy"},"source selection",
                 {"datastreamUrl","schemaUrl","observationsUrl","systemUrl","params","obsFormat","limits"})
             for field in ("datastreamUrl","schemaUrl","observationsUrl"):
                 url(selection[field],allowed_origins=self.allowed)
             if selection["systemUrl"]is not None:url(selection["systemUrl"],allowed_origins=self.allowed)
             if selection["obsFormat"]!="application/json":raise InputError("Unsupported selected observation representation")
             parameters(selection["params"])
+            if selection.get("schemaUrlPolicy","format-parameter") not in ("format-parameter","exact"):
+                raise InputError("Unsupported selected schema URL policy")
             self.observation_resource=selection.get("observationResource","collection")
             if self.observation_resource not in ("collection","single"):raise InputError("Unsupported observation resource selection")
             limits=selection["limits"];exact(limits,{"maxPages","maxRows","maxBytes"},"acquisition limits",{"maxPages","maxRows","maxBytes"})

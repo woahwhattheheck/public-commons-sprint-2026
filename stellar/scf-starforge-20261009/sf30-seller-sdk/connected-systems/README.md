@@ -248,6 +248,12 @@ Use `"observationResource": "single"` only when the selected URL returns one ori
 
 The operator does not convert an individual object into a fabricated collection response. Both modes retain the actual HTTP body, original observation values and schema.
 
+### Select the exact schema request
+
+Live CSAPI schema endpoints commonly use `obsFormat=application/json`. The default **Format parameter** policy preserves the existing normalized query behavior. For a publisher's immutable static schema file or an already complete schema URL, select **Exact schema URL** instead. The saved query carries `"schemaUrlPolicy": "exact"` and the consumer adds no format parameter. It still validates that the returned schema describes the selected JSON observation representation.
+
+The default or explicitly selected `format-parameter` policy remains omitted from the normalized query, preserving prior query identities. Exact policy is retained in the capture's selection, query drafts and receiving inventory. Changing this choice creates a distinct reviewed query; it never edits an earlier request or its responses.
+
 ## Reproduce the committed OGC example
 
 The publisher's [pinned original examples](https://github.com/opengeospatial/ogcapi-connected-systems/tree/fb858be23aa03e2b824ec50b5a97ac2c2a1d3fec) include one room-temperature observation, its datastream, scalar observation schema and thermometer description. They are illustrative publisher examples, not a field measurement or proof that a live demonstration service is operational.
@@ -273,7 +279,7 @@ python3 -B "$CSAPI/delivery/browser-owner.py" \
   --coverage-policy require-exhausted
 ```
 
-The recipe saves `publisher-reference/publisher-acquisition.json`, the original query/source and `native/native-result.json`; its completed `publisher-reference/publisher-result.json` binds those results to the publisher commit and exact native packet. Rerunning a completed stage verifies and returns its retained result. An incomplete stage keeps the same query, acquisition operation and receiving history.
+The recipe saves `publisher-reference/publisher-acquisition.json`, the original query/source and `native/native-result.json`; its completed `publisher-reference/publisher-result.json` binds those results to the publisher commit and exact native packet. Rerunning a completed stage verifies and returns its retained result. An incomplete stage keeps its selected query, acquisition operation and receiving history. The committed-example recipe also recognizes its earlier failed query with an automatically appended schema parameter: it proves that only that schema selection changed, retains the failed query and original HTTP step, and records both identities in `publisher-reference/exact-schema-query-selection.json` before using the exact static URL. An already completed original acquisition is reused.
 
 The original datastream uses an indoor-temperature label while the supplied thermometer description uses an outdoor label. The datastream also retains the publisher's original result-time interval. The recipe preserves these source inconsistencies and makes no correction or provenance claim beyond the committed example. Source/license identities and the separately observed public-service errors are documented in [SOURCES.md](SOURCES.md).
 
