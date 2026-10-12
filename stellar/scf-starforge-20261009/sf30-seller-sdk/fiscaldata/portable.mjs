@@ -44,9 +44,21 @@ function relativePath(value) {
   return value;
 }
 async function immutable(path, value) {
-  try { await createFile(path,value); }
-  catch(error){if(error.code!=='EEXIST')throw error;
-    if(!(await readPrivate(path,Math.max(value.length+1,1024))).equals(value))throw fault('PACKAGE_IDENTITY_CHANGED','An original package or receiving identity already selects other bytes.',409);}
+  // Every caller holds the original source or destination kernel lease. Only a
+  // fully written and fsynced private attempt may become a selected metadata name.
+  const maximum=Math.max(value.length+1,1024),directory=dirname(path);
+  const verify=async()=>{
+    if(!(await readPrivate(path,maximum)).equals(value))throw fault('PACKAGE_IDENTITY_CHANGED','An original package or receiving identity already selects other bytes.',409);
+    await syncDirectory(directory);
+  };
+  if(await exists(path)){await verify();return;}
+  const temporary=join(directory,'.portable-metadata-'+randomUUID());
+  await createFile(temporary,value);
+  if(!(await readPrivate(temporary,maximum)).equals(value))throw fault('PACKAGE_METADATA_CHANGED','The complete metadata attempt differs from its intended bytes.',409);
+  // The same held kernel lease serializes publication; completed names remain
+  // immutable, and any interrupted attempt stays retained under its private name.
+  if(await exists(path)){await verify();return;}
+  await rename(temporary,path);await syncDirectory(directory);
 }
 async function descriptor(root,path) {
   const result=await hashPrivate(join(root,relativePath(path)),MAX_FILE);

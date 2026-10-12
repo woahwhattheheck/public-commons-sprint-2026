@@ -133,11 +133,11 @@ function stateView(state,section='overview',offset=0,limit=50){
   return result;
 }
 export class MerchantFiscalDataWorkspaces{
-  #config;#handles=new Map();#pending=new Set();#closing=false;#close;
+  #config;#handles=new Map();#receiving=new Set();#pending=new Set();#closing=false;#close;
   #reads=new RetainedFileReads({errorPrefix:'FISCALDATA'});
   constructor(config){this.#config=config;}
   get summary(){return{configured:Boolean(this.#config.fiscalDataWorkspaces),operator:this.#config.fiscalDataWorkspaces?.operator??null,
-    opened:[...this.#handles.keys()],pending:this.#pending.size,closing:this.#closing,...this.#reads.summary};}
+    opened:[...this.#handles.keys()],receiving:[...this.#receiving],pending:this.#pending.size,closing:this.#closing,...this.#reads.summary};}
   #declared(name){identifier(name,'Fiscal workspace alias');const entry=this.#config.fiscalDataWorkspaces?.workspaces?.[name];
     if(!entry)throw failure('FISCALDATA_WORKSPACE_NOT_CONFIGURED','Choose an alias from merchant_fiscaldata_status.');return entry;}
   #packageDirectory(name){this.#declared(name);return join(this.#config.exportsDirectory,'fiscaldata-packages',name);}
@@ -148,9 +148,15 @@ export class MerchantFiscalDataWorkspaces{
   }
   async #open(name){
     const entry=this.#declared(name);
+    if(this.#receiving.has(name))throw failure('FISCALDATA_WORKSPACE_RECEIVING','The original package is still being received into this alias.');
     if(!this.#handles.has(name)){
-      const opening=(async()=>{const model=await this.#model(entry),header=await readJson(join(entry.directory,'workspace.json'),1024**2);
-        return{entry,model,workspaceId:header.id,instanceId:randomUUID(),browser:null,tail:Promise.resolve(),closing:false,suspended:false};})();
+      const opening=(async()=>{
+        const model=await this.#model(entry);
+        try{
+          const header=await readJson(join(entry.directory,'workspace.json'),1024**2);
+          return{entry,model,workspaceId:header.id,instanceId:randomUUID(),browser:null,tail:Promise.resolve(),closing:false,suspended:false,lifecycle:null};
+        }catch(error){await model.close();throw error;}
+      })();
       this.#handles.set(name,opening);
       try{await opening;}catch(error){if(this.#handles.get(name)===opening)this.#handles.delete(name);throw error;}
     }
@@ -170,17 +176,18 @@ export class MerchantFiscalDataWorkspaces{
   async #status(name,section='overview',offset=0,limit=50){
     count(offset,'History offset');count(limit,'History page size',1,100);
     if(name===undefined)return{...this.summary,workspaces:Object.entries(this.#config.fiscalDataWorkspaces?.workspaces??{}).map(([workspace,entry])=>({
-      workspace,label:entry.label,state:this.#handles.has(workspace)?'OPEN':'CLOSED',
+      workspace,label:entry.label,state:this.#receiving.has(workspace)?'RECEIVING':this.#handles.has(workspace)?'OPEN':'CLOSED',
       imports:Object.entries(entry.imports).map(([sourceImport,item])=>({sourceImport,label:item.label,sha256:item.sha256})),
       merchants:Object.entries(entry.merchants).map(([profile,item])=>({profile,...item})),
       buyerWorkspaces:Object.entries(entry.buyerWorkspaces).map(([id,item])=>({id,label:item.label}))}))};
     const entry=this.#declared(name);
     if(section==='packages')return{workspace:name,packages:await this.#packages(name,offset,limit)};
-    const pending=this.#handles.get(name);if(!pending)return{workspace:name,label:entry.label,state:'CLOSED'};
+    const pending=this.#handles.get(name);if(!pending)return{workspace:name,label:entry.label,state:this.#receiving.has(name)?'RECEIVING':'CLOSED'};
     const handle=await pending;
     return{workspace:name,workspaceId:handle.workspaceId,instanceId:handle.instanceId,
-      state:handle.closing?'CLOSING':handle.suspended?'CHECKPOINTING':handle.model?'OPEN':'CLOSED',
-      operator:this.#config.fiscalDataWorkspaces.operator,native:handle.model?stateView(await handle.model.snapshot(),section,offset,limit):null,
+      state:handle.closing?'CLOSING':handle.lifecycle?.state??(handle.model?'OPEN':'CLOSED'),
+      lifecycle:handle.lifecycle,
+      operator:this.#config.fiscalDataWorkspaces.operator,native:handle.model&&!handle.lifecycle&&!handle.closing?stateView(await handle.model.snapshot(),section,offset,limit):null,
       browser:{open:Boolean(handle.browser)},fileReads:this.#reads.status(name)};
   }
   async #audit(handle,action,input,origin,perform){
@@ -228,7 +235,23 @@ export class MerchantFiscalDataWorkspaces{
   }
   #enqueue(handle,perform){
     if(handle.closing)throw failure('FISCALDATA_WORKSPACE_CLOSING','The original workspace is closing.');
+    if(handle.lifecycle)throw failure('FISCALDATA_WORKSPACE_DRAINING','The original workspace is draining for '+handle.lifecycle.state.toLowerCase()+'. Retry after its lifecycle completes.');
     const task=handle.tail.then(perform);handle.tail=task.then(()=>{},()=>{});return task;
+  }
+  async #transition(handle,state,perform){
+    if(handle.closing)throw failure('FISCALDATA_WORKSPACE_CLOSING','The original workspace is closing.');
+    if(handle.lifecycle)throw failure('FISCALDATA_WORKSPACE_DRAINING','The original workspace already has an active lifecycle transition.');
+    // Reserve admission synchronously, before either browser or queued native work can yield.
+    handle.lifecycle={state,startedAt:new Date().toISOString()};
+    const closeBrowser=async()=>{const browser=handle.browser;handle.browser=null;if(browser)await browser.close();};
+    try{
+      await closeBrowser();
+      await handle.tail.catch(()=>{});
+      // A browser-open accepted before the reservation may have completed in the old tail.
+      // Its requests cannot enter #enqueue while reserved; drain it outside that tail too.
+      await closeBrowser();
+      return await perform();
+    }finally{handle.lifecycle=null;}
   }
   async #history(handle,offset,limit){
     let names=[];try{names=await readdir(join(handle.entry.directory,'operator-history'));}catch(error){if(error.code!=='ENOENT')throw error;}
@@ -262,7 +285,7 @@ export class MerchantFiscalDataWorkspaces{
     const{createFiscalWorkspaceHandler}=await import('../../stellar/scf-starforge-20261009/sf30-seller-sdk/fiscaldata/workspace-server.mjs');
     let handler,closing=false;const requests=new Set(),sockets=new Set();
     const server=createServer((req,res)=>{
-      if(closing||!handler){res.writeHead(503);res.end('Workspace is starting or draining.');return;}
+      if(closing||!handler||handle.lifecycle||handle.closing){res.writeHead(503);res.end('Workspace is starting or draining.');return;}
       const task=Promise.resolve(handler(req,res)).catch(error=>{if(!res.headersSent)res.writeHead(500);res.end('Workspace request failed.');});
       requests.add(task);task.finally(()=>requests.delete(task));
     });
@@ -283,7 +306,6 @@ export class MerchantFiscalDataWorkspaces{
     }};
   }
   async #checkpoint(name,handle,operationId){
-    if(handle.browser){await handle.browser.close();handle.browser=null;}
     await this.#reads.closeScope(name);handle.suspended=true;
     let result;
     try{
@@ -295,14 +317,18 @@ export class MerchantFiscalDataWorkspaces{
         publication:{merchantEditions:before.editions.filter(e=>e.merchant).map(e=>({id:e.id,sha256:e.sha256,merchant:e.merchant})),
           acquisitions:before.exports.filter(e=>e.exportKind==='acquisition').map(e=>({id:e.id,createdAt:e.createdAt}))}});
     }finally{
-      if(!handle.model)handle.model=await this.#model(handle.entry);
-      handle.suspended=false;
+      try{if(!handle.model)handle.model=await this.#model(handle.entry);}
+      catch(error){handle.closing=true;this.#handles.delete(name);throw error;}
+      finally{handle.suspended=false;}
     }
     return{workspace:name,instanceId:handle.instanceId,...result,state:stateView(await handle.model.snapshot())};
   }
   async #restore(name,args){
     const entry=this.#declared(name);
     if(this.#handles.has(name))throw failure('FISCALDATA_RESTORE_OPEN','Close this exact destination instance before receiving its source package.');
+    if(this.#receiving.has(name))throw failure('FISCALDATA_WORKSPACE_RECEIVING','This alias already has an original receiving operation.');
+    this.#receiving.add(name);
+    try{
     let file;
     if(args.sourceImport!==undefined){
       if(args.sourceWorkspace!==undefined||args.packageId!==undefined)throw failure('INVALID_PARAMS','Choose one original package source.');
@@ -319,6 +345,7 @@ export class MerchantFiscalDataWorkspaces{
     const result=await receiveFiscalSourcePackage({directory:entry.directory,packagePath:file,expectedSha256:args.expectedSha256,
       operationId:args.operationId,actor:this.#config.fiscalDataWorkspaces.operator});
     return{workspace:name,state:'CLOSED',receiving:result};
+    }finally{this.#receiving.delete(name);}
   }
   async #execute(name,handle,args){
     const call=async(action,input={})=>{
@@ -346,9 +373,7 @@ export class MerchantFiscalDataWorkspaces{
       case'merchant_fiscaldata_publisher':if(publisherActions.has(args.action))return call(args.action,args.payload);break;
       case'merchant_fiscaldata_file':return this.#file(args.workspace,handle,args);
       case'merchant_fiscaldata_history':return this.#history(handle,args.offset??0,args.limit??50);
-      case'merchant_fiscaldata_checkpoint':return this.#checkpoint(args.workspace,handle,args.operationId);
       case'merchant_fiscaldata_browser':
-        if(args.action==='close'){if(handle.browser){await handle.browser.close();handle.browser=null;}return{workspace:args.workspace,browser:'CLOSED'};}
         if(args.action==='open'){handle.browser=await this.#borrowBrowser(args.workspace,handle,args.port);return{workspace:args.workspace,
           instanceId:handle.instanceId,browser:'OPEN',url:handle.browser.url};}break;
     }
@@ -370,13 +395,13 @@ export class MerchantFiscalDataWorkspaces{
     if(name==='merchant_fiscaldata_file'&&args.kind==='package')return this.#file(args.workspace,null,args);
     const pending=this.#handles.get(args.workspace);if(!pending)throw failure('FISCALDATA_WORKSPACE_CLOSED','Open the original workspace first.');
     const handle=await pending;
-    // Stop accepting browser requests before enqueueing a drain operation.
-    if(name==='merchant_fiscaldata_checkpoint'||name==='merchant_fiscaldata_browser'&&args.action==='close'){
-      const browser=handle.browser;handle.browser=null;if(browser)await browser.close();
-    }
+    if(name==='merchant_fiscaldata_checkpoint')
+      return this.#transition(handle,'CHECKPOINTING',()=>this.#checkpoint(args.workspace,handle,args.operationId));
+    if(name==='merchant_fiscaldata_browser'&&args.action==='close')
+      return this.#transition(handle,'BROWSER_CLOSING',async()=>({workspace:args.workspace,browser:'CLOSED'}));
     if(name==='merchant_fiscaldata_close'){
       if(args.instanceId!==handle.instanceId)throw failure('INSTANCE_CONFLICT','Use the exact process-owned instance ID from status.');
-      return this.#stop(args.workspace,handle);
+      return this.#transition(handle,'CLOSING',()=>this.#stop(args.workspace,handle));
     }
     return this.#enqueue(handle,()=>this.#execute(name,handle,args));
   }
