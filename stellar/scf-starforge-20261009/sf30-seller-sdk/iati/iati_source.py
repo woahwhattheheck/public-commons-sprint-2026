@@ -12,7 +12,9 @@ import sys
 
 XML_ROOT = Path(__file__).resolve().parent.parent / "xml"
 if str(XML_ROOT) not in sys.path:
-    sys.path.insert(0, str(XML_ROOT))
+    # Keep this product's server/managed modules ahead of shared XML support.
+    # cli.py imports the specialized IATI server after this mapper is loaded.
+    sys.path.append(str(XML_ROOT))
 from xml_source import (
     InputError, MAX_SOURCE, MAX_RECORD, MAX_DEPTH, Node, parser, parse_stream,
     expanded, utf16_length, dataset_spec as original_dataset_spec,
