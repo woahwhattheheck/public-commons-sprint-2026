@@ -15,6 +15,10 @@ let reflectionSelection = new Set(), reflectionSourceFingerprint = null;
 const customerFiles = ['methods.json', 'openapi.json', 'client/seller-client.mjs', 'client/seller-client.d.mts',
   'client/seller-openapi.json', 'client/package.json', 'client/README.md'];
 const pretty = value => JSON.stringify(value, null, 2);
+const sourceFingerprint = value => JSON.stringify(value, function (key, item) {
+  return item && typeof item === 'object' && !Array.isArray(item) ?
+    Object.fromEntries(Object.keys(item).sort().map(name => [name, item[name]])) : item;
+});
 const short = value => value ? value.slice(0, 12) : 'none';
 function notice(message, kind = '') { $('notice').textContent = message; $('notice').dataset.kind = kind; }
 function object(value, name) {
@@ -560,12 +564,12 @@ $('reflection-clear').addEventListener('click', () => {
 $('reflection-discover').addEventListener('click', () => work(async () => {
   const result = await json('reflection-inventory', { source: readSource(), protocol: $('reflection-protocol').value });
   fillSource(result.source); dirty = true; reflectedInventory = result; reflectionPage = 0;
-  reflectionSourceFingerprint = JSON.stringify(readSource()); reflectionSelection.clear(); reflectionPreview = null;
+  reflectionSourceFingerprint = sourceFingerprint(readSource()); reflectionSelection.clear(); reflectionPreview = null;
   renderReflectionServices(); renderReflectionPreview(); buttons();
   notice('Discovered ' + result.services.length + ' services through native ' + result.protocol + ' reflection.');
 }, 'Reading this endpoint’s native reflection inventory…'));
 $('reflection-capture').addEventListener('click', () => work(async () => {
-  if (!reflectedInventory || reflectionSourceFingerprint !== JSON.stringify(readSource()))
+  if (!reflectedInventory || reflectionSourceFingerprint !== sourceFingerprint(readSource()))
     throw new Error('Discover services again after changing this connection.');
   if (!reflectionSelection.size) throw new Error('Select at least one service.');
   const id = crypto.randomUUID();
@@ -585,7 +589,7 @@ $('reflection-capture').addEventListener('click', () => work(async () => {
 $('reflection-save').addEventListener('click', () => work(async () => {
   if (!reflectionPreview) throw new Error('Capture and review the selected services first.');
   if (routeDirty || planDirty) throw new Error('Apply or discard pending route or complete plan edits first.');
-  if (JSON.stringify(readSource()) !== JSON.stringify(reflectionPreview.request.source))
+  if (sourceFingerprint(readSource()) !== sourceFingerprint(reflectionPreview.request.source))
     throw new Error('Reopen the retained capture or discover the edited connection first.');
   if (!confirmReplacement('Saving this exact reflected source and its merchant plan', { request: true })) return;
   const nextPlan = structuredClone(plan);
