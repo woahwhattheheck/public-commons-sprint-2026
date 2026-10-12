@@ -88,6 +88,11 @@ Use a new directory to acquire a fresh edition. `import` copies and verifies the
 complete retained edition; an already imported manifest resolves to its existing
 project entry.
 
+For a complete acquisition already retained by Commons' connected public-source
+helper, use `capture-received`. The [receiving guide](RETAINED_PUBLIC_SOURCE.md)
+covers original response bundles, interrupted receiving and integration with the
+same import and reviewed refresh workflow.
+
 `captureSelection()` accepts the canonical HTTPS catalogue origin, package and
 resource IDs, explicit filters, optional full-text query, page size and pagination.
 Offset pagination is the default. CKAN 2.12 keyset pagination uses the returned
