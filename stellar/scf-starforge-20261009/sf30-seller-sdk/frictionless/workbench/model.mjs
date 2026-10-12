@@ -398,8 +398,19 @@ export async function openFrictionlessSourceWorkbench({publisher,inputs={},envir
       need(snapshot.edition.id===body.editionId&&snapshot.edition.sourceHash===selected.record.data.summary.sourceHash,'FRICTIONLESS_EXPORT_BINDING_CHANGED',undefined,409);
       if(!await exists(archive)){checkpoint(op.id,{phase:'exporting complete original source'});await run(['source-export','--source',selected.file,'--output',archive],signal);}
       await finishNativeLink(archive);const original=await hashPrivate(archive,MAX_SOURCE_FILE);
-      const verified=join(folder,'verified-source');
-      if(!await exists(verified))await run(['source-receive','--archive',archive,'--sha256',original.hash,'--output',verified],signal);
+      let archiveIdentity=item('operations',op.id).data.archiveIdentity;
+      if(!archiveIdentity){
+        archiveIdentity={name:'source.tar.gz',bytes:original.bytes,sha256:original.hash};
+        // Retain the original compressed bytes before native receiving. A resumed
+        // export cannot substitute another archive for an already verified one.
+        updateOperation(op.id,{archiveIdentity});
+      }
+      need(archiveIdentity.name==='source.tar.gz'&&archiveIdentity.bytes===original.bytes&&archiveIdentity.sha256===original.hash,
+        'FRICTIONLESS_SOURCE_EXPORT_CHANGED','The retained export archive differs from its original request identity.',409);
+      // Legacy unbound verified-source directories are left untouched. The
+      // original receiver validates this exact archive into its digest-bound path.
+      const verified=join(folder,'verified-source-'+archiveIdentity.sha256);
+      if(!await exists(verified))await run(['source-receive','--archive',archive,'--sha256',archiveIdentity.sha256,'--output',verified],signal);
       await syncDirectory(folder);
       const restored=await inspectFrictionlessSource(join(verified,'source.json'),{env:environment});
       const retainedOriginal=await readPrivate(join(verified,'original-source.json'),MAX_JSON);
