@@ -1,0 +1,19 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "wqx-water-quality",
+  "description": "WQX water-quality observations",
+  "commands": {
+    "water-quality": "stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/cli.mjs"
+  },
+  "commandDescriptions": {
+    "water-quality": "Review WQX samples, detection limits and complete paid data editions"
+  },
+  "exports": {
+    "./seller/water-quality": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/merchant.mjs",
+    "./seller/water-quality/provider": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/provider.mjs",
+    "./seller/water-quality/samples": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/samples.mjs",
+    "./seller/water-quality/analysis": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/analysis.mjs",
+    "./seller/water-quality/project": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/project.mjs",
+    "./seller/water-quality/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/workspace.mjs"
+  }
+}

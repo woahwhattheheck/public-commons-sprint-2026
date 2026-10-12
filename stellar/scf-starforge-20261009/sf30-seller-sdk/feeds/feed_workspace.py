@@ -145,6 +145,46 @@ class FeedWorkspace(Workspace):
         self.db.execute("UPDATE feed_operations SET result=? WHERE id=?", (json_bytes(result).decode(), operation_id))
         return result
 
+    def operation(self, operation_id, family="feed"):
+        """Read original ledger and its capture; carried history cannot resume."""
+        identifier(operation_id)
+        if family not in ("feed", "collection"):
+            raise InputError("Choose the original feed or collection operation family")
+        with self.mutex:
+            table = "feed_operations" if family == "feed" else "feed_collection_operations"
+            row = self.db.execute("SELECT * FROM " + table + " WHERE id=?", (operation_id,)).fetchone()
+            historical = False
+            if row is None and family == "feed":
+                row = self.db.execute("SELECT * FROM feed_operation_history WHERE id=?", (operation_id,)).fetchone()
+                historical = row is not None
+            if row is None:
+                raise FileNotFoundError("Unknown original operation")
+            payload = load_json(row["payload"])
+            result = load_json(row["result"]) if row["result"] is not None else None
+            run = None
+            continuation = None
+            # The native capture derives its ID from this exact operation payload.
+            # A partial acquisition exists before its ledger has a complete result.
+            if not historical and (family == "feed" and payload.get("action") in ("capture", "import") or
+                                   family == "collection" and payload.get("action") == "collection-capture"):
+                run_id = digest(json_bytes({"operationId": operation_id, "payload": payload}))
+                run_table = "feed_runs" if family == "feed" else "feed_collection_runs"
+                native = self.db.execute("SELECT * FROM " + run_table + " WHERE id=?", (run_id,)).fetchone()
+                if native is not None:
+                    run = load_json(native["body"])
+                    if run.get("operationId") != operation_id:
+                        raise InputError("The retained capture differs from its original operation")
+                    if family == "feed":
+                        run = run | {"id": native["id"], "state": native["state"], "created": native["created"]}
+                    if result is None and payload["action"] == "capture":
+                        continuation = {"action": "resume", "captureId": run_id}
+                    elif result is None and payload["action"] == "collection-capture":
+                        continuation = {"action": "collection-resume", "runId": run_id}
+            return {"schema": "stellar-forge.feed-operation.v1", "id": operation_id,
+                    "family": family, "historyOnly": historical, "created": row["created"],
+                    "state": "RESULT_RETAINED" if row["result"] is not None else "INTENT_RETAINED",
+                    "request": payload, "result": result, "run": run, "continuation": continuation}
+
     def feed(self, feed_id):
         row = self.db.execute("SELECT * FROM feed_sources WHERE id=?", (identifier(feed_id),)).fetchone()
         if row is None:

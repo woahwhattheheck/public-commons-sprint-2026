@@ -25,7 +25,7 @@ function field(label,value,change,{type='text',max=2000,placeholder='',readonly=
   return el('label',{},label,n);
 }
 function select(label,value,options,change){
-  const n=el('select',{onchange:e=>change?.(e.target.value)});
+  const n=el('select',{'aria-label':label,onchange:e=>change?.(e.target.value)});
   for(const [key,title]of options)n.append(el('option',{value:key,selected:key===value},title));return el('label',{},label,n);
 }
 function check(label,value,change){return el('label',{class:'check'},el('input',{type:'checkbox',checked:value,onchange:e=>change(e.target.checked)}),label);}

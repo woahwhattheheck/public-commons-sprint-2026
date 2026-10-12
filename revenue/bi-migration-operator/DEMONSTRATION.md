@@ -54,3 +54,45 @@ Those local exercises cover the actual operator, generated native file formats, 
 SOURCE.json, counting-basis.json, footnotes.json and source_warnings.json retain the original public report interpretation. Group A counts and arrest-based Group B are distinct. The original population labels and combined 2023/2024 applicability are retained. Regional calculations use the Sheriff's total once, without adding its component jurisdictions again. Published summary controls remain independent of detailed source tables; differences between them remain visible.
 
 The original public report and extraction provenance are linked in SOURCE.json. SOLICITATION_SCOPE.md records the separately reviewed current procurement scope and source references. Use actual customer exports and approved receiving access for the contracted report family.
+
+## SQL Server operating workflow — 12 October 2026
+
+The integrated SQL Server workflow completed one retained operation, `sqljourney-290aaa4b0a70c94aa5bd`, at 02:55:40 UTC. It used all 5,037 rows from the bundled, published SANDAG OffenseCells CSV, whose SHA256 is `3d61804ae639c7e7907da106ca18d313973846f9748b36495b590e847fa153a4`. Four separately identified Practice columns exercised exact decimal(38,8), bigint, datetime2(7), and binary transport. The agency source columns and original CSV remained unchanged.
+
+The actual application/worker path completed these connected operations:
+
+- Native declaration/catalog projection, typed generated keyset query, original metadata preflight and explicit query review.
+- Eight committed result pages at a reviewed maximum of 637 rows/page. The third response was deliberately lost; the same operation preserved its first two pages and pending cursor, reopened, continued, canceled after four committed pages, then completed all 5,037 rows. Nine query calls included that one lost response. Reopening the completed operation added zero query calls.
+- A complete comparison against the original published source passed. One saved cell change produced exactly one different cell with no duplicate keys, extra rows or missing rows. A linked correction passed. Separate one-unit changes in the eighth decimal place and seventh timestamp fractional digit were both detected.
+- A reviewed mapping of every original model field generated the complete mapped CSV and built the existing native Power BI project. The builder used the existing jsonschema dependency closure after the initial Python environment reported that dependency missing.
+- A second workspace received 22 records and 35 original revisions. The same bundle reopened its original accepted receipt. Independent profile edits created one conflict; the receiving operator retained both complete branches and exported them again with their source identities.
+- An encrypted cold restore reopened 38 original record heads with identical payload hashes and original business IDs, while issuing a new browser access key. Receiving and restoration started zero database jobs.
+
+This complete operating run used the included explicit local protocol carrier and the unchanged released driver declaration/type contract. It opened zero SQL Server connections. Actual SQL Server execution uses the same prepared native job with the operator's configured host, credentials and existing pinned driver installation. Each received page retains the source driver's `single-statement-database-isolation` label and its own observed boundary.
+
+Reproduce the complete retained operation through `examples/SQL_SERVER_JOURNEY.py`; then use `examples/SQL_SERVER_UI.mjs` to continue its completed state through the actual browser. The UI entrypoint does not start native capture jobs. Full instructions are in [tools/sql-server/GUIDE.md](tools/sql-server/GUIDE.md).
+
+### Completed browser receiving and continuation
+
+The same operating example completed its browser continuation at **03:37:52.593 UTC on 12 October 2026**. All five SQL screens—Connections & catalog, Queries & review, Capture jobs, Model bindings, and Receiving—completed at both 1,440-pixel desktop and 390-pixel mobile widths without horizontal overflow or browser errors.
+
+The browser saved the existing profile and reviewed query as revision 3, applied the complete physical-field model mapping as plan revision 4, and downloaded the original native job and result. Their exact hashes matched the retained objects. The full 1,169,248-byte updated workstream package was received into the existing second workspace as 23 heads, including the original source history. That receiver reopened the same receipt. The original cold-restored workspace reopened the same 5,037-row, eight-page native job. Browser receiving and reopening started zero native capture jobs or SQL Server connections.
+
+The UI exercise's private `UI-STATE.json`, `UI-RESULT.json`, downloads and screenshots retain its progress. Its final result SHA256 is `ff04115afc5bf6ae362ee9c42b90ac74d5099876457642b45056a185c88a9c1b`. Source and receiving browsers and their servers closed after the operation. An interrupted continuation uses that same operation directory.
+
+An independent review by the original SQL driver team also completed the calculated-column join: SQL mappings select physical model fields only, while calculated columns retain their original DAX and metadata. Its original Store → SQL mapping → native 13-file Power BI project → reopen exercise preserved exact 38-digit values, NULL and Boolean values, accepted a legacy saved mapping, and retained the DAX. Its UI check exposed physical selectors and no calculated-only submission. These final source postimages are included in this release.
+
+## Twelve-agency billing operation — 12 October 2026
+
+The complete authored billing example and the original staff UI completed one connected receiving operation. The example contains twelve explicit payer agencies, 83 original Azure-shaped cost rows, 36 usage rows across three named metrics, and sixteen ordered rules. Two retained internal allocation rows are excluded from the supplier-cost view. The 81 selected source charges total exactly `3618.005492789012345678901234` USD; period rounding allocates `3618.01` USD across all twelve agencies with zero unresolved charges.
+
+The staff operator read the saved policy while retaining the new monthly draft, prepared the selected inputs, and reopened the same successful operation after its response was deliberately lost. Review and finalization generated twelve printable agency statements, their CSVs, a four-sheet accounting workbook, original inputs, and the saved policy/calculation in a 39-file ZIP.
+
+The same period was then reopened for a documented `-0.01` USD agency correction. Recalculation, review and finalization produced `3618.00` USD in replacement statements while retaining the original finalized revision and archive. The downloaded original and replacement ZIPs matched their saved objects. All three accounting workbooks opened with twelve agency rows and complete allocation/source sheets.
+
+The original encrypted backup and restoration reopened both billing periods, all three delivery records, every original period revision, and identical statement bytes. Start a fresh authored example with:
+
+    python BI_OPERATOR.py --workspace ./billing-example billing-example
+    python BI_OPERATOR.py --workspace ./billing-example serve
+
+[BILLING_GUIDE.md](BILLING_GUIDE.md) covers agency setup, complete source import, ordered policy editing, monthly review, correction, statement generation and the same actions through the CLI. The authored agencies and amounts are operating inputs supplied with the software; actual payer identities and provider exports are selected in the receiving workspace.

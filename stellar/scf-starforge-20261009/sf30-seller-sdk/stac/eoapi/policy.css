@@ -1,0 +1,58 @@
+/* MIT. Industrial operator surface; scoped to the original policy mount. */
+.eoapi-policy{color:#181818;background:#fff;font:14px/1.5 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;max-width:1500px;margin:0 auto;border:1px solid #b8b8b8;box-sizing:border-box}
+.eoapi-policy *,.eoapi-policy *::before,.eoapi-policy *::after{box-sizing:border-box}
+.eoapi-policy [hidden]{display:none!important}
+.eoapi-policy h2{font-size:24px;line-height:1.25;margin:2px 0 8px;font-weight:650}
+.eoapi-policy h3{font-size:17px;line-height:1.35;margin:0 0 12px;font-weight:650}
+.eoapi-policy h4{font-size:14px;margin:20px 0 8px;font-weight:650}
+.eoapi-policy p{margin:8px 0 12px}
+.eoapi-policy .ep-header{padding:24px 28px;display:flex;gap:24px;align-items:flex-start;justify-content:space-between;border-bottom:1px solid #b8b8b8;background:#f5f5f5}
+.eoapi-policy .ep-eyebrow{font:11px/1.4 ui-monospace,SFMono-Regular,Consolas,monospace;letter-spacing:.08em;text-transform:uppercase;margin:0 0 6px}
+.eoapi-policy [data-summary]{margin:0;color:#555}
+.eoapi-policy .ep-status,.eoapi-policy .ep-error{margin:0;padding:12px 28px;min-height:44px;border-bottom:1px solid #ddd}
+.eoapi-policy .ep-error{border-left:5px solid #333;background:#eee;font-weight:600}
+.eoapi-policy .ep-nav{display:flex;gap:0;flex-wrap:wrap;border-bottom:1px solid #aaa;background:#fafafa;padding:0 16px}
+.eoapi-policy .ep-nav button{border:0;border-bottom:3px solid transparent;border-radius:0;background:transparent;min-height:46px;padding:10px 14px;margin-bottom:-1px}
+.eoapi-policy .ep-nav button[aria-pressed=true]{border-bottom-color:#181818;background:#fff;font-weight:650}
+.eoapi-policy [data-panel]{padding:24px 28px}
+.eoapi-policy .ep-toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:0 0 20px}
+.eoapi-policy .ep-toolbar label{margin:0;min-width:180px}
+.eoapi-policy .ep-toolbar [data-draft-status]{margin-left:auto;color:#555;font-size:12px}
+.eoapi-policy button{font:inherit;line-height:1.25;min-height:36px;padding:8px 12px;border:1px solid #aaa;border-radius:2px;background:#f5f5f5;color:#181818;cursor:pointer;white-space:normal;text-align:center}
+.eoapi-policy button:hover:not(:disabled){background:#e7e7e7;border-color:#666}
+.eoapi-policy button:disabled{color:#777;background:#f6f6f6;border-color:#d0d0d0;cursor:default}
+.eoapi-policy button[data-action=approve],.eoapi-policy button[data-action=save],.eoapi-policy button[data-action=receive]{background:#222;color:#fff;border-color:#222}
+.eoapi-policy button[data-action=approve]:hover:not(:disabled),.eoapi-policy button[data-action=save]:hover:not(:disabled),.eoapi-policy button[data-action=receive]:hover:not(:disabled){background:#444}
+.eoapi-policy button[data-action=approve]:disabled,.eoapi-policy button[data-action=save]:disabled,.eoapi-policy button[data-action=receive]:disabled{background:#e7e7e7;border-color:#ccc;color:#777}
+.eoapi-policy input,.eoapi-policy textarea,.eoapi-policy select{font:inherit;color:#181818;background:#fff;border:1px solid #aaa;border-radius:2px;min-height:36px;padding:7px 9px;width:100%;margin-top:4px}
+.eoapi-policy textarea{resize:vertical;font:12px/1.6 ui-monospace,SFMono-Regular,Consolas,monospace;min-height:68px;tab-size:2}
+.eoapi-policy input[type=checkbox]{width:18px;min-height:18px;height:18px;display:block}
+.eoapi-policy input[type=file]{padding:6px;width:100%;max-width:290px;font-size:12px}
+.eoapi-policy input[readonly],.eoapi-policy input:disabled,.eoapi-policy textarea:disabled,.eoapi-policy select:disabled{background:#f3f3f3;color:#666}
+.eoapi-policy :is(button,input,textarea,select,summary,a):focus-visible{outline:2px solid #111;outline-offset:3px}
+.eoapi-policy label{display:block;font-size:12px;font-weight:600;min-width:0}
+.eoapi-policy label small{display:block;font-weight:400;color:#555;margin-top:5px}
+.eoapi-policy .ep-file{font-size:12px;max-width:300px}
+.eoapi-policy .ep-editor{padding:0;margin:0;border:0;min-width:0}
+.eoapi-policy .ep-card{border:1px solid #c5c5c5;padding:20px;margin:0 0 20px}
+.eoapi-policy .ep-card>p,.eoapi-policy .ep-filter>p,.eoapi-policy .ep-routes>p{color:#555;max-width:100ch;font-size:13px}
+.eoapi-policy .ep-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px 20px}
+.eoapi-policy .ep-wide{grid-column:1/-1}
+.eoapi-policy .ep-routes,.eoapi-policy .ep-filter{border-top:1px solid #ddd;margin-top:20px;padding-top:2px}
+.eoapi-policy .ep-route-row{display:grid;grid-template-columns:minmax(180px,1fr) minmax(200px,1.25fr) auto;gap:12px;align-items:end;border:1px solid #ddd;background:#fafafa;padding:12px;margin:10px 0}
+.eoapi-policy .ep-row-controls{display:flex;gap:6px;align-items:center;padding-bottom:4px}
+.eoapi-policy .ep-row-controls button{min-width:34px;padding:8px}
+.eoapi-policy .ep-right{padding:16px;border:1px solid #ddd;background:#fafafa;margin:12px 0}
+.eoapi-policy .ep-right>button{margin-top:12px}
+.eoapi-policy .ep-table-wrap{width:100%;overflow:auto;margin:12px 0 20px;border:1px solid #ccc}
+.eoapi-policy table{border-collapse:collapse;font-size:12px;width:100%;text-align:left}
+.eoapi-policy th{background:#f0f0f0;font-weight:650;border-bottom:1px solid #bbb;white-space:nowrap}
+.eoapi-policy td,.eoapi-policy th{padding:10px 12px;vertical-align:top}
+.eoapi-policy td{border-bottom:1px solid #ddd;white-space:pre-wrap;overflow-wrap:anywhere;min-width:90px;max-width:480px}
+.eoapi-policy tr:last-child td{border-bottom:0}
+.eoapi-policy .ep-identity{font:12px/1.6 ui-monospace,SFMono-Regular,Consolas,monospace;overflow-wrap:anywhere;color:#444}
+.eoapi-policy details{margin:16px 0;border:1px solid #ccc;padding:12px 14px}
+.eoapi-policy summary{cursor:pointer;font-weight:600}
+.eoapi-policy pre{font:12px/1.6 ui-monospace,SFMono-Regular,Consolas,monospace;overflow:auto;background:#f6f6f6;padding:14px;margin:12px 0 0;max-height:540px;border:1px solid #ddd}
+.eoapi-policy .ep-sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+@media(max-width:760px){.eoapi-policy .ep-header{padding:18px;display:block}.eoapi-policy .ep-header>button{margin-top:14px}.eoapi-policy [data-panel]{padding:18px}.eoapi-policy .ep-status,.eoapi-policy .ep-error{padding:12px 18px}.eoapi-policy .ep-grid,.eoapi-policy .ep-route-row{grid-template-columns:1fr}.eoapi-policy .ep-toolbar{align-items:stretch}.eoapi-policy .ep-toolbar [data-draft-status]{margin-left:0;width:100%}.eoapi-policy .ep-row-controls{justify-content:flex-start}.eoapi-policy .ep-card{padding:14px}.eoapi-policy .ep-nav{padding:0 4px}.eoapi-policy .ep-nav button{padding:10px;font-size:12px}}

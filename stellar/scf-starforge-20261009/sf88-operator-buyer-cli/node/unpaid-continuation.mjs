@@ -208,6 +208,9 @@ export async function prepareUnpaidContinuation(operation, options = {}) {
   return locked(operation, async () => {
     signalCheck(signal);
     await operation._bound();
+    need(!await exists(join(operation.directory, 'expired-continuation.json'))&&
+      !await exists(join(operation.directory, 'undispatched-continuation.json')),
+      'CONTINUATION_ALREADY_SELECTED');
     let failure = await originalFailure(operation);
     need(failure.eligible, 'UNPAID_CONTINUATION_REQUIRES_DEFINITIVE_UNPAID_FAILURE');
     need(failure.resultSha256 === expectedResultSha256, 'UNPAID_CONTINUATION_RESULT_CHANGED');
@@ -282,4 +285,19 @@ export async function followUnpaidContinuation(operation) {
     current = child;
   }
   throw new BuyerError('UNPAID_CONTINUATION_LINEAGE_INVALID');
+}
+
+
+// Shared original operation/lock mechanics. Source-family predicates remain above.
+export {own as readContinuationOperation, requestIdentity as continuationRequestIdentity,
+  locked as withContinuationLock};
+export async function readUnpaidContinuationEdge(operation, meta) {
+  need(object(meta.unpaidContinuation), 'UNPAID_CONTINUATION_LINEAGE_INVALID');
+  const parent = operation.buyer.operation(intent(meta.unpaidContinuation.parentIntentId));
+  const selected = await choice(parent);
+  need(selected && selected.sha256 === meta.unpaidContinuation.choiceSha256 &&
+    selected.value.intentId === operation.intentId, 'UNPAID_CONTINUATION_CHOICE_CHANGED');
+  const failure = await originalFailure(parent);
+  await childBinding(parent, selected, failure, operation);
+  return {operation: parent, meta: failure.meta};
 }
