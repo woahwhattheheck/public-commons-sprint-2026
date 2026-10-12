@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // MIT. One explicit native gRPC -> merchant MCP -> usable customer receiving journey.
 // Uses the original included service, original stores/HTTP servers and original file transport.
-import { mkdir, readFile, writeFile, rename } from 'node:fs/promises';
+import { mkdir, lstat, readFile, writeFile, rename } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
 import { pathToFileURL, fileURLToPath } from 'node:url';
 import { createHash, randomUUID, randomBytes } from 'node:crypto';
@@ -10,33 +10,64 @@ const root = resolve(fileURLToPath(new URL('../', import.meta.url)));
 const args = new Map();
 for (let i = 2; i < process.argv.length; i += 2) {
   const key = process.argv[i], value = process.argv[i + 1];
-  if (!['--source-root', '--out', '--source-commit'].includes(key) || value === undefined || args.has(key))
-    throw new Error('Use --source-root COMPLETE_SOURCE --out NEW_PRIVATE_DIRECTORY --source-commit REVIEWED_COMMIT.');
+  if (!['--source-root', '--out', '--resume', '--source-commit'].includes(key) || value === undefined || args.has(key))
+    throw new Error('Use --source-root COMPLETE_SOURCE with either --out NEW_PRIVATE_DIRECTORY or --resume SAVED_DIRECTORY, and --source-commit REVIEWED_COMMIT.');
   args.set(key, value);
 }
-if (!args.has('--out') || !/^[0-9a-f]{40}$/.test(args.get('--source-commit') ?? ''))
-  throw new Error('Supply a new private --out directory and the reviewed --source-commit.');
-const sourceRoot = resolve(args.get('--source-root') ?? root), out = resolve(args.get('--out'));
-await mkdir(out, { mode: 0o700 });
+if (args.has('--out') === args.has('--resume') || !/^[0-9a-f]{40}$/.test(args.get('--source-commit') ?? ''))
+  throw new Error('Supply exactly one --out or --resume directory and the reviewed --source-commit.');
+const resuming = args.has('--resume');
+const sourceRoot = resolve(args.get('--source-root') ?? root), out = resolve(args.get(resuming ? '--resume' : '--out'));
+if (resuming) {
+  const stat = await lstat(out);
+  if (!stat.isDirectory() || stat.isSymbolicLink() || (stat.mode & 0o077))
+    throw new Error('Resume the original private real journey directory.');
+} else await mkdir(out, { mode: 0o700 });
 const nativePath = 'stellar/scf-starforge-20261009/sf30-seller-sdk/grpc/';
 const merchantPath = 'stellar-forge/mcp-merchant-operator/';
 const imported = path => import(pathToFileURL(join(sourceRoot, path)).href);
 const sha = bytes => createHash('sha256').update(bytes).digest('hex');
 const requireValue = (condition, reason) => { if (!condition) throw new Error(reason); };
 const privateJson = async (name, value) => writeFile(join(out, name), JSON.stringify(value, null, 2) + '\n', { mode: 0o600, flag: 'wx' });
-const report = { schema: 'stellar-forge.grpc-agent-native-journey.v1', sourceCommit: args.get('--source-commit'),
+const previous = resuming ? JSON.parse(await readFile(join(out, 'journey.json'), 'utf8')) : null;
+const receivingPhases = ['captured-source-and-native-revisions', 'native-call-and-original-recovery',
+  'complete-customer-download-resume-and-repeat', 'complete-source-receiving'];
+if (resuming) {
+  requireValue(previous.schema === 'stellar-forge.grpc-agent-native-journey.v1' && previous.state !== 'COMPLETE' &&
+    Array.isArray(previous.phases) && receivingPhases.every(name => previous.phases.some(row => row.name === name)) &&
+    previous.shutdown?.every(row => row.closed) === true,
+    'Resume requires the original completed call/receiving phases and closed prior servers.');
+}
+const report = previous ?? { schema: 'stellar-forge.grpc-agent-native-journey.v1', sourceCommit: args.get('--source-commit'),
   runId: randomUUID(), startedAt: new Date().toISOString(), source: 'original included native gRPC example', node: process.version,
   originalCalls: [], phases: [], state: 'STARTED' };
+if (resuming) {
+  report.continuations ??= [];
+  report.continuations.push({ startedAt: new Date().toISOString(), sourceCommit: report.sourceCommit,
+    sourceFiles: report.sourceFiles, previousState: report.state, failure: report.failure,
+    finishedAt: report.finishedAt, schemaAssertions: report.phases.find(row => row.name === 'native-schema-assertions'),
+    retainedPhases: report.phases.filter(row => row.name !== 'native-schema-assertions').map(row => row.name) });
+  for (const row of report.phases) row.sourceCommit ??= report.sourceCommit;
+  report.sourceCommit = args.get('--source-commit'); report.node = process.version; report.state = 'STARTED';
+  delete report.failure; delete report.finishedAt; delete report.shutdown;
+}
 const checkpoint = async () => {
   await writeFile(join(out, 'journey.next.json'), JSON.stringify(report, null, 2) + '\n', { mode: 0o600 });
   await rename(join(out, 'journey.next.json'), join(out, 'journey.json'));
 };
 let example, source, receiving, merchant, client;
 const phase = async (name, action) => {
+  const retained = report.phases.find(row => row.name === name);
+  if (resuming && retained && name !== 'native-schema-assertions') {
+    process.stdout.write(JSON.stringify({ phase: name, state: 'RETAINED', sourceCommit: retained.sourceCommit }) + '\n');
+    return retained;
+  }
   const startedAt = new Date().toISOString();
   const value = await action();
-  report.phases.push({ name, startedAt, finishedAt: new Date().toISOString(), ...value });
+  const result = { name, sourceCommit: report.sourceCommit, startedAt, finishedAt: new Date().toISOString(), ...value };
+  if (retained) report.phases[report.phases.indexOf(retained)] = result; else report.phases.push(result);
   await checkpoint(); process.stdout.write(JSON.stringify({ phase: name, state: 'COMPLETE' }) + '\n');
+  return result;
 };
 try {
   const { startExample } = await imported(nativePath + 'examples/server.mjs');
@@ -71,32 +102,79 @@ try {
       !validate({}, { not: { $ref: '#/missing' } }).ok &&
       validate({}, { patternProperties: {} }).reason === 'SCHEMA_KEYWORD_UNSUPPORTED:patternProperties',
       'Negation changed original malformed-reference or unsupported-keyword behavior.');
-    return { oneofPresence: 'preserved', canonicalMapKeys: 'enforced', originalUnsupportedKeywords: 'retained' };
+    const malformed = [
+      [{}, { not: { anyOf: [{ $ref: '#/missing' }] } }, 'SCHEMA_LOCAL_REFERENCE_MISSING'],
+      [{}, { not: { oneOf: [{ $ref: '#/missing' }] } }, 'SCHEMA_LOCAL_REFERENCE_MISSING'],
+      [{ field: 1 }, { propertyNames: { not: { anyOf: [{ $ref: '#/missing' }] } } }, 'SCHEMA_LOCAL_REFERENCE_MISSING'],
+      [{}, { title: 'annotation', not: { $ref: '#/title' } }, 'SCHEMA_NODE_INVALID'],
+      [{}, { anyOf: [true, { $ref: '#/missing' }] }, 'SCHEMA_LOCAL_REFERENCE_MISSING'],
+    ];
+    for (const [info, schema, reason] of malformed)
+      requireValue(validate(info, schema).reason === reason, 'A malformed reference was admitted through an alternate schema branch.');
+    const recursive = { $defs: { node: { type: 'object', properties: {
+      value: { type: 'integer' }, child: { $ref: '#/$defs/node' },
+    }, additionalProperties: false } }, $ref: '#/$defs/node' };
+    requireValue(validate({ value: 1, child: { value: 2, child: { value: 3 } } }, recursive).ok &&
+      !validate({ value: 1, child: { value: 'wrong type' } }, recursive).ok &&
+      validate({}, { not: { $ref: '#' } }).reason === 'SCHEMA_REFERENCE_CYCLE',
+      'Finite recursive values or the same-instance cycle guard changed.');
+    const repeatedBranch = { properties: { child: { $ref: '#/$defs/node' } } };
+    const amplification = { $defs: { node: { type: 'object', allOf: [repeatedBranch, repeatedBranch] } }, $ref: '#/$defs/node' };
+    let nested = {}; for (let i = 0; i < 18; i++) nested = { child: nested };
+    requireValue(validate(nested, amplification).reason === 'SCHEMA_EVALUATION_LIMIT',
+      'Recursive alternatives did not share the validation evaluation budget.');
+    return { oneofPresence: 'preserved', canonicalMapKeys: 'enforced', originalUnsupportedKeywords: 'retained',
+      malformedReferences: malformed.length, finiteRecursion: 'preserved', sameInstanceCycles: 'rejected', evaluationBudget: 'enforced' };
   });
-  example = await startExample({ port: 0, authorization: environment.GRPC_DEMO_AUTHORIZATION });
+  const savedSource = resuming ? JSON.parse(await readFile(join(out, 'source.json'), 'utf8')) : null;
+  let examplePort = 0;
+  if (resuming) {
+    const match = /^127\.0\.0\.1:([1-9][0-9]{0,4})$/.exec(savedSource.target);
+    requireValue(match && Number(match[1]) <= 65535, 'The retained original example target is invalid.');
+    examplePort = Number(match[1]);
+  }
+  example = await startExample({ port: examplePort, authorization: environment.GRPC_DEMO_AUTHORIZATION });
   source = await startGrpcWorkspace({ port: 0, stateDirectory: join(out, 'source-workspace'), env: environment });
   receiving = await startGrpcWorkspace({ port: 0, stateDirectory: join(out, 'receiving-workspace'), env: environment });
-  const nativeUrl = new URL(source.url);
-  const response = await fetch(nativeUrl.origin + '/api/example', { headers: { 'x-workspace-token': nativeUrl.hash.slice(1) } });
-  requireValue(response.ok, 'The original native example settings could not be read.');
-  const original = await response.json(); original.source.target = example.target;
-  const method = original.plan.routes[0].grpcMethod, input = original.plan.routes[0].example;
-  await privateJson('source.json', original.source); await privateJson('plan.json', original.plan); await privateJson('request.json', input);
-  await writeFile(join(out, 'source-url.txt'), source.url + '\n', { mode: 0o600, flag: 'wx' });
-  await writeFile(join(out, 'receiving-url.txt'), receiving.url + '\n', { mode: 0o600, flag: 'wx' });
-  await privateJson('connection.json', { schema: 'stellar-forge.grpc-workspace-connection.v1', workspaces: {
+  let original;
+  if (resuming) original = { source: savedSource, plan: JSON.parse(await readFile(join(out, 'plan.json'), 'utf8')) };
+  else {
+    const nativeUrl = new URL(source.url);
+    const response = await fetch(nativeUrl.origin + '/api/example', { headers: { 'x-workspace-token': nativeUrl.hash.slice(1) } });
+    requireValue(response.ok, 'The original native example settings could not be read.');
+    original = await response.json(); original.source.target = example.target;
+  }
+  const method = original.plan.routes[0].grpcMethod;
+  const input = resuming ? JSON.parse(await readFile(join(out, 'request.json'), 'utf8')) : original.plan.routes[0].example;
+  if (!resuming) {
+    await privateJson('source.json', original.source); await privateJson('plan.json', original.plan); await privateJson('request.json', input);
+  }
+  await writeFile(join(out, 'source-url.txt'), source.url + '\n', { mode: 0o600, flag: resuming ? 'w' : 'wx' });
+  await writeFile(join(out, 'receiving-url.txt'), receiving.url + '\n', { mode: 0o600, flag: resuming ? 'w' : 'wx' });
+  if (!resuming) await privateJson('connection.json', { schema: 'stellar-forge.grpc-workspace-connection.v1', workspaces: {
     source: { consoleUrlFile: './source-url.txt', captures: { original: { label: 'Original native analytics merchant',
       directory: original.protoDirectory, entrypoints: original.entrypoints, sourceFile: './source.json', planFile: './plan.json' } },
       files: { request: { kind: 'request', path: './request.json' } } },
     receiving: { consoleUrlFile: './receiving-url.txt' },
   } });
-  const initialized = await initializeGrpcWorkspaceMerchant({ directory: join(out, 'merchant-agent'), connection: join(out, 'connection.json') });
+  const initialized = resuming ? { configuration: join(out, 'merchant-agent', 'merchant-mcp.json') }
+    : await initializeGrpcWorkspaceMerchant({ directory: join(out, 'merchant-agent'), connection: join(out, 'connection.json') });
   merchant = await startMerchantMcp({ configPath: initialized.configuration, port: 0, tokenEnv: 'GRPC_AGENT_MCP_TOKEN', environment });
   client = await openMerchantFileClient({ url: merchant.url, tokenEnv: 'GRPC_AGENT_MCP_TOKEN', environment });
   const call = (name, values = {}) => client.call('merchant_grpc_' + name, { workspace: 'source', ...values }, { timeoutMs: 420000 });
-  const ids = { call: randomUUID(), secondCall: randomUUID(), firstPreparation: randomUUID(), secondPreparation: randomUUID() };
-  await privateJson('operation-ids.json', ids);
+  const ids = resuming ? JSON.parse(await readFile(join(out, 'operation-ids.json'), 'utf8'))
+    : { call: randomUUID(), secondCall: randomUUID(), firstPreparation: randomUUID(), secondPreparation: randomUUID() };
+  if (!resuming) await privateJson('operation-ids.json', ids);
   let first, second, currentPlan, customer, revisionExport;
+  if (resuming) {
+    const captured = report.phases.find(row => row.name === 'captured-source-and-native-revisions');
+    first = { revision: captured.firstRevision, protoSha256: captured.protoSha256 };
+    second = { revision: captured.secondRevision, protoSha256: captured.protoSha256 };
+    currentPlan = (await call('revision', { revision: second.revision, section: 'plan' })).plan;
+    for (const operationId of [ids.call, ids.secondCall])
+      requireValue((await call('attempt', { operationId })).phase === 'COMPLETED', 'A retained original native call is incomplete.');
+    requireValue(example.calls.length === 0, 'Reopening the retained workspace dispatched an application RPC.');
+  }
   await phase('captured-source-and-native-revisions', async () => {
     first = await call('capture', { capture: 'original', baseRevision: null });
     const methods = await call('revision', { revision: first.revision, section: 'methods' });
@@ -164,16 +242,19 @@ try {
   await phase('original-direct-merchant', async () => {
     const runtime = await call('run', { preparation: ids.secondPreparation });
     requireValue(runtime.active?.phase === 'RUNNING', 'The original direct merchant did not start.');
+    const callsBeforeChallenge = example.calls.length;
     const native = await fetch(runtime.active.url + currentPlan.routes[0].path, { method: 'POST',
       headers: { 'content-type': 'application/json' }, body: JSON.stringify(input) });
     await native.arrayBuffer();
-    requireValue(native.status === 402 && example.calls.length === 2, 'The original unpaid challenge dispatched an application RPC.');
+    requireValue(native.status === 402 && example.calls.length === callsBeforeChallenge, 'The original unpaid challenge dispatched an application RPC.');
     const stopped = await call('stop');
     requireValue(!stopped.active, 'The original direct merchant did not drain.');
     return { runId: runtime.active.id, mode: runtime.active.mode, challengeStatus: native.status, nativeCalls: example.calls.length };
   });
   await phase('original-release-activation-drain-and-rollback', async () => {
-    await call('checkout', { revision: first.revision, baseRevision: second.revision });
+    const selected = await call('status');
+    if (selected.currentRevision !== first.revision)
+      await call('checkout', { revision: first.revision, baseRevision: selected.currentRevision });
     await call('prepare', { revision: first.revision, operationId: ids.firstPreparation });
     await call('checkout', { revision: second.revision, baseRevision: first.revision });
     const suffix = report.runId.slice(0, 8), one = 'grpc-agent-a-' + suffix, two = 'grpc-agent-b-' + suffix;
@@ -200,7 +281,8 @@ try {
     await call('release_close');
     return { firstRelease: one, secondRelease: two, rollbackInstance, generation: final.state.generation, selectedRelease: final.state.active };
   });
-  report.state = 'COMPLETE'; report.nativeCalls = example.calls.length;
+  report.state = 'COMPLETE'; report.nativeCalls = report.phases.find(row => row.name === 'native-call-and-original-recovery').nativeCalls;
+  if (resuming) report.continuations.at(-1).additionalNativeCalls = example.calls.length;
 } catch (error) {
   report.state = 'FAILED'; report.failure = { code: error.code ?? null, message: error.message };
   process.exitCode = 1;
