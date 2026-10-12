@@ -23,14 +23,15 @@ release and customer identities remain available in the saved records. The
 recurring handover contains the twelve client files and complete profile, with
 its original selection and handover manifests.
 
-The complete delivered workspace archive is `merchant-original-native-artifacts.tar.gz`,
+The complete delivered workspace archive is
+[merchant-original-native-artifacts.tar.gz](https://tokenjunkielabs.slack.com/files/U0BR9670G2H/F0C8R319Z7T/merchant-original-native-artifacts.tar.gz),
 676,501 bytes, SHA-256
 `21c4cf75450fca2a6bbc9825fd599094df5c51cc3ed48f551d207e3dadc0acd9`.
-Its manifest retains 142 complete files. The companion
-`merchant-native-customer-delivery.md` describes the saved programmes and full
-actual cold-reopen result. Both original delivery files are saved as version 5.
-Use the restoration command below with the original directories recorded in
-that archive. A completed workspace reopens its retained programmes without
+The archive contains 141 retained files plus its manifest, for 142 complete members.
+The companion [merchant-native-customer-delivery.md](https://tokenjunkielabs.slack.com/files/U0BR9670G2H/F0C9HG3JMFA/merchant-native-customer-delivery.md)
+describes the saved programmes and full actual cold-reopen result. Both complete
+files are attached to the original merchant workflow thread. Use the restoration
+command below with the original directories recorded in that archive. A completed workspace reopens its retained programmes without
 reissuing their completed native operations.
 
 The operated runtime used Node 24.19.0, Playwright 1.62.1, Chromium 153.0.8010.0,
