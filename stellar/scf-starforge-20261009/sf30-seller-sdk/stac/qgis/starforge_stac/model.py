@@ -1,8 +1,8 @@
 # SPDX-License-Identifier: MIT
-"""QGIS project state over the complete original STAC receiving files.
+"""QGIS project state over complete original STAC and vector receiving files.
 
-Only the Node original receiver prepares qgis-receiving.json. This reader
-verifies that exact file closure for the desktop, and stores analyst choices.
+Each source reader retains its original manifest and exact file closure while
+this workspace stores analyst choices, native maps and complete receiving.
 It never retrieves an asset, resolves a source URL or evaluates a payment.
 """
 from __future__ import annotations
@@ -215,6 +215,9 @@ def retain_copy(source, root, name, expected, progress=None):
 
 
 class ReceivingSource:
+    sourceKind = "stac"
+    manifest_name = MANIFEST_NAME
+
     def __init__(self, root, expected_manifest_sha256=None, progress=None, verify=True):
         self.root = directory(root)
         manifest, body = read_json(member(self.root, MANIFEST_NAME))
@@ -344,6 +347,21 @@ class ReceivingSource:
         return rows
 
 
+def open_receiving_source(root, expected_manifest_sha256=None, progress=None, verify=True):
+    """Select the complete original manifest without changing either source kind."""
+    root = directory(root)
+    vector_name = "vector-export.json"
+    selected = [name for name in (MANIFEST_NAME, vector_name)
+                if (root / name).exists() or (root / name).is_symlink()]
+    require(len(selected) == 1, "RECEIVING_MANIFEST_SELECTION",
+            "Select one complete original qgis-receiving.json or vector-export.json directory.",
+            manifests=selected)
+    if selected[0] == vector_name:
+        from .vector_source import VectorReceivingSource
+        return VectorReceivingSource(root, expected_manifest_sha256, progress=progress, verify=verify)
+    return ReceivingSource(root, expected_manifest_sha256, progress=progress, verify=verify)
+
+
 def compare_sources(left, right):
     scenes = []
     for key in sorted(set(left.scenes) | set(right.scenes)):
@@ -360,13 +378,18 @@ def compare_sources(left, right):
                 return None
             file = value.get("file")
             return {"original": value.get("original"), "outcome": value.get("outcome"), "reason": value.get("reason"),
-                    "file": {k: file.get(k) for k in ("bytes", "sha256", "contentType")} if file else None}
+                    "file": {k: file.get(k) for k in ("bytes", "sha256", "contentType", "nativeBundleSha256")} if file else None}
         status = "ADDED" if old is None else "REMOVED" if new is None else "UNCHANGED" if facts(old) == facts(new) else "CHANGED"
         same_bytes = bool(old and new and old.get("file") and new.get("file") and
-                          all(old["file"].get(x) == new["file"].get(x) for x in ("bytes", "sha256")))
+                          all(old["file"].get(x) == new["file"].get(x) for x in ("bytes", "sha256", "nativeBundleSha256")))
         assets.append({"key": key, "status": status, "sameReceivedBytes": same_bytes,
                        "left": copy.deepcopy(old), "right": copy.deepcopy(new)})
-    return {"leftSourceId": left.id, "rightSourceId": right.id, "scenes": scenes, "assets": assets,
+    return {"leftSourceId": left.id, "rightSourceId": right.id,
+            "leftSourceKind": left.sourceKind, "rightSourceKind": right.sourceKind,
+            "sameSourceIdentities": left.sourceKind == right.sourceKind and set(left.scenes) == set(right.scenes),
+            "sameSelection": (left.sourceKind == right.sourceKind and
+                              left.source.get("selectionSha256") == right.source.get("selectionSha256")),
+            "scenes": scenes, "assets": assets,
             "counts": {name.lower(): sum(row["status"] == name for row in scenes)
                        for name in ("ADDED", "REMOVED", "UNCHANGED", "CHANGED")},
             "sameQuery": (left.edition or {}).get("query") == (right.edition or {}).get("query")}
@@ -424,18 +447,49 @@ class QgisWorkspace:
         require(not self.db_path.is_symlink(), "WORKSPACE_DATABASE", "Use the ordinary project database.")
         if not self.db_path.exists():
             require(create, "WORKSPACE_MISSING", "Create a new project workspace or open its existing directory.")
-            require(not any(self.root.iterdir()), "NEW_WORKSPACE_DIRECTORY", "Choose a new empty project directory.")
-            with self._connect() as db:
-                db.executescript("""
-                    CREATE TABLE workspace (id INTEGER PRIMARY KEY CHECK(id=1), body TEXT NOT NULL);
-                    CREATE TABLE events (revision INTEGER PRIMARY KEY, body TEXT NOT NULL);
-                    CREATE TABLE requests (request_id TEXT PRIMARY KEY, input_sha256 TEXT NOT NULL, result TEXT NOT NULL);
-                """)
-                state = {"schema": WORKSPACE_SCHEMA, "id": "qgis-" + uuid.uuid4().hex,
-                         "title": str(title).strip() or "STAC GIS project", "revision": 0,
-                         "createdAt": utc_now(), "activeSourceId": None, "sources": [], "layers": [],
-                         "projects": [], "reviews": []}
-                db.execute("INSERT INTO workspace VALUES(1,?)", (json.dumps(state, ensure_ascii=False),))
+            # A pre-publication stop may leave only our private initialization file/journal.
+            # Those originals remain untouched; a complete replacement is published atomically.
+            initialization = re.compile(r"^[.]workspace-init-[a-f0-9]{32}[.]sqlite(?:-journal)?$")
+            require(all(not item.is_symlink() and item.is_file() and
+                        (item.name == "workspace.sqlite" or initialization.fullmatch(item.name))
+                        for item in self.root.iterdir()), "NEW_WORKSPACE_DIRECTORY",
+                    "Choose a new project directory or resume its unfinished initialization.")
+            temporary = self.root / (".workspace-init-" + uuid.uuid4().hex + ".sqlite")
+            db = None
+            try:
+                fd = os.open(temporary, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+                os.close(fd)
+                db = sqlite3.connect(temporary, timeout=30)
+                with db:
+                    db.execute("BEGIN IMMEDIATE")
+                    db.execute("CREATE TABLE workspace (id INTEGER PRIMARY KEY CHECK(id=1), body TEXT NOT NULL)")
+                    db.execute("CREATE TABLE events (revision INTEGER PRIMARY KEY, body TEXT NOT NULL)")
+                    db.execute("CREATE TABLE requests (request_id TEXT PRIMARY KEY, input_sha256 TEXT NOT NULL, result TEXT NOT NULL)")
+                    state = {"schema": WORKSPACE_SCHEMA, "id": "qgis-" + uuid.uuid4().hex,
+                             "title": str(title).strip() or "STAC GIS project", "revision": 0,
+                             "createdAt": utc_now(), "activeSourceId": None, "sources": [], "layers": [],
+                             "projects": [], "reviews": []}
+                    db.execute("INSERT INTO workspace VALUES(1,?)", (json.dumps(state, ensure_ascii=False),))
+                db.close()
+                db = None
+                with temporary.open("rb") as stream:
+                    os.fsync(stream.fileno())
+                try:
+                    os.link(temporary, self.db_path)
+                except FileExistsError:
+                    # A concurrent creator published its complete original state first.
+                    require(self.db_path.is_file() and not self.db_path.is_symlink(),
+                            "WORKSPACE_DATABASE", "Use the ordinary project database.")
+                if os.name == "posix":
+                    directory_fd = os.open(self.root, os.O_RDONLY)
+                    try:
+                        os.fsync(directory_fd)
+                    finally:
+                        os.close(directory_fd)
+            finally:
+                if db is not None:
+                    db.close()
+                temporary.unlink(missing_ok=True)
         state = self.read()
         require(state.get("schema") == WORKSPACE_SCHEMA and isinstance(state.get("revision"), int),
                 "WORKSPACE_SCHEMA", "The directory is not a Starforge QGIS project workspace.")
@@ -532,14 +586,14 @@ class QgisWorkspace:
         source_id = source_id or state["activeSourceId"]
         row = next((x for x in state["sources"] if x["id"] == source_id), None)
         require(row is not None, "SOURCE_NOT_SELECTED", "Select an imported source edition.")
-        return ReceivingSource(self.root / row["path"], row["manifestSha256"], progress=progress, verify=verify)
+        return open_receiving_source(self.root / row["path"], row["manifestSha256"], progress=progress, verify=verify)
 
     def import_source(self, source_root, *, revision, request_id, actor, expected_manifest_sha256=None, progress=None):
         if expected_manifest_sha256 is not None:
             previous = self.operation(request_id, "source.imported", {"sourceId": expected_manifest_sha256})
             if previous:
                 return previous
-        source = ReceivingSource(source_root, expected_manifest_sha256, progress=progress)
+        source = open_receiving_source(source_root, expected_manifest_sha256, progress=progress)
         payload = {"sourceId": source.id}
         previous = self.operation(request_id, "source.imported", payload)
         if previous:
@@ -548,8 +602,8 @@ class QgisWorkspace:
         target.mkdir(mode=0o700, parents=True, exist_ok=True)
         for name, record in source.files.items():
             retain_copy(source.path(name), target, name, record, progress)
-        retain_bytes(target, MANIFEST_NAME, source.manifest_body)
-        ReceivingSource(target, source.id, verify=False)
+        retain_bytes(target, source.manifest_name, source.manifest_body)
+        open_receiving_source(target, source.id, verify=False)
         def update(state):
             existing = next((x for x in state["sources"] if x["id"] == source.id), None)
             if existing is None:
@@ -586,6 +640,8 @@ class QgisWorkspace:
             source = cached[row["sourceId"]]
             require(row.get("kind") in ("footprints", "raster", "vector"), "LAYER_KIND",
                     "Select footprints, a retained raster, or a retained vector layer.")
+            require(source.sourceKind != "vector" or row["kind"] == "vector", "VECTOR_LAYER_KIND",
+                    "Choose the original native vector output for this vector source.")
             row["label"] = str(row.get("label") or ("Scene footprints" if row["kind"] == "footprints" else row.get("assetKey", "Layer"))).strip()
             require(0 < len(row["label"]) <= 512, "LAYER_LABEL", "Use a layer label of up to 512 characters.")
             row.setdefault("visible", True)
@@ -606,6 +662,13 @@ class QgisWorkspace:
                         "Choose an asset actually present in this received edition.")
                 row["sceneKey"] = scene_key(row.get("collection"), row["itemId"])
                 row["file"] = copy.deepcopy(item["file"])
+                if item.get("nativeLayer") is not None:
+                    if not row.get("vectorLayer"):
+                        row["vectorLayer"] = item["nativeLayer"]
+                    require(row["kind"] == "vector" and row.get("vectorLayer") == item["nativeLayer"],
+                            "VECTOR_ORIGINAL_LAYER_SELECTION",
+                            "Select the exact native layer bound to this original output.",
+                            nativeLayer=item["nativeLayer"])
                 row.setdefault("vectorLayer", "")
                 require(isinstance(row["vectorLayer"], str) and len(row["vectorLayer"]) <= 512 and
                         not any(c in row["vectorLayer"] for c in ("\x00", "|", "\n", "\r")),
@@ -689,14 +752,14 @@ class QgisWorkspace:
                     next_asset = right.assets.get(key)
                     require(next_asset and next_asset.get("file"), "SUCCESSOR_ASSET_UNAVAILABLE",
                             "The successor did not retain this asset. Keep the prior layer or remove it.", layerId=row["id"])
-                    same_bytes = all(old["file"].get(k) == next_asset["file"].get(k) for k in ("bytes", "sha256"))
+                    same_bytes = all(old["file"].get(k) == next_asset["file"].get(k) for k in ("bytes", "sha256", "nativeBundleSha256"))
                     row["file"] = copy.deepcopy(next_asset["file"])
                     if not same_bytes:
                         row["styleFile"] = None
                         row["styleDependencies"] = []
                         row["bands"] = None
                         row["crsOverride"] = None
-                        row["vectorLayer"] = decision.get("vectorLayer", "")
+                        row["vectorLayer"] = decision.get("vectorLayer", next_asset.get("nativeLayer", ""))
                         row["vectorSubsetString"] = decision.get("vectorSubsetString", "")
                 layers.append(row)
             changes.append({"layerId": old["id"], "decision": choice, "oldSourceId": left_id,
@@ -753,10 +816,10 @@ class QgisWorkspace:
                     "PACKAGE_FILE_CONFLICT", "A project file has two different retained identities.", path=record["path"])
             records[record["path"]] = record
         for row in state["sources"]:
-            source = ReceivingSource(self.root / row["path"], row["manifestSha256"], verify=False)
+            source = open_receiving_source(self.root / row["path"], row["manifestSha256"], verify=False)
             for name, value in source.files.items():
                 add({"path": row["path"] + "/" + name, "bytes": value["bytes"], "sha256": value["sha256"]})
-            add({"path": row["path"] + "/" + MANIFEST_NAME, "bytes": len(source.manifest_body), "sha256": source.id})
+            add({"path": row["path"] + "/" + source.manifest_name, "bytes": len(source.manifest_body), "sha256": source.id})
         all_layers = list(state["layers"])
         for project in state["projects"]:
             add(project["file"])
@@ -786,13 +849,13 @@ class QgisWorkspace:
         records.insert(0, {"path": "workspace-snapshot.json", "bytes": len(snapshot_body), "sha256": sha_bytes(snapshot_body)})
         software = {}
         plugin_root = Path(__file__).resolve().parent
-        for name in ("__init__.py", "model.py", "qgis_project.py", "plugin.py", "cli.py", "metadata.txt"):
+        for name in ("__init__.py", "model.py", "vector_source.py", "qgis_project.py", "plugin.py", "cli.py", "metadata.txt"):
             path = plugin_root / name
             require(path.is_file() and not path.is_symlink(), "PLUGIN_SOURCE_MISSING",
                     "Keep the complete installed QGIS plugin with the project handover.", path=name)
             body = path.read_bytes()
             software["software/starforge_stac/" + name] = body
-        for name in ("OPERATIONS.md", "LICENSE"):
+        for name in ("OPERATIONS.md", "VECTOR_RECEIVING.md", "LICENSE"):
             path = plugin_root / name
             if not path.is_file():
                 path = plugin_root.parent / name
@@ -959,7 +1022,7 @@ def receive_package(archive_path, destination, *, expected_sha256=None, progress
                 "REQUEST_HISTORY", "The original operation history contains a duplicate identity.")
         # Bind all nested source and project/style references before publishing the database.
         for source in snapshot["state"]["sources"]:
-            ReceivingSource(target / source["path"], source["manifestSha256"], verify=False)
+            open_receiving_source(target / source["path"], source["manifestSha256"], verify=False)
         referenced = []
         for project in snapshot["state"]["projects"]:
             referenced.append(project["file"])

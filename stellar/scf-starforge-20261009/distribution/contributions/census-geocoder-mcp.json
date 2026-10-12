@@ -27,7 +27,8 @@
     "stellar/scf-starforge-20261009/sf30-seller-sdk/census-geocoder/public/style.css",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/census-geocoder/example-addresses.csv",
     "stellar-forge/mcp-merchant-operator/census-geocoder-download.d.mts",
-    "stellar/scf-starforge-20261009/sf30-seller-sdk/census-geocoder/public/customer-intake.mjs"
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/census-geocoder/public/customer-intake.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/census-geocoder/operations/customer-retained-capture.mjs"
   ],
   "applicationProviders": {
     "census-geocoder": "stellar/scf-starforge-20261009/distribution/runtime-workspace/providers/census-geocoder.mjs"

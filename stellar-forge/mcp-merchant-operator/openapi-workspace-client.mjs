@@ -6,6 +6,26 @@ import { PACKAGE_EXPORT_MANIFEST, PACKAGE_EXPORT_MAX_BYTES, parseMerchantPackage
   '../../stellar/scf-starforge-20261009/sf61-openapi-seller-import/workspace/package-export-format.mjs';
 import { sf61Checked, SF61_ALIAS, SF61_SHA, sf61Failure } from './sf61-connection.mjs';
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
+function workspaceClient(client, workspace) {
+  if (!client || typeof client !== 'object' || Array.isArray(client))
+    throw sf61Failure('OPENAPI_DOWNLOAD_CONFIGURATION', 'Supply one original file client with its stable endpoint identity, or the HTTP endpoint.');
+  const endpoint = client.endpoint, call = client.call;
+  if (typeof call !== 'function' || typeof endpoint !== 'string' || !endpoint.trim() ||
+      endpoint.length > 4096 || /[\0\r\n]/.test(endpoint))
+    throw sf61Failure('OPENAPI_DOWNLOAD_CONFIGURATION', 'Supply one original file client with its stable endpoint identity, or the HTTP endpoint.');
+  const identity = endpoint + '#openapi-workspace=' + encodeURIComponent(workspace);
+  if (identity.length > 4096)
+    throw sf61Failure('OPENAPI_DOWNLOAD_CONFIGURATION', 'The original workspace-bound endpoint identity exceeds its byte limit.');
+  const request = call.bind(client);
+  return Object.freeze({ endpoint: identity,
+    call: (name, args, options) => request(name, { ...args, workspace }, options) });
+}
+function workspaceOptions(workspace, options) {
+  if (options.client === undefined) return options;
+  if (options.url !== undefined)
+    throw sf61Failure('OPENAPI_DOWNLOAD_CONFIGURATION', 'Supply one original file client with its stable endpoint identity, or the HTTP endpoint.');
+  return { ...options, client: workspaceClient(options.client, workspace) };
+}
 function transport(workspace) {
   return createRetainedDownload({
     manifestName: PACKAGE_EXPORT_MANIFEST, parseManifest: parseMerchantPackageExport,
@@ -16,17 +36,18 @@ function transport(workspace) {
     connect: async options => {
       sf61Checked(workspace, SF61_ALIAS, 'original workspace alias');
       const client = await openMerchantFileClient(options);
-      return { endpoint: client.endpoint + '#openapi-workspace=' + encodeURIComponent(workspace),
-        call: (name, args, request) => client.call(name, { workspace, ...args }, request) };
+      return workspaceClient(client, workspace);
     }
   });
 }
 /** Continue the exact original export after client or server restart. */
 export async function downloadOpenApiPackage({ workspace, ...options } = {}) {
-  return transport(sf61Checked(workspace, SF61_ALIAS, 'workspace alias')).download(options);
+  sf61Checked(workspace, SF61_ALIAS, 'workspace alias');
+  return transport(workspace).download(workspaceOptions(workspace, options));
 }
 export async function inspectOpenApiPackageDownload({ workspace, ...options } = {}) {
-  return transport(sf61Checked(workspace, SF61_ALIAS, 'workspace alias')).inspect(options);
+  sf61Checked(workspace, SF61_ALIAS, 'workspace alias');
+  return transport(workspace).inspect(workspaceOptions(workspace, options));
 }
 /** Reopen every completed file locally through the same receiving directory guard. */
 export async function reopenOpenApiPackageDownload({ directory, expectedManifestSha256 } = {}) {

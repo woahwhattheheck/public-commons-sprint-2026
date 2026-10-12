@@ -11,8 +11,10 @@ The console contains five working areas:
 | Host | Inspect the configured capabilities, request capacity, provider load states and host identity. Request native status explicitly. |
 | Tools | Search the actual configured catalog, keep favorites, review each tool's schema and save named immutable request revisions. |
 | Requests | Run an exact saved revision, retain the native return, reopen earlier revisions, recover an original operation and download its exact JSON. |
-| Workflows | Arrange saved native requests into complete operations with input bindings, required results, durable progress, original recovery and named receiving ownership. |
+| Workflows | Arrange native requests into complete operations with input bindings, required results, recovery and named receiving ownership. Export and install reviewed recipes to reuse the whole operating procedure. |
 | Customers | Receive an original seller-generated client, retain partial progress, resume the same reviewed export and download its verified files or original archive. |
+
+Use [Workflow recipes](WORKFLOW_RECIPES.md) to export a complete saved operation, review another profile’s configured native tools and inputs, and install all of its requests and first workflow edition together. The complete source, review and original installation travel with its profile.
 
 ## Open the existing host
 

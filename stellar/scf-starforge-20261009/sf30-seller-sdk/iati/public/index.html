@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>IATI · Aid finance workspace</title><link rel="stylesheet" href="/style.css"><script src="/app.js" defer></script></head>
+<body>
+<header class="topbar"><div class="brand"><span class="mark" aria-hidden="true">IA</span><div><strong>IATI</strong><span>Aid finance workspace</span></div></div>
+<div class="top-actions"><span class="connection" id="connection">Opening source workspace</span><button id="reload" type="button">Refresh saved work</button></div></header>
+<div class="layout">
+<aside class="sidebar"><p class="eyebrow">Original publisher data</p><nav aria-label="Workspace">
+<button data-view="overview" class="active">Overview</button><button data-view="sources">Publisher sources</button>
+<button data-view="portfolios">Portfolio review</button><button data-view="query">Explore data</button>
+<button data-view="compare">Compare editions</button><button data-view="transfer">Receive and export</button></nav>
+<div class="sidebar-note"><strong>Source first</strong><p>Keep reported values, currencies, dates and transaction types together. Each saved portfolio retains its original XML and dataset lineage.</p></div></aside>
+<main id="main" aria-busy="true">
+<div id="status" role="status" aria-live="polite">Opening the original workspace…</div>
+<section data-panel="overview"><div class="heading"><div><p class="eyebrow">Retained work</p><h1>Aid finance, with its source.</h1>
+<p class="lede">Review publisher activities, transactions and budgets. Build a selected portfolio, compare its editions and carry the complete source to the next analyst.</p></div></div>
+<div id="overview-counts" class="metrics"></div>
+<div class="grid two"><article class="card"><div class="card-title"><h2>Saved portfolios</h2><button data-go="portfolios">Create portfolio</button></div><div id="overview-portfolios" class="stack"></div></article>
+<article class="card"><div class="card-title"><h2>Publisher editions</h2><button data-go="sources">Retain XML</button></div><div id="overview-sources" class="stack"></div></article></div>
+<article class="card interpretation"><h2>Read the dimensions before the total</h2><p>Values are reported amounts in their stated currency. Separate transaction types, valuation dates and budget periods remain separate in the report. No exchange rate or unreported allocation is added.</p></article></section>
+
+<section data-panel="sources" hidden><div class="heading"><div><p class="eyebrow">01 · Source intake</p><h1>Publisher sources</h1><p>Retain the complete XML file and inspect the original activity and financial coverage.</p></div></div>
+<div class="grid two"><form id="source-form" class="card"><h2>Retain an IATI XML edition</h2><label>Publisher / edition label<input id="source-label" maxlength="160" placeholder="Publisher and reporting edition" required></label>
+<label>Complete XML file<input id="source-file" type="file" accept=".xml,.iati,application/xml,text/xml" required></label><p class="fine">The original source bytes are retained before projection. The file limit is 256 MiB.</p>
+<button type="submit" class="primary">Retain and inspect source</button></form>
+<article class="card"><h2>Open retained edition</h2><label>Source<select id="source-select"></select></label><button id="source-open">Open source profile</button><div id="source-identity" class="identity"></div></article></div>
+<article class="card"><div class="card-title"><h2>Source profile</h2><button id="source-to-portfolio">Use this source in a portfolio</button></div>
+<div id="source-profile" class="empty">Choose a retained publisher edition.</div></article></section>
+
+<section data-panel="portfolios" hidden><div class="heading"><div><p class="eyebrow">02 · Explicit selection</p><h1>Portfolio review</h1><p>Each saved revision retains the selected publisher sources and builds its activity, transaction and budget datasets.</p></div></div>
+<div class="grid two"><article class="card"><h2>Saved portfolio</h2><label>Portfolio<select id="portfolio-select"></select></label>
+<div class="row"><button id="portfolio-open">Open saved revision</button><button id="portfolio-new">New portfolio</button></div>
+<label>Revision<input id="portfolio-revision" type="number" min="1" placeholder="Latest saved revision"></label><div id="portfolio-identity" class="identity"></div><button id="portfolio-history">Read complete revision history</button><div id="portfolio-history-result"></div></article>
+<article class="card"><h2>Complete handover</h2><p>The portfolio packet contains the selected publisher XML, mappings, native datasets, reports and saved revision history.</p>
+<button id="portfolio-download">Download full portfolio</button><button id="report-download">Download complete report</button><button id="report-json">View report JSON</button><p id="pending-request" class="fine"></p><button id="retry-portfolio" hidden>Retry the saved portfolio request</button></article></div>
+<form id="portfolio-form" class="card"><div class="card-title"><h2 id="portfolio-form-title">Create portfolio</h2><span class="badge" id="portfolio-mode">New selection</span></div>
+<div class="grid two"><label>Portfolio name<input id="portfolio-name" maxlength="160" required></label><label>Notes<textarea id="portfolio-notes" rows="2" placeholder="Purpose, interpretation or receiving context"></textarea></label></div>
+<fieldset><legend>Original publisher sources</legend><div id="portfolio-sources" class="source-choices"></div></fieldset>
+<details class="selection-details"><summary>Activity, currency, transaction, budget and date selection</summary>
+<p class="fine">Leave a selection empty to retain the source’s full coverage. Values below remain exact reported identifiers and codes.</p>
+<div class="grid three"><label>Activity IDs, one per line<textarea id="activity-ids" rows="3"></textarea></label>
+<label>Currencies, one per line<textarea id="currencies" rows="3" placeholder="USD"></textarea></label>
+<label>Transaction type codes, one per line<textarea id="transaction-types" rows="3" placeholder="3"></textarea></label>
+<label>Budget type codes, one per line<textarea id="budget-types" rows="2" placeholder="1"></textarea></label>
+<label>From date<input id="date-from" type="date"></label><label>Through date<input id="date-to" type="date"></label></div></details>
+<fieldset><legend>Named review</legend><div class="grid three"><label>Review status<select id="review-status"><option value="draft">Draft</option><option value="reviewed">Reviewed</option><option value="needs-correction">Needs correction</option></select></label><label>Reviewer<input id="reviewer" maxlength="160"></label><label>Review note<textarea id="review-note" rows="2"></textarea></label></div></fieldset>
+<div class="form-actions"><button type="submit" class="primary">Save and build this portfolio</button><span class="fine">The same request ID is retained if its reply is interrupted.</span></div></form>
+<article class="card"><div class="card-title"><h2>Reviewed portfolio report</h2><span id="report-revision" class="badge"></span></div><div id="portfolio-report" class="empty">Save or open a portfolio to read its complete report.</div></article></section>
+
+<section data-panel="query" hidden><div class="heading"><div><p class="eyebrow">03 · Native datasets</p><h1>Explore reported rows</h1><p>Query the original generated dataset. Financial and identifier strings keep their exact source values.</p></div></div>
+<article class="card"><label>Completed native edition<select id="build-select"></select></label><div id="build-summary" class="metrics"></div>
+<form id="query-form"><label>Native query parameters<input id="query-text" value="limit=25" spellcheck="false" autocomplete="off"></label>
+<p class="fine" id="query-help"></p><div class="row"><button type="submit" class="primary">Run query</button><button id="query-prev" type="button" disabled>Previous page</button><button id="query-next" type="button" disabled>Next page</button></div></form>
+<p id="query-page" class="fine"></p><div id="query-result" class="table-scroll empty">Choose a completed edition and run a query.</div>
+<div class="row"><button id="dataset-download">Download native CSV package</button><button id="project-download">Download source project</button></div></article>
+<details class="card"><summary>Review and save an explicit native mapping</summary><p>Portfolio creation supplies the standard activity, transaction and budget mappings. Use this form when a separate reviewed native dataset is needed.</p>
+<div class="grid two"><label>Original source<select id="mapping-source"></select></label><label>Mapping preset<select id="preset-select"></select></label></div>
+<div class="row"><button id="preset-load">Load preset</button><label>Saved mapping<select id="plan-select"></select></label><button id="plan-load">Open saved mapping</button></div>
+<label>Complete mapping JSON<textarea id="plan-json" rows="14" spellcheck="false"></textarea></label>
+<div class="row"><button id="plan-save">Validate and save mapping</button><button id="mapping-build">Build selected source and mapping</button></div></details></section>
+
+<section data-panel="compare" hidden><div class="heading"><div><p class="eyebrow">04 · Edition history</p><h1>Compare complete editions</h1><p>Read original keyed row changes and source coverage. No before/after amounts are combined across currencies or transaction types.</p></div></div>
+<article class="card"><h2>Portfolio revision comparison</h2><form id="portfolio-compare-form"><div class="grid three"><label>Portfolio<select id="compare-portfolio"></select></label>
+<label>Before revision<input id="compare-before-revision" type="number" min="1" value="1" required></label>
+<label>After revision<input id="compare-after-revision" type="number" min="1" value="2" required></label></div>
+<details><summary>Explicit publisher-edition pairs</summary><label>Optional JSON array of before / after source IDs<textarea id="compare-pairs" rows="3" placeholder='[{"before":"source SHA-256","after":"source SHA-256"}]'></textarea></label></details>
+<button class="primary" type="submit">Compare selected revisions</button></form><div id="portfolio-comparison" class="empty">Select two saved revisions.</div></article>
+<article class="card"><h2>Native keyed dataset comparison</h2><form id="native-compare-form"><div class="grid two"><label>Before edition<select id="before-build"></select></label><label>After edition<select id="after-build"></select></label></div>
+<button class="primary" type="submit">Compare native editions</button></form><div id="comparison-counts" class="metrics"></div>
+<label>Retained native comparison<select id="comparison-select"></select></label><button id="comparison-open">Open retained changes</button>
+<div id="changes" class="table-scroll empty">Compare editions with the same reviewed mapping and unique keys.</div><p id="changes-page" class="fine"></p>
+<div class="row"><button id="changes-next" disabled>Next changes</button><button id="changes-download" disabled>Download every change</button></div></article></section>
+
+<section data-panel="transfer" hidden><div class="heading"><div><p class="eyebrow">05 · Full receiving</p><h1>Receive and export</h1><p>Reconstruct the complete portfolio or original native source project in this workspace.</p></div></div>
+<div class="grid two"><form id="receive-form" class="card"><h2>Receive an original packet</h2><label>Complete ZIP file<input id="receive-file" type="file" accept=".zip,application/zip" required></label>
+<p class="fine">The original receiver verifies the packet and reconstructs its source, mappings and native build identities. Repeating the same packet preserves its original result.</p><button class="primary" type="submit">Verify and receive packet</button>
+<div id="receive-result"></div></form><article class="card"><h2>Export a saved portfolio</h2><label>Portfolio<select id="transfer-portfolio"></select></label>
+<label>Revision<input id="transfer-revision" type="number" min="1" placeholder="Latest revision"></label><button id="transfer-download">Download full portfolio packet</button>
+<p class="fine">Use the command line or the existing source-workspace MCP for a declared original console connection and complete retained file receiving.</p></article></div></section>
+<footer>IATI source workspace · Original XML retained · Native SF30 datasets</footer>
+</main></div>
+</body></html>

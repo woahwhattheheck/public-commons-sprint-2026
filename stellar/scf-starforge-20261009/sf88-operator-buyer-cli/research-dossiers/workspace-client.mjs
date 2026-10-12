@@ -2,6 +2,7 @@
 import {isAbsolute,resolve} from 'node:path';
 import {Readable} from 'node:stream';
 import {createClinicalTrialsClient} from './clinical-trials-client.mjs';
+import {createDocumentWorkspaceClient,createPipelineWorkspaceClient,sendPipelineFiles} from './document-workspace-client.mjs';
 import {BuyerError,need,object,parseJson,safeCode} from '../node/store.mjs';
 import {writePortableFile,PORTABLE_LIMIT} from './portable.mjs';
 import {readResearchHostFile,openResearchSource} from './workspace-files.mjs';
@@ -19,6 +20,7 @@ const parameters=value=>{
 };
 const dossierPath=id=>'/api/dossiers/'+pathId(id);
 const operationPath=(id,operationId)=>dossierPath(id)+'/crossref/operations/'+pathId(operationId);
+const sourcePath=(id,editionId,key)=>dossierPath(id)+'/retained-editions/'+pathId(editionId)+'/occurrences/'+pathId(key);
 
 export async function readResearchConnectionFile(file){
   need(typeof file==='string'&&isAbsolute(file)&&resolve(file)===file,'RESEARCH_CONNECTION_ABSOLUTE_PATH_REQUIRED');
@@ -72,11 +74,12 @@ export class ResearchWorkspaceClient{
     const pending=Promise.resolve().then(work);this.#pending.add(pending);
     return pending.finally(()=>this.#pending.delete(pending));
   }
-  async #request(route,{body,method=body===undefined?'GET':'POST',headers={},signal}={},consume=readResponse){
+  async #request(route,{body,method=body===undefined?'GET':'POST',headers={},signal,readOnly=false}={},consume=readResponse){
     const connection=await this.#connection();
     const target=new URL(route,connection.origin);
     need(route.startsWith('/api/')&&target.origin===connection.origin&&['GET','POST'].includes(method),'RESEARCH_ROUTE_INVALID');
-    const timeout=AbortSignal.timeout(this.timeoutMs),selectedSignal=signal?AbortSignal.any([signal,timeout]):timeout;
+    const lifetime=new AbortController(),timeout=AbortSignal.timeout(this.timeoutMs);
+    const selectedSignal=AbortSignal.any([lifetime.signal,timeout,...(signal?[signal]:[])]);
     try{
       const response=await this.#fetch(target,{method,redirect:'error',signal:selectedSignal,
         headers:{...headers,Authorization:'Bearer '+connection.token,Origin:connection.origin,Accept:'application/json',
@@ -91,13 +94,17 @@ export class ResearchWorkspaceClient{
       return await consume(response);
     }catch(error){
       if(error instanceof BuyerError){
-        if(!Number.isInteger(error.status))Object.assign(error,{outcomeUnknown:method==='POST',method,route,
-          recovery:method==='POST'?'Read the original dossier revision or saved Crossref operation before another write.':null});
+        if(!Number.isInteger(error.status))Object.assign(error,{outcomeUnknown:method==='POST'&&!readOnly,method,route,
+          recovery:method==='POST'&&!readOnly?'Read the original dossier revision or saved source operation before another write.':null});
         throw error;
       }
       const code=safeCode(error.code,'RESEARCH_CONNECTION_INTERRUPTED');
-      throw new BuyerError(code,{outcomeUnknown:method==='POST',method,route,
-        recovery:method==='POST'?'Read the original dossier revision or saved Crossref operation before another write.':null});
+      throw new BuyerError(code,{outcomeUnknown:method==='POST'&&!readOnly,method,route,
+        recovery:method==='POST'&&!readOnly?'Read the original dossier revision or saved source operation before another write.':null});
+    }finally{
+      // A consumer can fail before reading the response (for example a full
+      // destination volume). End this request's original transport in every case.
+      lifetime.abort();
     }
   }
   #json(route,body,options={}){
@@ -124,6 +131,9 @@ export class ResearchWorkspaceClient{
   section(id,{section,...options}={}){
     need(typeof section==='string'&&/^[a-z]+$/.test(section),'RESEARCH_SECTION_INVALID');
     return this.#json(dossierPath(id)+'/sections/'+section+parameters(options));
+  }
+  source(id,{editionId,key,revision}={}){
+    return this.#json(sourcePath(id,editionId,key)+parameters({revision}));
   }
   createDossier(input){return this.#json('/api/dossiers?projection=metadata',input);}
   updateDossier(id,input){return this.#json(dossierPath(id)+'?projection=metadata',input);}
@@ -164,6 +174,25 @@ export class ResearchWorkspaceClient{
   async receiveSourceBundleFile(id,{file,sha256,...input}){
     const bytes=await readResearchHostFile(resolve(file),64*1024*1024,{sha256});
     return this.receiveSourceBundleBytes(id,{...input,bytes});
+  }
+  documents(){
+    return createDocumentWorkspaceClient({
+      request:(route,body,options)=>this.#json(route,body,options),
+      downloadRequest:(route,file,body,options)=>this.#download(route,file,{...options,request:body}),
+    });
+  }
+  pipelines(){
+    return createPipelineWorkspaceClient({
+      request:(route,body,options)=>this.#json(route,body,options),
+      download:(route,file,options)=>this.#download(route,file,options),
+      downloadRequest:(route,file,body,options)=>this.#download(route,file,{...options,request:body}),
+      prepareFiles:(id,input,options)=>this.#run(()=>sendPipelineFiles({
+        inspect:(route,requestOptions)=>this.#request(route,requestOptions,
+          async response=>parseJson(await readResponse(response))),
+        send:(route,requestOptions)=>this.#request(route,{...requestOptions,method:'POST'},
+          async response=>parseJson(await readResponse(response))),
+      },id,input,options)),
+    });
   }
   clinicalTrials(){
     return createClinicalTrialsClient({
@@ -206,8 +235,12 @@ export class ResearchWorkspaceClient{
     return this.#json(dossierPath(id)+'/pipelines/operations/'+pathId(operationId),undefined,options);
   }
 
-  async #download(route,file,{signal,expectedSha256}={}){
-    return this.#run(()=>this.#request(route,{signal},async response=>{
+  async #download(route,file,{signal,expectedSha256,request}={}){
+    const body=request===undefined?undefined:JSON.stringify(request);
+    need(body===undefined||Buffer.byteLength(body)<=RESEARCH_CONTROL_LIMIT,'RESEARCH_REQUEST_TOO_LARGE');
+    return this.#run(()=>this.#request(route,{signal,readOnly:true,...(body===undefined?{}:{
+      body,method:'POST',headers:{'Content-Type':'application/json'}
+    })},async response=>{
       const disposition=response.headers.get('content-disposition')??'';
       const filename=disposition.match(/^attachment; filename="([A-Za-z0-9][A-Za-z0-9._-]{0,179})"$/)?.[1]??'research.json';
       const contentType=response.headers.get('content-type')??'application/octet-stream';
@@ -219,13 +252,23 @@ export class ResearchWorkspaceClient{
         }
         need(declared===null||Number(declared)===count,'RESEARCH_DOWNLOAD_INCOMPLETE');
       })());
-      const result=await writePortableFile(resolve(file),{body,filename,contentType});
-      // A caller supplying a reviewed digest receives the retained file identity
-      // even when it changed, so it can inspect that exact complete export.
-      if(expectedSha256!==undefined&&result.sha256!==expectedSha256)
-        throw new BuyerError('RESEARCH_EXPORTED_FILE_CHANGED',{file:result,destinationPublished:true});
+      let result;
+      try{result=await writePortableFile(resolve(file),{body,filename,contentType});}
+      finally{
+        body.destroy();
+        if(typeof response.body?.cancel==='function'&&!response.body.locked)
+          await response.body.cancel().catch(()=>{});
+        else if(typeof response.body?.destroy==='function')response.body.destroy();
+      }
       const revision=response.headers.get('x-research-dossier-revision');
-      return {...result,...(revision&&/^[0-9]+$/.test(revision)?{revision:Number(revision)}:{})};
+      const editionId=response.headers.get('x-research-edition-id'),occurrenceId=response.headers.get('x-research-occurrence-id');
+      const saved={...result,...(revision&&/^[0-9]+$/.test(revision)?{revision:Number(revision)}:{}),
+        ...(editionId&&/^e_[a-f0-9]{64}$/.test(editionId)?{editionId}:{}),
+        ...(occurrenceId&&/^o_[a-f0-9]{64}$/.test(occurrenceId)?{occurrenceId}:{})};
+      // Preserve complete file and original source identity on a checksum error.
+      if(expectedSha256!==undefined&&saved.sha256!==expectedSha256)
+        throw new BuyerError('RESEARCH_EXPORTED_FILE_CHANGED',{file:saved,destinationPublished:true});
+      return saved;
     }));
   }
   exportDossier(id,{format='json.gz',file,...options}={}){
@@ -235,8 +278,19 @@ export class ResearchWorkspaceClient{
   exportCrossrefEdition(id,operationId,{file,...options}={}){
     return this.#download(operationPath(id,operationId)+'/edition',file,options);
   }
-  exportRetainedEdition(id,editionId,{file,...options}={}){
-    return this.#download(dossierPath(id)+'/retained-editions/'+pathId(editionId),file,options);
+  exportRetainedEdition(id,editionId,{file,revision,...options}={}){
+    return this.#download(dossierPath(id)+'/retained-editions/'+pathId(editionId)+parameters({revision}),file,options);
+  }
+  exportSource(id,{editionId,key,revision,part='content',file,expectedSha256,...options}={}){
+    need(['content','record'].includes(part),'RESEARCH_SOURCE_PART_INVALID');
+    return this.#download(sourcePath(id,editionId,key)+'/'+part+parameters({revision,sha256:expectedSha256}),
+      file,{...options,expectedSha256});
+  }
+  exportSourceFile(id,{editionId,key,revision,name,expectedSha256,file,...options}={}){
+    need(typeof name==='string'&&name.length>0&&name.length<=1024&&
+      typeof expectedSha256==='string'&&/^[a-f0-9]{64}$/.test(expectedSha256),'RESEARCH_SOURCE_FILE_SELECTION_REQUIRED');
+    return this.#download(sourcePath(id,editionId,key)+'/file'+parameters({revision,name,sha256:expectedSha256}),
+      file,{...options,expectedSha256});
   }
   exportComparison(id,{before,after,file,...options}={}){
     return this.#download(dossierPath(id)+'/compare'+parameters({before,after}),file,options);

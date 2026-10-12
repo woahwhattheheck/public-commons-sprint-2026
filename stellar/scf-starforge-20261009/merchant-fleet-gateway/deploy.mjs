@@ -287,12 +287,8 @@ export function fleetDeploymentRunbook(p, bundle) {
   return text;
 }
 
-export async function generateFleetDeployment(deploymentFile, output, options) {
-  const p = await prepareFleetDeployment(deploymentFile, options), bundle = absolute(resolve(output), 'bundle');
-  need(!overlap(bundle, p.sourceRoot) && !overlap(bundle, p.stateRoot) &&
-    !p.inputFiles.some(file => inside(bundle, file.path)) &&
-    !p.readOnlyRoots.some(root => overlap(bundle, root)) &&
-    (!p.environmentFile || !inside(bundle, p.environmentFile)), 'Keep the new bundle separate from source, state and inputs');
+/** Render the existing complete host bundle for native generation and resumable receiving. */
+export function fleetDeploymentFiles(p, bundle) {
   const files = new Map([
     ['Caddyfile', fleetCaddyfile(p)], [p.unit, fleetServiceUnit(p, bundle)],
     ['recovery-plan.json', JSON.stringify({ schema: 'stellar-forge.merchant-recovery-plan.v1', roots: p.recoveryRoots }, null, 2) + '\n'],
@@ -300,6 +296,16 @@ export async function generateFleetDeployment(deploymentFile, output, options) {
   ]);
   if (p.container) files.set('compose.json', JSON.stringify(fleetCompose(p, bundle), null, 2) + '\n');
   const manifest = { ...p, bundle, artifacts: Object.fromEntries([...files].map(([name, bytes]) => [name, sha(bytes)])) };
+  return { files, manifest };
+}
+
+export async function generateFleetDeployment(deploymentFile, output, options) {
+  const p = await prepareFleetDeployment(deploymentFile, options), bundle = absolute(resolve(output), 'bundle');
+  need(!overlap(bundle, p.sourceRoot) && !overlap(bundle, p.stateRoot) &&
+    !p.inputFiles.some(file => inside(bundle, file.path)) &&
+    !p.readOnlyRoots.some(root => overlap(bundle, root)) &&
+    (!p.environmentFile || !inside(bundle, p.environmentFile)), 'Keep the new bundle separate from source, state and inputs');
+  const { files, manifest } = fleetDeploymentFiles(p, bundle);
   let created = false;
   try {
     await mkdir(bundle, { mode: 0o700 }); created = true;

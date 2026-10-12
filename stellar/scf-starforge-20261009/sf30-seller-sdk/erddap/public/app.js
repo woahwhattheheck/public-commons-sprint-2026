@@ -50,7 +50,7 @@ async function busy(label, action) {
   $$('button').forEach(b => { b.dataset.wasDisabled = b.disabled ? '1' : '0'; b.disabled = true; });
   try { await action(); }
   catch (error) { fail(error); status('The saved source and completed operations remain available.'); }
-  finally { S.busy = false; $('button').forEach(b => { if(Object.prototype.hasOwnProperty.call(b.dataset,'wasDisabled')){b.disabled = b.dataset.wasDisabled === '1'; delete b.dataset.wasDisabled;} }); }
+  finally { S.busy = false; $$('button').forEach(b => { if(Object.prototype.hasOwnProperty.call(b.dataset,'wasDisabled')){b.disabled = b.dataset.wasDisabled === '1'; delete b.dataset.wasDisabled;} }); }
 }
 function field(id, label, value = '', extra = '') {
   return '<label class="field"><span>' + esc(label) + '</span><input id="' + esc(id) + '" value="' + esc(value) + '" ' + extra + '></label>';
@@ -880,8 +880,8 @@ async function commitHandoff(pending){
     if(error.status===409){
       record.conflict={expectedHead:payload.expectedHead,currentRevision:error.result?.currentRevision??null};
       S.handoff.latestHead=error.result?.currentRevision??S.handoff.latestHead;
-      saveDrafts();await persistHandoffDrafts();render();
     }
+    saveDrafts();await persistHandoffDrafts();render();
     throw error;
   }
   if(saved.sourceId!==sourceId||handoffCanonical(saved.profile)!==handoffCanonical(payload.profile))

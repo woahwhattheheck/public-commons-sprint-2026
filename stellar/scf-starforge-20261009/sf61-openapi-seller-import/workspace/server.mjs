@@ -30,6 +30,8 @@ import { readBrowserAssets } from '../../distribution/browser-assets.mjs';
 import { cachePackageBinding, cachePolicyRevisionApi } from './cache-policy-revisions.mjs';
 import { createHarConsoleRoutes } from '../har/workspace-http.mjs';
 import { createPackageTransferRoutes } from './package-transfer-http.mjs';
+import { createOperationPolicyRoutes } from './operation-policy-http.mjs';
+import { assertOperationPolicyCapture } from './operation-policy-record.mjs';
 
 const here = fileURLToPath(new URL('.', import.meta.url));
 const STATIC = await readBrowserAssets(new URL('./browser-assets.json',import.meta.url));
@@ -81,6 +83,7 @@ export async function startWorkspace({ parent, port=0, noSignals=false, oauthCon
   const packageTransfer=createPackageTransferRoutes({parent:output,validatePlan:oauth.validatePlan});
   let harPromise;
   const har = () => harPromise ??= createHarConsoleRoutes({parent:output}).catch(error=>{harPromise=null;throw error;});
+  const operationPolicies=await createOperationPolicyRoutes({parent:output,validatePlan:oauth.validatePlan,har});
   let migrationPromise, migrationInstance;
   const migrations = () => migrationPromise ??= createMigrationRoutes({parent:output,origin:()=>origin,parentRuntime:view,
     env:runtimeEnv,oauthConnections,allowLoopbackOAuth,oauthLookup,validatePlan:oauth.validatePlan})
@@ -179,6 +182,7 @@ export async function startWorkspace({ parent, port=0, noSignals=false, oauthCon
       if (!pathname.startsWith('/api/')) return send(404,{error:'Not found'});
       if (!constantEqual(req.headers['x-workspace-token'],token)) return send(401,{error:'Open the complete workspace URL printed by the launcher'});
       if (req.method==='GET') {
+        if (pathname.startsWith('/api/operation-policies/')) return await operationPolicies.get(pathname,url,send);
         if (pathname.startsWith('/api/package-transfer/')) return await packageTransfer.get(pathname,url,send);
         if (pathname.startsWith('/api/har/')) return await (await har()).get(pathname,url,send,res);
         if(pathname.startsWith('/api/cache-operations/'))return await cacheOperation(req,res,url);
@@ -217,7 +221,8 @@ export async function startWorkspace({ parent, port=0, noSignals=false, oauthCon
         }
         if (pathname==='/api/load') {
           const p=await readPackage(output,url.searchParams.get('name'));
-          return send(200,{name:p.name,specText:p.specText,plan:p.plan,preview:p.manifest.preview,
+          return send(200,{name:p.name,folder:p.folder,command:p.command,specText:p.specText,plan:p.plan,preview:p.manifest.preview,
+            ...(p.operationPolicy?{operationPolicy:p.operationPolicy,...(p.operationPolicy.capturedSource?{capturedSource:p.operationPolicy.capturedSource}:{})}:{}),
             ...(p.sourceRevision?{sourceRevision:p.sourceRevision,folder:p.folder,release:releaseCommands(p.folder,p.name)}:{})});
         }
         return send(404,{error:'Not found'});
@@ -264,16 +269,18 @@ export async function startWorkspace({ parent, port=0, noSignals=false, oauthCon
         if (body.capturedSource!==undefined) await (await har()).app.checkSource(body.capturedSource,body.specText,body.plan);
         await oauth.validatePlan(body.specText,body.plan);return send(200,prepareMerchant(body.specText,body.plan).preview);
       }
+      if (pathname==='/api/operation-policies/review') return send(200,await operationPolicies.review(body));
       if (pathname==='/api/oauth/binding')return send(200,await oauth.binding(body));
       if (pathname==='/api/revisions/review')return send(200,await reviewMerchantRevision({...body,parent:output,validatePlan:oauth.validatePlan}));
       if (!['/api/save','/api/start','/api/stop','/api/accept','/api/cache/invalidate','/api/operations/issue','/api/operations/download','/api/operations/load','/api/operations/handoff',
         '/api/customer/create','/api/customer/prepare','/api/customer/open','/api/customer/close','/api/oauth/command',
-        '/api/revisions/draft','/api/revisions/save','/api/revisions/stage'].includes(pathname) && !pathname.startsWith('/api/migrations/') && !pathname.startsWith('/api/har/') && !pathname.startsWith('/api/package-transfer/')) return send(404,{error:'Not found'});
+        '/api/revisions/draft','/api/revisions/save','/api/revisions/stage'].includes(pathname) && !pathname.startsWith('/api/migrations/') && !pathname.startsWith('/api/har/') && !pathname.startsWith('/api/package-transfer/') && !pathname.startsWith('/api/operation-policies/')) return send(404,{error:'Not found'});
       if (busy) return send(409,{error:'A workspace operation is in progress'});
       busy=true;
       let finishMutation;
       mutationDone=new Promise(yes=>{finishMutation=yes;});
       try {
+        if (pathname.startsWith('/api/operation-policies/')) return await operationPolicies.post(pathname,body,send);
         if (pathname.startsWith('/api/package-transfer/')) return await packageTransfer.post(pathname,body,send);
         if (pathname.startsWith('/api/har/')) return await (await har()).post(pathname,body,send,res);
         if (pathname.startsWith('/api/migrations/')) return await (await migrations()).post(pathname,body,send);
@@ -284,11 +291,12 @@ export async function startWorkspace({ parent, port=0, noSignals=false, oauthCon
         if(pathname==='/api/revisions/save')return send(201,await saveMerchantRevision({...body,parent:output,validatePlan:oauth.validatePlan}));
         if(pathname==='/api/revisions/stage')return send(201,await stageMerchantRevision({...body,parent:output,validatePlan:oauth.validatePlan}));
         if (pathname==='/api/save') {
+          assertOperationPolicyCapture(body.operationPolicy,body.capturedSource);
           await oauth.validatePlan(body.specText,body.plan);
           const result=body.capturedSource!==undefined
-            ? await (await har()).app.saveMerchant({capturedSource:body.capturedSource,specText:body.specText,plan:body.plan,name:body.name})
-            : await savePackage({specText:body.specText,plan:body.plan,parent:output,name:body.name});
-          return send(201,{name:result.name,folder:result.folder,command:result.command,preview:result.preview});
+            ? await (await har()).app.saveMerchant({capturedSource:body.capturedSource,specText:body.specText,plan:body.plan,name:body.name,operationPolicy:body.operationPolicy})
+            : await savePackage({specText:body.specText,plan:body.plan,parent:output,name:body.name,operationPolicy:body.operationPolicy});
+          return send(201,{name:result.name,folder:result.folder,command:result.command,preview:result.preview,...(result.operationPolicy?{operationPolicy:result.operationPolicy}:{})});
         }
         if(pathname.startsWith('/api/customer/')) {
           const project=await readPackage(output,body.packageName);

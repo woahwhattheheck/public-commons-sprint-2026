@@ -6,10 +6,10 @@ The application runs on your computer. Its SQLite workspace contains the current
 
 ## Install and open
 
-Python 3.10 or newer is required. The package uses `python-docx 1.2.0` and `reportlab 4.4.9` to generate editable Word documents and PDFs. Download the [complete source package](https://github.com/woahwhattheheck/public-commons-sprint-2026/raw/main/scc-standards-workbench-2026/releases/scc_standards_workbench-0.1.1-source.zip) and install it into your usual Python environment. The archive contains the application, browser assets, original public sources and declared build metadata:
+Python 3.10 or newer is required. The package uses `python-docx 1.2.0` and `reportlab 4.4.9` to generate editable Word documents and PDFs. Download the [complete source package](https://github.com/woahwhattheheck/public-commons-sprint-2026/raw/main/scc-standards-workbench-2026/releases/scc_standards_workbench-0.2.0-source.zip) and install it into your usual Python environment. The archive contains the application, browser assets, original public sources and declared build metadata:
 
 ```sh
-python -m pip install ./scc_standards_workbench-0.1.1-source.zip
+python -m pip install ./scc_standards_workbench-0.2.0-source.zip
 standards-workbench --workspace ./standards-workspace --demo
 ```
 
@@ -18,6 +18,18 @@ Open the localhost address printed by the command, normally `http://127.0.0.1:87
 The command installs the package and its declared document dependencies; it does not require an account, API key or database server. The source package is an application, not a self-contained Python runtime. A controlled offline installation can supply the same dependency wheels through the ordinary pip `--no-index --find-links` options.
 
 For an empty working project, omit `--demo` and choose **New project**. The public and authored examples have stable, distinct IDs; selecting an example again opens the retained project without overwriting its edits. A later example source edition requires a fresh workspace or an explicit archive of the existing one.
+
+## Exchange a bilingual review packet
+
+Run `standards-workbench --workspace ./review-workspace --review-demo` to prepare the complete public-source reviewer example once. It freezes the paired clauses and cases into a ready packet while leaving actual returns and decisions for explicit entry. Repeating the command preserves the same project.
+
+**Consultation receiving** completes the recipient-to-operator path. Freeze a packet from one edition and consultation, enter its English/French instructions and return route, and download a standalone offline reviewer page. Reviewers read the exact paired clauses and original public case rows, save drafts, and export their comments as a packet-bound JSON file.
+
+The operator previews and retains the original return bytes. Exact duplicate content preserves existing comments and dispositions. A corrected return retains its actual predecessor and earlier unresolved comments. Proposed wording can become an explicit amendment to the working clause, with the exact current clause identity, before/after text and rationale.
+
+Freeze the successor edition, then record the comment disposition and selected resolution clause. Respondent replies select one return; a publication appendix includes only dispositions explicitly selected for public use and tied to that exact exported edition. Reviewer contact fields and original return files stay out of those selected handovers. The complete private archive preserves and restores the operating history.
+
+Read [CONSULTATION.md](CONSULTATION.md) for the complete exchange, correction handling, audience choices and CLI handovers. The original procedure, voting, publication and financial workflows keep their separate records and authority.
 
 ## Two examples with different meanings
 

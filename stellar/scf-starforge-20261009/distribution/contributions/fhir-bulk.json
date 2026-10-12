@@ -1,0 +1,15 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "fhir-bulk",
+  "description": "Original FHIR Bulk Data acquisition, reviewed native dataset editions, merchant operation and complete customer receiving.",
+  "commands": {
+    "fhir-bulk": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_bulk/cli.mjs"
+  },
+  "commandDescriptions": {
+    "fhir-bulk": "Acquire complete original FHIR exports, review source and projections, publish native dataset editions and receive saved work."
+  },
+  "exports": {
+    "./seller/fhir-bulk": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_bulk/merchant.mjs",
+    "./buyer/fhir-bulk": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_bulk/customer.mjs"
+  }
+}

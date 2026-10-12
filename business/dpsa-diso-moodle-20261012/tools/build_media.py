@@ -9,9 +9,24 @@ WIDTH, HEIGHT, FPS = 960, 540, 10
 def require(ok, message):
     if not ok: raise RuntimeError(message)
 def digest(file):
-    return hashlib.sha256(file.read_bytes()).hexdigest()
+    result = hashlib.sha256()
+    with file.open("rb") as stream:
+        for block in iter(lambda: stream.read(1024 * 1024), b""): result.update(block)
+    return result.hexdigest()
 def encoded(value):
     return (json.dumps(value, ensure_ascii=False, indent=2) + "\n").encode()
+def save(file, value):
+    pending = file.with_name(file.name + ".pending")
+    with pending.open("wb") as stream:
+        stream.write(encoded(value)); stream.flush(); os.fsync(stream.fileno())
+    pending.replace(file)
+def original_files(root, records):
+    for record in records:
+        relative = Path(record["path"])
+        require(not relative.is_absolute() and ".." not in relative.parts, "Original media paths stay within the render")
+        file = root / relative
+        require(file.is_file() and not file.is_symlink() and file.stat().st_size == record["bytes"] and
+                digest(file) == record["sha256"], "Retain the complete rendered module asset: " + str(relative))
 def metadata(root, file):
     return {"path": file.relative_to(root).as_posix(), "bytes": file.stat().st_size, "sha256": digest(file)}
 def font(size, bold=False):
@@ -70,7 +85,10 @@ def frame(file, video, scene, caption, number, total):
         draw.text((51, y), line, font=captionface, fill="#202020"); y += 26
     image.save(file, optimize=True)
 def choose_ffmpeg(explicit):
-    if explicit: return str(Path(explicit).resolve())
+    if explicit:
+        binary = shutil.which(explicit) or str(Path(explicit).expanduser().resolve())
+        require(Path(binary).is_file() and os.access(binary, os.X_OK), "Select an installed executable FFmpeg")
+        return binary
     binary = shutil.which("ffmpeg")
     if binary: return binary
     try:
@@ -81,6 +99,9 @@ def speech_engine(mode, explicit):
     if mode == "captioned": return None
     binary = explicit or shutil.which("espeak-ng") or shutil.which("espeak") or shutil.which("say")
     require(binary or mode == "auto", "A local speech executable is required by this receiving configuration")
+    if binary:
+        binary = shutil.which(binary) or str(Path(binary).expanduser().resolve())
+        require(Path(binary).is_file() and os.access(binary, os.X_OK), "Select an installed local speech executable")
     return binary
 def speak(binary, text, destination, ffmpeg, voice):
     textfile = destination.with_suffix(".txt"); textfile.write_text(text, encoding="utf-8")
@@ -105,12 +126,29 @@ def render(source, output, ffmpeg, mode, speech, voice):
     require(len({item["moduleId"] for item in scripts["videos"]}) == 13, "Unique native module presentation identities")
     catalog = {item["id"]: item for item in json.loads((source / "sources.json").read_text())["sources"]}
     output.mkdir(parents=True, exist_ok=True)
-    manifest = {"schema": "dpsa.diso.rendered-media.v1", "scriptSha256": hashlib.sha256(raw).hexdigest(),
+    identity = {"scriptsSha256": hashlib.sha256(raw).hexdigest(), "sourcesSha256": digest(source / "sources.json"),
+                "rendererSha256": digest(Path(__file__)), "frameSize": [WIDTH, HEIGHT], "framesPerSecond": FPS,
+                "ffmpegSha256": digest(Path(ffmpeg)), "speechSha256": digest(Path(speech)) if speech else None,
+                "voice": voice if speech else None}
+    renderkey = hashlib.sha256(encoded(identity)).hexdigest()
+    manifest = {"schema": "dpsa.diso.rendered-media.v1", "scriptSha256": identity["scriptsSha256"],
                 "frameSize": [WIDTH, HEIGHT], "framesPerSecond": FPS, "speechExecutable": Path(speech).name if speech else None,
-                "videos": [], "files": []}
+                "renderSha256": renderkey, "renderSettings": identity, "videos": [], "files": []}
     for video in scripts["videos"]:
         require(len(video["scenes"]) >= 4 and video["sourceIds"], "Complete substantive source-linked presentation: " + video["id"])
         folder = output / video["moduleId"]; frames = folder / "frames"; frames.mkdir(parents=True, exist_ok=True)
+        checkpoint = folder / ".render.json"
+        if checkpoint.is_file():
+            retained = json.loads(checkpoint.read_text(encoding="utf-8"))
+            require(retained.get("schema") == "dpsa.diso.rendered-module.v1" and retained.get("renderSha256") == renderkey,
+                    "Continue the original presentation inputs, voice and renderer for " + video["moduleId"])
+            item = retained["video"]
+            require(item["id"] == video["id"] and item["moduleId"] == video["moduleId"], "Reuse this exact original module render")
+            original_files(output, retained["files"])
+            manifest["videos"].append(item)
+            print(json.dumps({"moduleId": video["moduleId"], "state": "REUSED", "durationSeconds": item["durationSeconds"],
+                              "mode": item["mode"]}), flush=True)
+            continue
         subtitles, concat, clock, counter = [], [], 0.0, 0
         with tempfile.TemporaryDirectory(prefix="diso-media-") as temporary:
             work = Path(temporary); pcm = bytearray(); rate = None
@@ -173,10 +211,14 @@ def render(source, output, ffmpeg, mode, speech, voice):
             "transcriptFile": transcript.relative_to(output).as_posix(), "posterFile": poster.relative_to(output).as_posix(),
             "audioFile": mp3.relative_to(output).as_posix() if mp3 else None,
             "files": [metadata(output, file) for file in delivered]}
+        save(checkpoint, {"schema": "dpsa.diso.rendered-module.v1", "renderSha256": renderkey, "video": item,
+                          "files": [metadata(output, file) for file in delivered + sorted(frames.glob("caption-*.png"))]})
         manifest["videos"].append(item)
-        print(json.dumps({"moduleId": video["moduleId"], "durationSeconds": item["durationSeconds"], "mode": item["mode"], "videoBytes": mp4.stat().st_size}), flush=True)
-    manifest["files"] = [metadata(output, file) for file in sorted(output.rglob("*")) if file.is_file() and file.name != "media.json"]
-    (output / "media.json").write_bytes(encoded(manifest))
+        print(json.dumps({"moduleId": video["moduleId"], "state": "COMPLETE", "durationSeconds": item["durationSeconds"],
+                          "mode": item["mode"], "videoBytes": mp4.stat().st_size}), flush=True)
+    manifest["files"] = [metadata(output, file) for file in sorted(output.rglob("*"))
+                         if file.is_file() and file.name not in {"media.json", "media.json.pending", ".render.json", ".render.json.pending"}]
+    save(output / "media.json", manifest)
     return {"state": "COMPLETE", "videos": len(manifest["videos"]), "durationSeconds": round(sum(v["durationSeconds"] for v in manifest["videos"]), 3),
             "mode": "narrated-captioned" if speech else "captioned", "manifest": str(output / "media.json"), "files": len(manifest["files"])}
 if __name__ == "__main__":
