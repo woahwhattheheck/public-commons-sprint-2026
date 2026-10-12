@@ -57,27 +57,55 @@ const nonempty = value => value !== null && value !== undefined && value !== '' 
   (typeof value !== 'object' || Object.keys(value).length > 0);
 function historyKey(entry) { return String(entry.id ?? entry.sha256 ?? hash(entry)); }
 
-async function completeInventory(client, { harvesterUuid = undefined, uuids = [] } = {}) {
-  let from = 0; const seenOffsets = new Set(), records = new Map(); let expectedTotal = null;
-  while (true) {
-    requireValue(!seenOffsets.has(from), 'CATALOGUE_INVENTORY_PAGE_REPEATED'); seenOffsets.add(from);
-    const page = resultValue(await client.inventory({ ...(harvesterUuid ? { harvesterUuid } : {}), uuids, from, size: 200 }));
-    requireValue(Array.isArray(page.records) && page.totalRelation === 'eq' &&
-      Number.isSafeInteger(page.total) && page.total >= 0, 'CATALOGUE_EXACT_INVENTORY_REQUIRED');
-    if (expectedTotal === null) expectedTotal = page.total;
-    requireValue(expectedTotal === page.total, 'CATALOGUE_INVENTORY_CHANGED_DURING_READ');
-    for (const record of page.records) {
-      requireValue(typeof record.uuid === 'string' && !records.has(record.uuid), 'CATALOGUE_INVENTORY_UUID_REPEATED');
-      records.set(record.uuid, copy(record));
+function nativeUuidBatches(values) {
+  requireValue(Array.isArray(values) && new Set(values).size === values.length,
+    'CATALOGUE_NATIVE_UUID_LIST_INVALID');
+  const batches = []; let current = [], encodedBytes = 0;
+  for (const uuid of values) {
+    requireValue(typeof uuid === 'string' && uuid.length, 'CATALOGUE_NATIVE_UUID_INVALID');
+    const size = encodeURIComponent(uuid).length + 3;
+    requireValue(size <= 6000, 'CATALOGUE_NATIVE_UUID_URL_LIMIT');
+    if (current.length && (current.length >= 500 || encodedBytes + size > 6000)) {
+      batches.push(current); current = []; encodedBytes = 0;
     }
-    if (page.complete) break;
-    requireValue(Number.isSafeInteger(page.nextFrom) && page.nextFrom > from && page.records.length,
-      'CATALOGUE_INVENTORY_NEXT_PAGE_REQUIRED');
-    from = page.nextFrom;
+    current.push(uuid); encodedBytes += size;
   }
-  requireValue(records.size === expectedTotal, 'CATALOGUE_INVENTORY_INCOMPLETE');
-  return { records: [...records.values()].sort((a, b) => a.uuid.localeCompare(b.uuid)),
-    total: expectedTotal, scope: 'caller-visible-index' };
+  if (current.length) batches.push(current);
+  return batches;
+}
+async function completeInventory(client, { harvesterUuid = undefined, uuids = [] } = {}) {
+  const queries = [...(harvesterUuid ? [{ harvesterUuid }] : []),
+    ...nativeUuidBatches(uuids).map(batch => ({ uuids: batch }))];
+  requireValue(queries.length, 'CATALOGUE_NATIVE_INVENTORY_SELECTION_REQUIRED');
+  const combined = new Map();
+  for (const query of queries) {
+    let from = 0; const seenOffsets = new Set(), records = new Map(); let expectedTotal = null;
+    while (true) {
+      requireValue(!seenOffsets.has(from), 'CATALOGUE_INVENTORY_PAGE_REPEATED'); seenOffsets.add(from);
+      const page = resultValue(await client.inventory({ ...query, from, size: 200 }));
+      requireValue(Array.isArray(page.records) && page.totalRelation === 'eq' &&
+        Number.isSafeInteger(page.total) && page.total >= 0 &&
+        page.failedShards === 0 && page.searchTimedOut === false, 'CATALOGUE_EXACT_INVENTORY_REQUIRED');
+      if (expectedTotal === null) expectedTotal = page.total;
+      requireValue(expectedTotal === page.total, 'CATALOGUE_INVENTORY_CHANGED_DURING_READ');
+      for (const record of page.records) {
+        requireValue(typeof record.uuid === 'string' && !records.has(record.uuid), 'CATALOGUE_INVENTORY_UUID_REPEATED');
+        records.set(record.uuid, copy(record));
+      }
+      if (page.complete) break;
+      requireValue(Number.isSafeInteger(page.nextFrom) && page.nextFrom > from && page.records.length,
+        'CATALOGUE_INVENTORY_NEXT_PAGE_REQUIRED');
+      from = page.nextFrom;
+    }
+    requireValue(records.size === expectedTotal, 'CATALOGUE_INVENTORY_INCOMPLETE');
+    for (const [uuid, record] of records) {
+      requireValue(!combined.has(uuid) || hash(combined.get(uuid)) === hash(record),
+        'CATALOGUE_INVENTORY_CHANGED_DURING_READ');
+      combined.set(uuid, record);
+    }
+  }
+  return { records: [...combined.values()].sort((a, b) => a.uuid.localeCompare(b.uuid)),
+    total: combined.size, scope: 'caller-visible-index' };
 }
 async function stableInventory(client, query) {
   const first = await completeInventory(client, query), second = await completeInventory(client, query);
@@ -268,46 +296,63 @@ export async function createCatalogueController({ directory, stacWorkspace = nul
   async function captureRecords(context, client, uuids, capability, phase, { approved = true } = {}) {
     const records = [];
     for (const uuid of sorted(uuids)) {
-      try {
-        const record = resultValue(await client.readRecord(uuid, { approved, includeSharing: true }));
-        requireValue(record.uuid === uuid && record.info?.uuid === uuid, 'CATALOGUE_NATIVE_RECORD_ID_CHANGED');
-        const attachments = resultValue(await client.listAttachments(uuid, { approved }));
-        const canEdit = capability.actor.admin || String(record.info.ownerId) === String(capability.actor.id) ||
-          yes(record.info.edit) || yes(record.info.canEdit);
-        const canDownload = capability.actor.admin || String(record.info.ownerId) === String(capability.actor.id) ||
-          yes(record.info.download) || yes(record.info.canDownload);
-        const xmlFile = await context.retain('records/' + recordKey(uuid) + '/' + hash(record.rawXml) + '.xml',
-          Buffer.from(record.rawXml), { binary: true });
-        const native = { uuid, status: 'PRESENT', approved, metadataSha256: record.metadataSha256,
-          info: copy(record.info), sharing: copy(record.sharing), attachments: copy(attachments.attachments),
-          attachmentInventoryComplete: Boolean(canEdit && canDownload), xmlFile };
-        const snapshot = await context.retain('records/' + recordKey(uuid) + '/' + phase + '-' + hash(native) + '.json', native);
-        records.push({ ...native, snapshot });
-      } catch (error) {
+      let record;
+      try { record = resultValue(await client.readRecord(uuid, { approved, includeSharing: false })); }
+      catch (error) {
         if (error.status !== 404) throw error;
         const missing = { uuid, status: 'NOT_VISIBLE_OR_ABSENT', approved,
-          meaning: 'This caller received HTTP 404; no catalogue-wide absence is inferred.' };
+          meaning: 'This caller received HTTP 404 for metadata XML; no catalogue-wide absence is inferred.' };
         records.push({ ...missing, snapshot: await context.retain('records/' + recordKey(uuid) + '/' + phase + '-404.json', missing) });
+        continue;
       }
+      requireValue(record.uuid === uuid && record.info?.uuid === uuid, 'CATALOGUE_NATIVE_RECORD_ID_CHANGED');
+      // A sharing/attachment failure cannot turn known-present metadata into an absent record.
+      const sharing = resultValue(await client.readSharing(uuid));
+      const attachments = resultValue(await client.listAttachments(uuid, { approved }));
+      const canEdit = capability.actor.admin || String(record.info.ownerId) === String(capability.actor.id) ||
+        yes(record.info.edit) || yes(record.info.canEdit);
+      const canDownload = capability.actor.admin || String(record.info.ownerId) === String(capability.actor.id) ||
+        yes(record.info.download) || yes(record.info.canDownload);
+      const xmlFile = await context.retain('records/' + recordKey(uuid) + '/' + hash(record.rawXml) + '.xml',
+        Buffer.from(record.rawXml), { binary: true });
+      const native = { uuid, status: 'PRESENT', approved, metadataSha256: record.metadataSha256,
+        info: copy(record.info), sharing: copy(sharing), attachments: copy(attachments.attachments),
+        attachmentInventoryComplete: Boolean(canEdit && canDownload), xmlFile };
+      const snapshot = await context.retain('records/' + recordKey(uuid) + '/' + phase + '-' + hash(native) + '.json', native);
+      records.push({ ...native, snapshot });
     }
     return records;
+  }
+  function requireIndexedSnapshots(inventory, records) {
+    const snapshots = new Map(records.map(record => [record.uuid, record]));
+    requireValue(inventory.records.every(record => snapshots.get(record.uuid)?.status === 'PRESENT'),
+      'CATALOGUE_INDEXED_METADATA_UNAVAILABLE',
+      'The native index contains a selected record whose complete metadata could not be read. Read that original record before changing the catalogue.');
   }
   async function archive(context, client, records, phase) {
     const present = records.filter(record => record.status === 'PRESENT');
     if (!present.length) return { kind: 'EMPTY_NATIVE_SELECTION', phase, uuids: [], completeSelectedRecords: true };
     requireValue(present.every(record => record.attachmentInventoryComplete),
       'CATALOGUE_NATIVE_ARCHIVE_PERMISSIONS_REQUIRED', 'Use the record owner or an authorized catalogue administrator to retain the complete native attachments before refresh.');
-    const native = resultValue(await client.exportMef(present.map(record => record.uuid), { approved: true,
-      withXLinksResolved: false, withXLinkAttribute: true }));
-    const inspection = inspectMef(native.bytes, { records: present,
-      maxBytes: context.state.connection.maxMefBytes, maxFileBytes: context.state.connection.maxMefBytes });
-    const file = await context.retain('archives/' + phase + '-' + inspection.sha256 + '.mef.zip', native.bytes, { binary: true });
-    const value = { phase, operationId: context.op.id, createdAt: stamp(), file, ...inspection,
-      recovery: 'Native metadata and attachment content. Import does not restore original harvester ownership or workflow state.' };
-    const existing = context.state.archives.find(item => item.operationId === context.op.id && item.file.sha256 === file.sha256 && item.phase === phase);
-    if (existing) return copy(existing);
-    context.state.archives.push(value); await context.checkpoint();
-    return value;
+    const byUuid = new Map(present.map(record => [record.uuid, record]));
+    const parts = [];
+    for (const uuids of nativeUuidBatches(present.map(record => record.uuid))) {
+      const native = resultValue(await client.exportMef(uuids, { approved: true,
+        withXLinksResolved: false, withXLinkAttribute: true }));
+      const inspection = inspectMef(native.bytes, { records: uuids.map(uuid => byUuid.get(uuid)),
+        maxBytes: context.state.connection.maxMefBytes, maxFileBytes: context.state.connection.maxMefBytes });
+      const file = await context.retain('archives/' + phase + '-' + inspection.sha256 + '.mef.zip', native.bytes, { binary: true });
+      const existing = context.state.archives.find(item => item.operationId === context.op.id &&
+        item.file.sha256 === file.sha256 && item.phase === phase);
+      if (existing) parts.push(copy(existing));
+      else {
+        const value = { phase, operationId: context.op.id, createdAt: stamp(), file, ...inspection,
+          recovery: 'Native metadata and attachment content. Import does not restore original harvester ownership or workflow state.' };
+        context.state.archives.push(value); await context.checkpoint(); parts.push(value);
+      }
+    }
+    return parts.length === 1 ? parts[0] : { kind: 'MEF_ARCHIVE_SET', phase,
+      uuids: present.map(record => record.uuid), completeSelectedRecords: true, parts };
   }
   async function connect({ operationId }) {
     const state = await workspace.getState();
@@ -349,6 +394,7 @@ export async function createCatalogueController({ directory, stacWorkspace = nul
         const records = await captureRecords(context, client,
           sorted([...inventory.records.map(value => value.uuid), ...context.state.everOwnedUuids, ...plan.expectedRecordIds]),
           capability, 'before');
+        requireIndexedSnapshots(inventory, records);
         const collisions = records.filter(value => value.status === 'PRESENT' && plan.expectedRecordIds.includes(value.uuid) &&
           (!node || value.info.source !== node.uuid || !yes(value.info.isHarvested)));
         requireValue(!collisions.length, 'CATALOGUE_FOREIGN_RECORD_COLLISION',
@@ -373,6 +419,7 @@ export async function createCatalogueController({ directory, stacWorkspace = nul
         requireValue(hash(current) === hash(prepared.inventory), 'CATALOGUE_NATIVE_INVENTORY_CHANGED');
         const records = await captureRecords(context, client, prepared.records.map(record => record.uuid),
           capability, 'pre-dispatch');
+        requireIndexedSnapshots(current, records);
         requireValue(hash(recordsIdentity(records)) === hash(recordsIdentity(prepared.records)),
           'CATALOGUE_NATIVE_RECORDS_CHANGED', 'Refresh the native review and archive after the current catalogue edits.');
         return live;
@@ -478,6 +525,7 @@ export async function createCatalogueController({ directory, stacWorkspace = nul
       let afterRecords = await captureRecords(context, client,
         sorted([...plan.expectedRecordIds, ...context.state.everOwnedUuids, ...afterInventory.records.map(record => record.uuid)]),
         capability, 'after');
+      requireIndexedSnapshots(afterInventory, afterRecords);
       const owned = afterRecords.filter(record => record.status === 'PRESENT' &&
         record.info.source === node.uuid && yes(record.info.isHarvested));
       context.state.everOwnedUuids = sorted([...context.state.everOwnedUuids, ...owned.map(record => record.uuid),
@@ -496,24 +544,33 @@ export async function createCatalogueController({ directory, stacWorkspace = nul
       let validation = null;
       if (!issues.length && plan.postHarvestValidation) {
         const expectedHashes = Object.fromEntries(owned.map(record => [record.uuid, record.metadataSha256]));
-        validation = await context.step('validate-harvested-records',
-          async () => ({ dispatchAcknowledged: true,
-            report: resultValue(await client.validateRecords(plan.expectedRecordIds, { approved: true })) }),
-          { mutation: true, reconcile: async () => {
-            const records = [];
-            for (const uuid of plan.expectedRecordIds) records.push(resultValue(await client.readValidation(uuid, { approved: true })));
-            const observed = records.every(record => record.metadataSha256 === expectedHashes[record.uuid] &&
-              ['0', '1'].includes(String(record.valid)));
-            return { resolved: observed, value: { dispatchAcknowledged: false,
-              outcome: 'CURRENT_VALIDATION_STATE_OBSERVED', report: null, records, runIdentity: null } };
-          } });
+        const batches = nativeUuidBatches(plan.expectedRecordIds), results = [];
+        for (const uuids of batches) {
+          const stepName = batches.length === 1 ? 'validate-harvested-records' :
+            'validate-harvested-' + hash(uuids).slice(0, 24);
+          results.push(await context.step(stepName,
+            async () => ({ dispatchAcknowledged: true, uuids,
+              report: resultValue(await client.validateRecords(uuids, { approved: true })) }),
+            { mutation: true, reconcile: async () => {
+              const records = [];
+              for (const uuid of uuids) records.push(resultValue(await client.readValidation(uuid, { approved: true })));
+              const observed = records.every(record => record.metadataSha256 === expectedHashes[record.uuid] &&
+                ['0', '1'].includes(String(record.valid)));
+              return { resolved: observed, value: { dispatchAcknowledged: false, uuids,
+                outcome: 'CURRENT_VALIDATION_STATE_OBSERVED', report: null, records, runIdentity: null } };
+            } }));
+        }
+        validation = results.length === 1 ? results[0] : {
+          dispatchAcknowledged: results.every(result => result.dispatchAcknowledged),
+          batches: results, report: null
+        };
+        for (const result of results) issues.push(...processingIssues(result.report));
         const statuses = [];
         for (const uuid of plan.expectedRecordIds) statuses.push(resultValue(await client.readValidation(uuid, { approved: true })));
         if (statuses.some(record => record.metadataSha256 !== expectedHashes[record.uuid]))
           issues.push('Native metadata changed while the validation results were being read.');
         if (statuses.some(record => String(record.valid) !== '1'))
           issues.push('One or more actual native records remain unvalidated or invalid.');
-        issues.push(...processingIssues(validation.report));
         validation = { ...validation, persisted: statuses };
       }
       const afterArchive = await archive(context, client, owned, 'after');
@@ -646,7 +703,8 @@ export async function createCatalogueController({ directory, stacWorkspace = nul
           if (['sharing', 'publish'].includes(action))
             return hash(sharingRows(after.sharing)) === hash(prepared.expectedSharing) &&
               (action === 'publish' || after.metadataSha256 === expectedMetadataSha256);
-          return workflowId(after.workflow) === prepared.targetStatus;
+          return after.metadataSha256 === expectedMetadataSha256 &&
+            workflowId(after.workflow) === prepared.targetStatus;
         }
         const native = await context.step('native-record-action', async () => {
           await preflight(async () => {
@@ -679,9 +737,9 @@ export async function createCatalogueController({ directory, stacWorkspace = nul
         if (!effectMatches(after)) issues.push('The current native record does not have every reviewed effect.');
         if (action === 'validate' && String(after.validation?.valid) !== '1')
           issues.push('The native record remains invalid or unvalidated; review its native validation details.');
-        if (action === 'approve' && !native.dispatchAcknowledged &&
+        if (['submit', 'approve'].includes(action) &&
           after.metadataSha256 !== prepared.before.metadataSha256)
-          issues.push('The approved native content differs from the reviewed draft; inspect the retained versions.');
+          issues.push('The native workflow content differs from the reviewed draft; inspect the retained versions.');
         if (action === 'publish' && !native.dispatchAcknowledged)
           issues.push('Publication privileges are observed. The lost acknowledgement does not confirm configured metadata processing.');
         const result = { operationId, uuid, action, before: prepared.before, after, native,
