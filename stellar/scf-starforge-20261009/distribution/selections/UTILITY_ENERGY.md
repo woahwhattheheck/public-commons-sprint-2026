@@ -46,14 +46,14 @@ The existing build journal binds the source commit and selection. An explicit di
 
 ## Install the original runtime
 
-Pass the returned archive and hash to the maintained installer. Select the exact features needed by the intended runtime; the native and MCP selection below supports the merchant and agent receiving path:
+Pass the returned archive and hash to the maintained installer. Select the exact features needed by the intended runtime. The schema, OpenAPI and MCP groups below match this product selection and support the merchant and agent receiving path:
 
 ```sh
 node stellar/scf-starforge-20261009/distribution/runtime-install-cli.mjs prepare \
   --dir /absolute/utility-runtime \
   --archive /absolute/utility-release/ORIGINAL_ARCHIVE.tgz \
   --sha256 ORIGINAL_ARCHIVE_SHA256 \
-  --native --feature mcp --operator
+  --native --feature schema --feature openapi --feature mcp --operator
 
 node stellar/scf-starforge-20261009/distribution/runtime-install-cli.mjs install \
   --dir /absolute/utility-runtime
@@ -64,7 +64,7 @@ node stellar/scf-starforge-20261009/distribution/runtime-install-cli.mjs inspect
 
 The profile resolves the selected package's original declarations and exact versions. The original installer owns its package lock, dependency installation, native probes, lease, recovery and READY record. If a complete retained dependency graph is already available, the existing `--adopt-existing` path validates it through that same profile and lock before accepting it. Keep any existing runtime or customer workspace at its original path.
 
-Python 3.11 or later and the original Linux `flock` command are part of the operator profile. The Utility source retains its Python requirement declaration. The full browser receiving invocation takes the host's existing Playwright module and Chromium executable as explicit paths.
+Python 3.11 or later and the original Linux `flock` command are part of the operator profile. The original XML reader also requires Expat 2.6 or later in that selected Python runtime. The Utility source retains its Python requirement declaration. The full browser receiving invocation takes the host's existing Playwright module and Chromium executable as explicit paths.
 
 Register the READY runtime in the original Runtime workspace. Select the Utility application, review the retained workspace and source binding, then prepare and start it through the original managed worker. Its authenticated console descriptor belongs to that same Python owner. Closing a borrowed client leaves the owner intact; stopping the application drains the listener and active requests before the workspace lease closes. The complete managed callback exercises both start/stop and reopen.
 
@@ -121,7 +121,7 @@ The original receiver completes these phases in one operation:
 1. Verify the complete source declaration, original report and actual imported operator/publisher modules.
 2. Reuse or reconstruct the original core, then compare its source, rows, editions and snapshot to the retained completed result.
 3. Complete the existing browser and HTTP-client workflow over the same customer, including retained source-priority review and downloads.
-4. Borrow that Python owner for all 22 Utility MCP tools and complete original export reads.
+4. Borrow that Python owner, verify the complete 22-name Utility MCP catalog, and exercise the original status, inventory, records, inspection, interval series, export, retained-file and client-reopen workflow.
 5. Export through the original CLI, restore into a new receiver and query the same 1,340-row native snapshot.
 6. Use the original READY runtime and managed Applications worker for two complete start/stop passes with the same source and customer identities.
 7. Save the complete report, customer package, portable workspace and combined delivery bundle.
