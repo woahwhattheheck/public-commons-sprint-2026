@@ -28,6 +28,7 @@ import { stellarExpertApplication, prepareStellarExpertApplication } from './app
 import { atlasApplication, prepareAtlasApplication } from './application-atlas.mjs';
 import { n8nApplication, prepareN8nApplication } from './application-n8n.mjs';
 import { redisApplication, prepareRedisApplication } from './application-redis.mjs';
+import { cryptoworthApplication, prepareCryptoworthApplication } from './application-cryptoworth.mjs';
 import { openApiApplication, prepareOpenApiApplication } from './application-openapi.mjs';
 import { arcgisAgentApplication, prepareArcgisAgentApplication } from './application-arcgis.mjs';
 import { duckdbAgentApplication, prepareDuckDBAgentApplication } from './application-duckdb-agent.mjs';
@@ -102,6 +103,7 @@ export const APPLICATION_CATALOG = Object.freeze([
   cocartApplication(common),
   stellarExpertApplication(common),
   redisApplication(common),
+  cryptoworthApplication(common),
   arcgisAgentApplication(common),
   duckdbAgentApplication(common),
   s3MerchantApplication(common),
@@ -360,6 +362,9 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
   } else if (type.id === 'blockscout') {
     const original = await prepareBlockscoutApplication(settings, inputPath);
     args.push(...original.args); inputs.push(...original.inputs);
+  } else if (type.id === 'cryptoworth') {
+    const original = await prepareCryptoworthApplication(settings, inputPath, runtimeDirectory);
+    args.push(...original.args); inputs.push(...original.inputs); selectedResourceKey = original.resourceKey;
   } else if (type.id === 'redis') {
     const original = await prepareRedisApplication(settings, inputPath, runtimeDirectory);
     args.push(...original.args); inputs.push(...original.inputs);
