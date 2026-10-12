@@ -4,6 +4,14 @@ This operator retains an entire ClinicalTrials.gov v2 cohort, reviews whole stud
 
 The same original NDJSON/XML workspace owns the source files, mapping, builds, query engine, comparisons and lease. The browser, CLI and attached merchant MCP operate that one workspace. PRS validation, reviewed modernization and typed reconciliation use the shared clinicaltrials/prs implementation.
 
+## Managed application
+
+Choose **ClinicalTrials registry** in the existing **Applications** workspace to
+review the original private workspace and selected Python, start its console,
+attach the same MCP connection, and stop or reopen its retained work. The
+[complete managed operating guide](MANAGED_APPLICATION.md) covers source/runtime
+selection, PRS readiness, customer handover and the existing CLI controls.
+
 ## Open the operator
 
 ~~~sh
