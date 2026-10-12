@@ -7,7 +7,7 @@ retained workspace. An agent can finish a browser-started dataset, and a browser
 can inspect an agent's saved source and mapping immediately.
 
 The installed module is `@tokenjunkielabs/starforge-merchant/merchant/mcp/source-workspaces`.
-It contributes 18 tools to the existing merchant MCP and uses its current HTTP or
+It contributes source-workspace tools to the existing merchant MCP and uses its current HTTP or
 stdio transport. The underlying source console owns the workspace lock, native
 dataset worker and application lifecycle.
 
@@ -191,3 +191,10 @@ For full receiving, call `merchant_source_export` with `kind: "portfolio"`, the 
 A receiving IATI alias can use `merchant_source_import` with that retained portfolio `exportId` and its original `fromWorkspace`. The native importer verifies every member and reconstructs all referenced datasets, full report bytes, request identities and revisions before publishing the portfolio history. Report-only archives are delivered for reading and are not importable portfolio packets.
 
 Full native CLI/client and Applications operations: [IATI operator guide](../../stellar/scf-starforge-20261009/sf30-seller-sdk/iati/OPERATIONS.md). The original source interpretation and limits are documented in [IATI DOMAIN](../../stellar/scf-starforge-20261009/sf30-seller-sdk/iati/DOMAIN.md).
+
+
+## Retained NDJSON merchant packages
+
+The original NDJSON workspace now retains the full prepared merchant and generated customer SDK. Use merchant_source_merchant_save with the original build/payment/origin/path and optional requestId, merchant_source_merchants for the saved catalog, and merchant_source_merchant to verify and reopen one package. merchant_source_merchant_export feeds its exact saved ZIP into the existing bounded byte reader. The earlier merchant_source_merchant_prepare tool preserves its ZIP result but uses the same retained native preparation.
+
+Receive that complete package with merchant_source_merchant_receive, selecting exportId plus fromWorkspace or a declared file handle whose kind is merchant. The original receiving console validates every original file and reconstructs source/mapping/native snapshot before publishing the merchant. The same ZIP is retained byte-for-byte. Full CLI, browser, HTTP, limits and interrupted-operation workflow: [Retained NDJSON merchants](../../stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/MERCHANT_PACKAGES.md).
