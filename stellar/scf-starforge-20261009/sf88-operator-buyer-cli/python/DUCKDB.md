@@ -194,7 +194,8 @@ complete SQL result, and appears under **Saved exports**.
 
 Each completed result includes:
 
-- `result.parquet`, with the native result types.
+- `result.parquet`, with the exact representations declared in `columns` and
+  `column_encodings`.
 - `result.csv`, with a header and `\N` as the declared null marker.
 - `request.json` and `execution.json`, recording the original selected query
   and completed result.
@@ -209,6 +210,46 @@ To deliver an existing export to another computer, copy that export's complete
 directory. The portable analytical workspace described below retains its export
 history and original directory locators; the result files travel in their own
 export directories.
+
+### Exact integers in Parquet
+
+DuckDB's native Parquet writer converts `HUGEINT` and `UHUGEINT` to
+`DOUBLE`. That affects ordinary integer aggregates as well as explicit
+128-bit columns. This workspace selects a lossless representation before
+writing the complete saved result:
+
+| SQL result | Parquet representation | `encoding` |
+| --- | --- | --- |
+| Signed or unsigned 128-bit integers whose values all fit 38 decimal digits | `DECIMAL(38,0)` | `decimal128` |
+| A 128-bit integer column containing a wider value | Exact decimal `VARCHAR` | `duckdb_text` |
+| Nested values containing 128-bit integers, variable-size integers, intervals or times with a time zone | Native text with its original SQL type retained | `duckdb_text` |
+| Other supported native result columns | Their native representation | `native` |
+
+The nested/text path checks that every non-null value can be cast back to its
+original native type unchanged before writing. It preserves nulls. One complete
+scan selects the numeric representation for all top-level 128-bit columns;
+normal-sized sums remain numeric in Parquet. The SQL result is materialized
+once, so representation selection and file output use those same rows.
+
+`query_columns` records the original SQL result schema. `columns` records the
+actual Parquet schema. Each `column_encodings` entry links the column name,
+`query_type`, `parquet_type`, and encoding. These fields are in both
+`execution.json` and `manifest.json`; CSV is produced from that retained
+Parquet result. Source tables, reviewed mappings, SQL previews and the portable
+native database keep their original types.
+
+For example, if `total` is declared as an original `HUGEINT` aggregate in the
+manifest, a receiving DuckDB query can restore that type explicitly:
+
+```sql
+SELECT CAST(total AS HUGEINT) AS total
+FROM read_parquet('/absolute/private/export/result.parquet');
+```
+
+Use the supplied original type for each converted column. Complete older
+exports reopen with their retained files and schema. This behavior follows the
+[declared DuckDB 1.5.6 Parquet writer](https://github.com/duckdb/duckdb/blob/v1.5.6/extension/parquet/parquet_writer.cpp)
+and [native numeric type ranges](https://duckdb.org/docs/current/sql/data_types/numeric).
 
 ## Compare a later delivery
 
