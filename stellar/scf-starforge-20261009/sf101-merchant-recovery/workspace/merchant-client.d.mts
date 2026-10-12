@@ -2,6 +2,17 @@ export type RecoveryWorkspaceAlias = string;
 export type RecoveryProfileId = string;
 export type RecoveryOperationId = string;
 export type RecoveryDigest = string;
+export type RecoveryFleetRestoreId = string;
+export type RecoveryFleetTargetId = string;
+/** The original host selects all paths; the caller selects one restored source and one receiving target. */
+export type RecoveryFleetSelection = {
+  action: 'fleet-prepare';
+  fleetTargetId: RecoveryFleetTargetId;
+  quiesced: true;
+} & (
+  | { restoreId: RecoveryOperationId; fleetRestoreId?: never }
+  | { fleetRestoreId: RecoveryFleetRestoreId; restoreId?: never }
+);
 export interface RecoveryIdentity {
   schema: 'stellar-forge.recovery-workspace-identity.v1';
   workspaceId: string;
@@ -18,6 +29,7 @@ export type RecoverySelection = {
   | ({ action: 'publisher-prepare' } & (
       | { restoreId: RecoveryOperationId; publisherRestoreId?: never }
       | { publisherRestoreId: string; restoreId?: never }))
+  | RecoveryFleetSelection
   | { action: 'push'; bundleId: string }
   | { action: 'pull'; snapshotId: RecoveryDigest; destinationName?: string }
   | { action: 'restore'; snapshotId: RecoveryDigest; destinationName?: string; bundleId?: string }
@@ -78,7 +90,7 @@ export function recoveryWorkspaceTools<T>(tool: (
   required: string[], options: { readOnly?: boolean; idempotent?: boolean; destructive?: boolean; openWorld?: boolean }
 ) => T): T[];
 export class MerchantRecoveryWorkspaces {
-  constructor(config: { recoveryWorkspaces?: RecoveryWorkspaceConfiguration | null });
+  constructor(config: { recoveryWorkspaces?: Pick<RecoveryWorkspaceConfiguration, 'workspaces'> | null });
   readonly summary: RecoveryWorkspaceSummary;
   call<N extends keyof RecoveryToolInputs>(name: N, args: RecoveryToolInputs[N]): Promise<RecoveryToolResult>;
   close(): Promise<void>;

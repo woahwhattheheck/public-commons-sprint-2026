@@ -1,0 +1,34 @@
+{
+  "schema": "stellar-forge.2ba-processing-original-source.v1",
+  "source": {
+    "url": "https://www.2ba.nl/wp-content/uploads/parameters.zip",
+    "retrievedAt": "2026-10-12T09:19:17.772428+00:00"
+  },
+  "archive": {
+    "file": "parameters.zip",
+    "bytes": 387,
+    "sha256": "b7b7a88138ac29952a712af412d33de6010bb45bc414ad50c1dd2ad90a2a682f",
+    "gitBlob": "0a222bb57f4abe5e74ee895709f1638739c8c1f6"
+  },
+  "members": [
+    {
+      "file": "parameters.xml",
+      "bytes": 446,
+      "sha256": "a1e7a2e4d920126eecd45fa6cb603d9da2deeb508dc9ae0ab4de8b08f2db1d2e",
+      "gitBlob": "cb891b51299aacec45427dcea6150236234d58d1"
+    }
+  ],
+  "observations": {
+    "root": "UCProcessParameters",
+    "defaultNamespace": "http://www.2ba.nl",
+    "childOrder": [
+      "GeneratedBy",
+      "PackageDescription",
+      "SendReportToEmail",
+      "ReportLanguage"
+    ],
+    "reportLanguage": "NL",
+    "newline": "CRLF",
+    "hasFinalNewline": false
+  }
+}

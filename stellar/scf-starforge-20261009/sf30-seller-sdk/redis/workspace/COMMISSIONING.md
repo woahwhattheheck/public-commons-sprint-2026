@@ -147,3 +147,7 @@ const result = await commissionRedis({
 A file-based caller should pass the exact complete input bytes' inputSha256. An object-only caller can omit it; the command uses canonical JSON identity consistently for that operation. Reuse the same choice when recovering.
 
 The default runtime requirements are those of the original source/authoring workspace: current supported Node with node:sqlite, the existing Redis dependency for native connections, and the original package source. Receiving needs the selected source network/environment; review and workspace creation can run offline. The command does not install another dependency set or launch another merchant process.
+
+## Customer commissioning operator
+
+The original saved workspace now includes a complete customer commissioning view, expected-result matrix, durable receiving operations and customer handover. See [COMMISSIONING_OPERATOR.md](COMMISSIONING_OPERATOR.md) for the browser, original CLI, HTTP and same-workspace native receiving flow.

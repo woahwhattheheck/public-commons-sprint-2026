@@ -1,5 +1,6 @@
 // MIT. Preserve JSON number tokens before JavaScript can round them.
-export function parseExactJSON(text) {
+export function parseExactJSON(text, {onDuplicate} = {}) {
+  if (onDuplicate !== undefined && typeof onDuplicate !== 'function') throw new TypeError('Duplicate handler must be a function');
   if (typeof text !== 'string') throw new TypeError('JSON text required');
   let at = 0;
   const fail = () => { throw new TypeError('Invalid source JSON at character ' + at); };
@@ -13,17 +14,30 @@ export function parseExactJSON(text) {
     }
     fail();
   }
-  function value(depth = 0) {
+  function value(depth = 0, path = []) {
     if (depth > 80) throw new TypeError('Source JSON nesting exceeds 80');
     ws(); const c = text[at];
     if (c === '"') return string();
     if (c === '{') {
-      at++; const out = Object.create(null); ws();
+      at++; const out = Object.create(null), positions = onDuplicate ? new Map() : null; ws();
       if (text[at] === '}') { at++; return out; }
       while (at < text.length) {
         ws(); if (text[at] !== '"') fail(); const key = string();
-        if (Object.hasOwn(out, key)) throw new TypeError('Duplicate source JSON key');
-        ws(); if (text[at++] !== ':') fail(); out[key] = value(depth + 1);
+        const repeated = Object.hasOwn(out, key);
+        if (repeated && !onDuplicate) throw new TypeError('Duplicate source JSON key');
+        ws(); if (text[at++] !== ':') fail(); ws();
+        const start = at, nextValue = value(depth + 1, onDuplicate ? [...path, key] : []);
+        if (repeated) {
+          const previous = positions.get(key), occurrence = previous.count + 1;
+          if (onDuplicate({path: [...path, key], previous: out[key], value: nextValue,
+            previousRaw: text.slice(previous.start, previous.end), valueRaw: text.slice(start, at),
+            previousStart: previous.start, previousEnd: previous.end, start, end: at, occurrence}) !== true)
+            throw new TypeError('Duplicate source JSON key');
+          previous.count = occurrence;
+        } else {
+          out[key] = nextValue;
+          if (positions) positions.set(key, {start, end: at, count: 1});
+        }
         ws(); const next = text[at++]; if (next === '}') return out; if (next !== ',') fail();
       }
       fail();
@@ -31,7 +45,7 @@ export function parseExactJSON(text) {
     if (c === '[') {
       at++; const out = []; ws(); if (text[at] === ']') { at++; return out; }
       while (at < text.length) {
-        out.push(value(depth + 1)); ws(); const next = text[at++];
+        out.push(value(depth + 1, onDuplicate ? [...path, out.length] : [])); ws(); const next = text[at++];
         if (next === ']') return out; if (next !== ',') fail();
       }
       fail();

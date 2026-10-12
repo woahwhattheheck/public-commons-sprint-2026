@@ -103,7 +103,7 @@ For the 2BA target, a selected status mapping has this shape:
 
 Map only native PRE-LAUNCH, ACTIVE, ON HOLD, PLANNED WITHDRAWAL or OBSOLETE tokens to codes from the actual selected mapping. The public 2BA rule defines actions for recipient125/126/94E/130; it does not itself provide the complete native-token translation table. The profile therefore retains an explicit source-bound mapping instead of creating that table from similarly named statuses.
 
-A released modelling class row is `{code:"MC000023",version:"5",source:{url,sha256,revision}}`. Select the original release source for each code/version used by the delivery. `attachmentPolicy.keepMimeUrlCodes` records explicit MDX URL-retention selections for the recipient's external parameter.xml configuration.
+A released modelling class row is `{code:"MC000023",version:"5",source:{url,sha256,revision}}`. Select the original release source for each code/version used by the delivery. `attachmentPolicy.keepMimeUrlCodes` records original MDX URL-retention selections. An explicit 2BA processing selection carries them into the recipient's `parameters.xml`; see [2BA upload packages](./2BA_UPLOAD.md).
 
 ## Correct exact product values
 
@@ -201,6 +201,23 @@ The adjacent source directory contains the unchanged ETIM2.0 schema and27,705-by
 The sample's `/Supplier/0/Product/0/LcaEnvironmental/ProductSpecificRulesUri` ends with U+0020 after the PDF URL. The pinned schema requires a URI. The first review exposes that original source finding; a reasoned product correction removes only that trailing space before producing the corrected demonstration export. The original uploaded file and bundled publisher example remain unchanged.
 
 `source/RULES.json` binds each implemented source rule to its exact original document/section and records this sample observation. `source/NOTICE.txt` and `source/LICENSE-ETIM.txt` accompany the retained original schema. The receiving program uses the original example and all original operator/CLI/MCP/handover APIs to exercise the complete workflow.
+
+## Complete 2BA upload package
+
+A 2BA submission can include an explicit, reasoned `processing` selection.
+Its original case-sensitive parameter names and values are saved in the profile.
+The immutable review applies effective FULL/CHANGE handling, skipped records,
+and selected price/attachment retention before the package is created.
+
+Export `parameters.xml` to inspect that selection, or `2ba.zip` from a ready
+nonempty review to receive it together with the complete native message. The
+same formats are available through the original browser, installed CLI, native
+MCP and retained-file typed client. The complete [2BA upload guide](./2BA_UPLOAD.md)
+covers operator controls, exact field shapes, archive identity and receiving.
+
+The original published MC000023/v5 selection used by the following receiving
+program is retained with its source attribution under
+[source/2BA_RECEIVING_REFERENCES.json](./source/2BA_RECEIVING_REFERENCES.json).
 
 ## Primary references
 

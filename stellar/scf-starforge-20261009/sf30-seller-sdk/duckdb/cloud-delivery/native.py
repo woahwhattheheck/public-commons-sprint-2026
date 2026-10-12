@@ -927,117 +927,31 @@ def materialize(input):
         Path(str(temporary) + ".wal").unlink(missing_ok=True)
 
 
+
+def _source_archive_module():
+    spec = importlib.util.spec_from_file_location(
+        "sf30_source_bundle_archive", Path(__file__).resolve().parents[2] / "source_bundle_archive.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def _source_archive_policy(module):
+    # Preserve the original Cloud schema, expanded limit, receipt and errors.
+    return module.ArchivePolicy("stellar-forge.coinmetrics-cloud-handover.v1",
+                                max_expanded_bytes=8 * 1024 * 1024 * 1024,
+                                max_members=20000, max_manifest_bytes=MAX_JSON,
+                                prefix="CLOUD", error_type=Fault)
+
+
 def archive(input):
-    source, output = Path(input["source"]), Path(input["destination"])
-    inventory = input["inventory"]
-    if output.exists():
-        with zipfile.ZipFile(output) as retained:
-            if encoded(json.loads(retained.read("handover.json"))) != encoded(input["manifest"]):
-                raise Fault("CLOUD_HANDOVER_SNAPSHOT_CONFLICT")
-            if set(retained.namelist()) != {"handover.json"} | {"files/" + file["path"] for file in inventory}:
-                raise Fault("CLOUD_HANDOVER_INVENTORY_MISMATCH")
-            for file in inventory:
-                checksum, size = hashlib.sha256(), 0
-                with retained.open("files/" + file["path"]) as member:
-                    for chunk in iter(lambda: member.read(1024 * 1024), b""):
-                        checksum.update(chunk)
-                        size += len(chunk)
-                        if size > int(file["bytes"]):
-                            raise Fault("CLOUD_HANDOVER_FILE_SIZE_MISMATCH")
-                if str(size) != file["bytes"] or checksum.hexdigest() != file["sha256"]:
-                    raise Fault("CLOUD_HANDOVER_FILE_DIGEST_MISMATCH")
-        return {"archive": file_hash(output), "members": len(inventory) + 1, "reused": True}
-    temporary = output.with_name("." + output.name + "." + uuid.uuid4().hex + ".tmp")
-    total = 0
-    try:
-        with zipfile.ZipFile(temporary, "x", compression=zipfile.ZIP_DEFLATED, compresslevel=6) as bundle:
-            bundle.writestr("handover.json", encoded(input["manifest"]) + "\n")
-            for file in inventory:
-                path = source_path(source, file)
-                before = file_hash(path)
-                if before != {"bytes": file["bytes"], "sha256": file["sha256"]}:
-                    raise Fault("CLOUD_HANDOVER_SOURCE_CHANGED")
-                total += int(file["bytes"])
-                if total > 8 * 1024 * 1024 * 1024:
-                    raise Fault("CLOUD_HANDOVER_SIZE_LIMIT")
-                checksum, size = hashlib.sha256(), 0
-                with path.open("rb") as original, bundle.open("files/" + file["path"], "w", force_zip64=True) as target:
-                    for chunk in iter(lambda: original.read(1024 * 1024), b""):
-                        checksum.update(chunk)
-                        size += len(chunk)
-                        if size > int(file["bytes"]):
-                            raise Fault("CLOUD_HANDOVER_SOURCE_CHANGED")
-                        target.write(chunk)
-                if str(size) != file["bytes"] or checksum.hexdigest() != file["sha256"] or file_hash(path) != before:
-                    raise Fault("CLOUD_HANDOVER_SOURCE_CHANGED")
-        os.chmod(temporary, 0o600)
-        with temporary.open("rb") as handle:
-            os.fsync(handle.fileno())
-        os.link(temporary, output)
-        return {"archive": file_hash(output), "members": len(inventory) + 1}
-    finally:
-        temporary.unlink(missing_ok=True)
+    module = _source_archive_module()
+    return module.archive(input, policy=_source_archive_policy(module))
 
 
 def extract(input):
-    source, destination = Path(input["archive"]), Path(input["destination"])
-    source_hash = file_hash(source)
-    with zipfile.ZipFile(source) as bundle:
-        members = bundle.infolist()
-        if len(members) > 20000 or sum(item.file_size for item in members) > 8 * 1024 * 1024 * 1024:
-            raise Fault("CLOUD_HANDOVER_SIZE_LIMIT")
-        names = [item.filename for item in members]
-        if len(set(names)) != len(names) or "handover.json" not in names or bundle.getinfo("handover.json").file_size > MAX_JSON:
-            raise Fault("CLOUD_HANDOVER_MANIFEST_INVALID")
-        manifest = json.loads(bundle.read("handover.json").decode("utf-8"), object_pairs_hook=pairs)
-        if manifest.get("schema") != "stellar-forge.coinmetrics-cloud-handover.v1":
-            raise Fault("CLOUD_HANDOVER_SCHEMA_INVALID")
-        inventory = manifest.get("files")
-        if not isinstance(inventory, list) or set(names) != {"handover.json"} | {"files/" + file["path"] for file in inventory}:
-            raise Fault("CLOUD_HANDOVER_INVENTORY_MISMATCH")
-        destination.mkdir(mode=0o700, parents=True, exist_ok=True)
-        for file in inventory:
-            name = file["path"]
-            if not name or name.startswith("/") or "\\" in name or any(x in ("", ".", "..") for x in name.split("/")):
-                raise Fault("CLOUD_HANDOVER_PATH_INVALID")
-            info = bundle.getinfo("files/" + name)
-            if ((info.external_attr >> 16) & 0o170000) == 0o120000 or str(info.file_size) != file["bytes"]:
-                raise Fault("CLOUD_HANDOVER_FILE_INVALID")
-            path = destination / name
-            if path.resolve() != path:
-                raise Fault("CLOUD_HANDOVER_PATH_INVALID")
-            path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
-            if path.resolve() != path:
-                raise Fault("CLOUD_HANDOVER_PATH_INVALID")
-            if path.exists():
-                if file_hash(path) != {"bytes": file["bytes"], "sha256": file["sha256"]}:
-                    raise Fault("CLOUD_RECEIVED_FILE_CONFLICT")
-                continue
-            temporary = path.with_name("." + path.name + "." + uuid.uuid4().hex + ".tmp")
-            try:
-                total, checksum = 0, hashlib.sha256()
-                with bundle.open(info) as original, temporary.open("xb") as retained:
-                    os.chmod(temporary, 0o600)
-                    while True:
-                        chunk = original.read(1024 * 1024)
-                        if not chunk:
-                            break
-                        total += len(chunk)
-                        if total > info.file_size:
-                            raise Fault("CLOUD_HANDOVER_FILE_SIZE_MISMATCH")
-                        checksum.update(chunk)
-                        retained.write(chunk)
-                    retained.flush()
-                    os.fsync(retained.fileno())
-                if str(total) != file["bytes"] or checksum.hexdigest() != file["sha256"]:
-                    raise Fault("CLOUD_HANDOVER_FILE_DIGEST_MISMATCH")
-                os.link(temporary, path)
-            finally:
-                temporary.unlink(missing_ok=True)
-        atomic(destination / "received-handover.json", manifest)
-    if source_hash != file_hash(source):
-        raise Fault("CLOUD_HANDOVER_SOURCE_CHANGED")
-    return {"manifest": manifest, "archive": source_hash}
+    module = _source_archive_module()
+    return module.extract(input, policy=_source_archive_policy(module))
 
 
 def main():

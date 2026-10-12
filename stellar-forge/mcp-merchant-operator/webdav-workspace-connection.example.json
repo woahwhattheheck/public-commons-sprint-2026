@@ -1,0 +1,41 @@
+{
+  "schema": "stellar-forge.webdav-workspace-connection.v1",
+  "workspaces": {
+    "reports": {
+      "label": "Reviewed reports",
+      "directory": "./webdav-reports",
+      "python": "python3",
+      "browserPort": 0,
+      "sourceProfiles": {
+        "files": {
+          "label": "Reports collection",
+          "source": {
+            "schema": "stellar-forge.webdav-source.v1",
+            "connection": {
+              "rootUrl": "https://files.example.org/remote.php/dav/files/operator/reports/",
+              "auth": {
+                "type": "basic",
+                "usernameEnv": "WEBDAV_USERNAME",
+                "passwordEnv": "WEBDAV_PASSWORD"
+              },
+              "allowLocalHttp": false
+            },
+            "limits": {
+              "maxListingBytes": 4194304,
+              "maxEntries": 10000,
+              "maxFileBytes": 67108864,
+              "timeoutMs": 30000,
+              "maxCaptureMs": 600000
+            }
+          }
+        }
+      },
+      "merchantProfiles": {},
+      "buyerWorkspaces": {},
+      "sourcePackets": {},
+      "runtime": {
+        "port": 0
+      }
+    }
+  }
+}

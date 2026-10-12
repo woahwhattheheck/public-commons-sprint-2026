@@ -1,7 +1,8 @@
 import { MerchantProviderOwners } from './provider-lifecycle.mjs';
 import { merchantToolCatalog, merchantToolFamilies, merchantToolFamily } from './catalog.mjs';
 export { MERCHANT_TOOLS } from './catalog.mjs';
-import { MERCHANT_PROVIDERS, merchantProviderConfigured, merchantRequestBytes } from './providers.mjs';
+import { MERCHANT_PROVIDERS, MERCHANT_PROVIDER_REGISTRY, merchantProviderConfigured, merchantRequestBytes } from './providers.mjs';
+import { captureHostComposition } from './host-profile.mjs';
 
 
 // MIT. MCP merchant operations over the original SF82 release lifecycle and SF30 SDK.
@@ -71,7 +72,7 @@ export class MerchantReleaseOperator {
   }
   get tools() { return structuredClone(this.#tools); }
 
-  #hostFingerprint;
+  #hostFingerprint; #hostComposition;
   inspectHost() {
     if(!this.#hostFingerprint) {
       const stable=value=>Array.isArray(value)?'['+value.map(stable).join(',')+']':
@@ -79,7 +80,11 @@ export class MerchantReleaseOperator {
           .map(key=>JSON.stringify(key)+':'+stable(value[key])).join(',')+'}':JSON.stringify(value);
       this.#hostFingerprint=hash(stable(this.#config));
     }
+    this.#hostComposition??=captureHostComposition({registry:MERCHANT_PROVIDER_REGISTRY,
+      configured:Object.keys(MERCHANT_PROVIDERS).filter(name=>merchantProviderConfigured(name,this.#config)),
+      tools:this.#tools,familyFor:merchantToolFamily,sha256:hash});
     return {schema:'stellar-forge.merchant-host-profile.v1',merchant:this.#config.name,
+      composition:structuredClone(this.#hostComposition),
       configurationFingerprint:this.#hostFingerprint,maxRequestBytes:this.maxRequestBytes,
       capabilities:{tools:this.#tools.length,families:merchantToolFamilies(this.#config)},
       providers:Object.entries(MERCHANT_PROVIDERS)

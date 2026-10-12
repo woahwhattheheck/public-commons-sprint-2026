@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>360Giving publisher workspace</title>
+<link rel="stylesheet" href="/style.css"><script src="/app.js" defer></script>
+</head>
+<body>
+<header><div><p class="eyebrow">Publisher operations</p><h1>360Giving workspace</h1></div><button id="refresh" type="button">Refresh workspace</button></header>
+<main>
+<p id="connection" class="muted">Opening the saved workspace…</p>
+<p id="status" class="notice" role="status" aria-live="polite"></p>
+<section aria-labelledby="editions-heading">
+<div class="section-title"><h2 id="editions-heading">Publisher editions</h2><a href="#intake">Add a source edition</a></div>
+<p class="muted">Each fund has a separate dataset. Its source editions, saved reviews, candidates and complete native builds remain available.</p>
+<div class="grid">
+<label>Dataset<select id="dataset"><option value="">Choose a dataset</option></select></label>
+<label>Source edition<select id="edition"><option value="">Choose an edition</option></select></label>
+</div>
+<div id="edition-panel" hidden>
+<dl id="edition-details"></dl>
+<div class="grid">
+<label>Saved review<select id="decision"><option value="">Start a review</option></select></label>
+<label>Candidate<select id="candidate"><option value="">Original source</option></select></label>
+</div>
+<div class="actions">
+<button id="review" type="button">Open publisher review</button>
+<button id="make-candidate" type="button">Create candidate</button>
+<button id="build-original" type="button">Build original dataset</button>
+<button id="build-candidate" type="button">Build candidate dataset</button>
+<button id="export" class="primary" type="button">Prepare complete handoff</button>
+</div>
+<details><summary>Import an existing decision file</summary>
+<form id="decision-import" class="inline-form"><label>Review decisions JSON<input id="decision-file" type="file" accept=".json,application/json" required></label><button type="submit">Save review</button></form>
+</details>
+</div>
+<p id="empty-editions" class="empty">Add the complete publisher JSON and matching registry record below to begin.</p>
+</section>
+
+<section id="native-panel" aria-labelledby="native-heading" hidden>
+<div class="section-title"><h2 id="native-heading">Native grant dataset</h2><button id="refresh-native" type="button">Refresh builds</button></div>
+<form id="query-form">
+<label>Complete build<select id="build"></select></label>
+<details><summary>Query options</summary>
+<label>Native query parameters<textarea id="query-params" rows="5" spellcheck="false">{"limit":"25","fields":"grant_id,title,recipient_name,amount_awarded,currency,award_date"}</textarea></label>
+<p class="muted">Use string values. Filter with where_grant_id, where_currency or where_recipient_id; use gte_award_date / lte_award_date for dates and sort for grant_id, award_date or title. Remove fields to return all 26 mapped columns.</p></details>
+<div class="actions"><button type="submit">Query grants</button><button id="query-next" type="button" disabled>Next page</button><span id="query-summary" role="status"></span></div>
+</form>
+<div id="query-table" class="table-wrap"></div>
+<details><summary>Complete native response</summary><pre id="query-result"></pre></details>
+</section>
+
+<section id="comparison-panel" aria-labelledby="compare-heading" hidden>
+<h2 id="compare-heading">Compare complete builds</h2>
+<form id="compare-form"><div class="grid"><label>Earlier build<select id="before"></select></label><label>Later build<select id="after"></select></label></div><button type="submit">Compare grants</button></form>
+<label>Saved comparison<select id="comparison"><option value="">Choose a comparison</option></select></label>
+<p id="comparison-summary" class="muted"></p>
+<div id="changes-table" class="table-wrap"></div>
+<div class="actions"><button id="changes-next" type="button" disabled>Next changes</button><button id="changes-download" type="button" disabled>Download all changes</button></div>
+</section>
+
+<section id="intake" aria-labelledby="intake-heading">
+<h2 id="intake-heading">Add a complete source edition</h2>
+<form id="intake-form">
+<div class="grid"><label>Dataset key<input id="intake-dataset" pattern="[a-z0-9][a-z0-9_-]{0,79}" placeholder="digital-ethics-2022" list="dataset-keys" required><datalist id="dataset-keys"></datalist></label>
+<label>Dataset label<input id="intake-label" maxlength="160" placeholder="Digital Ethics Fund 2022" required></label></div>
+<label>Original publisher source URL<input id="source-url" type="url" placeholder="https://publisher.example/grants.json" required></label>
+<div class="grid"><label>Complete 360Giving package<input id="source-file" type="file" accept=".json,application/json" required></label><label>Matching registry record<input id="registry-file" type="file" accept=".json,application/json" required></label>
+<label>Saved source capture, if available<input id="capture-file" type="file" accept=".json,application/json"></label><label>Original transport bytes, if available<input id="transport-file" type="file"></label></div>
+<button type="submit">Retain and prepare edition</button>
+</form>
+</section>
+
+<section aria-labelledby="receive-heading">
+<h2 id="receive-heading">Receive a complete handoff</h2>
+<p class="muted">Receive the publisher source, exact saved decisions, candidate, full native projects and portable operator source. Each fund keeps its original dataset key.</p>
+<form id="receive-form" class="inline-form"><label>Complete operator handoff ZIP<input id="receive-file" type="file" accept=".zip,application/zip" required></label><button type="submit">Receive and reopen</button></form>
+</section>
+
+<section aria-labelledby="requests-heading">
+<h2 id="requests-heading">Saved work</h2>
+<p class="muted">Every operation retains its input and result. Reopen an interrupted request to continue that same work.</p>
+<div id="pending-browser"></div><div id="requests" class="request-list"></div>
+<details id="request-details"><summary>Selected operation</summary><pre id="request-result"></pre></details>
+</section>
+</main>
+<footer>360Giving publisher workspace · Complete sources and original native dataset engine</footer>
+</body></html>

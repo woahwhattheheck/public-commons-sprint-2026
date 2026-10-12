@@ -6,7 +6,8 @@ and reopen the restored project. These commands use the same workbench, archive,
 publisher, dataset and seller implementation as the Workspace tab and CLI.
 
 The transferred project includes captured provider pages, source declarations
-and reviewed field meanings, publisher plans and history, retained dataset
+and reviewed field meanings, complete refresh comparisons and operator decisions,
+publisher plans and history, retained dataset
 versions, merchant packages, seller release history and prepared buyer
 configurations. Receiving retains original source bytes and release digests,
 then binds their installed capture and handler locations to the receiving
@@ -216,3 +217,10 @@ The complete customer archive, file inventory, original source declaration,
 reviewed meanings and receiving journal are retained in the chosen output
 directory. The original project's captures and publications supply the data
 throughout this workflow.
+
+## Continue a received source refresh
+
+The [reviewed refresh workflow](REVIEWED_REFRESH.md) compares complete retained
+editions, selects an accepted successor and preserves the previous publication.
+Its comparison files and decisions travel in this same whole-workspace archive.
+The seven refresh tools operate on the received alias and its existing owner.

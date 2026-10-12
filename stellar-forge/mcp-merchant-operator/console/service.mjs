@@ -3,8 +3,10 @@ import { readFile } from 'node:fs/promises';
 import { basename, dirname, resolve, join } from 'node:path';
 import { timingSafeEqual } from 'node:crypto';
 import { merchantToolFamily } from '../catalog.mjs';
-import { createConsoleCustomers } from './customers.mjs';
+import { compareHostProfiles } from '../host-profile.mjs';
+import { createConsoleCustomers, customerManifestAccess } from './customers.mjs';
 import { createMerchantWorkflows } from './workflows.mjs';
+import { createMerchantWorkflowRecipes, MAX_WORKFLOW_RECIPE_REQUEST_BYTES } from './workflow-recipes.mjs';
 import { MerchantConsoleStore, CONSOLE_SCHEMA, canonical, digest, fail } from './store.mjs';
 
 const ROOT = new URL('./public/', import.meta.url);
@@ -12,6 +14,7 @@ const assets = new Map([
   ['/operator/', ['index.html', 'text/html; charset=utf-8']],
   ['/operator/app.mjs', ['app.mjs', 'text/javascript; charset=utf-8']],
   ['/operator/workflows.mjs', ['workflows.mjs', 'text/javascript; charset=utf-8']],
+  ['/operator/workflow-recipes.mjs', ['workflow-recipes.mjs', 'text/javascript; charset=utf-8']],
   ['/operator/style.css', ['style.css', 'text/css; charset=utf-8']]
 ]);
 const equal = (a,b) => typeof a === 'string' && typeof b === 'string' &&
@@ -97,10 +100,11 @@ export async function createMerchantConsole({operator,configPath,directory,autho
     if (authorization) try { await authorization.authorizeTool(context,name,args); }
     catch(error){error.merchantConsoleAuthorization=true;throw error;}
   }
-  const deliveryAccess = value => {
-    const selection=value.identity;
-    return {name:(selection.family==='core'?'merchant_client_export':'merchant_opensearch_deployment')+'_manifest',
-      args:{exportId:selection.exportId,...(selection.workspace?{workspace:selection.workspace}:{})}};
+  const deliveryAccess = value => customerManifestAccess(value.identity);
+  const bindingView = value => {
+    const {host,...rest}=value;
+    return {...rest,merchant:host.merchant,toolCount:host.capabilities?.tools??null,
+      compositionFingerprint:host.composition?.fingerprint??null,sourceCommit:host.composition?.sourceCommit??null};
   };
   async function visibleProfile(profileId,context) {
     const profile=store.profile(profileId), drafts=[],calls=[];
@@ -113,7 +117,9 @@ export async function createMerchantConsole({operator,configPath,directory,autho
       const access=deliveryAccess(value);
       if(await allowed(context,access.name,access.args)) deliveries.push(customers.view(value));
     }
-    return {profile,drafts,calls,deliveries,hostBound:profile.hostFingerprint===snapshot().configurationFingerprint};
+    return {profile,drafts,calls,deliveries,bindings:store.hostBindings(profileId).map(bindingView),
+      hostBound:profile.hostFingerprint===snapshot().configurationFingerprint,
+      compositionBound:profile.host.composition?.fingerprint?profile.host.composition.fingerprint===operator.inspectHost().composition?.fingerprint:null};
   }
   async function startCall(input,context,workflowGuard) {
     if (closing) throw fail('CONSOLE_CLOSING','The operator interface is closing.',503);
@@ -149,6 +155,7 @@ export async function createMerchantConsole({operator,configPath,directory,autho
     releaseStore:resolve(dirname(configPath),sourceConfiguration.releaseStore)});
   const workflows=createMerchantWorkflows({store,definitions,getHost:snapshot,startCall,requireTool,
     isCallActive:id=>active.has(id),waitCall:async id=>{await active.get(id);return store.call(id);}});
+  const recipes=createMerchantWorkflowRecipes({store,definitions,getHost:snapshot,requireTool,requireOpen});
   function handler(req,res) {
     let url;try{url=new URL(req.url,'http://127.0.0.1');}catch{return Promise.resolve(false);}
     if(url.pathname!=='/operator'&&!url.pathname.startsWith('/operator/'))return Promise.resolve(false);
@@ -206,6 +213,12 @@ export async function createMerchantConsole({operator,configPath,directory,autho
         if(!value)throw fail('CONSOLE_TOOL_UNAVAILABLE','Choose a configured native tool.',404);
         send(res,200,{definition:value,family:merchantToolFamily(value.name)??'core',schemaSha256:digest(canonical(value))});return true;
       }
+      if(req.method==='GET'&&route==='workflow-recipes'){
+        send(res,200,await recipes.list(url.searchParams.get('profile'),context));return true;
+      }
+      if(req.method==='GET'&&route.startsWith('workflow-recipe-install/')){
+        send(res,200,await recipes.installation(decodeURIComponent(route.slice('workflow-recipe-install/'.length)),context));return true;
+      }
       if(req.method==='GET'&&route==='workflows'){
         send(res,200,await workflows.list(url.searchParams.get('profile'),context));return true;
       }
@@ -217,6 +230,22 @@ export async function createMerchantConsole({operator,configPath,directory,autho
         send(res,200,{run:await workflows.run(decodeURIComponent(route.slice(13)),context)});return true;
       }
       if(req.method==='GET'&&route==='profiles'){send(res,200,{profiles:store.profiles(),host:snapshot()});return true;}
+      if(req.method==='GET'&&route.startsWith('host-review/')){
+        const profile=store.profile(decodeURIComponent(route.slice(12))),selected=url.searchParams.get('revision');
+        const binding=selected===null?null:store.hostBinding(profile.id,Number(selected));
+        const comparison=compareHostProfiles(binding?.host??profile.host,snapshot());
+        const review={...comparison,recordedAt:new Date().toISOString(),
+          profile:{id:profile.id,name:profile.name,revision:profile.revision,bindingRevision:profile.bindingRevision??null},
+          baselineBinding:binding?bindingView(binding):null};
+        const packet={...review,contentSha256:digest(canonical(review))};
+        if(url.searchParams.get('download')==='1')attachment(res,profile.id+'-host-review.json',json(packet));
+        else send(res,200,packet);
+        return true;
+      }
+      if(req.method==='GET'&&route.startsWith('host-binding/')){
+        const profileId=decodeURIComponent(route.slice(13));
+        send(res,200,{binding:store.hostBinding(profileId,Number(url.searchParams.get('revision')))});return true;
+      }
       if(req.method==='GET'&&route.startsWith('profile/')){
         send(res,200,await visibleProfile(decodeURIComponent(route.slice(8)),context));return true;
       }
@@ -268,18 +297,20 @@ export async function createMerchantConsole({operator,configPath,directory,autho
       // The console's draft metadata must fit around a full original native packet.
       // Dispatch still checks the exact original MCP envelope against maxRequestBytes.
       let input;entry.reading=true;
-      try{input=await body(req,route==='import'?128*1024*1024:operator.maxRequestBytes+8192);}
+      try{input=await body(req,route==='import'?128*1024*1024:route.startsWith('workflow-recipe-')?MAX_WORKFLOW_RECIPE_REQUEST_BYTES:operator.maxRequestBytes+8192);}
       finally{entry.reading=false;}
       requireOpen();
       if(!input||typeof input!=='object'||Array.isArray(input))throw fail('CONSOLE_JSON','Supply an operator request object.',400);
       if(route==='customers'){send(res,202,{delivery:await customers.start(input,req)});return true;}
       if(route==='customer-pause'){
-        const record=store.delivery(input.id),selection=record.identity;
-        await requireTool(context,(selection.family==='core'?'merchant_client_export':'merchant_opensearch_deployment')+'_manifest',
-          {exportId:selection.exportId,...(selection.workspace?{workspace:selection.workspace}:{})});
+        const record=store.delivery(input.id),access=deliveryAccess(record);
+        await requireTool(context,access.name,access.args);
         requireOpen();
         send(res,200,{delivery:customers.pause(input.id)});return true;
       }
+      if(route==='workflow-recipe-export'){send(res,200,await recipes.export(input,context));return true;}
+      if(route==='workflow-recipe-review'){send(res,200,await recipes.review(input,context));return true;}
+      if(route==='workflow-recipe-install'){send(res,200,await recipes.install(input,context));return true;}
       if(route==='workflows'){send(res,200,await workflows.save(input,context));return true;}
       if(route==='workflow-runs'){send(res,202,await workflows.start(input,context));return true;}
       if(route==='workflow-resume'){send(res,202,await workflows.resume(input,context));return true;}
@@ -302,7 +333,7 @@ export async function createMerchantConsole({operator,configPath,directory,autho
           await requireTool(context,value.tool,JSON.parse(value.argumentsJson));
         for(const value of packet.deliveries??[]) {const access=deliveryAccess(value);await requireTool(context,access.name,access.args);}
         requireOpen();
-        send(res,200,store.import(packet));return true;
+        send(res,200,store.import(packet,{isActiveCall:call=>active.has(call.id)}));return true;
       }
       throw fail('CONSOLE_ROUTE','Choose a configured operator action.',404);
     }catch(error){
@@ -311,7 +342,7 @@ export async function createMerchantConsole({operator,configPath,directory,autho
     }
   }
   return {
-    store,handler,snapshot,startCall,workflows,
+    store,handler,snapshot,startCall,workflows,recipes,
     beginClose,
     close(){
       if(!closed){

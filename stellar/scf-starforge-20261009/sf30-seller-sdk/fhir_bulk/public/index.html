@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>FHIR Bulk Data · Stellar Forge</title>
+<link rel="stylesheet" href="/style.css">
+<script type="module" src="/app.js"></script>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to workspace</a>
+<header class="app-header">
+  <div><span class="product-family">Stellar Forge · Data operations</span><h1>FHIR Bulk Data</h1></div>
+  <div class="header-actions"><span id="workspace-label">Opening workspace</span><button id="refresh" type="button">Refresh</button></div>
+</header>
+<div class="app-layout">
+  <aside class="sidebar" aria-label="Workspace navigation">
+    <nav id="navigation" aria-label="Bulk Data sections">
+      <button type="button" data-section="overview" aria-current="page">Overview</button>
+      <button type="button" data-section="exports">Server exports</button>
+      <button type="button" data-section="sources">Original resources</button>
+      <button type="button" data-section="mapping">Dataset mapping</button>
+      <button type="button" data-section="datasets">Dataset editions</button>
+      <button type="button" data-section="query">Native query</button>
+      <button type="button" data-section="compare">Edition changes</button>
+      <button type="button" data-section="delivery">Delivery and reopen</button>
+    </nav>
+    <div class="sidebar-context" id="selection-context"></div>
+  </aside>
+  <main id="main" tabindex="-1">
+    <div id="notice" role="status" aria-live="polite" hidden></div>
+    <div id="pending" aria-live="polite" hidden></div>
+    <div id="content" aria-busy="true"><section class="panel"><h2>Opening workspace</h2><p>Reading retained exports, original resources and dataset editions.</p></section></div>
+  </main>
+</div>
+<footer class="app-footer"><span>Original resources · Reviewed mappings · Native dataset engine</span><span id="connection-state">Connecting</span></footer>
+<dialog id="inspect-dialog" aria-labelledby="inspect-title">
+  <div class="dialog-header"><h2 id="inspect-title">Original record</h2><button type="button" data-close-dialog>Close</button></div>
+  <div id="inspect-content"></div>
+</dialog>
+</body>
+</html>

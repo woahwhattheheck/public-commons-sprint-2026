@@ -48,14 +48,29 @@
       "bytes": 47099
     },
     {
+      "path": "native/desk_receiving.mjs",
+      "git_blob": "51792bdde212521a3043a366d46521eda17073c0",
+      "bytes": 25254
+    },
+    {
       "path": "native/native_fixture.py",
       "git_blob": "afb72f8b2279d0e99b637d8d4e5a15d5bd32f5b4",
       "bytes": 11287
     },
     {
+      "path": "native/provision_instance.py",
+      "git_blob": "543ed212786e1ce9dc1d2731132769834dab86e5",
+      "bytes": 5825
+    },
+    {
       "path": "native/README.md",
-      "git_blob": "0227caed1a71d724f10c4be7c0755a29b9eb3207",
-      "bytes": 7010
+      "git_blob": "6424911fafd6dbf31ca56aedcd8f76f2f2c76eaf",
+      "bytes": 16335
+    },
+    {
+      "path": "native/receive_host.py",
+      "git_blob": "ec53ee50ac6b8bcf4e3aa9d5d2d4ab79edfa5d09",
+      "bytes": 44230
     },
     {
       "path": "native/run_native.py",
@@ -64,8 +79,8 @@
     },
     {
       "path": "native/runtime-request.json",
-      "git_blob": "e1e44f84ed80689fd08f65be603b4da6c9fe9ff3",
-      "bytes": 1655
+      "git_blob": "3cb0d37176578868363abc89dba5c8c5688dd561",
+      "bytes": 3138
     },
     {
       "path": "operate_inventory.py",

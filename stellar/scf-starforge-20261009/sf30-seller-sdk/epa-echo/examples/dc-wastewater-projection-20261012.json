@@ -1,0 +1,2034 @@
+{
+  "schema": "stellar-forge.epa-echo-source-projection-example.v1",
+  "sourcePackage": {
+    "path": "examples/dc-wastewater-source-20261012.json",
+    "bytes": 826432,
+    "sha256": "c737c859126057359c3918e20e4553651b31ab14532060c64aa49f25a7fe24d9",
+    "gitBlob": "413c5b35e907c60f4db04ded31ae33e29de10beb"
+  },
+  "sourceSelection": {
+    "facilityIds": [
+      "110072033839",
+      "110072235550",
+      "110029030144",
+      "110072237877"
+    ]
+  },
+  "meaning": "A complete local projection of the eight retained original EPA source responses. No additional EPA request or running application identity is represented by this example.",
+  "counts": {
+    "facilities": 4,
+    "permits": 25,
+    "compliance": 10,
+    "quarters": 4836,
+    "inspections": 54,
+    "enforcement": 8,
+    "metadata": 6624,
+    "source-fields": 9300
+  },
+  "facilities": [
+    {
+      "facilityId": "110072033839",
+      "facilityName": "23RD STREET NW & VIRGINIA AVE NW",
+      "captured": true,
+      "facility": {
+        "facilityId": "110072033839",
+        "facilityName": "23RD STREET NW & VIRGINIA AVE NW",
+        "street": "23RD STREET NW & VIRGINIA AVE NW",
+        "city": "WASHINGTON",
+        "state": "DC",
+        "zip": "20037",
+        "county": "District of Columbia",
+        "latitude": "38.89728",
+        "longitude": "-77.05014",
+        "permitCount": "2",
+        "programmes": "RCRA",
+        "sourceMessage": "Success",
+        "sourcePageSha256": "c35cd62c64bde0df073a735199c55195872d3daa7164c16b354f56307af4de14",
+        "sourceObservedAt": "2026-10-12",
+        "sourceUrl": "https://echodata.epa.gov/echo/dfr_rest_services.get_dfr?output=JSON&p_id=110072033839"
+      },
+      "permitCount": 2,
+      "programmes": [
+        "RCRA"
+      ],
+      "sourceMessage": "Success",
+      "complianceSources": [
+        {
+          "Statute": "RCRA",
+          "SourceID": "DCP000004047",
+          "CurrentSNC": "No",
+          "Description": null,
+          "CurrentAsOf": "10/10/2026",
+          "QtrsInNC": "0"
+        }
+      ],
+      "reportedCurrentSNC": 0,
+      "systemExtractDates": {
+        "Dates": [
+          {
+            "EPASystem": "RCRAInfo",
+            "SystemExtractDate": "10/09/2026"
+          },
+          {
+            "EPASystem": "SDWIS",
+            "SystemExtractDate": "10/07/2026"
+          }
+        ]
+      },
+      "programmePeriods": [
+        {
+          "Program": "RCRA",
+          "StartDate": "10/01/2023",
+          "EndDate": "09/30/2026"
+        }
+      ],
+      "sourceDuplicates": [
+        {
+          "path": "/Results/SABACSDemographics",
+          "occurrence": 2,
+          "previousStart": 8629,
+          "previousEnd": 8632,
+          "start": 9805,
+          "end": 9808
+        }
+      ],
+      "sections": [
+        {
+          "name": "Message",
+          "type": "string",
+          "entries": null
+        },
+        {
+          "name": "MultipleFRSFacilities",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "RegistryID",
+          "type": "string",
+          "entries": null
+        },
+        {
+          "name": "Reports",
+          "type": "object",
+          "entries": 4
+        },
+        {
+          "name": "Permits",
+          "type": "array",
+          "entries": 2
+        },
+        {
+          "name": "SystemExtractDates",
+          "type": "object",
+          "entries": 1
+        },
+        {
+          "name": "EnforcementComplianceSummaries",
+          "type": "object",
+          "entries": 2
+        },
+        {
+          "name": "NAICS",
+          "type": "object",
+          "entries": 1
+        },
+        {
+          "name": "SBEEventTotals",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "SIC",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "EffluentGuidelines",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "InspectionEnforcementSummary",
+          "type": "object",
+          "entries": 2
+        },
+        {
+          "name": "ComplianceHistory",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "ComplianceSummary",
+          "type": "object",
+          "entries": 2
+        },
+        {
+          "name": "CWA3YrCompliance",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "CWARNCCompliance",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "CWA3YrD80D90Counts",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "CWAEffluentComplianceEXP",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "CWAPSCompliance",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "CWAPSComplianceNew",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "CWASECompliance",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "CWACSCompliance",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "CWACSComplianceNew",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "CWAEffluentALRExceedencesEXP",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "AirCompliance",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "BflmCompliance",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "RCRACompliance",
+          "type": "object",
+          "entries": 25
+        },
+        {
+          "name": "SDWISCompliance",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "Watersheds",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "AssessedWaters",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "Notices",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "FormalActions",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "ICISFormalActions",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "CaseFormalActions",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "TRIHistory",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "TRIReleases",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "DmrPollLoads",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "RCRAWasteHistory",
+          "type": "object",
+          "entries": 2
+        },
+        {
+          "name": "AirQuality",
+          "type": "object",
+          "entries": 13
+        },
+        {
+          "name": "AirQualityNAAs",
+          "type": "object",
+          "entries": 1
+        },
+        {
+          "name": "SiteVisits",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "SanitarySurveys",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "ViolationsEnforcementActions",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "LeadAndCopperRule5Yr",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "Tribes",
+          "type": "array",
+          "entries": 0
+        },
+        {
+          "name": "WebFireDocuments",
+          "type": "array",
+          "entries": 0
+        },
+        {
+          "name": "CAEDDocuments",
+          "type": "array",
+          "entries": 0
+        },
+        {
+          "name": "SpatialMetadata",
+          "type": "object",
+          "entries": 8
+        },
+        {
+          "name": "ACS2023Demographics",
+          "type": "object",
+          "entries": 39
+        },
+        {
+          "name": "SABACSDemographics",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "ACS2024Demographics",
+          "type": "object",
+          "entries": 39
+        },
+        {
+          "name": "MinorTTDemographics",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "AWSDocs",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "Industries",
+          "type": "string",
+          "entries": null
+        },
+        {
+          "name": "MapOutput",
+          "type": "object",
+          "entries": 8
+        }
+      ],
+      "tableCounts": {
+        "facilities": 1,
+        "permits": 2,
+        "compliance": 1,
+        "quarters": 12,
+        "inspections": 0,
+        "enforcement": 0,
+        "metadata": 42,
+        "source-fields": 429
+      },
+      "sourcePageSha256": "c35cd62c64bde0df073a735199c55195872d3daa7164c16b354f56307af4de14",
+      "sourceObservedAt": "2026-10-12",
+      "sourceUrl": "https://echodata.epa.gov/echo/dfr_rest_services.get_dfr?output=JSON&p_id=110072033839"
+    },
+    {
+      "facilityId": "110072235550",
+      "facilityName": "AYOBAMI PETERS",
+      "captured": true,
+      "facility": {
+        "facilityId": "110072235550",
+        "facilityName": "AYOBAMI PETERS",
+        "street": "5000 OVERLOO 26TH AND K STREET NW",
+        "city": "WASHINGTON",
+        "state": "DC",
+        "zip": "22304",
+        "county": "District of Columbia",
+        "latitude": "",
+        "longitude": "",
+        "permitCount": "2",
+        "programmes": "RCRA",
+        "sourceMessage": "Success",
+        "sourcePageSha256": "9e10f8a1915dd371b252ef87115c46e8883e1308fbfed30c5507c26f0e663b71",
+        "sourceObservedAt": "2026-10-12",
+        "sourceUrl": "https://echodata.epa.gov/echo/dfr_rest_services.get_dfr?output=JSON&p_id=110072235550"
+      },
+      "permitCount": 2,
+      "programmes": [
+        "RCRA"
+      ],
+      "sourceMessage": "Success",
+      "complianceSources": [
+        {
+          "Statute": "RCRA",
+          "SourceID": "DCP000004065",
+          "CurrentSNC": "No",
+          "Description": null,
+          "CurrentAsOf": "10/10/2026",
+          "QtrsInNC": "0"
+        }
+      ],
+      "reportedCurrentSNC": 0,
+      "systemExtractDates": {
+        "Dates": [
+          {
+            "EPASystem": "RCRAInfo",
+            "SystemExtractDate": "10/09/2026"
+          },
+          {
+            "EPASystem": "SDWIS",
+            "SystemExtractDate": "10/07/2026"
+          }
+        ]
+      },
+      "programmePeriods": [
+        {
+          "Program": "RCRA",
+          "StartDate": "10/01/2023",
+          "EndDate": "09/30/2026"
+        }
+      ],
+      "sourceDuplicates": [
+        {
+          "path": "/Results/SABACSDemographics",
+          "occurrence": 2,
+          "previousStart": 6189,
+          "previousEnd": 6192,
+          "start": 7366,
+          "end": 7369
+        }
+      ],
+      "sections": [
+        {
+          "name": "Message",
+          "type": "string",
+          "entries": null
+        },
+        {
+          "name": "MultipleFRSFacilities",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "RegistryID",
+          "type": "string",
+          "entries": null
+        },
+        {
+          "name": "Reports",
+          "type": "object",
+          "entries": 4
+        },
+        {
+          "name": "Permits",
+          "type": "array",
+          "entries": 2
+        },
+        {
+          "name": "SystemExtractDates",
+          "type": "object",
+          "entries": 1
+        },
+        {
+          "name": "EnforcementComplianceSummaries",
+          "type": "object",
+          "entries": 2
+        },
+        {
+          "name": "NAICS",
+          "type": "object",
+          "entries": 1
+        },
+        {
+          "name": "SBEEventTotals",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "SIC",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "EffluentGuidelines",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "InspectionEnforcementSummary",
+          "type": "object",
+          "entries": 2
+        },
+        {
+          "name": "ComplianceHistory",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "ComplianceSummary",
+          "type": "object",
+          "entries": 2
+        },
+        {
+          "name": "CWA3YrCompliance",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "CWARNCCompliance",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "CWA3YrD80D90Counts",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "CWAEffluentComplianceEXP",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "CWAPSCompliance",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "CWAPSComplianceNew",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "CWASECompliance",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "CWACSCompliance",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "CWACSComplianceNew",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "CWAEffluentALRExceedencesEXP",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "AirCompliance",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "BflmCompliance",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "RCRACompliance",
+          "type": "object",
+          "entries": 25
+        },
+        {
+          "name": "SDWISCompliance",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "Watersheds",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "AssessedWaters",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "Notices",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "FormalActions",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "ICISFormalActions",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "CaseFormalActions",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "TRIHistory",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "TRIReleases",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "DmrPollLoads",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "RCRAWasteHistory",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "AirQuality",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "AirQualityNAAs",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "SiteVisits",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "SanitarySurveys",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "ViolationsEnforcementActions",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "LeadAndCopperRule5Yr",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "Tribes",
+          "type": "array",
+          "entries": 0
+        },
+        {
+          "name": "WebFireDocuments",
+          "type": "array",
+          "entries": 0
+        },
+        {
+          "name": "CAEDDocuments",
+          "type": "array",
+          "entries": 0
+        },
+        {
+          "name": "SpatialMetadata",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "ACS2023Demographics",
+          "type": "object",
+          "entries": 39
+        },
+        {
+          "name": "SABACSDemographics",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "ACS2024Demographics",
+          "type": "object",
+          "entries": 39
+        },
+        {
+          "name": "MinorTTDemographics",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "AWSDocs",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "Industries",
+          "type": "string",
+          "entries": null
+        },
+        {
+          "name": "MapOutput",
+          "type": "object",
+          "entries": 8
+        }
+      ],
+      "tableCounts": {
+        "facilities": 1,
+        "permits": 2,
+        "compliance": 1,
+        "quarters": 12,
+        "inspections": 0,
+        "enforcement": 0,
+        "metadata": 38,
+        "source-fields": 373
+      },
+      "sourcePageSha256": "9e10f8a1915dd371b252ef87115c46e8883e1308fbfed30c5507c26f0e663b71",
+      "sourceObservedAt": "2026-10-12",
+      "sourceUrl": "https://echodata.epa.gov/echo/dfr_rest_services.get_dfr?output=JSON&p_id=110072235550"
+    },
+    {
+      "facilityId": "110029030144",
+      "facilityName": "BLUE PLAINS WASTEWATER TREATMENT PLANT",
+      "captured": true,
+      "facility": {
+        "facilityId": "110029030144",
+        "facilityName": "BLUE PLAINS WASTEWATER TREATMENT PLANT",
+        "street": "5000 OVERLOOK AVE SW",
+        "city": "WASHINGTON",
+        "state": "DC",
+        "zip": "20032",
+        "county": "District of Columbia",
+        "latitude": "38.816701",
+        "longitude": "-77.032732",
+        "permitCount": "19",
+        "programmes": "CAA, CWA, RCRA, SDWA",
+        "sourceMessage": "Success",
+        "sourcePageSha256": "c925d375d5e38761e8e56296bfb4dd345c90b9e8c73d593d59005f28b4b0d8c7",
+        "sourceObservedAt": "2026-10-12",
+        "sourceUrl": "https://echodata.epa.gov/echo/dfr_rest_services.get_dfr?output=JSON&p_id=110029030144"
+      },
+      "permitCount": 19,
+      "programmes": [
+        "CAA",
+        "CWA",
+        "RCRA",
+        "SDWA"
+      ],
+      "sourceMessage": "Success",
+      "complianceSources": [
+        {
+          "Statute": "CAA",
+          "SourceID": "DC0000001100100142",
+          "CurrentSNC": "Yes",
+          "Description": "Addressed-State",
+          "CurrentAsOf": "10/10/2026",
+          "QtrsInNC": "12"
+        },
+        {
+          "Statute": "CAA",
+          "SourceID": "DC00000011001G0155",
+          "CurrentSNC": "No",
+          "Description": null,
+          "CurrentAsOf": "10/10/2026",
+          "QtrsInNC": "0"
+        },
+        {
+          "Statute": "CWA",
+          "SourceID": "DC0021199",
+          "CurrentSNC": "No",
+          "Description": null,
+          "CurrentAsOf": "06/30/2026",
+          "QtrsInNC": "7"
+        },
+        {
+          "Statute": "CWA",
+          "SourceID": "DCL021199",
+          "CurrentSNC": "No",
+          "Description": null,
+          "CurrentAsOf": "06/30/2026",
+          "QtrsInNC": "0"
+        },
+        {
+          "Statute": "RCRA",
+          "SourceID": "DCD000797761",
+          "CurrentSNC": "No",
+          "Description": null,
+          "CurrentAsOf": "10/10/2026",
+          "QtrsInNC": "0"
+        },
+        {
+          "Statute": "RCRA",
+          "SourceID": "DCP000003544",
+          "CurrentSNC": "No",
+          "Description": null,
+          "CurrentAsOf": "10/10/2026",
+          "QtrsInNC": "0"
+        },
+        {
+          "Statute": "SDWA",
+          "SourceID": "DC0000002",
+          "CurrentSNC": "No",
+          "Description": null,
+          "CurrentAsOf": "06/30/2026",
+          "QtrsInNC": "0"
+        }
+      ],
+      "reportedCurrentSNC": 1,
+      "systemExtractDates": {
+        "Dates": [
+          {
+            "EPASystem": "ICIS-Air",
+            "SystemExtractDate": "10/09/2026"
+          },
+          {
+            "EPASystem": "ICIS-NPDES",
+            "SystemExtractDate": "10/09/2026"
+          },
+          {
+            "EPASystem": "RCRAInfo",
+            "SystemExtractDate": "10/09/2026"
+          },
+          {
+            "EPASystem": "SDWIS",
+            "SystemExtractDate": "10/07/2026"
+          }
+        ]
+      },
+      "programmePeriods": [
+        {
+          "Program": "CAA",
+          "StartDate": "10/01/2023",
+          "EndDate": "09/30/2026"
+        },
+        {
+          "Program": "CWA",
+          "StartDate": "07/01/2023",
+          "EndDate": "06/30/2026"
+        },
+        {
+          "Program": "RCRA",
+          "StartDate": "10/01/2023",
+          "EndDate": "09/30/2026"
+        },
+        {
+          "Program": "SDWA",
+          "StartDate": "07/01/2023",
+          "EndDate": "06/30/2026"
+        }
+      ],
+      "sourceDuplicates": [],
+      "sections": [
+        {
+          "name": "Message",
+          "type": "string",
+          "entries": null
+        },
+        {
+          "name": "MultipleFRSFacilities",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "RegistryID",
+          "type": "string",
+          "entries": null
+        },
+        {
+          "name": "Reports",
+          "type": "object",
+          "entries": 4
+        },
+        {
+          "name": "Permits",
+          "type": "array",
+          "entries": 19
+        },
+        {
+          "name": "SystemExtractDates",
+          "type": "object",
+          "entries": 1
+        },
+        {
+          "name": "EnforcementComplianceSummaries",
+          "type": "object",
+          "entries": 2
+        },
+        {
+          "name": "NAICS",
+          "type": "object",
+          "entries": 1
+        },
+        {
+          "name": "SBEEventTotals",
+          "type": "object",
+          "entries": 1
+        },
+        {
+          "name": "SIC",
+          "type": "object",
+          "entries": 1
+        },
+        {
+          "name": "EffluentGuidelines",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "InspectionEnforcementSummary",
+          "type": "object",
+          "entries": 2
+        },
+        {
+          "name": "ComplianceHistory",
+          "type": "object",
+          "entries": 2
+        },
+        {
+          "name": "ComplianceSummary",
+          "type": "object",
+          "entries": 2
+        },
+        {
+          "name": "CWA3YrCompliance",
+          "type": "object",
+          "entries": 2
+        },
+        {
+          "name": "CWARNCCompliance",
+          "type": "object",
+          "entries": 2
+        },
+        {
+          "name": "CWA3YrD80D90Counts",
+          "type": "object",
+          "entries": 2
+        },
+        {
+          "name": "CWAEffluentComplianceEXP",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "CWAPSCompliance",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "CWAPSComplianceNew",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "CWASECompliance",
+          "type": "object",
+          "entries": 2
+        },
+        {
+          "name": "CWACSCompliance",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "CWACSComplianceNew",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "CWAEffluentALRExceedencesEXP",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "AirCompliance",
+          "type": "object",
+          "entries": 2
+        },
+        {
+          "name": "BflmCompliance",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "RCRACompliance",
+          "type": "object",
+          "entries": 25
+        },
+        {
+          "name": "SDWISCompliance",
+          "type": "object",
+          "entries": 27
+        },
+        {
+          "name": "Watersheds",
+          "type": "object",
+          "entries": 1
+        },
+        {
+          "name": "AssessedWaters",
+          "type": "object",
+          "entries": 1
+        },
+        {
+          "name": "Notices",
+          "type": "object",
+          "entries": 2
+        },
+        {
+          "name": "FormalActions",
+          "type": "object",
+          "entries": 2
+        },
+        {
+          "name": "ICISFormalActions",
+          "type": "object",
+          "entries": 2
+        },
+        {
+          "name": "CaseFormalActions",
+          "type": "object",
+          "entries": 2
+        },
+        {
+          "name": "TRIHistory",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "TRIReleases",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "DmrPollLoads",
+          "type": "object",
+          "entries": 2
+        },
+        {
+          "name": "RCRAWasteHistory",
+          "type": "object",
+          "entries": 2
+        },
+        {
+          "name": "AirQuality",
+          "type": "object",
+          "entries": 13
+        },
+        {
+          "name": "AirQualityNAAs",
+          "type": "object",
+          "entries": 1
+        },
+        {
+          "name": "SiteVisits",
+          "type": "object",
+          "entries": 1
+        },
+        {
+          "name": "SanitarySurveys",
+          "type": "object",
+          "entries": 1
+        },
+        {
+          "name": "ViolationsEnforcementActions",
+          "type": "object",
+          "entries": 1
+        },
+        {
+          "name": "LeadAndCopperRule5Yr",
+          "type": "object",
+          "entries": 1
+        },
+        {
+          "name": "Tribes",
+          "type": "array",
+          "entries": 0
+        },
+        {
+          "name": "WebFireDocuments",
+          "type": "array",
+          "entries": 0
+        },
+        {
+          "name": "CAEDDocuments",
+          "type": "array",
+          "entries": 0
+        },
+        {
+          "name": "SpatialMetadata",
+          "type": "object",
+          "entries": 8
+        },
+        {
+          "name": "ACS2023Demographics",
+          "type": "object",
+          "entries": 39
+        },
+        {
+          "name": "SABACS2023Demographics",
+          "type": "object",
+          "entries": 3
+        },
+        {
+          "name": "ACS2024Demographics",
+          "type": "object",
+          "entries": 39
+        },
+        {
+          "name": "SABACS2024Demographics",
+          "type": "object",
+          "entries": 3
+        },
+        {
+          "name": "MinorTTDemographics",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "AWSDocs",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "Industries",
+          "type": "string",
+          "entries": null
+        },
+        {
+          "name": "MapOutput",
+          "type": "object",
+          "entries": 8
+        }
+      ],
+      "tableCounts": {
+        "facilities": 1,
+        "permits": 19,
+        "compliance": 7,
+        "quarters": 4800,
+        "inspections": 54,
+        "enforcement": 8,
+        "metadata": 263,
+        "source-fields": 8112
+      },
+      "sourcePageSha256": "c925d375d5e38761e8e56296bfb4dd345c90b9e8c73d593d59005f28b4b0d8c7",
+      "sourceObservedAt": "2026-10-12",
+      "sourceUrl": "https://echodata.epa.gov/echo/dfr_rest_services.get_dfr?output=JSON&p_id=110029030144"
+    },
+    {
+      "facilityId": "110072237877",
+      "facilityName": "PUMP STATION - 9TH & D ST SW, DC 20024",
+      "captured": true,
+      "facility": {
+        "facilityId": "110072237877",
+        "facilityName": "PUMP STATION - 9TH & D ST SW, DC 20024",
+        "street": "9TH & D ST SW",
+        "city": "WASHINGTON",
+        "state": "DC",
+        "zip": "20024",
+        "county": "District of Columbia",
+        "latitude": "38.89476",
+        "longitude": "-76.99375",
+        "permitCount": "2",
+        "programmes": "RCRA",
+        "sourceMessage": "Success",
+        "sourcePageSha256": "3240bfb439f19f7d3ec14c74e96b23cc52bf2bf85f22642c5d6e57457fc680e9",
+        "sourceObservedAt": "2026-10-12",
+        "sourceUrl": "https://echodata.epa.gov/echo/dfr_rest_services.get_dfr?output=JSON&p_id=110072237877"
+      },
+      "permitCount": 2,
+      "programmes": [
+        "RCRA"
+      ],
+      "sourceMessage": "Success",
+      "complianceSources": [
+        {
+          "Statute": "RCRA",
+          "SourceID": "DCP000004064",
+          "CurrentSNC": "No",
+          "Description": null,
+          "CurrentAsOf": "10/10/2026",
+          "QtrsInNC": "0"
+        }
+      ],
+      "reportedCurrentSNC": 0,
+      "systemExtractDates": {
+        "Dates": [
+          {
+            "EPASystem": "RCRAInfo",
+            "SystemExtractDate": "10/09/2026"
+          },
+          {
+            "EPASystem": "SDWIS",
+            "SystemExtractDate": "10/07/2026"
+          }
+        ]
+      },
+      "programmePeriods": [
+        {
+          "Program": "RCRA",
+          "StartDate": "10/01/2023",
+          "EndDate": "09/30/2026"
+        }
+      ],
+      "sourceDuplicates": [
+        {
+          "path": "/Results/SABACSDemographics",
+          "occurrence": 2,
+          "previousStart": 7939,
+          "previousEnd": 7942,
+          "start": 9130,
+          "end": 9133
+        }
+      ],
+      "sections": [
+        {
+          "name": "Message",
+          "type": "string",
+          "entries": null
+        },
+        {
+          "name": "MultipleFRSFacilities",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "RegistryID",
+          "type": "string",
+          "entries": null
+        },
+        {
+          "name": "Reports",
+          "type": "object",
+          "entries": 4
+        },
+        {
+          "name": "Permits",
+          "type": "array",
+          "entries": 2
+        },
+        {
+          "name": "SystemExtractDates",
+          "type": "object",
+          "entries": 1
+        },
+        {
+          "name": "EnforcementComplianceSummaries",
+          "type": "object",
+          "entries": 2
+        },
+        {
+          "name": "NAICS",
+          "type": "object",
+          "entries": 1
+        },
+        {
+          "name": "SBEEventTotals",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "SIC",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "EffluentGuidelines",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "InspectionEnforcementSummary",
+          "type": "object",
+          "entries": 2
+        },
+        {
+          "name": "ComplianceHistory",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "ComplianceSummary",
+          "type": "object",
+          "entries": 2
+        },
+        {
+          "name": "CWA3YrCompliance",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "CWARNCCompliance",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "CWA3YrD80D90Counts",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "CWAEffluentComplianceEXP",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "CWAPSCompliance",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "CWAPSComplianceNew",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "CWASECompliance",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "CWACSCompliance",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "CWACSComplianceNew",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "CWAEffluentALRExceedencesEXP",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "AirCompliance",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "BflmCompliance",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "RCRACompliance",
+          "type": "object",
+          "entries": 25
+        },
+        {
+          "name": "SDWISCompliance",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "Watersheds",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "AssessedWaters",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "Notices",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "FormalActions",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "ICISFormalActions",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "CaseFormalActions",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "TRIHistory",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "TRIReleases",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "DmrPollLoads",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "RCRAWasteHistory",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "AirQuality",
+          "type": "object",
+          "entries": 13
+        },
+        {
+          "name": "AirQualityNAAs",
+          "type": "object",
+          "entries": 1
+        },
+        {
+          "name": "SiteVisits",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "SanitarySurveys",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "ViolationsEnforcementActions",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "LeadAndCopperRule5Yr",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "Tribes",
+          "type": "array",
+          "entries": 0
+        },
+        {
+          "name": "WebFireDocuments",
+          "type": "array",
+          "entries": 0
+        },
+        {
+          "name": "CAEDDocuments",
+          "type": "array",
+          "entries": 0
+        },
+        {
+          "name": "SpatialMetadata",
+          "type": "object",
+          "entries": 8
+        },
+        {
+          "name": "ACS2023Demographics",
+          "type": "object",
+          "entries": 39
+        },
+        {
+          "name": "SABACSDemographics",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "ACS2024Demographics",
+          "type": "object",
+          "entries": 39
+        },
+        {
+          "name": "MinorTTDemographics",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "AWSDocs",
+          "type": "object",
+          "entries": 0
+        },
+        {
+          "name": "Industries",
+          "type": "string",
+          "entries": null
+        },
+        {
+          "name": "MapOutput",
+          "type": "object",
+          "entries": 8
+        }
+      ],
+      "tableCounts": {
+        "facilities": 1,
+        "permits": 2,
+        "compliance": 1,
+        "quarters": 12,
+        "inspections": 0,
+        "enforcement": 0,
+        "metadata": 38,
+        "source-fields": 386
+      },
+      "sourcePageSha256": "3240bfb439f19f7d3ec14c74e96b23cc52bf2bf85f22642c5d6e57457fc680e9",
+      "sourceObservedAt": "2026-10-12",
+      "sourceUrl": "https://echodata.epa.gov/echo/dfr_rest_services.get_dfr?output=JSON&p_id=110072237877"
+    }
+  ],
+  "samples": {
+    "facilities": {
+      "columns": [
+        "facilityId",
+        "facilityName",
+        "street",
+        "city",
+        "state",
+        "zip",
+        "county",
+        "latitude",
+        "longitude",
+        "permitCount",
+        "programmes",
+        "sourceMessage",
+        "sourcePageSha256",
+        "sourceObservedAt",
+        "sourceUrl"
+      ],
+      "total": 4,
+      "rows": [
+        {
+          "facilityId": "110072033839",
+          "facilityName": "23RD STREET NW & VIRGINIA AVE NW",
+          "street": "23RD STREET NW & VIRGINIA AVE NW",
+          "city": "WASHINGTON",
+          "state": "DC",
+          "zip": "20037",
+          "county": "District of Columbia",
+          "latitude": "38.89728",
+          "longitude": "-77.05014",
+          "permitCount": "2",
+          "programmes": "RCRA",
+          "sourceMessage": "Success",
+          "sourcePageSha256": "c35cd62c64bde0df073a735199c55195872d3daa7164c16b354f56307af4de14",
+          "sourceObservedAt": "2026-10-12",
+          "sourceUrl": "https://echodata.epa.gov/echo/dfr_rest_services.get_dfr?output=JSON&p_id=110072033839"
+        },
+        {
+          "facilityId": "110072235550",
+          "facilityName": "AYOBAMI PETERS",
+          "street": "5000 OVERLOO 26TH AND K STREET NW",
+          "city": "WASHINGTON",
+          "state": "DC",
+          "zip": "22304",
+          "county": "District of Columbia",
+          "latitude": "",
+          "longitude": "",
+          "permitCount": "2",
+          "programmes": "RCRA",
+          "sourceMessage": "Success",
+          "sourcePageSha256": "9e10f8a1915dd371b252ef87115c46e8883e1308fbfed30c5507c26f0e663b71",
+          "sourceObservedAt": "2026-10-12",
+          "sourceUrl": "https://echodata.epa.gov/echo/dfr_rest_services.get_dfr?output=JSON&p_id=110072235550"
+        }
+      ]
+    },
+    "permits": {
+      "columns": [
+        "facilityId",
+        "facilityName",
+        "statute",
+        "epaSystem",
+        "sourceId",
+        "facilityStatus",
+        "universe",
+        "areas",
+        "expirationDate",
+        "expirationDateIso",
+        "latitude",
+        "longitude",
+        "datum",
+        "naics",
+        "sic",
+        "sourcePath",
+        "recordJson",
+        "sourcePageSha256",
+        "sourceObservedAt",
+        "sourceUrl"
+      ],
+      "total": 25,
+      "rows": [
+        {
+          "facilityId": "110072033839",
+          "facilityName": "23RD STREET NW & VIRGINIA AVE NW",
+          "statute": "",
+          "epaSystem": "FRS",
+          "sourceId": "110072033839",
+          "facilityStatus": "",
+          "universe": "",
+          "areas": "",
+          "expirationDate": "",
+          "expirationDateIso": "",
+          "latitude": "38.89728",
+          "longitude": "-77.05014",
+          "datum": "NAD83",
+          "naics": "",
+          "sic": "",
+          "sourcePath": "/Results/Permits/0",
+          "recordJson": "{\"Statute\":\"\",\"EPASystem\":\"FRS\",\"EPARegion\":null,\"SourceID\":\"110072033839\",\"FacilityName\":\"23RD STREET NW & VIRGINIA AVE NW\",\"FacilityStreet\":\"23RD STREET NW & VIRGINIA AVE NW\",\"FacilityCity\":\"WASHINGTON\",\"FacilityState\":\"DC\",\"FacilityZip\":\"20037\",\"FacilityFipsCode\":\"11001\",\"FacilityCountyName\":\"District of Columbia\",\"Universe\":\"\",\"Areas\":null,\"ExpDate\":null,\"Latitude\":\"38.89728\",\"Longitude\":\"-77.05014\",\"IndianCountry\":\"N\",\"SIC\":null,\"NAICS\":null,\"DQURL\":null,\"HdatumDesc\":\"NAD83\",\"CollectDesc\":\"ADDRESS MATCHING-NEAREST INTERSECTION\",\"RefPointDesc\":\"ENTRANCE POINT OF A FACILITY OR STATION\",\"Scale\":null,\"AccuracyValue\":\"200\",\"AccuracyScore\":\"200\",\"HasIcisSsoRpt\":\"N\",\"HasBioRpt\":\"N\",\"HasSBERpt\":\"N\",\"HasBflmRpt\":\"N\",\"FacilityStatus\":null}",
+          "sourcePageSha256": "c35cd62c64bde0df073a735199c55195872d3daa7164c16b354f56307af4de14",
+          "sourceObservedAt": "2026-10-12",
+          "sourceUrl": "https://echodata.epa.gov/echo/dfr_rest_services.get_dfr?output=JSON&p_id=110072033839"
+        },
+        {
+          "facilityId": "110072033839",
+          "facilityName": "23RD STREET NW & VIRGINIA AVE NW",
+          "statute": "RCRA",
+          "epaSystem": "RCRAInfo",
+          "sourceId": "DCP000004047",
+          "facilityStatus": "Inactive (     )",
+          "universe": "Other",
+          "areas": "",
+          "expirationDate": "",
+          "expirationDateIso": "",
+          "latitude": "38.897339",
+          "longitude": "-77.050105",
+          "datum": "WGS84",
+          "naics": "221310 221320",
+          "sic": "",
+          "sourcePath": "/Results/Permits/1",
+          "recordJson": "{\"Statute\":\"RCRA\",\"EPASystem\":\"RCRAInfo\",\"EPARegion\":\"03\",\"SourceID\":\"DCP000004047\",\"FacilityName\":\"23RD STREET NW & VIRGINIA AVE NW\",\"FacilityStreet\":\"23RD STREET NW & VIRGINIA AVE NW\",\"FacilityCity\":\"WASHINGTON\",\"FacilityState\":\"DC\",\"FacilityZip\":\"20037\",\"FacilityFipsCode\":\"11001\",\"FacilityCountyName\":\"District of Columbia\",\"Universe\":\"Other\",\"Areas\":null,\"ExpDate\":null,\"Latitude\":\"38.897339\",\"Longitude\":\"-77.050105\",\"IndianCountry\":\"N\",\"SIC\":null,\"NAICS\":\"221310 221320\",\"DQURL\":null,\"HdatumDesc\":\"WGS84\",\"CollectDesc\":null,\"RefPointDesc\":null,\"Scale\":null,\"AccuracyValue\":null,\"AccuracyScore\":null,\"HasIcisSsoRpt\":\"N\",\"HasBioRpt\":\"N\",\"HasSBERpt\":\"N\",\"HasBflmRpt\":\"N\",\"FacilityStatus\":\"Inactive (     )\"}",
+          "sourcePageSha256": "c35cd62c64bde0df073a735199c55195872d3daa7164c16b354f56307af4de14",
+          "sourceObservedAt": "2026-10-12",
+          "sourceUrl": "https://echodata.epa.gov/echo/dfr_rest_services.get_dfr?output=JSON&p_id=110072033839"
+        }
+      ]
+    },
+    "compliance": {
+      "columns": [
+        "facilityId",
+        "statute",
+        "sourceId",
+        "currentSNC",
+        "description",
+        "currentAsOf",
+        "currentAsOfIso",
+        "quartersInNoncompliance",
+        "periodStart",
+        "periodEnd",
+        "periodStartIso",
+        "periodEndIso",
+        "systemExtractDate",
+        "systemExtractDateIso",
+        "sourcePath",
+        "recordJson",
+        "sourcePageSha256",
+        "sourceObservedAt",
+        "sourceUrl"
+      ],
+      "total": 10,
+      "rows": [
+        {
+          "facilityId": "110072033839",
+          "statute": "RCRA",
+          "sourceId": "DCP000004047",
+          "currentSNC": "No",
+          "description": "",
+          "currentAsOf": "10/10/2026",
+          "currentAsOfIso": "2026-10-10",
+          "quartersInNoncompliance": "0",
+          "periodStart": "10/01/2023",
+          "periodEnd": "09/30/2026",
+          "periodStartIso": "2023-10-01",
+          "periodEndIso": "2026-09-30",
+          "systemExtractDate": "10/09/2026",
+          "systemExtractDateIso": "2026-10-09",
+          "sourcePath": "/Results/ComplianceSummary/Source/0",
+          "recordJson": "{\"Statute\":\"RCRA\",\"SourceID\":\"DCP000004047\",\"CurrentSNC\":\"No\",\"Description\":null,\"CurrentAsOf\":\"10/10/2026\",\"QtrsInNC\":\"0\"}",
+          "sourcePageSha256": "c35cd62c64bde0df073a735199c55195872d3daa7164c16b354f56307af4de14",
+          "sourceObservedAt": "2026-10-12",
+          "sourceUrl": "https://echodata.epa.gov/echo/dfr_rest_services.get_dfr?output=JSON&p_id=110072033839"
+        },
+        {
+          "facilityId": "110072235550",
+          "statute": "RCRA",
+          "sourceId": "DCP000004065",
+          "currentSNC": "No",
+          "description": "",
+          "currentAsOf": "10/10/2026",
+          "currentAsOfIso": "2026-10-10",
+          "quartersInNoncompliance": "0",
+          "periodStart": "10/01/2023",
+          "periodEnd": "09/30/2026",
+          "periodStartIso": "2023-10-01",
+          "periodEndIso": "2026-09-30",
+          "systemExtractDate": "10/09/2026",
+          "systemExtractDateIso": "2026-10-09",
+          "sourcePath": "/Results/ComplianceSummary/Source/0",
+          "recordJson": "{\"Statute\":\"RCRA\",\"SourceID\":\"DCP000004065\",\"CurrentSNC\":\"No\",\"Description\":null,\"CurrentAsOf\":\"10/10/2026\",\"QtrsInNC\":\"0\"}",
+          "sourcePageSha256": "9e10f8a1915dd371b252ef87115c46e8883e1308fbfed30c5507c26f0e663b71",
+          "sourceObservedAt": "2026-10-12",
+          "sourceUrl": "https://echodata.epa.gov/echo/dfr_rest_services.get_dfr?output=JSON&p_id=110072235550"
+        }
+      ]
+    },
+    "quarters": {
+      "columns": [
+        "facilityId",
+        "statute",
+        "sourceId",
+        "section",
+        "periodIndex",
+        "periodStart",
+        "periodEnd",
+        "periodStartIso",
+        "periodEndIso",
+        "field",
+        "value",
+        "valueType",
+        "recordId",
+        "sourcePath",
+        "recordJson",
+        "sourcePageSha256",
+        "sourceObservedAt",
+        "sourceUrl"
+      ],
+      "total": 4836,
+      "rows": [
+        {
+          "facilityId": "110072033839",
+          "statute": "",
+          "sourceId": "DCP000004047",
+          "section": "RCRACompliance",
+          "periodIndex": "1",
+          "periodStart": "10/01/2023",
+          "periodEnd": "12/31/2023",
+          "periodStartIso": "2023-10-01",
+          "periodEndIso": "2023-12-31",
+          "field": "Qtr1Status",
+          "value": "No Violation Identified",
+          "valueType": "string",
+          "recordId": "",
+          "sourcePath": "/Results/RCRACompliance/Sources/0/Status/Qtr1Status",
+          "recordJson": "{\"SourceID\":\"DCP000004047\",\"Qtr1Status\":\"No Violation Identified\",\"Qtr2Status\":\"No Violation Identified\",\"Qtr3Status\":\"No Violation Identified\",\"Qtr4Status\":\"No Violation Identified\",\"Qtr5Status\":\"No Violation Identified\",\"Qtr6Status\":\"No Violation Identified\",\"Qtr7Status\":\"No Violation Identified\",\"Qtr8Status\":\"No Violation Identified\",\"Qtr9Status\":\"No Violation Identified\",\"Qtr10Status\":\"No Violation Identified\",\"Qtr11Status\":\"No Violation Identified\",\"Qtr12Status\":\"No Violation Identified\"}",
+          "sourcePageSha256": "c35cd62c64bde0df073a735199c55195872d3daa7164c16b354f56307af4de14",
+          "sourceObservedAt": "2026-10-12",
+          "sourceUrl": "https://echodata.epa.gov/echo/dfr_rest_services.get_dfr?output=JSON&p_id=110072033839"
+        },
+        {
+          "facilityId": "110072033839",
+          "statute": "",
+          "sourceId": "DCP000004047",
+          "section": "RCRACompliance",
+          "periodIndex": "2",
+          "periodStart": "01/01/2024",
+          "periodEnd": "03/31/2024",
+          "periodStartIso": "2024-01-01",
+          "periodEndIso": "2024-03-31",
+          "field": "Qtr2Status",
+          "value": "No Violation Identified",
+          "valueType": "string",
+          "recordId": "",
+          "sourcePath": "/Results/RCRACompliance/Sources/0/Status/Qtr2Status",
+          "recordJson": "{\"SourceID\":\"DCP000004047\",\"Qtr1Status\":\"No Violation Identified\",\"Qtr2Status\":\"No Violation Identified\",\"Qtr3Status\":\"No Violation Identified\",\"Qtr4Status\":\"No Violation Identified\",\"Qtr5Status\":\"No Violation Identified\",\"Qtr6Status\":\"No Violation Identified\",\"Qtr7Status\":\"No Violation Identified\",\"Qtr8Status\":\"No Violation Identified\",\"Qtr9Status\":\"No Violation Identified\",\"Qtr10Status\":\"No Violation Identified\",\"Qtr11Status\":\"No Violation Identified\",\"Qtr12Status\":\"No Violation Identified\"}",
+          "sourcePageSha256": "c35cd62c64bde0df073a735199c55195872d3daa7164c16b354f56307af4de14",
+          "sourceObservedAt": "2026-10-12",
+          "sourceUrl": "https://echodata.epa.gov/echo/dfr_rest_services.get_dfr?output=JSON&p_id=110072033839"
+        }
+      ]
+    },
+    "inspections": {
+      "columns": [
+        "facilityId",
+        "statute",
+        "epaSystem",
+        "sourceId",
+        "section",
+        "date",
+        "dateIso",
+        "type",
+        "agency",
+        "description",
+        "recordId",
+        "periodStart",
+        "periodEnd",
+        "periodStartIso",
+        "periodEndIso",
+        "sourcePath",
+        "recordJson",
+        "sourcePageSha256",
+        "sourceObservedAt",
+        "sourceUrl"
+      ],
+      "total": 54,
+      "rows": [
+        {
+          "facilityId": "110029030144",
+          "statute": "CAA",
+          "epaSystem": "ICIS-Air",
+          "sourceId": "DC0000001100100142",
+          "section": "ComplianceHistory",
+          "date": "01/15/2026",
+          "dateIso": "2026-01-15",
+          "type": "PCE Stack Test",
+          "agency": "State",
+          "description": "Findings:  Pass",
+          "recordId": "DC000A1769519",
+          "periodStart": "10/10/2021",
+          "periodEnd": "09/30/2026",
+          "periodStartIso": "2021-10-10",
+          "periodEndIso": "2026-09-30",
+          "sourcePath": "/Results/ComplianceHistory/Inspection/0",
+          "recordJson": "{\"Statute\":\"CAA\",\"SourceID\":\"DC0000001100100142\",\"EPASystem\":\"ICIS-Air\",\"ActivityType\":\"Inspection/Evaluation\",\"InspectionType\":\"PCE Stack Test\",\"LeadAgency\":\"State\",\"Date\":\"01/15/2026\",\"CMSFlag\":\"N\",\"OfficialFlag\":\"N\",\"SncFlag\":\"N\",\"Finding\":\"Findings:  Pass\",\"CompMonitorID\":\"DC000A1769519\"}",
+          "sourcePageSha256": "c925d375d5e38761e8e56296bfb4dd345c90b9e8c73d593d59005f28b4b0d8c7",
+          "sourceObservedAt": "2026-10-12",
+          "sourceUrl": "https://echodata.epa.gov/echo/dfr_rest_services.get_dfr?output=JSON&p_id=110029030144"
+        },
+        {
+          "facilityId": "110029030144",
+          "statute": "CAA",
+          "epaSystem": "ICIS-Air",
+          "sourceId": "DC0000001100100142",
+          "section": "ComplianceHistory",
+          "date": "01/15/2026",
+          "dateIso": "2026-01-15",
+          "type": "PCE Stack Test",
+          "agency": "State",
+          "description": "Findings:  Pass",
+          "recordId": "DC000A1769523",
+          "periodStart": "10/10/2021",
+          "periodEnd": "09/30/2026",
+          "periodStartIso": "2021-10-10",
+          "periodEndIso": "2026-09-30",
+          "sourcePath": "/Results/ComplianceHistory/Inspection/1",
+          "recordJson": "{\"Statute\":\"CAA\",\"SourceID\":\"DC0000001100100142\",\"EPASystem\":\"ICIS-Air\",\"ActivityType\":\"Inspection/Evaluation\",\"InspectionType\":\"PCE Stack Test\",\"LeadAgency\":\"State\",\"Date\":\"01/15/2026\",\"CMSFlag\":\"N\",\"OfficialFlag\":\"N\",\"SncFlag\":\"N\",\"Finding\":\"Findings:  Pass\",\"CompMonitorID\":\"DC000A1769523\"}",
+          "sourcePageSha256": "c925d375d5e38761e8e56296bfb4dd345c90b9e8c73d593d59005f28b4b0d8c7",
+          "sourceObservedAt": "2026-10-12",
+          "sourceUrl": "https://echodata.epa.gov/echo/dfr_rest_services.get_dfr?output=JSON&p_id=110029030144"
+        }
+      ]
+    },
+    "enforcement": {
+      "columns": [
+        "facilityId",
+        "statute",
+        "epaSystem",
+        "sourceId",
+        "section",
+        "date",
+        "dateIso",
+        "type",
+        "agency",
+        "caseNumber",
+        "penalty",
+        "description",
+        "recordId",
+        "periodStart",
+        "periodEnd",
+        "periodStartIso",
+        "periodEndIso",
+        "sourcePath",
+        "recordJson",
+        "sourcePageSha256",
+        "sourceObservedAt",
+        "sourceUrl"
+      ],
+      "total": 8,
+      "rows": [
+        {
+          "facilityId": "110029030144",
+          "statute": "RCRA",
+          "epaSystem": "RCRAInfo",
+          "sourceId": "DCD000797761",
+          "section": "Notices",
+          "date": "01/23/2023",
+          "dateIso": "2023-01-23",
+          "type": "VERBAL INFORMAL",
+          "agency": "State",
+          "caseNumber": "",
+          "penalty": "",
+          "description": "",
+          "recordId": "001",
+          "periodStart": "10/10/2021",
+          "periodEnd": "09/30/2026",
+          "periodStartIso": "2021-10-10",
+          "periodEndIso": "2026-09-30",
+          "sourcePath": "/Results/Notices/Notice/0",
+          "recordJson": "{\"Statute\":\"RCRA\",\"EPASystem\":\"RCRAInfo\",\"SourceID\":\"DCD000797761\",\"ActionType\":\"VERBAL INFORMAL\",\"LeadAgency\":\"State\",\"NoticeDate\":\"01/23/2023\",\"EnfIdentifier\":\"001\",\"OfficialFlag\":\"N\"}",
+          "sourcePageSha256": "c925d375d5e38761e8e56296bfb4dd345c90b9e8c73d593d59005f28b4b0d8c7",
+          "sourceObservedAt": "2026-10-12",
+          "sourceUrl": "https://echodata.epa.gov/echo/dfr_rest_services.get_dfr?output=JSON&p_id=110029030144"
+        },
+        {
+          "facilityId": "110029030144",
+          "statute": "SDWA",
+          "epaSystem": "SDWIS",
+          "sourceId": "DC0000002",
+          "section": "Notices",
+          "date": "04/15/2023",
+          "dateIso": "2023-04-15",
+          "type": "Federal no additional Formal Action needed",
+          "agency": "EPA",
+          "caseNumber": "",
+          "penalty": "",
+          "description": "",
+          "recordId": "29",
+          "periodStart": "07/01/2021",
+          "periodEnd": "06/30/2026",
+          "periodStartIso": "2021-07-01",
+          "periodEndIso": "2026-06-30",
+          "sourcePath": "/Results/Notices/Notice/1",
+          "recordJson": "{\"Statute\":\"SDWA\",\"EPASystem\":\"SDWIS\",\"SourceID\":\"DC0000002\",\"ActionType\":\"Federal no additional Formal Action needed\",\"LeadAgency\":\"EPA\",\"NoticeDate\":\"04/15/2023\",\"EnfIdentifier\":\"29\",\"OfficialFlag\":\"Y\"}",
+          "sourcePageSha256": "c925d375d5e38761e8e56296bfb4dd345c90b9e8c73d593d59005f28b4b0d8c7",
+          "sourceObservedAt": "2026-10-12",
+          "sourceUrl": "https://echodata.epa.gov/echo/dfr_rest_services.get_dfr?output=JSON&p_id=110029030144"
+        }
+      ]
+    },
+    "metadata": {
+      "columns": [
+        "facilityId",
+        "section",
+        "epaSystem",
+        "field",
+        "value",
+        "valueType",
+        "sourcePath",
+        "sourcePageSha256",
+        "sourceObservedAt",
+        "sourceUrl"
+      ],
+      "total": 6624,
+      "rows": [
+        {
+          "facilityId": "110072033839",
+          "section": "SystemExtractDates",
+          "epaSystem": "RCRAInfo",
+          "field": "EPASystem",
+          "value": "RCRAInfo",
+          "valueType": "string",
+          "sourcePath": "/Results/SystemExtractDates/Dates/0/EPASystem",
+          "sourcePageSha256": "c35cd62c64bde0df073a735199c55195872d3daa7164c16b354f56307af4de14",
+          "sourceObservedAt": "2026-10-12",
+          "sourceUrl": "https://echodata.epa.gov/echo/dfr_rest_services.get_dfr?output=JSON&p_id=110072033839"
+        },
+        {
+          "facilityId": "110072033839",
+          "section": "SystemExtractDates",
+          "epaSystem": "RCRAInfo",
+          "field": "SystemExtractDate",
+          "value": "10/09/2026",
+          "valueType": "string",
+          "sourcePath": "/Results/SystemExtractDates/Dates/0/SystemExtractDate",
+          "sourcePageSha256": "c35cd62c64bde0df073a735199c55195872d3daa7164c16b354f56307af4de14",
+          "sourceObservedAt": "2026-10-12",
+          "sourceUrl": "https://echodata.epa.gov/echo/dfr_rest_services.get_dfr?output=JSON&p_id=110072033839"
+        }
+      ]
+    },
+    "source-fields": {
+      "columns": [
+        "facilityId",
+        "statute",
+        "sourceId",
+        "section",
+        "sourcePath",
+        "field",
+        "value",
+        "valueType",
+        "sourcePageSha256",
+        "sourceObservedAt",
+        "sourceUrl"
+      ],
+      "total": 9300,
+      "rows": [
+        {
+          "facilityId": "110072033839",
+          "statute": "",
+          "sourceId": "",
+          "section": "Message",
+          "sourcePath": "/Results/Message",
+          "field": "Message",
+          "value": "Success",
+          "valueType": "string",
+          "sourcePageSha256": "c35cd62c64bde0df073a735199c55195872d3daa7164c16b354f56307af4de14",
+          "sourceObservedAt": "2026-10-12",
+          "sourceUrl": "https://echodata.epa.gov/echo/dfr_rest_services.get_dfr?output=JSON&p_id=110072033839"
+        },
+        {
+          "facilityId": "110072033839",
+          "statute": "",
+          "sourceId": "",
+          "section": "MultipleFRSFacilities",
+          "sourcePath": "/Results/MultipleFRSFacilities",
+          "field": "MultipleFRSFacilities",
+          "value": "{}",
+          "valueType": "object",
+          "sourcePageSha256": "c35cd62c64bde0df073a735199c55195872d3daa7164c16b354f56307af4de14",
+          "sourceObservedAt": "2026-10-12",
+          "sourceUrl": "https://echodata.epa.gov/echo/dfr_rest_services.get_dfr?output=JSON&p_id=110072033839"
+        }
+      ]
+    }
+  },
+  "identicalSourceComparison": {
+    "added": 0,
+    "removed": 0,
+    "changed": 0,
+    "unchanged": 9300,
+    "ambiguousGroups": 0
+  },
+  "sourcePackageRoundTrip": {
+    "bytes": 826432,
+    "sha256": "c737c859126057359c3918e20e4553651b31ab14532060c64aa49f25a7fe24d9"
+  }
+}

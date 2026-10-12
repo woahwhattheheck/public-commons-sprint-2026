@@ -18,6 +18,7 @@ import portfolio as portfolios
 import operations_support as support
 import operations_buyer as buyer
 import operations_completion as completion
+import operations_cohort as cohort
 
 SCHEMA = "stellar-forge.sf47-operations.v1"
 MAX_SOURCE = 8 * 1024 * 1024
@@ -134,10 +135,12 @@ class Operations:
         result = {**context, "sources": list(context["sources"].values()),
                   "report": domain.report(**context)}
         result["completion"] = completion.dashboard(context)
+        cohort_history = self._cohort_history(program_id)
         result["reviews"] = [{**{key: row[key] for key in ("id", "version", "createdAt", "actor", "note", "businessSha256")},
                               "purpose": row.get("purpose"),
                               **({"completionTranche": row["completion"]["clock"]["tranche"],
-                                  "receiptId": row["completion"]["receipt"]["id"]} if row.get("purpose") == "TRANCHE_COMPLETION" else {})}
+                                  "receiptId": row["completion"]["receipt"]["id"]} if row.get("purpose") == "TRANCHE_COMPLETION" else {}),
+                              **(cohort.summary(row, context, cohort_history) if row.get("purpose") == "COHORT_EVALUATION" else {})}
             for row in (json.loads(raw[0]) for raw in self.db.execute(
                 "SELECT body_json FROM ops_reviews WHERE program_id=? ORDER BY rowid DESC", (program_id,)))]
         latest = self.db.execute("SELECT current_revision FROM plans WHERE id=?", (result["program"]["planId"],)).fetchone()
@@ -268,6 +271,11 @@ class Operations:
                 if result["unchanged"]:
                     return {"id": program_id, "version": expected, "action": command, "kind": kind,
                             "recordId": record_id, **extra_receipt}
+            elif command == "cohort.prepare":
+                result = cohort.prepare(self, context, data, actor, next_version, self._cohort_history(program_id))
+                before, after, kind, record_id = (result[key] for key in ("before", "after", "kind", "recordId"))
+                extra_receipt = {key: value for key, value in result.items()
+                                 if key not in ("before", "after", "kind", "recordId")}
             elif command.startswith("completion."):
                 if command == "completion.submit" and self.db.execute("SELECT COUNT(*) FROM ops_records WHERE program_id=?", (program_id,)).fetchone()[0] >= MAX_RECORDS:
                     domain.fail("This operations case has reached its retained-record bound.", status=413)
@@ -381,6 +389,36 @@ class Operations:
         return self.workspace._transaction(body.get("requestId"), payload, action)
 
 
+    def _cohort_history(self, program_id):
+        events = [json.loads(row[0]) for row in self.db.execute(
+            "SELECT body_json FROM ops_events WHERE program_id=? ORDER BY version", (program_id,))]
+        return cohort.history_from_events(events)
+
+    def _cohort_reviews(self, program_id, selected):
+        if not isinstance(selected, list) or len(selected) > 20 or any(not isinstance(x, str) for x in selected) or len(selected) != len(set(selected)):
+            domain.fail("Select at most twenty distinct original cohort reviews.", "INVALID_COHORT")
+        result = []
+        for ident in selected:
+            review = self.review(program_id, ident)
+            cohort.validate_review(review)
+            result.append(review)
+        return result
+
+    def seed_cohort(self, program_id, body):
+        with self.workspace.mutex:
+            context = self._completion_context(program_id, body, ("tranche",))
+            return cohort.seed(context, body.get("tranche"))
+
+    def preview_cohort(self, program_id, body):
+        with self.workspace.mutex:
+            context = self._completion_context(program_id, body, ("inputs",))
+            return cohort.preview(context, body.get("inputs"), self._cohort_history(context["program"]["id"]))
+
+    def export_cohort(self, program_id, review_id):
+        with self.workspace.mutex:
+            review = self.review(program_id, review_id)
+            return cohort.review_files(review, lambda source_id: self.source(program_id, source_id))
+
     def completion_calendar(self, program_id, as_of=None):
         with self.workspace.mutex:
             return completion.dashboard(self._context(identifier(program_id, "operation")), as_of)
@@ -399,8 +437,10 @@ class Operations:
 
     def preview_completion(self, program_id, body):
         with self.workspace.mutex:
-            context = self._completion_context(program_id, body, ("receiptId", "asOfDate", "summary"))
-            return completion.preview(context, {key: value for key, value in body.items() if key != "expectedVersion"})
+            context = self._completion_context(program_id, body, ("receiptId", "asOfDate", "summary", "cohortReviewIds"))
+            reviews = self._cohort_reviews(program_id, body["cohortReviewIds"]) if "cohortReviewIds" in body else None
+            return completion.preview(context, {key: value for key, value in body.items() if key != "expectedVersion"},
+                                      reviews, self._cohort_history(program_id) if reviews is not None else None)
 
     def export_completion(self, program_id, review_id):
         with self.workspace.mutex:
@@ -721,6 +761,7 @@ class Operations:
                 domain.fail("The complete original review snapshot and report are required.")
             if digest(review["snapshot"]) != review["businessSha256"]:
                 domain.fail("A frozen review differs from its retained business snapshot.")
+        cohort.validate_import(reviews, events)
         completion.validate_import(context, document.get("completionPlans", []), reviews, events, source_program["version"])
         saved_forecasts = document.get("forecasts", [])
         if not isinstance(saved_forecasts, list) or len(saved_forecasts) > forecasts.MAX_FORECASTS:
