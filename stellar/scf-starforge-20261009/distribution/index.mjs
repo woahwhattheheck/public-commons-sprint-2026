@@ -3,6 +3,8 @@ export { compileHttpSellerOffer, paymentRequiredResponse } from '../sf30-seller-
 export { compileSellerRoutes, createSellerResourceHandler } from '../sf30-seller-sdk/resource-server.mjs';
 export { readSellerConfig, startSellerService } from '../sf30-seller-sdk/serve.mjs';
 export { startSellerOperations } from '../sf30-seller-sdk/operations/server.mjs';
+export { compileUpstreamTls, upstreamTlsReferences, UPSTREAM_TLS_SCHEMA } from '../sf30-seller-sdk/upstream-tls/config.mjs';
+export { loadUpstreamTls, deferUpstreamTls, UpstreamTlsError } from '../sf30-seller-sdk/upstream-tls/profile.mjs';
 export { compileSupplierAccounts } from '../sf30-seller-sdk/supplier-quota/config.mjs';
 export { createSupplierQuotaRegistry, attachSupplierQuota, SUPPLIER_QUOTA_SCHEMA } from '../sf30-seller-sdk/supplier-quota/application.mjs';
 export { startDuckdbWorkbench } from '../sf30-seller-sdk/duckdb/workbench/server.mjs';
@@ -35,3 +37,12 @@ export { createDuckdbWorkspace } from '../sf30-seller-sdk/duckdb/workspace/model
 export { openS3MerchantWorkspace, validateS3MerchantDraft } from '../sf30-seller-sdk/s3/workspace/controller.mjs';
 export { startS3MerchantWorkspace } from '../sf30-seller-sdk/s3/workspace/server.mjs';
 export * as mpp from '../mpp-charge/index.mjs';
+export { main as startGoldRushWorkspace, openWorkbench as openGoldRushWorkbench } from '../sf30-seller-sdk/examples/goldrush-stellar-pilot/workbench.mjs';
+export { prepareCoinGeckoProduct, startCoinGeckoService } from '../partners/coingecko-stellar-market/provider.mjs';
+export { startMarketWorkspace } from '../partners/coingecko-stellar-market/workspace/server.mjs';
+
+export { openCollections, previewCollection, renderCollectionCsv, renderCollectionReport } from '../sf88-operator-buyer-cli/collections/model.mjs';
+export { startCollectionsWorkspace, serveCollections } from '../sf88-operator-buyer-cli/collections/server.mjs';
+export { SDMX_MERCHANT_RELEASE_SCHEMA, prepareSdmxMerchant, readSdmxMerchant,
+  startSdmxMerchant, publishSdmxMerchant } from '../sf30-seller-sdk/sdmx/merchant.mjs';
+export { reviewSdmxBuyer, prepareSdmxBuyer } from '../sf30-seller-sdk/sdmx/customer.mjs';

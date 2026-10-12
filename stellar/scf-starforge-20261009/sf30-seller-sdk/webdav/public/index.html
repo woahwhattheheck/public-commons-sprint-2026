@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="workspace-token" content="__WORKSPACE_TOKEN__">
+<title>WebDAV source workspace · Stellar Forge</title>
+<link rel="stylesheet" href="/style.css">
+<script type="module" src="/app.mjs"></script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to workspace</a>
+<header class="masthead">
+  <div><div class="eyebrow">STELLAR FORGE</div><h1>WebDAV source workspace</h1></div>
+  <div class="connection"><span id="connection">Opening original workspace…</span><button id="refresh" type="button">Refresh saved state</button></div>
+</header>
+<div class="shell">
+<nav aria-label="Workspace">
+  <button type="button" data-view="source">1. Source connection</button>
+  <button type="button" data-view="files">2. Collection and files</button>
+  <button type="button" data-view="captures">3. Captures and recovery</button>
+  <button type="button" data-view="projection">4. Public projection</button>
+  <button type="button" data-view="editions">5. Dataset and merchant</button>
+  <button type="button" data-view="publisher">6. Publisher and customer</button>
+  <button type="button" data-view="handoff">7. Handoff and history</button>
+  <p class="nav-note">Original source bytes and typed editions remain private in this workspace. Review the public projection and merchant terms before publication.</p>
+</nav>
+<div class="workspace">
+  <div id="notice" role="status" aria-live="polite"></div>
+  <div id="operation-status" role="status" aria-live="polite"></div>
+  <div id="recovery"></div>
+  <main id="main" tabindex="-1"><p>Loading saved state…</p></main>
+</div>
+</div>
+<footer><span id="identity"></span><span>Original dataset, SF82 release and SF88 buyer engines</span></footer>
+</body>
+</html>

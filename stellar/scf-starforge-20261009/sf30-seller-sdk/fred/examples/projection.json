@@ -1,0 +1,28 @@
+{
+  "fields": [
+    "series",
+    "date",
+    "value",
+    "missing",
+    "as_of",
+    "time_basis",
+    "realtime_start",
+    "realtime_end",
+    "units",
+    "frequency",
+    "seasonal_adjustment"
+  ],
+  "filters": [
+    "series",
+    "missing"
+  ],
+  "ranges": [
+    "date"
+  ],
+  "sorts": [
+    "date",
+    "series"
+  ],
+  "defaultLimit": 25,
+  "maxLimit": 100
+}

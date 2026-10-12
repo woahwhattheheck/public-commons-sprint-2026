@@ -1,3 +1,4 @@
+import { createCustomerWorkbenchUI } from './customer-workbench.js';
 const $=selector=>document.querySelector(selector);
 const token=location.hash.slice(1)||sessionStorage.getItem('mpp-session');
 if(location.hash){sessionStorage.setItem('mpp-session',token);history.replaceState(null,'',location.pathname);}
@@ -30,7 +31,9 @@ async function download(group,id) {
   if(!response.ok)throw new Error((await response.json()).error);
   const url=URL.createObjectURL(await response.blob()),link=node('a');link.href=url;link.download=id+'.bin';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
+const customerWorkbenchUI=createCustomerWorkbenchUI({api,token,refresh,notify});
 function render() {
+  customerWorkbenchUI.render(state.customerWorkbench,state.jobs);
   $('#connection').textContent='Connected · revision '+state.metadata.revision;
   $('#versions').textContent=Object.entries(state.versions).map(([name,version])=>name+' '+version).join(' · ');
   $('#metrics').replaceChildren(...[

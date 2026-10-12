@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
 import { startLocalDevelopmentCatalog } from '../sf44-developer-onramp/onboard.mjs';
 import { prepareReview } from '../sf88-operator-buyer-cli/prepare.mjs';
+import { createAtlasWorkspaceHttp } from './workspace-http.mjs';
 
 const HOST = '127.0.0.1';
 const MAX_PAGE_BYTES = 16 * 1024 * 1024;
@@ -13,6 +14,8 @@ const STATIC = Object.freeze({
   '/': ['index.html', 'text/html; charset=utf-8'],
   '/app.mjs': ['app.mjs', 'text/javascript; charset=utf-8'],
   '/styles.css': ['styles.css', 'text/css; charset=utf-8'],
+  '/workspace-ui.mjs': ['workspace-ui.mjs', 'text/javascript; charset=utf-8'],
+  '/workspace.css': ['workspace.css', 'text/css; charset=utf-8'],
 });
 const HEADERS = Object.freeze({
   'cache-control': 'no-store',
@@ -155,15 +158,17 @@ function send(res, status, data, mime = 'application/json; charset=utf-8') {
  * selected public HTTPS Bazaar GET endpoint. This has no registration, wallet,
  * signer, paid-origin, verify, settle, or mutable catalog route.
  */
-export async function startExplorer({ fixture = false, upstream = null, localUpstream = null, port = 0 } = {}) {
+export async function startExplorer({ fixture = false, upstream = null, localUpstream = null, workspaceDirectory = null, port = 0 } = {}) {
   if (!Number.isInteger(port) || port < 0 || port > 65535)
     throw new RangeError('Invalid local listener port');
-  if ([fixture, Boolean(upstream), Boolean(localUpstream)].filter(Boolean).length !== 1)
+  const sourceCount = [fixture, Boolean(upstream), Boolean(localUpstream)].filter(Boolean).length;
+  if (sourceCount > 1 || sourceCount === 0 && !workspaceDirectory)
     throw new TypeError('Choose exactly one original discovery source');
   let development = null;
   let server = null;
+  let workspace = null;
   try {
-    const source = fixture ? 'LOCAL_NONPAYABLE_SF44_FIXTURE' :
+    const source = sourceCount === 0 ? 'RETAINED_CATALOG_WORKSPACE' : fixture ? 'LOCAL_NONPAYABLE_SF44_FIXTURE' :
       localUpstream ? 'ORIGINAL_SF60_DURABLE_CATALOG' : 'PUBLIC_FACILITATOR_READ_ONLY';
     let upstreamOrigin;
     if (fixture) {
@@ -171,9 +176,10 @@ export async function startExplorer({ fixture = false, upstream = null, localUps
       upstreamOrigin = development.baseUrl;
     } else if (localUpstream) {
       upstreamOrigin = normalizeLocalUpstream(localUpstream);
-    } else {
+    } else if (upstream) {
       upstreamOrigin = normalizeUpstream(upstream);
     }
+    if (workspaceDirectory) workspace = await createAtlasWorkspaceHttp({ directory: workspaceDirectory });
     const assets = new Map(await Promise.all(Object.entries(STATIC).map(async ([route, [file, mime]]) =>
       [route, { bytes: await readFile(new URL(file, import.meta.url)), mime }])));
     let expectedHost = '';
@@ -186,6 +192,7 @@ export async function startExplorer({ fixture = false, upstream = null, localUps
             req.headers.host !== expectedHost) return reply(403, { error: 'LOCAL_ORIGIN_ONLY' });
         if (!req.url || req.url.length > 4096) return reply(400, { error: 'BAD_URL' });
         const request = new URL(req.url, 'http://127.0.0.1');
+        if (workspace && await workspace.handle({ request: req, url: request, origin: 'http://' + expectedHost, reply })) return;
         if (request.pathname === '/api/prepare-review' && request.search === '') {
           if (req.method !== 'POST') return reply(405,{error:'POST_ONLY'});
           if (req.headers.origin !== 'http://' + expectedHost ||
@@ -205,9 +212,11 @@ export async function startExplorer({ fixture = false, upstream = null, localUps
         }
         if (req.method !== 'GET') return reply(405, { error: 'GET_ONLY' });
         if (request.pathname === '/api/source' && request.search === '')
-          return reply(200, { mode: source, origin: fixture ? 'original SF44 fixture' : upstreamOrigin,
-            paidRequestsEnabled: false, autoPaymentEnabled: false });
+          return reply(200, { mode: source, origin: fixture ? 'original SF44 fixture' : upstreamOrigin ?? 'Retained local catalog observations',
+            paidRequestsEnabled: false, autoPaymentEnabled: false, workspaceEnabled: Boolean(workspace) });
         if (request.pathname === '/api/discovery') {
+          if (!upstreamOrigin) return reply(200, { mode: source, resources: [], pagination: { total: 0 },
+            completeResponse: false, readOnly: true, paidRequestsEnabled: false });
           let target;
           try { target = selectDiscoveryRequest(request, upstreamOrigin); }
           catch (error) { return reply(400, { error: 'INVALID_QUERY', reason: String(error.message).slice(0, 180) }); }
@@ -253,14 +262,16 @@ export async function startExplorer({ fixture = false, upstream = null, localUps
     });
     expectedHost = HOST + ':' + server.address().port;
     return {
-      source, url: 'http://' + expectedHost,
+      source, url: 'http://' + expectedHost + (workspace ? '/#' + workspace.token : ''),
       async close() {
         await new Promise((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
+        await workspace?.close();
         if (development) await development.close();
       },
     };
   } catch (error) {
     if (server?.listening) await new Promise(resolve => server.close(resolve));
+    await workspace?.close();
     if (development) await development.close();
     throw error;
   }
@@ -269,14 +280,14 @@ export async function startExplorer({ fixture = false, upstream = null, localUps
 function cli() {
   const args = process.argv.slice(2);
   if (args.includes('--help')) {
-    console.log('Use: node server.mjs --fixture OR --local-upstream http://127.0.0.1:8787 OR --upstream https://public-facilitator.example [--port 0]');
+    console.log('Use: node server.mjs [--fixture OR --local-upstream http://127.0.0.1:8787 OR --upstream https://public-facilitator.example] [--workspace ABSOLUTE_PRIVATE_DIRECTORY] [--port 0]\nWith --workspace and no live source, reopen retained catalog pages and buyer requests.');
     return;
   }
   const count = name => args.filter(value => value === name).length;
-  if (args.some((arg, i) => !['--fixture', '--upstream', '--local-upstream', '--port'].includes(arg) &&
-      !(i > 0 && ['--upstream', '--local-upstream', '--port'].includes(args[i - 1]))) ||
+  if (args.some((arg, i) => !['--fixture', '--upstream', '--local-upstream', '--workspace', '--port'].includes(arg) &&
+      !(i > 0 && ['--upstream', '--local-upstream', '--workspace', '--port'].includes(args[i - 1]))) ||
       count('--fixture') > 1 || count('--upstream') > 1 ||
-      count('--local-upstream') > 1 || count('--port') > 1 ||
+      count('--local-upstream') > 1 || count('--workspace') > 1 || count('--port') > 1 ||
       [args.includes('--fixture'), args.includes('--upstream'),
         args.includes('--local-upstream')].filter(Boolean).length > 1) {
     throw new TypeError('Unknown, duplicate or conflicting CLI options');
@@ -285,9 +296,9 @@ function cli() {
   const portArg = value('--port');
   const port = portArg === null ? 0 : Number(portArg);
   const fixture = args.includes('--fixture') ||
-    (!args.includes('--upstream') && !args.includes('--local-upstream'));
+    (!args.includes('--upstream') && !args.includes('--local-upstream') && !args.includes('--workspace'));
   return startExplorer({ fixture, upstream: value('--upstream'),
-    localUpstream: value('--local-upstream'), port }).then(session => {
+    localUpstream: value('--local-upstream'), workspaceDirectory: value('--workspace'), port }).then(session => {
     console.log(JSON.stringify({ status: 'RUNNING', url: session.url, source: session.source,
       paidRequestsEnabled: false }, null, 2));
     let stopping = false;

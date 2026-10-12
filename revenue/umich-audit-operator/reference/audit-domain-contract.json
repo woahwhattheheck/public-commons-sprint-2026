@@ -1,0 +1,438 @@
+{
+  "schema": "umich-audit-domain-reference/v1",
+  "case_id": "umich-audit-rfp0012413-2026",
+  "purpose": "Source-grounded input to the original whole audit evidence, migration, management-action and receiving/recovery product.",
+  "source_status": {
+    "procurement_notice": "Original 11-page public event notice fully read; detailed Buyer Attachments and Attachment F remain with 7A2F's original acquisition.",
+    "business_process": "Current public University Audit Services process, follow-up page and sample report; these are reference defaults to review, not an assertion that the unpublished detailed procurement specifications mandate this implementation.",
+    "sample_data": "The University's file is explicitly a Sample Report. Its placeholder observations are not operational audit findings."
+  },
+  "sources": [
+    {
+      "id": "rfp-notice",
+      "url": "https://bids.sciquest.com/apps/Router/PublicEvent?CustomerOrg=UMich",
+      "locator": "Internal Audit Software / RFP-0012413-TECH-2026 / event1442341 / View as PDF / Sourcingevent/1442341-event.pdf",
+      "pages": 11,
+      "classification": "current_procurement_notice",
+      "private_download_query_excluded": true
+    },
+    {
+      "id": "audit-process",
+      "url": "https://audits.umich.edu/the-audit-process/steps-of-the-process/",
+      "local_name": "audit-process.html",
+      "classification": "public_current_business_process"
+    },
+    {
+      "id": "follow-up",
+      "url": "https://audits.umich.edu/the-audit-process/reporting-follow-up/",
+      "local_name": "reporting-follow-up.html",
+      "classification": "public_current_business_process"
+    },
+    {
+      "id": "sample-report",
+      "url": "https://audits.umich.edu/uploads/reports-and-advisories-sample-report-9-2024.pdf",
+      "local_name": "sample-audit-report-2024.pdf",
+      "pages": 3,
+      "classification": "public_sample_document",
+      "edition_note": "The URL includes 9-2024; the document's report date is a placeholder."
+    }
+  ],
+  "source_native_report": {
+    "source_id": "sample-report",
+    "page": 1,
+    "sections": [
+      "Internal Audit of",
+      "Sample Report",
+      "Date",
+      "Conclusion",
+      "Audit Scope, Objectives, and Results by Sub-Activity",
+      "Context and Key Risk Considerations"
+    ],
+    "table_columns": [
+      "Key Areas and Sub-Activities Audited",
+      "Results",
+      "Priority Level",
+      "Details"
+    ],
+    "hierarchy": [
+      "Key Area",
+      "Objective",
+      "Sub-Activity Audited"
+    ],
+    "result_symbols": [
+      {
+        "raw": "O",
+        "meaning": "Audit observation(s) noted",
+        "priority": "A corresponding priority belongs to each observation."
+      },
+      {
+        "raw": "check mark",
+        "meaning": "Controls functioning as intended, no observation noted",
+        "priority": null
+      }
+    ],
+    "mapping_notes": [
+      "Retain the original label/symbol and row or document locator beside any normalized value.",
+      "An area/objective can contain multiple sub-activities; a sub-activity result and an individual observation's priority are distinct.",
+      "Keep an absent priority null. Do not map a check mark or missing priority to Low.",
+      "The published example has one High observation, one Medium observation and a check-mark row. Those are template examples, not discovered University cases."
+    ]
+  },
+  "business_process": {
+    "source_id": "audit-process",
+    "stages": [
+      "Announcement",
+      "Planning",
+      "Opening Meeting",
+      "Review & Testing",
+      "Closing Meeting",
+      "Reporting",
+      "Follow-Up"
+    ],
+    "stage_notes": {
+      "Planning": "Unit objectives and significant risks inform scope and the audit program.",
+      "Opening Meeting": "Timing and resource requirements are agreed with the unit.",
+      "Review & Testing": "Evidence can include interviews, observation, control work and document review; observations are shared as identified.",
+      "Closing Meeting": "Department representatives and other stakeholders finalize the executive summary and management advisory reports.",
+      "Reporting": "Final audit report and any necessary management advisory memos are distributed.",
+      "Follow-Up": "Audit Services verifies corrective action implementation and issues a follow-up memo."
+    },
+    "status_model_note": "These are the site's published process stages, not a native software status enumeration or a mandatory linear state machine."
+  },
+  "follow_up_reference": {
+    "source_ids": [
+      "sample-report",
+      "follow-up"
+    ],
+    "sample_page": 2,
+    "clock_basis": "report issue date",
+    "unit": "calendar months",
+    "rules": [
+      {
+        "priority": "High",
+        "expected_completion_months": 6,
+        "explicit_management_action_plan_override": true,
+        "follow_up_interval_months": 6,
+        "audit_verification": "completeness and sustainability",
+        "committee_communication": "Open observations beyond the six-month window are communicated to FAIC."
+      },
+      {
+        "priority": "Medium",
+        "expected_completion_months": 12,
+        "explicit_management_action_plan_override": true,
+        "follow_up_interval_months": 6,
+        "audit_verification": "completeness and sustainability",
+        "committee_communication": "Open observations beyond one year are communicated to FAIC."
+      },
+      {
+        "priority": "Low",
+        "expected_completion_months": null,
+        "regular_audit_services_follow_up": false,
+        "distribution": "Reported directly to the audited unit; excluded from the audit report and senior-management attention.",
+        "future_review": "May be revisited in a subsequent audit of the same unit."
+      }
+    ],
+    "implementation_notes": [
+      "Represent issue date, source policy, calculated reference date and any expressly supplied action-plan date separately.",
+      "Do not replace calendar-month calculations with 180/365-day constants.",
+      "An action-plan exception is explicit source data, not an inferred extension.",
+      "The template's committee-communication thresholds are separate sentences from its action-deadline override; do not silently assume that an override changes escalation timing.",
+      "Preserve unit-reported implementation and Audit Services verification as distinct evidence. The source does not supply a native status code list.",
+      "Produce an internal follow-up queue and reviewable export; do not send actual contacts or represent an adopted University policy."
+    ]
+  },
+  "document_audiences": {
+    "source_ids": [
+      "sample-report",
+      "audit-process"
+    ],
+    "sample_page": 3,
+    "outputs": [
+      {
+        "kind": "audit_report",
+        "audience": "Audited unit leadership plus the stated central leadership distribution.",
+        "contents": "Summary observations, management plans, background and conclusions."
+      },
+      {
+        "kind": "audit_observation_document",
+        "audience": "Unit leadership only, per the process page.",
+        "contents": "Detailed observations and management action plans."
+      },
+      {
+        "kind": "management_advisory_memo",
+        "audience": "Appropriate management recipients selected in the engagement.",
+        "contents": "Optional supporting detail, out-of-scope observation, limited project, sampled unit finding, or referral to the unit able to resolve an issue."
+      },
+      {
+        "kind": "it_audit_report",
+        "additional_audience_roles": [
+          "chief information officer",
+          "chief security officer"
+        ]
+      },
+      {
+        "kind": "michigan_medicine_it_audit_report",
+        "additional_audience_roles": [
+          "Michigan Medicine chief information officer",
+          "Michigan Medicine chief information security officer"
+        ]
+      },
+      {
+        "kind": "regents_summary",
+        "audience": "Board of Regents periodic summary; FAIC periodic activity and follow-up summary."
+      }
+    ],
+    "central_report_roles": [
+      "president",
+      "executive vice presidents",
+      "general counsel",
+      "associate vice president for finance",
+      "controller",
+      "executive director of enterprise risk management",
+      "ethics, compliance and integrity officer",
+      "director of internal controls"
+    ],
+    "implementation_notes": [
+      "These are role names, not a verified live recipient/address list.",
+      "Retain source scopes separately; the detailed observation document must not automatically inherit the broader summary audience.",
+      "Freeze the selected projection and audience in a reviewed receiving package. Any actual transmission belongs to the original authorized sender.",
+      "Preserve raw source wording when the process page and sample appendix use different role titles."
+    ]
+  },
+  "proposed_engineering_records": {
+    "classification": "authored_product_design_not_vendor_schema",
+    "records": [
+      {
+        "name": "engagement",
+        "fields": [
+          "source_namespace",
+          "source_id",
+          "title",
+          "organizational_scope",
+          "audit_type",
+          "scope_text",
+          "objectives",
+          "program_reference",
+          "issue_date",
+          "stage_raw",
+          "normalized_stage",
+          "source_revision"
+        ]
+      },
+      {
+        "name": "audit_area",
+        "fields": [
+          "engagement_id",
+          "source_id",
+          "parent_area_id",
+          "label",
+          "objective",
+          "source_order"
+        ]
+      },
+      {
+        "name": "sub_activity",
+        "fields": [
+          "area_id",
+          "source_id",
+          "label",
+          "raw_result_symbol",
+          "normalized_result",
+          "source_locator"
+        ]
+      },
+      {
+        "name": "observation",
+        "fields": [
+          "engagement_id",
+          "sub_activity_id",
+          "source_id",
+          "title",
+          "details",
+          "priority_raw",
+          "priority_normalized",
+          "report_inclusion",
+          "owner_unit",
+          "source_revision"
+        ]
+      },
+      {
+        "name": "management_action",
+        "fields": [
+          "observation_id",
+          "source_id",
+          "plan_text",
+          "responsible_party_reference",
+          "source_status",
+          "issue_date",
+          "explicit_target_date",
+          "reference_target_date",
+          "override_source",
+          "unit_completion_statement",
+          "verified_at",
+          "verification_reference"
+        ]
+      },
+      {
+        "name": "evidence",
+        "fields": [
+          "source_id",
+          "filename",
+          "media_type",
+          "sha256",
+          "size",
+          "source_locator",
+          "custody_path",
+          "classification",
+          "engagement_id",
+          "observation_id",
+          "source_revision"
+        ]
+      },
+      {
+        "name": "review_decision",
+        "fields": [
+          "record_type",
+          "record_id",
+          "source_revision",
+          "decision",
+          "reason",
+          "reviewer_reference",
+          "reviewed_at",
+          "input_hash"
+        ]
+      },
+      {
+        "name": "receiving_projection",
+        "fields": [
+          "source_selection_hash",
+          "mapping_revision",
+          "target_contract_reference",
+          "document_kind",
+          "audience_role_selection",
+          "included_record_ids",
+          "omitted_record_ids_with_reasons",
+          "artifact_manifest",
+          "review_reference"
+        ]
+      },
+      {
+        "name": "follow_up_review",
+        "fields": [
+          "action_id",
+          "review_date",
+          "source_status",
+          "implementation_evidence",
+          "auditor_verification",
+          "next_review_date",
+          "memo_reference",
+          "committee_review_flag"
+        ]
+      },
+      {
+        "name": "source_mapping",
+        "fields": [
+          "source_namespace",
+          "source_field_or_ordinal",
+          "target_field",
+          "transform",
+          "value_map",
+          "null_rule",
+          "relationship_key",
+          "native_contract_reference",
+          "revision"
+        ]
+      }
+    ]
+  },
+  "full_workflow_outline": [
+    "Import the original source files and attachments while preserving record IDs, exact bytes, labels, nulls and source relationships.",
+    "Review explicit mappings for engagements, areas, activities, observations, action plans, evidence and audiences; expose missing identities and broken relationships.",
+    "Resolve source conflicts through retained corrections and decisions without replacing original artifacts.",
+    "Review report, observation-detail, advisory and follow-up projections separately, with exact source/selection hashes and audience scopes.",
+    "Produce the selected target's documented native format and compare its returned export to the reviewed source selection. An arbitrary CSV is not labeled vendor-native.",
+    "Operate action follow-up with separate reference dates, supplied overrides, implementation assertions and auditor verification.",
+    "Build a complete private receiving package, reopen it independently, and retain source/output reconciliation and original review history.",
+    "Back up and restore the original working state, attachment custody, mappings, decisions and outstanding actions, preserving all IDs and access classifications."
+  ],
+  "procurement_engineering_links": [
+    {
+      "id": "RFP-LIFECYCLE",
+      "page": 2,
+      "source_id": "rfp-notice",
+      "kind": "scope",
+      "area": "Full audit lifecycle",
+      "product_join": "Link planning/risk, engagement/workpaper evidence, actions and reporting."
+    },
+    {
+      "id": "RFP-3.3.5",
+      "page": 6,
+      "source_id": "rfp-notice",
+      "kind": "question",
+      "area": "Proposed products, data flows and safeguards",
+      "product_join": "Export actual source→processing→target flow and the selected field/attachment classifications."
+    },
+    {
+      "id": "RFP-3.3.13-14",
+      "page": 7,
+      "source_id": "rfp-notice",
+      "kind": "question",
+      "area": "Recovery and contingency plans",
+      "product_join": "Demonstrate actual retained-state backup, recovery and reopening."
+    },
+    {
+      "id": "RFP-3.3.20-24",
+      "page": 7,
+      "source_id": "rfp-notice",
+      "kind": "question",
+      "area": "Subcontractors, external access and lifecycle",
+      "product_join": "Record who receives which output and the source's access classification; do not manufacture certifications."
+    },
+    {
+      "id": "RFP-3.3.30-39",
+      "page": 7,
+      "source_id": "rfp-notice",
+      "kind": "question",
+      "area": "Storage/access geography, encryption and centralized authentication",
+      "product_join": "Expose the actual configured deployment/storage/auth contract without assuming an institution-approved hosting model."
+    },
+    {
+      "id": "RFP-3.4",
+      "page": 7,
+      "source_id": "rfp-notice",
+      "kind": "stated_requirement_and_questionnaire",
+      "area": "WCAG 2.1 AA, Section 508 and accessibility evidence",
+      "product_join": "Keyboard-operable full workflow and version-specific conformance observations."
+    },
+    {
+      "id": "RFP-4.1.3",
+      "page": 8,
+      "source_id": "rfp-notice",
+      "kind": "question",
+      "area": "Assumptions tied to source sections",
+      "product_join": "Retain explicit scope and source-format assumptions with affected records."
+    },
+    {
+      "id": "RFP-4.1.7",
+      "page": 9,
+      "source_id": "rfp-notice",
+      "kind": "question",
+      "area": "Weeks, role hours/rates, University effort, travel, assessment price and milestones",
+      "product_join": "Keep measurable implementation and receiving workshare boundaries separate from prime software/licensing obligations."
+    },
+    {
+      "id": "RFP-P1",
+      "page": 10,
+      "source_id": "rfp-notice",
+      "kind": "native_line_item",
+      "area": "Total Pricing, quantity1, LS",
+      "product_join": "Native Attachment F remains the controlling price worksheet; do not invent its columns."
+    }
+  ],
+  "next_source_inputs": [
+    "7A2F's original requirements/specifications and procurement schedule.",
+    "7A2F's original Attachment F pricing workbook, agreement and data-security attachments.",
+    "Existing prime/platform choice and its actual native import/export definitions.",
+    "An approved source export or explicitly marked Practice fixture for the complete product journey; public sample report stays classified as a template."
+  ]
+}

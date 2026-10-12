@@ -2,6 +2,10 @@
 
 The ArcGIS adapter imports a selected FeatureServer or MapServer layer into the existing SF30 data publisher. The same publisher owns saved plans, extraction, typed review, dataset versions, schedules, local operator UI and SF88 buyer preparation. The adapter supplies source capture and projection; public queries and payment handling use the existing implementations.
 
+## Open the complete source workbench
+
+[WORKBENCH.md](WORKBENCH.md) covers capture or exact-file import, native field mapping, immutable source-edition selection, the existing publication workflow, managed deployment and receiving downloads in one local interface. Reopen an existing publisher with `starforge arcgis workbench --workspace ABSOLUTE_WORKSPACE`; create a new one with `--create --state ABSOLUTE_DATASET_DIRECTORY`. The same CLI is available directly as `node stellar/scf-starforge-20261009/sf30-seller-sdk/arcgis/cli.mjs workbench`.
+
 ## Start with a live layer
 
 Use Linux, Node 22.16 or later and util-linux `flock`. From the repository or extracted source root:
@@ -154,6 +158,10 @@ const spatialReference = JSON.parse(row.spatial_reference_json);
 Retain the returned snapshot, field selection, source identifier and original `page.nextCursor`. Continue with the same filters, sort and fields through the existing dataset buyer. An Esri feature-set consumer can reuse the original geometry and spatial reference directly.
 
 The installed package exposes `starforge arcgis` (and `arcgis-publisher`) for these same CLI commands. JavaScript consumers use `@tokenjunkielabs/starforge-merchant/seller/arcgis`, `/seller/arcgis/publisher` and `/buyer/arcgis`. The existing merchant MCP accepts a host-declared `kind: "arcgis"` and opens this original publisher; see [the maintained MCP guide](../../../../stellar-forge/mcp-merchant-operator/PUBLISHERS.md).
+
+## Managed merchant deployment
+
+[DEPLOYMENT.md](DEPLOYMENT.md) continues a reviewed, published ArcGIS extraction into the original SF82 release console: export the exact candidate and merchant, stage against the same dataset version store, select/start/drain/rollback/reopen, then recover the public GIS declaration from the retained release for the original buyer delivery. Use `deployment-export`, `deployment-stage`, `deployment-status` and `deployment-receiving` through the existing ArcGIS command.
 
 ## Completed native customer workflow
 

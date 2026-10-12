@@ -5,8 +5,10 @@ import { createHash, randomUUID } from 'node:crypto';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { dirname, join, resolve } from 'node:path';
 import { loadDatasetConfig } from '../dataset-handler.mjs';
+import { acquireDatasetLease } from './writer-lease.mjs';
 
-const SCHEMA = 'stellar-forge.dataset-versions.v1';
+const LEGACY_SCHEMA = 'stellar-forge.dataset-versions.v1';
+const SCHEMA = 'stellar-forge.dataset-versions.v2';
 const HASH = /^[a-f0-9]{64}$/;
 const object = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 const digest = bytes => createHash('sha256').update(bytes).digest('hex');
@@ -48,7 +50,7 @@ async function directory(path) {
   if (process.platform !== 'win32' && (info.mode & 0o077))
     throw new TypeError('Version storage must be private (chmod 700)');
 }
-async function acquire(directoryPath) {
+async function acquireLegacy(directoryPath) {
   const path = join(directoryPath, 'writer.lock');
   const lock = { pid: process.pid, token: randomUUID(), createdAt: new Date().toISOString() };
   for (let attempt = 0; attempt < 2; attempt++) {
@@ -63,6 +65,9 @@ async function acquire(directoryPath) {
       const before = await lstat(path), old = (await jsonFile(path)).value;
       if (!Number.isSafeInteger(old.pid) || old.pid < 1 || typeof old.token !== 'string')
         throw fault('DATASET_LOCK_INVALID', 'Invalid writer lock; inspect this private state directory');
+      if (process.platform === 'linux')
+        throw fault('DATASET_LEGACY_WRITER_PRESENT',
+          'Stop the original v1 writer before upgrading. If it crashed, retain its terminal record and exact writer.lock before operator recovery; a process number alone cannot establish ownership.');
       let alive = true;
       try { process.kill(old.pid, 0); } catch (probe) { if (probe.code === 'ESRCH') alive = false; }
       if (alive || attempt) throw fault('DATASET_WRITER_RUNNING', 'The dataset version store already has a live writer');
@@ -79,7 +84,7 @@ function contractOf(description) {
   return digest(JSON.stringify(canonical(contract)));
 }
 function validateState(state) {
-  if (!object(state) || state.schema !== SCHEMA || !HASH.test(state.current ?? '') ||
+  if (!object(state) || ![LEGACY_SCHEMA, SCHEMA].includes(state.schema) || !HASH.test(state.current ?? '') ||
       !HASH.test(state.contractHash ?? '') || !Array.isArray(state.versions) || !object(state.settings))
     throw new TypeError('Invalid dataset version state');
   integer(state.revision, 'revision', 1, Number.MAX_SAFE_INTEGER);
@@ -156,18 +161,24 @@ function selectedQuery(query = {}) {
  * All datasets are loaded by the original SF30 loader, never by a second parser. */
 export async function openDatasetVersions({ directory: suppliedDirectory, initialConfig,
   retentionMs, maxVersions, maxRetainedBytes, maxCachedVersions = 2,
-  maxResidentRows = 1000000, now = Date.now } = {}) {
+  maxResidentRows = 1000000, collectOnOpen = true, now = Date.now } = {}) {
   if (typeof suppliedDirectory !== 'string' || !suppliedDirectory || typeof now !== 'function')
     throw new TypeError('A private directory and clock are required');
+  if (typeof collectOnOpen !== 'boolean') throw new TypeError('collectOnOpen must be boolean');
   integer(maxCachedVersions, 'maxCachedVersions', 1, 16);
   integer(maxResidentRows, 'maxResidentRows', 1, 16000000);
   const root = resolve(suppliedDirectory), generations = join(root, 'versions');
   await directory(root); await directory(generations);
-  const unlock = await acquire(root), resident = new Map(), known = new Map(), scope = new AsyncLocalStorage();
+  const lease = process.platform === 'linux' ? acquireDatasetLease(root) : null;
+  let legacyUnlock = null;
+  const unlock = async () => {
+    try { await legacyUnlock?.(); } finally { await lease?.close(); }
+  };
+  const resident = new Map(), known = new Map(), scope = new AsyncLocalStorage();
   let state, tail = Promise.resolve(), memoryTail = Promise.resolve(), closing = false;
   const serialize = task => {
     if (closing) return Promise.reject(fault('DATASET_STORE_CLOSED', 'Dataset store is closing'));
-    const result = tail.then(task); tail = result.catch(() => {}); return result;
+    const result = tail.then(() => { lease?.assertHeld(); return task(); }); tail = result.catch(() => {}); return result;
   };
   const memory = task => {
     const result = memoryTail.then(task); memoryTail = result.catch(() => {}); return result;
@@ -221,10 +232,12 @@ export async function openDatasetVersions({ directory: suppliedDirectory, initia
       throw fault('DATASET_REVISION_CHANGED', 'Dataset state changed after the operator inspected it; read status again');
   }
   const persist = async next => {
+    lease?.assertHeld();
     validateState(next);
     const temporary = join(root, `.state-${randomUUID()}.json`);
     try {
       await privateFile(temporary, encode(next));
+      lease?.assertHeld();
       await rename(temporary, join(root, 'state.json'));
       await syncDirectory(root);
       state = next;
@@ -236,7 +249,7 @@ export async function openDatasetVersions({ directory: suppliedDirectory, initia
         typeof config.file !== 'string' || !config.file)
       throw new TypeError('An original csv-dataset.v1 config is required');
     const maxBytes = integer(config.maxBytes ?? 64 * 1024 * 1024, 'maxBytes', 1, 256 * 1024 * 1024);
-    const temporary = join(generations, `.stage-${randomUUID()}`);
+    const temporary = join(generations, `${lease ? '.v2-stage-' : '.stage-'}${randomUUID()}`);
     await mkdir(temporary, { mode: 0o700 });
     try {
       const input = await open(resolve(dirname(absolute), config.file),
@@ -325,8 +338,17 @@ export async function openDatasetVersions({ directory: suppliedDirectory, initia
     return [...ids];
   }
   try {
+    let existingSchema;
+    try { existingSchema = (await jsonFile(join(root, 'state.json'), 256 * 1024)).value.schema; }
+    catch (error) { if (error.code !== 'ENOENT') throw error; }
+    if (existingSchema === SCHEMA && !lease)
+      throw fault('DATASET_LINUX_FLOCK_REQUIRED', 'This dataset store uses Linux util-linux flock.');
+    // During the one-time upgrade, keep the original writer exclusion until v2
+    // is durable. Older runtimes reject v2 before serving or committing state;
+    // v2 preparation uses a namespace their pre-validation cleanup cannot remove.
+    if (existingSchema !== SCHEMA) legacyUnlock = await acquireLegacy(root);
     for (const entry of await readdir(generations)) {
-      if (/^\.stage-[a-f0-9-]{36}$/.test(entry))
+      if (/^\.(?:v2-)?stage-[a-f0-9-]{36}$/.test(entry))
         await rm(join(generations, entry), { recursive: true, force: true });
     }
     try { state = validateState((await jsonFile(join(root, 'state.json'), 256 * 1024)).value); }
@@ -340,14 +362,15 @@ export async function openDatasetVersions({ directory: suppliedDirectory, initia
         if (staged.dataset.describe().rowCount > maxResidentRows)
           throw new RangeError('Current dataset exceeds maxResidentRows; increase the parsed-data row budget');
         await install(staged);
-        await persist({ schema: SCHEMA, revision: 1, current: staged.record.snapshot,
+        await persist({ schema: lease ? SCHEMA : LEGACY_SCHEMA, revision: 1, current: staged.record.snapshot,
           contractHash: staged.contractHash, settings: policy, versions: [staged.record] });
         cache(staged.record.snapshot, staged.dataset);
       } finally { await rm(staged.temporary, { recursive: true, force: true }); }
     } else {
       if (initialConfig || retentionMs !== undefined || maxVersions !== undefined || maxRetainedBytes !== undefined)
         throw new TypeError('Existing stores retain their initialized settings; reopen without initialization options');
-      await collectInternal();
+      // Portable capture keeps every stored generation; live reopen still collects by default.
+      if (collectOnOpen) await collectInternal();
       // Preserve the original full restart validation, one generation at a time.
       // Only compact descriptions survive for cold generations; current is last.
       for (const record of [...state.versions.filter(v => v.snapshot !== state.current),
@@ -361,9 +384,12 @@ export async function openDatasetVersions({ directory: suppliedDirectory, initia
         cache(record.snapshot, loaded.dataset);
       }
     }
+    if (lease && state.schema === LEGACY_SCHEMA) await persist({ ...state, schema: SCHEMA });
+    if (lease && legacyUnlock) { await legacyUnlock(); legacyUnlock = null; }
   } catch (error) { await unlock(); throw error; }
 
   function select(query, allowSnapshot) {
+    lease?.assertHeld();
     const selection = selectedQuery(query), id = selection.snapshot ?? state.current;
     if (selection.explicitSnapshot && !allowSnapshot)
       throw fault('INVALID_DATASET_QUERY', 'This route does not advertise a snapshot selector; use its original cursor or current query', 400);
@@ -394,7 +420,7 @@ export async function openDatasetVersions({ directory: suppliedDirectory, initia
   const result = {
     directory: root,
     describe: () => structuredClone(known.get(state.current).description),
-    status: () => ({ schema: SCHEMA, revision: state.revision, current: state.current,
+    status: () => ({ schema: state.schema, revision: state.revision, current: state.current,
       settings: { ...state.settings }, retainedSourceBytes: state.versions.reduce((sum, v) => sum + v.sourceBytes, 0),
       cache: { maxCachedVersions, maxResidentRows, residentVersions: resident.size,
         residentRows: residentRows() },

@@ -7,7 +7,7 @@
   const MAX_PORTABLE_FILE_BYTES = 256 * 1024 * 1024;
   const tokenKey = 'research-dossiers-session:' + location.origin;
   const state = {token: '', dossiers: [], dossier: null, activeTab: 'sources', sourceId: null, variantDigest: null,
-    page: 0, busy: false, openalexConfigured: false, openalexEditions: [], editingDossier: false, editingQuestion: null, editingFinding: null, editingSelection: null, importCompleted: new Set(), noteDrafts: new Map()};
+    page: 0, busy: false, openalexConfigured: false, openalexEditions: [], editingDossier: false, editingQuestion: null, editingFinding: null, editingSelection: null, importCompleted: new Set(), noteDrafts: new Map(), noteEditVersions: new Map()};
   const safeStorage = {
     get() { try { return sessionStorage.getItem(tokenKey) || ''; } catch { return ''; } },
     set(value) { try { sessionStorage.setItem(tokenKey, value); } catch {} }
@@ -77,7 +77,10 @@
       if (value) { button.dataset.wasDisabled = button.disabled ? '1' : '0'; button.disabled = true; }
       else if (button.dataset.wasDisabled !== undefined) { button.disabled = button.dataset.wasDisabled === '1'; delete button.dataset.wasDisabled; }
     });
+    $('detail-selected').disabled = value;
+    $('detail-classification').disabled = value;
     $('connection').textContent = value ? 'Saving / loading' : 'Local workspace';
+    if (!value) renderNoteState();
   }
   async function api(path, {method = 'GET', body, download = false} = {}) {
     const response = await fetch(path, {method, headers: {Authorization: 'Bearer ' + state.token,
@@ -325,12 +328,18 @@
   async function saveEvidence({includeNote = true} = {}) {
     const source = sourceById(state.sourceId);
     if (!source) return;
+    const key = draftKey(source.id), editVersion = state.noteEditVersions.get(key) || 0;
     const note = includeNote ? $('detail-note').value : source.note || '';
     const selected = $('detail-selected').checked;
     const classification = $('detail-classification').value;
     await mutate('/evidence', {sourceId: source.id, selected, note, classification});
-    state.noteDrafts.delete(draftKey(source.id)); renderDetail();
-    notify('Evidence selection and analysis saved.');
+    // A completed save may acknowledge an older draft while the user keeps typing.
+    if (includeNote && (state.noteEditVersions.get(key) || 0) === editVersion)
+      state.noteDrafts.delete(key);
+    renderDetail();
+    const draft = state.noteDrafts.get(key), saved = sourceById(source.id);
+    notify(draft !== undefined && draft !== (saved?.note || '') ?
+      'Evidence selection saved. Your newer note is still unsaved.' : 'Evidence selection and analysis saved.');
   }
   function renderQuestions() {
     const questions = asArray(state.dossier.questions);
@@ -666,9 +675,11 @@
   });
   $('detail-note').addEventListener('input', () => {
     if (state.sourceId) {
-      const value = $('detail-note').value, source = sourceById(state.sourceId);
-      if (value === (source?.note || '')) state.noteDrafts.delete(draftKey(state.sourceId));
-      else state.noteDrafts.set(draftKey(state.sourceId), value);
+      const value = $('detail-note').value, source = sourceById(state.sourceId), key = draftKey(state.sourceId);
+      state.noteEditVersions.set(key, (state.noteEditVersions.get(key) || 0) + 1);
+      // While a save is pending, reverting to the earlier saved text is still a new edit.
+      if (!state.busy && value === (source?.note || '')) state.noteDrafts.delete(key);
+      else state.noteDrafts.set(key, value);
     }
     renderNoteState();
   });
