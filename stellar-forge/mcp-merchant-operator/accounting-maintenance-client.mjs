@@ -16,7 +16,7 @@ const FIELDS = {
   cancel: ['jobId'],
 };
 const FILE_FIELDS = ['kind', 'recoveryId', 'runId', 'exportId', 'collectionId', 'sourceId',
-  'reviewId', 'closeId', 'handoffId', 'revisionId', 'adjustmentId', 'jobId', 'planId', 'responseId', 'nativePost', 'attemptId', 'file', 'statementId', 'customerId', 'usageId', 'replacesId', 'from', 'until', 'profileId', 'captureId', 'returnId', 'rollbackId', 'scope', 'cycleId', 'fileId'];
+  'reviewId', 'closeId', 'handoffId', 'revisionId', 'adjustmentId', 'jobId', 'planId', 'responseId', 'nativePost', 'attemptId', 'file', 'statementId', 'customerId', 'usageId', 'replacesId', 'from', 'until', 'profileId', 'captureId', 'returnId', 'rollbackId', 'scope', 'cycleId', 'fileId', 'receivedId', 'clientId'];
 const plain = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 const fail = (code, message) => Object.assign(new Error(message), { code: 'ACCOUNTING_MAINTENANCE_CLIENT_' + code });
 function exact(value, fields) {

@@ -6,9 +6,11 @@ import {mountCaseDesk} from './case-desk.mjs';
 import {mountHandoffDesk} from './handoff-desk.mjs';
 import {mountIncidentDesk} from './incident-desk.mjs';
 import {mountRuntimeDesk} from './runtime-desk.mjs';
+import {mountCommissioningDesk} from './commissioning-desk.mjs';
 
 let caseDesk = null;
 let runtimeDesk = null;
+let commissioningDesk = null;
 
 const $ = id => document.getElementById(id);
 const form = $('intake-form');
@@ -272,6 +274,7 @@ function invalidateComparison() {
   message('compare-status', 'Choose Compare changes to review the selected captures.');
 }
 function invalidateWorkorder(text = 'Sources or terms changed. Create a new workorder to use these selections.') {
+  commissioningDesk?.invalidateWorkorder();
   workorderRevision++;
   workorderAbort?.abort(); workorderAbort = null;
   workorder = null;
@@ -462,6 +465,7 @@ $('workorder-form').addEventListener('submit', async event => {
     if (result.packet?.schema !== 'SCF-SF77/merchant-workorder-v1' ||
         typeof result.html !== 'string' || typeof result.checklist !== 'string') throw new Error('The original workorder was not returned');
     showWorkorder(result);
+    await commissioningDesk?.receiveWorkorder(result,payload);
     message('workorder-status', 'Workorder prepared. Review and save the documents below; nothing has been sent.', 'good');
   } catch (error) {
     if (revision !== workorderRevision) return;
@@ -489,6 +493,8 @@ const caseRoot = document.createElement('div');
 const handoffRoot = document.createElement('section');
 const incidentRoot = document.createElement('section');
 const runtimeRoot = document.createElement('section');
+const commissioningRoot = document.createElement('section');
+$('workorder').after(commissioningRoot);
 const portableFiles = document.createElement('details');
 portableFiles.className = 'portable-cases source-details';
 const portableSummary = document.createElement('summary');
@@ -525,15 +531,17 @@ async function readCase() {
   const termsText = JSON.stringify({schema: 'stellar-forge.merchant-terms-draft.v1', values: termsEditor.readDraft()});
   const baselineOnly = $('workorder-baseline-only').checked;
   const workorderSource=$('workorder-source').value;
+  const commissioning=commissioningDesk?.read()??null;
   const current = latestBytes, browser = postBytes;
   const selected = files.map(([field]) => [field, selectedSource(field)]);
   const sources = Object.fromEntries(await Promise.all(selected.map(async ([field, file]) =>
     [field, file ? await encodedFile(file) : null])));
   sources.intake = current ? encodeBytes(new TextEncoder().encode(current)) : null;
   sources.preflight = browser ? encodeBytes(new TextEncoder().encode(browser)) : null;
-  return {inputs, sources, termsText, baselineOnly,workorderSource};
+  return {inputs, sources, termsText, baselineOnly,workorderSource,...(commissioning?{commissioning}:{})};
 }
 async function applyCase(state, {canReplace = ()=>true} = {}) {
+  const commissioning=await commissioningDesk.prepare(state.commissioning??null);
   // Complete structural/representability checks before touching the current editor.
   const terms = state.termsText ? JSON.parse(state.termsText) :
     {schema: 'stellar-forge.merchant-terms-draft.v1', values: emptyTermsDraft};
@@ -584,6 +592,7 @@ async function applyCase(state, {canReplace = ()=>true} = {}) {
   $('permission').checked = false; $('post-permission').checked = false;
   $('workorder-baseline-only').checked = state.baselineOnly;
   $('workorder-source').value=workorderSource;
+  commissioningDesk.apply(commissioning);
   termsEditor.loadDraft(terms.values);
   for (const [field, value] of selections) if (value) retained.set(field, value);
   if (current) {
@@ -606,6 +615,7 @@ async function applyCase(state, {canReplace = ()=>true} = {}) {
   $('terms-file-status').textContent = 'Restored raw draft fields, including existing recorded terms. Original workorder validation still applies.';
   document.querySelector('footer').textContent = 'Merchant workspace · Save case retains the full case. Portable workspace files transfer captures and draft terms.';
 }
+commissioningDesk=mountCommissioningDesk({root:commissioningRoot,onChange:()=>caseDesk?.changed({user:true,source:false})});
 const portable = mountWorkspaceFiles({root:workspaceRoot,readState:readCase,
   applyState:state=>caseDesk.importWorkspace(state),
   onNameChange:name=>caseDesk?.rename(name)});
@@ -618,6 +628,7 @@ runtimeDesk = mountRuntimeDesk({root:runtimeRoot,
 caseDesk = mountCaseDesk({root:caseRoot,readState:readCase,
   applyState:async (state,options)=>{await applyCase(state,options);portable.setName(state.name);},
   readSupport:()=>runtimeDesk.getText(),
+  applySavedCommissioning:(value,options)=>commissioningDesk.mergeSaved(value,options),
   prepareSupport:(text,inputs)=>runtimeDesk.prepare(text,inputs),
   applySupport:(text,review)=>{runtimeDesk.apply(text,review);syncSources();},
   onDraftChange:()=>{runtimeDesk.inputsChanged();invalidateWorkorder();},
@@ -626,7 +637,7 @@ mountHandoffDesk({root:handoffRoot,onOpenCase:id=>caseDesk.openSavedCase(id)});
 mountIncidentDesk({root:incidentRoot,exportCase:()=>caseDesk.exportSnapshot(),
   importCase:(state,files)=>caseDesk.importWorkspace(state,files)});
 for (const event of ['input','change']) document.querySelector('main').addEventListener(event,e=>{
-  if (caseRoot.contains(e.target) || incidentRoot.contains(e.target) || handoffRoot.contains(e.target) || workspaceRoot.contains(e.target) || runtimeRoot.contains(e.target) ||
+  if (caseRoot.contains(e.target) || incidentRoot.contains(e.target) || handoffRoot.contains(e.target) || workspaceRoot.contains(e.target) || runtimeRoot.contains(e.target) || commissioningRoot.contains(e.target) ||
       ['permission','post-permission'].includes(e.target.id)) return;
   caseDesk.changed({user:true});
 });

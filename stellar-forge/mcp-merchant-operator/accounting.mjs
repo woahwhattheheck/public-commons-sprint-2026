@@ -9,6 +9,7 @@ import { merchantQuickBooksRecoverySources } from './accounting-quickbooks-oauth
 import { RetainedFileReads } from './retained-file-reads.mjs';
 import { MerchantCryptoworth, cryptoworthFileSelectors } from './accounting-cryptoworth.mjs';
 import { MerchantRunbooks, runbookFileSelectors } from './accounting-runbooks.mjs';
+import { MerchantPortfolio, portfolioFileSelectors } from './accounting-portfolio.mjs';
 import { adjustmentDefinitions, MerchantAdjustments } from './accounting-adjustments.mjs';
 import { statementDefinitions, statementFileNames, statementFileSelectors, MerchantCustomerStatements } from './accounting-statements.mjs';
 import { platformDefinitions, platformFileNames, normalizePlatformConfig, platformSourceView, platformPathReferences, MerchantPlatforms } from './accounting-platforms.mjs';
@@ -43,11 +44,11 @@ const digest = bytes => createHash('sha256').update(bytes).digest('hex');
 
 
 
-const sourceKinds = ['recoveredSources', 'recoveryRequests', 'proofFiles', 'termsFiles', 'pricingReports', 'accountantReturns', 'buyerSources', 'platformInputs', 'statementUsageInputs', 'cryptoworthInputs', 'runbookInputs'];
+const sourceKinds = ['recoveredSources', 'recoveryRequests', 'proofFiles', 'termsFiles', 'pricingReports', 'accountantReturns', 'buyerSources', 'platformInputs', 'statementUsageInputs', 'cryptoworthInputs', 'runbookInputs', 'portfolioInputs'];
 
 
 
-const fileSelections = ['runId', 'recoveryId', 'exportId', 'collectionId', 'sourceId', 'reviewId', 'closeId', 'handoffId', 'revisionId', 'adjustmentId', 'jobId', 'planId', 'responseId', 'nativePost', 'attemptId', 'file', ...statementFileSelectors, ...cryptoworthFileSelectors, ...runbookFileSelectors];
+const fileSelections = ['runId', 'recoveryId', 'exportId', 'collectionId', 'sourceId', 'reviewId', 'closeId', 'handoffId', 'revisionId', 'adjustmentId', 'jobId', 'planId', 'responseId', 'nativePost', 'attemptId', 'file', ...statementFileSelectors, ...cryptoworthFileSelectors, ...runbookFileSelectors, ...portfolioFileSelectors];
 
 
 
@@ -106,13 +107,25 @@ export function normalizeAccountingConfig(raw, base) {
   if (!plain(raw.workspaces) || Object.keys(raw.workspaces).length > 16) throw fail('ACCOUNTING_CONFIGURATION_ERROR', 'Declare up to 16 original accounting workspaces.');
   const workspaces = Object.create(null), directories = new Set(), backupRoots = new Set();
   for (const [key, value] of Object.entries(raw.workspaces)) {
-    named(key); exact(value, ['label', 'directory', 'outboxDir', 'proofDir', 'termsFile', ...sourceKinds, 'collectionInputs', 'collectionHttpsProxyEnv', 'adjustmentHttpsProxyEnv', 'bitwave', 'platforms', 'recovery'], ['directory', 'outboxDir', 'proofDir', 'termsFile']);
+    named(key); exact(value, ['label', 'directory', 'outboxDir', 'proofDir', 'termsFile', ...sourceKinds, 'collectionInputs', 'collectionHttpsProxyEnv', 'adjustmentHttpsProxyEnv', 'bitwave', 'platforms', 'recovery', 'portfolioClients'], ['directory', 'outboxDir', 'proofDir', 'termsFile']);
     if (value.label !== undefined && (!check(name, value.label) || !value.label.trim())) throw fail('ACCOUNTING_CONFIGURATION_ERROR', 'Use a nonempty workspace label up to 160 characters.');
     const entry = { label: value.label ?? key };
     for (const field of ['directory', 'outboxDir', 'proofDir', 'termsFile']) entry[field] = hostPath(value[field], base);
     if (directories.has(entry.directory)) throw fail('ACCOUNTING_CONFIGURATION_ERROR', 'Declare each accounting workspace directory once.');
     directories.add(entry.directory);
     for (const field of sourceKinds) entry[field] = sourceMap(value[field], base);
+    entry.portfolioClients = Object.create(null);
+    if (value.portfolioClients !== undefined) {
+      if (!plain(value.portfolioClients) || Object.keys(value.portfolioClients).length > 15)
+        throw fail('ACCOUNTING_CONFIGURATION_ERROR', 'Declare up to 15 existing client-workspace aliases for a portfolio.');
+      const selected = new Set();
+      for (const [client, target] of Object.entries(value.portfolioClients)) {
+        named(client); named(target);
+        if (target === key || selected.has(target))
+          throw fail('ACCOUNTING_CONFIGURATION_ERROR', 'Each portfolio client must select a separate original workspace, distinct from its coordinator.');
+        selected.add(target); entry.portfolioClients[client] = target;
+      }
+    }
     entry.collectionInputs = collectionInputMap(value.collectionInputs, base);
     entry.bitwave = normalizeBitwaveConfig(value.bitwave, base);
     entry.platforms = normalizePlatformConfig(value.platforms, base);
@@ -135,6 +148,18 @@ export function normalizeAccountingConfig(raw, base) {
     }
     workspaces[key] = entry;
   }
+  const visited = new Set(), visiting = new Set();
+  function visit(key) {
+    if (visiting.has(key)) throw fail('ACCOUNTING_CONFIGURATION_ERROR', 'Portfolio client aliases must not form a coordinator cycle.');
+    if (visited.has(key)) return;
+    visiting.add(key);
+    for (const target of Object.values(workspaces[key].portfolioClients)) {
+      if (!Object.hasOwn(workspaces, target)) throw fail('ACCOUNTING_CONFIGURATION_ERROR', 'Every portfolio client must select an existing accounting.workspaces alias.');
+      visit(target);
+    }
+    visiting.delete(key); visited.add(key);
+  }
+  for (const key of Object.keys(workspaces)) visit(key);
   return { workspaces };
 }
 async function sourceBytes(path, maximum) {
@@ -209,6 +234,7 @@ export class MerchantAccounting {
       ...Object.fromEntries(sourceKinds.map(kind => [kind, Object.keys(value[kind] ?? {})])), collectionInputs: Object.keys(value.collectionInputs ?? {}),
       bitwave: bitwaveSourceView(value.bitwave),
       platforms: platformSourceView(value.platforms),
+      portfolioClients: Object.keys(value.portfolioClients ?? {}),
       adjustments: { verification: 'ORIGINAL_NETWORK_RPC', httpsProxyConfigured: Boolean(value.adjustmentHttpsProxyEnv) },
       operatingRecovery: { configured: Boolean(value.recovery), startPaused: value.recovery?.startPaused ?? false, mode: mode ?? 'CLOSED' } };
   }
@@ -229,7 +255,7 @@ export class MerchantAccounting {
   #result(key, value, operation) {
     // These providers project host metadata themselves. Reviewed operator text
     // and hash-bound native requests must cross the wire without substitutions.
-    if (operation.startsWith('merchant_accounting_cryptoworth_') || operation.startsWith('merchant_accounting_runbooks_')) return value;
+    if (operation === 'merchant_accounting_file' || operation.startsWith('merchant_accounting_cryptoworth_') || operation.startsWith('merchant_accounting_runbooks_') || operation.startsWith('merchant_accounting_portfolio_')) return value;
     if (value?.record?.revisions) value = { ...value, record: handoffBrief(value.record) };
     if (value?.definition?.versions) value = { ...value, definition: periodBrief(value.definition) };
     return this.#safe(value?.state ? { ...value, state: this.#state(key, value.state) } : value);
@@ -271,7 +297,7 @@ export class MerchantAccounting {
   async #openRuntime(key, record) {
     const definition = this.#definition(key), { directory, outboxDir, proofDir, termsFile } = definition;
     const workspace = await openAccountingWorkspace({ directory, outboxDir, proofDir, termsFile });
-    const runtime = { workspace, collection: null, accountant: null, bitwave: null, adjustments: null, statements: null, platforms: null, cryptoworth: null, runbooks: null };
+    const runtime = { workspace, collection: null, accountant: null, bitwave: null, adjustments: null, statements: null, platforms: null, cryptoworth: null, runbooks: null, portfolio: null, clientWorkspaces: new Set() };
     try {
       const recovered = workspace.view().sources.recoveredDir;
       if (recovered && !Object.values(definition.recoveredSources).includes(recovered))
@@ -280,6 +306,11 @@ export class MerchantAccounting {
       runtime.accountant = new AccountantWorkspace(workspace);
       runtime.cryptoworth = new MerchantCryptoworth(workspace, runtime.accountant, { readSource: (source, maximum) => sourceBytes(this.#source(key, 'cryptoworthInputs', source), maximum) });
       runtime.runbooks = new MerchantRunbooks(workspace, runtime.accountant, { readSource: (source, maximum) => sourceBytes(this.#source(key, 'runbookInputs', source), maximum) });
+      runtime.portfolio = new MerchantPortfolio(runtime.runbooks.controller, {
+        clientAliases: Object.keys(definition.portfolioClients ?? {}),
+        withClient: (client, fn) => this.#withPortfolioClient(key, runtime, client, fn),
+        readSource: (source, maximum) => sourceBytes(this.#source(key, 'portfolioInputs', source), maximum),
+      });
       runtime.adjustments = new MerchantAdjustments(workspace, { httpsProxyEnv: definition.adjustmentHttpsProxyEnv });
       runtime.statements = new MerchantCustomerStatements(workspace, { readSource: (source, maximum) => sourceBytes(this.#source(key, 'statementUsageInputs', source), maximum) });
       await runtime.statements.init();
@@ -293,23 +324,61 @@ export class MerchantAccounting {
       Object.assign(record, runtime); return runtime;
     } catch (error) { await this.#closeRuntime(key, record, runtime).catch(() => {}); throw error; }
   }
+  async #withPortfolioClient(key, runtime, client, fn) {
+    named(client);
+    const targets = this.#definition(key).portfolioClients ?? {};
+    if (!Object.hasOwn(targets, client) || typeof fn !== 'function')
+      throw fail('ACCOUNTING_PORTFOLIO_CLIENT_NOT_CONFIGURED', 'Choose an original configured portfolio client alias.');
+    const target = targets[client];
+    await this.#open(target, { borrower: runtime });
+    const record = this.#sessions.get(target);
+    if (!record?.maintenance || record.closing)
+      throw fail('ACCOUNTING_NOT_OPEN', 'The selected original client workspace is closing or unavailable.');
+    const admission = record.maintenance.enter();
+    const pending = Promise.resolve().then(() => fn({
+      workspace: admission.workspace, accountant: admission.accountant, runbooks: admission.runbooks.controller,
+    }));
+    record.calls.add(pending);
+    try { return await pending; }
+    finally { record.calls.delete(pending); admission.release(); }
+  }
+  async #releasePortfolioClients(runtime) {
+    for (const key of [...(runtime.clientWorkspaces ?? [])]) {
+      const record = this.#sessions.get(key);
+      if (!record || !record.borrowers.has(runtime)) { runtime.clientWorkspaces.delete(key); continue; }
+      if (record.explicitOpened || record.borrowers.size > 1) {
+        record.borrowers.delete(runtime); runtime.clientWorkspaces.delete(key); continue;
+      }
+      // Keep this final borrow until the original owner actually closes.
+      await this.#closeWorkspace(key);
+      record.borrowers.delete(runtime); runtime.clientWorkspaces.delete(key);
+    }
+  }
   async #closeRuntime(key, record, runtime) {
+    // A client close failure retains the complete coordinator runtime for retry.
+    await this.#releasePortfolioClients(runtime);
     let problem;
     try { await this.#files.closeScope(key); } catch (error) { problem = error; }
-    for (const owner of [runtime.runbooks, runtime.cryptoworth, runtime.platforms, runtime.bitwave, runtime.collection, runtime.workspace]) {
+    for (const owner of [runtime.portfolio, runtime.runbooks, runtime.cryptoworth, runtime.platforms, runtime.bitwave, runtime.collection, runtime.workspace]) {
       if (!owner) continue;
       try { await owner.close(); } catch (error) { problem ??= error; }
       finally { if (owner.tasks) await Promise.allSettled([...owner.tasks]); }
     }
-    if (record.workspace === runtime.workspace) Object.assign(record, { workspace: null, collection: null, accountant: null, bitwave: null, adjustments: null, statements: null, platforms: null, cryptoworth: null, runbooks: null });
     if (problem) throw problem;
+    if (record.workspace === runtime.workspace) Object.assign(record, { workspace: null, collection: null, accountant: null, bitwave: null, adjustments: null, statements: null, platforms: null, cryptoworth: null, runbooks: null, portfolio: null, clientWorkspaces: null });
   }
-  async #open(key) {
+  async #open(key, { borrower } = {}) {
     this.#definition(key);
     const existing = this.#sessions.get(key);
     if (existing?.closing) throw fail('ACCOUNTING_CLOSING', 'This accounting workspace is closing.');
-    if (existing) { await existing.opening; return this.#safe(this.#sessionState(key, existing)); }
-    const definition = this.#definition(key), record = { workspace: null, collection: null, accountant: null, bitwave: null, adjustments: null, statements: null, platforms: null, cryptoworth: null, runbooks: null, maintenance: null, closing: false, calls: new Set() };
+    if (existing) {
+      await existing.opening;
+      if (existing.closing) throw fail('ACCOUNTING_CLOSING', 'This accounting workspace is closing.');
+      if (borrower) { existing.borrowers.add(borrower); borrower.clientWorkspaces.add(key); }
+      else existing.explicitOpened = true;
+      return this.#safe(this.#sessionState(key, existing));
+    }
+    const definition = this.#definition(key), record = { workspace: null, collection: null, accountant: null, bitwave: null, adjustments: null, statements: null, platforms: null, cryptoworth: null, runbooks: null, portfolio: null, clientWorkspaces: null, maintenance: null, closing: false, explicitOpened: !borrower, borrowers: new Set(), calls: new Set() };
     this.#sessions.set(key, record);
     record.opening = (async () => {
       const oauth = definition.platforms?.qbo?.oauth;
@@ -326,7 +395,11 @@ export class MerchantAccounting {
       record.maintenance = await openAccountingMaintenance({ directory: definition.directory, ...definition.recovery, hostSources,
         openRuntime: () => this.#openRuntime(key, record), closeRuntime: runtime => this.#closeRuntime(key, record, runtime) });
     })();
-    try { await record.opening; return this.#safe(this.#sessionState(key, record)); }
+    try {
+      await record.opening;
+      if (borrower) { record.borrowers.add(borrower); borrower.clientWorkspaces.add(key); }
+      return this.#safe(this.#sessionState(key, record));
+    }
     catch (error) { this.#sessions.delete(key); throw error; }
   }
   async #closeWorkspace(key) {
@@ -335,13 +408,13 @@ export class MerchantAccounting {
     if (!record) return { workspace: key, ownership: 'CLOSED' };
     if (!record.close) {
       record.closing = true;
-      record.close = (async () => {
-        try {
-          await record.opening; await Promise.allSettled([...record.calls]);
-          await record.maintenance?.close();
-        }
-        finally { if (this.#sessions.get(key) === record) this.#sessions.delete(key); }
+      const attempt = (async () => {
+        await record.opening; await Promise.allSettled([...record.calls]);
+        await record.maintenance?.close();
+        if (this.#sessions.get(key) === record) this.#sessions.delete(key);
       })();
+      record.close = attempt;
+      attempt.catch(() => { if (record.close === attempt) record.close = null; });
     }
     await record.close;
     return { workspace: key, ownership: 'CLOSED', retained: true };
@@ -354,11 +427,13 @@ export class MerchantAccounting {
       'customer-statement': ['statementId', 'file'],
       cryptoworth: ['profileId', 'planId', 'captureId', 'returnId', 'rollbackId', 'scope', 'file'],
       runbooks: ['cycleId', 'fileId', 'file'],
+      portfolio: ['captureId', 'receivedId', 'clientId', 'cycleId', 'planId', 'file'],
       'customer-statement-preview': ['customerId', 'runId', 'usageId', 'replacesId', 'from', 'until', 'file'] }[kind];
     if (fileSelections.some(key => args[key] !== undefined && !selectors.includes(key))) throw fail('ACCOUNTING_INVALID_ARGUMENTS', 'Use only the original source selectors for this file kind.');
     const session = this.#sessions.get(args.workspace);
     if (kind === 'cryptoworth') return session.cryptoworth.file(args);
     if (kind === 'runbooks') return session.runbooks.file(args);
+    if (kind === 'portfolio') return session.portfolio.file(args);
     if (kind === 'qbo' || kind === 'xero') return session.platforms.file(args);
     if (kind === 'customer-statement' || kind === 'customer-statement-preview') return session.statements.file(args);
     if (kind === 'response') {
@@ -403,6 +478,7 @@ export class MerchantAccounting {
     const key = args.workspace, session = this.#sessions.get(key);
     if (operation.startsWith('merchant_accounting_cryptoworth_')) return session.cryptoworth.call(operation, args);
     if (operation.startsWith('merchant_accounting_runbooks_')) return session.runbooks.call(operation, args);
+    if (operation.startsWith('merchant_accounting_portfolio_')) return session.portfolio.call(operation, args);
     if (operation.startsWith('merchant_accounting_qbo_') || operation.startsWith('merchant_accounting_xero_')) return session.platforms.call(operation, args);
     if (operation.startsWith('merchant_accounting_customer_')) return session.statements.call(operation, args);
     if (operation === 'merchant_accounting_adjustment' || operation.startsWith('merchant_accounting_adjustment_'))
@@ -555,12 +631,21 @@ export class MerchantAccounting {
   close() {
     if (!this.#close) {
       this.#closing = true;
-      this.#close = (async () => {
+      const attempt = (async () => {
+        // Accepted coordinator calls may still admit children. Drain them before
+        // taking the final set of original owners to close.
+        for (;;) {
+          const records = [...this.#sessions.values()];
+          await Promise.allSettled(records.flatMap(record => [record.opening, ...record.calls].filter(Boolean)));
+          if ([...this.#sessions.values()].every(record => record.calls.size === 0)) break;
+        }
         const results = await Promise.allSettled([...this.#sessions.keys()].map(key => this.#closeWorkspace(key)));
-        await this.#files.close();
         const rejected = results.find(result => result.status === 'rejected');
         if (rejected) throw rejected.reason;
+        await this.#files.close();
       })();
+      this.#close = attempt;
+      attempt.catch(() => { if (this.#close === attempt) this.#close = null; });
     }
     return this.#close;
   }

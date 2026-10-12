@@ -1,8 +1,8 @@
-# Starforge STAC QGIS receiving
+# Starforge QGIS receiving
 
 This component turns an original verified Starforge STAC customer delivery into a native GIS project that another analyst can receive and reopen. It retains the original selected data, complete scene and Collection metadata, native customer records, map choices, styles, source editions, saved maps, and project history.
 
-The desktop plugin uses an existing QGIS 3.40 or later installation, including its own Python, Qt, GDAL and projection libraries. The Starforge command prepares the original source and builds the plugin ZIP. The native plugin then operates the received local files.
+The desktop plugin uses an existing QGIS 3.40 or later installation, including its own Python, Qt, GDAL and projection libraries. The Starforge command prepares the original STAC source, builds the plugin ZIP and exposes the original workspace and receiving operations. The native plugin operates the same received local files. Native vector exports enter through their original vector-export.json and preserve their complete source, layer and companion-file bindings; VECTOR_RECEIVING.md describes that source contract.
 
 ## Prepare the original source and install
 
@@ -181,3 +181,98 @@ For an actual desktop capture, set STARFORGE_QGIS_JOURNEY_CONFIG to that same fi
 | native-journey.py | One original-input native receiving continuation |
 
 Primary API references: [QGIS raster layers](https://docs.qgis.org/3.40/en/docs/pyqgis_developer_cookbook/raster.html), [native project load/save](https://docs.qgis.org/3.40/en/docs/pyqgis_developer_cookbook/loadproject.html), [QgsProject](https://qgis.org/pyqgis/3.44/core/QgsProject.html), [QgsProviderRegistry](https://qgis.org/pyqgis/3.44/core/QgsProviderRegistry.html), and [QgsMapLayer styles](https://qgis.org/pyqgis/master/core/QgsMapLayer.html).
+
+## Operate through the installed Starforge command
+
+The installed `starforge stac-qgis` entry also exposes the complete original Python workspace CLI. This is the same SQLite workspace, source reader, native renderer and receiving codec used by the desktop. The command passes the selected action JSON to that original engine unchanged. A workstation can therefore prepare an import, inspect its original request, save a native map and receive the whole project without locating a Python source directory inside the installation.
+
+Ordinary source, workspace and archive commands select `python3` unless `--python` or `STARFORGE_QGIS_PYTHON` names another existing interpreter. Native map commands require that explicit binding to the Python supplied with the existing QGIS installation. Use the same supported QGIS version as the desktop. The process retains the caller's working directory and environment; paths passed through named path flags are resolved from that directory. Relative paths inside the original action JSON retain that same meaning.
+
+### Commands and their original actions
+
+| Installed command | Original Python action | Required input |
+| --- | --- | --- |
+| `source-open` | `source-open` | `--directory`; optional `--expected-sha256` |
+| `workspace-create` | `create` | `--workspace`; optional `--title` |
+| `workspace-open` | `open` | `--workspace` |
+| `workspace-import` | `import` | `--workspace --input` |
+| `workspace-select` | `select` | `--workspace --input` |
+| `workspace-scenes` | `scenes` | `--workspace`; optional `--source-id` |
+| `workspace-assets` | `assets` | `--workspace`; optional `--source-id --scene-key` |
+| `workspace-layers` | `layers` | `--workspace --input` |
+| `workspace-compare` | `compare` | `--workspace --left --right` |
+| `workspace-review` | `review` | `--workspace --input` |
+| `workspace-history` | `history` | `--workspace` |
+| `workspace-operation` | `operation` | `--workspace --request-id` |
+| `native-inspect` | `native-inspect` | `--workspace --input`, QGIS Python binding |
+| `native-save` | `native-save` | `--workspace --input`, QGIS Python binding |
+| `native-open` | `native-open` | `--workspace --project-id`, QGIS Python binding |
+| `project-export` | `export` | `--workspace --file`; optional original `--revision` |
+| `project-receive` | `receive` | `--workspace --file`; optional `--expected-sha256` |
+
+All commands in this table accept `--python` and the standalone `--progress` flag. They stream the original complete JSON result to standard output and native progress/errors to standard error. Redirect standard output to retain a large original inventory or history; the installed entry does not truncate it into a console summary. The original process exit status is preserved. Interrupting the process leaves the original request and retained workspace available for continuation.
+
+The existing `export` and `open` names continue to prepare and reopen a STAC customer receiving directory. Use `source-open` for either original `qgis-receiving.json` or original `vector-export.json`; use `project-export` and `project-receive` for the complete analyst project archive. The original `plugin` command and the `stac qgis-export`, `qgis-open`, and `qgis-plugin` aliases keep their result contracts.
+
+### Import and inspect an original source
+
+First reopen the exact source with its received manifest SHA, then create the analyst workspace:
+
+~~~sh
+starforge stac-qgis source-open --directory ORIGINAL_SOURCE --expected-sha256 ORIGINAL_MANIFEST_SHA256 > source-inventory.json
+starforge stac-qgis workspace-create --workspace NEW_WORKSPACE --title "Received GIS analysis"
+~~~
+
+Create an import action JSON file with the actual source path and manifest SHA returned above. Each write retains the original workspace revision, analyst and stable request ID:
+
+~~~json
+{
+  "revision": 0,
+  "requestId": "analyst-source-import-001",
+  "actor": "Receiving analyst",
+  "directory": "/absolute/original-source",
+  "expectedManifestSha256": "COPY_THE_ORIGINAL_MANIFEST_SHA256"
+}
+~~~
+
+Replace the descriptive values with the actual selected source and analyst, then dispatch that same file:
+
+~~~sh
+starforge stac-qgis workspace-import --workspace WORKSPACE --input import-action.json --progress > import-result.json
+starforge stac-qgis workspace-open --workspace WORKSPACE
+starforge stac-qgis workspace-assets --workspace WORKSPACE > received-assets.json
+~~~
+
+The original vector inventory carries `nativeIdentity`, `nativeLayer`, source-layer metadata and the full companion-bundle identity. Keep those actual values when selecting a layer. The STAC inventory carries its original Collection, Item and asset keys. The native inspection JSON uses the actual imported `sourceId`, `collection`, `itemId` and `assetKey`. Run that file with `native-inspect --input` and the existing QGIS Python to obtain the native provider, CRS, fields, bands and selected sublayer.
+
+A `workspace-layers` action contains `revision`, `requestId`, `actor` and the complete intended `layers` array. Use the layer definitions described below and in VECTOR_RECEIVING.md. Native vector outputs retain their exact `vectorLayer`; the original engine normalizes the retained file descriptor from the source. The desktop's **Capture current QGIS styles** action records the analyst's live styling into that same workspace before a later native save.
+
+### Save, recover and receive the complete project
+
+A native save action contains the displayed workspace `revision`, a new stable `requestId`, `actor`, and optional selected `projectCrs`. The original renderer uses the retained layer definitions and style resources:
+
+~~~sh
+starforge stac-qgis native-save --workspace WORKSPACE --input map-save.json --python EXISTING_QGIS_PYTHON > map-result.json
+starforge stac-qgis native-open --workspace WORKSPACE --project-id RETAINED_PROJECT_ID --python EXISTING_QGIS_PYTHON
+~~~
+
+If a response is lost, read the original request first:
+
+~~~sh
+starforge stac-qgis workspace-operation --workspace WORKSPACE --request-id ORIGINAL_REQUEST_ID
+~~~
+
+A completed operation returns its original result. Continue an unfinished action with the same JSON, revision and request ID; the original engine handles its retained files and exact replay. To make a different decision after a revision conflict, reopen the current workspace, review it and save a new action with a new request ID. The installed entry leaves those decisions with the operator.
+
+Compare the original source IDs with `workspace-compare`. A `workspace-review` input contains `leftSourceId`, `rightSourceId`, the complete `decisions` array and `note`, together with the normal write identity. Review every affected map layer using the same **Keep**, **Update** or **Remove** choices as the desktop. Then save another native map; the prior map continues to use its original source edition.
+
+Export the displayed final revision to a new archive path outside the workspace:
+
+~~~sh
+starforge stac-qgis project-export --workspace WORKSPACE --file COMPLETE_PROJECT.zip --revision DISPLAYED_REVISION > project-export.json
+starforge stac-qgis project-receive --workspace RECEIVER_WORKSPACE --file COMPLETE_PROJECT.zip --expected-sha256 ORIGINAL_ARCHIVE_SHA256 > project-receive.json
+starforge stac-qgis native-open --workspace RECEIVER_WORKSPACE --project-id RETAINED_PROJECT_ID --python EXISTING_QGIS_PYTHON
+~~~
+
+Use the exact archive SHA from the export result. Receiving reconstructs the same source editions, analyst state, events, request results, saved maps and styles, together with the complete maintained plugin source and guides. A retry of the same archive in the same receiving directory reuses the original receiving identity. Opening the retained project at that destination verifies its own complete local closure and native layer bindings.
+

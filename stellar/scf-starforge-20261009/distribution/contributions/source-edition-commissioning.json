@@ -1,0 +1,23 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "source-edition-commissioning",
+  "description": "Original source-edition commissioning, workorder preparation and receiving",
+  "components": [
+    "stellar/scf_2026/sf49_data_commissioning"
+  ],
+  "supportFiles": [
+    "stellar/scf-starforge-20261009/sf77-merchant-workorder/README.md"
+  ],
+  "commands": {
+    "source-edition-workorder": "stellar/scf_2026/sf49_data_commissioning/source-edition-workorder.mjs",
+    "merchant-workorder": "stellar/scf-starforge-20261009/sf77-merchant-workorder/workorder.mjs"
+  },
+  "commandDescriptions": {
+    "source-edition-workorder": "Prepare, receive and replay a source-bound workorder with original attachments",
+    "merchant-workorder": "Build the original workorder from a saved support handoff or intake"
+  },
+  "exports": {
+    "./merchant/source-edition-workorder": "./source/stellar/scf_2026/sf49_data_commissioning/source-edition-workorder.mjs",
+    "./merchant/workorder": "./source/stellar/scf-starforge-20261009/sf77-merchant-workorder/workorder.mjs"
+  }
+}

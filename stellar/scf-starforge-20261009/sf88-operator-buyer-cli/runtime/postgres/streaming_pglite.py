@@ -274,8 +274,9 @@ class StreamingPGlite:
             raise RuntimeError("PGLITE_BROKER_FAILED: " + str(self.failure))
         if self.server is None or self.server.poll() is not None:
             raise RuntimeError("PGLITE_WORKER_NOT_RUNNING")
-        result = subprocess.run(argv, env={**self.environment, **(extra_environment or {})},
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=timeout)
+        from stellar_forge_buyer.processes import run_owned
+        result = run_owned(argv, env={**self.environment, **(extra_environment or {})},
+            text=True, timeout=timeout)
         if self.failure is not None:
             raise RuntimeError("PGLITE_BROKER_FAILED: " + str(self.failure))
         return result

@@ -3,10 +3,16 @@ import { basename } from 'node:path';
 import { RetainedFileReads } from '../../../../stellar-forge/mcp-merchant-operator/retained-file-reads.mjs';
 import { ErddapClient, readHostFile, readErddapConfiguration, CONNECTION_SCHEMA, MAX_FILE_BYTES, canonical, digest, failure } from './mcp-client.mjs';
 import { erddapTools, fileFields } from './mcp-catalog.mjs';
+import { ErddapProviderHandoffClient } from './provider-handoff-client.mjs';
 export { readErddapConfiguration, CONNECTION_SCHEMA, erddapTools };
 const plain = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 const definitions = new Map(erddapTools((name, description, properties, required) => ({ name, description, properties, required })).map(t => [t.name, t]));
 function check(value, schema, key) {
+  if (schema.anyOf) {
+    for (const variant of schema.anyOf) { try { check(value, variant, key); return; } catch {} }
+    throw failure('MCP_INPUT_INVALID', 'Supply the declared ' + key + ', including explicit null only where allowed.');
+  }
+  if (schema.type === 'null' && value !== null) throw failure('MCP_INPUT_INVALID', 'Use explicit null for ' + key + '.');
   if (schema.type === 'string' && (typeof value !== 'string' || schema.minLength !== undefined && value.length < schema.minLength ||
     schema.maxLength !== undefined && value.length > schema.maxLength || schema.pattern && !new RegExp(schema.pattern).test(value)))
     throw failure('MCP_INPUT_INVALID', 'Supply the declared ' + key + '.');
@@ -15,8 +21,8 @@ function check(value, schema, key) {
   if (schema.type === 'object' && !plain(value)) throw failure('MCP_INPUT_INVALID', 'Supply a complete JSON object for ' + key + '.');
   if (schema.enum && !schema.enum.includes(value)) throw failure('MCP_INPUT_INVALID', 'Choose a declared ' + key + '.');
 }
-function small(value) {
-  if (Buffer.byteLength(JSON.stringify(value)) > 1024 * 1024)
+function small(value, maximum = 1024 * 1024) {
+  if (Buffer.byteLength(JSON.stringify(value)) > maximum)
     throw failure('VIEW_TOO_LARGE', 'Use a smaller original record/row page or download the complete source member or customer packet.');
   return value;
 }
@@ -89,6 +95,37 @@ export class MerchantErddapWorkspaces {
       return { workspace: alias, collection: args.collection, viewSha256, total: values.length, offset,
         returned: items.length, nextOffset: offset + items.length < values.length ? offset + items.length : null, items };
     }
+    if (name.startsWith('merchant_erddap_provider_')) {
+      const handoffs = new ErddapProviderHandoffClient(client);
+      if (name === 'merchant_erddap_provider_status' || name === 'merchant_erddap_provider_records') {
+        const state = await handoffs.state();
+        if (name === 'merchant_erddap_provider_status') return {workspace: alias, schema: state.schema, limits: state.limits,
+          heads: state.heads.length, received: state.received.length, client: client.metadata};
+        const values = state[args.collection];
+        if (!Array.isArray(values)) throw failure('COLLECTION_INVALID', 'The original provider collection is unavailable.');
+        const viewSha256 = digest(Buffer.from(canonical(values))), offset = args.offset ?? 0, limit = args.limit ?? 50;
+        if (offset > values.length || offset > 0 && !args.expectedViewSha256 ||
+          args.expectedViewSha256 && args.expectedViewSha256 !== viewSha256)
+          throw failure('COLLECTION_CHANGED', 'Continue the exact original provider collection with its current view SHA256.',
+            {viewSha256, total: values.length});
+        const items = values.slice(offset, offset + limit);
+        return {workspace: alias, collection: args.collection, viewSha256, total: values.length, offset,
+          returned: items.length, nextOffset: offset + items.length < values.length ? offset + items.length : null, items};
+      }
+      if (name === 'merchant_erddap_provider_draft') return handoffs.draft(args.sourceId);
+      if (name === 'merchant_erddap_provider_preview') return handoffs.preview(args.sourceId, args.profile);
+      if (name === 'merchant_erddap_provider_save') return handoffs.save(args.sourceId, args.profile, args.expectedHead);
+      if (name === 'merchant_erddap_provider_review') return handoffs.review(args.revision);
+      if (name === 'merchant_erddap_provider_history') return handoffs.history(args.sourceId, args);
+      if (name === 'merchant_erddap_provider_export') return handoffs.export(args.revision, args.mode);
+      if (name === 'merchant_erddap_provider_received') return handoffs.received(args.receiptId);
+      if (name === 'merchant_erddap_provider_receive') {
+        const input = entry.inputs?.[args.input];
+        if (input?.kind !== 'handoff' || input.sha256 !== args.expectedSha256)
+          throw failure('PROVIDER_INPUT_REQUIRED', 'Choose the complete configured provider handoff and its exact SHA256.');
+        return handoffs.receive(input);
+      }
+    }
     if (name === 'merchant_erddap_search') return client.json('/api/search', { server: args.server, text: args.text ?? '', page: args.page ?? 1, limit: args.limit ?? 50 });
     if (name === 'merchant_erddap_metadata_load') return client.json('/api/metadata', { server: args.server, datasetId: args.datasetId, protocol: args.protocol });
     if (name === 'merchant_erddap_metadata') return client.json('/api/metadata/' + args.id);
@@ -130,7 +167,8 @@ export class MerchantErddapWorkspaces {
       return Promise.reject(failure('MCP_INPUT_INVALID', 'Supply only the declared fields and all required values.'));
     try { for (const [key, value] of Object.entries(args)) check(value, definition.properties[key], key); }
     catch (error) { return Promise.reject(error); }
-    const pending = Promise.resolve().then(() => this.#call(name, args)).then(small); this.#pending.add(pending);
+    const pending = Promise.resolve().then(() => this.#call(name, args)).then(value => small(value,
+      name.startsWith('merchant_erddap_provider_') ? 4 * 1024 * 1024 : 1024 * 1024)); this.#pending.add(pending);
     pending.then(() => this.#pending.delete(pending), () => this.#pending.delete(pending)); return pending;
   }
   close() {

@@ -1,0 +1,145 @@
+{
+  "schema": "tjl.dpsa-diso.workshare.v1",
+  "preparedAt": "2026-10-12T09:31:14Z",
+  "partner": "Empanda",
+  "supplier": "TokenJunkieLabs",
+  "currency": "ZAR",
+  "professionalFee": 445000,
+  "taxBasis": "Any legally applicable VAT or statutory tax is separately identified in the executed subcontract. Supplier tax registration is not asserted.",
+  "quoteValidThrough": "2027-01-28",
+  "durationBusinessDays": 35,
+  "startConditions": [
+    "Signed scope and rights schedule",
+    "Agreed staffed start date",
+    "R133,500 initial payment",
+    "Approved brand and reference material",
+    "Authorised target-site access",
+    "Named security/learning reviewer and consolidated review authority"
+  ],
+  "milestones": [
+    {
+      "id": "start",
+      "share": 0.3,
+      "amount": 133500,
+      "trigger": "Before production after agreed start conditions",
+      "date": null
+    },
+    {
+      "id": "complete-candidate",
+      "share": 0.4,
+      "amount": 178000,
+      "trigger": "Complete first 13-module staging release and source; invoice due seven calendar days",
+      "date": null
+    },
+    {
+      "id": "accepted-handover",
+      "share": 0.3,
+      "amount": 133500,
+      "trigger": "Accepted corrected source and receiving; invoice due seven calendar days",
+      "date": null
+    }
+  ],
+  "cohort": {
+    "courses": 1,
+    "languages": [
+      "en"
+    ],
+    "brands": 1,
+    "modules": 13,
+    "units": 26,
+    "questions": 312,
+    "teachingChapters": 78,
+    "applicationChapters": 26,
+    "workbooks": 26,
+    "guidancePages": 26,
+    "glossaryEntries": 58,
+    "sourceCatalogEntries": 33,
+    "mediaModules": 13,
+    "mediaScenes": 52,
+    "finishedNarrationMinutesMaximum": 40,
+    "consolidatedReviewCycles": 2,
+    "targetStagingSites": 1,
+    "cleanReceivingEnvironments": 1,
+    "staffSessions": 2,
+    "staffSessionMinutesMaximum": 90
+  },
+  "support": {
+    "calendarDays": 30,
+    "responseBusinessDays": 2,
+    "basis": "Reproducible agreed-scope defects"
+  },
+  "product": {
+    "repository": "woahwhattheheck/public-commons-sprint-2026",
+    "commit": "d04d0b36d6ae5db0f2c72a2f7b53f5a5f0a5dd78",
+    "path": "business/dpsa-diso-moodle-20261012",
+    "state": "SOURCE_MERGED_NATIVE_RECEIVING_PENDING",
+    "sourceLicense": "MIT"
+  },
+  "source": {
+    "tender": "https://www.dpsa.gov.za/dpsa2g/documents/tenders/DPSA003_2026.pdf",
+    "index": "https://www.dpsa.gov.za/newsroom/tenders/",
+    "partner": "https://empanda.co.za/our-services/elearning/",
+    "contact": "https://empanda.co.za/contact/",
+    "sourceObservedAt": "2026-10-12T09:20:00Z"
+  },
+  "stage": "PREPARED",
+  "primeResponsibilities": [
+    "Bid and legal bidder representations",
+    "Named qualified security SME and instructional authority",
+    "Actual signed reference evidence",
+    "Approved content and stakeholder decisions",
+    "Customer hosting, target access and review authority",
+    "Whole-bid price/taxes and customer ownership terms"
+  ],
+  "productionPhases": [
+    {
+      "id": "foundation",
+      "title": "Requirements, source rights, brand and target-site setup",
+      "hoursMin": 12,
+      "hoursMax": 16
+    },
+    {
+      "id": "curriculum",
+      "title": "Adapt all 26 units and integrate the approved SME source",
+      "hoursMin": 40,
+      "hoursMax": 48
+    },
+    {
+      "id": "assessment",
+      "title": "Revise and validate the complete 312-question assessment",
+      "hoursMin": 24,
+      "hoursMax": 28
+    },
+    {
+      "id": "media",
+      "title": "Produce 13 module presentations, captions and editable media",
+      "hoursMin": 24,
+      "hoursMax": 28
+    },
+    {
+      "id": "moodle",
+      "title": "Native course assembly and agreed target-site integration",
+      "hoursMin": 24,
+      "hoursMax": 28
+    },
+    {
+      "id": "review",
+      "title": "Two consolidated full-course review and correction cycles",
+      "hoursMin": 24,
+      "hoursMax": 28
+    },
+    {
+      "id": "handover",
+      "title": "Full receiving, source handover and two staff sessions",
+      "hoursMin": 12,
+      "hoursMax": 16
+    },
+    {
+      "id": "coordination",
+      "title": "Progress reporting, delivery coordination and included support allowance",
+      "hoursMin": 12,
+      "hoursMax": 16
+    }
+  ],
+  "offerId": "DPSA-DISO-PRODUCTION-20261012"
+}
