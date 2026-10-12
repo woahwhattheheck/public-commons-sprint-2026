@@ -148,6 +148,10 @@ The carrier uses the original operation's controller.lock and writes only its cu
 
 The carrier's journal owns the original Console request IDs, native action UUIDs, workflow installation, run, file manifests and export. A browser-retained pending workflow start is recovered by its original intent. An unresolved native return is surfaced through the original linked recovery path; it is not counted as completion.
 
+New reviewer requests inspect the selected profile's complete authorized draft inventory before creating their retained UUID. Recovering a draft keeps its original profile, native tool, arguments and revision; a different identity is rejected. Normal new actions no longer request a missing draft resource.
+
+The carrier preserves the full error history across restarts. Each continuation records its own browser attempt, source generation and error range, and requires that attempt to contain no page, console or HTTP response errors. Error records include their request path or source location so a failed resource can be repaired directly. An earlier failed attempt is retained in the final result and does not prevent a corrected continuation from completing. Browser downloads keep the selected page and context until the exact original file has been retained, and drain their observers on success, cancellation, timeout or closure.
+
 The final CONSOLE-RESULT.json is written only after all original browser, merchant and workbench owners have closed successfully. It carries complete file identities and the loaded source hashes. Execution availability or a published carrier alone is not reported as that result.
 
 ## Source and integration
