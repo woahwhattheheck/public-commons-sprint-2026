@@ -1,0 +1,30 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "openlineage-workspace",
+  "description": "Original OpenLineage jobs, runs, datasets, saved reviews and customer result context",
+  "commands": {
+    "openlineage": "stellar/scf-starforge-20261009/sf30-seller-sdk/openlineage-workspace/cli.mjs"
+  },
+  "commandDescriptions": {
+    "openlineage": "Import original lineage events, operate saved editions, attach results and deliver complete editable workspaces"
+  },
+  "exports": {
+    "./seller/openlineage": {
+      "types": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/openlineage-workspace/client.d.ts",
+      "import": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/openlineage-workspace/client.mjs"
+    },
+    "./seller/openlineage/model": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/openlineage-workspace/model.mjs",
+    "./seller/openlineage/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/openlineage-workspace/store.mjs",
+    "./seller/openlineage/server": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/openlineage-workspace/server.mjs",
+    "./seller/openlineage/mcp": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/openlineage-workspace/protocol.mjs"
+  },
+  "applicationProviders": {
+    "openlineage-workspace": "stellar/scf-starforge-20261009/sf30-seller-sdk/openlineage-workspace/application-provider.mjs"
+  },
+  "browserAssets": [
+    {
+      "server": "stellar/scf-starforge-20261009/sf30-seller-sdk/openlineage-workspace/server.mjs",
+      "manifest": "stellar/scf-starforge-20261009/sf30-seller-sdk/openlineage-workspace/browser-assets.json"
+    }
+  ]
+}
