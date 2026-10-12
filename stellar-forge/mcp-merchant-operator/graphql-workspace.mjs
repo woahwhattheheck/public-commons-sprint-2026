@@ -569,7 +569,7 @@ export class MerchantGraphqlWorkspaces {
           if (status.preview?.state === 'COMPLETED') return { ...status, cancellationRequested: false };
           throw failure('GRAPHQL_PREVIEW_NOT_OWNED', 'This MCP process does not own that unfinished preview. Inspect its original retained state.');
         }
-        if (job.state === 'REQUESTING') { job.cancellationRequested = true; job.controller.abort(); }
+        if (['VALIDATING', 'REQUESTING'].includes(job.state)) { job.cancellationRequested = true; job.controller.abort(); }
         return { ...this.#jobView(job), cancellationRequested: Boolean(job.cancellationRequested) };
       }
       case 'merchant_graphql_preview_recover': {
