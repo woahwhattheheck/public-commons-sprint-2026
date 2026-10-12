@@ -29,7 +29,8 @@ export function s3MerchantApplication(common) {
       field('origin', 'Initial public HTTPS origin', 'text'),
       field('releaseConsolePort', 'Local release console port', 'port', false,
         'Use 0 for an available port. This console and its owned seller drain with the application.'),
-      ...common,
+      ...common.map(item => item.name === 'port' ? { ...item,
+        description: 'Use 0 to retain this workspace’s authoring port after its first launch. A fixed port selects a new browser origin.' } : item),
     ],
   };
 }
@@ -59,8 +60,11 @@ export async function prepareS3MerchantApplication(settings, { inputPath, runtim
     'APPLICATION_S3_SOURCE_REQUIRED', 'Choose a runtime containing the S3 Applications workspace lifecycle.');
   const workspace = await originalStore.inspectS3WorkspaceStore(directory, { allowMissing: true });
   need(workspace.directory === directory, 'APPLICATION_S3_WORKSPACE_CHANGED');
+  need(Object.hasOwn(workspace, 'authoringPort'), 'APPLICATION_S3_SOURCE_REQUIRED',
+    'Choose the complete S3 Applications runtime with retained browser-origin recovery.');
   if (workspace.database)
-    inputs.push({ ...workspace.database, workspaceId: workspace.workspaceId, releaseStore: workspace.releaseStore });
+    inputs.push({ ...workspace.database, workspaceId: workspace.workspaceId,
+      releaseStore: workspace.releaseStore, authoringPort: workspace.authoringPort });
   const releaseStore = absolute(settings.releaseStore ?? workspace.releaseStore ?? join(directory, 'releases'));
   need(!workspace.releaseStore || workspace.releaseStore === releaseStore,
     'APPLICATION_S3_RELEASE_STORE_CHANGED', 'Reopen this merchant with its saved original release store.');
@@ -78,8 +82,11 @@ export async function prepareS3MerchantApplication(settings, { inputPath, runtim
       await readReleaseState(releaseStore);
     }
   }
+  need(!(ports[0] === 0 && workspace.authoringPort && workspace.authoringPort === ports[1]),
+    'APPLICATION_S3_PORT_CONFLICT', 'The release console cannot use the saved authoring port.');
   const args = ['workspace', '--state', directory, '--release-store', releaseStore,
     '--expected-workspace-id', workspace.workspaceId ?? 'new',
+    '--expected-authoring-port', String(workspace.authoringPort ?? 0),
     '--release-console-port', String(ports[1])];
   // Once a revision exists, its original imports can be archived or moved.
   // Reopening the application consumes the immutable saved revision instead.
@@ -156,8 +163,13 @@ export async function s3MerchantStartup(request, operationDirectory, text, conte
       value.initial.origin === origin && current.revision >= 1, 'APPLICATION_S3_STARTUP_CHANGED');
   } else need(value.initial === null, 'APPLICATION_S3_STARTUP_CHANGED');
   const port = Number(selectedValue(request, '--port', true) ?? 0);
+  const previousPort = Number(selectedValue(request, '--expected-authoring-port'));
+  need(Number.isInteger(previousPort) && previousPort >= 0 && previousPort <= 65535,
+    'APPLICATION_S3_STARTUP_CHANGED');
   const releasePort = Number(selectedValue(request, '--release-console-port'));
-  const url = localUrl(value.workspace, port, true);
+  const url = localUrl(value.workspace, port || previousPort, true);
+  need(current.authoringPort === Number(url.port || 80) && value.authoringPort === current.authoringPort,
+    'APPLICATION_S3_STARTUP_CHANGED');
   need(plain(value.releaseConsole), 'APPLICATION_S3_STARTUP_CHANGED');
   const release = localUrl(value.releaseConsole.operatorUrl, releasePort, true);
   const releaseOrigin = localUrl(value.releaseConsole.url, releasePort, false);
@@ -166,6 +178,6 @@ export async function s3MerchantStartup(request, operationDirectory, text, conte
   return { url: url.href,
     links: [{ id: 's3-releases', label: 'Open merchant releases', url: release.href }],
     original: { schema: STARTUP, directory, workspaceId: current.workspaceId, releaseStore,
-      initial: value.initial, observedRevision: current.revision,
+      initial: value.initial, observedRevision: current.revision, authoringPort: current.authoringPort,
       authoringOrigin: url.origin, releaseOrigin: release.origin } };
 }

@@ -25,12 +25,20 @@ const POST = {
   '/api/stage': ['stage', ['packageId', 'releaseId', 'operationId', 'runtime']],
   '/api/console': ['openReleaseConsole', []],
 };
-export async function startS3MerchantWorkspace({ port = 0, releaseConsolePort, ...options } = {}) {
+export async function startS3MerchantWorkspace({ port = 0, releaseConsolePort, expectedAuthoringPort, ...options } = {}) {
   if (!Number.isInteger(port) || port < 0 || port > 65535 ||
       releaseConsolePort !== undefined && (!Number.isInteger(releaseConsolePort) || releaseConsolePort < 0 || releaseConsolePort > 65535))
     throw new S3WorkspaceError('INVALID_PORT');
   if (port && port === releaseConsolePort) throw new S3WorkspaceError('WORKSPACE_PORT_CONFLICT');
+  if (expectedAuthoringPort !== undefined && (!Number.isInteger(expectedAuthoringPort) || expectedAuthoringPort < 0 || expectedAuthoringPort > 65535))
+    throw new S3WorkspaceError('WORKSPACE_BROWSER_PORT_INVALID');
   const controller = await openS3MerchantWorkspace(options);
+  const priorPort = controller.authoringPort, listenPort = port || priorPort || 0;
+  if (expectedAuthoringPort !== undefined && expectedAuthoringPort !== (priorPort ?? 0) ||
+      listenPort && listenPort === releaseConsolePort) {
+    await controller.close();
+    throw new S3WorkspaceError('WORKSPACE_BROWSER_PORT_CHANGED', 409, 'Review the workspace’s current authoring and release-console ports.');
+  }
   const token = randomBytes(32).toString('hex'), tokenBytes = Buffer.from(token);
   const assets = new Map();
   try {
@@ -87,7 +95,7 @@ export async function startS3MerchantWorkspace({ port = 0, releaseConsolePort, .
     }
   });
   server.requestTimeout = 150000; server.headersTimeout = 10000; server.keepAliveTimeout = 2000;
-  try { await new Promise((done, fail) => { server.once('error', fail); server.listen(port, '127.0.0.1', done); }); }
+  try { await new Promise((done, fail) => { server.once('error', fail); server.listen(listenPort, '127.0.0.1', done); }); }
   catch (error) { await controller.close(); throw error; }
   origin = new URL('http://127.0.0.1:' + server.address().port).origin; host = new URL(origin).host;
   const close = () => closing ??= (async () => {
@@ -97,6 +105,7 @@ export async function startS3MerchantWorkspace({ port = 0, releaseConsolePort, .
   })();
   let releaseConsole = null;
   try {
+    controller.retainAuthoringPort({ port: server.address().port, expectedPort: priorPort });
     if (releaseConsolePort !== undefined)
       releaseConsole = await controller.openReleaseConsole({ port: releaseConsolePort });
   } catch (error) { await close(); throw error; }
@@ -107,6 +116,7 @@ const HELP = `S3 merchant workspace
   node server.mjs --state PRIVATE_DIRECTORY [--port 0] [--release-store EXISTING_OR_NEW_STORE]
     [--source PRIVATE_SOURCE.json --payment PUBLIC_TERMS.json --origin HTTPS_ORIGIN]
     [--release-console-port 0] [--expected-workspace-id new|ORIGINAL_UUID]
+    [--expected-authoring-port PREVIOUS_PORT_OR_0]
     [--expected-source-sha256 SHA256 --expected-payment-sha256 SHA256]
 
 Source/payment/origin import the first revision only. Reopen the same --state
@@ -114,6 +124,8 @@ without the original files. The original AWS provider stays in this process.
 The printed private local URL opens source, product, price and release authoring.
 --release-console-port also opens the original release console in this same
 managed session; stopping the workspace drains that console and its owned seller.
+Port 0 reuses this workspace's saved authoring port after its first launch, keeping
+its browser draft and pending request recovery on the same origin.
 `;
 async function importFile(path, expectedSha256) {
   const filename = resolve(path);
@@ -139,7 +151,7 @@ async function importFile(path, expectedSha256) {
 export async function main(args = process.argv.slice(2)) {
   if (!args.length || args.length === 1 && ['--help', '-h'].includes(args[0])) { process.stdout.write(HELP); return; }
   const flags = {}, known = ['--state', '--port', '--release-store', '--source', '--payment', '--origin',
-    '--release-console-port', '--expected-workspace-id', '--expected-source-sha256', '--expected-payment-sha256'];
+    '--release-console-port', '--expected-workspace-id', '--expected-authoring-port', '--expected-source-sha256', '--expected-payment-sha256'];
   for (let index = 0; index < args.length; index += 2) {
     const [key, value] = args.slice(index, index + 2);
     if (!known.includes(key) || !value || value.startsWith('--') || Object.hasOwn(flags, key)) throw new S3WorkspaceError('INVALID_OPTIONS', 400, HELP);
@@ -166,6 +178,7 @@ export async function main(args = process.argv.slice(2)) {
   const session = await startS3MerchantWorkspace({ directory: resolve(flags['--state']),
     ...(flags['--release-store'] ? { releaseStore: resolve(flags['--release-store']) } : {}),
     port: port('--port') ?? 0, releaseConsolePort: port('--release-console-port'),
+    expectedAuthoringPort: port('--expected-authoring-port'),
     expectedWorkspaceId: flags['--expected-workspace-id'],
     ...(importCount ? { initial: { source: source.value, payment: payment.value, origin: flags['--origin'] } } : {}) });
   const stop = () => { void session.close().then(() => { process.exitCode = 0; }, error => { process.stderr.write(error.message + '\n'); process.exitCode = 1; }); };
@@ -174,6 +187,7 @@ export async function main(args = process.argv.slice(2)) {
     schema: 'stellar-forge.s3-workspace-startup.v1', status: 'S3_MERCHANT_WORKSPACE_READY',
     workspace: session.url, directory: session.controller.directory, workspaceId: session.controller.workspaceId,
     releaseStore: session.controller.releaseStore, releaseConsole: session.releaseConsole,
+    authoringPort: session.server.address().port,
     initial: importCount ? { sourceFile: source.path, sourceSha256: source.sha256,
       paymentFile: payment.path, paymentSha256: payment.sha256, origin: flags['--origin'] } : null,
   }) + '\n');
