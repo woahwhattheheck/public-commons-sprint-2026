@@ -7,6 +7,7 @@ import { readOpenSearchSourceFile, createOpenSearchQuerySource } from '../source
 import { validateOpenSearchSource, compileOpenSearchQueries, bindOpenSearchParameters } from '../declaration.mjs';
 import { compileOpenSearchMerchantPlan, prepareOpenSearchSeller } from '../prepare.mjs';
 import { OpenSearchRelevanceWorkspace } from '../relevance/workspace.mjs';
+import { OpenSearchCatalogWorkspace } from '../catalog/workspace.mjs';
 import { OpenSearchDeploymentWorkspace } from './deployment.mjs';
 import { openWorkspaceStore, WorkspaceError, clone, digest, identifier, compareEditions, editionCsv } from './store.mjs';
 
@@ -84,12 +85,13 @@ class OpenSearchWorkspace {
     Object.assign(this, options); this.active = new Map(); this.nativeBusy = false; this.closed = false;
     this.relevance = new OpenSearchRelevanceWorkspace(this, options.relevanceOptions);
     this.deployment = new OpenSearchDeploymentWorkspace(this);
+    this.catalog = new OpenSearchCatalogWorkspace(this);
   }
   state() {
     const saved = this.store.state();
     return { ...saved, packages: saved.packages.map(item => this.package(item.id)), source: { name: basename(this.source.path ?? 'source.json'),
       schema: this.config.schema, connection: profile(this.config),
-      queries: clone(this.config.queries) }, templatePlan: clone(this.templatePlan), nativeBusy: this.nativeBusy, relevance: this.relevance.state(), deployment: this.deployment.summary() };
+      queries: clone(this.config.queries) }, templatePlan: clone(this.templatePlan), nativeBusy: this.nativeBusy, relevance: this.relevance.state(), deployment: this.deployment.summary(), catalog: this.catalog.state() };
   }
   failure(error) { return nativeError(error, this.config, this.env); }
   draft(id, revision) { return this.store.draft(id, revision); }
