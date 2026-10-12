@@ -148,6 +148,32 @@ class Workspace:
             rows = self.db.execute("SELECT body,sha256 FROM records WHERE kind=? ORDER BY id", (kind,)).fetchall()
         return [{**json.loads(row["body"]), "revision_sha256": row["sha256"]} for row in rows]
 
+    @contextlib.contextmanager
+    def read_snapshot(self):
+        """Keep related reads on one original SQLite snapshot."""
+        with self._mutex:
+            owns = not self.db.in_transaction
+            if owns:
+                self.db.execute("BEGIN")
+            try:
+                yield
+            finally:
+                if owns:
+                    self.db.rollback()
+
+    def records_page(self, kind, offset=0, limit=100):
+        identifier(kind, "record kind")
+        if type(offset) is not int or offset < 0 or type(limit) is not int or not 1 <= limit <= 1000:
+            raise OperationError("RECORD_PAGE", "Use a nonnegative offset and 1–1000 records per page.")
+        with self.read_snapshot():
+            total = self.db.execute("SELECT COUNT(*) FROM records WHERE kind=?", (kind,)).fetchone()[0]
+            rows = self.db.execute("SELECT body,sha256 FROM records WHERE kind=? ORDER BY id LIMIT ? OFFSET ?",
+                                   (kind, limit, offset)).fetchall()
+        items = [{**json.loads(row["body"]), "revision_sha256": row["sha256"]} for row in rows]
+        next_offset = offset + len(items)
+        return {"items": items, "offset": offset, "limit": limit, "total": total,
+                "next_offset": next_offset if next_offset < total else None}
+
     def save_record(self, kind, record_id, body, expected_revision=None):
         identifier(kind, "record kind"); identifier(record_id)
         if not isinstance(body, dict):

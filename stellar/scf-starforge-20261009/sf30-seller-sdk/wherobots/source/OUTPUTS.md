@@ -67,6 +67,8 @@ Receiving saves its operation journal and original archive identity. An interrup
 
 `export_dataset_handover(workspace, edition_id, dataset_id, destination: Path)` creates a complete CSV/configuration package for the existing SF30 loader where the complete output fits that engine. It retains exact text or lossless JSON, pairs every exposed value with `value`, `null` or `missing` state, and includes original source/run/part objects and mapping in `source.json`. The complete directory is installed atomically and subsequent reads verify its manifest.
 
+The same original-object descriptors are exposed as `sourceFiles` for the maintained SF82 source reader. Its publisher copies and verifies every original source, listing, output part and run companion when staging the dataset release. `original_objects` keeps the receiving-oriented mapping in the same source manifest; both fields refer to the identical retained files.
+
 The original SF30 limits apply: 64 physical columns (up to 32 value/state pairs), 1,000,000 rows, 256 MiB CSV, 1 MiB maximum cell text and its existing response byte budget. The full workflow handover remains available for larger outputs. The package's `dataset.json` is consumed by the maintained SF30 dataset loader, publisher and merchant composition; this module does not introduce another payment or dataset query implementation.
 
 ## Source standards

@@ -539,6 +539,8 @@ def export_dataset_handover(workspace, edition_id, dataset_id, destination):
                         if nested_sha in original_objects and original_objects[nested_sha] != nested:
                             fail("OUTPUT_OBJECT_DESCRIPTOR", "A nested original has inconsistent sizes.")
                         original_objects[nested_sha] = nested
+        retained_source_files = [{"path": "originals/" + sha, **original_objects[sha]}
+                                 for sha in sorted(original_objects)]
         source = {"schema": "stellar-forge.wherobots-dataset-source.v1", **binding,
                   "workflow_id": edition["workflow_id"], "operation_id": edition["operation_id"],
                   "native_run_id": edition.get("native_run_id"), "row_count": rows,
@@ -546,7 +548,7 @@ def export_dataset_handover(workspace, edition_id, dataset_id, destination):
                   "columns": dataset["columns"], "geometry": dataset["geometry"],
                   "listing_object": dataset["listing_object"], "original_operation": _record_body(operation),
                   "original_parts": dataset["files"],
-                  "original_objects": [{"path": "originals/" + sha, **original_objects[sha]} for sha in sorted(original_objects)],
+                  "original_objects": retained_source_files, "sourceFiles": retained_source_files,
                   "dataset_csv": _file_hash(staged / "dataset.csv")}
         _private_write(staged / "dataset.json", _json_bytes(config))
         _private_write(staged / "source.json", _json_bytes(source))
