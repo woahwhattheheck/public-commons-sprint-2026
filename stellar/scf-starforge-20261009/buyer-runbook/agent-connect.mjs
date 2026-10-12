@@ -5,6 +5,8 @@ import {randomUUID} from 'node:crypto';
 import {isDeepStrictEqual} from 'node:util';
 import {acquireStateLease} from '../merchant-fleet-gateway/state-lease.mjs';
 import {writePrivate} from '../../../stellar-forge/mcp-merchant-operator/host-files.mjs';
+import {openWorkspace as openOriginalOperatorWorkspace} from '../sf88-operator-buyer-cli/workspace.mjs';
+import {HOST_SCHEMA,readCommerceConfiguration,selectedMerchant,selectedBuyer} from '../sf88-operator-buyer-cli/research-dossiers/customer-commerce/configuration.mjs';
 import {BUYER_AGENT_CONFIGURATION,plain,need,fail} from './agent-contract.mjs';
 import {BuyerWorkspaceConnection,hostPath,privateDirectory,readPrivate,readBuyerAgentConfiguration,parse,hash,encode} from './agent-connection.mjs';
 
@@ -25,9 +27,11 @@ async function info(path){try{return await lstat(path);}catch(error){if(error.co
 async function syncDirectory(path){const handle=await open(path,'r');try{await handle.sync();}finally{await handle.close();}}
 async function directory(path){
  await privateDirectory(dirname(path));
- try{await mkdir(path,{mode:0o700});await syncDirectory(dirname(path));}
+ try{await mkdir(path,{mode:0o700});}
  catch(error){if(error.code!=='EEXIST')throw error;}
- return privateDirectory(path);
+ const selected=await privateDirectory(path);
+ // A prior mkdir may have completed before its parent sync was interrupted.
+ await syncDirectory(dirname(path));return selected;
 }
 async function document(path){
  try{const body=await readPrivate(path,LIMIT);return {value:parse(body,'BUYER_AGENT_CONNECTION_DOCUMENT_INVALID'),sha256:hash(body),bytes:body.length};}
@@ -60,7 +64,11 @@ async function stage(file,before,value,validate,temporaryFiles){
 async function publish(staged,temporaryFiles){
  need(unchanged(staged.before,await document(staged.file)),'BUYER_AGENT_CONNECTION_DOCUMENT_CHANGED',
   'The original configuration changed during setup. Reopen its current complete document.');
- if(!staged.changed)return {state:'REOPENED',sha256:staged.before.sha256,bytes:staged.before.bytes};
+ if(!staged.changed){
+  // Finish the original publication sync when a previous rename already won.
+  await syncDirectory(dirname(staged.file));
+  return {state:'REOPENED',sha256:staged.before.sha256,bytes:staged.before.bytes};
+ }
  // One original flock owns the complete preimage check and atomic publication.
  // Renaming the private stage leaves no second hard link after interruption.
  await rename(staged.temporary,staged.file);
@@ -77,7 +85,6 @@ function requireBinding(definition,{directory,launchFile,storageDirectory}){
 async function addResearchConnection(options,connectionFile,workspace,temporaryFiles){
  if(options.researchFile===undefined)return null;
  const file=hostPath(options.researchFile),before=await document(file);
- const {HOST_SCHEMA,readCommerceConfiguration,selectedMerchant}=await import('../sf88-operator-buyer-cli/research-dossiers/customer-commerce/configuration.mjs');
  const normalized=before?await readCommerceConfiguration(file):{schema:HOST_SCHEMA,buyers:{},merchants:{}};
  need(unchanged(before,await document(file)),'BUYER_AGENT_CONNECTION_DOCUMENT_CHANGED','Reopen the current original Research host declaration.');
  const raw=before?structuredClone(before.value):{schema:HOST_SCHEMA,merchants:{},buyers:{}};
@@ -112,6 +119,15 @@ export async function connectBuyerRunbookAgent(options,{signal}={}){
  need(plain(options)&&Object.keys(options).every(key=>KEYS.includes(key))&&
   ['connectionFile','workspace','launchFile','storageDirectory'].every(key=>Object.hasOwn(options,key)),
   'INVALID_PARAMS','Select the connection file, workspace alias, actual launch file and private receiving directory.');
+ // Capture every host selection before any filesystem or native await.
+ // Only immutable string values cross the original connection lifetime.
+ const captured={};
+ for(const key of KEYS)if(Object.hasOwn(options,key)){
+  const value=options[key];
+  need(value===undefined||typeof value==='string','INVALID_PARAMS','Use string values for the documented connection inputs.');
+  captured[key]=value;
+ }
+ options=Object.freeze(captured);
  const connectionFile=hostPath(options.connectionFile),workspace=alias(options.workspace),
   launchFile=hostPath(options.launchFile),storageDirectory=hostPath(options.storageDirectory);
  if(options.label!==undefined)label(options.label);
@@ -146,8 +162,7 @@ export async function connectBuyerRunbookAgent(options,{signal}={}){
   let operator=null;
   if(options.operatorDirectory!==undefined){
    const operatorDirectory=hostPath(options.operatorDirectory);await privateDirectory(operatorDirectory);
-   const {openWorkspace}=await import('../sf88-operator-buyer-cli/workspace.mjs');
-   const original=await openWorkspace(['--dir',operatorDirectory]);
+   const original=await openOriginalOperatorWorkspace(['--dir',operatorDirectory]);
    operator={handle:operatorHandle,directory:operatorDirectory,configurationFile:original.configPath,
     network:original.manifest.network,payer:original.manifest.payer};
    need(!overlaps(storageDirectory,operatorDirectory)&&files.every(file=>!overlaps(file,operatorDirectory)),
@@ -162,7 +177,7 @@ export async function connectBuyerRunbookAgent(options,{signal}={}){
   if(existing){
    requireBinding(existing,{directory:nativeDirectory,launchFile,storageDirectory,selectionSha256:opened.connection.selectionSha256});
    if(sourceChanged)need(options.expectedConnectionSha256===before.sha256,'BUYER_AGENT_CONNECTION_SOURCE_REVIEW_REQUIRED',
-    'Select the current complete configuration SHA256 to adopt this original application source update.');
+    'Select the current complete configuration SHA256 '+before.sha256+' to adopt this original application source update.');
    if(options.label!==undefined)need(existing.label===options.label,'BUYER_AGENT_CONNECTION_LABEL_CHANGED',
     'Use the retained label when reopening this original connection.');
   }
@@ -200,7 +215,6 @@ export async function connectBuyerRunbookAgent(options,{signal}={}){
   need(isDeepStrictEqual(current,candidate.normalized),'BUYER_AGENT_CONNECTION_WRITE_CHANGED','Reopen the selected complete connection.');
   let researchResult=null;
   if(research){
-   const {selectedBuyer}=await import('../sf88-operator-buyer-cli/research-dossiers/customer-commerce/configuration.mjs');
    const buyer=await selectedBuyer(research.normalized,research.buyer);
    need(buyer.definition.directory===nativeDirectory&&buyer.definition.expectedSelectionSha256===opened.connection.selectionSha256,
     'BUYER_AGENT_RESEARCH_BUYER_CHANGED','Select this same original Buyer in the Research host.');
