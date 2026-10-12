@@ -16,6 +16,101 @@ const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
 const keys = ['SF36_CONSENT_KEY_B64', 'SF36_AUDIT_KEY_B64', 'SF36_OPERATOR_KEY_B64'];
 let terminalBusy = false;
 
+/** Versioned wire formats implemented by this bridge and its paired helper. */
+export const OPERATOR_APPROVAL_CAPABILITIES = Object.freeze({
+  schema: 'stellar-forge.sf81.capabilities.v1',
+  review_channels: Object.freeze(['terminal', 'pipe']),
+  review_schema: 'stellar-forge.sf81.review.v1',
+  decision_schema: 'stellar-forge.sf81.decision.v1',
+  approval_schema: 'stellar-forge.sf81.approval.v1',
+  operator_review_schema: 'stellar-forge.sf62.operator-review.v1',
+});
+
+/**
+ * Query this imported module's own helper with the same trusted Python selected
+ * for createOperatorApproval. Other operator fields are deliberately unused.
+ * Import the bridge from the original retained runtime before calling this
+ * probe; it does not select or relocate a foreign helper or accounting runtime.
+ * A supported result describes the pipe protocol. checkOperatorChannel checks
+ * the owning host's live transport separately.
+ */
+export async function probeOperatorApprovalCapabilities({ python } = {},
+  { timeoutMs = 3000, signal } = {}) {
+  if (typeof python !== 'string' || !isAbsolute(python) || python.includes('\0'))
+    throw new TypeError('python must be the trusted absolute interpreter path');
+  if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 100 || timeoutMs > 30_000)
+    throw new TypeError('capability timeout must be 100..30000 milliseconds');
+  if (signal !== undefined && !(signal instanceof AbortSignal))
+    throw new TypeError('signal must be an AbortSignal');
+  const selection = Object.freeze({ python, helper });
+  const result = (code, capabilities = null) => Object.freeze({
+    schema: 'stellar-forge.sf81.capability-probe.v1',
+    supported: code === 'OPERATOR_BROWSER_REVIEW_SUPPORTED',
+    code, selection, capabilities,
+  });
+  if (signal?.aborted) return result('OPERATOR_CAPABILITIES_ABORTED');
+  return await new Promise(resolve => {
+    let child, timer, killTimer, failure, done = false, output = Buffer.alloc(0);
+    const finish = (code, capabilities) => {
+      if (done) return;
+      done = true; clearTimeout(timer); clearTimeout(killTimer);
+      signal?.removeEventListener('abort', abort);
+      resolve(result(code, capabilities));
+    };
+    const stop = code => {
+      if (done) return;
+      failure ??= code;
+      if (child && child.exitCode === null && child.signalCode === null) {
+        child.kill('SIGTERM');
+        killTimer ??= setTimeout(() => child.kill('SIGKILL'), 1000);
+        killTimer.unref();
+      }
+    };
+    const abort = () => stop('OPERATOR_CAPABILITIES_ABORTED');
+    try {
+      child = spawn(python, ['-I', '-B', '-u', helper, '--capabilities'], {
+        env: { LANG: 'C.UTF-8', LC_ALL: 'C.UTF-8' },
+        shell: false, windowsHide: true, stdio: ['ignore', 'pipe', 'ignore'],
+      });
+    } catch { finish('OPERATOR_CAPABILITIES_UNAVAILABLE'); return; }
+    child.once('error', () => finish('OPERATOR_CAPABILITIES_UNAVAILABLE'));
+    child.stdout.on('error', () => stop('OPERATOR_CAPABILITIES_UNAVAILABLE'));
+    child.stdout.on('data', chunk => {
+      if (done || failure) return;
+      if (output.length + chunk.length > 8192) {
+        stop('OPERATOR_CAPABILITIES_INVALID'); return;
+      }
+      output = Buffer.concat([output, chunk]);
+    });
+    child.once('close', (exitCode, childSignal) => {
+      if (failure) { finish(failure); return; }
+      // An original helper without the query rejects these arguments in its
+      // parser before it can read stdin or enter the original approval flow.
+      if (exitCode === 2 && !childSignal && output.toString('utf8').trim() === '') {
+        finish('OPERATOR_CAPABILITIES_UNSUPPORTED'); return;
+      }
+      if (exitCode !== 0 || childSignal) {
+        finish('OPERATOR_CAPABILITIES_UNAVAILABLE'); return;
+      }
+      let advertised;
+      try { advertised = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(output)); }
+      catch { finish('OPERATOR_CAPABILITIES_INVALID'); return; }
+      const expected = OPERATOR_APPROVAL_CAPABILITIES;
+      if (!advertised || typeof advertised !== 'object' || Array.isArray(advertised) ||
+          !Array.isArray(advertised.review_channels) ||
+          !expected.review_channels.every(channel => advertised.review_channels.includes(channel)) ||
+          !Object.entries(expected).every(([key, value]) =>
+            key === 'review_channels' || advertised[key] === value)) {
+        finish('OPERATOR_CAPABILITIES_UNSUPPORTED'); return;
+      }
+      finish('OPERATOR_BROWSER_REVIEW_SUPPORTED', expected);
+    });
+    timer = setTimeout(() => stop('OPERATOR_CAPABILITIES_TIMEOUT'), timeoutMs);
+    signal?.addEventListener('abort', abort, { once: true });
+    if (signal?.aborted) abort();
+  });
+}
+
 export class OperatorBridgeError extends Error {
   constructor(code, intentId) {
     super(code); this.name = 'OperatorBridgeError'; this.code = code;
