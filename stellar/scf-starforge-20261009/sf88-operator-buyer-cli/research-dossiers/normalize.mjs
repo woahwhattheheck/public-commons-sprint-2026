@@ -1,6 +1,7 @@
 // MIT — Interpret retained research metadata and the original provider's live view.
 import { createHash } from 'node:crypto';
 import { need, object, parseJson } from '../node/store.mjs';
+import {SOURCE_BUNDLE_SCHEMA,projectSourceBundle} from './source-bundles.mjs';
 
 export const SCHEMA = 'sf88-research-results-v1';
 export const hash = bytes => createHash('sha256').update(bytes).digest('hex');
@@ -48,7 +49,8 @@ function item(row, index, provider) {
 
 export function normalizeResponse(raw, provider = 'research') {
   // The original fatal UTF-8 parser omits one leading BOM without changing the retained input.
-  const response = parseJson(typeof raw === 'string' ? Buffer.from(raw, 'utf8') : raw);
+  const originalResponse = parseJson(typeof raw === 'string' ? Buffer.from(raw, 'utf8') : raw);
+  const response = originalResponse?.schema===SOURCE_BUNDLE_SCHEMA ? projectSourceBundle(originalResponse) : originalResponse;
   need(object(response), 'RESEARCH_RESPONSE_OBJECT_REQUIRED');
   provider = String(provider).toLowerCase();
   // Valyu output is opened through its maintained entitlement-aware edition reader.
@@ -89,7 +91,7 @@ export function normalizeResponse(raw, provider = 'research') {
     items: response.results.map((row, index) => item(row, index, name)),
     usage: object(response.usage) ? response.usage : {},
     sourceTerms: response.sourceTerms, warnings: Array.isArray(response.warnings) ? response.warnings : [],
-    error: response.error ?? null, raw: response,
+    error: response.error ?? null, raw: originalResponse,
   };
 }
 
