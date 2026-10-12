@@ -182,14 +182,14 @@ def reviewed_columns(columns, requested=None):
             alias = re.sub(r"[^A-Za-z0-9_]", "_", original)[:56]
             if not alias or not alias[0].isalpha() or alias.startswith("sf_"):
                 alias = "column_" + alias[:48]
-            if alias in used:
+            if alias.casefold() in used:
                 alias = alias[:54] + "_" + str(index + 1)
-        require(isinstance(alias, str) and NAME.fullmatch(alias) and alias not in used
+        require(isinstance(alias, str) and NAME.fullmatch(alias) and alias.casefold() not in used
                 and not alias.startswith("_sf_"), "DATASETTE_COLUMN_ALIAS_INVALID", str(alias))
-        used.add(alias)
+        used.add(alias.casefold())
         mapping[original] = alias
     type_column = "datasette_native_types"
-    while type_column in used:
+    while type_column.casefold() in used:
         type_column += "_"
     return mapping, type_column
 
