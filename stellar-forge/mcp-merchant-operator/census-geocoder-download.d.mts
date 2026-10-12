@@ -123,7 +123,7 @@ export interface CensusDatasetPage {
   dataset: CensusDatasetDescription;
   fields: string[];
   rows: Array<Record<string, string | number | boolean | null>>;
-  filters: Record<string, string>;
+  filters: Record<string, string | number | boolean | null>;
   page: { limit: number; total: number; returned: number; nextCursor: string | null };
   [key: string]: unknown;
 }
