@@ -99,7 +99,7 @@ export function createMatomoSource(input, {env = process.env, allowLoopback = fa
         fields: Object.fromEntries(fields), authenticated: Boolean(authorization), credentialsRetained: false};
     }
     const binding = {origin: endpoint.origin, path: endpoint.pathname, method, query,
-      responseMode: 'bytes', responseHeaders: ['content-type', 'content-language', 'etag', 'last-modified'],
+      responseMode: 'bytes', retainErrorResponse: true, responseHeaders: ['content-type', 'content-language', 'etag', 'last-modified'],
       timeoutMs: config.timeoutMs, maxResponseBytes: config.maxResponseBytes, maxInFlight: 1,
       maxRequestBytes: 262144, ...(method === 'POST' ? {bodyType: 'form-data'} : {}),
       ...(config.mode === 'wordpress' && config.authorization.headerEnv ? {headerEnv: {authorization: config.authorization.headerEnv}} : {})};

@@ -1,6 +1,6 @@
 // MIT. Durable source reads and action identities on the original private workspace lease.
 import { DatabaseSync } from 'node:sqlite';
-import { chmod, lstat, link, unlink } from 'node:fs/promises';
+import { chmod, lstat, link, unlink, readdir } from 'node:fs/promises';
 import { join, dirname } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { acquireWorkspace, privateDirectory, readPrivate as rawReadPrivate, createFile, syncDirectory, identity, digest, bytes, fault, stamp } from '../postgres/publisher/files.mjs';
@@ -62,8 +62,14 @@ export async function openMatomoStore({directory, create = false, source, enviro
       const existing = await readJson(join(directory, 'workspace.json'), 65536);
       if (existing.schema !== SETTINGS || identity(sourceConfig(source, {allowLoopback})) !== existing.sourceSha256)
         throw fault('MATOMO_WORKSPACE_EXISTS', 'Reopen the original workspace with its saved source.', 409);
-      create = false;
-    } catch (error) { if (error.code !== 'ENOENT') throw error; }
+      create = false; initializing = false;
+    } catch (error) {
+      if (error.code !== 'ENOENT') throw error;
+      try {
+        const names = await readdir(directory);
+        if (names.some(name => name !== 'workspace.json.matomo-pending' && name !== 'publisher.lock')) throw fault('MATOMO_WORKSPACE_NOT_EMPTY');
+      } catch (cause) { if (cause.code !== 'ENOENT') throw cause; }
+    }
   }
   await privateDirectory(directory, initializing);
   const release = await acquireWorkspace(directory); let db;
@@ -71,12 +77,17 @@ export async function openMatomoStore({directory, create = false, source, enviro
     const settingsPath = join(directory, 'workspace.json');
     if (create) {
       const config = sourceConfig(source, {allowLoopback});
-      await writeNew(settingsPath, bytes({schema: SETTINGS, id: randomUUID(), createdAt: stamp(), source: config, sourceSha256: identity(config)}));
+      await writeNew(settingsPath, bytes({schema: SETTINGS, id: randomUUID(), createdAt: stamp(), initializationVersion: 1, source: config, sourceSha256: identity(config)}));
     }
     const settings = await readJson(settingsPath, 65536);
     if (settings.schema !== SETTINGS || identity(settings.source) !== settings.sourceSha256 ||
         source && identity(sourceConfig(source, {allowLoopback})) !== settings.sourceSha256) throw fault('MATOMO_WORKSPACE_SOURCE_CHANGED');
     sourceConfig(settings.source, {allowLoopback});
+    const initializedPath = join(directory, 'initialized.json');
+    let initialized = null;
+    try { initialized = await readJson(initializedPath, 4096); } catch (error) { if (error.code !== 'ENOENT') throw error; }
+    if (initialized && (initialized.schema !== 'stellar-forge.matomo-initialization.v1' ||
+        initialized.workspaceId !== settings.id || initialized.sourceSha256 !== settings.sourceSha256)) throw fault('MATOMO_WORKSPACE_INITIALIZATION_CHANGED');
     for (const name of ['requests', 'catalogs', 'captures', 'editions', 'comparisons', 'merchant', 'deliveries']) await privateDirectory(join(directory, name), true);
     const database = join(directory, 'matomo.sqlite');
     let absent = false;
@@ -84,7 +95,7 @@ export async function openMatomoStore({directory, create = false, source, enviro
       const stat = await lstat(database);
       if (!stat.isFile() || stat.isSymbolicLink() || stat.nlink !== 1 || stat.mode & 0o077) throw fault('MATOMO_PRIVATE_DATABASE_REQUIRED');
     } catch (error) { if (error.code !== 'ENOENT') throw error; absent = true; }
-    if (absent && !initializing) throw fault('MATOMO_WORKSPACE_DATABASE_MISSING');
+    if (absent && !create && !(settings.initializationVersion === 1 && initialized === null)) throw fault('MATOMO_WORKSPACE_DATABASE_MISSING');
     db = new DatabaseSync(database); await chmod(database, 0o600);
     db.exec('PRAGMA foreign_keys=ON; PRAGMA journal_mode=DELETE; PRAGMA synchronous=FULL;');
     db.exec([
@@ -102,6 +113,8 @@ export async function openMatomoStore({directory, create = false, source, enviro
       'CREATE TABLE IF NOT EXISTS deliveries(id TEXT PRIMARY KEY,data TEXT NOT NULL,created_at TEXT NOT NULL);',
       'CREATE TABLE IF NOT EXISTS history(sequence INTEGER PRIMARY KEY,kind TEXT NOT NULL,subject TEXT,data TEXT NOT NULL,created_at TEXT NOT NULL);',
     ].join('\n'));
+    await writeNew(initializedPath, bytes({schema: 'stellar-forge.matomo-initialization.v1',
+      workspaceId: settings.id, sourceSha256: settings.sourceSha256}));
     db.prepare("UPDATE actions SET state='INTERRUPTED',error=? WHERE state='RUNNING'").run(JSON.stringify({code:'MATOMO_PROCESS_INTERRUPTED'}));
     db.prepare("UPDATE requests SET state='INTERRUPTED' WHERE state='RUNNING'").run();
     db.prepare("UPDATE attempts SET state='INTERRUPTED' WHERE state='RUNNING'").run();
@@ -134,11 +147,12 @@ export async function openMatomoStore({directory, create = false, source, enviro
       }
       if (active) throw fault('MATOMO_WORKSPACE_BUSY', 'The displayed operation is still running.', 409);
       if (input.expectedRevision !== revision()) throw fault('MATOMO_REVISION_CHANGED', 'Refresh the current workspace before this new action.', 409);
-      const controller = new AbortController(), task = {id, kind, controller, promise: null}; active = task;
+      const controller = new AbortController(), task = {id, kind, controller, promise: null};
       transaction(() => {
         db.prepare('INSERT INTO actions(id,kind,input_hash,input,state,started_at) VALUES(?,?,?,?,?,?)').run(id, kind, exact, JSON.stringify(input), 'RUNNING', stamp());
         event('ACTION_STARTED', id, {kind});
       });
+      active = task;
       task.promise = (async () => {
         try {
           const result = await fn({signal: controller.signal, operationId: id});

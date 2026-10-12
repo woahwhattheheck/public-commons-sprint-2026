@@ -34,6 +34,13 @@ function reportPage(value, report) {
   if (!plain(value) || !plain(value.metadata) || !Object.hasOwn(value, 'reportData')) throw fault('MATOMO_PROCESSED_REPORT_SHAPE');
   if (value.metadata.module && value.metadata.module !== report.module ||
       value.metadata.action && value.metadata.action !== report.action) throw fault('MATOMO_PROCESSED_REPORT_IDENTITY');
+  if (typeof value.metadata.uniqueId === 'string' && typeof report.uniqueId === 'string' &&
+      value.metadata.uniqueId !== report.uniqueId) throw fault('MATOMO_PROCESSED_REPORT_VARIANT_CHANGED');
+  if (Object.hasOwn(value.metadata, 'parameters')) {
+    if (!plain(value.metadata.parameters) || identity(scalarParameters(value.metadata.parameters)) !== identity(report.parameters ?? {}))
+      throw fault('MATOMO_PROCESSED_REPORT_VARIANT_CHANGED');
+  } else if (Object.keys(report.parameters ?? {}).length && !(value.metadata.uniqueId && report.uniqueId))
+    throw fault('MATOMO_PROCESSED_REPORT_VARIANT_UNBOUND');
   let rows, shape;
   if (Array.isArray(value.reportData)) { rows = value.reportData; shape = 'array'; }
   else if (plain(value.reportData)) { rows = [value.reportData]; shape = 'object'; }

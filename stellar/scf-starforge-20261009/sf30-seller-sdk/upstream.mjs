@@ -29,7 +29,7 @@ const plain = value => value !== null && typeof value === 'object' && !Array.isA
   [Object.prototype,null].includes(Object.getPrototypeOf(value));
 const reserved = /^(?:host|connection|keep-alive|content-length|transfer-encoding|te|trailer|upgrade|expect|proxy-.*|cookie|set-cookie|accept-encoding|content-encoding|content-type|origin|referer|forwarded|x-forwarded-.*|sec-.*|payment-.*|x-payment.*|extension-responses|settlement-overrides|x402-.*|www-authenticate)$/i;
 const responseAllowed = new Set(['content-type','content-language','etag','last-modified','content-disposition','x-credits-remaining','x-ratelimit-limit','x-ratelimit-remaining','x-ratelimit-reset']);
-const bindingKeys = new Set(['origin','path','method','query','requestHeaders','headerEnv','responseHeaders','responseMode','timeoutMs','maxResponseBytes','maxRequestBytes','bodyType','maxInFlight','availability','responseContract','idempotency','cache','oauth2','oauthConnection','stream','supplierAccount','tls','transport']);
+const bindingKeys = new Set(['origin','path','method','query','requestHeaders','headerEnv','responseHeaders','responseMode','timeoutMs','maxResponseBytes','maxRequestBytes','bodyType','maxInFlight','availability','responseContract','idempotency','cache','oauth2','oauthConnection','stream','supplierAccount','tls','transport','retainErrorResponse']);
 const bad = text => { throw new TypeError(text); };
 const handlerRuntimes = new WeakMap();
 const handlerSupplierQuotas = new WeakMap();
@@ -188,6 +188,8 @@ export function compileUpstreamBindings(config,{allowLoopback=false,env=process.
     const stream = streaming ? compileUpstreamStreamPolicy(raw.stream,responseMode) : undefined;
     if (OWN(raw,'responseContract') && responseMode !== 'json') bad('Response contracts require JSON responseMode');
     const responseContract = OWN(raw,'responseContract') ? compileResponseContract(raw.responseContract,{method}).contract : undefined;
+    if (raw.retainErrorResponse !== undefined && typeof raw.retainErrorResponse !== 'boolean') bad('retainErrorResponse must be a boolean');
+    const retainErrorResponse = raw.retainErrorResponse ?? false;
     const maxResponseBytes = integer(raw.maxResponseBytes,1_048_576,1_048_576,'maxResponseBytes');
     const idempotency = compileUpstreamIdempotency(raw.idempotency,{env,method,maxResponseBytes,requestHeaders,credentials:credentialRefs});
     if (idempotency) {
@@ -208,7 +210,7 @@ export function compileUpstreamBindings(config,{allowLoopback=false,env=process.
       ...(tls ? {tls} : {}),
       ...(responseContract === undefined ? {} : {responseContract}),
       timeoutMs:integer(raw.timeoutMs,10000,120000,'timeoutMs'),
-      maxResponseBytes,
+      maxResponseBytes,retainErrorResponse,
       maxInFlight:integer(raw.maxInFlight,16,256,'maxInFlight'),
       availability:compileAvailabilityPolicy(raw.availability)};
     compiled[name] = Object.freeze({...binding,cache:compileUpstreamCache(raw.cache,binding)});
@@ -299,7 +301,7 @@ export function createUpstreamHandlers(config,{allowLoopback=false,env=process.e
       responseHeaders:[...new Set(['content-type',...binding.responseHeaders])],responseType:binding.responseMode,
       ...(binding.stream ? {stream:binding.stream} : {}),
       ...(binding.responseContract === undefined ? {} : {responseContract:binding.responseContract}),
-      timeoutMs:binding.timeoutMs,maxResponseBytes:binding.maxResponseBytes,maxInFlight:binding.maxInFlight,
+      timeoutMs:binding.timeoutMs,maxResponseBytes:binding.maxResponseBytes,maxInFlight:binding.maxInFlight,retainErrorResponse:binding.retainErrorResponse,
       ...(binding.idempotency ? {idempotency:configuredUpstreamIdempotency(binding.idempotency)} : {}),
       allowLocal:binding.local,...(agent ? {agent} : binding.local ? {} : {lookup:publicLookup(binding,lookup)})};
     if (binding.cache) handlers[name] = createConfiguredCachedUpstream(options,binding.cache,binding.availability);
