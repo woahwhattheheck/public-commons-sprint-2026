@@ -208,3 +208,9 @@ maintained native buyer and seller.
 Add a retained processing workspace to the existing server with `--processing-workspace DIRECTORY`; supply `--processing-config FILE` for its configured source. The [processing guide](./processing/PROCESSING.md) covers the original deployment connection, workflow inventories, selected run histories, pagination and recovery, analyst-reviewed scene associations, and complete processing/STAC export and receiving. The processing view stays mounted during workspace polling so an analyst can configure sources and review retained history without losing form edits. Its server uses the same authenticated local session as the scene workspace.
 
 The library exposes `createProcessingController` through `@tokenjunkielabs/starforge-merchant/seller/stac/processing`, provider helpers through `seller/stac/processing/provider`, and complete portable processing receiving through `buyer/stac/processing`. Source credentials remain in the server's configured source-auth transport; raw captured records, explicit association choices and original handover members travel with the receiving case.
+
+## Customer eoAPI onboarding
+
+Use `starforge stac eoapi-init` and `starforge stac eoapi-serve` to open customer operations in the same original analyst session. The workflow carries the approved Auth Proxy policy, retained source edition, explicit selected files and immutable delivery approval through the original merchant, Buyer and portable GIS receiving. Deployment commissioning uses the existing retained plan/run and private source runtime.
+
+[Customer onboarding and receiving guide](eoapi/ONBOARDING.md) covers source credentials, complete CLI commands, operation recovery, customer export and offline reopen. The installed SDK exposes `@tokenjunkielabs/starforge-merchant/seller/stac/eoapi` and `@tokenjunkielabs/starforge-merchant/buyer/stac/eoapi`.

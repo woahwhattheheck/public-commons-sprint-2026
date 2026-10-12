@@ -1,3 +1,5 @@
+import {mountEoapi} from './eoapi/ui.mjs';
+let eoapiMount=null;
 const root=document.querySelector('#app');
 const state={workspace:null,jobs:[],queryId:null,editionId:null,tab:'search',mode:'table',page:0,pageSize:25,filter:'',statusFilter:'all',draft:null,detail:null,csrf:null,maxRequestBytes:128*1024*1024,dialog:null,notice:null,comparison:null,comparisonIds:null,pendingJobs:new Set(),busy:new Set()};
 const array=value=>Array.isArray(value)?value:value&&typeof value==='object'?Object.values(value):[];
@@ -69,7 +71,7 @@ function defaultDraft(value){
 }
 function currentDraft(){return state.draft||(state.draft=defaultDraft(query()));}
 async function refresh({render=true,detail=true}={}){
-  const result=await api('/api/state');state.workspace=result.workspace;state.jobs=result.jobs||[];
+  const result=await api('/api/state');state.workspace=result.workspace;state.jobs=result.jobs||[];state.eoapi=result.eoapi===true;
   state.processingCapabilities=result.capabilities?.processing?.enabled?result.capabilities.processing:null;
   if(state.queryId&&!byId(state.workspace.queries,state.queryId)){state.queryId=null;state.editionId=null;state.draft=null;}
   if(!state.queryId&&array(state.workspace.queries).length&&!state.draft){state.queryId=array(state.workspace.queries)[0].id;}
@@ -246,10 +248,12 @@ function renderApp(){
   const sidebar=node('aside',{class:'sidebar','aria-label':'Saved searches'},node('div',{class:'sidebar-header'},node('h3',{},'Saved queries'),button('New',()=>{state.queryId=null;state.editionId=null;state.detail=null;state.draft=defaultDraft(null);state.tab='search';renderApp();},{class:'small'})),list,node('div',{class:'sidebar-footer'},externalLink('https://element84.com/earth-search/','Earth Search by Element 84'),node('p',{},'Collection rights and source metadata travel with the saved review.')));
   const title=node('div',{class:'workspace-title'},node('div',{},node('h2',{},query()?.name||'Prepare a scene query'),node('p',{class:'muted'},query()?array(query().collections).join(' · '):'Choose a collection, an area and an observation window.')),query()?badge(queryEditions().length+' editions'):null);
   const tabs=node('nav',{class:'tabs','aria-label':'Workspace views'});
-  for(const [key,label]of [['search','Catalog & query'],['scenes','Scenes & assets'],['compare','Compare editions'],['review','Selections & handover'],...(state.processingCapabilities?[['processing','Processing history']]:[])]){
+  for(const [key,label]of [['search','Catalog & query'],['scenes','Scenes & assets'],['compare','Compare editions'],['review','Selections & handover'],...(state.eoapi?[['eoapi','Customer operations']]:[]),...(state.processingCapabilities?[['processing','Processing history']]:[])]){
     tabs.append(button(label,()=>{state.tab=key;renderApp();},{role:'tab','aria-selected':state.tab===key}));
   }
+  eoapiMount?.destroy();eoapiMount=null;
   const main=node('main',{class:'workspace',id:'main'},title,tabs);
+  if(state.tab==='eoapi'){const panel=node('div');main.append(panel);eoapiMount=mountEoapi(panel,{api,workspace:state.workspace,editionId:state.editionId});}
   if(state.tab==='search')main.append(renderSearch());
   if(state.tab==='scenes')main.append(renderScenes());
   if(state.tab==='compare')main.append(renderCompare());

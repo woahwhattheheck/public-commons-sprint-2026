@@ -22,12 +22,21 @@ const html = value => String(value ?? '').replaceAll('&', '&amp;').replaceAll('<
 const withoutUndefined = object => Object.fromEntries(Object.entries(object).filter(([, value]) => value !== undefined));
 
 export async function openStacWorkspace({ directory, title = 'Satellite imagery workspace',
-  endpoint, transport, create = true } = {}) {
+  endpoint, transport, sourceAuth, create = true } = {}) {
   directory = await privateDirectory(directory, { create });
   const versions = await privateDirectory(join(directory, 'versions'), { create });
   await privateDirectory(join(directory, 'captures'), { create });
   await privateDirectory(join(directory, 'locks'), { create });
-  let queue = Promise.resolve();
+  let queue = Promise.resolve(), closing = null;
+  const pending = new Set();
+  function owned(operation) {
+    return (...args) => {
+      if (closing) return Promise.reject(Object.assign(new Error('STAC_WORKSPACE_CLOSED'), { code: 'STAC_WORKSPACE_CLOSED' }));
+      const result = Promise.resolve().then(() => operation(...args));
+      pending.add(result); result.then(() => pending.delete(result), () => pending.delete(result));
+      return result;
+    };
+  }
   const verifiedAssets = new Map();
   const versionFile = revision => join(versions, String(revision).padStart(12, '0') + '.json');
   async function readState() {
@@ -53,7 +62,7 @@ export async function openStacWorkspace({ directory, title = 'Satellite imagery 
   }
   const opening = await readState();
   if (endpoint !== undefined) need(normalizeEndpoint(endpoint) === opening.endpoint, 'STAC_WORKSPACE_ENDPOINT_MISMATCH');
-  let provider = createStacProvider({ endpoint: opening.endpoint, transport });
+  let provider = createStacProvider({ endpoint: opening.endpoint, transport, sourceAuth });
   async function mutate(change, expectedRevision) {
     const action = queue.then(async () => {
       for (let retry = 0; retry < 8; retry++) {
@@ -146,23 +155,45 @@ export async function openStacWorkspace({ directory, title = 'Satellite imagery 
     const state = await readState(), id = input.id ?? identity('query');
     const normalized = normalizeQuery(input, { endpoint: state.endpoint, collections: state.collections });
     const name = input.name ?? 'Scene search';
+    const operationId = input.operationId === undefined ? null : opId(input.operationId);
+    const inputDigest = digestJson({id:input.id ?? null,name,...normalized});
+    if (operationId && state.operations[operationId]) {
+      const prior = state.operations[operationId];
+      need(prior.kind === 'QUERY_SAVE' && prior.inputDigest === inputDigest, 'STAC_OPERATION_INPUT_CHANGED');
+      return structuredClone(prior.result);
+    }
     need(typeof name === 'string' && name.trim().length > 0 && name.length <= 240, 'STAC_QUERY_NAME_INVALID');
     return mutate(s => {
       const existing = s.queries.find(v => v.id === id);
       if (input.id) need(existing, 'STAC_QUERY_NOT_FOUND');
       const query = { id, name: name.trim(), ...normalized, updatedAt: stamp() };
+      if (operationId) need(!s.operations[operationId], 'STAC_OPERATION_ALREADY_EXISTS');
       if (existing) Object.assign(existing, query); else s.queries.push(query);
+      if (operationId) s.operations[operationId] = {kind:'QUERY_SAVE',inputDigest,status:'COMPLETE',result:structuredClone(query)};
       return query;
     }, input.expectedRevision);
   }
-  async function reviewSearch({ queryId } = {}) {
+  async function reviewSearch({ queryId, operationId } = {}) {
+    operationId = operationId === undefined ? null : opId(operationId);
+    if (operationId) {
+      const prior = (await readState()).operations[operationId];
+      if (prior) {
+        need(prior.kind === 'SEARCH_REVIEW' && prior.queryId === queryId, 'STAC_OPERATION_INPUT_CHANGED');
+        return structuredClone(prior.result);
+      }
+    }
     const state = await readState(); need(state.catalog, 'STAC_DISCOVERY_REQUIRED');
     const query = state.queries.find(v => v.id === queryId); need(query, 'STAC_QUERY_NOT_FOUND');
     const request = searchRequest(state.catalog, query), id = identity('review');
     const review = { id, queryId, query: structuredClone(query), queryDigest: digestJson(query), request,
       collections: state.collections.filter(v => query.collections.includes(v.id)), catalog: state.catalog,
       catalogSources: state.catalogSources.filter(v => v.status === 'RECEIVED'), createdAt: stamp() };
-    return mutate(s => { s.reviews.push(review); return review; }, state.revision);
+    return mutate(s => {
+      if (operationId) need(!s.operations[operationId], 'STAC_OPERATION_ALREADY_EXISTS');
+      s.reviews.push(review);
+      if (operationId) s.operations[operationId] = {kind:'SEARCH_REVIEW',queryId,status:'COMPLETE',result:structuredClone(review)};
+      return review;
+    }, state.revision);
   }
   async function itemsFor(edition) {
     const items = new Map();
@@ -282,13 +313,27 @@ export async function openStacWorkspace({ directory, title = 'Satellite imagery 
       return e;
     });
   }
-  async function reviewAsset({ editionId, itemId, assetKey, maxBytes = 16 * 1024 * 1024 } = {}) {
+  async function reviewAsset({ editionId, itemId, assetKey, maxBytes = 16 * 1024 * 1024, operationId } = {}) {
+    operationId = operationId === undefined ? null : opId(operationId);
+    const inputDigest = digestJson({editionId,itemId,assetKey,maxBytes});
+    if (operationId) {
+      const prior = (await readState()).operations[operationId];
+      if (prior) {
+        need(prior.kind === 'ASSET_REVIEW' && prior.inputDigest === inputDigest, 'STAC_OPERATION_INPUT_CHANGED');
+        return structuredClone(prior.result);
+      }
+    }
     need(Number.isSafeInteger(maxBytes) && maxBytes > 0 && maxBytes <= 2 * 1024 ** 3, 'STAC_ASSET_BYTE_BUDGET_INVALID');
     const detail = await getEdition(editionId), item = detail.items.find(v => stacItemKey(v) === itemId);
     need(item, 'STAC_ITEM_NOT_FOUND');
     const review = { id: identity('asset-review'), editionId, ...assetDescriptor(item, assetKey,
       detail.edition.collections.find(v => v.id === item.collection)), itemDigest: digestJson(item), maxBytes, createdAt: stamp() };
-    return mutate(s => { s.assetReviews.push(review); return review; });
+    return mutate(s => {
+      if (operationId) need(!s.operations[operationId], 'STAC_OPERATION_ALREADY_EXISTS');
+      s.assetReviews.push(review);
+      if (operationId) s.operations[operationId] = {kind:'ASSET_REVIEW',inputDigest,status:'COMPLETE',result:structuredClone(review)};
+      return review;
+    });
   }
   async function acquireAsset({ reviewId, operationId } = {}) {
     operationId = opId(operationId);
@@ -517,10 +562,22 @@ export async function openStacWorkspace({ directory, title = 'Satellite imagery 
       const receipt = { id: identity('import'), digest, sourceWorkspaceId: bundle.sourceWorkspaceId, editionIds: bundle.editions.map(v => v.id),
         files: bundle.files.length, bytes: total, completedAt: stamp() }; s.imports.push(receipt); return receipt;
     });
-    provider = createStacProvider({ endpoint: bundle.endpoint, transport });
+    await provider.close();
+    provider = createStacProvider({ endpoint: bundle.endpoint, transport, sourceAuth });
     return imported;
   }
-  return Object.freeze({ directory, getState: readState, discover, saveQuery, reviewSearch, acquire, resume: ({ editionId }) => runEdition(editionId),
-    cancel, getEdition, reviewAsset, acquireAsset, setDecision, compare, exportHandover, importHandover, getAsset, getAssetFile,
-    exportReport, exportEdition, close: async () => { for (const [key, controller] of active) if (key.startsWith(directory + ':')) controller.abort(new Error('STAC_WORKSPACE_CLOSED')); await queue; } });
+  return Object.freeze({ directory, getState: owned(readState), discover: owned(discover), saveQuery: owned(saveQuery),
+    reviewSearch: owned(reviewSearch), acquire: owned(acquire), resume: owned(({ editionId }) => runEdition(editionId)),
+    cancel: owned(cancel), getEdition: owned(getEdition), reviewAsset: owned(reviewAsset), acquireAsset: owned(acquireAsset),
+    setDecision: owned(setDecision), compare: owned(compare), exportHandover: owned(exportHandover),
+    importHandover: owned(importHandover), getAsset: owned(getAsset), getAssetFile: owned(getAssetFile),
+    exportReport: owned(exportReport), exportEdition: owned(exportEdition),
+    close() {
+      if (!closing) closing = (async () => {
+        for (const [key, controller] of active) if (key.startsWith(directory + ':')) controller.abort(new Error('STAC_WORKSPACE_CLOSED'));
+        await provider.close(); await Promise.allSettled([...pending]); await queue;
+      })();
+      return closing;
+    } });
+
 }

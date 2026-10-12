@@ -4,7 +4,7 @@ import {readFile,stat} from 'node:fs/promises';
 import {createReadStream} from 'node:fs';
 import {pipeline} from 'node:stream/promises';
 
-const STATIC=new Map([['/',['ui.html','text/html; charset=utf-8']],['/ui.html',['ui.html','text/html; charset=utf-8']],['/ui.css',['ui.css','text/css; charset=utf-8']],['/ui.mjs',['ui.mjs','text/javascript; charset=utf-8']]]);
+const STATIC=new Map([['/eoapi/ui.mjs',['eoapi/ui.mjs','text/javascript; charset=utf-8']],['/eoapi/ui.css',['eoapi/ui.css','text/css; charset=utf-8']],['/eoapi/commissioning/view.mjs',['eoapi/commissioning/view.mjs','text/javascript; charset=utf-8']],['/eoapi/commissioning/view.css',['eoapi/commissioning/view.css','text/css; charset=utf-8']],['/',['ui.html','text/html; charset=utf-8']],['/ui.html',['ui.html','text/html; charset=utf-8']],['/ui.css',['ui.css','text/css; charset=utf-8']],['/ui.mjs',['ui.mjs','text/javascript; charset=utf-8']]]);
 const randomToken=()=>randomBytes(32).toString('base64url');
 const equal=(a,b)=>typeof a==='string'&&typeof b==='string'&&Buffer.byteLength(a)===Buffer.byteLength(b)&&timingSafeEqual(Buffer.from(a),Buffer.from(b));
 const fail=(status,message,code='REQUEST_FAILED')=>Object.assign(new Error(message),{status,code});
@@ -75,7 +75,7 @@ async function streamAsset(req,res,workspace,assetId,{preview=false}={}){
  * Getters are local views. Provider operations run only through explicit POST routes.
  * The returned URL carries a one-process session key in its fragment.
  */
-export async function startStacServer({workspace,processing=null,host='127.0.0.1',port=0,maxRequestBytes=128*1024*1024}={}){
+export async function startStacServer({workspace,eoapi,processing=null,host='127.0.0.1',port=0,maxRequestBytes=128*1024*1024}={}){
   if(!workspace||typeof workspace.getState!=='function')throw new TypeError('An initialized STAC workspace is required.');
   if(!['127.0.0.1','::1','localhost'].includes(host))throw new Error('The analyst server binds to loopback only.');
   if(!Number.isInteger(Number(port))||Number(port)<0||Number(port)>65535)throw new Error('Port must be an integer from 0 through 65535.');
@@ -142,7 +142,7 @@ export async function startStacServer({workspace,processing=null,host='127.0.0.1
         if(closing)throw fail(503,'The local operator is closing.','SERVER_CLOSING');
         if(req.headers.origin!==origin||!equal(req.headers['x-csrf-token'],csrf))throw fail(403,'This action must come from the active local operator session.','CSRF_REQUIRED');
       }
-      if(method==='GET'&&path==='/api/state'){json(res,200,{workspace:await workspace.getState(),jobs:[...jobs.values()].map(summarizeJob),capabilities:{processing:processingCapabilities||{enabled:false}}});return;}
+      if(method==='GET'&&path==='/api/state'){json(res,200,{workspace:await workspace.getState(),jobs:[...jobs.values()].map(summarizeJob),eoapi:Boolean(eoapi),capabilities:{processing:processingCapabilities||{enabled:false}}});return;}
       if(method==='GET'&&path==='/processing/view.mjs'){
         if(!processingView)throw fail(404,'Processing history is not configured for this workspace.','PROCESSING_NOT_CONFIGURED');
         res.writeHead(200,{'content-type':'text/javascript; charset=utf-8','content-length':processingView.length});res.end(processingView);return;
@@ -158,6 +158,14 @@ export async function startStacServer({workspace,processing=null,host='127.0.0.1
         const query=Object.create(null);
         for(const [key,value]of url.searchParams){if(Object.hasOwn(query,key))query[key]=Array.isArray(query[key])?[...query[key],value]:[query[key],value];else query[key]=value;}
         json(res,200,await processingReads[name]({query,stacWorkspace:workspace}));return;
+      }
+      if(path.startsWith('/api/eoapi/')){
+        if(!eoapi)throw fail(404,'Start the customer onboarding operator to open this view.','EOAPI_RUNTIME_REQUIRED');
+        const body=method==='POST'?await bodyJSON(req,maxRequestBytes):{};
+        const result=await eoapi.dispatch({method,path:path.slice('/api/eoapi'.length),body});
+        if(result&&typeof result.status==='number'&&Object.hasOwn(result,'body'))json(res,result.status,result.body);
+        else json(res,200,result);
+        return;
       }
       if(method==='GET'&&path==='/api/jobs'){json(res,200,{jobs:[...jobs.values()].map(summarizeJob)});return;}
       const jobPath=path.match(/^\/api\/jobs\/([^/]+)$/);
@@ -216,5 +224,5 @@ export async function startStacServer({workspace,processing=null,host='127.0.0.1
   const addressHost=address.family==='IPv6'?'['+address.address+']':address.address;
   authority=addressHost+':'+address.port;origin='http://'+authority;
   cookieName='stac_session_'+address.port;
-  return {server,address,origin,url:origin+'/#session='+bootstrap,close:async()=>{closing=true;server.closeIdleConnections?.();await new Promise((resolve,reject)=>server.close(error=>error?reject(error):resolve()));}};
+  return {server,address,origin,url:origin+'/#session='+bootstrap,close:async()=>{closing=true;server.closeIdleConnections?.();await new Promise((resolve,reject)=>server.close(error=>error?reject(error):resolve()));await Promise.allSettled([...jobs.values()].map(job=>job.promise));}};
 }
