@@ -75,15 +75,21 @@ export class MerchantSupportIncidentSources {
   async #open(){
     if(this.#closing)throw fail('OPERATOR_CLOSING','Merchant support is closing.',503);
     if(!this.configured)return null;
-    if(!this.#opening)this.#opening=(async()=>{
-      const manager=await openIncidentSources({configPath:this.#config.incidentSourcesFile,environment:this.#environment});
-      try{
-        if(JSON.stringify(projection(manager.configuration()))!==JSON.stringify(this.#config.incidentSources))
-          throw fail('SUPPORT_INCIDENT_SOURCES_CHANGED','The host incident source selection changed. Review and restart the original merchant configuration.',409);
-        if(this.#closing)throw fail('OPERATOR_CLOSING','Merchant support is closing.',503);
-        this.#manager=manager;return manager;
-      }catch(error){await manager.close();throw error;}
-    })();
+    if(!this.#opening){
+      const opening=(async()=>{
+        const manager=await openIncidentSources({configPath:this.#config.incidentSourcesFile,environment:this.#environment});
+        try{
+          if(JSON.stringify(projection(manager.configuration()))!==JSON.stringify(this.#config.incidentSources))
+            throw fail('SUPPORT_INCIDENT_SOURCES_CHANGED','The host incident source selection changed. Review and restart the original merchant configuration.',409);
+          if(this.#closing)throw fail('OPERATOR_CLOSING','Merchant support is closing.',503);
+          this.#manager=manager;return manager;
+        }catch(error){await manager.close();throw error;}
+      })();
+      this.#opening=opening;
+      // A transient original-store failure may recover. Every new opening still
+      // checks the same host-selected bytes and canonical store identities.
+      opening.catch(()=>{if(this.#opening===opening)this.#opening=null;});
+    }
     return this.#opening;
   }
   #source(args){
