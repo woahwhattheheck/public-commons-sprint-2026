@@ -845,7 +845,7 @@ def render_report(publication):
                       "</td><td>" + escape(s["bytes"]) + "</td></tr>" for s in p["edition"]["selections"])
     issues = [dict(row_id=r["row_id"], table=r["table"], source_row=r["source_row"], **issue)
               for r in p["rows"] for issue in r["issues"]]
-    return """<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+    return ("""<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>""" + title + """</title><style>body{font:16px/1.6 system-ui;color:#17372f;background:#f6f8f5;margin:0}
 main{max-width:1100px;margin:auto;padding:40px 24px}section{background:white;padding:24px;margin:24px 0;border:1px solid #d4dfd8;border-radius:12px}
 h1{font-size:36px;line-height:1.15}h2{font-size:24px}small,code{overflow-wrap:anywhere}.state{padding:14px;background:#fff0c9;border-left:4px solid #c38e23}
@@ -859,4 +859,4 @@ table{border-collapse:collapse;width:100%;font-size:13px}td,th{padding:10px;text
 <section><h2>Complete exception register</h2><p>Every original row remains in the native archive and editable register exports.</p><pre>""" + escape(json.dumps(issues, ensure_ascii=False, indent=2)) + """</pre></section>
 <section><h2>Decisions and review</h2><pre>""" + escape(json.dumps(p["reviews"], ensure_ascii=False, indent=2)) + """</pre></section>
 <footer><small>Original case """ + escape(p["context"]["case_id"]) + """ · publication """ + escape(publication["id"]) + """ / """ + escape(publication["revision"]) +
-"""<br>Source packet """ + escape(p["context"]["packet_sha256"]) + """<br>Publication SHA-256 """ + escape(publication["sha256"]) + """</small></footer></main></html>"""
+"""<br>Source packet """ + escape(p["context"]["packet_sha256"]) + """<br>Publication SHA-256 """ + escape(publication["sha256"]) + """</small></footer></main></html>""")
