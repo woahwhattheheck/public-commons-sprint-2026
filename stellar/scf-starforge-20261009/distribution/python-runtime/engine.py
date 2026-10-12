@@ -71,6 +71,16 @@ def private(path):
     return path
 
 
+def publish(temporary, path):
+    path = Path(path)
+    os.replace(temporary, path)
+    directory = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY)
+    try:
+        os.fsync(directory)
+    finally:
+        os.close(directory)
+
+
 def write(path, value, raw=False):
     path = Path(path)
     private(path.parent)
@@ -81,12 +91,7 @@ def write(path, value, raw=False):
             output.write(data)
             output.flush()
             os.fsync(output.fileno())
-        os.replace(temporary, path)
-        directory = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY)
-        try:
-            os.fsync(directory)
-        finally:
-            os.close(directory)
+        publish(temporary, path)
     finally:
         if os.path.exists(temporary):
             os.unlink(temporary)
@@ -216,7 +221,7 @@ def download(url, path, checksum):
         output.flush()
         os.fsync(output.fileno())
     need(value.hexdigest() == checksum, "Downloaded wheel differs from the resolver identity")
-    os.replace(pending, path)
+    publish(pending, path)
 
 
 def named_requirements(values):
@@ -325,7 +330,12 @@ def resolve_wheels(root, python, directory, requirements, local=None):
             need(version == local["version"] and checksum == local["sha256"] and filename == local["path"].name,
                  "The dependency resolver changed the original application wheel")
             if not destination.exists():
-                shutil.copyfile(local["path"], destination)
+                pending = destination.with_name(destination.name + ".partial")
+                with local["path"].open("rb") as original, pending.open("wb") as output:
+                    shutil.copyfileobj(original, output, CHUNK)
+                    output.flush()
+                    os.fsync(output.fileno())
+                publish(pending, destination)
             url = "original-source:" + local["sourceId"]
         else:
             download(url, destination, checksum)
@@ -545,7 +555,9 @@ def bundle(root, candidate_id, output):
         for name, path in members.items():
             archive.write(path, name)
         archive.writestr("COHORT.json", encoded(manifest))
-    os.replace(pending, output)
+    with pending.open("rb") as complete:
+        os.fsync(complete.fileno())
+    publish(pending, output)
     return {"path": str(output), "sha256": digest(output), "bytes": output.stat().st_size,
             "candidate": candidate_id, "lockSha256": manifest["lockSha256"], "sourceId": manifest["sourceId"]}
 
@@ -591,7 +603,7 @@ def receive(root, archive_path):
                     checksum.update(data); out.write(data)
                 out.flush(); os.fsync(out.fileno())
             need(checksum.hexdigest() == item["sha256"], "Transferred original wheel bytes differ")
-            os.replace(pending, destination)
+            publish(pending, destination)
     return candidate_view(root, candidate_id)
 
 
@@ -611,14 +623,15 @@ def activate(root, installation_id, expected):
     manifest = installed(root, installation_id, True)
     path = root / "active.json"
     previous = read(path) if path.exists() else None
+    # A committed selection is the same operation result after a worker reconnect.
+    if previous and previous["installation"] == installation_id:
+        return previous
     if expected is not None:
         expected_id = identifier(expected) if expected else None
         need((previous or {}).get("installation") == expected_id, "The selected active Python installation changed")
     value = {"installation": installation_id, "python": manifest["python"], "entrypoints": manifest["entrypoints"],
              "source": manifest["source"], "extras": manifest["extras"], "activatedAt": time.time(),
              "previousInstallation": (previous or {}).get("installation")}
-    if previous and previous["installation"] == installation_id:
-        return previous
     write(path, value)
     return value
 
