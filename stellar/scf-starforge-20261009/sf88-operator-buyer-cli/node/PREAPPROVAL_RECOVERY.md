@@ -109,6 +109,16 @@ The SDK records the new native PID identity, private stdout/stderr and result in
 
 The caller's abort signal and native runtime timeout apply to the new native process. Cancellation preserves the recorded attempt and output for inspection; it does not automatically launch again.
 
+### Retain a failure before child creation
+
+Metadata checks and the closed response-lock move complete before the exclusive child attempt. If this preparation is interrupted, executing the same selected plan recognizes the exact moved reservation inode and resumes the preparation. A new response writer at the original path causes a conflict.
+
+After the child attempt is claimed, the runtime finishes descriptor and entry preparation before spawning. If it definitively fails before creating a child, the attempt becomes `NOT_DISPATCHED` with an embedded `stellar-forge.node-native-start-receipt.v1` receipt. That single saved record includes the original start time, observation time, phase, safe error code, exact native argv and its canonical SHA-256. An aborted call before spawn has the same explicit outcome when the receipt can be saved.
+
+Inspect and prepare a new linked recovery for that selected failed attempt. The original ledger audit and fresh approval still apply. A missing or unwritable receipt leaves the existing claim intact; it never implies that no process ran.
+
+Once a continuation is linked, ordinary `review()` returns that selected saved review and its original review time. It preserves the source review pinned by the recovery history.
+
 ## Reopen the same history and result
 
 ```js

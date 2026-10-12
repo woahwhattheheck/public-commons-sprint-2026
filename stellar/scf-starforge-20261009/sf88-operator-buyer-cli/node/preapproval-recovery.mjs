@@ -9,6 +9,7 @@ import { pathToFileURL, fileURLToPath } from 'node:url';
 import { absolute, privateDirectory, readJson, readBytes, parseJson, writeJson, writeBytes,
   syncDirectory, jsonBytes, digest, now, object, need, BuyerError, exists } from './store.mjs';
 import { checkWorkspace, workspaceCommand } from './workspace.mjs';
+import { unstartedAttempt } from './runtime.mjs';
 
 const SCHEMA = 'stellar-forge.node-preapproval-recovery.v1';
 const NODE_SCHEMA = 'stellar-forge.node-buyer.v1';
@@ -109,7 +110,7 @@ async function chain(operation) {
   throw new BuyerError('PREAPPROVAL_HISTORY_LIMIT');
 }
 
-async function readSources(operation, current) {
+async function readSources(operation, current, retainedPlan = null) {
   const { meta, config, directory, attempt } = current;
   need(typeof meta.nativeWorkspace === 'string', 'PREAPPROVAL_ORIGINAL_WORKSPACE_REQUIRED');
   need(attempt?.schema === NODE_SCHEMA && attempt.intentId === operation.intentId &&
@@ -121,6 +122,11 @@ async function readSources(operation, current) {
   need(!await exists(destination) && !await exists(evidencePath),
     'PREAPPROVAL_ORIGINAL_OUTPUT_EXISTS');
   const reviewPath = join(directory, 'review.json');
+  const reservationPath = join(dirname(destination), '.' + basename(destination) + '.x402-download.lock');
+  const released = retainedPlan ? join(retainedPlan.directory, 'released-download-reservation.json') : null;
+  const originalReservation = released && await exists(released) ? released : reservationPath;
+  if (originalReservation !== reservationPath)
+    need(!await exists(reservationPath), 'PREAPPROVAL_NEW_OUTPUT_WRITER_EXISTS');
   const sources = await Promise.all([
     snapshot('operation.json', join(operation.directory, 'operation.json'), { limit: 65536 }),
     snapshot('config.json', operation.configPath, { limit: 65536 }),
@@ -128,8 +134,7 @@ async function readSources(operation, current) {
     snapshot('attempt.json', join(directory, 'attempt.json'), { limit: 16384 }),
     snapshot('stdout.json', join(directory, 'stdout.json'), { optional: true }),
     snapshot('stderr.log', join(directory, 'stderr.log'), { optional: true }),
-    snapshot('download-reservation.json', join(dirname(destination),
-      '.' + basename(destination) + '.x402-download.lock'), { optional: true, limit: 16384 }),
+    snapshot('download-reservation.json', originalReservation, { optional: true, limit: 16384 }),
   ]);
   need(sources[1].sha256 === meta.configSha256, 'PREAPPROVAL_CONFIGURATION_CHANGED');
   need(!sources[4].exists || sources[4].bytes === 0, 'PREAPPROVAL_NATIVE_OUTPUT_EXISTS');
@@ -153,11 +158,13 @@ async function readSources(operation, current) {
   return sources;
 }
 
-async function verifySources(plan, { releasedReservation = false } = {}) {
+async function verifySources(plan) {
   for (const pin of plan.sources) {
-    const archived = pin.name === 'download-reservation.json' && releasedReservation
+    const archived = typeof plan.directory === 'string' && pin.name === 'download-reservation.json'
       ? join(plan.directory, 'released-download-reservation.json') : null;
-    const actual = await snapshot(pin.name, archived && await exists(archived) ? archived : pin.path,
+    const moved = archived && await exists(archived);
+    if (moved) need(!await exists(pin.path), 'PREAPPROVAL_NEW_OUTPUT_WRITER_EXISTS');
+    const actual = await snapshot(pin.name, moved ? archived : pin.path,
       { optional: !pin.exists, limit: Math.max(pin.bytes ?? 0, 16384) });
     need(actual.exists === pin.exists && (!pin.exists ||
       actual.sha256 === pin.sha256 && actual.bytes === pin.bytes &&
@@ -280,6 +287,13 @@ export async function readPreapprovalRecovery(operation) {
     })), pending: current.pending ? preparedView(current.pending) : null };
 }
 
+/** Ordinary review follows the selected immutable continuation instead of rewriting its source. */
+export async function readSelectedPreapprovalReview(operation) {
+  const current = await chain(operation), selected = current.history.at(-1);
+  need(selected, 'PREAPPROVAL_PREPARED_PLAN_REQUIRED');
+  return copy(selected.plan.review);
+}
+
 export async function inspectPreapprovalRecovery(operation, { nativeRecord, signal } = {}) {
   checkSignal(signal);
   const current = await chain(operation);
@@ -397,13 +411,50 @@ export async function executePreapprovalRecovery(operation,
   await verifySources(plan);
   const sourceAttempt = parseJson(await readBytes(join(plan.sourceDirectory, 'attempt.json'), 16384));
   const originalCurrent = { ...current, directory: plan.sourceDirectory, attempt: sourceAttempt };
-  const sources = await readSources(operation, originalCurrent);
+  const sources = await readSources(operation, originalCurrent, plan);
   const checked = await processProof(operation, originalCurrent, sources, plan.processRequest.nativeRecord, signal);
   const originalLedgerCheck = await ledgerProof(operation, current, signal);
   await verifySources(plan);
   checkSignal(signal);
   const { meta, config } = current;
-  let attempt = { schema: NODE_SCHEMA, intentId: operation.intentId, state: 'STARTING', createdAt: now(),
+  let command = { args: ['--execute', '--config', operation.configPath], entryFile: operation.buyer.runtime.cli };
+  if (meta.nativeWorkspace) command = workspaceCommand(operation.buyer, {
+    directory: meta.nativeWorkspace, configPath: operation.configPath, ticketSha256: meta.ticketSha256 ?? null });
+  const executionCheck = {
+    schema: SCHEMA, intentId: operation.intentId, planSha256: expectedPlanSha256, checkedAt: now(),
+    processProof: checked.proof, originalLedgerCheck,
+  };
+  const checkSha256 = digest(jsonBytes(executionCheck));
+  const checksDirectory = join(current.directory, 'checks');
+  await privateDirectory(checksDirectory);
+  await writeJson(join(checksDirectory, checkSha256 + '.json'), executionCheck, { exclusive: true });
+  const reservation = plan.sources.find(value => value.name === 'download-reservation.json');
+  if (reservation?.exists) {
+    const released = join(current.directory, 'released-download-reservation.json');
+    if (await exists(released)) {
+      const observed = await snapshot(reservation.name, released, { limit: 16384 });
+      need(observed.sha256 === reservation.sha256 && observed.device === reservation.device &&
+        observed.inode === reservation.inode && !await exists(reservation.path),
+      'PREAPPROVAL_DOWNLOAD_RESERVATION_CHANGED');
+    } else {
+      const observed = await snapshot(reservation.name, reservation.path, { limit: 16384 });
+      need(observed.sha256 === reservation.sha256 && observed.device === reservation.device &&
+        observed.inode === reservation.inode, 'PREAPPROVAL_DOWNLOAD_RESERVATION_CHANGED');
+      try { await rename(reservation.path, released); }
+      catch (error) {
+        if (error.code !== 'ENOENT') throw error;
+        const moved = await snapshot(reservation.name, released, { limit: 16384 });
+        need(moved.sha256 === reservation.sha256 && moved.device === reservation.device &&
+          moved.inode === reservation.inode, 'PREAPPROVAL_DOWNLOAD_RESERVATION_CHANGED');
+      }
+      await syncDirectory(dirname(reservation.path)); await syncDirectory(current.directory);
+    }
+  }
+  await verifySources(plan);
+  checkSignal(signal);
+  const createdAt = now();
+  let attempt = { schema: NODE_SCHEMA, intentId: operation.intentId, state: 'STARTING',
+    createdAt, startedAt: createdAt, executionCheckSha256: checkSha256,
     configSha256: meta.configSha256, bodySha256: meta.bodySha256, retry: 'NO_AUTOMATIC_RETRY',
     preapprovalRecovery: { planSha256: expectedPlanSha256, sourceAttemptSha256: plan.sourceAttemptSha256 },
   };
@@ -413,28 +464,15 @@ export async function executePreapprovalRecovery(operation,
     if (error.code === 'EEXIST') throw new BuyerError('ATTEMPT_ALREADY_RECORDED_USE_RECOVER', { operation });
     throw error;
   }
-  let command = { args: ['--execute', '--config', operation.configPath], entryFile: operation.buyer.runtime.cli };
-  if (meta.nativeWorkspace) command = workspaceCommand(operation.buyer, {
-    directory: meta.nativeWorkspace, configPath: operation.configPath, ticketSha256: meta.ticketSha256 ?? null });
   let run;
   try {
-    await writeJson(join(current.directory, 'execution-check.json'), {
-      schema: SCHEMA, intentId: operation.intentId, checkedAt: now(),
-      processProof: checked.proof, originalLedgerCheck,
-    }, { exclusive: true });
-    const reservation = plan.sources.find(value => value.name === 'download-reservation.json');
-    if (reservation?.exists) {
-      // The old writer has been proved absent. Retain its exact reservation inode
-      // beside its copied original bytes before the native client reserves output.
-      const observed = await snapshot(reservation.name, reservation.path, { limit: 16384 });
-      need(observed.sha256 === reservation.sha256 && observed.device === reservation.device &&
-        observed.inode === reservation.inode, 'PREAPPROVAL_DOWNLOAD_RESERVATION_CHANGED');
-      await rename(reservation.path, join(current.directory, 'released-download-reservation.json'));
-      await syncDirectory(dirname(reservation.path)); await syncDirectory(current.directory);
-    }
-    checkSignal(signal);
     run = await operation.buyer.runtime.run(command.args, {
       directory: current.directory, signal, entryFile: command.entryFile,
+      beforeSpawn: async nativeCommand => {
+        await verifySources(plan);
+        attempt = { ...attempt, nativeCommand };
+        await writeJson(attemptPath, attempt);
+      },
       started: async (pid, processIdentity) => {
         attempt = { ...attempt, state: 'STARTED', pid, startedAt: now(),
           ...(processIdentity ? { processIdentity } : {}) };
@@ -442,12 +480,14 @@ export async function executePreapprovalRecovery(operation,
       },
     });
   } catch (error) {
-    await writeJson(attemptPath, { ...attempt, state: 'INTERRUPTED_OR_START_FAILED', endedAt: now() });
+    await writeJson(attemptPath, unstartedAttempt(attempt, error) ??
+      { ...attempt, state: 'INTERRUPTED_OR_START_FAILED', endedAt: now() });
     throw error;
   }
   if (run.output?.mode !== NATIVE_RESULT || run.output.intentId !== operation.intentId) {
-    await writeJson(attemptPath, { ...attempt, state: 'NATIVE_RESULT_UNAVAILABLE', endedAt: now(),
-      exitCode: run.exitCode, errorCode: run.errorCode ?? 'NATIVE_RESULT_INVALID' });
+    await writeJson(attemptPath, unstartedAttempt(attempt, run) ??
+      { ...attempt, state: 'NATIVE_RESULT_UNAVAILABLE', endedAt: now(),
+        exitCode: run.exitCode, errorCode: run.errorCode ?? 'NATIVE_RESULT_INVALID' });
     throw new BuyerError(run.errorCode ?? 'NATIVE_RESULT_INVALID', { operation, exitCode: run.exitCode });
   }
   const record = { schema: NODE_SCHEMA, intentId: operation.intentId, configSha256: meta.configSha256,

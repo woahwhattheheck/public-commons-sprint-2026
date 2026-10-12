@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Observe a retained Linux process for an interrupted original Node attempt.
+"""Observe an interrupted or definitively unstarted original Node attempt.
 
 This read-only helper supplies process evidence to the original authenticated
 Governor check. It neither grants approval nor establishes absence of payment.
@@ -25,6 +25,7 @@ sys.dont_write_bytecode = True
 SCHEMA = "stellar-forge.node-preapproval-process-proof.v1"
 REQUEST_SCHEMA = "stellar-forge.node-preapproval-process-proof-request.v1"
 IDENTITY_SCHEMA = "stellar-forge.node-process-identity.v1"
+NATIVE_START_SCHEMA = "stellar-forge.node-native-start-receipt.v1"
 SHA = re.compile(r"^[a-f0-9]{64}$")
 MAX_FILE = 16 * 1024 * 1024
 
@@ -219,6 +220,46 @@ def recorded_identity_proof(selected, attempt, bindings, directory, workspace, i
     return result
 
 
+def not_dispatched_proof(attempt, operation, bindings, directory, workspace, intent_id, config_sha):
+    receipt = attempt.get("nativeStart")
+    need(attempt.get("state") == "NOT_DISPATCHED" and attempt.get("pid") is None and
+         not (isinstance(attempt.get("processIdentity"), dict) and
+              attempt["processIdentity"].get("status") == "RECORDED"),
+         "ORIGINAL_UNSTARTED_ATTEMPT_REQUIRED")
+    need(isinstance(receipt, dict) and receipt.get("schema") == NATIVE_START_SCHEMA and
+         receipt.get("nativeProcessStarted") is False and receipt.get("phase") == "BEFORE_SPAWN" and
+         receipt.get("attemptStartedAt") == attempt.get("startedAt") and
+         isinstance(receipt.get("errorCode"), str) and
+         re.fullmatch(r"[A-Z0-9_]{1,120}", receipt["errorCode"]),
+         "ORIGINAL_NATIVE_START_RECEIPT_REQUIRED")
+    need(instant(receipt["observedAt"]) >= instant(attempt["startedAt"]),
+         "ORIGINAL_NATIVE_START_RECEIPT_ORDER_DIFFERS")
+    command = receipt.get("command")
+    need(isinstance(command, list) and len(command) == 9 and
+         all(isinstance(arg, str) and "\0" not in arg and len(arg) <= 16384 for arg in command) and
+         Path(command[0]).is_absolute() and Path(command[1]).is_absolute(),
+         "ORIGINAL_NATIVE_START_COMMAND_REQUIRED")
+    ticket = operation.get("ticketSha256")
+    need(ticket is None or isinstance(ticket, str) and SHA.fullmatch(ticket),
+         "ORIGINAL_NATIVE_START_TICKET_INVALID")
+    need(command[2:] == ["execute-workspace", "--dir", str(workspace), "--config",
+                            bindings["config"]["path"], "--ticket-sha", ticket or "none"],
+         "ORIGINAL_NATIVE_START_COMMAND_BINDINGS_DIFFER")
+    # store.mjs jsonBytes uses JSON.stringify(value, null, 2) plus one newline.
+    # The argv consists only of strings, so this reproduces those exact bytes.
+    encoded = (json.dumps(command, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
+    need(isinstance(receipt.get("commandSha256"), str) and SHA.fullmatch(receipt["commandSha256"]) and
+         hashlib.sha256(encoded).hexdigest() == receipt["commandSha256"],
+         "ORIGINAL_NATIVE_START_COMMAND_SHA256_DIFFERS")
+    # A settled runtime return before any spawn event is retained atomically in
+    # this same pinned attempt. A missing receipt never implies no child.
+    confirm_bindings(bindings)
+    result = result_base(intent_id, config_sha, bindings, directory, workspace)
+    result.update(nativeRecord=None, nativeStart=receipt,
+                  procfs={"attempt": {"outcome": "ORIGINAL_NATIVE_PROCESS_NOT_DISPATCHED"}})
+    return result
+
+
 def inspect_request(request_path):
     request_raw, request_binding = stable_bytes(absolute(request_path))
     selected = parse(request_raw)
@@ -255,12 +296,15 @@ def inspect_request(request_path):
          review["native"].get("intentId") == intent_id and
          all(value.get("bodySha256") == operation.get("bodySha256") for value in (review, attempt)),
          "ORIGINAL_REVIEW_BINDINGS_DIFFER")
-    need(attempt.get("state") in ("STARTED", "INTERRUPTED_OR_START_FAILED", "NATIVE_RESULT_UNAVAILABLE") and
-         type(attempt.get("pid")) is int and attempt["pid"] > 0, "ORIGINAL_STARTED_ATTEMPT_REQUIRED")
     need(instant(operation["createdAt"]) <= instant(attempt["startedAt"]), "ORIGINAL_ATTEMPT_ORDER_DIFFERS")
     need(config.get("operator", {}).get("ledger") == str(workspace / "reservations.sqlite") and
          config["operator"].get("policy") == str(workspace / "policy.json") and
          config.get("signerModule") == str(workspace / "signer.mjs"), "ORIGINAL_NATIVE_WORKSPACE_BINDINGS_DIFFER")
+
+    if attempt.get("state") == "NOT_DISPATCHED":
+        return not_dispatched_proof(attempt, operation, bindings, directory, workspace, intent_id, config_sha)
+    need(attempt.get("state") in ("STARTED", "INTERRUPTED_OR_START_FAILED", "NATIVE_RESULT_UNAVAILABLE") and
+         type(attempt.get("pid")) is int and attempt["pid"] > 0, "ORIGINAL_STARTED_ATTEMPT_REQUIRED")
 
     if isinstance(attempt.get("processIdentity"), dict) and attempt["processIdentity"].get("status") == "RECORDED":
         return recorded_identity_proof(selected, attempt, bindings, directory, workspace, intent_id, config_sha)
