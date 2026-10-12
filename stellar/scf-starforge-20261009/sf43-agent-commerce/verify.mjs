@@ -197,12 +197,23 @@ export function parseSep41TransferAmount(native) {
 /** Prefer actual @stellar/stellar-sdk provided by @x402/stellar installation. */
 export async function createOfficialEventDecoder() {
   let sdk;
-  try { sdk=await import('@stellar/stellar-sdk'); }
+  // The official base entry contains the same XDR and ScVal implementations
+  // without loading the SDK's HTTP, Horizon, RPC and contract client graph.
+  try { sdk=await import('@stellar/stellar-sdk/base'); }
   catch(error) {
-    if(error.code !== 'ERR_MODULE_NOT_FOUND') throw error;
-    // The maintained buyer installs its pinned SDK in its own package. Reuse
-    // that exact runtime when the operator has no hoisted root installation.
-    sdk=createRequire(new URL('../sf88-operator-buyer-cli/package.json',import.meta.url))('@stellar/stellar-sdk');
+    if (!['ERR_MODULE_NOT_FOUND','ERR_PACKAGE_PATH_NOT_EXPORTED'].includes(error.code)) throw error;
+    try { sdk=await import('@stellar/stellar-sdk'); }
+    catch(rootError) {
+      if(rootError.code !== 'ERR_MODULE_NOT_FOUND') throw rootError;
+      // Preserve the maintained buyer's package-local installation and older
+      // SDKs that do not publish the base subpath.
+      const require=createRequire(new URL('../sf88-operator-buyer-cli/package.json',import.meta.url));
+      try { sdk=require('@stellar/stellar-sdk/base'); }
+      catch(localError) {
+        if (!['MODULE_NOT_FOUND','ERR_PACKAGE_PATH_NOT_EXPORTED'].includes(localError.code)) throw localError;
+        sdk=require('@stellar/stellar-sdk');
+      }
+    }
   }
   const decode=value=>sdk.scValToNative(sdk.xdr.ScVal.fromXDR(value,'base64'));
   return async event=>{
