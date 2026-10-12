@@ -36,6 +36,8 @@ All native row types are preserved in the preview. The first access hashes the e
 
 ## Resume original work
 
+New native session definitions are fully written and synced before the original creator atomically publishes `session.json` inside its exclusively created private directory. An interrupted initial write therefore leaves its partial file and directory retained, with no final definition to mistake for a completed session. The receiving preparation can use another session path while keeping the same original operator keys and ledger.
+
 Reopen the same `--state` directory. Existing sessions and browser action history persist, while current acquisition state is read from the original native files. An interrupted browser job is marked `INTERRUPTED`; it is not automatically replayed.
 
 - **Recover interrupted session** calls the original native recovery. Its same-host process and lock-identity checks determine whether a dead lock can be removed. This application does not remove a live or foreign-host native lock.
