@@ -16,7 +16,9 @@ module Starforge
           response.headers["Cache-Control"] = "no-store"
           response.headers["X-Content-Type-Options"] = "nosniff"
         end
-        helper_method :operator_token, :operator_values, :operator_text
+        helper_method :operator_token, :operator_values, :operator_text,
+          :operator_data_unpack, :operator_data_value, :operator_data_label,
+          :operator_data_time, :operator_data_column, :operator_data_type
         rescue_from Starforge::Error, Starforge::RailsDataset::ImportError, with: :operator_error
         rescue_from ActiveRecord::RecordNotFound do
           head :not_found
@@ -86,6 +88,75 @@ module Starforge
         @detail = @workspace.detail(params[:id])
         @attachments = @workspace.attachments(params[:id],offset: operator_integer(:offset,0))
         render template: "starforge_dataset_operator/attachments", layout: "starforge_dataset_operator"
+      end
+
+      def records
+        id = params[:id].to_s
+        @detail = @workspace.detail(id)
+        @data_catalog = @workspace.data_captures(id,before: params[:capture_before])
+        capture_id = params[:capture_id].presence || @data_catalog.fetch("items").first&.fetch("id")
+        if capture_id
+          selected = @workspace.data_capture_state(id,capture_id)
+          if selected.fetch("state") == "complete"
+            @data_capture = selected.fetch("capture")
+            if params[:query_id].present? && !params.key?(:query)
+              @data = @workspace.data_rows(id,capture_id,params[:query_id].to_s,
+                page: operator_data_page)
+            else
+              query = operator_data_query(@data_capture.fetch("columns"))
+              result = @workspace.query_data(id,capture_id,query: query)
+              @data = @workspace.data_rows(id,capture_id,result.fetch("id"),
+                page: operator_data_page)
+            end
+            @data_query = @data.fetch("query").fetch("query")
+            @data_query_id = @data.fetch("query").fetch("id")
+          else
+            @data_pending_selection = selected
+          end
+        end
+        render template: "starforge_dataset_operator/records",layout: "starforge_dataset_operator"
+      end
+
+      def capture_data
+        selected = operator_verify("data_capture")
+        id = params[:id].to_s
+        Files.need(selected.fetch("review_id") == id,"DATASET_OPERATOR_SELECTION_CHANGED")
+        capture_id = selected.fetch("capture_id")
+        state = @workspace.select_data_capture(id,id: capture_id,
+          actor: selected.fetch("capture_actor",@operator_actor),
+          expected_revision: selected.fetch("expected_revision"),
+          expected_receipt_sha256: selected.fetch("expected_receipt_sha256"))
+        if state.fetch("state") == "complete"
+          flash[:notice] = "The saved working dataset is ready."
+        else
+          operator_enqueue_capture(id,capture_id)
+        end
+        redirect_to({action: :records,id: id,capture_id: capture_id},status: :see_other)
+      end
+
+      def record
+        id,capture_id = params[:id].to_s,params[:capture_id].to_s
+        @detail = @workspace.detail(id)
+        @record_detail = @workspace.data_record(id,capture_id,key_sha256: params[:key_sha256].to_s)
+        @data_capture = @record_detail.fetch("capture")
+        # A returning query is re-opened in the same review/capture before it is linked.
+        if params[:query_id].present?
+          @return_data = @workspace.data_rows(id,capture_id,params[:query_id].to_s,
+            page: operator_data_page)
+        end
+        render template: "starforge_dataset_operator/record",layout: "starforge_dataset_operator"
+      end
+
+      def data_export
+        operator_download(@workspace.data_export(params[:id].to_s,params[:capture_id].to_s,
+          params[:query_id].to_s,format: params[:format].to_s))
+      end
+
+      def data_attachment
+        operator_download(@workspace.data_attachment(params[:id].to_s,params[:capture_id].to_s,
+          key_sha256: params[:key_sha256].to_s,file: params[:file].to_s,
+          record_id: params[:record_id].to_s,column: params[:column].to_s,
+          index: operator_integer(:index,0)))
       end
 
       def download
@@ -180,6 +251,126 @@ module Starforge
       def operator_error(error)
         @operator_problem = error.message
         render template: "starforge_dataset_operator/error",layout: "starforge_dataset_operator",status: :conflict
+      end
+
+      def operator_data_page
+        page = operator_integer(:page,1)
+        raise ActionController::BadRequest, "Choose a page starting at 1." unless page >= 1
+        page - 1
+      end
+
+      def operator_data_query(columns)
+        raw = params[:query]
+        return {"search"=>"","statuses"=>["active"],
+          "target_states"=>%w[unchanged changed missing],"filters"=>[],"sort"=>[]} if raw.nil?
+        raise ActionController::BadRequest, "Use the record search form." unless
+          raw.is_a?(ActionController::Parameters) || raw.is_a?(Hash)
+        allowed = columns.to_h { |column| [column.fetch("key"),column] }
+        result = {"search"=>raw.fetch("search","").to_s,
+          "statuses"=>operator_data_choices(raw["statuses"],%w[active removed]),
+          "target_states"=>operator_data_choices(raw["target_states"],%w[unchanged changed missing]),
+          "filters"=>[],"sort"=>[]}
+        operator_data_inputs(raw["filters"],32).each do |filter|
+          column,operator = filter["column"].to_s,filter.fetch("operator","eq").to_s
+          next if column.empty?
+          definition = allowed[column]
+          raise ActionController::BadRequest, "Choose a column from this saved dataset." unless definition
+          selected = {"column"=>column,"operator"=>operator}
+          unless %w[is_null not_null].include?(operator)
+            value = filter.fetch("value","")
+            raise ActionController::BadRequest, "Enter one filter value." unless value.is_a?(String)
+            if definition.fetch("type") == "boolean"
+              raise ActionController::BadRequest, "Use true or false for a yes/no filter." unless
+                %w[true false].include?(value)
+              value = value == "true"
+            end
+            selected["value"] = value
+          end
+          result["filters"] << selected
+        end
+        operator_data_inputs(raw["sort"],8).each do |sort|
+          column = sort["column"].to_s
+          next if column.empty?
+          result["sort"] << {"column"=>column,"direction"=>sort.fetch("direction","asc").to_s,
+            "nulls"=>sort.fetch("nulls","last").to_s}
+        end
+        result
+      end
+
+      def operator_data_choices(value,allowed)
+        raise ActionController::BadRequest, "Choose at least one record state." unless value.is_a?(Array)
+        chosen = value.reject { |item| item == "" }
+        raise ActionController::BadRequest, "Choose at least one record state." unless
+          chosen.all? { |item| item.is_a?(String) && allowed.include?(item) } &&
+          !chosen.empty? && chosen.uniq == chosen
+        chosen
+      end
+
+      def operator_data_inputs(value,maximum)
+        return [] if value.nil?
+        if value.is_a?(ActionController::Parameters) || value.is_a?(Hash)
+          keys = value.keys
+          raise ActionController::BadRequest, "Use the ordered record filters." unless
+            keys.all? { |key| /\A(?:0|[1-9][0-9]*)\z/.match?(key.to_s) }
+          selected = keys.sort_by { |key| Integer(key.to_s,10) }.map { |key| value[key] }
+        elsif value.is_a?(Array)
+          selected = value
+        else
+          raise ActionController::BadRequest, "Use the ordered record filters."
+        end
+        raise ActionController::BadRequest, "Too many selected filters or sort columns." unless
+          selected.length <= maximum && selected.all? {
+            |item| item.is_a?(ActionController::Parameters) || item.is_a?(Hash)
+          }
+        selected
+      end
+
+      def operator_enqueue_capture(review_id,capture_id)
+        result = DataCaptureJob.perform_later(@operator_tenant,review_id,capture_id)
+        if result
+          flash[:notice] = "The working dataset is being saved. Refresh this page for its result."
+        else
+          flash[:alert] = "The queue did not accept this dataset. Resume the saved capture below."
+        end
+      rescue StandardError
+        flash[:alert] = "The queue response was interrupted. Refresh this page; Resume continues the saved capture."
+      end
+
+      def operator_data_unpack(value)
+        RailsDataset.unpack(value)
+      end
+
+      def operator_data_value(value)
+        return "Empty value" if value.nil?
+        return "Empty text" if value.is_a?(String) && value.empty?
+        return "Yes" if value == true
+        return "No" if value == false
+        operator_text(value)
+      end
+
+      def operator_data_label(value)
+        {"active"=>"Present in source","removed"=>"Removed from source",
+          "unchanged"=>"Matches imported values","changed"=>"Edited after import",
+          "missing"=>"No current record","selected"=>"Waiting to start",
+          "running"=>"Saving records","error"=>"Needs attention",
+          "complete"=>"Ready"}.fetch(value.to_s) { value.to_s.tr("_"," ").capitalize }
+      end
+
+      def operator_data_time(value)
+        return "Not recorded" if value.nil? || value.to_s.empty?
+        Time.iso8601(value.to_s).utc.strftime("%b %-d, %Y at %H:%M UTC")
+      rescue ArgumentError
+        value.to_s
+      end
+
+      def operator_data_column(column)
+        label = column.fetch("label").to_s.tr("_"," ").strip
+        label.empty? ? "Column" : label.sub(/\A./) { |first| first.upcase }
+      end
+
+      def operator_data_type(value)
+        {"string"=>"Text","integer"=>"Whole number","decimal"=>"Decimal",
+          "boolean"=>"Yes / no","date"=>"Date","datetime"=>"Date and time"}.fetch(value.to_s,value.to_s)
       end
 
       def operator_values(raw)

@@ -561,6 +561,94 @@ module Starforge
         Files.sync(root)
       end
 
+      # Creation and export verification observe the identical native state.
+      # Keep one row builder for original entries, exact values and file links.
+      def data_native_records(review_id,context,value)
+        current,scope,pk = context.values_at(:stream,:scope,:pk)
+        column_names = value.mapping.target_columns
+        choices,packages = data_review_packages(review_id,current),{}
+        editions = {}
+        edition_for = lambda do |id|
+          editions[id.to_s] ||= begin
+            row = @models.fetch(:edition).find_by!(dataset_stream_id: current.id,id: id)
+            [row,value.verified_receipt(row)]
+          end
+        end
+        states_relation = @models.fetch(:row).where(dataset_stream_id: current.id)
+        states_relation.find_in_batches(batch_size: Records::PAGE) do |states|
+          ids = states.map(&:target_id).compact
+          targets = ids.empty? ? {} : scope.where(pk=>ids).to_a.index_by { |target| target.public_send(pk).to_s }
+          missing_ids = ids.map(&:to_s)-targets.keys
+          Records.need(missing_ids.empty? || !scope.klass.unscoped.where(pk=>missing_ids).exists?,
+            "DATASET_MANAGED_TARGET_OUTSIDE_SCOPE")
+          entries = @models.fetch(:entry).where(dataset_edition_id: states.map(&:last_edition_id).uniq,
+            key_sha256: states.map(&:key_sha256)).to_a.index_by { |entry| [entry.dataset_edition_id.to_s,entry.key_sha256] }
+          records = states.map do |state|
+            Records.need(HASH.match?(state.key_sha256.to_s) &&
+              RailsDataset.sha(state.key_json) == state.key_sha256 &&
+              state.target_model == scope.klass.name && Records::STATES.include?(state.status),
+              "DATASET_DATA_KEY_STATE")
+            last_edition,last_receipt = edition_for.call(state.last_edition_id)
+            entry_row = entries[[state.last_edition_id.to_s,state.key_sha256]]
+            last_entry = data_entry(entry_row,last_edition.id,state.key_sha256)
+            Records.need(last_entry["key_json"] == state.key_json &&
+              last_entry["target_id"] == state.target_id &&
+              (state.status == "removed") == (last_entry["action"] == "removed"),
+              "DATASET_DATA_KEY_STATE_CHANGED")
+            source_row,source_edition = entry_row,last_edition
+            if state.status == "removed"
+              entry_table,edition_table = @models.fetch(:entry).arel_table,@models.fetch(:edition).arel_table
+              joined = entry_table.join(edition_table).on(
+                entry_table[:dataset_edition_id].eq(edition_table[:id])).join_sources
+              source_row = @models.fetch(:entry).joins(joined).
+                where(edition_table[:dataset_stream_id].eq(current.id)).
+                where(edition_table[:revision].lteq(last_edition.revision)).
+                where(key_sha256: state.key_sha256).where.not(action: "removed").
+                order(edition_table[:revision].desc,entry_table[:id].desc).first
+              Records.need(source_row,"DATASET_DATA_ORIGINAL_ROW_MISSING")
+              source_edition,_source_receipt = edition_for.call(source_row.dataset_edition_id)
+            end
+            original = data_entry(source_row,source_edition.id,state.key_sha256)
+            Records.need(original["source_raw_json"].is_a?(String) &&
+              RailsDataset.sha(original["source_raw_json"]) == original["source_row_sha256"] &&
+              original["source_row_sha256"] == state.source_row_sha256 &&
+              original["after_json"] == state.values_json,"DATASET_DATA_ORIGINAL_ROW_CHANGED")
+            raw_values = Files.parse(original.fetch("source_raw_json"),decimals: true)
+            Records.need(raw_values.is_a?(Hash),"DATASET_DATA_ORIGINAL_ROW")
+            assigned = RailsDataset.unpack(Files.parse(state.values_json))
+            expected = assigned.merge(RailsDataset.unpack(Files.parse(last_entry.fetch("after_json"))))
+            target = targets[state.target_id.to_s]
+            current_values = target ? column_names.to_h { |name| [name,target.public_send(name)] } : {}
+            changed = expected.keys.select { |name|
+              !target || !current_values.key?(name) ||
+                RailsDataset.pack(current_values[name]) != RailsDataset.pack(expected[name])
+            }
+            target_state = target.nil? ? "missing" : (changed.empty? ? "unchanged" : "changed")
+            key = RailsDataset.unpack(Files.parse(state.key_json))
+            Records.need(key.is_a?(Hash),"DATASET_DATA_KEY")
+            key_text = key.map { |name,cell| name + "=" + Records.text(cell) }.join(", ")
+            cells = {"@key"=>Records.tagged(key_text),"@status"=>Records.tagged(state.status),
+              "@target_state"=>Records.tagged(target_state)}
+            column_names.each { |name| cells["target."+name] = Records.tagged(current_values[name]) }
+            record = {"schema"=>Records::ROW,"key_sha256"=>state.key_sha256,
+              "key"=>Records.tagged(key),"key_text"=>key_text,"status"=>state.status,
+              "target_state"=>target_state,"source"=>{"edition_id"=>source_edition.id.to_s,
+                "revision"=>source_edition.revision,"manifest_sha256"=>source_edition.manifest_sha256,
+                "row_sha256"=>original["source_row_sha256"],"ordinal"=>original["source_ordinal"],
+                "entry_sha256"=>source_row.record_sha256,"values"=>Records.tagged(raw_values),
+                "raw_json"=>original.fetch("source_raw_json")},
+              "committed"=>{"edition_id"=>last_edition.id.to_s,"revision"=>last_edition.revision,
+                "entry_sha256"=>entry_row.record_sha256,"values"=>Records.tagged(expected)},
+              "target"=>{"id"=>state.target_id,"model"=>scope.klass.name,
+                "values"=>Records.tagged(current_values),"changed_columns"=>changed.sort},
+              "cells"=>cells,
+              "attachments"=>data_attachments_for(source_edition.manifest_sha256,raw_values,choices,packages)}
+            record
+          end
+          yield records
+        end
+      end
+
       def complete_data_capture(review_id,capture_id)
         request,context = data_request(review_id,capture_id)
         root = data_directory(review_id,capture_id)
@@ -587,90 +675,14 @@ module Starforge
                 latest.mapping_sha256 == value.mapping.sha256,"DATASET_DATA_RECEIVED_SOURCE_CHANGED")
               columns = data_columns(value.mapping)
               column_names = value.mapping.target_columns
-              choices,packages = data_review_packages(review_id,current),{}
-              editions = {}
-              edition_for = lambda do |id|
-                editions[id.to_s] ||= begin
-                  row = @models.fetch(:edition).find_by!(dataset_stream_id: current.id,id: id)
-                  [row,value.verified_receipt(row)]
-                end
-              end
               counts = {"total"=>0,"active"=>0,"removed"=>0,"unchanged"=>0,"changed"=>0,"missing"=>0}
               chunks,buckets,bucket_files = [],{},{}
               aggregate = Digest::SHA256.new
-              states_relation = @models.fetch(:row).where(dataset_stream_id: current.id)
-              states_relation.find_in_batches(batch_size: Records::PAGE) do |states|
-                ids = states.map(&:target_id).compact
-                targets = ids.empty? ? {} : scope.where(pk=>ids).to_a.index_by { |target| target.public_send(pk).to_s }
-                missing_ids = ids.map(&:to_s)-targets.keys
-                Records.need(missing_ids.empty? || !scope.klass.unscoped.where(pk=>missing_ids).exists?,
-                  "DATASET_MANAGED_TARGET_OUTSIDE_SCOPE")
-                entries = @models.fetch(:entry).where(dataset_edition_id: states.map(&:last_edition_id).uniq,
-                  key_sha256: states.map(&:key_sha256)).to_a.index_by { |entry| [entry.dataset_edition_id.to_s,entry.key_sha256] }
-                records = states.map do |state|
-                  Records.need(HASH.match?(state.key_sha256.to_s) &&
-                    RailsDataset.sha(state.key_json) == state.key_sha256 &&
-                    state.target_model == scope.klass.name && Records::STATES.include?(state.status),
-                    "DATASET_DATA_KEY_STATE")
-                  last_edition,last_receipt = edition_for.call(state.last_edition_id)
-                  entry_row = entries[[state.last_edition_id.to_s,state.key_sha256]]
-                  last_entry = data_entry(entry_row,last_edition.id,state.key_sha256)
-                  Records.need(last_entry["key_json"] == state.key_json &&
-                    last_entry["target_id"] == state.target_id &&
-                    (state.status == "removed") == (last_entry["action"] == "removed"),
-                    "DATASET_DATA_KEY_STATE_CHANGED")
-                  source_row,source_edition = entry_row,last_edition
-                  if state.status == "removed"
-                    entry_table,edition_table = @models.fetch(:entry).arel_table,@models.fetch(:edition).arel_table
-                    joined = entry_table.join(edition_table).on(
-                      entry_table[:dataset_edition_id].eq(edition_table[:id])).join_sources
-                    source_row = @models.fetch(:entry).joins(joined).
-                      where(edition_table[:dataset_stream_id].eq(current.id)).
-                      where(edition_table[:revision].lteq(last_edition.revision)).
-                      where(key_sha256: state.key_sha256).where.not(action: "removed").
-                      order(edition_table[:revision].desc,entry_table[:id].desc).first
-                    Records.need(source_row,"DATASET_DATA_ORIGINAL_ROW_MISSING")
-                    source_edition,_source_receipt = edition_for.call(source_row.dataset_edition_id)
-                  end
-                  original = data_entry(source_row,source_edition.id,state.key_sha256)
-                  Records.need(original["source_raw_json"].is_a?(String) &&
-                    RailsDataset.sha(original["source_raw_json"]) == original["source_row_sha256"] &&
-                    original["source_row_sha256"] == state.source_row_sha256 &&
-                    original["after_json"] == state.values_json,"DATASET_DATA_ORIGINAL_ROW_CHANGED")
-                  raw_values = Files.parse(original.fetch("source_raw_json"),decimals: true)
-                  Records.need(raw_values.is_a?(Hash),"DATASET_DATA_ORIGINAL_ROW")
-                  assigned = RailsDataset.unpack(Files.parse(state.values_json))
-                  expected = assigned.merge(RailsDataset.unpack(Files.parse(last_entry.fetch("after_json"))))
-                  target = targets[state.target_id.to_s]
-                  current_values = target ? column_names.to_h { |name| [name,target.public_send(name)] } : {}
-                  changed = expected.keys.select { |name|
-                    !target || !current_values.key?(name) ||
-                      RailsDataset.pack(current_values[name]) != RailsDataset.pack(expected[name])
-                  }
-                  target_state = target.nil? ? "missing" : (changed.empty? ? "unchanged" : "changed")
-                  key = RailsDataset.unpack(Files.parse(state.key_json))
-                  Records.need(key.is_a?(Hash),"DATASET_DATA_KEY")
-                  key_text = key.map { |name,cell| name + "=" + Records.text(cell) }.join(", ")
-                  cells = {"@key"=>Records.tagged(key_text),"@status"=>Records.tagged(state.status),
-                    "@target_state"=>Records.tagged(target_state)}
-                  column_names.each { |name| cells["target."+name] = Records.tagged(current_values[name]) }
-                  record = {"schema"=>Records::ROW,"key_sha256"=>state.key_sha256,
-                    "key"=>Records.tagged(key),"key_text"=>key_text,"status"=>state.status,
-                    "target_state"=>target_state,"source"=>{"edition_id"=>source_edition.id.to_s,
-                      "revision"=>source_edition.revision,"manifest_sha256"=>source_edition.manifest_sha256,
-                      "row_sha256"=>original["source_row_sha256"],"ordinal"=>original["source_ordinal"],
-                      "entry_sha256"=>source_row.record_sha256,"values"=>Records.tagged(raw_values),
-                      "raw_json"=>original.fetch("source_raw_json")},
-                    "committed"=>{"edition_id"=>last_edition.id.to_s,"revision"=>last_edition.revision,
-                      "entry_sha256"=>entry_row.record_sha256,"values"=>Records.tagged(expected)},
-                    "target"=>{"id"=>state.target_id,"model"=>scope.klass.name,
-                      "values"=>Records.tagged(current_values),"changed_columns"=>changed.sort},
-                    "cells"=>cells,
-                    "attachments"=>data_attachments_for(source_edition.manifest_sha256,raw_values,choices,packages)}
+              data_native_records(review_id,context,value) do |records|
+                records.each do |record|
                   counts["total"] += 1
-                  counts[state.status] += 1
-                  counts[target_state] += 1
-                  record
+                  counts[record.fetch("status")] += 1
+                  counts[record.fetch("target_state")] += 1
                 end
                 chunk_number = chunks.length
                 file = Records.write(temporary,format("rows/chunk-%08d.jsonl",chunk_number)) do |io|
@@ -954,9 +966,68 @@ module Starforge
         raise
       end
 
+      # Explicit portability profile for a saved, complete working-state capture.
+      # Native edition receipts stay immutable while legitimate target changes
+      # and missing rows are verified against the selected capture.
+      def verify_data_capture(review_id,capture_id,expected_capture_sha256:)
+        Records.need(HASH.match?(expected_capture_sha256.to_s),"DATASET_DATA_CAPTURE_HASH")
+        capture = data_capture(review_id,capture_id)
+        Records.need(capture["sha256"] == expected_capture_sha256,"DATASET_DATA_CAPTURE_CHANGED")
+        context = data_scope(review_id)
+        data_snapshot_transaction(context) do
+          current = data_current(review_id,context)
+          Records.need(current["can_capture"] && current["revision"] == capture["revision"] &&
+            current["edition_id"] == capture["edition_id"] &&
+            current["receipt_sha256"] == capture["receipt_sha256"],
+            "DATASET_DATA_EDITION_CHANGED")
+          value = importer(review_id)
+          Records.need(value.source_binding == capture["source"] &&
+            value.mapping.definition == capture["mapping"] &&
+            data_columns(value.mapping) == capture["columns"],"DATASET_DATA_RECEIVED_SOURCE_CHANGED")
+          # Read every selected capture file before using it as the comparison.
+          data_each_record(review_id,capture) { |_record,_reference| }
+          root = File.join(data_directory(review_id,capture_id),"content")
+          capture.fetch("keys").each_value { |file| Records.original_file(root,file) { |_io| } }
+          digest,counts = Digest::SHA256.new,{"total"=>0,"active"=>0,"removed"=>0,
+            "unchanged"=>0,"changed"=>0,"missing"=>0}
+          data_native_records(review_id,context,value) do |records|
+            records.each do |record|
+              digest.update(Records.json(record) + "\n")
+              counts["total"] += 1
+              counts[record.fetch("status")] += 1
+              counts[record.fetch("target_state")] += 1
+            end
+          end
+          Records.need(counts == capture["counts"] && digest.hexdigest == capture["rows_sha256"],
+            "DATASET_DATA_WORKING_STATE_CHANGED")
+          history,editions = Digest::SHA256.new,0
+          native = context.fetch(:stream).reload
+          @models.fetch(:edition).where(dataset_stream_id: native.id).find_each do |edition|
+            receipt = value.verified_receipt(edition)
+            if edition.id.to_s == capture["edition_id"]
+              Records.need(receipt == capture["receipt"],"DATASET_RECEIPT_CHANGED")
+            end
+            history.update(RailsDataset.json(receipt))
+            history.update("\n")
+            editions += 1
+          end
+          Records.need(native.revision == capture["revision"] &&
+            native.latest_edition_id.to_s == capture["edition_id"],"DATASET_DATA_EDITION_CHANGED")
+          {"schema"=>"stellar-forge.dataset-operator-captured-working-state.v1",
+            "profile"=>"captured-working-state",
+            "workingCapture"=>{"reviewId"=>review_id,"captureId"=>capture_id,
+              "expectedCaptureSha256"=>capture.fetch("sha256")},
+            "stream_id"=>native.id.to_s,"scope_sha256"=>capture.fetch("scope_sha256"),
+            "revision"=>capture.fetch("revision"),"edition_id"=>capture.fetch("edition_id"),
+            "receipt_sha256"=>capture.fetch("receipt_sha256"),"source"=>capture.fetch("source"),
+            "counts"=>counts,"rows_sha256"=>digest.hexdigest,"editions"=>editions,
+            "history_sha256"=>history.hexdigest}
+        end
+      end
+
       private :data_scope, :data_receipt, :data_current, :data_directory, :data_request, :data_cleanup_staging,
         :data_columns, :data_entry, :data_review_packages, :data_attachments_for,
-        :data_authorize_records, :data_snapshot_transaction, :data_each_record,
+        :data_authorize_records, :data_snapshot_transaction, :data_each_record, :data_native_records,
         :data_query_directory, :data_query, :data_resolve_references
     end
   end

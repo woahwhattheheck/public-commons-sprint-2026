@@ -11,9 +11,13 @@ export const RUBY_CLIENT_MANIFEST = 'ruby-client.json';
 export const LEGACY_RUBY_CLIENT_FILES = Object.freeze(["seller_client.rb","seller_client.rbs","seller-client-bridge.mjs","seller-buyer-bridge.mjs","seller-contract.json","rails_receiving.rb","customer.rb","RUBY.md"]);
 export const LEGACY_DATASET_RUBY_CLIENT_FILES = Object.freeze(["seller_client.rb","seller_client.rbs","seller-client-bridge.mjs","seller-buyer-bridge.mjs","seller-contract.json","rails_receiving.rb","customer.rb","RUBY.md","seller-dataset-bridge.mjs","dataset_delivery.rb","dataset_receiving.rb","dataset_customer.rb","rails_dataset.rb","DATASETS.md","examples/dataset_lifecycle.rb","examples/rails_dataset/create_dataset_import_tables.rb","examples/rails_dataset/models.rb","examples/rails_dataset/import_dataset_job.rb","examples/rails_dataset/commission.rb","examples/rails_dataset/mapping.json","examples/rails_dataset/README.md"]);
 export const LEGACY_COMPLETE_RUBY_CLIENT_FILES = Object.freeze([...LEGACY_DATASET_RUBY_CLIENT_FILES,...["native_dataset.rb","native_dataset_receiving.rb","native_dataset_customer.rb","NATIVE_DATASETS.md","examples/native_dataset_lifecycle.rb"]]);
-export const DATASET_OPERATOR_FILES = Object.freeze(["examples/rails_dataset/operator/workspace.rb","examples/rails_dataset/operator/jobs.rb","examples/rails_dataset/operator/controller.rb","examples/rails_dataset/operator/commission.rb","examples/rails_dataset/operator/README.md","examples/rails_dataset/operator/install.rb","examples/rails_dataset/operator/operator.css","examples/rails_dataset/operator/views/layouts/starforge_dataset_operator.html.erb","examples/rails_dataset/operator/views/starforge_dataset_operator/index.html.erb","examples/rails_dataset/operator/views/starforge_dataset_operator/show.html.erb","examples/rails_dataset/operator/views/starforge_dataset_operator/changes.html.erb","examples/rails_dataset/operator/views/starforge_dataset_operator/history.html.erb","examples/rails_dataset/operator/views/starforge_dataset_operator/attachments.html.erb","examples/rails_dataset/operator/views/starforge_dataset_operator/error.html.erb"]);
+export const LEGACY_DATASET_OPERATOR_FILES = Object.freeze(["examples/rails_dataset/operator/workspace.rb","examples/rails_dataset/operator/jobs.rb","examples/rails_dataset/operator/controller.rb","examples/rails_dataset/operator/commission.rb","examples/rails_dataset/operator/README.md","examples/rails_dataset/operator/install.rb","examples/rails_dataset/operator/operator.css","examples/rails_dataset/operator/views/layouts/starforge_dataset_operator.html.erb","examples/rails_dataset/operator/views/starforge_dataset_operator/index.html.erb","examples/rails_dataset/operator/views/starforge_dataset_operator/show.html.erb","examples/rails_dataset/operator/views/starforge_dataset_operator/changes.html.erb","examples/rails_dataset/operator/views/starforge_dataset_operator/history.html.erb","examples/rails_dataset/operator/views/starforge_dataset_operator/attachments.html.erb","examples/rails_dataset/operator/views/starforge_dataset_operator/error.html.erb"]);
+export const DATASET_RECORD_FILES = Object.freeze(["examples/rails_dataset/operator/records.rb","examples/rails_dataset/operator/records_cli.rb","examples/rails_dataset/operator/records.md","examples/rails_dataset/operator/records_example.rb","examples/rails_dataset/operator/views/starforge_dataset_operator/records.html.erb","examples/rails_dataset/operator/views/starforge_dataset_operator/record.html.erb"]);
+export const DATASET_OPERATOR_FILES = Object.freeze([...LEGACY_DATASET_OPERATOR_FILES,...DATASET_RECORD_FILES]);
+export const LEGACY_OPERATOR_RUBY_CLIENT_FILES = Object.freeze([...LEGACY_COMPLETE_RUBY_CLIENT_FILES,...LEGACY_DATASET_OPERATOR_FILES]);
 export const RUBY_CLIENT_FILES = Object.freeze([...LEGACY_COMPLETE_RUBY_CLIENT_FILES,...DATASET_OPERATOR_FILES]);
 export const LEGACY_NATIVE_RUBY_CLIENT_FILES = Object.freeze(["seller_client.rb","seller_client.rbs","dataset_delivery.rb","native_dataset.rb","native_dataset_receiving.rb","native_dataset_customer.rb","rails_dataset.rb","NATIVE_DATASETS.md","DATASETS.md","examples/native_dataset_lifecycle.rb","examples/rails_dataset/create_dataset_import_tables.rb","examples/rails_dataset/models.rb","examples/rails_dataset/import_dataset_job.rb","examples/rails_dataset/commission.rb","examples/rails_dataset/mapping.json","examples/rails_dataset/README.md"]);
+export const LEGACY_OPERATOR_NATIVE_RUBY_CLIENT_FILES = Object.freeze([...LEGACY_NATIVE_RUBY_CLIENT_FILES,...LEGACY_DATASET_OPERATOR_FILES]);
 export const NATIVE_RUBY_CLIENT_FILES = Object.freeze([...LEGACY_NATIVE_RUBY_CLIENT_FILES,...DATASET_OPERATOR_FILES]);
 export const NATIVE_RUBY_CLIENT_MANIFEST = 'native-dataset-client.json';
 const NATIVE_SCHEMA = 'stellar-forge.ruby-native-dataset-client.v1';
@@ -95,7 +99,7 @@ async function publishOnce(directory, name, bytes) {
 }
 function fileRecord(name, bytes) { return { name, bytes: bytes.length, sha256: sha(bytes) }; }
 function checkManifest(value, original) {
-  const expected = [LEGACY_RUBY_CLIENT_FILES,LEGACY_DATASET_RUBY_CLIENT_FILES,LEGACY_COMPLETE_RUBY_CLIENT_FILES,RUBY_CLIENT_FILES]
+  const expected = [LEGACY_RUBY_CLIENT_FILES,LEGACY_DATASET_RUBY_CLIENT_FILES,LEGACY_COMPLETE_RUBY_CLIENT_FILES,LEGACY_OPERATOR_RUBY_CLIENT_FILES,RUBY_CLIENT_FILES]
     .find(files => value?.files?.length === files.length);
   if (!value || value.schema !== SCHEMA || value.sourceSha256 !== original.sourceSha256 ||
       value.originalManifestSha256 !== original.manifestFile.sha256 || !Array.isArray(value.files) || !expected ||
@@ -361,7 +365,8 @@ export async function inspectRubySellerClient({ directory } = {}) {
     origin: original.origin, mode: original.mode, operations: original.operations,
     capabilities:manifest.files.length === LEGACY_RUBY_CLIENT_FILES.length ? ['single-response'] :
       ['single-response','dataset','rails-dataset-editions',...(manifest.files.some(item=>item.name==='native_dataset.rb')?['direct-sf100-dataset']:[]),
-        ...(manifest.files.some(item=>item.name==='examples/rails_dataset/operator/controller.rb')?['rails-dataset-operator']:[])],
+        ...(manifest.files.some(item=>item.name==='examples/rails_dataset/operator/controller.rb')?['rails-dataset-operator']:[]),
+        ...(manifest.files.some(item=>item.name==='examples/rails_dataset/operator/records.rb')?['committed-dataset-browse','complete-data-export']:[])],
     manifest, manifestSha256: sha(await bytesAt(directory, RUBY_CLIENT_MANIFEST, 131072)),
     files: [...original.files, original.manifestFile, ...manifest.files] };
 }
@@ -439,7 +444,7 @@ function nativeManifest(files) {
   return {schema:NATIVE_SCHEMA,files:[...files].map(([name,bytes])=>fileRecord(name,bytes))};
 }
 function checkNativeManifest(value) {
-  const expected = [LEGACY_NATIVE_RUBY_CLIENT_FILES,NATIVE_RUBY_CLIENT_FILES]
+  const expected = [LEGACY_NATIVE_RUBY_CLIENT_FILES,LEGACY_OPERATOR_NATIVE_RUBY_CLIENT_FILES,NATIVE_RUBY_CLIENT_FILES]
     .find(files=>files.length===value?.files?.length);
   if (!value || value.schema !== NATIVE_SCHEMA || !Array.isArray(value.files) || !expected ||
       value.files.length !== expected.length || value.files.some((file,index)=>
@@ -467,7 +472,8 @@ export async function inspectNativeRubyClient({directory}={}) {
   }
   return {state:'COMPLETE',directory,manifest,manifestSha256:sha(bytes),
     capabilities:['direct-sf100-dataset','offline-dataset-receiving','rails-dataset-editions',
-      ...(manifest.files.some(file=>file.name==='examples/rails_dataset/operator/controller.rb')?['rails-dataset-operator']:[])],
+      ...(manifest.files.some(file=>file.name==='examples/rails_dataset/operator/controller.rb')?['rails-dataset-operator']:[]),
+      ...(manifest.files.some(file=>file.name==='examples/rails_dataset/operator/records.rb')?['committed-dataset-browse','complete-data-export']:[])],
     files:manifest.files};
 }
 

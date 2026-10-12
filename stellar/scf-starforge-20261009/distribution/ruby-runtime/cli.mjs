@@ -16,7 +16,7 @@ const HELP = `Managed Ruby runtime
     --bundler-version VERSION --request-id UUID [--project-directory DIR --gemfile Gemfile]
   ruby-runtime install|verify --directory DIR --id ENV --operation-id UUID [--offline] [--wait]
   ruby-runtime run --directory DIR --id ENV --operation-id UUID
-    --entry native-dataset-lifecycle|baserow-customer-lifecycle [--wait] -- ORIGINAL_ARGS
+    --entry native-dataset-lifecycle|baserow-customer-lifecycle|dataset-records|dataset-records-lifecycle [--wait] -- ORIGINAL_ARGS
   ruby-runtime inspect --directory DIR
   ruby-runtime operation|resume|cancel --directory DIR --operation-id UUID [--wait]
   ruby-runtime log --directory DIR --operation-id UUID [--offset BYTES --limit BYTES]
@@ -25,6 +25,8 @@ const HELP = `Managed Ruby runtime
   ruby-runtime application|stop --directory DIR --id APP
   ruby-runtime launch --directory DIR --id APP --operation-id UUID [--port 9292]
   ruby-runtime export --directory DIR --id ENV --operation-id UUID [--application-id APP] [--wait]
+  ruby-runtime export|verify --directory DIR --id ENV --application-id APP --operation-id UUID
+    --capture-review-id REVIEW_UUID --capture-id CAPTURE_UUID --capture-sha256 SHA [--wait]
   ruby-runtime file --directory DIR --operation-id UUID --name ORIGINAL_FILE [--out ABSOLUTE_FILE]
   ruby-runtime receive --directory DIR --id ENV --title TITLE --ruby /absolute/ruby
     --archive ABSOLUTE_TAR --expected-sha256 SHA --operation-id UUID [--bundler-version VERSION] [--wait]
@@ -41,6 +43,7 @@ const KEYS = {
   '--bundler-version':'bundlerVersion','--project-directory':'projectDirectory','--gemfile':'gemfile',
   '--request-id':'requestId','--operation-id':'operationId','--application-id':'applicationId',
   '--environment-id':'environmentId','--application-directory':'applicationDirectory',
+  '--capture-review-id':'captureReviewId','--capture-id':'captureId','--capture-sha256':'captureSha256',
   '--archive':'archive','--expected-sha256':'expectedSha256','--entry':'entry',
   '--application-sha256':'expectedApplicationSha256','--environment-selection-sha256':'expectedEnvironmentSelectionSha256',
   '--port':'port','--offset':'offset','--limit':'limit','--name':'name','--out':'out',
@@ -49,8 +52,8 @@ const FLAGS = { '--create':'create','--offline':'offline','--wait':'wait','--sta
 const ALLOWED = {
   init:['directory'],probe:['ruby','bundlerVersion'],inspect:['directory'],
   create:['directory','id','title','ruby','bundlerVersion','projectDirectory','gemfile','requestId'],
-  install:['directory','id','operationId','offline','wait'],verify:['directory','id','operationId','applicationId','wait'],
-  export:['directory','id','operationId','applicationId','wait'],
+  install:['directory','id','operationId','offline','wait'],verify:['directory','id','operationId','applicationId','wait','captureReviewId','captureId','captureSha256'],
+  export:['directory','id','operationId','applicationId','wait','captureReviewId','captureId','captureSha256'],
   run:['directory','id','operationId','entry','wait'],
   operation:['directory','operationId','wait'],resume:['directory','operationId','wait'],
   cancel:['directory','operationId','wait'],log:['directory','operationId','offset','limit'],
@@ -81,6 +84,14 @@ function parse(argv) {
       need(typeof value === 'string' && !value.includes('\0'), 'RUBY_CLI_ARGUMENTS', 'Missing value: ' + key);
       input[name] = ['port','offset','limit'].includes(name) ? Number(value) : value;
     }
+  }
+  const captureKeys = ['captureReviewId','captureId','captureSha256'];
+  if (captureKeys.some(key => Object.hasOwn(input,key))) {
+    need(captureKeys.every(key => Object.hasOwn(input,key)), 'RUBY_WORKING_CAPTURE_INVALID',
+      'Select the original review, capture UUID and complete capture SHA together.');
+    input.workingCapture = { reviewId: input.captureReviewId, captureId: input.captureId,
+      expectedCaptureSha256: input.captureSha256 };
+    for (const key of captureKeys) delete input[key];
   }
   return { action, input, original };
 }
