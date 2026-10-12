@@ -7,6 +7,10 @@ Applications opens the original merchant and buyer tools from a selected READY r
 | Application | Maintained command | Original workflow |
 | --- | --- | --- |
 | CoinGecko market research | coingecko serve | Original market sources, request collections, comparisons, notes, provider plans, native buyer recovery and complete handover |
+| Repository metadata editions | oai serve | Original OAI-PMH capture, retained metadata editions, mapping, publisher and complete customer handover |
+| Fiscal Data operations | fiscaldata managed | Named Treasury operator, exact source and decimal editions, comparisons, original merchant and buyer, complete package receiving |
+| Databento migration | databento-workspace managed | Complete original historical-data source, field mapping, named review, retained results and customer handover |
+| OpenCage geocoding | opencage-workbench serve | Original geocoding source, explicit candidate decisions, retained merchant releases and complete customer deliveries |
 | Catalog Atlas | atlas | Retained catalog intake, offer comparison, exact native buyer preparation and complete workspace receiving |
 | n8n automation merchant | n8n-merchant serve | Configuration review, original preparation, paid jobs, retained workflow executions, customer results and stop/reopen |
 | API-pass customer | api-pass-workspace serve | Original API access, saved requests, exact response recovery, private buyer history and customer statements |
@@ -23,11 +27,13 @@ Applications opens the original merchant and buyer tools from a selected READY r
 | Stellar asset investigation | dataset-workspace --stellar-expert | Original asset observations, exact editions, reviewed findings, native dataset and merchant releases, purchased page receiving |
 | ArcGIS merchant workspace | arcgis-agent serve | One original browser and MCP service for source capture, field mapping, publication, staged deployments and complete customer files |
 | S3 object merchant | s3 workspace | Object source and complete prices, retained HEAD reviews and packages, original release controls, customer files and saved-workspace reopening |
+| DuckDB customer and agent | mcp-native serve | Original running customer warehouse, reviewed source reports, saved SQL, complete CSV/Parquet and portable receiving through the same browser and agent connection |
 | Dataset preview | dataset-workspace | A dataset configuration file or retained dataset state, native query and preview |
 | Dataset buyer | buyer-dataset-workspace | Original acquisitions, received rows and files, private customer history and Python analysis |
 | Request collections | buyer-collections-workspace | Grouped request review, original approvals and runs, retained outcomes and verified customer file downloads |
 | Baserow source authoring | baserow-workspace serve | Original field discovery, retained rows and files, versioned projections, dataset publishing and customer handover |
 | Grant planning and delivery | grant-workspace serve | Retained grant plans and revisions, contributor delivery, invoices, allocations, cash records and original exports |
+| Grants.gov opportunities | grantsgov serve | Complete original federal opportunity capture, immutable editions, qualification, native dataset publication and complete source/customer receiving |
 | PostgreSQL publisher | postgres-publisher serve | Plans, extraction, candidate review, publication, schedules and buyer handoff |
 | Google Sheets publisher | sheets-publisher serve | Original authorization/source, range plans, extraction, review and recurring publication |
 | PostgreSQL authoring | postgres-workspace | Original database inspection, query contracts, merchant package and release |
@@ -61,6 +67,12 @@ Select a READY installation containing the complete S3 Applications source and i
 
 The complete [S3 merchant Applications guide](./S3_MERCHANT_APPLICATIONS.md) covers installation selection, review/save, customer delivery, same-workspace receiving, ownership and recovery.
 
+## OpenCage geocoding
+
+Choose the initialized private OpenCage workspace containing its saved source plan and payment terms. Review and save the application, then review its start and open the original geocoding operator. The saved selection binds the immutable configuration and the twelve original source and browser files in both the selected runtime and adopted release.
+
+The same operator retains provider observations, candidate decisions, packages, merchant generations and customer exports. Stop drains its original server, source transport and workspace lease; a later start reopens that saved work with a new private listener. The complete [OpenCage Applications guide](../../sf30-seller-sdk/opencage/APPLICATIONS.md) covers source preparation, merchant and customer work, managed launch and recovery.
+
 ## Save and start
 
 1. Open the existing runtime workspace, attach or select the READY installation at its original absolute directory, and choose **Applications → New application**.
@@ -92,6 +104,21 @@ reopens the retained state without repeating earlier calls.
 Follow [gRPC merchant authoring in Applications](GRPC_APPLICATIONS.md) for the
 complete setup, saved-source selection, native opening, Stop and recovery workflow.
 
+## Grants.gov opportunities
+
+Choose the initialized private research directory and optional original buyer
+bindings JSON. Review, save and start **Grants.gov opportunities** through the
+same managed application lifecycle. The selected installed command retains the
+original query, capture, edition, qualification and publisher records. The
+native browser and complete MCP workflow are documented in
+[Grants.gov research, publication and receiving](../../../../stellar-forge/mcp-merchant-operator/GRANTSGOV_WORKSPACE.md).
+
+Applications binds the original workspace identity, reviewed source files and
+optional buyer directory references. It checks the native startup announcement
+against the live authenticated instance before retaining its private browser
+URL. Source acquisition and qualification changes keep that workspace identity.
+Stop and reopen the same saved operation to retain all original work.
+
 ## Merchant pricing and scenario planning
 
 The complete [managed pricing workflow](PRICING_APPLICATIONS.md) covers original
@@ -115,6 +142,18 @@ Use the browser for source intake, field mapping, edition selection, extraction,
 Applications prevents a second managed launch of the same merchant configuration. The publisher retains its own native writer lease. A changed connection file requires a fresh application review; source records and ordinary workspace progress continue through their original controls.
 
 See `stellar-forge/mcp-merchant-operator/ARCGIS_WORKSPACE.md` in the selected source for complete configuration, native request recovery, deployment and file-delivery instructions.
+
+## DuckDB customer and agent
+
+Select **DuckDB customer and agent** from a complete READY Node runtime. Choose the original initialized native buyer MCP directory and a private DuckDB connection JSON containing the running customer directory and its exact source report aliases. The existing Python **DuckDB dataset workspace** owns that original warehouse and browser.
+
+Use **Agent port** for the MCP listener; the Python browser retains its own port. Supply the original MCP access configuration through the host environment or private environment JSON. Review checks the running original service and source reports, pins its persistent workspace ID and exact connection bytes, and retains the selected complete source and original directories.
+
+After **Review application → Save application → Review start → Start**, **Open application** opens the actual original DuckDB browser. The retained operation also includes the agent MCP endpoint and native buyer console. Work on source mappings, immutable editions, saved SQL, comparison, complete query exports and portable receiving in that same customer workspace.
+
+The native launcher serves its currently opened native instance, including when an older saved operator module points to a previous source checkout. The original buyer, wallet and ledger remain in use. **Stop** closes the managed MCP connection; the separately owned Python service remains available. A same-workspace Python restart rotates its browser capability while preserving the persistent workspace ID. Current database contents and the rotating launch file are not immutable input fingerprints.
+
+The complete [DuckDB customer and agent guide](../../../../stellar-forge/mcp-paid-agent/DUCKDB.md) includes registration creation, both launch routes, every agent operation, exact-value handling, whole-file delivery, source refresh and original request continuation.
 
 ## Publisher initialization and reopening
 
@@ -567,3 +606,21 @@ Inside the original workspace, discover the selected fields, retain the complete
 ## CoinGecko market research
 
 Choose the original private CoinGecko workspace and optional saved project and buyer profile configuration. The same browser, model and native jobs run through Review/Save, managed connection, Start/Open, Stop and reopen. The startup observer binds the reviewed source to the actual installed release and original project; shutdown drains the original worker and database. Full operating instructions: [CoinGecko in Applications](COINGECKO_APPLICATIONS.md).
+
+## Repository metadata editions
+
+Choose **Repository metadata editions** with the original initialized XML/OAI workspace, its selected Python 3.11 or later executable, and the private environment file used by that operator. Review and Save retain the original workspace identity, selected Python runtime and complete native source binding. Review Start and Start use the maintained `oai` command from the adopted runtime; Open checks the original authenticated listener and returns to that repository's retained metadata editions. Repository metadata, feeds and XML share the original workspace resource lease, so a retained operation can be reopened or stopped before another application starts against that same directory.
+
+Within the original repository console, select the actual endpoint and metadata format, capture its complete records and resumption tokens, inspect retained metadata and mappings, and select an edition for the original publisher and customer handover. Stop drains the original server; reopen keeps the same repository history and unfinished capture state. The [OAI Applications guide](OAI_APPLICATIONS.md) covers the complete managed operation and recovery. The [original OAI operating guide](../../sf30-seller-sdk/oai-pmh/README.md) and [publisher guide](../../sf30-seller-sdk/oai-pmh/PUBLISHING.md) cover the source and complete publication workflow.
+
+## Fiscal Data operations
+
+Choose **Fiscal Data operations** with the original private Fiscal operator connection, the initialized workspace alias declared in that file, and an existing private source-package directory outside its source workspaces. The original terminal executable carries configured buyer approvals. Review and Save retain the exact connection, stable workspace identity and complete selected runtime source; the resolved workspace supplies the existing application resource lease. Start uses the original named MCP model and browser, and Open checks the same live local identity against the reviewed source and adopted release.
+
+The retained workspace provides source captures, exact decimal editions, comparisons, merchant preparation and buyer delivery. Its operator is displayed in the existing browser footer. Source edits and capture revisions stay writable within the same workspace. Stop drains the original model and browser; reopen preserves its captures, publisher history and complete source-package receiving. Follow the complete [Fiscal Data Applications guide](FISCALDATA_APPLICATIONS.md) for initialization or package receiving, private connections, runtime selection, managed operation, recovery and customer handover.
+
+## Databento migration
+
+Choose **Databento migration** with the initialized or received workbench directory containing its original `operation.json` and `workspace/` directory. Review and Save retain that operation marker, stable native workspace identity and selected source; Review Start and Start bind the same source in the adopted release. The application uses the original authenticated Python workspace server with the Databento operator assets, and Open selects the migration workspace after its live identity matches.
+
+Complete historical source editions, inspect field mappings, perform the named review, preserve results and export the customer handover from the original workbench. Stop closes its native server and model; reopen retains the same work and history. The complete [Databento Applications guide](DATABENTO_APPLICATIONS.md) covers initial setup or receiving, source/runtime selection, original producer and review actions, customer export, Stop and recovery.
