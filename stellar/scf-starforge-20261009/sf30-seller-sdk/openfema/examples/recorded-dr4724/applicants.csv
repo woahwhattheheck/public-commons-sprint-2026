@@ -1,0 +1,44 @@
+disasterNumber,applicantId,name,addressLine1,addressLine2,city,zipCode,state,county,joinState,projects,includedProjects,projectCost,federalObligated,totalObligated,mitigation
+4724,000-U5JBW-00,Hawaii Emergency Management Agency/Department of Defense,3949 Diamond Head Road,,Honolulu,96816-4413,Hawaii,Statewide,matched,12,12,464624995.26,446312927.03,446312927.03,0.00
+4724,000-U6RRP-00,Hawaii National Guard,3949 Diamond Head Road,Building 306A,Honolulu,96816-0000,Hawaii,Statewide,matched,4,4,16968121.85,16816028.58,16816028.58,0.00
+4724,009-U4VRX-00,Maui County / Department of Fire and Public Safety,200 Dairy Road,,Kahului,96732-0000,Hawaii,Maui County,matched,8,8,3565876.13,3416128.96,3416128.96,0.00
+4724,009-U7F1A-00,Maui County / Department of Transportation,110 Alaihi ST,Unit 210,Kahului,96732-0000,Hawaii,Maui County,matched,5,5,1870978.47,1795344.07,1795344.07,0.00
+4724,001-ULY63-00,Maui County / Department of the Prosecuting Attorney,200 S. High Street,,Wailuku,96793-0000,Hawaii,Maui County,matched,2,2,38814.04,38814.04,38814.04,0.00
+4724,009-UAR1M-00,Maui County / Department of Police,55 Mahalani Street,,Wailuku,96793-0000,Hawaii,Maui County,matched,5,5,2876015.32,2539916.69,2539916.69,0.00
+4724,001-00FAA-00,"County of Hawaii, Finance Department","25 Aupuni Street, Suite 2103",,Hilo,96720-0000,Hawaii,Hawaii County,matched,2,2,553720.52,553720.52,553720.52,0.00
+4724,009-URLQ3-00,"County of Maui, Department of Water Supply",200 SOUTH HIGH STREET,,WAILUKU,96793-0000,Hawaii,Maui County,matched,7,7,8613783.44,7116253.77,7116253.77,0.00
+4724,000-UQZ8G-00,"State of Hawaii, Department of Education",3633 Waialae Avenue,,Honolulu,96816-0000,Hawaii,Statewide,matched,10,10,74309346.49,68218567.10,68218567.10,2029777.00
+4724,009-U60M6-00,Maui County / Department of Environmental Management,200 S. High Street,,Wailuku,96793-0000,Hawaii,Maui County,matched,8,8,1270932.84,1193760.23,1193760.23,0.00
+4724,009-UNC65-00,Maui County / Department of Public Works,200 S. High Street,,Wailuku,96793-0000,Hawaii,Maui County,matched,7,7,7128818.57,5768667.90,5768667.90,0.00
+4724,009-UFNPB-00,Maui County / Emergency Management Agency (Maui County - Civil Defense Agency),200 S High St,"Kalana O Maui Bldg, 1st Fl",Wailuku,96793-0000,Hawaii,Maui County,matched,8,8,26621026.01,22260585.87,22260585.87,0.00
+4724,009-URGID-00,"Alano Club of Lahaina, Inc.",562-C Front Street,,Lahaina,96761-0000,Hawaii,Maui County,matched,3,3,1652579.21,1495190.71,1495190.71,0.00
+4724,000-UO4KM-00,"State of Hawaii, Department of Human Services",1390 Miller Street,Queen Liliuokalani Building,Honolulu,96813-0000,Hawaii,Statewide,matched,4,4,1838182.36,1838182.36,1838182.36,0.00
+4724,009-99009-01,Maui County / Department of Housing and Human Concerns,2200 Main Street,Ste 546,Wailuku,96793-0000,Hawaii,Maui County,matched,6,6,31227842.22,28258936.80,28258936.80,0.00
+4724,000-U4XW6-00,"State of Hawaii, Department of Hawaiian Homelands",91-5420 Kapolei Parkway,,Kapolei,96707-0000,Hawaii,Statewide,matched,4,4,830238.75,808975.83,808975.83,0.00
+4724,009-U1DDQ-00,Maui County / Department of Parks and Recreation,"700 Halia Nakoa Street, Unit 2B",,Wailuku,96793-0000,Hawaii,Maui County,matched,12,12,1543772.19,1412542.86,1412542.86,0.00
+4724,000-UW9IC-00,Hale Mahaolu,200 Hina Avenue,,Kahului,96732-0000,Hawaii,Statewide,matched,1,1,142323.48,128091.14,128091.14,5621746.98
+4724,000-U07ZV-00,"State of Hawaii, Department of Public Safety",1177 Alakea Street,#500,Honolulu,96813-0000,Hawaii,Statewide,matched,6,6,1364342.24,1359609.70,1359609.70,0.00
+4724,000-UQUJO-00,"State of Hawaii, Department of Land and Natural Resources",1151 Punchbowl Street,Room 221,Honolulu,96813-0000,Hawaii,Statewide,matched,11,11,8709336.61,7942360.51,7942360.51,0.00
+4724,000-UUPZO-00,State of Hawaii Department of Transportation Airports Division,400 Rodgers Blvd,Suite 700,Honolulu,96819-1880,Hawaii,Statewide,matched,1,1,279407.89,279407.89,279407.89,0.00
+4724,000-UF4UL-00,"Kaiser Foundation Health Plan, Inc.",711 Kapiolani Blvd.,,Honolulu,96813-0000,Hawaii,"Honolulu, City and County of",matched,3,3,20687572.41,18040623.22,18040623.22,0.00
+4724,003-UHGBQ-00,"Department of Business, Economic Development & Tourism - Hawaii Tourism Authority",1801 Kalakaua Ave,1st Floor,Honolulu,96815-0000,Hawaii,Statewide,matched,3,3,840836.83,840836.83,840836.83,0.00
+4724,009-UUTW5-00,Lahaina Restoration Foundation,120 Dickenson Street,,Lahaina,96793-0000,Hawaii,Maui County,matched,13,13,15521757.21,13561337.55,13561337.55,0.00
+4724,000-UO04K-00,"Department of Business, Economic Development & Tourism - Strategic Industries Division","235 S. Beretania St., 5th Floor",,Honolulu,96813-0000,Hawaii,Statewide,matched,3,3,75597.78,75597.78,75597.78,0.00
+4724,009-UTW33-00,Lahaina Jodo Mission,12 Ala Moana Street,,Lahaina,96761-0000,Hawaii,Maui County,matched,3,3,11246804.86,10175593.09,10175593.09,0.00
+4724,000-UJYI1-00,Office of the Lieutenant Governor,415 S Beretania Street,Fifth Floor,Honolulu,96817-0000,Hawaii,Statewide,matched,1,1,5806.10,5806.10,5806.10,0.00
+4724,000-UUX3Y-00,"State of Hawaii, Department of Health",1250 Punchbowl Street,Room 310,Honolulu,96813-0000,Hawaii,Statewide,matched,5,5,1433729.73,1307796.78,1307796.78,0.00
+4724,009-UF4CN-00,Maui County / Office of Economic Development,"2200 Main Street, Suite 305",,Wailuku,96793-0000,Hawaii,Maui County,matched,4,4,765021.59,470842.34,470842.34,0.00
+4724,009-UNUEY-00,"Community Clinic of Maui, Inc. dba Malama I Ke Ola Health Center",1881 Nani St,,Wailuku,96793-1811,Hawaii,Maui County,matched,1,1,195204.96,175684.46,175684.46,0.00
+4724,000-UO4KM-01,Hawaii Public Housing Authority,1002 North School Street,,Honolulu,96817-0000,Hawaii,Statewide,matched,4,4,40864258.92,36973998.57,36973998.57,6758697.19
+4724,000-UQZ8G-01,State of Hawaii/Department of Education - Hawaii State Public Library System,5245 Kalanianaole Highway,,Honolulu,96821-0000,Hawaii,Statewide,matched,2,2,11664935.07,10553988.87,10553988.87,358493.15
+4724,003-UR7B6-00,Roman Catholic Church in the State of Hawaii,Diocesan Chancery Office,1184 Bishop Street,Honolulu,96813-0000,Hawaii,"Honolulu, City and County of",matched,6,6,4330853.32,3918179.00,3918179.00,0.00
+4724,000-UMRGM-00,Department of Labor and Industrial Relations,830 Punchbowl St,Room 321,Honolulu,96813-0000,Hawaii,Statewide,matched,2,2,10713.16,10713.16,10713.16,0.00
+4724,009-99009-03,Maui County / Department of Management (Office of Recovery),"200 S. High Street, Suite 614",,Wailuku,96793-0000,Hawaii,Maui County,matched,4,4,400820.80,398649.10,398649.10,0.00
+4724,009-UP9HC-00,Waiola Church,"535 Wainee St Lahaina, HI 96761",,Lahaina,96761-0000,Hawaii,Maui County,matched,2,2,1226814.93,1109975.42,1109975.42,280162.94
+4724,009-UXEQX-00,"Ka Hale A Ke Ola Homeless Resource Centers, Inc.",670 Waiale Rd.,,Wailuku,96793-0000,Hawaii,Maui County,matched,3,3,25797560.04,23340649.57,23340649.57,0.00
+4724,000-UT3CN-00,Hawaii Conference of Seventhday Adventists,2728 Pali Hwy,,Honolulu,96817-0000,Hawaii,"Honolulu, City and County of",matched,2,2,52654.35,47639.65,47639.65,0.00
+4724,009-UCQRD-00,Worldwide Indigenous Science Network,573 Wainee St.,,Lahaina,96761-0000,Hawaii,Maui County,matched,1,1,19754.96,17779.47,17779.47,0.00
+4724,000-ULODG-00,Honpa Hongwanji Mission of Hawaii,1727 Pali Highway,,Honolulu,96813-0000,Hawaii,"Honolulu, City and County of",matched,2,2,11905281.25,10771444.95,10771444.95,0.00
+4724,009-00257-00,Lahaina United Methodist Church,142 Baker St.,,Lahaina,96761-0000,Hawaii,Maui County,matched,2,2,1269211.02,1148333.78,1148333.78,0.00
+4724,009-UGNOH-00,Wo Hing Society,848 FRONT STREET,,LAHAINA,96761-0000,Hawaii,Maui County,matched,2,2,1266776.70,1146131.30,1146131.30,0.00
+4724,009-U78V3-00,Lahaina Congregation of Jehovah's Witnesses,1181 Front St,,Lahaina,96761-0000,Hawaii,Maui County,matched,1,1,27784.47,25006.03,25006.03,0.00
