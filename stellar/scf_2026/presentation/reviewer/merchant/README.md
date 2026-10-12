@@ -114,6 +114,8 @@ The private workbench and Buyer access codes are never tool results, download ma
 
 `RECEIVING.mjs` extends the existing completed reviewer operation. It requires that operation's exact `WORKBENCH-RESULT.json` and already-received sender/receiver workbenches. It uses the normal maintained merchant host and registry with this contribution selected; there is no replacement server or registry fixture.
 
+Before opening the merchant, the continuation reads the exact public packet saved by the original browser, checks the completed operation’s byte count and SHA-256, and compares every byte with that same operation’s private native export. Browser-created file permissions do not turn this public source packet into a private configuration file. The original download and native export remain in place; private workbench headers, connection records and host configuration keep their existing private-file checks.
+
 The extension replays the original packet review and receive actions, reads both original complete results, retains/downloads the original accepted export, interrupts a real file transfer after a durable byte checkpoint, restarts the merchant and resumes that same file, then receives the exact file through the original second operator's saved review/receive actions. It also exercises a merchant-owned and a borrowed workbench, current lifecycle recovery and local complete-file reopen. The original 14-phase browser result is left unchanged. The extension uses its own journal beneath that same operation and retains zero new payment transactions.
 
 ```sh
