@@ -197,13 +197,13 @@ The merchant's **Collect earned amount and keep open** operation calls the origi
 
 The product observes balance and withdrawn cumulative at the same ledger. New unpaid commitments must cover their authenticated purchase amount and fit the remaining balance while the native SDK checks the increase from its current cumulative record. Financial records retain their original action, operation ID, fee authority, signed transaction, hash and finality. Resume and archival reconciliation use that same signed transaction.
 
-The [complete Channel guide](../../mpp-channel/README.md) includes all 35 supported operations, exact input shapes, fee review, original transaction recovery and contract sources.
+The [complete Channel guide](https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/5cc64e9df69025971c883bc770df4440375b484a/stellar/scf-starforge-20261009/mpp-channel/README.md) includes all 35 supported operations, exact input shapes, fee review, original transaction recovery and contract sources.
 
 ### Receive the whole operated product
 
 Use the original complete-channel export and receiving flow to carry the actual task/customer history, merchant records, paid output files, funding, collection/refund records, signed transactions, coherent observations and native SDK state. Its source closure includes the complete Python customer application and original product.
 
-The [product receiving guide](../../../../products/mpp-workspace/RECEIVING.md) covers the original workspace identity and operating transfer. The [Python customer guide](../../mpp-channel/python/README.md) provides the complete work-list runner and `receive_channel.py`. Their existing operation IDs and immutable response/handover files continue across process interruption and receiving.
+The [product receiving guide](https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/5cc64e9df69025971c883bc770df4440375b484a/products/mpp-workspace/RECEIVING.md) covers the original workspace identity and operating transfer. The [Python customer guide](https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/5cc64e9df69025971c883bc770df4440375b484a/stellar/scf-starforge-20261009/mpp-channel/python/README.md) provides the complete work-list runner and `receive_channel.py`. Their existing operation IDs and immutable response/handover files continue across process interruption and receiving.
 
 In Runtime **Applications**, this selection also exposes **Native MPP merchant and customer** from provider `mpp-product`. Select the initialized product and its original native SDK/runtime, review the application and start it through the existing managed terminal. The original **MPP merchant and customer** provider continues to operate its existing native console registrations.
 
