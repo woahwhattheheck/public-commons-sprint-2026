@@ -1,11 +1,16 @@
 // MIT. Optional private terminal and original CLI URL capture inside the managed runner.
 import { blockscoutStartup } from './application-blockscout.mjs';
 import { mppStartup, MPP_READY_SCHEMA } from './application-mpp.mjs';
+import { cheesecakeStartup } from './application-cheesecake.mjs';
+import { odataStartup } from '../../sf30-seller-sdk/odata/live/applications.mjs';
+import { jobResultReceiverStartup } from './application-job-result-receiver.mjs';
+import { sheetsStartup } from './application-sheets.mjs';
 import { atlasStartup } from './application-atlas.mjs';
 import { redisStartup } from './application-redis.mjs';
 import { jobCheckoutStartup } from './application-job-checkout.mjs';
 import { datasetBuyerStartup } from './application-dataset-buyer.mjs';
 import { collectionsStartup } from './application-collections.mjs';
+import { grantStartup } from './application-grant.mjs';
 import { tenderlyStartup } from './application-tenderly.mjs';
 import { browserWalletOutputReader, browserWalletStartup, verifyBrowserWalletLaunch } from './application-browser-wallet.mjs';
 import { eventFeedOutputReader, eventFeedStartup, verifyEventFeedLaunch } from './application-event-feed.mjs';
@@ -86,6 +91,70 @@ export function observeApplicationOutput(request, directory, context = {}) {
     // Read only the maintained CLI's startup announcement. Later user-entered
     // terminal text and provider payloads cannot select a different application.
     text = text.replace(/\x1b\[[0-?]*[ -/]*[@-~]/g, '').trim();
+    if (request.command === 'stellar-application') {
+      if (!text.startsWith('{"schema":"stellar-forge.application-installed-startup.v1",')) return;
+      saving = saving.then(async () => {
+        if (seen) return;
+        const startup = await cheesecakeStartup(request, text);
+        const url = startup && privateUrl(startup.url);
+        if (!url) return;
+        seen = true;
+        await saveJSON(join(directory, 'application-url.json'), {
+          schema: 'stellar-forge.application-url.v1', applicationId: request.applicationId,
+          operationId: directory.split('/').at(-1), command: request.command,
+          source: 'original-command-stdout', observedAt: now(), url, original: startup.original,
+        });
+      }).catch(error => { if (error.code !== 'EEXIST') saveError = error; });
+      return;
+    }
+    if (request.command === 'dataset' && request.args?.[0] === 'odata') {
+      if (!text.startsWith('{"schema":"stellar-forge.odata-workspace-startup.v1",')) return;
+      saving = saving.then(async () => {
+        if (seen) return;
+        const startup = await odataStartup(request, directory, text, context);
+        const url = startup && privateUrl(startup.url);
+        if (!url) return;
+        seen = true;
+        await saveJSON(join(directory, 'application-url.json'), {
+          schema: 'stellar-forge.application-url.v1', applicationId: request.applicationId,
+          operationId: directory.split('/').at(-1), command: request.command,
+          source: 'original-command-stdout', observedAt: now(), url, links: startup.links, original: startup.original,
+        });
+      }).catch(error => { if (error.code !== 'EEXIST') saveError = error; });
+      return;
+    }
+    if (request.command === 'jobs' && request.args?.[0] === 'receiver' && request.args?.[1] === 'serve') {
+      if (!text.startsWith('{"schema":"stellar-forge.job-result-receiver-ready.v1",')) return;
+      saving = saving.then(async () => {
+        if (seen) return;
+        const startup = await jobResultReceiverStartup(request, text);
+        const url = startup && privateUrl(startup.url);
+        if (!url) return;
+        seen = true;
+        await saveJSON(join(directory, 'application-url.json'), {
+          schema: 'stellar-forge.application-url.v1', applicationId: request.applicationId,
+          operationId: directory.split('/').at(-1), command: request.command,
+          source: 'original-command-stdout', observedAt: now(), url, original: startup.original,
+        });
+      }).catch(error => { if (error.code !== 'EEXIST') saveError = error; });
+      return;
+    }
+    if (request.command === 'sheets-source') {
+      if (!text.startsWith('{"schema":"stellar-forge.sheets-authoring-startup.v1",')) return;
+      saving = saving.then(async () => {
+        if (seen) return;
+        const startup = await sheetsStartup(request, text);
+        const url = startup && privateUrl(startup.url);
+        if (!url) return;
+        seen = true;
+        await saveJSON(join(directory, 'application-url.json'), {
+          schema: 'stellar-forge.application-url.v1', applicationId: request.applicationId,
+          operationId: directory.split('/').at(-1), command: request.command,
+          source: 'original-command-stdout', observedAt: now(), url, original: startup.original,
+        });
+      }).catch(error => { if (error.code !== 'EEXIST') saveError = error; });
+      return;
+    }
     if (walletOutput) {
       for (const value of walletOutput(text)) {
         saving = saving.then(async () => {
@@ -101,6 +170,22 @@ export function observeApplicationOutput(request, directory, context = {}) {
           });
         }).catch(error => { if (error.code !== 'EEXIST') saveError = error; });
       }
+      return;
+    }
+    if (request.command === 'grant-workspace') {
+      if (!text.startsWith('{"schema":"stellar-forge.sf47.workspace-launch.v1",')) return;
+      saving = saving.then(async () => {
+        if (seen) return;
+        const startup = await grantStartup(request, text);
+        const url = startup && privateUrl(startup.url);
+        if (!url) return;
+        seen = true;
+        await saveJSON(join(directory, 'application-url.json'), {
+          schema: 'stellar-forge.application-url.v1', applicationId: request.applicationId,
+          operationId: directory.split('/').at(-1), command: request.command,
+          source: 'original-command-stdout', observedAt: now(), url, original: startup.original,
+        });
+      }).catch(error => { if (error.code !== 'EEXIST') saveError = error; });
       return;
     }
     if (request.command === 'atlas') {

@@ -1,5 +1,12 @@
 # API merchant workspace
 
+The [complete package transfer workflow](PACKAGE_TRANSFER.md) exports the original
+source, plan, generated merchant and compiled files as a resumable package,
+receives it through this workspace's original publisher, and stages initial or
+revised packages in SF82. The [merchant MCP authoring guide](../../../../stellar-forge/mcp-merchant-operator/OPENAPI_WORKSPACES.md)
+adds the same source reviews, retained drafts, cache operations, policy revisions,
+package receiving and release staging to the maintained merchant operator.
+
 Configure per-operation host connections in the [backend transport profile guide](TRANSPORTS.md). The workspace retains the original upstream configuration through source reviews and seller releases.
 
 Declared finite SSE and NDJSON routes use the same workspace, saved merchant package and native seller. The [streaming workflow](STREAMING.md) covers explicit payment flow, source limits, generated customer review, and opening the existing commerce console for approval and retained output.

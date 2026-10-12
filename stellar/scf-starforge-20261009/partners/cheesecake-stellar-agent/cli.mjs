@@ -2,9 +2,9 @@
 // MIT. The original buyer owns native approval, signing, the attempt and recovery.
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { loadApplication, loadConfiguration, inspectHandoff } from './configuration.mjs';
+import { loadApplication, loadConfiguration, inspectHandoff, inspectRemoteMcp } from './configuration.mjs';
 
-const commands = new Set(['list','verify-source','review','execute','status','recover','read','export']);
+const commands = new Set(['list','verify-source','review','execute','status','recover','read','export','cancel','spending','reconcile']);
 const fail = code => Object.assign(new Error(code), { code });
 function parse(args) {
   const [command, ...tail] = args;
@@ -13,6 +13,7 @@ function parse(args) {
   const options = {};
   const allowed = command === 'read' ? ['config','intent','format','limit-bytes'] :
     command === 'export' ? ['config','intent','out'] :
+    command === 'reconcile' ? ['config','intent','transaction'] :
     command === 'list' || command === 'verify-source' ? ['config'] : ['config','intent'];
   for (let i = 0; i < tail.length; i += 2) {
     const key = tail[i].slice(2);
@@ -29,9 +30,10 @@ export async function main(args = process.argv.slice(2)) {
   if (input.help) {
     process.stdout.write(
       'Usage: node cli.mjs list|verify-source --config /private/application.json\n' +
-      '       node cli.mjs review|execute|status|recover --config FILE --intent ORIGINAL_INTENT\n' +
+      '       node cli.mjs review|execute|status|recover|cancel|spending --config FILE --intent ORIGINAL_INTENT\n' +
       '       node cli.mjs read --config FILE --intent ORIGINAL_INTENT [--format json|text|base64|file] [--limit-bytes N]\n' +
       '       node cli.mjs export --config FILE --intent ORIGINAL_INTENT --out NEW_ABSOLUTE_FILE\n' +
+       '       node cli.mjs reconcile --config FILE --intent ORIGINAL_INTENT [--transaction ORIGINAL_HASH]\n' +
       '\nUse one configuration and original intent through review, execution and recovery.\n' +
       'Execute enters the original native operator and its existing approval/signing configuration.\n');
     return;
@@ -42,6 +44,10 @@ export async function main(args = process.argv.slice(2)) {
     const output = { handoffId: source.manifest.handoffId, manifestSha256: source.manifestSha256,
       fileCount: source.manifest.files.length, totalBytes: source.manifest.totalBytes,
       requests: [...source.requests.values()].map(x => x.view) };
+    if (c.remoteMcp) {
+      const remote = await inspectRemoteMcp(c.remoteMcp,{sourceRoot:resolve(c.runtimeDirectory,'../../..')});
+      output.remoteMcp = {sourceSha256:remote.sourceSha256,requests:[...remote.requests.values()].map(x=>x.view)};
+    }
     process.stdout.write(JSON.stringify(output, null, 2) + '\n'); return output;
   }
   const loaded = await loadApplication(o.config), controller = new AbortController();
@@ -54,6 +60,7 @@ export async function main(args = process.argv.slice(2)) {
         ...(o.format ? { format: o.format } : {}),
         ...(o['limit-bytes'] ? { limitBytes: Number(o['limit-bytes']) } : {}),
         ...(o.out ? { destination: resolve(o.out) } : {}),
+        ...(o.transaction ? { transaction: o.transaction } : {}),
       });
     process.stdout.write(JSON.stringify(result, null, 2) + '\n'); return result;
   } finally {

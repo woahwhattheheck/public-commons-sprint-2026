@@ -227,6 +227,13 @@ The original configured seller application validates the request and complete
 JSON element response before authorization settlement. Review counts and research
 rows are projections of those unchanged provider bytes.
 
+The [current managed Partition documentation](https://docs.unstructured.io/api-reference/legacy-api/partition/overview)
+labels that endpoint legacy and directs new managed production processing toward
+Pipelines local-file jobs. This integration deliberately targets the pinned
+self-hosted Partition deployment below. Choose that deployment for an existing or
+custom document workflow, and use the managed product's own job interface when
+planning a Pipelines integration.
+
 The manifest identifies the supported self-hosted Partition contract:
 [API revision 44835210](https://github.com/Unstructured-IO/unstructured-api/tree/448352104eefd2e5b8fa2dc32282fc1cd3db31ae),
 [core revision d2990950](https://github.com/Unstructured-IO/unstructured/tree/d29909504c7a19a13c19721f6907ac2fef0bb5ca),

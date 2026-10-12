@@ -12,7 +12,7 @@ From the repository root:
 node stellar/scf-starforge-20261009/sf30-seller-sdk/frictionless/cli.mjs --help
 ~~~
 
-The maintained distribution exposes `stellar-forge frictionless`. The original dataset command also accepts `node dataset-cli.mjs frictionless ...`. The examples below use the direct CLI from the `frictionless` directory.
+The maintained distribution exposes `starforge frictionless`. The original dataset command also accepts `node dataset-cli.mjs frictionless ...`. The examples below use the direct CLI from the `frictionless` directory.
 
 Use canonical private directories and owner-only source/configuration files. The original publisher takes a writer lease: close its browser server before opening that same workspace through another CLI process.
 
@@ -171,7 +171,7 @@ node cli.mjs buyer --workspace /private/monthly-publisher --run RETURNED_RUN_UUI
 node cli.mjs buyer --workspace /private/monthly-publisher --run RETURNED_RUN_UUID --seller http://127.0.0.1:ACTUAL_PORT --resource https://merchant.example/data --intent CUSTOMER_INTENT --option SELECTED_INDEX --offer-sha RETURNED_OFFER_SHA
 ~~~
 
-The second command creates the original SF88 buyer configuration from the actual offer and retained snapshot. Continue that configuration through the existing [operator buyer](../../sf88-operator-buyer-cli/README.md) and [dataset delivery](../../sf100-buyer-dataset-delivery/README.md). Their acquired manifest and JSONL preserve the original response/page hashes and pinned edition. Applications can consume the original Python `DatasetDelivery`; the [PostgreSQL receiving guide](../../sf88-operator-buyer-cli/python/POSTGRESQL.md) describes transactional warehouse loading.
+The second command creates the original SF88 buyer configuration from the actual offer and retained snapshot. Continue that configuration through the existing [operator buyer](../../sf88-operator-buyer-cli/README.md) and [dataset delivery](../../sf88-operator-buyer-cli/python/DATASETS.md). Their acquired manifest and JSONL preserve the original response/page hashes and pinned edition. Applications can consume the original Python `DatasetDelivery`; the [PostgreSQL receiving guide](../../sf88-operator-buyer-cli/python/POSTGRESQL.md) describes transactional warehouse loading.
 
 ## 6. Refresh, export and reopen
 
@@ -185,6 +185,71 @@ node cli.mjs review-source --source /private/received-source/source.json
 ~~~
 
 Source export streams original files into an atomic create-only archive. The source remains portable alongside its complete capture; `original-source.json` preserves its earlier configuration. Receiving streams extraction, checks the whole archive identity and every declared file, rejects unsafe members, and reopens the retained source before committing the new directory. Hashing and transfer use bounded memory. Individual source members are limited to 256 MiB, the transfer archive to 256 MiB, and total extracted bundle bytes to 512 MiB.
+
+
+### Publish the retained source at a receiving location
+
+A source archive contains the complete capture and source mapping. Keep the original reviewed publication plan with the handover as well: its dataset contract, extraction order and limits are separate from the source mapping.
+
+The SF82 dataset runtime opens the exact version-store path in its `binding.json` `datasetDirectory`. A prepared package or staged store may move while that version store remains at its configured path. To operate at a new version-store location, publish the received source into a new canonical target, then prepare and stage a release bound to that target through the original interfaces.
+
+Create the receiving parent directories with owner-only access. After the source-receive and review-source commands above, generate a receiving plan:
+
+~~~bash
+node cli.mjs plan --source /private/received-source/source.json --query monthly --out /private/received-plan.json
+~~~
+
+The `plan` command accepts `--source`, `--query` and `--out`. It generates a starting plan ordered by the first projected column ascending, empty filters/ranges/sorts, 50 default rows per page and 250 maximum, plus the original extraction defaults. Review the generated JSON before saving it.
+
+For a restored customer contract, carry over the original reviewed input fields while keeping the receiving plan's newly computed `sourceHash`. This example accepts either the original input plan or its retained `plans/PLAN_FOLDER/plan.json`; place that file at the first path below:
+
+~~~bash
+python3 - /private/original-reviewed-plan.json /private/received-plan.json <<'PY'
+import json
+import sys
+from pathlib import Path
+
+original = json.loads(Path(sys.argv[1]).read_text())
+destination = Path(sys.argv[2])
+received = json.loads(destination.read_text())
+if original["query"] != received["query"]:
+    raise SystemExit("Choose the original reviewed named query.")
+dataset_fields = (
+    "name", "columns", "filters", "ranges", "sorts",
+    "maxCellChars", "defaultLimit", "maxLimit", "maxPageBytes",
+)
+received.update(
+    title=original["title"],
+    query=original["query"],
+    input=original.get("input", {}),
+    dataset={key: original["dataset"][key] for key in dataset_fields
+             if key in original["dataset"]},
+    extraction=original["extraction"],
+)
+destination.write_text(json.dumps(received, indent=2) + "\n")
+PY
+~~~
+
+The received source hash stays tied to its actual local configuration. Derived saved-plan fields such as `digest`, `runtimeSourceHash`, and the generated dataset `schema`, `file`, `maxRows` and `maxBytes` are produced by the original publisher when it saves this input.
+
+Run the full original publication and release workflow at the new paths:
+
+~~~bash
+node cli.mjs init --workspace /private/received-publisher --source /private/received-source/source.json --state /private/received-dataset
+node cli.mjs save --workspace /private/received-publisher --input /private/received-plan.json
+node cli.mjs extract --workspace /private/received-publisher --plan RETURNED_RECEIVING_PLAN_NUMBER
+node cli.mjs inspect --workspace /private/received-publisher --run RETURNED_RECEIVING_RUN_UUID --query 'limit=20'
+node cli.mjs review --workspace /private/received-publisher --run RETURNED_RECEIVING_RUN_UUID --reviewer 'Receiving operator' --note 'Reviewed the complete retained source and original publication contract at the receiving location.' --initialize
+node cli.mjs publish --workspace /private/received-publisher --run RETURNED_RECEIVING_RUN_UUID --review RETURNED_RECEIVING_REVIEW_ID
+node cli.mjs release-prepare --workspace /private/received-publisher --run RETURNED_RECEIVING_RUN_UUID --output /private/received-release-package --payment /private/merchant-payment.json --origin https://receiving-merchant.example
+node cli.mjs release-stage --package /private/received-release-package --releases /private/received-releases --id received-monthly-20261012
+node ../../sf82-seller-pilot/release-cli.mjs status --store /private/received-releases
+node ../../sf82-seller-pilot/release-cli.mjs inspect --store /private/received-releases --id received-monthly-20261012
+node ../../sf82-seller-pilot/release-cli.mjs activate --store /private/received-releases --id received-monthly-20261012 --expect CURRENT_GENERATION
+node ../../sf82-seller-pilot/release-cli.mjs run --store /private/received-releases --expect ACTIVATED_GENERATION
+~~~
+
+Compare the original and receiving capture SHA-256, selected query/projection, reviewed schema, complete row count and published snapshot. The receiving plan, run, target directory, release digest and listener are its own results. Use that listener and public resource with the buyer commands in section 5. Stop the original foreground service with its normal signal, then run the same selected release again; check its actual health and offer after reopening. The original publisher, target and release remain independently operable through their existing interfaces.
 
 The metadata comparison reports changes to source files, schema, dialect and fields. Use the original versioned dataset/customer comparison for row-level edition changes. The existing [publisher schedules](../postgres/publisher/SCHEDULES.md) operate reviewed saved plans. A saved Frictionless plan is a fixed capture; fetching a new HTTP source edition remains an explicit capture/review operation.
 
@@ -205,3 +270,23 @@ The monthly Mauna Loa resource had seven data columns and an older six-column he
 | **Total** | **1,640** |
 
 All six completed the original extract → inspect → review → publish sequence. A complete source archive was exported, received into a new private directory and reopened with the same capture SHA-256 and all six complete row counts. This operation used the original data and original publisher/version-store implementation.
+
+### Merchant activation and independent receiving completed
+
+The 822-row Mauna Loa monthly edition completed both the original merchant journey and an independent merchant created from the received source. The published snapshot is `345a7111117cccefad818c7714f8fa8ccbd7af0ebb5ee311eeea5c936090973f`.
+
+| Original native operation | Publisher and merchant | Independent receiving merchant |
+| --- | --- | --- |
+| Complete publication | 822 rows | Same 822 rows and snapshot |
+| Retained source/plan/candidate closure | 15 files, 204,725 bytes | 15 files, 204,660 bytes |
+| Release ID | `co2-mm-mlo-20261012` | `received-co2-mm-mlo-20261012` |
+| Activated generation | 1 | 1 |
+| Actual health and data response | HTTP 200 / HTTP 402 | HTTP 200 / HTTP 402 |
+| Original SF88 buyer configuration | Prepared from the live offer | Prepared from the live receiving offer |
+| Stop and fresh-process reopen | HTTP 200, same selected release | HTTP 200, same selected receiving release |
+
+Both used the original SF82 public testnet example terms from `examples/upstream-selections.json` and the original challenge-only merchant. The receiving journey used the streamed archive's retained source, the same reviewed monthly mapping and publication options, a new publisher and a new dataset version store. Its prepared binding points to that new store. Both completed services closed their owned listeners.
+
+The original release digest is `b4cdc19f8de5164929c220966e1d7007653ccea927425e138f153ab6f2ed7394`; the independent receiving release digest is `04fa41fe829506fae2e7cc843c01eb41fa7b3419d0c04246b3815c6828f219b9`. The live offer retained SHA-256 `7338def7750903814f37d3ffe531813cc53276306a0d348e1e9f594352067961` across both merchants. Each buyer configuration contains its own new intent and operation identity.
+
+The complete original source, streamed archive, native merchant/customer results and receiving instructions are attached to the [original Frictionless delivery thread](https://tokenjunkielabs.slack.com/archives/C0BTB4SUCP9/p1791764771161389). The received source supports another fresh publication through the steps above.
