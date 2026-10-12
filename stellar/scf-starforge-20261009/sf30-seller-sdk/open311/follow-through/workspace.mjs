@@ -8,7 +8,7 @@ import { SOURCE_SCHEMA, inspectSource, importSource as makeSource, sourceSummary
 import { PROFILE_SCHEMA, EDITION_SCHEMA, LINK_SCHEMA, WORK_SCHEMA, RETURN_SCHEMA, DECISION_SCHEMA, DISPATCH_SCHEMA,
   normalizeProfile, normalizeDefinition, buildEdition, editionSummary, requestRow, orderRow, createLink, effectiveLinks, createWork, currentWork, workView, projectRequest, compareEditions,
   reviewTemplate, createReturn, proposalConflicts, applyReview, returnSummary, workSummary, createDispatch, dispatchSummary, DEFAULT_DISPATCH_COLUMNS } from './domain.mjs';
-import { requestCsv, dispatchCsv, dispatchGeoJson, htmlReport, fileResult } from './formats.mjs';
+import { requestCsv, dispatchCsv, dispatchGeoJson, htmlReport, dispatchReport, fileResult } from './formats.mjs';
 
 export const WORKSPACE_SCHEMA='commons.open311.follow-through-workspace.v1';
 const DATABASE_SCHEMA='commons.open311.follow-through-database.v1';
@@ -210,6 +210,9 @@ export function openWorkspace(suppliedDirectory,{create=true}={}){
       if(kind==='workspace'){if(selected.length||fileId)fail('EXPORT_SELECTION_CONFLICT','A complete workspace export does not select an item.');const bundle=packageInside();file=fileResult('open311-follow-through-'+bundle.workspaceId+'.json','application/json; charset=utf-8',canonical(bundle)+'\n');}
       else if(kind==='source'){if(selected.length!==1||!sourceId)fail('SOURCE_SELECTION_REQUIRED','Choose the complete original source file.');const original=sourceOriginalFile(get('source',sourceId),fileId);file=fileResult(original.filename,original.contentType,original.body);}
       else if(kind==='returned'){if(selected.length!==1||!returnId)fail('RETURN_SELECTION_REQUIRED','Choose an original reviewer file.');file=fileResult(returnId+'.json','application/json; charset=utf-8',get('return',returnId).originalText);}
+      else if(kind==='report'&&dispatchId){
+        if(selected.length!==1)fail('DISPATCH_SELECTION_REQUIRED','Choose one complete saved dispatch.');const value=get('dispatch',dispatchId);file=fileResult(value.id+'.html','text/html; charset=utf-8',dispatchReport(value));
+      }
       else if(kind.startsWith('dispatch-')){
         if(selected.length!==1||!dispatchId)fail('DISPATCH_SELECTION_REQUIRED','Choose one complete saved dispatch.');const value=get('dispatch',dispatchId),format=kind.slice(9);
         if(format==='json')file=fileResult(value.id+'.json','application/json; charset=utf-8',canonical(value)+'\n');
