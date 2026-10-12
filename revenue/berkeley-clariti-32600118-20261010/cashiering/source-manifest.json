@@ -72,13 +72,13 @@
     },
     {
       "path": "cashiering/model.py",
-      "bytes": 34578,
-      "sha256": "573d7c0b47b321a460560f7515ae20a002837a724e7c570cbc6eaaba06e28175"
+      "bytes": 35506,
+      "sha256": "06b1ab5fe801d66d05260e4cac43273e2e279a49276d6ca75e76cc483a34729f"
     },
     {
       "path": "cashiering/engine.py",
-      "bytes": 47836,
-      "sha256": "cbf030a044ea4f99c0c0f40a838ea7654cac4d3300e15fa2e8571af717334b86"
+      "bytes": 48351,
+      "sha256": "e8b08fe1d0d89ae65e2913a727ea607dd161fbf449d67444fa14e53d6a399b45"
     },
     {
       "path": "cashiering/API.md",
@@ -101,15 +101,32 @@
       "sha256": "7f1c9b716b7bb645d2c2c2ee76542c0552a0150f30b56a6f68edb8b6ebe48665"
     },
     {
+      "path": "cashiering/WORKFLOW.md",
+      "bytes": 11383,
+      "sha256": "572f1cf5ec8c0ef0ffa9fc528393ed182d81da629606eeb12db34c994ab30a65"
+    },
+    {
       "path": "cashiering/reporting.py",
       "bytes": 31912,
       "sha256": "39f367f6537a5b7e2950fd5801fd3a69e8d0e8d8ca61f839201e8c9fe76eee09"
+    },
+    {
+      "path": "README.md",
+      "bytes": 12099,
+      "sha256": "74a2898aaa12c26794350809850ea34dfc82e893fbacdff47eea67d93174c27f"
     }
   ],
   "component_revision": "cashiering-native-continuation-20261012",
   "native_continuation": {
     "host_blob": "a20728e59eb02ab307b45a9c66ae60baf89a663a",
     "host_unchanged_except": "Additive cashiering import, static routes and API dispatch on the same Workspace DB/auth/CAS.",
-    "runtime": "No native operation has been registered for this financial component yet."
+    "runtime": "Source preservation stage; actual execution is recorded separately in native-run/result.json under the retained operation identity.",
+    "operation_id": "berkeley-daily-cashiering-native-82e4-20261012",
+    "source_closure": "Complete curated permitting comparator and cashiering operator, including both browser surfaces and the original audit bridge; immutable packet bytes are captured from the actual installed source.",
+    "ui_component": {
+      "commit": "1310a94279ec0ffa2ee5360920bae591482ae4a6",
+      "app_blob": "319f6488a51740bbdde3243d06bf8302c7dad606",
+      "app_sha256": "be76f3f60b4985234817f774864a1ea49eb76f02bd84a493aabeb0091e4641bf"
+    }
   }
 }

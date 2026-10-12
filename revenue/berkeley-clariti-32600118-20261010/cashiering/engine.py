@@ -56,15 +56,23 @@ class Cashiering:
         self.workspace = workspace
         self.conflict = conflict
         self.source_files = {}
-        for name in ("model.py", "engine.py", "reporting.py", "API.md", "SOURCE_CONTRACT.md",
-                     "requirements-catalog.json", "source-manifest.json", "WORKFLOW.md"):
-            path = ROOT / name
+        # Retain the complete existing application and additive operator, including
+        # both browser surfaces and the original native comparator bridge.
+        component_paths = (
+            "cashiering/__init__.py", "cashiering/model.py", "cashiering/engine.py",
+            "cashiering/reporting.py", "cashiering/API.md", "cashiering/SOURCE_CONTRACT.md",
+            "cashiering/requirements-catalog.json", "cashiering/source-manifest.json",
+            "cashiering/WORKFLOW.md", "cashiering/public/index.html",
+            "cashiering/public/app.mjs", "cashiering/public/style.css",
+            "workspace/app.py", "workspace/intake.py", "workspace/scenarios.py",
+            "workspace/API.md", "workspace/audit-bridge.mjs",
+            "workspace/public/index.html", "workspace/public/app.mjs",
+            "workspace/public/style.css", "audit.mjs",
+        )
+        for relative_path in component_paths:
+            path = ROOT.parent / relative_path
             if path.is_file():
-                self.source_files["cashiering/" + name] = path.read_bytes()
-        for name in ("app.py", "intake.py", "scenarios.py", "API.md"):
-            path = ROOT.parent / "workspace" / name
-            if path.is_file():
-                self.source_files["workspace/" + name] = path.read_bytes()
+                self.source_files[relative_path] = path.read_bytes()
         catalog = ROOT / "requirements-catalog.json"
         self.source_catalog = json.loads(catalog.read_text()) if catalog.is_file() else {}
         with workspace.lock, workspace.db() as conn:
