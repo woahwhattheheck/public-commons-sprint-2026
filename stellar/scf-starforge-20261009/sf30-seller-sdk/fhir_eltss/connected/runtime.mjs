@@ -306,9 +306,10 @@ return class MerchantWorkspace {
         sourceIdentity={input:args.input,sha256:upload.sha256,bytes:upload.bytes};
       }
       try{
-        const {target,headers={},adoptWorkspace=false}=uploadRoute(kind,args,upload,{contentType});
-        const original=await client.request('POST',target,{upload,adoptWorkspace,headers});
-        return await this.#capture(alias,original,{...args,received:sourceIdentity},{action,method:'POST',target});
+        const {method='POST',target,headers={},adoptWorkspace=false}=uploadRoute(kind,args,upload,{contentType});
+        need(method==='POST'||method==='PUT','ELTSS_UPLOAD_METHOD_INVALID','Select the native declared upload method.');
+        const original=await client.request(method,target,{upload,adoptWorkspace,headers});
+        return await this.#capture(alias,original,{...args,received:sourceIdentity},{action,method,target});
       }finally{await unlink(upload.path).catch(error=>{if(error.code!=='ENOENT')throw error;});}
     }
     const route=routeFor(action,args);need(route,'ELTSS_TOOL_UNKNOWN');

@@ -1,0 +1,107 @@
+{
+  "schema": "stellar-forge.human-services-directory-product-source.v1",
+  "selection": "human-services-directory",
+  "recipe": "stellar/scf-starforge-20261009/distribution/selections/human-services-directory.json",
+  "command": "human-services-directory",
+  "connectedCommand": "merchant-human-services-directory",
+  "application": "human-services-directory",
+  "sourceDirectory": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory",
+  "sourceRepository": "woahwhattheheck/public-commons-sprint-2026",
+  "productRepository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+  "publishedSources": [
+    {
+      "id": "hsds-3.3.1",
+      "publisher": "Open Referral",
+      "repository": "openreferral/specification",
+      "ref": "606a72cc3ddd80f890b6422bc7bd53392764775a",
+      "release": "v3.3.1",
+      "publishedAt": "2026-09-09T08:34:56Z",
+      "files": 85,
+      "license": "CC-BY-SA-4.0",
+      "url": "https://github.com/openreferral/specification/releases/tag/v3.3.1"
+    },
+    {
+      "id": "fhir-hsd-1.0.0",
+      "publisher": "HL7 International",
+      "repository": "HL7/FHIR-IG-Human-Services-Directory",
+      "ref": "ff9fff7902343f1640c0d3a4cf098a62a3e1c054",
+      "release": "1.0.0-STU1",
+      "fhirVersion": "4.0.1",
+      "files": 20,
+      "license": "CC0-1.0",
+      "url": "https://hl7.org/fhir/us/hsds/"
+    }
+  ],
+  "originalSource": {
+    "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/directory-original-source.json",
+    "gitBlob": "e3d464bb382eee470658b40d97710ab4c3ca9439",
+    "sha256": "e3312d1577709bb455c50331023f47f61f8527de417e7db7bf09b7f7dd244e27",
+    "files": 105,
+    "preserveExactBytes": true
+  },
+  "assembledSource": [
+    {
+      "role": "complete-source-engine-and-native-index-exercise",
+      "gitBlob": "e0e68771dcb18314b3ff43d8426142a0a79a3dc5",
+      "bytes": 230898,
+      "sha256": "7265d83a024662c049af9e7489281e9d2006bf11192d558bed2e3375ab897721"
+    },
+    {
+      "role": "complete-native-domain-ui-and-receiving",
+      "gitBlob": "fe84eba80479141bd52ee8eb8fc39d674011eb03",
+      "bytes": 451226,
+      "sha256": "3db7875a3047f5a9f71b9e0cc4aa6c851ada1868e8f0aae5a33714cfe7c6e4cc"
+    },
+    {
+      "role": "complete-connected-applications-and-operating-guides",
+      "gitBlob": "233047cf5b9e52efca68f056d8bc8878247e1e2c",
+      "files": 25,
+      "note": "Current source updates this manifest to the final source-engine and native driver successors."
+    }
+  ],
+  "inheritedProducts": [
+    {
+      "selection": "gravity-referrals",
+      "sourceManifest": "products/gravity-referrals/SOURCE.json"
+    },
+    {
+      "selection": "healthcare-interoperability",
+      "sourceManifest": "products/healthcare-interoperability/SOURCE.json"
+    }
+  ],
+  "sharedSourceChanges": [
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_eltss/connected/runtime.mjs",
+      "change": "Select the native upload route's POST or PUT method; existing routes retain POST. Directory source content uses its saved import profile and complete PUT body."
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_eltss/connected/RECEIVING.mjs",
+      "gitBlob": "13aa86a20739b09a60a3531c3d18bb260349dbfa",
+      "publication": "https://github.com/woahwhattheheck/public-commons-sprint-2026/pull/2397",
+      "merge": "d08a5b631ef124725aeb77ae7da5b33380362c1d",
+      "change": "Close idle Chromium during complete-file and MCP work, then reopen the same retained browser profile for the remaining native observations."
+    }
+  ],
+  "interfaces": {
+    "directoryCatalogue": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/directory-schema.json",
+    "sourceCatalogue": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/directory-source-schema.json",
+    "sdk": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/connected/client.mjs",
+    "types": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/connected/client.d.mts",
+    "provider": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/connected/provider.mjs",
+    "nativeReceiving": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/operate_receiving.py",
+    "browserReceiving": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/operate_browser.mjs",
+    "connectedReceiving": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/connected/RECEIVING.mjs",
+    "installedApplicationsReceiving": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/operate_installed_applications.mjs"
+  },
+  "limits": {
+    "nativeArchiveBytes": 2147483648,
+    "connectedFileBytes": 536870912,
+    "sourceIndexBytes": 268435456,
+    "interactivePageBytes": 4194304
+  },
+  "guides": {
+    "operating": "products/human-services-directory/OPERATING.md",
+    "receiving": "products/human-services-directory/RECEIVING.md",
+    "sourceNotice": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/SOURCE_NOTICE.md"
+  }
+}
