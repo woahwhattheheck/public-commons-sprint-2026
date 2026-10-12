@@ -99,6 +99,10 @@
       "manifest": "stellar/scf-starforge-20261009/sf30-seller-sdk/mssql/workspace/browser-assets.json"
     },
     {
+      "server": "stellar/scf-starforge-20261009/sf61-openapi-seller-import/workspace/server.mjs",
+      "manifest": "stellar/scf-starforge-20261009/sf61-openapi-seller-import/workspace/browser-assets.json"
+    },
+    {
       "server": "stellar/scf-starforge-20261009/sf30-seller-sdk/grpc/workspace/server.mjs",
       "manifest": "stellar/scf-starforge-20261009/sf30-seller-sdk/grpc/workspace/browser-assets.json"
     }
