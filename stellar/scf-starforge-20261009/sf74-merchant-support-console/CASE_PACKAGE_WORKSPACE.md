@@ -107,7 +107,7 @@ Each operation has an immutable request and an observed status:
 | NEEDS_CONTINUATION | A source, storage or provider step ended before completion | Read the recorded stage, resolve that concrete condition, then resume |
 | COMPLETE | Original immutable result exists | Open the received case or original files |
 
-The browser retains an unacknowledged request body separately from later form edits. **Resume the original request** replays those exact bytes and ID. The server joins an already running operation or returns its original completed result. It never treats an uncertain response as permission to create another case.
+The browser locks source and folder selection while an operation is being prepared. It retains an unacknowledged request body separately from later form edits. **Resume the original request** replays those exact bytes and ID. The server joins an already running operation or returns its original completed result. It never treats an uncertain response as permission to create another case. A complete native preparation rejection permits correction only after the original operation lookup confirms that no operation was retained. The rejected input and that exact lookup result remain in the browser's original attempt history. Invalid operation names are checked before preparing a new request.
 
 An operation's native receiving substeps retain their original request identities. The controller reconciles an existing immutable completion if its final status write was interrupted. Completed receiving continues to use the original local case and native bundle records.
 
@@ -188,3 +188,38 @@ The package operation directory keeps its immutable request, observed status and
 Keep the received case directory and native source directory together when moving the installed application. Open the same case UUID after restarting with those actual directories. If transferring the complete package to another host, run the original receiving workflow there; its native checkpoint creates and retains that host's receiving UUID.
 
 A completed original archive and manifest are useful while a browser is unavailable. The original CLI commands `inspect-package` and `receive-package` operate on the same files and source service. Their request ID, actor and selected manifest remain unchanged on retry.
+
+## Continue the completed original receiving case
+
+`tools/receive_case_package_workspace.mjs` is the complete native continuation for this browser and installed MCP product. Run it after the original Support implementation journey has completed and all of its original owners have closed. It reads that existing `implementation-operation.json`, retains its exact bytes, and continues its actual `receivedCase.id` inside the original `receiver-cases` directory.
+
+```sh
+node stellar/scf-starforge-20261009/sf74-merchant-support-console/tools/receive_case_package_workspace.mjs \
+  --source /absolute/selected-distribution/source \
+  --source-map /absolute/private/complete-selected-source-map.json \
+  --baseline-workspace /absolute/private/completed-support-native \
+  --workspace /absolute/private/case-package-continuation \
+  --modules /absolute/existing/node_modules \
+  --browser /absolute/existing/chromium \
+  --node /absolute/existing/node \
+  --python /absolute/existing/python3 \
+  --operation-id SCF-CASE-PACKAGE-WORKSPACE-20261012-7A2F
+```
+
+The complete selected source map must include this application, original Support/MCP dependencies, native SF49 archive/source engine and the receiving driver. Its literal file bodies or SHA-256 entries are checked against the installed source before the first application starts. Omitting `--source-map` uses the original completed baseline’s retained `source-map.json`.
+
+The continuation performs seven connected stages:
+
+1. Opens the exact completed receiving case in the original browser and verifies the configured case, source and package roots.
+2. Prepares two original SF49 source editions from the same saved case, using the actual completed implementation artifacts. It retains the complete operating result as an unassigned original source attachment.
+3. Exports through the browser, interrupts only its already-accepted response body, and reconciles the same original request. It checks the complete saved history and every native member inventory.
+4. Uploads the complete package folder through the browser, inspects and receives it into a fresh original Case desk, then opens the actual received case and all source editions. Desktop and 390-pixel views are retained.
+5. Opens the existing installed Merchant MCP, lists its sixteen package tools, exports the original selected case, and reads the complete manifest through the native descriptor protocol. An exact file read continues after explicit lease release.
+6. Receives that complete export through the existing Handoffs transport and SF49 source receiver. It closes the source listener, records a real receiving observation in the resulting case, restarts the receiver, and reopens the same later revision while the source remains offline.
+7. Produces the final complete case/source export through the original CLI and retains the full operating guide, inventories, screenshots, case histories and source receiving records.
+
+Its result is `case-package-operation.json`, schema `stellar-forge.case-package-workspace-native-result.v1`. Each stage and exact mutation request are retained before proceeding. Completion requires `state: "completed"` and all four original closure fields—`closed`, `browserClosed`, `serversClosed`, `workersClosed`—to be true. A failed or interrupted stage keeps its actual original inputs and working case for continuation.
+
+The automatic Support packager can select this driver as one sequential continuation after its completed baseline, inside the same maintained native admission. It preserves both native journals, complete donor and receiver directories, full native source archives, browser outputs and the final stopped-workspace package. The receiving owner saves that package through its existing file-preservation operation before the private process exits.
+
+For a new receiver, the output `delivery/Complete_Received_Case_And_All_Sources/` is the final portable case/source package. The incoming original package is also retained because it contains the prior sender’s full history. Keep both packages and the native case/source directories with the receiving journals.
