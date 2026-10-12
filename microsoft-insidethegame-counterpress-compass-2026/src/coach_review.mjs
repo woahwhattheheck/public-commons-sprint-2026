@@ -3,6 +3,7 @@ import {createHash} from 'node:crypto';
 import {derive, makeSnapshot, WINDOW_SECONDS} from './engine.mjs';
 import {parseCount, parseView} from './live_sessions.mjs';
 import {MATCH_PACKAGE_FORMAT} from './match_archive.mjs';
+import {buildPlayerCoaching, parsePlayerCoachingFocus} from './player_coaching.mjs';
 
 export const COACH_BUNDLE_FORMAT = 'counterpress.coach-review.v1';
 export const MAX_COACH_MATCHES = 4;
@@ -84,6 +85,7 @@ export async function createCoachComparison(store, input, libraryKey) {
   if (input.matches.some(item => !item || typeof item !== 'object' || typeof item.id !== 'string') ||
       new Set(input.matches.map(item => item.id)).size !== input.matches.length)
     throw fail('Choose distinct saved match IDs');
+  const focus = parsePlayerCoachingFocus(input.focus);
   const documents = [];
   for (const selected of input.matches) {
     // Use the original archive's validated read, permissions and exact event array.
@@ -102,11 +104,18 @@ export async function createCoachComparison(store, input, libraryKey) {
     view, period, windowSeconds: WINDOW_SECONDS, matches,
     selection: matches.map(({id, count, revision, sourceSha256}) => ({id, count, revision, sourceSha256})),
   };
+  result.focus = focus;
+  result.coaching = buildPlayerCoaching(documents.map(({archive, match}, i) => ({
+    id: archive.id, title: archive.title, revision: archive.revision,
+    scenario: match.scenario, seed: match.seed,
+    sourceSha256: matches[i].sourceSha256, total: match.events.length,
+    events: match.events.slice(0, matches[i].count), notes: archive.review.notes,
+  })), {view, period, focus, generatedAt: result.generatedAt, includeSource: input.export === true});
   if (input.export === true) {
     result.bundle = {
       format: COACH_BUNDLE_FORMAT,
       title: typeof input.title === 'string' ? input.title.trim().slice(0, 100) : '',
-      generatedAt: result.generatedAt, view, period,
+      generatedAt: result.generatedAt, view, period, focus,
       matches: documents.map(({match, archive}, i) => ({
         originalId: archive.id, revision: archive.revision, sourceSha256: matches[i].sourceSha256,
         count: matches[i].count,

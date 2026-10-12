@@ -1,4 +1,5 @@
 import {ArchiveLink} from './archive.js';
+import {PLAYER_COACHING_WORDS, parsePlayerCoachingFocus, playerCoachingHtml} from './player_coaching.mjs';
 
 const el = id => document.getElementById(id);
 const node = (tag, text, className = '') => {
@@ -85,6 +86,32 @@ const WORDS = {
     coverage: 'Jugadas observadas', sourceDetails: 'Detalles del origen', sourceDigest: 'SHA-256 del partido original', copyState: 'Selección de comparación recuperada.',
   },
 };
+
+Object.assign(WORDS.en, {
+  focusPlayer: 'Follow a player', wholeTeam: 'Whole team', focusOutcome: 'Playlist outcome',
+  focusAll: 'All outcomes', focusSuccess: 'Successful team sequence', notAttempted: 'Without a qualifying press',
+  not_attempted: 'Without a qualifying press', pending: 'Open window',
+  downloadBrief: 'Save and download coaching brief', briefDownloaded: 'Coaching brief downloaded with original event replay.',
+  playerSummary: 'Player coaching', playerHelp: 'Choose a player to compare actions and distinct sequence involvement across these original matches.',
+  noPlayerActions: 'No recorded actions in the selected prefixes', matchedSources: 'matches with recorded actions',
+  savePlaylist: 'Save player playlist moments', playlistCapacity: 'This playlist would exceed 64 saved moments in this match. Choose an outcome filter or remove saved moments first.',
+  playlistSaved: 'Player playlist and recap selection saved in the original match.',
+  playlistCount: 'selected sequences', openStart: 'Open sequence start', openEnd: 'Open observed end',
+  emptyPlaylist: 'No sequences match this player, half and outcome.', bothHalves: 'Both half contexts',
+});
+Object.assign(WORDS.es, {
+  focusPlayer: 'Seguir a un jugador', wholeTeam: 'Todo el equipo', focusOutcome: 'Resultado de la lista',
+  focusAll: 'Todos los resultados', focusSuccess: 'Secuencia del equipo recuperada', notAttempted: 'Sin presión válida',
+  not_attempted: 'Sin presión válida', pending: 'Ventana abierta',
+  downloadBrief: 'Guardar y descargar informe del entrenador', briefDownloaded: 'Informe descargado con reproducción de las jugadas originales.',
+  playerSummary: 'Análisis del jugador', playerHelp: 'Elige un jugador para comparar acciones y participación en secuencias distintas de estos partidos.',
+  noPlayerActions: 'Sin acciones registradas en los prefijos seleccionados', matchedSources: 'partidos con acciones registradas',
+  savePlaylist: 'Guardar momentos de la lista del jugador', playlistCapacity: 'La lista superaría 64 momentos guardados en este partido. Filtra por resultado o elimina momentos guardados.',
+  playlistSaved: 'Lista del jugador y selección guardadas en el partido original.',
+  playlistCount: 'secuencias seleccionadas', openStart: 'Abrir inicio de la secuencia', openEnd: 'Abrir final observado',
+  emptyPlaylist: 'No hay secuencias para este jugador, parte y resultado.', bothHalves: 'Contexto de ambas partes',
+});
+
 let collection = [], selected = [], comparison = null, busy = false, storageAvailable = true;
 let libraryKey, sets = [], activeImport = null;
 const drafts = new Map();
@@ -125,7 +152,8 @@ async function action(operation) {
 }
 function config() {
   return {title: el('setTitle').value.trim(), matches: selected.map(item => ({...item})),
-    view: {team: el('team').value, audience: el('audience').value, locale: el('locale').value}, period: el('period').value};
+    view: {team: el('team').value, audience: el('audience').value, locale: el('locale').value}, period: el('period').value,
+    focus: {player: el('focusPlayer').value || null, outcome: el('focusOutcome').value}};
 }
 function remember() { writeLocal(KEYS.current, config()); }
 function applyConfig(value) {
@@ -136,6 +164,8 @@ function applyConfig(value) {
   }
   if (['all', 'first', 'second'].includes(value.period)) el('period').value = value.period;
   el('setTitle').value = typeof value.title === 'string' ? value.title.slice(0, 100) : '';
+  let focus; try { focus = parsePlayerCoachingFocus(value.focus); } catch { focus = {player: null, outcome: 'all'}; }
+  setPlayerChoice(focus.player); el('focusOutcome').value = focus.outcome;
 }
 function localize() {
   document.documentElement.lang = el('locale').value;
@@ -284,7 +314,7 @@ function momentCard(match, moment) {
   body.append(node('p', moment.text));
   const chain = node('div', undefined, 'chain'); chain.setAttribute('aria-label', words().events);
   for (const event of moment.evidence) {
-    const link = node('a', event.id + ' ' + event.type + ' ' + time(event.second));
+    const link = node('a', event.id + ' ' + (coachingWords()[event.type] || event.type) + ' ' + time(event.second));
     link.href = replay(match.id, event.count); chain.append(link);
   }
   body.append(chain);
@@ -292,8 +322,11 @@ function momentCard(match, moment) {
     const event = moment[field];
     if (event) body.append(node('p', words()[label] + ': ' + event.id + ' · ' + time(event.second) + ' · ' + event.team + ' · ' + event.type, 'muted'));
   }
-  const actions = node('div', undefined, 'actions'), link = node('a', words().replay, 'button');
+  const actions = node('div', undefined, 'actions'), link = node('a', words().openEnd, 'button');
   link.href = replay(match.id, moment.count); actions.append(link);
+  if (Number.isInteger(moment.startCount)) {
+    const start = node('a', words().openStart, 'button'); start.href = replay(match.id, moment.startCount); actions.prepend(start);
+  }
   const saved = (drafts.get(match.id)?.review ?? match.archive.review).bookmarks.some(item => item.eventId === moment.eventId);
   const bookmark = node('button', saved ? words().bookmarked : words().bookmark);
   bookmark.dataset.readonly = String(!match.archive.canEdit || saved); bookmark.disabled = !match.archive.canEdit || saved;
@@ -303,7 +336,7 @@ function momentCard(match, moment) {
     if (!draft.review.bookmarks.some(item => item.eventId === moment.eventId))
       draft.review.bookmarks.push({eventId: moment.eventId, count: moment.count,
         label: (words()[moment.status] + ' · ' + time(moment.fromSecond) + ' · ' + moment.id).slice(0, 100), note: ''});
-    keepDrafts();
+    retainPlayerSelection(draft.review, match, [moment]); keepDrafts();
     await saveOriginalReview(match, node('p'));
   }));
   actions.append(bookmark); body.append(actions); details.append(body); return details;
@@ -316,6 +349,7 @@ function matchPanel(match) {
     node('span', words().coverage + ': ' + match.count + '/' + match.total + ' · ' + time(match.observedThroughSecond)),
     node('span', 'revision ' + match.revision));
   panel.append(meta);
+  const halfContext = playerHalfContext(match); if (halfContext) panel.append(halfContext);
   const grid = node('div', undefined, 'detail-grid');
   grid.append(notesPanel(match));
   const source = node('div'); source.append(node('h3', words().events));
@@ -339,31 +373,138 @@ function matchPanel(match) {
     }
     panel.append(retained);
   }
-  const controls = node('div', undefined, 'moment-filter'); controls.append(node('strong', words().moments));
-  const select = node('select'); select.setAttribute('aria-label', words().moments + ' · ' + match.title);
-  for (const value of ['all', 'success', 'expired', 'interrupted']) {
-    const option = node('option', words()[value === 'all' ? 'anyOutcome' : value]); option.value = value; select.append(option);
+  const controls = node('div', undefined, 'moment-filter'), sequences = coachingSequences(match);
+  controls.append(node('strong', coachingWords().playlist), node('span', sequences.length + ' ' + words().playlistCount, 'muted'));
+  if (comparison.coaching?.focus.player) {
+    const save = node('button', words().savePlaylist);
+    save.disabled = !match.archive.canEdit || !sequences.length;
+    save.dataset.readonly = String(save.disabled);
+    save.addEventListener('click', () => action(() => savePlayerPlaylist(match, sequences))); controls.append(save);
   }
-  controls.append(select); panel.append(controls);
+  panel.append(controls);
   const rows = node('div', undefined, 'moments'), more = node('button', words().showMore); let shown = 20;
   function draw() {
-    const filtered = match.moments.filter(moment => select.value === 'all' || moment.status === select.value);
-    rows.replaceChildren(...filtered.slice(0, shown).map(moment => momentCard(match, moment)));
-    if (!filtered.length) rows.append(node('p', words().noMoments, 'muted'));
-    more.hidden = filtered.length <= shown;
+    rows.replaceChildren(...sequences.slice(0, shown).map(moment => momentCard(match, moment)));
+    if (!sequences.length) rows.append(node('p', words().emptyPlaylist, 'muted'));
+    more.hidden = sequences.length <= shown;
   }
-  select.addEventListener('change', () => { shown = 20; draw(); });
   more.addEventListener('click', () => { shown += 20; draw(); });
   draw(); panel.append(rows, more); return panel;
 }
+
+function coachingWords() { return PLAYER_COACHING_WORDS[el('locale').value] || PLAYER_COACHING_WORDS.en; }
+function setPlayerChoice(player) {
+  const value = player || '';
+  if (value && ![...el('focusPlayer').options].some(option => option.value === value)) {
+    const option = node('option', value); option.value = value; el('focusPlayer').append(option);
+  }
+  el('focusPlayer').value = value;
+}
+function renderPlayerChoices() {
+  const value = el('focusPlayer').value;
+  const all = node('option', words().wholeTeam); all.value = '';
+  const options = (comparison?.coaching?.players || []).map(player => {
+    const option = node('option', player.player + ' · ' + player.matches + '/' + comparison.matches.length);
+    option.value = player.player; return option;
+  });
+  if (value && !options.some(option => option.value === value)) {
+    const option = node('option', value + ' · ' + words().noPlayerActions); option.value = value; options.push(option);
+  }
+  el('focusPlayer').replaceChildren(all, ...options); el('focusPlayer').value = value;
+}
+function coachingMatch(match) { return comparison?.coaching?.matches.find(item => item.id === match.id); }
+function coachingSequences(match) {
+  const source = coachingMatch(match);
+  if (!source) return match.moments;
+  const outcome = comparison.coaching.focus.outcome;
+  return source.sequences.filter(item => outcome === 'all' || item.status === outcome)
+    .map(item => ({...item, count: item.endCount, eventId: item.endEventId}));
+}
+function coachingRatio(n, d) {
+  return n + '/' + d + (d ? ' · ' + Math.round(n * 1000 / d) / 10 + '%' : ' · —');
+}
+function coachingTable(headers, rows) {
+  const wrap = node('div', undefined, 'table-scroll'), table = node('table'), head = node('thead'), title = node('tr');
+  for (const text of headers) {const th = node('th', text); th.scope = 'col'; title.append(th);}
+  head.append(title); table.append(head);
+  const body = node('tbody');
+  for (const values of rows) {
+    const row = node('tr');
+    values.forEach((text, index) => {const cell = node(index ? 'td' : 'th', String(text)); if (!index) cell.scope = 'row'; row.append(cell);});
+    body.append(row);
+  }
+  table.append(body); wrap.append(table); return wrap;
+}
+function playerCoachingPanel() {
+  const review = comparison.coaching, W = coachingWords(), totals = review.totals.selected;
+  const panel = node('section', undefined, 'panel player-coaching');
+  panel.append(node('h2', W.heading + ' · ' + review.focus.player),
+    node('p', comparison.view.team + ' · ' + words()[comparison.period === 'all' ? 'whole' : comparison.period], 'muted'));
+  const metrics = node('div', undefined, 'coaching-metrics');
+  for (const [label, value] of [[W.actionCount, totals.actionCount], [W.regain, totals.actions.regain],
+    [W.sequenceInvolvements, totals.sequenceInvolvements], [W.successes, totals.successes]]) {
+    const card = node('div', undefined, 'coaching-metric'); card.append(node('strong', String(value)), node('span', label)); metrics.append(card);
+  }
+  panel.append(metrics, node('p', W.context, 'method'));
+  const rows = [['coverage'], ['actionCount'], ['pressure'], ['regain'], ['sequenceInvolvements'], ['successes'],
+    ['expiredAttempts'], ['interruptedAttempts'], ['pendingWindows']].map(([key]) => [
+      W[key], ...review.matches.map(match => key === 'coverage' ? match.count + '/' + match.total + ' · ' + time(match.observedThroughSecond) :
+        ['pressure', 'regain'].includes(key) ? match.selectedStats.actions[key] : match.selectedStats[key]),
+    ]);
+  rows.push([W.involvedRate, ...review.matches.map(match => coachingRatio(match.selectedStats.successes, match.selectedStats.resolvedAttempts))]);
+  panel.append(coachingTable([W.match, ...review.matches.map(match => match.title)], rows));
+  panel.append(node('p', W.involvedRate + ': ' + coachingRatio(totals.successes, totals.resolvedAttempts) + ' · ' +
+    W.pressFrequency + ': ' + coachingRatio(review.totals.team.pressingWindows, review.totals.team.observedLosses) + ' · ' +
+    W.regainEfficiency + ': ' + coachingRatio(review.totals.team.successes, review.totals.team.resolvedAttempts), 'method'));
+  panel.append(node('p', W.method + ' ' + W.exposure, 'method'));
+  if (review.duplicateSources.length) panel.append(node('p', W.duplicates, 'method'));
+  return panel;
+}
+function playerHalfContext(match) {
+  const source = coachingMatch(match), W = coachingWords();
+  if (!source || !comparison.coaching.focus.player) return null;
+  const details = node('details', undefined, 'coaching-halves');
+  details.append(node('summary', words().bothHalves + ' · ' + comparison.coaching.focus.player));
+  const rows = ['first', 'second'].map(key => {
+    const stats = source[key].selectedStats;
+    return [W[key], stats.actionCount, stats.actions.regain, stats.sequenceInvolvements, stats.successes];
+  });
+  details.append(coachingTable([W.half, W.actionCount, W.regain, W.sequenceInvolvements, W.successes], rows),
+    node('p', W.method, 'method'));
+  return details;
+}
+function retainPlayerSelection(review, match, sequences) {
+  if (!comparison.coaching?.focus.player || !sequences.length) return;
+  if (review.view.team !== comparison.view.team) review.selectedMomentId = null;
+  review.view = {...comparison.view};
+  review.recap = {...(review.recap || {}),
+    player: comparison.coaching.focus.player, period: comparison.period, outcome: comparison.coaching.focus.outcome,
+    observedCount: Math.max(review.cursor, review.recap?.observedCount || 0, match.count),
+    selectedSequenceId: sequences[0].id};
+}
+async function savePlayerPlaylist(match, sequences) {
+  const draft = draftFor(match), seen = new Set(draft.review.bookmarks.map(item => item.eventId));
+  const additions = [];
+  for (const sequence of sequences) if (!seen.has(sequence.eventId)) {
+    seen.add(sequence.eventId);
+    additions.push({eventId: sequence.eventId, count: sequence.count,
+      label: (comparison.coaching.focus.player + ' · ' + words()[sequence.status] + ' · ' + time(sequence.fromSecond)).slice(0, 100),
+      note: ''});
+  }
+  if (draft.review.bookmarks.length + additions.length > 64) throw new Error(words().playlistCapacity);
+  draft.review.bookmarks.push(...additions); retainPlayerSelection(draft.review, match, sequences); keepDrafts();
+  await saveOriginalReview(match, node('p')); notify(words().playlistSaved);
+}
+
 function renderComparison() {
   el('empty').hidden = Boolean(comparison);
   if (!comparison) { el('result').replaceChildren(); return; }
   const summary = node('section', undefined, 'panel');
   summary.append(node('h2', el('setTitle').value.trim() || words().comparison),
     node('p', comparison.view.team + ' · ' + words()[comparison.period === 'all' ? 'whole' : comparison.period], 'muted'));
-  renderTable(summary);
-  el('result').replaceChildren(summary, ...comparison.matches.map(matchPanel));
+  renderTable(summary); renderPlayerChoices();
+  const panels = comparison.coaching?.focus.player ? [playerCoachingPanel(), summary] : [summary];
+  el('result').replaceChildren(...panels, ...comparison.matches.map(matchPanel));
 }
 async function compare() {
   if (selected.length < 2 || selected.length > 4) throw new Error(words().chooseTwo);
@@ -396,7 +537,8 @@ async function recoverImportedMatch(pending, item) {
 }
 el('compare').addEventListener('click', () => action(compare));
 el('refresh').addEventListener('click', () => action(async () => { await refresh(); notify(words().refreshDone); }));
-for (const key of ['team', 'period', 'audience', 'locale']) el(key).addEventListener('change', () => {
+for (const key of ['team', 'period', 'audience', 'locale', 'focusPlayer', 'focusOutcome']) el(key).addEventListener('change', () => {
+  if (key === 'team') setPlayerChoice(null);
   remember();
   if (key === 'locale') localize();
   if (selected.length >= 2) void action(compare);
@@ -416,16 +558,31 @@ el('openSet').addEventListener('click', () => action(async () => {
   if (!value) return;
   applyConfig(value); localize(); remember(); await refresh(); await compare();
 }));
-el('export').addEventListener('click', () => action(async () => {
+
+async function savedComparisonForExport() {
   if (selected.length < 2) throw new Error(words().chooseTwo);
   for (const item of selected) {
     if (!drafts.has(item.id)) continue;
-    const match = comparison?.matches.find(match => match.id === item.id);
-    if (!match) { await compare(); }
+    if (!comparison?.matches.some(match => match.id === item.id)) await compare();
     await saveOriginalReview(comparison.matches.find(match => match.id === item.id), node('p'));
   }
   const result = await request('/api/coach-review', 'POST', {...config(), export: true});
-  comparison = result; renderComparison(); downloadJSON(result.bundle, 'counterpress-coach-review.json'); notify(words().exported);
+  comparison = result; remember(); renderComparison(); return result;
+}
+function downloadBriefFile(content) {
+  const url = URL.createObjectURL(new Blob([content], {type: 'text/html;charset=utf-8'}));
+  const link = node('a'); link.href = url; link.download = 'counterpress-player-coaching.html'; link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+}
+
+el('export').addEventListener('click', () => action(async () => {
+  const result = await savedComparisonForExport();
+  downloadJSON(result.bundle, 'counterpress-coach-review.json'); notify(words().exported);
+}));
+el('downloadBrief').addEventListener('click', () => action(async () => {
+  const result = await savedComparisonForExport();
+  const content = playerCoachingHtml(result.coaching, {title: el('setTitle').value.trim() || null, baseUrl: new URL('/', location.href).href});
+  downloadBriefFile(content); notify(words().briefDownloaded);
 }));
 el('demo').addEventListener('click', () => action(async () => {
   const added = [];
@@ -448,7 +605,9 @@ el('import').addEventListener('click', () => action(async () => {
   try { bundle = JSON.parse(text); } catch { throw new Error(words().noFile); }
   if (bundle.format === 'counterpress.match.v1')
     bundle = {format: FORMAT, title: bundle.review?.title || '', view: bundle.review?.view,
-      period: 'all', matches: [{count: bundle.review?.cursor ?? 0, package: bundle}]};
+      period: bundle.review?.recap?.period || 'all',
+      focus: {player: bundle.review?.recap?.player || null, outcome: bundle.review?.recap?.outcome || 'all'},
+      matches: [{count: bundle.review?.cursor ?? 0, package: bundle}]};
   if (bundle.format !== FORMAT || !Array.isArray(bundle.matches) || bundle.matches.length < 1 || bundle.matches.length > 4 ||
       bundle.matches.some(item => item?.package?.format !== 'counterpress.match.v1' || !Number.isInteger(item.count) ||
         item.count < 0 || item.count > (item.package.match?.events?.length ?? -1))) throw new Error(words().noFile);
