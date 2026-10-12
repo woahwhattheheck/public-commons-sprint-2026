@@ -345,8 +345,9 @@ async function analysisFiles(workspace,selected){
     return output;
   }
   for(const file of retained.files??[]){
-    if(names.has(file.name))throw fault('FILE_MANIFEST','The frozen analysis selection repeats a file name.',409);names.add(file.name);
-    output.push(await descriptor(retainedPath(workspace.store,file),{kind:'analysis',id:selected.id,file:file.name},
+    const selector=retained.merchantRecord?file.storage.operationId+'/'+file.name:file.name;
+    if(names.has(selector))throw fault('FILE_MANIFEST','The frozen analysis selection repeats a file name.',409);names.add(selector);
+    output.push(await descriptor(retainedPath(workspace.store,file),{kind:'analysis',id:selected.id,file:selector},
       {name:file.name,type:file.type,bytes:file.bytes,sha256:file.sha256,retention:'FROZEN_ANALYSIS_FILE'}));
   }
   for(const file of retained.objects??[]){
