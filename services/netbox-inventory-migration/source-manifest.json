@@ -49,8 +49,8 @@
     },
     {
       "path": "native/desk_receiving.mjs",
-      "git_blob": "cd91e0425cb0d387071eb78f02ea45d78baa6e4a",
-      "bytes": 23944
+      "git_blob": "51792bdde212521a3043a366d46521eda17073c0",
+      "bytes": 25254
     },
     {
       "path": "native/native_fixture.py",
