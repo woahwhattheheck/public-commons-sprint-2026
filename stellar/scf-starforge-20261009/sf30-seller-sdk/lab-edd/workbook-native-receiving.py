@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 # MIT. Standalone native receiving exercise for the complete Lab EDD workbook path.
 # Run: python3 workbook-native-receiving.py /absolute/pinned/source/root
+# Emit this same unchanged software-format fixture for the original file-job receiver:
+# python3 workbook-native-receiving.py /absolute/pinned/source/root --fixture-only /private/source.xlsx
 # Uses generated software-format fixtures; no customer or competition observations.
 import io, json, hashlib, zipfile, tempfile, importlib.util, sys, os, xml.etree.ElementTree as ET
 from pathlib import Path
@@ -68,6 +70,17 @@ def scopes(data):
                     found.append((key,[(p,current[p]) for p in value.split()]))
         else:current=stack.pop()
     return found
+if len(sys.argv)>2:
+    if len(sys.argv)!=4 or sys.argv[2]!="--fixture-only" or not Path(sys.argv[3]).is_absolute():
+        raise SystemExit("Use --fixture-only with one new absolute private XLSX path.")
+    fixture,parts=build(False)
+    descriptor=os.open(sys.argv[3],os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW|os.O_CLOEXEC,0o600)
+    with os.fdopen(descriptor,"wb") as destination:
+        destination.write(fixture)
+    print(json.dumps({"schema":"lab-edd.native-workbook-format-fixture.v1","source_kind":"generated software-format fixture",
+                      "path":sys.argv[3],"bytes":len(fixture),"sha256":hashlib.sha256(fixture).hexdigest(),
+                      "headers":150,"retained_rows":[2,4],"blank_rows":[3],"epoch":"1904"},separators=(",",":")))
+    raise SystemExit(0)
 reports=[]
 for formula in (False,True):
     raw,parts=build(formula);f,w=workbook(raw)
