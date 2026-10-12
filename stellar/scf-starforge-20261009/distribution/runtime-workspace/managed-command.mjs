@@ -5,6 +5,7 @@ import { join, resolve } from 'node:path';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { prepareApplicationCommand, observeApplicationOutput } from './application-command.mjs';
+import { assertPythonManagedLaunch, pythonManagedStopSignal } from '../python-runtime/application-lifecycle.mjs';
 import { plain, absolute, privateDirectory, readJSON, saveJSON, canonical, json, digest,
   need, now, processIdentity } from './storage.mjs';
 
@@ -24,12 +25,13 @@ async function run(directory) {
     'MANAGED_COMMAND_REQUEST_CHANGED');
   const launch = await readJSON(join(directory, 'command-launch.json'));
   const argv = [join(request.releaseDirectory, 'forge.mjs'), 'run', request.command, '--', ...request.args];
-  need(launch.releaseId === request.releaseId && launch.digest === request.releaseDigest &&
+  if (request.pythonCommand) assertPythonManagedLaunch(request, launch);
+  else need(launch.releaseId === request.releaseId && launch.digest === request.releaseDigest &&
     launch.cwd === request.homeDirectory && JSON.stringify(launch.args) === JSON.stringify(argv),
   'MANAGED_COMMAND_LAUNCH_CHANGED');
   let child, timer, outcome, observing, stopping = false;
   const stopped = async () => Boolean(await readJSON(join(directory, 'stop.json'), true));
-  const stop = () => { stopping = true; if (child) child.kill('SIGTERM'); };
+  const stop = () => { stopping = true; if (child) child.kill(pythonManagedStopSignal(request)); };
   let result;
   try {
     if (await stopped()) {
@@ -39,7 +41,7 @@ async function run(directory) {
       // Both ordinary and terminal commands inherit the original held worker
       // lease. The optional PTY is only an input/output adapter for this child.
       child = spawn(launchCommand.executable, launchCommand.args, launchCommand.options);
-      observing = observeApplicationOutput(request, directory);
+      observing = observeApplicationOutput(request, directory, { pid: child.pid });
       if (child.stdout) child.stdout.on('data', bytes => { process.stdout.write(bytes); observing.write(bytes); });
       if (child.stderr) child.stderr.on('data', bytes => process.stderr.write(bytes));
       outcome = new Promise((accept, reject) => {
@@ -50,7 +52,7 @@ async function run(directory) {
       await saveJSON(join(directory, 'command-process.json'), {
         startedAt: now(), runner: { pid: process.pid, processStart: await processIdentity() },
         original: { pid: child.pid, processStart: await processIdentity(child.pid), executable: launchCommand.executable,
-          args: launchCommand.args, cwd: request.homeDirectory, role: request.terminal ? 'original-command-terminal' : 'original-command' },
+          args: launchCommand.args, cwd: launchCommand.options.cwd, role: request.terminal ? 'original-command-terminal' : 'original-command' },
       });
       let reading = false;
       timer = setInterval(async () => {
@@ -75,7 +77,7 @@ async function run(directory) {
         stopped: stopping, launched: true };
     }
   } catch (error) {
-    if (child) child.kill('SIGTERM');
+    if (child) child.kill(pythonManagedStopSignal(request));
     if (outcome) await outcome.catch(() => {});
     if (observing) await observing.close().catch(() => {});
     result = { exitCode: null, signal: null, state: 'LAUNCH_FAILED', stopped: stopping,
@@ -84,7 +86,9 @@ async function run(directory) {
     clearInterval(timer); process.off('SIGTERM', stop); process.off('SIGINT', stop);
   }
   const recorded = { operation: 'original-command', releaseId: request.releaseId, digest: request.releaseDigest,
-    command: request.command, args: request.args, cwd: request.homeDirectory, completedAt: now(), ...result };
+    command: request.command, args: request.args, cwd: launch.cwd, completedAt: now(),
+    ...(request.pythonCommand ? { pythonInstallation: request.pythonCommand.installationId,
+      pythonBindingFingerprint: request.pythonCommand.fingerprint } : {}), ...result };
   await saveJSON(join(directory, 'command-result.json'), recorded);
   process.exitCode = result.state === 'LAUNCH_FAILED' ? 1 : 0;
 }

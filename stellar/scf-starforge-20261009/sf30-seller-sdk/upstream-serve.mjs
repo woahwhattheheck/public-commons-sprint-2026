@@ -15,7 +15,8 @@ Both JSON paths resolve from the current directory. Backend origins are fixed;
 credential headers name environment variables, not values in JSON.
 --check validates both configs and their route bindings without network/listening.
 Without --facilitator, requests return payment challenges and never call a backend.
-See UPSTREAM.md for merchant setup, OAUTH.md for client credentials, and
+See UPSTREAM.md for merchant setup, UPSTREAM_TRANSPORT.md for named host egress,
+OAUTH.md for client credentials, and
 oauth-connections/README.md for reviewed authorization-code connections.`;
 
 function parse(args) {
@@ -84,7 +85,8 @@ export async function main(args = process.argv.slice(2), {env=process.env}={}) {
       upstreamBindings:upstreams.length,protectedUpstreamBindings:upstreams.filter(row => row.protected).length,
       cachedUpstreamBindings:upstreams.filter(row => row.cache).length,
       oauthUpstreamBindings:upstreams.filter(row => row.oauth2||row.oauthConnection).length,
-      supplierQuotaBindings:upstreams.filter(row => row.supplierAccount).length}) + '\n');
+      supplierQuotaBindings:upstreams.filter(row => row.supplierAccount).length,
+      upstreamTransports:upstreams.filter(row => row.transport).map(row => ({binding:row.name,...row.transport}))}) + '\n');
     await application.close();
     return null;
   }

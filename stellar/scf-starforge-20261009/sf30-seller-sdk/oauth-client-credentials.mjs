@@ -2,7 +2,7 @@
 // No refresh-token grant, discovery, buyer input, background refresh or API retry.
 import { createHash } from 'node:crypto';
 import { lookup as systemLookup } from 'node:dns/promises';
-import { request as httpRequest } from 'node:http';
+import { request as httpRequest, Agent as HttpAgent } from 'node:http';
 import { request as httpsRequest } from 'node:https';
 import { isIP } from 'node:net';
 import { isPublicAddress } from '../sf31-buyer-client/public-transport.mjs';
@@ -97,7 +97,7 @@ function publicLookup(hostname, lookup) {
   };
 }
 const formPart = value => new URLSearchParams({ x: value }).toString().slice(2);
-function tokenRequest(config, identity, { lookup, signal, now }) {
+function tokenRequest(config, identity, { lookup, signal, now, agent }) {
   return new Promise((resolve, reject) => {
     const url = new URL(config.tokenEndpoint), started = now();
     const form = new URLSearchParams({ grant_type: 'client_credentials' });
@@ -125,8 +125,8 @@ function tokenRequest(config, identity, { lookup, signal, now }) {
     timer = setTimeout(() => bad('OAUTH_TIMEOUT'), config.timeoutMs);
     try {
       request = (url.protocol === 'https:' ? httpsRequest : httpRequest)(url, {
-        method: 'POST', headers, agent: false, maxHeaderSize: 16384,
-        ...(url.protocol === 'https:' ? { lookup: publicLookup(url.hostname, lookup),
+        method: 'POST', headers, agent: agent ?? false, maxHeaderSize: 16384,
+        ...(url.protocol === 'https:' ? { ...(agent === undefined ? {lookup: publicLookup(url.hostname, lookup)} : {}),
           rejectUnauthorized: true, minVersion: 'TLSv1.2' } : {}),
       }, res => {
         response = res;
@@ -180,10 +180,12 @@ function tokenRequest(config, identity, { lookup, signal, now }) {
 
 /** One private, lazy token cache. Caller cancellation does not cancel other waiters. */
 export function createOAuthClientCredentials(raw, {
-  allowLoopback = false, env = process.env, lookup = systemLookup, now = () => performance.now(), validateCredentials = true,
+  allowLoopback = false, env = process.env, lookup = systemLookup, now = () => performance.now(), validateCredentials = true, agent,
 } = {}) {
   if (typeof lookup !== 'function' || typeof now !== 'function') throw new TypeError('Invalid OAuth runtime');
   const config = compileOAuthClientCredentials(raw, { allowLoopback, env, validateCredentials });
+  if (agent !== undefined && (!(agent instanceof HttpAgent) || agent.protocol !== new URL(config.tokenEndpoint).protocol))
+    throw new TypeError('OAuth agent must be a Node Agent for the configured protocol');
   let closed = false, cached = null, pending = null, currentKey = null, blockedUntil = 0, generation = 0, lastError = null;
   const totals = { tokenRequests: 0, cacheHits: 0, renewals: 0, failures: 0, cancellations: 0, rotations: 0, invalidations: 0 };
   function reset() {
@@ -193,7 +195,7 @@ export function createOAuthClientCredentials(raw, {
   function begin(identity) {
     const record = { controller: new AbortController(), generation, waiters: 0, settled: false, promise: null };
     totals.tokenRequests++;
-    record.promise = tokenRequest(config, identity, { lookup, signal: record.controller.signal, now }).then(token => {
+    record.promise = tokenRequest(config, identity, { lookup, signal: record.controller.signal, now, agent }).then(token => {
       if (closed || record.generation !== generation) fail('OAUTH_STATE_CHANGED');
       // A secret rotation during an exchange cannot install or return an old token.
       if (credentials(config, env).key !== identity.key) fail('OAUTH_CREDENTIALS_CHANGED');

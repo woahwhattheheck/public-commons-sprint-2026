@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>SEC EDGAR · Merchant workspace</title>
+  <link rel="stylesheet" href="/style.css">
+  <script type="module" src="/app.mjs"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div><p class="eyebrow">STELLAR FORGE / DATA OPERATIONS</p><h1>SEC EDGAR</h1><p class="subtitle">Merchant workspace</p></div>
+    <div class="top-actions"><span id="revision" class="tag">Connecting</span><button id="refresh" type="button">Refresh saved state</button><button id="save" class="primary" type="button" disabled>Save draft</button></div>
+  </header>
+  <div id="notice" class="notice" role="status" aria-live="polite">Opening the retained workspace…</div>
+  <section id="unlock" class="card unlock" hidden>
+    <h2>Open your workspace session</h2><p>Use the full workspace link returned when the local server starts, or enter its access key.</p>
+    <form id="unlock-form"><label>Workspace access key<input id="access-key" type="password" autocomplete="off" required></label><button class="primary">Open workspace</button></form>
+  </section>
+  <main id="desk" hidden>
+    <section class="summary" aria-label="Saved workspace summary">
+      <div><span class="stat" id="edition-count">0</span><span>Retained captures</span></div>
+      <div><span class="stat" id="product-count">0</span><span>Data products</span></div>
+      <div><span class="stat" id="source-count">0</span><span>Bound source editions</span></div>
+      <div><span class="stat small" id="saved-at">—</span><span>Last saved</span></div>
+    </section>
+    <nav class="tabs" aria-label="Workspace sections">
+      <button class="active" data-tab="products" aria-current="page">Data products</button>
+      <button data-tab="captures">Capture library</button>
+      <button data-tab="handoff">Buyer handoff</button>
+      <button data-tab="history">Saved revisions</button>
+    </nav>
+
+    <section id="tab-products" class="tab-panel">
+      <div class="card merchant-fields"><label>Merchant title<input id="merchant-title" maxlength="120" placeholder="Issuer fundamentals"></label><label>Merchant origin<input id="merchant-origin" type="url" placeholder="https://data.example.com"></label></div>
+      <div class="work-grid">
+        <aside class="card products-rail">
+          <div class="section-heading"><h2>Products</h2><span id="product-local-state" class="muted">Saved draft</span></div>
+          <div id="product-list" class="item-list"></div>
+          <label>Capture for a new product<select id="new-product-edition"><option value="">Choose a capture</option></select></label>
+          <button id="add-product" type="button" class="wide">Add data product</button>
+          <p class="help">Each product retains one capture and its exact source fingerprint.</p>
+        </aside>
+        <div class="main-column">
+          <section id="product-empty" class="card empty"><h2>Define a data product</h2><p>Import a SEC company-facts or filings capture, then select it to create your first product.</p><button type="button" data-open-tab="captures">Open capture library</button></section>
+          <section id="product-card" class="card" hidden>
+            <div class="section-heading"><h2 id="product-heading">Product</h2><button id="remove-product" type="button" class="quiet">Remove from draft</button></div>
+            <form id="product-form">
+              <div class="fields two"><label>Product ID<input id="product-id" required maxlength="64" pattern="[A-Za-z][A-Za-z0-9_]{0,63}"></label><label>Request path<input id="product-path" required placeholder="/data/apple-facts"></label></div>
+              <label>Description<textarea id="product-description" rows="2" maxlength="512"></textarea></label>
+              <label>Source edition<select id="product-edition" required></select></label>
+              <div id="product-source" class="source-line"></div>
+              <div id="facts-fields">
+                <label>Allowed concepts<textarea id="product-concepts" rows="3" placeholder="us-gaap:Assets&#10;us-gaap:Revenues"></textarea></label>
+                <details id="concept-details"><summary>Choose concepts from this capture</summary><label>Find a concept<input id="concept-search" type="search" placeholder="Assets, revenue, earnings…"></label><select id="concept-picker" multiple size="7" aria-label="Concepts present in the selected capture"></select><div class="section-heading"><span id="concept-count" class="help"></span><button id="add-concepts" type="button">Add selected concepts</button></div></details>
+              </div>
+              <div class="fields two"><label>Allowed filing forms<input id="product-forms" placeholder="10-K, 10-Q"></label><label>Maximum rows per response<input id="product-page-size" type="number" min="1" max="1000" value="100" required></label></div>
+              <details class="terms" open><summary>Payment terms</summary><p class="help">Use the payment-options JSON from your seller configuration. Amounts, assets, networks and receiving accounts retain their original values.</p><label>Payment options<textarea id="product-payments" rows="6" class="code" spellcheck="false" placeholder="[]"></textarea></label></details>
+              <details><summary>Example request parameters</summary><label>Example query<textarea id="product-example" rows="3" class="code" spellcheck="false"></textarea></label></details>
+              <div class="form-actions"><button type="submit">Apply product changes</button><span class="help">Save draft retains all product changes as a new revision.</span></div>
+            </form>
+          </section>
+          <section id="preview-card" class="card" hidden>
+            <div class="section-heading"><h2>Inspect selected records</h2><span id="preview-count" class="muted"></span></div>
+            <form id="query-form">
+              <div class="fields three facts-query"><label>Taxonomy<input id="query-taxonomy" placeholder="us-gaap"></label><label>Concept<input id="query-concept" placeholder="Assets"></label><label>Unit<input id="query-unit" placeholder="USD"></label></div>
+              <div class="fields three"><label>Form<input id="query-form-value" placeholder="10-K"></label><label>Accession<input id="query-accession" placeholder="0000320193-25-000079"></label><label>Rows<input id="query-limit" type="number" min="1" max="1000" value="25"></label></div>
+              <details><summary>Date filters</summary><div class="fields two"><label>Filed from<input id="query-filed-from" type="date"></label><label>Filed through<input id="query-filed-to" type="date"></label></div><div class="fields two facts-query"><label>Period from<input id="query-period-from" type="date"></label><label>Period through<input id="query-period-to" type="date"></label></div></details>
+              <div class="form-actions"><button type="submit" class="primary">Preview records</button><button id="next-page" type="button" disabled>Next page</button><button id="download-preview" type="button" disabled>Download selection</button></div>
+            </form>
+            <p class="help">Values retain their source decimal text. Filing variants and restatements remain separate records.</p>
+            <div id="preview-table" class="table-wrap"><p class="empty-inline">Run a preview to inspect the selected rows.</p></div>
+          </section>
+        </div>
+      </div>
+      <details class="card advanced"><summary>Merchant JSON and draft recovery</summary><p class="help">Import or edit the complete merchant configuration. Apply edited JSON before saving.</p><textarea id="merchant-json" class="code" rows="15" spellcheck="false" aria-label="Complete merchant configuration"></textarea><div class="form-actions"><button id="apply-json" type="button">Apply JSON to draft</button><label class="file-control">Import configuration<input id="config-file" type="file" accept=".json,application/json"></label></div><div class="form-actions"><button id="download-local" type="button">Download local draft</button><button id="load-saved" type="button">Load saved draft</button></div><p id="draft-recovery-state" class="help">Loading the saved draft replaces local edits. Download your local draft first to keep a copy.</p></details>
+    </section>
+
+    <section id="tab-captures" class="tab-panel" hidden>
+      <div class="work-grid captures-grid">
+        <section class="card"><h2>Import an original capture</h2><p class="help">Select the downloaded SEC JSON file. The original bytes are retained alongside the searchable edition.</p>
+          <form id="import-form">
+            <label>Edition ID<input id="capture-id" required placeholder="apple-facts-20261011" maxlength="96" pattern="[A-Za-z0-9][A-Za-z0-9_-]{0,95}"></label>
+            <div class="fields two"><label>Capture type<select id="capture-kind"><option value="facts">Company facts</option><option value="filings">Filings</option></select></label><label>Issuer CIK<input id="capture-cik" required pattern="[0-9]{1,10}" maxlength="10" placeholder="0000320193"></label></div>
+            <label>Original SEC source URL<input id="capture-url" type="url" required placeholder="https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json"></label>
+            <label>Captured at <span class="muted">(optional)</span><input id="capture-time" type="datetime-local" step="1"></label>
+            <label>Original JSON file<input id="capture-file" type="file" accept=".json,application/json" required></label>
+            <button class="primary" type="submit">Import capture</button>
+          </form>
+        </section>
+        <section class="card"><div class="section-heading"><h2>Retained editions</h2><span id="capture-total" class="muted"></span></div><div id="capture-list" class="item-list"></div><div id="capture-detail" hidden></div></section>
+      </div>
+    </section>
+
+    <section id="tab-handoff" class="tab-panel" hidden>
+      <section class="card"><div class="section-heading"><h2>Buyer handoff</h2><span id="handoff-revision" class="tag"></span></div><p>Export the saved product configuration, endpoint contract and source editions for the original seller and buyer workflow.</p><div class="form-actions"><button type="button" data-download="config">Merchant configuration</button><button type="button" data-download="openapi">OpenAPI document</button><button type="button" data-download="handoff" class="primary">Complete buyer handoff</button></div><p id="handoff-dirty" class="help"></p><div id="handoff-products" class="handoff-products"></div></section>
+    </section>
+
+    <section id="tab-history" class="tab-panel" hidden>
+      <section class="card"><div class="section-heading"><h2>Saved revisions</h2><button id="refresh-history" type="button">Refresh history</button></div><p>Restoring a prior draft writes a new revision and retains the full saved history.</p><div id="history-table" class="table-wrap"></div><div class="form-actions"><label>Revision to restore<select id="restore-revision"></select></label><button id="restore" type="button">Restore as a new revision</button></div></section>
+    </section>
+  </main>
+  <footer>SEC source captures · Stable editions · Original Stellar/x402 seller flow</footer>
+</body>
+</html>
