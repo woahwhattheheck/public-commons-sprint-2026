@@ -49,7 +49,7 @@ source checkout and installed software directory.
 ## Open from installed Applications
 
 In the original Runtime workspace, select the installed runtime with the gRPC
-transport and add a **gRPC merchant workspace** application. Choose its private
+transport and add a **gRPC merchant authoring** application. Choose its private
 workspace directory, listener port and, when needed, the original private
 environment file. Review the saved selection, then Start and open the private
 workspace URL shown by the managed application.
