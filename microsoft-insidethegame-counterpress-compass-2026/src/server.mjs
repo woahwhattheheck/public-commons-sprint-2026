@@ -1,4 +1,5 @@
 import {createServer} from 'node:http';
+import {createHash} from 'node:crypto';
 import {readFile} from 'node:fs/promises';
 import {fileURLToPath, pathToFileURL} from 'node:url';
 import {dirname, join} from 'node:path';
@@ -12,17 +13,20 @@ import {createCommentaryContinuity, findRetainedInsight, presentRetainedInsight}
 import {createEvidenceExport, evidenceCsv} from './evidence_export.mjs';
 import {scenarioList, DEFAULT_SCENARIO} from './scenarios.mjs';
 import {createSessionStore, parseView, parseSpeed, parseCount, resumeCursor, delayMs} from './live_sessions.mjs';
-import {createMatchArchiveStore, MAX_PACKAGE_BYTES, MAX_REVIEW_BYTES} from './match_archive.mjs';
+import {createMatchArchiveStore, createMatchPackage, MAX_PACKAGE_BYTES, MAX_REVIEW_BYTES} from './match_archive.mjs';
 import {createCoachComparison} from './coach_review.mjs';
+import {createBroadcastReport, broadcastCandidates, broadcastHtml, broadcastVtt} from './broadcast_handover.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..');
 const FIXTURE = JSON.parse(await readFile(join(ROOT, 'data', 'events.json'), 'utf8'));
 validateFixture(FIXTURE);
 const TYPES = {'/':'text/html; charset=utf-8', '/app.js':'text/javascript; charset=utf-8', '/archive.js':'text/javascript; charset=utf-8', '/player-recap.js':'text/javascript; charset=utf-8', '/player_recap.mjs':'text/javascript; charset=utf-8', '/engine.mjs':'text/javascript; charset=utf-8', '/style.css':'text/css; charset=utf-8',
-  '/coach-review':'text/html; charset=utf-8', '/coach-review.js':'text/javascript; charset=utf-8', '/coach-review.css':'text/css; charset=utf-8'};
+  '/coach-review':'text/html; charset=utf-8', '/coach-review.js':'text/javascript; charset=utf-8', '/coach-review.css':'text/css; charset=utf-8',
+  '/broadcast-handover':'text/html; charset=utf-8', '/broadcast-handover.js':'text/javascript; charset=utf-8', '/broadcast-handover.css':'text/css; charset=utf-8'};
 const ROUTES = {'/': 'index.html', '/app.js': 'app.js', '/archive.js': 'archive.js', '/player-recap.js': 'player-recap.js', '/player_recap.mjs': '../src/player_recap.mjs', '/engine.mjs': '../src/engine.mjs', '/style.css': 'style.css',
-  '/coach-review':'coach-review.html', '/coach-review.js':'coach-review.js', '/coach-review.css':'coach-review.css'};
+  '/coach-review':'coach-review.html', '/coach-review.js':'coach-review.js', '/coach-review.css':'coach-review.css',
+  '/broadcast-handover':'broadcast-handover.html', '/broadcast-handover.js':'broadcast-handover.js', '/broadcast-handover.css':'broadcast-handover.css'};
 const DEFAULT_PORT = 3167;
 // Existing local replay remains free; admitted paid attempts count even on failure.
 const foundryAdmission = createFoundryAdmission();
@@ -138,7 +142,7 @@ export const server = createServer(async (req, res) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('Referrer-Policy', 'no-referrer');
   res.setHeader('X-Frame-Options', 'DENY');
-  res.setHeader('Content-Security-Policy', "default-src 'self'; connect-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'");
+  res.setHeader('Content-Security-Policy', "default-src 'self'; connect-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; media-src 'self' blob:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'");
   try {
     const url = new URL(req.url, 'http://localhost');
     const path = url.pathname;
@@ -189,6 +193,31 @@ export const server = createServer(async (req, res) => {
     if (req.method === 'POST' && path === '/api/coach-review') {
       return send(res, 200, await createCoachComparison(await archives(),
         objectBody(await getJSON(req, 16384)), req.headers['x-counterpress-library']));
+    }
+    if (req.method === 'POST' && path === '/api/broadcast-handover') {
+      const body = objectBody(await getJSON(req, MAX_REVIEW_BYTES));
+      const format = body.format ?? 'workspace';
+      if (!['workspace', 'match', 'html', 'vtt'].includes(format))
+        return send(res, 400, {error: 'Choose a supported handover format'});
+      const {archive, match} = await (await archives()).open(body.id, req.headers['x-counterpress-library']);
+      const review = Object.hasOwn(body, 'broadcast') ? {...archive.review, broadcast: body.broadcast} : archive.review;
+      const packet = createMatchPackage(match, review);
+      const report = createBroadcastReport(packet.match, packet.review);
+      packet.review.broadcast = report.broadcast;
+      report.source.sha256 = createHash('sha256').update(JSON.stringify(packet.match)).digest('hex');
+      if (format === 'workspace') return send(res, 200, {
+        archive, package: packet, report, candidates: broadcastCandidates(packet.match, report.broadcast),
+      });
+      const content = format === 'html' ? broadcastHtml(report, packet) :
+        format === 'vtt' ? broadcastVtt(report) : JSON.stringify(packet, null, 2) + '\n';
+      const extension = {html: 'html', vtt: 'vtt', match: 'json'}[format];
+      res.writeHead(200, {
+        'Content-Type': {html: 'text/html; charset=utf-8', vtt: 'text/vtt; charset=utf-8',
+          match: 'application/json; charset=utf-8'}[format],
+        'Content-Disposition': 'attachment; filename="counterpress-broadcast.' + extension + '"',
+        'Cache-Control': 'no-store',
+      });
+      return res.end(content);
     }
     const parts = path.split('/');
     if (path === '/api/archives' || path.startsWith('/api/archives/')) {
