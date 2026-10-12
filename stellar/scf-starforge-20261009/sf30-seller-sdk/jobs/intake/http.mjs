@@ -1,8 +1,9 @@
 // MIT. Routes mounted inside the existing merchant customer listener.
+import { isInputRoute, handleInputRoute } from '../inputs/http.mjs';
 import { CATALOG_PATH, REQUEST_PATH, WITHDRAW_PATH, MAX_REQUEST_BYTES, need, problem } from './protocol.mjs';
 
 export function isIntakeRoute(url) {
-  return [CATALOG_PATH, REQUEST_PATH, WITHDRAW_PATH].includes(url);
+  return [CATALOG_PATH, REQUEST_PATH, WITHDRAW_PATH].includes(url) || isInputRoute(url);
 }
 function accessToken(request) {
   let count = 0;
@@ -27,8 +28,10 @@ async function body(request, maximum) {
   catch { throw problem('JOB_INTAKE_JSON_INVALID'); }
 }
 /** Caller owns host/origin checks, inflight capacity, no-store JSON and shutdown. */
-export async function handleJobIntake({ intake, request, respond }) {
+export async function handleJobIntake({ intake, request, respond, signal }) {
   if (!intake || !isIntakeRoute(request.url)) return false;
+  if (isInputRoute(request.url)) return handleInputRoute({ inputs: intake.inputs, request, respond,
+    jsonBody: body, accessToken: accessToken(request), signal });
   if (request.url === CATALOG_PATH) {
     need(['GET', 'HEAD'].includes(request.method), 'JOB_INTAKE_METHOD_REJECTED', 405);
     need(!request.headers['transfer-encoding'] && Number(request.headers['content-length'] ?? 0) === 0,
@@ -38,7 +41,7 @@ export async function handleJobIntake({ intake, request, respond }) {
   need(request.method === 'POST', 'JOB_INTAKE_METHOD_REJECTED', 405);
   if (request.url === REQUEST_PATH) {
     const input = await body(request, MAX_REQUEST_BYTES);
-    const result = await intake.prepare(input, { accessToken: accessToken(request) });
+    const result = await intake.prepare(input, { accessToken: accessToken(request), signal });
     respond(result.handoff.created ? 201 : 200, result); return true;
   }
   respond(200, await intake.withdraw(await body(request, 4096))); return true;

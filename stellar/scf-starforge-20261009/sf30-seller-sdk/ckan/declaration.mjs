@@ -18,7 +18,7 @@ export function compileQueries(declared) {
     throw fault('CKAN_QUERIES_REQUIRED');
   return Object.fromEntries(Object.entries(declared).map(([name, query]) => {
     if (!NAME.test(name) || ['constructor', 'prototype', '__proto__'].includes(name)) throw fault('CKAN_QUERY_NAME_INVALID');
-    only(query, ['projection'], 'CKAN_QUERY_DECLARATION_INVALID');
+    only(query, ['projection', 'semanticReview'], 'CKAN_QUERY_DECLARATION_INVALID');
     if (!object(query.projection) || !Object.keys(query.projection).length || Object.keys(query.projection).length > 64)
       throw fault('CKAN_PROJECTION_REQUIRED');
     const projection = Object.fromEntries(Object.entries(query.projection).map(([alias, spec]) => {
@@ -32,7 +32,13 @@ export function compileQueries(declared) {
         throw fault('CKAN_COLUMN_TYPE_INVALID');
       return [alias, { field: spec.field, type, nullable, encoding }];
     }));
+    if (query.semanticReview !== undefined) {
+      only(query.semanticReview, ['sha256', 'definitionSha256'], 'CKAN_SEMANTIC_REVIEW_INVALID');
+      if (!HASH.test(query.semanticReview.sha256 ?? '') || !HASH.test(query.semanticReview.definitionSha256 ?? ''))
+        throw fault('CKAN_SEMANTIC_REVIEW_INVALID');
+    }
     return [name, { sql: 'CKAN retained edition projection ' + name, columns: Object.keys(projection), projection,
+      ...(query.semanticReview ? { semanticReview: { ...query.semanticReview } } : {}),
       parameters: {}, parameterOrder: [] }];
   }));
 }

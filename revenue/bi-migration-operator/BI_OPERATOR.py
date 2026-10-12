@@ -19,6 +19,7 @@ def main():
     action.add_argument("name")
     action.add_argument("request", help="JSON request file, or - for stdin; use a stable operation_id for replay")
     commands.add_parser("state", help="Read current migration and support state")
+    commands.add_parser("billing-example", help="Load the complete authored 12-agency cost allocation example")
     recover = commands.add_parser("restore", help="Authenticate and restore an encrypted workspace to a new path")
     recover.add_argument("backup")
     recover.add_argument("destination")
@@ -43,6 +44,9 @@ def main():
                 if args.command == "action":
                     request = json.load(sys.stdin) if args.request == "-" else json.loads(Path(args.request).read_text(encoding="utf-8"))
                     result = service.dispatch(args.name, request)
+                elif args.command == "billing-example":
+                    from bi_operator.billing_example import load_billing_example
+                    result = load_billing_example(service)
                 elif args.command == "state":
                     result = service.state()
                 elif args.command == "backup":
