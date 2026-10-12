@@ -1,0 +1,30 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "finage",
+  "description": "Finage original customer receiving and portable recovery",
+  "supportFiles": [
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/databento/receiving/receiver.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/databento/receiving/README.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/finage/warehouse.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/finage/receiving/receiver.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/finage/receiving/README.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/finage/receiving/operate.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/finage/receiving/read-views.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/finage/receiving/OPERATE.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/finage/receiving/installed.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/finage/receiving/cli.mjs",
+    "stellar/scf-starforge-20261009/distribution/FINAGE.md"
+  ],
+  "commands": {
+    "finage-warehouse": "stellar/scf-starforge-20261009/sf30-seller-sdk/finage/warehouse.mjs",
+    "finage-receive": "stellar/scf-starforge-20261009/sf30-seller-sdk/finage/receiving/cli.mjs"
+  },
+  "commandDescriptions": {
+    "finage-warehouse": "Receive, select, query, export and recover original Finage deliveries",
+    "finage-receive": "Prepare, run, resume and inspect the complete two-export customer receiving operation"
+  },
+  "exports": {
+    "./seller/finage/warehouse": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/finage/warehouse.mjs",
+    "./seller/finage/receiving": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/finage/receiving/installed.mjs"
+  }
+}
