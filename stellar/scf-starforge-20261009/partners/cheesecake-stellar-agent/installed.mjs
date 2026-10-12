@@ -11,6 +11,9 @@ import { readBytes } from './application.mjs';
 
 const STARTUP = 'stellar-forge.application-installed-startup.v1';
 const SELECTION = 'stellar-forge.application-installed-selection.v1';
+const APPLICATION = 'stellar/scf-starforge-20261009/partners/cheesecake-stellar-agent';
+const APPLICATION_FILES = ['application.mjs','configuration.mjs','remote-mcp.mjs','server.mjs',
+  'cli.mjs','installed.mjs','ui/app.js','ui/index.html','ui/style.css'];
 const fail = code => Object.assign(new Error(code), {code});
 const need = (condition, code) => { if (!condition) throw fail(code); };
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
@@ -63,9 +66,20 @@ export async function installedApplicationPaths() {
     runtimeDirectory,operatorGuide:join(applicationDirectory,'OPERATOR.md'),
     installedGuide:join(applicationDirectory,'INSTALLED.md')};
 }
-async function selection(config, {requireState = true} = {}) {
+async function selection(config, {requireState = true,managedSourceDirectory} = {}) {
   const paths = await installedApplicationPaths();
-  need(config.runtimeDirectory === paths.runtimeDirectory, 'APPLICATION_SELECTED_RUNTIME_CHANGED');
+  const sourceRoot = resolve(absolute(config.runtimeDirectory),'../../..');
+  const applicationDirectory = join(sourceRoot,APPLICATION);
+  need((managedSourceDirectory === undefined ? paths.applicationDirectory : absolute(managedSourceDirectory)) ===
+    applicationDirectory, 'APPLICATION_SELECTED_RUNTIME_CHANGED');
+  await directory(config.runtimeDirectory); await directory(applicationDirectory);
+  const applicationFiles = await Promise.all(APPLICATION_FILES.map(name => sourceFile(join(applicationDirectory,name))));
+  const launchedFiles = paths.applicationDirectory === applicationDirectory ? applicationFiles :
+    await Promise.all(APPLICATION_FILES.map(name => sourceFile(join(paths.applicationDirectory,name))));
+  need(applicationFiles.every((file,index) => file.bytes === launchedFiles[index].bytes &&
+    file.sha256 === launchedFiles[index].sha256), 'APPLICATION_LAUNCH_SOURCE_CHANGED');
+  const applicationSourceFiles = Object.fromEntries(APPLICATION_FILES.map((name,index) =>
+    [name,applicationFiles[index].sha256]));
   if (requireState) await directory(config.stateDirectory,{privateOnly:true});
   const handoff = await inspectHandoff(config.handoffDirectory);
   const references = [{
@@ -81,7 +95,7 @@ async function selection(config, {requireState = true} = {}) {
   let remoteMcp = null;
   if (config.remoteMcp) {
     const {inspectRemoteMcp} = await import('./remote-mcp.mjs');
-    const remote = await inspectRemoteMcp(config.remoteMcp,{sourceRoot:paths.sourceRoot});
+    const remote = await inspectRemoteMcp(config.remoteMcp,{sourceRoot});
     references.push(await sourceFile(config.remoteMcp));
     need(references.at(-1).sha256 === remote.sourceSha256, 'APPLICATION_REMOTE_SELECTION_CHANGED');
     references.push(await sourceFile(remote.config.operatorModule));
@@ -92,20 +106,21 @@ async function selection(config, {requireState = true} = {}) {
   }
   return {applicationId:config.applicationId,subject:config.subject,stateDirectory:config.stateDirectory,
     handoffDirectory:config.handoffDirectory,remoteMcpFile:config.remoteMcp ?? null,
-    runtimeDirectory:config.runtimeDirectory,sourceRoot:paths.sourceRoot,
+    runtimeDirectory:config.runtimeDirectory,sourceRoot,
     handoffId:handoff.manifest.handoffId,manifestSha256:handoff.manifestSha256,
     httpRequests:handoff.requests.size,remoteMcp,directories:[...new Set(directories)],
-    references:[...new Map(references.map(item => [item.path,item])).values()]};
+    applicationDirectory,applicationSourceFiles,
+    references:[...new Map([...applicationFiles,...references].map(item => [item.path,item])).values()]};
 }
 
 /** Read the exact host selection without loading authorization, signer or provider code. */
-export async function inspectInstalledApplication(configFile, {expectedSelectionSha256} = {}) {
+export async function inspectInstalledApplication(configFile, {expectedSelectionSha256,managedSourceDirectory} = {}) {
   absolute(configFile);
   need(await realpath(configFile) === configFile, 'APPLICATION_SOURCE_PATH_CHANGED');
   const config = await loadConfiguration(configFile), raw = await readBytes(configFile,2*1024*1024);
   need(isDeepStrictEqual(config,JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(raw))),
     'APPLICATION_CONFIGURATION_CHANGED');
-  const original = await selection(config);
+  const original = await selection(config,{managedSourceDirectory});
   const configurationSha256 = hash(raw);
   const reference = {path:configFile,kind:'file',bytes:raw.length,sha256:configurationSha256};
   const value = {schema:SELECTION,configFile,configurationSha256,...original,
@@ -115,7 +130,8 @@ export async function inspectInstalledApplication(configFile, {expectedSelection
     selectionSha256 === expectedSelectionSha256, 'APPLICATION_SELECTED_SOURCE_CHANGED');
   need(hash(await readBytes(configFile,2*1024*1024)) === configurationSha256,
     'APPLICATION_CONFIGURATION_CHANGED');
-  return {...value,selectionSha256};
+  return {...value,selectionSha256,
+    launchSourceDirectory:(await installedApplicationPaths()).applicationDirectory};
 }
 
 /** Prepare one new private receiving application from the host's selected sources. */
@@ -146,9 +162,9 @@ export async function initializeInstalledApplication({directory:destination,appl
 }
 
 /** Start the unchanged authenticated application on its selected loopback listener. */
-export async function startInstalledApplication({configFile,expectedSelectionSha256,
+export async function startInstalledApplication({configFile,expectedSelectionSha256,managedSourceDirectory,
   bearerToken=process.env.STELLAR_APP_ACCESS_TOKEN,host='127.0.0.1',port=0} = {}) {
-  const selected = await inspectInstalledApplication(absolute(configFile),{expectedSelectionSha256});
+  const selected = await inspectInstalledApplication(absolute(configFile),{expectedSelectionSha256,managedSourceDirectory});
   const {createApplicationServer} = await import('./server.mjs');
   const opened = await createApplicationServer({configFile,bearerToken,host,port});
   try {
@@ -160,10 +176,12 @@ export async function startInstalledApplication({configFile,expectedSelectionSha
       opened.identity.handoffId === selected.handoffId && opened.identity.manifestSha256 === selected.manifestSha256 &&
       (opened.identity.remoteMcp?.sourceSha256 ?? null) === (selected.remoteMcp?.sourceSha256 ?? null),
       'APPLICATION_OPENED_SOURCE_CHANGED');
-    await inspectInstalledApplication(configFile,{expectedSelectionSha256:selected.selectionSha256});
+    await inspectInstalledApplication(configFile,{expectedSelectionSha256:selected.selectionSha256,managedSourceDirectory});
     const startup = {schema:STARTUP,status:'STELLAR_APPLICATION_READY',configFile,
       configurationSha256:selected.configurationSha256,selectionSha256:selected.selectionSha256,
       applicationId:selected.applicationId,stateDirectory:selected.stateDirectory,
+      sourceDirectory:selected.applicationDirectory,launchSourceDirectory:selected.launchSourceDirectory,
+      runtimeDirectory:selected.runtimeDirectory,sourceFiles:selected.applicationSourceFiles,pid:process.pid,
       handoffId:selected.handoffId,remoteMcpSourceSha256:selected.remoteMcp?.sourceSha256 ?? null,
       serverId:opened.identity.server.id,origin:opened.origin};
     return {...opened,startup,selection:selected};
@@ -178,7 +196,7 @@ const help = [
   '    [--profile ORIGINAL_OPERATOR_PROFILE] [--authorization TRUSTED_MODULE] [--remote REMOTE_SELECTION_JSON]',
   '  starforge stellar-application inspect --config PRIVATE_APPLICATION_JSON',
   '  starforge stellar-application serve --config PRIVATE_APPLICATION_JSON [--port 0] [--host 127.0.0.1|::1]',
-  '    [--expected-selection-sha256 REVIEWED_SOURCE_SHA256]',
+  '    [--expected-selection-sha256 REVIEWED_SOURCE_SHA256] [--managed-source SELECTED_APPLICATION_DIRECTORY]',
   '  starforge stellar-application list|verify-source --config PRIVATE_APPLICATION_JSON',
   '  starforge stellar-application review|execute|status|recover|read|export|cancel|spending|reconcile ...',
   '',
@@ -221,10 +239,10 @@ export async function main(args=process.argv.slice(2)) {
     process.stdout.write(JSON.stringify(value,null,2)+'\n');return value;
   }
   if (action === 'serve') {
-    const o=options(tail,['config','port','host','expected-selection-sha256']);
+    const o=options(tail,['config','port','host','expected-selection-sha256','managed-source']);
     need(o.config,'APPLICATION_CONFIG_REQUIRED');
     const opened=await startInstalledApplication({configFile:absolute(o.config),
-      expectedSelectionSha256:o['expected-selection-sha256'],port:o.port===undefined?0:Number(o.port),host:o.host??'127.0.0.1'});
+      expectedSelectionSha256:o['expected-selection-sha256'],managedSourceDirectory:o['managed-source'],port:o.port===undefined?0:Number(o.port),host:o.host??'127.0.0.1'});
     process.stdout.write(JSON.stringify(opened.startup)+'\n');
     let stopping=false;
     const stop=async()=>{if(stopping)return;stopping=true;try{await opened.close();

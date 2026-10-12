@@ -93,9 +93,12 @@ starforge stellar-application serve --config PRIVATE_APPLICATION_JSON \
   --expected-selection-sha256 ORIGINAL_REVIEWED_SELECTION_SHA256 --port 0
 ~~~
 
-The launcher verifies that selection before and after opening the application.
-Its structured startup names the actual listener, application, private state,
-handoff and reviewed digest. The token stays in the process environment and
+The launcher verifies that selection before and after opening the application and
+compares the server's actual opened configuration and source identity. Managed
+launches retain the original selected runtime and compare every executed application
+module and browser asset in the copied release with that original selection.
+Structured startup names the actual listener, selected and executed source directories,
+application, private state, handoff and reviewed digest. The token stays in the process environment and
 browser Authorization header.
 
 ## Original command line and MCP operations

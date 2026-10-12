@@ -112,7 +112,7 @@ export async function configureMcpSpendingModule(configPath, modulePath) {
     'const configured = await readMcpSpendingHost(configPath);',
     'export const openOperator = () => openMcpSpendingHost(configPath);',
     '// Declarative host metadata is available before a signing operator is needed.',
-    'export let readiness = Object.freeze({network:configured.limits.network,payer:configured.payer,',
+    'export let readiness = Object.freeze({provider:"ORIGINAL_X402_STELLAR",network:configured.limits.network,payer:configured.payer,',
     '  asset:configured.limits.asset,payTo:configured.limits.payTo,maxAtomic:configured.limits.maxAtomic,',
     '  sdkVersions:null,aggregateSpending:Object.freeze({provider:"ORIGINAL_SF36",',
     '    actor:configured.spending.actor,service:configured.spending.service,',
