@@ -941,7 +941,10 @@
     "./seller/bls-labor": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/bls-labor/source.mjs",
     "./seller/bls-labor/publisher": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/bls-labor/publisher/model.mjs",
     "./seller/bls-labor/publisher/plan": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/bls-labor/publisher/plan.mjs",
-    "./seller/bls-labor/release": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/bls-labor/release.mjs"
+    "./seller/bls-labor/release": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/bls-labor/release.mjs",
+    "./merchant/mcp/har-workspaces": "./source/stellar-forge/mcp-merchant-operator/har-workspace.mjs",
+    "./merchant/mcp/har-export": "./source/stellar-forge/mcp-merchant-operator/har-export.mjs",
+    "./merchant/mcp/har-download": "./source/stellar-forge/mcp-merchant-operator/har-download.mjs"
   },
   "nativePeers": {
     "@x402/core": {
