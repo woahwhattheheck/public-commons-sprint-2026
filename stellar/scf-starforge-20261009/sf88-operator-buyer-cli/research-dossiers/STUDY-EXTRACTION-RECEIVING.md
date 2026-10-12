@@ -163,3 +163,75 @@ The commissioning customer is the internal Commons research programme. Request o
 The complete customer result is `customer-updates.json`; its full operating directory is `customer-updates/`. The whole programme result includes the project, all three delivery identities, both original table identities, actual source-change counts and both exact handover identities. Its artifact list includes the closed handover files, complete source selection, authored commissioning case and original-request replay output. Credentials remain in the original private connection files.
 
 Recovery first reuses the original received-review completion and frozen revision. Subsequent customer operations can extend that same received workspace without causing an already completed extraction phase to execute again. Interrupted customer requests are reconciled by their original saved request ID and revision. The same signal reaches the customer clients through the existing fetch transport, and both owned application listeners join normal or interrupted closure. Run the same existing `study-extraction-workflow.mjs` command and operation directory to complete the programme.
+
+
+## Full client template exchange
+
+The same receiving programme continues the completed second publication through
+the original template-exchange product before producing its continued dossier
+exports. It uses the existing received store and application listener. The
+selected publication and its fourteen original rows remain pinned to the saved
+review revision while subsequent template reviews extend the same dossier.
+
+The complete native continuation authors a commissioning workbook, maps every
+original field by its stable result identity, releases the frozen table, receives
+a reordered client workbook with one explicitly labelled proposed value and an
+unmapped note, and reviews that complete return. The actual assigned reviewer
+receives a complete uncertain draft through the existing extraction engine. The
+original accepted request is recovered under its original request ID. A later
+client template edition retains the notes and row order and receives its own
+reviewed mapping and released workbook.
+
+The original template product exports and receives the full extended dossier,
+including its actual workbook, mapping, comparison, request and review blobs.
+The existing Research browser then opens the selected return, review and draft,
+downloads the released workbook, and records desktop and mobile screens. It uses
+the current application's original fragment token; saved delivery records carry
+only the public application path. The same configured Python interpreter is
+passed to the original stores and application listeners.
+
+The full continuing result is template-exchange.json, with the complete
+operating files under template-continuation/. Its native and browser phases
+reuse their original files and selected IDs after interruption. The main dossier
+reports and both continued portable formats use the actual revision after this
+template work. The original frozen extraction publication remains the selected
+customer deliverable, and the subsequent customer handover carries the complete
+template history in that same original dossier.
+
+Inspect the emitted workbook previews and browser images when the native
+programme finishes. The programme retains those exact files for the receiving
+owner's visual review.
+
+
+## Independent appraisal in the same dossier
+
+The original full appraisal follows the completed received extraction review.
+The programme calls the maintained risk-of-bias/study-case.mjs binder against
+the actual selected second result set, original Eligibility Study, source
+occurrence and frozen review revision. That binder verifies both independently
+authored reviewer packets, their complete source passages and the actual
+selected immutable result against the original retained registry bytes.
+
+The existing runRiskOfBiasBrowser authors the review and protocol, creates the
+exact result-level assessment, records both independent drafts and submissions,
+and records their explicit adjudication. Each of the seven UI requests and its
+original browser request envelope are retained before native dispatch. The
+programme recovers those unchanged requests after the completed review and
+again in the final received workspace. Both recovery passes return their
+original immutable operations and preserve the current dossier revision.
+
+The template continuation then extends the same dossier. The main portable
+receiving comparison includes every original appraisal section and all four
+appraisal report formats at the actual continued revision. The existing final
+Research listener opens the same appraisal, original source and selected result
+before the customer handover begins. The complete source case, independent
+comparison, adjudication, selected reports and desktop/mobile screenshots are
+included in the programme's artifacts.
+
+Source and receiving summaries are appraisal-author.json and
+appraisal-received.json. Their operating directories have the corresponding
+names. The complete root result reports the unchanged study/result identities,
+both assigned reviewers, original request and operation identities, source
+passage counts, selected assessment/protocol editions and both actual
+workspace identities. Resume the same root command and operation directory to
+continue an interrupted phase using its original requests.

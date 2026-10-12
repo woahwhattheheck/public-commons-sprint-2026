@@ -31,3 +31,11 @@ export {CUSTOMER_UPDATES_SCHEMA,CUSTOMER_UPDATE_ACTIONS,CUSTOMER_UPDATE_SECTIONS
 export {submitCustomerUpdate,createCustomerHandover,receiveCustomerHandover,retainCustomerExport,readCustomerOperation} from './customer-updates/operator.mjs';
 export {inspectCustomerHandover} from './customer-updates/files.mjs';
 export {runResearchCustomerDelivery} from './customer-updates/receiving.mjs';
+
+export {createTemplateExchange,validateTemplateExchangeState,validateTemplateExchangeTransition,
+  templateExchangeBlobs,createTemplateExchangeClient,createTemplateExchangeDispatcher,
+  inspectWorkbook,patchWorkbook,runTemplateExchangeCli} from './template-exchange/index.mjs';
+
+export {RISK_STUDY_CASE_SCHEMA,loadRiskOfBiasStudyPacket,bindRiskOfBiasStudyCase} from './risk-of-bias/study-case.mjs';
+export {RISK_RECEIVING_SCHEMA,receiveRiskOfBiasStudy,verifyRiskOfBiasReceiving,continueRiskOfBiasReceiving} from './risk-of-bias/receiving.mjs';
+export {RISK_OF_BIAS_TRANSPORT_RECEIVING_SCHEMA,receiveRiskOfBiasTransports} from './risk-of-bias/receiving-transports.mjs';

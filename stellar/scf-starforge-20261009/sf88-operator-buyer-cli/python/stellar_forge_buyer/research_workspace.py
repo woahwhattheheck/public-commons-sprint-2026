@@ -340,6 +340,11 @@ class ResearchWorkspace:
         from .research_eligibility import ResearchEligibility
         return ResearchEligibility(self, dossier_id)
 
+    def customer_updates(self, dossier_id):
+        """Recurring customer commissioning, original delivery and receiving."""
+        from .research_customer_updates import ResearchCustomerUpdates
+        return ResearchCustomerUpdates(self, dossier_id)
+
     def citations(self, dossier_id):
         from .research_citations import ResearchCitations
         return ResearchCitations(self, dossier_id)
