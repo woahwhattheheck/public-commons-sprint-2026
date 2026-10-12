@@ -41,6 +41,14 @@ export async function verifyReceiving({connection, directory, expectedManifestSh
       need(view?.relkind === 'v' && view.reloptions?.includes('security_invoker=true'), 'POSTGIS_RECEIVING_VIEW_CHANGED', layer.id);
       need(typeof layer.viewDefinitionSha256 === 'string' && sha256(view.definition) === layer.viewDefinitionSha256,
         'POSTGIS_RECEIVING_VIEW_DEFINITION_CHANGED', layer.id);
+      need(typeof layer.physicalRelation === 'string', 'POSTGIS_RECEIVING_PHYSICAL_EDITION_REQUIRED');
+      const dependencies = (await client.query(
+        "SELECT DISTINCT d.refobjid::regclass::text AS relation FROM pg_rewrite r JOIN pg_depend d ON d.objid=r.oid " +
+        "JOIN pg_class c ON c.oid=d.refobjid WHERE r.ev_class=$1::regclass AND d.refclassid='pg_class'::regclass " +
+        "AND c.relkind IN ('r','p','f')", [q(layer.relation)])).rows;
+      const physical = (await client.query('SELECT $1::regclass::text AS relation', [q(layer.physicalRelation)])).rows[0].relation;
+      need(dependencies.length === 1 && dependencies[0].relation === physical,
+        'POSTGIS_RECEIVING_PHYSICAL_EDITION_CHANGED', layer.id);
       const columns = (await client.query(
         'SELECT a.attname,format_type(a.atttypid,a.atttypmod) AS type FROM pg_attribute a ' +
         'WHERE a.attrelid=$1::regclass AND a.attnum>0 AND NOT a.attisdropped ORDER BY a.attnum', [q(layer.relation)])).rows;
