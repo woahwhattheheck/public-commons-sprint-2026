@@ -1,0 +1,208 @@
+{
+  "schema": "stellar-forge.xchange-source-rules.v1",
+  "source": {
+    "schema": {
+      "url": "https://www.etim-international.com/xChange/20",
+      "archiveUrl": "https://etim.de/wp-content/uploads/2025/12/ETIM-xChange_V2.0-2025-11-27.zip",
+      "revision": "2.0 / 2025-11-27",
+      "file": "ETIM_xChange_Schema_V2.0_2025-11-27.json",
+      "gitBlob": "e58d6c0ed08c65dd35eaf711d63301b095a69f6c",
+      "bytes": 62128,
+      "sha256": "5d05577f392661397fbbeff7a1e0486796a515ae65afbe8ab069ab1c9697f20a",
+      "license": "Apache-2.0",
+      "copyright": "2025 ETIM International"
+    },
+    "sample": {
+      "archiveUrl": "https://etim.de/wp-content/uploads/2025/12/ETIM-xChange_V2.0-2025-11-27.zip",
+      "file": "ETIM_xChange_SampleFile_V2.0_2025-11-27.json",
+      "gitBlob": "7eb6d73991ce2f1a82f16edac3b9b13216fcabe7",
+      "bytes": 27705,
+      "sha256": "cf81492486cdd2c3a976e07dc901c45fa101fe95797ee6697364e7b56533e04e",
+      "role": "Original publisher example; retained unchanged"
+    },
+    "archive": {
+      "url": "https://etim.de/wp-content/uploads/2025/12/ETIM-xChange_V2.0-2025-11-27.zip",
+      "bytes": 10468653,
+      "sha256": "7493b2d6af6f6d79b51a366ccf7379161a6723dcd291755aff789a0b7e3a2608"
+    },
+    "guideline": {
+      "url": "https://etim.org.pl/wp-content/uploads/2026/05/ETIM-xChange_Guideline_V2.0-2025-11-27.pdf",
+      "publisher": "ETIM International",
+      "edition": "2.0 / 2025-11-27"
+    },
+    "recipient": {
+      "url": "https://www.2ba.nl/en/documentation/file-exchange/etim-xchange-v2-0/",
+      "observedAt": "2026-10-12",
+      "version": "ETIM xChange V2.0"
+    },
+    "uri": {
+      "url": "https://www.rfc-editor.org/rfc/rfc3986",
+      "section": "Appendix A"
+    }
+  },
+  "rules": [
+    {
+      "id": "native-schema",
+      "target": "all",
+      "source": "schema",
+      "section": "Complete original JSON Schema",
+      "behavior": "Apply the original type, required, code list, minimum, exclusive maximum, Unicode length, pattern, format, array cardinality, unique-item and additional-property constraints. Empty CountrySpecificExtensions item schemas retain arbitrary original JSON."
+    },
+    {
+      "id": "native-order",
+      "target": "all",
+      "source": "recipient",
+      "section": "Common mistakes",
+      "behavior": "Write native keys in the pinned schema order. Retain all unknown extension object keys and native field values."
+    },
+    {
+      "id": "native-full-change",
+      "target": "all",
+      "source": "guideline",
+      "section": "3.2; 5.1 p147",
+      "behavior": "FULL carries the complete offered product and corresponding trade-item population. CHANGE carries new, changed or deleted products and/or trade items and references the previous catalogue version."
+    },
+    {
+      "id": "explicit-record-replacement",
+      "target": "all",
+      "source": "guideline",
+      "section": "3.2; 5.1 p147",
+      "interpretation": true,
+      "behavior": "The local recipient model replaces each complete supplied Product body, excluding its independently tracked TradeItem collection, and replaces each supplied complete TradeItem. Unlisted CHANGE records persist. This is an explicit materialization policy; the cited guideline does not specify a field-by-field patch protocol."
+    },
+    {
+      "id": "filename",
+      "target": "2ba-xchange-2.0",
+      "source": "recipient",
+      "section": "Root tree",
+      "behavior": "Export filenames contain ETIM_XCHANGE. The native SchemaVersion remains 2.0."
+    },
+    {
+      "id": "supplier-gln",
+      "target": "2ba-xchange-2.0",
+      "source": "recipient",
+      "section": "Root tree / Points of attention 2",
+      "path": "/Supplier/*/SupplierIdGln",
+      "behavior": "Require the original supplying party GLN."
+    },
+    {
+      "id": "full-omissions",
+      "target": "2ba-xchange-2.0",
+      "source": "recipient",
+      "section": "Type dataset",
+      "behavior": "An omitted previous product becomes expired with recipient status130; an omitted previous trade item is deleted. The immutable before value remains in the review history."
+    },
+    {
+      "id": "change-status-actions",
+      "target": "2ba-xchange-2.0",
+      "source": "recipient",
+      "section": "Statuscode",
+      "behavior": "CHANGE product records have recipient mutation3. Trade-item recipient statuses125,126,94E mean change3 and130 means delete2. FULL imports supplied products/trade items with add/new mutation1."
+    },
+    {
+      "id": "source-status-map",
+      "target": "2ba-xchange-2.0",
+      "source": "recipient",
+      "section": "Mapping vs datamodel / Mapping product status code / Mapping trade item status code",
+      "behavior": "The profile selects the exact versioned native-status mapping and its original source URL/SHA/revision. No native-status mapping is inferred from the similarly named token.",
+      "sourceLinks": [
+        "https://my.2ba.nl/ModelMan/UnitMapping?Unitlist=ProductStatusCode&format=ETIM_XCHANGE_V2_0",
+        "https://my.2ba.nl/ModelMan/UnitMapping?Unitlist=TradeItemStatusCode&format=ETIM_XCHANGE_V2_0"
+      ]
+    },
+    {
+      "id": "brand-series-type",
+      "target": "2ba-xchange-2.0",
+      "source": "recipient",
+      "section": "Descriptions, brand, serie and type",
+      "behavior": "Require native brand, series and type. RNV_NA is retained only when explicitly supplied or corrected with an operator reason."
+    },
+    {
+      "id": "ordering-pricing",
+      "target": "2ba-xchange-2.0",
+      "source": "recipient",
+      "section": "Order price details / Points of attention3",
+      "paths": [
+        "/TradeItem/*/Ordering/UseUnit",
+        "/TradeItem/*/Ordering/UseUnitConversionFactor",
+        "/TradeItem/*/Pricing/*/PriceUnitFactor",
+        "/TradeItem/*/Pricing/*/PriceOnRequest",
+        "/TradeItem/*/Pricing/*/PriceValidityDate"
+      ],
+      "behavior": "Require these recipient fields on the original order/price records. Decimal strings retain their original lexemes."
+    },
+    {
+      "id": "logistics",
+      "target": "2ba-xchange-2.0",
+      "source": "recipient",
+      "section": "Logistics information",
+      "behavior": "Keep all native measurements. Recipient projection selects metric records, retains calendar-day lead time and maps packagingC62 toNE."
+    },
+    {
+      "id": "trade-description-projection",
+      "target": "2ba-xchange-2.0",
+      "source": "recipient",
+      "section": "Descriptions, brand, serie and type / Points of attention",
+      "behavior": "Retain native product marketing text and product-page URL as the trade-item recipient projection."
+    },
+    {
+      "id": "modelling-release",
+      "target": "2ba-xchange-2.0",
+      "source": "recipient",
+      "section": "ETIM Modelclass (MC)",
+      "behavior": "An MC code/version is selected with the original release-source URL, SHA and revision."
+    },
+    {
+      "id": "minus-feature",
+      "target": "2ba-xchange-2.0",
+      "source": "recipient",
+      "section": "Reason no value",
+      "behavior": "Warn when a native feature has a minus value that2BA does not import. Operator-supplied NA/MV/UN remains explicit."
+    },
+    {
+      "id": "environmental-attachment",
+      "target": "2ba-xchange-2.0",
+      "source": "recipient",
+      "section": "Environmental data",
+      "behavior": "Check original attachment scalar AttachmentType ATX004 and AttachmentTypeSpecification MDX054 for EPD context."
+    },
+    {
+      "id": "header-metadata",
+      "target": "2ba-xchange-2.0",
+      "source": "recipient",
+      "section": "Root tree / Points of attention",
+      "behavior": "Retain creator, supplier attachments and catalogue validity values in native source. Expose recipient notices for header attachments and validity start not imported by2BA."
+    },
+    {
+      "id": "attachment-url-policy",
+      "target": "2ba-xchange-2.0",
+      "source": "recipient",
+      "section": "Attachments / Points of attention1",
+      "behavior": "Retain chosen KeepMimeURL MDX codes as explicit recipient metadata. The external parameter.xml setting is a distinct receiving configuration."
+    },
+    {
+      "id": "relationships",
+      "target": "2ba-xchange-2.0",
+      "source": "recipient",
+      "section": "Reference items",
+      "behavior": "Retain complete product and trade relationships; warn that2BA maps relationships at product level. Resolve current/prior product references without inventing missing target products."
+    },
+    {
+      "id": "native-uri",
+      "target": "all",
+      "source": "uri",
+      "section": "Appendix A",
+      "behavior": "Validate the complete original generic URI syntax, preserving valid non-HTTP schemes. The field is not silently trimmed."
+    }
+  ],
+  "originalSampleObservation": {
+    "schema": "stellar-forge.xchange-source-observation.v1",
+    "path": "/Supplier/0/Product/0/LcaEnvironmental/ProductSpecificRulesUri",
+    "originalValue": "http://www.pep-ecopassport.org/fileadmin/webmaster-fichiers/PSR0007-ed1.1-FR-2015_10_16-AppareilsElectriquesAutonomesdeSecurite.pdf ",
+    "finding": "XCHANGE_SCHEMA_FORMAT",
+    "reason": "The publisher example contains a trailing U+0020 space, which is outside the URI syntax.",
+    "suggestedExplicitCorrection": "Remove only the trailing space in a reasoned saved product correction.",
+    "originalFileChanged": false,
+    "numericTokens": 38
+  }
+}
