@@ -53,7 +53,7 @@ def read(path, maximum=65536):
 _process_paths = {}
 
 def process_identity(pid):
-    """Resolve this process or its own child through the mounted procfs namespace."""
+    """Resolve this process or its original child using the child's private handoff."""
     try:
         own_text = Path("/proc/self/stat").read_text()
         own_proc_pid = int(own_text.split(" ", 1)[0])
@@ -66,9 +66,10 @@ def process_identity(pid):
         elif own_proc_pid == os.getpid():
             candidates = [pid]
         else:
+            # Some kernels omit /proc/PID/task/TID/children. The original fork
+            # child supplies its mounted-procfs PID over a private pipe before
+            # exec; the parent still verifies its namespace, parent and start.
             candidates = [_process_paths[pid]] if pid in _process_paths else []
-            children = Path("/proc/self/task/" + str(own_proc_pid) + "/children").read_text().split()
-            candidates.extend(int(value) for value in children if int(value) not in candidates)
         for proc_pid in candidates:
             base = Path("/proc/" + str(proc_pid))
             try:
@@ -113,8 +114,24 @@ def main(directory):
     if launch["args"] != argv or launch["cwd"] != request["homeDirectory"] or launch["digest"] != request["releaseDigest"]:
         raise ValueError("Original command changed")
     executable = launch["executable"]
-    pid, master = pty.fork()
+    identity_reader, identity_writer = os.pipe()
+    try:
+        pid, master = pty.fork()
+    except BaseException:
+        os.close(identity_reader)
+        os.close(identity_writer)
+        raise
     if pid == 0:
+        os.close(identity_reader)
+        observed = process_identity(os.getpid())
+        if observed is None:
+            raise RuntimeError("Original terminal could not observe its own process identity")
+        packet = (json.dumps({"pid": os.getpid(), **observed}) + "\n").encode()
+        try:
+            if len(packet) > 4096 or os.write(identity_writer, packet) != len(packet):
+                raise RuntimeError("Original terminal identity handoff was incomplete")
+        finally:
+            os.close(identity_writer)
         os.set_inheritable(3, True)
         os.chdir(launch["cwd"])
         tty = os.open("/dev/tty", os.O_RDWR | os.O_NOCTTY)
@@ -125,10 +142,12 @@ def main(directory):
             "inputTTY": os.isatty(0), "outputTTY": os.isatty(1), "observedAt": now(),
         })
         os.execve(executable, [executable] + argv, os.environ)
+    os.close(identity_writer)
+    os.set_blocking(identity_reader, False)
     os.set_blocking(master, False)
     os.set_blocking(1, False)
-    original = process_identity(pid)
-    original_start = original["processStart"] if original else None
+    original = None
+    original_start = None
     stopping = False
     stop_reason = None
     stop_at = None
@@ -271,8 +290,45 @@ def main(directory):
     signal.signal(signal.SIGTERM, stop)
     signal.signal(signal.SIGINT, stop)
     try:
-        if original_start is None:
-            raise RuntimeError("Original terminal process identity unavailable")
+        # Await the same unreaped child, never a replacement launch. The pipe
+        # has one writer created by this pty.fork and closes before exec.
+        deadline = time.monotonic() + 5.0
+        received = bytearray()
+        announced = None
+        while original_start is None:
+            if stopping or probe_child():
+                raise RuntimeError("Original terminal ended before its identity handoff")
+            if time.monotonic() >= deadline:
+                raise RuntimeError("Original terminal process identity unavailable")
+            if announced is None:
+                readable, _, _ = select.select([identity_reader], [], [], 0.05)
+                if not readable:
+                    continue
+                chunk = os.read(identity_reader, 4097 - len(received))
+                if not chunk:
+                    raise RuntimeError("Original terminal identity handoff closed")
+                received.extend(chunk)
+                if len(received) > 4096:
+                    raise RuntimeError("Original terminal identity handoff exceeded its bound")
+                if b"\n" not in received:
+                    continue
+                announced = json.loads(received)
+                if (announced.get("pid") != pid or announced.get("parent") != os.getpid()
+                        or announced.get("group") != pid or announced.get("session") != pid
+                        or not isinstance(announced.get("procPid"), int)
+                        or not isinstance(announced.get("processStart"), str)):
+                    raise RuntimeError("Original terminal identity handoff changed")
+                _process_paths[pid] = announced["procPid"]
+            observed = process_identity(pid)
+            if observed is None:
+                select.select([], [], [], 0.05)
+                continue
+            if (observed["processStart"] != announced["processStart"]
+                    or observed["group"] != pid or observed["session"] != pid
+                    or observed["pidNamespace"] != announced["pidNamespace"]):
+                raise RuntimeError("Original terminal process identity changed")
+            original = observed
+            original_start = observed["processStart"]
         save(root / "terminal-process.json", {
             "schema": "stellar-forge.application-terminal-process.v1",
             "startedAt": now(), "operationId": root.name,
@@ -360,6 +416,7 @@ def main(directory):
             pass
         raise
     finally:
+        os.close(identity_reader)
         os.close(master)
 
 if __name__ == "__main__":
