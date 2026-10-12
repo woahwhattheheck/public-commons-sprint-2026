@@ -240,7 +240,7 @@ continuation. A named temporary read can finish after the operator console
 closes; completed receiving can be verified offline with `reopen`.
 
 Each file is checked against its original SHA256 and byte count. The maintained
-download budget is 256 MB; source indexes above 65 KB use an individual page
+download budget is 256 MiB (268,435,456 bytes); source indexes above 65 KB use an individual page
 selection or the original complete source-package export. Page names carry
 their original index and body/wire identity, so repeated provider filenames
 remain distinct.
