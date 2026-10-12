@@ -1,6 +1,7 @@
 // MIT. Carry accepted customer sections into the maintained SCF reviewer edition.
 const WEBHOOK = '## Webhook customer adoption: complete event tasks and operator handover';
 const OPENFN = '## OpenFn: paid workflow commissioning and complete receiving';
+const REFERRAL = '## Referral implementation: source changes, returned outcomes and complete receiving';
 const OPENFN_PARAGRAPHS = [
   '**Paid workflow commissioning and complete receiving — OpenFn.**',
   '**OpenFn implementation opportunity.**',
@@ -52,8 +53,10 @@ function paragraph(manuscript, prefix) {
 /** Update complete accepted customer text while retaining every other chapter and table. */
 export function receiveGrantCustomerSections(productAndFinanceMarkdown, manuscript) {
   let companion = clean(productAndFinanceMarkdown);
-  const webhook = section(manuscript, WEBHOOK);
-  if (webhook) companion = installSection(companion, WEBHOOK, projectGrantMarkdown(webhook.text));
+  for (const heading of [WEBHOOK, REFERRAL]) {
+    const incoming = section(manuscript, heading);
+    if (incoming) companion = installSection(companion, heading, projectGrantMarkdown(incoming.text));
+  }
   const incoming = OPENFN_PARAGRAPHS.map(prefix => paragraph(manuscript, prefix));
   need(incoming.every(Boolean) || incoming.every(value => value === null), 'Select both accepted OpenFn paragraphs from the complete canonical manuscript.');
   if (incoming.every(Boolean)) {
@@ -101,5 +104,12 @@ export function receiveGrantCustomerSources(index, companion) {
     /https:\/\/github\.com\/woahwhattheheck\/commons\/tree\/([a-f0-9]{40})\/(opportunities\/openfn-commissioning-\d{8})/, openfn);
   receive('openfn-grant-inclusion', 'OpenFn customer workflow and existing funded packages',
     /https:\/\/github\.com\/woahwhattheheck\/commons\/blob\/([a-f0-9]{40})\/(opportunities\/openfn-commissioning-\d{8}\/SCF_INCLUSION\.md)/, openfn);
+  const referral = section(companion, REFERRAL)?.text || '';
+  receive('gravity-referral-source', 'Referral source, operating contract and responsibilities',
+    /https:\/\/github\.com\/woahwhattheheck\/commons\/blob\/([a-f0-9]{40})\/(tools\/revenue_owner_console_\d{8}\/case_assets\/elimu-gravity-referral-implementation-\d{8}-450e\/SOURCE_DOMAIN\.md)/, referral);
+  receive('gravity-referral-receiving', 'Complete referral operating result and receiving',
+    /https:\/\/github\.com\/woahwhattheheck\/commons\/blob\/([a-f0-9]{40})\/(tools\/revenue_owner_console_\d{8}\/case_assets\/elimu-gravity-referral-implementation-\d{8}-450e\/OPERATED_GRAVITY_RECEIVING\.md)/, referral);
+  receive('gravity-referral-commissioning', 'Complete referral commissioning and staff handover scope',
+    /https:\/\/github\.com\/woahwhattheheck\/commons\/blob\/([a-f0-9]{40})\/(tools\/revenue_owner_console_\d{8}\/case_assets\/elimu-gravity-referral-implementation-\d{8}-450e\/Elimu_Referral_Implementation_Workshare_Offer_\d{8}\.md)/, referral);
   return index;
 }

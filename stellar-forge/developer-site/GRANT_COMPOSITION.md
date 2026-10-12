@@ -20,7 +20,7 @@ The example selects the installed economic, coastal and Datasette sources receiv
 
 The manuscript has one “Reviewer application” heading followed by the nine answers in their original order, then “Detailed application and source material.” The command extracts those answers and replaces the corresponding prose in the original reviewer shell. The existing tenth section, installed examples, film, budget, and other static assets remain in the same site.
 
-The economic, coastal and Datasette modules receive their selected complete customer installations. The customer module also receives the accepted Webhook H2 section and both OpenFn paragraphs, preserving the companion's other chapters and its six-package allocation table. An H2 section ends before the next H1 or H2; its more detailed headings remain part of that section. Repeated composition updates those sections in place.
+The economic, coastal and Datasette modules receive their selected complete customer installations. The customer module also receives the complete accepted Webhook and referral-implementation sections and both OpenFn paragraphs, preserving the companion's other chapters and its six-package allocation table. An H2 section ends before the next H1 or H2; its more detailed headings remain part of that section. Repeated composition updates those sections in place.
 
 The Markdown download retains sibling links to the companion. The HTML reader resolves those same links through grant-data. Public correspondence labels retain their substance while private Slack and mailbox destinations are removed from the public edition. The complete original manuscript remains the editorial source.
 
