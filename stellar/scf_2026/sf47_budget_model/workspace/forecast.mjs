@@ -21,7 +21,7 @@ function download(raw,filename,type='application/json') {
   const a=document.createElement('a');a.href=url;a.download=filename;a.click();setTimeout(()=>URL.revokeObjectURL(url),10000);
 }
 
-export function mountForecast({container,current,api:transport,mutationId,recordingActor,onSaved,initialForecastId=null,onSelection=()=>{}}) {
+export function mountForecast({container,current,api:transport,mutationId,recordingActor,onSaved,initialForecastId=null,initialInputs=null,onSelection=()=>{}}) {
   const root=document.createElement('section');root.className='operating-forecast';container.replaceChildren(root);
   let active=true,busy=false,selected=null,preview=null,editing=true,inputState=null,request=null;
   const available=()=>active&&root.isConnected;
@@ -198,7 +198,7 @@ export function mountForecast({container,current,api:transport,mutationId,record
       if(action==='export-json'){const body=structuredClone(selected);delete body.current;download(JSON.stringify(body,null,2)+'\n',selected.id+'.json');return;}
     });
   });
-  inputState=defaults();render();
-  const ready=initialForecastId?loadSaved(initialForecastId):Promise.resolve();
-  return {ready,dispose(){active=false;},root};
+  inputState=initialInputs?structuredClone(initialInputs):defaults();render();
+  const ready=initialForecastId&&!initialInputs?loadSaved(initialForecastId):Promise.resolve();
+  return {ready,draftInputs(){return editing&&available()?structuredClone(readEditor()):null;},dispose(){active=false;},root};
 }

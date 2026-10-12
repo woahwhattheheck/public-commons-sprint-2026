@@ -47,16 +47,29 @@ If the catalog requires an intake access token, enter the key supplied by that m
 
 Choose **Save draft** to keep the request locally, or **Prepare checkout** to save it and ask the merchant for its original ticket. The saved request appears in the left-hand list with its merchant, function, price and phase.
 
+## Attach original files
+
+A function with configured inputFiles shows **Save request and add files**. Save its ordinary fields first, then select each required file in the saved request. The page displays the merchant's slot names, media types, file-size limits and combined limit.
+
+Use a local file chooser or select a verified Resource library item. Hashing runs over bounded slices in a browser worker; local staging retains the original bytes privately. The file table shows actual saved bytes and each full SHA256. If the browser closes during staging, reselect the same file to resume its missing chunks.
+
+**Prepare checkout** transfers and seals the originals at the merchant before retaining the original request-dispatch attempt. The original input includes the complete file descriptors and policy hash, so its prepared job and checkout keep that exact selection.
+
+After a transfer or service interruption, reopen this saved request and continue it. Once the merchant has received all originals, the existing ticket-recovery path can proceed using that original state. **Free unused local file storage** releases replaced/withdrawn files and local copies already received by the merchant.
+
+The [complete file-input guide](../../../sf30-seller-sdk/jobs/inputs/README.md) includes installed local-file and library commands, storage controls, policy-change behavior, worker integration, and a complete two-file supplier-invoice reconciliation application. Functions without a file policy preserve their ordinary inputs, including application-owned $files fields.
+
 ## Open the same original checkout
 
 Preparation performs these durable steps:
 
 1. Save the request reference, selected catalog/function, input, claim and canonical request digest.
-2. Retain the fact that a merchant request is about to be sent.
-3. Send that request through the original public HTTPS transport.
-4. Verify the returned original job, function, input hash, label, URLs, payment and claim.
-5. Save the exact response and private handoff.
-6. Import that handoff into the original Checkout application.
+2. For configured file inputs, resume missing chunks and seal their exact originals at the merchant.
+3. Retain the fact that a merchant request is about to be sent.
+4. Send that request through the original public HTTPS transport.
+5. Verify the returned original job, function, input hash, label, URLs, payment and claim.
+6. Save the exact response and private handoff.
+7. Import that handoff into the original Checkout application.
 
 Preparation stops at the imported checkout. Select **Open Checkout** to inspect the original request and terms, review it and continue its configured approval flow.
 
