@@ -21,7 +21,7 @@ import { imageOperationFields, imageWorkspaceState, reviewWorkspaceImage, attach
   openWorkspaceImageDownload, reviewWorkspaceImageContainer, normalizeImageOperation,
   executeImageOperation } from './image-workspace.mjs';
 
-import { initializeApplications, applicationsState, reviewApplication, saveApplication, applicationBindingOperation,
+import { initializeApplications, applicationsState, applicationsHistory, reviewApplication, saveApplication, applicationBindingOperation,
   reviewApplicationStart, dispatchApplicationStart, cancelApplicationRun, applicationOperation, applicationOutput,
   readApplicationTerminal, sendApplicationTerminal } from './applications.mjs';
 import { transferOperationFields, initializeTransferWorkspace, runtimeTransferWorkspaceState,
@@ -402,7 +402,8 @@ export async function openRuntimeWorkspace({ directory } = {}) {
         'RUNTIME_WORKSPACE_INSTALL_LOG_UNAVAILABLE', 'This runtime has no npm attempt log yet');
       return { name: state.logFile, ...await tailFile(join(selected.directory, state.logFile)) };
     },
-    async applicationsState() { return applicationsState(root); },
+    async applicationsState(options) { return applicationsState(root, options); },
+    async applicationsHistory(options) { return applicationsHistory(root, options); },
     async applicationsReview(input) {
       const selected = await entry(root, recordId(input.runtimeId));
       return reviewApplication(root, { ...input, runtimeDirectory: selected.directory });
