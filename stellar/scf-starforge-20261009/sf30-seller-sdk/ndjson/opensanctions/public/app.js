@@ -11,6 +11,7 @@ $("#native-link").href = "/#" + encodeURIComponent(token);
 let state, contract, busy = false, view = "overview", selectedUpdate, selectedChange, selectedRequest, localPlan;
 let entityOffset=0, counterpartyOffset=0, changeOffset=0;
 let currentChangeRows=[];
+let pendingCandidate=null;
 const escape = value => String(value ?? "—").replace(/[&<>"']/g, ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
 const p = value => "<pre class='scroll-box'>" + escape(pretty(value)) + "</pre>";
 const message = (text, error=false) => { const n=$("#notice"); n.textContent=text; n.className=error?"error":"success"; };
@@ -47,7 +48,7 @@ async function run(label, task) {
   message(label+"…");
   try {const result=await task(); message(label+" completed."); return result;}
   catch(error) {message(error.message || String(error),true); console.error(error);}
-  finally {busy=false;changed.filter(el=>el.isConnected).forEach(el=>el.disabled=false); syncDispatch();}
+  finally {busy=false;changed.filter(el=>el.isConnected).forEach(el=>el.disabled=false); syncDispatch();syncCaseChoice();}
 }
 function onForm(id,label,fn) {$("#"+id).addEventListener("submit",event=>{event.preventDefault(); const form=event.currentTarget;run(label,()=>fn(form));});}
 function table(id,headers,rows,empty="No retained records yet.") {
@@ -270,12 +271,21 @@ onForm("change-review-form","Save source review",async form=>{
     expected:selectedChange.reviews.at(-1)?.id||null});
   await refresh();await inspectChange(id);
 });
+function clearCandidateContext() {
+  pendingCandidate=null;$("#candidate-review-context").hidden=true;$("#candidate-case-choice").hidden=true;
+}
+function syncCaseChoice() {
+  $('#case-form button[type="submit"]').disabled=busy||Boolean(pendingCandidate?.needsChoice);
+}
 function resetCase() {
+  clearCandidateContext();
   const f=$("#case-form");f.reset();for(const key of ["case_id","expected","match_request"]) named(f,key).value="";
   named(f,"monitoring").value=pretty(contract.monitoring);$("#case-history").textContent="";
+  syncCaseChoice();
 }
 $("#new-case").addEventListener("click",resetCase);
 async function inspectCase(id) {
+  clearCandidateContext();
   const result=await api("case?"+new URLSearchParams({id})),c=result.case,form=$("#case-form");
   const fields={case_id:c.id,expected:c.revision,match_request:c.matchRequest||"",portfolio_id:c.portfolio,counterparty_id:c.counterpartyId,edition_id:c.edition,
     candidate_id:c.candidateId,resolution:c.resolution,relevance:c.relevance,reviewer:c.reviewer,reason:c.reason,monitoring:pretty(c.monitoring||contract.monitoring)};
@@ -283,6 +293,40 @@ async function inspectCase(id) {
   $("#case-history").innerHTML="<h3>Complete original case history</h3>"+result.history.map(event=>"<details><summary>"+escape(time(event.value.updatedAt))+" · "+escape(event.value.resolution)+" / "+escape(event.value.relevance)+"</summary>"+p(event.value)+"</details>").join("");
   navigate("review");
 }
+async function applyNativeCandidate(context,caseId) {
+  if (caseId) await inspectCase(caseId); else resetCase();
+  const form=$("#case-form");
+  for (const [key,v] of Object.entries({portfolio_id:context.portfolio,counterparty_id:context.counterparty,
+    candidate_id:context.candidate,edition_id:context.edition,match_request:context.request})) named(form,key).value=v;
+  pendingCandidate={...context,needsChoice:false};
+  $("#candidate-review-context").hidden=false;$("#candidate-case-choice").hidden=true;
+  $("#candidate-review-note").textContent=caseId
+    ?"This native candidate continues the selected case and its complete history. Review the current source and record the reason for this decision."
+    :"This native candidate starts a new case for the selected counterparty. Record separate identity and relevance decisions.";
+  syncCaseChoice();navigate("review");
+}
+async function reviewNativeCandidate(candidate,counterparty) {
+  const r=selectedRequest;
+  if (!r || r.state!=="RECEIVED") throw new Error("Open the retained native response first");
+  const context={request:r.id,portfolio:r.portfolio,counterparty,candidate,edition:r.edition||$("#source-edition").value};
+  const portfolio=state.portfolios.find(p=>p.id===r.portfolio);
+  const previous=state.cases.filter(c=>c.portfolioKey===portfolio?.key&&c.counterpartyId===counterparty&&!c.mergedInto);
+  const matching=previous.filter(c=>c.candidateId===candidate||(c.resolvedCurrentIds||[]).includes(candidate));
+  if (matching.length===1) return applyNativeCandidate(context,matching[0].id);
+  if (!previous.length) return applyNativeCandidate(context,null);
+  resetCase();pendingCandidate={...context,needsChoice:true};
+  $("#candidate-review-context").hidden=false;$("#candidate-case-choice").hidden=false;
+  $("#candidate-review-note").textContent="This counterparty already has case history. Choose the history this native candidate belongs to, or explicitly start a separate case.";
+  $("#candidate-case-selection").replaceChildren(new Option("Choose case history",""),
+    ...previous.map(c=>new Option(c.candidateId+" · "+c.resolution+" / "+c.relevance+" · "+short(c.id),c.id)),
+    new Option("Start a separate case for this candidate","__new__"));
+  syncCaseChoice();navigate("review");
+}
+$("#use-candidate-case").addEventListener("click",()=>run("Select original case history",async()=>{
+  const chosen=$("#candidate-case-selection").value;
+  if (!chosen||!pendingCandidate) throw new Error("Choose the existing history or a separate new case");
+  await applyNativeCandidate({...pendingCandidate},chosen==="__new__"?null:chosen);
+}));
 onForm("case-form","Save customer case decision",async form=>{
   const body={portfolio_id:value(form,"portfolio_id"),counterparty_id:value(form,"counterparty_id"),candidate_id:value(form,"candidate_id"),
     edition_id:value(form,"edition_id"),resolution:value(form,"resolution"),relevance:value(form,"relevance"),reason:value(form,"reason"),reviewer:value(form,"reviewer"),
@@ -366,11 +410,7 @@ document.addEventListener("click",event=>{
     if (action==="change") await inspectChange(id);
     if (action==="case") await inspectCase(id);
     if (action==="request") {await inspectRequest(id);navigate("screening");}
-    if (action==="candidate") {
-      resetCase();const f=$("#case-form"),r=selectedRequest;
-      for (const [key,v] of Object.entries({portfolio_id:r.portfolio,counterparty_id:trigger.dataset.counterparty,candidate_id:id,edition_id:r.edition||$("#source-edition").value,match_request:r.id})) named(f,key).value=v;
-      navigate("review");
-    }
+    if (action==="candidate") await reviewNativeCandidate(id,trigger.dataset.counterparty);
   });
 });
 await run("Open retained source workspace",refresh);

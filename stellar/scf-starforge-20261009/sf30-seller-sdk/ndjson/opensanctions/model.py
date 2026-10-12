@@ -662,14 +662,20 @@ class Domain:
                         continue
                     findings.append(finding["id"])
                     changed = {p["property"] for p in finding.get("properties", []) if not p["orderOnly"]}
-                    identity_change = bool(changed.intersection(policy["resolutionProperties"])) or finding["kind"] in {
-                        "ID_REPLACED_OR_MERGED", "IDENTIFIER_AMBIGUOUS"}
-                    identity_change |= "referents" in finding.get("semanticMetadataFields", finding.get("metadataFields", []))
+                    semantic_metadata = set(finding.get("semanticMetadataFields", finding.get("metadataFields", [])))
+                    # An adjacent designation has its own identifier history.
+                    # Its identifier changes do not decide the subject's identity.
+                    identity_change = finding["entityId"] in relevant_ids and (
+                        bool(changed.intersection(policy["resolutionProperties"])) or finding["kind"] in {
+                        "ID_REPLACED_OR_MERGED", "IDENTIFIER_AMBIGUOUS"} or "referents" in semantic_metadata)
                     if identity_change:
                         identity = True
-                    relevant_change = bool(changed.intersection({"topics", "programId"})) or linked or finding["kind"] in {
+                    designation_change = linked and (bool(changed) or
+                        bool(semantic_metadata.intersection({"datasets", "target", "schema"})) or finding["kind"] in {
+                        "ENTITY_ADDED", "ENTITY_ABSENT_IN_SELECTED_EDITION", "SOURCE_ASSERTION_REMOVED"})
+                    relevant_change = bool(changed.intersection({"topics", "programId"})) or designation_change or finding["kind"] in {
                         "ENTITY_ABSENT_IN_SELECTED_EDITION", "SOURCE_ASSERTION_REMOVED"}
-                    relevant_change |= "datasets" in finding.get("semanticMetadataFields", finding.get("metadataFields", []))
+                    relevant_change |= "datasets" in semantic_metadata
                     if relevant_change:
                         candidate_entities = list(designation_entities)
                         for eid in relevant_ids:
@@ -688,9 +694,11 @@ class Domain:
                         relevance |= in_scope
                 # The native source identity is reconciled even when there is only metadata drift.
                 identity |= len(pointers) != 1 or pointers != case.get("resolvedCurrentIds", [])
+                reviewed_current = case["edition"] == after and pointers == case.get("resolvedCurrentIds", [])
                 resolution_review = identity and (case["resolution"] == "undecided" or
-                    case["resolution"] == "same_entity" and policy["reviewConfirmedIdentityChanges"])
-                relevance_review = relevance and case["resolution"] != "different_entity"
+                    case["resolution"] == "same_entity" and policy["reviewConfirmedIdentityChanges"] and not reviewed_current)
+                relevance_review = relevance and case["resolution"] != "different_entity" and (
+                    case["relevance"] == "undecided" or not reviewed_current)
                 if resolution_review:
                     reasons.append("Current identity/identifier data affects the selected resolution policy")
                 if relevance_review:
@@ -700,6 +708,7 @@ class Domain:
                                    "reviewRequired": resolution_review or relevance_review,
                                    "identityReview": resolution_review, "relevanceReview": relevance_review,
                                    "reasons": reasons,
+                                   "decisionsCurrentForEdition": reviewed_current,
                                    "priorResolutionPreserved": not resolution_review,
                                    "priorRelevancePreserved": not relevance_review})
         return {"comparison": comparison, "rows": result,

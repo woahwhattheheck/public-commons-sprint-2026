@@ -120,7 +120,7 @@ A case can originate from source inspection or a native returned candidate. When
 
 The customer's monitoring policy selects identity properties, programs, topics and datasets. Default identity fields include names/aliases, birth date, nationality, registration/tax/identity numbers and vessel/securities identifiers. Empty program/topic/dataset lists mean all values within the selected source context.
 
-The impact view routes identity changes and source/designation relevance separately. Confirmed mismatches preserve the existing decision. Confirmed matches can reopen for configured identity changes. Linked Sanction changes and relevant topic/program/source membership changes are evaluated against the customer's recorded scope. Original metadata remains inspectable alongside the routing result.
+The impact view routes identity changes and source/designation relevance separately. Confirmed mismatches preserve the existing decision. Confirmed matches can reopen for configured identity changes. A linked Sanction triggers relevance review when its designation data or meaningful source membership changes; its own referent history does not by itself reopen the subject's identity. Original observation updates remain inspectable. Decisions explicitly reviewed against the selected current edition stay current when that same comparison is reopened. An undecided gate remains available for review.
 
 ## Native yente screening
 
@@ -197,3 +197,8 @@ The HTTP extension exposes /api/os/ operations in web.py. Original /api/query, s
 SOURCE_CONTRACT.json records the original implementation revision, schema sources, reference URLs and evaluation data identities. Primary sources include the provider's monitoring, identifier, bulk JSON, delta and statement guides, yente's OpenAPI, and the original exporter implementation.
 
 The original UN operating material includes September 30 and October 12, 2026 full exports and the three intervening nonempty delta editions. Its population moves from 2,926 to 2,923 through four MOD, four DEL and one ADD. The actual replacement of NK-imakgBoSw66P4ytCKUaNZ2 by Q94511220 provides the identifier receiving case.
+
+
+The complete original-source receiving operation reconstructed three native builds, both retained editions and the two-event case history in a fresh Workspace. Its original source query returned the same dataset snapshot and canonical entity. The current reviewed case retained both decisions without reopening on that edition. Native screening operations use the selected service's own indexed edition and actual response, retained with the customer request.
+
+Native candidate review continues the single existing case when its candidate or current canonical pointer matches. If the counterparty has several possible histories, the operator chooses the original history or explicitly starts a separate case. The prior case ID, revision and decisions stay visible while the exact received native request is attached to the new review.
