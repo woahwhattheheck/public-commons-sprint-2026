@@ -774,7 +774,8 @@
     "./seller/census-acs": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/census-acs/source.mjs",
     "./seller/census-acs/publisher": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/census-acs/publisher/model.mjs",
     "./seller/census-acs/publisher/plan": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/census-acs/publisher/plan.mjs",
-    "./seller/census-acs/release": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/census-acs/release.mjs"
+    "./seller/census-acs/release": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/census-acs/release.mjs",
+    "./merchant/mcp/usaspending": "./source/stellar-forge/mcp-merchant-operator/usaspending-workspace.mjs"
   },
   "nativePeers": {
     "@x402/core": {
