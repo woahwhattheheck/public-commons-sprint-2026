@@ -1,0 +1,63 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "stac-postgis",
+  "description": "Retained PostGIS intake, customer edit review, publication, rollback and complete database/QGIS receiving",
+  "commands": {
+    "stac-postgis": "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/postgis/cli.mjs"
+  },
+  "commandDescriptions": {
+    "stac-postgis": "Operate source-to-PostGIS intake, reviewed publication, rollback and complete native receiving"
+  },
+  "exports": {
+    "./seller/stac/postgis": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/stac/postgis/index.mjs",
+    "./seller/stac/postgis/operator": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/stac/postgis/operator.mjs",
+    "./seller/stac/postgis/receiving": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/stac/postgis/verify.mjs"
+  },
+  "runtimePackageManifests": {
+    "stac-postgis": "stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/package.json"
+  },
+  "supportFiles": [
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/postgis/contract.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/postgis/files.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/postgis/source_crs.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/postgis/database.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/postgis/index.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/postgis/verify.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/postgis/backup.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/postgis/cli.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/postgis/operator.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/postgis/operator.html",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/postgis/operator.css",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/postgis/operator-browser.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/postgis/native-journey.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/postgis/OPERATOR.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/postgis/RECEIVING.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/postgis/profile.example.json",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/postgis/native-journey.example.json",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/postgis/browser-assets.json",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/postgis/qgis/__init__.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/postgis/qgis/source.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/postgis/qgis/native.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/postgis/qgis/operator.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/postgis/qgis/cli.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/postgis/qgis/package.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/postgis/qgis/OPERATIONS.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/postgis/qgis/connection.schema.json",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/qgis/starforge_stac/postgis/__init__.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/qgis/starforge_stac/model.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/qgis/starforge_stac/qgis_project.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/qgis/starforge_stac/plugin.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/qgis/starforge_stac/cli.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/qgis/plugin-package.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/qgis/OPERATIONS.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/qgis/starforge_stac/metadata.txt",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/postgis/qgis/examples/receive_project.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/postgis/qgis/RECEIVING_RUN.md"
+  ],
+  "browserAssets": [
+    {
+      "server": "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/postgis/operator.mjs",
+      "manifest": "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/postgis/browser-assets.json"
+    }
+  ]
+}

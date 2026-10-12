@@ -5,11 +5,16 @@ import {need, canonical, qi, relation, META, sha256} from './contract.mjs';
 const TEXT_TYPES = {getTypeParser: () => value => value};
 const abort = signal => { if (signal?.aborted) throw signal.reason || new Error('POSTGIS_RECEIVING_ABORTED'); };
 export async function verifyReceiving({connection, directory, expectedManifestSha256, role, signal,
-  requireUnchangedRows = true} = {}) {
+  requireUnchangedRows = true, layerIds} = {}) {
   abort(signal);
   need(connection && typeof connection === 'object', 'POSTGIS_READER_CONNECTION_REQUIRED');
-  const original = await openReceiving(directory, expectedManifestSha256);
+  const original = await openReceiving(directory, expectedManifestSha256, {signal});
   const receipt = original.manifest;
+  const selectedLayers = layerIds === undefined ? receipt.layers : (() => {
+    need(Array.isArray(layerIds) && layerIds.length > 0 && new Set(layerIds).size === layerIds.length &&
+      layerIds.every(id => receipt.layers.some(layer => layer.id === id)), 'POSTGIS_RECEIVING_SELECTED_LAYERS_REQUIRED');
+    return receipt.layers.filter(layer => layerIds.includes(layer.id));
+  })();
   const {Client} = await import('pg');
   const {default: Cursor} = await import('pg-cursor');
   const client = new Client({...connection, types: TEXT_TYPES, pipeline: false, application_name: 'starforge-postgis-receiving'});
@@ -61,7 +66,7 @@ export async function verifyReceiving({connection, directory, expectedManifestSh
     need(current.length === 1 && current[0].revision === String(receipt.revision) &&
       current[0].active_edition_id === receipt.editionId, 'POSTGIS_RECEIVING_EDITION_CHANGED',
       {projectId: receipt.projectId, expectedEdition: receipt.editionId, expectedRevision: receipt.revision, observed: current});
-    for (const layer of receipt.layers) {
+    for (const layer of selectedLayers) {
       abort(signal);
       const selectedRole = layer.roles.find(item => item.name === server.role);
       need(selectedRole, 'POSTGIS_RECEIVING_SELECTED_ROLE_NOT_ACCEPTED', {layerId: layer.id, role: server.role});
@@ -135,6 +140,7 @@ export async function verifyReceiving({connection, directory, expectedManifestSh
       current: {projectId: receipt.projectId, editionId: current[0].active_edition_id, revision: receipt.revision,
         database: server.name, postgresVersion: server.version, postgisVersion: postgis,
         role: server.role, sessionRole: server.session_role, readOnly: true},
+      selection: {layerIds: selectedLayers.map(layer => layer.id)},
       observations: {layers: checked, allAcceptedRowsMatch: checked.every(layer => layer.matchesAcceptedRows)}};
   } catch (error) {
     primaryError ||= error;

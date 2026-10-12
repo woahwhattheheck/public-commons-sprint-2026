@@ -8,9 +8,10 @@ export async function createDatabase(connection, profile) {
   need(connection && typeof connection === 'object', 'POSTGIS_WRITE_CONNECTION_REQUIRED');
   const pool = new Pool({...connection, types: TEXT_TYPES, pipeline: false, max: 3, application_name: 'starforge-postgis-intake'});
   pool.on('error', () => {});
-  const first = await pool.connect();
-  let environment, extensionSchema, owner;
+  let first, environment, extensionSchema, owner, closing;
+  const close = () => closing ||= pool.end();
   try {
+    first = await pool.connect();
     const observed = (await first.query(
       "SELECT current_database() AS name, current_user AS owner, current_setting('server_version') AS version, " +
       "current_setting('server_version_num') AS version_number, n.nspname AS extension_schema, e.extversion AS extension_version " +
@@ -28,7 +29,9 @@ export async function createDatabase(connection, profile) {
       postgresVersion: row.version, postgisVersion: native.version, metadataRelation: META.projects,
       owner, extensionSchema};
   } catch (error) {
-    first.release(); await pool.end(); throw error;
+    if (first) first.release();
+    try { await close(); } catch (cleanupError) { if (Object.isExtensible(error)) error.postgisCleanupError = cleanupError; }
+    throw error;
   }
   first.release();
   function q(name) { return relation(profile.database.schema, name); }
@@ -349,14 +352,44 @@ export async function createDatabase(connection, profile) {
   }
   async function* cursorRows(client, statement, parameters = []) {
     const {default: Cursor} = await import('pg-cursor');
-    const cursor = client.query(new Cursor(statement, parameters, {types: TEXT_TYPES}));
+    let cursor, ended = false, connectionError, primaryError;
+    const onEnd = () => { ended = true; };
+    const onError = error => { connectionError ||= error; };
+    client.on('end', onEnd); client.on('error', onError);
+    const nativeCallback = invoke => new Promise((resolveNative, rejectNative) => {
+      let settled = false;
+      const finish = (error, value) => {
+        if (settled) return;
+        settled = true; client.removeListener('end', terminalEnd); client.removeListener('error', terminalError);
+        if (error) rejectNative(error); else resolveNative(value);
+      };
+      const terminalEnd = () => finish(connectionError || new Error('POSTGIS_CURSOR_CONNECTION_ENDED'));
+      const terminalError = error => finish(error);
+      if (ended || connectionError) { finish(connectionError || new Error('POSTGIS_CURSOR_CONNECTION_ENDED')); return; }
+      client.once('end', terminalEnd); client.once('error', terminalError);
+      try { invoke(finish); } catch (error) { finish(error); }
+    });
     try {
+      cursor = client.query(new Cursor(statement, parameters, {types: TEXT_TYPES}));
       for (;;) {
-        const rows = await new Promise((resolveRows, reject) => cursor.read(256, (error, rows) => error ? reject(error) : resolveRows(rows)));
+        const rows = await nativeCallback(callback => cursor.read(256, callback));
         if (!rows.length) break;
         for (const row of rows) yield row;
       }
-    } finally { await new Promise((resolveClose, reject) => cursor.close(error => error ? reject(error) : resolveClose())); }
+    } catch (error) {
+      primaryError = error; throw error;
+    } finally {
+      try {
+        // pg-cursor.close waits for readyForQuery; a ended connection cannot
+        // produce it. The same client's native terminal event settles reads.
+        if (cursor && !ended && !connectionError) await nativeCallback(callback => cursor.close(callback));
+      } catch (error) {
+        if (!primaryError) throw error;
+        if (Object.isExtensible(primaryError)) primaryError.cleanupError = error;
+      } finally {
+        client.removeListener('end', onEnd); client.removeListener('error', onError);
+      }
+    }
   }
   async function tableDigest(client, table, condition = null) {
     const hash = createHash('sha256'); let count = 0n;
@@ -410,5 +443,5 @@ export async function createDatabase(connection, profile) {
   return {pool, environment, owner, q, transaction, initialized, ensure, project, edition, savedOperation,
     mutate, checkRoles, projectRoleAccess, primaryKeyMappings, sridDefinitions, createFeatureTable, lockTables, userColumns, allColumns,
     rowHashSQL, copyFeatureRows, installRoles, grantLayer, switchViews, observeRoles, cursorRows,
-    tableDigest, assertView, describeLayers, operatorSequence, close: () => pool.end()};
+    tableDigest, assertView, describeLayers, operatorSequence, close};
 }
