@@ -24,6 +24,7 @@ Applications opens the original merchant and buyer tools from a selected READY r
 | Dataset preview | dataset-workspace | A dataset configuration file or retained dataset state, native query and preview |
 | Dataset buyer | buyer-dataset-workspace | Original acquisitions, received rows and files, private customer history and Python analysis |
 | Request collections | buyer-collections-workspace | Grouped request review, original approvals and runs, retained outcomes and verified customer file downloads |
+| Baserow source authoring | baserow-workspace serve | Original field discovery, retained rows and files, versioned projections, dataset publishing and customer handover |
 | Grant planning and delivery | grant-workspace serve | Retained grant plans and revisions, contributor delivery, invoices, allocations, cash records and original exports |
 | PostgreSQL publisher | postgres-publisher serve | Plans, extraction, candidate review, publication, schedules and buyer handoff |
 | Google Sheets publisher | sheets-publisher serve | Original authorization/source, range plans, extraction, review and recurring publication |
@@ -518,3 +519,21 @@ Review retains the workspace's original SQLite identity and immutable settings, 
 Choose **Stellar asset investigation** with its private **StellarExpert workspace**, optional **Original buyer inbox** and optional **Private merchant runtime JSON**. The workspace may be retained or one new directory in an existing private parent. Use the common **Local port** and **Private environment JSON** settings for the original source command.
 
 The selection carries the stable workspace UUID, source files, original inbox and exact merchant runtime configuration into the existing review and launch. Applications opens the original authenticated workspace from its structured startup record. Capture original asset observations, compare retained editions, review findings, prepare datasets, operate the original merchant releases and receive purchased dataset pages through the existing customer inbox. Captures, editions, notes and receipts remain normal mutable workspace progress across Stop and reopen. The complete [StellarExpert operator guide](../../sf30-seller-sdk/stellar-expert/OPERATOR_GUIDE.md) covers the source, merchant and customer workflow.
+
+## Baserow source authoring
+
+The **Baserow source authoring** application opens the same retained workspace used by `baserow-workspace`. Initialize its private working directory once:
+
+~~~sh
+starforge baserow-workspace init \
+  --directory /PRIVATE/baserow-source \
+  --target /PRIVATE/baserow-dataset
+~~~
+
+In Applications, select the current READY runtime and this original workspace. Choose port `0` for an available local port. Supply an optional private connections file for public-grid or authorized-table observations; token values are provided through the selected private environment file. An existing source packet can be imported with the connection field empty.
+
+Review and save the application, then review its start and select **Start → Open**. The retained start uses the original `baserow-workspace serve` command. It binds the private workspace's immutable settings and SQLite file identity, the nine native launch/browser files, the selected connections file and the actual managed release. The saved URL comes from that child process's `BASEROW_AUTHORING_READY` announcement.
+
+Inside the original workspace, discover the selected fields, retain the complete original rows and files, create a typed projection, preview it and save a reviewed version. Open the original publisher for that selected version; its merchant controls prepare and stage the original release and customer handoff. The source workspace also exports the complete retained packet for another operator. The [source workspace guide](../../sf30-seller-sdk/baserow/workspace/README.md) covers discovery, original file receiving, versions, packet import and merchant operation. The [provider guide](../../sf30-seller-sdk/baserow/README.md) covers the Baserow source and publication contract.
+
+**Stop** drains the owned source and publisher operations before releasing the workspace. **Reopen** returns to its retained captures, request history, versions and deployment state. A closed runtime browser can reopen the existing managed operation. If the selected source installation or connections file changes, review that current input before the next start. Normal source edits and publication versions stay within the retained workspace and preserve its managed identity.
