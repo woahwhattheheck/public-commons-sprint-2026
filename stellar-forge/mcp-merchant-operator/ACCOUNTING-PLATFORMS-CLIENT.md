@@ -172,7 +172,7 @@ starforge merchant-accounting-platforms plan \
 
 ### Configured native company and journal posting
 
-The same QBO client can inspect the host's native connection, capture the actual company and account pages, preview a reviewed journal and retain its native posting. The host declares platforms.qbo with the original realmId, environment and token environment name; optional minorVersion remains part of the original connection identity. The SDK does not accept a substitute HTTP transport or credential value from the model.
+The same QBO client can inspect the host's native connection, capture the actual company and account pages, preview a reviewed journal and retain its native posting. The host declares platforms.qbo using either its original realmId, environment and token environment name, or the reviewed OAuth company described below. Optional minorVersion remains part of the original connection identity. The SDK uses that host-owned connection for provider requests.
 
 Use read --action connection, or SDK connection(), to inspect the current configured destination. Native company capture is read --action company-fetch or SDK companyFetch(args). Supply the actual realmId and environment, and choose summary, accounts or snapshot. The snapshot view includes the full original company and its sourceDocuments; the accounts view is paged. expectedCompanySha256 can pin a subsequent requested view to the same original company content. This capture performs native GET requests and does not create a journal.
 
@@ -220,6 +220,75 @@ The native continuation first uses any retained response that can finish locally
 This distinction also appears in CLI status: pending native posting returns exit3; native FAULT or CONFLICT returns exit2. Original QBO response PENDING recovery remains a separate local-return path and can run during reconcile. That local recovery never invokes the native posting continuation.
 
 Read plan view native-attempts to inspect the complete original attempt inventory. Native files use kind:qbo, planId and nativePost:true. The posting's root files are intent.json and request.json. For an actual retained attempt, additionally supply its original attemptId and choose response.json or receipt.json. The same download helper checks the returned source digest and releases only its owned reader. Keep the returned file metadata rather than constructing paths from a guessed attempt number.
+
+### Reviewed OAuth company in the same customer connection
+
+The host can attach an already reviewed QuickBooks company to this same accounting workspace. Complete the original [QuickBooks connection and company-selection workflow](../../stellar/scf-starforge-20261009/sf30-seller-sdk/oauth-connections/QUICKBOOKS.md) first: register the application, connect and review the returned grant, capture the actual company and chart, and save the exact reviewed selection. That workflow owns consent, renewal, selection replacement and revocation.
+
+In the existing workspace's platforms.qbo configuration, the host operator supplies:
+
+~~~json
+{
+  "oauth": {
+    "connectionsFile": "../oauth-connections.json",
+    "selectionDirectory": "../qbo-company"
+  }
+}
+~~~
+
+The two paths resolve from the merchant configuration file's directory. connectionsFile is the existing OAuth host registry configuration; selectionDirectory contains the original saved company selection. The optional expectedSelectionSha256 pins selection.integrity.sha256 from that reviewed record. Copy the actual 64-character lowercase digest when this deployment requires a fixed selection. A changed selection then fails open with ACCOUNTING_QBO_SELECTION_CHANGED so the operator can review the configuration and saved choice together.
+
+OAuth mode obtains realmId, environment and minorVersion from that selection. The configuration accepts oauth on its own; combining it with tokenEnv, realmId, environment or minorVersion is rejected. Existing token-environment configurations continue to use their original behavior. Full host setup remains in [ACCOUNTING-PLATFORMS.md](ACCOUNTING-PLATFORMS.md).
+
+The customer connects through the existing MCP endpoint. Its MCP_ACCESS_TOKEN authenticates that customer connection. The host resolves its QuickBooks connection directory and application secret through the original private environment; those provider values do not enter the customer request or prepared-operation directory.
+
+#### Read and retain the selected company identity
+
+The same installed commands open the existing alias and inspect the company:
+
+~~~sh
+starforge merchant-accounting-platforms open \
+  --url "$ACCOUNTING_MCP_URL" --workspace "$ACCOUNTING_WORKSPACE" --platform qbo
+
+starforge merchant-accounting-platforms read \
+  --url "$ACCOUNTING_MCP_URL" --workspace "$ACCOUNTING_WORKSPACE" --platform qbo \
+  --action connection
+
+starforge merchant-accounting-platforms status \
+  --url "$ACCOUNTING_MCP_URL" --workspace "$ACCOUNTING_WORKSPACE" --platform qbo
+~~~
+
+No request file is needed for read --action connection. In an embedded client, use await client.connection(). This refreshes the original local registry status and reports the saved selection; it does not acquire a bearer or make a QuickBooks request.
+
+| Returned field | Meaning for the receiving operator |
+| --- | --- |
+| realmId, environment, minorVersion | Original native destination selected for this accounting owner. |
+| selection.id and selection.integrity.sha256 | Exact reviewed selection opened by this owner. Retain both with the handover. |
+| selection.companyName, baseCurrency, accountCount, selectableAccountCount, companySha256 and capturedAt | Original reviewed company snapshot and chart summary, including its capture identity. |
+| selection.review | Original reviewer and reference for the company choice. |
+| authorization.alias, profileSha256 and grantId | Original registered connection and reviewed authorization bound to the selection. |
+| authorization.bindingMatches | Whether the current local alias, source, profile, grant, realm and environment still match that choice. |
+| authorization.state, ready and lastError | Current original grant state and local admission result. Unavailable or closed ownership is explicit. |
+| connection | Current native grant projection, including its retained refresh deadlines; null when unavailable. |
+| provider | Null before first provider acquisition; afterward the original provider's public lifecycle snapshot. |
+
+The top-level available and authorization.ready fields describe current local grant and binding readiness. Remote permission or revocation is learned through the next explicit native provider operation. A successful connection read therefore establishes the saved selection and local status, rather than proving a new provider request succeeded.
+
+Before open, sources reports configured OAuth mode and any expected selection digest. Read connection after open to receive the selected company identity. Use that returned realmId and environment for a deliberate company-fetch. As described above, company-fetch performs the native company/preferences/account reads; its snapshot output retains the complete original source documents. The saved selection's earlier company snapshot remains distinct from a later fresh capture.
+
+#### Continue historical work and recover authorization
+
+Opening a revoked or replaced grant retains the original workspace's journals, accountant returns, native attempts and files. Use status and plan to choose the saved operation, ordinary reconcile to observe its exact result, and download to receive the selected original files. Native response or return recovery can complete already retained local bookkeeping through the original controller. Customer read and download ownership, digest checks and close behavior stay unchanged.
+
+For a new native company capture or an explicit post or post-resume, the same host delegates to the original reviewed OAuth client. It rechecks the selected binding before obtaining provider authorization. A disconnected matching grant reports QBO_OAUTH_GRANT_REQUIRED; a changed company, profile, source or grant reports the original binding error. Keep that exact error and the existing prepared request. Refreshing a status view does not reauthorize the account.
+
+Reconnect through the original connection manager, review the resulting grant and company, and save the new selection through the linked workflow. Token renewal within the same reviewed grant preserves the selection. Replacing the grant or company requires a new explicit selection. When a deliberately changed deployment pin is in use, update expectedSelectionSha256 and reload the original merchant host with that updated configuration. A workspace pause/resume or close/open within the same running host keeps its existing configured pin.
+
+An already open accounting owner retains the selection it opened. After the host operator saves a replacement selection, use the existing maintenance pause/resume or accounting close/open workflow to reopen that same workspace and adopt it. Finish the owner's admitted operations and readers through the maintained lifecycle first. Read connection again and compare the returned selection, realm and environment with the reviewed replacement.
+
+Keep every historical plan, native posting UUID, request digest and accountant-return identity. Reconnection supplies authorization to an existing native operation only when its original company, environment and request checks still match. It does not rewrite a journal to point at another company. A BOOKED posting remains adopted without another submission; an unfinished native posting still uses its explicit prepared post-resume decision and original request history.
+
+The host closes the original QBO and Xero controllers before releasing the acquired provider and OAuth registry. Customer disconnect keeps its existing meaning: drain only the client-owned calls and readers and release that connection. The separate closeWorkspace operation closes the owned accounting workspace. This gives the receiving operator a single accounting lifetime across configuration, review, result recovery and delivery.
 
 ## Xero: context, plan, original operation and return
 
@@ -350,3 +419,4 @@ The returned native object is preserved with found, pending, submissionAttempted
 Use the existing operation directory for later reconciliation. Retain its original request, source files and native IDs when moving machines or reopening a session. Keep the same configured endpoint, workspace and token environment name; resolving a missing reply does not justify selecting another company or tenant.
 
 This guide describes the implemented customer protocol. Native provider results and release acceptance belong to the original platform operation and its retained result; examples and previews do not assert a live provider transaction.
+

@@ -108,11 +108,11 @@ function portNumber(value, fallback) {
   return Number(value);
 }
 export async function startMerchantMcp({ configPath, port = 3211, tokenEnv = 'MCP_ACCESS_TOKEN',
-  environment = process.env, woocommerceFetchImpl } = {}) {
+  environment = process.env, woocommerceFetchImpl, accounting } = {}) {
   if (!configPath || !/^[A-Za-z_][A-Za-z0-9_]*$/.test(tokenEnv)) throw failure('CONFIGURATION_ERROR', 'Supply a merchant configuration and token environment-variable name.');
   port = portNumber(port, 3211);
   const operator = await openMerchantOperator(configPath,
-    { woocommerce: { environment, fetchImpl: woocommerceFetchImpl } });
+    { woocommerce: { environment, fetchImpl: woocommerceFetchImpl }, accounting: { ...accounting, environment } });
   let server;
   try {
     const handler = createMcpToolHandler(operator, { bearerToken: environment[tokenEnv],
