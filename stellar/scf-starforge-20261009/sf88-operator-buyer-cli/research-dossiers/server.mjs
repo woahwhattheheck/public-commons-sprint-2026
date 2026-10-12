@@ -8,6 +8,7 @@ import { randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
 import {privateDirectory,writeJson,digest,jsonBytes as canonicalBytes} from '../node/store.mjs';
 import {RESEARCH_WORKSPACE_API,RESEARCH_WORKSPACE_CONNECTION,researchWorkspaceId,researchSummary,researchPage,researchSection,researchComparison,researchCrossrefReview} from './workspace-protocol.mjs';
 import { openDossierStore } from './dossier.mjs';
+import {handleEligibilityRoute,ELIGIBILITY_REVIEW_LIMIT} from './eligibility-routes.mjs';
 import {inspectResearchResponse,inspectRetainedSource,readRetainedSourceFile} from './source-inspection.mjs';
 import { openClinicalTrialsWorkspace } from './clinical-trials-workspace.mjs';
 import { handleClinicalTrialsRoute } from './clinical-trials-routes.mjs';
@@ -35,6 +36,8 @@ const TYPES = Object.freeze({
   'source-inspection.js': 'text/javascript; charset=utf-8',
   'citation-review.js': 'text/javascript; charset=utf-8',
   'citation-review.css': 'text/css; charset=utf-8',
+  'eligibility.js': 'text/javascript; charset=utf-8',
+  'eligibility.css': 'text/css; charset=utf-8',
   'source-bundles.css': 'text/css; charset=utf-8',
 });
 const MAX_SOURCE_BUNDLE_BODY = 128 * 1024 * 1024 + 65536; // A 64 MiB bundle inside the rawText JSON string.
@@ -126,7 +129,8 @@ export async function startDossierWorkspace({directory, port = 0, providers = {}
   const store = await openDossierStore(directory, {providers});
   const workspaceId = researchWorkspaceId(store.directory), instanceId = randomUUID();
   const api = {schema:RESEARCH_WORKSPACE_API,metadata:true,revisionPages:true,streamedPortable:true,sourceBundles:true,sourceInspection:true,
-    citationUpdateReview:true,citationReviewRequestLimit:MAX_CITATION_REVIEW_BODY,revisionReports:true,savedCrossrefOperations:crossrefSource!==null,originalObjectInputs:objectStateDirectory!==null};
+    citationUpdateReview:true,citationReviewRequestLimit:MAX_CITATION_REVIEW_BODY,
+    eligibilityReview:true,eligibilityReviewRequestLimit:ELIGIBILITY_REVIEW_LIMIT,revisionReports:true,savedCrossrefOperations:crossrefSource!==null,originalObjectInputs:objectStateDirectory!==null};
   await store.list();
   const unstructured = await openUnstructuredWorkspace({dossiers:store,...(documentSource ?? {})});
   if (unstructured.provider) {
@@ -246,6 +250,9 @@ export async function startDossierWorkspace({directory, port = 0, providers = {}
       const match = path.match(/^\/api\/dossiers\/([^/]+)(?:\/(.*))?$/);
       if (!match) {send(404, {error: 'ROUTE_NOT_FOUND'}); return;}
       const id = pathId(match[1]), action = match[2] || '';
+      if(await handleEligibilityRoute({store,dossierId:id,action,req,url,projection,
+        readBody:()=>readJson(req,ELIGIBILITY_REVIEW_LIMIT),send,
+        setHeader:(name,value)=>res.setHeader(name,value)}))return;
       if (req.method === 'GET' && action === '') {
         const options = url.searchParams.has('revision') ? {revision: revisionQuery(url.searchParams.get('revision'))} : {};
         send(200, await (projection==='metadata'?store.getMetadata(id,options):store.get(id, options))); return;
