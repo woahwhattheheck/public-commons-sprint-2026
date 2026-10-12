@@ -1,0 +1,32 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "sensorthings",
+  "description": "Original SensorThings source capture, retained observation operations, normal merchant setup and managed workspace receiving.",
+  "commands": {
+    "sensorthings": "stellar/scf-starforge-20261009/sf30-seller-sdk/sensorthings/cli.mjs",
+    "sensorthings-setup": "stellar/scf-starforge-20261009/sf30-seller-sdk/sensorthings/setup.mjs"
+  },
+  "commandDescriptions": {
+    "sensorthings": "Open the original SensorThings workspace, operate retained source editions and recover the same native operations.",
+    "sensorthings-setup": "Retain private workspace references and initialize or reopen the original merchant MCP host."
+  },
+  "exports": {
+    "./sensorthings": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sensorthings/core.mjs",
+    "./sensorthings/contract": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sensorthings/contract.mjs",
+    "./sensorthings/domain": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sensorthings/domain.mjs",
+    "./sensorthings/dataset": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sensorthings/dataset.mjs",
+    "./sensorthings/provider": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sensorthings/provider.mjs",
+    "./sensorthings/schema": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sensorthings/schema.mjs",
+    "./sensorthings/mcp": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sensorthings/mcp.mjs",
+    "./sensorthings/mcp-protocol": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sensorthings/mcp-protocol.mjs",
+    "./sensorthings/portable": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sensorthings/portable.mjs",
+    "./sensorthings/files": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sensorthings/files.mjs",
+    "./sensorthings/setup": {
+      "types": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sensorthings/setup.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sensorthings/setup.mjs"
+    }
+  },
+  "merchantProviders": {
+    "sensorthings-workspaces": "stellar/scf-starforge-20261009/sf30-seller-sdk/sensorthings/merchant-provider.mjs"
+  }
+}

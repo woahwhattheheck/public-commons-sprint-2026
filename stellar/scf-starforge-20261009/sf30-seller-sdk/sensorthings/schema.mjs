@@ -1,4 +1,5 @@
 // MIT. Pure source-owned SensorThings metadata. No native runtime imports.
+import {MAX_RETAINED_CHUNK_BYTES} from '../../../../stellar-forge/mcp-merchant-operator/retained-file-contracts.mjs';
 export const WORKSPACE_SCHEMA='stellar-forge.sensorthings-workspace.v1';
 export const EDITION_SCHEMA='stellar-forge.sensorthings-edition.v1';
 export const SOURCE_CONTRACT=Object.freeze({
@@ -45,7 +46,7 @@ export function workspaceSchema(workspaceId){
   return {schema:'stellar-forge.sensorthings-schema.v1',workspaceSchema:WORKSPACE_SCHEMA,workspaceId,
     sourceContract:SOURCE_CONTRACT,actions:ACTIONS,tables:['observations','components','entities'],
     operation:'Use one stable operationId and the displayed expectedRevision. Reopen the same operation after a lost reply.',
-    limits:{maxPageBytes:16*1024*1024,maxNativeDatasetBytes:256*1024*1024,maxNativeRows:250000,maxFileChunkBytes:65536}};
+    limits:{maxPageBytes:16*1024*1024,maxNativeDatasetBytes:256*1024*1024,maxNativeRows:250000,maxFileChunkBytes:MAX_RETAINED_CHUNK_BYTES,defaultFileChunkBytes:65536}};
 }
 
 export const CONNECTION_SCHEMA='stellar-forge.sensorthings-workspace-connection.v1';

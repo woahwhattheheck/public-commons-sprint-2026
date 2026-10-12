@@ -171,7 +171,7 @@ The maintained CLI composes this interface with the existing retained-download.m
 
 ### File descriptors and restart
 
-Fixed files are fully hashed through the same held read-only descriptor before the first byte is returned. Original manifest hashes are checked against that descriptor. The native reader bounds ranges to 65,536 bytes and retains up to four reads per instance. Idle reads expire after 120 seconds.
+Fixed files are fully hashed through the same held read-only descriptor before the first byte is returned. Original manifest hashes are checked against that descriptor. The native reader bounds ranges to 196,608 bytes (192 KiB) and retains up to four reads per instance. The examples above explicitly request 65,536-byte ranges. Idle reads expire after 120 seconds.
 
 A read ID belongs to the current process. After a listener restart or idle expiry, reopen an immutable file using the same manifest selection, expected SHA256 and saved byte offset. A nonzero offset requires the expected SHA256. The receiver must also verify its retained destination prefix before appending more bytes; the original retained-download.mjs handles this for complete CLI receiving.
 
@@ -304,7 +304,8 @@ The following are implementation admission limits, not statements about the size
 | Limit | Value |
 |---|---:|
 | Source-object chunk in the transfer stream | 48 KiB |
-| Fixed-buffer file hashing | 64 KiB |
+| Portable source-file hashing buffer | 64 KiB |
+| Native held-file hashing buffer | Up to 192 KiB |
 | One source object | 256 MiB |
 | Sum of deduplicated source bytes | 2 GiB |
 | Complete compressed source archive | 2 GiB |
@@ -313,7 +314,7 @@ The following are implementation admission limits, not statements about the size
 | Retained source-edition metadata | 16 MiB |
 | Deduplicated source objects | 100,000 |
 | One manifest-selected fixed file | 8 GiB |
-| One file range | 64 KiB |
+| One file range | 192 KiB |
 | Simultaneous retained reads per file-access instance | 4 |
 | Retained-read idle expiry | 120 seconds |
 
