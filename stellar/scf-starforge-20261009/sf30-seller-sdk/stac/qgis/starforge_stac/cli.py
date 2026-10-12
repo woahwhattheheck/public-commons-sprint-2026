@@ -24,12 +24,34 @@ def execute(args, progress=None):
     if command == "create":
         return QgisWorkspace(args.workspace, create=True, title=args.title).read()
     workspace = QgisWorkspace(args.workspace)
-    from .postgis.cli import COMMANDS as POSTGIS_COMMANDS, execute as postgis_execute
-    if command in POSTGIS_COMMANDS:
-        payload = read_json(args.input)[0] if args.input else {"sourceId": args.source_id}
-        return postgis_execute(workspace, command, payload, project_id=args.project_id, progress=progress)
     if command == "open":
         return workspace.read()
+    if command == "field":
+        require(args.input, "INPUT_REQUIRED", "Supply the complete field --input JSON.")
+        request, _ = read_json(args.input)
+        require(isinstance(request, dict) and isinstance(request.get("payload", {}), dict),
+                "FIELD_REQUEST", "Use an original field action and payload.")
+        action, data = request.get("action"), request.get("payload", {})
+        from .field import (FIELD_ACTIONS, NATIVE_ACTIONS, returned_inventory, copy_device_package,
+                            review_page, field_command)
+        if action == "field.state":
+            state = workspace.read()
+            return {"workspaceId": state["id"], "revision": state["revision"], "fieldCampaigns": state.get("fieldCampaigns", [])}
+        if action == "field.inventory":
+            return returned_inventory(data["directory"], progress=progress)
+        if action == "field.copy":
+            return copy_device_package(workspace, data["roundId"], data["destination"], progress=progress)
+        if action == "field.review":
+            return review_page(workspace, data["roundId"], data["returnId"], offset=data.get("offset", 0),
+                               limit=data.get("limit", 100), layer_id=data.get("layerId", ""), kind=data.get("kind", ""))
+        common = {"revision": request.get("revision"), "request_id": request.get("requestId"), "actor": request.get("actor")}
+        if action in NATIVE_ACTIONS | {"field.inspect", "field.reopen"}:
+            from .field_bridge import run_native
+            runtime = request.get("nativeRuntime")
+            require(isinstance(runtime, dict), "FIELD_NATIVE_COMMAND", "Select the existing native QGIS environment.")
+            return run_native(workspace, action, data, progress=progress, **runtime, **common)
+        require(action in FIELD_ACTIONS, "FIELD_ACTION", "Choose a documented original field operation.")
+        return field_command(workspace, action, data, progress=progress, **common)
     if command == "scenes":
         return {"sourceId": workspace.source(args.source_id).id, "scenes": workspace.source(args.source_id).scene_rows()}
     if command == "assets":
@@ -72,8 +94,7 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("command", choices=["source-open", "create", "open", "import", "select", "scenes", "assets",
                                            "layers", "compare", "review", "native-inspect", "native-save", "native-open",
-                                           "export", "receive", "history", "operation", "postgis-layers",
-                                           "native-postgis-check", "native-postgis-select", "native-postgis-refresh"])
+                                           "export", "receive", "history", "operation", "field"])
     parser.add_argument("--workspace")
     parser.add_argument("--directory")
     parser.add_argument("--input")
