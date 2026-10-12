@@ -180,10 +180,15 @@ export async function main(argv = process.argv.slice(2)) {
     operatorSettings: args['--operator-settings'] ?? null, port: args['--port'] === undefined ? 8439 : Number(args['--port']),
     analysis: configured ? { python: args['--analysis-python'], checkout: args['--analysis-checkout'], directory: args['--analysis-directory'] } : null };
   const workspace = await startDatasetWorkspace(settings);
-  process.stdout.write(args['--startup-format'] === 'json'
-    ? JSON.stringify(datasetWorkspaceLaunch(settings, workspace.url)) + '\n'
-    : 'Dataset customer workspace: ' + workspace.url + '\n');
-  process.stdout.write('Keep this terminal open for original per-page purchase approval.\n');
+  try {
+    process.stdout.write(args['--startup-format'] === 'json'
+      ? JSON.stringify(datasetWorkspaceLaunch(settings, workspace.url)) + '\n'
+      : 'Dataset customer workspace: ' + workspace.url + '\n');
+    process.stdout.write('Keep this terminal open for original per-page purchase approval.\n');
+  } catch (error) {
+    await workspace.close();
+    throw error;
+  }
   let stopping = false;
   const stop = async () => {
     if (stopping) return; stopping = true;
