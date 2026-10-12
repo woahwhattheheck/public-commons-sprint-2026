@@ -335,9 +335,11 @@ async function openTimescaleWorkspace({directory,create=false,sourceFile,mainten
           if(original.plan!==selected.data.publisherPlanId)throw fault('TIMESCALE_EXTRACTION_BINDING_CHANGED');
           return {runId:original.id,state:original.state,publisherPlanId:original.plan,reused:true};
         }
+        context.signal.throwIfAborted();
         const started=publisher.startExtraction(selected.data.publisherPlanId,{id:input.requestId});
         const cancel=()=>{try{publisher.cancel(started.id);}catch{}};
         context.signal.addEventListener('abort',cancel,{once:true});
+        if(context.signal.aborted)cancel();
         try{
           const result=await started.completion;
           return {runId:result.id,state:result.state,publisherPlanId:result.plan,error:result.data.error??null,reused:false};
