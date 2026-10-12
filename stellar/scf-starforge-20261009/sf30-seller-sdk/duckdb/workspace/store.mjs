@@ -49,7 +49,9 @@ async function regularOrMissing(path) {
   try {
     const file = await lstat(path);
     if (!file.isFile() || file.isSymbolicLink()) throw new WorkspaceError('WORKSPACE_FILE_INVALID');
+    return file;
   } catch (error) { if (error.code !== 'ENOENT') throw error; }
+  return null;
 }
 
 /** Read the retained selection before the normal workspace acquires its ownership lock. */
@@ -57,7 +59,7 @@ export async function readSavedWorkspaceSource(directory) {
   const root = resolve(directory), filename = resolve(root, 'workspace.sqlite');
   if (await realpath(root) !== root || !(await lstat(root)).isDirectory())
     throw new WorkspaceError('PRIVATE_WORKSPACE_DIRECTORY_REQUIRED');
-  await regularOrMissing(filename);
+  if (!await regularOrMissing(filename)) throw new WorkspaceError('SAVED_WORKSPACE_SOURCE_REQUIRED', 404);
   let db;
   try {
     db = new DatabaseSync(filename, { readOnly: true });
@@ -128,7 +130,17 @@ export async function openWorkspaceStore({ directory, sourceFile }) {
   const getDraft = revision => rowDraft(db.prepare('SELECT * FROM drafts WHERE revision=?').get(revisionNumber(revision)));
   const getPackage = id => rowPackage(db.prepare('SELECT * FROM packages WHERE id=?').get(operationId(id)));
   return {
-    directory: root, sourceFile: canonicalSource, latest, getDraft, getPackage,
+    directory: root, latest, getDraft, getPackage,
+    get sourceFile() { return db.prepare('SELECT value FROM metadata WHERE key=?').get('sourceFile').value; },
+    extension(initialize) { return initialize({ db, transaction }); },
+    selectSourceFile(value, expected) {
+      if (typeof value !== 'string' || resolve(value) !== value || value.includes('\0'))
+        throw new WorkspaceError('CLOUD_SOURCE_PATH_INVALID');
+      const current = db.prepare('SELECT value FROM metadata WHERE key=?').get('sourceFile').value;
+      if (current !== expected && current !== value) throw new WorkspaceError('SOURCE_CHANGED', 409);
+      db.prepare('UPDATE metadata SET value=? WHERE key=?').run(value, 'sourceFile');
+      return value;
+    },
     workspaceId: db.prepare('SELECT value FROM metadata WHERE key=?').get('workspaceId').value,
     sourceDescription(value) {
       if (value !== undefined) db.prepare('INSERT INTO metadata(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value')

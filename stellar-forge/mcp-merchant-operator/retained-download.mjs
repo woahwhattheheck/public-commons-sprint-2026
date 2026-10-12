@@ -5,7 +5,7 @@ import { createHash } from 'node:crypto';
 import { resolve, join, dirname } from 'node:path';
 import { MCP_VERSION } from '../mcp-paid-agent/http-tools.mjs';
 import { MAX_RETAINED_CHUNK_BYTES } from './retained-file-reads.mjs';
-import { failure, identifier, privateSupportDirectory, writePrivate } from './config.mjs';
+import { failure, identifier, privateSupportDirectory, writePrivate } from './host-files.mjs';
 import { acquireStateLease } from '../../stellar/scf-starforge-20261009/merchant-fleet-gateway/state-lease.mjs';
 
 const sha = bytes => createHash('sha256').update(bytes).digest('hex');
@@ -63,7 +63,8 @@ export async function openMerchantFileClient({ url, tokenEnv = 'MCP_ACCESS_TOKEN
 
 /** Owner adapters supply the original manifest parser, names and identity schema. */
 export function createRetainedDownload({ manifestName, parseManifest, maximumBytes, stateSchema,
-  resultSchema, toolPrefix, errorPrefix, clientName, describe = () => ({}), connect = openMerchantFileClient, nestedFiles = false }) {
+  resultSchema, toolPrefix, errorPrefix, clientName, describe = () => ({}), connect = openMerchantFileClient, nestedFiles = false, readLease = true,
+  validateExportId = value => identifier(value, 'Export ID') }) {
   async function regular(path, flags = constants.O_RDONLY, maximum = maximumBytes) {
     const handle = await open(path, flags | (constants.O_NOFOLLOW ?? 0) | (constants.O_NONBLOCK ?? 0), 0o600);
     try {
@@ -210,8 +211,9 @@ export function createRetainedDownload({ manifestName, parseManifest, maximumByt
   function chunkBytes(result, file, offset, limit, exportId, manifestSha256, readId) {
     const size = Math.min(limit, file.bytes - offset);
     if (result.exportId !== exportId || result.manifestSha256 !== manifestSha256 || result.file?.name !== file.name ||
-        result.file?.bytes !== file.bytes || result.file?.sha256 !== file.sha256 || !validReadId(result.readId) ||
-        readId && result.readId !== readId || result.offset !== offset || result.bytesRead !== size || result.encoding !== 'base64' ||
+        result.file?.bytes !== file.bytes || result.file?.sha256 !== file.sha256 ||
+        (readLease ? !validReadId(result.readId) || readId && result.readId !== readId
+          : result.readId !== undefined && result.readId !== null) || result.offset !== offset || result.bytesRead !== size || result.encoding !== 'base64' ||
         result.nextOffset !== (offset + size < file.bytes ? offset + size : null) || typeof result.data !== 'string')
       throw failure(errorPrefix + '_DOWNLOAD_CHUNK_CONFLICT', 'The returned chunk does not match its pinned original file and byte offset.');
     const bytes = Buffer.from(result.data, 'base64');
@@ -292,7 +294,7 @@ export function createRetainedDownload({ manifestName, parseManifest, maximumByt
   /** Saves the exact original files; a second invocation resumes the same directory. */
   async function download({ url, exportId, directory, tokenEnv, environment, signal,
     chunkSize = MAX_RETAINED_CHUNK_BYTES, onProgress, expectedManifestSha256 } = {}) {
-    identifier(exportId, 'Export ID');
+    validateExportId(exportId);
     if (!Number.isSafeInteger(chunkSize) || chunkSize < 1 || chunkSize > MAX_RETAINED_CHUNK_BYTES)
       throw failure(errorPrefix + '_DOWNLOAD_CONFIGURATION', 'Chunk size must be 1–196608 bytes.');
     const client = await connect({ url, tokenEnv, environment, signal, errorPrefix, clientName });
@@ -312,7 +314,7 @@ export function createRetainedDownload({ manifestName, parseManifest, maximumByt
   }
 
   async function inspect({ url, exportId, tokenEnv, environment, signal } = {}) {
-    identifier(exportId, 'Export ID');
+    validateExportId(exportId);
     const client = await connect({ url, tokenEnv, environment, signal, errorPrefix, clientName });
     const bytes = await retainedManifest(client, exportId);
     return { manifest: parseManifest(bytes, exportId), manifestSha256: sha(bytes) };

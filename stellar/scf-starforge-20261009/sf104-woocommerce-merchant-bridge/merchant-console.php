@@ -3,7 +3,7 @@
 if (!defined('ABSPATH')) { exit; }
 
 final class Starforge_SF104_Merchant_Console {
-    const VERSION = '0.5.0';
+    const VERSION = '0.6.0';
     const API = '/merchant-console';
     const HANDOFF_SCHEMA = 'stellar-forge.sf104.merchant-handoff.v1';
 
@@ -299,6 +299,27 @@ final class Starforge_SF104_Merchant_Console {
             $product = wc_get_product((int) $items[0]['productId']);
             if ($product) $base['currentProduct'] = self::describe_product($product);
         }
+        // Basket review observes every originally selected product. The order
+        // digest above still identifies the saved order; product mappings are
+        // current observations and never replace its immutable checkout terms.
+        $base['currentProducts'] = [];
+        if (is_array($record) && ($record['handoff']['schema'] ?? '') === 'stellar-forge.sf104.checkout-handoff.v2' &&
+            is_array($record['handoff']['items'] ?? null) && class_exists('Starforge_SF104_Basket')) {
+            $seen_products = [];
+            foreach (array_slice($record['handoff']['items'], 0, Starforge_SF104_Basket::MAX_LINES) as $line) {
+                $product_id = is_array($line) ? (string) ($line['productId'] ?? '') : '';
+                if (!preg_match('/^[1-9][0-9]{0,17}$/D', $product_id) || isset($seen_products[$product_id])) continue;
+                $seen_products[$product_id] = true;
+                $product = wc_get_product((int) $product_id);
+                $observed = $product ? self::describe_product($product) : ['id' => $product_id, 'missing' => true, 'error' => 'The original product is no longer available.'];
+                $observed['delivery'] = null; $observed['deliveryError'] = null;
+                if ($product) {
+                    try { $observed['delivery'] = Starforge_SF104_Basket::delivery($product); }
+                    catch (Throwable $e) { $observed['deliveryError'] = $e->getMessage(); }
+                }
+                $base['currentProducts'][] = $observed;
+            }
+        }
         $base['actions'] = ['release' => ['enabled' => false, 'mode' => null, 'reason' => 'No original accepted notice is awaiting release.'],
             'reset' => ['enabled' => false, 'reason' => 'No reserved native attempt is eligible for merchant reset.'],
             'handoff' => ['url' => null, 'reason' => 'No currently available frozen buyer instructions.']];
@@ -439,6 +460,9 @@ final class Starforge_SF104_Merchant_Console {
                 if (!hash_equals($current['stateDigest'], $digest)) throw new RuntimeException('Order ' . $id . ' changed after selection. Refresh it and select its current state before exporting.', 409);
                 unset($current['orderUrl'], $current['actions']);
                 if ($current['currentProduct']) unset($current['currentProduct']['editUrl'], $current['currentProduct']['exportUrl']);
+                foreach ($current['currentProducts'] ?? [] as $index => $product) {
+                    unset($current['currentProducts'][$index]['editUrl'], $current['currentProducts'][$index]['exportUrl']);
+                }
                 return ['observedAt' => gmdate('Y-m-d\TH:i:s\Z'), 'order' => $current];
             });
         }

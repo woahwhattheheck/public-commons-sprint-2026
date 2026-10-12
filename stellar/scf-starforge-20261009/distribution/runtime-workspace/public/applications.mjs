@@ -1,4 +1,5 @@
 // MIT. Applications presentation over the original runtime and managed-command APIs.
+import { renderOpenApiApplicationReview } from './openapi-application.mjs';
 const element = (tag, text, className) => {
   const node = document.createElement(tag);
   if (text !== undefined) node.textContent = text;
@@ -207,7 +208,8 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
         configuration.open = false; configurationReview = null; reviewResult.hidden = true;
         await refresh(); await refreshWorkspace(); message(result.connectionError?.message ?? 'Application saved with its original runtime and data locations.');
       }));
-      reviewResult.replaceChildren(element('h3', 'Reviewed application'), rows, save);
+      reviewResult.replaceChildren(element('h3', 'Reviewed application'), rows,
+        renderOpenApiApplicationReview(reviewed.command), save);
       if (reviewed.command.createDirectories.length) reviewResult.append(element('p', 'Creates private folder: ' + reviewed.command.createDirectories.join(', '), 'note'));
       reviewResult.hidden = false;
     });
@@ -234,7 +236,7 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
       ['Inputs', reviewed.command.inputs.map(item => item.path).join('\n')],
       ['Terminal', reviewed.command.terminal ? 'Explicit operator input through the original controlling terminal' : 'Retained original output'],
       ...mppReviewRows(reviewed.command),
-    ]), start); operationReview.hidden = false;
+    ]), renderOpenApiApplicationReview(reviewed.command), start); operationReview.hidden = false;
   }
   function renderSelected() {
     const app = selected(); selectedPanel.hidden = !app; history.hidden = !app;
@@ -396,7 +398,18 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
       editingId = null; configurationReview = startReview = null;
       label.value = type.title; runtime.value = descriptor.runtime.runtimeId; kind.value = type.id;
       const values = { installationId: descriptor.installationId };
-      if (descriptor.command === 'duckdb') {
+      if (descriptor.command === 'postgres') {
+        if (!descriptor.args.includes('serve')) throw new Error('Prepare the PostgreSQL serve command with its private operator directory.');
+        const option = (name, fallback) => {
+          const index = descriptor.args.indexOf(name);
+          return index >= 0 ? descriptor.args[index + 1] :
+            descriptor.args.find(item => item.startsWith(name + '='))?.slice(name.length + 1) ?? fallback;
+        };
+        values.workspaceDirectory = option('--workspace');
+        values.connectionEnvironment = option('--connection-env', 'SF_BUYER_POSTGRES_DSN');
+        values.databaseSchema = option('--schema', 'sf_received');
+        values.port = Number(option('--port', '0'));
+      } else if (descriptor.command === 'duckdb') {
         values.workspaceDirectory = value('--workspace');
         values.port = descriptor.args.includes('--port') ? Number(value('--port')) : 0;
         if (descriptor.args.includes('--export-root')) values.exportRoot = value('--export-root');

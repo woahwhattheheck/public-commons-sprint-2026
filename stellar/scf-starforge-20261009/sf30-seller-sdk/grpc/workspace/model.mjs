@@ -11,6 +11,7 @@ import { validateGrpcConfig, grpcEnvironmentNames } from '../config.mjs';
 import { createGrpcSource } from '../source.mjs';
 import { compileGrpcMerchantPlan, prepareGrpcSeller, readGrpcPrepared, CUSTOMER_FILES } from '../prepare.mjs';
 import { startGrpcMerchant } from '../merchant.mjs';
+import { assertGrpcWorkspaceBinding } from './binding.mjs';
 import { fields, text, canonical, sha256, jsonBytes, readJson, readBytes, writeNew,
   syncDirectory, privateDirectory, fail, assertProtoArchiveFits, writeJsonSnapshot } from '../common.mjs';
 
@@ -47,7 +48,7 @@ function draft(source, protoSource, plan) {
 }
 export async function createGrpcWorkspace({ stateDirectory, sourceFile, protoDirectory, entrypoints, planFile,
   sellerPort = 0, operationsPort = 0, maxInFlight = 64, drainGraceMs = 60000,
-  nativeFactory = null, releaseRuntime, env = process.env } = {}) {
+  nativeFactory = null, releaseRuntime, env = process.env, expectedBinding } = {}) {
   if (typeof stateDirectory !== 'string' || !isAbsolute(stateDirectory)) fail('GRPC_ABSOLUTE_WORKSPACE_REQUIRED');
   const root = await privateDirectory(stateDirectory, true), lease = await acquireStateLease(root);
   const environment = { ...env };
@@ -132,6 +133,31 @@ export async function createGrpcWorkspace({ stateDirectory, sourceFile, protoDir
       operations: active.session?.operations?.url, availability: active.session?.operations?.availabilityControlUrl,
       source: active.session?.source.status() } : null,
     previous: previousRun, releaseConsole: releaseConsole ? { url: releaseConsole.operatorUrl } : null });
+  async function attemptInventory() {
+    lease.assertHeld();
+    const attempts = [];
+    for (const file of await readdir(folders.attempts)) {
+      if (!file.endsWith('.json') || !UUID.test(file.slice(0, -5))) continue;
+      const attempt = await readJson(join(folders.attempts, file), 65536);
+      attempts.push({ id: attempt.id, revision: attempt.revision, method: attempt.method, phase: attempt.phase,
+        startedAt: attempt.startedAt, finishedAt: attempt.finishedAt, error: attempt.error,
+        inputSha256: attempt.inputSha256, responseSha256: attempt.responseSha256 });
+    }
+    return attempts.sort((a, b) => b.startedAt.localeCompare(a.startedAt) || a.id.localeCompare(b.id));
+  }
+  async function attemptsPage(input = {}) {
+    fields(input, ['offset', 'limit', 'expectedSnapshot'], 'GRPC_ATTEMPTS_PAGE_FIELDS_INVALID');
+    const offset = input.offset ?? 0, limit = input.limit ?? 50;
+    if (!Number.isSafeInteger(offset) || offset < 0 || !Number.isSafeInteger(limit) || limit < 1 || limit > 250)
+      fail('GRPC_ATTEMPTS_PAGE_RANGE_INVALID');
+    if (offset && input.expectedSnapshot === undefined) fail('GRPC_ATTEMPTS_SNAPSHOT_REQUIRED', 409);
+    const items = await attemptInventory(), snapshot = sha256(canonical(items));
+    if (input.expectedSnapshot !== undefined && identifier(input.expectedSnapshot) !== snapshot)
+      fail('GRPC_ATTEMPTS_SNAPSHOT_CHANGED', 409);
+    if (offset > items.length) fail('GRPC_ATTEMPTS_PAGE_RANGE_INVALID');
+    return { schema: 'stellar-forge.grpc-workspace-attempt-page.v1', total: items.length, snapshot, offset,
+      items: items.slice(offset, offset + limit), nextOffset: offset + limit < items.length ? offset + limit : null };
+  }
   async function state() {
     lease.assertHeld();
     const revisions = structuredClone(revisionIndex);
@@ -145,18 +171,11 @@ export async function createGrpcWorkspace({ stateDirectory, sourceFile, protoDir
     for (const file of await readdir(folders.intents)) {
       if (file.endsWith('.json') && UUID.test(file.slice(0, -5))) intents.push(await readJson(join(folders.intents, file), 65536));
     }
-    const attempts = [];
-    for (const file of await readdir(folders.attempts)) {
-      if (!file.endsWith('.json') || !UUID.test(file.slice(0, -5))) continue;
-      const attempt = await readJson(join(folders.attempts, file), 65536);
-      attempts.push({ id: attempt.id, revision: attempt.revision, method: attempt.method, phase: attempt.phase,
-        startedAt: attempt.startedAt, finishedAt: attempt.finishedAt, error: attempt.error,
-        inputSha256: attempt.inputSha256, responseSha256: attempt.responseSha256 });
-    }
+    const attempts = await attemptInventory();
     return { schema: 'stellar-forge.grpc-workspace-state.v1', stateDirectory: root, currentRevision: currentId(),
       generation: current?.generation ?? 0, revisions: revisions.sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
       prepared: prepared.sort((a, b) => b.createdAt.localeCompare(a.createdAt)), intents,
-      attempts: attempts.sort((a, b) => b.startedAt.localeCompare(a.startedAt)).slice(0, 50),
+      attempts: attempts.slice(0, 50),
       attemptCount: attempts.length, runtime: runtime() };
   }
   const save = body => execute(() => saveInside(body));
@@ -307,14 +326,32 @@ export async function createGrpcWorkspace({ stateDirectory, sourceFile, protoDir
   });
   async function stopInside() {
     if (!active) return runtime();
-    active.phase = 'DRAINING';
-    await atomicJson(join(root, 'run.json'), { ...runtime().active, pid: process.pid });
-    try {
-      await active.session.close();
-      previousRun = { id: active.id, releaseId: active.releaseId, revision: active.revision,
-        phase: 'STOPPED', startedAt: active.startedAt, endedAt: stamp() };
-      active = null; await atomicJson(join(root, 'run.json'), previousRun); return runtime();
-    } catch (issue) { active.phase = 'STOP_UNCONFIRMED'; throw issue; }
+    const owned = active, path = join(root, 'run.json');
+    owned.phase = 'DRAINING';
+    let recordingIssue;
+    try { await atomicJson(path, { ...runtime().active, pid: process.pid }); }
+    catch (issue) { recordingIssue = issue; }
+    // A full disk or failed status write must not prevent the owned native drain.
+    try { await owned.session.close(); }
+    catch (issue) {
+      owned.phase = 'STOP_UNCONFIRMED';
+      try { await atomicJson(path, { ...runtime().active, pid: process.pid }); }
+      catch (recordIssue) {
+        throw Object.assign(new AggregateError([issue, recordIssue], 'GRPC_WORKSPACE_STOP_FAILED'),
+          { code: 'GRPC_WORKSPACE_STOP_FAILED' });
+      }
+      throw issue;
+    }
+    previousRun = { id: owned.id, releaseId: owned.releaseId, revision: owned.revision,
+      phase: 'STOPPED', startedAt: owned.startedAt, endedAt: stamp() };
+    active = null;
+    try { await atomicJson(path, previousRun); }
+    catch (issue) {
+      if (recordingIssue) throw Object.assign(new AggregateError([recordingIssue, issue],
+        'GRPC_WORKSPACE_STOP_RECORD_FAILED'), { code: 'GRPC_WORKSPACE_STOP_RECORD_FAILED' });
+      throw issue;
+    }
+    return runtime();
   }
   const stop = () => execute(stopInside);
   const download = body => execute(async () => {
@@ -377,12 +414,21 @@ export async function createGrpcWorkspace({ stateDirectory, sourceFile, protoDir
     if (closePromise) return closePromise;
     closing = true;
     closePromise = (async () => {
-      try { await busy; await releaseConsole?.close(); releaseConsole = null; await stopInside(); }
-      finally { await lease.close(); }
+      // The request owns its failure; shutdown still closes every owned runtime.
+      try { await busy; } catch {}
+      const issues = [];
+      try { await releaseConsole?.close(); releaseConsole = null; } catch (issue) { issues.push(issue); }
+      try { await stopInside(); } catch (issue) { issues.push(issue); }
+      try { await lease.close(); } catch (issue) { issues.push(issue); }
+      if (issues.length === 1) throw issues[0];
+      if (issues.length) throw Object.assign(new AggregateError(issues, 'GRPC_WORKSPACE_CLOSE_FAILED'),
+        { code: 'GRPC_WORKSPACE_CLOSE_FAILED' });
     })();
     return closePromise;
   }
   try {
+    // The same original writer lease owns this check and every later source read.
+    if (expectedBinding !== undefined) await assertGrpcWorkspaceBinding(root, expectedBinding);
     for (const directory of Object.values(folders)) await privateDirectory(directory, true);
     revisionIndex = await optional(join(root, 'revisions.json'), 1048576) ?? [];
     if (!Array.isArray(revisionIndex) || revisionIndex.some(row => !REV.test(row.id))) fail('GRPC_WORKSPACE_INDEX_INVALID', 409);
@@ -401,7 +447,7 @@ export async function createGrpcWorkspace({ stateDirectory, sourceFile, protoDir
       await saveInside({ source, protoSource, plan, baseRevision: null, title: 'gRPC merchant' });
     }
   } catch (issue) { await lease.close(); throw issue; }
-  return { stateDirectory: root, state, runtime, save, capture, open, checkout, method, review,
+  return { stateDirectory: root, state, attemptsPage, runtime, save, capture, open, checkout, method, review,
     call, readAttempt, prepare, run, stop, download, archive, stage, openReleaseConsole, closeReleaseConsole, close,
     bindOperationsNavigationOrigin(origin) {
       const url = new URL(origin);
@@ -409,3 +455,4 @@ export async function createGrpcWorkspace({ stateDirectory, sourceFile, protoDir
       navigationOrigin = origin;
     } };
 }
+
