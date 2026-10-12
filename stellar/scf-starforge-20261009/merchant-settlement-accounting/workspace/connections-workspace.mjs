@@ -3,7 +3,7 @@ import { readFile, readdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { absolute, privateDirectory, readJson, atomicJson, syncDirectory, identity, fault } from '../../sf30-seller-sdk/postgres/publisher/files.mjs';
 import { withOAuthConnectionLock } from '../../sf30-seller-sdk/oauth-connections/store.mjs';
-import { readOAuthHostConnections, openOAuthConnectionRegistry } from '../../sf30-seller-sdk/oauth-connections/host.mjs';
+import { readOAuthHostConnections, openOAuthConnectionRegistry, inspectOAuthHostDirectory } from '../../sf30-seller-sdk/oauth-connections/host.mjs';
 import { plain, hex, intuitQboProfile, xeroOAuthProfile } from '../../sf30-seller-sdk/oauth-connections/profile.mjs';
 import { listQuickBooksConnections, previewQuickBooksSelection, validateQuickBooksSelection,
   readQuickBooksSelection, saveQuickBooksSelection, quickBooksSelectionSummary,
@@ -16,6 +16,7 @@ import { QboHttpClient } from '../accountant/qbo-http.mjs';
 
 export const ACCOUNTING_CONNECTION_REQUEST_BYTES = 65536;
 export const ACCOUNTING_SELECTION_REVIEW_SCHEMA = 'stellar-forge.accounting-connection-review.v1';
+export const ACCOUNTING_CONNECTION_SCOPE_SCHEMA = 'stellar-forge.accounting-connection-scope.v1';
 const REQUEST_SCHEMA = 'stellar-forge.accounting-connection-review-request.v1';
 const ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 const KINDS = ['quickbooks', 'xero'];
@@ -122,7 +123,7 @@ export async function openAccountingConnections({
     ...(lookup ? { lookup } : {}), ...(agent ? { agent } : {}),
   });
   let closing = false, closingPromise, qboOwner, xeroOwner, qboOpening, xeroOpening;
-  let activeSelections, nativeStatuses = new Map();
+  let activeSelections, scope, nativeStatuses = new Map();
   const runtime = { env: environment, allowLoopback, ...(lookup ? { lookup } : {}),
     ...(agent ? { agent } : {}), fetchImpl, ...(timeoutMs ? { timeoutMs } : {}) };
   const authorizeRegistry = {
@@ -254,7 +255,7 @@ export async function openAccountingConnections({
       restartRequired: (selections[provider]?.integrity.sha256 ?? null) !==
         (activeSelections[provider]?.integrity.sha256 ?? null),
     };
-    return { providers, connections: { quickbooks, xero }, callbackOrigin: origin() };
+    return { scope, providers, connections: { quickbooks, xero }, callbackOrigin: origin() };
   }
   async function history({ offset = 0, limit = 25 } = {}) {
     need(Number.isSafeInteger(offset) && offset >= 0 && Number.isSafeInteger(limit) && limit >= 1 && limit <= 100,
@@ -344,7 +345,21 @@ export async function openAccountingConnections({
   }
   try {
     activeSelections = await readAccountingSelections(selectionDirectory);
-    await authorizeRegistry.list();
+    const registered = await authorizeRegistry.list();
+    const ownerUid = process.geteuid?.() ?? process.getuid?.();
+    const selectionIdentity = await inspectOAuthHostDirectory(selectionDirectory, { ownerUid });
+    const profiles = [];
+    for (const value of registered) {
+      const directory = environment[value.directoryEnv];
+      profiles.push({ alias: value.alias, directoryEnv: value.directoryEnv,
+        profileSha256: value.profileSha256, directory,
+        identity: await inspectOAuthHostDirectory(directory, { directoryEnv: value.directoryEnv, ownerUid }) });
+    }
+    profiles.sort((left, right) => left.alias < right.alias ? -1 : left.alias > right.alias ? 1 : 0);
+    // Stable across the same owner's restart and grant rotation. A different
+    // selection root, profile or private grant store owns different commands.
+    scope = identity({ schema: ACCOUNTING_CONNECTION_SCOPE_SCHEMA,
+      selectionDirectory, selectionIdentity, profiles });
     const qboSelection = activeSelections.quickbooks;
     const qboClient = new QboHttpClient({
       realmId: qboSelection?.realmId ?? '', environment: qboSelection?.environment ?? 'sandbox',
@@ -376,7 +391,12 @@ export async function openAccountingConnections({
       qboClient: Object.freeze(qboClient), xeroClient: Object.freeze(xeroClient),
       activeSelections: Object.freeze(Object.fromEntries(KINDS.map(provider =>
         [provider, selectionSummary(provider, activeSelections[provider])]))),
-      oauth, assertOpen: current, state, history, preview, resumeReview, save, accounts, download,
+      scope, oauth, assertOpen: current,
+      assertScope(value) {
+        need(hex(value) && value === scope, 'ACCOUNTING_CONNECTION_SCOPE_CHANGED',
+          'This request belongs to a different accounting connection workspace. Reopen its original Application.');
+      },
+      state, history, preview, resumeReview, save, accounts, download,
       async review(reviewId) { const value = await readReview(reviewId); return reviewView(value.request, value.selection, value.saved); },
       tenants(value) {
         need(exact(value, ['alias', 'profileSha256', 'grantId']), 'ACCOUNTING_CONNECTION_REQUEST',
@@ -406,9 +426,16 @@ export async function openAccountingConnections({
 }
 
 /** Same original accounting HTTP request gates; this function adds only native selection routes. */
-export async function handleAccountingConnections(owner, { method, path, value, query = {} }) {
+export async function handleAccountingConnections(owner, { method, path, value, query = {}, scope }) {
   if (!owner) return null;
+  const oauthPath = ['/api/oauth/connections', '/api/oauth/connection', '/api/oauth/command'].includes(path);
+  const connectionPath = path === '/api/accounting-connections' || path.startsWith('/api/accounting-connections/');
+  if (!oauthPath && !connectionPath) return null;
   owner.assertOpen();
+  // POST callers must bind the same served owner. A scoped read/download also
+  // rejects a recycled listener before returning another workspace's contents.
+  if (method === 'POST' || scope !== undefined) owner.assertScope(scope);
+  if (query.scope !== undefined) owner.assertScope(query.scope);
   if (path === '/api/oauth/connections' && method === 'GET') return { value: await owner.oauth.list() };
   if (path === '/api/oauth/connection' && method === 'GET')
     return { value: await owner.oauth.status(query.alias, query.flowId) };
