@@ -1047,7 +1047,44 @@ function productXml(p,profile){
   if(!productData&&present(p.customsTariff))result+='<PRODUCT_LOGISTIC_DETAILS><CUSTOMS_TARIFF_NUMBER>'+element('CUSTOMS_NUMBER',p.customsTariff)+'</CUSTOMS_TARIFF_NUMBER></PRODUCT_LOGISTIC_DETAILS>';
   return result+'</PRODUCT>';
 }
-export function exportSupplierProducts(rowsIterable,{profile,submission={},format='products.jsonl'}={}){
+
+/**
+ * Verify transaction coverage from the immutable review's supplier-ID column.
+ * Only IDs are retained; products and XML are never materialized a second time.
+ */
+export function checkSupplierProductCoverage(productIdsIterable, profile, {submission = {}} = {}) {
+  const selected=normalizeSupplierProfile(profile),v=validation(selected),ids=new Set();
+  requireValue(productIdsIterable&&typeof productIdsIterable!=='string'&&typeof productIdsIterable[Symbol.iterator]==='function','SUPPLIER_COVERAGE_IDS','Provide the original synchronous immutable supplier-ID iterator.');
+  requireValue(plain(submission),'SUPPLIER_COVERAGE_SUBMISSION','Provide the immutable submission metadata object.');
+  let productCount=0;
+  for(const id of productIdsIterable){
+    const path='/supplierProductIds/'+productCount;productCount++;
+    if(typeof id!=='string'||!id.length){
+      v.add('error','SUPPLIER_ID_REQUIRED',path,'The immutable review contains a product without its exact supplier product identifier.',refs('bmecat-5.0','§4c–f'));
+      continue;
+    }
+    if(ids.has(id))v.add('error','SUPPLIER_EXPORT_DUPLICATE',path,'The immutable review contains repeated supplier product identifier '+JSON.stringify(id)+'. Keep one product per supplier identifier.',refs('bmecat-5.0','§4c–f'));
+    ids.add(id);
+  }
+  if(!productCount)v.add('error','SUPPLIER_EXPORT_EMPTY','/supplierProductIds','A BMEcat transaction must include at least one original product.',refs('bmecat-5.0','§4c–f'));
+  let expectedProductCount=null;
+  if(selected.envelope.transaction==='T_UPDATE_PRICES'){
+    const suppliedPrevious=submission.previousProductIds??selected.envelope.previousProductIds;
+    const path=submission.previousProductIds!==undefined&&submission.previousProductIds!==null?'/submission/previousProductIds':'/profile/envelope/previousProductIds';
+    if(!Array.isArray(suppliedPrevious)){
+      v.add('error','PRICE_UPDATE_COVERAGE',path,'A price-only update needs the previous complete catalog product-ID set to preserve its coverage.',refs('bmecat-5.0','§2 p7; §4e pp52–53'));
+    }else{
+      const expected=list(suppliedPrevious,path),expectedSet=new Set(expected);expectedProductCount=expected.length;
+      for(let index=0;index<expected.length;index++)if(!ids.has(expected[index]))
+        v.add('error','PRICE_UPDATE_PRODUCT_MISSING',path+'/'+index,'The price-only update is missing original catalog product '+JSON.stringify(expected[index])+'. Include that product in the selected edition.',refs('bmecat-5.0','§2 p7; §4e pp52–53'));
+      for(const id of ids)if(!expectedSet.has(id))
+        v.add('error','PRICE_UPDATE_PRODUCT_ADDED','/supplierProductIds/'+escapedPointer(id),'The price-only update contains product '+JSON.stringify(id)+' outside the original catalog. Select the correct previous catalog or a product-update transaction.',refs('bmecat-5.0','§2 p7; §4e pp52–53'));
+    }
+  }
+  return freeze({productCount,distinctProductCount:ids.size,expectedProductCount,findings:v.findings});
+}
+
+export function exportSupplierProducts(rowsIterable,{profile,submission={},format='products.jsonl',productIds}={}){
   const selected=normalizeSupplierProfile(profile);
   submission=freeze(clone(submission));
   requireValue(rowsIterable&&typeof rowsIterable[Symbol.iterator]==='function','SUPPLIER_EXPORT_ROWS','Provide the original synchronous immutable review row iterator.');
@@ -1058,6 +1095,8 @@ export function exportSupplierProducts(rowsIterable,{profile,submission={},forma
   requireValue(['bmecat.xml','bmecat-5.0','xml'].includes(format),'SUPPLIER_EXPORT_FORMAT','Select products.jsonl or bmecat.xml.');
   requireValue(selected.targets.includes('bmecat-5.0'),'SUPPLIER_EXPORT_TARGET','Select the BMEcat 5.0 target before XML export.');
   const global=validation(selected);checkEnvelope(selected,global,submission);checkPartyIds(selected,global);
+  const coverage=productIds===undefined?null:checkSupplierProductCoverage(productIds,selected,{submission});
+  if(coverage)global.findings.push(...coverage.findings);
   const globalErrors=global.findings.filter(x=>x.severity==='error');
   if(globalErrors.length)throw failure('SUPPLIER_EXPORT_REVIEW','Resolve the catalog-envelope findings before XML export.',{findings:globalErrors});
   const e=selected.envelope,metadata=freeze({schema:'stellar-forge.supplier-export.v1',profileId:selected.id,implementation:PROFILE_ID,target:'bmecat-5.0',sources:PROFILE_SOURCE,submission:clone(submission),transaction:e.transaction,catalogId:e.catalogId,catalogVersion:e.catalogVersion,generationDate:e.generationDate});

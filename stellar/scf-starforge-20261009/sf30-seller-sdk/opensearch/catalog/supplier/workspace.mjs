@@ -2,7 +2,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { clone, canonical, digest, identifier, now } from '../../workspace/store.mjs';
 import { normalizeSupplierProfile, supplierProductTemplate, checkSupplierProduct,
-  exportSupplierProducts, PROFILE_ID, PROFILE_SOURCE } from './profile.mjs';
+  exportSupplierProducts, checkSupplierProductCoverage, PROFILE_ID, PROFILE_SOURCE } from './profile.mjs';
 import { PLAN_SCHEMA, CORRECTION_SCHEMA, REVIEW_SCHEMA, ROW_SCHEMA, SUPPLIER_TABLES,
   fail, text, revision, seal, verifySealed, normalizeBindings, normalizePatches,
   projectSupplier, applyCorrections, correctionFor, supplierId, rowCounts, setupSupplierTables } from './model.mjs';
@@ -13,6 +13,9 @@ const like = value => '%' + value.replaceAll('\\','\\\\').replaceAll('%','\\%').
 const count = (db, sql, ...values) => Number(db.prepare(sql).get(...values).n);
 const issue = (code,path,message) => ({ severity:'error',code,path,message,
   rule:{section:'Supplier submission workspace',url:'https://github.com/woahwhattheheck/public-commons-sprint-2026/tree/main/stellar/scf-starforge-20261009/sf30-seller-sdk/opensearch/catalog/supplier'} });
+function* productIds(db,reviewId) {
+  for(const row of db.prepare('SELECT supplier_id FROM catalog_supplier_products WHERE review_id=? ORDER BY material_key').iterate(reviewId))yield row.supplier_id;
+}
 function page(offset=0,limit=50) {
   offset=Number(offset);limit=Number(limit);
   if(!Number.isSafeInteger(offset)||offset<0||!Number.isSafeInteger(limit)||limit<1||limit>200)
@@ -166,6 +169,9 @@ export class SupplierWorkspace {
         }
         total++;
       }
+      const globalFindings=checkSupplierProductCoverage(productIds(this.db,id),plan.profile).findings;
+      const globalCounts=rowCounts(globalFindings);errors+=globalCounts.errors;warnings+=globalCounts.warnings;
+      for(const finding of globalFindings){const key=finding.severity+':'+finding.code,prior=codes.get(key)??{severity:finding.severity,code:finding.code,count:0};prior.count++;codes.set(key,prior);}
       const findProductIn=(reviewId,pid)=>{
         if(typeof pid!=='string'||!pid.length)return null;
         const matches=this.db.prepare('SELECT record_json FROM catalog_supplier_products WHERE review_id=? AND supplier_id=? LIMIT 2').all(reviewId,pid);
@@ -195,7 +201,7 @@ export class SupplierWorkspace {
       this.db.exec('DELETE FROM supplier_gtin_stage');
       const review=seal({schema:REVIEW_SCHEMA,id,planId:plan.id,planRevision:plan.revision,catalogId:plan.catalogId,tenantId:plan.tenantId,
         editionId:edition.id,editionReviewSha256:edition.reviewSha256,source:clone(edition.source),plan:clone(plan),
-        correctionsRootSha256,rowsRootSha256:supplierRowsRoot(this.db,id),createdAt:at,
+        correctionsRootSha256,rowsRootSha256:supplierRowsRoot(this.db,id),createdAt:at,globalFindings:clone(globalFindings),
         counts:{total,readyProducts:total-errorProducts,errorProducts,errors,warnings},
         findings:[...codes.values()].sort((a,b)=>(a.severity+':'+a.code).localeCompare(b.severity+':'+b.code,'en'))});
       put(this.db,'catalog_supplier_reviews',review,[id,plan.id,at,json(review)]);
@@ -229,9 +235,10 @@ export class SupplierWorkspace {
     if(format==='issues.csv'){
       const csv=value=>'"'+String(value??'').replaceAll('"','""')+'"';
       function* issues(){
-        yield ['materialId','supplierProductId','severity','code','path','message','ruleSection','ruleUrl'].map(csv).join(',')+'\r\n';
+        yield ['scope','materialId','supplierProductId','severity','code','path','message','ruleSection','ruleUrl'].map(csv).join(',')+'\r\n';
+        for(const finding of review.globalFindings??[])yield ['delivery','','',finding.severity,finding.code,finding.path,finding.message,finding.rule?.section,finding.rule?.url].map(csv).join(',')+'\r\n';
         for(const row of rows())for(const finding of row.findings)
-          yield [row.materialId,supplierId(row.product),finding.severity,finding.code,finding.path,finding.message,
+          yield ['product',row.materialId,supplierId(row.product),finding.severity,finding.code,finding.path,finding.message,
             finding.rule?.section, finding.rule?.url].map(csv).join(',')+'\r\n';
       }
       return{type:'text/csv; charset=utf-8',filename:filename+format,body:issues()};
@@ -243,7 +250,7 @@ export class SupplierWorkspace {
     if(format!=='bmecat.xml')fail('SUPPLIER_EXPORT_FORMAT_INVALID','Choose review.json, issues.csv, products.jsonl or bmecat.xml.');
     if(review.counts.errors||!review.counts.total)
       fail('SUPPLIER_CORRECTIONS_REQUIRED','Resolve the '+review.counts.errors+' delivery errors and review a nonempty product edition before creating BMEcat.');
-    const exported=exportSupplierProducts(rows(),{profile:review.plan.profile,submission:review,format});
+    const exported=exportSupplierProducts(rows(),{profile:review.plan.profile,submission:review,format,productIds:productIds(this.db,review.id)});
     return{type:exported.type??exported.contentType,filename:exported.filename??filename+format,body:exported.body};
   }
 }

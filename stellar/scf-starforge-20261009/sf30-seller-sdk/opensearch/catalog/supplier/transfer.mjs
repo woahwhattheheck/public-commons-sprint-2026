@@ -1,6 +1,6 @@
 // MIT. Complete supplier histories and immutable reviewed products in catalog v2 bundles.
 import { canonical, digest, identifier } from '../../workspace/store.mjs';
-import { normalizeSupplierProfile } from './profile.mjs';
+import { normalizeSupplierProfile, checkSupplierProductCoverage } from './profile.mjs';
 import { PLAN_SCHEMA,CORRECTION_SCHEMA,REVIEW_SCHEMA,ROW_SCHEMA,SUPPLIER_TABLES,
   SUPPLIER_KEYS,fail,verifySealed,normalizeBindings,normalizePatches,projectSupplier,applyCorrections,
   correctionFor,supplierId,rowCounts } from './model.mjs';
@@ -133,8 +133,14 @@ export function validateSupplierClosure(db,header) {
     if(canonical(plan)!==canonical(review.plan)||plan.editionId!==review.editionId||
       !edition||edition.reviewSha256!==review.editionReviewSha256)
       fail('SUPPLIER_BUNDLE_REVIEW_PLAN_CHANGED','A supplier review differs from its original submission and edition.');
-    let errors=0,warnings=0,errorProducts=0,total=0;
+    function* originalIds(){for(const row of db.prepare('SELECT supplier_id FROM catalog_supplier_products WHERE review_id=? ORDER BY material_key').iterate(review.id))yield row.supplier_id;}
+    const globalFindings=checkSupplierProductCoverage(originalIds(),plan.profile).findings;
+    if(canonical(globalFindings)!==canonical(review.globalFindings??[]))
+      fail('SUPPLIER_BUNDLE_DELIVERY_FINDINGS_CHANGED','The delivery findings differ from its original product identifiers and selected profile.');
+    const globals=rowCounts(globalFindings);
+    let errors=globals.errors,warnings=globals.warnings,errorProducts=0,total=0;
     const codes=new Map();
+    for(const finding of globalFindings){const key=finding.severity+':'+finding.code,prior=codes.get(key)??{severity:finding.severity,code:finding.code,count:0};prior.count++;codes.set(key,prior);}
     for(const saved of db.prepare('SELECT * FROM catalog_supplier_products WHERE review_id=? ORDER BY material_key').iterate(review.id)){
       const row=parse(saved),material=originalMaterial(db,review.editionId,row.materialKey);
       const base=projectSupplier(material,plan.bindings),baseHash=digest(base);
