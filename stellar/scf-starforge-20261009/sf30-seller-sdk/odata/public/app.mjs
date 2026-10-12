@@ -2,6 +2,7 @@
 const $=id=>document.getElementById(id),esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let state,selectedEdition=null,loadedRows=[],rowPage=0,merchant=null,pageIdentity=null;
 let liveProducts=[],selectedLive=null,liveDetail=null,livePlanIdentity=null;
+let semanticPreview=null,semanticSelectionKey=null,semanticRequest=0;
 function notify(message,error=false){$('notice').textContent=message;$('notice').classList.toggle('error',error);}
 async function api(path,body){const response=await fetch(path,body===undefined?{}:{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
   const result=await response.json();if(!response.ok)throw new Error(result.message||result.error||'Operation failed.');return result;}
@@ -43,6 +44,52 @@ function drawRows(){if(!loadedRows.length){$('rows').innerHTML='<div class="empt
   const start=rowPage*50;$('rows').innerHTML=table(paths,loadedRows.slice(start,start+50).map(row=>paths.map(path=>value(row,path))));
   $('row-pager').innerHTML=`<button class="small" data-page="-1" ${rowPage===0?'disabled':''}>Previous</button><span>${start+1}–${Math.min(start+50,loadedRows.length)} of ${loadedRows.length}</span><button class="small" data-page="1" ${start+50>=loadedRows.length?'disabled':''}>Next</button>`;
 }
+function exportSelection(){
+  const data=Object.fromEntries(new FormData($('export-form'))),selection={id:data.id};
+  if(data.fields.trim())selection.fields=data.fields.split(',').map(value=>value.trim());
+  return selection;
+}
+function clearSemanticPreview(){
+  semanticPreview=null;semanticSelectionKey=null;semanticRequest++;
+  $('semantic-summary').textContent='Preview the selected fields to inspect their original CSDL types, complete keys, and receiving columns.';
+  $('semantic-columns').innerHTML='';$('semantic-source').textContent='';
+  $('semantic-raw').hidden=true;$('semantic-download').disabled=true;
+}
+function drawSemanticPreview(dictionary){
+  const projectedKeys=dictionary.primaryKey.projected||[],source=dictionary.source;
+  const selected=state?.editions.find(value=>value.id===exportSelection().id);
+  $('semantic-summary').innerHTML=`<div class="metadata"><span>Entity: <code>${esc(source.entityType)}</code></span><span>Source keys: ${esc(dictionary.primaryKey.source.join(', ')||'None')}</span><span>${dictionary.columns.length} receiving columns</span>${selected?`<span>${selected.rowCount} retained rows</span>`:''}</div><p>${dictionary.primaryKey.complete?'All source keys are retained.':'The selected columns omit a source key.'} This preview binds the next matching export to these exact field meanings.</p>`;
+  const facetNames=[['precision','Precision'],['scale','Scale'],['maxLength','Max length'],['unicode','Unicode'],['sRID','SRID'],['defaultValue','Default']];
+  $('semantic-columns').innerHTML=table(['Receiving column','Original property','CSDL definition','Stored value','Meaning'],dictionary.columns.map(column=>{
+    const original=column.sourceDefinition,facets=facetNames.filter(([key])=>Object.hasOwn(original,key))
+      .map(([key,label])=>label+': '+String(original[key])).join(' · ');
+    const sourceType=column.role==='state'?'Source presence':original.type+(original.collection?' []':'');
+    const nullability=column.role==='state'?'value / null / missing':original.nullable?'Nullable source':'Required source';
+    return [
+      `<code>${esc(column.name)}</code>${projectedKeys.includes(column.name)?'<div class="muted">Source key</div>':''}`,
+      `<code>${esc(column.sourceField)}</code><div class="muted">${esc(column.role)}</div>`,
+      `${esc(sourceType)}<div class="muted">${esc(nullability)}</div>${facets?`<div class="muted">${esc(facets)}</div>`:''}`,
+      `${esc(column.type)}<div class="muted">${esc(column.encoding)} · ${column.nullable?'nullable':'required'}</div>`,
+      esc(column.dictionary.notes||'')
+    ];
+  }));
+  $('semantic-source').textContent=JSON.stringify(dictionary,null,2);
+  $('semantic-raw').hidden=false;$('semantic-download').disabled=false;
+}
+async function previewSemantics(){
+  const selection=exportSelection(),key=JSON.stringify(selection),request=++semanticRequest;
+  if(!selection.id)throw new Error('Choose an accepted edition to preview its field meanings.');
+  const dictionary=await api('/api/semantics',selection);
+  if(request!==semanticRequest||key!==JSON.stringify(exportSelection()))
+    throw new Error('The selected edition or fields changed. Preview the current selection.');
+  semanticPreview=dictionary;semanticSelectionKey=key;drawSemanticPreview(dictionary);
+  return dictionary;
+}
+function exportFiles(record){
+  const link=file=>`<a href="/api/export?id=${encodeURIComponent(record.id)}&file=${encodeURIComponent(file)}">${esc(file)}</a>`;
+  const main=record.files.filter(file=>!file.startsWith('capture/')),capture=record.files.filter(file=>file.startsWith('capture/'));
+  return main.map(link).join(' · ')+(capture.length?`<details><summary>${capture.length} original source files</summary><div>${capture.map(link).join('<br>')}</div></details>`:'');
+}
 async function refresh(){
   const oldConnection=$('connection').value;state=await api('/api/state');
   $('stats').innerHTML=`<dt>Connections</dt><dd>${state.connections.length}</dd><dt>Saved queries</dt><dd>${state.plans.length}</dd><dt>Complete editions</dt><dd>${state.editions.filter(value=>value.status==='COMPLETE').length}</dd><dt>Exports</dt><dd>${state.exports.length}</dd>`;
@@ -52,12 +99,13 @@ async function refresh(){
   $('query-url').textContent=state.plans.find(value=>value.id===$('review-plan').value)?.query.url||'';
   const complete=state.editions.filter(value=>value.status==='COMPLETE');options('review-edition',complete);options('compare-before',complete);options('compare-after',complete);
   options('export-edition',complete.filter(value=>value.decisions.at(-1)?.decision==='accept'));
+  if(semanticPreview&&semanticSelectionKey!==JSON.stringify(exportSelection()))clearSemanticPreview();
   $('edition-list').innerHTML=table(['Edition','Entity set','State','Rows / pages','Created','Actions'],state.editions.map(value=>[
     esc(value.label),esc(value.entitySet),badge(value.status),`${value.rowCount} / ${value.pageCount}`,esc(time(value.createdAt)),
     `<div class="row-actions"><button class="small" data-edition="${esc(value.id)}">Open</button>${value.status!=='COMPLETE'?`<button class="small" data-resume="${esc(value.id)}">Resume</button><button class="small" data-pause="${esc(value.id)}">Pause</button>`:''}</div>`]));
   if(!selectedEdition&&state.editions.length)selectedEdition=state.editions.at(-1).id;drawEdition();
-  $('exports').innerHTML=table(['Dataset','Rows','Merchant','Files'],state.exports.map(value=>[esc(value.dataset.name),String(value.dataset.rowCount),value.merchant?'Configured':'Dataset',
-    value.files.map(file=>`<a href="/api/export?id=${esc(value.id)}&file=${esc(file)}">${esc(file)}</a>`).join(' · ')]));
+  $('exports').innerHTML=table(['Dataset','Rows','Merchant','Field meanings','Files'],state.exports.map(value=>[esc(value.dataset.name),String(value.dataset.rowCount),value.merchant?'Configured':'Dataset',
+    value.semantics?`<a href="/api/export?id=${encodeURIComponent(value.id)}&file=semantics.json" title="${esc(value.semantics.sha256)}">Open dictionary</a>`:'Original export',exportFiles(value)]));
   options('query-export',state.exports,value=>value.dataset.name+' · '+value.id.slice(0,8));options('merchant-export',state.exports.filter(value=>value.merchant),value=>value.dataset.name+' · '+value.id.slice(0,8));
   options('live-plan',state.plans.filter(value=>value.reviewedAt));drawLiveScope();
   if(state.liveProducts?.length||!$('live').hidden)await refreshLive();
@@ -87,8 +135,18 @@ $('edition-review-form').onsubmit=event=>{event.preventDefault();action('Receivi
 $('compare-form').onsubmit=event=>{event.preventDefault();action('Edition comparison',async()=>{const form=new FormData(event.target),result=await api('/api/compare?before='+encodeURIComponent(form.get('before'))+'&after='+encodeURIComponent(form.get('after')));
   $('comparison').innerHTML=`<div class="metric-row">${[['Added',result.added.length],['Removed',result.removed.length],['Changed',result.changed.length]].map(([name,total])=>`<div class="metric"><b>${total}</b><span>${name.toUpperCase()}</span></div>`).join('')}</div><p>${esc(result.note)}</p>`+
     table(['Change','Entity key','Property','Before','After'],[...result.changed.flatMap(row=>row.fields.map(field=>['Changed',`<code>${esc(row.key)}</code>`,esc(field.path),esc(JSON.stringify(field.before)),esc(JSON.stringify(field.after))])),...result.added.map(row=>['Added',esc(row.key),'','',esc(JSON.stringify(row.row))]),...result.removed.map(row=>['Removed',esc(row.key),'',esc(JSON.stringify(row.row)),''])]);},event.submitter);};
+$('preview-semantics').onclick=event=>action('Preview field meanings',previewSemantics,event.currentTarget);
+$('export-form').elements.fields.addEventListener('input',clearSemanticPreview);
+$('export-edition').addEventListener('change',clearSemanticPreview);
+$('semantic-download').onclick=()=>{
+  if(!semanticPreview||semanticSelectionKey!==JSON.stringify(exportSelection())){clearSemanticPreview();return;}
+  const url=URL.createObjectURL(new Blob([JSON.stringify(semanticPreview,null,2)+'\n'],{type:'application/json'}));
+  const link=document.createElement('a');link.href=url;link.download='odata-field-meanings.json';
+  document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+};
 $('merchant-enabled').onchange=()=>$('payment-fields').hidden=!$('merchant-enabled').checked;
-$('export-form').onsubmit=event=>{event.preventDefault();action('Create dataset export',async()=>{const data=Object.fromEntries(new FormData(event.target)),input={id:data.id,name:data.name};if(data.fields.trim())input.fields=data.fields.split(',').map(value=>value.trim());
+$('export-form').onsubmit=event=>{event.preventDefault();action('Create dataset export',async()=>{const data=Object.fromEntries(new FormData(event.target)),selection=exportSelection(),input={...selection,name:data.name};
+  if(semanticPreview&&semanticSelectionKey===JSON.stringify(selection))input.expectedSemanticSha256=semanticPreview.sha256;
   if($('merchant-enabled').checked){input.origin=data.origin;input.path=data.path;input.payment={scheme:'exact',network:data.network,asset:data.asset,amount:data.amount,payTo:data.payTo,maxTimeoutSeconds:300};}
   return api('/api/export',input);},event.submitter);};
 $('query-export-form').onsubmit=event=>{event.preventDefault();action('Dataset preview',async()=>{const result=await api('/api/query',Object.fromEntries(new FormData(event.target)));const body=result.body;

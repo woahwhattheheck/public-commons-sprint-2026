@@ -44,6 +44,7 @@ export async function startRuntimeWorkspace({ directory, port = 8465, openApiSet
     ['/managed.mjs', 'managed.mjs', 'text/javascript; charset=utf-8'],
     ['/applications.mjs', 'applications.mjs', 'text/javascript; charset=utf-8'],
     ['/openapi-application.mjs', 'openapi-application.mjs', 'text/javascript; charset=utf-8'],
+    ['/accounting-application.mjs', 'accounting-application.mjs', 'text/javascript; charset=utf-8'],
     ['/openapi-connection-setup.mjs', 'openapi-connection-setup.mjs', 'text/javascript; charset=utf-8'],
     ['/style.css', 'style.css', 'text/css; charset=utf-8'],
     ['/transfer.mjs', 'transfer.mjs', 'text/javascript; charset=utf-8'],
@@ -243,7 +244,7 @@ export async function startRuntimeWorkspace({ directory, port = 8465, openApiSet
       if (url.pathname === '/api/applications/connect')
         return send(202, await model.applicationsConnect(await body(req, ['applicationId'])));
       if (url.pathname === '/api/applications/start-review')
-        return send(200, await model.applicationsStartReview(await body(req, ['applicationId'])));
+        return send(200, await model.applicationsStartReview({ ...await body(req, ['applicationId']), navigationOrigin: origin }));
       if (url.pathname === '/api/applications/start')
         return send(202, await model.applicationsStart(await body(req, ['applicationId', 'requestId', 'reviewId'])));
       if (url.pathname === '/api/applications/stop')
@@ -275,7 +276,8 @@ export async function startRuntimeWorkspace({ directory, port = 8465, openApiSet
   server.requestTimeout = 120000; server.headersTimeout = 10000; server.keepAliveTimeout = 5000;
   server.maxRequestsPerSocket = 100;
   await new Promise((done, reject) => { server.once('error', reject); server.listen(port, HOST, done); });
-  host = HOST + ':' + server.address().port; origin = 'http://' + host;
+  origin = new URL('http://' + HOST + ':' + server.address().port).origin;
+  host = new URL(origin).host;
   return { origin, url: origin + '/#' + token, directory: model.directory,
     async close() {
       if (closing) return;
