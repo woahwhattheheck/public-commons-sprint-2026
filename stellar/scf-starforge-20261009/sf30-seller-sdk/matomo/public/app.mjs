@@ -123,8 +123,8 @@ function merchantView(){
   const prepare=editions.length?form('new-merchant',[
     field('Immutable source edition','editionId',currentId('edition',editions),{options:options(editions),required:true}),
     el('div',{class:'grid'},
-      field('Merchant name','name','',{required:true}),
-      field('Descriptor HTTPS origin','origin','',{required:true,help:'Canonical HTTPS origin of the reviewed merchant.'}),
+      field('Merchant name','name','',{required:true,attrs:{maxLength:32,pattern:'[ -~]{1,32}'},help:'1–32 printable ASCII characters, as required by the original seller offer.'}),
+      field('Descriptor HTTPS origin','origin','',{required:true,help:'Canonical public HTTPS descriptor. For a private evaluation, use a reserved .example name and identify that scope; the separately bound loopback server is not a deployed HTTPS endpoint.'}),
       field('Stellar network','network','stellar:testnet',{required:true}),
       field('Asset contract','asset','',{required:true}),
       field('Recipient account','payTo','',{required:true}),
@@ -140,7 +140,7 @@ function merchantView(){
     }});
     await refresh();
   }):el('div',{class:'empty'},'Prepare a complete typed edition first.');
-  blocks.push(card('Configure a merchant from a retained edition',el('p',{},'Use the original SQLite query workbench and reviewed payment terms. The descriptor origin is the published HTTPS address; a local development release can separately bind a loopback port.'),prepare));
+  blocks.push(card('Configure a merchant from a retained edition',el('p',{},'Use the original SQLite query workbench and reviewed payment terms. The complete public draft is checked by the original seller compiler before it is retained. An internal evaluation can use an explicitly reserved .example descriptor while its runtime separately binds a loopback port.'),prepare));
   blocks.push(card('Retained merchant drafts',records(merchants,'merchant','merchant')));
   const selected=S.detail?.merchant?.merchant??find(merchants,S.selected.merchant),workbench=S.detail?.merchant?.workbench;
   if(selected){

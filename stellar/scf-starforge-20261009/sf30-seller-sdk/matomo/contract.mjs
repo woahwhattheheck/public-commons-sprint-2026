@@ -118,5 +118,6 @@ export function reportIdentity(report) {
 }
 export function safeError(error) {
   const code = typeof error?.code === 'string' && /^[A-Z][A-Z0-9_]{0,100}$/.test(error.code) ? error.code : 'MATOMO_OPERATION_FAILED';
-  return {code, message: code, status: Number.isInteger(error?.status) ? error.status : 500};
+  const publicMessages={MATOMO_MERCHANT_NAME_INVALID:'Use 1–32 printable ASCII characters for the merchant name.',MATOMO_MERCHANT_DRAFT_INVALID:'The original seller compiler rejected this draft. Check the canonical public HTTPS descriptor, 1–32 character ASCII name, payment terms, and query/public-input definitions.'};
+  return {code, message: publicMessages[code]??code, status: Number.isInteger(error?.status) ? error.status : 500};
 }
