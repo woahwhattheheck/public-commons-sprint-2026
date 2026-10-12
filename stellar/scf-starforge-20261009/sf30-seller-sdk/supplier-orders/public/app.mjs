@@ -1,12 +1,14 @@
 // MIT. Supplier-order operator on the original private workspace HTTP API.
 import { sha256File, Sha256 } from '/file-sha256.mjs';
 import { ZERO, exact, add, multiply, divide, rounded, decimal } from '/numbers.mjs';
+import { createSupplierOrderTransportDesk } from '/transport.mjs';
 
 const $=id=>document.getElementById(id), API='/api/supplier-orders';
 const clone=value=>JSON.parse(JSON.stringify(value)), json=value=>JSON.stringify(value,null,2);
 const encoded=value=>encodeURIComponent(String(value)), PAGE=30;
 const SESSION='supplier-orders:'+location.origin;
 const state={token:null,workspace:null,orders:[],orderTotal:0,orderOffset:0,order:null,documents:[],documentTotal:0,documentOffset:0,document:null,drafts:[],draftTotal:0,draftOffset:0,draftScope:null,draftSequence:0,orderSequence:0,draft:null,working:null,lineIndex:null,dirty:false,prepared:null,request:null,requestFile:null,busy:false,editorGeneration:0,editorIdentity:null,tab:'lines',refreshSequence:0};
+let transportDesk;
 const hashes=new WeakMap();
 const labels={ORDER:'Order',ORDERRESPONSE:'Confirmation',DISPATCHNOTIFICATION:'Dispatch',INVOICE:'Invoice'};
 function node(tag,text,css){const n=document.createElement(tag);if(text!==undefined&&text!==null)n.textContent=String(text);if(css)n.className=css;return n;}
@@ -78,6 +80,7 @@ async function reviewCurrentRequest(){
   if(op&&!['FAILED','INTERRUPTED'].includes(op.state))throw new Error('The original operation is still active; reopen its response first.');
   privateStorage('previous-conflict',JSON.stringify(r));retireRequest(op);await refresh({preserveEditor:true});
   if(r.kind==='source')openSource();else if(r.kind==='package-import')$('transfer-dialog').showModal();else if(r.kind==='draft-save'){const current=r.body.draftId?await api('/drafts/'+encoded(r.body.draftId)):await api('/drafts/new',{method:'POST',body:{kind:r.body.kind,orderIds:r.body.orderIds}});const replaced=openEditor(current)!==false;state.conflictDraft=clone(r.body);$('draft-conflict-json').textContent=json(r.body);shown('draft-conflict',true);message(replaced?'The current saved draft is open. Compare the retained earlier edits before saving a new request.':'Your current unsaved document is retained. The earlier conflicting request is available below for comparison.');}
+  else if(r.kind.startsWith('transport-'))await transportDesk.reviewRequest(r);
   else message('The conflicting request is retained in this tab’s history. Review current source and revisions before creating a new request.');
 }
 function properties(target,entries){clear(target);const list=target.tagName==='DL'?target:node('dl');for(const [label,value]of entries){if(value===undefined||value===null||value==='')continue;list.append(node('dt',label),node('dd',typeof value==='object'?json(value):value));}if(list!==target)target.append(list);}
@@ -133,7 +136,7 @@ async function selectDocument(id){
   const row=await api('/documents/'+encoded(id));state.document=row;$('document-title').textContent=(labels[row.kind]??row.kind)+' '+row.documentId;
   properties($('document-metadata'),[['Revision',row.revision],['Source file',row.source?.name],['Original bytes',row.source?.bytes],['SHA-256',row.source?.sha256],['Order references',row.orderIds],['Direction',row.direction],['Saved',row.createdAt]]);
   findingList($('document-findings'),row.review?.findings??[]);$('document-json').textContent=json(row.document);$('selection-reason').value='';
-  shown('document-selection',Boolean(state.order)&&!currentSelections().has(id));$('document-copy-draft').disabled=row.kind==='ORDER';shown('document-detail',true);selectTab('documents');
+  shown('document-selection',Boolean(state.order)&&!currentSelections().has(id));$('document-copy-draft').disabled=row.kind==='ORDER';shown('document-detail',true);transportDesk.documentSelected(row);selectTab('documents');
 }
 function selectTab(name){state.tab=name;for(const button of document.querySelectorAll('[data-tab]')){const active=button.dataset.tab===name;button.classList.toggle('active',active);button.setAttribute('aria-selected',String(active));shown('tab-'+button.dataset.tab,active);}}
 async function loadDrafts(){
@@ -311,6 +314,7 @@ async function downloadSelectedDocument(){
   const row=state.document;if(!row)return;return downloadFile({id:row.id,name:row.source.name,bytes:row.source.bytes,sha256:row.source.sha256,mimeType:'application/xml'},'/documents/'+encoded(row.id)+'/file');
 }
 async function receiveResult(kind,result,request){
+  if(kind.startsWith('transport-'))return transportDesk.receiveResult(kind,result,request);
   if(kind==='draft-save'){const draft=result.draft??(result.draftId?await api('/drafts/'+encoded(result.draftId)):null);if(!draft)throw new Error('The saved operation did not return its original draft identity.');if(!state.working||request?.editorIdentity===state.editorIdentity&&request?.editorGeneration===state.editorGeneration){openEditor(draft,{accepted:true});message('Saved working document revision '+draft.revision+'.');}else if(request?.editorIdentity===state.editorIdentity){state.draft=clone(draft);state.dirty=true;$('draft-revision').textContent='Saved original revision '+draft.revision+' · newer local edits retained';$('draft-save-state').textContent='The original request is saved; newer edits remain unsaved';$('prepare-draft').disabled=true;message('Saved original request revision '+draft.revision+'. Your newer edited fields remain in the working document.');}else{message('The original request saved '+draft.id+' revision '+draft.revision+'. Your different working document remains open; use Working drafts to inspect the saved result.');}await refresh({preserveEditor:true});return;}
   if(kind==='draft-prepare'){const record=result.document??(result.documentId?await api('/documents/'+encoded(result.documentId)):null),file=result.file;if(!record||!file)throw new Error('The completed preparation must return its document and full file receipt.');if(!state.working&&request?.body.draftId)openEditor(await api('/drafts/'+encoded(request.body.draftId)),{accepted:true});state.prepared={record,file};properties($('prepared-metadata'),[['Document',record.documentId],['Revision',record.revision],['Original working draft',request?.body.draftId??record.draftId],['Prepared from working revision',request?.body.expectedRevision??record.draftRevision],['File',file.name],['Bytes',file.bytes],['SHA-256',file.sha256]]);shown('prepared-result',true);await refresh({preserveEditor:true});message('Prepared the complete XML. Review its revision selection when it should contribute to current quantities.');return;}
   if(kind==='package-export'){const file=result.file;if(!file)throw new Error('The completed workspace export has no retained file receipt.');const target=clear($('package-result'));properties(target,[['File',file.name],['Bytes',file.bytes],['SHA-256',file.sha256]]);target.append(button('Download complete customer ZIP',()=>downloadFile(file)));message('The complete customer package is retained for download.');return;}
@@ -320,6 +324,9 @@ async function receiveResult(kind,result,request){
 }
 
 auth();
+transportDesk=createSupplierOrderTransportDesk({api,mutate,downloadFile,selectDocument,message,guard,
+  getDocument:()=>state.document,getPrepared:()=>state.prepared?.record,
+  refreshWorkspace:()=>refresh({preserveEditor:true})});
 for(const value of ['AWAITING_CONFIRMATION','IN_PROGRESS','REVIEW','COMPLETE']){const option=node('option',value.replaceAll('_',' '));option.value=value;$('order-status').append(option);}
 for(const control of document.querySelectorAll('[data-close]'))control.addEventListener('click',()=>$(control.dataset.close).close());
 for(const control of document.querySelectorAll('[data-tab]'))control.addEventListener('click',()=>selectTab(control.dataset.tab));

@@ -58,7 +58,7 @@ export async function readSupplierOrderWorkspaceConfiguration(path){
   const base=dirname(path),workspaces=Object.create(null),directories=new Set();
   for(const [alias,item]of Object.entries(raw.workspaces)){
     identifier(alias,'Supplier-order workspace alias');
-    exact(item,['label','directory','inputs'],['directory']);
+    exact(item,['label','directory','inputs','transportConfigPath'],['directory']);
     const directory=await realpath(hostPath(item.directory,base));await privateSupportDirectory(directory);
     const info=await lstat(directory);
     if(process.platform!=='win32'&&process.getuid&&info.uid!==process.getuid())
@@ -71,7 +71,15 @@ export async function readSupplierOrderWorkspaceConfiguration(path){
     for(const [inputId,input]of Object.entries(declared)){
       identifier(inputId,'Original input alias');inputs[inputId]=inputDeclaration(input,base);
     }
-    workspaces[alias]=Object.freeze({label:line(item.label??alias,'Supplier-order workspace label'),directory,inputs:Object.freeze(inputs)});
+    let transportConfigPath;
+    if(item.transportConfigPath!==undefined){
+      transportConfigPath=hostPath(item.transportConfigPath,base);
+      const transport=await privateJson(transportConfigPath);
+      if(!plain(transport)||transport.schema!=='stellar-forge.supplier-order-https-config.v1'||!Array.isArray(transport.channels))
+        throw failure('CONFIGURATION_ERROR','Select the original private supplier-order HTTPS configuration.');
+    }
+    workspaces[alias]=Object.freeze({label:line(item.label??alias,'Supplier-order workspace label'),directory,inputs:Object.freeze(inputs),
+      ...(transportConfigPath===undefined?{}:{transportConfigPath})});
   }
   return Object.freeze({workspaces:Object.freeze(workspaces)});
 }

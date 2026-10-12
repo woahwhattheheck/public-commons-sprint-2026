@@ -9,6 +9,7 @@ import { clone, now } from '../opensearch/workspace/store.mjs';
 import { PROFILE_ID, normalizedDocument, sourceDocumentId, businessKey, data, fail, canonical, digest } from './core.mjs';
 import { TABLES, TABLE_KEYS, MAX_PACKAGE_BYTES } from './workspace.mjs';
 import { parseOpenTransDocument } from './opentrans.mjs';
+import { validateSupplierOrderTransmission, TRANSMISSION_SCHEMA } from './transport.mjs';
 
 export const PACKAGE_SCHEMA='stellar-forge.supplier-orders-package.v1';
 const SNAPSHOT_SCHEMA='stellar-forge.supplier-orders-snapshot.v1';
@@ -73,6 +74,10 @@ function completeRow(table,row){
     if(record.kind!==row.kind||record.kind!==record.document.kind||record.documentId!==record.document.documentId||record.businessKey!==row.business_key||record.businessKey!==businessKey(record.document)||record.id!==sourceDocumentId(record.document,record.source?.sha256))fail('ORDER_PACKAGE_DOCUMENT_DIFFERS','The indexed document identity differs from its original source record.');
   }
   if(table==='supplier_order_selections'&&(record.orderId!==row.order_id||record.documentId!==row.document_id))fail('ORDER_PACKAGE_SELECTION_DIFFERS','The indexed selection differs from the original record.');
+  if(table==='supplier_order_transmissions'&&record.schema===TRANSMISSION_SCHEMA){
+    validateSupplierOrderTransmission(record);
+    if(record.state!==row.state||(record.documentId??'')!==row.document_id)fail('ORDER_PACKAGE_TRANSMISSION_DIFFERS','The indexed transport receipt differs from its original record.');
+  }
   if(table==='supplier_order_files'&&(!/^[a-f0-9]{64}$/.test(record.id)||record.id!==record.sha256||!Number.isSafeInteger(record.bytes)||record.bytes<0||record.kind!==row.kind))fail('ORDER_PACKAGE_FILE_INVALID','Invalid immutable complete file record.');
   if(table==='supplier_order_heads'||table==='supplier_order_history'){
     if(!Array.isArray(record.selectionIds)||record.selectionIds.some(id=>typeof id!=='string'))fail('ORDER_PACKAGE_CURRENT_SELECTION_INVALID','Retain the exact original current document-selection IDs.');
@@ -185,7 +190,7 @@ export async function readSupplierOrderPackage(workspace,path,{mode='merge',requ
   try{
     const {manifest}=await nativeArchive('unpack',path,directory),snapshot=join(directory,'workspace.jsonl');
     const incomingFiles=new Map(manifest.entries.filter(entry=>entry.path.startsWith('files/')).map(entry=>[entry.sha256,entry]));
-    const seen=new Set(),counts={},documents=new Set(),selections=new Map(),heads=[],sources=[],drafts=[];
+    const seen=new Set(),counts={},documents=new Set(),selections=new Map(),heads=[],sources=[],drafts=[],transmissions=[];
     let header=null,ended=false,totalRows=0,operationCount=0;
     const plan={mode,sourceWorkspaceId:manifest.workspaceId,workspaceId:workspace.store.id,packageSha256,added:{},preserved:{},foreign:{},operations:0,canMerge:true};
     for await(const line of lines(snapshot)){
@@ -210,6 +215,7 @@ export async function readSupplierOrderPackage(workspace,path,{mode='merge',requ
         const issuer=record.document.header.supplierId;if(issuer&&issuer!==header.supplierIdentity?.value)fail('ORDER_PACKAGE_SUPPLIER_DIFFERS','A document issuer differs from the original package supplier.');
       }
       if(table==='supplier_order_sources')sources.push(record);
+      if(table==='supplier_order_transmissions'&&record.schema===TRANSMISSION_SCHEMA)transmissions.push(record);
       if(table==='supplier_order_selections')selections.set(record.id,{orderId:record.orderId,documentId:record.documentId});
       if(table==='supplier_order_heads'||table==='supplier_order_history')heads.push({orderId:record.orderId,documentId:record.documentId,selectionIds:record.selectionIds});
       if(table==='supplier_order_drafts'||table==='supplier_order_draft_history')drafts.push({orderIds:record.orderIds,sourceOrderDocuments:record.sourceOrderDocuments});
@@ -225,6 +231,7 @@ export async function readSupplierOrderPackage(workspace,path,{mode='merge',requ
       for(const id of head.selectionIds){const selection=selections.get(id);if(!selection||selection.orderId!==head.orderId||!documents.has(selection.documentId))fail('ORDER_PACKAGE_SELECTION_MISSING','A retained order selection is missing its complete original document.');}}
     for(const selection of selections.values())if(!documents.has(selection.documentId))fail('ORDER_PACKAGE_DOCUMENT_MISSING','A retained selection document is absent.');
     for(const draft of drafts)for(const original of draft.sourceOrderDocuments??[])if(!documents.has(original.id))fail('ORDER_PACKAGE_DRAFT_SOURCE_MISSING','A saved draft is missing an original source order.');
+    for(const record of transmissions)validateSupplierOrderTransmission(record,{fileExists:file=>incomingFiles.get(file.sha256)?.bytes===file.bytes,documentExists:id=>documents.has(id)});
     plan.rows=totalRows;plan.files=incomingFiles.size;plan.tableCounts=counts;
     if(mode==='inspect')return{schema:'stellar-forge.supplier-orders-receiving.v1',...plan};
     if(!plan.canMerge)fail('ORDER_PACKAGE_SUPPLIER_DIFFERS','This package belongs to a different original supplier. Receive it into that supplier’s workspace.',409,{workspaceSupplier:workspace.supplierIdentity(),incomingSupplier:header.supplierIdentity});
