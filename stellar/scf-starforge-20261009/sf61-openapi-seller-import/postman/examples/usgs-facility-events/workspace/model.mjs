@@ -1,9 +1,12 @@
 // MIT. Customer operating semantics over the original facility-event reporter.
 import { createHash, randomUUID } from 'node:crypto';
 import { buildFacilityReport, normaliseFacilities, renderFacilityCsv, renderFacilityHtml } from '../report-core.mjs';
+import { parseCollectionManifest } from '../../../../../sf88-operator-buyer-cli/resource-library/collection-package.mjs';
 
 export const DESK_SCHEMA = 'stellar-forge.facility-operations-workspace.v1';
 export const TRANSFER_SCHEMA = 'stellar-forge.facility-operations-transfer.v1';
+export const COLLECTION_TRANSFER_SCHEMA = 'stellar-forge.facility-operations-transfer.v2';
+export const BUYER_COLLECTION_SCHEMA = 'stellar-forge.facility-buyer-collection.v1';
 export const STARTUP_SCHEMA = 'stellar-forge.facility-operations-startup.v1';
 export const SOURCE_LIMIT = 64 * 1024 * 1024;
 export const REVIEW_STATUSES = ['assigned','investigating','action-recorded','closed'];
@@ -87,6 +90,39 @@ export function sourceRequest(plan,window,kind='query') {
   if(kind==='query') {url.searchParams.set('limit','20000');url.searchParams.set('orderby','time-asc');}
   return url.href;
 }
+export function buyerCollection(bytes, identity, input={}, receivedAt=now()) {
+  const manifest=parseCollectionManifest(bytes),collection=manifest.collection;
+  need(/^[a-f0-9]{64}$/.test(identity.archiveSha256??'')&&Number.isSafeInteger(identity.archiveBytes)&&
+    identity.archiveBytes>=1024&&identity.archiveBytes<=16*1024*1024*1024,'Supply the complete original collection archive identity.');
+  const result={schema:BUYER_COLLECTION_SCHEMA,name:string(input.name??collection.id+'.tar','Collection filename',4096,true),
+    operator:string(input.operator,'Receiving operator',200,true),note:string(input.note??'','Collection receiving note',8000),
+    receivedAt:timestamp(receivedAt,'Collection receiving time'),archiveSha256:identity.archiveSha256,archiveBytes:identity.archiveBytes,
+    manifestSha256:hash(bytes),manifestBytes:bytes.byteLength,memberCount:collection.members.length,objectCount:manifest.objects.length,
+    collection:{id:collection.id,revision:collection.revision,name:collection.name,note:collection.note,updatedAt:collection.updatedAt??null}};
+  return {...result,id:hash(result)};
+}
+export function buyerProvenance(value) {
+  need(plain(value)&&value.schema==='stellar-forge.facility-buyer-source.v1','Supply the original collection source binding.');
+  const result={schema:value.schema};
+  for(const key of ['collectionId','archiveSha256','manifestSha256','memberId']){
+    need(/^[a-f0-9]{64}$/.test(value[key]??''),'The original collection '+key+' is required.');result[key]=value[key];
+  }
+  return result;
+}
+export function validateBuyerSource(source,collection,metadata) {
+  const acquisition=buyerProvenance(source.acquisition),manifest=parseCollectionManifest(metadata);
+  need(collection.schema===BUYER_COLLECTION_SCHEMA&&collection.id===acquisition.collectionId&&
+    collection.archiveSha256===acquisition.archiveSha256&&collection.manifestSha256===acquisition.manifestSha256&&
+    hash(metadata)===acquisition.manifestSha256&&collection.manifestBytes===metadata.byteLength&&
+    collection.collection.id===manifest.collection.id&&collection.collection.revision===manifest.collection.revision,
+    'The source differs from its original buyer collection.');
+  const member=manifest.collection.members.find(item=>item.id===acquisition.memberId);
+  need(member&&member.sha256===source.bodySha256&&member.bytes===source.bytes&&member.deliveryStatus==='SAVED'&&
+    member.httpStatus===source.status&&member.name===source.name&&String(member.url??'')===source.url&&
+    source.mode==='buyer-collection','The response differs from the selected original buyer member.');
+  return {sourceId:source.id,collection,member};
+}
+
 export function sourceRecord(bytes, input={}) {
   need(bytes.byteLength<=SOURCE_LIMIT,'A retained response may contain at most 64 MiB.');
   const status=input.status??200;
@@ -99,13 +135,15 @@ export function sourceRecord(bytes, input={}) {
     need(document.features.length<=100000,'This source exceeds the original reporter’s 100000 received-row limit.');
     need(document.metadata?.status===undefined || document.metadata.status===200,'The retained provider metadata reports an unsuccessful response.');
   }
-  const record={name:string(input.name??'events.geojson','Source filename',300,true),bodySha256:hash(bytes),bytes:bytes.byteLength,
+  const record={name:string(input.name??'events.geojson','Source filename',4096,true),bodySha256:hash(bytes),bytes:bytes.byteLength,
     status,receivedAt:timestamp(input.receivedAt??now(),'Receiving time'),url:string(input.url??document?.metadata?.url??'','Source URL',8000),
     mode:input.mode??'retained-file',returnedFeatures:document?.features.length??0,
     metadata:document?.metadata??null,headers:plain(input.headers)?input.headers:{},
     ...(input.captureId?{captureId:input.captureId}:{}),...(input.plan?{plan:queryPlan(input.plan)}:{}),
     ...(input.window?{window:input.window}:{}),...(input.counts?{counts:input.counts}:{}),
-    ...(input.note?{note:string(input.note,'Source note',4000)}:{})};
+    ...(input.note?{note:string(input.note,'Source note',4000)}:{}),
+    ...(input.acquisition?{acquisition:buyerProvenance(input.acquisition)}:{}),
+    ...(input.receivedBy?{receivedBy:string(input.receivedBy,'Receiving operator',200,true)}:{})};
   return {...record,id:hash(record)};
 }
 export function originalInput(source,bytes) {
@@ -209,7 +247,7 @@ export function comparisonCsv(comparison) {
       row.before?.event.distanceKm,row.after?.event.distanceKm,row.before?.event.updatedUtc,row.after?.event.updatedUtc])]
     .map(line=>line.map(csvCell).join(',')).join('\r\n')+'\r\n';
 }
-export function handoverHtml(project,current,rows,rosterEntry,sources,{retainedWork=[],reviewHistory=[]}={}) {
+export function handoverHtml(project,current,rows,rosterEntry,sources,{retainedWork=[],reviewHistory=[],acquisitions=[]}={}) {
   const actions=rows.map(row=>'<tr><td>'+escape(row.facility.name)+'<br>'+escape(row.event.id)+'</td><td>'+escape(row.status)+
     (row.sourceChanged?'<br>Event or facility selection changed':'')+'</td><td>'+escape(row.assignee)+'</td><td>'+escape(row.review?.action)+'</td><td>'+
     escape(row.review?.notes)+'</td><td>'+escape(row.review?.dueUtc)+'</td><td>'+escape(row.review?.operator)+'<br>'+escape(row.review?.createdAt)+'</td></tr>').join('');
@@ -230,6 +268,19 @@ export function handoverHtml(project,current,rows,rosterEntry,sources,{retainedW
     (notes.length?'<section><h2>Source selection and count observations</h2><ul>'+notes.map(note=>'<li>'+escape(note)+'</li>').join('')+'</ul></section>':'')+
     '<section><h2>Retained edition</h2><p class="hash">'+escape(current.id)+'</p><p>Report SHA-256: '+escape(current.reportSha256)+
     '</p><p>The accompanying full workspace retains original source bytes, all saved reports, procedures, attribution and decision history.</p></section>';
-  return renderFacilityHtml(current.report).replace('</main>',extra+carried+historyHtml+'</main>');
+  const acquisitionHtml=acquisitions.length?'<section><h2>Original buyer collections and selected responses</h2>'+
+    acquisitions.map(({sourceId,collection,member})=>'<article><h3>'+escape(member.name)+'</h3><p>'+
+      escape(collection.collection.name)+' · original revision '+escape(collection.collection.revision)+
+      ' · received by '+escape(collection.operator)+' · '+escape(collection.receivedAt)+'</p>'+
+      '<p>Original intent: '+escape(member.intentId)+' · buyer outcome: '+escape(member.buyerStatus)+
+      ' · HTTP status: '+escape(member.httpStatus)+'</p><p>Original payment terms: '+escape(member.paymentTerms?.scheme)+
+      ' · '+escape(member.paymentTerms?.network)+' · asset '+escape(member.paymentTerms?.asset)+
+      ' · recipient '+escape(member.paymentTerms?.payTo)+' · maximum atomic amount '+escape(member.paymentTerms?.maxAtomic)+'</p>'+
+      '<pre>'+escape(member.annotation?.note)+'</pre><p>Original review tags: '+escape((member.annotation?.tags??[]).join(', '))+'</p>'+
+      '<p class="hash">Collection archive SHA-256: '+escape(collection.archiveSha256)+
+      '<br>Original manifest SHA-256: '+escape(collection.manifestSha256)+'<br>Original response SHA-256: '+
+      escape(member.sha256)+'<br>Facility source edition: '+escape(sourceId)+'</p></article>').join('')+
+    '<p>The complete original collection archives, including all members, accompany the full workspace transfer.</p></section>':'';
+  return renderFacilityHtml(current.report).replace('</main>',extra+carried+historyHtml+acquisitionHtml+'</main>');
 }
 export { renderFacilityCsv };

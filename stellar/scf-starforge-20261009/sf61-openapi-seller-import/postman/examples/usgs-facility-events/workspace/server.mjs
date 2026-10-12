@@ -2,13 +2,15 @@
 import { createServer } from 'node:http';
 import { randomBytes, timingSafeEqual } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
+import { pipeline } from 'node:stream/promises';
+import { downloadCollectionArchive } from './buyer-collections.mjs';
 import { openFacilityStore } from './store.mjs';
 import { SourceCaptures } from './provider.mjs';
 import { SOURCE_LIMIT, now, need, parseBytes, renderFacilityCsv, reviewCsv, comparisonCsv, handoverHtml, hash, coverageNotes, canonical } from './model.mjs';
 import { readBrowserAssets } from '../../../../../distribution/browser-assets.mjs';
 
 const STATIC=await readBrowserAssets(new URL('./browser-assets.json',import.meta.url));
-const CSP="default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; font-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'; object-src 'none'";
+const CSP="default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; font-src 'self'; worker-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'; object-src 'none'";
 function constantEqual(a,b){const x=Buffer.from(typeof a==='string'?a:''),y=Buffer.from(b);return x.length===y.length&&timingSafeEqual(x,y);}
 async function body(req,maximum=8*1024*1024){
   const chunks=[];let size=0;
@@ -26,7 +28,7 @@ export async function startFacilityServer({workspace,port=0,sourceIdentity=null,
   need(beforeStoreClose===undefined||typeof beforeStoreClose==='function','The launch cleanup must be a function.');
   const store=await openFacilityStore(workspace),captures=new SourceCaptures(store,{fetch:transport});
   const token=randomBytes(32).toString('base64url');let origin,closing=false;
-  const server=createServer(async(req,res)=>{
+  const server=createServer({maxHeaderSize:65536,requestTimeout:0},async(req,res)=>{
     res.setHeader('Cache-Control','no-store');res.setHeader('X-Content-Type-Options','nosniff');
     res.setHeader('Referrer-Policy','no-referrer');res.setHeader('Content-Security-Policy',CSP);
     const send=(status,value)=>{res.writeHead(status,{'Content-Type':'application/json; charset=utf-8'});res.end(JSON.stringify(value));};
@@ -79,6 +81,30 @@ export async function startFacilityServer({workspace,port=0,sourceIdentity=null,
         if(route==='comparison.csv'){
           return download(res,Buffer.from(comparisonCsv(store.compare(projectId,url.searchParams.get('before'),url.searchParams.get('after')))),'text/csv; charset=utf-8','facility-edition-comparison.csv');
         }
+        const collection=/^collections\/([^/]+)(?:\/(manifest|archive))?$/.exec(route);
+        if(collection){
+          const value=store.entry(projectId,'collection',collection[1]);
+          if(collection[2]==='manifest')return download(res,store.blob(value.manifestSha256),'application/json; charset=utf-8','original-collection-manifest.json');
+          if(collection[2]==='archive'){
+            const cancellation=new AbortController(),closed=()=>{if(!res.writableFinished)cancellation.abort(new Error('The collection download closed.'));};
+            res.once('close',closed);let saved;
+            try{
+              saved=await downloadCollectionArchive(store.directory,value,{signal:cancellation.signal});
+              res.writeHead(200,{'Content-Type':'application/x-tar','Content-Disposition':'attachment; filename="'+filename(value.name,'')+'"',
+                'Content-Length':saved.bytes,'X-Content-SHA256':saved.sha256});
+              await pipeline(saved.file.createReadStream({start:0,autoClose:false}),res,{signal:cancellation.signal});return;
+            }finally{res.off('close',closed);if(saved)await saved.dispose();}
+          }
+          return send(200,store.collectionMembers(projectId,value.id,{query:url.searchParams.get('query')??'',
+            offset:int(url.searchParams.get('offset'),0),limit:int(url.searchParams.get('limit'),50)}));
+        }
+        const acquisition=/^sources\/([^/]+)\/acquisition$/.exec(route);
+        if(acquisition){
+          const value=store.entry(projectId,'source',acquisition[1]);
+          need(value.acquisition,'This source was received as an ordinary response file.',404);
+          return download(res,Buffer.from(JSON.stringify(store.sourceAcquisitions(projectId,[value])[0],null,2)+'\n'),
+            'application/json; charset=utf-8','original-buyer-member.json');
+        }
         const rosterMatch=/^rosters\/([^/]+)\/raw$/.exec(route);
         if(rosterMatch){const item=store.entry(projectId,'roster',rosterMatch[1]);return download(res,Buffer.from(canonical(item.facilityInput)),'application/json; charset=utf-8',item.label+'.json');}
         const source=/^sources\/([^/]+)\/raw$/.exec(route);
@@ -93,12 +119,19 @@ export async function startFacilityServer({workspace,port=0,sourceIdentity=null,
           if(report[2]==='report.json')return download(res,Buffer.from(JSON.stringify(value.report,null,2)+'\n'),'application/json; charset=utf-8',filename(value.label,'.json'));
           if(report[2]==='report.csv')return download(res,Buffer.from(renderFacilityCsv(value.report)),'text/csv; charset=utf-8',filename(value.label,'.csv'));
           const sites=store.entry(projectId,'roster',value.rosterId),sources=value.sourceIds.map(id=>store.entry(projectId,'source',id));
-          const html=handoverHtml(store.project(projectId),value,store.allEditionWork(projectId,value.id),sites,sources,{retainedWork:store.allEditionWork(projectId,null),reviewHistory:store.entries(projectId,'review')});
+          const html=handoverHtml(store.project(projectId),value,store.allEditionWork(projectId,value.id),sites,sources,{retainedWork:store.allEditionWork(projectId,null),reviewHistory:store.entries(projectId,'review'),acquisitions:store.sourceAcquisitions(projectId,sources)});
           // The original report is self-contained and supplies its own print styles.
           res.setHeader('Content-Security-Policy',"default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'");
           res.writeHead(200,{'Content-Type':'text/html; charset=utf-8'});res.end(html);return;
         }
         throw Object.assign(new Error('Route not found.'),{status:404});
+      }
+      if(req.method==='POST'&&route==='collections/upload'){
+        need(captures.size===0,'Pause active source captures before receiving a buyer collection.',409);
+        const metadata={name:url.searchParams.get('name'),operator:url.searchParams.get('operator'),
+          expectedSha256:url.searchParams.get('sha256'),bytes:Number(url.searchParams.get('bytes'))};
+        return send(200,await store.importBuyerCollectionUpload(projectId,req,metadata,
+          Number(req.headers['x-project-revision']),req.headers['x-operation-id']));
       }
       if(req.method==='POST'&&route==='sources'){
         const meta={name:url.searchParams.get('name')??'events.geojson',status:int(url.searchParams.get('status'),200),
@@ -110,6 +143,15 @@ export async function startFacilityServer({workspace,port=0,sourceIdentity=null,
       const input=parseBytes(await body(req),'Workspace request'),revision=input.revision,operationId=input.operationId;
       if(req.method==='PATCH'&&route==='')return send(200,store.updateProject(projectId,input,revision,operationId));
       if(req.method==='POST'){
+        if(route==='collections'){
+          need(captures.size===0,'Pause active source captures before receiving a buyer collection.',409);
+          return send(200,await store.importBuyerCollection(projectId,input,revision,operationId));
+        }
+        const collectionSources=/^collections\/([^/]+)\/sources$/.exec(route);
+        if(collectionSources){
+          need(captures.size===0,'Pause active source captures before receiving buyer responses.',409);
+          return send(200,await store.importCollectionSources(projectId,collectionSources[1],input,revision,operationId));
+        }
         if(route==='rosters')return send(200,store.saveRoster(projectId,input,revision,operationId));
         if(route==='queries')return send(200,store.saveQuery(projectId,input,revision,operationId));
         if(route==='editions')return send(200,store.createEdition(projectId,input,revision,operationId));
