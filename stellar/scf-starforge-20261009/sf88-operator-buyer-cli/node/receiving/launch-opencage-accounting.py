@@ -49,7 +49,17 @@ def main():
         raise ValueError("The implementation manifest belongs to another project")
     example = regular(value["example"])
     source = directory(project / "source")
+    continuation = operation_id == "scf-node-operation-accounting-free-02-a39c-20261012"
+    financial_name = "financial-source-02" if continuation else "financial-source"
     financial_source = directory(value.get("financialSourceDirectory", str(project / "financial-source")))
+    if financial_source != project / financial_name:
+        raise ValueError("Select the exact original or complete successor financial directory")
+    output_name = "run-02" if continuation else "run"
+    if value.get("outputDirectory", "run") != output_name:
+        raise ValueError("Preserve the receiving operation's own output directory")
+    if continuation != (value.get("previousReceiving") is not None):
+        raise ValueError("The receiving successor requires the original failed-command selection")
+    previous_financial_source = directory(project / "financial-source")
     runtime = directory(value["runtimeDirectory"])
     state = directory(value["stateDirectory"])
     producer = directory(value["original"]["producerRuntimeDirectory"])
@@ -71,11 +81,11 @@ def main():
         operation_id=operation_id, peer=args.peer, project=str(project),
         command=command, java=None, node=None,
         artifact=[input_path.relative_to(project).as_posix(), manifest.relative_to(project).as_posix()],
-        artifact_on_success=[value.get("outputDirectory", "run")],
-        artifact_on_failure=[value.get("outputDirectory", "run")],
+        artifact_on_success=[output_name],
+        artifact_on_failure=[output_name],
         retain_artifacts=True, records_root=str(Path(args.records_root).resolve()),
         worker_root=str(directory(args.worker_root)), temp_root=str(directory(args.temp_root)),
-        runtime_path=sorted({str(host), str(source), str(financial_source), str(node),
+        runtime_path=sorted({str(host), str(source), str(financial_source), str(previous_financial_source), str(node),
                              str(producer), str(state), str(dependencies)}),
         runtime_consumers_root=None, memory_mib=256, memory_reserve_mib=64,
         memory_reservations_root=None, memory_reclaim="clean-cache", memory_storage="included",
