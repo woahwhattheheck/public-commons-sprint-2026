@@ -25,6 +25,8 @@ try{previous=JSON.parse(await fs.readFile(join(selected.stage,'native-result.jso
 const resumeGrant=!!(selected.grantReceiving&&previous?.savedSupportDirectory&&previous?.handoff&&previous?.caseId&&previous?.incidentId);
 const root=join(selected.work,(resumeGrant?'grant-resume-':'customer-')+randomUUID());
 await fs.mkdir(root,{mode:0o700});
+const liveRoot=join(selected.stage,'native-live',root.slice(root.lastIndexOf('/')+1));
+await fs.mkdir(liveRoot,{recursive:true,mode:0o700});
 const workspace=join(root,'managed-workspace');
 const report=resumeGrant?{...previous,status:'RUNNING',resumedAt:new Date().toISOString(),currentSourcePin:selected.sourceCommit}:
   {schema:'stellar-forge.merchant-support-applications-operation.v1',sourcePin:selected.sourceCommit,status:'RUNNING',
@@ -147,7 +149,8 @@ try {
     report.receiving.push({status:receiverStatus,sha256:createHash('sha256').update(bytes).digest('hex'),bytes:Buffer.byteLength(bytes)});
     res.writeHead(receiverStatus);res.end();});
   const receiverURL=await listen(receiver);
-  const statePath=join(root,'state'),casePath=join(root,'cases'),configPath=join(root,'sources.json'),environmentPath=join(root,'environment.json');
+  const statePath=join(liveRoot,'state'),casePath=join(liveRoot,'cases'),configPath=join(liveRoot,'sources.json'),environmentPath=join(liveRoot,'environment.json');
+  report.liveDirectory=liveRoot;report.scratchDirectory=root;report.managedWorkspace=workspace;await save();
   await initializeIncidentStore({directory:statePath,config:{schema:CONFIG_SCHEMA,pollMs:250,failurePolls:1,recoveryPolls:1,windowMinutes:1,captureEveryMs:1000,
     merchants:[{id:'native-merchant',label:'Native merchant',seller:seller.url,ops:opsURL}],
     notification:{id:'receiving',urlEnv:'SF74_RECEIVING_URL',secretEnv:'SF74_RECEIVING_SECRET',allowLoopback:true,
