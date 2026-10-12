@@ -437,7 +437,7 @@ $('download-handoff').addEventListener('click', () => {
 });
 $('copy-handoff').addEventListener('click', () => handoff && navigator.clipboard.writeText(JSON.stringify(handoff, null, 2)).then(() => message('Deployment handoff copied.')).catch(error));
 const sourceBuilds = createSourceBuildWorkspaceView({ root: $('source-build-workspace'), api, getState: () => state,
-  operation, refreshWorkspace: refresh, openLog, switchView, message, error,
+  operation, refreshWorkspace: refresh, openLog, switchView, chooseRuntime, message, error,
   chooseArchive: async id => {
     const requestedToken = token, workspaceId = state?.workspaceId, generation = ++archiveSelectionGeneration;
     const currentSelection = () => token === requestedToken && state?.workspaceId === workspaceId &&

@@ -1,4 +1,5 @@
 import type { ProductPlanView } from './source-product-plans.mjs';
+import type { ProductPlanHandoff, ProductPlanInstallationSummary } from './product-plan-runtime.mjs';
 import type { SourceDescriptor } from '../discovery/product-requirements-source.mjs';
 import type { CapabilityDeclaration } from '../discovery/product-requirements.mjs';
 
@@ -41,18 +42,18 @@ export interface ProductPlanBriefing {
   capabilities: CapabilityDeclaration[]; dependencies: BriefingRuntimeGroup[];
   review: { reviewId: string; requestId: string; selectionSha256: string; reviewedAt: string;
     bindingId: string; inspectedAt: string };
-  build: BriefingBuild | null;
+  build: BriefingBuild | null; installation: ProductPlanInstallationSummary | null;
   origins: { originId: string; local: boolean; selected: boolean; recordedAt: string;
     reviewId: string; requestId: string; build: BriefingBuild | null }[];
   observations: { originId: string; observedAt: string; build: BriefingBuild | null }[];
 }
 export interface ProductPlanBriefingExport {
   schema: typeof PRODUCT_PLAN_BRIEFING_SCHEMA; planId: string; bindingId: string; sourceCommit: string;
-  generatedAt: string; format: ProductPlanBriefingFormat; filename: string; mimeType: string; content: string;
+  generatedAt: string; format: ProductPlanBriefingFormat; filename: string; mimeType: string; content: string; runtimeId?: string;
 }
-export function productPlanBriefing(view: ProductPlanView, options?: { generatedAt?: string }): ProductPlanBriefing;
+export function productPlanBriefing(view: ProductPlanView, options?: { generatedAt?: string; installation?: ProductPlanHandoff }): ProductPlanBriefing;
 export function formatProductPlanBriefingMarkdown(value: ProductPlanBriefing): string;
 export function formatProductPlanBriefingHTML(value: ProductPlanBriefing): string;
 export function exportProductPlanBriefing(view: ProductPlanView, options?: {
-  format?: ProductPlanBriefingFormat; generatedAt?: string;
+  format?: ProductPlanBriefingFormat; generatedAt?: string; installation?: ProductPlanHandoff;
 }): ProductPlanBriefingExport;
