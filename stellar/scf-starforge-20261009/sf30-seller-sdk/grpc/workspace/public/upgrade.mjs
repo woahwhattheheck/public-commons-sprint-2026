@@ -27,7 +27,7 @@ function detail(label, value) {
 
 export function mountGrpcUpgrades({ root, json, work, notice, onAdopt, mayAdopt, storageKey }) {
   let inventory = null, base = null, report = null, draftDirty = false, requestId = null, requestKey = null;
-  let page = 0, filter = '', level = '';
+  let page = 0, filter = '', level = '', adoptionUnconfirmed = false;
   const title = element('input'); title.type = 'text'; title.maxLength = 120; title.id = 'upgrade-title';
   const candidate = element('select'); candidate.id = 'upgrade-candidate';
   const plan = element('textarea'); plan.rows = 20; plan.spellcheck = false; plan.id = 'upgrade-plan';
@@ -54,7 +54,7 @@ export function mountGrpcUpgrades({ root, json, work, notice, onAdopt, mayAdopt,
     if (!inventory?.currentRevision) throw new Error('Save a merchant revision first.');
     const selected = await json('open', { revision: inventory.currentRevision });
     base = selected; title.value = selected.title.slice(0, 112) + ' upgrade'; plan.value = pretty(selected.plan);
-    report = null; draftDirty = false; requestId = null; requestKey = null;
+    report = null; draftDirty = false; requestId = null; requestKey = null; adoptionUnconfirmed = false;
     if (!candidate.value) selectFirstCandidate();
     render(); notice('Upgrade starts from saved revision ' + short(base.id) + '. Its current HTTP routes and complete payment terms are in the proposed plan.');
   }, 'Opening the current saved merchant…'));
@@ -62,7 +62,7 @@ export function mountGrpcUpgrades({ root, json, work, notice, onAdopt, mayAdopt,
     const value = inputs(), key = stable(value);
     if (key !== requestKey) { requestId = crypto.randomUUID(); requestKey = key; }
     try { sessionStorage.setItem(storageKey + ':last-upgrade', requestId); } catch {}
-    report = await json('upgrade-review', { id: requestId, ...value });
+    report = await json('upgrade-review', { id: requestId, ...value }); adoptionUnconfirmed = false;
     draftDirty = false; page = 0; render(); await refreshHistory();
     notice(report.planValidation.valid ? 'Exact upgrade retained. Review its contract, route, request-example and payment changes before using this saved plan.' :
       'Upgrade review retained. Correct the proposed plan, then review the revised input.');
@@ -72,13 +72,26 @@ export function mountGrpcUpgrades({ root, json, work, notice, onAdopt, mayAdopt,
     if (!report || !reviewMatches()) throw new Error('Review the currently visible upgrade inputs first.');
     if (!report.planValidation.valid) throw new Error('Correct the reported merchant-plan error and review again.');
     if (!mayAdopt()) return;
-    const result = await json('upgrade-adopt', { id: report.id, expectedReviewSha256: report.reviewSha256 });
-    report = result; draftDirty = false;
+    const selected = { id: report.id, expectedReviewSha256: report.reviewSha256 };
+    adoptionUnconfirmed = true; renderControls();
+    let result;
+    try { result = await json('upgrade-adopt', selected); }
+    catch (issue) {
+      try { await reconcileOutcome(); }
+      catch (readIssue) {
+        renderControls();
+        throw new Error(issue.message + ' Read the retained save outcome for this same review before choosing another operation. Outcome read: ' + readIssue.message);
+      }
+      return;
+    }
+    adoptionUnconfirmed = false; report = result; draftDirty = false;
     await onAdopt(result.revision);
     render(); notice('The reviewed upgrade is saved as ' + short(result.revision.id) +
       '. Use the original channel review, Prepare and release controls for this revision.');
   }, 'Saving the exact reviewed source and merchant plan…'), false);
   adopt.id = 'upgrade-adopt';
+  const reconcile = action('Read retained save outcome', () => work(reconcileOutcome, 'Reading the original retained Save result…'));
+  reconcile.id = 'upgrade-reconcile';
   const download = action('Download retained review', () => {
     if (!report) return;
     const bytes = new Blob([pretty(report) + '\n'], { type: 'application/json' });
@@ -87,7 +100,7 @@ export function mountGrpcUpgrades({ root, json, work, notice, onAdopt, mayAdopt,
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   });
   download.id = 'upgrade-download';
-  const controls = element('div', undefined, 'actions'); controls.append(newDraft, review, adopt, download);
+  const controls = element('div', undefined, 'actions'); controls.append(newDraft, review, adopt, reconcile, download);
   const heading = element('h2', 'Contract upgrades');
   const explanation = element('p', 'Compare the current saved merchant with a retained protobuf revision or reflection capture. Keep its routes and terms, edit the proposed plan, and use the original Save and release workflow after reviewing the exact changes.');
   root.append(heading, explanation, baseline, field('Saved candidate source', candidate), candidateNote,
@@ -152,19 +165,25 @@ export function mountGrpcUpgrades({ root, json, work, notice, onAdopt, mayAdopt,
   }
   function renderControls() {
     const match = reviewMatches();
-    baseline.textContent = base ? 'Upgrade base ' + short(base.id) + ' · current saved revision ' +
-      short(inventory?.currentRevision) + (inventory?.currentRevision !== base.id ? ' · start again from the new current revision before adopting' : '') :
-      'No upgrade base selected. Use the current saved revision.';
-    review.disabled = !base || !candidate.value;
     const alreadyApplied = Boolean(report?.adoption);
+    baseline.textContent = base ? 'Upgrade base ' + short(base.id) + ' · current saved revision ' +
+      short(inventory?.currentRevision) + (inventory?.currentRevision !== base.id ?
+        alreadyApplied ? ' · this review retains its original saved result' :
+        adoptionUnconfirmed || report?.adoptionIntent ? ' · read the retained Save outcome for this review' :
+          ' · compare the new current revision before a new adoption' : '') :
+      'No upgrade base selected. Use the current saved revision.';
+    review.disabled = !base || !candidate.value || adoptionUnconfirmed;
     const stillSelected = report?.baseSelection?.revision === inventory?.currentRevision &&
       report?.baseSelection?.generation === inventory?.generation;
     const resumeAfterSave = report?.adoptionIntent?.after?.revision === inventory?.currentRevision &&
       report?.adoptionIntent?.after?.generation === inventory?.generation;
-    adopt.disabled = !match || !report?.planValidation.valid || (!alreadyApplied && !stillSelected && !resumeAfterSave);
+    adopt.disabled = adoptionUnconfirmed || !match || !report?.planValidation.valid || (!alreadyApplied && !stillSelected && !resumeAfterSave);
     adopt.textContent = alreadyApplied ? 'Open saved upgrade' : 'Use reviewed upgrade';
+    reconcile.disabled = !report;
     download.disabled = !report;
+    newDraft.disabled = adoptionUnconfirmed;
     status.textContent = !report ? 'Review uses the captured native types and serializes examples without an application request.' :
+      adoptionUnconfirmed ? 'The original Save reply is unavailable. Read retained save outcome; this keeps the same review and sends no Save.' :
       !match ? 'The visible input differs from the retained review. Review this version before adopting it.' :
       report.adoption ? 'Saved upgrade ' + short(report.adoption.revision) + ' · retained review ' + short(report.reviewSha256) :
       report.adoptionIntent ? 'An original Save was started for this review. Use reviewed upgrade to reconcile that same saved operation.' :
@@ -236,9 +255,20 @@ export function mountGrpcUpgrades({ root, json, work, notice, onAdopt, mayAdopt,
     }
     if (!rows.length) changeRows.append(element('p', report ? 'No matching contract changes.' : 'The retained comparison will appear here.'));
   }
+  async function reconcileOutcome() {
+    if (!report) throw new Error('Open the original retained upgrade review first.');
+    const retained = await json('upgrade-open', { id: report.id });
+    report = retained; adoptionUnconfirmed = false;
+    render();
+    await refreshHistory();
+    notice(retained.adoption ? 'The original Save completed as ' + short(retained.adoption.revision) +
+      '. Open saved upgrade to view that retained result.' :
+      retained.adoptionIntent ? 'The original Save intent is retained. Use reviewed upgrade to reconcile this same operation; no new review is needed.' :
+        'The retained review has no Save intent or result. The original review remains available; no Save was sent by this read.');
+  }
   async function openReview(id) {
     if (!allowReplacement('Opening a retained review')) return;
-    report = await json('upgrade-open', { id });
+    report = await json('upgrade-open', { id }); adoptionUnconfirmed = false;
     base = await json('open', { revision: report.request.baseRevision });
     title.value = report.request.title; plan.value = pretty(report.request.plan);
     candidate.value = report.request.candidate.kind + ':' + report.request.candidate.id;

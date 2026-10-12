@@ -84,6 +84,8 @@ For a server stream, the original complete/non-OK/cancelled capture and payment-
 
 If a review reply was lost, the browser keeps its original review ID in session storage. Reopening or repeating the unchanged review reads that same record. It does not create another application request.
 
+If the original Save reply is unavailable, the panel reads **Read retained save outcome** for the same review ID. You can repeat that read after reconnecting; it sends no Save. A workspace refresh keeps this recovery choice visible instead of suggesting a new upgrade. A completed result becomes **Open saved upgrade**.
+
 If the original Save was interrupted, the retained adoption intent binds the expected old and new selection generations. Use the same reviewed upgrade again:
 
 - If Save had not advanced the current selection, the original pure Save completes from that same intent.
