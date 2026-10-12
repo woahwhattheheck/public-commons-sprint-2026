@@ -1,6 +1,10 @@
 /** Guidance from the original merchant host, selected by advertised tool prefixes. */
 const sections = [
   {
+    "prefix": "merchant_clinicaltrials_",
+    "text": "For ClinicalTrials, attach the declared existing console and use its original capture, NCT, source SHA and integer revision. Read the original complete study and official PRS reports before retaining a review or modernization decision. Save the exact action UUID and payload before mutation; inspect that same operation after an interrupted reply. Portable receiving preserves original studies, reviews and source editions in a new receiver; inspect its actual operation/export inventory before continuation. Prepare declared native files and receive their complete SHA-pinned bytes through retained downloads. Closing this attachment drains its own reads and leaves the original Python console owner open."
+  },
+  {
     "prefix": null,
     "text": "For Stellar asset workspaces, discover the host-declared alias and original workspaceId, then read schema/view before actions. Every original action requires operationId and expectedRevision; repeat the identical action identity after an unknown response, and preserve actual errors and revisions. Use retained file reads or stellar-expert-mcp to receive complete original sources, exports and customer receipts with their hashes. The original browser remains the workspace writer."
   },
