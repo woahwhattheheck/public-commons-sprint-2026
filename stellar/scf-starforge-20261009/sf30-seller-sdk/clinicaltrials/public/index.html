@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>ClinicalTrials registry workspace</title><link rel="stylesheet" href="/style.css"><script type="module" src="/app.js"></script></head>
+<body>
+<header class="topbar"><div><strong>STARFORGE</strong><span>ClinicalTrials registry workspace</span></div><button id="refresh" type="button">Refresh retained state</button></header>
+<div class="layout">
+<aside class="sidebar"><div class="sidebar-label">REGISTRY OPERATIONS</div><nav aria-label="Workspace sections">
+<button data-section="cohort" aria-current="page">01 / Cohort &amp; source</button>
+<button data-section="studies">02 / Whole-study review</button>
+<button data-section="mapping">03 / Mapping &amp; editions</button>
+<button data-section="prs">04 / PRS &amp; reconciliation</button>
+<button data-section="query">05 / Query &amp; merchant</button>
+<button data-section="publisher">06 / Publisher &amp; buyer</button>
+<button data-section="exports">07 / Export &amp; recovery</button></nav>
+<div id="workspace-summary" class="sidebar-summary">Opening workspace…</div>
+</aside>
+<main>
+<div id="notice" class="notice" role="status" hidden></div>
+<section id="connection" class="panel" hidden><h2>Open the private operator connection</h2><p>Use the current console link from the running workspace.</p><form id="connection-form"><label>Console link or token<input id="connection-token" type="password" autocomplete="off" required></label><button type="submit">Open workspace</button></form></section>
+<section id="pending" class="panel" hidden><h2>Reconcile the previous action</h2><p id="pending-summary"></p><div class="actions"><button id="pending-read" type="button">Read original operation</button><button id="pending-clear" type="button">Review current state and clear this attempt</button></div><details><summary>Original request and outcome</summary><pre id="pending-details"></pre></details></section>
+
+<section id="section-cohort" data-panel="cohort">
+<div class="section-heading"><div><div class="eyebrow">01 / COHORT &amp; SOURCE</div><h1>Capture the complete registry selection</h1><p>Retain full protocol, results, annotation, document and derived sections with the original response pages and provider data edition.</p></div><button id="version-read" type="button" data-write>Read provider version</button></div>
+<form id="cohort-form" class="panel"><h2>Source selection</h2><div class="form-grid">
+<label class="span-2">Cohort name<input id="cohort-name" value="Daiichi Sankyo results portfolio" required maxlength="128"></label>
+<label>Lead sponsor<input id="cohort-lead" value="Daiichi Sankyo"></label>
+<label>Condition or disease<input id="cohort-condition" placeholder="All conditions in this scope"></label>
+<label>Search terms<input id="cohort-term" placeholder="Optional registry search"></label>
+<label>Results availability<select id="cohort-results"><option value="results:with" selected>Studies with results</option><option value="">All studies</option><option value="results:without">Studies without results</option></select></label>
+<label>Sort<input id="cohort-sort" value="LastUpdatePostDate:desc" spellcheck="false"><span class="help">Use original numeric/date fields or @relevance.</span></label>
+<label>Studies per provider page<input id="cohort-page-size" type="number" min="1" max="1000" value="50" required></label>
+</div><details><summary>Additional source parameters and capacity</summary><div class="form-grid">
+<label class="span-2">Additional original query/filter parameters<textarea id="cohort-advanced" rows="4" spellcheck="false">{}</textarea></label>
+<label>Study capacity<input id="cohort-max-studies" type="number" min="1" max="1000000" value="100000" required></label>
+<label>Raw source capacity, MiB<input id="cohort-max-bytes" type="number" min="1" max="256" value="256" required></label>
+<label>Text markup<select id="cohort-markup"><option value="markdown">Markdown</option><option value="legacy">Legacy text</option></select></label>
+</div><p class="help">Full nested fields remain selected. Provider page tokens, counts and fields are controlled by the retained capture.</p><details><summary>Current original query contract</summary><pre id="query-contract"></pre></details></details>
+<div class="actions"><button type="submit" class="primary" data-write>Save cohort selection</button><button id="capture-start" type="button" data-write>Start a new capture</button></div></form>
+<div class="panel"><div class="panel-heading"><h2>Retained capture</h2><select id="capture-select" aria-label="Retained capture"></select></div>
+<div id="capture-summary" class="facts"></div><div id="capture-progress" class="progress-label"></div>
+<div class="actions"><button id="capture-page" type="button" data-write>Capture next page</button><button id="capture-complete" type="button" class="primary" data-write>Continue complete capture</button><button id="capture-pause" type="button">Pause after current page</button><button id="capture-resume" type="button" data-write>Resume retained capture</button><button id="capture-inspect" type="button">Inspect retained source files</button></div>
+<p class="help">Pause retains the same opaque page token. Completion follows the original token chain until it ends, including empty intermediate pages.</p>
+<div id="capture-files" class="table-scroll"></div><details><summary>Complete capture and source requests</summary><pre id="capture-details">Inspect a retained capture.</pre></details></div>
+</section>
+
+<section id="section-studies" data-panel="studies" hidden>
+<div class="section-heading"><div><div class="eyebrow">02 / WHOLE-STUDY REVIEW</div><h1>Review the original study record</h1><p>Review decisions are retained beside source values. All registry sections remain available.</p></div></div>
+<form id="study-search-form" class="panel inline-form"><label>Search this retained cohort<input id="study-search" placeholder="NCT identifier, title, status or sponsor"></label><button type="submit">Search studies</button><button id="study-first" type="button">First page</button><button id="study-next" type="button">Next page</button><span id="study-count" class="help"></span></form>
+<div id="studies-table" class="panel table-scroll"></div>
+<div id="study-open" class="panel" hidden><div class="panel-heading"><h2 id="study-title">Selected study</h2><a id="study-public" target="_blank" rel="noreferrer">Original registry page</a></div>
+<div id="study-facts" class="facts"></div>
+<form id="study-review-form"><div class="form-grid"><label>Review disposition<select id="study-decision"><option value="ready">Ready for the selected downstream review</option><option value="follow-up">Follow-up needed</option><option value="exclude">Exclude from this delivery selection</option></select></label><label>Reviewer<input id="study-reviewer" required maxlength="160"></label><label class="span-2">Review note<textarea id="study-note" required maxlength="8192" rows="3"></textarea></label></div><button type="submit" data-write>Save study review</button></form>
+<div id="study-review-history"></div><label>Whole source section<select id="study-section"></select></label><pre id="study-json" class="source-view"></pre>
+<details><summary>Exact source identity and full JSON</summary><div id="study-source"></div><pre id="study-full-json"></pre></details></div>
+<form id="study-compare-form" class="panel"><h2>Compare the same study across captures</h2><div class="form-grid"><label>Before capture<select id="study-before"></select></label><label>After capture<select id="study-after"></select></label><label>NCT identifier<input id="study-compare-id" pattern="NCT[0-9]{8}" required placeholder="NCT03529110"></label></div><button type="submit">Read whole-study field changes</button><pre id="study-changes">Select two retained source editions.</pre></form>
+</section>
+
+<section id="section-mapping" data-panel="mapping" hidden>
+<div class="section-heading"><div><div class="eyebrow">03 / MAPPING &amp; EDITIONS</div><h1>Prepare an explicit dataset</h1><p>Choose exact source paths and types. Optional values keep a separate state column so missing, null and empty remain reviewable.</p></div><button id="mapping-default" type="button" data-write>Load registry review mapping</button></div>
+<div class="panel"><div class="panel-heading"><h2>Retained mappings</h2><select id="mapping-select" aria-label="Retained mapping"></select></div>
+<form id="mapping-form"><div class="form-grid"><label class="span-2">Dataset name<input id="mapping-name" required maxlength="128"></label>
+<label>Unique key columns<input id="mapping-keys" value="nct_id"></label><label>Equality filters<input id="mapping-filters"></label>
+<label>Range filters<input id="mapping-ranges"></label><label>Sortable fields<input id="mapping-sorts"></label>
+<label>Default query page size<input id="mapping-limit" type="number" min="1" max="1000" value="50"></label><label>Maximum query page size<input id="mapping-max-limit" type="number" min="1" max="1000" value="250"></label></div>
+<div class="table-scroll"><table class="mapping-table"><thead><tr><th>Output name</th><th>Exact JSON path array</th><th>Mode</th><th>Type</th><th>Nullable</th><th>Missing value</th><th></th></tr></thead><tbody id="mapping-columns"></tbody></table></div>
+<div class="actions"><button id="mapping-add" type="button">Add column</button><button id="mapping-add-state" type="button">Add required state columns</button><button type="submit" class="primary" data-write>Save reviewed mapping</button><button id="edition-build" type="button" data-write>Build complete captured cohort</button></div>
+<details><summary>Original mapping JSON</summary><textarea id="mapping-json" rows="12" spellcheck="false"></textarea><button id="mapping-load-json" type="button">Load JSON for review</button></details></form></div>
+<div class="panel"><div class="panel-heading"><h2>Whole source field inventory</h2><button id="inventory-read" type="button">Read complete source inventory</button></div><label>Filter exact field paths<input id="inventory-search" placeholder="resultsSection, enrollment, contacts…"></label><div id="inventory-summary" class="help"></div><div id="inventory-table" class="table-scroll"></div><button id="inventory-next" type="button">Next field page</button></div>
+<div class="panel"><h2>Native dataset editions</h2><div id="editions-table" class="table-scroll"></div>
+<form id="edition-compare-form"><div class="form-grid"><label>Before edition<select id="edition-before"></select></label><label>After edition<select id="edition-after"></select></label></div><button type="submit" data-write>Compare retained editions</button></form><pre id="edition-comparison"></pre><div id="edition-change-table" class="table-scroll"></div><button id="edition-change-next" type="button">Next changes</button></div>
+</section>
+
+<section id="section-prs" data-panel="prs" hidden>
+<div class="section-heading"><div><div class="eyebrow">04 / PRS &amp; RECONCILIATION</div><h1>Review the original disclosure input</h1><p>Validate the original XML, review exact legacy element decisions, and reconcile explicitly linked studies against retained registry records.</p></div></div>
+<form id="prs-upload-form" class="panel"><h2>Import original PRS XML</h2><div class="form-grid"><label>XML file<input id="prs-file" type="file" accept=".xml,application/xml,text/xml" required></label><label>Original schema<select id="prs-schema"><option value="protocol">Protocol record</option><option value="results">Results record</option></select></label></div><button type="submit" data-write>Retain and inspect original XML</button><div id="prs-runtime" class="help"></div></form>
+<div class="panel"><div class="panel-heading"><h2>Original and candidate documents</h2><select id="prs-documents"></select></div><div id="prs-document-summary"></div><div class="actions"><button id="prs-inspect" type="button">Read full inspection</button><button id="prs-download-xml" type="button">Download exact XML</button><button id="prs-download-report" type="button">Download inspection report</button></div><details><summary>Original schema errors, upload intent and legacy elements</summary><pre id="prs-inspection">Import a PRS document.</pre></details><details><summary>Original XML</summary><pre id="prs-xml"></pre></details></div>
+<form id="prs-plan-form" class="panel"><h2>Prepare explicit modernization decisions</h2><p>Choose occurrence IDs from the inspection. Each decision retains its reason; replacement values must be supplied by the reviewer.</p><div class="form-grid"><label>Reviewer<input id="prs-reviewer" required></label><label>Review rationale<input id="prs-rationale" required></label><label class="span-2">Decisions<textarea id="prs-decisions" rows="9" spellcheck="false" required>[]</textarea><span class="help">Each item: elementId, action (remove, keep or replace), reason, and explicit replacement fields when needed.</span></label></div><button type="submit" class="primary" data-write>Prepare reviewed modernization plan</button>
+<label>Retained plan<select id="prs-plans"></select></label><div class="actions"><button id="prs-read-plan" type="button">Read full plan and changes</button><button id="prs-apply" type="button" data-write>Apply the reviewed plan to its original</button></div><pre id="prs-plan-details">Prepare a plan from the original document.</pre></form>
+<form id="prs-candidate-form" class="panel"><h2>Review an independently edited candidate</h2><label>Candidate filename<input id="prs-candidate-name" value="reviewed-candidate.xml" required></label><label>Candidate XML<textarea id="prs-candidate-xml" rows="8" spellcheck="false" required></textarea></label><label>Change explanation<input id="prs-candidate-note" required></label><button type="submit" data-write>Retain candidate and compare original</button></form>
+<form id="prs-reconcile-form" class="panel"><h2>Reconcile linked disclosure studies</h2><p>Link each selected PRS study index to its original NCT identifier and explain the match. Reconciliation uses full captured API records and the original typed PRS mappings.</p><label>Reviewed reconciliation plan<textarea id="prs-reconcile-plan" rows="12" spellcheck="false" required>{"studyLinks":[],"reviewer":"","rationale":""}</textarea></label><button type="submit" class="primary" data-write>Reconcile against this captured cohort</button><label>Retained reconciliation<select id="prs-reconciliations"></select></label><button id="prs-read-reconciliation" type="button">Read complete retained findings</button><pre id="prs-reconciliation-details"></pre></form>
+</section>
+
+<section id="section-query" data-panel="query" hidden>
+<div class="section-heading"><div><div class="eyebrow">05 / QUERY &amp; MERCHANT</div><h1>Review the dataset and customer terms</h1><p>Use the original typed dataset and native continuation cursor before preparing its merchant package.</p></div></div>
+<form id="query-form" class="panel"><label>Native edition<select id="query-build" required></select></label><label>Query parameters<textarea id="query-params" rows="4" spellcheck="false">limit=50</textarea></label><div class="actions"><button type="submit" class="primary" data-write>Run native query</button><button id="query-next" type="button" data-write>Next original page</button><button id="query-load" type="button">Load saved initial query</button></div><div id="query-summary" class="help"></div><div id="query-table" class="table-scroll"></div><details><summary>Original native response</summary><pre id="query-result"></pre></details></form>
+<form id="merchant-form" class="panel"><h2>Prepare the original merchant offer</h2><div class="form-grid"><label>Public origin<input id="merchant-origin" type="url" required placeholder="https://your-dataset.example"></label><label>Dataset path<input id="merchant-path" value="/registry" required></label>
+<label>Payment scheme<input id="payment-scheme" value="exact" required></label><label>Network<input id="payment-network" required placeholder="Operator-selected network"></label><label class="span-2">Asset<input id="payment-asset" required spellcheck="false"></label><label>Amount, exact atomic units<input id="payment-amount" required pattern="[0-9]+" inputmode="numeric"></label><label>Maximum timeout, seconds<input id="payment-timeout" type="number" min="1" value="600" required></label><label class="span-2">Recipient address<input id="payment-recipient" required spellcheck="false"></label></div><button type="submit" data-write>Validate and save merchant terms</button><div id="merchant-summary" class="help"></div></form>
+</section>
+<section id="section-publisher" class="publisher-section" data-panel="publisher" aria-labelledby="publisher-title" hidden>
+        <div class="section-heading"><div><div class="eyebrow">06 / PUBLISHER &amp; BUYER</div><h2 id="publisher-title">Publish and deliver the dataset</h2><p>Use the retained export with the original dataset publisher, seller release and customer acquisition.</p></div><button id="pub-open" type="button" data-write>Open publisher</button></div>
+        <div id="pub-state-summary" class="panel muted">Open the publisher to inspect its retained versions, releases and customer sessions.</div>
+        <nav class="publisher-nav" aria-label="Publication workflow">
+          <button type="button" data-publisher-view="prepare" aria-current="page">1. Prepare dataset</button>
+          <button type="button" data-publisher-view="versions">2. Review versions</button>
+          <button type="button" data-publisher-view="release">3. Run seller</button>
+          <button type="button" data-publisher-view="buyer">4. Deliver to customer</button>
+        </nav>
+        <div data-publisher-panel="prepare">
+          <form id="pub-prepare-form" class="panel">
+            <h3>Prepare an exported edition</h3>
+            <p>The publisher retains the exact CSV, dataset configuration, source provenance and original merchant offer. Its first preparation initializes the original dataset version store.</p>
+            <label>Retained operator export<select id="pub-export"><option value="">Export an edition with merchant terms first</option></select></label>
+            <div id="pub-export-summary" class="help"></div>
+            <div class="actions"><button type="submit" id="pub-prepare" class="primary" data-write>Prepare publisher dataset</button><button type="button" id="pub-go-exports">Open export &amp; recovery</button></div>
+          </form>
+          <div class="panel"><div class="panel-heading"><h3>Retained drafts</h3><span id="pub-draft-count" class="badge">0 drafts</span></div><div id="pub-drafts"></div></div>
+        </div>
+        <div data-publisher-panel="versions" hidden>
+          <form id="pub-preview-form" class="panel">
+            <h3>Preview an exact draft or version</h3>
+            <div class="form-grid">
+              <label class="span-2">Preview target<select id="pub-preview-target" required><option value="">Prepare a dataset first</option></select></label>
+              <label class="span-2">Native query string<textarea id="pub-preview-query" rows="3" spellcheck="false" maxlength="8192" placeholder="limit=100"></textarea></label>
+            </div>
+            <div class="actions"><button type="submit" id="pub-preview" class="primary" data-write>Preview selected dataset</button><button type="button" id="pub-preview-next" data-write>Next preview page</button><button type="button" id="pub-load-query">Load operator query</button></div>
+            <p class="help">Draft previews use the original typed dataset. Published versions use the running seller’s original private control channel.</p>
+            <div id="pub-preview-summary" class="help"></div><div id="pub-preview-table" class="table-scroll query-table"></div>
+            <details><summary>Exact native preview</summary><pre id="pub-preview-result">No publisher preview yet.</pre></details>
+          </form>
+          <div class="panel">
+            <h3>Review and publish a retained draft</h3>
+            <label>Draft<select id="pub-review-draft"><option value="">Prepare a dataset first</option></select></label>
+            <div id="pub-review-summary" class="help"></div><div id="pub-publication-pins" class="facts mono"></div>
+            <div class="actions"><button type="button" id="pub-review" data-write>Review against current version</button><button type="button" id="pub-publish" class="primary" data-write>Publish reviewed draft</button></div>
+            <p class="help">Start the seller before reviewing or publishing. A changed target revision requires a fresh review of this same draft.</p>
+            <details><summary>Retained draft and publication history</summary><pre id="pub-review-result">Select a draft.</pre></details>
+          </div>
+          <div class="panel">
+            <div class="panel-heading"><h3>Published versions</h3><button type="button" id="pub-collect" data-write>Collect expired versions</button></div>
+            <p class="help">Select an existing version using the displayed current snapshot and revision. Retention and active cursor handling remain with the original dataset engine.</p>
+            <div id="pub-versions"></div>
+          </div>
+        </div>
+        <div data-publisher-panel="release" hidden>
+          <form id="pub-release-form" class="panel">
+            <h3>Stage the original seller release</h3>
+            <div class="form-grid">
+              <label class="span-2">Source draft<select id="pub-release-draft" required><option value="">Prepare a dataset first</option></select></label>
+              <label>Release ID<input id="pub-release-id" required maxlength="64" pattern="[a-z0-9][a-z0-9._-]*" autocomplete="off" spellcheck="false" placeholder="registry-portfolio-01"></label>
+              <label>Release label<input id="pub-release-label" required autocomplete="off" placeholder="Reviewed registry portfolio"></label>
+              <label>Local listening port<input id="pub-release-port" type="number" min="0" max="65535" value="0" required><span class="help">0 lets the operating system select an available port.</span></label>
+              <label>Facilitator URL<input id="pub-facilitator" type="url" autocomplete="off" spellcheck="false" placeholder="Configured facilitator URL"><span class="help">Configure a facilitator for native payments. Leave empty to inspect payment challenges.</span></label>
+              <label class="checkbox-label span-2"><input id="pub-local-facilitator" type="checkbox">Allow a local facilitator for this configured runtime</label>
+            </div>
+            <div class="actions"><button type="submit" id="pub-stage" class="primary" data-write>Stage seller release</button></div>
+          </form>
+          <div class="panel">
+            <div class="panel-heading"><h3>Release selection and runtime</h3><span id="pub-generation" class="badge">Generation —</span></div>
+            <div id="pub-runtime-summary"></div>
+            <div class="actions"><button type="button" id="pub-release-start" class="primary" data-write>Start selected seller</button><button type="button" id="pub-release-stop" data-write>Stop this operator’s seller</button><button type="button" id="pub-release-rollback" data-write>Roll back release selection</button></div>
+            <p class="help">Activation selects a retained release. Stop and start the owned seller to run a changed selection; its current process remains visible until then.</p>
+            <div id="pub-releases"></div>
+            <details><summary>Original release status</summary><pre id="pub-release-details">Open the publisher.</pre></details>
+          </div>
+        </div>
+        <div data-publisher-panel="buyer" hidden>
+          <form id="pub-buyer-review-form" class="panel">
+            <h3>Review the customer’s actual offer</h3>
+            <div class="form-grid">
+              <label class="span-2">Published snapshot<select id="pub-buyer-snapshot" required><option value="">Prepare and run the seller first</option></select></label>
+              <label class="span-2">First-page native query<textarea id="pub-buyer-query" rows="3" maxlength="8192" spellcheck="false" placeholder="limit=100"></textarea><span class="help">Choose the snapshot above; continuation cursors are generated by the original acquisition.</span></label>
+            </div>
+            <div class="actions"><button type="submit" id="pub-buyer-review" class="primary" data-write>Read actual customer offer</button><button type="button" id="pub-load-buyer-query">Load operator query</button></div>
+            <div id="pub-buyer-review-summary" class="help"></div><div id="pub-buyer-preview" class="table-scroll query-table"></div>
+            <details><summary>Original offer, accepted payment terms and query</summary><pre id="pub-buyer-offer">Read the running seller’s offer.</pre></details>
+          </form>
+          <form id="pub-buyer-prepare-form" class="panel">
+            <h3>Prepare the reviewed customer request</h3>
+            <div class="form-grid">
+              <label>Request intent ID<input id="pub-intent-id" required autocomplete="off" spellcheck="false" placeholder="A retained customer request ID"></label>
+              <label>Accepted payment option<select id="pub-accept" required><option value="">Review the actual offer first</option></select></label>
+            </div>
+            <p id="pub-accept-summary" class="help"></p>
+            <div class="actions"><button type="submit" id="pub-buyer-prepare" class="primary" data-write>Prepare customer request</button></div>
+          </form>
+          <form id="pub-session-form" class="panel">
+            <h3>Continue through the original buyer workspace</h3>
+            <div class="form-grid">
+              <label class="span-2">Prepared customer request<select id="pub-buyer-id" required><option value="">Prepare a customer request first</option></select></label>
+              <label class="span-2">Existing buyer workspace path<input id="pub-buyer-workspace" required autocomplete="off" spellcheck="false" placeholder="/absolute/path/to/original-buyer-workspace"><span class="help">Use the original workspace with its configured account and signer. Credentials stay in that workspace.</span></label>
+              <label>Maximum pages<input id="pub-max-pages" type="number" min="1" required placeholder="Number of reviewed pages"></label>
+              <label>Total payment limit, atomic units<input id="pub-max-total" required inputmode="numeric" pattern="[0-9]+" placeholder="Exact integer limit"></label>
+              <label>Maximum rows<input id="pub-max-rows" type="number" min="1" value="1000000" required></label>
+              <label>Maximum bytes per page<input id="pub-max-page-bytes" type="number" min="1" value="1048576" required></label>
+            </div>
+            <p id="pub-session-summary" class="help">The session retains its original request, selected snapshot, workspace and limits for run and recovery.</p>
+            <div class="actions"><button type="submit" id="pub-session" class="primary" data-write>Open retained buyer session</button><button type="button" id="pub-download-buyer">Download customer request</button></div>
+          </form>
+          <div class="panel"><h3>Customer acquisitions and delivery files</h3><div id="pub-sessions"></div></div>
+        </div>
+        <details class="panel"><summary>Retained publisher state</summary><pre id="pub-state-details">Open the publisher.</pre></details>
+      </section>
+
+      
+<section id="section-exports" data-panel="exports" hidden>
+<div class="section-heading"><div><div class="eyebrow">07 / EXPORT &amp; RECOVERY</div><h1>Deliver and reopen the whole workspace</h1><p>Keep the complete registry pages, mapping, native dataset, PRS decisions and original merchant customer files together.</p></div><button id="package-export" type="button" class="primary" data-write>Export reviewed edition</button></div>
+<div class="panel"><label>Retained customer export<select id="export-select"></select></label><div id="export-summary" class="facts"></div><div id="export-files" class="table-scroll"></div></div>
+<form id="restore-form" class="panel"><h2>Receive a complete source workspace</h2><p>Restore the portable clinicaltrials-workspace.zip into an empty workspace. All original native source, mapping and dataset identities are checked during receiving.</p><label>Portable workspace ZIP<input id="restore-file" type="file" accept=".zip,application/zip" required></label><button id="restore-submit" type="submit" data-write>Restore original workspace</button><p id="restore-hint" class="help"></p></form>
+<div class="panel"><h2>Original source contracts</h2><div id="contract-files" class="actions"></div><details><summary>Retained workspace details</summary><pre id="state-details"></pre></details></div>
+</section>
+<footer>Public registry source and reviewed operator decisions · Original native dataset and customer lifecycle</footer>
+</main></div></body></html>
