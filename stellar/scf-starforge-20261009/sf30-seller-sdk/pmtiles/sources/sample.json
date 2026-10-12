@@ -1,0 +1,61 @@
+{
+  "repository": "protomaps/PMTiles",
+  "sourceCommit": "aec8fa1341222fdddb3318e9ffa8e18e19b312f7",
+  "path": "spec/v3/stamen_toner(raster)CC-BY+ODbL_z3.pmtiles",
+  "blob": "8d170ca89ecf3197d14366db63679f198a198101",
+  "bytes": 716052,
+  "sha256": "b96efe3ea10b98632c0c0dc229d000b604ebdad6b2f1321ea11d9de931df1ce5",
+  "encoding": "base64",
+  "header": {
+    "magic": "PMTiles",
+    "version": 3,
+    "root": {
+      "offset": "127",
+      "length": "246"
+    },
+    "metadata": {
+      "offset": "373",
+      "length": "22"
+    },
+    "leaves": {
+      "offset": "395",
+      "length": "0"
+    },
+    "tiles": {
+      "offset": "395",
+      "length": "715657"
+    },
+    "addressedTiles": "85",
+    "tileEntries": "84",
+    "tileContents": "80",
+    "clustered": 1,
+    "internalCompression": 2,
+    "tileCompression": 1,
+    "tileType": 2,
+    "minZoom": 0,
+    "maxZoom": 3,
+    "bounds": [
+      -180,
+      -85,
+      180,
+      85
+    ],
+    "centerZoom": 0,
+    "center": [
+      0,
+      0
+    ]
+  },
+  "license": {
+    "tiles": "CC-BY-4.0",
+    "data": "ODbL-1.0",
+    "attribution": "Map tiles by Stamen Design, under CC BY 4.0. Data by OpenStreetMap, under ODbL.",
+    "primarySource": "https://openlayers.org/en/latest/examples/pmtiles-image.html"
+  },
+  "firstTileImage": {
+    "fileOffset": 395,
+    "signature": "89504e470d0a1a0a",
+    "width": 256,
+    "height": 256
+  }
+}

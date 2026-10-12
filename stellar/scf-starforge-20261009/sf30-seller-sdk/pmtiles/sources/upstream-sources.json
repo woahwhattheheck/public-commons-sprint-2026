@@ -1,0 +1,256 @@
+{
+  "schema": "stellar-forge.pmtiles-upstream-runtime-sources.v1",
+  "retrievedAt": "2026-10-12T11:20:59+00:00",
+  "scope": "public",
+  "packages": [
+    {
+      "name": "pmtiles",
+      "version": "4.5.0",
+      "purpose": "Native PMTiles reader",
+      "repository": "protomaps/PMTiles",
+      "ref": "aec8fa1341222fdddb3318e9ffa8e18e19b312f7",
+      "packagePath": "js/package.json",
+      "blob": "1b6519d9ef11ead211f7988354e2052ba2fcc208",
+      "sourceUrl": "https://github.com/protomaps/PMTiles/blob/aec8fa1341222fdddb3318e9ffa8e18e19b312f7/js/package.json",
+      "npmArchive": {
+        "version": "4.5.0",
+        "resolved": "https://registry.npmjs.org/pmtiles/-/pmtiles-4.5.0.tgz",
+        "integrity": "sha512-CBeD4SoUluFziGdy/8k7FOjQxQy486n+929W/tWophauvMICpkZ26vGBWhDt/6b1FZQWNaf4jFdT/5+q0Wii5w==",
+        "license": "BSD-3-Clause",
+        "dependencies": {
+          "fflate": "^0.8.2"
+        }
+      },
+      "npmEvidence": {
+        "repository": "protomaps/PMTiles",
+        "ref": "aec8fa1341222fdddb3318e9ffa8e18e19b312f7",
+        "path": "app/package-lock.json",
+        "blob": "a9ec4eb38eaed8e734ed133ea493f6035271e0bf"
+      }
+    },
+    {
+      "name": "@maplibre/maplibre-gl-style-spec",
+      "version": "26.4.4",
+      "purpose": "Native and browser style validation",
+      "repository": "maplibre/maplibre-style-spec",
+      "ref": "v26.4.4",
+      "packagePath": "package.json",
+      "blob": "71a36da6a5b8a9e1ae9eb5768f4248a31f426ae3",
+      "sourceUrl": "https://github.com/maplibre/maplibre-style-spec/blob/v26.4.4/package.json",
+      "npmArchive": {
+        "version": "26.4.4",
+        "resolved": "https://registry.npmjs.org/@maplibre/maplibre-gl-style-spec/-/maplibre-gl-style-spec-26.4.4.tgz",
+        "integrity": "sha512-hG4RZR4PBd/+6A3ODdZ3AnQRF106ZQk1y3bhwDg8bH/A4Oz2tnRUJVVWs9BZa6gXZ1d3UKe89C+Mm+olGBELvA==",
+        "dev": true,
+        "license": "ISC",
+        "dependencies": {
+          "@mapbox/jsonlint-lines-primitives": "^2.0.3",
+          "@mapbox/unitbezier": "^1.0.0",
+          "json-stringify-pretty-compact": "^4.0.0",
+          "minimist": "^1.2.8",
+          "quickselect": "^3.0.0",
+          "tinyqueue": "^3.0.0"
+        },
+        "bin": {
+          "gl-style-format": "dist/gl-style-format.mjs",
+          "gl-style-migrate": "dist/gl-style-migrate.mjs",
+          "gl-style-validate": "dist/gl-style-validate.mjs"
+        }
+      },
+      "npmEvidence": {
+        "repository": "geoblocks/ol-maplibre-layer",
+        "ref": "master",
+        "path": "package-lock.json",
+        "blob": "011101cbb96bcb0d4ed0854468e255b4419aecc1"
+      }
+    },
+    {
+      "name": "ol",
+      "version": "10.11.0",
+      "purpose": "OpenLayers preview",
+      "repository": "openlayers/openlayers",
+      "ref": "v10.11.0",
+      "packagePath": "package.json",
+      "sourceUrl": "https://github.com/openlayers/openlayers/blob/v10.11.0/package.json",
+      "npmArchive": {
+        "version": "10.11.0",
+        "resolved": "https://registry.npmjs.org/ol/-/ol-10.11.0.tgz",
+        "integrity": "sha512-OJ+lrx7kx/1O7Xx18Ff9QkVnwZIEL0OuhJQSy2sYgzzDvyZ2qHvuZEGAajbSstUyBwaS1OtQ4RWnY84tRMDdqg==",
+        "dev": true,
+        "license": "BSD-2-Clause",
+        "dependencies": {
+          "@types/rbush": "4.0.0",
+          "earcut": "^3.0.0",
+          "geotiff": "^3.1.0-beta.0",
+          "pbf": "5.1.2",
+          "rbush": "^4.0.0",
+          "zarrita": "^0.7.1"
+        },
+        "funding": {
+          "type": "opencollective",
+          "url": "https://opencollective.com/openlayers"
+        }
+      },
+      "npmEvidence": {
+        "repository": "geoblocks/ol-maplibre-layer",
+        "ref": "master",
+        "path": "package-lock.json",
+        "blob": "011101cbb96bcb0d4ed0854468e255b4419aecc1"
+      }
+    },
+    {
+      "name": "maplibre-gl",
+      "version": "6.14.0",
+      "purpose": "Styled map renderer and worker",
+      "repository": "maplibre/maplibre-gl-js",
+      "ref": "v6.14.0",
+      "packagePath": "package.json",
+      "blob": "fa89b254a39ed1d74b19f89febe905757cebc00e",
+      "sourceUrl": "https://github.com/maplibre/maplibre-gl-js/blob/v6.14.0/package.json"
+    },
+    {
+      "name": "@geoblocks/ol-maplibre-layer",
+      "version": "2.0.0",
+      "purpose": "MapLibre layer in original OpenLayers map",
+      "repository": "geoblocks/ol-maplibre-layer",
+      "ref": "v2.0.0",
+      "packagePath": "package.json",
+      "blob": "f0cd1b6bfd3f50047aa5805d281dcac26b9cee9f",
+      "sourceUrl": "https://github.com/geoblocks/ol-maplibre-layer/blob/v2.0.0/package.json"
+    }
+  ],
+  "upstreamOptionalReader": {
+    "name": "ol-pmtiles",
+    "version": "2.0.2",
+    "sourceUrl": "https://github.com/protomaps/PMTiles/blob/aec8fa1341222fdddb3318e9ffa8e18e19b312f7/openlayers/package.json",
+    "packageBlob": "d75eb530969e95a753c52e9bf3921e4c0117e7ad",
+    "dependencies": {
+      "pmtiles": "^4.3.0"
+    },
+    "peerDependencies": {
+      "ol": ">=9.0.0"
+    }
+  },
+  "nativeAndBrowserArchives": [
+    {
+      "id": "go-pmtiles",
+      "tag": "v1.31.2",
+      "publishedAt": "2026-07-22T19:02:26Z",
+      "releaseUrl": "https://github.com/protomaps/go-pmtiles/releases/tag/v1.31.2",
+      "license": "BSD-3-Clause",
+      "assets": [
+        {
+          "name": "go-pmtiles_1.31.2_Linux_arm64.tar.gz",
+          "bytes": 15779781,
+          "sha256": "f8bd47e7ea866863489cad588fbaf2f31f42e5821f7a03f009b3769f05801cb1",
+          "url": "https://github.com/protomaps/go-pmtiles/releases/download/v1.31.2/go-pmtiles_1.31.2_Linux_arm64.tar.gz",
+          "evidence": "GitHub release asset metadata"
+        },
+        {
+          "name": "go-pmtiles_1.31.2_Linux_x86_64.tar.gz",
+          "bytes": 17444324,
+          "sha256": "3ed7dbf4ec2e6dfe5e25b6f70d1ffc932729f93c86db353bf514dd71010a312f",
+          "url": "https://github.com/protomaps/go-pmtiles/releases/download/v1.31.2/go-pmtiles_1.31.2_Linux_x86_64.tar.gz",
+          "evidence": "GitHub release asset metadata"
+        }
+      ]
+    },
+    {
+      "id": "martin",
+      "tag": "martin-v1.16.1",
+      "publishedAt": "2026-09-09T15:20:58Z",
+      "releaseUrl": "https://github.com/maplibre/martin/releases/tag/martin-v1.16.1",
+      "license": "MIT OR Apache-2.0",
+      "assets": [
+        {
+          "name": "martin-aarch64-unknown-linux-musl.tar.gz",
+          "bytes": 36967295,
+          "sha256": "6802b55c378d6a38180d881d306f53c17ac4ebbb35893aa94204907b0f08fd1c",
+          "url": "https://github.com/maplibre/martin/releases/download/martin-v1.16.1/martin-aarch64-unknown-linux-musl.tar.gz",
+          "evidence": "GitHub release asset metadata"
+        },
+        {
+          "name": "martin-x86_64-unknown-linux-musl.tar.gz",
+          "bytes": 39784027,
+          "sha256": "831df5399bb573a8b6bc01dbb38be5938c0e95501e715403d9eacd9143b33348",
+          "url": "https://github.com/maplibre/martin/releases/download/martin-v1.16.1/martin-x86_64-unknown-linux-musl.tar.gz",
+          "evidence": "GitHub release asset metadata"
+        }
+      ]
+    },
+    {
+      "id": "maplibre-gl",
+      "tag": "v6.14.0",
+      "publishedAt": "2026-10-11T14:30:36Z",
+      "releaseUrl": "https://github.com/maplibre/maplibre-gl-js/releases/tag/v6.14.0",
+      "license": "BSD-3-Clause",
+      "assets": [
+        {
+          "name": "dist.zip",
+          "bytes": 4885063,
+          "sha256": "3fb6ad06f12adde814a4ebf7e56ebcc1726e54306fa1d5fce88d0fca8ede822e",
+          "url": "https://github.com/maplibre/maplibre-gl-js/releases/download/v6.14.0/dist.zip",
+          "evidence": "GitHub release asset metadata"
+        }
+      ]
+    },
+    {
+      "id": "style-spec",
+      "tag": "v26.4.4",
+      "publishedAt": "2026-09-15T13:10:04Z",
+      "releaseUrl": "https://github.com/maplibre/maplibre-style-spec/releases/tag/v26.4.4",
+      "license": "ISC",
+      "assets": [
+        {
+          "name": "dist.zip",
+          "bytes": 1469834,
+          "sha256": "88d32b143a75aa7f705bc205f63d4e46ad8b37595458c0769de6886ce48edb5d",
+          "url": "https://github.com/maplibre/maplibre-style-spec/releases/download/v26.4.4/dist.zip",
+          "evidence": "GitHub release asset metadata"
+        }
+      ]
+    },
+    {
+      "id": "openlayers",
+      "tag": "v10.11.0",
+      "publishedAt": "2026-10-04T19:55:20Z",
+      "releaseUrl": "https://github.com/openlayers/openlayers/releases/tag/v10.11.0",
+      "license": "BSD-2-Clause",
+      "assets": [
+        {
+          "name": "v10.11.0-package.zip",
+          "bytes": 3326460,
+          "sha256": "95f36b8a91381a886f93415e168b01ae66b7c0b3a9cf6841e28aae6386de5334",
+          "url": "https://github.com/openlayers/openlayers/releases/download/v10.11.0/v10.11.0-package.zip",
+          "evidence": "GitHub release asset metadata"
+        }
+      ]
+    }
+  ],
+  "worker": {
+    "version": "6.14.0",
+    "main": "dist/maplibre-gl.mjs",
+    "entry": "dist/maplibre-gl-worker.mjs",
+    "css": "dist/maplibre-gl.css",
+    "layout": "main and worker are independent self-contained ESM bundles",
+    "setWorkerUrlBeforeMap": true,
+    "sourceUrl": "https://github.com/maplibre/maplibre-gl-js/blob/v6.14.0/rolldown.config.ts",
+    "sourceBlob": "5e5efe19542101757e22ea4c88287d59353a3b9a"
+  },
+  "validator": {
+    "package": "@maplibre/maplibre-gl-style-spec",
+    "version": "26.4.4",
+    "export": "validateStyleMin",
+    "input": "parsed StyleSpecification object",
+    "output": "ValidationError[]; empty means valid",
+    "cli": [
+      "gl-style-validate",
+      "--json",
+      "style.json"
+    ],
+    "cliSuccessExit": 0,
+    "cliInvalidExit": 1,
+    "exportSourceBlob": "c6404db978a927a10f6fecff071e21343ac5a5d8",
+    "implementationBlob": "5bf9aa65b143d49d5d0005ba10c069d982464ac4"
+  }
+}

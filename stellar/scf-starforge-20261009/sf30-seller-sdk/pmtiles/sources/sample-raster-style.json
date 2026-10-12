@@ -1,0 +1,32 @@
+{
+  "version": 8,
+  "name": "Original Stamen Toner sample",
+  "center": [
+    0,
+    0
+  ],
+  "zoom": 2,
+  "metadata": {
+    "starforge:sample-sha256": "b96efe3ea10b98632c0c0dc229d000b604ebdad6b2f1321ea11d9de931df1ce5",
+    "starforge:source-archive": "stamen-toner-z0-z3.pmtiles",
+    "starforge:source-url": "https://github.com/protomaps/PMTiles/blob/aec8fa1341222fdddb3318e9ffa8e18e19b312f7/spec/v3/stamen_toner%28raster%29CC-BY%2BODbL_z3.pmtiles"
+  },
+  "sources": {
+    "toner": {
+      "type": "raster",
+      "url": "http://127.0.0.1:3010/toner",
+      "tileSize": 256,
+      "attribution": "Map tiles by <a href=\"https://stamen.com\">Stamen Design</a>, under <a href=\"https://creativecommons.org/licenses/by/4.0/\">CC BY 4.0</a>. Data by <a href=\"https://www.openstreetmap.org/copyright\">OpenStreetMap contributors</a>, under <a href=\"https://opendatacommons.org/licenses/odbl/1-0/\">ODbL</a>."
+    }
+  },
+  "layers": [
+    {
+      "id": "toner",
+      "type": "raster",
+      "source": "toner",
+      "paint": {
+        "raster-opacity": 1
+      }
+    }
+  ]
+}
