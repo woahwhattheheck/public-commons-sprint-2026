@@ -330,13 +330,13 @@ final class Starforge_SF104_Basket {
     }
     static function render_summary($handoff) {
         if (($handoff['schema'] ?? '') !== self::SCHEMA) return;
-        echo '<h3>Items in this payment</h3><table class="shop_table"><thead><tr><th>Product</th><th>Quantity</th><th>Store total</th><th>Atomic amount</th></tr></thead><tbody>';
+        echo '<h3>Items in this payment</h3><div class="sf104-basket-summary" role="region" aria-label="Items in this payment" tabindex="0" style="max-width:100%;overflow-x:auto"><table class="shop_table"><thead><tr><th>Product</th><th>Quantity</th><th>Store total</th><th>Atomic amount</th></tr></thead><tbody>';
         foreach ($handoff['items'] as $line) {
             echo '<tr><td>' . esc_html($line['name']) . '</td><td>' . esc_html($line['quantity']) . '</td><td>' .
                 esc_html($handoff['storefront']['currency'] . ' ' . $line['lineStoreTotal']) . '</td><td>' .
                 esc_html($line['lineAmountAtomic']) . '</td></tr>';
         }
-        echo '</tbody></table><p>One payment covers these exact items. The store releases each product through the original order after settlement review.</p>';
+        echo '</tbody></table></div><p>One payment covers these exact items. The store releases each product through the original order after settlement review.</p>';
     }
 }
 Starforge_SF104_Basket::boot();
