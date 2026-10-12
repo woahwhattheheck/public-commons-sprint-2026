@@ -204,7 +204,8 @@ export async function mountPrescientView({root,api,context={}}={}){
     for(const row of [...list(saved.configuration.deliveryReviews)].reverse().slice(0,8)){
       deliveryReviews.append(node('article',{class:'prescient-record'},node('h5',{},'Delivery review '+short(row.sha256)),
         node('p',{},row.summary.scenes+' scenes · '+row.summary.assets+' selected assets · '+bytes(row.summary.assetBytes)),
-        node('p',{},row.summary.collections.join(', ')),node('p',{class:'muted'},row.sourceDirectory),
+        node('p',{},row.summary.collections.join(', ')),
+        node('p',{},'Original catalog: '+row.source.catalogEndpoint),node('p',{class:'muted'},row.sourceDirectory),
         details('Original selection and source binding',row.source),
         button('Approve and export this delivery',async()=>{
           const result=await command('/deliveries/export',{reviewId:row.id,reviewSha256:row.sha256});

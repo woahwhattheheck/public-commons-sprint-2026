@@ -99,7 +99,7 @@ Stopping the host aborts admitted source and receiving calls, drains its owned S
 
 Complete or reopen the customer delivery through the existing STAC merchant, SF88 buyer and dataset/file workflow. This operator consumes that original completed directory; it does not initiate another purchase.
 
-In **Prescient → Original customer delivery**, choose the exact completed customer directory from an allowed receiving root and create its review. The native `StacDelivery.open` verifies its original manifests, selected files and byte hashes. The review retains the original bundle, edition, selection and native binding identities; each scene's actual collection and each received asset's size are compared with the selected profile.
+In **Prescient → Original customer delivery**, choose the exact completed customer directory from an allowed receiving root and create its review. The native `StacDelivery.open` verifies its original manifests, selected files and byte hashes. The review displays the original catalog endpoint and retains its query hash alongside the original bundle, edition, selection and native binding identities. Inspect that original source when approving a delivery; importing an existing customer delivery does not change the configured Prescient endpoint or grant its source identity to another origin. Each scene's actual collection and each received asset's size are compared with the selected profile.
 
 Inspect the saved review and export that exact review. The existing portable GIS engine writes the complete original customer delivery, local STAC catalog, GeoJSON and offline scene explorer. The operator then adds:
 
