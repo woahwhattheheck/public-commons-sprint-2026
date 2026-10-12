@@ -261,7 +261,8 @@ class PortfolioWorkspace:
                 current_model = self.native.capture(project_file, provenance)
                 current_model["companions"] = []
                 unchanged = compare_models(model, current_model)["summary"]
-                require(not any(unchanged[name] for name in ("added", "removed", "changed_fields")),
+                require(not any(unchanged[name] for name in ("added", "removed", "changed_fields",
+                                                                    "definition_changes", "companion_changes")),
                         "native_capture_changed",
                         "The native project changed before its original capture finished; retain this request and capture the new edition separately.",
                         unchanged)

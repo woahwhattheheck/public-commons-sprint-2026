@@ -973,6 +973,21 @@ class TargetWorkspace:
                 (change.get("family"), change.get("left_key"), change.get("right_key"), change.get("path"),
                  change.get("kind"), change.get("before"), change.get("after"))
                 for change in comparison.get("changes", [])
+            )), "</section><section><h2>Native field and collection definitions</h2>",
+            ("<p>The retained comparison includes the complete field catalogue and native collection definitions. "
+             "Paths identify their original source location.</p>"
+             if isinstance(comparison.get("definition_changes"), list) and comparison.get("definition_sources")
+             else "<p>This saved comparison has no native definition coverage.</p>"),
+            table(("Compared edition", "Field catalogue SHA-256", "Native JSON identity", "Retained collections SHA-256"), (
+                (label, source.get("field_catalogue_sha256"), source.get("native_json_identity"),
+                 source.get("retained_collections_sha256"))
+                for side, label in (("left", "Original / intended"), ("right", "Received"))
+                for source in [(comparison.get("definition_sources") or {}).get(side, {})]
+            )),
+            table(("Scope", "Original path", "Change", "Before", "After"), (
+                (change.get("scope"), change.get("path"), change.get("kind"),
+                 change.get("before"), change.get("after"))
+                for change in comparison.get("definition_changes", [])
             )), "</section><section><h2>Identity and receiving findings</h2>",
             table(("Source", "Finding"), (
                 [("Capture identity", item) for item in value.get("capture_identity_findings", [])] +
