@@ -336,6 +336,10 @@ export async function startNativeRedisTopology({ topology, directory, password, 
         stages.push({ stage: 'silent-startup-terminal-cleanup', elapsedMs, ...terminal.status() });
       } finally { await terminal.close(); transports.delete(terminal); }
     }
+    async function userClients(node, user) {
+      const listing = await node.client.sendCommand(['CLIENT', 'LIST']);
+      return String(listing).split('\n').filter(line => line.split(' ').includes('user=' + user)).length;
+    }
     async function exercise({ source, queries, connectTimeoutMs }) {
       const availability = await source.query('availability', {});
       let pauseNode;
@@ -404,6 +408,18 @@ export async function startNativeRedisTopology({ topology, directory, password, 
       assert.ok(slowElapsed > connectTimeoutMs);
       stages.push({ stage: 'read-outlasts-connect-deadline', connectTimeoutMs, elapsedMs: slowElapsed,
         queryTimeoutMs: queries.availability.timeoutMs });
+      if (topology === 'cluster') {
+        // Keep the active read on its healthy owner while another already-open
+        // shard disconnects. Native Cluster.destroy must still close siblings.
+        let disconnected;
+        for (const node of nodes.filter(node => node !== pauseNode)) {
+          if (await userClients(node, 'merchant') === 0) continue;
+          const killed = Number(await node.client.sendCommand(['CLIENT', 'KILL', 'USER', 'merchant', 'SKIPME', 'yes']));
+          if (killed) { disconnected = { node: node.label, closedMerchantConnections: killed }; break; }
+        }
+        assert.ok(disconnected, 'The native reader must have an already-open second shard');
+        stages.push({ stage: 'one-shard-disconnected-before-close', ...disconnected });
+      }
       await pauseNode.client.sendCommand(['CLIENT', 'PAUSE', '250', 'ALL']);
       const controller = new AbortController(), aborted = setTimeout(() => controller.abort(), 25), start = Date.now();
       try { await assert.rejects(source.query('availability', {}, { signal: controller.signal }), issue => issue.code === 'QUERY_ABORTED'); }
@@ -411,7 +427,12 @@ export async function startNativeRedisTopology({ topology, directory, password, 
       await source.close();
       const closed = source.status();
       assert.equal(closed.state, 'CLOSED'); assert.equal(closed.active, 0); assert.equal(closed.connections, 0); assert.equal(closed.retiring, 0);
-      stages.push({ stage: 'active-read-cancel-and-close', elapsedMs: Date.now() - start, status: closed });
+      const physicalConnections = await until(async () => {
+        const data = await Promise.all(nodes.map(async node => ({ node: node.label, readers: await userClients(node, 'merchant') })));
+        const control = await Promise.all(monitors.map(async node => ({ node: node.label, readers: await userClients(node, 'sentinel_reader') })));
+        return [...data, ...control].every(node => node.readers === 0) ? { data, control } : false;
+      }, 'REDIS_MERCHANT_CONNECTION_RETAINED_AFTER_CLOSE', 5000);
+      stages.push({ stage: 'active-read-cancel-and-close', elapsedMs: Date.now() - start, status: closed, physicalConnections });
       return { result: 'PASS', topology, dataProcesses: nodes.length, monitorProcesses: monitors.length,
         ...(certificates ? { tls: { mode: 'verify-full', dataCaSha256: certificates.data.sha256,
           sentinelCaSha256: certificates.monitor.sha256, independentAuthorities: true, subjectAltNames: ['localhost', '127.0.0.1'] } } : {}),
