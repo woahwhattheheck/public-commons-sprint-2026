@@ -70,7 +70,8 @@
     "stellar-forge/mcp-merchant-operator/supplier-order-client.d.mts",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/supplier-orders/receiving/SUPPLIER_ORDERS_NATIVE.md",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/supplier-orders/PROFILES.md",
-    "stellar/scf-starforge-20261009/sf30-seller-sdk/supplier-orders/examples/customer-profile.json"
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/supplier-orders/examples/customer-profile.json",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/supplier-orders/GUIDE.md"
   ],
   "excludeFiles": [
     "stellar/scf-starforge-20261009/distribution/index.mjs"

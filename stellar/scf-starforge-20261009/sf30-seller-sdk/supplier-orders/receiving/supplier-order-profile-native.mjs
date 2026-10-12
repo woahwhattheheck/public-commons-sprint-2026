@@ -485,9 +485,9 @@ export async function runSupplierOrderProfileReceiving({
       await page.goto(desk.url,{waitUntil:'networkidle'});await page.locator('#open-profile').click();await page.locator('#profile-dialog').waitFor({state:'visible'});
       await page.waitForFunction(expected=>document.querySelector('#profile-current')?.textContent.includes(expected),profileSha256);
       assert.equal(await page.locator('#profile-fields').isDisabled(),true);assert.equal(await page.locator('#profile-save').isDisabled(),true);
-      const displayed=JSON.parse(await page.locator('#profile-complete').innerText());assert.deepEqual(displayed,profile);
+      const displayed=JSON.parse(await page.locator('#profile-complete').textContent());assert.deepEqual(displayed,profile);
       await page.waitForFunction(expected=>document.querySelector('#profile-history')?.textContent.includes(expected),adoption.requestId);
-      const history=await page.locator('#profile-history').innerText();assert.ok(history.includes(adoption.requestId));assert.ok(!history.includes(adoption.inspectRequestId));
+      const history=await page.locator('#profile-history').textContent();assert.ok(history.includes(adoption.requestId));assert.ok(!history.includes(adoption.inspectRequestId));
       const [download]=await Promise.all([page.waitForEvent('download'),Promise.resolve().then(()=>page.locator('#profile-download').click())]);
       const complete=await exactBytes(await download.path());assert.equal(sha(complete),sha(declarationBytes));assert.equal(complete.length,declarationBytes.length);
       const profileDownload=await retain(join(root,'downloads','customer-profile.json'),complete);
