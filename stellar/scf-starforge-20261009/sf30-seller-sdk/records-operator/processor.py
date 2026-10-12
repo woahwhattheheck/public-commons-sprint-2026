@@ -19,6 +19,7 @@ from pathlib import Path
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from offsite_records_storage_invoice_reconciliation import engine
+from workbook import WorkbookError, Intake as WorkbookIntake, read_workbook_source, workbook_descriptors
 
 SCHEMA = "tj.records-operator-workspace.v1"
 FILE_LIMIT = 8 * 1024 * 1024
@@ -430,6 +431,8 @@ class Records:
         self.requirement_rows = []
         self.catalog_rows = []
         self.reference_bindings = []
+        self.workbook_intakes = []
+        self.workbook_errors = []
         self.columns = self._columns()
         self._load_inputs()
         self._compile()
@@ -438,6 +441,7 @@ class Records:
         self._transition()
         self._cooperative()
         self._references()
+        self._workbooks()
         if compare and self.edition.get("compareToEdition"):
             self._compare()
 
@@ -482,7 +486,7 @@ class Records:
         if table in ("rates", "invoices") and scale not in ("minor", "major"):
             raise InputError("Rates/invoices need an explicit moneyScale of minor or major")
         return mapping, constants, maps, identity({"table": table, "mapping": mapping, "constants": constants,
-                                                 "valueMaps": maps, "moneyScale": scale})
+                                                 "valueMaps": maps, "moneyScale": scale, **({"workbookBindingSha256": source.get("workbookBindingSha256")} if source.get("format") == "xlsx" else {})})
 
     def _mapped(self, source, original, mapping, constants, maps):
         table = source["table"]
@@ -594,6 +598,10 @@ class Records:
             meta = {"id": source["id"], "path": source["path"], "sha256": source["sha256"], "recordIndex": index,
                     "locator": "row " + str(index + (2 if source["format"] == "csv" else 1)),
                     "mappingSha256": mapping_sha, "rawRowSha256": raw_sha}
+            if source.get("format") == "xlsx" and type(original.get("_workbook")) is dict:
+                meta["locator"] = original["_workbook"]["locator"]
+                meta["workbook"] = {key: copy.deepcopy(original["_workbook"][key]) for key in
+                                    ("workbookId", "workbookSha256", "sheet", "row", "sourceRowSha256", "bindingSha256")}
             record = {"id": "row:" + str(index), "table": source["table"], "values": None, "mapped": {},
                       "original": copy.deepcopy(original), "_source": meta, "omitted": False, "errors": []}
             try:
@@ -647,16 +655,20 @@ class Records:
                     utc(source.get("capturedAt"), "source.capturedAt")
                     text(source.get("sourceKind"), "source.sourceKind", 300)
                     raw, binding = file_bytes(self.base, source)
-                    if not re.fullmatch(r"captures/[0-9a-f]{64}\.(csv|json)", source["path"]) or Path(source["path"]).name.split(".")[0] != binding["sha256"]:
-                        raise InputError("Use a content-addressed original CSV/JSON capture")
+                    if not re.fullmatch(r"captures/[0-9a-f]{64}\.(csv|json|xlsx)", source["path"]) or Path(source["path"]).name.split(".")[0] != binding["sha256"]:
+                        raise InputError("Use a content-addressed original CSV/JSON/XLSX capture")
                     self.source_bindings[source["path"]] = binding
-                    originals, columns = read_rows(raw, source)
+                    workbook_summary = None
+                    if source.get("format") == "xlsx":
+                        originals, columns, workbook_summary = read_workbook_source(source, edition, self.base)
+                    else:
+                        originals, columns = read_rows(raw, source)
                     projected, mapping_sha = self._project(source, originals)
                     self.source_records.append({**copy.deepcopy(source), "columns": columns, "rows": len(originals),
                                                 "omittedRows": sum(row["omitted"] for row in projected),
                                                 "rowErrors": sum(bool(row["errors"]) for row in projected),
-                                                "mappingSha256": mapping_sha, "status": "retained"})
-                except (InputError, engine.InputError, OSError) as exc:
+                                                "mappingSha256": mapping_sha, "status": "retained", **({"workbook": workbook_summary} if workbook_summary else {})})
+                except (InputError, engine.InputError, WorkbookError, OSError) as exc:
                     self.error("SOURCE_IMPORT", str(exc), sourceId=source.get("id"))
                     self.source_records.append({**copy.deepcopy(source), "status": "correction-required", "error": str(exc)})
             known = {source["id"] for source in sources}
@@ -1148,6 +1160,29 @@ class Records:
             self.comparison = {"comparableScope": False, "errorCode": "COMPARISON_INPUT", "reason": str(exc)}
 
 
+    def _workbooks(self):
+        # Receiving a request/reference workbook does not alter the original ledger.
+        # Its complete source and decisions remain available even before promotion.
+        try:
+            descriptors = workbook_descriptors(self.edition)
+        except WorkbookError as exc:
+            self.workbook_errors.append({"code": "WORKBOOK_INPUT", "message": str(exc)})
+            return
+        for descriptor in descriptors:
+            intake = None
+            try:
+                intake = WorkbookIntake(self.base, descriptor)
+                summary = intake.summary()
+                self.workbook_intakes.append(summary)
+                self.source_bindings[descriptor["path"]] = {key: descriptor[key] for key in ("path", "sha256", "bytes")}
+                for document in intake.documents.values():
+                    self.source_bindings[document["path"]] = {key: document[key] for key in ("path", "sha256", "bytes")}
+            except (WorkbookError, OSError) as exc:
+                self.workbook_errors.append({"code": "WORKBOOK_INPUT", "workbookId": descriptor.get("id"), "message": str(exc)})
+            finally:
+                if intake is not None:
+                    intake.close()
+
     def report(self, customer=False):
         result = self.packet["result"] if self.packet else None
         counts = {table: sum(not row["omitted"] and row["values"] is not None for row in self.tables[table]) for table in TABLES}
@@ -1208,6 +1243,9 @@ class Records:
                         "priced": sum(row["original"].get("unitPrice") is not None for row in self.catalog_rows)},
             "customerColumns": self.columns,
             "customerMapping": self.customer_mapping(),
+            "workbooks": {"count": len(self.workbook_intakes), "readyForCustodySource": sum(item["readyForCustodySource"] for item in self.workbook_intakes),
+                          "rows": sum(item["rows"] for item in self.workbook_intakes), "errorCount": len(self.workbook_errors),
+                          **({} if customer else {"intakes": [{key: item[key] for key in ("id", "label", "role", "sha256", "bytes", "selection", "rows", "blankRows", "hiddenRows", "included", "excluded", "pending", "issueCount", "reviewCurrent", "readyForCustodySource", "bindingSha256") if key in item} for item in self.workbook_intakes], "errors": self.workbook_errors})},
         }
         if customer:
             output["input"].pop("referenceFiles", None)
@@ -1394,7 +1432,7 @@ def export_complete(workspace_path, output_dir, period_id=None, edition_id=None,
     manifests = []
     operator_names = {"calculation.json", "normalized-request.json", "source-inventory.json", "review-decisions.json",
                       "source-corrections.json", "input-errors.json", "mapped-source-records.ndjson", "operator-invoices.ndjson",
-                      "findings.ndjson", "cooperative-basis.csv"}
+                      "findings.ndjson", "cooperative-basis.csv", "workbook-intakes.json", "workbook-rows.ndjson"}
     def output_path(name):
         relative = name if name == "manifest.json" else ("operator/" if name in operator_names else "customer/") + name
         path = temporary / relative
@@ -1498,6 +1536,27 @@ def export_complete(workspace_path, output_dir, period_id=None, edition_id=None,
             stream_jsonl("mapped-source-records.ndjson", (record for table in TABLES for record in records.tables[table]))
             stream_jsonl("operator-invoices.ndjson", records.invoices())
             stream_jsonl("findings.ndjson", iter(records.findings))
+            write("workbook-intakes.json", json.dumps({"intakes": records.edition.get("workbooks", []), "assessments": records.workbook_intakes,
+                  "errors": records.workbook_errors}, ensure_ascii=False, indent=2) + "\n", "application/json")
+            def workbook_rows():
+                try:
+                    descriptors = workbook_descriptors(records.edition)
+                except WorkbookError as exc:
+                    yield {"code": "WORKBOOK_INPUT", "message": str(exc), "complete": False}
+                    return
+                for descriptor in descriptors:
+                    intake = None
+                    try:
+                        intake = WorkbookIntake(records.base, descriptor)
+                        for row in intake.items:
+                            yield {"workbookId": intake.id, **row}
+                    except (WorkbookError, OSError) as exc:
+                        yield {"workbookId": descriptor.get("id"), "code": "WORKBOOK_INPUT",
+                               "message": str(exc), "complete": False}
+                    finally:
+                        if intake is not None:
+                            intake.close()
+            stream_jsonl("workbook-rows.ndjson", workbook_rows())
             stream_csv("cooperative-basis.csv", ["month", "agencyId", "agencyName", "invoiceRef", "rowId", "chargeCode", "lineKind", "amountMinor", "sourceId", "sourceSha256"],
                        ([row.get(key) for key in ("month", "agencyId", "agencyName", "invoiceRef", "rowId", "chargeCode", "lineKind", "amountMinor", "sourceId", "sourceSha256")]
                         for row in records.cooperative_basis))
@@ -1507,6 +1566,7 @@ def export_complete(workspace_path, output_dir, period_id=None, edition_id=None,
                     "calculationStatus": report["reconciliation"]["status"], "sourceFiles": list(records.source_bindings.values()),
                     "files": [dict(item) for item in manifests], "counts": report["counts"],
                     "completeRowExport": not records.input_errors, "inputErrorCount": len(records.input_errors),
+                    "completeWorkbookRowExport": not records.workbook_errors, "workbookInputErrorCount": len(records.workbook_errors),
                     "interpretation": "Every mapped admitted invoice row is exported; exact original/invalid/omitted source records remain in operator source."}
         write("manifest.json", json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", "application/json")
         if destination.exists():
