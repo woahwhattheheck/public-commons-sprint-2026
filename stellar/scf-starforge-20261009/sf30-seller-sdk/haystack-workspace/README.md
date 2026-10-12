@@ -35,6 +35,10 @@ An edition retains its exact ordered source set, accepted proposal IDs, complete
 
 For two imports of different original files, pair their sources explicitly using `sourcePairs`. Unique native IDs then align within the chosen pair. An unpaired source keeps its own identity. Ambiguous or missing IDs remain tied to their original rows.
 
+## Assigned corrective work and recipient returns
+
+The [corrective-work guide](CORRECTIVE_WORK.md) covers source-bound findings, assignments, complete evidence, submission rounds, verification, reopening, accepted exceptions and reviewed recipient returns. Use the existing Work items section and original mutation recovery to continue this work across receiving operators.
+
 ## Native API
 
 Start the application and read `GET /api/identity`. Keep its original workspace and current instance IDs. Native callers send them as `x-haystack-workspace` and `x-haystack-instance` headers. Supply the private token through `Authorization: Bearer …` when configured.
@@ -48,6 +52,8 @@ Start the application and read `GET /api/identity`. Keep its original workspace 
 | Native records | `records.list`, `record.read`, `diagnostics.list` |
 | Typed corrections | `proposal.preview`, `proposals.list`, `proposal.read`, `proposal.prepare`, `proposal.review` |
 | Editions | `editions.list`, `edition.read`, `edition.save`, `edition.compare` |
+| Corrective work | `works.list`, `work.read`, `work.capture`, `work.update`, `work.evidence`, `evidence.read`, `work.submit`, `work.review` |
+| Reviewed returns | `return.preview`, `return.apply`, `returns.list`, `return.read` |
 | Original outcomes | `operations.list`, `operation.read` |
 | Complete deliveries | `delivery.prepare`, `delivery.read` |
 
