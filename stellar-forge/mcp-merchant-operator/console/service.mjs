@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { basename, dirname, resolve, join } from 'node:path';
 import { timingSafeEqual } from 'node:crypto';
 import { merchantToolFamily } from '../catalog.mjs';
-import { createConsoleCustomers } from './customers.mjs';
+import { createConsoleCustomers, customerManifestAccess } from './customers.mjs';
 import { createMerchantWorkflows } from './workflows.mjs';
 import { createMerchantWorkflowRecipes, MAX_WORKFLOW_RECIPE_REQUEST_BYTES } from './workflow-recipes.mjs';
 import { MerchantConsoleStore, CONSOLE_SCHEMA, canonical, digest, fail } from './store.mjs';
@@ -99,11 +99,7 @@ export async function createMerchantConsole({operator,configPath,directory,autho
     if (authorization) try { await authorization.authorizeTool(context,name,args); }
     catch(error){error.merchantConsoleAuthorization=true;throw error;}
   }
-  const deliveryAccess = value => {
-    const selection=value.identity;
-    return {name:(selection.family==='core'?'merchant_client_export':'merchant_opensearch_deployment')+'_manifest',
-      args:{exportId:selection.exportId,...(selection.workspace?{workspace:selection.workspace}:{})}};
-  };
+  const deliveryAccess = value => customerManifestAccess(value.identity);
   async function visibleProfile(profileId,context) {
     const profile=store.profile(profileId), drafts=[],calls=[];
     for(const value of store.drafts(profileId))
@@ -283,9 +279,8 @@ export async function createMerchantConsole({operator,configPath,directory,autho
       if(!input||typeof input!=='object'||Array.isArray(input))throw fail('CONSOLE_JSON','Supply an operator request object.',400);
       if(route==='customers'){send(res,202,{delivery:await customers.start(input,req)});return true;}
       if(route==='customer-pause'){
-        const record=store.delivery(input.id),selection=record.identity;
-        await requireTool(context,(selection.family==='core'?'merchant_client_export':'merchant_opensearch_deployment')+'_manifest',
-          {exportId:selection.exportId,...(selection.workspace?{workspace:selection.workspace}:{})});
+        const record=store.delivery(input.id),access=deliveryAccess(record);
+        await requireTool(context,access.name,access.args);
         requireOpen();
         send(res,200,{delivery:customers.pause(input.id)});return true;
       }
