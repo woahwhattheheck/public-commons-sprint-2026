@@ -30,7 +30,10 @@ const TYPES = Object.freeze({
   'unstructured-pipelines.css': 'text/css; charset=utf-8',
   'clinical-trials.js': 'text/javascript; charset=utf-8',
   'clinical-trials.css': 'text/css; charset=utf-8',
+  'source-bundles.js': 'text/javascript; charset=utf-8',
+  'source-bundles.css': 'text/css; charset=utf-8',
 });
+const MAX_SOURCE_BUNDLE_BODY = 128 * 1024 * 1024 + 65536; // A 64 MiB bundle inside the rawText JSON string.
 const MAX_RESEARCH_BODY = 96 * 1024 * 1024 + 65536; // 16 MiB raw UTF-8, worst-case JSON escaping plus envelope.
 const MAX_PORTABLE_BODY = 256 * 1024 * 1024 + 65536; // Engine caps the serialized portable record at 256 MiB.
 const MAX_CONTROL_BODY = 1024 * 1024;
@@ -117,7 +120,7 @@ export async function startDossierWorkspace({directory, port = 0, providers = {}
     typeof openalexWorkspace?.exportFiles === 'function', 'OPENALEX_WORKSPACE_API_REQUIRED');
   const store = await openDossierStore(directory, {providers});
   const workspaceId = researchWorkspaceId(store.directory), instanceId = randomUUID();
-  const api = {schema:RESEARCH_WORKSPACE_API,metadata:true,revisionPages:true,streamedPortable:true,
+  const api = {schema:RESEARCH_WORKSPACE_API,metadata:true,revisionPages:true,streamedPortable:true,sourceBundles:true,
     savedCrossrefOperations:crossrefSource!==null,originalObjectInputs:objectStateDirectory!==null};
   await store.list();
   const unstructured = await openUnstructuredWorkspace({dossiers:store,...(documentSource ?? {})});
@@ -339,6 +342,7 @@ export async function startDossierWorkspace({directory, port = 0, providers = {}
       }
       if (req.method !== 'POST') {send(405, {error: 'METHOD_NOT_ALLOWED'}); return;}
       const data = await readJson(req, action === 'pipelines/prepare' ? PIPELINE_UPLOAD_BODY_BYTES :
+        ['source-bundles/preview', 'source-bundles/receive'].includes(action) ? MAX_SOURCE_BUNDLE_BODY :
         ['receive', 'reference'].includes(action) ? MAX_RESEARCH_BODY : MAX_CONTROL_BODY);
       if(action==='pipelines/objects/review'||action==='pipelines/objects/prepare') {
         const controller=new AbortController(),abort=()=>controller.abort();
@@ -352,6 +356,13 @@ export async function startDossierWorkspace({directory, port = 0, providers = {}
           if(!res.destroyed)send(201,result);
         } finally {res.off('close',ended);req.off('aborted',abort);}
         return;
+      }
+      if(action==='source-bundles/preview'){
+        send(200,await store.previewSourceBundle(id,selectedFields(data,['questionId','rawText'])));return;
+      }
+      if(action==='source-bundles/receive'){
+        send(200,await store.receiveSourceBundle(id,{...selectedFields(data,
+          ['questionId','rawText','expectedBundleSha256']),expectedRevision:revision(data.expectedRevision),projection}));return;
       }
       if (action === 'pipelines/prepare') {
         send(201,await pipelines.prepare(id,data)); return;

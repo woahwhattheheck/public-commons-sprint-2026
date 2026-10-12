@@ -113,3 +113,12 @@ case merely to repeat completed steps.
 The `*-serve.json` and `connection.json` files are private connection material.
 Keep them in the original private directory. Share the complete selected customer
 exports, reports and actual result through the existing handover, with their hashes.
+
+## Retained cloud continuation
+
+The complete original C79F native continuation is published in
+[its existing-operation handoff](../../operations/scf-stac-client-native-receiving-20261012/README.md).
+It includes the original lifecycle read, exact source inputs, maintained placement,
+same customer command and full result preservation. An equipped session can consume
+that saved operation without reconstructing its source or creating another receiving
+identity. The source/native/output arguments above remain the ordinary customer entry.

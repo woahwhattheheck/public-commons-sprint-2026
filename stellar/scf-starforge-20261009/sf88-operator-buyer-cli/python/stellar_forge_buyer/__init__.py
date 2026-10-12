@@ -1,5 +1,6 @@
 """Installable Python interface to the original Stellar Forge buyer runtime."""
 from .client import Buyer, Operation, Review
+from .inbox import Inbox, InboxResult, InboxError
 from .acquisitions import AcquisitionWorkspace, AcquisitionResult, AcquisitionProcess, AcquisitionError
 from .datasets import DatasetAcquisition, DatasetDelivery, DatasetError
 from .duckdb_dataset import DuckDBWorkspace
@@ -15,6 +16,7 @@ from .streams import SSEEvent, NDJSONRecord, StreamDelivery, read_retained_respo
 __all__ = [
     "AcquisitionWorkspace", "AcquisitionResult", "AcquisitionProcess", "AcquisitionError",
     "WorkspaceRecovery", "WorkspaceRecoveryResult", "WorkspaceRecoveryProcess", "WorkspaceRecoveryError",
+    "Inbox", "InboxResult", "InboxError",
     "Buyer", "Operation", "Review", "BuyerResult", "FileDelivery", "FileTransfer", "AccountingResult", "SessionAccountingResult",
     "DatasetAcquisition", "DatasetDelivery", "DatasetError", "DuckDBWorkspace", "DuckDBSpatial",
     "Column", "DatasetMapping", "PostgresWarehouse", "WarehouseError", "review_delivery",

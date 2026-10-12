@@ -459,3 +459,98 @@ The browser, direct CLI, installed Applications provider and merchant MCP use th
 same original SF101 workspace and underlying recovery engines. A receiving host
 selects its own declared paths and operation IDs while retaining the source
 host's snapshot and original journal in the handoff.
+
+## 10. Receive an existing workspace through merchant MCP
+
+The installed `merchant-recovery-mcp-receive` command carries an existing
+recovery workspace through the actual registered merchant transport. Select
+the retained original encrypted bundle and the completed upload, download, or
+restore journal IDs from that workspace's declared profile. This operation
+uses the installed source, original verifier, actual configured remote
+inventory, and original local HTTP services.
+
+Finish the current native workspace operation and close its listener before
+this receiving command takes that same workspace's existing lease. Keep the
+original passphrase and storage credential environment available to this
+process. Use the supported Node version and existing S3 runtime profile
+described in the remote guide.
+
+Create a private input file:
+
+```json
+{
+  "schema": "stellar-forge.recovery-merchant-receiving.v1",
+  "directory": "/private/recovery/mcp-receiving",
+  "workspaceDirectory": "/private/recovery/operator",
+  "hostConfig": "/private/recovery/host.json",
+  "profileId": "merchant",
+  "bundleId": "snapshots/month-end",
+  "snapshotId": "THE_64_HEX_ORIGINAL_SNAPSHOT_ID",
+  "operationId": "merchant-mcp-receiving-20261012",
+  "workspace": "merchant",
+  "completedOperations": [
+    { "id": "month-end-upload", "command": "push" },
+    { "id": "receiving-download", "command": "pull" },
+    { "id": "receiving-restore", "command": "restore" }
+  ]
+}
+```
+
+Replace the example profile, bundle, exact snapshot and operation IDs with
+their retained native values. Select each relevant completed journal once.
+The receiving operation ID is distinct from those transfer IDs and stays
+unchanged on continuation. Its verification request uses the same ID with
+`-verify` appended. The output directory is private, has an existing parent,
+and sits beside the original workspace.
+
+```sh
+starforge merchant-recovery-mcp-receive \
+  --input /private/recovery/merchant-receiving.json
+```
+
+From a complete original source tree, the same entry is:
+
+```sh
+node stellar/scf-starforge-20261009/sf101-merchant-recovery/workspace/native-receiving.mjs \
+  --input /private/recovery/merchant-receiving.json
+```
+
+The command performs the following whole receiving operation:
+
+1. Retain the exact selected input under the original Linux delivery lease,
+   inspect the registered provider, and initialize its original private merchant
+   configuration.
+2. Open the selected native workspace and merchant MCP on loopback, initialize
+   the actual protocol, and read the original state and encrypted bundle.
+3. Review and verify that bundle through MCP. Continuation reads the same native
+   verification request before starting or resuming it.
+4. Read the selected completed original transfers and adopt their completion
+   into the workspace. Their original command, snapshot, destination and
+   provider receipts remain the source of the completed result.
+5. Read the actual configured storage inventory and complete native journal
+   pages, following each original cursor.
+6. Read back the completed verification through continuation and idle
+   cancellation, retaining its existing attempt count.
+7. Close the merchant host, read the still-running original native listener,
+   then close and reopen that native workspace and merchant host. Read back the
+   same complete request under the new listener instance and original workspace
+   identity.
+8. Close both owned services and save the complete receiving result.
+
+The private output contains `selection.json`, the original reviewed selection,
+the merchant configuration and connection, and `result.json` after completion.
+A stopped attempt retains its actual phases and error in an `attempt-*.json`
+file; the error names that file and the original receiving ID. The original
+workspace and transfer journals retain accepted work. Continue with the same
+input command. A previously complete receiving result returns directly from
+its original file.
+
+Keep these receiving files with the private host handoff. The full result
+contains native workspace paths, IDs, provider receipts, and source metadata;
+the console prints the operation, snapshot, final status and result path.
+Passphrases and listener tokens remain in the original private environment and
+native launch.
+
+The programmatic export `./merchant/mcp/recovery/receive` provides
+`receiveRecoveryWorkspaceMerchant(input, { onProgress })` and its input/result
+declarations. It uses the same original entry and saved native request.

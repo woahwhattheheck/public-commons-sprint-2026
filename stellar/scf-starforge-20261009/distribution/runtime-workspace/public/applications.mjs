@@ -3,6 +3,8 @@ import { renderOpenApiApplicationReview } from './openapi-application.mjs';
 import { renderApplicationReview } from './application-review.mjs';
 import { renderAccountingApplicationReview } from './accounting-application.mjs';
 import { createOpenApiConnectionSetupView } from './openapi-connection-setup.mjs';
+import { createApplicationLibrary } from './application-library.mjs';
+import { createApplicationDrafts } from './application-drafts.mjs';
 const element = (tag, text, className) => {
   const node = document.createElement(tag);
   if (text !== undefined) node.textContent = text;
@@ -50,18 +52,24 @@ async function textHash(text) {
 }
 export function createApplicationsWorkspaceView({ root, api, getState, refreshWorkspace, switchView, message, error }) {
   let data = null, selectedId = null, selectedRun = null, editingId = null, configurationReview = null, startReview = null;
-  let loading = false, sending = false, scope = 0, settingsScope = 0, initial = true;
+  let loading = false, sending = false, scope = 0, settingsScope = 0, initial = true, navigationVersion = 0;
   let historyData = null, historyApplicationId = null, historyCursor = null, historyTrail = [], historyScope = 0, historyLoading = false;
-  const key = name => 'starforge-applications-' + getState()?.workspaceId + '-' + name;
-  const readSaved = name => { try { return JSON.parse(sessionStorage.getItem(key(name)) ?? 'null'); } catch { return null; } };
-  const saveSaved = (name, value) => { try { if (value === null) sessionStorage.removeItem(key(name)); else sessionStorage.setItem(key(name), JSON.stringify(value)); } catch {} };
+  const key = (name, workspaceId = getState()?.workspaceId) => 'starforge-applications-' + workspaceId + '-' + name;
+  const readSaved = (name, workspaceId) => { try { return JSON.parse(sessionStorage.getItem(key(name, workspaceId)) ?? 'null'); } catch { return null; } };
+  const saveSaved = (name, value, workspaceId) => {
+    try {
+      if (value === null) sessionStorage.removeItem(key(name, workspaceId));
+      else sessionStorage.setItem(key(name, workspaceId), JSON.stringify(value));
+      return true;
+    } catch { return false; }
+  };
   const selected = () => data?.applications.find(item => item.id === selectedId) ?? null;
   const currentType = () => data?.catalog.find(item => item.id === kind.value);
   const header = element('div', undefined, 'section-title');
   header.append(element('h2', 'Applications'), button('New application', () => edit(null)));
   const intro = element('p', 'Open the original merchant and buyer tools using an installed runtime. Application data, private URLs and process history stay with this workspace.', 'note');
-  const list = element('div', undefined, 'runtime-list');
-  const empty = element('p', 'No applications have been saved. Select a ready runtime and review an application below.', 'empty');
+  const libraryRoot = element('div'); libraryRoot.id = 'application-library';
+  const draftRoot = element('div'); draftRoot.id = 'application-setup-drafts';
   const configuration = element('details'); configuration.open = true;
   configuration.append(element('summary', 'Configure application'));
   const form = element('form'), grid = element('div', undefined, 'columns');
@@ -74,7 +82,7 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
   const reviewButton = element('button', 'Review application'); reviewButton.type = 'submit';
   const reviewResult = element('div', undefined, 'result'); reviewResult.hidden = true;
   form.append(grid, field('Original application', kind), description, settings, reviewButton, reviewResult);
-  configuration.append(form);
+  configuration.append(draftRoot, form);
   const openapiSetupRoot = element('div'); configuration.append(openapiSetupRoot);
   const openapiSetup = createOpenApiConnectionSetupView({
     root: openapiSetupRoot, api, message, error,
@@ -90,7 +98,7 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
     onPrepared(prepared) {
       const value = configurationValue();
       if (!['openapi', 'merchant-accounting'].includes(value.kind)) return;
-      renderSettings({ ...value.settings, ...prepared });
+      drafts.mergeSettings(prepared);
       configuration.open = true; reviewButton.focus();
     },
   });
@@ -175,7 +183,34 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
   inputForm.append(element('p', 'This is the original application terminal. Review its current prompt, then enter the response yourself. Opening or refreshing this page sends no input.', 'note'),
     field('Terminal response', input), terminalActions, inputStatus);
   outputPanel.append(outputDescription, output, inputForm);
-  root.replaceChildren(header, intro, list, empty, configuration, selectedPanel, history, outputPanel);
+  root.replaceChildren(header, intro, libraryRoot, configuration, selectedPanel, history, outputPanel);
+  const drafts = createApplicationDrafts({
+    root: draftRoot, controls: { label, runtime, kind, settings }, reviewButton,
+    getWorkspaceId: () => getState()?.workspaceId,
+    getCatalog: () => data?.catalog ?? [], getApplications: () => data?.applications ?? [],
+    getRuntimes: () => getState()?.runtimes ?? [],
+    selectedRuntime: () => getState()?.selected?.phase === 'READY' ? getState().selected.id : null,
+    renderSettings,
+    onContext(id, { select = true } = {}) {
+      editingId = id;
+      if (select && id && selectedId !== id) {
+        navigationVersion++; selectedId = id; selectedRun = null; startReview = null; resetHistory(id);
+        outputPanel.hidden = true; output.textContent = ''; inputForm.hidden = true;
+        library.select(id); renderSelected(); saveSelection();
+        act(async () => {
+          if (!await refreshHistory() || selectedId !== id) return;
+          renderSelected(); await refreshOutput(); saveSelection();
+        });
+      }
+    },
+    onChange() { configurationReview = null; reviewResult.hidden = true; },
+    onNotice: message,
+  });
+  const library = createApplicationLibrary({
+    root: libraryRoot, readSaved, saveSaved, getWorkspaceId: () => getState()?.workspaceId,
+    openApplication: id => act(() => selectApplication(id)),
+    configureApplication: kind => edit(null, { kind }),
+  });
 
   const visibleRuns = () => historyData?.applicationId === selectedId ? historyData.runs : selected()?.runs ?? [];
   const saveSelection = () => saveSaved('selected', { selectedId, selectedRun, historyCursor, historyTrail });
@@ -223,6 +258,7 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
       if (!historyTrail.length) return;
       historyCursor = historyTrail.pop();
     } else { historyCursor = null; historyTrail = []; }
+    navigationVersion++;
     let received = false;
     try {
       if (await refreshHistory()) {
@@ -236,21 +272,48 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
     }
   }
   async function selectApplication(id) {
-    selectedId = id; selectedRun = null; startReview = null; resetHistory(id);
-    renderSelected();
+    navigationVersion++; selectedId = id; selectedRun = null; startReview = null; resetHistory(id);
+    library.select(id); renderSelected();
     await refreshHistory(); renderSelected(); await refreshOutput(); saveSelection();
   }
 
-  async function retainedRequest(route, body) {
+  async function retainedRequest(route, body, setupTicket = null) {
     const existing = readSaved('pending');
     const same = existing?.route === route && existing.body.reviewId === body.reviewId &&
       existing.body.applicationId === body.applicationId;
     if (existing && !same) throw new Error('Recover the retained application request before starting a different request.');
-    const pending = same ? existing : { route, body: { ...body, requestId: crypto.randomUUID() } };
-    saveSaved('pending', pending);
-    const result = await api(pending.route, pending.body);
-    saveSaved('pending', null);
-    return result;
+    const pending = same ? existing : { route, workspaceId: getState()?.workspaceId,
+      body: { ...body, requestId: crypto.randomUUID() }, ...(setupTicket ? { setupTicket } : {}) };
+    if (!saveSaved('pending', pending))
+      throw new Error('The browser could not retain this application request. Restore tab storage, then retry this reviewed action.');
+    return completeRetainedRequest(pending);
+  }
+  function clearRetainedRequest(pending, workspaceId) {
+    const current = readSaved('pending', workspaceId);
+    if (!current || current.route !== pending.route ||
+        JSON.stringify(current.body) !== JSON.stringify(pending.body)) return false;
+    return saveSaved('pending', null, workspaceId);
+  }
+  async function completeRetainedRequest(pending) {
+    const workspaceId = pending.workspaceId ?? pending.setupTicket?.workspaceId ?? getState()?.workspaceId;
+    try {
+      const result = await api(pending.route, pending.body);
+      clearRetainedRequest(pending, workspaceId); return result;
+    } catch (issue) {
+      // These original save guards precede the application record write.
+      const rejectedSave = pending.route === '/api/applications/save' &&
+        [400, 409].includes(issue.status) &&
+        ['APPLICATION_REVIEW_CHANGED', 'APPLICATION_RUNNING', 'APPLICATION_INPUTS_CHANGED'].includes(issue.code);
+      if (rejectedSave) {
+        saveSaved('rejected-save', { ...pending, error: { code: issue.code, status: issue.status },
+          observedAt: new Date().toISOString() }, workspaceId);
+        clearRetainedRequest(pending, workspaceId);
+        if (workspaceId === getState()?.workspaceId && configurationReview?.id === pending.body.reviewId) {
+          configurationReview = null; reviewResult.hidden = true; drafts.refresh();
+        }
+      }
+      throw issue;
+    }
   }
   async function act(action) {
     const own = scope;
@@ -284,7 +347,12 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
               (entry.extras.join(', ') || 'base') + ' · ' + entry.id.slice(0, 12), entry.id)));
           node.value = entries.some(entry => entry.id === values[item.name]) ? values[item.name] :
             entries.some(entry => entry.id === value.active?.installation) ? value.active.installation : '';
-        }).catch(issue => { if (generation === settingsScope) { node.replaceChildren(new Option('Python inventory unavailable', '')); error(issue); } });
+          drafts.settingsReady(node);
+        }).catch(issue => {
+          if (generation !== settingsScope || selectedRuntime !== runtime.value || !node.isConnected) return;
+          node.replaceChildren(new Option('Python inventory unavailable', ''));
+          drafts.settingsReady(node); error(issue);
+        });
       }
     }
     configurationReview = null; reviewResult.hidden = true;
@@ -297,25 +365,24 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
       if (item.type === 'boolean') { if (node.checked) values[item.name] = true; }
       else if (node.value !== '') values[item.name] = item.type === 'port' ? Number(node.value) : node.value.trim();
     }
-    const previous = data?.applications.find(item => item.id === editingId);
     return { runtimeId: runtime.value, kind: kind.value, label: label.value.trim(), settings: values,
-      applicationId: editingId, expectedRevision: previous?.revision ?? null };
+      applicationId: editingId, expectedRevision: drafts.baseRevision() };
   }
-  function edit(app) {
-    editingId = app?.id ?? null;
-    if (app) { selectedId = app.id; label.value = app.label; runtime.value = app.runtimeId; kind.value = app.kind; }
-    else { label.value = ''; runtime.value = getState()?.selected?.phase === 'READY' ? getState().selected.id : runtime.options[1]?.value ?? ''; }
-    renderSettings(app?.settings ?? {}); configuration.open = true; configuration.scrollIntoView({ block: 'nearest' });
-    label.focus(); renderSelected();
+  function edit(app, options = {}) {
+    drafts.edit(app, options);
+    configuration.open = true; configuration.scrollIntoView({ block: 'nearest' });
+    label.focus(); library.select(selectedId); renderSelected();
   }
-  kind.addEventListener('change', () => renderSettings());
+  kind.addEventListener('change', () => drafts.changeKind(kind.value));
   form.addEventListener('input', event => {
     configurationReview = null; reviewResult.hidden = true;
     // Hide the previous registration review immediately while a bound field changes.
     // The change event reads the new context once, after the field edit.
     if (openapiContextField(event.target)) openapiSetup.reset();
+    drafts.capture();
   });
   form.addEventListener('change', event => {
+    drafts.capture();
     if (openapiContextField(event.target)) openapiSetup.setContext().catch(error);
   });
   runtime.addEventListener('change', () => {
@@ -323,10 +390,18 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
     configurationReview = null; reviewResult.hidden = true;
     if (currentType()?.python) renderSettings({ ...values, installationId: undefined });
     else openapiSetup.setContext().catch(error);
+    drafts.capture();
   });
   form.addEventListener('submit', event => {
     event.preventDefault(); act(async () => {
-      configurationReview = await api('/api/applications/review', configurationValue());
+      drafts.expectedRevision();
+      const setupTicket = drafts.snapshot(), request = configurationValue();
+      const received = await api('/api/applications/review', request);
+      if (!drafts.matches(setupTicket)) {
+        message('The setup changed while review was running. Review the current retained fields.');
+        return;
+      }
+      configurationReview = received;
       const reviewed = configurationReview;
       const rows = facts([
         ['Original command', reviewed.command.pythonCommand ? reviewed.command.pythonCommand.executable + ' ' +
@@ -341,13 +416,19 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
       ]);
       const save = button(editingId ? 'Save reviewed settings' : 'Save application', () => act(async () => {
         if (configurationReview !== reviewed) return;
+        const submitted = { scope, navigationVersion };
         save.disabled = true;
         let result;
-        try { result = await retainedRequest('/api/applications/save', { reviewId: reviewed.id, applicationId: editingId }); }
+        try { result = await retainedRequest('/api/applications/save', { reviewId: reviewed.id, applicationId: reviewed.applicationId }, setupTicket); }
         finally { save.disabled = false; }
-        selectedId = result.applicationId; editingId = null;
-        configuration.open = false; configurationReview = null; reviewResult.hidden = true;
-        await refresh(); await refreshWorkspace(); message(result.connectionError?.message ?? 'Application saved with its original runtime and data locations.');
+        const completedSetup = drafts.saved(setupTicket, result);
+        if (submitted.scope !== scope) return;
+        if (submitted.navigationVersion === navigationVersion && completedSetup) selectedId = result.applicationId;
+        configuration.open = !completedSetup; configurationReview = null; reviewResult.hidden = true;
+        await refresh(); await refreshWorkspace();
+        message(result.connectionError?.message ?? (completedSetup ?
+          'Application saved with its original runtime and data locations.' :
+          'Application saved. Your newer setup draft remains open.'));
       }));
       reviewResult.replaceChildren(element('h3', 'Reviewed application'), rows,
         renderOpenApiApplicationReview(reviewed.command), renderApplicationReview(reviewed.command), renderAccountingApplicationReview(reviewed.command), save);
@@ -360,11 +441,13 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
     const reviewed = startReview;
     const start = button('Start reviewed application', () => act(async () => {
       if (startReview !== reviewed) return;
+      const submitted = { scope, navigationVersion };
       start.disabled = true;
       let result;
       try { result = await retainedRequest('/api/applications/start', { applicationId: reviewed.applicationId, reviewId: reviewed.id }); }
       finally { start.disabled = false; }
-      followOperation(reviewed.applicationId, result.operationId);
+      if (submitted.scope !== scope) return;
+      if (submitted.navigationVersion === navigationVersion) followOperation(reviewed.applicationId, result.operationId);
       if (startReview === reviewed) startReview = null;
       await refresh(); await refreshWorkspace(); message(reviewed.command.pythonCommand && !reviewed.command.pythonCommand.ready ?
         'The original workbook command is starting. Its operating result and output appear below.' :
@@ -473,7 +556,7 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
       historyRows.replaceChildren(...pageRuns.map(run => {
         const row = element('article', undefined, 'operation');
         const actions = element('div', undefined, 'actions');
-        actions.append(button('Open output', () => { selectedRun = run.id; saveSelection(); refreshOutput().catch(error); }));
+        actions.append(button('Open output', () => { navigationVersion++; selectedRun = run.id; saveSelection(); refreshOutput().catch(error); }));
         row.append(element('h3', run.command + ' · ' + run.phase),
           element('p', run.id + ' · ' + run.createdAt),
           element('p', run.result?.state ? 'Original outcome: ' + run.result.state + (run.result.exitCode !== null && run.result.exitCode !== undefined ? ', exit ' + run.result.exitCode : '') :
@@ -529,10 +612,16 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
   inputForm.addEventListener('submit', event => { event.preventDefault(); terminalSend(input.value + '\n').catch(error); });
   const recoverRequest = button('Recover last application request', () => act(async () => {
     const pending = readSaved('pending'); if (!pending) return;
-    const result = await api(pending.route, pending.body);
-    selectedId = result.applicationId ?? selectedId;
-    followOperation(selectedId, result.operationId);
-    saveSaved('pending', null); await refresh(); await refreshWorkspace();
+    const submitted = { scope, navigationVersion };
+    const result = await completeRetainedRequest(pending);
+    const completedSetup = pending.route === '/api/applications/save' && pending.setupTicket ? drafts.saved(pending.setupTicket, result) : false;
+    if (submitted.scope !== scope) return;
+    if (submitted.navigationVersion === navigationVersion && (!pending.setupTicket || completedSetup)) {
+      selectedId = result.applicationId ?? selectedId;
+      followOperation(selectedId, result.operationId);
+    }
+    if (completedSetup) configuration.open = false;
+    await refresh(); await refreshWorkspace();
   }));
   header.append(recoverRequest);
   async function refresh() {
@@ -550,31 +639,12 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
           historyTrail = Array.isArray(saved.historyTrail) ? saved.historyTrail.filter(value => value === null || typeof value === 'string') : [];
         }
       }
-      const currentRuntime = runtime.value;
-      const options = (getState()?.runtimes ?? []).filter(item => item.phase === 'READY');
-      const signature = JSON.stringify(options.map(item => [item.id, item.label, item.packageVersion]));
-      if (runtime.dataset.signature !== signature) {
-        runtime.dataset.signature = signature;
-        runtime.replaceChildren(new Option('Choose a ready runtime', ''), ...options.map(item => new Option(item.label + ' · ' + (item.packageVersion ?? item.sourceCommit), item.id)));
-        runtime.value = options.some(item => item.id === currentRuntime) ? currentRuntime :
-          options.some(item => item.id === getState()?.selected?.id) ? getState().selected.id : options[0]?.id ?? '';
-      }
-      if (!kind.options.length) {
-        kind.replaceChildren(...data.catalog.map(item => new Option(item.title, item.id)));
-        renderSettings();
-      }
+      drafts.refresh();
       if (!data.applications.some(item => item.id === selectedId)) { selectedId = data.applications[0]?.id ?? null; resetHistory(selectedId); }
-      const listSignature = JSON.stringify(data.applications.map(app => [app.id, app.label, app.phase]));
-      if (list.dataset.signature !== listSignature) {
-        list.dataset.signature = listSignature;
-        list.replaceChildren(...data.applications.map(app => {
-          const node = button(app.label + ' · ' + app.phase, () => act(() => selectApplication(app.id)));
-          node.className = 'runtime-entry'; node.dataset.applicationId = app.id; return node;
-        }));
-      }
-      empty.hidden = data.applications.length > 0;
+      library.update(data, selectedId);
       recoverRequest.hidden = !readSaved('pending');
-      if (data.applications.length && editingId === null && !configurationReview && !label.value) configuration.open = false;
+      if (data.applications.length && editingId === null && !configurationReview && !label.value && !drafts.hasDraft())
+        configuration.open = false;
       if (!historyLoading) await refreshHistory();
       renderSelected(); await refreshOutput();
       await openapiSetup.refresh().catch(error);
@@ -592,8 +662,7 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
       const savedRuntime = getState()?.runtimes.find(item => item.id === descriptor.runtime.runtimeId);
       if (![...runtime.options].some(item => item.value === descriptor.runtime.runtimeId))
         runtime.append(new Option(savedRuntime?.label ?? descriptor.runtime.directory, descriptor.runtime.runtimeId));
-      editingId = null; configurationReview = startReview = null;
-      label.value = type.title; runtime.value = descriptor.runtime.runtimeId; kind.value = type.id;
+      configurationReview = startReview = null;
       const values = { installationId: descriptor.installationId };
       if (descriptor.command === 'postgres') {
         if (!descriptor.args.includes('serve')) throw new Error('Prepare the PostgreSQL serve command with its private operator directory.');
@@ -616,14 +685,15 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
         if (descriptor.args.includes('--node')) values.nodeExecutable = value('--node');
         values.port = descriptor.args.includes('--port') ? Number(value('--port')) : 0;
       } else values.argumentsJSON = JSON.stringify(descriptor.args, null, 2);
-      renderSettings(values); configuration.open = true;
+      drafts.edit(null, { kind: type.id, label: type.title, runtimeId: descriptor.runtime.runtimeId, values });
+      configuration.open = true;
       switchView('applications'); configuration.scrollIntoView({ block: 'nearest' });
       label.focus();
     },
-    async choose(id) { selectedId = id; selectedRun = null; resetHistory(id); switchView('applications'); await refresh(); },
+    async choose(id) { navigationVersion++; selectedId = id; selectedRun = null; resetHistory(id); switchView('applications'); await refresh(); },
     reset() {
-      scope++; data = null; selectedId = selectedRun = editingId = null; configurationReview = startReview = null;
-      resetHistory(null); initial = true; label.value = ''; kind.replaceChildren(); runtime.replaceChildren(); list.replaceChildren();
+      scope++; navigationVersion++; data = null; selectedId = selectedRun = editingId = null; configurationReview = startReview = null;
+      resetHistory(null); initial = true; drafts.reset(); library.reset(); label.value = ''; kind.replaceChildren(); runtime.replaceChildren();
       selectedPanel.hidden = history.hidden = outputPanel.hidden = reviewResult.hidden = true; configuration.open = true;
       openapiSetup.reset();
     },

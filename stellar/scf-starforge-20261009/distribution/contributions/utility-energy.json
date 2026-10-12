@@ -1,0 +1,82 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "utility-energy",
+  "description": "Complete UtilityAPI and Green Button receiving, review, managed operator, native datasets, original publisher and customer MCP delivery",
+  "commands": {
+    "utility-energy": "stellar/scf-starforge-20261009/sf30-seller-sdk/utility-energy/cli.mjs",
+    "dataset-utility-energy": "stellar/scf-starforge-20261009/sf30-seller-sdk/utility-energy/cli.mjs"
+  },
+  "commandDescriptions": {
+    "utility-energy": "Receive complete original utility sources, review corrected intervals, reconcile bills, publish datasets and reopen the customer workspace.",
+    "dataset-utility-energy": "Open the original UtilityAPI and Green Button customer operator."
+  },
+  "supportFiles": [
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/utility-energy/utility_shared.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/utility-energy/utility_time.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/utility-energy/utility_source.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/utility-energy/utility_contracts.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/utility-energy/utility_analysis.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/utility-energy/utility_workspace.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/utility-energy/utility_api.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/utility-energy/utility_publisher.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/utility-energy/utility_delivery.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/utility-energy/utility_server.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/utility-energy/cli.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/utility-energy/public/index.html",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/utility-energy/public/style.css",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/utility-energy/public/app.js",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/utility-energy/fixtures/test_usage_data.xml",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/utility-energy/fixtures/test_usage_data_01.xml",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/utility-energy/contracts/espi-4.0.xsd",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/utility-energy/contracts/atom-4.1.xsd",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/utility-energy/contracts/GreenButtonAlliance-LICENSE",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/utility-energy/contracts/utilityapi-examples.json",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/utility-energy/contracts/utilityapi-published-object-text.json",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/utility-energy/contracts/SOURCE_GUIDE.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/utility-energy/contracts/source-contracts.json",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/utility-energy/requirements.txt",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/utility-energy/README.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/utility-energy/operate-example.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/application.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/ndjson_source.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/xml/workspace.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/xml/server.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/xml/xml_source.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/xml/native.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/publisher-bridge.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/utility-energy/managed.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/utility-energy/managed-application.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/utility-energy/application-provider.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/utility-energy/utility-client.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/utility-energy/MANAGED_APPLICATION.md",
+    "stellar-forge/mcp-merchant-operator/utility-energy-workspace.mjs",
+    "stellar-forge/mcp-merchant-operator/utility-energy-client.mjs",
+    "stellar-forge/mcp-merchant-operator/utility-energy-setup.mjs",
+    "stellar-forge/mcp-merchant-operator/catalog/utility-energy-workspace.mjs",
+    "stellar-forge/mcp-merchant-operator/providers/utility-energy-workspaces.mjs",
+    "stellar-forge/mcp-merchant-operator/UTILITY_ENERGY_WORKSPACE.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/cli.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/cli.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/managed.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/merchant.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/public/index.html",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/public/app.js",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/public/style.css",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/dataset-handler.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/utility-energy/cli.mjs"
+  ],
+  "exports": {
+    "./seller/utility-energy": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/utility-energy/cli.mjs",
+    "./seller/utility-energy/client": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/utility-energy/utility-client.mjs",
+    "./seller/utility-energy/managed": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/utility-energy/managed-application.mjs",
+    "./merchant/utility-energy": "./source/stellar-forge/mcp-merchant-operator/utility-energy-workspace.mjs",
+    "./merchant/utility-energy/client": "./source/stellar-forge/mcp-merchant-operator/utility-energy-client.mjs",
+    "./merchant/utility-energy/setup": "./source/stellar-forge/mcp-merchant-operator/utility-energy-setup.mjs"
+  },
+  "applicationProviders": {
+    "utility-energy": "stellar/scf-starforge-20261009/sf30-seller-sdk/utility-energy/application-provider.mjs"
+  },
+  "merchantProviders": {
+    "utility-energy-workspaces": "stellar-forge/mcp-merchant-operator/providers/utility-energy-workspaces.mjs"
+  }
+}

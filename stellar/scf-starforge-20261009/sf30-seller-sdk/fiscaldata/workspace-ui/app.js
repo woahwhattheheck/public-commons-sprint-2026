@@ -1,4 +1,5 @@
 // MIT. Browser controls for the retained Fiscal Data model and original publisher.
+import { createRefreshPanel } from './refresh.js';
 const $=id=>document.getElementById(id);
 const arr=value=>Array.isArray(value)?value:[];
 const text=value=>value===null?'null':value===undefined?'':typeof value==='object'?JSON.stringify(value):String(value);
@@ -64,6 +65,8 @@ const ui={sourceId:null,sourceRevision:null,sourceDirty:false,sourceDrafts:new M
   edition:null,editionDirty:false,editionDrafts:new Map(),editionOffset:0,comparison:null,comparisonOffset:0,
   briefingComparisonId:null,briefingDrafts:new Map(),buyerReview:null,detailRequests:{capture:0,edition:0,comparison:0}};
 let state=null,sessionToken='',mutation=null,refreshPromise=null,pollTimer=null;
+const refreshPanel=createRefreshPanel({getState:()=>state,action,task,fail,notice,el,table,readout,originalDetails,
+ fileLink,files,badge,empty,stamp,short,count,select,busy:()=>!!mutation});
 function adopt(next){
   if(!next)return;
   if(next.sessionToken)sessionToken=next.sessionToken;
@@ -127,7 +130,7 @@ function render(){
   $('warnings').hidden=!state.recoveryWarnings.length;
   if(state.recoveryWarnings.length)$('warnings').replaceChildren(...state.recoveryWarnings.map(item=>el('p',{},typeof item==='string'?item:
     [item.code,item.message].filter(Boolean).join(' · ')||JSON.stringify(item))));
-  renderSources();renderCaptures();renderEditions();renderComparisons();renderExports();renderBriefing();renderPublisher();renderAvailability();
+  renderSources();renderCaptures();renderEditions();renderComparisons();renderExports();renderBriefing();renderPublisher();refreshPanel.render();renderAvailability();
 }
 function renderSources(){
   update('sources-list',[state.sources,ui.sourceId],()=>state.sources.length?state.sources.map(source=>el('button',{
@@ -177,6 +180,7 @@ function renderCaptures(){
 }
 function renderAvailability(){
   if(!state)return;
+  refreshPanel.availability();
   $('probe-source').disabled=!ui.sourceId||ui.sourceDirty||!!mutation;
   $('capture-form').querySelector('button').disabled=!$('capture-source').value||!!mutation;
   $('edition-create-form').querySelector('button').disabled=!$('edition-capture').value||!!mutation;
@@ -815,12 +819,14 @@ document.addEventListener('click',event=>{
   go().catch(fail);
 });
 async function route(){
-  const [selected,id]=location.hash.slice(1).split('/'),view=['capture','editions','compare','publish'].includes(selected)?selected:'capture';
+  const [selected,id,runId]=location.hash.slice(1).split('/'),view=['capture','editions','compare','refresh','publish'].includes(selected)?selected:'capture';
   for(const node of document.querySelectorAll('.view'))node.hidden=node.id!=='view-'+view;
   for(const link of document.querySelectorAll('nav [data-view]')){
     if(link.dataset.view===view)link.setAttribute('aria-current','page');else link.removeAttribute('aria-current');
   }
-  if(!state||!id)return;
+  if(!state)return;
+  if(view==='refresh'){await refreshPanel.route(id,runId);return;}
+  if(!id)return;
   if(view==='capture')await openCapture(id);
   if(view==='editions')await openEdition(id);
   if(view==='compare')await openComparison(id);
@@ -837,7 +843,7 @@ async function poll(){
   if(document.visibilityState==='visible'){
     try{await refresh();}catch{$('connection').textContent='Connection interrupted';$('connection').dataset.state='FAILED';}
   }
-  pollTimer=setTimeout(poll,state?.worker?.captureId?5000:15000);
+  pollTimer=setTimeout(poll,state?.worker?.captureId||state?.worker?.refreshRunId||state?.refreshRuns?.some(run=>['QUEUED','RUNNING','WAITING_CAPTURE'].includes(run.status))?5000:15000);
 }
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')poll();});
 async function start(){

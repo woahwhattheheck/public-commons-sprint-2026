@@ -107,6 +107,33 @@ const supportHandoff = (bytes, filename) => {
 
 
 
+const buyerHandoff = (bytes, filename) => {
+  need(Buffer.isBuffer(bytes) && bytes.length > 0 && bytes.length <= GRANT_MAX_SOURCE_BYTES,
+    'GRANT_INPUT_TOO_LARGE', 'Use the complete nonempty original buyer handoff up to 8 MiB.');
+  need(typeof filename === 'string' && filename.trim() && [...filename].length <= 240 &&
+    !/[\x00-\x1f\\/]/.test(filename) && !['.', '..'].includes(filename.trim()),
+    'GRANT_INVALID_INPUT', 'Use the plain original buyer filename without directory components.');
+  return {filename, contentBase64:bytes.toString('base64')};
+};
+const buyerSelections = value => {
+  need(Array.isArray(value) && value.length >= 1 && value.length <= 100,
+    'GRANT_INVALID_INPUT', 'Select from one through 100 original buyer jobs.');
+  const jobs = new Set(), purchases = new Set();
+  for (const row of value) {
+    exact(row, ['jobId', 'purchaseId'], ['jobId', 'purchaseId']);
+    sha(row.jobId);
+    need(!jobs.has(row.jobId), 'GRANT_INVALID_INPUT', 'Select each original buyer job once.');
+    jobs.add(row.jobId);
+    if (row.purchaseId !== null) {
+      id(row.purchaseId, 'purchase');
+      need(!purchases.has(row.purchaseId), 'GRANT_INVALID_INPUT',
+        'Each selected source job retains its own original purchase.');
+      purchases.add(row.purchaseId);
+    }
+  }
+  return value;
+};
+
 /** Exact regular-file input. Private launch records additionally keep original ownership. */
 export async function readGrantAgentFile(filename, maximum = GRANT_MAX_BUNDLE_BYTES, privateOnly = false) {
   const fd = await open(path(filename), constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK);
@@ -448,6 +475,35 @@ export class GrantWorkspaceClient {
     return this.#request('/api/operations/' + caseId + '/command', {originalRequestId:body.requestId,
       body:{...original, action:'support.receive', data:{...supportHandoff(bytes, filename),
         expectedPreviewSha256, deploymentId, ...(deployment === undefined ? {} : {deployment})}}});
+  }
+  buyerPreview(caseId, expectedVersion, bytes, filename) {
+    id(caseId, 'operation'); integer(expectedVersion, 'Current case version');
+    return this.#request('/api/operations/' + caseId + '/buyer-preview',
+      {body:{expectedVersion, ...buyerHandoff(bytes, filename)}, mutation:false});
+  }
+  buyerReceive(caseId, bytes, body) {
+    id(caseId, 'operation');
+    exact(body, ['expectedVersion', 'requestId', 'actor', 'note', 'filename',
+      'expectedPreviewSha256', 'deploymentId', 'deployment', 'selections'],
+    ['expectedVersion', 'requestId', 'actor', 'filename', 'expectedPreviewSha256', 'selections']);
+    integer(body.expectedVersion, 'Current case version'); requestId(body.requestId);
+    sha(body.expectedPreviewSha256); text(body.actor, 'Receiving operator', 300);
+    if (body.note !== undefined) text(body.note, 'Receiving note', 12000, true);
+    const {filename, expectedPreviewSha256, deploymentId = null, deployment, selections, ...original} = body;
+    buyerSelections(selections);
+    if (deploymentId !== null) {
+      id(deploymentId, 'deployment');
+      need(deployment === undefined || deployment === null ||
+        (plain(deployment) && Object.keys(deployment).length === 0), 'GRANT_INVALID_INPUT',
+      'Choose the existing deployment without competing replacement fields.');
+    } else {
+      exact(deployment, SUPPORT_DEPLOYMENT_FIELDS, ['name', 'operator', 'role']);
+      need(['BUYER', 'BOTH'].includes(deployment.role), 'GRANT_INVALID_INPUT',
+        'Select the original buyer or combined merchant/buyer deployment role.');
+    }
+    return this.#request('/api/operations/' + caseId + '/command', {originalRequestId:body.requestId,
+      body:{...original, action:'buyer.receive', data:{...buyerHandoff(bytes, filename),
+        expectedPreviewSha256, deploymentId, ...(deployment === undefined ? {} : {deployment}), selections}}});
   }
   download(kind, args) {
     object(args);

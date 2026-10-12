@@ -279,6 +279,61 @@ The original handoff and retained rendered report each fit 8 MiB. The case retai
 
 The maintained grant launcher passes its running Node executable to the original Python support reader. Borrowed Applications and MCP-started instances use that same lifecycle. Download sourceIds through merchant_grant_export with kind source; the original handoff reopens in Merchant Support, and the saved HTML opens as the receiving-time report. Complete case export/import preserves both files, their deployment association and original event history.
 
+## Receive original buyer work into Operations
+
+The two Buyer operations consume the complete private handoff from the maintained [SF88 exporter and SF47 native receiver](../../stellar/scf_2026/sf47_budget_model/workspace/BUYER_OPERATIONS.md). They use the same authenticated case, exact-file input transport, complete snapshots and original request journal as Support. The grant service invokes the installed original saved-source reader; choosing these tools does not execute a buyer attempt.
+
+| Tool | Original result |
+| --- | --- |
+| merchant_grant_buyer_preview | Read-only complete source/job review, original outcome and output observations, matching purchases, accountable deployments and previewSha256. |
+| merchant_grant_buyer_receive | Native buyer.receive transaction retaining the original JSON, native HTML, explicit selected job associations, purchase/deployment changes, case event and original request receipt. |
+
+### Select the whole source and review all jobs
+
+Read the original case's current version and deployments. Inspect the declared input with merchant_grant_inputs, complete the original byte transfer, or select a retained source-export snapshot. Use its exact whole-file SHA-256 and original filename:
+
+```json
+{
+  "workspace": "grant",
+  "caseId": "operation-<original 32 hex characters>",
+  "expectedVersion": 37,
+  "input": {"hostInput": "buyer-operations"},
+  "expectedInputSha256": "<exact original handoff SHA256>",
+  "filename": "buyer-operations.json"
+}
+```
+
+Pass these fields to merchant_grant_buyer_preview. The original handoff is a complete nonempty file up to 8 MiB containing one through 100 source jobs. The input may be a hostInput, completed transferId or original snapshotId; sourceWorkspace can explicitly select another configured input owner. The provider verifies the entire selected file before dispatch. Buyer tools consume the whole file and accept neither an inputPointer nor a reconstructed review object.
+
+The response is retained as an immutable snapshot. Inspect its original `/source`, `/reader`, `/counts`, `/rows`, `/deployments`, `/purchases` and `/previewSha256`. Use merchant_grant_rows with `pointer:"/rows"` and follow every nextOffset; each source row retains jobId, intentId, native state/outcome, payment and output observations, source hashes, issues, canReceive, matches, suggestedPurchaseId, identityConflicts and receiving. An oversized row points to its complete file. merchant_grant_file_read returns the full original preview, including the native HTML.
+
+### Associate the actual deployment and purchases
+
+Choose an existing BUYER or BOTH deployment from this case. Its original operator, participant class and business identity remain retained. Omit deployment, or use null/an empty object. For a new accountable deployment use deploymentId:null (or omit it), and deployment containing name, operator and the explicit role BUYER or BOTH. The other fields use the same original domain contract described under Support; a HANDED_OVER record requires its actual receiving person and calendar date.
+
+Prepare only the reviewed source selections:
+
+```json
+[
+  {"jobId": "<original 64 hex job ID>", "purchaseId": "purchase-<original 32 hex ID>"},
+  {"jobId": "<different original 64 hex job ID>", "purchaseId": null}
+]
+```
+
+An existing intent or network/transaction match must select that original purchase. A later original recovery or output observation stays on its prior purchase and deployment. Choose null only when the native row is a new original purchase. Each job occurs once, each selected existing purchase occurs once, and every selection explicitly includes purchaseId. The native service rejects source conflicts, invalid attribution and stale preview state before saving.
+
+Call merchant_grant_buyer_receive with the exact preview input fields plus expectedPreviewSha256, deploymentId or new deployment, selections, actor, note and one stable requestId. Do not substitute the file SHA for the preview SHA: one identifies the original bytes, while the other binds the native review to the current operating case.
+
+### Recover, export and reopen the complete case
+
+Read the native receive result's version, recordId, sourceIds, sourceSha256, purchaseIds, selectedJobIds, totalSourceJobs, unselectedJobIds and unchanged. The complete original handoff is retained even when the operator receives only some jobs. Whole-source counts and the selected case-metric population remain separate. Native atomic strings keep their asset/network, and original timestamps retain their own meanings.
+
+A successful same-source association may return unchanged without advancing the version. An interrupted receive keeps its exact original request ID and payload; repeat those original fields to recover the committed native receipt. A definite case-version or preview conflict preserves the source selection for a fresh deliberate review. The client performs no automatic write retry.
+
+Use merchant_grant_export with kind source for each returned source ID, or kind case for the complete operating case. Receive the complete ZIP through the existing case_import using the original input/byte transfer. Reopen the actual returned received-case ID and compare its purchase identities, original source hashes and buyerHandoff associations. Complete case export/import also preserves its current Completion plans, Support, event-dependent forecasts, portfolio selections and original history.
+
+The native reader needs its installed Node executable; the maintained grant launcher supplies the original runtime, and SF47_BUYER_NODE can select an explicit installed binary. BUYER_REVIEW_BUSY retains the original selection while the one active native review completes. The reader's complete output is bounded at 16 MiB and its retained native HTML at 8 MiB; large preview results stay available through the same snapshot/file paging. A handoff exceeding the original limits needs an explicit smaller source selection from the maintained exporter.
+
 ## Export, transfer and receive the complete work
 
 merchant_grant_export supports original plan ZIP, operating-case ZIP, forecast ZIP, portfolio ZIP, source file, scenario JSON and original daily/cost CSVs. It preserves the complete native response. A case ZIP includes all original source attachments, reviews, forecasts and portfolios.
@@ -371,7 +426,7 @@ The client exposes original plan operations, case creation/commands, preview/sav
 
 ## Operate tranche completion through agents
 
-The same grant case now exposes 53 operations. Completion adds eight tools to the prior 45-tool catalogue; existing case commands and export also accept the original completion actions and prepared files.
+The same grant case now exposes 55 operations. Buyer receiving adds two tools to the 53-tool catalogue that includes Completion's eight tools; existing case commands and export also accept the original completion actions and prepared files.
 
 | Tool | Work performed |
 | --- | --- |

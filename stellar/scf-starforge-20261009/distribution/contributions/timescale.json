@@ -47,7 +47,9 @@
     "stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/timescale/REMEDIATION.md",
     "stellar-forge/mcp-merchant-operator/TIMESCALE_CLIENT.md",
     "stellar-forge/mcp-merchant-operator/timescale-client.d.mts",
-    "stellar-forge/mcp-merchant-operator/timescale-remediation-receiving.mjs"
+    "stellar-forge/mcp-merchant-operator/timescale-remediation-receiving.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/timescale/ubuntu-native-demo.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/timescale/UBUNTU_NATIVE.md"
   ],
   "browserAssets": [
     {

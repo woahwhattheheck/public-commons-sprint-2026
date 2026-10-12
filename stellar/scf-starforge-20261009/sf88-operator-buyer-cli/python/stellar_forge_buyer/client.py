@@ -66,6 +66,11 @@ class Buyer:
         from .acquisitions import AcquisitionWorkspace
         return AcquisitionWorkspace.from_buyer(self, **options)
 
+    def inbox(self, directory):
+        """Read/export an existing native Inbox without creating another journal."""
+        from .inbox import Inbox
+        return Inbox.from_buyer(self, directory)
+
     def operation(self, intent_id: str):
         return Operation(self, intent(intent_id))
 

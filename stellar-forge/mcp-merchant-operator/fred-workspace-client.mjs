@@ -246,7 +246,7 @@ export class FredWorkspaceClient {
       : definition.consoleUrlEnv ? this.#environment[definition.consoleUrlEnv] : definition.url;
     return connection(raw, definition, this.#boundId);
   }
-  async #fetchResponse(selected, path, { method = 'GET', body, signal, operationId, maximum } = {}) {
+  async #fetchResponse(selected, path, { method = 'GET', body, signal, operationId, maximum, readOnly = false } = {}) {
     const headers = { accept: 'application/json', authorization: 'Bearer ' + selected.token, origin: selected.origin };
     let encoded;
     if (body !== undefined) {
@@ -261,12 +261,12 @@ export class FredWorkspaceClient {
     try { response = await this.#fetch(selected.origin + path, { method, headers, ...(encoded === undefined ? {} : { body: encoded }),
       redirect: 'error', signal: requestSignal }); }
     catch { fail('FRED_CLIENT_TRANSPORT_ERROR', 'The original response was not received. Inspect the same project operation or recover the same customer intent.',
-      { ...details, ambiguous: method !== 'GET', responseReceived: false }); }
+      { ...details, ambiguous: method !== 'GET' && !readOnly, responseReceived: false }); }
     try { bytes = await responseBytes(response, maximum ?? this.maxResponseBytes); }
     catch (error) {
       throw new FredWorkspaceError(error.code ?? 'FRED_CLIENT_RESPONSE_INCOMPLETE',
         error instanceof FredWorkspaceError ? error.message : 'The original response body did not complete.',
-        { ...details, status: response.status, ambiguous: method !== 'GET', responseReceived: true });
+        { ...details, status: response.status, ambiguous: method !== 'GET' && !readOnly, responseReceived: true });
     }
     if (!response.ok) {
       let original; try { original = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes)); } catch {}
@@ -274,8 +274,8 @@ export class FredWorkspaceClient {
       const code = typeof error?.code === 'string' ? error.code : 'FRED_CLIENT_HTTP_ERROR';
       const message = (typeof error?.message === 'string' ? error.message : 'The original workspace rejected the request.')
         .split(selected.token).join('[private]').slice(0, 6000);
-      fail(code, message, { ...details, status: response.status, ambiguous: method !== 'GET' && response.status >= 500,
-        responseReceived: true, inspectOriginalOperation: method !== 'GET', responseBytes: bytes.length, responseSha256: fredDigest(bytes),
+      fail(code, message, { ...details, status: response.status, ambiguous: method !== 'GET' && !readOnly && response.status >= 500,
+        responseReceived: true, inspectOriginalOperation: method !== 'GET' && !readOnly, responseBytes: bytes.length, responseSha256: fredDigest(bytes),
         ...(typeof error?.retryAt === 'string' ? { retryAt: error.retryAt } : {}) });
     }
     return { response, bytes };
@@ -309,7 +309,7 @@ export class FredWorkspaceClient {
     const result = await this.#request(path, options);
     try { return JSON.parse(result.bytes.toString('utf8')); }
     catch { fail('FRED_CLIENT_RESPONSE_INVALID', 'The original response was not complete JSON.',
-      { ambiguous: options.method === 'POST', ...(options.operationId ? { operationId: options.operationId } : {}) }); }
+      { ambiguous: options.method === 'POST' && !options.readOnly, ...(options.operationId ? { operationId: options.operationId } : {}) }); }
   }
   async launch(options = {}) {
     await this.#connect(options.signal);
@@ -338,6 +338,17 @@ export class FredWorkspaceClient {
     const query = new URLSearchParams({ before: digest(before, 'earlier capture ID'), after: digest(after, 'later capture ID'),
       offset: String(integer(offset, 0, 1000000, 'comparison offset')) });
     return page(await this.#json('/api/compare?' + query, options), 'changes');
+  }
+  async previewBriefing({ captureId, briefing, offset = 0 }, options) {
+    digest(captureId, 'capture ID'); object(briefing, 'Original analyst selection');
+    const value = await this.#json('/api/briefing-preview', { ...options, method: 'POST', readOnly: true,
+      body: { captureId, briefing, offset: integer(offset, 0, 30000, 'measure offset') } });
+    return briefingPage(value, { captureId, reviewId: null });
+  }
+  async briefing({ reviewId, offset = 0 }, options) {
+    digest(reviewId, 'saved analyst review ID');
+    return briefingPage(await this.#json('/api/briefing?' + new URLSearchParams({ review: reviewId,
+      offset: String(integer(offset, 0, 30000, 'measure offset')) }), options), { reviewId });
   }
   publication(publicationId, options) {
     return this.#json('/api/publication?' + new URLSearchParams({ publication: digest(publicationId, 'publication ID') }), options);
@@ -397,7 +408,7 @@ export class FredWorkspaceClient {
   }
   async file(selection, options = {}) {
     object(selection, 'Original file selection');
-    let path, fallback;
+    let path, fallback, expectedMember = null;
     if (selection.kind === 'source') {
       path = '/api/source?' + new URLSearchParams({ capture: digest(selection.captureId, 'capture ID') }); fallback = 'fred-original-capture.json';
     } else if (selection.kind === 'comparison') {
@@ -407,9 +418,20 @@ export class FredWorkspaceClient {
     else if (selection.kind === 'customer') {
       path = '/api/customer-download?' + new URLSearchParams({ publication: digest(selection.publicationId, 'publication ID'), intent: operation(selection.intentId) });
       fallback = 'fred-customer-response.bin';
-    } else fail('FRED_CLIENT_INPUT_INVALID', 'Choose an original source, comparison, project or customer file.');
+    } else if (selection.kind === 'briefing') {
+      const memberNames = { html: 'briefing.html', csv: 'briefing-measures.csv', json: 'briefing.json', manifest: 'briefing-manifest.json' };
+      fallback = memberNames[selection.format];
+      if (!fallback) fail('FRED_CLIENT_INPUT_INVALID', 'Choose the original HTML, CSV, JSON or manifest briefing file.');
+      const saved = await this.briefing({ reviewId: selection.reviewId }, options);
+      expectedMember = saved.files?.find(file => file.path === fallback);
+      if (!expectedMember || !SHA.test(expectedMember.sha256) || !Number.isSafeInteger(expectedMember.bytes) || expectedMember.bytes < 1)
+        fail('FRED_CLIENT_BRIEFING_CHANGED', 'The original saved briefing file descriptor is missing.');
+      path = '/api/briefing?' + new URLSearchParams({ review: selection.reviewId, format: selection.format });
+    } else fail('FRED_CLIENT_INPUT_INVALID', 'Choose an original source, comparison, briefing, project or customer file.');
     const { response, bytes } = await this.#request(path, options);
     const sha256 = fredDigest(bytes);
+    if (expectedMember && (sha256 !== expectedMember.sha256 || bytes.length !== expectedMember.bytes))
+      fail('FRED_CLIENT_BRIEFING_CHANGED', 'The complete original briefing differs from its saved source review.', { sha256, bytes: bytes.length });
     if (options.expectedSha256 !== undefined && digest(options.expectedSha256) !== sha256)
       fail('FRED_CLIENT_FILE_CHANGED', 'The complete original download differs from its reviewed SHA256.', { sha256, bytes: bytes.length });
     const proposed = (response.headers.get('content-disposition') ?? '').match(/filename="([^"]*)"/)?.[1] ?? fallback;
@@ -427,16 +449,40 @@ export class FredWorkspaceClient {
   close() { this.#closed = true; this.#bound = null; this.#lifetime.abort(new Error('FRED workspace client closed')); }
 }
 
+function briefingPage(value, binding) {
+  if (value?.schema !== 'stellar-forge.fred-briefing-model.v1' || !Array.isArray(value.measures) || !Array.isArray(value.series) ||
+      !Number.isSafeInteger(value.measureCount) || value.measureCount < 0 || value.measureCount > 30000 ||
+      !Number.isSafeInteger(value.offset) || value.offset < 0 || value.offset > value.measureCount ||
+      value.limit !== 100 || value.measures.length !== Math.min(100, value.measureCount - value.offset) ||
+      value.nextOffset !== (value.offset + 100 < value.measureCount ? value.offset + 100 : null) ||
+      Object.entries(binding).some(([key, expected]) => value[key] !== expected))
+    fail('FRED_CLIENT_BRIEFING_CHANGED', 'The original analyst page or its source/review binding changed.');
+  if (binding.reviewId !== null && (!value.manifest || value.manifest.reviewId !== binding.reviewId ||
+      value.manifest.captureId !== value.captureId || value.manifest.reportId !== value.reportId ||
+      !Array.isArray(value.files) || value.files.length !== 4))
+    fail('FRED_CLIENT_BRIEFING_CHANGED', 'The saved analyst page lost its complete original file inventory.');
+  return value;
+}
 export function inspectFredProjectBundle(bundle) {
-  if (bundle?.schema !== 'stellar-forge.fred-project-bundle.v1' || !plain(bundle.state) ||
-      !Array.isArray(bundle.captures) || !Array.isArray(bundle.publicationPlans) || !SHA.test(bundle.bundleSha256 ?? ''))
-    fail('FRED_CLIENT_BUNDLE_INVALID', 'Use the complete original FRED project bundle.');
-  const identity = { schema: bundle.schema, state: bundle.state, captures: bundle.captures, publicationPlans: bundle.publicationPlans };
+  const briefing = bundle?.schema === 'stellar-forge.fred-project-bundle.v2';
+  if ((!briefing && bundle?.schema !== 'stellar-forge.fred-project-bundle.v1') || !plain(bundle.state) ||
+      !Array.isArray(bundle.captures) || !Array.isArray(bundle.publicationPlans) || !SHA.test(bundle.bundleSha256 ?? '') ||
+      (briefing ? !Array.isArray(bundle.briefings) || bundle.briefings.length < 1 : bundle.briefings !== undefined))
+    fail('FRED_CLIENT_BUNDLE_INVALID', 'Use the complete original versioned FRED project bundle.');
+  const identity = { schema: bundle.schema, state: bundle.state, captures: bundle.captures, publicationPlans: bundle.publicationPlans,
+    ...(briefing ? { briefings: bundle.briefings } : {}) };
   if (fredDigest(Buffer.from(canonicalFredJSON(identity))) !== bundle.bundleSha256 ||
-      bundle.state.schema !== 'stellar-forge.fred-project.v1' || !UUID.test(bundle.state.id ?? '') || bundle.state.pending)
+      bundle.state.schema !== 'stellar-forge.fred-project.v1' || !UUID.test(bundle.state.id ?? '') || bundle.state.pending ||
+      !Array.isArray(bundle.state.reviews))
     fail('FRED_CLIENT_BUNDLE_INVALID', 'The original completed project bundle identity changed.');
+  const analystReviews = bundle.state.reviews.filter(review => review.briefing);
+  if ((bundle.briefings ?? []).length !== analystReviews.length ||
+      new Set((bundle.briefings ?? []).map(item => item.manifest?.reviewId)).size !== analystReviews.length ||
+      (bundle.briefings ?? []).some(item => !analystReviews.some(review => review.id === item.manifest?.reviewId)))
+    fail('FRED_CLIENT_BUNDLE_INVALID', 'The complete project export lost an original analyst briefing.');
   return { schema: bundle.schema, projectId: bundle.state.id, revision: bundle.state.revision,
-    bundleSha256: bundle.bundleSha256, captures: bundle.captures.length, publications: bundle.publicationPlans.length };
+    bundleSha256: bundle.bundleSha256, captures: bundle.captures.length, publications: bundle.publicationPlans.length,
+    ...(briefing ? { briefings: bundle.briefings.length } : {}) };
 }
 
 /** Publishes the complete original bytes without replacing an existing file. */

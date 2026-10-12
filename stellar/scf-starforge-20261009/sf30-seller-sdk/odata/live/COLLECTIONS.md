@@ -447,3 +447,28 @@ for (const profile of bundle.state.liveProducts || []) {
 The final call invokes `openCollection` under each original collection lease. It recompiles the original source/query, checks the complete request chain, cumulative rows, declared-key uniqueness, exact source values and selected analytical output, and verifies the original document closure again at the receiving location. The original OData restore journal still owns same-input replay and final state publication.
 
 The native workspace HTTP request reader currently accepts 64 MiB. A larger complete transfer can use the original filesystem `workspace.restore` caller or the independently retained Analysis Workspace Transfer. Keep the full source selection together when choosing the receiving route.
+
+
+## Live services customer controls
+
+The existing OData operator now includes Complete customer collections under Live services. Open a prepared service, receive each original customer response with the existing receiving form, and select its query. Add the saved pages in their actual order, or use the complete saved chain when there is one unambiguous chain. An optional original buyer handoff supplies the first or selected page's request; otherwise the receiver uses the service request and each previous returned cursor. The receiver validates the entire request and response sequence before publishing the collection.
+
+Choose a collection ID and an optional title or subset of delivered fields. Entity keys are retained automatically. Reusing the ID resumes its exact original selection; changed source, query, pages or projection require a different ID. Open retained collections to inspect the completion reason, supplier counts, acquisition window, exact query, declared fields and source digests. The original row viewer pages through the retained supplier rows. CSV, row indexes, typed projection and every original Analysis source file are available through declared downloads.
+
+The existing complete workspace backup includes all collection source and Analysis files under each original service. Its receiving path validates the full closure before writing and reopens every original collection before publishing restored workspace state. Use the existing Restore command in an empty workspace. The HTTP route retains its original 64 MiB request limit. Before reading a larger selected file, the Restore chooser opens the original native command for this host and an empty destination workspace. Run the displayed command with the actual saved transfer path, then open the received workspace. The native CLI and filesystem workspace SDK validate the same complete transfer. Complete collection scans run on customer operations rather than the merchant status poll.
+
+The original live API now exposes:
+
+- GET /api/live/collections?id=SERVICE
+- GET /api/live/collection?id=SERVICE&collectionId=COLLECTION
+- GET /api/live/collection/rows?id=SERVICE&collectionId=COLLECTION&offset=0&limit=100
+- POST /api/live/collection with {id,collectionId,pages:[{receivedId,buyerId?}],title?,fields?,limits?}
+- GET /api/live/file?id=SERVICE&kind=collection&recordId=COLLECTION&name=DECLARED_RELATIVE_PATH
+
+The original live operations object also exposes collections, collection, collectionRows, collect and restoreCollection. The latter accepts the existing Analysis sourceManifest path and expectedSha256 through the filesystem API. All collection mutations use the original live state sequence.
+
+The existing OData CLI also supports live collections, collection, collect, collection-rows, collection-file and restore-collection. Run the normal command help for their exact options. A collect selection file contains pages and optional title, fields and limits; the service and collection IDs are supplied by the original CLI arguments. The native whole-workspace receiving command is:
+
+    node stellar/scf-starforge-20261009/sf30-seller-sdk/odata/cli.mjs --workspace EMPTY_DIRECTORY restore --input COMPLETE_TRANSFER.json
+
+This uses the same workspace.restore implementation as the browser and retains the complete original source and collection files.
