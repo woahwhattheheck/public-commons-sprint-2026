@@ -31,7 +31,9 @@
     "merchantProviders": [],
     "browserAssets": []
   },
-  "contributions": [],
+  "contributions": [
+    "python"
+  ],
   "components": [
     "products/analysis-project",
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python",
