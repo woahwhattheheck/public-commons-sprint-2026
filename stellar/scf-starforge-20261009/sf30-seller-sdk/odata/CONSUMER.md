@@ -23,8 +23,9 @@ workspace and merchant state directories outside the installed source release.
 ## Receive an original workspace
 
 An `odata-workspace.json` transfer includes the original metadata, queries,
-response pages, reviews, normalized rows, dataset exports and prepared live
-packages. Restore it into a new workspace:
+response pages, reviews, normalized rows, dataset exports, prepared live
+packages, committed buyer handoffs and received response artifacts. Restore it
+into a new workspace:
 
 ```sh
 npx --no-install starforge odata --workspace ./received-orders restore \
@@ -38,6 +39,24 @@ same directory. `status` prints retained IDs for terminal operation. Use
 `backup --out NEW_FILE.json` to create its next portable transfer. The original
 server continuation governs the end of capture; a page-size preference does not
 guarantee a returned page size.
+
+Reopen a saved live service with the original operator:
+
+```sh
+npx --no-install starforge odata --workspace ./received-orders serve \
+  --live-service SAVED_LIVE_SERVICE
+```
+
+Select the service ID from the workspace's saved live products. The same server
+opens the merchant and drains it when the operator closes. Embedded callers use
+`startODataServer({ workspace, port: 0, liveServiceId })`; the result includes
+the operator `url`, original HTTP `server`, optional running `liveRuntime`
+and one `close()` operation.
+
+The maintained Applications workflow opens this same workspace and optional
+saved service. [live/APPLICATIONS.md](live/APPLICATIONS.md) describes its
+Review → Save → Start → Open → Stop → reopen lifecycle and original installed
+receiving operation.
 
 ## Embed the maintained API
 
@@ -125,8 +144,10 @@ receiving control. Each receipt retains the original response, JSONL rows and
 next request. Use a stable intent for each exact request and the returned next
 request for the next purchase.
 
-The portable workspace carries prepared live packages. The running merchant's
-private identity/history and the buyer's execution records remain in their
-original retained runtime directories. Keep those directories through upgrades
-and reopening. The complete source/provider and live operator contracts are in
-[PROVIDER.md](PROVIDER.md), [README.md](README.md) and [live/README.md](live/README.md).
+The portable workspace carries prepared live packages, committed buyer handoffs
+and received page artifacts. Retain the running merchant's private identity and
+history, and the buyer's execution records, in their original runtime directories
+through upgrades and reopening. Reuse the recorded request and response paths
+when resuming a committed SF88 operation. The complete source/provider and live
+operator contracts are in [PROVIDER.md](PROVIDER.md), [README.md](README.md),
+[live/README.md](live/README.md) and [live/APPLICATIONS.md](live/APPLICATIONS.md).
