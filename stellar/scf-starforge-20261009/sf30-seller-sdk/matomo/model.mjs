@@ -5,14 +5,15 @@ import {createMatomoCaptures} from './capture.mjs';
 import {createMatomoEditions} from './editions.mjs';
 import {createMatomoComparisons} from './comparison.mjs';
 import {createMatomoMerchant} from './merchant.mjs';
+import {createMatomoHandover} from './operator-handover.mjs';
 import {identifier,safeError} from './contract.mjs';
 import {digest,fault} from '../postgres/publisher/files.mjs';
 import {join} from 'node:path';
-export async function openMatomoWorkspace({directory,create=false,source,sourceFile,environment=process.env,allowLoopback=false}={}) {
+export async function openMatomoWorkspace({directory,create=false,source,sourceFile,environment=process.env,allowLoopback=false,python=environment.MATOMO_PYTHON??'python3',node=process.execPath}={}) {
   if(sourceFile){if(source)throw fault('MATOMO_ONE_SOURCE_REQUIRED');source=JSON.parse(await readFile(sourceFile,'utf8'));}
   const store=await openMatomoStore({directory,create,source,environment,allowLoopback});
   try{
-    const captures=createMatomoCaptures(store),editions=createMatomoEditions(store,captures),comparisons=createMatomoComparisons(store,editions),merchant=createMatomoMerchant(store,editions,{environment});
+    const captures=createMatomoCaptures(store),editions=createMatomoEditions(store,captures),comparisons=createMatomoComparisons(store,editions),merchant=createMatomoMerchant(store,editions,{environment}),handover=createMatomoHandover(store,merchant,editions,{environment,python,node});
     const operations=Object.freeze({
       discover:captures.discover,'resume-catalog':captures.resumeCatalog,capture:captures.captureReport,'resume-capture':captures.resumeCapture,
       edition:editions.prepare,'resume-edition':editions.resume,'review-edition':editions.review,
@@ -21,8 +22,9 @@ export async function openMatomoWorkspace({directory,create=false,source,sourceF
       'export-package':merchant.exportPackage,'recover-package':merchant.recoverPackage,
       'stage-release':merchant.stage,'select-release':merchant.select,'start-release':merchant.start,'stop-release':merchant.stop,'open-release-console':merchant.openConsole,
       'prepare-delivery':merchant.prepareDelivery,'recover-delivery':merchant.recoverDelivery,'review-delivery':merchant.reviewDelivery,'publish-delivery':merchant.publishDelivery,
+      'prepare-handover':handover.prepare,'resume-handover':handover.resume,'receive-handover':handover.receive,'resume-receiving':handover.resumeReceiving,'reopen-receiving':handover.reopen,
     });
-    const state=()=>({...store.state(),merchant:merchant.list()});
+    const state=()=>({...store.state(),merchant:merchant.list(),...handover.list()});
     async function perform(name,input){if(!Object.hasOwn(operations,name))throw fault('MATOMO_OPERATION_NOT_FOUND',undefined,404);return operations[name](input);}
     async function sourceRead(id) {
       const row=store.db.prepare('SELECT * FROM requests WHERE id=?').get(identifier(id));
@@ -37,6 +39,7 @@ export async function openMatomoWorkspace({directory,create=false,source,sourceF
       if(kind==='comparison'){const value=await comparisons.report(id);return {content:value.raw,name:id+'-comparison.json',mediaType:'application/json'};}
       if(kind==='findings')return {stream:comparisons.findingLines(id),name:id+'-findings.jsonl',mediaType:'application/x-ndjson'};
       if(kind==='delivery')return merchant.deliveryFile(id,options.kind);
+      if(kind==='handover')return handover.file(id,options.kind??'archive');
       if(kind==='source'){
         const row=store.db.prepare('SELECT * FROM requests WHERE id=?').get(identifier(id));
         if(!row||!row.accepted_attempt)throw fault('MATOMO_ACCEPTED_READ_REQUIRED');
@@ -49,6 +52,6 @@ export async function openMatomoWorkspace({directory,create=false,source,sourceF
     }
     let closing;
     const close=()=>closing??=(async()=>{try{await store.close();}finally{await merchant.close();}})();
-    return Object.freeze({store,captures,editions,comparisons,merchant,state,perform,sourceRead,artifact,close,operationNames:Object.keys(operations)});
+    return Object.freeze({store,captures,editions,comparisons,merchant,handover,state,perform,sourceRead,artifact,close,operationNames:Object.keys(operations)});
   }catch(error){await store.close();throw error;}
 }

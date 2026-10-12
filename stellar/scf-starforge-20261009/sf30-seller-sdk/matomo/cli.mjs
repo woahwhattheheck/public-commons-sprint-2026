@@ -9,11 +9,11 @@ import {startMatomoWorkspace} from './server.mjs';
 export async function run(argv=process.argv.slice(2)) {
   const {values,positionals}=parseArgs({args:argv,allowPositionals:true,options:{
     workspace:{type:'string'},source:{type:'string'},create:{type:'boolean',default:false},'allow-loopback':{type:'boolean',default:false},
-    input:{type:'string'},id:{type:'string'},port:{type:'string'},query:{type:'string'}
+    python:{type:'string'},input:{type:'string'},id:{type:'string'},port:{type:'string'},query:{type:'string'}
   }});
   if(!values.workspace)throw new Error('Use --workspace PRIVATE_DIRECTORY. First open also uses --create --source SOURCE_JSON.');
   const command=positionals[0]??'serve',options={directory:resolve(values.workspace),create:values.create,
-    sourceFile:values.source?resolve(values.source):undefined,allowLoopback:values['allow-loopback']};
+    sourceFile:values.source?resolve(values.source):undefined,allowLoopback:values['allow-loopback'],...(values.python?{python:values.python}:{})};
   if(command==='serve'){
     const app=await startMatomoWorkspace({...options,port:Number(values.port??0)});
     process.stdout.write(JSON.stringify({schema:'stellar-forge.matomo-operator.v1',url:app.url,directory:options.directory})+'\n');
@@ -31,6 +31,8 @@ export async function run(argv=process.argv.slice(2)) {
     else if(command==='edition-state'){const value=await model.editions.manifest(values.id,{database:true});result={edition:value.edition,manifest:value.value};}
     else if(command==='merchant-state')result=await model.merchant.state(values.id);
     else if(command==='delivery-state')result=await model.merchant.inspectDelivery(values.id,values.query);
+    else if(command==='handover-state')result=model.handover.handover(values.id);
+    else if(command==='receiving-state')result=model.handover.receiving(values.id);
     else if(command==='releases')result=await model.merchant.releases();
     else{
       if(!values.input)throw new Error('Use --input JSON_FILE, or --input - for one exact JSON operation on stdin.');
@@ -39,7 +41,9 @@ export async function run(argv=process.argv.slice(2)) {
       if(command==='preview')result=await model.merchant.preview(input);
       else result=await model.perform(command,input);
     }
-    process.stdout.write(JSON.stringify(result,null,2)+'\n');return result;
+    process.stdout.write(JSON.stringify(result,null,2)+'\n');
+    if(['start-release','open-release-console'].includes(command))await new Promise(done=>{for(const signal of ['SIGINT','SIGTERM'])process.once(signal,done);});
+    return result;
   }finally{await model.close();}
 }
 if(process.argv[1]&&pathToFileURL(resolve(process.argv[1])).href===import.meta.url)run().catch(error=>{process.stderr.write(JSON.stringify({error:error.code??'MATOMO_COMMAND_FAILED',message:error.message})+'\n');process.exitCode=1;});
