@@ -150,12 +150,12 @@ function exportFileType(name) {
 }
 
 export class MerchantSupport {
-  #config; #store; #commercial; #watch = null; #lastWatchExit = null; #closing = false; #close; #incidentSources; #environment;
+  #config; #store; #commercial; #casePackages; #watch = null; #lastWatchExit = null; #closing = false; #close; #incidentSources; #environment;
   #reads = new RetainedFileReads({ errorPrefix: 'SUPPORT' });
   constructor(config, { environment = process.env } = {}) {
     this.#config = config; this.#environment = environment;
     this.#commercial=merchantCommercial({cases:()=>this.#cases(),casesDirectory:()=>this.#configured().casesDirectory,
-      exportsDirectory:()=>this.#config.exportsDirectory,reads:this.#reads});
+      exportsDirectory:()=>this.#config.exportsDirectory,reads:this.#reads,environment});
     this.#incidentSources = new MerchantSupportIncidentSources(config.support, {
       profiles: () => this.summary.profiles,
       profile: (alias, sourceDigest) => this.#profile(alias, sourceDigest),
@@ -179,6 +179,13 @@ export class MerchantSupport {
     return this.#config.support;
   }
   async #cases() { return this.#store ??= openCaseStore(this.#configured().casesDirectory); }
+  async #packages() {
+    if(this.#closing)throw failure('OPERATOR_CLOSING','Merchant support is closing.');
+    return this.#casePackages??=(async()=>{
+      const module=await import('./support-case-packages.mjs');
+      return module.openMerchantCasePackages({config:this.#config,store:await this.#cases(),environment:this.#environment});
+    })();
+  }
   #incidents() {
     const directory = this.#configured().incidentsDirectory;
     if (!directory) throw failure('INCIDENTS_NOT_CONFIGURED', 'Register the existing SF93 incident directory in the host support connection.');
@@ -447,6 +454,7 @@ export class MerchantSupport {
     if (this.#closing) throw failure('OPERATOR_CLOSING', 'Merchant support is closing.');
     try {
       return await (async () => {
+      if(name.startsWith('merchant_case_package_'))return (await this.#packages()).call(name,args);
       if(this.#commercial.handles(name))return this.#commercial.call(name,args);
       if(name==='merchant_service_read')return readServiceCase({store:await this.#cases(),args});
       if(name==='merchant_service_change')return changeServiceCase({store:await this.#cases(),args,readSnapshot:input=>this.#incidentSources.serviceSnapshot(input)});
@@ -562,11 +570,12 @@ export class MerchantSupport {
     this.#closing = true;
     this.#close = (async () => {
       const handle = this.#watch;
-      const readsClosing = this.#reads.close(), sourcesClosing = this.#incidentSources.close();
+      const readsClosing = this.#reads.close(), sourcesClosing = this.#incidentSources.close(), commercialClosing = this.#commercial.close();
+      const packagesClosing=this.#casePackages?this.#casePackages.then(owner=>owner.close(),()=>{}):Promise.resolve();
       try {
         if (handle) { handle.state = 'STOPPING'; handle.controller.abort(); await handle.done; }
       } finally {
-        const results = await Promise.allSettled([readsClosing, sourcesClosing]);
+        const results = await Promise.allSettled([readsClosing, sourcesClosing, packagesClosing, commercialClosing]);
         const errors = results.filter(value => value.status === 'rejected').map(value => value.reason);
         if (errors.length) throw new AggregateError(errors, 'Original support readers and source watchers did not finish closing.');
       }

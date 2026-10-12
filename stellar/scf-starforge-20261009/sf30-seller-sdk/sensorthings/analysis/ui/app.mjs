@@ -4,7 +4,7 @@ const $=id=>document.getElementById(id),HASH=/^[a-f0-9]{64}$/,ID=/^[A-Za-z0-9_-]
   SESSION_KEY='stellar-forge.sensorthings.analysis.tab-session.v1',MAX_BROWSER_DOWNLOAD=64*1024*1024;
 const state={token:null,workspaceId:null,schema:null,view:null,overview:null,project:null,version:null,summary:null,edition:null,
   tab:'overview',pending:null,pendingObservation:null,forms:new Map(),catalogs:new Map(),editions:new Map(),sourceSummaries:new Map(),
-  frame:null,framePath:null,generation:0,paneGeneration:0,mutation:false,rowsOffset:0,citationDraft:[],annotationEdit:null};
+  pythonEditionId:null,frame:null,framePath:null,generation:0,paneGeneration:0,mutation:false,rowsOffset:0,citationDraft:[],annotationEdit:null};
 function node(tag,properties={},...children){
   const el=document.createElement(tag);
   for(const [key,value]of Object.entries(properties??{})){
@@ -714,6 +714,90 @@ async function openPublication(id){
       ['Source review',publication.sourceReview?.decision],['Manifest identity',code(publication.manifestSha256)]]),
     p(publication.note),filesTable(listed.files),details('Exact frozen publication record',publication)));
 }
+
+function pythonSourcePane(){
+  const section=node('section',{class:'card'},node('h3',{},'Python analysis handover')),
+    ids=state.overview.sourceEditionIds??[];
+  section.append(p('Prepare an original source edition for the existing editable SQL, report and workbook application. The handover includes every source table, the complete source archive and exact original identifiers.'));
+  if(!state.schema.actions?.['analysis.python.prepare']){
+    section.append(p('This installed composition does not advertise the Python source-preparation action. Use the current complete application package.','empty'));return section;
+  }
+  if(!ids.length){section.append(p('Receive an original source edition before preparing its analysis handover.','empty'));return section;}
+  if(!ids.includes(state.pythonEditionId))state.pythonEditionId=ids.includes(state.version?.editionId)?state.version.editionId:ids[0];
+  const chosen=select('pythonEditionId',editionOptions(),state.pythonEditionId,{required:true}),host=node('div',{});
+  const render=()=>{
+    const editionId=chosen.value;state.pythonEditionId=editionId;
+    const exports=(state.view.exports??[]).filter(x=>x.editionId===editionId),
+      usable=exports.filter(x=>x.schema==='stellar-forge.sensorthings-transfer-receipt.v1'&&ID.test(x.id??'')&&
+        x.originalWorkspaceId===state.workspaceId&&HASH.test(x.file?.sha256??'')&&Number.isSafeInteger(x.file?.bytes)),
+      records=(state.overview.pythonSources??[]).filter(x=>x.editionId===editionId);
+    const exportForm=formShell('Original source archive',async(_form,revision)=>{
+      if(!HASH.test(editionId))throw new Error('Select the exact retained source edition.');
+      await beginAction('edition.export',{editionId},revision);
+    });
+    exportForm.append(p('Select an existing complete source export below, or retain an export of this exact edition with its original review history.','small muted'),
+      node('div',{class:'actions'},submitButton('Export original source edition')));
+    const prepareForm=formShell('Prepare the complete analysis source',async(form,revision)=>{
+      const receipt=usable.find(x=>x.id===value(form,'pythonExportId'));
+      if(!receipt)throw new Error('Select a complete original export of this exact source edition.');
+      await beginAction('analysis.python.prepare',{editionId,exportId:receipt.id,actor:requireActor()},revision);
+    }),choice=select('pythonExportId',[{value:'',label:'Select a retained original export'},...usable.map(x=>({
+      value:x.id,label:x.createdAt+' · '+short(x.id,22)+' · '+humanBytes(x.file.bytes)
+    }))],'',{required:true}),identityArea=node('div',{});
+    const showIdentity=()=>{
+      const receipt=usable.find(x=>x.id===choice.value);
+      identityArea.replaceChildren(receipt?kv([['Original export ID',code(receipt.id)],['Exact source edition',code(receipt.editionId)],
+        ['Complete archive',humanBytes(receipt.file.bytes)],['Archive SHA256',code(receipt.file.sha256)]]):
+        p('Choose the completed source-export result; its ID is separate from the action that created it.','small muted'));
+    };
+    choice.addEventListener('change',showIdentity);showIdentity();
+    prepareForm.append(field('Original source export',choice),identityArea,
+      p('This prepares source files. The Python application records its actual import, calculations, reports, workbooks and receiving results when that programme runs.','small muted'),
+      node('div',{class:'actions'},submitButton('Prepare Python analysis handover')));
+    if(!usable.length)prepareForm.querySelector('button[type=submit]').dataset.readonly='true';
+    host.replaceChildren(node('div',{class:'grid'},exportForm,prepareForm),
+      usable.length?table(['Retained source export','Recorded','Complete archive','Original files'],usable.map(x=>[
+        code(x.id),x.createdAt,humanBytes(x.file.bytes),readFileButtons({kind:'transfer',id:x.id})
+      ])):p('No complete original source export is recorded for this edition.','empty'),
+      node('h4',{},'Prepared analysis handovers'),
+      records.length?table(['Preparation','Recorded','Provider traversal','Source archive','Complete handover'],records.map(x=>[
+        code(x.id),x.createdAt,x.sourceComplete?'Selected query traversed':'Incomplete traversal retained',
+        (Number.isSafeInteger(x.sourceArchive?.bytes)?humanBytes(x.sourceArchive.bytes):'Not supplied'),button('Inspect source and files',()=>guard(()=>openPythonSource(x.id)))
+      ])):p('No Python source handover has been prepared for this edition.','empty'));
+  };
+  chosen.addEventListener('change',()=>{render();setBusy(state.mutation);});render();
+  section.append(field('Exact retained source edition',chosen),host);return section;
+}
+async function openPythonSource(id){
+  const record=await request('/api/analysis/python-sources/'+encodeURIComponent(id));
+  if(record.schema!=='stellar-forge.sensorthings-python-source.v1'||record.id!==id||
+      record.originalWorkspaceId!==state.workspaceId||!Array.isArray(record.files))
+    throw new Error('The prepared analysis handover belongs to another original source selection.');
+  const selection={kind:'analysis',id},listed=await request('/api/files?selection='+encodeURIComponent(JSON.stringify(selection))),
+    byPath=new Map(record.files.map(f=>[f.file,f]));
+  if(byPath.size!==record.files.length||!Array.isArray(listed.files)||listed.files.length!==byPath.size)
+    throw new Error('The complete prepared-source file list differs from its original record.');
+  const seen=new Set();
+  for(const file of listed.files){
+    const path=file.selection?.file,original=byPath.get(path);
+    if(!original||seen.has(path)||file.selection.kind!=='analysis'||file.selection.id!==id||
+        file.bytes!==original.bytes||file.sha256!==original.sha256)
+      throw new Error('A prepared source file differs from its original complete identity.');
+    seen.add(path);
+  }
+  detail('Complete Python analysis handover',node('div',{},
+    kv([['Preparation',code(record.id)],['Original source edition',code(record.editionId)],['Original source export',code(record.exportId)],
+      ['Source document',code(record.documentId)],['Provider traversal',record.sourceComplete?'Selected query traversed':'Incomplete traversal retained'],
+      ['Complete source archive',humanBytes(record.sourceArchive.bytes)],['Archive SHA256',code(record.sourceArchive.sha256)]]),
+    table(['Complete table','Rows','Columns'],Object.entries(record.tables).map(([name,t])=>[name,count(t.rows),count(t.columns.length)])),
+    p('Receive the whole selection with the maintained file client for the Python programme. Its download manifest preserves the original source paths even when local filenames are numbered. Individual files below retain their exact bytes and selectors.','flow-note'),
+    details('Complete-file receiving selection',selection),
+    table(['Original source path','Download name','Bytes','SHA256','Download'],listed.files.map(file=>[
+      code(file.selection.file),file.name,humanBytes(file.bytes),code(file.sha256),
+      button('Download exact file',()=>guard(()=>downloadFile(file)))
+    ])),details('Original preparation record',record)));
+}
+
 async function transferPane(){
   const data=await inbox(),v=state.version,pj=state.project;
   const result=[...pageHeading('Receive, export and reopen','Use the existing source inbox, native held-file downloader and project history. All receiving choices bind the exact displayed filename, byte count and SHA256.'),
@@ -733,6 +817,7 @@ async function transferPane(){
       pj.exports.length?table(['Export','Recorded','Original head','File'],pj.exports.map(x=>[
         code(x.id),x.createdAt,code(x.headVersionId),readFileButtons({kind:'analysis',id:x.id})])):p('No complete project export is recorded.','empty'));
   }
+  result.push(pythonSourcePane());
   result.push(node('div',{class:'grid'},
     receiveForm({kind:'project',label:'Receive complete project',data}),
     receiveForm({kind:'source',label:'Receive original source edition',data})),
@@ -756,7 +841,7 @@ async function transferPane(){
 }
 function closeSession(){
   stopViewer();state.generation++;state.paneGeneration++;sessionStorage.removeItem(SESSION_KEY);
-  Object.assign(state,{token:null,workspaceId:null,schema:null,view:null,overview:null,project:null,version:null,summary:null,edition:null,pending:null});
+  Object.assign(state,{token:null,workspaceId:null,schema:null,view:null,overview:null,project:null,version:null,summary:null,edition:null,pending:null,pythonEditionId:null});
   state.forms.clear();state.catalogs.clear();state.editions.clear();state.sourceSummaries.clear();$('actor').value='';
   $('application').hidden=true;$('connection').hidden=false;$('refresh').disabled=true;$('lock').disabled=true;$('pane').replaceChildren();
   $('identity').textContent='Session closed in this tab. Original workspace and any retained pending-request envelope are unchanged.';status('');

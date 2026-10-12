@@ -17,6 +17,7 @@ Use the maintained original application/distribution installation, including the
 | analysis/ui/ | Complete analyst interface |
 | analysis/publication.mjs | Immutable full-data publication, readable report, source-derived rendering and chosen evidence |
 | analysis/transfer.mjs | Exact complete-project export and create-only receiving |
+| analysis/python-document.mjs and the original Python Analysis programme | Complete source-document preparation, editable SQL/report/workbook receiving and original workspace continuation |
 | Original MCP/protocol/types and downloader | Fifteen-tool original catalog, including merchant_sensorthings_analysis and the original file receiver |
 | analysis/upstream/ | Retained publisher source, original licence declarations and release metadata |
 
@@ -182,6 +183,21 @@ For full editable handover, choose **Export complete project**. The original cor
 
 If that project already exists locally, the core preserves its existing local head while adding compatible original immutable histories. The receiving result names both the imported head and the retained local head. Source decisions are not silently imported as local approvals.
 
+
+### 10. Continue in the original Python Analysis application
+
+**Receive / export → Python analysis handover** selects an exact retained source edition and its completed original source-export result. Existing exports remain available; **Export original source edition** records a new export only when the operator chooses it. The returned export ID is separate from the operation that created that archive.
+
+**Prepare Python analysis handover** uses the same action journal, revision checks and attributed operator. It retains all three unmodified source tables, a separate original semantic-identity index, the original scalar eligibility result, and the complete original source archive. A prepared handover is a source document; its preparation does not claim that the downstream SQL, report, workbook or receiving programme has run.
+
+The prepared-source inspector shows the exact edition/export/document IDs, source archive bytes and SHA256, all five table row counts and every original file selector. **Incomplete traversal retained** describes provider coverage separately from possession of the complete retained archive. Individual download buttons use the existing held-file gateway and complete-file hash checks.
+
+Use the maintained complete-file downloader for the whole `{kind:"analysis",id:<preparation ID>}` selection. It preserves the original source selectors in `sensorthings-download.json` while writing its normal numbered flat filenames. The original Python programme consumes that manifest directly; no intermediate directory copy or renamed substitute source is needed. A preparation already available in its original nested layout can still use its exact `intake.json`.
+
+The existing Python application supplies full typed query exports, editable SQL definitions, source and categorical summaries, exact numeric summaries, original semantic-key comparisons, reports, workbooks, full portable export, the actual original restore and a continued query/report/workbook edit. See the complete [Python Analysis receiving guide](../../sf88-operator-buyer-cli/python/SENSORTHINGS_ANALYSIS.md) for the maintained command, exact request fields, receiving inputs and current source limits.
+
+The Python handover is bound to the immutable source edition. It does not change an analyst project version, interpret an annotation as a provider observation, or replace the original analysis workspace. The three actual Hamburg A/B and BGS preparation receipts belong to the same native receiving programme; their IDs and outputs are taken from that run.
+
 ## Data and numeric meaning
 
 The implementation uses the original model's numericEligibility(row) for publication. A numeric rendering accepts only original JSON numbers from the explicitly declared OGC measurement/count families, with explicit instantaneous phenomenonTime. Count values must be integral; non-finite browser values and nonzero underflow are excluded. Exact source decimal lexemes remain in the original data.
@@ -233,6 +249,7 @@ Replace the illustrative revision and all placeholders with the displayed origin
 | analysis.receipt.import | publicationId, filename, expectedSha256, expectedBytes, actor, note |
 | analysis.export | projectId, actor, note |
 | analysis.import | filename, expectedSha256, expectedBytes, actor, note |
+| analysis.python.prepare | editionId, original returned exportId, actor |
 
 The source-edition import/review actions remain the existing original actions. They are exposed in the source/receiving tabs without a second implementation.
 
@@ -258,11 +275,12 @@ Saved selection adds normalized UTC values and these fixed meanings:
 | Saved comparison | GET /api/analysis/comparisons/<comparisonId> |
 | Publication record | GET /api/analysis/publications/<publicationId> |
 | Host-bound inbox identities | GET /api/analysis/inbox |
+| Prepared Python source | GET /api/analysis/python-sources/<preparationId> |
 | Original operation | GET /api/operations/<operationId> |
 | Original full files | GET /api/files?selection=<encoded exact JSON selection> |
 | Original native viewer metadata | GET /api/analysis/viewers/<viewerId>/<versionId>/<map\|numeric>/deployment.json |
 
-The existing MCP read is **merchant_sensorthings_analysis** with mode overview, project, version, summary, rows, streams, comparison, publication or inbox. Use the workspace alias from the original private connection. Identity-bearing modes take the exact id; rows additionally accept bounded offset/limit.
+The existing MCP read is **merchant_sensorthings_analysis** with mode overview, project, version, summary, rows, streams, comparison, publication, inbox or python-source. Use the workspace alias from the original private connection. Identity-bearing modes take the exact id; rows additionally accept bounded offset/limit.
 
 Example native read input:
 
@@ -406,12 +424,13 @@ The coordinated source interface was read from these original public-sprint blob
 
 | Source | Git blob |
 |---|---|
-| analysis/core.mjs | 72dce3a5f62357f121a348cf343f743f3d23fabd |
-| analysis/http.mjs | 93d0c0410ded79f499167ec702cb215b7e439de0 |
+| analysis/core.mjs | bbfc1876bdf837e91b64e7a55d39dc85e2424937 |
+| analysis/http.mjs | ceaf88074d51eaebf144f13265498685d626e6c5 |
 | analysis/model.mjs | f9099a51ad73bf684677b141a92822693e577fa7 |
-| analysis/types.d.mts | 04ccedd62561afd9185de86599da59107fb8cbc6 |
-| analysis/schema.mjs | a72a1f8036d275b63545815391865c592b92a098 |
+| analysis/types.d.mts | 6e9a4b6eb96c29357cb5f8905d6fe3e9c06c5b81 |
+| analysis/schema.mjs | 074803b3d27a765ccbbccd91bf896895d80504d3 |
 | analysis/artifacts.mjs | d98437ce67c84661db027ed587d077f66296bedc |
+| analysis/python-document.mjs | e04bde567eb3e764b5cf22f77d26b79bf3c03baf |
 | Original portable.mjs | a077c75a18731f206b8b56889c36d5de96b1591f |
 | Original contract.mjs | 1569d7bdffbdefd11fa5eddff3a7a2c38156b38e |
 | analysis/viewer.mjs | 8b674125d1e96cb3cbcf4ff8109b01ecb7c34a7b |

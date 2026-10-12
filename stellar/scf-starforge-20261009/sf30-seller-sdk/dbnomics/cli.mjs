@@ -24,6 +24,8 @@ const HELP = `DBnomics economic workspace — Linux, Node 24 LTS, util-linux flo
   save-notes | save-report | query --workspace PROJECT --input ORIGINAL_OPERATION.json
   report --workspace PROJECT --id REPORT_ID
   export-report --workspace PROJECT --id REPORT_ID [--format json|csv|html] [--out NEW_FILE]
+  analysis-source --workspace PROJECT --input ORIGINAL_SELECTION.json [--out SOURCE_DIRECTORY]
+  analysis-source-export --workspace PROJECT --id ORIGINAL_OPERATION --out COMPLETE_ANALYSIS_SOURCE.json
   export-sources --workspace PROJECT --out NEW_SOURCE_HANDOVER.json
   import-sources --workspace PROJECT --id ORIGINAL_OPERATION --file SOURCE_HANDOVER.json
   template --workspace PROJECT --query NAME [--out NEW_PLAN.json]
@@ -115,7 +117,11 @@ export async function main(argv=process.argv.slice(2)){
     else if(command==='export-report'){
       result=await workbench.exportReport(required(o,'--id'),o['--format']??'json');
       if(o['--out'])result={...result,delivery:await outputFile(o['--out'],await readOriginalFile(result.path))};
-    }else if(command==='export-sources')result=await outputFile(required(o,'--out'),jsonBytes(await workbench.exportSources()));
+    }else if(command==='analysis-source'){
+      result=await workbench.analysisSource(await json(required(o,'--input')));
+      if(o['--out'])result={...result,delivery:await (await import('./analysis-source.mjs')).copyDbnomicsAnalysisSource(result.directory,resolve(o['--out']))};
+    }else if(command==='analysis-source-export')result=await outputFile(required(o,'--out'),jsonBytes(await workbench.analysisSourceExport(required(o,'--id'))));
+    else if(command==='export-sources')result=await outputFile(required(o,'--out'),jsonBytes(await workbench.exportSources()));
     else if(command==='import-sources')result=await workbench.importSources({id:required(o,'--id'),bundle:await json(required(o,'--file'))});
     else if(command==='query')result=await workbench.saveQuery(await json(required(o,'--input')));
     else if(command==='template'){

@@ -6,6 +6,7 @@ import {readPrivateFile} from '../sf93-seller-support-bundle/incident-store.mjs'
 import {writeBytes,privateDirectory} from '../sf88-operator-buyer-cli/node/store.mjs';
 import {openCaseStore} from './case-store.mjs';
 import {commissioningCli} from './commissioning-cli.mjs';
+import {commercialReceivingCli} from './commercial/receiving-cli.mjs';
 import {openCaseCommercial,commercialWorkspaceId} from './case-commercial.mjs';
 import {captureCommercialPricingSource,jsonBytes,sha256} from './commercial-pricing.mjs';
 import {emptyCommercialDraft} from './commercial-quote.mjs';
@@ -13,7 +14,8 @@ import {MAX_MATERIAL_BYTES} from './commissioning.mjs';
 
 const stringNames=['cases-dir','case','revision','request-id','actor','draft','review-sha','parent','source',
   'quote','quote-sha','status','observed-at','reference','note','before','after','kind','out','export-id',
-  'pricing-config','pricing-directory','pricing-snapshot','pricing-history','plan-id','scenario-id'];
+  'pricing-config','pricing-directory','pricing-snapshot','pricing-history','plan-id','scenario-id',
+  'source-dir','generated-at','python','from','sha256'];
 const required=(values,name)=>{if(typeof values[name]!=='string'||!values[name])throw new Error('Supply --'+name);return values[name];};
 function absolute(value){if(!isAbsolute(value)||resolve(value)!==value)throw new Error('Use an absolute normalized private path.');return value;}
 async function originalJson(path){return JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(await readPrivateFile(absolute(path),MAX_MATERIAL_BYTES)));}
@@ -23,19 +25,23 @@ async function outputFile(path,bytes) {
   catch(error){if(error.code!=='EEXIST')throw error;const existing=await readPrivateFile(path,Math.max(bytes.length,1));if(!Buffer.from(existing).equals(bytes))throw new Error('The selected output already contains different original bytes.');}
   return {path,bytes:bytes.length,sha256:sha256(bytes)};
 }
-export async function commercialCli(argv=process.argv.slice(2)) {
+export async function commercialCli(argv=process.argv.slice(2),{environment=process.env,signal}={}) {
+  if(argv[0]==='receiving')return commercialReceivingCli(argv.slice(1),{environment,signal});
   const {values,positionals}=parseArgs({args:argv,allowPositionals:true,strict:true,
     options:{...Object.fromEntries(stringNames.map(n=>[n,{type:'string'}])),help:{type:'boolean'}}});
   if(values.help){if(positionals.length||Object.keys(values).length!==1)throw new Error('Use --help on its own.');return {
     command:'merchant-commercial',usage:'starforge merchant-commercial ACTION [options]',
-    actions:['template','source','read','preview','save-draft','publish','receive-pricing','receive','compare','quote','handoff','export'],
+    actions:['template','source','read','preview','save-draft','publish','receive-pricing','receive','compare','quote','handoff','export','inspect-package','receive-package','receiving'],
     source:'--pricing-config FILE --pricing-directory DIR (--pricing-snapshot FILE | --pricing-history FILE) --plan-id UUID [--scenario-id ID] --out FILE',
     case:'--cases-dir DIR --case UUID',
     mutation:'--revision SHA256 --request-id UUID --actor NAME',
     preview:'--draft FILE [--out FILE]',publish:'--draft FILE --review-sha SHA256 [--parent UUID]',
     receive:'--quote UUID --quote-sha SHA256 --status ACCEPTED|REVISION_REQUESTED|DECLINED --observed-at UTC --reference TEXT [--note TEXT]',
     quote:'--quote UUID --quote-sha SHA256 --out FILE [--kind QUOTE|QUOTE_JSON]',
-    export:'--revision SHA256 --out DIR [--export-id ID] uses the original complete implementation/support exporter',
+    export:'--revision SHA256 --out DIR [--export-id ID] [--source-dir DIR] [--generated-at UTC] [--python PATH] uses the original complete case/source exporter',
+    'inspect-package':'--from DIR [--sha256 SHA256] [--python PATH]',
+    'receive-package':'--from DIR --out DIR --cases-dir DIR --source-dir DIR --request-id UUID --actor NAME [--sha256 SHA256] [--python PATH]',
+    receiving:'merchant-commercial receiving --help uses the complete original selected plan, workspace backup, case export and independent restore workflow',
     guide:'sf74-merchant-support-console/COMMERCIAL.md'};}
   if(positionals.length!==1)throw new Error('Select one merchant-commercial action.');
   const action=positionals[0],common=['cases-dir','case'];
@@ -46,7 +52,9 @@ export async function commercialCli(argv=process.argv.slice(2)) {
     'save-draft':[...mutation,'draft'],publish:[...mutation,'draft','review-sha','parent'],
     'receive-pricing':[...mutation,'source'],receive:[...mutation,'quote','quote-sha','status','observed-at','reference','note'],
     compare:[...common,'revision','before','after'],quote:[...common,'revision','quote','quote-sha','kind','out'],
-    handoff:[...common,'revision','quote','quote-sha','out'],export:[...common,'revision','out','export-id'],
+    handoff:[...common,'revision','quote','quote-sha','out'],export:[...common,'revision','out','export-id','source-dir','generated-at','python'],
+    'inspect-package':['from','sha256','python'],
+    'receive-package':['from','sha256','out','cases-dir','source-dir','request-id','actor','python'],
   }[action];
   if(!allowed||Object.keys(values).some(k=>!allowed.includes(k)))throw new Error('Unknown action or unexpected quotation option.');
   if(action==='template'){const value=emptyCommercialDraft();return values.out?{draft:value,file:await outputFile(values.out,jsonBytes(value))}:value;}
@@ -63,8 +71,8 @@ export async function commercialCli(argv=process.argv.slice(2)) {
     const file=await outputFile(required(values,'out'),jsonBytes(value));
     return {state:'COMPLETE',sourceId:value.id,planId:value.planId,scenarioId:value.scenarioId,version:value.version,file};
   }
-  if(action==='export') {
-    const forwarded=['export'];
+  if(['export','inspect-package','receive-package'].includes(action)) {
+    const forwarded=[action];
     for(const key of allowed)if(values[key]!==undefined)forwarded.push('--'+key,values[key]);
     return commissioningCli(forwarded);
   }

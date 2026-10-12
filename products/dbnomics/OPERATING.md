@@ -495,3 +495,31 @@ display.
 
 The software retains the repository's [MIT license](../../LICENSE). Statistical
 source rights and attribution remain with each retained provider edition.
+
+
+## Complete Python briefing and returned workbook
+
+The selected package contains the complete **DBnomics Analysis and editable
+workbook receiving** arm. In **Analysis and notes**, select the original
+capture, complete saved reports and exact notes revision, then prepare/download
+the full Analysis source. Its original raw economic handover travels with the
+mapped records.
+
+Install the original Python package with its declared `workbooks` extra in
+the maintained Python runtime. **Applications → DBnomics analysis and workbook
+receiving** runs the full original command with the selected installation;
+**Analysis and workbook workspace** opens its `OPERATION/analysis` database.
+Use the same private operating directory and native source checkout.
+
+The Python command `stellar-forge-dbnomics-analysis` provides preparation,
+full briefing/query/workbook outputs, original returned-file comparison and
+review, exact source-notes adoption, archive receiving and source reopening.
+The complete native example runs an already completed DBnomics receiving
+project and can carry an explicitly selected real observation note through
+the workbook return.
+
+Read the full [Analysis and workbook operating guide](../../stellar/scf-starforge-20261009/sf30-seller-sdk/dbnomics/ANALYSIS.md)
+for all command/input shapes, Python methods, installed application setup,
+source semantics, complete file exports and the original recovery behavior.
+The new named Node export is `./seller/dbnomics/analysis-source`; client and
+MCP source/file methods use the same project operation.
