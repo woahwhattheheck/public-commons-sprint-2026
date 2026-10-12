@@ -10,6 +10,7 @@ export async function main(argv=process.argv.slice(2)){
     python=argv[1];argv=argv.slice(2);
   }
   const routes=new Map([
+    ['archivematica','./archivematica.py'],['archivematica-client','./archivematica_client.py'],
     ['roda','./roda.py'],['roda-client','./roda_client.py'],
     ['preservica','./preservica.py'],['preservica-client','./preservica_client.py'],
     ['workbench','./workbench.py'],

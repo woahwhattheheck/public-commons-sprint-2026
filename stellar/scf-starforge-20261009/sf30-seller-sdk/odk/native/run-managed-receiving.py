@@ -67,6 +67,39 @@ def enable_native_custody():
     return Path("/proc/sys/kernel/random/boot_id").read_text().strip()
 
 
+def stable_host_identity():
+    """Keep native machine identities private; boot IDs alone do not identify a host."""
+    def token(paths):
+        for filename in paths:
+            try:
+                value = Path(filename).read_text().strip().lower().replace("-", "")
+            except OSError:
+                continue
+            if (len(value) == 32 and all(char in "0123456789abcdef" for char in value)
+                    and value not in ("0" * 32, "f" * 32)):
+                return value
+        return None
+
+    machine = token(("/etc/machine-id", "/var/lib/dbus/machine-id"))
+    product = token(("/sys/class/dmi/id/product_uuid",))
+    def digest_identity(kind, value):
+        return hashlib.sha256((kind + "\0" + value).encode()).hexdigest() if value else None
+    return {"schema": "linux-stable-host-identity.v1",
+            "machineIdSha256": digest_identity("linux-machine-id.v1", machine),
+            "dmiProductUuidSha256": digest_identity("linux-dmi-product-uuid.v1", product)}
+
+
+def same_stable_host(original, current):
+    if not isinstance(original, dict) or not isinstance(current, dict):
+        return False
+    if original.get("schema") != "linux-stable-host-identity.v1" or original != current:
+        return False
+    values = [original.get("machineIdSha256"), original.get("dmiProductUuidSha256")]
+    return (any(value is not None for value in values) and
+            all(value is None or (isinstance(value, str) and len(value) == 64 and
+                all(char in "0123456789abcdef" for char in value)) for value in values))
+
+
 def process_identity(pid, boot_id):
     try:
         raw = Path("/proc") / str(pid) / "stat"
@@ -189,7 +222,7 @@ def stop_original(child, boot_id):
     return result
 
 
-def reconcile_previous_closure(private, boot_id):
+def reconcile_previous_closure(private, boot_id, host_identity):
     """Preserve an incomplete native custody result instead of relaunching over it."""
     result_path = private / "launch-result.json"
     if not result_path.exists():
@@ -199,13 +232,26 @@ def reconcile_previous_closure(private, boot_id):
     if result.get("operationId") != OPERATION:
         raise ValueError("Use the original matching native receiving result.")
     if result.get("closed") is True:
+        if (result.get("closureReason") == "original-host-reboot" and
+                not same_stable_host(result.get("hostIdentity"),
+                                     (result.get("closureObservation") or {}).get("hostIdentity"))):
+            raise OriginalClosureError(
+                "The retained reboot closure has no matching original host identity. "
+                "Reconcile its original host evidence before another start.")
         return
     previous_boot = (result.get("parentIdentity") or {}).get("bootId")
     if isinstance(previous_boot, str) and previous_boot and previous_boot != boot_id:
+        if not same_stable_host(result.get("hostIdentity"), host_identity):
+            # A copied or mounted directory can come from another still-running
+            # host. Preserve its exact result; this kernel cannot close that launch.
+            raise OriginalClosureError(
+                "The kernel boot changed without a matching retained native host identity. "
+                "Continue reconciliation on the original host; the original result is preserved.")
         prior_sha256 = hashlib.sha256(original_bytes).hexdigest()
         closure_key = hashlib.sha256(original_bytes + b"\0" + boot_id.encode()).hexdigest()
         closure_path = private / ("launch-closure-" + closure_key + ".json")
-        observation = {"originalBootId": previous_boot, "currentBootId": boot_id}
+        observation = {"originalBootId": previous_boot, "currentBootId": boot_id,
+                       "hostIdentity": host_identity}
         if closure_path.exists():
             closed = json.loads(closure_path.read_bytes())
             if (closed.get("operationId") != OPERATION or closed.get("closed") is not True or
@@ -270,13 +316,15 @@ def main():
     disposition = {}
     summary = None
     boot_id = None
+    host_identity = None
     try:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         info = os.fstat(lock)
         if not stat.S_ISREG(info.st_mode) or info.st_uid != os.getuid() or info.st_mode & 0o077:
             raise ValueError("Keep the original private lock file.")
         boot_id = enable_native_custody()
-        reconcile_previous_closure(private, boot_id)
+        host_identity = stable_host_identity()
+        reconcile_previous_closure(private, boot_id, host_identity)
         selection = {
             "schema": "stellar-forge.odk-managed-receiving-launch.v1",
             "operationId": OPERATION,
@@ -295,6 +343,7 @@ def main():
             write_json(selection_path, selection)
         owner = {"operationId": OPERATION, "pid": os.getpid(), "startedAt": time.time(), "selection": selection,
                  "custody": "linux-subreaper-pidfd-v1", "parentIdentity": process_identity(os.getpid(), boot_id),
+                 "hostIdentity": host_identity,
                  "launchIdentity": str(os.getpid()) + ":" + str(time.time_ns())}
         os.ftruncate(lock, 0)
         os.write(lock, (json.dumps(owner) + "\n").encode())
@@ -325,7 +374,8 @@ def main():
                 # must never stand in for an unobserved later launch.
                 write_json(private / "launch-owner.json", owner)
                 disposition = {"operationId": OPERATION, "launchIdentity": owner["launchIdentity"],
-                               "parentIdentity": owner["parentIdentity"], "state": "DISPATCHING",
+                               "parentIdentity": owner["parentIdentity"], "hostIdentity": host_identity,
+                               "state": "DISPATCHING",
                                "closed": False, "remainingChildren": None}
                 write_json(private / "launch-result.json", disposition)
                 try:
