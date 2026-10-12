@@ -10,3 +10,7 @@ export * as orderNumbers from './numbers.mjs';
 export { SupplierOrderTransport, TRANSMISSION_SCHEMA, validateSupplierOrderTransmission } from './transport.mjs';
 export { SUPPLIER_HTTPS_CONFIG_SCHEMA, normalizeSupplierOrderTransportConfig, loadSupplierOrderTransportConfig } from './transport-config.mjs';
 export { serveSupplierOrderHttpsIntake } from './https-intake.mjs';
+
+export { SUPPLIER_ORDER_PROFILE_SCHEMA, SUPPLIER_ORDER_PROFILE_SELECTION_SCHEMA, DEFAULT_SUPPLIER_ORDER_PROFILE_ID,
+  defaultSupplierOrderProfile, supplierOrderProfileTemplate, normalizeSupplierOrderProfile, supplierOrderProfileSha256,
+  supplierOrderProfileFields, supplierOrderDocumentProfile } from './profiles.mjs';
