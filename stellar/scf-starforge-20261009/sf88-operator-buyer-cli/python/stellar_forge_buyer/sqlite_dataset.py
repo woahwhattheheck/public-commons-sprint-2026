@@ -16,6 +16,7 @@ import tempfile
 import time
 
 from .datasets import DatasetDelivery
+from .dataset_semantics import read_delivery_semantics, sql_descriptor, sql_context
 from .errors import StateError
 from .storage import digest, parse, private_directory, sync_directory
 
@@ -26,6 +27,7 @@ _ORDINAL = "_sf_row_number"
 _META = "sf_dataset_versions"
 _HEADS = "sf_dataset_views"
 _HISTORY = "sf_dataset_activations"
+_SEMANTICS = "sf_dataset_semantics"
 
 
 def _json(value):
@@ -110,6 +112,10 @@ class DatasetDatabase:
                     db.execute("PRAGMA user_version=1")
                 elif application != _APPLICATION or version != 1:
                     raise StateError("DATASET_SQL_DATABASE_FORMAT_MISMATCH")
+                if create:
+                    # Additive storage belongs to the same immutable edition and
+                    # travels in the original SQLite backup/portable workspace.
+                    db.execute(f"CREATE TABLE IF NOT EXISTS {_SEMANTICS}(version_id TEXT PRIMARY KEY REFERENCES {_META}(version_id),document BLOB NOT NULL)")
                 db.commit()
             except BaseException:
                 db.rollback()
@@ -151,7 +157,14 @@ class DatasetDatabase:
         row = db.execute(f"SELECT sequence,record FROM {_META} WHERE version_id=?", (version_id,)).fetchone()
         if row is None:
             raise StateError("DATASET_SQL_VERSION_NOT_FOUND")
-        return {**parse(row["record"].encode()), "sequence": row["sequence"]}
+        record = {**parse(row["record"].encode()), "sequence": row["sequence"]}
+        if record.get("semantics") is not None:
+            retained = db.execute(f"SELECT document FROM {_SEMANTICS} WHERE version_id=?", (version_id,)).fetchone()
+            if retained is None:
+                raise StateError("DATASET_SQL_SEMANTIC_DOCUMENT_MISSING")
+            context = sql_context(bytes(retained["document"]), record["semantics"], version_id)
+            record["semantic_dictionary"] = context["document"]
+        return record
 
     def import_delivery(self, delivery: DatasetDelivery, *, columns=None):
         """Commit the verified complete room once; do not change any named view.
@@ -165,7 +178,7 @@ class DatasetDatabase:
         native = delivery.native
         status = native.get("nativeStatus") or {}
         binding = native.get("sourceBindingSha256")
-        if native.get("schema") != "stellar-forge.sf88.dataset-delivery.v1" or not isinstance(binding, str) or not _HEX.fullmatch(binding) or status.get("complete") is not True or status.get("finalized") is not True:
+        if native.get("schema") not in {"stellar-forge.sf88.dataset-delivery.v1", "stellar-forge.sf100.dataset-delivery.v1"} or not isinstance(binding, str) or not _HEX.fullmatch(binding) or status.get("complete") is not True or status.get("finalized") is not True:
             raise StateError("DATASET_SQL_COMPLETE_NATIVE_DELIVERY_REQUIRED")
         manifest_bytes = delivery.file("manifest.json").read_bytes(limit=4 * 1024 * 1024)
         manifest_sha = digest(manifest_bytes)
@@ -189,12 +202,16 @@ class DatasetDatabase:
         source = native["outputs"]["dataset.jsonl"]
         if manifest.get("outputs", {}).get("dataset.jsonl") != {key: source[key] for key in ("bytes", "sha256")}:
             raise StateError("DATASET_SQL_ROW_BINDING_INVALID")
+        semantics = read_delivery_semantics(delivery, manifest=manifest)
+        semantic_mapping = sql_descriptor(semantics, fields, mapped) if semantics else None
         identity = {"schema": _FORMAT, "manifestSha256": manifest_sha, "sourceBindingSha256": binding,
                     "columns": list(zip(fields, mapped))}
         return self._import_rows(manifest_bytes=manifest_bytes, identity=identity, fields=fields,
             mapped=mapped, total=total, source=source, opener=delivery.file("dataset.jsonl").open,
+            semantics=semantics,
             details={"dataset": dataset, "sourceDirectory": native.get("sourceDirectory"),
-                     "source_pages": len(source_pages), "originalPaymentStatus": native.get("paymentStatus")})
+                     "source_pages": len(source_pages), "originalPaymentStatus": native.get("paymentStatus"),
+                     **({"semantics": semantic_mapping} if semantic_mapping else {})})
 
     def import_response(self, projection, *, allow_incomplete=False):
         """Commit a complete analytical projection with its distinct source manifest.
@@ -228,7 +245,7 @@ class DatasetDatabase:
                      "row_representation": "explicit-response-projection",
                      "originalPaymentStatus": manifest["source"]["original"].get("paymentStatus")})
 
-    def _import_rows(self, *, manifest_bytes, identity, fields, mapped, total, source, opener, details):
+    def _import_rows(self, *, manifest_bytes, identity, fields, mapped, total, source, opener, details, semantics=None):
         """One original transaction and scalar/type policy for both native inputs."""
         version_id = digest(_json(identity).encode())
         table = "sf_dataset_rows_" + version_id
@@ -275,6 +292,9 @@ class DatasetDatabase:
                                            for index, field in enumerate(fields)], "row_order_column": _ORDINAL}
                 db.execute(f"INSERT INTO {_META}(version_id,created_at,record,manifest) VALUES(?,?,?,?)",
                            (version_id, record["created_at"], _json(record), manifest_bytes))
+                if semantics is not None:
+                    db.execute(f"INSERT INTO {_SEMANTICS}(version_id,document) VALUES(?,?)",
+                               (version_id, semantics["bytes"]))
                 record = self._version(db, version_id)
                 db.commit()
                 return {**record, "import_status": "IMPORTED"}
@@ -299,6 +319,52 @@ class DatasetDatabase:
             if digest(row["manifest"]) != parse(row["record"].encode())["manifestSha256"]:
                 raise StateError("DATASET_SQL_RETAINED_MANIFEST_CHANGED")
             return bytes(row["manifest"])
+
+    def semantics(self, version_id):
+        """Original meanings plus reviewed source-to-SQL mapping, or None."""
+        with self._connection(readonly=True) as db:
+            db.execute("BEGIN")
+            version = self._version(db, version_id)
+            if version.get("semantics") is None:
+                return None
+            return {**version["semantics"], "version_id": version_id,
+                    "document": version["semantic_dictionary"]}
+
+    def semantics_bytes(self, version_id):
+        """Return the exact retained dictionary file from this SQL edition."""
+        with self._connection(readonly=True) as db:
+            db.execute("BEGIN")
+            version = self._version(db, version_id)
+            if version.get("semantics") is None:
+                return None
+            row = db.execute(f"SELECT document FROM {_SEMANTICS} WHERE version_id=?", (version_id,)).fetchone()
+            raw = bytes(row["document"])
+            sql_context(raw, version["semantics"], version_id)
+            return raw
+
+    def compare_semantics(self, before_id, after_id):
+        """Compare source meaning and SQL mapping separately from row changes."""
+        with self._connection(readonly=True) as db:
+            db.execute("BEGIN")
+            before = self._version(db, before_id)
+            after = self._version(db, after_id)
+        first, second = before.get("semantics"), after.get("semantics")
+        def columns(version):
+            meanings = {column["name"]: column for column in version.get("semantic_dictionary", {}).get("columns", [])}
+            return {column["source"]: {"sql_column": column["column"], "meaning": meanings.get(column["source"])}
+                    for column in version.get("column_types", [])}
+        left, right = columns(before), columns(after)
+        changes = [{"source": name, "before": left.get(name), "after": right.get(name)}
+                   for name in sorted(set(left) | set(right)) if left.get(name) != right.get(name)]
+        return {"schema": "stellar-forge.python-semantic-comparison.v1",
+                "before_version": before_id, "after_version": after_id,
+                "before": first, "after": second,
+                "definition_changed": (first or {}).get("definition_sha256") != (second or {}).get("definition_sha256"),
+                "capture_changed": (first or {}).get("capture_manifest_sha256") != (second or {}).get("capture_manifest_sha256"),
+                "mapping_changed": before.get("columns") != after.get("columns"),
+                "columns": changes,
+                "before_document": before.get("semantic_dictionary"),
+                "after_document": after.get("semantic_dictionary")}
 
     def versions(self, *, before=None, limit=100):
         if type(limit) is not int or not 1 <= limit <= 1000 or before is not None and (type(before) is not int or before < 1):

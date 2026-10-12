@@ -56,6 +56,7 @@ const definitions = [
   ['merchant_ckan_capture', 'Read and retain one selected package/resource through the original CKAN Action API capture engine. Choose actual provider filters, query and offset/keyset pagination; keyset with an _id filter requires offset instead. Returns the native operation ID immediately; follow status and resume that edition after interruption.', {
     ...changing, packageId: field, resourceId: field, filters: { type: 'object' },
     q: { type: 'string', maxLength: 2048 }, pagination: { type: 'string', enum: ['offset', 'keyset'] },
+    schemaUrl: { type: 'string', maxLength: 4096, description: 'Optional CSVW schema URL on the same HTTPS catalogue; original schema responses are retained before and after the DataStore pages.' },
     pageSize: { type: 'integer', minimum: 1, maximum: 32000 }, maxRows: positive, maxBytes: positive,
     timeoutMs: { type: 'integer', minimum: 100, maximum: 300000 },
     maxResponseBytes: { type: 'integer', minimum: 1024, maximum: 67108864 },
@@ -69,9 +70,15 @@ const definitions = [
   ['merchant_ckan_compare', 'Compare two complete editions of the same original resource using the selected unique non-null source key. Returns original counts, metadata identities and the first hundred changes. Public column names remain data; exact numeric tokens are strings in this tool presentation.', {
     ...selected, beforeId: uuid, afterId: uuid, key: field,
   }, ['workspace', 'beforeId', 'afterId'], read],
-  ['merchant_ckan_source_save', 'Save an explicit public field projection bound to the inspected original capture SHA256. Field names, aliases, nullability and native/text/json encoding are checked by the original typed source engine. Returns a native operation whose result is the saved source and preview.', {
+  ['merchant_ckan_semantics_preview', 'Preview the original retained CSVW or field-dictionary meaning for an explicit field projection before saving a source. Returns its projected semantic document, source definitions, URI mappings, key coverage and issues through the original model.', {
+    ...selected, editionId: uuid, projection,
+  }, ['workspace', 'editionId', 'projection'], read],
+  ['merchant_ckan_source_save', 'Save an explicit public field projection bound to the inspected original capture SHA256. Field names, aliases, nullability and native/text/json encoding are checked by the original typed source engine. Retained CSVW or field-dictionary meaning is projected to these aliases and saved as the reviewed semantic contract. Returns a native operation whose result is the saved source and preview.', {
     ...changing, editionId: uuid, title: shortText, query: columnName, projection, expectedCaptureSha256: digest,
   }, [...changed, 'editionId', 'title', 'query', 'projection', 'expectedCaptureSha256'], mutation],
+  ['merchant_ckan_source_semantics', 'Read the reviewed semantic document of one saved original source, including after another operation or a project reopen. The original model rechecks the retained capture and saved semantic digest before returning it.', {
+    ...selected, sourceId: uuid,
+  }, ['workspace', 'sourceId'], read],
   ['merchant_ckan_publication_create', 'Create a candidate through the original publisher using this saved source title/projection. Select the public filters, ranges, sorts and page limits plus extraction order and budgets. The retained native publication/run IDs own review and recovery.', {
     ...changing, sourceId: uuid, filters: fields, ranges: fields, sorts: fields, defaultLimit: positive, maxLimit: positive,
     order: { type: 'array', minItems: 1, maxItems: 64, items: { type: 'object', additionalProperties: false,
@@ -229,7 +236,8 @@ export async function readCkanWorkspaceConfiguration(path) {
 // Provider/public values may legitimately be called "file", "directory" or
 // "authorization". Preserve their full keys; redact only control metadata.
 const dataFields = new Set(['package', 'datasets', 'rows', 'changes', 'fields', 'suggestions',
-  'sample', 'projection', 'preview', 'columns', 'parameters', 'filters', 'ranges', 'sorts']);
+  'sample', 'projection', 'preview', 'columns', 'parameters', 'filters', 'ranges', 'sorts',
+  'semantics', 'semanticChanges']);
 const privateFields = new Set(['directory', 'sourceFile', 'targetDirectory', 'publisherDirectory', 'manifestFile',
   'captureFile', 'oauthDirectory', 'authTokenEnv', 'accessTokenEnv', 'out', 'path', 'file', 'root',
   'packageDirectory', 'configText', 'handlers', 'upstreams', 'authorization', 'privateKey', 'seed', 'mnemonic']);
@@ -455,6 +463,10 @@ export class MerchantCkanWorkspaces {
       }
       case 'merchant_ckan_edition': return { workspace, native: view(await original.edition(nativeId(input.editionId))) };
       case 'merchant_ckan_compare': return { workspace, native: view(await original.compare(nativeId(input.beforeId), nativeId(input.afterId), input.key ?? '_id')) };
+      case 'merchant_ckan_semantics_preview':
+        return { workspace, native: publicData(await original.previewSemantics(nativeId(input.editionId), input.projection)) };
+      case 'merchant_ckan_source_semantics':
+        return { workspace, native: publicData(await original.sourceSemantics(nativeId(input.sourceId))) };
       case 'merchant_ckan_source_save': {
         const { editionId, ...selection } = input;
         nativeId(editionId); expectedDigest(selection.expectedCaptureSha256);

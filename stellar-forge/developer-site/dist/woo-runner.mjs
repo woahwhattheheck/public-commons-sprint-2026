@@ -3,7 +3,7 @@
 // remains in the selected original toolkit. The Site includes these same bytes
 // as merchant.mjs in a downloaded setup packet; this file is not a browser module.
 import {constants} from 'node:fs';
-import {readFile, mkdir, copyFile, lstat, writeFile, mkdtemp, rename, rm} from 'node:fs/promises';
+import {readFile, mkdir, copyFile, lstat, writeFile, mkdtemp, rename, rm, realpath} from 'node:fs/promises';
 import {basename, dirname, isAbsolute, join, resolve} from 'node:path';
 import {fileURLToPath, pathToFileURL} from 'node:url';
 import {spawn} from 'node:child_process';
@@ -117,7 +117,12 @@ async function originalSource(toolkit, agent = false) {
 }
 
 async function sourceCommand(base, entry, args) {
-  const child = spawn(process.execPath, [join(base,ENTRIES[entry] ?? AGENT_ENTRIES[entry]),...args], {stdio:'inherit',shell:false,env:process.env});
+  const selected = join(base,ENTRIES[entry] ?? AGENT_ENTRIES[entry]);
+  await regular(selected);
+  // Node resolves its main module through linked source directories. Launch
+  // that same original file so its CLI entry guard and dependency root agree.
+  const filename = await realpath(selected);
+  const child = spawn(process.execPath, [filename,...args], {stdio:'inherit',shell:false,env:process.env});
   const stop = signal => { if (!child.killed) child.kill(signal); };
   const interrupt = () => stop('SIGINT'), terminate = () => stop('SIGTERM');
   process.once('SIGINT',interrupt); process.once('SIGTERM',terminate);
@@ -262,7 +267,7 @@ async function agentInput(base, state, path, modules) {
 async function prepareAgent(base, state, path) {
   const modules = await agentModules(base), selected = await agentInput(base,state,path,modules);
   const {input,directory,siteUrl,external,rawOperator,operator} = selected;
-  const entryPath = join(modules.directory,'stdio.mjs');
+  const entryPath = await realpath(join(modules.directory,'stdio.mjs'));
   const configPath = join(directory,'host','merchant-mcp.json');
   const connection = {schema:modules.WOOCOMMERCE_CONNECTION_SCHEMA, stores:{
     [input.store]:{label:input.label, operator:external ?? './operator.json',
@@ -308,7 +313,8 @@ async function readAgent(base,directory) {
     saved.connection === join(directory,'woocommerce.json') && saved.client === join(directory,'client.json'),
     'Reopen the original agent directory with its matching setup record.');
   const modules = await agentModules(base);
-  need(saved.entryPath === join(modules.directory,'stdio.mjs') &&
+  const logicalEntry = join(modules.directory,'stdio.mjs'), originalEntry = await realpath(logicalEntry);
+  need((saved.entryPath === logicalEntry || saved.entryPath === originalEntry) &&
     saved.source === resolve(base,'../..'), 'Use the same toolkit path as this prepared agent. For an intentional source relocation, use the new toolkit’s original client-config.mjs with the saved host configuration.');
   const config = await modules.readMerchantConfig(saved.configuration);
   const store = config.woocommerce?.stores[saved.store];
