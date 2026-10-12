@@ -51,8 +51,8 @@ export async function prepareFlowableProductApplication(settings, context) {
   // The shared Applications composer adds its selected port to the original command.
   return { args: ['open', '--dir', selected.directory, '--expected-binding', selected.bindingSha256],
     inputs, createDirectories: [], resourceKey: selected.resourceId,
-    applicationReview: { schema: 'stellar-forge.application-review-content.v1', title: 'Flowable process operations',
-      summary: 'Open the saved process portfolio, reviewed native deployments, human tasks and validated migration with complete original history and customer handover.',
+    applicationReview: { schema: 'stellar-forge.application-review-content.v1', title: 'Flowable process and decision operations',
+      summary: 'Open native process and decision portfolios, deploy original BPMN and DMN resources, operate human tasks and evaluate rules with complete execution history and customer handover.',
       sections: [
         { title: 'Original workspace', rows: [
           { label: 'Product', value: selected.profile.name },
@@ -66,6 +66,8 @@ export async function prepareFlowableProductApplication(settings, context) {
         { title: 'Native operation and receiving', rows: [
           { label: 'Process release', value: 'Exact original BPMN or deployment archive, native definition versions and retained resources' },
           { label: 'Native operations', value: 'Saved process start and human task requests; Flowable validation before reviewed process migration' },
+          { label: 'Decision release and evaluation', value: 'Original DMN deployment, current native decision and decision-service evaluation, typed inputs and full native result variables' },
+          { label: 'Decision history', value: 'Captured native execution records, original audit data and the deployed resource for each definition' },
           { label: 'Recovery', value: 'Reopen the saved operation and refresh its original response, current native work and historic readback' },
           { label: 'Customer handover', value: 'Complete native NDJSON history, exact source blobs, full-file receiving and same-request adoption' },
         ] },
@@ -144,9 +146,9 @@ export async function flowableProductStartup(request, text) {
 export default {
   schema: APPLICATION_PROVIDER_SCHEMA, id: 'flowable-product', order: 450,
   catalog({ common, field }) { return [{
-    id: 'flowable-product', command: 'flowable-product', title: 'Flowable process operations', terminal: false,
+    id: 'flowable-product', command: 'flowable-product', title: 'Flowable process and decision operations', terminal: false,
     requiredSource: PRODUCT + 'managed.mjs',
-    description: 'Open the saved process portfolio, reviewed deployments, human tasks, validated native migration, original request recovery and complete customer handover.',
+    description: 'Open native process and decision portfolios, reviewed BPMN and DMN releases, human tasks, validated migration, decision evaluation and complete source/history receiving.',
     fields: [
       field('workspaceDirectory', 'Private product directory', 'path', true, 'Select the directory initialized by flowable-product init.'),
       ...common.map(item => item.name === 'port' ? { ...item, label: 'Workspace port',
