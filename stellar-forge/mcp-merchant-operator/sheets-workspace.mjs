@@ -33,12 +33,27 @@ const draftSchema = { type: 'object', additionalProperties: false, properties: {
   connectionAlias: { type: ['string', 'null'] } },
   required: ['captureId', 'title', 'name', 'range', 'columns', 'emptyRows', 'mode', 'connectionAlias'] };
 
+
+const deploymentFile = { type: 'string', enum: ['dataset.csv','dataset.json','seller.json','source.json','binding.json'] };
+const merchantTerms = { type: 'object', additionalProperties: false, properties: {
+  origin: { type:'string', minLength:1, maxLength:2048 }, path: { type:'string', minLength:1, maxLength:1024 },
+  payment: { type:'object', additionalProperties:false, properties: {
+    scheme:text, network:text, asset:{type:'string',minLength:1,maxLength:512},
+    payTo:{type:'string',minLength:1,maxLength:512}, amount:{type:'string',pattern:'^[0-9]+$'},
+    maxTimeoutSeconds:{type:'integer',minimum:1}
+  }, required:['scheme','network','asset','payTo','amount','maxTimeoutSeconds'] }
+}, required:['origin','path','payment'] };
+const deploymentRuntime = { type:'object', additionalProperties:false, properties: {
+  port:{type:'integer',minimum:0,maximum:65535}, facilitator:{type:'string',minLength:1,maxLength:2048},
+  allowLocalFacilitator:{type:'boolean'}
+} };
+
 export function sheetsWorkspaceTools(tool) {
   return [
     tool('merchant_sheets_workspaces', 'List host-declared original Sheets source-authoring aliases and this MCP process ownership. Does not open a model, query Google or start a publisher.', {}, [], read),
     tool('merchant_sheets_open', 'Open one existing original Sheets source workspace under its native lease and serve its same browser on loopback. The browser and these tools share one model. Release a separately running source CLI first. This does not start the publisher or read Google.', selected, ['workspace'], { idempotent: true }),
-    tool('merchant_sheets_close', 'Close this exact owned Sheets/browser instance, drain its original operations and publisher, release verified packet reads and its original lease. Saved source versions and operation receipts remain.', { ...selected, instanceId: uuid }, ['workspace', 'instanceId'], { destructive: true }),
-    tool('merchant_sheets_status', 'Read original source selection, current draft/revision, capture and version pages, latest preview, native operation IDs and current browser/publisher ownership. Public samples retain original values; local storage and credential references are omitted.', {
+    tool('merchant_sheets_close', 'Close this exact owned Sheets/browser instance, drain its original operations, publisher and deployment console/owned merchant, release verified file reads and its original lease. Saved source versions and operation receipts remain.', { ...selected, instanceId: uuid }, ['workspace', 'instanceId'], { destructive: true }),
+    tool('merchant_sheets_status', 'Read original source selection, current draft/revision, capture and version pages, latest preview, native operation IDs and current browser/publisher/deployment ownership. Public samples retain original values; local storage and credential references are omitted.', {
       ...selected, capturesOffset: revision, versionsOffset: revision, limit: { type: 'integer', minimum: 1, maximum: 100 },
     }, ['workspace'], read),
     tool('merchant_sheets_inputs', 'List host-declared input aliases, or inspect one original observation/private packet file to obtain its current exact bytes and SHA256. Does not import, parse source values or read Google. Import requires this reviewed SHA256.', {
@@ -91,6 +106,44 @@ export function sheetsWorkspaceTools(tool) {
     tool('merchant_sheets_publisher_close', 'Close and drain the original publisher owned by this source workspace using one retained request UUID. Original plans, candidates, versions, schedules and buyer handoffs remain.', {
       ...selected, requestId: uuid,
     }, ['workspace', 'requestId'], { idempotent: true, destructive: true }),
+
+    tool('merchant_sheets_deployment_status', 'Read original published runs matched to saved Sheets source versions, deployment request history, immutable release selection and current original merchant/console ownership. Uses retained native data; no Google read, extraction or merchant start.', {
+      ...selected, runsOffset:revision, operationsOffset:revision, limit:{type:'integer',minimum:1,maximum:100},
+    }, ['workspace'], read),
+    tool('merchant_sheets_deployment_review', 'Bind one originally published run and exact retained source version to reviewed public merchant terms. Reuses the original candidate and seller compiler. The amount is an atomic integer string. Retain requestId and returned reviewSha256.', {
+      ...selected, versionId:version, runId:uuid, terms:merchantTerms, requestId:uuid,
+    }, ['workspace','versionId','runId','terms','requestId'], {idempotent:true}),
+    tool('merchant_sheets_deployment_prepare', 'Prepare the five original dataset-release files from the completed deployment review and exact reviewSha256. Retains the original dataset directory and public projection; no raw Sheet cells, Google credentials, extraction or version-store migration. Same request recovery completes the same package.', {
+      ...selected, reviewRequestId:uuid, expectedReviewSha256:digest, requestId:uuid,
+    }, ['workspace','reviewRequestId','expectedReviewSha256','requestId'], {idempotent:true}),
+    tool('merchant_sheets_deployment_package', 'Inspect the exact completed original package request, public file hashes, source binding and merchant configuration hash. Package and dataset paths are host-local and omitted from MCP output.', {
+      ...selected, packageRequestId:uuid,
+    }, ['workspace','packageRequestId'], read),
+    tool('merchant_sheets_deployment_stage', 'Stage the reviewed package through the original SF82 release store. Requires the package source SHA256 and a stable immutable release ID. Reusing an ID requires identical package, label and normalized runtime. Does not select or start the merchant.', {
+      ...selected, packageRequestId:uuid, expectedSourceSha256:digest, id:text,
+      label:{type:'string',minLength:1,maxLength:240}, runtime:deploymentRuntime, requestId:uuid,
+    }, ['workspace','packageRequestId','expectedSourceSha256','id','requestId'], {idempotent:true}),
+    tool('merchant_sheets_deployment_compare', 'Compare retained merchant releases through the original SF82 comparator. Omit from to use the original active selection. Returns the current selection generation and original diff; does not change either release or the dataset.', {
+      ...selected, from:{type:['string','null']}, to:text,
+    }, ['workspace','to'], read),
+    tool('merchant_sheets_deployment_console_open', 'Open the original loopback SF82 deployment console inside this same Sheets workspace. That original console solely owns merchant lifecycle. CurrentDeployment establishes the live URL/instance; a recorded receipt alone does not. Opening does not start a merchant.', {
+      ...selected, requestId:uuid,
+    }, ['workspace','requestId'], {idempotent:true}),
+    tool('merchant_sheets_deployment_console_close', 'Close only the exact current deployment console instance, drain its owned merchant and retain release/dataset state. Reusing the original request never closes a successor console.', {
+      ...selected, instanceId:uuid, requestId:uuid,
+    }, ['workspace','instanceId','requestId'], {idempotent:true,destructive:true}),
+    tool('merchant_sheets_deployment_command', 'Run one explicit activate, rollback, run, stop or restart through the SAME original console used by the browser. Use current consoleInstanceId and expectedGeneration; use the inspected target release expectedDigest except for stop, and exact merchant instanceId for stop/restart. Activate uses id; rollback uses to or original previous release. Original receiving review may be supplied. After an uncertain local reply, operation/resume only observes current native state and NEVER replays the command; inspect before a new explicit request.', {
+      ...selected, action:{type:'string',enum:['activate','rollback','run','stop','restart']},
+      consoleInstanceId:uuid, expectedGeneration:revision, expectedDigest:digest, instanceId:uuid, id:text, to:text,
+      reason:{type:'string',maxLength:2000}, receiving:{type:'object'}, requestId:uuid,
+    }, ['workspace','action','consoleInstanceId','expectedGeneration','requestId'], {idempotent:true,destructive:true,openWorld:true}),
+    tool('merchant_sheets_deployment_file_read', 'Read one exact verified original package file through the existing SHA256-pinned retained-file reader. Files over its existing 256,000,000-byte limit use the original browser/CLI download. Reuse readId, expectedSha256 and offset; after expiry/restart omit readId and resume the SAME package/file/hash/offset. No host path input.', {
+      ...selected, packageRequestId:uuid, file:deploymentFile, readId:uuid, expectedSha256:digest, offset:revision,
+      limit:{type:'integer',minimum:1,maximum:MAX_RETAINED_CHUNK_BYTES},
+    }, ['workspace','packageRequestId','file'], read),
+    tool('merchant_sheets_deployment_file_release', 'Release only the current alias retained-file snapshot. Does not delete a package, source, dataset version or release.', {
+      ...selected, readId:uuid,
+    }, ['workspace','readId'], read),
     tool('merchant_sheets_packet_read', 'Read a private portable source packet from the original saved version. Live credential references are stripped by the original exporter. Returns SHA256-pinned base64 chunks through the existing retained-file reader; reuse readId, expectedSha256 and offset. After expiry or restart omit readId and resume the SAME version/hash/offset.', {
       ...selected, versionId: version, readId: uuid, expectedSha256: digest, offset: revision,
       limit: { type: 'integer', minimum: 1, maximum: MAX_RETAINED_CHUNK_BYTES },
@@ -211,7 +264,7 @@ export async function readSheetsWorkspaceConfiguration(path) {
 // to be named "directory" or "sourceFile". Never filter a public row/projection.
 const dataFields = new Set(['draft', 'columns', 'sample', 'columnTypes']);
 const privateFields = new Set(['directory', 'sourceFile', 'targetDirectory', 'publisherDirectory', 'manifestFile',
-  'resourceFile', 'oauthDirectory', 'accessTokenEnv']);
+  'resourceFile', 'oauthDirectory', 'accessTokenEnv', 'root', 'releaseDirectory', 'packageDirectory', 'datasetDirectory']);
 function view(value) {
   if (Array.isArray(value)) return value.map(view);
   if (!plain(value)) return value;
@@ -340,13 +393,13 @@ export class MerchantSheetsWorkspaces {
       case 'merchant_sheets_select': return { workspace, native: view(await original.selectVersion(input)) };
       case 'merchant_sheets_operation': {
         const receipt = original.operation(nativeId(input.requestId)), state = await original.status();
-        return { workspace, receipt: view(receipt), currentPublisher: view(state.publisher),
+        return { workspace, receipt: view(receipt), currentPublisher: view(state.publisher), currentDeployment: view(state.deployment),
           currentSelection: state.selectedVersion, currentDraftRevision: state.draftRevision };
       }
       case 'merchant_sheets_resume': {
         const result = await original.resume(nativeId(input.requestId)), state = await original.status();
         return { workspace, native: view(result), receipt: view(original.operation(input.requestId)),
-          currentPublisher: view(state.publisher), currentSelection: state.selectedVersion };
+          currentPublisher: view(state.publisher), currentDeployment: view(state.deployment), currentSelection: state.selectedVersion };
       }
       case 'merchant_sheets_publisher_open':
       case 'merchant_sheets_publisher_close': {
@@ -356,6 +409,38 @@ export class MerchantSheetsWorkspaces {
         return { workspace, receipt: view({ ...receipt, ...(recordedBrowserUrl ? { recordedBrowserUrl } : {}) }),
           currentPublisher: view(state.publisher), currentSelection: state.selectedVersion };
       }
+      case 'merchant_sheets_deployment_status': return { workspace, native: view(await original.deploymentStatus(input)) };
+      case 'merchant_sheets_deployment_review': return { workspace, native: view(await original.reviewDeployment(input)) };
+      case 'merchant_sheets_deployment_prepare': return { workspace, native: view(await original.prepareDeployment(input)) };
+      case 'merchant_sheets_deployment_package': return { workspace, native: view(await original.inspectDeploymentPackage(nativeId(input.packageRequestId))) };
+      case 'merchant_sheets_deployment_stage': return { workspace, native: view(await original.stageDeployment(input)) };
+      case 'merchant_sheets_deployment_compare': return { workspace, native: view(await original.compareDeployment(input)) };
+      case 'merchant_sheets_deployment_command': {
+        const result = await original.commandDeployment(input), current = await original.deploymentStatus();
+        return { workspace, receipt:view(result), currentDeployment:view(current.console), native:view(current.native) };
+      }
+      case 'merchant_sheets_deployment_console_open':
+      case 'merchant_sheets_deployment_console_close': {
+        const result = name === 'merchant_sheets_deployment_console_open'
+          ? await original.openDeploymentConsole(input) : await original.closeDeploymentConsole(input);
+        const current = await original.status(), { url:recordedConsoleUrl, ...receipt } = result;
+        return { workspace, receipt:view({...receipt, ...(recordedConsoleUrl ? {recordedConsoleUrl} : {})}),
+          currentDeployment:view(current.deployment) };
+      }
+      case 'merchant_sheets_deployment_file_read': {
+        const packageRequestId = nativeId(input.packageRequestId), filename = input.file;
+        if (!deploymentFile.enum.includes(filename)) throw failure('INVALID_PARAMS','Choose one original package filename.');
+        const chunk = await this.#reads.read({ scope:this.#scope(workspace),
+          key:'deployment:' + packageRequestId + ':' + filename, kind:'sheets-deployment-file',
+          directory:this.#definition(workspace).directory,
+          readId:input.readId, expectedSha256:input.expectedSha256, offset:input.offset, limit:input.limit,
+          load:async () => { const file = await original.deploymentFile(packageRequestId,filename);
+            return {name:file.filename,type:file.mime,bytes:file.bytes}; } });
+        return { workspace, packageRequestId, file:filename, ...chunk };
+      }
+      case 'merchant_sheets_deployment_file_release':
+        await this.#reads.release(this.#scope(workspace), nativeId(input.readId));
+        return { workspace, readId:input.readId, state:'RELEASED' };
       case 'merchant_sheets_packet_read': {
         const versionId = nativeVersion(input.versionId); original.version(versionId);
         const chunk = await this.#reads.read({ scope: this.#scope(workspace), key: 'source-version:' + versionId,

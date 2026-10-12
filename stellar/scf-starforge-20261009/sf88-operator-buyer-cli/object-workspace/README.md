@@ -517,26 +517,28 @@ session and original operator journal leases.
 The same customer flow is available from the original object command:
 
 ```sh
-buyer-object analysis-review --state /absolute/private/download-workspace \
+starforge buyer-object analysis-review --state /absolute/private/download-workspace \
   --session completed-events --name purchased_events --format csv
 
 # Use reviewSha256 from that exact review.
-buyer-object analysis-open --state /absolute/private/download-workspace \
+starforge buyer-object analysis-open --state /absolute/private/download-workspace \
   --session completed-events --name purchased_events --format csv \
   --review REVIEW_SHA256
 
 # Reopen analytical work without selecting a source or acquiring a file.
-buyer-object analysis-open --state /absolute/private/download-workspace
+starforge buyer-object analysis-open --state /absolute/private/download-workspace
 
-buyer-object analysis-status --state /absolute/private/download-workspace
+starforge buyer-object analysis-status --state /absolute/private/download-workspace
 ```
 
 For these analysis commands, `--session` is the saved name inside `STATE/sessions`.
 The native download commands retain their original absolute `--session` paths.
 `analysis-open` stays in the foreground and prints the private analytical URL;
-keep that terminal open and use `Ctrl+C` to close its owned application. Without
-the installed alias, use `node .../sf88-operator-buyer-cli/object-cli.mjs` with the
-same arguments. No new acquisition or purchase is part of this handoff.
+keep that terminal open and use `Ctrl+C` to close its owned application. The
+installed entry point is `starforge buyer-object`; the package exposes `starforge`
+as its executable. For a source checkout, use
+`node .../sf88-operator-buyer-cli/object-cli.mjs` with the same arguments. No new
+acquisition or purchase is part of this handoff.
 
 ## Embedding and deployment
 

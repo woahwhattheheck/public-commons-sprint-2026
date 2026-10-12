@@ -1,12 +1,17 @@
 // MIT. Jobs, verified resources and collections share the original private HTTP host.
 import { readFile } from 'node:fs/promises';
+import { randomUUID } from 'node:crypto';
+import { readJson, writeJson, exists } from '../node/store.mjs';
+import { jobWorkspaceLaunchPath, JOB_WORKSPACE_LAUNCH_SCHEMA } from './launch.mjs';
 import { serveLibrary } from '../resource-library/server.mjs';
 import { collectionExtension } from '../resource-library/collection-ui.mjs';
 import { requireValue } from './state.mjs';
+import { jobCheckoutExtension } from './checkout/server.mjs';
 
 export async function startJobCustomerWorkspace({ model, port = 0 } = {}) {
   requireValue(model?.library && typeof model.retain === 'function', 'JOB_WORKSPACE_MODEL_REQUIRED');
   const collections = await collectionExtension(model.library);
+  const checkout = await jobCheckoutExtension(model.checkout);
   const assets = await Promise.all([
     ['/jobs/','public/index.html','text/html'],
     ['/jobs/app.mjs','public/app.mjs','text/javascript'],
@@ -56,9 +61,32 @@ export async function startJobCustomerWorkspace({ model, port = 0 } = {}) {
     }
   };
   const host = await serveLibrary(model.library, { port,
-    additionalAssets: [...collections.additionalAssets, ...assets],
-    authenticatedRoute: [collections.authenticatedRoute, route] });
-  return { ...host, url: host.origin + '/jobs/#' + host.token,
+    additionalAssets: [...collections.additionalAssets, ...assets, ...checkout.additionalAssets],
+    authenticatedRoute: [collections.authenticatedRoute, route, checkout.authenticatedRoute] });
+  const opened = { ...host, url: host.origin + '/jobs/#' + host.token,
     libraryUrl: host.origin + '/#' + host.token,
-    collectionsUrl: host.origin + '/collections#' + host.token };
+    collectionsUrl: host.origin + '/collections#' + host.token,
+    checkoutUrl: host.origin + '/jobs/checkout/#' + host.token };
+  const checkoutState = model.checkout.status(), privateLaunch = jobWorkspaceLaunchPath(model.directory);
+  const launch = { schema: JOB_WORKSPACE_LAUNCH_SCHEMA, state: 'LISTENING', directory: model.directory,
+    runtimeDirectory: checkoutState.runtimeDirectory, operatorSelection: checkoutState.selection,
+    pid: process.pid, instanceId: randomUUID(), startedAt: new Date().toISOString(),
+    url: opened.url, checkoutUrl: opened.checkoutUrl, libraryUrl: opened.libraryUrl,
+    collectionsUrl: opened.collectionsUrl, privateLaunch };
+  try { await writeJson(privateLaunch, launch); }
+  catch (error) { await host.close(); throw error; }
+  let closing;
+  return { ...opened, launch, privateLaunch,
+    close() {
+      if (!closing) closing = (async () => {
+        try { await host.close(); }
+        finally {
+          const current = await exists(privateLaunch) ? await readJson(privateLaunch) : null;
+          if (current?.instanceId === launch.instanceId)
+            await writeJson(privateLaunch, { ...launch, state: 'CLOSED', endedAt: new Date().toISOString() });
+        }
+      })();
+      return closing;
+    },
+  };
 }

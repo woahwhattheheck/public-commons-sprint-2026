@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Diffbot data workspace</title>
+  <link rel="stylesheet" href="./style.css">
+  <script type="module" src="./browser.mjs"></script>
+</head>
+<body>
+  <a class="skip-link" href="#content">Skip to workspace</a>
+  <header class="app-header">
+    <div class="brand"><p class="eyebrow">Retained web data</p><h1>Diffbot data workspace</h1><p id="workspace-label">Opening the original workspace…</p></div>
+    <div id="header-actions" class="button-row"></div>
+  </header>
+  <div class="state-bar"><div id="save-state" class="button-row"></div><div id="edition-control"></div></div>
+  <nav id="navigation" class="navigation" aria-label="Workspace"></nav>
+  <main id="main">
+    <p id="notice" role="status" aria-live="polite" hidden></p>
+    <section id="recovery" class="recovery" aria-label="Original operation recovery" hidden></section>
+    <div id="content" tabindex="-1"><p class="empty">Loading the original source, saved reviews and retained operation history.</p></div>
+  </main>
+  <footer><span id="footer-state"></span><span>Original source · reviewed delivery · portable handover</span></footer>
+</body>
+</html>

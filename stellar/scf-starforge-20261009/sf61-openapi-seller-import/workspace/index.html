@@ -2,7 +2,7 @@
 <html lang="en">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>API merchant workspace</title><link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/oauth.css"></head>
 <body>
-<header><div><p class="eyebrow">STELLAR / MERCHANT TOOLS</p><h1>API merchant workspace</h1><p class="lede">Configure a paid facade for your existing API. Save a reusable project, then run the seller and its operations dashboard.</p></div><span class="badge">LOCAL WORKSPACE</span></header>
+<header><div><p class="eyebrow">STELLAR / MERCHANT TOOLS</p><h1>API merchant workspace</h1><p class="lede">Configure a paid facade for your existing API. Save a reusable project, then run the seller and its operations dashboard.</p></div><div><a id="migration-link" href="/migrations/">Data migrations</a><span class="badge">LOCAL WORKSPACE</span></div></header>
 <div id="notice" role="status" aria-live="polite">Connecting to the local workspace…</div>
 <main>
 <aside><h2>Saved projects</h2><p class="muted">Projects stay in the private output folder selected at launch.</p><button id="refresh" type="button">Refresh projects</button><div id="packages" class="project-list"></div><p id="output" class="small wrap"></p></aside>
@@ -28,7 +28,7 @@
 <section><div class="section-heading"><span class="step">5</span><div><h2>Run the saved seller</h2><p class="muted" id="run-label">Save or reopen a project to start it here.</p></div></div>
 <div class="inline"><button id="start-preview" class="primary" type="button" disabled>Start challenge preview</button><button id="check-routes" type="button" disabled>Check unpaid routes</button><button id="stop" type="button" disabled>Stop managed seller</button></div>
 <details><summary>Use a native facilitator</summary><label>Authorized facilitator HTTPS URL<input id="facilitator" type="url" placeholder="https://your-facilitator.example"></label><p class="hint">This uses the original native seller integration. Required backend environment variables must be set before launching this workspace.</p><button id="start-native" type="button" disabled>Start native seller</button></details>
-<div id="runtime" class="runtime"></div><div id="cache-runtime" class="runtime"></div><div id="credential-runtime" class="runtime"></div><div id="operation-runtime" class="runtime"></div><p class="hint">Challenge preview returns real payment challenges. It does not settle payments or establish revenue.</p>
+<div id="runtime" class="runtime"></div><div id="cache-workspace-navigation" class="runtime"></div><div id="cache-runtime" class="runtime"></div><div id="credential-runtime" class="runtime"></div><div id="operation-runtime" class="runtime"></div><p class="hint">Challenge preview returns real payment challenges. It does not settle payments or establish revenue.</p>
 </section>
 <section id="stream-customers"><div class="section-heading"><span class="step">6</span><div><h2>Prepare a streaming customer</h2><p class="muted">Review an exact request and customer budget for the original Stellar testnet setup, then use its commerce console to approve the purchase and retain its output.</p></div></div><div id="stream-customer-content"></div></section>
 <section id="source-revisions" aria-label="API contract revision desk"></section>

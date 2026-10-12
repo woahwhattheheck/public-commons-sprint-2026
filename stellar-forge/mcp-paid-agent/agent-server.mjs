@@ -66,6 +66,9 @@ const schemas={
     name:'bazaar_execute_approved',description:'Attempt the quoted call ONLY when operator approval callback authorizes it; default denies. Never retries a potentially settled signed request.',
     inputSchema:{type:'object',properties:{quoteId:{type:'string'}},required:['quoteId'],additionalProperties:false}},
   bazaar_status:{name:'bazaar_status',description:'Inspect the exact state of a prior quote; no network call.',inputSchema:{type:'object',properties:{quoteId:{type:'string'}},required:['quoteId'],additionalProperties:false}},
+  bazaar_spending_status:{name:'bazaar_spending_status',description:'Read this remote MCP quote’s original aggregate budget preview or retained SF36 reservation and finalization. Uses the host-configured ledger.',
+    annotations:{readOnlyHint:true,destructiveHint:false,idempotentHint:true,openWorldHint:false},
+    inputSchema:{type:'object',properties:{quoteId:{type:'string'}},required:['quoteId'],additionalProperties:false}},
   bazaar_reconcile_payment:{name:'bazaar_reconcile_payment',description:'Read the original transaction through the host-configured Stellar verifier and save its observation on this quote. No approval, signing, submission or purchase retry. Supply transaction only when an older result omitted its original hash.',
     annotations:{readOnlyHint:false,destructiveHint:false,idempotentHint:true,openWorldHint:true},
     inputSchema:{type:'object',properties:{quoteId:{type:'string'},transaction:{type:'string',pattern:'^[0-9a-fA-F]{64}$'}},required:['quoteId'],additionalProperties:false}},
@@ -94,10 +97,10 @@ export class McpPaidToolBroker {
   #catalogUrl;#trustedOrigins;#approve;#sign;#fetch;#records=new Map();#quotes=new Map();
   #timeLimit;#quoteTTL;#maxRecords;#agentCommerce;
   #store;#scope;#closing=false;#storeClosed=false;#closePromise;#active=new Set();#shutdown=new AbortController();
-  #mcpPolicies;#remoteControllers=new Map();#results;#reconcilePaymentAdapter;#reconciliations=new Map();
+  #mcpPolicies;#approvalControllers=new Map();#remoteControllers=new Map();#results;#reconcilePaymentAdapter;#reconciliations=new Map();#spendingStatusAdapter;
   constructor({discoveryUrl,allowedResourceOrigins=[],approve=()=>false,signPayment=null,
     fetchImpl=defaultFetch,timeoutMs=8000,quoteTTL=10*60*1000,maxRecords=500,
-    agentCommerce=null,quoteStore=null,remoteMcpPolicies=[],resultStore=null,reconcilePayment=null}={}){
+    agentCommerce=null,quoteStore=null,remoteMcpPolicies=[],resultStore=null,reconcilePayment=null,spendingStatus=null}={}){
     if(!discoveryUrl)throw new TypeError('Explicit configured discoveryUrl required');
     this.#catalogUrl=new URL(discoveryUrl);
     if(!['https:','http:'].includes(this.#catalogUrl.protocol)||this.#catalogUrl.username||this.#catalogUrl.password||
@@ -112,6 +115,8 @@ export class McpPaidToolBroker {
     this.#timeLimit=timeoutMs;this.#quoteTTL=quoteTTL;this.#maxRecords=maxRecords;
     this.#agentCommerce=agentCommerce;
     this.#reconcilePaymentAdapter=reconcilePayment;
+    if(spendingStatus!==null&&typeof spendingStatus!=='function')throw new TypeError('Invalid spending status adapter');
+    this.#spendingStatusAdapter=spendingStatus;
     this.#mcpPolicies=normalizeMcpPolicies(remoteMcpPolicies);
     if(quoteStore!==null&&['load','save','close'].some(name=>typeof quoteStore[name]!=='function'))
       throw new TypeError('Quote store must provide load/save/close');
@@ -285,6 +290,25 @@ export class McpPaidToolBroker {
     this.#store?.save(recovered);
     Object.assign(q,recovered);return statOf(q);
   }
+  async spendingStatus({quoteId}={}){
+    this.#running();
+    const q=this.#quotes.get(quoteId);if(!q)fail('QUOTE_UNKNOWN','Unknown quote');
+    if(!q.invocation)fail('MCP_SPENDING_REMOTE_QUOTE_REQUIRED','Select a remote MCP quote.');
+    if(!this.#spendingStatusAdapter)fail('MCP_SPENDING_NOT_CONFIGURED','Connect the native governed MCP operator.');
+    const operation=Promise.resolve().then(async()=>{
+      this.#running();
+      const report=await this.#spendingStatusAdapter(quoteId,{
+        quote:{quoteId,requestUrl:q.url,method:q.method,
+          invocation:structuredClone(q.invocation),accepted:structuredClone(q.accepted)},
+        signal:AbortSignal.any([this.#shutdown.signal,AbortSignal.timeout(Math.max(30000,this.#timeLimit))])});
+      if(!plain(report)||report.schema!=='stellar-forge.mcp-spending.v1'||
+          report.request_id!==quoteId||Buffer.byteLength(JSON.stringify(report))>65536)
+        fail('MCP_SPENDING_RESULT_MISMATCH','The ledger response does not match this quote.');
+      this.#running();return structuredClone(report);
+    });
+    this.#active.add(operation);
+    try{return await operation;}finally{this.#active.delete(operation);}
+  }
   async reconcilePayment({quoteId,transaction}={}){
     this.#running();
     const q=this.#quotes.get(quoteId);if(!q)fail('QUOTE_UNKNOWN','Unknown quote');
@@ -342,7 +366,10 @@ export class McpPaidToolBroker {
   cancel({quoteId}={}){
     const q=this.#quotes.get(quoteId);if(!q)fail('QUOTE_UNKNOWN','Unknown quote');
     if(q.status==='PREVIEWED'||q.status==='APPROVAL_PENDING'){
-      q.status='CANCELLED';this.#persist(q);return statOf(q);
+      q.status='CANCELLED';
+      // End this quote's host prompt even when its cancellation cannot persist.
+      try{this.#persist(q);}finally{this.#approvalControllers.get(quoteId)?.abort();}
+      return statOf(q);
     }
     if(q.status==='EXECUTING'){
       q.status=q.signedRequestDispatched?'INDETERMINATE':'CANCEL_REQUESTED';
@@ -368,15 +395,20 @@ export class McpPaidToolBroker {
     // Reserve the quote synchronously before the first await: concurrent MCP
     // calls must not independently authorize/sign/dispatch the same payment.
     q.status='APPROVAL_PENDING';q.phase='APPROVAL';this.#persist(q);
+    const approvalController=new AbortController();
+    this.#approvalControllers.set(quoteId,approvalController);
     let permission;
     try {
       permission=await this.#approve(Object.freeze({quoteId:q.quoteId,resource:q.resource,requestUrl:q.url,method:q.method,
-        accepted:structuredClone(q.accepted),...(q.invocation?{invocation:structuredClone(q.invocation)}:{}),signal:this.#shutdown.signal}));
+        accepted:structuredClone(q.accepted),...(q.invocation?{invocation:structuredClone(q.invocation)}:{}),
+        signal:AbortSignal.any([this.#shutdown.signal,approvalController.signal])}));
     }catch(e){
       if(this.#closing||q.status!=='APPROVAL_PENDING')return statOf(q);
       q.status='PREVIEWED'; // approval errors retain the original retry semantics
       this.#persist(q);
       throw e;
+    }finally{
+      this.#approvalControllers.delete(quoteId);approvalController.abort();
     }
     // Cancellation/expiration during asynchronous human approval must win.
     if(this.#closing||q.status!=='APPROVAL_PENDING')return statOf(q);
@@ -547,6 +579,7 @@ export class McpPaidToolBroker {
       case 'bazaar_read_result':return this.readResult(args);
       case 'bazaar_recover_result':return this.recoverResult(args);
       case 'bazaar_reconcile_payment':return this.reconcilePayment(args);
+      case 'bazaar_spending_status':return this.spendingStatus(args);
       case 'sf43_discover_review_and_pay':{
         this.#running();
         if(!this.#agentCommerce)fail('AGENT_COMMERCE_UNAVAILABLE','SF43 requires an explicitly injected approved adapter');
