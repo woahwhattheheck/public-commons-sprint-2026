@@ -1,0 +1,29 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "woo-erp-operator",
+  "description": "Complete native Woo ERP merchant operations and portable project receiving",
+  "commands": {
+    "merchant-woo-erp": "stellar-forge/mcp-merchant-operator/woo-erp-cli.mjs"
+  },
+  "commandDescriptions": {
+    "merchant-woo-erp": "Operate original ERP mappings, order delivery, correction and complete project receiving"
+  },
+  "exports": {
+    "./merchant/mcp/woocommerce/erp": {
+      "types": "./source/stellar-forge/mcp-merchant-operator/woo-erp-client.d.mts",
+      "import": "./source/stellar-forge/mcp-merchant-operator/woo-erp-client.mjs"
+    },
+    "./merchant/mcp/woocommerce/erp-tools": "./source/stellar-forge/mcp-merchant-operator/woo-erp-schema.mjs"
+  },
+  "supportFiles": [
+    "stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/merchant-erp.php",
+    "stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/merchant-erp-mapping.php",
+    "stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/merchant-erp-acumatica.php",
+    "stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/merchant-erp-store.php",
+    "stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/merchant-erp-console.php",
+    "stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/merchant-erp.js",
+    "stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/merchant-erp.css",
+    "stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/ERP.md",
+    "stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/erp-map.example.json"
+  ]
+}

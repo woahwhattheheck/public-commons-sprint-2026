@@ -8,11 +8,14 @@ import { collectionExtension } from '../resource-library/collection-ui.mjs';
 import { requireValue } from './state.mjs';
 import { jobCheckoutExtension } from './checkout/server.mjs';
 import { jobIntakeExtension } from './intake/server.mjs';
+import { jobResolutionExtension } from './resolution/server.mjs';
+import { RESOLUTION_RECEIVING_BYTES } from '../../sf30-seller-sdk/jobs/resolution/limits.mjs';
 
 export async function startJobCustomerWorkspace({ model, port = 0, browserApproval = true, landing = 'request' } = {}) {
   requireValue(model?.library && typeof model.retain === 'function', 'JOB_WORKSPACE_MODEL_REQUIRED');
   const closeCheckout = async () => {
     const failures = [];
+    try { await model.resolution?.close(); } catch (error) { failures.push(error); }
     try { await model.intake?.close(); } catch (error) { failures.push(error); }
     try { await model.checkout.close(); } catch (error) { failures.push(error); }
     if (failures.length === 1) throw failures[0];
@@ -85,14 +88,16 @@ export async function startJobCustomerWorkspace({ model, port = 0, browserApprov
     ].map(async ([route, file, type]) => ({ route, type, bytes: await readFile(new URL(file, import.meta.url)) })));
     const intake = await jobIntakeExtension(model.intake);
     const checkout = await jobCheckoutExtension(model.checkout, { browserApproval });
-    host = await serveLibrary(model.library, { port,
-      additionalAssets: [...collections.additionalAssets, ...assets, ...intake.additionalAssets, ...checkout.additionalAssets],
-      authenticatedRoute: [collections.authenticatedRoute, route, intake.authenticatedRoute, checkout.authenticatedRoute] });
+    const resolutions = await jobResolutionExtension(model.resolution);
+    host = await serveLibrary(model.library, { port, maxBodyBytes: RESOLUTION_RECEIVING_BYTES,
+      additionalAssets: [...collections.additionalAssets, ...assets, ...intake.additionalAssets, ...checkout.additionalAssets, ...resolutions.additionalAssets],
+      authenticatedRoute: [collections.authenticatedRoute, resolutions.authenticatedRoute, route, intake.authenticatedRoute, checkout.authenticatedRoute] });
     const opened = { ...host, url: host.origin + '/jobs/#' + host.token,
       libraryUrl: host.origin + '/#' + host.token,
       collectionsUrl: host.origin + '/collections#' + host.token,
       checkoutUrl: host.origin + '/jobs/checkout/#' + host.token,
       intakeUrl: host.origin + '/jobs/request/#' + host.token,
+      resolutionUrl: host.origin + '/jobs/resolutions/#' + host.token,
       approvalMode: browserApproval ? 'browser' : 'terminal', landing };
     opened.entryUrl = jobWorkspaceEntryUrl(opened, landing);
     const checkoutState = model.checkout.status();
@@ -101,7 +106,7 @@ export async function startJobCustomerWorkspace({ model, port = 0, browserApprov
       runtimeDirectory: checkoutState.runtimeDirectory, operatorSelection: checkoutState.selection,
       pid: process.pid, instanceId: randomUUID(), startedAt: new Date().toISOString(),
       url: opened.url, checkoutUrl: opened.checkoutUrl, libraryUrl: opened.libraryUrl,
-      collectionsUrl: opened.collectionsUrl, intakeUrl: opened.intakeUrl,
+      collectionsUrl: opened.collectionsUrl, intakeUrl: opened.intakeUrl, resolutionUrl: opened.resolutionUrl,
       approvalMode: opened.approvalMode, landing, entryUrl: opened.entryUrl, privateLaunch };
     await writeJson(privateLaunch, launch);
     let closing;
