@@ -1,3 +1,5 @@
+import { MAX_RETAINED_CHUNK_BYTES } from './retained-file-contracts.mjs';
+export { MAX_RETAINED_CHUNK_BYTES } from './retained-file-contracts.mjs';
 // MIT. Original accounting read snapshots, shared by the native retained-file owners.
 import { open, mkdtemp, unlink, rmdir } from 'node:fs/promises';
 import { constants } from 'node:fs';
@@ -9,7 +11,7 @@ const DEFAULT_SNAPSHOT_BYTES_LIMIT = 256_000_000;
 const COPY_CHUNK_BYTES = 1024 * 1024;
 const SNAPSHOT_COUNT_LIMIT = 4;
 const SNAPSHOT_IDLE_MS = 120_000;
-export const MAX_RETAINED_CHUNK_BYTES = 196608;
+
 export const MAX_RETAINED_IMMUTABLE_FILE_BYTES = 8 * 1024 * 1024 * 1024;
 const digest = bytes => createHash('sha256').update(bytes).digest('hex');
 const SHA256 = /^[0-9a-f]{64}$/;

@@ -1,16 +1,11 @@
+import { HAR_EXPORT_FILES } from './har-export-contracts.mjs';
+export { HAR_EXPORT_FILES } from './har-export-contracts.mjs';
 // MIT. Completion identity shared by the original HAR operator and retained downloader.
 import { createHash } from 'node:crypto';
 export const HAR_EXPORT_SCHEMA = 'stellar-forge.har-operator-export.v1';
 export const HAR_EXPORT_MANIFEST = 'har-export.json';
 export const HAR_EXPORT_MAX_BYTES = 128 * 1024 * 1024;
-export const HAR_EXPORT_FILES = Object.freeze({
-  reviewer: ['review.html', 'text/html; charset=utf-8'],
-  inventory: ['inventory.json', 'application/json'],
-  decisions: ['decisions.json', 'application/json'],
-  draft: ['draft.json', 'application/json'],
-  comparison: ['change-report.json', 'application/json'],
-  openapi: ['openapi.json', 'application/json'],
-});
+
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 const SHA = /^[a-f0-9]{64}$/, ALIAS = /^[a-z0-9][a-z0-9_-]{0,63}$/;
 const plain = v => v !== null && typeof v === 'object' && !Array.isArray(v);
