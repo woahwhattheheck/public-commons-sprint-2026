@@ -1,4 +1,5 @@
 import {ArchiveLink} from './archive.js';
+import {createRundownBuilder} from './rundown-builder.js';
 
 const el = id => document.getElementById(id);
 const node = (tag, value, className = '') => {
@@ -93,6 +94,36 @@ if (!/^[0-9a-f]{64}$/.test(libraryKey || '')) {
 let current = null, draft = null, baseBroadcast = null, collection = [];
 let dirty = false, conflict = false, busy = false, editVersion = 0, generation = 0;
 let videoUrl = null, sourceGeneration = 0;
+
+const rundown = createRundownBuilder({
+  root: el('rundownBuilder'),
+  context: () => current && draft ? {
+    id: current.archive.id, match: current.package.match, broadcast: draft,
+    recap: current.archive.review.recap, busy,
+  } : null,
+  request: body => request('/api/broadcast-rundown', 'POST', body),
+  replayUrl: (count, team) => urlFor(count, team),
+  append: items => {
+    const seen = new Set(draft.cues.map(cue => cue.momentId).filter(Boolean));
+    const additions = items.filter(item => !seen.has(item.momentId));
+    if (draft.cues.length + additions.length > 64) throw new Error(words().maximum);
+    draft.cues.push(...additions.map(item => ({
+      id: 'cue_' + crypto.randomUUID().replaceAll('-', ''), eventId: item.eventId,
+      count: item.count, momentId: item.momentId, caption: item.caption, videoStart: null, videoEnd: null,
+    })));
+    changed(); renderCues(); renderSources();
+  },
+  applyBrief: story => {
+    const notes = draft.notes.includes(story.brief) ? draft.notes :
+      draft.notes + (draft.notes.trim() ? '\n\n' : '') + story.brief;
+    if (notes.length > 4000) throw new Error(draft.view.locale === 'es' ?
+      'Las notas superarían 4000 caracteres. Acórtalas antes de añadir el resumen.' :
+      'Production notes would exceed 4000 characters. Shorten them before adding the summary.');
+    draft.title = story.title; draft.notes = notes;
+    el('title').value = draft.title; el('notes').value = draft.notes; changed();
+  },
+});
+
 const words = () => WORDS[el('locale').value] || WORDS.en;
 const clock = second => {
   const tenths = Math.round(second * 10);
@@ -114,7 +145,7 @@ function status() {
     dirty ? words().local : current && !current.archive.canEdit ? words().shared :
     current?.archive.review.broadcast ? words().saved : words().ready);
 }
-function changed() { dirty = true; conflict = false; editVersion++; remember(); status(); updateCounts(); }
+function changed() { dirty = true; conflict = false; editVersion++; remember(); status(); updateCounts(); rundown.sync(); }
 async function request(path, method = 'GET', body) {
   const headers = {'X-Counterpress-Library': libraryKey};
   if (body !== undefined) headers['Content-Type'] = 'application/json';
@@ -132,6 +163,7 @@ function setBusy(value) {
     el('downloadVtt').disabled = !draft?.cues.some(cue => cue.videoStart !== null && cue.videoEnd !== null);
     renderSources(); renderCues();
   }
+  rundown.sync();
   status();
 }
 function localize() {
