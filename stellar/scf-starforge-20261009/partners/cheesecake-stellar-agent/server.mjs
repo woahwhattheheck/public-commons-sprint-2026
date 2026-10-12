@@ -192,7 +192,7 @@ export async function createApplicationServer({configFile,bearerToken=process.en
       sourceRoot:loaded.sourceRoot,allowedOrigins:origins,operatorProfileConfigured:Boolean(loaded.config.operatorProfile)});
     server=createServer((req,res)=>{
       // Accept only this listener's selected host; DNS rebinding cannot grant the bearer or current host authority.
-      if(req.headers.host!==server.operatorHost) return send(res,400,{error:{code:'APPLICATION_HOST_INVALID',message:'Use the selected loopback origin.'}});
+      if(req.headers.host!==server.operatorHost&&req.headers.host!==server.operatorCanonicalHost) return send(res,400,{error:{code:'APPLICATION_HOST_INVALID',message:'Use the selected loopback origin.'}});
       void component.handler(req,res);
     });
     server.requestTimeout=45000;server.headersTimeout=15000;server.keepAliveTimeout=5000;
@@ -201,8 +201,9 @@ export async function createApplicationServer({configFile,bearerToken=process.en
       server.listen({host,port},()=>{server.removeListener('error',reject);resolveListen();});
     });
     const address=server.address(),authority=(host==='::1'?'[::1]':host)+':'+address.port;
-    const origin='http://'+authority;
-    server.operatorHost=authority;origins.add(origin);
+    const addressUrl=new URL('http://'+authority),origin=addressUrl.origin;
+    server.operatorHost=authority;server.operatorCanonicalHost=addressUrl.host;
+    origins.add(origin);origins.add('http://'+authority);
     async function close() {
       if(closed)return closed;
       closed=(async()=>{
