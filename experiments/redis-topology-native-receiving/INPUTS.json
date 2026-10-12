@@ -1,0 +1,56 @@
+{
+  "schema": "stellar-forge.redis-topology-native-inputs.v1",
+  "operation": "SCF-REDIS-TOPOLOGY-F8256-20261012",
+  "sourceCommit": "9c70294811b07f8cdba78479763ae55baf2e2f21",
+  "phases": [
+    "cluster with full browser/operator/customer journey",
+    "sentinel with independent data/monitor TLS and full browser/operator/customer journey"
+  ],
+  "files": [
+    {
+      "name": "native-source-capture.json",
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "gitBlob": "95b72e6dfd3c49341c0b585fb27c6edb7d91dc97",
+      "bytes": 4315156,
+      "sha256": "887146cbbda1e7c2887063da8af0865e3b5ae552a5acbca494eb0bd061da294b"
+    },
+    {
+      "name": "receive-native-source.py",
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "gitBlob": "436aace34a329787ce24605ecb2b4c9f7c4045c5",
+      "bytes": 4559,
+      "sha256": "8ae417ff02eb1b30a0f718574d47cba86df90692f9ce50b3c023bff9c044945b"
+    },
+    {
+      "name": "run-native-topologies.py",
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "gitBlob": "90f87c25ce89e901ed564159157b30402596a07e",
+      "bytes": 7524,
+      "sha256": "91b8c84a88ea6516ff49413eb99cab80b0c6ccb457c646f4dc98b42be9dfb5ef"
+    }
+  ],
+  "equipment": {
+    "node": ">=22.16",
+    "redisServer": "7.x with Sentinel and TLS",
+    "redisClient": "6.2.1",
+    "playwright": "existing installed module",
+    "chromium": "existing installed executable",
+    "nativeHost": "original start(SimpleNamespace)/ForegroundLaunch",
+    "controllerArchive": {
+      "repository": "woahwhattheheck/commons",
+      "gitBlob": "cfb52f3944389d63452caab2384accc75bf5a6c7",
+      "bytes": 196139,
+      "sha256": "9ab83b543b260efc13ebabb7e0a6c1474373e3af79ef00a194d6da84d41a55cb"
+    }
+  },
+  "resources": {
+    "memoryMiB": 768,
+    "memoryReserveMiB": 128,
+    "workingDiskMiB": 128,
+    "diskReserveMiB": 64,
+    "workingInodes": 4096,
+    "inodeReserve": 512
+  },
+  "output": "results/receiving-result.json",
+  "originalThread": "https://tokenjunkielabs.slack.com/archives/C0C1F274SGH/p1791755121178039"
+}

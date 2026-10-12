@@ -94,7 +94,9 @@ export async function main(argv = process.argv.slice(2)) {
     const merchant = join(root, 'merchant'), configPath = join(merchant, 'merchant-mcp.json');
     if (!await optionalJson(configPath)) await initializeOpendatasoftWorkspaceMerchant({ directory: merchant, connection });
     const environment = { ...process.env, MCP_ACCESS_TOKEN: randomBytes(32).toString('hex') };
-    host = await startMerchantMcp({ configPath, port: 0, environment });
+    host = await startMerchantMcp({ configPath, port: record.mcpPort ?? 0, environment });
+    record.mcpPort = Number(new URL(host.url).port);
+    await save(recordPath, record);
     const client = await openOpendatasoftClient({ url: host.url, environment });
     const opens = await Promise.all([1,2,3].map(() => client.open({ workspace, browser: true })));
     if (new Set(opens.map(value => value.browser.url)).size !== 1 ||
@@ -111,9 +113,12 @@ export async function main(argv = process.argv.slice(2)) {
       editions.push(...status.native.editions);
       for (const key of Object.keys(histories)) histories[key].push(...status.native[key]);
     }
+    const datasetOf = value => value.datasetId ?? value.selection?.datasetId;
     let selected = record.editionId ? editions.find(value => value.id === record.editionId) :
-      editions.filter(value => value.datasetId === input.datasetId && value.state === 'COMPLETE').at(-1);
-    if (!selected) selected = editions.filter(value => value.datasetId === input.datasetId).at(-1);
+      editions.filter(value => datasetOf(value) === input.datasetId && value.state === 'COMPLETE').at(-1);
+    if (record.editionId && !selected)
+      throw failure('RECEIVING_IDENTITY', 'The original retained capture edition is missing; restore that original workbench.');
+    if (!selected) selected = editions.filter(value => datasetOf(value) === input.datasetId).at(-1);
     const complete = async started => {
       const done = await client.awaitOperation({ workspace, operationId: started.operationId }, { timeoutMs: 3600000 });
       if (done.operation.state !== 'COMPLETE')
@@ -136,9 +141,11 @@ export async function main(argv = process.argv.slice(2)) {
     await phase('complete_source_reviewed', { editionId: edition.id, datasetId: edition.datasetId,
       rowCount: rows, pages, captureSha256: edition.manifestSha256, notesRevision: edition.notes.revision });
     if (!record.exportRequest) {
-      const source = histories.sources.filter(value => value.editionId === edition.id).at(-1);
-      const publications = new Set(histories.publications.filter(value => histories.sources.some(s => s.id === value.sourceId && s.editionId === edition.id)).map(value => value.id));
+      const sources = histories.sources.filter(value => value.editionId === edition.id);
+      const sourceIds = new Set(sources.map(value => value.id));
+      const publications = new Map(histories.publications.filter(value => sourceIds.has(value.sourceId)).map(value => [value.id, value]));
       const merchantExport = histories.exports.filter(value => publications.has(value.publicationId)).at(-1);
+      const source = merchantExport ? sources.find(value => value.id === publications.get(merchantExport.publicationId).sourceId) : sources.at(-1);
       const buyer = merchantExport && histories.buyerRequests.filter(value => value.exportId === merchantExport.id).at(-1);
       const geometry = edition.fields.find(value => ['geo_point_2d','geo_shape'].includes(value.type));
       record.exportRequest = { workspace, exportId: input.exportId, editionId: edition.id,

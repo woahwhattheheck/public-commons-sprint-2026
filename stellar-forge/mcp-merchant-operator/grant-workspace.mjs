@@ -238,18 +238,22 @@ export class MerchantGrantWorkspaces {
       'The selected input differs from the exact reviewed SHA256 or byte count.');
     return {bytes, metadata, sourceWorkspace:source};
   }
-  async #forecastInputs(alias, args) {
+  async #modelInputs(alias, args, label) {
     need((args.inputs !== undefined) !== (args.input !== undefined), 'GRANT_INPUT_SELECTION_INVALID',
-      'Supply original forecast inputs inline or one verified input reference.');
+      'Supply original ' + label.toLowerCase() + ' inputs inline or one verified input reference.');
     if (args.inputs !== undefined) {
-      need(plain(args.inputs) && args.expectedInputSha256 === undefined, 'GRANT_INVALID_INPUT',
-        'Inline forecast inputs are one native JSON object.');
+      need(plain(args.inputs) && args.expectedInputSha256 === undefined && args.inputPointer === undefined,
+        'GRANT_INVALID_INPUT', 'Inline ' + label.toLowerCase() + ' inputs are one native JSON object.');
       return args.inputs;
     }
     const original = await this.#input(alias, args.input, args.expectedInputSha256);
-    need(original.bytes.length <= GRANT_MAX_SOURCE_BYTES, 'GRANT_INPUT_TOO_LARGE', 'Forecast input JSON fits the native 8 MiB source bound.');
-    const inputs = decode(original.bytes);
-    need(plain(inputs), 'GRANT_INVALID_INPUT', 'Forecast input is the original JSON object, not an exported wrapper.');
+    // Verify the entire retained file before selecting its explicitly requested original object.
+    const inputs = pointer(decode(original.bytes), args.inputPointer ?? '');
+    need(plain(inputs), 'GRANT_INVALID_INPUT',
+      label + ' input must select its original JSON object. Use inputPointer for an original response wrapper.');
+    const selectedBytes = args.inputPointer ? Buffer.byteLength(JSON.stringify(inputs)) : original.bytes.length;
+    need(selectedBytes <= GRANT_MAX_SOURCE_BYTES, 'GRANT_INPUT_TOO_LARGE',
+      label + ' input JSON fits the native 8 MiB source bound.');
     return inputs;
   }
   async #transfer(alias, selected) {
@@ -399,7 +403,8 @@ export class MerchantGrantWorkspaces {
     if (verb === 'close') return client.detach(args.expectedInstanceId);
     const rest = Object.fromEntries(Object.entries(args).filter(([key]) => key !== 'workspace'));
     const reads = {plans:'plans', plan:'plan', plan_history:'plan-history', cases:'cases', case:'case',
-      case_report:'case-report', case_history:'case-history', forecasts:'forecasts', forecast:'forecast', review:'review'};
+      case_report:'case-report', case_history:'case-history', forecasts:'forecasts', forecast:'forecast',
+      portfolios:'portfolios', portfolio:'portfolio', review:'review'};
     let original;
     if (Object.hasOwn(reads, verb)) original = await client.read(reads[verb], rest);
     else if (['plan_estimate','plan_save','plan_restore','plan_clone'].includes(verb)) {
@@ -407,14 +412,27 @@ export class MerchantGrantWorkspaces {
     } else if (verb === 'case_create') original = await client.createCase(rest);
     else if (verb === 'case_command') { const {caseId, ...body} = rest; original = await client.command(caseId, body); }
     else if (verb === 'forecast_preview') original = await client.forecastPreview(args.caseId, args.expectedVersion,
-      await this.#forecastInputs(alias, args));
+      await this.#modelInputs(alias, args, 'Forecast'));
     else if (verb === 'forecast_save') {
-      const {caseId, input, expectedInputSha256, ...body} = rest;
-      original = await client.forecastSave(caseId, {...body, inputs:await this.#forecastInputs(alias, args)});
-    } else if (verb === 'export') original = await client.download(args.kind, rest);
-    else if (['plan_import','case_import','source_attach','intake'].includes(verb)) {
+      const {caseId, input, inputPointer, expectedInputSha256, ...body} = rest;
+      original = await client.forecastSave(caseId, {...body, inputs:await this.#modelInputs(alias, args, 'Forecast')});
+    } else if (verb === 'portfolio_seed') original = await client.portfolioSeed(args.caseId, args.expectedVersion, args.forecastId);
+    else if (verb === 'portfolio_preview') original = await client.portfolioPreview(args.caseId, args.expectedVersion,
+      await this.#modelInputs(alias, args, 'Portfolio'));
+    else if (verb === 'portfolio_save') {
+      const {caseId, input, inputPointer, expectedInputSha256, ...body} = rest;
+      original = await client.portfolioSave(caseId, {...body, inputs:await this.#modelInputs(alias, args, 'Portfolio')});
+    } else if (verb === 'portfolio_selection') original = await client.portfolioSelection(args.caseId, args.expectedVersion,
+      args.portfolioId, args.alternativeId);
+    else if (verb === 'export') original = await client.download(args.kind, rest);
+    else if (['plan_import','case_import','source_attach','intake','support_preview','support_receive'].includes(verb)) {
       const {input, expectedInputSha256, ...body} = rest, selected = await this.#input(alias, input, expectedInputSha256);
-      if (verb === 'plan_import') {
+      if (verb === 'support_preview') {
+        original = await client.supportPreview(body.caseId, body.expectedVersion, selected.bytes, body.filename);
+      } else if (verb === 'support_receive') {
+        const {caseId, ...fields} = body;
+        original = await client.supportReceive(caseId, selected.bytes, fields);
+      } else if (verb === 'plan_import') {
         const {kind, ...fields} = body;
         if (kind === 'plan') need(!['note','planning','filename'].some(key => Object.hasOwn(fields,key)),
           'GRANT_INVALID_INPUT', 'A complete planning ZIP retains its own note, planning and filename. Supply only the received name and original request ID.');
@@ -427,7 +445,9 @@ export class MerchantGrantWorkspaces {
       } else { const {caseId, ...fields} = body; original = await client.attach(caseId, selected.bytes, fields); }
     } else throw failure('GRANT_TOOL_UNKNOWN', 'Choose an original grant operation.');
     return this.#snapshot(alias, original, {tool:name, ...Object.fromEntries(Object.entries(rest).filter(([key]) =>
-      ['planId','caseId','forecastId','sourceId','reviewId','revision','after','limit','kind','requestId','expectedRevision','expectedVersion'].includes(key)))});
+      ['planId','caseId','forecastId','portfolioId','alternativeId','sourceId','reviewId','revision','after','limit','kind',
+        'requestId','expectedRevision','expectedVersion','input','inputPointer','expectedInputSha256',
+        'filename','expectedPreviewSha256','deploymentId'].includes(key)))});
   }
   async call(name, args = {}) {
     need(!this.#closing, 'GRANT_CLOSING', 'The original grant client is closing.');

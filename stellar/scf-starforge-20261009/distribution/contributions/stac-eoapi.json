@@ -11,5 +11,8 @@
       "server": "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/server.mjs",
       "manifest": "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/browser-assets.json"
     }
-  ]
+  ],
+  "applicationProviders": {
+    "stac": "stellar/scf-starforge-20261009/distribution/runtime-workspace/providers/stac.mjs"
+  }
 }
