@@ -11,14 +11,14 @@ import { REDIS_CERTIFICATE_FILES } from '../connection-profile.mjs';
 
 const hash=value=>createHash('sha256').update(value).digest('hex');
 const json=value=>JSON.stringify(value,null,2)+'\n';
-export async function runRedisSetupJourney({sourceFile,planFile,root,runtime}={}) {
+export async function runRedisSetupJourney({sourceFile,planFile,root,runtime,applicationsConfiguration}={}) {
   await mkdir(root,{mode:0o700});
   const source=JSON.parse(await readFile(sourceFile,'utf8')),plan=JSON.parse(await readFile(planFile,'utf8'));
   const initial={label:'Redis setup receiving',source,plan,certificates:{}},environment={...process.env};
   for(const item of REDIS_CERTIFICATE_FILES)if(source.connection[item.profile])
     initial.certificates[item.profile]=await readFile(resolve(dirname(sourceFile),source.connection[item.profile]),'utf8');
   const stages=[],downloads=[],browserErrors=[];
-  let server,browser,workspace,reopenedServer,page;
+  let server,browser,workspace,reopenedServer,page,managedSetup;
   try{
     // All deployment forms use the original source and merchant compilers. Only the
     // selected fixture is read; other profiles exercise offline creation and CA custody.
@@ -44,7 +44,12 @@ export async function runRedisSetupJourney({sourceFile,planFile,root,runtime}={}
         stages.push({kind:'offline-create',deployment:connection.transport??connection.topology,workspaceId:created.workspaceId,environment:checked.environment});
       }finally{await setup.close();}
     }
-    server=await startRedisConnectionSetupServer({directory:join(root,'workspace'),initial,environment,port:0,operationId:'original-native-setup'});
+    if(applicationsConfiguration) managedSetup=await (await import('./managed-journey.mjs')).startRedisManagedSetupJourney({
+      configurationFile:applicationsConfiguration,redisDirectory:join(root,'workspace'),initial});
+    const setupOperationId=managedSetup?.operationId??'original-native-setup';
+    const setupInputSha256=managedSetup?.inputSha256;
+    server=managedSetup??await startRedisConnectionSetupServer({
+      directory:join(root,'workspace'),initial,environment,port:0,operationId:setupOperationId});
     const playwright=await import(process.env.SF30_PLAYWRIGHT_MODULE??'playwright');
     const chromium=playwright.chromium??playwright.default?.chromium;
     assert.equal(typeof chromium?.launch,'function');
@@ -104,35 +109,54 @@ export async function runRedisSetupJourney({sourceFile,planFile,root,runtime}={}
     await page.locator('#create').click();
     await page.waitForURL(url=>url.origin!==server.url);
     await page.locator('#status').filter({hasText:'Workspace ready.'}).waitFor();
-    const created=server.setup.created,originalId=created.workspaceId;
+    const created=(await call('state')).value.created,originalId=created.workspaceId;
     assert.ok(originalId);assert.equal(created.digest,reviewed.review.digest);
-    assert.equal(server.workspaceServer.workspace.metadata().id,originalId);
+    const authoringUrl=new URL(page.url());
+    const authoringRequest=async(path,input)=>{
+      const response=await fetch(new URL('/api/'+path,authoringUrl),{
+        method:input===undefined?'GET':'POST',
+        headers:{'x-workspace-token':authoringUrl.hash.slice(1),
+          ...(input===undefined?{}:{origin:authoringUrl.origin,'content-type':'application/json'})},
+        ...(input===undefined?{}:{body:JSON.stringify(input)})});
+      const value=await response.json();assert.equal(response.status,200,JSON.stringify(value));return value;
+    };
+    assert.equal((await authoringRequest('state')).workspace.id,originalId);
     // Continue as an operator in the original saved product editor.
     await page.locator('#query-list button').filter({hasText:'leaderboard'}).click();
     await page.locator('#query-rows').fill('1');await page.locator('#query-form button[type=submit]').click();
     await page.locator('#revision-note').fill('Connected source, one ranking row per request');
     await page.locator('#save').click();await page.locator('#status').filter({hasText:'Revision saved.'}).waitFor();
-    workspace=server.setup.workspace;
-    const changed=workspace.metadata().head;
-    const prepared=await workspace.prepare({requestId:'setup-customer-package',revisionId:changed});
+    const changed=(await authoringRequest('state')).workspace.head;
+    const prepared=await authoringRequest('prepare',{requestId:'setup-customer-package',revisionId:changed});
     assert.equal(prepared.status,'COMPLETED');
     const publicFiles=Object.keys(prepared.result.files).filter(name=>name==='openapi.json'||name.startsWith('client/'));
     for(const name of publicFiles){
-      const file=await workspace.file(prepared.id,name);assert.equal(hash(file.bytes),prepared.result.files[name].sha256);
+      const response=await fetch(new URL('/api/customer-file?package='+encodeURIComponent(prepared.id)+
+        '&name='+encodeURIComponent(name),authoringUrl),{headers:{'x-workspace-token':authoringUrl.hash.slice(1)}});
+      assert.equal(response.status,200);const bytes=Buffer.from(await response.arrayBuffer());
+      assert.equal(hash(bytes),prepared.result.files[name].sha256);
     }
-    const staged=await workspace.stage({requestId:'setup-retained-release',packageId:prepared.id,releaseId:'setup-v1',runtime:runtime??{port:0}});
+    const staged=await authoringRequest('stage',{requestId:'setup-retained-release',packageId:prepared.id,releaseId:'setup-v1',runtime:runtime??{port:0}});
     assert.equal(staged.status,'COMPLETED');
     stages.push({kind:'browser-create-edit-prepare-stage',workspaceId:originalId,revision:changed,publicFiles:publicFiles.length,
       livePreviewRows:catalog.data.rowCount,screenshot,releaseId:staged.result.releaseId});
+    if(managedSetup){
+      const retained=await managedSetup.reattach();
+      assert.equal(retained.created.workspaceId,originalId);
+      assert.equal(retained.created.setupOrigin.operationId,setupOperationId);
+      stages.push({kind:'applications-setup-reattach',applicationId:managedSetup.summary().applicationId,
+        operationId:setupOperationId,workspaceId:originalId});
+    }
     await browser.close();browser=null;await server.close();server=null;workspace=null;
-    const continued=await createRedisConnectionSetup({directory:join(root,'workspace'),initial,environment,operationId:'original-native-setup'});
+    const continued=await createRedisConnectionSetup({directory:join(root,'workspace'),initial,environment,
+      operationId:setupOperationId,inputSha256:setupInputSha256});
     try{
       assert.equal(continued.created.workspaceId,originalId);assert.equal(continued.created.recovered,true);
       assert.equal(continued.id,created.setupOrigin.setupId);
       assert.equal(continued.workspace.metadata().head,changed);
-      stages.push({kind:'managed-setup-continuation',operationId:continued.operationId,workspaceId:originalId,head:changed});
+      stages.push({kind:'original-setup-cold-continuation',operationId:continued.operationId,workspaceId:originalId,head:changed});
     }finally{await continued.close();}
-    await assert.rejects(createRedisConnectionSetup({directory:join(root,'workspace'),initial,environment,operationId:'another-setup'}),
+    await assert.rejects(createRedisConnectionSetup({directory:join(root,'workspace'),initial,environment,operationId:'another-setup',inputSha256:setupInputSha256}),
       error=>error.code==='REDIS_SETUP_ORIGIN_CHANGED');
     workspace=await openRedisAuthoringWorkspace(join(root,'workspace'),{environment,
       expectedWorkspaceId:created.workspaceId,expectedProfileSha256:created.profileSha256});
@@ -153,7 +177,8 @@ export async function runRedisSetupJourney({sourceFile,planFile,root,runtime}={}
     assert.equal(await page.locator('#workspace-title').innerText(),'Merchant connected through setup');
     assert.deepEqual(browserErrors,[]);
     stages.push({kind:'cold-reopen',workspaceId:originalId,profileSha256:created.profileSha256,query:'catalog',rows:preview.result.data.rowCount});
-    return {result:'PASS',workspaceId:originalId,profileSha256:created.profileSha256,stages,downloads};
+    return {result:'PASS',workspaceId:originalId,profileSha256:created.profileSha256,stages,downloads,
+      ...(managedSetup?{managedSetup:managedSetup.summary()}:{})};
   }catch(error){
     const diagnostic={error:error.message,browserErrors,stages};
     if(page&&!page.isClosed())diagnostic.status=await page.locator('#status').innerText().catch(()=>null);

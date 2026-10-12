@@ -5,6 +5,8 @@
 // Add SF30_REDIS_JOURNEY_TLS=1 to the Sentinel mode for independent data/monitor CAs.
 // SF30_REDIS_JOURNEY_COLLECTIONS=1 joins complete List/Set native and customer pages.
 // SF30_REDIS_JOURNEY_SETUP=1 joins the original browser connection setup before CA removal.
+// SF30_REDIS_JOURNEY_APPLICATIONS_CONFIG selects an existing READY runtime/home for
+// managed receiving of that same six-product workspace; its native work is retained.
 // Both modes use the existing local x402 facilitator fixture.
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
@@ -68,6 +70,10 @@ async function createRestSeed() {
 
 const work = await mkdtemp(join(tmpdir(), 'sf30-redis-journey-'));
 const output = process.env.SF30_REDIS_JOURNEY_OUTPUT;
+const applicationsConfiguration = process.env.SF30_REDIS_JOURNEY_APPLICATIONS_CONFIG;
+if (applicationsConfiguration && (process.env.SF30_REDIS_JOURNEY_SETUP !== '1' ||
+    process.env.SF30_REDIS_JOURNEY_COLLECTIONS !== '1'))
+  throw new Error('REDIS_APPLICATIONS_JOURNEY_REQUIRES_SETUP_AND_COLLECTIONS');
 const write = (path, value) => writeFile(path, JSON.stringify(value, null, 2) + '\n', { mode: 0o600 });
 const listen = server => new Promise(done => server.listen(0, '127.0.0.1', done));
 const shutdown = async server => { server.closeAllConnections?.(); await new Promise(done => server.close(done)); };
@@ -182,7 +188,13 @@ try {
   const runtime = { port: 0, allowLocalFacilitator: true, facilitator: 'http://127.0.0.1:' + facilitator.address().port };
   const setupJourney = process.env.SF30_REDIS_JOURNEY_SETUP === '1'
     ? await (await import('./workspace/setup-journey.mjs')).runRedisSetupJourney({
-      sourceFile, planFile, root: join(work, 'connection-setup'), runtime,
+      sourceFile, planFile, root: join(work, 'connection-setup'), runtime, applicationsConfiguration,
+    }) : undefined;
+  const applicationsJourney = applicationsConfiguration
+    ? await (await import('./workspace/managed-journey.mjs')).runRedisApplicationsJourney({
+      configurationFile: applicationsConfiguration, redisDirectory: join(work, 'connection-setup', 'workspace'),
+      expectedQueryKinds: Object.values(declaration.queries).map(query => query.kind),
+      customerPackageId: 'setup-customer-package', managedSetup: setupJourney?.managedSetup,
     }) : undefined;
   const workspaceJourney = process.env.SF30_REDIS_JOURNEY_WORKSPACE === '1'
     ? await (await import('./workspace/native-journey.mjs')).runRedisWorkspaceJourney({
@@ -263,6 +275,7 @@ try {
       'original generated client and buyer response files', 'retained source after authoring removal', 'native child upgrade and rollback'],
     deliveries, ...(workspaceJourney ? { workspace: workspaceJourney } : {}),
     ...(setupJourney ? { setup: setupJourney } : {}),
+    ...(applicationsJourney ? { applications: applicationsJourney, retainedWorkDirectory: work } : {}),
     ...(collectionJourney ? { collections: { source: collectionSource, customer: collectionCustomer } } : {}) };
   if (output) await write(output, result); console.log(JSON.stringify(result));
 } finally {
@@ -271,5 +284,5 @@ try {
   if (facilitator.listening) await shutdown(facilitator);
   if (engine?.exitCode === null) { const exited = once(engine, 'exit'); engine.kill('SIGTERM'); await exited; }
   if (priorEnv === undefined) delete process.env[envName]; else process.env[envName] = priorEnv;
-  await rm(work, { recursive: true, force: true });
+  if (!applicationsConfiguration) await rm(work, { recursive: true, force: true });
 }
