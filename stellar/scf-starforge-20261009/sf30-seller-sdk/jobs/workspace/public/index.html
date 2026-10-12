@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Paid jobs · Starforge</title>
+  <link rel="stylesheet" href="/style.css">
+  <script type="module" src="/app.mjs"></script>
+</head>
+<body>
+  <a class="skip" href="#jobs">Skip to jobs</a>
+  <header>
+    <div class="brand">STARFORGE <span>MERCHANT OPERATIONS</span></div>
+    <div class="heading"><div><h1>Paid jobs</h1><p id="service-name">Opening the original merchant workspace…</p></div>
+      <div class="toolbar"><span id="connection" class="status">Connecting</span><button id="refresh" type="button">Refresh</button><button id="export" type="button">Export ledger</button></div>
+    </div>
+  </header>
+  <main>
+    <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
+    <section class="metrics" aria-label="Job totals">
+      <div><span>Awaiting payment</span><strong id="count-payment">—</strong></div>
+      <div><span>Ready to run</span><strong id="count-ready">—</strong></div>
+      <div><span>Running</span><strong id="count-running">—</strong></div>
+      <div><span>Needs attention</span><strong id="count-attention">—</strong></div>
+      <div><span>Completed</span><strong id="count-complete">—</strong></div>
+    </section>
+    <section class="worker strip" aria-labelledby="worker-title">
+      <div><h2 id="worker-title">Execution worker</h2><p id="worker-description">Loading worker state…</p></div>
+      <div class="toolbar"><button id="reconcile" type="button">Read settlements</button><button id="worker-stop" type="button">Drain worker</button><button id="worker-start" class="primary" type="button">Start worker</button></div>
+    </section>
+    <div class="layout">
+      <section id="jobs" class="panel job-panel" aria-labelledby="jobs-title">
+        <div class="panel-heading"><h2 id="jobs-title">Job queue</h2><span id="queue-count" class="muted"></span></div>
+        <div class="filters"><label>Find a job<input id="search" type="search" placeholder="Job ID, label, reference or function" autocomplete="off"></label>
+          <label>Status<select id="status-filter"><option value="">All states</option></select></label></div>
+        <div class="table-scroll"><table><thead><tr><th scope="col">Job</th><th scope="col">Function</th><th scope="col">State</th><th scope="col">Updated</th></tr></thead><tbody id="job-rows"></tbody></table></div>
+        <div id="empty" class="empty" hidden><h3>No jobs in this view</h3><p>Prepare a job with the merchant’s configured function and input.</p></div>
+        <div class="pager"><button id="previous" type="button">Previous</button><span id="page-label"></span><button id="next" type="button">Next</button></div>
+      </section>
+      <section class="panel" aria-labelledby="prepare-title">
+        <div class="panel-heading"><h2 id="prepare-title">Prepare a purchased job</h2></div>
+        <p class="intro">Choose a function and save its input. The resulting ticket carries the original paid request and access to this job.</p>
+        <form id="create-form">
+          <label>Function<select id="function" required></select></label>
+          <p id="function-description" class="muted"></p>
+          <dl id="function-terms" class="terms"></dl>
+          <div class="two"><label>Label<input id="label" maxlength="160" placeholder="Monthly usage report"></label><label>Reference<input id="reference" maxlength="80" placeholder="Your order reference"></label></div>
+          <div class="label-row"><label for="input">Input JSON</label><button id="example" class="text-button" type="button">Use example</button></div>
+          <textarea id="input" rows="9" spellcheck="false" required>{}</textarea>
+          <details><summary>Function input contract</summary><pre id="input-schema"></pre></details>
+          <button class="primary wide" type="submit">Prepare job and purchase ticket</button>
+        </form>
+      </section>
+    </div>
+    <section id="ticket-panel" class="panel" aria-labelledby="ticket-title" hidden>
+      <div class="panel-heading"><div><h2 id="ticket-title">Prepared purchase ticket</h2><p class="muted">Save this ticket for the buyer. It contains the job’s private retrieval capability.</p></div><div class="toolbar"><button id="ticket-copy" type="button">Copy ticket</button><button id="ticket-download" type="button">Download ticket</button><button id="ticket-hide" type="button">Hide</button></div></div>
+      <pre id="ticket-json" class="ticket"></pre>
+    </section>
+    <section id="detail-panel" class="panel" aria-labelledby="detail-title" hidden>
+      <div class="panel-heading"><div><h2 id="detail-title">Job</h2><p id="detail-subtitle" class="muted mono"></p></div><span id="detail-state" class="status"></span></div>
+      <dl id="detail-facts" class="facts"></dl>
+      <div class="detail-grid"><div><h3>Execution history</h3><ol id="history" class="history"></ol></div><div><h3>Saved input</h3><pre id="detail-input"></pre><details><summary>Complete original job</summary><pre id="detail-json"></pre></details></div></div>
+      <div id="result-panel" class="result-panel" hidden><div class="panel-heading"><div><h3>Completed result</h3><p id="result-summary" class="muted"></p></div><div class="toolbar"><button id="result-preview" type="button">Preview</button><button id="result-download" type="button">Download result</button></div></div><pre id="result-content" hidden></pre></div>
+      <form id="action-form" class="recovery"><div><h3>Job recovery</h3><p class="muted">Changes use this job’s current revision. Renew a lost ticket while the job is prepared to keep its saved input and reference; the previous ticket stops working. Retry execution to reuse a retained paid job.</p></div><label>Reason<input id="reason" maxlength="500" required placeholder="What changed or why should this job stop?"></label><div class="toolbar"><button id="renew-claim-job" type="button">Renew purchase ticket</button><button id="cancel-job" type="button">Cancel job</button><button id="retry-job" type="button">Retry execution</button></div></form>
+    </section>
+  </main>
+  <footer><span>Private merchant workspace</span><span id="last-updated"></span></footer>
+</body>
+</html>

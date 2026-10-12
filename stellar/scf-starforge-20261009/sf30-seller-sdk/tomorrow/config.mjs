@@ -116,19 +116,28 @@ export function normalizeWork(input, plan, instant = Date.now()) {
     window: { startTime, endTime, timezone, dailyStartHour: integer(input.window.dailyStartHour ?? 6, 0, 23, 'WEATHER_DAILY_START_INVALID') },
     units, fields: [...fields], timesteps: [...timesteps], thresholds: rules, tile };
 }
-export function requestsFor(work, { tileTimeFormat = 'original' } = {}) {
-  need(['original', 'whole-seconds'].includes(tileTimeFormat), 'WEATHER_TILE_TIME_FORMAT_INVALID');
+export function requestsFor(work, { tileTimeFormat = 'iso-path' } = {}) {
+  need(['iso-path', 'original', 'whole-seconds'].includes(tileTimeFormat), 'WEATHER_TILE_TIME_FORMAT_INVALID');
   const body = { location: [work.location.latitude, work.location.longitude], fields: [...work.fields], units: work.units,
     timesteps: [...work.timesteps], ...work.window };
   const requests = [{ kind: 'timeline', method: 'POST', url: API_ORIGIN + '/v4/timelines', body }];
   if (work.tile) {
-    const t = { ...work.tile };
-    if (tileTimeFormat === 'whole-seconds') {
+    const t = { ...work.tile }; fixedTime(t.time);
+    if (tileTimeFormat === 'whole-seconds' || tileTimeFormat === 'iso-path') {
       const formatted = t.time.replace(/\.0{1,3}(?=Z$|[+-]\d{2}:\d{2}$)/, '');
       need(Date.parse(formatted) === Date.parse(t.time), 'WEATHER_TILE_TIME_CHANGED'); t.time = formatted;
     }
     requests.push({ kind: 'tile', method: 'GET', url: API_ORIGIN + '/v4/map/tile/' + t.zoom + '/' + t.x + '/' + t.y + '/' +
-      encodeURIComponent(t.field) + '/' + encodeURIComponent(t.time + '.png'), tile: { ...t } });
+      encodeURIComponent(t.field) + '/' + (tileTimeFormat === 'iso-path' ? t.time + '.png' : encodeURIComponent(t.time + '.png')), tile: { ...t } });
   }
   return requests;
+}
+
+/** Old reviewed requests remain valid after the provider's literal ISO path correction. */
+export function weatherRequestVariants(work) {
+  return ['iso-path', 'original', 'whole-seconds'].map(tileTimeFormat => requestsFor(work, { tileTimeFormat }));
+}
+export function matchesWeatherRequests(work, requests) {
+  const actual = JSON.stringify(requests);
+  return weatherRequestVariants(work).some(expected => JSON.stringify(expected) === actual);
 }

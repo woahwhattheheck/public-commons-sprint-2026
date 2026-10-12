@@ -25,7 +25,7 @@
   </aside>
   <main id="qbo-main" tabindex="-1">
     <div class="heading">
-      <div><div class="eyebrow">Accountant handoff · QuickBooks Online</div><h1>QuickBooks journal handoff</h1><p>Review a journal from a retained settlement handoff, then bring the saved QuickBooks result back to its original accounting records.</p></div>
+      <div><div class="eyebrow">Accountant handoff · QuickBooks Online</div><h1>QuickBooks journal handoff</h1><p>Review a retained settlement journal, post it to the connected QuickBooks company, and keep the received result with its original accounting records.</p></div>
       <span class="badge">Retained merchant workspace</span>
     </div>
     <div id="qbo-message" class="message" role="status" aria-live="polite" aria-atomic="true" hidden></div>
@@ -33,11 +33,19 @@
       <div><strong>The submitted operation needs a response</strong><p id="qbo-retry-message"></p></div>
       <div class="actions"><button id="qbo-retry" class="primary" type="button">Read or retry the same operation</button><button id="qbo-dismiss-retry" type="button">Keep form; dismiss retry</button></div>
     </section>
+    <section id="qbo-connection-panel" class="panel qbo-connection-panel" aria-labelledby="qbo-connection-title">
+      <div class="panel-heading"><div><h2 id="qbo-connection-title">Connected QuickBooks company</h2><p id="qbo-connection-description">Reading the accounting server connection…</p></div><span id="qbo-connection-status" class="badge">Loading</span></div>
+      <div class="padded"><dl id="qbo-connection-details" class="record-values qbo-connection-details"></dl>
+        <div class="actions"><button id="qbo-connection-refresh" type="button">Refresh connection</button><button id="qbo-company-fetch" type="button">Load company and accounts</button></div>
+        <p class="hint qbo-spaced">Loading the company fills its identity, home currency and account choices in the journal draft. Review every entered amount and mapping with that company selected.</p>
+        <details class="qbo-spaced"><summary>Connection configuration</summary><p id="qbo-connection-config" class="hint qbo-spaced"></p></details>
+      </div>
+    </section>
     <details id="qbo-prepare-panel" class="panel qbo-prepare-panel" open>
       <summary><span>Prepare a journal plan</span><span class="hint">Choose the source and company, then map the accounts.</span></summary>
       <details class="padded qbo-divider qbo-company-loader">
         <summary>Load company setup from saved QuickBooks exports</summary>
-        <p class="hint qbo-spaced">Use the CompanyInfo, Preferences and Account JSON exports from the same QuickBooks company. The setup provides its home currency and available account IDs. Each file can be up to 8 MiB.</p>
+        <p class="hint qbo-spaced">Use the CompanyInfo, Preferences and Account JSON exports from the same QuickBooks company. The setup provides its home currency and available account IDs. The combined company sources can be up to 8 MiB.</p>
         <form id="qbo-company-form" class="qbo-form-grid qbo-spaced">
           <div><label for="qbo-company-realm">Company / realm ID for these exports</label><input id="qbo-company-realm" required inputmode="numeric" autocomplete="off" placeholder="QuickBooks company ID"></div>
           <div><label for="qbo-company-info-file">CompanyInfo JSON</label><input id="qbo-company-info-file" type="file" accept=".json,application/json" required></div>
@@ -45,9 +53,9 @@
           <div><label for="qbo-company-accounts-file">Account JSON</label><input id="qbo-company-accounts-file" type="file" accept=".json,application/json" required></div>
           <div class="qbo-wide actions"><button id="qbo-company-load" type="submit">Load company setup</button><button id="qbo-company-manual" type="button">Use manual company fields</button></div>
         </form>
-        <div id="qbo-company-source-status" class="hint qbo-spaced" aria-live="polite">Company and account fields are entered manually.</div>
-        <datalist id="qbo-account-options"></datalist>
       </details>
+      <div id="qbo-company-source-status" class="padded hint qbo-divider" aria-live="polite">Company and account fields are entered manually.</div>
+      <datalist id="qbo-account-options"></datalist>
       <form id="qbo-create-form">
         <div class="padded qbo-form-grid">
           <div><label for="qbo-handoff">Original accountant handoff</label><select id="qbo-handoff" required></select></div>
@@ -106,13 +114,40 @@
             </div>
             <section id="qbo-line-detail" class="record-detail" tabindex="-1" aria-label="Journal line and original source"><p class="hint">Select a line to inspect its exact source, account and valuation.</p></section>
           </div>
-          <div class="padded qbo-divider"><h3>Approve and export the reviewed request</h3><p id="qbo-review-status" class="hint qbo-spaced"></p><form id="qbo-review-form" class="qbo-review-form"><label for="qbo-review-note">Review note</label><textarea id="qbo-review-note" rows="2" maxlength="2000" required placeholder="Accounts, source events and home-currency amounts reviewed"></textarea><div class="actions qbo-spaced"><button id="qbo-review" class="primary" type="submit">Approve retained journal</button></div></form><p class="hint">Use the retained request with the existing QuickBooks integration for this company. The saved QuickBooks response can be imported in the next step.</p><div id="qbo-request-downloads" class="actions qbo-spaced"></div></div>
+          <div class="padded qbo-divider"><h3>Approve the reviewed journal</h3><p id="qbo-review-status" class="hint qbo-spaced"></p><form id="qbo-review-form" class="qbo-review-form"><label for="qbo-review-note">Review note</label><textarea id="qbo-review-note" rows="2" maxlength="2000" required placeholder="Accounts, source events and home-currency amounts reviewed"></textarea><div class="actions qbo-spaced"><button id="qbo-review" class="primary" type="submit">Approve retained journal</button></div></form><p class="hint">Post the approved journal through the connected company below, or download its exact request for the company’s existing QuickBooks client.</p><div id="qbo-request-downloads" class="actions qbo-spaced"></div></div>
+          <section id="qbo-native-panel" class="qbo-divider" aria-labelledby="qbo-native-title">
+            <div class="padded"><div class="qbo-native-heading"><div><h3 id="qbo-native-title">Post to the connected company</h3><p id="qbo-native-description" class="hint qbo-spaced"></p></div><span id="qbo-native-status" class="badge">Review required</span></div>
+              <div class="actions qbo-spaced"><button id="qbo-native-preview" type="button">Review native posting</button><button id="qbo-native-refresh" type="button">Refresh posting state</button></div>
+              <section id="qbo-native-preview-panel" class="qbo-native-card qbo-spaced" aria-labelledby="qbo-native-preview-title" hidden>
+                <h3 id="qbo-native-preview-title">Review this company and exact journal</h3><p id="qbo-native-preview-description" class="hint qbo-spaced"></p>
+                <div id="qbo-native-preview-metrics" class="metrics qbo-spaced"></div>
+                <dl id="qbo-native-preview-details" class="record-values"></dl>
+                <p class="hint">The saved journal lines above are the request being posted. The workspace first finds any existing journal for this plan, then continues the same request identity through provider receipt and the original accountant return.</p>
+                <label class="qbo-check qbo-spaced" for="qbo-native-confirm"><input id="qbo-native-confirm" type="checkbox"><span id="qbo-native-confirm-label">I reviewed the company, journal date, accounts and amounts for this posting.</span></label>
+                <div class="actions qbo-spaced"><button id="qbo-native-post" class="primary" type="button">Post reviewed journal</button><button id="qbo-native-clear-preview" type="button">Continue reviewing</button></div>
+              </section>
+              <section id="qbo-native-operation" class="qbo-native-card qbo-spaced" aria-labelledby="qbo-native-operation-title" hidden>
+                <h3 id="qbo-native-operation-title">Retained posting operation</h3>
+                <p id="qbo-native-operation-description" class="hint qbo-spaced" aria-live="polite"></p>
+                <dl id="qbo-native-operation-details" class="record-values"></dl>
+                <div id="qbo-native-error" class="qbo-native-error" hidden></div>
+                <p id="qbo-native-retry-status" class="hint qbo-spaced" hidden></p>
+                <div class="actions qbo-spaced"><button id="qbo-native-resume" class="primary" type="button">Resume original posting</button><button id="qbo-native-open-response" type="button" hidden>Open retained response</button><button id="qbo-native-open-return" type="button" data-qbo-open="return" hidden>Open accountant return</button></div>
+                <div id="qbo-native-downloads" class="qbo-file-list qbo-spaced"></div>
+              </section>
+            </div>
+            <details id="qbo-native-attempts-panel" class="padded qbo-divider" hidden><summary id="qbo-native-attempts-summary">Native request and response history</summary>
+              <p class="hint qbo-spaced">Every retained attempt carries its actual request identity, provider status, response bytes and file digests.</p>
+              <div class="table-wrap qbo-spaced"><table class="qbo-native-attempts"><caption class="sr-only">Native QuickBooks attempts and exact retained files</caption><thead><tr><th scope="col">Operation / received</th><th scope="col">Provider result</th><th scope="col">Request identity</th><th scope="col">Retained files</th></tr></thead><tbody id="qbo-native-attempts"></tbody></table></div>
+              <div class="pagination"><span id="qbo-native-attempt-page"></span><div class="actions"><button id="qbo-native-attempt-previous" type="button">Previous</button><button id="qbo-native-attempt-next" type="button">Next</button></div></div>
+            </details>
+          </section>
           <details id="qbo-cancel-panel" class="padded qbo-divider">
             <summary>Cancel an unused journal plan</summary>
             <p id="qbo-cancel-status" class="hint qbo-spaced">Cancel this retained plan when it will not be used. Its source events become available for a new journal plan.</p>
             <form id="qbo-cancel-form" class="qbo-review-form">
               <label for="qbo-cancel-note">Cancellation note</label><textarea id="qbo-cancel-note" rows="2" maxlength="2000" required placeholder="Why this journal plan is being retired"></textarea>
-              <label class="qbo-check qbo-spaced" for="qbo-cancel-unused"><input id="qbo-cancel-unused" type="checkbox" required><span>I confirm this journal has not been entered or sent to QuickBooks and will not be used.</span></label>
+              <label class="qbo-check qbo-spaced" for="qbo-cancel-unused"><input id="qbo-cancel-unused" type="checkbox" required><span>I confirm this journal has no saved QuickBooks posting and its retained request will not be used.</span></label>
               <button id="qbo-cancel" class="qbo-spaced" type="submit">Cancel this unused plan</button>
             </form>
           </details>
@@ -121,7 +156,7 @@
       </section>
       <section id="qbo-view-response" class="qbo-view" hidden>
         <section class="panel">
-          <div class="panel-heading"><div><h2>Retain the saved QuickBooks response</h2><p>Choose the JSON response from this company's saved JournalEntry. Review its amounts, accounts and source links against the retained request.</p></div></div>
+          <div class="panel-heading"><div><h2>Retain the saved QuickBooks response</h2><p>Native posting retains its response automatically. For a journal posted through the company’s existing client, choose its complete JournalEntry JSON here and compare it with the retained request.</p></div></div>
           <form id="qbo-response-form" class="padded qbo-form-grid">
             <div><label for="qbo-response-file">JournalEntry or Fault response · up to 8 MiB</label><input id="qbo-response-file" type="file" accept=".json,application/json" required><p id="qbo-file-status" class="hint">Choose the complete received JSON file.</p></div>
             <div><label for="qbo-response-name">Received response name</label><input id="qbo-response-name" maxlength="160" required placeholder="QuickBooks journal · saved response"></div>

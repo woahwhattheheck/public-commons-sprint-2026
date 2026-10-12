@@ -1,0 +1,326 @@
+[
+  {
+    "id": "10a",
+    "group": "A",
+    "year": 2021,
+    "pages": [
+      31,
+      32
+    ],
+    "jurisdictions": [
+      "Carlsbad",
+      "Chula Vista",
+      "Coronado",
+      "El Cajon",
+      "Escondido",
+      "La Mesa",
+      "National City",
+      "Oceanside",
+      "San Diego",
+      "Sheriff-Total",
+      "Del Mar",
+      "Encinitas",
+      "Imperial Beach"
+    ],
+    "published_rows": 59,
+    "footnote_ids": [
+      "page-32"
+    ]
+  },
+  {
+    "id": "10b",
+    "group": "A",
+    "year": 2021,
+    "pages": [
+      33,
+      34
+    ],
+    "jurisdictions": [
+      "Lemon Grove",
+      "Poway",
+      "San Marcos",
+      "Santee",
+      "Solana Beach",
+      "Vista",
+      "Unincorporated",
+      "Sheriff Other",
+      "Harbor",
+      "UCSD",
+      "CSUSM",
+      "SDSU"
+    ],
+    "published_rows": 59,
+    "footnote_ids": [
+      "page-34"
+    ]
+  },
+  {
+    "id": "11a",
+    "group": "A",
+    "year": 2023,
+    "pages": [
+      35,
+      36
+    ],
+    "jurisdictions": [
+      "Carlsbad",
+      "Chula Vista",
+      "Coronado",
+      "El Cajon",
+      "Escondido",
+      "La Mesa",
+      "National City",
+      "Oceanside",
+      "San Diego",
+      "Sheriff-Total",
+      "Del Mar",
+      "Encinitas",
+      "Imperial Beach"
+    ],
+    "published_rows": 59,
+    "footnote_ids": [
+      "page-36"
+    ]
+  },
+  {
+    "id": "11b",
+    "group": "A",
+    "year": 2023,
+    "pages": [
+      37,
+      38
+    ],
+    "jurisdictions": [
+      "Lemon Grove",
+      "Poway",
+      "San Marcos",
+      "Santee",
+      "Solana Beach",
+      "Vista",
+      "Unincorporated",
+      "Sheriff Other",
+      "Harbor",
+      "UCSD",
+      "CSUSM",
+      "SDSU"
+    ],
+    "published_rows": 60,
+    "footnote_ids": [
+      "page-38"
+    ]
+  },
+  {
+    "id": "12a",
+    "group": "A",
+    "year": 2024,
+    "pages": [
+      39,
+      40
+    ],
+    "jurisdictions": [
+      "Carlsbad",
+      "Chula Vista",
+      "Coronado",
+      "El Cajon",
+      "Escondido",
+      "La Mesa",
+      "National City",
+      "Oceanside",
+      "San Diego",
+      "Sheriff-Total",
+      "Del Mar",
+      "Encinitas",
+      "Imperial Beach"
+    ],
+    "published_rows": 59,
+    "footnote_ids": [
+      "page-40"
+    ]
+  },
+  {
+    "id": "12b",
+    "group": "A",
+    "year": 2024,
+    "pages": [
+      41,
+      42
+    ],
+    "jurisdictions": [
+      "Lemon Grove",
+      "Poway",
+      "San Marcos",
+      "Santee",
+      "Solana Beach",
+      "Vista",
+      "Unincorporated",
+      "Sheriff Other",
+      "Harbor",
+      "UCSD",
+      "CSUSM",
+      "SDSU"
+    ],
+    "published_rows": 59,
+    "footnote_ids": [
+      "page-42"
+    ]
+  },
+  {
+    "id": "14a",
+    "group": "B",
+    "year": 2021,
+    "pages": [
+      44
+    ],
+    "jurisdictions": [
+      "Carlsbad",
+      "Chula Vista",
+      "Coronado",
+      "El Cajon",
+      "Escondido",
+      "La Mesa",
+      "National City",
+      "Oceanside",
+      "San Diego",
+      "Sheriff-Total",
+      "Del Mar",
+      "Encinitas",
+      "Imperial Beach"
+    ],
+    "published_rows": 8,
+    "footnote_ids": [
+      "page-44"
+    ]
+  },
+  {
+    "id": "14b",
+    "group": "B",
+    "year": 2021,
+    "pages": [
+      45
+    ],
+    "jurisdictions": [
+      "Lemon Grove",
+      "Poway",
+      "San Marcos",
+      "Santee",
+      "Solana Beach",
+      "Vista",
+      "Unincorporated",
+      "Sheriff Other",
+      "Harbor",
+      "UCSD",
+      "CSUSM",
+      "SDSU"
+    ],
+    "published_rows": 8,
+    "footnote_ids": [
+      "page-45"
+    ]
+  },
+  {
+    "id": "15a",
+    "group": "B",
+    "year": 2023,
+    "pages": [
+      46
+    ],
+    "jurisdictions": [
+      "Carlsbad",
+      "Chula Vista",
+      "Coronado",
+      "El Cajon",
+      "Escondido",
+      "La Mesa",
+      "National City",
+      "Oceanside",
+      "San Diego",
+      "Sheriff-Total",
+      "Del Mar",
+      "Encinitas",
+      "Imperial Beach"
+    ],
+    "published_rows": 8,
+    "footnote_ids": [
+      "page-46"
+    ]
+  },
+  {
+    "id": "15b",
+    "group": "B",
+    "year": 2023,
+    "pages": [
+      47
+    ],
+    "jurisdictions": [
+      "Lemon Grove",
+      "Poway",
+      "San Marcos",
+      "Santee",
+      "Solana Beach",
+      "Vista",
+      "Unincorporated",
+      "Sheriff Other",
+      "Harbor",
+      "UCSD",
+      "CSUSM",
+      "SDSU"
+    ],
+    "published_rows": 8,
+    "footnote_ids": [
+      "page-47"
+    ]
+  },
+  {
+    "id": "16a",
+    "group": "B",
+    "year": 2024,
+    "pages": [
+      48
+    ],
+    "jurisdictions": [
+      "Carlsbad",
+      "Chula Vista",
+      "Coronado",
+      "El Cajon",
+      "Escondido",
+      "La Mesa",
+      "National City",
+      "Oceanside",
+      "San Diego",
+      "Sheriff-Total",
+      "Del Mar",
+      "Encinitas",
+      "Imperial Beach"
+    ],
+    "published_rows": 8,
+    "footnote_ids": [
+      "page-48"
+    ]
+  },
+  {
+    "id": "16b",
+    "group": "B",
+    "year": 2024,
+    "pages": [
+      49
+    ],
+    "jurisdictions": [
+      "Lemon Grove",
+      "Poway",
+      "San Marcos",
+      "Santee",
+      "Solana Beach",
+      "Vista",
+      "Unincorporated",
+      "Sheriff Other",
+      "Harbor",
+      "UCSD",
+      "CSUSM",
+      "SDSU"
+    ],
+    "published_rows": 8,
+    "footnote_ids": [
+      "page-49"
+    ]
+  }
+]

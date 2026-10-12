@@ -11,6 +11,8 @@ import { compileUpstreamIdempotency, configuredUpstreamIdempotency } from './ups
 import { supportsSellerMethod } from './http-methods.mjs';
 import { createUpstreamOperationControl } from './upstream-operation-control.mjs';
 import { compileOAuthClientCredentials, createOAuthClientCredentials } from './oauth-client-credentials.mjs';
+import { compileOAuthConnection } from './oauth-connections/profile.mjs';
+import { createOAuthConnectionProvider } from './oauth-connections/provider.mjs';
 import { compileUpstreamCache, createConfiguredCachedUpstream } from './response-cache/config.mjs';
 import { compileUpstreamStreamPolicy } from './upstream-stream.mjs';
 import { compileSupplierAccounts } from './supplier-quota/config.mjs';
@@ -22,8 +24,8 @@ const OWN = (value,key) => Object.prototype.hasOwnProperty.call(value,key);
 const plain = value => value !== null && typeof value === 'object' && !Array.isArray(value) &&
   [Object.prototype,null].includes(Object.getPrototypeOf(value));
 const reserved = /^(?:host|connection|keep-alive|content-length|transfer-encoding|te|trailer|upgrade|expect|proxy-.*|cookie|set-cookie|accept-encoding|content-encoding|content-type|origin|referer|forwarded|x-forwarded-.*|sec-.*|payment-.*|x-payment.*|extension-responses|settlement-overrides|x402-.*|www-authenticate)$/i;
-const responseAllowed = new Set(['content-type','content-language','etag','last-modified','content-disposition']);
-const bindingKeys = new Set(['origin','path','method','query','requestHeaders','headerEnv','responseHeaders','responseMode','timeoutMs','maxResponseBytes','maxRequestBytes','bodyType','maxInFlight','availability','responseContract','idempotency','cache','oauth2','stream','supplierAccount','transport']);
+const responseAllowed = new Set(['content-type','content-language','etag','last-modified','content-disposition','x-credits-remaining','x-ratelimit-limit','x-ratelimit-remaining','x-ratelimit-reset']);
+const bindingKeys = new Set(['origin','path','method','query','requestHeaders','headerEnv','responseHeaders','responseMode','timeoutMs','maxResponseBytes','maxRequestBytes','bodyType','maxInFlight','availability','responseContract','idempotency','cache','oauth2','oauthConnection','stream','supplierAccount','transport']);
 const bad = text => { throw new TypeError(text); };
 const handlerRuntimes = new WeakMap();
 const handlerSupplierQuotas = new WeakMap();
@@ -111,6 +113,11 @@ export function upstreamCredentialReferences(config) {
       if (!plain(binding.oauth2)) bad('Invalid OAuth declaration');
       add(binding.oauth2.clientIdEnv); add(binding.oauth2.clientSecretEnv);
     }
+    if (binding.oauthConnection !== undefined) {
+      if (!plain(binding.oauthConnection)) bad('Invalid OAuth connection declaration');
+      add(binding.oauthConnection.directoryEnv);
+      if (binding.oauthConnection.clientSecretEnv !== undefined) add(binding.oauthConnection.clientSecretEnv);
+    }
     if (binding.idempotency !== undefined) {
       if (!plain(binding.idempotency)) bad('Invalid idempotency declaration');
       add(binding.idempotency.keyEnv);
@@ -146,7 +153,9 @@ export function compileUpstreamBindings(config,{allowLoopback=false,env=process.
       credentials[key] = value;
     }
     const oauth2 = raw.oauth2 === undefined ? undefined : compileOAuthClientCredentials(raw.oauth2,{allowLoopback,env});
-    if (oauth2 && OWN(credentials,'authorization')) bad('OAuth cannot be combined with an authorization headerEnv');
+    const oauthConnection = raw.oauthConnection === undefined ? undefined : compileOAuthConnection(raw.oauthConnection,{resourceOrigin:url.origin,allowLoopback});
+    if (oauth2 && oauthConnection) bad('Select one OAuth grant flow for an upstream binding');
+    if ((oauth2 || oauthConnection) && OWN(credentials,'authorization')) bad('OAuth cannot be combined with an authorization headerEnv');
     const transport = raw.transport === undefined ? undefined : transports[raw.transport];
     if (transport?.mode === 'environment-proxy' && (url.protocol !== 'https:' ||
         oauth2 && new URL(oauth2.tokenEndpoint).protocol !== 'https:'))
@@ -178,6 +187,7 @@ export function compileUpstreamBindings(config,{allowLoopback=false,env=process.
       ...(transport ? {transport} : {}),
       ...(stream ? {stream} : {}),
       ...(oauth2 ? {oauth2} : {}),
+      ...(oauthConnection ? {oauthConnection} : {}),
       ...(responseContract === undefined ? {} : {responseContract}),
       timeoutMs:integer(raw.timeoutMs,10000,120000,'timeoutMs'),
       maxResponseBytes,
@@ -246,8 +256,12 @@ export function createUpstreamHandlers(config,{allowLoopback=false,env=process.e
   supplierQuotas = createSupplierQuotaRegistry(config);
   for (const [name,binding] of Object.entries(compiled)) {
     const agent = transports.agentFor(binding.transport?.profile);
-    const key = binding.oauth2 ? JSON.stringify({oauth2:binding.oauth2,transport:binding.transport ?? null}) : null;
-    if (key && !providers.has(key)) providers.set(key,createOAuthClientCredentials(binding.oauth2,{allowLoopback,env,lookup,...(agent ? {agent} : {})}));
+    const key = binding.oauthConnection ? JSON.stringify(['authorizationCode',binding.origin,binding.oauthConnection,binding.transport ?? null]) :
+      binding.oauth2 ? JSON.stringify({oauth2:binding.oauth2,transport:binding.transport ?? null}) : null;
+    const runtime = {allowLoopback,env,lookup,...(agent ? {agent} : {})};
+    if (key && !providers.has(key)) providers.set(key,binding.oauthConnection ?
+      createOAuthConnectionProvider(binding.oauthConnection,{resourceOrigin:binding.origin,...runtime}) :
+      createOAuthClientCredentials(binding.oauth2,runtime));
     const provider = key ? providers.get(key) : undefined;
     const supplierQuota = binding.supplierAccount ? supplierQuotas.controller(binding.supplierAccount) : undefined;
     const options = {...(supplierQuota ? {supplierQuota} : {}),...(provider ? {credentialProvider:provider} : {}),baseUrl:binding.origin,path:binding.path,method:binding.method,
@@ -265,6 +279,13 @@ export function createUpstreamHandlers(config,{allowLoopback=false,env=process.e
       handlers[name] = binding.availability ? protectUpstream(handler,binding.availability,
         {maxInFlight:binding.maxInFlight}) : handler;
     }
+    if (binding.oauthConnection) {
+      const originalSnapshot=handlers[name].snapshot;
+      handlers[name].snapshot=()=>{
+        const {oauth2:legacyLabel,...base}=originalSnapshot();
+        return Object.freeze({...base,oauthConnection:provider.snapshot()});
+      };
+    }
     if (supplierQuota) handlers[name] = attachSupplierQuota(handlers[name], supplierQuota,
       {preflight:!binding.cache && !binding.idempotency});
     handlers[name] = transports.retain(handlers[name],binding.transport);
@@ -272,8 +293,7 @@ export function createUpstreamHandlers(config,{allowLoopback=false,env=process.e
   }
   } catch(error) {
     transports.destroy();
-    for (const provider of providers.values()) provider.close();
-    const cleanup = new Set(Object.values(handlers).flatMap(handler => [handler.cache,handler.idempotency]).filter(Boolean));
+    const cleanup = new Set([...providers.values(),...Object.values(handlers).flatMap(handler => [handler.cache,handler.idempotency])].filter(Boolean));
     for (const control of cleanup) Promise.resolve().then(() => control.close()).catch(() => {});
     Promise.resolve().then(() => supplierQuotas?.close()).catch(() => {});
     throw error;
@@ -281,18 +301,26 @@ export function createUpstreamHandlers(config,{allowLoopback=false,env=process.e
   let closing;
   handlerSupplierQuotas.set(handlers,supplierQuotas);
   handlerRuntimes.set(handlers,options => closing ??= (async () => {
-    // Finish original buffered requests and stream completions before closing
-    // the credentials, supplier ledger or selected transport that they own.
+    // Retain original buffered requests and streams through their completion;
+    // the original OAuth provider then persists any in-flight rotating grant.
     await transports.drain();
+    try {
+    const failures = [];
+    const drain = async operations => {
+      const results = await Promise.allSettled(operations.map(operation => Promise.resolve().then(operation)));
+      for (const result of results) if (result.status === 'rejected') failures.push(result.reason);
+      return results.map(result => result.status === 'fulfilled' ? result.value : undefined);
+    };
     const cacheControls = new Set(Object.values(handlers).map(handler => handler.cache).filter(Boolean));
-    try { return await Promise.all([...cacheControls].map(control => control.close(options))); }
-    finally {
-      try {
-        for (const provider of providers.values()) provider.close();
-        await Promise.all([...new Set(Object.values(handlers).map(handler => handler.idempotency).filter(Boolean))]
-          .map(control => control.close()));
-      } finally { try { await supplierQuotas.close(); } finally { transports.destroy(); } }
-    }
+    const cacheResults = await drain([...cacheControls].map(control => () => control.close(options)));
+    await drain([...providers.values()].map(provider => () => provider.close()));
+    const idempotencyControls = new Set(Object.values(handlers).map(handler => handler.idempotency).filter(Boolean));
+    await drain([...idempotencyControls].map(control => () => control.close()));
+    await drain([() => supplierQuotas.close()]);
+    if (failures.length === 1) throw failures[0];
+    if (failures.length > 1) throw new AggregateError(failures, 'Original upstream resources did not all close');
+    return cacheResults;
+    } finally { transports.destroy(); }
   })());
   return Object.freeze(handlers);
 }

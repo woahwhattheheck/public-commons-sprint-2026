@@ -1,0 +1,88 @@
+{
+  "schema": "commons.research-workshare.v1",
+  "date": "2026-10-11",
+  "company": "Cottage Labs",
+  "recipient": "us@cottagelabs.com",
+  "title": "Open research data implementation workshare",
+  "currency": "USD",
+  "fee": 6400,
+  "businessDays": 10,
+  "milestones": [
+    {
+      "label": "Kickoff and agreed implementation inputs",
+      "amount": 3200
+    },
+    {
+      "label": "Accepted workflow and operator handover",
+      "amount": 3200
+    }
+  ],
+  "cohort": {
+    "queries": 2,
+    "maxRecordsPerQuery": 2500,
+    "capturesPerQuery": 2,
+    "environments": 1,
+    "serviceRoutes": 1,
+    "reviewCycles": 2
+  },
+  "scope": [
+    "Configure two approved OpenAlex works queries for a named research or library use case; agree fields, filters, source period, account budget and publication permissions.",
+    "Install the retained researcher workspace in one customer-controlled environment, with original query revisions, complete cursor/page records and source coverage.",
+    "Set up useful record review, notes and selections; author/institution/topic/funder summaries; supplied-field and duplicate reporting; and a later-capture comparison.",
+    "Integrate one reviewed metadata-service route or agreed CSV/JSON research output interface using the existing maintained operator/client workflow.",
+    "Deliver the exact source pages, complete selected research editions, original review history and reports, bibliography/CSV/JSON outputs, the working receiver and a newly reopened private workspace.",
+    "Complete two consolidated review/correction cycles, one 90-minute engineer/operator handover and a written operating and recovery guide."
+  ],
+  "inputs": [
+    "A named project owner and researcher/reviewer, the two research questions and what useful output will be accepted.",
+    "Approved OpenAlex query or institutional identifiers, selected fields/date range and an agreed record envelope; the customer's provider account if authenticated acquisition is selected.",
+    "One Linux/Node deployment environment with appropriate private storage and the customer-controlled service or output destination.",
+    "The selected access and delivery model; any native merchant terms and signer/facilitator configuration stay with the authorized customer/operator.",
+    "Consolidated reviewer feedback within one business day during the agreed delivery window."
+  ],
+  "acceptance": [
+    "Each source request and received page can be traced to the selected query revision; coverage, missing fields, duplicates and any interrupted acquisition remain visible.",
+    "Review decisions and useful research outputs survive restart; the later edition comparison retains the original IDs and before/after metadata.",
+    "An engineer receives the complete exported edition into a new private workspace and reopens the original query, page bytes and review decisions.",
+    "The agreed customer-facing service/output works with the designated recipient and the operator can repeat the documented refresh, review, export and recovery procedure."
+  ],
+  "warranty": {
+    "days": 14,
+    "unit": "calendar days after acceptance",
+    "scope": "Correction of defects in the delivered implementation",
+    "response": "Initial response within two business days, followed by diagnosis and an agreed correction date"
+  },
+  "care": {
+    "monthlyFee": 600,
+    "hours": 4,
+    "extraHourly": 150,
+    "scope": "Delivered workflow configuration, source-field changes and monthly retained-edition/recovery review"
+  },
+  "boundaries": "Cottage Labs retains the institutional relationship, research interpretation and customer infrastructure. Provider charges, hosting and third-party subscriptions stay in the customer-approved account. Additional repositories, custom repository write-back, full-text acquisition/remediation, bibliometric research conclusions and extra cohorts receive a separate agreed scope.",
+  "sources": [
+    {
+      "url": "https://cottagelabs.com/projects/nglp/",
+      "use": "First-party DSpace/OJS normalization, usage/workflow analytics and open-source handover"
+    },
+    {
+      "url": "https://cottagelabs.com/data-repositories/",
+      "use": "Current research repositories, custom metadata and workflow integration"
+    },
+    {
+      "url": "https://cottagelabs.com/open-access-infrastructure/",
+      "use": "Current OA infrastructure and continuing support practice"
+    },
+    {
+      "url": "https://cottagelabs.com/contact/",
+      "use": "Published inquiry route; exact HTML protected link resolves to us@cottagelabs.com"
+    },
+    {
+      "url": "https://help.openalex.org/api/",
+      "use": "Current provider and entity/query contract"
+    },
+    {
+      "url": "https://help.openalex.org/access/pricing/",
+      "use": "Metadata access and provider account costs"
+    }
+  ]
+}
