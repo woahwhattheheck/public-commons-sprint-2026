@@ -1,14 +1,16 @@
 {
   "schema": "stellar-forge.merchant-distribution-contribution.v1",
   "id": "lab-edd",
-  "description": "Complete source-bound laboratory EDD review, native receiving files and sealed-file jobs",
+  "description": "Complete laboratory review, cross-profile reconciliation, native files, managed jobs and 42-operation merchant MCP workflow",
   "commands": {
     "lab-edd": "stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/cli.mjs",
-    "lab-edd-receive": "stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/receiving.mjs"
+    "lab-edd-receive": "stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/receiving.mjs",
+    "lab-edd-agent": "stellar-forge/mcp-merchant-operator/lab-edd-cli.mjs"
   },
   "commandDescriptions": {
     "lab-edd": "Review complete laboratory EDD source, record field decisions and receive native delivery files",
-    "lab-edd-receive": "Receive the complete original laboratory file job, native outputs and offline operator workflow"
+    "lab-edd-receive": "Receive the complete original laboratory file job, native outputs and offline operator workflow",
+    "lab-edd-agent": "Operate complete laboratory source, saved decisions, original checkout and native results through merchant MCP"
   },
   "exports": {
     "./seller/lab-edd": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/application.mjs",
@@ -25,7 +27,17 @@
     "./seller/lab-edd/reconciliation/table": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/reconciliation-table.mjs",
     "./seller/lab-edd/reconciliation/report": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/reconciliation-report.mjs",
     "./seller/lab-edd/merchant-configuration": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/merchant-configuration.mjs",
-    "./seller/lab-edd/application-provider": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/application-provider.mjs"
+    "./seller/lab-edd/application-provider": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/application-provider.mjs",
+    "./seller/lab-edd/operator": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/operator.mjs",
+    "./seller/lab-edd/operator/model": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/operator-model.mjs",
+    "./lab-edd/operator": "./source/stellar-forge/mcp-merchant-operator/lab-edd-workspaces.mjs",
+    "./lab-edd/operator/client": {
+      "types": "./source/stellar-forge/mcp-merchant-operator/lab-edd-client.d.mts",
+      "import": "./source/stellar-forge/mcp-merchant-operator/lab-edd-client.mjs"
+    },
+    "./lab-edd/operator/connection": "./source/stellar-forge/mcp-merchant-operator/lab-edd-connection.mjs",
+    "./lab-edd/operator/setup": "./source/stellar-forge/mcp-merchant-operator/lab-edd-setup.mjs",
+    "./lab-edd/operator/receiving": "./source/stellar-forge/mcp-merchant-operator/lab-edd-receiving.mjs"
   },
   "supportFiles": [
     "stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/README.md",
@@ -56,9 +68,19 @@
     "stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/examples/mccampbell/cross-profile-result.json",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/examples/mccampbell/cross-profile-members.json",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/APPLICATIONS.md",
-    "stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/applications.example.json"
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/applications.example.json",
+    "stellar-forge/mcp-merchant-operator/LAB_EDD_WORKSPACE.md",
+    "stellar-forge/mcp-merchant-operator/lab-edd-client.d.mts",
+    "stellar-forge/mcp-merchant-operator/lab-edd-workspaces.example.json",
+    "stellar-forge/mcp-merchant-operator/lab-edd-setup.example.json",
+    "stellar-forge/mcp-merchant-operator/lab-edd-receiving.example.json",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/examples/mccampbell/current-field-decisions.json",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/examples/mccampbell/baseline-field-decisions.json"
   ],
   "applicationProviders": {
     "laboratory-edd": "stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/application-provider.mjs"
+  },
+  "merchantProviders": {
+    "laboratory-workspaces": "stellar-forge/mcp-merchant-operator/providers/laboratory-workspaces.mjs"
   }
 }
