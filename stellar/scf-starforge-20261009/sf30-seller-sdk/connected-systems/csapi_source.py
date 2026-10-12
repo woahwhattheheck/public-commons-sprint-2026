@@ -196,6 +196,19 @@ def collection(document):
     if not isinstance(document.get(key),list):raise InputError("Expected provider items or GeoJSON features")
     return document[key]
 
+def observation_items(document,resource="collection"):
+    """Select original objects without manufacturing a collection representation."""
+    if resource=="single":
+        if not isinstance(document,dict):raise InputError("Expected one original observation object")
+        return [document]
+    if resource!="collection":raise InputError("Unsupported observation resource selection")
+    if not isinstance(document,dict) or not isinstance(document.get("items"),list):
+        raise InputError("Expected an observation items collection")
+    rows=document["items"]
+    if "numberReturned" in document and str(document["numberReturned"])!=str(len(rows)):
+        raise InputError("Provider numberReturned differs from its complete page")
+    return rows
+
 def observation(value,datastream_id):
     if not isinstance(value,dict):raise InputError("An observation must be a JSON object")
     for field in ("id","datastream@id","resultTime"):
@@ -274,13 +287,15 @@ class Capture:
             self.system=json_value(self.read(resources["system"]),True) if "system" in resources else None
             self.conformance=json_value(self.read(resources["conformance"])) if "conformance" in resources else None
             selection=m["selection"]
-            exact(selection,{"datastreamUrl","schemaUrl","observationsUrl","systemUrl","params","obsFormat","limits"},"source selection",
+            exact(selection,{"datastreamUrl","schemaUrl","observationsUrl","systemUrl","params","obsFormat","limits","observationResource"},"source selection",
                 {"datastreamUrl","schemaUrl","observationsUrl","systemUrl","params","obsFormat","limits"})
             for field in ("datastreamUrl","schemaUrl","observationsUrl"):
                 url(selection[field],allowed_origins=self.allowed)
             if selection["systemUrl"]is not None:url(selection["systemUrl"],allowed_origins=self.allowed)
             if selection["obsFormat"]!="application/json":raise InputError("Unsupported selected observation representation")
             parameters(selection["params"])
+            self.observation_resource=selection.get("observationResource","collection")
+            if self.observation_resource not in ("collection","single"):raise InputError("Unsupported observation resource selection")
             limits=selection["limits"];exact(limits,{"maxPages","maxRows","maxBytes"},"acquisition limits",{"maxPages","maxRows","maxBytes"})
             integer(limits["maxPages"],1,MAX_PAGES,"maxPages");integer(limits["maxRows"],1,MAX_ROWS,"maxRows")
             integer(limits["maxBytes"],1024,MAX_SOURCE-2*1024*1024,"maxBytes")
@@ -288,6 +303,8 @@ class Capture:
                 if role in resources and files[resources[role]]["requestUrl"]!=selection[field]:raise InputError("Retained metadata belongs to another selection")
             pages=m["pages"]
             if not isinstance(pages,list) or not pages or len(pages)>limits["maxPages"]:raise InputError("Acquisition must retain at least one complete observation page")
+            if self.observation_resource=="single" and (len(pages)!=1 or limits["maxPages"]!=1):
+                raise InputError("A single observation resource must retain exactly one original response")
             if any(not isinstance(page,str) or page not in files for page in pages) or len(set(pages))!=len(pages):
                 raise InputError("Original observation page list is invalid")
             if set(files)!=set(resources.values())|set(pages):raise InputError("Unaccounted source response")
@@ -317,10 +334,10 @@ class Capture:
             seen_urls.add(request)
             if page_number>1 and request!=next_url:raise InputError("Observation pages do not follow the original next link")
             document=json_value(self.read(name),True)
-            if not isinstance(document,dict) or not isinstance(document.get("items"),list):raise InputError("Expected an observation items collection")
-            rows=document["items"]
-            if "numberReturned" in document and str(document["numberReturned"])!=str(len(rows)):raise InputError("Provider numberReturned differs from its complete page")
+            rows=observation_items(document,self.observation_resource)
             next_url=next_link(document,entry["finalUrl"],self.allowed)
+            if self.observation_resource=="single" and next_url is not None:
+                raise InputError("A single observation resource cannot imply an unreceived next page")
             for index,row in enumerate(rows):
                 count+=1
                 if count>m["selection"]["limits"]["maxRows"]:raise InputError("Complete source exceeds its selected maxRows")
@@ -328,6 +345,7 @@ class Capture:
         covered=m["coverage"]
         expected={"status":"exhausted" if next_url is None else "page-limit","pages":len(m["pages"]),"observations":count,
             "nextUrl":next_url,"consistency":"sequential-pages-not-transactional-snapshot"}
+        if self.observation_resource=="single":expected["scope"]="single-observation-resource"
         if next_url is not None and len(m["pages"])!=m["selection"]["limits"]["maxPages"]:
             raise InputError("A partial source must identify the actual selected page bound")
         if covered!=expected:raise InputError("Coverage differs from the retained response chain")

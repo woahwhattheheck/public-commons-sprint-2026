@@ -119,3 +119,19 @@ error cause or its exact running revision. The source Git tree was
 `6ad75aa7fbfc76517c8a24c21446471845007855`, route blob
 `a1be9b8964c75a31f18012b53f3a00414c6ce10d`, and API blob
 `1f79120772a9c240edb83cceacaed3a6e8da375d`.
+
+## Original committed publisher reference
+
+The product recipe receives unmodified original example files from [opengeospatial/ogcapi-connected-systems at `fb858be23aa03e2b824ec50b5a97ac2c2a1d3fec`](https://github.com/opengeospatial/ogcapi-connected-systems/tree/fb858be23aa03e2b824ec50b5a97ac2c2a1d3fec). These are illustrative publisher examples. They do not replace the retained actual error receipts from the public implementations, and they are not field observations.
+
+| Original resource | Bytes | SHA256 |
+| --- | ---: | --- |
+| [api/part2/openapi/examples/datastreams/datastream-simple.json](https://github.com/opengeospatial/ogcapi-connected-systems/blob/fb858be23aa03e2b824ec50b5a97ac2c2a1d3fec/api/part2/openapi/examples/datastreams/datastream-simple.json) | 1238 | `75e43bcfa85af757f22f5ef3e248e8cdfead1cd44d16ecf896459c4c9b1e2000` |
+| [api/part2/openapi/examples/observations/obs-simple.json](https://github.com/opengeospatial/ogcapi-connected-systems/blob/fb858be23aa03e2b824ec50b5a97ac2c2a1d3fec/api/part2/openapi/examples/observations/obs-simple.json) | 178 | `57aa8e6b29c4a054ec6bcce4dd6f6a0b16d9bb00263b5b04fe91f8dc65f17fba` |
+| [api/part2/openapi/examples/schemas/observationSchema-scalar-json.json](https://github.com/opengeospatial/ogcapi-connected-systems/blob/fb858be23aa03e2b824ec50b5a97ac2c2a1d3fec/api/part2/openapi/examples/schemas/observationSchema-scalar-json.json) | 633 | `918c8541367b4b851768e72989314400a7f492aea3df44b4044d5cbf175476bf` |
+| [api/part1/openapi/examples/systems/thermometer-sensor-sml.json](https://github.com/opengeospatial/ogcapi-connected-systems/blob/fb858be23aa03e2b824ec50b5a97ac2c2a1d3fec/api/part1/openapi/examples/systems/thermometer-sensor-sml.json) | 853 | `f27c4b096ad3de331a09cd2f082200bb03232f9560efa00fa911ef3821bfa54e` |
+| [LICENSE](https://github.com/opengeospatial/ogcapi-connected-systems/blob/fb858be23aa03e2b824ec50b5a97ac2c2a1d3fec/LICENSE) | 4443 | `b3b9a76d230f057844d004c374406453d92f863caecaa42ccd9c7863e143fed1` |
+
+The observation ID is `1h6pmb3ntfmogfppknk9aefpvs`, datastream ID `958tf25kjm2f6`, phenomenon/result time `2021-03-15T04:53:34Z`, and result `23.5`. The declared scalar quantity uses `Cel`. The recipe verifies all original HTTP response bodies against these committed resource identities and preserves the source's original labels, time interval and nil declarations.
+
+The original 4,443-byte license is retained unchanged as `examples/ogc-connected-systems-LICENSE.txt`. Its permission and attribution requirements govern these examples; the authored consumer's MIT notice does not replace the publisher license. No OGC certification or endorsement is claimed. `delivery/publisher-example.py` selects the explicit single-observation mode so the original 178-byte object is never rewritten into a collection response.

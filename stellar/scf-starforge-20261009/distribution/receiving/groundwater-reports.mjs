@@ -14,6 +14,7 @@ import { startRuntimeWorkspace } from '../runtime-workspace/server.mjs';
 import { inspectRuntimeInstall, installRuntime, runtimeCommand } from '../runtime-install.mjs';
 import { exportRuntimeTransfer, inspectRuntimeTransfer, beginRuntimeTransferReceive,
   receiveRuntimeTransferPart, completeRuntimeTransferReceive, installReceivedRuntime } from '../runtime-transfer.mjs';
+import { MAX_MANIFEST_BYTES } from '../runtime-transfer-lock.mjs';
 import { plain, need, absolute, privateDirectory, makePrivate, regular, readJSON,
   saveJSON, digest, canonical, json, operationLease } from '../runtime-workspace/storage.mjs';
 
@@ -385,7 +386,7 @@ export async function runGroundwaterDistributionReceiving(value, { signal, progr
     const transfer = await inspectRuntimeTransfer({ directory: transferDirectory, verify: true });
     need(transfer.complete && transfer.state.phase === 'COMPLETE', 'GROUNDWATER_TRANSFER_INCOMPLETE');
     const receivingDirectory = join(input.directory, 'receiving');
-    const manifest = await regular(join(transferDirectory, 'manifest.json'), 4 * 1024 * 1024);
+    const manifest = await regular(join(transferDirectory, 'manifest.json'), MAX_MANIFEST_BYTES);
     await beginRuntimeTransferReceive({ directory: receivingDirectory, manifest, manifestSha256: transfer.manifestSha256 });
     for (const part of transfer.manifest.parts) {
       abort(signal);

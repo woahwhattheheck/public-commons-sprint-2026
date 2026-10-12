@@ -203,3 +203,9 @@ A complete customer integration verifies the selected endpoint and observation s
 Keep provider HTTP receipts and actual error bodies. A 429 or 503 can carry a persisted retry deadline; honor that deadline on the same operation. A returned document may explain a 4xx or 5xx without producing an accepted observation source. A request lost after transmission is reconciled through `operation`, not assumed absent.
 
 Keep the complete original workspace, source packets, mappings, release directories, seller state and customer sessions under their declared retention policy. The operator does not silently delete earlier acquisitions or normalize away conflicting observation IDs. Changes to schema, coverage choice, unit handling or quality interpretation belong in a new reviewed mapping or source selection.
+
+## Publisher example and scope
+
+The [committed OGC reference recipe](delivery/publisher-example.py) supplies an explicitly labeled, single-resource product demonstration through the same source, native dataset and customer receiving interfaces. It does not establish a live sensor feed or authorize a paid deployment. Its retained license and original source values travel with the reference project. A merchant integration must still select its actual customer endpoint, permitted observation window and commercial terms.
+
+For a single observation URL, the saved query includes `observationResource: "single"`; collection queries omit that field. The same source coverage and original mapping enter the lineage, merchant release identity, dataset export and project packet. Do not describe exhausted single-resource coverage as a complete provider collection.

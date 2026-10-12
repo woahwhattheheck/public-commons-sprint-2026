@@ -332,12 +332,13 @@ export async function runInstalledDatasetteBrowser({
       'DATASETTE_INSTALLED_ORIGINAL_EDITION');
     const moduleName=isAbsolute(playwrightModule)?pathToFileURL(playwrightModule).href:playwrightModule;
     const browser=await import(moduleName);
-    need(browser.chromium?.launchPersistentContext,'DATASETTE_INSTALLED_BROWSER_RUNTIME');
+    const chromium=browser.chromium??browser.default?.chromium;
+    need(typeof chromium?.launchPersistentContext==='function','DATASETTE_INSTALLED_BROWSER_RUNTIME');
     browserAttempt={id:randomUUID(),startedAt:stamp(),errorOffset:state.browserErrors.length};
     state.browserAttempts??=[];state.browserAttempts.push(browserAttempt);
     await save('BROWSER_ATTEMPT_RETAINED');
     const openBrowser=async(url,width=1440,height=1000)=>{
-      context=await browser.chromium.launchPersistentContext(join(outputDirectory,'browser-profile'),{
+      context=await chromium.launchPersistentContext(join(outputDirectory,'browser-profile'),{
         headless:true,viewport:{width,height},acceptDownloads:true,
         ...(browserExecutable?{executablePath:browserExecutable}:{}),args:['--disable-dev-shm-usage']});
       const page=context.pages()[0]??await context.newPage();

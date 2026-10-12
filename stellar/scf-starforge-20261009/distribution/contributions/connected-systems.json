@@ -40,6 +40,8 @@
     "stellar/scf-starforge-20261009/sf30-seller-sdk/connected-systems/sources/discovery-receipts.json",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/xml/workspace.py",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/xml/xml_source.py",
-    "stellar/scf-starforge-20261009/sf30-seller-sdk/xml/native.mjs"
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/xml/native.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/connected-systems/delivery/publisher-example.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/connected-systems/examples/ogc-connected-systems-LICENSE.txt"
   ]
 }

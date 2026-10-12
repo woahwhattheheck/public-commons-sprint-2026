@@ -395,6 +395,13 @@ content-producing runtime identity. Run the returned original `serveCommand`
 and reopen the received browser. The full edition history, captures, source
 rights, reviews, releases and predecessor chain remain available.
 
+## Paid map outputs
+
+Use [PMTILES_COMMERCE.md](PMTILES_COMMERCE.md) to price original map resources or
+complete operations packages, run the original SF82 seller and purchase/receive
+through the original SF88 object engine. Its additive tools share this same
+workspace, configured host profiles and shutdown lifetime.
+
 ## Recovery and tool catalog
 
 Every saved mutation uses a stable `requestId` and the host-selected original
