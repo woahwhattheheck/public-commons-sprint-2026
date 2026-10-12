@@ -1,12 +1,14 @@
 // MIT. The existing SF30 transport executes every provider request.
 import { createUpstreamHandlers, closeUpstreamHandlers } from '../../sf30-seller-sdk/upstream.mjs';
 import { UPSTREAM_ATTEMPT } from '../../sf30-seller-sdk/upstream-handler.mjs';
+import { connectionRuntime, connectionPath, connectionSummary } from './connection.mjs';
 import { compileResponseContract, RESPONSE_CONTRACT_SCHEMA } from '../../sf30-seller-sdk/response-contract.mjs';
 import { openProviderAccounting } from './accounting.mjs';
 import { prepareProduct, selectedToken, admitToken, reject, tokenSchema, validateTokenValue, ORIGIN, QUOTA_HEADERS, CONTRACT, error } from './product.mjs';
 
-function providerTarget(value) {
-  if (value === undefined) return { origin: ORIGIN, allowLoopback: false, source: 'blockscout-pro' };
+function providerTarget(value, connection) {
+  if (value === undefined) return { origin: connection.origin, allowLoopback: false,
+    source: connection.mode === 'pro' ? 'blockscout-pro' : 'blockscout-instance' };
   let url;
   try { url = new URL(value); } catch { throw error('BLOCKSCOUT_DEVELOPMENT_ORIGIN_INVALID'); }
   if (url.protocol !== 'http:' || url.hostname !== '127.0.0.1' || url.origin !== value || url.username || url.password)
@@ -17,22 +19,22 @@ function providerTarget(value) {
 export async function createBlockscoutApplication(input, { directory, env = process.env, lookup,
   developmentProviderOrigin, now } = {}) {
   const prepared = prepareProduct(input), { plan } = prepared;
-  const key = env?.[plan.apiKeyEnv];
-  if (typeof key !== 'string' || key.length < 16 || key.length > 4096 || !/^[A-Za-z0-9._~+\/-]+=*$/.test(key))
-    throw error('BLOCKSCOUT_PRIVATE_API_KEY_REQUIRED');
-  const target = providerTarget(developmentProviderOrigin);
+  const credentials = connectionRuntime(plan, env), key = credentials.secret;
+  const target = providerTarget(developmentProviderOrigin, credentials.connection);
+  const containsCredential = value => key !== null && value.includes(key);
   const responseValidator = compileResponseContract({ schema: RESPONSE_CONTRACT_SCHEMA, method: 'GET',
     responses: { '200': { content: { 'application/json': tokenSchema() } } } });
   const bindings = Object.fromEntries(plan.chains.map(chain => ['blockscout_' + chain.chainId, {
-    origin: target.origin, path: '/' + chain.chainId + '/api/v2/tokens/:address_hash', method: 'GET',
-    responseMode: 'json', headerEnv: { authorization: 'BLOCKSCOUT_RUNTIME_AUTHORIZATION' },
-    responseHeaders: ['content-type', 'etag', 'last-modified', ...QUOTA_HEADERS],
+    origin: target.origin, path: connectionPath(plan, chain.chainId), method: 'GET',
+    responseMode: 'json', headerEnv: credentials.headerEnv,
+    responseHeaders: ['content-type', 'etag', 'last-modified',
+      ...(credentials.connection.mode === 'pro' ? QUOTA_HEADERS : QUOTA_HEADERS.filter(name => name !== 'x-credits-remaining'))],
     timeoutMs: plan.limits.timeoutMs, maxResponseBytes: plan.limits.maxResponseBytes,
     maxInFlight: plan.limits.maxInFlight,
     availability: { failureThreshold: 3, resetAfterMs: 30000, maxResetAfterMs: 300000 },
   }]));
   const transport = createUpstreamHandlers({ schema: 'stellar-forge.seller-upstreams.v1', bindings },
-    { allowLoopback: target.allowLoopback, env: { BLOCKSCOUT_RUNTIME_AUTHORIZATION: 'Bearer ' + key },
+    { allowLoopback: target.allowLoopback, env: credentials.env,
       ...(lookup === undefined ? {} : { lookup }) });
   let accounting;
   try { accounting = await openProviderAccounting({ directory, plan, ...(now === undefined ? {} : { now }) }); }
@@ -68,7 +70,7 @@ export async function createBlockscoutApplication(input, { directory, env = proc
       const upstreamStatus = attempt?.upstreamStatus ?? response.body?.upstreamStatus ?? (response.status < 400 ? response.status : null);
       const dispatched = attempt?.dispatched ?? true;
       const providerHeaders = Object.fromEntries(Object.entries(response.headers ?? {})
-        .filter(([, value]) => typeof value === 'string' && !value.includes(key)));
+        .filter(([, value]) => typeof value === 'string' && !containsCredential(value)));
       let original = Buffer.isBuffer(response.body) ? response.body : null;
       let code = response.body?.error;
       if (response.status < 400) {
@@ -77,7 +79,7 @@ export async function createBlockscoutApplication(input, { directory, env = proc
           if (!original) throw Error();
           const text = new TextDecoder('utf-8', { fatal: true }).decode(original);
           // A provider echo must never persist or release the launch credential.
-          if (text.includes(key)) { original = null; code = 'BLOCKSCOUT_RESPONSE_PRIVATE'; }
+          if (containsCredential(text)) { original = null; code = 'BLOCKSCOUT_RESPONSE_PRIVATE'; }
           else value = JSON.parse(text);
         } catch { code = 'BLOCKSCOUT_RESPONSE_INVALID'; }
         if (!code) {
@@ -111,8 +113,8 @@ export async function createBlockscoutApplication(input, { directory, env = proc
     handlers['admit_' + id] = context => admit(chain, context);
   }
   function snapshot() {
-    return { schema: 'stellar-forge.blockscout-runtime.v1', contract: CONTRACT, source: target.source,
-      publicOrigin: plan.publicOrigin, paymentNetwork: plan.payment.network,
+    return { schema: 'stellar-forge.blockscout-runtime.v1', contract: credentials.connection.mode === 'pro' ? CONTRACT : 'blockscout-instance-token-detail-v1', source: target.source,
+      connection: connectionSummary(plan), publicOrigin: plan.publicOrigin, paymentNetwork: plan.payment.network,
       chains: plan.chains.map(row => ({ ...row, dataNetwork: 'eip155:' + row.chainId })),
       provider: accounting.snapshot(), transport: Object.fromEntries(Object.entries(transport)
         .filter(([, handler]) => typeof handler.snapshot === 'function').map(([name, handler]) => [name, handler.snapshot()])) };
