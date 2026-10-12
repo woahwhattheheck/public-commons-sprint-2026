@@ -113,8 +113,8 @@
     $("previous").disabled=page===0; $("next").disabled=start+pageSize>=visible.length;
     renderOverview();
   }
-  function activate(next, restored, key) {
-    const nextModel=C.buildModel(next,true); C.validateReview(next,nextModel);
+  function activate(workspace, restored, key) {
+    const {savedCase:next,model:nextModel}=workspace; C.validateReview(next,nextModel);
     if(savedCase && unsaved && !window.confirm("The current case has changes that have not been saved in this browser. Cancel to keep this case and use Save case, or OK to discard those unsaved changes and open the selected case.")){
       notice("Current case kept. Use Save case to retain a portable copy before switching.");
       return false;
@@ -159,6 +159,7 @@
     await busy("Preparing the selected edition…",async()=>{
       $("export-result").textContent="Preparing…";
       const edition=C.release(savedCase,model,exportScope());
+      delete edition.publication;
       if(kind==="csv")download(edition.edition_id+".csv",edition.csv,"text/csv;charset=utf-8");
       else if(kind==="json")download(edition.edition_id+".json",edition.json);
       else if(kind==="codebook")download(edition.edition_id+"-codebook.csv",edition.codebook,"text/csv;charset=utf-8");
@@ -174,10 +175,10 @@
     const r=await fetch("data/source-manifest.json");if(!r.ok)throw Error("Cannot load bundled sources. Start the local server with node cli.cjs serve, or open a saved case.");
     const manifest=await r.json(),texts={},queue=manifest.files.slice();
     await Promise.all(Array.from({length:4},async()=>{while(queue.length){const f=queue.shift(),response=await fetch("data/"+f.path);if(!response.ok)throw Error("Cannot read "+f.path);texts[f.path]=await response.text();}}));
-    activate(C.makeCase(manifest,texts));
+    activate(C.makeWorkspace(manifest,texts));
   });
   $("open-case").onclick=()=>$("case-file").click();
-  $("case-file").onchange=()=>{const f=$("case-file").files[0];if(f)busy("Opening and verifying the saved case…",async()=>activate(C.openCase(await f.text())));$("case-file").value="";};
+  $("case-file").onchange=()=>{const f=$("case-file").files[0];if(f)busy("Opening and verifying the saved case…",async()=>activate(C.openWorkspace(await f.text())));$("case-file").value="";};
   $("save-case").onclick=()=>{download(savedCase.case_id+".json",C.canonical(savedCase)+"\n");notice("Complete source case prepared for download.");};
   $("indicator").onchange=()=>{updateMeasures("");refresh(true);};
   $("geotype").onchange=()=>{updateGeographies();refresh(true);};
@@ -209,14 +210,14 @@
   busy("Opening workspace…",async()=>{
     const embedded=$("embedded-case");
     if(embedded){
-      const base=C.openCase(embedded.textContent), tail=base.review_events.at(-1)?.event_id || base.case_id;
-      const key="embedded:"+base.case_id+":"+tail;
+      const base=C.openWorkspace(embedded.textContent), tail=base.savedCase.review_events.at(-1)?.event_id || base.savedCase.case_id;
+      const key="embedded:"+base.savedCase.case_id+":"+tail;
       for(const candidateKey of [key,"active"]){
         try{
           const previous=await restoreLocal(candidateKey);
           if(previous){
-            const candidate=C.openCase(previous);
-            if(isContinuation(base,candidate)){
+            const candidate=C.openWorkspace(previous);
+            if(isContinuation(base.savedCase,candidate.savedCase)){
               activate(candidate,true,key);
               if(candidateKey!==key)scheduleSave();
               return;
@@ -227,7 +228,7 @@
       activate(base,false,key);
       return;
     }
-    try{const previous=await restoreLocal();if(previous){activate(C.openCase(previous),true);return;}}catch(_){}
+    try{const previous=await restoreLocal();if(previous){activate(C.openWorkspace(previous),true);return;}}catch(_){}
     notice("Open the bundled NYC source or a saved case to begin.");
   });
 })();
