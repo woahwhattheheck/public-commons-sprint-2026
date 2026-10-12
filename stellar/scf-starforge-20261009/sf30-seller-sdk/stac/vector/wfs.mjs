@@ -1,7 +1,7 @@
 /** Original WFS application download -> retained vector source and native delivery. */
 import { createHash, randomUUID } from "node:crypto";
-import { mkdir, readFile, open, link, unlink, realpath } from "node:fs/promises";
-import { resolve, dirname } from "node:path";
+import { mkdir, readFile, open, link, unlink, realpath, lstat, readdir } from "node:fs/promises";
+import { resolve, dirname, basename } from "node:path";
 import { captureVectorSelection, exportVectorCapture, VectorOperationError } from "./index.mjs";
 import { parseExactJSON as parse, stringifyExactJSON as encode, ExactNumber } from "./json.mjs";
 
@@ -15,8 +15,46 @@ function stable(value) {
 const canonical = value => encode(stable(value));
 const jsonBytes = value => Buffer.from(encode(value, 2) + "\n");
 const plain = value => value && typeof value === "object" && !Array.isArray(value) && !(value instanceof ExactNumber);
+async function reconcileSourceLinks(path) {
+  const target = await lstat(path);
+  need(target.isFile() && !target.isSymbolicLink(), "VECTOR_WFS_RETAINED_FILE_REQUIRED", path);
+  if (target.nlink === 1) return;
+  // The original immutable writer links complete bytes before unlinking its
+  // private staging name. Recover only a staging link to this exact final inode.
+  const directory = dirname(path), prefix = basename(path) + ".";
+  let changed = false;
+  for (const name of await readdir(directory)) {
+    if (!name.startsWith(prefix) ||
+        !/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\.receiving$/.test(name.slice(prefix.length))) continue;
+    const staging = resolve(directory, name);
+    let candidate;
+    try { candidate = await lstat(staging); }
+    catch (error) { if (error.code === "ENOENT") continue; throw error; }
+    if (candidate.dev !== target.dev || candidate.ino !== target.ino) continue;
+    need(candidate.isFile() && !candidate.isSymbolicLink() &&
+      !(candidate.mode & 0o077), "VECTOR_WFS_STAGED_LINK_INVALID", staging);
+    try { await unlink(staging); changed = true; }
+    catch (error) { if (error.code !== "ENOENT") throw error; }
+  }
+  if (changed) {
+    const parent = await open(directory, "r");
+    try { await parent.sync(); } finally { await parent.close(); }
+  }
+}
+/** Reconcile only completed source-file links while the caller holds its project lease. */
+export async function reconcileWfsVectorSourceLinks(sourceDirectory) {
+  const directory = resolve(sourceDirectory);
+  try { need(await realpath(directory) === directory, "VECTOR_WFS_SOURCE_DIRECTORY_LINK"); }
+  catch (error) { if (error.code === "ENOENT") return; throw error; }
+  for (const name of ["request.json", "source-receipt.json", "features.geojson",
+    "original-order.json", "selection.json", "profile.json"]) {
+    try { await reconcileSourceLinks(resolve(directory, name)); }
+    catch (error) { if (error.code !== "ENOENT") throw error; }
+  }
+}
 async function readOptional(path) {
-  try { return await readFile(path); } catch (error) { if (error.code === "ENOENT") return null; throw error; }
+  try { await reconcileSourceLinks(path); return await readFile(path); }
+  catch (error) { if (error.code === "ENOENT") return null; throw error; }
 }
 async function immutable(path, raw) {
   const existing = await readOptional(path);

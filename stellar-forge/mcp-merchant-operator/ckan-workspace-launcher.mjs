@@ -18,7 +18,7 @@ const SOURCE_FILES = [
   ...['ckan-workspace-launcher.mjs', 'ckan-workspace.mjs', 'ckan-workspace-transfers.mjs',
     'catalog/ckan-workspace.mjs', 'retained-file-reads.mjs', 'config.mjs', 'operator.mjs', 'serve.mjs'].map(name => MCP + name),
   ...['model.mjs', 'server.mjs', 'source.mjs', 'capture.mjs', 'semantics.mjs', 'declaration.mjs',
-    'archive.mjs', 'source-locations.mjs',
+    'archive.mjs', 'source-locations.mjs', 'refresh.mjs', 'reviewed-refresh.mjs',
     'public/index.html', 'public/app.mjs', 'public/style.css'].map(name => CKAN + name),
   ...['releases.mjs', 'release-installation.mjs'].map(name =>
     'stellar/scf-starforge-20261009/sf82-seller-pilot/' + name),

@@ -31,6 +31,8 @@ export function buildReviewerCustomerRecipe({definitions,mode='deliver'}={}){
       input('/selectionRevision','Received revision','integer','Its current inspected native selection revision.'),
       input('/quoteId','Saved quote','string','The exact original quote whose complete result will be retained.')
     );
+    step('source-open','Connect original source','workbench_open',{workspace:'source'},
+      [binding('/workspace','/sourceWorkspace')]);
     step('source-selection','Inspect original received packet','selection',{workspace:'source',selectionId:placeholder},
       [binding('/workspace','/sourceWorkspace'),binding('/selectionId','/selectionId')],retained,true);
     step('source-buyer','Open original saved Buyer','buyer_open',{workspace:'source',selectionId:placeholder,expectedRevision:2,requestId:placeholder},

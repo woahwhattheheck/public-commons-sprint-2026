@@ -9,6 +9,12 @@ verification, reconcile merchant activity, close a saved period, prepare the
 accountant's original packet and apply a reviewed return. The exact delivered
 response remains retrievable throughout that operation.
 
+The complete [buyer-only accounting workflow](./ACCOUNTING_BUYER.md) uses an
+explicit buyer source mode in this same provider. It previews and retains the
+original issued period, recovers its native startup and first-handoff identity,
+and carries its accountant/Xero/operating-recovery history without merchant
+outbox or proof directories.
+
 The complete [Bitwave Data Fusion workflow](./BITWAVE.md) uses the same owned
 workspace and accountant instance. Its thirteen additional tools operate declared
 customer organizations and native tables, retained delivery/capture and repair,
