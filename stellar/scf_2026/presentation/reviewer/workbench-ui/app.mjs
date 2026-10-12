@@ -32,7 +32,7 @@ function table(headers, rows, className = '') {
   return node('div', {className:'table-wrap'}, [node('table', {className}, [
     node('thead', {}, [node('tr', {}, headers.map(label => node('th', {text:label, scope:'col'})))]),
     node('tbody', {}, rows.map(row => node('tr', {}, row.map(value =>
-      node('td', {}, [value instanceof Node ? value : document.createTextNode(value === undefined || value === null ? '—' : String(value)))])))),
+      node('td', {}, [value instanceof Node ? value : document.createTextNode(value === undefined || value === null ? '—' : String(value))]))))),
   ])]);
 }
 function field(label, control) {
