@@ -1,0 +1,33 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "merchant-receivables",
+  "description": "Customer invoicing, service quotation import, payment allocation, credit notes and dated receivables",
+  "commands": {
+    "receivables": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/cli.mjs"
+  },
+  "commandDescriptions": {
+    "receivables": "Operate invoices, service quotation drafts, credit notes, customer payments and account balances"
+  },
+  "exports": {
+    "./merchant/receivables": "./source/stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/store.mjs",
+    "./merchant/receivables/core": "./source/stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/core.mjs",
+    "./merchant/receivables/server": "./source/stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/server.mjs",
+    "./merchant/receivables/client": {
+      "types": "./source/stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/client.d.ts",
+      "default": "./source/stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/client.mjs"
+    },
+    "./merchant/receivables/quote-import": "./source/stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/quote-import.mjs"
+  },
+  "supportFiles": [
+    "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/client.d.ts"
+  ],
+  "browserAssets": [
+    {
+      "server": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/server.mjs",
+      "manifest": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/browser-assets.json"
+    }
+  ],
+  "applicationProviders": {
+    "merchant-receivables": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/application-provider.mjs"
+  }
+}

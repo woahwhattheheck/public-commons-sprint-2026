@@ -66,6 +66,7 @@
         </section>
         <section class="panel"><div class="section-heading"><div><h2>Resources</h2><p class="small muted">Add the source documents, links and working notes used by the procedure.</p></div><button id="add-resource" type="button">Add resource</button></div><div id="author-resources"></div></section>
         <section class="panel"><div class="section-heading"><div><h2>Procedure steps</h2><p class="small muted">Keep each task clear enough for another preparer to perform and a reviewer to assess.</p></div><button id="add-step" type="button">Add step</button></div><div id="author-steps"></div></section>
+        <section class="panel"><div class="section-heading"><div><h2>Named procedure sets</h2><p class="small muted">Choose the tasks for weekly cash reviews, monthly closes or another recurring process. A period keeps its selected set and edition.</p></div><button id="add-profile" type="button">Add procedure set</button></div><div id="author-profiles"></div></section>
         <div class="form-footer"><p id="author-basis" class="small muted"></p><div class="actions"><button id="author-discard" type="button">Discard this draft</button><button class="primary" type="submit">Save edition</button></div></div>
       </form>
     </section>
@@ -76,6 +77,8 @@
         <div class="form-grid">
           <label>Runbook<select id="schedule-book" required><option value="">Choose a runbook</option></select></label>
           <label>Procedure edition<select id="schedule-edition" required><option value="">Choose an edition</option></select></label>
+          <label class="full">Procedure set<select id="schedule-profile"><option value="">All procedures</option></select></label>
+          <section id="schedule-selection" class="full source-summary" aria-live="polite"></section>
           <label>Period label<input id="schedule-label" maxlength="240" placeholder="For example, October close" required></label>
           <label>Due date<input id="schedule-due" type="date" required></label>
           <label>Preparer<input id="schedule-preparer" maxlength="160" autocomplete="off" required></label>

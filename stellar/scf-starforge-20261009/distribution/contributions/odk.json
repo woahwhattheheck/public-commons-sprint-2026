@@ -10,7 +10,7 @@
   "commandDescriptions": {
     "odk-central-workspace": "Open the original Central field, commissioning and warehouse application or run its retained data commands",
     "odk-central-host": "Operate the original Central host, complete native backup, restore and service handover",
-    "odk-central-receive": "Receive an existing Central source or the released forms through the original capture, review, reports, archive and reopening"
+    "odk-central-receive": "Receive original Central source, released forms and commissioned periods through the native review, reports, archives and reopening"
   },
   "exports": {
     "./seller/odk": {
@@ -34,7 +34,8 @@
     "./seller/odk/warehouse": {
       "types": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/odk/warehouse/index.d.mts",
       "import": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/odk/warehouse/index.mjs"
-    }
+    },
+    "./seller/odk/period-receiving": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/odk/native/receive-released-periods.mjs"
   },
   "applicationProviders": {
     "odk": "stellar/scf-starforge-20261009/sf30-seller-sdk/odk/application-provider.mjs"

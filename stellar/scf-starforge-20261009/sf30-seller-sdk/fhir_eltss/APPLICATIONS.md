@@ -137,10 +137,10 @@ Run it after `operate_receiving.py` has produced the original
 `OPERATED_ELTSS.json`, using the cumulative distribution containing this provider:
 
 ```sh
-node SOURCE/stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_eltss/operate_installed_applications.mjs \\
-  --runtime-directory /absolute/ready-runtime \\
-  --runtime-workspace /absolute/private-runtime-workspace \\
-  --receiving /absolute/native-receiving/OPERATED_ELTSS.json \\
+node SOURCE/stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_eltss/operate_installed_applications.mjs \
+  --runtime-directory /absolute/ready-runtime \
+  --runtime-workspace /absolute/private-runtime-workspace \
+  --receiving /absolute/native-receiving/OPERATED_ELTSS.json \
   --out /absolute/installed-applications-receiving
 ```
 
@@ -151,3 +151,33 @@ the same output directory when continuing. The complete result is
 browser downloads remain alongside it. Runtime source, source manifest,
 application ID, workspace UUID and original native receiving are fixed in its
 saved selection.
+
+## Continue installed receiving at the restored directory
+
+A complete workspace received on another host keeps its original UUID and saved
+records. Restore the original archive with `eltss-careplans init` followed by
+`eltss-careplans workspace-receive`, as shown in
+[BROWSER_RECEIVING.md](BROWSER_RECEIVING.md#receive-the-same-workspace-on-another-host).
+Select the resulting private directory when saving the application.
+
+The installed receiving command accepts the same explicit directory:
+
+~~~sh
+node /ABS/SF30/fhir_eltss/operate_installed_applications.mjs \
+  --runtime-directory /ABS/ready-runtime \
+  --runtime-workspace /ABS/private-runtime-workspace \
+  --receiving /ABS/originals/OPERATED_ELTSS.json \
+  --workspace /ABS/received-careplans \
+  --out /ABS/installed-careplan-receiving
+~~~
+
+The selected READY runtime supplies the Applications host and provider. The
+provider opens the restored workspace under the original UUID; the browser
+receiver also verifies the actual authenticated operator directory. The result
+retains the exact original receiving-file SHA256, original path, selected path,
+saved application ID and both managed application starts. The complete first
+workspace download is reopened after the second start.
+
+Omit `--workspace` to continue the original host's receiving journal unchanged.
+Retain the same original receiving JSON, READY runtime, selected workspace and
+output directory whenever continuing an existing installed journey.

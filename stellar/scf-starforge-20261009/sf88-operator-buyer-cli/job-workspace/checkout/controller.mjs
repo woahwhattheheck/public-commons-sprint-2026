@@ -542,10 +542,13 @@ export async function openJobCheckout({ directory, lease, adopt, operatorWorkspa
     directory, import: importTicket, replace: replaceTicket, start, cancel, list, status,
     enableBrowserApproval, approval, decideApproval,
     get(id) { return item(row(id)); },
-    async wait(id) {
-      row(id); const task = activeTask?.id === id ? activeTask : null;
+    async wait(id, { taskId } = {}) {
+      const original = row(id), task = activeTask?.id === id ? activeTask : null;
+      requireValue(taskId === undefined || taskId === (task?.public ?? original.lastTask)?.id, 'JOB_CHECKOUT_TASK_CHANGED', 409);
       if (task) await task.promise;
-      return item(row(id));
+      const value = item(row(id));
+      requireValue(taskId === undefined || taskId === value.task?.id, 'JOB_CHECKOUT_TASK_CHANGED', 409);
+      return value;
     },
     close() {
       if (closePromise) return closePromise;

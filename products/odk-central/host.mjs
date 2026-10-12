@@ -31,7 +31,7 @@ export function runOriginalCentralPython(filename,args){
       detach();
       if(error.code==='ENOENT')Object.assign(error,{
         code:'CENTRAL_PRODUCT_PYTHON',
-        message:'Install Python 3.10 or newer on this original Linux host, then continue the same Central command.',
+        message:'Install Python 3.11 or newer for the complete field reporting product, then continue the same Central command.',
       });
       reject(error);
     });
