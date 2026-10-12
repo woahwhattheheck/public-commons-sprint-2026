@@ -14,6 +14,7 @@ import {callResearchEligibility,exportResearchEligibility,RESEARCH_ELIGIBILITY_P
 import {callResearchCustomerUpdates,exportResearchCustomerUpdates,RESEARCH_CUSTOMER_UPDATE_PREFIX} from './research-customer-updates.mjs';
 import {callResearchRis,exportResearchRis,RESEARCH_RIS_PREFIX} from './research-ris.mjs';
 import {ResearchCommerceOperations,RESEARCH_COMMERCE_PREFIX} from './research-commerce.mjs';
+import {callResearchQuotes,exportResearchQuotes,RESEARCH_QUOTE_PREFIX} from './research-quotes.mjs';
 import {callResearchEuropePmc,exportResearchEuropePmc,RESEARCH_EUROPE_PMC_PREFIX} from './research-europe-pmc.mjs';
 export {researchWorkspaceTools} from './catalog/research-workspace.mjs';
 import {ResearchWorkspaceClient} from '../../stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/workspace-client.mjs';
@@ -47,7 +48,7 @@ export async function readResearchWorkspaceConfiguration(file){
       throw failure('CONFIGURATION_ERROR','Declare original source handles.');
     for(const[name,source]of Object.entries(value.sources??{})){
       identifier(name);exact(source,['file','kind','sha256','provider','sourceReference','filename','contentType'],['file','kind','sha256']);
-      if(!['research','reference','portable','clinicaltrials-packet','source-bundle','pipeline-input','europe-pmc-packet','europe-pmc-portable','commerce-publication','ris-source'].includes(source.kind)||!['portable','clinicaltrials-packet','source-bundle','pipeline-input','europe-pmc-packet','europe-pmc-portable','commerce-publication','ris-source'].includes(source.kind)&&
+      if(!['research','reference','portable','clinicaltrials-packet','source-bundle','pipeline-input','europe-pmc-packet','europe-pmc-portable','commerce-publication','ris-source','quote-input'].includes(source.kind)||!['portable','clinicaltrials-packet','source-bundle','pipeline-input','europe-pmc-packet','europe-pmc-portable','commerce-publication','ris-source','quote-input'].includes(source.kind)&&
         (typeof source.provider!=='string'||!/^[a-z][a-z0-9_-]{0,79}$/.test(source.provider)))
         throw failure('CONFIGURATION_ERROR','Each source declares its original kind and provider.');
       if(source.sourceReference!==undefined&&(typeof source.sourceReference!=='string'||source.sourceReference.length>4000)||
@@ -269,6 +270,9 @@ export class MerchantResearchWorkspaces{
     try{
       if(args.kind.startsWith('ris-')){
         ({result,selection}=await exportResearchRis(entry.client,args,{file:temporary,download}));
+      }else if(args.kind.startsWith('quote-')){
+        ({result,selection}=await exportResearchQuotes(entry.client,args,{file:temporary,download,
+          source:(name,accepted)=>this.#source(entry,name,accepted)}));
       }else if(args.kind.startsWith('commerce-')){
         ({result,selection}=await this.#commerce(entry).export(args,{file:temporary}));
       }else if(args.kind.startsWith('risk-')){
@@ -382,6 +386,7 @@ export class MerchantResearchWorkspaces{
     return this.#with(args.workspace,async entry=>{
       const c=entry.client,id=args.dossierId,input=nativeFields(args,['workspace','dossierId']);
       if(name.startsWith(RESEARCH_RIS_PREFIX))return callResearchRis(c,name,args,{source:(name,accepted)=>this.#source(entry,name,accepted)});
+      if(name.startsWith(RESEARCH_QUOTE_PREFIX))return callResearchQuotes(c,name,args,{source:(name,accepted)=>this.#source(entry,name,accepted)});
       if(name.startsWith(RESEARCH_COMMERCE_PREFIX))return this.#commerce(entry).call(name,args);
       if(name.startsWith(RESEARCH_CUSTOMER_UPDATE_PREFIX))return callResearchCustomerUpdates(c,name,args);
       if(name.startsWith(RESEARCH_ELIGIBILITY_PREFIX))return callResearchEligibility(c,name,args);
@@ -478,7 +483,7 @@ export class MerchantResearchWorkspaces{
     });
   }
   call(name,args={}){
-    validate(name,args);
+    validate(name,args);args=structuredClone(args);
     return this.#track(async()=>{
       try{return await this.#execute(name,args);}
       catch(error){
