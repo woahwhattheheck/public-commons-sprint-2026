@@ -1,0 +1,17 @@
+{
+  "schema": "stellar-forge.fred-receiver-config.v1",
+  "id": "scf-fred-unrate-20261012",
+  "title": "UNRATE economic edition",
+  "buyerConfig": "/ABSOLUTE/EXISTING/scf-buyer.json",
+  "paymentFile": "/ABSOLUTE/EXISTING/scf-public-payment.json",
+  "origin": "https://YOUR-EXISTING-MERCHANT-HOST",
+  "path": "/economic-data",
+  "facilitator": "https://YOUR-EXISTING-FACILITATOR-HOST",
+  "merchantPort": 8402,
+  "browser": {
+    "module": "/ABSOLUTE/EXISTING/playwright/index.mjs",
+    "executablePath": "/ABSOLUTE/EXISTING/chromium",
+    "headless": true,
+    "timeoutMs": 30000
+  }
+}

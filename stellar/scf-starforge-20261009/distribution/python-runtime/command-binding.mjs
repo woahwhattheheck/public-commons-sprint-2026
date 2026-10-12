@@ -9,16 +9,20 @@ const SCHEMA='stellar-forge.python-application-command.v1';
 const hash=value=>digest(json(canonical(value)));
 const MODULES=Object.freeze({
   analysis:'stellar_forge_buyer.analysis_workspace',
+  duckdb:'stellar_forge_buyer.duckdb_cli',
   workbooks:'stellar_forge_buyer.analysis_workbooks',
   workbookDelivery:'stellar_forge_buyer.workbook_client',
 });
 export const PYTHON_APPLICATION_COMMANDS=Object.freeze([
+  {id:'duckdb',kind:'module',title:'DuckDB dataset workspace',module:MODULES.duckdb,
+    description:'Review original dataset deliveries, retain editions, run SQL and export portable analytical results.'},
   {id:'analysis',kind:'module',title:'Analysis workspace',module:MODULES.analysis,
     description:'Open the original retained analysis database and its matching merchant source.'},
   {id:'workbooks',kind:'module',title:'Workbook build and receiving',module:MODULES.workbooks,
     description:'Use the original workbook build, receive, inspect and copy commands.'},
   {id:'workbookDelivery',kind:'module',title:'Workbook delivery',module:MODULES.workbookDelivery,
     description:'Run the original recipe against its selected analysis database and delivery operation.'},
+  {id:'stellar-forge-duckdb',kind:'script',title:'DuckDB dataset command'},
   {id:'stellar-forge-buyer',kind:'script',title:'Original buyer command'},
   {id:'stellar-forge-agent',kind:'script',title:'Original agent workflow'},
   {id:'stellar-forge-workbook',kind:'script',title:'Original workbook command'},
@@ -31,6 +35,7 @@ function argumentsList(args) {
   return [...args];
 }
 function requiredExtras(command,args) {
+  if(['duckdb','stellar-forge-duckdb'].includes(command))return ['duckdb'];
   if(command==='stellar-forge-agent')return ['agents'];
   if(['workbookDelivery','stellar-forge-workbook-deliver'].includes(command))return ['workbooks'];
   if(['workbooks','stellar-forge-workbook'].includes(command) && !['receive','inspect','copy','--help'].includes(args[0]))return ['workbooks'];
@@ -63,6 +68,13 @@ export async function bindPythonApplicationCommand(root,{
         'PYTHON_APPLICATION_DATABASE_REQUIRED','Select one original Analysis database directory.');
       absolute(originalArgs[originalArgs.indexOf('--database')+1]);
     }
+    if(command==='duckdb'){
+      const workspaces=originalArgs.filter(item=>item==='--workspace');
+      need(workspaces.length===1 && !originalArgs.some(item=>item==='--database' ||
+        item.startsWith('--database=') || item.startsWith('--workspace=')),
+        'PYTHON_APPLICATION_WORKSPACE_REQUIRED','Select one private DuckDB workspace directory with --workspace.');
+      absolute(originalArgs[originalArgs.indexOf('--workspace')+1]);
+    }
     argv=['-I','-m',module,...originalArgs];
   }else{
     entrypoint=installation.entrypoints?.[command];
@@ -79,7 +91,10 @@ export async function bindPythonApplicationCommand(root,{
     lockSha256:installation.lockSha256,python:installation.python,command,args:originalArgs,
     module,entrypoint,requiredExtras:extras,executable:installation.python,argv,cwd:binding.directory,
     ready:command==='analysis'?{kind:'analysis-private-launch',schema:'stellar-forge.customer-analysis.v1',
-      file:join(absolute(originalArgs[originalArgs.indexOf('--database')+1]),'analysis-launch.json')}:null,
+      file:join(absolute(originalArgs[originalArgs.indexOf('--database')+1]),'analysis-launch.json')}:
+      command==='duckdb'?{kind:'duckdb-private-launch',schema:'stellar-forge.duckdb-operator-launch.v1',
+        directory:absolute(originalArgs[originalArgs.indexOf('--workspace')+1]),
+        file:join(absolute(originalArgs[originalArgs.indexOf('--workspace')+1]),'duckdb-launch.json')}:null,
     capabilities:installation.capabilities};
   return {...value,fingerprint:hash(value)};
 }
