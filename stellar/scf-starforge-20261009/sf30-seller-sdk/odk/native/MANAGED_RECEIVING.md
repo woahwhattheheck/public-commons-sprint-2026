@@ -46,7 +46,7 @@ warehouse receiving. Those programmes consume real provider data separately.
 
 ## Execute on the specifically accepting host
 
-The selected host must already have Linux, Python 3.10+, Node.js 24+, the complete
+The selected host must already have Linux with procfs and pidfd support, Python 3.11+, Node.js 24+, the complete
 original installed product, Playwright and a working Chromium executable.
 Return those actual paths with the accepted original operation before dispatch.
 No dependency download, browser installation or service provisioning is performed
@@ -68,13 +68,51 @@ python3 /PRIVATE_SOURCE/run-managed-receiving.py \
 Use actual absolute paths supplied by that host. The Python entry verifies the
 driver bytes, owns one OS file lock and one original Node child, and keeps the
 source/runtime/operation selection stable. It forwards cancellation to the
-owned programme and settles its exact child. An OS-released lock can be reused
-after a killed launcher; a live owner is never replaced. Private JSON writes use
-unique temporary names, so a reused namespace PID cannot strand a continuation.
-The launcher observes its exact Node session leader with Linux `waitid(WNOWAIT)`
-and keeps that PID reserved until cleanup. A nonzero or signal exit closes that
-original process group before reaping the leader. Managed child ownership stays
-retained until actual closure is observed, including when a first close attempt fails.
+owned programme and settles its exact child. Reopening an OS-released lock
+reconciles the retained original closure before starting a child. Launcher records use
+unique same-directory temporary files, file fsync, atomic replacement and
+directory fsync. An unused temporary left by a killed process cannot collide
+with a later invocation that receives the same PID.
+
+The Linux launcher retains kernel custody of the original native process family.
+It acts as a child subreaper, observes the Node leader without reaping its PID,
+and first lets the original driver perform its normal cleanup. If that leader
+exits abnormally, orphaned descendants—including browsers with their own
+sessions—are adopted by the same launcher. Signals use pidfds after checking the
+actual kernel parent and process birth identity; selection never uses process
+names or an unverified PID list. The leader is reaped only after the owned child
+set is empty, and the complete result is printed after that closure succeeds.
+
+Handled SIGINT, SIGTERM and SIGHUP received during native process creation are
+recorded until the exact child is assigned and its owner/result are retained.
+The launcher then delivers cancellation through its normal owned cleanup. It
+does not change the child's inherited signal mask.
+
+The private launch result records the current DISPATCHING, RUNNING and CLOSED
+states. A known failure to create the native process records NOT_STARTED. An
+unobserved or incomplete closure remains CLOSURE_UNRESOLVED with its original
+process identities and error. On the same host boot, reconcile that exact launch
+and native operation before another start; an empty later PID lookup alone does
+not replace the missing descendant-closure result.
+
+## Original host identity and recovery
+
+Before dispatch, the launcher reads the native Linux machine ID and the DMI
+product UUID when available. Domain-separated SHA-256 values stay in the
+original private launch owner and result beside the kernel boot ID. Raw machine
+identifiers are neither printed nor added to the customer delivery. All
+available retained identity fields must match; an empty identity cannot
+establish host continuity.
+
+A changed kernel boot ID closes an unfinished launch only when the retained
+stable host identity matches the current host. The original closure record
+retains that identity, both boot IDs and the prior result hash before the
+ordinary launch result is updated. Copying or mounting the private directory on
+a different host does not establish that its original processes ended. Missing
+or changed identity, including an older boot-only closure, preserves the
+original evidence for reconciliation on the original host. The existing
+complete child-closure result continues to permit normal replay through the
+same operation and OS-owned lock.
 
 The Node entry is intentionally invoked through this launcher. The private
 operation directory is mode 0700. Its startup logs and browser profile remain
