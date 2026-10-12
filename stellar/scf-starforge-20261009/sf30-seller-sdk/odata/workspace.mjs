@@ -279,7 +279,7 @@ export async function openODataWorkspace({ directory, fetchImpl = globalThis.fet
   async function backup(){
     if(running.size)throw fault('ODATA_TRANSFER_RUNNING','Pause active imports before making a portable workspace.',409);
     const saved=await store.read(),files=[];
-    const liveLease=saved.liveProducts?.length?await acquireReleaseLease(join(root,'live'),'control.lock'):null;
+    const liveLease=saved.liveProducts?.length?await acquireReleaseLease(join(root,'live'),'state.lock'):null;
     try{
     const hashes=new Set(saved.editions.flatMap(value=>value.pages.flatMap(page=>[page.source.sha256,page.rowsSha256])));
     for(const catalog of [...saved.connections.map(value=>value.catalog),...saved.editions.map(value=>value.catalog)])
