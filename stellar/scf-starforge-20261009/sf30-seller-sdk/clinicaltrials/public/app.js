@@ -229,6 +229,9 @@ function renderSelectors() {
   options('prs-documents',model.prs.map(p => [p.id,p.name+' · '+(p.report.schemaValid?'Schema valid':'Review schema errors')]),currentPrs?.record.id);
   options('prs-plans',model.prsPlans.map(p => [p.id,short(p.id)+' · '+p.reviewer]));
   options('prs-reconciliations',model.prsReconciliations.map(p => [p.id,short(p.id)+' · '+number(p.studies)+' studies']));
+  const documents=model.prs.map(p=>[p.id,p.name+' · '+short(p.id)]);
+  options('prs-preview-base',documents);options('prs-preview-incoming',documents);
+  options('prs-previews',(model.prsPreviews||[]).map(p=>[p.id,short(p.id)+' · '+p.reviewer+' · '+(p.complete?'Composed':'Review unresolved units')]));
   options('export-select',model.exports.map(e => [e.id,e.createdAt+' · '+e.rowCount+' rows · '+short(e.snapshot)]));
 }
 function renderEditions() {
@@ -242,6 +245,8 @@ function renderPrs() {
   $('prs-runtime').textContent = report?.error || 'Original PRS validation and reviewed transformation use the retained official schema closure.';
   if (currentPrs) facts($('prs-document-summary'),[
     ['Document',currentPrs.record.name],['Schema',currentPrs.record.report.schemaKind],
+    ['Text encoding',currentPrs.displayEncoding || currentPrs.record.report.encoding],
+    ...(currentPrs.displayWarning ? [['Text display',currentPrs.displayWarning]] : []),
     ['Schema validation',currentPrs.record.report.schemaValid?'Valid':'Review original findings'],
     ['Original bytes',currentPrs.record.report.bytes],['Legacy occurrences',currentPrs.record.report.legacyElements?.length ?? 'See report'],
   ]);
@@ -524,6 +529,22 @@ $('prs-apply').addEventListener('click',()=>handle(async()=>{
   const result=await perform('prs.apply',{documentId:plan.documentId,planId:plan.id});
   await readPrs(result.document.id);notice('Reviewed candidate retained with the original plan and comparison.');
 }));
+form('prs-preview-form',async()=>{
+  const rules=JSON.parse($('prs-preview-rules').value||'{}');
+  const result=await perform('prs.preview',{baseDocumentId:$('prs-preview-base').value,
+    incomingDocumentId:$('prs-preview-incoming').value,reviewer:$('prs-preview-reviewer').value,rules});
+  $('prs-previews').value=result.previewId;$('prs-preview-details').textContent=json(result.report);
+  await readPrs(result.document.id);notice('Original documents and the reviewed composed candidate are retained.');
+});
+$('prs-read-preview').addEventListener('click',()=>handle(async()=>{
+  if(!$('prs-previews').value)throw new Error('Prepare a reviewed upload preview first.');
+  $('prs-preview-details').textContent=json(await api('/api/clinical/prs-preview?'+params({previewId:$('prs-previews').value})));
+}));
+$('prs-read-catalog').addEventListener('click',()=>handle(async()=>{
+  $('prs-catalog-details').textContent=json(await api('/api/clinical/prs-catalog'));
+  $('prs-catalog-details').closest('details').open=true;
+}));
+$('prs-download-catalog').addEventListener('click',()=>handle(()=>download('/api/clinical/prs-catalog','prs-field-catalog.json')));
 form('prs-candidate-form',async()=>{
   const result=await perform('prs.candidate',{originalId:getPrsId(),xml:$('prs-candidate-xml').value,
     name:$('prs-candidate-name').value,reviewedBy:$('prs-reviewer').value,note:$('prs-candidate-note').value});

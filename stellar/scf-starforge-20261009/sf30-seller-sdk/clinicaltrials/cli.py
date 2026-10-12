@@ -66,7 +66,7 @@ def main(argv=None):
     compare=sub.add_parser("compare");compare.add_argument("--before",required=True);compare.add_argument("--after",required=True)
     export=sub.add_parser("export");export.add_argument("--build");export.add_argument("--out")
     restore=sub.add_parser("restore");restore.add_argument("--file",required=True)
-    prs=sub.add_parser("prs");prs.add_argument("mode",choices=["import","inspect","plan","apply","reconcile"])
+    prs=sub.add_parser("prs");prs.add_argument("mode",choices=["import","inspect","plan","apply","reconcile","preview","catalog","preview-read"])
     prs.add_argument("--file");prs.add_argument("--document");prs.add_argument("--schema",choices=["protocol","results"],default="protocol")
     operation=sub.add_parser("operation");operation.add_argument("id")
     contract=sub.add_parser("contract");contract.add_argument("name",choices=sorted(CONTRACTS));contract.add_argument("--out",required=True)
@@ -139,6 +139,8 @@ def main(argv=None):
             result=act("package.import",{"packagePath":str(path),"sha256":file_digest(path,2*1024*1024*1024)})
         elif command=="prs":
             if args.mode=="inspect":result=ws.prs_document(args.document)
+            elif args.mode=="catalog":result=ws.prs_catalog()
+            elif args.mode=="preview-read":result=ws.prs_preview(args.document)
             elif args.mode=="import":
                 if not args.file:parser.error("prs import requires --file")
                 path=Path(args.file).expanduser().absolute()

@@ -146,6 +146,7 @@ class Workspace(PackageOperations, SourceWorkspace):
                 CREATE TABLE IF NOT EXISTS registry_exports(id TEXT PRIMARY KEY,body TEXT NOT NULL);
                 CREATE TABLE IF NOT EXISTS registry_prs_plans(id TEXT PRIMARY KEY,body TEXT NOT NULL);
                 CREATE TABLE IF NOT EXISTS registry_prs_reconciliations(id TEXT PRIMARY KEY,body TEXT NOT NULL);
+                CREATE TABLE IF NOT EXISTS registry_prs_previews(id TEXT PRIMARY KEY,body TEXT NOT NULL);
                 CREATE TABLE IF NOT EXISTS registry_actions(id TEXT PRIMARY KEY,request_sha TEXT NOT NULL,body TEXT NOT NULL);
             """)
             if self._meta("revision") is None:self._set("revision",0)
@@ -194,6 +195,7 @@ class Workspace(PackageOperations, SourceWorkspace):
                 "activePlan":self._meta("activePlan"),"lastQuery":self._meta("lastQuery"),
                 "reviews":self._all("registry_reviews"),"prs":self._all("registry_prs"),
                 "prsPlans":self._all("registry_prs_plans"),"prsReconciliations":self._all("registry_prs_reconciliations"),
+                "prsPreviews":self._all("registry_prs_previews"),
                 "merchant":self._meta("merchant"),"exports":self._all("registry_exports"),
                 "publisher":self.publisher.state(),"runtime":{"prs":prs.doctor()},
                 "contract":{"apiVersion":registry.CONTRACT["apiVersion"],
@@ -385,7 +387,7 @@ class Workspace(PackageOperations, SourceWorkspace):
             value=registry.parse_document(raw)
             return {"captureId":capture["id"],"nctId":nct_id,"sourceSha256":row["sha"],
                     "page":{key:page[key] for key in ["index","url","receivedAt","sha256","bodyPath"]},
-                    "summary":load_json(row["summary"]),"study":value,"json":source_json.exact_json(value),
+                    "summary":load_json(row["summary"]),"study":value,"json":raw.decode("utf-8"),
                     "sectionJson":{k:registry.pretty_json(v) for k,v in value.items()},
                     "reviews":[r for r in self._all("registry_reviews") if r["captureId"]==capture["id"] and r["nctId"]==nct_id]}
 
@@ -420,7 +422,14 @@ class Workspace(PackageOperations, SourceWorkspace):
         row=self.db.execute("SELECT body FROM registry_prs WHERE id=?",(ident,)).fetchone()
         if row is None:raise InputError("Unknown retained PRS document")
         data=self._verified("prs/"+ident+".xml",ident,prs.MAX_XML).read_bytes()
-        return {"record":load_json(row[0]),"xml":data.decode("utf-8-sig")}
+        record=load_json(row[0])
+        encoding=record["report"].get("encoding") or "utf-8-sig"
+        warning=None
+        try:display=data.decode(encoding)
+        except (LookupError,UnicodeDecodeError):
+            display=data.decode("utf-8",errors="replace")
+            warning="The inspection could not supply a complete text decoding. Download the retained original bytes."
+        return {"record":record,"xml":display,"displayEncoding":encoding,"displayWarning":warning}
 
 
     def prs_plan(self,ident):
@@ -438,6 +447,40 @@ class Workspace(PackageOperations, SourceWorkspace):
         record=load_json(row[0])
         data=self._verified("prs/reconciliation-"+ident+".json",ident,64*1024*1024).read_bytes()
         return {**record,"report":load_json(data)}
+
+    def prs_catalog(self):
+        return prs.catalog()
+
+    def prs_preview(self,ident):
+        ident=checked_sha(ident)
+        row=self.db.execute("SELECT body FROM registry_prs_previews WHERE id=?",(ident,)).fetchone()
+        if row is None:raise InputError("Unknown retained PRS upload preview")
+        record=load_json(row[0])
+        data=self._verified("prs/preview-"+ident+".json",ident,64*1024*1024).read_bytes()
+        return {**record,"report":load_json(data)}
+
+    def preview_prs(self,p):
+        base=self.prs_document(p["baseDocumentId"])["record"]
+        incoming=self.prs_document(p["incomingDocumentId"])["record"]
+        schema=base["report"]["schemaKind"]
+        if incoming["report"]["schemaKind"]!=schema:
+            raise InputError("The retained base and incoming documents use different original PRS schemas")
+        reviewer=registry.text(p["reviewer"],"Reviewer",160)
+        before=self._verified("prs/"+base["id"]+".xml",base["id"],prs.MAX_XML).read_bytes()
+        after=self._verified("prs/"+incoming["id"]+".xml",incoming["id"],prs.MAX_XML).read_bytes()
+        candidate,report=prs.preview_upload(before,after,schema,p.get("rules"),reviewer)
+        created=self.import_prs(candidate,"composed-"+incoming["name"],schema,base["id"],reviewer,
+            "Reviewed local composition of retained incoming document "+incoming["id"])
+        retained={"schema":"stellar-forge.clinicaltrials-prs-preview.v1","baseDocumentId":base["id"],
+            "incomingDocumentId":incoming["id"],"candidateId":created["id"],"reviewer":reviewer,
+            "rules":p.get("rules"),"report":report}
+        encoded=json_bytes(retained);ident=registry.sha(encoded)
+        summary={"id":ident,"baseDocumentId":base["id"],"incomingDocumentId":incoming["id"],
+            "candidateId":created["id"],"reviewer":reviewer,"createdAt":registry.now(),
+            "bytes":len(encoded),"complete":report.get("complete")}
+        immutable(self.root/"prs"/("preview-"+ident+".json"),encoded)
+        with self.db:self.db.execute("INSERT OR IGNORE INTO registry_prs_previews VALUES(?,?)",(ident,json_bytes(summary).decode()))
+        return {"document":created,"previewId":ident,"report":self.prs_preview(ident)}
 
     def prepare_prs(self,p):
         document=self.prs_document(p["documentId"])
@@ -475,7 +518,7 @@ class Workspace(PackageOperations, SourceWorkspace):
             records.append({"rawJson":item["json"],"source":{"captureId":capture["id"],
                 "pageReference":item["page"],"observedAt":item["page"]["receivedAt"],
                 "apiVersion":capture["version"]["apiVersion"],"dataTimestamp":capture["version"]["dataTimestamp"],
-                "sourceSha256":item["sourceSha256"]}})
+                "sourceSha256":item["sourceSha256"],"sha256":item["sourceSha256"]}})
         raw=self._verified("prs/"+document["id"]+".xml",document["id"],prs.MAX_XML).read_bytes()
         report=prs.reconcile(raw,records,plan)
         retained={"schema":"stellar-forge.clinicaltrials-prs-reconciliation.v1","documentId":document["id"],
@@ -595,6 +638,7 @@ class Workspace(PackageOperations, SourceWorkspace):
         if action=="prs.plan":return self.prepare_prs(p)
         if action=="prs.apply":return self.apply_prs(p)
         if action=="prs.reconcile":return self.reconcile_prs(p)
+        if action=="prs.preview":return self.preview_prs(p)
         if action.startswith("publisher."):
             if action=="publisher.prepare":
                 directory=Path(p.get("exportDirectory","")).resolve()

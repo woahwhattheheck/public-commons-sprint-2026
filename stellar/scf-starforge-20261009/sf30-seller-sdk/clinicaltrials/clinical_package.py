@@ -41,6 +41,7 @@ class PackageOperations:
             "createdAt":registry.now(),"native":base,"captures":captures,
             "reviews":self._all("registry_reviews"),"prs":self._all("registry_prs"),
             "prsPlans":self._all("registry_prs_plans"),"prsReconciliations":self._all("registry_prs_reconciliations"),
+            "prsPreviews":self._all("registry_prs_previews"),
             "metadata":{k:self._meta(k) for k in ["configuration","currentCapture","activeBuild","activePlan","lastQuery","merchant"]}}
         with self.scratch() as temp:
             members={}
@@ -284,7 +285,8 @@ class PackageOperations:
                     else:copy_private(original,target)
                 with self.db:self.db.execute("INSERT OR REPLACE INTO registry_prs VALUES(?,?)",(record["id"],json_bytes(record).decode()))
             for key,table,prefix in [("prsPlans","registry_prs_plans","plan-"),
-                                     ("prsReconciliations","registry_prs_reconciliations","reconciliation-")]:
+                                     ("prsReconciliations","registry_prs_reconciliations","reconciliation-"),
+                                     ("prsPreviews","registry_prs_previews","preview-")]:
                 for record in manifest.get(key,[]):
                     original=temp/"prs"/(prefix+record["id"]+".json")
                     if file_digest(original,64*1024*1024)!=record["id"]:

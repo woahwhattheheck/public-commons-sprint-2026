@@ -56,6 +56,8 @@ class Handler(RetainedHandler):
             elif route=="/api/clinical/prs":self._json(ws.prs_document(q["documentId"]))
             elif route=="/api/clinical/prs-plan":self._json(ws.prs_plan(q["planId"]))
             elif route=="/api/clinical/prs-reconciliation":self._json(ws.prs_reconciliation(q["reportId"]))
+            elif route=="/api/clinical/prs-preview":self._json(ws.prs_preview(q["previewId"]))
+            elif route=="/api/clinical/prs-catalog":self._json(ws.prs_catalog())
             elif route=="/api/clinical/export":
                 exported=ws.read_export(q["exportId"],q["file"])
                 self._download(exported["path"],exported["filename"],media(exported["filename"]))

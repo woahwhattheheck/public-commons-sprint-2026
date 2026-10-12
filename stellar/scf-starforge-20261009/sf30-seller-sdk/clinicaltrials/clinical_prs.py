@@ -11,7 +11,7 @@ def _engine():
         raise InputError("The installed ClinicalTrials package needs its original prs/ module") from error
 
 def _call(name,*args,**kwargs):
-    if args and isinstance(args[0],bytes) and len(args[0])>MAX_XML:
+    if any(isinstance(value,(bytes,bytearray,memoryview)) and len(value)>MAX_XML for value in args):
         raise InputError("PRS input exceeds this operator's 64 MiB capacity")
     kwargs["schema_dir"]=HERE/"contracts"
     try:
@@ -39,3 +39,9 @@ def apply(data,plan):
 
 def reconcile(data,records,plan):
     return _call("reconcile",data,records,plan)
+
+def preview_upload(base,incoming,schema="protocol",rules=None,reviewer=""):
+    return _call("preview_upload",base,incoming,schema=schema,rules=rules,reviewer=reviewer)
+
+def catalog():
+    return _call("catalog")

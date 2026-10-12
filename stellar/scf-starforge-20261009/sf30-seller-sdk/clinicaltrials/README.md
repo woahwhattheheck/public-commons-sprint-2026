@@ -194,3 +194,15 @@ The original lease serializes all mutable source, review and publisher actions. 
 ## License
 
 MIT, consistent with the existing Starforge seller toolkit and shared source engines.
+
+## Retained PRS upload previews and exact study bytes
+
+The full PRS implementation is the source-owned `clinicaltrials/prs/` leaf. Its original XSD closure, modernization profile, correlated record links and source-based upload semantics remain authoritative. `study().json` contains the retained UTF-8 study bytes, including the original record terminator, and reproduces `sourceSha256`. The text shown for a PRS document uses the encoding reported by that same original inspector; the downloadable XML retains its exact bytes.
+
+`prs.preview` accepts `{baseDocumentId,incomingDocumentId,reviewer,rules?}`. Both documents must already belong to this workspace and use the same selected Protocol or Results schema. The original `preview_upload` composes the reviewed full/partial/list-delete operation. The controller retains both inputs, the composed candidate and a separate immutable preview report with all source operations, unresolved units and original-to-candidate changes. A candidate can equal an existing document byte-for-byte; its preview still has its own retained report.
+
+Read the result through `GET /api/clinical/prs-preview?previewId=ID`; `state.prsPreviews` lists the saved reports. `GET /api/clinical/prs-catalog` returns the complete original 185-field profile, including typed XML/API routes and the explicit record/group identity requirements. The browser exposes both reads and the full reviewed preview form. CLI equivalents are `prs preview --file reviewed-preview.json`, `prs preview-read --document ID`, and `prs catalog`.
+
+Portable receiving includes `prsPreviews` and exact `prs/preview-ID.json` files with the original XML, modernization plans and reconciliation reports. Customer sourceFiles retains the same closure for native SF82 publication. New workspaces can receive older packets without previews.
+
+The native dataset's declared column order is part of its snapshot. Customer export preserves that order when changing the adjacent CSV filename to `dataset.csv`; general metadata canonicalization does not reorder the dataset's columns. Failed provider-version response bytes remain retained with their validation outcome, while a completed capture still requires consistent original validated start/resume/finish editions.
