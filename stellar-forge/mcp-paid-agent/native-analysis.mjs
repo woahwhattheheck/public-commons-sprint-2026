@@ -12,6 +12,7 @@ import {createNativeWorkbookActions} from './native-analysis-workbooks.mjs';
 import {createNativeSourceActions} from './native-analysis-sources.mjs';
 import {createNativeArchiveActions} from './native-analysis-archives.mjs';
 import {createNativeSemanticActions} from './native-analysis-semantics.mjs';
+import {createNativeResearchActions,publicNativeResearchJob} from './native-analysis-research.mjs';
 
 const SCHEMA='stellar-forge.mcp-native-analysis.v1';
 const CUSTOMER='stellar-forge.customer-analysis.v1';
@@ -90,6 +91,7 @@ function publicVersion(version){
   const {sourceDirectory,...record}=version;return record;
 }
 function publicJob(job){
+  job=publicNativeResearchJob(job,publicSource);
   const result={...job};
   if(object(result.request?.source))result.request={...result.request,source:publicSource(result.request.source)};
   if(object(result.result)){
@@ -121,6 +123,7 @@ export function createNativeAnalysis({manifest,completedDataset,completedObject,
   const sources=createNativeSourceActions({manifest,completedObject,completedResponse});
   const archives=createNativeArchiveActions({reads,parse});
   const meanings=createNativeSemanticActions();
+  const research=createNativeResearchActions({publicJob});
   let closed=false;
   const available=()=>need(!closed&&!isClosed(),'MCP_NATIVE_WORKSPACE_CLOSING');
   async function roots(create=false){
@@ -308,6 +311,7 @@ export function createNativeAnalysis({manifest,completedDataset,completedObject,
     else if(meanings.handles(op))value=await meanings.call({operation:op,body,get,
       cacheScope:record.workspaceId+':'+connection.url.href+':'+connection.capability,
       getBytes:(route,maximum)=>request(connection,route,undefined,context.signal,{raw:true,maximum})});
+    else if(research.handles(op))value=await research.call({operation:op,body,get,post});
     else if(sources.handles(op))value=await sources.call({operation:op,body,post});
     else if(workbooks.handles(op))value=await workbooks.call({operation:op,body,record,state:connection.state,get,post});
     else if(archives.handles(op))value=await archives.call({operation:op,body,record,state:connection.state,get,post});

@@ -38,6 +38,14 @@ original request/output identities through the existing Node client and Analysis
 engines; `examples/research_document_workbook.py` carries the complete receiving
 operation.
 
+The [Research intake in the original Analysis browser](RESEARCH_INTAKE.md) lets
+an operator choose a named Research connection, review an actual saved document
+or retained managed output, capture its complete source, and continue through
+those same mapping and workbook controls. Capture history reopens the exact
+original job after a lost reply, and portable receiving keeps the source usable
+without its Research connection. `examples/research_intake_workbook.py` carries
+the browser, native import, full workbook and cold-receiving continuation.
+
 [Uploads, typed stream records and resumable file delivery](CUSTOMER_WORKFLOWS.md)
 joins the original native 16 MiB multipart authoring, SSE/NDJSON reader and paid-file
 continuation in one Python customer workflow. `MultipartRequest` and `UploadFile`

@@ -303,3 +303,257 @@ Native agents can also use the original customer Workbooks application through t
 ## Complete portable workspace delivery
 
 Use the [native portable workspace workflow](ARCHIVES.md) to export and receive the original SQLite snapshot together with its retained query-export, report and workbook files. The same analysis host exposes complete selection review, export history, progress, cancellation, exact same-ID recovery and verified file ranges. The installed MCP download client retains durable partial transport; the original Python receiver validates and atomically publishes the complete customer workspace for offline and live reopening.
+
+
+## Saved Research documents and managed outputs
+
+The native agent can receive an existing Research document purchase, retained
+managed Pipelines output, or saved dossier edition into this same Analysis
+workspace. The original Research client verifies and captures the complete
+selected edition; the original response-source registration, Analysis job,
+preview/import, SQL, full export, workbook and portable archive continue from
+that source.
+
+### Configure the original host connection
+
+Start the original Analysis service with its private Research registry, using
+the complete maintained Python and Node source:
+
+~~~bash
+python -m stellar_forge_buyer.analysis_workspace \
+  --database /private/customer/analysis \
+  --checkout /work/installed-merchant-source \
+  --research-connections /private/research-connections.json \
+  serve --port 0
+~~~
+
+The registry uses schema
+`stellar-forge.analysis-research-connections.v1` and the
+existing private Research connection files. Each entry has a name, label,
+absolute connection-file path and actual expected Research workspace ID.
+The [original Research intake guide](../../stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/RESEARCH_INTAKE.md)
+contains its complete configuration and browser/CLI workflow.
+
+Register this running Analysis service under the normal native alias described
+above. `research-connections` exposes only the configured names,
+labels and exact Research workspace IDs. All eight new operations use the
+same native `action: analysis` interface and the same
+`analysisWorkspace` alias. The selected Analysis service owns
+its original capability and local jobs.
+
+| Native operation | Original result and next use |
+| --- | --- |
+| `research-connections` | Configured aliases, exact workspace IDs, and original capture availability |
+| `research-dossiers` | Original dossier inventory with its complete snapshot/next cursor |
+| `research-sources` | Saved Documents purchases/editions or existing Pipelines outputs/editions |
+| `research-review` | The exact selected edition and its original digest, provider and source metadata |
+| `research-elements` | Bounded pages from that reviewed edition, with explicit page/type/text filters |
+| `research-capture` | Original Analysis job admission or same-request recovery of the complete source |
+| `research-captures` | Retained original capture requests, progress and compact completion identities |
+| `research-cancel` | Cancellation request for that original local capture worker |
+
+Use the existing `job` operation to read the complete capture
+result. Its native ID is the same 32-character lowercase hexadecimal ID
+retained in the capture request.
+
+### Review the saved original selection
+
+These examples use the original host SDK dispatcher. The caller selects the
+actual returned connection and dossier; the variable names below are not
+new identifiers or provider credentials.
+
+~~~js
+const call = async (analysisOperation, analysisRequest = {}) =>
+  (await native.call({
+    action: 'analysis',
+    analysisWorkspace: 'customer',
+    analysisOperation,
+    analysisRequest
+  })).result;
+
+const configured = await call('research-connections');
+// Select the intended returned connection using its actual name.
+const connection = configured.connections.find(
+  item => item.name === selectedConnectionName
+);
+if (!connection) throw new Error('Select a configured Research connection.');
+const base = {
+  connection: connection.name,
+  expected_workspace_id: connection.workspace_id
+};
+
+const first = await call('research-dossiers', {...base, limit: 20});
+const nextCursor = first.result.next;
+if (nextCursor) {
+  const next = await call('research-dossiers', {...base, ...nextCursor});
+  // next.result belongs to the same original inventory snapshot.
+}
+~~~
+
+The native outer envelope has its own `result` field. The four
+Research read operations then preserve the original intake wrapper:
+`{connection, workspace_id, dossier_id?, family?, result}`.
+The inventory is therefore `first.result` after the helper
+above unwraps the native outer envelope. Preserve the entire original
+inventory `next` object. A nonzero offset requires its exact
+snapshot; a changed inventory is returned by the original service as a
+reviewable error.
+
+Read sources using the actual dossier ID and family:
+
+~~~js
+const picked = {
+  ...base,
+  dossier_id: selectedDossierId,
+  family: selectedFamily
+};
+const listed = await call('research-sources', {...picked, limit: 20});
+~~~
+
+The original dossier ID is `d_<UUID>`, including its hyphens.
+Use the original returned Documents or Pipelines cursor as
+`after` for another saved-source page. Managed provider job,
+file and node IDs remain the native values returned with that source.
+
+Select exactly one of these source forms:
+
+| Family | Original `selection` |
+| --- | --- |
+| Documents | `{purchaseId: 'u_<64 hex>'}` or `{editionId: 'e_<64 hex>'}` |
+| Pipelines | `{operationId: 'up_<64 hex>', outputId: 'out_<64 hex>'}` or `{editionId: 'e_<64 hex>'}` |
+
+Use actual returned IDs in place of the notation. A selection keeps its
+native shape and family; it is never regenerated from row order.
+
+~~~js
+const selected = {...picked, selection: selectedOriginalSource};
+const reviewed = await call('research-review', selected);
+const editionSha256 = reviewed.result.editionSha256;
+
+const page = await call('research-elements', {
+  ...selected,
+  expected_edition_sha256: editionSha256,
+  offset: 0,
+  limit: 25,
+  page: '',
+  type: '',
+  query: ''
+});
+~~~
+
+The exact review digest is
+`reviewed.result.editionSha256`. Element filtering changes the
+displayed page. Capture retains the complete selected original edition and
+its full source closure. The native adapter preserves the original pagination
+and enforces its ordinary 256 KiB tool-result boundary; use smaller element
+or history pages when the returned metadata is large.
+
+### Capture, preview and import the complete source
+
+Read the original Analysis `sources` or `state`
+before choosing the source alias revision. Revision zero creates a new alias.
+Retain the complete request below, including its ID, title and full ISO capture
+time with timezone, before dispatch. Use the actual current source revision
+when intentionally replacing an existing alias.
+
+~~~js
+const exactCapture = {
+  id: retainedIds.capture,
+  ...selected,
+  expected_edition_sha256: editionSha256,
+  name: reviewedAnalysisSourceName,
+  expected_revision: reviewedSourceRevision,
+  title: reviewedSourceTitle,
+  captured_at: retainedCaptureTimestamp
+};
+
+const started = await call('research-capture', exactCapture);
+const captured = await call('job', {id: exactCapture.id});
+~~~
+
+Read that same job until it reports its actual terminal state. On COMPLETE,
+the original result contains:
+
+| Result field | Meaning |
+| --- | --- |
+| `connection`, `workspace_id`, `dossier_id`, `family`, `selection` | The original reviewed Research selection |
+| `edition_sha256` | The exact captured edition digest |
+| `document_id` | Original registered source-document identity |
+| `source` | Original Analysis source name, revision and retained provenance |
+| `registration_current` | Whether that historical capture is still the selected source revision |
+| `mapping` | Producer's complete original 18-column typed response mapping |
+| `receipt` | Original source-producer receipt and exact provider/capture identity |
+| `verification` | Original document ID, files, bytes, row count and completeness |
+
+The existing native source projection removes local host paths while retaining
+the document ID and source provenance. A previous capture can remain complete
+after its source alias advances; use its exact retained source revision for
+the following preview.
+
+Once that original capture is COMPLETE, continue through the existing native
+response operations:
+
+~~~js
+const source = captured.result.source;
+const previewRequest = {
+  id: retainedIds.preview,
+  source: source.name,
+  source_revision: source.revision,
+  mapping: captured.result.mapping
+};
+await call('response-preview', previewRequest);
+const preview = await call('job', {id: previewRequest.id});
+
+// After preview is COMPLETE, use its actual retained preview digest.
+const importRequest = {
+  id: retainedIds.import,
+  preview_id: preview.id,
+  preview_sha256: preview.result.preview_sha256
+};
+await call('response-import', importRequest);
+const imported = await call('job', {id: importRequest.id});
+~~~
+
+The complete preview exhausts the mapped original records before import.
+Use its actual completeness status and the original explicit incomplete-source
+option when applicable. Select the returned immutable imported version
+through the ordinary `activate` operation, then use the
+existing reviewed SQL, full query export, workbook and archive operations.
+The [workbook guide](WORKBOOKS.md) and [complete portable archive guide](ARCHIVES.md)
+carry those original selected-version, query-result and complete-file bindings.
+
+### Recover the same original capture
+
+A lost native tool reply leaves the exact original capture request as the
+recovery unit. Read `job` using its retained ID first. If
+accepted, that job contains the original request and actual status/result.
+Explicitly repeating `research-capture` with every unchanged
+request field resumes the existing original capture. A different selection,
+digest, source revision or timestamp requires a new reviewed request.
+
+The source-registration transaction is authoritative. If it completed before
+the job result reply was retained, the original intake searches its registered
+source closure first and completes that same capture. A matching restored
+source can finish this recovery with the Research connection unavailable.
+
+`research-captures` pages original history by its returned
+`next_before` sequence. It keeps compact document/digest/
+verification results; `job` opens the complete selected
+receipt and mapping.
+
+~~~js
+await call('research-cancel', {id: exactCapture.id});
+const observed = await call('job', {id: exactCapture.id});
+~~~
+
+Cancellation belongs to the existing local capture worker and its original
+Research-client calls. A completed source registration remains available and
+complete. Closing the native MCP adapter drains its own requests through the
+existing Analysis lifetime; the host's service and saved jobs retain their
+normal ownership.
+
+For a portable delivery, use the original whole-workspace archive. It includes
+the registered original source documents, exact mapping and imported data,
+capture history, selected original query/workbook outputs and their
+manifests. The restored Analysis service can reopen those local documents
+under a newly registered native workspace alias.
