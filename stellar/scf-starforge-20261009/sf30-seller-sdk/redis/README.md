@@ -7,8 +7,9 @@ routes, examples and exact native payment alternatives. Preparation creates the
 original seller service, OpenAPI document and generated buyer client together.
 
 The source supports Redis 7 or later and Valkey 7.2 or later with `EVAL_RO`.
-It uses the maintained `@redis/client` 6.2.1 connection implementation and the
-existing SF30 developer portal, operations interface and request lifecycle.
+Native profiles select standalone Redis, Redis Cluster or Redis Sentinel. They
+use the maintained `@redis/client` 6.2.1 implementation and the existing SF30
+developer portal, operations interface and request lifecycle.
 
 ## Connect an Upstash source
 
@@ -177,25 +178,136 @@ Redis dataset continues under its own operational lifecycle.
 
 ## Configure the native connection
 
-`connection` accepts `host`, `port`, `database`, optional `username` and
-`passwordEnv`, `tls` and optional `caFile`. The defaults are port 6379, database 0
-and `tls: "verify-full"`. TLS validates the server certificate and hostname;
-`caFile` is resolved relative to the source file. A local development connection
-can explicitly choose `local-plaintext` for `127.0.0.1`, `::1` or `localhost`.
+The private `connection` selects one deployment. Omitted `topology` keeps the
+original standalone profile. All native profiles accept `username`,
+`passwordEnv`, `tls` and `caFile`. The host environment supplies the password
+when a preview or seller starts. TLS defaults to `verify-full`, which validates
+the server certificate and hostname. An explicit CA is relative to the source
+file and is copied into prepared packages and retained releases.
 
-For an authenticated service, set the connection's `username` and the name of its
-existing password environment entry, for example
-`"passwordEnv": "REDIS_MERCHANT_PASSWORD"`. The private host environment supplies
-the value when the reader starts. Preparation copies an explicit CA into the
-package and records required environment names in the manifest.
+| Deployment | Required connection fields | Database |
+| --- | --- | --- |
+| Standalone | `host`; optional `port` defaults to 6379 | `database` defaults to 0 |
+| Cluster | `topology: "cluster"`, `rootNodes` | Database 0 |
+| Sentinel | `topology: "sentinel"`, `name`, `sentinelRootNodes` | `database` defaults to 0 on the data server |
+
+Start from the corresponding complete source and merchant-plan templates:
+
+```sh
+starforge redis init --directory /srv/merchant/cluster --topology cluster
+starforge redis init --directory /srv/merchant/sentinel --topology sentinel
+```
+
+Each seed list contains 1–16 distinct `{ "host": "...", "port": 6379 }`
+endpoints. Cluster seeds default to port 6379; Sentinel seeds default to 26379.
+Use several independently reachable seeds so the driver can discover the
+deployment when one seed is unavailable. `describe` reports the topology and
+seed count without exposing hosts or credential values.
+
+### Cluster
+
+A Cluster connection uses the same merchant credentials and TLS settings for
+seed discovery and every discovered data node:
+
+```json
+{
+  "topology": "cluster",
+  "rootNodes": [
+    { "host": "redis-1.example", "port": 6379 },
+    { "host": "redis-2.example", "port": 6379 },
+    { "host": "redis-3.example", "port": 6379 }
+  ],
+  "username": "merchant",
+  "passwordEnv": "REDIS_MERCHANT_PASSWORD",
+  "tls": "verify-full"
+}
+```
+
+Every declared product reads one selected Redis key. The driver receives that
+key with the original `EVAL_RO` invocation, routes it to the slot's primary and
+handles native `MOVED` and `ASK` redirects. The reader uses primary nodes.
+Different products and enum-selected keys can occupy different slots. A Cluster
+profile rejects nonzero databases before opening a connection.
+
+### Sentinel
+
+A Sentinel profile names the monitored primary and separates discovery
+credentials and TLS from data credentials and TLS:
+
+```json
+{
+  "topology": "sentinel",
+  "name": "merchant-primary",
+  "sentinelRootNodes": [
+    { "host": "sentinel-1.example", "port": 26379 },
+    { "host": "sentinel-2.example", "port": 26379 },
+    { "host": "sentinel-3.example", "port": 26379 }
+  ],
+  "database": 0,
+  "username": "merchant",
+  "passwordEnv": "REDIS_MERCHANT_PASSWORD",
+  "tls": "verify-full",
+  "sentinelUsername": "merchant-monitor",
+  "sentinelPasswordEnv": "REDIS_SENTINEL_PASSWORD",
+  "sentinelTls": "verify-full"
+}
+```
+
+`sentinelTls` also defaults to `verify-full`. Set `caFile` for a private
+data-server CA and `sentinelCaFile` for a private Sentinel CA. Preparation
+retains them independently as `database-ca.pem` and `sentinel-ca.pem` and
+lists both required environment names in the manifest. The saved workspace
+retains the original certificate bytes and environment references through
+reopen, customer preparation and release staging.
+
+The native Sentinel client discovers and reads the current primary. Its
+existing topology refresh handles a promoted primary; this reader does not
+select replicas. Supply monitor credentials for the Sentinel service and data
+credentials for the database nodes. Configure each service through its own
+existing administration interface.
+
+### Advertised addresses and local receiving
+
+Cluster and Sentinel deployments may advertise addresses that differ from the
+host's reachable addresses. An optional `nodeAddressMap` translates exact
+advertised `host:port` strings to explicit endpoints:
+
+```json
+{
+  "nodeAddressMap": {
+    "10.20.0.12:6379": { "host": "redis-2.internal.example", "port": 6379 }
+  }
+}
+```
+
+The map permits at most 256 entries. Each destination specifies its port.
+Sentinel applies the same map to discovered monitor and data endpoints. Keep the
+mapped endpoint compatible with its server certificate and the host's existing
+network access.
+
+For a local development deployment, explicitly choose `local-plaintext`.
+If either the data or Sentinel connection uses this mode, every seed, mapped
+endpoint and discovered destination must be `127.0.0.1`, `::1` or
+`localhost`. The source checks discovered destinations as well as the initial
+profile. Use the verified TLS profiles for a remote deployment.
+
+### Connection lifetime
 
 The source has explicit `maxConnections`, `maxPending`, `connectTimeoutMs`,
-`idleTimeoutMs` and `startupTimeoutMs`. It reuses its owned connections across
-queries and keeps the queue and request lifetime within the configured limits.
-On a deadline, it retires the affected connection. The deadline bounds the
-client's wait; an already executing remote script continues according to the
-Redis server's script lifecycle. Stopping closes the source through the existing
-seller HTTP drain.
+`idleTimeoutMs` and `startupTimeoutMs`. For Cluster and Sentinel,
+`maxConnections` counts owned logical clients; the native driver opens the
+sockets needed for discovery and data nodes inside each client. Size this limit
+alongside the deployment's socket capacity. The default is four logical clients.
+
+The source reuses ready clients and keeps requests within the configured queue
+and lifetime. On cancellation or deadline it retires the affected client and
+joins its connection and command work before releasing its pool slot. Closing
+the source joins all retiring clients as well as active work. A failed seed can
+fall through to another configured seed using the native driver.
+
+A client deadline ends the reader's request; a script already executing on
+Redis continues according to the server's script lifecycle. Stopping a seller
+uses the existing HTTP drain before closing its source.
 
 ## Grant the command and key permissions
 
@@ -211,6 +323,17 @@ the example source uses this ACL permission fragment:
 ACL SETUSER merchant on resetkeys -@all ~merchant:availability:catalog ~merchant:catalog:north ~merchant:catalog:south ~merchant:rankings:daily ~merchant:events +eval_ro +ping +get +strlen +hmget +hstrlen +zrange +xrange
 ```
 
+For Cluster, add `+cluster|slots` for native discovery and `+asking` for a
+read redirected during a slot migration. Apply the merchant identity and its
+key permissions consistently to the Cluster's data nodes.
+
+For Sentinel, configure the separate monitor reader with `+ping`,
+`+sentinel|master`, `+sentinel|replicas`, `+sentinel|sentinels`,
+`+psubscribe` and `+punsubscribe`, together with channel access for native
+topology notifications. The integration fixture uses `&*` for that monitor
+identity. The data-server merchant retains the read permissions above. Sentinel
+administration and failover use the deployment's existing administrator identity.
+
 Apply the equivalent settings through the database's existing administration
 interface. Native script execution respects the user's command and key
 permissions. Redis-compatible hosted providers must expose the same read-only
@@ -221,6 +344,8 @@ Primary command and access-control references:
 - [Redis EVAL_RO](https://redis.io/docs/latest/commands/eval_ro/)
 - [Valkey EVAL_RO](https://valkey.io/commands/eval_ro/)
 - [Redis ACL](https://redis.io/docs/latest/operate/oss_and_stack/management/security/acl/)
+- [node-redis 6.2.1 Cluster](https://github.com/redis/node-redis/blob/redis%406.2.1/docs/clustering.md)
+- [node-redis 6.2.1 Sentinel](https://github.com/redis/node-redis/blob/redis%406.2.1/docs/sentinel.md)
 
 ## Operate the service and retained releases
 
@@ -256,6 +381,22 @@ an ACL user, exports the original customer client, and uses the original buyer
 and SF82 child process for upgrade and rollback. Its facilitator is the existing
 local x402 protocol fixture. `SF30_REDIS_JOURNEY_OUTPUT` optionally saves the
 result to a selected file.
+
+Set `SF30_REDIS_JOURNEY_TOPOLOGY=cluster` for three native primaries, live slot
+routing and a slot migration, or `SF30_REDIS_JOURNEY_TOPOLOGY=sentinel` for an
+authenticated primary/replica deployment and three Sentinel monitors with an
+actual primary promotion. These modes continue through the same declared
+products, merchant, buyer, customer files and retained release journey. Add
+`SF30_REDIS_JOURNEY_WORKSPACE=1` and `SF30_REDIS_WORKSPACE_BROWSER=1` to include
+the existing saved editor and browser flow on the selected deployment. The
+native journey owns and closes the ephemeral Redis processes it starts.
+
+Add `SF30_REDIS_JOURNEY_TLS=1` to the Sentinel run to generate separate data
+and monitor CAs and real SAN certificates through the installed `openssl`
+executable. That run uses verified TLS on both planes, retains both CA files
+through the original workspace and package, removes the original merchant CA
+source copies, and continues through the retained seller's actual customer
+deliveries and release changes. The selected Redis executable must include TLS.
 
 The integrated run on Redis 7.0.15 and `@redis/client` 6.2.1 completed six buyer
 deliveries, retained every original response file, and restored the original

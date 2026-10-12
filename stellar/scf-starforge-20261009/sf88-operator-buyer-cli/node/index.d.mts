@@ -196,11 +196,30 @@ export interface PreapprovalLedgerCheck extends JsonObject {
   outcome: 'ABSENT_FROM_AUTHENTICATED_ORIGINAL_LEDGER';
   intentId: string; reservationsForIntent: 0;
 }
+/** Exact private unsigned journal selected before one same-intent continuation. */
+export interface PreapprovalWireCheckpoint {
+  schema: 'stellar-forge.sf88.preapproval-wire.v1.checkpoint';
+  directory: string; exists: boolean; sha256: string; state: string;
+  binding: { intentId: string; url: string; method: string; configValueSha256: string;
+    bodyPresent: boolean; bodyBytes: number; bodySha256: string };
+  directoryIdentity?: { device: number; inode: number };
+  lockIdentity?: { device: number; inode: number } | null;
+  sourceSha256?: string | null;
+  files: Array<{ name: string; bytes: number; sha256: string; device: number; inode: number }>;
+}
+/** Reopened selected history remains separate from the next canonical wire. */
+export interface PreapprovalWireHistory {
+  schema: 'stellar-forge.sf88.preapproval-wire.v1'; intentId: string;
+  status: 'PREPARING' | 'RETAINED'; planSha256: string; selectionSha256: string;
+  checkpointSha256: string; retirementSha256?: string; sourceSha256?: string | null;
+  archiveDirectory: string | null; state?: string; files?: number;
+}
 export interface PreapprovalRecoveryPrepared {
   schema: 'stellar-forge.node-preapproval-recovery.v1'; intentId: string;
   status: 'PREPARED'; directory: string; attemptSha256: string;
   planSha256: string; review: Review;
   originalLedgerCheck: PreapprovalLedgerCheck; processProof: PreapprovalProcessProof;
+  originalWire?: PreapprovalWireCheckpoint; wireHistory?: PreapprovalWireHistory;
 }
 export interface PreapprovalRecoveryAvailable {
   schema: 'stellar-forge.node-preapproval-recovery.v1'; intentId: string;
@@ -208,12 +227,13 @@ export interface PreapprovalRecoveryAvailable {
   sources: Array<{ name: string; path: string; exists: boolean;
     bytes?: number; sha256?: string; device?: number; inode?: number }>;
   originalLedgerCheck: PreapprovalLedgerCheck; processProof: PreapprovalProcessProof;
+  originalWire: PreapprovalWireCheckpoint;
 }
 export interface PreapprovalRecoveryHistory {
   schema: 'stellar-forge.node-preapproval-recovery.v1'; intentId: string;
   state: string; directory: string;
   history: Array<{ directory: string; planSha256: string; attemptSha256: string;
-    reason: string; createdAt: string }>;
+    reason: string; createdAt: string; wireHistory?: PreapprovalWireHistory }>;
   pending: PreapprovalRecoveryPrepared | null;
 }
 

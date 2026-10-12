@@ -151,3 +151,28 @@ The helper's structured process diagnostics distinguish an active identity, diff
 A runtime configured with `nativeFileReservation` reserves backing on the actual metadata and output descriptors before starting the native child. The selected preapproval attempt uses four 65,536-byte metadata slots for its initial state, actual command, child identity and terminal state, plus the same saved-result bound used by ordinary execution and recovery. Closing an interrupted run can therefore publish its terminal checkpoint using already-held space. The configured provider and complete selected runtime source are described in [PROTECTED_STORAGE.md](PROTECTED_STORAGE.md).
 
 The retained native command records the actual child invocation. When the protected bootstrap is selected, its private request binds the original entry file, original arguments, allocator descriptor and selected runtime source. The direct entry path keeps its original command shape.
+
+## Retained wire history for the same intent
+
+An interrupted native process can leave an unsigned request journal before the approval callback has returned. The normal preapproval workflow now carries that journal with the selected plan:
+
+1. Inspection reads the complete private journal under its original writer lock. It accepts absent, pre-source and unsigned-only histories. A live writer or any signing/signed phase makes this preapproval path ineligible.
+2. Preparation binds its complete file inventory and source digest into the immutable plan alongside the original attempt, review, configuration and native workspace.
+3. Execution acquires the selected plan's own flock and repeats the original absent-process and authenticated zero-reservation ledger checks. It records that audit before changing the journal location.
+4. The original journal directory moves intact to the plan's `original-wire/` directory. The actual source/phase bytes, temporary publication inodes and original writer lock are retained. `wire-selection.json` binds the plan, source attempt, exact inventory and audit; `wire-retirement.json` records the completed move. Both publication files use the existing held-file allocation provider when configured.
+5. The caller reserves its four attempt-record replacements and result record, then enters the original runtime and its normal approval flow. The new journal occupies the original evidence pathname.
+
+`readPreapprovalRecovery()` exposes the safe `wireHistory` projection for each retained plan. The original journal remains readable through its selected history even after a newer journal exists. Private request and authorization bytes remain in the original private evidence/history files.
+
+An interruption before the directory move reopens the same selection and verifies the original journal. An interruption after the move verifies the exact archive and completes its existing retirement record. A competing or repeated execution cannot move the replacement journal: the per-plan lock, original attempt gate and immutable archive selection identify the old attempt independently of the canonical evidence pathname.
+
+Preparation and execution continue to use the existing public methods and exact reviewed hashes. Existing plans without the additive wire inventory acquire their one immutable selection only after the same original process and ledger audit. The source configuration, operation ticket, original ledger and intent identifier retain their normal meanings.
+
+
+| Wire outcome | Original operation action |
+| --- | --- |
+| `PREAPPROVAL_WIRE_WRITER_ACTIVE` | Read the original runtime and its active attempt before selecting another execution. |
+| `PREAPPROVAL_RECOVERY_ACTIVE` | Reopen the same selected plan after its current caller finishes. |
+| `PREAPPROVAL_NEW_WIRE_EXISTS` | Inspect the newer canonical attempt. The selected plan’s earlier journal remains in `original-wire/`. |
+| `PREAPPROVAL_WIRE_SIGNING_OR_DISPATCH_RECORDED` | Use the existing authorization or lost-output recovery path appropriate to the recorded phase. |
+| `PREAPPROVAL_WIRE_SOURCE_CHANGED` | Reopen the original plan and compare its retained inventory with the current source before selecting a continuation. |
