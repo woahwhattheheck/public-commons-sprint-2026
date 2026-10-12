@@ -16,10 +16,11 @@ export function datasetWorkspaceSelection({ stateDirectory, profilePath = null, 
 export function datasetWorkspaceUrl(value, port = 0) {
   try {
     const url = new URL(value);
+    const actualPort = Number(url.port || 80);
     if (typeof value !== 'string' || value.length > 4096 || url.protocol !== 'http:' ||
-        url.hostname !== '127.0.0.1' || !url.port || url.username || url.password ||
+        url.hostname !== '127.0.0.1' || actualPort < 1 || actualPort > 65535 || url.username || url.password ||
         url.pathname !== '/' || url.search || !/^#[a-f0-9]{64}$/.test(url.hash) ||
-        port && Number(url.port) !== port) return null;
+        port && actualPort !== port) return null;
     return url.href;
   } catch { return null; }
 }
