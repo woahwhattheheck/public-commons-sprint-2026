@@ -22,6 +22,23 @@ DISTRIBUTION = "stellar/scf-starforge-20261009/distribution/"
 DRIVER_SOURCE = "operations/merchant-support-native/"
 
 
+def echo(text):
+    try:
+        sys.stdout.write(text)
+        sys.stdout.flush()
+    except BrokenPipeError:
+        # A disconnected progress reader does not cancel the accepted native child.
+        descriptor = os.open(os.devnull, os.O_WRONLY)
+        try:
+            os.dup2(descriptor, sys.stdout.fileno())
+        finally:
+            os.close(descriptor)
+
+
+def emit(value):
+    echo(json.dumps(value) + "\n")
+
+
 def now():
     return datetime.datetime.now(datetime.timezone.utc).isoformat()
 
@@ -195,8 +212,8 @@ def main():
         env.update({"PATH": str(Path(node).parent) + os.pathsep + env.get("PATH", ""),
                     "TMPDIR": str(work), "NODE_OPTIONS": "--max-old-space-size=512",
                     "PYTHONDONTWRITEBYTECODE": "1"})
-        print(json.dumps({"phase": "SOURCE_READY", "sourceCommit": commit,
-                          "driverBlobs": driver_blobs, "work": str(work)}), flush=True)
+        emit({"phase": "SOURCE_READY", "sourceCommit": commit,
+                          "driverBlobs": driver_blobs, "work": str(work)})
         log_path = stage / "native-run.log"
         if log_path.exists():
             retained = directory(str(stage / "native-attempts"))
@@ -228,12 +245,12 @@ def main():
                 active.update({"phase": "RUNNING", "pid": child.pid,
                                "processStart": process_start(child.pid)})
                 save(stage / "native-active.json", active)
-                print(json.dumps({"phase": "RUNNING", "pid": child.pid,
-                                  "attemptId": attempt, "sourceCommit": commit}), flush=True)
+                emit({"phase": "RUNNING", "pid": child.pid,
+                                  "attemptId": attempt, "sourceCommit": commit})
                 for line in child.stdout:
                     log.write(line)
                     log.flush()
-                    print(line, end="", flush=True)
+                    echo(line)
                 code = child.wait()
             if code == 0 and not args.prepare_only:
                 outcome = read_json(stage / "native-result.json", {})
@@ -244,9 +261,9 @@ def main():
             if interrupted["signal"] is not None:
                 active["signal"] = interrupted["signal"]
             save(stage / "native-active.json", active)
-            print(json.dumps({"phase": active["phase"], "exitCode": code,
+            emit({"phase": active["phase"], "exitCode": code,
                               "selection": str(work / "journey-selection.json"),
-                              "result": str(stage / "native-result.json")}), flush=True)
+                              "result": str(stage / "native-result.json")})
             return code if code >= 0 else 128 - code
         except BaseException as error:
             if child and child.poll() is None:
