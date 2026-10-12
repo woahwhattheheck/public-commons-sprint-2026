@@ -43,6 +43,13 @@
         "../../../sf81-buyer-operator-bridge/browser-ui/approval.css",
         "text/css; charset=utf-8"
       ]
+    ],
+    [
+      "/recovery.mjs",
+      [
+        "recovery.mjs",
+        "text/javascript; charset=utf-8"
+      ]
     ]
   ]
 }

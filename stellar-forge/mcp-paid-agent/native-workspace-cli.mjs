@@ -13,6 +13,7 @@ const fail = code => { throw Object.assign(new Error(code), {code}); };
 const commands = {init:['--workspace','--catalog','--max-response-bytes','--response-timeout-ms'],
   call:['--input'], serve:['--port','--duckdb-description','--duckdb-description-sha256','--duckdb-workspace-id'], report:['--out'], inspect:[],
   'objects-register':['--description'], 'datasets-register':['--description'],
+  'datasets-receive':['--id','--room','--session'],
   'analysis-register':['--name','--database'], 'analysis-inbox-register':['--name','--inbox'],
   'collections-register':['--description'], 'duckdb-register':['--description']};
 function parse(args) {
@@ -53,6 +54,7 @@ async function main(args) {
       'call --dir ABS --input REQUEST_JSON\n' +
       'objects-register --dir ABS --description ORIGINAL_S3_OBJECTS_JSON\n' +
       'datasets-register --dir ABS --description ORIGINAL_SF30_DATASET_DESCRIPTION_JSON\n' +
+      'datasets-receive --dir ABS --id ID --room FINALIZED_ORIGINAL_SF100 [--session COMPLETE_ORIGINAL_SF88]\n' +
       'analysis-register --dir ABS --name ALIAS --database RUNNING_ORIGINAL_ANALYSIS_DIRECTORY\n' +
       'analysis-inbox-register --dir ABS --name ALIAS --inbox EXISTING_ORIGINAL_SF88_INBOX\n' +
       'collections-register --dir ABS --description PRIVATE_ORIGINAL_COLLECTION_REGISTRATION_JSON\n' +
@@ -93,6 +95,13 @@ async function main(args) {
     try {
       if (!v['--name'] || !v['--database']) fail('MCP_NATIVE_ANALYSIS_REGISTRATION_REQUIRED');
       return print(await native.registerAnalysis({name:v['--name'],database:v['--database']}));
+    } finally {await native.close();}
+  }
+  if (command === 'datasets-receive') {
+    try {
+      if(!v['--id']||!v['--room'])fail('MCP_DATASET_RECEIVING_ARGUMENTS_REQUIRED');
+      return print(await native.registerReceivedDataset({acquisitionId:v['--id'],room:v['--room'],
+        session:v['--session']??null}));
     } finally {await native.close();}
   }
   if (command === 'objects-register' || command === 'datasets-register') {

@@ -16,6 +16,7 @@ const help=String.raw`Usage:
   node cli.mjs disconnect --directory PATH --revision N --grant ID --request-id ID [--revoke] [--allow-loopback]
   node cli.mjs revoke --directory PATH --revision N --request-id ID [--revocation-grant ID] [--allow-loopback]
   node cli.mjs quickbooks --help
+  node cli.mjs setup --help
   node cli.mjs xero --help
 
 Profile files contain public registration data. Client secrets are read only from
@@ -123,6 +124,7 @@ async function connect(directory,args,options){
   }
 }
 export async function main(argv=process.argv.slice(2)){
+  if(argv[0]==='setup'){const {setupMain}=await import('./setup/cli.mjs');return setupMain(argv.slice(1));}
   if(argv[0]==='xero'){const {xeroMain}=await import('./xero-cli.mjs');return xeroMain(argv.slice(1));}
   if(argv[0]==='quickbooks'){const {quickbooksMain}=await import('./quickbooks-cli.mjs');return quickbooksMain(argv.slice(1));}
   const args=argumentsFor(argv);if(args.command==='help'){process.stdout.write(help);return;}
