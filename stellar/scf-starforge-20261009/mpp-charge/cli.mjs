@@ -10,6 +10,7 @@ import { preparePurchase, executePurchase, finalizePurchase, purchaseView } from
 import { merchantContract, contractOpenAPI } from './customer/contract.mjs';
 import { exportCustomerPackage, receiveCustomerBundle, inspectCustomerExport, resumeCustomerExport,
   readCustomerBundleFile } from './customer/export.mjs';
+import { createCustomerWorkbench, customerWorkbenchProfile } from './customer/workbench.mjs';
 
 const HELP='Native Stellar MPP Charge\n\n'+
   'node mpp-charge/cli.mjs runtime-template DEPENDENCY_DIRECTORY\n'+
@@ -18,7 +19,12 @@ const HELP='Native Stellar MPP Charge\n\n'+
   'node mpp-charge/cli.mjs customer-export WORKSPACE NEW_CUSTOMER_DIRECTORY\n'+
   'node mpp-charge/cli.mjs customer-receive BUNDLE.json NEW_CUSTOMER_DIRECTORY\n'+
   'node mpp-charge/cli.mjs customer-inspect|customer-resume CUSTOMER_DIRECTORY\n'+
-  'node mpp-charge/cli.mjs profile WORKSPACE merchant|buyer CONFIG.json\n'+
+  'node mpp-charge/cli.mjs profile WORKSPACE merchant|buyer|customer CONFIG.json\n'+
+  'node mpp-charge/cli.mjs customer-draft WORKSPACE CONTRACT_OR_PACKAGE.json\n'+
+  'node mpp-charge/cli.mjs customer-configure WORKSPACE REVIEWED_DRAFT.json\n'+
+  'node mpp-charge/cli.mjs customer-status WORKSPACE [OFFSET]\n'+
+  'node mpp-charge/cli.mjs customer-preview|customer-prepare WORKSPACE OFFER_ID INPUTS.json\n'+
+  'node mpp-charge/cli.mjs customer-retry WORKSPACE PURCHASE_ID\n'+
   'node mpp-charge/cli.mjs serve WORKSPACE [PORT]\n'+
   'node mpp-charge/cli.mjs merchant WORKSPACE [PORT]\n'+
   'node mpp-charge/cli.mjs prepare WORKSPACE [CHALLENGE_ID]\n'+
@@ -56,14 +62,40 @@ export async function main(argv=process.argv.slice(2)) {
       await waitForStop(app.close);return 0;
     }
     workspace=await openWorkspace(resolve(directory),{create:command==='init'});
+    const workbench=createCustomerWorkbench({workspace});
+    const readDocument=async path=>{const bytes=await readFile(resolve(path));
+      requireValue(bytes.length<=2*1024*1024,'MPP_CUSTOMER_DOCUMENT_TOO_LARGE');
+      return JSON.parse(new TextDecoder('utf8',{fatal:true}).decode(bytes));};
     let result;
     if(command==='init'){requireValue(rest.length===0,'MPP_CLI_ARGUMENTS_INVALID');result=await workspace.metadata();}
     else if(command==='profile') {
-      requireValue(rest.length===2 && ['merchant','buyer'].includes(rest[0]),'MPP_PROFILE_ARGUMENTS_INVALID');
+      requireValue(rest.length===2 && ['merchant','buyer','customer'].includes(rest[0]),'MPP_PROFILE_ARGUMENTS_INVALID');
       const raw=await readFile(resolve(rest[1]));requireValue(raw.length<=2*1024*1024,'MPP_PROFILE_TOO_LARGE');
       const input=JSON.parse(raw.toString('utf8'));
-      const profile=rest[0]==='merchant'?merchantConfig(input):buyerConfig(input);
+      const profile=rest[0]==='merchant'?merchantConfig(input):rest[0]==='customer'?
+        customerWorkbenchProfile(input,workspace.root):buyerConfig(input);
       result=await workspace.configure(rest[0],profile,(await workspace.metadata()).revision);
+    } else if(command==='customer-draft') {
+      requireValue(rest.length===1,'MPP_CUSTOMER_DOCUMENT_REQUIRED');
+      result=await workbench.intake(await readDocument(rest[0]));
+    } else if(command==='customer-configure') {
+      requireValue(rest.length===1,'MPP_CUSTOMER_DOCUMENT_REQUIRED');
+      const reviewed=await readDocument(rest[0]);
+      result=await workbench.configure({profile:reviewed.draft,revision:reviewed.revision});
+    } else if(command==='customer-status') {
+      requireValue(rest.length<=1,'MPP_CLI_ARGUMENTS_INVALID');
+      result=await workbench.snapshot({offset:rest[0]===undefined?0:Number(rest[0])});
+    } else if(['customer-preview','customer-prepare'].includes(command)) {
+      requireValue(rest.length===2,'MPP_CUSTOMER_PREPARATION_ARGUMENTS_INVALID');
+      const options=await readDocument(rest[1]),profileId=(await workspace.metadata()).customer;
+      if(command==='customer-prepare')result=await workbench.prepare({profileId,offerId:rest[0],options});
+      else {
+        const {purchaseId,challengeId,...inputs}=options;
+        result=await workbench.preview({profileId,offerId:rest[0],inputs});
+      }
+    } else if(command==='customer-retry') {
+      requireValue(rest.length===1,'MPP_PURCHASE_ID_REQUIRED');
+      result=await workbench.retryPreparation(rest[0]);
     } else if(command==='merchant') {
       requireValue(rest.length<=1,'MPP_CLI_ARGUMENTS_INVALID');
       const app=await serveMerchant({workspace,profile:await workspace.profile('merchant'),
@@ -82,7 +114,8 @@ export async function main(argv=process.argv.slice(2)) {
     } else if(['execute','resume','finalize','inspect'].includes(command)) {
       requireValue(rest.length===1,'MPP_PURCHASE_ID_REQUIRED');
       const purchaseId=rest[0];
-      if(command==='inspect') result=purchaseView(await workspace.read('purchases',purchaseId));
+      if(await workbench.isCustomerPurchase(purchaseId))result=await workbench.action(purchaseId,command);
+      else if(command==='inspect') result=purchaseView(await workspace.read('purchases',purchaseId));
       else if(command==='finalize') result=await finalizePurchase({workspace,purchaseId});
       else result=await executePurchase({workspace,purchaseId,resume:command==='resume'});
     } else if(command==='recover-delivery') {
@@ -98,6 +131,7 @@ export async function main(argv=process.argv.slice(2)) {
         status:row.response.status,bytes:row.response.bytes,sha256:row.response.sha256}:null};
     } else if(command==='export') {
       requireValue(rest.length===3,'MPP_EXPORT_ARGUMENTS_INVALID');
+      if(rest[0]==='purchases' && await workbench.isCustomerPurchase(rest[1]))await workbench.resource(rest[1]);
       result=await exportResponse({workspace,group:rest[0],recordId:rest[1],destination:rest[2]});
     } else requireValue(false,'MPP_COMMAND_UNKNOWN');
     console.log(json(result));return 0;

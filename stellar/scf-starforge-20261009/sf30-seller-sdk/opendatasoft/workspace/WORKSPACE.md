@@ -186,9 +186,9 @@ For a reviewed or published candidate, enter:
 
 **Export merchant package** retains the complete reviewed dataset and its original runtime with those public resource and payment terms. A finalized export appears under **Merchant & buyer** and **Receiving**.
 
-**Download complete merchant package** produces a gzip tar archive of the retained package. Transfer that complete archive to a receiving host and use its original receiving guide and runtime installation instructions.
+**Download complete merchant package** produces a gzip tar archive of the retained package. New exports include [RECEIVING.md](../publisher/RECEIVING.md) as a manifest-bound file. **Download receiving guide** also supplies those instructions with the selected manifest, handler, source and snapshot identities; this companion works for existing retained packages. Transfer the complete archive and its guide to the receiving host.
 
-**Stage retained merchant package** binds the selected package manifest hash to a named release in this project's original seller release store. Choose its label and loopback seller port.
+**Stage retained merchant package** binds the selected package manifest hash to a named release in this project's original seller release store. Choose its label and loopback seller port. Set the configured public facilitator URL for native payment verification and settlement. A local loopback facilitator requires the explicit local-facilitator checkbox. An empty facilitator selects the original offer-only service mode. These runtime choices accompany the retained six-field public payment offer.
 
 When a package has been staged, the screen prints the actual command to open the original seller release console:
 
@@ -224,7 +224,7 @@ Retained buyer requests appear with their original configuration path, selected 
 
 A capture import needs its complete original directory, including the export and metadata files referenced by its manifest. Copy the directory intact to the receiving host before selecting that local manifest path. The engine validates and imports that retained source into this project.
 
-A merchant receiving handoff needs the complete package archive and its original included instructions. A buyer continuation needs its exact configuration and retained original operator state. Keep those artifacts associated with the selected package, snapshot and intent.
+A merchant receiving handoff includes the complete package archive and **Download receiving guide**. The guide covers installation, original package inspection and copying, release activation, actual offer review, buyer preparation, whole-dataset acquisition and source-capture import. A buyer continuation carries its exact configuration and retained original operator state. Keep those artifacts associated with the selected package, snapshot and intent.
 
 Closing and reopening the workbench preserves editions, notes, source mappings, publication history, exports, seller release references and buyer requests. The serving command owns the project lock and releases it on shutdown.
 
@@ -233,7 +233,7 @@ Closing and reopening the workbench preserves editions, notes, source mappings, 
 The original public source integration used:
 
 - Portal: [public.opendatasoft.com](https://public.opendatasoft.com/)
-- Dataset: [Open Data Sources](https://public.opendatasoft.com/explore/dataset/open-data-sources/)
+- Dataset: [Open Data Inception](https://public.opendatasoft.com/explore/dataset/open-data-sources/)
 - Native dataset ID: `open-data-sources`
 - Native dataset UID: `da_t0o52c`
 - Complete retained source on 11 October 2026: 3,763 rows and 18 original fields.

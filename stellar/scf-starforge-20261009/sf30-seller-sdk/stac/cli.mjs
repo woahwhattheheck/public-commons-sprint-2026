@@ -57,6 +57,14 @@ Original merchant/customer controller:
   customer-deliver --directory DIR --buyer-config JSON_FILE --out DIR
   customer-open    --directory DIR
 
+Offline GIS from the original customer delivery:
+  portable-export --directory RECEIVED_DIR --out PORTABLE_DIR
+  portable-open   --directory PORTABLE_DIR [--expected-manifest-sha256 SHA256]
+
+The portable export retains original delivery files, source/asset identities,
+GeoJSON, collection rights and the offline scene explorer. Both commands work
+without an analyst workspace or Buyer connection.
+
 Scene identity is collection-scoped:
   encodeURIComponent(collection) + '/' + encodeURIComponent(native scene ID)
 
@@ -123,6 +131,20 @@ export async function runStacCLI(argv=process.argv.slice(2)){
   if(command.startsWith('merchant-')||command.startsWith('customer-')){
     const {runStacCommercialCommand}=await import('./customer.mjs');
     const {result,close}=await runStacCommercialCommand({command,flags});stdout(result);if(close)await keepOpen(close);return;
+  }
+  if(command==='portable-export'||command==='portable-open'){
+    const directory=resolve(required(flags,'directory'));
+    const {exportPortableStacDelivery,openPortableStacDelivery}=await import('./receiving/delivery.mjs');
+    if(command==='portable-export'){
+      const {StacDelivery}=await import('./customer.mjs');
+      const delivery=await StacDelivery.open(directory);
+      stdout(await exportPortableStacDelivery(delivery,resolve(required(flags,'out'))));return;
+    }
+    const opened=await openPortableStacDelivery(directory,
+      flags['expected-manifest-sha256']?{expectedManifestSha256:required(flags,'expected-manifest-sha256')}:{});
+    stdout({directory:opened.directory,editionId:opened.delivery.edition.id,editionDigest:opened.delivery.edition.digest,
+      bundleSha256:opened.delivery.manifest.bundleSha256,manifestFile:opened.manifestFile.record,
+      paths:opened.paths,summary:opened.manifest.summary,sourceDelivery:opened.manifest.sourceDelivery});return;
   }
   const directory=resolve(String(flags.workspace||flags.directory||''));
   if(!flags.workspace&&!flags.directory)throw new Error('--workspace is required for analyst workspace commands.');

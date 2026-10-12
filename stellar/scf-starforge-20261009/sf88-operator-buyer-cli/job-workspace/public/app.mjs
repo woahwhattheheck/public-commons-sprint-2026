@@ -2,9 +2,11 @@
 const byId = id => document.getElementById(id);
 const SESSION = 'sf88-paid-job-customer-session';
 let token = location.hash.slice(1);
-if (token) { sessionStorage.setItem(SESSION, token); history.replaceState(null, '', location.pathname); }
+if (token) { sessionStorage.setItem(SESSION, token); history.replaceState(null, '', location.pathname + location.search); }
 else token = sessionStorage.getItem(SESSION) ?? '';
 const prefix = '/api/job-workspace';
+const initialEntry = new URL(location.href).searchParams.get('entry');
+let requestedEntry = /^[a-f0-9]{64}$/.test(initialEntry ?? '') ? initialEntry : null;
 let selected = null, selectionEpoch = 0, offset = 0, total = 0, pageItems = [], refreshing = false, timer;
 let labelDirty = false, labelRevision = 0, noteDirty = false, annotationRevision = 0, noteRequest = null, collectionRequest = null;
 let previewKey = null;
@@ -42,7 +44,7 @@ function node(tag, text, className) {
   return value;
 }
 function links() {
-  for (const [id, path] of [['jobsLink','/jobs/'],['libraryLink','/'],['collectionsLink','/collections'],['resultLibraryLink','/']])
+  for (const [id, path] of [['checkoutLink','/jobs/checkout/'],['jobsLink','/jobs/'],['libraryLink','/'],['collectionsLink','/collections'],['resultLibraryLink','/']])
     byId(id).href = path + '#' + token;
 }
 function renderList() {
@@ -142,17 +144,17 @@ async function refresh() {
     byId('scanStatus').textContent = scan ? 'Indexing ' + scan.completed + ' / ' + (scan.total ?? '…') :
       status.library.scan ? (status.library.scan.counts.VERIFIED ?? 0) + ' verified resources' : 'Library has not been scanned';
     byId('scanButton').disabled = Boolean(scan);
-    const selectedId = selected?.id, epoch = selectionEpoch;
+    const selectedId = selected?.id ?? requestedEntry, epoch = selectionEpoch;
     if (selectedId) {
       const current = await api(endpoint(selectedId));
-      if (selected?.id === selectedId && epoch === selectionEpoch) selected = current;
+      if ((!selected || selected.id === selectedId) && epoch === selectionEpoch) { selected = current; requestedEntry = null; }
     }
     renderList(); renderDetail();
     byId('connection').textContent = 'Connected · ' + new Date().toLocaleTimeString();
   } catch (error) {
     byId('connection').textContent = 'Connection interrupted';
     if (error.status === 401) message('Open the private launch URL again to restore this session.', true);
-    else problem(error);
+    else { requestedEntry = null; problem(error); }
   } finally { refreshing = false; }
 }
 async function perform(kind) {

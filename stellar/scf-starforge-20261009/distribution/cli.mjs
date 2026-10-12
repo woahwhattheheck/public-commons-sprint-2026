@@ -23,6 +23,7 @@ const help = `Starforge merchant toolkit
   starforge runtime-transfer --help
 
 Native commands (arguments pass unchanged to the maintained implementation):
+  census-publisher                         Publish Census ACS observations and complete original source deliveries
   usaspending-research                      Capture federal awards, review prime workshares and operate saved editions
   usaspending-dossier                       Receive award editions, write research findings and recover source packets
   weather-operations                        Operate weather sources, decisions, frozen reports and original recovery
@@ -57,6 +58,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   jobs-buyer                                Receive accepted jobs, follow execution and retrieve saved results
   job-workspace                             Receive paid jobs, retrieve results and organize research collections
   supplier-quotas                            Review supplier account configuration and inspect retained call allowances
+  cache-operations                          Review cache activity, change retention and recover saved operations
   openapi     OpenAPI seller import            pilot       OpenAPI pilot + operations
   buyer       Discover, review, approved call  capture     One HTTP 402 capture
   import-headers  Import original operator HTTP headers
@@ -85,6 +87,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   buyer-agent Operate the original buyer through LangGraph checkpoints and LangChain tools
   stac                                      Discover imagery, compare scenes and deliver selected assets to customers
   tomorrow                                  Plan weather work, review forecasts, recover resources and deliver licensed files
+  coingecko                                 Operate CoinGecko sources, market research and original purchases
   tenderly / tenderly-workspace              Prepare and operate the Tenderly simulation merchant
   tenderly-customer                          Receive, recover and export the original simulation purchase
   tenderly-analysis                          Receive, compare and review completed Tenderly simulations
@@ -138,6 +141,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   commerce-console                           Browser workspace for a prepared commerce session
   dataset-refresh                            Publish and select retained dataset versions
   dataset-publisher                          Publish retained CSV/workbook selections and prepare buyer acquisition
+  hud-income-limits                          Retain published HUD limits, review selections and operate customer releases
   workbook                                   Inspect sources, review mappings and adopt complete workbook editions
   workbook-customer                          Receive published workbooks through the original buyer and Analysis
   workbook-receive                            Complete retained workbook receiving and full SQL export
@@ -170,6 +174,8 @@ Native commands (arguments pass unchanged to the maintained implementation):
   s3                                         Inspect and configure selected object-store resources
   python-merchant                            Inspect, diagnose and serve a Python application
   python-workspace                           Author Python sources, run private previews and operate native releases
+  diffbot-workspace                          Review retained web data, publish customer editions and reopen handoffs
+  diffbot-acquire                            Retain original Diffbot Account, Extract and Bulk results
   merchant-readiness                         Review every configured Stellar receiving account
   availability                              Review, pause and resume a running seller's selected routes
   cube-onboarding                            Capture and prepare reviewed Cube reports as a merchant

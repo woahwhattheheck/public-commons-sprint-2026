@@ -4,7 +4,7 @@ import { randomUUID, timingSafeEqual } from 'node:crypto';
 import { openJobStore } from '../../sf30-seller-sdk/jobs/store.mjs';
 import { executeJob } from '../../sf30-seller-sdk/jobs/execution.mjs';
 import { canonical, digest, plain, validateJobInput, jobError } from '../../sf30-seller-sdk/jobs/config.mjs';
-import { OPERATION, KEY_HEADER, MAX_RESULT, requestIdentity, jsonBytes } from './configuration.mjs';
+import { OPERATION, KEY_HEADER, MAX_RESULT, requestIdentity, jsonBytes, readPrivateFile } from './configuration.mjs';
 import { allowance } from './allowance-client.mjs';
 
 export const ADMISSION_SCHEMA = 'stellar-forge.sf101.api-application-admission.v1';
@@ -117,6 +117,29 @@ export async function cancelUnstartedExecution(runtime, store, id, { expectedRev
 
 /** The original exclusive job lease owns this separate application's execution root. */
 export async function startApplication(runtime, { env = process.env, python } = {}) {
+  const executionSource = runtime.executionSource ?? runtime.source;
+  if (runtime.executionSource) {
+    const binding = runtime.executionBinding;
+    if (!plain(binding) || binding.schema !== 'stellar-forge.sf101.api-application-execution-binding.v1' ||
+        !/^[a-f0-9]{64}$/.test(binding.snapshotManifestSha256 ?? '') ||
+        !/^[a-f0-9]{64}$/.test(binding.restorationSha256 ?? '') ||
+        canonical(binding.source) !== canonical(runtime.source.identity) ||
+        binding.application !== executionSource.identity.application ||
+        canonical(executionSource.identity) !== canonical({ ...runtime.source.identity, application: binding.application }) ||
+        executionSource.configSource !== runtime.source.configSource ||
+        executionSource.applicationSource !== runtime.source.applicationSource ||
+        canonical(executionSource.raw) !== canonical(runtime.source.raw) ||
+        canonical(executionSource.compiled) !== canonical(runtime.source.compiled) ||
+        digest(await readPrivateFile(binding.application, 4194304)) !== runtime.source.identity.applicationSha256)
+      fail('APP_EXECUTION_RESTORATION_CHANGED');
+  }
+  const environment = { ...env };
+  for (const [name, path] of Object.entries(runtime.environmentPaths ?? {})) {
+    if (!runtime.executionBinding || !runtime.source.compiled.environment.includes(name) ||
+        typeof path !== 'string' || !path.startsWith('/') || /[\x00-\x1f]/.test(path))
+      fail('APP_RESTORED_ENVIRONMENT_CHANGED');
+    environment[name] = path;
+  }
   const store = await openJobStore(runtime.profile.store, runtime.source);
   let running = true, pumping = null, stopping = null, lastFault = null;
   const pending = new Map(), active = new Map(), admissions = new Map(), requests = new Set(), sockets = new Set();
@@ -251,7 +274,7 @@ export async function startApplication(runtime, { env = process.env, python } = 
     const attempt = row.attempts.at(-1), controller = new AbortController();
     const slot = { row, attempt, controller, promise: null };
     active.set(row.id, slot);
-    slot.promise = executeJob(runtime.source, row, attempt, { env, signal: controller.signal })
+    slot.promise = executeJob(executionSource, row, attempt, { env: environment, signal: controller.signal })
       .then(body => finishAttempt(slot, body, null), error => finishAttempt(slot, null, error))
       .then(() => settle(entry))
       .catch(error => {
@@ -284,9 +307,11 @@ export async function startApplication(runtime, { env = process.env, python } = 
               fail('APP_EXECUTION_ALREADY_ATTEMPTED');
             if (Date.now() >= Date.parse(admission.deadlineAt)) fail('APP_RESERVATION_EXPIRED');
             current.state = 'RUNNING'; current.error = null;
-            const attempt = { id: randomUUID(), startedAt: now(), finishedAt: null, state: 'RUNNING', error: null };
+            const attempt = { id: randomUUID(), startedAt: now(), finishedAt: null, state: 'RUNNING', error: null,
+              ...(runtime.executionBinding ? { restoration: runtime.executionBinding } : {}) };
             current.attempts.push(attempt);
-            return history(current, 'execution-started', { attemptId: attempt.id });
+            return history(current, 'execution-started', { attemptId: attempt.id,
+              ...(runtime.executionBinding ? { restorationSha256: runtime.executionBinding.restorationSha256 } : {}) });
           });
           launch(row, entry);
         } catch (error) {

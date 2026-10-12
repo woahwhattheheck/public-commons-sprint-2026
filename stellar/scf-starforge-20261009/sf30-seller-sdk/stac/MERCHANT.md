@@ -344,3 +344,41 @@ Source contracts: [seller routing](../resource-server.mjs),
 [Object](../../sf88-operator-buyer-cli/node/object.mjs),
 [object session](../../sf88-operator-buyer-cli/object-session.mjs),
 and [dataset delivery](../../sf88-operator-buyer-cli/dataset-delivery.mjs).
+
+## Existing native source operation through the full operator fixture
+
+After examples/native-capture.mjs and examples/native-complete.mjs finish the
+same retained upstream operation, the complete commerce continuation is:
+
+~~~sh
+node stellar/scf-starforge-20261009/sf30-seller-sdk/stac/examples/native-commerce-journey.mjs \
+  --directory /absolute/existing/stac-native-operation
+~~~
+
+The command reads that operation's complete-result.json and exact edition-1
+identity. It reuses the maintained USGS local protocol fixture with the original
+SF30/SF61/SF82 merchant and original SF36/SF81/SF88 operator, policy, ledger,
+Dataset, file requests and Object acquisition. Its scoped HTTPS CONNECT endpoint
+serves only the fixture merchant origin. The original source responses and
+selected acquired asset are the input to every customer output.
+
+The original typed CSV count determines the page ceiling; actual declared file
+sizes determine each chunk allocation. Their total determines the fixture's
+spending policy and maximum original approval prompts. The fixture's generated
+operator keys, profile, local certificate and ledger stay in the operation's
+private native-commerce/local-fixture directory. A retained proxy port and the
+same native IDs allow continuation after interruption.
+
+The result is native-commerce/result.json. It records ORIGINAL_LOCAL_PROTOCOL_FIXTURE
+as the commerce mode and retains the complete original customer result, actual
+native protocol counts, source edition identity and acquired scene count.
+native-commerce/received and native-commerce/receiving-copy open with
+StacDelivery.open(). A repeated completed command verifies both receiving rooms
+and returns the original completed result.
+
+8910's portable GIS adapter can consume that opened delivery and use
+exportPortableStacDelivery(delivery, destination) for the same retained scene,
+source, rights and acquired-asset content. The fixture's original terminal
+method is adapted from [the maintained USGS journey](../usgs-water/journey.mjs);
+the production customer commands above continue to use the operator's configured
+Buyer and merchant service.
