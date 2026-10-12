@@ -3,6 +3,17 @@ import { isIP } from 'node:net';
 import { identity, fault } from '../postgres/publisher/files.mjs';
 
 export const PROFILE_SCHEMA = 'stellar-forge.oauth-authorization-profile.v1';
+export const INTUIT_QBO_PROVIDER = 'intuit-quickbooks';
+export const INTUIT_QBO_SCOPE = 'com.intuit.quickbooks.accounting';
+export const INTUIT_QBO_ENDPOINTS = Object.freeze({
+  authorization: 'https://appcenter.intuit.com/connect/oauth2',
+  token: 'https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer',
+  revoke: 'https://developer.api.intuit.com/v2/oauth2/tokens/revoke',
+  sandbox: 'https://sandbox-quickbooks.api.intuit.com',
+  production: 'https://quickbooks.api.intuit.com',
+});
+export const intuitQboProfile = profile => profile?.provider?.kind === INTUIT_QBO_PROVIDER;
+export const qboRealm = value => typeof value === 'string' && /^[0-9]{1,64}$/.test(value);
 export const plain = value => value !== null && typeof value === 'object' && !Array.isArray(value) &&
   [Object.prototype, null].includes(Object.getPrototypeOf(value));
 export const hex = value => typeof value === 'string' && /^[a-f0-9]{64}$/.test(value);
@@ -56,7 +67,7 @@ function authorizationParameters(value) {
 export function normalizeOAuthProfile(raw, { allowLoopback = false } = {}) {
   exact(raw, ['schema', 'label', 'source', 'authorizationEndpoint', 'tokenEndpoint', 'revocationEndpoint',
     'issuer', 'clientId', 'clientSecretEnv', 'authMethod', 'scopes', 'resourceOrigins',
-    'authorizationParameters', 'resourceParameters', 'pkceMethod'], 'OAuth profile');
+    'authorizationParameters', 'resourceParameters', 'pkceMethod', 'provider', 'callbackOrigin'], 'OAuth profile');
   if (raw.schema !== PROFILE_SCHEMA || typeof allowLoopback !== 'boolean') fail('Use the authorization profile schema.');
   text(raw.label, 'provider label', 160);
   exact(raw.source, ['sha256', 'scheme'], 'original OpenAPI source');
@@ -72,7 +83,18 @@ export function normalizeOAuthProfile(raw, { allowLoopback = false } = {}) {
   text(raw.clientId, 'registered client ID', 4096);
   if (authMethod === 'none' ? raw.clientSecretEnv !== undefined : !envName(raw.clientSecretEnv))
     fail('Confidential clients require one client-secret environment reference; public clients omit it.');
-  if (raw.pkceMethod !== undefined && raw.pkceMethod !== 'S256') fail('PKCE S256 is required.');
+  let provider;
+  if (raw.provider !== undefined) {
+    exact(raw.provider, ['kind', 'environment'], 'provider dialect');
+    if (raw.provider.kind !== INTUIT_QBO_PROVIDER || !['sandbox', 'production'].includes(raw.provider.environment))
+      fail('Choose the explicit QuickBooks sandbox or production provider dialect.');
+    provider = { kind: INTUIT_QBO_PROVIDER, environment: raw.provider.environment };
+  }
+  const pkceMethod = raw.pkceMethod ?? 'S256';
+  if (pkceMethod !== 'S256' && !(provider && pkceMethod === 'none'))
+    fail('Use PKCE S256, or the explicit confidential QuickBooks SDK flow.');
+  if (provider && (pkceMethod !== 'none' || authMethod !== 'client_secret_basic' || raw.clientId.includes(':')))
+    fail('The QuickBooks dialect uses the documented confidential client-secret Basic flow and pkceMethod none.');
   if (!Array.isArray(raw.resourceOrigins) || raw.resourceOrigins.length < 1 || raw.resourceOrigins.length > 32 ||
       new Set(raw.resourceOrigins).size !== raw.resourceOrigins.length) fail('Select distinct approved upstream origins.');
   const resourceOrigins = raw.resourceOrigins.map(value => endpoint(value, { allowLoopback, origin: true })).sort();
@@ -83,14 +105,48 @@ export function normalizeOAuthProfile(raw, { allowLoopback = false } = {}) {
     endpoint(value, { allowLoopback, query: true });
     if (!resourceOrigins.includes(new URL(value).origin)) fail('Each resource parameter must belong to an approved upstream origin.');
   }
+  let callbackOrigin;
+  if (provider) {
+    text(raw.callbackOrigin, 'registered callback origin', 2048);
+    let callback;
+    try { callback = new URL(raw.callbackOrigin); } catch { fail('Use the registered callback origin.'); }
+    if (raw.callbackOrigin !== callback.origin || callback.username || callback.password)
+      fail('Register one exact callback origin without a path, query or credentials.');
+    if (callback.protocol === 'http:') {
+      if (provider.environment !== 'sandbox' || !callback.port ||
+          !(callback.hostname === 'localhost' || allowLoopback && callback.hostname === '127.0.0.1'))
+        fail('Use localhost with an explicit port for sandbox callbacks, or the registered public HTTPS origin.');
+    } else endpoint(raw.callbackOrigin, { origin:true });
+    callbackOrigin = raw.callbackOrigin;
+    const local = value => { const url = new URL(value); return allowLoopback && url.protocol === 'http:' && url.hostname === '127.0.0.1' && Boolean(url.port); };
+    const exactEndpoint = (actual, expected) => actual === expected || local(actual);
+    if (!raw.revocationEndpoint ||
+        !exactEndpoint(authorizationEndpoint, INTUIT_QBO_ENDPOINTS.authorization) ||
+        !exactEndpoint(tokenEndpoint, INTUIT_QBO_ENDPOINTS.token) ||
+        !exactEndpoint(endpoint(raw.revocationEndpoint, { allowLoopback }), INTUIT_QBO_ENDPOINTS.revoke) ||
+        resourceOrigins.length !== 1 || resourceOrigins[0] !== INTUIT_QBO_ENDPOINTS[provider.environment] ||
+        resourceParameters.length || scopes(raw.scopes).length !== 1 || raw.scopes[0] !== INTUIT_QBO_SCOPE)
+      fail('The QuickBooks profile must use its declared native endpoints, environment and accounting scope.');
+  } else if (raw.callbackOrigin !== undefined) fail('A registered callback origin requires the explicit QuickBooks provider dialect.');
   return {
     schema: PROFILE_SCHEMA, label: raw.label, source: { ...raw.source }, authorizationEndpoint, tokenEndpoint,
     ...(raw.revocationEndpoint === undefined ? {} : { revocationEndpoint: endpoint(raw.revocationEndpoint, { allowLoopback }) }),
     ...(raw.issuer === undefined ? {} : { issuer: endpoint(raw.issuer, { allowLoopback }) }),
     clientId: raw.clientId, authMethod, ...(raw.clientSecretEnv === undefined ? {} : { clientSecretEnv: raw.clientSecretEnv }),
     scopes: scopes(raw.scopes), resourceOrigins, authorizationParameters: authorizationParameters(raw.authorizationParameters ?? {}),
-    resourceParameters: [...resourceParameters].sort(), pkceMethod: 'S256',
+    resourceParameters: [...resourceParameters].sort(), pkceMethod,
+    ...(provider ? { provider, callbackOrigin } : {}),
   };
+}
+/** The callback origin is host-configured public registration, never browser request input. */
+export function oauthRedirectOrigin(profile, localOrigin) {
+  const local = new URL(localOrigin);
+  if (localOrigin !== local.origin || local.protocol !== 'http:' || local.hostname !== '127.0.0.1' || !local.port)
+    fail('Use the original literal loopback listener origin.');
+  const selected = profile.callbackOrigin ?? localOrigin, callback = new URL(selected);
+  if (callback.protocol === 'http:' && callback.port !== local.port)
+    fail('Open the original callback listener on the exact registered sandbox port.');
+  return selected;
 }
 export const oauthProfileIdentity = profile => identity(profile);
 export function oauthCallbackPath(profileSha256) {

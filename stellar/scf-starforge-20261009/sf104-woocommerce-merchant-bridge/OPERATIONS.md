@@ -13,7 +13,7 @@ action remains the path to Woo fulfillment.
 
 ## Install the complete plugin
 
-Keep these seven files together in `wp-content/plugins/starforge-sf98-woo/`:
+Keep these 14 files together in `wp-content/plugins/starforge-sf98-woo/`:
 
 - `starforge-sf98-woo.php`
 - `checkout-gateway.php`
@@ -22,6 +22,13 @@ Keep these seven files together in `wp-content/plugins/starforge-sf98-woo/`:
 - `merchant-console.js`
 - `merchant-console.css`
 - `OPERATIONS.md`
+- `merchant-operator.php`
+- `NATIVE_REVIEW.md`
+- `merchant-refunds.php`
+- `merchant-refunds.js`
+- `merchant-refunds.css`
+- `refund-networks.json`
+- `REFUNDS.md`
 
 The maintained developer Site's **Prepare WordPress plugin** and merchant setup
 packet copy this complete folder from their selected checkout or installed
@@ -161,6 +168,28 @@ Refresh and reopen the same order after an interrupted response. A retained
 A released journal whose current Woo paid status or transaction later differs
 is labelled **Released order needs review**. Historical release state is not
 silently overwritten to match a later order edit.
+
+## Record a verified native refund
+
+Open the original released order and choose **Refunds**. Import the unchanged
+`adjustments.json` export from the accounting workspace after its native refund
+verifier has matched the return transfer. The screen selects only returns that
+match this order's original payment, source report and reverse-transfer terms.
+
+Enter the credit in the order's Woo currency and choose **Prepare order credit**.
+Review the saved native amount, Woo amount, reason and original return transaction,
+then confirm **Record Woo order credit**. The current order view shows the saved
+Woo refund ID, remaining amount, order status and download-access result. Each
+partial return keeps its own original accounting adjustment UUID; the bridge
+checks their combined native and store-currency amounts.
+
+If a response is interrupted, refresh this same order and open its saved mapping.
+**Recover this same order credit** reuses the native refund already saved with
+that adjustment's identity. A full monetary credit normally makes the order
+refunded, which can end download access under the store's rules. This workflow
+keeps item quantities and existing download records; product-return decisions
+remain in the Woo order's item controls. The [refund guide](REFUNDS.md) includes
+the matching CLI, original-source handoff and recovery states.
 
 ## Reopen an independently reconciled unpaid attempt
 

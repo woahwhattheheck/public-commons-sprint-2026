@@ -129,8 +129,9 @@ export async function startWorkspace({ parent, port=0, noSignals=false, oauthCon
     const send=(status,value)=>{res.writeHead(status,{'Content-Type':'application/json; charset=utf-8'});res.end(JSON.stringify(value));};
     try {
       if (shuttingDown) return send(503,{error:'Workspace is stopping'});
-      if (req.headers.host !== new URL(origin).host || req.headers.origin && req.headers.origin !== origin) return send(403,{error:'Use the exact local workspace origin'});
       const url=new URL(req.url,origin), pathname=url.pathname;
+      if ((req.headers.host !== new URL(origin).host || req.headers.origin && req.headers.origin !== origin) &&
+          !oauth.acceptCallbackRequest(req,url)) return send(403,{error:'Use the exact local workspace origin'});
       if(req.method==='GET'&&oauth.returned(res,url))return;
       if(await oauth.callback(req,res,url))return;
       if (req.method==='GET' && STATIC.has(pathname)) {

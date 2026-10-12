@@ -401,8 +401,12 @@ function renderConnection(){
   const available=Boolean(connection?.available);
   $('qbo-connection-status').textContent=connectionIssue?'Unavailable':available?'Configured':connection?'Setup required':'Loading';
   $('qbo-connection-description').textContent=connectionIssue?connectionIssue:available?'The accounting server is configured for '+connection.environment+' company '+connection.realmId+'. Load its current company setup to review the native account choices.':connection?'Configure the QuickBooks company connection in the accounting server, then refresh it here.':'Reading the accounting server connection…';
-  $('qbo-connection-details').innerHTML=connection?definitions({companyId:connection.realmId??'Not configured',environment:connection.environment,minorVersion:connection.minorVersion??'Provider default'}):'';
-  $('qbo-connection-config').textContent='The server reads '+(connection?.tokenEnv??'STARFORGE_QBO_ACCESS_TOKEN')+' through its existing authorized account, or a configured OAuth token provider. STARFORGE_QBO_REALM_ID selects the company and STARFORGE_QBO_ENVIRONMENT selects sandbox or production. Set these in the accounting server process, then refresh this connection.';
+  $('qbo-connection-details').innerHTML=connection?definitions({companyId:connection.realmId??'Not configured',environment:connection.environment,minorVersion:connection.minorVersion??'Provider default',
+    ...(connection.authorization?.kind==='oauth-connection'?{company:connection.authorization.companyName??'Load current company setup',connection:connection.authorization.alias,reviewedGrant:connection.authorization.grantId}: {})}):'';
+  $('qbo-connection-config').textContent=connection?.authorization?.kind==='oauth-connection'?
+    'Authorization uses the reviewed '+connection.authorization.alias+' connection. The connection workspace manages its grant, renewal and disconnect. Use its saved company selection when reopening this accounting workspace.'+
+      (connection.authorization.lastError?' Last authorization result: '+connection.authorization.lastError+'.':''):
+    'The server reads '+(connection?.tokenEnv??'STARFORGE_QBO_ACCESS_TOKEN')+' through its existing authorized account, or a configured OAuth token provider. STARFORGE_QBO_REALM_ID selects the company and STARFORGE_QBO_ENVIRONMENT selects sandbox or production. Set these in the accounting server process, then refresh this connection.';
   controls();
 }
 async function loadConnection(){

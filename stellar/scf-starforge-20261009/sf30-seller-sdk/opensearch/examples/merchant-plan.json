@@ -1,0 +1,34 @@
+{
+  "schema": "stellar-forge.opensearch-merchant-plan.v1",
+  "publicOrigin": "https://search.example.com",
+  "payment": {
+    "scheme": "exact",
+    "network": "stellar:testnet",
+    "amount": "10000",
+    "asset": "REPLACE_WITH_REAL_SEP41_CONTRACT",
+    "payTo": "REPLACE_WITH_REAL_RECEIVING_ACCOUNT",
+    "maxTimeoutSeconds": 60
+  },
+  "routes": [
+    {
+      "id": "product_search",
+      "path": "/search/products",
+      "method": "POST",
+      "query": "products",
+      "serviceName": "Product Search",
+      "description": "Search the approved product catalog in one consistent snapshot.",
+      "tags": [
+        "search",
+        "catalog"
+      ],
+      "parameterDescriptions": {
+        "term": "Words to match against the product title.",
+        "available": "Select the catalog availability value."
+      },
+      "example": {
+        "term": "pump",
+        "available": true
+      }
+    }
+  ]
+}

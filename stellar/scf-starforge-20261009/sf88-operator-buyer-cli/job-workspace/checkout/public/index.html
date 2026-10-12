@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Job checkout</title>
+  <link rel="stylesheet" href="/jobs/style.css">
+  <link rel="stylesheet" href="/jobs/checkout/style.css">
+  <script type="module" src="/jobs/checkout/app.mjs"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div><span class="eyebrow">STELLAR FORGE</span><h1>Job checkout</h1></div>
+    <nav aria-label="Workspace">
+      <a href="/jobs/checkout/" id="checkoutLink" aria-current="page">Checkout</a>
+      <a href="/jobs/" id="jobsLink">Jobs</a>
+      <a href="/" id="libraryLink">Resource library</a>
+      <a href="/collections" id="collectionsLink">Collections</a>
+    </nav>
+  </header>
+  <main>
+    <div id="message" role="status" aria-live="polite"></div>
+    <section class="overview" aria-label="Checkout status">
+      <div><strong id="total">0</strong><span>Retained checkouts</span></div>
+      <div><strong id="reviewed">0</strong><span>Reviewed requests</span></div>
+      <div><strong id="accepted">0</strong><span>Accepted jobs</span></div>
+      <div class="wide"><span id="activity">Ready</span><button type="button" id="reload">Refresh workspace</button></div>
+    </section>
+    <section class="setup" aria-labelledby="setupHeading">
+      <h2 id="setupHeading">Operator connection</h2>
+      <p id="operator" class="mono">Loading the saved selection.</p>
+      <p id="operatorHint" class="hint">Purchase approval uses the original terminal connected to this workspace.</p>
+    </section>
+    <details class="intake" id="intake" open>
+      <summary>Import a merchant purchase ticket</summary>
+      <form id="importForm" autocomplete="off">
+        <label>Private handoff JSON<input id="ticketFile" type="file" accept=".json,application/json" required></label>
+        <label>Label <span class="optional">(optional)</span><input id="ticketLabel" maxlength="512" placeholder="October demand report"></label>
+        <p class="hint span2">The merchant handoff contains the prepared job, exact payment terms and access capability. Its original bytes are saved before review.</p>
+        <div class="span2"><button id="importButton" class="primary" type="submit">Import ticket</button></div>
+      </form>
+    </details>
+    <div class="workbench">
+      <section class="job-list" aria-labelledby="listHeading">
+        <div class="section-heading"><h2 id="listHeading">Checkouts</h2><span id="count"></span></div>
+        <form id="filterForm" class="filters">
+          <label class="search">Search<input id="query" type="search" placeholder="Label, merchant, job or function"></label>
+          <label>Stage<select id="phase"><option value="">All stages</option><option>IMPORTED</option><option>REVIEWED</option><option>RECOVERABLE</option><option>ACCEPTED</option><option>FINISHED</option></select></label>
+          <button type="submit">Apply filters</button>
+        </form>
+        <div class="table-scroll">
+          <table><thead><tr><th scope="col">Request</th><th scope="col">Stage</th><th scope="col">Maximum amount</th></tr></thead><tbody id="rows"></tbody></table>
+        </div>
+        <p id="empty" class="empty">Import a ticket to begin.</p>
+        <div class="pager"><button id="previous" type="button">Previous</button><span id="page">0 checkouts</span><button id="next" type="button">Next</button></div>
+      </section>
+      <section class="job-detail" aria-labelledby="detailHeading">
+        <div class="section-heading"><div><h2 id="detailHeading">Select a checkout</h2><p class="mono" id="identity"></p></div><span id="stage" class="state" hidden></span></div>
+        <p id="unselected" class="empty">Review the merchant, application and payment request before starting checkout.</p>
+        <div id="detail" hidden>
+          <p id="progress" class="hint" aria-live="polite"></p>
+          <div class="actions checkout-actions">
+            <button type="button" id="reviewButton">Review request</button>
+            <button type="button" id="executeButton" class="primary">Start checkout</button>
+            <button type="button" id="recoverButton">Recover original operation</button>
+            <button type="button" id="stopButton" hidden>Stop local operation</button>
+            <a href="/jobs/" id="openJob" hidden>Open accepted job</a>
+          </div>
+          <dl class="facts checkout-facts">
+            <dt>Merchant</dt><dd id="merchant"></dd>
+            <dt>Function</dt><dd id="function"></dd>
+            <dt>Network</dt><dd id="network"></dd>
+            <dt>Maximum atomic amount</dt><dd id="amount" class="mono"></dd>
+            <dt>Asset</dt><dd id="asset" class="mono"></dd>
+            <dt>Recipient</dt><dd id="recipient" class="mono"></dd>
+            <dt>Payment window</dt><dd id="timeout"></dd>
+            <dt>Payment flow</dt><dd id="paymentFlow"></dd>
+            <dt>Merchant revision</dt><dd id="merchantRevision"></dd>
+          </dl>
+          <section class="review">
+            <div class="section-heading"><h3>Original buyer review</h3><span id="reviewedAt"></span></div>
+            <p class="hint" id="reviewHint">Review prepares the exact request through your existing operator configuration.</p>
+            <dl class="facts checkout-facts"><dt>Operator</dt><dd id="reviewOperator">—</dd><dt>Service</dt><dd id="reviewService">—</dd><dt>Body SHA-256</dt><dd id="bodyHash" class="mono"></dd><dt>Input SHA-256</dt><dd id="inputHash" class="mono"></dd></dl>
+          </section>
+          <section class="outcome">
+            <div class="section-heading"><h3>Purchase outcome</h3><span id="outcomeState"></span></div>
+            <p id="outcome" class="hint">The original buyer result will appear here.</p>
+          </section>
+          <details class="metadata"><summary>Request and recovery location</summary><pre id="requestDetails"></pre></details>
+          <details class="metadata" id="replacement">
+            <summary>Use a renewed merchant ticket</summary>
+            <form id="replaceForm" autocomplete="off">
+              <label>New private handoff JSON<input id="replacementFile" type="file" accept=".json,application/json" required></label>
+              <label>Reason<input id="replacementReason" maxlength="500" required placeholder="Merchant renewed the unpaid job capability"></label>
+              <p class="hint">The replacement must retain the same job, input and payment terms and have a newer merchant revision. The original preparation stays in this checkout’s private history.</p>
+              <button id="replaceButton" type="submit">Replace unattempted ticket</button>
+            </form>
+          </details>
+          <details class="metadata"><summary>Checkout history</summary><ol id="history" class="history"></ol></details>
+        </div>
+      </section>
+    </div>
+  </main>
+  <footer><span id="connection">Connecting</span><span>Private customer workspace</span></footer>
+</body>
+</html>
