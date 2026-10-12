@@ -7,14 +7,14 @@ HTML = r"""<!doctype html>
 <main><div id="message" class="notice" role="status" aria-live="polite" hidden></div>
 <section id="screen-source" class="screen"><div class="page-title"><div><h2>Review and receive a dataset</h2><p>Inspect the complete original delivery, choose its database mapping, then retain an immutable edition.</p></div></div>
 <section class="panel"><form id="source-form"><label for="report-path">Original delivery report on this computer</label><div class="inline"><input id="report-path" autocomplete="off" spellcheck="false" required placeholder="/absolute/path/to/dataset-delivery.json"><button class="primary" type="submit">Inspect delivery</button></div><p class="hint">Open the original SF88 delivery report or finalized SF100 scan. Its original files remain the receiving input.</p></form></section>
-<section id="source-panel" class="panel" hidden><h3>Complete source review</h3><dl id="source-facts" class="facts"></dl><h3>Field and key mapping</h3><p class="hint">Suggested types come from every delivered row. Review all columns. Keys use non-null comparable fields; PostgreSQL checks uniqueness during import.</p><div class="table-scroll"><table><thead><tr><th>Original field</th><th>Database column</th><th>PostgreSQL type</th><th>Allow null</th><th>Key</th><th>Observed values</th></tr></thead><tbody id="mapping-rows"></tbody></table></div><details><summary>First five original rows</summary><div id="source-preview"></div></details><form id="mapping-form"><div class="form-grid"><label>Reviewer<input id="reviewer" required maxlength="160" autocomplete="name"></label><label>Review note<textarea id="review-note" rows="2" maxlength="4000" placeholder="Describe the selected fields, types and keys."></textarea></label></div><button class="primary" type="submit">Save complete mapping review</button></form></section>
+<section id="source-panel" class="panel" hidden><h3>Complete source review</h3><dl id="source-facts" class="facts"></dl><div id="source-meanings"></div><h3>Field and key mapping</h3><p class="hint">Suggested types come from every delivered row. Review all columns. Keys use non-null comparable fields; PostgreSQL checks uniqueness during import.</p><div class="table-scroll"><table><thead><tr><th>Original field</th><th>Database column</th><th>PostgreSQL type</th><th>Allow null</th><th>Key</th><th>Observed values</th></tr></thead><tbody id="mapping-rows"></tbody></table></div><details><summary>First five original rows</summary><div id="source-preview"></div></details><form id="mapping-form"><div class="form-grid"><label>Reviewer<input id="reviewer" required maxlength="160" autocomplete="name"></label><label>Review note<textarea id="review-note" rows="2" maxlength="4000" placeholder="Describe the selected fields, types and keys."></textarea></label></div><button class="primary" type="submit">Save complete mapping review</button></form></section>
 <section id="review-panel" class="panel" hidden><div class="section-head"><h3>Saved receiving review</h3><button id="import-review" class="primary" type="button">Import reviewed edition</button></div><div id="review-details"></div></section>
 <section class="panel"><div class="section-head"><h3>Previous reviews</h3><button id="more-reviews" type="button" hidden>More reviews</button></div><div id="review-list" class="item-list"></div></section></section>
-<section id="screen-editions" class="screen" hidden><div class="page-title"><div><h2>Retained dataset editions</h2><p>Read typed records and original JSON, or download the exact source manifest and receiving mapping.</p></div></div><div class="two-column"><section class="panel"><div id="edition-list" class="item-list"></div><button id="more-editions" class="stack" type="button" hidden>More editions</button></section><section id="edition-panel" class="panel" hidden><div id="edition-facts"></div><div class="toolbar"><button id="download-manifest" type="button">Original manifest</button><button id="download-mapping" type="button">Column mapping</button><button id="download-edition" type="button">Receiving record</button><button id="use-edition" type="button">Use in application view</button></div><div id="edition-rows"></div><div class="toolbar"><button id="rows-previous" type="button">Previous rows</button><span id="rows-label" class="muted"></span><button id="rows-next" type="button">Next rows</button></div><details><summary>Complete edition and mapping</summary><pre id="edition-json"></pre></details></section></div></section>
+<section id="screen-editions" class="screen" hidden><div class="page-title"><div><h2>Retained dataset editions</h2><p>Read typed records with their original field meanings. Download the source dictionary, manifest and receiving mapping.</p></div></div><div class="two-column"><section class="panel"><div id="edition-list" class="item-list"></div><button id="more-editions" class="stack" type="button" hidden>More editions</button></section><section id="edition-panel" class="panel" hidden><div id="edition-facts"></div><div class="toolbar"><button id="download-manifest" type="button">Original manifest</button><button id="download-mapping" type="button">Column mapping</button><button id="download-edition" type="button">Receiving record</button><button id="download-semantics" type="button" hidden>Original dictionary</button><button id="use-edition" type="button">Use in application view</button></div><div id="edition-meanings" class="stack"></div><div id="edition-rows"></div><div class="toolbar"><button id="rows-previous" type="button">Previous rows</button><span id="rows-label" class="muted"></span><button id="rows-next" type="button">Next rows</button></div><details><summary>Complete edition and mapping</summary><pre id="edition-json"></pre></details></section></div></section>
 <section id="screen-views" class="screen" hidden><div class="page-title"><div><h2>Select the application’s dataset</h2><p>Keep a stable SQL view while retaining each selected edition and its complete history.</p></div></div><section class="panel"><h3>Current application views</h3><div id="view-list" class="item-list"></div></section>
-<section class="panel"><form id="view-form"><div class="form-grid"><label>View name<input id="view-name" required maxlength="63" autocomplete="off" spellcheck="false" placeholder="customer_inventory"></label><label>Retained edition<select id="view-version" required></select></label></div><button type="submit">Review current view and selection</button></form><div id="view-review" class="stack" hidden><div id="view-facts"></div><button id="activate-view" class="primary" type="button">Select this edition</button><p class="hint">The reviewed current revision is checked by PostgreSQL. A changed column signature requires a new view name.</p></div><div id="view-history" class="stack"></div><button id="more-history" type="button" hidden>More history</button></section></section>
-<section id="screen-compare" class="screen" hidden><div class="page-title"><div><h2>Compare complete editions</h2><p>PostgreSQL compares every row by the reviewed source keys. Open each page of changed records below.</p></div></div><section class="panel"><form id="compare-form"><div class="form-grid"><label>Previous edition<select id="compare-previous" required></select></label><label>Following edition<select id="compare-current" required></select></label></div><button class="primary" type="submit">Compare all rows</button></form><div id="compare-result" class="stack"></div><div class="toolbar"><button id="compare-back" type="button" hidden>Previous changes</button><span id="compare-label" class="muted"></span><button id="compare-next" type="button" hidden>More changes</button></div></section></section>
-<section id="screen-recovery" class="screen" hidden><div class="page-title"><div><h2>Operations and recovery</h2><p>Reopen the saved import or view selection after a lost response or process restart.</p></div></div><section class="panel"><div id="request-list" class="item-list"></div><button id="more-requests" class="stack" type="button" hidden>More operations</button></section><section id="request-panel" class="panel" hidden><div id="request-details"></div></section><section class="panel"><h3>Reopen and hand over</h3><p>The operator directory retains mapping reviews and original requests. PostgreSQL retains complete imported rows, original manifests, immutable editions and selected view history. Reopen this directory with the same restored database and schema.</p><p class="hint">Use the database owner’s PostgreSQL backup and restore procedure for the complete receiving schema. Download a selected edition’s mapping, manifest and receiving record from Retained editions for the handover.</p><dl id="reopen-facts" class="facts"></dl></section></section>
+<section class="panel"><form id="view-form"><div class="form-grid"><label>View name<input id="view-name" required maxlength="63" autocomplete="off" spellcheck="false" placeholder="customer_inventory"></label><label>Retained edition<select id="view-version" required></select></label></div><button type="submit">Review current view and selection</button></form><div id="view-review" class="stack" hidden><div id="view-facts"></div><div id="view-meanings"></div><div id="view-meaning-comparison"></div><button id="activate-view" class="primary" type="button">Select this edition</button><p class="hint">The reviewed current revision is checked by PostgreSQL. A changed column signature requires a new view name.</p></div><div id="view-history" class="stack"></div><button id="more-history" type="button" hidden>More history</button></section></section>
+<section id="screen-compare" class="screen" hidden><div class="page-title"><div><h2>Compare complete editions</h2><p>Compare original field meanings and database mappings, then compare every row by the reviewed source keys.</p></div></div><section class="panel"><form id="compare-form"><div class="form-grid"><label>Previous edition<select id="compare-previous" required></select></label><label>Following edition<select id="compare-current" required></select></label></div><div class="toolbar"><button class="primary" type="submit">Compare all rows</button><button id="compare-meanings" type="button">Compare source meanings</button></div></form><div id="compare-meaning-result" class="stack"></div><div id="compare-result" class="stack"></div><div class="toolbar"><button id="compare-back" type="button" hidden>Previous changes</button><span id="compare-label" class="muted"></span><button id="compare-next" type="button" hidden>More changes</button></div></section></section>
+<section id="screen-recovery" class="screen" hidden><div class="page-title"><div><h2>Operations and recovery</h2><p>Reopen the saved import or view selection after a lost response or process restart.</p></div></div><section class="panel"><div id="request-list" class="item-list"></div><button id="more-requests" class="stack" type="button" hidden>More operations</button></section><section id="request-panel" class="panel" hidden><div id="request-details"></div></section><section class="panel"><h3>Reopen and hand over</h3><p>The operator directory retains mapping reviews and original requests. PostgreSQL retains complete imported rows, original dictionaries and manifests, immutable editions and selected view history. Reopen this directory with the same restored database and schema.</p><p class="hint">Use the database owner’s PostgreSQL backup and restore procedure for the complete receiving schema. Download a selected edition’s mapping, manifest and receiving record from Retained editions for the handover.</p><dl id="reopen-facts" class="facts"></dl></section></section>
 <footer>STELLAR FORGE · CUSTOMER DATA RECEIVING</footer></main></div><script src="/app.js" defer></script></body></html>
 """
 
@@ -23,7 +23,7 @@ input[type=checkbox]{width:16px;min-width:16px;height:16px;margin:0;accent-color
 
 .cell-original{min-width:180px}.cell-original details{margin:0;padding:0;border:0}.cell-original pre{max-height:180px}
 .check-cell{text-align:center}.record-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
-#source-preview{overflow:auto}.mapping-sample{font-size:11px;max-width:220px}
+#source-preview{overflow:auto}.meanings{margin:18px 0}.meaning-cell{min-width:150px;max-width:320px}.meaning-cell .hint{margin:4px 0}.meanings .table-scroll{max-height:520px}.mapping-sample{font-size:11px;max-width:220px}
 @media(max-width:760px){.sidebar nav{grid-template-columns:repeat(3,1fr)}.two-column{display:block}.form-grid{display:block}.header-actions{gap:5px}.topbar{gap:8px}.topbar h1{font-size:17px}}
 """
 
@@ -54,6 +54,9 @@ const errors = {
   DATASET_PG_COMPARE_REQUIRES_SAME_MAPPING_AND_KEYS: 'Choose two editions with the same complete mapping and at least one reviewed source key.',
   DATASET_PG_OPERATOR_WAREHOUSE_CHANGED: 'This operator directory belongs to a different database identity or schema. Reopen it with its original restored warehouse.',
   DATASET_PG_KEYS_REQUIRE_NONNULL_COMPARABLE_COLUMNS: 'Keys must use non-null comparable fields. Review the selected key and null settings.',
+  DATASET_PG_REIMPORT_ORIGINAL_DICTIONARY_REQUIRED: 'This edition predates dictionary receiving. Reopen its original saved review and import it again to attach the bound original dictionary to the same edition.',
+  DATASET_PG_LEGACY_EDITION_HAS_NO_DICTIONARY: 'This original delivery has no source dictionary.',
+  DATASET_SQL_SEMANTIC_MAPPING_INVALID: 'Use distinct database column names, including capitalization, for the retained source dictionary.',
   DATASET_PG_OPERATOR_CAPABILITY_REQUIRED: 'Open the private URL from this application’s current launch record.',
 };
 function message(text, error = false) {
@@ -133,6 +136,98 @@ function table(headings, rows) {
   rows.forEach(values => { const row = make('tr'); values.forEach(value => {const td = make('td'); td.append(cell(value)); row.append(td);}); body.append(row); });
   node.append(head, body); wrap.append(node); return wrap;
 }
+function meaningText(value) {
+  if (value === null || value === undefined) return '';
+  if (typeof value === 'string') return value;
+  if (Array.isArray(value)) return value.map(meaningText).filter(Boolean).join('; ');
+  return JSON.stringify(value);
+}
+function meaningCell(column) {
+  if (!column) return make('span', 'No dictionary definition', 'muted');
+  const node = make('div', undefined, 'meaning-cell'), definition = column.projectedDefinition || {};
+  const title = meaningText(definition.titles || definition.title);
+  if (title) node.append(make('strong', title));
+  if (definition.description) node.append(make('p', meaningText(definition.description)));
+  const entries = [['Source field',column.sourceField],['Source type',column.type],
+    ['Encoding',column.encoding],['Units',definition.unit || definition.units],
+    ['Datatype',definition.datatype],['Format',definition.format]];
+  for (const [label, value] of entries) if (value !== undefined && value !== null && value !== '')
+    node.append(make('p', label + ': ' + meaningText(value), 'hint'));
+  return node;
+}
+function meanings(record, currentMapping) {
+  const node = make('section', undefined, 'meanings');
+  node.append(make('h3', 'Original field meanings'));
+  if (record.semantics_status === 'SOURCE_REQUIRED') {
+    node.append(make('p', 'The original manifest includes a dictionary that this earlier import did not retain. Open its saved review and import the same edition to receive that dictionary.', 'notice'),
+      button('Open original receiving review', () => openOriginalMeaningReview(record.version_id)));
+    return node;
+  }
+  const document = record.semantic_dictionary || record.document;
+  const descriptor = record.semantics || (record.document ? record : null);
+  if (!document || !descriptor) {
+    node.append(make('p', record.semantics_status === 'NONE'
+      ? 'This delivery has no source dictionary. The reviewed mapping and original rows remain available.'
+      : 'This older saved review did not record source meanings. Reopen the original delivery to inspect its dictionary, or import the same reviewed edition to retain it.', 'hint'));
+    return node;
+  }
+  const mapping = currentMapping || record.mapping;
+  const aliases = new Map((mapping?.columns || descriptor.columns).map(column => [column.source,column.column]));
+  const sourceKeys = document.primaryKey.projected || [];
+  const key = descriptor.primary_key;
+  node.append(facts([
+    ['Dictionary',record.semantics_status === 'AVAILABLE' ? 'Verified original delivery' : 'Retained original delivery'],
+    ['Source primary key',sourceKeys.join(', ') || 'Not declared'],
+    ['Key coverage',document.primaryKey.complete && sourceKeys.every(name => aliases.has(name)) ? 'All source key fields are mapped' : 'Source key is incomplete or outside this projection'],
+    ['Receiving key',mapping ? mapping.keys.join(', ') || 'Original row order' : key.columns.join(', ') || 'Original row order'],
+    ['Source key enforced',record.semantics_status === 'AVAILABLE' ? 'Checked during PostgreSQL import' : key.enforced ? 'Yes, by this edition’s PostgreSQL primary key' : 'No'],
+  ]));
+  const definitions = document.columns.filter(column => aliases.has(column.name));
+  node.append(table(['Delivered field','Database column','Meaning','Original definition'], definitions.map(column => [
+    column.name, aliases.get(column.name), meaningCell(column),
+    details('Full field definition', column),
+  ])));
+  if (document.issues.length) node.append(details('Source definition issues',document.issues));
+  if (document.virtualColumns.length) node.append(details('Source virtual columns',document.virtualColumns));
+  node.append(details('Original dictionary and source capture',document),
+    details('Dictionary file and SQL binding',descriptor));
+  return node;
+}
+function renderMeaningComparison(value) {
+  const node = make('section', undefined, 'meanings');
+  node.append(make('h3','Source meaning comparison'), facts([
+    ['Field definitions',value.definition_changed ? 'Changed' : 'Unchanged'],
+    ['Source capture',value.capture_changed ? 'Changed' : 'Unchanged'],
+    ['Receiving mapping',value.mapping_changed ? 'Changed' : 'Unchanged'],
+    ['Fields with changes',value.columns.length],
+  ]));
+  if (value.columns.length) node.append(table(['Field','Previous meaning and mapping','Following meaning and mapping'],
+    value.columns.map(column => [column.source,
+      column.before === null ? null : details('Previous field',column.before),
+      column.after === null ? null : details('Following field',column.after)])));
+  else node.append(make('p','The source fields and receiving mappings are unchanged.','hint'));
+  node.append(button('Download complete meaning comparison', () => download(
+    '/api/semantic-compare?previous=' + value.before_version + '&current=' + value.after_version,
+    'postgres-meanings-' + value.before_version + '-' + value.after_version + '.json')),
+    details('Complete source meaning comparison',value));
+  return node;
+}
+async function openOriginalMeaningReview(versionId) {
+  let found = reviewRows.find(row => row.version_id === versionId);
+  while (!found && reviewBefore) {
+    const page = await api('/api/reviews?before=' + encodeURIComponent(reviewBefore) + '&limit=100');
+    reviewRows.push(...page.reviews); reviewBefore = page.next_before;
+    found = reviewRows.find(row => row.version_id === versionId);
+  }
+  renderReviews(); show('source');
+  if (!found) {
+    message('Open this edition’s original delivery report, save its complete mapping review, then import the unchanged edition to retain the dictionary.');
+    $('report-path').focus(); return;
+  }
+  renderReview(await api('/api/reviews/' + found.record_id));
+  $('review-panel').scrollIntoView({block:'start'});
+  message('Import this original review to attach the dictionary to its existing edition.');
+}
 function editionLabel(record) {
   return (record.dataset?.name || 'Dataset') + ' · ' + record.row_count + ' rows · ' + record.version_id.slice(0, 12);
 }
@@ -204,6 +299,8 @@ function renderMapping() {
   const rows = source.mapping.columns.map((column, index) => {
     const row = make('tr'); row.dataset.index = String(index);
     const original = make('td'); original.append(make('code', column.source));
+    const meaning = source.semantic_dictionary?.columns.find(value => value.name === column.source);
+    if (meaning) original.append(meaningCell(meaning));
     const nameCell = make('td'), name = make('input'); name.value = column.column; name.dataset.field = 'column';
     name.setAttribute('aria-label', 'Database column for ' + column.source); name.spellcheck = false; nameCell.append(name);
     const typeCell = make('td'), type = make('select'); type.dataset.field = 'type';
@@ -243,6 +340,7 @@ async function inspectSource() {
     ['Original snapshot',source.dataset.snapshot],['Original payment status',JSON.stringify(source.payment_status)],
   ]).children);
   renderMapping();
+  $('source-meanings').replaceChildren(meanings(source));
   const names = source.mapping.columns.map(column => column.source);
   $('source-preview').replaceChildren(table(names, source.preview.map(row => names.map(name => row[name]))));
 }
@@ -254,7 +352,7 @@ function renderReview(record) {
       ['Retained edition',record.version_id]]),
     table(['Source','Column','Type','Null allowed'],record.mapping.columns.map(column =>
       [column.source,column.column,column.type,column.nullable ? 'Yes' : 'No'])),
-    details('Complete saved review',record));
+    meanings({...record.review,mapping:record.mapping}), details('Complete saved review',record));
 }
 function renderReviews() {
   $('more-reviews').hidden = !reviewBefore;
@@ -300,6 +398,8 @@ async function openEdition(id) {
       ['Created',selectedEdition.created_at],['Source snapshot',selectedEdition.dataset?.snapshot],
       ['Keys',selectedEdition.mapping.keys.join(', ') || 'Original row order']]));
   $('edition-json').textContent = JSON.stringify(selectedEdition,null,2);
+  $('edition-meanings').replaceChildren(meanings(selectedEdition));
+  $('download-semantics').hidden = selectedEdition.semantics_status !== 'RETAINED';
   rowsAfter = 0; rowBack = []; nextRow = null; $('edition-rows').replaceChildren(empty('Opening retained rows…')); await showRows(); renderEditions();
   for (const key of ['view-version','compare-previous','compare-current']) fillSelect($(key));
 }
@@ -336,7 +436,14 @@ async function reviewView() {
   const name = $('view-name').value, versionId = $('view-version').value;
   if (!name || !versionId) throw new Error('Enter a view name and choose its retained edition.');
   const current = await api('/api/current?name=' + encodeURIComponent(name));
-  const target = editions.get(versionId) || await api('/api/versions/' + versionId);
+  const target = await api('/api/versions/' + versionId);
+  editions.set(versionId, target);
+  let meaningComparison = null;
+  if (current.version && current.version.semantics_status !== 'SOURCE_REQUIRED' &&
+      target.semantics_status !== 'SOURCE_REQUIRED') {
+    meaningComparison = await api('/api/semantic-compare?previous=' + current.version.version_id +
+                                  '&current=' + versionId);
+  }
   const history = await api('/api/history?name=' + encodeURIComponent(name) + '&limit=50');
   if ($('view-name').value !== name || $('view-version').value !== versionId)
     throw new Error('The selected view or edition changed. Review the current choice again.');
@@ -348,6 +455,8 @@ async function reviewView() {
     ['Current edition',current.version ? editionLabel(current.version) : 'No view yet'],
     ['Selected edition',editionLabel(target)],['Complete rows',target.row_count],
   ]),table(['Database column','PostgreSQL type'],target.mapping.columns.map(column => [column.column,column.type])));
+  $('view-meanings').replaceChildren(meanings(target));
+  $('view-meaning-comparison').replaceChildren(...(meaningComparison ? [renderMeaningComparison(meaningComparison)] : []));
   $('activate-view').textContent = current.version?.version_id === versionId ? 'Keep this selected edition' : 'Select this edition';
   renderHistory();
 }
@@ -377,6 +486,12 @@ async function useEdition() {
   if (!selectedEdition) return;
   fillSelect($('view-version')); $('view-version').value = selectedEdition.version_id;
   invalidateView(); show('views'); $('view-name').focus();
+}
+async function compareMeanings() {
+  const previous = $('compare-previous').value, current = $('compare-current').value;
+  if (!previous || !current) throw new Error('Choose two retained editions.');
+  const result = await api('/api/semantic-compare?previous=' + previous + '&current=' + current);
+  $('compare-meaning-result').replaceChildren(renderMeaningComparison(result));
 }
 async function compareEditions(offset = 0) {
   if (!comparison) throw new Error('Choose the two retained editions.');
@@ -466,6 +581,7 @@ $('rows-previous').addEventListener('click',() => run(async () => {
 }));
 for (const [id, route, prefix] of [
   ['download-manifest','manifest','manifest'],['download-mapping','mapping','postgres-mapping'],['download-edition','edition','postgres-edition'],
+  ['download-semantics','semantics-file','semantics'],
 ]) $(id).addEventListener('click',() => run(() => download('/api/' + route + '?version_id=' + selectedEdition.version_id,prefix + '-' + selectedEdition.version_id + '.json')));
 $('use-edition').addEventListener('click',() => run(useEdition));
 $('view-name').addEventListener('input',invalidateView);
@@ -478,17 +594,23 @@ $('more-history').addEventListener('click',() => run(async () => {
 }));
 function invalidateComparison() {
   comparison = null; compareBack = []; compareNext = null;
-  $('compare-result').replaceChildren(); $('compare-label').textContent = '';
+  $('compare-result').replaceChildren(); $('compare-meaning-result').replaceChildren(); $('compare-label').textContent = '';
   $('compare-back').hidden = $('compare-next').hidden = true; controls();
 }
 $('compare-previous').addEventListener('change',invalidateComparison);
 $('compare-current').addEventListener('change',invalidateComparison);
+$('compare-meanings').addEventListener('click', () => run(compareMeanings));
+$('mapping-rows').addEventListener('change', () => {
+  if (source) $('source-meanings').replaceChildren(meanings(source, mapping()));
+});
 $('compare-form').addEventListener('submit',event => {
   event.preventDefault(); run(async () => {
     comparison = {previous:$('compare-previous').value,current:$('compare-current').value};
     if (!comparison.previous || !comparison.current) throw new Error('Choose two retained editions.');
     compareBack = []; compareNext = null;
     $('compare-result').replaceChildren(empty('Comparing complete retained editions…'));
+    try { await compareMeanings(); }
+    catch (error) { $('compare-meaning-result').replaceChildren(make('p',errorText(error),'notice')); }
     await compareEditions(0);
   });
 });
