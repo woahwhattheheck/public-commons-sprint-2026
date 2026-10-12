@@ -144,7 +144,7 @@ export function createMatomoMerchant(store,editions,{environment=process.env}={}
     return store.perform('stage-release',input,async({signal})=>{
       await ensureReleases();
       let result;
-      if((await listReleases(releaseRoot)).some(x=>x.id===releaseId)){
+      if((await listReleases(releaseRoot)).releases.some(x=>x.id===releaseId)){
         result=await inspectRelease(releaseRoot,releaseId);
         if(result.sqlite?.packageManifestSha256!==saved.data.manifestSha256||result.sqlite?.originalSourceSha256!==digest(native.originals.get('source.json'))||identity(result.runtime)!==identity(normalizeReleaseRuntime(input.runtime??{port:0}))||result.label!==input.label)
           throw fault('MATOMO_RELEASE_ID_CONFLICT');
