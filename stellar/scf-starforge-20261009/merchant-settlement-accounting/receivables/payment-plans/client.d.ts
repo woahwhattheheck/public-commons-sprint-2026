@@ -87,7 +87,13 @@ export interface PaymentPlanMutation {
   edition?: ScheduleEdition; operation: PaymentPlanOperation;
 }
 export interface GeneratePaymentPlan {
-  invoiceId: string; balanceDate: string; firstDueDate: string; count: number; intervalDays: number;
+  invoiceId: string; balanceDate: string; firstDueDate: string; count: number;
+  /** Fixed-day interval; defaults to 30 when neither interval is supplied. */
+  intervalDays?: number;
+  /** Calendar-month interval, from 1 to 120; mutually exclusive with intervalDays. */
+  intervalMonths?: number;
+  /** Calendar months only. END_OF_MONTH requires the first due date to be month-end. */
+  monthAnchor?: 'DAY_OF_MONTH' | 'END_OF_MONTH';
   title?: string; reference?: string; customerNote?: string;
 }
 export interface PaymentPlansClientOptions { baseUrl?: string; fetch?: typeof fetch; }

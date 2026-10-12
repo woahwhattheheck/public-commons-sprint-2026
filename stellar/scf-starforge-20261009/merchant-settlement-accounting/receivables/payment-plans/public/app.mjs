@@ -188,9 +188,42 @@ function updateEditorTotal() {
   const draft = readDraft(), currency = selectedCurrency(draft);
   $('#editor-total').textContent = 'Scheduled total: ' + exactTotal(draft.installments, currency?.scale) + ' ' + (currency?.code || '');
 }
+const CADENCES = [
+  ['DAYS', 'Fixed number of days'],
+  ['WEEKLY', 'Weekly'],
+  ['FORTNIGHTLY', 'Every two weeks'],
+  ['MONTHLY', 'Monthly'],
+  ['QUARTERLY', 'Quarterly'],
+  ['YEARLY', 'Yearly'],
+  ['MONTHS', 'Custom calendar months'],
+];
+function readGeneration() {
+  const form = $('#plan-form'), previous = ui.editor?.generation || {};
+  if (!form) return copy(previous);
+  const get = name => form.elements.namedItem(name)?.value;
+  return {firstDueDate:get('firstDueDate'),count:get('count'),cadence:get('cadence'),
+    intervalDays:get('intervalDays'),intervalMonths:get('intervalMonths'),monthAnchor:get('monthAnchor')};
+}
+function updateGenerationControls() {
+  const form = $('#plan-form');
+  if (!form) return;
+  const cadence = form.elements.cadence.value;
+  for (const [name, active] of [
+    ['intervalDays', cadence === 'DAYS'],
+    ['intervalMonths', cadence === 'MONTHS'],
+    ['monthAnchor', ['MONTHLY','QUARTERLY','YEARLY','MONTHS'].includes(cadence)],
+  ]) {
+    const input = form.elements.namedItem(name);
+    input.disabled = !active;
+    input.closest('label').hidden = !active;
+    input.closest('label').style.display = active ? '' : 'none';
+  }
+}
 function editorMarkup() {
   const draft = ui.editor.draft, currency = selectedCurrency(draft);
-  const rows = draft.installments || [];
+  const rows = draft.installments || [], generation = ui.editor.generation;
+  const options = (values, selected) => values.map(([id,title]) => '<option value="' + esc(id) + '"' +
+    (selected === id ? ' selected' : '') + '>' + esc(title) + '</option>').join('');
   return '<form id="plan-form"><div class="form-grid">' +
     '<label class="span-2">Issued invoice<select name="invoiceId" required' + (draft.id ? ' disabled' : '') + '>' + invoiceOptions(draft.invoiceId) + '</select></label>' +
     '<label>Balance date<input type="date" name="balanceDate" value="' + esc(draft.balanceDate) + '" required></label>' +
@@ -198,11 +231,14 @@ function editorMarkup() {
     '<label>Customer reference<input name="reference" maxlength="240" value="' + esc(draft.reference) + '"></label>' +
     '<label class="span-3">Customer note<textarea name="customerNote" maxlength="4000">' + esc(draft.customerNote) + '</textarea></label></div>' +
     '<section class="form-section"><h3>Prepare equal installments</h3><div class="generation">' +
-    '<label>First due date<input type="date" name="firstDueDate" value="' + esc(rows[0]?.dueDate || addDays(draft.balanceDate || dateToday(), 7)) + '"></label>' +
-    '<label>Installments<input type="number" name="count" min="1" max="120" value="' + esc(rows.length || 3) + '"></label>' +
-    '<label>Days between<input type="number" name="intervalDays" min="1" max="366" value="30"></label>' +
+    '<label>First due date<input type="date" name="firstDueDate" value="' + esc(generation.firstDueDate) + '"></label>' +
+    '<label>Installments<input type="number" name="count" min="1" max="1000" value="' + esc(generation.count) + '"></label>' +
+    '<label>Repeat<select name="cadence">' + options(CADENCES,generation.cadence) + '</select></label>' +
+    '<label>Days between<input type="number" name="intervalDays" min="1" max="3660" value="' + esc(generation.intervalDays) + '"></label>' +
+    '<label>Months between<input type="number" name="intervalMonths" min="1" max="120" value="' + esc(generation.intervalMonths) + '"></label>' +
+    '<label>Monthly date<select name="monthAnchor">' + options([['DAY_OF_MONTH','Original day of month'],['END_OF_MONTH','Last day of month']],generation.monthAnchor) + '</select></label>' +
     '<button type="button" data-action="generate" data-request>Prepare schedule</button></div>' +
-    '<p class="footnote">Uses the invoice balance on the selected date. You can adjust each date and amount before saving.</p></section>' +
+    '<p class="footnote">Calendar schedules keep the original day, using a shorter month’s last day when needed. For last-day schedules, choose the first month’s last date. Review and edit every date and amount before saving.</p></section>' +
     '<div class="review-heading"><h3>Installments</h3><span class="meta">' + esc(currency?.code || '') + '</span></div>' +
     '<div class="schedule-edit"><table><thead><tr><th>#</th><th>Label</th><th>Due date</th><th class="number">Amount</th><th></th></tr></thead><tbody>' +
     rows.map((row,index) => '<tr data-installment data-id="' + esc(row.id || '') + '"><td>' + (index+1) + '</td><td>' +
@@ -214,9 +250,13 @@ function editorMarkup() {
     '<div class="dialog-actions"><button type="button" data-action="close">Close</button><button class="primary" type="submit" data-mutates>Save draft</button></div></form>';
 }
 function showEditor(draft, options = {}) {
+  const rows = draft.installments || [];
   ui.editor = {draft:copy(draft),version:options.version,revision:options.revision ?? ui.state.revision,
-    workspaceId:options.workspaceId || ui.state.workspaceId};
+    workspaceId:options.workspaceId || ui.state.workspaceId,
+    generation:copy(options.generation || {firstDueDate:rows[0]?.dueDate || addDays(draft.balanceDate || dateToday(),7),
+      count:rows.length || 3,cadence:'DAYS',intervalDays:30,intervalMonths:1,monthAnchor:'DAY_OF_MONTH'})};
   openDialog(draft.id ? 'Edit payment plan' : 'New payment plan', editorMarkup());
+  updateGenerationControls();
   updateEditorTotal();
 }
 function openNew(invoiceId) {
@@ -230,11 +270,15 @@ function openNew(invoiceId) {
     reference:'',customerNote:'',installments:[]});
 }
 async function generate() {
-  const draft = readDraft(), form = $('#plan-form');
-  const result = await ui.client.generate({...draft, firstDueDate:form.elements.firstDueDate.value,
-    count:Number(form.elements.count.value), intervalDays:Number(form.elements.intervalDays.value)});
+  const draft = readDraft(), generation = readGeneration();
+  const monthly = {MONTHLY:1,QUARTERLY:3,YEARLY:12,MONTHS:Number(generation.intervalMonths)};
+  const spacing = Object.hasOwn(monthly,generation.cadence) ?
+    {intervalMonths:monthly[generation.cadence],monthAnchor:generation.monthAnchor} :
+    {intervalDays:generation.cadence === 'WEEKLY' ? 7 : generation.cadence === 'FORTNIGHTLY' ? 14 : Number(generation.intervalDays)};
+  ui.editor.generation = copy(generation);
+  const result = await ui.client.generate({...draft,firstDueDate:generation.firstDueDate,count:Number(generation.count),...spacing});
   const generated = {...result.draft,...(draft.id ? {id:draft.id} : {})};
-  showEditor(generated,{version:ui.editor.version,revision:result.revision,workspaceId:result.workspaceId});
+  showEditor(generated,{version:ui.editor.version,revision:result.revision,workspaceId:result.workspaceId,generation});
   notice('Schedule prepared. Review the dates and amounts, then save the draft.',false,true);
 }
 function installmentsTable(rows,currency) {
@@ -497,8 +541,17 @@ document.addEventListener('submit',async event => {
 });
 $('#search').addEventListener('input',() => { if (ui.state) render(); });
 $('#customer-filter').addEventListener('change',() => refresh().catch(error => notice(error.message,true)));
-document.addEventListener('input',event => { if (event.target.closest('#plan-form')) updateEditorTotal(); });
+document.addEventListener('input',event => {
+  if (event.target.closest('#plan-form')) {
+    ui.editor.generation = readGeneration();
+    updateEditorTotal();
+  }
+});
 document.addEventListener('change',event => {
+  if (event.target.closest('#plan-form .generation')) {
+    ui.editor.generation = readGeneration();
+    updateGenerationControls();
+  }
   if (event.target.matches('#plan-form [name=invoiceId]')) {
     const draft = readDraft(), invoice = invoiceById(draft.invoiceId);
     draft.installments = []; draft.title = 'Payment plan · ' + (invoice?.number || draft.invoiceId);
