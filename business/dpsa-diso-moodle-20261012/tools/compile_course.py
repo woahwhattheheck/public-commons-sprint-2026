@@ -13,6 +13,7 @@ h1,h2,h3{line-height:1.25}h2{border-top:2px solid #333;padding-top:1.2rem;margin
 h3{margin-top:2rem}nav,aside{background:#f3f3f3;padding:1rem;border:1px solid #bbb}
 a{color:#202020;text-underline-offset:.15em}table{border-collapse:collapse;width:100%}td,th{padding:.5rem;text-align:left;border:1px solid #aaa}
 li{margin:.4rem 0}.source-list{font-size:.9rem}article{break-before:page}.learning-time{color:#555}
+caption{text-align:left;font-weight:650;margin:.8rem 0 .35rem}.diso-working-table{margin:1rem 0}.diso-working-table th[scope=row]{font-weight:550}
 @media(max-width:640px){body{padding:1rem}table{font-size:.9rem}td,th{overflow-wrap:anywhere}}@media print{nav{display:none}body{padding:0;max-width:none}a{color:inherit}}"""
 
 def require(value, message):
@@ -151,11 +152,86 @@ def questions_xml(unit, sources, source):
     ET.fromstring(data)
     return data + b"\n"
 
-def application_html(unit):
+
+def workbook_table(title, columns, rows, working=False):
+    require(len(columns) >= 2 and rows, "A working table needs headings and rows")
+    body = []
+    for row in rows:
+        require(len(row) == len(columns), "Table row matches its authored headings: " + title)
+        cells = ["<th scope=\"row\">" + text(row[0]) + "</th>"]
+        cells += ["<td>" + (text(value) if str(value) else "[Complete]") + "</td>" for value in row[1:]]
+        body.append("<tr>" + "".join(cells) + "</tr>")
+    return ('<div class="diso-working-table" role="region" tabindex="0" aria-label="' + text(title) +
+            '" style="max-width:100%;overflow-x:auto"><table><caption>' + text(title) +
+            "</caption><thead><tr>" + "".join('<th scope="col">' + text(value) + "</th>" for value in columns) +
+            "</tr></thead><tbody>" + "".join(body) + "</tbody></table></div>")
+
+def validate_workbook(workbook, sources):
+    require(workbook.get("title") and workbook.get("exhibits") and workbook.get("tasks") and
+            workbook.get("decisionPrompts") and workbook.get("workedExampleHtml", "").strip(),
+            "Complete practical working material required: " + workbook["unitId"])
+    source_links(workbook.get("sourceIds", []), sources)
+    for exhibit in workbook["exhibits"]:
+        workbook_table(exhibit["title"], exhibit["columns"], exhibit["rows"])
+    for task in workbook["tasks"]:
+        require(task.get("instructions") and len(task.get("columns", [])) >= 2 and task.get("rowLabels"),
+                "Complete working document required: " + workbook["unitId"])
+        require(all(isinstance(label, str) and label.strip() for label in task["rowLabels"]),
+                "Working rows have meaningful labels: " + workbook["unitId"])
+
+def workbook_html(workbook, sources, scenario_note):
+    sections = ["<section class=\"diso-workbook\"><h4>" + text(workbook["title"]) + "</h4>",
+                "<p><em>" + text(scenario_note) + "</em></p>"]
+    for exhibit in workbook["exhibits"]:
+        sections.append(workbook_table(exhibit["title"], exhibit["columns"], exhibit["rows"]))
+    sections.append("<h4>Complete your working documents</h4><p>Copy the headings and tables into your practice submission. Complete the cells, explain your decisions and retain the original record identifiers from the exercise.</p>")
+    for task in workbook["tasks"]:
+        sections.append("<p>" + text(task["instructions"]) + "</p>")
+        rows = [[label] + [""] * (len(task["columns"]) - 1) for label in task["rowLabels"]]
+        sections.append(workbook_table(task["title"], task["columns"], rows, working=True))
+    sections.append("<h4>Decision prompts</h4><ol>" + "".join(
+        "<li>" + text(prompt) + "</li>" for prompt in workbook["decisionPrompts"]) + "</ol>")
+    sections.append(source_links(workbook.get("sourceIds", []), sources) + "</section>")
+    return "".join(sections)
+
+def markdown_cell(value):
+    return str(value).replace("|", r"\|").replace("\n", "<br>")
+
+def markdown_table(columns, rows):
+    lines = ["| " + " | ".join(markdown_cell(value) for value in columns) + " |",
+             "| " + " | ".join("---" for _ in columns) + " |"]
+    lines += ["| " + " | ".join(markdown_cell(value) for value in row) + " |" for row in rows]
+    return "\n".join(lines)
+
+def plain_html(value):
+    value = re.sub(r"</(?:p|h[1-6]|li)>|<br\s*/?>", "\n\n", value, flags=re.I)
+    return html.unescape(re.sub(r"<[^>]+>", "", value)).strip()
+
+def workbook_markdown(unit, workbook, sources, scenario_note):
+    lines = ["# " + unit["id"] + ": " + workbook["title"], scenario_note,
+             "## Application", plain_html(unit["application"]["instructionsHtml"]),
+             "**Deliverable:** " + unit["application"]["deliverable"]]
+    for exhibit in workbook["exhibits"]:
+        lines += ["## " + exhibit["title"], markdown_table(exhibit["columns"], exhibit["rows"])]
+    for task in workbook["tasks"]:
+        rows = [[label] + [""] * (len(task["columns"]) - 1) for label in task["rowLabels"]]
+        lines += ["## " + task["title"], task["instructions"], markdown_table(task["columns"], rows)]
+    lines += ["## Decision prompts", "\n".join(
+        str(index) + ". " + prompt for index, prompt in enumerate(workbook["decisionPrompts"], 1)),
+        "## Review your response", markdown_table(["Criterion", "Points"],
+        [[row["criterion"], row["points"]] for row in unit["application"]["rubric"]]),
+        "## Reflection", unit["reflection"]["prompt"],
+        "Submit your completed working document in the associated Moodle practice activity to open its suggested answer and reflection guidance."]
+    if workbook.get("sourceIds"):
+        lines += ["## Primary sources", "\n".join(
+            "- [" + sources[key]["title"] + "](" + sources[key]["url"] + ")" for key in workbook["sourceIds"])]
+    return ("\n\n".join(lines) + "\n").encode("utf-8")
+
+def application_html(unit, working_material):
     item = unit["application"]
     rubric = "".join("<tr><td>" + text(row["criterion"]) + "</td><td>" + text(row["points"]) + "</td></tr>" for row in item["rubric"])
     return ("<h3>" + text(item["title"]) + "</h3>" + item["instructionsHtml"] +
-            "<h4>Your working document</h4><p>" + text(item["deliverable"]) + "</p>" +
+            "<h4>Your working document</h4><p>" + text(item["deliverable"]) + "</p>" + working_material +
             "<h4>Review your response</h4><table><thead><tr><th>Criterion</th><th>Points</th></tr></thead><tbody>" + rubric +
             "</tbody></table><h4>Reflection</h4><p>" + text(unit["reflection"]["prompt"]) + "</p>" +
             "<p>Submit your practice workbook to open the suggested answer and reflection guidance, then revise your response. Keep personal and operationally sensitive information out of practice submissions.</p>")
@@ -181,6 +257,13 @@ def build(source, output, media):
     require(catalog["schema"] == "dpsa.diso.sources.v1", "Original primary-source catalog required")
     sources = {row["id"]: row for row in catalog["sources"]}
     require(len(sources) == len(catalog["sources"]), "Unique source identities required")
+    workbook_catalog = load(course.get("workbooksFile", "workbooks.json"))
+    require(workbook_catalog["schema"] == "dpsa.diso.workbooks.v1", "Original complete practical workbook catalog required")
+    workbooks = {item["unitId"]: item for item in workbook_catalog["workbooks"]}
+    require(len(workbooks) == len(workbook_catalog["workbooks"]) == 26, "All26 unique practical workbooks required")
+    for workbook in workbooks.values():
+        validate_workbook(workbook, sources)
+    scenario_note = workbook_catalog["scenarioNote"]
     glossary = load(course.get("glossaryFile", "glossary.json"))
     scripts = load(course.get("mediaFile", "media/scripts.json"))
     diagrams = load(course.get("diagramsFile", "images/diagrams.json"))
@@ -194,7 +277,7 @@ def build(source, output, media):
     glossary_html = "<h2>" + text(glossary["title"]) + "</h2><dl>" + "".join(
         "<dt><strong>" + text(item["term"]) + "</strong></dt><dd>" + item["definitionHtml"] +
         source_links(item.get("sourceIds", []), sources) + "</dd>" for item in glossary["entries"]) + "</dl>"
-    modules, identifiers, instructor = [], set(), []
+    modules, identifiers, instructor, practice_pages, received_workbooks = [], set(), [], [], set()
     files, question_types = {}, Counter()
     for item in media_manifest["files"]:
         data = owned_file(media, item["path"]).read_bytes()
@@ -218,6 +301,13 @@ def build(source, output, media):
         printable.append('<article id="' + text(module["id"]) + '"><h2>' + text(module["title"]) + "</h2>" + summary)
         instructor.append("<h2>" + text(module["title"]) + "</h2>")
         for unit in module["units"]:
+            require(unit["id"] in workbooks, "Practical workbook belongs to this unit: " + unit["id"])
+            workbook = workbooks[unit["id"]]
+            received_workbooks.add(unit["id"])
+            working_material = workbook_html(workbook, sources, scenario_note)
+            application = application_html(unit, working_material)
+            files["workbooks/" + unit["id"] + ".md"] = workbook_markdown(unit, workbook, sources, scenario_note)
+            practice_pages.append("<article><h2>" + text(unit["title"]) + "</h2>" + application + "</article>")
             require(unit["quiz"]["passPercent"] == 75 and unit["quiz"]["attempts"] == 0, unit["id"] + ": assessment policy differs")
             require(unit["chapters"] and unit["application"]["rubric"] and unit["reflection"]["prompt"], unit["id"] + ": complete learning materials required")
             for q in unit["quiz"]["questions"]:
@@ -228,10 +318,13 @@ def build(source, output, media):
                         files[relative] = retain(relative)
                 require(q["promptHtml"].strip() and q["generalFeedbackHtml"].strip(), q["id"] + ": meaningful question and feedback required")
             chapters = [{"id": c["id"], "title": c["title"], "content": c["bodyHtml"] + source_links(c["sourceIds"], sources)} for c in unit["chapters"]]
-            chapters.append({"id": unit["id"] + "-APPLICATION", "title": "Apply the unit", "content": application_html(unit)})
-            guidance = "<h3>Suggested answer</h3>" + unit["application"]["suggestedAnswerHtml"] + "<h3>Reflection guidance</h3>" + unit["reflection"]["guidanceHtml"]
+            chapters.append({"id": unit["id"] + "-APPLICATION", "title": "Apply the unit", "content": application})
+            guidance = ("<h3>Suggested answer</h3>" + unit["application"]["suggestedAnswerHtml"] +
+                        "<h3>Worked practical guidance</h3>" + workbook["workedExampleHtml"] +
+                        source_links(workbook.get("sourceIds", []), sources) +
+                        "<h3>Reflection guidance</h3>" + unit["reflection"]["guidanceHtml"])
             files["guidance/" + unit["id"] + ".html"] = guidance.encode("utf-8")
-            instructor.append("<h3>" + text(unit["title"]) + "</h3>" + application_html(unit) + guidance)
+            instructor.append("<h3>" + text(unit["title"]) + "</h3>" + application + guidance)
             xml_name = "questions/" + unit["id"] + ".xml"
             files[xml_name] = questions_xml(unit, sources, source)
             book = "<h2>" + text(unit["title"]) + "</h2>" + "".join("<section><h3>" + text(c["title"]) + "</h3>" + c["content"] + "</section>" for c in chapters)
@@ -239,13 +332,14 @@ def build(source, output, media):
             printable.append(book)
             native["units"].append({
                 "id": unit["id"], "title": unit["title"], "estimatedMinutes": unit["estimatedMinutes"],
-                "objectives": unit["objectives"], "chapters": chapters, "applicationHtml": application_html(unit), "guidanceHtml": guidance,
+                "objectives": unit["objectives"], "chapters": chapters, "applicationHtml": application, "guidanceHtml": guidance,
                 "quiz": {"id": unit["quiz"]["id"], "title": unit["quiz"]["title"], "file": xml_name,
                          "passPercent": 75, "attempts": 0,
                          "questions": [{"id": q["id"], "type": q["type"], "name": q["name"]} for q in unit["quiz"]["questions"]]},
             })
         printable.append("</article>")
         modules.append(native)
+    require(received_workbooks == set(workbooks), "Each original practical workbook belongs to the complete course")
     require(len(identifiers) == 312, "Complete 26-unit /312-question edition required")
     sources_html = "<h2>Primary sources and further reading</h2>" + source_links(list(sources), sources)
     printable.append(glossary_html)
@@ -253,13 +347,16 @@ def build(source, output, media):
     navigation = "<nav aria-label=\"Course modules\"><ol>" + "".join('<li><a href="#' + text(m["id"]) + '">' + text(m["title"]) + "</a></li>" for m in modules) + "</ol></nav>"
     page = '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' + text(course["title"]) + "</title><style>" + STYLE + "</style></head><body>" + navigation + "".join(printable) + "</body></html>"
     files["Complete_DISO_Course.html"] = page.encode()
+    files["Complete_DISO_Practice_Workbook.html"] = ('<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>DISO practical working documents</title><style>' + STYLE + "</style></head><body><h1>DISO practical working documents</h1><p>All26 practice activities with authored scenario exhibits, working tables, decision prompts and review criteria.</p>" + "".join(practice_pages) + "</body></html>").encode("utf-8")
     files["Instructor_Guidance.html"] = ('<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>DISO instructor guidance</title><style>' + STYLE + "</style></head><body><h1>DISO instructor guidance</h1><p>Worked answers and reflection guidance for course editors and facilitators.</p>" + "".join(instructor) + "</body></html>").encode()
     source_identity = sha(encode({"sources": sorted(source_records, key=lambda row: row["path"]), "renderedMediaSha256": sha(owned_file(media, "media.json").read_bytes())}))
     package = {"schema": "dpsa.diso.moodle-package.v1", "moodleBranch": "405", "moodleCommit": MOODLE_COMMIT,
                "sourceSha256": source_identity, "course": course, "modules": modules, "sourcesHtml": sources_html, "glossaryHtml": glossary_html,
                "counts": {"modules": 13, "units": 26, "books": 26, "assignments": 26, "quizzes": 26,
                           "questions": len(identifiers), "questionTypes": dict(question_types), "sources": len(sources),
-                          "videos": len(rendered), "glossaryEntries": len(glossary["entries"]), "chapters": 104, "guidancePages": 26}}
+                          "videos": len(rendered), "glossaryEntries": len(glossary["entries"]), "chapters": 104, "guidancePages": 26,
+                          "workbookTemplates": len(workbooks), "workbookExhibits": sum(len(w["exhibits"]) for w in workbooks.values()),
+                          "workingTables": sum(len(w["tasks"]) for w in workbooks.values())}}
     files["package.json"] = encode(package)
     manifest = {"schema": "dpsa.diso.compiled-source.v1", "sourceSha256": source_identity,
                 "moodleCommit": MOODLE_COMMIT, "sourceFiles": source_records,
