@@ -74,8 +74,11 @@ python3 -B operations/scf-stac-client-native-receiving-20261012/continue-native.
 
 The wrapper checks the exact archive and every declared member, the original
 source/operation identities, and the actual empty-stage `INVALID_BUYER_TRANSPORT` outcome. It
-restores the unmodified completed native record under the original task's retained
-records directory when the private originating namespace has ended.
+restores the unmodified completed native record at its exact original private
+`/dev/c79f-stac-receiving-placement/native-placement-97e9112be662d71911495534/work/records/97e9112be662d71911495534d46715f892bd806b01a09a4a43983a2de7c14b38`
+path when the original namespace has ended. This retains the original native
+runtime-use path binding and avoids a new allocation on the full overlay. No
+request, intent, registration or outcome identity is rewritten.
 The maintained `terminal-result` placement contract then checks the exact request
 and result digests, original ended process identities, and released resources.
 It retains that complete original record in the next placement and creates the
