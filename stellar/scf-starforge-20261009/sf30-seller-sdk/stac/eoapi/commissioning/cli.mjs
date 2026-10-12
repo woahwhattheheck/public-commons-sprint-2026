@@ -107,7 +107,7 @@ export async function runCommissioningCli(argv,{stdout=process.stdout,stderr=pro
       if(command==='receive')result=await workspace.importPackage({package:await privateJson(required('input'),380*1024*1024),operationId:required('operation')});
       if(command==='reopen')result=await workspace.getImported({importId:required('import')});
     }
-    stdout.write(jsonBytes(result));return 0;
+    stdout.write(jsonBytes(result));return command==='run'&&result?.status==='INTERRUPTED'?2:0;
   }catch(error){
     stderr.write(jsonBytes({error:safeCode(error?.code,'EOAPI_COMMISSIONING_OPERATION_FAILED')}));
     return 1;
