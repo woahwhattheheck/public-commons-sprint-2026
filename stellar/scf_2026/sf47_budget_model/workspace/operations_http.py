@@ -9,7 +9,8 @@ from operations import Operations, decoded
 
 
 def register_static(static):
-    static.update({"/operations.mjs": ("operations.mjs", "text/javascript; charset=utf-8"),
+    static.update({"/operations_support.mjs": ("operations_support.mjs", "text/javascript; charset=utf-8"),
+                   "/operations.mjs": ("operations.mjs", "text/javascript; charset=utf-8"),
                    "/operations.css": ("operations.css", "text/css; charset=utf-8"),
                    "/forecast.mjs": ("forecast.mjs", "text/javascript; charset=utf-8"),
                    "/forecast.css": ("forecast.css", "text/css; charset=utf-8"),
@@ -86,11 +87,12 @@ def write(handler, parsed):
     elif path == "/api/operations":
         result = ops.create(handler.json_body())
     else:
-        match = re.fullmatch(r"/api/operations/(operation-[a-f0-9]{32})/(command|forecast-preview|portfolio-preview|portfolio-seed|portfolio-selection)", path)
+        match = re.fullmatch(r"/api/operations/(operation-[a-f0-9]{32})/(command|support-preview|forecast-preview|portfolio-preview|portfolio-seed|portfolio-selection)", path)
         if not match:
             raise Problem("Operations command not found.", 404, "NOT_FOUND")
         body = handler.json_body()
-        methods = {"command": ops.command, "forecast-preview": ops.preview_forecast,
+        methods = {"command": ops.command, "support-preview": ops.preview_support,
+                   "forecast-preview": ops.preview_forecast,
                    "portfolio-preview": ops.preview_portfolio, "portfolio-seed": ops.seed_portfolio,
                    "portfolio-selection": ops.select_portfolio}
         result = methods[match.group(2)](match.group(1), body)

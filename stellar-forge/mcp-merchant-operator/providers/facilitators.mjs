@@ -3,7 +3,7 @@ import { defineMerchantProvider, MERCHANT_PROVIDER_SCHEMA } from '../provider-co
 
 export default defineMerchantProvider({
   schema: MERCHANT_PROVIDER_SCHEMA, id: "facilitators", family: "facilitators",
-  title: "facilitators merchant", order: 420, catalogOrder: 480,
+  title: "facilitators merchant", order: 430, catalogOrder: 490,
   configKey: "facilitators", summary: false, dependencies: [],
   maxRequestBytes: 131072,
   configuration: { input: "facilitatorConnection", privateExports: false,
@@ -14,7 +14,7 @@ export default defineMerchantProvider({
     {
       "prefix": "merchant_facilitator",
       "text": "For a retained facilitator change, use merchant_facilitators and merchant_facilitator_review, inspect every generated native payment alternative, then stage the exact reviewId. Its complete review remains in merchant_inspect/compare and must match at native startup. After a lost stage reply inspect the proposed release ID.",
-      "order": 170
+      "order": 180
     }
   ],
   load: () => import("../../../stellar/scf-starforge-20261009/sf82-seller-pilot/release-facilitator.mjs"),

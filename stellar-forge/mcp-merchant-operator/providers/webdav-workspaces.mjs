@@ -4,7 +4,7 @@ import { webDavWorkspaceTools } from "../catalog/webdav-tools.mjs";
 
 export default defineMerchantProvider({
   schema: MERCHANT_PROVIDER_SCHEMA, id: "webdav-workspaces", family: "webdavWorkspaces",
-  title: "webdav workspaces merchant", order: 200, catalogOrder: 160,
+  title: "webdav workspaces merchant", order: 210, catalogOrder: 170,
   configKey: "webdavWorkspaces", summary: true, dependencies: [],
   maxRequestBytes: 131072,
   configuration: { input: "webdavWorkspaceConnection", privateExports: true,

@@ -4,7 +4,7 @@ import { worldbankWorkspaceTools } from "../catalog/worldbank-workspace.mjs";
 
 export default defineMerchantProvider({
   schema: MERCHANT_PROVIDER_SCHEMA, id: "worldbank-workspaces", family: "worldbankWorkspaces",
-  title: "worldbank workspaces merchant", order: 190, catalogOrder: 130,
+  title: "worldbank workspaces merchant", order: 200, catalogOrder: 140,
   configKey: "worldbankWorkspaces", summary: true, dependencies: [],
   maxRequestBytes: 131072,
   configuration: { input: "worldbankWorkspaceConnection", privateExports: true,
@@ -14,7 +14,7 @@ export default defineMerchantProvider({
     {
       "prefix": "merchant_worldbank_",
       "text": "For World Bank workspaces, list declared aliases and open the original model. Save a source selection with its exact revision. Start or resume the same original capture ID, inspect its retained job until COMPLETE, and preserve its capture SHA256 for comparison, review and export. Original imported page receipts and handover packages require a host alias and inspected source hash. Merchant preparation uses a host profile; native publisher revisions, release generations and buyer intent/session IDs govern the full lifecycle. Browser and agent share the same model. Read original files in SHA-pinned chunks or use download-worldbank for durable complete receiving. Reopen the same original directory after interruption.",
-      "order": 150
+      "order": 160
     }
   ],
   load: () => import("../worldbank-workspace.mjs"),

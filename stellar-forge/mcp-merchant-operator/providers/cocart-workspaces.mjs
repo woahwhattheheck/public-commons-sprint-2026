@@ -4,7 +4,7 @@ import { cocartWorkspaceTools } from "../catalog/cocart-workspace.mjs";
 
 export default defineMerchantProvider({
   schema: MERCHANT_PROVIDER_SCHEMA, id: "cocart-workspaces", family: "cocartWorkspaces",
-  title: "cocart workspaces merchant", order: 450, catalogOrder: 450,
+  title: "cocart workspaces merchant", order: 460, catalogOrder: 460,
   configKey: "cocartWorkspaces", summary: true, dependencies: [],
   maxRequestBytes: 131072,
   configuration: { input: "cocartWorkspaceConnection", privateExports: true,

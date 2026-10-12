@@ -4,7 +4,7 @@ import { stellarExpertWorkspaceTools } from "../catalog/stellar-expert-workspace
 
 export default defineMerchantProvider({
   schema: MERCHANT_PROVIDER_SCHEMA, id: "stellar-expert-workspaces", family: "stellarExpertWorkspaces",
-  title: "stellar expert workspaces merchant", order: 270, catalogOrder: 230,
+  title: "stellar expert workspaces merchant", order: 280, catalogOrder: 240,
   configKey: "stellarExpertWorkspaces", summary: true, dependencies: [],
   maxRequestBytes: 131072,
   configuration: { input: "stellarExpertWorkspaceConnection", privateExports: true,
@@ -14,7 +14,7 @@ export default defineMerchantProvider({
     {
       "prefix": null,
       "text": "For Stellar asset workspaces, discover the host-declared alias and original workspaceId, then read schema/view before actions. Every original action requires operationId and expectedRevision; repeat the identical action identity after an unknown response, and preserve actual errors and revisions. Use retained file reads or stellar-expert-mcp to receive complete original sources, exports and customer receipts with their hashes. The original browser remains the workspace writer.",
-      "order": 70
+      "order": 80
     }
   ],
   load: () => import("../stellar-expert-workspace.mjs"),

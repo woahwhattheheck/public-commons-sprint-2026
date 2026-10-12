@@ -4,7 +4,7 @@ import { discoveryTools } from "../catalog/discovery.mjs";
 
 export default defineMerchantProvider({
   schema: MERCHANT_PROVIDER_SCHEMA, id: "discovery", family: "discovery",
-  title: "discovery merchant", order: 60, catalogOrder: 10,
+  title: "discovery merchant", order: 70, catalogOrder: 20,
   configKey: "catalog", summary: true, dependencies: [],
   maxRequestBytes: 131072,
   configuration: { input: "catalogConnection", privateExports: false,
@@ -14,7 +14,7 @@ export default defineMerchantProvider({
     {
       "prefix": "merchant_discovery_",
       "text": "Use merchant_discovery_status and review before applying the returned reviewId to publish or withdraw offers; after an interrupted apply, inspect current discovery instead of replaying it.",
-      "order": 190
+      "order": 200
     }
   ],
   load: () => import("../discovery.mjs"),

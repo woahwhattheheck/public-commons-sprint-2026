@@ -1342,3 +1342,20 @@ export async function initializeDspaceOperatorMerchant({ directory, connection, 
     operators: Object.entries(configured.operators).map(([operator, entry]) => ({ operator, label: entry.label })),
     ownership: 'EXISTING_DSPACE_OPERATOR' };
 }
+
+/** Attach the existing authenticated STAC imagery/processing host without replacing its owner. */
+export async function initializeStacWorkspaceMerchant({ directory, connection, name = 'Starforge STAC imagery' }) {
+  const root = resolve(directory), stacWorkspaceConnection = hostPath(connection, process.cwd());
+  name = line(name, 'Merchant name');
+  const selection = await (await import('./stac-workspace-client.mjs')).readStacWorkspaceConfiguration(stacWorkspaceConnection);
+  await mkdir(root, { mode: 0o700 });
+  await (await import('../../stellar/scf-starforge-20261009/sf82-seller-pilot/releases.mjs')).initReleaseStore(join(root, 'releases'));
+  await mkdir(join(root, 'customer-exports'), { mode: 0o700 });
+  const configuration = join(root, 'merchant-mcp.json');
+  await writePrivate(configuration, { schema: CONFIG_SCHEMA, name, releaseStore: './releases',
+    exportsDirectory: './customer-exports', sources: {}, stacWorkspaceConnection });
+  await readMerchantConfig(configuration);
+  return { schema: CONFIG_SCHEMA, configuration, state: 'INITIALIZED', stacWorkspacesConfigured: true,
+    workspaces: Object.entries(selection.workspaces).map(([workspace, entry]) => ({ workspace, label: entry.label })),
+    hostOwnership: 'ORIGINAL_STAC_HOST' };
+}

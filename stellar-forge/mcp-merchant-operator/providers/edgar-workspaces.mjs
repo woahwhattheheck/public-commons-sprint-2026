@@ -4,7 +4,7 @@ import { edgarWorkspaceTools } from "../catalog/sec-edgar-tools.mjs";
 
 export default defineMerchantProvider({
   schema: MERCHANT_PROVIDER_SCHEMA, id: "edgar-workspaces", family: "edgarWorkspaces",
-  title: "edgar workspaces merchant", order: 210, catalogOrder: 170,
+  title: "edgar workspaces merchant", order: 220, catalogOrder: 180,
   configKey: "edgarWorkspaces", summary: true, dependencies: [],
   maxRequestBytes: 131072,
   configuration: { input: "edgarWorkspaceConnection", privateExports: true,

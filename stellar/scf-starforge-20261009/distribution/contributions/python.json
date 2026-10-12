@@ -15,5 +15,8 @@
     "./seller/python/config": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/python/config.mjs",
     "./seller/python/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/python/workspace/model.mjs",
     "./seller/python/workspace/server": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/python/workspace/server.mjs"
+  },
+  "applicationProviders": {
+    "python": "stellar/scf-starforge-20261009/distribution/runtime-workspace/providers/python.mjs"
   }
 }

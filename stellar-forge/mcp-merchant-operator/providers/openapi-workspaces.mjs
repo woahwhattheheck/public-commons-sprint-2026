@@ -4,7 +4,7 @@ import { openapiWorkspaceTools } from "../catalog/openapi-workspace.mjs";
 
 export default defineMerchantProvider({
   schema: MERCHANT_PROVIDER_SCHEMA, id: "openapi-workspaces", family: "openapiWorkspaces",
-  title: "openapi workspaces merchant", order: 380, catalogOrder: 380,
+  title: "openapi workspaces merchant", order: 390, catalogOrder: 390,
   configKey: "openapiWorkspaces", summary: true, dependencies: [],
   maxRequestBytes: 131072,
   configuration: { input: "openapiWorkspaceConnection", privateExports: true,
