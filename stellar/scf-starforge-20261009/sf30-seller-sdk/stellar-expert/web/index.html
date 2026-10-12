@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>Stellar asset workspace</title>
+<link rel="stylesheet" href="/workspace.css">
+<script src="/workspace.js" defer></script>
+</head>
+<body>
+<a class="skip-link" href="#content">Skip to workspace</a>
+<header class="topbar">
+  <div><p class="eyebrow">Stellar Forge · Merchant tools</p><h1>Stellar asset workspace</h1><p class="subtitle">Research assets and accounts, retain source editions, and deliver reviewed data.</p></div>
+  <div class="topbar-actions"><span id="session-state" class="muted">Opening workspace</span><button id="refresh" type="button">Refresh saved state</button></div>
+</header>
+<div class="workspace-shell">
+  <aside class="sidebar">
+    <nav aria-label="Workspace">
+      <button type="button" data-view="watchlist" aria-current="page">Watchlist</button>
+      <button type="button" data-view="editions">Source editions</button>
+      <button type="button" data-view="analysis">Analysis and notes</button>
+      <button type="button" data-view="publications">Merchant publications</button>
+      <button type="button" data-view="receiving">Customer receiving</button>
+    </nav>
+    <div id="workspace-summary" class="workspace-summary"></div>
+    <p class="sidebar-help">Provider observations retain their network and capture time. Review the selected edition before publishing.</p>
+  </aside>
+  <main id="content" tabindex="-1">
+    <div id="notice" class="notice" role="status" aria-live="polite">Opening the saved workspace…</div>
+    <section id="pending-panel" class="notice attention" aria-labelledby="pending-title" hidden>
+      <h2 id="pending-title">A saved action needs its original response</h2>
+      <p id="pending-description"></p>
+      <div class="actions"><button id="recover-action" type="button" class="primary">Recover this action</button><button id="inspect-pending" type="button">Read current state</button></div>
+    </section>
+    <section id="conflict-panel" class="notice attention" hidden>
+      <h2>Saved state changed while you were editing</h2>
+      <p>Your draft is retained. Load the current state, compare the selected source, and save when ready.</p>
+      <div class="actions"><button id="load-conflict" type="button">Load current state and keep draft</button></div>
+    </section>
+    <div id="view" aria-busy="true"></div>
+  </main>
+</div>
+<dialog id="detail-dialog" aria-labelledby="detail-title">
+  <div class="panel-heading"><h2 id="detail-title">Source details</h2><button type="button" id="close-detail">Close</button></div>
+  <div id="detail-content"></div>
+</dialog>
+<footer>StellarExpert supplies the source observations. The workspace retains your selected editions, annotations, publication, and receiving history.</footer>
+</body>
+</html>

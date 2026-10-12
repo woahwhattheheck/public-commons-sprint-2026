@@ -10,7 +10,9 @@ import { datasetQueryParameters } from './dataset-cli.mjs';
 const HELP = [
   'Usage: node dataset-workspace.mjs (--dataset FILE | --state PRIVATE_DIR)',
   '  [--port 8430] [--resource https://your-api.example/data] [--catalog PRIVATE_DIR]',
-  'Open a CSV snapshot or attach to the running original dataset-refresh service.',
+  'Or: node dataset-workspace.mjs --stellar-expert PRIVATE_DIR [--inbox PRIVATE_INBOX] [--port 8436]',
+  '  [--release-runtime PRIVATE_JSON]',
+  'Open a CSV snapshot, attach to the original dataset service, or investigate Stellar assets.',
   'The private workspace previews native queries and can activate retained versions.',
   'Use the printed session URL on the same trusted computer. Paths are startup-only.',
 ].join('\n');
@@ -171,6 +173,10 @@ export async function startDatasetWorkspace({ datasetPath, stateDirectory, catal
 }
 
 export async function main(args = process.argv.slice(2)) {
+  if (args.includes('--stellar-expert')) {
+    const { main: stellarExpertMain } = await import('./stellar-expert/workspace.mjs');
+    return stellarExpertMain(args.map(value => value === '--stellar-expert' ? '--workspace' : value));
+  }
   if (args.length === 1 && args[0] === '--help') { console.log(HELP); return; }
   const options = {};
   for (let i = 0; i < args.length; i += 2) {
