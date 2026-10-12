@@ -2,7 +2,8 @@
 // MIT. Native MPP operator workflow; launch in the existing governor/key host.
 import { readFile, mkdir, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { spawn } from 'node:child_process';
+import { pathToFileURL, fileURLToPath } from 'node:url';
 import { openWorkspace, requireValue, json } from './storage.mjs';
 import { merchantConfig, buyerConfig } from './config.mjs';
 import { serveWorkspace, serveMerchant, exportResponse } from './server.mjs';
@@ -14,6 +15,7 @@ import { createCustomerWorkbench, customerWorkbenchProfile } from './customer/wo
 
 const HELP='Native Stellar MPP Charge\n\n'+
   'node mpp-charge/cli.mjs runtime-template DEPENDENCY_DIRECTORY\n'+
+  'node mpp-charge/cli.mjs runtime-receive DEPENDENCY_DIRECTORY [--cache ARCHIVE_DIRECTORY] [--cache-limit-bytes BYTES] [--offline] [--inspect]\n'+
   'node mpp-charge/cli.mjs init WORKSPACE\n'+
   'node mpp-charge/cli.mjs customer-contract|customer-openapi WORKSPACE\n'+
   'node mpp-charge/cli.mjs customer-export WORKSPACE NEW_CUSTOMER_DIRECTORY\n'+
@@ -43,6 +45,27 @@ export async function main(argv=process.argv.slice(2)) {
       await writeFile(target+'/package.json',await readFile(new URL('./package.json',import.meta.url)),{flag:'wx',mode:0o600});
       await writeFile(target+'/package-lock.json',await readFile(new URL('./package-lock.json',import.meta.url)),{flag:'wx',mode:0o600});
       console.log(json({directory:target,manifest:target+'/package.json',lockfile:target+'/package-lock.json'}));return 0;
+    }
+    if(command==='runtime-receive') {
+      const options=[];
+      for(let index=0;index<rest.length;index++) {
+        const option=rest[index];
+        if(option==='--cache') {
+          requireValue(!options.includes(option) && typeof rest[index+1]==='string' &&
+            !rest[index+1].startsWith('--'),'MPP_CLI_ARGUMENTS_INVALID');
+          options.push(option,resolve(rest[++index]));
+        } else if(option==='--cache-limit-bytes') {
+          const value=rest[++index];
+          requireValue(!options.includes(option) && typeof value==='string' && /^\d+$/.test(value) &&
+            Number.isSafeInteger(Number(value)),'MPP_CLI_ARGUMENTS_INVALID');
+          options.push(option,value);
+        } else {
+          requireValue(['--offline','--inspect'].includes(option) && !options.includes(option),'MPP_CLI_ARGUMENTS_INVALID');
+          options.push(option);
+        }
+      }
+      requireValue(!options.includes('--cache-limit-bytes') || options.includes('--cache'),'MPP_CLI_ARGUMENTS_INVALID');
+      return await receiveRuntime(resolve(directory),options);
     }
     if(command==='customer-receive') {
       requireValue(rest.length===1,'MPP_CUSTOMER_RECEIVE_ARGUMENTS_INVALID');
@@ -144,6 +167,23 @@ export async function main(argv=process.argv.slice(2)) {
   } catch(error) {
     console.error(JSON.stringify({error:error.code??'MPP_COMMAND_FAILED'}));return 2;
   } finally{await workspace?.close();}
+}
+async function receiveRuntime(directory,options) {
+  const child=spawn(process.env.MPP_RUNTIME_PYTHON||'python3',[
+    fileURLToPath(new URL('./runtime-receiving.py',import.meta.url)),directory,...options
+  ],{stdio:'inherit'});
+  const handlers=['SIGINT','SIGTERM'].map(signal=>{
+    const handler=()=>{if(child.exitCode===null)child.kill(signal);};
+    process.on(signal,handler);return [signal,handler];
+  });
+  try {
+    return await new Promise((resolveExit,reject)=>{
+      child.once('error',error=>reject(Object.assign(error,{code:'MPP_RUNTIME_PYTHON_REQUIRED'})));
+      child.once('close',(code,signal)=>resolveExit(code??(signal==='SIGINT'?130:143)));
+    });
+  } finally {
+    for(const [signal,handler] of handlers)process.removeListener(signal,handler);
+  }
 }
 function waitForStop(close) {
   return new Promise(resolveStop=>{
