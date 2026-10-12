@@ -208,3 +208,8 @@ The original official Treasury frontend provides the implementation and document
 - Debt to the Penny source description: https://fiscaldata.treasury.gov/datasets/debt-to-the-penny/
 
 Original row/source definitions remain the authority for interpreting a dataset. Native response bodies, retrieval times, metadata, links and hashes are retained in the workspace so a later capture can be compared against its actual original inputs.
+
+## Managed Applications
+
+The installed **Fiscal Data operations** application reopens this same named-operator workspace through the original Applications Review, Save, Start, Open, Stop and retained-reopen workflow. It verifies selected and executed source, the private connection and the original workspace identity, then borrows the existing MCP model and browser. The [complete Applications guide](../../distribution/runtime-workspace/FISCALDATA_APPLICATIONS.md) covers private setup, reviewed startup, source checkpoint receiving, original publisher/buyer controls and recovery.
+

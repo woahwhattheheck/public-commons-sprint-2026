@@ -13,9 +13,11 @@ const headers={'cache-control':'no-store','x-content-type-options':'nosniff',
   'referrer-policy':'no-referrer','cross-origin-resource-policy':'same-origin',
   'content-security-policy':"default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"};
 
-export async function createFiscalWorkspaceHandler({model,origins,basePath='',token=randomBytes(32).toString('hex')}={}) {
+export async function createFiscalWorkspaceHandler({model,origins,basePath='',token=randomBytes(32).toString('hex'),identity=null}={}) {
   if(!model||!Array.isArray(origins)||!origins.length||!/^(?:\/[A-Za-z0-9_-]+)*$/.test(basePath))
     throw fault('WORKSPACE_ORIGIN_REQUIRED','Provide the original model and an explicit local workspace origin.');
+  if(identity!==null&&!object(identity))throw fault('WORKSPACE_IDENTITY_REQUIRED','Provide an original managed application identity.');
+  const managedIdentity=identity===null?null:structuredClone(identity);
   const allowed=new Set(origins.map(value=>new URL(value).origin));
   const hosts=new Set([...allowed].map(value=>new URL(value).host));
   const assets=new Map(await Promise.all(Object.entries(assetTypes).map(async([name,type])=>
@@ -51,7 +53,11 @@ export async function createFiscalWorkspaceHandler({model,origins,basePath='',to
       if(['GET','HEAD'].includes(req.method)) {
         const asset=assets.get(route==='/'?'index.html':route.slice(1));
         if(asset){reply(200,asset.type,asset.bytes,asset.type.startsWith('text/html')?{'set-cookie':cookie()}:{});return true;}
-        if(route==='/api/state'){json(200,{...await model.snapshot(),sessionToken:token},{'set-cookie':cookie()});return true;}
+        if(route==='/api/state'){json(200,{...await model.snapshot(),...(managedIdentity?{managedApplication:{workspaceAlias:managedIdentity.workspaceAlias,operator:managedIdentity.operator,instanceId:managedIdentity.instanceId}}:{}),sessionToken:token},{'set-cookie':cookie()});return true;}
+        if(route==='/api/identity'&&managedIdentity!==null){
+          if(!authenticated(req))throw fault('WORKSPACE_SESSION_REQUIRED','Open this workspace before inspecting its original managed identity.',403);
+          json(200,managedIdentity);return true;
+        }
         const match=/^\/api\/files\/([^/]+)\/([^/]+)\/([^/]+)$/.exec(route);
         if(match) {
           if(!authenticated(req))throw fault('WORKSPACE_SESSION_REQUIRED','Open this workspace before downloading its retained files.',403);
@@ -136,3 +142,4 @@ export async function startFiscalWorkspace({port=0,host='127.0.0.1',basePath='',
         server.closeIdleConnections?.();try{await model.close();}finally{server.closeAllConnections?.();await stopped;}})();}};
   } catch(error){server.close();await model.close();throw error;}
 }
+
