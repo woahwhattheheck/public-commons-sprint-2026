@@ -1,0 +1,25 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "sheetbest-authoring",
+  "description": "Complete private Sheet Best field authoring, original publisher/SF82 and managed browser/MCP lifecycle.",
+  "commands": {
+    "sheetbest-workspace": {
+      "component": "sf30-seller-sdk",
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/sheetbest/workspace/cli.mjs"
+    }
+  },
+  "exports": {
+    "./seller/sheetbest/workspace": "stellar/scf-starforge-20261009/sf30-seller-sdk/sheetbest/workspace/model.mjs",
+    "./seller/sheetbest/workspace/server": "stellar/scf-starforge-20261009/sf30-seller-sdk/sheetbest/workspace/server.mjs",
+    "./seller/sheetbest/workspace/launch": "stellar/scf-starforge-20261009/sf30-seller-sdk/sheetbest/workspace/launch.mjs",
+    "./seller/sheetbest/workspace/packet": "stellar/scf-starforge-20261009/sf30-seller-sdk/sheetbest/workspace/packet.mjs",
+    "./seller/sheetbest/workspace/deployment": "stellar/scf-starforge-20261009/sf30-seller-sdk/sheetbest/workspace/deployment.mjs",
+    "./seller/sheetbest/workspace/mcp": "stellar/scf-starforge-20261009/sf30-seller-sdk/sheetbest/workspace/mcp.mjs"
+  },
+  "applicationProviders": {
+    "sheetbest-authoring": "stellar/scf-starforge-20261009/sf30-seller-sdk/sheetbest/workspace/application-provider.mjs"
+  },
+  "merchantProviders": {
+    "sheetbest-workspaces": "stellar/scf-starforge-20261009/sf30-seller-sdk/sheetbest/workspace/merchant-provider.mjs"
+  }
+}
