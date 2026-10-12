@@ -130,6 +130,64 @@ The original merchant listener binds to loopback and prints its endpoint.
 Use that actual endpoint for receiving. Native management authentication and
 the merchant MCP bearer token belong to their respective existing listeners.
 
+## Reopen a managed agent Application
+
+The installed `native-facilitator-operator` product contains **Native Stellar
+facilitator** and **Native Stellar agent** in the existing Runtime Workspace
+Applications catalog. Start the original native operator Application first.
+Initialize its merchant connection using the preceding original provider setup,
+then select **Native Stellar agent**.
+
+Choose the original private `merchant-mcp.json`, its declared native operator
+alias and the host environment name for the merchant MCP bearer token.
+The selected private environment JSON can provide that token using the existing
+Applications environment binding. Set **Agent port** to zero for an available
+loopback endpoint.
+
+Review and Save the Application, Connect its intended installed release,
+Review Start and Start. The original review retains the merchant configuration,
+native connection and selected private URL receipt, the source implementation,
+and the existing release/receiving directory identities. The launcher checks
+the same binding before opening the original merchant MCP service. It attaches
+the original native alias and retains that authenticated native process with
+the agent process's own identity and MCP endpoint.
+
+**Open** reopens the already running native operator's browser. The retained
+Application startup records the corresponding `mcpUrl`, selected operator
+alias and exact binding SHA256. Use that actual MCP endpoint with
+`native-facilitator-receive` or the original MCP client configuration.
+The startup URL and its native token belong in the existing private operation.
+
+Applications **Stop** drains accepted work and retained file readers through
+the original merchant service. Reopen the same saved agent Application and
+merchant configuration to continue the existing export IDs. The native
+facilitator Application owns its browser, payment backend and journal lifetime.
+
+For direct operation, the same source-owned launcher is installed:
+
+```sh
+starforge native-facilitator-agent inspect \
+  --config /srv/starforge/private/native-agent/merchant-mcp.json \
+  --operator main
+
+starforge native-facilitator-agent serve \
+  --config /srv/starforge/private/native-agent/merchant-mcp.json \
+  --operator main --expected-binding-sha256 ORIGINAL_BINDING_SHA256 \
+  --port 0 --token-env MCP_ACCESS_TOKEN
+```
+
+Use the binding SHA256 returned by the original inspect command. A private
+URL-file connection binds the exact retained receipt bytes and its announced
+native identity. An environment connection binds the original variable name
+and any configured instanceId; its actual original instance is retained on
+successful attachment.
+
+The `./facilitator/operator/agent` export provides the same inspection and
+startup factory with TypeScript declarations. Its returned `close()` retains
+the original service across a failed shutdown for an explicit retry. If startup
+cleanup itself fails, the error's `closeNativeAgent()` retains that same owner;
+the command keeps its signal handler available until cleanup finishes.
+
 ## Agent workflow
 
 Every tool below starts with `merchant_native_facilitator_`.

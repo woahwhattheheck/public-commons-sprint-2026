@@ -156,3 +156,10 @@ existing collector interface. A durable catalog capture stores every original
 resource together with the exact selected native profile, original instance,
 network, resource version and first catalog/queue observation. The merchant
 receiver continues that retained export after its agent session ends.
+
+The same installed selection includes **Native Stellar agent** in Runtime
+Workspace Applications. It reviews the original merchant configuration and
+native alias, runs the original agent service, reopens this native browser, and
+retains its exact startup/binding for receiving after the agent host restarts.
+The source-owned `native-facilitator-agent inspect|serve` command and typed
+`./facilitator/operator/agent` export use that same launcher.
