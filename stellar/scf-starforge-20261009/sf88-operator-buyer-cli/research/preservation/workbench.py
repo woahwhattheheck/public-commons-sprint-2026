@@ -14,6 +14,8 @@ import os
 from pathlib import Path, PurePosixPath
 import re
 import secrets
+import signal
+import sys
 import shutil
 import stat
 import tempfile
@@ -336,6 +338,8 @@ class Workbench:
         try:
             self.guard = threading.RLock()
             self.csrf = secrets.token_urlsafe(32)
+            self.instance_id = uuid.uuid4().hex
+            self.launch = None
             self.port = None
             self.active = None
             self.worker = None
@@ -519,7 +523,8 @@ class Workbench:
             _, saved = self.operation(root.name)
             migrations.append({k: saved[k] for k in ("id", "provider", "label", "selection", "createdAt")})
         return {"schema": SCHEMA, "initialized": status is not None, "status": status,
-                "workspace": str(self.root), "csrf": self.csrf, "active": active,
+                "workspace": str(self.root), "instanceId": self.instance_id,
+                "csrf": self.csrf, "active": active,
                 "jobs": jobs[-100:], "jobCount": len(jobs), "artifacts": artifacts,
                 "migrations": migrations, "providers": provider_templates(),
                  "reviewHistory": review_history(self.root, status) if status is not None else [],
@@ -954,6 +959,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
 
     def base_checks(self, mutation=False):
         hosts = {f"127.0.0.1:{self.app.port}", f"localhost:{self.app.port}"}
+        if self.app.port == 80:
+            hosts.update({"127.0.0.1", "localhost"})
         if self.headers.get("Host", "") not in hosts:
             raise Problem("HOST", "Use the local operator address printed by the application.")
         origin = self.headers.get("Origin")
@@ -1046,6 +1053,10 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 path = Path(__file__).with_name(name)
                 self.send_content(200, p.read_regular(path.parent, path.name, BODY_LIMIT),
                                   "text/html; charset=utf-8" if name.endswith(".html") else "text/javascript; charset=utf-8")
+            elif request.path == "/api/launch":
+                if self.app.launch is None:
+                    raise Problem("APPLICATION_STARTING", "The original operator is still opening.")
+                self.send_json(200, self.app.launch)
             elif request.path == "/api/state":
                 self.send_json(200, self.app.state())
             elif request.path == "/api/preview":
@@ -1159,23 +1170,113 @@ class Handler(http.server.BaseHTTPRequestHandler):
             self.send_error_value(error)
 
 
-def serve(workspace, port=8785):
+MANAGED_BINDING_SCHEMA = "stellar-forge.preservation-workbench-binding.v1"
+MANAGED_STARTUP_SCHEMA = "stellar-forge.preservation-workbench-launch.v1"
+
+
+def managed_binding(workspace):
+    """Read the original source/workspace identity without opening an operator."""
+    if sys.version_info < (3, 11):
+        raise Problem("PYTHON_VERSION", "Choose the existing Python 3.11 or later executable.")
+    supplied = Path(workspace).absolute()
+    if supplied.is_symlink():
+        raise Problem("WORKSPACE", "Choose the original workspace directory.")
+    root = supplied.resolve()
+    parent = root.parent
+    if not parent.is_dir():
+        raise Problem("WORKSPACE_PARENT", "Choose an existing private parent for this workspace.")
+    parent_info = parent.stat()
+    identity = {"parent": str(parent), "parentDevice": str(parent_info.st_dev),
+                "parentInode": str(parent_info.st_ino), "state": "awaiting-source"}
+    if root.exists():
+        if not root.is_dir():
+            raise Problem("WORKSPACE", "Choose a retained preservation workspace or a new directory path.")
+        before = root.stat()
+        project_file = file_digest(root / "project.json", BODY_LIMIT)
+        prepared_file = file_digest(root / "prepared.json", MAX_SNAPSHOT_MEMBER)
+        project, prepared = p.project_files(root)
+        after = root.stat()
+        if ((before.st_dev, before.st_ino) != (after.st_dev, after.st_ino)
+                or project_file != file_digest(root / "project.json", BODY_LIMIT)
+                or prepared_file != file_digest(root / "prepared.json", MAX_SNAPSHOT_MEMBER)):
+            raise Problem("WORKSPACE_CHANGED", "The selected source workspace changed while reading.")
+        identity.update({"state": "initialized", "device": str(after.st_dev), "inode": str(after.st_ino),
+                         "projectSha256": project_file["sha256"],
+                         "preparedSha256": prepared_file["sha256"],
+                         "sourceBindingSha256": p.digest(p.canonical(project["binding"])),
+                         "sourceRecords": len(prepared["records"])})
+    source_root = Path(__file__).resolve().parents[2]
+    names = list(APPLICATION)
+    optional = [(source_root / name).exists() for name in PRESERVICA_APPLICATION]
+    if any(optional):
+        if not all(optional):
+            raise Problem("APPLICATION_SOURCE", "Retain the complete original Preservica source and guides.")
+        names.extend(PRESERVICA_APPLICATION)
+    hashes = {name: file_digest(source_root / name, BODY_LIMIT)["sha256"] for name in names}
+    current_parent = parent.stat()
+    if (parent_info.st_dev, parent_info.st_ino) != (current_parent.st_dev, current_parent.st_ino):
+        raise Problem("WORKSPACE_CHANGED", "The selected workspace parent changed while reading.")
+    value = {"schema": MANAGED_BINDING_SCHEMA, "workspace": str(root), "workspaceIdentity": identity,
+             "sourceRoot": str(source_root), "source": hashes,
+             "python": {"executable": os.path.realpath(sys.executable),
+                        "version": list(sys.version_info[:3])}}
+    return value | {"sha256": p.digest(p.canonical(value))}
+
+
+def serve(workspace, port=8785, expected_binding=None):
     if type(port) is not int or not 0 <= port <= 65535:
         raise Problem("PORT", "Choose a local port from 0 through 65535.")
+    selected = None
+    if expected_binding is not None:
+        if not isinstance(expected_binding, str) or not HASH.fullmatch(expected_binding):
+            raise Problem("MANAGED_BINDING", "Use the original reviewed workspace binding SHA-256.")
+        selected = managed_binding(workspace)
+        if selected["sha256"] != expected_binding:
+            raise Problem("MANAGED_BINDING_CHANGED", "The selected workspace, source or Python changed after review.")
+        workspace = selected["workspace"]
     app = Workbench(workspace)
     server = None
+    previous_signals = {}
+    interrupted = False
+
+    def interrupt(signum, frame):
+        nonlocal interrupted
+        if not interrupted:
+            interrupted = True
+            raise KeyboardInterrupt
+
     try:
+        if selected is not None and managed_binding(workspace)["sha256"] != expected_binding:
+            raise Problem("MANAGED_BINDING_CHANGED", "The workspace changed before its original operator opened.")
+        if threading.current_thread() is threading.main_thread():
+            for signum in (signal.SIGINT, signal.SIGTERM):
+                previous_signals[signum] = signal.getsignal(signum)
+                signal.signal(signum, interrupt)
         server = http.server.ThreadingHTTPServer(("127.0.0.1", port), Handler)
         server.workbench = app
         server.daemon_threads = False
         app.port = server.server_address[1]
-        print(json.dumps({"application": SCHEMA, "workspace": str(app.root),
-                          "url": f"http://127.0.0.1:{app.port}", "pid": os.getpid()}), flush=True)
+        origin = "http://127.0.0.1" + (f":{app.port}" if app.port != 80 else "")
+        app.launch = {"application": SCHEMA, "workspace": str(app.root), "url": origin,
+                      "pid": os.getpid(), "instanceId": app.instance_id}
+        if selected is not None:
+            app.launch = {"schema": MANAGED_STARTUP_SCHEMA, "status": "PRESERVATION_WORKBENCH_READY",
+                          **app.launch, "bindingSha256": selected["sha256"],
+                          "workspaceIdentity": selected["workspaceIdentity"],
+                          "sourceRoot": selected["sourceRoot"], "source": selected["source"],
+                          "python": selected["python"]}
+        print(json.dumps(app.launch), flush=True)
         server.serve_forever(poll_interval=0.25)
     finally:
-        if server is not None:
-            server.server_close()
-        app.close()
+        try:
+            try:
+                if server is not None:
+                    server.server_close()
+            finally:
+                app.close()
+        finally:
+            for signum, handler in previous_signals.items():
+                signal.signal(signum, handler)
 
 
 def main(argv=None):
@@ -1184,12 +1285,17 @@ def main(argv=None):
     web = commands.add_parser("serve", help="Open one retained workspace in the local browser")
     web.add_argument("--workspace", required=True)
     web.add_argument("--port", type=int, default=8785)
+    web.add_argument("--expected-binding", help="Original reviewed managed binding SHA-256")
+    binding = commands.add_parser("binding", help="Read original workspace, source and selected Python identity")
+    binding.add_argument("--workspace", required=True)
     receiving = commands.add_parser("receive", help="Receive a complete operator application/workspace")
     receiving.add_argument("--source", required=True)
     receiving.add_argument("--output", required=True)
     args = parser.parse_args(argv)
     if args.command == "serve":
-        serve(args.workspace, args.port)
+        serve(args.workspace, args.port, args.expected_binding)
+    elif args.command == "binding":
+        print(json.dumps(managed_binding(args.workspace), ensure_ascii=False))
     else:
         print(json.dumps(receive_workspace(args.source, args.output), ensure_ascii=False, indent=2))
     return 0

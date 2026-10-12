@@ -6,12 +6,12 @@ The source is published independently of its execution. A completed result requi
 
 ## Original runtime and source
 
-`buyer-receiving-runtime.json` records the 195 selected source paths and exact Git blob identities for this whole continuation. Materialize those retained blobs at their recorded relative paths and verify every identity before starting. The manifest is an explicit source selection: it preserves the original buyer runtime from `3afca9599b602b67a8b722043061100e2efef294`, the maintained receiving continuation, and the cohort/client application changes at `704df543668351f125f7beb0222789724a657127`. Its `head` is that application source anchor; its exact `files` list is authoritative for the selected runtime. Later unrelated package changes are not silently substituted into that selection.
+`buyer-receiving-runtime.json` records the 195 selected source paths and exact Git blob identities for this whole continuation. Materialize those retained blobs at their recorded relative paths and verify every identity before starting. The manifest is an explicit source selection: it preserves the original buyer runtime from `3afca9599b602b67a8b722043061100e2efef294`, the maintained receiving continuation, and the cohort/client application changes at `5771cd96dc13e80d3a630fecd2bf03b954482c60`. Its `head` is that application source anchor; its exact `files` list is authoritative for the selected runtime. Later unrelated package changes are not silently substituted into that selection.
 
 The selected source includes these receiving files beside the original `cli.py`:
 
 - `buyer-operations-receiving.mjs`: the single SDK, browser, agent and receiving controller.
-- `buyer-agent-receiving.mjs`: the original agent phase with the additive cohort/client join, Git blob `603e0c05eeac9db8b3f2db8babbb8d29b9de2fa5`.
+- `buyer-agent-receiving.mjs`: the original agent phase with the additive cohort/client join, Git blob `0f1fdf851383f328538beddf353393c983228e03`.
 - `cohort-operations-receiving.mjs`: the optional original-case cohort phase, Git blob `6e6b008dc603ea8affe376eb28000d35ef5ab923`.
 
 The controller checks that exact agent helper before invoking it. The helper checks the original typed client, grant provider and 58-tool catalogue blobs. The runtime manifest identifies source files; it is not an execution result or a private input package.
@@ -39,7 +39,7 @@ Save one private JSON configuration. The paths below are placeholders for the al
 {
   "schema": "sf47.native-buyer-receiving-config.v1",
   "sourceRoot": "/absolute/original-source",
-  "sourceHead": "704df543668351f125f7beb0222789724a657127",
+  "sourceHead": "5771cd96dc13e80d3a630fecd2bf03b954482c60",
   "workDirectory": "/absolute/private-receiving",
   "inboxDirectory": "/absolute/original-buyer/inbox",
   "intentIds": ["original-intent-id"],
@@ -97,6 +97,9 @@ Save one private JSON configuration. The paths below are placeholders for the al
   "cohortReceiving": true
 }
 ```
+
+
+The maintained cohort tools accept referenced input up to the original 32 MiB request allowance; other model inputs keep their 8 MiB limit. The complete selected file is hashed before applying its explicit JSON pointer, and the resulting HTTP envelope must still fit the original request limit. The same provider and input-transfer path handle this selection.
 
 The joined agent phase currently accepts one explicitly selected purchase. Its operation ID is 1–76 characters from letters, numbers, dots, underscores and hyphens; it becomes the stable agent request prefix. Python and Node must be absolute paths. The declared Node must resolve to the executable actually running the controller.
 

@@ -28,8 +28,21 @@ export async function createEchoBrowser({getServer,sourceCommit,sourcePackageFil
   executablePath:process.env.EPA_ECHO_CHROMIUM_EXECUTABLE??'/workspace/scratch/705ebf077387/browser-runtime/chrome-headless-shell-linux64/chrome-headless-shell',
   headless:true,env:environment,args:['--no-sandbox','--disable-dev-shm-usage','--disable-gpu','--disable-background-networking','--renderer-process-limit=1']
  });
- const context=await browser.newContext({viewport:{width:1280,height:900},acceptDownloads:true});
- const page=await context.newPage();page.setDefaultTimeout(30000);
+ let context,page;
+ try{
+  context=await browser.newContext({viewport:{width:1280,height:900},acceptDownloads:true});
+  page=await context.newPage();page.setDefaultTimeout(30000);
+ }catch(error){
+  const cleanupErrors=[];
+  try{await browser.close();}catch(closeError){
+   cleanupErrors.push({resource:'browser initialization',code:closeError.code??'EPA_ECHO_BROWSER_CLOSE_FAILED',message:closeError.message});
+  }
+  error.cleanupErrors=[...(error.cleanupErrors??[]),...cleanupErrors];
+  journal.state='CONTINUABLE';
+  journal.initializationError={code:error.code??'EPA_ECHO_BROWSER_INITIALIZATION_FAILED',message:error.message,cleanupErrors:error.cleanupErrors,at:new Date().toISOString()};
+  try{await save(journalFile,journal);}catch(saveError){error.journalSaveError={code:saveError.code,message:saveError.message};}
+  throw error;
+ }
  page.on('pageerror',e=>journal.errors.push({message:e.message,at:new Date().toISOString()}));
  const settled=()=>page.waitForFunction(()=>typeof S!=='undefined'&&S.schema&&S.view&&!S.refreshing&&!S.operationBusy&&!S.modal?.busy);
  const current=()=>page.evaluate(async()=>{const r=await fetch('/api/view',{headers:{authorization:'Bearer '+sessionStorage.getItem('epa-echo:session:'+location.origin)},cache:'no-store'});if(!r.ok)throw Error('Original workspace view '+r.status);return r.json();});
@@ -402,9 +415,20 @@ export async function createEchoBrowser({getServer,sourceCommit,sourcePackageFil
  }
  return {source:originalSource,publish,receive,portable,reopened,page,journal,
   async close(){
-   journal.finishedAt=new Date().toISOString();journal.state=journal.receiptId&&journal.receivedWorkspaceId&&journal.steps.some(s=>s.name==='ORIGINAL_WORKSPACE_REOPENED')?'COMPLETE':'CONTINUABLE';
-   await save(journalFile,journal);await browser.close();need(journal.errors.length===0,'The original EPA operator browser reported an application error.');
-   return journal;
+   const complete=journal.receiptId&&journal.receivedWorkspaceId&&journal.steps.some(s=>s.name==='ORIGINAL_WORKSPACE_REOPENED');
+   journal.state='CLOSING';let failure;const cleanupErrors=[];
+   try{await save(journalFile,journal);}catch(error){failure=error;}
+   try{await browser.close();}catch(error){
+    cleanupErrors.push({code:error.code??'EPA_ECHO_BROWSER_CLOSE_FAILED',message:error.message});failure??=error;
+   }
+   if(journal.errors.length)failure??=Object.assign(new Error('The original EPA operator browser reported an application error.'),{code:'EPA_ECHO_BROWSER_APPLICATION_ERROR'});
+   if(failure){
+    journal.state='CONTINUABLE';journal.closeError={code:failure.code??'EPA_ECHO_BROWSER_CLOSE_FAILED',message:failure.message,cleanupErrors,at:new Date().toISOString()};
+    try{await save(journalFile,journal);}catch(saveError){failure.journalSaveError={code:saveError.code,message:saveError.message};}
+    throw failure;
+   }
+   journal.finishedAt=new Date().toISOString();journal.state=complete?'COMPLETE':'CONTINUABLE';delete journal.closeError;
+   await save(journalFile,journal);return journal;
   }
  };
 }

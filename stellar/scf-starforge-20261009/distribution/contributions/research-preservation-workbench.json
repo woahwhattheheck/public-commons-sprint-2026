@@ -1,0 +1,41 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "research-preservation-workbench",
+  "description": "Complete research-preservation source review, Archivematica/RODA/Preservica operations, editable handover and original managed Applications launch.",
+  "supportFiles": [
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research/preservation/preservation.py",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research/preservation/roda.py",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research/preservation/roda_client.py",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research/preservation/workbench.py",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research/preservation/workbench.html",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research/preservation/workbench.js",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research/preservation/WORKBENCH.md",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research/preservation/README.md",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research/preservation/RODA.md",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research/preservation/RODA_REST.md",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research/preservation/cli.mjs",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research/oai/oai_feed.py",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research/preservation/preservica.py",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research/preservation/preservica_client.py",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research/preservation/PRESERVICA.md",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research/preservation/PRESERVICA_PROVIDER_CONTRACT.md",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research/preservation/application.mjs",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research/preservation/application-provider.mjs",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research/preservation/WORKBENCH_BROWSER_RECEIVING.md",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research/preservation/receiving/run_workbench_browser.mjs",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research/preservation/receiving/workbench_browser_support.py"
+  ],
+  "commands": {
+    "preservation-workspace": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research/preservation/cli.mjs"
+  },
+  "commandDescriptions": {
+    "preservation-workspace": "Open the original preservation workbench with its selected Python, source review, destination journals and complete workspace receiving."
+  },
+  "exports": {
+    "./research/preservation/cli": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research/preservation/cli.mjs",
+    "./research/preservation/application": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research/preservation/application.mjs"
+  },
+  "applicationProviders": {
+    "research-preservation-workbench": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research/preservation/application-provider.mjs"
+  }
+}

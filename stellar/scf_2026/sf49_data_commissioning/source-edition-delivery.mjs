@@ -7,7 +7,7 @@ import {
 import {acquireWorkspace} from '../../scf-starforge-20261009/sf30-seller-sdk/postgres/publisher/files.mjs';
 import {
   prepareSourceEditionWorkorder,inspectSourceEditionWorkorder,sourceEditionWorkorderFile,
-  sourceEditionWorkorderInput
+  sourceEditionWorkorderInput,SOURCE_EDITION_LIMITS
 } from './source-edition-workorder.mjs';
 import {
   SOURCE_ARCHIVE_LIMITS,exportSourceEditionArchive,inspectSourceEditionArchive,receiveSourceEditionArchive
@@ -16,7 +16,7 @@ import {
 export const SOURCE_DELIVERY_SCHEMA='stellar-forge.sf49.source-delivery-request.v1';
 export const SOURCE_BUNDLE_REFERENCE_SCHEMA='stellar-forge.sf49.source-bundle-reference.v1';
 export const SOURCE_DELIVERY_HTTP_BASE='/api/commissioning/source-bundles';
-const MAX_HANDOFF=224*1024**2,MAX_TERMS=1024**2,MAX_JSON=2*1024**2;
+const MAX_HANDOFF=SOURCE_EDITION_LIMITS.handoffBytes,MAX_TERMS=SOURCE_EDITION_LIMITS.termsBytes,MAX_JSON=2*1024**2;
 const ID=/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/,SHA=/^[a-f0-9]{64}$/;
 const canonical=value=>Array.isArray(value)?'['+value.map(canonical).join(',')+']':
   value!==null&&typeof value==='object'?'{'+Object.keys(value).sort().map(key=>JSON.stringify(key)+':'+canonical(value[key])).join(',')+'}':JSON.stringify(value);
@@ -43,7 +43,7 @@ function size(value,maximum) {
     Number.isSafeInteger(Number(result))&&Number(result)<=maximum,'SF49_DELIVERY_FILE_LIMIT');
   return result;
 }
-function fileSelection(value,kind) {
+function fileSelection(value,kind,{reserveNative=true}={}) {
   ensure(Array.isArray(value)&&value.length<=(kind==='archive'?1:64)&&
     (kind!=='archive'||value.length===1),'SF49_DELIVERY_FILES_INVALID');
   const ids=new Set();let total=0;
@@ -56,7 +56,7 @@ function fileSelection(value,kind) {
     return {id,name:filename(file.name),role:kind==='archive'?'source-edition-archive':
       text(file.role||'source',160,'source role'),bytes,sha256:file.sha256??null};
   });
-  ensure(kind==='archive'||total<=SOURCE_ARCHIVE_LIMITS.sourceBytes-MAX_HANDOFF-MAX_TERMS,
+  ensure(kind==='archive'||total<=SOURCE_ARCHIVE_LIMITS.sourceBytes-(reserveNative?MAX_HANDOFF+MAX_TERMS:0),
     'SF49_DELIVERY_SOURCE_TOTAL_LIMIT','The original SF49 source ceiling includes its handoff and terms.');
   return files;
 }
@@ -98,12 +98,18 @@ export async function openSourceEditionDelivery({
     const value=await optionalJson(join(pathFor(id),'request.json'));
     ensure(value?.schema===SOURCE_DELIVERY_SCHEMA&&value.id===id,'SF49_DELIVERY_NOT_FOUND');
     identifier(value.caseId);ensure(SHA.test(value.caseRevision)&&['source','archive'].includes(value.kind),'SF49_DELIVERY_RETAINED_REQUEST_INVALID');
-    same(value.files,fileSelection(value.files,value.kind),'SF49_DELIVERY_RETAINED_REQUEST_INVALID');
+    // Existing requests retain the actual accepted handoff/terms byte pins.
+    // A later native allowance change must not invalidate completed sources
+    // merely because their old conservative reservation was different.
+    same(value.files,fileSelection(value.files,value.kind,{reserveNative:false}),'SF49_DELIVERY_RETAINED_REQUEST_INVALID');
     text(value.label,240,'retained label');text(value.actor,200,'retained operator');
     ensure(typeof value.createdAt==='string'&&Number.isFinite(Date.parse(value.createdAt)),'SF49_DELIVERY_RETAINED_REQUEST_INVALID');
     if(value.kind==='source') {
       object(value.source,['handoff','terms'],'retained native source');
       sourcePin(value.source.handoff,MAX_HANDOFF);sourcePin(value.source.terms,MAX_TERMS);
+      const total=value.files.reduce((sum,file)=>sum+Number(file.bytes),0)+
+        Number(value.source.handoff.bytes)+Number(value.source.terms.bytes);
+      ensure(total<=SOURCE_EDITION_LIMITS.sourceBytes,'SF49_DELIVERY_RETAINED_REQUEST_INVALID');
     }
     return value;
   }
@@ -228,11 +234,12 @@ export async function openSourceEditionDelivery({
       object(input,['id','kind','caseId','caseRevision','label','actor','files'],'source transfer');
       const id=identifier(input.id),caseId=identifier(input.caseId);
       ensure(SHA.test(input.caseRevision)&&['source','archive'].includes(input.kind),'SF49_DELIVERY_CASE_BINDING_INVALID');
-      const files=fileSelection(input.files??[],input.kind);
+      const out=await privateRoot(pathFor(id)),retained=await optionalJson(join(out,'request.json'));
+      const files=fileSelection(input.files??[],input.kind,{reserveNative:!retained});
       const selection={id,kind:input.kind,caseId,caseRevision:input.caseRevision,
         label:text(input.label||id,240,'transfer label'),actor:text(input.actor,200,'operator'),files};
-      const out=await privateRoot(pathFor(id)),retained=await optionalJson(join(out,'request.json'));
       if(retained) {
+        await request(id);
         same(Object.fromEntries(Object.keys(selection).map(key=>[key,retained[key]])),selection);
         if(input.kind==='source') {
           const sourceRoot=await privateRoot(join(out,'original-inputs'));
@@ -364,13 +371,14 @@ export async function openSourceEditionDelivery({
         else await atomicJson(join(folder,'request.json'),request);
         const previous=await optionalJson(join(folder,'result.json'),8*MAX_JSON);
         if(previous)return {attachment:previous,transfer:await view(id)};
-        const checked=await inspectSourceEditionWorkorder({directory:saved.directory});
+        const nativeInput=await sourceEditionWorkorderInput({directory:saved.directory});
+        const checked=nativeInput.summary;
         ensure(checked.bundleId===request.bundleId&&checked.manifestSha256===request.manifestSha256,
           'SF49_DELIVERY_ORIGINAL_CHANGED');
         abort(signal);
         const result=await attachBundle({caseId,expectedRevision,requestId,actor,signal,
           descriptor:saved.record.descriptor,directory:saved.directory,
-          loadWorkorder:()=>sourceEditionWorkorderInput({directory:saved.directory})});
+          loadWorkorder:async()=>nativeInput});
         ensure(result&&typeof result==='object'&&!Array.isArray(result)&&
           Buffer.byteLength(JSON.stringify(result))<=MAX_JSON,'SF49_DELIVERY_CASE_ATTACHMENT_RESULT_REQUIRED');
         const retained={requestId,caseId,bundleId:request.bundleId,manifestSha256:request.manifestSha256,

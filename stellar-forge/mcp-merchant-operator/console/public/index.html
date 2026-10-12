@@ -168,13 +168,13 @@
       </section>
 
       <section id="page-customers" class="page" hidden>
-        <div class="section-heading"><div><p class="eyebrow">Original clients and API packages</p><h2>Customer receiving</h2></div><button id="refresh-customers">Refresh receiving</button></div>
+        <div class="section-heading"><div><p class="eyebrow">Original customer exports</p><h2>Customer receiving</h2></div><button id="refresh-customers">Refresh receiving</button></div>
         <div class="columns">
           <section class="panel"><h3>Receive or resume a customer</h3><p>Use the export identity returned by the merchant. Receiving keeps the original manifest, verified files and resumable transfer.</p>
             <form id="customer-form">
               <p id="customer-form-hint" class="hint"></p>
-              <label for="customer-family">Original customer authority</label><select id="customer-family"><option value="core">Merchant release store</option><option value="opensearch">OpenSearch workspace deployment</option><option value="openapi">API workspace package</option></select>
-              <div id="customer-workspace-field" hidden><label for="customer-workspace">Configured workspace alias</label><input id="customer-workspace" pattern="[a-z0-9][a-z0-9_-]{0,63}" autocomplete="off"></div>
+              <label for="customer-family">Original customer authority</label><select id="customer-family"><option value="core">Merchant release store</option><option value="opensearch">OpenSearch workspace deployment</option><option value="openapi">API workspace package</option><option value="grant-reviewer">Grant reviewer packet and results</option><option value="grpc">gRPC customer, source and observations</option></select>
+              <div id="customer-workspace-field" hidden><label for="customer-workspace">Configured workspace alias</label><input id="customer-workspace" pattern="[A-Za-z0-9][A-Za-z0-9._-]{0,127}" autocomplete="off"></div>
               <label for="customer-export">Original export ID</label><input id="customer-export" pattern="[a-z0-9][a-z0-9_-]{0,63}" required autocomplete="off">
               <label for="customer-sha">Manifest SHA-256</label><input id="customer-sha" pattern="[a-f0-9]{64}" class="mono" required autocomplete="off">
               <div class="actions"><button class="primary" type="submit">Receive original customer</button></div>

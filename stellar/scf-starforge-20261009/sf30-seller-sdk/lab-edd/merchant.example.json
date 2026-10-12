@@ -19,7 +19,7 @@
   "functions": {
     "laboratoryReview": {
       "path": "/laboratory-review",
-      "description": "Review every original laboratory EDD row and qualifier, apply exact source-bound field decisions, compare reissued deliveries, and deliver native receiving files with a complete offline editor and original-source archive.",
+      "description": "Review complete original laboratory deliveries, retain native fields and duplicate lineage, reconcile EQuIS3/EQuIS4 through explicit source-bound correspondence and independent field decisions, and return both native receiving files and full offline editors.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -74,6 +74,43 @@
             },
             "maxItems": 512,
             "uniqueItems": true
+          },
+          "baselineProfile": {
+            "type": "string",
+            "enum": [
+              "equis-lab-3",
+              "equis-lab-4",
+              "geotech-dts8d"
+            ]
+          },
+          "baselineEncoding": {
+            "type": "string",
+            "enum": [
+              "utf-8",
+              "windows-1252"
+            ]
+          },
+          "expectedBaselineSha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$",
+            "minLength": 64,
+            "maxLength": 64
+          },
+          "baselineDecisionFormat": {
+            "type": "string",
+            "enum": [
+              "json",
+              "csv",
+              "tsv"
+            ]
+          },
+          "reconciliationFormat": {
+            "type": "string",
+            "enum": [
+              "json",
+              "csv",
+              "tsv"
+            ]
           }
         },
         "required": [
@@ -105,7 +142,7 @@
           },
           "baseline": {
             "required": false,
-            "description": "Optional complete earlier delivery in the same selected source profile for duplicate-aware reissue comparison.",
+            "description": "Complete original earlier delivery. Select baselineProfile for explicit EQuIS3/EQuIS4 cross-profile review; omit it for the same-profile reissue comparison.",
             "mediaTypes": [
               "application/zip",
               "application/x-zip-compressed",
@@ -128,9 +165,31 @@
               "text/plain"
             ],
             "maxBytes": 4194304
+          },
+          "baseline_decisions": {
+            "required": false,
+            "description": "Complete source-bound baseline field decisions JSON or editable CSV/TSV. Used with the explicitly different-profile baseline.",
+            "mediaTypes": [
+              "application/json",
+              "text/csv",
+              "text/tab-separated-values",
+              "text/plain"
+            ],
+            "maxBytes": 4194304
+          },
+          "reconciliation": {
+            "required": false,
+            "description": "Complete saved cross-profile correspondence JSON or editable CSV/TSV, bound to both original sources and the exact mapping.",
+            "mediaTypes": [
+              "application/json",
+              "text/csv",
+              "text/tab-separated-values",
+              "text/plain"
+            ],
+            "maxBytes": 16777216
           }
         },
-        "maxTotalBytes": 37748736
+        "maxTotalBytes": 58720256
       },
       "payment": {
         "scheme": "exact",

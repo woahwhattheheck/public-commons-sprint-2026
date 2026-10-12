@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Aviary migration workbench</title>
+<style>
+:root{color-scheme:light;font:14px/1.5 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#202124;background:#f5f5f5}
+*{box-sizing:border-box}body{margin:0}header{background:#fff;border-bottom:1px solid #ccc;padding:19px 28px}
+header p{margin:4px 0 0;color:#606060}h1{font-size:21px;line-height:1.3;margin:0;font-weight:650}
+h2{font-size:19px;margin:0 0 15px}h3{font-size:15px;margin:23px 0 10px}
+nav{display:flex;gap:4px;flex-wrap:wrap;padding:12px 28px;background:#eaeaea;border-bottom:1px solid #ccc}
+button,input,select,textarea{font:inherit}button,.button{padding:8px 13px;border:1px solid #aaa;border-radius:3px;background:#fff;color:#202124;cursor:pointer;text-decoration:none}
+button:hover,.button:hover{background:#ededed}button.primary{background:#2b2b2b;border-color:#2b2b2b;color:#fff}
+button.primary:hover{background:#444}button:disabled{opacity:.5;cursor:wait}
+nav button[aria-current=page]{border-color:#333;background:#fff;font-weight:650}
+main{max-width:1440px;margin:0 auto;padding:24px 28px 60px}.panel{background:#fff;border:1px solid #ccc;border-radius:3px;padding:22px;margin-bottom:18px}
+[hidden]{display:none!important}.toolbar{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin:14px 0}
+.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.grid.two{grid-template-columns:repeat(2,minmax(0,1fr))}
+label{display:block;font-weight:600;margin:5px 0}input,select,textarea{width:100%;padding:8px;border:1px solid #b5b5b5;border-radius:2px;background:#fff;color:#202124}
+textarea{min-height:90px;resize:vertical}input[type=checkbox]{width:auto}input:focus,select:focus,textarea:focus,button:focus-visible,a:focus-visible{outline:2px solid #444;outline-offset:2px}
+small,.muted{color:#646464;font-weight:400}.status{display:inline-block;padding:3px 8px;border:1px solid #bbb;background:#f1f1f1;border-radius:2px;font-size:12px}
+.metrics{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin:18px 0}.metric{padding:13px;border:1px solid #d5d5d5;background:#fafafa}.metric strong{display:block;font-size:24px;font-weight:600}
+.table-wrap{width:100%;overflow:auto}table{border-collapse:collapse;width:100%;font-size:13px}th,td{padding:10px 11px;border-bottom:1px solid #ddd;text-align:left;vertical-align:top;overflow-wrap:anywhere}th{background:#f2f2f2;font-weight:600}
+td select,td input{min-width:130px}td pre{margin:0;white-space:pre-wrap;max-width:650px}.message{border:1px solid #777;background:#fff;padding:12px 16px;margin-bottom:18px;white-space:pre-wrap}
+pre,code{font:12px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace;overflow-wrap:anywhere}pre{white-space:pre-wrap;max-height:450px;overflow:auto;background:#f5f5f5;border:1px solid #ddd;padding:12px}
+details{border-top:1px solid #ddd;padding-top:12px;margin-top:18px}summary{cursor:pointer;font-weight:600}.right{margin-left:auto}.notes{margin:0;padding-left:23px}.notes li{margin:7px 0}.row-disabled{color:#777;background:#f9f9f9}.key{white-space:nowrap}
+#mappingJson{font:12px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace;min-height:300px}.source-note{margin:12px 0;color:#555;overflow-wrap:anywhere}
+@media(max-width:800px){header{padding:16px}nav{padding:10px 16px}main{padding:18px 14px 40px}.panel{padding:16px}.grid,.grid.two{grid-template-columns:1fr}.metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.metric:last-child{grid-column:1/-1}th,td{padding:8px}h1{font-size:19px}}
+</style>
+<script src="/app.js" defer></script>
+</head>
+<body>
+<header><h1>Aviary migration workbench</h1><p id="workspaceLabel">Opening saved workspace…</p></header>
+<nav aria-label="Workspace sections">
+<button data-tab="overview" aria-current="page">Overview</button>
+<button data-tab="mapping">Mappings</button>
+<button data-tab="preview">Record review</button>
+<button data-tab="transfer">Migration</button>
+<button data-tab="delivery">Delivery</button>
+</nav>
+<main>
+<div id="message" role="status" aria-live="polite" class="message" hidden></div>
+<section id="overview" class="tab panel">
+<h2>Saved source and migration</h2><p class="muted">Keep original source records, field choices and file relationships together from preparation through receiving.</p>
+<div id="metrics" class="metrics"></div>
+<div class="grid two"><div><h3>Original source</h3><div id="sourceSummary"></div></div><div><h3>Current mapping</h3><div id="mappingSummary"></div></div></div>
+<div class="toolbar"><button data-go="mapping" class="primary">Review mappings</button><button data-go="preview">Review records</button><a class="button" href="/review" target="_blank" rel="noopener">Open saved printable review</a></div>
+<h3>Saved work</h3><div id="jobList"></div>
+<h3>Recent activity</h3><div id="events"></div>
+</section>
+<section id="mapping" class="tab panel" hidden>
+<h2>Source mappings</h2><p class="muted">Select source columns and entered defaults. Each saved revision retains its original source and exact choices.</p>
+<div class="grid two"><div><label for="mappingKind">Table</label><select id="mappingKind"><option value="resources">Resources</option><option value="media">Media</option><option value="transcripts">Transcripts</option><option value="indexes">Indexes</option><option value="supplemental">Supplemental files</option></select></div>
+<div><label for="mappingPath">Source CSV</label><select id="mappingPath"></select></div></div>
+<p id="sourceColumns" class="source-note"></p>
+<div class="table-wrap"><table><thead><tr><th>Aviary field</th><th>Original source column</th><th>Entered default</th></tr></thead><tbody id="mappingRows"></tbody></table></div>
+<div class="toolbar"><button id="mapCustom">Map unused columns as custom fields</button><button id="ignoreUnused">Record unused columns as ignored</button></div>
+<label for="mappingNote">Mapping note</label><textarea id="mappingNote"></textarea>
+<div class="toolbar"><button id="saveMapping" class="primary">Save mapping revision</button><button id="assignKeys">Assign Aviary user keys</button><span id="mappingDirty" class="muted"></span></div>
+<details><summary>Value maps, exclusions and path prefixes</summary><p class="muted">The complete mapping document supports exact value substitutions, preserved source identifiers, exclusion reasons and an entered path prefix to remove.</p><textarea id="mappingJson" aria-label="Complete mapping document" spellcheck="false"></textarea><button id="applyJson">Apply document to editor</button></details>
+</section>
+<section id="preview" class="tab panel" hidden>
+<h2>Record and rights review</h2>
+<div class="toolbar"><label for="previewKind">Table</label><select id="previewKind"><option value="resources">Resources</option><option value="media">Media</option><option value="transcripts">Transcripts</option><option value="indexes">Indexes</option><option value="supplemental">Supplemental files</option></select><button id="refreshPreview">Refresh current review</button><span id="previewCount" class="muted"></span></div><p id="previewStatus" class="source-note"></p>
+<div id="issues"></div><div class="table-wrap"><table><thead><tr><th>Include</th><th>Source key</th><th>Title / file</th><th>Parent</th><th>Rights / description</th><th>Source row</th><th>Complete record</th></tr></thead><tbody id="previewRows"></tbody></table></div>
+<div class="toolbar"><button id="previousPage">Previous</button><button id="nextPage">Next</button><button id="saveReview" class="primary">Save review choices</button></div>
+</section>
+<section id="transfer" class="tab panel" hidden>
+<h2>Original migration</h2><p class="muted">Choose a saved operation to continue its original provider IDs and completed file parts, or prepare a new target in the separate draft.</p>
+<div class="grid two"><div><label for="savedOperation">Saved operation</label><select id="savedOperation"><option value="">New migration plan</option></select></div><div class="toolbar"><button id="newOperation">Open new plan draft</button></div></div><p id="planState" class="source-note"></p>
+<div class="grid"><div><label for="baseUrl">Aviary organization URL</label><input id="baseUrl" type="url" placeholder="https://yourorganization.aviaryplatform.com"></div>
+<div><label for="collectionId">Collection ID</label><input id="collectionId" inputmode="numeric" placeholder="Existing collection ID"></div>
+<div><label for="tokenEnv">API token environment variable</label><input id="tokenEnv" value="AVIARY_TOKEN"></div></div>
+<div class="grid two"><div><label for="operationId">Saved operation ID</label><input id="operationId"></div><div><label for="organizationId">Organization ID (required)</label><input id="organizationId" inputmode="numeric" pattern="[1-9][0-9]*" placeholder="Organization ID"></div></div>
+<div class="toolbar"><button id="planMigration" class="primary">Save migration plan</button><button id="runMigration">Run / continue original migration</button><button id="refreshTransfer">Refresh progress</button></div>
+<details id="savedConfiguration" hidden><summary>Complete saved target configuration</summary><pre id="selectedConfiguration"></pre></details>
+<div id="runSummary"></div><div class="table-wrap"><table><thead><tr><th>Operation item</th><th>Progress</th><th>Provider ID</th><th>Last update</th><th>Details</th></tr></thead><tbody id="actionRows"></tbody></table></div>
+<details><summary>Reconcile a request whose response was interrupted</summary><p class="muted">Use the original record found in Aviary. The workbench reads it and checks its parent and descriptive fields against the original request before attaching the ID.</p>
+<div class="grid"><div><label for="reconcileAction">Original action</label><select id="reconcileAction"></select></div><div><label for="providerId">Original Aviary record ID</label><input id="providerId"></div><div><label for="reconcileNote">How the original record was located</label><input id="reconcileNote"></div></div><div class="toolbar"><button id="reconcile">Reconcile original record</button></div></details>
+<details><summary>Refresh expired upload links for the original media</summary><p class="muted">Paste a fresh provider upload manifest for the same media ID and original multipart upload ID. Completed parts remain saved.</p><label for="refreshMediaKey">Media user key</label><input id="refreshMediaKey"><label for="uploadManifest">Provider upload manifest</label><textarea id="uploadManifest" spellcheck="false"></textarea><div class="toolbar"><button id="refreshUpload">Adopt fresh upload links</button></div></details>
+</section>
+<section id="delivery" class="tab panel" hidden>
+<h2>Packages and receiving</h2><p class="muted">The native package contains Aviary’s five CSVs and selected media assets. The complete workspace also includes original source, mapping revisions, operation history, exported transcripts and the application.</p>
+<p id="deliveryRevision" class="source-note"></p>
+<div class="toolbar"><button id="buildPackage" class="primary">Build native Aviary package</button><button id="exportWorkspace">Export complete workspace</button><button id="exportTranscripts">Download transcript formats</button><a class="button" href="/review" target="_blank" rel="noopener">Open saved review</a></div>
+<div id="artifactList"></div>
+<h3>Receive a complete workspace</h3><pre>python3 -B aviary.py receive --source Aviary_Complete_Workspace.zip --output received
+python3 -B received/application/aviary.py serve --workspace received/workspace</pre>
+<h3>Retained transcript exports</h3><div id="transcriptList"></div>
+</section>
+</main>
+</body>
+</html>

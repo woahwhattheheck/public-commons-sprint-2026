@@ -425,3 +425,11 @@ starforge wfs mcp-init --directory /srv/wfs/native-host \
 The maintained initializer creates the original release store and merchant configuration, or accepts an explicitly selected existing release store through `--release-store`. Repeating the same setup preserves the original configuration and release history.
 
 The complete entry points are defined in [index.mjs](./index.mjs), command arguments in [cli.mjs](./cli.mjs), source rules in [protocol.mjs](./protocol.mjs), and the portable receiving contract in [portable.mjs](./portable.mjs). The [distribution contribution](../../distribution/contributions/wfs-geoserver.json) registers the command, public exports and original providers together.
+
+## Complete GeoSolutions customer operation
+
+The [complete customer guide](./examples/native-runtime/RUN_CUSTOMER.md) and its [original source packet](./examples/native-runtime/source-packet.json) run the existing `SCF-WFS-GEOSOLUTIONS-CUSTOMER-7DE2-20261012` operation with its two complete retained source editions. The packet includes the cumulative WFS product and native vector engine, and reuses the original merchant source, selected runtime, source-capture receiver and artifact publisher.
+
+The [customer journey](./examples/native-customer-journey.mjs) captures native source editions, uses the browser to review field mappings and download the exact edited profile, exports both native formats, and resumes one committed export after its HTTP reply is interrupted. Its [native continuation](./examples/native-vector-customer.mjs) then binds the same original native receipts to merchant source publication, customer acquisition and whole-project receiving.
+
+The selected Python reopens the actual GeoPackage and Shapefile contents in each receiver. Native request bodies and the interrupted-reply record live under the original customer request tree, so the same complete artifact retains them across a foreground interruption. The guide carries the original source descriptor, launcher and complete receiving command.

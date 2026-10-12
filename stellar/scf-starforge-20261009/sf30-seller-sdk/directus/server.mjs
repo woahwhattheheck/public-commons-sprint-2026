@@ -12,6 +12,7 @@ import {DirectusOperations} from './operations.mjs';
 import {prepareDirectusMerchant,readDirectusMerchant,startDirectusMerchant,publishDirectusMerchant} from './merchant.mjs';
 import {reviewDirectusBuyer,prepareDirectusBuyer,receiveDirectusBuyer,inspectDirectusDelivery} from './customer.mjs';
 import {object,canonical} from './source.mjs';
+import {inspectDatasetSession} from '../../sf88-operator-buyer-cli/dataset-session.mjs';
 import {acquireDatasetLease} from '../dataset-refresh/writer-lease.mjs';
 import {hash,fault,MAX_SOURCE_BYTES} from './source.mjs';
 import {DIRECTUS_OPERATOR_LAUNCH_SCHEMA,verifyDirectusOperatorSourceSelection} from './launch.mjs';
@@ -185,10 +186,16 @@ export async function startDirectusOperator({directory,workspaceDirectory,source
           const {action,...input}=await body(req,2*1024*1024);
           const result=await scoped(req,async()=>{
             if(action==='offer')return reviewDirectusBuyer(input);
-            if(action==='prepare')return prepareDirectusBuyer(input);
-            if(action==='receive')return receiveDirectusBuyer(input);
+            if(action==='prepare')return prepareDirectusBuyer({...input,workspace});
+            if(action==='receive')return receiveDirectusBuyer({...input,workspace});
             if(action==='inspect')return inspectDirectusDelivery(input.directory);
-            throw fault('DIRECTUS_BUYER_ACTION','Choose offer, prepare, receive or inspect.');
+            if(action==='retain-session')return workspace.retainBuyerSession(input);
+            if(action==='session-status'){
+              const saved=workspace.state().project_runtime.sessions.find(session=>session.id===input.id);
+              if(!saved)throw fault('DIRECTUS_SESSION_MISSING','Choose a saved acquired session.',404);
+              return inspectDatasetSession(saved.directory);
+            }
+            throw fault('DIRECTUS_BUYER_ACTION','Choose offer, prepare, receive, inspect, retain-session or session-status.');
           });
           send(res,200,result);return;
         }

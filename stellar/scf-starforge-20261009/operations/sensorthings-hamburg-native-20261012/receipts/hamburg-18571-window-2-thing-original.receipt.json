@@ -1,0 +1,42 @@
+{
+  "schema": "stellar-forge.sensorthings-connector-source-receipt.v1",
+  "operationId": "SCF_SENSORTHINGS_HAMBURG_NATIVE_1B40_20261012",
+  "role": "window-2-thing",
+  "sourceUrl": "https://iot.hamburg.de/v1.1/Datastreams(18571)/Thing",
+  "receivedAt": "2026-10-12T10:57:13Z",
+  "timestampBasis": "Clock read after complete connector download returned; provider HTTP request times are not exposed.",
+  "body": {
+    "filename": "hamburg-18571-window-2-thing-original.json",
+    "bytes": 741,
+    "sha256": "50dfd472f336f5b4e15bc459408d23721bd6d52f7648494c7112c3128ec56110"
+  },
+  "representation": "COMPLETE_CONNECTOR_UTF8_TEXT",
+  "sourceHttpStatus": null,
+  "sourceHttpHeaders": null,
+  "method": "Notion create_attachment(source_url), then download_attachment(file_upload_id)",
+  "request": {
+    "source_url": "https://iot.hamburg.de/v1.1/Datastreams(18571)/Thing",
+    "filename": "hamburg-18571-window-2-thing-original.json",
+    "content_type": "application/json"
+  },
+  "connector": {
+    "attachment": {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"file_upload_id\":\"3f7dd772-3100-81ab-83b8-00b275323a52\",\"filename\":\"hamburg-18571-window-2-thing-original.json\",\"content_type\":\"application/json; charset=utf-8\",\"content_length\":741,\"status\":\"uploaded\",\"markdown_source\":\"file-upload://3f7dd772-3100-81ab-83b8-00b275323a52\",\"suggested_markdown\":\"<file src=\\\"file-upload://3f7dd772-3100-81ab-83b8-00b275323a52\\\"></file>\"}"
+        }
+      ],
+      "isError": false
+    },
+    "download": {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"file_upload_id\":\"3f7dd772-3100-81ab-83b8-00b275323a52\",\"filename\":\"hamburg-18571-window-2-thing-original.json\",\"content_type\":\"application/json; charset=utf-8\",\"content_length\":741,\"content\":\"{\\\"@iot.selfLink\\\":\\\"https://iot.hamburg.de/v1.1/Things(8490)\\\",\\\"@iot.id\\\":8490,\\\"name\\\":\\\"E-Ladestation DE*HHM*E1011\\\",\\\"description\\\":\\\"Electric charging station for electric cars\\\",\\\"properties\\\":{\\\"assetID\\\":\\\"DE*HHM*E1011\\\",\\\"infoLastUpdate\\\":\\\"2024-07-18T13:12:06.629729Z\\\",\\\"keywords\\\":[\\\"E-Ladestation\\\",\\\"Elektroladestation\\\",\\\"Hamburg\\\"],\\\"language\\\":\\\"de\\\",\\\"ownerThing\\\":\\\"Stromnetz Hamburg\\\"},\\\"HistoricalLocations@iot.navigationLink\\\":\\\"https://iot.hamburg.de/v1.1/Things(8490)/HistoricalLocations\\\",\\\"Locations@iot.navigationLink\\\":\\\"https://iot.hamburg.de/v1.1/Things(8490)/Locations\\\",\\\"MultiDatastreams@iot.navigationLink\\\":\\\"https://iot.hamburg.de/v1.1/Things(8490)/MultiDatastreams\\\",\\\"Datastreams@iot.navigationLink\\\":\\\"https://iot.hamburg.de/v1.1/Things(8490)/Datastreams\\\"}\"}"
+        }
+      ],
+      "isError": false
+    }
+  }
+}

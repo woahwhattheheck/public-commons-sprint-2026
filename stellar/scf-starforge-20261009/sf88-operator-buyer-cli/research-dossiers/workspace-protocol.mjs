@@ -7,7 +7,7 @@ import {RESEARCH_WORKSPACE_API,RESEARCH_WORKSPACE_CONNECTION,RESEARCH_SECTIONS,R
 export {RESEARCH_WORKSPACE_API,RESEARCH_WORKSPACE_CONNECTION,RESEARCH_SECTIONS,RESEARCH_PAGE_LIMIT,RESEARCH_CONTROL_LIMIT,RESEARCH_COMPARISON_SECTIONS} from './workspace-contracts.mjs';
 export const researchWorkspaceId = directory => 'research_' + createHash('sha256').update(directory).digest('hex');
 export const researchSummary = value => Object.fromEntries(
-  ['schema','id','title','description','revision','createdAt','updatedAt','questionCount','editionCount','selectedCount','findingCount','citationReviewCount']
+  ['schema','id','title','description','revision','createdAt','updatedAt','questionCount','editionCount','selectedCount','findingCount','citationReviewCount','eligibilityReviewCount']
     .filter(key => Object.hasOwn(value,key)).map(key => [key,value[key]]));
 export const researchRevision = value => {
   need(Number.isSafeInteger(value)&&value>=1&&value<100000000,'REVISION_INVALID');return value;

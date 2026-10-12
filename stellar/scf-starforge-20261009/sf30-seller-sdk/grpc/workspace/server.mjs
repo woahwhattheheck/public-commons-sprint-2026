@@ -59,7 +59,8 @@ export async function startGrpcWorkspace({ model, port = 8453, managedSelection,
     return typeof token === 'string' && Buffer.byteLength(token) === capability.length &&
       timingSafeEqual(Buffer.from(token), Buffer.from(capability));
   };
-  const actions = { save: 'save', capture: 'capture', open: 'open', checkout: 'checkout',
+  const actions = { 'health-start': 'healthStart', 'health-read': 'healthRead', 'health-list': 'healthList',
+    'health-resume': 'healthResume', 'health-cancel': 'healthCancel', 'health-export': 'healthExport', save: 'save', capture: 'capture', open: 'open', checkout: 'checkout',
     'reflection-inventory': 'reflectionInventory', 'reflection-capture': 'reflectionCapture',
     'reflection-open': 'reflectionOpen', 'reflection-save': 'reflectionSave',
     'upgrade-review': 'upgradeReview', 'upgrade-open': 'upgradeOpen',

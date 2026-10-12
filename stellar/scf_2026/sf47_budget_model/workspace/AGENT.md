@@ -202,8 +202,32 @@ The maintained typed client and original MCP provider delegate the complete work
 
 The preparation body is `{expectedVersion,requestId,actor,note?,inputs,expectedPreviewSha256}`. Preserve the exact body and request ID after an uncertain result. It replays the first committed case result before the case-version check. The provider can take the complete `inputs` inline or through its existing verified original input/snapshot/transfer selection, with `inputPointer` selecting the original seed's `/inputs`. It does not create a second input journal or a second business case.
 
+Cohort input references use the original 32 MiB request allowance. The provider verifies the complete selected file's SHA and bytes before applying an explicit `inputPointer`, then sends the selected native JSON object; the full HTTP envelope must still fit 32 MiB. Use the existing chunked input transfer for a full file and retain its completion digest. The ordinary 8 MiB source-upload and other model-input limits remain those of their original operations.
+
+Read the whole cohort preview before freezing it: its `/observations`, `/intents`, `/targets` and source findings are available through the original snapshot and row interfaces. Preserve the exact reviewed input, current case version and preview SHA. A freeze can retain unmet targets as a complete review; when a real preceding tranche payment exists, select the intended saved reviews in Completion and read its full combined findings before preparation. An empty `cohortReviewIds:[]` is an explicit selection and has its own native preview; omission retains the earlier request shape. Keep the same choice and order from preview through preparation.
+
 Both `completionPreview` and `completionPrepare` accept optional `cohortReviewIds`, at most twenty distinct original review IDs. The corresponding `merchant_grant_completion_preview` and `merchant_grant_completion_prepare` retain that same optional array. Omit it when no cohort is selected to preserve the previous request shape. Currentness, the correct tranche, the observation cutoff and unmet target/source findings are checked by the original service. The prepared form and complete export embed the selected immutable evidence.
 
 A `COHORT_EVALUATION` may truthfully retain unmet targets. There is no additional submission endpoint, payment action, award date or generated independent participant. The original payment-based completion clock, deliverables, form receipt and issuer outcome keep their existing owners and identities.
 
 MCP responses use the same retained complete-file and array-page interfaces as other Operations results. Page the original `/observations`, `/intents`, `/targets` and other arrays from the returned immutable snapshot; preserve its ID and SHA. An oversized row remains available from the complete original file. Reopening the review or export does not recapture an Inbox or repeat a provider/payment operation.
+
+## Customer installation editions and complete receiving
+
+The original client and MCP provider operate the same Customer installations desk:
+
+| Native client | MCP operation | Original selection |
+| --- | --- | --- |
+| `read('installations', {caseId})` | `merchant_grant_installations` | Current installation heads in the selected case. |
+| `read('installation', {caseId, installationId, revision})` | `merchant_grant_installation` | A complete immutable edition; omit revision to select its current head. |
+| `read('installation-history', {caseId, installationId, before, limit})` | `merchant_grant_installation_history` | Follow the returned `nextBefore` on this same installation. |
+| `installationSeed(caseId, expectedVersion)` | `merchant_grant_installation_seed` | Complete editable document at `/document` plus original case/plan identity. |
+| `installationPreview(caseId, body)` | `merchant_grant_installation_preview` | Exact document, case version, installation ID and current edition. |
+| `installationSave(caseId, body)` | `merchant_grant_installation_save` | Original reviewed document, preview SHA, operator, save reason and request ID. |
+| `download('installation', {caseId, installationId, revision})` | `merchant_grant_export`, kind `installation` | Complete case and selected-edition handover ZIP. |
+
+A preview body is `{expectedVersion, installationId, expectedRevision, document}`. New installations select `installationId:null, expectedRevision:0`; a next edition selects the original stable ID and its current revision. Save adds `requestId, actor, note, expectedPreviewSha256`. The typed client maps this to the original `installation.save` case command and preserves the original request on recovery.
+
+The MCP tools accept the complete document as `inputs` or the existing verified `input` reference plus its exact SHA. Use `inputPointer:'/document'` to select the seed document from a complete retained response. Read the full preview findings and original selected records before saving. The source desk remains the authority for workorders, commercial terms and existing purchase observations.
+
+Import the selected handover through the original case receiver. Its response includes `selectedInstallation`; read that exact ID/revision in the returned receiving case. The ZIP retains its original readable rendition and every prior edition. The matching managed Python/Node launch source lists include the complete installed operating modules and mounted UI. Adopt both readers with the native/client/provider joins before reopening a changed release. [INSTALLATIONS.md](INSTALLATIONS.md) contains the full input, API, CLI and receiving contract.

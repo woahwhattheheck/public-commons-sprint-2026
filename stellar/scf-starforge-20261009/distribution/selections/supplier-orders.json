@@ -1,0 +1,81 @@
+{
+  "schema": "stellar-forge.distribution-source-selection.v1",
+  "id": "supplier-orders",
+  "title": "Supplier orders and document delivery",
+  "description": "Original Unite openTRANS 1.0 supplier order operations, exact confirmations/dispatches/invoices, private browser, CLI, merchant MCP and complete customer receiving.",
+  "base": {
+    "commands": [
+      "installation",
+      "runtime-profile",
+      "runtime-install",
+      "merchant-mcp",
+      "merchant-mcp-stdio",
+      "merchant-mcp-client-config"
+    ],
+    "exports": [
+      "./installation",
+      "./installation/cli",
+      "./installation/product",
+      "./installation/runtime",
+      "./runtime-profile",
+      "./runtime-install",
+      "./merchant/mcp",
+      "./merchant/mcp/catalog",
+      "./merchant/mcp/server",
+      "./merchant/mcp/stdio",
+      "./merchant/mcp/client-config",
+      "./package.json",
+      "./manifest.json"
+    ],
+    "features": [
+      "schema",
+      "mcp"
+    ],
+    "applicationProviders": [],
+    "merchantProviders": [],
+    "browserAssets": []
+  },
+  "contributions": [
+    "supplier-orders",
+    "merchant-provider-supplier-orders"
+  ],
+  "components": [
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/supplier-orders"
+  ],
+  "supportFiles": [
+    "stellar/scf-starforge-20261009/distribution/build.mjs",
+    "stellar/scf-starforge-20261009/distribution/build-state.mjs",
+    "stellar/scf-starforge-20261009/distribution/git-source.mjs",
+    "stellar/scf-starforge-20261009/distribution/browser-assets.mjs",
+    "stellar/scf-starforge-20261009/distribution/product-package.mjs",
+    "stellar/scf-starforge-20261009/distribution/source-selection.mjs",
+    "stellar/scf-starforge-20261009/distribution/specification.mjs",
+    "stellar/scf-starforge-20261009/distribution/source-providers.mjs",
+    "stellar/scf-starforge-20261009/distribution/cli.mjs",
+    "stellar/scf-starforge-20261009/distribution/workspace.mjs",
+    "stellar/scf-starforge-20261009/distribution/runtime-profile-cli.mjs",
+    "stellar/scf-starforge-20261009/distribution/runtime-profile.mjs",
+    "stellar/scf-starforge-20261009/distribution/runtime-install-cli.mjs",
+    "stellar/scf-starforge-20261009/distribution/runtime-install.mjs",
+    "stellar/scf-starforge-20261009/distribution/runtime-unpack.py",
+    "LICENSE",
+    "stellar-forge/mcp-paid-agent/package.json",
+    "stellar-forge/payment-auto-catalog/package.json",
+    "stellar-forge/payment-auto-catalog/package-lock.json",
+    "stellar-forge/payment-auto-catalog/schema-validation.mjs",
+    "stellar-forge/payment-auto-catalog/schema-pattern.mjs",
+    "stellar-forge/mcp-merchant-operator/provider-cli.mjs",
+    "stellar/scf-starforge-20261009/distribution/selections/SUPPLIER_ORDERS.md",
+    "stellar-forge/mcp-merchant-operator/SUPPLIER_ORDERS.md",
+    "stellar-forge/mcp-merchant-operator/supplier-order-client.d.mts",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/supplier-orders/receiving/SUPPLIER_ORDERS_NATIVE.md"
+  ],
+  "excludeFiles": [
+    "stellar/scf-starforge-20261009/distribution/index.mjs"
+  ],
+  "product": {
+    "schema": "stellar-forge.merchant-product-package.v1",
+    "description": "Original supplier orders, exact confirmations, dispatches and invoices, merchant MCP and complete customer receiving.",
+    "readme": "stellar/scf-starforge-20261009/distribution/selections/SUPPLIER_ORDERS.md"
+  }
+}

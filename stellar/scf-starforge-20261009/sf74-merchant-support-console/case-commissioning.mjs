@@ -1,6 +1,6 @@
 // MIT. Implementation commands through the existing SF74 case writer.
 import {createHash} from 'node:crypto';
-import {parseWorkspace,serializeWorkspace} from './workspace-file.mjs';
+import {parseWorkspace,serializeWorkspace,workspaceDraft} from './workspace-file.mjs';
 import {workorderFromSources} from './workorder-source.mjs';
 import {termsDocumentFromDraft} from './terms-editor.mjs';
 import {
@@ -24,11 +24,6 @@ function conflict(record) {
   return Object.assign(commissioningError('CASE_CONFLICT','The saved case changed. Read its current revision before applying this operation.',409),
     {currentRevision:record.revision});
 }
-function workspaceDraft(workspace,commissioning) {
-  return {name:workspace.name,inputs:workspace.inputs,sources:workspace.sources,termsText:workspace.termsText,
-    baselineOnly:workspace.baselineOnly,...(workspace.workorderSource?{workorderSource:workspace.workorderSource}:{}),
-    commissioning};
-}
 export function savedCaseWorkorderInputs(record,workspace) {
   if(!workspace.termsText)throw commissioningError('CASE_TERMS_REQUIRED','Record the workorder terms in this case');
   const draft=JSON.parse(workspace.termsText);
@@ -51,20 +46,23 @@ export function savedCaseWorkorderInputs(record,workspace) {
   }
   return inputs;
 }
-function originalEditionPayload(state,editionId) {
+export function originalEditionPayload(state,editionId) {
   const {edition,packet}=commissioningWorkorder(state,editionId),inputs={};
   for(const [key,digest] of Object.entries(edition.inputs)) {
+    if(key==='supportText'&&edition.sourceBundle)continue;
     const bytes=commissioningFileBytes(state,digest);
     inputs[key]=key==='supportText'?new TextDecoder('utf-8',{fatal:true}).decode(bytes):encodeCommissioningBytes(bytes);
   }
   if(edition.runtimeMapping)inputs.inputs=copy(edition.runtimeMapping);
   const decode=ref=>new TextDecoder('utf-8',{fatal:true}).decode(commissioningFileBytes(state,ref));
-  return {result:{packet,html:decode(edition.html),checklist:decode(edition.checklist)},inputs,sourceCase:edition.sourceCase};
+  return {result:{packet,html:decode(edition.html),checklist:decode(edition.checklist)},inputs,sourceCase:edition.sourceCase,
+    ...(edition.sourceBundle?{sourceBundle:{manifestText:decode(edition.sourceBundle.manifest),
+      runtimeBytes:edition.sourceBundle.runtimeBytes}}:{})};
 }
 async function saveResult(store,record,workspace,next) {
   if(next.replayed)return {case:caseRef(record),revision:next.revision,result:next.result,replayed:true,
     summary:commissioningSummary(next.state)};
-  const workspaceText=await serializeWorkspace(workspaceDraft(workspace,next.state),{now:workspace.savedAt});
+  const workspaceText=await serializeWorkspace(workspaceDraft(workspace,{commissioning:next.state}),{now:workspace.savedAt});
   const saved=await store.save({id:record.id,expectedRevision:record.revision,workspaceText,
     supportText:record.supportText,metadata:record.metadata});
   return {case:{id:record.id,revision:saved.case.revision,workspaceSha256:sha(workspaceText),

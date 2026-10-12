@@ -7,3 +7,11 @@
 .mapping-control{flex-wrap:wrap}.mapping-control>select{width:auto;min-width:110px;flex:1}
 .mapping-control>input{width:auto;min-width:120px;flex:1}.advanced-grid{grid-template-columns:1fr 1fr}
 @media(max-width:780px){.topbar-actions #save-state{display:none}.topbar-actions{gap:4px}.value-map .pair{grid-template-columns:minmax(0,1fr) 105px}.value-map .pair>:nth-child(3){grid-column:1}.value-map .pair>:nth-child(4){grid-column:2}.advanced-grid{grid-template-columns:1fr}}
+
+/* Native network inventory retains the original neutral desk layout. */
+.network-table{min-width:900px;width:100%;border-collapse:collapse}
+.network-table th,.network-table td{padding:12px 14px;vertical-align:top;text-align:left;border-bottom:1px solid var(--line,#d8d8d8)}
+.network-table th{font-size:12px;font-weight:600;white-space:nowrap}
+.network-table td{font-size:13px;min-width:112px;max-width:340px;overflow-wrap:anywhere}
+.network-table td:first-child{min-width:170px}
+.network-table pre{max-width:500px;white-space:pre-wrap;overflow-wrap:anywhere}

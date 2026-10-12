@@ -1,0 +1,261 @@
+{
+  "schema": "stellar-forge.unite-supplier-edi-rules.v1",
+  "profileId": "unite-opentrans-1.0",
+  "observedDate": "2026-10-12",
+  "sourceOperation": "UNITE-EDI-SOURCE-2769-20261012",
+  "projectThread": "https://tokenjunkielabs.slack.com/archives/C0BTB4SUCP9/p1791801874496449",
+  "sources": {
+    "overview": {
+      "url": "https://support.unite.eu/en-gb/for-suppliers/edi-interfaces-for-order-processing",
+      "section": "Order number; supported formats and transport protocols"
+    },
+    "order": {
+      "url": "https://support.unite.eu/en-gb/for-suppliers/order-transmission-interface",
+      "section": "Header and item information; Purchase Order and C-Order examples"
+    },
+    "confirmation": {
+      "url": "https://support.unite.eu/en-gb/for-suppliers/order-confirmation-interface",
+      "section": "Explanation of transmitted information"
+    },
+    "dispatch": {
+      "url": "https://support.unite.eu/en-gb/for-suppliers/dispatch-notification-interface",
+      "section": "Information on header level; Information on item level"
+    },
+    "invoice": {
+      "url": "https://support.unite.eu/en-de/for-suppliers/invoice-interface",
+      "section": "Information on header level; Information on item level"
+    },
+    "serials": {
+      "url": "https://support.unite.eu/en-gb/for-suppliers/submit-serial-numbers",
+      "section": "openTRANS 1.0: dispatch notification and invoice"
+    },
+    "specification": {
+      "url": "https://unite.eu/assets/support/uk/specification_opentrans_v1_0_en-2.pdf",
+      "revision": "1.0; English translation 2001-12-24",
+      "sections": [
+        "Legal status, printed pages 2–3",
+        "Coding/must/can, printed pages 14–15",
+        "Data types, printed pages 16–18",
+        "INVOICE_SUMMARY, printed page49",
+        "ORDERRESPONSE, printed pages73–85",
+        "ARTICLE_PRICE, printed pages142–146"
+      ]
+    },
+    "supplierGuide": {
+      "url": "https://unite.eu/assets/support/uk/mercateo-edi-3-3supplier_en.pdf",
+      "revision": "3.3; 2022-10-18"
+    }
+  },
+  "precedence": [
+    "The actual recipient agreement selects the format, legal parties and transport.",
+    "Apply current Unite-specific rules to the original openTRANS1.0 document.",
+    "Use the captured original DTD and parameter-entity files for structure, order, cardinality and attributes.",
+    "Preserve complete original XML and all source comments/extensions; projection does not replace the source."
+  ],
+  "scope": {
+    "documentKinds": [
+      "ORDER",
+      "ORDERRESPONSE",
+      "DISPATCHNOTIFICATION",
+      "INVOICE"
+    ],
+    "nativeVersion": "1.0",
+    "selectedTransport": "Existing configured HTTPS when supplied",
+    "sourceExamples": [
+      "supplier_order.zip",
+      "supplier_c-order.zip",
+      "supplier_orderresponse.zip",
+      "supplier_dispatchnotification.zip",
+      "supplier_invoice.zip"
+    ]
+  },
+  "identity": [
+    {
+      "field": "ORDER_ID",
+      "rule": "Complete exact reference, maximum21 Unicode characters; internal hyphens and special characters are allowed. Preserve the entire value.",
+      "source": "overview"
+    },
+    {
+      "field": "LINE_ITEM_ID",
+      "rule": "Preserve the original order line identity. Dispatch/invoice own line numbers and ORDER_REFERENCE/LINE_ITEM_ID are distinct.",
+      "source": "order"
+    },
+    {
+      "field": "SUPPLIER_PARTY/PARTY_ID",
+      "rule": "Retain the supplier account number and original type attribute in each related document.",
+      "source": "order"
+    },
+    {
+      "field": "BUYER_PARTY/PARTY_ID",
+      "rule": "Retain the original customer account number and party role. Regular and agency/C-Order sources have different buyer identities.",
+      "source": "order"
+    },
+    {
+      "field": "Document revision",
+      "rule": "Original source hash plus business identity distinguishes immutable inputs. A repeated business document is an explicit revision selection; identical bytes are replay.",
+      "basis": "application-policy"
+    }
+  ],
+  "partyAndOrderModes": {
+    "regular": "Current order guidance identifies the relevant Unite entity as buyer for the ordinary Spotmarket/SingleCreditor order.",
+    "agency": "Current C-Order guidance identifies the actual end customer as buyer for agency forwarding, Exclusive Catalogue or Business Shop.",
+    "invoiceParty": "Order guidance says INVOICE_PARTY equals BUYER_PARTY. Retain actual original legal parties; the selected invoice recipient arrangement controls outgoing billing.",
+    "address": "The three delivery NAME/NAME2/NAME3 lines each permit up to70 characters. Customer order/job information can occur in the third address line.",
+    "consolidation": "Orders with different actual legal/invoice/delivery parties or currencies need an explicit compatible consolidation agreement; do not silently replace those parties."
+  },
+  "documents": {
+    "ORDER": {
+      "header": {
+        "identity": "ORDER_INFO/ORDER_ID",
+        "date": "ORDER_INFO/ORDER_DATE",
+        "parties": "Original ORDER_PARTIES subtree",
+        "currency": "Original PRICE_CURRENCY selection"
+      },
+      "item": {
+        "container": "ORDER_ITEM_LIST/ORDER_ITEM",
+        "identity": "LINE_ITEM_ID",
+        "article": "ARTICLE_ID/SUPPLIER_AID",
+        "buyerArticle": "ARTICLE_ID/BUYER_AID including original type",
+        "quantity": "QUANTITY",
+        "unit": "ORDER_UNIT",
+        "price": "ARTICLE_PRICE"
+      },
+      "priceRule": "Net line amount = PRICE_AMOUNT × QUANTITY ÷ PRICE_QUANTITY; omitted PRICE_QUANTITY has effective value1."
+    },
+    "ORDERRESPONSE": {
+      "header": {
+        "identity": "ORDERRESPONSE_INFO/ORDER_ID",
+        "date": "ORDERRESPONSE_INFO/ORDER_RESPONSE_DATE",
+        "supplierOrder": "SUPPLIER_ORDER_ID",
+        "delivery": "DELIVERY_DATE"
+      },
+      "item": {
+        "container": "ORDERRESPONSE_ITEM_LIST/ORDERRESPONSE_ITEM",
+        "identity": "LINE_ITEM_ID",
+        "article": "ARTICLE_ID/SUPPLIER_AID",
+        "quantity": "QUANTITY",
+        "unit": "ORDER_UNIT",
+        "optionalChangedPrice": "ARTICLE_PRICE",
+        "delivery": "DELIVERY_DATE"
+      },
+      "availability": "A receipt-only acknowledgment with no deliverability statement is not processed by Unite. Positive quantity may confirm less than ordered.",
+      "cancellation": "A negative quantity cancels its absolute amount: ordered3/-3 cancels all; ordered3/-2 cancels two. It does not establish availability of the remaining unit.",
+      "revision": "Unite permits a new confirmation for an updated date or other change. The selected latest explicit line confirmation replaces earlier confirmation effect; negative repeats never accumulate cancellation.",
+      "sparseLinePolicy": "The product retains a prior explicit line selection when that line is absent from a partial response. This is an explicit application interpretation; the current vendor text does not define field-by-field merge semantics.",
+      "price": "When ARTICLE_PRICE is omitted, the original ORDER price is confirmed, including after a previous response with a changed price.",
+      "date": "Header date applies unless the item provides its own date. Missing date alone is not declared a universal mandatory-field failure in the current table."
+    },
+    "DISPATCHNOTIFICATION": {
+      "header": {
+        "identity": "DISPATCHNOTIFICATION_INFO/DISPATCHNOTIFICATION_ID",
+        "date": "DISPATCHNOTIFICATION_INFO/DISPATCHNOTIFICATION_DATE",
+        "delivery": "DELIVERY_DATE",
+        "transport": "TRANSPORT_PARTY",
+        "packages": "PACKAGE_INFO/PACKAGE_ID"
+      },
+      "item": {
+        "container": "DISPATCHNOTIFICATION_ITEM_LIST/DISPATCHNOTIFICATION_ITEM",
+        "identity": "LINE_ITEM_ID",
+        "article": "ARTICLE_ID/SUPPLIER_AID",
+        "quantity": "QUANTITY",
+        "unit": "ORDER_UNIT",
+        "reference": "ORDER_REFERENCE/ORDER_ID plus ORDER_REFERENCE/LINE_ITEM_ID",
+        "delivery": "DELIVERY_DATE",
+        "packages": "PACKAGE_INFO/PACKAGE_ID"
+      },
+      "dateMeaning": "Document date is interpreted as shipping date if no separate shipping date is supplied.",
+      "transport": "Only TRANSPORT_PARTY/NAME is processed by the current Unite interface; preserve the whole original tree.",
+      "packages": "One PACKAGE_INFO per supplied package number. Item package data is optional and overrides the header when different; lack of tracking is not by itself a universal mandatory field.",
+      "revision": "Distinct supplier-scoped dispatch IDs contribute separate documented quantities; selecting a revision of the same ID replaces its previous complete contribution, including removed order references."
+    },
+    "INVOICE": {
+      "header": {
+        "identity": "INVOICE_INFO/INVOICE_ID",
+        "date": "INVOICE_INFO/INVOICE_DATE",
+        "delivery": "DELIVERY_DATE",
+        "currency": "PRICE_CURRENCY",
+        "parties": "Original buyer, supplier and invoice legal parties/VAT identifiers"
+      },
+      "item": {
+        "container": "INVOICE_ITEM_LIST/INVOICE_ITEM",
+        "identity": "LINE_ITEM_ID",
+        "article": "ARTICLE_ID/SUPPLIER_AID",
+        "quantity": "QUANTITY",
+        "unit": "ORDER_UNIT",
+        "price": "ARTICLE_PRICE",
+        "reference": "ORDER_REFERENCE/ORDER_ID plus ORDER_REFERENCE/LINE_ITEM_ID",
+        "deliveryReference": "DELIVERY_REFERENCE",
+        "delivery": "DELIVERY_DATE"
+      },
+      "summary": {
+        "count": "TOTAL_ITEM_NUM",
+        "net": "TOTAL_AMOUNT",
+        "tax": "TOTAL_TAX_AMOUNT"
+      },
+      "summaryMeaning": "TOTAL_AMOUNT is the complete invoice net amount, excluding tax and separately represented surcharges/deductions. TOTAL_TAX_AMOUNT is the tax total.",
+      "revision": "Retain the original supplier/issuer identity alongside invoice number. A corrected same invoice number replaces only that issuer’s prior contribution.",
+      "financialMeaning": "An invoice document and a documented dispatch do not establish cash settlement or physical receipt. Retain the actual transmission response and any separate recipient processing outcome."
+    }
+  },
+  "deliveryDate": {
+    "path": "DELIVERY_DATE",
+    "children": [
+      "DELIVERY_START_DATE",
+      "DELIVERY_END_DATE"
+    ],
+    "type": {
+      "optional": "Supplier goods dispatch",
+      "fixed": "Expected customer goods receipt"
+    },
+    "inheritance": "Item value overrides the header; original type and both period endpoints remain retained.",
+    "source": "confirmation"
+  },
+  "money": {
+    "priceFields": [
+      "PRICE_AMOUNT",
+      "PRICE_CURRENCY",
+      "PRICE_LINE_AMOUNT",
+      "PRICE_QUANTITY",
+      "TAX",
+      "TAX_AMOUNT",
+      "PRICE_FLAG"
+    ],
+    "typeAttribute": "ARTICLE_PRICE/@type is required in the original specification; preserve the actual price type and its commercial meaning.",
+    "priceQuantity": "Optional exact NUMBER; effective1 only when absent. Preserve native absence and explicit fractional values.",
+    "tax": "Unite invoice TAX is a fractional rate, for example0.19. Retain original rate, any native tax amount and currency.",
+    "exact": "Original NUMBER lexemes support signs, decimal points and exponent notation. Use exact rational arithmetic; retain original numeric strings.",
+    "currency": "Compare and total money only under coherent original price/header currencies. Equal numeric ratios in different currencies are different prices.",
+    "rounding": "Any target rounding selection records scale, mode and line-versus-document aggregation basis. Generation and review use the same basis; source values remain unchanged.",
+    "specificationCaution": "The old PRICE_LINE_AMOUNT prose includes a self-reference. Current Unite’s specific PRICE_AMOUNT × QUANTITY ÷ PRICE_QUANTITY rule resolves the calculation. The original TAX_AMOUNT text is retained for interpretation with the actual invoice sample."
+  },
+  "serials": {
+    "source": "serials",
+    "level": "item",
+    "onePerField": true,
+    "dispatchRemarkType": "dispatchnotification",
+    "invoiceRemarkType": "invoice",
+    "syntax": "NUMBER:[Number][Type]SERIAL[/Type][Value]<original serial value>[/Value][/Number]",
+    "rule": "Preserve complete original REMARK text and original serial strings. Multiple serials use repeated fields, without joining them using commas or semicolons."
+  },
+  "nativeXml": {
+    "encoding": "Honor the original XML encoding declaration. The standard explicitly permits UTF-8, UTF-16 and ISO-8859-1.",
+    "lengths": "Declared field lengths count characters, not encoded bytes.",
+    "presence": "Both mandatory and optional-present original elements contain meaningful content; empty/whitespace-only is invalid.",
+    "numbers": "NUMBER, INTEGER and COUNT are separate native lexical types; COUNT is a nonnegative integer. Preserve original lexical values and validate the actual field type.",
+    "dtd": "Resolve external declarations only to exact captured local DTD members and their selected parameter-entity dependencies. Do not fetch entities from the network.",
+    "preservation": "Retain original element names, child order, attributes, text, comments, full source bytes and the selected DTD source."
+  },
+  "reviewAndReceiving": {
+    "immutableSource": "Import complete original source even when business review finds inconsistent quantities/prices; retain actionable findings instead of losing the input.",
+    "currentEffect": "Current projection records selected source revisions. Replacing a multi-order document recomputes the union of its previous and new referenced orders.",
+    "history": "Customer edits are reasoned drafts against explicit original order revisions. New source files remain separate immutable documents.",
+    "portable": "Deliver complete source/document/draft/revision/selection/transmission history; receive it into another workspace and preserve newer receiver work on compatible replay.",
+    "actualNativeInput": "The sole original seven-source acquisition must supply all original ZIP members and exact DTD/license identity before the full publisher-sample receiving run."
+  },
+  "license": {
+    "specification": "Copyright2000–2001 Fraunhofer IAO, Stuttgart; Universität Essen BLI. Original legal-status section permits use/copy/publication/distribution under its retained notice and implementation conditions.",
+    "originalStandard": "Keep the original specification and DTD unchanged with attribution. Changes to a specification have their own required derived-work notice and must not be represented as the original openTRANS standard.",
+    "vendorSources": "Retain current Unite pages and sample packages as original internal sources. Inspect their actual ZIP license/readme members before selecting any public redistribution.",
+    "authoredRules": "This file is an authored implementation mapping of the cited factual interface requirements; complete original documents remain the source."
+  }
+}
