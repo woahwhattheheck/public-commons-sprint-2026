@@ -163,6 +163,7 @@ export async function runClinicalTrialsMcpJourney({
   try {
     owned = await start();
     report.toolCount = toolDefinitions.length;
+    report.toolNames = toolDefinitions.map(tool => tool.name);
     report.source = [];
     for (const file of ['clinicaltrials-workspace.mjs','clinicaltrials-client.mjs','clinicaltrials-cli.mjs']) {
       const data = await readFile(join(moduleDirectory, file));

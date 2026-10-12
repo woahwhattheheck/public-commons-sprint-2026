@@ -124,3 +124,7 @@ Post the actual result and final files to the existing Clinical thread:
 https://tokenjunkielabs.slack.com/archives/C0BTTA66TK3/p1791772881074649
 
 Use operation **CLINICAL-CUSTOMER-COMMITTED-RECEIVING-20261012-1FB3** and the accepted original receiver. The authoritative completion is the actual passed value plus the saved phase/file results. A failed step keeps its exact journal, error and persistent workspace for the same receiver's continuation. Inspect those committed outcomes before invoking another mutation.
+
+## Complete named Clinical interface
+
+The receiving manifest pins all 41 original tool names: 23 Clinical operations and 18 delegated source operations. The callback records the actual names and the receiver compares their complete set, including uniqueness. This follows the original source catalog and preserves the earlier actual 41-tool observation. The batch-enabled product adds its separate batch and entry reads; its successor uses its own full named interface.

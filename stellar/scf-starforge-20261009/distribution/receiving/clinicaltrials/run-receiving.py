@@ -276,8 +276,10 @@ try:
             "portableReopen": True, "resumeJournal": resume_journal
         }, "mcp-run")
         report["mcp"] = read_child_report(mcp_directory)
-        if report["mcp"].get("toolCount") != 42:
-            raise RuntimeError("The complete installed Clinical MCP catalog must contain its original 42 tools")
+        tool_names=report["mcp"].get("toolNames",[])
+        if (len(tool_names)!=len(set(tool_names)) or
+                sorted(tool_names)!=sorted(EXPECTED["toolNames"])):
+            raise RuntimeError("The installed Clinical MCP catalog differs from its complete original named interface")
         phase("same_console_complete_mcp_receiving", passed=report["mcp"].get("passed"))
     except BaseException as exc:
         report["mcp"] = {"passed": False, "error": str(exc), "observed": read_child_report(mcp_directory)}
