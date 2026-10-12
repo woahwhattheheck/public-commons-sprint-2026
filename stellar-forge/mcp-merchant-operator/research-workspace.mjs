@@ -6,6 +6,7 @@ import {exact,identifier,line,plain,failure} from './host-files.mjs';
 import {RetainedFileReads} from './retained-file-reads.mjs';
 import {researchWorkspaceTools,RESEARCH_EXPORTS} from './catalog/research-workspace.mjs';
 import {callResearchClinicalTrials,exportResearchClinicalTrials,RESEARCH_CLINICALTRIALS_PREFIX} from './research-clinicaltrials.mjs';
+import {callResearchDocuments,exportResearchDocuments,RESEARCH_DOCUMENT_PREFIXES} from './research-documents.mjs';
 export {researchWorkspaceTools} from './catalog/research-workspace.mjs';
 import {ResearchWorkspaceClient} from '../../stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/workspace-client.mjs';
 import {readResearchHostFile,openResearchSource} from '../../stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/workspace-files.mjs';
@@ -37,13 +38,18 @@ export async function readResearchWorkspaceConfiguration(file){
     if(value.sources!==undefined&&(!plain(value.sources)||Object.keys(value.sources).length>128))
       throw failure('CONFIGURATION_ERROR','Declare original source handles.');
     for(const[name,source]of Object.entries(value.sources??{})){
-      identifier(name);exact(source,['file','kind','sha256','provider','sourceReference'],['file','kind','sha256']);
-      if(!['research','reference','portable','clinicaltrials-packet','source-bundle'].includes(source.kind)||!['portable','clinicaltrials-packet','source-bundle'].includes(source.kind)&&
+      identifier(name);exact(source,['file','kind','sha256','provider','sourceReference','filename','contentType'],['file','kind','sha256']);
+      if(!['research','reference','portable','clinicaltrials-packet','source-bundle','pipeline-input'].includes(source.kind)||!['portable','clinicaltrials-packet','source-bundle','pipeline-input'].includes(source.kind)&&
         (typeof source.provider!=='string'||!/^[a-z][a-z0-9_-]{0,79}$/.test(source.provider)))
         throw failure('CONFIGURATION_ERROR','Each source declares its original kind and provider.');
       if(source.sourceReference!==undefined&&(typeof source.sourceReference!=='string'||source.sourceReference.length>4000)||
         source.kind==='reference'&&!/^[a-z0-9-]+$/.test(source.provider))
         throw failure('CONFIGURATION_ERROR','Use the original reference provider and source reference.');
+      if(source.filename!==undefined&&(source.kind!=='pipeline-input'||typeof source.filename!=='string'||
+        !source.filename.trim()||Buffer.byteLength(source.filename)>1024||/[\\/\u0000-\u001f\u007f]/.test(source.filename))||
+        source.contentType!==undefined&&(source.kind!=='pipeline-input'||typeof source.contentType!=='string'||
+          !source.contentType.trim()||Buffer.byteLength(source.contentType)>256||/[\u0000-\u001f\u007f]/.test(source.contentType)))
+        throw failure('CONFIGURATION_ERROR','Declare the original pipeline input filename and content type.');
       sources[name]={...source,file:hostPath(source.file,base),sha256:checkedDigest(source.sha256)};
     }
     workspaces[alias]={label:line(value.label??alias),consoleUrlFile:hostPath(value.consoleUrlFile,base),
@@ -101,7 +107,8 @@ export class MerchantResearchWorkspaces{
         return {workspace,label:value.label,state:entry?(entry.detaching?'DETACHING':'ATTACHED'):'DETACHED',
           attachmentId:entry?.id??null,workspaceId:entry?.client.workspaceId??null,
           sources:Object.entries(value.sources??{}).map(([source,item])=>({source,kind:item.kind,
-            provider:item.provider??null,sha256:item.sha256})),
+            provider:item.provider??null,sha256:item.sha256,
+            ...(item.kind==='pipeline-input'?{filename:item.filename??null,contentType:item.contentType??'application/octet-stream'}:{})})),
           reads:entry?this.#reads.status(entry.id):null};
       }),exports:this.#reads.summary};
   }
@@ -168,7 +175,11 @@ export class MerchantResearchWorkspaces{
         this.#detached.set(alias,id);
         return {workspace:alias,attachmentId:id,state:'DETACHED',workspaceId:entry.client.workspaceId,
           listenerOwnership:'ORIGINAL_APPLICATIONS_WORKSPACE'};
-      })();
+      })().catch(error=>{
+        // RetainedFileReads preserves failed handles for the SAME owner to
+        // retry. Keep detaching and the entry, but release the failed promise.
+        entry.close=null;throw error;
+      });
     }
     return entry.close;
   }
@@ -196,7 +207,9 @@ export class MerchantResearchWorkspaces{
     const spec=kind(args.kind),temporary=join(entry.directory,'.export-'+randomUUID()+'.'+spec.extension);
     let result,selection;
     try{
-      if(args.kind.startsWith('clinicaltrials-')){
+      if(args.kind.startsWith('document-')||args.kind.startsWith('pipeline-')){
+        ({result,selection}=await exportResearchDocuments(entry.client,args,{file:temporary}));
+      }else if(args.kind.startsWith('clinicaltrials-')){
         ({result,selection}=await exportResearchClinicalTrials(entry.client,args,{file:temporary}));
       }else if(spec.format){
         exact(args,['workspace','dossierId','kind','expectedSha256'],['workspace','dossierId','kind']);
@@ -293,6 +306,10 @@ export class MerchantResearchWorkspaces{
     if(name==='merchant_research_detach')return this.#detach(args.workspace,args.attachmentId);
     return this.#with(args.workspace,async entry=>{
       const c=entry.client,id=args.dossierId,input=nativeFields(args,['workspace','dossierId']);
+      if(RESEARCH_DOCUMENT_PREFIXES.some(prefix=>name.startsWith(prefix))){
+        const result=await callResearchDocuments(c,name,args,{source:(name,accepted)=>this.#source(entry,name,accepted)});
+        return name.endsWith('_receive')?compactDossier(result):result;
+      }
       if(name.startsWith(RESEARCH_CLINICALTRIALS_PREFIX)){
         const result=await callResearchClinicalTrials(c,name,args,{source:(name,accepted)=>this.#source(entry,name,accepted)});
         return name==='merchant_research_clinicaltrials_receive'?compactDossier(result):result;
@@ -383,7 +400,8 @@ export class MerchantResearchWorkspaces{
       catch(error){
         if(error.outcomeUnknown)throw Object.assign(failure(error.code??'RESEARCH_CONNECTION_INTERRUPTED',
           'The original write response was interrupted. Read the saved dossier revision and the same source receiving operation or retained input before another write.'),
-          {outcomeUnknown:true,dossierId:args.dossierId,operationId:args.operationId,requestId:args.requestId,sourceId:args.sourceId});
+          {outcomeUnknown:true,dossierId:args.dossierId,operationId:error.operationId??args.operationId,
+            requestId:error.requestId??args.requestId,sourceId:args.sourceId});
         throw error;
       }
     });
@@ -396,7 +414,10 @@ export class MerchantResearchWorkspaces{
         await Promise.all([...this.#entries.values()].map(entry=>this.#detach(entry.alias,entry.id)));
         await this.#reads.close();
         return {state:'DETACHED',listenerOwnership:'ORIGINAL_APPLICATIONS_WORKSPACE'};
-      })();
+      })().catch(error=>{
+        // Closing remains admission-closed while its original readers retry.
+        this.#closing=null;throw error;
+      });
     }
     return this.#closing;
   }

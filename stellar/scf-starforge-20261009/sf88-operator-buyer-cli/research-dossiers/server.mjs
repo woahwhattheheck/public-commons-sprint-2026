@@ -410,7 +410,9 @@ export async function startDossierWorkspace({directory, port = 0, providers = {}
         send(200,original.bytes,original.contentType,original.filename); return;
       }
       if (action === 'pipelines/receive') {
-        send(200,await pipelines.receive(id,data)); return;
+        const received=await pipelines.receive(id,data);
+        send(200,projection==='metadata'?{...received,
+          dossier:researchSummary(await store.getMetadata(id,{revision:received.dossier.revision}))}:received); return;
       }
       if (action === 'unstructured/review') {
         send(200, await unstructured.review(id, data.selection)); return;
@@ -425,8 +427,10 @@ export async function startDossierWorkspace({directory, port = 0, providers = {}
         send(200, result.bytes, result.contentType, result.filename); return;
       }
       if (action === 'unstructured/receive') {
-        send(200, await unstructured.receive(id, selectedFields(data,
-          ['selection','expectedEditionSha256','questionId','label','expectedRevision']))); return;
+        const received=await unstructured.receive(id, selectedFields(data,
+          ['selection','expectedEditionSha256','questionId','label','expectedRevision']));
+        send(200,projection==='metadata'?{...received,
+          dossier:researchSummary(await store.getMetadata(id,{revision:received.dossier.revision}))}:received); return;
       }
       if (action === 'crossref/prepare') {
         requireValue(crossref !== null, 'CROSSREF_WORKSPACE_NOT_CONFIGURED');

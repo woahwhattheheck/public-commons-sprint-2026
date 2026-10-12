@@ -5,6 +5,7 @@ import {resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {ResearchWorkspaceClient,researchSummary} from './workspace-client.mjs';
 import {readResearchHostFile} from './workspace-files.mjs';
+import {DOCUMENT_COMMANDS,main as documentMain} from './document-workspace-cli.mjs';
 import {parseJson,need,safeCode} from '../node/store.mjs';
 
 const usage=String.raw`Research workspace client
@@ -49,7 +50,17 @@ Receive a completed original Object Buyer file:
 
 Review captures the exact saved delivery; it does not acquire, assemble or pay.
 Preparation binds that review to an original managed processing operation.
-Submit, monitor and receive that same operation in the existing Pipelines pane.
+Submit, monitor and receive that same operation in the existing Pipelines pane
+or with the documents-* and pipelines-* commands below.
+
+Operate original Documents and the complete managed Pipeline lifecycle:
+  documents-help
+  documents-list|documents-review|documents-elements|documents-receive|documents-download
+  pipelines-list|pipelines-operation|pipelines-prepare|pipelines-submit|pipelines-refresh
+  pipelines-cancel|pipelines-provider-jobs|pipelines-reconcile|pipelines-retain
+  pipelines-review|pipelines-elements|pipelines-receive|pipelines-input|pipelines-output|pipelines-download
+
+Run documents-help for exact JSON fields, original revisions and complete file downloads.
 
 Operate the saved original Crossref acquisition:
   crossref-prepare --id DOSSIER --input PLAN_REQUEST.json
@@ -110,6 +121,7 @@ const commandOptions=Object.freeze({
 const compact=value=>value?.dossier?{...value,dossier:researchSummary(value.dossier)}:value;
 const selected=value=>Object.fromEntries(Object.entries(value).filter(([,item])=>item!==undefined));
 export async function main(argv=process.argv.slice(2),{output=process.stdout}={}){
+  if(DOCUMENT_COMMANDS.includes(argv[0]))return documentMain(argv,{output});
   const [command,...args]=argv;
   if(!command||['help','--help','-h'].includes(command)){output.write(usage);return;}
   need(Object.hasOwn(commandOptions,command),'COMMAND_UNKNOWN');
@@ -208,7 +220,10 @@ if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){
   main().catch(error=>{
     process.stderr.write(JSON.stringify({error:safeCode(error.code,'RESEARCH_COMMAND_FAILED'),
       ...(Number.isInteger(error.status)?{status:error.status}:{}),
-      ...(error.outcomeUnknown?{outcomeUnknown:true,recovery:'Read the original dossier revision or the same saved Crossref operation before another write.'}:{})})+'\n');
+      ...(error.destinationPublished?{destinationPublished:true,file:error.file}:{}),
+      ...(error.sourceCleanupFailed?{sourceCleanupFailed:true}:{}),
+      ...(error.outcomeUnknown?{outcomeUnknown:true,requestId:error.requestId,operationId:error.operationId,
+        recovery:error.recovery??'Read the original dossier revision or the same saved source operation before another write.'}:{})})+'\n');
     process.exitCode=1;
   });
 }
