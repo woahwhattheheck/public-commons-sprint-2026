@@ -87,3 +87,13 @@ POST /api/drafts saves a requestId, optional draftId/expectedRevision, title, qu
 GET /api/editions/ID opens a full saved edition; suffixes result.json, edition.json and results.csv download its retained exports. GET /api/compare?before=ID&after=ID returns the complete identity-based comparison. GET /api/packages/ID supplies its manifest and original handoff; its file route serves only a recorded, checksum-matching package member.
 
 The workspace imports original source and preparation functions directly. Source query compilation, parameter binding, native PIT lifecycle, field-capability checks, seller price/declaration compilation, generated clients and merchant runtime remain in those maintained components.
+
+## Search relevance and customer review
+
+The **Search relevance** view shares this workspace's original source, saved query drafts, private database and request recovery. Create named evaluation sets from exact saved query revisions, choose typed input cases, and assign judgments to original `[_index, _id]` identities. A retained search capture can seed the document selection and its original source provenance.
+
+Saved evaluations run the original OpenSearch ranking-evaluation adapter. The review screen keeps native scores, returned judged/unrated counts, native failures and complete-window correspondence together. Each immutable edition exports a customer HTML report, native/full JSON, case CSV and comparison JSON.
+
+Use **Open merchant draft** on the selected evaluated variant and input case to continue through this workspace's existing **Prepare merchant** action. The original request records the chosen evaluation ID and result checksum.
+
+The complete operator workflow, metric controls, import format and service API are in [the relevance guide](../relevance/README.md).

@@ -3,7 +3,7 @@
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Stellar Forge · Native MPP</title><link rel="stylesheet" href="/style.css"><script type="module" src="/app.js"></script></head>
 <body>
 <header><div><strong>STELLAR FORGE</strong><span>Native MPP Charge</span></div><p id="connection">Connecting</p></header>
-<nav aria-label="Workspace"><button data-tab="overview" class="selected">Activity</button><button data-tab="merchant">Merchant</button><button data-tab="buyer">Buyer</button><button data-tab="customers">Customer handoff</button></nav>
+<nav aria-label="Workspace"><button data-tab="overview" class="selected">Activity</button><button data-tab="merchant">Merchant</button><button data-tab="buyer">Buyer</button><button data-tab="customers">Customer handoff</button><button data-tab="customer-workbench">Customer workbench</button></nav>
 <main>
 <div id="notice" role="status" aria-live="polite"></div>
 <section id="overview" class="panel">
@@ -82,6 +82,63 @@
 <pre>starforge mpp customer-receive /path/to/mpp-package.json /private/merchant-customer</pre>
 <p>Customers configure their own payer, spending governor and limits. Each purchase captures the actual challenge and uses the original approval, signed request and recovery flow. The guide inside the package covers installation, first use and reopening an interrupted purchase.</p>
 <div class="actions"><a id="customer-public-contract" target="_blank" rel="noopener noreferrer">Public contract</a><a id="customer-public-openapi" target="_blank" rel="noopener noreferrer">Public OpenAPI</a></div>
+</section>
+<section id="customer-workbench" class="panel" hidden>
+<div class="heading"><div><h1>Customer workbench</h1><p>Receive a merchant's offers, configure purchase limits, and retrieve purchased resources.</p></div><button id="cw-refresh-history">Refresh purchases</button></div>
+<p id="cw-status" class="runtime">Import a customer contract or package to begin.</p>
+<details id="cw-intake" open><summary>Receive a merchant contract</summary>
+<form id="cw-fetch-form"><fieldset id="cw-fetch-fields">
+<div class="grid"><label>Merchant HTTPS origin<input name="origin" type="url" required placeholder="https://api.example.com"></label><label>Explicit CONNECT proxy environment variable<input name="proxyEnv" placeholder="Optional"></label><label>Explicit CONNECT proxy URL<input name="proxyUrl" type="url" placeholder="Optional; choose URL or environment variable"></label></div>
+<button type="submit">Fetch public contract</button></fieldset></form>
+<form id="cw-intake-form"><fieldset id="cw-intake-fields">
+<label>Customer package or contract file<input id="cw-document-file" type="file" accept=".json,application/json"></label>
+<label>Contract or package JSON<textarea id="cw-document" rows="5" spellcheck="false" placeholder="Paste the merchant's contract or customer package"></textarea></label>
+<div class="actions"><button type="submit">Review imported contract</button><button id="cw-load-saved" type="button">Load saved configuration</button></div></fieldset></form>
+</details>
+<div id="cw-draft" hidden>
+<div class="heading"><h2>Customer configuration</h2><button id="cw-refresh-contract" type="button">Check current merchant contract</button></div>
+<p id="cw-draft-title"></p><p id="cw-edit-status" class="runtime"></p>
+<details id="cw-difference"><summary>Changes from the saved contract</summary><pre id="cw-difference-content"></pre></details>
+<form id="cw-configuration-form"><fieldset id="cw-configuration-fields">
+<h3>Signer and spending governor</h3>
+<div class="grid">
+<label>Payer account<input name="payer" required placeholder="G…"></label>
+<label>Signer environment variable<input name="keyEnv" required placeholder="MPP_CUSTOMER_SIGNER"></label>
+<label>Runtime dependency directory<input name="dependencyRoot" required placeholder="/opt/starforge-mpp"></label>
+<label>Python executable<input name="python" required placeholder="/usr/bin/python3"></label>
+<label>Existing governor ledger<input name="ledger" required placeholder="/private/operator/spend.db"></label>
+<label>Governor policy file<input name="policy" required placeholder="/private/operator/policy.json"></label>
+<label>Actor ID<input name="actor" required placeholder="operator"></label>
+<label>Service ID<input name="service" required placeholder="research"></label>
+<label>Trusted Stellar RPC URL<input name="rpcUrl" placeholder="Network default"></label>
+<label>Explicit CONNECT proxy environment variable<input name="proxyEnv" placeholder="Optional"></label><label>Explicit CONNECT proxy URL<input name="proxyUrl" type="url" placeholder="Optional; choose URL or environment variable"></label>
+</div>
+<h3>Per-purchase asset limits</h3>
+<p>Amounts use the token's smallest unit. The spending governor also applies its existing account and service budgets.</p>
+<div class="scroll"><table class="cw-limits"><thead><tr><th>Network and token</th><th>Decimals</th><th>Maximum token amount</th><th>Maximum fee, stroops</th></tr></thead><tbody id="cw-limits"></tbody></table></div>
+<p class="hint">The operator host supplies the named signer and governor keys. Executing a purchase opens the existing approval flow in its controlling terminal.</p>
+<button type="submit" class="primary">Save contract and customer configuration</button>
+</fieldset></form>
+</div>
+<h2>Prepare a purchase</h2>
+<form id="cw-purchase-form"><fieldset id="cw-purchase-fields" disabled>
+<div class="grid"><label>Offer<select id="cw-offer" name="offerId"></select></label><label>Purchase ID<input id="cw-purchase-id" name="purchaseId" required pattern="[A-Za-z0-9][A-Za-z0-9_.:-]{0,95}" placeholder="purchase-001"></label></div>
+<div class="actions"><button id="cw-new-id" type="button">New purchase ID</button></div>
+<p id="cw-offer-summary" class="runtime"></p>
+<dl id="cw-offer-terms" class="cw-facts"></dl>
+<div class="grid"><label>Query parameters as JSON<textarea id="cw-query" rows="5" spellcheck="false">{}</textarea></label>
+<label>POST JSON body<textarea id="cw-body" rows="5" spellcheck="false" placeholder="Leave empty for no body"></textarea></label></div>
+<details><summary>Specific challenge</summary><label>Challenge ID<input id="cw-challenge-id" placeholder="Leave empty when the merchant offers one matching challenge"></label></details>
+<div class="actions"><button id="cw-preview" type="button">Preview exact request</button><button type="submit" class="primary">Prepare purchase</button></div>
+<p class="hint">Keep the same purchase ID to reopen this exact preparation. Execution and recovery use the retained request and contract.</p>
+</fieldset></form>
+<details id="cw-request-detail"><summary>Exact request preview</summary><pre id="cw-request-preview">Select an offer and preview its request.</pre></details>
+<h2>Customer purchases</h2>
+<div id="cw-jobs" class="jobs"></div>
+<div class="scroll"><table><thead><tr><th>Purchase and merchant</th><th>Offer</th><th>Payment stage</th><th>Resource</th><th>Accounting</th><th>Actions</th></tr></thead><tbody id="cw-purchases"></tbody></table></div>
+<div class="heading cw-pagination"><p id="cw-page"></p><div class="actions"><button id="cw-previous">Previous</button><button id="cw-next">Next</button></div></div>
+<details id="cw-purchase-detail"><summary>Selected customer purchase</summary><pre id="cw-purchase-details">Select a purchase to inspect its original terms.</pre></details>
+<details id="cw-resource-detail"><summary>Purchased resource</summary><pre id="cw-resource-metadata"></pre><pre id="cw-resource-preview"></pre></details>
 </section>
 </main>
 <footer><span>Private operator workspace</span><span id="versions"></span></footer>

@@ -228,3 +228,7 @@ See [Native MPP customer delivery](customer/README.md) for installation, public 
 The published Stellar package integrity captured during integration is sha512-L0bwohQU4jKgm3yBFxvrhcYuroRITnUMGmr4N+aJY6q2GYY1bnhenFeTU5Bi0sxXP/5PIRA4ulRHPtqeZ8oTpA==.
 
 Retained merchant profiles preserve their configured route values and file paths. For unfinished historical deliveries backed by `json-file` or `handlersModule`, keep versioned external files at those paths until recovery completes. Operator recovery and export use the saved profile even after the active merchant profile changes.
+
+## Customer receiving and purchasing
+
+The private console includes a **Customer workbench** for receiving merchant contracts and customer packages, configuring the payer and spending limits, preparing exact offer requests, operating the original approval and recovery flow, and downloading purchased resources. See the [workbench guide](./customer/workbench-guide.md) for its console, CLI and typed API interfaces.

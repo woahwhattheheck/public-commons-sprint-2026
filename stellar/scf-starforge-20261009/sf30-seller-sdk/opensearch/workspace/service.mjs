@@ -5,6 +5,7 @@ import { join, resolve, relative, basename, sep } from 'node:path';
 import { readOpenSearchSourceFile, createOpenSearchQuerySource } from '../source.mjs';
 import { validateOpenSearchSource, compileOpenSearchQueries, bindOpenSearchParameters } from '../declaration.mjs';
 import { compileOpenSearchMerchantPlan, prepareOpenSearchSeller } from '../prepare.mjs';
+import { OpenSearchRelevanceWorkspace } from '../relevance/workspace.mjs';
 import { openWorkspaceStore, WorkspaceError, clone, digest, identifier, compareEditions, editionCsv } from './store.mjs';
 
 const DEFAULT_PLAN = { schema: 'stellar-forge.opensearch-merchant-plan.v1',
@@ -60,7 +61,7 @@ async function packageFiles(directory) {
 }
 
 export async function createOpenSearchWorkspace({ sourceFile, planFile, directory, env = process.env,
-  sourceFactory = createOpenSearchQuerySource, prepareSeller = prepareOpenSearchSeller } = {}) {
+  sourceFactory = createOpenSearchQuerySource, prepareSeller = prepareOpenSearchSeller, relevanceOptions } = {}) {
   const source = await readOpenSearchSourceFile(sourceFile);
   const config = validateOpenSearchSource(source.config);
   const templatePlan = planFile ? JSON.parse(await readFile(resolve(planFile), 'utf8')) : DEFAULT_PLAN;
@@ -72,19 +73,21 @@ export async function createOpenSearchWorkspace({ sourceFile, planFile, director
       if (!(await lstat(path)).isDirectory() || (await lstat(path)).isSymbolicLink()) throw new WorkspaceError('WORKSPACE_CHILD_DIRECTORY_INVALID');
       await chmod(path, 0o700);
     }
-    return new OpenSearchWorkspace({ source, config, templatePlan, store, env, sourceFactory, prepareSeller });
+    return new OpenSearchWorkspace({ source, config, templatePlan, store, env, sourceFactory, prepareSeller, relevanceOptions });
   } catch (error) { store.close(); throw error; }
 }
 
 class OpenSearchWorkspace {
   constructor(options) {
     Object.assign(this, options); this.active = new Map(); this.nativeBusy = false; this.closed = false;
+    this.relevance = new OpenSearchRelevanceWorkspace(this, options.relevanceOptions);
   }
   state() {
     return { ...this.store.state(), source: { name: basename(this.source.path ?? 'source.json'),
       schema: this.config.schema, connection: profile(this.config),
-      queries: clone(this.config.queries) }, templatePlan: clone(this.templatePlan), nativeBusy: this.nativeBusy };
+      queries: clone(this.config.queries) }, templatePlan: clone(this.templatePlan), nativeBusy: this.nativeBusy, relevance: this.relevance.state() };
   }
+  failure(error) { return nativeError(error, this.config, this.env); }
   draft(id, revision) { return this.store.draft(id, revision); }
   operation(id) { return this.store.operation(id); }
   history(id) { return this.store.history(id); }

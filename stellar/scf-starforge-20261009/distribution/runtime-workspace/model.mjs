@@ -21,6 +21,9 @@ import { imageOperationFields, imageWorkspaceState, reviewWorkspaceImage, attach
   openWorkspaceImageDownload, reviewWorkspaceImageContainer, normalizeImageOperation,
   executeImageOperation } from './image-workspace.mjs';
 
+import { initializeApplications, applicationsState, reviewApplication, saveApplication, applicationBindingOperation,
+  reviewApplicationStart, dispatchApplicationStart, cancelApplicationRun, applicationOperation, applicationOutput,
+  readApplicationTerminal, sendApplicationTerminal } from './applications.mjs';
 import { transferOperationFields, initializeTransferWorkspace, runtimeTransferWorkspaceState,
   reviewWorkspaceRuntimeTransfer, attachWorkspaceRuntimeTransfer, prepareWorkspaceRuntimeTransferReceive,
   uploadWorkspaceRuntimeTransferPart, downloadWorkspaceRuntimeTransfer, normalizeRuntimeTransferOperation,
@@ -118,7 +121,7 @@ async function jobView(root, id) {
   const active = state.phase === 'RUNNING' && (await workerAlive(state) || await operationRunning(join(directory, 'worker.lock')));
   const commandActive = state.phase === 'RUNNING' && Boolean(state.commandProcess) && (await managedCommandAlive(state) || active);
   return { id, operation: request.operation, runtimeId: request.runtimeId ?? request.targetId ?? null,
-    homeId: request.homeId ?? null, commandActive,
+    homeId: request.homeId ?? null, applicationId: request.applicationId ?? null, terminal: request.terminal === true, commandActive,
     targetId: request.targetId ?? null, imageId: request.imageId ?? null, transferId: request.transferId ?? null,
     cacheTransferId: request.cacheTransferId ?? null,
     targetDirectory: request.targetDirectory ?? null, createdAt: request.createdAt,
@@ -166,6 +169,7 @@ const fields = {
 export async function openRuntimeWorkspace({ directory } = {}) {
   const { root, config } = await context(directory);
   await initializeManagedWorkspace(root);
+  await initializeApplications(root);
   await initializeTransferWorkspace(root);
   const model = {
     directory: root,
@@ -365,6 +369,40 @@ export async function openRuntimeWorkspace({ directory } = {}) {
         'RUNTIME_WORKSPACE_INSTALL_LOG_UNAVAILABLE', 'This runtime has no npm attempt log yet');
       return { name: state.logFile, ...await tailFile(join(selected.directory, state.logFile)) };
     },
+    async applicationsState() { return applicationsState(root); },
+    async applicationsReview(input) {
+      const selected = await entry(root, recordId(input.runtimeId));
+      return reviewApplication(root, { ...input, runtimeDirectory: selected.directory });
+    },
+    async applicationsSave(input) {
+      const saved = await saveApplication(root, input);
+      let connection = null, connectionError = null;
+      try {
+        const request = await applicationBindingOperation(root, saved.id);
+        if (request) connection = await model.begin(request);
+      } catch (error) { connectionError = asError(error); }
+      return { applicationId: saved.id, revision: saved.revision, saved: true, connection, connectionError };
+    },
+    async applicationsConnect({ applicationId }) {
+      const request = await applicationBindingOperation(root, applicationId);
+      return request ? { applicationId, ...await model.begin(request) } : { applicationId, connected: true, reopened: true };
+    },
+    async applicationsStartReview({ applicationId }) { return reviewApplicationStart(root, applicationId); },
+    async applicationsStart(input) { return dispatchApplicationStart(root, input, request => model.begin(request)); },
+    async applicationsStop(input) { return cancelApplicationRun(root, input, id => model.stopManagedCommand(id)); },
+    async applicationsRecover(input) {
+      const request = await applicationOperation(root, input);
+      const existing = await readJSON(join(jobPath(root, input.operationId), 'request.json'), true);
+      if (!existing) return dispatchApplicationStart(root, { applicationId: input.applicationId, requestId: input.operationId,
+        reviewId: (await readJSON(join(root, 'applications', input.applicationId, 'runs', input.operationId + '.json'))).reviewId }, value => model.begin(value));
+      const current = await jobView(root, input.operationId);
+      if (current.workerActive) return { applicationId: input.applicationId, operationId: input.operationId, running: true, reopened: true };
+      if (current.phase === 'QUEUED') return model.resumeQueued(input.operationId);
+      return model.recoverManagedOperation(input.operationId);
+    },
+    async applicationsOutput(input) { return applicationOutput(root, input); },
+    async applicationsTerminal(input) { return readApplicationTerminal(root, input); },
+    async applicationsInput(input) { return sendApplicationTerminal(root, input); },
     async managedState(options) { return managedState(root, options); },
     async openManagedHome(options) { return openManagedHome(root, options); },
     async reviewManagedAdoption({ homeId, runtimeId }) {

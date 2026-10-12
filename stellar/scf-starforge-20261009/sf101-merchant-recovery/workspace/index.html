@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Merchant recovery</title>
+<link rel="stylesheet" href="/style.css">
+<script type="module" src="/app.mjs"></script>
+</head>
+<body>
+<header class="masthead">
+  <div><p class="eyebrow">STARFORGE / OPERATIONS</p><h1 id="title">Merchant recovery</h1></div>
+  <div class="profile-control"><label for="profile">Recovery profile</label><select id="profile" disabled></select></div>
+</header>
+<main>
+  <div id="notice" role="status" aria-live="polite">Opening the retained recovery workspace…</div>
+  <section class="host-line" aria-label="Host configuration"><div><span class="label">Remote store</span><span id="store-summary">—</span></div><div><span class="label">Passphrase</span><span id="passphrase-summary">—</span></div><div><span class="label">Original journal</span><code id="operations-path">—</code></div></section>
+  <div class="work-grid">
+    <div>
+      <section class="panel" aria-labelledby="transfer-heading">
+        <div class="section-head"><div><p class="eyebrow">01 / SELECT</p><h2 id="transfer-heading">Recovery transfer</h2></div><button id="new-selection" type="button">New selection</button></div>
+        <form id="transfer-form">
+          <label for="action">Operation</label>
+          <select id="action"><option value="push">Upload encrypted snapshot</option><option value="pull">Download encrypted snapshot</option><option value="restore">Cold restore</option></select>
+          <div id="bundle-field"><div class="label-row"><label for="bundle">Local encrypted bundle</label><button id="refresh-bundles" type="button" class="text-button">Refresh bundles</button></div><select id="bundle"></select><p class="hint" id="bundle-help">Select an original encrypted snapshot from the host's backup roots.</p></div>
+          <div id="snapshot-field" hidden><label for="snapshot">Remote snapshot ID</label><input id="snapshot" list="snapshot-options" class="mono" autocomplete="off" spellcheck="false" maxlength="64" placeholder="64-character snapshot SHA-256"><datalist id="snapshot-options"></datalist><p class="hint">Use the exact ID from remote inventory or a completed upload.</p></div>
+          <label for="operation-id">Operation ID</label><input id="operation-id" class="mono" maxlength="80" pattern="[A-Za-z0-9][A-Za-z0-9_.-]{0,79}" autocomplete="off" spellcheck="false" required><p class="hint">This ID retains the original selection and progress through continuation.</p>
+          <div id="destination-field" hidden><label for="destination">New destination name</label><input id="destination" class="mono" maxlength="80" pattern="[A-Za-z0-9][A-Za-z0-9_.-]{0,79}" autocomplete="off" spellcheck="false" placeholder="Use the operation ID"><p class="hint" id="destination-help"></p></div>
+          <button id="review-button" type="submit" class="primary">Review transfer</button>
+        </form>
+      </section>
+      <section class="panel" id="review-panel" aria-labelledby="review-heading" hidden>
+        <div class="section-head"><div><p class="eyebrow">02 / REVIEW</p><h2 id="review-heading">Selected transfer</h2></div><span id="review-state" class="badge">Ready for review</span></div>
+        <dl id="review-details" class="key-values"></dl>
+        <p id="review-note" class="hint"></p>
+        <div class="actions"><button id="start-button" type="button" class="primary">Start transfer</button><button id="discard-review" type="button">Discard review</button></div>
+      </section>
+      <section class="panel" aria-labelledby="local-heading">
+        <div class="section-head"><div><p class="eyebrow">LOCAL / ENCRYPTED</p><h2 id="local-heading">Available bundles</h2></div><span id="bundle-count" class="badge">0</span></div>
+        <div id="bundle-list" class="compact-list"><p class="empty">The selected host profile supplies the bundle roots.</p></div>
+      </section>
+    </div>
+    <div>
+      <section class="panel" aria-labelledby="inventory-heading">
+        <div class="section-head"><div><p class="eyebrow">REMOTE / COMPLETED</p><h2 id="inventory-heading">Snapshot inventory</h2></div><button id="refresh-inventory" type="button">Refresh inventory</button></div>
+        <p class="hint" id="inventory-observed">Refresh to read the selected remote store.</p>
+        <div class="table-scroll"><table><thead><tr><th>Snapshot</th><th>Created</th><th class="number">Files / bytes</th><th>Use</th></tr></thead><tbody id="inventory-rows"><tr><td colspan="4" class="empty">Remote inventory has not been read in this session.</td></tr></tbody></table></div>
+        <button id="inventory-more" type="button" hidden>Load more snapshots</button>
+      </section>
+      <section class="panel" aria-labelledby="progress-heading">
+        <div class="section-head"><div><p class="eyebrow">03 / OPERATE</p><h2 id="progress-heading">Workspace transfers</h2></div><button id="refresh-progress" type="button">Refresh progress</button></div>
+        <p class="hint" id="active-summary">The original transfer journal supplies operation status.</p>
+        <div id="request-list" class="request-list"><p class="empty">Reviewed transfers will remain here after the browser closes.</p></div>
+        <button id="requests-more" type="button" hidden>Load more workspace requests</button>
+      </section>
+      <section class="panel" aria-labelledby="journal-heading">
+        <div class="section-head"><div><p class="eyebrow">ORIGINAL / JOURNAL</p><h2 id="journal-heading">Existing operations</h2></div><button id="refresh-operations" type="button">Refresh journal</button></div>
+        <p class="hint">Review an existing operation to continue its exact retained selection.</p>
+        <div class="table-scroll"><table><thead><tr><th>Operation ID</th><th>Action</th><th>Status</th><th>Use</th></tr></thead><tbody id="operation-rows"><tr><td colspan="4" class="empty">Loading original operations…</td></tr></tbody></table></div>
+        <button id="operations-more" type="button" hidden>Load more operations</button>
+      </section>
+    </div>
+  </div>
+  <section class="panel" id="detail-panel" aria-labelledby="detail-heading" hidden>
+    <div class="section-head"><div><p class="eyebrow">ORIGINAL / READBACK</p><h2 id="detail-heading">Operation details</h2></div><button id="close-details" type="button">Close details</button></div>
+    <pre id="detail-body"></pre>
+  </section>
+</main>
+<footer><span id="workspace-reference"></span><span>Original encrypted bundles · Immutable remote selection · Retained operation IDs</span></footer>
+</body>
+</html>

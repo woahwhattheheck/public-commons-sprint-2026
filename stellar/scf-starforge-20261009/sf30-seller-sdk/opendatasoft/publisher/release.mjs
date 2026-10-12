@@ -104,6 +104,7 @@ export async function exportOpendatasoftMerchantPackage(options) {
   const source = structuredClone(selected.config); source.connection.file = 'capture/capture.json';
   const fileMap = new Map([
     ['data.csv', csv], ['dataset.json', datasetConfig], ['source.json', bytes(source)],
+    ['RECEIVING.md', await readFile(new URL('./RECEIVING.md', import.meta.url))],
     ['original-source.json', await readPrivate(join(sourceDirectory, 'original-source.json'))],
     ['reviewed-plan.json', bytes(plan.data)], ['candidate.json', bytes(candidate)],
     ['review.json', bytes(run.data.review)], ['openapi.json', bytes(generated.document)],
