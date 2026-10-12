@@ -48,6 +48,7 @@ export async function openCentralStore(directory) {
     if (schema && schema !== WORKSPACE_SCHEMA) throw fault('CENTRAL_WORKSPACE_SCHEMA', 'This workspace uses another storage version.');
     db.prepare('INSERT OR IGNORE INTO metadata(key,value) VALUES (?,?)').run('schema',WORKSPACE_SCHEMA);
     db.prepare('INSERT OR IGNORE INTO metadata(key,value) VALUES (?,?)').run('createdAt',now());
+    db.prepare('INSERT OR IGNORE INTO metadata(key,value) VALUES (?,?)').run('revision','0');
     db.prepare('INSERT OR IGNORE INTO metadata(key,value) VALUES (?,?)').run('workspaceId',randomUUID());
   } catch (error) { db?.close(); await lease.close(); throw error; }
   function assertOpen() { if (closed) throw fault('CENTRAL_CLOSED', 'Reopen the workspace.'); }
@@ -63,6 +64,7 @@ export async function openCentralStore(directory) {
     return result;
   }
   function list(kind) { assertOpen(); return db.prepare('SELECT revision,value FROM records WHERE kind=? ORDER BY rowid').all(kind).map(recordRow); }
+  function changed() { db.prepare("UPDATE metadata SET value=CAST(value AS INTEGER)+1 WHERE key='revision'").run(); }
   function writeRecord(kind,id,value,expectedRevision) {
     const old = get(kind,id,false);
     if (expectedRevision !== undefined && (old?.revision ?? 0) !== expectedRevision)
@@ -70,7 +72,7 @@ export async function openCentralStore(directory) {
     const revision = (old?.revision ?? 0) + 1, saved = { ...value,id,revision,updatedAt:now() };
     db.prepare('INSERT INTO records(kind,id,revision,value) VALUES (?,?,?,?) ON CONFLICT(kind,id) DO UPDATE SET revision=excluded.revision,value=excluded.value')
       .run(kind,id,revision,JSON.stringify(saved));
-    return saved;
+    changed(); return saved;
   }
   const put = (kind,id,value,expectedRevision) => transaction(() => writeRecord(kind,id,value,expectedRevision));
   const update = (kind,id,operation) => transaction(() => { const old=get(kind,id);return writeRecord(kind,id,operation(old),old.revision); });
@@ -87,7 +89,7 @@ export async function openCentralStore(directory) {
     }
     db.prepare('INSERT INTO resources(capture,key,kind,sha256,bytes,value) VALUES (?,?,?,?,?,?)')
       .run(capture,key,kind,receipt.sha256,receipt.bytes,JSON.stringify(receipt));
-    return receipt;
+    changed(); return receipt;
   }
   async function retainStream(body) {
     assertOpen(); const path=join(root,'temporary',randomUUID()+'.part'), file=await open(path,'wx',0o600);
@@ -155,7 +157,7 @@ export async function openCentralStore(directory) {
   }
   function saveSubmission(capture,formKey,instanceId,value) {
     db.prepare('INSERT INTO submissions(capture,form_key,instance_id,value) VALUES (?,?,?,?) ON CONFLICT(capture,form_key,instance_id) DO UPDATE SET value=excluded.value')
-      .run(capture,formKey,instanceId,JSON.stringify(value));return value;
+      .run(capture,formKey,instanceId,JSON.stringify(value));changed();return value;
   }
   function submission(capture,formKey,instanceId) {
     const result=db.prepare('SELECT value FROM submissions WHERE capture=? AND form_key=? AND instance_id=?').get(capture,formKey,instanceId);
@@ -171,6 +173,10 @@ export async function openCentralStore(directory) {
   function* resourceEntries(capture) {
     for(const item of db.prepare('SELECT key,kind,value FROM resources WHERE capture=? ORDER BY rowid').iterate(capture))
       yield {key:item.key,kind:item.kind,...JSON.parse(item.value)};
+  }
+  function* iterateSubmissions(capture) {
+    for(const item of db.prepare('SELECT form_key,instance_id,value FROM submissions WHERE capture=? ORDER BY form_key,instance_id').iterate(capture))
+      yield {formKey:item.form_key,...JSON.parse(item.value)};
   }
   function resourceTotals(capture) {
     return db.prepare('SELECT kind,COUNT(*) AS count,SUM(bytes) AS bytes FROM resources WHERE capture=? GROUP BY kind ORDER BY kind').all(capture);
@@ -190,9 +196,9 @@ export async function openCentralStore(directory) {
     const path=join(directory,'central.sqlite');await sqliteBackup(db,path);await chmod(path,0o600);
     return {id,directory,path};
   }
-  return {directory:root,db,get,list,put,update,transaction,resource,saveResource,retainStream,raw,sourceFile,
+  return {directory:root,db,get,list,put,update,writeRecord,transaction,resource,saveResource,retainStream,raw,sourceFile,
     retain:bytes=>retain(join(root,'sources'),bytes),pageRecords,commitPage,rows,row,iterateRows,
-    saveSubmission,submission,resourceList,resourceEntries,resourceTotals,orphanCounts,compareRows,snapshot,
+    saveSubmission,submission,resourceList,resourceEntries,iterateSubmissions,resourceTotals,orphanCounts,compareRows,snapshot,
     identity:()=>Object.fromEntries(db.prepare('SELECT key,value FROM metadata').all().map(row=>[row.key,row.value])),
     async close(){if(!closed){closed=true;try{db.close();}finally{await lease.close();}}}};
 }

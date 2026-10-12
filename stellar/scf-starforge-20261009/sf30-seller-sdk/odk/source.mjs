@@ -104,27 +104,9 @@ export function createCentralSource({ url, authEnv, allowLoopback = false, fetch
   async function catalog(projectId, formId, options) {
     const root = new URL(formPath(projectId, formId) + '.svc', apiRoot).href;
     const service = await json(root, options), metadata = await request(root + '/$metadata', { ...options, accept: 'application/xml' });
-    const model = parseMetadata(metadata.raw, { contentType: metadata.headers['content-type'] ?? '', identifierDialect: 'odk-central' });
-    if (!service.value || !Array.isArray(service.value.value)) throw fault('CENTRAL_SERVICE', 'The form did not return a native OData service document.', 502);
-    const names = new Set();
-    const entitySets = service.value.value.filter(value => (value.kind ?? 'EntitySet') === 'EntitySet').map(item => {
-      if (typeof item.name !== 'string' || typeof item.url !== 'string' || names.has(item.name))
-        throw fault('CENTRAL_SERVICE', 'The Central service document repeats or omits a table identifier.', 502);
-      names.add(item.name);
-      const selected = getEntitySet(model, item.name), target = boundary(item.url, root + '/', apiRoot);
-      if (!new URL(target).pathname.startsWith(new URL(root + '/').pathname))
-        throw fault('CENTRAL_TABLE_BOUNDARY', 'The advertised table leaves this form.', 502);
-      if (selected.keyFields.length !== 1 || selected.keyFields[0] !== '__id')
-        throw fault('CENTRAL_TABLE_KEY', 'This Central table does not expose its native __id key.', 502);
-      return { ...selected, url: target };
-    });
-    if (!names.has('Submissions')) throw fault('CENTRAL_ROOT_TABLE', 'The Central service has no Submissions table.', 502);
-    const strip = ({ raw, value, ...receipt }) => receipt;
-    return { schema: 'stellar-forge.odata-catalog.v1', ...model, entitySets, identifierDialect: 'odk-central',
-      serviceUrl: root + '/', metadataUrl: metadata.url, observedAt: metadata.receivedAt,
-      receipts: { service: strip(service), metadata: strip(metadata) }, source: CENTRAL_SOURCE,
-      original: { service: service.raw, metadata: metadata.raw } };
+    return decodeCentralCatalog({ root, apiRoot, service, metadata });
   }
+
   async function page(catalog, query, url = query.url, options = {}) {
     const result = await request(url, { ...options, accept: 'application/json;IEEE754Compatible=true' });
     return parsePage({ catalog, query, raw: result.raw, url: result.url, headers: result.headers, status: result.status, receivedAt: result.receivedAt });
@@ -165,4 +147,27 @@ export function repeatRelations(catalog) {
     if (!parent) throw fault('CENTRAL_REPEAT_RELATION', 'Central repeat ' + set.name + ' has no retained native parent field.', 502);
     return { table: set.name, parentTable: parent.name, parentField: '__' + parent.name.replaceAll('.', '-') + '-id' };
   });
+}
+
+export function decodeCentralCatalog({ root, apiRoot, service, metadata }) {
+  const model = parseMetadata(metadata.raw, { contentType: metadata.headers['content-type'] ?? '', identifierDialect: 'odk-central' });
+  if (!service.value || !Array.isArray(service.value.value)) throw fault('CENTRAL_SERVICE', 'The form did not return a native OData service document.', 502);
+  const names = new Set();
+  const entitySets = service.value.value.filter(value => (value.kind ?? 'EntitySet') === 'EntitySet').map(item => {
+    if (typeof item.name !== 'string' || typeof item.url !== 'string' || names.has(item.name))
+      throw fault('CENTRAL_SERVICE', 'The Central service document repeats or omits a table identifier.', 502);
+    names.add(item.name);
+    const selected = getEntitySet(model, item.name), target = boundary(item.url, root + '/', apiRoot);
+    if (!new URL(target).pathname.startsWith(new URL(root + '/').pathname))
+      throw fault('CENTRAL_TABLE_BOUNDARY', 'The advertised table leaves this form.', 502);
+    if (selected.keyFields.length !== 1 || selected.keyFields[0] !== '__id')
+      throw fault('CENTRAL_TABLE_KEY', 'This Central table does not expose its native __id key.', 502);
+    return { ...selected, url: target };
+  });
+  if (!names.has('Submissions')) throw fault('CENTRAL_ROOT_TABLE', 'The Central service has no Submissions table.', 502);
+  const strip = ({ raw, value, ...receipt }) => receipt;
+  return { schema: 'stellar-forge.odata-catalog.v1', ...model, entitySets, identifierDialect: 'odk-central',
+    serviceUrl: root + '/', metadataUrl: metadata.url, observedAt: metadata.receivedAt,
+    receipts: { service: strip(service), metadata: strip(metadata) }, source: CENTRAL_SOURCE,
+    original: { service: service.raw, metadata: metadata.raw } };
 }
