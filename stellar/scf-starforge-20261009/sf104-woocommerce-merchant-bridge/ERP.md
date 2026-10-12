@@ -30,6 +30,14 @@ The schema's example server is a publisher example. Use the application authoriz
 
 ## Configure the existing installation
 
+Copy the complete merchant plugin folder when installing or upgrading. Its existing checkout, basket, merchant review and refund files remain together with these ERP runtime files:
+
+- `merchant-erp.php`, `merchant-erp-store.php` and `merchant-erp-mapping.php`: the original-order lifecycle, retained revisions and exact request plans.
+- `merchant-erp-acumatica.php`: the installed contract, native document and detail receiving adapter.
+- `merchant-erp-console.php`, `merchant-erp.js` and `merchant-erp.css`: the integrated WordPress operating workspace.
+
+Keep `ERP.md` and `erp-map.example.json` with the package. The desktop operator also uses `merchant-erp-client.mjs` and `merchant-erp-cli.mjs` from the complete toolkit dependency closure. Do not copy only the plugin entry file: it loads these runtime modules directly.
+
 Use the plugin's existing WordPress/WooCommerce installation and source closure. The ERP PHP modules use PHP 8+, the normal WordPress database API, and the native Woo order objects. No additional PHP package, Node package, schema service, queue, scheduler, or hosted CI workflow is required.
 
 The WordPress administrator registers authorized ERP application/credential pairs in the process environment:

@@ -16,6 +16,7 @@ import { secEdgarStartup } from './application-sec-edgar.mjs';
 import { jobResultReceiverStartup } from './application-job-result-receiver.mjs';
 import { sheetsStartup } from './application-sheets.mjs';
 import { nocodbStartup } from './application-nocodb.mjs';
+import { cocartStartup } from './application-cocart.mjs';
 import { stellarExpertStartup, STELLAR_EXPERT_READY_SCHEMA } from './application-stellar-expert.mjs';
 import { atlasStartup } from './application-atlas.mjs';
 import { n8nStartup } from './application-n8n.mjs';
@@ -30,8 +31,10 @@ import { pricingStartup } from './application-pricing.mjs';
 import { collectionsStartup } from './application-collections.mjs';
 import { baserowStartup } from './application-baserow.mjs';
 import { grantStartup } from './application-grant.mjs';
+import { buyerRunbookStartup, BUYER_RUNBOOK_LAUNCH_SCHEMA } from './application-buyer-runbook.mjs';
 import { grantsgovStartup } from './application-grantsgov.mjs';
 import { fredStartup } from './application-fred.mjs';
+import { worldbankAgentStartup } from './application-worldbank.mjs';
 import { tenderlyStartup } from './application-tenderly.mjs';
 import { browserWalletOutputReader, browserWalletStartup, verifyBrowserWalletLaunch } from './application-browser-wallet.mjs';
 import { rssAtomStartup } from './application-rss-atom.mjs';
@@ -116,6 +119,22 @@ export function observeApplicationOutput(request, directory, context = {}) {
     // Read only the maintained CLI's startup announcement. Later user-entered
     // terminal text and provider payloads cannot select a different application.
     text = text.replace(/\x1b\[[0-?]*[ -/]*[@-~]/g, '').trim();
+    if (request.command === 'worldbank-agent') {
+      if (!text.startsWith('{"schema":"stellar-forge.worldbank-agent-startup.v1",')) return;
+      saving = saving.then(async () => {
+        if (seen) return;
+        const startup = await worldbankAgentStartup(request, text);
+        const url = startup && privateUrl(startup.url);
+        if (!url) return;
+        seen = true;
+        await saveJSON(join(directory, 'application-url.json'), {
+          schema: 'stellar-forge.application-url.v1', applicationId: request.applicationId,
+          operationId: directory.split('/').at(-1), command: request.command,
+          source: 'original-command-stdout', observedAt: now(), url, original: startup.original,
+        });
+      }).catch(error => { if (error.code !== 'EEXIST') saveError = error; });
+      return;
+    }
     if (request.command === 'mcp-native' && request.args?.includes('--duckdb-description')) {
       if (!text.startsWith('{"schema":"' + DUCKDB_AGENT_STARTUP_SCHEMA + '",')) return;
       saving = saving.then(async () => {
@@ -186,6 +205,22 @@ export function observeApplicationOutput(request, directory, context = {}) {
       saving = saving.then(async () => {
         if (seen) return;
         const startup = await n8nStartup(request, text, context);
+        const url = startup && privateUrl(startup.url);
+        if (!url) return;
+        seen = true;
+        await saveJSON(join(directory, 'application-url.json'), {
+          schema: 'stellar-forge.application-url.v1', applicationId: request.applicationId,
+          operationId: directory.split('/').at(-1), command: request.command,
+          source: 'original-command-stdout', observedAt: now(), url, original: startup.original,
+        });
+      }).catch(error => { if (error.code !== 'EEXIST') saveError = error; });
+      return;
+    }
+    if (request.command === 'cocart-managed') {
+      if (!text.startsWith('{"schema":"stellar-forge.cocart-workspace-startup.v1",')) return;
+      saving = saving.then(async () => {
+        if (seen) return;
+        const startup = await cocartStartup(request, text);
         const url = startup && privateUrl(startup.url);
         if (!url) return;
         seen = true;
@@ -444,6 +479,22 @@ export function observeApplicationOutput(request, directory, context = {}) {
       saving = saving.then(async () => {
         if (seen) return;
         const startup = await grantsgovStartup(request, text);
+        const url = startup && privateUrl(startup.url);
+        if (!url) return;
+        seen = true;
+        await saveJSON(join(directory, 'application-url.json'), {
+          schema: 'stellar-forge.application-url.v1', applicationId: request.applicationId,
+          operationId: directory.split('/').at(-1), command: request.command,
+          source: 'original-command-stdout', observedAt: now(), url, original: startup.original,
+        });
+      }).catch(error => { if (error.code !== 'EEXIST') saveError = error; });
+      return;
+    }
+    if (request.command === 'buyer-runbook') {
+      if (!text.startsWith('{"schema":"' + BUYER_RUNBOOK_LAUNCH_SCHEMA + '",')) return;
+      saving = saving.then(async () => {
+        if (seen) return;
+        const startup = await buyerRunbookStartup(request, text);
         const url = startup && privateUrl(startup.url);
         if (!url) return;
         seen = true;
