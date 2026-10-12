@@ -7,6 +7,7 @@ import { compileResponseContract } from './response-contract.mjs';
 import { canonicalOperationJSON, operationRequestHash } from './upstream-idempotency.mjs';
 import { supportsSellerMethod, requiresJsonBody } from './http-methods.mjs';
 import { compileUpstreamStreamPolicy, openUpstreamStream } from './upstream-stream.mjs';
+import { upstreamTlsRequestOptions, assertUpstreamTlsProfile } from './upstream-tls/profile.mjs';
 
 // Private per-invocation metadata. Never serialized into a response or retained in
 // operation state; lets availability distinguish a real backend call from replay.
@@ -160,12 +161,12 @@ export function createUpstreamHandler(options = {}) {
   if (!object(options)) throw new TypeError('Upstream options must be a plain object');
   const known = new Set(['baseUrl', 'path', 'method', 'query', 'headers', 'requestHeaders',
     'responseHeaders', 'responseType', 'timeoutMs', 'maxRequestBytes', 'maxResponseBytes',
-    'maxInFlight', 'allowLocal', 'lookup', 'agent', 'onResult', 'responseContract', 'idempotency', 'cachePolicyMetadata', 'credentialProvider', 'bodyType', 'stream', 'supplierQuota']);
+    'maxInFlight', 'allowLocal', 'lookup', 'agent', 'onResult', 'responseContract', 'idempotency', 'cachePolicyMetadata', 'credentialProvider', 'bodyType', 'stream', 'supplierQuota', 'tls']);
   for (const key of Object.keys(options)) if (!known.has(key)) throw new TypeError(`Unknown upstream option: ${key}`);
   const { baseUrl, path, method = 'GET', query = [], headers: configuredHeaders = {},
     requestHeaders = [], responseHeaders = ['content-type', 'content-language'], responseType = 'json',
     timeoutMs = 10000, maxRequestBytes = 1048576, maxResponseBytes = 1048576,
-    maxInFlight = 16, allowLocal = false, lookup, agent, onResult, responseContract, idempotency, cachePolicyMetadata = false, credentialProvider, stream, bodyType='json', supplierQuota } = options;
+    maxInFlight = 16, allowLocal = false, lookup, agent, onResult, responseContract, idempotency, cachePolicyMetadata = false, credentialProvider, stream, bodyType='json', supplierQuota, tls } = options;
   if (!['json','form-data'].includes(bodyType) || bodyType==='form-data'&&!requiresJsonBody(method)) throw new TypeError('Invalid upstream bodyType');
   if (!supportsSellerMethod(method) || !['json', 'bytes', 'sse', 'ndjson'].includes(responseType) || typeof allowLocal !== 'boolean' ||
       typeof cachePolicyMetadata !== 'boolean' ||
@@ -185,6 +186,8 @@ export function createUpstreamHandler(options = {}) {
   if (!streaming && stream !== undefined) throw new TypeError('stream settings require sse or ndjson responseType');
   const streamPolicy = streaming ? compileUpstreamStreamPolicy(stream,responseType) : null;
   const targetFor = compileTarget(baseUrl, path, allowLocal), queries = queryMapping(query);
+  if (tls !== undefined && new URL(baseUrl).protocol !== 'https:') throw new TypeError('TLS profile requires an HTTPS upstream');
+  assertUpstreamTlsProfile(tls);
   // Trusted host transport selection keeps the original exchange and deadline.
   // Explicit agents can use Node's configured egress proxy. Default callers keep
   // their existing unpooled sockets and original DNS lookup behavior.
@@ -294,6 +297,7 @@ export function createUpstreamHandler(options = {}) {
         dispatched = true;
         request = (target.protocol === 'https:' ? httpsRequest : httpRequest)(target, {
           method, headers: outgoing, maxHeaderSize: 16384, agent: agent ?? false,
+          ...upstreamTlsRequestOptions(tls),
           ...(lookup === undefined ? {} : { lookup }),
         }, res => {
           response = res;
@@ -403,6 +407,8 @@ export function createUpstreamHandler(options = {}) {
       try {
         lifetime = beginUpstreamRequest(context.signal, timeoutMs);
         const trustedHeaders = await resolveUpstreamHeaders(staticHeaders ?? configuredHeaders, credentialProvider, lifetime);
+        // A deferred certificate failure has not dispatched a supplier request.
+        upstreamTlsRequestOptions(tls);
         if (idempotency && (Object.hasOwn(trustedHeaders,idempotency.requestHeader) || Object.hasOwn(trustedHeaders,idempotency.backendHeader)))
           throw new TypeError('Operation headers cannot be supplied as credentials');
         Object.assign(prepared.outgoing, trustedHeaders);
@@ -424,7 +430,7 @@ export function createUpstreamHandler(options = {}) {
           result = {outcome:'NOT_DISPATCHED',error:allowance.body.error,response:allowance};
         } else {
           startedExchange = true;
-          result = streaming ? await openUpstreamStream({...prepared,method,lookup,expose,
+          result = streaming ? await openUpstreamStream({...prepared,method,lookup,expose,tls,
             format:responseType,policy:streamPolicy,headerSignal:lifetime.signal,signal:context.signal}) :
             await exchange(prepared, lifetime.signal);
           // Only the original source exchange observes provider cooldowns.
@@ -466,6 +472,7 @@ export function createUpstreamHandler(options = {}) {
   }
   // No URL, credential, request or response payload is retained in diagnostics.
   upstreamHandler.snapshot = () => Object.freeze({ ...totals,
+    ...(tls ? {tls:tls.snapshot()} : {}),
     ...(streamPolicy ? {stream:Object.freeze({format:responseType,...streamPolicy})} : {}),
     ...(credentialProvider ? {oauth2:credentialProvider.snapshot()} : {}),
     ...(idempotency ? {idempotency:idempotency.operations.snapshot()} : {}) });

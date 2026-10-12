@@ -70,6 +70,7 @@ function inspectBytes(bytes, service, allowLoopback) {
       cache: raw.cache ?? null,
       ...(raw.oauth2 === undefined ? {} : { oauth2: raw.oauth2 }),
       ...(raw.oauthConnection === undefined ? {} : { oauthConnection: raw.oauthConnection }),
+      ...(raw.tls === undefined ? {} : { tls: raw.tls }),
     };
   }
   return { bindings, environment: references, credentialValuesChecked: false };
