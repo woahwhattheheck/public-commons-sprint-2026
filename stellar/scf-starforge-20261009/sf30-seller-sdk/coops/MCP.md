@@ -108,3 +108,7 @@ The original journal reconciles an interrupted request before revision checks.
 Accepted source no-data outcomes remain explicit missing coverage in the workbook.
 
 See [the complete analyst and native operating guide](analysis/README.md).
+
+## Reviewed coastal studies
+
+The same original workspace now advertises `merchant_coops_study_preview`, `merchant_coops_study_rows`, and `study.save`, `study.review`, `study.export`, `study.return.start`, `study.return.chunk`, `study.return.finish`, `study.receive` as the corresponding `merchant_coops_…` tools. Study returns use one-MiB original chunks, not a whole-file MCP argument. Read exact saved study/release/return IDs from the original view; keep the same operation identity after uncertainty. Full CSV/JSONL/report/manifest/TAR and returned comparison files use the existing export metadata/chunk tools. [STUDIES.md](STUDIES.md) defines native basis, review, receiving, scale and recovery behavior.

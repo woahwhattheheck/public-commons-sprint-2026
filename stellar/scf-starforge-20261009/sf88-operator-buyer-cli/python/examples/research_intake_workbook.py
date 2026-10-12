@@ -125,6 +125,39 @@ class IntakeWorkflow(Workflow):
         source.verify()
         return source
 
+    def _browser_result(self, workspace, result, *, restore=False, expected_capture=None):
+        phase = "restored" if restore else "captured_and_imported"
+        need(isinstance(result, dict) and result.get("schema") == BROWSER_SCHEMA and
+             result.get("phase") == phase and result.get("workspace_id") == workspace.identity and
+             result.get("browser_errors") == [],
+             "RESEARCH_INTAKE_BROWSER_RESULT_CHANGED")
+        if restore:
+            need(expected_capture and result.get("configured") is False and
+                 all(result.get(key) == value for key, value in (
+                     ("capture_id", expected_capture["id"]),
+                     ("document_id", expected_capture["document_id"]),
+                     ("edition_sha256", expected_capture["edition_sha256"]))),
+                 "RESEARCH_INTAKE_RESTORED_BROWSER_BINDING_CHANGED")
+            artifacts = {"analysis-research-restored-mobile.png": result.get("screenshot")}
+        else:
+            need(isinstance(result.get("screenshots"), dict) and
+                 set(result["screenshots"]) == {"desktop", "mobile"},
+                 "RESEARCH_INTAKE_BROWSER_ARTIFACTS_CHANGED")
+            artifacts = {
+                "analysis-research-desktop.png": result["screenshots"]["desktop"],
+                "analysis-research-mobile.png": result["screenshots"]["mobile"],
+            }
+        for name, artifact in artifacts.items():
+            need(isinstance(artifact, dict) and artifact.get("name") == name and
+                 isinstance(artifact.get("bytes"), int) and artifact["bytes"] > 0 and
+                 isinstance(artifact.get("sha256"), str) and
+                 re.fullmatch(r"[a-f0-9]{64}", artifact["sha256"]),
+                 "RESEARCH_INTAKE_BROWSER_ARTIFACTS_CHANGED")
+            actual = pin(self.browser_directory / name)
+            need(actual["bytes"] == artifact["bytes"] and actual["sha256"] == artifact["sha256"],
+                 "RESEARCH_INTAKE_BROWSER_ARTIFACTS_CHANGED")
+        return result
+
     def _browser(self, workspace, *, restore=False, expected_capture=None):
         need(self.playwright and self.chromium, "RESEARCH_INTAKE_EXISTING_BROWSER_RUNTIME_REQUIRED")
         need(Path(self.playwright).is_file() and Path(self.chromium).is_file(),
@@ -180,10 +213,8 @@ class IntakeWorkflow(Workflow):
                     })
                     raise StateError("RESEARCH_INTAKE_BROWSER_INTERRUPTED:" + str(process.returncode))
                 result = json.loads(stdout)
-                need(result.get("schema") == BROWSER_SCHEMA and
-                     result.get("workspace_id") == workspace.identity,
-                     "RESEARCH_INTAKE_BROWSER_RESULT_CHANGED")
-                return result
+                return self._browser_result(workspace, result, restore=restore,
+                                            expected_capture=expected_capture)
         finally:
             server.shutdown()
             owner.join()
@@ -203,9 +234,8 @@ class IntakeWorkflow(Workflow):
             self.bind_workspace(workspace)
             completed_path = self.browser_directory / "browser-complete.json"
             if completed_path.is_file():
-                browser = parse(read(completed_path, 32 * 1024 * 1024))
-                need(browser.get("schema") == BROWSER_SCHEMA and browser["workspace_id"] == workspace.identity,
-                     "RESEARCH_INTAKE_BROWSER_RESULT_CHANGED")
+                browser = self._browser_result(workspace,
+                    parse(read(completed_path, 32 * 1024 * 1024)))
             else:
                 browser = self._browser(workspace)
             capture = workspace.job(browser["capture_id"])
@@ -270,9 +300,21 @@ class IntakeWorkflow(Workflow):
             need(observed["status"] == "COMPLETE" and observed["request"] == capture["request"] and
                  observed["result"]["document_id"] == capture["result"]["document_id"],
                  "RESEARCH_INTAKE_RESTORED_CAPTURE_CHANGED")
-            result = self._browser(workspace, restore=True, expected_capture={
+            expected = {
                 "id": capture["id"], "document_id": capture["result"]["document_id"],
-                "edition_sha256": capture["result"]["edition_sha256"]})
+                "edition_sha256": capture["result"]["edition_sha256"]}
+            # Reuse a completed observation and its exact retained screenshot.
+            # The original archive receiver has already rechecked this current
+            # workspace's source, query, typed export and workbook above.
+            receipt_path = self.records / "browser-restored.json"
+            completed_path = self.browser_directory / "browser-restored.json"
+            prior = receipt_path if receipt_path.is_file() else completed_path
+            if prior.is_file():
+                result = self._browser_result(workspace,
+                    parse(read(prior, 32 * 1024 * 1024)),
+                    restore=True, expected_capture=expected)
+            else:
+                result = self._browser(workspace, restore=True, expected_capture=expected)
             return self.receipt("browser-restored", result)
 
 
