@@ -245,3 +245,7 @@ The local joined journey uses the original native SDK and payment components
 with controlled Linkup contract and RPC/Horizon responses. Deployment acceptance
 then uses the operator's actual configured Linkup account, HTTPS merchant, asset,
 wallet and facilitator and retains those original results through the same path.
+
+## Research questions, source analysis and dossier handover
+
+Completed search and sourced-answer purchases can enter the existing research dossier with their exact original request/response bytes, ordered source records and native purchase identity. The receiving guide covers source selections, analyst notes, findings, revision comparison, reports, portable receiving and original customer-workspace backup: [Linkup research dossiers](../sf88-operator-buyer-cli/node/examples/LINKUP_DOSSIERS.md).

@@ -9,6 +9,8 @@ import { startSellerOperations } from '../../sf30-seller-sdk/operations/server.m
 import { privateDirectory, newDirectory, readBytes, writeNew, syncDirectory, json, parse } from '../../sf102-cube-paid-query-adapter/onboarding/files.mjs';
 import { inspectPlan, sellerConfig, upstreamBindings, providerRequest, describeResult, HANDLER, ADMISSION } from './product.mjs';
 
+import { createTenderlyProviderRecovery } from './provider-recovery.mjs';
+
 const REQUEST_SCHEMA = 'stellar-forge.tenderly-operation-request.v1';
 const fail = (code, status = 409) => Object.assign(new Error(code), { code, status });
 const reject = (status, error) => ({ status, headers: { 'content-type': 'application/json; charset=utf-8' }, body: { error } });
@@ -101,6 +103,12 @@ export function createTenderlyApplication({ plan: rawPlan, stateDirectory, env =
     response: key => tracked(() => storedResponse(key)),
     recover: options => tracked(() => recover(options)),
   });
+  const retainedProvider = createTenderlyProviderRecovery({ plan, stateDirectory, env, upstreamOrigin,
+    allowLoopbackUpstream, operations: {
+      request: readRequest, inspect: key => durable.inspect(key), response: storedResponse, recover,
+    } });
+  const providerRecovery = Object.freeze(Object.fromEntries(Object.entries(retainedProvider)
+    .map(([name, method]) => [name, input => tracked(() => method(input))])));
   const handlers = {
     [HANDLER]: context => tracked(async () => {
       let provider;
@@ -127,7 +135,7 @@ export function createTenderlyApplication({ plan: rawPlan, stateDirectory, env =
   })();
   operationControl = createUpstreamOperationControl(compileUpstreamBindings(bindings, options), { [HANDLER]: adapted }, { closeHandlers: close });
   const config = structuredClone(original.config); config.routes[0].admit = ADMISSION;
-  return { config, handlers: Object.freeze(handlers), operations, operationControl, review, close,
+  return { config, handlers: Object.freeze(handlers), operations, providerRecovery, operationControl, review, close,
     snapshot: () => ({ schema: 'stellar-forge.tenderly-merchant-status.v1', planSha256: review.planSha256,
       networkId: plan.networkId, simulationType: plan.simulationType, route: review.route,
       provider: 'Tenderly Simulation API', upstreams: original.snapshot(), closed }) };
