@@ -64,6 +64,18 @@ class Workspace(RetainedWorkspace):
 class Handler(RetainedHandler):
     server_version = "SF30-NDJSON"
 
+    def _get(self):
+        target = urlsplit(self.path)
+        if target.path != "/api/launch":
+            return super()._get()
+        self._gate()
+        if target.query:
+            raise InputError("The original launch endpoint has no query parameters")
+        if self.server.launch is None:
+            self._json({"error": "The managed NDJSON console is not available"}, 503)
+            return
+        self._json(self.server.launch)
+
     def _post(self):
         if urlsplit(self.path).path != "/api/merchant":
             return super()._post()
@@ -86,3 +98,4 @@ class Handler(RetainedHandler):
 class OperatorServer(RetainedServer):
     def __init__(self, workspace: Workspace, port: int = 0):
         super().__init__(workspace, port, assets_directory=HERE / "public", handler_class=Handler)
+        self.launch = None

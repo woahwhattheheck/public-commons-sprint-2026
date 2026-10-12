@@ -243,7 +243,7 @@ For a running seller, the publisher buyer action reads its current offer for the
 
 ## Original public-source journey
 
-[examples/public-catalog.mjs](examples/public-catalog.mjs) runs against Baserow's own [public software catalog](https://baserow.io/public/grid/4si6SNrY_T9_ENsCPjjSr2LDynTxbDh7OkvLkQorPY8). It discovers the current original field IDs/types, explicitly selects the public sortings, retains every page and original file, publishes a private reviewed dataset, reopens the publication, and exports and rechecks the same file bytes.
+[examples/public-catalog.mjs](examples/public-catalog.mjs) runs against Baserow's own [public software catalog](https://baserow.io/public/grid/4si6SNrY_T9_ENsCPjjSr2LDynTxbDh7OkvLkQorPY8). It discovers the current original field IDs/types, explicitly selects the public sortings, retains every page and original file, publishes a private reviewed dataset, reopens the publication, and exports and rechecks the same file bytes. The same invocation continues through the source workspace: import the original capture, read every row and file descriptor through the local HTTP API, receive an original file with its manifest and byte hash, validate and freeze a reviewed version, open and close its original publisher, export the full source packet, and import, review and reopen that packet in a second private workspace.
 
 ~~~sh
 node examples/public-catalog.mjs --out /private/native/baserow-catalog --source-ref EXACT_CHECKOUT_SHA
@@ -251,7 +251,7 @@ node examples/public-catalog.mjs --out /private/native/baserow-catalog --source-
 
 The example uses the storage origin observed in the actual public catalog. Supply repeated --attachment-origin values for any newly observed original storage origins. Reuse an already received complete source with --capture ORIGINAL_CAPTURE.json. Supply --terms ORIGINAL_PRIVATE_MERCHANT_TERMS.json to also prepare and stage the original merchant package; --runtime carries its existing runtime configuration.
 
-The directory retains native-result.json, the original source capture, publisher, version store, customer preview and original customer files. The result records the actual row/page/file counts, source and CSV hashes, snapshot, retained run ID and reopen result, including the phases completed by that invocation.
+The directory retains native-result.json, workspace-customer-result.json, the original source capture, publisher, version store, customer preview, original customer files, the complete workspace source packet and both private source workspaces. Results record the actual row/page/file counts, source and CSV hashes, snapshot, retained run and request IDs, complete delivered-row digest, packet hash and reopened source version. The continuation reads the same retained provider observation.
 
 ## Maintained primary contracts
 

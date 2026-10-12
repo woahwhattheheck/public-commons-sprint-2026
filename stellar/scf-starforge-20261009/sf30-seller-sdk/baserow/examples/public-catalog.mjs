@@ -2,11 +2,15 @@
 import { dirname, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { mkdir } from 'node:fs/promises';
-import { bytes, createFile, readJson, hashPrivate, privateDirectory, fault } from '../../postgres/publisher/files.mjs';
+import { randomUUID, createHash } from 'node:crypto';
+import { bytes, createFile, readJson, hashPrivate, privateDirectory, fault, digest, identity } from '../../postgres/publisher/files.mjs';
 import { discoverBaserowTable } from '../http.mjs';
 import { captureBaserowSource, readBaserowCapture, copyBaserowCapture, bindBaserowCapture, exportBaserowAttachments } from '../capture.mjs';
 import { readBaserowSourceFile } from '../declaration.mjs';
 import { openBaserowPublisher } from '../publisher/model.mjs';
+import { BaserowNumber, exactJson } from '../values.mjs';
+import { openBaserowAuthoring } from '../workspace/model.mjs';
+import { serveBaserowAuthoring } from '../workspace/server.mjs';
 import { reviewBaserowDeployment, prepareBaserowDeployment, inspectBaserowDeployment, stageBaserowDeployment } from '../deployment.mjs';
 
 const PUBLIC_GRID = 'https://baserow.io/public/grid/4si6SNrY_T9_ENsCPjjSr2LDynTxbDh7OkvLkQorPY8';
@@ -19,6 +23,7 @@ const HELP = 'One native Baserow customer journey (Node 24, Linux, util-linux fl
   'The default acquires the original first-party public software catalog and its original files.\n' +
   'An existing complete capture is copied byte-for-byte when --capture is supplied.\n' +
   'The original publisher reviews, publishes and reopens one private dataset version.\n' +
+  'The same capture then passes through local source review, receiving, full packet export and reopen.\n' +
   'With actual supplied merchant terms, the original SF82 package/release is prepared and staged.\n' +
   'All original captures, CSV, file exports and native-result.json remain in the chosen directory.\n';
 function argumentsFor(argv) {
@@ -69,6 +74,196 @@ function originalPublicOrder(view) {
     return { field: item.field, direction: item.order.toLowerCase() };
   });
 }
+
+// Continue the same observation through the real local source browser API.
+async function receiveWorkspaceSource(directory, sourceFile, original) {
+  const sourceDirectory = join(directory, 'source-workspace');
+  const recipientDirectory = join(directory, 'recipient-workspace');
+  const receivedDirectory = join(directory, 'workspace-files');
+  await privateDirectory(receivedDirectory, true);
+  let workspace, service, phase = 'source-import';
+  const start = async (target, create) => {
+    workspace = await openBaserowAuthoring({ directory: target, create });
+    service = await serveBaserowAuthoring({ workspace, port: 0 });
+  };
+  const close = async () => {
+    if (service) { const current = service; service = null; workspace = null; await current.close(); }
+    else if (workspace) { const current = workspace; workspace = null; await current.close(); }
+  };
+  const request = async (path, input) => {
+    const response = await fetch(service.origin + path, {
+      method: input === undefined ? 'GET' : 'POST', redirect: 'error',
+      headers: { 'x-baserow-workspace-token': service.token, origin: service.origin,
+        ...(input === undefined ? {} : { 'content-type': 'application/json' }) },
+      ...(input === undefined ? {} : { body: JSON.stringify(input) }), signal: AbortSignal.timeout(300000),
+    });
+    if (!response.ok) {
+      const detail = await response.json().catch(() => ({}));
+      throw fault(detail.error ?? 'BASEROW_EXAMPLE_WORKSPACE_HTTP', detail.message ?? 'Workspace HTTP ' + response.status, response.status);
+    }
+    return response;
+  };
+  const api = async (path, input) => (await request(path, input)).json();
+  const action = async (path, input) => {
+    const requestId = randomUUID();
+    return { requestId, result: await api(path, { ...input, requestId }) };
+  };
+  const query = (path, value) => path + '?' + new URLSearchParams(value);
+  const originalValue = value => value instanceof BaserowNumber ? { kind: 'number-token', value: value.text } :
+    value === null ? { kind: 'null', value: null } :
+    ['string', 'boolean'].includes(typeof value) ? { kind: typeof value, value } :
+    { kind: 'structured', value: exactJson(value) };
+  async function receive(captureId, name) {
+    const selectedKeys = ['$recordId', '$order', ...original.manifest.selection.fields.map(field => 'field_' + field.id)];
+    const rowsHash = createHash('sha256'), filesHash = createHash('sha256');
+    let offset = 0, rowCount = 0, rowPages = 0;
+    do {
+      const page = await api(query('/api/capture-rows', { id: captureId, offset, limit: 100 }));
+      if (page.manifestSha256 !== original.manifestSha256 || page.total !== original.manifest.rowCount ||
+          page.offset !== offset || identity(page.fields.map(field => field.key)) !== identity(selectedKeys) ||
+          page.records.length !== Math.min(100, page.total - offset))
+        throw fault('BASEROW_EXAMPLE_WORKSPACE_ROWS_CHANGED');
+      for (const row of page.records) {
+        const baseline = original.records[rowCount];
+        if (row.index !== rowCount || identity(Object.keys(row.values)) !== identity(selectedKeys))
+          throw fault('BASEROW_EXAMPLE_WORKSPACE_ROWS_CHANGED');
+        for (const key of selectedKeys) {
+          const value = key === '$recordId' ? baseline.id : key === '$order' ? baseline.order : baseline[key];
+          if (identity(row.values[key]) !== identity(originalValue(value)))
+            throw fault('BASEROW_EXAMPLE_WORKSPACE_VALUE_CHANGED');
+        }
+        rowsHash.update(JSON.stringify(row.values) + '\n'); rowCount++;
+      }
+      const next = rowCount < page.total ? rowCount : null;
+      if (page.nextOffset !== next) throw fault('BASEROW_EXAMPLE_WORKSPACE_ROWS_CHANGED');
+      offset = next; rowPages++;
+    } while (offset !== null);
+    offset = 0;
+    let fileCount = 0, filePages = 0, firstFile = null;
+    do {
+      const page = await api(query('/api/capture-files', { id: captureId, offset, limit: 100 }));
+      if (page.manifestSha256 !== original.manifestSha256 || page.total !== original.manifest.attachmentCount ||
+          page.offset !== offset || page.complete !== true || page.files.length !== Math.min(100, page.total - offset))
+        throw fault('BASEROW_EXAMPLE_WORKSPACE_FILES_CHANGED');
+      for (const file of page.files) {
+        const baseline = original.manifest.attachments[fileCount];
+        if (file.file !== baseline.file || file.sha256 !== baseline.sha256 || file.bytes !== baseline.bytes ||
+            file.referenceCount !== baseline.references.length)
+          throw fault('BASEROW_EXAMPLE_WORKSPACE_FILES_CHANGED');
+        firstFile ??= file;
+        filesHash.update(JSON.stringify({ file: file.file, bytes: file.bytes, sha256: file.sha256,
+          referenceCount: file.referenceCount }) + '\n');
+        fileCount++;
+      }
+      const next = fileCount < page.total ? fileCount : null;
+      if (page.nextOffset !== next) throw fault('BASEROW_EXAMPLE_WORKSPACE_FILES_CHANGED');
+      offset = next; filePages++;
+    } while (offset !== null);
+    let downloaded = null;
+    if (firstFile) {
+      const response = await request(query('/api/capture-file', { id: captureId, file: firstFile.file,
+        manifestSha256: original.manifestSha256, sha256: firstFile.sha256 }));
+      const content = Buffer.from(await response.arrayBuffer());
+      if (response.headers.get('x-content-sha256') !== firstFile.sha256 ||
+          response.headers.get('x-capture-sha256') !== original.manifestSha256 ||
+          content.length !== firstFile.bytes || digest(content) !== firstFile.sha256)
+        throw fault('BASEROW_EXAMPLE_WORKSPACE_DOWNLOAD_CHANGED');
+      const file = join(receivedDirectory, name + '-' + firstFile.file);
+      await createFile(file, content);
+      downloaded = { file, bytes: content.length, sha256: firstFile.sha256, originalFile: firstFile.file };
+    }
+    return { captureId, manifestSha256: original.manifestSha256, rows: rowCount, rowPages,
+      rowsSha256: rowsHash.digest('hex'), files: fileCount, filePages,
+      fileIndexSha256: filesHash.digest('hex'), downloaded };
+  }
+  async function retainVersion(note) {
+    const state = await api('/api/status');
+    const saved = await action('/api/draft', { draft: state.draft, expectedRevision: state.draftRevision });
+    const checked = await action('/api/preview', { draftRevision: saved.result.draftRevision });
+    if (!checked.result.complete || !checked.result.allRowsChecked ||
+        Object.values(checked.result.reports).some(value => value.report.rowCount !== original.manifest.rowCount))
+      throw fault('BASEROW_EXAMPLE_WORKSPACE_PREVIEW_CHANGED');
+    const selected = await action('/api/version', { draftRevision: saved.result.draftRevision,
+      previewId: checked.result.id, reviewer: 'Commons native operator', note,
+      expectedSelectedVersion: state.selectedVersion });
+    if (selected.result.version.observationSha256 !== original.manifestSha256 ||
+        selected.result.version.selectionSha256 !== original.manifest.selectionSha256)
+      throw fault('BASEROW_EXAMPLE_WORKSPACE_VERSION_CHANGED');
+    return { draftRequestId: saved.requestId, previewRequestId: checked.requestId,
+      versionRequestId: selected.requestId, versionId: selected.result.selectedVersion,
+      sourceFile: selected.result.sourceFile, sourceSha256: selected.result.sourceSha256 };
+  }
+  try {
+    await start(sourceDirectory, true);
+    const importRequestId = randomUUID();
+    const imported = await workspace.importSource({ sourceFile, title: 'Original Baserow catalog source',
+      expectedDraftRevision: 0, requestId: importRequestId });
+    if (!imported.draftSaved || imported.capture.manifestSha256 !== original.manifestSha256)
+      throw fault('BASEROW_EXAMPLE_WORKSPACE_IMPORT_CHANGED');
+    phase = 'source-rows-and-files';
+    const sourceReceived = await receive(imported.capture.id, 'source');
+    phase = 'source-version-review';
+    const sourceVersion = await retainVersion('Original complete catalog capture and file bytes, received through the source workspace.');
+    phase = 'original-publisher-browser';
+    const opened = await action('/api/publisher/start', { expectedSelectedVersion: sourceVersion.versionId });
+    if (opened.result.sourceVersion !== sourceVersion.versionId || opened.result.sourceSha256 !== sourceVersion.sourceSha256)
+      throw fault('BASEROW_EXAMPLE_WORKSPACE_PUBLISHER_CHANGED');
+    const publisherUrl = new URL(opened.result.url);
+    if (publisherUrl.protocol !== 'http:' || publisherUrl.hostname !== '127.0.0.1')
+      throw fault('BASEROW_EXAMPLE_WORKSPACE_PUBLISHER_CHANGED');
+    const publisherPage = await fetch(new URL('/', publisherUrl), { redirect: 'error', signal: AbortSignal.timeout(30000) });
+    if (!publisherPage.ok || !publisherPage.headers.get('content-type')?.startsWith('text/html'))
+      throw fault('BASEROW_EXAMPLE_WORKSPACE_PUBLISHER_CHANGED');
+    const publisherHtmlSha256 = digest(Buffer.from(await publisherPage.arrayBuffer()));
+    const stopped = await action('/api/publisher/stop', {});
+    if (stopped.result.running !== false) throw fault('BASEROW_EXAMPLE_WORKSPACE_PUBLISHER_CHANGED');
+    phase = 'complete-packet-export';
+    const packetResponse = await request(query('/api/export', { id: sourceVersion.versionId }));
+    const packetBytes = Buffer.from(await packetResponse.arrayBuffer());
+    const packetFile = join(directory, 'workspace-source-packet.json');
+    await createFile(packetFile, packetBytes);
+    const packet = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(packetBytes));
+    await close();
+    phase = 'recipient-packet-import';
+    await start(recipientDirectory, true);
+    const recipientImport = await action('/api/import-package', { packet, title: 'Received original Baserow catalog',
+      expectedDraftRevision: 0 });
+    if (!recipientImport.result.draftSaved || recipientImport.result.capture.manifestSha256 !== original.manifestSha256)
+      throw fault('BASEROW_EXAMPLE_WORKSPACE_IMPORT_CHANGED');
+    const recipientCaptureId = recipientImport.result.capture.id;
+    phase = 'recipient-rows-and-files';
+    const recipientReceived = await receive(recipientCaptureId, 'recipient');
+    if (recipientReceived.rowsSha256 !== sourceReceived.rowsSha256 ||
+        recipientReceived.fileIndexSha256 !== sourceReceived.fileIndexSha256)
+      throw fault('BASEROW_EXAMPLE_WORKSPACE_TRANSFER_CHANGED');
+    phase = 'recipient-version-review';
+    const recipientVersion = await retainVersion('Received original source packet; complete rows and original attachment hashes preserved.');
+    await close();
+    phase = 'recipient-original-reopen';
+    workspace = await openBaserowAuthoring({ directory: recipientDirectory });
+    const reopened = await workspace.status(), retainedVersion = workspace.version(recipientVersion.versionId);
+    const selected = await readBaserowSourceFile(reopened.publisher.sourceFile);
+    const retainedCapture = await readBaserowCapture(selected.captureFile, original.manifestSha256);
+    const recovered = await workspace.resume(recipientImport.requestId);
+    if (reopened.selectedVersion !== recipientVersion.versionId || selected.hash !== recipientVersion.sourceSha256 ||
+        retainedVersion.sourceSha256 !== recipientVersion.sourceSha256 || retainedCapture.manifestSha256 !== original.manifestSha256 ||
+        recovered.capture.id !== recipientCaptureId || recovered.capture.manifestSha256 !== original.manifestSha256 ||
+        workspace.operation(recipientVersion.versionRequestId).status !== 'complete')
+      throw fault('BASEROW_EXAMPLE_WORKSPACE_REOPEN_CHANGED');
+    const result = { schema: 'stellar-forge.baserow-workspace-customer-receiving.v1',
+      state: 'COMPLETED', originalCaptureSha256: original.manifestSha256, completedAt: new Date().toISOString(),
+      source: { directory: sourceDirectory, importRequestId, ...sourceReceived, version: sourceVersion },
+      publisherBrowser: { sourceVersion: sourceVersion.versionId, openRequestId: opened.requestId,
+        closeRequestId: stopped.requestId, htmlSha256: publisherHtmlSha256, stopped: true },
+      packet: { file: packetFile, bytes: packetBytes.length, sha256: digest(packetBytes) },
+      recipient: { directory: recipientDirectory, importRequestId: recipientImport.requestId,
+        ...recipientReceived, version: recipientVersion, reopened: true, originalImportRecovered: true } };
+    await createFile(join(directory, 'workspace-customer-result.json'), bytes(result));
+    return result;
+  } catch (issue) { issue.workspacePhase = phase; throw issue; }
+  finally { await close(); }
+}
+
 export async function main(argv = process.argv.slice(2)) {
   if (argv.length === 1 && argv[0] === '--help') { process.stdout.write(HELP); return; }
   const options = argumentsFor(argv);
@@ -164,6 +359,8 @@ export async function main(argv = process.argv.slice(2)) {
       deployment = { review, prepared, reopened, staged };
       await createFile(join(options.directory, 'merchant-handoff.json'), bytes(deployment));
     }
+    stage = 'source-workspace-customer-receiving';
+    const workspaceReceiving = await receiveWorkspaceSource(options.directory, sourceFile, capture);
     const result = { schema: 'stellar-forge.baserow-native-customer-journey.v1',
       operation: 'BASEROW-PUBLIC-CATALOG-CAPTURE-0D0B-20261012', state: 'COMPLETED',
       sourceRef: options.sourceRef, node: process.version, startedAt, completedAt: new Date().toISOString(),
@@ -179,6 +376,12 @@ export async function main(argv = process.argv.slice(2)) {
         originalCandidateDigest: current.manifest.candidateDigest, reopened: true },
       receiving: { preview: join(options.directory, 'customer-preview.json'), attachments: delivered.file,
         files: delivered.files.map(item => ({ file: item.file, bytes: item.bytes, sha256: item.sha256 })) },
+      workspaceReceiving: { file: join(options.directory, 'workspace-customer-result.json'),
+        sourceVersion: workspaceReceiving.source.version.versionId,
+        recipientVersion: workspaceReceiving.recipient.version.versionId,
+        captureSha256: workspaceReceiving.originalCaptureSha256,
+        rowsSha256: workspaceReceiving.recipient.rowsSha256,
+        packetSha256: workspaceReceiving.packet.sha256, recipientReopened: true },
       deployment: deployment ? { file: join(options.directory, 'merchant-handoff.json'),
         packageDirectory: deployment.prepared.packageDirectory, sourceSha256: deployment.reopened.sourceSha256,
         releaseId: deployment.staged.release.id } : null };
@@ -188,7 +391,8 @@ export async function main(argv = process.argv.slice(2)) {
     const result = { schema: 'stellar-forge.baserow-native-customer-journey.v1',
       operation: 'BASEROW-PUBLIC-CATALOG-CAPTURE-0D0B-20261012', state: 'FAILED', sourceRef: options.sourceRef,
       startedAt, stoppedAt: new Date().toISOString(), directory: options.directory, stage,
-      code: issue.code ?? 'BASEROW_NATIVE_JOURNEY_FAILED', providerStatus: issue.providerStatus ?? null,
+      code: issue.code ?? 'BASEROW_NATIVE_JOURNEY_FAILED', workspacePhase: issue.workspacePhase ?? null,
+      providerStatus: issue.providerStatus ?? null,
       retryAfter: issue.retryAfter ?? null };
     try { await createFile(join(options.directory, 'native-failure.json'), bytes(result)); } catch {}
     throw issue;
