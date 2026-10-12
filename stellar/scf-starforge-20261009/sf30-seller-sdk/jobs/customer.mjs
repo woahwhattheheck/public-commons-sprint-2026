@@ -35,7 +35,7 @@ export async function startCustomerServer({ model, port = 8477, maxInFlight = 8,
   const publicOrigin = new URL(model.configuration.publicOrigin);
   const intake = createJobIntake({ model, intakeConfig, env });
   let active = 0, closed = false, closing;
-  const sockets = new Set();
+  const sockets = new Set(), intakeOperations = new Set();
   function takeCapacity(req, res) {
     if (active >= maxInFlight) {
       json(req, res, 429, { error: 'JOB_CUSTOMER_BUSY' }, { 'retry-after': '1' }); return false;
@@ -58,9 +58,17 @@ export async function startCustomerServer({ model, port = 8477, maxInFlight = 8,
         return json(req, res, 403, { error: 'JOB_CUSTOMER_ORIGIN_REJECTED' });
       if (intake && isIntakeRoute(req.url)) {
         if (!takeCapacity(req, res)) return;
-        await handleJobIntake({ intake, request: req, respond: (status, value) => {
-          if (!res.destroyed) json(req, res, status, value);
-        } });
+        const controller = new AbortController();
+        const abort = () => controller.abort(jobError('JOB_INPUT_TRANSFER_CANCELLED', 409));
+        intakeOperations.add(controller); req.once('aborted', abort); res.once('close', abort);
+        if (req.aborted || res.destroyed) abort();
+        try {
+          await handleJobIntake({ intake, request: req, signal: controller.signal, respond: (status, value) => {
+            if (!res.destroyed) json(req, res, status, value);
+          } });
+        } finally {
+          intakeOperations.delete(controller); req.off('aborted', abort); res.off('close', abort);
+        }
         return;
       }
       if (!['GET', 'HEAD'].includes(req.method)) return json(req, res, 405, { error: 'JOB_CUSTOMER_METHOD_REJECTED' }, { allow: 'GET, HEAD' });
@@ -84,7 +92,7 @@ export async function startCustomerServer({ model, port = 8477, maxInFlight = 8,
       res.end(req.method === 'HEAD' ? undefined : result.body);
     } catch (error) {
       if (res.destroyed) return;
-      if (!res.headersSent) json(req, res, [400, 401, 403, 404, 405, 409, 413, 415, 422, 429, 503].includes(error.status) ? error.status : 503,
+      if (!res.headersSent) json(req, res, [400, 401, 403, 404, 405, 408, 409, 413, 415, 422, 429, 503, 507].includes(error.status) ? error.status : 503,
         { error: /^JOB_[A-Z_]+$/.test(error.code ?? '') ? error.code : 'JOB_CUSTOMER_UNAVAILABLE' });
       else res.destroy();
     }
@@ -100,6 +108,7 @@ export async function startCustomerServer({ model, port = 8477, maxInFlight = 8,
     close() {
       if (closing) return closing;
       closed = true;
+      for (const controller of intakeOperations) controller.abort(jobError('JOB_INPUT_TRANSFER_CANCELLED', 409));
       closing = new Promise((resolve, reject) => {
         const timer = setTimeout(() => { for (const socket of sockets) socket.destroy(); }, 15000);
         server.close(error => { clearTimeout(timer); error ? reject(error) : resolve({ stopped: true }); });

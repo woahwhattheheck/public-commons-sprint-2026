@@ -6,6 +6,7 @@ Applications opens the original merchant and buyer tools from a selected READY r
 
 | Application | Maintained command | Original workflow |
 | --- | --- | --- |
+| CoinGecko market research | coingecko serve | Original market sources, request collections, comparisons, notes, provider plans, native buyer recovery and complete handover |
 | Catalog Atlas | atlas | Retained catalog intake, offer comparison, exact native buyer preparation and complete workspace receiving |
 | n8n automation merchant | n8n-merchant serve | Configuration review, original preparation, paid jobs, retained workflow executions, customer results and stop/reopen |
 | API-pass customer | api-pass-workspace serve | Original API access, saved requests, exact response recovery, private buyer history and customer statements |
@@ -21,6 +22,7 @@ Applications opens the original merchant and buyer tools from a selected READY r
 | NocoDB source authoring | nocodb-source workspace serve | Original database observations, complete captures, public projections, dataset publisher and retained workspace recovery |
 | Stellar asset investigation | dataset-workspace --stellar-expert | Original asset observations, exact editions, reviewed findings, native dataset and merchant releases, purchased page receiving |
 | ArcGIS merchant workspace | arcgis-agent serve | One original browser and MCP service for source capture, field mapping, publication, staged deployments and complete customer files |
+| S3 object merchant | s3 workspace | Object source and complete prices, retained HEAD reviews and packages, original release controls, customer files and saved-workspace reopening |
 | Dataset preview | dataset-workspace | A dataset configuration file or retained dataset state, native query and preview |
 | Dataset buyer | buyer-dataset-workspace | Original acquisitions, received rows and files, private customer history and Python analysis |
 | Request collections | buyer-collections-workspace | Grouped request review, original approvals and runs, retained outcomes and verified customer file downloads |
@@ -50,6 +52,14 @@ Applications opens the original merchant and buyer tools from a selected READY r
 | XML dataset onboarding | dataset xml … serve | An initialized XML workspace, source intake, mapping, native query, comparison and portable editions |
 
 A selected runtime must actually contain the command. XML and Object Buyer additionally require their original forwarding/server source; an older package cannot acquire these capabilities by selecting a label. The chosen original profile supplies the dependencies required by the application. Applications installs no replacement engine or new npm dependency.
+
+### S3 object merchant
+
+Select a READY installation containing the complete S3 Applications source and its original S3 dependency profile. Choose the private merchant workspace; its original release store is reused automatically. Source JSON, complete Stellar payment JSON and public HTTPS origin can initialize the first revision together. Once saved, subsequent starts use that revision even if its original import files have moved.
+
+**Open application** opens the original S3 authoring workspace. **Open merchant releases** opens its own SF82 release console. The same application owns both consoles and the seller started there. **Stop application** drains the original merchant and closes both windows' listeners; its source, prices, reviews, packages, release generation and customer files remain saved. Port **0** retains this workspace's original authoring port after first launch, so the same browser tab can restore unfinished edits on normal Stop/Start.
+
+The complete [S3 merchant Applications guide](./S3_MERCHANT_APPLICATIONS.md) covers installation selection, review/save, customer delivery, same-workspace receiving, ownership and recovery.
 
 ## Save and start
 
@@ -279,7 +289,8 @@ CLI state/output are private operator data and can include original capability U
 
 | Method | API | Purpose |
 | --- | --- | --- |
-| GET | /api/applications/state | Saved bindings, runs and current private URL |
+| GET | /api/applications/state | Saved bindings and current private URL; optional `historyLimit=1..100` (default 30) |
+| GET | /api/applications/history | One application's complete retained chronology, paged by `applicationId`, optional `limit=1..100` and returned `cursor` |
 | POST | /api/applications/review | New configuration or current revision review |
 | POST | /api/applications/save | Save configuration and join original managed adoption |
 | POST | /api/applications/connect | Continue the same pending adoption |
@@ -290,6 +301,21 @@ CLI state/output are private operator data and can include original capability U
 | GET | /api/applications/output | Retained original command output |
 | GET | /api/applications/terminal | Original PTY output, identities and input receipts |
 | POST | /api/applications/input | Explicit idempotent terminal input |
+
+### Browse retained application operations
+
+The Applications overview refreshes the current run for each saved application. Select an application to see its latest 30 operations, then use **Older operations**, **Newer operations** or **Latest operations** to navigate its full retained history. **Open output** works on any selected page. The selected page and operation reopen with the same browser session, while the application controls continue to show the current run.
+
+The CLI supplies the same navigation:
+
+```sh
+starforge runtime-workspace applications --workspace /absolute/workspace
+starforge runtime-workspace application-history --workspace /absolute/workspace --application-id APPLICATION_ID --limit 30
+starforge runtime-workspace application-history --workspace /absolute/workspace --application-id APPLICATION_ID --limit 30 --cursor RETURNED_NEXT_CURSOR
+starforge runtime-workspace application-output --workspace /absolute/workspace --application-id APPLICATION_ID --operation-id OPERATION_UUID
+```
+
+The application list defaults to one run per application in the CLI; use `--history-limit 30` for the earlier expanded list. History responses include `runs`, `totalRuns` and `nextCursor`; a null cursor ends the chronology. Cursors belong to one application and continue after the last returned operation, so newly created runs do not shift an older page. The JavaScript model exposes `applicationsHistory({ applicationId, limit, cursor })` and `applicationsState({ historyLimit })`. Existing model and HTTP state calls retain their default of 30 runs.
 
 These routes use the existing loopback, Host, Origin and capability checks. Output is rendered as text. No original application capability is placed in a public asset.
 
@@ -537,3 +563,7 @@ Review and save the application, then review its start and select **Start → Op
 Inside the original workspace, discover the selected fields, retain the complete original rows and files, create a typed projection, preview it and save a reviewed version. Open the original publisher for that selected version; its merchant controls prepare and stage the original release and customer handoff. The source workspace also exports the complete retained packet for another operator. The [source workspace guide](../../sf30-seller-sdk/baserow/workspace/README.md) covers discovery, original file receiving, versions, packet import and merchant operation. The [provider guide](../../sf30-seller-sdk/baserow/README.md) covers the Baserow source and publication contract.
 
 **Stop** drains the owned source and publisher operations before releasing the workspace. **Reopen** returns to its retained captures, request history, versions and deployment state. A closed runtime browser can reopen the existing managed operation. If the selected source installation or connections file changes, review that current input before the next start. Normal source edits and publication versions stay within the retained workspace and preserve its managed identity.
+
+## CoinGecko market research
+
+Choose the original private CoinGecko workspace and optional saved project and buyer profile configuration. The same browser, model and native jobs run through Review/Save, managed connection, Start/Open, Stop and reopen. The startup observer binds the reviewed source to the actual installed release and original project; shutdown drains the original worker and database. Full operating instructions: [CoinGecko in Applications](COINGECKO_APPLICATIONS.md).
