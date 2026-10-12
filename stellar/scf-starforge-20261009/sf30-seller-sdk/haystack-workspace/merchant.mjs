@@ -1,7 +1,8 @@
 import { stringifyJson } from "./json-codec.mjs";
+import { createHash } from "node:crypto";
 // MIT. Merchant call/summary/close owner over one original native HTTP workspace.
 import { tools as nativeTools } from "./catalog.mjs";
-import { haystackWorkspaceTools, HAYSTACK_MERCHANT_REQUEST_BYTES, HAYSTACK_MERCHANT_RESPONSE_BYTES } from "./merchant-tools.mjs";
+import { haystackWorkspaceTools, HAYSTACK_MERCHANT_REQUEST_BYTES, HAYSTACK_MERCHANT_RESPONSE_BYTES, HAYSTACK_SEMANTIC_READ_ACTIONS } from "./merchant-tools.mjs";
 import { HaystackHostClient, haystackHostError, readHaystackWorkspaceConfiguration, readHaystackHostInput, haystackInputMetadata } from "./merchant-client.mjs";
 export { haystackWorkspaceTools, readHaystackWorkspaceConfiguration };
 
@@ -14,6 +15,11 @@ function need(value, message, status = 400, code = "HAYSTACK_TOOL_INPUT", detail
   if (!value) throw haystackHostError(message, status, code, details);
 }
 function validate(value, schema, key) {
+  if (schema.anyOf) {
+    need(schema.anyOf.some(alternative => { try { validate(value, alternative, key); return true; } catch { return false; } }), "Use a declared " + key + " value.");
+    return;
+  }
+  if (schema.type === "null") need(value === null, "Use null for " + key + ".");
   if (schema.type === "string") need(typeof value === "string" && value.length >= (schema.minLength ?? 0) &&
     value.length <= (schema.maxLength ?? Number.MAX_SAFE_INTEGER) && (!schema.pattern || new RegExp(schema.pattern).test(value)), "Use the declared " + key + ".");
   if (schema.type === "integer") need(Number.isSafeInteger(value) && value >= (schema.minimum ?? Number.MIN_SAFE_INTEGER) &&
@@ -33,6 +39,19 @@ function validate(value, schema, key) {
     value.forEach((item, index) => validate(item, schema.items ?? {}, key + "[" + index + "]"));
   }
 }
+function jsonRange(value, args, action, workspaceId) {
+  const raw = Buffer.from(stringifyJson(value)), offset = args.offset ?? 0, length = args.length ?? 1048576;
+  const sha256 = createHash("sha256").update(raw).digest("hex");
+  need(Number.isSafeInteger(offset) && offset >= 0 && offset <= raw.length && Number.isSafeInteger(length) && length >= 1 && length <= 4194304,
+    "Choose a complete supported JSON byte range.", 416, "HAYSTACK_VIEW_RANGE");
+  need(offset === 0 || args.expectedResponseSha256, "Continue with the original complete response SHA-256.", 409, "HAYSTACK_VIEW_IDENTITY");
+  need(!args.expectedResponseSha256 || args.expectedResponseSha256 === sha256, "The original complete view changed. Retain the same selected source and workspace revision.", 409, "HAYSTACK_VIEW_IDENTITY");
+  const bytes = raw.subarray(offset, Math.min(offset + length, raw.length)), nextOffset = offset + bytes.length;
+  return { schema: "stellar-forge.haystack-semantic-json-range.v1", workspace: args.workspace,
+    workspaceId: value.workspaceId ?? workspaceId, ...(Number.isSafeInteger(value.revision) ? { revision: value.revision } : {}),
+    action, encoding: "utf-8-json", offset, bytes: bytes.length, totalBytes: raw.length, nextOffset,
+    complete: nextOffset === raw.length, sha256, chunkSha256: createHash("sha256").update(bytes).digest("hex"), base64: bytes.toString("base64") };
+}
 function completeResponse(value, name, args) {
   const responseBytes = Buffer.byteLength(stringifyJson(value));
   if (responseBytes <= HAYSTACK_MERCHANT_RESPONSE_BYTES) return value;
@@ -45,12 +64,17 @@ function completeResponse(value, name, args) {
       ...(value.source?.id ? { sourceId: value.source.id } : {}),
       ...(value.edition?.id ? { editionId: value.edition.id } : {}),
       ...(value.proposal?.id ? { proposalId: value.proposal.id } : {}),
+      ...(value.intake?.id ? { intakeId: value.intake.id } : {}),
+      ...(value.model?.id ? { modelId: value.model.id } : {}),
+      ...(value.version?.id ? { versionId: value.version.id } : {}),
+      ...(value.validation?.id ? { validationId: value.validation.id } : {}),
+      ...(value.return?.id ? { returnId: value.return.id } : {}),
       ...(value.kind ? { deliveryKind: value.kind, sha256: value.sha256, bytes: value.bytes } : {})
     },
     completeResponse: {
       location: "The original saved workspace operation and complete editable package",
       action: "operation.read", operationId: value.operationId,
-      instruction: "Read the saved proposal/source/edition through its exact identity and record pages, or prepare the complete workspace delivery and read every original byte range."
+      instruction: "Read the saved source, intake, model version, validation or return by its exact identity and complete record pages, or prepare the full workspace delivery and read every original byte range."
     }
   };
   throw haystackHostError("The selected complete response exceeds the merchant view. Use smaller record pages or original file ranges.",
@@ -76,7 +100,7 @@ export class MerchantHaystackWorkspaces {
   }
   #selection(alias) {
     const entry = this.#entry(alias);
-    return { workspace: alias, label: entry.label, workspaceId: entry.workspaceId, maxInputBytes: entry.maxInputBytes,
+    return { workspace: alias, label: entry.label, workspaceId: entry.workspaceId, maxInputBytes: entry.maxInputBytes, maxReturnBytes: entry.maxReturnBytes,
       inputs: Object.entries(entry.inputs).map(([name, input]) => haystackInputMetadata(name, input)),
       client: this.#clients.get(alias)?.metadata ?? { state: "UNATTACHED", workspaceId: entry.workspaceId } };
   }
@@ -91,13 +115,34 @@ export class MerchantHaystackWorkspaces {
       return { workspace: alias, ...haystackInputMetadata(args.input, found.input), bytes: found.bytes.length };
     }
     if (name === "merchant_haystack_import_file") {
-      const found = await readHaystackHostInput(entry, args.input, args.expectedSha256);
+      const found = await readHaystackHostInput(entry, args.input, args.expectedSha256, "source");
       return client.action("source.import", {
         operationId: args.operationId, expectedRevision: args.expectedRevision,
         name: found.input.name, base64: found.bytes.toString("base64"), format: "json-v4",
         sourceUrl: args.sourceUrl ?? found.input.sourceReference,
         ...(args.select === undefined ? {} : { select: args.select })
       });
+    }
+    if (name === "merchant_haystack_semantic_read") {
+      need(HAYSTACK_SEMANTIC_READ_ACTIONS.includes(args.action), "Choose a declared original read-only semantic view.");
+      return jsonRange(await client.action(args.action, args.args), args, args.action, entry.workspaceId);
+    }
+    if (name === "merchant_haystack_semantic_intake_import_file") {
+      const found = await readHaystackHostInput(entry, args.input, args.expectedSha256, "point-list");
+      return client.action("semantic.intake.import", {
+        operationId: args.operationId, expectedRevision: args.expectedRevision,
+        name: found.input.name, format: found.input.format, base64: found.bytes.toString("base64"),
+        ...(found.input.delimiter === undefined ? {} : { delimiter: found.input.delimiter }),
+        sourceUrl: args.sourceUrl ?? found.input.sourceReference
+      });
+    }
+    if (["merchant_haystack_semantic_return_preview_file", "merchant_haystack_semantic_return_apply_file"].includes(name)) {
+      const found = await readHaystackHostInput(entry, args.input, args.expectedSha256, "workspace-return");
+      const { workspace, input, expectedSha256, offset, length, expectedResponseSha256, ...nativeArgs } = args;
+      const preview = name === "merchant_haystack_semantic_return_preview_file";
+      const action = preview ? "semantic.return.preview" : "semantic.return.apply";
+      const result = await client.action(action, { ...nativeArgs, base64: found.bytes.toString("base64") });
+      return preview && (offset !== undefined || length !== undefined || expectedResponseSha256 !== undefined) ? jsonRange(result, args, action, entry.workspaceId) : result;
     }
     const action = nativeActions.get(name);
     need(action, "Choose a declared original haystack operation.");
