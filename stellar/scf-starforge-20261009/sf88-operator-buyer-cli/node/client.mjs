@@ -1,8 +1,10 @@
 // MIT — Durable Node applications on the original SF88 CLI.
+import { inspectPreapprovalRecovery, preparePreapprovalRecovery, executePreapprovalRecovery,
+  recoverPreapprovalResult, readPreapprovalRecovery, readSelectedPreapprovalReview } from './preapproval-recovery.mjs';
 import { mkdir, mkdtemp, readdir, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { NativeRuntime } from './runtime.mjs';
+import { NativeRuntime, unstartedAttempt } from './runtime.mjs';
 import { WorkspaceRecovery } from './workspace-recovery.mjs';
 import {AcquisitionWorkspace} from './acquisitions.mjs';
 import { readWorkspace, checkWorkspace, workspaceCommand } from './workspace.mjs';
@@ -308,6 +310,10 @@ export class Operation {
       await assertOperationContinuationBinding(this, { meta, config });
     return { meta, config };
   }
+  inspectPreapprovalRecovery(options) { return inspectPreapprovalRecovery(this, options); }
+  preparePreapprovalRecovery(options) { return preparePreapprovalRecovery(this, options); }
+  executePreapprovalRecovery(options) { return executePreapprovalRecovery(this, options); }
+  readPreapprovalRecovery() { return readPreapprovalRecovery(this); }
   inspectLostOutput(options) { return inspectNodeLostOutput(this,options); }
   recoverLostOutput(options) { return recoverNodeLostOutput(this,options); }
   readLostOutputRecovery(options) { return readNodeLostOutputRecovery(this,options); }
@@ -323,6 +329,8 @@ export class Operation {
   async review({ signal } = {}) {
     checkSignal(signal);
     const { meta } = await this._bound();
+    if (await exists(join(this.directory, 'preapproval-continuation.json')))
+      return readSelectedPreapprovalReview(this);
     const native = await this.buyer.runtime.checked(['--review', '--config', this.configPath],
       { stateDirectory: this.buyer.stateDirectory, mode: 'OFFLINE_REVIEW', signal });
     await this._bound();
@@ -333,6 +341,8 @@ export class Operation {
       bodySha256: meta.bodySha256, ticketSha256: meta.ticketSha256 ?? null,
       ...(meta.nativeWorkspace === undefined ? {} : { nativeWorkspace: meta.nativeWorkspace }),
       native, reviewedAt: now() };
+    if (await exists(join(this.directory, 'preapproval-continuation.json')))
+      return readSelectedPreapprovalReview(this);
     await writeJson(join(this.directory, 'review.json'), review);
     checkSignal(signal);
     return copy(review);
@@ -384,18 +394,20 @@ export class Operation {
     try {
       run = await this.buyer.runtime.run(command.args, {
         directory: this.directory, signal, entryFile: command.entryFile,
-        started: async pid => {
-          attempt = { ...attempt, state: 'STARTED', pid, startedAt: now() };
+        started: async (pid, processIdentity) => {
+          attempt = { ...attempt, state: 'STARTED', pid, startedAt: now(), processIdentity };
           await writeJson(attemptPath, attempt);
         },
       });
     } catch (error) {
-      await writeJson(attemptPath, { ...attempt, state: 'INTERRUPTED_OR_START_FAILED', endedAt: now() });
+      await writeJson(attemptPath, unstartedAttempt(attempt, error) ??
+        { ...attempt, state: 'INTERRUPTED_OR_START_FAILED', endedAt: now() });
       throw error;
     }
     if (run.output?.mode !== NATIVE_RESULT || run.output.intentId !== this.intentId) {
-      await writeJson(attemptPath, { ...attempt, state: 'NATIVE_RESULT_UNAVAILABLE', endedAt: now(),
-        exitCode: run.exitCode, errorCode: run.errorCode ?? 'NATIVE_RESULT_INVALID' });
+      await writeJson(attemptPath, unstartedAttempt(attempt, run) ??
+        { ...attempt, state: 'NATIVE_RESULT_UNAVAILABLE', endedAt: now(),
+          exitCode: run.exitCode, errorCode: run.errorCode ?? 'NATIVE_RESULT_INVALID' });
       throw new BuyerError(run.errorCode ?? 'NATIVE_RESULT_INVALID', { operation: this, exitCode: run.exitCode });
     }
     const record = { schema: SCHEMA, intentId: this.intentId, configSha256: meta.configSha256,
@@ -413,6 +425,8 @@ export class Operation {
   }
   async recover() {
     const { meta } = await this._bound();
+    if (await exists(join(this.directory, 'preapproval-continuation.json')))
+      return recoverPreapprovalResult(this);
     if (await exists(join(this.directory, 'result.json')))
       return this._result(await readJson(join(this.directory, 'result.json'), this.buyer.runtime.outputLimit));
     if (!await exists(join(this.directory, 'attempt.json'))) return null;
@@ -431,6 +445,8 @@ export class Operation {
     const attemptPath = join(this.directory, 'attempt.json');
     const attempt = await exists(attemptPath) ? await readJson(attemptPath) : null;
     const result = await this.recover();
+    const preapprovalRecovery = await exists(join(this.directory, 'preapproval-continuation.json'))
+      ? await readPreapprovalRecovery(this) : null;
     let transportCheckpoint = null;
     if (await exists(join(config.evidenceDir, 'wire-' + digest(Buffer.from(this.intentId))))) {
       // The selected native runtime owns its checkpoint version. The standalone
@@ -441,7 +457,8 @@ export class Operation {
         await (await this.buyer._requestFiles()).readRequestFile(config.operation.bodyFile);
       transportCheckpoint = await reader.readAttemptWireCheckpoint({cfg:config,body});
     }
-    return { intentId: this.intentId, directory: this.directory, state: attempt?.state ?? meta.state,
+    return { intentId: this.intentId, directory: this.directory, state: preapprovalRecovery?.state ?? attempt?.state ?? meta.state,
+      ...(preapprovalRecovery ? { preapprovalRecovery, originalAttemptState: attempt?.state ?? null } : {}),
       resultRecoverable: result !== null, nativeStatus: result?.status ?? null,
       deliveryStatus: result?.delivery.status ?? null, transportCheckpoint,
       ...(attempt?.kind === 'INBOX_DELEGATED' ? {inboxDirectory:attempt.inboxDirectory} : {}),

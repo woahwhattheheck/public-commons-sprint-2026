@@ -14,6 +14,23 @@ npm --prefix /srv/mpp/native-runtime ci \
   --ignore-scripts --omit=dev --no-audit --no-fund
 ~~~
 
+Hosts with a small memory budget can receive the identical locked runtime with
+the maintained streamed installer, then inspect it before opening the original
+console:
+
+~~~bash
+starforge mpp runtime-receive /srv/mpp/native-runtime
+starforge mpp runtime-receive /srv/mpp/native-runtime --inspect
+~~~
+
+It preserves the locked package locations and SHA512 archive integrity, reuses
+completed packages after interruption, retries transient original registry requests
+inside the same process, and supports an explicit --cache directory
+for following offline receivers. When persistent capacity is small, add
+--cache-limit-bytes to retain a partial archive cache while installation finishes
+on the selected runtime filesystem. The native MPP guide describes the complete
+runtime receiving workflow and measured cache results.
+
 The copied manifest and lockfile pin **@stellar/mpp 0.7.1**, **mppx 0.6.29**, and **@stellar/stellar-sdk 15.1.0**. Set the original merchant or customer configuration's absolute `dependencyRoot` to that directory. Keep this peer set separate from the distribution's other Stellar runtime.
 
 Initialize the private workspace once:

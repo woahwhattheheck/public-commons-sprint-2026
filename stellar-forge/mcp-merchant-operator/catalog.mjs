@@ -1,4 +1,5 @@
 import { merchantProviderConfigured } from './providers.mjs';
+import { apiPassWorkspaceTools } from './api-pass-protocol.mjs';
 // MIT. Original tool metadata; provider runtimes load only when selected.
 import { CLIENT_EXPORT_MANIFEST, CLIENT_EXPORT_FILES } from '../../stellar/scf-starforge-20261009/sf30-seller-sdk/developer/client-export-contracts.mjs';
 import { MAX_RETAINED_CHUNK_BYTES } from './retained-file-contracts.mjs';
@@ -31,6 +32,7 @@ import { usaSpendingWorkspaceTools } from './catalog/usaspending-workspace.mjs';
 import { researchWorkspaceTools } from './catalog/research-workspace.mjs';
 import { grantsWorkspaceTools } from './catalog/grantsgov-workspace.mjs';
 import { sourceWorkspaceTools } from './catalog/source-workspace.mjs';
+import { clinicalTrialsWorkspaceTools } from './catalog/clinicaltrials-workspace.mjs';
 import { baserowWorkspaceTools } from './catalog/baserow-workspace.mjs';
 import { usgsWorkspaceTools } from './catalog/usgs-workspace.mjs';
 import { feedsWorkspaceTools } from './catalog/feeds-workspace.mjs';
@@ -64,6 +66,7 @@ function tool(name, description, properties = {}, required = [], { readOnly = fa
 }
 
 const familyTools = {
+  apiPassWorkspaces: apiPassWorkspaceTools(tool),
   discovery: discoveryTools(tool),
   cache: cacheControlTools(tool),
   fleet: fleetControlTools(tool),
@@ -93,6 +96,7 @@ const familyTools = {
   researchWorkspaces: researchWorkspaceTools(tool),
   grantsWorkspaces: grantsWorkspaceTools(tool),
   sourceWorkspaces: sourceWorkspaceTools(tool),
+  clinicalTrialsWorkspaces: clinicalTrialsWorkspaceTools(tool),
   baserowWorkspaces: baserowWorkspaceTools(tool),
   usgsWorkspaces: usgsWorkspaceTools(tool),
   feedsWorkspaces: feedsWorkspaceTools(tool),
@@ -155,6 +159,7 @@ const MERCHANT_TOOLS = [
     { exportId: idSchema, readId: { type: 'string' } }, ['exportId', 'readId'], { readOnly: true, idempotent: true }),
   tool('merchant_operations', 'Open the original merchant operations, retained history and private availability controls for this process-owned running instance. The control link grants availability changes; keep it in the operator session.',
     { instanceId: instanceSchema }, ['instanceId'], { readOnly: true, idempotent: true }),
+  ...familyTools.apiPassWorkspaces,
   ...familyTools.discovery,
   ...familyTools.cache,
   ...familyTools.fleet,
@@ -184,6 +189,7 @@ const MERCHANT_TOOLS = [
   ...familyTools.researchWorkspaces,
   ...familyTools.grantsWorkspaces,
   ...familyTools.sourceWorkspaces,
+  ...familyTools.clinicalTrialsWorkspaces,
   ...familyTools.baserowWorkspaces,
   ...familyTools.usgsWorkspaces,
   ...familyTools.feedsWorkspaces,
