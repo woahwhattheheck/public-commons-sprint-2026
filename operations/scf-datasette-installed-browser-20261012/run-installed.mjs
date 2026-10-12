@@ -95,7 +95,7 @@ function absolute(value,name) {
  * extraction, publication, payment and the separate customer Analysis run retain their original owners.
  */
 export async function runInstalledDatasetteBrowser({
-  repository,sourceRef,publisherProgrammeDirectory,outputDirectory,
+  repository,sourceRef='04e77d53a1a56fe45d74022ab2cd9f54acb0349a',publisherProgrammeDirectory,outputDirectory,
   playwrightModule='playwright',browserExecutable,port=53173,receivedPort=53174,
   offline=false,npmCache,python='python3',npm='npm',
 }={}) {
