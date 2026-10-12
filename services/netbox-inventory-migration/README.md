@@ -4,6 +4,12 @@ Move a selected CSV inventory into the customer's existing NetBox, review its ac
 
 The native contract is NetBox **v4.7.2**, commit **251458b89a5eb2f5fe0d20ecd1140ba08f141a9c**. Each actual review also records the server's own NetBox version, database schema, tenant and origin. The contract pin identifies the implementation used to build this integration; it does not substitute for the version returned by a running customer instance.
 
+## Browser customer desk
+
+The [customer desk](workspace/README.md) carries retained CSV uploads, complete column and relationship mapping, actual permitted catalogue selection, original native review/apply/recovery, and corrected drafts through this same operator. It keeps a browser action attached to its original request across a lost reply, and includes the complete desk source in the selected native handover.
+
+Start it with `python3 workspace/server.py --directory /private/customer-inventory --config /private/netbox-connection.json`. Open the returned local URL. Reopening the same directory restores the saved projects and native action history.
+
 ## Customer operating path
 
 1. Select the existing tenant, native catalogues and a complete source edition.
