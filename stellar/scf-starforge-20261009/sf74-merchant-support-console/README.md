@@ -2,6 +2,8 @@
 
 Keep a merchant case queue, diagnose each route, inspect its runtime and delivery outcomes, review repairs, and prepare internal workorders in one local workspace. The same original captures move through each stage. The optional case desk retains multiple merchant drafts, follow-up ownership and dates, original runtime support files or usage periods, search, work status and saved versions across restarts.
 
+The [Implementation and receiving desk](IMPLEMENTATION.md) continues the same workorder through assigned tasks, original deliverables, technical and customer receiving, measured effort, source updates and complete case handover. The browser, installed `merchant-implementation` CLI and original merchant MCP share the same retained case.
+
 ## Open the workspace
 
 From the repository root, with Node 22 or newer:

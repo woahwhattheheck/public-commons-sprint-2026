@@ -61,10 +61,11 @@ if(journey.browserCompleted&&await exists(mcpResultFile)){
 if(journey.error){journey.priorInterruptions=[...(journey.priorInterruptions??[]),journey.error];delete journey.error;}
 journey.continuations=(journey.continuations??0)+1;journey.process={pid:process.pid,startedAt:now()};
 const checkpoint=async phase=>{journey.phase=phase;journey.updatedAt=now();await save(JOURNAL,journey);log({phase});};
-let server,browser,facilitator,facilitatorServer,tls,proxy,merchantPort;
+let server,browser,facilitator,facilitatorServer,tls,proxy,merchantPort,operationError,operatingComplete=false;
+const cleanupErrors=[];
 const tunnels=new Set(),exchanges=[],transportCounts={merchantConnect:0,rpcConnect:0,refusedConnect:0};
 const listen=server=>new Promise((yes,no)=>{server.once('error',no);server.listen(0,'127.0.0.1',()=>yes(server.address().port));});
-const stop=server=>new Promise(yes=>{if(!server)return yes();server.close(yes);server.closeIdleConnections?.();});
+const stop=server=>new Promise((yes,no)=>{if(!server)return yes();server.close(error=>error&&error.code!=='ERR_SERVER_NOT_RUNNING'?no(error):yes());server.closeIdleConnections?.();});
 async function bridgeRpc(socket,head,authority){
  const address=process.env.HTTPS_PROXY??process.env.https_proxy??process.env.HTTP_PROXY??process.env.http_proxy;
  must(address,'ORIGINAL_EGRESS_PROXY_REQUIRED');
@@ -217,8 +218,9 @@ try{
  await checkpoint('ORIGINAL_EPA_MCP_AND_ALL_FILES_COMPLETE');
  }
  if(facilitatorServer){
-  journey.facilitatorFinal=facilitator.status();journey.facilitatorDrain=await facilitatorServer.close();facilitatorServer=null;facilitator=null;
+  journey.facilitatorFinal=facilitator.status();journey.facilitatorDrain=await facilitatorServer.close();
   must(journey.facilitatorDrain.drained===true,'ORIGINAL_FACILITATOR_DRAIN_REQUIRED');
+  facilitatorServer=null;facilitator=null;
  }
  delete process.env.SCF_ROUTESCAN_BUYER_SECRET;delete process.env.SCF_ROUTESCAN_FEE_SECRET;
  const {runEchoApplications}=await import('./applications-receiving.mjs');
@@ -227,19 +229,35 @@ try{
   releaseRuntimeFile:RUNTIME,receiptId:journey.receiptId,receivedWorkspaceId:journey.receivedWorkspaceId});
  must(journey.applications.state==='COMPLETE','ORIGINAL_EPA_APPLICATIONS_REQUIRED');
  must(sha(await readFile(join(OPERATOR,'policy.json')))===journey.operatorPolicySha256,'ORIGINAL_OPERATOR_POLICY_CHANGED');
- journey.transportCounts=transportCounts;journey.exchanges=exchanges;journey.completedAt=now();
- await checkpoint('COMPLETE');
- log({phase:'COMPLETE',result:JOURNAL,workspaceId:journey.workspaceId,editionId:journey.editionId,receiptId:journey.receiptId,acquisition:journey.acquisition});
+ journey.transportCounts=transportCounts;journey.exchanges=exchanges;
+ await checkpoint('OPERATING_WORK_COMPLETE');operatingComplete=true;
 }catch(error){
+ operationError=error;
  journey.error={code:error.code??'EPA_ECHO_NATIVE_OPERATION_FAILED',message:String(error.message).slice(0,1500),stack:String(error.stack).slice(0,7000),at:now()};
- journey.facilitatorAtError=facilitator?.status?.();journey.transportCounts=transportCounts;journey.exchanges=exchanges;
- try{await save(JOURNAL,journey);}catch(saveError){log({phase:'JOURNAL_SAVE_REQUIRED',code:saveError.code});}
- log({phase:'CONTINUATION_REQUIRED',code:journey.error.code,message:journey.error.message,activeBuyer:journey.activeBuyer??null});
- process.exitCode=1;
+ try{journey.facilitatorAtError=facilitator?.status?.();}catch(statusError){journey.facilitatorStatusError={code:statusError.code,message:statusError.message};}
+ journey.transportCounts=transportCounts;journey.exchanges=exchanges;
 }finally{
- try{await browser?.close();}catch(error){log({phase:'BROWSER_CLOSE',message:error.message});}
- try{await server?.close();}catch(error){log({phase:'WORKSPACE_CLOSE',message:error.message});}
- if(facilitatorServer)await facilitatorServer.close().catch(()=>{});else if(facilitator)await facilitator.drain().catch(()=>{});
- for(const socket of tunnels)socket.destroy();await stop(proxy);await stop(tls);
+ const cleanup=async(resource,close)=>{
+  try{await close();}catch(error){cleanupErrors.push({resource,code:error.code??'EPA_ECHO_NATIVE_CLEANUP_FAILED',message:String(error.message).slice(0,1500),at:now()});}
+ };
+ await cleanup('browser',()=>browser?.close());
+ await cleanup('EPA workspace',()=>server?.close());
+ await cleanup('native facilitator',async()=>{
+  if(facilitatorServer){const result=await facilitatorServer.close();must(result?.drained===true,'ORIGINAL_FACILITATOR_DRAIN_REQUIRED');}
+  else if(facilitator)await facilitator.drain();
+ });
+ for(const socket of tunnels)await cleanup('transport socket',()=>socket.destroy());
+ await cleanup('local proxy',()=>stop(proxy));await cleanup('merchant TLS listener',()=>stop(tls));
  delete process.env.SCF_ROUTESCAN_BUYER_SECRET;delete process.env.SCF_ROUTESCAN_FEE_SECRET;
+}
+if(operationError||cleanupErrors.length){
+ if(!journey.error)journey.error={code:'EPA_ECHO_NATIVE_CLEANUP_FAILED',message:'The original operating resources did not all close.',at:now()};
+ journey.error.cleanupErrors=cleanupErrors;journey.phase='CONTINUATION_REQUIRED';journey.updatedAt=now();
+ try{await save(JOURNAL,journey);}catch(saveError){log({phase:'JOURNAL_SAVE_REQUIRED',code:saveError.code});}
+ log({phase:'CONTINUATION_REQUIRED',code:journey.error.code,message:journey.error.message,cleanupErrors,activeBuyer:journey.activeBuyer??null});
+ process.exitCode=1;
+}else if(operatingComplete){
+ journey.cleanup={state:'CLOSED',resources:['browser','EPA workspace','native facilitator','transport sockets','local proxy','merchant TLS listener']};
+ journey.completedAt=now();await checkpoint('COMPLETE');
+ log({phase:'COMPLETE',result:JOURNAL,workspaceId:journey.workspaceId,editionId:journey.editionId,receiptId:journey.receiptId,acquisition:journey.acquisition});
 }

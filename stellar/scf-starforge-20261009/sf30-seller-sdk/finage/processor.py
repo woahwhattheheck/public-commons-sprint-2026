@@ -201,7 +201,7 @@ def validate_columns(columns):
     return columns
 
 def load_workspace(path=None):
-    path = Path(path or "workspace.json").resolve()
+    path = (Path(path) if path is not None else Path(__file__).with_name("workspace.json")).resolve()
     require(path.is_file() and path.stat().st_size <= MAX_FILE, "WORKSPACE", "Use the saved native workspace.json.")
     data = path.read_bytes()
     doc = loads(data)

@@ -3,7 +3,9 @@ import { readFile } from 'node:fs/promises';
 import { basename, dirname, resolve, join } from 'node:path';
 import { timingSafeEqual } from 'node:crypto';
 import { merchantToolFamily } from '../catalog.mjs';
-import { createConsoleCustomers } from './customers.mjs';
+import { compareHostProfiles } from '../host-profile.mjs';
+import { createConsoleCustomers, customerAccess } from './customers.mjs';
+import { buildReviewerCustomerRecipe } from './reviewer-recipes.mjs';
 import { createMerchantWorkflows } from './workflows.mjs';
 import { createMerchantWorkflowRecipes, MAX_WORKFLOW_RECIPE_REQUEST_BYTES } from './workflow-recipes.mjs';
 import { MerchantConsoleStore, CONSOLE_SCHEMA, canonical, digest, fail } from './store.mjs';
@@ -14,6 +16,7 @@ const assets = new Map([
   ['/operator/app.mjs', ['app.mjs', 'text/javascript; charset=utf-8']],
   ['/operator/workflows.mjs', ['workflows.mjs', 'text/javascript; charset=utf-8']],
   ['/operator/workflow-recipes.mjs', ['workflow-recipes.mjs', 'text/javascript; charset=utf-8']],
+  ['/operator/customer-reviewer.mjs', ['customer-reviewer.mjs', 'text/javascript; charset=utf-8']],
   ['/operator/style.css', ['style.css', 'text/css; charset=utf-8']]
 ]);
 const equal = (a,b) => typeof a === 'string' && typeof b === 'string' &&
@@ -99,10 +102,11 @@ export async function createMerchantConsole({operator,configPath,directory,autho
     if (authorization) try { await authorization.authorizeTool(context,name,args); }
     catch(error){error.merchantConsoleAuthorization=true;throw error;}
   }
-  const deliveryAccess = value => {
-    const selection=value.identity;
-    return {name:(selection.family==='core'?'merchant_client_export':'merchant_opensearch_deployment')+'_manifest',
-      args:{exportId:selection.exportId,...(selection.workspace?{workspace:selection.workspace}:{})}};
+  const deliveryAccess = value => customerAccess(value.identity);
+  const bindingView = value => {
+    const {host,...rest}=value;
+    return {...rest,merchant:host.merchant,toolCount:host.capabilities?.tools??null,
+      compositionFingerprint:host.composition?.fingerprint??null,sourceCommit:host.composition?.sourceCommit??null};
   };
   async function visibleProfile(profileId,context) {
     const profile=store.profile(profileId), drafts=[],calls=[];
@@ -115,7 +119,9 @@ export async function createMerchantConsole({operator,configPath,directory,autho
       const access=deliveryAccess(value);
       if(await allowed(context,access.name,access.args)) deliveries.push(customers.view(value));
     }
-    return {profile,drafts,calls,deliveries,hostBound:profile.hostFingerprint===snapshot().configurationFingerprint};
+    return {profile,drafts,calls,deliveries,bindings:store.hostBindings(profileId).map(bindingView),
+      hostBound:profile.hostFingerprint===snapshot().configurationFingerprint,
+      compositionBound:profile.host.composition?.fingerprint?profile.host.composition.fingerprint===operator.inspectHost().composition?.fingerprint:null};
   }
   async function startCall(input,context,workflowGuard) {
     if (closing) throw fail('CONSOLE_CLOSING','The operator interface is closing.',503);
@@ -194,6 +200,18 @@ export async function createMerchantConsole({operator,configPath,directory,autho
       if(req.method==='GET'&&route.startsWith('customer-archive/')){
         await customers.archive(decodeURIComponent(route.slice(17)),req,res);return true;
       }
+      if(req.method==='GET'&&route.startsWith('reviewer-value/')){
+        const record=store.call(decodeURIComponent(route.slice('reviewer-value/'.length)));
+        await requireTool(context,record.tool,JSON.parse(record.argumentsJson));
+        const {readReviewerConsoleCall}=await import('./customer-reviewer.mjs');
+        send(res,200,await readReviewerConsoleCall({record,operator,authorize:authorizeRequest,request:req}));return true;
+      }
+      if(req.method==='GET'&&route==='reviewer-recipe'){
+        const recipe=buildReviewerCustomerRecipe({definitions,mode:url.searchParams.get('mode')??'deliver'});
+        // This is a source recipe, not an invocation. The maintained recipe review and install
+        // authorize its resolved original workspace inputs before any native action.
+        send(res,200,{recipe});return true;
+      }
       if(req.method==='GET'&&route==='host'){send(res,200,snapshot());return true;}
       if(req.method==='GET'&&route==='tools'){
         const family=url.searchParams.get('family'),query=(url.searchParams.get('q')??'').toLowerCase();
@@ -226,6 +244,22 @@ export async function createMerchantConsole({operator,configPath,directory,autho
         send(res,200,{run:await workflows.run(decodeURIComponent(route.slice(13)),context)});return true;
       }
       if(req.method==='GET'&&route==='profiles'){send(res,200,{profiles:store.profiles(),host:snapshot()});return true;}
+      if(req.method==='GET'&&route.startsWith('host-review/')){
+        const profile=store.profile(decodeURIComponent(route.slice(12))),selected=url.searchParams.get('revision');
+        const binding=selected===null?null:store.hostBinding(profile.id,Number(selected));
+        const comparison=compareHostProfiles(binding?.host??profile.host,snapshot());
+        const review={...comparison,recordedAt:new Date().toISOString(),
+          profile:{id:profile.id,name:profile.name,revision:profile.revision,bindingRevision:profile.bindingRevision??null},
+          baselineBinding:binding?bindingView(binding):null};
+        const packet={...review,contentSha256:digest(canonical(review))};
+        if(url.searchParams.get('download')==='1')attachment(res,profile.id+'-host-review.json',json(packet));
+        else send(res,200,packet);
+        return true;
+      }
+      if(req.method==='GET'&&route.startsWith('host-binding/')){
+        const profileId=decodeURIComponent(route.slice(13));
+        send(res,200,{binding:store.hostBinding(profileId,Number(url.searchParams.get('revision')))});return true;
+      }
       if(req.method==='GET'&&route.startsWith('profile/')){
         send(res,200,await visibleProfile(decodeURIComponent(route.slice(8)),context));return true;
       }
@@ -283,9 +317,8 @@ export async function createMerchantConsole({operator,configPath,directory,autho
       if(!input||typeof input!=='object'||Array.isArray(input))throw fail('CONSOLE_JSON','Supply an operator request object.',400);
       if(route==='customers'){send(res,202,{delivery:await customers.start(input,req)});return true;}
       if(route==='customer-pause'){
-        const record=store.delivery(input.id),selection=record.identity;
-        await requireTool(context,(selection.family==='core'?'merchant_client_export':'merchant_opensearch_deployment')+'_manifest',
-          {exportId:selection.exportId,...(selection.workspace?{workspace:selection.workspace}:{})});
+        const record=store.delivery(input.id),access=deliveryAccess(record);
+        await requireTool(context,access.name,access.args);
         requireOpen();
         send(res,200,{delivery:customers.pause(input.id)});return true;
       }
@@ -314,7 +347,7 @@ export async function createMerchantConsole({operator,configPath,directory,autho
           await requireTool(context,value.tool,JSON.parse(value.argumentsJson));
         for(const value of packet.deliveries??[]) {const access=deliveryAccess(value);await requireTool(context,access.name,access.args);}
         requireOpen();
-        send(res,200,store.import(packet));return true;
+        send(res,200,store.import(packet,{isActiveCall:call=>active.has(call.id)}));return true;
       }
       throw fail('CONSOLE_ROUTE','Choose a configured operator action.',404);
     }catch(error){

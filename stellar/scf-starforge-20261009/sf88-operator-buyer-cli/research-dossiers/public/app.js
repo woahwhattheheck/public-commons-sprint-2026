@@ -5,6 +5,8 @@ import {createUnstructuredPipelinesPanel} from './unstructured-pipelines.js';
 import {createClinicalTrialsPanel} from './clinical-trials.js';
 import {createSourceBundlePanel,renderSourceBundleFiles} from './source-bundles.js';
 import {renderInspectedSource,renderOriginalRecordControl} from './source-inspection.js';
+import {createCitationReviewPanel} from './citation-review.js';
+import {createEligibilityPanel} from './eligibility.js';
 'use strict';
 (() => {
   const $ = id => document.getElementById(id);
@@ -12,7 +14,7 @@ import {renderInspectedSource,renderOriginalRecordControl} from './source-inspec
   const MAX_RESEARCH_FILE_BYTES = 16 * 1024 * 1024;
   const MAX_PORTABLE_FILE_BYTES = 256 * 1024 * 1024;
   const tokenKey = 'research-dossiers-session:' + location.origin;
-  const state = {token: '', dossiers: [], dossier: null, activeTab: new URLSearchParams(location.hash.slice(1)).get('view')==='pipelines'?'pipelines':'sources', sourceId: null, variantDigest: null,
+  const state = {token: '', dossiers: [], dossier: null, activeTab: ['pipelines','citation-review','eligibility'].includes(new URLSearchParams(location.hash.slice(1)).get('view'))?new URLSearchParams(location.hash.slice(1)).get('view'):'sources', sourceId: null, variantDigest: null,
     page: 0, busy: false, openalexConfigured: false, openalexEditions: [], editingDossier: false, editingQuestion: null, editingFinding: null, editingSelection: null, importCompleted: new Set(), noteDrafts: new Map(), noteEditVersions: new Map()};
   const safeStorage = {
     get() { try { return sessionStorage.getItem(tokenKey) || ''; } catch { return ''; } },
@@ -96,6 +98,8 @@ import {renderInspectedSource,renderOriginalRecordControl} from './source-inspec
     pipelinePanel.updateBusy();
     clinicalTrialsPanel.updateBusy();
     sourceBundlePanel.updateBusy();
+    citationReviewPanel.updateBusy();
+    eligibilityPanel.updateBusy();
   }
   async function api(path, {method = 'GET', body, file, download = false} = {}) {
     const requestUrl=new URL(path,location.origin);
@@ -162,12 +166,14 @@ import {renderInspectedSource,renderOriginalRecordControl} from './source-inspec
     $('question-filter').value = '';
     $('selected-only').checked = false;
     const params = new URLSearchParams(); params.set('dossier', state.dossier.id);
+    if(['citation-review','eligibility'].includes(state.activeTab))params.set('view',state.activeTab);
     history.replaceState(null, '', '#' + params.toString());
     render();
   }
   function applyDossier(view) {
     state.dossier = view; state.page = 0; state.sourceId = null;
     const params = new URLSearchParams(); params.set('dossier', view.id);
+    if(['citation-review','eligibility'].includes(state.activeTab))params.set('view',state.activeTab);
     history.replaceState(null, '', '#' + params.toString());
     render();
   }
@@ -195,6 +201,8 @@ import {renderInspectedSource,renderOriginalRecordControl} from './source-inspec
     pipelinePanel.setDossier(view);
     clinicalTrialsPanel.setDossier(view);
     sourceBundlePanel.setDossier(view);
+    citationReviewPanel.setDossier(view);
+    eligibilityPanel.setDossier(view);
     if (!view) return;
     $('dossier-title').textContent = view.title || 'Untitled dossier';
     $('dossier-description').textContent = view.description || '';
@@ -563,7 +571,7 @@ import {renderInspectedSource,renderOriginalRecordControl} from './source-inspec
     if (tab === 'crossref' && $('crossref-tab').hidden) tab = 'sources';
     if (tab === 'clinical-trials' && $('clinical-trials-tab').hidden) tab = 'sources';
     state.activeTab = tab;
-    ['sources', 'questions', 'findings', 'revisions', 'crossref', 'documents', 'pipelines', 'clinical-trials'].forEach(name => {
+    ['sources', 'questions', 'findings', 'revisions', 'citation-review', 'eligibility', 'crossref', 'documents', 'pipelines', 'clinical-trials'].forEach(name => {
       $('view-' + name).hidden = name !== tab;
       const button = document.querySelector('[data-tab="' + name + '"]');
       button.classList.toggle('active', name === tab);
@@ -573,6 +581,13 @@ import {renderInspectedSource,renderOriginalRecordControl} from './source-inspec
     documentPanel.show(tab === 'documents');
     pipelinePanel.show(tab === 'pipelines');
     clinicalTrialsPanel.show(tab === 'clinical-trials');
+    citationReviewPanel.show(tab === 'citation-review');
+    eligibilityPanel.show(tab === 'eligibility');
+    const params=new URLSearchParams(location.hash.slice(1));
+    if(['citation-review','eligibility'].includes(tab))params.set('view',tab);
+    else if(['citation-review','eligibility'].includes(params.get('view')))params.delete('view');
+    if(state.dossier)params.set('dossier',state.dossier.id);
+    history.replaceState(null,'',params.toString()?'#'+params.toString():location.pathname);
   }
   function clearFormError(form) { const box = form.querySelector('.form-error'); if (box) {box.textContent = ''; box.hidden = true;} }
   function showDossier(edit = false) {
@@ -698,6 +713,12 @@ import {renderInspectedSource,renderOriginalRecordControl} from './source-inspec
     getDossier:()=>state.dossier,isBusy:()=>state.busy,
     onReceived:async view=>{applyDossier(view);await refreshList();}});
   const sourceBundlePanel=createSourceBundlePanel({root:$('source-bundle-dialog'),openButton:$('source-bundle-open'),
+    api,task,notify,getDossier:()=>state.dossier,isBusy:()=>state.busy,
+    onReceived:async view=>{applyDossier(view);await refreshList();}});
+  const citationReviewPanel=createCitationReviewPanel({root:$('view-citation-review'),tab:$('citation-review-tab'),
+    api,task,notify,getDossier:()=>state.dossier,isBusy:()=>state.busy,
+    onReceived:async view=>{applyDossier(view);await refreshList();}});
+  const eligibilityPanel=createEligibilityPanel({root:$('view-eligibility'),tab:$('eligibility-tab'),
     api,task,notify,getDossier:()=>state.dossier,isBusy:()=>state.busy,
     onReceived:async view=>{applyDossier(view);await refreshList();}});
   document.querySelectorAll('.dialog-close').forEach(button => button.addEventListener('click', () => {
@@ -886,7 +907,7 @@ import {renderInspectedSource,renderOriginalRecordControl} from './source-inspec
     }, form);
   });
   window.addEventListener('beforeunload', event => {
-    if (state.noteDrafts.size > 0) {event.preventDefault(); event.returnValue = '';}
+    if (state.noteDrafts.size > 0 || citationReviewPanel.hasUnsaved() || eligibilityPanel.hasUnsaved()) {event.preventDefault(); event.returnValue = '';}
   });
   async function start() {
     const params = new URLSearchParams(location.hash.slice(1));

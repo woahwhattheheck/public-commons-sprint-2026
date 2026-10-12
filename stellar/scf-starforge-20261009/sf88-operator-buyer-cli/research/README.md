@@ -409,3 +409,13 @@ The new immutable record is stored at `research-runtime-selections/successors/<p
 Only new page intents use the new default runtime. An existing operation keeps its original source and configuration. An ordinary page prepared by an earlier retained selection reopens through that exact selection's source and allocator, even after another runtime becomes the default. If it has an explicitly prepared same-intent preapproval recovery plan, the adapter reopens that plan's recorded controller and executes only its saved review and plan hash. Preparing such a plan is an operator action described in [PREAPPROVAL_RECOVERY.md](../node/PREAPPROVAL_RECOVERY.md#select-a-repaired-runtime-for-the-same-intent). An ordinary prepared operation without such a plan retains its original execution route.
 
 The original query, cursor page intent, paid-result identity, provider response bytes and shared ledger are unchanged by this source selection. Direct OpenAlex API mode rejects native runtime-selection options.
+
+## Aviary audio and video migration
+
+The [Aviary migration workbench](aviary/README.md) preserves an original audiovisual collection, its reviewed mapping into Aviary's five native tables, local assets, rights and relationships. Its browser interface handles mapping revisions, complete row review, original API migration progress, recovery and portable handoff.
+
+From this package, initialize a source workspace with `node research/aviary/cli.mjs init --source SOURCE --workspace WORKSPACE --mapping MAPPING_JSON`, then start the operator interface with `node research/aviary/cli.mjs serve --workspace WORKSPACE`. The direct Python entry is `research/aviary/aviary.py`; both entries use the same saved source and state.
+
+The workbench can export the reviewed native ZIP or operate the configured Aviary collection through its original API. Local media and attachments remain bound to their reviewed bytes through held file descriptors. Durable per-resource, per-media, per-part and attachment actions preserve original provider IDs across interrupted transfers. Complete workspace export includes the application, original files, every mapping revision, migration journal, transcript exports and human-readable review.
+
+The source includes a public USGS collection example, its exact publisher-source receiver and one whole API/storage/portable receiving program. [Provider contract](aviary/PROVIDER_CONTRACT.md) records the pinned AVP importer and native CSV semantics. [The operating guide](aviary/README.md) covers original source capture, preview, upload, reconciliation, export and cold reopen.

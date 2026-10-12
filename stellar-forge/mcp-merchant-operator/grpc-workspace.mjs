@@ -204,7 +204,8 @@ export class MerchantGrpcWorkspaces {
       }
       return await consume(response);
     } catch (error) {
-      if (error.status || error.code?.startsWith('GRPC_') || error.code === 'INVALID_PARAMS') throw error;
+      // AbortError/TimeoutError can carry a numeric DOMException code.
+      if (error.status || (typeof error.code === 'string' && error.code.startsWith('GRPC_')) || error.code === 'INVALID_PARAMS') throw error;
       if (['ENOSPC', 'EDQUOT', 'EROFS', 'EACCES'].includes(error.code)) throw fail('GRPC_EXPORT_STORAGE_UNAVAILABLE', 'Restore the private export directory capacity or access and continue the original saved operation.');
       throw fail('GRPC_OPERATION_INTERRUPTED', 'The original operator reply was interrupted. Read status and the same retained operationId before retrying an action.');
     } finally { this.#controllers.delete(controller); }

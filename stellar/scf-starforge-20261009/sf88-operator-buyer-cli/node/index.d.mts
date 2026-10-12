@@ -357,7 +357,84 @@ export class Buyer {
   attachObject(options: { id: string; directory: string; accountingOnly?: boolean }): Promise<ObjectAcquisition>;
   listObjects(): AsyncIterable<ObjectAcquisition>;
 }
+
+export interface OperationAccountingIdentity {
+  intentId: string;
+  stateDirectory: string;
+  operationDirectory: string;
+  producerRuntimeDirectory: string;
+  operationSha256: string;
+  configurationSha256: string;
+  bodyPresent: boolean;
+  bodyBytes: number;
+  bodySha256: string;
+  ticketSha256: string | null;
+  attemptDirectory: string;
+  attemptCreatedAt: string;
+  producingCommandSha256: string | null;
+  nativeWorkspace: string | null;
+  preapprovalHistorySha256: string | null;
+}
+export interface OperationFinalizationOptions {
+  /** Derived for fromWorkspace. Required for paid fromConfig attempts. */
+  workspaceDirectory?: string;
+  /** Supply together with merchantRoute for the actual original merchant. */
+  outboxDirectory?: string;
+  merchantRoute?: string;
+  signal?: AbortSignal;
+}
+export interface OperationAccountingNative extends JsonObject {
+  schema: 'stellar-forge.node-operation-accounting-native.v1';
+  kind: 'PAID_FINALIZATION' | 'UNPAID_RESPONSE';
+  contextSha256: string;
+  identity: OperationAccountingIdentity;
+  workspace: string | null;
+  accountingRuntimeDirectory: string;
+  evidencePath: string;
+  evidenceSha256: string;
+  attemptSnapshotSha256: string;
+  observedAttemptSha256: string;
+  approvedRequestSha256: string | null;
+  completedAt: string;
+  recordAuthority: 'ORIGINAL_SF36_LEDGER_RESULT' | 'ORIGINAL_UNSIGNED_RESPONSE';
+  result: JsonObject & {outcome:
+    'FINALIZED' | 'IDEMPOTENT_FINALIZED' | 'NOT_FINALIZED' | 'WORKER_ERROR' | 'NO_PAYMENT_REQUIRED'};
+}
+export interface OperationAccountingCommand {
+  native: OperationAccountingNative;
+  commandId: string;
+  commandDirectory: string;
+  startedAt: string;
+  process: {exitCode: number | null; exitSignal: string | null; errorCode: string | null};
+  viewStatus: 'SAVED' | 'SAVE_FAILED' | 'RECOVERED_NATIVE_OUTPUT';
+  recovered: boolean;
+}
+export interface OperationAccountingView {
+  schema: 'stellar-forge.node-operation-accounting-view.v1';
+  intentId: string;
+  latest: {
+    commandId: string; commandDirectory: string; startedAt: string;
+    status: 'NO_COMPLETE_OUTPUT' | 'RECORDED' | 'OUTPUT_RECOVERED';
+    process: OperationAccountingCommand['process'];
+    result: OperationAccountingCommand | null;
+  };
+  lastComplete: OperationAccountingCommand | null;
+  lastFinalized: OperationAccountingCommand | null;
+}
+export interface OperationAccountingExport {
+  path: string; bytes: number; sha256: string; format: 'json';
+  intentId: string; commandId: string; outcome: string;
+}
+
 export class Operation {
+  readonly lastAccounting?: OperationAccountingCommand;
+  /** Finalize the retained attempt through the original SF36 worker; never executes a buyer. */
+  finalize(options?: OperationFinalizationOptions): Promise<OperationAccountingCommand>;
+  /** Local saved accounting view; no key loader, ledger write or provider request. */
+  accounting(options?: {commandId?: string}): Promise<OperationAccountingView | null>;
+  /** Recover complete native accounting stdout after an interrupted local save. */
+  recoverAccounting(options?: {commandId?: string}): Promise<OperationAccountingView | null>;
+  exportAccounting(destination: string, options?: {commandId?: string; signal?: AbortSignal}): Promise<OperationAccountingExport>;
   readonly intentId: string;
   readonly directory: string;
   readonly configPath: string;

@@ -1,0 +1,341 @@
+{
+  "schema": "stellar-forge.grant-reviewer-source-index.v1",
+  "evidence_date": "2026-10-12",
+  "project": "Stellar Discovery Trust Layer",
+  "applicant": "Bryce Muhlnickel / TokenJunkieLabs",
+  "application": {
+    "path": "application.md",
+    "bytes": 23481,
+    "sha256": "b1cf1ecea13f2f50c3968b17716c1635b8331b069a6ef93ed3a86f690a4beb58",
+    "git_blob": "40ac3d76a35d2b0e993245c5354abb00a9059645"
+  },
+  "request": {
+    "basis": "prospective",
+    "currency": "USD-equivalent award paid in XLM",
+    "amount": 38000,
+    "hours": 400,
+    "planning_rate_usd_per_hour": 95,
+    "delivery_days_from_actual_award_acceptance": 150,
+    "packages": [
+      {
+        "id": "T1-resource",
+        "tranche": 1,
+        "start_day": 1,
+        "end_day": 30,
+        "title": "Merchant-resource integration",
+        "hours": 80,
+        "cost_usd": 7600
+      },
+      {
+        "id": "T1-handover",
+        "tranche": 1,
+        "start_day": 1,
+        "end_day": 30,
+        "title": "Authority and handover",
+        "hours": 40,
+        "cost_usd": 3800
+      },
+      {
+        "id": "T2-provider",
+        "tranche": 2,
+        "start_day": 31,
+        "end_day": 90,
+        "title": "Provider and ledger deployment",
+        "hours": 70,
+        "cost_usd": 6650
+      },
+      {
+        "id": "T2-threat",
+        "tranche": 2,
+        "start_day": 31,
+        "end_day": 90,
+        "title": "Deployed threat response",
+        "hours": 50,
+        "cost_usd": 4750
+      },
+      {
+        "id": "T3-mainnet",
+        "tranche": 3,
+        "start_day": 91,
+        "end_day": 150,
+        "title": "Mainnet merchant rollout",
+        "hours": 90,
+        "cost_usd": 8550
+      },
+      {
+        "id": "T3-recovery",
+        "tranche": 3,
+        "start_day": 91,
+        "end_day": 150,
+        "title": "Production recovery and handover",
+        "hours": 70,
+        "cost_usd": 6650
+      }
+    ]
+  },
+  "baseline": {
+    "basis": "completed team-operated development purchases",
+    "network": "Stellar testnet",
+    "distinct_purchases": 18,
+    "native_stroops": "411000",
+    "native_xlm": "0.0411",
+    "fees": "separately recorded",
+    "independent_customer_adoption": "prospective funded milestone"
+  },
+  "milestones": {
+    "day30": {
+      "independent_merchants": 2,
+      "second_operator_handover": true
+    },
+    "day90": {
+      "independent_buyers": 2,
+      "minimum_useful_testnet_purchases": 10,
+      "consecutive_calendar_days": 7,
+      "independent_facilitators": 2,
+      "installed_response_cases": 2,
+      "purchase_count_scope": "total across the two independent buyers"
+    },
+    "day150": {
+      "mainnet_merchants": 2,
+      "independent_buyers": 2,
+      "minimum_useful_purchases": 30,
+      "consecutive_calendar_days": 14,
+      "both_buyers_return_on_another_day": true,
+      "receiving_engineer_restore_and_reconcile": true,
+      "purchase_count_scope": "total across the two independent buyers"
+    }
+  },
+  "capacity": {
+    "basis": "retained conditional native comparison",
+    "assumed_award_date": "2026-12-07",
+    "working_days": "Monday–Friday",
+    "closures": [
+      "2026-12-25",
+      "2027-01-01",
+      "2027-01-18",
+      "2027-02-15"
+    ],
+    "lowest_examined_timely_weekly_hours": {
+      "engineering": 25,
+      "operations": 8
+    },
+    "actual_named_staffing": "not entered by this packet",
+    "t1_finish": "2027-01-06",
+    "final_handover": "2027-04-13",
+    "target": "2027-05-06",
+    "late_tasks": 0,
+    "collection_timing_findings": 0
+  },
+  "cash": {
+    "basis": "conditional forecasts; original opening cash unentered; zero observed cash records",
+    "payment_percentages": [
+      10,
+      20,
+      30,
+      40
+    ],
+    "payment_usd_equivalent": [
+      "3800",
+      "7600",
+      "11400",
+      "15200"
+    ],
+    "tranche_costs_usd": [
+      "11400",
+      "11400",
+      "15200"
+    ],
+    "cash_accrual": "remaining package cost across inclusive selected start/finish interval; working-day resource calendar remains separate",
+    "cases": [
+      {
+        "lag_days": 14,
+        "payout_days": [
+          0,
+          44,
+          104,
+          164
+        ],
+        "evenly_phased_requirement_usd": "15200.00",
+        "selected_calendar_requirement_usd": "17250.00",
+        "peak_date": "2027-03-20"
+      },
+      {
+        "lag_days": 30,
+        "payout_days": [
+          0,
+          60,
+          120,
+          180
+        ],
+        "evenly_phased_requirement_usd": "18746.67",
+        "selected_calendar_requirement_usd": "23275.00",
+        "peak_date": "2027-04-05"
+      },
+      {
+        "lag_days": 60,
+        "payout_days": [
+          0,
+          90,
+          150,
+          210
+        ],
+        "evenly_phased_requirement_usd": "26346.67",
+        "selected_calendar_requirement_usd": "26600.00",
+        "peak_date": "2027-04-13"
+      }
+    ]
+  },
+  "submission": {
+    "state": "INTEREST_SUBMITTED_AWAITING_INVITATION",
+    "interest_acknowledged_date": "2026-10-11",
+    "full_build_deadline": "2026-11-08",
+    "panel_review": [
+      "2026-11-11",
+      "2026-11-18"
+    ],
+    "community_vote": [
+      "2026-11-23",
+      "2026-12-03"
+    ],
+    "award_distribution_date": null
+  },
+  "sources": [
+    {
+      "id": "application",
+      "label": "Original SCF #46 application",
+      "kind": "application",
+      "basis": "October 12, 2026 retained application edition; substantive public reviewer projection",
+      "sections": [
+        "request",
+        "architecture",
+        "operated-baseline",
+        "work-packages",
+        "customer-learning",
+        "capacity",
+        "cash",
+        "applicant"
+      ]
+    },
+    {
+      "id": "reviewer-guide",
+      "kind": "published-source",
+      "label": "Original Grant purchase reviewer",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "commit": "03a93f7c59a703ebc63416ae0e914f07099fef37",
+      "path": "products/grant-reviewer/OPERATING.md",
+      "git_blob": "1015cf307b5fba8a4f84e9ef3b53fcb57be0d01c",
+      "url": "https://github.com/woahwhattheheck/tjlabs-stellar-merchant-workspace/blob/03a93f7c59a703ebc63416ae0e914f07099fef37/products/grant-reviewer/OPERATING.md"
+    },
+    {
+      "id": "development-guide",
+      "kind": "published-source",
+      "label": "Complete merchant development and acceptance contract",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "commit": "03a93f7c59a703ebc63416ae0e914f07099fef37",
+      "path": "products/merchant-workspace/DEVELOPMENT.md",
+      "git_blob": "487408d4156cd16223b120f41323b6b7d1bc13c4",
+      "url": "https://github.com/woahwhattheheck/tjlabs-stellar-merchant-workspace/blob/03a93f7c59a703ebc63416ae0e914f07099fef37/products/merchant-workspace/DEVELOPMENT.md"
+    },
+    {
+      "id": "budget-input",
+      "kind": "published-source",
+      "label": "Original costed six-package scenario",
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "commit": "2761cc9a44d511959e224dc7ee5998aa13df7e8e",
+      "path": "stellar/scf_2026/sf47_budget_model/sf10_current_candidate.json",
+      "url": "https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/2761cc9a44d511959e224dc7ee5998aa13df7e8e/stellar/scf_2026/sf47_budget_model/sf10_current_candidate.json"
+    },
+    {
+      "id": "economic-report",
+      "kind": "completed-output",
+      "label": "FRED economic briefing and complete original source",
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "commit": "655e527e30fd72ae877d3b11390378a6168ca7e4",
+      "path": "stellar-forge/developer-site/dist/examples/fred-briefing-20261012",
+      "files": 15,
+      "original_observations": 2219,
+      "selected_observations": 75,
+      "comparisons": 150,
+      "url": "https://github.com/woahwhattheheck/public-commons-sprint-2026/raw/655e527e30fd72ae877d3b11390378a6168ca7e4/stellar-forge/developer-site/dist/examples/fred-briefing-20261012/stellar-forge-economic-briefing-20261012.zip"
+    },
+    {
+      "id": "film",
+      "kind": "completed-output",
+      "label": "Product/team film",
+      "duration_seconds": 212,
+      "editable_companion_clips": 11,
+      "url": "https://github.com/woahwhattheheck/public-commons-sprint-2026/releases/download/scf-presentation-20261011/stellar-forge-scf46-presentation.mp4",
+      "bytes": 6324445,
+      "editable_companion_bytes": 6305128
+    },
+    {
+      "id": "method-incident",
+      "kind": "public-report",
+      "label": "Original method mismatch and correction",
+      "url": "https://github.com/x402-foundation/x402/issues/3657",
+      "qualification": "Base deployment; original author later corrected its server."
+    },
+    {
+      "id": "discovery-incident",
+      "kind": "public-report",
+      "label": "Settlement and discovery follow-up",
+      "url": "https://github.com/x402-foundation/x402/issues/3677",
+      "qualification": "Base deployment; thread includes later indexing and facilitator diagnostics."
+    },
+    {
+      "id": "stellar-x402",
+      "kind": "official-documentation",
+      "label": "Stellar x402",
+      "url": "https://developers.stellar.org/docs/build/agentic-payments/x402"
+    },
+    {
+      "id": "stellar-mpp",
+      "kind": "official-documentation",
+      "label": "Stellar MPP",
+      "url": "https://developers.stellar.org/docs/build/agentic-payments/mpp"
+    },
+    {
+      "id": "scf-round",
+      "kind": "official-program",
+      "label": "SCF #46 dates",
+      "url": "https://communityfund.stellar.org/awards/recxrSMYwAl8vcglg"
+    },
+    {
+      "id": "scf-criteria",
+      "kind": "official-program",
+      "label": "Submission criteria",
+      "url": "https://stellar.gitbook.io/scf-handbook/scf-awards/build-award/submission-criteria",
+      "qualification": "The complete submission must contain the substantive application; supplemental links support engineering inspection."
+    },
+    {
+      "id": "scf-budget",
+      "kind": "official-program",
+      "label": "Budget, tranche and receipt-based form guidance",
+      "url": "https://stellar.gitbook.io/scf-handbook/scf-awards/build-award/budget-and-deliverable-guidelines"
+    }
+  ],
+  "product_and_finance": {
+    "path": "product-and-finance.md",
+    "git_blob": "f945864b5326bf312abc6327d37c0a197f7632a6",
+    "bytes": 30731,
+    "sha256": "161a66badaa90ec61c22e6fc95b1a702169e850548eb47fddc80a79c8c6f441b",
+    "basis": "Independently reviewed full product, cost, cash, customer and operating companion retained unchanged from public PR2097."
+  },
+  "narrative_source": {
+    "basis": "Original manuscript author's complete October 12 reviewer answer",
+    "original_bytes": 23419,
+    "original_sha256": "8e735175ecc5d66dc913397cc5d7bdf63f91075ed450077a976819890c6630c4",
+    "editorial_clarifications": [
+      {
+        "before": "at least ten useful testnet purchases during seven consecutive days",
+        "after": "at least ten useful testnet purchases in total across the two buyers during seven consecutive days",
+        "reason": "State the existing combined purchase-count target across the two independent buyers."
+      },
+      {
+        "before": "at least thirty useful purchases within fourteen consecutive days",
+        "after": "at least thirty useful purchases in total across the two buyers within fourteen consecutive days",
+        "reason": "State the existing combined purchase-count target across the two independent buyers."
+      }
+    ]
+  }
+}

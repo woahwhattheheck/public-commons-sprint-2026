@@ -42,7 +42,7 @@ STORES = ("objects", "datasets", "editions", "decisions", "candidates", "native"
           "requests", "deliveries", "received", "tmp")
 RUNTIME = ("dataset-handler.mjs", "xml/workspace.py", "xml/xml_source.py",
            "xml/native.mjs", "xml/server.py", "ndjson/application.py",
-           "ndjson/ndjson_source.py")
+           "ndjson/ndjson_source.py", "stellar-expert/exact-json.mjs")
 
 
 def encoded(value):
@@ -175,6 +175,16 @@ def verified_archive(path):
             if expected != {"bytes": total, "sha256": h.hexdigest()}:
                 raise InputError("A complete handoff member differs: " + name)
         return manifest
+
+
+def runtime_files():
+    """Complete original publisher and native source carried by customer handoffs."""
+    paths = {name: SDK / name for name in RUNTIME}
+    for path in PROFILE.rglob("*"):
+        if path.is_file() and not path.is_symlink() and "__pycache__" not in path.parts:
+            if path.suffix in {".py", ".mjs", ".mts", ".js", ".css", ".html", ".md", ".txt", ".json"}:
+                paths[path.relative_to(SDK).as_posix()] = path
+    return {"runtime/sf30-seller-sdk/" + name: path for name, path in paths.items()}
 
 
 class PublisherWorkspace:
@@ -550,13 +560,7 @@ class PublisherWorkspace:
         return file_info(path, MAX_UPLOAD)
 
     def _runtime_files(self):
-        paths = {name: SDK / name for name in RUNTIME}
-        for root in (PROFILE,):
-            for path in root.rglob("*"):
-                if path.is_file() and not path.is_symlink() and "__pycache__" not in path.parts:
-                    if path.suffix in {".py", ".mjs", ".js", ".css", ".html", ".md", ".txt", ".json"}:
-                        paths[path.relative_to(SDK).as_posix()] = path
-        return {"runtime/sf30-seller-sdk/" + name: path for name, path in paths.items()}
+        return runtime_files()
 
     def _export(self, body, record):
         edition_id = identity(body["edition"])

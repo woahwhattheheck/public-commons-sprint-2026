@@ -100,6 +100,47 @@ The shared SF103 engine configures the original `x402Client` with `ExactStellarS
 
 `SIGNER_*` errors identify invalid local configuration, provider initialization or quote drift. `OFFICIAL_STELLAR_SDK_UNAVAILABLE` means the dependencies cannot be imported from the source module. `OFFICIAL_STELLAR_SDK_VERSION_MISMATCH` reports a different installed version; `OFFICIAL_STELLAR_SDK_INCOMPATIBLE` means the installed API lacks the required exports. The shared engine's `NATIVE_PAYMENT_CREATION_FAILED` identifies simulation/signing failure without placing private account material or raw transaction data in the CLI error. Preserve the original SF81 reservation after any failure; use the existing reconciliation path before another operation.
 
+## Retained SDK failure diagnostics
+
+An approved native attempt now retains a validated `nativeSigning` object with
+its original `signing-error.json`, the normal attempt-wire checkpoint and the
+SF88 execution summary. The shared SF103 error and SF88 error translation carry
+the same object. Reopening the original private wire recovers it without
+loading a wallet, opening RPC or entering the signer again. Existing records
+continue to return their original error code.
+
+The diagnostic identifies the exact SDK version, active payload or original
+signer-callback boundary, whether the SDK returned its envelope, and the
+actual entry/return/failure counts of the original authorization and transaction
+signer methods. Its failure facts retain only a fixed set of error names,
+transport/TLS/timeout codes, HTTP status values and recognized reason codes from
+the pinned original SDK source. The native SDK still receives the original
+arguments and signer receiver, and its returned envelope remains unchanged.
+
+The recognized reasons distinguish the original SDK branches:
+
+| Reason | Original branch |
+| --- | --- |
+| `SIMULATION_RESTORE_REQUIRED` | Simulation returned its archived-state restoration preamble. |
+| `SIMULATION_FAILED` / `SIMULATION_RESULT_MISSING` | Native simulation failed or supplied no result. |
+| `EXPECTED_SIGNER_MISMATCH` / `AUTHORIZATION_SIGNATURES_MISSING` | The original authorization checks could not match the required signer set. |
+| `INPUT_PARAMETERS_INVALID` / `SPONSORSHIP_REQUIRED` | The SDK rejected the supplied requirement or fee sponsorship. |
+| `SPEND_ASSET_NOT_ALLOWED` / `SPEND_ATOMIC_CAP_EXCEEDED` / `SPEND_USD_CAP_EXCEEDED` | The original client rejected the selection under its existing spend controls. |
+
+These fixed classifications are derived from the pinned
+[Stellar scheme](https://github.com/x402-foundation/x402/blob/f8f83309706b14cc696962f0a002eeeb66c3dc26/typescript/packages/mechanisms/stellar/src/exact/client/scheme.ts),
+[shared authorization implementation](https://github.com/x402-foundation/x402/blob/f8f83309706b14cc696962f0a002eeeb66c3dc26/typescript/packages/mechanisms/stellar/src/shared.ts)
+and [original client](https://github.com/x402-foundation/x402/blob/f8f83309706b14cc696962f0a002eeeb66c3dc26/typescript/packages/core/src/client/x402Client.ts).
+
+Use a retained TLS or connection code to repair the original trust or network
+configuration; use the recognized SDK reason and signer counters to locate the
+original simulation or signing boundary. The operating result contains no raw
+exception message, URL, response body, authorization or transaction content.
+Custom errors outside the recognized source templates keep the bounded error
+classification. A failed attempt continues through its existing reservation,
+wire and chain-reconciliation workflow; those original records determine its
+financial disposition.
+
 ## Original source used
 
 - [Stellar's native CLI example](https://github.com/stellar/x402-stellar/blob/main/examples/client-cli/src/index.ts), observed Git blob `171e5e5a31c5e43e30cb44a561670c1f364ee319`.

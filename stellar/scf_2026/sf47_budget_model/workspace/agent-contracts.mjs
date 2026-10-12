@@ -13,5 +13,6 @@ export const GRANT_CASE_ACTIONS = Object.freeze([
   'invoice.save', 'invoice.review', 'invoice.dispute', 'invoice.reopen', 'invoice.void',
   'cash.record', 'cash.void', 'award.save', 'deployment.save', 'purchase.record', 'purchase.observe',
   'purchase.void', 'outcome.save', 'review', 'close', 'reopen',
+  'cohort.prepare', 'installation.save',
   ...GRANT_COMPLETION_ACTIONS,
 ]);

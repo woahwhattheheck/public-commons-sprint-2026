@@ -58,12 +58,12 @@ export async function readBuyerExpenseConfiguration(path) {
   if(!Object.keys(raw.workspaces).length)throw fail('CONFIGURATION','Declare at least one original expense workspace.');
   const workspaces={};
   for(const [name,value] of Object.entries(raw.workspaces)) {
-    identifier(name);exact(value,['directory','python','ledgers','quoteSources','refundSources','adjustmentSources','accountantSources'],['directory']);
+    identifier(name);exact(value,['directory','python','ledgers','quoteSources','governedQuoteSources','refundSources','adjustmentSources','accountantSources'],['directory']);
     const directory=hostPath(value.directory,dirname(path));
     const python=value.python ?? 'python3';
     if(typeof python!=='string'||python.includes('\0')||(python!=='python3'&&!isAbsolute(python)))throw fail('CONFIGURATION','Select python3 or a host-declared absolute Python interpreter path.');
     const bindings={};
-    for(const kind of ['ledgers','quoteSources']) {
+    for(const kind of ['ledgers','quoteSources','governedQuoteSources']) {
       const selected=value[kind] ?? {};exact(selected,Object.keys(selected));bindings[kind]={};
       for(const [key,source] of Object.entries(selected)) {
         identifier(key);exact(source,['path','name','provenance','dataContext'],['path','name','provenance']);
@@ -215,7 +215,7 @@ export class MerchantBuyerExpenses {
   }
   async #sourceAllowed(s,selection,sourceId) {
     const source=(await this.#get(s,'/api/state')).sources.find(v=>v.id===sourceId);
-    const bindings=(source?.kind ?? 'sf36_ledger')==='mcp_quote'?selection.quoteSources:selection.ledgers;
+    const bindings=({mcp_quote:selection.quoteSources,governed_mcp:selection.governedQuoteSources,sf36_ledger:selection.ledgers})[source?.kind??'sf36_ledger'];
     let declared=Boolean(source&&Object.values(bindings ?? {}).some(v=>v.path===source.path));
     if(source&&!declared)for(const value of Object.values(bindings ?? {})){
       try{if(await realpath(value.path)===source.path){declared=true;break;}}
@@ -297,7 +297,7 @@ export class MerchantBuyerExpenses {
   }
   async #execute(name,args) {
     const action=name.slice(PREFIX.length);
-    if(action==='workspaces')return {...this.summary,workspaces:Object.entries(this.#config?.workspaces ?? {}).map(([workspace,s])=>({workspace,ledgers:Object.entries(s.ledgers ?? {}).map(([alias,v])=>({alias,name:v.name,provenance:v.provenance})),quoteSources:Object.entries(s.quoteSources ?? {}).map(([alias,v])=>({alias,name:v.name,provenance:v.provenance})),refundSources:Object.entries(s.refundSources??{}).map(([alias,v])=>({alias,name:v.name,provenance:v.provenance,dataContext:v.dataContext,siteUrl:v.siteUrl,manifestSha256:v.manifestSha256})),adjustmentSources:Object.entries(s.adjustmentSources??{}).map(([alias,v])=>({alias,name:v.name,provenance:v.provenance,dataContext:v.dataContext,sourceSha256:v.sourceSha256,eventId:v.eventId,expectedJob:v.expectedJob??null})),accountantSources:Object.entries(s.accountantSources??{}).map(([alias,v])=>({alias,name:v.name,provenance:v.provenance,sourceSha256:v.sourceSha256})),open:this.#sessions.has(workspace)}))};
+    if(action==='workspaces')return {...this.summary,workspaces:Object.entries(this.#config?.workspaces ?? {}).map(([workspace,s])=>({workspace,ledgers:Object.entries(s.ledgers ?? {}).map(([alias,v])=>({alias,name:v.name,provenance:v.provenance})),quoteSources:Object.entries(s.quoteSources ?? {}).map(([alias,v])=>({alias,name:v.name,provenance:v.provenance})),governedQuoteSources:Object.entries(s.governedQuoteSources??{}).map(([alias,v])=>({alias,name:v.name,provenance:v.provenance,dataContext:v.dataContext})),refundSources:Object.entries(s.refundSources??{}).map(([alias,v])=>({alias,name:v.name,provenance:v.provenance,dataContext:v.dataContext,siteUrl:v.siteUrl,manifestSha256:v.manifestSha256})),adjustmentSources:Object.entries(s.adjustmentSources??{}).map(([alias,v])=>({alias,name:v.name,provenance:v.provenance,dataContext:v.dataContext,sourceSha256:v.sourceSha256,eventId:v.eventId,expectedJob:v.expectedJob??null})),accountantSources:Object.entries(s.accountantSources??{}).map(([alias,v])=>({alias,name:v.name,provenance:v.provenance,sourceSha256:v.sourceSha256})),open:this.#sessions.has(workspace)}))};
     if(action==='exports'){const root=await this.#rootReady(),names=(await readdir(root)).filter(v=>/^[a-z0-9][a-z0-9_-]{0,63}$/.test(v)).sort();const selected=page(names,args.offset,args.limit);return {...selected,items:await Promise.all(selected.items.map(id=>this.#exportStatus(id)))};}
     if(action==='export_status')return this.#exportStatus(args.exportId);
     if(action==='manifest'){const s=await this.#exportStatus(args.exportId);if(s.state!=='COMPLETE')throw fail('EXPORT_PENDING','Resume the retained original export request.');return {exportId:args.exportId,state:'MANIFEST_RETAINED',manifestFile:s.manifestFile};}
@@ -332,13 +332,14 @@ export class MerchantBuyerExpenses {
       case 'capture_status':return get('/api/captures/'+part(args.id)+suffix);
       case 'ledger_register':{const ledger=selection.ledgers[identifier(args.ledger)];if(!ledger)throw fail('LEDGER_NOT_DECLARED','Select a host-declared original ledger.');return this.#mutate(s,args,'/api/sources',{path:ledger.path,name:args.name??ledger.name,provenance:args.provenance??ledger.provenance,data_context:ledger.dataContext??'operational'});}
       case 'mcp_register':{const source=selection.quoteSources?.[identifier(args.quoteSource)];if(!source)throw fail('SOURCE_NOT_DECLARED','Select a host-declared original MCP quote source.');return this.#mutate(s,args,'/api/sources',{kind:'mcp_quote',path:source.path,name:args.name??source.name,provenance:args.provenance??source.provenance,data_context:source.dataContext??'operational'});}
+      case 'governed_mcp_register':{const source=selection.governedQuoteSources?.[identifier(args.governedSource)];if(!source)throw fail('SOURCE_NOT_DECLARED','Select a host-declared original governed MCP source descriptor.');return this.#mutate(s,args,'/api/sources',{kind:'governed_mcp',path:source.path,name:args.name??source.name,provenance:args.provenance??source.provenance,data_context:source.dataContext??'operational'});}
       case 'capture':await this.#sourceAllowed(s,selection,args.sourceId);return this.#mutate(s,args,'/api/sources/'+part(args.sourceId)+'/capture');
       case 'source_rebind':{
-        const kind=args.quoteSource===undefined?'sf36_ledger':'mcp_quote';
-        const source=(kind==='mcp_quote'?selection.quoteSources:selection.ledgers)?.[identifier(args.quoteSource??args.ledger)];
+        const kind=args.governedSource!==undefined?'governed_mcp':args.quoteSource!==undefined?'mcp_quote':'sf36_ledger';
+        const source=({governed_mcp:selection.governedQuoteSources,mcp_quote:selection.quoteSources,sf36_ledger:selection.ledgers})[kind]?.[identifier(args.governedSource??args.quoteSource??args.ledger)];
         if(!source)throw fail('SOURCE_NOT_DECLARED','Select a host-declared original source of the registered type.');
         const registered=(await get('/api/state')).sources.find(v=>v.id===args.sourceId);
-        if(!registered||(registered.kind??'sf36_ledger')!==kind)throw fail('SOURCE_KIND','Rebind the same original source type; a quote store is not an SF36 ledger.');
+        if(!registered||(registered.kind??'sf36_ledger')!==kind)throw fail('SOURCE_KIND','Rebind the same registered original source type and native identity.');
         return this.#mutate(s,args,'/api/sources/'+part(args.sourceId)+'/rebind',{path:source.path,operator:args.operator,reason:args.reason});
       }
       case 'capture_review':return this.#mutate(s,args,'/api/captures/'+part(args.id)+'/decision',{decision:args.decision,operator:args.operator,reason:args.reason});

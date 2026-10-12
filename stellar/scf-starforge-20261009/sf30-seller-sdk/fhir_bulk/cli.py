@@ -121,6 +121,8 @@ def run_export(ws, export_id, operation_id, max_wait_seconds=3600):
 def common(parser):
     parser.add_argument("--workspace", default=argparse.SUPPRESS, help="Absolute original private workspace")
     parser.add_argument("--credentials-file", default=argparse.SUPPRESS, help="Absolute local authentication profile file")
+    parser.add_argument("--expected-workspace-id", default=argparse.SUPPRESS,
+                        help="Reopen this exact initialized native workspace UUID")
 
 
 def parser():
@@ -170,6 +172,10 @@ def parser():
     q = command("adopt-status", "Receive the actual status URL for the same original operation")
     q.add_argument("--operation", required=True)
     q.add_argument("--status-url", required=True)
+    q.add_argument("--reason", required=True)
+    q = command("receive-capture", "Join a complete retained source packet to its original accepted operation")
+    q.add_argument("--operation", required=True)
+    q.add_argument("--source", required=True, help="Original source ID returned by source-add")
     q.add_argument("--reason", required=True)
     q = command("cancel", "Retain and send an explicit original provider cancellation")
     q.add_argument("--operation", required=True)
@@ -286,6 +292,8 @@ def execute(args, ws):
         return ws.operation(args.id)
     if name == "adopt-status":
         return ws.adopt_status(args.operation, {"statusUrl": args.status_url, "reason": args.reason})
+    if name == "receive-capture":
+        return ws.receive_capture(args.operation, {"sourceId": args.source, "reason": args.reason})
     if name == "cancel":
         return ws.cancel(args.operation, args.request_id)
     if name == "source-add":
@@ -345,7 +353,7 @@ def execute(args, ws):
             raise InputError("Choose a loopback port from 0 to 65535")
         from fhir_server import OperatorServer
         with OperatorServer(ws, args.port) as server:
-            emit({"url": server.url, "workspace": str(ws.root)})
+            emit(server.startup())
             try:
                 server.serve_forever(poll_interval=0.2)
             except KeyboardInterrupt:
@@ -361,11 +369,16 @@ def main(argv=None):
         p.error("--workspace is required")
     try:
         path = absolute(args.workspace, "Workspace")
+        expected_workspace_id = getattr(args, "expected_workspace_id", None)
+        if expected_workspace_id and not path.exists():
+            raise InputError("The selected initialized FHIR workspace is no longer present")
         create = args.command in {"init", "serve", "workspace-import", "packet-import"} and not path.exists()
         credentials = getattr(args, "credentials_file", None)
         if credentials:
             credentials = absolute(credentials, "Credentials")
         with Workspace(path, create=create, credentials_file=credentials) as ws:
+            if expected_workspace_id is not None and ws.workspace_id != expected_workspace_id:
+                raise InputError("The original FHIR workspace differs from the selected workspace UUID")
             result = execute(args, ws)
         if result is not None:
             emit(result)

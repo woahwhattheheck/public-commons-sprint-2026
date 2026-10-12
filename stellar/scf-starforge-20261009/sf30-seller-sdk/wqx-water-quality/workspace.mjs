@@ -12,12 +12,16 @@ import { reviewSheetCsv, reviewSheetTsv, parseReviewSheetCsv, parseReviewSheetTs
 import { previewReviewSheet, saveReviewSheet, listReviewSheets, readReviewSheet,
   exportReviewSheet, receiveReviewSheet } from './review-sheet/workflow.mjs';
 
+import { concentrationSourceGroups, prepareConcentrationChoices, concentrationReportForDocument,
+  concentrationReportCsv } from './review-sheet/concentrations.mjs';
+
 const HERE = dirname(fileURLToPath(import.meta.url));
 const STATIC = new Map([['/', ['ui/index.html', 'text/html; charset=utf-8']],
   ['/app.mjs', ['ui/app.mjs', 'text/javascript; charset=utf-8']],
   ['/style.css', ['ui/style.css', 'text/css; charset=utf-8']],
   ['/openwaters.mjs', ['ui/openwaters.mjs', 'text/javascript; charset=utf-8']],
-  ['/review-sheet.mjs', ['ui/review-sheet.mjs', 'text/javascript; charset=utf-8']]]);
+  ['/review-sheet.mjs', ['ui/review-sheet.mjs', 'text/javascript; charset=utf-8']],
+  ['/concentrations.mjs', ['ui/concentrations.mjs', 'text/javascript; charset=utf-8']]]);
 const json = value => JSON.stringify(value, null, 2) + '\n';
 function fail(message, code = 'WQX_WORKSPACE_INVALID', status = 400) { throw Object.assign(new Error(message), { code, status }); }
 function sameToken(value, expected) {
@@ -98,9 +102,10 @@ export async function startWaterQualityWorkspace({ directory, port = 0, merchant
           jobs: [...jobs.values()].map(({ promise, ...row }) => row) });
       if (request.method === 'GET' && path === '/api/review-sheets')
         return send(response, 200, await listReviewSheets({ project }));
-      if (request.method === 'GET' && (match = /^\/api\/review-sheets\/source\/([A-Za-z0-9_-]+)(?:\/(targets))?$/.exec(path))) {
+      if (request.method === 'GET' && (match = /^\/api\/review-sheets\/source\/([A-Za-z0-9_-]+)(?:\/(targets|concentrations))?$/.exec(path))) {
         const plan = await project.readOpenWaters(match[1]);
         if (!match[2]) return send(response, 200, reviewSheetSource(plan));
+        if (match[2] === 'concentrations') return send(response, 200, concentrationSourceGroups(plan));
         const query = { offset: Number(url.searchParams.get('offset') ?? 0), limit: Number(url.searchParams.get('limit') ?? 100) };
         for (const key of ['kind', 'field', 'search', 'status']) if (url.searchParams.has(key)) query[key] = url.searchParams.get(key);
         if (url.searchParams.has('attentionOnly')) {
@@ -109,6 +114,12 @@ export async function startWaterQualityWorkspace({ directory, port = 0, merchant
           query.attentionOnly = value === 'true';
         }
         return send(response, 200, listReviewSheetTargets(plan, query));
+      }
+      if (request.method === 'GET' && (match = /^\/api\/review-sheets\/([A-Za-z0-9_-]+)\/concentrations$/.exec(path))) {
+        const record = await readReviewSheet({project, reviewId:match[1]});
+        if (record.status !== 'COMPLETE') fail('Save the prepared review before reopening its concentration report.', 'WQX_CONCENTRATION_PREPARED', 409);
+        const source = await project.readOpenWaters(record.document.sourcePlanId), resultPlan = await project.readOpenWaters(record.newPlanId);
+        return send(response, 200, concentrationReportForDocument(source, record.document, {resultPlan}));
       }
       if (request.method === 'GET' && (match = /^\/api\/review-sheets\/([A-Za-z0-9_-]+)(?:\/(csv|tsv|json|report|bundle|native-locations|native-results|native-crosswalk|native-report|native-references|native-bundle))?$/.exec(path))) {
         if (!match[2]) return send(response, 200, await readReviewSheet({ project, reviewId: match[1] }));
@@ -166,6 +177,10 @@ export async function startWaterQualityWorkspace({ directory, port = 0, merchant
       if (path === '/api/analysis') return send(response, 200, await project.analyze(input));
       if (path === '/api/open-waters/preview') return send(response, 200, await project.previewOpenWaters(input));
       const result = await serial(async () => {
+        if (path === '/api/review-sheets/concentrations') return prepareConcentrationChoices({project, document:input.document,
+          resultIds:input.resultIds, targetUnit:input.targetUnit, reason:input.reason});
+        if (path === '/api/review-sheets/concentrations/csv') return {filename:input.report?.source?.sourcePlanId + '-concentration-report.csv',
+          mime:'text/csv;charset=utf-8', text:concentrationReportCsv(input.report)};
         if (path === '/api/review-sheets/preview') return previewReviewSheet({ project, document: input.document, newPlanId: input.newPlanId });
         if (path === '/api/review-sheets') return saveReviewSheet({ project, reviewId: input.reviewId,
           document: input.document, newPlanId: input.newPlanId, expectedPreviewSha256: input.expectedPreviewSha256 });

@@ -6,6 +6,7 @@ import {fileURLToPath} from 'node:url';
 import {ResearchWorkspaceClient,researchSummary} from './workspace-client.mjs';
 import {readResearchHostFile} from './workspace-files.mjs';
 import {DOCUMENT_COMMANDS,main as documentMain} from './document-workspace-cli.mjs';
+import {ELIGIBILITY_COMMANDS,main as eligibilityMain} from './eligibility-cli.mjs';
 import {parseJson,need,safeCode} from '../node/store.mjs';
 
 const usage=String.raw`Research workspace client
@@ -70,8 +71,25 @@ Operate the saved original Crossref acquisition:
   crossref-stop --id DOSSIER --operation ID
   crossref-receive --id DOSSIER --operation ID --input REVIEWED_RECEIVE.json
 
+Operate full eligibility review in the same original dossier:
+  eligibility-help
+  eligibility-view|eligibility-queue|eligibility-review|eligibility-export
+  eligibility-create|eligibility-protocol|eligibility-workset|eligibility-decide
+  eligibility-resolve|eligibility-study|eligibility-apply|eligibility-impact
+
+Run eligibility-help for original request fields, revision-pinned queues,
+independent review, resolution, full exports and same-request recovery.
+
+Review a retained correction or retraction notice:
+  citation-updates --id DOSSIER [--revision N --notice ID --status all|pending|reviewed --offset N --limit N]
+  citation-review --id DOSSIER --input REVIEW_REQUEST.json
+
+The review request keeps requestId, expectedRevision and expectedFingerprint.
+It saves the explicit evidence edits, finding edits and finding dispositions
+in one dossier revision. Repeat the same request after a lost reply.
+
 Retain and reopen complete original files:
-  export --id DOSSIER --format json|json.gz|md|html --out NEW_FILE
+  export --id DOSSIER --format json|json.gz|md|html --out NEW_FILE [--revision N]
   export-crossref --id DOSSIER --operation ID --out NEW_FILE
   export-edition --id DOSSIER --edition ID --out NEW_FILE [--revision N --sha256 SHA256]
   export-source --id DOSSIER --edition ID --key ORIGINAL_KEY --part content|record --out NEW_FILE [--revision N --sha256 SHA256]
@@ -112,7 +130,9 @@ const commandOptions=Object.freeze({
   'crossref-review':['id','operation','section','offset','limit'],
   'crossref-start':['id','operation','plan-sha256'],'crossref-stop':['id','operation'],
   'crossref-receive':['id','operation','input'],
-  export:['id','format','out','sha256'],'export-crossref':['id','operation','out','sha256'],
+  'citation-updates':['id','revision','notice','status','offset','limit'],
+  'citation-review':['id','input'],
+  export:['id','format','out','sha256','revision'],'export-crossref':['id','operation','out','sha256'],
   'export-edition':['id','edition','out','revision','sha256'],'export-compare':['id','before','after','out','sha256'],
   'export-source':['id','edition','key','part','out','revision','sha256'],
   'export-source-file':['id','edition','key','name','out','revision','sha256'],
@@ -122,6 +142,7 @@ const compact=value=>value?.dossier?{...value,dossier:researchSummary(value.doss
 const selected=value=>Object.fromEntries(Object.entries(value).filter(([,item])=>item!==undefined));
 export async function main(argv=process.argv.slice(2),{output=process.stdout}={}){
   if(DOCUMENT_COMMANDS.includes(argv[0]))return documentMain(argv,{output});
+  if(ELIGIBILITY_COMMANDS.includes(argv[0]))return eligibilityMain(argv,{output});
   const [command,...args]=argv;
   if(!command||['help','--help','-h'].includes(command)){output.write(usage);return;}
   need(Object.hasOwn(commandOptions,command),'COMMAND_UNKNOWN');
@@ -136,7 +157,7 @@ export async function main(argv=process.argv.slice(2),{output=process.stdout}={}
   };
   const required=name=>{need(typeof values[name]==='string'&&values[name].length>0,'ARGUMENT_REQUIRED');return values[name];};
   const digest=name=>{const value=required(name);need(/^[a-f0-9]{64}$/.test(value),'RESEARCH_SHA256_REQUIRED');return value;};
-  const input=async()=>parseJson(await readResearchHostFile(resolve(required('input')),2*1024*1024));
+  const input=async()=>parseJson(await readResearchHostFile(resolve(required('input')),command==='citation-review'?16*1024*1024:2*1024*1024));
   const client=new ResearchWorkspaceClient({connectionFile:resolve(values['connection-file']),directory:resolve(values.directory)},
     values['timeout-ms']===undefined?{}:{timeoutMs:number('timeout-ms')});
   try{
@@ -202,7 +223,11 @@ export async function main(argv=process.argv.slice(2),{output=process.stdout}={}
       case 'crossref-start':result=await client.startCrossref(required('id'),required('operation'),{expectedPlanSha256:digest('plan-sha256')});break;
       case 'crossref-stop':result=await client.stopCrossref(required('id'),required('operation'));break;
       case 'crossref-receive':result=await client.receiveCrossref(required('id'),required('operation'),await input());break;
-      case 'export':result=await client.exportDossier(required('id'),{format:values.format??'json.gz',...exportOptions()});break;
+      case 'citation-updates':result=await client.citationUpdates(required('id'),{...page,...selected({
+        revision:number('revision'),noticeId:values.notice,status:values.status})});break;
+      case 'citation-review':result=await client.reviewCitationUpdate(required('id'),await input());break;
+      case 'export':result=await client.exportDossier(required('id'),{format:values.format??'json.gz',
+        ...selected({revision:number('revision')}),...exportOptions()});break;
       case 'export-crossref':result=await client.exportCrossrefEdition(required('id'),required('operation'),exportOptions());break;
       case 'export-edition':result=await client.exportRetainedEdition(required('id'),required('edition'),{
         ...exportOptions(),...selected({revision:number('revision')})});break;

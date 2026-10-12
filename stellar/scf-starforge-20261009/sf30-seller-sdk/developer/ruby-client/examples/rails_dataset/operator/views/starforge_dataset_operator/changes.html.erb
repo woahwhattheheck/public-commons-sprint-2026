@@ -1,0 +1,29 @@
+<% id = @detail.dig("selection","id"); review = @detail["review"] %>
+<div class="heading"><h2>Complete edition changes</h2><%= link_to "Review overview",action: :show,id: id %></div>
+<nav class="actions" aria-label="Change filters">
+  <% Starforge::DatasetOperator::GROUPS.each do |group| %><%= link_to "#{group.tr("_"," ").capitalize} (#{review.dig("groups",group,"count")})",action: :changes,id: id,group: group,page: 0 %><% end %>
+</nav>
+<p><%= @changes["total"] %> entries · Page <%= @changes["page"] + 1 %> of <%= @changes["pages"] %> · <%= @changes["group"].tr("_"," ") %></p>
+<div class="scroll"><table><thead><tr><th>Action</th><th>Business key</th><th>Target</th><th>Source position</th><th>Values and original source</th></tr></thead><tbody>
+<% @changes["rows"].each do |row| %>
+  <% before = operator_values(row["before_json"]); after = operator_values(row["after_json"]) %>
+  <tr><td><strong><%= row["action"] %></strong><% %w[adopted restored source_changed].each do |flag| %><% if row[flag] %><br><span class="small"><%= flag.tr("_"," ") %></span><% end %><% end %></td>
+    <td><% operator_values(row["key_json"]).each do |key,value| %><div><span class="small"><%= key %></span><br><span class="mono"><%= operator_text(value) %></span></div><% end %></td>
+    <td><%= row["target_id"] || row["previous_target_id"] || "New record" %></td><td><%= row["source_ordinal"] %></td>
+    <td><details><summary>Inspect complete row</summary>
+      <table><thead><tr><th>Attribute</th><th>Before</th><th>After</th></tr></thead><tbody>
+      <% (before.keys + after.keys).uniq.each do |key| %><tr><td><%= key %></td><td class="preserve"><%= before.key?(key) ? operator_text(before[key]) : "—" %></td><td class="preserve"><%= after.key?(key) ? operator_text(after[key]) : "—" %></td></tr><% end %>
+      </tbody></table>
+      <h4>Original source JSON</h4><pre><%= row["source_raw_json"] %></pre>
+      <p class="mono"><%= row["source_row_sha256"] %></p>
+    </details></td>
+  </tr>
+<% end %>
+</tbody></table></div>
+<nav class="actions" aria-label="Change pages">
+  <% if @changes["page"] > 0 %><%= link_to "Previous",action: :changes,id: id,group: @changes["group"],page: @changes["page"] - 1 %><% end %>
+  <% if @changes["page"] + 1 < @changes["pages"] %><%= link_to "Next",action: :changes,id: id,group: @changes["group"],page: @changes["page"] + 1 %><% end %>
+  <%= form_with url: {action: :changes,id: id}, method: :get, local: true do %>
+    <%= hidden_field_tag :group,@changes["group"] %><%= label_tag :page,"Page index (first = 0)" %><%= number_field_tag :page,@changes["page"],min: 0,max: @changes["pages"] - 1 %><%= submit_tag "Go" %>
+  <% end %>
+</nav>

@@ -215,7 +215,9 @@ def main():
                     prefix=str(index+1).zfill(2);path=Path(item["path"])
                     if identity(path)!={k:item[k]for k in ("bytes","sha256")}:raise ValueError("Original selected capture changed")
                     with path.open("rb")as inp:src=ws.add_source(inp,item["name"],item["name"])
-                    shape=src["inventory"]
+                    # Reinspect the same original bytes with the current source parser; older
+                    # retained inventories remain the original acquisition-time observation.
+                    with path.open("rb") as current_source:shape=ws.format.inventory(current_source)
                     plan=ws.save_plan(ws.default_mapping(src["id"],shape["datasetId"]+" original observations"))
                     build=ws.build(src["id"],plan["id"])
                     query=whole_query(ws,build)
