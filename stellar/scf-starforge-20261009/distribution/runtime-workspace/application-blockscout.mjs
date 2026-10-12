@@ -1,6 +1,8 @@
 // MIT. Original Blockscout merchant binding for the retained Applications launcher.
 import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { absolute, privateDirectory, regular, plain, need, digest } from './storage.mjs';
+import { normalizeBlockscoutDeployment, DEPLOYMENT_SCHEMA } from '../../partners/blockscout-stellar-pro-api/deployment.mjs';
 
 const STARTUP = 'stellar-forge.blockscout-startup.v1';
 const PACKAGE = 'stellar-forge.blockscout-package.v1';
@@ -17,7 +19,10 @@ export function blockscoutApplication(common) {
       field('packageDirectory', 'Verified merchant package', 'path', true),
       field('stateDirectory', 'Private merchant state', 'path', true,
         'Use this same directory across restart, credential rotation and price rollback.'),
-      field('facilitator', 'Original facilitator URL', 'text', true),
+      field('deploymentMode', 'Deployment mode', 'text', false,
+        'paid (default) or challenge-only. Review offers and private controls before paid activation.'),
+      field('facilitator', 'Original facilitator URL', 'text', false,
+        'Required in paid mode. A challenge-only launch retains this reference without starting payment processing.'),
       field('operationsPort', 'Merchant operations port', 'port'),
       field('deskPort', 'Provider desk port', 'port'),
       field('drainGraceMs', 'Drain grace in milliseconds', 'text', false, '1000–300000; default 60000.'),
@@ -26,6 +31,23 @@ export function blockscoutApplication(common) {
       ...common,
     ],
   };
+}
+export async function checkBlockscoutDeploymentRuntime(type, settings, runtime) {
+  if (type.id !== 'blockscout' || settings.deploymentMode === undefined) return;
+  const path = join(runtime.sourceRoot, 'stellar/scf-starforge-20261009/partners/blockscout-stellar-pro-api/deployment.mjs');
+  let selected;
+  try {
+    await regular(path, 65536);
+    selected = await import(pathToFileURL(path).href);
+  } catch {
+    need(false, 'APPLICATION_BLOCKSCOUT_DEPLOYMENT_RUNTIME_REQUIRED',
+      'Select an installed merchant edition with Blockscout deployment modes.');
+  }
+  need(selected.DEPLOYMENT_SCHEMA === DEPLOYMENT_SCHEMA &&
+    typeof selected.normalizeBlockscoutDeployment === 'function',
+    'APPLICATION_BLOCKSCOUT_DEPLOYMENT_RUNTIME_REQUIRED');
+  selected.normalizeBlockscoutDeployment({ mode: settings.deploymentMode, facilitator: settings.facilitator,
+    allowLocalFacilitator: settings.allowLocalFacilitator ?? false });
 }
 function parsed(bytes) {
   try { return JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes)); }
@@ -44,13 +66,8 @@ async function manifestAt(directory) {
   return { value, sha256: digest(bytes) };
 }
 export async function prepareBlockscoutApplication(settings, inputPath) {
-  let facilitator;
-  try { facilitator = new URL(settings.facilitator); }
-  catch { need(false, 'APPLICATION_BLOCKSCOUT_FACILITATOR_INVALID'); }
-  const local = settings.allowLocalFacilitator === true &&
-    facilitator.protocol === 'http:' && facilitator.hostname === '127.0.0.1';
-  need((local || facilitator.protocol === 'https:') && !facilitator.username && !facilitator.password &&
-    !facilitator.search && !facilitator.hash, 'APPLICATION_BLOCKSCOUT_FACILITATOR_INVALID');
+  const deployment = normalizeBlockscoutDeployment({ mode: settings.deploymentMode ?? 'paid',
+    facilitator: settings.facilitator, allowLocalFacilitator: settings.allowLocalFacilitator ?? false });
   const selectedPorts = [settings.port ?? 0, settings.operationsPort ?? 0, settings.deskPort ?? 0];
   need(selectedPorts.every(value => Number.isInteger(value) && value >= 0 && value <= 65535), 'APPLICATION_PORT_INVALID');
   const ports = selectedPorts.filter(Boolean);
@@ -77,16 +94,19 @@ export async function prepareBlockscoutApplication(settings, inputPath) {
     inputs.push(item);
   }
   const args = ['serve', '--package', settings.packageDirectory, '--state', settings.stateDirectory,
-    '--facilitator', settings.facilitator, '--operations-port', String(settings.operationsPort ?? 0),
-    '--desk-port', String(settings.deskPort ?? 0),
+    ...(settings.facilitator ? ['--facilitator', settings.facilitator] : []),
+    '--operations-port', String(settings.operationsPort ?? 0), '--desk-port', String(settings.deskPort ?? 0),
     '--expected-plan-sha256', original.value.planSha256, '--expected-package-sha256', original.sha256];
+  // Omitted mode preserves the original paid command and saved package inputs.
+  if (settings.deploymentMode !== undefined) args.push('--mode', deployment.mode);
   if (grace !== undefined) args.push('--drain-grace-ms', String(grace));
   if (settings.allowLocalFacilitator) args.push('--allow-local-facilitator');
   return { args, inputs };
 }
-function selectedValue(request, name) {
+function selectedValue(request, name, fallback) {
   need(Array.isArray(request.args) && request.args[0] === 'serve', 'APPLICATION_BLOCKSCOUT_STARTUP_CHANGED');
   const positions = request.args.flatMap((value, index) => value === name ? [index] : []);
+  if (positions.length === 0 && fallback !== undefined) return fallback;
   need(positions.length === 1 && typeof request.args[positions[0] + 1] === 'string',
     'APPLICATION_BLOCKSCOUT_STARTUP_CHANGED');
   return request.args[positions[0] + 1];
@@ -100,7 +120,12 @@ export async function blockscoutStartup(request, text) {
   const packageDirectory = absolute(selectedValue(request, '--package')),
     stateDirectory = absolute(selectedValue(request, '--state')),
     expectedPlan = selectedValue(request, '--expected-plan-sha256'),
-    expectedPackage = selectedValue(request, '--expected-package-sha256');
+    expectedPackage = selectedValue(request, '--expected-package-sha256'),
+    mode = selectedValue(request, '--mode', 'paid');
+  need(['paid', 'challenge-only'].includes(mode) && (value.deploymentMode ?? 'paid') === mode &&
+    (value.merchantMode === undefined ? mode === 'paid' :
+      value.merchantMode === (mode === 'paid' ? 'NATIVE_X402' : 'CHALLENGE_ONLY')),
+    'APPLICATION_BLOCKSCOUT_STARTUP_CHANGED', 'The original merchant must open in its reviewed deployment mode');
   need(/^[a-f0-9]{64}$/.test(expectedPlan) && /^[a-f0-9]{64}$/.test(expectedPackage),
     'APPLICATION_BLOCKSCOUT_STARTUP_CHANGED');
   need(value.packageDirectory === packageDirectory && value.stateDirectory === stateDirectory,
@@ -116,5 +141,5 @@ export async function blockscoutStartup(request, text) {
     !url.username && !url.password && !url.search && url.pathname === '/' &&
     /^[a-f0-9]{64}$/.test(url.hash.slice(1)), 'APPLICATION_BLOCKSCOUT_STARTUP_CHANGED');
   return { url: url.href, original: { schema: STARTUP, packageDirectory, stateDirectory,
-    planSha256: value.planSha256, packageManifestSha256: original.sha256 } };
+    planSha256: value.planSha256, packageManifestSha256: original.sha256, deploymentMode: mode } };
 }

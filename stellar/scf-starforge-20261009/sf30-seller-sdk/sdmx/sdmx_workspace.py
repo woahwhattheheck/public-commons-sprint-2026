@@ -14,6 +14,7 @@ import re
 import shutil
 import sqlite3
 import stat
+import sys
 import tempfile
 import threading
 import uuid
@@ -23,9 +24,22 @@ from sdmx_source import InputError, MAX_SOURCE, MAX_METADATA, parse_source, peri
 
 HERE = Path(__file__).resolve().parent
 XML = HERE.parent / "xml"
-spec = importlib.util.spec_from_file_location("_sf30_sdmx_xml_workspace", XML / "workspace.py")
-_original = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(_original)
+_original_name = "_sf30_sdmx_xml_workspace"
+_original = sys.modules.get(_original_name)
+if _original is None:
+    spec = importlib.util.spec_from_file_location(_original_name, XML / "workspace.py")
+    _original = importlib.util.module_from_spec(spec)
+    # Postponed dataclass annotations resolve through the module's explicit
+    # original identity. Register before execution, as ordinary imports do.
+    sys.modules[_original_name] = _original
+    try:
+        spec.loader.exec_module(_original)
+    except BaseException:
+        if sys.modules.get(_original_name) is _original:
+            del sys.modules[_original_name]
+        raise
+elif Path(getattr(_original, "__file__", "")).resolve() != (XML / "workspace.py").resolve():
+    raise ImportError("The original SDMX XML module name belongs to another source file")
 NativeEngine = _original.NativeEngine
 json_bytes, load_json = _original.json_bytes, _original.load_json
 private_write, regular, file_digest, sync_dir = (

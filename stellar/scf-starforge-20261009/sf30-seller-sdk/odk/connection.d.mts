@@ -1,14 +1,18 @@
 // MIT.
-import type {CentralConnection,CentralRequestOptions,CentralAction,CentralCommissioningAction,RecordValue} from './index.mjs';
+import type {CentralConnection,CentralRequestOptions,CentralAction,CentralCommissioningAction,CentralWarehouseAction,RecordValue} from './index.mjs';
 export {CentralWorkspaceClient,connectCentralWorkspace,readCentralConnection,inspectCentralListener,
   ODK_CONNECTION_FILENAME,ODK_CONNECTION_SCHEMA,ODK_STARTUP_SCHEMA,
-  centralOperationId,centralActionRoute,requestCentralAction,inspectCentralCommissioning} from './index.mjs';
+  centralOperationId,centralActionRoute,requestCentralAction,inspectCentralCommissioning,inspectCentralWarehouse} from './index.mjs';
 export type {CentralConnection,CentralConnectionValue,CentralRequestOptions,CentralAction,
-  CentralActionNamespace,CentralCommissioningAction,CentralCommissioningState} from './index.mjs';
+  CentralActionNamespace,CentralCommissioningAction,CentralCommissioningState,CentralWarehouseAction,
+  CentralWarehouseState,CentralWarehouseRequest,CentralWarehousePrepareInput,CentralWarehouseConnectInput,
+  CentralWarehouseInspectInput,CentralWarehouseReviewInput,CentralWarehouseImportInput,
+  CentralWarehousePeriodReportInput,CentralWarehouseOperation,CentralWarehouseApproval} from './index.mjs';
 export const ODK_MAX_RESPONSE_BYTES:number,ODK_MAX_INPUT_BYTES:number,ODK_MAX_CONTROL_BYTES:number;
 export const ODK_HASH:RegExp,ODK_UUID:RegExp;
 export const CENTRAL_READ_ACTIONS:Set<CentralAction>,CENTRAL_ACTIONS:Set<CentralAction>;
 export const CENTRAL_COMMISSIONING_READ_ACTIONS:Set<CentralCommissioningAction>,CENTRAL_COMMISSIONING_ACTIONS:Set<CentralCommissioningAction>;
+export const CENTRAL_WAREHOUSE_READ_ACTIONS:Set<CentralWarehouseAction>,CENTRAL_WAREHOUSE_ACTIONS:Set<CentralWarehouseAction>;
 export function odkDigest(bytes:string|Uint8Array):string;
 export function odkPlain(value:unknown):value is RecordValue;
 export function odkFailure(code:string,message:string,status?:number,details?:RecordValue):Error&{code:string;status:number;details?:RecordValue;data?:RecordValue};

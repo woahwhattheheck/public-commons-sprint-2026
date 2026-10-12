@@ -125,3 +125,9 @@ paid-job merchant provider. Its private lease prevents a second service from
 owning the same state. Use the same saved Application's Stop and fresh Start;
 its job records, input claims, source binding and completed customer results
 remain in that original private service directory.
+
+## Complete agent operation
+
+The selected `lab-edd` contribution now includes the `laboratory-workspaces` merchant provider and `starforge lab-edd-agent`. Follow [the complete operator guide](../../../../stellar-forge/mcp-merchant-operator/LAB_EDD_WORKSPACE.md) to reuse the saved application's paid-job connection and original buyer profile. All 42 tools operate the same source, decision, checkout, native task and result identities. The original paid-job provider remains the merchant/worker owner.
+
+The same full receiving driver walks both public 500-result EDD families, every physical row and correspondence group, CSV/TSV editing, immutable review and five-slot staging, native checkout, complete result delivery and independent cold reopening. Retain its actual `result.json`, source manifest and original runtime tuple with the application edition.

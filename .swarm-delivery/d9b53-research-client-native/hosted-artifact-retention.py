@@ -22,6 +22,7 @@ from urllib.parse import parse_qs, urlparse
 
 SCHEMA = "commons.hosted-artifact-retention/v1"
 RETRY_SCHEMA = "commons.hosted-artifact-retry/v1"
+RECEIPT_SCHEMA = "commons.hosted-artifact-receipt/v1"
 
 
 def now():
@@ -183,6 +184,8 @@ class Retention:
             "transferObserved": state.get("transfer", {}).get("complete", False),
             "finalizationStarted": state.get("finalization", {}).get("started", False),
             "providerResultObserved": "providerResult" in state.get("finalization", {}),
+            "receiptReconciled": bool(state.get("reconciliation")),
+            "reconciliationId": state.get("reconciliation", {}).get("id"),
             "diagnostics": state.get("transfer", {}).get("diagnostics", []),
             "retryRequest": str(self.control / "retry-request.json"),
             "receipt": state.get("receipt") if accepted(state.get("receipt")) else None,
@@ -264,6 +267,8 @@ class Retention:
             self.state["status"] = "saved"
             self.persist()
             return self.state["receipt"]
+        if self.state.get("reconciliation") is not None:
+            raise ValueError("The host file is already saved; repeat its original receipt reconciliation to finish metadata")
         if not isinstance(request, dict) or request.get("schema") != RETRY_SCHEMA:
             raise ValueError("Use the original retention retry schema")
         if (request.get("operationId") != self.operation_id
@@ -313,19 +318,7 @@ class Retention:
             self.install_prepared(request["preparedUpload"], reason="selected unused renewal")
             self.refresh_unused = False
 
-        helper_path = str(self.helper_directory)
-        if helper_path not in sys.path:
-            sys.path.insert(0, helper_path)
-        upload_module = importlib.import_module("library_upload")
-        files_module = importlib.import_module("library_file_transfer")
-        apps_module = importlib.import_module("library_hosted_apps")
-        for module, name in (
-            (upload_module, "library_upload.py"),
-            (files_module, "library_file_transfer.py"),
-            (apps_module, "library_hosted_apps.py"),
-        ):
-            if Path(module.__file__).resolve() != self.helper_directory / name:
-                raise ValueError("A different original upload helper is already imported")
+        upload_module, files_module, apps_module = self.helper_modules()
         retention = self
 
         class ObservedUploader:
@@ -468,18 +461,142 @@ class Retention:
             self.current_attempt = None
 
 
+    def helper_modules(self):
+        helper_path = str(self.helper_directory)
+        if helper_path not in sys.path:
+            sys.path.insert(0, helper_path)
+        modules = tuple(importlib.import_module(name) for name in (
+            "library_upload", "library_file_transfer", "library_hosted_apps",
+        ))
+        for module, name in zip(modules, (
+            "library_upload.py", "library_file_transfer.py", "library_hosted_apps.py",
+        ), strict=True):
+            if Path(module.__file__).resolve() != self.helper_directory / name:
+                raise ValueError("A different original upload helper is already imported")
+        return modules
+
+    def reconcile_receipt(self, request):
+        """Apply an observed normal host-write result to this same sealed file.
+
+        This accepts the complete real create result, not a supplied saved flag.
+        It dispatches no prepare, transfer or finalize operation.
+        """
+        self.verify_artifact()
+        if not isinstance(request, dict) or request.get("schema") != RECEIPT_SCHEMA:
+            raise ValueError("Use the original hosted-artifact receipt schema")
+        if (request.get("operationId") != self.operation_id
+                or request.get("artifactSha256") != self.artifact["sha256"]
+                or request.get("sourcePath") != self.artifact["path"]):
+            raise ValueError("The observed receipt selects a different original file")
+        if request.get("expectedUploadSessionId") != self.state.get("uploadSessionId"):
+            raise ValueError("The selected upload session changed before reconciliation")
+        identity = request.get("reconciliationId")
+        if (not isinstance(identity, str) or not identity or len(identity) > 160
+                or any(ord(c) < 32 for c in identity)):
+            raise ValueError("Select one printable receipt-reconciliation identity")
+        value = request.get("providerResult")
+        if (not isinstance(value, dict)
+                or value.get("operation") != "create_library_file"
+                or value.get("status") != "succeeded"
+                or value.get("file_name") != Path(self.artifact["path"]).name
+                or type(value.get("file_size_bytes")) is not int
+                or value["file_size_bytes"] != self.artifact["bytes"]):
+            raise ValueError("Use the complete succeeded create result for this exact file")
+        for name in ("file_id", "library_file_id"):
+            item = value.get(name)
+            if (not isinstance(item, str) or not item or any(ord(c) < 32 for c in item)):
+                raise ValueError("The observed create result is missing its file identity")
+        selected_type = self.state.get("libraryArtifactType")
+        if (selected_type is not None and value.get("library_artifact_type") is not None
+                and value["library_artifact_type"] != selected_type):
+            raise ValueError("The observed create changes the selected artifact classification")
+        prepared = self.prepared()
+        if self.state.get("finalization", {}).get("started"):
+            if prepared is None or value["file_id"] != prepared.get("file_id"):
+                raise ValueError("Reconcile the already started original finalization first")
+        request_sha = hashlib.sha256(json.dumps(
+            {key: item for key, item in request.items() if key != "action"},
+            sort_keys=True, ensure_ascii=False, separators=(",", ":"),
+        ).encode("utf-8")).hexdigest()
+        record = self.control / "reconciliations" / (
+            hashlib.sha256(identity.encode("utf-8")).hexdigest() + ".json")
+        previous = read_json(record) if record.exists() else None
+        if previous is not None and previous.get("requestSha256") != request_sha:
+            raise ValueError("The receipt-reconciliation identity selects different evidence")
+        observed = self.state.get("reconciliation")
+        if observed is not None and observed.get("providerResult") != value:
+            raise ValueError("Preserve the first observed successful file receipt")
+        if accepted(self.state.get("receipt")):
+            row = self.state["receipt"]["results"][0]
+            if (row.get("file_id") != value["file_id"]
+                    or row.get("library_file_id") != value["library_file_id"]):
+                raise ValueError("The original artifact already has another accepted file identity")
+            self.publish_summary()
+            return self.state["receipt"]
+        observation = previous or {
+            "schema": RECEIPT_SCHEMA, "operationId": self.operation_id,
+            "artifactSha256": self.artifact["sha256"], "sourcePath": self.artifact["path"],
+            "id": identity, "requestSha256": request_sha,
+            "expectedUploadSessionId": self.state.get("uploadSessionId"),
+            "providerResult": value, "observedAt": now(), "metadataApplied": False,
+        }
+        # Retain the original provider result before the idempotent local metadata step.
+        write_json(record, observation)
+        self.state["reconciliation"] = observation
+        self.state["status"] = "reconciling-receipt"
+        self.persist()
+        try:
+            upload_module, files_module, apps_module = self.helper_modules()
+            workflow = upload_module.LibraryUploadWorkflow(
+                apps_module.HostedAppsClient(), files_module.LibraryFileMaterializer(),
+                upload_module.SignedUrlUploader(),
+                state_parent=self.control / "helper-state",
+            )
+            selected = {"local_path": self.artifact["path"], "purpose": "create_library_file"}
+            if selected_type is not None:
+                selected["library_artifact_type"] = selected_type
+            original_request = workflow._parse_requests({"uploads": [selected]})[0]
+            # _result owns result validation, xattrs and the normal file-write receipt.
+            # No prepared transport is represented or dispatched by this metadata view.
+            view = type("ObservedHostWrite", (), {})()
+            view.request, view.payload = original_request, {}
+            workflow._publish_all_receipts = True
+            row = workflow._result(view, value)
+            self.verify_artifact()
+            self.state["receipt"] = {"results": [row]}
+            observation["metadataApplied"] = row.get("local_metadata_applied") is True
+            observation["metadataObservedAt"] = now()
+            observation.pop("metadataError", None)
+            self.state["status"] = "saved" if accepted(self.state["receipt"]) else "awaiting-retry"
+            return self.state["receipt"]
+        except Exception as error:
+            observation["metadataError"] = {"type": type(error).__name__,
+                                            "message": str(error), "observedAt": now()}
+            self.state["status"] = "awaiting-retry"
+            return None
+        finally:
+            write_json(record, observation)
+            self.persist()
+            self.publish_summary()
+
     def safe_attempt(self, request):
         try:
             return self.attempt(request)
         except Exception as error:
-            self.state["status"] = "saved" if accepted(self.state.get("receipt")) else "awaiting-retry"
-            self.state.setdefault("attempt", {})["exception"] = {
-                "type": type(error).__name__, "message": str(error), "observedAt": now(),
-            }
-            try:
-                self.persist()
-            except OSError:
-                pass
+            if self.current_attempt is not None:
+                self.state["status"] = "saved" if accepted(self.state.get("receipt")) else "awaiting-retry"
+                self.state.setdefault("attempt", {})["exception"] = {
+                    "type": type(error).__name__, "message": str(error), "observedAt": now(),
+                }
+                try:
+                    self.persist()
+                except OSError:
+                    pass
+            else:
+                # Rejected control input does not rewrite the last provider attempt.
+                self.emit(json.dumps({"state": "retry-input-attention",
+                                      "operationId": self.operation_id,
+                                      "type": type(error).__name__, "message": str(error)}))
             self.publish_summary()
             self.current_attempt = None
             return None
@@ -530,8 +647,10 @@ class Retention:
             self.emit(json.dumps(self.read_bytes(request), separators=(",", ":")))
         elif action == "retry":
             self.safe_attempt(request)
+        elif action == "reconcile":
+            self.reconcile_receipt(request)
         else:
-            raise ValueError("Use status, read or retry on the original return")
+            raise ValueError("Use status, read, retry or reconcile on the original return")
 
     def request(self, retry_id, mode="same-session"):
         return {

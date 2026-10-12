@@ -90,14 +90,17 @@ export function connectionSummary(plan) {
       providerTemplate: c.origin + connectionPath(plan, row.chainId),
       merchantTemplate: plan.publicOrigin + '/' + row.chainId + '/api/v2/tokens/:address_hash' })) };
 }
-export function connectionRuntime(plan, env = process.env) {
+export function connectionRuntime(plan, env = process.env, { deferCredentials = false } = {}) {
+  if (typeof deferCredentials !== 'boolean') fail('BLOCKSCOUT_DEFER_CREDENTIALS_INVALID');
   const c = connectionForPlan(plan);
   if (c.authentication.kind === 'none') return { connection: c, headerEnv: {}, env: {}, secret: null };
+  const name = c.authentication.kind === 'bearer' ? 'authorization' : 'x-api-key';
   const secret = env?.[plan.apiKeyEnv];
+  if (deferCredentials && (secret === undefined || secret === null || secret === ''))
+    return { connection: c, headerEnv: { [name]: 'BLOCKSCOUT_RUNTIME_AUTHORIZATION' }, env: {}, secret: null };
   if (typeof secret !== 'string' || secret.length < 16 || secret.length > 4096 ||
       !/^[A-Za-z0-9._~+\/-]+=*$/.test(secret))
     fail('BLOCKSCOUT_PRIVATE_API_KEY_REQUIRED');
-  const name = c.authentication.kind === 'bearer' ? 'authorization' : 'x-api-key';
   return { connection: c, headerEnv: { [name]: 'BLOCKSCOUT_RUNTIME_AUTHORIZATION' },
     env: { BLOCKSCOUT_RUNTIME_AUTHORIZATION: c.authentication.kind === 'bearer' ? 'Bearer ' + secret : secret }, secret };
 }

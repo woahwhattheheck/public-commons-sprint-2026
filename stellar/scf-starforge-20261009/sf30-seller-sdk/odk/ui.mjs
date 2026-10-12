@@ -294,6 +294,10 @@ function renderPublisher(){
 }
 function renderWorkspace(){renderPublisher();replace('workspace-information',table(['Workspace','Original identity'],[['Workspace ID',workspace.id],['Revision',workspace.revision],['Created',date(workspace.createdAt)],['Received original archive',workspace.receivedArchive?.archiveSha256||'Created on this host']]));
   replace('archive-list',workspace.archives.length?table(['Archive','Created','Size','Files'],descending(workspace.archives).map(item=>[item.id,date(item.createdAt),bytes(item.bytes),item.files.length?outputFiles(item):node('span','Previous archive receipt retained')])):empty('Create a portable archive to move the complete workspace to another host.'));}
+bind('open-warehouse',()=>{
+  if(!token)throw new Error('Open the private workspace before its reporting warehouse.');
+  location.assign('/warehouse/#token='+encodeURIComponent(token));
+});
 bind('open-commissioning',()=>{
   if(!token)throw new Error('Open the private workspace before its customer commissioning editor.');
   location.assign('/commissioning/#token='+encodeURIComponent(token));

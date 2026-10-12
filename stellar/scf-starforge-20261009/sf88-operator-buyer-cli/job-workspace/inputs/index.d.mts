@@ -1,3 +1,4 @@
+import type { FileHandle } from 'node:fs/promises';
 import type { IncomingMessage } from 'node:http';
 import type { Library } from '../../resource-library/library.mjs';
 import type { IntakeDetail, IntakeEntry } from '../intake/index.mjs';
@@ -15,7 +16,7 @@ export type InputFileSource =
   {kind: 'browser-file' | 'local-file'; filename: string} |
   {kind: 'resource-library'; resourceId: string; sha256: string; bytes: number; source: unknown} | null;
 export interface CustomerInputTask {
-  id: string; kind: 'file-selection' | 'file-staging' | 'file-sealing' | 'library-file-selection' | 'file-remove' | 'file-cleanup';
+  id: string; kind: 'file-selection' | 'file-staging' | 'file-sealing' | 'library-file-selection' | 'file-remove' | 'file-cleanup' | 'source-read';
   state: 'RUNNING' | 'CANCELLING'; startedAt: string; completedAt: string | null; progress: InputFileProgress | null;
 }
 export interface CustomerInputSummary {
@@ -27,6 +28,14 @@ export interface CustomerInputSummary {
 }
 export interface CustomerFileSelection {
   slot: string; expectedRevision: number; filename?: string; contentType?: string; signal?: AbortSignal;
+}
+/** Complete original sealed files held under the customer's native input operation. */
+export interface SelectedCustomerInput {
+  requestId: string; revision: number; reference: string;
+  merchant: {origin: string; catalogSha256: string; functionId: string; functionSha256: string};
+  input: Record<string, unknown>;
+  files: Record<string, {file: FileHandle; descriptor: InputFileDescriptor; uploadId: string; plan: InputUploadPlan}>;
+  signal: AbortSignal;
 }
 export interface JobInputFiles {
   readonly directory: string;
@@ -47,6 +56,9 @@ export interface JobInputFiles {
   };
   remove(id: string, options: {slot: string; expectedRevision: number; signal?: AbortSignal}): Promise<{slot: string; removed: true}>;
   cleanup(id: string, options: {expectedRevision: number; signal?: AbortSignal}): Promise<{uploads: number; bytes: number}>;
+  /** Handles remain owned by this operation and close after the callback settles. */
+  withSelected<T>(id: string, options: {slots: string[]; expectedRevision: number; signal?: AbortSignal},
+    consume: (selection: SelectedCustomerInput) => T | Promise<T>): Promise<T>;
   cancel(id: string): boolean;
   close(): Promise<{closed: true}>;
 }

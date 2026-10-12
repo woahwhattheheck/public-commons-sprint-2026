@@ -15,6 +15,12 @@ const environment=field('environmentFile','Private environment JSON','path');
 const original='stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/';
 const key=value=>digest(json(canonical(value)));
 export const PYTHON_APPLICATION_CATALOG=Object.freeze([
+  {id:'python-dbnomics',python:true,command:'stellar-forge-dbnomics-analysis',terminal:false,
+    requiredSource:original+'dbnomics.py',title:'DBnomics analysis and workbook receiving',
+    description:'Prepare the complete economic source, produce briefings and workbooks, review returned records and reopen the original editable workspace.',
+    fields:[installation,field('argumentsJSON','Original economic-analysis arguments','json',true,
+      'JSON array beginning with --operation and its original directory, followed by prepare, receive, finish, return-workbook, return-review, accept-return, adopt-notes, reopen or inspect.'),
+      field('nodeExecutable','Original Node executable','path',false,'Defaults to this managed runtime worker’s Node executable.'),environment]},
   {id:'python-postgres',python:true,command:'postgres',terminal:false,
     requiredSource:original+'postgres_http.py',title:'PostgreSQL receiving workspace',
     description:'Review source mappings, import complete dataset editions, compare changes and manage the customer application SQL view.',
@@ -61,11 +67,43 @@ function option(args,name) {
   need(values.length<=1,'PYTHON_APPLICATION_ARGUMENTS_INVALID','Select '+name+' once.');
   return values[0];
 }
+async function dbnomicsRetainedReturn(args,directory,inputPath) {
+  const id=option(args,'--id'),sha256=option(args,'--sha256');
+  need(typeof id==='string' && /^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$/.test(id) &&
+    typeof sha256==='string' && /^[a-f0-9]{64}$/.test(sha256),'PYTHON_DBNOMICS_RETURN_BINDING_REQUIRED');
+  const operationFile=join(directory,'returns',id,'operation.json'),inputs=[];
+  let operation;
+  try{operation=await privateControl(operationFile);}
+  catch(error){if(error.code==='ENOENT')return {args,inputs};throw error;}
+  const workflowFile=join(directory,'operation.json'),workflow=await privateControl(workflowFile);
+  need(workflow.schema==='stellar-forge.dbnomics-economic-workflow.v1' &&
+    operation.schema==='stellar-forge.dbnomics-workbook-return.v1' &&
+    operation.id===id && operation.workflow_id===workflow.id &&
+    operation.source_document_id===workflow.source?.document_id &&
+    operation.returned_file?.sha256===sha256,'PYTHON_DBNOMICS_RETURN_CHANGED');
+  inputs.push(await inputPath(operationFile,'file',false,true),
+    await inputPath(workflowFile,'file',false,true));
+  const retained=join(directory,'returns',id,'returned.xlsx');
+  let handle;
+  try{handle=await open(retained,constants.O_RDONLY|constants.O_NOFOLLOW);}
+  catch(error){if(error.code==='ENOENT')return {args,inputs};throw error;}
+  await handle.close();
+  // The same returned bytes are already retained by the original workflow.
+  // Bind that file instead of requiring an external input that may have moved.
+  const selected=[...args];
+  const index=selected.findIndex(value=>value==='--file'||value.startsWith('--file='));
+  need(index>=0 && option(selected,'--file')!==undefined,'PYTHON_DBNOMICS_RETURN_FILE_REQUIRED');
+  if(selected[index]==='--file')selected[index+1]=retained;
+  else selected[index]='--file='+retained;
+  return {args:selected,inputs};
+}
 export function pythonApplicationResource(type,settings) {
   if(type.command==='duckdb')return key({family:'python-duckdb',directory:settings.workspaceDirectory});
   if(type.command==='postgres')return key({family:'python-postgres',directory:settings.workspaceDirectory});
   if(type.command==='analysis')return key({family:'python-analysis',directory:settings.databaseDirectory});
   const args=argumentsFrom(settings);
+  if(type.command==='stellar-forge-dbnomics-analysis')return key({family:'python-dbnomics',
+    directory:option(args,'--operation')});
   return key({family:'python-workbook',directory:option(args,'--operation')??option(args,'--destination')??
     option(args,'--delivery')??option(args,'--database')??null,args});
 }
@@ -100,6 +138,36 @@ export async function pythonApplicationCommand(root,type,settings,{
     inputs.push(...node.inputs);
     args=['--database',settings.databaseDirectory,'--checkout',binding.sourceRoot,'--node',node.executable,
       'serve','--port',String(settings.port??0)];
+  }else if(type.command==='stellar-forge-dbnomics-analysis'){
+    args=argumentsFrom(settings);
+    need(option(args,'--checkout')===undefined && option(args,'--node')===undefined,
+      'PYTHON_DBNOMICS_RUNTIME_SELECTED','The installed application supplies its original source and Node executable.');
+    let subcommand=null;
+    for(let index=0;index<args.length;index++){
+      if(['--operation','--wait-seconds'].includes(args[index])){index++;continue;}
+      if(args[index].startsWith('--operation=')||args[index].startsWith('--wait-seconds='))continue;
+      subcommand=args[index];break;
+    }
+    need(subcommand!=='serve','PYTHON_DBNOMICS_USE_ANALYSIS_APPLICATION',
+      'Open this operation’s analysis directory with the original Analysis and workbook workspace application.');
+    const directory=option(args,'--operation');
+    need(typeof directory==='string','PYTHON_DBNOMICS_OPERATION_REQUIRED');
+    inputs.push(await inputPath(absolute(directory),'directory',true,true));
+    if(subcommand==='return-workbook'){
+      const resumed=await dbnomicsRetainedReturn(args,absolute(directory),inputPath);
+      args=resumed.args;inputs.push(...resumed.inputs);
+    }
+    for(const [flag,kind,missing] of [
+      ['--source','directory',false],['--bundle','file',false],['--selection','file',false],
+      ['--project','directory',false],['--file','file',false],['--target','directory',true],
+      ['--source-project','directory',true],['--source-receiving-project','directory',true],
+    ]){
+      const selected=option(args,flag);
+      if(selected!==undefined)inputs.push(await inputPath(absolute(selected),kind,missing,true));
+    }
+    const node=await selectedExecutable(settings.nodeExecutable??process.execPath);
+    inputs.push(...node.inputs);
+    args=['--checkout',binding.sourceRoot,'--node',node.executable,...args];
   }else{
     args=argumentsFrom(settings);
     for(const [flag,kind,missing,privateOnly] of [

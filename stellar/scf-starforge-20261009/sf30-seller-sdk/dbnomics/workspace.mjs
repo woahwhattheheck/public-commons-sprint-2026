@@ -27,7 +27,7 @@ export async function openDbnomicsWorkspace({directory,create=false,targetDirect
   need(settings.schema===PROJECT&&settings.directory===directory&&settings.sourceFile===sourceFile&&settings.publisherDirectory===join(directory,'publisher')&&
     (!targetDirectory||resolve(targetDirectory)===settings.targetDirectory),'Reopen this project with its original directory and dataset target.','DBNOMICS_PROJECT_BINDING_CHANGED',409);
   if(!await exists(sourceFile)){need(create,'The original source declaration is missing.');await exactFile(directory,'source.json',jsonBytes({schema:SOURCE_SCHEMA,captures:{},queries:{}}));}
-  for(const name of ['captures','acquisitions','operations','notes','reports','exports'])await privateDirectory(join(directory,name),true);
+  for(const name of ['captures','acquisitions','operations','notes','reports','exports','analysis-sources'])await privateDirectory(join(directory,name),true);
   const core=await openDbnomicsPublisher({directory:settings.publisherDirectory,create:!await exists(join(settings.publisherDirectory,'workspace.json')),
     sourceFile,targetDirectory:settings.targetDirectory,seller,resource,environment});
   let closed=false,closing=null,active=null;
@@ -189,6 +189,17 @@ export async function openDbnomicsWorkspace({directory,create=false,targetDirect
       extraction:{maxRows:Math.max(1,rows),maxBytes:64*1024*1024,maxRowBytes:1024*1024,timeoutMs:30000,
         order:[{column:'series_id',direction:'asc'},{column:'period',direction:'asc'}]}};
   }
+  async function analysisSourceSummaries(){
+    const result=[];
+    for(const entry of (await readdir(join(directory,'analysis-sources'),{withFileTypes:true})).filter(row=>row.isDirectory()).sort((a,b)=>a.name.localeCompare(b.name))){
+      let retained;try{retained=await operation(entry.name);}catch(error){if(error.code==='ENOENT')continue;throw error;}
+      if(retained.kind==='ANALYSIS_SOURCE'&&retained.state==='COMPLETE'&&retained.result){
+        const {id,documentId,selection,rowCount,counts,sourceBundleSha256}=retained.result;
+        result.push({id,documentId,selection,rowCount,counts,sourceBundleSha256,createdAt:retained.createdAt});
+      }
+    }
+    return result;
+  }
   async function status(input={}){
     const source=await readDbnomicsSource(sourceFile),reports=await reportSummaries();
     const captures=Object.entries(source.config.captures).map(([id,ref])=>({...ref.summary,captureId:id,captureSha256:ref.sha256}));
@@ -196,11 +207,9 @@ export async function openDbnomicsWorkspace({directory,create=false,targetDirect
     const operations=[];
     for(const name of names.slice(-100)){const value=await operation(name.slice(0,-12));operations.push({...value,result:undefined});}
     return {schema:'stellar-forge.dbnomics-workspace-status.v1',project:settings,sourceHash:source.hash,captures,queries:source.queries,reports,
-      active:active?{id:active.id,kind:active.kind}:null,operations,publisher:core.status(input),sourceTerms:captures.map(row=>({captureId:row.captureId,terms:row.terms}))};
+      active:active?{id:active.id,kind:active.kind}:null,operations,analysisSources:await analysisSourceSummaries(),publisher:core.status(input),sourceTerms:captures.map(row=>({captureId:row.captureId,terms:row.terms}))};
   }
-  async function exportSources(){
-    available();const op={id:'source-export',kind:'EXPORT_SOURCES',promise:null};active=op;
-    op.promise=(async()=>{
+  async function sourceHandover(){
       const source=await readDbnomicsSource(sourceFile),captures=[];
       for(const id of Object.keys(source.config.captures)){const retained=await capture(id);captures.push(retained.capture);}
       const notes=[];
@@ -209,8 +218,28 @@ export async function openDbnomicsWorkspace({directory,create=false,targetDirect
       const reports=[];for(const name of (await readdir(join(directory,'reports'))).filter(name=>name.endsWith('.json')).sort())reports.push(await readJson(join(directory,'reports',name),MAX_CAPTURE_BYTES));
       const content={schema:BUNDLE,project:{id:settings.id,createdAt:settings.createdAt},sourceConfig:source.config,captures,notes,reports};
       return {...content,bundleSha256:digest(content)};
-    })();
+  }
+  async function exportSources(){
+    available();const op={id:'source-export',kind:'EXPORT_SOURCES',promise:null};active=op;
+    op.promise=sourceHandover();
     try{return await op.promise;}finally{if(active===op)active=null;}
+  }
+  const analysisSource=async({id,selection}={})=>{
+    const engine=await import('./analysis-source.mjs'),selected=engine.normalizeDbnomicsAnalysisSelection(selection);
+    return mutate(id,'ANALYSIS_SOURCE',{selection:selected},async intent=>{
+      const folder=join(directory,'analysis-sources',id);await privateDirectory(folder,true);
+      let bundle=await optionalJson(join(folder,'original-handover.json'),MAX_CAPTURE_BYTES);
+      if(!bundle){bundle=await sourceHandover();await exactFile(folder,'original-handover.json',jsonBytes(bundle));}
+      const built=engine.buildDbnomicsAnalysisSource(bundle,selected,{createdAt:intent.createdAt});
+      return {id,...await engine.writeDbnomicsAnalysisSource(join(folder,'source'),built)};
+    });
+  };
+  async function analysisSourceExport(id){
+    const op=await operation(id);
+    need(op.kind==='ANALYSIS_SOURCE'&&op.state==='COMPLETE','Complete the original economic Analysis source operation.','DBNOMICS_ANALYSIS_SOURCE_REQUIRED',409);
+    const bundle=await (await import('./analysis-source.mjs')).exportDbnomicsAnalysisSource(join(directory,'analysis-sources',id,'source'));
+    need(bundle.documentId===op.result.documentId,'The original economic source operation changed.');
+    return bundle;
   }
   const importSources=({id,bundle}={})=>{
     const {bundleSha256,...content}=bundle??{};
@@ -266,5 +295,5 @@ export async function openDbnomicsWorkspace({directory,create=false,targetDirect
     writes.has(name)?(...args)=>{need(!active&&!closed&&!closing,'An analyst workspace operation is active.','DBNOMICS_WORKSPACE_BUSY',409);return value(...args);}:value])));
   return Object.freeze({directory,settings,sourceFile,publisher,status,operation,discover:input=>discoverDbnomics(input,{fetchImpl}),
     acquire,refresh,importCapture,capture,observations,facets,compare,notes,saveNotes,saveReport,report,exportReport,saveQuery,planTemplate,
-    exportSources,importSources,savePublicationPlan,startPublication,close});
+    exportSources,importSources,analysisSource,analysisSourceExport,savePublicationPlan,startPublication,close});
 }

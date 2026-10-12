@@ -81,6 +81,10 @@ export async function receiveMatomoProduct({archive,directory,operationId,allowL
     if(await exists(completed)){
       const receipt=await readRetainedJson(completed,1048576);
       if(receipt.schema!==RECEIPT||receipt.operationId!==operationId||receipt.requestSha256!==requestSha256||receipt.workspaceId!==model.store.settings.id||identity(receipt.archive)!==identity(pin))throw fault('MATOMO_PRODUCT_RECEIVING_CHANGED');
+      // Reconcile the exact retained archive's directory layout under the
+      // same receiving identity before private original-file verification.
+      // This also repairs intermediate directories made by older receivers.
+      await native('receive-files',{archive,directory:working,archivePin:pin},options);
       // Editable local rows may legitimately have advanced after receiving.
       const origin=model.origin??await createMatomoProductOrigin(model.store,options);try{await origin?.verify();}finally{if(origin!==model.origin)await origin?.close();}
       await writeNew(join(directory,'result.json'),bytes(receipt));

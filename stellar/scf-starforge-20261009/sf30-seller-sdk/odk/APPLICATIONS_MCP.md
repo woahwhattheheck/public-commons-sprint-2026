@@ -373,6 +373,88 @@ ID is useful provenance; it does not authorize changing the receiving publisher.
 Use the current native release status and the mapped output before an intended
 activation or rollback.
 
+
+## Approved-period warehouse through the same application
+
+Applications' **Reporting warehouse profiles** selects the private host JSON
+declaring the installed original PostgreSQL interpreter, private operator
+workspace, SQL schema and existing connection environment alias. The shared
+**Private environment JSON** supplies that alias's value to the managed host.
+The original warehouse profile file and its reviewed identity are checked
+during preparation and against the running application's startup.
+
+~~~sh
+starforge odk-central-workspace --workspace /private/field-workspace \
+  --operator "Field reporting operator" \
+  --warehouse-profiles /private/postgres-profiles.json
+~~~
+
+**Reporting warehouse** opens the authenticated `/warehouse/` screen on this
+existing listener. The managed factory opens the original field workspace,
+commissioning model and warehouse model through one trusted Store callback.
+Its close operation drains the warehouse and commissioner before releasing the
+original workspace.
+
+The full workflow selects the issued dataset for an accepted original period,
+retains its complete approval, inspects every approved CSV row, reviews every
+SQL column and original key, receives an immutable PostgreSQL edition, then
+exports both periods and every changed row in the full original report ZIP.
+The [warehouse operating guide](warehouse/README.md) contains the original
+PostgreSQL setup, full source binding and receiving instructions.
+
+The private `odk.connection.json` is accepted by the installed warehouse CLI:
+
+~~~sh
+starforge odk-central-workspace warehouse state \
+  --operator-file /private/field-workspace/odk.connection.json
+
+starforge odk-central-workspace warehouse prepare \
+  --operator-file /private/field-workspace/odk.connection.json \
+  --input /private/approved-output-action.json
+~~~
+
+Every warehouse action uses a saved caller-generated 32-character lowercase
+hexadecimal `requestId`. The complete approval input includes the original
+`deliveryId`, `datasetId` and period0 or1. A SQL inspection adds `approvalId`
+and `profileId`; review retains the actual `inspectionId`, complete mapping,
+reviewer and optional note. Import uses the original `reviewId`. A period
+report selects the original `previousImportId`, `currentImportId` and title.
+
+| SDK method | Original typed tool |
+| --- | --- |
+| `warehouseState` | `merchant_odk_warehouse_state` |
+| Authenticated warehouse URL | `merchant_odk_warehouse_browser` |
+| `warehousePrepare` | `merchant_odk_warehouse_prepare` |
+| `warehouseConnect` | `merchant_odk_warehouse_connect` |
+| `warehouseInspect` | `merchant_odk_warehouse_inspect` |
+| `warehouseReview` | `merchant_odk_warehouse_review` |
+| `warehouseImport` | `merchant_odk_warehouse_import` |
+| `warehousePeriodReport` | `merchant_odk_warehouse_period_report` |
+| `warehouseOperation` | `merchant_odk_warehouse_operation` |
+| `warehouseApproval` | `merchant_odk_warehouse_approval` |
+| `warehouseResume` | `merchant_odk_warehouse_resume` |
+
+These 11 operations bring the complete ODK catalog to57 tools. Warehouse state
+uses the same explicit pagination for profiles, deliveries, approvals and
+operations. Each saved operation exposes its original command, attempts,
+source binding, complete native output/result receipts and any retained report.
+
+A response interrupted after dispatch preserves the original ID. Reopen that
+request with `warehouseOperation` and continue the same native action through
+`warehouseResume`. An interrupted approval preparation uses its same saved
+`warehousePrepare` input. Completed operations reopen their retained result.
+
+The complete declarations are exported through both `./seller/odk` and
+`./seller/odk/warehouse`. The namespace `warehouse` uses the shared original
+`requestCentralAction` recovery boundary. Credentials stay in the declared
+host environment; tool inputs select existing profiles.
+
+Create the next native Central archive after the warehouse handover. Its
+original resources retain approved exports, full command outputs, complete
+result records and the exact period report ZIP. After original archive receiving,
+those files resolve under the current workspace and remain readable through
+the existing authenticated downloads and retained-file tools.
+
 ## Source and implementation references
 
 - ODK Central API and OData documentation: https://docs.getodk.org/central-api/ and https://docs.getodk.org/central-api-odata/

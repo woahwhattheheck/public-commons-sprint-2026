@@ -443,7 +443,8 @@ def reopen_handover(workspace, *, progress=None):
             "revision": snapshot["state"]["revision"], "projects": readbacks, "publications": publications}
 
 
-def receive(archive_path, destination, *, expected_sha256, progress=None, native_reopen="auto"):
+def receive(archive_path, destination, *, expected_sha256, progress=None, native_reopen="auto",
+            expected_workspace_id=None):
     """Receive through the original engine, verify migration records and reopen maps.
 
     native_reopen is 'auto', 'required', or 'skip'. A selected QGIS runtime's real
@@ -455,6 +456,14 @@ def receive(archive_path, destination, *, expected_sha256, progress=None, native
             "PACKAGE_HASH_REQUIRED", "Keep the complete handover's original SHA-256.")
     require(native_reopen in ("auto", "required", "skip"), "NATIVE_RECEIVING_MODE",
             "Choose auto, required or skip for native project reopening.")
+    if expected_workspace_id is not None:
+        require(isinstance(expected_workspace_id, str) and bool(expected_workspace_id),
+                "MIGRATION_WORKSPACE_ID_REQUIRED", "Keep the original incoming workspace ID.")
+        selected = inspect_handover(archive_path, expected_sha256=expected_sha256,
+                                    verify_files=False, progress=progress)
+        require(selected["workspaceId"] == expected_workspace_id, "MIGRATION_WORKSPACE_CHANGED",
+                "The selected archive belongs to another original workspace.",
+                expectedWorkspaceId=expected_workspace_id, actualWorkspaceId=selected["workspaceId"])
     received = receive_package(archive_path, destination, expected_sha256=expected_sha256, progress=progress)
     workspace = Workspace(received["workspace"].root)
     migration = workspace.verify_migration()

@@ -24,6 +24,8 @@ export const HELP = [
   '  applications --workspace DIRECTORY --binding BINDING_ID',
   '  application-review --workspace DIRECTORY --package PACKAGE_ID --binding BINDING_ID',
   '        --runtime RUNTIME_ID --label LABEL --settings SETTINGS.json --request-id UUID',
+  '  deployment-review --workspace DIRECTORY --application APPLICATION_ID --revision CURRENT_SHA256',
+  '        --settings DEPLOYMENT.json --request-id UUID',
   '  application-save --workspace DIRECTORY --review REVIEW_ID --request-id UUID',
   '  reconnect --workspace DIRECTORY --application APPLICATION_ID --request-id UUID',
   '  launch-review --workspace DIRECTORY --application APPLICATION_ID --request-id UUID',
@@ -41,6 +43,8 @@ export const HELP = [
   '',
   'Use the same request ID when receiving a lost response. History and resume reopen',
   'that exact operation. Application save resolves one reviewed merchant identity;',
+  'deployment-review revises its mode, facilitator and credential-file references',
+  'after its original run stops. The package, runtime and provider state stay bound.',
   'launch/recover/stop use the existing Applications runtime and original process.',
   'Closing this setup desk leaves a separately running Applications merchant intact.',
 ].join('\n');
@@ -52,6 +56,7 @@ const specs = {
   prepare: ['review','out','request-id'], connect: ['applications','request-id'],
   applications: ['binding'],
   'application-review': ['package','binding','runtime','label','settings','request-id'],
+  'deployment-review': ['application','revision','settings','request-id'],
   'application-save': ['review','request-id'], reconnect: ['application','request-id'],
   'launch-review': ['application','request-id'], launch: ['review','request-id'],
   'recover-run': ['application','operation','request-id'], stop: ['application','operation','request-id'],
@@ -128,6 +133,8 @@ export async function main(args = process.argv.slice(2), io = {
     else if (command === 'application-review') result = await model.call(command, { requestId,
       bindingId: out.binding, runtimeId: out.runtime, packageId: out.package, label: out.label,
       settings: await fileJSON(out.settings) });
+    else if (command === 'deployment-review') result = await model.call(command, { requestId,
+      applicationId: out.application, expectedRevision: out.revision, settings: await fileJSON(out.settings) });
     else if (['application-save','launch'].includes(command))
       result = await model.call(command, { requestId, reviewId: out.review });
     else if (['reconnect','launch-review'].includes(command))

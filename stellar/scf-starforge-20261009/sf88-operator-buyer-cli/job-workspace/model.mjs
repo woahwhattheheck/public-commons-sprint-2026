@@ -233,11 +233,12 @@ export async function openJobWorkspace({ directory, buyerRoots, fileRoots, trans
         return item(row(id));
       });
     }
-    async function cancel(id) {
+    async function cancel(id, { taskId } = {}) {
       return serial(async () => {
         active(); row(id);
         const task = tasks.get(id);
         if (!task) return item(row(id));
+        requireValue(taskId === undefined || taskId === task.public.id, 'JOB_CUSTOMER_TASK_CHANGED', 409);
         task.public = { ...task.public, state: 'CANCELLING' };
         task.controller.abort(Object.assign(new Error('JOB_CUSTOMER_OPERATION_CANCELLED'), { code: 'JOB_CUSTOMER_OPERATION_CANCELLED' }));
         return item(row(id));
@@ -282,10 +283,13 @@ export async function openJobWorkspace({ directory, buyerRoots, fileRoots, trans
       transport, fetchImpl, requestTimeoutMs, maxConcurrent });
     return Object.freeze({ directory, library, checkout, intake, resolution, register, retain, reconcile, update, start, cancel, scan, list, status,
       get(id) { return item(row(id)); },
-      async wait(id) {
+      async wait(id, { taskId } = {}) {
         const task = tasks.get(id);
+        requireValue(taskId === undefined || taskId === (task?.public ?? row(id).lastTask)?.id, 'JOB_CUSTOMER_TASK_CHANGED', 409);
         if (task) await task.promise;
-        return item(row(id));
+        const value = item(row(id));
+        requireValue(taskId === undefined || taskId === value.task?.id, 'JOB_CUSTOMER_TASK_CHANGED', 409);
+        return value;
       },
       close() {
         if (closePromise) return closePromise;

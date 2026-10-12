@@ -130,3 +130,19 @@ const rows = await workbench.observations(capture.captureId, {offset:0,limit:100
 Official contracts and exact included receipts are in [SOURCE.md](./SOURCE.md). The selected source is bounded by 100 exact series, one million observations and the documented file capacities. Discovery is paginated independently. Choose smaller complete source groups when provider responses exceed the selected capacity.
 
 DBnomics' aggregate database terms and each original provider's terms remain part of every capture/report/customer source package. Review the original provider's current reuse terms for the intended customer delivery. The implementation workshare covers acquisition, source revision handling, analyst workflows, publication and receiving.
+
+
+## Python Analysis and editable economic workbooks
+
+The **Python Analysis and editable workbooks** section prepares an exact saved
+capture, selected complete reports and notes revision for the original
+Analysis workspace. The installed Python workflow builds a full economic
+briefing, typed JSONL/CSV/SQLite exports, workbook and editable archive. Returned
+Records workbooks are compared and reviewed through native DatasetChanges;
+plain analyst notes can be appended with the original economic notes revision
+check.
+
+Use the complete [Analysis and workbook guide](ANALYSIS.md) and the original
+`sf88-operator-buyer-cli/python/examples/dbnomics_economic_workbook.py`.
+The typed client exposes `analysisSource` and `analysisSourceFile`; the same
+operations are available in the CLI and direct MCP tools.

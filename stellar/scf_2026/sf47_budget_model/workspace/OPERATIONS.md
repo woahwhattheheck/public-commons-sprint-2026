@@ -103,3 +103,7 @@ Aggregate export holds the original mutex and one SQLite read snapshot, borrowin
 ## Operating cash and remaining-work forecasts
 
 The **Operating forecast** tab calculates dated remaining obligations from this same case. It retains original paid allocations, uninvoiced work, conditional grant receipts and selected customer delivery scenarios, then saves the complete reviewed snapshot through the existing case transaction. Reopen saved forecasts or receive them with the complete case archive. See [FORECAST.md](FORECAST.md) for the operating workflow, cash calculations, exact sources and customer/capacity assumptions.
+
+## Implementation evidence
+
+[Implementation evidence](IMPLEMENTATION_EVIDENCE.md) adds a source-preserving review desk to this original case. Read the complete SF74 source, select original observations and their existing case associations, preview the current links, and freeze the same request. Technical and customer receiving remain distinct; negative and historical observations retain their meaning. Optional Completion evidence and complete export/import use the maintained original reader to verify the exact frozen source and cutoff.

@@ -60,9 +60,9 @@ function sameRequest(request, selected) {
 export class WqxWorkspaceFiles {
   #root; #config; #reads = new RetainedFileReads({ errorPrefix: 'WQX', maxSnapshotBytes: WQX_MAX_FILE_BYTES });
   #ready; #closing = false;
-  constructor(config) {
-    this.#config = config.wqxWorkspaces;
-    this.#root = join(config.exportsDirectory, 'wqx');
+  constructor(config, { namespace = 'wqx', sourceConfiguration = config.wqxWorkspaces } = {}) {
+    this.#config = sourceConfiguration;
+    this.#root = join(config.exportsDirectory, identifier(namespace, 'File-store namespace'));
     this.#ready = (async () => {
       await wqxPrivateDirectory(config.exportsDirectory); await folder(this.#root);
       await folder(join(this.#root, 'inputs')); await folder(join(this.#root, 'files'));

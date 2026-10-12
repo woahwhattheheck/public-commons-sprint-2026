@@ -455,7 +455,9 @@ function safeArtifactPath(root,file){
 }
 async function screenshots(result,root){
   const values=[];
-  for(const output of result?.nativeOutputs??[]){
+  const outputs=result?.nativeOutputs;
+  need(object(outputs)&&Array.isArray(outputs.artifacts),'STUDY_WORKFLOW_BROWSER_ARTIFACTS_REQUIRED');
+  for(const output of outputs.artifacts){
     const raw=typeof output==='string'?output:output.file??output.path??output.filename;
     if(typeof raw!=='string'||!raw.toLowerCase().endsWith('.png'))continue;
     const file=safeArtifactPath(root,raw),value=await identity(file);
@@ -513,8 +515,14 @@ function eligibilityRecord(value,root){
     receiving:Object.fromEntries(Object.entries(value.receiving).map(([name,item])=>[name,
       Object.fromEntries(Object.entries(item).filter(([key])=>!['directory','currentRevision'].includes(key)))]))};
 }
+function customerUpdateRecord(value,root){
+  need(value?.schema==='sf88-study-extraction-customer-programme/v1'&&value.state==='COMPLETE',
+    'STUDY_WORKFLOW_CUSTOMER_UPDATE_COMPLETION_REQUIRED');
+  const {files,...record}=value;
+  return {...clone(record),files:files.map(file=>deliveryReference(root,file))};
+}
 async function completeResult({runDirectory,binding,seed:originalSeed,selection,receivedSelection,artifacts,
-  jsonReceiving,gzipReceiving,continuedReceiving,senderBrowser,receivedBrowser,merchant,receivedMerchant,eligibility}){
+  jsonReceiving,gzipReceiving,continuedReceiving,senderBrowser,receivedBrowser,merchant,receivedMerchant,eligibility,customerUpdates}){
   const unique=new Map();
   for(const value of artifacts){
     const file=safeArtifactPath(runDirectory,value.file),path=relative(runDirectory,file).split(sep).join('/');
@@ -532,6 +540,7 @@ async function completeResult({runDirectory,binding,seed:originalSeed,selection,
     jsonReceiving,gzipReceiving,continuedReceiving,
     browser:{sender:senderBrowser.selection??selection,received:receivedBrowser.selection??receivedSelection},
     customer:eligibilityRecord(eligibility,runDirectory),
+    customerUpdates:customerUpdateRecord(customerUpdates,runDirectory),
     merchant:{sender:merchantRecord(merchant,runDirectory),received:merchantRecord(receivedMerchant,runDirectory)},
     artifacts:[...unique.values()],completedAt:new Date().toISOString()};
   await immutableJson(join(runDirectory,'result.json'),result);return result;
@@ -602,7 +611,8 @@ async function runHeld(options,drivers){
   const browserDriver=drivers.browser??(await import('./study-extraction-browser.mjs')).runStudyExtractionBrowser;
   const merchantDriver=drivers.merchant??(await import('./study-extraction-merchant-receiving.mjs')).runStudyExtractionMerchant;
   const eligibilityDriver=drivers.eligibility??(await import('./study-extraction-eligibility.mjs')).runStudyExtractionEligibility;
-  need([browserDriver,merchantDriver,eligibilityDriver].every(value=>typeof value==='function'),
+  const customerDriver=drivers.customer??(await import('./study-extraction-customer.mjs')).runStudyExtractionCustomer;
+  need([browserDriver,merchantDriver,eligibilityDriver,customerDriver].every(value=>typeof value==='function'),
     'STUDY_WORKFLOW_ORIGINAL_DRIVERS_REQUIRED');
   const storeOptions={extractionOptions:{signal}};
   const openStore=async directory=>{
@@ -718,10 +728,15 @@ async function runHeld(options,drivers){
       dossierId:id,revision:receivedSelection.currentRevision,formId:receivedSelection.formId,
       resultSetId:receivedSelection.resultSetId,tableId:receivedSelection.tableId,publicationId:receivedSelection.publicationId,
       againstPublicationId:selection.publicationId,source:merchantSource(sourceCase),replayRequests,runDirectory:await privateDirectory(join(runDirectory,'received-merchant')),signal}));
-    need((await receiving.getMetadata(id)).revision===receivedSelection.currentRevision,'STUDY_WORKFLOW_RECEIVED_REPLAY_CHANGED_HEAD');
-    need((await original.getMetadata(id)).revision===selection.currentRevision,'STUDY_WORKFLOW_SENDER_CHANGED_AFTER_RECEIVING');
-    need(same(await siblingState(receiving,id,originalSeed.siblingQuestionId,receivedSelection.currentRevision),originalSeed.sibling),
-      'STUDY_WORKFLOW_RECEIVED_SIBLING_CHANGED');
+    const reviewed=await checkpoint(join(runDirectory,'received-review-complete.json'),async()=>{
+      need((await receiving.getMetadata(id)).revision===receivedSelection.currentRevision,'STUDY_WORKFLOW_RECEIVED_REPLAY_CHANGED_HEAD');
+      need((await original.getMetadata(id)).revision===selection.currentRevision,'STUDY_WORKFLOW_SENDER_CHANGED_AFTER_RECEIVING');
+      need(same(await siblingState(receiving,id,originalSeed.siblingQuestionId,receivedSelection.currentRevision),originalSeed.sibling),
+        'STUDY_WORKFLOW_RECEIVED_SIBLING_CHANGED');
+      return {dossierId:id,revision:receivedSelection.currentRevision,publicationId:receivedSelection.publicationId};
+    });
+    need(reviewed.dossierId===id&&reviewed.revision===receivedSelection.currentRevision&&
+      reviewed.publicationId===receivedSelection.publicationId,'STUDY_WORKFLOW_RECEIVED_REVIEW_CHANGED');
   }finally{await receivedApp.close();}
   artifacts.push(...await screenshots(receivedBrowser,runDirectory));
   artifacts.push(...await verifiedDeliveryArtifacts(receivedMerchant,runDirectory,'merchant-received'));
@@ -739,8 +754,26 @@ async function runHeld(options,drivers){
   const continuedReceiving=await checkpoint(join(runDirectory,'continued-receiving.json'),()=>verifyReceiving({
     original:receiving,received:finalStore,id,revision:receivedSelection.currentRevision,sourceCase,
     selections:[selection,receivedSelection],sibling:originalSeed.sibling}));
+  const customerSenderConnection=join(runDirectory,'customer-connection.json'),
+    customerReceiverConnection=join(runDirectory,'customer-received-connection.json');
+  let customerSenderApp,customerReceiverApp,customerUpdates;
+  try{
+    customerSenderApp=await openApp(receivingDirectory,customerSenderConnection,signal);
+    customerReceiverApp=await openApp(join(runDirectory,'final-received-workspace'),customerReceiverConnection,signal);
+    customerUpdates=await checkpoint(join(runDirectory,'customer-updates.json'),()=>customerDriver({
+      senderConnectionFile:customerSenderConnection,receiverConnectionFile:customerReceiverConnection,
+      runDirectory:join(runDirectory,'customer-updates'),seed:originalSeed,sourceCase,
+      baselineSelection:selection,updatedSelection:receivedSelection,signal}));
+    need(customerUpdates?.dossierId===id&&customerUpdates.source?.workspaceId===customerSenderApp.workspaceId&&
+      customerUpdates.receiver?.workspaceId===customerReceiverApp.workspaceId,
+      'STUDY_WORKFLOW_CUSTOMER_EXISTING_WORKSPACES_CHANGED');
+  }finally{
+    const closed=await Promise.allSettled([customerSenderApp?.close(),customerReceiverApp?.close()]);
+    const failure=closed.find(value=>value.status==='rejected');if(failure&&!signal?.aborted)throw failure.reason;
+  }
+  artifacts.push(...await verifiedDeliveryArtifacts(customerUpdates,runDirectory,'customer-update'));
   return completeResult({runDirectory,binding,seed:originalSeed,selection,receivedSelection,artifacts,
-    jsonReceiving,gzipReceiving,continuedReceiving,senderBrowser,receivedBrowser,merchant,receivedMerchant,eligibility});
+    jsonReceiving,gzipReceiving,continuedReceiving,senderBrowser,receivedBrowser,merchant,receivedMerchant,eligibility,customerUpdates});
 }
 export async function runStudyExtractionWorkflow(options,drivers={}){
   need(object(options)&&typeof options.operation==='string'&&/^[A-Za-z0-9_-]{8,100}$/.test(options.operation),
