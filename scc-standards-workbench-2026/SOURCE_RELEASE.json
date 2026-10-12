@@ -186,13 +186,13 @@
     },
     {
       "path": "web/app.js",
-      "git_blob_sha": "a5f4fb888ecee25592b6823900a4e2fac730f2b1",
-      "bytes": 80174
+      "git_blob_sha": "98d88547b9b0b7a262e877c22047ed0cd53bec29",
+      "bytes": 80242
     },
     {
       "path": "web/consultation.css",
-      "git_blob_sha": "640d1de8d0ff0fe65c61e4ac2587b1f5d4ddc974",
-      "bytes": 17610
+      "git_blob_sha": "3ce5f99c6ec144cb709a89e5202deece71dbc45f",
+      "bytes": 17771
     },
     {
       "path": "web/consultation.js",
@@ -226,8 +226,8 @@
     },
     {
       "path": "web/style.css",
-      "git_blob_sha": "78e7c32628dd0d32c259a0e7e14e705568d8b1db",
-      "bytes": 13209
+      "git_blob_sha": "c904703eedd79bbf7f9aeecb35bb8f64fd254e6e",
+      "bytes": 13282
     },
     {
       "path": "workspace.py",
@@ -237,7 +237,7 @@
   ],
   "execution": {
     "initial_feature_imports_and_javascript_checks": "completed on the first feature cut",
-    "consultation_full_browser_and_installed_return_journey": "The original saved case completed all 16 stages at release 0.2.2, public commit 198df6455769bdd0be841d913fd773624731ed10. The same saved-case continuation and complete desktop/phone view phase in delivery/consultation-receiving.mjs operate this corrected source.",
+    "consultation_full_browser_and_installed_return_journey": "The same saved project completed all 16 business stages and the complete 40-view desktop/phone review at release 0.2.3, public commit 87b16f92d5fb7a8116ac33d1730d3a043423cd89. The original receiving controller retains this project and its published source records across source continuations.",
     "prior_publisher_0_1_1": "completed document generation and all 81 rendered-page visual review"
   },
   "notes": [
@@ -245,6 +245,7 @@
     "The operator and offline recipient use the existing packet, return, amendment and disposition records.",
     "The receiving controller resumes the same saved project and records the selected source when a correction is applied.",
     "Reopening a saved response preserves its reviewer details, language, comments and pending editor before persisting the rendered state.",
-    "Operator presentation keeps complete original records and distinguishes missing amounts from zero. Publication dates are formatted for the selected language while the captured edition and source JSON remain unchanged."
+    "Operator presentation keeps complete original records and distinguishes missing amounts from zero. Publication dates are formatted for the selected language while the captured edition and source JSON remain unchanged.",
+    "The completed visual review is incorporated in the phone consultation navigation, active tab counts and singular record labels."
   ]
 }
