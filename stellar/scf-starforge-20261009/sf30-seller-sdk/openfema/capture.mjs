@@ -20,6 +20,7 @@ function fault(code,message,status=400,details={}) {return Object.assign(new Err
 function plain(value) {return value!==null&&typeof value==='object'&&!Array.isArray(value);}
 function copy(value) {return structuredClone(value);}
 function integer(value,label,{min=0,max=Number.MAX_SAFE_INTEGER}={}) {
+  if(typeof value!=='string'&&typeof value!=='number')throw fault('OPENFEMA_NUMBER',label+' must be an exact integer.');
   if(typeof value==='string'&&!/^\d+$/.test(value)) throw fault('OPENFEMA_NUMBER',label+' must be an exact nonnegative integer.');
   const n=Number(value);
   if(!Number.isSafeInteger(n)||n<min||n>max) throw fault('OPENFEMA_NUMBER',label+' is outside the supported integer range.');
@@ -218,14 +219,60 @@ function sourceIdentity(edition) {
       pages:d.pages.map(p=>({sha256:p.sha256,bytes:p.bytes,url:p.url,skip:p.skip,count:p.count})),rowCount:d.rowCount,sourceCount:d.sourceCount,
       filterBatches:d.filterBatches.map(b=>({filter:b.filter,sourceCount:b.sourceCount,rowCount:b.rowCount}))}];}))})));
 }
+function acquisitionIdentity(edition) {
+  const connectors=[];
+  for(const kind of KINDS){const d=edition.datasets[kind];
+    for(const receipt of [d.metadataReceipt,d.fieldsReceipt,...d.pages,d.metadataEndReceipt])
+      if(receipt.connector!==undefined){validateReceipt(receipt,receipt.url);connectors.push({kind,url:receipt.url,
+        sha256:receipt.sha256,connectorSha256:receipt.connectorSha256,sourceSlot:receipt.connector.sourceSlot});}
+  }
+  return connectors.length?hash(Buffer.from(stable({schema:'stellar-forge.openfema-acquisition-identity.v1',connectorReceipts:connectors}))):null;
+}
 function editionIdentity(edition) {
-  return hash(Buffer.from(stable({schema:EDITION_SCHEMA,captureId:edition.captureId,sourceSha256:edition.sourceSha256,
-    createdAt:edition.createdAt,completedAt:edition.completedAt})));
+  const value={schema:EDITION_SCHEMA,captureId:edition.captureId,sourceSha256:edition.sourceSha256,
+    createdAt:edition.createdAt,completedAt:edition.completedAt};
+  if(edition.acquisitionSha256!==undefined)value.acquisitionSha256=edition.acquisitionSha256;
+  return hash(Buffer.from(stable(value)));
 }
-function validateReceipt(receipt,url) {
-  if(!plain(receipt)||receipt.url!==url||!SHA.test(receipt.sha256??'')||!Number.isSafeInteger(receipt.bytes)||receipt.bytes<0||receipt.status!==200)
-    throw fault('OPENFEMA_RECEIPT','A retained original response has a different URL, status or byte identity.',409);
+const CONNECTOR_SCHEMA='stellar-forge.openfema-connector-file.v1';
+function connectorEvidence(receipt,url,{sourceSlot}={}) {
+  const c=receipt.connector;
+  const validTime=value=>typeof value==='string'&&Number.isFinite(Date.parse(value));
+  if(!plain(c)||c.schema!==CONNECTOR_SCHEMA||c.provider!=='notion-public-file'||c.sourceUrl!==url||
+     !Number.isSafeInteger(c.responseIndex)||c.responseIndex<0||
+     typeof c.sourceSlot!=='string'||!c.sourceSlot||
+     sourceSlot!==undefined&&c.sourceSlot!==sourceSlot||
+     !validTime(c.requestedAt)||!validTime(c.uploadReceivedAt)||!validTime(c.downloadReceivedAt)||
+     Date.parse(c.requestedAt)>Date.parse(c.uploadReceivedAt)||Date.parse(c.uploadReceivedAt)>Date.parse(c.downloadReceivedAt)||
+     receipt.status!==null||receipt.method!==null||receipt.headers!==null||
+     receipt.observedAt!==c.downloadReceivedAt||receipt.observationTiming!=='connector-download-received')
+    throw fault('OPENFEMA_CONNECTOR_RECEIPT','Retain the exact connector response position, source URL and receiving clocks; unexposed provider HTTP facts must remain null.',409);
+  const u=c.createAttachment,d=c.downloadAttachment;
+  if(!plain(u)||!plain(d)||u.status!=='uploaded'||
+     typeof u.file_upload_id!=='string'||!/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(u.file_upload_id)||
+     d.file_upload_id!==u.file_upload_id||typeof u.filename!=='string'||!u.filename||
+     d.filename!==u.filename||typeof u.content_type!=='string'||!/^application\/json(?:\s*;|$)/i.test(u.content_type)||
+     d.content_type!==u.content_type||!Number.isSafeInteger(u.content_length)||u.content_length<1||
+     d.content_length!==u.content_length||u.content_length!==receipt.bytes||typeof d.content!=='string'||
+     u.markdown_source!=='file-upload://'+u.file_upload_id)
+    throw fault('OPENFEMA_CONNECTOR_FILE','The original create/download receipts must identify the same complete JSON attachment.',409);
+  const original=Buffer.from(d.content,'utf8');
+  if(original.length!==receipt.bytes||hash(original)!==receipt.sha256)
+    throw fault('OPENFEMA_CONNECTOR_BYTES','The complete connector download text differs from the retained original response identity.',409);
+  const digest=hash(Buffer.from(stable(c)));
+  if(receipt.connectorSha256!==digest)
+    throw fault('OPENFEMA_CONNECTOR_CHANGED','The retained connector evidence changed.',409);
+  return copy(c);
 }
+export function validateOpenFemaResponseReceipt(receipt,url,{sourceSlot}={}) {
+  if(!plain(receipt)||receipt.url!==url||!SHA.test(receipt.sha256??'')||!Number.isSafeInteger(receipt.bytes)||receipt.bytes<0)
+    throw fault('OPENFEMA_RECEIPT','A retained original response has a different URL or byte identity.',409);
+  if(receipt.connector!==undefined)connectorEvidence(receipt,url,{sourceSlot});
+  else if(receipt.status!==200||receipt.connectorSha256!==undefined)
+    throw fault('OPENFEMA_RECEIPT','A direct HTTP source receipt must retain its actual successful provider status.',409);
+  return receipt;
+}
+const validateReceipt=validateOpenFemaResponseReceipt;
 export function createOpenFemaCapture({store,fetchImpl=globalThis.fetch,userAgent='Commons OpenFEMA portfolio/1.0'}={}) {
   if(!store||typeof store.putObject!=='function'||typeof store.saveResponse!=='function'||typeof store.mutate!=='function')
     throw fault('OPENFEMA_STORE','Use the original private workspace store.');
@@ -348,7 +395,7 @@ export function createOpenFemaCapture({store,fetchImpl=globalThis.fetch,userAgen
       try {
       for(let batchIndex=0;batchIndex<dataset.filterBatches.length;batchIndex++) {
         let batch=status(id).datasets[kind].filterBatches[batchIndex];
-        const allowed=kind==='declarations'?null:new Set((batch.filter.match(/\d+/g)??[]).map(Number));
+        const allowed=kind==='declarations'?(c.scope.disasterNumbers.length?new Set(split(c.scope.disasterNumbers)[batchIndex]):null):new Set((batch.filter.match(/\d+/g)??[]).map(Number));
         while(!batch.complete) {
           signal?.throwIfAborted();
           const current=status(id),d=current.datasets[kind],url=pageUrl(kind,batch.filter,batch.skip,current.scope.pageSize);
@@ -361,7 +408,7 @@ export function createOpenFemaCapture({store,fetchImpl=globalThis.fetch,userAgen
           let lastKey=batch.lastKey;const issues=[];
           for(let rowIndex=0;rowIndex<records.length;rowIndex++) {
             const row=records[rowIndex],number=integer(row.disasterNumber,'Source disaster number',{min:1,max:99999});
-            if(kind==='declarations'?!matchesDeclaration(row,current.scope):!allowed.has(number))
+            if(kind==='declarations'?(!matchesDeclaration(row,current.scope)||(allowed&&!allowed.has(number))):!allowed.has(number))
               throw fault('OPENFEMA_FILTER_IGNORED','A provider row is outside its requested disaster cohort.',502);
             const key=String(row[d.orderBy]??'');
             if(!key)throw fault('OPENFEMA_SOURCE_KEY','The original source row lacks its stable paging key '+d.orderBy+'.',502);
@@ -422,10 +469,14 @@ export function createOpenFemaCapture({store,fetchImpl=globalThis.fetch,userAgen
       datasets:c.datasets,disasterNumbers:c.disasterNumbers,sourceSha256:null,issues:c.issues,
       consistency:'dataset-refresh-bracketed',termsUrl:'https://www.fema.gov/about/openfema/terms-conditions',
       source:'Federal Emergency Management Agency, OpenFEMA'};
-    edition.sourceSha256=sourceIdentity(edition);edition.id=editionIdentity(edition);
+    edition.sourceSha256=sourceIdentity(edition);
+    const acquisitionSha256=acquisitionIdentity(edition);if(acquisitionSha256!==null)edition.acquisitionSha256=acquisitionSha256;
+    edition.id=editionIdentity(edition);
     if(originalEdition) {
       if(originalEdition.schema!==EDITION_SCHEMA||sourceIdentity(originalEdition)!==originalEdition.sourceSha256||
-         editionIdentity(originalEdition)!==originalEdition.id||originalEdition.sourceSha256!==edition.sourceSha256)
+         editionIdentity(originalEdition)!==originalEdition.id||originalEdition.sourceSha256!==edition.sourceSha256||
+         acquisitionIdentity(originalEdition)!==(originalEdition.acquisitionSha256??null)||
+         (originalEdition.acquisitionSha256??null)!==(edition.acquisitionSha256??null))
         throw fault('OPENFEMA_IMPORT_EDITION','The supplied original edition differs from the complete retained source responses.',409);
       edition=copy(originalEdition);
     }
@@ -466,7 +517,8 @@ export function createOpenFemaCapture({store,fetchImpl=globalThis.fetch,userAgen
   async function readEdition(id) {
     if(!SHA.test(id??''))throw fault('OPENFEMA_EDITION_ID','Choose a retained original edition.');
     const edition=await store.edition(id);
-    if(edition.schema!==EDITION_SCHEMA||edition.id!==id||sourceIdentity(edition)!==edition.sourceSha256||editionIdentity(edition)!==id)
+    if(edition.schema!==EDITION_SCHEMA||edition.id!==id||sourceIdentity(edition)!==edition.sourceSha256||editionIdentity(edition)!==id||
+       acquisitionIdentity(edition)!==(edition.acquisitionSha256??null))
       throw fault('OPENFEMA_EDITION_CHANGED','The original edition identity changed.',409);
     return edition;
   }
@@ -474,21 +526,27 @@ export function createOpenFemaCapture({store,fetchImpl=globalThis.fetch,userAgen
     if(!Object.hasOwn(DATASETS,kind))throw fault('OPENFEMA_DATASET','Choose declarations, applicants or projects.');
     yield* datasetRows((await readEdition(id)).datasets[kind]);
   }
-  async function retainExternal(id,kind,input,url,generation=0) {
-    if(!plain(input)||input.url!==url||input.status!==200||typeof input.observedAt!=='string'||!Number.isFinite(Date.parse(input.observedAt)))
-      throw fault('OPENFEMA_IMPORT_RECEIPT','Import the original URL, observed timestamp, HTTP200 status and unchanged response bytes.');
+  async function retainExternal(id,kind,input,url,generation=0,sourceSlot) {
+    if(!plain(input)||input.url!==url||typeof input.observedAt!=='string'||!Number.isFinite(Date.parse(input.observedAt)))
+      throw fault('OPENFEMA_IMPORT_RECEIPT','Import the original URL, receiving timestamp and unchanged response bytes.');
+    const connector=input.connector!==undefined;
+    if(connector)validateReceipt(input,url,{sourceSlot});
+    else if(input.status!==200)throw fault('OPENFEMA_IMPORT_RECEIPT','A direct HTTP import requires its actual HTTP200 receipt; connector imports must carry their complete separate evidence.');
     let bytes;
     if(typeof input.bodyText==='string'&&input.bodyBase64===undefined)bytes=Buffer.from(input.bodyText,'utf8');
     else if(typeof input.bodyBase64==='string'&&input.bodyText===undefined&&/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(input.bodyBase64))
       bytes=Buffer.from(input.bodyBase64,'base64');
     else throw fault('OPENFEMA_IMPORT_BYTES','Each original response needs exactly one bodyText or canonical bodyBase64 value.');
     if(bytes.length>MAX_PAGE_BYTES)throw fault('OPENFEMA_IMPORT_BYTES','An original page exceeds 64MiB.');
-    const object=await store.putObject(bytes);
-    if(input.sha256!=null&&input.sha256!==object.sha256||input.bytes!=null&&input.bytes!==object.bytes)
+    if(input.sha256!=null&&input.sha256!==hash(bytes)||input.bytes!=null&&input.bytes!==bytes.length)
       throw fault('OPENFEMA_IMPORT_HASH','The imported source bytes differ from the supplied receipt.',409);
-    const receipt={schema:'stellar-forge.openfema-response.v1',url,status:200,method:'GET',observedAt:input.observedAt,
-      headers:safeHeaders(input.headers),...object,dataset:kind,captureGeneration:generation,acquisition:'imported-original'};
-    await store.saveResponse(id,url,receipt);return {receipt,body:parseOpenFemaJSON(bytes)};
+    const body=parseOpenFemaJSON(bytes),object=await store.putObject(bytes);
+    const evidence=connector?{status:null,method:null,headers:null,observationTiming:'connector-download-received',
+      connector:copy(input.connector),connectorSha256:input.connectorSha256,acquisition:'imported-connector-original'}:
+      {status:200,method:'GET',headers:safeHeaders(input.headers),acquisition:'imported-original'};
+    const receipt={schema:'stellar-forge.openfema-response.v1',url,observedAt:input.observedAt,
+      ...object,dataset:kind,captureGeneration:generation,...evidence};
+    await store.saveResponse(id,url,receipt);return {receipt,body};
   }
   async function importBundle(bundle) {
     if(!plain(bundle)||bundle.schema!==BUNDLE_SCHEMA||!plain(bundle.datasets)||KINDS.some(k=>!plain(bundle.datasets[k])))
@@ -514,31 +572,33 @@ export function createOpenFemaCapture({store,fetchImpl=globalThis.fetch,userAgen
           if(kind==='declarations')cohort=status(b.id).disasterNumbers;
           continue;
         }
-        const incoming=bundle.datasets[kind],meta=await retainExternal(b.id,kind,incoming.metadata,metaUrl(kind)),
-          fields=await retainExternal(b.id,kind,incoming.fields,fieldsUrl(kind));
+        const incoming=bundle.datasets[kind],meta=await retainExternal(b.id,kind,incoming.metadata,metaUrl(kind),0,kind+'/metadata'),
+          fields=await retainExternal(b.id,kind,incoming.fields,fieldsUrl(kind),0,kind+'/fields');
         const metadata=metadataRecord(meta.body,kind);validateFields(fields.body,kind);
         const filters=kind==='declarations'?declarationFilters(b.scope):linkedFilters(cohort);
         if(!Array.isArray(incoming.pages))throw fault('OPENFEMA_IMPORT_PAGES','Each imported dataset must include its complete ordered original pages.');
-        const dataset=freshDataset(kind);dataset.metadataReceipt=meta.receipt;dataset.metadataSnapshot=metadata;dataset.fieldsReceipt=fields.receipt;
+        const dataset=freshDataset(kind),importIssues=[];dataset.metadataReceipt=meta.receipt;dataset.metadataSnapshot=metadata;dataset.fieldsReceipt=fields.receipt;
         let pageIndex=0;const numbers=new Set();
         for(let batchIndex=0;batchIndex<filters.length;batchIndex++) {
-          const filter=filters[batchIndex],allowed=kind==='declarations'?null:new Set((filter.match(/\d+/g)??[]).map(Number));
+          const filter=filters[batchIndex],allowed=kind==='declarations'?(b.scope.disasterNumbers.length?new Set(split(b.scope.disasterNumbers)[batchIndex]):null):new Set((filter.match(/\d+/g)??[]).map(Number));
           const batch={filter,sourceCount:null,rowCount:0,skip:0,lastKey:null,pages:[],complete:false};
           while(!batch.complete) {
             const item=incoming.pages[pageIndex++];if(!item)throw fault('OPENFEMA_IMPORT_INCOMPLETE','An imported source page is missing.');
-            const url=pageUrl(kind,filter,batch.skip,b.scope.pageSize),retained=await retainExternal(b.id,kind,item,url),
+            const url=pageUrl(kind,filter,batch.skip,b.scope.pageSize),retained=await retainExternal(b.id,kind,item,url,0,kind+'/page/'+(pageIndex-1)),
               records=entityRows(retained.body,dataset.entity),
               count=boundPageMetadata(retained.body,{skip:batch.skip,pageSize:b.scope.pageSize,firstCount:batch.sourceCount});
             if(records.length>b.scope.pageSize||batch.skip+records.length>count||(!records.length&&batch.skip<count))
               throw fault('OPENFEMA_IMPORT_INCOMPLETE','An imported page does not cover its declared source count.');
-            for(const row of records) {
+            for(const [sourceRow,row] of records.entries()) {
               const number=integer(row.disasterNumber,'Source disaster number',{min:1,max:99999});
-              if(kind==='declarations'?!matchesDeclaration(row,b.scope):!allowed.has(number))
+              if(kind==='declarations'?(!matchesDeclaration(row,b.scope)||(allowed&&!allowed.has(number))):!allowed.has(number))
                 throw fault('OPENFEMA_IMPORT_SCOPE','An original row is outside the selected cohort.');
               if(kind==='declarations')numbers.add(number);
               const key=String(row[dataset.orderBy]??'');
-              if(!key||batch.lastKey!==null&&compareKey(batch.lastKey,key,kind)>=0)
-                throw fault('OPENFEMA_IMPORT_ORDER','The imported pages must follow their complete, unique original source-key order.');
+              if(!key||batch.lastKey!==null&&compareKey(batch.lastKey,key,kind)>0)
+                throw fault('OPENFEMA_IMPORT_ORDER','The imported pages must follow their complete original source-key order.');
+              if(batch.lastKey!==null&&compareKey(batch.lastKey,key,kind)===0)
+                importIssues.push({code:'DUPLICATE_SOURCE_KEY',kind,key,sourcePageSha256:retained.receipt.sha256,sourceRow});
               batch.lastKey=key;
             }
             const page={...retained.receipt,skip:batch.skip,count:records.length,sourceCount:count,batchIndex,filter,metadata:copy(retained.body.metadata)};
@@ -549,12 +609,15 @@ export function createOpenFemaCapture({store,fetchImpl=globalThis.fetch,userAgen
           dataset.filterBatches.push(batch);
         }
         if(pageIndex!==incoming.pages.length)throw fault('OPENFEMA_IMPORT_SCOPE','The bundle contains extra pages outside its exact cohort.');
-        const end=await retainExternal(b.id,kind,incoming.metadataEnd,metaUrl(kind));
+        const end=await retainExternal(b.id,kind,incoming.metadataEnd,metaUrl(kind),0,kind+'/metadataEnd');
         if(refreshToken(metadata)!==refreshToken(metadataRecord(end.body,kind)))
           throw fault('OPENFEMA_IMPORT_REFRESH','The original dataset refreshed during this supplied page sequence.');
         dataset.metadataEndReceipt=end.receipt;dataset.state='COMPLETE';dataset.completedAt=stamp();
+        const connectorCount=[dataset.metadataReceipt,dataset.fieldsReceipt,...dataset.pages,dataset.metadataEndReceipt].filter(r=>r.connector!==undefined).length;
+        if(connectorCount)importIssues.push({code:'CONNECTOR_HTTP_METADATA_UNEXPOSED',kind,responseCount:connectorCount,
+          message:'Complete original JSON was received through a public-file connector. Attachment type/length and receiving clocks are retained; provider HTTP status, method and headers were not exposed.'});
         if(kind==='declarations')cohort=[...numbers].sort((a,b)=>a-b);
-        await update(b.id,c=>{c.datasets[kind]=dataset;c.disasterNumbers=cohort;});
+        await update(b.id,c=>{c.datasets[kind]=dataset;c.disasterNumbers=cohort;c.issues.push(...importIssues);});
       }
       return await finish(b.id,{originalEdition:bundle.edition??null});
     }catch(error) {
@@ -567,7 +630,9 @@ export function createOpenFemaCapture({store,fetchImpl=globalThis.fetch,userAgen
     const pack=async receipt=>{
       const bytes=await store.object(receipt.sha256);
       if(bytes.length!==receipt.bytes)throw fault('OPENFEMA_SOURCE_CHANGED','The original response length changed.',409);
+      validateReceipt(receipt,receipt.url);
       return {url:receipt.url,status:receipt.status,observedAt:receipt.observedAt,headers:receipt.headers,sha256:receipt.sha256,bytes:receipt.bytes,
+        ...(receipt.connector!==undefined?{method:null,observationTiming:receipt.observationTiming,connector:copy(receipt.connector),connectorSha256:receipt.connectorSha256}:{}),
         bodyBase64:bytes.toString('base64')};
     };
     for(const kind of KINDS) {
