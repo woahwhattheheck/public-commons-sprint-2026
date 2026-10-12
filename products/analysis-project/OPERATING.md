@@ -29,7 +29,26 @@ node stellar/scf-starforge-20261009/distribution/runtime-install-cli.mjs inspect
   --dir /private/analysis-runtime --load --source
 ~~~
 
-Retain the returned source root, source commit and source-manifest digest. Provision the original Python package in **Runtime workspace → Python**, selecting Python 3.12 or later and this same source release. Resolution, installation and activation stay with the original Python runtime worker. The package's console-script inventory must include `stellar-forge-analysis-project`; an older installation remains available for its existing sessions.
+Retain the returned source root, source commit and source-manifest digest. The named recipe includes the maintained `python` contribution, which supplies the original Python Applications provider, command registrations and package exports. Its catalog includes **Open Analysis project** and **Export complete Analysis project** from the original Python lifecycle.
+
+Use an existing private Runtime workspace, or initialize one once and attach this installed release:
+
+~~~sh
+node /private/analysis-runtime/package/source/stellar/scf-starforge-20261009/distribution/runtime-workspace/cli.mjs init \
+  --workspace /private/runtime-workspace
+
+node /private/analysis-runtime/package/source/stellar/scf-starforge-20261009/distribution/runtime-workspace/cli.mjs attach \
+  --workspace /private/runtime-workspace --runtime /private/analysis-runtime
+~~~
+
+For the operator interface, open that same workspace with its original server:
+
+~~~sh
+node /private/analysis-runtime/package/source/stellar/scf-starforge-20261009/distribution/runtime-workspace/cli.mjs serve \
+  --workspace /private/runtime-workspace
+~~~
+
+Keep this workspace and its attached runtime when continuing the installed receiving operation. Provision the original Python package in **Runtime workspace → Python**, selecting Python 3.12 or later and this same source release. Resolution, installation and activation stay with the original Python runtime worker. The package's console-script inventory must include `stellar-forge-analysis-project`; an older installation remains available for its existing sessions.
 
 Select the declared extras needed by subsequent analytical work. Opening a retained project and exporting its already generated report/workbook files use the original source and standard library. Building new workbook editions requires the original `workbooks` extra. The current installed `pyproject.toml` and the retained project's source select their actual dependencies.
 
@@ -58,7 +77,7 @@ Preparation opens the original installed command in read-only inspection mode. I
 
 ZIP input is materialized under a private retained directory. The default is a sibling of the customer database named by the reviewed manifest SHA256. Keep that directory while the project is in use. The original complete source remains available after the input ZIP is moved only when the subsequent command explicitly selects the retained extracted directory.
 
-The original archive receiver creates or reopens the destination under its own receiving journal. Repeating the same source and destination returns its original receiving result and preserves later customer queries, reports, workbook editions and database revisions. A different project cannot overwrite that destination.
+The original archive receiver creates or reopens the destination under its own receiving journal. Repeating the same source and destination returns its original receiving result and preserves later customer queries, reports, workbook editions and database revisions. A different project cannot overwrite that destination. Operation records are published only after their complete contents are saved, and a repeated record must match its retained bytes. ZIP extraction saves the complete selected directory before making that cache available. An interrupted write therefore keeps the completed operation records and the selected source together for the next continuation.
 
 Applications observes the actual original listener's private launch file, process ID and workspace identity before presenting **Open**. **Stop** sends SIGINT through the same managed process. The native Analysis owner closes its server and drains its original background work. Open and export requests use the same database resource as **Analysis and workbook workspace**, so they share its existing local ownership rules.
 

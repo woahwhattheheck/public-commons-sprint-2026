@@ -1,7 +1,7 @@
 {
   "schema": "stellar-forge.merchant-distribution-contribution.v1",
   "id": "merchant-provider-flowable-workspaces",
-  "description": "Original Flowable workspace MCP actions and complete retained file delivery",
+  "description": "Original Flowable process and decision MCP operations, execution audit and complete retained file delivery",
   "merchantProviders": {
     "flowable-workspaces": "stellar-forge/mcp-merchant-operator/providers/flowable-workspaces.mjs"
   },

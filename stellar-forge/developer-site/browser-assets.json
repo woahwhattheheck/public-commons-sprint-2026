@@ -10,16 +10,16 @@
       ]
     ],
     [
-      "/agentsmith-capture.py",
+      "/agentsmith-LICENSE.txt",
       [
-        "agentsmith-capture.py",
+        "agentsmith-LICENSE.txt",
         "text/plain; charset=utf-8"
       ]
     ],
     [
-      "/agentsmith-LICENSE.txt",
+      "/agentsmith-capture.py",
       [
-        "agentsmith-LICENSE.txt",
+        "agentsmith-capture.py",
         "text/plain; charset=utf-8"
       ]
     ],
@@ -122,17 +122,17 @@
       ]
     ],
     [
-      "/examples/fred-briefing-20261012/package-manifest.json",
-      [
-        "examples/fred-briefing-20261012/package-manifest.json",
-        "application/json; charset=utf-8"
-      ]
-    ],
-    [
       "/examples/fred-briefing-20261012/START_HERE.md",
       [
         "examples/fred-briefing-20261012/START_HERE.md",
         "text/markdown; charset=utf-8"
+      ]
+    ],
+    [
+      "/examples/fred-briefing-20261012/package-manifest.json",
+      [
+        "examples/fred-briefing-20261012/package-manifest.json",
+        "application/json; charset=utf-8"
       ]
     ],
     [
@@ -153,6 +153,13 @@
       "/examples/fred-briefing-20261012/stellar/scf-starforge-20261009/sf30-seller-sdk/fred/BRIEFINGS.md",
       [
         "examples/fred-briefing-20261012/stellar/scf-starforge-20261009/sf30-seller-sdk/fred/BRIEFINGS.md",
+        "text/markdown; charset=utf-8"
+      ]
+    ],
+    [
+      "/examples/fred-briefing-20261012/stellar/scf-starforge-20261009/sf30-seller-sdk/fred/examples/briefing-20261012/README.md",
+      [
+        "examples/fred-briefing-20261012/stellar/scf-starforge-20261009/sf30-seller-sdk/fred/examples/briefing-20261012/README.md",
         "text/markdown; charset=utf-8"
       ]
     ],
@@ -189,13 +196,6 @@
       [
         "examples/fred-briefing-20261012/stellar/scf-starforge-20261009/sf30-seller-sdk/fred/examples/briefing-20261012/macro-source.capture.json",
         "application/json; charset=utf-8"
-      ]
-    ],
-    [
-      "/examples/fred-briefing-20261012/stellar/scf-starforge-20261009/sf30-seller-sdk/fred/examples/briefing-20261012/README.md",
-      [
-        "examples/fred-briefing-20261012/stellar/scf-starforge-20261009/sf30-seller-sdk/fred/examples/briefing-20261012/README.md",
-        "text/markdown; charset=utf-8"
       ]
     ],
     [
@@ -265,6 +265,34 @@
       "/fleet.html",
       [
         "fleet.html",
+        "text/html; charset=utf-8"
+      ]
+    ],
+    [
+      "/grant-companion-core.mjs",
+      [
+        "grant-companion-core.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/grant-companion-workspace.mjs",
+      [
+        "grant-companion-workspace.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/grant-companion.css",
+      [
+        "grant-companion.css",
+        "text/css; charset=utf-8"
+      ]
+    ],
+    [
+      "/grant-companion.html",
+      [
+        "grant-companion.html",
         "text/html; charset=utf-8"
       ]
     ],
@@ -451,6 +479,13 @@
       ]
     ],
     [
+      "/rail402-LICENSE.txt",
+      [
+        "rail402-LICENSE.txt",
+        "text/plain; charset=utf-8"
+      ]
+    ],
+    [
       "/rail402-capture.py",
       [
         "rail402-capture.py",
@@ -462,13 +497,6 @@
       [
         "rail402-captures.json",
         "application/json; charset=utf-8"
-      ]
-    ],
-    [
-      "/rail402-LICENSE.txt",
-      [
-        "rail402-LICENSE.txt",
-        "text/plain; charset=utf-8"
       ]
     ],
     [

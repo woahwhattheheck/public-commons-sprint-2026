@@ -6,12 +6,12 @@ The caller supplies the exact retained publisher programme directory and the ful
 
 ## Run
 
-Select Node 24 and the existing Playwright installation on the accepting host. Supply its module path when it is outside normal Node resolution. Retain an explicit source port and a distinct receiving port; browser recovery depends on reopening the same origin.
+Select Node 24 and the existing Playwright installation on the accepting host. Supply its module path when it is outside normal Node resolution. Retain an explicit source port and a distinct receiving port; browser recovery depends on reopening the same origin. The caller accepts both named chromium exports and the default.chromium export exposed by an existing CommonJS Playwright entry; it uses that same installed browser implementation.
 
 ```json
 {
   "repository": "/absolute/public-commons-sprint-2026",
-  "sourceRef": "764954a49c7c77b22de85d96eb9148be726a5e7a",
+  "sourceRef": "e22cb42649f327ddf887fabc9abad227e3441da9",
   "publisherProgrammeDirectory": "/absolute/original-publisher-programme",
   "outputDirectory": "/absolute/installed-datasette-continuation",
   "playwrightModule": "/absolute/node_modules/playwright/index.mjs",
@@ -23,7 +23,7 @@ Select Node 24 and the existing Playwright installation on the accepting host. S
 }
 ```
 
-The explicit sourceRef above is the immutable public source containing the final browser and customer Analysis SQL and query-job support. For a canonical repository that has its own commit history, omit sourceRef to resolve that checkout's HEAD to a complete commit SHA on the first invocation. The journey saves that resolved SHA with its original input before building. A rerun without sourceRef reuses the saved SHA even when repository HEAD has advanced; it never selects a new source implicitly. An explicitly supplied sourceRef must match the retained source on a rerun.
+The explicit sourceRef above is the immutable public source containing the complete Datasette selection, final browser recovery and customer Analysis SQL and query-job support. For a canonical repository that has its own commit history, omit sourceRef to resolve that checkout's HEAD to a complete commit SHA on the first invocation. The journey saves that resolved SHA with its original input before building. A rerun without sourceRef reuses the saved SHA even when repository HEAD has advanced; it never selects a new source implicitly. An explicitly supplied sourceRef must match the retained source on a rerun.
 
 An existing populated npm cache may be supplied as npmCache; offline selects the maintained installer's offline dependency path. browserExecutable can select the host's installed Chromium executable.
 

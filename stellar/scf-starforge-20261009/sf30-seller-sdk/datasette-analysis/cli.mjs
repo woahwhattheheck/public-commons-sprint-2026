@@ -12,14 +12,17 @@ export const DATASETTE_ANALYSIS_SOURCE = 'stellar/scf-starforge-20261009/sf30-se
 const SCHEMA = 'stellar-forge.datasette-analysis-python-selection.v1';
 const HASH = /^[a-f0-9]{64}$/;
 const CORE = ['cli.mjs', 'cli.py', 'model.py', 'source.py', 'recipes.py',
-  'operator_server.py', 'operator_client.py', 'operator.html', 'operator.css', 'operator.mjs'];
+  'operator_server.py', 'operator_client.py', 'operator_client.pyi',
+  'operator.html', 'operator.css', 'operator.mjs', 'edition_bridge.mjs', 'receiving.py',
+  'nld_contract.py', 'nld_task.py', 'nld_worker.py', 'nld_adapter.py',
+  'nld_cli.py', 'nld_receiving.py', 'nld_operator.mjs', 'NLD.md', 'NLD_SOURCE_CONTRACT.json'];
 const OPTIONS = new Map([
   ['--runtime-workspace', 'root'], ['--runtime-directory', 'runtimeDirectory'],
   ['--runtime-id', 'runtimeId'], ['--installation-id', 'installationId'],
   ['--expected-binding-sha256', 'expectedBindingSha256'],
 ]);
 const COMMANDS = new Set(['serve', 'status', 'prepare', 'rows', 'compare', 'export',
-  'call', 'request', 'download', 'receive']);
+  'call', 'request', 'download', 'receive', 'nld', 'nld-receive']);
 const fingerprint = value => digest(json(canonical(value)));
 
 export function parseDatasetteAnalysisCommand(args) {
@@ -114,7 +117,10 @@ export async function resolveDatasetteAnalysisCommand(args, { leaseFd } = {}) {
       'DATASETTE_ANALYSIS_CHECKOUT_CHANGED', 'Use the source carried by the selected original installation.');
     if (checkout === undefined) commandArgs.push('--checkout', selected.binding.sourceRoot);
   }
-  const entry = join(selected.binding.sourceRoot, DATASETTE_ANALYSIS_SOURCE, 'cli.py');
+  const entryName = commandArgs[0] === 'nld' ? 'nld_cli.py'
+    : commandArgs[0] === 'nld-receive' ? 'nld_receiving.py' : 'cli.py';
+  if (entryName !== 'cli.py') commandArgs.shift();
+  const entry = join(selected.binding.sourceRoot, DATASETTE_ANALYSIS_SOURCE, entryName);
   return { executable: selected.installation.python, args: ['-I', entry, ...commandArgs],
     cwd: selected.binding.directory, binding: selected.selection, fingerprint: selected.fingerprint };
 }
@@ -127,6 +133,8 @@ function usage() {
     '  --workspace /private/analysis --operation-id OPERATION_ID --port 0\n\n' +
     'Commands after -- are the original cli.py commands: serve, status, prepare,\n' +
     'rows, compare, export, call, request, download and receive.\n' +
+    'nld forwards to the complete original-workspace NLD CLI; nld-receive runs its\n' +
+    'retained whole-workspace receiving programme with explicit original IDs.\n' +
     'Use the same workspace and operation ID when reopening existing work.\n' +
     'Install workbooks in the existing Python workspace before launch.\n';
 }

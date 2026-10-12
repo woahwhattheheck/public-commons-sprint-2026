@@ -30,9 +30,14 @@ def get(handler, workspace, url, query, parts):
     elif len(parts) == 4 and parts[:3] == ["api", "lineage", "plans"]:
         need(not query, "QUERY_FIELDS_INVALID")
         handler._reply(200, workspace.lineage.plan(parts[3]))
+    elif len(parts) == 5 and parts[:3] == ["api", "lineage", "plans"] and parts[4] == "downloads":
+        need(not query, "QUERY_FIELDS_INVALID")
+        handler._reply(200, workspace.lineage.downloads(parts[3]))
     elif len(parts) == 5 and parts[:3] == ["api", "lineage", "plans"] and parts[4] == "file":
-        need(set(query) == {"name"}, "DOWNLOAD_REQUIRED")
-        result = workspace.lineage.download(parts[3], query["name"][0])
+        need("name" in query and not set(query) - {"name", "sha256"} and
+             all(len(values) == 1 for values in query.values()), "DOWNLOAD_REQUIRED")
+        result = workspace.lineage.download(parts[3], query["name"][0],
+                                            expected_sha256=query.get("sha256", [None])[0])
         raw = result["bytes"]
         handler.send_response(200)
         handler.send_header("Content-Type", result["mime"])

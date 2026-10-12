@@ -116,6 +116,7 @@
     "stellar-forge/mcp-merchant-operator/research-ris.mjs",
     "stellar-forge/mcp-merchant-operator/research-risk-of-bias.mjs",
     "stellar-forge/mcp-merchant-operator/research-workspace.mjs",
+    "stellar/scf-starforge-20261009/distribution/browser-assets.mjs",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/routescan/config.mjs",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/routescan/primitives.mjs",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/routescan/quota.mjs",
@@ -152,6 +153,7 @@
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/STUDY-PROTOCOL-OPERATOR.md",
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/STUDY-PROTOCOL-RECEIVING.md",
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/customer-quotes/OPERATING.md",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/customer-quotes/browser-assets.json",
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/customer-quotes/cli.mjs",
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/customer-quotes/client.d.mts",
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/customer-quotes/client.mjs",
@@ -213,6 +215,7 @@
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/research-source-values.py",
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/ris-source/OPERATING_GUIDE.md",
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/ris-source/RECEIVING_GUIDE.md",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/ris-source/SOURCE_CONTRACT.md",
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/ris-source/browser-journey.mjs",
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/ris-source/cli.mjs",
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/ris-source/client.mjs",
@@ -300,5 +303,11 @@
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/workspace-client.mjs",
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/workspace-protocol.mjs",
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/zotero-workspace.mjs"
+  ],
+  "browserAssets": [
+    {
+      "server": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/customer-quotes/routes.mjs",
+      "manifest": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/customer-quotes/browser-assets.json"
+    }
   ]
 }

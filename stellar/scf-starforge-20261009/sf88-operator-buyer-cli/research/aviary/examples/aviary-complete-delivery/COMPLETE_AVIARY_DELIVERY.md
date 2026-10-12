@@ -11,36 +11,93 @@ original archives, then uses that original received workspace.
 
 ## Exact source and current status
 
-The application base is the complete twenty-file source packet from PR2164:
+The unchanged native application base is PR2164, merged as
+79586025b5b8916b8ea254ce43093623931b8544 in
+https://github.com/woahwhattheheck/public-commons-sprint-2026.
 
-- Merge: 79586025b5b8916b8ea254ce43093623931b8544.
-- Public repository: https://github.com/woahwhattheheck/public-commons-sprint-2026
-- Original source prefix:
-  stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research/aviary/
-- Source packet Git blob: 64cbf2ae87cc8fa00aa37d8f7d849cca250a5b62.
-- Source packet: 601,618 UTF-8 bytes.
-- Source packet SHA-256:
-  12da23f08cda04634318e6944c071286348effc0ec88ed63fa79cceaa61e34bf.
+The original source prefix is
+stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research/aviary/.
+The preceding twenty-file packet is Git blob
+64cbf2ae87cc8fa00aa37d8f7d849cca250a5b62, 601,618 UTF-8 bytes, SHA-256
+12da23f08cda04634318e6944c071286348effc0ec88ed63fa79cceaa61e34bf.
 
-The companion's whole producer is 74,496 UTF-8 bytes,
-SHA-256 6347c3a562dfcff119b4ea83f3ddc84f7091a03adbc70ea6ec5923f898078b98.
+This successor changes one example member, examples/usgs-example-input.json,
+after the actual public initialization rejected its supplemental Sequence #
+target. All nineteen other source members and every original data file remain
+byte-identical. The selected twenty-file source packet is 603,245 UTF-8 bytes,
+SHA-256 cb5f1cd8d5fabee6b6e43eb1571f13fe660b1c195462118ec929328607855fc3.
 
-The complete input carries those exact source bytes, the unchanged canonical
-4,034-byte private-state caller and both earlier complete producer postimages.
-The first producer was 36,626 bytes, SHA-256
-ff6762270c9eb821ff649b253ff3d1a9ab378dd9c4353999af226b18d126cbf3.
-The reviewed command-recovery producer was 53,244 bytes, SHA-256
-c74bfc791f70039662d4e6e0ab9875e679d2fc04edc0549db16acbf5c72bff33.
-Both remain retained as source history. An original revision 1 checkpoint made
-by the 70,704-byte producer (SHA-256
-073938b61dbe10e7d771741ffe5f76a0f455c3f5515ddebf86245c68e6f71d18)
-also keeps that exact producer as history before adopting this successor.
-Existing application files are unchanged.
+The complete producer is 81,715 UTF-8 bytes, SHA-256
+6cb5e3cc848bf2cdc3184c3ea0c6c93d48c3cb0a89c62165f301c5833f48755d.
+The complete input includes the unchanged 4,034-byte canonical private-state
+caller, all selected application source, the three preceding complete producers
+and the original 50662 history. Before any provider or browser work, it
+reconstructs and checks the complete original 832,813-byte input against SHA-256
+99fdb99fe21012f6bfe76947d72bb0fe2a402f02e90eb81eb5f762d9633569da,
+then retains its exact bytes alongside the original source packet, mapping,
+guide and failure evidence.
 
-Source review has accepted the command/process recovery. Python syntax and the
-full new public/browser/visual/save execution remain pending until this actual
-producer runs. The original nineteen native checks are already accepted and
-saved. These are separate states; this source packet is not a new browser PASS.
+The producer history contains:
+
+| Complete source | Bytes | SHA-256 |
+| --- | ---: | --- |
+| Original delivery producer | 36626 | ff6762270c9eb821ff649b253ff3d1a9ab378dd9c4353999af226b18d126cbf3 |
+| Reviewed command recovery | 53244 | c74bfc791f70039662d4e6e0ab9875e679d2fc04edc0549db16acbf5c72bff33 |
+| Actual 50662 producer | 74496 | 6347c3a562dfcff119b4ea83f3ddc84f7091a03adbc70ea6ec5923f898078b98 |
+
+An original revision 1 checkpoint made by the 70,704-byte producer, SHA-256
+073938b61dbe10e7d771741ffe5f76a0f455c3f5515ddebf86245c68e6f71d18,
+also retains that exact source as history when used with its bound source
+profile. Checkpoint format compatibility does not rewrite a different selected
+source packet or a committed workspace.
+
+The actual 50662 execution compiled all selected Python source, verified both
+accepted archives and the original nineteen-check result, and completed the
+public source collector with exit code zero. Initialization then rejected the
+unsupported supplemental target. The initializer's own cleanup ran before
+any public workspace identity or review was committed. The browser had not
+started. The complete process census later found no original process or private
+root. A complete Library metadata reconciliation found no finalized artifact
+from that attempt. Its attempted failure save is therefore not claimed as saved.
+
+This corrected source is prepared for the next complete continuation. Its
+native syntax, public initialization, browser and visual result are recorded
+only when that actual run returns them. The original nineteen native checks
+remain accepted and saved; they are reused without provider replay.
+
+## Explicit supplemental sequence treatment
+
+The source supplemental CSV is unchanged: 809 bytes, SHA-256
+55c488c8903bdbe45c6fc31dd6aa2ab8717808514e9e21e0940e015dbeb87f57.
+Both rows and their original sequence values remain in the source inventory.
+
+| Source column or mapping | Retained outcome |
+| --- | --- |
+| sequence | Listed explicitly in supplemental ignoredColumns; original CSV values remain present |
+| attachment_key | Remains explicitly ignored as in the original mapping |
+| Sequence # target | Removed from this example's supplemental target mapping because the maintained supplemental model has no such field |
+| Other supplemental mappings | Resource User Key, Title, File Path, Public and Description remain unchanged |
+| Mapping note | Records why sequence is unmapped and that no provider ordering is claimed |
+
+The maintained supplemental client sends title, description, access, parent
+resource and file data. It sends no sequence or sort parameter and traverses
+supplemental rows in their original CSV order. This correction makes that
+actual outcome explicit. It does not infer support from another importer's CSV
+template or silently remove an unknown source column.
+
+The corrected example is 18,329 bytes, SHA-256
+080565897337c1c0d352c3ac238368271f93b25f18e00c8a06528b82677b6e03.
+The original rejected example is 17,978 bytes, SHA-256
+4623d912924f5c77031db1815329014a05a480a9ae5e93789dc52145efd0d95a.
+The exact 24,887-byte 50662 history has SHA-256
+2ac7d003fb075ec99dabb4ad4205cfc641b6d762dfb0e0ffd357972d84f1e54f.
+
+These originals and the complete previous input are retained in
+producer-source/history-50662/ in both recovery checkpoints and the final
+delivery history. The source-selection receipt identifies the correction and
+the unchanged source data. This continuation reopens the saved original
+provider archives and completes the uncommitted public example; it does not
+create another provider-contract fixture.
 
 ## Files and invocation
 
@@ -169,7 +226,7 @@ or a legacy orphan log without its process/terminal proof, remains undispatched
 and is reported as requiring reconciliation.
 
 The initial producer file remains unchanged. Hash-named selected producers,
-the two earlier source bodies, full reconstruction input, guide and exact
+the three earlier source bodies, full reconstruction input, guide and exact
 source-adoption records are retained under producer-source. The final handoff
 includes that directory and all command requests, attempts, process/dispatch
 records, terminal results and logs.
@@ -238,7 +295,12 @@ or replaying the completed mapping/provider workflow.
 ## Resume an actually saved checkpoint
 
 This option accepts an already-authorized local copy of a checkpoint created by
-this producer. It makes no remote file transfer or sharing change.
+this producer with the same selected source-packet SHA. It makes no remote file
+transfer or sharing change. A checkpoint from the preceding source profile
+must remain bound to its original input; this option does not silently change
+its application files or command requests. No finalized 50662 checkpoint was
+found, so the correction continues from the already saved original archives
+and carries that failed execution as immutable history.
 
     python3 -B complete_aviary_delivery.py \
       --input aviary-delivery-input.json \

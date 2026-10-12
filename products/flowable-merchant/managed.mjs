@@ -18,6 +18,7 @@ export const FLOWABLE_PRODUCT_SOURCE_FILES = Object.freeze([
   'products/flowable-merchant/cli.mjs',
   'products/flowable-merchant/application-provider.mjs',
   FLOWABLE + 'native.mjs',
+  FLOWABLE + 'dmn-native.mjs',
   FLOWABLE + 'workspace/store.mjs',
   FLOWABLE + 'workspace/model.mjs',
   FLOWABLE + 'workspace/delivery.mjs',
@@ -100,7 +101,7 @@ export async function inspectFlowableProductLaunch(input = {}, { environment = p
   return { ...binding, directory: options.directory, bindingSha256: sha256(canonical(binding)),
     review: { name: first.profile.name, workspaceId: observed.workspace.workspaceId,
       ownership: 'ORIGINAL_FLOWABLE_WORKSPACE',
-      operation: 'Original deployments, process starts, human tasks, migration validation and saved engine history',
-      receiving: 'Complete original BPMN resources, saved revisions, native requests, responses and journals',
+      operation: 'Original BPMN and DMN deployments, process and human task operations, migration validation, decision evaluation and saved native history',
+      receiving: 'Complete original BPMN and DMN resources, decision audits, saved revisions, native requests, responses and journals',
       activation: 'Native deployment creates versioned definitions; migration applies the reviewed document to the selected running process' } };
 }

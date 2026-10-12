@@ -74,20 +74,21 @@ export async function callResearchQuotes(client,name,args,context={}){
 }
 export async function exportResearchQuotes(client,args,{file,download,source}={}){
  original(typeof download==='function','Use the original Research file receiver.');
- const api=client.customerQuotes(),options={file,expectedSha256:args.expectedSha256};
+ const api=client.customerQuotes(),options={file,expectedSha256:args.expectedSha256,expectedBytes:args.quoteExpectedBytes};
  if(args.kind==='quote-operation-file'){
-  exact(args,['workspace','kind','quoteOperationId','quoteFileName','expectedSha256'],
-   ['workspace','kind','quoteOperationId','quoteFileName','expectedSha256']);
+  exact(args,['workspace','kind','quoteOperationId','quoteFileName','quoteExpectedBytes','expectedSha256'],
+   ['workspace','kind','quoteOperationId','quoteFileName','quoteExpectedBytes','expectedSha256']);
   const result=await download(()=>api.download(args.quoteOperationId,args.quoteFileName,options));
-  return {result,selection:{quoteOperationId:args.quoteOperationId,quoteFileName:args.quoteFileName}};
+  return {result,selection:{quoteOperationId:args.quoteOperationId,quoteFileName:args.quoteFileName,quoteExpectedBytes:args.quoteExpectedBytes}};
  }
  original(['quote-case-file','quote-tariff-file'].includes(args.kind),'Select an original quotation file kind.');
- exact(args,['workspace','kind','quoteCaseId','quoteInput','quoteInputSource','expectedSha256'],
+ exact(args,['workspace','kind','quoteCaseId','quoteInput','quoteInputSource','quoteExpectedBytes','expectedSha256'],
   ['workspace','kind','quoteCaseId','expectedSha256']);
  const input=await requestBody(args,{source},'quoteInput','quoteInputSource');
  const result=await download(()=>args.kind==='quote-case-file'?api.downloadCase(args.quoteCaseId,input,options):
   api.downloadTariff(args.quoteCaseId,input,options));
  return {result,selection:{quoteCaseId:args.quoteCaseId,quoteInputSha256:digest(Buffer.from(JSON.stringify(input))),
   ...(args.quoteInputSource?{quoteInputSource:args.quoteInputSource}:{}),
+  ...(args.quoteExpectedBytes===undefined?{}:{quoteExpectedBytes:args.quoteExpectedBytes}),
   ...(result.metadata?.case?{case:result.metadata.case}:{})}};
 }

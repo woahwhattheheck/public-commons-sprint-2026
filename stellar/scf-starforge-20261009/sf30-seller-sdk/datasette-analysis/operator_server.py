@@ -27,7 +27,8 @@ _REQUEST = re.compile(r"[a-f0-9]{32}")
 _HASH = re.compile(r"[a-f0-9]{64}")
 _MAX_JSON = 1024 * 1024
 _MAX_HANDOVER = 32 * 1024 * 1024
-_ACTIONS = {"prepare", "compare", "export"}
+_ACTIONS = {"prepare", "compare", "export", "nld.prepare", "nld.execute",
+            "nld.report", "nld.pack", "nld.restore"}
 _TABLE = "sf_datasette_operator_requests"
 
 
@@ -150,7 +151,7 @@ class DatasetteOperator:
     def submit(self, action, body, *, request_id):
         identifier(request_id)
         need(action in _ACTIONS, "DATASETTE_ACTION_INVALID",
-             "Choose prepare, compare or export.")
+             "Choose a supported original Datasette or NLD action.")
         need(isinstance(body, dict), "DATASETTE_REQUEST_BODY_REQUIRED",
              "Supply the original JSON action body.")
         raw = encoded({"action": action, "body": body})
@@ -209,7 +210,9 @@ class DatasetteOperator:
 
     def _execute(self, request_id, action, body):
         try:
-            if action == "export":
+            if action in {"export", "nld.pack"}:
+                need(body.get("export_id", request_id) == request_id,
+                     "DATASETTE_EXPORT_REQUEST_CHANGED", "The export ID must match its original request.")
                 body = {**body, "export_id": request_id}
             result = self.model.dispatch(action, body)
             raw = encoded(result).decode()
@@ -257,6 +260,7 @@ def create_operator(analysis, *, operation_id, port=0, model_factory=DatasetteAn
             "/datasette/": ((here / "operator.html").read_bytes(), "text/html;charset=utf-8"),
             "/datasette/operator.mjs": ((here / "operator.mjs").read_bytes(), "text/javascript;charset=utf-8"),
             "/datasette/operator.css": ((here / "operator.css").read_bytes(), "text/css;charset=utf-8"),
+            "/datasette/nld_operator.mjs": ((here / "nld_operator.mjs").read_bytes(), "text/javascript;charset=utf-8"),
         }
         intake = private_directory(
             analysis.database.directory / "datasette-operator-intake" / operation_id,
@@ -399,6 +403,19 @@ def create_operator(analysis, *, operation_id, port=0, model_factory=DatasetteAn
                     parts = url.path.strip("/").split("/")
                     if self.command in {"GET", "HEAD"} and url.path == "/api/datasette/status" and not query:
                         return self._reply(200, controller.status())
+                    if self.command in {"GET", "HEAD"} and url.path == "/api/datasette/nld/status":
+                        need(not (set(values) - {"project_id"}), "NLD_STATUS_SELECTION", "Select one retained project.")
+                        # Read-only: never replace the active native writer's record.
+                        from nld_adapter import DatasetteNld
+                        return self._reply(200, DatasetteNld(controller.model).status(**values))
+                    if self.command in {"GET", "HEAD"} and url.path == "/api/datasette/nld/rows":
+                        need("project_id" in values and not (set(values) -
+                             {"project_id", "definition_id", "run_id", "kind", "offset", "limit"}),
+                             "NLD_ROW_SELECTION", "Select one original project and row page.")
+                        from nld_adapter import DatasetteNld
+                        body = {**values, "offset": int(values.get("offset", "0")),
+                                "limit": int(values.get("limit", "100"))}
+                        return self._reply(200, DatasetteNld(controller.model).rows(**body))
                     if self.command in {"GET", "HEAD"} and url.path == "/api/datasette/rows":
                         need(not (set(values) - {"edition_id", "offset", "limit"}),
                              "DATASETTE_ROW_SELECTION_INVALID", "Select an edition, offset and page size.")

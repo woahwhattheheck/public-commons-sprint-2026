@@ -1,6 +1,6 @@
 // MIT. The original commercial receiving controller under the configured Support owner.
 import {openCommercialReceivingController} from '../../stellar/scf-starforge-20261009/sf74-merchant-support-console/commercial/operator.mjs';
-import {failure} from './config.mjs';
+import {failure} from './host-files.mjs';
 const ACTIONS={
   merchant_case_commercial_receiving_status:'status',
   merchant_case_commercial_receiving_capture:'capture',

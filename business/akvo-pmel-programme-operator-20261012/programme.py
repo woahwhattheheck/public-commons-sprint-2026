@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import argparse
-from contextlib import contextmanager
+from contextlib import contextmanager, ExitStack
 import fcntl
 import hashlib
 import html
@@ -737,7 +737,14 @@ def frozen_results_packet(ws, path, selected, workspace_id):
         check(edition["sha256"] == selected["sha256"] and
               edition["report"]["reportSha256"] == manifest["reportSha256"] == selected["report"]["reportSha256"],
               "The completed packet changes the selected original report")
-        reports = report_module.report_files(edition, edition["report"], snapshot["comparisons"])
+        rebuilt = ws.results.report(selected["id"], selected["revision"])
+        check(rebuilt["edition"]["sha256"] == edition["sha256"] and
+              rebuilt["report"] == edition["report"] and
+              rebuilt["report"]["reportSha256"] == manifest["reportSha256"],
+              "The readable report no longer rebuilds from its original selected source")
+        # Native export renders the verified rebuilt report, whose presentation order
+        # differs from canonical JSON object order in the retained snapshot.
+        reports = report_module.report_files(edition, rebuilt["report"], snapshot["comparisons"])
         for name, data in reports.items():
             member = "reports/" + name
             check(member in paths and paths[member].read_bytes() == data,
@@ -761,7 +768,7 @@ def frozen_publisher_packet(ws, Workspace, path, selected):
         return packet_identity
 
 
-def build_handover(workspace, iati, result_path, runtime_manifest, runtime_root, out, *, opened_workspace=None):
+def build_handover(workspace, iati, result_path, runtime_manifest, runtime_root, out, *, opened_workspace=None, resume_from=None):
     result_path = absolute(result_path)
     result = read_json(result_path)
     check(result.get("schema") == RUN, "Select a complete original programme result")
@@ -781,8 +788,33 @@ def build_handover(workspace, iati, result_path, runtime_manifest, runtime_root,
     original = {"schema": "tjlabs.pmel.handover-build.v1", "operationId": result["operationId"],
                 "result": identity(result_path), "runtime": digest(encoded(runtime)),
                 "operator": {name: identity(Path(__file__).parent / name) for name in SOURCE_FILES}}
-    immutable_json(out / "BUILD.json", original)
-    with operation_lock(out / ".build"):
+    with ExitStack() as leases:
+        resume = None
+        if resume_from is not None:
+            resume = private_directory(absolute(resume_from))
+            check(not out.is_relative_to(resume) and not resume.is_relative_to(out),
+                  "Resume into a separate handover directory and keep the earlier build")
+            leases.enter_context(operation_lock(resume / ".build"))
+            previous = read_json(resume / "BUILD.json")
+            check(previous.get("schema") == original["schema"] and
+                  previous.get("operationId") == original["operationId"] and
+                  previous.get("result") == original["result"] and
+                  identity(resume / "programme-result.json") == original["result"],
+                  "The prior handover does not belong to this completed original programme")
+            previous_runtime = read_json(resume / "runtime-selection.json")
+            check(digest(encoded(previous_runtime)) == previous.get("runtime") and
+                  set(previous.get("operator", {})) == set(SOURCE_FILES),
+                  "The prior handover lost its original selected software basis")
+            for name in SOURCE_FILES:
+                check(identity(resume / name) == previous["operator"][name],
+                      "The prior handover source changed: " + name)
+            original["resumeFrom"] = {
+                "build": identity(resume / "BUILD.json"),
+                "runtime": previous["runtime"],
+                "operator": previous["operator"],
+            }
+        immutable_json(out / "BUILD.json", original)
+        leases.enter_context(operation_lock(out / ".build"))
         members = {}
         def retain_bytes(name, data):
             name = relative(name)
@@ -794,6 +826,9 @@ def build_handover(workspace, iati, result_path, runtime_manifest, runtime_root,
             copy_original(path, out / name, expected)
             members[name] = expected
         retain_file("programme-result.json", result_path)
+        if resume is not None:
+            retain_file("resumed-build/BUILD.json", resume / "BUILD.json", original["resumeFrom"]["build"])
+            retain_file("resumed-build/runtime-selection.json", resume / "runtime-selection.json")
         original_plan = read_json(result_path.parent / "original-plan.json")
         check(original_plan["workspaceId"] == result["workspaceId"] and
               digest(encoded(original_plan["plan"])) == result["planSha256"],
@@ -839,7 +874,12 @@ def build_handover(workspace, iati, result_path, runtime_manifest, runtime_root,
                 check(current["sha256"] == selected["sha256"], "The selected original edition differs")
                 filename = "data/results-" + name + ".zip"
                 if not (out / filename).exists() and not (out / filename).is_symlink():
-                    ws.results.export(selected["id"], out / filename, selected["revision"])
+                    prior_packet = resume / filename if resume is not None else None
+                    if prior_packet is not None and (prior_packet.exists() or prior_packet.is_symlink()):
+                        prior_identity, _ = frozen_results_packet(ws, prior_packet, selected, result["workspaceId"])
+                        copy_original(prior_packet, out / filename, prior_identity)
+                    else:
+                        ws.results.export(selected["id"], out / filename, selected["revision"])
                 packet_identity, reports = frozen_results_packet(ws, out / filename, selected, result["workspaceId"])
                 members[filename] = packet_identity
                 for report_name, data in reports.items():
@@ -849,7 +889,12 @@ def build_handover(workspace, iati, result_path, runtime_manifest, runtime_root,
             for ident, (name, selected) in final_publishers.items():
                 filename = "data/publisher-" + name + ".zip"
                 if not (out / filename).exists() and not (out / filename).is_symlink():
-                    ws.publishing.export(ident, out / filename, selected["revision"])
+                    prior_packet = resume / filename if resume is not None else None
+                    if prior_packet is not None and (prior_packet.exists() or prior_packet.is_symlink()):
+                        prior_identity = frozen_publisher_packet(ws, Workspace, prior_packet, selected)
+                        copy_original(prior_packet, out / filename, prior_identity)
+                    else:
+                        ws.publishing.export(ident, out / filename, selected["revision"])
                 members[filename] = frozen_publisher_packet(ws, Workspace, out / filename, selected)
                 publishing_packets.append({"alias": name, "project": ident, "revision": selected["revision"],
                                            "path": filename, **members[filename]})
@@ -859,6 +904,8 @@ def build_handover(workspace, iati, result_path, runtime_manifest, runtime_root,
                     "iatiPath": "runtime/" + runtime["iatiPath"], "runtimeSelection": runtime["selection"],
                     "results": project_packets, "selectedHeads": list(selected_heads.values()),
                     "publishing": publishing_packets, "files": members}
+        if resume is not None:
+            manifest["resumedBuild"] = original["resumeFrom"]
         immutable_json(out / "HANDOVER.json", manifest)
         return {"directory": str(out), "manifest": identity(out / "HANDOVER.json"),
                 "files": len(members), "bytes": sum(row["bytes"] for row in members.values()),
@@ -888,6 +935,7 @@ def main(argv=None):
     handover.add_argument("--runtime-manifest", required=True, type=Path)
     handover.add_argument("--runtime-root", required=True, type=Path)
     handover.add_argument("--out", required=True, type=Path)
+    handover.add_argument("--resume-from", type=Path, help="Earlier same-programme handover whose completed native archives should be reused")
     args = parser.parse_args(argv)
     if args.command == "init":
         Workspace = load_runtime(args.iati)
@@ -902,7 +950,7 @@ def main(argv=None):
         result = select_programme(args.workspace, args.iati, args.selection)
     else:
         result = build_handover(args.workspace, args.iati, args.result, args.runtime_manifest,
-                                args.runtime_root, args.out)
+                                args.runtime_root, args.out, resume_from=args.resume_from)
     print(json.dumps(result, ensure_ascii=False, indent=2, allow_nan=False))
 
 

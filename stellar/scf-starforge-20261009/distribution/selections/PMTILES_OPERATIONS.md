@@ -7,8 +7,9 @@ reviews one saved edition, publishes it, and gives the customer a complete
 workspace that can reopen and restore earlier releases.
 
 The source recipe is `pmtiles-operations.json`. The maintained source composer
-selects 29 commands, 53 named exports, four Applications and seven merchant
-providers from the original declarations. The four Applications are PMTiles
+selects the commands, named exports, four Applications and seven merchant
+providers from the original declarations, including the additive paid-output
+command and five output/customer exports. The four Applications are PMTiles
 map releases, Object Buyer, Buyer Runbook and Merchant console. The build
 receipt records the selected commit, complete file inventory, recipe identity,
 archive byte count and SHA-256.
@@ -551,3 +552,13 @@ records, reconciles the original operation and completes its original Stop.
 A saved preview receipt is never substituted for a running native preview in
 a new server lifetime. A completed second Stop reuses the retained native map
 and screenshot, verifies their identities, and finishes the same report.
+
+## Priced map outputs and complete customer acquisition
+
+The selection also includes `pmtiles-commerce`: prepare immutable priced map
+resources or the original complete operations ZIP, stage and operate the seller
+through SF82, purchase through the original SF88 object engine, and reopen the
+complete customer package. See the [paid-output operating guide](../../sf30-seller-sdk/pmtiles/commerce/README.md)
+and [merchant MCP commerce guide](../../../../stellar-forge/mcp-merchant-operator/PMTILES_COMMERCE.md).
+Keep the existing source/runtime selections and original native payment profiles;
+each download catalog binds its original release, complete bytes and price.

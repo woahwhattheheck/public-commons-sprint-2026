@@ -133,3 +133,20 @@ Do not invoke the helper independently while the original programme owns its col
 A successful report proves this local source-native product path: original Analysis history → reviewed native event publication → actual collector HTTP/replay → original portable application and workspace receiving. It does not assert a managed-provider execution, paid purchase, competition submission or production remote deployment.
 
 Until the selected host returns COMPLETE and the original files are verified, this packet is prepared source. Use the actual result and artifact hashes when reporting execution.
+
+
+## Original MCP handover continuation
+
+The same browser programme also calls `analysis_lineage_mcp.mjs` after the desktop/mobile captures, closing its Chromium context first. The original Analysis server and selected collector remain under that programme's ownership. There is no second native operation and no new query, workbook, publication or paid request.
+
+Provide the complete installed original MCP source closure in the selected checkout, including `stellar-forge/mcp-paid-agent`, `stellar-forge/mcp-merchant-operator/retained-download.mjs` and their actual relative imports. The native coordinator records the selected server, dispatcher, Lineage helper/schema, saved-file reader, download adapter, original transfer engine and initialization helper hashes before the operation starts. Use the same Node executable as the selected original MCP package.
+
+The publication phase registers the already-running Analysis directory through `createNativeAnalysis.register` and starts the original loopback MCP HTTP server through its maintained in-process operator interface. Its private bearer token stays in the receiving directory; it is absent from reports and command-line arguments. The original server's ordinary approve/sign interface is configured with the same refusing functions used by the native Analysis CLI. All exercised tool requests use the original Analysis action.
+
+The MCP caller reads the accepted plan and publication, then repeats the exact saved plan and publication request bodies. It verifies that the same original IDs reopen as complete. It reviews the native seven-file index and checks that its handover bytes/digest match the browser's already retained handover.
+
+The first download deliberately stops only after the maintained transfer engine has fsynced a real downloaded chunk and persisted its prefix digest. The exact interruption progress is saved before the deliberate stop. The caller closes the original MCP server, starts it again over the same private alias/cache state, and resumes the same file directory with the same plan/index digests. An interrupted carrier instead reopens those same records; it never allocates replacement plan or publication IDs. If the original download was already complete before its stage receipt was saved, the result names that actual recovered completion instead of claiming a newly discarded response.
+
+After all seven files are verified, the caller closes MCP and reopens the complete handover through the SDK's offline path. It verifies all seven original files and `lineage-download-index.json` under the maintained download lock. The cold-restored browser phase repeats the read/download/offline continuation against the original restored Analysis workspace with no configured collector, preserving its accepted source and publication.
+
+Each phase stores `mcp-publish/` or `mcp-restore/` beneath the same original receiving directory, with a frozen selection, exact request journal, private operator/server state, resumable handover files and final result. The browser result embeds the original MCP receipt and file records. The top-level original native result therefore includes the complete source/workbook/collector/archive/restore operation and this agent handover; the receiving programme does not create an independent source-only success claim.

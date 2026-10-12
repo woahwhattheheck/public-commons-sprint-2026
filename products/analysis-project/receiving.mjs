@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 // MIT. One installed continuation of the retained 7DE2 Analysis project.
 import { createHash, randomUUID } from 'node:crypto';
-import { open, readFile, writeFile, mkdir, lstat } from 'node:fs/promises';
+import { constants } from 'node:fs';
+import { open, readFile, writeFile, mkdir, lstat, link, unlink } from 'node:fs/promises';
 import { join, resolve, dirname } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { parseArgs } from 'node:util';
@@ -44,12 +45,42 @@ const model=await openRuntimeWorkspace({directory:values.workspace});
 const config={operation:OPERATION,...values,sourceManifestSha256:plan.source.manifestSha256,original:ORIGINAL};
 const pathFor=name=>join(root,name+'.json');
 async function read(name){try{return JSON.parse(await readFile(pathFor(name),'utf8'));}catch(error){if(error.code!=='ENOENT')throw error;return null;}}
+async function syncDirectory(path){
+  const handle=await open(path,constants.O_RDONLY|constants.O_DIRECTORY);
+  try{await handle.sync();}finally{await handle.close();}
+}
+async function retainedReceipt(path,raw,name){
+  const handle=await open(path,constants.O_RDONLY|constants.O_NOFOLLOW);
+  try{
+    const before=await handle.stat();
+    need(before.isFile() && before.size===raw.length &&
+      before.uid===process.getuid() && !(before.mode&0o077),
+      'Preserve the original '+name+' receipt.');
+    const bytes=await handle.readFile(),after=await handle.stat();
+    need(bytes.equals(raw) && before.dev===after.dev && before.ino===after.ino &&
+      before.size===after.size && before.mtimeMs===after.mtimeMs &&
+      before.ctimeMs===after.ctimeMs,'Preserve the original '+name+' selection.');
+    await handle.sync();
+  }finally{await handle.close();}
+  await syncDirectory(dirname(path));
+}
 async function keep(name,value){
-  const path=pathFor(name),raw=json(value);
-  try {await writeFile(path,raw,{flag:'wx',mode:0o600});}
-  catch(error){if(error.code!=='EEXIST')throw error;need(await readFile(path,'utf8')===raw,'Preserve the original '+name+' selection.');}
-  const handle=await open(path,'r');try{await handle.sync();}finally{await handle.close();}
-  const parent=await open(dirname(path),'r');try{await parent.sync();}finally{await parent.close();}
+  const path=pathFor(name),raw=Buffer.from(json(value),'utf8');
+  try{await retainedReceipt(path,raw,name);return value;}
+  catch(error){if(error.code!=='ENOENT')throw error;}
+  const temporary=path+'.'+randomUUID()+'.partial';
+  let handle;
+  try{
+    handle=await open(temporary,constants.O_WRONLY|constants.O_CREAT|constants.O_EXCL|constants.O_NOFOLLOW,0o600);
+    await handle.writeFile(raw);await handle.sync();await handle.close();handle=null;
+    try{await link(temporary,path);}
+    catch(error){if(error.code!=='EEXIST')throw error;}
+    await retainedReceipt(path,raw,name);
+  }finally{
+    if(handle)await handle.close();
+    try{await unlink(temporary);}catch(error){if(error.code!=='ENOENT')throw error;}
+    await syncDirectory(dirname(path));
+  }
   return value;
 }
 async function once(name,work){const old=await read(name);return old??keep(name,await work());}
@@ -141,7 +172,20 @@ async function ensureApp(name,kind,settings){
   }));
   const input=await once(name+'-save-request',async()=>({requestId:randomUUID(),reviewId:reviewed.id}));
   const saved=await once(name+'-saved',()=>model.applicationsSave(input));
-  need(saved.saved && !saved.connectionError,'The original application connection must complete.');
+  need(saved.saved,'Preserve the original saved application.');
+  const current=await app(saved.applicationId);
+  if(!current.release){
+    const attempt=name+'-connect-'+randomUUID();
+    await keep(attempt+'-request',{applicationId:saved.applicationId});
+    try{
+      const connected=await model.applicationsConnect({applicationId:saved.applicationId});
+      await keep(attempt+'-result',connected);
+    }catch(error){
+      await keep(attempt+'-error',{name:error.name,code:error.code??null,message:error.message});
+      const reconciled=await app(saved.applicationId);
+      if(!reconciled.release)throw error;
+    }
+  }
   const ready=await waitFor(name+'-connection',()=>app(saved.applicationId),value=>Boolean(value.release));
   need(ready.release.sourceCommit===values['source-commit'],'Keep the same installed release.');
   return {id:saved.applicationId,review:reviewed,saved};

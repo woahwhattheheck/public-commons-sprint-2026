@@ -1,0 +1,31 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "operator-discovery",
+  "description": "Search installed commands, original registration sources, package exports, Applications and merchant providers, and declared runtime groups.",
+  "components": [
+    "stellar/scf-starforge-20261009/distribution/discovery"
+  ],
+  "commands": {
+    "discover": "stellar/scf-starforge-20261009/distribution/discovery/cli.mjs"
+  },
+  "commandDescriptions": {
+    "discover": "Search installed toolkit capabilities, inspect original registrations, export every match and open the command finder"
+  },
+  "exports": {
+    "./operator/discovery": {
+      "types": "./source/stellar/scf-starforge-20261009/distribution/discovery/catalog.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/distribution/discovery/catalog.mjs"
+    },
+    "./operator/discovery/source": "./source/stellar/scf-starforge-20261009/distribution/discovery/load.mjs",
+    "./operator/discovery/server": "./source/stellar/scf-starforge-20261009/distribution/discovery/server.mjs"
+  },
+  "applicationProviders": {
+    "operator-discovery": "stellar/scf-starforge-20261009/distribution/discovery/application-provider.mjs"
+  },
+  "browserAssets": [
+    {
+      "server": "stellar/scf-starforge-20261009/distribution/discovery/server.mjs",
+      "manifest": "stellar/scf-starforge-20261009/distribution/discovery/browser-assets.json"
+    }
+  ]
+}
