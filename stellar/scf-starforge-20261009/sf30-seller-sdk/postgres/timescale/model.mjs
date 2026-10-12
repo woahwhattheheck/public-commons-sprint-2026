@@ -47,7 +47,7 @@ async function openTimescaleWorkspace({directory,create=false,sourceFile,mainten
       await createFile(join(directory,'workspace.json'),bytes({schema:'stellar-forge.timescale-workspace.v1',
         id:randomUUID(),title:checkText(title,'a workspace title',128),createdAt:stamp(),
         originalSourceDigest:original.sourceDigest,targetDirectory,maintenance:!!maintenance,
-        maintenanceSourceDigest:maintenance?.sourceDigest??null}));
+        maintenanceSourceDigest:maintenance?.sourceDigest??null,buyer:seller===null&&resource===null?null:{seller,resource}}));
     }
     const settings=await readJson(join(directory,'workspace.json'),16384);
     if(settings.schema!=='stellar-forge.timescale-workspace.v1')throw fault('TIMESCALE_WORKSPACE_INVALID');
@@ -100,6 +100,7 @@ async function openTimescaleWorkspace({directory,create=false,sourceFile,mainten
       change(row.id,row.state==='DISPATCHING'?'OUTCOME_UNKNOWN':'INTERRUPTED',
         {error:{code:'TIMESCALE_PROCESS_INTERRUPTED'}},'PROCESS_RECOVERY');
     }
+    if(seller===null&&resource===null&&settings.buyer){seller=settings.buyer.seller;resource=settings.buyer.resource;}
     publisher=await openPostgresPublisher({directory:join(directory,'publisher'),create,sourceFile,targetDirectory,environment,seller,resource});
     function status({limit=25,offset=0}={}){
       if(!Number.isSafeInteger(limit)||limit<1||limit>100||!Number.isSafeInteger(offset)||offset<0)throw fault('TIMESCALE_HISTORY_PAGE_INVALID');
@@ -223,6 +224,8 @@ async function openTimescaleWorkspace({directory,create=false,sourceFile,mainten
         if(!maintenanceSourceFile)throw fault('TIMESCALE_MAINTENANCE_CONNECTION_REQUIRED','Reopen or receive with the selected maintenance connection to operate the database.');
         const selected=await edition(input.plan.editionId);
         if(selected.record.digest!==input.plan.editionDigest)throw fault('TIMESCALE_EDITION_REVIEW_CHANGED');
+        const retained=db.prepare('SELECT id FROM plans WHERE id=?').get(input.requestId);
+        if(retained){const saved=getPlan(input.requestId,'refresh');return {planId:saved.id,digest:saved.digest,plan:saved.data};}
         const original=refreshContract(selected.value,input.plan);
         const plan=await prepareNativeRefresh(maintenanceSourceFile,original,{environment,signal:context.signal,captureId:randomUUID(),sourceDigest:settings.originalSourceDigest});
         transaction(()=>{db.prepare('INSERT INTO plans VALUES(?,?,?,?,?)').run(input.requestId,'refresh',stamp(),identity(plan),JSON.stringify(plan));});
@@ -256,6 +259,8 @@ async function openTimescaleWorkspace({directory,create=false,sourceFile,mainten
         if(!maintenanceSourceFile)throw fault('TIMESCALE_MAINTENANCE_CONNECTION_REQUIRED');
         const selected=await edition(input.editionId);
         if(selected.record.digest!==input.editionDigest)throw fault('TIMESCALE_EDITION_REVIEW_CHANGED');
+        const retained=db.prepare('SELECT id FROM plans WHERE id=?').get(input.requestId);
+        if(retained){const saved=getPlan(input.requestId,'job');return {planId:saved.id,digest:saved.digest,plan:saved.data};}
         const plan=await prepareNativeJob(maintenanceSourceFile,{edition:selected.value,...input},{environment,signal:context.signal});
         transaction(()=>{db.prepare('INSERT INTO plans VALUES(?,?,?,?,?)').run(input.requestId,'job',stamp(),identity(plan),JSON.stringify(plan));});
         return {planId:input.requestId,digest:identity(plan),plan};
@@ -274,23 +279,70 @@ async function openTimescaleWorkspace({directory,create=false,sourceFile,mainten
     function selectAggregate(input){
       only(input,['requestId','expectedVersion','selection','extraction']);
       return start('select-aggregate',input,async()=>{
-        const selected=await edition(input.selection.editionId);
-        if(selected.record.digest!==input.selection.editionDigest)throw fault('TIMESCALE_EDITION_REVIEW_CHANGED');
-        const plan=projectionContract(selected.value,input.selection);
-        const config=(await readPostgresSourceFile(sourceFile)).config;
-        const next={...config,queries:{timescale_aggregate:plan.query},bindings:{}};
-        // The existing publisher retains every saved original plan. Replacing
-        // this current declaration cannot mutate earlier extraction source files.
-        await atomicJson(join(directory,'connection'),'source.json',next);
-        const inspected=await publisher.source();
-        const saved=await publisher.savePlan({title:plan.title,sourceHash:inspected.hash,query:'timescale_aggregate',
-          input:plan.input,dataset:{name:plan.title,columns:Object.fromEntries(plan.columns.map(column=>[column.name,{type:'string',nullable:column.nullable}])),
-            sorts:plan.columns.map(column=>column.name),defaultLimit:50,maxLimit:250,maxCellChars:65536,maxPageBytes:921600},
-          extraction:input.extraction??{maxRows:1000000,maxBytes:268435456,timeoutMs:300000}});
-        const data={...plan,publisherPlanId:saved.id,publisherPlanDigest:saved.data.digest};
+        const retained=db.prepare('SELECT id FROM plans WHERE id=?').get(input.requestId);
+        if(retained){const saved=getPlan(input.requestId,'projection');return {planId:saved.id,digest:saved.digest,publisherPlanId:saved.data.publisherPlanId,plan:saved.data};}
+        let prepared=operation(input.requestId).data.selection;
+        if(!prepared){
+          const selected=await edition(input.selection.editionId);
+          if(selected.record.digest!==input.selection.editionDigest)throw fault('TIMESCALE_EDITION_REVIEW_CHANGED');
+          const plan=projectionContract(selected.value,input.selection);
+          const config=(await readPostgresSourceFile(sourceFile)).config;
+          const next={...config,queries:{timescale_aggregate:plan.query},bindings:{}};
+          const extraction={maxRows:1000000,maxBytes:268435456,maxRowBytes:1048576,timeoutMs:300000,
+            ...input.extraction,order:plan.columns.map(column=>({column:column.name,direction:'asc'}))};
+          const declaration={title:plan.title,sourceHash:digest(bytes(next)),query:'timescale_aggregate',
+            input:plan.input,dataset:{name:plan.title,columns:Object.fromEntries(plan.columns.map(column=>[column.name,{type:'string',nullable:column.nullable}])),
+              sorts:plan.columns.map(column=>column.name),defaultLimit:50,maxLimit:250,maxCellChars:65536,maxPageBytes:921600},
+            extraction};
+          prepared={plan,next,declaration,afterPublisherPlanId:publisher.status({limit:1}).plans[0]?.id??0};
+          change(input.requestId,'RUNNING',{selection:prepared},'SELECTION_PREPARED');
+        }
+        // Restore the selected saved declaration on an explicit continuation.
+        // The publisher's earlier plans retain their own original source files.
+        if(digest(await readPrivate(sourceFile))!==prepared.declaration.sourceHash)
+          await atomicJson(join(directory,'connection'),'source.json',prepared.next);
+        let saved=null,offset=0;
+        for(;;){
+          const page=publisher.status({limit:100,plansOffset:offset});
+          for(const row of page.plans){
+            if(row.id<=prepared.afterPublisherPlanId)continue;
+            const value=row.data;
+            if(value.sourceHash===prepared.declaration.sourceHash&&value.title===prepared.plan.title&&
+                value.query==='timescale_aggregate'&&identity(value.input)===identity(prepared.plan.input)&&
+                identity(value.extraction)===identity(prepared.declaration.extraction)&&
+                identity(value.dataset.columns)===identity(prepared.declaration.dataset.columns)){
+              if(saved)throw fault('TIMESCALE_SELECTION_PUBLICATION_AMBIGUOUS');
+              saved=row;
+            }
+          }
+          if(page.pages.plans.next===null)break;
+          offset=page.pages.plans.next;
+        }
+        saved??=await publisher.savePlan(prepared.declaration);
+        const data={...prepared.plan,publisherPlanId:saved.id,publisherPlanDigest:saved.data.digest};
         transaction(()=>{db.prepare('INSERT INTO plans VALUES(?,?,?,?,?)').run(input.requestId,'projection',stamp(),identity(data),JSON.stringify(data));});
         return {planId:input.requestId,digest:identity(data),publisherPlanId:saved.id,plan:data};
-      });
+      },{retryRead:true});
+    }
+    function startPublicationExtraction(input){
+      only(input,['requestId','expectedVersion','planId','planDigest']);
+      return start('extraction',input,async context=>{
+        const selected=getPlan(input.planId,'projection');
+        if(selected.digest!==input.planDigest)throw fault('TIMESCALE_PLAN_REVIEW_CHANGED');
+        let original;
+        try{original=publisher.run(input.requestId);}catch(issue){if(issue.code!=='RUN_NOT_FOUND')throw issue;}
+        if(original){
+          if(original.plan!==selected.data.publisherPlanId)throw fault('TIMESCALE_EXTRACTION_BINDING_CHANGED');
+          return {runId:original.id,state:original.state,publisherPlanId:original.plan,reused:true};
+        }
+        const started=publisher.startExtraction(selected.data.publisherPlanId,{id:input.requestId});
+        const cancel=()=>{try{publisher.cancel(started.id);}catch{}};
+        context.signal.addEventListener('abort',cancel,{once:true});
+        try{
+          const result=await started.completion;
+          return {runId:result.id,state:result.state,publisherPlanId:result.plan,error:result.data.error??null,reused:false};
+        }finally{context.signal.removeEventListener('abort',cancel);}
+      },{retryRead:true});
     }
     function cancel(id){
       uuid(id);if(active?.id!==id)throw fault('TIMESCALE_OPERATION_NOT_ACTIVE','The operation has already returned.',409);
@@ -302,9 +354,13 @@ async function openTimescaleWorkspace({directory,create=false,sourceFile,mainten
       closing=(async()=>{try{await active?.promise;await publisher?.close();}finally{db.close();await release();}})();
       return closing;
     }
-    return {directory,settings,sourceFile,maintenanceSourceFile,publisher,status,operation,edition,comparison,
-      saveReview,prepareRefresh,startRefresh,startVerification,prepareJob,applyJob,selectAggregate,startCapture,
-      getPlan,readRecord,retainRecord,cancel,available,close};
+    const guardedMutations=new Set(['savePlan','startExtraction','review','publish','recover','prepareBuyer']);
+    const publisherFacade=Object.freeze(Object.fromEntries(Object.entries(publisher).map(([name,value])=>
+      [name,guardedMutations.has(name)?(...args)=>{available();return value(...args);}:value])));
+    function exclusive(kind,input,work){return start(kind,input,work,{retryRead:true});}
+    return {directory,settings,sourceFile,maintenanceSourceFile,publisher:publisherFacade,status,operation,edition,comparison,
+      saveReview,prepareRefresh,startRefresh,startVerification,prepareJob,applyJob,selectAggregate,startCapture,startPublicationExtraction,
+      getPlan,readRecord,retainRecord,cancel,available,exclusive,close};
   }catch(issue){try{await publisher?.close();}finally{db?.close();await release();}throw issue;}
 }
 
