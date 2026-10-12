@@ -97,6 +97,157 @@ continues using its original configuration with these added fields. Existing
 HTTP and stdio launchers register the same tools. Use the provider's existing
 authentication and the configured workspace alias.
 
+## Use a reviewed QuickBooks OAuth company
+
+The same MCP host can consume the original reviewed company selection from the
+[QuickBooks OAuth workflow](../../stellar/scf-starforge-20261009/sf30-seller-sdk/oauth-connections/QUICKBOOKS.md).
+Complete that workflow's registered application, consent, grant review, native
+company preview and saved selection. Keep its existing private connection
+directory and host connection aliases. The merchant host then opens the original
+accounting workspace with that selected authorization.
+
+Replace only the qbo configuration above with this mode:
+
+~~~json
+{
+  "platforms": {
+    "qbo": {
+      "oauth": {
+        "connectionsFile": "../oauth-connections.json",
+        "selectionDirectory": "../private/qbo-company"
+      }
+    }
+  }
+}
+~~~
+
+Both paths resolve relative to the merchant configuration, as other accounting
+paths do. The connections file uses the original
+stellar-forge.oauth-host-connections.v1 schema and maps a trusted alias to its
+directory environment-variable name. The selection directory contains the original
+selection.json written by the native quickbooks select command. Supply the
+declared directory variable and registered client-secret variable to this same
+host process. Configuration files contain their references, and the original
+connection store retains the actual grant.
+
+An optional oauth.expectedSelectionSha256 pins the saved selection's exact
+integrity.sha256. It is the native selection identity, not a hash of a JSON file's
+formatting. A different saved selection rejects this accounting open with
+ACCOUNTING_QBO_SELECTION_CHANGED. Without that optional pin, each open reads the
+current complete native selection, verifies its integrity and original operation
+source, and retains that choice for the lifetime of this accounting owner.
+
+The oauth object is exclusive with qbo.tokenEnv, realmId, environment and
+minorVersion. The original selection supplies the exact company, environment and
+minor version. The existing access-token environment mode remains available with
+its original fields and behavior. Xero's configuration and original tenant aliases
+are unchanged.
+
+Start the existing merchant MCP service or its stdio launcher using the same
+configuration and private host environment. The installed merchant-accounting-platforms
+command and both original public customer SDK exports operate this mode without
+additional client arguments. The maintained package already includes the merchant
+operator and the original OAuth source components.
+
+### Inspect the selected connection before native work
+
+Open the original accounting workspace, then call merchant_accounting_qbo_connection
+through the existing qbo customer interface. This reads local retained connection
+state. It does not acquire a bearer, refresh a provider token, fetch the company
+or post a journal.
+
+The response preserves realmId, environment, minorVersion and available. In OAuth
+mode tokenEnv is null; the current authorization comes from the original reviewed
+connection. Additional fields describe the selected company and its current state:
+
+| Field | Meaning |
+| --- | --- |
+| authorization.kind | oauth-connection |
+| authorization.alias, profileSha256, grantId | The exact original selection's connection identity |
+| authorization.state | Current original grant state, or unavailable/closed for this owner |
+| authorization.ready | This selected original grant currently admits provider work |
+| authorization.bindingMatches | The current alias, directory reference, profile, grant, company and operation source match the retained selection |
+| authorization.lastError | A public native binding/connection code; no credential value |
+| selection | The original native company-selection summary, including ID, integrity, company/chart counts and reviewer |
+| connection | Current original grant identity/state, so a replaced grant can be compared with the retained selection |
+| provider | The original provider snapshot after its client has been opened, otherwise null |
+
+Ready describes the retained grant's local eligibility. The original provider
+acquires credentials when the requested native operation starts.
+
+The original OAuth client opens when an explicitly requested company read or
+journal operation needs it. It validates the current reviewed binding and obtains
+credentials through the existing provider. Its native company capture, credential
+renewal, rejection handling, fixed company endpoint and original journal transport
+remain authoritative. The merchant adapter does not repeat a journal after an
+uncertain provider response.
+
+### Continue historical work after a revoked or changed grant
+
+A disconnected, revoked or replaced grant leaves original plans, retained provider
+responses, accountant returns and exact file downloads available. Opening this
+workspace and reading those records does not require a fresh provider token.
+Original local recovery can still finish an already saved accountant response; it
+does not perform another provider posting.
+
+Use the connection response to distinguish historical receiving from a currently
+usable authorization. A selected grant that no longer matches reports
+QBO_OAUTH_COMPANY_CHANGED; a matching grant without current approval/connection
+reports QBO_OAUTH_GRANT_REQUIRED. Original directory/source errors remain visible
+as public codes. Explicit native provider work requires the current reviewed
+authorization and exact original company.
+
+Reconnect through the existing OAuth connection manager. If the grant, source,
+company or profile changes, create and review the new native company selection.
+Update the optional host selection pin when appropriate. A changed pin or host
+path requires reopening the merchant MCP host so it reads the updated configuration.
+Workspace pause/resume or close/open within that same running host keeps its current
+configuration. When that configuration already admits the new choice, reopen the
+same accounting workspace to adopt the saved selection; an already running owner
+continues to retain its original selection. Existing journal operations must still
+match their retained company, environment, minor version and request identity.
+
+Ordinary customer reconcile continues to inspect nativePost and recover retained
+local accountant results. It never invokes native post-resume merely because an
+OAuth token becomes available. An unfinished native operation still requires the
+existing explicit post-resume preview and execute path with its original identity.
+
+### Host ownership and shutdown
+
+The original maintenance controller drains admitted MCP calls and retained file
+readers, then closes the native QuickBooks and Xero controllers. Their original
+provider operations finish or retain their interruption state before the OAuth
+provider closes. The registry closes last, and the accounting lease is released
+through its original owner. Initialization failure also closes every owner that
+was acquired. Repeated close calls share that same completion.
+
+The reviewed selection and OAuth directory remain host-owned operating inputs.
+The accounting tool interface exposes their declared workspace and connection
+identities; it accepts no caller-selected credential file, connection path or
+transport. The original connection manager continues to own consent, reconnect
+and remote revocation.
+
+Programmatic hosts use the existing public entry point:
+
+~~~js
+import { startMerchantMcp } from '@tokenjunkielabs/starforge-merchant/merchant/mcp/server';
+
+const service = await startMerchantMcp({
+  configPath: '/srv/merchant-config/merchant-mcp.json',
+  environment: process.env,
+  port: 3211
+});
+// Existing tools and customer connections use service.url.
+await service.close();
+~~~
+
+The environment passed to startMerchantMcp supplies the host's OAuth directory and
+secret references as well as its existing transport authentication. Direct
+openMerchantOperator callers can supply the same environment through
+options.accounting.environment. Native embedded operation hosts can pass the
+original OAuth runtime options through options.accounting.quickbooksOAuth;
+these are trusted host options, not merchant JSON or customer tool arguments.
+
 ## One lifetime and one delivery path
 
 Open the workspace with merchant_accounting_open. Its operating maintenance
