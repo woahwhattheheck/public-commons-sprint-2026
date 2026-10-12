@@ -15,6 +15,7 @@ from model import Problem, canonical, digest, now, text, short_id, csv_bytes, MA
 import operations_domain as domain
 import forecast as forecasts
 import portfolio as portfolios
+import operations_support as support
 
 SCHEMA = "stellar-forge.sf47-operations.v1"
 MAX_SOURCE = 8 * 1024 * 1024
@@ -231,9 +232,19 @@ class Operations:
                 domain.fail("Reopen this closed review before recording new work.", "OPERATIONS_CLOSED", 409)
             next_version = expected + 1
             before, after, kind, record_id = None, None, None, None
+            extra_receipt = {}
             if command == "source.add":
                 after = self._source_add(program_id, data)
                 kind, record_id = "source", after["id"]
+            elif command == "support.receive":
+                result = support.receive(self, context, data, actor, next_version)
+                before, after, kind = result["before"], result["after"], "deployments"
+                record_id = after["id"]
+                extra_receipt = {"sourceIds": result["sourceIds"], "sourceSha256": result["sourceSha256"],
+                                 "unchanged": result["unchanged"]}
+                if result["unchanged"]:
+                    return {"id": program_id, "version": expected, "action": command, "kind": kind,
+                            "recordId": record_id, **extra_receipt}
             elif command == "forecast.save":
                 candidate = forecasts.preview(context, data.get("inputs"))
                 if candidate["previewSha256"] != domain.sha(data.get("expectedPreviewSha256"), "Reviewed forecast", False):
@@ -332,8 +343,13 @@ class Operations:
             self.db.execute("UPDATE ops_programs SET version=?,updated_at=? WHERE id=?", (next_version, now(), program_id))
             self._event(program_id, next_version, {**body, "actor": actor, "note": note}, command, before, after, kind, record_id)
             return {"id": program_id, "version": next_version, "action": command, "kind": kind, "recordId": record_id,
-                    **({"businessSha256": after["businessSha256"]} if command == "review" else {})}
+                    **extra_receipt, **({"businessSha256": after["businessSha256"]} if command == "review" else {})}
         return self.workspace._transaction(body.get("requestId"), payload, action)
+
+    def preview_support(self, program_id, body):
+        with self.workspace.mutex:
+            context = deepcopy(self._context(identifier(program_id, "operation")))
+        return support.preview(context, body)
 
     def preview_forecast(self, program_id, body):
         if not isinstance(body, dict) or set(body) - {"expectedVersion", "inputs"}:
