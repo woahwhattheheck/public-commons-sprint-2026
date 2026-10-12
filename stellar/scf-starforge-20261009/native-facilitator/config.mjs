@@ -25,8 +25,37 @@ function addresses(x, prefix, code) {
   return [...x];
 }
 
+function catalogConfig(input, recipients) {
+  if (input == null) return null;
+  fields(input, ['directory','merchants'], 'CATALOG_CONFIG_INVALID');
+  requireValue(typeof input.directory === 'string' && isAbsolute(input.directory) &&
+    input.directory.length <= 4096 && !/[\0\r\n]/.test(input.directory), 'CATALOG_ABSOLUTE_DIRECTORY_REQUIRED');
+  requireValue(Array.isArray(input.merchants) && input.merchants.length > 0 &&
+    input.merchants.length <= 256, 'CATALOG_MERCHANTS_REQUIRED');
+  const bindings = new Set(), identities = new Map();
+  const merchants = input.merchants.map(row => {
+    fields(row, ['sellerId','signer','origin','payTo'], 'CATALOG_MERCHANT_INVALID');
+    requireValue(typeof row.sellerId === 'string' && /^[A-Za-z0-9_.:-]{1,128}$/.test(row.sellerId),
+      'CATALOG_SELLER_ID_INVALID');
+    requireValue(typeof row.signer === 'string' && row.signer.length >= 3 && row.signer.length <= 256 &&
+      !/[\u0000-\u001f\u007f]/.test(row.signer), 'CATALOG_SELLER_SIGNER_INVALID');
+    requireValue(recipients.includes(row.payTo), 'CATALOG_RECIPIENT_OUTSIDE_PAYMENT_POLICY');
+    let origin;
+    try { origin = new URL(row.origin); } catch { throw new FacilitatorError('CATALOG_HTTPS_ORIGIN_REQUIRED'); }
+    requireValue(origin.protocol === 'https:' && !origin.username && !origin.password &&
+      origin.pathname === '/' && !origin.search && !origin.hash, 'CATALOG_HTTPS_ORIGIN_REQUIRED');
+    const key = origin.origin + '|' + row.payTo;
+    requireValue(!bindings.has(key), 'CATALOG_MERCHANT_BINDING_DUPLICATE');
+    requireValue(!identities.has(row.sellerId) || identities.get(row.sellerId) === row.signer,
+      'CATALOG_SELLER_SIGNER_CONFLICT');
+    bindings.add(key); identities.set(row.sellerId,row.signer);
+    return {sellerId:row.sellerId,signer:row.signer,origin:origin.origin,payTo:row.payTo};
+  });
+  return {directory:resolve(input.directory),merchants};
+}
+
 export function validateConfig(input) {
-  fields(input, ['schema','network','rpcUrl','signers','feeBumpSigner','payments','limits','operations'], 'CONFIG_FIELDS_INVALID');
+  fields(input, ['schema','network','rpcUrl','signers','feeBumpSigner','payments','limits','operations','catalog'], 'CONFIG_FIELDS_INVALID');
   requireValue(input.schema === 'stellar-forge.native-facilitator.v1', 'CONFIG_SCHEMA_INVALID');
   requireValue(['stellar:testnet','stellar:pubnet'].includes(input.network), 'EXPLICIT_STELLAR_NETWORK_REQUIRED');
   let rpc;
@@ -79,7 +108,7 @@ export function validateConfig(input) {
   integer(maxLedgerAgeSeconds, 5, 3600, 'LEDGER_MAX_AGE_INVALID');
   requireValue(op.requireReady === undefined || typeof op.requireReady === 'boolean', 'REQUIRE_READY_INVALID');
   return { schema:input.schema, network:input.network, rpcUrl:rpc.href, signers, feeBumpSigner,
-    payments:{assets,recipients,maxAtomic,paymentFlows:[...paymentFlows]}, limits:{maxTransactionFeeStroops:limits.maxTransactionFeeStroops,
+    payments:{assets,recipients,maxAtomic,paymentFlows:[...paymentFlows]}, catalog:catalogConfig(input.catalog,recipients), limits:{maxTransactionFeeStroops:limits.maxTransactionFeeStroops,
       inclusionFeeStroops,maxVerifyInFlight,maxSettleInFlight,drainGraceMs}, operations:{
       ownershipDirectory:ownershipDirectory === null ? null : resolve(ownershipDirectory),
       rpcTimeoutMs,readinessMaxAgeMs,maxLedgerAgeSeconds,requireReady:op.requireReady ?? false} };
@@ -100,7 +129,7 @@ export function reviewConfig(input) {
   const c = validateConfig(input);
   return { mode:'OFFLINE_FACILITATOR_REVIEW', network:c.network, rpcOrigin:new URL(c.rpcUrl).origin,
     signers:c.signers, feeBumpSigner:c.feeBumpSigner, payments:c.payments, limits:c.limits,
-    operations:c.operations,feesSponsored:true, settlementConcurrency:c.limits.maxSettleInFlight,
+    operations:c.operations,catalog:c.catalog,feesSponsored:true, settlementConcurrency:c.limits.maxSettleInFlight,
     signingMaterialLoaded:false };
 }
 
