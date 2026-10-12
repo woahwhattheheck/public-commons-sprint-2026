@@ -7,7 +7,7 @@ import {pipeline} from 'node:stream/promises';
 import {openFiscalWorkspace} from './workspace-model.mjs';
 
 const fault=(code,message,status=400)=>Object.assign(new Error(message),{code,status});
-const assetTypes={'index.html':'text/html; charset=utf-8','app.js':'text/javascript; charset=utf-8','style.css':'text/css; charset=utf-8'};
+const assetTypes={'index.html':'text/html; charset=utf-8','app.js':'text/javascript; charset=utf-8','refresh.js':'text/javascript; charset=utf-8','style.css':'text/css; charset=utf-8'};
 const object=value=>value!==null&&typeof value==='object'&&!Array.isArray(value);
 const headers={'cache-control':'no-store','x-content-type-options':'nosniff',
   'referrer-policy':'no-referrer','cross-origin-resource-policy':'same-origin',

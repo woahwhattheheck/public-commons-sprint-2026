@@ -12,6 +12,10 @@ import { checkOperatorChannel } from '../../sf81-buyer-operator-bridge/bridge.mj
 import { loadOperationTicket, requireOperationTicketFingerprint, requireCurrentOperationTicket } from '../operation-ticket.mjs';
 
 const modes = {
+  'inbox-list':['--inbox'],
+  'inbox-show':['--inbox','--intent'],
+  'inbox-export-operations':['--inbox','--intents-json','--out','--max-verify-bytes'],
+  'inbox-inspect-operations':['--file'],
   'workspace-read':['--dir','--config'],
   'workspace-check':['--dir','--config','--ticket-sha'],
   'execute-workspace':['--dir','--config','--ticket-sha'],
@@ -86,6 +90,37 @@ export async function main(args = process.argv.slice(2)) {
   need(allowed.every(key => ['--claim-env','--ticket-sha','--outbox','--merchant-route',
     '--timeout-ms','--resume'].includes(key) || (action === 'workspace-read' && key === '--config') ||
     options.has(key)), 'APPLICATION_OPTION_REQUIRED');
+  if (action.startsWith('inbox-')) {
+    const controller = new AbortController();
+    const interrupt = () => { process.exitCode=130; controller.abort(); };
+    const terminate = () => { process.exitCode=143; controller.abort(); };
+    process.once('SIGINT', interrupt); process.once('SIGTERM', terminate);
+    try {
+      let native, root;
+      if (action === 'inbox-inspect-operations') {
+        const {inspectSavedHandoff} = await import('../operations-handoff/customer.mjs');
+        native = await inspectSavedHandoff({file:options.get('--file'), signal:controller.signal});
+      } else if (action === 'inbox-export-operations') {
+        const text = options.get('--intents-json'), cap = options.get('--max-verify-bytes');
+        need(text.length <= 20000 && /^(0|[1-9][0-9]{0,10})$/.test(cap), 'BUYER_SELECT_ORIGINAL_INTENTS');
+        let selected;
+        try { selected = JSON.parse(text); } catch { need(false, 'BUYER_SELECT_ORIGINAL_INTENTS'); }
+        const {exportSelectedInbox} = await import('../operations-handoff/customer.mjs');
+        root = options.get('--inbox');
+        native = await exportSelectedInbox({directory:root, destination:options.get('--out'),
+          intentIds:selected, maxVerifyBytes:Number(cap), signal:controller.signal});
+      } else {
+        const {openQueue} = await import('../queue.mjs');
+        const queue = await openQueue(options.get('--inbox')); root = queue.root;
+        native = action === 'inbox-list' ? {jobs:await queue.list()}
+          : {job:await queue.show(options.get('--intent'))};
+      }
+      return print({mode:'ORIGINAL_PYTHON_INBOX', action,
+        ...(root === undefined ? {} : {root}), ...native, noExecution:true});
+    } finally {
+      process.off('SIGINT', interrupt); process.off('SIGTERM', terminate);
+    }
+  }
   if (action === 'workspace-read') {
     const workspace = await workspaceConfiguration(options.get('--dir'), {
       configuration:options.has('--config') ? await config(options.get('--config')) : undefined,

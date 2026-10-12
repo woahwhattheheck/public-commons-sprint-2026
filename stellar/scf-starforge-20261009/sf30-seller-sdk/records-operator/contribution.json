@@ -1,0 +1,25 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "records-operator",
+  "description": "Records ledgers, reconciliation and operator delivery",
+  "commands": {
+    "records-workspace": "stellar/scf-starforge-20261009/sf30-seller-sdk/records-operator/workbench.mjs"
+  },
+  "commandDescriptions": {
+    "records-workspace": "Review retained records ledgers, manage the original workspace and receive complete customer and operator handoffs"
+  },
+  "exports": {
+    "./seller/records/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/records-operator/workbench.mjs",
+    "./seller/records/managed": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/records-operator/managed.mjs",
+    "./seller/records/application-provider": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/records-operator/application-provider.mjs"
+  },
+  "browserAssets": [
+    {
+      "server": "stellar/scf-starforge-20261009/sf30-seller-sdk/records-operator/workbench.mjs",
+      "manifest": "stellar/scf-starforge-20261009/sf30-seller-sdk/records-operator/browser-assets.json"
+    }
+  ],
+  "applicationProviders": {
+    "records-operator": "stellar/scf-starforge-20261009/sf30-seller-sdk/records-operator/application-provider.mjs"
+  }
+}

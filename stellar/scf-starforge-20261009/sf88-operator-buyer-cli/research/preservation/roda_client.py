@@ -34,8 +34,12 @@ AIP_CLASS = "org.roda.core.data.v2.ip.AIP"
 BAGIT_PLUGIN = "org.roda.core.plugins.base.ingest.BagitToAIPPlugin"
 INGEST_PLUGINS = {
     "org.roda.core.plugins.base.ingest.v2.ConfigurableIngestPlugin",
-    "org.roda.core.plugins.base.ingest.v2.DefaultIngestPlugin",
     "org.roda.core.plugins.base.ingest.v2.MinimalIngestPlugin",
+}
+# DefaultIngestPlugin mutates the submitted Job map during service validation.
+# Worker-only job/lock/parent parameters are added to a copied map (JobsHelper).
+DERIVED_JOB_PARAMETERS = {
+    "parameter.total_steps", "parameter.create_submission", "parameter.reporting_class",
 }
 TERMINAL = {"COMPLETED", "FAILED_DURING_CREATION", "FAILED_TO_COMPLETE", "STOPPED", "REJECTED"}
 PAUSED = {"PENDING_APPROVAL", "SCHEDULED"}
@@ -344,6 +348,11 @@ def _template(path, handoff):
     parameters = value["pluginParameters"]
     if not isinstance(parameters, dict) or not all(isinstance(k, str) and isinstance(v, str) for k, v in parameters.items()):
         _fail("INVALID_JOB_TEMPLATE", "pluginParameters must be an exact string-to-string map.")
+    if {"parameter.total_steps", "parameter.reporting_class"} & set(parameters):
+        _fail("DERIVED_JOB_PARAMETER", "Leave total_steps and reporting_class to the original ingest implementation.")
+    if ("parameter.create_submission" in parameters
+            and parameters["parameter.create_submission"] not in {"true", "false"}):
+        _fail("INVALID_JOB_TEMPLATE", "Explicit create_submission must be the original lowercase boolean string.")
     if parameters.get("parameter.sip_to_aip_class") != BAGIT_PLUGIN:
         _fail("WRONG_SIP_PARSER", "The reviewed transfer requires the original BagIt-to-AIP parser.")
     if value["priority"] not in {"URGENT", "HIGH", "MEDIUM", "LOW"} or value["parallelism"] not in {"LIMITED", "NORMAL"}:
@@ -711,7 +720,7 @@ class _Client:
                 _fail("INCOMPLETE_INDEX_RESPONSE", "Index pagination ended before its reported total.")
         _fail("INDEX_PAGE_LIMIT", "Continue reconciliation with an appropriate configured pagination limit.")
 
-    def _validate_transfer(self, resource):
+    def _validate_transfer(self, resource, *, job_move=False):
         if not isinstance(resource, dict):
             _fail("INVALID_TRANSFER_RESPONSE", "Expected the original transferred resource.")
         _id(resource.get("uuid"), "transfer.uuid")
@@ -720,7 +729,7 @@ class _Client:
         if resource.get("size") != self.plan["transfer"]["bytes"]:
             _fail("STAGED_SIZE_MISMATCH", "Staged ZIP length differs from the original transfer.")
         parent = resource.get("parentUUID") or None
-        if parent != self.config.get("stagingParentUuid"):
+        if not job_move and parent != self.config.get("stagingParentUuid"):
             _fail("STAGING_PARENT_MISMATCH", "Staged resource belongs to a different parent.")
         return resource
 
@@ -796,20 +805,142 @@ class _Client:
         value["sourceObjectsClass"] = TRANSFER_CLASS
         return value
 
+    def _job_model(self, job_id):
+        job_id = _id(job_id, "job.id")
+        job = self._api("GET", "/jobs/" + urllib.parse.quote(job_id, safe=""))
+        if job.get("id") != job_id:
+            _fail("JOB_IDENTITY_MISMATCH", "Repository returned a different full job model.")
+        return job
+
+    def _job_parameters(self, job, request):
+        requested, effective = request["pluginParameters"], job.get("pluginParameters")
+        if not isinstance(effective, dict) or not all(
+                isinstance(k, str) and isinstance(v, str) for k, v in effective.items()):
+            _fail("INVALID_JOB_PARAMETERS", "The full job must retain its string-to-string parameter map.")
+        for key, value in requested.items():
+            if effective.get(key) != value:
+                _fail("JOB_PARAMETER_MISMATCH", "A requested ingest parameter changed.", field=key)
+        unexpected = set(effective) - set(requested) - DERIVED_JOB_PARAMETERS
+        if unexpected:
+            _fail("UNREVIEWED_JOB_PARAMETERS", "The job contains additional parameters outside the reviewed server contract.",
+                  fields=sorted(unexpected))
+        maximum = 5 if request["plugin"].endswith(".MinimalIngestPlugin") else 11
+        steps = effective.get("parameter.total_steps")
+        if (not isinstance(steps, str) or not re.fullmatch(r"[1-9][0-9]*", steps)
+                or not 1 <= int(steps) <= maximum):
+            _fail("INVALID_DERIVED_JOB_PARAMETER", "The original effective ingest-step count is invalid.",
+                  field="parameter.total_steps")
+        if effective.get("parameter.create_submission") not in {"true", "false"}:
+            _fail("INVALID_DERIVED_JOB_PARAMETER", "The repository submission setting must be a lowercase boolean.",
+                  field="parameter.create_submission")
+        if effective.get("parameter.reporting_class") != request["plugin"]:
+            _fail("INVALID_DERIVED_JOB_PARAMETER", "The report class must be the selected concrete ingest plugin.",
+                  field="parameter.reporting_class")
+        return {"requestedSha256": _sha(_json(requested)), "effectiveSha256": _sha(_json(effective)),
+                "derivedParameters": {key: effective[key] for key in sorted(set(effective) - set(requested))},
+                "sourceCommit": SOURCE_COMMIT}
+
+    def _source_identity(self, job, request, current_uuid):
+        upload = _optional_json(self.remote / "upload" / "accepted.json")
+        if (not upload or upload.get("operationId") != self.plan["operationId"]
+                or upload.get("uuid") != request["sourceObjects"]["ids"][0]
+                or upload.get("sha256") != self.plan["transfer"]["sha256"]
+                or upload.get("bytes") != self.plan["transfer"]["bytes"]):
+            _fail("SAVED_UPLOAD_BINDING_CHANGED", "Job source requires the original verified upload.")
+        return {"schema": "stellar-forge.roda-job-source-binding.v1",
+                "operationId": self.plan["operationId"], "jobId": job["id"],
+                "requestSha256": _sha(_json(request)), "originalUuid": request["sourceObjects"]["ids"][0],
+                "originalRelativePath": upload.get("relativePath"),
+                "currentUuid": _id(current_uuid, "job.sourceUuid"),
+                "name": self.plan["uploadName"], "bytes": self.plan["transfer"]["bytes"],
+                "sha256": self.plan["transfer"]["sha256"]}
+
+    def _read_source_binding(self, path, job, request):
+        value = _read_json(path)
+        if not isinstance(value, dict):
+            _fail("JOB_SOURCE_BINDING_CHANGED", "Saved source movement must be an object.")
+        identity = self._source_identity(job, request, value.get("currentUuid"))
+        if any(value.get(key) != expected for key, expected in identity.items()):
+            _fail("JOB_SOURCE_BINDING_CHANGED", "Saved movement is not bound to this job and original transfer.")
+        canonical = {key: item for key, item in value.items() if key != "bindingSha256"}
+        if value.get("bindingSha256") != _sha(_json(canonical)):
+            _fail("JOB_SOURCE_BINDING_CHANGED", "The original saved movement bytes have changed.")
+        if path.name != _sha(_json(identity)) + ".json" or value.get("kind") != "SAME_JOB_MOVED_SOURCE":
+            _fail("JOB_SOURCE_BINDING_CHANGED", "Saved movement identity differs from its immutable file.")
+        resource, download = value.get("resource"), value.get("download")
+        self._validate_transfer(resource, job_move=True)
+        if (resource.get("uuid") != identity["currentUuid"] or not isinstance(download, dict)
+                or download.get("bodySha256") != identity["sha256"]
+                or download.get("bodyBytes") != identity["bytes"] or download.get("status") != 200):
+            _fail("JOB_SOURCE_BINDING_CHANGED", "Saved moved-source verification differs from the original transfer.")
+        return value
+
+    def _job_source(self, job, request):
+        source = job.get("sourceObjects")
+        if (not isinstance(source, dict) or source.get("type") != "list"
+                or not isinstance(source.get("ids"), list) or len(source["ids"]) != 1
+                or source.get("selectedClass") != TRANSFER_CLASS):
+            _fail("JOB_SOURCE_MISMATCH", "The full job must select one transferred-resource source.")
+        current_uuid = _id(source["ids"][0], "job.sourceUuid")
+        identity = self._source_identity(job, request, current_uuid)
+        if current_uuid == identity["originalUuid"]:
+            return {**identity, "kind": "ORIGINAL_UPLOAD"}
+        path = self.remote / "job" / "source-moves" / (_sha(_json(identity)) + ".json")
+        if path.exists():
+            return self._read_source_binding(path, job, request)
+        # The original autoaccept workflow can move a SIP and rewrite the job
+        # and report source UUID. Bind that observation to this same job plus
+        # its actual unchanged ZIP; never replace the original upload record.
+        try:
+            resource = self._validate_transfer(
+                self._api("GET", "/transfers/" + urllib.parse.quote(current_uuid, safe="")), job_move=True)
+            if resource["uuid"] != current_uuid:
+                _fail("JOB_SOURCE_MISMATCH", "Repository returned a different moved source.")
+            download, _ = self._request(
+                "GET", "/transfers/" + urllib.parse.quote(current_uuid, safe="") + "/download",
+                verify_transfer=True)
+        except RodaError as exc:
+            if exc.code != "REMOTE_NOT_FOUND":
+                raise
+            _fail("JOB_SOURCE_MOVE_UNRESOLVED", "The job's current source is not yet retrievable; reopen this same job.",
+                  jobId=job["id"], originalTransferUuid=identity["originalUuid"],
+                  currentTransferUuid=current_uuid, response=exc.details.get("response"))
+        value = {**identity, "kind": "SAME_JOB_MOVED_SOURCE", "observedAt": _now(),
+                 "jobSourceObjects": source, "resource": resource, "download": download,
+                 "basis": "same-job-selected-source-and-original-complete-zip",
+                 "sourceCommit": SOURCE_COMMIT}
+        value["bindingSha256"] = _sha(_json(value))
+        _write_json(path, value)
+        return self._read_source_binding(path, job, request)
+
+    def _known_job_sources(self, job, request):
+        current = self._job_source(job, request)
+        known = {current["originalUuid"], current["currentUuid"]}
+        directory = self.remote / "job" / "source-moves"
+        if directory.exists():
+            paths = sorted(directory.iterdir())
+            if len(paths) > 10000:
+                _fail("JOB_SOURCE_HISTORY_LIMIT", "Source movement history exceeds the receiving limit.")
+            for path in paths:
+                # Ignore the original writer's unpublished .write-* files.
+                if path.name.startswith(".write-"):
+                    continue
+                if path.suffix != ".json":
+                    _fail("JOB_SOURCE_BINDING_CHANGED", "Unexpected file in source movement history.")
+                known.add(self._read_source_binding(path, job, request)["currentUuid"])
+        return current, known
+
     def _validate_job(self, job, request):
         if not isinstance(job, dict):
             _fail("INVALID_JOB_RESPONSE", "Expected the full original RODA job model.")
         _id(job.get("id"), "job.id")
-        for key in ("name", "plugin", "pluginParameters", "priority", "parallelism"):
+        for key in ("name", "plugin", "priority", "parallelism"):
             if job.get(key) != request[key]:
                 _fail("JOB_IDENTITY_MISMATCH", "Job model differs from the original submitted request.", field=key)
         if job.get("username") != self.config["repositoryUsername"]:
             _fail("JOB_ACTOR_MISMATCH", "Job belongs to a different repository user.")
-        source = job.get("sourceObjects")
-        if (not isinstance(source, dict) or source.get("type") != "list"
-                or source.get("ids") != request["sourceObjects"]["ids"]
-                or source.get("selectedClass") != TRANSFER_CLASS):
-            _fail("JOB_SOURCE_MISMATCH", "The full job model does not select the original uploaded resource.")
+        self._job_parameters(job, request)
+        self._job_source(job, request)
         if job.get("state") not in KNOWN_STATES:
             _fail("UNKNOWN_JOB_STATE", "The repository returned an unknown job state.", state=job.get("state"))
         return job
@@ -818,7 +949,9 @@ class _Client:
         job = self._validate_job(job, request)
         value = {"schema": "stellar-forge.roda-job-accepted.v1", "operationId": self.plan["operationId"],
                  "jobId": job["id"], "requestSha256": _sha(_json(request)),
-                 "transferUuid": request["sourceObjects"]["ids"][0], "source": source}
+                 "transferUuid": request["sourceObjects"]["ids"][0], "source": source,
+                 "parameters": self._job_parameters(job, request),
+                 "acceptedSource": self._job_source(job, request)}
         _write_json(self.remote / "job" / "accepted.json", value)
         return value
 
@@ -834,13 +967,13 @@ class _Client:
                 _fail("JOB_SELECTION_CONFLICT", "This operation has already selected another job.")
             return accepted
         if job_id is not None:
-            job = self._api("GET", "/jobs/" + urllib.parse.quote(_id(job_id, "jobId"), safe=""))
+            job = self._job_model(job_id)
             return self._accept_job(job, request, "operator-selected-original-job")
         response = self._completed(self.remote / "job")
         if response and response[0]["status"] == 201:
             job = _parse(response[1])
             # Reopen the full model even when an ingress proxy returned a projection.
-            job = self._api("GET", "/jobs/" + urllib.parse.quote(_id(job.get("id"), "job.id"), safe=""))
+            job = self._job_model(job.get("id"))
             return self._accept_job(job, request, "original-create-response")
         candidates = self._find("jobs", [("name", self.plan["jobName"]),
                                          ("username", self.config["repositoryUsername"])])
@@ -850,7 +983,7 @@ class _Client:
             _fail("MULTIPLE_JOB_MATCHES", "More than one job carries the immutable original operation marker.",
                   jobIds=[r.get("id") for r in candidates])
         if candidates:
-            job = self._api("GET", "/jobs/" + urllib.parse.quote(_id(candidates[0].get("id"), "job.id"), safe=""))
+            job = self._job_model(candidates[0].get("id"))
             return self._accept_job(job, request, "original-create-index-reconciliation")
         return None
 
@@ -874,7 +1007,7 @@ class _Client:
         request = self._job_request(upload)
         _write_json(self.remote / "job" / "create-request.json", request)
         job = self._api("POST", "/jobs", value=request, mutation=True, stage="job", expected=(201,))
-        model = self._api("GET", "/jobs/" + urllib.parse.quote(_id(job.get("id"), "job.id"), safe=""))
+        model = self._job_model(job.get("id"))
         self._accept_job(model, request, "original-create-response")
         return self.local_status()
 
@@ -908,6 +1041,7 @@ class _Client:
         stats = job.get("jobStats")
         if not isinstance(stats, dict):
             _fail("JOB_STATS_MISSING", "The full job model must retain its per-object counters.")
+        source_binding, source_ids = self._known_job_sources(job, self._job_request(upload))
         report_rows, aip_ids, failures = [], set(), []
         def visit(report, depth=0):
             if depth > 32 or len(report_rows) >= 100000:
@@ -923,7 +1057,7 @@ class _Client:
             report_rows.append(row)
             if row["pluginState"] in {"FAILURE", "PARTIAL_SUCCESS"}:
                 failures.append(row)
-            if (source_id == upload["uuid"] and row["sourceObjectClass"] == TRANSFER_CLASS
+            if (source_id in source_ids and row["sourceObjectClass"] == TRANSFER_CLASS
                     and row["outcomeObjectId"] not in {None, "", "NO_OUTCOME_ID"}
                     and row["outcomeObjectClass"] in {AIP_CLASS, "org.roda.core.data.v2.ip.IndexedAIP"}):
                 aip_ids.add(_id(row["outcomeObjectId"], "outcomeObjectId"))
@@ -948,7 +1082,7 @@ class _Client:
             if aip.get("id") != aip_id:
                 _fail("AIP_IDENTITY_MISMATCH", "Repository returned a different result AIP.")
             parent = self.inputs["handoff"].get("collection", {}).get("parentAipId")
-            if parent and aip.get("parentId") != parent:
+            if (aip.get("parentId") or "") != (parent or ""):
                 _fail("AIP_COLLECTION_MISMATCH", "Result AIP is outside the reviewed parent collection.")
             aips.append(aip)
         state = job["state"]
@@ -981,7 +1115,10 @@ class _Client:
         return {"schema": "stellar-forge.roda-ingest-observation.v1",
                 "operationId": self.plan["operationId"], "observedAt": _now(), "status": status,
                 "jobId": job["id"], "jobState": state, "jobStats": stats, "job": job,
-                "uploadUuid": upload["uuid"], "reports": reports, "reportRows": report_rows,
+                "uploadUuid": upload["uuid"], "currentTransferUuid": source_binding["currentUuid"],
+                "sourceBinding": source_binding, "verifiedSourceUuids": sorted(source_ids),
+                "jobParameters": self._job_parameters(job, self._job_request(upload)),
+                "reports": reports, "reportRows": report_rows,
                 "aips": aips, "unresolvedAips": unresolved_aips, "resultAipIds": sorted(aip_ids),
                 "reportPaginationComplete": True, "packageModel": "one-bag-one-aip"}
 
@@ -1002,15 +1139,16 @@ class _Client:
         request = self._job_request(upload)
         deadline = time.monotonic() + poll_seconds
         while True:
-            job = self._validate_job(self._api("GET", "/jobs/" + urllib.parse.quote(accepted["jobId"], safe="")), request)
+            job = self._validate_job(self._job_model(accepted["jobId"]), request)
             if job["state"] in TERMINAL | PAUSED or time.monotonic() >= deadline:
                 break
             time.sleep(min(interval_seconds, max(0, deadline - time.monotonic())))
         reports = self._reports(job["id"])
-        latest = self._validate_job(self._api("GET", "/jobs/" + urllib.parse.quote(job["id"], safe="")), request)
+        latest = self._validate_job(self._job_model(job["id"]), request)
         observation = self._outcome(latest, reports, upload)
         if (latest["state"] != job["state"] or latest.get("jobStats") != job.get("jobStats")
-                or latest.get("endDate") != job.get("endDate")):
+                or latest.get("endDate") != job.get("endDate")
+                or latest.get("sourceObjects") != job.get("sourceObjects")):
             observation["status"] = "JOB_CHANGED_DURING_RECONCILIATION"
             observation["reportPaginationComplete"] = False
         path = self.remote / "observations" / (_sha(_json(observation)) + ".json")
@@ -1055,7 +1193,7 @@ class _Client:
             value = _parse(raw)
             if value.get("operationId") != self.plan["operationId"]:
                 _fail("OBSERVATION_OPERATION_MISMATCH", "Saved observation belongs to a different original operation.")
-            result.update({k: value.get(k) for k in ("status", "jobState", "jobStats", "resultAipIds",
+            result.update({k: value.get(k) for k in ("status", "jobState", "jobStats", "resultAipIds", "currentTransferUuid",
                                                    "reportPaginationComplete", "observedAt")})
             result["observation"] = "remote/" + pointer["path"]
         return result

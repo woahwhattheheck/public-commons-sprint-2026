@@ -90,6 +90,7 @@ function renderHost(){
     ['Host binding',host.configurationFingerprint,true],['Console workspace',host.console.workspaceId,true],
     ['Accepted calls',host.operator.activeCalls],['Console calls',host.console.activeCalls],['Active workflows',host.console.workflows?.activeRuns??0],
     ['Customer transfers',host.console.customers?.activeDownloads??0],['Customer archives',host.console.customers?.activeArchives??0],
+    ['HTTP requests',host.console.activeRequests??0],['Incomplete bodies',host.console.pendingBodies??0],
     ['Seller instance',host.operator.instanceId??'No seller managed by this host',true]
   ]);
   $('host-sources').replaceChildren(...(host.sources?.length?host.sources.map(value=>node('p',value.source+(value.label?' · '+value.label:''))):[node('p','No release sources configured.','hint')]));
@@ -242,22 +243,41 @@ function argumentsValue(){
 }
 async function saveDraft(copy=false){
   const profile=requireProfile();if(!state.definition)throw new Error('Choose a configured native tool.');
+  const epoch=state.sessionEpoch,selection=state.profileEpoch,toolSequence=state.toolOpenSeq,
+    selectedDraftId=state.draft?.id??null,name=$('draft-name').value,argumentText=$('native-arguments').value;
+  const current=()=>epoch===state.sessionEpoch&&selection===state.profileEpoch&&state.profile?.id===profile.id;
   const old=copy?null:state.draft;
-  const body={profileId:profile.id,name:$('draft-name').value,tool:state.tool,arguments:argumentsValue(),
+  const body={profileId:profile.id,name,tool:state.tool,arguments:argumentsValue(),
     ...(old?{id:old.id,expectedRevision:old.revision}:{}),...(state.recoveryOf?{recoveryOf:state.recoveryOf}:{})};
-  const packet=await api('drafts',{method:'POST',body});state.draft=packet.draft;state.dirty=false;
-  $('native-arguments').value=pretty(JSON.parse(packet.draft.argumentsJson));await loadProfile();updateRun();notice('Saved '+packet.draft.name+' · revision '+packet.draft.revision+'.');
+  const packet=await api('drafts',{method:'POST',body,epoch});if(!current())return;
+  if(toolSequence===state.toolOpenSeq&&(state.draft?.id??null)===selectedDraftId&&
+      $('draft-name').value===name&&$('native-arguments').value===argumentText){
+    state.draft=packet.draft;state.dirty=false;
+    $('native-arguments').value=pretty(JSON.parse(packet.draft.argumentsJson));
+  }
+  await loadProfile();if(!current())return;
+  updateRun();notice('Saved '+packet.draft.name+' · revision '+packet.draft.revision+'.');
 }
 async function runDraft(){
-  const profile=requireProfile(),draft=state.draft;
+  const profile=requireProfile(),draft=state.draft,epoch=state.sessionEpoch,selection=state.profileEpoch;
+  const current=()=>epoch===state.sessionEpoch&&selection===state.profileEpoch&&state.profile?.id===profile.id;
   if(!draft||state.dirty)throw new Error('Save the displayed revision first.');
   const callId=uid();state.pendingCall=callId;
   try{
-    await api('calls',{method:'POST',body:{id:callId,profileId:profile.id,draftId:draft.id,draftRevision:draft.revision,expectedHostFingerprint:state.host.configurationFingerprint}});
-    await loadProfile();await openCall(callId);notice('Accepted '+draft.tool+' with the saved native arguments.');
+    await api('calls',{method:'POST',epoch,body:{id:callId,profileId:profile.id,draftId:draft.id,draftRevision:draft.revision,expectedHostFingerprint:state.host.configurationFingerprint}});
+    if(!current())return;
+    await loadProfile();if(!current())return;
+    await openCall(callId);if(current())notice('Accepted '+draft.tool+' with the saved native arguments.');
   }catch(error){
-    try{await loadProfile();if(state.details.calls.some(value=>value.id===callId)){await openCall(callId);notice('The original request is retained. Open its current return and recovery actions.');return;}}catch{}
-    throw error;
+    if(!current())return;
+    try{
+      await loadProfile();if(!current())return;
+      if(state.details.calls.some(value=>value.id===callId)){
+        await openCall(callId);if(current())notice('The original request is retained. Open its current return and recovery actions.');
+        return;
+      }
+    }catch{}
+    if(current())throw error;
   }
 }
 function renderDrafts(){
@@ -297,20 +317,29 @@ async function openCall(id,navigate=true){
   text($('call-message'),value.receiving==='RETURN_PENDING'?'The original call is retained without an active return in this process. Use its native operation identifiers in a read or recovery tool.':value.error?value.error.code+': '+value.error.message:value.state==='COMPLETE'?'The exact returned JSON is retained for download.':'The original tool is running.');
   $('download-result').disabled=value.state!=='COMPLETE';$('reopen-draft').disabled=false;
   const selection=customerSelection(value,result);$('use-customer').hidden=!selection;state.customerSelection=selection;
-  await recoveryChoices(value);
+  if(!await recoveryChoices(value,{epoch,profileSelection,sequence}))return;
+  if(epoch!==state.sessionEpoch||profileSelection!==state.profileEpoch||sequence!==state.callOpenSeq||state.call?.id!==id)return;
   renderCalls();if(navigate)setPage('requests');
 }
-async function recoveryChoices(call){
-  const packet=await api('recovery/'+encodeURIComponent(call.id));state.recovery.clear();
+async function recoveryChoices(call,{epoch,profileSelection,sequence}){
+  const packet=await api('recovery/'+encodeURIComponent(call.id),{epoch});
+  if(epoch!==state.sessionEpoch||profileSelection!==state.profileEpoch||sequence!==state.callOpenSeq||state.call?.id!==call.id)return false;
+  state.recovery.clear();
   for(const value of packet.items)state.recovery.set(value.definition.name,{...value,kind:'Read'});
   for(const value of packet.controls??[])state.recovery.set(value.definition.name,{...value,kind:'Control'});
   $('recovery-tools').replaceChildren(...[...state.recovery].map(([name,value])=>new Option(value.kind+' · '+name,name)));
   $('recovery-panel').hidden=state.recovery.size===0;
+  return true;
 }
 async function nativeStatus(){
-  const profile=requireProfile(),packet=await api('tool/merchant_status');
-  const saved=await api('drafts',{method:'POST',body:{profileId:profile.id,name:'Inspect native merchant status',tool:packet.definition.name,arguments:{}}});
-  await chooseTool(saved.draft.tool,{draft:saved.draft});await runDraft();
+  const profile=requireProfile(),epoch=state.sessionEpoch,selection=state.profileEpoch;
+  const current=()=>epoch===state.sessionEpoch&&selection===state.profileEpoch&&state.profile?.id===profile.id;
+  const packet=await api('tool/merchant_status',{epoch});if(!current())return;
+  const saved=await api('drafts',{method:'POST',epoch,body:{profileId:profile.id,name:'Inspect native merchant status',tool:packet.definition.name,arguments:{}}});
+  if(!current())return;
+  await chooseTool(saved.draft.tool,{draft:saved.draft});
+  if(!current()||state.draft?.id!==saved.draft.id||state.tool!==saved.draft.tool)return;
+  await runDraft();
 }
 function customerSelection(call,result){
   const args=JSON.parse(call.argumentsJson),family=call.tool.startsWith('merchant_opensearch_deployment_')?'opensearch':call.tool.startsWith('merchant_client_export')?'core':null;
@@ -326,8 +355,13 @@ function fillCustomer(value){
   $('customer-workspace-field').hidden=value.family!=='opensearch';$('customer-workspace').required=value.family==='opensearch';setPage('customers');
 }
 async function receiveCustomer(selection){
-  const profile=requireProfile(),body={profileId:profile.id,...selection,expectedHostFingerprint:state.host.configurationFingerprint};
-  const packet=await api('customers',{method:'POST',body});state.customer=packet.delivery;await loadProfile();renderCustomer();notice('Receiving the reviewed original customer export '+body.exportId+'.');
+  const profile=requireProfile(),epoch=state.sessionEpoch,profileSelection=state.profileEpoch,customerId=state.customer?.id??null;
+  const current=()=>epoch===state.sessionEpoch&&profileSelection===state.profileEpoch&&state.profile?.id===profile.id;
+  const body={profileId:profile.id,...selection,expectedHostFingerprint:state.host.configurationFingerprint};
+  const packet=await api('customers',{method:'POST',body,epoch});if(!current())return;
+  if((state.customer?.id??null)===customerId)state.customer=packet.delivery;
+  await loadProfile();if(!current())return;
+  renderCustomer();notice('Receiving the reviewed original customer export '+body.exportId+'.');
 }
 function renderCustomers(){
   selectionList($('customer-list'),state.details?.deliveries??[],state.customer?.id,(button,value)=>{

@@ -672,3 +672,7 @@ See [the complete DSpace Applications guide](APPLICATION_DSPACE.md) for setup, s
 ## USGS Water and native DSS
 
 Choose **USGS water and native DSS** to review and save the original project, optional buyer and official HEC-DSS interpreter. Start opens the original Water workspace; Open uses its verified local listener, and Stop drains its original source/edition/native work before releasing the project. A received project can reopen its existing source edition and DSS export without a saved project selection or another native write. Changes to a saved selection or other reviewed inputs require reviewing the current application before the next Start. The existing managed-home adoption, operation history and restart behavior apply. See [the complete Water Applications guide](../../sf30-seller-sdk/usgs-water/MANAGED.md) for setup, received-project operation, command-line use and recovery.
+
+## Find applications and keep unfinished setup
+
+The saved library supports search, runtime and status filters, pagination, and a selected application that stays attached to its original history and output. The complete live tool catalog is searchable by purpose, command and setup fields. Setup drafts retain raw fields per workspace, application and tool in the current tab, survive refresh and view changes, and make saved-revision conflicts explicit. A save or recovered response clears only the exact reviewed draft; later changes remain available. See [the Applications library and setup guide](APPLICATION_LIBRARY.md) for the complete workflow.

@@ -51,6 +51,78 @@ const PINS = Object.freeze({
   assembled:'0d6f8a4cb11dc2fc875120af693433b2a0dcd9ab3158f63618026a3fb4e8ff87',
 });
 
+
+const PROTECTED_SOURCE_PROFILE = Object.freeze({
+  id:'ORIGINAL_AUTHORIZATION_WITH_HELD_FILE_RESERVATIONS_V1',
+  execute:'366544e23c3e1c1bd70b993dce3a5a16d133d8357e63ccec8dd2dfac0c97c4b2', wire:'06d0f3816cd9c359ba9cc6e88db849eee80fe7a8300482d8136a833b663a7c04', store:'5232d58fd2ac4e3666bdd13cb73322bd53785d9e0994b1511200b1dd15d89531',
+  runtime:'96c57344c965e519069ab694d6f9a85ea856a448a134c6041730dcef8e026551', bootstrap:'aabc20e221b269957ff9e32115500980d27e32e3292ad9e338c7a1fff9eddac4',
+  provider:'56362274bad8b536f8928234da773fe7aef4c15773911dfe087e4970a400c06c', runtimeSource:'d99256fcb72fd9956f62aad7c070beb627c1d5b140e0ccc858f8866d03118954',
+  responseFile:'1aa6e71f1b308a4ea71b61ee597323c41da379408e75633bcc62246f3818c295',
+  processIdentity:'8b5d942d8b80f90e9197e12a9280689285e4c0ee0376d31f601c77726900921c',
+});
+
+const PROTECTED_SOURCE_PROFILES = Object.freeze([
+  PROTECTED_SOURCE_PROFILE,
+  Object.freeze({
+    ...PROTECTED_SOURCE_PROFILE,
+    id:'ORIGINAL_AUTHORIZATION_WITH_HELD_FILE_RESERVATIONS_AND_TEMPORARY_INVENTORY_V1',
+    store:'dbaac9e39164422318839eb8b6e0de6e362f8d0c687c5d6e2b555c93fc72be04',
+  }),
+]);
+
+async function protectedEntrySource({runtime, directory, operation, bound, reader, signerSources, signal}) {
+  const paths = [
+    ['reservationRuntime',join(runtime,'node/runtime.mjs'),'runtime'],
+    ['reservationBootstrap',join(runtime,'node/reserved-entry.mjs'),'bootstrap'],
+    ['reservationProvider',join(runtime,'node/file-reservation.mjs'),'provider'],
+    ['reservationRuntimeSource',join(runtime,'node/runtime-source.mjs'),'runtimeSource'],
+    ['reservationProcessIdentity',join(runtime,'node/process-identity.mjs'),'processIdentity'],
+    ['reservationResponseFile',resolve(runtime,'../sf31-buyer-client/response-file.mjs'),'responseFile'],
+  ];
+  for (const [name,path,key] of paths) {
+    const source = await reader.read(path,{pin:PROTECTED_SOURCE_PROFILE[key]});
+    signerSources[name] = source.descriptor;
+  }
+  const path = join(directory,'native-reserved-request.json');
+  if (!await exists(path)) return null;
+  const source = await reader.read(path,{limit:2097152,privateFile:true,json:true});
+  const request = source.value, workspace = bound.meta.nativeWorkspace;
+  const selectedEntry = await realpath(join(runtime,workspace === undefined ? 'cli.mjs' : 'python/bridge.mjs'));
+  const args = workspace === undefined ? ['--execute','--config',operation.configPath] :
+    ['execute-workspace','--dir',workspace,'--config',operation.configPath,
+      '--ticket-sha',bound.meta.ticketSha256 ?? 'none'];
+  need(request.schema === 'stellar-forge.sf88.reserved-entry.v1' &&
+    Object.keys(request).every(key => ['schema','entryFile','entrySha256','args',
+      'nativeFileReservation','nativeRuntimeSource'].includes(key)) &&
+    request.entryFile === selectedEntry && HASH.test(request.entrySha256 ?? '') &&
+    same(request.args,args), 'UNDISPATCHED_RESERVED_ENTRY_BINDING_CHANGED');
+  const entry = await reader.read(selectedEntry,{limit:16777216,pin:request.entrySha256});
+  const {normalizeNativeFileReservation} = await import(pathToFileURL(join(runtime,'node/file-reservation.mjs')).href);
+  const descriptor = normalizeNativeFileReservation(request.nativeFileReservation);
+  need(object(descriptor) && same(descriptor,request.nativeFileReservation),
+    'UNDISPATCHED_RESERVED_ENTRY_DESCRIPTOR_CHANGED');
+  // The descriptor selects a program, so bind the actual reviewed allocator
+  // executable as well as its JavaScript adapter before using this predicate.
+  need(await realpath(descriptor.executable) === descriptor.executable &&
+    descriptor.executableSha256 === 'ccd7a867766e25f931d6e5cf07a8fd0fb0c9d4baa03c4af4be44f3b41756757a',
+    'UNDISPATCHED_REVIEWED_ALLOCATOR_CHANGED');
+  const executable = await reader.read(descriptor.executable,{limit:16777216,pin:descriptor.executableSha256});
+  signerSources.reservationExecutable = executable.descriptor;
+  let runtimeSource = null;
+  if (request.nativeRuntimeSource !== undefined) {
+    const {verifySuccessorRuntimeSource} = await import(pathToFileURL(join(runtime,'node/runtime-source.mjs')).href);
+    runtimeSource = await verifySuccessorRuntimeSource(request.nativeRuntimeSource,{signal});
+    need(runtimeSource.directory === runtime &&
+      (operation.buyer.runtime.nativeRuntimeSource === undefined ||
+        same(runtimeSource,operation.buyer.runtime.nativeRuntimeSource)),
+      'UNDISPATCHED_RESERVED_RUNTIME_BINDING_CHANGED');
+  }
+  signerSources.reservationRequest = source.descriptor;
+  signerSources.reservationEntry = entry.descriptor;
+  return {requestSha256:source.descriptor.sha256,entrySha256:entry.descriptor.sha256,
+    nativeFileReservation:copy(descriptor),runtimeSource};
+}
+
 function sourceReader(signal) {
   const observed = new Map();
   let bytesRead = 0;
@@ -266,7 +338,7 @@ export async function readUndispatchedAuthorizationEvidence(operation, options =
     'UNDISPATCHED_ORIGINAL_OPERATION_CHANGED');
   await privateDirectory(stateDirectory, {create:false});
   await privateDirectory(directory, {create:false});
-  const attemptFile = await reader.read(join(directory, 'attempt.json'), {limit:16384, privateFile:true, json:true});
+  const attemptFile = await reader.read(join(directory, 'attempt.json'), {limit:65536, privateFile:true, json:true});
   const attempt = attemptFile.value;
   need(attemptFile.descriptor.sha256 === selected.expectedAttemptId &&
     attempt.schema === bound.meta.schema && attempt.intentId === operation.intentId &&
@@ -282,11 +354,29 @@ export async function readUndispatchedAuthorizationEvidence(operation, options =
   const bodyPresent = bound.config.operation.bodyFile !== undefined;
   const wireBody = bodyPresent ? bound.body : undefined;
 
-  for (const [name, path] of [
-    ['execute',join(runtime,'execute.mjs')], ['wire',join(runtime,'attempt-wire.mjs')],
-    ['store',join(runtime,'node/store.mjs')], ['config',join(runtime,'config.mjs')],
-    ['workspace',join(runtime,'workspace.mjs')],
-  ]) await pin(name, path);
+  // Accept complete reviewed implementations, never a mix of independently
+  // allowed execute/wire/store versions. Historical descriptors and output keep
+  // their exact previous shape; the additional profile is explicit below.
+  const nativeSources = {};
+  for (const [name,path] of [
+    ['execute',join(runtime,'execute.mjs')],['wire',join(runtime,'attempt-wire.mjs')],
+    ['store',join(runtime,'node/store.mjs')],
+  ]) {
+    const source = await reader.read(path);
+    nativeSources[name] = source.descriptor.sha256;
+    signerSources[name] = source.descriptor;
+  }
+  const historical = ['execute','wire','store'].every(name => nativeSources[name] === PINS[name]);
+  const protectedProfile = PROTECTED_SOURCE_PROFILES.find(profile =>
+    ['execute','wire','store'].every(name => nativeSources[name] === profile[name]));
+  const protectedSource = protectedProfile !== undefined;
+  need(historical || protectedSource,'UNDISPATCHED_REVIEWED_SOURCE_CHANGED');
+  need(protectedSource || attemptFile.descriptor.bytes <= 16384, 'UNDISPATCHED_SOURCE_FILE_INVALID');
+  await pin('config',join(runtime,'config.mjs'));
+  await pin('workspace',join(runtime,'workspace.mjs'));
+  const reservedEntry = protectedSource ? await protectedEntrySource({
+    runtime,directory,operation,bound,reader,signerSources,signal,
+  }) : null;
   const [{openWorkspace}, {execution}, {readAttemptWireCheckpoint}] = await Promise.all([
     import(pathToFileURL(join(runtime,'workspace.mjs')).href),
     import(pathToFileURL(join(runtime,'config.mjs')).href),
@@ -404,6 +494,10 @@ export async function readUndispatchedAuthorizationEvidence(operation, options =
     wire:copy(snapshot), signerSources,
     scope:{
       basis:'RETAINED_ORIGINAL_WIRE_AND_REVIEWED_AUTHORIZATION_SOURCE',
+      ...(protectedSource ? {
+        reviewedNativeSourceProfile:protectedProfile.id,
+        allocationEntry:reservedEntry ?? {kind:'REVIEWED_DIRECT_NATIVE_ENTRY'},
+      } : {}),
       signer:'ORIGINAL_GENERATED_ENVIRONMENT_ED25519',
       x402SdkVersion:'2.28.0', stellarSdkVersion:'16.3.1',
       signedAuthorizationMayExist:snapshot.signingEntered,

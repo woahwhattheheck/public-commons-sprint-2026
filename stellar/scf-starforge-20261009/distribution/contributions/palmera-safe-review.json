@@ -6,10 +6,12 @@
     "stellar/scf-starforge-20261009/partners/palmera-safe-review"
   ],
   "commands": {
-    "safe-review": "stellar/scf-starforge-20261009/partners/palmera-safe-review/cli.mjs"
+    "safe-review": "stellar/scf-starforge-20261009/partners/palmera-safe-review/cli.mjs",
+    "safe-review-workspace": "stellar/scf-starforge-20261009/partners/palmera-safe-review/operator/server.mjs"
   },
   "commandDescriptions": {
-    "safe-review": "Capture, prepare, review, execute and recover an original Safe simulation purchase; compare and receive its complete handover."
+    "safe-review": "Capture, prepare, review, execute and recover an original Safe simulation purchase; compare and receive its complete handover.",
+    "safe-review-workspace": "Open the original Safe buyer operator workspace for capture, preparation, review, purchase recovery, analysis and complete handover receiving."
   },
   "exports": {
     "./buyer/safe-review": "./source/stellar/scf-starforge-20261009/partners/palmera-safe-review/workspace.mjs",
@@ -17,6 +19,11 @@
     "./buyer/safe-review/preparation": "./source/stellar/scf-starforge-20261009/partners/palmera-safe-review/preparation.mjs",
     "./buyer/safe-review/handover": "./source/stellar/scf-starforge-20261009/partners/palmera-safe-review/handover.mjs",
     "./buyer/safe-review/report": "./source/stellar/scf-starforge-20261009/partners/palmera-safe-review/report.mjs",
-    "./buyer/safe-review/receiving": "./source/stellar/scf-starforge-20261009/partners/palmera-safe-review/receiving/read-public-safe.mjs"
+    "./buyer/safe-review/receiving": "./source/stellar/scf-starforge-20261009/partners/palmera-safe-review/receiving/read-public-safe.mjs",
+    "./buyer/safe-review/operator": "./source/stellar/scf-starforge-20261009/partners/palmera-safe-review/operator/model.mjs",
+    "./buyer/safe-review/operator/server": "./source/stellar/scf-starforge-20261009/partners/palmera-safe-review/operator/server.mjs"
+  },
+  "applicationProviders": {
+    "palmera-safe-review": "stellar/scf-starforge-20261009/partners/palmera-safe-review/operator/application-provider.mjs"
   }
 }

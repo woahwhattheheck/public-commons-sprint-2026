@@ -29,13 +29,13 @@ function nativeError(error) {
   if (/NOT an original SF30 seller/.test(error?.message ?? '')) return 'FLEET_SELLER_UNAVAILABLE';
   return 'FLEET_CONTROL_REJECTED';
 }
-async function body(req) {
+async function body(req, maximum = 8192) {
   if (req.headers['content-type']?.split(';', 1)[0].trim() !== 'application/json')
     throw failure('WORKSPACE_JSON_REQUIRED', 415);
   const chunks = []; let size = 0;
   for await (const chunk of req) {
     size += chunk.length;
-    if (size > 8192) throw failure('WORKSPACE_REQUEST_TOO_LARGE', 413);
+    if (size > maximum) throw failure('WORKSPACE_REQUEST_TOO_LARGE', 413);
     chunks.push(chunk);
   }
   try { return JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(Buffer.concat(chunks))); }
@@ -98,9 +98,50 @@ export async function startFleetWorkspace({ stateDirectory, manifests = {}, port
       if (req.method === 'GET' && asset) return send(res, 200, asset.bytes, asset.type);
       if (req.method === 'GET' && req.url === '/api/session')
         return send(res, 200, { session: sessionKey, manifests: [...sources.keys()], managed });
+      // The mounted original SF98 UI keeps its own native session token.
+      // Authority and same-origin checks above apply to every mounted route.
+      const deliveryMount = releases && /^\/delivery\/([a-z][a-z0-9-]{0,39})\/([a-z][a-z0-9-]{0,39})(?:\/|$)/.exec(new URL(req.url, url).pathname);
+      if (deliveryMount) {
+        if (!await releases.mountDelivery(req, res, { tenant: deliveryMount[1], slot: deliveryMount[2], origin: url }))
+          send(res, 404, { error: 'WORKSPACE_ROUTE_NOT_FOUND' });
+        return;
+      }
       if (!sameSession(req)) return send(res, 403, { error: 'WORKSPACE_SESSION_REQUIRED' });
       if (req.method === 'GET' && req.url === '/api/status')
         return send(res, 200, await snapshot());
+      if (releases && req.url.startsWith('/api/releases/delivery')) {
+        const target = new URL(req.url, url), base = '/api/releases/delivery';
+        const reads = {
+          [base]: ['deliveryStatus', []],
+          [base + '/events']: ['deliveryEvents', ['id', 'state', 'offset', 'limit']],
+          [base + '/transfers']: ['deliveryTransfers', ['after', 'limit']],
+          [base + '/transfer']: ['deliveryTransferManifest', ['id', 'expectedFingerprint']],
+          [base + '/download']: ['sendDeliveryTransfer', ['id', 'expectedFingerprint']],
+        };
+        if (req.method === 'GET' && Object.hasOwn(reads, target.pathname)) {
+          const [method, extra] = reads[target.pathname], names = [...target.searchParams.keys()];
+          if (new Set(names).size !== names.length || !target.searchParams.has('tenant') || !target.searchParams.has('slot') ||
+              names.some(name => !['tenant', 'slot', ...extra].includes(name))) throw failure('WORKSPACE_REQUEST_INVALID');
+          const input = Object.fromEntries(target.searchParams);
+          for (const name of ['limit', 'offset']) if (input[name] !== undefined) {
+            if (!/^(?:0|[1-9]\d*)$/.test(input[name]) || !Number.isSafeInteger(Number(input[name])))
+              throw failure('WORKSPACE_REQUEST_INVALID');
+            input[name] = Number(input[name]);
+          }
+          if (method === 'sendDeliveryTransfer') return releases.sendDeliveryTransfer(req, res, input);
+          return send(res, 200, await releases[method](input));
+        }
+        const changes = {
+          [base + '/control']: ['deliveryControl', ['action', 'input']],
+          [base + '/transfer']: ['deliveryTransfer', ['id', 'expectedSourceFingerprint']],
+        };
+        if (req.method === 'POST' && !target.search && Object.hasOwn(changes, target.pathname)) {
+          const [method, extra] = changes[target.pathname], input = await body(req, 32768);
+          keys(input, ['tenant', 'slot', ...extra]); operationDispatched = true;
+          return send(res, 200, await releases[method](input));
+        }
+        return send(res, 404, { error: 'WORKSPACE_ROUTE_NOT_FOUND' });
+      }
       if (releases && req.url.startsWith('/api/releases/discovery')) {
         const target = new URL(req.url, url), base = '/api/releases/discovery';
         const reads = {
@@ -219,22 +260,25 @@ export async function startFleetWorkspace({ stateDirectory, manifests = {}, port
   const close = () => {
     if (closingPromise) return closingPromise;
     closing = true;
-    closingPromise = (async () => {
+    const attempt = (async () => {
       try {
         // An in-flight native stage may own an HTTP response. Signal its original
         // capture before waiting for that response and the listener to drain.
         releases?.cancelStaging?.();
         releases?.cancelClientTransfers?.();
+        releases?.cancelDeliveryOperations?.();
         if (server.listening) await new Promise((done, fail) => {
           server.close(error => error ? fail(error) : done()); server.closeIdleConnections();
         });
       } finally { await releases?.close(); }
     })();
-    return closingPromise;
+    closingPromise = attempt;
+    attempt.catch(() => { if (closingPromise === attempt) closingPromise = undefined; });
+    return attempt;
   };
   try {
     await new Promise((done, fail) => { server.once('error', fail); server.listen(port, HOST, done); });
-    url = 'http://' + HOST + ':' + server.address().port;
+    url = new URL('http://' + HOST + ':' + server.address().port).origin;
     // The original merchant authorizes this actual navigation origin, including
     // an automatically allocated workspace port. Requests wait for native startup.
     if (managed) {

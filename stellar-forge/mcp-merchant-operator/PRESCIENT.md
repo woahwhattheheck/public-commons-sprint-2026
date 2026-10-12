@@ -258,3 +258,7 @@ The maintained declarations describe `PrescientProfile`,
 `PrescientActionFields` and the action-specific body union. The API forwards
 native values and exposes the original action result; there is no parallel
 profile or receiving implementation in this client.
+
+## Retained native client continuation
+
+The [complete retained-operation guide](PRESCIENT_CONTINUATION.md) and its maintained executable carry the original configured sender and receiver through an actual lost response, immutable caller-body dispatch, original MCP reconciliation, CLI file download and same-client host restart. It uses the existing native operation and never substitutes for the complete StacDelivery customer receiving workflow.

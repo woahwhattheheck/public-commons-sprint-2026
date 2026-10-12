@@ -51,8 +51,11 @@ def disjoint(a,b):
 
 def main():
  parser=argparse.ArgumentParser(description=__doc__)
- for name in ('operation-root','baseline-source','project-update','baseline-handoff','node','controller-host','private-root'):
+ for name in ('operation-root','baseline-source','baseline-handoff','node','controller-host','private-root'):
   parser.add_argument('--'+name,required=True,type=Path)
+ parser.add_argument('--project-update',type=Path,
+  default=Path(__file__).resolve().parent/'inputs'/'project-update.json',
+  help='the fixed issued-source input; defaults to the complete packet shipped with this programme')
  for name in ('memory-reservations-root','disk-reservations-root','worker-root'):
   parser.add_argument('--'+name,type=Path)
  parser.add_argument('--launch',action='store_true',help='start/reopen this exact native record after selection')

@@ -39,14 +39,28 @@ export function createWorkflowPage({state,$,node,text,pretty,when,tag,properties
     });
   }
   async function retainIntent(ctx,kind,body){
-    const value=await intentRecord(ctx,kind,old=>old??{kind,body,createdAt:new Date().toISOString()});
+    const value=await intentRecord(ctx,kind,old=>old??{kind,body,attempts:0,createdAt:new Date().toISOString()});
     return value.body;
   }
-  async function releaseIntent(ctx,kind,body){
+  const intentId=(kind,body)=>body[kind==='handover'?'handoverId':'id'];
+  async function markAttempt(ctx,kind,body){
+    let attempt=null;
+    await intentRecord(ctx,kind,old=>{
+      if(!old||intentId(kind,old.body)!==intentId(kind,body))return old;
+      const number=(old.attempts??1)+1;attempt={number,prior:old.attempts!==0};
+      return {...old,attempts:number,lastAttemptAt:new Date().toISOString()};
+    });
+    if(!attempt){
+      if(current(ctx))await restoreIntents(ctx);
+      throw new Error('This pending action changed in another tab. Review the current original action.');
+    }
+    return attempt;
+  }
+  async function releaseIntent(ctx,kind,body,attempt=null){
     return intentRecord(ctx,kind,old=>{
       if(!old)return null;
-      const field=kind==='handover'?'handoverId':'id';
-      return old.body[field]===body[field]?null:old;
+      if(attempt&&old.attempts!==attempt.number)return old;
+      return intentId(kind,old.body)===intentId(kind,body)?null:old;
     });
   }
   async function restoreIntents(ctx){
@@ -115,8 +129,8 @@ export function createWorkflowPage({state,$,node,text,pretty,when,tag,properties
       const request=own.definition?.requests.find(value=>value.stepId===step.id)??state.details?.drafts.find(value=>value.id===step.draftId);
       const identity=node('p',(request?.tool??'Saved request')+' · '+step.draftId+' / r'+step.draftRevision,'hint break');
       const open=node('button','Open saved request');open.type='button';action(open,async()=>{
-        const packet=await api('draft/'+encodeURIComponent(step.draftId)+'?revision='+step.draftRevision);
-        return chooseTool(packet.draft.tool,{draft:packet.draft});
+        const ctx=context(),packet=await api('draft/'+encodeURIComponent(step.draftId)+'?revision='+step.draftRevision,{epoch:ctx.session});
+        if(current(ctx))return chooseTool(packet.draft.tool,{draft:packet.draft});
       });
       card.append(label,name,identity,open,node('p','Step identifier: '+step.id,'hint'));
       const mappingLabel=node('label','Input mappings (JSON)'),mappings=node('textarea');
@@ -169,16 +183,24 @@ export function createWorkflowPage({state,$,node,text,pretty,when,tag,properties
       if(own.pendingRun)throw new Error('Recover the displayed original start before starting a new run.');
       if(!definition||own.dirty)throw new Error('Save the displayed workflow revision first.');
       const inputs=parsed($('workflow-inputs').value,'Workflow inputs','object');
-      intent=await retainIntent(ctx,'start',{id:uid(),profileId:profile.id,workflowId:definition.id,workflowRevision:definition.revision,
-        expectedWorkflowSha256:definition.contentSha256,expectedHostFingerprint:state.host.configurationFingerprint,inputs});
+      const proposed={id:uid(),profileId:profile.id,workflowId:definition.id,workflowRevision:definition.revision,
+        expectedWorkflowSha256:definition.contentSha256,expectedHostFingerprint:state.host.configurationFingerprint,inputs};
+      intent=await retainIntent(ctx,'start',proposed);
       if(!current(ctx))return;
       own.pendingRun=intent;renderPending();sync();
+      if(intent.id!==proposed.id){notice('Another tab retained the displayed original start. Use Recover original action to continue it.');return;}
     }
+    const attempt=await markAttempt(ctx,'start',intent);if(!current(ctx))return;
     let result;
     try{result=await invoke('workflow-runs',intent,ctx);}
     catch(error){
-      try{result=await api('workflow-run/'+encodeURIComponent(intent.id),{epoch:ctx.session});}catch{}
-      if(!result){if(error.status>=400&&error.status<500){await releaseIntent(ctx,'start',intent);if(current(ctx))await restoreIntents(ctx);}throw error;}
+      try{result={...await api('workflow-run/'+encodeURIComponent(intent.id),{epoch:ctx.session}),reused:true};}catch{}
+      if(!result){
+        if(!attempt.prior&&error.status>=400&&error.status<500){
+          await releaseIntent(ctx,'start',intent,attempt);if(current(ctx))await restoreIntents(ctx);
+        }
+        throw error;
+      }
     }
     await releaseIntent(ctx,'start',intent);
     if(!current(ctx))return;
@@ -269,17 +291,25 @@ export function createWorkflowPage({state,$,node,text,pretty,when,tag,properties
     else{
       if(!run)throw new Error('Open the paused run.');
       if(own.pendingHandover)throw new Error('Recover the displayed original handover first.');
-      request=await retainIntent(ctx,'handover',{id:run.id,expectedRevision:run.revision,handoverId:uid(),
-        workspaceId:$('workflow-recipient-workspace').value.trim(),hostFingerprint:$('workflow-recipient-host').value.trim(),note:$('workflow-handover-note').value});
+      const proposed={id:run.id,expectedRevision:run.revision,handoverId:uid(),
+        workspaceId:$('workflow-recipient-workspace').value.trim(),hostFingerprint:$('workflow-recipient-host').value.trim(),note:$('workflow-handover-note').value};
+      request=await retainIntent(ctx,'handover',proposed);
       if(!current(ctx))return;own.pendingHandover=request;renderPending();sync();
+      if(request.handoverId!==proposed.handoverId){notice('Another tab retained the displayed original handover. Use Recover original action to continue it.');return;}
     }
+    const attempt=await markAttempt(ctx,'handover',request);if(!current(ctx))return;
     let response;
     try{response=await invoke('workflow-handover',request,ctx);}
     catch(error){
       try{const retained=await api('workflow-run/'+encodeURIComponent(request.id),{epoch:ctx.session});
-        if(retained.run.events.some(event=>event.kind==='HANDED_OVER'&&event.detail.id===request.handoverId))response=retained;
+        if(retained.run.events.some(event=>event.kind==='HANDED_OVER'&&event.detail.id===request.handoverId))response={...retained,reused:true};
       }catch{}
-      if(!response){if(error.status>=400&&error.status<500){await releaseIntent(ctx,'handover',request);if(current(ctx))await restoreIntents(ctx);}throw error;}
+      if(!response){
+        if(!attempt.prior&&error.status>=400&&error.status<500){
+          await releaseIntent(ctx,'handover',request,attempt);if(current(ctx))await restoreIntents(ctx);
+        }
+        throw error;
+      }
     }
     await releaseIntent(ctx,'handover',request);
     if(!current(ctx))return;
@@ -287,7 +317,7 @@ export function createWorkflowPage({state,$,node,text,pretty,when,tag,properties
     if(current(ctx)&&selection===own.runOpenSeq&&(recover||own.run?.id===request.id))await openRun(request.id);
     if(!current(ctx))return;
     await download('export/'+encodeURIComponent(response.run.profileId),response.run.profileId+'-operator-profile.json');
-    if(current(ctx))notice('Handed run '+request.id+' to '+request.workspaceId+' and exported its complete profile.');
+    if(current(ctx))notice(response.reused?'Recovered original handover '+request.handoverId+'. Current owner: '+response.run.ownerWorkspaceId+'. Complete profile exported.':'Handed run '+request.id+' to '+request.workspaceId+' and exported its complete profile.');
   }
   function sync(){
     const selected=Boolean(state.profile),saved=Boolean(own.definition)&&!own.dirty,bound=state.profile?.hostFingerprint===state.host?.configurationFingerprint;

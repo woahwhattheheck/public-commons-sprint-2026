@@ -69,6 +69,7 @@ export function createConsoleCustomers({operator,store,definitions,releaseStore,
       throw fail('CONSOLE_HOST_CHANGED','Bind this profile to the displayed original host before receiving customer files.');
     const prefix=toolPrefix(selection),args={exportId:selection.exportId,...(selection.workspace?{workspace:selection.workspace}:{})};
     await authorize(request,prefix+'_manifest',args);
+    if(closing)throw fail('CONSOLE_CLOSING','The original operator is closing.',503);
     const identitySha256=digest(canonical(selection)),id=identitySha256.slice(0,48);
     let record;
     try { record=store.delivery(id); } catch(error){if(error.code!=='CONSOLE_CUSTOMER_NOT_FOUND')throw error;}

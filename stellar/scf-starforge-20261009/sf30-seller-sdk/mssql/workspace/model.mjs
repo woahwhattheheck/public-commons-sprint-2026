@@ -263,6 +263,55 @@ export async function createMssqlWorkspace({ sourceFile, stateDirectory, environ
       active.status = 'stopping'; await active.session.close(); active = null; return { stopped: true };
     }),
     runtime: () => Promise.resolve(currentRuntime()),
+    adoptRelease: input => serialize(async () => {
+      fields(input, ['directory','manifestSha256','workspaceSha256']);
+      if (typeof input.directory !== 'string' || !isAbsolute(input.directory) ||
+          !/^[a-f0-9]{64}$/.test(input.manifestSha256 ?? '') ||
+          !/^[a-f0-9]{64}$/.test(input.workspaceSha256 ?? '')) fail('MSSQL_RECEIVING_SELECTION_INVALID');
+      const incoming = resolve(input.directory), stat = await lstat(incoming);
+      if (!stat.isDirectory() || stat.isSymbolicLink() || await realpath(incoming) !== incoming)
+        fail('MSSQL_RECEIVING_DIRECTORY_INVALID');
+      const savedBytes = await limited(resolve(incoming, 'workspace.json'), 1048576);
+      if (hash(savedBytes) !== input.workspaceSha256) fail('MSSQL_RECEIVING_SOURCE_CHANGED', 409);
+      const saved = JSON.parse(savedBytes), id = safeId(saved?.releaseId);
+      if (saved.schema !== SCHEMA || saved.manifestSha256 !== input.manifestSha256 ||
+          !/^[a-f0-9]{64}$/.test(saved.planId ?? '') || typeof saved.label !== 'string' ||
+          saved.choices?.releaseId !== id) fail('MSSQL_RECEIVING_METADATA_INVALID');
+      const original = await verifyPreparedMssqlSeller(resolve(incoming, 'package'));
+      if (original.manifestSha256 !== input.manifestSha256) fail('MSSQL_RECEIVING_SOURCE_CHANGED', 409);
+      const lease = await lockRelease(id);
+      try {
+        let previous;
+        try { previous = await verifiedRelease(id); } catch (error) { if (error.code !== 'ENOENT') throw error; }
+        if (previous) {
+          if (previous.prepared.manifestSha256 !== input.manifestSha256 ||
+              hash(await limited(resolve(previous.directory, 'workspace.json'), 1048576)) !== input.workspaceSha256)
+            fail('RELEASE_ID_ALREADY_USED', 409);
+          return { ...releaseSummary(previous), reopened: true };
+        }
+        const stage = await mkdtemp(resolve(root, 'temporary', 'receiving-'));
+        let committed = false;
+        try {
+          await privateDirectory(resolve(stage, 'package'));
+          await privateDirectory(resolve(stage, 'package', 'client'));
+          for (const [name, expected] of Object.entries(original.files)) {
+            const bytes = await limited(resolve(incoming, 'package', name), 16777216);
+            if (bytes.length !== expected.bytes || hash(bytes) !== expected.sha256)
+              fail('MSSQL_RECEIVING_SOURCE_CHANGED', 409);
+            await put(resolve(stage, 'package', name), bytes);
+          }
+          const manifestBytes = await limited(resolve(incoming, 'package', 'manifest.json'));
+          if (hash(manifestBytes) !== input.manifestSha256) fail('MSSQL_RECEIVING_SOURCE_CHANGED', 409);
+          await put(resolve(stage, 'package', 'manifest.json'), manifestBytes);
+          await put(resolve(stage, 'workspace.json'), savedBytes);
+          const prepared = await verifyPreparedMssqlSeller(resolve(stage, 'package'));
+          await directorySync(resolve(stage, 'package', 'client')); await directorySync(resolve(stage, 'package'));
+          await directorySync(stage); await lease.assert();
+          await rename(stage, resolve(releases, id)); committed = true; await directorySync(releases);
+          return { ...releaseSummary({saved, directory:resolve(releases, id), prepared}), reopened: false };
+        } finally { if (!committed) await rm(stage, {recursive:true, force:true}); }
+      } finally { await lease.close(); }
+    }),
     exportClient: input => serialize(async () => {
       fields(input, ['releaseId', 'manifestSha256']);
       if (!/^[a-f0-9]{64}$/.test(input.manifestSha256 ?? '')) fail('REVIEW_RELEASE_BEFORE_EXPORT', 409);
@@ -279,3 +328,6 @@ export async function createMssqlWorkspace({ sourceFile, stateDirectory, environ
     },
   };
 }
+
+// Read-only native profile binding shared by the installed operator and Applications.
+export { sourceSnapshot as inspectMssqlWorkspaceSource };

@@ -82,10 +82,59 @@ function fleetDiscoveryTools(tool) {
   ];
 }
 
+function fleetDeliveryTools(tool) {
+  const scope = { tenant, slot: alias }, selected = { ...scope, id: release };
+  const destination = { type: 'string', pattern: '^[a-z][a-z0-9-]{0,47}$' };
+  const settings = { type: 'object', additionalProperties: false, properties: {
+    id: destination, label: { type: 'string', minLength: 1, maxLength: 100 },
+    url: { type: 'string', minLength: 1, maxLength: 4096 },
+    allowedHost: { type: 'string', minLength: 1, maxLength: 253 },
+    secretEnv: { type: 'string', pattern: '^[A-Z][A-Z0-9_]{1,64}$' },
+    routeIds: { type: 'array', maxItems: 100, uniqueItems: true,
+      items: { type: 'string', pattern: '^[A-Za-z0-9_-]{1,80}$' } },
+    networks: { type: 'array', maxItems: 32, uniqueItems: true,
+      items: { type: 'string', pattern: '^[A-Za-z0-9_-]{1,32}:[A-Za-z0-9:_-]{1,100}$' } },
+    history: { type: 'string', enum: ['all', 'new'] }, paused: { type: 'boolean' },
+    expectedRevision: revision, eventId: digest, expectedDeliveryRevision: digest,
+    limit: { type: 'integer', minimum: 1, maximum: 100 },
+    concurrency: { type: 'integer', minimum: 1, maximum: 16 },
+    destinationConcurrency: { type: 'integer', minimum: 1, maximum: 16 },
+    timeoutMs: { type: 'integer', minimum: 100, maximum: 60000 },
+    pollMs: { type: 'integer', minimum: 100, maximum: 60000 },
+  } };
+  return [
+    tool('merchant_fleet_delivery_status', 'Read this release store’s actual original settlement producer, journal warning, source receipt count, destination cursors, original delivery leases and worker state. The fleet must be owned here; the selected slot may be stopped.',
+      scope, ['tenant', 'slot'], { readOnly: true, idempotent: true }),
+    tool('merchant_fleet_delivery_control', 'Operate the original SF98 destination workspace for this tenant and slot. Actions: enroll (id,label,url,allowedHost,secretEnv,history; optional routeIds/networks), pause (id,paused,expectedRevision), sync/drain (optional id), start/stop, requeue (id,eventId,expectedRevision,expectedDeliveryRevision). Worker settings retain original bounds. HTTPS destination signing uses the named environment reference in this host process.',
+      { ...scope, action: { type: 'string', enum: ['enroll', 'pause', 'sync', 'drain', 'start', 'stop', 'requeue'] }, input: settings },
+      ['tenant', 'slot', 'action', 'input'], { openWorld: true }),
+    tool('merchant_fleet_delivery_events', 'Read an original destination’s receipt IDs, settlement payloads, delivery outcomes and exact maintenance revisions, with its original pagination and filters.',
+      { ...scope, id: destination, state: { type: 'string', enum: ['ALL', 'PENDING', 'DELIVERED', 'RETRY', 'REQUEUE', 'EXHAUSTED'] },
+        offset: { type: 'integer', minimum: 0 }, limit: { type: 'integer', minimum: 1, maximum: 200 } },
+      ['tenant', 'slot', 'id'], { readOnly: true, idempotent: true }),
+    tool('merchant_fleet_delivery_transfers', 'List named immutable original SF98 destination exchanges for this store. Each keeps the source journal, destination descriptors, cursors and delivery history, and remains readable independently of the live source.',
+      { ...scope, after: release, limit: { type: 'integer', minimum: 1, maximum: 50 } },
+      ['tenant', 'slot'], { readOnly: true, idempotent: true }),
+    tool('merchant_fleet_delivery_transfer', 'Create or reopen a named original SF98 portable exchange using the source fingerprint from delivery status. Original source and destination continuity is verified before publication. An existing ID reopens its retained capture; use a new ID to capture later history.',
+      { ...selected, expectedSourceFingerprint: digest }, ['tenant', 'slot', 'id', 'expectedSourceFingerprint'], { idempotent: true }),
+    tool('merchant_fleet_delivery_manifest', 'Inspect a named original destination exchange and its exact native file names, bytes and SHA-256 values. Returns the existing destinations CLI inspection and receiving arguments; receiving preserves original delivery history and cursors.',
+      { ...selected, expectedFingerprint: digest }, ['tenant', 'slot', 'id'], { readOnly: true, idempotent: true }),
+    tool('merchant_fleet_delivery_file', 'Read original SF98 exchange bytes through the existing retained-file reader. Supply the inspected exchange fingerprint, relative member name and SHA-256; continue with readId and offset. Private path selection stays in the native store.',
+      { ...selected, expectedFingerprint: digest, expectedSha256: digest,
+        name: { type: 'string', pattern: '^(?:manifest\\.json|source/(?:manifest\\.json|events\\.ndjson|deliveries\\.ndjson)|destinations/[a-z][a-z0-9-]{0,47}/(?:manifest\\.json|events\\.ndjson|deliveries\\.ndjson))$' },
+        readId: identity, offset: { type: 'integer', minimum: 0 },
+        limit: { type: 'integer', minimum: 1, maximum: MAX_RETAINED_CHUNK_BYTES } },
+      ['tenant', 'slot', 'id', 'expectedFingerprint', 'expectedSha256', 'name'], { readOnly: true, idempotent: true }),
+    tool('merchant_fleet_delivery_file_release', 'Release only this store and transfer’s temporary verified file read. Original exchange files remain retained for subsequent receiving or resume.',
+      { ...selected, readId: identity }, ['tenant', 'slot', 'id', 'readId'], { readOnly: true, idempotent: true }),
+  ];
+}
+
 function fleetControlTools(tool) {
   return [
     ...fleetClientTools(tool),
     ...fleetDiscoveryTools(tool),
+    ...fleetDeliveryTools(tool),
     tool('merchant_fleet_plan', 'Inspect the host-configured original fleet: plan digest, tenant/slot/package aliases, listener ports and limits. Reads original release stores without starting a process or exposing private paths.', {}, [], { readOnly: true, idempotent: true }),
     tool('merchant_fleet_status', 'Read this MCP process ownership and the original live fleet revision, candidates, exact release mapping, retained rollback history, active requests and drain state. A stopped fleet remains stopped.', {}, [], { readOnly: true, idempotent: true }),
     tool('merchant_fleet_start', 'Start or reopen the original retained multi-store fleet using the exact inspected host-plan digest. Starts its original selected merchant sessions and gateway; does not request a paid resource.', { expectedPlanDigest: digest }, ['expectedPlanDigest'], { openWorld: true }),

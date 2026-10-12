@@ -6,19 +6,21 @@ import {join, resolve} from 'node:path';
 import {fileURLToPath, pathToFileURL} from 'node:url';
 import {createHash, randomUUID} from 'node:crypto';
 import {startReviewerWorkbench} from './workbench.mjs';
-import {readSourceFile, writeSourceFile, inspectGrantDemoWorkspace, exportGrantDemo} from './workspace.mjs';
+import {readSourceFile, writeSourceFile, inspectGrantDemoWorkspace, exportGrantDemo, nativeModules} from './workspace.mjs';
 import {operationLease} from '../../../scf-starforge-20261009/distribution/runtime-workspace/storage.mjs';
 const sha = bytes => createHash('sha256').update(bytes).digest('hex');
 const options = {};
 for (let i = 2; i < process.argv.length; i += 2) {
   const name = process.argv[i], value = process.argv[i + 1];
-  assert(['--operation', '--source-root', '--playwright', '--chromium'].includes(name) && value && !value.startsWith('--'),
-    'Use --operation ABS --source-root ABS --playwright ABS --chromium ABS.');
+  assert(['--operation', '--source-root', '--playwright', '--chromium', '--runtime-directory'].includes(name) && value && !value.startsWith('--'),
+    'Use --operation ABS --source-root ABS --playwright ABS --chromium ABS [--runtime-directory ABS].');
   assert(!Object.hasOwn(options, name), 'Repeated option'); options[name] = resolve(value);
 }
 for (const name of ['--operation', '--source-root', '--playwright', '--chromium']) assert(options[name], name + ' is required.');
 assert(Number(process.versions.node.split('.')[0]) >= 22, 'Use the maintained native Node 22 or later runtime.');
-const {chromium} = await import(pathToFileURL(options['--playwright']).href);
+const playwright = await import(pathToFileURL(options['--playwright']).href);
+const chromium = playwright.chromium ?? playwright.default?.chromium;
+assert(chromium && typeof chromium.launch === 'function', 'The selected Playwright package must expose Chromium.');
 const root = options['--operation'];
 await mkdir(root, {recursive:true, mode:0o700});
 for (const name of ['workbenches', 'downloads', 'screenshots', 'browser-temp']) await mkdir(join(root, name), {mode:0o700}).catch(error => {
@@ -33,30 +35,48 @@ catch (error) { if (error.code !== 'ENOENT') throw error;
     sourceRoot:options['--source-root'], createdAt:new Date().toISOString(), state:'CONTINUING',
     phases:{}, requests:{}, nativeReads:[], views:[]}; }
 assert.equal(journal.operation, root); assert.equal(journal.sourceRoot, options['--source-root']);
-if (journal.state === 'COMPLETE') {
+const needsManaged = Boolean(options['--runtime-directory'] && journal.managed?.state !== 'COMPLETE');
+if (journal.state === 'COMPLETE' && !needsManaged) {
   const result = JSON.parse(await readSourceFile(resultFile, {privateFile:true}));
   await lease.close(); process.stdout.write(JSON.stringify({status:'REUSED_COMPLETE', resultFile, resultSha256:sha(await readFile(resultFile)),
     runId:result.runId}) + '\n'); process.exit(0);
 }
+if (journal.state === 'COMPLETE' && needsManaged) {
+  const bytes = await readSourceFile(resultFile, {privateFile:true}), digest = sha(bytes);
+  const previousFile = join(root, 'WORKBENCH-RESULT-direct-' + digest + '.json');
+  try { assert.deepEqual(await readSourceFile(previousFile, {privateFile:true}), bytes); }
+  catch (error) {
+    if (error.code !== 'ENOENT') throw error;
+    await writeSourceFile(previousFile, bytes);
+  }
+  journal.previousResults ??= [];
+  if (!journal.previousResults.some(item => item.sha256 === digest))
+    journal.previousResults.push({path:previousFile,sha256:digest,bytes:bytes.length,state:'COMPLETE'});
+  journal.state = 'CONTINUING'; delete journal.completedAt;
+}
 async function finalizeResult() {
   const codeRoot = fileURLToPath(new URL('./', import.meta.url)), code = {};
-  for (const name of ['workspace.mjs','workbench-model.mjs','workbench.mjs','application-provider.mjs','workbench-ui/app.mjs'])
+  for (const name of ['workspace.mjs','workbench-model.mjs','workbench.mjs','application-provider.mjs','workbench-ui/app.mjs',
+    'WORKBENCH_RECEIVING.mjs','WORKBENCH_MANAGED_RECEIVING.mjs'])
     code[name] = sha(await readFile(join(codeRoot, name)));
   const result = {...journal, state:'COMPLETE', schema:'stellar-forge.grant-reviewer-receiving-result.v1', node:process.version,
     originalPurchaseTransactions:1, originalQuoteAttempts:2, newPaymentTransactions:0,
-    sourceCodeSha256:code, fullManagedAdoption:'separate maintained distribution operation'};
+    sourceCodeSha256:code, fullManagedAdoption:journal.managed?.state === 'COMPLETE' ? {
+      state:'COMPLETE',applicationId:journal.managed.applicationId,runtime:journal.managed.runtime,
+      steps:journal.managed.steps,cleanup:journal.managed.cleanup} : 'separate maintained distribution operation'};
   await writeSourceFile(resultFile, Buffer.from(JSON.stringify(result, null, 2) + '\n'), {replace:true});
   journal.state = 'COMPLETE';
   await writeSourceFile(journalFile, Buffer.from(JSON.stringify(journal, null, 2) + '\n'), {replace:true});
   process.stdout.write(JSON.stringify({status:'COMPLETE', runId:journal.runId, phases:Object.keys(journal.phases).length,
-    resultFile, resultSha256:sha(await readFile(resultFile)), ownedBrowserClosed:true, ownedWorkbenchesClosed:true}) + '\n');
+    resultFile, resultSha256:sha(await readFile(resultFile)), ownedBrowserClosed:true, ownedWorkbenchesClosed:true,
+    ownedManagedApplicationClosed:journal.managed?.cleanup?.ownedApplicationClosed ?? true}) + '\n');
 }
-if (journal.state === 'FINALIZING' && journal.ownedBrowserClosed && journal.ownedWorkbenchesClosed) {
+if (journal.state === 'FINALIZING' && journal.ownedBrowserClosed && journal.ownedWorkbenchesClosed && !needsManaged) {
   try { await finalizeResult(); } finally { await lease.close(); }
   process.exit(0);
 }
 
-let saving = Promise.resolve(), activePhase = 'setup', browser, context, page, stopping = false;
+let saving = Promise.resolve(), activePhase = 'setup', browser, context, page, stopping = false, managedLiveInstance = null;
 const applications = new Map(), consoleErrors = [];
 const save = () => {
   const bytes = Buffer.from(JSON.stringify(journal, null, 2) + '\n');
@@ -135,13 +155,12 @@ async function resultDownload(quoteId, expected, name) {
   assert.equal(bytes.length, expected.bytes); assert.equal(sha(bytes), expected.sha256);
   return {path, bytes:bytes.length, sha256:sha(bytes)};
 }
-const signal = () => { stopping = true; browser?.close().catch(() => {}); };
-process.once('SIGINT', signal); process.once('SIGTERM', signal);
-try {
-  await save();
+async function ensureBrowser() {
+  if (browser) return;
+  assert(!stopping);
   process.env.TMPDIR = join(root, 'browser-temp');
   browser = await chromium.launch({executablePath:options['--chromium'], headless:true,
-    args:['--no-sandbox', '--disable-dev-shm-usage'], downloadsPath:join(root, 'downloads')});
+    args:['--no-sandbox', '--disable-dev-shm-usage', '--disable-gpu', '--no-zygote', '--single-process'], downloadsPath:join(root, 'downloads')});
   assert(!stopping);
   context = await browser.newContext({viewport:{width:1440, height:1000}, acceptDownloads:true});
   page = await context.newPage();
@@ -163,7 +182,7 @@ try {
     if (!data?.requestId) return route.continue();
     const input = {...data}; delete input.requestId;
     const requestUrl = new URL(request.url()), path = requestUrl.pathname;
-    const liveInstance = ['/api/open', '/api/close'].includes(path) ? [...applications.values()].find(item => item.address === requestUrl.origin)?.instanceId : undefined;
+    const liveInstance = ['/api/open', '/api/close'].includes(path) ? [...applications.values(), managedLiveInstance].filter(Boolean).find(item => item.address === requestUrl.origin)?.instanceId : undefined;
     const fingerprint = sha(JSON.stringify({phase:activePhase, path, input, liveInstance}));
     let original = journal.requests[fingerprint];
     if (!original) {
@@ -174,6 +193,18 @@ try {
     if (stopping) return route.abort('aborted');
     await route.continue({postData:JSON.stringify({...data, requestId:original.id})});
   });
+}
+const signal = () => { stopping = true; browser?.close().catch(() => {}); };
+process.once('SIGINT', signal); process.once('SIGTERM', signal);
+try {
+  await save();
+  if (!journal.phases.source_owned_application_handoff) {
+  const native = await nativeModules(options['--source-root']);
+  journal.nativeSourceCodeSha256 = Object.fromEntries(await Promise.all(
+    ['quote-store.mjs','result-store.mjs','serve.mjs','remote-mcp.mjs'].map(async name => [name,
+      sha(await readSourceFile(join(native.sourceRoot,'stellar-forge/mcp-paid-agent',name)))])));
+  await save();
+  await ensureBrowser();
   let sender = await openPage('sender');
   const reviewed = await phase('original_packet_review', async () => {
     await view('Packet intake'); await press('Review bundled purchase');
@@ -349,6 +380,53 @@ try {
     return {providerId:catalog[0].id, command:catalog[0].command,
       currentInstanceVerified:true, workbenchId:receiver.workbenchId, fullManagedAdoption:'separate maintained distribution operation'};
   });
+  }
+  for (const [name] of applications) await closeApplication(name);
+  if (options['--runtime-directory']) {
+    await phase('managed_applications', async () => {
+      const {receiveManagedGrantReviewer} = await import('./WORKBENCH_MANAGED_RECEIVING.mjs');
+      journal.managed ??= {schema:'stellar-forge.grant-reviewer-managed-receiving.v1'};
+      const input = journal.phases.second_operator_packet_intake;
+      const original = journal.phases.complete_primary_result;
+      const result = await receiveManagedGrantReviewer({
+        operation:root, sourceRoot:options['--source-root'], runtimeDirectory:options['--runtime-directory'],
+        workbenchDirectory:join(root,'workbenches','receiver'),selectionId:input.selectionId,
+        packetSha256:journal.phases.closed_native_export.export.sha256,
+        workbenchId:journal.phases.source_owned_application_handoff.workbenchId,
+        record:journal.managed,checkpoint:save,cancelled:() => stopping,
+        inspectLive:async (connection, stage) => {
+          activePhase = stage; managedLiveInstance = connection;
+          try {
+            await ensureBrowser(); assert(!stopping);
+            await page.goto(connection.url + '#' + encodeURIComponent(connection.accessToken));
+            await page.locator('#workspace').waitFor({state:'visible'}); await idle();
+            await select(input.selectionId);
+            const before = await api(connection,'state');
+            assert.equal(before.id,journal.phases.source_owned_application_handoff.workbenchId);
+            const selection = before.selections.find(item => item.id === input.selectionId);
+            assert.equal(selection.packet.sha256,journal.phases.closed_native_export.export.sha256);
+            assert.deepEqual(selection.receipt.originalQuoteIds.slice().sort(),
+              journal.phases.original_native_receive.receipt.originalQuoteIds.slice().sort());
+            await view('Source and query');
+            if (!before.buyer.active) await press('Open original Buyer');
+            else await view('Buyer results');
+            const downloaded = await resultDownload(original.quoteId,original,stage+'-primary.json');
+            const status = await selectedNativeRead(connection,selection,original.quoteId);
+            const image = await snapshot(stage,'native-original-result');
+            await view('Handover');
+            assert((await api(connection,'state')).buyer.active);
+            await page.goto('about:blank');
+            return {workbenchId:before.id,selectionId:input.selectionId,packetSha256:selection.packet.sha256,
+              originalQuoteIds:selection.receipt.originalQuoteIds,nativeStatus:status,
+              result:downloaded,screenshot:image,newPayments:0};
+          } finally { managedLiveInstance = null; }
+        },
+      });
+      assert.equal(result.state,'COMPLETE');
+      return {applicationId:result.applicationId,runtime:result.runtime,
+        originalWorkbenchId:result.input.workbenchId,steps:result.steps,cleanup:result.cleanup,newPayments:0};
+    });
+  }
   assert.deepEqual(consoleErrors, []);
   const allowed = new Set(['bazaar_history','bazaar_results','bazaar_status','bazaar_read_result']);
   assert(journal.nativeReads.filter(row => row.method === 'tools/call').every(row => allowed.has(row.tool)));
@@ -368,4 +446,5 @@ try {
 }
 if (journal.state === 'FINALIZING') await finalizeResult();
 else process.stdout.write(JSON.stringify({status:journal.state, runId:journal.runId, error:journal.error,
-  ownedBrowserClosed:true, ownedWorkbenchesClosed:true}) + '\n');
+  ownedBrowserClosed:true, ownedWorkbenchesClosed:true,
+    ownedManagedApplicationClosed:journal.managed?.cleanup?.ownedApplicationClosed ?? true}) + '\n');

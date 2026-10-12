@@ -36,6 +36,12 @@ node cli.mjs --workspace DIRECTORY COMMAND [options]
   live run --id SERVICE
   live buyer --id SERVICE --intent STABLE_INTENT [--received RECEIPT]
   live receive --id SERVICE --response ORIGINAL_RESPONSE.json
+  live collections --id SERVICE
+  live collection --id SERVICE --collection COLLECTION
+  live collect --id SERVICE --collection COLLECTION --input SELECTION.json
+  live collection-rows --id SERVICE --collection COLLECTION [--offset 0 --limit 100]
+  live collection-file --id SERVICE --collection COLLECTION --file NAME --out FILE
+  live restore-collection --id SERVICE --collection COLLECTION --input SOURCE.json --sha SHA256
 
 Plans use declared entity properties and typed filter clauses. Imports follow the
 original nextLink and save every page before continuing. --pages sets the work
@@ -112,6 +118,16 @@ export async function main(args=process.argv.slice(2)){
         else if(subcommand==='detail')result=await live.detail(o.id);
         else if(subcommand==='buyer')result=await live.buyer({id:o.id,intentId:o.intent,receivedId:o.received});
         else if(subcommand==='receive')result=await live.receive({id:o.id,bodyBase64:(await readFile(resolve(o.response))).toString('base64')});
+        else if(subcommand==='collections')result=await live.collections({id:o.id});
+        else if(subcommand==='collection')result=await live.collection({id:o.id,collectionId:o.collection});
+        else if(subcommand==='collect')result=await live.collect({...await jsonFile(o.input),id:o.id,collectionId:o.collection});
+        else if(subcommand==='collection-rows')result=await live.collectionRows({id:o.id,collectionId:o.collection,offset:Number(o.offset??0),limit:Number(o.limit??100)});
+        else if(subcommand==='restore-collection')result=await live.restoreCollection({id:o.id,collectionId:o.collection,sourceManifest:resolve(o.input),expectedSha256:o.sha});
+        else if(subcommand==='collection-file'){
+          if(!o.out)throw new Error('collection-file requires --out.');
+          const file=await live.file({id:o.id,kind:'collection',recordId:o.collection,name:o.file});
+          await writeNew(resolve(o.out),file.bytes);console.log(JSON.stringify({created:resolve(o.out),bytes:file.bytes.length,sha256:file.sha256}));return;
+        }
         else if(subcommand==='run'){
           console.log(JSON.stringify(await live.start({id:o.id}),null,2));
           if(!abort.signal.aborted)await new Promise(resolve=>abort.signal.addEventListener('abort',resolve,{once:true}));return;

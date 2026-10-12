@@ -3,7 +3,7 @@
   "repository": "woahwhattheheck/public-commons-sprint-2026",
   "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/wherobots/source",
   "base_revision": "18e917b947d70589dcbaea68dc63d0c181955b4c",
-  "publisher_source_revision": "f9e6e9416126b98513e010318a4076220a00c610",
+  "publisher_source_revision": "49df6b50072749ff072ff2cbaf3396e91abcf26e",
   "base_files": [
     {
       "path": "OUTPUTS.md",
@@ -209,8 +209,8 @@
     },
     {
       "path": "interoperability/merchant_receiving.mjs",
-      "sha": "72b4d45c91ae4ad3e2bffaadbe10b94b3f69bd85",
-      "size": 13811
+      "sha": "d2e1ae6768fb47b1deddf4682dabaeb83a327ef1",
+      "size": 17486
     },
     {
       "path": "interoperability/native_receiving.py",
@@ -363,6 +363,40 @@
       "size": 31204
     }
   ],
-  "revision": "6e57b6d0d5f19dcb464b0b30f4040802c1809b57",
-  "source_parent": "bd9d/wherobots-complete-workspace-20261012"
+  "revision": "49df6b50072749ff072ff2cbaf3396e91abcf26e",
+  "source_parent": "bd9d/wherobots-complete-workspace-20261012",
+  "publisher_mode": "original-merchant",
+  "managed_source_revision": "49df6b50072749ff072ff2cbaf3396e91abcf26e",
+  "managed_files": [
+    {
+      "path": "application-launcher.d.mts",
+      "sha": "ccc790d620cf2944cd8a194a21895f202aab835f",
+      "size": 2334
+    },
+    {
+      "path": "application-launcher.mjs",
+      "sha": "99b62acad5cbf875d29c563ec403f59a450c4ee6",
+      "size": 19185
+    },
+    {
+      "path": "application-provider.mjs",
+      "sha": "70bfd13c7c6cc308d02f5b8b31e12c0bb56c4757",
+      "size": 5350
+    },
+    {
+      "path": "APPLICATIONS.md",
+      "sha": "84d6798c529f92311c3d02a08192e3ea2a0f7ae9",
+      "size": 8863
+    },
+    {
+      "path": "examples/managed-receiving.mjs",
+      "sha": "6ed85fb29431949b9b3da8504d4a08a739316175",
+      "size": 15168
+    },
+    {
+      "path": "managed-serve.py",
+      "sha": "0cc18e757a18acfcd23bc3e1294cbfa5e36bbcd3",
+      "size": 6853
+    }
+  ]
 }

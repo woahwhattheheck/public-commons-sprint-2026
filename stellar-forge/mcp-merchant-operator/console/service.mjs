@@ -65,9 +65,22 @@ export async function createMerchantConsole({operator,configPath,directory,autho
   const index = [...definitions].map(([name, value])=>({name,description:value.description,
     family:merchantToolFamily(name) ?? 'core',annotations:value.annotations ?? {},
     required:value.inputSchema.required ?? [],schemaSha256:digest(canonical(value))}));
-  const active = new Map(); let closing=false,closed;
+  const active = new Map(), requests = new Set(); let closing=false,closed;
+  const requireOpen = () => { if(closing)throw fail('CONSOLE_CLOSING','The operator interface is closing.',503); };
+  function respondError(error,res) {
+    if(res.destroyed||res.writableEnded)return;
+    if(res.headersSent){res.destroy();return;}
+    if(authorization&&error.merchantConsoleAuthorization)authorization.respondError(error,res);
+    else send(res,error.status??400,{error:cleanError(error)});
+  }
+  function beginClose() {
+    closing=true;workflows.beginClose();customers.beginClose();
+    for(const entry of requests)if(entry.reading&&!entry.req.destroyed)
+      entry.req.destroy(fail('CONSOLE_CLOSING','The host is closing this incomplete request body.',503));
+  }
   const snapshot = () => ({...operator.inspectHost(),configuration,
-    console:{schema:CONSOLE_SCHEMA,workspaceId:store.id,activeCalls:active.size,closing,customers:customers.summary,workflows:workflows.summary,
+    console:{schema:CONSOLE_SCHEMA,workspaceId:store.id,activeCalls:active.size,activeRequests:requests.size,
+      pendingBodies:[...requests].filter(value=>value.reading).length,closing,customers:customers.summary,workflows:workflows.summary,
       ...(launchBinding===undefined?{}:{binding:JSON.parse(JSON.stringify(launchBinding))})}});
   const callView = value => {
     const {resultJson,...rest}=value;
@@ -108,6 +121,7 @@ export async function createMerchantConsole({operator,configPath,directory,autho
     if(!definition) throw fail('CONSOLE_TOOL_UNAVAILABLE','This host does not advertise the saved native tool.',400);
     const args=JSON.parse(draft.argumentsJson);
     await requireTool(context,draft.tool,args);
+    requireOpen();
     const packet=json({jsonrpc:'2.0',id:input.id,method:'tools/call',params:{name:draft.tool,arguments:args}});
     if(packet.length>operator.maxRequestBytes)
       throw fail('CONSOLE_NATIVE_BODY_TOO_LARGE','The exact native MCP request exceeds this host’s ' + operator.maxRequestBytes + '-byte capacity.',413);
@@ -135,7 +149,16 @@ export async function createMerchantConsole({operator,configPath,directory,autho
     releaseStore:resolve(dirname(configPath),sourceConfiguration.releaseStore)});
   const workflows=createMerchantWorkflows({store,definitions,getHost:snapshot,startCall,requireTool,
     isCallActive:id=>active.has(id),waitCall:async id=>{await active.get(id);return store.call(id);}});
-  async function handler(req,res) {
+  function handler(req,res) {
+    let url;try{url=new URL(req.url,'http://127.0.0.1');}catch{return Promise.resolve(false);}
+    if(url.pathname!=='/operator'&&!url.pathname.startsWith('/operator/'))return Promise.resolve(false);
+    if(closing){respondError(fail('CONSOLE_CLOSING','The operator interface is closing.',503),res);return Promise.resolve(true);}
+    const entry={req,reading:false,task:null};requests.add(entry);
+    entry.task=handle(req,res,entry).catch(error=>{respondError(error,res);return true;})
+      .finally(()=>requests.delete(entry));
+    return entry.task;
+  }
+  async function handle(req,res,entry) {
     let url; try { url=new URL(req.url,'http://127.0.0.1'); } catch { return false; }
     if(url.pathname==='/operator' && req.method==='GET'){res.writeHead(302,{location:'/operator/','cache-control':'no-store'});res.end();return true;}
     if(!url.pathname.startsWith('/operator/'))return false;
@@ -154,12 +177,13 @@ export async function createMerchantConsole({operator,configPath,directory,autho
     let context;
     if(authorization){
       try{context=await authorization.authenticate(req);await authorization.authorizeTool(context,null,{});}
-      catch(error){authorization.respondError(error,res);return true;}
+      catch(error){error.merchantConsoleAuthorization=true;respondError(error,res);return true;}
     }else if(!equal(req.headers.authorization,'Bearer '+bearerToken)){
       send(res,401,{error:{code:'UNAUTHORIZED',message:'Connect with the original operator access token.'}});return true;
     }
     const route=url.pathname.slice('/operator/api/'.length);
     try{
+      requireOpen();
       if(req.method==='GET'&&route.startsWith('customer-file/')){
         const value=await customers.file(decodeURIComponent(route.slice(14)),url.searchParams.get('file'),req);
         attachment(res,value.file.name,value.bytes,'application/octet-stream');return true;
@@ -243,13 +267,17 @@ export async function createMerchantConsole({operator,configPath,directory,autho
         throw fail('CONSOLE_CONTENT_TYPE','Use application/json.',415);
       // The console's draft metadata must fit around a full original native packet.
       // Dispatch still checks the exact original MCP envelope against maxRequestBytes.
-      const input=await body(req,route==='import'?128*1024*1024:operator.maxRequestBytes+8192);
+      let input;entry.reading=true;
+      try{input=await body(req,route==='import'?128*1024*1024:operator.maxRequestBytes+8192);}
+      finally{entry.reading=false;}
+      requireOpen();
       if(!input||typeof input!=='object'||Array.isArray(input))throw fail('CONSOLE_JSON','Supply an operator request object.',400);
       if(route==='customers'){send(res,202,{delivery:await customers.start(input,req)});return true;}
       if(route==='customer-pause'){
         const record=store.delivery(input.id),selection=record.identity;
         await requireTool(context,(selection.family==='core'?'merchant_client_export':'merchant_opensearch_deployment')+'_manifest',
           {exportId:selection.exportId,...(selection.workspace?{workspace:selection.workspace}:{})});
+        requireOpen();
         send(res,200,{delivery:customers.pause(input.id)});return true;
       }
       if(route==='workflows'){send(res,200,await workflows.save(input,context));return true;}
@@ -262,6 +290,7 @@ export async function createMerchantConsole({operator,configPath,directory,autho
       if(route==='bind'){send(res,200,{profile:store.bindProfile(input,snapshot())});return true;}
       if(route==='drafts'){
         await requireTool(context,input.tool,input.arguments??{});
+        requireOpen();
         send(res,200,{draft:store.saveDraft(input,definitions.get(input.tool))});return true;
       }
       if(route==='calls'){send(res,202,await startCall(input,context));return true;}
@@ -272,23 +301,23 @@ export async function createMerchantConsole({operator,configPath,directory,autho
         for(const value of [...(packet.drafts??[]),...(packet.calls??[])])
           await requireTool(context,value.tool,JSON.parse(value.argumentsJson));
         for(const value of packet.deliveries??[]) {const access=deliveryAccess(value);await requireTool(context,access.name,access.args);}
+        requireOpen();
         send(res,200,store.import(packet));return true;
       }
       throw fail('CONSOLE_ROUTE','Choose a configured operator action.',404);
     }catch(error){
-      if(authorization&&error.merchantConsoleAuthorization)authorization.respondError(error,res);
-      else send(res,error.status??400,{error:cleanError(error)});
+      respondError(error,res);
       return true;
     }
   }
   return {
     store,handler,snapshot,startCall,workflows,
-    beginClose(){closing=true;workflows.beginClose();customers.beginClose();},
+    beginClose,
     close(){
       if(!closed){
-        closing=true;workflows.beginClose();customers.beginClose();
+        beginClose();
         closed=(async()=>{
-          const results=await Promise.allSettled([...active.values(),customers.close(),workflows.close()]);
+          const results=await Promise.allSettled([...active.values(),...[...requests].map(value=>value.task),customers.close(),workflows.close()]);
           const errors=results.filter(value=>value.status==='rejected').map(value=>value.reason);
           if(errors.length)throw Object.assign(new AggregateError(errors,'Original console shutdown is incomplete; retry this owner.'),{code:'CONSOLE_CLOSE_INCOMPLETE'});
           store.close();

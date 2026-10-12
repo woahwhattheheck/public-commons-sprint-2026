@@ -1,0 +1,72 @@
+{
+  "schema": "tjlabs.redis-customer-export.v1",
+  "operationId": "customer-receiving-001",
+  "budget": {
+    "maxCalls": 60,
+    "maxAtomic": "600000"
+  },
+  "response": {
+    "maxBytes": 1048576,
+    "timeoutMs": 30000
+  },
+  "products": [
+    {
+      "id": "availability",
+      "kind": "get",
+      "input": {},
+      "maxAtomic": "10000",
+      "acceptIndex": 0,
+      "paymentFlow": "authorization"
+    },
+    {
+      "id": "catalog",
+      "kind": "hash",
+      "input": {
+        "region": "north"
+      },
+      "maxAtomic": "10000",
+      "acceptIndex": 0,
+      "paymentFlow": "authorization"
+    },
+    {
+      "id": "leaderboard",
+      "kind": "sorted-set",
+      "input": {
+        "offset": "0"
+      },
+      "maxAtomic": "10000",
+      "acceptIndex": 0,
+      "paymentFlow": "authorization"
+    },
+    {
+      "id": "events",
+      "kind": "stream",
+      "input": {
+        "after": "-"
+      },
+      "maxAtomic": "10000",
+      "acceptIndex": 0,
+      "paymentFlow": "authorization"
+    },
+    {
+      "id": "list_feed",
+      "kind": "list",
+      "input": {
+        "offset": "0"
+      },
+      "maxAtomic": "10000",
+      "acceptIndex": 0,
+      "paymentFlow": "authorization"
+    },
+    {
+      "id": "member_catalog",
+      "kind": "set",
+      "input": {
+        "cursor": "0"
+      },
+      "maxAtomic": "10000",
+      "acceptIndex": 0,
+      "paymentFlow": "authorization"
+    }
+  ]
+}

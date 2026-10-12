@@ -4,6 +4,7 @@
 <body>
 <header><div><span class="brand">STELLAR FORGE</span><h1>OData workspace</h1><p>Connect business data, review a query, and deliver retained editions or live services.</p></div><div class="toolbar"><a class="button" href="/api/backup">Download workspace</a><label class="button">Restore workspace<input id="restore-file" type="file" accept="application/json" hidden></label><button id="refresh">Refresh</button></div></header>
 <div id="notice" role="status" aria-live="polite">Opening the retained workspace…</div>
+<section id="native-restore" class="panel" hidden><div class="section-heading"><h2>Restore a complete large workspace</h2><button id="native-restore-close" type="button">Close</button></div><p id="native-restore-file"></p><p>The browser receives workspace files up to 64 MiB. This complete transfer uses the original OData command on this host. Replace FULL_PATH_TO_TRANSFER with the directory containing your saved file.</p><p id="native-restore-target"></p><pre id="native-restore-command"></pre><p>The command validates the same complete file closure and reopens every original collection before publishing the received workspace.</p></section>
 <div class="layout"><nav aria-label="Workspace sections"><button data-section="source" class="selected">1. Sources & queries</button><button data-section="editions">2. Import & review</button><button data-section="compare">3. Compare editions</button><button data-section="export">4. Dataset exports</button><button data-section="merchant">5. Merchant releases</button><button data-section="live">6. Live services</button><dl id="stats"></dl></nav>
 <main>
 <section id="source" class="section">
@@ -39,6 +40,28 @@
 <form id="live-buyer" class="panel form-grid"><h3 class="wide">Prepare a customer handoff</h3><label>Service<select name="id" id="live-buyer-product" required></select></label><label>Stable purchase intent<input name="intentId" required placeholder="orders-receiving-page-1" maxlength="128"></label><label>Page to request<select name="receivedId" id="live-next-page"><option value="">First page of the reviewed query</option></select></label><p class="wide muted">The original buyer configuration binds the exact request, payment offer, intent, and saved response location. A continuation uses the supplier's returned cursor.</p><div class="form-action"><button type="submit">Prepare customer files</button></div></form>
 <form id="live-receive" class="panel form-grid"><h3 class="wide">Receive a customer response</h3><label>Service<select name="id" id="live-receive-product" required></select></label><label class="wide">Original saved response<input name="response" type="file" accept="application/json,.json" required></label><div class="form-action"><button type="submit">Receive page</button></div><p class="wide muted">Received pages retain the original response, exact typed records, cumulative row count, and the next customer request.</p></form>
 <div id="live-customer-files" class="panel"><h3>Customer handoffs and received pages</h3><p>Open a prepared service to view its retained customer work.</p></div>
+<div id="live-collections">
+<div class="panel"><div class="section-heading"><div><h3>Complete customer collections</h3><p id="collection-service">Open a prepared live service</p></div><button id="collection-refresh" type="button">Open retained collections</button></div><div id="collection-inventory" class="table-wrap"></div></div>
+<form id="collection-create" class="panel">
+<h3>Assemble the original response chain</h3>
+<p>Choose the received responses for one complete query, in their original order. The first request comes from the saved service query; each following request uses the previous response’s returned cursor. Choose an original buyer handoff when its request is required.</p>
+<div class="form-grid">
+<label>Received query<select id="collection-query"></select></label><label>Original response<select id="collection-page"></select></label>
+<label class="wide">Original buyer request <span class="muted">Optional</span><select id="collection-page-buyer"></select></label>
+<p id="collection-source-summary" class="wide muted"></p>
+<div class="wide toolbar"><button id="collection-add-page" type="button">Add selected page</button><button id="collection-use-chain" type="button">Use complete saved chain</button><button id="collection-clear-pages" type="button">Clear selection</button></div>
+<div id="collection-selected-pages" class="wide table-wrap"></div><p id="collection-selected-count" class="wide muted"></p>
+<label>Collection ID<input id="collection-id" name="collectionId" required maxlength="128" pattern="[A-Za-z0-9][A-Za-z0-9_.\-]*" placeholder="orders-october"></label>
+<label>Collection title <span class="muted">Optional</span><input id="collection-title" name="title" maxlength="128" placeholder="Defaults to the service title"></label>
+<label class="wide">Selected fields <span class="muted">Optional, comma-separated; delivered entity keys are always retained</span><input id="collection-fields" name="fields" placeholder="All delivered fields"></label>
+<div class="wide"><button type="submit" class="primary">Receive complete collection</button></div>
+</div>
+<p class="muted">Reusing a collection ID resumes that exact selection. Use a new ID for another query, source edition, page chain or field selection. The original supplier count and acquisition window remain visible with the collection.</p>
+</form>
+<div id="collection-detail" class="panel"></div>
+<div class="panel"><div class="section-heading"><h3>Original collection rows</h3><div class="toolbar"><button id="collection-previous" type="button">Previous 100</button><span id="collection-row-range"></span><button id="collection-next" type="button">Next 100</button></div></div><div id="collection-rows" class="table-wrap"></div></div>
+</div>
+
 </section>
 </main></div><footer>Original service metadata and responses remain attached to each retained edition.</footer><script type="module" src="/app.mjs"></script>
 </body></html>

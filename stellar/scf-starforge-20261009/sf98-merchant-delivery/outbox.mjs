@@ -11,6 +11,19 @@ export const SCHEMA = 'stellar-forge.sf98.delivery-event.v1';
 const hash = x => createHash('sha256').update(x).digest('hex');
 const okId = x => typeof x === 'string' && /^[a-f0-9]{64}$/.test(x);
 const date = () => new Date().toISOString();
+const nativeInstrumentations = new WeakMap();
+
+/** Original embedding metadata for a later managed launcher. Payment callers
+ * receive the same server; observers see only the original journal warning. */
+export function inspectNativeSettlementInstrumentation(server) {
+  const held = nativeInstrumentations.get(server);
+  if (!held) return null;
+  return Object.freeze({ server, outbox: held.outbox,
+    observeWriteFailures(listener) {
+      if (typeof listener !== 'function') throw new TypeError('Native delivery warning observer required');
+      held.observers.add(listener); return () => held.observers.delete(listener);
+    } });
+}
 
 function parseLine(line, path, index) {
   let data;
@@ -179,7 +192,8 @@ export function instrumentNativeSettlement(nativeServer, { compiled, outbox, onW
   if (!nativeServer || ['processHTTPRequest', 'processSettlement', 'createFailurePathSettlementHeaders']
     .some(name => typeof nativeServer[name] !== 'function') || typeof outbox?.record !== 'function')
     throw new TypeError('Original native server and open SF98 outbox required');
-  return Object.freeze({
+  const observers = new Set();
+  const instrumented = Object.freeze({
     processHTTPRequest: (...args) => nativeServer.processHTTPRequest(...args),
     createFailurePathSettlementHeaders: (...args) =>
       nativeServer.createFailurePathSettlementHeaders(...args),
@@ -192,9 +206,14 @@ export function instrumentNativeSettlement(nativeServer, { compiled, outbox, onW
           await outbox.record(event);
         } catch (error) {
           try { onWriteFailure(error); } catch { /* original payment result always wins */ }
+          for (const observer of observers) {
+            try { observer(error); } catch { /* observers cannot change a settled result */ }
+          }
         }
       }
       return result;
     },
   });
+  nativeInstrumentations.set(instrumented, { outbox, observers });
+  return instrumented;
 }

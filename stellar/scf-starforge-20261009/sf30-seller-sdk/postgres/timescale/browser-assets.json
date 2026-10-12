@@ -43,6 +43,20 @@
         "style.css",
         "text/css; charset=utf-8"
       ]
+    ],
+    [
+      "/timescale/remediation.mjs",
+      [
+        "remediation.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/timescale/remediation.css",
+      [
+        "remediation.css",
+        "text/css; charset=utf-8"
+      ]
     ]
   ]
 }
