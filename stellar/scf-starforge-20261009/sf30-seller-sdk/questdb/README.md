@@ -422,3 +422,29 @@ row-count review. It does not silently advance a saved fixed time window.
 Manifests retain the actual selected server build. The demo's real OKX
 executions are distinct from its generated FX tables; preserve that provenance
 when preparing a merchant example.
+
+## Complete native workbench operation
+
+The complete joined distribution includes `examples/native-demo.mjs`. It uses the real HTTP demonstration endpoint, a fixed reviewed UTC selection and the original workbench server/client. It saves a queryless connection, discovers the actual `trades` schema, saves the compiled reports with the current revision, captures native sampling and keyed ASOF output, and creates one retained dataset product. Its two editions use the same start with an explicitly widened end. Both the local browser and agent tools can subsequently reopen that same workbench.
+
+Run the source from the complete product checkout with its installed native x402 dependencies:
+
+```sh
+node stellar/scf-starforge-20261009/sf30-seller-sdk/questdb/examples/native-demo.mjs \
+  /absolute/private/questdb-native \
+  2026-10-12T07:30:00.000000Z \
+  2026-10-12T07:31:00.000000Z \
+  2026-10-12T07:32:00.000000Z \
+  2026-10-12T07:29:59.000000Z \
+  https://demo.questdb.io/
+```
+
+Choose retained UTC windows that the selected server actually contains. The final argument is the native HTTP endpoint; the source configuration stores its environment reference. `QUESTDB_SOURCE_PIN` can identify the complete source revision in each retained attempt. The final report is written only after all owned servers and source sessions close.
+
+The native operation exercises complete canonical JSON, typed NDJSON and quoted CSV; it also retains the first edition’s independent `/exp` output. It checks native sampling buckets and ASOF symbol, preceding-side, timestamp and one-second tolerance using actual returned rows. A separate hash-verified receiving copy uses the original capture range API. The dataset then carries native NULL, empty text, a nanosecond epoch LONG, native timestamp text, native DECIMAL text and a Boolean through original review, two publications, the snapshot-pinned x402 buyer and fresh-process workbench reopen.
+
+The original market fields come from actual OKX execution rows in the selected demonstration instance. Additional precision/encoding columns are explicitly declared SQL-derived fields: casting a microsecond timestamp to nanoseconds changes its representation, and casting a DOUBLE price to DECIMAL preserves the native cast result. Their definitions are retained in `case.json`. The native payment step uses the original buyer/seller implementation with disposable local signing and facilitator adapters; the resulting record identifies that execution mode.
+
+This operator uses complete-file limits of 4 MiB for each edition, 2 MiB for the ASOF report and 512 KiB for sampling, and refuses a truncated source response. A fixed selection exceeding those limits retains its partial request and concrete failure. Its possible retained capture, publisher, version, receiving and metadata growth fits a 64 MiB source-operation reservation, with additional host reserve selected by the maintained native allocator.
+
+The directory contains `case.json`, exact source/merchant files, `journey-progress.json`, immutable attempt results, `journey-result.json` and `workbench/`. The result’s `context` gives the original source revision, publication ID, publisher/target directories and both run IDs. Retained successful captures and publications are inspected on continuation. A completed result is returned directly. The workbench keeps its original seller intent and customer request for the next browser, MCP or managed Applications operator.
