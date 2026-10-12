@@ -20,6 +20,8 @@ The mapping includes these decisions:
 | columns[].required | Mark destination-required cells explicitly. Missing values appear in delivery issues. |
 | customerKeyColumn | Select the customer identifier column if the destination has one. |
 
+Each writable analyst field maps to one destination column, so receiving cannot choose between conflicting aliases. Repeated read-only source projections remain available.
+
 Every mapping requires one original GM project ID column and one disaster-number column. Their combined identity drives receiving. A source field's value type follows the published field: source IDs and dates stay text, money stays exact decimal USD, and source/reference fields remain attached. Review status, disposition, priority, owner, due date and note belong to the analyst.
 
 ## Save and review the mapping
