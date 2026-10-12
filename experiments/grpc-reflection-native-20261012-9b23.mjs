@@ -11,8 +11,8 @@ import { promisify } from 'node:util';
 const args = new Map();
 for (let i = 2; i < process.argv.length; i += 2) {
   const key = process.argv[i], value = process.argv[i + 1];
-  if (!['--source-root', '--out', '--resume', '--source-commit', '--phase', '--chrome-bin'].includes(key) ||
-      value === undefined || args.has(key)) throw new Error('Use --source-root, --source-commit, --out NEW_DIRECTORY or --resume SAVED_DIRECTORY, and --phase native|browser.');
+  if (!['--source-root', '--out', '--resume', '--source-commit', '--phase', '--chrome-bin', '--browser-profile'].includes(key) ||
+      value === undefined || args.has(key)) throw new Error('Use --source-root, --source-commit, --out NEW_DIRECTORY or --resume SAVED_DIRECTORY, and --phase native|browser; browser accepts --chrome-bin and --browser-profile.');
   args.set(key, value);
 }
 if (args.has('--out') === args.has('--resume') || !/^[a-f0-9]{40}$/.test(args.get('--source-commit') ?? ''))
@@ -410,11 +410,15 @@ try {
       const playwright = createRequire(process.env.CODEX_PRIMARY_RUNTIME_NODE_MODULES + '/')('playwright');
       const executablePath = args.get('--chrome-bin'); need(executablePath, 'Supply the maintained original Chromium executable.');
       await access(executablePath);
-      const profile = join(out, 'browser-profile'); await mkdir(profile, { recursive: true, mode: 0o700 });
+      const profile = resolve(args.get('--browser-profile') ?? join(out, 'browser-profile'));
+      await mkdir(profile, { recursive: true, mode: 0o700 });
+      const profileInfo = await lstat(profile);
+      need(profileInfo.isDirectory() && !profileInfo.isSymbolicLink() && !(profileInfo.mode & 0o077),
+        'Use this operation’s private disposable browser profile directory.');
       browser = await playwright.chromium.launchPersistentContext(profile, { executablePath, headless: true,
-        viewport: { width: 1440, height: 1000 }, args: ['--no-sandbox', '--disable-dev-shm-usage', '--disable-gpu'],
+        viewport: { width: 1440, height: 1000 }, args: ['--no-sandbox', '--disable-dev-shm-usage', '--disable-gpu', '--renderer-process-limit=1'],
         env: { ...environment, TMPDIR: profile } });
-      const page = await browser.newPage(), errors = [];
+      const page = browser.pages()[0] ?? await browser.newPage(), errors = [];
       page.on('pageerror', issue => errors.push(issue.message));
       page.on('dialog', dialog => dialog.accept());
       await page.goto(workspace.url, { waitUntil: 'networkidle' });
