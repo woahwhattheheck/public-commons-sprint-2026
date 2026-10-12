@@ -231,6 +231,12 @@ node /ABS/source/sf30-seller-sdk/pmtiles/cli.mjs prepare-release --workspace /sr
 
 Preparation retains the complete original edition, review and assets, resolved style, immutable release manifest, and Martin source selection. Original vector MVT tiles remain MVT; original image tiles remain their selected image encoding. Both Martin conversion directions are explicitly disabled.
 
+### Review the map, sources and changes
+
+The [complete preview guide](PREVIEW_OPERATIONS.md) explains the layer desk, original archive metadata and source-layer inventory, rendered-feature inspection, map view and immutable edition comparison. The map reports ready after its actual selected style and tiles load and the native map becomes idle. The selected release, source hashes, license and attribution remain visible throughout that review.
+
+Layer visibility and decision notes first belong to the selected preview. **Apply choices to draft** carries them into the matching edition without losing later draft edits. Save and inspect that edition to record the changed selection. **Download map inspection** retains the actual preview, rendered feature selection, source details, layer choices, view and recorded errors. **Compare exact editions** and the preceding-release panel keep both original immutable editions and their field-level differences; their download preserves those original source records.
+
 ### Preview the original native release
 
 Open native preview in the browser, or use the foreground command with the returned release ID:

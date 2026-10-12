@@ -53,7 +53,7 @@ export async function buildPMTilesRuntime(input,{signal}={}){
       selectedExecutables[key]={path,...descriptor};
     }
     const sourceFiles={};
-    for(const name of ['preview-entry.mjs','martin-launch.py','build-runtime.mjs'])
+    for(const name of ['preview-entry.mjs','preview.mjs','martin-launch.py','build-runtime.mjs'])
       sourceFiles[name]=await fileDescriptor(join(HERE,name));
     const request={schema:input.schema,requestId:input.requestId,modulesDirectory:modules,
       packages:Object.fromEntries(Object.entries(packages).map(([name,row])=>[name,{version:row.manifest.version,sha256:row.sha256}])),
