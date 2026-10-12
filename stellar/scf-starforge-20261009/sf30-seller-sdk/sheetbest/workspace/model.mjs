@@ -382,7 +382,7 @@ export async function openSheetBestAuthoring({ directory, create = false, connec
       const original = await capture(state.draft.captureId), config = sourceConfig(original, state.draft);
       const folder = join(directory, 'previews', request); await privateDirectory(folder, true);
       const file = join(folder, 'source.json'); await createOrVerify(file, bytes(config));
-      const reader = await openSheetBestSourceFile(file), reports = {};
+      const reader = await openSheetBestSourceFile(file), reports = {}, compiled = compileQueries(config.queries);
       try {
         for (const [name, query] of Object.entries(config.queries)) {
           const sample = [];
@@ -391,7 +391,14 @@ export async function openSheetBestAuthoring({ directory, create = false, connec
             maxRows: 1000000, maxBytes: MAX_CAPTURE_BYTES, maxRowBytes: 1048576, timeoutMs: 300000,
             signal: lifetime.signal, onRow(row) { if (sample.length < 25) sample.push(row); },
           });
-          reports[name] = { report, sample, sampleLimit: 25 };
+          const observation = report.observation.capture;
+          reports[name] = { report, sample, sampleLimit: 25, publicationReview: {
+            query: name, capturedAt: observation.receivedAt, captureSha256: observation.manifestSha256,
+            sourceRows: observation.rowCount, emittedRows: report.rowCount, rowScope: 'ALL_CAPTURED_ROWS',
+            allCapturedRows: observation.rowCount === report.rowCount,
+            columns: Object.entries(compiled[name].projection).map(([alias, spec]) => ({ alias, ...spec })),
+            order: structuredClone(report.order),
+          } };
         }
       } finally { await reader.source.close(); }
       const result = { id: request, draftRevision: input.draftRevision, draftSha256: identity(state.draft),

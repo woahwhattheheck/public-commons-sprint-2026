@@ -126,7 +126,7 @@ The workspace supports up to 32 queries and 64 selected columns per query. Each 
 
 Save draft uses the editor's original draft revision. Refresh workspace does not silently advance a dirty editor's revision. Reload saved draft deliberately replaces that editor with the current saved draft. A conflicting save returns the original revision conflict rather than overwriting another window.
 
-Validate every row calls the original openSheetBestSourceFile/exportDataset for every configured query and saved order. It checks all rows, field presence, types, null policy and original size limits. The browser displays at most 25 result rows per query; the receipt records all-row validation and the exact draft/capture/source identities.
+Validate every row calls the original openSheetBestSourceFile/exportDataset for every configured query and saved order. It checks all rows, field presence, types, null policy and original size limits. The same review displays the original capture time, source row count, emitted row count, chosen query and ordering, and each selected public alias, original field, type, explicit-null rule and empty-string rule. All captured rows are included with only the selected columns; the source has no row-filtering operation. The browser displays at most 25 result rows per query, and the receipt records all-row validation and the exact draft/capture/source identities.
 
 Enter the reviewer and change note, then Freeze and select source version. Version creation requires the exact saved preview, draft revision and current selected version. A preview from an earlier edit cannot authorize a later projection.
 
@@ -186,7 +186,7 @@ A completed PUBLISHER request receipt may contain the URL of a service that has 
 
 Refresh original publications in the workspace. Select an original published extraction and the source version that actually produced it. The model verifies source SHA256, capture manifest SHA256 and the saved extraction order against the original plan. Copy the actual original merchant origin, fixed path and payment terms into the review form.
 
-Review creates a read-only package review. Prepare binds its exact review hash and retains five files:
+Review shows the exact published candidate beside its original capture time, source/emitted row counts, query, extraction order and actually published column subset. It retains the original all-row publication semantics. Prepare binds that exact review hash and retains five **private merchant staging** files:
 
 | File | Original purpose |
 | --- | --- |
@@ -194,13 +194,13 @@ Review creates a read-only package review. Prepare binds its exact review hash a
 | dataset.json | Original typed dataset description |
 | seller.json | Original public seller route and payment terms |
 | source.json | Original source-plan, candidate, publication and configuration identities |
-| binding.json | Original existing dataset directory, contract and baseline snapshot |
+| binding.json | Original absolute dataset directory on the merchant host, contract and baseline snapshot |
 
-The package builder uses the existing prepareDatasetRelease validator and retained version store. It checks complete CSV/configuration hashes while copying and publishes only complete files. The package does not copy an API key or raw unselected source fields.
+The package builder uses the existing prepareDatasetRelease validator and retained version store. It checks complete CSV/configuration hashes while copying and publishes only complete files. The private staging package does not copy an API key or raw unselected source fields. Its binding intentionally retains the absolute dataset directory required by SF82; moving or redacting that path would change the original staging contract.
 
 Stage assigns an original release ID and reviewed runtime configuration. Open original release controls exposes SF82's existing comparison, activation, Run, Stop, Restart, rollback and customer receiving. The model retains the original generation, digest and exact owned instance requirements. An uncertain command response is recovered by inspecting original state; it does not repeat a command or infer that an unobserved transition happened.
 
-Deployment packages and the original source model remain separate from private portable source packets. Customer receiving uses the original release/customer contract, generated client and published dataset. A complete raw source packet is an operator artifact.
+Keep the five-file staging package with the merchant operator. For customer delivery, use the original SF82 release console's client export: it takes the owned running merchant's OpenAPI bytes and portable export/release/digest/instance identifiers. The original exporter produces seller-client.mjs, seller-client.d.mts, seller-openapi.json, package.json and README.md with its completion manifest. This path does not export the private capture, source-workspace connection or absolute dataset binding. Customers access the published dataset through that original merchant API and its exact snapshot contract. A complete raw source packet remains a private operator artifact for source reopen.
 
 The CLI has deployment-status, deployment-review, deployment-prepare, deployment-stage, deployment-package, deployment-console, deployment-compare and deployment-file. Supply each write's complete JSON input through --input and retain its --request UUID. Interactive run/stop/restart/rollback remain in the original release console, or the same model/MCP methods with exact current guards.
 
