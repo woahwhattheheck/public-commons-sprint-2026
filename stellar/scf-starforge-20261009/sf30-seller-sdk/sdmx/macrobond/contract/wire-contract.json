@@ -1,0 +1,265 @@
+{
+  "schema": "commons.macrobond-webapi-contract.v1",
+  "upstream": {
+    "repo": "macrobond/client-webapi-sample",
+    "commit": "9ee0f59a36b8c1224e0e9af3414cf1f982a1b761",
+    "tree": "ff5000eaf6c2b207d2a47e7c4dc24cd434b838b1",
+    "controller": "client-webapi-sample-password/SeriesServer/Controllers/SeriesController.cs",
+    "controller_blob": "cf70e0fffe39719ad04f1df7f623352db2a022a8",
+    "license": "Apache-2.0",
+    "license_blob": "261eeb9e9f8b2b4b0d119366dda99c6fd7d35c64"
+  },
+  "documents": {
+    "guide": "https://help.macrobond.com/apis-feeds-connectors/web-api-series-provider/",
+    "openapi": "https://schemas.macrobond.com/webclientapi.swagger.json",
+    "openapi_sha256": "fc4b93c0caa694d493c6a85c8490d54fad6b3db1a297ef84985a0e6aed6f25d2",
+    "openapi_bytes": 13318
+  },
+  "methods": [
+    {
+      "method": "GET",
+      "path": "/getcapabilities",
+      "required": true,
+      "query": [],
+      "response": {
+        "browse": "boolean",
+        "search": "boolean",
+        "editSeries": "boolean",
+        "allowMultipleSeriesPerRequest": "boolean",
+        "meta": "boolean",
+        "revisions": "boolean",
+        "revisionsRelease": "boolean",
+        "revisionsCompleteHistory": "boolean"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/loadseries",
+      "required": true,
+      "query": [
+        {
+          "name": "n",
+          "required": true,
+          "repeated": true,
+          "type": "string"
+        }
+      ],
+      "response": "ordered array of {data:{values,dates?,metaData}} or {error:string}"
+    },
+    {
+      "method": "GET",
+      "path": "/loadmeta",
+      "capability": "meta",
+      "query": [
+        {
+          "name": "n",
+          "required": true,
+          "repeated": true,
+          "type": "string"
+        }
+      ],
+      "response": "ordered array of {data:{metaData}} or {error:string}"
+    },
+    {
+      "method": "GET",
+      "path": "/searchseries",
+      "capability": "search",
+      "query": [
+        {
+          "name": "query",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "response": "array of PascalCase metadata dictionaries with PrimName and Description"
+    },
+    {
+      "method": "GET",
+      "path": "/loadtree",
+      "capability": "browse",
+      "query": [
+        {
+          "name": "reference",
+          "required": false,
+          "type": "string"
+        }
+      ],
+      "response": "array of nodes with Description and one of Children/ChildrenReference/SeriesReference"
+    },
+    {
+      "method": "GET",
+      "path": "/listseries",
+      "capability": "browse",
+      "query": [
+        {
+          "name": "reference",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "response": "{aspects?:[{name,description?}],groups:[{name?,series:[{description?,indentation?,emphasized?,spaceAbove?,entityMeta:[metadata],names:[string]}]}]}"
+    },
+    {
+      "method": "GET",
+      "path": "/loadvintage",
+      "capability": "revisions",
+      "query": [
+        {
+          "name": "n",
+          "required": true,
+          "type": "string"
+        },
+        {
+          "name": "timestamp",
+          "required": true,
+          "type": "ISO8601 instant"
+        }
+      ],
+      "response": "series data object with RevisionSeriesType=vintage and applicable RevisionTimeStamp"
+    },
+    {
+      "method": "GET",
+      "path": "/loadvintagetimestamps",
+      "capability": "revisions",
+      "query": [
+        {
+          "name": "n",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "response": "[{timeStamp:ISO8601,label?:string}]"
+    },
+    {
+      "method": "GET",
+      "path": "/loadcompletehistory",
+      "capability": "revisionsCompleteHistory+revisions",
+      "query": [
+        {
+          "name": "n",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "response": "array of complete vintage series objects"
+    },
+    {
+      "method": "GET",
+      "path": "/loadrelease",
+      "capability": "revisionsRelease+revisions",
+      "query": [
+        {
+          "name": "n",
+          "required": true,
+          "type": "string"
+        },
+        {
+          "name": "nthrelease",
+          "required": true,
+          "type": "integer>=0"
+        }
+      ],
+      "response": "series data with RevisionSeriesType=nth and RevisionSeriesNth",
+      "source": "official prose; absent from current sample controller"
+    },
+    {
+      "method": "POST",
+      "path": "/createseries",
+      "capability": "editSeries",
+      "query": [
+        {
+          "name": "lastModified",
+          "required": false,
+          "type": "ISO8601 instant"
+        },
+        {
+          "name": "forceReplace",
+          "required": false,
+          "type": "boolean"
+        }
+      ],
+      "body": "series data object",
+      "response": "new modification timestamp; 404/409 have original existence/revision semantics"
+    },
+    {
+      "method": "GET",
+      "path": "/removeseries",
+      "capability": "editSeries",
+      "query": [
+        {
+          "name": "n",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "response": "200 or404",
+      "source": "current sample controller and official prose; hosted OpenAPI saysPOST/body name"
+    }
+  ],
+  "metadata": {
+    "required_identifier": "PrimName",
+    "identifier_case": "lowercase",
+    "case_sensitive_fields": true,
+    "loadmeta_required": [
+      "Frequency",
+      "StartDate"
+    ],
+    "useful": [
+      "Description",
+      "Frequency",
+      "StartDate",
+      "EndDate",
+      "DayMask",
+      "Currency",
+      "Region",
+      "Class",
+      "DisplayUnit",
+      "Source",
+      "IHInfo",
+      "LastModifiedTimeStamp"
+    ],
+    "revisions": [
+      "StoresRevisionHistory",
+      "FirstRevisionTimeStamp",
+      "LastRevisionTimeStamp",
+      "RevisionSeriesType",
+      "RevisionTimeStamp",
+      "RevisionLabel",
+      "RevisionSeriesNth"
+    ]
+  },
+  "frequencies": {
+    "A": "annual",
+    "D": "daily",
+    "M": "monthly",
+    "Q": "quarterly",
+    "H": "semiannual",
+    "S": "semiannual",
+    "W": "weekly",
+    "additional_documented_values": [
+      "quadmonthly",
+      "bimonthly"
+    ],
+    "date_range": [
+      1600,
+      2499
+    ],
+    "daily_default_mask": 62
+  },
+  "original_source_discrepancies": [
+    "Hosted OpenAPI loadtree query vs current reference",
+    "Hosted OpenAPI listseries name vs current reference",
+    "Hosted OpenAPI omits loadmeta and revision methods",
+    "Hosted OpenAPI dictionary definitions are arrays although current controller uses dictionaries",
+    "Hosted OpenAPI removeseries POST vs current GET n",
+    "README .NET8 vs current csproj net9.0",
+    "Prose contains loadvintagedates/completehistory shorthand; actual route names are loadvintagetimestamps/loadcompletehistory"
+  ],
+  "implementation_decisions": {
+    "source_values": "retain exact original strings and source states; review consumer numeric/calendar representation",
+    "statistical_history": "keep official source editions distinct from customer provider-publication history",
+    "edits": "operator-controlled publication; expose editSeries only if full native edit workflow is implemented",
+    "publication": "immutable source-bound receiving editions with explicit current selection and rollback",
+    "authentication": "separate private operator controls and configured client provider authentication"
+  }
+}

@@ -36,8 +36,11 @@ configuration when access is required.
 
 After acquisition, the reader checks each blob's type, declared size, complete
 batch framing and Git object hash before passing its original bytes to the
-builder. The original regular-file restrictions, 2 MiB per-file and 32 MiB total
-source limits, component inventory, static-import parsing and pinned runtime
+builder. The reader and builder share a 64 MiB aggregate source limit, while
+original source files retain their 2 MiB limit. Before materialization, the whole
+package—including its generated manifest, metadata, README and license—must fit
+the original installer's 64 MiB unpacked limit and 4 MiB member limit. The regular-file
+restrictions, component inventory, static-import parsing and pinned runtime
 dependency rules remain part of packaging.
 
 The progress stream reports the resolved commit, selected file count, source

@@ -8,17 +8,19 @@ import { Buyer } from '../../sf88-operator-buyer-cli/node/index.mjs';
 import { need, operationId } from './model.mjs';
 import { jsonBytes } from './source.mjs';
 import { initializeFredProject, fredProjectView, configureFredProject, importFredCapture,
-  acquireFredCapture, selectFredCapture, getFredCapture, reviewFredCapture, compareFredCaptures,
+  acquireFredCapture, selectFredCapture, combineFredTables, getFredCapture, reviewFredCapture, compareFredCaptures,
   publishFredReview, selectFredPublication, exportFredProject, receiveFredProject, abandonFredOperation } from './project.mjs';
 import { startFredMerchant, prepareFredPurchase, executeFredPurchase, recoverFredPurchase, exportFredPurchase } from './merchant.mjs';
 import { startFredWorkspace } from './workspace.mjs';
+import { runFredReceiver, readFredReceiver } from './receiver.mjs';
 
-export const USAGE = "Economic editions — original FRED source, merchant and customer\n\nstarforge fred init --project ABS --title TEXT --selection FILE [--api-key-env NAME]\nstarforge fred show --project ABS\nstarforge fred serve --project ABS [--port N] [--buyer-config FILE] [--facilitator URL]\nstarforge fred configure --project ABS --id ID --expected-revision N --selection FILE\nstarforge fred capture --project ABS --id ID --expected-revision N\nstarforge fred import --project ABS --id ID --expected-revision N --source CAPTURE_JSON\nstarforge fred select --project ABS --id ID --expected-revision N --capture SHA\nstarforge fred review --project ABS --id ID --expected-revision N --capture SHA [--policy FILE] [--note FILE]\nstarforge fred compare --project ABS --before SHA --after SHA [--out FILE]\nstarforge fred source --project ABS --capture SHA --out FILE\nstarforge fred publish --project ABS --id ID --expected-revision N --review SHA --origin HTTPS --payment FILE [--path PATH]\nstarforge fred merchant --project ABS --publication SHA [--port N] [--facilitator URL]\nstarforge fred prepare --project ABS --publication SHA --intent ID [--query QUERY] [--file MEMBER] [--previous FILE] [--accept N] [--out FILE]\nstarforge fred buy --project ABS --publication SHA --intent ID --buyer-config FILE\nstarforge fred recover --project ABS --publication SHA --intent ID --buyer-config FILE\nstarforge fred delivery --project ABS --publication SHA --intent ID --buyer-config FILE --out FILE\nstarforge fred export --project ABS --out FILE\nstarforge fred receive --project ABS_EMPTY --source PROJECT_JSON\nstarforge fred abandon --project ABS --id ID --expected-revision N --pending ID\n\nUse the SAME id/revision to resume a pending capture. Original approvals occur in\nthe launch terminal. --allow-local-facilitator explicitly permits a configured\n127.0.0.1 HTTP facilitator. Omit --facilitator for original challenge-only serving.\nFile exports are create-only. Existing projects reopen with show or serve.";
+export const USAGE = "Economic editions — original FRED source, merchant and customer\n\nstarforge fred receiver --project ABS --config PRIVATE_JSON [--phase run|browser|status]\nstarforge fred receiver --project ABS --id ID --phase status\nstarforge fred init --project ABS --title TEXT --selection FILE [--api-key-env NAME]\nstarforge fred show --project ABS\nstarforge fred serve --project ABS [--port N] [--buyer-config FILE] [--facilitator URL]\nstarforge fred configure --project ABS --id ID --expected-revision N --selection FILE\nstarforge fred capture --project ABS --id ID --expected-revision N\nstarforge fred import --project ABS --id ID --expected-revision N --source CAPTURE_JSON\nstarforge fred select --project ABS --id ID --expected-revision N --capture SHA\nstarforge fred combine --project ABS --id ID --expected-revision N --captures SHA,SHA\nstarforge fred review --project ABS --id ID --expected-revision N --capture SHA [--policy FILE] [--note FILE]\nstarforge fred compare --project ABS --before SHA --after SHA [--out FILE]\nstarforge fred source --project ABS --capture SHA --out FILE\nstarforge fred publish --project ABS --id ID --expected-revision N --review SHA --origin HTTPS --payment FILE [--path PATH]\nstarforge fred merchant --project ABS --publication SHA [--port N] [--facilitator URL]\nstarforge fred prepare --project ABS --publication SHA --intent ID [--query QUERY] [--file MEMBER] [--previous FILE] [--accept N] [--out FILE]\nstarforge fred buy --project ABS --publication SHA --intent ID --buyer-config FILE\nstarforge fred recover --project ABS --publication SHA --intent ID --buyer-config FILE\nstarforge fred delivery --project ABS --publication SHA --intent ID --buyer-config FILE --out FILE\nstarforge fred export --project ABS --out FILE\nstarforge fred receive --project ABS_EMPTY --source PROJECT_JSON\nstarforge fred abandon --project ABS --id ID --expected-revision N --pending ID\n\nUse the SAME id/revision to resume a pending capture. Original approvals occur in\nthe launch terminal. --allow-local-facilitator explicitly permits a configured\n127.0.0.1 HTTP facilitator. Omit --facilitator for original challenge-only serving.\nFile exports are create-only. Existing projects reopen with show or serve.";
 const optionsFor = {
+  receiver: ['project','config','phase','id'],
   init: ['project','title','selection','api-key-env'], show: ['project'],
   serve: ['project','port','buyer-config','facilitator','allow-local-facilitator'],
   configure: ['project','id','expected-revision','selection'], capture: ['project','id','expected-revision'],
-  import: ['project','id','expected-revision','source'], select: ['project','id','expected-revision','capture'],
+  import: ['project','id','expected-revision','source'], combine: ['project','id','expected-revision','captures'], select: ['project','id','expected-revision','capture'],
   review: ['project','id','expected-revision','capture','policy','note'], compare: ['project','before','after','out'],
   source: ['project','capture','out'], publish: ['project','id','expected-revision','review','origin','path','payment'],
   merchant: ['project','publication','port','facilitator','allow-local-facilitator'],
@@ -76,6 +78,16 @@ export async function main(args = process.argv.slice(2)) {
   const buyer = async () => { need(flags['buyer-config'], '--buyer-config is required.'); return new Buyer(await readPrivateJson(resolve(flags['buyer-config']), 65536)).ready(); };
   let result;
   switch (command) {
+    case 'receiver': {
+      if (flags.phase === 'status' && flags.id) { result = await readFredReceiver({ directory, id: flags.id }); break; }
+      need(flags.config, '--config selects the existing private receiver settings.');
+      const abort = new AbortController(), stop = () => abort.abort();
+      process.once('SIGINT', stop); process.once('SIGTERM', stop);
+      try { result = await runFredReceiver({ directory, configFile: resolve(flags.config), phase: flags.phase ?? 'run',
+        signal: abort.signal, onProgress: value => console.error(JSON.stringify(value)) }); }
+      finally { process.removeListener('SIGINT', stop); process.removeListener('SIGTERM', stop); }
+      break;
+    }
     case 'init': result = await initializeFredProject({ directory, title: flags.title,
       selection: await fileJson(flags.selection, 65536), apiKeyEnv: flags['api-key-env'] ?? 'FRED_API_KEY' }); break;
     case 'show': result = await fredProjectView(directory); break;
@@ -88,6 +100,7 @@ export async function main(args = process.argv.slice(2)) {
       break;
     }
     case 'import': result = await importFredCapture({ ...common(), capture: await fileJson(flags.source) }); break;
+    case 'combine': result = await combineFredTables({ ...common(), captureIds: (flags.captures ?? '').split(',').map(value => value.trim()) }); break;
     case 'select': result = await selectFredCapture({ ...common(), captureId: flags.capture }); break;
     case 'review': result = await reviewFredCapture({ ...common(), captureId: flags.capture,
       policy: flags.policy ? await fileJson(flags.policy, 65536) : {},

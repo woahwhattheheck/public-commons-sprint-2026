@@ -40,7 +40,7 @@ function name(value) {
   return String(value || 'job-result.bin').replace(/[^A-Za-z0-9._-]/g, '_').slice(0, 160) || 'job-result.bin';
 }
 /** The owning merchant retains the model, lease and worker lifetime. */
-export async function startJobsWorkspace({ model, port = 0 } = {}) {
+export async function startJobsWorkspace({ model, delivery = null, port = 0 } = {}) {
   if (!model || typeof model.snapshot !== 'function' || typeof model.get !== 'function')
     throw fault('JOB_MODEL_REQUIRED', 'Open the original job merchant first.');
   if (!Number.isInteger(port) || port < 0 || port > 65535)
@@ -48,9 +48,19 @@ export async function startJobsWorkspace({ model, port = 0 } = {}) {
   const token = randomBytes(32).toString('hex'), expected = Buffer.from('Bearer ' + token);
   const staticAssets = new Map(await Promise.all([...assets].map(async ([path, [file, type]]) =>
     [path, { body: await readFile(new URL('./public/' + file, import.meta.url)), type }])));
+  if (delivery) {
+    const deliveryAssets = [
+      ['/deliveries', 'index.html', 'text/html; charset=utf-8'],
+      ['/job-result-delivery.mjs', 'app.mjs', 'text/javascript; charset=utf-8'],
+      ['/job-result-delivery.css', 'style.css', 'text/css; charset=utf-8'],
+    ];
+    for (const [path, file, type] of deliveryAssets)
+      staticAssets.set(path, { body: await readFile(new URL('../result-delivery/workspace/' + file, import.meta.url)), type });
+  }
   const pending = new Set(), readers = new Set();
   let origin, hostname, closing = false, closingPromise, drainPromise, drainError;
-  const snapshot = async () => ({ ...await model.snapshot(), operator: { drainError: drainError ?? null } });
+  const snapshot = async () => ({ ...await model.snapshot(), operator: { drainError: drainError ?? null },
+    ...(delivery ? { resultDelivery: { workspace: '/deliveries' } } : {}) });
   const server = createServer((req, res) => {
     const operation = (async () => {
       function send(status, data, type = 'application/json; charset=utf-8', extra = {}) {
@@ -82,6 +92,13 @@ export async function startJobsWorkspace({ model, port = 0 } = {}) {
         }
         if (['GET', 'HEAD'].includes(req.method)) {
           if (url.pathname === '/api/state') return send(200, await snapshot());
+          if (delivery && url.pathname === '/api/deliveries') return send(200, delivery.snapshot());
+          if (delivery && url.pathname === '/api/deliveries/export') return send(200, {
+            schema: 'stellar-forge.job-result-delivery-export.v1', capturedAt: new Date().toISOString(),
+            snapshot: delivery.snapshot(),
+          }, undefined, { 'content-disposition': 'attachment; filename="job-result-deliveries.json"' });
+          if (delivery && /^\/api\/deliveries\/[a-f0-9]{64}$/.test(url.pathname))
+            return send(200, delivery.get(url.pathname.split('/')[3]));
           if (url.pathname === '/api/export') return send(200, {
             schema: 'stellar-forge.paid-jobs.operator-export.v1', capturedAt: new Date().toISOString(),
             snapshot: await model.snapshot(),
@@ -105,6 +122,14 @@ export async function startJobsWorkspace({ model, port = 0 } = {}) {
         if (req.method !== 'POST') throw fault('METHOD_NOT_ALLOWED', 'Use GET or POST.', 405);
         readers.add(req); let input;
         try { input = await readJSON(req); } finally { readers.delete(req); }
+        const deliveryCommand = delivery && /^\/api\/deliveries\/(scan|drain|start|stop)$/.exec(url.pathname);
+        if (deliveryCommand) {
+          fields(input, []); return send(200, await delivery[deliveryCommand[1]]());
+        }
+        if (delivery && /^\/api\/deliveries\/[a-f0-9]{64}\/requeue$/.test(url.pathname)) {
+          fields(input, ['expectedRevision', 'reason']);
+          return send(200, await delivery.requeue({ id: url.pathname.split('/')[3], ...input }));
+        }
         if (url.pathname === '/api/jobs') {
           fields(input, ['functionId', 'input', 'label', 'reference']);
           return send(201, await model.createJob(input));

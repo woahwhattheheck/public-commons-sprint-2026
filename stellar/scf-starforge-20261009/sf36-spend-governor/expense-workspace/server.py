@@ -137,7 +137,10 @@ class Handler(BaseHTTPRequestHandler):
                 raise Problem("INVALID_JSON", "Submit a complete UTF-8 JSON object") from exc
             if not isinstance(body, dict) or not isinstance(body.get("payload", {}), dict):
                 raise Problem("JSON_OBJECT_REQUIRED", "Use an object with expected_revision and payload")
-            return self.change(path, parts, body.get("payload", {}), body.get("expected_revision"))
+            payload, expected = body.get("payload", {}), body.get("expected_revision")
+            operation = lambda: self.change(path, parts, payload, expected)
+            value = self.server.store.perform_request(body["request_id"], path, payload, expected, operation) if "request_id" in body else operation()
+            return self.send(value)
         except Problem as exc:
             self.send({"error": {"code": exc.code, "message": str(exc)}}, exc.status)
         except (ValueError, TypeError, OSError) as exc:
@@ -152,10 +155,19 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/expenses":
             return self.send(store.expenses(query=query.get("q", [""])[0], source=query.get("source", [""])[0],
                                             status=query.get("status", [""])[0], **self.paging(query)))
+        if path == "/api/requests":
+            return self.send(store.requests(**self.paging(query)))
+        if len(parts) == 3 and parts[:2] == ["api", "requests"]:
+            return self.send(store.inspect_request(parts[2]))
         if path == "/api/activity":
             return self.send(store.events(**self.paging(query)))
         if path == "/api/complete-project":
-            return self.send(complete_project(store), content_type="application/zip", filename="buyer-expense-complete-project.zip")
+            requested = query.get("expected_revision", [None])[0]
+            try:
+                expected = int(requested) if requested is not None else None
+            except ValueError as exc:
+                raise Problem("INVALID_REVISION", "Use the reviewed whole workspace revision") from exc
+            return self.send(complete_project(store, expected), content_type="application/zip", filename="buyer-expense-complete-project.zip")
         if len(parts) == 3 and parts[:2] == ["api", "items"]:
             return self.send(store.item(parts[2]))
         if len(parts) == 4 and parts[:2] == ["api", "sources"] and parts[3] == "captures":
@@ -187,22 +199,22 @@ class Handler(BaseHTTPRequestHandler):
         fixed = {"/api/sources": store.register_source, "/api/centers": store.save_center,
                  "/api/labels": store.save_labels, "/api/periods": store.save_period}
         if path in fixed:
-            return self.send(fixed[path](payload, expected))
+            return (fixed[path](payload, expected))
         if len(parts) == 4 and parts[0] == "api":
             group, ident, action = parts[1:]
             if group == "sources":
                 if action == "capture":
-                    return self.send(store.capture(ident, expected))
+                    return (store.capture(ident, expected))
                 if action == "rebind":
-                    return self.send(store.rebind(ident, payload, expected))
+                    return (store.rebind(ident, payload, expected))
             if group == "captures" and action == "decision":
-                return self.send(store.decide_capture(ident, payload, expected))
+                return (store.decide_capture(ident, payload, expected))
             if group == "items" and action == "coding":
-                return self.send(store.save_coding(ident, payload, expected))
+                return (store.save_coding(ident, payload, expected))
             if group == "periods":
                 actions = {"disposition": store.dispose, "review": store.review, "close": store.close_period, "reopen": store.reopen}
                 if action in actions:
-                    return self.send(actions[action](ident, payload, expected))
+                    return (actions[action](ident, payload, expected))
         raise Problem("NOT_FOUND", "This workspace mutation does not exist", 404)
 
 
