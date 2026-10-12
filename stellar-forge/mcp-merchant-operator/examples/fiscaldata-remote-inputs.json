@@ -1,0 +1,164 @@
+{
+  "schema": "stellar-forge.fiscaldata-client-input-examples.v1",
+  "instructions": "These are authored input templates. Replace every angle-bracket value with the exact returned native identity/revision/SHA before use. Keep a stable requestId only for replay of that same input. This file contains no completed customer operation.",
+  "source": {
+    "name": "Debt to the Penny — selected source interval",
+    "endpoint": "/v2/accounting/od/debt_to_penny",
+    "filter": "record_date:gte:2026-10-01,record_date:lte:2026-10-08",
+    "sort": "record_date",
+    "pageSize": 2,
+    "notes": "Public Treasury daily debt observations. Review source units, dates and complete row identity."
+  },
+  "capture": {
+    "sourceId": "<SOURCE_UUID>",
+    "sourceRevision": 1,
+    "sourceSha256": "<EXACT_SOURCE_SHA256>",
+    "name": "Selected Treasury source pages",
+    "requestId": "debt-capture-reviewed-01"
+  },
+  "edition": {
+    "captureId": "<COMPLETE_CAPTURE_UUID>",
+    "captureSha256": "<EXACT_CAPTURE_SHA256>",
+    "name": "Reviewed daily debt edition",
+    "requestId": "debt-edition-reviewed-01"
+  },
+  "review": {
+    "id": "<DRAFT_EDITION_UUID>",
+    "expectedRevision": 1,
+    "fields": [
+      {
+        "source": "record_date",
+        "name": "record_date",
+        "label": "Record date",
+        "role": "date",
+        "unit": "calendar date",
+        "scale": "1",
+        "notes": "Original date of the daily observation.",
+        "nullToken": null
+      },
+      {
+        "source": "tot_pub_debt_out_amt",
+        "name": "tot_pub_debt_out_amt",
+        "label": "Total public debt outstanding",
+        "role": "measure",
+        "unit": "USD",
+        "scale": "1",
+        "notes": "Daily stock observation. Preserve the source's original stated units; do not treat sums across dates as a Treasury period total.",
+        "nullToken": null
+      }
+    ],
+    "keyFields": [
+      "record_date"
+    ],
+    "notes": "This illustrative two-field selection must be checked against the actual captured metadata before saving.",
+    "filters": [
+      "record_date"
+    ],
+    "ranges": [],
+    "sorts": [
+      "record_date"
+    ],
+    "defaultLimit": 50,
+    "maxLimit": 1000
+  },
+  "build": {
+    "id": "<REVIEWED_DRAFT_EDITION_UUID>",
+    "expectedRevision": 2,
+    "requestId": "debt-edition-build-01"
+  },
+  "comparison": {
+    "leftEditionId": "<READY_BASELINE_UUID>",
+    "rightEditionId": "<READY_CANDIDATE_UUID>",
+    "keyFields": [
+      "record_date"
+    ],
+    "measureFields": [
+      "tot_pub_debt_out_amt"
+    ],
+    "name": "Reviewed daily debt comparison",
+    "requestId": "debt-comparison-reviewed-01"
+  },
+  "sourceExport": {
+    "kind": "comparison",
+    "id": "<READY_COMPARISON_UUID>",
+    "requestId": "debt-comparison-source-01"
+  },
+  "briefing": {
+    "comparisonId": "<READY_COMPARISON_UUID>",
+    "expectedComparisonSha256": "<EXACT_COMPARISON_SHA256>",
+    "exportId": "<READY_COMPARISON_EXPORT_UUID>",
+    "title": "Reviewed Treasury debt observations",
+    "audience": "Analyst handover",
+    "notes": "Use dated balances and the original source/unit context.",
+    "rowsPerPage": 200,
+    "requestId": "debt-comparison-briefing-01"
+  },
+  "refreshPlan": {
+    "name": "Weekly reviewed debt observations",
+    "baselineEditionId": "<READY_BASELINE_UUID>",
+    "expectedBaselineSha256": "<EXACT_BASELINE_SHA256>",
+    "capture": {
+      "mode": "window",
+      "dateField": "record_date",
+      "days": 8,
+      "lagDays": 0,
+      "baseFilter": ""
+    },
+    "comparison": {
+      "keyFields": [
+        "record_date"
+      ],
+      "measureFields": [
+        "tot_pub_debt_out_amt"
+      ]
+    },
+    "briefing": {
+      "title": "Weekly Treasury debt source review",
+      "audience": "Analyst handover",
+      "notes": "Daily stock observations; preserve original source units."
+    },
+    "requestId": "debt-refresh-plan-01"
+  },
+  "refreshPreview": {
+    "planId": "<SAVED_PLAN_UUID>",
+    "expectedRevision": 1,
+    "expectedPlanSha256": "<EXACT_PLAN_SHA256>",
+    "asOf": "2026-10-12"
+  },
+  "refreshStart": {
+    "planId": "<SAVED_PLAN_UUID>",
+    "expectedRevision": 1,
+    "expectedPlanSha256": "<EXACT_PLAN_SHA256>",
+    "asOf": "2026-10-12",
+    "requestId": "debt-refresh-run-20261012-01"
+  },
+  "refreshControl": {
+    "id": "<SAVED_RUN_UUID>",
+    "expectedRevision": 1
+  },
+  "refreshReview": {
+    "id": "<WAITING_RUN_UUID>",
+    "expectedRevision": 1,
+    "editionId": "<READY_REVIEWED_RUN_EDITION_UUID>",
+    "expectedEditionSha256": "<EXACT_READY_EDITION_SHA256>",
+    "requestId": "debt-refresh-review-01"
+  },
+  "refreshPromotion": {
+    "planId": "<SAVED_PLAN_UUID>",
+    "expectedRevision": 1,
+    "runId": "<COMPLETE_RUN_UUID>",
+    "expectedRunRevision": 1,
+    "requestId": "debt-refresh-promote-01"
+  },
+  "remoteRestore": {
+    "sourceWorkspace": "<DECLARED_SOURCE_ALIAS>",
+    "packageId": "<SEALED_PACKAGE_SHA256_ID>",
+    "expectedSha256": "<WORKSPACE_GZIP_SHA256>",
+    "operationId": "debt-workspace-receive-01"
+  },
+  "merchant": {
+    "editionId": "<READY_EDITION_UUID>",
+    "profile": "<HOST_DECLARED_PROFILE>",
+    "requestId": "debt-merchant-01"
+  }
+}
