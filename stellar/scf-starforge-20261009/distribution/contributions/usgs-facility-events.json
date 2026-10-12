@@ -18,5 +18,8 @@
       "server": "stellar/scf-starforge-20261009/sf61-openapi-seller-import/postman/examples/usgs-facility-events/workspace/server.mjs",
       "manifest": "stellar/scf-starforge-20261009/sf61-openapi-seller-import/postman/examples/usgs-facility-events/workspace/browser-assets.json"
     }
-  ]
+  ],
+  "applicationProviders": {
+    "usgs-facility-events": "stellar/scf-starforge-20261009/distribution/runtime-workspace/providers/usgs-facility-events.mjs"
+  }
 }
