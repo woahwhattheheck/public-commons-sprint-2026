@@ -142,11 +142,59 @@ remains attached to the native case, buyer intent and first published edition.
 
 ## Include the browser in the same live caller
 
+The complete included callback is
+[examples/browser-workbench.mjs](examples/browser-workbench.mjs). It opens the
+same saved application during both managed launches. It visits the source and
+payment terms, every saved report and typed mapping, both original subscription
+reviews, both complete editions, complete differences, both published runs,
+the original customer offer, and the saved source and merchant downloads.
+
+Select the existing browser runtime in the caller's environment:
+
+~~~sh
+export RISINGWAVE_PLAYWRIGHT_MODULE=/absolute/existing-playwright/index.mjs
+export RISINGWAVE_CHROMIUM_EXECUTABLE=/absolute/existing-chromium/chrome
+~~~
+
+Both paths are absolute. The Playwright setting is optional when the installed
+package already resolves playwright. The Chromium setting is optional when that
+Playwright installation already selects the intended browser. These variables
+must be inherited by the managed caller alongside its original database
+environment file. The callback uses that existing runtime.
+
+Append the included callback to the managed command:
+
+~~~sh
+--browser-module "$RISINGWAVE_READY/package/source/stellar/scf-starforge-20261009/sf30-seller-sdk/risingwave/examples/browser-workbench.mjs"
+~~~
+
+The callback compares the full browser download stream with each already
+received original: fourteen capture files, four complete difference files and
+the saved source and merchant declarations. It expands both original published
+run panels and the exact offer in the visible interface. It checks complete
+row totals, preserved NULL and empty text, precise value representations, the
+two original payment choices and the same publication and recurring policy.
+
+Each live phase produces seven desktop views at 1440 by 960 and three views at
+390 by 844, together with the browser version, original application/run
+selection, file hashes and actual browser outcomes. The complete received data
+remain in the original receiving directories. Browser temporary downloads are
+removed after their complete bytes have been checked. Screenshots and the
+per-attempt result live under browser/<phase>/<attempt>/.
+
+The callback awaits the live browser operation, verifies the saved source and
+merchant hashes, and closes its own browser before Applications proceeds to
+stop or reopen. The native database, application, MCP process and supported
+payment adapter remain under the original managed caller.
+
+### Use the included callback through JavaScript
+
 The JavaScript API accepts an awaited onOpen callback. It runs during both
 managed launches, with phase equal to first or reopen.
 
 ~~~js
 import { runRisingWaveManagedJourney } from './examples/managed-workbench.mjs';
+import { inspectRisingWaveManagedApplication } from './examples/browser-workbench.mjs';
 
 const result = await runRisingWaveManagedJourney({
   directory: '/absolute/private-managed-receiving',
@@ -156,19 +204,7 @@ const result = await runRisingWaveManagedJourney({
   expectedNativeSourcePin: process.env.RISINGWAVE_NATIVE_SOURCE_COMMIT,
   environmentFile: '/absolute/original-private-environment.json',
 
-  async onOpen(context) {
-    await inspectOriginalBrowser({
-      phase: context.phase,
-      url: context.url,
-      client: context.client,
-      mcp: context.mcp,
-      application: context.application,
-      runtime: context.runtime,
-      nativeResult: context.nativeResult,
-      receivingDirectory: context.directory,
-      opened: context.opened,
-    });
-  },
+  onOpen: inspectRisingWaveManagedApplication,
 });
 ~~~
 
@@ -189,7 +225,8 @@ history, recurring policy, payment choices and original buyer file. The
 receiving callback observes this retained case. Subsequent source authoring
 and publication use their own saved revisions and operation identities.
 
-For a CLI browser module, append:
+A separately maintained CLI browser module may also be selected by its
+absolute path:
 
 ~~~sh
 --browser-module /absolute/original-risingwave-browser.mjs
@@ -224,6 +261,7 @@ export async function inspectRisingWaveManagedApplication(context) {
 | receiving/complete-differences/ | Complete added, removed and changed streams, their manifest and original receiving progress. |
 | receiving/first/ and receiving/second/ | Full data.csv, dataset.json and candidate.json for each published run. |
 | receiving/original-buyer.json | Exact original snapshot-pinned buyer configuration. |
+| browser/<phase>/<attempt>/ | Original browser selection, ten complete screenshots, download identities and browser-result.json for that live phase. |
 | attempts/<id>.json | Immutable outcome of each actual receiving attempt. |
 | managed-result.json | Latest complete outcome, source identities, original lifecycle results and output paths. |
 
