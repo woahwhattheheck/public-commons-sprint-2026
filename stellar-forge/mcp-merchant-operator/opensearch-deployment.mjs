@@ -174,6 +174,11 @@ export class MerchantOpenSearchDeployments {
     }
     return this.#archives.get(workspace);
   }
+  async #readers(workspace) {
+    const selected = this.#customers.get(workspace);
+    return {customer:selected ? (await selected).summary : {activeFileReads:0,snapshotBytes:0},
+      archive:this.#files.status(workspace)};
+  }
   async #mutate(action,args,model,entry) {
     const native = this.#native(model);
     const request = {requestId:record(args.requestId),action};
@@ -192,7 +197,7 @@ export class MerchantOpenSearchDeployments {
       if (args.label !== undefined) {
         if (typeof args.label !== 'string' || args.label.length > 160)
           throw failure('INVALID_PARAMS','Use a release label of at most 160 characters.');
-        request.label = line(args.label,'Release label');
+        line(args.label,'Release label'); request.label = args.label;
       }
       request.runtime = openSearchRuntimeOptions(entry.runtime ?? {});
       // The browser can omit default runtime fields. Recover its exact request
@@ -237,7 +242,8 @@ export class MerchantOpenSearchDeployments {
     const native = this.#native(model), selected = name.slice('merchant_opensearch_deployment_'.length);
     if (MUTATIONS.has(selected)) return this.#mutate(MUTATIONS.get(selected),args,model,entry);
     switch (selected) {
-      case 'status': return openSearchDeploymentStatusView(await native.status());
+      case 'status': return {...openSearchDeploymentStatusView(await native.status()),
+        readers:await this.#readers(args.workspace)};
       case 'compare':
         identifier(args.to,'Release ID');
         if (args.from !== undefined) identifier(args.from,'Release ID');
