@@ -309,11 +309,13 @@ async function renderSources(){
     button("Open source",()=>navigate(()=>{view.source=s.id;view.sourceOffset=0;}),"small")])));
   content.append(formCard("Register original buyer ledger",[
     {name:"name",label:"Source name",required:true},
+    {name:"data_context",label:"Original operation context",value:state.data_context||"operational",choices:[{value:"operational",label:"Operational buyer source"},{value:"development",label:"Controlled development operation"}],help:"Keep the original source attribution. An accepted workspace retains one operation context."},
     {name:"path",label:"Original SF36 SQLite path",required:true,wide:true,help:"Select the existing reservations.sqlite file in its original buyer workspace."},
     {name:"provenance",label:"Source provenance",multiline:true,wide:true,help:"Retain the original operator, operation and source references that explain this ledger."}
   ],"Capture source for review",async(values,form)=>{const r=await save(form,"/api/sources",values);view.source=r.id;view.capture=r.capture.id;view.captureOffset=0;await redrawAfter("Original source captured. Review the retained rows before accepting them.");}).card);
   content.append(formCard("Register original MCP buyer source",[
     {name:"name",label:"Source name",required:true},
+    {name:"data_context",label:"Original operation context",value:state.data_context||"operational",choices:[{value:"operational",label:"Operational buyer source"},{value:"development",label:"Controlled development operation"}],help:"Keep the original source attribution. An accepted workspace retains one operation context."},
     {name:"path",label:"Original MCP quote directory",required:true,wide:true,help:"Choose the existing private directory containing the original quotes.sqlite; no signer or operator module is loaded."},
     {name:"provenance",label:"Source provenance",multiline:true,wide:true,help:"Retain the original buyer operation, source owner and payment-observation references."}
   ],"Capture MCP source for review",async(values,form)=>{const r=await save(form,"/api/sources",{...values,kind:"mcp_quote"});view.source=r.id;view.capture=r.capture.id;view.captureOffset=0;await redrawAfter("Original MCP quotes captured. Review their payment and result classifications before accepting.");},

@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import argparse
+import errno
 import hmac
 import json
 import secrets
 import signal
+import sqlite3
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -143,10 +145,17 @@ class Handler(BaseHTTPRequestHandler):
             return self.send(value)
         except Problem as exc:
             self.send({"error": {"code": exc.code, "message": str(exc)}}, exc.status)
-        except (ValueError, TypeError, OSError) as exc:
+        except (sqlite3.Error, OSError) as exc:
+            if getattr(exc, "sqlite_errorcode", None) == sqlite3.SQLITE_FULL or getattr(exc, "errno", None) == errno.ENOSPC:
+                self.send({"error": {"code": "STORAGE_FULL", "message": "The workspace needs free storage. Retain the same request identity and recover its result before retrying."}}, 507)
+            elif isinstance(exc, OSError):
+                self.send({"error": {"code": "INPUT_OR_SOURCE_ERROR", "message": str(exc)}}, 400)
+            else:
+                self.send({"error": {"code": "WORKSPACE_OPERATION_FAILED", "message": "The operation did not return a completion. Recover its saved request before retrying; retained state remains available."}}, 500)
+        except (ValueError, TypeError) as exc:
             self.send({"error": {"code": "INPUT_OR_SOURCE_ERROR", "message": str(exc)}}, 400)
         except Exception:
-            self.send({"error": {"code": "WORKSPACE_OPERATION_FAILED", "message": "The operation failed without issuing a new period. Retained state remains available."}}, 500)
+            self.send({"error": {"code": "WORKSPACE_OPERATION_FAILED", "message": "The operation did not return a completion. Recover its saved request before retrying; retained state remains available."}}, 500)
 
     def read(self, path, parts, query):
         store = self.server.store
