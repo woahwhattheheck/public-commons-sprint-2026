@@ -11,7 +11,7 @@ Select Node 24 and the existing Playwright installation on the accepting host. S
 ```json
 {
   "repository": "/absolute/public-commons-sprint-2026",
-  "sourceRef": "04e77d53a1a56fe45d74022ab2cd9f54acb0349a",
+  "sourceRef": "764954a49c7c77b22de85d96eb9148be726a5e7a",
   "publisherProgrammeDirectory": "/absolute/original-publisher-programme",
   "outputDirectory": "/absolute/installed-datasette-continuation",
   "playwrightModule": "/absolute/node_modules/playwright/index.mjs",
@@ -23,13 +23,17 @@ Select Node 24 and the existing Playwright installation on the accepting host. S
 }
 ```
 
-Use the final merged sourceRef selected by the original owner. An existing populated npm cache may be supplied as npmCache; offline selects the maintained installer's offline dependency path. browserExecutable can select the host's installed Chromium executable.
+The explicit sourceRef above is the immutable public source containing the final browser and customer Analysis SQL and query-job support. For a canonical repository that has its own commit history, omit sourceRef to resolve that checkout's HEAD to a complete commit SHA on the first invocation. The journey saves that resolved SHA with its original input before building. A rerun without sourceRef reuses the saved SHA even when repository HEAD has advanced; it never selects a new source implicitly. An explicitly supplied sourceRef must match the retained source on a rerun.
+
+An existing populated npm cache may be supplied as npmCache; offline selects the maintained installer's offline dependency path. browserExecutable can select the host's installed Chromium executable.
 
 ```sh
 node operations/scf-datasette-installed-browser-20261012/run-installed.mjs --input /absolute/installed-browser-input.json
 ```
 
 The builder uses the pinned Git source with offline object reads. It creates a resumable complete Datasette product archive, then the original installer prepares and verifies that selected runtime. The full checkout must retain the source objects for that commit.
+
+The journey records each runtime preparation target before invoking the maintained installer. If a preparation is interrupted before its complete plan and state are present, the next invocation preserves that directory and calls recoverRuntime into a retained recovery target. A partial dependency installation resumes in its same prepared directory. Managed application reconnection uses applicationsConnect on the saved binding; pending and interrupted launches use applicationsRecover on the original run identity.
 
 ## Whole workflow
 
