@@ -315,3 +315,8 @@ JS += _analysis_research_ui.JS
 # Evidence synthesis uses this exact Analysis capability and database.
 HTML = HTML.replace('<nav aria-label="Workspace">', '<nav aria-label="Workspace"><a id="synthesis-link" href="/synthesis">Evidence synthesis</a>', 1)
 JS += "\ndocument.getElementById('synthesis-link').href='/synthesis#'+capability;\n"
+
+
+# This publication view uses the same local capability and original job database.
+HTML = HTML.replace('<nav aria-label="Workspace">', '<nav aria-label="Workspace"><a id="lineage-link" href="/lineage">Lineage</a>', 1)
+JS += "\ndocument.getElementById('lineage-link').href='/lineage#'+capability;\n"
