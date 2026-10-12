@@ -358,7 +358,10 @@
     "fiscaldata": "stellar/scf-starforge-20261009/sf30-seller-sdk/fiscaldata/cli.mjs",
     "coingecko": "stellar/scf-starforge-20261009/partners/coingecko-stellar-market/cli.mjs",
     "webdav": "stellar/scf-starforge-20261009/sf30-seller-sdk/webdav/cli.mjs",
-    "cache-operations": "stellar/scf-starforge-20261009/sf30-seller-sdk/response-cache/workspace/cli.mjs"
+    "cache-operations": "stellar/scf-starforge-20261009/sf30-seller-sdk/response-cache/workspace/cli.mjs",
+    "nocodb-source": "stellar/scf-starforge-20261009/sf30-seller-sdk/nocodb/cli.mjs",
+    "nocodb-publisher": "stellar/scf-starforge-20261009/sf30-seller-sdk/nocodb/publisher/cli.mjs",
+    "nocodb-deployment": "stellar/scf-starforge-20261009/sf30-seller-sdk/nocodb/deployment-cli.mjs"
   },
   "exports": {
     "./seller/openalex": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/openalex/merchant.mjs",
@@ -829,7 +832,12 @@
     "./seller/webdav/packet": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/webdav/packet.mjs",
     "./seller/response-cache/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/response-cache/workspace/model.mjs",
     "./seller/response-cache/workspace/server": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/response-cache/workspace/server.mjs",
-    "./seller/response-cache/workspace/report": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/response-cache/workspace/reports.mjs"
+    "./seller/response-cache/workspace/report": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/response-cache/workspace/reports.mjs",
+    "./seller/nocodb": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/nocodb/source.mjs",
+    "./seller/nocodb/declaration": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/nocodb/declaration.mjs",
+    "./seller/nocodb/capture": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/nocodb/capture.mjs",
+    "./seller/nocodb/publisher": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/nocodb/publisher/model.mjs",
+    "./seller/nocodb/deployment": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/nocodb/deployment.mjs"
   },
   "nativePeers": {
     "@x402/core": {
