@@ -505,7 +505,7 @@ function originalStoreAmount(value, currencyKey="currency"){
 function adjustmentTable(records){
   return localTable(["Original reference / adjustment","Native decision","Original amount / asset","Dates / review","Original source"],
     records.map(r=>[el("div",{},r.source_reference||r.event_id,el("div",{class:"code long"},r.adjustment_id||r.event_id)),
-      el("div",{},r.kind+" / "+r.status,el("small",{},r.eligibility||r.payment_status)),
+      el("div",{},r.kind+" / "+r.status,el("div",{class:"quiet"},r.eligibility||r.payment_status)),
       el("div",{},r.amount===null||r.amount===undefined?"No adjustment amount":r.amount+" base units",
         el("div",{},r.network||""),el("small",{},"Asset digest"),el("div",{class:"code long"},r.asset_digest||"")),
       el("div",{},r.effective_at||"No effective date supplied",el("div",{},r.operator||""),el("small",{},r.reason||"")),
@@ -574,11 +574,11 @@ async function renderCredits(){
     {name:"source_sha256",label:"Original export SHA-256",required:true,wide:true,maxlength:64},
     {name:"event_id",label:"Original accounting event ID",required:true,wide:true,maxlength:64},
     {name:"expected_job",label:"Original paid-job selection JSON",multiline:true,wide:true,rows:5,
-      help:"Optional: retain job_id and its complete original settlement object. Every event, receipt, transaction, amount, route and order-reference binding must match."},
+      help:"Optional: retain job_id and its settlement selection from the original accounting export. Use the accounting event ID as settlement.id and preserve its nine native binding fields; see the operating guide."},
     {name:"provenance",label:"Original operation provenance",required:true,multiline:true,wide:true}
   ],"Capture original adjustment export",async(values,form)=>{
     let expected_job=null;
-    if(values.expected_job.trim()){try{expected_job=JSON.parse(values.expected_job);}catch{throw new Error("Enter the unchanged original job ID and settlement as valid JSON.");}}
+    if(values.expected_job.trim()){try{expected_job=JSON.parse(values.expected_job);}catch{throw new Error("Enter the original job ID and accounting-event settlement selection as valid JSON.");}}
     const result=await save(form,"/api/adjustment-packets",{...values,expected_job});view.refundPacket=result.id;
     await redrawAfter("The unchanged original accounting export and selected event are retained for review.");
   },{intro:"The original accounting compiler and native proof validators retain every decision. Pending refunds and cancellations remain source outcomes; verified returns become available only with their original payment binding. This import starts no payment or merchant operation."}).card);
@@ -601,8 +601,8 @@ async function renderRefundPacket(){
     facts(details),button("Download original packet",()=>download("/api/refund-packets/"+packet.id+"/original","original-receipt-"+packet.id+".zip"),"small")));
   if(returns.length)content.append(el("section",{class:"card"},el("h2",{},"Original verified returns"),
     localTable(["Adjustment / refund","Native return","Source status / store amount","Transaction / dates"],returns.map(c=>[
-      el("div",{},c.adjustment_id,el("small",{},c.refund_id)),unit(c.amount,c),
-      el("div",{},c.original_operation_status,el("small",{},originalStoreAmount(c))),
+      el("div",{class:"code long"},c.adjustment_id,c.refund_id&&c.refund_id!==c.adjustment_id?el("div",{class:"quiet"},c.refund_id):null),unit(c.amount,c),
+      el("div",{},c.original_operation_status,el("div",{class:"quiet"},originalStoreAmount(c))),
       el("div",{class:"code long"},c.transaction,el("div",{},c.transfer_at||"Transfer time not supplied"),el("small",{},"Observed "+c.observed_at))]))));
   if(generic)content.append(el("section",{class:"card"},el("h2",{},"Original merchant decisions"),
     adjustmentTable(packet.adjustments.map(r=>({...r,source_reference:packet.source_reference,source_name:packet.name,
