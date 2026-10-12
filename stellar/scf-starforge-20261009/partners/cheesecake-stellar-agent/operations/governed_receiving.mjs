@@ -8,15 +8,19 @@
  * Retains the full resulting application/state and receiving.json in --work.
  */
 import assert from 'node:assert/strict';
-import {mkdir,writeFile,readFile,stat,lstat,realpath} from 'node:fs/promises';
+import {mkdir,writeFile,readFile,stat,lstat,realpath,rename,link} from 'node:fs/promises';
 import {resolve,join,isAbsolute} from 'node:path';
 import {fileURLToPath,pathToFileURL} from 'node:url';
 import {createHash,randomBytes} from 'node:crypto';
-import {createGovernedNativeMcpOperator} from '../../../../../stellar-forge/mcp-paid-agent/native-spend-governor.mjs';
+import {openMcpSpendingHost} from '../../../../../stellar-forge/mcp-paid-agent/native-spend-workspace.mjs';
+import {runNativeMcpSpendingRecoveryReceiving} from '../../../../../stellar-forge/mcp-paid-agent/native-spend-recovery-receiving.mjs';
 import {inspectHandoff} from '../application.mjs';
 import {loadApplication} from '../configuration.mjs';
 import {initializeInstalledApplication,inspectInstalledApplication,startInstalledApplication} from '../installed.mjs';
+import {receiveApplicationProject,openReceivedApplicationProject,withRestoredApplicationProject} from '../project-receive.mjs';
+import {createApplicationServer} from '../server.mjs';
 
+const progress=stage=>process.stderr.write(JSON.stringify({receivingStage:stage})+'\n');
 const hash=bytes=>createHash('sha256').update(bytes).digest('hex');
 const endpoint='https://merchant.example/mcp';
 const payer='GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF';
@@ -30,7 +34,7 @@ const inputSchema={type:'object',properties:{mode:{type:'string',enum:['paid','f
 const largeText='café 😀 '.repeat(110000);
 const transaction='a'.repeat(64);
 const control={configured:false,authorized:true,opens:0,approvals:0,signing:0,protocolCalls:0,
-  unsigned:0,signed:0,approvalWaiting:false,approvalAborted:false,work:null,python:null,keys:null};
+  unsigned:0,signed:0,approvalWaiting:false,approvalAborted:false,work:null,python:null,keys:null,host:null};
 
 export async function authorizeFixture({context}) {
   return control.authorized && context.subject==='receiving:operator';
@@ -64,7 +68,7 @@ async function providerFixture(input,init={}) {
   const raw=JSON.stringify({jsonrpc:'2.0',id:rpc.id,result});
   return new Response(raw,{headers:{'content-type':'application/json','content-length':String(Buffer.byteLength(raw))}});
 }
-export async function openFixtureOperator() {
+export async function openFixtureOperator({environment=control.keys}={}) {
   assert.ok(control.configured);control.opens++;
   const sdk={versions:{core:'receiving-fixture',stellar:'receiving-fixture'},
     ExactStellarScheme:class{},
@@ -78,13 +82,8 @@ export async function openFixtureOperator() {
           payload:{integrationFixture:true}};
       }
     }};
-  const operator=await createGovernedNativeMcpOperator({
-    spending:{python:control.python,actor:'receiving-operator',service:'cheesecake-application',
-      policy:join(control.work,'policy.json'),ledger:join(control.work,'spending.sqlite'),
-      stateDirectory:join(control.work,'governed'),environment:control.keys},
-    payer,signer:{address:payer,signAuthEntry(){throw new Error('Fixture payment has no live signer.');}},
-    sdk,rpcUrl:'https://soroban-testnet.stellar.org',
-    limits:{network,asset,payTo,maxAtomic:'60',maxTimeoutSeconds:60},
+  const operator=await openMcpSpendingHost(control.host,{
+    environment,sdk,signer:{address:payer,signAuthEntry(){throw new Error('Fixture payment has no live signer.');}},
     approveQuote:async quote=>{
       control.approvals++;assert.equal(quote.limits.aggregate.approved,true);
       if(quote.invocation.arguments.mode==='revoked'){control.authorized=false;return true;}
@@ -120,16 +119,33 @@ export async function main(args=process.argv.slice(2)) {
   assert.ok(httpIds.length>0);
   await mkdir(work,{mode:0o700});
   const privateParent=await lstat(work);assert.equal(privateParent.mode&0o077,0);
+  // Match the maintained installer's reuse of byte-identical immutable source.
+  await link(fileURLToPath(new URL('../application.mjs',import.meta.url)),join(work,'installed-source-reference.mjs'));
   Object.assign(control,{configured:true,work,python:o['--python'],
     keys:Object.fromEntries(['CONSENT','AUDIT','OPERATOR'].map(name=>['SF36_'+name+'_KEY_B64',randomBytes(32).toString('base64')]))});
-  // Preserve fixture keys privately with this retained local integration case.
-  await writeFile(join(work,'fixture-environment.json'),JSON.stringify(control.keys),{mode:0o600,flag:'wx'});
   await writeFile(join(work,'policy.json'),JSON.stringify({schema:'stellar-spend-governor/v1',
     assets:[{network,asset,max_single:'100',max_total:'1000',max_per_utc_day:'1000',
       max_per_actor_utc_day:'1000',max_per_service_utc_day:'1000'}]}),{mode:0o600,flag:'wx'});
+  control.host=join(work,'native-spending-host.json');
+  await writeFile(control.host,JSON.stringify({schema:'stellar-forge.mcp-spending-host.v1',payer,
+    signerSecretEnv:'F232_RECEIVING_UNUSED_SIGNER',rpcUrl:'https://soroban-testnet.stellar.org',
+    limits:{network,asset,payTo,maxAtomic:'60',maxTimeoutSeconds:60},
+    spending:{python:control.python,actor:'receiving-operator',service:'cheesecake-application',
+      policy:join(work,'policy.json'),ledger:join(work,'spending.sqlite'),stateDirectory:join(work,'governed')}}),
+    {mode:0o600,flag:'wx'});
+  const passphraseEnv='F232_PROJECT_PASSPHRASE',passphraseValue=randomBytes(32).toString('hex');
+  const environment={...process.env,...control.keys,[passphraseEnv]:passphraseValue};
+  // Retain only this exercise's keys and passphrase in its private case.
+  await writeFile(join(work,'fixture-environment.json'),JSON.stringify({...control.keys,[passphraseEnv]:passphraseValue}),
+    {mode:0o600,flag:'wx'});
+  const projectProfile=join(work,'project-profile.json'),exportsDirectory=join(work,'project-archives');
+  await mkdir(exportsDirectory,{mode:0o700});
+  await writeFile(projectProfile,JSON.stringify({schema:'stellar-forge.application-project-profile.v1',
+    exportsDirectory,passphraseEnv,nativeMcpHost:control.host}),{mode:0o600,flag:'wx'});
   const operatorModule=join(work,'receiving-operator.mjs');
   await writeFile(operatorModule,'import {openFixtureOperator,authorizeFixture} from '+
-    JSON.stringify(import.meta.url)+';\nexport const openOperator=openFixtureOperator;\nexport const authorize=authorizeFixture;\n',
+    JSON.stringify(import.meta.url)+';\nexport const spendingConfigurationFile='+JSON.stringify(control.host)+
+    ';\nexport const openOperator=openFixtureOperator;\nexport const authorize=authorizeFixture;\n',
     {mode:0o600,flag:'wx'});
   const remoteFile=join(work,'remote-mcp.json');
   await writeFile(remoteFile,JSON.stringify({schema:'stellar-forge.application-remote-mcp.v1',
@@ -141,13 +157,14 @@ export async function main(args=process.argv.slice(2)) {
     {mode:0o600,flag:'wx'});
   let loaded,server;
   try {
+    progress('original-application');
     const prepared=await initializeInstalledApplication({directory:join(work,'application'),
       applicationId:'cheesecake-governed-receiving',subject:'receiving:operator',handoffDirectory:handoff,
-      authorizationModule:operatorModule,remoteMcp:remoteFile});
+      authorizationModule:operatorModule,remoteMcp:remoteFile,projectProfile});
     assert.equal(control.opens,0);
     assert.equal((await stat(prepared.configFile)).mode&0o077,0);
     assert.equal((await inspectInstalledApplication(prepared.configFile)).selectionSha256,prepared.selectionSha256);
-    loaded=await loadApplication(prepared.configFile);
+    loaded=await loadApplication(prepared.configFile,{environment});
     assert.equal(control.opens,1);
     const app=loaded.application,context=loaded.context;
     const listed=await app.requests(context);
@@ -193,7 +210,7 @@ export async function main(args=process.argv.slice(2)) {
     assert.equal(hash(bytes),saved.result.file.sha256);
     assert.equal(exported.exported.sha256,saved.result.file.sha256);
     await loaded.close();loaded=null;
-    loaded=await loadApplication(prepared.configFile);
+    loaded=await loadApplication(prepared.configFile,{environment});
     assert.equal(control.opens,2);
     const recovered=await loaded.application.call(loaded.context,'recover','remote-paid');
     assert.equal(recovered.binding.quoteId,paid.binding.quoteId);
@@ -203,7 +220,7 @@ export async function main(args=process.argv.slice(2)) {
     await loaded.close();loaded=null;
     const token=randomBytes(24).toString('hex');
     server=await startInstalledApplication({configFile:prepared.configFile,
-      expectedSelectionSha256:prepared.selectionSha256,bearerToken:token,port:0});
+      expectedSelectionSha256:prepared.selectionSha256,bearerToken:token,port:0,environment});
     assert.equal(control.opens,3);
     assert.equal(server.startup.stateDirectory,prepared.stateDirectory);
     assert.equal(server.startup.sourceDirectory,prepared.applicationDirectory);
@@ -223,7 +240,95 @@ export async function main(args=process.argv.slice(2)) {
     const result=await mcp.json();assert.equal(result.result.isError,false);
     assert.equal(result.result.structuredContent.result.file.sha256,saved.result.file.sha256);
     await server.close();server=null;
-    const sourcePaths=['application.mjs','configuration.mjs','remote-mcp.mjs','server.mjs','cli.mjs','installed.mjs','ui/app.js'];
+    loaded=await loadApplication(prepared.configFile,{environment});
+    progress('project-inspection');
+    const sourceRoot=loaded.sourceRoot,projectId='original-application-recovery';
+    const inspection=await loaded.application.project(loaded.context,'inspect');
+    assert.equal(inspection.applicationId,'cheesecake-governed-receiving');
+    assert.equal(inspection.financialOwners.length,1);
+    progress('encrypted-project-snapshot');
+    const snapshot=await loaded.application.project(loaded.context,'snapshot',{operationId:projectId});
+    assert.equal(snapshot.status,'APPLICATION_PROJECT_CREATED');
+    assert.equal(snapshot.requests,httpIds.length+4);
+    const repeated=await loaded.application.project(loaded.context,'snapshot',{operationId:projectId});
+    assert.equal(repeated.recordSha256,snapshot.recordSha256);
+    assert.equal(repeated.manifestSha256,snapshot.manifestSha256);
+    await loaded.close();loaded=null;
+    const receiverDirectory=join(work,'received-project');
+    progress('receive-project');
+    const received=await receiveApplicationProject({bundle:snapshot.bundle,directory:receiverDirectory,sourceRoot,
+      passphraseEnv,expectedManifestSha256:snapshot.manifestSha256,environment});
+    assert.equal(received.status,'APPLICATION_PROJECT_RECEIVED');
+    assert.equal(received.recordSha256,snapshot.recordSha256);
+    progress('offline-complete-results');
+    const offline=await openReceivedApplicationProject({directory:receiverDirectory,sourceRoot,
+      subject:context.subject,authorize:authorizeFixture,environment,passphraseEnv});
+    try{
+      assert.equal(offline.readOnly,true);
+      assert.equal((await offline.requests(context)).requests.length,httpIds.length+4);
+      const copy=await offline.call(context,'read','remote-paid',{format:'base64',limitBytes:2097152});
+      assert.equal(copy.partial,false);
+      assert.equal(hash(Buffer.from(copy.data,'base64')),saved.result.file.sha256);
+      const offlineExport=join(work,'received-complete-result.json');
+      await offline.call(context,'export','remote-paid',{destination:offlineExport});
+      assert.equal(hash(await readFile(offlineExport)),saved.result.file.sha256);
+      assert.equal((await offline.call(context,'recover','remote-paid')).binding.quoteId,paid.binding.quoteId);
+    }finally{await offline.close();}
+    progress('received-http-and-mcp');
+    const receivingOpens=control.opens;
+    server=await createApplicationServer({receivedDirectory:receiverDirectory,sourceRoot,
+      subject:context.subject,environment,passphraseEnv,bearerToken:token,port:0});
+    assert.equal(server.identity.project.mode,'RECEIVED');assert.equal(server.identity.readOnly,true);
+    const receivingReview=await fetch(server.origin+'/api/project',{headers});
+    assert.equal(receivingReview.status,200);
+    assert.equal((await receivingReview.json()).recordSha256,snapshot.recordSha256);
+    const receivingDownload=await fetch(server.origin+'/api/requests/remote-paid/download',{headers});
+    assert.equal(receivingDownload.status,200);
+    assert.equal(hash(Buffer.from(await receivingDownload.arrayBuffer())),saved.result.file.sha256);
+    const receivingMcp=await fetch(server.origin+'/mcp',{method:'POST',
+      headers:{...headers,accept:'application/json, text/event-stream','mcp-protocol-version':'2025-11-25'},
+      body:JSON.stringify({jsonrpc:'2.0',id:'received-native-result',method:'tools/call',
+        params:{name:'stellar_request_read',arguments:{intentId:'remote-paid',format:'file'}}})});
+    assert.equal(receivingMcp.status,200);
+    assert.equal((await receivingMcp.json()).result.structuredContent.result.file.sha256,saved.result.file.sha256);
+    assert.equal(control.opens,receivingOpens);
+    await server.close();server=null;
+    const settings={directory:receiverDirectory,sourceRoot,passphraseEnv,
+      expectedRecordSha256:snapshot.recordSha256,environment};
+    const verifyOriginal=async reopened=>{
+      assert.equal(reopened.config.applicationId,'cheesecake-governed-receiving');
+      const replay=await reopened.application.call(reopened.context,'execute','remote-paid');
+      assert.equal(replay.binding.quoteId,paid.binding.quoteId);
+      assert.equal(replay.operation.state,'CONFIRMED_BY_SERVER');
+      assert.equal((await reopened.application.call(reopened.context,'spending','remote-paid')).spending.reservation.amount,'60');
+      const result=await reopened.application.call(reopened.context,'read','remote-paid',{format:'base64',limitBytes:2097152});
+      assert.equal(hash(Buffer.from(result.data,'base64')),saved.result.file.sha256);
+      assert.equal(control.signing,1);assert.equal(control.signed,1);
+      return {status:reopened.recovery.status,quoteId:replay.binding.quoteId,resultSha256:saved.result.file.sha256};
+    };
+    progress('original-owner-reattach');
+    const reattached=await withRestoredApplicationProject({...settings,mode:'reattach'},verifyOriginal);
+    assert.equal(reattached.status,'APPLICATION_PROJECT_CURRENT_HOST_VERIFIED');
+    const originalState=join(work,'before-original-restore');await mkdir(originalState,{mode:0o700});
+    for(const name of ['application','native-spending-host.json','policy.json','spending.sqlite','governed','fixture-environment.json'])
+      await rename(join(work,name),join(originalState,name));
+    // Reopen with the archive's scoped original HMAC keys and the same host module.
+    const restoreEnvironment={...environment};
+    for(const key of Object.keys(control.keys))delete restoreEnvironment[key];
+    control.keys=null;
+    progress('original-owner-restore');
+    const restored=await withRestoredApplicationProject({...settings,mode:'restore',environment:restoreEnvironment},verifyOriginal);
+    assert.equal(restored.status,'APPLICATION_PROJECT_RESTORED');
+    assert.equal((await stat(prepared.configFile)).mode&0o077,0);
+    const project={operationId:projectId,recordSha256:snapshot.recordSha256,manifestSha256:snapshot.manifestSha256,
+      archivedRequests:snapshot.requests,archivedResultBytes:snapshot.resultBytes,
+      receiving:true,offlineCompleteResult:true,receivingHttpAndMcp:true,sameOperationReplay:true,reattached,restored,scopedOriginalKeys:true,
+      installedSourceReuse:true};
+    progress('native-spending-recovery');
+    const nativeRecovery=await runNativeMcpSpendingRecoveryReceiving({sourceRoot,
+      work:join(work,'native-spending-recovery'),python:control.python});
+    assert.equal(nativeRecovery.status,'PASSED');
+    const sourcePaths=['application.mjs','configuration.mjs','remote-mcp.mjs','server.mjs','cli.mjs','installed.mjs','project.mjs','project-receive.mjs','project-files.mjs','ui/app.js'];
     const files=await Promise.all(sourcePaths.map(async path=>({path,sha256:hash(await readFile(new URL('../'+path,import.meta.url)))})));
     const report={outcome:'PASS',operation:'cheesecake-governed-receiving-f232-20261012',
       scope:'original application/MCP SDK/SQLite/SF36 with local provider and payment fixtures',
@@ -231,7 +336,7 @@ export async function main(args=process.argv.slice(2)) {
       originalReviews,remoteRequests:4,signingCalls:control.signing,signedCalls:control.signed,
       reservedAmount:'60',resultBytes:bytes.length,resultSha256:hash(bytes),
       factoryInstances:control.opens,approvalCancellation:true,grantRevocation:true,
-      originalRestartQuoteId:paid.binding.quoteId,httpDownload:true,mcpRead:true,
+      originalRestartQuoteId:paid.binding.quoteId,httpDownload:true,mcpRead:true,project,nativeRecovery,
       sourceFiles:files,workspace:work};
     await writeFile(join(work,'receiving.json'),JSON.stringify(report,null,2)+'\n',{mode:0o600,flag:'wx'});
     process.stdout.write(JSON.stringify(report)+'\n');return report;
