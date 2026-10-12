@@ -25,6 +25,8 @@ export async function receiveEurostat({directory,config,signal,print=()=>{}}={})
   const bound={...config,source:{...config.source,file:resolve(config.source.file),bytes:sourceBody.length,sha256:digest(sourceBody)},
     buyer:{...config.buyer,configFile:resolve(config.buyer.configFile),configSha256:identity(buyerSettings)}};
   const workspace=await openEurostatWorkspace({directory:resolve(directory),create:true,targetDirectory:config.targetDirectory});
+  let merchant;
+  try {
   const folder=join(workspace.directory,'receivers',config.id);await privateDirectory(folder,true);
   let state=await optional(join(folder,'receiver.json'));
   if(state)need(state.schema==='stellar-forge.eurostat-receiving.v1'&&state.configurationSha256===identity(bound)&&
@@ -37,7 +39,6 @@ export async function receiveEurostat({directory,config,signal,print=()=>{}}={})
     state.phase=name;state.state='RUNNING';await save();print({operation:state.id,phase:name,runId:state.runId,checkpoint:join(folder,'receiver.json')});
     const result=await fn();state.steps[name]=result;await save();return result;
   };
-  let merchant;
   try{
     const imported=await step('source',()=>workspace.importCapture({body:sourceBody,sourceUrl:config.source.sourceUrl,
       retrievedAt:config.source.retrievedAt,transport:config.source.transport??{kind:'operator-retained-original',httpStatus:null}}));
@@ -72,6 +73,11 @@ export async function receiveEurostat({directory,config,signal,print=()=>{}}={})
     await step('extraction',async()=>{
       let run;try{run=workspace.publisher.run(state.runId);}catch(e){if(e.code!=='RUN_NOT_FOUND')throw e;}
       if(!run)run=await workspace.publisher.startExtraction(planned.id,{id:state.runId}).completion;
+      else if(['INTERRUPTED','FAILED','CANCELLED'].includes(run.state)){
+        // The maintained recovery path validates this same original complete candidate.
+        // It never starts another extraction or changes a native buyer intent.
+        await workspace.publisher.recover(state.runId);run=workspace.publisher.run(state.runId);
+      }
       need(['READY','REVIEWED','PUBLISHED'].includes(run.state),'EUROSTAT_ORIGINAL_EXTRACTION_PENDING',run.error??'Continue the original extraction result.',409);
       return {runId:run.id,state:run.state};
     });
@@ -166,5 +172,6 @@ export async function receiveEurostat({directory,config,signal,print=()=>{}}={})
     return state;
   }catch(e){state.state='CONTINUE_ORIGINAL_OPERATION';state.error={code:e.code??'EUROSTAT_RECEIVING_INTERRUPTED',message:e.message,at:stamp()};
     await save();print({operation:state.id,phase:state.phase,error:state.error,checkpoint:join(folder,'receiver.json')});throw e;
+  }
   }finally{try{await merchant?.close();}finally{await workspace.close();}}
 }
