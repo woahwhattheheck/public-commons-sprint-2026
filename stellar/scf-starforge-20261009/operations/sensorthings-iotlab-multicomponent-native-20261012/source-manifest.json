@@ -1,0 +1,846 @@
+{
+  "schema": "stellar-forge.sensorthings-multicomponent-originals.v1",
+  "operationId": "SCF-SENSORTHINGS-MULTICOMPONENT-ANALYSIS-1B40-20261012",
+  "sourceSelection": {
+    "start": "2016-06-20T00:00:00Z",
+    "endExclusive": "2016-06-27T00:00:00Z",
+    "pageSize": 128,
+    "serviceUrl": "https://frost.iotlab.com/sensorthings/v1.1/",
+    "kind": "MultiDatastreams",
+    "id": 23,
+    "firstUrl": "https://frost.iotlab.com/sensorthings/v1.1/MultiDatastreams(23)/Observations?%24filter=phenomenonTime+ge+2016-06-20T00%3A00%3A00Z+and+phenomenonTime+lt+2016-06-27T00%3A00%3A00Z&%24orderby=phenomenonTime+asc&%24top=128&%24count=true&%24expand=FeatureOfInterest"
+  },
+  "sourceTransport": {
+    "provider": "notion-public-file",
+    "originalHttpMetadata": "not_exposed",
+    "numericLexemes": "Retained in original UTF-8 JSON bodies; no numeric reserialization."
+  },
+  "sourceQualification": {
+    "bgs": {
+      "outcome": "no_observations_returned",
+      "advertisedMultiDatastreams": 42,
+      "qualificationOnly": true
+    },
+    "iotlab": {
+      "multiDatastreamId": 23,
+      "observations": 672,
+      "resultComponents": 2688,
+      "pages": 7,
+      "openingClosingStreamBytesEqual": true,
+      "dataReuseLicense": "not_established_from_retrieved_records",
+      "declarationFindings": [
+        "multiObservationDataTypes uses property/unit URIs rather than the required OGC OM observation type codes",
+        "ObservedProperty 17 names dissolved solids but describes suspended solids"
+      ],
+      "nativeEditionId": null
+    }
+  },
+  "sources": [
+    {
+      "role": "bgs-multi-catalogue-first-three",
+      "sourceUrl": "https://sensors.bgs.ac.uk/FROST-Server/v1.1/MultiDatastreams?$top=3&$count=true",
+      "requestedAt": "2026-10-12T12:46:33.168Z",
+      "completedAt": "2026-10-12T12:47:03.438Z",
+      "body": {
+        "path": "originals/bgs-multi-catalogue-first-three.json",
+        "bytes": 5261,
+        "sha256": "de8fe9d9936af489d3c4165dab2151735590820645beeecb216fe4c95275d8c0",
+        "gitSha": "259a5683a2882ebbe15b1c90fb35c80ffd75036b"
+      },
+      "receipt": {
+        "path": "receipts/bgs-multi-catalogue-first-three.json",
+        "bytes": 7964,
+        "sha256": "662102f609f868ca1b1b6cba13010b6da52eb9481a54b8019a79fa25d52f4df3",
+        "gitSha": "94dd7e15ff80dcd409447e63a4e894aaf9a7c03e"
+      }
+    },
+    {
+      "role": "bgs-multi-stream-opening",
+      "sourceUrl": "https://sensors.bgs.ac.uk/FROST-Server/v1.1/MultiDatastreams(90)",
+      "requestedAt": "2026-10-12T12:48:40.553Z",
+      "completedAt": "2026-10-12T12:48:52.811Z",
+      "body": {
+        "path": "originals/bgs-multi-stream-opening.json",
+        "bytes": 1691,
+        "sha256": "83362e4fb0ca9274532807e8667c5cb9a5984d1827efe34d4d1edd4bbd6e4b11",
+        "gitSha": "712d8c843c965b349e19df74df08b63916a69de6"
+      },
+      "receipt": {
+        "path": "receipts/bgs-multi-stream-opening.json",
+        "bytes": 3639,
+        "sha256": "bc9bba1c22b0c4f29bd94c76026d654231f5c64675af088c0dcd0ae61aa02855",
+        "gitSha": "babeb2d08c978a0647825776cedc8f83d86ed987"
+      }
+    },
+    {
+      "role": "bgs-multi-properties",
+      "sourceUrl": "https://sensors.bgs.ac.uk/FROST-Server/v1.1/MultiDatastreams(90)/ObservedProperties",
+      "requestedAt": "2026-10-12T12:48:52.811Z",
+      "completedAt": "2026-10-12T12:49:00.364Z",
+      "body": {
+        "path": "originals/bgs-multi-properties.json",
+        "bytes": 1434,
+        "sha256": "62489d7b9d8f988ff9984dbe8270296f78efc792885a848ef4a5ca3a26d09ca8",
+        "gitSha": "fb47ec5fa243300a20f28de85925c8abb89775ab"
+      },
+      "receipt": {
+        "path": "receipts/bgs-multi-properties.json",
+        "bytes": 3411,
+        "sha256": "03ec360315de9ea2b1b2aaf2344a178042d2011de100b9218bace0687de6f7dd",
+        "gitSha": "ca08a4726039f3c155061f773668317c2c63d5b1"
+      }
+    },
+    {
+      "role": "bgs-multi-observations-qualification",
+      "sourceUrl": "https://sensors.bgs.ac.uk/FROST-Server/v1.1/MultiDatastreams(90)/Observations?$orderby=phenomenonTime%20desc&$top=3&$count=true&$expand=FeatureOfInterest",
+      "requestedAt": "2026-10-12T12:49:00.364Z",
+      "completedAt": "2026-10-12T12:49:09.026Z",
+      "body": {
+        "path": "originals/bgs-multi-observations-qualification.json",
+        "bytes": 27,
+        "sha256": "694698019c220132c7e83d4f27cdf71b96bf41cafe4ae464e5197a282b1111e5",
+        "gitSha": "0e85702176cf4a6476206db352630d7902cfb77b"
+      },
+      "receipt": {
+        "path": "receipts/bgs-multi-observations-qualification.json",
+        "bytes": 1794,
+        "sha256": "92c535b4952762a290c0546f1c920bfff28afcf69aa8a93af64011e7b25c8f33",
+        "gitSha": "40e9f5bce511849e3ff31793152737ecd3db5adb"
+      }
+    },
+    {
+      "role": "bgs-multi-catalogue",
+      "sourceUrl": "https://sensors.bgs.ac.uk/FROST-Server/v1.1/MultiDatastreams?%24orderby=id+asc&%24top=64&%24count=true",
+      "requestedAt": "2026-10-12T12:49:32.379Z",
+      "completedAt": "2026-10-12T12:49:39.504Z",
+      "body": {
+        "path": "originals/bgs-multi-catalogue.json",
+        "bytes": 67372,
+        "sha256": "d24283d2683e42838f49ef303a40ac5b7e5b73e52675109476538a7478b7a65d",
+        "gitSha": "e4ec0005f50ad819a5e2239d5f3585a18e8defc2"
+      },
+      "receipt": {
+        "path": "receipts/bgs-multi-catalogue.json",
+        "bytes": 82404,
+        "sha256": "c7f2a8329f5b1df098f4ae554d0abbebadd12e96ac8a5c22e49a3221bb142061",
+        "gitSha": "fda56b486f7344eb8e40ed93765e990ef0fa1ef3"
+      }
+    },
+    {
+      "role": "bgs-multi-126-observations-qualification",
+      "sourceUrl": "https://sensors.bgs.ac.uk/FROST-Server/v1.1/MultiDatastreams(126)/Observations?$orderby=phenomenonTime%20desc&$top=3&$count=true&$expand=FeatureOfInterest",
+      "requestedAt": "2026-10-12T12:50:08.151Z",
+      "completedAt": "2026-10-12T12:50:17.294Z",
+      "body": {
+        "path": "originals/bgs-multi-126-observations-qualification.json",
+        "bytes": 27,
+        "sha256": "694698019c220132c7e83d4f27cdf71b96bf41cafe4ae464e5197a282b1111e5",
+        "gitSha": "0e85702176cf4a6476206db352630d7902cfb77b"
+      },
+      "receipt": {
+        "path": "receipts/bgs-multi-126-observations-qualification.json",
+        "bytes": 1815,
+        "sha256": "126f08392331f83ceb2be59f75925d22f079001d8518b44e96deedceea06851e",
+        "gitSha": "b1d5e6a5cd1c0d8d9d09d4f2b73a5ea438f2b2f8"
+      }
+    },
+    {
+      "role": "bgs-multi-observation-availability",
+      "sourceUrl": "https://sensors.bgs.ac.uk/FROST-Server/v1.1/MultiDatastreams?%24select=id%2Cname&%24expand=Observations(%24top%3D1%3B%24select%3Did%2CphenomenonTime%2Cresult)&%24top=64&%24count=true",
+      "requestedAt": "2026-10-12T12:50:42.009Z",
+      "completedAt": "2026-10-12T12:50:55.889Z",
+      "body": {
+        "path": "originals/bgs-multi-observation-availability.json",
+        "bytes": 2779,
+        "sha256": "721d11f697d06b79d153110fe1a455cc3a5b3b70fdd29759729e63a9612dc599",
+        "gitSha": "92b1e9f78e5a27d4acf0e99056d6b49fc0eea888"
+      },
+      "receipt": {
+        "path": "receipts/bgs-multi-observation-availability.json",
+        "bytes": 5579,
+        "sha256": "8167e6b6e905e6668ddb95ebbad095691aa3c0ec669cc114d768f2dd44eb9220",
+        "gitSha": "80403a67648e2d52d0ffc4241a5f8efd12ee4c1a"
+      }
+    },
+    {
+      "role": "iotlab-multi-catalogue-qualification",
+      "sourceUrl": "https://frost.iotlab.com/sensorthings/v1.1/MultiDatastreams?$top=3&$count=true",
+      "requestedAt": "2026-10-12T12:52:15.703Z",
+      "completedAt": "2026-10-12T12:52:24.135Z",
+      "body": {
+        "path": "originals/iotlab-multi-catalogue-qualification.json",
+        "bytes": 1581,
+        "sha256": "11dcc81eedfcd1316b294242e196870154e5700c8070491216ee5b2440172b88",
+        "gitSha": "035ca812061b2b216569b50f46e3b5b6c6f6ffea"
+      },
+      "receipt": {
+        "path": "receipts/iotlab-multi-catalogue-qualification.json",
+        "bytes": 3619,
+        "sha256": "1c5f0ee0e21c8749addd7da4d7bcf8051fe3e777dd3f378f90d7aff105897ab1",
+        "gitSha": "7ac9c5a79cb529786a39b59ca9044fc4b1fe176f"
+      }
+    },
+    {
+      "role": "iotlab-multi-observations-qualification",
+      "sourceUrl": "https://frost.iotlab.com/sensorthings/v1.1/MultiDatastreams(23)/Observations?$orderby=phenomenonTime%20asc&$top=3&$count=true&$expand=FeatureOfInterest",
+      "requestedAt": "2026-10-12T12:52:53.010Z",
+      "completedAt": "2026-10-12T12:53:01.733Z",
+      "body": {
+        "path": "originals/iotlab-multi-observations-qualification.json",
+        "bytes": 3597,
+        "sha256": "a4386579e2116af5361bc3aa76ca51d43014d82531b7047dc1ac22319ca0c6e3",
+        "gitSha": "66eff155539f8981611ff1376295cbb58b973746"
+      },
+      "receipt": {
+        "path": "receipts/iotlab-multi-observations-qualification.json",
+        "bytes": 5975,
+        "sha256": "183bf60194a78690b5757d966d2d0271b22b4ffa7741ae42f1af36915eb544f1",
+        "gitSha": "a642bbce77f9a5340f77a950b5f97e269bb2a539"
+      }
+    },
+    {
+      "role": "iotlab-multi-properties",
+      "sourceUrl": "https://frost.iotlab.com/sensorthings/v1.1/MultiDatastreams(23)/ObservedProperties",
+      "requestedAt": "2026-10-12T12:53:01.740Z",
+      "completedAt": "2026-10-12T12:53:10.187Z",
+      "body": {
+        "path": "originals/iotlab-multi-properties.json",
+        "bytes": 1959,
+        "sha256": "1f368e786578022bf975b386640fdea9b663d3d06d157c09333e083975778b9d",
+        "gitSha": "b28470f6f3516da121fe39de38e189493e754716"
+      },
+      "receipt": {
+        "path": "receipts/iotlab-multi-properties.json",
+        "bytes": 3930,
+        "sha256": "ba12d9ce89001721a9bf366396cfdb689655daaf5141b34b66ac190a7aaa55de",
+        "gitSha": "65a19f8a7b8321855e556f33b7b2c0002f4acbbe"
+      }
+    },
+    {
+      "role": "iotlab-multi-sensor",
+      "sourceUrl": "https://frost.iotlab.com/sensorthings/v1.1/MultiDatastreams(23)/Sensor",
+      "requestedAt": "2026-10-12T12:53:10.191Z",
+      "completedAt": "2026-10-12T12:53:17.432Z",
+      "body": {
+        "path": "originals/iotlab-multi-sensor.json",
+        "bytes": 716,
+        "sha256": "a24c829d94eddabf692d15bceaf15a5cd375058095306d15eff2ee0953d05a2b",
+        "gitSha": "888c4d676aaf9ff5084482d634f3a7036ccf89d2"
+      },
+      "receipt": {
+        "path": "receipts/iotlab-multi-sensor.json",
+        "bytes": 2418,
+        "sha256": "2f83be683f52f92ea3c409e8b40ded8819e7af65b07f3ae0120880284dce0478",
+        "gitSha": "d7307cafb7691d4d2823e7a31be04e5ea5a4d75a"
+      }
+    },
+    {
+      "role": "iotlab-multi-stream-opening",
+      "sourceUrl": "https://frost.iotlab.com/sensorthings/v1.1/MultiDatastreams(23)",
+      "requestedAt": "2026-10-12T12:54:34.367Z",
+      "completedAt": "2026-10-12T12:54:40.226Z",
+      "body": {
+        "path": "originals/iotlab-multi-stream-opening.json",
+        "bytes": 1554,
+        "sha256": "abf12fedb2740250742944a0c400a2e6230fe10a12a8c6bd5fbff26d1f23b820",
+        "gitSha": "1d44c61d38748aaeaae39c8da6880831d36cf37b"
+      },
+      "receipt": {
+        "path": "receipts/iotlab-multi-stream-opening.json",
+        "bytes": 3520,
+        "sha256": "bfe2c01e21e073efd96543d910530f3f8d2861fdfcb3188aab741229a0dfe2e5",
+        "gitSha": "183ddf53b8a666d60ab8b232443a3dc84561ca1d"
+      }
+    },
+    {
+      "role": "iotlab-multi-thing",
+      "sourceUrl": "https://frost.iotlab.com/sensorthings/v1.1/MultiDatastreams(23)/Thing",
+      "requestedAt": "2026-10-12T12:54:40.229Z",
+      "completedAt": "2026-10-12T12:54:45.972Z",
+      "body": {
+        "path": "originals/iotlab-multi-thing.json",
+        "bytes": 594,
+        "sha256": "80ab0a8e74b0ace9f0cb7d9fbb0b3fc9afc88ce09db0e6f09078f894f2bb5533",
+        "gitSha": "366c540e4296758647f71d4ecadd280b4e69c72c"
+      },
+      "receipt": {
+        "path": "receipts/iotlab-multi-thing.json",
+        "bytes": 2290,
+        "sha256": "3dc2475ef235800907acd042e1e9b17e27b84e7ff6e696228e437dc314179fea",
+        "gitSha": "8edfcb1626546da510cad12f6e726dbd5c1495f8"
+      }
+    },
+    {
+      "role": "iotlab-service-root",
+      "sourceUrl": "https://frost.iotlab.com/sensorthings/v1.1/",
+      "requestedAt": "2026-10-12T12:54:45.973Z",
+      "completedAt": "2026-10-12T12:54:51.037Z",
+      "body": {
+        "path": "originals/iotlab-service-root.json",
+        "bytes": 3107,
+        "sha256": "d06ec763289b4570b63c1462d61f4425529591afaea445ecc59de236d3793f2a",
+        "gitSha": "5acc9ae1a1a75676cea583d576eaf46e1f51fd2e"
+      },
+      "receipt": {
+        "path": "receipts/iotlab-service-root.json",
+        "bytes": 5205,
+        "sha256": "7234a0cd7fce27df266349b83be69a3a66ede7cd32b48fb21dc0fb2c782f4d01",
+        "gitSha": "22526df12f439acfd23c92b0afacf7d671e915a7"
+      }
+    },
+    {
+      "role": "iotlab-multi-native-catalogue",
+      "sourceUrl": "https://frost.iotlab.com/sensorthings/v1.1/MultiDatastreams?%24orderby=id+asc&%24top=3&%24count=true",
+      "requestedAt": "2026-10-12T12:55:20.907Z",
+      "completedAt": "2026-10-12T12:55:29.755Z",
+      "body": {
+        "path": "originals/iotlab-multi-native-catalogue.json",
+        "bytes": 1581,
+        "sha256": "11dcc81eedfcd1316b294242e196870154e5700c8070491216ee5b2440172b88",
+        "gitSha": "035ca812061b2b216569b50f46e3b5b6c6f6ffea"
+      },
+      "receipt": {
+        "path": "receipts/iotlab-multi-native-catalogue.json",
+        "bytes": 3606,
+        "sha256": "f5144527c3fc1b7e710860947e44a664f2d898ed436e62f76d7c11c67cdef54a",
+        "gitSha": "9a74c559905a0f575bb7fb07e3b99fd4786d036e"
+      }
+    },
+    {
+      "role": "iotlab-multi-locations",
+      "sourceUrl": "https://frost.iotlab.com/sensorthings/v1.1/Things(26)/Locations",
+      "requestedAt": "2026-10-12T12:55:29.759Z",
+      "completedAt": "2026-10-12T12:55:40.446Z",
+      "body": {
+        "path": "originals/iotlab-multi-locations.json",
+        "bytes": 573,
+        "sha256": "02d8ad73cb37d2a77a3b77e6d2d30fe4aae168a3f3ac85dc0914ce351de6b40f",
+        "gitSha": "1688a19a3698dce4bab29492f1c01e55d17e5424"
+      },
+      "receipt": {
+        "path": "receipts/iotlab-multi-locations.json",
+        "bytes": 2307,
+        "sha256": "539918209d184e05221b029f6a67ec3682f30e644628be1ee5fe5a765f2e9198",
+        "gitSha": "306e2257d5ae90a0851010c3db6f6830ce1e41fa"
+      }
+    },
+    {
+      "role": "iotlab-multi-week-page-000",
+      "sourceUrl": "https://frost.iotlab.com/sensorthings/v1.1/MultiDatastreams(23)/Observations?%24filter=phenomenonTime+ge+2016-06-20T00%3A00%3A00Z+and+phenomenonTime+lt+2016-06-27T00%3A00%3A00Z&%24orderby=phenomenonTime+asc&%24top=128&%24count=true&%24expand=FeatureOfInterest",
+      "requestedAt": "2026-10-12T12:56:23.262Z",
+      "completedAt": "2026-10-12T12:56:33.516Z",
+      "body": {
+        "path": "originals/iotlab-multi-week-page-000.json",
+        "bytes": 111257,
+        "sha256": "f148e210a70c0bbac16cad56f5929d189dbcd858f848b37d833b6c058c1407a8",
+        "gitSha": "8bc0e44eb33c2b9cebf5ad72ee4c7872ed426aef"
+      },
+      "receipt": {
+        "path": "receipts/iotlab-multi-week-page-000.json",
+        "bytes": 131726,
+        "sha256": "157e74f67439217939405439868574d6f8b089d10a2551e2f70dd232b9902f09",
+        "gitSha": "6f664cb2f01b4e9ce98178311a402f437596dfc5"
+      }
+    },
+    {
+      "role": "iotlab-multi-week-page-001",
+      "sourceUrl": "https://frost.iotlab.com/sensorthings/v1.1/MultiDatastreams(23)/Observations?$top=100&$skip=100&$filter=%28%28phenomenonTime+ge+2016-06-20T00%3A00%3A00Z%29+and+%28phenomenonTime+lt+2016-06-27T00%3A00%3A00Z%29%29&$expand=FeatureOfInterest&$orderby=phenomenonTime+asc,%40iot.id+asc&$count=true&$skipFilter=%28phenomenonTime+gt+2016-06-21T00%3A45%3A00Z%29",
+      "requestedAt": "2026-10-12T12:57:14.207Z",
+      "completedAt": "2026-10-12T12:57:22.230Z",
+      "body": {
+        "path": "originals/iotlab-multi-week-page-001.json",
+        "bytes": 111272,
+        "sha256": "0b9ee9496242bfad18717b6a9260991bddf3fc082775f25ba1e303d54d95aebe",
+        "gitSha": "8f1b875e9da7cea4e6a3a43c1df7b888bf73ab6f"
+      },
+      "receipt": {
+        "path": "receipts/iotlab-multi-week-page-001.json",
+        "bytes": 131834,
+        "sha256": "cda63533bb3d704b04a620327830387591267cd5a4d439d9407dd03c174f0989",
+        "gitSha": "c024cda313a7a4311857b1a0ecfe3a24da3bdd77"
+      }
+    },
+    {
+      "role": "iotlab-multi-week-page-002",
+      "sourceUrl": "https://frost.iotlab.com/sensorthings/v1.1/MultiDatastreams(23)/Observations?$top=100&$skip=200&$filter=%28%28phenomenonTime+ge+2016-06-20T00%3A00%3A00Z%29+and+%28phenomenonTime+lt+2016-06-27T00%3A00%3A00Z%29%29&$expand=FeatureOfInterest&$orderby=phenomenonTime+asc,%40iot.id+asc&$count=true&$skipFilter=%28phenomenonTime+gt+2016-06-22T01%3A45%3A00Z%29",
+      "requestedAt": "2026-10-12T12:57:22.385Z",
+      "completedAt": "2026-10-12T12:57:28.642Z",
+      "body": {
+        "path": "originals/iotlab-multi-week-page-002.json",
+        "bytes": 111254,
+        "sha256": "1d47f53a3c7b2499180c87424815a84b3aab5ec89816c114ccffbf6146839748",
+        "gitSha": "3ce4a3fefd8f6517e19bfdafdb8541bfdc5ab68c"
+      },
+      "receipt": {
+        "path": "receipts/iotlab-multi-week-page-002.json",
+        "bytes": 131816,
+        "sha256": "41ea163a887b015a53e97a06fbf0f148f3f4eb19b696ab7fbdbbc7a37b22d0d5",
+        "gitSha": "b1a115165c727cb59ca063099e0b1aa5a817d2b2"
+      }
+    },
+    {
+      "role": "iotlab-multi-week-page-003",
+      "sourceUrl": "https://frost.iotlab.com/sensorthings/v1.1/MultiDatastreams(23)/Observations?$top=100&$skip=300&$filter=%28%28phenomenonTime+ge+2016-06-20T00%3A00%3A00Z%29+and+%28phenomenonTime+lt+2016-06-27T00%3A00%3A00Z%29%29&$expand=FeatureOfInterest&$orderby=phenomenonTime+asc,%40iot.id+asc&$count=true&$skipFilter=%28phenomenonTime+gt+2016-06-23T02%3A45%3A00Z%29",
+      "requestedAt": "2026-10-12T12:57:28.787Z",
+      "completedAt": "2026-10-12T12:57:36.669Z",
+      "body": {
+        "path": "originals/iotlab-multi-week-page-003.json",
+        "bytes": 111259,
+        "sha256": "85ad164f7c10d33b054e02f3d0228774a16c691f07c180fbf37fb1ca230371c8",
+        "gitSha": "7b7c5226377af9065d8a75042348a4339ea88d9f"
+      },
+      "receipt": {
+        "path": "receipts/iotlab-multi-week-page-003.json",
+        "bytes": 131821,
+        "sha256": "84fdaf4a34e387dd721cf9e78ae8279f66f2169a0a9d0a6f89ab95630aad9be3",
+        "gitSha": "58ecc623a4fb9bf27de833b08bc72aba46723cdc"
+      }
+    },
+    {
+      "role": "iotlab-multi-week-page-004",
+      "sourceUrl": "https://frost.iotlab.com/sensorthings/v1.1/MultiDatastreams(23)/Observations?$top=100&$skip=400&$filter=%28%28phenomenonTime+ge+2016-06-20T00%3A00%3A00Z%29+and+%28phenomenonTime+lt+2016-06-27T00%3A00%3A00Z%29%29&$expand=FeatureOfInterest&$orderby=phenomenonTime+asc,%40iot.id+asc&$count=true&$skipFilter=%28phenomenonTime+gt+2016-06-24T03%3A45%3A00Z%29",
+      "requestedAt": "2026-10-12T12:58:19.662Z",
+      "completedAt": "2026-10-12T12:58:25.734Z",
+      "body": {
+        "path": "originals/iotlab-multi-week-page-004.json",
+        "bytes": 111256,
+        "sha256": "c4d39e14483283affc532b2e0bee1ac3c66c0ad53186aa742e8e6b7997c59ec1",
+        "gitSha": "4a7338e65ed47e36882a3e04fb3fae50a8c892ea"
+      },
+      "receipt": {
+        "path": "receipts/iotlab-multi-week-page-004.json",
+        "bytes": 131818,
+        "sha256": "29426d217b88f2ff471eaf7cf2f391b1ea5cfe46818f74da7afcb25e07b00d91",
+        "gitSha": "3dc311fbd7ebc530541e394ce954394b5592a2f0"
+      }
+    },
+    {
+      "role": "iotlab-multi-week-page-005",
+      "sourceUrl": "https://frost.iotlab.com/sensorthings/v1.1/MultiDatastreams(23)/Observations?$top=100&$skip=500&$filter=%28%28phenomenonTime+ge+2016-06-20T00%3A00%3A00Z%29+and+%28phenomenonTime+lt+2016-06-27T00%3A00%3A00Z%29%29&$expand=FeatureOfInterest&$orderby=phenomenonTime+asc,%40iot.id+asc&$count=true&$skipFilter=%28phenomenonTime+gt+2016-06-25T04%3A45%3A00Z%29",
+      "requestedAt": "2026-10-12T12:58:25.878Z",
+      "completedAt": "2026-10-12T12:58:33.172Z",
+      "body": {
+        "path": "originals/iotlab-multi-week-page-005.json",
+        "bytes": 111740,
+        "sha256": "85c1d83c25d423167696022259e27a7c16c8f684429dc576bdbbd481d05c0fc0",
+        "gitSha": "3163adf0310e153a30ca32afdbd39804112ec54d"
+      },
+      "receipt": {
+        "path": "receipts/iotlab-multi-week-page-005.json",
+        "bytes": 132302,
+        "sha256": "97b5e22ecefc7fa9b184676c6a14ef575ae0cb122b3019962b1189d608bb707e",
+        "gitSha": "a783c223d59cad5757790209a9ceeaea7ba6acae"
+      }
+    },
+    {
+      "role": "iotlab-multi-week-page-006",
+      "sourceUrl": "https://frost.iotlab.com/sensorthings/v1.1/MultiDatastreams(23)/Observations?$top=100&$skip=600&$filter=%28%28phenomenonTime+ge+2016-06-20T00%3A00%3A00Z%29+and+%28phenomenonTime+lt+2016-06-27T00%3A00%3A00Z%29%29&$expand=FeatureOfInterest&$orderby=phenomenonTime+asc,%40iot.id+asc&$count=true&$skipFilter=%28phenomenonTime+gt+2016-06-26T05%3A45%3A00Z%29",
+      "requestedAt": "2026-10-12T12:58:33.322Z",
+      "completedAt": "2026-10-12T12:58:41.578Z",
+      "body": {
+        "path": "originals/iotlab-multi-week-page-006.json",
+        "bytes": 80359,
+        "sha256": "73687b114c3241bceac308746a5c29a5bc5980545c41355faf0ba8465399e38f",
+        "gitSha": "8dcfcbcdf10d5a7be63be2b01c38633477298c81"
+      },
+      "receipt": {
+        "path": "receipts/iotlab-multi-week-page-006.json",
+        "bytes": 95698,
+        "sha256": "a9486c30094f54ed7dcba29a53aab56542a62228b386090242584182758e321f",
+        "gitSha": "a82b6edde15f1040de353815428dfbcc2284c835"
+      }
+    },
+    {
+      "role": "iotlab-multi-stream-closing",
+      "sourceUrl": "https://frost.iotlab.com/sensorthings/v1.1/MultiDatastreams(23)",
+      "requestedAt": "2026-10-12T12:58:41.687Z",
+      "completedAt": "2026-10-12T12:58:46.666Z",
+      "body": {
+        "path": "originals/iotlab-multi-stream-closing.json",
+        "bytes": 1554,
+        "sha256": "abf12fedb2740250742944a0c400a2e6230fe10a12a8c6bd5fbff26d1f23b820",
+        "gitSha": "1d44c61d38748aaeaae39c8da6880831d36cf37b"
+      },
+      "receipt": {
+        "path": "receipts/iotlab-multi-stream-closing.json",
+        "bytes": 3520,
+        "sha256": "bb8a4dc8bde9f514580cbb11a8fa2cc7efff8ae323e79d9877f7cb47f2abafca",
+        "gitSha": "357c7a16188d3ef4c995af70a397d9d8fb3facfe"
+      }
+    }
+  ],
+  "failedSourceAttempts": [
+    {
+      "role": "iotlab-multi-campaigns",
+      "sourceUrl": "https://frost.iotlab.com/sensorthings/v1.1/MultiDatastreams(23)/Campaigns",
+      "receipt": {
+        "path": "attempts/iotlab-multi-campaigns.json",
+        "bytes": 1690,
+        "sha256": "6d943bce600bda99c2ecb8b14df6d0b8bd80f0f7c4c027417e53e845e6079df3",
+        "gitSha": "b7351d33ccc7926de17beaccdd5c6aa2f248c9ee"
+      }
+    },
+    {
+      "role": "iotlab-license-catalogue",
+      "sourceUrl": "https://frost.iotlab.com/sensorthings/v1.1/Licenses",
+      "receipt": {
+        "path": "attempts/iotlab-license-catalogue.json",
+        "bytes": 1672,
+        "sha256": "c1ec57ea3253f4e25057cfe5aba5a1bd13bed0732a75716d39d06fe9fbb54bb8",
+        "gitSha": "b7d9b476b3cbd60f39d76c701430c17844ba3a53"
+      }
+    }
+  ],
+  "files": [
+    {
+      "path": "originals/bgs-multi-catalogue-first-three.json",
+      "role": "original-provider-body",
+      "bytes": 5261,
+      "sha256": "de8fe9d9936af489d3c4165dab2151735590820645beeecb216fe4c95275d8c0",
+      "gitSha": "259a5683a2882ebbe15b1c90fb35c80ffd75036b"
+    },
+    {
+      "path": "receipts/bgs-multi-catalogue-first-three.json",
+      "role": "complete-connector-acquisition-receipt",
+      "bytes": 7964,
+      "sha256": "662102f609f868ca1b1b6cba13010b6da52eb9481a54b8019a79fa25d52f4df3",
+      "gitSha": "94dd7e15ff80dcd409447e63a4e894aaf9a7c03e"
+    },
+    {
+      "path": "originals/bgs-multi-stream-opening.json",
+      "role": "original-provider-body",
+      "bytes": 1691,
+      "sha256": "83362e4fb0ca9274532807e8667c5cb9a5984d1827efe34d4d1edd4bbd6e4b11",
+      "gitSha": "712d8c843c965b349e19df74df08b63916a69de6"
+    },
+    {
+      "path": "receipts/bgs-multi-stream-opening.json",
+      "role": "complete-connector-acquisition-receipt",
+      "bytes": 3639,
+      "sha256": "bc9bba1c22b0c4f29bd94c76026d654231f5c64675af088c0dcd0ae61aa02855",
+      "gitSha": "babeb2d08c978a0647825776cedc8f83d86ed987"
+    },
+    {
+      "path": "originals/bgs-multi-properties.json",
+      "role": "original-provider-body",
+      "bytes": 1434,
+      "sha256": "62489d7b9d8f988ff9984dbe8270296f78efc792885a848ef4a5ca3a26d09ca8",
+      "gitSha": "fb47ec5fa243300a20f28de85925c8abb89775ab"
+    },
+    {
+      "path": "receipts/bgs-multi-properties.json",
+      "role": "complete-connector-acquisition-receipt",
+      "bytes": 3411,
+      "sha256": "03ec360315de9ea2b1b2aaf2344a178042d2011de100b9218bace0687de6f7dd",
+      "gitSha": "ca08a4726039f3c155061f773668317c2c63d5b1"
+    },
+    {
+      "path": "originals/bgs-multi-observations-qualification.json",
+      "role": "original-provider-body",
+      "bytes": 27,
+      "sha256": "694698019c220132c7e83d4f27cdf71b96bf41cafe4ae464e5197a282b1111e5",
+      "gitSha": "0e85702176cf4a6476206db352630d7902cfb77b"
+    },
+    {
+      "path": "receipts/bgs-multi-observations-qualification.json",
+      "role": "complete-connector-acquisition-receipt",
+      "bytes": 1794,
+      "sha256": "92c535b4952762a290c0546f1c920bfff28afcf69aa8a93af64011e7b25c8f33",
+      "gitSha": "40e9f5bce511849e3ff31793152737ecd3db5adb"
+    },
+    {
+      "path": "originals/bgs-multi-catalogue.json",
+      "role": "original-provider-body",
+      "bytes": 67372,
+      "sha256": "d24283d2683e42838f49ef303a40ac5b7e5b73e52675109476538a7478b7a65d",
+      "gitSha": "e4ec0005f50ad819a5e2239d5f3585a18e8defc2"
+    },
+    {
+      "path": "receipts/bgs-multi-catalogue.json",
+      "role": "complete-connector-acquisition-receipt",
+      "bytes": 82404,
+      "sha256": "c7f2a8329f5b1df098f4ae554d0abbebadd12e96ac8a5c22e49a3221bb142061",
+      "gitSha": "fda56b486f7344eb8e40ed93765e990ef0fa1ef3"
+    },
+    {
+      "path": "originals/bgs-multi-126-observations-qualification.json",
+      "role": "original-provider-body",
+      "bytes": 27,
+      "sha256": "694698019c220132c7e83d4f27cdf71b96bf41cafe4ae464e5197a282b1111e5",
+      "gitSha": "0e85702176cf4a6476206db352630d7902cfb77b"
+    },
+    {
+      "path": "receipts/bgs-multi-126-observations-qualification.json",
+      "role": "complete-connector-acquisition-receipt",
+      "bytes": 1815,
+      "sha256": "126f08392331f83ceb2be59f75925d22f079001d8518b44e96deedceea06851e",
+      "gitSha": "b1d5e6a5cd1c0d8d9d09d4f2b73a5ea438f2b2f8"
+    },
+    {
+      "path": "originals/bgs-multi-observation-availability.json",
+      "role": "original-provider-body",
+      "bytes": 2779,
+      "sha256": "721d11f697d06b79d153110fe1a455cc3a5b3b70fdd29759729e63a9612dc599",
+      "gitSha": "92b1e9f78e5a27d4acf0e99056d6b49fc0eea888"
+    },
+    {
+      "path": "receipts/bgs-multi-observation-availability.json",
+      "role": "complete-connector-acquisition-receipt",
+      "bytes": 5579,
+      "sha256": "8167e6b6e905e6668ddb95ebbad095691aa3c0ec669cc114d768f2dd44eb9220",
+      "gitSha": "80403a67648e2d52d0ffc4241a5f8efd12ee4c1a"
+    },
+    {
+      "path": "originals/iotlab-multi-catalogue-qualification.json",
+      "role": "original-provider-body",
+      "bytes": 1581,
+      "sha256": "11dcc81eedfcd1316b294242e196870154e5700c8070491216ee5b2440172b88",
+      "gitSha": "035ca812061b2b216569b50f46e3b5b6c6f6ffea"
+    },
+    {
+      "path": "receipts/iotlab-multi-catalogue-qualification.json",
+      "role": "complete-connector-acquisition-receipt",
+      "bytes": 3619,
+      "sha256": "1c5f0ee0e21c8749addd7da4d7bcf8051fe3e777dd3f378f90d7aff105897ab1",
+      "gitSha": "7ac9c5a79cb529786a39b59ca9044fc4b1fe176f"
+    },
+    {
+      "path": "originals/iotlab-multi-observations-qualification.json",
+      "role": "original-provider-body",
+      "bytes": 3597,
+      "sha256": "a4386579e2116af5361bc3aa76ca51d43014d82531b7047dc1ac22319ca0c6e3",
+      "gitSha": "66eff155539f8981611ff1376295cbb58b973746"
+    },
+    {
+      "path": "receipts/iotlab-multi-observations-qualification.json",
+      "role": "complete-connector-acquisition-receipt",
+      "bytes": 5975,
+      "sha256": "183bf60194a78690b5757d966d2d0271b22b4ffa7741ae42f1af36915eb544f1",
+      "gitSha": "a642bbce77f9a5340f77a950b5f97e269bb2a539"
+    },
+    {
+      "path": "originals/iotlab-multi-properties.json",
+      "role": "original-provider-body",
+      "bytes": 1959,
+      "sha256": "1f368e786578022bf975b386640fdea9b663d3d06d157c09333e083975778b9d",
+      "gitSha": "b28470f6f3516da121fe39de38e189493e754716"
+    },
+    {
+      "path": "receipts/iotlab-multi-properties.json",
+      "role": "complete-connector-acquisition-receipt",
+      "bytes": 3930,
+      "sha256": "ba12d9ce89001721a9bf366396cfdb689655daaf5141b34b66ac190a7aaa55de",
+      "gitSha": "65a19f8a7b8321855e556f33b7b2c0002f4acbbe"
+    },
+    {
+      "path": "originals/iotlab-multi-sensor.json",
+      "role": "original-provider-body",
+      "bytes": 716,
+      "sha256": "a24c829d94eddabf692d15bceaf15a5cd375058095306d15eff2ee0953d05a2b",
+      "gitSha": "888c4d676aaf9ff5084482d634f3a7036ccf89d2"
+    },
+    {
+      "path": "receipts/iotlab-multi-sensor.json",
+      "role": "complete-connector-acquisition-receipt",
+      "bytes": 2418,
+      "sha256": "2f83be683f52f92ea3c409e8b40ded8819e7af65b07f3ae0120880284dce0478",
+      "gitSha": "d7307cafb7691d4d2823e7a31be04e5ea5a4d75a"
+    },
+    {
+      "path": "originals/iotlab-multi-stream-opening.json",
+      "role": "original-provider-body",
+      "bytes": 1554,
+      "sha256": "abf12fedb2740250742944a0c400a2e6230fe10a12a8c6bd5fbff26d1f23b820",
+      "gitSha": "1d44c61d38748aaeaae39c8da6880831d36cf37b"
+    },
+    {
+      "path": "receipts/iotlab-multi-stream-opening.json",
+      "role": "complete-connector-acquisition-receipt",
+      "bytes": 3520,
+      "sha256": "bfe2c01e21e073efd96543d910530f3f8d2861fdfcb3188aab741229a0dfe2e5",
+      "gitSha": "183ddf53b8a666d60ab8b232443a3dc84561ca1d"
+    },
+    {
+      "path": "originals/iotlab-multi-thing.json",
+      "role": "original-provider-body",
+      "bytes": 594,
+      "sha256": "80ab0a8e74b0ace9f0cb7d9fbb0b3fc9afc88ce09db0e6f09078f894f2bb5533",
+      "gitSha": "366c540e4296758647f71d4ecadd280b4e69c72c"
+    },
+    {
+      "path": "receipts/iotlab-multi-thing.json",
+      "role": "complete-connector-acquisition-receipt",
+      "bytes": 2290,
+      "sha256": "3dc2475ef235800907acd042e1e9b17e27b84e7ff6e696228e437dc314179fea",
+      "gitSha": "8edfcb1626546da510cad12f6e726dbd5c1495f8"
+    },
+    {
+      "path": "originals/iotlab-service-root.json",
+      "role": "original-provider-body",
+      "bytes": 3107,
+      "sha256": "d06ec763289b4570b63c1462d61f4425529591afaea445ecc59de236d3793f2a",
+      "gitSha": "5acc9ae1a1a75676cea583d576eaf46e1f51fd2e"
+    },
+    {
+      "path": "receipts/iotlab-service-root.json",
+      "role": "complete-connector-acquisition-receipt",
+      "bytes": 5205,
+      "sha256": "7234a0cd7fce27df266349b83be69a3a66ede7cd32b48fb21dc0fb2c782f4d01",
+      "gitSha": "22526df12f439acfd23c92b0afacf7d671e915a7"
+    },
+    {
+      "path": "originals/iotlab-multi-native-catalogue.json",
+      "role": "original-provider-body",
+      "bytes": 1581,
+      "sha256": "11dcc81eedfcd1316b294242e196870154e5700c8070491216ee5b2440172b88",
+      "gitSha": "035ca812061b2b216569b50f46e3b5b6c6f6ffea"
+    },
+    {
+      "path": "receipts/iotlab-multi-native-catalogue.json",
+      "role": "complete-connector-acquisition-receipt",
+      "bytes": 3606,
+      "sha256": "f5144527c3fc1b7e710860947e44a664f2d898ed436e62f76d7c11c67cdef54a",
+      "gitSha": "9a74c559905a0f575bb7fb07e3b99fd4786d036e"
+    },
+    {
+      "path": "originals/iotlab-multi-locations.json",
+      "role": "original-provider-body",
+      "bytes": 573,
+      "sha256": "02d8ad73cb37d2a77a3b77e6d2d30fe4aae168a3f3ac85dc0914ce351de6b40f",
+      "gitSha": "1688a19a3698dce4bab29492f1c01e55d17e5424"
+    },
+    {
+      "path": "receipts/iotlab-multi-locations.json",
+      "role": "complete-connector-acquisition-receipt",
+      "bytes": 2307,
+      "sha256": "539918209d184e05221b029f6a67ec3682f30e644628be1ee5fe5a765f2e9198",
+      "gitSha": "306e2257d5ae90a0851010c3db6f6830ce1e41fa"
+    },
+    {
+      "path": "originals/iotlab-multi-week-page-000.json",
+      "role": "original-provider-body",
+      "bytes": 111257,
+      "sha256": "f148e210a70c0bbac16cad56f5929d189dbcd858f848b37d833b6c058c1407a8",
+      "gitSha": "8bc0e44eb33c2b9cebf5ad72ee4c7872ed426aef"
+    },
+    {
+      "path": "receipts/iotlab-multi-week-page-000.json",
+      "role": "complete-connector-acquisition-receipt",
+      "bytes": 131726,
+      "sha256": "157e74f67439217939405439868574d6f8b089d10a2551e2f70dd232b9902f09",
+      "gitSha": "6f664cb2f01b4e9ce98178311a402f437596dfc5"
+    },
+    {
+      "path": "originals/iotlab-multi-week-page-001.json",
+      "role": "original-provider-body",
+      "bytes": 111272,
+      "sha256": "0b9ee9496242bfad18717b6a9260991bddf3fc082775f25ba1e303d54d95aebe",
+      "gitSha": "8f1b875e9da7cea4e6a3a43c1df7b888bf73ab6f"
+    },
+    {
+      "path": "receipts/iotlab-multi-week-page-001.json",
+      "role": "complete-connector-acquisition-receipt",
+      "bytes": 131834,
+      "sha256": "cda63533bb3d704b04a620327830387591267cd5a4d439d9407dd03c174f0989",
+      "gitSha": "c024cda313a7a4311857b1a0ecfe3a24da3bdd77"
+    },
+    {
+      "path": "originals/iotlab-multi-week-page-002.json",
+      "role": "original-provider-body",
+      "bytes": 111254,
+      "sha256": "1d47f53a3c7b2499180c87424815a84b3aab5ec89816c114ccffbf6146839748",
+      "gitSha": "3ce4a3fefd8f6517e19bfdafdb8541bfdc5ab68c"
+    },
+    {
+      "path": "receipts/iotlab-multi-week-page-002.json",
+      "role": "complete-connector-acquisition-receipt",
+      "bytes": 131816,
+      "sha256": "41ea163a887b015a53e97a06fbf0f148f3f4eb19b696ab7fbdbbc7a37b22d0d5",
+      "gitSha": "b1a115165c727cb59ca063099e0b1aa5a817d2b2"
+    },
+    {
+      "path": "originals/iotlab-multi-week-page-003.json",
+      "role": "original-provider-body",
+      "bytes": 111259,
+      "sha256": "85ad164f7c10d33b054e02f3d0228774a16c691f07c180fbf37fb1ca230371c8",
+      "gitSha": "7b7c5226377af9065d8a75042348a4339ea88d9f"
+    },
+    {
+      "path": "receipts/iotlab-multi-week-page-003.json",
+      "role": "complete-connector-acquisition-receipt",
+      "bytes": 131821,
+      "sha256": "84fdaf4a34e387dd721cf9e78ae8279f66f2169a0a9d0a6f89ab95630aad9be3",
+      "gitSha": "58ecc623a4fb9bf27de833b08bc72aba46723cdc"
+    },
+    {
+      "path": "originals/iotlab-multi-week-page-004.json",
+      "role": "original-provider-body",
+      "bytes": 111256,
+      "sha256": "c4d39e14483283affc532b2e0bee1ac3c66c0ad53186aa742e8e6b7997c59ec1",
+      "gitSha": "4a7338e65ed47e36882a3e04fb3fae50a8c892ea"
+    },
+    {
+      "path": "receipts/iotlab-multi-week-page-004.json",
+      "role": "complete-connector-acquisition-receipt",
+      "bytes": 131818,
+      "sha256": "29426d217b88f2ff471eaf7cf2f391b1ea5cfe46818f74da7afcb25e07b00d91",
+      "gitSha": "3dc311fbd7ebc530541e394ce954394b5592a2f0"
+    },
+    {
+      "path": "originals/iotlab-multi-week-page-005.json",
+      "role": "original-provider-body",
+      "bytes": 111740,
+      "sha256": "85c1d83c25d423167696022259e27a7c16c8f684429dc576bdbbd481d05c0fc0",
+      "gitSha": "3163adf0310e153a30ca32afdbd39804112ec54d"
+    },
+    {
+      "path": "receipts/iotlab-multi-week-page-005.json",
+      "role": "complete-connector-acquisition-receipt",
+      "bytes": 132302,
+      "sha256": "97b5e22ecefc7fa9b184676c6a14ef575ae0cb122b3019962b1189d608bb707e",
+      "gitSha": "a783c223d59cad5757790209a9ceeaea7ba6acae"
+    },
+    {
+      "path": "originals/iotlab-multi-week-page-006.json",
+      "role": "original-provider-body",
+      "bytes": 80359,
+      "sha256": "73687b114c3241bceac308746a5c29a5bc5980545c41355faf0ba8465399e38f",
+      "gitSha": "8dcfcbcdf10d5a7be63be2b01c38633477298c81"
+    },
+    {
+      "path": "receipts/iotlab-multi-week-page-006.json",
+      "role": "complete-connector-acquisition-receipt",
+      "bytes": 95698,
+      "sha256": "a9486c30094f54ed7dcba29a53aab56542a62228b386090242584182758e321f",
+      "gitSha": "a82b6edde15f1040de353815428dfbcc2284c835"
+    },
+    {
+      "path": "originals/iotlab-multi-stream-closing.json",
+      "role": "original-provider-body",
+      "bytes": 1554,
+      "sha256": "abf12fedb2740250742944a0c400a2e6230fe10a12a8c6bd5fbff26d1f23b820",
+      "gitSha": "1d44c61d38748aaeaae39c8da6880831d36cf37b"
+    },
+    {
+      "path": "receipts/iotlab-multi-stream-closing.json",
+      "role": "complete-connector-acquisition-receipt",
+      "bytes": 3520,
+      "sha256": "bb8a4dc8bde9f514580cbb11a8fa2cc7efff8ae323e79d9877f7cb47f2abafca",
+      "gitSha": "357c7a16188d3ef4c995af70a397d9d8fb3facfe"
+    },
+    {
+      "path": "attempts/iotlab-multi-campaigns.json",
+      "role": "failed-source-attempt",
+      "bytes": 1690,
+      "sha256": "6d943bce600bda99c2ecb8b14df6d0b8bd80f0f7c4c027417e53e845e6079df3",
+      "gitSha": "b7351d33ccc7926de17beaccdd5c6aa2f248c9ee"
+    },
+    {
+      "path": "attempts/iotlab-license-catalogue.json",
+      "role": "failed-source-attempt",
+      "bytes": 1672,
+      "sha256": "c1ec57ea3253f4e25057cfe5aba5a1bd13bed0732a75716d39d06fe9fbb54bb8",
+      "gitSha": "b7d9b476b3cbd60f39d76c701430c17844ba3a53"
+    }
+  ]
+}

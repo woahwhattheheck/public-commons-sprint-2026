@@ -1,0 +1,39 @@
+{
+  "schema": "stellar-forge.sensorthings-connector-acquisition.v1",
+  "role": "iotlab-service-root",
+  "sourceUrl": "https://frost.iotlab.com/sensorthings/v1.1/",
+  "requestedFilename": "iotlab-service-root.json",
+  "requestedAt": "2026-10-12T12:54:45.973Z",
+  "uploadCompletedAt": "2026-10-12T12:54:50.609Z",
+  "downloadRequestedAt": "2026-10-12T12:54:50.609Z",
+  "downloadCompletedAt": "2026-10-12T12:54:51.037Z",
+  "originalHttp": {
+    "method": null,
+    "status": null,
+    "headers": null
+  },
+  "originalBody": {
+    "path": "originals/iotlab-service-root.json",
+    "bytes": 3107,
+    "sha256": "d06ec763289b4570b63c1462d61f4425529591afaea445ecc59de236d3793f2a",
+    "gitSha": "5acc9ae1a1a75676cea583d576eaf46e1f51fd2e"
+  },
+  "uploadToolResponse": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"file_upload_id\":\"3f7dd772-3100-81ea-b6b0-00b2925f79f0\",\"filename\":\"iotlab-service-root.json\",\"content_type\":\"application/json; charset=utf-8\",\"content_length\":3107,\"status\":\"uploaded\",\"markdown_source\":\"file-upload://3f7dd772-3100-81ea-b6b0-00b2925f79f0\",\"suggested_markdown\":\"<file src=\\\"file-upload://3f7dd772-3100-81ea-b6b0-00b2925f79f0\\\"></file>\"}"
+      }
+    ],
+    "isError": false
+  },
+  "downloadToolResponse": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"file_upload_id\":\"3f7dd772-3100-81ea-b6b0-00b2925f79f0\",\"filename\":\"iotlab-service-root.json\",\"content_type\":\"application/json; charset=utf-8\",\"content_length\":3107,\"content\":\"{\\\"value\\\":[{\\\"name\\\":\\\"Campaigns\\\",\\\"url\\\":\\\"https://frost.iotlab.com/sensorthings/v1.1/Campaigns\\\"},{\\\"name\\\":\\\"Datastreams\\\",\\\"url\\\":\\\"https://frost.iotlab.com/sensorthings/v1.1/Datastreams\\\"},{\\\"name\\\":\\\"FeaturesOfInterest\\\",\\\"url\\\":\\\"https://frost.iotlab.com/sensorthings/v1.1/FeaturesOfInterest\\\"},{\\\"name\\\":\\\"HistoricalLocations\\\",\\\"url\\\":\\\"https://frost.iotlab.com/sensorthings/v1.1/HistoricalLocations\\\"},{\\\"name\\\":\\\"Licenses\\\",\\\"url\\\":\\\"https://frost.iotlab.com/sensorthings/v1.1/Licenses\\\"},{\\\"name\\\":\\\"Locations\\\",\\\"url\\\":\\\"https://frost.iotlab.com/sensorthings/v1.1/Locations\\\"},{\\\"name\\\":\\\"MultiDatastreams\\\",\\\"url\\\":\\\"https://frost.iotlab.com/sensorthings/v1.1/MultiDatastreams\\\"},{\\\"name\\\":\\\"Observations\\\",\\\"url\\\":\\\"https://frost.iotlab.com/sensorthings/v1.1/Observations\\\"},{\\\"name\\\":\\\"ObservationGroups\\\",\\\"url\\\":\\\"https://frost.iotlab.com/sensorthings/v1.1/ObservationGroups\\\"},{\\\"name\\\":\\\"ObservedProperties\\\",\\\"url\\\":\\\"https://frost.iotlab.com/sensorthings/v1.1/ObservedProperties\\\"},{\\\"name\\\":\\\"Parties\\\",\\\"url\\\":\\\"https://frost.iotlab.com/sensorthings/v1.1/Parties\\\"},{\\\"name\\\":\\\"Relations\\\",\\\"url\\\":\\\"https://frost.iotlab.com/sensorthings/v1.1/Relations\\\"},{\\\"name\\\":\\\"Sensors\\\",\\\"url\\\":\\\"https://frost.iotlab.com/sensorthings/v1.1/Sensors\\\"},{\\\"name\\\":\\\"Things\\\",\\\"url\\\":\\\"https://frost.iotlab.com/sensorthings/v1.1/Things\\\"}],\\\"serverSettings\\\":{\\\"conformance\\\":[\\\"http://www.opengis.net/spec/iot_sensing/1.1/req/batch-request/batch-request\\\",\\\"http://www.opengis.net/spec/iot_sensing/1.1/req/create-observations-via-mqtt/observations-creation\\\",\\\"http://www.opengis.net/spec/iot_sensing/1.1/req/create-update-delete\\\",\\\"http://www.opengis.net/spec/iot_sensing/1.1/req/data-array/data-array\\\",\\\"http://www.opengis.net/spec/iot_sensing/1.1/req/datamodel\\\",\\\"http://www.opengis.net/spec/iot_sensing/1.1/req/multi-datastream\\\",\\\"http://www.opengis.net/spec/iot_sensing/1.1/req/receive-updates-via-mqtt/receive-updates\\\",\\\"http://www.opengis.net/spec/iot_sensing/1.1/req/request-data\\\",\\\"http://www.opengis.net/spec/iot_sensing/1.1/req/resource-path/resource-path-to-entities\\\",\\\"http://www.opengis.net/spec/sensorthings-staplus/1.0/conf/core\\\",\\\"http://www.opengis.net/spec/sensorthings-staplus/1.0/conf/create\\\",\\\"http://www.opengis.net/spec/sensorthings-staplus/1.0/conf/delete\\\",\\\"http://www.opengis.net/spec/sensorthings-staplus/1.0/conf/update\\\",\\\"https://fraunhoferiosb.github.io/FROST-Server/extensions/DeepSelect.html\\\",\\\"https://fraunhoferiosb.github.io/FROST-Server/extensions/GeoJSON-ResultFormat.html\\\",\\\"https://fraunhoferiosb.github.io/FROST-Server/extensions/JsonBatchRequest.html\\\",\\\"https://fraunhoferiosb.github.io/FROST-Server/extensions/ResponseMetadata.html\\\",\\\"https://fraunhoferiosb.github.io/FROST-Server/extensions/SelectDistinct.html\\\",\\\"https://github.com/INSIDE-information-systems/SensorThingsAPI/blob/master/CSV-ResultFormat/CSV-ResultFormat.md\\\",\\\"https://github.com/securedimensions/FROST-Server-PLUS/BUSINESS-LOGIC.md\\\"],\\\"http://www.opengis.net/spec/iot_sensing/1.1/req/create-observations-via-mqtt/observations-creation\\\":{\\\"endpoints\\\":[\\\"mqtt://frost.iotlab.com:1883\\\"]},\\\"http://www.opengis.net/spec/iot_sensing/1.1/req/receive-updates-via-mqtt/receive-updates\\\":{\\\"endpoints\\\":[\\\"mqtt://frost.iotlab.com:1883\\\"]}}}\"}"
+      }
+    ],
+    "isError": false
+  }
+}

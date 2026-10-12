@@ -1,0 +1,39 @@
+{
+  "schema": "stellar-forge.sensorthings-connector-acquisition.v1",
+  "role": "bgs-multi-126-observations-qualification",
+  "sourceUrl": "https://sensors.bgs.ac.uk/FROST-Server/v1.1/MultiDatastreams(126)/Observations?$orderby=phenomenonTime%20desc&$top=3&$count=true&$expand=FeatureOfInterest",
+  "requestedFilename": "bgs-multi-126-observations-qualification.json",
+  "requestedAt": "2026-10-12T12:50:08.151Z",
+  "uploadCompletedAt": "2026-10-12T12:50:16.776Z",
+  "downloadRequestedAt": null,
+  "downloadCompletedAt": "2026-10-12T12:50:17.294Z",
+  "originalHttp": {
+    "method": null,
+    "status": null,
+    "headers": null
+  },
+  "originalBody": {
+    "path": "originals/bgs-multi-126-observations-qualification.json",
+    "bytes": 27,
+    "sha256": "694698019c220132c7e83d4f27cdf71b96bf41cafe4ae464e5197a282b1111e5",
+    "gitSha": "0e85702176cf4a6476206db352630d7902cfb77b"
+  },
+  "uploadToolResponse": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"file_upload_id\":\"3f7dd772-3100-81fa-8e42-00b2d43d7454\",\"filename\":\"bgs-multi-126-observations-qualification.json\",\"content_type\":\"application/json; charset=utf-8\",\"content_length\":27,\"status\":\"uploaded\",\"markdown_source\":\"file-upload://3f7dd772-3100-81fa-8e42-00b2d43d7454\",\"suggested_markdown\":\"<file src=\\\"file-upload://3f7dd772-3100-81fa-8e42-00b2d43d7454\\\"></file>\"}"
+      }
+    ],
+    "isError": false
+  },
+  "downloadToolResponse": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"file_upload_id\":\"3f7dd772-3100-81fa-8e42-00b2d43d7454\",\"filename\":\"bgs-multi-126-observations-qualification.json\",\"content_type\":\"application/json; charset=utf-8\",\"content_length\":27,\"content\":\"{\\\"@iot.count\\\":0,\\\"value\\\":[]}\"}"
+      }
+    ],
+    "isError": false
+  }
+}

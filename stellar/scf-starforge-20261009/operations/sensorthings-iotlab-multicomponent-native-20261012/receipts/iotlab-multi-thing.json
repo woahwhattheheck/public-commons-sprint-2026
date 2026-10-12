@@ -1,0 +1,39 @@
+{
+  "schema": "stellar-forge.sensorthings-connector-acquisition.v1",
+  "role": "iotlab-multi-thing",
+  "sourceUrl": "https://frost.iotlab.com/sensorthings/v1.1/MultiDatastreams(23)/Thing",
+  "requestedFilename": "iotlab-multi-thing.json",
+  "requestedAt": "2026-10-12T12:54:40.229Z",
+  "uploadCompletedAt": "2026-10-12T12:54:45.574Z",
+  "downloadRequestedAt": "2026-10-12T12:54:45.574Z",
+  "downloadCompletedAt": "2026-10-12T12:54:45.972Z",
+  "originalHttp": {
+    "method": null,
+    "status": null,
+    "headers": null
+  },
+  "originalBody": {
+    "path": "originals/iotlab-multi-thing.json",
+    "bytes": 594,
+    "sha256": "80ab0a8e74b0ace9f0cb7d9fbb0b3fc9afc88ce09db0e6f09078f894f2bb5533",
+    "gitSha": "366c540e4296758647f71d4ecadd280b4e69c72c"
+  },
+  "uploadToolResponse": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"file_upload_id\":\"3f7dd772-3100-811f-a364-00b2d46dc82a\",\"filename\":\"iotlab-multi-thing.json\",\"content_type\":\"application/json; charset=utf-8\",\"content_length\":594,\"status\":\"uploaded\",\"markdown_source\":\"file-upload://3f7dd772-3100-811f-a364-00b2d46dc82a\",\"suggested_markdown\":\"<file src=\\\"file-upload://3f7dd772-3100-811f-a364-00b2d46dc82a\\\"></file>\"}"
+      }
+    ],
+    "isError": false
+  },
+  "downloadToolResponse": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"file_upload_id\":\"3f7dd772-3100-811f-a364-00b2d46dc82a\",\"filename\":\"iotlab-multi-thing.json\",\"content_type\":\"application/json; charset=utf-8\",\"content_length\":594,\"content\":\"{\\\"@iot.selfLink\\\":\\\"https://frost.iotlab.com/sensorthings/v1.1/Things(26)\\\",\\\"@iot.id\\\":26,\\\"description\\\":\\\"Data from Weid Aqua 100 provided by KWB\\\",\\\"name\\\":\\\"Weid_Aqua100Data\\\",\\\"HistoricalLocations@iot.navigationLink\\\":\\\"https://frost.iotlab.com/sensorthings/v1.1/Things(26)/HistoricalLocations\\\",\\\"Locations@iot.navigationLink\\\":\\\"https://frost.iotlab.com/sensorthings/v1.1/Things(26)/Locations\\\",\\\"MultiDatastreams@iot.navigationLink\\\":\\\"https://frost.iotlab.com/sensorthings/v1.1/Things(26)/MultiDatastreams\\\",\\\"Datastreams@iot.navigationLink\\\":\\\"https://frost.iotlab.com/sensorthings/v1.1/Things(26)/Datastreams\\\"}\"}"
+      }
+    ],
+    "isError": false
+  }
+}

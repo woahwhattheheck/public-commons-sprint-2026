@@ -1,0 +1,27 @@
+{
+  "schema": "stellar-forge.sensorthings-source-attempt.v1",
+  "role": "iotlab-multi-campaigns",
+  "url": "https://frost.iotlab.com/sensorthings/v1.1/MultiDatastreams(23)/Campaigns",
+  "filename": "iotlab-multi-campaigns.json",
+  "requestedAt": "2026-10-12T12:55:40.447Z",
+  "attachment": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"name\":\"APIResponseError\",\"code\":\"validation_error\",\"status\":400,\"headers\":{},\"body\":\"{\\\"object\\\":\\\"error\\\",\\\"status\\\":400,\\\"code\\\":\\\"validation_error\\\",\\\"message\\\":\\\"Notion could not download source_url within one minute. Make sure the URL is publicly reachable, permits an unauthenticated GET, and remains valid for at least one minute.\\\",\\\"additional_data\\\":{\\\"tool_error_code\\\":\\\"source_download_failed\\\",\\\"tool_error_class\\\":\\\"validation\\\",\\\"tool_error_retryable\\\":\\\"false\\\"},\\\"request_id\\\":\\\"a140790a-6487-41ee-bb63-e1ca44d5c843\\\"}\",\"additional_data\":{\"tool_error_code\":\"source_download_failed\",\"tool_error_class\":\"validation\",\"tool_error_retryable\":\"false\"},\"request_id\":\"a140790a-6487-41ee-bb63-e1ca44d5c843\",\"message\":\"Notion could not download source_url within one minute. Make sure the URL is publicly reachable, permits an unauthenticated GET, and remains valid for at least one minute.\"}"
+      }
+    ],
+    "structuredContent": {
+      "error_code": "INVALID_ARGUMENT"
+    },
+    "isError": true
+  },
+  "completedAt": "2026-10-12T12:55:46.152Z",
+  "originalHttp": {
+    "method": null,
+    "status": null,
+    "headers": null
+  },
+  "outcome": "connector-source-download-failed",
+  "originalBodyReceived": false
+}
