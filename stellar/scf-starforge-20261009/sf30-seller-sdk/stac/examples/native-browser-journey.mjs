@@ -70,11 +70,12 @@ export async function runStacBrowserJourney({
   selectionNote='Retain this scene for comparison and delivery review with its original collection and asset references.',
   playwrightModule=process.env.STAC_PLAYWRIGHT_MODULE,
   chromiumPath=process.env.STAC_CHROMIUM_PATH,
-  browserEnvironment={},browserArgs=[],profileParent=tmpdir(),
+  browserEnvironment={},browserArgs=[],profileParent=tmpdir(),inspectPortable,
   allowSingleProcess=process.env.STAC_CHROMIUM_SINGLE_PROCESS==='1'
 }={}){
   assert(providedWorkspace||directory,'Provide the existing captured workspace or its directory.');
   assert(outputDirectory,'Provide a separate output directory for the browser handover.');
+  assert(inspectPortable===undefined||typeof inspectPortable==='function','Portable inspection must be an importable callback.');
   assert(['SELECTED','REJECTED','REVIEW'].includes(selectionStatus),'Choose a native staff selection status.');
   assert(typeof actor==='string'&&actor.trim(),'Provide the actual assigned reviewer.');
   outputDirectory=resolve(outputDirectory);
@@ -302,6 +303,17 @@ export async function runStacBrowserJourney({
     await receivingPage.screenshot({path:join(outputDirectory,'receiving-selections-mobile.png'),fullPage:true});
     await stage('browser-receiving-import',{workspaceId:receivingIdentity,editionIdentitiesPreserved:true,decisions:receivingState.decisions.length,
       assets:receivingState.assets.length,image:receivedImage,mobile:receivingMobile});
+    if(inspectPortable){
+      const allowLoopbackOrigin=value=>{
+        const endpoint=new URL(value);
+        assert(endpoint.protocol==='http:'&&['127.0.0.1','localhost','[::1]'].includes(endpoint.hostname)&&!endpoint.username&&!endpoint.password,'The portable review server must use an explicit local HTTP origin.');
+        allowedOrigins.add(endpoint.origin);
+        return endpoint.origin;
+      };
+      const portableResult=await inspectPortable({context,outputDirectory,allowLoopbackOrigin,attachPage:page=>attachPage(page,'portable')});
+      assert(portableResult&&typeof portableResult==='object'&&!Array.isArray(portableResult),'Portable inspection must return its JSON result.');
+      await stage('portable-receiving-review',portableResult);
+    }
     await context.close();context=null;
     await receivingServer.close();receivingServer=null;
     await receivingWorkspace.close();receivingWorkspace=null;
