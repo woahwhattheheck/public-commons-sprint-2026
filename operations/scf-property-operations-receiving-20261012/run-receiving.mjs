@@ -100,8 +100,19 @@ export async function receivePropertyOperations(originalInput){
    }
   }
   let current=await application();
-  if(!current.release){journal.steps.connect??={requestedAt:now()};await save();journal.steps.connect.result=await model.applicationsConnect({applicationId:journal.application.id});await save();
-   current=await poll(application,v=>{need(v.phase!=='UNAVAILABLE'&&!['FAILED','CANCELLED'].includes(v.adoption?.phase),'PROPERTY_RECEIVING_ADOPTION_FAILED');return Boolean(v.release);},{seconds:input.timeoutSeconds,label:'original source adoption'});}
+  if(!current.release){journal.steps.connect??={requestedAt:now()};await save();journal.steps.connect.result=await model.applicationsConnect({applicationId:journal.application.id});await save();}
+  // The release directory becomes visible before the original adoption publishes active.json.
+  // Wait for that same saved operation to close before binding a start review to the home revision.
+  const savedApplication=await readJSON(join(input.runtimeWorkspace,'applications',journal.application.id,'application.json'));
+  const adoptionId=savedApplication.adoption?.requestId??null;
+  current=await poll(async()=>{
+   const value=await application(),state=adoptionId?await model.state():null;
+   const adoption=adoptionId?state.operations.find(x=>x.id===adoptionId):null;
+   need(value.phase!=='UNAVAILABLE'&&!['FAILED','CANCELLED'].includes(adoption?.phase),'PROPERTY_RECEIVING_ADOPTION_FAILED');
+   if(adoptionId)need(adoption&&adoption.operation==='managed-adopt'&&adoption.homeId===savedApplication.homeId,'PROPERTY_RECEIVING_ADOPTION_CHANGED');
+   return {value,adoption};
+  },v=>Boolean(v.value.release)&&(!adoptionId||(v.adoption.phase==='SUCCEEDED'&&!v.adoption.workerActive&&!v.adoption.commandActive)),
+  {seconds:input.timeoutSeconds,label:'original source adoption and owner closure'}).then(v=>v.value);
   if(journal.release)need(same(journal.release,current.release),'PROPERTY_RECEIVING_RELEASE_CHANGED');else{journal.release=current.release;await save();}
   async function history(){
    const rows=[];let cursor=null,total=null;const seen=new Set();
