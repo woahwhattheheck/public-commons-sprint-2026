@@ -92,7 +92,9 @@ only to this private instance.
 ### Select the actual runtime
 
 Use Linux x86_64 with Python3.12+ for the selected NetBox environment,
-`dpkg-deb`, an existing Redis7.0.15 executable and its required shared libraries,
+`dpkg-deb`, a C compiler, Python development headers and the actual PostgreSQL
+client development headers/`pg_config` required by NetBox's pinned
+`psycopg[c,pool]` dependency, an existing Redis7.0.15 executable and its required shared libraries,
 Node and an existing Playwright/Chromium installation. The host accepts
 `--netbox-python` for an already-equipped actual NetBox4.7.2 environment.
 Otherwise it creates one private venv and installs the pinned
@@ -100,6 +102,15 @@ Otherwise it creates one private venv and installs the pinned
 installation experimental; the original versioned checkout can instead be
 selected with `--netbox-source`. That route uses the exact pinned
 requirements and its original `netbox/manage.py`.
+
+The original [NetBox installation instructions](https://github.com/netbox-community/netbox/blob/251458b89a5eb2f5fe0d20ecd1140ba08f141a9c/docs/installation/3-netbox.md)
+and [Psycopg local-build requirements](https://www.psycopg.org/psycopg3/docs/basic/install.html#local-installation)
+identify these system build prerequisites. On a prepared Linux image they are
+normally provided by its compiler, Python development and libpq development
+packages. Select an existing private `pg_config` with `--pg-config` when it is not
+in PATH. The receiver verifies its reported `libpq-fe.h` before preparing a new
+venv. An already verified saved application reopens from its original files
+without another package installation.
 
 The receiver verifies the installed CLI, settings, native Token,
 ScriptModule, API script routes and file-storage source against

@@ -557,10 +557,21 @@ class Host:
     def application(self):
         existing = self.args.netbox_python
         python = existing.resolve() if existing else self.runtime / "venv/bin/python"
-        if not existing:
+        if not existing and not self.state.get("application"):
+            selected_config = self.args.pg_config or shutil.which("pg_config", path=self.env["PATH"])
+            need(selected_config is not None,
+                 "The pinned NetBox psycopg[c] dependency needs the actual libpq development headers and pg_config; select that builder or an existing --netbox-python environment.")
+            selected_config = Path(selected_config).resolve()
+            self.env["PATH"] = str(selected_config.parent) + ":" + self.env["PATH"]
+            includedir = Path(self.call("libpq-build-headers", [selected_config, "--includedir"]).read_text().strip())
+            need((includedir / "libpq-fe.h").is_file(), "The selected original pg_config has no PostgreSQL client development headers.")
+            self.state["native_build"] = {"pg_config": str(selected_config),
+                                          "includedir": str(includedir)}
+            self.save()
             if not python.exists():
                 self.call("create-netbox-venv", [self.args.python, "-m", "venv", self.runtime / "venv"])
-            # pip resumes the same private venv. It never changes shared Python.
+            # pip resumes the same private venv. A previously verified application
+            # reopens below from its original source, without reinstalling it.
             selection = ["netbox==4.7.2"]
             if self.args.netbox_source:
                 requirements = self.args.netbox_source.resolve() / "requirements.txt"
@@ -794,6 +805,7 @@ def main():
     parser.add_argument("--redis-library-directory", action="append", type=Path, default=[])
     parser.add_argument("--python", type=Path, default=Path(sys.executable))
     parser.add_argument("--netbox-python", type=Path, help="Existing actual NetBox4.7.2 Python; omitted installs the pinned evaluation package privately.")
+    parser.add_argument("--pg-config", type=Path, help="Existing native pg_config with libpq development headers; needed when preparing a new NetBox environment.")
     parser.add_argument("--netbox-source", type=Path, help="Optional actual pinned source checkout using netbox/manage.py.")
     parser.add_argument("--chromium", required=True, type=Path, help="Existing original Chromium executable for the native desktop/mobile receiver.")
     parser.add_argument("--node", default=os.environ.get("CODEX_PRIMARY_RUNTIME_NODE", "node"))
