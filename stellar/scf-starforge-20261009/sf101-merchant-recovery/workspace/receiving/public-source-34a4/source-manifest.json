@@ -1,0 +1,131 @@
+{
+  "schema": "stellar-forge.recovery-operation-source.v1",
+  "operationId": "SF101-WORKSPACE-PUBLIC-SOURCE-34A4-20261011",
+  "sourceCommit": "999edce11e44f11c7b0855cb300438080175ae90",
+  "mergedSourceCommit": "a622d03a833fca2934ff6bf7eb2728e850b9e5fd",
+  "sourceRepository": "woahwhattheheck/public-commons-sprint-2026",
+  "sourceFiles": [
+    {
+      "path": "stellar/scf-starforge-20261009/distribution/browser-assets.mjs",
+      "bytes": 4571,
+      "sha256": "1aaa548c7982d80aa1c73715bf0322822d063cdc3d570172a5ee15487be9a2e9",
+      "gitBlobSha": "63801fa838c0479e6ae156d9f155461f02df0cfb"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/distribution/distribution.json",
+      "bytes": 75031,
+      "sha256": "d4baa3b5449d5a67596522a0f1bd76781478a5dcf5b88dc8b20ab1f12d31fd28",
+      "gitBlobSha": "f8382f511c7318f366e24b04bd5b19aeca941696"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf101-merchant-recovery/REMOTE.md",
+      "bytes": 24116,
+      "sha256": "95072c6464235edee7fb86de4824a98e51de65c314e7a09f7bbee39cd9e4d333",
+      "gitBlobSha": "e0d3bb8d30da0b9756f1aade10c57bbfc19e5d20"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf101-merchant-recovery/recover.mjs",
+      "bytes": 14785,
+      "sha256": "32fb9d872e29a166cfa199031eaab26da3aa17bb1dbf8299bb5e7cc28bb8f666",
+      "gitBlobSha": "8584fbb42c9fe5d523676e7309c22f67a99e2add"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf101-merchant-recovery/remote-cli.mjs",
+      "bytes": 7978,
+      "sha256": "a62b036668dc8a5043f1f77a0ad209d273976ebb6b9f0d141d705d6a04fe6240",
+      "gitBlobSha": "a775cb955b0f3162f539c7fd2e733e133acb8bad"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf101-merchant-recovery/remote-s3.mjs",
+      "bytes": 24297,
+      "sha256": "dc11505c372b49955b2d642f0fef6a1412d7a1986235ff6c0d3b3a2e825cde07",
+      "gitBlobSha": "d7f0c0d6f3d1b509b5a8625eedf0599de0896f6e"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf101-merchant-recovery/remote.mjs",
+      "bytes": 26065,
+      "sha256": "10e8f704262ff4787893bd295ceb3fd67853662845bef192bd3b706162d2fe3e",
+      "gitBlobSha": "1e4948266678c2d17edda340d0268d33f1828f77"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf101-merchant-recovery/workspace/GUIDE.md",
+      "bytes": 18357,
+      "sha256": "f886f617bc61b144a41fb0d30fb86bbc4591441bda131b6b4d5e5673ebc212e6",
+      "gitBlobSha": "8bb9bcce8f279e6255bd05a33467a72c287e46f4"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf101-merchant-recovery/workspace/app.mjs",
+      "bytes": 22200,
+      "sha256": "118273ad7ee5bbfd4e1fb77accc4894f9a8fc5807b96aa9733da4e60d853478b",
+      "gitBlobSha": "0f915217308dee48e2b37830315765467ef68e66"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf101-merchant-recovery/workspace/browser-assets.json",
+      "bytes": 392,
+      "sha256": "2dfb2ada71d9aae9a1a988076bf250ba8a8f1c1f1689817cd4f3d2df9809ba0e",
+      "gitBlobSha": "15c2d4908bd768b1b7a7c8fdf335782e2683468c"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf101-merchant-recovery/workspace/cli.mjs",
+      "bytes": 5140,
+      "sha256": "7dff06a17a49a21b4b5245a789eabc26721e8b07e1187cffdeb6591eded3bece",
+      "gitBlobSha": "93999c9dda787798c218f7021c059c090c75a5d5"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf101-merchant-recovery/workspace/index.html",
+      "bytes": 6638,
+      "sha256": "be73804f792b795a7d7a38b6255928f2407b109c36a9ce3956e8f229f4b0862f",
+      "gitBlobSha": "084e0a83346e72add06385121672f0756be2eee9"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf101-merchant-recovery/workspace/model.mjs",
+      "bytes": 28680,
+      "sha256": "52ba837e13e51dd10e31c62a00e01587021caa85a5d39991db6a54325fa62252",
+      "gitBlobSha": "7abe1f65deb37de89f0017d7a7bc1d328ca425b7"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf101-merchant-recovery/workspace/server.mjs",
+      "bytes": 10933,
+      "sha256": "e06d80c43e79759c4a2f6774160f91bc079ba242f3938826512ab46c043e0e44",
+      "gitBlobSha": "28df10addb83a898eba68cb716c63f150bc7b103"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf101-merchant-recovery/workspace/style.css",
+      "bytes": 5283,
+      "sha256": "b15041438010ac3803be2735a819b8439aae56c52c34a3dba61ae8325d752ab5",
+      "gitBlobSha": "0be491e41098a3f5df126efe0159a8d7c046dcb9"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf98-merchant-delivery/delivery-lock.mjs",
+      "bytes": 4868,
+      "sha256": "2aaa10b2eadd7c4da28fce4004493fea15fdd34194978ccb589e37900d989a59",
+      "gitBlobSha": "b2833be9fdcda8581bf91132412747471683c54e"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/s3/package.json",
+      "bytes": 295,
+      "sha256": "affe97f74787cc12081ada90b417e04456b23dbb6d242917cea1a38010edb35f",
+      "gitBlobSha": "ff24a49d730a8795bfb5dd408d2dc7bcafc3bc0c"
+    }
+  ],
+  "originalDriverSha256": "143b59d5a3581e764e2be47a66f4b1e34f8484e1652253baa672b1b26d47e8ce",
+  "continuationOperationId": "SF101-WORKSPACE-PUBLIC-SOURCE-34A4-CONTINUE-20261012",
+  "originalRequestSha256": "89dd4a04a81e886b9e1dee8c5fed13806857a1250255f904e9e4522c2fd15abd",
+  "privateStatePacket": {
+    "filename": "scf101-original-public-source-state.zip",
+    "bytes": 230844,
+    "sha256": "9c7fafdebe595aba77c3ea70720d2a70504c701873400ef76f86cb332ee60b8c",
+    "files": 39
+  },
+  "receiving": {
+    "sourceMode": "exact manifest blobs",
+    "originalDriver": "original-operate-workspace.mjs",
+    "driver": "operate-workspace.mjs",
+    "playwrightModulesEnvironment": "SCF_RECOVERY_PLAYWRIGHT_MODULES",
+    "chromiumExecutable": "argv[2] or SCF_RECOVERY_CHROMIUM",
+    "applicationDirectory": "/dev/shm/scf-recovery-workspace-34a4",
+    "originalDirectory": "/dev/shm/scf-remote-recovery-34a4/public-source-operation",
+    "awsSdkVersion": "3.1149.0",
+    "custody": "original source controller is reconciled and closed before the receiving worker dispatches this same operation"
+  }
+}
