@@ -1,7 +1,7 @@
 {
   "schema": "stellar-forge.merchant-distribution-contribution.v1",
   "id": "pmtiles-commerce",
-  "description": "Paid immutable PMTiles output releases and complete original SF88 customer receiving.",
+  "description": "Paid immutable PMTiles output releases, original SF88 customer receiving and native accounting continuation.",
   "components": [
     "stellar/scf-starforge-20261009/sf30-seller-sdk/pmtiles/commerce"
   ],
@@ -23,6 +23,7 @@
     "./pmtiles/output-package": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/pmtiles/commerce/package.mjs",
     "./pmtiles/output-buyer": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/pmtiles/commerce/buyer.mjs",
     "./pmtiles/output-source": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/pmtiles/commerce/source.mjs",
-    "./pmtiles/output-cli": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/pmtiles/commerce/cli.mjs"
+    "./pmtiles/output-cli": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/pmtiles/commerce/cli.mjs",
+    "./pmtiles/output-native-environment": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/pmtiles/commerce/native-environment.mjs"
   }
 }
