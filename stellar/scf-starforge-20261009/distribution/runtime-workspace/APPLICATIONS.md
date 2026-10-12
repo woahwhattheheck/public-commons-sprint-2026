@@ -11,6 +11,7 @@ Applications opens the original merchant and buyer tools from a selected READY r
 | PostgreSQL publisher | postgres-publisher serve | Plans, extraction, candidate review, publication, schedules and buyer handoff |
 | Google Sheets publisher | sheets-publisher serve | Original authorization/source, range plans, extraction, review and recurring publication |
 | PostgreSQL authoring | postgres-workspace | Original database inspection, query contracts, merchant package and release |
+| Paid application jobs | job-workspace serve | Prepared job checkout, original review and execution, verified results, customer library and collections |
 | Object buyer workspace | buyer-object-workspace | Original sessions, receiving, chunk or whole acquisition, verified downloads and managed analysis |
 | GoldRush wallet research | goldrush workbench | Retained wallets, requests, source comparisons, notes and original buyer approval |
 | Research dossiers | research-workspace | Questions, saved source editions, findings, comparison and portable reports |
@@ -50,6 +51,71 @@ Select the existing private object state. An optional original product profile s
 The first operator settings file creates the original received/operator-settings.json path reference. A later start can omit that setting and reuse the saved path. Selecting a different path for the same state is rejected; the original prepared product files and their buyer workspace remain unchanged. The optional Analysis Python executable is resolved and reviewed before launch.
 
 The original Object Buyer URL opens its receiving, acquisition, accounting, downloads and analysis controls. Its per-chunk or whole-purchase approval stays in the connected original terminal. Retained customer acquisitions are never replayed by opening this application.
+
+## Paid application jobs
+
+Choose **Applications → New application → Paid application jobs**. Select a READY
+runtime containing the original `job-workspace` checkout and SF88 customer source.
+The runtime supplies the original buyer dependencies. Choose the private customer
+directory and exactly one existing operator source:
+
+| Setting | Use |
+| --- | --- |
+| Private job customer directory | Reopen the same customer records, or create one directory in an existing private parent. |
+| Original initialized operator workspace | The original private directory with its workspace.json and operator.json. |
+| Original private Node buyer profile | The existing private profile file, used instead of an operator workspace. |
+| Terminal Python executable | The existing Python standard-library PTY; the default is /usr/bin/python3. |
+| Private environment JSON | Optional host-local environment values used by the original signer or buyer. |
+| Local port | Use 0 for the original customer host to choose an available loopback port. |
+
+**Review application** retains the selected operator input files and the exact
+installed runtime. The native source directory is derived from that installation.
+The resulting command has this form:
+
+~~~text
+starforge job-workspace serve --state ABS_PRIVATE_CUSTOMER --operator-workspace ABS_ORIGINAL_OPERATOR --runtime ABS_SELECTED_SOURCE_SF88 --port 0
+~~~
+
+The profile selection replaces `--operator-workspace` with
+`--operator-profile`. **Save application → Review start → Start reviewed
+application** uses the same managed adoption, reviewed arguments and original
+PTY as other buyer applications. Saving creates the one reviewed customer
+directory when needed.
+
+### Open the customer and complete its job
+
+**Open application** opens the original **Checkout** view. Import the prepared
+merchant ticket into that view, review its terms and source, and use the original
+buyer execution action. The connected terminal presents the original approval
+when required; its input receipt stays with this managed operation.
+
+The original customer retains the checkout revision and attempt. Accepted jobs
+continue in **Jobs**, where the customer follows execution and retrieves the
+verified result. **Resource library** and **Collections** open on that same
+private customer host and preserve the original received files and references.
+Use the customer's existing recovery action for a retained interrupted attempt.
+
+The catalog observes the original startup schema, reads
+`job-workspace-launch.json` through the selected source's
+`readJobWorkspaceLaunch`, and matches the selected state, native source,
+operator, PID, instance, private record and requested port. Its **Open
+application** link comes from the verified `checkoutUrl`. The source reader also
+validates the Jobs, library and collections routes on the same private host.
+
+### Stop, reopen and upgrade
+
+**Stop application** uses the existing managed PTY and original shutdown drain.
+The customer finishes closing its active child and accepted-result intake before
+releasing its customer lease. Closing the Applications browser or console server
+alone leaves the original managed process available for reopening.
+
+Reopen Applications to recover the same run and its retained terminal receipts.
+After a completed stop, review a new start with the same customer directory and
+operator source. The customer reopens its original checkouts, attempts, accepted
+jobs, result library and collections. Existing checkouts retain their originally
+selected source and operator; an installed upgrade supplies the source for future
+ticket imports. Review the updated original input files before starting if the
+operator configuration has changed.
 
 ## Environment
 
