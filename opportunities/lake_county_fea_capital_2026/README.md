@@ -126,3 +126,24 @@ Public source acquisition is handled by the separately selected source collector
 Keep the workspace directory private and writable by the actual operator. Back up through the native complete export while the application holds its workspace lock. Do not copy a live SQLite file without its native snapshot procedure or delete unknown initialization/receiving stages.
 
 Archive size is bounded at 512 MiB, compressed and uncompressed. The current implementation is a single local workspace with serialized mutations, not a multi-tenant hosted service. Public URLs and evidence metadata are preserved; production integration, licensed systems, professional judgments and client data access remain explicitly selected work.
+
+## Commission the selected public source edition
+
+The public intake uses the complete original source packet and its sealed collector directory. It verifies every original member and the complete source ZIP before projecting records, then retains the projection rules and complete original JSON records in the workspace.
+
+Run the packet's exact collector in the same native session with `FEA_PUBLIC_SOURCE_SAVE_MODE=embedded` and a private `FEA_PUBLIC_SOURCE_DIR`. Keep its complete directory, including `capture-complete.json`, in the final handover. A repeated collector invocation verifies and reuses the completed edition; changed source URLs or original bytes require a separate source decision.
+
+`commission_public.py` takes the original public packet and workshare source paths, their SHA-256/byte counts, the actual operator, original operation ID, selected workspace/output/receiving directories, and optional existing Node/Playwright/Chromium paths. Use its `--help` output for the complete argument list. It creates the real internal workspace through the same native API; it does not create another commercial case.
+
+The application receives a prepared public-reference edition and the actual captured edition, compares all projected registers, and retains the full comparison. The operating selection and application source hashes are immutable. Resume reuses that exact selection and original native request journal instead of deriving another edition from changed local files.
+
+The added historical registers preserve:
+
+- `financial_observations`: proposed funding, reported rent and historical grant context, with their actual status, unit, recipient and source date.
+- `capital_rollforward`: all supplied components and summary rows, with exact opening/addition/deletion/closing values. Each row reconciles independently; summary rows are not summed again with their components.
+- `budgets`: complete original historical account lines. Financial column mappings and amounts remain unknown until reviewed against the source page.
+- `asset_observations`: source-linked public facility, lease, maintenance, parcel and GIS observations. Public directory and GIS identifiers retain their separate namespaces.
+
+GIS identifier coverage and published edit-marker consistency remain separate. The source files preserve original service geometry, including Z/M when supplied, and all bounded response pages. A complete source response does not imply a current professional asset assessment.
+
+The initial public operating publication is explicitly internal work with follow-up required. No client-approved register, private FEA model, condition assessment, replacement valuation, 15-year forecast, confirmed grant cash or client acceptance is fabricated from these public observations.
