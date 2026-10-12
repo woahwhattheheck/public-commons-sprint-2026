@@ -57,3 +57,6 @@ export { DspaceWorkspace, openDspaceWorkspace, receiveDspaceWorkspace } from '..
 export { prepareDspaceMerchant, readDspaceMerchant, initializeDspaceVersions, startDspaceMerchant, publishDspaceMerchant,
   stageDspaceRelease, activateDspaceRelease, rollbackDspaceRelease, runDspaceRelease } from '../sf30-seller-sdk/dspace/merchant.mjs';
 export { reviewDspaceBuyer, prepareDspaceBuyer, receiveDspaceBuyer, inspectDspaceDelivery } from '../sf30-seller-sdk/dspace/customer.mjs';
+
+export { IntrinioWorkspace, createIntrinioWorkspace, openIntrinioWorkspace,
+  importIntrinioWorkspace, startIntrinioWorkspace } from '../sf30-seller-sdk/intrinio/workspace.mjs';

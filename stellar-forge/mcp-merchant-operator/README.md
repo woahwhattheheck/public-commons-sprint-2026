@@ -1,5 +1,9 @@
 # Starforge merchant operations through MCP
 
+The host advertises its configured tools and loads each original provider when it is needed. Release-state reads use the small native release layer; workspace, seller and customer operations retain their existing ownership and recovery paths. See [Configured providers and startup](CONFIGURED_PROVIDERS.md) for setup, capability status, request limits, lifecycle and provider integration.
+
+Operate a complete Baserow source and merchant through the same browser workspace. Capture native rows and files, review source versions, run the original publisher and refresh schedule, stage the merchant, and deliver the complete original source to a customer. Manifest-pinned downloads resume after MCP restart, and the recipient reopens the same native import offline. See [Baserow source, merchant and customer operations](BASEROW_WORKSPACE.md) for all 20 tools, host setup and the original-source continuation.
+
 Federal grant opportunity research uses this same host's 36 original-workspace
 tools. Open retained source captures, qualify full notices, save immutable
 editions and workshares, prepare and publish the native dataset, complete
@@ -766,6 +770,6 @@ and dataset files through the host's existing durable file receiver.
 documents the complete workflow and its original IDs, revisions and file hashes.
 
 
-## STAC imagery and processing customers
+## STAC imagery and Cirrus processing workspaces
 
-Attach the original STAC analyst host through [the STAC customer guide](./STAC.md). The Node client, `starforge stac-workspace` command and `merchant_stac_*` tools share native query/review/capture/continuation, full scene and comparison views, retained assets, analyst decisions and complete imagery/Cirrus handovers. `merchant-mcp init-stac-workspaces --dir NEW_DIRECTORY --connection CONNECTION.json` uses the existing private native host connection; credentials and provider sessions remain with that host.
+[STAC.md](STAC.md) connects the existing authenticated imagery and processing host to the typed Node client, `starforge stac-workspace` customer CLI and 29 `merchant_stac_*` tools. The complete flow covers saved source/query review, original capture and continuation, full item and comparison views, analyst decisions, original asset bytes, reports and portable receiving/reopen. Host configuration supplies private connection and input aliases; browser and agents keep the same original workspace, revision and operation IDs. `init-stac-workspaces --dir NEW_DIRECTORY --connection STAC_WORKSPACE_CONNECTION.json` adds that original host to this merchant without starting another imagery server.
