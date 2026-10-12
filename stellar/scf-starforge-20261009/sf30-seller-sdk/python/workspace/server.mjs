@@ -60,16 +60,26 @@ async function readOperatorAsset(file, remaining) {
  * assets cannot be replaced. Set operatorPath to one registered HTML page.
  * The selected operatorUrl and nativeOperatorUrl share the same token, native
  * source/preview/release APIs, origin checks and owned-process close lifecycle.
+ * operatorBinding optionally retains the caller's JSON launch identity in the
+ * authenticated state response. It is copied before the workspace opens.
  * Added assets are read once at startup, with 2 MiB per-file and 8 MiB total
  * bounds checked before allocation. Callers keep scripts/styles external so
  * the original same-origin CSP applies without modification.
  */
-export async function startPythonWorkspace(root, { port = 8431, operatorAssets = [], operatorPath = '/' } = {}) {
+export async function startPythonWorkspace(root, { port = 8431, operatorAssets = [], operatorPath = '/', operatorBinding } = {}) {
   if (!Number.isInteger(port) || port < 0 || port > 65535) throw new TypeError('Workspace port must be 0–65535.');
   if (!Array.isArray(operatorAssets)) throw new TypeError('Operator assets must be explicit local file records.');
   const assetPath = value => typeof value === 'string' && /^\/[A-Za-z0-9._/-]*$/.test(value) &&
     !value.includes('//') && !value.split('/').some(part => part === '.' || part === '..');
   if (!assetPath(operatorPath)) throw new TypeError('Use an exact local operator page path without query, fragment or traversal.');
+  let retainedBinding;
+  if (operatorBinding !== undefined) {
+    if (!operatorBinding || typeof operatorBinding !== 'object' || Array.isArray(operatorBinding))
+      throw new TypeError('Operator binding must be an explicit JSON object.');
+    const encoded = JSON.stringify(operatorBinding);
+    if (Buffer.byteLength(encoded) > 32768) throw new RangeError('Operator binding exceeds 32 KiB.');
+    retainedBinding = JSON.parse(encoded);
+  }
   const workspace = typeof root === 'string' ? await openWorkspace(root) : root;
   if (!workspace?.state || !workspace?.close) throw new TypeError('Supply a saved Python workspace directory or its opened model.');
   const token = randomBytes(32).toString('hex'), tokenBytes = Buffer.from(token);
@@ -100,7 +110,8 @@ export async function startPythonWorkspace(root, { port = 8431, operatorAssets =
   let hosts = new Set(), origins = new Set(), url, busy = false, stopping = false, lastError = null;
   let actionDone = Promise.resolve(), resolveClosed, rejectClosed;
   const closed = new Promise((done, fail) => { resolveClosed = done; rejectClosed = fail; }); closed.catch(() => {});
-  const status = async () => ({ ...await workspace.state(), operator: { busy, stopping, lastError } });
+  const status = async () => ({ ...await workspace.state(), operator: { busy, stopping, lastError,
+    ...(retainedBinding ? { binding: retainedBinding } : {}) } });
   const mutations = new Map([
     ['/api/revisions', [['expectedHead', 'baseRevision', 'note', 'entry', 'declarationText', 'files', 'remove'], input => workspace.save(input)]],
     ['/api/restore', [['expectedHead', 'revisionId', 'note'], input => workspace.restore(input)]],
@@ -182,8 +193,10 @@ export async function startPythonWorkspace(root, { port = 8431, operatorAssets =
   try { await new Promise((done, fail) => { server.once('error', fail); server.listen(port, '127.0.0.1', done); }); }
   catch (error) { await workspace.close(); throw error; }
   const assigned = server.address().port;
-  hosts = new Set(['127.0.0.1:' + assigned, 'localhost:' + assigned]); origins = new Set([...hosts].map(host => 'http://' + host));
-  url = 'http://127.0.0.1:' + assigned;
+  const explicitHosts = ['127.0.0.1:' + assigned, 'localhost:' + assigned];
+  hosts = new Set([...explicitHosts, ...explicitHosts.map(host => new URL('http://' + host).host)]);
+  origins = new Set([...hosts].map(host => 'http://' + host));
+  url = new URL('http://127.0.0.1:' + assigned).origin;
   let closing;
   const close = () => {
     if (closing) return closing; stopping = true;

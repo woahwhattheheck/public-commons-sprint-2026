@@ -13,5 +13,8 @@
     "./seller/fiscaldata/server": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/fiscaldata/workspace-server.mjs",
     "./seller/fiscaldata/source": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/fiscaldata/capture.mjs",
     "./seller/fiscaldata/portable": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/fiscaldata/portable.mjs"
+  },
+  "applicationProviders": {
+    "fiscaldata": "stellar/scf-starforge-20261009/distribution/runtime-workspace/providers/fiscaldata.mjs"
   }
 }

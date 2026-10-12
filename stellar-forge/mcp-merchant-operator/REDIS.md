@@ -7,8 +7,12 @@ SF82 release store carries the merchant through comparison, activation, startup,
 rollback and customer delivery.
 
 The imported Redis connection and source limits remain host configuration. The
-native source resolves its existing environment references for Redis TCP or
-Upstash HTTPS. Redis values, binary values, missing values, score strings and
+native source resolves its existing environment references for standalone Redis,
+Cluster, Sentinel or Upstash HTTPS. Cluster routing and Sentinel primary discovery
+use the workspace's retained host-selected profile; all 17 operator tools use
+the same original workspace for these deployments. Sentinel preserves separate
+data and monitor credential references and CA certificates. Supply both declared
+environment entries to the MCP host so previews and sellers can open that source. Redis values, binary values, missing values, score strings and
 stream IDs retain their original representations.
 
 ## Connect an existing workspace

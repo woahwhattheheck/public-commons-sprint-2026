@@ -3,7 +3,9 @@
 Use this workspace to capture declared merchant sources after their writers are
 stopped, authenticate an original encrypted bundle, publish that snapshot, find
 a completed recovery point on the selected storage service, and restore its
-original named roots on a receiving host.
+original named roots on a receiving host. It also authenticates and adopts an
+existing local dataset-publisher restore through the publisher's maintained
+receiving operation.
 
 The workspace operates the maintained `runRemote` facade and `recover.mjs`.
 Its original transfer journal remains the saved record of the upload, download,
@@ -14,7 +16,8 @@ a review of the exact operation, progress, and reopening that retained work.
 ## Prepare the recovery host
 
 Use the release that contains `merchant-recovery-remote workspace`. Prepare
-the host with the existing storage access and the original recovery passphrase.
+the host with the original recovery passphrase. A profile that uses remote
+transfer also needs its existing storage access.
 The [remote recovery guide](../REMOTE.md#operator-setup) defines the private S3
 configuration, existing credential providers, optional proxy transport, and
 supported Node versions.
@@ -25,17 +28,20 @@ The host administrator chooses these separate locations:
 | --- | --- |
 | Workspace host configuration | Names the available profiles and their permitted storage and local parents. |
 | Workspace state directory | Retains this operator workspace's local work. Reopen this same directory when continuing it. |
-| A profile's `storeConfig` | The existing private S3 configuration used by the original adapter. |
+| A profile's optional `storeConfig` | The existing private S3 configuration used for remote transfers. Omit it or use `null` for local recovery. |
 | A profile's `operations` | The original transfer journals and provider acknowledgements for that merchant. |
 | A profile's `bundleRoots` | Named collections containing original encrypted snapshots and configured parents for new captures. |
 | A profile's optional `capturePlans` | Named original recovery plan files, each bound to one declared encrypted-bundle parent. |
+| A profile's optional `publisherRestores` | Host-declared original encrypted bundles and existing plaintext publisher restores to inspect and adopt. |
 | A profile's `downloadRoot` | The parent for encrypted bundles received from the selected storage service. |
 | A profile's `restoreRoot` | The parent for new plaintext cold-restore destinations. |
 
 Use normalized absolute paths and private directories owned by the operating
-account. Keep the operations directory separate from the selected encrypted
-bundle and restore destinations. Each original restore creates a new plaintext
-directory under the declared restore parent.
+account. Keep the workspace and operations directories outside the captured
+source roots, encrypted bundles, and plaintext restore destinations. Each new
+original cold restore creates a new plaintext directory under the declared
+restore parent. A declared existing publisher restore names the completed
+bundle and receiving directory already present within the profile's roots.
 
 For the example paths in this guide, prepare the parent directories:
 
@@ -77,7 +83,7 @@ paths with the actual merchant's selections:
 chmod 600 /private/merchant-recovery/workspace.json /private/merchant-recovery/remote.json
 ```
 
-`storeConfig` references the original
+`storeConfig`, when selected, references the original
 `stellar-forge.merchant-recovery-s3.v1` configuration. `passEnv` references an
 existing environment variable by name. Provision its value through
 the merchant's existing secret-management procedure before starting the
@@ -88,6 +94,106 @@ For multiple merchants, use clear profile labels and the actual original
 operations directory for each merchant. The original transfer facade serializes
 writers within an operations directory. Preserve that directory when moving
 between the browser and headless commands.
+
+## Configure a local recovery profile
+
+Use a local profile when the encrypted bundle and completed cold restore already
+exist on this host, or when capturing and verifying a stopped source locally.
+The same profile keeps original local capture results, publisher preparation,
+and operation history.
+
+The following example uses an existing dataset-publisher recovery such as a
+completed Census publisher cold restore. Replace every example path with the
+actual retained locations. The encrypted bundle and plaintext restore below
+must already exist; preserve the original completed recovery and its returned
+paths.
+
+Save this host configuration as
+`/private/publisher-recovery/workspace.json`:
+
+```json
+{
+  "schema": "stellar-forge.recovery-workspace.v1",
+  "title": "Dataset publisher recovery",
+  "profiles": [
+    {
+      "id": "publisher-local",
+      "label": "Local publisher recovery",
+      "operations": "/private/publisher-recovery/operations",
+      "passEnv": "SF101_RECOVERY_PASSPHRASE",
+      "bundleRoots": [
+        {
+          "id": "publisher-backups",
+          "label": "Original publisher snapshots",
+          "directory": "/private/publisher-backups"
+        }
+      ],
+      "downloadRoot": "/private/publisher-downloads",
+      "restoreRoot": "/private/publisher-restored",
+      "publisherRestores": [
+        {
+          "id": "existing-cold-restore",
+          "label": "Accepted publisher cold restore",
+          "bundleDirectory": "/private/publisher-backups/accepted-snapshot",
+          "restoreDirectory": "/private/publisher-restored/completed-recovery"
+        }
+      ]
+    }
+  ]
+}
+```
+
+This profile omits `storeConfig`; an explicit `"storeConfig": null` selects the
+same local mode. Keep the declared parent directories present and private.
+The profile still declares `operations`, `passEnv`, `bundleRoots`,
+`downloadRoot`, and `restoreRoot`. Original local journal reads and publisher
+preparation from a completed journal remain available.
+
+A `publisherRestores` entry contains one stable ID, a readable label, the exact
+original encrypted bundle directory, and the existing plaintext restore
+directory. Keep the bundle within the profile's declared encrypted-bundle roots
+and the completed restore within its `restoreRoot`. The browser chooses the
+declared entry by ID. The server rereads its permitted paths and the native
+publisher inspector authenticates the selected recovery before preparation.
+
+Retain the host configuration and operator state separately from those source,
+bundle, and restored directories. Keep the configuration private, provision the
+named passphrase through the existing host secret facility, and start the same
+installed command:
+
+```sh
+chmod 600 /private/publisher-recovery/workspace.json
+starforge merchant-recovery-remote workspace serve \
+  --config /private/publisher-recovery/workspace.json \
+  --directory /private/publisher-recovery/operator \
+  --port 8481
+```
+
+Open its printed capability URL. The host summary reads **Local recovery**.
+The operation selector begins with **Create encrypted snapshot** when capture
+plans are declared, otherwise **Prepare restored dataset publisher** when
+existing restores are declared, otherwise **Verify local encrypted bundle**.
+Remote inventory and upload, download, and remote cold-restore controls remain
+disabled for this profile.
+
+The **Declared restored publishers** section lists the configured original
+bundle and completed restore paths. Choose **Review publisher recovery** to open
+that entry in the operation form. Review then uses the original authenticated
+publisher inspection; **Prepare restored publisher** runs or adopts the
+original native receiving preparation. A native preparation that already
+completed retains its result and actual reopening paths.
+
+Local capture is also available by adding the same optional `capturePlans`
+declaration described below, with `bundleRootId: "publisher-backups"` for this
+example. The original plan and all output, journal, and operator state remain
+outside the source roots. Each fresh capture requires a current, explicit
+quiescence acknowledgment.
+
+For later remote transfer, the host administrator can add the original private
+`storeConfig` and its credential provider to the same profile and restart the
+operator with the same state directory. Local work retains its original IDs.
+The configured remote profile then offers its normal inventory and transfer
+workflow.
 
 ## Enable capture from declared sources
 
@@ -200,8 +306,10 @@ starforge runtime-install run --dir /private/starforge-runtime -- \
   --port 8481
 ```
 
-The runtime profile must include the original `s3` feature, selected with
-`--feature s3` during preparation. The distribution derives that feature from
+The runtime profile for remote transfer must include the original `s3` feature,
+selected with `--feature s3` during preparation. A local-only profile uses the
+original capture, verification, and publisher recovery modules without opening
+a storage client. The distribution derives that feature from
 the retained `sf30-seller-sdk/s3/package.json`; its selected SDK is installed
 beside the original package. The runtime launcher checks the saved installation
 and forwards the same command arguments to the original remote CLI.
@@ -238,15 +346,17 @@ selected operation's latest saved phase.
 ## Open through Applications
 
 The installed runtime workspace offers **Merchant recovery** as an application.
-Choose a runtime containing this workspace and its `s3` feature. Select the
+Choose a runtime containing this workspace and the original recovery modules;
+include its `s3` feature for profiles that use remote transfer. Select the
 original private host configuration and the same private recovery workspace
 directory. For a new workspace directory, its private parent must already exist.
 Use the optional private environment JSON for the original AWS, proxy and
 passphrase environment values.
 
-The Applications review retains the exact host configuration digest, its
+The Applications review retains the exact host configuration digest, any
 referenced S3 configurations, bundle roots, original journal directory, and
-download and restore parents. Saving and starting use the maintained
+download and restore parents. For local publisher adoption, it also retains
+each declared original encrypted bundle and existing restored directory. Saving and starting use the maintained
 Applications path review and resource lock. Reopen the saved application with
 those original paths to keep its recovery work available.
 
@@ -379,7 +489,7 @@ to review its exact selected store and publication operation.
 
 ## Continue an interrupted local operation
 
-**Stop transfer** requests a stop for the selected workspace execution. An
+**Stop execution** requests a stop for the selected workspace execution. An
 already running original capture or verification phase finishes before the
 controller reads back its result. Follow the saved phase and original result
 under **Workspace operations**.
@@ -487,15 +597,17 @@ event identities, and complete the deployment's existing transition procedure.
 
 ## Prepare a restored dataset publisher
 
-A completed remote restore can continue into the original dataset publisher's
-receiving-host preparation from this same workspace. The preparation uses the
+An existing local cold restore or a completed remote restore can continue into
+the original dataset publisher's receiving-host preparation from this same
+workspace. The preparation uses the
 restored publisher's own configuration, recovery bindings and application
 leases.
 
-Start from the original remote restore journal. Its completed result identifies
-the authenticated snapshot, encrypted bundle and plaintext destination. The
-workspace derives the publisher selection from that retained operation and the
-profile's declared host roots.
+Choose an existing host-declared publisher restore or the original completed
+remote restore journal. A host declaration names the original encrypted bundle
+and its existing plaintext restore. A completed remote journal supplies those
+paths from its original result. Both selections remain within the profile's
+host roots and use the publisher's original authenticated inspection.
 
 ### Capture the original publisher
 
@@ -518,32 +630,47 @@ the reviewed typed plan privately with the request. When an original completed
 capture is adopted, the authenticated manifest is compared with that retained
 plan; the original live source can already have been moved or released.
 
-Continue through the existing verified-bundle upload, remote inventory and cold
-restore workflow. Preserve each operation ID and the complete snapshot ID so the
-publisher preparation remains attached to the intended recovery point.
+After capture and verification, use the original local cold-restore procedure
+or the configured remote upload, inventory and cold-restore workflow. Preserve
+the completed original restore, each operation ID, and the full snapshot ID.
+For a local restore, declare its existing encrypted bundle and actual plaintext
+destination under `publisherRestores` before opening its publisher preparation.
 
 ### Select the completed restore
 
-In the original remote operations view, open the completed restore and choose
-**Review publisher recovery**. The operation selector also offers
-**Prepare restored dataset publisher**.
+Choose **Prepare restored dataset publisher** in the operation selector and
+select the **Restored publisher source**:
 
-Select the profile and the original completed restore ID. Choose a new workspace
-operation ID for this preparation. The source restore ID continues to identify
-the completed restore; the new operation ID identifies its following publisher
-preparation.
+| Source mode | Selection retained by the operation |
+| --- | --- |
+| **Host-declared restored publisher** | Select a configured `publisherRestores` entry. The operation retains its `publisherRestoreId`, exact encrypted bundle, and existing plaintext destination. |
+| **Original remote restore journal** | Select an original `COMPLETE` restore ID. The operation retains its `restoreId` and derives the snapshot, encrypted bundle, and destination from that original journal. |
 
-The workspace uses the original journal's snapshot, encrypted bundle and actual
-plaintext restore destination. The browser selection identifies the retained
-restore; the host configuration supplies its permitted paths. Select
-**Review restored publisher** to read the exact proposed preparation.
+The form keeps the two mode selections separately as you switch between them.
+Only the selected source ID is submitted in a review. Profiles with declared
+existing restores initially select the host-declared mode. The **Declared
+restored publishers** list opens that exact entry through **Review publisher
+recovery**. Completed remote journals offer the same action beside their
+original restore.
+
+Choose a fresh workspace operation ID for this preparation. It identifies the
+workspace request while the source restore ID or declared restore ID continues
+to identify the existing recovery. Select **Review restored publisher** to read
+the exact proposed preparation.
+
+For a completed local publisher recovery such as an existing Census case, choose
+its host-declared entry and review the actual recovered generations, workbooks,
+mappings, candidates, buyers, and publication decisions. The native inspector
+checks the authenticated bundle and restored application bindings before a
+preparation can start. The same receiving operation can adopt a native
+preparation that has already completed and return its retained reopening paths.
 
 The review reads the restored publisher through its original inspection
 function. Check the complete receiving selection:
 
 | Review detail | Operating decision |
 | --- | --- |
-| Completed restore ID and snapshot | Confirm the recovery point and original operation being continued. |
+| Source mode, selected restore ID and snapshot | Confirm the host-declared recovery or original completed journal being continued. |
 | Encrypted bundle and plaintext destination | Identify the authenticated backup and the actual restored named roots. |
 | Original publisher binding | Read the source dataset, publisher and seller configuration relationships. |
 | Receiving publisher binding | Review how those original roots will be bound on this host. |
@@ -552,8 +679,8 @@ function. Check the complete receiving selection:
 | Buyers and pending publications | Inspect the restored publisher's retained delivery and publication work. |
 | Native review SHA and native operation ID | Retain the exact original inspection selected for this preparation. |
 
-Keep the displayed review with the same profile, source restore ID and workspace
-operation ID. If the selected restored inputs or bindings change, refresh their
+Keep the displayed review with the same profile, selected source mode and ID,
+and workspace operation ID. If the selected restored inputs or bindings change, refresh their
 original state and review the resulting selection again.
 
 ### Prepare the original restored application
@@ -569,7 +696,7 @@ Follow **Workspace operations** and **Refresh progress** until the original
 preparation result has been read back. Use **Continue operation** to follow the
 same retained request after an interruption.
 
-**Stop transfer** requests a stop before preparation starts. If the original
+**Stop execution** requests a stop before preparation starts. If the original
 native preparation is already running, follow its current phase to the native
 readback. Inspect the saved request before deciding how to continue it.
 
@@ -578,10 +705,11 @@ refresh its saved progress, and inspect the original result. A completed native
 preparation remains the selected operation's completed outcome.
 
 The workspace completion has `status: COMPLETE` and
-`command: publisher-prepare`. It retains `sourceRestoreId`, `snapshotId`,
-`bundle`, `destination`, `publisherOperationId`, and the original
-`prepared` result. Keep both the workspace operation ID and the native
-publisher operation ID with the original restore.
+`command: publisher-prepare`. A host-declared selection retains
+`sourcePublisherRestoreId`; a remote-journal selection retains `sourceRestoreId`.
+Both keep `snapshotId`, `bundle`, `destination`, `publisherOperationId`, and the
+unchanged original `prepared` result. Keep the workspace operation ID, selected
+source ID, and native publisher operation ID with the existing recovery.
 
 ### Open the prepared publisher
 
@@ -601,8 +729,8 @@ the original application:
 Use these returned paths and the original `prepared.instructions` with the
 maintained launch procedure in
 [Dataset publisher recovery](../DATASET_PUBLISHER.md). Preserve the prepared
-binding, original restore ID, snapshot ID and native preparation result with the
-receiving-host handoff.
+binding, declared restore ID or original restore journal ID, snapshot ID, and
+native preparation result with the receiving-host handoff.
 
 Reopen the original publisher against that selected state. Inspect the retained
 dataset generations, workbooks, mappings, candidates, buyers and pending
@@ -630,7 +758,7 @@ retry timing, and any uncertain-write information accompany the original
 failure when available. Correct the reported input, host, or provider cause,
 then continue the retained operation.
 
-For a remote transfer, **Stop transfer** closes the S3 client owned by the
+For a remote transfer, **Stop execution** closes the S3 client owned by the
 selected workspace execution and retains its original journal. An in-progress
 local verification or cold restore may finish after that request. Use **Refresh progress** to read
 the resulting saved phase. When the original journal records `COMPLETE`, that
@@ -676,12 +804,13 @@ Retain these items for the receiving operator:
 | Workspace host configuration and workspace state | Reopen the permitted profiles and retained operator work. |
 | Declared capture plans and original stop/restart procedure | Review the exact roots and plan digest before a subsequent source capture. |
 | Captured bundle and retained capture-attempt paths | Continue original verification and preserve interrupted generated outputs with their capture identities. |
-| Original S3 configuration | Identify the existing bucket, prefix, endpoint, and credential provider. |
+| Original S3 configuration, when selected | Identify the existing bucket, prefix, endpoint, and credential provider for remote work. |
 | Original operations directory | Reopen exact transfer bindings, progress, completion, and provider acknowledgements. |
 | Snapshot ID and completion key | Select the same completed recovery point. |
 | Original encrypted bundle and download location | Authenticate and reuse the retained snapshot. |
 | Completed restore destination and result | Continue the original merchant's receiving-host procedure. |
-| Dataset-publisher preparation review and completed native result | Reopen the exact prepared dataset, publisher and seller configuration with the source restore and native operation identities. |
+| Declared publisher restore IDs and their exact bundle/restore paths | Reopen existing local publisher recovery through its original authenticated inspection and native preparation. |
+| Dataset-publisher preparation review and completed native result | Reopen the exact prepared dataset, publisher and seller configuration with the selected source and native operation identities. |
 
 The original credential and passphrase facilities remain with the host's
 existing secret-management process. The operator handoff identifies their

@@ -1,4 +1,4 @@
-"""Lossless source-file restoration from the original SF88 dataset delivery.
+"""Lossless source-file restoration from original SF88 or finalized SF100 delivery.
 
 Providers supply manifest and release validators. Original DatasetDelivery owns
 page, recovery, accounting and transport state; this module reconstructs bytes.
@@ -191,8 +191,12 @@ def restore_file_projection(delivery, destination, *, result_type,
     if expected_capture_id is not None:
         contract.sha(expected_capture_id, "expected_capture_id")
     native = delivery.native
-    if not isinstance(native, dict) or native.get("schema") != "stellar-forge.sf88.dataset-delivery.v1":
-        raise contract.error_type("ORIGINAL_SF88_DATASET_DELIVERY_REQUIRED")
+    if (not isinstance(native, dict) or native.get("schema") not in {
+            "stellar-forge.sf88.dataset-delivery.v1",
+            "stellar-forge.sf100.dataset-delivery.v1"}
+            or native.get("schema") == "stellar-forge.sf100.dataset-delivery.v1"
+            and native.get("sourceFormat") != "SF100_SCAN"):
+        raise contract.error_type("ORIGINAL_DATASET_DELIVERY_REQUIRED")
     output = Path(os.path.abspath(Path(destination).expanduser()))
     parent = private_directory(output.parent)
     if parent != output.parent:

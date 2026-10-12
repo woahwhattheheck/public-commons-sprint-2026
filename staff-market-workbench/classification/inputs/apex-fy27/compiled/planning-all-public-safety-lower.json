@@ -1,0 +1,1257 @@
+{
+  "as_of": "2026-10-12",
+  "basis": "For every combined authorized group, all authorized FTE are placed in the lowest published minimum among that group's permitted source roles. This is the lower full-occupancy published base-pay envelope. Base pay only, with every selected authorized position filled for the full year. Published annual rates are multiplied by FTE once. Incentive rates, credited service and reporting relationships are left blank. This cohort is an editable planning assumption derived from public authorizations; employee placement uses the separate private workforce import.",
+  "currency": "USD",
+  "data_kind": "planning_cohort",
+  "edition": "FY27 source / prepared 2026-10-12",
+  "name": "Apex all-public-safety public planning — lower envelope",
+  "planning_summary": {
+    "anchor": "minimum",
+    "annual_base_pay": "19087133.91",
+    "authorized_groups": 38,
+    "envelope": "lower",
+    "rows": 38,
+    "scope": "all-public-safety",
+    "total_fte": "275"
+  },
+  "rate_basis": "annual_fulltime",
+  "rows": [
+    {
+      "annual_base_rate": "142790.96",
+      "annual_incentive_rate": "",
+      "credited_years": "",
+      "current_grade_id": "SL303",
+      "fte": "1",
+      "id": "apex-authorized-fire-rescue-fire-chief--fire-rescue-fire-chief",
+      "manager_id": "",
+      "placement_rationale": "Published minimum rate for grade SL303; authorized group apex-authorized-fire-rescue-fire-chief.",
+      "role_id": "apex-fire-rescue-fire-chief",
+      "source_ref": {
+        "allocation_basis": "For every combined authorized group, all authorized FTE are placed in the lowest published minimum among that group's permitted source roles. This is the lower full-occupancy published base-pay envelope.",
+        "authorization": {
+          "as_of": "2026-10-12",
+          "label": "CN20-A1 FY27 Position Authorization by Department",
+          "page": "2",
+          "sha256": "cd39b69b057f9bbbbb9df12dacd80c8ac76cfa4519fbd7d378b3032dd95d5dbb",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-4a9bf4e1f4604076849f87b223df8ecf.pdf"
+        },
+        "authorized_group_id": "apex-authorized-fire-rescue-fire-chief",
+        "mapping_note": "",
+        "pay_grade": {
+          "as_of": "2026-10-12",
+          "label": "CN19-A1 FY27 Job Titles and Pay Ranges",
+          "note": "Annual 1.0 FTE amounts; original row pay-plan-p2-l39",
+          "page": "2",
+          "sha256": "684bef5023a621e8fb4c26892c8ec0864bb2a5fab0048566b6cc5acfa57f54a2",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-6954dd454cca4733bcafedfd1d792f0f.pdf"
+        },
+        "rate_basis": "Published minimum rate for grade SL303; authorized group apex-authorized-fire-rescue-fire-chief."
+      }
+    },
+    {
+      "annual_base_rate": "104849.06",
+      "annual_incentive_rate": "",
+      "credited_years": "",
+      "current_grade_id": "M14",
+      "fte": "3",
+      "id": "apex-authorized-fire-rescue-assistant-fire-chief--fire-rescue-assistant-fire-chief",
+      "manager_id": "",
+      "placement_rationale": "Published minimum rate for grade M14; authorized group apex-authorized-fire-rescue-assistant-fire-chief.",
+      "role_id": "apex-fire-rescue-assistant-fire-chief",
+      "source_ref": {
+        "allocation_basis": "For every combined authorized group, all authorized FTE are placed in the lowest published minimum among that group's permitted source roles. This is the lower full-occupancy published base-pay envelope.",
+        "authorization": {
+          "as_of": "2026-10-12",
+          "label": "CN20-A1 FY27 Position Authorization by Department",
+          "page": "2",
+          "sha256": "cd39b69b057f9bbbbb9df12dacd80c8ac76cfa4519fbd7d378b3032dd95d5dbb",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-4a9bf4e1f4604076849f87b223df8ecf.pdf"
+        },
+        "authorized_group_id": "apex-authorized-fire-rescue-assistant-fire-chief",
+        "mapping_note": "",
+        "pay_grade": {
+          "as_of": "2026-10-12",
+          "label": "CN19-A1 FY27 Job Titles and Pay Ranges",
+          "note": "Annual 1.0 FTE amounts; original row pay-plan-p2-l38",
+          "page": "2",
+          "sha256": "684bef5023a621e8fb4c26892c8ec0864bb2a5fab0048566b6cc5acfa57f54a2",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-6954dd454cca4733bcafedfd1d792f0f.pdf"
+        },
+        "rate_basis": "Published minimum rate for grade M14; authorized group apex-authorized-fire-rescue-assistant-fire-chief."
+      }
+    },
+    {
+      "annual_base_rate": "100071.50",
+      "annual_incentive_rate": "",
+      "credited_years": "",
+      "current_grade_id": "F109",
+      "fte": "6",
+      "id": "apex-authorized-fire-rescue-fire-battalion-chief--fire-rescue-fire-battalion-chief",
+      "manager_id": "",
+      "placement_rationale": "Published minimum rate for grade F109; authorized group apex-authorized-fire-rescue-fire-battalion-chief.",
+      "role_id": "apex-fire-rescue-fire-battalion-chief",
+      "source_ref": {
+        "allocation_basis": "For every combined authorized group, all authorized FTE are placed in the lowest published minimum among that group's permitted source roles. This is the lower full-occupancy published base-pay envelope.",
+        "authorization": {
+          "as_of": "2026-10-12",
+          "label": "CN20-A1 FY27 Position Authorization by Department",
+          "page": "2",
+          "sha256": "cd39b69b057f9bbbbb9df12dacd80c8ac76cfa4519fbd7d378b3032dd95d5dbb",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-4a9bf4e1f4604076849f87b223df8ecf.pdf"
+        },
+        "authorized_group_id": "apex-authorized-fire-rescue-fire-battalion-chief",
+        "mapping_note": "",
+        "pay_grade": {
+          "as_of": "2026-10-12",
+          "label": "CN19-A1 FY27 Job Titles and Pay Ranges",
+          "note": "Annual 1.0 FTE amounts; original row pay-plan-p2-l33",
+          "page": "2",
+          "sha256": "684bef5023a621e8fb4c26892c8ec0864bb2a5fab0048566b6cc5acfa57f54a2",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-6954dd454cca4733bcafedfd1d792f0f.pdf"
+        },
+        "rate_basis": "Published minimum rate for grade F109; authorized group apex-authorized-fire-rescue-fire-battalion-chief."
+      }
+    },
+    {
+      "annual_base_rate": "100071.50",
+      "annual_incentive_rate": "",
+      "credited_years": "",
+      "current_grade_id": "F109",
+      "fte": "1",
+      "id": "apex-authorized-fire-rescue-fire-marshal--fire-rescue-fire-marshal",
+      "manager_id": "",
+      "placement_rationale": "Published minimum rate for grade F109; authorized group apex-authorized-fire-rescue-fire-marshal.",
+      "role_id": "apex-fire-rescue-fire-marshal",
+      "source_ref": {
+        "allocation_basis": "For every combined authorized group, all authorized FTE are placed in the lowest published minimum among that group's permitted source roles. This is the lower full-occupancy published base-pay envelope.",
+        "authorization": {
+          "as_of": "2026-10-12",
+          "label": "CN20-A1 FY27 Position Authorization by Department",
+          "page": "2",
+          "sha256": "cd39b69b057f9bbbbb9df12dacd80c8ac76cfa4519fbd7d378b3032dd95d5dbb",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-4a9bf4e1f4604076849f87b223df8ecf.pdf"
+        },
+        "authorized_group_id": "apex-authorized-fire-rescue-fire-marshal",
+        "mapping_note": "",
+        "pay_grade": {
+          "as_of": "2026-10-12",
+          "label": "CN19-A1 FY27 Job Titles and Pay Ranges",
+          "note": "Annual 1.0 FTE amounts; original row pay-plan-p2-l33",
+          "page": "2",
+          "sha256": "684bef5023a621e8fb4c26892c8ec0864bb2a5fab0048566b6cc5acfa57f54a2",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-6954dd454cca4733bcafedfd1d792f0f.pdf"
+        },
+        "rate_basis": "Published minimum rate for grade F109; authorized group apex-authorized-fire-rescue-fire-marshal."
+      }
+    },
+    {
+      "annual_base_rate": "79718.70",
+      "annual_incentive_rate": "",
+      "credited_years": "",
+      "current_grade_id": "F107",
+      "fte": "1",
+      "id": "apex-authorized-fire-rescue-deputy-fire-marshal-i-ii--fire-rescue-deputy-fire-marshal-i-ii",
+      "manager_id": "",
+      "placement_rationale": "Published minimum rate for grade F107; authorized group apex-authorized-fire-rescue-deputy-fire-marshal-i-ii.",
+      "role_id": "apex-fire-rescue-deputy-fire-marshal-i-ii",
+      "source_ref": {
+        "allocation_basis": "For every combined authorized group, all authorized FTE are placed in the lowest published minimum among that group's permitted source roles. This is the lower full-occupancy published base-pay envelope.",
+        "authorization": {
+          "as_of": "2026-10-12",
+          "label": "CN20-A1 FY27 Position Authorization by Department",
+          "page": "2",
+          "sha256": "cd39b69b057f9bbbbb9df12dacd80c8ac76cfa4519fbd7d378b3032dd95d5dbb",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-4a9bf4e1f4604076849f87b223df8ecf.pdf"
+        },
+        "authorized_group_id": "apex-authorized-fire-rescue-deputy-fire-marshal-i-ii",
+        "mapping_note": "",
+        "pay_grade": {
+          "as_of": "2026-10-12",
+          "label": "CN19-A1 FY27 Job Titles and Pay Ranges",
+          "note": "Annual 1.0 FTE amounts; original row pay-plan-p2-l29",
+          "page": "2",
+          "sha256": "684bef5023a621e8fb4c26892c8ec0864bb2a5fab0048566b6cc5acfa57f54a2",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-6954dd454cca4733bcafedfd1d792f0f.pdf"
+        },
+        "rate_basis": "Published minimum rate for grade F107; authorized group apex-authorized-fire-rescue-deputy-fire-marshal-i-ii."
+      }
+    },
+    {
+      "annual_base_rate": "79718.70",
+      "annual_incentive_rate": "",
+      "credited_years": "",
+      "current_grade_id": "F107",
+      "fte": "2",
+      "id": "apex-authorized-fire-rescue-fire-training-coordinator-i-ii--fire-rescue-fire-training-coordinator-i-ii",
+      "manager_id": "",
+      "placement_rationale": "Published minimum rate for grade F107; authorized group apex-authorized-fire-rescue-fire-training-coordinator-i-ii.",
+      "role_id": "apex-fire-rescue-fire-training-coordinator-i-ii",
+      "source_ref": {
+        "allocation_basis": "For every combined authorized group, all authorized FTE are placed in the lowest published minimum among that group's permitted source roles. This is the lower full-occupancy published base-pay envelope.",
+        "authorization": {
+          "as_of": "2026-10-12",
+          "label": "CN20-A1 FY27 Position Authorization by Department",
+          "page": "2",
+          "sha256": "cd39b69b057f9bbbbb9df12dacd80c8ac76cfa4519fbd7d378b3032dd95d5dbb",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-4a9bf4e1f4604076849f87b223df8ecf.pdf"
+        },
+        "authorized_group_id": "apex-authorized-fire-rescue-fire-training-coordinator-i-ii",
+        "mapping_note": "",
+        "pay_grade": {
+          "as_of": "2026-10-12",
+          "label": "CN19-A1 FY27 Job Titles and Pay Ranges",
+          "note": "Annual 1.0 FTE amounts; original row pay-plan-p2-l29",
+          "page": "2",
+          "sha256": "684bef5023a621e8fb4c26892c8ec0864bb2a5fab0048566b6cc5acfa57f54a2",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-6954dd454cca4733bcafedfd1d792f0f.pdf"
+        },
+        "rate_basis": "Published minimum rate for grade F107; authorized group apex-authorized-fire-rescue-fire-training-coordinator-i-ii."
+      }
+    },
+    {
+      "annual_base_rate": "79718.70",
+      "annual_incentive_rate": "",
+      "credited_years": "",
+      "current_grade_id": "F107",
+      "fte": "24",
+      "id": "apex-authorized-fire-rescue-fire-captain-i-captain-ii--fire-rescue-fire-captain-i",
+      "manager_id": "",
+      "placement_rationale": "Published minimum rate for grade F107; authorized group apex-authorized-fire-rescue-fire-captain-i-captain-ii.",
+      "role_id": "apex-fire-rescue-fire-captain-i",
+      "source_ref": {
+        "allocation_basis": "For every combined authorized group, all authorized FTE are placed in the lowest published minimum among that group's permitted source roles. This is the lower full-occupancy published base-pay envelope.",
+        "authorization": {
+          "as_of": "2026-10-12",
+          "label": "CN20-A1 FY27 Position Authorization by Department",
+          "page": "2",
+          "sha256": "cd39b69b057f9bbbbb9df12dacd80c8ac76cfa4519fbd7d378b3032dd95d5dbb",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-4a9bf4e1f4604076849f87b223df8ecf.pdf"
+        },
+        "authorized_group_id": "apex-authorized-fire-rescue-fire-captain-i-captain-ii",
+        "mapping_note": "",
+        "pay_grade": {
+          "as_of": "2026-10-12",
+          "label": "CN19-A1 FY27 Job Titles and Pay Ranges",
+          "note": "Annual 1.0 FTE amounts; original row pay-plan-p2-l29",
+          "page": "2",
+          "sha256": "684bef5023a621e8fb4c26892c8ec0864bb2a5fab0048566b6cc5acfa57f54a2",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-6954dd454cca4733bcafedfd1d792f0f.pdf"
+        },
+        "rate_basis": "Published minimum rate for grade F107; authorized group apex-authorized-fire-rescue-fire-captain-i-captain-ii."
+      }
+    },
+    {
+      "annual_base_rate": "71491.89",
+      "annual_incentive_rate": "",
+      "credited_years": "",
+      "current_grade_id": "F104",
+      "fte": "2",
+      "id": "apex-authorized-fire-rescue-fire-inspector-i-ii-iii--fire-rescue-fire-inspector-i-ii-iii",
+      "manager_id": "",
+      "placement_rationale": "Published minimum rate for grade F104; authorized group apex-authorized-fire-rescue-fire-inspector-i-ii-iii.",
+      "role_id": "apex-fire-rescue-fire-inspector-i-ii-iii",
+      "source_ref": {
+        "allocation_basis": "For every combined authorized group, all authorized FTE are placed in the lowest published minimum among that group's permitted source roles. This is the lower full-occupancy published base-pay envelope.",
+        "authorization": {
+          "as_of": "2026-10-12",
+          "label": "CN20-A1 FY27 Position Authorization by Department",
+          "page": "2",
+          "sha256": "cd39b69b057f9bbbbb9df12dacd80c8ac76cfa4519fbd7d378b3032dd95d5dbb",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-4a9bf4e1f4604076849f87b223df8ecf.pdf"
+        },
+        "authorized_group_id": "apex-authorized-fire-rescue-fire-inspector-i-ii-iii",
+        "mapping_note": "",
+        "pay_grade": {
+          "as_of": "2026-10-12",
+          "label": "CN19-A1 FY27 Job Titles and Pay Ranges",
+          "note": "Annual 1.0 FTE amounts; original row pay-plan-p2-l27",
+          "page": "2",
+          "sha256": "684bef5023a621e8fb4c26892c8ec0864bb2a5fab0048566b6cc5acfa57f54a2",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-6954dd454cca4733bcafedfd1d792f0f.pdf"
+        },
+        "rate_basis": "Published minimum rate for grade F104; authorized group apex-authorized-fire-rescue-fire-inspector-i-ii-iii."
+      }
+    },
+    {
+      "annual_base_rate": "71491.89",
+      "annual_incentive_rate": "",
+      "credited_years": "",
+      "current_grade_id": "F104",
+      "fte": "24",
+      "id": "apex-authorized-fire-rescue-fire-engineer-i-ii--fire-rescue-fire-engineer-i-ii",
+      "manager_id": "",
+      "placement_rationale": "Published minimum rate for grade F104; authorized group apex-authorized-fire-rescue-fire-engineer-i-ii.",
+      "role_id": "apex-fire-rescue-fire-engineer-i-ii",
+      "source_ref": {
+        "allocation_basis": "For every combined authorized group, all authorized FTE are placed in the lowest published minimum among that group's permitted source roles. This is the lower full-occupancy published base-pay envelope.",
+        "authorization": {
+          "as_of": "2026-10-12",
+          "label": "CN20-A1 FY27 Position Authorization by Department",
+          "page": "2",
+          "sha256": "cd39b69b057f9bbbbb9df12dacd80c8ac76cfa4519fbd7d378b3032dd95d5dbb",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-4a9bf4e1f4604076849f87b223df8ecf.pdf"
+        },
+        "authorized_group_id": "apex-authorized-fire-rescue-fire-engineer-i-ii",
+        "mapping_note": "",
+        "pay_grade": {
+          "as_of": "2026-10-12",
+          "label": "CN19-A1 FY27 Job Titles and Pay Ranges",
+          "note": "Annual 1.0 FTE amounts; original row pay-plan-p2-l27",
+          "page": "2",
+          "sha256": "684bef5023a621e8fb4c26892c8ec0864bb2a5fab0048566b6cc5acfa57f54a2",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-6954dd454cca4733bcafedfd1d792f0f.pdf"
+        },
+        "rate_basis": "Published minimum rate for grade F104; authorized group apex-authorized-fire-rescue-fire-engineer-i-ii."
+      }
+    },
+    {
+      "annual_base_rate": "64679.06",
+      "annual_incentive_rate": "",
+      "credited_years": "",
+      "current_grade_id": "F102",
+      "fte": "1",
+      "id": "apex-authorized-fire-rescue-community-risk-reduction-coordinator-i-ii--fire-rescue-community-risk-reduction-coordinator-i-ii",
+      "manager_id": "",
+      "placement_rationale": "Published minimum rate for grade F102; authorized group apex-authorized-fire-rescue-community-risk-reduction-coordinator-i-ii.",
+      "role_id": "apex-fire-rescue-community-risk-reduction-coordinator-i-ii",
+      "source_ref": {
+        "allocation_basis": "For every combined authorized group, all authorized FTE are placed in the lowest published minimum among that group's permitted source roles. This is the lower full-occupancy published base-pay envelope.",
+        "authorization": {
+          "as_of": "2026-10-12",
+          "label": "CN20-A1 FY27 Position Authorization by Department",
+          "page": "2",
+          "sha256": "cd39b69b057f9bbbbb9df12dacd80c8ac76cfa4519fbd7d378b3032dd95d5dbb",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-4a9bf4e1f4604076849f87b223df8ecf.pdf"
+        },
+        "authorized_group_id": "apex-authorized-fire-rescue-community-risk-reduction-coordinator-i-ii",
+        "mapping_note": "",
+        "pay_grade": {
+          "as_of": "2026-10-12",
+          "label": "CN19-A1 FY27 Job Titles and Pay Ranges",
+          "note": "Annual 1.0 FTE amounts; original row pay-plan-p2-l23",
+          "page": "2",
+          "sha256": "684bef5023a621e8fb4c26892c8ec0864bb2a5fab0048566b6cc5acfa57f54a2",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-6954dd454cca4733bcafedfd1d792f0f.pdf"
+        },
+        "rate_basis": "Published minimum rate for grade F102; authorized group apex-authorized-fire-rescue-community-risk-reduction-coordinator-i-ii."
+      }
+    },
+    {
+      "annual_base_rate": "64679.06",
+      "annual_incentive_rate": "",
+      "credited_years": "",
+      "current_grade_id": "F102",
+      "fte": "1",
+      "id": "apex-authorized-fire-rescue-fire-accreditation-specialist-i-ii--fire-rescue-fire-accreditation-specialist-i-ii",
+      "manager_id": "",
+      "placement_rationale": "Published minimum rate for grade F102; authorized group apex-authorized-fire-rescue-fire-accreditation-specialist-i-ii.",
+      "role_id": "apex-fire-rescue-fire-accreditation-specialist-i-ii",
+      "source_ref": {
+        "allocation_basis": "For every combined authorized group, all authorized FTE are placed in the lowest published minimum among that group's permitted source roles. This is the lower full-occupancy published base-pay envelope.",
+        "authorization": {
+          "as_of": "2026-10-12",
+          "label": "CN20-A1 FY27 Position Authorization by Department",
+          "page": "2",
+          "sha256": "cd39b69b057f9bbbbb9df12dacd80c8ac76cfa4519fbd7d378b3032dd95d5dbb",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-4a9bf4e1f4604076849f87b223df8ecf.pdf"
+        },
+        "authorized_group_id": "apex-authorized-fire-rescue-fire-accreditation-specialist-i-ii",
+        "mapping_note": "",
+        "pay_grade": {
+          "as_of": "2026-10-12",
+          "label": "CN19-A1 FY27 Job Titles and Pay Ranges",
+          "note": "Annual 1.0 FTE amounts; original row pay-plan-p2-l23",
+          "page": "2",
+          "sha256": "684bef5023a621e8fb4c26892c8ec0864bb2a5fab0048566b6cc5acfa57f54a2",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-6954dd454cca4733bcafedfd1d792f0f.pdf"
+        },
+        "rate_basis": "Published minimum rate for grade F102; authorized group apex-authorized-fire-rescue-fire-accreditation-specialist-i-ii."
+      }
+    },
+    {
+      "annual_base_rate": "56238.00",
+      "annual_incentive_rate": "",
+      "credited_years": "",
+      "current_grade_id": "F100",
+      "fte": "54",
+      "id": "apex-authorized-fire-rescue-cadet-firefighter-senior-firefighter--fire-rescue-firefighter-cadet",
+      "manager_id": "",
+      "placement_rationale": "Published minimum rate for grade F100; authorized group apex-authorized-fire-rescue-cadet-firefighter-senior-firefighter.",
+      "role_id": "apex-fire-rescue-firefighter-cadet",
+      "source_ref": {
+        "allocation_basis": "For every combined authorized group, all authorized FTE are placed in the lowest published minimum among that group's permitted source roles. This is the lower full-occupancy published base-pay envelope.",
+        "authorization": {
+          "as_of": "2026-10-12",
+          "label": "CN20-A1 FY27 Position Authorization by Department",
+          "page": "2",
+          "sha256": "cd39b69b057f9bbbbb9df12dacd80c8ac76cfa4519fbd7d378b3032dd95d5dbb",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-4a9bf4e1f4604076849f87b223df8ecf.pdf"
+        },
+        "authorized_group_id": "apex-authorized-fire-rescue-cadet-firefighter-senior-firefighter",
+        "mapping_note": "",
+        "pay_grade": {
+          "as_of": "2026-10-12",
+          "label": "CN19-A1 FY27 Job Titles and Pay Ranges",
+          "note": "Annual 1.0 FTE amounts; original row pay-plan-p2-l22",
+          "page": "2",
+          "sha256": "684bef5023a621e8fb4c26892c8ec0864bb2a5fab0048566b6cc5acfa57f54a2",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-6954dd454cca4733bcafedfd1d792f0f.pdf"
+        },
+        "rate_basis": "Published minimum rate for grade F100; authorized group apex-authorized-fire-rescue-cadet-firefighter-senior-firefighter."
+      }
+    },
+    {
+      "annual_base_rate": "56580.78",
+      "annual_incentive_rate": "",
+      "credited_years": "",
+      "current_grade_id": "M07",
+      "fte": "1",
+      "id": "apex-authorized-fire-rescue-admin-logistics-coordinator-i-ii--fire-rescue-admin-logistics-coordinator-i-ii",
+      "manager_id": "",
+      "placement_rationale": "Published minimum rate for grade M07; authorized group apex-authorized-fire-rescue-admin-logistics-coordinator-i-ii.",
+      "role_id": "apex-fire-rescue-admin-logistics-coordinator-i-ii",
+      "source_ref": {
+        "allocation_basis": "For every combined authorized group, all authorized FTE are placed in the lowest published minimum among that group's permitted source roles. This is the lower full-occupancy published base-pay envelope.",
+        "authorization": {
+          "as_of": "2026-10-12",
+          "label": "CN20-A1 FY27 Position Authorization by Department",
+          "page": "2",
+          "sha256": "cd39b69b057f9bbbbb9df12dacd80c8ac76cfa4519fbd7d378b3032dd95d5dbb",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-4a9bf4e1f4604076849f87b223df8ecf.pdf"
+        },
+        "authorized_group_id": "apex-authorized-fire-rescue-admin-logistics-coordinator-i-ii",
+        "mapping_note": "",
+        "pay_grade": {
+          "as_of": "2026-10-12",
+          "label": "CN19-A1 FY27 Job Titles and Pay Ranges",
+          "note": "Annual 1.0 FTE amounts; original row pay-plan-p2-l35",
+          "page": "2",
+          "sha256": "684bef5023a621e8fb4c26892c8ec0864bb2a5fab0048566b6cc5acfa57f54a2",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-6954dd454cca4733bcafedfd1d792f0f.pdf"
+        },
+        "rate_basis": "Published minimum rate for grade M07; authorized group apex-authorized-fire-rescue-admin-logistics-coordinator-i-ii."
+      }
+    },
+    {
+      "annual_base_rate": "61679.70",
+      "annual_incentive_rate": "",
+      "credited_years": "",
+      "current_grade_id": "M08",
+      "fte": "1",
+      "id": "apex-authorized-fire-rescue-executive-assistant-i-ii--fire-rescue-executive-assistant-i-ii",
+      "manager_id": "",
+      "placement_rationale": "Published minimum rate for grade M08; authorized group apex-authorized-fire-rescue-executive-assistant-i-ii.",
+      "role_id": "apex-fire-rescue-executive-assistant-i-ii",
+      "source_ref": {
+        "allocation_basis": "For every combined authorized group, all authorized FTE are placed in the lowest published minimum among that group's permitted source roles. This is the lower full-occupancy published base-pay envelope.",
+        "authorization": {
+          "as_of": "2026-10-12",
+          "label": "CN20-A1 FY27 Position Authorization by Department",
+          "page": "2",
+          "sha256": "cd39b69b057f9bbbbb9df12dacd80c8ac76cfa4519fbd7d378b3032dd95d5dbb",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-4a9bf4e1f4604076849f87b223df8ecf.pdf"
+        },
+        "authorized_group_id": "apex-authorized-fire-rescue-executive-assistant-i-ii",
+        "mapping_note": "",
+        "pay_grade": {
+          "as_of": "2026-10-12",
+          "label": "CN19-A1 FY27 Job Titles and Pay Ranges",
+          "note": "Annual 1.0 FTE amounts; original row pay-plan-p2-l36",
+          "page": "2",
+          "sha256": "684bef5023a621e8fb4c26892c8ec0864bb2a5fab0048566b6cc5acfa57f54a2",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-6954dd454cca4733bcafedfd1d792f0f.pdf"
+        },
+        "rate_basis": "Published minimum rate for grade M08; authorized group apex-authorized-fire-rescue-executive-assistant-i-ii."
+      }
+    },
+    {
+      "annual_base_rate": "142790.96",
+      "annual_incentive_rate": "",
+      "credited_years": "",
+      "current_grade_id": "SL303",
+      "fte": "1",
+      "id": "apex-authorized-police-police-chief--police-police-chief",
+      "manager_id": "",
+      "placement_rationale": "Published minimum rate for grade SL303; authorized group apex-authorized-police-police-chief.",
+      "role_id": "apex-police-police-chief",
+      "source_ref": {
+        "allocation_basis": "For every combined authorized group, all authorized FTE are placed in the lowest published minimum among that group's permitted source roles. This is the lower full-occupancy published base-pay envelope.",
+        "authorization": {
+          "as_of": "2026-10-12",
+          "label": "CN20-A1 FY27 Position Authorization by Department",
+          "page": "4",
+          "sha256": "cd39b69b057f9bbbbb9df12dacd80c8ac76cfa4519fbd7d378b3032dd95d5dbb",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-4a9bf4e1f4604076849f87b223df8ecf.pdf"
+        },
+        "authorized_group_id": "apex-authorized-police-police-chief",
+        "mapping_note": "",
+        "pay_grade": {
+          "as_of": "2026-10-12",
+          "label": "CN19-A1 FY27 Job Titles and Pay Ranges",
+          "note": "Annual 1.0 FTE amounts; original row pay-plan-p2-l39",
+          "page": "2",
+          "sha256": "684bef5023a621e8fb4c26892c8ec0864bb2a5fab0048566b6cc5acfa57f54a2",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-6954dd454cca4733bcafedfd1d792f0f.pdf"
+        },
+        "rate_basis": "Published minimum rate for grade SL303; authorized group apex-authorized-police-police-chief."
+      }
+    },
+    {
+      "annual_base_rate": "125737.46",
+      "annual_incentive_rate": "",
+      "credited_years": "",
+      "current_grade_id": "M16",
+      "fte": "1",
+      "id": "apex-authorized-police-deputy-police-chief--police-deputy-police-chief",
+      "manager_id": "",
+      "placement_rationale": "Published minimum rate for grade M16; authorized group apex-authorized-police-deputy-police-chief.",
+      "role_id": "apex-police-deputy-police-chief",
+      "source_ref": {
+        "allocation_basis": "For every combined authorized group, all authorized FTE are placed in the lowest published minimum among that group's permitted source roles. This is the lower full-occupancy published base-pay envelope.",
+        "authorization": {
+          "as_of": "2026-10-12",
+          "label": "CN20-A1 FY27 Position Authorization by Department",
+          "page": "4",
+          "sha256": "cd39b69b057f9bbbbb9df12dacd80c8ac76cfa4519fbd7d378b3032dd95d5dbb",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-4a9bf4e1f4604076849f87b223df8ecf.pdf"
+        },
+        "authorized_group_id": "apex-authorized-police-deputy-police-chief",
+        "mapping_note": "",
+        "pay_grade": {
+          "as_of": "2026-10-12",
+          "label": "CN19-A1 FY27 Job Titles and Pay Ranges",
+          "note": "Annual 1.0 FTE amounts; original row pay-plan-p4-l42",
+          "page": "4",
+          "sha256": "684bef5023a621e8fb4c26892c8ec0864bb2a5fab0048566b6cc5acfa57f54a2",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-6954dd454cca4733bcafedfd1d792f0f.pdf"
+        },
+        "rate_basis": "Published minimum rate for grade M16; authorized group apex-authorized-police-deputy-police-chief."
+      }
+    },
+    {
+      "annual_base_rate": "103135.14",
+      "annual_incentive_rate": "",
+      "credited_years": "",
+      "current_grade_id": "P207",
+      "fte": "4",
+      "id": "apex-authorized-police-police-captain--police-police-captain",
+      "manager_id": "",
+      "placement_rationale": "Published minimum rate for grade P207; authorized group apex-authorized-police-police-captain.",
+      "role_id": "apex-police-police-captain",
+      "source_ref": {
+        "allocation_basis": "For every combined authorized group, all authorized FTE are placed in the lowest published minimum among that group's permitted source roles. This is the lower full-occupancy published base-pay envelope.",
+        "authorization": {
+          "as_of": "2026-10-12",
+          "label": "CN20-A1 FY27 Position Authorization by Department",
+          "page": "4",
+          "sha256": "cd39b69b057f9bbbbb9df12dacd80c8ac76cfa4519fbd7d378b3032dd95d5dbb",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-4a9bf4e1f4604076849f87b223df8ecf.pdf"
+        },
+        "authorized_group_id": "apex-authorized-police-police-captain",
+        "mapping_note": "",
+        "pay_grade": {
+          "as_of": "2026-10-12",
+          "label": "CN19-A1 FY27 Job Titles and Pay Ranges",
+          "note": "Annual 1.0 FTE amounts; original row pay-plan-p4-l51",
+          "page": "4",
+          "sha256": "684bef5023a621e8fb4c26892c8ec0864bb2a5fab0048566b6cc5acfa57f54a2",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-6954dd454cca4733bcafedfd1d792f0f.pdf"
+        },
+        "rate_basis": "Published minimum rate for grade P207; authorized group apex-authorized-police-police-captain."
+      }
+    },
+    {
+      "annual_base_rate": "94822.62",
+      "annual_incentive_rate": "",
+      "credited_years": "",
+      "current_grade_id": "P206",
+      "fte": "7",
+      "id": "apex-authorized-police-police-lieutenant--police-police-lieutenant",
+      "manager_id": "",
+      "placement_rationale": "Published minimum rate for grade P206; authorized group apex-authorized-police-police-lieutenant.",
+      "role_id": "apex-police-police-lieutenant",
+      "source_ref": {
+        "allocation_basis": "For every combined authorized group, all authorized FTE are placed in the lowest published minimum among that group's permitted source roles. This is the lower full-occupancy published base-pay envelope.",
+        "authorization": {
+          "as_of": "2026-10-12",
+          "label": "CN20-A1 FY27 Position Authorization by Department",
+          "page": "4",
+          "sha256": "cd39b69b057f9bbbbb9df12dacd80c8ac76cfa4519fbd7d378b3032dd95d5dbb",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-4a9bf4e1f4604076849f87b223df8ecf.pdf"
+        },
+        "authorized_group_id": "apex-authorized-police-police-lieutenant",
+        "mapping_note": "",
+        "pay_grade": {
+          "as_of": "2026-10-12",
+          "label": "CN19-A1 FY27 Job Titles and Pay Ranges",
+          "note": "Annual 1.0 FTE amounts; original row pay-plan-p4-l50",
+          "page": "4",
+          "sha256": "684bef5023a621e8fb4c26892c8ec0864bb2a5fab0048566b6cc5acfa57f54a2",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-6954dd454cca4733bcafedfd1d792f0f.pdf"
+        },
+        "rate_basis": "Published minimum rate for grade P206; authorized group apex-authorized-police-police-lieutenant."
+      }
+    },
+    {
+      "annual_base_rate": "85053.28",
+      "annual_incentive_rate": "",
+      "credited_years": "",
+      "current_grade_id": "P205",
+      "fte": "16",
+      "id": "apex-authorized-police-police-sergeant--police-police-sergeant",
+      "manager_id": "",
+      "placement_rationale": "Published minimum rate for grade P205; authorized group apex-authorized-police-police-sergeant.",
+      "role_id": "apex-police-police-sergeant",
+      "source_ref": {
+        "allocation_basis": "For every combined authorized group, all authorized FTE are placed in the lowest published minimum among that group's permitted source roles. This is the lower full-occupancy published base-pay envelope.",
+        "authorization": {
+          "as_of": "2026-10-12",
+          "label": "CN20-A1 FY27 Position Authorization by Department",
+          "page": "4",
+          "sha256": "cd39b69b057f9bbbbb9df12dacd80c8ac76cfa4519fbd7d378b3032dd95d5dbb",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-4a9bf4e1f4604076849f87b223df8ecf.pdf"
+        },
+        "authorized_group_id": "apex-authorized-police-police-sergeant",
+        "mapping_note": "",
+        "pay_grade": {
+          "as_of": "2026-10-12",
+          "label": "CN19-A1 FY27 Job Titles and Pay Ranges",
+          "note": "Annual 1.0 FTE amounts; original row pay-plan-p4-l49",
+          "page": "4",
+          "sha256": "684bef5023a621e8fb4c26892c8ec0864bb2a5fab0048566b6cc5acfa57f54a2",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-6954dd454cca4733bcafedfd1d792f0f.pdf"
+        },
+        "rate_basis": "Published minimum rate for grade P205; authorized group apex-authorized-police-police-sergeant."
+      }
+    },
+    {
+      "annual_base_rate": "78776.05",
+      "annual_incentive_rate": "",
+      "credited_years": "",
+      "current_grade_id": "P204",
+      "fte": "6",
+      "id": "apex-authorized-police-police-corporal--police-police-corporal",
+      "manager_id": "",
+      "placement_rationale": "Published minimum rate for grade P204; authorized group apex-authorized-police-police-corporal.",
+      "role_id": "apex-police-police-corporal",
+      "source_ref": {
+        "allocation_basis": "For every combined authorized group, all authorized FTE are placed in the lowest published minimum among that group's permitted source roles. This is the lower full-occupancy published base-pay envelope.",
+        "authorization": {
+          "as_of": "2026-10-12",
+          "label": "CN20-A1 FY27 Position Authorization by Department",
+          "page": "4",
+          "sha256": "cd39b69b057f9bbbbb9df12dacd80c8ac76cfa4519fbd7d378b3032dd95d5dbb",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-4a9bf4e1f4604076849f87b223df8ecf.pdf"
+        },
+        "authorized_group_id": "apex-authorized-police-police-corporal",
+        "mapping_note": "",
+        "pay_grade": {
+          "as_of": "2026-10-12",
+          "label": "CN19-A1 FY27 Job Titles and Pay Ranges",
+          "note": "Annual 1.0 FTE amounts; original row pay-plan-p4-l48",
+          "page": "4",
+          "sha256": "684bef5023a621e8fb4c26892c8ec0864bb2a5fab0048566b6cc5acfa57f54a2",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-6954dd454cca4733bcafedfd1d792f0f.pdf"
+        },
+        "rate_basis": "Published minimum rate for grade P204; authorized group apex-authorized-police-police-corporal."
+      }
+    },
+    {
+      "annual_base_rate": "64400.54",
+      "annual_incentive_rate": "",
+      "credited_years": "",
+      "current_grade_id": "P200",
+      "fte": "86",
+      "id": "apex-authorized-police-police-officers-i-ii-iii-senior--police-police-officer-i",
+      "manager_id": "",
+      "placement_rationale": "Published minimum rate for grade P200; authorized group apex-authorized-police-police-officers-i-ii-iii-senior.",
+      "role_id": "apex-police-police-officer-i",
+      "source_ref": {
+        "allocation_basis": "For every combined authorized group, all authorized FTE are placed in the lowest published minimum among that group's permitted source roles. This is the lower full-occupancy published base-pay envelope.",
+        "authorization": {
+          "as_of": "2026-10-12",
+          "label": "CN20-A1 FY27 Position Authorization by Department",
+          "page": "4",
+          "sha256": "cd39b69b057f9bbbbb9df12dacd80c8ac76cfa4519fbd7d378b3032dd95d5dbb",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-4a9bf4e1f4604076849f87b223df8ecf.pdf"
+        },
+        "authorized_group_id": "apex-authorized-police-police-officers-i-ii-iii-senior",
+        "mapping_note": "",
+        "pay_grade": {
+          "as_of": "2026-10-12",
+          "label": "CN19-A1 FY27 Job Titles and Pay Ranges",
+          "note": "Annual 1.0 FTE amounts; original row pay-plan-p4-l44",
+          "page": "4",
+          "sha256": "684bef5023a621e8fb4c26892c8ec0864bb2a5fab0048566b6cc5acfa57f54a2",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-6954dd454cca4733bcafedfd1d792f0f.pdf"
+        },
+        "rate_basis": "Published minimum rate for grade P200; authorized group apex-authorized-police-police-officers-i-ii-iii-senior."
+      }
+    },
+    {
+      "annual_base_rate": "87474.19",
+      "annual_incentive_rate": "",
+      "credited_years": "",
+      "current_grade_id": "M12",
+      "fte": "1",
+      "id": "apex-authorized-police-compliance-manager--police-compliance-manager",
+      "manager_id": "",
+      "placement_rationale": "Published minimum rate for grade M12; authorized group apex-authorized-police-compliance-manager.",
+      "role_id": "apex-police-compliance-manager",
+      "source_ref": {
+        "allocation_basis": "For every combined authorized group, all authorized FTE are placed in the lowest published minimum among that group's permitted source roles. This is the lower full-occupancy published base-pay envelope.",
+        "authorization": {
+          "as_of": "2026-10-12",
+          "label": "CN20-A1 FY27 Position Authorization by Department",
+          "page": "4",
+          "sha256": "cd39b69b057f9bbbbb9df12dacd80c8ac76cfa4519fbd7d378b3032dd95d5dbb",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-4a9bf4e1f4604076849f87b223df8ecf.pdf"
+        },
+        "authorized_group_id": "apex-authorized-police-compliance-manager",
+        "mapping_note": "",
+        "pay_grade": {
+          "as_of": "2026-10-12",
+          "label": "CN19-A1 FY27 Job Titles and Pay Ranges",
+          "note": "Annual 1.0 FTE amounts; original row pay-plan-p4-l40",
+          "page": "4",
+          "sha256": "684bef5023a621e8fb4c26892c8ec0864bb2a5fab0048566b6cc5acfa57f54a2",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-6954dd454cca4733bcafedfd1d792f0f.pdf"
+        },
+        "rate_basis": "Published minimum rate for grade M12; authorized group apex-authorized-police-compliance-manager."
+      }
+    },
+    {
+      "annual_base_rate": "87474.19",
+      "annual_incentive_rate": "",
+      "credited_years": "",
+      "current_grade_id": "M12",
+      "fte": "1",
+      "id": "apex-authorized-police-communications-center-manager--police-communications-center-manager",
+      "manager_id": "",
+      "placement_rationale": "Published minimum rate for grade M12; authorized group apex-authorized-police-communications-center-manager.",
+      "role_id": "apex-police-communications-center-manager",
+      "source_ref": {
+        "allocation_basis": "For every combined authorized group, all authorized FTE are placed in the lowest published minimum among that group's permitted source roles. This is the lower full-occupancy published base-pay envelope.",
+        "authorization": {
+          "as_of": "2026-10-12",
+          "label": "CN20-A1 FY27 Position Authorization by Department",
+          "page": "4",
+          "sha256": "cd39b69b057f9bbbbb9df12dacd80c8ac76cfa4519fbd7d378b3032dd95d5dbb",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-4a9bf4e1f4604076849f87b223df8ecf.pdf"
+        },
+        "authorized_group_id": "apex-authorized-police-communications-center-manager",
+        "mapping_note": "",
+        "pay_grade": {
+          "as_of": "2026-10-12",
+          "label": "CN19-A1 FY27 Job Titles and Pay Ranges",
+          "note": "Annual 1.0 FTE amounts; original row pay-plan-p4-l40",
+          "page": "4",
+          "sha256": "684bef5023a621e8fb4c26892c8ec0864bb2a5fab0048566b6cc5acfa57f54a2",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-6954dd454cca4733bcafedfd1d792f0f.pdf"
+        },
+        "rate_basis": "Published minimum rate for grade M12; authorized group apex-authorized-police-communications-center-manager."
+      }
+    },
+    {
+      "annual_base_rate": "73291.50",
+      "annual_incentive_rate": "",
+      "credited_years": "",
+      "current_grade_id": "M10",
+      "fte": "1",
+      "id": "apex-authorized-police-compliance-specialist-i-ii--police-compliance-specialist-i-ii",
+      "manager_id": "",
+      "placement_rationale": "Published minimum rate for grade M10; authorized group apex-authorized-police-compliance-specialist-i-ii.",
+      "role_id": "apex-police-compliance-specialist-i-ii",
+      "source_ref": {
+        "allocation_basis": "For every combined authorized group, all authorized FTE are placed in the lowest published minimum among that group's permitted source roles. This is the lower full-occupancy published base-pay envelope.",
+        "authorization": {
+          "as_of": "2026-10-12",
+          "label": "CN20-A1 FY27 Position Authorization by Department",
+          "page": "4",
+          "sha256": "cd39b69b057f9bbbbb9df12dacd80c8ac76cfa4519fbd7d378b3032dd95d5dbb",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-4a9bf4e1f4604076849f87b223df8ecf.pdf"
+        },
+        "authorized_group_id": "apex-authorized-police-compliance-specialist-i-ii",
+        "mapping_note": "",
+        "pay_grade": {
+          "as_of": "2026-10-12",
+          "label": "CN19-A1 FY27 Job Titles and Pay Ranges",
+          "note": "Annual 1.0 FTE amounts; original row pay-plan-p4-l39",
+          "page": "4",
+          "sha256": "684bef5023a621e8fb4c26892c8ec0864bb2a5fab0048566b6cc5acfa57f54a2",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-6954dd454cca4733bcafedfd1d792f0f.pdf"
+        },
+        "rate_basis": "Published minimum rate for grade M10; authorized group apex-authorized-police-compliance-specialist-i-ii."
+      }
+    },
+    {
+      "annual_base_rate": "67228.51",
+      "annual_incentive_rate": "",
+      "credited_years": "",
+      "current_grade_id": "M09",
+      "fte": "1",
+      "id": "apex-authorized-police-crime-scene-technician-i-ii--police-crime-scene-technician-i-ii",
+      "manager_id": "",
+      "placement_rationale": "Published minimum rate for grade M09; authorized group apex-authorized-police-crime-scene-technician-i-ii.",
+      "role_id": "apex-police-crime-scene-technician-i-ii",
+      "source_ref": {
+        "allocation_basis": "For every combined authorized group, all authorized FTE are placed in the lowest published minimum among that group's permitted source roles. This is the lower full-occupancy published base-pay envelope.",
+        "authorization": {
+          "as_of": "2026-10-12",
+          "label": "CN20-A1 FY27 Position Authorization by Department",
+          "page": "4",
+          "sha256": "cd39b69b057f9bbbbb9df12dacd80c8ac76cfa4519fbd7d378b3032dd95d5dbb",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-4a9bf4e1f4604076849f87b223df8ecf.pdf"
+        },
+        "authorized_group_id": "apex-authorized-police-crime-scene-technician-i-ii",
+        "mapping_note": "",
+        "pay_grade": {
+          "as_of": "2026-10-12",
+          "label": "CN19-A1 FY27 Job Titles and Pay Ranges",
+          "note": "Annual 1.0 FTE amounts; original row pay-plan-p4-l34",
+          "page": "4",
+          "sha256": "684bef5023a621e8fb4c26892c8ec0864bb2a5fab0048566b6cc5acfa57f54a2",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-6954dd454cca4733bcafedfd1d792f0f.pdf"
+        },
+        "rate_basis": "Published minimum rate for grade M09; authorized group apex-authorized-police-crime-scene-technician-i-ii."
+      }
+    },
+    {
+      "annual_base_rate": "67228.51",
+      "annual_incentive_rate": "",
+      "credited_years": "",
+      "current_grade_id": "M09",
+      "fte": "1",
+      "id": "apex-authorized-police-police-crisis-counselor-i-ii--police-police-crisis-counselor-i-ii",
+      "manager_id": "",
+      "placement_rationale": "Published minimum rate for grade M09; authorized group apex-authorized-police-police-crisis-counselor-i-ii.",
+      "role_id": "apex-police-police-crisis-counselor-i-ii",
+      "source_ref": {
+        "allocation_basis": "For every combined authorized group, all authorized FTE are placed in the lowest published minimum among that group's permitted source roles. This is the lower full-occupancy published base-pay envelope.",
+        "authorization": {
+          "as_of": "2026-10-12",
+          "label": "CN20-A1 FY27 Position Authorization by Department",
+          "page": "4",
+          "sha256": "cd39b69b057f9bbbbb9df12dacd80c8ac76cfa4519fbd7d378b3032dd95d5dbb",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-4a9bf4e1f4604076849f87b223df8ecf.pdf"
+        },
+        "authorized_group_id": "apex-authorized-police-police-crisis-counselor-i-ii",
+        "mapping_note": "",
+        "pay_grade": {
+          "as_of": "2026-10-12",
+          "label": "CN19-A1 FY27 Job Titles and Pay Ranges",
+          "note": "Annual 1.0 FTE amounts; original row pay-plan-p4-l34",
+          "page": "4",
+          "sha256": "684bef5023a621e8fb4c26892c8ec0864bb2a5fab0048566b6cc5acfa57f54a2",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-6954dd454cca4733bcafedfd1d792f0f.pdf"
+        },
+        "rate_basis": "Published minimum rate for grade M09; authorized group apex-authorized-police-police-crisis-counselor-i-ii."
+      }
+    },
+    {
+      "annual_base_rate": "67228.51",
+      "annual_incentive_rate": "",
+      "credited_years": "",
+      "current_grade_id": "M09",
+      "fte": "1",
+      "id": "apex-authorized-police-victim-advocate-i-ii--police-victim-advocate-i-ii",
+      "manager_id": "",
+      "placement_rationale": "Published minimum rate for grade M09; authorized group apex-authorized-police-victim-advocate-i-ii.",
+      "role_id": "apex-police-victim-advocate-i-ii",
+      "source_ref": {
+        "allocation_basis": "For every combined authorized group, all authorized FTE are placed in the lowest published minimum among that group's permitted source roles. This is the lower full-occupancy published base-pay envelope.",
+        "authorization": {
+          "as_of": "2026-10-12",
+          "label": "CN20-A1 FY27 Position Authorization by Department",
+          "page": "4",
+          "sha256": "cd39b69b057f9bbbbb9df12dacd80c8ac76cfa4519fbd7d378b3032dd95d5dbb",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-4a9bf4e1f4604076849f87b223df8ecf.pdf"
+        },
+        "authorized_group_id": "apex-authorized-police-victim-advocate-i-ii",
+        "mapping_note": "",
+        "pay_grade": {
+          "as_of": "2026-10-12",
+          "label": "CN19-A1 FY27 Job Titles and Pay Ranges",
+          "note": "Annual 1.0 FTE amounts; original row pay-plan-p4-l34",
+          "page": "4",
+          "sha256": "684bef5023a621e8fb4c26892c8ec0864bb2a5fab0048566b6cc5acfa57f54a2",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-6954dd454cca4733bcafedfd1d792f0f.pdf"
+        },
+        "rate_basis": "Published minimum rate for grade M09; authorized group apex-authorized-police-victim-advocate-i-ii."
+      }
+    },
+    {
+      "annual_base_rate": "67228.51",
+      "annual_incentive_rate": "",
+      "credited_years": "",
+      "current_grade_id": "M09",
+      "fte": "1",
+      "id": "apex-authorized-police-civilian-traffice-crash-investigator--police-civilian-traffic-crash-investigator",
+      "manager_id": "",
+      "placement_rationale": "Published minimum rate for grade M09; authorized group apex-authorized-police-civilian-traffice-crash-investigator.",
+      "role_id": "apex-police-civilian-traffic-crash-investigator",
+      "source_ref": {
+        "allocation_basis": "For every combined authorized group, all authorized FTE are placed in the lowest published minimum among that group's permitted source roles. This is the lower full-occupancy published base-pay envelope.",
+        "authorization": {
+          "as_of": "2026-10-12",
+          "label": "CN20-A1 FY27 Position Authorization by Department",
+          "page": "4",
+          "sha256": "cd39b69b057f9bbbbb9df12dacd80c8ac76cfa4519fbd7d378b3032dd95d5dbb",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-4a9bf4e1f4604076849f87b223df8ecf.pdf"
+        },
+        "authorized_group_id": "apex-authorized-police-civilian-traffice-crash-investigator",
+        "mapping_note": "Original authorization spelling 'Traffice' maps to published pay-title 'Traffic'.",
+        "pay_grade": {
+          "as_of": "2026-10-12",
+          "label": "CN19-A1 FY27 Job Titles and Pay Ranges",
+          "note": "Annual 1.0 FTE amounts; original row pay-plan-p4-l34",
+          "page": "4",
+          "sha256": "684bef5023a621e8fb4c26892c8ec0864bb2a5fab0048566b6cc5acfa57f54a2",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-6954dd454cca4733bcafedfd1d792f0f.pdf"
+        },
+        "rate_basis": "Published minimum rate for grade M09; authorized group apex-authorized-police-civilian-traffice-crash-investigator."
+      }
+    },
+    {
+      "annual_base_rate": "67228.51",
+      "annual_incentive_rate": "",
+      "credited_years": "",
+      "current_grade_id": "M09",
+      "fte": "4",
+      "id": "apex-authorized-police-communications-shift-supervisor--police-communications-shift-supervisor",
+      "manager_id": "",
+      "placement_rationale": "Published minimum rate for grade M09; authorized group apex-authorized-police-communications-shift-supervisor.",
+      "role_id": "apex-police-communications-shift-supervisor",
+      "source_ref": {
+        "allocation_basis": "For every combined authorized group, all authorized FTE are placed in the lowest published minimum among that group's permitted source roles. This is the lower full-occupancy published base-pay envelope.",
+        "authorization": {
+          "as_of": "2026-10-12",
+          "label": "CN20-A1 FY27 Position Authorization by Department",
+          "page": "4",
+          "sha256": "cd39b69b057f9bbbbb9df12dacd80c8ac76cfa4519fbd7d378b3032dd95d5dbb",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-4a9bf4e1f4604076849f87b223df8ecf.pdf"
+        },
+        "authorized_group_id": "apex-authorized-police-communications-shift-supervisor",
+        "mapping_note": "",
+        "pay_grade": {
+          "as_of": "2026-10-12",
+          "label": "CN19-A1 FY27 Job Titles and Pay Ranges",
+          "note": "Annual 1.0 FTE amounts; original row pay-plan-p4-l34",
+          "page": "4",
+          "sha256": "684bef5023a621e8fb4c26892c8ec0864bb2a5fab0048566b6cc5acfa57f54a2",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-6954dd454cca4733bcafedfd1d792f0f.pdf"
+        },
+        "rate_basis": "Published minimum rate for grade M09; authorized group apex-authorized-police-communications-shift-supervisor."
+      }
+    },
+    {
+      "annual_base_rate": "61679.70",
+      "annual_incentive_rate": "",
+      "credited_years": "",
+      "current_grade_id": "M08",
+      "fte": "1",
+      "id": "apex-authorized-police-accreditation-specialist-i-ii--police-accreditation-specialist-i-ii",
+      "manager_id": "",
+      "placement_rationale": "Published minimum rate for grade M08; authorized group apex-authorized-police-accreditation-specialist-i-ii.",
+      "role_id": "apex-police-accreditation-specialist-i-ii",
+      "source_ref": {
+        "allocation_basis": "For every combined authorized group, all authorized FTE are placed in the lowest published minimum among that group's permitted source roles. This is the lower full-occupancy published base-pay envelope.",
+        "authorization": {
+          "as_of": "2026-10-12",
+          "label": "CN20-A1 FY27 Position Authorization by Department",
+          "page": "4",
+          "sha256": "cd39b69b057f9bbbbb9df12dacd80c8ac76cfa4519fbd7d378b3032dd95d5dbb",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-4a9bf4e1f4604076849f87b223df8ecf.pdf"
+        },
+        "authorized_group_id": "apex-authorized-police-accreditation-specialist-i-ii",
+        "mapping_note": "",
+        "pay_grade": {
+          "as_of": "2026-10-12",
+          "label": "CN19-A1 FY27 Job Titles and Pay Ranges",
+          "note": "Annual 1.0 FTE amounts; original row pay-plan-p2-l36",
+          "page": "2",
+          "sha256": "684bef5023a621e8fb4c26892c8ec0864bb2a5fab0048566b6cc5acfa57f54a2",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-6954dd454cca4733bcafedfd1d792f0f.pdf"
+        },
+        "rate_basis": "Published minimum rate for grade M08; authorized group apex-authorized-police-accreditation-specialist-i-ii."
+      }
+    },
+    {
+      "annual_base_rate": "61679.70",
+      "annual_incentive_rate": "",
+      "credited_years": "",
+      "current_grade_id": "M08",
+      "fte": "1",
+      "id": "apex-authorized-police-police-records-supervisor--police-police-records-supervisor",
+      "manager_id": "",
+      "placement_rationale": "Published minimum rate for grade M08; authorized group apex-authorized-police-police-records-supervisor.",
+      "role_id": "apex-police-police-records-supervisor",
+      "source_ref": {
+        "allocation_basis": "For every combined authorized group, all authorized FTE are placed in the lowest published minimum among that group's permitted source roles. This is the lower full-occupancy published base-pay envelope.",
+        "authorization": {
+          "as_of": "2026-10-12",
+          "label": "CN20-A1 FY27 Position Authorization by Department",
+          "page": "4",
+          "sha256": "cd39b69b057f9bbbbb9df12dacd80c8ac76cfa4519fbd7d378b3032dd95d5dbb",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-4a9bf4e1f4604076849f87b223df8ecf.pdf"
+        },
+        "authorized_group_id": "apex-authorized-police-police-records-supervisor",
+        "mapping_note": "",
+        "pay_grade": {
+          "as_of": "2026-10-12",
+          "label": "CN19-A1 FY27 Job Titles and Pay Ranges",
+          "note": "Annual 1.0 FTE amounts; original row pay-plan-p2-l36",
+          "page": "2",
+          "sha256": "684bef5023a621e8fb4c26892c8ec0864bb2a5fab0048566b6cc5acfa57f54a2",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-6954dd454cca4733bcafedfd1d792f0f.pdf"
+        },
+        "rate_basis": "Published minimum rate for grade M08; authorized group apex-authorized-police-police-records-supervisor."
+      }
+    },
+    {
+      "annual_base_rate": "61679.70",
+      "annual_incentive_rate": "",
+      "credited_years": "",
+      "current_grade_id": "M08",
+      "fte": "1",
+      "id": "apex-authorized-police-crime-analyst-i-ii--police-crime-analyst-i-ii",
+      "manager_id": "",
+      "placement_rationale": "Published minimum rate for grade M08; authorized group apex-authorized-police-crime-analyst-i-ii.",
+      "role_id": "apex-police-crime-analyst-i-ii",
+      "source_ref": {
+        "allocation_basis": "For every combined authorized group, all authorized FTE are placed in the lowest published minimum among that group's permitted source roles. This is the lower full-occupancy published base-pay envelope.",
+        "authorization": {
+          "as_of": "2026-10-12",
+          "label": "CN20-A1 FY27 Position Authorization by Department",
+          "page": "4",
+          "sha256": "cd39b69b057f9bbbbb9df12dacd80c8ac76cfa4519fbd7d378b3032dd95d5dbb",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-4a9bf4e1f4604076849f87b223df8ecf.pdf"
+        },
+        "authorized_group_id": "apex-authorized-police-crime-analyst-i-ii",
+        "mapping_note": "",
+        "pay_grade": {
+          "as_of": "2026-10-12",
+          "label": "CN19-A1 FY27 Job Titles and Pay Ranges",
+          "note": "Annual 1.0 FTE amounts; original row pay-plan-p2-l36",
+          "page": "2",
+          "sha256": "684bef5023a621e8fb4c26892c8ec0864bb2a5fab0048566b6cc5acfa57f54a2",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-6954dd454cca4733bcafedfd1d792f0f.pdf"
+        },
+        "rate_basis": "Published minimum rate for grade M08; authorized group apex-authorized-police-crime-analyst-i-ii."
+      }
+    },
+    {
+      "annual_base_rate": "61679.70",
+      "annual_incentive_rate": "",
+      "credited_years": "",
+      "current_grade_id": "M08",
+      "fte": "1",
+      "id": "apex-authorized-police-criminal-intelligence-analyst--police-criminal-intelligence-analyst",
+      "manager_id": "",
+      "placement_rationale": "Published minimum rate for grade M08; authorized group apex-authorized-police-criminal-intelligence-analyst.",
+      "role_id": "apex-police-criminal-intelligence-analyst",
+      "source_ref": {
+        "allocation_basis": "For every combined authorized group, all authorized FTE are placed in the lowest published minimum among that group's permitted source roles. This is the lower full-occupancy published base-pay envelope.",
+        "authorization": {
+          "as_of": "2026-10-12",
+          "label": "CN20-A1 FY27 Position Authorization by Department",
+          "page": "4",
+          "sha256": "cd39b69b057f9bbbbb9df12dacd80c8ac76cfa4519fbd7d378b3032dd95d5dbb",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-4a9bf4e1f4604076849f87b223df8ecf.pdf"
+        },
+        "authorized_group_id": "apex-authorized-police-criminal-intelligence-analyst",
+        "mapping_note": "",
+        "pay_grade": {
+          "as_of": "2026-10-12",
+          "label": "CN19-A1 FY27 Job Titles and Pay Ranges",
+          "note": "Annual 1.0 FTE amounts; original row pay-plan-p2-l36",
+          "page": "2",
+          "sha256": "684bef5023a621e8fb4c26892c8ec0864bb2a5fab0048566b6cc5acfa57f54a2",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-6954dd454cca4733bcafedfd1d792f0f.pdf"
+        },
+        "rate_basis": "Published minimum rate for grade M08; authorized group apex-authorized-police-criminal-intelligence-analyst."
+      }
+    },
+    {
+      "annual_base_rate": "61679.70",
+      "annual_incentive_rate": "",
+      "credited_years": "",
+      "current_grade_id": "M08",
+      "fte": "1",
+      "id": "apex-authorized-police-executive-assistant-i-ii--police-executive-assistant-i-ii",
+      "manager_id": "",
+      "placement_rationale": "Published minimum rate for grade M08; authorized group apex-authorized-police-executive-assistant-i-ii.",
+      "role_id": "apex-police-executive-assistant-i-ii",
+      "source_ref": {
+        "allocation_basis": "For every combined authorized group, all authorized FTE are placed in the lowest published minimum among that group's permitted source roles. This is the lower full-occupancy published base-pay envelope.",
+        "authorization": {
+          "as_of": "2026-10-12",
+          "label": "CN20-A1 FY27 Position Authorization by Department",
+          "page": "4",
+          "sha256": "cd39b69b057f9bbbbb9df12dacd80c8ac76cfa4519fbd7d378b3032dd95d5dbb",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-4a9bf4e1f4604076849f87b223df8ecf.pdf"
+        },
+        "authorized_group_id": "apex-authorized-police-executive-assistant-i-ii",
+        "mapping_note": "",
+        "pay_grade": {
+          "as_of": "2026-10-12",
+          "label": "CN19-A1 FY27 Job Titles and Pay Ranges",
+          "note": "Annual 1.0 FTE amounts; original row pay-plan-p2-l36",
+          "page": "2",
+          "sha256": "684bef5023a621e8fb4c26892c8ec0864bb2a5fab0048566b6cc5acfa57f54a2",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-6954dd454cca4733bcafedfd1d792f0f.pdf"
+        },
+        "rate_basis": "Published minimum rate for grade M08; authorized group apex-authorized-police-executive-assistant-i-ii."
+      }
+    },
+    {
+      "annual_base_rate": "56580.78",
+      "annual_incentive_rate": "",
+      "credited_years": "",
+      "current_grade_id": "M07",
+      "fte": "1",
+      "id": "apex-authorized-police-senior-program-support-specialist-i-ii--police-senior-program-support-specialist-pt-30",
+      "manager_id": "",
+      "placement_rationale": "Published minimum rate for grade M07; authorized group apex-authorized-police-senior-program-support-specialist-i-ii.",
+      "role_id": "apex-police-senior-program-support-specialist-pt-30",
+      "source_ref": {
+        "allocation_basis": "For every combined authorized group, all authorized FTE are placed in the lowest published minimum among that group's permitted source roles. This is the lower full-occupancy published base-pay envelope.",
+        "authorization": {
+          "as_of": "2026-10-12",
+          "label": "CN20-A1 FY27 Position Authorization by Department",
+          "page": "4",
+          "sha256": "cd39b69b057f9bbbbb9df12dacd80c8ac76cfa4519fbd7d378b3032dd95d5dbb",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-4a9bf4e1f4604076849f87b223df8ecf.pdf"
+        },
+        "authorized_group_id": "apex-authorized-police-senior-program-support-specialist-i-ii",
+        "mapping_note": "Authorization lists 1 FT / 1 FTE; the pay title says PT 30. Public envelope uses the authorization's FTE and the pay table's published full-time range. Town confirmation is required before using this mapping for an employee's position.",
+        "pay_grade": {
+          "as_of": "2026-10-12",
+          "label": "CN19-A1 FY27 Job Titles and Pay Ranges",
+          "note": "Annual 1.0 FTE amounts; original row pay-plan-p2-l35",
+          "page": "2",
+          "sha256": "684bef5023a621e8fb4c26892c8ec0864bb2a5fab0048566b6cc5acfa57f54a2",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-6954dd454cca4733bcafedfd1d792f0f.pdf"
+        },
+        "rate_basis": "Published minimum rate for grade M07; authorized group apex-authorized-police-senior-program-support-specialist-i-ii."
+      }
+    },
+    {
+      "annual_base_rate": "51910.35",
+      "annual_incentive_rate": "",
+      "credited_years": "",
+      "current_grade_id": "M06",
+      "fte": "10",
+      "id": "apex-authorized-police-telecommunicator-i-ii-senior--police-telecommunicator-i-ii-5-increase",
+      "manager_id": "",
+      "placement_rationale": "Published minimum rate for grade M06; authorized group apex-authorized-police-telecommunicator-i-ii-senior.",
+      "role_id": "apex-police-telecommunicator-i-ii-5-increase",
+      "source_ref": {
+        "allocation_basis": "For every combined authorized group, all authorized FTE are placed in the lowest published minimum among that group's permitted source roles. This is the lower full-occupancy published base-pay envelope.",
+        "authorization": {
+          "as_of": "2026-10-12",
+          "label": "CN20-A1 FY27 Position Authorization by Department",
+          "page": "4",
+          "sha256": "cd39b69b057f9bbbbb9df12dacd80c8ac76cfa4519fbd7d378b3032dd95d5dbb",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-4a9bf4e1f4604076849f87b223df8ecf.pdf"
+        },
+        "authorized_group_id": "apex-authorized-police-telecommunicator-i-ii-senior",
+        "mapping_note": "",
+        "pay_grade": {
+          "as_of": "2026-10-12",
+          "label": "CN19-A1 FY27 Job Titles and Pay Ranges",
+          "note": "Annual 1.0 FTE amounts; original row pay-plan-p4-l25",
+          "page": "4",
+          "sha256": "684bef5023a621e8fb4c26892c8ec0864bb2a5fab0048566b6cc5acfa57f54a2",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-6954dd454cca4733bcafedfd1d792f0f.pdf"
+        },
+        "rate_basis": "Published minimum rate for grade M06; authorized group apex-authorized-police-telecommunicator-i-ii-senior."
+      }
+    },
+    {
+      "annual_base_rate": "51910.35",
+      "annual_incentive_rate": "",
+      "credited_years": "",
+      "current_grade_id": "M06",
+      "fte": "2",
+      "id": "apex-authorized-police-evidence-tech-quartermaster-i-ii--police-evidence-tech-quartermaster-i-ii",
+      "manager_id": "",
+      "placement_rationale": "Published minimum rate for grade M06; authorized group apex-authorized-police-evidence-tech-quartermaster-i-ii.",
+      "role_id": "apex-police-evidence-tech-quartermaster-i-ii",
+      "source_ref": {
+        "allocation_basis": "For every combined authorized group, all authorized FTE are placed in the lowest published minimum among that group's permitted source roles. This is the lower full-occupancy published base-pay envelope.",
+        "authorization": {
+          "as_of": "2026-10-12",
+          "label": "CN20-A1 FY27 Position Authorization by Department",
+          "page": "4",
+          "sha256": "cd39b69b057f9bbbbb9df12dacd80c8ac76cfa4519fbd7d378b3032dd95d5dbb",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-4a9bf4e1f4604076849f87b223df8ecf.pdf"
+        },
+        "authorized_group_id": "apex-authorized-police-evidence-tech-quartermaster-i-ii",
+        "mapping_note": "",
+        "pay_grade": {
+          "as_of": "2026-10-12",
+          "label": "CN19-A1 FY27 Job Titles and Pay Ranges",
+          "note": "Annual 1.0 FTE amounts; original row pay-plan-p4-l25",
+          "page": "4",
+          "sha256": "684bef5023a621e8fb4c26892c8ec0864bb2a5fab0048566b6cc5acfa57f54a2",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-6954dd454cca4733bcafedfd1d792f0f.pdf"
+        },
+        "rate_basis": "Published minimum rate for grade M06; authorized group apex-authorized-police-evidence-tech-quartermaster-i-ii."
+      }
+    },
+    {
+      "annual_base_rate": "47625.55",
+      "annual_incentive_rate": "",
+      "credited_years": "",
+      "current_grade_id": "M05",
+      "fte": "3",
+      "id": "apex-authorized-police-police-records-technician-i-ii--police-police-records-technician-i-ii",
+      "manager_id": "",
+      "placement_rationale": "Published minimum rate for grade M05; authorized group apex-authorized-police-police-records-technician-i-ii.",
+      "role_id": "apex-police-police-records-technician-i-ii",
+      "source_ref": {
+        "allocation_basis": "For every combined authorized group, all authorized FTE are placed in the lowest published minimum among that group's permitted source roles. This is the lower full-occupancy published base-pay envelope.",
+        "authorization": {
+          "as_of": "2026-10-12",
+          "label": "CN20-A1 FY27 Position Authorization by Department",
+          "page": "4",
+          "sha256": "cd39b69b057f9bbbbb9df12dacd80c8ac76cfa4519fbd7d378b3032dd95d5dbb",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-4a9bf4e1f4604076849f87b223df8ecf.pdf"
+        },
+        "authorized_group_id": "apex-authorized-police-police-records-technician-i-ii",
+        "mapping_note": "",
+        "pay_grade": {
+          "as_of": "2026-10-12",
+          "label": "CN19-A1 FY27 Job Titles and Pay Ranges",
+          "note": "Annual 1.0 FTE amounts; original row pay-plan-p4-l24",
+          "page": "4",
+          "sha256": "684bef5023a621e8fb4c26892c8ec0864bb2a5fab0048566b6cc5acfa57f54a2",
+          "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-6954dd454cca4733bcafedfd1d792f0f.pdf"
+        },
+        "rate_basis": "Published minimum rate for grade M05; authorized group apex-authorized-police-police-records-technician-i-ii."
+      }
+    }
+  ],
+  "source_refs": [
+    {
+      "as_of": "2026-10-12",
+      "label": "CN20-A1 FY27 Position Authorization by Department",
+      "sha256": "cd39b69b057f9bbbbb9df12dacd80c8ac76cfa4519fbd7d378b3032dd95d5dbb",
+      "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-4a9bf4e1f4604076849f87b223df8ecf.pdf"
+    },
+    {
+      "as_of": "2026-10-12",
+      "label": "CN19-A1 FY27 Job Titles and Pay Ranges",
+      "sha256": "684bef5023a621e8fb4c26892c8ec0864bb2a5fab0048566b6cc5acfa57f54a2",
+      "url": "https://mccmeetingspublic.blob.core.usgovcloudapi.net/apexnc-meet-f78b069da4e34de28f9d58d6e1b71370/ITEM-Attachment-001-6954dd454cca4733bcafedfd1d792f0f.pdf"
+    },
+    {
+      "as_of": "2026-10-12",
+      "label": "Public Safety Classification and Compensation Plan RFP, issued October 5, 2026",
+      "page": "6",
+      "sha256": "f8f7680b7d771e4f766856a74bb4f58ff0e327b74ce48b4c75118209d38c33a5",
+      "url": "https://apexnc.org/DocumentCenter/View/56664"
+    }
+  ]
+}
