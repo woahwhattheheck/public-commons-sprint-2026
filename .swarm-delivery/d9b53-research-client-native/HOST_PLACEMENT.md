@@ -1,63 +1,76 @@
-# Continue the original Research case on its selected native host
+# Receive the original NCC Research case on the actual native host
 
-This producer operates the existing SCF-RESEARCH-CLIENT-NCC-D9B53-20261012 case and its CONTINUATION-01 native record. It restores the complete saved checkpoint, runs the original Research receiving and client/CLI/MCP programme, and keeps the sealed source/workspace return alive until the established artifact keeper has saved it or returned its exact bytes. The following Ottawa source-bundle producer consumes this same completed case.
+This carries the existing Research operation and its following Ottawa receiving to a selected Linux host. The original frozen application, customer case, reviewed sources and native continuation identity are preserved. The host supplies its actual compatible Node executable, ordinary case directory, one native shared-control root and original Library upload helper.
 
-The product source remains the 162-file 496ef23a cohort. All six retained Crossref responses, the original master revision 29, saved source-operation plans, reviewed edition and selected question remain original inputs. The runtime host selection described here changes where the existing native controller and executable are selected; it does not change the reviewed source, customer decisions or resource declaration.
+## The two existing private input files
 
-## Original inputs and source
+| Input | Exact file identity | Size and SHA256 |
+| --- | --- | --- |
+| Original undispatched Research checkpoint | `file_000000003a2c81f7b31db5c3cfe6f128` / `libfile_7c37e4e4f2688191be83dda72f8c9549` | 13,190,478 bytes; `0fb2bef1bcbbec1a9717df8f27539e4c2015431088b6f37a27684a60b7134b20` |
+| Complete Ottawa source bundle | `file_00000000d86481f990555465228f08c0` / `libfile_02c7876b5b14819186d9fbb94bd94877` | 5,966,483 bytes; `643cd42bd0a99342bd99544a12b04ea4d22bce9022b929589c4fb9477117f8fc` |
 
-The complete original recovery carrier is [F0C8L4WGDLL](https://tokenjunkielabs.slack.com/docs/T0BRETUB5TK/F0C8L4WGDLL). Its original e4 source is retained as the preceding source identity. Use the current `hosted-linked-native-continuation.py` beside this guide as the explicit replacement and set `ownerSource` and `ownerSourceIdentity` to these complete current bytes.
+Use the full native Library file attachment or materialize these exact versions. The original checkpoint contains all 162 frozen application source files, 29 native-controller source files, the original Research master at revision 29, all six retained Crossref captures, the reviewed 06db edition, both original plans, original configuration and preceding native observations. The Ottawa file contains all 42 original source members and the reviewed three source groups/five findings. Their receiving result is the existing dossier `d_1069001c-9dd6-4159-b648-83de8107c81f` and question `q_781ffdd1-aa58-4704-b254-1a2616a06d7b`.
 
-The authoritative saved checkpoint is `NCC_Research_Original_Operation_20261012.tar.gz`, 13,190,478 bytes, SHA-256 `0fb2bef1bcbbec1a9717df8f27539e4c2015431088b6f37a27684a60b7134b20`. Its original file identifiers are `libfile_7c37e4e4f2688191be83dda72f8c9549` and `file_000000003a2c81f7b31db5c3cfe6f128`. Obtain a fresh normal materialization URL when the receiving owner is ready and place it only in the private input's `checkpointUrl`.
+## Actual runtime and path selection
 
-The keeper remains Git blob `081e270be225b90b5582bc1849f5fe6212ea1351`, 38,913 bytes, SHA-256 `f8f57631eb579b4f887b2762203ca7c63c3ddd44bc3fb83e7b62aadf3d20e758`. Its original helper implementation is selected from the receiving host's existing helper directory. The producer holds the original file and its save identity through normal upload, returned-receipt reconciliation and complete offset byte reads.
+FAR12's actual receiving observation is https://tokenjunkielabs.slack.com/archives/C0BTB4SUCP9/p1791821651290859?thread_ts=1791820556.755929. It returned Linux, `/mnt/data`, Node `/opt/nvm/versions/node/v22.16.0/bin/node` version 22.16.0 and Python `/usr/local/bin/python` version 3.13.5. These are host facts for the selected receiving owner. A source pin or an assignment message does not replace that owner's native command result.
 
-## Select the receiving host
+The input's `hostBinding` selects:
 
-Read the actual executable, existing native shared-control root and original upload-helper directory from the accepting owner. Preserve its current controller and other workers' reservations. On an independent host, pass this optional object in the producer's original private input:
+- `caseDirectory`: one ordinary absolute case root, such as `/mnt/data/research-original-d9b53-20261012`.
+- `node`: the actual absolute compatible Node executable.
+- `sharedControl`: this host's existing shared native-control root.
+- `controlMode`: `existing` normally. For a host's first adoption of the original native controller, `initialize` creates its selected `capacity/memory` and `capacity/disk` directories and reuses any already present ledgers.
+- `helperDirectory`: the actual directory containing the original `library_upload.py`, `library_file_transfer.py` and `library_hosted_apps.py` implementation.
+- `observationDirectory`: one ordinary absolute directory for this continuation's original owner observations.
+- `hostReference`: the receiving owner's original source/host observation.
 
-```json
-{
-  "hostBinding": {
-    "schema": "sf88.research-client.native-host-binding.v1",
-    "node": "/actual/installed/node",
-    "sharedControl": "/actual/existing/shared-control",
-    "helperDirectory": "/actual/existing/library-helper",
-    "observationDirectory": "/actual/private/parent/research-continuation"
-  }
-}
+The shared-control selection belongs to the host. Reuse its current reservations and controller adoption. Moving this operation to the independently identified receiving host does not create a second reservation namespace on the saturated prior host.
+
+The checkpoint's original `case-input.json` remains exactly 3,951 bytes / `c2793b58e98143918df30263534d2049077f10fcdf7094012d894418336091d7`. It and `setup-result.json` retain all original paths. A stable sibling `case-input-host.json` copies every field and changes only `directory`, `node`, `sharedControl`, `controllerSource`, and `portable.path`. Its `native-host-binding.json` records the original and selected input identities and both directory roots.
+
+The original 1,872-byte launcher is retained unchanged in `inbox`. The continuation's exact source adaptation selects the companion case input in all three launcher positions, the original continuation ID, and the already measured 384 MiB + 128 MiB reserve. The original 9,826-byte run helper is unchanged: it derives the actual case root from that companion input's parent. Both original Node journeys therefore consume the same selected case directory and retained data. The current host's Python interpreter launches the original controller.
+
+Original records and the original shared runtime pointer remain literal provenance, including their old absolute paths and PIDs. The prior host's process identities are not interpreted as current processes on a different receiving host. This continuation's new local journal uses the same native operation ID, record basename and actual selected local root.
+
+## Complete file input
+
+The producer accepts `--input-file /absolute/path/linked-native-input.json`. Source fields may be complete strings or relative files selected by `ownerSourceFile`, `keeperFile`, `originalPointerFile` and the two original prior-attempt file selectors. Each is read as an ordinary local file, and the retained identities are checked before use. This avoids pasting a large Git JSON response into a runtime.
+
+Select exactly one `checkpointFile` or `checkpointUrl`. A complete local checkpoint is independently hashed and left unchanged. A current HTTPS materialization is downloaded, hashed and released only after its whole manifest and every selected extracted member are verified. Unsafe, unbound, duplicate or non-ordinary archive members are rejected.
+
+The first command is:
+
+```sh
+/usr/local/bin/python -B /mnt/data/RECEIVING_KIT/hosted-linked-native-continuation.py --input-file /mnt/data/RECEIVING_KIT/linked-native-input.json
 ```
 
-These are selectors to replace with observed paths, not installation commands. The Node executable and both control/helper directories must already exist. The control root must expose its existing `capacity/memory` and `capacity/disk` directories. The helper directory must contain the original `library_upload.py`. The optional observation directory may be a new private leaf under an existing parent; it stores this operation's lock, source and returned observations. It is separate from the native controller's shared reservation and runtime-consumer records.
+The packet's launcher must fill the actual local input file paths and the host's selected control/helper paths before invoking this command. It must preserve the original field hashes and fixed business/native IDs:
 
-Without `hostBinding`, the original cloud selectors remain in use. The actual Node version is checked against the original supported Node 22+ requirement. The native memory declaration remains 384 MiB plus 128 MiB reserve, with the original disk and inode declarations. The controller still decides actual admission.
+- Business: `SCF-RESEARCH-CLIENT-NCC-D9B53-20261012`
+- Native continuation: `SCF-RESEARCH-CLIENT-NCC-D9B53-20261012-CONTINUATION-01`
+- Record basename: `b35aab30a32f792473f446c358f1f401fd08012c514647f292062d8f437fda5b`
 
-The original absolute case root remains `/dev/research-original-d9b53-20261012`. Select a host on which that original private root can be restored. The original checkpoint's paths are not globally rewritten.
+The native controller retains actual admission, process, supervisor, capacity recovery and artifact results. A statvfs observation supplies context; the original atomic journal operation decides the actual write result. Resume uses the original capacity recovery's returned failure SHA and stops retrying an unchanged failure. No product command is reconstructed from a guessed record state.
 
-## Preserve the case input and native identity
+## Following Ottawa stage
 
-The original `case-input.json` is restored and verified unchanged. A host-bound run creates the stable sibling `case-input-host.json`; its content is a copy of the original object with only `node` and `sharedControl` replaced by the receiving host's resolved selections. Both files are beside each other at the original case root, preserving the original runner's input-parent contract.
+Run the following stage only after the first original native report records all eight completed client stages. Its existing source selection is PR2299 / `37db41d30f3a0353724a5d59d5191f6df99fa63b`, including the 19-module current Research store/report closure at `3f675551d23fe2991b54dc6d2ab5b6fa6a8a5030`.
 
-The producer retains `native-host-binding.json` with both input byte counts and hashes, original and selected runtime paths, helper/observation selectors, the business operation and native continuation ID. Re-entry requires exactly the same companion input and binding record. A different binding cannot overwrite a previously selected one.
+The file input for `hosted-ottawa-receiving.py` selects the original complete JavaScript program, current source envelope, 081e keeper, receiving guide and both original/host-selected input JSON files. The producer checks that the selected input differs only in its six runtime paths: dossier directory, source directory, output directory, original native report path, source-envelope path and original Ottawa bundle path. Every source identity, question, review statement and finding remains unchanged.
 
-The pinned original 1,872-byte native launcher has three occurrences of `"case-input.json"`: its configuration read, runtime input declaration and child command. A host-bound launch changes those three selectors to the stable companion name, while retaining the existing operation-ID and measured-resource substitutions. The original 9,826-byte run helper and all 162 product files remain unchanged. The generated launcher hash, original launcher hash and host-binding receipt are retained together.
+`bundleFile` can point to the original local six-megabyte Library file; it is verified and copied into the selected case root. The selected input and the original input are both retained with a host-binding receipt. The following producer reads the preceding native `case-input-host.json` through its recorded hash and uses that same Node and actual case root.
 
-The native continuation remains `SCF-RESEARCH-CLIENT-NCC-D9B53-20261012-CONTINUATION-01`, record `b35aab30a32f792473f446c358f1f401fd08012c514647f292062d8f437fda5b`. Existing request/intent checks, live supervisor detection, runtime-use registration and capacity recovery stay on the original native APIs. A surviving record with another intent is reconciled through its existing owner; the producer does not overwrite it.
+```sh
+/usr/local/bin/python -B /mnt/data/RECEIVING_KIT/hosted-ottawa-receiving.py --input-file /mnt/data/RECEIVING_KIT/ottawa-owner-input.json
+```
 
-## Actual journal writes and recovery
+The original receiver performs fresh revision comparison, reviewed preview and atomic source receiving. It recognizes an already received identical question/bundle before any new commit. It adds the three selections and five reviewed findings alongside all existing case history, writes every one of the 42 original files, full Markdown/HTML reports, and the full portable dossier, and independently reopens that portable through the original streaming API.
 
-The previous producer waited indefinitely for a fixed `statvfs.f_bavail` threshold before calling the native controller. This version records the actual selected runtime-consumer registry filesystem, available/free bytes and observation time, then calls the original controller.
+## Original results and file return
 
-An actual atomic journal failure is retained as the native failure. The original `capacity_recovery.observe` result supplies the exact failure hash for `native_foreground.py resume-capacity`. If that supported recovery returns the same failure unchanged, the producer retains its diagnostics and returns its attention result through the same artifact keeper. It does not spin another outer filesystem-wait loop.
+Each producer keeps actual application exit separate from its returned reports and artifact save. Retain full stdout/stderr, original source/configuration bindings, native journals and full returned files. The preceding native report must actually complete before Ottawa starts; an admission result alone is not a product result.
 
-The old cloud's already completed AF source-copy cleanup runs only in the original unbound mode. A host-bound receiving run preserves that unrelated path.
+The unchanged merged keeper `081e270be225b90b5582bc1849f5fe6212ea1351` retains the one sealed archive through original helper save, complete normal host-create receipt reconciliation or exact byte reads. It records an attempt before transfer, recognizes accepted receipts first, preserves fresh-session identity on retry and keeps native outcome separate from transfer status. After a normal host upload, apply its actual returned xattrs and give the same keeper the complete original receipt rather than upload the file again.
 
-## Complete the original workflow and the Ottawa continuation
-
-The original run performs current-master and reviewed-source receiving, opens the original authenticated Research listener, attaches the reusable client and merchant tools, reviews original paged source, resumes the saved Crossref operation, appends the source-grounded question note, exports the complete original delivery, receives a BOM-bearing response without changing its bytes, and independently reopens the portable result.
-
-Keep the source/workspace/native reports and every generated artifact in the same producing lifetime. The sealed return includes both case inputs and the host-binding record where selected, the complete controller/source closure, original records, all retained input data and the full native result. Save the actual return before releasing the producing owner.
-
-The following complete Ottawa producer is merged in [PR2299](https://github.com/woahwhattheheck/public-commons-sprint-2026/pull/2299), merge `37db41d30f3a0353724a5d59d5191f6df99fa63b`. Its complete source/input carrier is [F0C8PTS8TD2](https://tokenjunkielabs.slack.com/docs/T0BRETUB5TK/F0C8PTS8TD2). It consumes the same original completed report and dossier, then atomically joins the reviewed 42-file bundle, three groups and five findings through the current original store. It produces the complete original files, readable reports, portable history and independent reopen. The original bundle is 5,966,483 bytes, SHA-256 `643cd42bd0a99342bd99544a12b04ea4d22bce9022b929589c4fb9477117f8fc`.
-
-If the completed first producer has already closed after durable saving, use the Ottawa producer's documented `completedReturn` input to restore that actual completed return. Preserve the original saved result and resume at Ottawa intake; do not substitute the older undispatched checkpoint for an already completed case.
+The Research return includes the complete original case, source and native records. The Ottawa return includes all original source files, reviewed findings, reports, full authoritative portable and complete operation return. Keep the actual case workspace available until both exact archives are durably saved. Return actual native handle, selected directory, full original outputs, archive bytes/SHA256, and the saved file identifiers in the existing FAR12 receiving thread.
