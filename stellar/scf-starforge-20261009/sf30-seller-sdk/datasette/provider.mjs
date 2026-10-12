@@ -1,6 +1,7 @@
 // MIT. Source-owned Datasette MCP registration and original workspace access.
 import {defineMerchantProvider, MERCHANT_PROVIDER_SCHEMA} from '../../../../stellar-forge/mcp-merchant-operator/provider-contract.mjs';
 import {createDatasetteClient, DATASETTE_OPERATIONS} from './client.mjs';
+import {datasetteReceivingTools} from '../../../../stellar-forge/mcp-merchant-operator/catalog/datasette-workspace.mjs';
 
 export const DATASETTE_CONNECTION_SCHEMA = 'stellar-forge.datasette-workspace-connection.v1';
 const ALIAS = /^[a-z0-9][a-z0-9_-]{0,63}$/;
@@ -155,11 +156,11 @@ export default defineMerchantProvider({
   configKey: 'datasetteWorkspaces', summary: true, dependencies: [],
   concurrency: 'provider',
   maxRequestBytes: 1024 * 1024,
-  configuration: {input: 'datasetteWorkspaceConnection', privateExports: false,
+  configuration: {input: 'datasetteWorkspaceConnection', privateExports: true,
     read: async (value, {hostPath}) => readDatasetteWorkspaceConfiguration(hostPath(value))},
-  tools: datasetteWorkspaceTools,
+  tools: tool => [...datasetteWorkspaceTools(tool), ...datasetteReceivingTools(tool)],
   instructions: [{order: 1110, prefix: 'merchant_datasette_',
     text: 'Use one configured original Datasette workspace. Read its operation catalog and state before continuing an interrupted request. Keep capture operationId, publisher runId, selected edition and review identities. Source captures and editions use the saved native rows and metadata; publisher, buyer and release actions use their original retained stores.'}],
-  load: () => import('./provider.mjs'),
+  load: () => import('../../../../stellar-forge/mcp-merchant-operator/datasette-workspace.mjs'),
   create: (module, config, options) => new module.MerchantDatasetteWorkspaces(config, options),
 });
