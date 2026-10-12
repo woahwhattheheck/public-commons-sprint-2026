@@ -172,7 +172,7 @@ def normalize_source(source, mapping, expected, scales, prepared_indexes=None):
             "mode": metadata["mode"], "source_observed_at": metadata["observed_at"],
             "key": [], "candidates": [], "native_status": None, "status": "unknown",
             "event_id": None, "reference": None, "error_code": None, "error_message": None,
-            "observed_at": metadata["observed_at"], "amount_minor": None, "currency": None,
+            "observed_at": metadata["observed_at"], "native_observed_at": None, "amount_minor": None, "currency": None,
             "issues": [], "active_source": True,
         }
         values = original["values"]
@@ -195,7 +195,8 @@ def normalize_source(source, mapping, expected, scales, prepared_indexes=None):
                     row[target] = scalar(values.get(column), target)
             if mapping["observed_at_column"]:
                 row["observed_at"] = None
-                row["observed_at"] = m.instant(values.get(mapping["observed_at_column"]))
+                row["native_observed_at"] = m.instant(values.get(mapping["observed_at_column"]))
+                row["observed_at"] = row["native_observed_at"]
             if mapping["amount"] is not None:
                 am = mapping["amount"]
                 row["currency"], row["amount_minor"] = _amount(
@@ -243,10 +244,12 @@ def calculate(export, prepared, sources, body):
     for source in sources:
         families[(source["metadata"]["source_system"], source["metadata"]["report_family"])].append(source)
     inactive = set()
+    mixed_families = set()
     for family, group in families.items():
         snapshots = [s for s in group if s["metadata"]["mode"] == "snapshot"]
         events = [s for s in group if s["metadata"]["mode"] == "events"]
         if snapshots and events:
+            mixed_families.add(family)
             finding("mixed_source_modes", "This source family mixes state snapshots and incremental event streams.",
                     {"family": list(family), "source_ids": [s["id"] for s in group]})
         if snapshots:
@@ -294,7 +297,7 @@ def calculate(export, prepared, sources, body):
         if row["active_source"] and not row["excluded"] and row["prepared_id"] and am and am["value_basis"] == "incremental_events" and row["event_id"]:
             native_events[(row["source_system"], row["report_family"], row["event_id"])].append(row)
     for key, copies in native_events.items():
-        meanings = {m.fingerprint({"prepared_id": r["prepared_id"], "original": r["original"], "types": r["types"], "status": r["status"], "amount_minor": r["amount_minor"], "currency": r["currency"], "observed_at": r["observed_at"]}) for r in copies}
+        meanings = {m.fingerprint({"prepared_id": r["prepared_id"], "original": r["original"], "types": r["types"], "status": r["status"], "amount_minor": r["amount_minor"], "currency": r["currency"], "native_observed_at": r["native_observed_at"]}) for r in copies}
         if len(meanings) > 1:
             invalid_event_ids.add(key)
             finding("conflicting_event_identity", "One native event ID identifies different original records or prepared rows.",
@@ -357,7 +360,10 @@ def calculate(export, prepared, sources, body):
                     projection.update(currency=currency, expected_minor=expected_minor)
                     chosen = [r for r in (group if am["value_basis"] == "incremental_events" else latest_rows)
                               if r["status"] in am["included_statuses"]]
-                    usable = all(r["observed_at"] is not None for r in chosen)
+                    # A mixed report family has no single additive amount meaning.
+                    # Retain its expected amount and every observation, but do not
+                    # assert a returned total until selection separates its modes.
+                    usable = family not in mixed_families and all(r["observed_at"] is not None for r in chosen)
                     if am["value_basis"] == "incremental_events":
                         events = defaultdict(list)
                         for row in chosen:

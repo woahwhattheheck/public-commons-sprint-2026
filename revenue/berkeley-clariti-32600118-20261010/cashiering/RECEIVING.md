@@ -23,9 +23,9 @@ A finding review records a staff disposition; the native returned status, origin
 - Automatic matching uses only the configured exact native key tuple. Missing keys, repeated prepared keys and unmatched returned keys remain visible. No date or amount proximity match is inferred.
 - CSV values remain text. JSON numeric lexemes are retained as source text with original type metadata. Monetary arithmetic uses the financial engine's exact signed integer minor units under the original currency scales.
 - Original observation times require an explicit timezone/UTC offset. A supplied per-row time is interpreted explicitly. An invalid clock remains unsupported rather than falling back to the upload time.
-- The latest selected snapshot in a source family supplies current observations. Earlier snapshots remain in the complete rows and source history. Concurrent snapshots and mixtures of snapshot/event semantics produce findings.
+- The latest selected snapshot in a source family supplies current observations. Earlier snapshots remain in the complete rows and source history. Concurrent snapshots and mixtures of snapshot/event semantics produce findings. A mixed family's expected amounts remain visible, while returned amounts and differences stay unavailable until the selected source modes are separated.
 - Reported row totals use the latest original observation point. Incompatible amount interpretations, currencies or equally current conflicting values remain unavailable for aggregation.
-- Incremental event amounts require native event IDs. Identical repeated native events remain visible and contribute once. Conflicting event identities, including a shared ID attached to different prepared rows, produce findings and do not supply a usable amount.
+- Incremental event amounts require native event IDs. Identical repeated native events remain visible and contribute once. Native event meaning uses the original fields, prepared target, interpreted status/amount/currency and an explicitly mapped native timestamp. Each source report's observation time remains separate for latest-status display. Conflicting event identities, including a shared ID attached to different prepared rows, produce findings and do not supply a usable amount.
 - Prepared and known returned amounts are separate by source system, report family and currency. Every total gives prepared rows, rows with usable returned amounts and rows without them.
 - Manually assigned rows preserve their original values and the complete assignment history. An assignment to a source no longer selected becomes a retained stale-assignment finding.
 - Native row calculations are retained once per complete input signature and indexed in SQLite. Normal paging and finding review use the retained population. They do not reread and recalculate all the source files on every page.
@@ -168,3 +168,17 @@ CLI outputs are durably published with their exact byte count/hash. An existing 
 The original daily cashiering operating run remains the 82E4-owned case and database. Its existing native and browser continuations are the source for adopting this additive receiving arm. Original prepared exports and close records are reused. Controlled operating examples retain their actual source labels and do not replace a customer/vendor returned original.
 
 Complete operating artifacts belong with that same original case and delivery. A generated database or returned source containing customer information belongs in the original private delivery surface. Maintained software and explicitly labeled example inputs remain repository source.
+
+## Continue the saved original worked example
+
+The complete original operation is in `examples/operate_original_receiving.py`. It accepts the retained 82E4 database, the complete source directory and a private output directory. It selects the already saved run and exact prepared exchange, keeps their identities, receives complete labeled example return files, retains all mapping and review editions, produces the existing financial handover with its receiving rows, and reopens the full database backup. Its original UUIDs support request replay.
+
+~~~bash
+python -B cashiering/examples/operate_original_receiving.py \
+  --db /private/original-82e4-workspace.sqlite \
+  --source-dir /private/berkeley-clariti-32600118-20261010 \
+  --source-pin CURRENT_SOURCE_COMMIT \
+  --root /private/original-row-receiving
+~~~
+
+Use the original browser operation to open `/cashiering/receiving/` on that same saved workspace and select the returned receiving ID from `result.json`.
