@@ -8,6 +8,7 @@ const USAGE = `Usage:
   node dataset-cli.mjs sdmx --help     Retained SDMX editions, merchant publication and customer receiving
   node dataset-cli.mjs odata --help   OData source, retained editions and merchant workspace
   node dataset-cli.mjs xml --workspace DIRECTORY init|serve|source|plan|build|query|compare|export|import
+  node dataset-cli.mjs ndjson --workspace DIRECTORY init|serve|source|plan|build|query|compare|export|import|merchant
   node dataset-cli.mjs --dataset FILE
   node dataset-cli.mjs ogc --help      OGC / GeoJSON capture, field review and dataset export
   node dataset-cli.mjs geocoder --help Census address capture, match review, merchant and buyer
@@ -70,6 +71,7 @@ export async function main(args = process.argv.slice(2)) {
   if (args[0] === 'sdmx') return (await import('./sdmx/cli.mjs')).main(args.slice(1));
   if (args[0] === 'odata') return (await import('./odata/cli.mjs')).main(args.slice(1));
   if (args[0] === 'xml') return (await import('./xml/cli.mjs')).main(args.slice(1));
+  if (args[0] === 'ndjson') return (await import('./ndjson/cli.mjs')).main(args.slice(1));
   if (args[0] === 'ogc') return (await import('./ogc/cli.mjs')).main(args.slice(1));
   if (args[0] === 'geocoder') return (await import('./census-geocoder/cli.mjs')).main(args.slice(1));
   if (args.includes('--help')) { console.log(USAGE); return; }
