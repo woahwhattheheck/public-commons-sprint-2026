@@ -164,6 +164,38 @@ export interface DatasetteWorkspaceReceiving extends JsonObject {
   reused: boolean;
   manifest: JsonObject;
 }
+/** Original archive declaration retained before the first body byte. */
+export interface DatasetteUploadDeclaration {
+  uploadId: string;
+  name: string;
+  bytes: string;
+  sha256: string;
+}
+export interface DatasetteUploadRange extends DatasetteUploadDeclaration {
+  offset: string;
+  length: string;
+}
+export interface DatasetteUploadStatus extends JsonObject {
+  schema: 'stellar-forge.datasette-upload.v1';
+  workspaceId: string;
+  uploadId: string;
+  state: 'RECEIVING' | 'FINALIZABLE' | 'COMPLETE' | 'REJECTED';
+  name: string;
+  bytes: string;
+  sha256: string;
+  receivedBytes: string;
+  prefixSha256: string;
+  uncheckpointedBytes: string;
+  chunks: number;
+  maximumChunkBytes: string;
+  createdAt: string;
+  updatedAt: string;
+  completedAt?: string;
+  archiveFile?: string;
+  retainedFile?: DatasetteRetainedFile;
+  error?: JsonObject;
+  replayed?: boolean;
+}
 export interface DatasetteOperationResults {
   'files.list': DatasetteFilePage;
   'files.inspect': DatasetteRetainedFile;
@@ -191,6 +223,10 @@ export interface DatasetteClient {
   health(options?: DatasetteRequestOptions): Promise<DatasetteHealth>;
   status(options?: DatasetteRequestOptions): Promise<JsonValue>;
   operations(options?: DatasetteRequestOptions): Promise<JsonValue>;
+  uploadStatus(input: {uploadId: string}, options?: DatasetteRequestOptions): Promise<DatasetteUploadStatus>;
+  /** At most 8 MiB per request. Retain uploadId and read status after interruption. */
+  uploadChunk(input: DatasetteUploadRange, rawBytes: Uint8Array | ArrayBuffer | Blob,
+    options?: DatasetteRequestOptions): Promise<DatasetteUploadStatus>;
   /** Every action uses the original workspace dispatch and retains native results.
    * No transport or timeout failure automatically repeats a mutation. */
   dispatch<K extends DatasetteOperation>(

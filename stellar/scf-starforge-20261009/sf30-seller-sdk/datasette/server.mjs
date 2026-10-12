@@ -65,7 +65,7 @@ function json(response, status, value, head = false) {
   response.end(head ? undefined : body);
 }
 function identityFor(input) {
-  return input?.operationId ?? input?.runId ?? input?.requestId ?? input?.id ?? null;
+  return input?.operationId ?? input?.runId ?? input?.requestId ?? input?.uploadId ?? input?.id ?? null;
 }
 function errorResult(error, context) {
   const status = Number.isInteger(error?.status) && error.status >= 400 && error.status <= 599 ? error.status
@@ -78,6 +78,7 @@ function errorResult(error, context) {
     ...(context.operation ? {operation:context.operation, operationId:identityFor(context.input)} : {}),
     ...(context.started ? {uncertain:error?.uncertain === true || status >= 500} : {}),
     ...(typeof error?.directory === 'string' ? {directory:error.directory} : {}),
+    ...(object(error?.details) ? {details:error.details} : {}),
   }};
 }
 function attachment(name) {
@@ -205,6 +206,26 @@ export async function startDatasetteServer({
           context.operation = body.operation; context.input = body.input; context.started = true;
           json(response, 200, await workspace.dispatch(body.operation, body.input)); return;
         }
+        if (target.pathname === '/api/upload') {
+          requireMethod(request, response, ['GET', 'POST']);
+          if (request.method === 'GET') {
+            const input = readQuery(target, ['uploadId']);
+            json(response, 200, await workspace.uploadStatus(input)); return;
+          }
+          const input = readQuery(target, ['uploadId', 'name', 'bytes', 'sha256', 'offset', 'length']);
+          context.operation = 'files.upload'; context.input = input;
+          if (oneHeader(request, 'content-type') !== 'application/octet-stream' ||
+              oneHeader(request, 'content-encoding') !== undefined)
+            throw fail('DATASETTE_UPLOAD_CONTENT_TYPE_INVALID', 'Send the original uncompressed application/octet-stream bytes.', 415);
+          const declared = oneHeader(request, 'content-length');
+          if (!decimal(input.length) || Number(input.length) > 8 * 1024 * 1024 ||
+              declared !== undefined && declared !== input.length)
+            throw fail('DATASETTE_UPLOAD_RANGE_INVALID', 'Send one original range of at most 8 MiB with its exact declared length.');
+          context.started = true;
+          const result = await workspace.receiveUpload(input, request);
+          if (!request.complete) response.setHeader('Connection', 'close');
+          json(response, 200, result); return;
+        }
         if (target.pathname === '/api/file') {
           requireMethod(request, response, ['GET', 'HEAD']);
           const input = readQuery(target, ['path', 'sha256', 'offset', 'limit']);
@@ -244,8 +265,11 @@ export async function startDatasetteServer({
       server.once('error', failed); server.once('listening', ready); server.listen(port, host);
     });
     const address = server.address(), authority = (host === '::1' ? '[::1]' : host) + ':' + address.port;
-    url = 'http://' + authority;
-    permittedOrigins = new Set(['127.0.0.1', 'localhost', '[::1]'].map(name => 'http://' + name + ':' + address.port));
+    url = new URL('http://' + authority).origin;
+    permittedOrigins = new Set(['127.0.0.1', 'localhost', '[::1]'].flatMap(name => {
+      const explicit = 'http://' + name + ':' + address.port;
+      return [explicit, new URL(explicit).origin];
+    }));
     return Object.freeze({url, workspaceId:workspace.workspaceId, instanceId, directory:workspace.directory,
       close() {
         if (closing) return closing;
