@@ -119,3 +119,4 @@ export declare function startODataMerchant(options: {
 }): Promise<ODataMerchant>;
 
 export * from './live/collection.mjs';
+export * from './live/collection-store.mjs';
