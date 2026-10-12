@@ -12,7 +12,7 @@ HOST = Path('/workspace/scratch/dbc61db6310c/native-runtime-maintained-903bec05/
 PROJECT = Path('/dev/scf-following-4c3e572ce539')
 EXPECTED_NATIVE = 'dbf3605fdd032a53d3b96c411e9ad72fac0df9136bafa61080b4f112f16061ff'
 EXPECTED = {
-    'continue-applications.mjs': '8c68426d16cb613e14630b41111a9dba2dffc6c0',
+    'continue-applications.mjs': 'a40ff1b769fa9b5241e72fadc4e46f26983735ca',
     'copy-dataset-workspace.py': '53475d6e48779a4defc3cc829694f74f1fbf0267',
     'continuation-input.json': '0159163791ae23204e48555ac8b931e07373a0d1',
 }
