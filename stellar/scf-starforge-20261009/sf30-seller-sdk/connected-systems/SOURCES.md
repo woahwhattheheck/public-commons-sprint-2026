@@ -141,3 +141,16 @@ The original 4,443-byte license is retained unchanged as `examples/ogc-connected
 The original acquisition received the committed datastream body over HTTP at provider Date `Mon, 12 Oct 2026 20:38:13 GMT`: status 200, 1,238 bytes, SHA256 `75e43bcfa85af757f22f5ef3e248e8cdfead1cd44d16ecf896459c4c9b1e2000`. Its next schema request included the consumer's automatic `?obsFormat=application%2Fjson` parameter and failed at proxy CONNECT with `403 Forbidden`. No schema response status or body was received, so this transport failure is not represented as an HTTP 403 response from the publisher.
 
 The exact original receipt and failed attempt are retained in [publisher-request-evidence.json](sources/publisher-request-evidence.json). The application now exposes explicit `schemaUrlPolicy: "exact"` for static schema resources, while keeping the existing live-service format-parameter default and prior query identities. The recipe retains the failed query/operation and links a distinct corrected acquisition within the same original reference operation. Its original native/receiving result determines completion; the URL-policy correction alone is not evidence of success.
+
+### Completed original native receiving
+
+The original `ogc-room-temperature-reference-v1` operation completed on 12 October 2026. Its [full native and publisher result](examples/ogc-room-temperature-native-result.json) retains the original failed request linkage, corrected exact-schema query, body-to-commit checks, source identity, native build and independent receiver result.
+
+- Source: `2bdad5aeac5282f6750afd9e9d3b85d9b6e188464cbcf90f9190ba74224c2541`, 3916 bytes.
+- Build: `c87829609aeeef2790ac7ac91d283b9e0a7590e628c6a747281c886199d66879`; snapshot: `682277ab88cf03fc229118faca289c61d1f19e05ca3c41403d72991460edb0e0`.
+- Exact producer and receiver project: 6137 bytes, SHA256 `976fbe48b0264411d776bb76469bb9fc1e0fd13d6e175c9251f8f45736a19a1a`.
+- Original ordered-row SHA256: `c03940247aa9d60d4dc2a324c009f06759f77dbd34417d2aa4edefdaf31c548f`.
+- Scope: one original observation resource, one page, one row, exhausted within that explicitly selected resource.
+- The publisher observation retains its exact source-byte SHA256 `57aa8e6b29c4a054ec6bcce4dd6f6a0b16d9bb00263b5b04fe91f8dc65f17fba`; native original-observation cells and the independent receiver's reopened cells were verified.
+
+These native results do not imply browser completion, paid acquisition, a live field feed or acceptance of the separately failed demonstration services.
