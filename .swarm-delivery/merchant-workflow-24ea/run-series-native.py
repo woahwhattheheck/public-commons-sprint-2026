@@ -429,6 +429,23 @@ def build_archive(require_completed=False):
     os.replace(pending_bundle, bundle)
     return bundle, manifest
 
+def private_restore_directory(path):
+    import stat
+    try:
+        components = Path(path).relative_to(root).parts
+    except ValueError:
+        raise RuntimeError("Restore directories inside the original owned work directory.")
+    current = root
+    for component in (None, *components):
+        if component is not None:
+            current = current / component
+            current.mkdir(exist_ok=True, mode=0o700)
+        info = current.lstat()
+        if not stat.S_ISDIR(info.st_mode) or info.st_uid != os.getuid():
+            raise RuntimeError("Restore only an original owned application directory: " + str(current))
+        if stat.S_IMODE(info.st_mode) != 0o700:
+            os.chmod(current, 0o700, follow_symlinks=False)
+
 def restore_archive(bundle):
     with tarfile.open(bundle, "r:gz") as archive:
         manifest = json.load(archive.extractfile("native-delivery-manifest.json"))
@@ -453,6 +470,7 @@ def restore_archive(bundle):
             item = expected.get(member.name)
             if item and member.size != item["bytes"]:
                 raise RuntimeError("The complete native archive file size changed: " + member.name)
+            private_restore_directory(path.parent)
             if path.exists():
                 if member.name == "native-delivery-manifest.json":
                     if json.loads(path.read_text()) != manifest:
@@ -460,7 +478,6 @@ def restore_archive(bundle):
                 elif path.stat().st_size != item["bytes"] or sha_file(path) != item["sha256"]:
                     raise RuntimeError("Preserve different existing native data: " + member.name)
                 continue
-            path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
             temporary = path.with_name(path.name + ".814b-restore-pending")
             with archive.extractfile(member) as incoming, temporary.open("wb") as outgoing:
                 os.chmod(temporary, 0o600); shutil.copyfileobj(incoming, outgoing, 65536)
@@ -473,11 +490,11 @@ def restore_archive(bundle):
         original = source_path(item["archivedName"])
         if not destination.is_relative_to(root):
             raise RuntimeError("Restore configured source inputs inside the original owned work directory.")
+        private_restore_directory(destination.parent)
         if destination.exists():
             if destination.stat().st_size != item["bytes"] or sha_file(destination) != item["sha256"]:
                 raise RuntimeError("Preserve a different existing configured source: " + str(destination))
         else:
-            destination.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
             with original.open("rb") as incoming, destination.open("xb") as outgoing:
                 os.chmod(destination, 0o600); shutil.copyfileobj(incoming, outgoing, 65536)
     # Preserve empty application directories, including first-time customer receiving storage.
@@ -488,7 +505,7 @@ def restore_archive(bundle):
         path = source_path(name)
         if path.is_symlink() or path.exists() and not path.is_dir():
             raise RuntimeError("Preserve a different existing application path: " + name)
-        path.mkdir(parents=True, exist_ok=True, mode=0o700)
+        private_restore_directory(path)
     if "directories" not in manifest:
         # Earlier source archives retained ordinary files only. This configured empty directory
         # was required by readMerchantConfig when the original workspace was created.
@@ -499,7 +516,7 @@ def restore_archive(bundle):
                 exports = (configuration.parent / raw["exportsDirectory"]).resolve()
                 if not exports.is_relative_to(native) or exports == native:
                     raise RuntimeError("Restore customer exports inside the original merchant workspace.")
-                exports.mkdir(parents=True, exist_ok=True, mode=0o700)
+                private_restore_directory(exports)
     return manifest
 
 reopen_path = root / "native-archive-reopen.json"
@@ -859,6 +876,14 @@ if set(helpers) == {"library_upload.py", "library_hosted_apps.py", "library_file
         receipt = {"operationId": operation, "phase": "RETURNED", "exitCode": saved.returncode,
                    "result": returned, "stderr": saved.stderr.decode("utf-8", "replace")}
         atomic(receipt_path, (json.dumps(receipt, indent=2) + "\n").encode())
+        if saved.returncode:
+            import re
+            failure = receipt["stderr"].strip().splitlines()
+            detail = failure[-1] if failure else str(returned.get("message", ""))
+            detail = re.sub(r"https?://\S+", "[service URL]", detail)
+            if re.search(r"(?i)token|authorization|api.?key|secret|password|credential|bearer", detail):
+                detail = "The original save returned a credential-related service error; its complete result remains private."
+            emit({"event": "ORIGINAL_NATIVE_LIBRARY_ERROR", "exitCode": saved.returncode, "message": detail[:2000]})
         emit({"event": "ORIGINAL_NATIVE_LIBRARY_SAVED", "exitCode": saved.returncode,
             "results": [{key: item[key] for key in ("local_path", "status", "file_name", "library_file_id",
                 "file_id", "path", "current_version_number", "local_metadata_applied", "error_code") if key in item}

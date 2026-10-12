@@ -256,7 +256,11 @@ python3 run-series-native.py \
 
 The work directory and receiving directory have separate locations. The runner
 preserves an existing receiving directory before extraction and resumes the same
-saved archive phase after interruption. Original operation locks remain with the
+saved archive phase after interruption. Each restored application and configured
+input directory is created one component at a time as a private owned directory.
+Existing same-operation partial directories regain mode 0700 after their directory
+type and ownership are checked, so nested customer storage cannot make a Console
+workspace fail its existing private-directory requirement. Original operation locks remain with the
 controller and its child throughout the archive exchange and reopen.
 
 `ORIGINAL_NATIVE_OUTPUT_READY` reports the exact bundle size, SHA-256, native
