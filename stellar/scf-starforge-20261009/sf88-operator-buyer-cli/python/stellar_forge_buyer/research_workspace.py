@@ -336,6 +336,10 @@ class ResearchWorkspace:
                 value[key] = item
         return self._write(action, value, request_id=request_id, replay_safe=False)
 
+    def eligibility(self, dossier_id):
+        from .research_eligibility import ResearchEligibility
+        return ResearchEligibility(self, dossier_id)
+
     def citations(self, dossier_id):
         from .research_citations import ResearchCitations
         return ResearchCitations(self, dossier_id)
