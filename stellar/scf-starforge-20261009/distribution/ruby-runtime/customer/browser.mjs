@@ -2,3 +2,6 @@
 import '/runtime-browser.mjs';
 import { bootCustomerDesk } from './panel.mjs';
 bootCustomerDesk();
+
+import {bootApplicationEditions} from './editions.mjs';
+bootApplicationEditions();
