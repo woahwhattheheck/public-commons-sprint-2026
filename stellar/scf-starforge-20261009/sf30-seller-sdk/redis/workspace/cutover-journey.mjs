@@ -25,9 +25,15 @@ async function reviewed(page,checks){
   await page.locator('#cutover-status').filter({hasText:'Complete paired source, examples, comparison rules and candidate stage reviewed.'}).waitFor();
   assert.equal(await page.locator('#cutover-review-products tbody tr').count(),checks);
 }
-async function completed(page,workspace,mode){
-  await page.waitForFunction(()=>document.querySelector('#cutover-state')?.textContent==='COMPLETED'&&
-    document.querySelector('#cutover-pending')?.hidden,{}, {timeout});
+async function completed(page,workspace,mode,afterAttempt=null){
+  await page.waitForFunction(async({mode,afterAttempt})=>{
+    const token=sessionStorage.getItem('redis-cutover-token:'+location.origin);
+    const response=await fetch('/api/progress',{headers:{'x-workspace-token':token},cache:'no-store'});
+    if(!response.ok)return false;const original=await response.json();
+    return !original.attached&&original.progress?.mode===mode&&original.progress.state==='COMPLETED'&&
+      original.progress.attemptId!==afterAttempt&&document.querySelector('#cutover-state')?.textContent==='COMPLETED'&&
+      document.querySelector('#cutover-pending')?.hidden;
+  },{mode,afterAttempt},{timeout});
   const result=await workspace.state();
   assert.equal(result.attached,null);assert.equal(result.progress?.state,'COMPLETED');
   assert.equal(result.progress.mode,mode);assert.equal(result.lastFailure,null);
@@ -159,8 +165,13 @@ export async function createRedisCutoverBrowserJourney({directory,environment=pr
         await page.locator('#cutover-receive').click();
         if(interrupt){
           await interception;await page.unroute('**/api/start');
-          await page.waitForFunction(()=>!document.querySelector('#cutover-pending')?.hidden&&
-            !document.querySelector('#cutover-pending-continue')?.disabled);
+          await page.waitForFunction(async()=>{
+            if(!document.querySelector('#cutover-pending')?.hidden&&!document.querySelector('#cutover-pending-continue')?.disabled)return true;
+            const token=sessionStorage.getItem('redis-cutover-token:'+location.origin);
+            const response=await fetch('/api/progress',{headers:{'x-workspace-token':token},cache:'no-store'});
+            if(!response.ok)return false;const original=await response.json();
+            return !original.attached&&original.progress?.mode==='receive'&&original.progress.state==='COMPLETED';
+          });
           await page.reload();await page.locator('#cutover-main').waitFor();
           await page.waitForFunction(()=>document.querySelector('#cutover-control-state')?.dataset.owner==='true'&&
             (document.querySelector('#cutover-pending')?.hidden||!document.querySelector('#cutover-pending-continue')?.disabled));
@@ -180,7 +191,7 @@ export async function createRedisCutoverBrowserJourney({directory,environment=pr
         const before=await workspace.state();
         await reviewed(page,input.comparisons.length);
         await page.locator('[data-cutover-tab="receiving"]').click();await page.locator('#cutover-compare').click();
-        const compared=await completed(page,workspace,'compare');
+        const compared=await completed(page,workspace,'compare',before.progress?.attemptId??null);
         assert.equal(compared.operationId,before.operationId);assert.deepEqual(compared.result,before.result);
         await differences(page,compared);
         for(const side of ['baseline','candidate']){

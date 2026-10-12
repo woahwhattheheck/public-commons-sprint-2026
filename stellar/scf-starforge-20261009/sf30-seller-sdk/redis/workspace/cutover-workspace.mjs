@@ -330,18 +330,24 @@ export class RedisCutoverWorkspace{
       await this.closeEditors();this.lastFailure=null;
       const controller=new AbortController(),active={edition,mode:input.mode,controller,startedAt:new Date().toISOString(),task:null};
       this.active=active;
+      let admitted;const admission=new Promise(resolve=>{admitted=resolve;});
+      const observed=value=>{active.progress=clone(value);admitted();};
       active.task=Promise.resolve().then(async()=>{
         if(input.mode==='handover')return createRedisCutoverHandover({directory:selected.root,environment:this.environment,
-          signal:controller.signal,onProgress:value=>{active.progress=clone(value);
+          signal:controller.signal,onProgress:value=>{observed(value);
             if(controller.signal.aborted)throw issue('REDIS_CUTOVER_PAUSED','The original handover is paused after its retained operation.');}});
         return receiveRedisCutover({input:selected.input,inputSha256:selected.inputSha256,directory:selected.root,
-          environment:this.environment,mode:input.mode,signal:controller.signal,
+          environment:this.environment,mode:input.mode,signal:controller.signal,onProgress:observed,
           expectedSelection:{boundSha256:review.boundSha256,draftSha256:review.draftSha256}});
       }).catch(error=>{
         this.lastFailure={edition,error:{code:error.code??'REDIS_CUTOVER_OPERATOR_FAILED',message:error.message,details:error.details??null}};
         throw error;
-      }).finally(()=>{if(this.active===active)this.active=null;});
-      active.task.catch(()=>{});return this.state({edition});
+      }).finally(()=>{if(this.active===active)this.active=null;admitted();});
+      active.task.catch(()=>{});
+      // Return the original admission only after its first retained progress
+      // write, or its actual terminal outcome. Old completed progress cannot
+      // stand in for a newly accepted same-mode comparison.
+      await admission;return this.state({edition});
     });
   }
   continue(input={}){
