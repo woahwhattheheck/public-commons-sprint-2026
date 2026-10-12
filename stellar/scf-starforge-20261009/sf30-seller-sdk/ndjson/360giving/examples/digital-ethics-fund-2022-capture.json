@@ -1,0 +1,9 @@
+{
+  "sourceUrl": "https://scvo.scot/funding/data/a113z00000VExxLAAT/digital-ethics-fund-2022.json",
+  "finalUrl": "https://storage.googleapis.com/scvo-platform-assets/scvo/data/funding/archive/digital-ethics-fund-2022.json",
+  "captureMethod": "complete publisher JSON document code returned by connected content retrieval",
+  "retrievedDate": "2026-10-12",
+  "publisher": "Scottish Council for Voluntary Organisations",
+  "license": "https://creativecommons.org/licenses/by/4.0/",
+  "contentType": "application/json"
+}
