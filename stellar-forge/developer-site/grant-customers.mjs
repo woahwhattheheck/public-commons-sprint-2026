@@ -185,6 +185,14 @@ export function receiveGrantCustomerSources(index, companion) {
     /https:\/\/github\.com\/woahwhattheheck\/tjlabs-stellar-merchant-workspace\/blob\/([a-f0-9]{40})\/(\.swarm-delivery\/openlineage-service-levels-bbbd-\d{8}\/SERVICE_LEVELS_RECEIVING\.mjs)/, lineage);
   receive('openlineage-quality-operator', 'OpenLineage dataset quality operations',
     /https:\/\/github\.com\/woahwhattheheck\/tjlabs-stellar-merchant-workspace\/blob\/([a-f0-9]{40})\/(stellar\/scf-starforge-\d{8}\/sf30-seller-sdk\/openlineage-workspace\/QUALITY_OPERATOR\.md)/, lineage);
+  receive('installation-source-builds', 'Product selection, source comparison and installation',
+    /https:\/\/github\.com\/woahwhattheheck\/tjlabs-stellar-merchant-workspace\/blob\/([a-f0-9]{40})\/(stellar\/scf-starforge-\d{8}\/distribution\/runtime-workspace\/SOURCE_BUILDS\.md)/, companion);
+  receive('request-collection-authoring', 'Reusable buyer request plans and complete prepared periods',
+    /https:\/\/github\.com\/woahwhattheheck\/tjlabs-stellar-merchant-workspace\/blob\/([a-f0-9]{40})\/(stellar\/scf-starforge-\d{8}\/sf88-operator-buyer-cli\/collections\/AUTHORING\.md)/, companion);
+  receive('installation-product-requirements', 'Complete capability selection and committed dependency inspection',
+    /https:\/\/github\.com\/woahwhattheheck\/tjlabs-stellar-merchant-workspace\/blob\/([a-f0-9]{40})\/(stellar\/scf-starforge-\d{8}\/distribution\/discovery\/PRODUCT_REQUIREMENTS\.md)/, companion);
+  receive('installation-product-plans', 'Saved product, original installed Runtime and complete customer handoff',
+    /https:\/\/github\.com\/woahwhattheheck\/tjlabs-stellar-merchant-workspace\/blob\/([a-f0-9]{40})\/(stellar\/scf-starforge-\d{8}\/distribution\/runtime-workspace\/PRODUCT_PLANS\.md)/, companion);
   index.narrative_source = { ...index.narrative_source, composition: {
     ...index.narrative_source?.composition,
     retained_product_sections: headings(clean(companion)).filter(item => item.level === 2).map(item => item.text.slice(3)),
