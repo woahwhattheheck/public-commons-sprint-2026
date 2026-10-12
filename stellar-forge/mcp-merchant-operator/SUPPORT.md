@@ -73,6 +73,121 @@ customer SDK exports. The connection stores references to the original inputs;
 it does not copy an incident store. Applying a profile explicitly changes the
 original capture configuration through SF93's existing transaction.
 
+## Select the console's existing incident sources
+
+The same Support provider accepts the original multi-source file already used by
+the SF74 incident desk and managed Support application. Select that existing file
+in the host connection:
+
+```json
+{
+  "schema": "stellar-forge.merchant-support-connection.v1",
+  "casesDirectory": "/private/merchant/cases",
+  "incidentSourcesFile": "/private/merchant/incident-sources.json",
+  "defaultIncidentSource": "main",
+  "profiles": {
+    "current-host": {
+      "label": "Reviewed main registration",
+      "file": "/private/merchant/intake/watch.json"
+    }
+  },
+  "workspaces": {
+    "merchant-mapping": {
+      "label": "Original merchant workspace and owner terms",
+      "file": "/private/merchant/intake/merchant-workspace.json"
+    }
+  }
+}
+```
+
+Use the original source file format:
+
+```json
+{
+  "schema": "stellar-forge.support-incident-sources.v1",
+  "sources": [
+    {"id":"main","label":"Main merchant","directory":"incidents"},
+    {"id":"supplier","label":"Supplier merchant","directory":"supplier-incidents"}
+  ]
+}
+```
+
+Each source refers to an already initialized private SF93 store. The original
+source parser checks the file, configured IDs and actual directory identity; it
+allows at most eight sources and rejects duplicate bindings to the same store.
+Relative incident directories resolve beside that source file. The source file
+itself resolves beside the support connection.
+
+Select either `incidentsDirectory` or `incidentSourcesFile` in one connection.
+The existing single-directory configuration keeps its original tools and native
+watcher behavior. The new file mode uses the existing SF74 source manager, its
+original SF93 stores and its owned watchers.
+
+Start with `merchant_support_incident_sources`. It returns the connection mode,
+available source IDs and labels, bound source-file SHA-256 and default selection.
+A configured `defaultIncidentSource` must name one of those sources. With exactly
+one source it is selected automatically. Otherwise supply `incidentSource` on
+every incident, profile, watcher or notification operation. This field is separate
+from the existing handoff/workspace `source` alias.
+
+```json
+{"incidentSource":"supplier"}
+```
+
+This example opens the selected source through
+`merchant_support_profiles` or `merchant_support_watch_status`. Every result
+identifies its selected source. Listing, acknowledgment, reminder, notification
+recovery and incident-to-case operations use that same selector.
+
+The host binds the source file's bytes and original store identities at
+configuration read, then the provider verifies them before opening the manager.
+Changing that host mapping requires reviewing and restarting the merchant
+configuration. Live incident updates and explicit watch-configuration revisions
+do not change the host source binding. The source parser reads original state
+without starting observation.
+
+## Inspect the actual destination and retained route choices
+
+`merchant_support_destination` takes the current configuration revision and
+optional source selector:
+
+```json
+{"incidentSource":"main","expectedConfigRevision":2}
+```
+
+For Slack, it calls the existing destination inspector using the host's original
+token environment reference and returns the actual authenticated workspace and
+channel result. For a webhook, it reports whether the original environment
+configuration resolves. The operation sends no incident message. A changed
+configuration revision requires a new current inspection.
+
+The original [Slack notification transport](../../stellar/scf-starforge-20261009/sf93-seller-support-bundle/INCIDENT_OPERATIONS.md)
+retains its exact attempted message, binding, same-thread parent, retry timing and
+accepted delivery reference in the original event. The Support MCP reads the
+sanitized queue through the same incident operations.
+
+`merchant_incident_view` opens one original incident:
+
+```json
+{"incidentSource":"main","id":"<original incident UUID>"}
+```
+
+It returns the incident, integer revision, current configuration identity,
+`latestNotificationId`, sanitized notification history, and actual advertised
+`routes` from retained before/after capture files. Each route has its original
+ID, method, optional path and the capture sides that advertise it. A capture read
+or parse issue appears in `captureProblems`; the original capture remains in its
+store. These readers are also available to the existing single-directory
+connection by omitting `incidentSource`.
+
+Use the returned route ID when calling `merchant_incident_case`. In source-file
+mode, the provider calls the existing source manager's `prepareCase`, parses its
+complete original SF74 handoff and saves it through the existing case store.
+Before/after capture bytes are read under the original read-only transaction at
+the expected incident revision. The template is the exact inspected host
+workspace. This path keeps the original case format and source bytes while
+avoiding an additional temporary incident export directory.
+
 ## Operate the original observer and notification recovery
 
 Initialize the incident directory once on its host with the existing SF93 command
@@ -95,16 +210,18 @@ profile file alone does not change the running watcher.
 
 | Tool | Operation |
 | --- | --- |
-| `merchant_support_profiles` | List declared profiles and the current original configuration, or inspect one profile, its digest and concrete merchant/settings changes. |
+| `merchant_support_incident_sources` | Read the configured source IDs, default, mode and bound source-file digest. |
+| `merchant_support_profiles` | List declared profiles and the selected source's original configuration, or inspect one profile, its digest and concrete merchant/settings changes. |
+| `merchant_support_destination` | Inspect the current original Slack destination or webhook configuration at its exact configuration revision. |
 | `merchant_support_configure` | Apply the inspected profile with its exact file digest and current integer configuration revision. |
 | `merchant_support_watch_status` | Read the saved original worker record, this MCP process's owned instance and its last completion/failure. |
 | `merchant_support_watch_start` | Acquire the original worker lease and start observation for the exact inspected configuration revision/hash. |
 | `merchant_support_watch_stop` | Abort and await only this MCP process's watcher, using its exact returned instance ID. |
 | `merchant_notifications` | Inspect/filter/page original events, their attempts, delivery state and retry reason. |
-| `merchant_incident_notify` | Queue a new reminder for the exact incident revision using the currently configured destination. |
+| `merchant_incident_notify` | Queue a new reminder for the exact incident revision and latest observed notification ID using the currently configured destination. |
 | `merchant_notification_update` | Retry an original paused/exhausted event, or cancel an unfinished event, with its exact attempt count and named operator. |
 
-Start with `merchant_support_profiles` without arguments. Inspect a declared
+Start with `merchant_support_profiles`, selecting `incidentSource` when the host has multiple sources and no default. Inspect a declared
 profile when its original merchant registration, thresholds or notification
 settings need changing:
 
@@ -151,7 +268,7 @@ field identifies this MCP process's actual watcher. The saved `worker` record is
 also useful after a crash, but a saved `RUNNING` status alone does not establish
 that a worker is still alive. A new process uses the original kernel lease when
 it starts; it does not kill a saved PID or remove an ownership file. A startup or
-background failure is retained in `lastOwnedExit` with its original safe code.
+background failure in single-directory mode is retained in `lastOwnedExit` with its original safe code. Source-file mode returns the original source manager's current `watcher.status`, `watcher.error` and actual ownership, while an explicitly drained stop is retained in `lastOwnedExit`.
 
 Read `merchant_incidents` and `merchant_notifications` to work the actual observed
 condition. An event with `EXHAUSTED` or `PAUSED` may be retried using its current
@@ -169,14 +286,31 @@ destination, inspect the current incident revision and call
 `merchant_incident_notify`; this queues a **new** original reminder. Cancel an
 unfinished previous event with the same `merchant_notification_update` tool and
 `action:"cancel"` when the operator intends that cancellation. Cancellation does
-not erase the incident or report its merchant condition as recovered. After an
-interrupted notification mutation, inspect the original events before issuing
-another reminder; reminders create new event identities.
+not erase the incident or report its merchant condition as recovered. To guard a new reminder, pass the last observed event ID from
+`merchant_incident_view` in `expectedNotificationId`, or explicit `null` when the
+incident has no notification. Source-file mode requires this field. The existing
+single-directory call keeps omission compatible and accepts the same guard:
+
+```json
+{
+  "incidentSource":"main",
+  "id":"<original incident UUID>",
+  "expectedRevision":3,
+  "expectedNotificationId":"<last observed notification UUID>"
+}
+```
+
+SF93 checks this selection inside its original reminder transaction. If a lost
+response already created a new event, replaying the same previous ID is refused
+with the original selection conflict. Read the current incident and queue to
+reconcile that event. Change the guard to a newer ID only when deliberately
+requesting another reminder. Retrying delivery of an existing event still uses
+`merchant_notification_update` and its original attempt count.
 
 Stop an owned watcher with `merchant_support_watch_stop` and its exact
 `instanceId`. It waits for the current original state write and lease release;
 repeating that same completed stop in the same MCP process returns `unchanged`.
-Closing the MCP host performs the same owned-watch shutdown alongside its other
+In source-file mode, one MCP provider can own watchers for several configured sources. Each Start/Stop selects its source, retains its actual instance and drains that original source manager. A concurrent lifecycle action on the same source returns its current busy conflict. Closing the MCP host performs the same owned-watch shutdown for all of its sources alongside its other
 owned runtimes. It does not stop an independently run watcher, seller, notification
 receiver or delivery worker. The incident store, captures, events and cases stay
 available to the next MCP process and the original terminal/browser interfaces.
@@ -191,7 +325,8 @@ case used for owner terms, workorder and private handoff.
 | Tool | Use |
 | --- | --- |
 | `merchant_support_sources` | List configured aliases, or inspect a handoff/template with its exact source digest and mapping. |
-| `merchant_incidents` | Read original condition, revision, captures, acknowledgment and notification state. Filter by ID or status and page through the result. |
+| `merchant_incidents` | Read original condition, revision, captures, acknowledgment and notification state for the selected source. Filter by ID or status and page through the result. |
+| `merchant_incident_view` | Open exact retained capture route choices, latest notification selection and sanitized event history for one incident. |
 | `merchant_incident_ack` | Acknowledge an original open incident using its exact integer revision and named operator. |
 | `merchant_incident_case` | Use an inspected workspace template and the original incident export to create a saved case. |
 | `merchant_cases` | Find cases by text, work status or follow-up date. Archived cases appear when selected explicitly. |

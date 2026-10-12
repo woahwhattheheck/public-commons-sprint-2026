@@ -41,7 +41,7 @@ export async function readFleetConfiguration(raw, base, releaseStore) {
 export async function readSupportConfiguration(path) {
   path = resolve(path);
   const raw = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(await fileBytes(path, 1024 * 1024)));
-  exact(raw, ['schema', 'casesDirectory', 'incidentsDirectory', 'handoffs', 'workspaces', 'profiles'], ['schema', 'casesDirectory']);
+  exact(raw, ['schema', 'casesDirectory', 'incidentsDirectory', 'incidentSourcesFile', 'defaultIncidentSource', 'handoffs', 'workspaces', 'profiles'], ['schema', 'casesDirectory']);
   if (raw.schema !== SUPPORT_CONFIG_SCHEMA) throw failure('CONFIGURATION_ERROR', 'Expected an original merchant support connection.');
   const base = dirname(path), aliases = kind => {
     const source = raw[kind] ?? {};
@@ -51,7 +51,26 @@ export async function readSupportConfiguration(path) {
       return [name, { label: line(value.label ?? name, 'Support source label'), file: hostPath(value.file, base) }];
     }));
   };
+  if (raw.incidentsDirectory !== undefined && raw.incidentSourcesFile !== undefined)
+    throw failure('CONFIGURATION_ERROR', 'Select the original single incident directory or its existing incident sources file.');
+  let incidentSourcesFile, incidentSources, defaultIncidentSource;
+  if (raw.incidentSourcesFile !== undefined) {
+    incidentSourcesFile = hostPath(raw.incidentSourcesFile, base);
+    const { inspectIncidentSourcesConfiguration } = await import('../../stellar/scf-starforge-20261009/sf74-merchant-support-console/incident-sources.mjs');
+    const selected = await inspectIncidentSourcesConfiguration(incidentSourcesFile);
+    // Bind host-selected file bytes and original store identities, not their changing live revisions.
+    incidentSources = { schema: selected.schema, sha256: selected.sha256,
+      sources: selected.sources.map(({ id, label, directory }) => ({ id, label, directory })) };
+    if (raw.defaultIncidentSource !== undefined) {
+      defaultIncidentSource = identifier(raw.defaultIncidentSource, 'Default incident source');
+      if (!incidentSources.sources.some(value => value.id === defaultIncidentSource))
+        throw failure('CONFIGURATION_ERROR', 'Select the default incident source from the existing host source file.');
+    }
+  } else if (raw.defaultIncidentSource !== undefined)
+    throw failure('CONFIGURATION_ERROR', 'A default incident source requires the original incident sources file.');
   return { casesDirectory: await privateSupportDirectory(hostPath(raw.casesDirectory, base)),
+    ...(incidentSourcesFile === undefined ? {} : { incidentSourcesFile, incidentSources,
+      ...(defaultIncidentSource === undefined ? {} : { defaultIncidentSource }) }),
     incidentsDirectory: raw.incidentsDirectory === undefined ? null
       : await privateSupportDirectory(hostPath(raw.incidentsDirectory, base)),
     handoffs: aliases('handoffs'), workspaces: aliases('workspaces'), profiles: aliases('profiles') };

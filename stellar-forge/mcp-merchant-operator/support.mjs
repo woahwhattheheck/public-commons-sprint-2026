@@ -1,4 +1,5 @@
 import { supportTools, alias, digest, uuid, notificationStatuses, page, text, selected, metadataSchema, termsSchema, exportNames, object } from './catalog/support.mjs';
+import { MerchantSupportIncidentSources } from './support-incidents.mjs';
 export { supportTools } from './catalog/support.mjs';
 // MIT. Configured MCP access to the original incident, case and workorder lifecycle.
 import { createHash } from 'node:crypto';
@@ -138,12 +139,22 @@ function exportFileType(name) {
 }
 
 export class MerchantSupport {
-  #config; #store; #watch = null; #lastWatchExit = null; #closing = false; #close;
+  #config; #store; #watch = null; #lastWatchExit = null; #closing = false; #close; #incidentSources;
   #reads = new RetainedFileReads({ errorPrefix: 'SUPPORT' });
-  constructor(config) { this.#config = config; }
+  constructor(config) {
+    this.#config = config;
+    this.#incidentSources = new MerchantSupportIncidentSources(config.support, {
+      profiles: () => this.summary.profiles,
+      profile: (alias, sourceDigest) => this.#profile(alias, sourceDigest),
+      configurationChanges,
+      template: (alias, sourceDigest) => this.#input('workspace', alias, sourceDigest),
+      cases: () => this.#cases()
+    });
+  }
   get summary() {
     const value = this.#config.support;
-    return { configured: Boolean(value), incidentsConfigured: Boolean(value?.incidentsDirectory),
+    return { configured: Boolean(value), incidentsConfigured: Boolean(value?.incidentsDirectory || value?.incidentSourcesFile),
+      incidentSources: this.#incidentSources.summary,
       fileReads: this.#reads.summary,
       watcher: { ownedInstanceId: this.#watch?.instanceId ?? null, state: this.#watch?.state ?? 'NOT_OWNED', lastExit: this.#lastWatchExit },
       profiles: Object.entries(value?.profiles ?? {}).map(([profile, entry]) => ({ profile, label: entry.label })),
@@ -345,6 +356,9 @@ export class MerchantSupport {
     if (this.#closing) throw failure('OPERATOR_CLOSING', 'Merchant support is closing.');
     try {
       return await (async () => {
+      if (this.#incidentSources.handles(name)) return this.#incidentSources.call(name, args);
+      if (args.incidentSource !== undefined)
+        throw failure('SUPPORT_INCIDENT_SOURCE_NOT_FOUND', 'This connection uses its original single incident store; omit incidentSource or select a host source file.');
       switch (name) {
         case 'merchant_support_profiles': return this.#profiles(args.profile);
         case 'merchant_support_configure': {
@@ -359,7 +373,11 @@ export class MerchantSupport {
         case 'merchant_support_watch_start': return this.#startWatch(args);
         case 'merchant_support_watch_stop': return this.#stopWatch(args.instanceId);
         case 'merchant_notifications': return this.#notifications(args);
-        case 'merchant_incident_notify': return remindIncident({ directory: this.#incidents(), id: caseId(args.id), expectedRevision: configurationRevision(args.expectedRevision) });
+        case 'merchant_incident_notify': {
+          if (args.expectedNotificationId !== undefined && args.expectedNotificationId !== null) caseId(args.expectedNotificationId);
+          return remindIncident({ directory: this.#incidents(), id: caseId(args.id), expectedRevision: configurationRevision(args.expectedRevision),
+            ...(Object.hasOwn(args, 'expectedNotificationId') ? { expectedNotificationId: args.expectedNotificationId } : {}) });
+        }
         case 'merchant_notification_update': {
           if (!Number.isSafeInteger(args.expectedAttempts) || args.expectedAttempts < 0 || !['retry', 'cancel'].includes(args.action))
             throw failure('INVALID_PARAMS', 'Choose retry or cancel with the exact original notification attempt count.');
@@ -445,10 +463,14 @@ export class MerchantSupport {
     this.#closing = true;
     this.#close = (async () => {
       const handle = this.#watch;
-      const readsClosing = this.#reads.close();
+      const readsClosing = this.#reads.close(), sourcesClosing = this.#incidentSources.close();
       try {
         if (handle) { handle.state = 'STOPPING'; handle.controller.abort(); await handle.done; }
-      } finally { await readsClosing; }
+      } finally {
+        const results = await Promise.allSettled([readsClosing, sourcesClosing]);
+        const errors = results.filter(value => value.status === 'rejected').map(value => value.reason);
+        if (errors.length) throw new AggregateError(errors, 'Original support readers and source watchers did not finish closing.');
+      }
     })();
     return this.#close;
   }
