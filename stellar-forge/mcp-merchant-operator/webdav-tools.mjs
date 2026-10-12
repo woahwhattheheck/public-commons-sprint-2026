@@ -1,10 +1,11 @@
-import { webDavWorkspaceTools, alias, mutation, hash, uuid, readOnly, object, shortText, PUBLISHER_ACTIONS, SOURCE_KINDS, PUBLISHER_KINDS, SHA256, UUID } from './catalog/webdav-tools.mjs';
+import { webDavWorkspaceTools, webDavBindingSelection, alias, mutation, hash, uuid, readOnly, object, shortText, PUBLISHER_ACTIONS, SOURCE_KINDS, PUBLISHER_KINDS, SHA256, UUID } from './catalog/webdav-tools.mjs';
 export { webDavWorkspaceTools } from './catalog/webdav-tools.mjs';
 // MIT. Merchant agents operate the original WebDAV workspace, browser and publisher.
 import { constants } from 'node:fs';
 import { open, realpath, lstat } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
+import { identity as nativeWebDavIdentity } from '../../stellar/scf-starforge-20261009/sf30-seller-sdk/webdav/config.mjs';
 import { exact, failure, identifier, line, plain, privateSupportDirectory } from './config.mjs';
 import { RetainedFileReads, MAX_RETAINED_CHUNK_BYTES } from './retained-file-reads.mjs';
 import { RetainedSourceFileReads as SourceFileReads } from './retained-source-files.mjs';
@@ -176,7 +177,9 @@ export class MerchantWebDavWorkspaces {
       workspace, label: entry.label, state: this.#handles.has(workspace) ? 'OPEN' : 'CLOSED',
       sourceProfiles: Object.entries(entry.sourceProfiles).map(([profile, value]) => ({ profile, label: value.label, source: value.source })),
       merchantProfiles: Object.entries(entry.merchantProfiles).map(([profile, value]) => ({ profile, ...value })),
-      buyerWorkspaces: Object.entries(entry.buyerWorkspaces).map(([buyerWorkspace, value]) => ({ buyerWorkspace, label: value.label })),
+      runtime: copy(entry.runtime),
+      buyerWorkspaces: Object.entries(entry.buyerWorkspaces).map(([buyerWorkspace, value]) => ({ buyerWorkspace, label: value.label,
+        directorySha256: digest(Buffer.from(value.directory)) })),
       sourcePackets: Object.entries(entry.sourcePackets).map(([packet, value]) => ({ packet, label: value.label, sha256: value.sha256 })),
     })) };
     const entry = this.#declared(name), opening = this.#handles.get(name);
@@ -310,6 +313,21 @@ export class MerchantWebDavWorkspaces {
   }
   async #execute(name, handle, args) {
     const native = handle.server.workspace, entry = handle.entry, call = (action, input) => this.#act(args.workspace, handle, action, args, input);
+    if (args.expectedProfileSha256 !== undefined) {
+      const selected = webDavBindingSelection(name, args);
+      let value;
+      if (selected?.kind === 'source') value = entry.sourceProfiles[selected.profile]?.source;
+      else if (selected?.kind === 'merchant') {
+        const profile = entry.merchantProfiles[selected.profile];
+        if (profile) value = { origin: profile.origin, path: profile.path, payment: profile.payment };
+      } else if (selected?.kind === 'runtime') value = entry.runtime;
+      else if (selected?.kind === 'buyer') {
+        const buyer = entry.buyerWorkspaces[selected.profile];
+        if (buyer) value = { directorySha256: digest(Buffer.from(buyer.directory)) };
+      }
+      if (!SHA256.test(args.expectedProfileSha256) || !value || nativeWebDavIdentity(value) !== args.expectedProfileSha256)
+        throw failure('WEBDAV_PROFILE_CHANGED', 'The selected source, merchant, release runtime or buyer workspace differs from the reviewed profile.');
+    }
     switch (name) {
       case 'merchant_webdav_source': {
         const profile = entry.sourceProfiles[identifier(args.profile, 'Source profile')];
