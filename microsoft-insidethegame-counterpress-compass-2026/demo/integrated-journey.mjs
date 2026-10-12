@@ -121,20 +121,20 @@ export async function createIntegratedJourney({root,output,options}){
   requireValue(playerRecap.selectedStats.actions.regain===6&&playerRecap.selectedStats.successes===18,
     'The original H10 match profile changed');
   const prepared=join(output,'prepared'),privateQA=join(output,'review-images');
-  await fs.mkdir(prepared,{mode:0o700});await fs.mkdir(privateQA,{mode:0o700});
+  await fs.mkdir(prepared,{recursive:true,mode:0o700});await fs.mkdir(privateQA,{recursive:true,mode:0o700});
   const preparedCoach=join(prepared,'original-complete-review.json');
   const sourceBundle={format:'counterpress.coach-review.v1',title:'Harbor FC: high press and low block',
     generatedAt:new Date().toISOString(),view:{team:'Harbor FC',audience:'analyst',locale:'en'},period:'all',
     matches:[{count:high.match.events.length,sourceSha256:digest(high.match),package:high},
       {count:low.match.events.length,sourceSha256:digest(low.match),package:low}]};
-  await saveJSON(preparedCoach,sourceBundle);
+  if(!options.resume)await saveJSON(preparedCoach,sourceBundle);
   const state={highId:null,lowId:null,replayStart:null,replayEnd:null,insight,originalMatch:digest(high.match),
     originalLowMatch:digest(low.match),bookmarks:recapPackage.review.bookmarks.map(item=>item.eventId)};
   const artifacts={
     match:'Counterpress_Broadcast_Match.json',html:'Counterpress_Broadcast_Handover.html',
     vtt:'Counterpress_Broadcast_Captions.vtt',coach:'Counterpress_Coach_Review.json',
     recap:'Counterpress_Player_Recap.json',recapHtml:'Counterpress_Player_Recap.html',
-    guide:'READ_ME.html',video:'Counterpress_Compass_Running_Demo.mp4'
+    guide:'READ_ME.html',video:'Counterpress_Compass_Running_Demo.mp4',story:'Counterpress_Automatic_Story.json'
   };
   function retained(packet){
     equal(packet.match,original.match,'The original complete match changed');
@@ -153,6 +153,31 @@ export async function createIntegratedJourney({root,output,options}){
   }
   return {
     duration:112,
+    checkpoint(){return structuredClone(state);},
+    restore(snapshot){if(snapshot)Object.assign(state,structuredClone(snapshot));},
+    async restoreCaptured({page,origin,trace},coachPath){
+      const captured=await json(coachPath);
+      const capturedHigh=captured.matches.find(item=>item.package?.match?.scenario==='high-press')?.package;
+      requireValue(capturedHigh,'The recorded high-press review is missing');
+      const cues=capturedHigh.review.broadcast?.cues;
+      requireValue(cues?.length===2,'The recorded broadcast cues are missing');
+      state.replayStart=cues[1].videoStart;state.replayEnd=cues[1].videoEnd;
+      const story=await json(join(output,artifacts.story));
+      state.storyBrief=story.brief;
+      state.automaticStory={player:story.selection.player,sourceCount:story.source.count,
+          cues:story.cues.map(cue=>({momentId:cue.momentId,eventId:cue.eventId,count:cue.count,
+            fromSecond:cue.fromSecond,toSecond:cue.toSecond}))};
+      retained(capturedHigh);
+      await importCoach(page,origin,coachPath);
+      const items=await collection(page);
+      state.highId=items.find(item=>item.scenario==='high-press')?.id;
+      state.lowId=items.find(item=>item.scenario==='low-block')?.id;
+      requireValue(items.length===2&&state.highId&&state.lowId,'Captured reviews did not import into the recovered collection');
+      equal(await readArchive(page,state.highId),capturedHigh,'Import changed the completed recorded review');
+      state.restoredFromCapturedPackages=true;
+      trace.push({operation:'recover-captured-review',completeEvents:[941,948],
+        savedCaptionTimes:[state.replayStart,state.replayEnd],originalMatchUnchanged:true});
+    },
     async prepare({page,origin}){
       await importCoach(page,origin,preparedCoach);
       const items=await collection(page);
@@ -220,16 +245,40 @@ export async function createIntegratedJourney({root,output,options}){
         await page.locator('#comparison').scrollIntoViewIfNeeded();
         trace.push({comparison:await page.locator('#comparison').innerText()});
       });
-      await scene(67,'Build a broadcast handover from the saved match and choose the player’s source-linked moments.',async()=>{
+      await scene(67,'Build a five-play H10 story from the original sequences and choose the recovery for this recording.',async()=>{
         await openBroadcast(page,origin,state.highId);
         await page.locator('#fullMatch').click();await page.locator('#preview:enabled').waitFor();
         await page.locator('#sourceType').selectOption('sequence');await page.locator('#focus').selectOption('H10');
         await page.locator('#sourceList > li').filter({hasText:'e015'}).getByRole('button',{name:'Add caption',exact:true}).click();
-        await page.locator('#sourceList > li').filter({hasText:'e636'}).getByRole('button',{name:'Add caption',exact:true}).click();
+        const builder=page.locator('#rundownBuilder');
+        await page.locator('#rundown-player').selectOption('H10');
+        await page.locator('#rundown-period').selectOption('all');
+        await page.locator('#rundown-focus').selectOption('recoveries');
+        await page.locator('#rundown-limit').selectOption('5');
+        const pending=page.waitForResponse(response=>response.request().method()==='POST'&&
+          new URL(response.url()).pathname==='/api/broadcast-rundown');
+        await builder.getByRole('button',{name:'Build draft',exact:true}).click();
+        const response=await pending;requireValue(response.ok(),'The automatic story draft failed');
+        const story=await response.json();
+        equal(story.cues.map(cue=>cue.momentId),['e107','e386','e632','e791','e931'],
+          'The complete original H10 five-play story changed');
+        await page.waitForFunction(()=>document.querySelectorAll('#rundownBuilder .rundown-list > li').length===5);
+        await saveJSON(join(output,artifacts.story),story);
+        state.storyBrief=story.brief;
+        state.automaticStory={player:story.selection.player,sourceCount:story.source.count,
+          cues:story.cues.map(cue=>({momentId:cue.momentId,eventId:cue.eventId,count:cue.count,
+            fromSecond:cue.fromSecond,toSecond:cue.toSecond}))};
+        await builder.scrollIntoViewIfNeeded();await wait(1400);
+        const choices=builder.locator('.rundown-list > li input[type="checkbox"]');
+        for(let i=0;i<story.cues.length;i++)await choices.nth(i).setChecked(story.cues[i].momentId==='e632');
+        await builder.getByRole('button',{name:'Use story title and summary',exact:true}).click();
+        await builder.getByRole('button',{name:'Add selected plays',exact:true}).click();
+        requireValue(await page.locator('#cues > .cue').count()===2,'The chosen automatic recovery was not added');
         await page.locator('#cues').scrollIntoViewIfNeeded();
+        trace.push({automaticStory:state.automaticStory});
       });
       await scene(78,'Edit the commentary and align each caption to the actual recording, separately from the match clock.',async()=>{
-        await page.locator('#title').fill(TITLE);await page.locator('#notes').fill(NOTES);
+        await page.locator('#title').fill(TITLE);await page.locator('#notes').fill(NOTES+'\n\n'+state.storyBrief);
         await page.locator('#recordingName').fill(artifacts.video);
         const rows=page.locator('#cues > .cue');
         await rows.nth(0).locator('textarea').fill(FIRST_CAPTION);
@@ -353,6 +402,7 @@ export async function createIntegratedJourney({root,output,options}){
         '<p>The '+video.encodedDurationSeconds.toFixed(2)+'-second clip records the actual application. English chapter captions are included in the picture and as editable subtitle files.</p></section>'+
         '<section><h2>Open the delivered review</h2><ul><li><a href="'+artifacts.html+'">Broadcast handover with original-event replay</a></li>'+
         '<li><a href="'+artifacts.recapHtml+'">H10 player recap and half-by-half comparison</a></li>'+
+        '<li><a href="'+artifacts.story+'">Automatic H10 five-play broadcast draft</a></li>'+
         '<li><a href="'+artifacts.match+'">Complete editable match and broadcast captions</a></li>'+
         '<li><a href="'+artifacts.coach+'">Complete high-press and low-block coach review</a></li>'+
         '<li><a href="'+artifacts.vtt+'">Broadcast subtitles aligned to this recording</a></li></ul></section>'+
@@ -365,10 +415,11 @@ export async function createIntegratedJourney({root,output,options}){
       await fs.writeFile(join(output,artifacts.guide),guide);
       const report={artifacts,originalMatchSha256:state.originalMatch,originalLowMatchSha256:state.originalLowMatch,
         originalInsightId:ORIGINAL_INSIGHT,executedToolCount:1,providerTurnCount:2,
-        completeEvents:[941,948],recap:{player:'H10',regains:6,successfulSequenceInvolvements:18},
+        completeEvents:[941,948],automaticStory:state.automaticStory,recap:{player:'H10',regains:6,successfulSequenceInvolvements:18},
         captions:finalMatch.review.broadcast.cues.map(cue=>({eventId:cue.eventId,videoStart:cue.videoStart,videoEnd:cue.videoEnd})),
         savedRecordingDuration:finalMatch.review.broadcast.recording.durationSeconds,
-        originalArchiveReopenedAfterServerRestart:true,recipient:portable,mobile};
+        originalArchiveReopenedAfterServerRestart:!state.restoredFromCapturedPackages,
+        capturedReviewRecoveredAfterInterruption:Boolean(state.restoredFromCapturedPackages),recipient:portable,mobile};
       trace.push({operation:'completed-handover',...report});
       return report;
     }

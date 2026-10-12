@@ -23,7 +23,7 @@ The complete journey:
 2. Shows its source plays, executed match-state tool call and two provider turns.
 3. Opens H10's complete recap and replays the recorded 52:44.6–52:49.6 recovery.
 4. Saves the playlist and notes, then compares the complete original high-press and low-block matches.
-5. Authors two source-linked broadcast captions and assigns their video times from the actual captured player sequence.
+5. Builds the original H10 five-play recovery story, selects its e632–e636 recovery, and authors two source-linked captions with video times from the actual captured player sequence.
 6. Reopens the saved broadcaster workspace and its standalone event replay.
 7. Closes the recording browser and server before encoding.
 8. Restarts the original persistent application, opens the actual encoded MP4, saves its real duration, and downloads the complete editable delivery.
@@ -55,3 +55,11 @@ To retain the original basic seeded-player journey, omit --match and --review or
 The [official Microsoft Inside the Game rules](https://github.com/microsoft/insidethegamehackathon/blob/main/OFFICIAL%20RULES.md) require a functioning-project video strictly shorter than two minutes and football-realistic synthetic event data. This recorder uses the original project events. It does not change model configuration, invoke a new model call, publicly upload the video or submit the entry.
 
 The entrant retains the public video destination and platform submission. This complete source and recorded delivery can be used directly for that handoff.
+
+For restricted containers using the Sparticuz Chromium build, append `--browser-process-mode single` to keep the browser and renderer in one process. The default keeps the browser’s standard process model. Both modes operate the same application and editable recipient journey.
+
+## Continue an interrupted encode or handover
+
+After the full browser recording, the recorder saves its frame intervals, journey state and private collection state before closing the browser. If encoding or recipient delivery is interrupted, run the same command with the same output and original inputs, adding `--resume true`. It continues from the completed frames, or from the completed video when encoding already finished.
+
+The decoder, filter graph and H.264 encoder each use one worker thread to keep the recording deliverable on a shared machine. The private `capture-recovery.private.json` belongs only to that local operation; it contains collection access state, must stay private and must be excluded from deliverables. The recorder removes it after successful delivery. Export only the named public handover files and application source.
