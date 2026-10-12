@@ -7,6 +7,9 @@ import { isAbsolute } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { X402BuyerClient } from '../sf31-buyer-client/buyer.mjs';
 import { createPublicHttpsFetch } from '../sf31-buyer-client/public-transport.mjs';
+import { operatorApprovalEnvironment, checkBrowserApprovalChannel,
+  requestBrowserReview, finishBrowserReview } from './browser-approval.mjs';
+export { createBrowserApprovalBroker, operatorApprovalEnvironment } from './browser-approval.mjs';
 
 const helper = fileURLToPath(new URL('./approve.py', import.meta.url));
 const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
@@ -36,6 +39,18 @@ export async function checkOperatorTerminal(intentId) {
   }
 }
 
+/** Resolve the host-selected channel; a failed browser selection never falls back. */
+export async function checkOperatorChannel(intentId, { environment = process.env } = {}) {
+  try {
+    const selected = operatorApprovalEnvironment(environment);
+    if (Object.keys(selected).length) await checkBrowserApprovalChannel(selected);
+    else await checkOperatorTerminal(intentId);
+  } catch (error) {
+    if (error instanceof OperatorBridgeError) throw error;
+    throw new OperatorBridgeError(error.code ?? 'OPERATOR_CHANNEL_UNAVAILABLE', intentId);
+  }
+}
+
 /** Construction is privileged configuration, never values supplied by a seller/agent. */
 export function createOperatorApproval({ python, actor, service, policy, ledger,
   environment = process.env, timeoutMs = 300_000 } = {}) {
@@ -47,7 +62,9 @@ export function createOperatorApproval({ python, actor, service, policy, ledger,
       throw new TypeError('verified actor and service IDs are required');
   if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 100 || timeoutMs > 900_000)
     throw new TypeError('approval timeout must be 100..900000 milliseconds');
-  // Do not pass unrelated cloud credentials or Python/loader injection settings.
+  const browserEnvironment = operatorApprovalEnvironment(environment);
+  const browser = Object.keys(browserEnvironment).length > 0;
+  // Python receives only the existing native accounting keys, not transport tokens.
   const env = { LANG: 'C.UTF-8', LC_ALL: 'C.UTF-8' };
   for (const name of keys) {
     const value = environment[name];
@@ -56,7 +73,8 @@ export function createOperatorApproval({ python, actor, service, policy, ledger,
     env[name] = value;
   }
   const args = ['-I', '-B', '-u', helper, '--actor', actor, '--service', service,
-    '--policy', policy, '--ledger', ledger];
+    '--policy', policy, '--ledger', ledger,
+    ...(browser ? ['--review-channel', 'pipe'] : [])];
   return async function approve(intent, { signal } = {}) {
     const fail = code => new OperatorBridgeError(code, intent?.intentId);
     if (signal !== undefined && !(signal instanceof AbortSignal))
@@ -68,20 +86,24 @@ export function createOperatorApproval({ python, actor, service, policy, ledger,
     const digest = sha256(raw);
     terminalBusy = true;
     try {
-      await checkOperatorTerminal(intent?.intentId);
+      await checkOperatorChannel(intent?.intentId, { environment: browserEnvironment });
       if (signal?.aborted) throw fail('OPERATOR_ABORTED');
       return await new Promise((resolve, reject) => {
-        let child, timer, killTimer, failure, done = false, size = 0;
-        const chunks = [];
+        const deadline = Date.now() + timeoutMs;
+        let child, timer, killTimer, failure, done = false;
+        let buffered = Buffer.alloc(0), finalRecord, reviewSeen = false, decision;
+        const transport = new AbortController();
         const finish = (error, value) => {
           if (done) return; done = true;
           clearTimeout(timer); clearTimeout(killTimer);
           signal?.removeEventListener('abort', abort);
+          transport.abort();
           error ? reject(error) : resolve(value);
         };
         const stop = code => {
           if (done) return;
           failure ??= fail(code);
+          transport.abort();
           if (child && child.exitCode === null && child.signalCode === null) {
             child.kill('SIGTERM');
             killTimer ??= setTimeout(() => child.kill('SIGKILL'), 1000);
@@ -89,48 +111,89 @@ export function createOperatorApproval({ python, actor, service, policy, ledger,
           }
         };
         const abort = () => stop('OPERATOR_ABORTED');
+        const receive = frame => {
+          let record;
+          try { record = JSON.parse(frame); } catch { stop('OPERATOR_INVALID_RESULT'); return; }
+          if (browser && record?.schema === 'stellar-forge.sf81.review.v1') {
+            const r = record.review;
+            if (reviewSeen || finalRecord || record.input_sha256 !== digest ||
+                r?.request_id !== intent.intentId || r.max_atomic_units_to_reserve !== intent.amount ||
+                r.network !== intent.network || r.asset !== intent.asset ||
+                !/^[0-9a-f]{64}$/.test(r.request_sha256 ?? '') ||
+                record.current_native_budget_estimate?.approved !== true) {
+              stop('OPERATOR_REVIEW_MISMATCH'); return;
+            }
+            reviewSeen = true;
+            const remaining = deadline - Date.now();
+            if (remaining < 100) { stop('OPERATOR_TIMEOUT'); return; }
+            void requestBrowserReview(browserEnvironment, record,
+              { signal: transport.signal, timeoutMs: remaining }).then(answer => {
+              if (done || failure || signal?.aborted) return;
+              decision = answer;
+              child.stdin.end(JSON.stringify({
+                schema: 'stellar-forge.sf81.decision.v1',
+                input_sha256: digest, request_sha256: answer.requestSha256,
+                decision: answer.decision,
+              }) + '\n');
+            }, error => stop(error.code ?? 'OPERATOR_BROWSER_REVIEW_FAILED'));
+            return;
+          }
+          if (frame.length > 8192 || finalRecord ||
+              record?.schema !== 'stellar-forge.sf81.approval.v1' ||
+              browser && record.reservation && (!decision || decision.decision !== 'approve')) {
+            stop('OPERATOR_INVALID_RESULT'); return;
+          }
+          finalRecord = record;
+        };
         try {
           child = spawn(python, args, { env, shell: false, windowsHide: true,
             stdio: ['pipe', 'pipe', 'ignore'] });
         } catch { finish(fail('OPERATOR_START_FAILED')); return; }
         child.once('error', () => finish(fail('OPERATOR_START_FAILED')));
         child.stdout.on('data', chunk => {
-          size += chunk.length;
-          if (size > 8192) { stop('OPERATOR_RESULT_TOO_LARGE'); return; }
-          chunks.push(chunk);
+          buffered = Buffer.concat([buffered, chunk]);
+          if (buffered.length > (browser ? 512 * 1024 : 8192)) {
+            stop('OPERATOR_RESULT_TOO_LARGE'); return;
+          }
+          let end;
+          while ((end = buffered.indexOf(10)) >= 0) {
+            const frame = buffered.subarray(0, end);
+            buffered = buffered.subarray(end + 1);
+            if (frame.length) receive(frame);
+          }
         });
         child.stdin.on('error', () => stop('OPERATOR_INPUT_FAILED'));
-        child.once('close', (code, childSignal) => {
-          if (failure) { finish(failure); return; }
-          if (code !== 0 || childSignal) {
-            const error = fail('OPERATOR_NO_APPROVAL');
-            try {
-              const denied = JSON.parse(Buffer.concat(chunks).toString('utf8'));
-              if (denied?.schema === 'stellar-forge.sf81.approval.v1' &&
-                  typeof denied.reason === 'string' && denied.reason.length <= 256)
-                error.operatorReason = denied.reason;
-            } catch {}
-            finish(error); return;
+        child.once('close', async (code, childSignal) => {
+          if (buffered.length) receive(buffered);
+          let error = failure;
+          if (!error && (code !== 0 || childSignal)) {
+            error = fail('OPERATOR_NO_APPROVAL');
+            if (typeof finalRecord?.reason === 'string' && finalRecord.reason.length <= 256)
+              error.operatorReason = finalRecord.reason;
           }
-          let record;
-          try { record = JSON.parse(Buffer.concat(chunks).toString('utf8')); }
-          catch { finish(fail('OPERATOR_INVALID_RESULT')); return; }
-          const r = record?.reservation;
-          if (record?.schema !== 'stellar-forge.sf81.approval.v1' || record.input_sha256 !== digest ||
-              r?.schema !== 'stellar-forge.sf62.result.v1' ||
+          const r = finalRecord?.reservation;
+          if (!error && (finalRecord?.schema !== 'stellar-forge.sf81.approval.v1' ||
+              finalRecord.input_sha256 !== digest || r?.schema !== 'stellar-forge.sf62.result.v1' ||
               r.outcome !== 'FRESH_RESERVATION_APPROVED' || r.request_id !== intent.intentId ||
               r.reserved_atomic_units !== intent.amount || r.network !== intent.network ||
-              r.asset !== intent.asset || !/^[0-9a-f]{64}$/.test(r.request_sha256) ||
-              r.signed_requests !== 0 || r.wallet_calls !== 0 || r.payments_confirmed !== 0) {
-            finish(fail('OPERATOR_RESERVATION_MISMATCH')); return;
+              r.asset !== intent.asset || !/^[0-9a-f]{64}$/.test(r.request_sha256 ?? '') ||
+              browser && r.request_sha256 !== decision?.requestSha256 ||
+              r.signed_requests !== 0 || r.wallet_calls !== 0 || r.payments_confirmed !== 0))
+            error = fail('OPERATOR_RESERVATION_MISMATCH');
+          if (signal?.aborted) error ??= fail('OPERATOR_ABORTED');
+          if (browser && decision) {
+            try { await finishBrowserReview(browserEnvironment, decision, error ? 'FAILED' : 'APPROVED'); }
+            catch (reportError) { error ??= fail(reportError.code ?? 'OPERATOR_BROWSER_RESULT_UNCONFIRMED'); }
           }
-          if (signal?.aborted) { finish(fail('OPERATOR_ABORTED')); return; }
-          finish(null, Object.freeze({ ...r, input_sha256: digest }));
+          error ??= failure;
+          if (signal?.aborted) error ??= fail('OPERATOR_ABORTED');
+          finish(error, error ? undefined : Object.freeze({ ...r, input_sha256: digest }));
         });
-        timer = setTimeout(() => stop('OPERATOR_TIMEOUT'), timeoutMs);
+        timer = setTimeout(() => stop('OPERATOR_TIMEOUT'), Math.max(1, deadline - Date.now()));
         signal?.addEventListener('abort', abort, { once: true });
         if (signal?.aborted) abort();
-        child.stdin.end(raw);
+        if (browser) child.stdin.write(Buffer.concat([raw, Buffer.from('\n')]));
+        else child.stdin.end(raw);
       });
     } finally { terminalBusy = false; }
   };
@@ -176,3 +239,4 @@ export class OperatorApprovedBuyer {
     }
   }
 }
+
