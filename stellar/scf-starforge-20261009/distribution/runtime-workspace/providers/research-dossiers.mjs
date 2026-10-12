@@ -8,6 +8,19 @@ import {defaultResearchConnectionFile,readResearchApplicationConnection,research
   RESEARCH_CONNECTION_FILES} from '../application-research-connection.mjs';
 
 const PIPELINE_ROOT = 'stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers';
+const ZOTERO_ROOT = 'stellar/scf-starforge-20261009/sf30-seller-sdk/zotero';
+const EXTRACTION_FILES = [
+  'study-extraction.mjs', 'research-source-values.mjs', 'research-source-values.py',
+  'workspace-client.mjs',
+];
+const ZOTERO_FILES = [
+  'server.mjs', 'workspace.mjs', 'contracts.mjs', 'browser-assets.json',
+  'public/index.html', 'public/app.mjs', 'public/style.css',
+];
+function selectedConnection(settings) {
+  return Boolean(settings.objectStateDirectory || settings.connectionFile ||
+    settings.zoteroStateDirectory || settings.extractionPython);
+}
 const DOCUMENT_FILES = [
   'unstructured-workspace.mjs',
   '../node/client.mjs',
@@ -44,13 +57,17 @@ export default {
   schema: APPLICATION_PROVIDER_SCHEMA, id: "research-dossiers", order: 480,
   catalog({ common, field }) { return [{ id: 'research-dossiers', command: 'research-workspace', requiredSource: 'stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/server.mjs',
     title: 'Research dossiers', terminal: false,
-    description: 'Reopen research questions, original source editions, selections, findings, revision comparison and portable reports.',
+    description: 'Operate original Research sources, independent extraction, appraisal, reviewed publications, customer updates and Zotero, with retained history and complete portable receiving.',
     fields: [field('workspaceDirectory', 'Private research dossiers directory', 'path', true,
       'An existing directory or one new directory in an existing private parent.'),
       field('objectStateDirectory','Original private Object Buyer state','path',false,
         'Optional existing Object application. Its completed files become available for reviewed Research processing.'),
       field('connectionFile','Private Research connection file','path',false,
-        'When an Object state is selected, defaults to research-connection.json in this Research directory. Use that same file in the Object application.'),
+        'Defaults to research-connection.json in this Research directory when Object, Zotero or an extraction interpreter is selected. Existing clients use this private connection for the same listener.'),
+      field('zoteroStateDirectory', 'Original private Zotero library directory', 'path', false,
+        'Optional existing library or new directory in an existing private parent. Open Zotero explicitly from Research; preserve its original captures and reviews.'),
+      field('extractionPython', 'Original extraction Python executable', 'path', false,
+        'Optional absolute executable for retained source values and workbook processing. Review pins the selected executable and its original interpreter environment.'),
       field('openalexWorkspaceDirectory', 'Existing OpenAlex research workspace', 'path', false,
         'Optional saved collection with its original queries, editions, pages and review decisions.'),
       field('openalexModule', 'Original OpenAlex workspace module', 'path', false,
@@ -68,18 +85,40 @@ export default {
   validateSettings(type, settings) {
     need(!settings.objectStateDirectory||settings.objectStateDirectory!==settings.workspaceDirectory,
       'APPLICATION_DISTINCT_RESEARCH_DIRECTORY_REQUIRED','Keep the original Research and Object state in their respective directories.');
+    need(!settings.zoteroStateDirectory || settings.zoteroStateDirectory !== settings.workspaceDirectory,
+      'APPLICATION_DISTINCT_ZOTERO_DIRECTORY_REQUIRED',
+      'Keep the original Zotero library and Research dossier state in their respective directories.');
     need(!settings.openalexModule || settings.openalexWorkspaceDirectory,
       'APPLICATION_OPENALEX_WORKSPACE_REQUIRED', 'Choose the original saved OpenAlex workspace with its module');
     need(!settings.crossrefConfig || settings.crossrefState,
       'APPLICATION_CROSSREF_STATE_REQUIRED', 'Choose the original Crossref source directory with its configuration');
   },
   async checkRuntime(type, settings, runtime) {
-    if(settings.objectStateDirectory||settings.connectionFile) {
+    if(selectedConnection(settings)) {
       const files=[...RESEARCH_CONNECTION_FILES,...(settings.objectStateDirectory?
         ['object-inputs.mjs','object-reference.mjs','../object-workspace/research.mjs']:[])];
       for(const path of files)await regular(join(runtime.sourceRoot,PIPELINE_ROOT,path),4*1024*1024).catch(()=>
         need(false,'APPLICATION_NOT_IN_RUNTIME','Choose a runtime containing the original Research connection and selected Object input.'));
     }
+    if (settings.extractionPython) {
+      for (const path of EXTRACTION_FILES)
+        await regular(join(runtime.sourceRoot, PIPELINE_ROOT, path), 4 * 1024 * 1024).catch(() =>
+          need(false, 'APPLICATION_NOT_IN_RUNTIME',
+            'Choose the complete Research runtime containing the original extraction reader and configured Python workflow.'));
+    }
+    if (settings.zoteroStateDirectory) {
+      await regular(join(runtime.sourceRoot, PIPELINE_ROOT, 'zotero-workspace.mjs'), 4 * 1024 * 1024).catch(() =>
+        need(false, 'APPLICATION_NOT_IN_RUNTIME',
+          'Choose the complete Research runtime containing its original Zotero bridge.'));
+      for (const path of ZOTERO_FILES)
+        await regular(join(runtime.sourceRoot, ZOTERO_ROOT, path), 4 * 1024 * 1024).catch(() =>
+          need(false, 'APPLICATION_NOT_IN_RUNTIME',
+            'Choose a Research or Zotero installation containing the complete original Zotero source and browser assets.'));
+    }
+    if (type.id === 'research-dossiers' && settings.zoteroStateDirectory)
+      await regular(join(runtime.sourceRoot, PIPELINE_ROOT, 'workspace-client.mjs'), 4 * 1024 * 1024).catch(() =>
+        need(false, 'APPLICATION_NOT_IN_RUNTIME',
+          'Choose the runtime containing the original authenticated Research workspace client.'));
     if (settings.documentSourceConfig) {
       for (const path of DOCUMENT_FILES)
         await regular(join(runtime.sourceRoot, PIPELINE_ROOT, path), 4 * 1024 * 1024).catch(() =>
@@ -115,6 +154,16 @@ export default {
     const { args, inputs, createDirectories, path, option } = applicationPreparation(settings, inputPath);
     const workspace = await path('workspaceDirectory', 'directory', true, true);
     if (!workspace.exists) createDirectories.push(workspace.path);
+    if (settings.zoteroStateDirectory) {
+      const library = await path('zoteroStateDirectory', 'directory', true, true);
+      if (!library.exists && !createDirectories.includes(library.path)) createDirectories.push(library.path);
+    }
+    let extractionExecutable;
+    if (settings.extractionPython) {
+      const selected = await selectedExecutable(settings.extractionPython);
+      extractionExecutable = selected.executable;
+      inputs.push(...selected.inputs);
+    }
     await path('editionAdapter', 'file');
     await path('openalexModule', 'file');
     if (settings.crossrefState) {
@@ -127,7 +176,7 @@ export default {
       for (const part of ['queries', 'editions'])
         inputs.push(await inputPath(join(settings.openalexWorkspaceDirectory, part), 'directory'));
     }
-    const selectedRuntime = settings.documentSourceConfig || settings.pipelineSourceConfig || settings.objectStateDirectory || settings.connectionFile
+    const selectedRuntime = settings.documentSourceConfig || settings.pipelineSourceConfig || selectedConnection(settings)
       ? await inspectMerchantRuntime(absolute(runtimeDirectory), { load: false, source: false }) : null;
     if (settings.documentSourceConfig) {
       const selectedInput = await path('documentSourceConfig', 'file');
@@ -160,7 +209,7 @@ export default {
       normalizeConfiguration(JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes)));
     }
     if(settings.objectStateDirectory)await path('objectStateDirectory','directory',false,true);
-    if(settings.objectStateDirectory||settings.connectionFile) {
+    if(selectedConnection(settings)) {
       const connectionFile=settings.connectionFile??defaultResearchConnectionFile(settings.workspaceDirectory);
       const destination=await researchConnectionDestination(connectionFile,workspace,inputPath);
       inputs.push(destination);
@@ -169,6 +218,8 @@ export default {
       option('--connection-file',connectionFile);
     }
     option('--object-state',settings.objectStateDirectory);
+    option('--zotero-state', settings.zoteroStateDirectory);
+    option('--extraction-python', extractionExecutable);
     option('--dir', settings.workspaceDirectory);
     option('--edition-adapter', settings.editionAdapter);
     option('--openalex-workspace', settings.openalexWorkspaceDirectory);
@@ -189,10 +240,12 @@ export default {
         const documentIndex = request.args.indexOf('--document-source');
         const objectIndex=request.args.indexOf('--object-state');
         const connectionIndex=request.args.indexOf('--connection-file');
+        const zoteroIndex=request.args.indexOf('--zotero-state');
+        const extractionIndex=request.args.indexOf('--extraction-python');
         if (ready.mode !== 'RESEARCH_DOSSIER_WORKSPACE' || directoryIndex < 0 ||
             ready.directory !== request.args[directoryIndex + 1] ||
             crossrefSelected && ready.crossrefConfigured !== true || typeof ready.url !== 'string') return null;
-        if (pipelineIndex < 0 && documentIndex < 0 && objectIndex < 0 && connectionIndex < 0) return ready.url;
+        if (pipelineIndex < 0 && documentIndex < 0 && objectIndex < 0 && connectionIndex < 0 && zoteroIndex < 0 && extractionIndex < 0) return ready.url;
         if (pipelineIndex >= 0 && ready.pipelineSourceConfigured !== true ||
             documentIndex >= 0 && ready.documentSourceConfigured !== true ||
             objectIndex >= 0 && ready.objectSourceConfigured !== true) return null;
@@ -224,6 +277,28 @@ export default {
             need(ready.documentWorkspaceId === selected.workspaceId,
               'APPLICATION_DOCUMENT_STARTUP_CHANGED',
               'The original research listener opened a different document buyer source.');
+          }
+          if (zoteroIndex >= 0 || extractionIndex >= 0) {
+            const {ResearchWorkspaceClient} = await import(pathToFileURL(join(sourceRoot, PIPELINE_ROOT, 'workspace-client.mjs')).href);
+            need(typeof ResearchWorkspaceClient === 'function', 'APPLICATION_RESEARCH_CLIENT_REQUIRED',
+              'Use the original authenticated Research client from this selected runtime.');
+            const client = new ResearchWorkspaceClient({
+              ...(connectionIndex >= 0 ? {connectionFile:request.args[connectionIndex + 1]} : {url:ready.url}),
+              directory:request.args[directoryIndex + 1], expectedWorkspaceId:ready.workspaceId,
+            }, {timeoutMs:5000});
+            try {
+              const status = await client.status();
+              need(status.mode === 'RESEARCH_DOSSIER_WORKSPACE' &&
+                status.workspaceId === ready.workspaceId && status.instanceId === ready.instanceId,
+                'APPLICATION_RESEARCH_STARTUP_CHANGED',
+                'The authenticated Research status must identify this original listener and workspace.');
+              if (extractionIndex >= 0) need(status.api?.studyExtraction === true && status.api?.extractionPublications === true,
+                'APPLICATION_EXTRACTION_STARTUP_UNAVAILABLE',
+                'The selected Research listener must expose its original extraction and publication workflow.');
+              if (zoteroIndex >= 0) need(status.api?.zoteroBridge === true && status.zotero?.configured === true,
+                'APPLICATION_ZOTERO_STARTUP_UNAVAILABLE',
+                'The selected Research listener must retain its configured original Zotero library.');
+            } finally { await client.close(); }
           }
           return { url: ready.url, original: ready };
         };
