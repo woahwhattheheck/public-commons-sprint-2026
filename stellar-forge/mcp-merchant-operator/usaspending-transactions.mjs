@@ -1,5 +1,5 @@
 // MIT. Compose transaction operations into the existing USAspending merchant owner.
-import {failure,plain} from './config.mjs';
+import {failure,plain} from './host-files.mjs';
 import {sha,integer} from '../../stellar/scf-starforge-20261009/sf30-seller-sdk/usaspending/core.mjs';
 
 export const USASPENDING_TRANSACTION_SOURCE_KINDS=Object.freeze(['transaction-pages','transactions']);
