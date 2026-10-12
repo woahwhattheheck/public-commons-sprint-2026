@@ -150,6 +150,10 @@ def normalize_url(value):
         raise Error("repository.baseUrl needs an HTTP(S) URL without credentials, query or fragment")
     if port is not None and not 1 <= port <= 65535:
         raise Error("Invalid repository port")
+    path = u.path.rstrip("/")
+    if ("%" in u.netloc or any(part in {".", ".."} for part in path.split("/"))
+            or path.endswith("/api/v2")):
+        raise Error("repository.baseUrl is the application root, before /api/v2")
     return value.rstrip("/")
 
 
@@ -427,6 +431,8 @@ def _zip_copy(archive, name, path, *, stored=False):
             count, h = 0, hashlib.sha256()
             while chunk := src.read(CHUNK):
                 count += len(chunk)
+                if count > expected["bytes"]:
+                    raise Error("ZIP source grew beyond its verified length")
                 h.update(chunk)
                 dst.write(chunk)
         _equal(_stamp(os.fstat(fd)), _stamp(before), "ZIP source changed during publication")
