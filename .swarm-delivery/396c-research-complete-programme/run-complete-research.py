@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Run the original complete Citation, Python/Analysis and Europe PMC programme."""
-import os,sys,json,hashlib,subprocess,zipfile,stat,shutil
+import os,sys,json,hashlib,subprocess,zipfile,stat,shutil,uuid
 from pathlib import Path
 ROOT=Path(__file__).resolve().parent
 P="stellar/scf-starforge-20261009/sf88-operator-buyer-cli"
@@ -14,10 +14,22 @@ def digest(data):return hashlib.sha256(data).hexdigest()
 def encoded(value):return (json.dumps(value,ensure_ascii=False,indent=2)+"\n").encode()
 def save(path,value):
     data=encoded(value)
-    if path.exists():need(read(path)==data,"Original saved selection differs: "+str(path))
-    else:
-        with path.open("xb") as f:f.write(data);f.flush();os.fsync(f.fileno())
-        path.chmod(0o600)
+    if path.exists():
+        need(read(path)==data,"Original saved selection differs: "+str(path))
+        return
+    temporary=path.with_name(".receiving-"+uuid.uuid4().hex)
+    try:
+        with temporary.open("xb") as f:f.write(data);f.flush();os.fsync(f.fileno())
+        temporary.chmod(0o600)
+        need(read(temporary)==data,"Saved candidate differs: "+str(path))
+        try:os.link(temporary,path,follow_symlinks=False)
+        except FileExistsError:need(read(path)==data,"Concurrent saved selection differs: "+str(path))
+        dfd=os.open(path.parent,os.O_RDONLY|os.O_DIRECTORY)
+        try:os.fsync(dfd)
+        finally:os.close(dfd)
+        need(read(path)==data,"Published selection differs: "+str(path))
+    finally:
+        temporary.unlink(missing_ok=True)
 def command(name,argv):
     log=ROOT/"native-logs"/(name+".output")
     print(json.dumps({"phase":name,"state":"RUNNING","argv":argv}),flush=True)
@@ -40,16 +52,31 @@ def package(target,source,manifest,items):
         need(not path.is_symlink() and path.resolve().is_relative_to(ROOT),"Output leaves original root")
         rows[label]=(path,len(body),digest(body))
     document={"schema":"stellar-forge.complete-research-phase-delivery.v1","members":[{"path":n,"bytes":v[1],"sha256":v[2]} for n,v in sorted(rows.items())]}
-    if not target.exists():
-        with zipfile.ZipFile(target,"x",compression=zipfile.ZIP_DEFLATED,compresslevel=6) as archive:
-            for n,(path,size,sha) in sorted(rows.items()):archive.write(path,n)
-            archive.writestr("DELIVERY_MANIFEST.json",encoded(document))
-        target.chmod(0o600)
-    with zipfile.ZipFile(target) as archive:
-        need(set(archive.namelist())==set(rows)|{"DELIVERY_MANIFEST.json"},"Delivery membership differs")
-        need(archive.read("DELIVERY_MANIFEST.json")==encoded(document),"Delivery manifest differs")
-        for n,(_,size,sha) in rows.items():
-            body=archive.read(n);need(len(body)==size and digest(body)==sha,"Delivery member differs")
+    def verify(selected):
+        with zipfile.ZipFile(selected) as archive:
+            need(len(archive.namelist())==len(rows)+1 and set(archive.namelist())==set(rows)|{"DELIVERY_MANIFEST.json"},"Delivery membership differs")
+            need(archive.read("DELIVERY_MANIFEST.json")==encoded(document),"Delivery manifest differs")
+            for n,(_,size,sha) in rows.items():
+                body=archive.read(n);need(len(body)==size and digest(body)==sha,"Delivery member differs")
+    if target.exists():
+        verify(target)
+    else:
+        candidate=target.with_name(".research-delivery-"+uuid.uuid4().hex+".zip")
+        try:
+            with zipfile.ZipFile(candidate,"x",compression=zipfile.ZIP_DEFLATED,compresslevel=6) as archive:
+                for n,(path,size,sha) in sorted(rows.items()):archive.write(path,n)
+                archive.writestr("DELIVERY_MANIFEST.json",encoded(document))
+            candidate.chmod(0o600)
+            with candidate.open("rb") as stream:os.fsync(stream.fileno())
+            verify(candidate)
+            try:os.link(candidate,target,follow_symlinks=False)
+            except FileExistsError:verify(target)
+            dfd=os.open(target.parent,os.O_RDONLY|os.O_DIRECTORY)
+            try:os.fsync(dfd)
+            finally:os.close(dfd)
+            verify(target)
+        finally:
+            candidate.unlink(missing_ok=True)
     return {"file":str(target),"bytes":target.stat().st_size,"sha256":digest(read(target)),"members":len(rows)+1}
 def main():
     node=Path(os.environ.get("RESEARCH_NODE") or os.environ.get("CODEX_PRIMARY_RUNTIME_NODE") or shutil.which("node") or "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node").resolve()
