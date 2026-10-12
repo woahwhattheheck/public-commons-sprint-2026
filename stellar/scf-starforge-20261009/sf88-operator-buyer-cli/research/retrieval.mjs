@@ -4,6 +4,7 @@ import {join,resolve,dirname,basename} from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {setTimeout as pause} from 'node:timers/promises';
 import {Buyer} from '../node/client.mjs';
+import {openPreapprovalRecoveryOperation} from '../node/preapproval-recovery.mjs';
 import {readSuccessorRuntimeSource,verifySuccessorRuntimeSource,createRuntimeBoundBuyer} from '../node/runtime-source.mjs';
 import {normalizeNativeFileReservation} from '../node/file-reservation.mjs';
 import {privateDirectory,readBytes,readJson,writeBytes,writeJson,jsonBytes,digest,exists} from '../node/store.mjs';
@@ -121,26 +122,97 @@ async function openDirect({merchantConfig,budgetDirectory,productId,env}){
   }catch(error){await source.close();throw error;}
 }
 const RUNTIME_SELECTION='stellar-forge.research-native-runtime-selection.v1';
-async function openRuntimeSelection({stateDirectory,runtimeDirectory,binding,nativeRuntimeSource,nativeFileReservation}){
+async function openRuntimeSelection({stateDirectory,runtimeDirectory,binding,nativeRuntimeSource,
+  nativeFileReservation,expectedRuntimeSelectionSha256}){
   const chosenSource=nativeRuntimeSource===undefined?undefined:copy(nativeRuntimeSource);
   const chosenReservation=normalizeNativeFileReservation(nativeFileReservation);
-  const root=join(stateDirectory,'research-runtime-selections'),path=join(root,digest(canonical(binding))+'.json');
-  let previous;try{previous=await readJson(path,1048576);}catch(error){if(error.code!=='ENOENT')throw error;}
-  if(previous!==undefined){
-    check(object(previous)&&previous.schema===RUNTIME_SELECTION&&
-      previous.originalRuntimeDirectory===runtimeDirectory&&canonical(previous.retrievalBinding)===canonical(binding)&&
-      object(previous.runtimeSource)&&previous.runtimeSource.directory!==runtimeDirectory&&
-      typeof previous.createdAt==='string','RESEARCH_RUNTIME_SELECTION_CHANGED',undefined,409);
-    const checked=await verifySuccessorRuntimeSource(previous.runtimeSource);
-    const savedReservation=normalizeNativeFileReservation(previous.nativeFileReservation);
-    if(chosenSource!==undefined){
-      const requested=await readSuccessorRuntimeSource(chosenSource);
-      check(canonical(requested)===canonical(checked),'RESEARCH_RUNTIME_ALREADY_SELECTED',undefined,409);
+  check(expectedRuntimeSelectionSha256===undefined||
+    /^[a-f0-9]{64}$/.test(expectedRuntimeSelectionSha256),'RESEARCH_RUNTIME_EXPECTED_SELECTION_INVALID');
+  if(expectedRuntimeSelectionSha256!==undefined)
+    check(chosenSource!==undefined,'RESEARCH_RUNTIME_SOURCE_REQUIRED');
+  const root=join(stateDirectory,'research-runtime-selections');
+  const firstPath=join(root,digest(canonical(binding))+'.json');
+  const read=async path=>{
+    let raw;try{raw=await readBytes(path,1048576);}catch(error){if(error.code==='ENOENT')return null;throw error;}
+    let value;try{value=JSON.parse(raw);}catch{throw new ResearchError('RESEARCH_RUNTIME_SELECTION_CHANGED',undefined,409);}
+    check(object(value)&&value.schema===RUNTIME_SELECTION&&
+      value.originalRuntimeDirectory===runtimeDirectory&&canonical(value.retrievalBinding)===canonical(binding)&&
+      object(value.runtimeSource)&&value.runtimeSource.schema==='stellar-forge.node-successor-runtime-binding.v1'&&
+      /^[a-f0-9]{64}$/.test(value.runtimeSource.sha256??'')&&value.runtimeSource.directory!==runtimeDirectory&&
+      typeof value.createdAt==='string','RESEARCH_RUNTIME_SELECTION_CHANGED',undefined,409);
+    normalizeNativeFileReservation(value.nativeFileReservation);
+    return{value,path,sha256:digest(raw)};
+  };
+  let previous=await read(firstPath);
+  const history=[];
+  if(previous!==null){
+    check(previous.value.previousSelection===undefined,'RESEARCH_RUNTIME_SELECTION_CHANGED',undefined,409);
+    for(let depth=0;;depth++){
+      check(depth<64,'RESEARCH_RUNTIME_SELECTION_HISTORY_LIMIT',undefined,409);
+      history.push(previous);
+      const nextPath=join(root,'successors',previous.sha256+'.json');
+      const next=await read(nextPath);
+      if(next===null)break;
+      check(object(next.value.previousSelection)&&
+        Object.keys(next.value.previousSelection).every(key=>['path','sha256'].includes(key))&&
+        next.value.previousSelection.path===previous.path&&
+        next.value.previousSelection.sha256===previous.sha256,
+        'RESEARCH_RUNTIME_SELECTION_CHANGED',undefined,409);
+      previous=next;
     }
-    if(chosenReservation!==undefined)
-      check(canonical(chosenReservation)===canonical(savedReservation??null),'RESEARCH_RUNTIME_ALREADY_SELECTED',undefined,409);
-    return{...previous,runtimeSource:checked,...(savedReservation===undefined?{}:{nativeFileReservation:savedReservation}),path};
+    const directories=new Map();
+    for(const entry of history){
+      const identity=canonical({source:entry.value.runtimeSource,
+        reservation:normalizeNativeFileReservation(entry.value.nativeFileReservation)??null});
+      const directory=entry.value.runtimeSource.directory;
+      check(!directories.has(directory)||directories.get(directory)===identity,
+        'RESEARCH_RUNTIME_DIRECTORY_ALREADY_SELECTED',undefined,409);
+      directories.set(directory,identity);
+    }
+    const checked=await verifySuccessorRuntimeSource(previous.value.runtimeSource);
+    const savedReservation=normalizeNativeFileReservation(previous.value.nativeFileReservation);
+    const requested=chosenSource===undefined?checked:await readSuccessorRuntimeSource(chosenSource);
+    const requestedReservation=chosenReservation===undefined?savedReservation:chosenReservation;
+    const matches=canonical(requested)===canonical(checked)&&
+      canonical(requestedReservation??null)===canonical(savedReservation??null);
+    if(matches){
+      if(expectedRuntimeSelectionSha256!==undefined)
+        check(expectedRuntimeSelectionSha256===previous.sha256||
+          previous.value.previousSelection?.sha256===expectedRuntimeSelectionSha256,
+          'RESEARCH_RUNTIME_SELECTION_CHANGED',undefined,409);
+      return{...previous.value,runtimeSource:checked,
+        ...(savedReservation===undefined?{}:{nativeFileReservation:savedReservation}),
+        path:previous.path,selectionSha256:previous.sha256,
+        selections:history.map(entry=>({path:entry.path,sha256:entry.sha256,
+          runtimeSource:copy(entry.value.runtimeSource),
+          nativeFileReservation:normalizeNativeFileReservation(entry.value.nativeFileReservation)})),
+        history:history.map(entry=>({path:entry.path,sha256:entry.sha256,
+          runtimeSourceSha256:entry.value.runtimeSource.sha256,directory:entry.value.runtimeSource.directory}))};
+    }
+    check(expectedRuntimeSelectionSha256===previous.sha256,
+      'RESEARCH_RUNTIME_ALREADY_SELECTED',
+      'Select the current retained runtime-selection SHA to append a reviewed source change.',409);
+    check(requested.directory!==runtimeDirectory,'RESEARCH_RUNTIME_MUST_BE_DISTINCT');
+    check(!directories.has(requested.directory)||directories.get(requested.directory)===
+      canonical({source:requested,reservation:requestedReservation??null}),
+      'RESEARCH_RUNTIME_DIRECTORY_ALREADY_SELECTED',
+      'Keep each recorded source and allocator at its original runtime directory; select a distinct directory for a changed profile.',409);
+    await privateDirectory(join(root,'successors'));
+    const value={schema:RUNTIME_SELECTION,originalRuntimeDirectory:runtimeDirectory,
+      retrievalBinding:copy(binding),runtimeSource:requested,
+      ...(requestedReservation===undefined?{}:{nativeFileReservation:requestedReservation}),
+      previousSelection:{path:previous.path,sha256:previous.sha256},
+      createdAt:new Date().toISOString()};
+    const nextPath=join(root,'successors',previous.sha256+'.json');
+    try{await writeJson(nextPath,value,{exclusive:true});}
+    catch(error){if(error.code!=='EEXIST')throw error;}
+    // Read the first published successor and require the caller's exact choice.
+    // No original selection, prepared operation, profile or ledger is replaced.
+    return openRuntimeSelection({stateDirectory,runtimeDirectory,binding,
+      nativeRuntimeSource:chosenSource,nativeFileReservation:requestedReservation,
+      expectedRuntimeSelectionSha256});
   }
+  check(expectedRuntimeSelectionSha256===undefined,'RESEARCH_RUNTIME_SELECTION_NOT_FOUND',undefined,409);
   if(chosenSource===undefined){
     check(chosenReservation===undefined,'RESEARCH_RUNTIME_SOURCE_REQUIRED',
       'Select the complete native source before enabling its file reservation provider.');
@@ -153,33 +225,39 @@ async function openRuntimeSelection({stateDirectory,runtimeDirectory,binding,nat
     retrievalBinding:copy(binding),runtimeSource,
     ...(chosenReservation===undefined?{}:{nativeFileReservation:chosenReservation}),
     createdAt:new Date().toISOString()};
-  try{await writeJson(path,value,{exclusive:true});}
-  catch(error){
-    if(error.code!=='EEXIST')throw error;
-    // A concurrent receiver may have chosen the same source. Reopen that exact
-    // first published selection; neither caller replaces it or creates a page.
-    return openRuntimeSelection({stateDirectory,runtimeDirectory,binding,
-      nativeRuntimeSource:chosenSource,nativeFileReservation:chosenReservation});
-  }
-  return{...value,path};
+  try{await writeJson(firstPath,value,{exclusive:true});}
+  catch(error){if(error.code!=='EEXIST')throw error;}
+  return openRuntimeSelection({stateDirectory,runtimeDirectory,binding,
+    nativeRuntimeSource:chosenSource,nativeFileReservation:chosenReservation});
 }
 async function routedNativeBuyer(original,selection,selectedOptions){
   if(selection===null)return original;
   // The allocator belongs to the selected source. Original prepared intents
   // retain their original native execution path and do not seek its bootstrap.
-  const selected=await createRuntimeBoundBuyer(new Buyer(selectedOptions),selection.runtimeSource);
+  const buyers=new Map();
+  const buyerFor=async(choice,options={})=>{
+    await verifySuccessorRuntimeSource(choice.runtimeSource,{signal:options.signal});
+    const key=digest(canonical({source:choice.runtimeSource,reservation:choice.nativeFileReservation??null}));
+    if(!buyers.has(key))buyers.set(key,await createRuntimeBoundBuyer(new Buyer({
+      ...selectedOptions,nativeFileReservation:choice.nativeFileReservation,
+    }),choice.runtimeSource));
+    return buyers.get(key);
+  };
+  const selected=await buyerFor(selection);
   return{
     operation(intentId){return original.operation(intentId);},
     async openOperation(intentId,options={}){
       const operation=original.operation(intentId);
       const saved=await readJson(join(operation.directory,'operation.json'));
-      if(saved.runtimeDirectory===selected.runtime.directory){
-        await verifySuccessorRuntimeSource(selection.runtimeSource,{signal:options.signal});
-        return selected.openOperation(intentId,options);
+      const choice=selection.selections.find(value=>value.runtimeSource.directory===saved.runtimeDirectory);
+      if(choice){
+        const chosen=await buyerFor(choice,options);
+        return openPreapprovalRecoveryOperation(await chosen.openOperation(intentId,options),options);
       }
       // The original opener follows only the exact runtime choice bound to
-      // this operation's parent. It does not prepare or follow another intent.
-      return original.openOperation(intentId,options);
+      // this operation's parent. It rejects an unselected ordinary runtime;
+      // it never prepares or follows another intent.
+      return openPreapprovalRecoveryOperation(await original.openOperation(intentId,options),options);
     },
     async fromRequest(request,options){
       await verifySuccessorRuntimeSource(selection.runtimeSource,{signal:request.signal});
@@ -187,7 +265,7 @@ async function routedNativeBuyer(original,selection,selectedOptions){
     },
   };
 }
-async function openNative({buyerProfile,clientFile,clientOrigin,productId,env,nativeRuntimeSource,nativeFileReservation}){
+async function openNative({buyerProfile,clientFile,clientOrigin,productId,env,nativeRuntimeSource,nativeFileReservation,expectedRuntimeSelectionSha256}){
   check(typeof buyerProfile==='string'&&typeof clientFile==='string','NATIVE_CONFIGURATION_REQUIRED');
   const profile=await readJson(resolve(buyerProfile),1048576);
   check(object(profile)&&typeof profile.runtimeDirectory==='string'&&typeof profile.stateDirectory==='string'&&
@@ -218,7 +296,7 @@ async function openNative({buyerProfile,clientFile,clientOrigin,productId,env,na
     buyerStateDirectory:await realpath(stateDirectory),operatorProfileSha256:digest(canonical(operatorProfile)),origin:inspected.origin,
     clientSourceSha256:inspected.sourceSha256,clientFilesSha256:inspected.filesSha256,
     authorization:copy(profile.authorization)};
-  const runtimeSelection=await openRuntimeSelection({stateDirectory,runtimeDirectory,binding,nativeRuntimeSource,nativeFileReservation});
+  const runtimeSelection=await openRuntimeSelection({stateDirectory,runtimeDirectory,binding,nativeRuntimeSource,nativeFileReservation,expectedRuntimeSelectionSha256});
   const buyerConfiguration={runtimeDirectory,stateDirectory,operatorProfile,...runtimeOptions};
   const originalBuyer=new Buyer(buyerConfiguration);
   await originalBuyer.ready();
@@ -237,15 +315,16 @@ async function openNative({buyerProfile,clientFile,clientOrigin,productId,env,na
     async snapshot(){return {mode:'NATIVE_BUYER',entity:profile.entity,productId,origin:inspected.origin,
       buyerStateDirectory:binding.buyerStateDirectory,clientSourceSha256:inspected.sourceSha256,
       clientFilesSha256:inspected.filesSha256,authorization:copy(profile.authorization),
-      runtimeSelection:runtimeSelection===null?null:{path:runtimeSelection.path,runtimeSource:runtimeSelection.runtimeSource,
-        nativeFileReservation:runtimeSelection.nativeFileReservation??null}};},
+      runtimeSelection:runtimeSelection===null?null:{path:runtimeSelection.path,selectionSha256:runtimeSelection.selectionSha256,
+        history:copy(runtimeSelection.history),runtimeSource:copy(runtimeSelection.runtimeSource),
+        nativeFileReservation:copy(runtimeSelection.nativeFileReservation??null)}};},
     async close(){await operation.finish();}};
 }
 
 /** No signing, provider HTTP or payment engine is reimplemented here. */
 export async function openResearchRetrieval(options={}){
   const {merchantConfig,budgetDirectory,productId,buyerProfile,clientFile,clientOrigin,
-    nativeRuntimeSource,nativeFileReservation,env=process.env}=options;
+    nativeRuntimeSource,nativeFileReservation,expectedRuntimeSelectionSha256,env=process.env}=options;
   check(typeof productId==='string'&&productId.length>0,'RETRIEVAL_PRODUCT_REQUIRED');
   const selectedRuntime=nativeRuntimeSource===undefined?undefined:copy(nativeRuntimeSource);
   const selectedReservation=normalizeNativeFileReservation(nativeFileReservation);
@@ -253,10 +332,10 @@ export async function openResearchRetrieval(options={}){
   check(direct!==native,'RETRIEVAL_MODE_REQUIRED','Choose either a direct merchant configuration or an original native buyer profile.');
   if(direct){
     check(clientFile===undefined&&clientOrigin===undefined&&nativeRuntimeSource===undefined&&
-      nativeFileReservation===undefined,'RETRIEVAL_MODE_CONFLICT');
+      nativeFileReservation===undefined&&expectedRuntimeSelectionSha256===undefined,'RETRIEVAL_MODE_CONFLICT');
     return openDirect({merchantConfig,budgetDirectory,productId,env});
   }
   check(budgetDirectory===undefined,'RETRIEVAL_MODE_CONFLICT','The native merchant owns its shared provider budget.');
   return openNative({buyerProfile,clientFile,clientOrigin,productId,env,
-    nativeRuntimeSource:selectedRuntime,nativeFileReservation:selectedReservation});
+    nativeRuntimeSource:selectedRuntime,nativeFileReservation:selectedReservation,expectedRuntimeSelectionSha256});
 }

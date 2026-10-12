@@ -1,7 +1,8 @@
 // MIT. Routescan's original gas aggregation contract compiled into original SF30 offers.
 import { readFile, lstat } from 'node:fs/promises';
-import { createHash } from 'node:crypto';
 import { resolve } from 'node:path';
+import { plain, json, sha256, fail } from './primitives.mjs';
+export { plain, json, sha256, fail } from './primitives.mjs';
 import { compileHttpSellerOffer } from '../seller.mjs';
 import { compileSellerRoutes } from '../resource-server.mjs';
 import { compileSellerOpenApi } from '../developer-portal.mjs';
@@ -17,12 +18,6 @@ export const OPERATIONS = Object.freeze({
   total: { suffix: '/aggregations/avg-gas-price/tot', description: 'Average gas price over the selected days',
     response: { type: 'object', properties: { value: { type: 'string' } }, required: ['value'] } },
 });
-export const plain = value => value !== null && typeof value === 'object' && !Array.isArray(value);
-export const json = value => JSON.stringify(value, null, 2) + '\n';
-export const sha256 = value => createHash('sha256').update(value).digest('hex');
-export const fail = (message, status = 400, code = 'ROUTESCAN_INVALID') => {
-  throw Object.assign(new Error(message), { status, code });
-};
 const own = (value, key) => Object.hasOwn(value, key);
 function fields(value, allowed, label) {
   if (!plain(value) || Object.keys(value).some(key => !allowed.includes(key))) fail('Invalid ' + label + '.');

@@ -1,6 +1,6 @@
 // MIT. blockscout Applications registration over the original native implementation.
 import { APPLICATION_PROVIDER_SCHEMA, applicationPreparation, observeApplicationStartup } from '../application-provider.mjs';
-import { blockscoutApplication, prepareBlockscoutApplication, blockscoutStartup } from "../application-blockscout.mjs";
+import { blockscoutApplication, prepareBlockscoutApplication, blockscoutStartup, checkBlockscoutDeploymentRuntime } from "../application-blockscout.mjs";
 
 import { blockscoutConnectionApplication, prepareBlockscoutConnectionApplication,
   blockscoutConnectionStartup } from '../application-blockscout-connection.mjs';
@@ -8,6 +8,7 @@ import { blockscoutConnectionApplication, prepareBlockscoutConnectionApplication
 export default {
   schema: APPLICATION_PROVIDER_SCHEMA, id: "blockscout", order: 140,
   catalog({ common, field }) { return [blockscoutApplication(common), blockscoutConnectionApplication(common)]; },
+  checkRuntime: checkBlockscoutDeploymentRuntime,
   async prepare(type, settings, context) {
     const { inputPath, selectedExecutable, applicationEnvironment, runtimeDirectory } = context;
     const { args, inputs, createDirectories, path, option } = applicationPreparation(settings, inputPath);

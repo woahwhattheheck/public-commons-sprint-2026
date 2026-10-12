@@ -34,24 +34,43 @@ async function streamExport(store,id,path){
  }
  return fileIdentity(path);
 }
-export async function runClinicalTrialsDossierExample(options){
- need(typeof options?.outputDirectory==='string','EXAMPLE_CONFIGURATION_REQUIRED');
- const root=await privateDirectory(options.outputDirectory);
- return withPrivateLock(root,'example.lock',async()=>enrichHeld(options,await runHeld(options)));
+const LOCATION_KEYS=['sourcePacket','workspaceDirectory','receivingDirectory','outputDirectory'];
+function executionLocations(options,selected){
+ need(selected===undefined||selected!==null&&typeof selected==='object'&&!Array.isArray(selected),'EXAMPLE_LOCATIONS_INVALID');
+ const provided=selected===undefined?{}:JSON.parse(JSON.stringify(selected));
+ need(selected===undefined||Object.keys(provided).length===LOCATION_KEYS.length&&Object.keys(provided).every(key=>LOCATION_KEYS.includes(key)),'EXAMPLE_LOCATIONS_INVALID');
+ const locations=Object.fromEntries(LOCATION_KEYS.map(key=>[key,selected===undefined?options?.[key]:provided[key]]));
+ for(const value of Object.values(locations))need(typeof value==='string'&&value===resolve(value),'EXAMPLE_ABSOLUTE_PATH_REQUIRED');
+ need(locations.workspaceDirectory!==locations.receivingDirectory,'EXAMPLE_SEPARATE_RECEIVER_REQUIRED');
+ return Object.freeze(locations);
 }
-async function runHeld(options){
+export async function runClinicalTrialsDossierExample(options,{locations:selected}={}){
+ need(typeof options?.outputDirectory==='string','EXAMPLE_CONFIGURATION_REQUIRED');
+ // Host placement is explicit. The reviewed options and their retained input SHA stay unchanged.
+ const locations=executionLocations(options,selected),root=await privateDirectory(locations.outputDirectory);
+ return withPrivateLock(root,'example.lock',async()=>enrichHeld(options,await runHeld(options,locations),locations));
+}
+async function runHeld(options,locations){
  const required=['sourcePacket','packetSha256','captureId','question','title','workspaceDirectory','receivingDirectory','outputDirectory','requestId','selectNctId'];
  need(options&&required.every(key=>typeof options[key]==='string'&&options[key].length>0),'EXAMPLE_CONFIGURATION_REQUIRED');
  need(/^[a-f0-9]{64}$/.test(options.packetSha256)&&/^[A-Za-z0-9_-]{8,100}$/.test(options.requestId),'EXAMPLE_IDENTITY_INVALID');
  for(const key of ['sourcePacket','workspaceDirectory','receivingDirectory','outputDirectory'])need(options[key]===resolve(options[key]),'EXAMPLE_ABSOLUTE_PATH_REQUIRED');
  need(options.workspaceDirectory!==options.receivingDirectory,'EXAMPLE_SEPARATE_RECEIVER_REQUIRED');
- const output=await privateDirectory(options.outputDirectory),journalPath=join(output,'workflow.json'),inputSha256=sha(jsonBytes(options));
+ const output=await privateDirectory(locations.outputDirectory),journalPath=join(output,'workflow.json'),inputSha256=sha(jsonBytes(options));
  let journal;try{journal=await readJson(journalPath);}catch(e){if(e.code!=='ENOENT')throw e;journal={schema:'sf88-clinicaltrials-example-v1',inputSha256,steps:[]};await writeJson(journalPath,journal,{exclusive:true});}
  need(journal.inputSha256===inputSha256,'EXAMPLE_INPUT_CHANGED');
- if(journal.result)return journal.result;
+ if(journal.result){
+  const reports={...journal.result.reports},names={md:'clinicaltrials-report.md',html:'clinicaltrials-report.html',portable:'clinicaltrials-dossier.json.gz',originalPacket:'clinicaltrials-workspace.zip'};
+  for(const [key,name] of Object.entries(names)){
+   const recorded=reports[key];need(recorded,'EXAMPLE_RETAINED_REPORT_MISSING');
+   const located=await fileIdentity(join(output,name));need(located.sha256===recorded.sha256&&located.bytes===recorded.bytes,'EXAMPLE_RETAINED_REPORT_CHANGED');
+   reports[key]={...recorded,...located,recordedPath:recorded.recordedPath??recorded.path};
+  }
+  return {...journal.result,reports};
+ }
  const persist=async()=>writeJson(journalPath,journal);
  const step=async(name,value)=>{journal.steps=journal.steps.filter(row=>row.name!==name);journal.steps.push({name,at:new Date().toISOString(),value});await persist();process.stdout.write(JSON.stringify({step:name,...value})+'\n');};
- const store=await openDossierStore(options.workspaceDirectory);let workspace,receiver;
+ const store=await openDossierStore(locations.workspaceDirectory);let workspace,receiver;
  try{
   workspace=await openClinicalTrialsWorkspace({directory:join(store.directory,'clinical-trials'),dossiers:store,python:options.python??'python3'});
   const description='Retained ClinicalTrials source workflow '+options.requestId+'. Original registry capture and source remain unchanged.';
@@ -65,7 +84,7 @@ async function runHeld(options){
   let question=dossier.questions.find(row=>row.text===options.question);
   if(!question){dossier=await store.addQuestion(dossier.id,{text:options.question,expectedRevision:dossier.revision});question=dossier.questions.find(row=>row.text===options.question);}
   journal.questionId=question.id;await persist();
-  const input=await workspace.importFile(options.sourcePacket,{expectedSha256:options.packetSha256});
+  const input=await workspace.importFile(locations.sourcePacket,{expectedSha256:options.packetSha256});
   need(input.packetSha256===options.packetSha256,'EXAMPLE_ORIGINAL_PACKET_CHANGED');
   const capture=input.captures.find(row=>row.id===options.captureId);need(capture,'EXAMPLE_ORIGINAL_CAPTURE_MISSING');
   await step('original-input',{sourceId:input.sourceId,captureId:capture.id,rows:capture.rowCount,packetSha256:input.packetSha256});
@@ -104,7 +123,7 @@ async function runHeld(options){
   reports.portable=await streamExport(store,dossier.id,join(output,'clinicaltrials-dossier.json.gz'));
   await step('findings-and-report',{dossierId:dossier.id,revision:dossier.revision,findings:dossier.findings.length,reports});
   await workspace.close();workspace=null;
-  const receiving=await openDossierStore(options.receivingDirectory);
+  const receiving=await openDossierStore(locations.receivingDirectory);
   const restored=await receiving.reopenStream(createReadStream(reports.portable.path));
   need(restored.id===dossier.id&&restored.revision===dossier.revision&&JSON.stringify(restored.revisions)===JSON.stringify(dossier.revisions),'EXAMPLE_RESTORED_HISTORY_CHANGED');
   receiver=await openClinicalTrialsWorkspace({directory:join(receiving.directory,'clinical-trials'),dossiers:receiving,python:options.python??'python3'});
@@ -123,8 +142,8 @@ async function runHeld(options){
   await persist();return journal.result;
  }finally{await workspace?.close();await receiver?.close();}
 }
-async function enrichHeld(options,completed){
- const store=await openDossierStore(options.receivingDirectory),workspace=await openClinicalTrialsWorkspace({
+async function enrichHeld(options,completed,locations){
+ const store=await openDossierStore(locations.receivingDirectory),workspace=await openClinicalTrialsWorkspace({
   directory:join(store.directory,'clinical-trials'),dossiers:store,python:options.python??'python3'});
  try{
   const selected=await workspace.retainedEdition(completed.dossierId,completed.editionId);
@@ -136,13 +155,13 @@ async function enrichHeld(options,completed){
   for(const format of ['csv','json','html','md']){
    const content=format==='csv'?renderClinicalTrialsCohortCsv(analysis):format==='json'?renderClinicalTrialsCohortJson(analysis):
     renderClinicalTrialsCohortReport(analysis,{format});
-   reports[format]=await publish(join(options.outputDirectory,'clinicaltrials-cohort.'+format),Buffer.from(content,'utf8'));
+   reports[format]=await publish(join(locations.outputDirectory,'clinicaltrials-cohort.'+format),Buffer.from(content,'utf8'));
   }
   const groups=Object.fromEntries(Object.entries(analysis.groups).map(([name,items])=>[name,Array.isArray(items)?
    items.map(row=>({label:row.label,count:row.count,occurrences:row.occurrences,denominator:row.denominator,percent:row.percent})):items]));
-  const result={...completed,cohortAnalysis:{source:analysis.source,selectedStudies:analysis.selectedStudies,
+  const result={...completed,originalInputSha256:sha(jsonBytes(options)),executionLocations:locations,cohortAnalysis:{source:analysis.source,selectedStudies:analysis.selectedStudies,
    selectedOccurrences:analysis.selectedOccurrences,repeatedStudies:analysis.repeatedStudies,groups,observations:analysis.observations,reports}};
-  const journalPath=join(options.outputDirectory,'workflow.json'),journal=await readJson(journalPath);
+  const journalPath=join(locations.outputDirectory,'workflow.json'),journal=await readJson(journalPath);
   need(journal.inputSha256===sha(jsonBytes(options))&&journal.result?.editionSha256===selected.sha256,'EXAMPLE_ANALYSIS_IDENTITY_CHANGED');
   journal.result=result;await writeJson(journalPath,journal);
   process.stdout.write(JSON.stringify({step:'cohort-analysis',studies:analysis.selectedStudies,occurrences:analysis.selectedOccurrences,
@@ -153,6 +172,7 @@ async function enrichHeld(options,completed){
 
 if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){
  const config=JSON.parse(await readFile(process.argv[2],'utf8'));
- try{process.stdout.write(JSON.stringify(await runClinicalTrialsDossierExample(config))+'\n');}
+ try{const locations=process.argv[3]?JSON.parse(await readFile(process.argv[3],'utf8')):undefined;
+  process.stdout.write(JSON.stringify(await runClinicalTrialsDossierExample(config,{locations}))+'\n');}
  catch(error){process.stderr.write(JSON.stringify({error:error?.code??'CLINICALTRIALS_EXAMPLE_FAILED',message:error.message})+'\n');process.exitCode=1;}
 }

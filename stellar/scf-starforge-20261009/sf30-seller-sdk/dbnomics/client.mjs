@@ -27,6 +27,7 @@ export function createDbnomicsClient({origin,fetchImpl=fetch,signal}={}){
     importExample:id=>post(prefix+'seed',{id}),importCapture:input=>post(prefix+'import',input),
     capture:id=>get(prefix+'capture',{id}),observations:(id,options={})=>get(prefix+'observations',{id,...options}),
     facets:(id,options={})=>get(prefix+'facets',{id,...options}),compare:(before,after,options={})=>get(prefix+'compare',{before,after,...options}),
+    analysisSource:input=>post(prefix+'analysis-source',input),analysisSourceFile:id=>file('analysis-export',{id}),
     notes:(id,revision)=>get(prefix+'notes',{id,revision}),saveNotes:input=>post(prefix+'notes',input),
     report:(id,options={})=>get(prefix+'report',{id,...options}),saveReport:input=>post(prefix+'report',input),
     reportFile:(id,format='json')=>file('report-export',{id,format}),captureFile:id=>file('capture-export',{id}),

@@ -3,8 +3,9 @@ import {join} from 'node:path';
 import {APPLICATION_PROVIDER_SCHEMA,applicationPreparation,observeApplicationStartup}
   from '../../distribution/runtime-workspace/application-provider.mjs';
 import {centralManagedOptions} from './managed.mjs';
+import {readCentralWarehouseProfiles} from './host-inputs.mjs';
 import {ODK_STARTUP_SCHEMA,ODK_CONNECTION_FILENAME,odkNeed,odkPlain,
-  readCentralConnection,inspectCentralListener,odkInspectPrivateFile} from './connection.mjs';
+  readCentralConnection,inspectCentralListener,inspectCentralWarehouse,odkInspectPrivateFile} from './connection.mjs';
 
 export const ODK_APPLICATION_ID='odk-central';
 export default {
@@ -13,12 +14,18 @@ export default {
     return [{
       id:ODK_APPLICATION_ID,command:'odk-central-workspace',title:'ODK Central field reporting',
       terminal:false,requiredSource:'stellar/scf-starforge-20261009/sf30-seller-sdk/odk/managed.mjs',
-      description:'Retain complete Central forms, repeat rows, submission versions and media; review field periods, prepare reports and datasets, and reopen the same source on another host.',
+      description:'Retain complete Central forms, repeat rows, submission versions and media; review field periods, prepare reports and datasets, receive approved periods in PostgreSQL, and reopen the same source on another host.',
       fields:[
         field('workspaceDirectory','Field reporting workspace','path',true,
           'Choose the original private workspace or a new private directory.'),
         field('operator','Recording operator','text',true,
           'The accountable operator for this retained field-data workspace.'),
+        field('commissioningConnection','Central host connection','path',false,
+          'Optional original private connection or bootstrap file for the customer commissioning editor.'),
+        field('commissioningEnvironment','Central authorization file','path',false,
+          'Optional private host file containing the selected connection authorization alias.'),
+        field('warehouseProfiles','Reporting warehouse profiles','path',false,
+          'Optional private PostgreSQL profile file for approved datasets, SQL reviews and complete period reports.'),
         field('restoreArchive','Original workspace archive','path',false,
           'Optional exact original archive received into a new or empty workspace before opening.'),
         field('restoreSha256','Original archive SHA-256','text',false,
@@ -29,6 +36,9 @@ export default {
   },
   validateSettings(_type,settings){
     const args=['--workspace',settings.workspaceDirectory,'--operator',settings.operator];
+    if(settings.commissioningConnection)args.push('--commissioning-connection',settings.commissioningConnection);
+    if(settings.commissioningEnvironment)args.push('--commissioning-environment',settings.commissioningEnvironment);
+    if(settings.warehouseProfiles)args.push('--warehouse-profiles',settings.warehouseProfiles);
     if(settings.restoreArchive)args.push('--restore-archive',settings.restoreArchive);
     if(settings.restoreSha256)args.push('--restore-sha256',settings.restoreSha256);
     centralManagedOptions(args);
@@ -38,6 +48,19 @@ export default {
     const workspace=await path('workspaceDirectory','directory',true,true);
     if(!workspace.exists)createDirectories.push(workspace.path);
     option('--workspace',workspace.path);option('--operator',settings.operator);
+    const commissioning=await path('commissioningConnection','file',false,true);
+    if(commissioning)option('--commissioning-connection',commissioning.path);
+    const authorization=await path('commissioningEnvironment','file',false,true);
+    if(authorization)option('--commissioning-environment',authorization.path);
+    const warehouse=await path('warehouseProfiles','file',false,true);
+    if(warehouse){
+      const retained=await odkInspectPrivateFile(warehouse.path,1024*1024);
+      const selected=await readCentralWarehouseProfiles({profilesFile:warehouse.path});
+      odkNeed(selected.source.sha256===retained.sha256&&retained.bytes===warehouse.bytes&&
+        ['dev','ino','mtimeMs','ctimeMs'].every(key=>retained[key]===warehouse[key]),
+        'ODK_WAREHOUSE_PROFILES_CHANGED','The selected warehouse profiles changed during application preparation.',409);
+      option('--warehouse-profiles',warehouse.path);
+    }
     const archive=await path('restoreArchive','file',false,true);
     if(archive){
       const retained=await odkInspectPrivateFile(archive.path);
@@ -70,7 +93,20 @@ export async function centralApplicationStartup(request,text){
     connection.value.operator===selected.operator&&connection.value.origin===announced.origin&&
     connection.value.url===announced.url&&(!selected.port||Number(new URL(connection.value.origin).port)===selected.port),
   'ODK_APPLICATION_STARTUP_CHANGED','The original listener differs from its retained startup.',409);
-  const live=await inspectCentralListener(connection);
+  const live=await inspectCentralListener(connection),warehouse=await inspectCentralWarehouse(connection);
+  const warehouseUrl=connection.value.origin+'/warehouse/'+new URL(connection.value.url).hash;
+  odkNeed(announced.warehouseUrl===warehouseUrl,'ODK_APPLICATION_STARTUP_CHANGED',
+    'The warehouse URL differs from the selected Central listener.',409);
+  if(selected.warehouseProfilesFile){
+    const profiles=await readCentralWarehouseProfiles({profilesFile:selected.warehouseProfilesFile});
+    const current=await odkInspectPrivateFile(selected.warehouseProfilesFile,1024*1024);
+    const reviewed=request.inputs?.find(value=>value.path===selected.warehouseProfilesFile&&value.kind==='file');
+    odkNeed(profiles.source.sha256===announced.warehouseProfilesSha256&&current.sha256===profiles.source.sha256&&
+      reviewed&&current.bytes===reviewed.bytes&&
+      ['dev','ino','mtimeMs','ctimeMs'].every(key=>current[key]===reviewed[key]),
+      'ODK_WAREHOUSE_PROFILES_CHANGED','The warehouse profiles differ from the reviewed application input.',409);
+  }else odkNeed(announced.warehouseProfilesSha256===null,'ODK_WAREHOUSE_PROFILES_CHANGED',
+    'The application announced an unselected warehouse profile file.',409);
   const input=request.inputs?.find(value=>value.path===selected.directory&&value.kind==='directory');
   if(selected.restoreArchive){
     odkNeed(live.receivedArchive?.archiveSha256===selected.restoreSha256&&
@@ -84,6 +120,8 @@ export async function centralApplicationStartup(request,text){
   return {url:connection.value.url,workspaceId:live.id,connectionFile:connection.path,original:{
     schema:ODK_STARTUP_SCHEMA,workspaceId:live.id,directory:selected.directory,
     instanceId:connection.value.instanceId,connectionSha256:connection.sha256,pid:connection.value.pid,
-    operator:connection.value.operator,...(selected.restoreArchive?{receivedArchive:live.receivedArchive}:{}),
+    operator:connection.value.operator,warehouse:{schema:warehouse.schema,url:warehouseUrl,
+      profilesSha256:announced.warehouseProfilesSha256,profileIds:warehouse.profiles.map(value=>value.id)},
+    ...(selected.restoreArchive?{receivedArchive:live.receivedArchive}:{}),
   }};
 }

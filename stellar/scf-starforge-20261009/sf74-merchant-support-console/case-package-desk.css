@@ -1,0 +1,43 @@
+/* MIT. Industrial grayscale layout for original case/source receiving. */
+.cp-desk{--cp-border:#c5c9cc;--cp-muted:#555d64;--cp-paper:#fff;min-width:0}
+.cp-desk .section-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem}
+.cp-desk .section-heading p{max-width:72ch}
+.cp-desk .cp-tabs{display:flex;flex-wrap:wrap;gap:.35rem;border-bottom:1px solid var(--cp-border);padding:.5rem 0;margin:1rem 0}
+.cp-desk .cp-tabs button{border-radius:2px 2px 0 0;background:#f4f5f5;border:1px solid var(--cp-border);color:#202428;padding:.6rem .85rem}
+.cp-desk .cp-tabs button[aria-selected="true"]{background:#24292d;color:#fff;border-color:#24292d}
+.cp-desk .cp-page[hidden],.cp-desk [hidden]{display:none!important}
+.cp-desk .cp-page{min-width:0}
+.cp-desk .cp-box{border:1px solid var(--cp-border);background:var(--cp-paper);padding:1rem;margin:1rem 0;min-width:0}
+.cp-desk .cp-box h3{margin:0 0 .6rem}
+.cp-desk .cp-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,19rem),1fr));gap:1rem;align-items:start}
+.cp-desk .cp-field{display:flex;flex-direction:column;gap:.35rem;margin:0 0 .8rem;min-width:0;font-size:.92rem;font-weight:600}
+.cp-desk .cp-field input,.cp-desk .cp-field textarea,.cp-desk .cp-field select{box-sizing:border-box;width:100%;min-width:0;max-width:100%;border:1px solid #92999e;border-radius:2px;background:#fff;color:#202428;font:inherit;font-weight:400;padding:.55rem .65rem}
+.cp-desk .cp-field input[type="file"]{font-size:.85rem;padding:.45rem}
+.cp-desk .cp-actions{display:flex;flex-wrap:wrap;gap:.55rem;align-items:center;margin:.8rem 0}
+.cp-desk .cp-actions>span{color:var(--cp-muted);font-size:.85rem}
+.cp-desk button{max-width:100%;white-space:normal;overflow-wrap:anywhere;font:inherit;font-size:.9rem;padding:.55rem .75rem;cursor:pointer}
+.cp-desk button:disabled{cursor:default;opacity:.5}
+.cp-desk a{color:#222d36;text-decoration:underline;text-underline-offset:2px;overflow-wrap:anywhere}
+.cp-desk .cp-summary,.cp-desk .cp-note{font-size:.9rem;line-height:1.55;overflow-wrap:anywhere;color:var(--cp-muted)}
+.cp-desk .cp-pre{white-space:pre-wrap;overflow-wrap:anywhere;word-break:normal;font:12px/1.6 ui-monospace,SFMono-Regular,Consolas,monospace;background:#f4f5f5;border:1px solid var(--cp-border);padding:.8rem;max-height:32rem;overflow:auto}
+.cp-desk .cp-table-scroll{width:100%;overflow:auto;border:1px solid var(--cp-border)}
+.cp-desk table{width:100%;min-width:760px;border-collapse:collapse;font-size:.84rem;text-align:left}
+.cp-desk th,.cp-desk td{padding:.65rem .7rem;border-bottom:1px solid #d7dadc;vertical-align:top;overflow-wrap:anywhere;max-width:30rem}
+.cp-desk th{background:#edf0f1;color:#202428;font-weight:650;white-space:nowrap}
+.cp-desk td:nth-last-child(2){font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.8rem}
+.cp-desk details>summary{cursor:pointer;overflow-wrap:anywhere}
+.cp-desk .cp-file-list{display:flex;flex-direction:column;gap:.5rem;margin-top:.6rem}
+.cp-desk .cp-file-list p{margin:0}
+.cp-desk progress{width:100%;max-width:40rem;height:.65rem;accent-color:#343b40}
+.cp-desk .status.error{color:#202428;border-left:3px solid #24292d;padding-left:.8rem;font-weight:600}
+.cp-desk :focus-visible{outline:2px solid #222d36;outline-offset:3px}
+.cp-desk .cp-guide{max-width:90ch}
+@media(max-width:600px){
+ .cp-desk .section-heading{display:block}
+ .cp-desk .section-heading>button{margin-top:.5rem}
+ .cp-desk .cp-box{padding:.8rem}
+ .cp-desk .cp-tabs{gap:.3rem}
+ .cp-desk .cp-tabs button{flex:1 1 46%;padding:.55rem .5rem;font-size:.85rem}
+ .cp-desk .cp-actions>button{flex:1 1 13rem}
+ .cp-desk .cp-pre{padding:.6rem;font-size:11px}
+}

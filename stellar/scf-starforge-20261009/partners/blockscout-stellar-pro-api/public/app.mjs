@@ -43,7 +43,10 @@ function number(value) { return value === null || value === undefined ? 'Unknown
 function showStatus(value) {
   status = value; const p = value.provider, l = p.limits, q = p.providerQuota;
   const unit = p.budgetUnit ?? 'credits', instance = unit === 'requests';
-  $('identity').textContent = p.accountAlias + ' · ' + (value.source === 'loopback-contract-fixture' ? 'Loopback contract fixture' : value.connection?.providerName ?? 'Blockscout PRO') + ' · ' + value.paymentNetwork + ' payments';
+  const mode = value.deployment?.mode === 'challenge-only' ? 'Challenge-only' :
+    value.deployment?.mode === 'paid' ? 'Paid service' : 'Merchant';
+  const credential = value.providerCredential?.state === 'MISSING' ? ' · provider credential pending' : '';
+  $('identity').textContent = p.accountAlias + ' · ' + (value.source === 'loopback-contract-fixture' ? 'Loopback contract fixture' : value.connection?.providerName ?? 'Blockscout PRO') + ' · ' + mode + ' · ' + value.paymentNetwork + credential;
   $('history-budget-label').textContent = instance ? 'Local requests' : 'Local credits';
   $('budget-explanation').textContent = 'Local budgets count provider attempts in ' + unit + '. Provider balances are timestamped observations of the shared account. The original merchant journal records payment settlement.';
   $('admission').textContent = p.admission.allowed ? 'Available for a selected read' : names[p.admission.code] ?? p.admission.code;

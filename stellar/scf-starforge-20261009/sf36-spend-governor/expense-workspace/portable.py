@@ -8,12 +8,13 @@ import tempfile
 import zipfile
 from domain import Problem
 from native_mcp import reader_path
+from native_node import READER_FILES as NODE_READER_FILES, FEATURE as NODE_FEATURE
 
 ACCOUNTANT_READER_FILES = tuple(json.loads((Path(__file__).resolve().parent / 'accountant-reader-files.json').read_text())['files'])
 CREDIT_READER_FILES = tuple(json.loads((Path(__file__).resolve().parent / 'credit-reader-files.json').read_text())['files'])
 
 APP_FILES = ("native.py", "domain.py", "store.py", "exports.py", "portable.py", "server.py",
-             "public/index.html", "public/app.mjs", "public/style.css", "README.md", "cli.mjs", "receive.py", "native_mcp.py", "native_woo.py", "native_adjustments.py", "credits.py", "credit_store.py", "credit-reader-files.json", "native_accountant.py", "accountant_store.py", "accountant-reader-files.json", "BOOKKEEPING.md", "native_governed_mcp.py", "GOVERNED_MCP.md")
+             "public/index.html", "public/app.mjs", "public/style.css", "README.md", "cli.mjs", "receive.py", "native_mcp.py", "native_woo.py", "native_adjustments.py", "credits.py", "credit_store.py", "credit-reader-files.json", "native_accountant.py", "accountant_store.py", "accountant-reader-files.json", "BOOKKEEPING.md", "native_governed_mcp.py", "GOVERNED_MCP.md", "native_node.py", "node_store.py", "NODE_OPERATIONS.md")
 MCP_READER_FILES = ("stellar-forge/mcp-paid-agent/expense-statement.mjs",
                     "stellar-forge/mcp-paid-agent/expense-governed-statement.mjs",
                     "stellar-forge/mcp-paid-agent/native-spend-binding.mjs",
@@ -60,7 +61,9 @@ The original buyer ledgers, quote databases, signers, wallet keys and purchased 
 
     python3 app/sf36-spend-governor/expense-workspace/server.py --state project --port 0 --node /absolute/path/to/node
 
-No Node process starts until an operator explicitly captures a native source, imports an original refund packet, or previews an original accountant return. The saved original SF86 payment observation determines whether a matched transfer is available for allocation; seller response, result metadata and quoted amount remain separate. The expense reader neither contacts an RPC nor initiates, signs or retries a payment. Reconcile an unresolved original payment through its existing buyer operation, then capture and review that source edition here.
+No Node process starts until an operator explicitly captures a native source, previews or imports an original Node accounting export, imports an original refund packet, or previews an original accountant return. The saved original SF86 payment observation determines whether a matched transfer is available for allocation; seller response, result metadata and quoted amount remain separate. The expense reader neither contacts an RPC nor initiates, signs or retries a payment. Reconcile an unresolved original payment through its existing buyer operation, then capture and review that source edition here.
+
+Original Node operation exports use Sources → Import Node export. The exact complete export bytes, producing attempt/evidence, operation identity, original SF36 result and named intake/review decisions remain in this same SQLite state. An unpaid result stays NO_PAYMENT_REQUIRED with no asset, expense or fabricated reservation. A paid source supports expense coding only when the original native result is FINALIZED or IDEMPOTENT_FINALIZED. Earlier unresolved outcomes remain source history. Selecting a successor export does not replace an original ledger locator or run its worker. The included NODE_OPERATIONS.md describes native preview, stable-request capture/recovery, original-file download, period review and complete receiving.
 
 Native SF36 reservations, settled actual and unused capacity retain their original meanings. MCP quotes create no reservations in this workspace. Quote creation day is a source date, not a payment or accounting date. The operator supplies recognition dates and exact allocations; units remain separate by network and asset. A transfer shared by source rows requires explicit review, and the same exact matched event cannot be included twice in one period or another currently closed period.
 
@@ -85,6 +88,7 @@ def complete_project(store, expected_revision=None):
 def _complete_project(store, state):
     app = Path(__file__).resolve().parent
     entries = {}
+    node_sources = {source["id"] for source in state["sources"] if source.get("kind") == "node_operation"}
     for name in APP_FILES:
         path = app / name
         if path.is_symlink():
@@ -93,7 +97,7 @@ def _complete_project(store, state):
     for name in ("statement.py", "governor.py", "STATEMENTS.md"):
         entries["app/sf36-spend-governor/" + name] = (app.parent / name).read_bytes()
     native_root = reader_path().parents[2]
-    for name in sorted(set(MCP_READER_FILES) | set(CREDIT_READER_FILES) | set(ACCOUNTANT_READER_FILES)):
+    for name in sorted(set(MCP_READER_FILES) | set(CREDIT_READER_FILES) | set(ACCOUNTANT_READER_FILES) | set(NODE_READER_FILES)):
         path = native_root / name
         if path.is_symlink():
             raise ValueError("Original MCP reader source cannot be a symlink")
@@ -109,6 +113,9 @@ def _complete_project(store, state):
         "request_recovery": "sqlite-transaction-v1",
         "mcp_quote_capture": "native-readonly-v1",
         "governed_mcp_capture": "original-spending-readonly-v1",
+        "node_operation_capture": NODE_FEATURE,
+        "node_operation_count": len(node_sources),
+        "node_capture_count": sum(row[0] in node_sources for row in store.connection.execute("SELECT source_id FROM captures")),
         "buyer_credit_capture": "original-native-refund-v2",
         "data_context": state["data_context"],
         "buyer_bookkeeping": "issued-accountant-return-v1",

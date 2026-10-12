@@ -458,6 +458,14 @@ files. The same operating directory reopens under the new launch.
 
 ## Native receiving and upgrades
 
+After the native operator completes, run the
+[installed Applications continuation](../../stellar/scf-starforge-20261009/sf30-seller-sdk/risingwave/MANAGED_WORKBENCH.md).
+It adopts that original workbench, receives both complete captures and every
+difference through the selected MCP runtime, downloads both published editions
+and the original buyer file, and completes stop and fresh-process reopen.
+Keep the original native server and environment references available throughout.
+
+
 The native receiving operator in the
 [source guide](../../stellar/scf-starforge-20261009/sf30-seller-sdk/risingwave/README.md)
 runs against an actual selected RisingWave server. It exercises initial

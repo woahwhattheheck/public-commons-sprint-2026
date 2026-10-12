@@ -74,8 +74,11 @@ python3 -B operations/scf-stac-client-native-receiving-20261012/continue-native.
 
 The wrapper checks the exact archive and every declared member, the original
 source/operation identities, and the actual empty-stage `INVALID_BUYER_TRANSPORT` outcome. It
-restores the unmodified completed native record under the original task's retained
-records directory when the private originating namespace has ended.
+restores the unmodified completed native record at its exact original private
+`/dev/c79f-stac-receiving-placement/native-placement-97e9112be662d71911495534/work/records/97e9112be662d71911495534d46715f892bd806b01a09a4a43983a2de7c14b38`
+path when the original namespace has ended. This retains the original native
+runtime-use path binding and avoids a new allocation on the full overlay. No
+request, intent, registration or outcome identity is rewritten.
 The maintained `terminal-result` placement contract then checks the exact request
 and result digests, original ended process identities, and released resources.
 It retains that complete original record in the next placement and creates the
@@ -156,3 +159,46 @@ The command exits successfully only when the original receiving reports
 and partial outcomes retain their own actual status. B710's managed Applications
 build/READY operation and the Prescient and customer-delivery receivers keep
 their existing separate ownership.
+
+## Retain the original import result and continue the saved receiving workspace
+
+The next original native lifetime constructed the host and reached `input-import`. Its CLI returned code 2, while its receiving wrapper retained only the exit-code comparison. The receiving driver now keeps the complete native CLI result in `progress.error.nativeResult`, including the original operation identity and native outcome.
+
+Every subsequent result archive includes the two original local imagery/processing workspace trees together with the progress, reports, full native record and selected predecessor archive. A continuation restores these exact bytes into its selected receiving directory before opening the original hosts. The CLI connection and one-process bootstrap URL are created afresh. Existing receiving IDs and native import/export receipts remain in the retained workspace; provider data are unchanged.
+
+The same originating process saves the complete result through the installed current Library upload helper. It supplies `state_parent` explicitly on the selected private filesystem and records the returned identity. A save with an uncertain result is inspected before any additional write. This original command expects the maintained helper at `/workspace/scratch/c79fd06aedf2/cocart-commissioning/library-final-20261012`.
+
+Select the most recent complete retained result with both `--completed-result-archive` and `--completed-result-sha256`. The manifest must name this original business operation, the frozen source and a known receiving driver. Every member is verified before restoration; the original native request/result and exact registered record path are preserved. Native terminal-result placement remains responsible for the ended-process and released-resource checks.
+
+## Keep an uncreated placement journal in the originating private filesystem
+
+The original prepare operation can publish its small placement journal in the same private filesystem as its work. When no placement record has been created, pass `--plans-root /dev/c79f-stac-receiving-journals-20261012` to the same command and keep the originating process alive through complete receiving and artifact saving. The native admission records, shared capacity indexes, predecessor, memory and disk declarations are unchanged. The wrapper refuses this selection if the same operation already has a retained placement in its default shared journal. Previous shared journals remain in place.
+
+The complete receiving archive includes the selected private placement journal and native record before the original process ends. The same original upload helper saves that archive from this lifetime; a returned save identity is retained before any additional publication. This option avoids writing a new placement manifest into saturated shared tmpfs without copying the native runtime or changing an admitted request.
+
+## Match the released workspace and provider lifecycle
+
+The actual original receiving operation ended at 13:39:24 UTC with native job `463ef650b3c8217b6e72bb10f4eed964` reporting `OPERATION_FAILED: provider.close is not a function` during `input-import`. The borrowed B710 provider blob `dcc4c13deea67f8d4da5c181f7f6d8d2249d637f` predates the lifecycle used by the retained workspace.
+
+This continuation composes the original provider blob `e4d5d363304a4d550a217dc330c8c011ee2d58d5` from the same PR1807 merge `3a82a92aa7ee12c397606b979097b5f2655819e2` as workspace blob `9667097fbc4053676100dfc52fa059e0d6790a74`. Both exact released files are embedded and verified in the private overlay. Their existing SF31 transport, SF88 store and Routescan dependencies remain linked to the original runtime; no borrowed source is overwritten. The archive includes these source files and the receiving driver.
+
+The complete actual import outcome and both partially imported local workspace trees are saved in `SCF_STAC_Node_Receiving_8bf0172bd5a6.zip` (893,386 bytes; SHA256 `8bf0172bd5a6124b3dc4033b191fd4e8b11ec6dda4584dc7be2b9070be7d4e50`; saved file `libfile_c92785be28a08191acb0fbd027b07468/v0`). Continue that exact state with:
+
+```sh
+python3 -B operations/scf-stac-client-native-receiving-20261012/continue-native.py \
+  --completed-result-archive /dev/shm/c79f-stac-receiving-preserved-20261012/SCF_STAC_Node_Receiving_8bf0172bd5a6.zip \
+  --completed-result-sha256 8bf0172bd5a6124b3dc4033b191fd4e8b11ec6dda4584dc7be2b9070be7d4e50 \
+  --plans-root /dev/c79f-stac-receiving-journals-20261012
+```
+
+The linked native operation ends with `-provider-e4d5d363-<predecessor-request-sha8>`, so it preserves the original completed record and its exact request identity. The receiving driver keeps its original import ID and reopens the retained local state. Subsequent stages, native results and the complete saved artifact determine completion of the customer workflow.
+
+## Restore native private directories before host startup
+
+The original provider-matched continuation ended at 14:30:22 UTC with `PRIVATE_STATE_DIRECTORY_REQUIRED` before opening the restored host. Python's recursive directory creation had assigned default permissions to intermediate directories. The native host correctly requires every local state directory to be owner-only.
+
+Restoration now creates every directory component under the selected receiving root explicitly with mode `0700`, verifies it is an owned directory with no group or other access, and then restores the exact files. Existing directories with incompatible identity or permissions are reported; the wrapper does not relax the native host's requirement or alter the borrowed runtime.
+
+The complete ended operation is saved as `libfile_74c3c09edaac8191a3cf63f60f1fedf6/v0`, file `file_00000000cf6081f6b8a729a79c24e9e4`: 1,358,508 bytes, SHA256 `88c860848971aa5b24dccbabe6b43c994e511e8165ae4ed701c8d2c84b41062e`. Materialize that exact version through the current Library helper, verify the complete digest, and pass its local path with `--completed-result-archive` and that SHA256 to this same command. The original native record, import identity and partially imported workspace remain the inputs to the next linked continuation.
+
+If the shared preservation copy runs out of space, the wrapper removes only the incomplete file it just created and saves the complete private archive through the existing upload helper before its originating process ends. A pre-existing archive is never removed by that cleanup.

@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>OECD analyst workspace</title><link rel="stylesheet" href="/style.css"></head>
+<body>
+<header class="top"><div><span class="eyebrow">STELLAR FORGE</span><h1>OECD analyst workspace</h1></div><div id="connection-state">Opening original project…</div><button id="reload">Refresh workspace</button></header>
+<div id="notice" role="status" aria-live="polite"></div>
+<section id="connect" hidden><h2>Open the local operator</h2><label>Original console capability <input id="capability" type="password" autocomplete="off"></label><button id="connect-button">Connect</button></section>
+<main id="application" hidden>
+<aside>
+<section><h2>Original source captures</h2><button id="seed">Import complete October source</button><label class="file">Import source bundle <input id="capture-file" type="file" accept=".json,application/json"></label><label>Retained capture <select id="capture"></select></label><div id="capture-summary" class="muted"></div><details><summary>Original source files</summary><div id="source-list"></div></details></section>
+<section><h2>Analyst selection</h2><label>Title <input id="title" value="OECD leading-indicator briefing"></label><fieldset><legend>Countries</legend><div id="countries"></div></fieldset><div class="row"><label>From <input id="start" type="month" value="2024-01"></label><label>Through <input id="end" type="month"></label></div><label>Source project <select id="revision"></select></label><label>Analyst notes <textarea id="notes" rows="5"></textarea></label><div class="actions"><button id="preview">Review selection</button><button id="save" class="primary">Save briefing and customer edition</button></div><button id="new-draft">New operation</button><div id="preview-result" class="muted"></div></section>
+<section><h2>Source update</h2><p class="muted">Read a new OECD response for this capture’s countries and pinned metadata. Save it as a new revision to compare changes.</p><button id="refresh-source">Acquire current observations</button></section>
+<section><h2>Reopen project</h2><label class="file">Import complete project packet <input id="project-file" type="file" accept=".zip,application/zip"></label></section>
+</aside>
+<div class="work">
+<section><div class="section-title"><h2>Saved briefings</h2><span id="publication-state" class="muted"></span></div><div id="briefing-list" class="list"></div></section>
+<section id="report" hidden><div class="section-title"><h2 id="report-title"></h2><button id="publish" class="primary">Publish customer edition</button></div><p id="report-scope" class="muted"></p><div class="actions" id="report-downloads"></div><p id="report-notes"></p><h3 id="common-heading"></h3><div class="table-scroll"><table><thead><tr><th>Country</th><th>Original index</th><th>1 month · points</th><th>3 months · points</th><th>12 months · points</th><th>Latest source period</th></tr></thead><tbody id="comparison-table"></tbody></table></div><div id="series-charts"></div><details><summary>Original monthly observations</summary><div class="table-scroll"><table><thead><tr><th>Country</th><th>Period</th><th>Original value</th><th>Status</th><th>Presence</th><th>Unit / multiplier</th></tr></thead><tbody id="observations"></tbody></table></div></details><details><summary>Source and edition identities</summary><pre id="report-identity"></pre></details></section>
+<section><h2>Compare saved editions</h2><div class="row"><label>Earlier <select id="before"></select></label><label>Later <select id="after"></select></label><button id="compare">Compare original revisions</button></div><div id="comparison-result"></div></section>
+<section><h2>Customer series provider</h2><p id="provider-info" class="muted"></p><div class="actions"><button id="provider-capabilities">Read provider capabilities</button><button id="provider-series">Browse published series</button><button id="provider-connection">Download connection definition</button></div><pre id="provider-output"></pre></section>
+<footer><h2>Interpret the source</h2><p>The amplitude-adjusted CLI is a qualitative signal of economic turning points. Its long-term average is 100. Report changes are differences in index points at matching calendar months.</p><p><a href="https://www.oecd.org/en/data/indicators/composite-leading-indicator-cli.html" target="_blank" rel="noreferrer">OECD indicator definition</a> · <a href="https://www.oecd.org/en/data/insights/data-explainers/2024/04/composite-leading-indicators-frequently-asked-questions.html" target="_blank" rel="noreferrer">Original methodology and revisions</a></p></footer>
+</div>
+</main>
+<script type="module" src="/app.mjs"></script>
+</body></html>

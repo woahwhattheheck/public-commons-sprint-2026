@@ -1,6 +1,6 @@
 # Buyer expense and period workspace
 
-A private operator workspace for taking original SF36 buyer statements and native MCP purchase records through source review, expense allocation, named period review, accountant delivery and receiving.
+A private operator workspace for taking original SF36 buyer statements, native MCP purchase records and complete original Node accounting exports through source review, expense allocation, named period review, accountant delivery and receiving.
 
 The application uses the maintained `../statement.py` reader and statement calculator for SF36 ledgers. Original MCP quote stores enter through their own unchanged validation and a read-only `SqliteQuoteStore.readSnapshot` transaction. The original buyers continue to own reservations, payment receipts and reconciliation. This workspace retains reviewed captures and operator decisions in its existing SQLite database.
 
@@ -19,6 +19,10 @@ Open the complete private URL printed by the server. It listens on 127.0.0.1 wit
 With the maintained Starforge package, the original command is `starforge buyer-expenses --state /absolute/private/buyer-expenses --port 0`. Its fixed Node forwarder runs this same Python server and preserves arguments, signals and exit status.
 
 Use a new private directory with mode 0700, separate from the buyer. An existing expense project opens in the same way. Opening a saved project reads its operator state without touching its source ledgers or quote databases. Use `--node /absolute/path/to/node` when a later MCP capture needs an explicitly selected host runtime.
+
+## Original Node accounting export intake
+
+Sources → Import Node accounting export retains the exact original producer file, producing attempt/evidence and saved SF36 accounting result. Preview identifies the source and previous capture; a named review makes its pending capture current. Unpaid outcomes remain source history without payment assets or reservations. Finalized original rows use the same exact allocation, duplicate-source review, issued periods and complete receiving. The complete browser/API/MCP/customer workflow and source meanings are in [NODE_OPERATIONS.md](NODE_OPERATIONS.md).
 
 ## Complete operating flow
 

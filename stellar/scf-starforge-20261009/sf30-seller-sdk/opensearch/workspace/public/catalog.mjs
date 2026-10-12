@@ -27,6 +27,7 @@ export function createCatalogController({ host, api, perform, refresh, recover, 
   let dirty = false, reading = false, pageOffset = 0, pageNext = null, rowMode = 'materials';
   let matchOffset = 0, matchNext = null, matchInput = null, matchCandidates = [], matchChosen = null, editingDecision = null;
   let decisionOffset = 0, decisionNext = null, selectedPanel = 'setup', fileNotice = '', quantityUrl = null;
+  let storageOffset = 0, storageNext = null, storageRows = [], storageSelection = null, storageReceipt = null;
   const hashes = new WeakMap();
   let supplier = null;
   const nav = element('button', 'Material catalogs', { 'data-view': 'catalog', type: 'button' });
@@ -89,6 +90,12 @@ export function createCatalogController({ host, api, perform, refresh, recover, 
     '<article><h3>Move a complete catalog</h3><p class="help">The catalog bundle carries retained catalog histories, exact original source files and customer decisions. Import its original bytes to reopen that same catalog identity in another workspace.</p>',
     '<a id="cat-bundle-download" hidden>Download complete catalog bundle</a><label>Retained catalog bundle<input id="cat-bundle-file" type="file" accept=".jsonl,.ndjson,application/x-ndjson,application/json"></label>',
     '<p id="cat-bundle-status" class="help">Choose a complete catalog-bundle JSONL file.</p><div class="actions"><button id="cat-import" type="button">Import retained catalog</button></div></article>',
+    '<article><div class="section-heading"><div><h3>Receiving-stage storage</h3><p class="help">Completed imports release their temporary receiving databases and copied inputs after checking the retained originals. Inspect earlier imports or resume a retained stage here.</p></div><button id="cat-storage-refresh" type="button">Refresh import storage</button></div>',
+    '<p id="cat-storage-summary" class="summary">Open this view or refresh to inspect receiving stages.</p><div id="cat-storage-table" class="table-wrap"></div>',
+    '<div class="actions"><button id="cat-storage-previous" type="button">Previous imports</button><span id="cat-storage-page" class="help"></span><button id="cat-storage-next" type="button">Next imports</button></div>',
+    '<details id="cat-storage-detail" hidden><summary>Original import and retirement receipt</summary><pre id="cat-storage-json"></pre></details>',
+    '<div class="actions"><button id="cat-storage-retire" type="button">Verify originals and release selected stage</button></div>',
+    '<p class="help">The original bundle, canonical source files, catalog and customer histories stay retained. Estimates describe this page before verification; hardlinked source copies may release no blocks. A retained stage can be retried with the same original import and checksum after its reported issue is resolved.</p></article>',
     '</section>',
   ].join('');
   const supplierPanel = element('section', undefined, { id: 'cat-panel-supplier', 'aria-label': 'Supplier delivery', hidden: '' });
@@ -381,6 +388,53 @@ export function createCatalogController({ host, api, perform, refresh, recover, 
     $('cat-bundle-download').hidden = !catalog;
     if (catalog) $('cat-bundle-download').href = '/api/catalog/export?' + new URLSearchParams({ catalogId: catalog.id, format: 'catalog-bundle.jsonl' });
   }
+  function showStorageSelection() {
+    $('cat-storage-detail').hidden = !storageSelection;
+    if (!storageSelection) return;
+    $('cat-storage-json').textContent = pretty({
+      request: { importRequestId: storageSelection.importRequestId, expectedRequestSha256: storageSelection.requestSha256 },
+      inspection: storageSelection, ...(storageReceipt ? { receipt: storageReceipt } : {})
+    });
+  }
+  async function loadImportStorage() {
+    const result = await api('/api/catalog/import-storage?' + new URLSearchParams({ offset: String(storageOffset), limit: '25' }));
+    storageNext = result.nextOffset ?? null; storageRows = result.rows;
+    storageSelection = storageRows.find(row => row.importRequestId === storageSelection?.importRequestId) ?? null;
+    if (!storageSelection) storageReceipt = null;
+    const totals = result.pageTotals;
+    $('cat-storage-summary').textContent = totals.stages + ' stages on this page · ' + totals.bytes +
+      ' staged bytes · ' + totals.allocatedBytes + ' allocated bytes · up to ' + totals.estimatedReclaimableBytes +
+      ' allocated bytes before verification.';
+    table($('cat-storage-table'), ['Original import', 'Catalog revision', 'Import state', 'Stage bytes', 'Storage outcome'], storageRows,
+      row => [row.importRequestId, row.importedRevision, row.importState, row.stage.bytes,
+        row.status === 'STAGE_REAPPEARED' ? 'A new stage appeared; retained for inspection' :
+        row.retirement?.state === 'COMPLETE' ? row.retirement.summary?.outcome === 'ALREADY_ABSENT' ? 'Stage was already absent' :
+          'Released: ' + (row.retirement.summary?.removedAllocatedBytes ?? 0) + ' allocated bytes recorded' :
+          row.warning?.message ?? row.retirement?.error?.message ?? ({ READY_TO_VERIFY: 'Ready to verify originals',
+            READY_TO_RECONCILE: 'Stage removed; complete the retained receipt',
+            ABSENT: 'No receiving stage', IMPORT_RETAINED: 'Incomplete import retained',
+            IMPORT_OWNER_ACTIVE: 'Original import owner is active', RETIREMENT_ACTIVE: 'Retirement owner is active' }[row.status] ?? row.status)],
+      { label: 'Inspect', run: row => { storageSelection = row; storageReceipt = null;
+        showStorageSelection(); $('cat-storage-detail').open = true; buttons(); } });
+    $('cat-storage-page').textContent = result.total
+      ? (storageOffset + 1) + '–' + (storageOffset + storageRows.length) + ' of ' + result.total + ' imports'
+      : 'No original imports';
+    showStorageSelection(); buttons();
+  }
+  async function releaseImportStage() {
+    if (!storageSelection?.eligible) throw new Error('Inspect a completed import with a closed stage or unfinished retirement receipt first.');
+    const request = { importRequestId: storageSelection.importRequestId, expectedRequestSha256: storageSelection.requestSha256 };
+    let failure;
+    try {
+      storageReceipt = await api('/api/catalog/import-storage/retire', request);
+      notice('Receiving stage released for original import ' + request.importRequestId + '. ' +
+        storageReceipt.summary.removedAllocatedBytes + ' allocated bytes recorded as removed; ' +
+        storageReceipt.summary.alreadyAbsentFiles + ' files were already absent. The completed catalog and original source files are retained.');
+    } catch (error) { failure = error; }
+    try { await loadImportStorage(); } catch (error) { failure ??= error; }
+    showStorageSelection();
+    if (failure) throw failure;
+  }
   function fileFor(kind) { return $(kind === 'catalog-import' ? 'cat-bundle-file' : 'cat-file').files[0]; }
   async function checksum(file) {
     if (!hashes.has(file)) hashes.set(file, sha256File(file, { onProgress({ bytes, total }) {
@@ -467,6 +521,10 @@ export function createCatalogController({ host, api, perform, refresh, recover, 
     $('cat-decisions-next').disabled = held || decisionNext === null;
     $('cat-upload').disabled = held || !fileFor('catalog-upload');
     $('cat-import').disabled = held || !fileFor('catalog-import');
+    $('cat-storage-refresh').disabled = busy;
+    $('cat-storage-previous').disabled = held || storageOffset === 0;
+    $('cat-storage-next').disabled = held || storageNext === null;
+    $('cat-storage-retire').disabled = held || !storageSelection?.eligible;
     $('cat-use-lookup').disabled = held || !$('cat-lookup-source').value;
     renderFileState();
     supplier?.buttons();
@@ -481,6 +539,7 @@ export function createCatalogController({ host, api, perform, refresh, recover, 
   for (const button of section.querySelectorAll('[data-catalog-view]')) button.addEventListener('click', () => {
     panel(button.dataset.catalogView);
     if (selectedPanel === 'matches' && catalog) attempt(() => read(loadDecisions));
+    if (selectedPanel === 'handover') attempt(() => read(loadImportStorage));
     if (selectedPanel === 'supplier' && catalog) attempt(() => read(() => supplier.sync(catalog, catalogEditions())));
   });
   for (const id of ['cat-title', 'cat-tenant', 'cat-policy', 'cat-references', 'cat-attributes', 'cat-aliases', 'cat-delta'])
@@ -565,6 +624,14 @@ export function createCatalogController({ host, api, perform, refresh, recover, 
     expectedRevision: catalog.revision, index: $('cat-index').value.trim(), variant: $('cat-variant').value,
     ...($('cat-draft-title').value.trim() ? { title: $('cat-draft-title').value } : {}) })));
   $('cat-refresh').addEventListener('click', () => attempt(refresh));
+  $('cat-storage-refresh').addEventListener('click', () => attempt(() => read(loadImportStorage)));
+  $('cat-storage-previous').addEventListener('click', () => attempt(() => read(async () => {
+    storageOffset = Math.max(0, storageOffset - 25); await loadImportStorage();
+  })));
+  $('cat-storage-next').addEventListener('click', () => attempt(() => read(async () => {
+    storageOffset = storageNext; await loadImportStorage();
+  })));
+  $('cat-storage-retire').addEventListener('click', () => attempt(() => read(releaseImportStage)));
   formatControls();
   return { sync, buttons, transmitFile, hasUnsaved: () => dirty || supplier.hasUnsaved(),
     restorePending(pending) {

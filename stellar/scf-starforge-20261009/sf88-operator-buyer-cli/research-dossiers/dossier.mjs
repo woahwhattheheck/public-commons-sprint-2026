@@ -14,6 +14,16 @@ import {CITATION_REVIEW_SCHEMA,citationDigest,citationUpdateModel,citationUpdate
   recordCitationReview,validateCitationReviewState,validateCitationReviewTransition} from './citation-updates.mjs';
 import {eligibilityDigest,eligibilityInput,eligibilityModel,eligibilityPage,eligibilityReport,eligibilityExport,
   recordEligibilityOperation,validateEligibilityState,validateEligibilityTransition} from './eligibility-review.mjs';
+import {extractionDigest,extractionInput,studyExtractionModel,extractionPublicationContext,extractionPage,extractionReport,
+  extractionSourcePointers,recordStudyExtractionOperation,validateStudyExtractionState,validateStudyExtractionTransition} from './study-extraction.mjs';
+import {extractionMarkdown,extractionHtml} from './study-extraction-report.mjs';
+import {riskOfBiasDigest,riskOfBiasInput,riskOfBiasModel,riskOfBiasPage,riskOfBiasReport,riskOfBiasExport,
+  recordRiskOfBiasOperation,validateRiskOfBiasState,validateRiskOfBiasTransition} from './risk-of-bias/index.mjs';
+import {riskOfBiasRegistry} from './risk-of-bias/registry.mjs';
+import {createCustomerUpdateStore,validateCustomerUpdateTransition} from './customer-updates/store.mjs';
+import {validateCustomerUpdateState,customerUpdateBlobMetadata} from './customer-updates/model.mjs';
+import {publicationDigest,publicationInput,extractionPublicationModel,extractionPublicationPage,extractionPublicationReport,
+  extractionPublicationExport,recordExtractionPublication,validateExtractionPublicationState,validateExtractionPublicationTransition} from './extraction-publication.mjs';
 
 const DOCUMENT = 'sf88-research-dossier-v1';
 const PORTABLE = 'sf88-research-dossier-portable-v1';
@@ -36,6 +46,11 @@ const summary = state => ({
   selectedCount: state.selections.filter(selection => selection.selected).length,
   findingCount: state.findings.length, citationReviewCount:(state.citationReviews??[]).length,
   eligibilityReviewCount:(state.eligibilityEvents??[]).filter(value=>value.action==='create-review').length,
+  riskOfBiasReviewCount:(state.riskOfBiasEvents??[]).filter(value=>value.action==='create-review').length,
+  customerProjectCount:(state.customerUpdateEvents??[]).filter(value=>value.action==='create-project').length,
+  customerDeliveryCount:(state.customerUpdateEvents??[]).filter(value=>value.action==='publish-delivery').length,
+  extractionFormCount:(state.extractionEvents??[]).filter(value=>value.action==='create-form').length,
+  extractionPublicationCount:(state.extractionPublicationEvents??[]).filter(value=>value.action==='publish-table').length,
 });
 const referenceKeys = new Set(['id', 'editionId', 'queryId', 'workspaceId', 'operationId']);
 function referenceValue(reference) {
@@ -46,7 +61,7 @@ function referenceValue(reference) {
   return clone(reference);
 }
 
-export async function openDossierStore(directory, { providers = {} } = {}) {
+export async function openDossierStore(directory, { providers = {}, extractionOptions = {} } = {}) {
   directory = await privateDirectory(directory);
   const projects = await privateDirectory(join(directory, 'dossiers'));
   const blobs = await privateDirectory(join(directory, 'blobs'));
@@ -228,7 +243,7 @@ export async function openDossierStore(directory, { providers = {} } = {}) {
     const id = newId('d'), now = timestamp();
     const state = { schema: DOCUMENT, id, title, description, revision: 1,
       previous: null, createdAt: now, updatedAt: now, change: 'Created dossier',
-      questions: [], editions: [], selections: [], findings: [], citationReviews: [], eligibilityEvents: [] };
+      questions: [], editions: [], selections: [], findings: [], citationReviews: [], eligibilityEvents: [], extractionEvents: [], extractionPublicationEvents: [], riskOfBiasEvents: [], customerUpdateEvents: [] };
     await writeJson(join(await revisionsDirectory(id, true), filename(1)),
       { sha256: digest(jsonBytes(state)), state }, { exclusive: true });
     return projection === 'metadata' ? getMetadata(id) : get(id);
@@ -495,13 +510,140 @@ export async function openDossierStore(directory, { providers = {} } = {}) {
       {reviewId,workSetId,format,section});
   }
 
+
+  async function riskOfBias(id,{revision,...options}={}){
+    need((options.offset??0)===0||revision!==undefined,'RESEARCH_PAGE_REVISION_REQUIRED');
+    const {state}=await head(id,revision),projected=await projections(state,{references:false});
+    return riskOfBiasPage(state,riskOfBiasModel(state,projected,riskOfBiasRegistry(state,projected)),{...options,revision});
+  }
+  async function reviewRiskOfBias(id,{projection='metadata',...value}={}){
+    need(['metadata','full'].includes(projection),'RESEARCH_PROJECTION_INVALID');
+    const request=riskOfBiasInput(value),requestSha256=riskOfBiasDigest(request);
+    async function recovered(state){
+      const existing=(state.riskOfBiasEvents??[]).find(item=>item.requestId===request.requestId);
+      if(!existing)return null;
+      need(existing.requestSha256===requestSha256,'RISK_OF_BIAS_REQUEST_CHANGED');
+      return {dossier:projection==='metadata'?metadata(state):await get(id),operation:clone(existing),duplicate:true};
+    }
+    const prior=await recovered((await head(id)).state);if(prior)return prior;
+    let operation;
+    try{
+      const dossier=await commit(id,request.expectedRevision,'Appraisal: '+request.action,async(state,previous)=>{
+        const projected=await projections(previous,{references:false});
+        operation=await recordRiskOfBiasOperation(state,projected,request,timestamp(),
+          riskOfBiasRegistry(previous,projected),extractionOptions);
+      },{projection});
+      return {dossier,operation:clone(operation),duplicate:false};
+    }catch(error){
+      if(error.code==='REVISION_CONFLICT'){
+        const saved=await recovered((await head(id)).state);if(saved)return saved;
+      }
+      throw error;
+    }
+  }
+  async function exportRiskOfBias(id,{revision,...options}={}){
+    const {state}=await head(id,revision),projected=await projections(state,{references:false});
+    return riskOfBiasExport(state,riskOfBiasModel(state,projected,riskOfBiasRegistry(state,projected)),options);
+  }
+
+  async function extraction(id,{revision,...options}={}){
+    need((options.offset??0)===0||revision!==undefined,'RESEARCH_PAGE_REVISION_REQUIRED');
+    const {state}=await head(id,revision),projected=await projections(state,{references:false});
+    return extractionPage(state,studyExtractionModel(state,projected),options);
+  }
+  async function extractionSourceValues(id,{revision,...options}={}){
+    const {state}=await head(id,revision);
+    return extractionSourcePointers(state,await projections(state,{references:false}),options,extractionOptions);
+  }
+  async function reviewExtraction(id,{projection='metadata',...value}={}){
+    need(['metadata','full'].includes(projection),'RESEARCH_PROJECTION_INVALID');
+    const request=extractionInput(value),requestSha256=extractionDigest(request);
+    async function recovered(state){
+      const existing=(state.extractionEvents??[]).find(item=>item.requestId===request.requestId);
+      if(!existing)return null;
+      need(existing.requestSha256===requestSha256,'EXTRACTION_REQUEST_CHANGED');
+      return {dossier:projection==='metadata'?metadata(state):await get(id),operation:clone(existing),duplicate:true};
+    }
+    const prior=await recovered((await head(id)).state);if(prior)return prior;
+    let operation;
+    try{
+      const dossier=await commit(id,request.expectedRevision,'Extraction: '+request.action,async(state,previous)=>{
+        operation=await recordStudyExtractionOperation(state,await projections(previous,{references:false}),
+          request,timestamp(),extractionOptions);
+      },{projection});
+      return {dossier,operation:clone(operation),duplicate:false};
+    }catch(error){
+      if(error.code==='REVISION_CONFLICT'){
+        const saved=await recovered((await head(id)).state);if(saved)return saved;
+      }
+      throw error;
+    }
+  }
+  async function exportExtraction(id,{revision,format='json',formId,resultSetId}={}){
+    need(['json','md','html'].includes(format),'EXTRACTION_EXPORT_FORMAT_INVALID');
+    const {state}=await head(id,revision),projected=await projections(state,{references:false});
+    const report=extractionReport(state,studyExtractionModel(state,projected),{formId,resultSetId});
+    const body=format==='json'?jsonBytes(report):format==='md'?Buffer.from(extractionMarkdown(report).join('\n')+'\n','utf8'):
+      Buffer.from('<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'+
+        '<title>Study extraction</title><style>body{font:15px system-ui,sans-serif;color:#171717;background:#fff;max-width:1200px;margin:32px auto;padding:0 20px;line-height:1.5}table{border-collapse:collapse;width:100%;font-size:13px}th,td{border:1px solid #ccc;padding:8px;text-align:left;vertical-align:top}th{background:#f2f2f2}.extraction-table{overflow:auto}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f5f5f5;padding:16px}section{margin:24px 0}a{color:inherit}</style></head><body>'+
+        extractionHtml(report)+'</body></html>','utf8');
+    return {filename:id+'-r'+state.revision+'-extraction.'+(format==='md'?'md':format),
+      revision:state.revision,contentType:format==='json'?'application/json; charset=utf-8':
+        format==='md'?'text/markdown; charset=utf-8':'text/html; charset=utf-8',body};
+  }
+  async function extractionPublications(id,{revision,...options}={}){
+    need((options.offset??0)===0||revision!==undefined,'RESEARCH_PAGE_REVISION_REQUIRED');
+    const {state}=await head(id,revision),projected=await projections(state,{references:false});
+    const context=extractionPublicationContext(state,studyExtractionModel(state,projected));
+    return extractionPublicationPage(state,extractionPublicationModel(state,context),options);
+  }
+  async function reviewExtractionPublication(id,{projection='metadata',...value}={}){
+    need(['metadata','full'].includes(projection),'RESEARCH_PROJECTION_INVALID');
+    const request=publicationInput(value),requestSha256=publicationDigest(request);
+    async function recovered(state){
+      const existing=(state.extractionPublicationEvents??[]).find(item=>item.requestId===request.requestId);
+      if(!existing)return null;
+      need(existing.requestSha256===requestSha256,'EXTRACTION_PUBLICATION_REQUEST_CHANGED');
+      return {dossier:projection==='metadata'?metadata(state):await get(id),operation:clone(existing),duplicate:true};
+    }
+    const prior=await recovered((await head(id)).state);if(prior)return prior;
+    let operation;
+    try{
+      const dossier=await commit(id,request.expectedRevision,'Extraction publication: '+request.action,async(state,previous)=>{
+        const projected=await projections(previous,{references:false});
+        const context=extractionPublicationContext(previous,studyExtractionModel(previous,projected));
+        operation=await recordExtractionPublication(state,context,request,timestamp());
+      },{projection});
+      return {dossier,operation:clone(operation),duplicate:false};
+    }catch(error){
+      if(error.code==='REVISION_CONFLICT'){
+        const saved=await recovered((await head(id)).state);if(saved)return saved;
+      }
+      throw error;
+    }
+  }
+  async function exportExtractionPublication(id,{revision,...options}={}){
+    const {state}=await head(id,revision),projected=await projections(state,{references:false});
+    const context=extractionPublicationContext(state,studyExtractionModel(state,projected));
+    return extractionPublicationExport(state,extractionPublicationModel(state,context),options);
+  }
+
+  function collectBlobMetadata(state, contents) {
+    for (const metadata of [...state.editions.filter(edition => edition.mode === 'retained').map(edition => edition.raw),
+      ...customerUpdateBlobMetadata(state)]) {
+      const existing = contents.get(metadata.sha256);
+      need(!existing || existing.bytes === metadata.bytes, 'RESEARCH_BLOB_CHANGED');
+      contents.set(metadata.sha256, metadata);
+    }
+  }
+
   async function exportDossier(id, { format = 'json', revision } = {}) {
     need(['json', 'md', 'html'].includes(format), 'EXPORT_FORMAT_INVALID');
     const selected=(await head(id,revision)).state.revision;
     const versions = (await history(id)).filter(item=>item.state.revision<=selected), current = versions.at(-1).state;
     if (format === 'json') {
-      const metadata = new Map(versions.flatMap(envelope => envelope.state.editions
-        .filter(edition => edition.mode === 'retained').map(edition => [edition.raw.sha256, edition.raw])));
+      const metadata = new Map();
+      for (const envelope of versions) collectBlobMetadata(envelope.state, metadata);
       const contents = [];
       let total = 0;
       for (const meta of metadata.values()) {
@@ -521,6 +663,12 @@ export async function openDossierStore(directory, { providers = {} } = {}) {
     const reportProjected=await projections(current,{references:false});
     const citationModel=citationUpdateModel(current,reportProjected);
     report.eligibility=eligibilityReport(current,eligibilityModel(current,reportProjected));
+    const extractionModel=studyExtractionModel(current,reportProjected);
+    report.extraction=extractionReport(current,extractionModel);
+    report.riskOfBias=riskOfBiasReport(current,riskOfBiasModel(current,reportProjected,
+      riskOfBiasRegistry(current,reportProjected)));
+    report.extractionPublications=extractionPublicationReport(current,
+      extractionPublicationModel(current,extractionPublicationContext(current,extractionModel)));
     report.citationUpdates=citationModel.notices.map(({noticeId,noticeDoi,targetDoi,title,type,date,status,lastReview})=>
       ({noticeId,noticeDoi,targetDoi,title,type,date,status,lastReview}));
     report.citationCoverage=citationModel.coverage;
@@ -589,6 +737,10 @@ export async function openDossierStore(directory, { providers = {} } = {}) {
       }
       validateCitationReviewState(state,editions);
       validateEligibilityState(state,editions,knownOccurrences);
+      validateStudyExtractionState(state);
+      validateExtractionPublicationState(state);
+      validateRiskOfBiasState(state,editions,knownOccurrences);
+      validateCustomerUpdateState(state,editions);
       const findings = new Set();
       for (const finding of state.findings) {
         need(object(finding) && typeof finding.id === 'string' && /^f_[a-f0-9-]{36}$/.test(finding.id) &&
@@ -610,9 +762,20 @@ export async function openDossierStore(directory, { providers = {} } = {}) {
   async function validateReviewTransitions(previous,state,readContent){
     const hasCitation=(state.citationReviews?.length??0)>(previous?.citationReviews?.length??0);
     const hasEligibility=(state.eligibilityEvents?.length??0)>(previous?.eligibilityEvents?.length??0);
-    const projected=(hasCitation||hasEligibility)&&previous?await projections(previous,{references:false,readContent}):undefined;
+    const hasExtraction=(state.extractionEvents?.length??0)>(previous?.extractionEvents?.length??0);
+    const hasPublication=(state.extractionPublicationEvents?.length??0)>(previous?.extractionPublicationEvents?.length??0);
+    const hasRiskOfBias=(state.riskOfBiasEvents?.length??0)>(previous?.riskOfBiasEvents?.length??0);
+    const hasCustomerUpdate=(state.customerUpdateEvents?.length??0)>(previous?.customerUpdateEvents?.length??0);
+    const projected=(hasCitation||hasEligibility||hasExtraction||hasPublication||hasRiskOfBias||hasCustomerUpdate)&&previous?
+      await projections(previous,{references:false,readContent}):undefined;
     validateCitationReviewTransition(previous,state,projected);
     validateEligibilityTransition(previous,state,projected);
+    await validateStudyExtractionTransition(previous,state,projected,extractionOptions);
+    const context=hasPublication&&previous?extractionPublicationContext(previous,studyExtractionModel(previous,projected)):undefined;
+    await validateExtractionPublicationTransition(previous,state,context);
+    const riskRegistry=hasRiskOfBias&&previous?riskOfBiasRegistry(previous,projected):undefined;
+    await validateRiskOfBiasTransition(previous,state,projected,riskRegistry,extractionOptions);
+    await validateCustomerUpdateTransition(previous,state,projected,readContent);
   }
 
   async function reopen(portable) {
@@ -679,12 +842,7 @@ export async function openDossierStore(directory, { providers = {} } = {}) {
         const envelope = await readRevision(id, revision);
         need(envelope.state.previous === previous, 'DOSSIER_HISTORY_CHANGED');
         previous = envelope.sha256;
-        for (const edition of envelope.state.editions) {
-          if (edition.mode !== 'retained') continue;
-          const existing = contents.get(edition.raw.sha256);
-          need(!existing || existing.bytes === edition.raw.bytes, 'RESEARCH_BLOB_CHANGED');
-          contents.set(edition.raw.sha256, edition.raw);
-        }
+        collectBlobMetadata(envelope.state, contents);
         if (revision > 1) yield Buffer.from(',\n');
         yield jsonBytes(envelope);
       }
@@ -781,8 +939,13 @@ export async function openDossierStore(directory, { providers = {} } = {}) {
     } finally { await rm(staging, {recursive: true, force: true}); }
   }
 
+  const customerUpdateStore=createCustomerUpdateStore({head,commit,metadata,get,projections,blob,putBlob,exportStream});
   return Object.freeze({ directory, list, create, get, getMetadata, readRetainedEdition, listRevisions, update, addQuestion, updateQuestion,
+    ...customerUpdateStore,
     receive, previewSourceBundle, receiveSourceBundle, receiveBuyerResult, receiveReference, selectEvidence, updateSelection, addFinding, updateFinding,
     citationUpdates,reviewCitationUpdate,eligibility,reviewEligibility,exportEligibility,
+    riskOfBias,reviewRiskOfBias,exportRiskOfBias,
+    extraction,extractionSourceValues,reviewExtraction,exportExtraction,
+    extractionPublications,reviewExtractionPublication,exportExtractionPublication,
     compare, exportDossier, exportStream, reopen, reopenStream });
 }

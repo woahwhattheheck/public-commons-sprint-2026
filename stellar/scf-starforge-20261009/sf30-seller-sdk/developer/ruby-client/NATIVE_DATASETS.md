@@ -231,7 +231,9 @@ membership uses the following original identities:
 | --- | --- |
 | CKAN semantic dictionary | Catalog origin, package ID, resource ID |
 | OData semantic dictionary | Service URL, entity container, entity set |
-| Original room without a dictionary | The explicitly retained customer source key and native dataset name |
+| Superset semantic dictionary | Apache Superset provider/version, complete normalized server URL, chart ID/optional UUID, query ordinal, saved query-context and principal digests, selected result limit/offset |
+| Directus semantic dictionary | Directus provider/version, complete normalized server URL, collection, primary field, complete authenticated principal object and original source query |
+| Original room without a dictionary, including existing Baserow rooms | The explicitly retained customer source key and native dataset name |
 
 Every direct membership also includes `source_format=SF100_SCAN`, the customer
 `source_key`, original dataset name, exact `originalQueryHash` and ordered
@@ -247,6 +249,80 @@ stream binding. Rails separately retains tenant scope and the stable key mapping
 SF88 customer packets retain their existing membership object exactly: merchant
 contract digest, original operation ID, GET endpoint, selected query and fields.
 Previously saved SF88 stream hashes continue to match.
+
+### Superset and Directus source editions
+
+The direct receiver accepts the original producer contracts
+`stellar-forge.superset-semantics.v1` (Apache Superset 6.1) and
+`stellar-forge.directus-semantics.v1` (Directus 12.5). Receive them through the
+same original SF100 room and Python native receiver. The complete common
+receiving cohort is [PR2108](https://github.com/woahwhattheheck/public-commons-sprint-2026/pull/2108),
+merge `fd2a5be61f88c088bc128d17e061cdfd8a5bcec7`; its
+[receiving guide](../../../sf100-buyer-dataset-delivery/SEMANTIC_RECEIVING.md)
+describes the SF100 finalizer, SF88 page headers, Python dictionary loader and
+native MCP file adapter that accompany this Ruby reader.
+
+`delivery.membership.fetch("provider_source")` retains these exact shapes:
+
+~~~ruby
+# Superset
+{
+  "provider" => "apache-superset",
+  "protocol_version" => "6.1",
+  "server_url" => source.fetch("baseUrl"),
+  "chart_id" => source.fetch("chartId"),
+  "chart_uuid" => source.fetch("chartUuid"),
+  "query_ordinal" => source.fetch("queryOrdinal"),
+  "query_context_sha256" => source.fetch("queryContextSha256"),
+  "principal_sha256" => source.fetch("principalSha256"),
+  "row_limit" => semantics.fetch("query").fetch("rowLimit"),
+  "row_offset" => semantics.fetch("query").fetch("rowOffset")
+}
+
+# Directus
+{
+  "provider" => "directus",
+  "protocol_version" => "12.5",
+  "server_url" => source.fetch("baseUrl"),
+  "collection" => source.fetch("collection"),
+  "primary_field" => source.fetch("primaryField"),
+  "source_principal" => source.fetch("principal"),
+  "source_query" => source.fetch("query")
+}
+~~~
+
+The retained server URL includes any reverse-proxy prefix, for example
+`https://data.example.org/analytics/`. The original producer supplies its
+normalized URL; the customer checks that form and keeps the entire path.
+Superset numeric chart IDs, query ordinals and row limits remain integers, and
+an unspecified chart UUID or row limit remains null. Directus retains the
+complete original query object, including its selected fields, sort and any
+filter/window options. The original query/principal selection is therefore
+part of the logical resource stream. Directus keeps the producer's entire principal object, including any retained role/scope fields. A different authenticated source identity
+or source window requires its own reviewed stream binding.
+
+Capture timestamps, capture/schema hashes, dictionary definition/document
+hashes, physical snapshot and native manifest hashes remain in the edition's
+complete source binding and retained original files. Updated source values or
+attribution can be received as another edition of the same logical stream.
+The existing CKAN, OData, dictionary-free Baserow and SF88 membership objects
+keep their original shape.
+
+Superset pairs each native result column with its original presence column.
+Directus uses independently named value and state aliases, and its value cell
+contains the exact original JSON text. Keep the actual pair in the Rails
+mapping: `value`, `null` and `missing` are separate source states.
+The native receiver retains original field definitions, relations, source
+column ordinals/type codes and full raw rows with the edition. Application
+mapping remains explicit; the semantic dictionary does not choose a database
+column or coerce a Directus JSON number into a Ruby Float.
+
+Use the same complete commissioning, application export, copy and independent
+receive commands below for these source kinds. Choose a real finalized source
+room and its exact manifest, the existing customer source key, an explicit
+original key mapping and the original application operation. A completed
+customer package reopens with its own relative files after the source host
+is unavailable.
 
 ## Import into the original Rails application
 

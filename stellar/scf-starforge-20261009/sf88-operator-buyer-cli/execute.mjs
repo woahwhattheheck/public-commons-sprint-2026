@@ -1,7 +1,7 @@
 // MIT — SF88 privileged operator execution delegates to original source modules.
 import {stat,datasetStoragePath,datasetSourcePath} from './dataset-location.mjs';
 import { pathToFileURL } from 'node:url';
-import { OperatorApprovedBuyer, checkOperatorChannel } from '../sf81-buyer-operator-bridge/bridge.mjs';
+import * as operatorBridge from '../sf81-buyer-operator-bridge/bridge.mjs';
 import { executeWithEvidence } from '../sf82-checkout-evidence/evidence.mjs';
 import { prepareBuyerResponseFile } from '../sf31-buyer-client/response-file.mjs';
 import { createPublicHttpsFetch } from '../sf31-buyer-client/public-transport.mjs';
@@ -40,6 +40,22 @@ function logicalResponseFile(value) {
   return result;
 }
 
+/** Use this selected bridge's real channel API; older bridges retain terminal mode. */
+async function checkSelectedOperatorChannel(intentId, environment) {
+  if (typeof operatorBridge.checkOperatorChannel === 'function') {
+    // An explicitly selected browser channel must keep its original failure.
+    await operatorBridge.checkOperatorChannel(intentId, {environment});
+    return;
+  }
+  // A terminal-only retained helper cannot consume a browser decision. Reject
+  // either supplied setting instead of silently changing the selected channel.
+  need(environment.SF81_APPROVAL_SOCKET === undefined &&
+    environment.SF81_APPROVAL_TOKEN === undefined, 'OPERATOR_BROWSER_CHANNEL_UNSUPPORTED');
+  need(typeof operatorBridge.checkOperatorTerminal === 'function',
+    'OPERATOR_TERMINAL_PREFLIGHT_UNAVAILABLE');
+  await operatorBridge.checkOperatorTerminal(intentId);
+}
+
 export async function execute(cfg, { signal, emitSummary = true, environment = process.env,
   operationTicketSha256, evidenceRpcEndpoint } = {}) {
   need(signal === undefined || signal instanceof AbortSignal, 'INVALID_ABORT_SIGNAL');
@@ -62,7 +78,7 @@ export async function execute(cfg, { signal, emitSummary = true, environment = p
   const retainedBody=await readRequestBody(op);
   const body=retainedBody===undefined?undefined:Uint8Array.from(retainedBody);
   need(!signal?.aborted, 'OPERATOR_ABORTED');
-  await checkOperatorChannel(op.intentId, {environment});
+  await checkSelectedOperatorChannel(op.intentId, environment);
   need(!signal?.aborted, 'OPERATOR_ABORTED');
 
   let output, download, delivery, evidence, evidenceError, nativeResult, nativeError;
@@ -79,7 +95,7 @@ export async function execute(cfg, { signal, emitSummary = true, environment = p
       reserveFile:currentFileReservation()?.reserveFile,fetchImpl:createPublicHttpsFetch({
       trustedProxy:transport, timeoutMs:requestTimeoutMs,
     })});
-    const buyer = new OperatorApprovedBuyer({
+    const buyer = new operatorBridge.OperatorApprovedBuyer({
       operator: { ...owner, environment }, fetchImpl:wire.fetch,
     });
     need(!signal?.aborted, 'OPERATOR_ABORTED');

@@ -23,7 +23,7 @@ public final class Buyer {
     public Path stateDirectory() { return settings.state; }
 
     static final class Settings {
-        final Path runtime, state, bridge, profile;
+        final Path runtime, state, bridge, profile, callsDirectory;
         final String node;
         final Map<String, String> environment;
         final boolean approvalInput;
@@ -32,7 +32,7 @@ public final class Buyer {
         Settings(Builder b) {
             runtime = b.runtime; state = b.state;
             bridge = b.bridge == null ? runtime.resolve("go/bridge.mjs") : b.bridge;
-            profile = b.profile; node = b.node;
+            profile = b.profile; node = b.node; callsDirectory = b.callsDirectory;
             environment = b.environment == null ? null : Map.copyOf(b.environment);
             approvalInput = b.approvalInput;
             nativeTimeout = b.nativeTimeout; cleanupGrace = b.cleanupGrace; callTimeout = b.callTimeout;
@@ -41,7 +41,7 @@ public final class Buyer {
     }
     public static final class Builder {
         private final Path runtime, state;
-        private Path bridge, profile;
+        private Path bridge, profile, callsDirectory;
         private String node = "node";
         private Map<String, String> environment;
         private boolean approvalInput;
@@ -58,6 +58,8 @@ public final class Buyer {
         }
         public Builder bridge(Path path) { bridge = NativeCall.absolute(path); return this; }
         public Builder operatorProfile(Path path) { profile = NativeCall.absolute(path); return this; }
+        /** Existing IPC parent outside all selected acquisition and recovery source roots. */
+        public Builder callsDirectory(Path path) { callsDirectory = NativeCall.absolute(path); return this; }
         /** An explicit environment replaces inheritance. Values only enter the child environment. */
         public Builder environment(Map<String, String> values) { environment = Map.copyOf(values); return this; }
         /** Inherits the caller's real stdin for the original approval terminal. */
@@ -166,6 +168,14 @@ public final class Buyer {
         }
         return invoke("buyer.inspect-handoff", null, args);
     }
+    /** Opens the original acquisition workspace without creating state or running a command. */
+    public AcquisitionWorkspace acquisitions(Map<String, Object> workspaceOptions) {
+        return new AcquisitionWorkspace(this, workspaceOptions);
+    }
+    /** Archive verification and restoration can use a handle without a live workspace. */
+    public AcquisitionWorkspace acquisitions() { return acquisitions(Map.of()); }
+    /** Original recovery commands; constructing this handle leaves absent state absent. */
+    public WorkspaceRecovery workspaceRecovery() { return new WorkspaceRecovery(this); }
     public Inbox inbox(Path directory) { return new Inbox(this, NativeCall.absolute(directory)); }
     public Inbox createInbox(Path directory) throws IOException {
         Inbox value = inbox(directory);

@@ -39,8 +39,9 @@ async function host(name,processingEnabled=true){
 }
 async function cli(args,{code=0}={}){
  let stdout='',stderr='';const actual=await runStacWorkspaceCLI(args,{stdout:value=>{stdout+=value;},stderr:value=>{stderr+=value;}});
- assert.equal(actual,code,stderr);
- return stdout.trim()?JSON.parse(stdout.trim()):{stderr};
+ const result=stdout.trim()?JSON.parse(stdout.trim()):{stderr};
+ if(actual!==code)throw Object.assign(new Error('Original STAC CLI '+args[0]+' returned '+actual),{code:'STAC_RECEIVING_CLI_RESULT',command:args[0],nativeResult:result,stderr});
+ return result;
 }
 async function complete(client,job){if(job.status==='RUNNING')job=await client.wait(job.id,{timeoutMs:30000,intervalMs:20});assert.equal(job.status,'COMPLETE',JSON.stringify(job));return job;}
 async function chunkFile(adapter,selection){
@@ -138,8 +139,8 @@ try{
  assert.equal(waitCode,'STAC_CLIENT_WAIT_EXPIRED');assert(performance.now()-began<1000);
  await stage('host-restart-identity-operation-and-wait',{workspaceId:beforeId,recentJobAfterRestart:recoveredOp.recentJob,retainedProcessingOperation:recoveredOp.processing,waitCode,waitElapsedMs:Math.round(performance.now()-began)});
  const disconnected=await adapter.call('merchant_stac_disconnect',{workspace:'imagery'});assert.equal(disconnected.client,'DISCONNECTED');assert.equal((await client.state()).workspace.id,beforeId);
- progress.status='COMPLETE';progress.completedAt=new Date().toISOString();progress.sourceMode='original-retained-handover';progress.maxRssKiB=process.resourceUsage().maxRSS;
+ delete progress.error;progress.status='COMPLETE';progress.completedAt=new Date().toISOString();progress.sourceMode='original-retained-handover';progress.maxRssKiB=process.resourceUsage().maxRSS;
  progress.sourcePin=process.argv[5];await put(progressPath,progress);await put(join(root,'result.json'),progress);
  process.stdout.write(JSON.stringify({status:progress.status,stages:progress.stages.length,sourceMode:progress.sourceMode,maxRssKiB:progress.maxRssKiB})+'\n');
-}catch(error){progress.status='INTERRUPTED';progress.error={code:error.code??error.name,message:error.message,stack:error.stack};await put(progressPath,progress);process.stderr.write(JSON.stringify(progress.error)+'\n');process.exitCode=1;}
+}catch(error){progress.status='INTERRUPTED';progress.error={code:error.code??error.name,message:error.message,stack:error.stack,...(error.command?{command:error.command}:{}),...(error.nativeResult?{nativeResult:error.nativeResult}:{}),...(error.stderr?{stderr:error.stderr}:{})};await put(progressPath,progress);process.stderr.write(JSON.stringify(progress.error)+'\n');process.exitCode=1;}
 finally{for(const a of adapters)await a.close().catch(()=>{});for(const c of clients)c.close();for(const h of hosts.reverse())await h.close().catch(()=>{});}

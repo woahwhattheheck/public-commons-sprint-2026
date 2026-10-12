@@ -1,0 +1,5 @@
+{
+  "apiPath": "/api/receivables",
+  "uiPath": "/receivables",
+  "requestBytes": 2000000
+}

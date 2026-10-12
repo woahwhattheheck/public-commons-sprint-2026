@@ -156,7 +156,7 @@ function renderQuery(definition, saved) {
       });
       useLabel.append(use); wrapper.append(useLabel);
     }
-    if (spec.nullable || nativeSubscription) {
+    if (spec.nullable) {
       const nullLabel = node('label', 'Use NULL '), box = document.createElement('input');
       box.type = 'checkbox'; box.dataset.nullParameter = name; box.checked = value === null;
       box.addEventListener('change', () => { input.disabled = box.checked || wrapper.querySelector('[data-use-parameter]')?.checked === false; inputChanged(); });
@@ -412,6 +412,7 @@ schedulePanel = createSchedulePanel({ api, action, notice, context: () => state,
     $('candidate').scrollIntoView({ behavior: 'smooth', block: 'start' });
   } });
 export const publisherHost = Object.freeze({ api, action, notice, refresh, newPlan:freshPlan, context:()=>state,
+  async openPlan(id) { await choosePlan(id);$('configuration').scrollIntoView({behavior:'smooth',block:'start'}); },
   async openRun(id) { state.selected=id;state.detailVersion=null;state.offer=null;await loadRun(true);renderLists();buttons(); }
 });
 await action(async () => { await freshPlan(); await refresh(); });

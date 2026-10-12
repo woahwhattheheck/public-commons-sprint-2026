@@ -1,0 +1,48 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "frictionless-source-workspace",
+  "description": "Complete original Frictionless intake, immutable source editions, native review, publisher selection and resumable source receiving",
+  "commands": {
+    "frictionless-agent": "stellar-forge/mcp-merchant-operator/frictionless-workspace-setup.mjs",
+    "frictionless-source": "stellar/scf-starforge-20261009/sf30-seller-sdk/frictionless/workbench/cli.mjs"
+  },
+  "commandDescriptions": {
+    "frictionless-agent": "Open the original Frictionless source workbench, publisher and MCP owner through installed Applications.",
+    "frictionless-source": "Inspect, capture, review, select and receive complete source editions through the existing merchant client."
+  },
+  "exports": {
+    "./seller/frictionless/workbench": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/frictionless/workbench/model.mjs",
+    "./seller/frictionless/workbench/contracts": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/frictionless/workbench/contracts.mjs",
+    "./seller/frictionless/workbench/server": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/frictionless/workbench/server.mjs",
+    "./seller/frictionless/plan": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/frictionless/plan.mjs",
+    "./merchant/mcp/frictionless": "./source/stellar-forge/mcp-merchant-operator/frictionless-workspace.mjs",
+    "./merchant/mcp/frictionless/config": "./source/stellar-forge/mcp-merchant-operator/frictionless-workspace-config.mjs",
+    "./merchant/mcp/frictionless/client": "./source/stellar-forge/mcp-merchant-operator/frictionless-workspace-client.mjs",
+    "./merchant/mcp/frictionless/launcher": "./source/stellar-forge/mcp-merchant-operator/frictionless-workspace-setup.mjs",
+    "./merchant/mcp/frictionless/provider": "./source/stellar-forge/mcp-merchant-operator/providers/frictionless-workspaces.mjs"
+  },
+  "supportFiles": [
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/frictionless/workbench/README.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/frictionless/workbench/RECEIVING.md",
+    "stellar-forge/mcp-merchant-operator/FRICTIONLESS_WORKSPACE.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/frictionless/README.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/frictionless/package.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/frictionless/parquet.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/wherobots/source/wherobots_operator/__init__.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/wherobots/source/wherobots_operator/editions.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/wherobots/source/wherobots_operator/storage.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/wherobots/source/requirements.txt"
+  ],
+  "browserAssets": [
+    {
+      "server": "stellar/scf-starforge-20261009/sf30-seller-sdk/frictionless/workbench/server.mjs",
+      "manifest": "stellar/scf-starforge-20261009/sf30-seller-sdk/frictionless/workbench/browser-assets.json"
+    }
+  ],
+  "applicationProviders": {
+    "frictionless-agent": "stellar/scf-starforge-20261009/distribution/runtime-workspace/providers/frictionless-workspace.mjs"
+  },
+  "merchantProviders": {
+    "frictionless-workspaces": "stellar-forge/mcp-merchant-operator/providers/frictionless-workspaces.mjs"
+  }
+}

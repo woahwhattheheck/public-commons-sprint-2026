@@ -236,3 +236,10 @@ Stop the owner before backing up the full private workspace. Keep the complete
 source release and installed runtime used by that workspace with its backup.
 The selected distribution and operating guide preserve the original source and
 package identities for installation, receiving and later upgrades.
+
+## Continue the complete native case through Applications
+
+Use [MANAGED_WORKBENCH.md](MANAGED_WORKBENCH.md) and its complete installed operator
+to adopt the original finished native workbench, receive both complete captures and
+all differences through MCP, inspect both published editions and original buyer,
+stop, and reopen the same saved application in a second managed process.

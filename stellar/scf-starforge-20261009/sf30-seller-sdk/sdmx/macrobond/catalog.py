@@ -294,7 +294,7 @@ class Catalog:
             frequency = row["dimensions"].get("FREQ", "")
             frequencies.add(frequency)
             attrs = row["attributes"]
-            units.add(attrs.get("UNIT", ""))
+            units.add(attrs.get("UNIT", row["dimensions"].get("UNIT_MEASURE", "")))
             multipliers.add(attrs.get("UNIT_MULT", ""))
             decimals.add(attrs.get("DECIMALS", ""))
             stamp, number = None, None
@@ -351,6 +351,8 @@ class Catalog:
             "calendar": "Explicit source period anchors; the client may insert missing calendar periods.",
             "history": "Customer catalog publications; original source editions remain attached.",
         }
+        if "UNIT" not in first["attributes"] and "UNIT_MEASURE" in first["dimensions"]:
+            provenance["unit_component"] = "dimension:UNIT_MEASURE"
         metadata = {"PrimName": ident, "Description": flow + " / " + key,
                     "Frequency": FREQUENCIES.get(frequency, ""), "StartDate": first_date,
                     "EndDate": last_date,

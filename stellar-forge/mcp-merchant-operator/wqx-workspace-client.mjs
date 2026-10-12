@@ -171,6 +171,9 @@ export class WqxWorkspaceClient {
     object(args,'Input status'); identifier(args.inputId,'inputId');
     return inputState(await this.call('merchant_wqx_input_status',args,options),args);
   }
+  concentrationUnits(args, options) { return this.call('merchant_wqx_concentration_units',args,options); }
+  concentrationPrepare(args, options) { return this.call('merchant_wqx_concentration_prepare',args,options); }
+  concentrationReport(args, options) { return this.call('merchant_wqx_concentration_report',args,options); }
   async tableExport(args, options) { return validateWqxFile(await this.call('merchant_wqx_table_export',args,options)); }
   tableImport(args, options) { return this.call('merchant_wqx_table_import',args,options); }
   decisionsPreview(args, options) { return this.call('merchant_wqx_decisions_preview',args,options); }

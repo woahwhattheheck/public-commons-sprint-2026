@@ -1,4 +1,4 @@
-# Receive acquired datasets into PostgreSQL
+# Receive acquired and approved datasets into PostgreSQL
 
 Use an original completed SF88 acquisition and its SF100 delivery in a customer
 application's PostgreSQL database. The receiver loads all rows as one retained
@@ -9,7 +9,9 @@ view with its existing application tables.
 The Python entry points are `Column`, `DatasetMapping`, `PostgresWarehouse`
 and `review_delivery` from `stellar_forge_buyer.postgres_delivery`. The
 installed command is `stellar-forge-postgres`. Acquisition and delivery use the
-existing [dataset workflow](DATASETS.md).
+existing [dataset workflow](DATASETS.md). The same warehouse also receives accepted
+ODK Central commissioning outputs and exports complete comparisons between
+reporting periods; those workflows are documented below.
 
 ## Install and connect
 
@@ -681,3 +683,191 @@ Primary implementation contracts: [Psycopg COPY](https://www.psycopg.org/psycopg
 [PostgreSQL numeric types](https://www.postgresql.org/docs/current/datatype-numeric.html)
 and [PostgreSQL view replacement](https://www.postgresql.org/docs/current/sql-createview.html).
 
+
+
+## Accepted ODK Central reporting periods
+
+The same warehouse receives accepted datasets from the original ODK Central
+commissioning workspace. Select its retained commissioning delivery, approved
+dataset and period 0 or 1 in the Central application. The application retains
+the actual selection's approval and invokes this receiver through its existing
+private PostgreSQL profile.
+
+The approval binds the original workspace, commissioning definition and
+agreement, selected period/capture/table, issued acceptance review, export,
+approved field projection and every native export-file receipt. Paths remain
+relative to the selected current Central workspace. The receiver verifies the
+complete export, derives SQL rows from the approved `dataset.csv` value/state
+projection, and retains that projection with its original CSV, configuration,
+source descriptor, table schema, capture manifest and field dictionary inside
+the operator directory. Full capture JSONL, pages, forms and media remain in
+the original Central delivery and are bound by their original receipts.
+
+### Original receiving commands
+
+Initialize a new dedicated schema with the existing `init` command once, or
+reopen its original warehouse ID. Global connection options appear before the
+subcommand. Use the actual approval path and its SHA-256 retained by the
+original Central Store:
+
+```sh
+stellar-forge-postgres --schema field_reporting \
+  --expect-warehouse "$WAREHOUSE_ID" \
+  central-inspect --workspace /srv/customer/postgres-operator \
+  --approval "$APPROVAL_PATH" --expected-approval-sha256 "$APPROVAL_SHA256" \
+  --source-workspace /srv/customer/central
+```
+
+Inspection returns every physical value/state field, a suggested full SQL
+mapping, original dictionary and complete row count. Review its complete
+`mapping` object and save it as a private JSON file:
+
+```sh
+stellar-forge-postgres --schema field_reporting \
+  --expect-warehouse "$WAREHOUSE_ID" \
+  central-review --workspace /srv/customer/postgres-operator \
+  --approval "$APPROVAL_PATH" --expected-approval-sha256 "$APPROVAL_SHA256" \
+  --source-workspace /srv/customer/central \
+  --mapping /srv/customer/reviewed-postgres-mapping.json \
+  --reviewer "Reporting operator" --note "Reviewed reporting-period output" \
+  --review-id "$REVIEW_ID"
+
+stellar-forge-postgres --schema field_reporting \
+  --expect-warehouse "$WAREHOUSE_ID" \
+  central-import --workspace /srv/customer/postgres-operator \
+  --review-id "$REVIEW_ID" --request-id "$IMPORT_REQUEST_ID"
+```
+
+`REVIEW_ID` and `IMPORT_REQUEST_ID` are separately retained 32-character
+lowercase hexadecimal IDs chosen before execution. The review retains the
+complete source/mapping/reviewer/note intent before publishing either saved
+member. The same ID and inputs reopen the original immutable review; a changed
+intent requires a new ID. Read the original review after a lost response with:
+
+```sh
+stellar-forge-postgres --schema field_reporting \
+  --expect-warehouse "$WAREHOUSE_ID" \
+  review-record --workspace /srv/customer/postgres-operator \
+  --review-id "$REVIEW_ID"
+```
+
+Every physical field must remain mapped and the ordered native key fields must
+remain the receiving keys. The suggested mapping retains native Int64 and
+Decimal values as exact text; deliberate compatible numeric mappings remain
+available through the original SQL mapping review. Null, missing and present
+values retain their separate original state columns. A present non-string
+value cannot be an empty nullable CSV cell.
+
+A saved Central review reopens its managed manifest beside the projection and
+retained original companions. Reopening verifies all original companion bytes
+and applies the same complete metadata validation as initial preparation, using
+the retained operator source after a former export directory has moved.
+
+## Complete period report exports
+
+In the PostgreSQL browser, **Compare editions** includes a **Complete period
+report** form. Select two retained editions, enter their actual period labels
+and a title, then create the report. Its saved operation remains in
+**Operations**. **Download complete report** retrieves the original ZIP. A
+browser with a file save picker streams directly to the selected file; other
+browsers use the standard download.
+
+The command interface accepts exactly six selection fields:
+
+```json
+{
+  "schema": "stellar-forge.postgres-period-selection.v1",
+  "previous_version": "64-character original previous edition ID",
+  "current_version": "64-character original current edition ID",
+  "previous_label": "Actual previous period label",
+  "current_label": "Actual current period label",
+  "title": "Reporting period comparison"
+}
+```
+
+Replace the explanatory edition strings with the complete IDs from the
+original imports. Retain a new 32-character lowercase hexadecimal report
+request ID before executing:
+
+```sh
+stellar-forge-postgres --schema field_reporting \
+  --expect-warehouse "$WAREHOUSE_ID" \
+  period-report --workspace /srv/customer/postgres-operator \
+  --selection /srv/customer/period-selection.json \
+  --request-id "$REPORT_REQUEST_ID"
+```
+
+The original operator request's `result.artifact` contains the ZIP's current
+private `path`, `bytes`, `sha256` and `filename`. Its `result.report` contains
+the selected periods, full row counts, original keys, complete change totals
+and field-meaning changes.
+
+The existing local HTTP application exposes these routes:
+
+| Route | Operation |
+| --- | --- |
+| `POST /api/period-reports` | Create or recover with `{selection, request_id}` |
+| `GET /api/requests/<request_id>` | Read the original saved request |
+| `POST /api/requests/<request_id>/resume` | Resume that same request |
+| `GET` or `HEAD /api/period-reports/<request_id>/archive` | Retrieve the completed ZIP |
+
+These routes use the existing local connection and capability. Central invokes
+the original command profile and streams the result through its own existing
+authenticated application download.
+
+### Complete ZIP contents
+
+| File | Contents |
+| --- | --- |
+| `report.html` | Readable report, full totals and field-meaning changes |
+| `report.json` | Selected periods, edition identities, totals and warehouse snapshot |
+| `previous/dataset.jsonl` and `current/dataset.jsonl` | Every original row in retained order; exact original bytes and SHA-256 checked |
+| `previous/columns.csv` and `current/columns.csv` | Every typed SQL row with its original ordinal |
+| `changes.jsonl` and `changes.csv` | Every added, removed and changed row with original before/after objects |
+| `previous/edition.json` and `current/edition.json` | Complete retained edition records |
+| `previous/mapping.json` and `current/mapping.json` | Complete reviewed mappings and keys |
+| `previous/manifest.json` and `current/manifest.json` | Exact original source manifests |
+| `previous/semantics.json` and `current/semantics.json` | Exact original dictionaries when present |
+| `meaning-changes.json` | Complete field-definition, capture and mapping comparison |
+| `comparison.sql` | Actual SQL queries used for the export |
+| `README.md` | Encoding, comparison and receiving instructions |
+| `manifest.json` | Byte counts and SHA-256 for every other member |
+
+Every CSV cell is one JSON value, including headers. Read CSV first, then
+JSON-decode each cell. This preserves SQL NULL, empty strings, literal strings,
+exact Decimal tokens, dates and timestamps distinctly. Formula-like strings
+remain quoted data. The included guide supplies the streaming Python reader
+with `Decimal`.
+
+### Comparison and interruption recovery
+
+Both editions require the same ordered reviewed source keys and matching SQL
+key types. SQL aliases and other fields may differ. Rows join by those source
+keys. Adding/removing a source field or changing its SQL type marks matched
+rows changed. Other fields use PostgreSQL `IS DISTINCT FROM`; explicitly mapped
+JSON scalars compare retained JSON text. Field definitions and mappings are
+also compared independently of row values.
+
+All database reads occur in one read-only repeatable-read transaction on the
+original warehouse. Named cursors fetch small batches and write each archive
+member directly, keeping both full periods out of application memory. Original
+JSONL exports must match the immutable editions' exact byte counts and hashes.
+Join totals must reconcile to both complete row counts.
+
+The complete selection is retained before SQL execution. The ZIP is published
+only after completion. Resuming after a lost response verifies and returns that
+same archive; a missing result record is reconstructed from the complete ZIP.
+Changed selections require another request ID. Restoring the same operator
+directory can relocate the artifact while preserving report identity and bytes.
+
+```sh
+stellar-forge-postgres --schema field_reporting \
+  --expect-warehouse "$WAREHOUSE_ID" \
+  operation --workspace /srv/customer/postgres-operator \
+  --request-id "$REPORT_REQUEST_ID"
+
+stellar-forge-postgres --schema field_reporting \
+  --expect-warehouse "$WAREHOUSE_ID" \
+  resume --workspace /srv/customer/postgres-operator \
+  --request-id "$REPORT_REQUEST_ID"
+```

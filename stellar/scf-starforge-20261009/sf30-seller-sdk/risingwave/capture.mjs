@@ -1,5 +1,5 @@
 // MIT. Complete native subscription captures and closed, portable dataset editions.
-import { open, copyFile, lstat, rename, mkdir } from 'node:fs/promises';
+import { open, copyFile, lstat, rename, mkdir, readdir } from 'node:fs/promises';
 import { constants } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
@@ -11,6 +11,7 @@ import { bindRisingWaveParameters, validateNativeColumns } from './declaration.m
 import { inspectQuerySource, columnsSignature } from './catalogue.mjs';
 import { declareRisingWaveCursor, fetchRisingWaveCursor, closeRisingWaveCursor } from './cursor.mjs';
 import { RisingWaveMirror } from './mirror.mjs';
+import { recoverEventLog } from './event-log.mjs';
 export const CAPTURE_FILES=Object.freeze({json:'data.json',ndjson:'data.ndjson',csv:'data.csv',events:'events.ndjson',
   checkpoint:'checkpoint.json',state:'state.sqlite',manifest:'capture.json'});
 const EXTRACTION_FIELDS=['mode','onGap','maxRows','maxBytes','maxRowBytes','batchSize','timeoutSeconds','maxDurationMs','timeoutMs'];
@@ -69,7 +70,8 @@ export async function readRisingWaveCapture(directory,{expectedManifestSha256}={
   const checkpoint=await readJson(join(directory,CAPTURE_FILES.checkpoint)),meta=mirrorMeta(join(directory,CAPTURE_FILES.state));
   if(checkpoint.complete!==true||checkpoint.rawBindingHash!==manifest.rawBindingHash||checkpoint.rows!==manifest.sourceRowCount||
       identity(checkpoint)!==identity(manifest.checkpoint)||meta.rawBindingHash!==manifest.rawBindingHash||meta.complete!==true||
-      meta.captureBinding!==manifest.requestHash||meta.eventOffset!==checkpoint.eventOffset)
+      meta.captureBinding!==manifest.requestHash||meta.eventOffset!==checkpoint.eventOffset||
+      identity(meta.eventRecoveries??[])!==identity(manifest.eventRecoveries??[]))
     throw fail('RISINGWAVE_CAPTURE_CHECKPOINT_CHANGED');
   files.manifest=manifestFile;
   return {directory,manifest,files};
@@ -106,7 +108,8 @@ async function finishRestart(directory,intent){
   if(journal.phase==='DONE'&&intent.archives?.some(item=>item.id===journal.id))return;
   const destination=contained(directory,journal.destination);await privateDirectory(destination,true);
   for(const entry of journal.files){
-    const old=contained(directory,entry.path),target=join(destination,entry.path);
+    const old=contained(directory,entry.path),target=contained(destination,entry.path);
+    await privateDirectory(dirname(target),true);
     if(await exists(old)){
       const original=await fileInfo(old,entry.path);
       if(original.sha256!==entry.sha256||original.bytes!==entry.bytes)throw fail('RISINGWAVE_RESTART_SOURCE_CHANGED');
@@ -120,18 +123,29 @@ async function finishRestart(directory,intent){
   if(journal.phase!=='DONE')await atomicJson(path,{...journal,phase:'DONE',completedAt:now()});
   intent.archives??=[];
   if(!intent.archives.some(item=>item.id===journal.id)){
-    intent.archives.push({id:journal.id,directory:journal.destination,reason:journal.reason,files:journal.files});
+    intent.archives.push({id:journal.id,directory:journal.destination,reason:journal.reason,files:journal.files,
+      eventRecoveries:journal.eventRecoveries??[]});
+    intent.eventRecoveries=[];
     await atomicJson(join(directory,'intent.json'),intent);
   }
 }
 async function restartCapture(directory,intent,reason){
   await finishRestart(directory,intent);
   const files=[];
-  for(const filename of ['state.sqlite','state.sqlite-journal','state.seed.sqlite','events.ndjson','checkpoint.json','data.json','data.ndjson','data.csv']){
+  for(const filename of ['state.sqlite','state.sqlite-journal','state.seed.sqlite','events.ndjson','event-recovery.json','checkpoint.json','data.json','data.ndjson','data.csv']){
     if(await exists(join(directory,filename)))files.push(await fileInfo(join(directory,filename),filename));
   }
+  try{
+    await privateDirectory(join(directory,'event-recovery'));
+    for(const item of await readdir(join(directory,'event-recovery'),{withFileTypes:true})){
+      if(!item.isFile()||!/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}\.bin$/.test(item.name))
+        throw fail('RISINGWAVE_EVENT_RECOVERY_INVALID');
+      const filename='event-recovery/'+item.name;files.push(await fileInfo(contained(directory,filename),filename));
+    }
+  }catch(issue){if(issue.code!=='ENOENT')throw issue;}
   const id=randomUUID(),destination='attempts/'+id;
-  await atomicJson(join(directory,'restart.json'),{schema:'stellar-forge.risingwave-capture-restart.v1',id,destination,phase:'PREPARED',reason,files,at:now()});
+  await atomicJson(join(directory,'restart.json'),{schema:'stellar-forge.risingwave-capture-restart.v1',id,destination,phase:'PREPARED',reason,files,
+    eventRecoveries:intent.eventRecoveries??[],at:now()});
   await finishRestart(directory,intent);
 }
 function rawBinding(nativeIdentity,query){
@@ -162,12 +176,24 @@ async function outputWriter(path,budget){
     }
   };
 }
+async function localRecoveryBytes(directory,intent){
+  let total=0;
+  for(const receipt of intent.eventRecoveries??[]){
+    if(typeof receipt?.id!=='string'||receipt.captureId!==intent.id||receipt.requestHash!==intent.requestHash||
+        receipt.localRawCopy?.path!=='event-recovery/'+receipt.id+'.bin')throw fail('RISINGWAVE_EVENT_RECOVERY_INVALID');
+    const observed=await fileInfo(contained(directory,receipt.localRawCopy.path),receipt.localRawCopy.path);
+    if(observed.bytes!==receipt.source.bytes||observed.sha256!==receipt.source.sha256)throw fail('RISINGWAVE_EVENT_RECOVERY_CHANGED');
+    total+=observed.bytes;
+  }
+  return total;
+}
 async function materialize(directory,intent,mirror,nativeIdentity,query,input,options,notify,signal){
   const checkpoint=mirror.checkpoint();
   if(!checkpoint.complete||checkpoint.pendingDeltas)throw fail('RISINGWAVE_COMPLETE_MIRROR_REQUIRED');
   await notify('MATERIALIZING',{checkpoint,barrier:checkpoint.barrier});
   const stateStat=await lstat(join(directory,'state.sqlite')),eventStat=await lstat(join(directory,'events.ndjson'));
-  const budget={used:stateStat.size+eventStat.size,max:options.maxBytes};
+  const recoveryBytes=await localRecoveryBytes(directory,intent);
+  const budget={used:stateStat.size+eventStat.size+recoveryBytes,max:options.maxBytes};
   const outputs={},columns=Object.keys(query.columns);
   const columnTypes=columns.map(name=>{
     const spec=query.columns[name],field=nativeIdentity.relation.columns.find(value=>value.name===spec.column);
@@ -207,8 +233,8 @@ async function materialize(directory,intent,mirror,nativeIdentity,query,input,op
     baseCapture:intent.baseCapture??null,events:{received:checkpoint.events-(intent.baseCounters?.events??0),
       applied:checkpoint.appliedEvents-(intent.baseCounters?.appliedEvents??0),replayed:checkpoint.replayedEvents-(intent.baseCounters?.replayedEvents??0),
       cumulative:checkpoint.events},gap:intent.gap??null,archives:intent.archives??[],
-    createdAt:intent.createdAt,completedAt:now(),files};
-  const total=Object.values(files).reduce((sum,file)=>sum+file.bytes,0)+bytes(manifest).length;
+    eventRecoveries:intent.eventRecoveries??[],createdAt:intent.createdAt,completedAt:now(),files};
+  const total=Object.values(files).reduce((sum,file)=>sum+file.bytes,0)+bytes(manifest).length+recoveryBytes;
   if(total>options.maxBytes)throw fail('RISINGWAVE_CAPTURE_BYTE_LIMIT');
   await atomicJson(join(directory,CAPTURE_FILES.manifest),manifest);
   const result={directory,manifest,files:{...files,manifest:await fileInfo(join(directory,CAPTURE_FILES.manifest),CAPTURE_FILES.manifest)}};
@@ -338,20 +364,20 @@ export async function captureRisingWave(context,name,input={},supplied={}){
             intent.baseCounters=counters;
             mirror.db.exec('BEGIN IMMEDIATE');
             try{
-              mirror.set('captureBinding',requestHash);mirror.set('sourceIdentity',nativeIdentity);mirror.set('eventOffset',0);
+              mirror.set('captureBinding',requestHash);mirror.set('sourceIdentity',nativeIdentity);mirror.set('eventOffset',0);mirror.set('eventRecoveries',[]);
               mirror.set('complete',false);mirror.db.exec('COMMIT');
             }catch(issue){mirror.db.exec('ROLLBACK');throw issue;}
           }
           intent.effectiveMode=mode;
           await atomicJson(join(directory,'intent.json'),intent);
           eventsFile=await open(join(directory,'events.ndjson'),constants.O_RDWR|constants.O_APPEND|constants.O_CREAT|(constants.O_NOFOLLOW??0),0o600);
-          let offset=(await eventsFile.stat()).size;
-          const committed=mirror.get('eventOffset')??0;
-          if(committed>offset)throw fail('RISINGWAVE_EVENT_LOG_TRUNCATED');
+          const recovered=await recoverEventLog({directory,file:eventsFile,mirror,intent,maxBytes:options.maxBytes});
+          let offset=recovered.offset;
+          const committed=offset,recoveryBytes=await localRecoveryBytes(directory,intent);
           async function frame(value){
             const data=Buffer.from(JSON.stringify(value)+'\n');
             if(data.length>Math.max(options.maxRowBytes*options.batchSize,1048576)+16777216)throw fail('RISINGWAVE_EVENT_FRAME_TOO_LARGE');
-            if(offset+data.length+(await lstat(join(directory,'state.sqlite'))).size>options.maxBytes)throw fail('RISINGWAVE_CAPTURE_BYTE_LIMIT');
+            if(offset+data.length+(await lstat(join(directory,'state.sqlite'))).size+recoveryBytes>options.maxBytes)throw fail('RISINGWAVE_CAPTURE_BYTE_LIMIT');
             await writeAll(eventsFile,data);await eventsFile.sync();offset+=data.length;return offset;
           }
           await frame({schema:'stellar-forge.risingwave-event-session.v1',at:now(),capture:intent.id,requestHash,

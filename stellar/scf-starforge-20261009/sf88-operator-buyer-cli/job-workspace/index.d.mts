@@ -66,8 +66,8 @@ export interface JobWorkspace {
   reconcile(id: string): Promise<JobEntry>;
   update(id: string, options: {expectedRevision: number; label?: string; archived?: boolean}): Promise<JobEntry>;
   start(id: string, options?: {kind?: CustomerTask['kind']; deadlineMs?: number; pollMs?: number}): Promise<JobEntry>;
-  cancel(id: string): Promise<JobEntry>;
-  wait(id: string): Promise<JobEntry>;
+  cancel(id: string, options?: {taskId?: string}): Promise<JobEntry>;
+  wait(id: string, options?: {taskId?: string}): Promise<JobEntry>;
   scan(options?: {signal?: AbortSignal; onProgress?: (progress: NonNullable<ReturnType<Library['status']>['activity']>) => void}): Promise<Scan>;
   status(): WorkspaceStatus;
   close(): Promise<void>;
@@ -185,7 +185,7 @@ export interface JobCheckout {
   decideApproval(id: string, decision: CheckoutApprovalDecision): Promise<{checkout: CheckoutEntry; approval: CheckoutApproval}>;
   start(id: string, options: {kind?: CheckoutTask['kind']; expectedRevision: number}): Promise<CheckoutEntry>;
   cancel(id: string, options?: {taskId?: string}): Promise<CheckoutEntry>;
-  wait(id: string): Promise<CheckoutEntry>;
+  wait(id: string, options?: {taskId?: string}): Promise<CheckoutEntry>;
   close(): Promise<void>;
 }
 export interface JobWorkspaceLaunch {

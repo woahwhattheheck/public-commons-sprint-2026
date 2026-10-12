@@ -3,6 +3,7 @@ import {mountTermsEditor} from './terms-editor.mjs';
 import {mountWorkspaceFiles} from './workspace-files.mjs';
 import {decodeSource, sourceDigest} from './workspace-file.mjs';
 import {mountCaseDesk} from './case-desk.mjs';
+import {mountCasePackageDesk} from './case-package-desk.mjs';
 import {mountHandoffDesk} from './handoff-desk.mjs';
 import {mountIncidentDesk} from './incident-desk.mjs';
 import {mountRuntimeDesk} from './runtime-desk.mjs';
@@ -17,6 +18,7 @@ let serviceDesk = null;
 let currentServiceRecord = createServiceRecord();
 let commissioningDesk = null;
 let sourceBundlePanel = null;
+let casePackageDesk = null;
 
 const $ = id => document.getElementById(id);
 const form = $('intake-form');
@@ -497,6 +499,7 @@ const emptyTermsDraft = termsEditor.readDraft();
 const workspaceRoot = document.createElement('div');
 const caseRoot = document.createElement('div');
 const handoffRoot = document.createElement('section');
+const casePackageRoot = document.createElement('section');
 const incidentRoot = document.createElement('section');
 const runtimeRoot = document.createElement('section');
 const serviceRoot = document.createElement('section');
@@ -510,6 +513,7 @@ portableFiles.append(portableSummary,workspaceRoot);
 $('diagnose').before(caseRoot,incidentRoot,handoffRoot,portableFiles);
 $('review').before(runtimeRoot);
 commissioningRoot.after(serviceRoot);
+serviceRoot.after(casePackageRoot);
 const sourceText = value => new TextDecoder('utf-8', {fatal: true, ignoreBOM: true}).decode(decodeSource(value));
 const isRecord = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 function checkDisplayReport(report, kind) {
@@ -656,7 +660,7 @@ caseDesk = mountCaseDesk({root:caseRoot,readState:readCase,
   applySupport:(text,review)=>{runtimeDesk.apply(text,review);syncSources();},
   onDraftChange:()=>{runtimeDesk.inputsChanged();invalidateWorkorder();},
   onNameChange:name=>portable.setName(name),
-  onCurrentCaseChange:()=>{void sourceBundlePanel?.caseChanged().catch(()=>{});}});
+  onCurrentCaseChange:()=>{void sourceBundlePanel?.caseChanged().catch(()=>{});casePackageDesk?.refreshCase();}});
 sourceBundlePanel=mountSourceBundlePanel({root:commissioningDesk.sourceRoot,
   getCase:()=>{
     const selected=caseDesk.deliveryContext();
@@ -679,11 +683,33 @@ commissioningDesk.configureSourceDelivery({fileUrl:async original=>{
   return result;
 }});
 window.addEventListener('pagehide',event=>{if(!event.persisted)sourceBundlePanel.close();});
+casePackageDesk=mountCasePackageDesk({root:casePackageRoot,
+  caseContext:()=>caseDesk.deliveryContext(),saveCase:()=>caseDesk.saveForDelivery(),
+  onOpenCase:id=>caseDesk.openSavedCase(id)});
+window.addEventListener('pagehide',event=>{if(!event.persisted)casePackageDesk.destroy();});
 mountHandoffDesk({root:handoffRoot,onOpenCase:id=>caseDesk.openSavedCase(id)});
 mountIncidentDesk({root:incidentRoot,exportCase:()=>caseDesk.exportSnapshot(),
   importCase:(state,files)=>caseDesk.importWorkspace(state,files)});
 for (const event of ['input','change']) document.querySelector('main').addEventListener(event,e=>{
-  if (caseRoot.contains(e.target) || incidentRoot.contains(e.target) || handoffRoot.contains(e.target) || workspaceRoot.contains(e.target) || runtimeRoot.contains(e.target) || serviceRoot.contains(e.target) || commissioningRoot.contains(e.target) ||
+  if (caseRoot.contains(e.target) || incidentRoot.contains(e.target) || handoffRoot.contains(e.target) || casePackageRoot.contains(e.target) || workspaceRoot.contains(e.target) || runtimeRoot.contains(e.target) || serviceRoot.contains(e.target) || commissioningRoot.contains(e.target) ||
       ['permission','post-permission'].includes(e.target.id)) return;
   caseDesk.changed({user:true});
+});
+
+async function openLinkedCase() {
+  const url = new URL(location.href);
+  const selected = url.searchParams.getAll('case');
+  if (selected.length === 0) return;
+  if (selected.length !== 1 ||
+      !/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/.test(selected[0]))
+    throw new TypeError('The case link must name one saved case UUID.');
+  const id = selected[0];
+  const opened = await caseDesk.openSavedCase(id);
+  if (!opened || caseDesk.currentCase()?.id !== id) return;
+  const destination = url.hash === '#implementation' ? commissioningRoot :
+    url.hash === '#case-packages' ? casePackageRoot : null;
+  if (destination) destination.scrollIntoView({block: 'start'});
+}
+void openLinkedCase().catch(error => {
+  message('status', 'The linked case could not be opened: ' + String(error?.message ?? error).slice(0, 280), 'error');
 });

@@ -2,6 +2,12 @@
 
 A complete source and reporting workspace for existing ODK Central field operations. Choose authorized projects and forms, receive the full reporting cohort, inspect original versions and media, review the edition, and deliver readable reports or approved datasets. The same workspace opens in the browser, one command line, SDK, Applications and MCP.
 
+The complete installed [operating guide](../../../../products/odk-central/OPERATING.md)
+covers service hosting and backup, field capture, two-period commissioning,
+approved PostgreSQL receiving, publishing and full customer reopening.
+**Reporting warehouse** carries issued period datasets into the existing
+PostgreSQL operator through this same application's source store and listener.
+
 ## Operator workflow
 
 1. **Connect the existing Central user.** Select the Central server and the name of the host environment variable that contains its complete Authorization header. The workspace verifies the original user and accessible projects.
@@ -14,7 +20,7 @@ The browser uses a neutral, compact operator layout. Every original source downl
 
 ## Start
 
-Use Linux, Node 24 or newer, Python 3 with its standard library, and util-linux `flock`. The installed distribution has one command:
+Use Linux, Node 24 or newer, Python 3 with its standard library, and util-linux `flock`. The installed distribution opens the complete field, commissioning and warehouse application:
 
 ```sh
 starforge odk-central-workspace serve \
@@ -25,6 +31,30 @@ starforge odk-central-workspace serve \
 Applications owns the existing private listener and connection file. Its printed operator URL opens the same workspace in the browser. The host Authorization environment variable remains the credential source for Central requests; connection records retain the variable name.
 
 See [APPLICATIONS_MCP.md](./APPLICATIONS_MCP.md) for Applications, managed-host and MCP configuration. See [native/RECEIVING.md](./native/RECEIVING.md) for the original actual-provider receiving operation.
+
+## Customer commissioning and portable publishing
+
+**Customer commissioning** in the main navigation opens the complete source-agreement editor on the same authenticated listener. It records the actual host handover and account/project/form observations, saves the complete agreement with revision checks, creates two immutable reporting-period plans, and delivers the accepted native pair as reports, datasets and a complete portable workspace.
+
+Applications can bind the commissioner to the original host's private connection or bootstrap JSON. Its optional authorization file supplies only the selected original environment alias. The equivalent installed command is:
+
+```sh
+starforge odk-central-workspace serve --workspace /absolute/private/field-workspace --operator "Field operations" --commissioning-connection /absolute/private/central-host/connection.json --commissioning-environment /absolute/private/central-host/connection-secret.json
+```
+
+For a local Central CA, set the host's returned `NODE_EXTRA_CA_CERTS` path before Node starts. The original host controller remains responsible for the upstream service and its native backup/restore.
+
+Use `starforge odk-central-workspace commissioning --help` for the original full commissioning CLI. Existing Applications descriptors can be supplied to its `--operator-file` option to borrow that listener. See [COMMISSIONING.md](./COMMISSIONING.md) for the complete agreement, period, review, calendar and customer handover.
+
+The **Portable workspace** pane also receives the original publisher. New archives retain its dataset generations, prepared packages, release history and unfinished source. Receiving uses the maintained dataset/release APIs to stage complete native packages on the destination and retains the original-to-local mapping. The same pane lets the operator select the received release against the native store's current generation.
+
+```sh
+starforge odk-central-workspace publisher-capture --workspace /private/field-workspace --id original-publisher-snapshot
+starforge odk-central-workspace publisher-transfers --workspace /private/field-workspace
+starforge odk-central-workspace publisher-receive --workspace /private/received-workspace --id publisher-receiving --snapshot-id original-publisher-snapshot
+```
+
+Read [PUBLISHER_TRANSFER.md](./PUBLISHER_TRANSFER.md) for full source custody, partial preparation, exact replay and destination activation.
 
 ## Complete command workflow
 
@@ -161,3 +191,25 @@ try {
 A trusted source extension may pass `extend: async ({workspace, store}) => { ... }` during construction. It receives the same original database and source retention API after the workspace methods are assembled. Setup failure closes that original owner. Source extensions can compose customer commissioning records and observations into the complete portable workspace.
 
 Report and dataset operations bind the original request and receiving interpretation before output publication. Repeating an explicit operation ID resumes those exact outputs, including an interruption after some files were written. Browser recovery and CLI operation identities use the same original methods.
+
+The portable workspace editor resumes an unfinished publisher receiving under its original operation ID. Its row budget can be increased for a larger dataset on a suitably provisioned host. Received unfinished preparations remain visible with their original export and release request; the same native preparation continues from that request. The current host’s preparation records are available in `state.publisherPreparations`, while `publisherTransfers` retains the complete original source and receiving records.
+
+## Approved periods in the reporting warehouse
+
+Open **Reporting warehouse** from the managed application. Select the private
+PostgreSQL profile under Applications' **Reporting warehouse profiles**, or
+provide `--warehouse-profiles /private/postgres-profiles.json` to the existing
+managed command.
+
+The original workflow retains an issued commissioning dataset, inspects its
+complete approved CSV and dictionary, saves the full SQL mapping review,
+imports the immutable edition and produces the complete two-period report ZIP.
+Each period keeps the accepted Central review, original field/key/state
+projection and native warehouse request. The subsequent Central archive carries
+the approvals, complete command results and retained report files.
+
+Use `starforge odk-central-workspace warehouse --help` for the same command
+workflow through the existing `odk.connection.json`. The dedicated
+`./seller/odk/warehouse` export contains the original factories and complete
+types. The [warehouse guide](warehouse/README.md) documents installation,
+profiles, full receiving, native SQL bindings and portable reopening.

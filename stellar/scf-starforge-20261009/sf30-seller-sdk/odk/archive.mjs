@@ -3,6 +3,9 @@ import { spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { stat } from 'node:fs/promises';
+import { DatabaseSync } from 'node:sqlite';
+import { capturePublisherSnapshot } from './publisher-transfer.mjs';
 import { fault, now } from '../odata/state.mjs';
 
 const helper=fileURLToPath(new URL('./archive.py',import.meta.url));
@@ -20,6 +23,16 @@ async function run(args,{signal}={}) {
     });
   });
 }
+async function retainedSnapshotPublisher(store,id){
+  const path=join(store.directory,'transfers',id,'central.sqlite');
+  try{await stat(path);}catch(error){if(error.code==='ENOENT')return {exists:false};throw error;}
+  const original=new DatabaseSync(path,{readOnly:true});
+  try{
+    const row=original.prepare('SELECT value FROM records WHERE kind=? AND id=?').get('publisher-snapshot',id);
+    const publisher=row?JSON.parse(row.value):null;
+    return {exists:true,publisherSnapshotId:publisher?.status==='COMPLETE'?id:null};
+  }finally{original.close();}
+}
 const jobs=new WeakMap();
 export async function createCentralArchive(store,{id=randomUUID()}={}) {
   const existing=store.get('archive',id,false);
@@ -28,11 +41,13 @@ export async function createCentralArchive(store,{id=randomUUID()}={}) {
   if(!jobs.has(store))jobs.set(store,new Map());
   const active=jobs.get(store);if(active.has(id))return active.get(id);
   const operation=(async()=>{
+    const retained=await retainedSnapshotPublisher(store,id);
+    const publisherSnapshotId=retained.exists?retained.publisherSnapshotId:(await capturePublisherSnapshot(store,{id})).id;
     const snapshot=await store.snapshot(id),filename='central-workspace.tar.gz',output=join(snapshot.directory,filename);
     const result=await run(['create','--snapshot',snapshot.path,'--root',store.directory,'--output',output]);
     const {files:fileCount,...receipt}=result;
     return store.put('archive',snapshot.id,{...receipt,id:snapshot.id,kind:'archive',directory:snapshot.directory,createdAt:now(),
-      files:[filename],fileCount,receipts:{[filename]:{sha256:result.sha256,bytes:result.bytes}}},0);
+      files:[filename],fileCount,publisherSnapshotId,receipts:{[filename]:{sha256:result.sha256,bytes:result.bytes}}},0);
   })();
   active.set(id,operation);
   try{return await operation;}finally{active.delete(id);}
