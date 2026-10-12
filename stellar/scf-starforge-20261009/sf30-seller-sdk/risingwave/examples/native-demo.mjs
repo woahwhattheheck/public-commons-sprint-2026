@@ -118,23 +118,62 @@ function shortCapture(value){
     events:value.manifest.events,barrier:value.manifest.barrier,orderedRowsSha256:value.manifest.orderedRowsSha256,
     eventRecoveries:value.manifest.eventRecoveries??[],archives:value.manifest.archives,files:value.files};
 }
-async function verifyRows(capture,records,{included=true}={}){
-  const source=new Map(records.map(row=>[row.storageId,row])),seen=new Set();
+function exactNativeDecimal(value){
+  need(typeof value==='string'&&value.length<=128,'NATIVE_DECIMAL_TEXT_REQUIRED');
+  const match=/^([+-]?)([0-9]+)(?:\.([0-9]+))?(?:[eE]([+-]?[0-9]+))?$/.exec(value);
+  need(match,'NATIVE_DECIMAL_LEXEME_INVALID');
+  const exponent=Number(match[4]??0);need(Number.isSafeInteger(exponent)&&Math.abs(exponent)<=128,'NATIVE_DECIMAL_EXPONENT_INVALID');
+  let coefficient=BigInt((match[1]==='-'?'-':'')+match[2]+(match[3]??'')),scale=(match[3]?.length??0)-exponent;
+  if(coefficient===0n)return'0:0';
+  while(coefficient%10n===0n){coefficient/=10n;scale--;}
+  return String(coefficient)+':'+String(scale);
+}
+function observedNativeRows(observation){
+  const names=observation.fields.map(field=>field.name);
+  assert.deepEqual(names,selectedFields.split(','));
+  const rows=new Map();
+  for(const raw of observation.rows){
+    assert.equal(raw.length,names.length);
+    const row=Object.fromEntries(names.map((name,index)=>[name,raw[index]]));
+    for(const [name,value]of Object.entries(row))need(value===null||typeof value==='string','NATIVE_OBSERVATION_RAW_TEXT_REQUIRED',name);
+    need(typeof row.storage_id==='string'&&/^[0-9]+$/.test(row.storage_id),'NATIVE_OBSERVATION_STORAGE_ID_INVALID');
+    need(!rows.has(row.storage_id),'NATIVE_OBSERVATION_DUPLICATE_STORAGE_ID');
+    need(typeof row.priority==='string'&&/^-?[0-9]+$/.test(row.priority),'NATIVE_OBSERVATION_PRIORITY_INVALID');
+    const priority=Number(row.priority);need(Number.isSafeInteger(priority),'NATIVE_OBSERVATION_PRIORITY_INVALID');
+    need(['t','f','true','false'].includes(row.included),'NATIVE_OBSERVATION_BOOLEAN_INVALID');
+    rows.set(row.storage_id,{...row,priority,included:row.included==='t'||row.included==='true'});
+  }
+  assert.equal(rows.size,observation.rowCount);return rows;
+}
+function verifyObservedRow(row,observed,original){
+  assert.ok(original,'Captured storage identity is outside the retained original source.');
+  assert.ok(observed,'Captured row is absent from the retained complete native SELECT.');
+  // Both observations use the native PGwire text representation in UTC. Preserve
+  // DECIMAL and timestamp lexemes byte-for-byte; never compare through JS doubles
+  // or Date milliseconds. Only the declared integer/boolean outputs are decoded.
+  assert.deepEqual(row,observed,'Captured values differ from the independently observed native row.');
+  assert.equal(row.source_sha,original.sha256);assert.equal(row.source_text,original.raw);
+  assert.equal(hash(row.source_text),row.source_sha);assert.equal(row.source_id,original.sourceId);
+  assert.equal(row.null_note,null);assert.equal(row.empty_note,'');
+  assert.equal(typeof row.public_key,'string');assert.ok(BigInt(row.public_key)>BigInt(Number.MAX_SAFE_INTEGER));
+  assert.equal(exactNativeDecimal(row.exact_decimal),exactNativeDecimal(original.decimal));
+  assert.equal(typeof row.observed_at,'string');assert.equal(typeof row.source_document,'string');JSON.parse(row.source_document);
+}
+async function verifyRows(capture,records,observation){
+  const source=new Map(records.map(row=>[row.storageId,row])),native=observedNativeRows(observation),seen=new Set(),storage=new Set();
   let count=0,empty=0,nulls=0;
   for await(const row of readRisingWaveRows(capture)){
-    const original=source.get(row.storage_id);assert.ok(original,'Captured storage identity is outside the retained source.');
-    assert.equal(row.source_sha,original.sha256);assert.equal(row.source_text,original.raw);assert.equal(hash(row.source_text),row.source_sha);
-    assert.equal(row.source_id,original.sourceId);assert.equal(row.included,included);
-    assert.equal(row.null_note,null);assert.equal(row.empty_note,'');
-    assert.equal(typeof row.public_key,'string');assert.ok(BigInt(row.public_key)>BigInt(Number.MAX_SAFE_INTEGER));
-    assert.equal(typeof row.exact_decimal,'string');assert.equal(typeof row.observed_at,'string');
-    assert.equal(typeof row.source_document,'string');JSON.parse(row.source_document);
+    verifyObservedRow(row,native.get(row.storage_id),source.get(row.storage_id));
+    assert.equal(row.included,true);
+    assert.ok(!storage.has(row.storage_id),'Repeated captured storage identity.');storage.add(row.storage_id);
     assert.ok(!seen.has(row.public_key),'Visible key must be unique at the complete boundary.');seen.add(row.public_key);
     if(row.side_note===null)nulls++;else{assert.equal(row.side_note,'');empty++;}count++;
   }
-  assert.equal(count,capture.manifest.rowCount);
+  assert.equal(count,capture.manifest.rowCount);assert.equal(count,native.size);
   return{rows:count,sourceSha256Preserved:true,originalSourceTextPreserved:true,visibleKeys:seen.size,
     exactBigintText:true,exactDecimalText:true,timestampText:true,jsonText:true,nulls,empty,
+    nativeObservation:{path:observation.file,bytes:observation.fileBytes,sha256:observation.fileSha256,
+      requestHash:observation.requestHash,rowCount:observation.rowCount,observedAt:observation.observedAt},
     nativeBarrier:capture.manifest.barrier,ndjsonSha256:capture.files.ndjson.sha256};
 }
 async function eventSummary(capture){
@@ -302,6 +341,52 @@ export async function runRisingWaveNativeJourney({directory,inputFile,inputSha25
   const flush=label=>sql('FLUSH',[],label);
   async function visible(reference){
     return rowsAsObjects(await sql('SELECT '+selectedFields+' FROM '+qualified(reference)+' ORDER BY storage_id',[],'read-owned-source'));
+  }
+  async function observeNativeEdition(label,capture,reference,{selected=records,swapped=false}={}){
+    need(/^[a-z][a-z0-9-]+$/.test(label),'NATIVE_OBSERVATION_LABEL_INVALID');
+    const path=join(directory,'native-'+label+'-observation.json');
+    const statement='SELECT '+selectedFields+' FROM '+qualified(reference)+
+      ' WHERE included=$1::boolean AND priority >= $2::integer ORDER BY storage_id';
+    const request={captureId:capture.manifest.id,manifestSha256:capture.files.manifest.sha256,
+      sourceHash:capture.manifest.sourceHash,query:capture.manifest.query,input:capture.manifest.input,
+      relation:reference,endpoint:control.identity.endpoint,statement,parameters:[true,0],
+      publicKeyMapping:swapped?'first-two-original-keys-swapped':'original-source-ordinal'};
+    const requestHash=identity(request);
+    let observation=await optionalJson(path,134217728);
+    if(observation){
+      assert.equal(observation.schema,'native.risingwave-complete-row-observation.v1');
+      assert.equal(observation.requestHash,requestHash,'The retained native edition observation binds another capture.');
+      assert.deepEqual(observation.request,request);
+      assert.equal(observation.rowsSha256,hash(bytes(observation.rows)));
+      assert.equal(observation.fieldsSha256,hash(bytes(observation.fields)));
+    }else{
+      const before=await readRelation(control,reference);
+      assert.equal(before.id,capture.manifest.sourceIdentity.relation.id,'The original native relation was replaced.');
+      const reply=await sql(statement,request.parameters,'observe-complete-'+label);
+      const after=await readRelation(control,reference);
+      assert.deepEqual(after,before,'The native relation schema changed during the independent observation.');
+      assert.deepEqual(reply.fields.map(field=>field.name),selectedFields.split(','));
+      assert.equal(reply.rowCount,reply.rows.length);
+      observation={schema:'native.risingwave-complete-row-observation.v1',request,requestHash,
+        observedAt:new Date().toISOString(),relation:before,fields:reply.fields,fieldsSha256:hash(bytes(reply.fields)),
+        rows:reply.rows,rowsSha256:hash(bytes(reply.rows)),rowCount:reply.rows.length};
+    }
+    const original=new Map(selected.map(row=>[row.storageId,row])),native=observedNativeRows(observation);
+    assert.equal(native.size,capture.manifest.rowCount);
+    for(const [storageId,row]of native){
+      const expected=original.get(storageId);assert.ok(expected,'Native observation contains an undeclared source row.');
+      const publicKey=swapped&&storageId==='1'?records[1].publicKey:swapped&&storageId==='2'?records[0].publicKey:expected.publicKey;
+      assert.equal(row.public_key,publicKey,'The native BIGINT or explicit key swap differs from its exact reviewed value.');
+      assert.equal(exactNativeDecimal(row.exact_decimal),exactNativeDecimal(expected.decimal));
+      assert.equal(row.observed_at,progress.observedAt,'Native timestamp text differs from the original inserted native timestamp.');
+      assert.equal(row.included,true);assert.equal(row.source_url,sourceUrl);
+      assert.equal(row.source_sha,expected.sha256);assert.equal(row.source_text,expected.raw);assert.equal(row.source_id,expected.sourceId);
+    }
+    // The original operation owns this quiescent table. Commit the full native
+    // observation before permitting a later mutation; restart reuses these bytes.
+    if(!await optionalJson(path,134217728))await atomic(path,observation);
+    const retained=await readBytes(path,134217728,true);assert.deepEqual(JSON.parse(retained),observation);
+    return{...observation,file:path,fileBytes:retained.length,fileSha256:hash(retained)};
   }
   async function seed(reference,selected,label){
     let present;
@@ -547,22 +632,30 @@ export async function runRisingWaveNativeJourney({directory,inputFile,inputSha25
       await save({[query+'Subscription']:created});
     }
     if(!progress.preview){
-      const preview=await client.preview({expectedRevision:state.revision,query:'documents',input:captureInput});
+      const preview=await optionalJson(join(directory,'preview.json'))??
+        await client.preview({expectedRevision:state.revision,query:'documents',input:captureInput});
       assert.equal(preview.sample.rowCount,20);assert.equal(preview.sample.truncated,true);
       assert.equal(preview.sample.rows[0].null_note,null);assert.equal(preview.sample.rows[0].empty_note,'');
       await immutable(join(directory,'preview.json'),preview);await save({preview});
-      const selected=await client.preview({expectedRevision:state.revision,query:'documents',
-        input:{...captureInput,selectedKeys:[records[0].publicKey,records[1].publicKey]}});
-      assert.equal(selected.sample.rowCount,2);assert.equal(selected.sample.truncated,false);
-      await immutable(join(directory,'typed-array-preview.json'),selected);
     }
+    if(!progress.typedArrayPreview){
+      const selected=await optionalJson(join(directory,'typed-array-preview.json'))??
+        await client.preview({expectedRevision:state.revision,query:'documents',
+          input:{...captureInput,selectedKeys:[records[0].publicKey,records[1].publicKey]}});
+      assert.equal(selected.sample.rowCount,2);assert.equal(selected.sample.truncated,false);
+      assert.deepEqual(selected.sample.rows.map(row=>row.public_key).sort(),[records[0].publicKey,records[1].publicKey].sort());
+      await immutable(join(directory,'typed-array-preview.json'),selected);await save({typedArrayPreview:selected});
+    }
+    assert.deepEqual(await optionalJson(join(directory,'typed-array-preview.json')),progress.typedArrayPreview,
+      'Retain the completed original typed-array observation.');
     let quiet=await ensureCapture('quiet');
     const quietCapture=await waitCapture(quiet.id,{resume:quiet.state!=='COMPLETE'});
     assert.equal(quietCapture.manifest.sourceRowCount,records.length);
     assert.equal(quietCapture.manifest.checkpoint.lastTimestamp,null);
     assert.equal(quietCapture.manifest.checkpoint.resumeAvailable,false);
     assert.equal(quietCapture.manifest.barrier.state.kind,'InitLogStoreQuery');
-    await save({quiet:shortCapture(quietCapture),quietChecks:await verifyRows(quietCapture,records)});
+    const quietObservation=await observeNativeEdition('quiet',quietCapture,relation);
+    await save({quiet:shortCapture(quietCapture),quietChecks:await verifyRows(quietCapture,records,quietObservation)});
     await event('quiet-native-full',{rows:quietCapture.manifest.rowCount,resumeAvailable:false,
       barrier:quietCapture.manifest.barrier.state});
     if(!progress.quietChangesRefusal){
@@ -587,7 +680,8 @@ export async function runRisingWaveNativeJourney({directory,inputFile,inputSha25
     assert.equal(firstCapture.manifest.rowCount,records.length);
     assert.equal(firstCapture.manifest.checkpoint.resumeAvailable,true);
     assert.ok(firstCapture.manifest.archives.length>0,'The interrupted initial snapshot remains in its attempt archive.');
-    await save({firstCapture:shortCapture(firstCapture),firstChecks:await verifyRows(firstCapture,records),firstEvents:await eventSummary(firstCapture)});
+    const firstObservation=await observeNativeEdition('first',firstCapture,relation);
+    await save({firstCapture:shortCapture(firstCapture),firstChecks:await verifyRows(firstCapture,records,firstObservation),firstEvents:await eventSummary(firstCapture)});
     await event('resumed-original-full',{id:firstRecord.id,rows:firstCapture.manifest.rowCount,archives:firstCapture.manifest.archives.length,
       checkpoint:firstCapture.manifest.checkpoint});
     publicationId=progress.publicationId;
@@ -622,7 +716,8 @@ export async function runRisingWaveNativeJourney({directory,inputFile,inputSha25
     assert.ok(secondCapture.manifest.events.replayed>0);
     const changes=await eventSummary(secondCapture);
     for(const op of ['Insert','Delete','UpdateDelete','UpdateInsert'])assert.ok(changes.operations[op]>0,'Native event not observed: '+op);
-    await save({secondCapture:shortCapture(secondCapture),secondChecks:await verifyRows(secondCapture,records),secondEvents:changes});
+    const secondObservation=await observeNativeEdition('second',secondCapture,relation,{swapped:true});
+    await save({secondCapture:shortCapture(secondCapture),secondChecks:await verifyRows(secondCapture,records,secondObservation),secondEvents:changes});
     const comparisonId=progress.comparisonId??'comparison-native-'+randomUUID();
     if(!progress.comparisonId)await save({comparisonId});
     const comparison=await client.compareCaptures({comparisonId,before:firstRecord.id,after:secondRecord.id,keys:['public_key'],sampleLimit:100});
@@ -645,7 +740,9 @@ export async function runRisingWaveNativeJourney({directory,inputFile,inputSha25
       'The first published rows must equal the original complete workbench edition.');
     assert.equal(second.capture.manifest.orderedRowsSha256,secondCapture.manifest.orderedRowsSha256,
       'The second published rows must equal the original complete workbench edition.');
-    if(!progress.paid){
+    {
+      // Always reconcile the original delivery journal, including a crash after
+      // saving paid progress but before marking the same operation COMPLETE.
       const operationFile=join(directory,'buyer-operation.json'),deliveryFile=join(directory,'buyer-delivery.json');
       const intentId=progress.buyerIntentId??'risingwave-native-'+randomUUID();await save({buyerIntentId:intentId});
       const request={publicationId,runId:initial.id,snapshot:first.candidate.dataset.snapshot,intentId,query:'limit=20',acceptIndex:0};
@@ -660,8 +757,10 @@ export async function runRisingWaveNativeJourney({directory,inputFile,inputSha25
         assert.equal(operation.prepared.intentId??intentId,intentId);
         assert.equal(operation.prepared.snapshot,request.snapshot);
       }
+      need(!progress.paid||delivery,'NATIVE_BUYER_DELIVERY_MISSING','Restore the retained original delivery; do not resend a completed paid stage.');
       if(delivery){
         need(operation,'NATIVE_BUYER_OPERATION_MISSING');
+        if(operation.state==='COMPLETE')assert.equal(operation.deliverySha256,hash(bytes(delivery)),'The original completed delivery changed.');
         assert.equal(delivery.schema,'native.risingwave-buyer-delivery.v1');
         assert.equal(delivery.requestHash,requestHash);
         assert.equal(delivery.preparedSha256,operation.preparedSha256);
@@ -710,17 +809,14 @@ export async function runRisingWaveNativeJourney({directory,inputFile,inputSha25
       }
       const {page,paid}=delivery;assert.equal(page.page.total,records.length);assert.ok(page.rows.length>0);
       assert.equal(paid.rows,page.rows.length);assert.equal(paid.totalRows,page.page.total);
-      for(const row of page.rows){
-        assert.equal(row.null_note,null);assert.equal(row.empty_note,'');
-        assert.equal(typeof row.public_key,'string');assert.ok(BigInt(row.public_key)>BigInt(Number.MAX_SAFE_INTEGER));
-        assert.equal(typeof row.exact_decimal,'string');assert.equal(typeof row.observed_at,'string');
-        assert.equal(hash(row.source_text),row.source_sha);
-      }
+      const observed=observedNativeRows(firstObservation),original=new Map(records.map(row=>[row.storageId,row]));
+      for(const row of page.rows)verifyObservedRow(row,observed.get(row.storage_id),original.get(row.storage_id));
       paid.preservation={null:true,emptyText:true,largeIntegerText:true,decimalText:true,timestampText:true,originalSourceText:true};
       await atomic(deliveryFile,delivery);
-      await immutable(join(directory,'buyer-page.json'),page);await save({paid});
+      await immutable(join(directory,'buyer-page.json'),page);
       await atomic(operationFile,{...operation,state:'COMPLETE',completedAt:delivery.completedAt,
         deliverySha256:hash(bytes(delivery))});
+      await save({paid});
       await event('original-retained-edition-buyer',paid);
     }
     let schedule=await command('schedule/status');
@@ -756,6 +852,8 @@ export async function runRisingWaveNativeJourney({directory,inputFile,inputSha25
             await touch('retention-cursor-'+value.cursor.cursor,retentionRelation);
         }});
       assert.equal(baseline.manifest.rowCount,8);assert.equal(baseline.manifest.checkpoint.resumeAvailable,true);
+      const baselineObservation=await observeNativeEdition('retention-first',baseline,retentionRelation,{selected:records.slice(0,8)});
+      const baselineChecks=await verifyRows(baseline,records.slice(0,8),baselineObservation);
       const cutoff=BigInt(baseline.manifest.checkpoint.lastTimestamp)+32000n,deadline=Date.now()+120000;
       for(;;){
         const current=rowsAsObjects(await sql('SELECT now() AS native_time',[],'retention-native-clock',{retainRows:true}))[0].native_time;
@@ -775,8 +873,10 @@ export async function runRisingWaveNativeJourney({directory,inputFile,inputSha25
       assert.equal(rebuilt.manifest.gap.error.code,'RISINGWAVE_RETENTION_GAP');
       assert.equal(rebuilt.manifest.baseCapture.manifestSha256,baseline.files.manifest.sha256);
       const preserved=await readRisingWaveCapture(baseDir);assert.equal(preserved.files.manifest.sha256,baseline.files.manifest.sha256);
-      await save({retention:{first:shortCapture(baseline),gap:{directory:gapDir,error:gap},
-        rebuilt:shortCapture(rebuilt),priorEditionPreserved:true}});
+      const rebuiltObservation=await observeNativeEdition('retention-rebuilt',rebuilt,retentionRelation,{selected:records.slice(0,8)});
+      const rebuiltChecks=await verifyRows(rebuilt,records.slice(0,8),rebuiltObservation);
+      await save({retention:{first:shortCapture(baseline),firstChecks:baselineChecks,gap:{directory:gapDir,error:gap},
+        rebuilt:shortCapture(rebuilt),rebuiltChecks,priorEditionPreserved:true}});
       await source.close();source=null;
       await event('native-retention-rebuild',{prior:baseline.manifest.id,rebuilt:rebuilt.manifest.id,gap:gap.code});
     }
@@ -821,7 +921,11 @@ export async function runRisingWaveNativeJourney({directory,inputFile,inputSha25
       publicationId,initial.id,latest.id,firstRecord.id,secondRecord.id],{env:environment,timeout:60000,maxBuffer:16777216})).stdout);
     assert.equal(reopened.revision,closedState.revision);assert.equal(reopened.publicationId,publicationId);
     assert.equal(reopened.first.page.total,records.length);assert.equal(reopened.second.page.total,records.length-1);
-    assert.equal(reopened.first.rows[0].null_note,null);assert.equal(reopened.first.rows[0].empty_note,'');
+    const originalRows=new Map(records.map(row=>[row.storageId,row]));
+    for(const [page,observation]of [[reopened.first,firstObservation],[reopened.second,secondObservation]]){
+      const observed=observedNativeRows(observation);
+      for(const row of page.rows)verifyObservedRow(row,observed.get(row.storage_id),originalRows.get(row.storage_id));
+    }
     assert.equal(reopened.sellerRunning,true);assert.equal(reopened.schedule.enabled,true);
     assert.equal(reopened.schedule.policyId,progress.schedule.policyId);
     assert.equal(reopened.currentSnapshot,second.candidate.dataset.snapshot);
@@ -830,7 +934,8 @@ export async function runRisingWaveNativeJourney({directory,inputFile,inputSha25
     result={schema:'native.risingwave-source-publisher-journey.v1',outcome:'PASS',startedAt:progress.startedAt,
       completedAt:new Date().toISOString(),attempt,sourcePin,protocolSourcePin:SOURCE_PIN,runtime:{node:process.version},
       case:requested,source:{path:sourceFile,sha256:hash(await readFile(sourceFile)),discovery:progress.discovery},
-      context,quiet:progress.quiet,quietChangesRefusal:progress.quietChangesRefusal,
+      context,quiet:progress.quiet,quietChecks:progress.quietChecks,quietChangesRefusal:progress.quietChangesRefusal,
+      preview:{boundedFile:'preview.json',typedArrayFile:'typed-array-preview.json',typedArraySha256:hash(bytes(progress.typedArrayPreview))},
       first:{capture:progress.firstCapture,interruption:progress.firstInterruption,checks:progress.firstChecks,
         events:progress.firstEvents,plan:first.plan.id,run:initial.id,publication:initial.data.publication,publisherCapture:progress.firstPublicationCapture},
       second:{capture:progress.secondCapture,interruption:progress.secondInterruption,checks:progress.secondChecks,
