@@ -26,7 +26,7 @@ async function save(file,value){
 }
 async function retain(file,data){await mkdir(resolve(file,'..'),{recursive:true,mode:0o700});await writeFile(file,data,{mode:0o600});}
 function dataPage(result){return result.body??result.result?.body??result;}
-const declarations={processMemoryMiB:1024,privateWorkingStorageMiB:256,persistentOutputMiB:32};
+const declarations={wholeOperationMemoryMiB:1024,privateWorkingStorageMiB:256,persistentOutputMiB:32};
 export async function main(argv=process.argv.slice(2)){
   const args=options(argv),sourceFile=resolve(args.source),work=resolve(args.work),out=resolve(args.out);
   const operationId=args.operation??'grants-research-native';

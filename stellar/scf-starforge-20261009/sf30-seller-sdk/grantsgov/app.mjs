@@ -39,7 +39,7 @@ async function action(actionName,input={},remember=false){
     if(remember){sessionStorage.removeItem('grants-pending');$('pending').hidden=true;}
     return result;
   }catch(failure){
-    if(remember&&failure.status){sessionStorage.removeItem('grants-pending');$('pending').hidden=true;}
+    if(remember&&failure.status>=400&&failure.status<500){sessionStorage.removeItem('grants-pending');$('pending').hidden=true;}
     throw failure;
   }
 }
