@@ -9,3 +9,4 @@ export { normalizeProfile, normalizeSelection, validateReceipt, publicProfile,
   PROFILE_SCHEMA, REQUEST_SCHEMA, REVIEW_SCHEMA, RECEIVING_SCHEMA,
   parseExactJSON, canonical, nativeBytes } from './contract.mjs';
 export { runGeoServerCli } from './cli.mjs';
+export { runGeoServerNativeReceiving } from './native-receiving.mjs';
