@@ -7,6 +7,7 @@ import {need,object,parseJson} from '../node/store.mjs';
 import {createResearchDocumentSource} from './research-document-source.mjs';
 import {citationReviewInput,citationDigest} from '../research-dossiers/citation-updates.mjs';
 import {exportCitationFile,receiveCitationFile} from './research-citation-delivery.mjs';
+import {readResearchExtraction,reviewResearchExtraction} from '../research-dossiers/research-extraction-transport.mjs';
 import {eligibilityConsumerInput,readEligibility,submitEligibility,exportEligibility} from '../research-dossiers/eligibility-consumer.mjs';
 import {exportEligibilityDeliveryFile,receiveEligibilityFile} from './research-eligibility-delivery.mjs';
 
@@ -43,6 +44,13 @@ async function dispatch(client,action,input,signal){
     case 'citation-updates':return client.citationUpdates(dossierId,options);
     case 'citation-review':return client.reviewCitationUpdate(dossierId,body);
     case 'citation-export':return exportCitationFile(client,input);
+    case 'extraction':return readResearchExtraction(client,dossierId,options,{signal});
+    case 'extraction-source-values':return readResearchExtraction(client,dossierId,options,{sourceValues:true,signal});
+    case 'extraction-publications':return readResearchExtraction(client,dossierId,options,{publication:true,signal});
+    case 'extraction-review':return reviewResearchExtraction(client,dossierId,body,{signal});
+    case 'extraction-publication-review':return reviewResearchExtraction(client,dossierId,body,{publication:true,signal});
+    case 'extraction-export':return client.exportExtraction(dossierId,requestOptions);
+    case 'extraction-publication-export':return client.exportExtractionPublication(dossierId,requestOptions);
     case 'export-dossier':return client.exportDossier(dossierId,requestOptions);
     case 'export-edition':return client.exportRetainedEdition(dossierId,input.editionId,requestOptions);
     case 'export-comparison':return client.exportComparison(dossierId,requestOptions);

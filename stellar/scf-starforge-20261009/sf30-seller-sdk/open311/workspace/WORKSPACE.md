@@ -55,6 +55,8 @@ Choose a connection and open **Service catalog**.
 
 **Capture service catalog** fetches the provider's service list through the original client and saves that returned source. Subsequent catalog views open the saved capture.
 
+When the connection declares vendor query fields, **Provider options for catalog and definitions** exposes those fields before capture. The latest saved catalog's exact query supplies their starting values. For Helsinki's English catalog, set its documented `locale` field to `en`. Leave optional fields blank to use the provider's defaults. **Use saved query** restores the saved values. These visible options apply to both the next catalog capture and **Capture definition**; each returned source retains its actual query and receipt.
+
 Search by service code, name, group, or description. Each row supports:
 
 - **Inspect**: opens the complete original service object.

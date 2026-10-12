@@ -7,6 +7,9 @@ import {ResearchWorkspaceClient,researchSummary} from './workspace-client.mjs';
 import {readResearchHostFile} from './workspace-files.mjs';
 import {DOCUMENT_COMMANDS,main as documentMain} from './document-workspace-cli.mjs';
 import {ELIGIBILITY_COMMANDS,main as eligibilityMain} from './eligibility-cli.mjs';
+import {RISK_OF_BIAS_COMMANDS,main as riskOfBiasMain} from './risk-of-bias/cli.mjs';
+import {CUSTOMER_UPDATE_COMMANDS,main as customerUpdateMain} from './customer-updates/cli.mjs';
+import {STUDY_EXTRACTION_COMMANDS,main as extractionMain} from './study-extraction-cli.mjs';
 import {parseJson,need,safeCode} from '../node/store.mjs';
 
 const usage=String.raw`Research workspace client
@@ -71,6 +74,12 @@ Operate the saved original Crossref acquisition:
   crossref-stop --id DOSSIER --operation ID
   crossref-receive --id DOSSIER --operation ID --input REVIEWED_RECEIVE.json
 
+Commission and deliver complete recurring customer work in the same dossier:
+  customer-updates-help
+  customer-updates|customer-updates-record|customer-updates-preview|customer-updates-save
+  customer-updates-work|customer-updates-export|customer-updates-source-plan
+  customer-updates-handover|customer-updates-inspect|customer-updates-receive|customer-updates-operation
+
 Operate full eligibility review in the same original dossier:
   eligibility-help
   eligibility-view|eligibility-queue|eligibility-review|eligibility-export
@@ -79,6 +88,23 @@ Operate full eligibility review in the same original dossier:
 
 Run eligibility-help for original request fields, revision-pinned queues,
 independent review, resolution, full exports and same-request recovery.
+
+Operate source-bound study extraction and authored evidence tables:
+  extraction-help
+  extraction-view|extraction-source-values|extraction-review|extraction-export
+  extraction-publications|extraction-publication-review|extraction-publication-export
+
+Run extraction-help for complete form/result/reviewer actions, original saved-request
+recovery, full source/report exports and table-publication history.
+
+Operate source-bound appraisals and independent review:
+  risk-help
+  risk-view|risk-prepare|risk-review|risk-export
+  risk-create|risk-protocol|risk-assessment|risk-revise-assessment
+  risk-draft|risk-submit|risk-adjudicate|risk-impact
+
+Run risk-help for complete retained requests, exact study/result selectors,
+independent drafts, adjudication and all-table JSON/CSV/Markdown/HTML exports.
 
 Review a retained correction or retraction notice:
   citation-updates --id DOSSIER [--revision N --notice ID --status all|pending|reviewed --offset N --limit N]
@@ -141,8 +167,11 @@ const commandOptions=Object.freeze({
 const compact=value=>value?.dossier?{...value,dossier:researchSummary(value.dossier)}:value;
 const selected=value=>Object.fromEntries(Object.entries(value).filter(([,item])=>item!==undefined));
 export async function main(argv=process.argv.slice(2),{output=process.stdout}={}){
+  if(CUSTOMER_UPDATE_COMMANDS.includes(argv[0]))return customerUpdateMain(argv,{stdout:output});
   if(DOCUMENT_COMMANDS.includes(argv[0]))return documentMain(argv,{output});
   if(ELIGIBILITY_COMMANDS.includes(argv[0]))return eligibilityMain(argv,{output});
+  if(RISK_OF_BIAS_COMMANDS.includes(argv[0]))return riskOfBiasMain(argv,{output});
+  if(STUDY_EXTRACTION_COMMANDS.includes(argv[0]))return extractionMain(argv,{output});
   const [command,...args]=argv;
   if(!command||['help','--help','-h'].includes(command)){output.write(usage);return;}
   need(Object.hasOwn(commandOptions,command),'COMMAND_UNKNOWN');
