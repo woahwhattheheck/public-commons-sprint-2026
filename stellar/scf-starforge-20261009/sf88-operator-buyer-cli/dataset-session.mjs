@@ -180,6 +180,58 @@ function pageConfig(definition, index, cursor, allocated) {
     maxBytes:definition.limits.maxPageBytes, timeoutMs:30000};
   return c;
 }
+
+/** Read the original immutable page lineage for the shared lost-output source
+ * adapter. It never acquires, retries, signs or changes the session. */
+export async function readRetainedDatasetAttempt(directory,index) {
+  need(Number.isSafeInteger(index)&&index>=1&&index<=10000,'DATASET_LOST_OUTPUT_PAGE_REQUIRED');
+  await privateDirectory(directory);
+  await privateDirectory(join(directory,'pages'));
+  await privateDirectory(join(directory,'evidence'));
+  const sessionRaw=await readPrivate(join(directory,'session.json'),262144);
+  let definition;
+  try {definition=validateDefinition(JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(sessionRaw)),directory);}
+  catch(error){if(error instanceof InputError)throw error;throw new InputError('DATASET_SESSION_INVALID');}
+  const names=(await readdir(join(directory,'pages'))).filter(name=>/^[0-9]{6}$/.test(name)).sort();
+  need(names.length<=definition.limits.maxPages&&index<=names.length&&
+    names.every((name,position)=>name===indexName(position+1)),'DATASET_PAGE_GAP');
+  const sourceHashes={session:digest(sessionRaw)};
+  let previous=null,allocated=0n;
+  for(let number=1;number<=index;number++) {
+    const dir=join(directory,'pages',indexName(number));
+    await privateDirectory(dir);
+    const configurationRaw=await readPrivate(join(dir,'config.json'),262144);
+    const attemptRaw=await readPrivate(join(dir,'attempt.json'),8192);
+    let cfg,attempt;
+    try {
+      cfg=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(configurationRaw));
+      attempt=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(attemptRaw));
+    } catch {throw new InputError('DATASET_STATE_JSON_INVALID');}
+    const wanted=pageConfig(definition,number,previous?.nextCursor??null,allocated);
+    need(equal(cfg,wanted)&&attempt.schema==='stellar-forge.sf88.dataset-attempt.v1'&&
+      attempt.index===number&&attempt.intentId===wanted.operation.intentId&&
+      attempt.configurationSha256===digest(canonical(cfg))&&attempt.capAtomic===wanted.operation.expect.maxAtomic&&
+      Number.isFinite(Date.parse(attempt.startedAt)),'DATASET_ATTEMPT_CHANGED');
+    const body=await readPrivate(cfg.responseFile.destination,definition.limits.maxPageBytes,true);
+    const responseState={condition:body===null?'ABSENT':body.length?'SAVED':'EMPTY',
+      bytes:body?.length??0,sha256:body===null?null:digest(body)};
+    if(number===index) {
+      Object.assign(sourceHashes,{configuration:digest(configurationRaw),attempt:digest(attemptRaw),
+        response:responseState.sha256});
+      return {definition,cfg,attempt,sourceHashes,body,responseState,previous};
+    }
+    need(body?.length>0,'DATASET_PREVIOUS_PAGE_RESPONSE_REQUIRED');
+    const prefix='previous.'+indexName(number)+'.';
+    sourceHashes[prefix+'configuration']=digest(configurationRaw);
+    sourceHashes[prefix+'attempt']=digest(attemptRaw);
+    sourceHashes[prefix+'response']=digest(body);
+    previous=inspectDatasetPage(body,{url:cfg.operation.url,previous,
+      expectedSnapshot:definition.expectedSnapshot,maxRows:definition.limits.maxRows});
+    need(previous.nextCursor!==null,'DATASET_PAGE_AFTER_COMPLETE');
+    allocated+=BigInt(attempt.capAtomic);
+  }
+}
+
 function baseReport(definition) {
   return {schema:'stellar-forge.sf88.dataset-acquisition.v1', directory:definition.directory,
     configurationSha256:definition.configurationSha256, sessionId:definition.config.operation.intentId,
@@ -189,15 +241,24 @@ function baseReport(definition) {
     acquiredRows:0, totalRows:null, snapshot:null, pages:[],
     paymentAccounting:'Page caps are allocations, not charges. Original SF36 reservations and original SF82 chain observations remain authoritative.'};
 }
-async function nativePage(definition, cfg, result, previous) {
+async function nativePage(definition, cfg, result, previous, index) {
   const intentId = cfg.operation.intentId;
   const evidencePath = join(definition.directory, 'evidence', digest(intentId) + '.json');
   const evidenceBytes = await readPrivate(evidencePath, 262144, true);
   const body = await readPrivate(cfg.responseFile.destination, definition.limits.maxPageBytes, true);
+  let e,invalidJson=false;
+  if(evidenceBytes?.length) {
+    try {e=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(evidenceBytes));}
+    catch {invalidJson=true;}
+  }
+  if(!evidenceBytes?.length||invalidJson) {
+    const {recoveredDatasetPage}=await import('./dataset-lost-output.mjs');
+    const recovered=await recoveredDatasetPage({directory:definition.directory,index,cfg,previous,
+      expectedSnapshot:definition.expectedSnapshot,maxRows:definition.limits.maxRows});
+    if(recovered)return recovered;
+  }
   if (!evidenceBytes || !body) return {pending:true, code:'DATASET_ATTEMPT_NEEDS_ORIGINAL_RECONCILIATION'};
-  let e;
-  try { e = JSON.parse(new TextDecoder('utf-8', {fatal:true}).decode(evidenceBytes)); }
-  catch { throw new InputError('DATASET_NATIVE_EVIDENCE_INVALID'); }
+  if(invalidJson||!evidenceBytes.length)throw new InputError('DATASET_NATIVE_EVIDENCE_INVALID');
   need(e?.schema === 'scf82.checkout-evidence.v1' && e.intentId === intentId &&
     e.observation?.intentId === intentId, 'DATASET_NATIVE_EVIDENCE_MISMATCH');
   const outcome = analyzeOne(e.observation), b = e.observation.buyer;
@@ -274,7 +335,7 @@ async function inspectUnlocked(directory) {
     const failure = failureMetadata.value;
     let page;
     try {
-      page = await nativePage(definition, cfg, result, previous);
+      page = await nativePage(definition, cfg, result, previous, index);
       if (page.pending) throw new InputError(page.code);
     } catch (error) {
       report.status = 'RECONCILIATION_REQUIRED';
@@ -464,6 +525,16 @@ export async function accountDatasetSession(directory, {workspace,offset=0,limit
           retained.intentId===attempt.intentId&&retained.attemptSha256===digest(canonical(attempt))&&
           retained.configSha256===digest(raw))previous=retained;
         const evidencePath=join(directory,'evidence',digest(attempt.intentId)+'.json');
+        const {readDatasetLostOutputRecovery}=await import('./dataset-lost-output.mjs');
+        const lost=await readDatasetLostOutputRecovery({directory,index,workspace:selectedWorkspace});
+        if(lost) {
+          entries.push({index,intentId:attempt.intentId,
+            ...summarizeFinalization({result:lost.result,completedAt:lost.completedAt}),
+            viewPath:join(dir,'lost-output','recovery.json'),viewStatus:'AUTHENTICATED_RECOVERY',
+            lostOutputFinalization:lost,
+            ...(outbox?{merchant:{status:'USE_ORIGINAL_LOST_OUTPUT_TRANSFER_EXPORT',outbox,route:merchantRoute}}:{})});
+          continue;
+        }
         if(!previous) {
           const unpaid=await readUnpaidAttempt({evidencePath,intentId:attempt.intentId,attemptStartedAt:attempt.startedAt});
           if(unpaid) {entries.push({index,intentId:attempt.intentId,...unpaid,evidencePath,viewStatus:'ORIGINAL_RESPONSE'});continue;}
@@ -524,3 +595,6 @@ export async function deliverDatasetSession(directory, destination) {
     return await buildNativeDataRoom(report, destination);
   } finally { await release(); }
 }
+
+// Original canonical validation shared with the fixed SF36 source observer.
+export {validateDefinition as validateDatasetDefinition,pageConfig as datasetPageConfiguration};

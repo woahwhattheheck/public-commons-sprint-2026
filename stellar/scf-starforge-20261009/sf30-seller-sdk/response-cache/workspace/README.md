@@ -119,3 +119,9 @@ Restore requires an empty workspace and preserves its original identity, revisio
 Only retention settings are mutable here. Source admission, maximum response size, payment handling and credential acquisition remain owned by their existing runtime components. A policy change advances the cache generation so in-flight source work can finish for its existing consumers while the new policy starts with fresh retention.
 
 Run `node acceptance.mjs` for the focused operating journey: original cache/control, saved policy review, interrupted-response recovery, receiving and the authenticated browser API. Node 22+ with its built-in SQLite support is required.
+
+## Save observed policy in a merchant package
+
+In the embedded API package workspace, **Save policy for restart** reviews selected routes from a saved operating snapshot and compiles a new package through the original merchant revision engine. Retained reviews reopen after a workspace restart. Saving again after a lost successful response recovers the same completed package. The saved revision carries its selected operating snapshot to the receiving host.
+
+The existing command line exposes `policy-review`, `policy-list`, `policy-show` and `policy-save`. [Complete retained-policy workflow](../../../sf61-openapi-seller-import/workspace/CACHE_POLICY_REVISIONS.md).
