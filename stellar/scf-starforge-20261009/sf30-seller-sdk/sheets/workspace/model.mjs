@@ -11,6 +11,7 @@ import { openSheetsSourceFile, inspectSheetsSource } from '../source.mjs';
 import { openSheetsPublisher } from '../publisher/model.mjs';
 import { startPostgresPublisherServer } from '../../postgres/publisher/server.mjs';
 import { reviewSheetsDeployment, prepareSheetsDeployment, inspectSheetsDeployment, stageSheetsDeployment, readSheetsDeploymentFile } from '../deployment.mjs';
+import { inspectSheetsAuthoring } from './launch.mjs';
 import { normalizeConnections, selectConnection, connectionViews, workbookId, metadataView,
   fetchWorkbookMetadata } from './provider.mjs';
 
@@ -54,7 +55,7 @@ function packetBytes(value, maximum = MAX_CAPTURE_BYTES) {
 }
 
 export async function openSheetsAuthoring({ directory, create = false, connections = {}, environment = process.env,
-  targetDirectory, seller = null, resource = null } = {}) {
+  targetDirectory, seller = null, resource = null, expectedIdentity } = {}) {
   absolute(directory); connections = normalizeConnections(connections);
   if (create && !await absent(directory)) throw fault('SHEETS_AUTHORING_EXISTS', 'Reopen this source workspace without --create.');
   await privateDirectory(directory, create);
@@ -64,6 +65,10 @@ export async function openSheetsAuthoring({ directory, create = false, connectio
   const lifetime = new AbortController();
   let publisherAccess = Promise.resolve();
   try {
+    if (expectedIdentity !== undefined) {
+      if (create) throw fault('SHEETS_MANAGED_EXISTING_WORKSPACE_REQUIRED');
+      await inspectSheetsAuthoring(directory, { expectedIdentity });
+    }
     const database = join(directory, 'sources.sqlite');
     if (!create && await absent(database)) throw fault('SHEETS_AUTHORING_MISSING');
     if (!await absent(database)) {
@@ -782,3 +787,4 @@ export async function openSheetsAuthoring({ directory, create = false, connectio
     };
   } catch (issue) { try { db?.close(); } finally { await release(); } throw issue; }
 }
+

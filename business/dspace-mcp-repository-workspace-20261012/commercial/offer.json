@@ -1,0 +1,43 @@
+{
+  "schema": "commons-workshare-offer/v1",
+  "organization": "4Science",
+  "organization_domain": "4science.com",
+  "opportunity_id": "4science-dspace-mcp-community-call-20260929",
+  "prepared_date": "2026-10-12",
+  "recipient": {
+    "email": "info@4science.com",
+    "source": "https://4science.com/contact-us/"
+  },
+  "currency": "USD",
+  "price": 6400,
+  "delivery_business_days": 10,
+  "payment_milestones": [
+    {
+      "amount": 3200,
+      "event": "Scheduling"
+    },
+    {
+      "amount": 3200,
+      "event": "Completed receiving"
+    }
+  ],
+  "cohort": {
+    "repository_services": 1,
+    "collections": 2,
+    "existing_items": 500,
+    "draft_submission_families": 1,
+    "original_files": 20,
+    "max_file_bytes": 20971520,
+    "correction_cycles": 2
+  },
+  "support": {
+    "defect_correction_calendar_days": 14,
+    "acknowledgement_business_days": 1
+  },
+  "source_repository": "woahwhattheheck/public-commons-sprint-2026",
+  "source_path": "business/dspace-mcp-repository-workspace-20261012",
+  "upstream_repository": "4Science/dspace-mcp",
+  "upstream_commit": "ee503ba97910f592867c897c1fa938f9e029d03c",
+  "license": "AGPL-3.0-only",
+  "scope_source": "SCOPE.md"
+}
