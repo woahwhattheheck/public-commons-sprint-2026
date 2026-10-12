@@ -67,7 +67,7 @@ starforge merchant-mcp init-woocommerce \
 starforge merchant-mcp serve --config ORIGINAL_RETURNED_CONFIG_PATH --port 3211
 ~~~
 
-Use the configPath returned by initialization. The existing merchant server
+Use the `configuration` path returned by initialization. The existing merchant server
 supplies incoming authentication through its configured bearer-token environment
 name or OAuth configuration. The installed ERP client uses the same MCP
 connection; the WordPress and ERP credential values stay with their original
