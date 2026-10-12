@@ -32,7 +32,8 @@ export async function attachReleaseCacheControls(session, { controlFile, routes 
     return { invalidatedRoutes: [...selected.values()].filter(route => bindings.includes(route.binding)).map(route => route.id),
       bindings, routes: stats() };
   };
-  return startCacheControl({ controlFile, binding: { stats, invalidate } });
+  return startCacheControl({ controlFile, binding: { stats, invalidate },
+    ...(session.cacheManagement ? { management: session.cacheManagement } : {}) });
 }
 
 async function running(root, expectedInstanceId) {
@@ -41,7 +42,7 @@ async function running(root, expectedInstanceId) {
   if (!['RUNNING', 'RESTART_REQUIRED'].includes(status.runtime.state) || !observed?.cacheControlAvailable)
     return { status, available: false };
   if (expectedInstanceId !== undefined && expectedInstanceId !== observed.instanceId)
-    throw failure('Running seller changed. Refresh its instance ID before invalidating.');
+    throw failure('Running seller changed. Refresh its instance ID before operating its cache.');
   return { status, observed, available: true,
     controlFile: releaseCacheControlPath(root, observed.instanceId) };
 }
@@ -62,4 +63,69 @@ export async function invalidateReleaseCache(root, { instanceId, routeId } = {})
   const result = await callCacheControlFile(current.controlFile, { op: 'invalidate', ...(routeId === undefined ? {} : { route: routeId }) });
   return { schema: 'stellar-forge.seller-release-cache-invalidation.v1',
     instanceId, releaseId: current.observed.releaseId, ...result };
+}
+
+
+const cacheOperationId = value => {
+  if (typeof value !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/.test(value))
+    throw new TypeError('A stable cache operation ID of 1–128 ASCII characters is required.');
+  return value;
+};
+const cacheBinding = value => {
+  if (typeof value !== 'string' || !value || value.length > 128)
+    throw new TypeError('Choose a canonical cache binding returned by inspection.');
+  return value;
+};
+function retainedPolicy(value) {
+  const names = ['ttlMs', 'maxEntries', 'maxBytes', 'maxEntryBytes'];
+  if (!value || typeof value !== 'object' || Array.isArray(value) ||
+      ![Object.prototype, null].includes(Object.getPrototypeOf(value)) ||
+      Object.keys(value).some(key => !names.includes(key)) ||
+      names.some(key => !Object.hasOwn(value, key)))
+    throw new TypeError('Supply the complete reviewed retention policy.');
+  const limits = { ttlMs: 3600000, maxEntries: 100000, maxBytes: 268435456, maxEntryBytes: 16777216 };
+  for (const name of names) if (!Number.isSafeInteger(value[name]) || value[name] < 1 || value[name] > limits[name])
+    throw new TypeError('Invalid retained cache policy limit.');
+  if (value.maxEntryBytes > value.maxBytes) throw new TypeError('An entry cannot exceed the retained byte budget.');
+  // The original manager additionally checks the immutable source response cap.
+  return Object.fromEntries(names.map(name => [name, value[name]]));
+}
+async function managedCacheCall(root, instanceId, request) {
+  releaseCacheControlPath(root, instanceId);
+  const current = await running(root, instanceId);
+  if (!current.available) throw failure('No running seller cache is available.', 'RELEASE_CACHE_UNAVAILABLE');
+  const result = await callCacheControlFile(current.controlFile, request);
+  return { instanceId, releaseId: current.observed.releaseId, result };
+}
+
+/** Inspect the SAME upstream manager; canonical binding IDs keep shared routes together. */
+export async function inspectReleaseCache(root, { instanceId } = {}) {
+  const current = await managedCacheCall(root, instanceId, { op: 'inspect' });
+  return { schema: 'stellar-forge.seller-release-cache-inspection.v1',
+    instanceId: current.instanceId, releaseId: current.releaseId, inspection: current.result };
+}
+
+/** SF82 binds the seller instance; the original manager binds cache instance/revision/replay. */
+export async function changeReleaseCache(root, { instanceId, cacheInstanceId, expectedRevision,
+  operationId, binding, action, policy } = {}) {
+  releaseCacheControlPath(root, cacheInstanceId);
+  cacheOperationId(operationId); cacheBinding(binding);
+  if (!Number.isSafeInteger(expectedRevision) || expectedRevision < 0)
+    throw new TypeError('The inspected nonnegative cache revision is required.');
+  if (!['configure', 'invalidate'].includes(action) || action === 'invalidate' && policy !== undefined)
+    throw new TypeError('Choose configure with a complete policy or invalidate without a policy.');
+  const request = { op: 'change', operationId, expectedInstanceId: cacheInstanceId,
+    expectedRevision, route: binding, action,
+    ...(action === 'configure' ? { policy: retainedPolicy(policy) } : {}) };
+  const current = await managedCacheCall(root, instanceId, request);
+  return { schema: 'stellar-forge.seller-release-cache-change.v1',
+    instanceId: current.instanceId, releaseId: current.releaseId, operation: current.result };
+}
+
+/** Readback never changes the original operation ID or performs a new mutation. */
+export async function releaseCacheOperation(root, { instanceId, operationId } = {}) {
+  cacheOperationId(operationId);
+  const current = await managedCacheCall(root, instanceId, { op: 'operation', operationId });
+  return { schema: 'stellar-forge.seller-release-cache-operation.v1',
+    instanceId: current.instanceId, releaseId: current.releaseId, ...current.result };
 }

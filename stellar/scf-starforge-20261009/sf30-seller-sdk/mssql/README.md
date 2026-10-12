@@ -121,3 +121,24 @@ Private SQL, database identity and credentials are excluded from the generated p
 - [Microsoft result-set metadata function](https://learn.microsoft.com/en-us/sql/relational-databases/system-dynamic-management-objects/sys-dm-exec-describe-first-result-set-transact-sql?view=sql-server-ver17).
 - [Microsoft CAST and CONVERT](https://learn.microsoft.com/en-us/sql/t-sql/functions/cast-and-convert-transact-sql?view=sql-server-ver17).
 - [Microsoft Node.js connection guidance](https://learn.microsoft.com/en-us/sql/connect/node-js/step-3-proof-of-concept-connecting-to-sql-using-node-js?view=sql-server-ver17).
+
+## Retained seller releases and installed distribution
+
+The maintained merchant distribution includes `starforge mssql` and
+`starforge mssql-workspace`. Its `mssql` runtime profile installs the original
+pinned `mssql@12.7.4` dependency and the existing runtime doctor checks it.
+
+A prepared directory enters the same SF82 release store as other merchant sources:
+
+```sh
+node sf82-seller-pilot/release-cli.mjs init --store /absolute/path/release-store
+node sf82-seller-pilot/release-cli.mjs stage --store /absolute/path/release-store --id catalog-v1 --mssql-package /absolute/path/prepared
+node sf82-seller-pilot/release-cli.mjs inspect --store /absolute/path/release-store --id catalog-v1
+```
+
+Use the existing release CLI to activate, run, compare, stop, and roll back that
+retained source. Staging captures the approved query definitions, connection
+profile, certificate, public terms, generated customer client, and exact package
+bytes. It resolves credentials only when the original SQL Server seller starts.
+The existing SF82 child owns the process handshake, readiness, shutdown, and
+recovery. Source execution and payment continue through the original SF30 routes.

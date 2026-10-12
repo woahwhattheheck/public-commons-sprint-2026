@@ -3,6 +3,7 @@ import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { randomBytes, timingSafeEqual } from 'node:crypto';
 import { openWorkspace, fault } from './model.mjs';
+import { openPlanningWorkspace } from '../planning/workspace.mjs';
 
 const POLICY = "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'";
 const REPORT_POLICY = "default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'";
@@ -10,10 +11,14 @@ const REPORT_POLICY = "default-src 'none'; style-src 'unsafe-inline'; base-uri '
 export async function startWorkspace({port = 8457, ...options} = {}) {
   if (!Number.isInteger(port) || port < 0 || port > 65535) throw new TypeError('Port must be 0–65535.');
   const model = await openWorkspace(options), token = randomBytes(32).toString('hex');
+  const planning = await openPlanningWorkspace({model,directory:options.directory});
   const assets = new Map(await Promise.all([
     ['/', 'index.html','text/html; charset=utf-8'],
     ['/browser.mjs','browser.mjs','text/javascript; charset=utf-8'],
     ['/style.css','style.css','text/css; charset=utf-8'],
+    ['/planning','../planning/index.html','text/html; charset=utf-8'],
+    ['/planning/browser.mjs','../planning/browser.mjs','text/javascript; charset=utf-8'],
+    ['/planning/style.css','../planning/style.css','text/css; charset=utf-8'],
   ].map(async ([path,name,type]) => [path,{type,bytes:await readFile(new URL(name,import.meta.url))}])));
   let hosts = new Set(), origins = new Set();
   const server = createServer((req,res) => {
@@ -55,10 +60,12 @@ export async function startWorkspace({port = 8457, ...options} = {}) {
         const asset = assets.get(url.pathname);
         if (asset) return reply(200,asset.type,asset.bytes);
         if (url.pathname === '/api/state') return json(200,{...await model.state(),token});
-        const match = /^\/(files|repricing-files)\/([a-f0-9-]{36})\/(.+)$/.exec(url.pathname);
+        if (url.pathname === '/api/planning/state') return json(200,await planning.list());
+        const match = /^\/(files|repricing-files|planning-files)\/([a-f0-9-]{36})\/(.+)$/.exec(url.pathname);
         if (match) {
           const name = decodeURIComponent(match[3]);
-          const bytes = await (match[1] === 'repricing-files' ? model.downloadRepricing(match[2],name)
+          const bytes = await (match[1] === 'planning-files' ? planning.download(match[2],name)
+            : match[1] === 'repricing-files' ? model.downloadRepricing(match[2],name)
             : model.download(match[2],name)), last = name.split('/').at(-1);
           const html = name.endsWith('.html');
           const type = html ? 'text/html; charset=utf-8' : name.endsWith('.json')
@@ -70,6 +77,11 @@ export async function startWorkspace({port = 8457, ...options} = {}) {
       }
       if (req.method !== 'POST') return reply(405,'text/plain','Use GET or POST.',{allow:'GET, HEAD, POST'});
       const input = await body();
+      if (url.pathname === '/api/planning/source') return json(200,await planning.source(input.version));
+      if (url.pathname === '/api/planning/preview') return json(200,await planning.preview(input));
+      if (url.pathname === '/api/planning/save') return json(200,await planning.save(input));
+      if (url.pathname === '/api/planning/load') return json(200,await planning.load(input.planId));
+      if (url.pathname === '/api/planning/apply') return json(200,await planning.selection(input));
       if (url.pathname === '/api/source') return json(200,{...await model.state(input.selection),token});
       if (url.pathname === '/api/preview') return json(200,await model.preview(input));
       if (url.pathname === '/api/save') return json(200,await model.save(input));
@@ -94,7 +106,7 @@ export async function startWorkspace({port = 8457, ...options} = {}) {
   hosts = new Set([`127.0.0.1:${assigned}`,`localhost:${assigned}`]);
   origins = new Set([...hosts].map(host => `http://${host}`));
   let closing;
-  return {url:`http://127.0.0.1:${assigned}`,server,model,
+  return {url:`http://127.0.0.1:${assigned}`,planningUrl:`http://127.0.0.1:${assigned}/planning`,server,model,planning,
     close() { return closing ??= new Promise((done,fail) => {
       server.close(error => error ? fail(error) : done()); server.closeIdleConnections?.();
     }); }};

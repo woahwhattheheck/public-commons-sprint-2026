@@ -10,7 +10,7 @@ export async function inspectMssqlCatalog(sourceFile,{environment=process.env,ta
     connectTimeoutMs:declaration.config.connectTimeoutMs??5000,idleTimeoutMs:1000});
   try {
     const query=async(text,bind)=>{
-      const request=pool.request();request.timeout=declaration.config.startupTimeoutMs??10000;
+      const request=pool.request({requestTimeout:declaration.config.startupTimeoutMs??10000});
       bind?.(request);return(await request.query(text)).recordset;
     };
     const [server]=await query("SELECT CONVERT(varchar(128),SERVERPROPERTY('ProductVersion')) AS version");

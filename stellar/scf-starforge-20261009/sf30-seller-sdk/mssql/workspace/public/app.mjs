@@ -76,15 +76,25 @@ function columnOptions(select, selected, columns = filterable()) {
   select.replaceChildren(...columns.map(column => option(column.name, column.name + ' · ' + column.dataType)));
   if (columns.some(column => column.name === selected)) select.value = selected;
 }
+const orderable = () => {
+  const selected = new Set([...$('column-rows').querySelectorAll('input:checked')].map(input => input.value));
+  return filterable().filter(column => selected.has(column.name));
+};
 function renderOrders() {
+  const columns = orderable();
+  state.orders = state.orders.filter(order => columns.some(column => column.name === order.column));
+  if (!state.orders.length && columns.length) {
+    const first = columns.find(column => column.keyKind === 'PRI') ?? columns[0];
+    state.orders.push({ column: first.name, direction: 'ASC' });
+  }
   $('order-rows').replaceChildren(...state.orders.map((order, index) => {
-    const field = node('select', { 'aria-label': 'Order field ' + (index + 1), onchange: event => { order.column = event.target.value; endpointChanged(); } });
-    columnOptions(field, order.column);
+    const field = node('select', { 'aria-label': 'Order field ' + (index + 1), onchange: event => { order.column = event.target.value; endpointChanged(); renderOrders(); } });
+    columnOptions(field, order.column, columns.filter(column => column.name === order.column || !state.orders.some(other => other.column === column.name)));
     const direction = node('select', { 'aria-label': 'Order direction ' + (index + 1), onchange: event => { order.direction = event.target.value; endpointChanged(); } }, [option('ASC'), option('DESC')]);
     direction.value = order.direction;
     return node('div', { className: 'order-row' }, [field, direction, button('Remove', () => { state.orders.splice(index, 1); endpointChanged(); renderOrders(); })]);
   }));
-  $('add-order').disabled = !filterable().length || state.orders.length >= 4;
+  $('add-order').disabled = columns.length <= state.orders.length || state.orders.length >= 4;
 }
 function renderFilters() {
   $('filter-rows').replaceChildren(...state.filters.map((filter, index) => {
@@ -115,7 +125,7 @@ function renderColumns(selected = []) {
   const wanted = new Set(selected);
   $('column-rows').replaceChildren(...state.relation.columns.map(column => node('tr', {}, [
     node('td', {}, [node('input', { type: 'checkbox', checked: wanted.has(column.name), value: column.name,
-      'aria-label': 'Include ' + column.name, onchange: endpointChanged })]),
+      'aria-label': 'Include ' + column.name, onchange: () => { endpointChanged(); renderOrders(); } })]),
     node('td', {}, [node('span', { className: 'field-name mono', textContent: column.name }),
       node('span', { className: 'field-meta', textContent: [column.keyKind === 'PRI' ? 'Primary key' : column.keyKind,
         column.nullable === 'YES' ? 'Nullable' : 'Required'].filter(Boolean).join(' · ') })]),
@@ -277,7 +287,7 @@ $('new-endpoint').addEventListener('click', () => {
 $('refresh-catalog').addEventListener('click', () => work('Reading the actual database catalog…', refreshCatalog));
 $('table-select').addEventListener('change', event => work('Reading the actual table fields…', () => loadTable(event.target.value)));
 $('add-order').addEventListener('click', () => {
-  const column = filterable().find(item => !state.orders.some(order => order.column === item.name));
+  const column = orderable().find(item => !state.orders.some(order => order.column === item.name));
   if (column && state.orders.length < 4) state.orders.push({ column: column.name, direction: 'ASC' }); endpointChanged(); renderOrders();
 });
 $('add-filter').addEventListener('click', () => {
