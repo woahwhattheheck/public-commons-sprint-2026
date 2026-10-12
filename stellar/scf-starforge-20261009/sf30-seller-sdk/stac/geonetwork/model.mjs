@@ -55,7 +55,7 @@ export function normalizeConnection(input) {
     maxMefBytes: input.maxMefBytes ?? 268435456, expectedVersion: input.expectedVersion ?? null };
   for (const key of ['portal', 'language'])
     requireValue(typeof result[key] === 'string' && /^[A-Za-z0-9_-]{1,64}$/.test(result[key]), 'CATALOGUE_NATIVE_CONTEXT_INVALID');
-  for (const [key, min, max] of [['timeoutMs', 1000, 600000], ['maxResponseBytes', 1024, 268435456], ['maxMefBytes', 1024, 2147483647]])
+  for (const [key, min, max] of [['timeoutMs', 100, 300000], ['maxResponseBytes', 1024, 67108864], ['maxMefBytes', 1024, 536870912]])
     requireValue(Number.isSafeInteger(result[key]) && result[key] >= min && result[key] <= max, 'CATALOGUE_LIMIT_INVALID', 'Configure a valid ' + key + '.');
   if (result.expectedVersion !== null) textValue(result.expectedVersion, 'Expected installed version', 128);
   return result;
@@ -68,7 +68,7 @@ function resolvedLink(href, base, issues, collectionId, location) {
   }
   try {
     const url = base ? new URL(href, base) : new URL(href);
-    requireValue(['https:', 'http:', 'ftp:', 's3:', 'doi:', 'urn:'].includes(url.protocol), 'CATALOGUE_LINK_SCHEME');
+    requireValue(['https:', 'http:', 'ftp:', 's3:', 'doi:', 'urn:'].includes(url.protocol) && !url.username && !url.password, 'CATALOGUE_LINK_SCHEME');
     return url.href;
   } catch {
     issues.push({ severity: 'error', collectionId, location, code: 'SOURCE_BASE_REQUIRED', message: 'Retain an absolute original self link or supply the actual source document URL before publication.' });
@@ -167,6 +167,13 @@ export function validateSource(source) {
   requireValue(source.collections.every((c, i) => hash(c.original) === c.originalSha256 && hash(c.metadata) === c.metadataSha256 &&
     canonicalJson(c.metadata) === canonicalJson(source.document.collections[i]) && c.original.id === c.metadata.id &&
     c.metadata.id === source.collectionIds[i]), 'CATALOGUE_SOURCE_CHANGED');
+  requireValue(Array.isArray(source.nativeRecords) && source.nativeRecords.length === source.collections.length &&
+    source.nativeRecords.every((record, index) => record.collectionId === source.collectionIds[index] &&
+      record.uuid === nativeRecordId(source.collectionIds[index]) &&
+      typeof record.uuid === 'string' && record.uuid.length && !/[\/\\\u0000-\u001f]/.test(record.uuid) &&
+      !['.', '..'].includes(record.uuid)) &&
+    new Set(source.nativeRecords.map(record => record.uuid)).size === source.nativeRecords.length,
+    'CATALOGUE_NATIVE_UUID_MAPPING_CHANGED');
   return source;
 }
 export function compareCollectionSources(before, after) {
@@ -197,7 +204,7 @@ export function normalizePlan(input, { workspaceId, source, previousSource = nul
   const seen = new Set();
   const groups = privileges.map(item => {
     requireValue(isObject(item) && Array.isArray(item.operations) && item.operations.length <= 6, 'CATALOGUE_PRIVILEGES_INVALID');
-    const groupId = nativeId(item.groupId, 'privilege group ID');
+    const groupId = String(item.groupId) === '-1' ? '-1' : nativeId(item.groupId, 'privilege group ID');
     requireValue(!seen.has(groupId), 'CATALOGUE_PRIVILEGE_GROUP_REPEATED'); seen.add(groupId);
     requireValue(new Set(item.operations).size === item.operations.length &&
       item.operations.every(op => ['view', 'download', 'notify', 'dynamic', 'featured'].includes(op)), 'CATALOGUE_PRIVILEGE_OPERATION_INVALID');
