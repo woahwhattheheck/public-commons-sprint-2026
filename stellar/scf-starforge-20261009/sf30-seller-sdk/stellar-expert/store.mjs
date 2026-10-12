@@ -46,6 +46,20 @@ export async function readOwned(path,max=16*1024*1024) {
     return b;
   }finally{await f.close();}
 }
+
+export async function inspectStellarExpertIdentity(directory,{allowMissing=false}={}) {
+  const root=resolve(directory);
+  try {
+    await privateDirectory(root);
+    const state=JSON.parse((await readOwned(join(root,'workspace.json'),64*1024*1024)).toString('utf8'));
+    if(state.schema!=='stellar-forge.stellar-expert-workspace.v1'||
+      !/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(state.workspaceId??'')||
+      !Number.isSafeInteger(state.revision)||state.revision<0)
+      throw fault('STELLAR_WORKSPACE_SCHEMA','This directory contains another workspace format.',409);
+    return {directory:root,workspaceId:state.workspaceId};
+  }catch(error){if(allowMissing&&error.code==='ENOENT')return null;throw error;}
+}
+
 async function acquireLease(path) {
   // Kernel flock belongs to the pipe-lived helper. Parent death closes stdin,
   // releasing the lock without a timeout-based stale-owner guess.

@@ -84,3 +84,7 @@ The terminal interface is `node stellar/scf-starforge-20261009/sf30-seller-sdk/s
 | `workspace.mjs`, `cli.mjs`, `web/` | Shared local HTTP/terminal interfaces and industrial operator UI. |
 
 The original source and installed runtime paths are part of existing release bindings. Preserve those paths for a direct restored installation; prepare a new release through the original installer/publisher when selecting another layout. Keep private workspaces, buyer configuration and payment credentials outside the source repository.
+
+## Installed Applications entry
+
+The additive `distribution/runtime-workspace/application-stellar-expert.mjs` adapter provides the original `dataset-workspace --stellar-expert` command to the maintained Applications catalog. It reviews the selected runtime and stable workspace identity, retains the original inbox/runtime file selections, and recognizes the exact structured startup record. `--startup-format json` is available to maintained launchers; ordinary terminal startup retains its private session URL. `--expected-workspace-id UUID` binds a reopen to the originally reviewed workspace. Source captures and mutable workspace revisions remain usable across restart.
