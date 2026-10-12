@@ -1,3 +1,5 @@
+import { CLIENT_EXPORT_FILES, CLIENT_EXPORT_MANIFEST, MAX_CLIENT_EXPORT_FILE_BYTES } from './client-export-contracts.mjs';
+export { CLIENT_EXPORT_MANIFEST, CLIENT_EXPORT_FILES, MAX_CLIENT_EXPORT_FILE_BYTES } from './client-export-contracts.mjs';
 // MIT. Original customer SDK export, completion receipt and retained-file recovery.
 import { constants } from 'node:fs';
 import { readFile, stat, lstat, mkdir, open, link, unlink } from 'node:fs/promises';
@@ -7,9 +9,9 @@ import { fileURLToPath } from 'node:url';
 import { generateSellerClient, sellerClientSnapshot } from './client-generator.mjs';
 import { supportsSellerMethod } from '../http-methods.mjs';
 
-export const CLIENT_EXPORT_MANIFEST = 'client-export.json';
-export const CLIENT_EXPORT_FILES = Object.freeze(['seller-client.mjs', 'seller-client.d.mts', 'seller-openapi.json', 'package.json', 'README.md']);
-export const MAX_CLIENT_EXPORT_FILE_BYTES = 64 * 1024 * 1024;
+
+
+
 const MAX_TOTAL_BYTES = 128 * 1024 * 1024;
 const MANIFEST_LIMIT = 65000;
 const SCHEMA = 'stellar-forge.seller-client-manifest.v1';
