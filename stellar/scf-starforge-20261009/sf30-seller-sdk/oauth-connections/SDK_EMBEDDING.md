@@ -193,3 +193,11 @@ The core's `discard` is synchronous. Registry `discard` is asynchronous
 because it first rechecks the alias's private directory identity. Both core and
 registry `close` return promises and wait for their owned exchanges/saves.
 
+
+## Native QuickBooks company and accounting owner
+
+The typed `@tokenjunkielabs/starforge-merchant/seller/oauth-connections/quickbooks` export connects this registry to the original native QuickBooks accounting controller. Use `previewQuickBooksSelection({registry,...reviewedIdentity})` to read CompanyInfo, Preferences and all Account pages, then `saveQuickBooksSelection(directory,{registry,selection,previewSha256,expectedSelectionSha256})` to persist the reviewed company.
+
+`openQuickBooksOAuthClient({registry,selection,...runtime})` returns the original native client and an owned token provider. Inject its `client` into `startAccountingWorkspace({...,qboClient:client})`. Drain accounting before closing that client owner, and retain the original host's ownership of a shared registry. The integrated `startQuickBooksAccountingWorkspace` launcher performs these steps and exposes the actual original runtime as `accounting`.
+
+The full [QuickBooks guide](./QUICKBOOKS.md) covers registered callbacks, consent, persistent company selection, automatic grant renewal, native posting recovery, and complete CLI/SDK examples.

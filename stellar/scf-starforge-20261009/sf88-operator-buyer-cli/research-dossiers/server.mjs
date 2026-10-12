@@ -276,7 +276,7 @@ async function main(args) {
   try {app = await startDossierWorkspace({...options, providers, openalexWorkspace});}
   catch (error) {await openalexWorkspace?.close(); throw error;}
   process.stdout.write(JSON.stringify({mode: 'RESEARCH_DOSSIER_WORKSPACE', directory: options.directory,
-    url: app.url, providers: Object.keys(providers), openalexConfigured:openalexWorkspace !== null}, null, 2) + '\n');
+    url: app.url, providers: Object.keys(providers), openalexConfigured:openalexWorkspace !== null}) + '\n');
   let closing;
   const stop = () => closing ??= (async () => {
     try {await app.close();} finally {await openalexWorkspace?.close(); process.exitCode = 0;}
