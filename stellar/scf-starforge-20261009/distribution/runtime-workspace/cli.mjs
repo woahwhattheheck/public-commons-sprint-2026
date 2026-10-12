@@ -13,6 +13,11 @@ const HELP = `Starforge customer runtime workspace
   runtime-workspace attach --workspace DIRECTORY --runtime EXISTING_RUNTIME [--label NAME]
   runtime-workspace serve --workspace DIRECTORY [--port 8465]
   runtime-workspace status --workspace DIRECTORY [--runtime-id ID]
+  runtime-workspace python-status --workspace DIRECTORY --runtime-id ID
+  runtime-workspace python-review --workspace DIRECTORY --runtime-id ID --python ABS [--extras workbooks,agents|base]
+  runtime-workspace python-operation --workspace DIRECTORY --request ABSOLUTE_JSON_FILE
+  runtime-workspace python-continue --workspace DIRECTORY --operation-id UUID
+  runtime-workspace python-command --workspace DIRECTORY --runtime-id ID --installation-id SHA --command NAME --args ABSOLUTE_JSON_FILE
   runtime-workspace handoff --workspace DIRECTORY --runtime-id ID
   runtime-workspace transfers --workspace DIRECTORY [--transfer-id ID]
   runtime-workspace transfer-review --workspace DIRECTORY --runtime-id ID
@@ -51,6 +56,10 @@ const allowed = {
   'application-stop': ['--workspace', '--application-id', '--operation-id'],
   'application-recover': ['--workspace', '--application-id', '--operation-id'],
   'application-output': ['--workspace', '--application-id', '--operation-id'],
+  'python-status': ['--workspace', '--runtime-id'],
+  'python-review': ['--workspace', '--runtime-id', '--python', '--extras'],
+  'python-operation': ['--workspace', '--request'], 'python-continue': ['--workspace', '--operation-id'],
+  'python-command': ['--workspace', '--runtime-id', '--installation-id', '--command', '--args'],
   transfers: ['--workspace', '--transfer-id'], 'transfer-review': ['--workspace', '--runtime-id'],
   'transfer-attach': ['--workspace', '--directory', '--label'],
   'transfer-operation': ['--workspace', '--request'], 'transfer-continue': ['--workspace', '--operation-id'],
@@ -104,6 +113,21 @@ export async function main(argv = process.argv.slice(2)) {
     const method = { 'application-start-review': 'applicationsStartReview', 'application-connect': 'applicationsConnect',
       'application-stop': 'applicationsStop', 'application-recover': 'applicationsRecover', 'application-output': 'applicationsOutput' }[command];
     result = await model[method]({ applicationId: options['--application-id'], ...(options['--operation-id'] ? { operationId: options['--operation-id'] } : {}) });
+  } else if (command === 'python-status') result = await model.pythonState({ runtimeId: options['--runtime-id'] });
+  else if (command === 'python-review') {
+    if (!options['--python']) fail('PYTHON_INTERPRETER_REQUIRED', 'Select an absolute Python executable.');
+    result = await model.pythonReview({ runtimeId: options['--runtime-id'], python: resolve(options['--python']),
+      extras: options['--extras'] === 'base' ? [] : (options['--extras'] ?? 'workbooks').split(',') });
+  } else if (command === 'python-operation') {
+    if (!options['--request']) fail('PYTHON_REQUEST_FILE_REQUIRED');
+    const request = await readJSON(resolve(options['--request']));
+    if (!request?.operation?.startsWith('python-')) fail('PYTHON_OPERATION_INVALID');
+    result = await model.begin(request);
+  } else if (command === 'python-continue') result = await model.recoverPythonOperation(options['--operation-id']);
+  else if (command === 'python-command') {
+    if (!options['--args']) fail('PYTHON_ARGUMENT_FILE_REQUIRED');
+    result = await model.pythonCommand({ runtimeId: options['--runtime-id'], installationId: options['--installation-id'],
+      command: options['--command'], args: await readJSON(resolve(options['--args'])) });
   } else if (command === 'transfers') result = await model.transfersState({ cacheTransferId: options['--transfer-id'] ?? null });
   else if (command === 'transfer-review') result = await model.transfersReview({ runtimeId: options['--runtime-id'] });
   else if (command === 'transfer-attach') {

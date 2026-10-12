@@ -3,6 +3,7 @@ import {request as httpRequest} from 'node:http';
 import {request as httpsRequest} from 'node:https';
 import {createHmac, randomUUID} from 'node:crypto';
 import {hash, idPattern, kinds} from './incident-config.mjs';
+import {resolveSlackDestination,deliverSlackNotification,validSlackReceipt} from './notifications-slack.mjs';
 
 export const NOTIFICATION_SCHEMA = 'stellar-forge.seller-incident-notification.v1';
 export const MAX_PENDING = 1024;
@@ -14,6 +15,7 @@ export {terminal as terminalNotification};
 export function resolveDestination(config, env) {
   if (!config.notification) return {reason:'NOT_CONFIGURED'};
   const n = config.notification;
+  if (n.transport === 'slack') return resolveSlackDestination(n,env);
   let url;
   try {url = new URL(env[n.urlEnv]);} catch {return {reason:'DESTINATION_UNAVAILABLE'};}
   const local = n.allowLoopback && url.protocol==='http:' && url.hostname==='127.0.0.1' &&
@@ -96,8 +98,10 @@ function retryAfter(value, now, maximum) {
   const ms=/^\d+$/.test(value)?Number(value)*1000:Date.parse(value)-now;
   return Number.isFinite(ms)&&ms>=0?Math.min(ms,maximum):null;
 }
-export async function deliverNotification(event,destination,options,{signal}={}) {
+export async function deliverNotification(event,destination,options,{signal,slackRequest}={}) {
   checkPayload(event);
+  if (destination.transport === 'slack')
+    return deliverSlackNotification(event,destination,options,{signal,request:slackRequest});
   const timestamp=String(Math.floor(Date.now()/1000));
   const signature=createHmac('sha256',destination.secret).update(timestamp+'.'+event.body).digest('hex');
   return new Promise(resolve=>{
@@ -127,9 +131,15 @@ export async function deliverNotification(event,destination,options,{signal}={})
 export function applyDelivery(event,result,options,now) {
   event.attemptId=null;event.inFlightUntil=null;event.httpStatus=result.status ?? null;
   event.lastReason=result.reason;
-  if (result.accepted) {event.status='DELIVERED';event.acceptedAt=new Date(now).toISOString();event.nextAttemptAt=null;return;}
+  if (result.accepted) {
+    if (event.binding?.transport === 'slack' && !validSlackReceipt(result.providerReceipt,event))
+      throw new Error('SF93_SLACK_RECEIPT_INVALID');
+    if (result.providerReceipt) event.providerReceipt = structuredClone(result.providerReceipt);
+    event.status='DELIVERED';event.acceptedAt=new Date(now).toISOString();event.nextAttemptAt=null;return;
+  }
   if (!result.retryable || event.attempts>=options.maxAttempts) {event.status='EXHAUSTED';event.nextAttemptAt=null;return;}
   event.status='RETRY';
   const backoff=Math.min(options.maxRetryMs,options.retryMs*2**Math.min(event.attempts-1,30));
   event.nextAttemptAt=new Date(now+Math.max(backoff,result.retryAfterMs ?? 0)).toISOString();
 }
+

@@ -1,15 +1,15 @@
 // MIT — SCF SF82: one original approved buyer attempt to independently observed evidence.
 // Trusted operator-host adapter; not an agent-facing signer, new payment controller or ledger.
 import { createHash } from 'node:crypto';
-import { open, stat } from 'node:fs/promises';
-import { isAbsolute, join } from 'node:path';
+import { stat } from 'node:fs/promises';
+import { isAbsolute } from 'node:path';
 import { checkStellarTransaction, createOfficialEventDecoder } from '../sf43-agent-commerce/verify.mjs';
 import { captureBuyerResult, captureBuyerError, aggregateOutcomes } from '../sf52-buyer-outcomes/outcomes.mjs';
 import { sf81ReconciliationRecord } from '../sf82-chain-transfer-reconcile/record.mjs';
+import {checkoutPaths,readCheckoutRecord,createCheckoutRecord} from './checkpoint.mjs';
 
 const tag = /^[A-Za-z0-9._:-]{1,128}$/; // Original SF52 observation identity limit.
 const payer = /^[GC][A-Z2-7]{55}$/;
-const digest = s => createHash('sha256').update(s).digest('hex');
 const isObject = v => v !== null && typeof v === 'object' && !Array.isArray(v);
 
 async function bodyEvidence(response, maxBytes, timeoutMs) {
@@ -98,7 +98,7 @@ export async function executeWithEvidence({buyer, call, outputDir, trustedPayer,
   captureBuyerError({intentId:call.intentId,error:{paymentSent:false,code:'EVIDENCE_PREFLIGHT'},observedAt});
   const directory = await stat(outputDir);
   if (!directory.isDirectory()) throw new TypeError('EVIDENCE_PATH_NOT_DIRECTORY');
-  const evidencePath = join(outputDir, digest(call.intentId) + '.json');
+  const {evidencePath,checkpointPath,bodyPath}=checkoutPaths(outputDir,call.intentId);
   // Fail before invoking a signer when this exact intent already has a terminal
   // report. Cross-process paid-attempt uniqueness remains SF36's original job.
   try {
@@ -107,6 +107,11 @@ export async function executeWithEvidence({buyer, call, outputDir, trustedPayer,
   } catch (err) {
     if (err.code !== 'ENOENT') throw err;
   }
+
+  // A returned original buyer result is a durable continuation even if its
+  // later RPC observation or terminal file was interrupted.
+  if (await readCheckoutRecord(checkpointPath,{optional:true}))
+    throw new Error('CHECKOUT_CHECKPOINT_EXISTS_USE_RECOVERY');
 
   let result = null, error = null;
   try { result = await buyer.call(call); }
@@ -124,6 +129,12 @@ export async function executeWithEvidence({buyer, call, outputDir, trustedPayer,
     { paymentSent: true, code: 'UNKNOWN_EXECUTION_PHASE' } : error;
   const base = error ? captureBuyerError({intentId:call.intentId,error:observedError,observedAt}) :
     captureBuyerResult(result,{observedAt});
+  const checkpoint=await createCheckoutRecord(checkpointPath,{
+    schema:'scf82.checkout-checkpoint.v1',intentId:call.intentId,observedAt,
+    trustedPayer:trustedPayer??null,observation:base,reconciliation,
+    operatorReservation:reservationMetadata(result?.operatorReservation??error?.operatorReservation),
+    captureBody,maxBodyBytes,bodyCaptureTimeoutMs,
+  });
   let chain = null, delivery = null;
   let bodyCapture = {status:captureBody ? 'NO_SUCCESSFUL_PAID_BODY' : 'NOT_REQUESTED'};
   if (!error) {
@@ -135,39 +146,106 @@ export async function executeWithEvidence({buyer, call, outputDir, trustedPayer,
           bodySha256:candidate.bodySha256};
       }
     }
-    // Seller receipt alone cannot prove a transfer. SF43 queries ORIGINAL
-    // Stellar RPC for the approved network and validates its transfer event.
-    const terms = base.buyer.requirement, receipt = base.buyer.receipt;
-    if (trustedPayer && ['stellar:testnet','stellar:pubnet'].includes(terms?.network) &&
-        receipt?.success === true && receipt.network === terms.network &&
-        /^[0-9a-f]{64}$/.test(receipt.transaction || '')) {
-      let decoder = decodeContractEvent;
-      if (!decoder) {
-        try { decoder = await createOfficialEventDecoder(); }
-        catch { decoder = undefined; } // SF43 still checks tx inclusion; never claims a matched transfer.
-      }
-      chain = await checkStellarTransaction({
-        receipt: { ...receipt, payer: trustedPayer },
-        expected: { network:terms.network, asset:terms.asset, payTo:terms.payTo,
-          amount:terms.amount, payer:trustedPayer },
-        ...(decoder ? {decodeContractEvent:decoder} : {}),
-        ...(rpcEndpoint !== undefined ? {rpcEndpoint} : {}),
-        ...(rpcFetch !== undefined ? {fetchImpl:rpcFetch} : {}),
-      });
-    }
   }
+  // Retain the completed body-hash observation before the independent RPC work.
+  await createCheckoutRecord(bodyPath,{schema:'scf82.checkout-body-checkpoint.v1',
+    intentId:call.intentId,checkpointSha256:checkpoint.sha256,bodyCapture});
+  if (!error) chain=await observeCheckoutChain(base,{trustedPayer,decodeContractEvent,rpcEndpoint,rpcFetch});
+
   const observation = {...base, ...(chain ? {chain} : {}), ...(delivery ? {delivery} : {})};
   const report = aggregateOutcomes([observation]);
   const envelope = {
     schema:'scf82.checkout-evidence.v1', intentId:call.intentId, observedAt,
     operatorReservation:reservationMetadata(result?.operatorReservation ?? error?.operatorReservation),
     observation, report, bodyCapture, reconciliation,
+    sourceCheckpoint:{path:checkpointPath,sha256:checkpoint.sha256},
     notes:'Original SF43 observes the approved network, transaction and exact SEP-41 transfer. HTTP delivery and original SF36 accounting are recorded separately.',
   };
-  // Create-only terminal evidence. Never overwrite/release reservations after
-  // crashed sends, lost replies, partial writes or duplicate intent collisions.
-  const handle = await open(evidencePath,'wx',0o600);
-  try { await handle.writeFile(JSON.stringify(envelope,null,2) + '\n','utf8'); await handle.sync(); }
-  finally { await handle.close(); }
+  await createCheckoutRecord(evidencePath,envelope);
   return { result, error, evidencePath, report };
+}
+
+async function observeCheckoutChain(base,{trustedPayer,decodeContractEvent,rpcEndpoint,rpcFetch}={}) {
+  const terms=base.buyer.requirement,receipt=base.buyer.receipt;
+  if (!(trustedPayer&&['stellar:testnet','stellar:pubnet'].includes(terms?.network)&&
+      receipt?.success===true&&receipt.network===terms.network&&/^[0-9a-f]{64}$/.test(receipt.transaction||''))) return null;
+  let decoder=decodeContractEvent;
+  if (!decoder) {
+    try {decoder=await createOfficialEventDecoder();}
+    catch {decoder=undefined;}
+  }
+  return checkStellarTransaction({
+    receipt:{...receipt,payer:trustedPayer},
+    expected:{network:terms.network,asset:terms.asset,payTo:terms.payTo,amount:terms.amount,payer:trustedPayer},
+    ...(decoder?{decodeContractEvent:decoder}:{}),
+    ...(rpcEndpoint!==undefined?{rpcEndpoint}:{}),
+    ...(rpcFetch!==undefined?{fetchImpl:rpcFetch}:{}),
+  });
+}
+
+function terminalRecord(record,intentId) {
+  const value=record?.value;
+  if (!isObject(value)||value.schema!=='scf82.checkout-evidence.v1'||value.intentId!==intentId||
+      value.observation?.intentId!==intentId) throw new TypeError('CHECKOUT_TERMINAL_RECORD_INVALID');
+  aggregateOutcomes([value.observation]);
+  return {evidencePath:record.path,report:value.report,checkpointPath:value.sourceCheckpoint?.path??null,
+    recovered:false,evidenceSha256:record.sha256};
+}
+
+/** Finish observation of a saved original buyer result. This API never invokes
+ * a buyer, signer, approval, reservation or merchant request. */
+export async function recoverCheckoutEvidence({outputDir,intentId,trustedPayer,
+  decodeContractEvent,rpcEndpoint,rpcFetch}={}) {
+  const {evidencePath,checkpointPath,bodyPath}=checkoutPaths(outputDir,intentId);
+  if (trustedPayer!==undefined&&(typeof trustedPayer!=='string'||!payer.test(trustedPayer)))
+    throw new TypeError('TRUSTED_STELLAR_PAYER_INVALID');
+  if (decodeContractEvent!==undefined&&typeof decodeContractEvent!=='function')
+    throw new TypeError('DECODER_MUST_BE_TRUSTED_FUNCTION');
+  if (rpcFetch!==undefined&&typeof rpcFetch!=='function')throw new TypeError('RPC_FETCH_INVALID');
+  const terminal=await readCheckoutRecord(evidencePath,{optional:true});
+  if (terminal)return terminalRecord(terminal,intentId);
+  const checkpoint=await readCheckoutRecord(checkpointPath),saved=checkpoint.value;
+  if (!isObject(saved)||saved.schema!=='scf82.checkout-checkpoint.v1'||saved.intentId!==intentId||
+      saved.observation?.intentId!==intentId||saved.observation?.observedAt!==saved.observedAt||
+      typeof saved.captureBody!=='boolean'||!isObject(saved.reconciliation)||
+      !['AVAILABLE','UNAVAILABLE'].includes(saved.reconciliation.status)||
+      (saved.trustedPayer??null)!==(trustedPayer??null))
+    throw new TypeError('CHECKOUT_CHECKPOINT_BINDING_MISMATCH');
+  aggregateOutcomes([saved.observation]);
+  if (saved.reconciliation.status==='AVAILABLE'&&
+      (saved.reconciliation.record?.intentId!==intentId||
+       saved.reconciliation.record?.operatorReservation?.request_id!==intentId))
+    throw new TypeError('CHECKOUT_CHECKPOINT_BINDING_MISMATCH');
+  const bodyRecord=await readCheckoutRecord(bodyPath,{optional:true});
+  if (bodyRecord&&(bodyRecord.value?.schema!=='scf82.checkout-body-checkpoint.v1'||
+      bodyRecord.value?.intentId!==intentId||bodyRecord.value?.checkpointSha256!==checkpoint.sha256||
+      !isObject(bodyRecord.value?.bodyCapture)))
+    throw new TypeError('CHECKOUT_BODY_CHECKPOINT_BINDING_MISMATCH');
+  const bodyCapture=bodyRecord?.value.bodyCapture??{status:saved.captureBody?'CAPTURE_INTERRUPTED':'NOT_REQUESTED'};
+  let delivery=null;
+  if (bodyCapture.status==='HTTP_BODY_OBSERVED') {
+    if (!Number.isSafeInteger(bodyCapture.httpStatus)||bodyCapture.httpStatus<200||bodyCapture.httpStatus>=300||
+        !/^[0-9a-f]{64}$/.test(bodyCapture.bodySha256??'')||!Number.isSafeInteger(bodyCapture.bodyBytes)||
+        bodyCapture.bodyBytes<0||bodyCapture.bodyBytes>saved.maxBodyBytes)
+      throw new TypeError('CHECKOUT_BODY_CHECKPOINT_INVALID');
+    delivery={status:bodyCapture.status,httpStatus:bodyCapture.httpStatus,bodySha256:bodyCapture.bodySha256};
+  }
+  const chain=await observeCheckoutChain(saved.observation,{trustedPayer,decodeContractEvent,rpcEndpoint,rpcFetch});
+  const observation={...saved.observation,...(chain?{chain}:{}),...(delivery?{delivery}:{})};
+  const report=aggregateOutcomes([observation]);
+  const envelope={
+    schema:'scf82.checkout-evidence.v1',intentId,observedAt:saved.observedAt,
+    operatorReservation:saved.operatorReservation,observation,report,bodyCapture,reconciliation:saved.reconciliation,
+    sourceCheckpoint:{path:checkpointPath,sha256:checkpoint.sha256},
+    recovery:{schema:'scf82.checkout-recovery.v1',recoveredAt:new Date().toISOString(),
+      method:'original returned SF81 result and independent SF43 observation',buyerInvocations:0},
+    notes:'Original SF43 observes the approved network, transaction and exact SEP-41 transfer. HTTP delivery and original SF36 accounting are recorded separately.',
+  };
+  let written;
+  try {written=await createCheckoutRecord(evidencePath,envelope);}
+  catch(error) {
+    if (error.code!=='EEXIST')throw error;
+    return terminalRecord(await readCheckoutRecord(evidencePath),intentId);
+  }
+  return {evidencePath,report,checkpointPath,recovered:true,evidenceSha256:written.sha256};
 }

@@ -457,7 +457,7 @@ function renderExports(){
       lastExport=await cost('export',pendingExport);pendingExport=null;await refresh();status('Exact cost edition package retained. Download its TAR below.');
     },{primary:true})));
   $('content').append(section('Back up the complete private workspace',
-    muted('Retains all committed original pricing reviews, price decisions and cost editions, their original files, source revisions and histories. Active seller processes and environment credentials remain host configuration.'),
+    muted('Retains committed original pricing reviews, price decisions, scenario plans and cost editions, their original files, source revisions and histories. Active seller processes and environment credentials remain host configuration.'),
     note('The archive contains the original supplier and merchant records. Keep it in your private operating environment.'),
     button(pendingExport?.kind==='WORKSPACE_BACKUP'?'Recover private backup':'Create complete private backup',async()=>{
       if(pendingExport&&pendingExport.kind!=='WORKSPACE_BACKUP')throw new Error('Recover the pending cost edition export first.');

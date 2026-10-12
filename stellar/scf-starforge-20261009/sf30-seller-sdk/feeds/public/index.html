@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Feed workspace</title><link rel="stylesheet" href="/style.css"><script src="/app.js" defer></script></head>
+<body>
+<header><div><span class="eyebrow">STELLAR FORGE</span><h1>Feed workspace</h1></div><button id="refresh">Refresh workspace</button></header>
+<div id="notice" role="status" aria-live="polite">Opening retained workspace…</div>
+<section id="activity" class="activity" hidden><strong id="activity-title"></strong><span id="activity-detail"></span><button id="cancel">Cancel capture</button></section>
+<section id="pending" class="activity" hidden><span>A previous action is retained in this browser.</span><button id="retry">Resume action</button><button id="clear-pending">Clear browser selection</button></section>
+<nav aria-label="Workspace sections"><button data-tab="sources" aria-current="page">Sources</button><button data-tab="records">Retained records</button><button data-tab="editions">Editions</button><button data-tab="delivery">Delivery</button></nav>
+<main>
+<section id="sources" class="tab">
+<div class="split">
+<aside><h2>Registered feeds</h2><label>Selected feed<select id="feed-select"></select></label><p id="feed-description" class="muted"></p><div id="feed-identity" class="mono"></div>
+<details><summary>Add or update feed</summary><form id="feed-form">
+<label>Feed ID<input id="feed-id" required pattern="[A-Za-z0-9][A-Za-z0-9._-]{0,79}" placeholder="market-notices"></label>
+<label>Label<input id="feed-label" required maxlength="160" placeholder="Market notices"></label>
+<label>Feed URL<input id="feed-url" type="url" required placeholder="https://publisher.example/feed.xml"></label>
+<label>RSS identity<select id="rss-identity"><option value="guid-or-link">GUID, then item link</option><option value="guid">GUID required</option></select></label>
+<label>Additional paging origins<textarea id="feed-origins" rows="2" placeholder="One explicit https://origin.example per line"></textarea></label>
+<label>Expected revision<input id="feed-revision" type="number" min="0" value="0" required></label>
+<div class="buttons"><button type="submit">Save feed</button><button type="button" id="edit-feed">Use selected feed</button></div>
+</form></details>
+<h3>Acquire source</h3><form id="capture-form"><label>Pages per capture<input id="page-limit" type="number" min="1" max="1000" value="100"></label>
+<label class="check"><input id="follow-pages" type="checkbox" checked>Follow declared next links</label>
+<label class="check"><input id="force-feed" type="checkbox">Request full response without validators</label><button type="submit">Capture selected feed</button></form>
+<form id="import-form"><label>Original RSS or Atom XML<input id="source-file" type="file" accept=".xml,.rss,.atom,application/xml,application/rss+xml,application/atom+xml" required></label><button type="submit">Import original source</button></form>
+</aside>
+<div><div class="heading"><h2>Captures</h2><span id="capture-page" class="muted"></span></div><div id="capture-list"></div><div class="buttons"><button id="captures-back">Previous captures</button><button id="captures-next">Next captures</button></div>
+<section id="review-panel" hidden><div class="heading"><h2>Review capture</h2><button id="show-requests">HTTP history</button></div>
+<div id="review-meta"></div><div id="review-counts" class="metrics"></div><label id="accept-identity-label" class="check" hidden><input id="accept-identity" type="checkbox">Accept this capture's changed Atom feed identity</label>
+<div id="review-list"></div><div class="buttons"><button id="review-back">Previous records</button><button id="review-next">Next records</button><button id="apply-capture">Apply reviewed capture</button></div><p id="review-progress" class="muted"></p>
+</section>
+<section id="http-panel" hidden><h3>Retained HTTP requests</h3><div id="http-list"></div></section>
+</div></div>
+</section>
+<section id="records" class="tab" hidden>
+<div class="heading"><h2>Retained records</h2><span id="record-feed" class="mono"></span></div>
+<form id="search-form" class="row-form"><label>Search title, ID or summary<input id="record-query" type="search"></label><label>Visibility<select id="record-state"><option value="active">Active</option><option value="deleted">Deleted</option><option value="all">All retained</option></select></label><button type="submit">Search</button></form>
+<p id="record-count" class="muted"></p><div id="record-list"></div><div class="buttons"><button id="records-back">Previous records</button><button id="records-next">Next records</button></div>
+</section>
+<section id="editions" class="tab" hidden>
+<div class="split"><aside><h2>Build edition</h2><form id="edition-form"><label>Edition name<input id="edition-name" required maxlength="160" placeholder="Market notices — morning"></label><fieldset><legend>Feeds at current revision</legend><div id="edition-feeds"></div></fieldset><fieldset><legend>Exposed dataset fields</legend><div id="edition-fields"></div></fieldset><button type="submit">Build retained edition</button></form><p class="muted">Each edition preserves the selected active records. Notes stay in the private project. Source URL and content fields are exposed only when selected.</p></aside>
+<div><h2>Saved editions</h2><div id="edition-list"></div>
+<section id="query-panel" hidden><h3 id="query-title">Query edition</h3><form id="query-form" class="row-form"><label>Page size<input id="query-limit" type="number" min="1" max="1000" value="25"></label><label>Native query parameters<textarea id="query-params" rows="3" spellcheck="false">{}</textarea></label><button type="submit">Run first page</button></form><p class="muted">For example: {"fields":"id,title","where_feed_id":"market-notices","sort":"title"}. Values are strings. Continue with the saved cursor.</p><div id="query-result"></div><button id="query-next" disabled>Next dataset page</button></section>
+<h3>Compare editions</h3><form id="compare-form" class="row-form"><label>Before<select id="compare-before"></select></label><label>After<select id="compare-after"></select></label><button type="submit">Compare exact dataset cells</button></form><div id="comparison"></div><div class="buttons"><button id="changes-next" hidden>Next changes</button><button id="changes-download" hidden>Download all changes</button></div>
+</div></div>
+</section>
+<section id="delivery" class="tab" hidden>
+<div class="split"><div><h2>Deliver an edition</h2><label>Selected saved edition<select id="delivery-edition"></select></label><div class="buttons"><button id="export-dataset">Download native dataset</button><button id="export-project">Download complete project</button></div><p>The dataset contains the original CSV configuration, lineage and selected fields. A project also carries the selected feeds' current state, source pages, HTTP history, reviews and original native build for another operator to reopen.</p>
+<h3>Receive a project</h3><form id="receive-form"><label>Retained feed project<input id="project-file" type="file" accept=".zip,application/zip" required></label><button type="submit">Receive and reopen</button></form><p class="muted">Existing feed identities must agree. Use a separate private workspace to receive a divergent project.</p></div>
+<div><h2>Merchant and buyer handoff</h2><p>Export the selected dataset, then prepare its original seller release with your public payment terms. The merchant command retains the exact edition, initializes its native version store and stages the original release.</p>
+<pre id="merchant-help">node dataset-cli.mjs feeds merchant --help</pre>
+<p>Use the original seller's address and displayed snapshot to review its current offer and prepare buyer acquisition.</p><pre>node dataset-cli.mjs feeds buyer --help</pre>
+<p>The complete command sequence and source semantics are included in <code>feeds/README.md</code>.</p>
+</div></div>
+</section>
+</main>
+<dialog id="record-dialog"><form method="dialog" class="dialog-heading"><h2>Retained record</h2><button>Close</button></form><div id="record-detail"></div><form id="annotation-form"><label>Private note<textarea id="record-note" rows="5" maxlength="20000"></textarea></label><label>Tags<input id="record-tags" placeholder="research, follow-up"></label><label class="check"><input id="record-star" type="checkbox">Starred</label><button type="submit">Save review</button></form></dialog>
+<footer>RSS 2.0 · Atom 1.0 · Retained editions · Original SF30 datasets</footer>
+</body></html>
