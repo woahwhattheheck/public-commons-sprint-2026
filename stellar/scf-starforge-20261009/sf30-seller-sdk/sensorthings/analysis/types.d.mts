@@ -380,13 +380,29 @@ export interface AnalysisPythonSource extends NativeObject {
   relativeDirectory: string;
   documentId: Sha256;
   tables: Record<'observations'|'components'|'entities'|'observation_index'|'numeric_eligibility',
-    {collection:string;rows:number;columns:string[]}>;
+    {collection:string;rows:number;columns:string[]}> &
+    Partial<Record<'selected_components'|'component_index'|'component_eligibility'|'component_bindings',
+      {collection:string;rows:number;columns:string[]}>>;
+  /** Present only for the explicit saved-component preparation action. */
+  componentAnalysis?: AnalysisPythonComponentSelection;
   sourceComplete: boolean;
   sourceArchive: {bytes:number;sha256:Sha256;parts:number};
   files: AnalysisPythonSourceFile[];
 }
+/** Complete immutable component selection; original source vectors remain retained. */
+export interface AnalysisPythonComponentSelection {
+  schema:'stellar-forge.sensorthings-python-component-selection.v1';
+  analysisVersionId:AnalysisVersionId;
+  projectId:AnalysisProjectId;
+  editionId:Sha256;
+  selection:ComponentSelection;
+  bindingIds:Sha256[];
+  bindingManifestId:Sha256;
+  tables:['selected_components','component_index','component_eligibility','component_bindings'];
+}
 export interface AnalysisActionPayloads {
   'analysis.python.prepare': {editionId:Sha256;exportId:OperationId;actor:string};
+  'analysis.python.components.prepare': {editionId:Sha256;exportId:OperationId;analysisVersionId:AnalysisVersionId;actor:string};
   'analysis.create': {title:string;editionId:Sha256;selection:AnalysisSelectionInput;actor:string;note:string};
   'analysis.revise': {projectId:AnalysisProjectId;baseVersionId:AnalysisVersionId;
     title?:string;editionId?:Sha256;selection?:AnalysisSelectionInput;actor:string;reason:string};
@@ -406,6 +422,7 @@ export interface AnalysisActionPayloads {
 }
 export interface AnalysisActionResults {
   'analysis.python.prepare': AnalysisPythonSource;
+  'analysis.python.components.prepare': AnalysisPythonSource;
   'analysis.create': AnalysisVersionResult;
   'analysis.revise': AnalysisVersionResult;
   'analysis.annotate': AnalysisVersionResult;
