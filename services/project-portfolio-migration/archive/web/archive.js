@@ -35,7 +35,7 @@ export function createArchivePanel(C) {
     $("archive-save").dataset.unavailable=d.members.length?"false":"true";
     $("archive-review").dataset.unavailable=A.id&&!d.dirty&&c?.revision===d.baseRevision?"false":"true";
     const review=A.loaded?.review;
-    $("archive-publish").dataset.unavailable=A.id&&!d.dirty&&review?.value.cohort_revision===c?.revision&&
+    $("archive-publish").dataset.unavailable=A.id&&!d.dirty&&c?.id===A.id&&review?.value&&review.value.cohort_revision===c.revision&&
       review.value.definition_sha256===c.definition_sha256&&d.baseRevision===c.revision?"false":"true";
   }
   function renderSelectors() {
