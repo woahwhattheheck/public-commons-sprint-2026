@@ -70,6 +70,22 @@ async function command(buyer, commandName, input, {signal} = {}) {
   }
 }
 
+function lostOutputSelection({approvedRequestFile,approvedRequest,expectedRequestSha256,expectedAttemptId,expectedConfigSha256}) {
+  need((approvedRequestFile !== undefined) !== (approvedRequest !== undefined),
+    'LOST_OUTPUT_ONE_APPROVED_REQUEST_SOURCE_REQUIRED');
+  if (approvedRequest !== undefined) need(object(approvedRequest), 'LOST_OUTPUT_APPROVED_REQUEST_REQUIRED');
+  const input = approvedRequestFile === undefined
+    ? {approvedRequest:structuredClone(approvedRequest)} : {approvedRequestFile:absolute(approvedRequestFile)};
+  for (const [name,value] of Object.entries({expectedRequestSha256,expectedAttemptId,expectedConfigSha256})) {
+    if (value === undefined) continue;
+    need(typeof value === 'string' && (name === 'expectedAttemptId'
+      ? /^[A-Za-z0-9._:-]{1,128}$/.test(value) : /^[a-f0-9]{64}$/.test(value)),
+      'LOST_OUTPUT_SELECTED_ATTEMPT_INVALID');
+    input[name] = value;
+  }
+  return input;
+}
+
 /** Inspect the complete private merchant packet with the installed native reader. */
 export async function inspectOperationHandoff(buyer, file, {accept, signal} = {}) {
   if (accept !== undefined) need(Number.isSafeInteger(accept) && accept >= 0, 'EXPLICIT_SELECTION_INDEX_REQUIRED');
@@ -147,6 +163,29 @@ export class Inbox {
       .map(key => [key, review[key]]));
     return this._command('execute', {intentId, review:pins,
       ...(workspaceDirectory === undefined ? {} : {workspaceDirectory:absolute(workspaceDirectory)})}, {signal});
+  }
+  inspectLostOutput(intentId, {workspaceDirectory, approvedRequestFile, approvedRequest,
+    expectedRequestSha256, expectedAttemptId, expectedConfigSha256, signal} = {}) {
+    return this._command('inspect-lost-output', {intentId:intent(intentId),
+      workspaceDirectory:absolute(workspaceDirectory),
+      ...lostOutputSelection({approvedRequestFile,approvedRequest,expectedRequestSha256,expectedAttemptId,expectedConfigSha256})}, {signal});
+  }
+  recoverLostOutput(intentId, {workspaceDirectory, transaction, approvedRequestFile, approvedRequest,
+    expectedRequestSha256, expectedAttemptId, expectedConfigSha256, signal} = {}) {
+    need(typeof transaction === 'string' && /^[a-f0-9]{64}$/.test(transaction) &&
+      typeof expectedRequestSha256 === 'string' && /^[a-f0-9]{64}$/.test(expectedRequestSha256),
+      'LOST_OUTPUT_TRANSACTION_AND_DIGEST_REQUIRED');
+    return this._command('recover-lost-output', {intentId:intent(intentId),
+      workspaceDirectory:absolute(workspaceDirectory), transaction,
+      ...lostOutputSelection({approvedRequestFile,approvedRequest,expectedRequestSha256,expectedAttemptId,expectedConfigSha256})}, {signal});
+  }
+  readLostOutputRecovery(intentId, {workspaceDirectory, signal} = {}) {
+    return this._command('read-lost-output', {intentId:intent(intentId),
+      workspaceDirectory:absolute(workspaceDirectory)}, {signal});
+  }
+  exportLostOutputProof(intentId, destination, {workspaceDirectory, signal} = {}) {
+    return this._command('export-lost-output', {intentId:intent(intentId),
+      workspaceDirectory:absolute(workspaceDirectory), destination:absolute(destination)}, {signal});
   }
   cancel(intentId, options) { return this._command('cancel', {intentId:intent(intentId)}, options); }
   recover(intentId, options) { return this._command('recover', {intentId:intent(intentId)}, options); }

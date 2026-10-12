@@ -722,6 +722,12 @@ exposes the underlying saved-query operator for terminal use. Application
 imports use `./seller/allium`, `./seller/allium/workspace` and
 `./seller/allium/workspace/server`.
 
+## n8n automation merchants
+
+`starforge n8n-merchant` turns selected production n8n workflows into the existing durable paid-job merchant. Import a child workflow, export its native Webhook/Respond to Webhook wrapper, prepare the merchant with the actual workflow and payment configuration, then use its private operator console for job preparation, original customer handoffs, worker monitoring, results and recovery. A retained n8n execution stays attached to the same paid job when local monitoring resumes; a new remote run is an explicit decision after the previous execution fails.
+
+The [complete n8n merchant guide](../sf30-seller-sdk/n8n/README.md) includes native workflow import, authentication references, production publication, seller/customer HTTPS routing, the invoice automation example, browser operations and CLI recovery. Begin with `starforge n8n-merchant --help`. The typed `@tokenjunkielabs/starforge-merchant/merchant/n8n` import exposes the same maintained implementation; `/config`, `/prepare`, `/runtime` and `/workspace` subpaths expose its original modules. The selected n8n instance is operated separately and the existing whole SF30 source component carries this integration.
+
 ## Native payment dependencies
 
 For an actual payment-capable seller, install the native packages in the same

@@ -2,23 +2,28 @@
 // MIT — Private request-collection review over the maintained SF88 controller.
 import { createServer } from 'node:http';
 import { randomBytes, timingSafeEqual, createHash } from 'node:crypto';
-import { constants } from 'node:fs';
-import { open, readFile, realpath } from 'node:fs/promises';
-import { isAbsolute, resolve } from 'node:path';
+import { readFile, realpath } from 'node:fs/promises';
+import { basename, isAbsolute, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { readBrowserAssets } from '../../distribution/browser-assets.mjs';
 import { openCollections } from './model.mjs';
+import { createCollectionBrowserRunner } from './browser-run.mjs';
+import { sendCollectionFile } from './download.mjs';
+import { collectionsWorkspaceLaunch } from './launch.mjs';
+import { createBrowserApprovalBroker } from '../../sf81-buyer-operator-bridge/browser-approval.mjs';
 import { initializationDirectory, initializationBytes } from '../initialization.mjs';
 
 const HELP = [
   'Starforge request collections workspace',
   '',
   '  starforge buyer-collections-workspace --directory ABS_DIRECTORY',
-  '    [--queue-root ABS_EXISTING_INBOX] [--port 0]',
+  '    [--queue-root ABS_EXISTING_INBOX] [--port 0] [--approval-mode browser|terminal]',
+  '    [--startup-format text|json]',
   '',
   'Open the printed private URL in a browser on this host.',
   'Review saved requests, queue them, recover outcomes and export results.',
-  'The selected run command opens the original per-request terminal approval.',
+  'Run selected requests here and review each original payment in the browser.',
+  'Terminal mode keeps the existing selected command and terminal approval.',
 ].join('\n');
 const JSON_LIMIT = 256 * 1024;
 const EXPORT_LIMIT = 32 * 1024 * 1024;
@@ -85,23 +90,63 @@ function shellWord(word) {
 function snapshotPin(snapshot, expected) {
   need(snapshot.manifestSha256 === pinned(expected), 'COLLECTION_MANIFEST_CHANGED', 409);
 }
-export async function serveCollections(collections, { port = 0 } = {}) {
+export async function serveCollections(collections, {
+  port = 0, approvalMode = 'BROWSER', environment = process.env,
+} = {}) {
   need(collections && typeof collections.inspect === 'function'
     && typeof collections.preview === 'function', 'COLLECTION_CONTROLLER_REQUIRED');
   need(Number.isInteger(port) && port >= 0 && port <= 65535, 'PORT_INVALID');
+  need(['BROWSER', 'TERMINAL'].includes(approvalMode), 'APPROVAL_MODE_INVALID');
   const assets = await readBrowserAssets(new URL('./browser-assets.json', import.meta.url));
+  const approvals = approvalMode === 'BROWSER' ? await createBrowserApprovalBroker() : null;
+  let runner;
+  try { runner = approvals ? await createCollectionBrowserRunner({ collections, approvals, environment }) : null; }
+  catch (error) { await approvals?.close(); throw error; }
   const token = randomBytes(32).toString('hex');
-  const reviews = new Map(), exports = new Map(), work = new Set();
+  const reviews = new Map(), exports = new Map(), work = new Set(), transfers = new Set();
   let origin, closing = false, mutation = false;
   function prune() {
     const now = Date.now();
     for (const [key, value] of reviews) if (value.expiresAt <= now) reviews.delete(key);
     for (const [key, value] of exports) if (value.expiresAt <= now) exports.delete(key);
   }
-  async function mutate(fn) {
-    need(!mutation, 'COLLECTION_WORKSPACE_BUSY', 409);
+  async function mutate(fn, continuingRun = false) {
+    need(!mutation && (continuingRun || !runner?.busy), 'COLLECTION_WORKSPACE_BUSY', 409);
     mutation = true;
     try { return await fn(); } finally { mutation = false; }
+  }
+  function receivedFile(snapshot, intentId, expectedSha256) {
+    const item = snapshot.items.find(item => item.intentId === intentId);
+    need(item, 'COLLECTION_INTENT_UNKNOWN', 404);
+    const saved = item.job?.outcome?.responseFile;
+    need(saved?.status === 'SAVED' && typeof saved.path === 'string'
+      && isAbsolute(saved.path) && !saved.path.includes('\0')
+      && Number.isSafeInteger(saved.bytes) && saved.bytes >= 0
+      && typeof saved.sha256 === 'string' && /^[a-f0-9]{64}$/.test(saved.sha256),
+      'COLLECTION_RESPONSE_UNAVAILABLE', 409);
+    need(saved.sha256 === expectedSha256, 'COLLECTION_RESPONSE_CHANGED', 409);
+    const candidate = basename(saved.path).replace(/[^A-Za-z0-9._-]/g, '_').slice(0, 150);
+    const name = !candidate || ['.', '..'].includes(candidate) ? 'response.bin' : candidate;
+    return { name, path: saved.path, bytes: saved.bytes, sha256: saved.sha256 };
+  }
+  async function downloadFile(response, file) {
+    const controller = new AbortController();
+    const cancel = () => { if (!response.writableFinished) controller.abort(); };
+    response.once('close', cancel); transfers.add(controller);
+    // Descriptor lookup may have yielded while the host began shutdown.
+    if (closing) controller.abort();
+    try { await sendCollectionFile(response, file, { signal: controller.signal }); }
+    finally { response.off('close', cancel); transfers.delete(controller); }
+  }
+  async function approvalSnapshot(launchId, intent) {
+    let run = await runner.inspect(launchId);
+    if (run.state !== 'RUNNING') return { run, intentId: intent, approval: null };
+    runner.owns(launchId, intent);
+    const approval = await approvals.snapshot(intent);
+    run = await runner.inspect(launchId);
+    if (run.state !== 'RUNNING') return { run, intentId: intent, approval: null };
+    runner.owns(launchId, intent);
+    return { run, intentId: intent, approval };
   }
   const server = createServer((request, response) => {
     const send = (value, status = 200) => {
@@ -137,8 +182,35 @@ export async function serveCollections(collections, { port = 0 } = {}) {
       if (request.method === 'GET' && url.pathname === '/api/status')
         return send({ schema: 'stellar-forge.sf88.collections-workspace.v1',
           directory: collections.directory, queueRoot: collections.queueRoot,
-          busy: mutation, paymentApproval: 'original-terminal',
+          busy: mutation || Boolean(runner?.busy), paymentApproval:
+            approvals ? 'original-browser' : 'original-terminal',
           command: 'buyer-collections', exportRoot: resolve(collections.directory, 'exports') });
+      if (request.method === 'GET' && url.pathname === '/api/run')
+        return send({ run: runner ? await runner.inspect() : null });
+      const runRoute = /^\/api\/runs\/([a-f0-9-]{36})\/(pause|decision|approvals\/([^/]+))$/
+        .exec(url.pathname);
+      if (runRoute) {
+        need(runner && approvals, 'COLLECTION_BROWSER_APPROVAL_DISABLED', 409);
+        const launchId = runRoute[1];
+        if (request.method === 'GET' && runRoute[3]) {
+          let intent;
+          try { intent = decodeURIComponent(runRoute[3]); }
+          catch { need(false, 'COLLECTION_INTENT_UNKNOWN'); }
+          return send(await approvalSnapshot(launchId, intent));
+        }
+        need(request.method === 'POST', 'METHOD_NOT_ALLOWED', 405);
+        const input = fields(await jsonBody(request), runRoute[2] === 'pause' ? []
+          : ['intent', 'approvalId', 'requestSha256', 'decision']);
+        if (runRoute[2] === 'pause') return send({ run: await runner.pause({ launchId }) }, 202);
+        need(runRoute[2] === 'decision', 'METHOD_NOT_ALLOWED', 405);
+        const run = runner.owns(launchId, input.intent);
+        need(run.state === 'RUNNING', 'COLLECTION_RUN_NOT_ACTIVE', 409);
+        need(typeof input.approvalId === 'string'
+          && typeof input.requestSha256 === 'string' && /^[a-f0-9]{64}$/.test(input.requestSha256)
+          && ['approve', 'reject'].includes(input.decision), 'COLLECTION_APPROVAL_BINDING_INVALID');
+        await approvals.decide(input);
+        return send(await approvalSnapshot(launchId, input.intent));
+      }
       if (request.method === 'GET' && url.pathname === '/api/collections')
         return send(await collections.list());
       if (request.method === 'POST' && url.pathname === '/api/preview') {
@@ -167,31 +239,26 @@ export async function serveCollections(collections, { port = 0 } = {}) {
         reviews.delete(input.reviewId);
         return send(result, 201);
       }
-      const download = /^\/api\/exports\/([a-f0-9]{32})\/([A-Za-z0-9._-]{1,100})$/
+      const download = /^\/api\/(exports|deliveries)\/([a-f0-9]{32})\/([A-Za-z0-9._-]{1,150})$/
         .exec(url.pathname);
       if (request.method === 'GET' && download) {
-        const saved = exports.get(download[1]);
-        need(saved, 'COLLECTION_EXPORT_EXPIRED', 404);
-        const file = saved.files.find(entry => entry.name === download[2]);
+        const saved = exports.get(download[2]);
+        need(saved && saved.kind === download[1], 'COLLECTION_EXPORT_EXPIRED', 404);
+        const file = saved.files.find(entry => entry.name === download[3]);
         need(file && file.name !== '.' && file.name !== '..', 'EXPORT_FILE_NOT_FOUND', 404);
-        const handle = await open(resolve(saved.directory, file.name),
-          constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
-        try {
-          const stat = await handle.stat();
-          need(stat.isFile() && stat.size === file.bytes && stat.size <= EXPORT_LIMIT,
-            'COLLECTION_EXPORT_CHANGED', 409);
-          const bytes = await handle.readFile();
-          need(bytes.length === file.bytes
-            && createHash('sha256').update(bytes).digest('hex') === file.sha256,
-            'COLLECTION_EXPORT_CHANGED', 409);
-          response.writeHead(200, { 'Content-Type': 'application/octet-stream',
-            'Content-Length': bytes.length,
-            'Content-Disposition': 'attachment; filename="' + file.name + '"' });
-          response.end(bytes);
-        } finally { await handle.close(); }
+        if (saved.original) {
+          const snapshot = await collections.inspect(saved.original.id);
+          snapshotPin(snapshot, saved.original.manifestSha256);
+          const current = receivedFile(snapshot, saved.original.intentId, file.sha256);
+          need(current.path === file.path && current.bytes === file.bytes,
+            'COLLECTION_RESPONSE_CHANGED', 409);
+        }
+        else need(file.bytes <= EXPORT_LIMIT, 'COLLECTION_EXPORT_CHANGED', 409);
+        await downloadFile(response, { ...file,
+          path: saved.original ? file.path : resolve(saved.directory, file.name) });
         return;
       }
-      const route = /^\/api\/collections\/([^/]+)(?:\/(enqueue|cancel|recover|export|command))?$/
+      const route = /^\/api\/collections\/([^/]+)(?:\/(enqueue|cancel|recover|export|command|run|response))?$/
         .exec(url.pathname);
       need(route, 'ROUTE_NOT_FOUND', 404);
       let id;
@@ -201,9 +268,34 @@ export async function serveCollections(collections, { port = 0 } = {}) {
       if (request.method === 'GET' && !action) return send(await collections.inspect(id));
       need(request.method === 'POST' && action, 'METHOD_NOT_ALLOWED', 405);
       const input = fields(await jsonBody(request),
-        action === 'cancel' || action === 'recover' || action === 'command'
-          ? ['expectedManifestSha256', 'intentIds'] : ['expectedManifestSha256']);
+        action === 'response' ? ['expectedManifestSha256', 'intentId', 'expectedResponseSha256']
+          : action === 'run' ? ['expectedManifestSha256', 'intentIds', 'requestId', 'workspace', 'workspaceByIntent']
+          : action === 'cancel' || action === 'recover' || action === 'command'
+            ? ['expectedManifestSha256', 'intentIds'] : ['expectedManifestSha256']);
       const expectedManifestSha256 = pinned(input.expectedManifestSha256);
+      if (action === 'response') {
+        const snapshot = await collections.inspect(id);
+        snapshotPin(snapshot, expectedManifestSha256);
+        const file = receivedFile(snapshot, input.intentId, pinned(input.expectedResponseSha256));
+        const key = randomBytes(16).toString('hex');
+        while (exports.size >= 32) exports.delete(exports.keys().next().value);
+        exports.set(key, { kind: 'deliveries', files: [file],
+          original: { id, manifestSha256: expectedManifestSha256, intentId: input.intentId },
+          expiresAt: Date.now() + 60 * 60 * 1000 });
+        return send({ ...file, intentId: input.intentId, manifestSha256: expectedManifestSha256,
+          downloadUrl: '/api/deliveries/' + key + '/' + file.name });
+      }
+      if (action === 'run') {
+        need(runner, 'COLLECTION_BROWSER_APPROVAL_DISABLED', 409);
+        // The original controller/CLI owns the queue attempt, spending and run
+        // history. This host keeps only its selected child and approval routing.
+        const run = await mutate(() => runner.start({
+          requestId: input.requestId, id, expectedManifestSha256,
+          intentIds: input.intentIds, workspace: input.workspace,
+          workspaceByIntent: input.workspaceByIntent,
+        }), true);
+        return send({ run }, 202);
+      }
       if (action === 'command') {
         const snapshot = await collections.inspect(id);
         snapshotPin(snapshot, expectedManifestSha256);
@@ -232,7 +324,7 @@ export async function serveCollections(collections, { port = 0 } = {}) {
           const files = [...saved.files, { name: 'manifest.json', bytes: manifest.length,
             sha256: createHash('sha256').update(manifest).digest('hex') }];
           while (exports.size >= 32) exports.delete(exports.keys().next().value);
-          exports.set(key, { directory: saved.directory, files,
+          exports.set(key, { kind: 'exports', directory: saved.directory, files,
             expiresAt: Date.now() + 60 * 60 * 1000 });
           return { ...saved, files: files.map(file => ({ ...file,
             downloadUrl: '/api/exports/' + key + '/' + file.name })) };
@@ -260,7 +352,7 @@ export async function serveCollections(collections, { port = 0 } = {}) {
   server.requestTimeout = 30000;
   server.headersTimeout = 10000;
   server.maxRequestsPerSocket = 100;
-  await new Promise((done, reject) => {
+  try { await new Promise((done, reject) => {
     server.once('error', reject);
     server.listen(port, '127.0.0.1', () => {
       server.off('error', reject);
@@ -268,14 +360,20 @@ export async function serveCollections(collections, { port = 0 } = {}) {
       done();
     });
   });
+  } catch (error) {
+    await runner?.close(); await approvals?.close(); throw error;
+  }
   let closePromise;
   return { server, origin, token, url: origin + '/#' + token,
     close() {
       if (closePromise) return closePromise;
       closing = true;
+      for (const controller of transfers) controller.abort();
       closePromise = (async () => {
         server.closeIdleConnections?.();
+        await runner?.close();
         await Promise.allSettled([...work]);
+        await approvals?.close();
         await new Promise(done => {
           server.close(done);
           server.closeAllConnections?.();
@@ -291,7 +389,8 @@ export async function startCollectionsWorkspace(options = {}) {
     directory: options.directory, queueRoot: options.queueRoot,
   });
   let workspace;
-  try { workspace = await serveCollections(collections, { port: options.port ?? 0 }); }
+  try { workspace = await serveCollections(collections, { port: options.port ?? 0,
+    approvalMode: options.approvalMode ?? 'BROWSER', environment: options.environment ?? process.env }); }
   catch (error) { await collections.close(); throw error; }
   const closeServer = workspace.close;
   let closing;
@@ -307,18 +406,26 @@ export async function main(args = process.argv.slice(2)) {
   const input = {};
   for (let index = 0; index < args.length; index += 2) {
     const key = args[index], value = args[index + 1];
-    need(['--directory', '--queue-root', '--port'].includes(key)
+    need(['--directory', '--queue-root', '--port', '--approval-mode', '--startup-format'].includes(key)
       && value !== undefined && !Object.hasOwn(input, key), 'COLLECTION_CLI_ARGUMENT');
     input[key] = value;
   }
   need(input['--directory'] && isAbsolute(input['--directory']), 'COLLECTION_DIRECTORY_REQUIRED');
   const port = input['--port'] ?? '0';
   need(/^\d{1,5}$/.test(port) && Number(port) <= 65535, 'PORT_INVALID');
+  const startupFormat = input['--startup-format'] ?? 'text';
+  need(['text', 'json'].includes(startupFormat), 'COLLECTION_STARTUP_FORMAT_INVALID');
+  const approvalMode = (input['--approval-mode'] ?? 'browser').toUpperCase();
   const workspace = await startCollectionsWorkspace({
-    directory: input['--directory'], queueRoot: input['--queue-root'], port: Number(port),
+    directory: input['--directory'], queueRoot: input['--queue-root'], port: Number(port), approvalMode,
   });
-  console.log('Request collections: ' + workspace.url);
-  console.log('Keep this terminal open. Approve selected paid requests in a separate terminal.');
+  if (startupFormat === 'json') console.log(JSON.stringify(collectionsWorkspaceLaunch({
+    directory: workspace.collections.directory, queueRoot: workspace.collections.queueRoot, approvalMode,
+  }, workspace.url)));
+  else {
+    console.log('Request collections: ' + workspace.url);
+    console.log('Keep this terminal open while requests run. Use Pause in the workspace to stop remaining work.');
+  }
   let stopping = false;
   const stop = async () => {
     if (stopping) return;

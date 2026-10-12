@@ -17,6 +17,7 @@ import { openApiRequestBody, requestBodySummary } from '../request-body.mjs';
 import { openApiResponseStreams } from '../response-stream.mjs';
 import { merchantPaymentRequirements, merchantStreamPolicy } from './stream-plan.mjs';
 import { requirePostmanHeaderReferences } from '../postman/collection.mjs';
+import { merchantTransportPlan, merchantTransportSummary } from './transport-plan.mjs';
 import { queryParameterShape } from '../../sf30-seller-sdk/query-parameters.mjs';
 import { operationLease } from '../../distribution/runtime-workspace/storage.mjs';
 
@@ -137,7 +138,7 @@ export function merchantOAuthSelection(specText,row) {
 /** Build an explicit paid facade and preserve the source and backend auth mapping. */
 export function prepareMerchant(specText, plan) {
   const spec = parse(specText);
-  exactKeys(plan, ['schema','sellerServer','serviceName','payment','operations','allowLoopbackUpstream'], 'plan');
+  exactKeys(plan, ['schema','sellerServer','serviceName','payment','operations','allowLoopbackUpstream','transports'], 'plan');
   if (plan.schema !== 'stellar-forge.api-merchant-plan.v1' || typeof plan.sellerServer !== 'string' ||
       !Array.isArray(plan.operations) || !plan.operations.length || plan.operations.length > 64) fail('Select 1–64 operations in an API merchant plan');
   if (plan.allowLoopbackUpstream !== undefined && typeof plan.allowLoopbackUpstream !== 'boolean') fail('Loopback upstream choice must be boolean');
@@ -146,10 +147,12 @@ export function prepareMerchant(specText, plan) {
       sellerServer.username || sellerServer.password || sellerServer.search || sellerServer.hash)
     fail('Public seller server must be a canonical HTTPS URL, including its path prefix');
   exactKeys(plan.payment, ['network','asset','payTo','maxTimeoutSeconds','paymentFlow'], 'payment');
-  const facade = structuredClone(spec), selections = [], bindings = [], upstreams = {schema:'stellar-forge.seller-upstreams.v1', bindings:{}};
-  const transformations = [], ids = new Set(), routes = [], envNames = new Set(), seen = new Set(), materialized = new Set();
+  const transportPlan = merchantTransportPlan(plan);
+  const facade = structuredClone(spec), selections = [], bindings = [], upstreams = {schema:'stellar-forge.seller-upstreams.v1',
+    ...(Object.keys(transportPlan.transports).length?{transports:transportPlan.transports}:{}), bindings:{}};
+  const transformations = [], ids = new Set(), routes = [], envNames = new Set(transportPlan.environment), seen = new Set(), materialized = new Set();
   for (const row of plan.operations) {
-    exactKeys(row, ['method','path','id','serverIndex','amountAtomic','headerEnv','securityAlternative','responseMode','responseValidation','publicDescription','requestExample','querySerialization','timeoutMs','maxResponseBytes','maxRequestBytes','maxInFlight','requestHeaders','cache','availability','enforceResponseContract','oauth2','oauthConnection','oauthProfile','oauthAlias','idempotency','stream'], 'operation');
+    exactKeys(row, ['method','path','id','serverIndex','amountAtomic','headerEnv','securityAlternative','responseMode','responseValidation','publicDescription','requestExample','querySerialization','timeoutMs','maxResponseBytes','maxRequestBytes','maxInFlight','requestHeaders','cache','availability','enforceResponseContract','oauth2','oauthConnection','oauthProfile','oauthAlias','idempotency','stream','transport'], 'operation');
     const method = String(row.method).toUpperCase(), key = method + ' ' + row.path;
     if (!supportsSellerMethod(method)) fail(key + ': choose a method supported by the original seller');
     const stream = merchantStreamPolicy(row, method);
@@ -187,6 +190,7 @@ export function prepareMerchant(specText, plan) {
     upstreams.bindings[id] = {origin:backend.origin,
       path:backend.pathname.replace(/\/$/, '') + row.path.replace(/\{([^{}]+)\}/g, ':$1'), method,
       headerEnv:headers, responseMode:row.responseMode ?? 'json',
+      ...(row.transport===undefined?{}:{transport:row.transport}),
       ...(stream ? {stream} : {}),
       ...(requestBody?{bodyType:requestBody.bodyType}:{}),
       ...(row.maxRequestBytes!==undefined?{maxRequestBytes:row.maxRequestBytes}:{}),
@@ -204,7 +208,8 @@ export function prepareMerchant(specText, plan) {
       publicDescription:publicOperation.description ?? null, requestExampleSupplied:row.requestExample !== undefined,
       querySerializationOverrides:structuredClone(row.querySerialization ?? {}),
       responseMode:row.responseMode??'json',paymentFlow:plan.payment.paymentFlow??'authorization',
-      backendAuthentication:authentication.authentication, publicAuthentication:'native x402', securityAlternative:row.securityAlternative ?? 0});
+      backendAuthentication:authentication.authentication, publicAuthentication:'native x402', securityAlternative:row.securityAlternative ?? 0,
+      ...(row.transport===undefined?{}:{transport:transportPlan.profiles[row.transport]})});
   }
   const imported = importOpenApi(facade, selections), service = createSellerServiceConfig(imported, bindings);
   for (let i=0; i<imported.offers.length; i++) {
@@ -239,6 +244,12 @@ export function prepareMerchant(specText, plan) {
     env:merchantValidationEnvironment(upstreams,envNames)});
   validateUpstreamService(service, compiled);
   for (const route of routes) {
+    if (compiled[route.id].transport) {
+      route.transport = compiled[route.id].transport;
+      if (route.transport.mode==='environment-proxy'&&!route.environment.includes(route.transport.proxyEnv))
+        route.environment.push(route.transport.proxyEnv);
+      route.environment.sort();
+    }
     route.cache = compiled[route.id].cache;
     route.stream = compiled[route.id].stream ?? null;
     route.availability = compiled[route.id].availability;
@@ -248,6 +259,7 @@ export function prepareMerchant(specText, plan) {
   }
   return {facade, selections, bindings, upstreams, imported, service, transformations, cases,
     preview:{title:titleOf(spec), sourceSha256:sha(specText), routes,
+      ...(Object.keys(transportPlan.profiles).length?{transports:Object.values(transportPlan.profiles)}:{}),
       routeChecks:review,
       environment:[...envNames].sort(), credentialValuesChecked:false, allowLoopbackUpstream:plan.allowLoopbackUpstream === true}};
 }
@@ -302,6 +314,16 @@ export async function readPackage(parent, name) {
     plan:JSON.parse(await regular(join(folder,'merchant-plan.json'))),...(sourceRevision?{sourceRevision}:{})};
 }
 
+/** Download the exact retained upstream declarations through the existing package reader. */
+export async function readMerchantTransportConfiguration(parent,name) {
+  const project=await readPackage(parent,name),bytes=await regular(join(project.folder,'upstreams.json'),MANIFEST_LIMIT);
+  const sha256=sha(bytes);
+  if(sha256!==project.manifest.files['upstreams.json'])fail('Saved upstream configuration changed. Reopen the original package.');
+  const input=JSON.parse(bytes.toString('utf8'));
+  return {name:project.name,filename:'upstreams.json',bytes:bytes.length,sha256,text:bytes.toString('utf8'),
+    bindings:merchantTransportSummary(input)};
+}
+
 async function requireAbsentPackage(folder) {
   try { await lstat(folder); }
   catch (error) { if (error.code === 'ENOENT') return; throw error; }
@@ -345,6 +367,14 @@ export async function savePackage({specText, plan, parent, name, sourceRevision}
     'For native facilitator mode, replace --challenge-only with --facilitator YOUR_AUTHORIZED_HTTPS_FACILITATOR.',
     'Supply environment variables in the launcher process: ' + (prepared.preview.environment.join(', ') || '(none)') + '.',
     'Authorization variables contain the complete header value, including Bearer or Basic when required.',
+    ...(prepared.preview.transports?.length?[
+      '', '## Backend transport profiles', '',
+      'The original upstreams.json retains every selected named transport and its route assignments. Direct connections use the original backend transport; environment-proxy profiles select the named receiving-host variable.',
+      'A proxy variable contains its complete HTTP(S) proxy URL and is read only by the original launcher. Configure it on the receiving host before starting the seller. The package contains the variable name.',
+      'Environment proxies require the original runtime support in Node 22.21+ or 24.5+. Stop and restart the same original seller to load changed host values; save a new package/release to change a profile reference or route assignment.',
+      ...prepared.preview.transports.map(profile=>'- '+profile.profile+': '+profile.mode+(profile.proxyEnv?' · '+profile.proxyEnv:'')),
+      'The complete operator and receiving guide is sf61-openapi-seller-import/workspace/TRANSPORTS.md.', ''
+    ]:[]),
     'The compiler adds environment-variable references only. Supplied source files may already contain private values; keep the complete package private. After moving the package, adjust command paths.',
     'Authorization-code routes retain the exact reviewed grant ID, public source/profile and environment references. Provision that approved private connection on the receiving host; its directory and token values are never copied into this package.',
     'Renewal preserves the grant identity. After reconnecting or selecting another grant, reselect it in the API workspace and save a new compiled package. Existing package references do not silently switch grants.',
