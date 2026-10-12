@@ -52,6 +52,20 @@ supports interrupted-install continuation, fresh-directory upgrades, recovery,
 and original command launch. See [Customer runtime installation and recovery](RUNTIME_INSTALL.md)
 for the complete workflow and [Runtime profiles](RUNTIME.md) for dependency selection.
 
+### Incoming OAuth for the installed MCP service
+
+The original buyer and merchant MCP launchers accept the same reviewed incoming
+OAuth resource configuration. Use `starforge mcp-oauth` to create and inspect
+that configuration, discover the deployed provider, produce a native Claude Code
+registration and receive the complete authenticated MCP tool catalog.
+
+Select the original `mcp` runtime feature to install its pinned MCP/x402 packages
+and JOSE dependency. The maintained runtime installer reads those versions from
+the selected archive's original MCP package manifest and starts that archive's
+own commands. The [complete installed OAuth guide](source/stellar/scf-starforge-20261009/distribution/MCP_OAUTH.md)
+covers preparation, all five operator commands, buyer/merchant launch, direct API
+imports and recovery. Within the source tree, the same guide is [MCP_OAUTH.md](MCP_OAUTH.md).
+
 ### Runtime installation workspace
 
 Use the private browser workspace to select an original archive, review its exact
