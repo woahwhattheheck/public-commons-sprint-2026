@@ -7,7 +7,7 @@ import { FORMAT, sha256, canonical, digest, clone, parseSource, project, entity,
 import { projectReport, reportCsv, reportHtml } from "./reports.mjs";
 
 const APP_ROOT = dirname(fileURLToPath(import.meta.url));
-export const APPLICATION_FILES = ["LICENSE","OPENLINEAGE_LICENSE","README.md","RECEIVING.mjs","SOURCE_CONTRACT.md","app.js","browser-assets-loader.mjs","browser-assets.json","catalog.mjs","cli.mjs","client.d.ts","client.mjs","contribution.json","fixture-event-full.json","fixture-event-simple.json","fixture-lineage-dataset.json","fixture-lineage-implicit-job.json","fixture-lineage-mixed-sources.json","fixtures.json","index.html","model.mjs","package.json","protocol.mjs","reports.mjs","schema-core-1-0-1.json","schema-core-1-0-5.json","server.mjs","store.mjs","style.css"];
+export const APPLICATION_FILES = ["LICENSE","MERCHANT.md","OPENLINEAGE_LICENSE","README.md","RECEIVING.mjs","SOURCE_CONTRACT.md","app.js","browser-assets-loader.mjs","browser-assets.json","catalog.mjs","cli.mjs","client.d.ts","client.mjs","contribution.json","fixture-event-full.json","fixture-event-simple.json","fixture-lineage-dataset.json","fixture-lineage-implicit-job.json","fixture-lineage-mixed-sources.json","fixtures.json","index.html","mcp-client.mjs","mcp-setup.mjs","mcp-tools.mjs","mcp.mjs","merchant-provider.mjs","model.mjs","package.json","protocol.mjs","reports.mjs","schema-core-1-0-1.json","schema-core-1-0-5.json","server.mjs","store.mjs","style.css"];
 const HASH = /^[0-9a-f]{64}$/;
 export class WorkspaceError extends Error {
   constructor(message, status = 400, details = undefined) { super(message); this.status = status; this.details = details; }
@@ -193,6 +193,7 @@ export class LineageWorkspace {
   }
   async attachResult({ bytes, name, mediaType = "application/octet-stream", entityKeys, editionId, sourceReference, query = null, operationId, expectedRevision: revision }) {
     required(name, "name"); required(editionId, "editionId"); required(sourceReference, "sourceReference");
+    if (typeof mediaType !== "string" || !mediaType || /[\r\n\u0000]/.test(mediaType)) throw new WorkspaceError("Use a single valid media type");
     if (!Array.isArray(entityKeys) || !entityKeys.length) throw new WorkspaceError("Choose the original dataset or run");
     const buffer = Buffer.from(bytes);
     return this.change(operationId, { action: "result.attach", objectId: sha256(buffer), name, mediaType, entityKeys, editionId, sourceReference, query }, revision, async state => {
@@ -239,8 +240,9 @@ export class LineageWorkspace {
       throw new WorkspaceError("Use a non-negative offset and a record count from 1 to 1000");
     const state = await this.read();
     if (state.revision !== revision) throw new WorkspaceError("Workspace revision changed; restart this selection from its current revision", 409, { expectedRevision: revision, actualRevision: state.revision });
-    const report = projectReport(state, { edition });
-    const collections = new Set(["jobs", "datasets", "runs", "edges", "observedEdges", "sources", "events", "editions", "reviews", "results", "diagnostics"]);
+    if (collection === "operations" && edition !== null) throw new WorkspaceError("Operation history belongs to the complete workspace; omit edition");
+    const report = collection === "operations" ? { operations: state.operations } : projectReport(state, { edition });
+    const collections = new Set(["jobs", "datasets", "runs", "edges", "observedEdges", "sources", "events", "editions", "reviews", "results", "diagnostics", "operations"]);
     if (!collections.has(collection)) throw new WorkspaceError("Choose a declared original record collection");
     const records = report[collection] ?? [];
     if (offset > records.length) throw new WorkspaceError("Record offset exceeds the selected collection", 416);

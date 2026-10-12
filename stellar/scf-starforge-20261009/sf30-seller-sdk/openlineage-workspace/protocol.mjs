@@ -1,12 +1,13 @@
 import { createInterface } from "node:readline";
 import { tools } from "./catalog.mjs";
+import { WorkspaceError } from "./store.mjs";
 export { tools } from "./catalog.mjs";
 
 function checkArguments(tool, args) {
-  if (args === null || typeof args !== "object" || Array.isArray(args)) throw new Error("Tool arguments must be an object");
-  for (const required of tool.inputSchema.required) if (args[required] === undefined) throw new Error("Missing " + required);
-  for (const key of Object.keys(args)) if (!(key in tool.inputSchema.properties)) throw new Error("Unknown argument " + key);
-  if (tool.action === "source.import" && (typeof args.text === "string") === (typeof args.base64 === "string")) throw new Error("Provide exactly one of text or base64");
+  if (args === null || typeof args !== "object" || Array.isArray(args)) throw new WorkspaceError("Tool arguments must be an object");
+  for (const required of tool.inputSchema.required) if (args[required] === undefined) throw new WorkspaceError("Missing " + required);
+  for (const key of Object.keys(args)) if (!(key in tool.inputSchema.properties)) throw new WorkspaceError("Unknown argument " + key);
+  if (tool.action === "source.import" && (typeof args.text === "string") === (typeof args.base64 === "string")) throw new WorkspaceError("Provide exactly one of text or base64");
 }
 export async function handleRpc(workspace, request) {
   if (!request || request.jsonrpc !== "2.0" || typeof request.method !== "string") return { jsonrpc: "2.0", id: request?.id ?? null, error: { code: -32600, message: "Invalid JSON-RPC request" } };
@@ -25,7 +26,7 @@ export async function handleRpc(workspace, request) {
         const result = await workspace.dispatch(tool.action, args);
         return response({ content: [{ type: "text", text: JSON.stringify(result) }], structuredContent: result, isError: false });
       } catch (error) {
-        return response({ content: [{ type: "text", text: error.message }], isError: true, structuredContent: { error: error.message, status: error.status ?? 400, ...(error.details ? { details: error.details } : {}) } });
+        return response({ content: [{ type: "text", text: error.message }], isError: true, structuredContent: { error: error.message, status: error instanceof WorkspaceError ? error.status : 500, ...(error.details ? { details: error.details } : {}) } });
       }
     }
     return { jsonrpc: "2.0", id: request.id, error: { code: -32601, message: "Method not found" } };
