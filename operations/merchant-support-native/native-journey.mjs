@@ -103,7 +103,7 @@ async function closeAll() {
   await closeServer(ops);await closeServer(receiver);await seller?.close().catch(()=>{});
 }
 const watchdog=setTimeout(()=>{report.error='Native managed journey deadline reached';report.status='FAILED';
-  closeAll().finally(()=>save()).finally(()=>process.exit(2));},240000);
+  closeAll().finally(()=>save()).finally(()=>process.exit(2));},360000);
 try {
   const config=JSON.parse(await fs.readFile(join(sourceRoot,'sf30-seller-sdk/examples/service.json'),'utf8'));
   seller=await startSellerService({config,port:0,drainGraceMs:1000});
@@ -184,6 +184,13 @@ try {
   await supportPage.locator('#incident-case-prepare').click();
   const preparedResponse=await preparing;const prepared=await preparedResponse.json();assert.equal(preparedResponse.status(),200,JSON.stringify(prepared));
   const handoff=await importRuntimeHandoff(prepared.handoff);assert.ok(handoff.supportText.length>100);assert.ok(handoff.metadata.notes.includes(incident.id));
+  const handoffSha=createHash('sha256').update(prepared.handoff).digest('hex');
+  const supportCustody=join(selected.stage,'native-support',handoffSha);await fs.mkdir(supportCustody,{recursive:true,mode:0o700});
+  const handoffPath=join(supportCustody,'merchant-support-handoff.json');
+  try{await fs.writeFile(handoffPath,prepared.handoff,{flag:'wx',mode:0o600});}
+  catch(error){if(error.code!=='EEXIST')throw error;assert.equal(await fs.readFile(handoffPath,'utf8'),prepared.handoff);}
+  report.handoff={path:handoffPath,bytes:Buffer.byteLength(prepared.handoff),sha256:handoffSha};
+  await save();
   await supportPage.locator('#incident-case-open').click();
   await wait(async()=>!(await supportPage.locator('#case-save').isDisabled()),'prepared original case editable');
   const caseSaving=supportPage.waitForResponse(r=>r.request().method()==='POST'&&r.url().endsWith('/api/cases'));
@@ -217,6 +224,15 @@ try {
   await stopApplication();
   await wait(async()=>{const s=await stateStore.read();return s.worker?.status==='STOPPED';},'reopened managed Stop drained original watcher',18000);
   assert.deepEqual(report.browserErrors,[]);
+  await fs.cp(casePath,join(supportCustody,'cases'),{recursive:true,force:false,errorOnExist:true});
+  await fs.cp(statePath,join(supportCustody,'incidents'),{recursive:true,force:false,errorOnExist:true});
+  report.savedSupportDirectory=supportCustody;
+  await note('original handoff, saved case and incident captures retained',{caseId,incidentId:incident.id,handoffPath,handoffSha256:handoffSha});
+  await supportPage.close();supportPage=null;
+  if(selected.grantReceiving){
+    const {receiveGrantSupport}=await import(pathToFileURL(join(selected.stage,'grant-receiving.mjs')).href);
+    report.grantReceiving=await receiveGrantSupport({selected,context,handoffPath,merchantCaseId:caseId,incidentId:incident.id,note});
+  }
   report.status='COMPLETE';report.completedAt=new Date().toISOString();
   report.firstOperationId=first.current.id;report.reopenedOperationId=second.current.id;
   report.caseSupportSha256=createHash('sha256').update(handoff.supportText).digest('hex');
