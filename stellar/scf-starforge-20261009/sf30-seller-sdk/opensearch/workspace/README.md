@@ -97,3 +97,11 @@ Saved evaluations run the original OpenSearch ranking-evaluation adapter. The re
 Use **Open merchant draft** on the selected evaluated variant and input case to continue through this workspace's existing **Prepare merchant** action. The original request records the chosen evaluation ID and result checksum.
 
 The complete operator workflow, metric controls, import format and service API are in [the relevance guide](../relevance/README.md).
+
+## Managed merchant deployment
+
+The **Deployment** view stages a saved merchant package into this workspace's original SF82 release store. Compare its named query, source limits and public terms; select a release; start the original seller; and generate the customer client from that running instance. A later selection keeps the current seller serving until **Restart selected** drains and replaces it. **Select previous release** and restart return to the retained source.
+
+The private deployment and deployment.clients directories stay beside workspace.sqlite3. Complete client archives, deployment handovers, selection history and saved requests reopen with the workspace. Copied packages resolve beneath the current workspace directory and retain their original file manifests; historical request and package records keep their source identities.
+
+See [OpenSearch managed deployments](../../../sf82-seller-pilot/OPENSEARCH_RELEASES.md) for the complete browser, CLI, MCP, upgrade, rollback and receiving workflow.

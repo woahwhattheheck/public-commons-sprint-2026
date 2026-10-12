@@ -1,6 +1,7 @@
 // MIT. Original OpenSearch source and seller compiler joined to retained operator work.
 import { readFile, mkdir, readdir, lstat, realpath, chmod, open, link, unlink } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
+import { fileURLToPath } from 'node:url';
 import { join, resolve, relative, basename, sep } from 'node:path';
 import { readOpenSearchSourceFile, createOpenSearchQuerySource } from '../source.mjs';
 import { validateOpenSearchSource, compileOpenSearchQueries, bindOpenSearchParameters } from '../declaration.mjs';
@@ -85,7 +86,8 @@ class OpenSearchWorkspace {
     this.deployment = new OpenSearchDeploymentWorkspace(this);
   }
   state() {
-    return { ...this.store.state(), source: { name: basename(this.source.path ?? 'source.json'),
+    const saved = this.store.state();
+    return { ...saved, packages: saved.packages.map(item => this.package(item.id)), source: { name: basename(this.source.path ?? 'source.json'),
       schema: this.config.schema, connection: profile(this.config),
       queries: clone(this.config.queries) }, templatePlan: clone(this.templatePlan), nativeBusy: this.nativeBusy, relevance: this.relevance.state(), deployment: this.deployment.summary() };
   }
@@ -94,7 +96,16 @@ class OpenSearchWorkspace {
   operation(id) { return this.store.operation(id); }
   history(id) { return this.store.history(id); }
   edition(id) { return this.store.edition(id, true); }
-  package(id) { return this.store.package(id); }
+  package(id) {
+    const record = this.store.package(id);
+    const directory = join(this.store.directory, 'packages', record.id);
+    // Package paths are a view of the current materialized workspace. Original
+    // operation/package records retain the producer paths and manifest unchanged.
+    return { ...record, directory, handoff: { ...record.handoff, directory,
+      source: join(directory, 'source.json'), config: join(directory, 'service.json'),
+      client: join(directory, 'client'), openapi: join(directory, 'openapi.json'),
+      launcher: fileURLToPath(new URL('../start.mjs', import.meta.url)) } };
+  }
   save(request) {
     if (this.closed) throw new WorkspaceError('WORKSPACE_CLOSING', 'Workspace is closing.', 503);
     return this.store.saveDraft(request);
@@ -175,7 +186,7 @@ class OpenSearchWorkspace {
     throw new WorkspaceError('WORKSPACE_EXPORT_FORMAT_INVALID');
   }
   async downloadPackage(id, name) {
-    const record = this.store.package(id);
+    const record = this.package(id);
     const item = record.files.find(file => file.name === name);
     if (!item) throw new WorkspaceError('WORKSPACE_PACKAGE_FILE_NOT_FOUND', 'Package file not found.', 404);
     const root = await realpath(record.directory), path = resolve(root, name);
