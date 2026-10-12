@@ -109,7 +109,7 @@ async function openFile(file){
     if(!file||file.size>MAX_PLAN_BYTES)throw new Error('Choose the complete native plan JSON or planning ZIP, at most 32 MiB.');
     const source=await receivePlanningFile(new Uint8Array(await file.arrayBuffer()),{filename:file.name});
     const next=receivePlanningSource(draft,source);draft=next;$('view').value='planning';touch();render();
-    status('Received '+source.document.revisions.length+' native plan revisions. Review the complete budget and roadmap before applying the preview.');return;
+    status(draft.planningUpdate?.status==='reviewing'?'Retained the incoming native plan. Review its changes against the current plan, edited answers and issuer fields.':'Received '+source.document.revisions.length+' native plan revisions. Review the complete budget and roadmap before applying the preview.');return;
   }
   const text=await readFile(file);
   if(filePurpose==='form'){
