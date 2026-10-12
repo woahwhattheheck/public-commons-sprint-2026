@@ -75,7 +75,7 @@ async function streamAsset(req,res,workspace,assetId,{preview=false}={}){
  * Getters are local views. Provider operations run only through explicit POST routes.
  * The returned URL carries a one-process session key in its fragment.
  */
-export async function startStacServer({workspace,eoapi,prescient=null,processing=null,host='127.0.0.1',port=0,maxRequestBytes=128*1024*1024}={}){
+export async function startStacServer({workspace,eoapi,prescient=null,processing=null,catalogue=null,host='127.0.0.1',port=0,maxRequestBytes=128*1024*1024}={}){
   if(!workspace||typeof workspace.getState!=='function')throw new TypeError('An initialized STAC workspace is required.');
   if(!['127.0.0.1','::1','localhost'].includes(host))throw new Error('The analyst server binds to loopback only.');
   if(!Number.isInteger(Number(port))||Number(port)<0||Number(port)>65535)throw new Error('Port must be an integer from 0 through 65535.');
@@ -92,6 +92,16 @@ export async function startStacServer({workspace,eoapi,prescient=null,processing
     processingView=await readFile(new URL('processing/view.mjs',import.meta.url));
     processingCapabilities={enabled:true,reads:Object.keys(processingReads),actions:Object.keys(processingActions)};
   }
+
+  const catalogueMethods=Object.freeze({
+    configure:'configure',connect:'connect',receive:'receive',review:'review',
+    'publish-source':'publishSource',harvest:'harvest','inspect-records':'inspectRecords',
+    'record-action':'recordAction','export-handover':'exportHandover','receive-handover':'receiveHandover'
+  });
+  if(catalogue)for(const method of ['getState','inspectDelivery','getSource','sourceDocument','getSavedFile','close',...Object.values(catalogueMethods)])
+    if(typeof catalogue[method]!=='function')throw new TypeError('The catalogue controller needs '+method+'.');
+  const catalogueStreams=new Set();
+
   const bootstrap=randomToken(),session=randomToken(),csrf=randomToken();
   let origin='',authority='',cookieName='',closing=false;
   if(prescient&&(typeof prescient.getState!=='function'||typeof prescient.dispatch!=='function'))
@@ -101,10 +111,10 @@ export async function startStacServer({workspace,eoapi,prescient=null,processing
   const staticAssets=await readBrowserAssets(new URL('./browser-assets.json',import.meta.url));
   for(const [route,{url,type:mime}] of staticAssets){const filename=url.href,prior=[...staticCache.values()].find(x=>x.filename===filename);staticCache.set(route,prior||{filename,mime,bytes:await readFile(url)});}
   const summarizeJob=job=>({id:job.id,kind:job.kind,status:job.status,createdAt:job.createdAt,finishedAt:job.finishedAt,...(job.error?{error:job.error}:{}),...(job.result===undefined?{}:{result:job.result})});
-  function beginJob(kind,operationId,request,operation){
+  function beginJob(kind,operationId,request,operation,{reconcile=false}={}){
     const requestJSON=JSON.stringify(request);
     const id=typeof operationId==='string'&&operationId?tokenId(operationId):randomToken();
-    const existing=jobs.get(id);if(existing){if(existing.kind!==kind||existing.requestJSON!==requestJSON)throw fail(409,'This operation identity already belongs to a different action.','OPERATION_ID_CONFLICT');return existing;}
+    const existing=jobs.get(id);if(existing){if(existing.kind!==kind||existing.requestJSON!==requestJSON)throw fail(409,'This operation identity already belongs to a different action.','OPERATION_ID_CONFLICT');if(!reconcile||existing.status==='RUNNING')return existing;}
     const job={id,kind,requestJSON,status:'RUNNING',createdAt:new Date().toISOString()};
     jobs.set(id,job);
     job.promise=Promise.resolve().then(()=>operation(id)).then(result=>{job.result=copyJSON(result??null);job.status='COMPLETE';},error=>{job.error=publicError(error);job.status='FAILED';}).finally(()=>{
@@ -145,7 +155,7 @@ export async function startStacServer({workspace,eoapi,prescient=null,processing
         if(closing)throw fail(503,'The local operator is closing.','SERVER_CLOSING');
         if(req.headers.origin!==origin||!equal(req.headers['x-csrf-token'],csrf))throw fail(403,'This action must come from the active local operator session.','CSRF_REQUIRED');
       }
-      if(method==='GET'&&path==='/api/state'){json(res,200,{workspace:await workspace.getState(),jobs:[...jobs.values()].map(summarizeJob),eoapi:Boolean(eoapi),capabilities:{processing:processingCapabilities||{enabled:false},prescient:{enabled:Boolean(prescient)}}});return;}
+      if(method==='GET'&&path==='/api/state'){json(res,200,{workspace:await workspace.getState(),jobs:[...jobs.values()].map(summarizeJob),eoapi:Boolean(eoapi),capabilities:{processing:processingCapabilities||{enabled:false},prescient:{enabled:Boolean(prescient)},catalogue:{enabled:Boolean(catalogue)}}});return;}
       if(method==='GET'&&path==='/processing/view.mjs'){
         if(!processingView)throw fail(404,'Processing history is not configured for this workspace.','PROCESSING_NOT_CONFIGURED');
         res.writeHead(200,{'content-type':'text/javascript; charset=utf-8','content-length':processingView.length});res.end(processingView);return;
@@ -162,6 +172,52 @@ export async function startStacServer({workspace,eoapi,prescient=null,processing
         for(const [key,value]of url.searchParams){if(Object.hasOwn(query,key))query[key]=Array.isArray(query[key])?[...query[key],value]:[query[key],value];else query[key]=value;}
         json(res,200,await processingReads[name]({query,stacWorkspace:workspace}));return;
       }
+
+      if(path.startsWith('/api/catalogue/')){
+        if(!catalogue)throw fail(404,'Select a catalogue workspace in this STAC host.','CATALOGUE_NOT_CONFIGURED');
+        if(closing)throw fail(503,'The local catalogue operator is closing.','SERVER_CLOSING');
+        if(method==='GET'&&path==='/api/catalogue/state'){json(res,200,await catalogue.getState());return;}
+        if(method==='POST'&&path==='/api/catalogue/inspect-delivery'){
+          const input=await bodyJSON(req,65536);
+          json(res,200,await catalogue.inspectDelivery({deliveryDirectory:input.deliveryDirectory}));return;
+        }
+        const sourcePath=path.match(/^\/api\/catalogue\/sources\/([a-f0-9]{64})$/);
+        if(method==='GET'&&sourcePath){json(res,200,await catalogue.getSource(sourcePath[1]));return;}
+        const documentPath=path.match(/^\/api\/catalogue\/documents\/([a-f0-9]{64})$/);
+        if(method==='GET'&&documentPath){binary(res,await catalogue.sourceDocument(documentPath[1]));return;}
+        if(method==='GET'&&path==='/api/catalogue/files'){
+          const saved=await catalogue.getSavedFile(tokenId(url.searchParams.get('path')));
+          if(!saved?.stream||!Number.isSafeInteger(saved.bytes)||saved.bytes<0)throw fail(404,'This saved catalogue file is unavailable.','CATALOGUE_FILE_UNAVAILABLE');
+          if(closing){saved.stream.destroy();throw fail(503,'The local catalogue operator is closing.','SERVER_CLOSING');}
+          catalogueStreams.add(saved.stream);
+          const filename=safeName(saved.filename),ascii=filename.replace(/[^\x20-\x7e]/g,'_');
+          try{
+            res.writeHead(200,{'content-type':saved.mime||'application/octet-stream','content-length':saved.bytes,
+              'content-disposition':'attachment; filename="'+ascii+'"; filename*=UTF-8\'\''+encodeURIComponent(filename).replace(/['()*]/g,c=>'%'+c.charCodeAt(0).toString(16).toUpperCase()),
+              'content-security-policy':"default-src 'none'; sandbox"});
+            await pipeline(saved.stream,res);
+          }finally{catalogueStreams.delete(saved.stream);saved.stream.destroy();}
+          return;
+        }
+        const actionPath=path.match(/^\/api\/catalogue\/actions\/([a-z-]+)$/);
+        if(method==='POST'&&actionPath){
+          const action=actionPath[1];
+          if(!Object.hasOwn(catalogueMethods,action))throw fail(404,'This catalogue action is not enabled.','CATALOGUE_ACTION_UNKNOWN');
+          const body=await bodyJSON(req,maxRequestBytes),input=body.input??{};
+          if(input===null||typeof input!=='object'||Array.isArray(input)||Object.hasOwn(input,'operationId'))
+            throw fail(400,'Use an input object and the retained operation ID.','CATALOGUE_INPUT_INVALID');
+          if(typeof body.operationId!=='string'||!/^[A-Za-z0-9._:-]{1,128}$/.test(body.operationId))
+            throw fail(400,'Retain a stable catalogue operation ID before dispatch.','CATALOGUE_OPERATION_ID_REQUIRED');
+          // Poll duration controls observation only; the original native harvest identity is its reviewed plan.
+          const retainedInput=action==='harvest'?{planSha256:input.planSha256}:input;
+          const canonical=value=>Array.isArray(value)?value.map(canonical):value&&typeof value==='object'?Object.fromEntries(Object.keys(value).sort().map(key=>[key,canonical(value[key])])):value;
+          const job=beginJob('catalogue-'+action,body.operationId,canonical({action,input:retainedInput}),
+            operationId=>catalogue[catalogueMethods[action]]({...input,operationId}),{reconcile:body.reconcile===true});
+          json(res,202,summarizeJob(job));return;
+        }
+        throw fail(404,'This catalogue route was not found.','CATALOGUE_ROUTE_NOT_FOUND');
+      }
+
       if(path.startsWith('/api/prescient/')){
         if(!prescient)throw fail(404,'Open the configured Prescient operator for this workspace.','PRESCIENT_RUNTIME_REQUIRED');
         const body=method==='POST'?await bodyJSON(req,maxRequestBytes):{};
@@ -233,5 +289,6 @@ export async function startStacServer({workspace,eoapi,prescient=null,processing
   const addressHost=address.family==='IPv6'?'['+address.address+']':address.address;
   authority=addressHost+':'+address.port;origin='http://'+authority;
   cookieName='stac_session_'+address.port;
-  return {server,address,origin,url:origin+'/#session='+bootstrap,close:async()=>{closing=true;server.closeIdleConnections?.();await new Promise((resolve,reject)=>server.close(error=>error?reject(error):resolve()));await Promise.allSettled([...jobs.values()].map(job=>job.promise));}};
+  return {server,address,origin,url:origin+'/#session='+bootstrap,close:async()=>{closing=true;for(const stream of catalogueStreams)stream.destroy();const catalogueDrain=Promise.resolve().then(()=>catalogue?.close?.()).then(()=>({ok:true}),error=>({ok:false,error}));server.closeIdleConnections?.();await new Promise((resolve,reject)=>server.close(error=>error?reject(error):resolve()));await Promise.allSettled([...jobs.values()].map(job=>job.promise));const drained=await catalogueDrain;if(!drained.ok)throw drained.error;}};
 }
+

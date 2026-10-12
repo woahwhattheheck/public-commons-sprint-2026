@@ -33,3 +33,8 @@ export {
   exportWfsReceivedFile, exportWfsDatasetDelivery
 } from './customer.mjs';
 export { initializeWfsMerchantWorkspace } from './mcp-setup.mjs';
+
+export {
+  WFS_VECTOR_ROOT,WFS_VECTOR_REQUEST,WFS_VECTOR_RECEIPT,runWfsVector,resumeWfsVector,
+  listWfsVectors,inspectWfsVector,pageWfsVectorChanges,downloadWfsVector,downloadWfsVectorDocument
+} from './vector.mjs';

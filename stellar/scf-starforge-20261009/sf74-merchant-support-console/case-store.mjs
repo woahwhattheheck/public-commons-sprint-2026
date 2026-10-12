@@ -6,7 +6,8 @@ import {mkdir, lstat, open, readdir, rename, unlink, link, readlink, readFile} f
 import {resolve, join, isAbsolute, dirname} from 'node:path';
 import {createHash, randomUUID} from 'node:crypto';
 import {hostname} from 'node:os';
-import {parseWorkspace, MAX_WORKSPACE_BYTES} from './workspace-file.mjs';
+import {parseWorkspace, serializeWorkspace, MAX_WORKSPACE_BYTES} from './workspace-file.mjs';
+import {mergeCommissioningHistory} from './commissioning.mjs';
 import {parseRuntime, MAX_RUNTIME_BYTES} from './runtime-support.mjs';
 
 const ID = /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/;
@@ -339,8 +340,8 @@ export async function openCaseStore(path) {
     const id = identifier(input.id);
     if (input.expectedRevision !== null) revision(input.expectedRevision);
     const metadata = caseMetadata(input.metadata);
-    const workspace = await parseWorkspace(input.workspaceText);
-    const workspaceBytes = encoder.encode(input.workspaceText), workspaceSha256 = digest(workspaceBytes);
+    let workspace = await parseWorkspace(input.workspaceText), workspaceText=input.workspaceText;
+    let workspaceBytes = encoder.encode(workspaceText), workspaceSha256 = digest(workspaceBytes), commissioningChanged=false;
     // Omitted preserves a support attachment for existing API clients; explicit
     // null removes it from this new version without erasing retained history.
     const hasSupport=Object.hasOwn(input,'supportText');
@@ -354,11 +355,25 @@ export async function openCaseStore(path) {
       try { currentRevision = await head(id); current = await version(id,currentRevision); }
       catch (error) { if (error.code !== 'ENOENT') throw error; }
       const runtimeSupport=hasSupport?suppliedSupport:current?.runtimeSupport??null;
+      if(current&&(current.sources?.commissioning||workspace.commissioning)) {
+        const retainedRecord=await read(id,currentRevision),retained=await parseWorkspace(retainedRecord.workspaceText);
+        const commissioning=await mergeCommissioningHistory(workspace.commissioning,retained.commissioning);
+        if(JSON.stringify(commissioning)!==JSON.stringify(workspace.commissioning??null)) {
+          const draft={name:workspace.name,inputs:workspace.inputs,sources:workspace.sources,
+            termsText:workspace.termsText,baselineOnly:workspace.baselineOnly,
+            ...(workspace.workorderSource?{workorderSource:workspace.workorderSource}:{}),
+            ...(commissioning?{commissioning}:{})};
+          workspaceText=await serializeWorkspace(draft,{now:workspace.savedAt});
+          workspace=await parseWorkspace(workspaceText);workspaceBytes=encoder.encode(workspaceText);
+          workspaceSha256=digest(workspaceBytes);commissioningChanged=true;
+        }
+      }
       // Retrying the same request after a lost HTTP response returns its existing revision.
       if (current && current.workspaceSha256 === workspaceSha256 && JSON.stringify(current.metadata) === JSON.stringify(metadata) &&
           JSON.stringify(current.runtimeSupport??null)===JSON.stringify(runtimeSupport) &&
           [currentRevision,current.previousRevision].includes(input.expectedRevision))
-        return {case:summary(current,currentRevision), unchanged:true};
+        return {case:summary(current,currentRevision), unchanged:true,
+          ...(commissioningChanged?{commissioning:workspace.commissioning??null}:{})};
       if (input.expectedRevision !== currentRevision)
         throw Object.assign(fail('CASE_CONFLICT', 'A newer case version exists. Open it or save your draft as a separate case.', 409), {currentRevision});
       if (!current && (await readdir(root)).filter(name=>ID.test(name)).length >= CASE_LIMIT)
@@ -383,7 +398,8 @@ export async function openCaseStore(path) {
       await writeOnce(temp,encoder.encode(JSON.stringify({schema:'stellar-forge.merchant-case-head.v1',id,revision:newRevision}) + '\n'));
       await rename(temp,join(folder,'head.json')); temp = null;
       await syncDirectory(folder); await syncDirectory(root);
-      return {case:summary(value,newRevision), unchanged:false};
+      return {case:summary(value,newRevision), unchanged:false,
+        ...(commissioningChanged?{commissioning:workspace.commissioning??null}:{})};
     } finally {
       if (temp) await unlink(temp).catch(()=>{});
       await releaseWriter(lock);

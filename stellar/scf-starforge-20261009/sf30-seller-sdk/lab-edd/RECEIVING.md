@@ -157,3 +157,38 @@ python3 stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/workbook-native-r
 Run this same small native exercise in the original receiving operation alongside
 the actual supplied source families. The original EQuIS source-model result and
 its full data are in `examples/mccampbell/McCampbell_Complete_EDD_Model_20261012.zip`.
+
+## Complete native process ownership receiving
+
+The optional `receiving.complete.example.json` adds the existing generated DTS
+format workbook to both complete published supplier families. Keep the supplier
+observations and generated software-format observations under their retained
+`sourceKind` labels.
+
+Create the same unchanged 150-field fixture with the maintained generator:
+
+```sh
+python3 stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/workbook-native-receiving.py \
+  /absolute/pinned/source/root --fixture-only /absolute/private/DTS8D-native-format.xlsx
+```
+
+Select that file in the complete configuration, alongside the two unchanged
+published ZIPs and installed browser. Run the same `lab-edd-receive` command.
+The fixture passes through the original sealed-file worker for initial review,
+explicit Keep decisions, same-request replay and every native file comparison.
+
+The selected `processOwnership` phase then runs two additional original worker
+requests against that same retained workbook. The small declared receiving
+probe executes the real native file decoder and records its actual Linux PID,
+process start identity and decoded bytes before waiting. The first request is
+cancelled after that observation; the second reaches the original worker's
+selected deadline. The probe ignores the initial termination signal so the
+existing process manager must complete forced process-group retirement.
+Receiving checks the returned original cancellation/timeout, disappearance of
+that exact process and complete broker scratch removal. The actual observations
+and outcomes remain in `native-process-receiving/` and the full result.
+
+This is an explicit generated-format process-lifetime exercise. It uses the
+application's original worker, native bridge and process manager. Its retained
+probe and shorter deadline belong to the receiving configuration; the ordinary
+merchant application keeps its declared environment and execution policy.

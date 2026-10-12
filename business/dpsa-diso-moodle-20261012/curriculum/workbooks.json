@@ -1,0 +1,2453 @@
+{
+  "schema": "dpsa.diso.workbooks.v1",
+  "title": "DISO practical working documents",
+  "scenarioNote": "The exhibits and operational observations in these working documents are authored training scenarios. They extend the fictional application in the associated unit. Use the linked official sources for the applicable obligations and decision roles.",
+  "workbooks": [
+    {
+      "unitId": "M01-U01",
+      "title": "Map the complete relief-payment service",
+      "sourceIds": [],
+      "exhibits": [
+        {
+          "title": "Khanyisa information handoffs",
+          "columns": [
+            "Step",
+            "Information and location",
+            "Observed handling"
+          ],
+          "rows": [
+            [
+              "1. District intake",
+              "Paper form and supporting identity document",
+              "An intake clerk assigns a case number and scans both documents."
+            ],
+            [
+              "2. Eligibility review",
+              "Supplier-hosted case and eligibility-rule version",
+              "A central reviewer records a decision and its reasons."
+            ],
+            [
+              "3. Payment preparation",
+              "Weekly CSV containing case, amount and bank details",
+              "Finance exports approved cases and records the batch identifier."
+            ],
+            [
+              "4. Bank transfer",
+              "Payment instructions and bank acknowledgement",
+              "The acknowledgement is kept by Finance; district staff cannot see payment exceptions."
+            ],
+            [
+              "5. Appeals",
+              "Telephone note in a district spreadsheet",
+              "Staff sometimes identify callers by name alone when matching the appeal to a case."
+            ],
+            [
+              "6. Retained copy",
+              "Previous month's payment CSV on a shared drive",
+              "The service owner has not reviewed its current users or the reason for retaining the copy."
+            ]
+          ]
+        }
+      ],
+      "tasks": [
+        {
+          "title": "Information asset and consequence register",
+          "instructions": "Complete one row for each information asset. Separate who decides its business use from who operates its storage.",
+          "columns": [
+            "Asset",
+            "Public purpose",
+            "Business owner and technical custodian",
+            "Copies or transfers",
+            "Confidentiality consequence",
+            "Integrity consequence",
+            "Availability consequence"
+          ],
+          "rowLabels": [
+            "Application and identity documents",
+            "Eligibility rules",
+            "Decision and reasons",
+            "Payment instructions",
+            "Bank acknowledgement",
+            "Appeal records"
+          ]
+        },
+        {
+          "title": "Prioritise the service dependencies",
+          "instructions": "Select three dependencies from the completed map. State the harm and when it develops before proposing a control.",
+          "columns": [
+            "Dependency",
+            "Affected resident and harm",
+            "Time sensitivity",
+            "Usable alternative",
+            "Owner and next action"
+          ],
+          "rowLabels": [
+            "First priority",
+            "Second priority",
+            "Third priority"
+          ]
+        }
+      ],
+      "decisionPrompts": [
+        "Which missed handoff could cause a resident to be paid twice or not paid at all?",
+        "How will an appeal remain linked to the original case without relying on a surname?",
+        "Which retained copy needs a decision about access and purpose first?"
+      ],
+      "workedExampleHtml": "<p>A useful payment row identifies the relief-service owner for entitlement decisions and Finance for authorised payment execution, with ICT and the supplier operating the systems. The case number joins the decision, payment and appeal; a name alone can join the wrong resident's records.</p><p>The bank acknowledgement is an information asset in its own right. A payment file that was generated successfully does not establish that the bank accepted every instruction. Give reconciliation a named owner and make exceptions available to the staff who answer residents.</p><p>For the shared-drive copy, establish its present purpose, authorised users and applicable records treatment. The immediate question is who needs the information for which task. Keep the complete flow visible while the authorised owner determines the handling of the copy.</p>"
+    },
+    {
+      "unitId": "M01-U02",
+      "title": "Prepare a decision that the authorised owner can act on",
+      "sourceIds": [
+        "DPSA-IS-2022"
+      ],
+      "exhibits": [
+        {
+          "title": "Support-account observations",
+          "columns": [
+            "Observation",
+            "Known fact",
+            "Decision still needed"
+          ],
+          "rows": [
+            [
+              "Users",
+              "Eight clerks know the same supplier-support credentials.",
+              "How each clerk can receive named access in time."
+            ],
+            [
+              "Permission",
+              "The account can view all applications and edit payment details.",
+              "The minimum record scope and actions required for each task."
+            ],
+            [
+              "Timing",
+              "The next payment deadline is in two days; normal approval takes three weeks.",
+              "A feasible temporary arrangement and an owner for the provisioning repair."
+            ],
+            [
+              "Review",
+              "A log records the shared account name, without identifying the individual clerk.",
+              "How payment changes can be independently approved and attributable."
+            ],
+            [
+              "Authority",
+              "The service manager owns the service; ICT operates access; the DISO advises.",
+              "Which authorised role can approve the temporary residual risk."
+            ]
+          ]
+        }
+      ],
+      "tasks": [
+        {
+          "title": "Decision brief",
+          "instructions": "Write concise entries that can be reviewed together at the service decision meeting.",
+          "columns": [
+            "Brief element",
+            "Your entry"
+          ],
+          "rowLabels": [
+            "Decision requested and deadline",
+            "Service consequence and observed access",
+            "Temporary option and technical feasibility",
+            "Permanent process correction",
+            "Recommended option and residual exposure",
+            "Authority, implementation owner and review date"
+          ]
+        },
+        {
+          "title": "First-month delivery table",
+          "instructions": "Give each activity a completion condition that the responsible person can demonstrate.",
+          "columns": [
+            "Deliverable",
+            "Owner",
+            "Dependency",
+            "Completion evidence",
+            "Due or review point"
+          ],
+          "rowLabels": [
+            "Named limited access",
+            "Independent payment-change approval",
+            "Shared-account retirement",
+            "Provisioning lead-time repair",
+            "First operating review"
+          ]
+        }
+      ],
+      "decisionPrompts": [
+        "What can ICT deliver before the payment deadline, and who must confirm that feasibility?",
+        "Which approval belongs to the service owner rather than the DISO?",
+        "What will prevent a two-day workaround from becoming the next three-week delay?"
+      ],
+      "workedExampleHtml": "<p>Present the decision around continued relief payments and traceable payment changes. Ask ICT and the supplier to confirm whether named accounts with restricted record scope and an expiry can be made available before the deadline. Until that capability is confirmed, describe it as the proposed technical option.</p><p>Independent approval of payment changes addresses a different weakness from identifying the clerk. The decision should cover both. The authorised owner accepts or rejects the remaining exposure; the DISO supplies the facts, recommendation and follow-through.</p><p>The permanent deliverable is a functioning provisioning route with a responsible team, complete request inputs and an escalation path for urgent legitimate work. Closure includes actual permissions, the disposition of the shared credentials and evidence that a new legitimate user can obtain access through that route.</p>"
+    },
+    {
+      "unitId": "M02-U01",
+      "title": "Build an obligations register that handles conflicting requests",
+      "sourceIds": [
+        "POPIA",
+        "PAIA",
+        "DPSA-IS-2022",
+        "NARSSA-DISPOSAL"
+      ],
+      "exhibits": [
+        {
+          "title": "Permit-service decision inputs",
+          "columns": [
+            "Input",
+            "Supplied information",
+            "Question for the responsible role"
+          ],
+          "rows": [
+            [
+              "Supplier renewal",
+              "The supplier requests indefinite retention of all applications for its own product research.",
+              "What new purpose, authority, information scope and processing arrangements are proposed?"
+            ],
+            [
+              "Access request",
+              "A journalist requests historical permit decisions.",
+              "Which statutory request process and authorised decision-maker apply?"
+            ],
+            [
+              "Records schedule",
+              "Records staff confirm that an approved schedule exists, but the project has not obtained its version or disposal authority.",
+              "Which series, retention conditions and current preservation needs apply to these records?"
+            ],
+            [
+              "Security design",
+              "The online platform will store identity documents and reasons for decisions.",
+              "Which departmental security requirements and authorised roles govern the service?"
+            ],
+            [
+              "Contract",
+              "The draft specifies hosting availability but does not describe return, onward processing or incident contacts.",
+              "Which operational responsibilities and written terms must be completed?"
+            ]
+          ]
+        }
+      ],
+      "tasks": [
+        {
+          "title": "Five-row obligations register",
+          "instructions": "Read the listed official sources and record the relevant provision, source type and scope. Obtain the applicable local schedule rather than supplying a universal period.",
+          "columns": [
+            "Requirement area",
+            "Exact source and provision",
+            "Why it applies",
+            "Decision owner",
+            "Operating measure",
+            "Retained evidence or review trigger"
+          ],
+          "rowLabels": [
+            "Processing purpose and safeguards",
+            "Access to requested records",
+            "Retention and disposal",
+            "Departmental information security",
+            "Supplier processing and service duties"
+          ]
+        },
+        {
+          "title": "Route the two requests",
+          "instructions": "Preserve the records while the appropriate roles assess the requests.",
+          "columns": [
+            "Request",
+            "Facts still required",
+            "Responsible decision route",
+            "Work that proceeds meanwhile",
+            "Decision record"
+          ],
+          "rowLabels": [
+            "Supplier product research",
+            "Journalist's access request"
+          ]
+        }
+      ],
+      "decisionPrompts": [
+        "Can the project approve the supplier's new use merely through the hosting renewal?",
+        "How do you preserve the requested records while the access decision is being made?",
+        "Which source is a law, which is a directive and which is a local authorised records instrument?"
+      ],
+      "workedExampleHtml": "<p>The supplier's hosting role does not answer whether its unrelated research purpose is permitted. The register should connect purpose and safeguards to the responsible business, privacy and legal decision routes and the proposed written processing arrangements. Ask for the actual information scope and onward use before a decision is made.</p><p>The journalist's request follows the applicable PAIA route. Preserve potentially responsive records and allow the authorised decision-maker to apply the relevant requirements and exceptions. A classification label or a project manager's preference is not a substitute for that decision.</p><p>For records, identify the approved series and schedule, current version and applicable disposal authority. Record the local evidence to obtain. An entry containing an invented retention period cannot guide the team reliably, even if the rest of the register is neatly formatted.</p>"
+    },
+    {
+      "unitId": "M02-U02",
+      "title": "Coordinate the disclosure response and supplier renewal",
+      "sourceIds": [
+        "POPIA",
+        "IR-NOTIFICATION",
+        "IR-POPIA"
+      ],
+      "exhibits": [
+        {
+          "title": "Initial supplier report",
+          "columns": [
+            "Item",
+            "Report at 08:30",
+            "Current status"
+          ],
+          "rows": [
+            [
+              "Event",
+              "An unauthorised support user downloaded applicant records yesterday.",
+              "The supplier has supplied no reliable count or list of affected applicants."
+            ],
+            [
+              "Access",
+              "The supplier says it suspended the support user this morning.",
+              "The department needs the actual scope and remaining access paths confirmed."
+            ],
+            [
+              "Investigation",
+              "The supplier proposes waiting one month before anyone is told.",
+              "The responsible party must assess its own applicable notification duties."
+            ],
+            [
+              "Contract change",
+              "The renewal adds unrelated commercial analytics training.",
+              "This is a separate processing-purpose decision."
+            ],
+            [
+              "Availability",
+              "The permit application service is still operating.",
+              "Service continuity and disclosure assessment need coordinated owners."
+            ]
+          ]
+        }
+      ],
+      "tasks": [
+        {
+          "title": "Incident decision log",
+          "instructions": "Keep observations, uncertainty and decisions in separate columns. Use the actual times in the scenario.",
+          "columns": [
+            "Time and source",
+            "Known fact",
+            "Unresolved question",
+            "Owner and action",
+            "Decision or submission reference"
+          ],
+          "rowLabels": [
+            "08:30 supplier report",
+            "Access containment",
+            "Affected-information assessment",
+            "Notification assessment",
+            "Next coordinated update"
+          ]
+        },
+        {
+          "title": "Contract decision questions",
+          "instructions": "Specify the answer and accountable role needed before each proposed term can be resolved.",
+          "columns": [
+            "Topic",
+            "Question to the supplier",
+            "Departmental decision role",
+            "Required operational or contractual outcome"
+          ],
+          "rowLabels": [
+            "Permitted processing purpose",
+            "Information minimisation",
+            "Support and onward access",
+            "Incident reporting and cooperation",
+            "Return, retention and disposal"
+          ]
+        }
+      ],
+      "decisionPrompts": [
+        "Which notification is the operator's report to the department and which duties belong to the responsible party?",
+        "What information should be prepared immediately for the current reporting route while scope is refined?",
+        "Who will keep the notification reference and subsequent updates linked to the same incident?"
+      ],
+      "workedExampleHtml": "<p>At 08:30 the known event is a reported unauthorised download; the exact affected population remains unresolved. Assign the scope investigation, access containment and service decisions while the responsible party's authorised privacy/legal roles assess the applicable section 22 requirements. A supplier's proposed investigation timetable does not itself settle that assessment.</p><p>Keep the operator's notification to the department separate from the responsible party's duties to the Regulator and affected data subjects where applicable. The current official reporting resources identify the submission route; allocate access, preparation and retention of its reference to actual roles.</p><p>The unrelated analytics proposal should have its own decision entry, linked to the contract review. Urgent incident handling should not silently approve a permanent change in purpose. The final record should show who decided each issue and how the supplier's operating arrangements changed.</p>"
+    },
+    {
+      "unitId": "M03-U01",
+      "title": "Turn five requirement areas into operating work",
+      "sourceIds": [
+        "DPSA-IS-2022"
+      ],
+      "exhibits": [
+        {
+          "title": "Departmental implementation observations",
+          "columns": [
+            "Area",
+            "Available material",
+            "Missing operating connection"
+          ],
+          "rows": [
+            [
+              "Governance",
+              "A directive and policy are on the intranet.",
+              "The last review did not identify who owns the outstanding actions."
+            ],
+            [
+              "Access",
+              "A supplier user list exists.",
+              "No one reconciles it with current approved work or leavers."
+            ],
+            [
+              "Awareness",
+              "An annual presentation was circulated.",
+              "Payment staff cannot identify the alternate verification contact."
+            ],
+            [
+              "Change",
+              "A change form is available.",
+              "An emergency repair has no linked result or follow-up owner."
+            ],
+            [
+              "Recovery",
+              "Backup software reports completed jobs.",
+              "The department has no current end-to-end service restoration result."
+            ]
+          ]
+        }
+      ],
+      "tasks": [
+        {
+          "title": "Clause-to-control map",
+          "instructions": "Use the actual directive to supply the relevant provision. Separate design, operation and effectiveness.",
+          "columns": [
+            "Requirement and provision",
+            "Local owner",
+            "Operating procedure",
+            "Evidence of execution",
+            "Evidence of intended result",
+            "Current gap"
+          ],
+          "rowLabels": [
+            "Governance",
+            "Access and leavers",
+            "Role-specific awareness",
+            "Change management",
+            "Service recovery"
+          ]
+        },
+        {
+          "title": "Three coordinated improvements",
+          "instructions": "Group work that shares a cause or dependency and give it a deliverable owner.",
+          "columns": [
+            "Priority",
+            "Joined actions",
+            "Delivery owner and participants",
+            "Service outcome",
+            "Completion condition"
+          ],
+          "rowLabels": [
+            "1",
+            "2",
+            "3"
+          ]
+        }
+      ],
+      "decisionPrompts": [
+        "Which observations establish that a procedure exists, and which show that it operates?",
+        "How can HR, internal access and supplier access be joined in one leaver process?",
+        "What service result should the recovery owner demonstrate?"
+      ],
+      "workedExampleHtml": "<p>The access row should join the authorised population, actual accounts and current work. A completed spreadsheet is only useful if a named owner uses it to reconcile differences and close removals across the department and its supplier. Record the directive provision from the source during the exercise.</p><p>A coordinated leaver improvement can combine HR notification, internal account removal, supplier confirmation and a final exception review. That gives the service one accountable process instead of several lists with unrelated owners.</p><p>For recovery, distinguish a completed backup job from a restored and usable service. The operating evidence should cover the required information, identity and application dependencies, the service owner's validation and the applicable objectives. The three-action plan should prioritise consequences and dependencies rather than giving every missing document equal urgency.</p>"
+    },
+    {
+      "unitId": "M03-U02",
+      "title": "Make the urgent repair recoverable and attributable",
+      "sourceIds": [
+        "DPSA-IS-2022",
+        "CONTINUITY-2022"
+      ],
+      "exhibits": [
+        {
+          "title": "Emergency repair facts",
+          "columns": [
+            "Area",
+            "Available evidence",
+            "Unresolved dependency"
+          ],
+          "rows": [
+            [
+              "Failure",
+              "The benefits platform stopped during payment preparation.",
+              "Which application operations completed before the failure?"
+            ],
+            [
+              "Proposed repair",
+              "The supplier proposes a direct database edit through a shared account.",
+              "The exact records, change, named operator and permitted access window."
+            ],
+            [
+              "Recovery",
+              "Last night's backup job completed.",
+              "Whether a recoverable pre-change state and working restoration route are available."
+            ],
+            [
+              "Payments",
+              "Payment-file generation may already have begun.",
+              "Whether a file was sent and whether the bank accepted any instructions."
+            ],
+            [
+              "Service",
+              "The payment deadline is approaching.",
+              "Which controlled alternative can serve urgent cases if the repair fails."
+            ]
+          ]
+        }
+      ],
+      "tasks": [
+        {
+          "title": "Emergency-change decision",
+          "instructions": "Write the decision before implementation using the facts that are available now.",
+          "columns": [
+            "Decision element",
+            "Your entry"
+          ],
+          "rowLabels": [
+            "Failure and affected service",
+            "Exact proposed change and records",
+            "Named operator and authorised route",
+            "Pre-change state and reversal or recovery",
+            "Payment state and reconciliation owner",
+            "Approval, time and access expiry"
+          ]
+        },
+        {
+          "title": "Post-change acceptance and follow-up",
+          "instructions": "Include business validation as well as technical operation.",
+          "columns": [
+            "Check or repair",
+            "Responsible owner",
+            "Evidence needed",
+            "Outcome and follow-up"
+          ],
+          "rowLabels": [
+            "Application starts and intended change works",
+            "Affected records reconciled",
+            "Payment instructions reconciled",
+            "Temporary privileges closed",
+            "Underlying defect and recovery gap corrected"
+          ]
+        }
+      ],
+      "decisionPrompts": [
+        "Which observation would make rerunning a payment batch unsafe?",
+        "What must the supplier provide before the proposed database edit can be assessed?",
+        "How will you distinguish the authorised emergency decision from later review?"
+      ],
+      "workedExampleHtml": "<p>The payment state is a critical dependency: a repeated file can have a financial effect even when the application appears to have failed. Finance should reconcile the original batch identifier with the bank or payment interface before authorising further execution. Record uncertainty explicitly until that reconciliation is complete.</p><p>Ask the supplier to identify the exact change, records and named operator. Confirm the available pre-change state and recovery route, and route the emergency decision through the department's actual authority. A successful backup log does not demonstrate that the proposed edit can be reversed or the service restored.</p><p>After the repair, the service owner validates the business result, ICT verifies operation and the relevant owners close the temporary access. The later review should resolve the shared-account, recovery and underlying defect work with clear owners. Its date remains the actual review date.</p>"
+    },
+    {
+      "unitId": "M04-U01",
+      "title": "Preserve the source classification and handling decision",
+      "sourceIds": [
+        "MISS",
+        "DPSA-IS-2022"
+      ],
+      "exhibits": [
+        {
+          "title": "Document transfer record",
+          "columns": [
+            "Field",
+            "Current observation"
+          ],
+          "rows": [
+            [
+              "Document identity",
+              "Record KHY-SEC-017, version 3, received from another department."
+            ],
+            [
+              "Source marking",
+              "Secret; the sender identifies MISS as the source scheme."
+            ],
+            [
+              "Receiving system",
+              "The local dropdown offers Public, Confidential and Secret under the department's 2022 Directive implementation."
+            ],
+            [
+              "Proposed recipient",
+              "An external consultant requested by a senior manager."
+            ],
+            [
+              "Purpose and conditions",
+              "The request does not include the consultant's task, need-to-know or completed access conditions."
+            ],
+            [
+              "System gap",
+              "The import keeps the word Secret but currently drops the source-scheme field."
+            ]
+          ]
+        }
+      ],
+      "tasks": [
+        {
+          "title": "Handling decision record",
+          "instructions": "Preserve the original document identity and source marking while the authorised roles resolve access.",
+          "columns": [
+            "Record element",
+            "Your entry"
+          ],
+          "rowLabels": [
+            "Original ID, version, scheme and marking",
+            "Proposed purpose and recipient",
+            "Need-to-know and access conditions to establish",
+            "Authorised decision role",
+            "Permitted handling and transmission",
+            "Review trigger and retained decision"
+          ]
+        },
+        {
+          "title": "Classification mapping issue",
+          "instructions": "Describe the system change and the authority needed to approve it.",
+          "columns": [
+            "Mapping element",
+            "Current state",
+            "Required decision or change",
+            "Owner"
+          ],
+          "rowLabels": [
+            "Source scheme and version",
+            "Local label and meaning",
+            "Handling controls",
+            "Reclassification or redacted derivative",
+            "Source-to-derivative relationship"
+          ]
+        }
+      ],
+      "decisionPrompts": [
+        "What information is lost if the system retains only the word Secret?",
+        "Which facts establish the consultant's authorised need for this document?",
+        "How will an approved redacted copy remain linked to its source and decision?"
+      ],
+      "workedExampleHtml": "<p>The original record should retain KHY-SEC-017, version 3, the MISS scheme and the sender's marking. Preserve those attributes separately from any local mapping so that the receiving system does not imply a handling equivalence that has not been approved.</p><p>The senior manager's request starts a decision route. Establish the consultant's actual task, need-to-know and applicable access conditions, then record the authorised handling decision. If a redacted derivative is approved, give it its own version and link it to the original record and authorising decision.</p><p>The system issue is broader than adding a dropdown value: it includes scheme identity, the mapping authority and the operating controls attached to the mapped state. The relevant source schemes and departmental authority determine the final mapping.</p>"
+    },
+    {
+      "unitId": "M04-U02",
+      "title": "Control the 500-file digitisation batch",
+      "sourceIds": [
+        "NARSSA-RECORDS",
+        "NARSSA-DISPOSAL",
+        "NARSSA-MANUAL"
+      ],
+      "exhibits": [
+        {
+          "title": "Sample records in the 500-file batch",
+          "columns": [
+            "Physical ID",
+            "Pages expected",
+            "Observed issue"
+          ],
+          "rows": [
+            [
+              "PER-0001",
+              "8",
+              "All eight pages are present."
+            ],
+            [
+              "PER-0002",
+              "5",
+              "Two applicants in the batch have the same surname."
+            ],
+            [
+              "PER-0003",
+              "12",
+              "The scanner double-fed after page 7; completeness requires comparison."
+            ],
+            [
+              "PER-0004",
+              "4",
+              "One page contains handwriting that is faint in the first scan."
+            ],
+            [
+              "PER-0005",
+              "9",
+              "The source folder contains an inserted annexure with a separate reference."
+            ],
+            [
+              "Remaining 495 files",
+              "To be counted from the originals",
+              "Retain the same control process for the complete batch."
+            ]
+          ]
+        }
+      ],
+      "tasks": [
+        {
+          "title": "Source-to-scan batch register",
+          "instructions": "Use stable record and page identities. A scan can remain in exception while other accepted records proceed.",
+          "columns": [
+            "Physical ID",
+            "Expected and received pages",
+            "Digital ID and version",
+            "Quality exception",
+            "Reviewer and disposition",
+            "Physical and digital custody"
+          ],
+          "rowLabels": [
+            "PER-0001",
+            "PER-0002",
+            "PER-0003",
+            "PER-0004",
+            "PER-0005"
+          ]
+        },
+        {
+          "title": "Handling and disposal decisions",
+          "instructions": "Record the authority separately from the production count.",
+          "columns": [
+            "Stage",
+            "Access and custody",
+            "Required evidence",
+            "Decision owner"
+          ],
+          "rowLabels": [
+            "Receipt of originals",
+            "Scanning and exception repair",
+            "Master and access-copy creation",
+            "Authorised transfer",
+            "Retention and disposal decision"
+          ]
+        }
+      ],
+      "decisionPrompts": [
+        "How will the two same-surname files remain distinguishable?",
+        "What happens to PER-0003 until completeness is resolved?",
+        "Who must establish the applicable disposal authority before any original is destroyed?"
+      ],
+      "workedExampleHtml": "<p>Use the physical identifier as the stable join to the digital record and retain page counts and annexure relationships. A surname can remain descriptive metadata without becoming the sole identifier. PER-0003 requires comparison with the original and correction of any missing pages; it should not be accepted merely because a PDF was produced.</p><p>For PER-0004, make and inspect a usable replacement scan and retain the accepted version. Keep rejected intermediates under the batch's controlled process, with current custody visible. Distinguish a preservation master from an access copy where the departmental requirements call for both.</p><p>A 500-file production count describes the scanning work. Disposal remains a separate decision under the applicable records authority, including any preservation obligations. The completed batch register should support access, quality review, transfer and later authorised records management.</p>"
+    },
+    {
+      "unitId": "M05-U01",
+      "title": "Assign the public API's decision rights",
+      "sourceIds": [
+        "CGICT-2022",
+        "DPSA-IS-2022",
+        "POPIA",
+        "PAIA"
+      ],
+      "exhibits": [
+        {
+          "title": "Cross-agency API proposal",
+          "columns": [
+            "Participant",
+            "Proposed contribution or concern",
+            "Decision boundary"
+          ],
+          "rows": [
+            [
+              "Service manager",
+              "Wants the licensing API live next month.",
+              "Owns the service purpose and must identify the authorised release decision."
+            ],
+            [
+              "ICT team",
+              "Can implement the interface and access controls.",
+              "Needs agreed scope and conditions before configuration."
+            ],
+            [
+              "Legal and privacy roles",
+              "Need to assess the proposed information disclosure.",
+              "Provide the applicable assessment and authorised statutory decisions."
+            ],
+            [
+              "Three receiving agencies",
+              "Each requests a different set of fields.",
+              "Need agreed purposes, recipients, incident contacts and change arrangements."
+            ],
+            [
+              "Governance forum",
+              "Can review material resources and risks within its mandate.",
+              "Needs a specific decision request and accountable follow-through."
+            ]
+          ]
+        }
+      ],
+      "tasks": [
+        {
+          "title": "Four-decision responsibility matrix",
+          "instructions": "Name one accountable decision role for each item, using the actual departmental mandate during adoption.",
+          "columns": [
+            "Decision",
+            "Accountable authority",
+            "Implementing owner",
+            "Consulted roles",
+            "Inputs and conditions",
+            "Recorded outcome"
+          ],
+          "rowLabels": [
+            "API scope and release",
+            "Recipient access",
+            "Funding and ongoing support",
+            "Incident coordination"
+          ]
+        },
+        {
+          "title": "Cross-agency operating interface",
+          "instructions": "Specify what each receiving agency must be able to do before production use.",
+          "columns": [
+            "Interface item",
+            "Required agreement or procedure",
+            "Owner on each side",
+            "Review or escalation"
+          ],
+          "rowLabels": [
+            "Purpose and data fields",
+            "Access approval and removal",
+            "Incidents and contact alternates",
+            "Changes and versioning",
+            "Service support and exit"
+          ]
+        }
+      ],
+      "decisionPrompts": [
+        "Who is authorised to decide which records may be disclosed?",
+        "Which release conditions apply to all agencies and which depend on a particular purpose?",
+        "What decision should the next governance meeting actually make?"
+      ],
+      "workedExampleHtml": "<p>The matrix should distinguish the authorised release decision from the ICT team's ability to build an API. Start with the business purpose and field scope, and route the privacy, legal and records questions to the appropriate roles. The final authority follows the department's actual mandate.</p><p>Each agency interface needs named contacts, access approval and removal, an incident route and a process for changes. A single technical endpoint does not eliminate the different purposes or responsibilities of its recipients.</p><p>A useful escalation asks the governance forum to decide a stated scope, resource or residual-risk issue with the necessary inputs. Once decided, implementation actions return to named owners. Record the decision and conditions in a form that the service manager and technical team can apply during release and operation.</p>"
+    },
+    {
+      "unitId": "M05-U02",
+      "title": "Repair the exception process and its recurring cause",
+      "sourceIds": [
+        "DPSA-IS-2022",
+        "CGICT-2022"
+      ],
+      "exhibits": [
+        {
+          "title": "Forty-exception register: categories may overlap",
+          "columns": [
+            "Observation",
+            "Count",
+            "What the count does not establish"
+          ],
+          "rows": [
+            [
+              "All supplier-access exceptions",
+              "40",
+              "Whether each current account is still required or correctly scoped."
+            ],
+            [
+              "Expired entries",
+              "20",
+              "How many are also among the ten with no recorded approver."
+            ],
+            [
+              "Entries without a recorded approver",
+              "10",
+              "Whether approval exists elsewhere or whether the access is authorised."
+            ],
+            [
+              "Underlying cause",
+              "Several urgent cases bypassed slow normal onboarding.",
+              "The exact common bottleneck and time needed to repair it."
+            ],
+            [
+              "Service dependency",
+              "Some supplier access supports live services.",
+              "Which accounts can change immediately without an unacceptable service interruption."
+            ]
+          ]
+        }
+      ],
+      "tasks": [
+        {
+          "title": "Exception decision template",
+          "instructions": "Investigate the actual account and requirement before assigning its disposition.",
+          "columns": [
+            "Exception or account",
+            "Current purpose and scope",
+            "Approver and authority",
+            "Compensating measures",
+            "Expiry and review",
+            "Permanent resolution and owner"
+          ],
+          "rowLabels": [
+            "Priority live-service exception",
+            "Expired exception",
+            "Missing-approval exception"
+          ]
+        },
+        {
+          "title": "Three-stage correction plan",
+          "instructions": "Treat current exposure and the normal onboarding process as connected work.",
+          "columns": [
+            "Stage",
+            "Deliverables",
+            "Accountable owner",
+            "Service condition",
+            "Measure and follow-up"
+          ],
+          "rowLabels": [
+            "Establish current access and authority",
+            "Resolve and time-limit exceptions",
+            "Repair onboarding and review repeat demand"
+          ]
+        }
+      ],
+      "decisionPrompts": [
+        "Why can the 20 expired and ten missing-approval entries not simply be added together?",
+        "Which observation will determine the immediate treatment of an account?",
+        "How will you measure whether onboarding improves while legitimate urgent access remains timely?"
+      ],
+      "workedExampleHtml": "<p>The supplied categories overlap, so the counts do not establish that exactly thirty distinct exceptions are defective. Join the actual entries and account identities before reporting the number of affected accounts. For each, confirm current need, scope, authority and service dependency.</p><p>The revised exception record needs a real decision owner, compensating measures, an expiry and a permanent resolution. Where approval is missing, find the actual decision evidence or route the current decision to the authorised role. Where access has expired, resolve its disposition against present service needs and exposure.</p><p>The third stage repairs the process that generates repeat exceptions. Useful measures include the time from a complete legitimate request to usable access, repeat exceptions by cause and expired entries awaiting a decision. These measures connect control improvement to a functioning service.</p>"
+    },
+    {
+      "unitId": "M06-U01",
+      "title": "Connect the R20 million proposal to service outcomes",
+      "sourceIds": [
+        "CGICT-2022",
+        "CGICT-DIRECTIVE"
+      ],
+      "exhibits": [
+        {
+          "title": "Investment workshop inputs",
+          "columns": [
+            "Item",
+            "Known at the workshop",
+            "Information to obtain"
+          ],
+          "rows": [
+            [
+              "Proposal",
+              "R20 million for an electronic case system.",
+              "A breakdown of implementation, integration, training and ongoing support."
+            ],
+            [
+              "Benefit claim",
+              "Faster filing and retrieval.",
+              "A defined population, current baseline and target approved by the service owner."
+            ],
+            [
+              "Records",
+              "The design assumes existing case information is usable.",
+              "Current completeness, identity and migration exceptions."
+            ],
+            [
+              "People",
+              "The proposal assumes staff will adopt the service.",
+              "Role-based tasks, access, training, support and change capacity."
+            ],
+            [
+              "Security and continuity",
+              "The proposal names products.",
+              "The service outcomes and complete dependencies each control must support."
+            ]
+          ]
+        }
+      ],
+      "tasks": [
+        {
+          "title": "Outcome-to-investment map",
+          "instructions": "Leave a baseline as an assigned measurement task when it has not been supplied.",
+          "columns": [
+            "Public outcome",
+            "Baseline and population",
+            "Target and benefit owner",
+            "Capabilities and dependencies",
+            "Investment or operating cost",
+            "Measure and review date"
+          ],
+          "rowLabels": [
+            "Timely filing",
+            "Reliable case retrieval",
+            "Appropriate information access"
+          ]
+        },
+        {
+          "title": "Three governance decisions",
+          "instructions": "Connect each request to the forum or role with the actual authority.",
+          "columns": [
+            "Decision",
+            "Options and recommendation",
+            "Service and security trade-off",
+            "Authority and evidence needed",
+            "Owner after decision"
+          ],
+          "rowLabels": [
+            "Scope and phased delivery",
+            "Material funding or resource choice",
+            "Residual risk and continuity readiness"
+          ]
+        }
+      ],
+      "decisionPrompts": [
+        "Which claims in the proposal cannot yet be measured?",
+        "Which costs continue after the implementation supplier leaves?",
+        "How will the service owner determine whether the investment delivered the intended public benefit?"
+      ],
+      "workedExampleHtml": "<p>The R20 million figure is a proposed investment, not a benefit measure. Assign the service owner to define and measure filing and retrieval outcomes for a stated population, including cases that are difficult to process. Avoid supplying a baseline that the workshop has not established.</p><p>The capability map should connect records quality, integration, staff tasks, access and continuity to those outcomes. Separate implementation expenditure from ongoing support and operation so that the decision covers the whole service.</p><p>Use the department's actual governance arrangements: operational configuration belongs with the responsible ICT management roles, while material scope, funding and residual-risk decisions go to the authorised forum or executive role. A benefit owner remains responsible for reviewing the result after delivery.</p>"
+    },
+    {
+      "unitId": "M06-U02",
+      "title": "Recalculate the benefit claim on a comparable population",
+      "sourceIds": [
+        "CGICT-2022"
+      ],
+      "exhibits": [
+        {
+          "title": "Additional fictional review sample from the current period",
+          "columns": [
+            "Group",
+            "Cases",
+            "Average elapsed days",
+            "Dashboard treatment"
+          ],
+          "rows": [
+            [
+              "Completed cases in included districts",
+              "600",
+              "12",
+              "Included in the reported 12-day figure."
+            ],
+            [
+              "Completed cases in the excluded busiest district",
+              "300",
+              "28",
+              "Excluded."
+            ],
+            [
+              "Open incomplete cases across the service",
+              "100",
+              "35 days since receipt at the review date",
+              "Excluded; their final decision time is not yet known."
+            ],
+            [
+              "Historical baseline",
+              "All cases in the earlier stated cohort",
+              "30 days",
+              "The owner must confirm the same definition and completed/open treatment."
+            ]
+          ]
+        },
+        {
+          "title": "Operating and cost observations",
+          "columns": [
+            "Area",
+            "Observation"
+          ],
+          "rows": [
+            [
+              "Investment",
+              "R8 million installation cost has already been incurred."
+            ],
+            [
+              "Adoption",
+              "Half of staff currently use the new platform; role and district breakdown is missing."
+            ],
+            [
+              "Data portability",
+              "The supplier charges separately for export; the price and conditions are not supplied."
+            ],
+            [
+              "Support",
+              "The review has no confirmed ongoing cost or service-support owner."
+            ]
+          ]
+        }
+      ],
+      "tasks": [
+        {
+          "title": "Benefit and coverage review",
+          "instructions": "Calculate only like-for-like figures. Keep the age of open cases separate from completed decision time.",
+          "columns": [
+            "Measure",
+            "Population and calculation",
+            "Result",
+            "Limitation or missing comparison",
+            "Decision owner"
+          ],
+          "rowLabels": [
+            "Reported completed cases",
+            "All supplied completed cases",
+            "Open-case age and count",
+            "Comparison with the 30-day baseline",
+            "Adoption by district and role"
+          ]
+        },
+        {
+          "title": "Corrective investment decision",
+          "instructions": "Compare a workable corrective scope with the current arrangement.",
+          "columns": [
+            "Issue",
+            "Action and owner",
+            "Information or cost needed",
+            "Acceptance condition",
+            "Review date"
+          ],
+          "rowLabels": [
+            "Excluded district",
+            "Open and incomplete cases",
+            "Staff adoption",
+            "Export and continuing costs"
+          ]
+        }
+      ],
+      "decisionPrompts": [
+        "What is the weighted average for all 900 completed cases in the sample?",
+        "Why should the 100 open cases not be treated as if their final decision time were 35 days?",
+        "What further evidence is needed before the earlier 30-day baseline can support a benefit claim?"
+      ],
+      "workedExampleHtml": "<p>The combined mean for the 900 completed cases is (600 × 12 + 300 × 28) ÷ 900 = 17⅓ days. That remains a completed-case measure; the 100 open cases have a current age of 35 days and an unknown eventual decision time. Report their count and age separately so that difficult cases remain visible.</p><p>The original 12-day dashboard hides a material part of the service. Before comparing 17⅓ days with the earlier 30-day baseline, confirm the same population, time definition and treatment of open cases. A corrected number without a comparable baseline does not establish the size of the benefit.</p><p>The review should also assign the excluded district, staff adoption and export/operating costs to owners. The R8 million already spent informs the investment history; the current decision should compare the future service outcomes and remaining costs of feasible options.</p>"
+    },
+    {
+      "unitId": "M07-U01",
+      "title": "Compare three service risks using stated scales",
+      "sourceIds": [
+        "DPSA-IS-2022"
+      ],
+      "exhibits": [
+        {
+          "title": "Four-level scales supplied for this exercise",
+          "columns": [
+            "Level",
+            "Likelihood description",
+            "Impact description"
+          ],
+          "rows": [
+            [
+              "1",
+              "Exceptional under the stated current conditions.",
+              "A local inconvenience recoverable within normal work."
+            ],
+            [
+              "2",
+              "Plausible but dependent on conditions not currently observed.",
+              "A limited service disruption or correction effort with contained harm."
+            ],
+            [
+              "3",
+              "Credible under observed operating conditions.",
+              "Material harm or delay affecting a significant part of the service."
+            ],
+            [
+              "4",
+              "Expected to recur under the observed conditions without intervention.",
+              "Severe or prolonged harm affecting critical service delivery or many people."
+            ]
+          ]
+        },
+        {
+          "title": "Current exposure and controls",
+          "columns": [
+            "Risk area",
+            "Observed condition",
+            "Current protection or uncertainty"
+          ],
+          "rows": [
+            [
+              "Supplier administration",
+              "A shared administrator account can change payment details.",
+              "A change log exists but identifies the shared account; independent approval is not demonstrated."
+            ],
+            [
+              "District connectivity",
+              "Connections are unreliable.",
+              "An approved offline intake process exists; current throughput and reconciliation performance need confirming."
+            ],
+            [
+              "Proposed analytics export",
+              "The export is planned but not yet enabled.",
+              "Release is a future decision; proposed fields, purpose and access are not final."
+            ]
+          ]
+        }
+      ],
+      "tasks": [
+        {
+          "title": "Three-risk register",
+          "instructions": "Write cause, event and public-service consequence together. Assess likelihood and impact separately and explain how current controls change the assessment.",
+          "columns": [
+            "Risk statement",
+            "Current controls and gaps",
+            "Likelihood with reasons",
+            "Impact with reasons",
+            "Residual exposure and uncertainty",
+            "Owner and next decision"
+          ],
+          "rowLabels": [
+            "Shared supplier administrator",
+            "Unreliable connectivity",
+            "Planned analytics export"
+          ]
+        },
+        {
+          "title": "Priority and information request",
+          "instructions": "Choose a delivery priority without treating the scale as an automatic decision rule.",
+          "columns": [
+            "Priority",
+            "Reason and time sensitivity",
+            "Information that could change the decision",
+            "Owner and action"
+          ],
+          "rowLabels": [
+            "First",
+            "Second",
+            "Third"
+          ]
+        }
+      ],
+      "decisionPrompts": [
+        "Which risks are operating now and which depend on a future release?",
+        "What evidence would show that the offline intake process reduces the consequence?",
+        "Why is a numerical score alone insufficient to authorise the next action?"
+      ],
+      "workedExampleHtml": "<p>A useful risk statement for shared administration joins unauthorised or unattributable changes to payment diversion, error or delayed relief. The shared-account log provides some event history but does not establish which clerk or supplier operator acted, and it does not demonstrate independent approval.</p><p>The connectivity risk should account for the approved offline process. Its effect depends on actual capacity, information handling and later reconciliation. Assign those observations instead of either ignoring the control or assuming it solves every outage.</p><p>The analytics risk concerns a planned change. Keep the pending purpose, fields and access decisions visible before release. Different ratings can be defensible when the learner explains the supplied scale and facts. Prioritisation should show service consequences, timing, uncertainty and the authorised decision needed; multiplying two ratings does not provide that authority.</p>"
+    },
+    {
+      "unitId": "M07-U02",
+      "title": "Choose and resource a feasible treatment",
+      "sourceIds": [
+        "DPSA-IS-2022",
+        "CGICT-2022"
+      ],
+      "exhibits": [
+        {
+          "title": "Treatment options supplied to management",
+          "columns": [
+            "Option",
+            "Quoted or known resource",
+            "Effect and remaining decision"
+          ],
+          "rows": [
+            [
+              "Named-access supplier support",
+              "R120,000 per year.",
+              "Improves individual access and attribution; exact permission scope and operating responsibilities still need agreement."
+            ],
+            [
+              "Approval-process redesign",
+              "R40,000 plus two months of departmental work.",
+              "Repairs approval operation; identify the staff time, interim handling and acceptance condition."
+            ],
+            [
+              "Temporary shared access",
+              "Daily review and independent payment approval.",
+              "Requires named decision authority, review effort, scope, expiry and a permanent resolution."
+            ],
+            [
+              "Combined treatment",
+              "A feasible combination of the above.",
+              "Avoid counting an option's benefit before its dependency is in place."
+            ]
+          ]
+        }
+      ],
+      "tasks": [
+        {
+          "title": "Comparable options table",
+          "instructions": "Separate once-off cost, recurring cost and departmental effort. Use the same service consequence for all options.",
+          "columns": [
+            "Option",
+            "Once-off and recurring cost",
+            "Staff effort and time to operate",
+            "Protection delivered",
+            "Residual exposure",
+            "Dependency and owner"
+          ],
+          "rowLabels": [
+            "Named access",
+            "Approval redesign",
+            "Temporary arrangement",
+            "Recommended combination"
+          ]
+        },
+        {
+          "title": "Treatment and residual-risk decision",
+          "instructions": "State what can be decided now and how the treatment becomes effective.",
+          "columns": [
+            "Decision element",
+            "Your entry"
+          ],
+          "rowLabels": [
+            "Service and risk owner",
+            "Selected scope and resources",
+            "Temporary arrangement and expiry",
+            "Implementation owner and dates",
+            "Acceptance observation",
+            "Residual-risk decision and review trigger"
+          ]
+        }
+      ],
+      "decisionPrompts": [
+        "Which option can operate before the two-month redesign finishes?",
+        "What ongoing work is hidden if temporary daily review is described as free?",
+        "What observation will establish that the permanent treatment has actually changed access and approval?"
+      ],
+      "workedExampleHtml": "<p>A combined sequence may provide a workable interim arrangement while approval redesign is completed, with named access added where its scope and implementation are feasible. The recommendation must state the actual trade-offs; the annual R120,000 and once-off R40,000 are different cost categories, and departmental work remains a resource requirement.</p><p>Daily review and independent approval have owners and effort. Record who performs them, how exceptions are escalated and when the temporary arrangement is reviewed or ends. An expiry should lead to a current decision rather than silently extending access.</p><p>Acceptance should demonstrate individual permissions, attributable activity and the real payment-approval workflow. The authorised risk owner decides on the remaining exposure using those results. Reconsider the decision if the service, supplier access, implementation date or observed effectiveness changes.</p>"
+    },
+    {
+      "unitId": "M08-U01",
+      "title": "Trace five trust and recovery decisions through the architecture",
+      "sourceIds": [
+        "DPSA-IS-2022",
+        "NIST-ZTA",
+        "NIST-AUTH-2025"
+      ],
+      "exhibits": [
+        {
+          "title": "Architecture paths in the exercise",
+          "columns": [
+            "Path",
+            "Current design",
+            "Question exposed"
+          ],
+          "rows": [
+            [
+              "Resident → portal → case system",
+              "Identity documents and applications cross into supplier-hosted processing.",
+              "Which purpose, recipient and protection apply at each transfer?"
+            ],
+            [
+              "Clerk → identity provider → case system",
+              "Staff use MFA.",
+              "What establishes the particular records and changes each clerk may access?"
+            ],
+            [
+              "Clerk → payment details",
+              "Every clerk can edit every payment account.",
+              "Which service roles require this action and who approves changes?"
+            ],
+            [
+              "Supplier → administrator connection",
+              "Permanent privileged access is available.",
+              "What work, duration, scope and review authorise that access?"
+            ],
+            [
+              "Recovery team → identity platform → backup and case system",
+              "Recovery needs the identity platform assumed unavailable.",
+              "How can the complete recovery route start independently?"
+            ]
+          ]
+        }
+      ],
+      "tasks": [
+        {
+          "title": "Trust-boundary and decision map",
+          "instructions": "Draw the five paths and complete one row for each. Authentication and record/action authorisation need distinct decisions.",
+          "columns": [
+            "Path or boundary",
+            "Information or action",
+            "Identity and authentication",
+            "Authorised scope and approval",
+            "Dependency",
+            "Decision owner and change"
+          ],
+          "rowLabels": [
+            "Resident submission",
+            "Clerk sign-in",
+            "Payment edit",
+            "Supplier administration",
+            "Service recovery"
+          ]
+        },
+        {
+          "title": "Recovery dependency opening move",
+          "instructions": "Identify the first usable instructions, identities and keys when the primary identity service is unavailable.",
+          "columns": [
+            "Required dependency",
+            "Current location or owner",
+            "Circular dependency",
+            "Proposed independent route",
+            "Observation needed"
+          ],
+          "rowLabels": [
+            "Recovery instructions",
+            "Recovery identity",
+            "Backup or encryption key",
+            "Application and service validation"
+          ]
+        }
+      ],
+      "decisionPrompts": [
+        "Which permission problem remains even when MFA works correctly?",
+        "What makes the supplier connection temporary and attributable in practice?",
+        "How will the recovery team obtain its first usable identity and instructions?"
+      ],
+      "workedExampleHtml": "<p>MFA helps establish the authenticated user. It does not decide whether that clerk should edit every payment account. The payment boundary needs record and action scope, an approval route and operating evidence that the restriction is enforced.</p><p>For supplier administration, connect access to the authorised task, named operator, allowed resources, duration and review. A permanent connection with an impressive authentication method can still have excessive scope.</p><p>The recovery map reveals a circular dependency when instructions, keys or identities needed to recover the service are accessible only through the failed identity platform. Design an appropriately controlled independent route and include it in the complete recovery exercise. NIST provides technical architecture guidance; the department's applicable source obligations and authorised roles determine adoption.</p>"
+    },
+    {
+      "unitId": "M08-U02",
+      "title": "Evaluate the complete control population and response path",
+      "sourceIds": [
+        "DPSA-IS-2022"
+      ],
+      "exhibits": [
+        {
+          "title": "Additional fictional device and recovery observations",
+          "columns": [
+            "Observation",
+            "Supplied value or condition"
+          ],
+          "rows": [
+            [
+              "Registered endpoint population",
+              "250 devices."
+            ],
+            [
+              "Devices observed within 30 days",
+              "200 devices."
+            ],
+            [
+              "Observed devices meeting the update requirement",
+              "190 devices."
+            ],
+            [
+              "Dashboard headline",
+              "95% compliant, calculated as 190 ÷ 200."
+            ],
+            [
+              "Excluded devices",
+              "50 devices have not checked in for more than 30 days."
+            ],
+            [
+              "Backup keys",
+              "Held by one administrator with no demonstrated alternate recovery route."
+            ],
+            [
+              "Alerts",
+              "Generated in the dashboard with no assigned responder or escalation path."
+            ]
+          ]
+        }
+      ],
+      "tasks": [
+        {
+          "title": "Control coverage and operation table",
+          "instructions": "Keep observed compliance, full-population coverage and unknown devices separate.",
+          "columns": [
+            "Control",
+            "Intended population or service",
+            "Observed result",
+            "Unknown or uncovered scope",
+            "Operating owner",
+            "Acceptance condition"
+          ],
+          "rowLabels": [
+            "Endpoint updates",
+            "Backup recoverability",
+            "Alert response"
+          ]
+        },
+        {
+          "title": "Corrective delivery plan",
+          "instructions": "Prioritise complete service protection and usable ownership.",
+          "columns": [
+            "Action",
+            "Owner and dependency",
+            "Result to demonstrate",
+            "Priority or review point"
+          ],
+          "rowLabels": [
+            "Reconcile missing devices",
+            "Establish and exercise key recovery",
+            "Assign alert triage and escalation",
+            "Review full control result"
+          ]
+        }
+      ],
+      "decisionPrompts": [
+        "What percentage of the full 250-device scope is currently verified as meeting the update requirement?",
+        "Why does the 95% headline not describe all registered devices?",
+        "Which alert proves useful only after its owner can take an appropriate action?"
+      ],
+      "workedExampleHtml": "<p>The dashboard's 95% describes the 190 compliant devices among 200 observed devices. Verified compliance across the full registered population is 190 ÷ 250 = 76%; ten observed devices do not meet the requirement and fifty are unobserved. The unobserved devices require reconciliation rather than an assumption that they are compliant or compromised.</p><p>Encrypted backups need a usable, controlled recovery route for their keys. The acceptance decision should include an authorised alternate and an actual complete recovery observation. A single administrator's possession of the key is a dependency to resolve.</p><p>Assign alert ownership, decision authority and escalation so that a signal can lead to an appropriate response. The correction plan should join population visibility, recovery and response operation instead of accepting the product dashboard alone as the control result.</p>"
+    },
+    {
+      "unitId": "M09-U01",
+      "title": "Coordinate the first hour around the payment decision",
+      "sourceIds": [
+        "POPIA",
+        "IR-NOTIFICATION",
+        "DPSA-IS-2022"
+      ],
+      "exhibits": [
+        {
+          "title": "First-hour chronology",
+          "columns": [
+            "Time",
+            "Source",
+            "Observation"
+          ],
+          "rows": [
+            [
+              "09:00",
+              "Clerk",
+              "Unfamiliar changes appear in beneficiary bank details."
+            ],
+            [
+              "09:10",
+              "ICT",
+              "Suspicious activity is linked to the supplier administrator account."
+            ],
+            [
+              "09:20",
+              "Supplier",
+              "Requests unrestricted access to investigate."
+            ],
+            [
+              "10:00",
+              "Finance schedule",
+              "The next relief-payment batch is due."
+            ],
+            [
+              "At the current decision point",
+              "Incident team",
+              "The affected records, changes, possible disclosure and external payment state are not yet fully established."
+            ]
+          ]
+        }
+      ],
+      "tasks": [
+        {
+          "title": "Incident chronology and actions",
+          "instructions": "Do not replace the original observation when new information arrives; add a linked update.",
+          "columns": [
+            "Time and source",
+            "Fact or reported observation",
+            "Current uncertainty",
+            "Action and accountable owner",
+            "Decision or resulting record"
+          ],
+          "rowLabels": [
+            "09:00",
+            "09:10",
+            "09:20",
+            "Before 10:00",
+            "Next agreed update"
+          ]
+        },
+        {
+          "title": "Four coordinated decisions",
+          "instructions": "Record a decision about each area and identify the authority required.",
+          "columns": [
+            "Area",
+            "Options and service consequence",
+            "Recommended action",
+            "Decision owner",
+            "Evidence and review point"
+          ],
+          "rowLabels": [
+            "Contain supplier access",
+            "Protect or defer affected payment execution",
+            "Maintain urgent relief through an approved alternative",
+            "Assess privacy and legal notification"
+          ]
+        }
+      ],
+      "decisionPrompts": [
+        "Which permissions does the supplier actually need to investigate, and for how long?",
+        "What must Finance reconcile before a payment instruction is released or repeated?",
+        "Who owns the next coordinated update so that technical, service and notification work remain joined?"
+      ],
+      "workedExampleHtml": "<p>The first-hour plan should protect the payment decision while investigation establishes scope. Restrict or replace the suspicious access through the authorised technical route and provide the supplier with the specific access required for its agreed work. Unrestricted access is not justified simply by the request to investigate.</p><p>Finance needs the affected records and original batch state before approving payment execution. The service owner decides how urgent relief can continue through a controlled alternative where appropriate. Preserve the original observations and records required for investigation and reconciliation.</p><p>Allocate the legal and privacy assessment to the responsible roles using the applicable source requirements and current reporting route. Keep the affected population and disclosure questions explicit while they are investigated. A shared next-update time helps these parallel decisions use the same incident facts.</p>"
+    },
+    {
+      "unitId": "M09-U02",
+      "title": "Accept recovery only after the business records reconcile",
+      "sourceIds": [
+        "CONTINUITY-2022",
+        "CASE-TRANSNET",
+        "NARSSA-RECORDS"
+      ],
+      "exhibits": [
+        {
+          "title": "Recovery status at the handover meeting",
+          "columns": [
+            "Item",
+            "Known condition",
+            "Work remaining"
+          ],
+          "rows": [
+            [
+              "Application",
+              "The portal is online after last night's database was restored.",
+              "Confirm the actual recovery point and relevant changes since it."
+            ],
+            [
+              "Payments",
+              "One batch may have reached the bank.",
+              "Reconcile its original identifier and external acknowledgement before deciding on any retry."
+            ],
+            [
+              "Urgent applications",
+              "120 numbered paper applications were received during disruption.",
+              "Join each to its eventual case or exception without losing the original number."
+            ],
+            [
+              "Access path",
+              "The identified route has been restricted.",
+              "Confirm the restriction's operation and retain the continuing investigation."
+            ],
+            [
+              "Public information",
+              "Residents can reach the portal.",
+              "Explain current service availability and how urgent or missing cases will be handled."
+            ]
+          ]
+        }
+      ],
+      "tasks": [
+        {
+          "title": "Recovery acceptance record",
+          "instructions": "Use the service owner's required result for each decision.",
+          "columns": [
+            "Area",
+            "Result to establish",
+            "Evidence and owner",
+            "Current outcome",
+            "Remaining action"
+          ],
+          "rowLabels": [
+            "Data and recovery point",
+            "Payment reconciliation",
+            "120 temporary applications",
+            "Access containment",
+            "Service use and support"
+          ]
+        },
+        {
+          "title": "Five-action improvement plan",
+          "instructions": "Give each action a practical completion condition.",
+          "columns": [
+            "Action",
+            "Cause or dependency addressed",
+            "Owner and due point",
+            "Operating result"
+          ],
+          "rowLabels": [
+            "Account and access correction",
+            "Payment recovery and reconciliation",
+            "Temporary-record intake",
+            "Complete service recovery",
+            "Staff communication and support"
+          ]
+        },
+        {
+          "title": "Public service update",
+          "instructions": "Draft a short factual message without exposing personal or security-sensitive details.",
+          "columns": [
+            "Message element",
+            "Your wording"
+          ],
+          "rowLabels": [
+            "What service is available now",
+            "What residents should do about urgent or missing cases",
+            "How support can be reached",
+            "When the next update will appear"
+          ]
+        }
+      ],
+      "decisionPrompts": [
+        "What does portal availability establish, and what still requires a business decision?",
+        "How can the same temporary application be recognised if a resident also submits online?",
+        "Which remaining investigation fact changes the recovery decision or public update?"
+      ],
+      "workedExampleHtml": "<p>Keep service availability, data recovery and payment state as separate entries that feed one recovery decision. The portal being reachable does not settle whether restored records are complete or a payment has already been executed. Reconcile the original payment identity with the external system before deciding on another instruction.</p><p>Retain all 120 temporary application numbers and map each to a new or existing case, a duplicate decision or an owned exception. If a resident also submits online, the matching and review process should preserve one coherent service record rather than losing either submission.</p><p>A public update can state the available service, the route for urgent or missing cases and the next update time. The internal recovery record carries the detailed access, data and investigation work. The improvement plan should repair the operating causes and dependencies observed during recovery.</p>"
+    },
+    {
+      "unitId": "M10-U01",
+      "title": "Give staff a workable supplier-change route",
+      "sourceIds": [
+        "DPSA-IS-2022",
+        "POPIA"
+      ],
+      "exhibits": [
+        {
+          "title": "Supplier-change evidence available to the assistant",
+          "columns": [
+            "Item",
+            "Observed fact",
+            "Significance to examine"
+          ],
+          "rows": [
+            [
+              "Message",
+              "Requests new bank details and supplies a new phone number.",
+              "The proposed verification channel comes from the same request."
+            ],
+            [
+              "Pressure",
+              "Says deliveries will stop today and copies the assistant's manager.",
+              "Urgency and hierarchy may discourage ordinary verification."
+            ],
+            [
+              "Existing record",
+              "Contains a different established supplier phone number.",
+              "A previously established contact route is available to assess."
+            ],
+            [
+              "Absence",
+              "The normal verifier is on leave; the alternate is unclear.",
+              "The workflow needs a usable authorised escalation route."
+            ],
+            [
+              "Access",
+              "Two assistants previously used the manager's account because temporary access took a week.",
+              "Provisioning and accountability are part of the process problem."
+            ],
+            [
+              "Work queue",
+              "Other month-end payments are waiting.",
+              "The team can consider which unaffected work can continue."
+            ]
+          ]
+        }
+      ],
+      "tasks": [
+        {
+          "title": "Verification and escalation workflow",
+          "instructions": "Keep an unverified change from becoming an approved instruction while legitimate work continues through authorised routes.",
+          "columns": [
+            "Step",
+            "Action and trusted input",
+            "Responsible role or alternate",
+            "Record kept",
+            "If the step cannot complete"
+          ],
+          "rowLabels": [
+            "Receive and preserve request",
+            "Verify through an established route",
+            "Obtain authorised change approval",
+            "Apply with appropriate named access",
+            "Review and continue unaffected work"
+          ]
+        },
+        {
+          "title": "Process correction and manager message",
+          "instructions": "Draft a practical intervention that supports the correct behaviour.",
+          "columns": [
+            "Deliverable",
+            "Your entry"
+          ],
+          "rowLabels": [
+            "Immediate decision and reason",
+            "Alternate verifier and escalation route",
+            "Named temporary-access improvement",
+            "Queue and deadline management",
+            "Manager message: approximately 100 words"
+          ]
+        }
+      ],
+      "decisionPrompts": [
+        "Why is the new phone number in the message not independent verification?",
+        "How can a manager remove the pressure to bypass the approved process?",
+        "Which access and absence arrangements should be repaired after the immediate decision?"
+      ],
+      "workedExampleHtml": "<p>Preserve the request and use an independently established supplier contact route for the verification decision. The facts justify verification and controlled handling; they do not establish that a particular person committed fraud. Route the absence to the authorised alternate or escalation contact and keep the bank-change decision separate from unaffected payment work.</p><p>A practical manager message can tell staff to use the established verification route, bring unresolved urgent cases to the named alternate and continue authorised unaffected work. It should explain how deadlines will be managed so that the instruction is usable under pressure.</p><p>The follow-up work includes named temporary access, a clear alternate verifier and a manageable queue. A reminder to be careful will not correct the three-week or one-week process delays that make shared accounts and bypasses attractive.</p>"
+    },
+    {
+      "unitId": "M10-U02",
+      "title": "Deliver and evaluate the six-week learning programme",
+      "sourceIds": [
+        "DPSA-IS-2022",
+        "NCSC-EXERCISE-GUIDE"
+      ],
+      "exhibits": [
+        {
+          "title": "Role and baseline information",
+          "columns": [
+            "Population or measure",
+            "Supplied observation"
+          ],
+          "rows": [
+            [
+              "Department",
+              "240 staff across six offices."
+            ],
+            [
+              "Payment approvers",
+              "40 staff; the approved verification route was used in 11 of 20 comparable observed cases."
+            ],
+            [
+              "Access and reset staff",
+              "30 staff; 18 completed the previous online module."
+            ],
+            [
+              "Other staff",
+              "170 staff with different reporting and information-handling tasks."
+            ],
+            [
+              "Usability",
+              "The payment checklist is hard to read on mobile and the alternate approver is unclear."
+            ],
+            [
+              "Connectivity",
+              "Two offices experienced unreliable connections."
+            ]
+          ]
+        },
+        {
+          "title": "Programme checkpoints to complete",
+          "columns": [
+            "Period",
+            "Intended work"
+          ],
+          "rows": [
+            [
+              "Week 1",
+              "Confirm the task, baseline population, alternate roles and usable job-aid formats."
+            ],
+            [
+              "Weeks 2–3",
+              "Provide role-specific learning and controlled practice through accessible delivery routes."
+            ],
+            [
+              "Weeks 4–5",
+              "Observe comparable work, repair the process issues and give targeted feedback."
+            ],
+            [
+              "Week 6",
+              "Review outcomes, remaining gaps and continuing ownership."
+            ]
+          ]
+        }
+      ],
+      "tasks": [
+        {
+          "title": "Two role-specific learning designs",
+          "instructions": "Write an observable task and the conditions that make it possible.",
+          "columns": [
+            "Role",
+            "Task objective",
+            "Job-aid format",
+            "Practice scenario",
+            "Manager or service responsibility",
+            "Success observation"
+          ],
+          "rowLabels": [
+            "Payment approvers",
+            "Access and reset staff"
+          ]
+        },
+        {
+          "title": "Four-measure evaluation table",
+          "instructions": "Retain numerator, denominator, time window and population. A completion measure and a task-performance measure answer different questions.",
+          "columns": [
+            "Measure",
+            "Numerator and denominator",
+            "Baseline",
+            "Collection and comparison",
+            "Limitation",
+            "Action owner"
+          ],
+          "rowLabels": [
+            "Verification-route use",
+            "Access-module completion",
+            "Use of the authorised alternate",
+            "Time to resolve an urgent legitimate case"
+          ]
+        }
+      ],
+      "decisionPrompts": [
+        "What are the supplied payment-case and access-completion baseline percentages?",
+        "How will staff at the two unreliable offices complete equivalent learning and practice?",
+        "What observation will show that the new job aid and alternate route work during an urgent case?"
+      ],
+      "workedExampleHtml": "<p>The supplied payment-case baseline is 11 ÷ 20 = 55%; the access-module completion baseline is 18 ÷ 30 = 60%. The former describes observed use of the route in a small stated sample, while the latter describes module completion. Neither proves deliberate negligence or complete task competence.</p><p>Use a readable mobile and printable job aid, an identified alternate and equivalent low-bandwidth learning for the affected offices. Payment staff can practise independently verifying a change under time pressure; access staff can practise granting scoped named access and using the correct escalation route.</p><p>The six-week review should compare like tasks and populations, record process changes and preserve the limits of the sample. Managers own the availability of alternates, time and support. Continuing improvement follows from observed task outcomes and service delays as well as learning completion.</p>"
+    },
+    {
+      "unitId": "M11-U01",
+      "title": "Replace three misleading dashboard entries",
+      "sourceIds": [
+        "CGICT-2022",
+        "DPSA-MONITOR"
+      ],
+      "exhibits": [
+        {
+          "title": "Original monthly observations",
+          "columns": [
+            "Measure area",
+            "Supplied population and outcome",
+            "Draft headline"
+          ],
+          "rows": [
+            [
+              "Endpoints",
+              "1,000 registered; 900 currently observed; 810 observed devices meet the update requirement.",
+              "Updates 90% green."
+            ],
+            [
+              "Recovery",
+              "12 planned tests were run; nine met service and data objectives; two missed the time objective; one used an invalid dataset.",
+              "Recovery 100% green."
+            ],
+            [
+              "Privileged access",
+              "120 active accounts; 108 reviewed; six reviewed accounts lack a recorded justification; 12 remain unreviewed.",
+              "Privileged access 90% green."
+            ]
+          ]
+        }
+      ],
+      "tasks": [
+        {
+          "title": "Correct metric definitions",
+          "instructions": "State the question that each percentage answers. Retain distinct unknown and unsuccessful categories.",
+          "columns": [
+            "Metric and scope",
+            "Numerator / denominator",
+            "Result",
+            "Known gap",
+            "Unknown or unresolved population",
+            "Action and owner"
+          ],
+          "rowLabels": [
+            "Updates among observed devices",
+            "Verified updates across registered scope",
+            "Recovery objectives met",
+            "Privileged accounts reviewed",
+            "Reviewed accounts with recorded justification"
+          ]
+        },
+        {
+          "title": "Management decision note",
+          "instructions": "Use the department's actual thresholds and authority during adoption.",
+          "columns": [
+            "Decision element",
+            "Your entry"
+          ],
+          "rowLabels": [
+            "Most consequential service gap",
+            "Information or ownership needed",
+            "Recommended operating action",
+            "Decision authority",
+            "Next review and comparable measure"
+          ]
+        }
+      ],
+      "decisionPrompts": [
+        "Which endpoint percentage uses the full registered scope?",
+        "Why does running all 12 tests not establish that the recovery objectives were met?",
+        "What can be said about the six unjustified and twelve unreviewed accounts without labelling them as confirmed compromise?"
+      ],
+      "workedExampleHtml": "<p>For endpoints, 810 ÷ 900 = 90% of observed devices meet the requirement; 810 ÷ 1,000 = 81% of the registered scope is verified as meeting it. Ninety observed devices do not meet the requirement and one hundred remain unobserved.</p><p>Recovery execution coverage is 12 ÷ 12 = 100%, but objective achievement is 9 ÷ 12 = 75%. Retain the two time misses and the invalid-dataset result separately so that their owners can repair the actual causes.</p><p>Privileged-account review coverage is 108 ÷ 120 = 90%. Of all active accounts, 102 ÷ 120 = 85% have both been reviewed and have a recorded justification in the supplied data. Six reviewed accounts lack that record and twelve are unreviewed. Those are current decisions and information gaps, not automatic findings of compromise. Report them to the authorised owners without inventing a colour threshold.</p>"
+    },
+    {
+      "unitId": "M11-U02",
+      "title": "Show the comparable trend and today's full coverage",
+      "sourceIds": [
+        "CGICT-2022",
+        "DPSA-IS-2022"
+      ],
+      "exhibits": [
+        {
+          "title": "Service coverage and recovery scope",
+          "columns": [
+            "Observation",
+            "Value or condition"
+          ],
+          "rows": [
+            [
+              "Original cohort",
+              "100 services; previously 80 verified, now 90 verified."
+            ],
+            [
+              "Current registered estate",
+              "140 services; 90 verified."
+            ],
+            [
+              "Upcoming service demand",
+              "2,000 time-sensitive permit renewals next month."
+            ],
+            [
+              "Recovery exercise scope",
+              "The shared identity-recovery dependency was excluded."
+            ],
+            [
+              "Option A",
+              "Two-week remediation and monitored manual fallback; R180,000 proposed cost."
+            ],
+            [
+              "Option B",
+              "Delay a new non-critical feature and use the same staff for remediation."
+            ],
+            [
+              "Approval",
+              "Neither option has been approved."
+            ]
+          ]
+        }
+      ],
+      "tasks": [
+        {
+          "title": "Comparable reporting table",
+          "instructions": "Keep cohort improvement and current estate coverage as distinct measures.",
+          "columns": [
+            "Measure",
+            "Calculation or scope",
+            "Result",
+            "What it tells the decision-maker",
+            "What remains unresolved"
+          ],
+          "rowLabels": [
+            "Original cohort: earlier",
+            "Original cohort: current",
+            "Current full estate",
+            "Complete recovery readiness"
+          ]
+        },
+        {
+          "title": "One-page decision brief",
+          "instructions": "Give the authorised owner the information needed to choose between feasible options.",
+          "columns": [
+            "Brief element",
+            "Your entry"
+          ],
+          "rowLabels": [
+            "Renewal-service consequence and timing",
+            "Coverage and recovery observations",
+            "Option A: resources, conditions and trade-offs",
+            "Option B: resources, conditions and trade-offs",
+            "Recommendation and authority",
+            "Acceptance and next update"
+          ]
+        }
+      ],
+      "decisionPrompts": [
+        "How many percentage points did the original cohort improve?",
+        "What is current full-estate coverage, and why is that compatible with an improving cohort?",
+        "How does the excluded identity dependency affect the claim of complete recovery readiness?"
+      ],
+      "workedExampleHtml": "<p>The original cohort improved from 80% to 90%, a gain of ten percentage points. Current full-estate verification is 90 ÷ 140, approximately 64.3%, leaving fifty registered services unverified. Both observations can be true: the comparable cohort improved while the registered estate expanded.</p><p>The recovery claim needs to show that identity recovery was outside the latest scope. The team therefore has not yet demonstrated the complete dependency chain required by this service. Assign the missing exercise and any corrective work to the relevant owners.</p><p>The executive brief should compare the proposed R180,000 option with the consequence of delaying the non-critical feature and reassigning the same staff. Include manual-fallback capacity, ownership, acceptance and the two-week timing. The authorised owner decides the resource and priority trade-off; the recommendation should connect it to the upcoming renewal demand.</p>"
+    },
+    {
+      "unitId": "M12-U01",
+      "title": "Calculate the recovery gap and break the circular dependency",
+      "sourceIds": [
+        "CONTINUITY-2022"
+      ],
+      "exhibits": [
+        {
+          "title": "Recovery planning observations",
+          "columns": [
+            "Item",
+            "Supplied fact"
+          ],
+          "rows": [
+            [
+              "Outage begins",
+              "09:00."
+            ],
+            [
+              "Minimum-service objectives",
+              "RTO four hours; RPO thirty minutes."
+            ],
+            [
+              "Latest usable full backup",
+              "02:00."
+            ],
+            [
+              "Transaction logs",
+              "May cover later work, but have not been restored in a recent exercise."
+            ],
+            [
+              "Database restoration estimate",
+              "Two hours."
+            ],
+            [
+              "Identity recovery estimate",
+              "Forty minutes."
+            ],
+            [
+              "Service validation estimate",
+              "Forty-five minutes."
+            ],
+            [
+              "Instruction location",
+              "Inside the unavailable identity service."
+            ],
+            [
+              "Normal application intake",
+              "About 300 applications per hour."
+            ]
+          ]
+        }
+      ],
+      "tasks": [
+        {
+          "title": "Objective and dependency assessment",
+          "instructions": "Calculate known gaps from the stated times. Keep planned durations and demonstrated results separate.",
+          "columns": [
+            "Item",
+            "Calculation or dependency",
+            "Known result",
+            "Unproven part",
+            "Owner and next action"
+          ],
+          "rowLabels": [
+            "RTO deadline",
+            "Known full-backup recovery point",
+            "Potential transaction-log contribution",
+            "Identity and instruction dependency",
+            "Proposed complete sequence"
+          ]
+        },
+        {
+          "title": "Minimum-service fallback",
+          "instructions": "Choose a scope and capacity that the service owner can assess.",
+          "columns": [
+            "Fallback element",
+            "Your design and owner"
+          ],
+          "rowLabels": [
+            "Urgent-case eligibility and intake channel",
+            "Stable temporary record number",
+            "Access, custody and information minimisation",
+            "Capacity and queue communication",
+            "Return-to-service reconciliation"
+          ]
+        }
+      ],
+      "decisionPrompts": [
+        "What is the known data gap if only the 02:00 full backup can be used?",
+        "What would have to be demonstrated for the transaction logs to meet the thirty-minute RPO?",
+        "What is the estimated total if identity, database restoration and validation run sequentially, and what delay has not yet been accounted for?"
+      ],
+      "workedExampleHtml": "<p>The RTO deadline is 13:00. The known full-backup point is seven hours before the 09:00 outage, so that backup alone does not meet the thirty-minute RPO. A later point of at least 08:30 would need to be restored and verified to meet that objective; the possibility of later transaction logs is not yet that result.</p><p>The supplied sequential estimates total 40 + 120 + 45 = 205 minutes, or three hours twenty-five minutes. That leaves a planning margin of thirty-five minutes against the RTO, before unmeasured delays. The inaccessible instructions are an immediate dependency to resolve, and estimates do not establish an achieved recovery time.</p><p>The fallback should define urgent scope, numbered records, controlled custody and reconciliation ownership. At the normal rate, a four-hour disruption represents roughly 1,200 arriving applications; that indicates potential demand, not demonstrated manual capacity. The service owner must choose a feasible minimum service and communicate the queue.</p>"
+    },
+    {
+      "unitId": "M12-U02",
+      "title": "Reconcile the exercise before returning to normal",
+      "sourceIds": [
+        "CONTINUITY-2022",
+        "NARSSA-RECORDS",
+        "NCSC-EXERCISE-GUIDE"
+      ],
+      "exhibits": [
+        {
+          "title": "Exercise timeline and outstanding work",
+          "columns": [
+            "Time or item",
+            "Observation"
+          ],
+          "rows": [
+            [
+              "09:00",
+              "Exercise disruption begins."
+            ],
+            [
+              "08:45 recovery point",
+              "The restored data point is verified."
+            ],
+            [
+              "12:10",
+              "The database is restored."
+            ],
+            [
+              "13:40",
+              "Authentication and service validation finish."
+            ],
+            [
+              "Objectives",
+              "Four-hour RTO; thirty-minute RPO."
+            ],
+            [
+              "Temporary intake",
+              "120 numbered applications require reconciliation."
+            ],
+            [
+              "Payments",
+              "A batch of 20 instructions has uncertain external acknowledgement."
+            ]
+          ]
+        }
+      ],
+      "tasks": [
+        {
+          "title": "Objective result",
+          "instructions": "Use the complete service result for RTO and the verified data point for RPO.",
+          "columns": [
+            "Objective",
+            "Start or reference",
+            "Observed endpoint",
+            "Elapsed or gap",
+            "Result against objective",
+            "Cause or follow-up"
+          ],
+          "rowLabels": [
+            "RTO",
+            "RPO"
+          ]
+        },
+        {
+          "title": "Reconciliation register",
+          "instructions": "Retain the original temporary or payment identity. Use one row per actual item when carrying out the work.",
+          "columns": [
+            "Original identity",
+            "Existing destination or external reference",
+            "Current known state",
+            "Reconciliation decision",
+            "Authorised executor",
+            "Outcome or exception owner"
+          ],
+          "rowLabels": [
+            "Temporary application: example row",
+            "Possible duplicate application: example row",
+            "Payment with confirmed external outcome: example row",
+            "Payment with unresolved external outcome: example row"
+          ]
+        },
+        {
+          "title": "Management recovery statement",
+          "instructions": "State the exercise outcome and the remaining work in operational terms.",
+          "columns": [
+            "Statement element",
+            "Your wording"
+          ],
+          "rowLabels": [
+            "Service recovery time and objective",
+            "Verified recovery point and objective",
+            "Temporary applications and payment reconciliation",
+            "Decision needed before normal operation",
+            "Owned corrective work"
+          ]
+        }
+      ],
+      "decisionPrompts": [
+        "Why is 12:10 not the complete-service RTO endpoint?",
+        "How much did complete recovery exceed the four-hour objective?",
+        "What external outcome is needed before authorising a further payment instruction?"
+      ],
+      "workedExampleHtml": "<p>The complete service became usable at 13:40, four hours forty minutes after 09:00. The RTO was missed by forty minutes. Database restoration at 12:10 is an intermediate event. The verified 08:45 data point is fifteen minutes before the disruption and meets the thirty-minute RPO.</p><p>Keep all 120 temporary identities in the reconciliation register and record their joins to accepted cases or owned exceptions. For the twenty payment instructions, obtain the original external outcomes and reconcile the batch and item references before deciding on any retry. An uncertain acknowledgement is not the same as a confirmed rejection.</p><p>The management statement should report an exercise with a met RPO and missed RTO, the pending reconciliation and the decision about normal operation. Assign the delayed authentication or validation dependencies and reconciliation process to owners with clear operating outcomes.</p>"
+    },
+    {
+      "unitId": "M13-U01",
+      "title": "Choose a complete ninety-day delivery programme",
+      "sourceIds": [
+        "CGICT-2022",
+        "DPSA-IS-2022",
+        "CONTINUITY-2022"
+      ],
+      "exhibits": [
+        {
+          "title": "Planning constraints",
+          "columns": [
+            "Item",
+            "Supplied constraint"
+          ],
+          "rows": [
+            [
+              "Service",
+              "10,000 assistance applications per week."
+            ],
+            [
+              "Near-term resources",
+              "R650,000 and two staff equivalents over ninety days."
+            ],
+            [
+              "Planning capacity for this exercise",
+              "Assume 60 working days per staff equivalent: 120 staff-days in total."
+            ],
+            [
+              "Recovery",
+              "Last complete result took six hours against a four-hour objective."
+            ],
+            [
+              "Supplier dependency",
+              "Identity contract expires in nine months."
+            ],
+            [
+              "Platform replacement",
+              "R3.2 million proposal cannot finish in the ninety-day period."
+            ]
+          ]
+        },
+        {
+          "title": "Fictional work-package estimates for comparison",
+          "columns": [
+            "Package",
+            "Cash estimate",
+            "Departmental staff-days",
+            "Intended result"
+          ],
+          "rows": [
+            [
+              "A. Access ownership and priority corrections",
+              "R210,000",
+              "35",
+              "Current authorised privileges and a working approval/removal route."
+            ],
+            [
+              "B. Controlled appeal information route",
+              "R150,000",
+              "25",
+              "A usable replacement for ad hoc spreadsheet exports."
+            ],
+            [
+              "C. Complete recovery improvement",
+              "R180,000",
+              "30",
+              "Repair and exercise the dependency behind the six-hour result."
+            ],
+            [
+              "D. Staff handover and operating review",
+              "R60,000",
+              "10",
+              "Usable procedures, support routes and first operating review."
+            ],
+            [
+              "E. Identity renewal and exit decision preparation",
+              "R50,000",
+              "15",
+              "Requirements, continuity and procurement inputs before contract expiry."
+            ]
+          ]
+        }
+      ],
+      "tasks": [
+        {
+          "title": "Phased roadmap and resource calculation",
+          "instructions": "Use the supplied estimates as exercise inputs and identify the assumptions requiring confirmation during actual planning.",
+          "columns": [
+            "Phase and package",
+            "Dependency",
+            "Cash",
+            "Staff-days",
+            "Accountable owner",
+            "Acceptance and review"
+          ],
+          "rowLabels": [
+            "Days 1–30",
+            "Days 31–60",
+            "Days 61–90",
+            "Following-year decision"
+          ]
+        },
+        {
+          "title": "Management decision request",
+          "instructions": "Compare the near-term programme and longer-term platform choice against the same service outcomes.",
+          "columns": [
+            "Decision element",
+            "Your entry"
+          ],
+          "rowLabels": [
+            "Near-term scope and resource total",
+            "Critical sequence and operating support",
+            "Remaining capacity or contingency",
+            "Platform comparison and later decision date",
+            "Authority and progress review"
+          ]
+        }
+      ],
+      "decisionPrompts": [
+        "What are the total cost and staff-days of packages A–E?",
+        "Which work must start early because of the identity contract's nine-month horizon?",
+        "How would a change in the recovery estimate affect the other packages and management decision?"
+      ],
+      "workedExampleHtml": "<p>The five exercise packages total R650,000 and 115 staff-days, leaving five staff-days within the stated 120-day planning capacity and no unallocated cash. That is a tight plan: the decision should state the estimates, dependencies and how a change will be handled rather than presenting the totals as guaranteed delivery.</p><p>Access and appeal handling can begin with ownership and current operating facts. Recovery work needs the actual failed dependency and a complete service exercise. Begin identity renewal and exit preparation early enough to support the nine-month contract decision, while keeping staff handover and operating review in the delivery programme.</p><p>The R3.2 million replacement belongs in the longer-term comparison because it cannot complete in ninety days. Compare its future service capability, integration and lifecycle costs against the same outcomes. Management should approve a feasible near-term scope and the date and inputs for the later investment decision.</p>"
+    },
+    {
+      "unitId": "M13-U02",
+      "title": "Deliver the shared-service launch decision and operating handover",
+      "sourceIds": [
+        "POPIA",
+        "DPSA-IS-2022",
+        "CGICT-2022",
+        "CONTINUITY-2022",
+        "NARSSA-RECORDS"
+      ],
+      "exhibits": [
+        {
+          "title": "Launch meeting evidence",
+          "columns": [
+            "Area",
+            "Current observation"
+          ],
+          "rows": [
+            [
+              "Public purpose",
+              "The service purpose and responsible business owner are agreed."
+            ],
+            [
+              "Information",
+              "Identity documents and appeal records will be processed."
+            ],
+            [
+              "Supplier purpose",
+              "The supplier proposes unrelated analytics reuse of uploaded documents."
+            ],
+            [
+              "Privileges",
+              "The relevant access population has not been fully reviewed."
+            ],
+            [
+              "Recovery",
+              "Complete recovery took six hours against a four-hour RTO; the verified data point met the thirty-minute RPO."
+            ],
+            [
+              "Incident contact",
+              "The normal contact will be unavailable during launch week."
+            ],
+            [
+              "Timing",
+              "The public application channel is proposed to open in four weeks."
+            ],
+            [
+              "Dashboard proposal",
+              "The team wants every control marked green because the database and website work."
+            ]
+          ]
+        }
+      ],
+      "tasks": [
+        {
+          "title": "Integrated launch recommendation",
+          "instructions": "Connect the whole course's decisions to an authorised owner and a usable operating outcome.",
+          "columns": [
+            "Area",
+            "Current fact and consequence",
+            "Required work or decision",
+            "Authority and delivery owner",
+            "Launch condition and remaining exposure"
+          ],
+          "rowLabels": [
+            "Purpose, privacy and supplier reuse",
+            "Classification and records handling",
+            "Access and architecture",
+            "Incident contacts and alternates",
+            "Recovery and minimum service",
+            "Staff learning and support",
+            "Monitoring and management decision"
+          ]
+        },
+        {
+          "title": "Operating handover",
+          "instructions": "Name the actual receiving role and the observation that shows it can use each item.",
+          "columns": [
+            "Handover item",
+            "Current version or location",
+            "Owner and receiving role",
+            "Walkthrough or operating observation",
+            "Remaining action"
+          ],
+          "rowLabels": [
+            "Service procedures and information ownership",
+            "Access and support routes",
+            "Incident contacts and notification responsibilities",
+            "Recovery instructions and dependencies",
+            "Changes and supplier arrangements",
+            "Staff job aids and monitoring",
+            "Known limitations and escalation"
+          ]
+        },
+        {
+          "title": "Two-page management brief",
+          "instructions": "Use the completed tables to present a decision, not a list of disconnected control labels.",
+          "columns": [
+            "Brief section",
+            "Your entry"
+          ],
+          "rowLabels": [
+            "Public purpose and intended launch scope",
+            "Material observations and decisions",
+            "Feasible full or phased launch options",
+            "Recommendation, resources and authority",
+            "Acceptance, operating handover and review"
+          ]
+        }
+      ],
+      "decisionPrompts": [
+        "Which work can proceed while the supplier-purpose and launch decisions are being resolved?",
+        "What narrower service scope, if any, could support a phased launch with demonstrated operating capacity?",
+        "How will the receiving staff find and use the current incident, recovery and support arrangements during launch week?"
+      ],
+      "workedExampleHtml": "<p>The integrated recommendation should begin with the agreed public purpose and its information. Assess the proposed unrelated analytics use through the authorised business, privacy and legal routes, and establish the applicable records and classification handling. Keep the existing processing purpose and the proposed new purpose distinct in the decision record.</p><p>Complete the relevant privilege decisions, address the recovery dependency behind the two-hour RTO miss and appoint an authorised incident alternate for launch week. The met RPO remains a separate result. Staff should practise the actual verification, reporting and fallback tasks using the current procedures.</p><p>Give management feasible options, including a phased scope only where its service capacity, controls and expansion conditions can be demonstrated. The receiving handover joins information ownership, support, access, changes, incident and recovery instructions, known limitations and a practical staff walkthrough. The final decision records the authorised scope and remaining work with accountable owners.</p>"
+    }
+  ]
+}

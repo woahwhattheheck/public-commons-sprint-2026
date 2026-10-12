@@ -4,12 +4,12 @@ import {createHash} from 'node:crypto';
 import {isDeepStrictEqual} from 'node:util';
 import {reconcile} from '../sf97-merchant-revenue-ops/native-reconcile.mjs';
 import {normalizeTrafficHistoryReport} from '../sf30-seller-sdk/operations/history.mjs';
-import {parseWorkspace} from './workspace-file.mjs';
+import {parseWorkspace,MAX_WORKSPACE_BYTES} from './workspace-file.mjs';
 
 export const RUNTIME_SCHEMA = 'stellar-forge.merchant-runtime-case.v1';
 export const HANDOFF_SCHEMA = 'stellar-forge.merchant-support-handoff.v1';
 export const MAX_RUNTIME_BYTES = 192 * 1024 * 1024;
-export const MAX_HANDOFF_BYTES = 224 * 1024 * 1024;
+export const MAX_HANDOFF_BYTES = 2 * (MAX_RUNTIME_BYTES + MAX_WORKSPACE_BYTES) + 1024 * 1024;
 export const MAX_PERIOD_SOURCE_BYTES = 64 * 1024 * 1024;
 const MAX_FILE = 2_000_000;
 const PACKET_FILES = ['bundle.json','operator-brief.md','metrics.prom','manifest.json'];

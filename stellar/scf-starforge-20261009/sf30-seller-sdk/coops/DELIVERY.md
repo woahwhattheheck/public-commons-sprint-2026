@@ -15,7 +15,7 @@ The prepared company offer and its original form operation remain with the desig
 | Station/source choice | Explicit station ID, product, inclusive dates, units, time basis and datum; actual advertised station metadata. | The receiving engineer selects the project's stations and confirms suitability. |
 | Historical acquisition | Serial studies up to five calendar years; bounded provider requests, retained failed/unavailable responses, pause/resume with original IDs. | Actual selected acquisition and its measured source coverage. |
 | Source quality | Original value text, missing/null distinctions, q/f/sigma and observation/prediction separation. | Actual edition review, including datum/epoch evidence and measurement gaps. |
-| Model-input exchange | Original JSON convention intake, explicit receiving-target comparison, exact input files, selected columns and decision notes; mapping revisions pinned to complete CSV/JSON/JSONL exports. | The model owner's real column convention, frequency and required inputs. |
+| Model-input exchange | Original JSON convention intake, explicit receiving-target comparison, exact input files, selected columns and decision notes; mapping revisions and original files pinned to complete CSV/JSON/JSONL exports and selected native dataset/query/release packages. | The model owner's real column convention, frequency and required inputs. |
 | Source refresh | Distinct immutable editions; source/window/quality changes and ambiguous duplicate keys remain separate; complete streamed comparison. | A dated subsequent source edition and explicit analyst decision about using it. |
 | Staff operation | Existing forms, retained draft versions, exact operation replay, source-file import, original query and same-origin reopen. | One complete actual operator receiving record on the selected runtime. |
 | Native distribution | Existing SF30 query, original SF82 publisher, SF88/SF100 receiver and merchant MCP attachment. | Explicit release terms, actual configured runtime and any genuine buyer operation. |
@@ -39,7 +39,7 @@ The proposed study scope can include several stations and multiple years, but ea
 - The responsible review decision tied to the exact edition/source packet.
 - The selected model-input convention and its native revision.
 - Complete receiving files, immutable export receipts and source correction comparison.
-- Original dataset/query identity where selected.
+- Original dataset/query identity where selected, with its exact mapping revision, acquired mapping-file hash and retained receiving headings. Later conventions remain separate.
 - Staff save/replay, source-file receiving and reopen result in the same original workspace.
 
 ## Receiving path

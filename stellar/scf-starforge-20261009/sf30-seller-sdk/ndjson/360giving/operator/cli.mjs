@@ -15,7 +15,8 @@ export async function main(args = process.argv.slice(2)) {
   const program = new URL(example ? './run_complete_workflow.py' : './cli.py', import.meta.url);
   const child = spawn(executable, [fileURLToPath(program), ...args], {
     stdio: 'inherit', shell: false,
-    env: { ...process.env, PYTHONDONTWRITEBYTECODE: '1' },
+    env: { ...process.env, SF30_XML_NODE: process.env.SF30_XML_NODE || process.execPath,
+      PYTHONDONTWRITEBYTECODE: '1' },
   });
   const interrupt = () => child.kill('SIGINT');
   const terminate = () => child.kill('SIGTERM');

@@ -49,7 +49,7 @@ const definitions = [
   ['merchant_ckan_close', 'Close this exact owned CKAN browser/model instance, drain pending calls and native operation, close retained file reads, and release its original project lease. Saved editions, publisher state and merchant packages remain available on reopen.', { ...selected, instanceId: uuid }, ['workspace', 'instanceId'], { destructive: true, idempotent: false }],
   ['merchant_ckan_status', 'Read the original current operation, active operation ID, retained project item pages and current loopback browser. Before a changing tool, use native.operation?.id ?? null as expectedOperationId. A resolved operation may be FAILED or CANCELLED: inspect its state and error. Each collection has its own offset and nextOffset.', {
     ...selected, editionsOffset: offset, sourcesOffset: offset, publicationsOffset: offset,
-    exportsOffset: offset, buyerRequestsOffset: offset, limit: { type: 'integer', minimum: 1, maximum: 100 },
+    exportsOffset: offset, buyerRequestsOffset: offset, refreshesOffset: offset, limit: { type: 'integer', minimum: 1, maximum: 100 },
   }, ['workspace'], read],
   ['merchant_ckan_workspace_archives', 'List complete original workspace archives with exact hashes, project counts and the authenticated streaming download route. Page with nextOffset; browserUrl identifies the existing owner.', {
     ...selected, offset, limit: { type: 'integer', minimum: 1, maximum: 100 },
@@ -96,9 +96,39 @@ const definitions = [
   ['merchant_ckan_edition', 'Inspect one original edition, complete source fields, type/alias suggestions and first twenty source rows, or the retained progress of an unfinished edition. Exact number tokens are presented as strings without changing retained source bytes.', {
     ...selected, editionId: uuid,
   }, ['workspace', 'editionId'], read],
-  ['merchant_ckan_compare', 'Compare two complete editions of the same original resource using the selected unique non-null source key. Returns original counts, metadata identities and the first hundred changes. Public column names remain data; exact numeric tokens are strings in this tool presentation.', {
+  ['merchant_ckan_compare', 'Compare two complete editions of the same original resource using the selected unique non-null source key. Returns original counts, metadata identities and the first hundred changes as a preview; use refresh_prepare and refresh_changes for the complete retained reviewed comparison. Public column names remain data; exact numeric tokens are strings in this tool presentation.', {
     ...selected, beforeId: uuid, afterId: uuid, key: field,
   }, ['workspace', 'beforeId', 'afterId'], read],
+  ['merchant_ckan_refresh_prepare', 'Retain the complete keyed comparison from an original saved source to an inspected later edition. Preserves full changes, source terms, semantic differences and an explicit selection/window change. Reuses the same retained comparison after an uncertain reply; follow its original operation.', {
+    ...changing, sourceId: uuid, afterEditionId: uuid, expectedSourceSha256: digest,
+    expectedAfterCaptureSha256: digest, previousPublicationId: uuid, supersedesRefreshId: uuid,
+    keys: { type: 'array', minItems: 1, maxItems: 16, uniqueItems: true, items: field },
+  }, [...changed, 'sourceId', 'afterEditionId', 'expectedSourceSha256', 'expectedAfterCaptureSha256'], mutation],
+  ['merchant_ckan_refresh', 'Read one complete retained refresh, exact comparison identity, source/terms and field-meaning changes, reviewed projection, saved decision and original successor/predecessor IDs. A withdrawn selection retains its already published versions.', {
+    ...selected, refreshId: uuid,
+  }, ['workspace', 'refreshId'], read],
+  ['merchant_ckan_refresh_resume', 'Resume this same retained comparison or finish its already saved original decision. Reuses original file prefixes, decision bytes and successor source ID after interruption.', {
+    ...changing, refreshId: uuid,
+  }, [...changed, 'refreshId'], mutation],
+  ['merchant_ckan_refresh_preview', 'Validate the explicit successor projection against every retained after-row and preview its exact selected semantic dictionary. Returns projectionSha256 and nullable semantic/definition hashes for the original reviewed refresh decision.', {
+    ...selected, refreshId: uuid, expectedComparisonSha256: digest, projection, query: columnName, title: shortText,
+  }, ['workspace', 'refreshId', 'expectedComparisonSha256'], read],
+  ['merchant_ckan_refresh_changes', 'Page the complete retained key-bound change file. Continue with the returned nextOffset; the response byte budget may shorten a page. Exact numeric tokens are text in this presentation; use refresh_read for the complete unchanged JSONL file.', {
+    ...selected, refreshId: uuid, expectedComparisonSha256: digest, offset,
+    limit: { type: 'integer', minimum: 1, maximum: 100 },
+  }, ['workspace', 'refreshId', 'expectedComparisonSha256'], read],
+  ['merchant_ckan_refresh_read', 'Receive the entire original refresh JSONL in SHA256-pinned chunks through the existing read-only retained-file reader. Use both exact comparison and changes SHA256 from refresh; reuse readId/nextOffset and file_release for abandoned reads.', {
+    ...selected, refreshId: uuid, expectedComparisonSha256: digest, expectedSha256: digest, readId: uuid, offset,
+    limit: { type: 'integer', minimum: 1, maximum: MAX_RETAINED_CHUNK_BYTES },
+  }, ['workspace', 'refreshId', 'expectedComparisonSha256', 'expectedSha256'], read],
+  ['merchant_ckan_refresh_review', 'Save the operator decision on the exact full comparison: accept creates its original successor source; keep-current retains the existing selection; withdraw-source ends future publication from that selection while prior outputs remain available. For accept, send the exact projection and nullable semantic hashes returned by refresh_preview; then prepare/review/publish the returned acceptedSourceId through the original publisher tools.', {
+    ...changing, refreshId: uuid, expectedComparisonSha256: digest,
+    decision: { type: 'string', enum: ['accept', 'keep-current', 'withdraw-source'] }, reviewer: shortText,
+    note: { type: 'string', minLength: 1, maxLength: 2048 }, projection, query: columnName, title: shortText,
+    expectedProjectionSha256: digest,
+    expectedSemanticsSha256: { type: ['string', 'null'], pattern: SHA256.source },
+    expectedDefinitionSha256: { type: ['string', 'null'], pattern: SHA256.source },
+  }, [...changed, 'refreshId', 'expectedComparisonSha256', 'decision', 'reviewer', 'note'], mutation],
   ['merchant_ckan_semantics_preview', 'Preview the original retained CSVW or field-dictionary meaning for an explicit field projection before saving a source. Returns its projected semantic document, source definitions, URI mappings, key coverage and issues through the original model.', {
     ...selected, editionId: uuid, projection,
   }, ['workspace', 'editionId', 'projection'], read],

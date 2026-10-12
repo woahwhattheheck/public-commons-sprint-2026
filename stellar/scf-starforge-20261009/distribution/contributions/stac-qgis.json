@@ -1,12 +1,12 @@
 {
   "schema": "stellar-forge.merchant-distribution-contribution.v1",
   "id": "stac-qgis",
-  "description": "Original STAC receiving, native QGIS projects, edition review and complete desktop handover",
+  "description": "Original STAC and vector receiving, native QGIS projects, installed analyst operations, edition review and complete desktop handover",
   "commands": {
     "stac-qgis": "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/qgis/cli.mjs"
   },
   "commandDescriptions": {
-    "stac-qgis": "Prepare original STAC files, build the QGIS plugin and receive complete native GIS projects"
+    "stac-qgis": "Receive original GIS sources, operate analyst workspaces, review editions and deliver complete native QGIS projects"
   },
   "exports": {
     "./buyer/stac/qgis": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/stac/qgis/bridge.mjs"
