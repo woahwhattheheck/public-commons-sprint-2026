@@ -159,7 +159,8 @@ function outcome(entry,record,quote,extra = {}) {
 }
 
 /** Add the original governed remote buyer to the host's existing HTTP application. */
-export async function attachRemoteMcpApplication({application,configurationFile,sourceRoot,stateDirectory,authorize} = {}) {
+export async function attachRemoteMcpApplication({application,configurationFile,sourceRoot,stateDirectory,authorize,
+  environment=process.env} = {}) {
   need(application && typeof application.requests === 'function' && typeof application.call === 'function' &&
     typeof authorize === 'function','APPLICATION_HOST_AUTHORIZATION_REQUIRED');
   const selected = await inspectRemoteMcp(configurationFile,{sourceRoot});
@@ -222,7 +223,7 @@ export async function attachRemoteMcpApplication({application,configurationFile,
       nativeSource(sourceRoot,'agent-server.mjs'),nativeSource(sourceRoot,'quote-store.mjs'),
       nativeSource(sourceRoot,'result-store.mjs')]);
     const operatorModule = await import(pathToFileURL(config.operatorModule).href);
-    operator = typeof operatorModule.openOperator === 'function' ? await operatorModule.openOperator() : operatorModule;
+    operator = typeof operatorModule.openOperator === 'function' ? await operatorModule.openOperator({environment}) : operatorModule;
     need(['approve','signPayment','spendingStatus','reconcilePayment','close'].every(key =>
       typeof operator[key] === 'function'),'APPLICATION_REMOTE_GOVERNED_OPERATOR_REQUIRED');
     quoteStore = new quotes.SqliteQuoteStore({directory:join(root,'quotes')});
@@ -350,6 +351,14 @@ export async function attachRemoteMcpApplication({application,configurationFile,
     responseByteLimit(intentId) { return requests.has(intentId) ? MAX_RESULT :
       application.responseByteLimit?.(intentId) ?? 1048576; },
     supportsAction(action) { return ['cancel','spending','reconcile'].includes(action); },
+    async retainedReview(context,intentId) {
+      if(!requests.has(intentId))return application.retainedReview(context,intentId);
+      const entry=requests.get(intentId);await current();await permitted(context,'status',entry);
+      const {record,quote}=await attached(entry,context);
+      return {request:{...structuredClone(entry.view),inputSchemaSha256:quote.invocation.inputSchemaSha256},
+        binding:publicBinding(entry,record),review:{reviewedAt:record.reviewedAt,
+          native:{mode:'remote-mcp',quote:publicQuote(quote)}}};
+    },
     async requests(context) {
       await current();
       const original = await application.requests(context);
