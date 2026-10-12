@@ -8,7 +8,9 @@ Applications opens the original merchant and buyer tools from a selected READY r
 | --- | --- | --- |
 | Catalog Atlas | atlas | Retained catalog intake, offer comparison, exact native buyer preparation and complete workspace receiving |
 | n8n automation merchant | n8n-merchant serve | Configuration review, original preparation, paid jobs, retained workflow executions, customer results and stop/reopen |
+| API-pass customer | api-pass-workspace serve | Original API access, saved requests, exact response recovery, private buyer history and customer statements |
 | API merchant authoring | openapi-workspace | Source intake, paid routes, saved packages, seller preview and operations |
+| gRPC merchant authoring | grpc-workspace | Captured protobuf source, exact typed requests and terms, saved merchant editions, retained release controls and customer files |
 | Merchant pricing and scenario planning | revenue-workspace | Original usage, saved commercial reviews, exact demand/price/cost scenarios, exports and seller price changes |
 | Redis and Valkey merchant authoring | redis workspace open | Saved products, source profiles, live previews, customer packages and managed release controls |
 | MPP merchant and customer | mpp serve | Saved merchant/customer profiles, original offers, purchases, packages, governor terminal and retained response receiving |
@@ -16,6 +18,8 @@ Applications opens the original merchant and buyer tools from a selected READY r
 | OData source and live merchant | dataset odata | Saved source metadata, typed queries, retained editions, live paid pages, buyer handoffs and received records |
 | SEC EDGAR source operator | sec-edgar workspace | Original company facts and filings, retained source editions, merchant drafts and complete customer exports |
 | Google Sheets source authoring | sheets-source workspace serve | Retained workbook observations, typed source projections, original dataset publisher and merchant receiving |
+| NocoDB source authoring | nocodb-source workspace serve | Original database observations, complete captures, public projections, dataset publisher and retained workspace recovery |
+| Stellar asset investigation | dataset-workspace --stellar-expert | Original asset observations, exact editions, reviewed findings, native dataset and merchant releases, purchased page receiving |
 | ArcGIS merchant workspace | arcgis-agent serve | One original browser and MCP service for source capture, field mapping, publication, staged deployments and complete customer files |
 | Dataset preview | dataset-workspace | A dataset configuration file or retained dataset state, native query and preview |
 | Dataset buyer | buyer-dataset-workspace | Original acquisitions, received rows and files, private customer history and Python analysis |
@@ -41,6 +45,7 @@ Applications opens the original merchant and buyer tools from a selected READY r
 | Merchant recovery | merchant-recovery-remote workspace serve | Off-host inventory, original transfer journals and encrypted cold restore |
 | Commerce session | commerce-console start | An initialized SF66 session, original buyer/delivery/recovery and terminal approval |
 | RSS, Atom and subscription collections | dataset-feeds … serve | Original XML and OPML, saved selections, acquisition recovery, review, native editions and customer receiving |
+| JSON Lines datasets | dataset-ndjson … serve | Original JSON Lines intake, exact mapping, native query and comparison, merchant/customer packages and retained console handoff |
 | XML dataset onboarding | dataset xml … serve | An initialized XML workspace, source intake, mapping, native query, comparison and portable editions |
 
 A selected runtime must actually contain the command. XML and Object Buyer additionally require their original forwarding/server source; an older package cannot acquire these capabilities by selecting a label. The chosen original profile supplies the dependencies required by the application. Applications installs no replacement engine or new npm dependency.
@@ -57,6 +62,24 @@ A selected runtime must actually contain the command. XML and Object Buyer addit
 The API projects folder may be an existing private directory or one new directory in an existing private parent. Saving creates that one reviewed folder if needed. Source and dataset paths retain their original meanings.
 
 The runtime console and original application have separate capability URLs. The latter is captured only from the selected CLI's startup announcement and retained privately against its original operation ID. It is never inferred from a configured port, source example or arbitrary terminal text.
+
+## gRPC merchant authoring
+
+Choose **gRPC merchant authoring** from a runtime containing the native gRPC
+transport and managed workspace support. Select the original private workspace
+directory, or one new directory in an existing private parent, and review the
+listener ports and private environment. Save creates only the reviewed directory;
+Start binds its current source revision and the selected native launcher bytes.
+
+**Open application** uses the original instance's private launch record and an
+authenticated live response. Capture and edit the protobuf contract, review
+native methods and exact payment terms, prepare customer files, and operate the
+original seller and retained releases in that same workspace. **Stop** drains the
+owned native resources even if an in-flight request fails; a fresh reviewed start
+reopens the retained state without repeating earlier calls.
+
+Follow [gRPC merchant authoring in Applications](GRPC_APPLICATIONS.md) for the
+complete setup, saved-source selection, native opening, Stop and recovery workflow.
 
 ## Merchant pricing and scenario planning
 
@@ -305,7 +328,11 @@ To read an existing OpenAlex collection, select its original research workspace 
 
 The optional provider edition adapter is the original local module passed as --edition-adapter. It can reopen Valyu editions through the original retained provider store, preserving that store's access and retention behavior. Applications records the module file identity and passes the same path to research-workspace.
 
-The original command announces one JSON line with mode RESEARCH_DOSSIER_WORKSPACE, its selected directory and its actual loopback capability URL. The observer accepts it only for the research-workspace command and matching --dir argument, then applies the existing local URL checks. The source command owns HTTP shutdown and closure of its original provider workspace; saved dossiers remain available for the next reviewed start.
+To enable the original **DOI metadata** tab, select **Private Crossref source directory**. Reopen the retained directory when continuing an acquisition, or create one directory in an existing private parent. This passes `--crossref-state` to the original research command and uses public Crossref by default. **Original Crossref merchant configuration** is optional; it selects an existing host configuration using `--crossref-config` and requires the source directory. Applications retains the directory identity and complete configuration-file fingerprint in Review/Save and Review start. The selected runtime must include the original Crossref workspace and source modules.
+
+Use the existing dossier and question to review its selected DOI scope, acquire or resume metadata, inspect source coverage and exact changes, and retain the reviewed edition. Stop and reopen retain that acquisition and its original receiving receipt. Preserve both the dossier directory and selected Crossref source directory to continue unfinished acquisition; portable dossier export carries received research and authored analysis. The original [Crossref operating guide](../../sf88-operator-buyer-cli/research-dossiers/CROSSREF.md) describes the complete acquisition, partial refresh, receiving recovery, report and reopen flow.
+
+The original command announces one JSON line with mode RESEARCH_DOSSIER_WORKSPACE, its selected directory and its actual loopback capability URL. The observer accepts it only for the research-workspace command and matching --dir argument, then applies the existing local URL checks. A selected Crossref source also requires the original startup to report crossrefConfigured: true. The source command owns HTTP shutdown and closure of its original provider workspaces; saved dossiers and retained Crossref captures remain available for the next reviewed start.
 
 Inside the original research application, create or reopen a question, receive saved source editions, compare provider occurrences, select evidence, write findings, compare revisions and download HTML, Markdown or complete portable JSON. Reopen the same portable dossier through its original API or CLI to retain all revision and source identities.
 
@@ -477,3 +504,33 @@ Choose **n8n automation merchant** and select the private merchant directory. Fo
 The installed command verifies its selected source against the managed execution copy, then opens the original seller, customer, operations and automation consoles. Applications binds Open to the actual managed child, private launch record and authenticated original listener. The private environment file supplies the configuration’s n8n API and webhook reference names. Stop drains the original services and job worker before another start reopens the same state.
 
 The [complete n8n Applications guide](N8N_APPLICATIONS.md) covers first-run preparation, installed source selection, native workflow setup, credentials, ports, original job execution, customer delivery, unresolved execution recovery and stop/reopen.
+
+## JSON Lines datasets
+
+The complete [NDJSON managed application guide](../../sf30-seller-sdk/ndjson/MANAGED_APPLICATIONS.md) covers the original retained source workspace, explicit Python selection, review/save/start/open/stop/reopen, merchant MCP connection and complete customer handoff.
+
+## API-pass customer workspace
+
+Select **API-pass customer** and the private configuration produced by the maintained `api-pass-workspace configure` command. The configured customer workspace and the selected **Private customer workspace** must name the same directory. That directory retains connections, passes, exact request bodies, saved responses and operation history. The original Buyer state, Inbox and optional customer accounting workspace retain their existing paths.
+
+**Purchase approval channel** accepts `auto`, `browser` or `terminal`. Auto checks the selected original runtime's browser approval capability and uses its existing terminal channel when that capability is absent. Browser requires the original broker and its selected native helper. An optional **Selected original approval broker** names that original module. The managed PTY remains available through the original **Terminal Python executable**, which defaults to `/usr/bin/python3`. Private host proxy settings belong in the existing environment configuration.
+
+Review, save, finish the original runtime connection if required, then review and start the application. The review retains the configuration, prior workspace state and eight product files. Before starting, the adapter compares the selected installation and the adopted execution copy. The actual startup record must match the launched descendant process, loopback listener, original configuration and authenticated customer session before **Open application** becomes available.
+
+In the customer workspace, select a connection and adopt an existing pass or prepare an original purchase. Saved request identities reopen the same response. Recovery continues the selected original operation and joins its authenticated proof, buyer history and statement files. Closing the browser retains these selections and records.
+
+Use the ordinary Applications **Stop**, **Review start** and **Start reviewed application** controls to reopen the same customer directory. Each start reviews the current state, and the existing application resource lease serializes managed use of that directory.
+
+The complete [API-pass customer guide](../../sf101-merchant-receiver/api-access/workspace/README.md) covers configuration, connection setup, purchase approval, exact request recovery, customer reports, browser operations and installed package imports.
+
+## NocoDB source authoring
+
+Choose the original initialized private **NocoDB workspace** and, when live database access is needed, its optional **Private NocoDB connections file**. The connection stores the original server and credential environment references. Use the existing **Local port** and **Private environment JSON** fields for the original native listener and host environment.
+
+Review retains the workspace's original SQLite identity and immutable settings, the complete nine-file native source selection and the exact optional connection file. Start launches the maintained source authoring command with those selections. The original structured startup opens that same workspace and original dataset publisher; captures, projections and draft revisions can continue normally. Stop drains the original process, and a later start reopens its saved work. The complete [NocoDB Applications guide](../../sf30-seller-sdk/nocodb/APPLICATIONS.md) covers initialization, live and retained source intake, publisher/customer delivery and managed recovery.
+
+## Stellar asset investigation
+
+Choose **Stellar asset investigation** with its private **StellarExpert workspace**, optional **Original buyer inbox** and optional **Private merchant runtime JSON**. The workspace may be retained or one new directory in an existing private parent. Use the common **Local port** and **Private environment JSON** settings for the original source command.
+
+The selection carries the stable workspace UUID, source files, original inbox and exact merchant runtime configuration into the existing review and launch. Applications opens the original authenticated workspace from its structured startup record. Capture original asset observations, compare retained editions, review findings, prepare datasets, operate the original merchant releases and receive purchased dataset pages through the existing customer inbox. Captures, editions, notes and receipts remain normal mutable workspace progress across Stop and reopen. The complete [StellarExpert operator guide](../../sf30-seller-sdk/stellar-expert/OPERATOR_GUIDE.md) covers the source, merchant and customer workflow.

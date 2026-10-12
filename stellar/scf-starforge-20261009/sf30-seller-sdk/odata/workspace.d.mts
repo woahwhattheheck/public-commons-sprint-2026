@@ -11,7 +11,7 @@ export interface ODataWorkspace {
   refreshConnection(id: string): Promise<ODataConnection>;
   plan(input: { connectionId: string; query: ODataQueryPlan; id?: string; name?: string }): Promise<ODataSavedPlan>;
   reviewPlan(input: { id: string; note: string }): Promise<ODataSavedPlan>;
-  startCapture(input: { planId: string; label?: string }): Promise<ODataEditionSummary>;
+  startCapture(input: { id?: string; planId: string; label?: string }): Promise<ODataEditionSummary>;
   capture(id: string, options?: { pageBudget?: number; signal?: AbortSignal }): Promise<ODataEditionSummary>;
   pause(id: string): Promise<ODataEditionSummary>;
   edition(id: string): Promise<ODataEdition>;
