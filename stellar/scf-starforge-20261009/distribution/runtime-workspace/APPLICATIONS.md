@@ -339,6 +339,10 @@ The original startup record contains schema stellar-forge.redis-workspace-startu
 
 **Stop application** closes that original authoring server and its owned release console. After it has stopped, a new reviewed start reopens the same workspace ID, saved revisions, requests, customer packages and release store with a fresh private URL. The Redis workspace's own Continue action resumes an original interrupted request; launching Applications preserves its normal recovery semantics.
 
+## API merchant connections and managed reopening
+
+The existing **API merchant authoring** application can select the original OAuth host configuration and private environment, review exact source/profile/callback bindings, and reopen the same authoring projects and private connection stores. Its managed start accepts the original host's bound startup announcement. See [API merchant authoring in Applications](./OPENAPI_APPLICATIONS.md) for original registration, fixed callbacks, private receiving, and stop/reopen instructions.
+
 ## MPP merchant and customer
 
 **MPP merchant and customer** opens the original initialized MPP workspace. Review retains its saved merchant, buyer and customer profiles and the selected installed source. The original positional `mpp serve WORKSPACE PORT` command runs with its managed approval terminal. Open the existing private console, configure the intended role, inspect offers and saved purchases, and continue the original package, response and recovery operations. Stop drains the same managed process; reopen keeps the saved workspace. The complete installed dependency and merchant/customer flow is in [MPP_APPLICATIONS.md](./MPP_APPLICATIONS.md).
