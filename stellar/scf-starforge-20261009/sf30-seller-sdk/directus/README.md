@@ -226,6 +226,22 @@ node stellar/scf-starforge-20261009/sf30-seller-sdk/directus/cli.mjs receive \
 
 A repeated receiving operation opens the same received project, including later edits and later publisher selections. Re-exporting the received project captures its current dataset history; reopening its original incoming file keeps those later local changes. The received database becomes available after its original records validate, and the operator opens it after its publishing and customer files are restored.
 
+### Continue interrupted work in its original project
+
+History keeps each browser request with the operator, selected project and workspace that created it. A received copy can retain the original workspace UUID while having a different project key; its pending work opens separately.
+
+**Retained native work** reopens capture and content-version operations with their original action, actor, operation ID and complete inputs. Select a request to read or continue it. Completed native history remains in the project after the browser request clears.
+
+**Retained workspace work** reopens edits, edition reviews, selections, comparisons and source imports. Continue first reads the workspace's original operation journal. When the request already committed, its stored result opens directly. An interrupted request continues with its original inputs and expected revision. If the workspace rejected an outdated decision, review the current edition or form and submit a new request; the earlier request remains available to read and download.
+
+Source imports retain the complete file's byte length and SHA-256 in browser recovery storage. The source itself is received by the original workspace. For an import that has not committed, use **Choose original file** to select the matching capture and continue its original request. This supports complete source files up to the workspace's 256 MiB limit without putting their base64 bodies into browser session storage.
+
+**Retained project receiving** keeps each editable project's original receiving request and file digest. Choose its original project file to continue. The browser compares the returned operation, file digest, byte length and selected project with that request before opening the received workspace. Downloads bind the current operator, instance, project and workspace.
+
+Changing projects saves each project's native and publishing form draft under that project's identity. It clears old action controls, results, source and edition selections immediately, then restores only the selected project's draft against its current source and edition choices. Connection credentials are entered again in the connection form. Delayed source pages, field lists and native responses are applied only to the selection that requested them. Earlier browser records from before project-scoped recovery remain available through the History download controls.
+
+Receiving and selection registry changes, launch records and their newly created directories are synced before success is returned. Stopping the operator drains its native work and owned publishers before closing the workspace. A publisher that needs another close attempt remains owned by the same operator so it can finish that drain.
+
 ## Whole native customer run
 
 [Native setup](NATIVE_SETUP.md) installs the original Directus 12.5.0 application, prepares an isolated version-enabled collection with varied field values, and runs the complete customer and browser exercises in one owned operation. It supports a retained SDK source, Node, Playwright and Chromium installation so an existing equipped machine can run the same application.

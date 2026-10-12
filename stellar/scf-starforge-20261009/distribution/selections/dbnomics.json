@@ -2,7 +2,7 @@
   "schema": "stellar-forge.distribution-source-selection.v1",
   "id": "dbnomics",
   "title": "DBnomics economic sources and analysis",
-  "description": "Exact DBnomics series, saved analyst reports, source revision review, native publication and complete customer receiving",
+  "description": "Exact economic sources, Python Analysis briefings and returned-workbook review, native publication and complete customer receiving",
   "base": {
     "commands": [
       "installation",
@@ -112,7 +112,7 @@
   ],
   "product": {
     "schema": "stellar-forge.merchant-product-package.v1",
-    "description": "Exact DBnomics series, saved analyst reports, source revision review, native publication and complete customer receiving",
+    "description": "Exact economic sources, Python Analysis briefings and returned-workbook review, native publication and complete customer receiving",
     "readme": "products/dbnomics/OPERATING.md",
     "bin": {
       "starforge": "stellar/scf-starforge-20261009/distribution/cli.mjs"

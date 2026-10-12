@@ -48,6 +48,9 @@ function ownerEnded(owner) {
   return Boolean(owner.stamp && current && owner.stamp !== current);
 }
 
+// Reuse the original operation-owner lifetime for private catalog-stage retirement.
+export { ownerEnded as workspaceOwnerEnded };
+
 export async function openWorkspaceStore(directory, profileHash) {
   if (typeof directory !== 'string' || !directory) throw new WorkspaceError('WORKSPACE_DIRECTORY_REQUIRED');
   const selected = resolve(directory);
@@ -245,7 +248,7 @@ class WorkspaceStore {
     this.draft(id);
     return this.db.prepare('SELECT record_json FROM draft_history WHERE draft_id=? ORDER BY revision DESC').all(id).map(parsed);
   }
-  close() { LIVE_INSTANCES.delete(this.owner.instance); this.db.close(); }
+  close() { this.db.close(); LIVE_INSTANCES.delete(this.owner.instance); }
 }
 
 function hitMap(edition) {

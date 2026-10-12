@@ -1,4 +1,5 @@
 import {commercialTools} from './commercial.mjs';
+import {casePackageTools} from './case-packages.mjs';
 // MIT. Original tool metadata; provider runtimes load only when selected.
 import { CASE_STATUSES } from '../../../stellar/scf-starforge-20261009/sf74-merchant-support-console/case-statuses.mjs';
 import { MAX_RETAINED_CHUNK_BYTES } from '../retained-file-contracts.mjs';
@@ -38,6 +39,7 @@ function supportTools(tool) {
   const read = { readOnly: true, idempotent: true };
   return [
     ...serviceTools(tool),
+    ...casePackageTools(tool),
     ...commercialTools(tool),
     tool('merchant_support_incident_sources', 'Inspect the original support connection mode, configured incident source IDs/labels, bound source-file digest and host default. Reads no arbitrary path and starts no watcher.', {}, [], read),
     tool('merchant_support_destination', 'Inspect the currently selected source notification configuration at its exact revision. Slack resolves the original host token and reads the actual authenticated workspace/channel; webhook reports configuration resolution. Sends no notification.',

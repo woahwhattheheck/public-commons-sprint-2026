@@ -103,6 +103,11 @@ class HandoffDesk {
     if (!source) throw fail('HANDOFF_SOURCE_UNAVAILABLE', 'Choose a configured handoff source.', 404);
     return source;
   }
+  // Trusted sibling transport only. Browser routes expose profiles(), never this host reference.
+  connection(key) {
+    this.#ready();const {url,tokenEnv,label}=this.#source(key);
+    return Object.freeze({key,label,url,tokenEnv});
+  }
   #key(source,id) {return source+'\0'+id;}
   #ready() {if(this.#closing)throw fail('HANDOFF_CLOSING','The desk is closing. Reopen it to continue the same files.',503);}
   #track(promise) {this.#pending.add(promise);promise.then(()=>this.#pending.delete(promise),()=>this.#pending.delete(promise));return promise;}

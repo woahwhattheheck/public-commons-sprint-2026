@@ -8,6 +8,7 @@ import {researchWorkspaceTools,RESEARCH_EXPORTS} from './catalog/research-worksp
 import {callResearchClinicalTrials,exportResearchClinicalTrials,RESEARCH_CLINICALTRIALS_PREFIX} from './research-clinicaltrials.mjs';
 import {callResearchDocuments,exportResearchDocuments,RESEARCH_DOCUMENT_PREFIXES} from './research-documents.mjs';
 import {callResearchCitationUpdates,RESEARCH_CITATION_REVIEW_PREFIX} from './research-citation-updates.mjs';
+import {callResearchEligibility,exportResearchEligibility,RESEARCH_ELIGIBILITY_PREFIX} from './research-eligibility.mjs';
 import {callResearchEuropePmc,exportResearchEuropePmc,RESEARCH_EUROPE_PMC_PREFIX} from './research-europe-pmc.mjs';
 export {researchWorkspaceTools} from './catalog/research-workspace.mjs';
 import {ResearchWorkspaceClient} from '../../stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/workspace-client.mjs';
@@ -239,6 +240,8 @@ export class MerchantResearchWorkspaces{
         ({result,selection}=await exportResearchClinicalTrials(entry.client,args,{file:temporary,download}));
       }else if(args.kind.startsWith('europe-pmc-')){
         ({result,selection}=await exportResearchEuropePmc(entry.client,args,{file:temporary,download}));
+      }else if(args.kind.startsWith('eligibility-')){
+        ({result,selection}=await exportResearchEligibility(entry.client,args,{file:temporary,download}));
       }else if(spec.format){
         exact(args,['workspace','dossierId','kind','revision','expectedSha256'],['workspace','dossierId','kind']);
         result=await download(()=>entry.client.exportDossier(args.dossierId,{format:spec.format,file:temporary,revision:args.revision,expectedSha256:args.expectedSha256}));
@@ -335,6 +338,7 @@ export class MerchantResearchWorkspaces{
     if(name==='merchant_research_detach')return this.#detach(args.workspace,args.attachmentId);
     return this.#with(args.workspace,async entry=>{
       const c=entry.client,id=args.dossierId,input=nativeFields(args,['workspace','dossierId']);
+      if(name.startsWith(RESEARCH_ELIGIBILITY_PREFIX))return callResearchEligibility(c,name,args);
       if(name.startsWith(RESEARCH_CITATION_REVIEW_PREFIX))return callResearchCitationUpdates(c,name,args);
       if(name.startsWith(RESEARCH_EUROPE_PMC_PREFIX))return callResearchEuropePmc(c,name,args,{
         source:(name,accepted)=>this.#source(entry,name,accepted)});

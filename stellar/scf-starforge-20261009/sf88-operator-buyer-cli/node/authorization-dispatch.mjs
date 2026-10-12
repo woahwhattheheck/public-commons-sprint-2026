@@ -68,9 +68,35 @@ const PROTECTED_SOURCE_PROFILES = Object.freeze([
     id:'ORIGINAL_AUTHORIZATION_WITH_HELD_FILE_RESERVATIONS_AND_TEMPORARY_INVENTORY_V1',
     store:'dbaac9e39164422318839eb8b6e0de6e362f8d0c687c5d6e2b555c93fc72be04',
   }),
+  Object.freeze({
+    ...PROTECTED_SOURCE_PROFILE,
+    id:'ORIGINAL_AUTHORIZATION_WITH_HELD_FILES_AND_SELECTED_BRIDGE_CHANNEL_V1',
+    execute:'0af1fe73c5884e5ea359cd3c4530ac66d199b235de6a7efe7584c91481a2206a',
+  }),
+  Object.freeze({
+    ...PROTECTED_SOURCE_PROFILE,
+    id:'ORIGINAL_AUTHORIZATION_WITH_HELD_FILES_SELECTED_BRIDGE_AND_TEMPORARY_INVENTORY_V1',
+    execute:'0af1fe73c5884e5ea359cd3c4530ac66d199b235de6a7efe7584c91481a2206a',
+    store:'dbaac9e39164422318839eb8b6e0de6e362f8d0c687c5d6e2b555c93fc72be04',
+  }),
+  Object.freeze({
+    ...PROTECTED_SOURCE_PROFILE,
+    id:'ORIGINAL_AUTHORIZATION_WITH_HELD_FILES_SELECTED_BRIDGE_DATASET_LOCATION_AND_DIAGNOSTICS_V1',
+    execute:'a21cc840ec7a2db32dae5eaa62d6288f56ce716118000d4ee0551d117b406714',
+    datasetLocation:'a9d833150994f8e6e835cc17c8c08f90fc0f2aaf4182fa9c4da6c18d0f39aa04',
+    nativeSigningDiagnostics:'3e6e4761cfdd4d9c900660ecd5866e75bb834e963a083ca9af0a280b415424f7',
+  }),
+  Object.freeze({
+    ...PROTECTED_SOURCE_PROFILE,
+    id:'ORIGINAL_AUTHORIZATION_WITH_HELD_FILES_SELECTED_BRIDGE_DATASET_LOCATION_DIAGNOSTICS_AND_TEMPORARY_INVENTORY_V1',
+    execute:'a21cc840ec7a2db32dae5eaa62d6288f56ce716118000d4ee0551d117b406714',
+    store:'dbaac9e39164422318839eb8b6e0de6e362f8d0c687c5d6e2b555c93fc72be04',
+    datasetLocation:'a9d833150994f8e6e835cc17c8c08f90fc0f2aaf4182fa9c4da6c18d0f39aa04',
+    nativeSigningDiagnostics:'3e6e4761cfdd4d9c900660ecd5866e75bb834e963a083ca9af0a280b415424f7',
+  }),
 ]);
 
-async function protectedEntrySource({runtime, directory, operation, bound, reader, signerSources, signal}) {
+async function protectedEntrySource({runtime, directory, operation, bound, reader, signerSources, signal, profile}) {
   const paths = [
     ['reservationRuntime',join(runtime,'node/runtime.mjs'),'runtime'],
     ['reservationBootstrap',join(runtime,'node/reserved-entry.mjs'),'bootstrap'],
@@ -79,8 +105,12 @@ async function protectedEntrySource({runtime, directory, operation, bound, reade
     ['reservationProcessIdentity',join(runtime,'node/process-identity.mjs'),'processIdentity'],
     ['reservationResponseFile',resolve(runtime,'../sf31-buyer-client/response-file.mjs'),'responseFile'],
   ];
+  if (profile.datasetLocation) paths.push(
+    ['reservationDatasetLocation',join(runtime,'dataset-location.mjs'),'datasetLocation'],
+    ['reservationNativeSigningDiagnostics',resolve(runtime,'../sf103-native-buyer-signer/diagnostics.mjs'),'nativeSigningDiagnostics'],
+  );
   for (const [name,path,key] of paths) {
-    const source = await reader.read(path,{pin:PROTECTED_SOURCE_PROFILE[key]});
+    const source = await reader.read(path,{pin:profile[key]});
     signerSources[name] = source.descriptor;
   }
   const path = join(directory,'native-reserved-request.json');
@@ -375,7 +405,7 @@ export async function readUndispatchedAuthorizationEvidence(operation, options =
   await pin('config',join(runtime,'config.mjs'));
   await pin('workspace',join(runtime,'workspace.mjs'));
   const reservedEntry = protectedSource ? await protectedEntrySource({
-    runtime,directory,operation,bound,reader,signerSources,signal,
+    runtime,directory,operation,bound,reader,signerSources,signal,profile:protectedProfile,
   }) : null;
   const [{openWorkspace}, {execution}, {readAttemptWireCheckpoint}] = await Promise.all([
     import(pathToFileURL(join(runtime,'workspace.mjs')).href),

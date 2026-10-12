@@ -91,3 +91,10 @@ Existing `comparison.test.mjs`, `credentialed.test.mjs` and `post-preflight.test
 The existing implementation screen now includes [Source delivery and receiving](SOURCE_BUNDLES.md). Prepare a native source edition from the saved case, stream its original attachments, review and attach the original workorder, and download exact retained members from any edition. The same case includes [service commitments and reports](SERVICE_OPERATIONS.md) and the [commercial quotation application](COMMERCIAL.md).
 
 Use the installed [complete case source package](CASE_SOURCE_PACKAGE.md) workflow to transfer the selected case, its captured immutable history and all referenced native source archives. Native source files stay outside the 64 MiB implementation record, including files that have never been linked to an implementation task. The receiver uses the existing Support Handoffs and SF49 native archive operations, then opens the full case in its original saved-case store.
+
+
+## Complete case and source receiving
+
+The **Complete delivery** desk exports the selected saved case, every retained case revision and every native source edition, including unassigned original attachments. It receives complete folders or existing Handoffs sources, resumes the same original operation, and reopens the resulting case in this desk. The installed Support MCP provider exposes the same original operations and retained file streams.
+
+See [CASE_PACKAGE_WORKSPACE.md](CASE_PACKAGE_WORKSPACE.md) for browser, host configuration, MCP, streaming and receiving instructions. [CASE_SOURCE_PACKAGE.md](CASE_SOURCE_PACKAGE.md) documents the unchanged native package and CLI. Existing case, service and quotation operations remain in the same application.
