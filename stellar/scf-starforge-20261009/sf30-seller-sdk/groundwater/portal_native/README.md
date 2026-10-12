@@ -86,7 +86,7 @@ A successful preparation writes:
 - `output/requirements.txt` and `requirements-lock.json`: the actual installed Python dependency versions.
 - `output/preparation-browser/browser-result.json`: ordinary-account login, native permissions, CSRF and anonymous-access results.
 
-If an owned phase fails, the process drains its children and writes an interrupted preparation archive with a new retained artifact sequence. Its result remains interrupted. The actual log and private state identify where the same request can continue. A missing selected browser does not make the account/browser phase complete.
+If an owned phase fails, the process drains its children and writes an interrupted preparation archive with a new retained artifact sequence. Its result remains interrupted. The actual log and private state identify where the same request can continue. A failure during later receiving also captures the current stopped portal, original incoming model result and backup, exact receiving/browser request controls, and pending operation evidence. The pre-receiving installation archive is retained separately. A missing selected browser does not make the account/browser phase complete.
 
 Screenshots are local inspection aids. They are not required members of the saved preparation artifact.
 
@@ -196,3 +196,7 @@ All implementation checks refer to Tethys commit `f030ef90c3441472298e2ab3543cae
 - [Database CLI](https://github.com/TethysPlatform/tethys/blob/f030ef90c3441472298e2ab3543cae7f25c91716/tethys_cli/db_commands.py), [configuration/static generators](https://github.com/TethysPlatform/tethys/blob/f030ef90c3441472298e2ab3543cae7f25c91716/tethys_cli/gen_commands.py), and [application installation](https://github.com/TethysPlatform/tethys/blob/f030ef90c3441472298e2ab3543cae7f25c91716/tethys_cli/install_commands.py)
 
 The actual native result is the authority for installation and browser completion. Source publication alone does not establish an installed portal or a received customer study.
+
+### Continuing a stopped receiving phase
+
+If receiving fails after the original model has been restored, its interrupted carrier includes the current portal and original receiving/browser request controls, the exact parent result and model backup, and the earlier prepared installation archive. Restore it with the same command, adding `--native-result` and `--backup` at the exact original paths recorded in `manifest.json` under `original_incoming_paths`. Both destinations must be explicitly supplied; this archive cannot select an unapproved external write path. Existing matching files are verified and preserved. Continue the original receiving input after restore; the initial prepared installation, account identities and already recorded model operations remain the same.

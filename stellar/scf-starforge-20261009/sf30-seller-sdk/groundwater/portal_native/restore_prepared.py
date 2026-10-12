@@ -11,7 +11,7 @@ import tempfile
 import zipfile
 from common import digest,info,owned_lock,publish,publish_bytes,read,read_bytes,require,sync_dir,verify,verify_archive
 
-def restore(archive,expected,work_directory,driver_directory,source_capsule):
+def restore(archive,expected,work_directory,driver_directory,source_capsule,*,native_result=None,backup=None):
     archive=Path(archive).resolve()
     manifest=verify_archive(archive,expected)
     require(manifest["schema"]=="groundwater.tethys-prepared-portal.v1" and manifest["all_owned_services_closed"] is True,
@@ -26,9 +26,25 @@ def restore(archive,expected,work_directory,driver_directory,source_capsule):
             "The installed runtime/configuration and actor Paths are bound to their original paths; this restore does not rebind them.")
     require(not archive.is_relative_to(roots["work"]) and not archive.is_relative_to(roots["driver"]),
             "Keep the actual incoming carrier outside the restored portal and source.")
+    incoming={"incoming/original-source-capsule.json":Path(source_capsule)}
+    declared=manifest.get("original_incoming_paths",{})
+    require(set(declared)<= {"native_result","backup"},"The retained input mapping is unsupported.")
+    supplied={"native_result":native_result,"backup":backup}
+    for key,member in (("native_result","incoming/native-result.json"),("backup","incoming/original-workspace-backup.zip")):
+        if key in declared:
+            value=supplied[key]
+            require(isinstance(value,(str,Path)) and Path(value).is_absolute(),"Select the explicit original "+key+" restoration path.")
+            target=Path(value)
+            require(str(target)==declared[key] and target.resolve()==target and not target.is_symlink(),
+                    "This restore preserves the original input path; it does not rebind "+key+".")
+            require(target!=archive,"The carrier cannot overwrite itself.")
+            incoming[member]=target
+        else:require(supplied[key] is None,"The selected archive has no original "+key+" input.")
+
     request={"schema":"groundwater.tethys-preparation-restore.v1","archive":{**expected,"path":str(archive)},
              "operation_id":manifest["operation_id"],"work_directory":str(roots["work"]),
              "driver_directory":str(roots["driver"]),"source_capsule":str(source_capsule)}
+    if declared:request["original_incoming_paths"]={k:str(supplied[k]) for k in sorted(declared)}
     # Sibling control exists before destination creation. An interruption has one resumable original identity.
     control=roots["work"].with_name(roots["work"].name+".restore-control")
     if control.exists():
@@ -60,9 +76,11 @@ def restore(archive,expected,work_directory,driver_directory,source_capsule):
                         and len(member.parts)>1 and member.parts[0] in roots and str(member)==row["path"],
                         "A retained archive path is not a selected original member.")
                 require(row["path"] not in seen,"An original member is duplicated.");seen.add(row["path"])
-                target=Path(source_capsule) if member.parts[0]=="incoming" else roots[member.parts[0]].joinpath(*member.parts[1:])
                 if member.parts[0]=="incoming":
-                    require(row["path"]=="incoming/original-source-capsule.json","An unsupported external input was selected.")
+                    require(row["path"] in incoming,"An unsupported external input was selected.")
+                    target=incoming[row["path"]]
+                else:target=roots[member.parts[0]].joinpath(*member.parts[1:])
+                require(all(target!=prior for _,prior in targets),"Two retained members select the same destination.")
                 require(not target.is_symlink() or row["kind"]=="symlink","A target file is linked.")
                 for parent in target.parents:
                     require(not parent.is_symlink(),"An original target parent is linked.")
@@ -106,9 +124,10 @@ def restore(archive,expected,work_directory,driver_directory,source_capsule):
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     for name in ("archive","sha256","work-directory","driver-directory","source-capsule"):p.add_argument("--"+name,required=True)
+    p.add_argument("--native-result");p.add_argument("--backup")
     p.add_argument("--bytes",required=True,type=int);a=p.parse_args();previous=os.umask(0o077)
     try:
-        result=restore(a.archive,{"bytes":a.bytes,"sha256":a.sha256},a.work_directory,a.driver_directory,a.source_capsule)
+        result=restore(a.archive,{"bytes":a.bytes,"sha256":a.sha256},a.work_directory,a.driver_directory,a.source_capsule,native_result=a.native_result,backup=a.backup)
         print(json.dumps(result),flush=True)
     finally:os.umask(previous)
 

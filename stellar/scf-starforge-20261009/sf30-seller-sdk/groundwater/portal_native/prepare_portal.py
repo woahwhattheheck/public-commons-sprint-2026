@@ -180,11 +180,20 @@ def prepared_archive(context,*,state="complete",failure=None):
     for current in sorted(output.rglob("*")):
         if not current.is_file() or current.is_symlink():continue
         rel=current.relative_to(output).as_posix()
-        if rel.endswith(".zip") or rel.endswith(".tmp") or "/screenshots/" in "/"+rel or rel=="preparation-result.json":continue
+        retained_archives={"Groundwater_Tethys_Prepared_Portal.zip","Groundwater_Tethys_Complete_Private_Handover.zip"}
+        if (rel.endswith(".zip") and rel not in retained_archives) or rel.endswith(".tmp") or "/screenshots/" in "/"+rel or (rel=="preparation-result.json" and state=="complete"):continue
         selected.append((current,{"path":"work/output/"+rel,"kind":"file","mode":0o600,**info(current)}))
-    for name in ("bootstrap-request.json","bootstrap-context.json","credentials.json","preparation-browser-input.json"):
+    controls=("bootstrap-request.json","bootstrap-context.json","credentials.json","preparation-browser-input.json",
+              "request.json","context.json","receiving-input.json","receiving-request.json",
+              "browser-input.json","reopened-browser-input.json","incoming-original.sqlite")
+    for name in controls:
         p=root/name
         if p.is_file():selected.append((p,{"path":"work/"+name,"kind":"file","mode":0o600,**info(p)}))
+    # A stopped receiving failure retains its same original parent inputs and pending controls.
+    for key,member in (("native_result","incoming/native-result.json"),("backup","incoming/original-workspace-backup.zip")):
+        if key in context:
+            record=context[key];p=Path(record["path"]);verify(p,record)
+            selected.append((p,{"path":member,"kind":"file","mode":0o600,**info(p)}))
     for row in inventory(HERE):
         if "/screenshots/" in "/"+row["path"]:continue
         p=HERE/row["path"]
@@ -200,6 +209,7 @@ def prepared_archive(context,*,state="complete",failure=None):
         "original_source_capsule":context["source_capsule"],"source_capsule_git_sha":CAPSULE_SHA,
         "source_head":read(context["source_capsule"],2097152)["source_head"],
         "files":[r for _,r in selected],"directories":directories,
+        "original_incoming_paths":{k:context[k]["path"] for k in ("native_result","backup") if k in context},
         "runtime_scope":"Exact paths on a compatible Linux host with the recorded original base Python/Node shared libraries; no cross-platform runtime claim.",
         "all_owned_services_closed":True,"native_model_runs_started":0,
         "contains_private_account_and_session_material":True,"failure":failure}
