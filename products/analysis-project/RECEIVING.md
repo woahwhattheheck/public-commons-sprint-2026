@@ -40,9 +40,25 @@ On reentry, the program joins those saved Python requests. It uses the original 
 
 The program binds the installed release and exact original ZIP before using the original Applications model. It saves one useful customer query, `delivery_inventory_d9b53`, which reports actual row counts for each currently selected original view. Its saved decision contains the exact SQL, views and query operation ID. Existing queries, reports and workbook definitions remain attached to the same database.
 
+Keep the same `--out` directory when continuing this operation. The original application save/start requests, archive ID, customer revision, command outputs and completed stages are retained there. New immutable receipts publish from complete synced temporary files, and an existing receipt is checked and synced again. Extraction saves all source directories before publishing its verified cache. Use the existing Applications recovery control for an interrupted managed process; a completed stage is reused by this program. The complete following ZIP and credential-free `complete.json` are the delivery outputs.
+
+## Continue the original Applications requests
+
+Use the same command and `--out` directory after an interruption. The saved application, start request, native query ID, archive ID, database and source selection are read before continuation. The original Applications methods own connection, worker recovery, cancellation and the resource lease.
+
 Application save and release connection have separate receipts. If the application was saved while connection was interrupted, the program reads its current original state and uses the existing **Connect** operation for that same application ID. Each actual connection request and result is retained. Once the original release is available, its source commit is checked and the same application continues, including after a historical save receipt recorded a connection error.
 
-Keep the same `--out` directory when continuing this operation. The original application save/start requests, archive ID, customer revision, command outputs and completed stages are retained there. New immutable receipts publish from complete synced temporary files, and an existing receipt is checked and synced again. Extraction saves all source directories before publishing its verified cache. Use the existing Applications recovery control for an interrupted managed process; a completed stage is reused by this program. The complete following ZIP and credential-free `complete.json` are the delivery outputs.
+For an unfinished customer stage, the program reads the selected run from the complete paginated Applications history. An active original run is reused. A queued or interrupted request is joined through `applicationsRecover`; returned recovery results are retained with that request. The native command engine may finish an already returned command result, resume an unlaunched worker, or record its actual reconciled outcome.
+
+If a still-required listener or export has an ended command, the programme can review a subsequent run of the same application. It verifies the same application revision, runtime binding, release, Python command and original arguments. The next request is retained before dispatch, and a permanent link records its preceding run and outcome. Reentry uses that exact next request after an interrupted dispatch. The receiving database, saved query job and archive operation are the original selections, so a reopened listener continues the existing customer work.
+
+An `OUTCOME_UNAVAILABLE` result retains the original host/process uncertainty. It does not authorize another command. Reconcile that original host and its retained output in Applications, then continue the same receiving command. A complete native export result can still establish its saved artifact when the surrounding command-result journal is missing; the report keeps the actual command outcome and independently verifies the entire following archive.
+
+Completed customer stages are reused before requesting a listener. For example, after the saved query and query-job receipts are complete, reentry proceeds to their original stop and export stages. Stops resolve the latest recorded continuation, use the existing Applications stop control, and retain the ended native result before another stage uses that database.
+
+Direct installed inspection and repeat-export commands retain the actual native close result, standard output and standard error. The receiving process keeps its operation lease and output handles until that exact child closes, including a signal or failure during execution. Successful final output is not announced before those command receipts are synchronized.
+
+The final `complete.json` includes all selected application/save/start/stop receipts and the full connection, recovery and continuation lineage. Its URLs have their private fragments removed and credential fields are redacted. The complete local operation directory retains the original private launch records and command output required by its operator.
 
 ## Whole installed journey
 
