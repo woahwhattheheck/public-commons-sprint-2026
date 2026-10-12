@@ -38,6 +38,7 @@
   ],
   "supportFiles": [
     "stellar/scf-starforge-20261009/sf30-seller-sdk/routescan/quota.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/routescan/primitives.mjs",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/routescan/config.mjs",
     "stellar-forge/mcp-merchant-operator/research-europe-pmc.mjs",
     "stellar-forge/mcp-merchant-operator/catalog/research-europe-pmc.mjs",
