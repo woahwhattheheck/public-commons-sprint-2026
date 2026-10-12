@@ -1,0 +1,4 @@
+record_id,latitude,longitude,preferred_language
+customer-001,51.952659,7.632473,en
+customer-002,51.952659,7.632473,en
+customer-003,,,en

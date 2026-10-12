@@ -820,3 +820,27 @@ The [headless remote commands](../REMOTE.md) remain available for the same
 operations. The [original SF101 production runbook](../README.md#production-runbook)
 covers the source snapshot and restore procedures. Both interfaces continue
 through the same original journals and recovery engine.
+
+## Agent operation through merchant MCP
+
+The maintained `recovery-workspaces` merchant provider can operate this same
+running workspace. It reads the private `recovery-workspace-launch.json`
+published by `workspace serve`, verifies the actual native listener identity,
+and uses the original profile, selection, review hash and retained operation ID.
+The browser and Applications remain connected to that same writer.
+
+Declare the original workspace and host configuration in the private
+`stellar-forge.recovery-workspace-connection.v1` file, then add
+`recoveryWorkspaceConnection` to the original merchant MCP host or initialize it
+through `starforge merchant-providers init recovery-workspaces --options FILE`.
+
+The provider exposes complete status, bundles, inventory, request/journal
+pagination, exact same-ID request readback, review/start, continuation and
+cancellation. Local-only profiles retain capture, local verification and
+host-declared publisher preparation. A new server session is read from the
+original native launch after restart. Its token stays on the owning host.
+
+See [MCP.md](MCP.md) for the complete setup, eleven tools, capture → verification →
+off-host transfer → cold restore → publisher preparation workflow, typed exports
+and interrupted-response readback. The native CLI ready JSON also includes
+`connectionFile`, `instanceId`, `workspaceId` and `configurationSha256`.

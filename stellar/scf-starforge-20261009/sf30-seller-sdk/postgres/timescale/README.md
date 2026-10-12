@@ -215,3 +215,9 @@ node stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/timescale/browser-r
 ```
 
 Use the URL printed by that original listener. The browser arm preserves the listener, publisher, scheduler and database ownership of its caller. Its local receiving record and individual browser JSON downloads have a 64 MiB limit; exceeding a limit stops with the retained original output available. The full native package and installed merchant downloader retain their separately documented file and manifest limits. A parsed or installed driver alone does not mark a native phase complete; completion comes from the original operation's recorded results.
+
+## Continue assigned remediation
+
+The same application includes an assigned-work desk for the original completed Remediate and Defer review decisions. Staff can assign and revise work, bind retained plans and actual operation outcomes, review a later source edition, resolve or reopen an item, and receive its full history in the existing project archive. Every revision uses the original workspace journal and exclusive writer; native changes still use the original plan controls.
+
+[REMEDIATION.md](./REMEDIATION.md) contains the complete staff workflow, original-request recovery, CLI/HTTP/SDK interfaces and the same-operation receiving sequence. Installed code exposes `./seller/timescale/remediation`; the usual `./seller/timescale` workspace also supplies `workspace.remediation`.

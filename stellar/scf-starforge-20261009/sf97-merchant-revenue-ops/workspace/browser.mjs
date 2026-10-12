@@ -6,6 +6,7 @@ let current, draft, selected = 0, editRevision = null, dirty = false, busy = fal
 let repricingSource = null, repricingAmounts = new Map(), repricingPreview = null;
 let repricingDirty = false, repricingEditRevision = null, pendingRepricingSave = null;
 let repricingRoutePage = 0;
+let repricingQuoteValuations = new Map();
 const REPRICING_ROUTES_PER_PAGE = 8;
 const text = (tag,value,className) => { const node = document.createElement(tag); node.textContent = value; if (className) node.className = className; return node; };
 const money = value => value === null || value === undefined ? 'Unknown' : '$' + value;
@@ -362,19 +363,29 @@ function repricingEdits() {
     return amount === expectedAmount ? [] : [{routeId:route.routeId,paymentIndex,expectedAmount,amount}];
   }));
 }
+const quoteMode = () => $('repricing-mode').value === 'quote';
+function repricingValuations() {
+  return (repricingSource?.routes ?? []).flatMap(route => route.paymentOptions.flatMap((option,paymentIndex) => {
+    const entered=repricingQuoteValuations.get(paymentKey(route.routeId,paymentIndex));
+    return entered?.selected ? [{routeId:route.routeId,paymentIndex,expectedAmount:paymentAmount(option),
+      atomicUnits:entered.atomicUnits.trim(),usd:entered.usd.trim(),basis:entered.basis.trim()}] : [];
+  }));
+}
+const repricingInputCount = () => quoteMode() ? repricingValuations().length : repricingEdits().length;
 const repricingStale = () => Boolean(repricingSource?.sellerChanged);
 const repricingSelectionChanged = () => Boolean(repricingSource && $('repricing-source').value !== repricingSource.version);
 function repricingControls() {
   lock($('repricing-source'),!current.history.length);
   lock($('repricing-load'),!$('repricing-source').value);
-  const unavailable = repricingStale() || repricingSelectionChanged(), changed = repricingEdits().length;
+  const unavailable = repricingStale() || repricingSelectionChanged(), changed = repricingInputCount();
+  lock($('repricing-mode'),!repricingSource || unavailable);
   lock($('repricing-reset'),!repricingSource || unavailable || !changed);
   lock($('repricing-preview'),!repricingSource || unavailable || !changed);
   lock($('repricing-save'),!repricingPreview || unavailable || !$('repricing-name').value.trim());
   lock($('repricing-name'),!repricingSource || unavailable);
   lock($('repricing-previous'),repricingRoutePage === 0);
   lock($('repricing-next'),(repricingRoutePage+1)*REPRICING_ROUTES_PER_PAGE >= (repricingSource?.routes.length ?? 0));
-  document.querySelectorAll('.repricing-amount').forEach(input => lock(input,unavailable));
+  document.querySelectorAll('.repricing-amount,.repricing-valuation-select,.repricing-valuation-input').forEach(input => lock(input,unavailable));
 }
 function repricingChoices() {
   const selectedVersion = $('repricing-source').value;
@@ -391,12 +402,14 @@ function repricingChoices() {
   if ([...$('repricing-source').options].some(option=>option.value === selectedVersion)) $('repricing-source').value = selectedVersion;
 }
 function repricingSummary() {
-  const count = repricingEdits().length;
-  $('repricing-change-count').textContent = count ? count+' payment choice'+(count === 1 ? '' : 's')+' changed.' : 'No amounts changed.';
+  const count = repricingInputCount();
+  $('repricing-change-count').textContent = quoteMode()
+    ? count ? count+' payment choice'+(count === 1 ? '' : 's')+' selected for quote conversion.' : 'Select payment choices and enter their valuations.'
+    : count ? count+' payment choice'+(count === 1 ? '' : 's')+' changed.' : 'No amounts changed.';
 }
 function invalidateRepricing() {
   repricingPreview = null; pendingRepricingSave = null; repricingDirty = true;
-  $('repricing-review').hidden = true; $('repricing-state').textContent = 'Unsaved payment amounts';
+  $('repricing-review').hidden = true; $('repricing-state').textContent = 'Unsaved price inputs';
   repricingSummary(); controls();
 }
 function paymentIdentity(option) {
@@ -408,6 +421,34 @@ function paymentIdentity(option) {
   details.append(values);
   if (Object.hasOwn(option,'extra')) details.append(text('pre',JSON.stringify(option.extra,null,2)));
   return details;
+}
+function quoteValuationEditor(route,paymentIndex,row) {
+  const key=paymentKey(route.routeId,paymentIndex);
+  const entered=repricingQuoteValuations.get(key) ?? {selected:false,atomicUnits:'',usd:'',basis:''};
+  repricingQuoteValuations.set(key,entered);
+  const container=document.createElement('div');container.className='repricing-valuation';
+  const label=document.createElement('label');label.className='repricing-valuation-choice';
+  const choice=document.createElement('input');choice.type='checkbox';choice.checked=entered.selected;
+  choice.className='repricing-valuation-select';
+  choice.setAttribute('aria-label',route.routeId+', choice '+(paymentIndex+1)+', use saved USD quote');
+  label.append(choice,text('span','Use saved USD quote'));
+  const fields=document.createElement('div');fields.className='repricing-valuation-fields';fields.hidden=!entered.selected;
+  for (const [name,title,pattern,maxLength] of [
+    ['atomicUnits','Valued atomic units','[1-9][0-9]{0,38}',39],
+    ['usd','USD value of those units','(0|[1-9][0-9]*)(\\.[0-9]{1,6})?',64],
+    ['basis','Valuation source or assumption',null,300]]) {
+    const fieldLabel=text('label',title),field=document.createElement('input');
+    field.type='text';field.className='repricing-valuation-input';field.value=entered[name];
+    field.dataset.routeId=route.routeId;field.dataset.paymentIndex=String(paymentIndex);
+    field.dataset.field=name;field.maxLength=maxLength;field.autocomplete='off';field.required=true;
+    if(pattern){field.pattern=pattern;field.inputMode=name==='usd'?'decimal':'numeric';}else field.minLength=4;
+    field.setAttribute('aria-label',route.routeId+', choice '+(paymentIndex+1)+', '+title);
+    field.addEventListener('input',()=>{entered[name]=field.value;invalidateRepricing();});
+    fieldLabel.append(field);fields.append(fieldLabel);
+  }
+  choice.addEventListener('change',()=>{entered.selected=choice.checked;fields.hidden=!choice.checked;
+    row.dataset.changed=String(choice.checked);invalidateRepricing();});
+  row.dataset.changed=String(entered.selected);container.append(label,fields);return container;
 }
 function renderRepricingOptions() {
   $('repricing-options').replaceChildren();
@@ -447,7 +488,9 @@ function renderRepricingOptions() {
         hint.textContent = changed ? 'Changed — review before saving.' : 'Current amount retained.';
       }
       input.addEventListener('input',() => { repricingAmounts.set(key,input.value); update(); invalidateRepricing(); });
-      update(); label.append(input,hint); row.append(description,original,label); section.append(row);
+      update(); label.append(input,hint);
+      row.append(description,original,quoteMode() ? quoteValuationEditor(route,paymentIndex,row) : label);
+      section.append(row);
     });
     $('repricing-options').append(section);
   }
@@ -543,7 +586,7 @@ function renderRepricing() {
 async function loadRepricing(version) {
   if (repricingDirty && !window.confirm('Replace the unsaved price change with the selected review’s original payment amounts?')) return false;
   const source = await api('/api/repricing/source',{version});
-  repricingSource = source; repricingAmounts = new Map(); repricingPreview = null; pendingRepricingSave = null;
+  repricingSource = source; repricingAmounts = new Map(); repricingQuoteValuations = new Map(); repricingPreview = null; pendingRepricingSave = null;
   repricingDirty = false; repricingRoutePage = 0;
   repricingEditRevision = Object.hasOwn(source,'repricingRevision') ? source.repricingRevision : current.repricing?.revision ?? null;
   for (const route of source.routes) route.paymentOptions.forEach((option,index) => repricingAmounts.set(paymentKey(route.routeId,index),paymentAmount(option)));
@@ -558,6 +601,21 @@ function repricingPayload() {
   if (!repricingSource) throw new Error('Load a saved pricing review first.');
   if (repricingStale()) throw new Error('Save and load a review of the current seller configuration before changing its amounts.');
   if (repricingSelectionChanged()) throw new Error('Load the selected pricing review before preparing its amounts.');
+  if (quoteMode()) {
+    const quoteValuations=repricingValuations();
+    if (!quoteValuations.length) throw new Error('Select a payment choice and enter its valuation.');
+    const invalid=quoteValuations.find(row=>!/^[1-9][0-9]{0,38}$/.test(row.atomicUnits) ||
+      !/^(0|[1-9][0-9]*)(\.[0-9]{1,6})?$/.test(row.usd) || row.usd.length>64 || row.basis.length<4 || row.basis.length>300);
+    if (invalid) {
+      repricingRoutePage=Math.floor(repricingSource.routes.findIndex(route=>route.routeId===invalid.routeId)/REPRICING_ROUTES_PER_PAGE);
+      renderRepricingOptions();
+      const field=[...document.querySelectorAll('.repricing-valuation-input')].find(input=>
+        input.dataset.routeId===invalid.routeId && Number(input.dataset.paymentIndex)===invalid.paymentIndex && !input.validity.valid);
+      if(field){field.disabled=false;field.reportValidity();}
+      throw new Error('Complete the atomic units, USD value and valuation basis for '+invalid.routeId+', choice '+(invalid.paymentIndex+1)+'.');
+    }
+    return {version:repricingSource.version,sellerSha256:repricingSource.sellerSha256,quoteValuations};
+  }
   const edits = repricingEdits();
   if (!edits.length) throw new Error('Change at least one payment amount before reviewing.');
   const invalid = edits.find(edit=>!/^[1-9][0-9]{0,38}$/.test(edit.amount));
@@ -595,6 +653,28 @@ function renderRepricingTerms(change,expanded = false) {
   if (expanded) { show(); detail.open = true; }
   $('repricing-review-terms').replaceChildren(detail);
 }
+function renderQuoteConversion(conversion) {
+  const target=$('repricing-quote-review');target.replaceChildren();target.hidden=!conversion;
+  if(!conversion)return;
+  target.append(text('h4','Saved quotes and entered valuations'),
+    text('p','Each proposed amount is the smallest whole atomic amount that covers its saved USD quote at your entered valuation.','muted small'));
+  const exact=value=>value.numerator+'/'+value.denominator+' USD';
+  const shown=value=>value.floorUsd===value.ceilingUsd ? money(value.floorUsd) : money(value.floorUsd)+' to '+money(value.ceilingUsd);
+  target.append(table(conversion.rows,[
+    ['Service',identity],['Choice',row=>row.paymentIndex+1],['Saved quote',row=>money(row.quoteUsd)],
+    ['Entered valuation',row=>row.valuation.atomicUnits+' atomic = '+money(row.valuation.usd)],
+    ['Proposed atomic amount',row=>text('code',row.amount)],['Value at entered rate',row=>shown(row.valuedAmountUsd)],
+    ['Valuation and rounding',row=>{
+      const detail=document.createElement('details');detail.append(text('summary','Inspect basis'));
+      detail.append(text('p','Saved quote basis: '+row.quoteBasis),
+        text('p','Entered valuation basis: '+row.valuation.basis),
+        text('p','Exact proposed value: '+exact(row.valuedAmountUsd)),
+        text('p','Exact rounding excess: '+exact(row.roundingExcessUsd)),
+        text('p','Value of one atomic unit: '+exact(row.atomicUnitUsd)));
+      return detail;
+    }]
+  ]));
+}
 function renderRepricingReview(result) {
   repricingPreview = result; pendingRepricingSave = null; $('repricing-review').hidden = false;
   $('repricing-state').textContent = 'Price change reviewed · ready to save';
@@ -606,6 +686,7 @@ function renderRepricingReview(result) {
     ['Payment terms',row=> { const button = text('button','Inspect terms','repricing-term-action'); button.type = 'button';
       button.addEventListener('click',()=>renderRepricingTerms(row,true)); return button; }]]));
   renderRepricingTerms(result.changes[0]);
+  renderQuoteConversion(result.quoteConversion);
   $('repricing-proposed-hash').textContent = result.proposedSellerSha256;
 }
 function payload() {
@@ -676,12 +757,16 @@ $('repricing-source-form').addEventListener('submit',event => { event.preventDef
   if (!$('repricing-source').value) throw new Error('Save a pricing review before preparing a price change.');
   await loadRepricing($('repricing-source').value);
 }); });
+$('repricing-mode').addEventListener('change',()=>{
+  invalidateRepricing();renderRepricingOptions();controls();
+});
 $('repricing-reset').addEventListener('click',() => {
   if (!repricingSource) return;
   for (const route of repricingSource.routes) route.paymentOptions.forEach((option,index) => repricingAmounts.set(paymentKey(route.routeId,index),paymentAmount(option)));
   repricingPreview = null; pendingRepricingSave = null; repricingDirty = false; repricingRoutePage = 0;
+  repricingQuoteValuations = new Map();
   $('repricing-review').hidden = true; $('repricing-state').textContent = 'Loaded · '+repricingSource.label;
-  renderRepricingOptions(); controls(); notice('The selected saved review’s original payment amounts have been restored.');
+  renderRepricingOptions(); controls(); notice('Original payment amounts restored and entered valuations cleared.');
 });
 for (const [id,direction] of [['repricing-previous',-1],['repricing-next',1]]) $(id).addEventListener('click',() => {
   repricingRoutePage += direction; renderRepricingOptions(); controls();
