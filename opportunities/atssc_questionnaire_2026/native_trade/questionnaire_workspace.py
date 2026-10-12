@@ -305,6 +305,8 @@ class Workspace:
                 if not key_path.exists(): self._private_file("operator-key.txt",key+"\n")
             db.commit()
         os.chmod(self.db_path,0o600)
+        from respondent_operations import RespondentOperations
+        self.outreach = RespondentOperations(self)
 
     @contextmanager
     def connection(self):
@@ -351,6 +353,8 @@ class Workspace:
 
     def invoke(self,method,params=None):
         params = params or {}
+        if isinstance(method,str) and method.startswith("outreach."):
+            return self.outreach.invoke(method[len("outreach."):],params)
         function = getattr(self,"op_"+method,None)
         if function is None or not callable(function): raise OperationError("METHOD","Unknown native operation")
         return function(params)
@@ -458,14 +462,19 @@ class Workspace:
             return {"publication_id":key,"questionnaire_id":questionnaire["id"],"definition_version":questionnaire["version"]}
         return self._write("publish",key,{"questionnaire_id":p["questionnaire_id"]},action)
 
+    def _invite_record(self,db,p,key,access):
+        name = str(p.get("name","")).strip()
+        if not name: raise OperationError("NAME","A respondent name is required")
+        self._row(db,"publications",p["publication_id"])
+        db.execute("INSERT INTO respondents VALUES(?,?,?,?,0,NULL,'invited',?)",(key,p["publication_id"],name,digest(access.encode()),now()))
+        return {"respondent_id":key,"publication_id":p["publication_id"],"name":name,"version":0,"access_code":access,"entry_path":"/respondent/"+key}
+
     def op_invite(self,p):
         key,access = identifier(),secrets.token_urlsafe(30)
         name = str(p.get("name","")).strip()
         if not name: raise OperationError("NAME","A respondent name is required")
         def action(db):
-            self._row(db,"publications",p["publication_id"])
-            db.execute("INSERT INTO respondents VALUES(?,?,?,?,0,NULL,'invited',?)",(key,p["publication_id"],name,digest(access.encode()),now()))
-            return {"respondent_id":key,"publication_id":p["publication_id"],"name":name,"version":0,"access_code":access,"entry_path":"/respondent/"+key}
+            return self._invite_record(db,p,key,access)
         result = self._write("invite",key,{"publication_id":p["publication_id"],"name":name},action)
         self._private_file("respondent-"+key+".json",json.dumps(result,ensure_ascii=False,indent=2)+"\n")
         return result
@@ -730,6 +739,8 @@ def receive_project(archive_path,destination,expected_sha256=None):
             os.mkdir(destination,0o700)
             for root in ("application","workspace"):
                 os.rename(temp/root,destination/root)
-    result = Workspace(destination/"workspace").op_status({})
+    received_workspace = Workspace(destination/"workspace")
+    received_workspace.outreach.verify_sources()
+    result = received_workspace.op_status({})
     if result["workspace_id"] != manifest["workspace_id"]: raise OperationError("ARCHIVE","Received native workspace identity changed")
     return {"directory":str(destination),"workspace_id":result["workspace_id"],"integrity":"ok","verified_files":len(manifest["files"]),"sha256":digest(data)}

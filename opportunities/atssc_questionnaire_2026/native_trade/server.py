@@ -6,15 +6,16 @@ import html
 import json
 import secrets
 import time
+import tempfile
 from http.cookies import SimpleCookie
 from http.server import BaseHTTPRequestHandler,ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import parse_qs,urlparse
+from urllib.parse import parse_qs,urlparse,quote
 
 from questionnaire_workspace import OperationError,Workspace
 
 SOURCE = Path(__file__).resolve().parent
-RESPONDENT_METHODS = {"get_respondent","workbook_answers","submit_revision","import_workbook","inspect_workbook"}
+RESPONDENT_METHODS = {"get_respondent","workbook_answers","submit_revision","import_workbook","inspect_workbook","outreach.respondent_contact","outreach.update_respondent_contact"}
 
 
 def main():
@@ -63,6 +64,30 @@ def main():
                 if not self.allowed_host(): return self.send(403,{"error":"Invalid local host"})
                 parsed = urlparse(self.path)
                 path = parsed.path
+                if path == "/respondent-operations/guide":
+                    return self.send(200,(SOURCE/"RESPONDENT_OPERATIONS.md").read_bytes(),"text/plain; charset=utf-8")
+                if path in {"/respondent-operations","/respondent-operations/","/respondent-operations/contact"} or path.startswith("/public/entry/"):
+                    return self.send(200,(SOURCE/"respondent-operations.html").read_bytes(),"text/html; charset=utf-8")
+                if path in {"/respondent-operations.mjs","/respondent-operations.css"}:
+                    return self.send(200,(SOURCE/path[1:]).read_bytes(),"text/javascript; charset=utf-8" if path.endswith(".mjs") else "text/css; charset=utf-8")
+                if path == "/api/outreach/public":
+                    token=parse_qs(parsed.query).get("token",[""])[0]
+                    return self.send(200,workspace.outreach.public_info(token))
+                if path.startswith("/api/outreach/files/"):
+                    record=self.session()
+                    if not record or record["role"]!="operator":return self.send(401,{"error":"Operator session required"})
+                    resource=path.removeprefix("/api/outreach/files/").split("/")
+                    if resource==["project.zip"]:
+                        with tempfile.TemporaryDirectory(prefix="outreach-project-",dir=workspace.directory) as temporary:
+                            result=workspace.outreach.op_export_project({"path":str(Path(temporary)/"ATSSC_Complete_Project.zip")})
+                            raw=Path(result["path"]).read_bytes()
+                        filename,mime="ATSSC_Complete_Project.zip","application/zip"
+                    elif len(resource)==1 and resource[0].startswith("operating."):
+                        raw,filename,mime=workspace.outreach.file_bytes("operating",format_name=resource[0].split(".",1)[1])
+                    elif len(resource)==3 and resource[0] in {"source","message"}:
+                        raw,filename,mime=workspace.outreach.file_bytes(resource[0],resource[1],resource[2])
+                    else:return self.send(404,{"error":"Operating download not found"})
+                    return self.send(200,raw,mime,{"Content-Disposition":"attachment; filename*=UTF-8''"+quote(Path(filename).name,safe=""),"X-Content-SHA256":__import__("hashlib").sha256(raw).hexdigest()})
                 if path in {"/","/operator"} or path.startswith("/respondent/"):
                     return self.send(200,(SOURCE/"index.html").read_bytes(),"text/html; charset=utf-8")
                 if path in {"/app.mjs","/style.css"}:
@@ -94,6 +119,14 @@ def main():
                 length = int(self.headers.get("Content-Length","0"))
                 if not 0 < length <= 90*1024*1024: return self.send(413,{"error":"Request body exceeds the workbook limit"})
                 data = json.loads(self.rfile.read(length))
+                if self.path == "/api/outreach/public-entry":
+                    if length>1024*1024:return self.send(413,{"error":"Registration information exceeds its form limit"})
+                    bucket="public:"+self.client_address[0]
+                    count,expires=failures.get(bucket,(0,0))
+                    if expires<time.time():count,expires=0,time.time()+60
+                    if count>=20:return self.send(429,{"error":"Please try registration again shortly"})
+                    failures[bucket]=(count+1,expires)
+                    return self.send(200,{"result":workspace.outreach.public_enter(data)})
                 if self.path == "/api/session":
                     if failures.get(self.client_address[0],(0,0))[1] > time.time(): return self.send(429,{"error":"Try the access code again shortly"})
                     role = data.get("role")
@@ -115,11 +148,23 @@ def main():
                 method,params = data.get("method"),data.get("params",{})
                 if record["role"] == "respondent":
                     if method not in RESPONDENT_METHODS: return self.send(403,{"error":"This operation requires the operator"})
-                    if method in {"get_respondent","workbook_answers","submit_revision"}:
+                    if method in {"get_respondent","workbook_answers","submit_revision","outreach.respondent_contact","outreach.update_respondent_contact"}:
                         if params.get("respondent_id") != record["respondent_id"]: return self.send(403,{"error":"Open this respondent's own record"})
                     if method in {"inspect_workbook","workbook_answers"} and params.get("sha256") not in record["workbooks"]: return self.send(403,{"error":"Use an original workbook uploaded in this session"})
                     if method == "submit_revision" and params.get("workbook_sha256") and params["workbook_sha256"] not in record["workbooks"]: return self.send(403,{"error":"Upload this respondent's own workbook before submitting"})
                 result = workspace.invoke(method,params)
+                if method in {"submit_revision","review_revision"}:
+                    profile=workspace.outreach.op_status({}).get("profile") or {}
+                    if profile.get("automatic_notifications"):
+                        try:
+                            trigger=(result.get("review_id") if method=="review_revision" else result.get("revision_id")) or __import__("hashlib").sha256(json.dumps(result,sort_keys=True).encode()).hexdigest()
+                            notices=workspace.outreach.op_sync_notifications({"request_id":"native-notices:"+method+":"+trigger,
+                                "actor":"original questionnaire response","reason":"Prepare configured notices from the committed original response",
+                                "automatic":True,"expected_revision":workspace.outreach.op_status({})["revision"]})
+                            result={**result,"notifications":notices}
+                        except Exception as notice_error:
+                            result={**result,"notifications":{"state":"REVIEW","code":getattr(notice_error,"code","REQUEST"),
+                                "message":str(notice_error),"continuation":"Run original response notification synchronization after reviewing its settings."}}
                 if method == "import_workbook": record["workbooks"].add(result["sha256"])
                 return self.send(200,{"result":result})
             except Exception as e:
