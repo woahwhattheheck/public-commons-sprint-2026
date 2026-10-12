@@ -195,6 +195,10 @@ export function createSupplierController({container,api,perform,host,notice,elem
     if(review.recipient){
       formats.push(['recipient.jsonl','Complete recipient state (JSONL)'],['impact.csv','Recipient effects (CSV)']);
       if(!counts.errors&&counts.total)formats.push(['xchange.json','ETIM xChange delivery (JSON)']);
+      if(review.plan.profile.target==='2ba-xchange-2.0'&&review.plan.profile.processing){
+        formats.push(['parameters.xml','2BA processing parameters (XML)']);
+        if(!counts.errors&&counts.total)formats.push(['2ba.zip','Complete 2BA upload package (ZIP)']);
+      }
     }
     for(const [format,label]of formats)$('exports').append(element('a',label,{href:'/api/catalog/supplier/export?'+new URLSearchParams({
       reviewId:review.id,expectedReviewSha256:review.sha256,format})}));
@@ -227,6 +231,7 @@ export function createSupplierController({container,api,perform,host,notice,elem
   function choosePath(path){
     if(!path||path==='/')return;
     if(path==='/profile'||path.startsWith('/profile/')||path==='/submission'||path.startsWith('/submission/')){
+      if(xchange.focusSetting(path)){notice('Update the selected 2BA processing choice, then save and review this submission.');return;}
       const fields={'/profile/languages':'languages','/profile/countries':'countries',
         '/profile/defaultLanguage':'language','/profile/role':'role',
         '/profile/envelope/supplier/name':'supplier-name','/profile/envelope/buyer/name':'buyer-name',
