@@ -7,6 +7,15 @@ recover original results, download saved resources and complete original purchas
 accounting with retained receipts and an accounting CSV. It uses the existing
 runbook engine and original SF88 command for every operation.
 
+## Set up a receiving host
+
+A new receiving workspace can start with only `--state`; it creates its private
+configuration directory automatically. Open **Local buyer setup** to configure,
+review and save this host’s original operator preset. Earlier versions can be
+restored or downloaded, and the page shows effects on pending reviews while
+prepared buyers keep their original ledgers. See [OPERATOR_SETUP.md](OPERATOR_SETUP.md)
+for first setup, exact-byte legacy adoption and CLI operation.
+
 ## Start with original buyer configurations
 
 Prepare complete SF88 configs using the existing buyer onboarding or merchant
@@ -85,11 +94,13 @@ node stellar/scf-starforge-20261009/buyer-runbook/cli.mjs workspace \
   --operator-settings /private/acquisitions/local-operator.json
 ```
 
-The settings path is retained and may be omitted on reopen. An existing workspace
-can attach its first local settings file with the same flag. Its selected config
-directory and settings path remain fixed. Changes to the contents of that local
-preset require a new review before preparing a request; already prepared buyers
-keep their original local policy and identity.
+The declared settings path is retained and may be omitted on reopen. An existing
+workspace can attach its first local settings file with the same flag. **Local
+buyer setup** can adopt its exact bytes into the workspace, then retain selected
+preset revisions without changing the external file. The configuration directory
+and original declaration stay fixed. A different selected preset requires a
+current request review before preparation; prepared buyers keep their original
+local policy and identity. See [OPERATOR_SETUP.md](OPERATOR_SETUP.md).
 
 1. Choose **Receive merchant request** and upload the original complete file
    within the packet limit shown by the receiver. The workspace retains its exact bytes privately. Uploading that
@@ -117,10 +128,13 @@ live terms and terminal approval when the acquisition executes. Each received
 stable intent is bound to one local prepared request. The workspace publishes
 the ordinary source config only after native setup is complete, and records the
 ready reference last. Repeating preparation after an interrupted final publication
-adopts that same completed operator and ledger. An incomplete native attempt whose
-saved review still matches resumes its original setup generation, including the
-original private inputs, keys and spending ledger. Changed retained inputs report
-their native mismatch before setup continues. A new review has its own generation.
+adopts that same completed operator and ledger. An incomplete native attempt resumes its original setup generation from the
+complete preset bytes retained before initialization, including when the active
+host settings have changed. Its original private inputs, keys and spending ledger
+remain attached to that generation. Older attempts can adopt actual matching
+preset bytes from the current declaration or saved host versions. Changed retained
+inputs report their native mismatch before setup continues. Existing distinct
+request reviews retain their original generation identities.
 
 Received source configs reference the private intake and native operator files
 under this workspace. Keep that workspace and the original source directory at

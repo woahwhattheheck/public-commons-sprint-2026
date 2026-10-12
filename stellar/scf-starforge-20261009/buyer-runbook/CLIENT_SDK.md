@@ -26,8 +26,13 @@ payment terms are reviewed later by the original buyer.
 
 ## Open the original workspace
 
-Use the same private configuration directory and local operator preset described
-in [WORKSPACE.md](WORKSPACE.md#receive-a-private-merchant-request):
+A new customer can start with only `--state`, then use **Local buyer setup** to
+save the original host fields. The workspace creates its private configuration
+directory when `--configs` is omitted. [OPERATOR_SETUP.md](OPERATOR_SETUP.md)
+covers saved versions, exact-byte legacy adoption and native recovery.
+
+Existing deployments can keep their private configuration directory and launcher
+preset as described in [WORKSPACE.md](WORKSPACE.md#receive-a-private-merchant-request):
 
 ```sh
 node stellar/scf-starforge-20261009/buyer-runbook/cli.mjs workspace \

@@ -97,10 +97,10 @@ export async function receiveNdjsonApplications(config, { onProgress = () => {} 
       for (;;) {
         const item = await application();
         if (accept(item)) return item;
-        const interrupted = item.phase === 'INTERRUPTED' || item.adoption?.phase === 'INTERRUPTED';
         const operation = item.current ?? item.adoption;
-        const alive = item.current?.state ? await managedCommandAlive(item.current.state) : false;
-        if (interrupted && !alive && operation && recover && !attempted.has(operation.id)) {
+        const recoverable = operation && ['PENDING', 'QUEUED', 'INTERRUPTED'].includes(operation.phase);
+        const alive = operation?.state ? await managedCommandAlive(operation.state) : false;
+        if (recoverable && !operation.active && !alive && recover && !attempted.has(operation.id)) {
           attempted.add(operation.id); await recover(item); continue;
         }
         need(!['FAILED', 'UNAVAILABLE'].includes(item.phase) &&
@@ -152,7 +152,8 @@ export async function receiveNdjsonApplications(config, { onProgress = () => {} 
         if (!selected.runs.some(item => item.id === pass.requestId))
           await model.applicationsStart({ applicationId: journal.applicationId,
             requestId: pass.requestId, reviewId: pass.reviewId });
-        else if (selected.current?.phase === 'INTERRUPTED') await recover();
+        else if (['PENDING', 'QUEUED', 'INTERRUPTED'].includes(selected.current?.phase) &&
+          !selected.current.active) await recover();
         const active = await waitFor(item => item.current?.id === pass.requestId &&
           Boolean(item.current.privateUrl), recover);
         const url = new URL(active.current.privateUrl);

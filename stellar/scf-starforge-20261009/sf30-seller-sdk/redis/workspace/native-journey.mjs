@@ -34,7 +34,9 @@ export async function runRedisWorkspaceJourney({sourceFile,planFile,root,runtime
       stages.push({kind:'preview',query:name,rows:operation.result.data.rowCount});
     }
     if(process.env.SF30_REDIS_WORKSPACE_BROWSER==='1'){
-      const {chromium}=await import(process.env.SF30_PLAYWRIGHT_MODULE??'playwright');
+      const playwright=await import(process.env.SF30_PLAYWRIGHT_MODULE??'playwright');
+      const chromium=playwright.chromium??playwright.default?.chromium;
+      assert.equal(typeof chromium?.launch,'function','The selected Playwright module must expose Chromium.');
       browser=await chromium.launch({headless:true,args:['--no-sandbox'],
         ...(process.env.SF30_CHROMIUM_EXECUTABLE?{executablePath:process.env.SF30_CHROMIUM_EXECUTABLE}:{})});
       const page=await browser.newPage({viewport:{width:1440,height:1000}}),issues=[];
