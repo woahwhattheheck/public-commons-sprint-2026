@@ -2,10 +2,11 @@
 import {readdir,lstat,mkdir,rename,rm,readFile} from 'node:fs/promises';
 import {join,resolve,dirname,relative,sep} from 'node:path';
 import {createHash,randomUUID} from 'node:crypto';
-import {jsonBytes,readOwned,writeNew,privateDirectory,syncDir,openWorkspaceStore} from '../stellar-expert/store.mjs';
+import {stable,jsonBytes,readOwned,writeNew,privateDirectory,syncDir,openWorkspaceStore} from '../stellar-expert/store.mjs';
 import {WORKSPACE_SCHEMA} from './schema.mjs';
 import {TABLE_COLUMNS,displayRow,formatMinor,fault} from './domain.mjs';
 import {zipEntries,readZip,archivePath} from './zip.mjs';
+import {restoreNativePublishers} from './relocation.mjs';
 const TRANSFER='stellar-forge.openfema-workspace-transfer.v1';
 const digest=bytes=>createHash('sha256').update(bytes).digest('hex');
 const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -40,8 +41,8 @@ export async function workspaceArchive(store){
   const current=JSON.parse(records.find(x=>x.path==='workspace.json')?.bytes.toString('utf8')??'null');
   if(current?.workspaceId!==before.workspaceId||current.revision!==before.revision)throw fault('OPENFEMA_TRANSFER_CHANGED','The original workspace state changed.',409);
   const manifest={schema:TRANSFER,workspaceSchema:WORKSPACE_SCHEMA,workspaceId:before.workspaceId,revision:before.revision,originalDirectory:store.root,createdAt:new Date().toISOString(),files:records.map(({path,bytes,sha256})=>({path,bytes:bytes.length,sha256})),
-    receiving:{command:'openfema restore --archive FILE --workspace NEW_ABSOLUTE_PRIVATE_DIRECTORY',nativePublication:'Original native publisher, release, customer and source files are included. Restore records the new filesystem location; archived releases retain their original immutable dataset binding. Prepare a new release from a retained dataset when publishing from the restored directory.',inbox:'Customer bytes remain readable offline. Select the original customer inbox when continuing an acquisition.'}};
-  const readme='# OpenFEMA complete workspace\n\nThis archive contains every retained source page, metadata and field dictionary, source edition, portfolio version, analyst decision, dataset, original publisher, release package, and received customer file.\n\nRestore into a NEW private directory with the original installed command:\n\n    openfema restore --archive OpenFEMA_Complete_Workspace.zip --workspace /absolute/private/new-workspace\n\nOpen the returned workspace with openfema-workspace. The operator preserves the original workspace identity and its source history. Native draft stores are adopted through their maintained recovery API when the directory changes. Historical release bindings remain original; the publication screen prepares a new native release for the restored location.\n\nOpenFEMA_Workspace_Manifest.json lists the exact SHA-256 and length of every original file. Runtime locks and process sockets are re-created by the original engines.\n';
+    receiving:{command:'openfema restore --archive FILE --workspace NEW_ABSOLUTE_PRIVATE_DIRECTORY',nativePublication:'Original native publisher, release, customer and source files are included. Restore adopts the original dataset publisher at its new location and stages corresponding releases with that location. Select a restored release to activate it; prior releases and their selection history remain intact.',inbox:'Customer bytes remain readable offline. Select the original customer inbox when continuing an acquisition.'}};
+  const readme='# OpenFEMA complete workspace\n\nThis archive contains every retained source page, metadata and field dictionary, source edition, portfolio version, analyst decision, dataset, original publisher, release package, and received customer file.\n\nRestore into a NEW private directory with the original installed command:\n\n    openfema restore --archive OpenFEMA_Complete_Workspace.zip --workspace /absolute/private/new-workspace\n\nOpen the returned workspace with openfema-workspace. The operator preserves the original workspace identity and its source history. Native draft stores are adopted through their maintained recovery API when the directory changes. Each retained release is staged again with its original dataset, source, payment terms and runtime at the restored location. Select the restored release in Publication to activate it. Historical releases and selection history remain intact. If receiving was interrupted, repeat the same restore command with this exact archive and directory to continue.\n\nOpenFEMA_Workspace_Manifest.json lists the exact SHA-256 and length of every original file. Runtime locks and process sockets are re-created by the original engines.\n';
   return {name:'OpenFEMA_Complete_Workspace.zip',type:'application/zip',manifest,bytes:zipEntries([{path:'OpenFEMA_Workspace_Manifest.json',bytes:jsonBytes(manifest)},{path:'START_HERE.md',text:readme},...records.map(r=>({path:'workspace/'+r.path,bytes:r.bytes}))])};
 }
 export function inspectWorkspaceArchive(bytes){
@@ -63,47 +64,62 @@ export function inspectWorkspaceArchive(bytes){
 async function absent(path){try{await lstat(path);return false;}catch(error){if(error.code==='ENOENT')return true;throw error;}}
 export async function restoreWorkspaceArchive({bytes,directory}={}){
   const transfer=inspectWorkspaceArchive(bytes),target=resolve(directory??'');
-  if(typeof directory!=='string'||!directory.startsWith('/')||target!==directory||!(await absent(target)))throw fault('OPENFEMA_RESTORE_TARGET','Choose a new absolute directory for this complete workspace.');
+  if(typeof directory!=='string'||!directory.startsWith('/')||target!==directory||target==='/'||target.includes('\0')||target===transfer.manifest.originalDirectory)throw fault('OPENFEMA_RESTORE_TARGET','Choose a distinct absolute private directory for this complete workspace.');
   await privateDirectory(dirname(target));
-  const staging=join(dirname(target),'.openfema-receiving-'+randomUUID()),plan={schema:'stellar-forge.openfema-workspace-relocation.v1',sourceManifestSha256:transfer.manifestSha256,archiveSha256:transfer.archiveSha256,workspaceId:transfer.manifest.workspaceId,from:transfer.manifest.originalDirectory,to:target};
-  await mkdir(staging,{mode:0o700});let moved=false;
+  const plan={schema:'stellar-forge.openfema-workspace-relocation.v1',sourceManifestSha256:transfer.manifestSha256,archiveSha256:transfer.archiveSha256,workspaceId:transfer.manifest.workspaceId,from:transfer.manifest.originalDirectory,to:target};
+  const journalName='receiving-'+transfer.archiveSha256+'.json';
+  let staging=null,moved=false,store;
   try{
-    for(const entry of transfer.manifest.files){
-      const destination=join(staging,entry.path);
-      await mkdir(dirname(destination),{recursive:true,mode:0o700});
-      await writeNew(destination,transfer.entries.get('workspace/'+entry.path));
-    }
-    await writeNew(join(staging,'receiving-'+transfer.archiveSha256+'.json'),jsonBytes({...plan,receivedAt:new Date().toISOString()}));
-    // Publication stays inert during receiving. Exact original content is present
-    // before the directory becomes the selected workspace.
-    await rename(staging,target);moved=true;await syncDir(dirname(target));
-    const relocations=[];
-    if(target!==transfer.manifest.originalDirectory){
-      const {openPublisherDrafts}=await import('../dataset-refresh/workspace-state.mjs');
-      for(const dataset of transfer.state.datasets??[]){
-        const relativePublisher=dataset.relativePublisherDirectory??dataset.relativeDirectory+'/publisher';
-        if(!/^datasets\/dataset-[a-f0-9]{24}\/publisher$/.test(relativePublisher))throw fault('OPENFEMA_RESTORE_PUBLISHER','The retained publisher directory changed.');
-        const publisherRoot=join(target,relativePublisher),draftDirectory=join(publisherRoot,'drafts'),draftStatePath=join(draftDirectory,'workspace.json');
-        if(await absent(draftStatePath))continue;
-        const draftState=JSON.parse((await readOwned(draftStatePath,4*1024*1024)).toString('utf8')),datasetDirectory=join(publisherRoot,'dataset'),datasetStatePath=join(datasetDirectory,'state.json');
-        if(await absent(datasetStatePath))continue;
-        const datasetState=JSON.parse((await readOwned(datasetStatePath,262144)).toString('utf8'));
-        if(draftState.datasetDirectory===datasetDirectory)continue;
-        const native=await openPublisherDrafts({datasetDirectory:draftState.datasetDirectory,directory:draftDirectory});
-        try{
-          const nativePlan={...plan,datasetId:dataset.id,expectedDirectory:draftState.datasetDirectory,datasetDirectory,expectedRevision:draftState.revision,expectedSnapshot:datasetState.current,expectedDatasetRevision:datasetState.revision};
-          const sourcePlanSha256=digest(jsonBytes(nativePlan));
-          relocations.push(await native.adoptDatasetDirectory({...nativePlan,sourceManifestSha256:transfer.manifestSha256,sourcePlanSha256,operationId:digest(jsonBytes({kind:'native-publisher-adoption',sourcePlanSha256}))}));
-        }finally{await native.close();}
+    if(await absent(target)){
+      staging=join(dirname(target),'.openfema-receiving-'+randomUUID());
+      await mkdir(staging,{mode:0o700});
+      for(const entry of transfer.manifest.files){
+        const destination=join(staging,entry.path);
+        await mkdir(dirname(destination),{recursive:true,mode:0o700});
+        await writeNew(destination,transfer.entries.get('workspace/'+entry.path));
       }
+      await writeNew(join(staging,journalName),jsonBytes({...plan,receivedAt:new Date().toISOString()}));
+      await syncDir(staging);
+      await rename(staging,target);moved=true;await syncDir(dirname(target));
+    }else{
+      await privateDirectory(target);
+      let journal;
+      try{journal=JSON.parse((await readOwned(join(target,journalName),262144)).toString('utf8'));}
+      catch(error){if(error.code==='ENOENT')throw fault('OPENFEMA_RESTORE_TARGET','This directory belongs to another operation. Use a new directory or the exact archive originally received here.',409);throw error;}
+      if(Object.entries(plan).some(([key,value])=>journal[key]!==value))throw fault('OPENFEMA_RESTORE_IDENTITY','Continue with this directory’s original archive and receiving identity.',409);
+      moved=true;
     }
-    const store=await openWorkspaceStore(target,{schema:WORKSPACE_SCHEMA});
-    try{await store.mutate(s=>{s.restoredFrom={...plan,receivedAt:new Date().toISOString(),nativePublisherRelocations:relocations.length};});}
-    finally{await store.close();}
-    return {...plan,directory:target,files:transfer.manifest.files.length,nativePublisherRelocations:relocations.length,workspaceId:transfer.manifest.workspaceId};
+    // The kernel workspace lease covers every native adoption and the single
+    // additive index commit, including resumption after an interrupted receive.
+    store=await openWorkspaceStore(target,{schema:WORKSPACE_SCHEMA});
+    const current=store.read(),completed=current.restoredFrom;
+    if(current.workspaceId!==plan.workspaceId)throw fault('OPENFEMA_RESTORE_IDENTITY','The receiving directory belongs to another workspace.',409);
+    if(completed?.archiveSha256===plan.archiveSha256&&completed.to===target&&completed.sourceManifestSha256===plan.sourceManifestSha256&&completed.complete===true)
+      return {...completed.receiving,reused:true,currentRevision:current.revision};
+    if(stable(current)!==stable(transfer.state))throw fault('OPENFEMA_RESTORE_CHANGED','The receiving workspace changed before its original restore completed. Reopen its original receiving operation.',409);
+    const sourceFiles=new Map(transfer.manifest.files.map(entry=>[entry.path,transfer.entries.get('workspace/'+entry.path)]));
+    const native=await restoreNativePublishers({directory:target,originalDirectory:transfer.manifest.originalDirectory,workspaceId:plan.workspaceId,archiveSha256:plan.archiveSha256,manifestSha256:plan.sourceManifestSha256,sourceFiles});
+    const receivedAt=new Date().toISOString(),result={...plan,directory:target,files:transfer.manifest.files.length,receivedAt,
+      nativePublisherRelocations:native.publisherRelocations.length,restagedReleases:native.releases.length,
+      nativeRestorationPlanSha256:native.planSha256,releaseMappings:native.releaseMappings,workspaceId:plan.workspaceId};
+    await store.mutate(s=>{
+      for(const release of native.releases){
+        const existing=s.releases.find(r=>r.id===release.id);
+        if(existing&&stable(existing)!==stable(release))throw fault('OPENFEMA_RESTORE_RELEASE_CHANGED','The restored release identity belongs to different inputs.',409);
+        if(!existing)s.releases.push(release);
+      }
+      if(s.restoredFrom){
+        s.restorationHistory??=[];
+        if(!s.restorationHistory.some(r=>r.archiveSha256===s.restoredFrom.archiveSha256&&r.to===s.restoredFrom.to))s.restorationHistory.push(s.restoredFrom);
+      }
+      s.restoredFrom={...plan,complete:true,receivedAt,nativePublisherRelocations:native.publisherRelocations.length,
+        nativeRestorationPlanSha256:native.planSha256,releaseMappings:native.releaseMappings,
+        publisherRelocations:native.publisherRelocations,selections:native.selections??[],receiving:result};
+    });
+    return {...result,reused:false,currentRevision:store.read().revision};
   }catch(error){
-    if(!moved)await rm(staging,{recursive:true,force:true});
-    else error.receivingDirectory=target;
+    if(!moved&&staging)await rm(staging,{recursive:true,force:true});
+    else if(moved)error.receivingDirectory=target;
     throw error;
-  }
+  }finally{await store?.close();}
 }
