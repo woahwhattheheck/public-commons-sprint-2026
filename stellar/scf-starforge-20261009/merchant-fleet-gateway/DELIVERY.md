@@ -4,6 +4,25 @@ The fleet now connects each original SF82 merchant to the existing SF98 outbox a
 
 The browser, foreground fleet CLI and merchant MCP operate the same retained store. The original destination engine performs synchronization, HMAC signing, delivery, pause/resume, maintenance and worker ownership.
 
+## Installed product registration
+
+The source-owned [sf98-managed-delivery contribution](../distribution/contributions/sf98-managed-delivery.json) adds the three maintained delivery interfaces to the original package. The existing components include the native producer, release binding, fleet browser assets, destination application, accounting receiver and SF101 receiving source.
+
+Inspect the original installed registration with:
+
+~~~sh
+starforge registrations --source sf98-managed-delivery
+starforge registrations --command delivery-destinations
+~~~
+
+| Package export | Maintained interface |
+| --- | --- |
+| @tokenjunkielabs/starforge-merchant/seller/delivery/native | Original resource-server settlement binding |
+| @tokenjunkielabs/starforge-merchant/seller/releases/delivery | Retained release source, destination workspace and exchange |
+| @tokenjunkielabs/starforge-merchant/merchant/fleet/delivery | Declared tenant/slot delivery desk and original file receiving |
+
+The existing fleet-release, merchant-fleet-workspace, merchant-mcp, delivery-destinations and merchant-accounting-workspace commands open the same native interfaces. The original distribution builder composes this contribution with other source-owned registrations and records its exact Git blob in the installed manifest.
+
 ## Start from the existing fleet
 
 Use the original fleet bootstrap and declared source aliases described in [BOOTSTRAP.md](BOOTSTRAP.md). Then open its managed workspace:
