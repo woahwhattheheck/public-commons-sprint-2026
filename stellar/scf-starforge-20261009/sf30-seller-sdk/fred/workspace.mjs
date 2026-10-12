@@ -9,7 +9,7 @@ import { Buyer } from '../../sf88-operator-buyer-cli/node/index.mjs';
 import { need, inspectCapture, MAX_CAPTURE_BYTES, operationId } from './model.mjs';
 import { jsonBytes } from './source.mjs';
 import { readFredProject, fredProjectView, getFredCapture, configureFredProject, importFredCapture, acquireFredCapture,
-  selectFredCapture, reviewFredCapture, compareFredCaptures, publishFredReview, exportFredProject,
+  selectFredCapture, combineFredTables, reviewFredCapture, compareFredCaptures, publishFredReview, exportFredProject,
   selectFredPublication, abandonFredOperation } from './project.mjs';
 import { startFredMerchant, readFredMerchant, prepareFredPurchase, executeFredPurchase,
   recoverFredPurchase, exportFredPurchase } from './merchant.mjs';
@@ -58,6 +58,7 @@ export async function startFredWorkspace({ directory, port = 0, buyerConfig, env
       case 'configure': return configureFredProject({ ...common, selection: request.selection });
       case 'capture': return acquireFredCapture({ ...common, environment, signal: abort.signal });
       case 'import': return importFredCapture({ ...common, capture: request.capture });
+      case 'combine': return combineFredTables({ ...common, captureIds: request.captureIds });
       case 'select': return selectFredCapture({ ...common, captureId: request.captureId });
       case 'review': return reviewFredCapture({ ...common, captureId: request.captureId, policy: request.policy, note: request.note });
       case 'publish': return publishFredReview({ ...common, reviewId: request.reviewId, origin: request.origin, path: request.path, payment: request.payment });

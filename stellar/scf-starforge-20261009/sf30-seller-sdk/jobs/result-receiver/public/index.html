@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Job results · Starforge</title>
+  <link rel="stylesheet" href="/style.css">
+  <script type="module" src="/app.mjs"></script>
+</head>
+<body>
+<header class="masthead">
+  <div><p class="eyebrow">Starforge / Customer operations</p><h1>Job results</h1>
+    <p class="muted">Receive, inspect and keep completed output from your paid jobs.</p></div>
+  <button id="lock" type="button" hidden>Lock workspace</button>
+</header>
+<main>
+  <p id="notice" role="status" aria-live="polite" hidden></p>
+  <section id="access-panel" class="panel access" aria-labelledby="access-heading">
+    <h2 id="access-heading">Open the customer desk</h2>
+    <p>Use the private operator link printed by the receiver, or enter its access token below.</p>
+    <form id="access-form"><label for="access-token">Operator access token</label>
+      <div class="inline"><input id="access-token" type="password" autocomplete="off" required minlength="32" spellcheck="false">
+        <button type="submit" class="primary">Open desk</button></div>
+    </form>
+    <p class="muted small">Access lasts for this browser tab. The receiving endpoint runs separately.</p>
+  </section>
+  <div id="workspace" hidden>
+    <section class="panel" aria-labelledby="destination-heading">
+      <div class="section-head"><h2 id="destination-heading">Receiving destination</h2><button id="refresh" type="button">Refresh</button></div>
+      <div class="status-grid">
+        <div><span class="label">Destination</span><strong id="destination-id"></strong><p id="destination-url" class="mono wrap"></p></div>
+        <div><span class="label">Stored results</span><strong id="total-results" class="number">0</strong></div>
+        <div><span class="label">Receiving now</span><strong id="receiving-count" class="number">0</strong></div>
+        <div><span class="label">Maximum result</span><strong id="max-bytes"></strong></div>
+      </div>
+      <p id="recovery" class="muted small" hidden></p>
+    </section>
+    <div class="columns">
+      <section class="panel results-panel" aria-labelledby="results-heading">
+        <div class="section-head"><h2 id="results-heading">Stored output</h2><span id="page-label" class="muted small"></span></div>
+        <label for="filter">Filter this page</label>
+        <input id="filter" type="search" placeholder="Job, function or filename" autocomplete="off">
+        <div class="table-scroll"><table>
+          <thead><tr><th scope="col">Job / function</th><th scope="col">Result</th><th scope="col">Received</th></tr></thead>
+          <tbody id="rows"></tbody>
+        </table></div>
+        <p id="empty" class="muted">No results have arrived yet.</p>
+        <div class="pagination"><button id="previous" type="button" disabled>Previous</button><button id="next" type="button" disabled>Next</button></div>
+      </section>
+      <section class="panel detail-panel" aria-labelledby="detail-heading">
+        <h2 id="detail-heading">Result details</h2>
+        <p id="select-prompt" class="muted">Select an output to inspect its metadata, verify its bytes or download the original file.</p>
+        <div id="detail" hidden>
+          <p class="label">Original filename</p><h3 id="filename" class="wrap"></h3>
+          <div class="actions"><button id="download" type="button" class="primary">Download result</button><button id="verify" type="button">Verify stored bytes</button></div>
+          <p id="verification" role="status" class="small" hidden></p>
+          <dl id="fields" class="metadata"></dl>
+          <section class="preview-section" aria-labelledby="preview-heading"><h3 id="preview-heading">Text preview</h3>
+            <p id="preview-caption" class="muted small"></p><pre id="preview" tabindex="0" hidden></pre></section>
+          <details><summary>Delivery manifest</summary><pre id="manifest" tabindex="0"></pre></details>
+          <div class="actions"><button id="download-manifest" type="button">Download manifest</button><button id="download-receipt" type="button">Download receipt</button></div>
+        </div>
+      </section>
+    </div>
+    <section class="panel" aria-labelledby="merchants-heading">
+      <h2 id="merchants-heading">Accepted merchants</h2>
+      <p class="muted small">Incoming results must match one of these configured merchant identities.</p>
+      <ul id="merchants" class="merchant-list"></ul>
+    </section>
+  </div>
+</main>
+<footer>Starforge job result receiver <span>Private customer desk</span></footer>
+</body>
+</html>

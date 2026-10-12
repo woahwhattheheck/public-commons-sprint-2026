@@ -147,8 +147,8 @@ export async function readPackage(directory, { expectedPlanSha256, expectedManif
 }
 export function operatorTarget(value, tokenEnvironment, env = process.env) {
   let url; try { url = new URL(value); } catch { throw error('BLOCKSCOUT_DESK_URL_INVALID'); }
-  if (url.protocol !== 'http:' || !['127.0.0.1', 'localhost'].includes(url.hostname) || !url.port ||
-      Number(url.port) > 65535 || url.username || url.password || url.search || url.pathname !== '/') throw error('BLOCKSCOUT_DESK_URL_INVALID');
+  if (url.protocol !== 'http:' || !['127.0.0.1', 'localhost'].includes(url.hostname) ||
+      Number(url.port || 80) < 1 || Number(url.port || 80) > 65535 || url.username || url.password || url.search || url.pathname !== '/') throw error('BLOCKSCOUT_DESK_URL_INVALID');
   if (url.hash && tokenEnvironment !== undefined) throw error('BLOCKSCOUT_DESK_TOKEN_SELECTION_AMBIGUOUS');
   if (tokenEnvironment !== undefined && !/^[A-Z_][A-Z0-9_]{0,79}$/.test(tokenEnvironment)) throw error('BLOCKSCOUT_DESK_TOKEN_ENV_INVALID');
   const token = url.hash ? url.hash.slice(1) : env[tokenEnvironment];
@@ -299,3 +299,4 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     ...(e.currentAttempt ? { currentAttempt: e.currentAttempt } : {}) }));
   process.exitCode = e.code === 'BLOCKSCOUT_RECONCILIATION_REVISION_CHANGED' ? 3 : 1;
 });
+
