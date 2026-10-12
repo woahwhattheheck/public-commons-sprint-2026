@@ -42,13 +42,24 @@
 <label>Installed runtime<select id="application-runtime" required></select></label>
 <label>Merchant label<input id="application-label" type="text" maxlength="120" required></label>
 <label>Private merchant state<input id="merchant-state" type="text" required></label>
+<label>Deployment mode<select id="application-mode"><option value="paid">Paid service</option><option value="challenge-only">Challenge-only first deployment</option></select></label>
 <label>Facilitator URL<input id="facilitator" type="url" required placeholder="https://your-facilitator.example"></label>
 <label>Private environment JSON file<input id="environment-file" type="text" placeholder="/private/merchant-environment.json"></label>
 <label>Merchant port<input id="merchant-port" type="number" min="0" max="65535" value="0" required></label>
 <label>Operations port<input id="operations-port" type="number" min="0" max="65535" value="0" required></label>
 <label>Provider desk port<input id="desk-port" type="number" min="0" max="65535" value="0" required></label>
 <label>Drain grace, milliseconds<input id="drain-grace" type="text" value="60000" pattern="[0-9]+" required></label>
-</div><label class="check"><input id="allow-local" type="checkbox">Use the original local development facilitator at http://127.0.0.1</label><p class="muted">Port 0 selects an available local port. Keep the account's merchant state for restart and recovery.</p><button type="submit">Review merchant application</button></fieldset></form>
+</div><label class="check"><input id="allow-local" type="checkbox">Use the original local development facilitator at http://127.0.0.1</label><p class="muted">Port 0 selects an available local port. Challenge-only opens the real unpaid routes and private desk before provider credentials and a facilitator are configured. Keep the account's merchant state for paid activation and recovery.</p><button type="submit">Review merchant application</button></fieldset></form>
+<form id="deployment-form" hidden><fieldset><legend>Review deployment of the same merchant</legend>
+<div id="deployment-original"></div><p>Stop or reconcile the current run first. The reviewed change retains this application's package, runtime and provider account state.</p>
+<div class="grid">
+<label>Selected deployment mode<select id="deployment-mode"><option value="paid">Paid service</option><option value="challenge-only">Challenge-only</option></select></label>
+<label>Facilitator URL<input id="deployment-facilitator" type="url" placeholder="https://your-facilitator.example"></label>
+<label>Private environment JSON file<input id="deployment-environment-file" type="text" placeholder="/private/merchant-environment.json"></label>
+</div><label class="check"><input id="deployment-allow-local" type="checkbox">Use the original local development facilitator at http://127.0.0.1</label>
+<p class="muted">The environment file supplies provider credentials on the host. An empty field uses the current process environment. Paid mode requires a facilitator.</p>
+<div class="actions"><button type="submit" id="review-deployment">Review deployment change</button><button type="button" id="cancel-deployment">Close deployment form</button></div>
+</fieldset></form>
 <div id="application-review" hidden><h3>Application review</h3><div id="application-review-summary"></div><button type="button" id="save-application">Save in Applications</button></div>
 <div id="launch-review" hidden><h3>Review original launch</h3><div id="launch-review-summary"></div><button type="button" id="start-application">Start original merchant</button></div>
 <h3>Saved merchant applications</h3><div id="applications-list"></div><div id="application-output" hidden><h3>Original operation output</h3><pre id="output-text"></pre></div>

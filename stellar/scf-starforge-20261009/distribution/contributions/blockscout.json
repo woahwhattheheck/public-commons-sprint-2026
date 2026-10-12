@@ -1,7 +1,7 @@
 {
   "schema": "stellar-forge.merchant-distribution-contribution.v1",
   "id": "blockscout",
-  "description": "Blockscout token merchants, reviewed provider connections and original account operations",
+  "description": "Blockscout provider connections, challenge-only deployment and reviewed paid activation of the same merchant",
   "applicationProviders": {
     "blockscout": "stellar/scf-starforge-20261009/distribution/runtime-workspace/providers/blockscout.mjs"
   },
@@ -10,8 +10,8 @@
     "blockscout-connections": "stellar/scf-starforge-20261009/partners/blockscout-stellar-pro-api/connection-workspace/cli.mjs"
   },
   "commandDescriptions": {
-    "blockscout": "Review provider connections; prepare, receive and operate the original token-information merchant",
-    "blockscout-connections": "Review, receive and reopen private Blockscout connections; launch the saved merchant through Applications"
+    "blockscout": "Prepare, receive and operate the original token merchant in reviewed challenge-only or paid mode",
+    "blockscout-connections": "Review provider connections and activate the same saved merchant through Applications"
   },
   "exports": {
     "./partners/blockscout": "./source/stellar/scf-starforge-20261009/partners/blockscout-stellar-pro-api/product.mjs",
@@ -22,7 +22,8 @@
     "./partners/blockscout/connection": "./source/stellar/scf-starforge-20261009/partners/blockscout-stellar-pro-api/connection.mjs",
     "./partners/blockscout/connection-setup": "./source/stellar/scf-starforge-20261009/partners/blockscout-stellar-pro-api/connection-setup.mjs",
     "./partners/blockscout/connection-workspace": "./source/stellar/scf-starforge-20261009/partners/blockscout-stellar-pro-api/connection-workspace/model.mjs",
-    "./partners/blockscout/connection-workspace/server": "./source/stellar/scf-starforge-20261009/partners/blockscout-stellar-pro-api/connection-workspace/server.mjs"
+    "./partners/blockscout/connection-workspace/server": "./source/stellar/scf-starforge-20261009/partners/blockscout-stellar-pro-api/connection-workspace/server.mjs",
+    "./partners/blockscout/deployment": "./source/stellar/scf-starforge-20261009/partners/blockscout-stellar-pro-api/deployment.mjs"
   },
   "browserAssets": [
     {
