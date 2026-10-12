@@ -2,15 +2,10 @@
 // MIT. One installed DBnomics command and its original source-dataset publisher.
 import {dirname,resolve} from 'node:path';
 import {fileURLToPath,pathToFileURL} from 'node:url';
-import {main as publisherMain} from '../postgres/publisher/cli.mjs';
 import {privateDirectory} from '../postgres/publisher/files.mjs';
-import {openDbnomicsWorkspace} from './workspace.mjs';
-import {startDbnomicsServer} from './server.mjs';
 import {readOriginalFile,importDbnomicsInput} from './source.mjs';
 import {discoverDbnomics,exactFile} from './provider.mjs';
 import {need,jsonBytes} from './model.mjs';
-import {prepareDbnomicsRelease,stageDbnomicsRelease,activateDbnomicsRelease,
-  rollbackDbnomicsRelease,runDbnomicsRelease} from './release.mjs';
 const HELP = `DBnomics economic workspace — Linux, Node 24 LTS, util-linux flock
 
   init --workspace NEW_PROJECT [--state ORIGINAL_DATASET]
@@ -69,14 +64,15 @@ async function outputFile(path,content){
 }
 export async function main(argv=process.argv.slice(2)){
   if(!argv.length||['help','--help'].includes(argv[0])){process.stdout.write(HELP+'\n');return;}
-  if(argv[0]==='publisher-help')return publisherMain(['--help'],{sourceName:'DBnomics',defaultPort:8459});
-  if(delegated.has(argv[0]))return publisherMain(argv,{sourceName:'DBnomics',defaultPort:8459,
-    openPublisher:async options=>{const workbench=await openDbnomicsWorkspace(options);return {...workbench.publisher,close:()=>workbench.close()};}});
+  if(argv[0]==='publisher-help')return (await import('../postgres/publisher/cli.mjs')).main(['--help'],{sourceName:'DBnomics',defaultPort:8459});
+  if(delegated.has(argv[0]))return (await import('../postgres/publisher/cli.mjs')).main(argv,{sourceName:'DBnomics',defaultPort:8459,
+    openPublisher:async options=>{const workbench=await (await import('./workspace.mjs')).openDbnomicsWorkspace(options);return {...workbench.publisher,close:()=>workbench.close()};}});
   const {command,o}=parse(argv);
   if(command==='discover'){const result=await discoverDbnomics(await json(required(o,'--input')));print(result);return result;}
   if(command==='mcp')return (await import('./mcp.mjs')).runDbnomicsMcp({origin:required(o,'--origin')});
   if(['release-stage','release-activate','release-rollback','release-run'].includes(command)){
     const input=await json(required(o,'--input'));
+    const {stageDbnomicsRelease,activateDbnomicsRelease,rollbackDbnomicsRelease,runDbnomicsRelease}=await import('./release.mjs');
     const result=command==='release-stage'?await stageDbnomicsRelease(input):
       command==='release-activate'?await activateDbnomicsRelease(input.releaseDirectory,input.id,input.options):
       command==='release-rollback'?await rollbackDbnomicsRelease(input.releaseDirectory,input.options):
@@ -85,12 +81,12 @@ export async function main(argv=process.argv.slice(2)){
   }
   if(command==='receive')return (await import('./receiving.mjs')).receiveDbnomics({
     directory:resolve(required(o,'--workspace')),config:await json(required(o,'--input')),print});
-  const workbench=await openDbnomicsWorkspace({
+  const workbench=await (await import('./workspace.mjs')).openDbnomicsWorkspace({
     directory:resolve(required(o,'--workspace')),create:command==='init'||Boolean(o['--create']),
     targetDirectory:o['--state']?resolve(o['--state']):undefined,seller:o['--seller']??null,resource:o['--resource']??null});
   if(command==='serve'){
     try{
-      const service=await startDbnomicsServer({workbench,port:o['--port']===undefined?8459:Number(o['--port'])});
+      const service=await (await import('./server.mjs')).startDbnomicsServer({workbench,port:o['--port']===undefined?8459:Number(o['--port'])});
       print({url:service.url,workspace:workbench.directory,source:workbench.sourceFile,target:workbench.settings.targetDirectory});
       for(const signal of ['SIGINT','SIGTERM'])process.once(signal,()=>service.close().catch(()=>{process.exitCode=1;}));
       return service;
@@ -126,7 +122,7 @@ export async function main(argv=process.argv.slice(2)){
       const value=await workbench.planTemplate(required(o,'--query'));result=o['--out']?await outputFile(o['--out'],jsonBytes(value)):value;
     }else if(command==='save-plan')result=await workbench.savePublicationPlan(await json(required(o,'--input')));
     else if(command==='extract')result=workbench.startPublication(await json(required(o,'--input')));
-    else if(command==='release-prepare')result=await prepareDbnomicsRelease({...await json(required(o,'--input')),publisher:workbench.publisher});
+    else if(command==='release-prepare')result=await (await import('./release.mjs')).prepareDbnomicsRelease({...await json(required(o,'--input')),publisher:workbench.publisher});
     else need(false,'Choose a documented DBnomics command.\n'+HELP,'DBNOMICS_COMMAND');
     if(command==='extract'){
       const id=result.id;while(workbench.publisher.run(id).state==='EXTRACTING')await new Promise(resolve=>setTimeout(resolve,50));
