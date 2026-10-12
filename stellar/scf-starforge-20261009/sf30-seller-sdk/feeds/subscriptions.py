@@ -139,8 +139,8 @@ class SubscriptionWorkspace:
                 raise InputError("An enabled subscription needs a valid original URL and registered feed")
             normalized.append(dict(member))
         enabled_ids = sorted({m["feedId"] for m in normalized if m["enabled"]})
-        if not enabled_ids or len(enabled_ids) > 250:
-            raise InputError("Enable 1–250 distinct feeds in a collection")
+        if not enabled_ids or len(enabled_ids) > 100:
+            raise InputError("Enable 1–100 distinct feeds in a collection")
         return normalized
 
     def save(self, collection_id, title, members, new_feeds, expected_revision, operation_id):
