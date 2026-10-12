@@ -1,0 +1,19 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "python",
+  "description": "Python application products",
+  "commands": {
+    "python-merchant": "stellar/scf-starforge-20261009/sf30-seller-sdk/python/merchant.mjs",
+    "python-workspace": "stellar/scf-starforge-20261009/sf30-seller-sdk/python/workspace/cli.mjs"
+  },
+  "commandDescriptions": {
+    "python-merchant": "Inspect, diagnose and serve a Python application",
+    "python-workspace": "Author Python sources, run private previews and operate native releases"
+  },
+  "exports": {
+    "./seller/python": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/python/merchant.mjs",
+    "./seller/python/config": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/python/config.mjs",
+    "./seller/python/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/python/workspace/model.mjs",
+    "./seller/python/workspace/server": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/python/workspace/server.mjs"
+  }
+}

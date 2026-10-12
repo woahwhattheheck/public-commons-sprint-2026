@@ -81,3 +81,18 @@ The browser saved the existing profile and reviewed query as revision 3, applied
 The UI exercise's private `UI-STATE.json`, `UI-RESULT.json`, downloads and screenshots retain its progress. Its final result SHA256 is `ff04115afc5bf6ae362ee9c42b90ac74d5099876457642b45056a185c88a9c1b`. Source and receiving browsers and their servers closed after the operation. An interrupted continuation uses that same operation directory.
 
 An independent review by the original SQL driver team also completed the calculated-column join: SQL mappings select physical model fields only, while calculated columns retain their original DAX and metadata. Its original Store → SQL mapping → native 13-file Power BI project → reopen exercise preserved exact 38-digit values, NULL and Boolean values, accepted a legacy saved mapping, and retained the DAX. Its UI check exposed physical selectors and no calculated-only submission. These final source postimages are included in this release.
+
+## Twelve-agency billing operation — 12 October 2026
+
+The complete authored billing example and the original staff UI completed one connected receiving operation. The example contains twelve explicit payer agencies, 83 original Azure-shaped cost rows, 36 usage rows across three named metrics, and sixteen ordered rules. Two retained internal allocation rows are excluded from the supplier-cost view. The 81 selected source charges total exactly `3618.005492789012345678901234` USD; period rounding allocates `3618.01` USD across all twelve agencies with zero unresolved charges.
+
+The staff operator read the saved policy while retaining the new monthly draft, prepared the selected inputs, and reopened the same successful operation after its response was deliberately lost. Review and finalization generated twelve printable agency statements, their CSVs, a four-sheet accounting workbook, original inputs, and the saved policy/calculation in a 39-file ZIP.
+
+The same period was then reopened for a documented `-0.01` USD agency correction. Recalculation, review and finalization produced `3618.00` USD in replacement statements while retaining the original finalized revision and archive. The downloaded original and replacement ZIPs matched their saved objects. All three accounting workbooks opened with twelve agency rows and complete allocation/source sheets.
+
+The original encrypted backup and restoration reopened both billing periods, all three delivery records, every original period revision, and identical statement bytes. Start a fresh authored example with:
+
+    python BI_OPERATOR.py --workspace ./billing-example billing-example
+    python BI_OPERATOR.py --workspace ./billing-example serve
+
+[BILLING_GUIDE.md](BILLING_GUIDE.md) covers agency setup, complete source import, ordered policy editing, monthly review, correction, statement generation and the same actions through the CLI. The authored agencies and amounts are operating inputs supplied with the software; actual payer identities and provider exports are selected in the receiving workspace.
