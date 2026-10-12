@@ -4,7 +4,7 @@
   "organizer": {
     "repository": "artificial-scientist-lab/Learn2Design-2026",
     "commit": "1dc4d6e7d0ff656555f48bcf3c22a4d284779386",
-    "checked_at": "2026-10-11T18:00:00Z",
+    "checked_at": "2026-10-12T20:31:21Z",
     "rules": "https://github.com/artificial-scientist-lab/Learn2Design-2026/blob/1dc4d6e7d0ff656555f48bcf3c22a4d284779386/docs/submission.md",
     "validator_sha256": "9ec6ac14de3e04e8edf77c40981496aafc38cae8928105b89a45d87b433ff2e7",
     "rules_sha256": "78b786e07183ab1350b251fb4283970ba3088df6339ec18a327950963fb10b0b"
@@ -118,6 +118,213 @@
           }
         ]
       }
+    },
+    {
+      "id": "107-archive-scalar",
+      "class": "BoundedArchiveRestartPortfolio",
+      "submission": "batch-portfolio-d76c/original-107/submission.py",
+      "submission_bytes": 11420,
+      "submission_sha256": "b1926eb41ee3c2483ed473a9bfb52afde3330185dee49c18c56c559aab2faddb",
+      "requirements": "batch-portfolio-d76c/original-107/requirements.txt",
+      "requirements_sha256": "e5a08971b90b00e381dc240406ec2e796e142362347e99f439ca53318d3632f6",
+      "source_owner": "Unchanged original sol107 BoundedArchiveRestartPortfolio source; distinct from original exact-Hessian107.",
+      "invocation": {
+        "companions": [
+          {
+            "module": "elite_archive",
+            "path": "batch-portfolio-d76c/elite_archive.py",
+            "sha256": "cd8e43ed2227e9107d2398d9cd3353b286d371b7ad1fc2c663b0cf352ba44953"
+          }
+        ],
+        "optimize_kwargs": {},
+        "diagnostic_expectations": []
+      }
+    },
+    {
+      "class": "BatchedCorpusPortfolioD76C",
+      "submission": "batch-portfolio-d76c/submission.py",
+      "submission_bytes": 20875,
+      "submission_sha256": "f7e10ac47c53c85d1ba5647b6da1d9265683cc660df2e184c26a05b43420cc3d",
+      "requirements": "batch-portfolio-d76c/requirements.txt",
+      "requirements_sha256": "189ce1f45d8b650463612e8cdad59c719f8f9f3bf7c418c79a18290229efff80",
+      "source_owner": "D76C batched integration of original107 portfolio, original feasible archive and DBA55 public-corpus bank.",
+      "id": "batch-random-d76c",
+      "invocation": {
+        "companions": [
+          {
+            "module": "batched_update",
+            "path": "batch-portfolio-d76c/batched_update.py",
+            "sha256": "a3c81644f5775d1bdc7ee2d83d03ec2a8b3afa7a63be150d7fb786041bdbe148"
+          },
+          {
+            "module": "elite_archive",
+            "path": "batch-portfolio-d76c/elite_archive.py",
+            "sha256": "cd8e43ed2227e9107d2398d9cd3353b286d371b7ad1fc2c663b0cf352ba44953"
+          },
+          {
+            "module": "warmstart",
+            "path": "batch-portfolio-d76c/warmstart.py",
+            "sha256": "e603d6192c73741dbbf5f54ad8fa379ec06936fb6aabd21cd12cdec8bc86e204"
+          }
+        ],
+        "assets": [
+          {
+            "name": "warmstart_bank.npz",
+            "path": "batch-portfolio-d76c/warmstart_bank.npz",
+            "bytes": 2170687,
+            "sha256": "609a69e08ef1c9ec3460e3f012e7f1b52bb6a29c232c198a63415409d2ab7d39"
+          }
+        ],
+        "optimize_kwargs": {
+          "batch_size": 8,
+          "corpus_starts": false
+        },
+        "diagnostic_expectations": [
+          {
+            "path": [
+              "batch_size"
+            ],
+            "equals": 8
+          },
+          {
+            "path": [
+              "backend"
+            ],
+            "equals": "gpu"
+          },
+          {
+            "path": [
+              "initializer",
+              "status"
+            ],
+            "equals": "disabled"
+          }
+        ]
+      }
+    },
+    {
+      "class": "BatchedCorpusPortfolioD76C",
+      "submission": "batch-portfolio-d76c/submission.py",
+      "submission_bytes": 20875,
+      "submission_sha256": "f7e10ac47c53c85d1ba5647b6da1d9265683cc660df2e184c26a05b43420cc3d",
+      "requirements": "batch-portfolio-d76c/requirements.txt",
+      "requirements_sha256": "189ce1f45d8b650463612e8cdad59c719f8f9f3bf7c418c79a18290229efff80",
+      "source_owner": "D76C batched integration of original107 portfolio, original feasible archive and DBA55 public-corpus bank.",
+      "id": "batch-corpus-d76c",
+      "invocation": {
+        "companions": [
+          {
+            "module": "batched_update",
+            "path": "batch-portfolio-d76c/batched_update.py",
+            "sha256": "a3c81644f5775d1bdc7ee2d83d03ec2a8b3afa7a63be150d7fb786041bdbe148"
+          },
+          {
+            "module": "elite_archive",
+            "path": "batch-portfolio-d76c/elite_archive.py",
+            "sha256": "cd8e43ed2227e9107d2398d9cd3353b286d371b7ad1fc2c663b0cf352ba44953"
+          },
+          {
+            "module": "warmstart",
+            "path": "batch-portfolio-d76c/warmstart.py",
+            "sha256": "e603d6192c73741dbbf5f54ad8fa379ec06936fb6aabd21cd12cdec8bc86e204"
+          }
+        ],
+        "assets": [
+          {
+            "name": "warmstart_bank.npz",
+            "path": "batch-portfolio-d76c/warmstart_bank.npz",
+            "bytes": 2170687,
+            "sha256": "609a69e08ef1c9ec3460e3f012e7f1b52bb6a29c232c198a63415409d2ab7d39"
+          }
+        ],
+        "optimize_kwargs": {
+          "batch_size": 8,
+          "corpus_starts": true
+        },
+        "diagnostic_expectations": [
+          {
+            "path": [
+              "batch_size"
+            ],
+            "equals": 8
+          },
+          {
+            "path": [
+              "backend"
+            ],
+            "equals": "gpu"
+          },
+          {
+            "path": [
+              "initializer",
+              "status"
+            ],
+            "equals": "ready"
+          }
+        ]
+      }
+    },
+    {
+      "class": "BatchedCorpusPortfolioD76C",
+      "submission": "batch-portfolio-d76c/submission.py",
+      "submission_bytes": 20875,
+      "submission_sha256": "f7e10ac47c53c85d1ba5647b6da1d9265683cc660df2e184c26a05b43420cc3d",
+      "requirements": "batch-portfolio-d76c/requirements.txt",
+      "requirements_sha256": "189ce1f45d8b650463612e8cdad59c719f8f9f3bf7c418c79a18290229efff80",
+      "source_owner": "D76C batched integration of original107 portfolio, original feasible archive and DBA55 public-corpus bank.",
+      "id": "batch-corpus-cpu1-d76c",
+      "invocation": {
+        "companions": [
+          {
+            "module": "batched_update",
+            "path": "batch-portfolio-d76c/batched_update.py",
+            "sha256": "a3c81644f5775d1bdc7ee2d83d03ec2a8b3afa7a63be150d7fb786041bdbe148"
+          },
+          {
+            "module": "elite_archive",
+            "path": "batch-portfolio-d76c/elite_archive.py",
+            "sha256": "cd8e43ed2227e9107d2398d9cd3353b286d371b7ad1fc2c663b0cf352ba44953"
+          },
+          {
+            "module": "warmstart",
+            "path": "batch-portfolio-d76c/warmstart.py",
+            "sha256": "e603d6192c73741dbbf5f54ad8fa379ec06936fb6aabd21cd12cdec8bc86e204"
+          }
+        ],
+        "assets": [
+          {
+            "name": "warmstart_bank.npz",
+            "path": "batch-portfolio-d76c/warmstart_bank.npz",
+            "bytes": 2170687,
+            "sha256": "609a69e08ef1c9ec3460e3f012e7f1b52bb6a29c232c198a63415409d2ab7d39"
+          }
+        ],
+        "optimize_kwargs": {
+          "batch_size": 1,
+          "corpus_starts": true
+        },
+        "diagnostic_expectations": [
+          {
+            "path": [
+              "batch_size"
+            ],
+            "equals": 1
+          },
+          {
+            "path": [
+              "backend"
+            ],
+            "equals": "cpu"
+          },
+          {
+            "path": [
+              "initializer",
+              "status"
+            ],
+            "equals": "ready"
+          }
+        ]
+      }
     }
   ],
   "native_runner": {
@@ -176,11 +383,11 @@
     "cpu_launcher_sha256": "97c55ae3559befea87db90a3ae902e903042579ab81ca50320a452813ad76356",
     "semantics": "Same-process effective runtime plus exact source/companion/options invocation; original native Objective, runner and report remain authoritative. Coordinate-map diagnostics must identify the requested actual map.",
     "invocation_adapter": "runner/invocation.py",
-    "invocation_adapter_sha256": "42d5a782d377d8a2400eae283f2f379a04103061d5017363f7d50534176bfda6"
+    "invocation_adapter_sha256": "d567f5b43902893b80d419bcd27bbeb88028627dba6dcab3c1f72344fa765594"
   },
   "phase_operator": {
     "path": "run_phase.py",
-    "sha256": "ede516fd8d9e13cdc715cc092236e5a49199a11d2add8345f8073d357fbdb6ed",
+    "sha256": "91e8d3c7858da29a4abfd443657392a6250e82b24ddb80be7cd45fff354d1cd1",
     "semantics": "One source-pinned serial phase inside an existing allocation; original native runner/context; isolated empty per-cell bounded caches; retain every native outcome and interrupted attempt; raw results export."
   },
   "source_carrier": {
@@ -190,11 +397,14 @@
     "cpu_correction": "https://github.com/woahwhattheheck/public-commons-sprint-2026/pull/1048"
   },
   "source_uptake": {
-    "version": "r4-coordinate-map",
+    "version": "r5-batched-corpus",
     "original_release_commit": "0f0a62337e6af6af477672c58b98ce8c50097e55",
     "source_artifact": "F0C8J5U6FC4",
     "source_archive_sha256": "3a8a6fdd31cf7898cf064d6034b1430e2132ed46af46e381efdba0e686dfb691",
     "changed_algorithm_bytes": false,
-    "existing_native_operation_unchanged": "l2d-exact-hessian6966-t7-s42-180-cpu-20261011"
+    "existing_native_operation_unchanged": "l2d-exact-hessian6966-t7-s42-180-cpu-20261011",
+    "previous_source_commit": "f81990b4effe4277e975f6dc82f555e2fb4ddfb5",
+    "batch_operation": "L2D-H100-BATCHED-CORPUS-PORTFOLIO-20261012-D76C",
+    "bank_sha256": "609a69e08ef1c9ec3460e3f012e7f1b52bb6a29c232c198a63415409d2ab7d39"
   }
 }
