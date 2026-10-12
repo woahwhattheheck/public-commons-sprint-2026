@@ -38,3 +38,6 @@ export * as mpp from '../mpp-charge/index.mjs';
 export { main as startGoldRushWorkspace, openWorkbench as openGoldRushWorkbench } from '../sf30-seller-sdk/examples/goldrush-stellar-pilot/workbench.mjs';
 export { prepareCoinGeckoProduct, startCoinGeckoService } from '../partners/coingecko-stellar-market/provider.mjs';
 export { startMarketWorkspace } from '../partners/coingecko-stellar-market/workspace/server.mjs';
+
+export { openCollections, previewCollection, renderCollectionCsv, renderCollectionReport } from '../sf88-operator-buyer-cli/collections/model.mjs';
+export { startCollectionsWorkspace, serveCollections } from '../sf88-operator-buyer-cli/collections/server.mjs';
