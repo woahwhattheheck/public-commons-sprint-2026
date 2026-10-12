@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Run the original Product4 operation and managed Applications receiving in one owned runtime."""
-import argparse,base64,datetime,fcntl,gzip,hashlib,json,os,pathlib,shutil,stat,subprocess,sys,time
+import argparse,base64,datetime,fcntl,gzip,hashlib,json,os,pathlib,shutil,stat,subprocess,sys,tempfile,time
 os.umask(0o077)
 parser=argparse.ArgumentParser(description=__doc__)
 for name in ['run-directory','records-directory','source-packet','donor-repository','git-receiver','runtime-receiver','application-caller','following-ready']:
@@ -40,6 +40,18 @@ assert git_oid(receiver)=='0f1be6df1c47f8f8fb9517dcaee5b708c71aa4d6'
 assert git_oid(caller)=='e9fdd60207a7c706ab547ba68d60f53f504e53ec'
 assert subprocess.run([node,'--check',str(caller)],capture_output=True,text=True).returncode==0
 new_record={'schema':'stellar-forge.mpp-applications-original-operation.v1','sourceCommit':'9ef475062876557d6baf14e0e5414d7afbf3bc7f','receiverBlob':git_oid(receiver),'callerBlob':git_oid(caller),'startedAt':datetime.datetime.now(datetime.timezone.utc).isoformat()}
+def atomic_private(path,body):
+ fd,name=tempfile.mkstemp(prefix='.receiving-',dir=path.parent)
+ try:
+  with os.fdopen(fd,'wb') as stream:
+   stream.write(body);stream.flush();os.fsync(stream.fileno())
+  os.replace(name,path)
+  parent=os.open(path.parent,os.O_RDONLY|os.O_DIRECTORY)
+  try: os.fsync(parent)
+  finally: os.close(parent)
+ finally:
+  try: os.unlink(name)
+  except FileNotFoundError: pass
 record_path=retained/'mpp-original-complete-native-result.json.gz'
 record=new_record
 if record_path.exists():
@@ -48,6 +60,15 @@ if record_path.exists():
   for key in ['schema','sourceCommit','receiverBlob','callerBlob']:
    if saved.get(key)!=new_record[key]: parser.error('Retained original operation input changed: '+key)
   record=saved
+ else:
+  original=record_path.read_bytes()
+  sha=hashlib.sha256(original).hexdigest()
+  prior=retained/'previous';prior.mkdir(mode=0o700,exist_ok=True)
+  archive=prior/(sha+'.json.gz')
+  if archive.exists():
+   if archive.read_bytes()!=original: parser.error('Retained prior operation archive changed')
+  else: atomic_private(archive,original)
+  record['previousRecord']={'path':str(archive),'sha256':sha,'runDirectory':saved.get('runDirectory')}
 record['runDirectory']=str(root)
 record['selectedInputs']={key:str(value) for key,value in vars(options).items() if isinstance(value,pathlib.Path)}
 def retain_record():
@@ -77,6 +98,15 @@ def command(argv,log_name):
    except Exception:
     if len(line)<500: print(line,end='',flush=True)
   status=process.wait()
+ completion={'schema':'stellar-forge.mpp-original-command-completion.v1',
+  'sourceCommit':record['sourceCommit'],'argv':argv,'exitCode':status,
+  'completedAt':datetime.datetime.now(datetime.timezone.utc).isoformat()}
+ if log_name=='original-mpp-native.log':
+  native_result=root/'mpp-mcp-run/result.json'
+  if native_result.exists():
+   original=native_result.read_bytes()
+   completion['result']={'bytes':len(original),'sha256':hashlib.sha256(original).hexdigest()}
+ atomic_private(root/(log_name+'.completion.json'),(json.dumps(completion,sort_keys=True)+'\n').encode())
  record.setdefault('steps',{})[log_name]={'exitCode':status,'log':log.read_text(errors='replace')}
  print(json.dumps({'phase':log_name+'-finished','exitCode':status,'retention':retain_record()}),flush=True)
  return status
@@ -93,8 +123,19 @@ runtime_args=['python3',str(receiver),str(run/'runtime'),'--source',str(source/'
 if options.cache: runtime_args.extend(['--cache',str(options.cache),'--cache-limit-bytes',str(options.cache_limit_bytes)])
 status=command(runtime_args,'runtime-receiving.log')
 if status: sys.exit(status)
-if record.get('nativeExitCode')==0 and (run/'result.json').exists():
+native_argv=[node,'--experimental-vm-modules',str(source/'operations/scf-mpp-merchant-mcp-native-20261012/execute.mjs'),str(source),str(run)]
+native_completion=root/'original-mpp-native.log.completion.json'
+completed_native=False
+if native_completion.exists():
+ completed=json.loads(native_completion.read_text())
+ if (completed.get('schema')=='stellar-forge.mpp-original-command-completion.v1' and
+     completed.get('sourceCommit')==record['sourceCommit'] and completed.get('argv')==native_argv and
+     completed.get('exitCode')==0 and (run/'result.json').exists()):
+  native_bytes=(run/'result.json').read_bytes()
+  completed_native=completed.get('result')=={'bytes':len(native_bytes),'sha256':hashlib.sha256(native_bytes).hexdigest()}
+if (completed_native or record.get('nativeExitCode')==0) and (run/'result.json').exists():
  record['mppResult']=json.loads((run/'result.json').read_text())
+ record['nativeExitCode']=0
  environment['NODE_EXTRA_CA_CERTS']=str(run/'tls.crt')
  print(json.dumps({'phase':'ORIGINAL_PRODUCT4_REOPENED','retention':retain_record()}),flush=True)
 else:
@@ -104,7 +145,7 @@ else:
   '-days','1','-subj','/CN=merchant.example.com','-addext','subjectAltName=DNS:merchant.example.com'],'tls-setup.log')
  if status: sys.exit(status)
  environment['NODE_EXTRA_CA_CERTS']=str(run/'tls.crt')
- status=command([node,'--experimental-vm-modules',str(source/'operations/scf-mpp-merchant-mcp-native-20261012/execute.mjs'),str(source),str(run)],'original-mpp-native.log')
+ status=command(native_argv,'original-mpp-native.log')
  if (run/'result.json').exists(): record['mppResult']=json.loads((run/'result.json').read_text())
  record['nativeExitCode']=status
  print(json.dumps({'phase':'ORIGINAL_PRODUCT4_FINISHED','exitCode':status,'result':record.get('mppResult'),'retention':retain_record()}),flush=True)

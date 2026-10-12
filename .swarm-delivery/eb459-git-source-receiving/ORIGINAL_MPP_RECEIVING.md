@@ -39,7 +39,7 @@ python3 receive-original-mpp.py \
 
 The one original operation identifier is SCF-MPP-APPLICATIONS-NATIVE-20261012-EB459. Reconcile the current process before moving this invocation to another host. The run directory owns a process lease, source materialization, exact SDK installation, original workspaces, TLS files, Apps inputs, customer bundles and logs. The records directory retains mpp-original-complete-native-result.json.gz, containing complete phase logs and original result documents. Records and environment files are private.
 
-The carrier executes the original source-native Product4 execute.mjs once in a fresh native state. If its complete native result is retained in the same run directory, continuation reopens that result and proceeds to the original Applications roles. An interrupted original native phase retains its actual data and log for direct reconciliation. Receiving retries reuse the original role input and journal.
+The carrier executes the original source-native Product4 execute.mjs once in a fresh native state. Each child completion is written atomically immediately after its observed exit, before the outer phase record. If the parent is interrupted after the native child completes, continuation reconciles that original completion's exact argv, source commit, exit code and result byte count/SHA-256, then reopens the same result and proceeds to the original Applications roles. An earlier record for a different run directory is retained under previous/ by its original SHA-256 before a new record is adopted. An interrupted original native phase retains its actual data and log for direct reconciliation. Receiving retries reuse the original role input and journal.
 
 ## Following READY descriptor
 
