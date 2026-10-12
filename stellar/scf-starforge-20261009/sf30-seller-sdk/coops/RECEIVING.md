@@ -22,6 +22,10 @@ The caller retains the existing managed process, browser profile, native admissi
 
 The source selection is frozen with the first checkpoint. A later call must use the same workspace origin, selected parameters and output directory. A completed call returns its original hash-verified result without resaving business work.
 
+An interrupted issued request is reconciled through the same retained browser request and native operation ID before the continuation waits for completion. This covers an original request that had not reached reservation and a reserved operation that still needs its native continuation. Permanent native failures and unrelated pending requests remain explicit. Once a returned file has a retained complete-upload receipt, an already-issued comparison or receiving decision resumes from that receipt; the continuation does not restart chunk intake or replace a later draft.
+
+For the optional multi-station study, exact review callbacks and the complete release/return/reopen sequence are documented in [STUDIES.md](STUDIES.md). The supplied [coastal receiving selection](examples/coastal-receiving-selection.json) enables that leg on the same original host.
+
 An owner supplies these callbacks inside its existing controller:
 
 ```js
