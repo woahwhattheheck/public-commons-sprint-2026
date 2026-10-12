@@ -1,0 +1,37 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "odk",
+  "description": "Original ODK Central field captures, source-linked reporting, Stellar dataset releases and complete receiving",
+  "commands": {
+    "odk": "stellar/scf-starforge-20261009/sf30-seller-sdk/odk/cli.mjs",
+    "odk-central-workspace": "stellar/scf-starforge-20261009/sf30-seller-sdk/odk/managed.mjs"
+  },
+  "commandDescriptions": {
+    "odk": "Operate original Central field source, reporting editions, datasets, releases and complete receiving",
+    "odk-central-workspace": "Open the original Central workspace through Applications or its native data commands"
+  },
+  "exports": {
+    "./seller/odk": {
+      "types": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/odk/index.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/odk/index.mjs"
+    },
+    "./seller/odk/connection": {
+      "types": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/odk/connection.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/odk/connection.mjs"
+    },
+    "./seller/odk/managed": {
+      "types": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/odk/managed.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/odk/managed.mjs"
+    },
+    "./seller/odk/mcp": {
+      "types": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/odk/mcp.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/odk/mcp.mjs"
+    }
+  },
+  "applicationProviders": {
+    "odk": "stellar/scf-starforge-20261009/sf30-seller-sdk/odk/application-provider.mjs"
+  },
+  "merchantProviders": {
+    "odk-workspaces": "stellar/scf-starforge-20261009/sf30-seller-sdk/odk/merchant-provider.mjs"
+  }
+}
