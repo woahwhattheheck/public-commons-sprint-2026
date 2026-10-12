@@ -38,6 +38,7 @@ async function textHash(text) {
 export function createApplicationsWorkspaceView({ root, api, getState, refreshWorkspace, switchView, message, error }) {
   let data = null, selectedId = null, selectedRun = null, editingId = null, configurationReview = null, startReview = null;
   let loading = false, sending = false, scope = 0, settingsScope = 0, initial = true;
+  let historyData = null, historyApplicationId = null, historyCursor = null, historyTrail = [], historyScope = 0, historyLoading = false;
   const key = name => 'starforge-applications-' + getState()?.workspaceId + '-' + name;
   const readSaved = name => { try { return JSON.parse(sessionStorage.getItem(key(name)) ?? 'null'); } catch { return null; } };
   const saveSaved = (name, value) => { try { if (value === null) sessionStorage.removeItem(key(name)); else sessionStorage.setItem(key(name), JSON.stringify(value)); } catch {} };
@@ -94,7 +95,13 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
   selectedPanel.append(selectedTitle, details, actions, relatedApplications, urlNote, operationReview);
   const history = element('section', undefined, 'panel'); history.hidden = true;
   history.append(element('h3', 'Original operations'));
-  const historyRows = element('div'); history.append(historyRows);
+  const historyRows = element('div'), historyControls = element('div', undefined, 'actions');
+  const historyStatus = element('p', '', 'note'); historyStatus.setAttribute('aria-live', 'polite');
+  const newerHistory = button('Newer operations', () => act(() => pageHistory('newer')));
+  const olderHistory = button('Older operations', () => act(() => pageHistory('older')));
+  const latestHistory = button('Latest operations', () => act(() => pageHistory('latest')));
+  historyControls.append(newerHistory, olderHistory, latestHistory);
+  history.append(historyRows, historyControls, historyStatus);
   const outputPanel = element('section', undefined, 'panel'); outputPanel.hidden = true;
   outputPanel.append(element('h3', 'Application output'));
   const outputDescription = element('p', '', 'note'), output = element('pre'), inputStatus = element('div');
@@ -110,6 +117,66 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
     field('Terminal response', input), terminalActions, inputStatus);
   outputPanel.append(outputDescription, output, inputForm);
   root.replaceChildren(header, intro, list, empty, configuration, selectedPanel, history, outputPanel);
+
+  const visibleRuns = () => historyData?.applicationId === selectedId ? historyData.runs : selected()?.runs ?? [];
+  const saveSelection = () => saveSaved('selected', { selectedId, selectedRun, historyCursor, historyTrail });
+  function resetHistory(applicationId = selectedId) {
+    historyScope++; historyLoading = false; historyApplicationId = applicationId;
+    historyData = null; historyCursor = null; historyTrail = [];
+    delete historyRows.dataset.signature;
+  }
+  function renderHistoryNavigation() {
+    const page = historyData?.applicationId === selectedId ? historyData : null;
+    newerHistory.disabled = historyLoading || !historyTrail.length;
+    olderHistory.disabled = historyLoading || !page?.nextCursor;
+    latestHistory.disabled = historyLoading || !historyCursor;
+    historyStatus.textContent = historyLoading ? 'Loading operations…' : page ?
+      page.runs.length + ' of ' + page.totalRuns + ' retained operations' : '';
+  }
+  async function refreshHistory() {
+    const app = selected();
+    if (!app || app.error) { historyData = null; return false; }
+    if (historyApplicationId !== app.id) resetHistory(app.id);
+    const own = scope, generation = ++historyScope, requestedCursor = historyCursor;
+    historyLoading = true; renderHistoryNavigation();
+    try {
+      const value = await api(query('/api/applications/history', {
+        applicationId: app.id, limit: 30, ...(requestedCursor ? { cursor: requestedCursor } : {}),
+      }));
+      if (own !== scope || generation !== historyScope || app.id !== selectedId) return false;
+      historyData = value; return true;
+    } finally {
+      if (own === scope && generation === historyScope) { historyLoading = false; renderHistoryNavigation(); }
+    }
+  }
+  async function pageHistory(direction) {
+    if (historyLoading || !selected()) return;
+    const applicationId = selectedId, own = scope;
+    const previous = { cursor: historyCursor, trail: [...historyTrail] };
+    if (direction === 'older') {
+      if (!historyData?.nextCursor) return;
+      historyTrail.push(historyCursor); historyCursor = historyData.nextCursor;
+    } else if (direction === 'newer') {
+      if (!historyTrail.length) return;
+      historyCursor = historyTrail.pop();
+    } else { historyCursor = null; historyTrail = []; }
+    let received = false;
+    try {
+      if (await refreshHistory()) {
+        received = true; selectedRun = null; renderSelected(); saveSelection(); await refreshOutput();
+      }
+    } catch (issue) {
+      if (!received && own === scope && applicationId === selectedId) {
+        historyCursor = previous.cursor; historyTrail = previous.trail; renderHistoryNavigation();
+      }
+      throw issue;
+    }
+  }
+  async function selectApplication(id) {
+    selectedId = id; selectedRun = null; startReview = null; resetHistory(id);
+    renderSelected();
+    await refreshHistory(); renderSelected(); await refreshOutput(); saveSelection();
+  }
 
   async function retainedRequest(route, body) {
     const existing = readSaved('pending');
@@ -278,13 +345,14 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
       active ? current.stop ? 'The original application is draining its work and stopping.' : 'Waiting for the original application to print its local session URL.' :
         current?.url ? 'This operation has ended. Its retained URL is historical; review a new start to open the same saved application data.' :
           'Save and review a start to receive the original application URL.';
-    const signature = JSON.stringify(app.runs);
+    const pageRuns = visibleRuns();
+    const signature = JSON.stringify([app.id, pageRuns]);
     if (historyRows.dataset.signature !== signature) {
       historyRows.dataset.signature = signature;
-      historyRows.replaceChildren(...app.runs.map(run => {
+      historyRows.replaceChildren(...pageRuns.map(run => {
         const row = element('article', undefined, 'operation');
         const actions = element('div', undefined, 'actions');
-        actions.append(button('Open output', () => { selectedRun = run.id; saveSaved('selected', { selectedId, selectedRun }); refreshOutput().catch(error); }));
+        actions.append(button('Open output', () => { selectedRun = run.id; saveSelection(); refreshOutput().catch(error); }));
         row.append(element('h3', run.command + ' · ' + run.phase),
           element('p', run.id + ' · ' + run.createdAt),
           element('p', run.result?.state ? 'Original outcome: ' + run.result.state + (run.result.exitCode !== null && run.result.exitCode !== undefined ? ', exit ' + run.result.exitCode : '') :
@@ -292,13 +360,14 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
           actions); return row;
       }));
     }
-    if (!selectedRun || !app.runs.some(run => run.id === selectedRun)) selectedRun = current?.id ?? null;
-    renderStartReview();
+    if (!selectedRun || !pageRuns.some(run => run.id === selectedRun)) selectedRun = pageRuns[0]?.id ?? null;
+    renderHistoryNavigation(); renderStartReview();
   }
   async function refreshOutput() {
     const app = selected(), id = selectedRun, own = scope;
     if (!app || !id) { outputPanel.hidden = true; return; }
-    const run = app.runs.find(item => item.id === id);
+    const run = visibleRuns().find(item => item.id === id);
+    if (!run) { outputPanel.hidden = true; return; }
     const response = await api(query(run.terminal ? '/api/applications/terminal' : '/api/applications/output', { applicationId: app.id, operationId: id }));
     if (scope !== own || app.id !== selectedId || id !== selectedRun) return;
     outputPanel.hidden = false;
@@ -348,12 +417,16 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
     if (loading) return;
     loading = true; const own = scope;
     try {
-      const value = await api('/api/applications/state');
+      const value = await api('/api/applications/state?historyLimit=1');
       if (own !== scope) return;
       data = value;
       if (initial) {
         initial = false; const saved = readSaved('selected');
-        if (saved) { selectedId = saved.selectedId; selectedRun = saved.selectedRun; }
+        if (saved) {
+          selectedId = saved.selectedId; selectedRun = saved.selectedRun; historyApplicationId = selectedId;
+          historyCursor = typeof saved.historyCursor === 'string' ? saved.historyCursor : null;
+          historyTrail = Array.isArray(saved.historyTrail) ? saved.historyTrail.filter(value => value === null || typeof value === 'string') : [];
+        }
       }
       const currentRuntime = runtime.value;
       const options = (getState()?.runtimes ?? []).filter(item => item.phase === 'READY');
@@ -368,26 +441,27 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
         kind.replaceChildren(...data.catalog.map(item => new Option(item.title, item.id)));
         renderSettings();
       }
-      if (!data.applications.some(item => item.id === selectedId)) selectedId = data.applications[0]?.id ?? null;
+      if (!data.applications.some(item => item.id === selectedId)) { selectedId = data.applications[0]?.id ?? null; resetHistory(selectedId); }
       const listSignature = JSON.stringify(data.applications.map(app => [app.id, app.label, app.phase]));
       if (list.dataset.signature !== listSignature) {
         list.dataset.signature = listSignature;
         list.replaceChildren(...data.applications.map(app => {
-          const node = button(app.label + ' · ' + app.phase, () => { selectedId = app.id; selectedRun = null; startReview = null; saveSaved('selected', { selectedId, selectedRun }); renderSelected(); refreshOutput().catch(error); });
+          const node = button(app.label + ' · ' + app.phase, () => act(() => selectApplication(app.id)));
           node.className = 'runtime-entry'; node.dataset.applicationId = app.id; return node;
         }));
       }
       empty.hidden = data.applications.length > 0;
       recoverRequest.hidden = !readSaved('pending');
       if (data.applications.length && editingId === null && !configurationReview && !label.value) configuration.open = false;
+      if (!historyLoading) await refreshHistory();
       renderSelected(); await refreshOutput();
-      saveSaved('selected', { selectedId, selectedRun });
+      saveSelection();
     } finally { loading = false; }
   }
   return {
     refresh,
     async beginPython(descriptor) {
-      data = await api('/api/applications/state');
+      data = await api('/api/applications/state?historyLimit=1');
       const type = data.catalog.find(item => item.python && item.command === descriptor.command);
       if (!type) throw new Error('This Applications revision does not include the selected original Python command.');
       const value = name => descriptor.args[descriptor.args.indexOf(name) + 1];
@@ -412,10 +486,10 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
       switchView('applications'); configuration.scrollIntoView({ block: 'nearest' });
       label.focus();
     },
-    async choose(id) { selectedId = id; selectedRun = null; switchView('applications'); await refresh(); },
+    async choose(id) { selectedId = id; selectedRun = null; resetHistory(id); switchView('applications'); await refresh(); },
     reset() {
       scope++; data = null; selectedId = selectedRun = editingId = null; configurationReview = startReview = null;
-      initial = true; label.value = ''; kind.replaceChildren(); runtime.replaceChildren(); list.replaceChildren();
+      resetHistory(null); initial = true; label.value = ''; kind.replaceChildren(); runtime.replaceChildren(); list.replaceChildren();
       selectedPanel.hidden = history.hidden = outputPanel.hidden = reviewResult.hidden = true; configuration.open = true;
     },
   };
