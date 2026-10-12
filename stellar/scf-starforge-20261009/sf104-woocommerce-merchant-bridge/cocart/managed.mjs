@@ -5,7 +5,7 @@ import {open, lstat, realpath, readdir, mkdir, readFile} from 'node:fs/promises'
 import {resolve, dirname, join, isAbsolute} from 'node:path';
 import {fileURLToPath, pathToFileURL} from 'node:url';
 import {randomUUID} from 'node:crypto';
-import {CartWorkspace, CartError, SOURCE, sha256, validateProfile} from './workspace.mjs';
+import {CartWorkspace, CartError, SOURCE, sha256, validateProfile, validateReceivingTransport} from './workspace.mjs';
 import {serve, loadSDK} from './server.mjs';
 
 export const COCART_MANAGED_SCHEMA = 'stellar-forge.cocart-workspace-startup.v1';
@@ -169,7 +169,18 @@ export async function setupCocartWorkspace({
       workspace=new CartWorkspace({root});const current=workspace.view();
       need(current.profile_source?.sha256===sha256(profileBytes),
         'MANAGED_PROFILE_CHANGED','Reopen the existing original profile or choose a new workspace.',{},409);
-      need(!receivingTransport,'MANAGED_TRANSPORT_REOPEN','Use the original explicit transport.rebind action for an existing workspace.');
+      if(receivingTransport) {
+        const selected=validateReceivingTransport(originalProfile,receivingTransport);
+        const events=current.events.filter(event=>event.type==='transport.receiving_selected');
+        const creation=events.length===1?events[0].detail:null;
+        need(creation&&creation.from?.store_url===originalProfile.store_url&&
+          creation.from?.checkout_url===originalProfile.checkout_url&&
+          creation.to?.store_url===selected.profile.store_url&&
+          creation.to?.checkout_url===selected.profile.checkout_url&&creation.reason===selected.reason,
+          'MANAGED_TRANSPORT_REOPEN','Keep the original creation transport declaration. Use transport.rebind to change the current workspace transport.',{},409);
+        // Retain original creation metadata in the connection. Later native rebinds and
+        // all current cart/history state stay in the original workspace unchanged.
+      }
     } else {
       await directory(root,{create:!exists,empty:true});
       workspace=new CartWorkspace({root,create:true,profile:parse(profileBytes),profileBytes,receivingTransport});
