@@ -651,25 +651,36 @@ export async function openRisingWaveWorkbench({ directory: selectedDirectory, so
       const selected = input.publicationId ?? key('publication');
       id(selected); if (!selected.startsWith('publication-')) throw fault('PUBLICATION_ID_INVALID');
       const currentState = await state(), existing = currentState.publications.includes(selected);
-      const saved = existing ? await revision(input.expectedRevision) : await expected(input.expectedRevision);
+      const location = join(root, 'publications', selected);
+      const staged = await exists(join(location, 'publication.json')) || await exists(join(location, 'source.json'));
+      const saved = existing || staged ? await revision(input.expectedRevision) : await expected(input.expectedRevision);
       if (!saved || !Object.hasOwn(saved.source.queries, input.query)) throw fault('RISINGWAVE_REPORT_REQUIRED', 'Save and select a RisingWave report.');
       if (!saved.merchant) throw fault('MERCHANT_TERMS_REQUIRED', 'Save the public merchant origin and payment choices first.');
+      const path = resourcePath(input.path);
       if (existing) {
         const retained = await inspectPublication(selected);
-        if (retained.revision !== saved.revision || retained.query !== input.query || retained.path !== resourcePath(input.path) ||
-            retained.sourceHash !== saved.sourceHash || retained.merchantHash !== saved.merchantHash) throw fault('PUBLICATION_REQUEST_CHANGED');
+        if (retained.revision !== saved.revision || retained.query !== input.query || retained.path !== path ||
+            retained.sourceHash !== saved.sourceHash || retained.merchantHash !== saved.merchantHash)
+          throw fault('PUBLICATION_REQUEST_CHANGED');
         return retained;
       }
-      const location = await directory(join(root, 'publications', selected));
-      await directory(join(location, 'buyers'));
-      const boundSource = bytes({ ...saved.source, queries: { [input.query]: saved.source.queries[input.query] } });
-      const link = { schema: 'stellar-forge.risingwave-browser-publication.v1', id: selected, createdAt: timestamp(),
+      await directory(location); await directory(join(location, 'buyers'));
+      const boundSource = bytes({...saved.source, queries: {[input.query]: saved.source.queries[input.query]}});
+      let link = await readJson(join(location, 'publication.json'), 1048576)
+        .catch(issue => {if (issue.code !== 'ENOENT') throw issue; return null;});
+      if (link && (link.schema !== 'stellar-forge.risingwave-browser-publication.v1' || link.id !== selected ||
+          link.revision !== saved.revision || link.sourceRevisionId !== saved.id || link.sourceHash !== saved.sourceHash ||
+          link.merchantHash !== saved.merchantHash || link.publicationSourceHash !== digest(boundSource) ||
+          link.query !== input.query || link.path !== path || digest(bytes(link.merchant)) !== saved.merchantHash))
+        throw fault('PUBLICATION_REQUEST_CHANGED', 'Continue the original product with its saved source, report, merchant and path.', 409);
+      link ??= {schema: 'stellar-forge.risingwave-browser-publication.v1', id: selected, createdAt: timestamp(),
         revision: saved.revision, sourceRevisionId: saved.id, sourceHash: saved.sourceHash, merchantHash: saved.merchantHash,
-        publicationSourceHash: digest(boundSource), query: input.query, path: resourcePath(input.path), merchant: structuredClone(saved.merchant) };
-      await createFile(join(location, 'source.json'), boundSource);
-      await createFile(join(location, 'publication.json'), bytes(link)); await syncDirectory(location);
-      const current = await state(); current.publications.push(selected); current.updatedAt = timestamp();
-      await atomicJson(root, 'workspace.json', current);
+        publicationSourceHash: digest(boundSource), query: input.query, path, merchant: structuredClone(saved.merchant)};
+      await retainBytes(location, 'source.json', boundSource);
+      await retainBytes(location, 'publication.json', bytes(link));
+      const current = await state();
+      if (!current.publications.includes(selected)) current.publications.push(selected);
+      current.updatedAt = timestamp(); await atomicJson(root, 'workspace.json', current);
       return inspectPublication(selected);
     });
   }

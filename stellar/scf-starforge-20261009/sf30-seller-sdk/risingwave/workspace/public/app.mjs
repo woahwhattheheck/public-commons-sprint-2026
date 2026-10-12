@@ -8,7 +8,7 @@ const types=['string','integer','number','boolean','bigint','decimal','timestamp
 const state={saved:null,source:null,merchant:null,payments:[],dirty:false,reportDirty:false,selectedReport:'',
   columns:[],parameters:[],filters:[],catalogue:null,captures:null,offset:0,product:null,offer:null,
   subscriptionReview:null,subscriptionRequests:new Map(),captureRequests:new Map(),productRequests:new Map(),
-  comparisonRequests:new Map(),saveRequests:new Map(),buyerRequests:new Map(),journal:[],downloads:[],rawEditors:{},remoteSaved:null,buyerOffset:0,buyerDrafts:{}};
+  comparisonRequests:new Map(),saveRequests:new Map(),buyerRequests:new Map(),journal:[],downloads:[],rawEditors:{},remoteSaved:null,buyerOffset:0,buyerDrafts:{},productGeneration:0,productReadVersion:0,pendingProductId:null,offerVersion:0,offerSelection:null,operationGeneration:0,workspaceGeneration:0};
 
 const requestMapNames = ['subscriptionRequests','captureRequests','productRequests','comparisonRequests','saveRequests','buyerRequests'];
 const dynamicFormNames = ['payments','report-columns','report-parameters','report-filters','preview-parameters','capture-parameters'];
@@ -41,7 +41,7 @@ function browserSnapshot() {
     journal:structuredClone(state.journal),downloads:structuredClone(state.downloads),buyerDrafts:structuredClone(state.buyerDrafts),
     view:{tab:document.querySelector('nav button[aria-selected="true"]')?.dataset.tab??'source',offset:state.offset,
       comparisonOffset:state.comparisonOffset??0,buyerOffset:state.buyerOffset??0,productId:state.product?.id??null,
-      subscriptionReviewId:state.subscriptionReview?.requestId??null,offer:structuredClone(state.offer),
+      subscriptionReviewId:state.subscriptionReview?.requestId??null,offer:structuredClone(state.offer),offerSelection:structuredClone(state.offerSelection),
       reconcileRequested:state.reconcileRequested===true,reconcileChoices:structuredClone(state.reconcileChoices??{})}};
 }
 function localCheckpoint(snapshot=browserSnapshot()) {
@@ -116,12 +116,13 @@ function restoreFields(snapshot) {
 function currentHasChanges(){return state.dirty||state.reportDirty||Object.values(state.rawEditors??{}).some(Boolean);}
 async function installBrowserSnapshot(snapshot,latest) {
   const value=validateBrowserState(snapshot,latest.workspaceIdentity);
+  state.productGeneration++;state.productReadVersion++;state.offerVersion++;state.pendingProductId=null;$('selected-product').inert=false;
   let base=latest;
   if(value.baseRevision!==latest.revision){
     const original=value.baseRevision?await requestApi('revisions/'+value.baseRevision):{revision:0,source:null,merchant:null,sourceHash:null,savedAt:null};
     base={...latest,...original};
   }
-  state.product=null;state.offer=null;state.subscriptionReview=null;$('selected-product').hidden=true;$('subscription-review').hidden=true;
+  state.product=null;state.offer=null;state.offerSelection=null;state.subscriptionReview=null;$('selected-product').hidden=true;$('subscription-review').hidden=true;
   install(base);state.remoteSaved=latest;
   state.source=structuredClone(value.source);state.merchant=structuredClone(value.merchant);state.payments=structuredClone(value.payments);
   state.selectedReport=value.selectedReport;state.rawEditors=structuredClone(value.rawEditors??{});
@@ -150,12 +151,19 @@ async function installBrowserSnapshot(snapshot,latest) {
     try{showSubscriptionReview(await requestApi('subscriptions/'+value.view.subscriptionReviewId));}
     catch(error){notice('The saved draft is open. Subscription refresh: '+error.message,true);}
   }
-  state.offer=structuredClone(value.view.offer);
+  state.offer=structuredClone(value.view.offer);state.offerSelection=structuredClone(value.view.offerSelection??null);
+  if(state.offer&&!same(state.offerSelection,buyerSelection())){state.offer=null;state.offerSelection=null;}
   if(state.offer){options($('buyer-option'),state.offer.accepts.map((choice,index)=>({value:String(index),label:index+' · '+choice.network+' · '+choice.amount})),value.form['buyer-option']?.value??'0');}
   tab(value.view.tab);renderOperations();renderDownloads();status();
   if(value.baseRevision!==latest.revision)notice('Restored all browser edits from revision '+value.baseRevision+'. Revision '+latest.revision+' is now saved; reconcile the changes before saving this draft.');
 }
-async function openRecovery(id) {
+async function workspaceTransition(action) {
+  const inert=document.body.inert;document.body.inert=true;
+  state.workspaceGeneration++;state.productGeneration++;state.productReadVersion++;state.offerVersion++;state.operationGeneration++;
+  state.pendingProductId=null;$('selected-product').inert=false;
+  try{return await action();}finally{document.body.inert=inert;}
+}
+async function openRecovery(id) {return workspaceTransition(async()=>{
   await flushRecovery();
   const [record,latest]=await Promise.all([requestApi('browser-workspaces/'+id),requestApi('state')]);
   recovery.ready=false;
@@ -163,7 +171,7 @@ async function openRecovery(id) {
     recovery.pending=null;recovery.lastSaved=structuredClone(record.state);}
   finally{recovery.ready=true;}
   checkpoint();await refreshRecoveryList();notice('Opened the complete saved browser workspace and its original operations.');
-}
+});}
 async function refreshRecoveryList() {
   const result=await requestApi('browser-workspaces');
   options($('recovery-select'),result.items.map(item=>({value:item.id,label:item.updatedAt+' · source '+item.baseRevision+
@@ -206,10 +214,12 @@ function renderOperations() {
   if(!state.journal.length)target.append(el('p','Original source saves, subscriptions, editions, differences, products and customer requests appear here.','muted'));
 }
 async function continueOperation(entry) {
+  const generation=++state.operationGeneration,context=entry.path==='publications'?beginProductSelection(entry.body.publicationId):null;
+  try {
   let result;
   if(entry.state==='RETURNED'){
     const receipt=entry.receipt??{};
-    if(entry.path==='save'){const saved=await requestApi('revisions/'+(receipt.saveOperation?.revision??receipt.revision));$('recovery-result').replaceChildren(details(saved,'Original saved source revision'));return;}
+    if(entry.path==='save'){const saved=await requestApi('revisions/'+(receipt.saveOperation?.revision??receipt.revision));if(generation===state.operationGeneration)$('recovery-result').replaceChildren(details(saved,'Original saved source revision'));return;}
     if(entry.path.startsWith('subscription/'))result=await requestApi('subscriptions/'+entry.body.requestId);
     else if(entry.path==='capture'||entry.path.startsWith('capture/'))result=await requestApi('captures/'+(entry.body.captureId??entry.body.id));
     else if(entry.path==='captures/compare')result=await requestApi('comparisons/'+entry.body.comparisonId);
@@ -219,14 +229,16 @@ async function continueOperation(entry) {
       $('recovery-result').replaceChildren(details(entry,'Original customer preparation'),button('Download original customer request',()=>download('files/buyer/'+publication+'/'+buyer,'RisingWave-Dataset-Buyer-'+buyer+'.json')));return;
     }else result=await requestApi('publications/'+entry.path.split('/')[1]);
   }else result=await api(entry.path,entry.body);
+  if(generation!==state.operationGeneration)return;
   $('recovery-result').replaceChildren(details(result,'Original operation result'));
   if(entry.path.startsWith('subscription/'))showSubscriptionReview(result);
   else if(entry.path==='capture'||entry.path.startsWith('capture/')){$('capture-operation').replaceChildren(captureCard(result));await refreshCaptures();}
   else if(entry.path==='captures/compare'){renderComparison(result);await refreshComparisons();}
   else if(entry.path==='save'){state.remoteSaved=await requestApi('state');status();}
-  else if(entry.path==='publications'){adoptProduct(result);}
+  else if(entry.path==='publications'){adoptProduct(result,context);}
   else if(entry.path.endsWith('/buyer')){const publication=entry.path.split('/')[1];$('recovery-result').append(button('Download original customer request',()=>download('files/buyer/'+publication+'/'+result.id,'RisingWave-Dataset-Buyer-'+result.id+'.json')));}
   notice('Opened the original '+entry.path+' operation.');checkpoint();
+  } finally {if(context)finishProductSelection(context);}
 }
 function renderDownloads() {
   const target=$('recovery-downloads');if(!target)return;
@@ -243,9 +255,12 @@ async function draftForReconciliation() {
   return {source,merchant:currentMerchant()};
 }
 async function prepareReconciliation() {
-  const latest=await requestApi('state'),draft=await draftForReconciliation();
+  const generation=state.workspaceGeneration,reviewed=editorEdition(),originalState=structuredClone(state.saved);
+  const draft=await draftForReconciliation(),latest=await requestApi('state');
+  if(generation!==state.workspaceGeneration)return;
   state.remoteSaved=latest;state.reconcileRequested=true;state.reconcileChoices??={};
-  const original={source:state.saved.source??freshSource(),merchant:state.saved.merchant};
+  if(!same(reviewed,editorEdition())){$('reconcile-result').replaceChildren(el('p','The draft changed while its reconciliation was prepared.'),button('Review the current draft',prepareReconciliation));checkpoint();return;}
+  const original={source:originalState.source??freshSource(),merchant:originalState.merchant};
   const saved={source:latest.source??freshSource(),merchant:latest.merchant};
   const result=mergeDraft(original,draft,saved,key=>state.reconcileChoices[key]);
   const target=$('reconcile-result');target.replaceChildren(el('p','Draft source revision '+state.saved.revision+' · saved source revision '+latest.revision));
@@ -258,8 +273,11 @@ async function prepareReconciliation() {
   }
   if(result.conflicts.length)target.append(button('Recalculate with these field choices',prepareReconciliation));
   else target.append(button('Apply reconciled draft',async()=>{
+    if(generation!==state.workspaceGeneration)return;
+    if(!same(reviewed,editorEdition())){await prepareReconciliation();return;}
     const observed=await requestApi('state');
-    if(observed.revision!==latest.revision){await prepareReconciliation();return;}
+    if(generation!==state.workspaceGeneration)return;
+    if(observed.revision!==latest.revision||!same(reviewed,editorEdition())){await prepareReconciliation();return;}
     const source=result.value.source,merchant=result.value.merchant;
     install(latest);state.remoteSaved=latest;state.source=structuredClone(source);state.merchant=structuredClone(merchant);
     state.payments=structuredClone(merchant?.paymentOptions??(merchant?.payment?[merchant.payment]:[]));
@@ -332,10 +350,81 @@ function install(saved){state.saved=saved;state.source=structuredClone(saved.sou
   $('environment-status').replaceChildren(...(saved.environment??[]).map(item=>el('span',item.name+' · '+(item.configured?'Configured':'Missing'),'badge')));
   $('source-history').replaceChildren(grid(['Revision','Saved','Reports','Files'],(saved.history??[]).map(item=>[item.revision,item.savedAt,item.reports,button('Download source',()=>download('files/revision/'+item.revision+'/source.json','RisingWave-Source-Revision-'+item.revision+'.json'))])));renderProducts();status();}
 function requireSaved(){if(!state.saved?.revision)throw new Error('Save the source connection first.');if(currentHasChanges())throw new Error('Save the current changes before starting a native operation.');return state.saved.revision;}
-async function saveSource(){if(Object.values(state.rawEditors??{}).some(Boolean))throw new Error('Apply the edited source JSON and payment JSON before saving their fields.');if(state.reportDirty){const result=await api('report/compile',{report:reportSpec()});const name=$('report-name').value.trim();if(!name)throw new Error('Enter a report name.');state.source.queries[name]=result;state.selectedReport=name;state.reportDirty=false;state.dirty=true;}
-  const input={expectedRevision:state.saved?.revision??0,source:currentSource(),merchant:currentMerchant()};
+const sourceFieldNames=['connection-env','tls','ca-env','query-timeout','max-inflight','allow-local','merchant-origin','merchant-service','merchant-description','source-json','payment-json'];
+const reportFieldNames=['report-select','report-name','report-description','relation-schema','relation-name','subscription-schema','subscription-name','report-key','report-max-rows','report-max-bytes'];
+const pickedFields=(snapshot,names)=>Object.fromEntries(names.map(name=>[name,snapshot.form[name]]));
+const sourceEdition=snapshot=>({source:snapshot.source,merchant:snapshot.merchant,payments:snapshot.payments,form:pickedFields(snapshot,sourceFieldNames),rawEditors:snapshot.rawEditors});
+const reportEdition=snapshot=>({selectedReport:snapshot.selectedReport,columns:snapshot.columns,parameters:snapshot.parameters,filters:snapshot.filters,form:pickedFields(snapshot,reportFieldNames)});
+const editorEdition=(snapshot=browserSnapshot())=>({baseRevision:snapshot.baseRevision,source:sourceEdition(snapshot),report:reportEdition(snapshot)});
+function nativeParameterDrafts() {
+  return Object.fromEntries([['preview-parameters','report-select'],['capture-parameters','capture-query']].map(([target,select])=>{
+    const query=$(select).value,parameters=state.saved?.source?.queries?.[query]?.parameters??{};
+    return [target,{query,parameters:structuredClone(parameters),fields:[...$(target).querySelectorAll('[data-parameter]')].map(node=>{
+      const name=node.dataset.parameter;
+      return {name,value:node.value,include:[...$(target).querySelectorAll('[data-include]')].find(value=>value.dataset.include===name)?.checked,
+        nil:[...$(target).querySelectorAll('[data-null]')].find(value=>value.dataset.null===name)?.checked};
+    })}];
+  }));
+}
+function restoreNativeParameterDrafts(drafts) {
+  for(const[target,select]of [['preview-parameters','report-select'],['capture-parameters','capture-query']]){
+    const draft=drafts[target],query=$(select).value;if(!draft||draft.query!==query)continue;
+    const parameters=state.saved?.source?.queries?.[query]?.parameters??{};
+    for(const field of draft.fields){
+      const previous=draft.parameters[field.name],parameter=parameters[field.name];
+      if(!previous||!parameter||previous.type!==parameter.type||Boolean(previous.array)!==Boolean(parameter.array))continue;
+      const value=[...$(target).querySelectorAll('[data-parameter]')].find(node=>node.dataset.parameter===field.name);
+      if(value)value.value=field.value;
+      const include=[...$(target).querySelectorAll('[data-include]')].find(node=>node.dataset.include===field.name);
+      if(include&&parameter.required===false)include.checked=Boolean(field.include);
+      const nil=[...$(target).querySelectorAll('[data-null]')].find(node=>node.dataset.null===field.name);
+      if(nil&&parameter.nullable===true)nil.checked=Boolean(field.nil);
+    }
+  }
+}
+function renderSourceMetadata(saved) {
+  $('environment-status').replaceChildren(...(saved.environment??[]).map(item=>el('span',item.name+' · '+(item.configured?'Configured':'Missing'),'badge')));
+  $('source-history').replaceChildren(grid(['Revision','Saved','Reports','Files'],(saved.history??[]).map(item=>[
+    item.revision,item.savedAt,item.reports,button('Download source',()=>download('files/revision/'+item.revision+'/source.json','RisingWave-Source-Revision-'+item.revision+'.json'))])));
+  renderProducts();status();
+}
+
+async function saveSource(){
+  if(Object.values(state.rawEditors??{}).some(Boolean))throw new Error('Apply the edited source JSON and payment JSON before saving their fields.');
+  const generation=state.workspaceGeneration,submitted=browserSnapshot(),input={expectedRevision:state.saved?.revision??0,source:currentSource(),merchant:currentMerchant()};
+  const report=state.reportDirty?{name:$('report-name').value.trim(),spec:reportSpec()}:null;
+  if(report&&!report.name)throw new Error('Enter a report name.');
+  if(report)input.source.queries[report.name]=await api('report/compile',{report:report.spec});
+  if(generation!==state.workspaceGeneration)return;
   const request=originalRequest(state,'saveRequests',input,'requestId','save');
-  const saved=await api('save',request);install(saved);state.remoteSaved=saved;notice('Saved the complete source, reports and merchant terms.');}
+  const saved=await api('save',request);
+  if(generation!==state.workspaceGeneration)return;
+  const later=browserSnapshot(),parameters=nativeParameterDrafts();
+  state.remoteSaved=saved;
+  const authorChanged=!same(editorEdition(submitted),editorEdition(later));
+  const fieldsChanged=!same(submitted.form,later.form)||!same(submitted.parameterInputs,later.parameterInputs);
+  if(!authorChanged&&!fieldsChanged){
+    if(report)state.selectedReport=report.name;
+    install(saved);restoreNativeParameterDrafts(parameters);
+    notice('Saved the complete source, reports and merchant terms.');
+  }else if(saved.saveOperation?.revision===saved.revision){
+    // Apply the acknowledged submission as the base and retain every later editor delta.
+    state.source=mergeDraft(submitted.source,later.source,saved.source,()=> 'draft').value;
+    state.merchant=mergeDraft(submitted.merchant,later.merchant,saved.merchant,()=> 'draft').value;
+    state.saved=saved;state.dirty=!same(sourceEdition(submitted),sourceEdition(later));
+    state.reportDirty=!same(reportEdition(submitted),reportEdition(later));
+    if(report&&state.selectedReport===submitted.selectedReport)state.selectedReport=report.name;
+    refreshReportOptions(state.selectedReport);restoreNativeParameterDrafts(parameters);
+    if(!state.rawEditors.source)$('source-json').value=pretty(state.source);
+    renderSourceMetadata(saved);
+    notice('Saved source revision '+saved.revision+'. Edits made during the save remain in the current draft.');
+  }else{
+    // A replay can acknowledge an older accepted save while another revision is current.
+    state.dirty=true;renderSourceMetadata({...state.saved,history:saved.history,publications:saved.publications});
+    notice('Original source revision '+saved.saveOperation.revision+' is saved. Later edits remain available for reconciliation with revision '+saved.revision+'.');
+  }
+  checkpoint();
+}
 function inputCell(value,label,onInput,{type='text',checked=false}={}){const cell=el('td'),input=el('input');input.type=type;input.setAttribute('aria-label',label);if(type==='checkbox'){input.checked=checked;input.className='cell-check';}else input.value=value??'';input.addEventListener(type==='checkbox'?'change':'input',()=>{onInput(type==='checkbox'?input.checked:input.value);markReportDirty();});cell.append(input);return cell;}
 function selectCell(value,label,choices,onChange){const cell=el('td'),select=el('select');select.setAttribute('aria-label',label);options(select,choices.map(value=>({value,label:value})),value);select.addEventListener('change',()=>{onChange(select.value);markReportDirty();});cell.append(select);return cell;}
 function renderColumns(){$('report-columns').replaceChildren(...state.columns.map((column,index)=>{const row=el('tr');row.append(inputCell(column.alias,'Output alias '+index,v=>column.alias=v),inputCell(column.column,'Native column '+index,v=>column.column=v),selectCell(column.type,'Type '+index,types,v=>column.type=v),inputCell(null,'Nullable '+index,v=>column.nullable=v,{type:'checkbox',checked:column.nullable===true}));const cell=el('td');cell.append(button('Remove',()=>{state.columns.splice(index,1);renderColumns();markReportDirty();}));row.append(cell);return row;}));}
@@ -423,37 +512,93 @@ async function refreshSubscriptions(){const result=await api('subscriptions');$(
   if(!result.items.length)$('subscription-operations').append(el('p','Saved subscription reviews and their original operation results appear here.','muted'));}
 function renderHandoff(){const target=$('handoff-files');if(!target)return;target.replaceChildren();if(state.saved?.revision){target.append(button('Download saved source',()=>download('files/revision/'+state.saved.revision+'/source.json','RisingWave-Source.json')),button('Download saved merchant terms',()=>download('files/revision/'+state.saved.revision+'/merchant.json','RisingWave-Merchant.json')));}
   const capture=state.captures?.items.find(item=>item.state==='COMPLETE');$('transfer-command').textContent='starforge risingwave-workbench receive \\\n  --connection /private/workbench-launch.json \\\n  --capture '+(capture?.id??'CAPTURE_ID')+' \\\n  --directory /private/customer-edition';}
+function buyerSelection() {
+  return {publicationId:state.product?.id??null,runId:$('buyer-run').value,query:$('buyer-query').value};
+}
+function currentBuyerInput() {
+  return {...buyerSelection(),intentId:$('buyer-intent').value,acceptIndex:Number($('buyer-option').value),
+    offerSha256:state.offer?.offerSha256??null};
+}
+function invalidateOffer() {state.offerVersion++;state.offer=null;state.offerSelection=null;$('buyer-option').replaceChildren();$('buyer-result').replaceChildren();}
 function rememberBuyerDraft() {
   if(!state.product||!$('buyer-intent'))return;
-  state.buyerDrafts[state.product.id]={form:Object.fromEntries(['buyer-run','buyer-query','buyer-intent','buyer-option'].map(id=>[id,fieldValue($(id))])),offer:structuredClone(state.offer)};
+  state.buyerDrafts[state.product.id]={form:Object.fromEntries(['buyer-run','buyer-query','buyer-intent','buyer-option'].map(id=>[id,fieldValue($(id))])),
+    offer:structuredClone(state.offer),offerSelection:structuredClone(state.offerSelection)};
 }
-function adoptProduct(product) {
-  rememberBuyerDraft();state.product=product;state.buyerOffset=0;state.offer=null;
-  $('buyer-intent').value='';$('buyer-query').value='limit=10';$('buyer-run').value='';$('buyer-option').replaceChildren();$('buyer-result').replaceChildren();
+function productContext() {
+  if(!state.product)throw new Error('Open a data product first.');
+  if(state.pendingProductId)throw new Error('Wait for the selected data product to open.');
+  return {generation:state.productGeneration,id:state.product.id};
+}
+function sameProduct(context) {
+  return !state.pendingProductId&&context.generation===state.productGeneration&&context.id===state.product?.id;
+}
+function beginProductSelection(id) {
+  rememberBuyerDraft();
+  const context={generation:++state.productGeneration,id};
+  state.pendingProductId=id;state.productReadVersion++;state.offerVersion++;$('selected-product').inert=true;
+  return context;
+}
+function finishProductSelection(context) {
+  if(context.generation!==state.productGeneration)return;
+  state.pendingProductId=null;$('selected-product').inert=false;
+}
+function adoptProduct(product,context) {
+  if(context.generation!==state.productGeneration||context.id!==product.id)return false;
+  rememberBuyerDraft();state.product=product;state.buyerOffset=product.buyerPage?.offset??0;
+  state.offer=null;state.offerSelection=null;finishProductSelection(context);
+  $('buyer-intent').value='risingwave-'+crypto.randomUUID();$('buyer-query').value='limit=10';$('buyer-run').value='';
+  $('buyer-option').replaceChildren();$('buyer-result').replaceChildren();
   renderProduct();
   const retained=state.buyerDrafts[product.id];
   if(retained){
-    state.offer=structuredClone(retained.offer);
+    state.offer=structuredClone(retained.offer);state.offerSelection=structuredClone(retained.offerSelection??null);
     if(state.offer)options($('buyer-option'),state.offer.accepts.map((choice,index)=>({value:String(index),label:index+' · '+choice.network+' · '+choice.amount})),'0');
     for(const[id,field]of Object.entries(retained.form))setField($(id),field);
+    if(state.offer&&!same(state.offerSelection,buyerSelection()))invalidateOffer();
   }
-  checkpoint();
+  checkpoint();return true;
 }
-
-function renderProducts(){$('products-list').replaceChildren(...(state.saved?.publications??[]).map(item=>{const card=el('article',undefined,'capture-card');card.append(el('h3',item.query),el('p',item.path),button('Open product',async()=>{adoptProduct(await api('publications/'+item.id));}));return card;}));}
-async function refreshProducts(){const latest=await api('state');state.remoteSaved=latest;if(currentHasChanges()){state.saved={...state.saved,publications:latest.publications,history:latest.history};}else if(latest.revision!==state.saved?.revision)install(latest);else state.saved=latest;renderProducts();if(state.product)await refreshProduct();status();}
-async function refreshProduct(){state.product=await api('publications/'+state.product.id+'?buyerOffset='+state.buyerOffset);renderProduct();}
+async function openProduct(id) {
+  const context=beginProductSelection(id);
+  try{adoptProduct(await api('publications/'+id),context);}
+  finally{finishProductSelection(context);}
+}
+function renderProducts() {
+  $('products-list').replaceChildren(...(state.saved?.publications??[]).map(item=>{
+    const card=el('article',undefined,'capture-card');
+    card.append(el('h3',item.query),el('p',item.path),button('Open product',()=>openProduct(item.id)));return card;
+  }));
+}
+async function refreshProducts() {
+  const latest=await api('state');
+  if(latest.revision>=Math.max(state.saved?.revision??0,state.remoteSaved?.revision??0)){
+    state.remoteSaved=latest;
+    if(currentHasChanges())state.saved={...state.saved,publications:latest.publications,history:latest.history};
+    else if(latest.revision!==state.saved?.revision)install(latest);
+    else state.saved=latest;
+    renderProducts();status();
+  }
+  if(state.product&&!state.pendingProductId)await refreshProduct();
+}
+async function refreshProduct(context=productContext()) {
+  if(!sameProduct(context))return;
+  const offset=state.buyerOffset,version=++state.productReadVersion;
+  const product=await api('publications/'+context.id+'?buyerOffset='+offset);
+  if(sameProduct(context)&&version===state.productReadVersion&&offset===state.buyerOffset){state.product=product;renderProduct();}
+  return product;
+}
 function renderProduct(){const product=state.product;if(!product)return;$('selected-product').hidden=false;$('product-title').textContent=product.query;$('publisher-link').href=product.consoleUrl;
   facts($('product-facts'),[['Resource',product.merchant.publicOrigin+product.path],['Saved source revision',product.revision],['Seller',product.seller?.origin??'Stopped'],['Scheduler',product.schedule?.enabled?'Enabled':'Paused'],['Product',product.id]]);
-  const runs=product.status.runs??[];$('product-runs').replaceChildren(grid(['Run','State','Action'],runs.map(item=>[item.id,item.state,button('Inspect',async()=>{const result=await api('publications/'+product.id+'/run?runId='+encodeURIComponent(item.id));$('product-runs').append(details(result,'Run '+item.id));})])));
-  options($('buyer-run'),runs.filter(item=>['PUBLISHED','READY'].includes(item.state)).map(item=>({value:item.id,label:item.id+' · '+item.state})),$('buyer-run').value);if(!$('buyer-intent').value)$('buyer-intent').value='risingwave-'+crypto.randomUUID();
+  const runs=product.status.runs??[];$('product-runs').replaceChildren(grid(['Run','State','Action'],runs.map(item=>[item.id,item.state,button('Inspect',async()=>{const context=productContext();const result=await api('publications/'+product.id+'/run?runId='+encodeURIComponent(item.id));if(sameProduct(context)&&context.id===product.id)$('product-runs').append(details(result,'Run '+item.id));})])));
+  const retainedRun=fieldValue($('buyer-run'));options($('buyer-run'),[{value:'',label:'Choose a published edition'},...runs.filter(item=>['PUBLISHED','READY'].includes(item.state)).map(item=>({value:item.id,label:item.id+' · '+item.state}))],retainedRun.value);setField($('buyer-run'),retainedRun);
   $('buyer-history').replaceChildren(grid(['Prepared','Intent','Published edition','Original request'],(product.buyers??[]).map(item=>[
     item.createdAt,item.intentId,item.snapshot,button('Download customer request',()=>download('files/buyer/'+product.id+'/'+item.id,'RisingWave-Dataset-Buyer-'+item.id+'.json'))])));
   const page=product.buyerPage??{offset:0,total:product.buyers?.length??0,nextOffset:null};
   $('buyers-page').textContent=page.total?(page.offset+1)+'–'+(page.offset+(product.buyers?.length??0))+' of '+page.total:'No customer requests';
   $('buyers-prev').disabled=!page.offset;$('buyers-next').disabled=page.nextOffset===null;
 }
-on('reload',async()=>{await flushRecovery();recovery.id=browserId();recovery.version=0;recovery.pending=null;recovery.lastSaved=null;const latest=await api('state');install(latest);state.remoteSaved=latest;notice('Opened the latest saved source. The previous complete draft remains in Transfer.');});
+on('reload',()=>workspaceTransition(async()=>{await flushRecovery();recovery.id=browserId();recovery.version=0;recovery.pending=null;recovery.lastSaved=null;const latest=await api('state');install(latest);state.remoteSaved=latest;notice('Opened the latest saved source. The previous complete draft remains in Transfer.');}));
 
 on('save-source',saveSource);
 on('add-payment',()=>{state.payments.push({scheme:'exact',network:'',asset:'',amount:'',payTo:'',maxTimeoutSeconds:60});renderPayments();markDirty();});
@@ -490,20 +635,44 @@ on('inspect-subscription',async()=>{const result=await api('subscription/inspect
 on('prepare-subscription',async()=>{const input={expectedRevision:requireSaved(),query:$('subscription-query').value,retention:$('subscription-retention').value.trim()},key=pretty(input);let request=state.subscriptionRequests.get(key);if(!request){request={...input,requestId:'subscription-'+Date.now()+'-'+crypto.randomUUID()};state.subscriptionRequests.set(key,request);}notice('Preparing original subscription request '+request.requestId+'.');showSubscriptionReview(await api('subscription/prepare',request));await refreshSubscriptions();notice('Saved the exact subscription creation review.');});
 on('create-subscription',async()=>{const selected=state.subscriptionReview;if(!selected)throw new Error('Open a saved creation review first.');const result=await api('subscription/create',{expectedRevision:selected.revision,requestId:selected.requestId,reviewHash:selected.review.reviewHash});showSubscriptionReview(result);await refreshSubscriptions();notice('Original subscription operation: '+result.result.status+'.');});
 on('refresh-subscriptions',refreshSubscriptions);
-on('create-product',async()=>{const input={expectedRevision:requireSaved(),query:$('product-query').value,path:$('product-path').value.trim()},key=pretty(input);let request=state.productRequests.get(key);if(!request){const existing=state.saved.publications.find(item=>item.revision===input.expectedRevision&&item.query===input.query&&item.path===input.path);request={...input,publicationId:existing?.id??'publication-'+Date.now()+'-'+crypto.randomUUID()};state.productRequests.set(key,request);}
-  adoptProduct(await api('publications',request));await refreshProducts();renderProduct();notice('Opened the original dataset publication.');});
+on('create-product',async()=>{
+  const input={expectedRevision:requireSaved(),query:$('product-query').value,path:$('product-path').value.trim()},key=pretty(input);
+  let request=state.productRequests.get(key);
+  if(!request){
+    const existing=state.saved.publications.find(item=>item.revision===input.expectedRevision&&item.query===input.query&&item.path===input.path);
+    request={...input,publicationId:existing?.id??'publication-'+Date.now()+'-'+crypto.randomUUID()};state.productRequests.set(key,request);
+  }
+  const context=beginProductSelection(request.publicationId);
+  try{const product=await api('publications',request);adoptProduct(product,context);await refreshProducts();
+    if(sameProduct(context))notice('Opened the original dataset publication.');}
+  finally{finishProductSelection(context);}
+});
 on('refresh-products',refreshProducts);
-on('start-seller',async()=>{if(!state.product)throw new Error('Open a data product first.');state.product=await api('publications/'+state.product.id+'/seller/start',{});renderProduct();});
-on('stop-seller',async()=>{if(!state.product)throw new Error('Open a data product first.');state.product=await api('publications/'+state.product.id+'/seller/stop',{});renderProduct();});
-on('read-offer',async()=>{if(!state.product)throw new Error('Open a data product first.');const offer=await api('publications/'+state.product.id+'/buyer?runId='+encodeURIComponent($('buyer-run').value)+'&query='+encodeURIComponent($('buyer-query').value));state.offer=offer;
-  options($('buyer-option'),offer.accepts.map((choice,index)=>({value:String(index),label:index+' · '+choice.network+' · '+choice.amount})),'0');$('buyer-result').replaceChildren(details(offer,'Exact customer offer'));});
-on('prepare-buyer',async()=>{if(!state.offer||!state.product)throw new Error('Read the exact buyer offer first.');
-  const input={runId:$('buyer-run').value,query:$('buyer-query').value,intentId:$('buyer-intent').value,acceptIndex:Number($('buyer-option').value),offerSha256:state.offer.offerSha256};
-  const selected=originalRequest(state,'buyerRequests',{publicationId:state.product.id,...input},'buyerId','buyer');
-  const {publicationId,...request}=selected;const result=await api('publications/'+publicationId+'/buyer',request);
-  await refreshProduct();
-  $('buyer-result').replaceChildren(details(result,'Prepared customer request'),button('Download customer request',()=>download('files/buyer/'+state.product.id+'/'+result.id,'RisingWave-Dataset-Buyer-'+result.id+'.json')));});
-for(const id of ['buyer-run','buyer-query'])$(id).addEventListener('input',()=>{state.offer=null;});
+for(const action of ['start','stop'])on(action+'-seller',async()=>{
+  const context=productContext();await api('publications/'+context.id+'/seller/'+action,{});
+  if(sameProduct(context))await refreshProduct(context);
+});
+on('read-offer',async()=>{
+  const context=productContext(),selection=buyerSelection(),version=++state.offerVersion;
+  const offer=await api('publications/'+context.id+'/buyer?runId='+encodeURIComponent(selection.runId)+'&query='+encodeURIComponent(selection.query));
+  if(!sameProduct(context)||version!==state.offerVersion||!same(selection,buyerSelection()))return;
+  state.offer=offer;state.offerSelection=selection;
+  options($('buyer-option'),offer.accepts.map((choice,index)=>({value:String(index),label:index+' · '+choice.network+' · '+choice.amount})),'0');
+  $('buyer-result').replaceChildren(details(offer,'Exact customer offer'));checkpoint();
+});
+on('prepare-buyer',async()=>{
+  const context=productContext();
+  if(!state.offer||!same(state.offerSelection,buyerSelection()))throw new Error('Read the exact buyer offer for this selected edition and query first.');
+  const submitted=currentBuyerInput();
+  const selected=originalRequest(state,'buyerRequests',submitted,'buyerId','buyer');
+  const {publicationId,...request}=selected,result=await api('publications/'+publicationId+'/buyer',request);
+  if(!sameProduct(context)||!same(submitted,currentBuyerInput()))return;
+  await refreshProduct(context);
+  if(!sameProduct(context)||!same(submitted,currentBuyerInput()))return;
+  $('buyer-result').replaceChildren(details(result,'Prepared customer request'),
+    button('Download customer request',()=>download('files/buyer/'+publicationId+'/'+result.id,'RisingWave-Dataset-Buyer-'+result.id+'.json')));
+});
+for(const id of ['buyer-run','buyer-query'])$(id).addEventListener('input',invalidateOffer);
 window.addEventListener('beforeunload',event=>{localCheckpoint();if(currentHasChanges()){event.preventDefault();event.returnValue='';}});
 document.addEventListener('visibilitychange',()=>{if(document.hidden){localCheckpoint();void flushRecovery().catch(()=>{});}});
 document.addEventListener('input',event=>{if(event.target.id==='source-json')state.rawEditors.source=true;if(event.target.id==='payment-json')state.rawEditors.payments=true;status();checkpoint();});
@@ -515,14 +684,14 @@ on('recovery-save',async()=>{await flushRecovery();await refreshRecoveryList();n
 on('recovery-refresh',refreshRecoveryList);
 on('recovery-open',()=>openRecovery($('recovery-select').value));
 on('recovery-export',()=>{localCheckpoint();downloadObject(browserSnapshot(),'RisingWave-Browser-Workspace-'+recovery.id+'.json');});
-on('recovery-import',async()=>{
+on('recovery-import',()=>workspaceTransition(async()=>{
   const selected=$('recovery-file').files?.[0];if(!selected)throw new Error('Choose a complete browser workspace JSON file.');
   const value=validateBrowserState(JSON.parse(await selected.text()),state.saved.workspaceIdentity);
   await flushRecovery();const latest=await api('state');recovery.ready=false;
   try{await installBrowserSnapshot(value,latest);recovery.id=browserId();recovery.version=0;recovery.pending=null;recovery.lastSaved=null;}
   finally{recovery.ready=true;}
   await flushRecovery();await refreshRecoveryList();notice('Imported the complete browser workspace and its original operation selections.');
-});
+}));
 
 let polling=false;setInterval(()=>{if(polling||document.hidden||$('captures').hidden||!state.captures?.items.some(item=>item.state==='CAPTURING'))return;polling=true;void run(refreshCaptures).finally(()=>{polling=false;});},3000);
-await run(async()=>{if(!/^[A-Za-z0-9_-]{43}$/.test(token))throw new Error('Open the complete private URL printed by the workbench launcher.');await initializeRecovery(await requestApi('state'));if(state.reconcileRequested)await prepareReconciliation();notice('Opened the original workbench and retained browser workspace.');});
+await run(()=>workspaceTransition(async()=>{if(!/^[A-Za-z0-9_-]{43}$/.test(token))throw new Error('Open the complete private URL printed by the workbench launcher.');await initializeRecovery(await requestApi('state'));if(state.reconcileRequested)await prepareReconciliation();notice('Opened the original workbench and retained browser workspace.');}));
