@@ -5,7 +5,8 @@ stopped, authenticate an original encrypted bundle, publish that snapshot, find
 a completed recovery point on the selected storage service, and restore its
 original named roots on a receiving host. It also authenticates and adopts an
 existing local dataset-publisher restore through the publisher's maintained
-receiving operation.
+receiving operation, and prepares a restored merchant fleet through its original
+receiving engine.
 
 The workspace operates the maintained `runRemote` facade and `recover.mjs`.
 Its original transfer journal remains the saved record of the upload, download,
@@ -33,6 +34,8 @@ The host administrator chooses these separate locations:
 | A profile's `bundleRoots` | Named collections containing original encrypted snapshots and configured parents for new captures. |
 | A profile's optional `capturePlans` | Named original recovery plan files, each bound to one declared encrypted-bundle parent. |
 | A profile's optional `publisherRestores` | Host-declared original encrypted bundles and existing plaintext publisher restores to inspect and adopt. |
+| A profile's optional `fleetRestores` | Original encrypted fleet bundles and their existing complete plaintext restores. |
+| A profile's optional `fleetTargets` | Original native target declarations and receiving operation directories. |
 | A profile's `downloadRoot` | The parent for encrypted bundles received from the selected storage service. |
 | A profile's `restoreRoot` | The parent for new plaintext cold-restore destinations. |
 
@@ -172,7 +175,8 @@ starforge merchant-recovery-remote workspace serve \
 Open its printed capability URL. The host summary reads **Local recovery**.
 The operation selector begins with **Create encrypted snapshot** when capture
 plans are declared, otherwise **Prepare restored dataset publisher** when
-existing restores are declared, otherwise **Verify local encrypted bundle**.
+existing publisher restores are declared, otherwise **Prepare restored merchant fleet**
+when receiving targets are declared, otherwise **Verify local encrypted bundle**.
 Remote inventory and upload, download, and remote cold-restore controls remain
 disabled for this profile.
 
@@ -738,6 +742,190 @@ publications through its existing operator before continuing the corresponding
 publication work. The original publisher remains responsible for its normal
 job, delivery and publication transitions.
 
+## Receive an original merchant fleet
+
+The same workspace now takes a completed fleet cold restore through its
+original receiving operation. It authenticates the captured fleet plan and
+every restored root, shows all merchants and release slots, receives the
+captured absolute paths, and returns the new deployment bundle together with
+the original native result.
+
+Use the fleet's existing shutdown procedure to stop the receiving service and
+the selected source writers. Keep them stopped through preparation. Run the
+workspace under the original nonzero Linux service UID and GID captured in the
+fleet plan. The native receiving engine checks that account and the ownership
+of the receiving parents before placing any root.
+
+### Declare the existing fleet restore and its receiving target
+
+Add these optional fields to the selected recovery profile. Replace the example
+IDs and paths with the existing original recovery and host declarations:
+
+```json
+{
+  "fleetRestores": [
+    {
+      "id": "accepted-fleet",
+      "label": "Accepted original fleet restore",
+      "bundleDirectory": "/private/fleet-backups/accepted",
+      "restoreDirectory": "/private/fleet-restored/accepted"
+    }
+  ],
+  "fleetTargets": [
+    {
+      "id": "original-host",
+      "label": "Original fleet receiving host",
+      "targetFile": "/private/fleet-recovery/targets.json",
+      "operationDirectory": "/private/fleet-recovery/native-receiving"
+    }
+  ]
+}
+```
+
+The encrypted bundle belongs within this profile's declared bundle roots or
+download root. The existing plaintext restore belongs strictly within its
+restore root. Keep both paths, the workspace state and the original transfer
+journals separate. The receiving operation directory is the original native
+journal for this exact target.
+
+The private target file uses the existing native schema:
+
+```json
+{
+  "schema": "stellar-forge.fleet-recovery-targets.v1",
+  "sourcePlanSha256": "ACTUAL_64_HEX_ORIGINAL_FLEET_RECOVERY_PLAN_SHA256",
+  "destinationParents": ["/srv/original-fleet"],
+  "deploymentBundle": "/srv/original-fleet/received-deployment"
+}
+```
+
+Use the exact source-plan digest from the original fleet capture. The selected
+private receiving parents must contain every captured root at its original
+absolute path and the new deployment bundle. Those parents belong to the
+captured service account. Retained native placement can reopen its own partial
+or completed roots; an unrelated existing path remains an explicit native
+conflict to resolve through the original recovery.
+
+The original installed fleet source and separately provisioned service
+environment remain available at their retained host locations. Preserve the
+existing stop, launch and rollback procedures with this receiving declaration.
+
+A completed original remote restore can also supply the bundle and plaintext
+paths. In that case select its existing transfer operation ID instead of a
+host-declared fleet restore ID. Both routes use the same authenticated fleet
+inspection and the same host-declared receiving target. A local-only profile
+can prepare an existing fleet restore without an S3 configuration.
+
+### Review the complete fleet in the browser
+
+Choose **Prepare restored merchant fleet**, or use **Review fleet recovery**
+beside a declared restore or completed original cold restore. Select the
+original source and receiving target, keep the operation ID, and confirm that
+the fleet and selected writers will remain stopped.
+
+Choose **Review restored fleet**. The review includes:
+
+| Review information | What the operator can inspect |
+| --- | --- |
+| Source and receiving identities | Original restore ID, encrypted snapshot, recovery-plan digest, captured profile digest, target-file digest and native operation ID. |
+| Original service account and receiving parents | The captured UID/GID, every declared parent, installed source location and new deployment bundle. |
+| Complete receiving roots | Each logical root and kind, authenticated restored path, original receiving path, file count, byte count and current native placement state. |
+| Every merchant and release slot | Merchant ID and host, startup slot, slot port, generation, history count, active release and previous release. |
+| Complete retained release links | Every saved revision and mapping, its digest and snapshot, pending phase, and full unchanged native review. |
+
+The source, target and raw operation ID remain in this browser session when
+the page reopens or the operator changes profiles. Missing host declarations
+stay visible with their saved IDs. A current writer-shutdown confirmation is
+required again when reopening the selection or changing its source or target.
+Saved workspace requests remain the durable operating history.
+
+Choose **Prepare restored fleet** for that exact review. The workspace binds
+the selected source and target, then calls the original
+`prepareRestoredFleet` implementation. The native engine owns the receiving
+lease, root placement, retained partial work and deployment generation.
+
+### Follow the original completion and reopen the fleet
+
+**Workspace operations** retains the original request, native phase and error,
+receiving target, selected restore, and complete result. **Continue operation**
+reopens that same saved request after an interruption. **Stop execution**
+requests cancellation before native preparation starts; an already-running
+native preparation can finish, and its returned result stays with this request.
+
+If a response is lost, read the same request first. A saved complete request
+reopens its retained result before rereading the original bundle and restore
+copies. When the native operation completed before the outer acknowledgement,
+continuation reads that exact native completion and saves it on the original
+workspace request.
+
+The outer result has status `COMPLETE` and command `fleet-prepare`. It keeps
+`sourceFleetRestoreId` or `sourceRestoreId`, `fleetTargetId`, `fleetOperationId`,
+`snapshotId`, `bundle`, `destination`, `reviewSha256`, `operationDirectory`,
+and the unchanged native `prepared` result.
+
+| Completed native result | Use at handoff |
+| --- | --- |
+| `prepared.deploymentBundle` | Open this generated deployment through the maintained fleet launch procedure. |
+| `prepared.originalDeploymentBundle` | Identify the captured original deployment alongside the new receiving bundle. |
+| `prepared.serviceUid`, `prepared.serviceGid` | Use the original service identity for launch and subsequent operation. |
+| `prepared.runtime` | Follow the actual returned unit, workspace port, Node runtime and installed source directory. |
+| `prepared.roots` | Reopen every received original path with its captured source-tree identity. |
+| `prepared.summary` | Inspect every merchant, slot, retained release and saved fleet release link. |
+| `prepared.operationId`, `reviewSha256`, `operationDirectory` | Continue or inspect the same native receiving operation. |
+
+The browser displays the actual deployment and runtime paths on completion
+and retains the complete native result beneath them. Launch that deployment
+with the fleet's existing operating procedure, then continue the retained
+merchant releases, gateway configuration and rollback workflow through the
+original fleet operator.
+
+### Use the same workflow from the CLI or merchant tools
+
+Keep the original workspace server running. Save the complete selection as an
+owned private JSON file; these example IDs correspond to the declarations above:
+
+```json
+{
+  "profileId": "fleet-local",
+  "action": "fleet-prepare",
+  "id": "original-fleet-receiving",
+  "fleetRestoreId": "accepted-fleet",
+  "fleetTargetId": "original-host",
+  "quiesced": true
+}
+```
+
+A remote-journal selection replaces `fleetRestoreId` with `restoreId` and the
+original completed cold-restore ID. Use one source selector in the same
+selection file.
+
+```sh
+starforge merchant-recovery-remote workspace review \
+  --config /private/fleet-recovery/workspace.json \
+  --directory /private/fleet-recovery/operator \
+  --selection /private/fleet-recovery/selection.json
+
+starforge merchant-recovery-remote workspace start \
+  --config /private/fleet-recovery/workspace.json \
+  --directory /private/fleet-recovery/operator \
+  --selection /private/fleet-recovery/selection.json \
+  --expected-review-hash ACTUAL_WORKSPACE_REVIEW_HASH
+
+starforge merchant-recovery-remote workspace request \
+  --config /private/fleet-recovery/workspace.json \
+  --directory /private/fleet-recovery/operator \
+  --profile fleet-local \
+  --id original-fleet-receiving
+```
+
+Use the returned outer workspace `reviewHash` for start. The native receiving
+review and operation identity are derived from the exact native inspection.
+The CLI attaches through the existing private launch to the original running
+workspace. The merchant tools use the same selection, listener, review and
+request paths. The complete eleven-command and tool reference is in
+[MCP.md](MCP.md); [FLEET_ADAPTER.md](FLEET_ADAPTER.md) describes the original
+receiving boundary and retained phases.
+
 ## Follow progress, cancel, and continue
 
 For remote transfers, the original journal's `status` is the last saved transfer phase.
@@ -810,6 +998,7 @@ Retain these items for the receiving operator:
 | Original encrypted bundle and download location | Authenticate and reuse the retained snapshot. |
 | Completed restore destination and result | Continue the original merchant's receiving-host procedure. |
 | Declared publisher restore IDs and their exact bundle/restore paths | Reopen existing local publisher recovery through its original authenticated inspection and native preparation. |
+| Fleet restore and receiving target declarations, reviewed native identity and completed result | Reopen the exact received roots and generated fleet deployment under its original service account. |
 | Dataset-publisher preparation review and completed native result | Reopen the exact prepared dataset, publisher and seller configuration with the selected source and native operation identities. |
 
 The original credential and passphrase facilities remain with the host's
