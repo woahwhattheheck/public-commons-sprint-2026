@@ -48,7 +48,7 @@ function equal(left, right) { return identity(left) === identity(right); }
 export async function prepareFrictionlessRelease({
   publisher, runId, outputDirectory, payment, origin, path = '/data',
 } = {}) {
-  if (!publisher || publisher.settings?.schema !== 'stellar-forge.frictionless-publisher-workspace.v1' ||
+  if (!publisher || !['stellar-forge.frictionless-publisher-workspace.v1','stellar-forge.frictionless-publisher-workspace.v2'].includes(publisher.settings?.schema) ||
       typeof publisher.candidate !== 'function' || !UUID.test(runId ?? ''))
     throw fault('PACKAGE_PUBLISHER_REQUIRED', 'Choose the open Frictionless publisher and its original extraction.');
   const directory = absolute(publisher.directory, 'publisher directory');
