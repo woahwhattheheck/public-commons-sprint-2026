@@ -1021,10 +1021,9 @@ async function verifyPublisherFiles(root,manifest) {
     const build=manifest.build,receipt=(await readJSON(join(root,build.receipt.path))).value;
     if(receipt.schema!=='stellar-forge.fuul-stellar-build-receipt.v1'||receipt.sourceCapsuleSha256!==CAPSULE_SHA256||
       receipt.sourcePackageId!==build.sourcePackageId||receipt.sourceDirectory!==build.sourceDirectory||
-      canonical(receipt.toolchain)!==canonical(build.toolchain)||!Array.isArray(receipt.steps)||
-      receipt.steps.some(step=>step.status!=='COMPLETE'||step.exitCode!==0)||
-      canonical(receipt.steps.map(step=>step.name))!==canonical(['source-install','source-build','source-pack','consumer-install']))
+      canonical(receipt.toolchain)!==canonical(build.toolchain)||!completeBuildSteps(receipt))
       fail('RUNTIME_BUILD_SOURCE_CHANGED');
+    if(receipt.compiledOutput)await verifyCompiledOutput(join(root,build.sourceDirectory),receipt.compiledOutput);
     const builtSource=packages.get(build.sourcePackageId);
     if(!builtSource.includeDevelopment||!builtSource.requiredByFuul)fail('RUNTIME_BUILD_SOURCE_CHANGED');
     const compiler=builtSource.dependencies.find(edge=>edge.name==='typescript'&&edge.present);
@@ -1043,6 +1042,171 @@ async function verifyPublisherFiles(root,manifest) {
 const BUILD_SCHEMA='stellar-forge.fuul-stellar-build-operation.v1';
 const BUILD_RECEIPT_SCHEMA='stellar-forge.fuul-stellar-build-receipt.v1';
 const BUILD_COMMAND_SCHEMA='stellar-forge.fuul-stellar-build-command.v1';
+
+const COMPILED_OUTPUT_SCHEMA='stellar-forge.fuul-stellar-compiled-output.v1';
+const RECOVERY_STAGE=/^source-build-recovery-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+const PACKAGE_STAGE=/^source-package-[a-f0-9]{64}$/;
+function buildStage(name) {
+  return ['source-install','source-build','source-pack','consumer-install'].includes(name)||
+    RECOVERY_STAGE.test(name)||PACKAGE_STAGE.test(name);
+}
+function buildHeap(value) {
+  if(value===undefined||value===null)return null;
+  if(!Number.isInteger(value)||value<128||value>65536)fail('RUNTIME_BUILD_HEAP_INVALID',{minimumMB:128,maximumMB:65536});
+  return value;
+}
+function compiledSelection(value) {
+  if(!object(value)||value.schema!==COMPILED_OUTPUT_SCHEMA||value.sourceCapsuleSha256!==CAPSULE_SHA256||
+    !['source-build'].includes(value.stage)&&!RECOVERY_STAGE.test(value.stage)||
+    typeof value.attemptId!=='string'||!/^attempt-[0-9a-f-]{36}$/.test(value.attemptId)||
+    !Array.isArray(value.files)||!value.files.length||!Array.isArray(value.directories)||
+    !SHA256.test(value.sha256))fail('RUNTIME_BUILD_OUTPUT_SELECTION_INVALID');
+  const {sha256:expected,...body}=value;
+  if(sha256(Buffer.from(canonical(body)))!==expected)fail('RUNTIME_BUILD_OUTPUT_SELECTION_INVALID');
+  const paths=new Set();
+  for(const row of value.directories) {
+    relative(row.path);mode(row.mode);
+    if(row.path!=='dist'&&!row.path.startsWith('dist/')||paths.has(row.path))
+      fail('RUNTIME_BUILD_OUTPUT_SELECTION_INVALID');
+    paths.add(row.path);
+  }
+  for(const row of value.files) {
+    relative(row.path);mode(row.mode);
+    if(!row.path.startsWith('dist/')||paths.has(row.path)||!Number.isSafeInteger(row.bytes)||row.bytes<0||
+      !SHA256.test(row.sha256))fail('RUNTIME_BUILD_OUTPUT_SELECTION_INVALID');
+    paths.add(row.path);
+  }
+  if(!paths.has('dist')||!paths.has('dist/esm/index.js')||!paths.has('dist/cjs/index.js')||
+    !paths.has('dist/esm/index.d.ts')||!paths.has('dist/cjs/index.d.ts')||
+    !paths.has('dist/cjs/package.json'))fail('RUNTIME_BUILD_OUTPUT_SELECTION_INVALID');
+  return value;
+}
+async function compiledFiles(root) {
+  const files=[],directories=[];
+  async function visit(rel) {
+    await safeParents(root,rel);
+    const filename=join(root,rel),entry=await fs.lstat(filename);
+    if(entry.isSymbolicLink())fail('RUNTIME_BUILD_OUTPUT_CHANGED',{path:rel});
+    if(entry.isDirectory()) {
+      directories.push({path:rel,mode:entry.mode&0o777});
+      for(const name of (await fs.readdir(filename)).sort())await visit(rel+'/'+name);
+    }else if(entry.isFile()) {
+      const row=await inspectFile(filename);
+      files.push({path:rel,bytes:row.bytes,sha256:row.sha256,mode:row.mode});
+    }else fail('RUNTIME_BUILD_OUTPUT_CHANGED',{path:rel});
+  }
+  try{await visit('dist');}catch(error){
+    if(['ENOENT','ENOTDIR'].includes(error.code))fail('RUNTIME_BUILD_OUTPUT_CHANGED',{},error);
+    throw error;
+  }
+  return {files:files.sort((a,b)=>a.path.localeCompare(b.path,'en')),
+    directories:directories.sort((a,b)=>a.path.localeCompare(b.path,'en'))};
+}
+async function captureCompiledOutput(root,step,checked) {
+  const inventory=await compiledFiles(root),available=new Set(inventory.files.map(row=>row.path));
+  function exports(value) {
+    if(typeof value==='string'&&value.startsWith('./dist/')&&!available.has(value.slice(2)))
+      fail('RUNTIME_BUILD_EXPORT_MISSING',{path:value});
+    if(Array.isArray(value))for(const item of value)exports(item);
+    else if(object(value))for(const item of Object.values(value))exports(item);
+  }
+  exports(checked.packageJSON.exports);
+  for(const name of ['main','module','types'])exports(checked.packageJSON[name]);
+  if((await fs.readFile(path.join(root,'dist','cjs','package.json'),'utf8')).trim()!=='{"type":"commonjs"}')
+    fail('RUNTIME_BUILD_OUTPUT_CHANGED',{path:'dist/cjs/package.json'});
+  const body={schema:COMPILED_OUTPUT_SCHEMA,sourceCapsuleSha256:CAPSULE_SHA256,
+    stage:step.name,attemptId:step.attemptId,completedAt:step.finishedAt,...inventory};
+  return compiledSelection({...body,sha256:sha256(Buffer.from(canonical(body)))});
+}
+async function verifyCompiledOutput(root,value) {
+  const selected=compiledSelection(value),actual=await compiledFiles(root);
+  if(canonical(actual.files)!==canonical(selected.files)||canonical(actual.directories)!==canonical(selected.directories))
+    fail('RUNTIME_BUILD_OUTPUT_CHANGED',{expectedSha256:selected.sha256});
+  return selected;
+}
+function completeBuildSteps(receipt) {
+  if(!Array.isArray(receipt.steps)||receipt.steps.some(step=>!object(step)||step.status!=='COMPLETE'||step.exitCode!==0))
+    return false;
+  const names=receipt.steps.map(step=>step.name);
+  const legacy=['source-install','source-build','source-pack','consumer-install'];
+  if(canonical(names)===canonical(legacy))return receipt.compiledOutput===undefined;
+  if(names.length!==4&&names.length!==5)return false;
+  if(names[0]!=='source-install'||names[1]!=='source-build'||names.at(-1)!=='consumer-install'||
+    !PACKAGE_STAGE.test(names.at(-2))||names.length===5&&!RECOVERY_STAGE.test(names[2]))return false;
+  let output;try{output=compiledSelection(receipt.compiledOutput);}catch{return false;}
+  const build=names.length===5?receipt.steps[2]:receipt.steps[1],pack=receipt.steps.at(-2);
+  return output.stage===build.name&&output.attemptId===build.attemptId&&
+    pack.name==='source-package-'+output.sha256&&
+    Array.isArray(pack.argv)&&pack.argv[1]==='pack'&&pack.argv.includes('--ignore-scripts');
+}
+
+async function assertNoActiveBuildCommand(operation) {
+  const root=path.join(operation.buildDirectory,'commands');
+  if(!await lstatMaybe(root))return;
+  await directory(root);
+  for(const stage of await fs.readdir(root)) {
+    if(!buildStage(stage))fail('RUNTIME_BUILD_COMMAND_INVALID',{stage});
+    const base=path.join(root,stage);await directory(base);
+    for(const name of await fs.readdir(base)) {
+      if(!/^attempt-[0-9a-f-]{36}$/.test(name))continue;
+      const attemptDirectory=path.join(base,name),filename=path.join(attemptDirectory,'command.json');
+      if(!await lstatMaybe(filename))continue;
+      const loaded=await readJSON(filename),command=loaded.value;
+      if(command.schema!==BUILD_COMMAND_SCHEMA||command.operationId!==operation.id||command.stage!==stage||
+        command.attemptDirectory!==attemptDirectory)fail('RUNTIME_BUILD_COMMAND_CHANGED',{stage});
+      const resultFile=path.join(attemptDirectory,'result.json');
+      const result=await lstatMaybe(resultFile)?(await readJSON(resultFile)).value:null;
+      if(result&&result.commandSha256!==sha256(loaded.bytes))fail('RUNTIME_BUILD_COMMAND_CHANGED',{stage});
+      if(result?.status==='COMPLETE'||result?.status==='FAILED')continue;
+      if(await buildCommandActive(command,result))
+        fail('RUNTIME_BUILD_IN_PROGRESS',{stage,operationId:operation.id,commandFile:filename});
+    }
+  }
+}
+
+async function ensureCompiledOutput(operation,checked,{bun,signal,progress}={}) {
+  let changed=false;
+  if(operation.compiledOutput) {
+    compiledSelection(operation.compiledOutput);
+    try{return await verifyCompiledOutput(operation.sourceDirectory,operation.compiledOutput);}
+    catch(error){if(error.code!=='RUNTIME_BUILD_OUTPUT_CHANGED')throw error;changed=true;}
+  }
+  // A previous prepack invokes the publisher build and removes dist before it
+  // compiles. A completed older source-build receipt cannot recover those bytes.
+  // Use one persisted native recovery stage, then pin its actual completed output.
+  const first=operation.steps.find(step=>step.name==='source-build');
+  let step=first;
+  if(changed||operation.compiledRecovery||first?.recovered) {
+    if(changed||!operation.compiledRecovery) {
+      if(operation.compiledOutput) {
+        operation.priorCompiledOutputs??=[];
+        if(!operation.priorCompiledOutputs.some(row=>row.sha256===operation.compiledOutput.sha256))
+          operation.priorCompiledOutputs.push(operation.compiledOutput);
+      }
+      operation.compiledOutput=null;
+      operation.compiledRecovery={stage:'source-build-recovery-'+randomUUID(),createdAt:new Date().toISOString()};
+      await atomicBytes(operation.buildDirectory,'operation.json',jsonBytes(operation));
+    }
+    if(!RECOVERY_STAGE.test(operation.compiledRecovery.stage))fail('RUNTIME_BUILD_OUTPUT_SELECTION_INVALID');
+    step=await executeBuildStage(operation,operation.compiledRecovery.stage,bun,['run','build'],
+      operation.sourceDirectory,{signal,progress});
+    operation.steps=operation.steps.filter(row=>row.name!==step.name).concat(step);
+    await atomicBytes(operation.buildDirectory,'operation.json',jsonBytes(operation));
+  }
+  if(!step||step.status!=='COMPLETE'||step.exitCode!==0)fail('RUNTIME_BUILD_OUTPUT_UNAVAILABLE');
+  await verifyOriginalSource(operation.sourceDirectory,checked);
+  const selected=await captureCompiledOutput(operation.sourceDirectory,step,checked);
+  // Keep every completed output selection separately as well as its current
+  // pointer, so a later recovery preserves the original native build history.
+  await fs.mkdir(path.join(operation.buildDirectory,'compiled-outputs'),{recursive:true,mode:0o700});
+  await writeSelectedFile(operation.buildDirectory,'compiled-outputs/'+selected.sha256+'.json',jsonBytes(selected),0o600);
+  operation.compiledOutput=selected;
+  await atomicBytes(operation.buildDirectory,'operation.json',jsonBytes(operation));
+  await progress?.({stage:'compiled-output',status:'COMPLETE',operationId:operation.id,
+    sha256:selected.sha256,files:selected.files.length,attemptId:selected.attemptId});
+  return selected;
+}
+
 function abortBuild(signal) {
   if(signal?.aborted)fail('RUNTIME_BUILD_ABORTED');
 }
@@ -1163,7 +1327,7 @@ export async function runFuulBuildChild(commandFile) {
   if(command.schema!==BUILD_COMMAND_SCHEMA||typeof command.token!=='string'||
     !Array.isArray(command.args)||command.args.some(value=>typeof value!=='string'||value.includes('\0'))||
     typeof command.executable!=='string'||!path.isAbsolute(command.executable)||
-    !['source-install','source-build','source-pack','consumer-install'].includes(command.stage)||
+    !buildStage(command.stage)||
     typeof command.cwd!=='string'||!path.isAbsolute(command.cwd))fail('RUNTIME_BUILD_COMMAND_INVALID');
   if(path.basename(file)!=='command.json'||command.attemptDirectory!==attemptDirectory)fail('RUNTIME_BUILD_COMMAND_INVALID');
   const release=await acquire(attemptDirectory);
@@ -1179,6 +1343,8 @@ export async function runFuulBuildChild(commandFile) {
       npm_config_cache:command.cacheDirectory,npm_config_audit:'false',npm_config_fund:'false',
       PATH:command.toolDirectories.join(path.delimiter)+path.delimiter+(process.env.PATH??'')};
     delete env.NODE_OPTIONS;
+    const heapMB=buildHeap(command.nodeHeapMB);
+    if(heapMB!==null)env.NODE_OPTIONS='--max-old-space-size='+heapMB;
     const stdout=await fs.open(path.join(attemptDirectory,'stdout.log'),constants.O_WRONLY|constants.O_CREAT|constants.O_APPEND,0o600);
     let stderr;
     try{stderr=await fs.open(path.join(attemptDirectory,'stderr.log'),constants.O_WRONLY|constants.O_CREAT|constants.O_APPEND,0o600);}
@@ -1226,7 +1392,7 @@ async function executeBuildStage(operation,stage,executable,args,cwd,{signal,pro
     if(result?.status==='COMPLETE') {
       return {name:stage,status:'COMPLETE',exitCode:0,startedAt:result.startedAt,finishedAt:result.finishedAt,
         argv:[path.basename(executable),...args.map(arg=>path.isAbsolute(arg)?'<operation-path>':arg)],
-        recovered:true,attemptId:name,stdoutSha256:(await inspectFile(path.join(attemptDirectory,'stdout.log'))).sha256,
+        recovered:true,nodeHeapMB:buildHeap(command.nodeHeapMB),attemptId:name,stdoutSha256:(await inspectFile(path.join(attemptDirectory,'stdout.log'))).sha256,
         stderrSha256:(await inspectFile(path.join(attemptDirectory,'stderr.log'))).sha256};
     }
     if(await buildCommandActive(command,result))fail('RUNTIME_BUILD_IN_PROGRESS',{stage,operationId:operation.id,commandFile});
@@ -1236,12 +1402,13 @@ async function executeBuildStage(operation,stage,executable,args,cwd,{signal,pro
   await fs.mkdir(attemptDirectory,{mode:0o700});
   const command={schema:BUILD_COMMAND_SCHEMA,operationId:operation.id,stage,token:randomUUID(),
     executable,args,cwd,attemptDirectory,cacheDirectory:path.join(operation.buildDirectory,'npm-cache'),
-    toolDirectories:operation.toolDirectories,createdAt:new Date().toISOString()};
+    toolDirectories:operation.toolDirectories,nodeHeapMB:buildHeap(operation.nodeHeapMB),createdAt:new Date().toISOString()};
   await atomicBytes(attemptDirectory,'command.json',jsonBytes(command));
   await progress?.({stage,status:'RUNNING',operationId:operation.id,attemptId});
   abortBuild(signal);
   const wrapper='const m=await import(process.argv[1]);await m.runFuulBuildChild(process.argv[2]);';
   const env={...process.env,FUUL_BUILD_COMMAND_TOKEN:command.token};delete env.NODE_OPTIONS;
+  if(command.nodeHeapMB!==null)env.NODE_OPTIONS='--max-old-space-size='+command.nodeHeapMB;
   const child=spawn(process.execPath,['--input-type=module','--eval',wrapper,import.meta.url,path.join(attemptDirectory,'command.json')],
     {cwd:operation.buildDirectory,env,stdio:'ignore'});
   const stop=()=>{if(!child.killed)try{child.kill('SIGTERM');}catch{}};
@@ -1264,7 +1431,7 @@ async function executeBuildStage(operation,stage,executable,args,cwd,{signal,pro
   }
   const retained={name:stage,status:'COMPLETE',exitCode:0,startedAt:result.startedAt,finishedAt:result.finishedAt,
     argv:[path.basename(executable),...args.map(arg=>path.isAbsolute(arg)?'<operation-path>':arg)],
-    attemptId,stdoutSha256:(await inspectFile(path.join(attemptDirectory,'stdout.log'))).sha256,
+    nodeHeapMB:buildHeap(command.nodeHeapMB),attemptId,stdoutSha256:(await inspectFile(path.join(attemptDirectory,'stdout.log'))).sha256,
     stderrSha256:(await inspectFile(path.join(attemptDirectory,'stderr.log'))).sha256};
   await progress?.({stage,status:'COMPLETE',operationId:operation.id,attemptId});
   return retained;
@@ -1292,10 +1459,9 @@ async function readBuildSelection(installationDirectory,checked) {
   await verifyOriginalSource(selected.sourceDirectory,checked);
   const receipt=selected.receipt;
   if(receipt.sourceCapsuleSha256!==CAPSULE_SHA256||receipt.toolchain?.bun!==BUN_VERSION||
-    receipt.toolchain?.typescript!==TYPESCRIPT_VERSION||!Array.isArray(receipt.steps)||
-    ['source-install','source-build','source-pack','consumer-install'].some(name=>
-      !receipt.steps.some(step=>step.name===name&&step.status==='COMPLETE'&&step.exitCode===0)))
+    receipt.toolchain?.typescript!==TYPESCRIPT_VERSION||!completeBuildSteps(receipt))
     fail('RUNTIME_BUILD_SELECTION_CHANGED');
+  if(receipt.compiledOutput)await verifyCompiledOutput(selected.sourceDirectory,receipt.compiledOutput);
   const files=[
     {filename:path.join(installationDirectory,'package.json'),path:'build/installation/package.json'},
     {filename:path.join(installationDirectory,'package-lock.json'),path:'build/installation/package-lock.json'},
@@ -1313,8 +1479,9 @@ async function readBuildSelection(installationDirectory,checked) {
  * install its original npm archive in a private consumer project, then retain the
  * complete installed SDK, Stellar and shared source/compiler package graph. */
 export async function buildFuulRuntime({installationDirectory,directory:selectedDirectory,sourceDirectory,
-  bunExecutable='bun',npmExecutable='npm',signal,progress}={}) {
+  bunExecutable='bun',npmExecutable='npm',nodeHeapMB,signal,progress}={}) {
   abortBuild(signal);
+  const requestedHeapMB=buildHeap(nodeHeapMB);
   const installation=absolute(installationDirectory,'installationDirectory');
   const destination=absolute(selectedDirectory,'directory');
   const selectedSource=sourceDirectory===undefined?null:absolute(sourceDirectory,'sourceDirectory');
@@ -1366,6 +1533,7 @@ export async function buildFuulRuntime({installationDirectory,directory:selected
       }else await fs.mkdir(installation,{mode:0o700});
       await atomicBytes(installation,'.fuul-sdk-build.json',jsonBytes(operation));
     }
+    await assertNoActiveBuildCommand(operation);
     const bun=await actualExecutable(bunExecutable,'bun'),npm=await actualExecutable(npmExecutable,'npm');
     const [bunVersion,npmVersion]=await Promise.all([buildToolVersion(bun),buildToolVersion(npm)]);
     const [nodeMajor,nodeMinor]=process.versions.node.split('.').map(Number);
@@ -1376,7 +1544,7 @@ export async function buildFuulRuntime({installationDirectory,directory:selected
     if(operation.tools&&(canonical(operation.tools)!==canonical(tools)||canonical(operation.toolchain)!==canonical(toolchain)))
       fail('RUNTIME_BUILD_TOOLCHAIN_CHANGED');
     const toolBindings=await prepareBuildToolBindings(buildDirectory,tools);
-    operation={...operation,tools,toolchain,toolDirectories:[toolBindings,...new Set(Object.values(tools).map(value=>path.dirname(value)))],status:'BUILDING'};
+    operation={...operation,tools,toolchain,nodeHeapMB:nodeHeapMB===undefined?buildHeap(operation.nodeHeapMB):requestedHeapMB,toolDirectories:[toolBindings,...new Set(Object.values(tools).map(value=>path.dirname(value)))],status:'BUILDING'};
     await atomicBytes(buildDirectory,'operation.json',jsonBytes(operation));
     await prepareBuildSource(privateSource,checked,selectedSource);
     const stages=[
@@ -1389,10 +1557,18 @@ export async function buildFuulRuntime({installationDirectory,directory:selected
       await atomicBytes(buildDirectory,'operation.json',jsonBytes(operation));
       await verifyOriginalSource(privateSource,checked);
     }
-    const archiveDirectory=path.join(buildDirectory,'archive');
+    const compiledOutput=await ensureCompiledOutput(operation,checked,{bun,signal,progress});
+    const archiveDirectory=path.join(buildDirectory,'archive',compiledOutput.sha256);
     await fs.mkdir(archiveDirectory,{recursive:true,mode:0o700});
-    const pack=await executeBuildStage(operation,'source-pack',npm,['pack','--json','--pack-destination',archiveDirectory],privateSource,{signal,progress});
-    operation.steps=operation.steps.filter(item=>item.name!=='source-pack').concat(pack);
+    await verifyCompiledOutput(privateSource,compiledOutput);
+    // The original build above has completed and every emitted byte is selected.
+    // npm still constructs the original package from its unchanged files/exports,
+    // while --ignore-scripts avoids running that exact build a second time.
+    const packStage='source-package-'+compiledOutput.sha256;
+    const pack=await executeBuildStage(operation,packStage,npm,
+      ['pack','--ignore-scripts','--json','--pack-destination',archiveDirectory],privateSource,{signal,progress});
+    await verifyCompiledOutput(privateSource,compiledOutput);
+    operation.steps=operation.steps.filter(item=>item.name!==packStage).concat(pack);
     await atomicBytes(buildDirectory,'operation.json',jsonBytes(operation));
     await verifyOriginalSource(privateSource,checked);
     const archiveFile=path.join(archiveDirectory,'fuul-sdk-stellar-0.3.0.tgz');
@@ -1422,10 +1598,15 @@ export async function buildFuulRuntime({installationDirectory,directory:selected
       const actual=await inspectFile(path.join(installation,...name.split('/')));
       installationFiles.push({path:rel,bytes:actual.bytes,sha256:actual.sha256,mode:actual.mode});
     }
+    const selectedNames=['source-install','source-build',
+      ...(compiledOutput.stage==='source-build'?[]:[compiledOutput.stage]),packStage,'consumer-install'];
+    const selectedSteps=selectedNames.map(name=>operation.steps.find(step=>step.name===name));
     const receipt={schema:BUILD_RECEIPT_SCHEMA,operationId:operation.id,sourceCapsuleSha256:CAPSULE_SHA256,
       originalCommit:checked.value.publisher.commit,originalLockSha256:LOCK_SHA256,contractsSha256:CONTRACTS_SHA256,
       createdAt:operation.createdAt,completedAt:new Date().toISOString(),toolchain,
-      steps:operation.steps,archive:{filename:'fuul-sdk-stellar-0.3.0.tgz',bytes:archive.bytes,sha256:archive.sha256}};
+      steps:selectedSteps,compiledOutput,previousSteps:operation.steps.filter(step=>!selectedNames.includes(step.name)),
+      archive:{filename:'fuul-sdk-stellar-0.3.0.tgz',bytes:archive.bytes,sha256:archive.sha256}};
+    if(!completeBuildSteps(receipt))fail('RUNTIME_BUILD_SELECTION_CHANGED');
     operation={...operation,status:'COMPLETE',receipt,installationFiles};
     await atomicBytes(buildDirectory,'operation.json',jsonBytes(operation));
     await atomicBytes(installation,'.fuul-sdk-build.json',jsonBytes(operation));
