@@ -435,7 +435,8 @@
     "sec-edgar-download": "stellar-forge/mcp-merchant-operator/sec-edgar-download.mjs",
     "nocodb-workspace": "stellar/scf-starforge-20261009/sf30-seller-sdk/nocodb/workspace/cli.mjs",
     "unstructured-merchant": "stellar/scf-starforge-20261009/partners/unstructured/merchant.mjs",
-    "unstructured-commerce": "stellar/scf-starforge-20261009/partners/unstructured/commerce.mjs"
+    "unstructured-commerce": "stellar/scf-starforge-20261009/partners/unstructured/commerce.mjs",
+    "mcp-collections-download": "stellar-forge/mcp-paid-agent/native-collections-download.mjs"
   },
   "exports": {
     "./seller/openalex": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/openalex/merchant.mjs",
@@ -1063,7 +1064,10 @@
     "./partners/unstructured/commerce": "./source/stellar/scf-starforge-20261009/partners/unstructured/commerce.mjs",
     "./merchant/mcp/coingecko": "./source/stellar-forge/mcp-merchant-operator/coingecko-workspace.mjs",
     "./merchant/mcp/fiscaldata": "./source/stellar-forge/mcp-merchant-operator/fiscaldata-workspace.mjs",
-    "./seller/fiscaldata/portable": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/fiscaldata/portable.mjs"
+    "./seller/fiscaldata/portable": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/fiscaldata/portable.mjs",
+    "./buyer/mcp/collections": "./source/stellar-forge/mcp-paid-agent/native-collections.mjs",
+    "./buyer/mcp/collections-schema": "./source/stellar-forge/mcp-paid-agent/native-collections-schema.mjs",
+    "./buyer/mcp/collections-download": "./source/stellar-forge/mcp-paid-agent/native-collections-download.mjs"
   },
   "nativePeers": {
     "@x402/core": {
