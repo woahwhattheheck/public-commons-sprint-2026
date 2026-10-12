@@ -241,37 +241,52 @@ class NativeProvider:
             seen.add(following); cursor = following
         return views, objects
 
+
     def snapshot(self, workspace, operation, include_logs=False):
         from wherobots import WherobotsJob
+        from wherobots.models import extract_instant_value
         self._require_config()
         result = {}
         with WherobotsJob.from_run_id(operation["native_run_id"], config=self.config) as native:
             view = native_dict(native.get_status())
             result.update(run=view, run_object=workspace.put_object(canonical(view)))
-            for name, call in (("metrics", native.get_metrics), ("cost", native.get_cost)):
-                try:
-                    value = call()
-                    value = native_dict(value) if hasattr(value, "to_dict") else value
-                    result[name] = {"state": "CAPTURED", "captured_at": now(),
-                                    "object": workspace.put_object(canonical(value)),
-                                    **({"usd": value} if name == "cost" else {})}
-                except Exception as error:
-                    result[name] = {"state": "UNAVAILABLE", "error": self.error(error), "captured_at": now()}
+            captured_at = now()
+            try:
+                metrics = native.get_metrics()
+                result["metrics"] = {"state": "CAPTURED", "captured_at": captured_at,
+                                     "object": workspace.put_object(canonical(native_dict(metrics)))}
+                # The pinned SDK's get_cost() fetches this same metrics object
+                # and applies its own published extractor and metric keys.
+                cost = extract_instant_value(metrics.instant_metrics, WherobotsJob._COST_METRIC_KEYS)
+                result["cost"] = {"state": "CAPTURED", "captured_at": captured_at,
+                                  "object": workspace.put_object(canonical(cost)), "usd": cost}
+            except Exception as error:
+                for name in ("metrics", "cost"):
+                    if name not in result:
+                        result[name] = {"state": "UNAVAILABLE", "error": self.error(error), "captured_at": captured_at}
             if include_logs:
                 cursor, seen, pages, count = 0, set(), [], 0
-                while True:
-                    page = native.get_logs(cursor=cursor, size=100)
-                    raw = native_dict(page)
-                    pages.append(workspace.put_object(canonical(raw)))
-                    count += len(page.items)
-                    following = page.next_page
-                    if following is None:
-                        break
-                    if following == cursor or str(following) in seen:
-                        raise OperationError("LOG_PAGE_CYCLE", "The native log stream repeated its continuation cursor.",
-                                             details={"retained_pages": pages})
-                    seen.add(str(following)); cursor = following
-                result["logs"] = {"captured_at": now(), "complete": True, "pages": pages, "entries": count}
+                capture = {"captured_at": now(), "complete": False, "pages": pages, "entries": count}
+                try:
+                    while True:
+                        page = native.get_logs(cursor=cursor, size=100)
+                        raw = native_dict(page)
+                        pages.append(workspace.put_object(canonical(raw)))
+                        count += len(page.items)
+                        capture["entries"] = count
+                        following = page.next_page
+                        # SDK0.5 iter_logs treats a repeated current cursor as
+                        # normal exhaustion, including its empty-tail reply.
+                        if following is None or following == cursor:
+                            capture["complete"] = True
+                            break
+                        if str(following) in seen:
+                            raise OperationError("LOG_PAGE_CYCLE", "The native log stream returned an earlier continuation cursor.")
+                        seen.add(str(cursor)); cursor = following
+                except Exception as error:
+                    capture["error"] = self.error(error)
+                    capture["resume_cursor"] = cursor
+                result["logs"] = capture
         return result
 
     def cancel(self, operation):
