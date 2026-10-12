@@ -104,10 +104,21 @@ Each new workspace export gets a distinct generation. The same export request ID
 The additive declaration is distribution/contributions/datasette-analysis.json. Add **datasette-analysis** to the existing Datasette source selection's contributions array beside its source/publisher contribution. The declaration carries:
 
 - The complete sf30-seller-sdk/datasette-analysis source, operator assets, typed Python client, example handovers and receiving launcher.
+- The original sf30-seller-sdk/datasette component, including the maintained edition reader, original captures and exact JSON scalar helpers.
 - The original sf88-operator-buyer-cli component, including the complete Python package, pyproject, package data and Node bridge files.
 - The original distribution/python-runtime component.
 - The source-owned Applications adapter and provider.
 - The datasette-analysis native command and its Node export.
+
+The contribution also names the complete source dependencies outside those components for both customer import paths:
+
+| Customer import | Original source dependencies |
+|---|---|
+| Reviewed native edition | datasette/editions.mjs, capture.mjs and json.mjs; postgres/publisher/files.mjs |
+| Finalized delivered dataset | sf88/python/finalized-dataset-bridge.mjs and sf100-buyer-dataset-delivery/deliver.mjs; the original SF88 configuration and initialization |
+| Original finalized configuration | sf31-buyer-client public-transport.mjs, request-body.mjs, response-file.mjs and response-stream.mjs; sf85-live-402-capture/proxy-connect.mjs and sf30-seller-sdk/multipart.mjs |
+
+These eight outside-component support files are selected explicitly. The original finalized scanner and exact native-edition reader are therefore present in the same installed source archive as the Python application. Original row import, query, report, workbook and archive receiving continue through the maintained engines.
 
 Keep the selected recipe's original distribution, merchant source, buyer, publisher and runtime dependencies. Source selection and contribution composition stay in the existing distribution engine. The **workbooks** extra belongs to the original Python installation; it is selected in **Python & workbooks**.
 
