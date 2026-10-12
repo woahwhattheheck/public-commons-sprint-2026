@@ -1,67 +1,67 @@
-# Install the standards workbench 0.1.1
+# Install the standards workbench 0.2.0
 
-This release contains the complete local application, browser assets, original public source files, bilingual drafting example and separate authored operator exercise. Version 0.1.1 improves heading and table pagination in the generated English/French Word documents and PDFs.
+Version 0.2.0 adds the complete bilingual consultation exchange to the existing local standards application: a frozen recipient packet, an offline reviewer, original returned comments, corrected-return history, explicit adoption of unchanged decisions, paired-language amendments, and replies tied to a frozen successor edition.
 
-## Download and run
+## Download and open the review example
 
-Download [scc_standards_workbench-0.1.1-py3-none-any.whl](./scc_standards_workbench-0.1.1-py3-none-any.whl). Python 3.10 or newer is required. Install it into the Python environment in which you want to run the application:
+Download [scc_standards_workbench-0.2.0-source.zip](./scc_standards_workbench-0.2.0-source.zip). Python 3.10 or newer is required.
 
 ```sh
-python -m pip install ./scc_standards_workbench-0.1.1-py3-none-any.whl
-standards-workbench --workspace ./standards-workspace --demo
+python -m pip install ./scc_standards_workbench-0.2.0-source.zip
+standards-workbench --workspace ./review-workspace --review-demo
 ```
 
 Open the local address printed by the command, normally `http://127.0.0.1:8773`. Keep the command running while you work. Stop it with Ctrl+C and use the same workspace path to resume.
 
-The wheel declares `python-docx==1.2.0` and `reportlab==4.4.9`. Pip installs those document-generation dependencies. The wheel does not contain a Python runtime. For an offline installation, supply this wheel and the dependency wheels through pip's `--no-index --find-links` options.
+The source package includes the Python application, browser assets, public sources, full operating guides, and portable receiving controller. Its declared document dependencies are `python-docx==1.2.0` and `reportlab==4.4.9`; pip installs them with the application. It does not include a Python runtime. A controlled offline installation can supply the source and dependency wheels through pip's ordinary `--no-index --find-links` options.
 
-## Choose the right working project
+## Complete the consultation exchange
 
-The default public example retains ten paired English/French clauses, eight source-bound cases and seventeen input files. The original Statistics Canada CSV bytes remain cp1252; the separately identified UTF-8 derivatives are included too. The municipal-change counts describe affected Census populations and retain their original vintages.
+The review example has a stable project identity. Its ten paired clauses and eight cases use the retained public Statistics Canada materials; the packet contains explicit English/French review instructions. Reopening it preserves the working project and actual subsequent decisions.
 
-For an empty working project, omit `--demo` and choose **New project**. To open the separate authored operator exercise:
+1. Download a frozen consultation packet and open its standalone reviewer page. Read either language or both, inspect original source rows, save local drafts, and export packet-bound JSON comments.
+2. In **Consultation receiving**, preview and receive the original returned file. The workspace retains its bytes and source identity with the resulting comments.
+3. For proposed wording, save an explicit amendment against the current bilingual clause. Freeze the successor edition before recording its final resolution.
+4. Receive a corrected response with its actual predecessor. Adopt prior decisions only for explicitly selected unchanged entries. Changed entries retain their own work.
+5. Export one respondent's reply or explicitly selected publication dispositions. Keep the complete private continuation for restoration.
+
+Respondent contact fields, raw returned files and private receipt notes do not enter the selected reply or publication appendix. Exact duplicate response content preserves decisions. Repeated saved requests recover their original result; ambiguous server replies retain the same pending request in the editor.
+
+Read the [consultation operating guide](../CONSULTATION.md), [complete workbench guide](../README.md), [API contract](../API.md), and [publication format](../PUBLICATION.md). The [portable receiving guide](../delivery/CONSULTATION-RECEIVING.md) and controller cover the complete original-return, correction, amendment, selected export and same-project restore journey. They require explicit local paths and keep private configuration outside published source.
+
+## Execution status of this source release
+
+The first feature cut completed Python imports and JavaScript syntax checks. Focused source review subsequently covered corrected-response lineage, immutable decision adoption and transaction/replay behavior. Its immutable adoption-ID overwrite was fixed before any batch record changes.
+
+The final 0.2.0 corrected-return browser and installed-reopen journey is authored and included, and has **not yet executed**. Its controller records the actual source identity and resumes its own retained project after a documented source correction. Source publication does not represent that pending journey as completed. The earlier installed workbench continuation remains a separate original operation.
+
+The unchanged 0.1.1 publisher has completed generation and visual inspection of all eighty-one Word/PDF pages. Its original source and outputs underpin this release's publication engine; no new publication result is inferred from the consultation source change.
+
+## Upgrade and retain a project
+
+Stop the running application and retain a complete private export before installing an upgrade. Restart with the same `--workspace` path. Earlier project histories and frozen records are preserved; the additional consultation collections are empty-compatible with earlier state.
 
 ```sh
-standards-workbench --workspace ./standards-workspace --authored-demo
-```
-
-Its example committee, agreement and remittance inputs are explicitly authored. It initially contains no recorded vote, accepted report, invoice or collected payment. The two examples have stable, distinct project IDs. Opening an example again resumes the retained project and preserves its edits.
-
-The application supports clause and table authoring, original-file intake and field mapping, language review, frozen editions, edition-bound consultation and ballots, procedural review, publication, communication records, phase reports, invoicing and payment allocation. Its selected procedure records preserve the distinctions between TS, PAS, WA, CSG and the separate ordinary DGSI profiles. Selecting a profile does not establish a standards body's elected accreditation edition or approval.
-
-## Upgrade an existing workspace
-
-Stop its running application, retain a private project export, install the new wheel in the same Python environment, and restart with the same `--workspace` path. The application resumes the existing project. Keep the export available for independent restoration.
-
-## Retain and reopen a project
-
-The workspace directory holds its SQLite database and original file custody. The CLI can list projects and produce a complete private project archive:
-
-```sh
-standards-workbench --workspace ./standards-workspace --list
-standards-workbench --workspace ./standards-workspace --export PROJECT_ID --output project-private.zip
+standards-workbench --workspace ./review-workspace --list
+standards-workbench --workspace ./review-workspace --export PROJECT_ID --output project-private.zip
 standards-workbench --workspace ./restored-workspace --restore project-private.zip --list
 ```
 
-Use the actual project ID shown by `--list`. Private archives carry the original files, full project state and history. The application's publication export is a separate content projection: it includes only the explicitly public sources and their bound case rows. Select the recipient-appropriate export when sharing work.
+Use the actual project ID printed by `--list`. A complete private archive includes the original files, full state, event history and retained request results. A recipient packet and selected reply are different projections; choose the export appropriate to the intended use.
 
-See the [complete operating guide](../README.md), [API guide](../API.md) and [publication guide](../PUBLICATION.md) for the native workflow and exact record semantics.
+## Exact source package
 
-## Completed installation and publication work
+| File | Bytes | Git blob identity |
+| --- | ---: | --- |
+| `scc_standards_workbench-0.2.0-source.zip` | 1,336,289 | `1c32d10186228adf0f56097a44f265334bde20f5` |
 
-On 12 October 2026 at 03:21 UTC, this 0.1.1 wheel was built from the exact selected source archive and installed into a fresh target. Its installed command completed successfully. All thirty-three packaged application and public-source files matched the selected bytes, and all thirty-nine wheel members were retained. The installed runtime reports workbench 0.1.1, python-docx 1.2.0 and ReportLab 4.4.9.
+The ZIP has forty-six members: forty-five selected source, guide, receiver and public-input files plus `SOURCE_RELEASE.json`. Each selected file's byte count and Git blob identity is retained in that manifest. Both original cp1252 CSVs match their original Git objects; the separately labeled lossless UTF-8 derivatives remain unchanged. The archive directory, stored-member CRC values, and every extracted member were compared to the selected source bytes during packaging. These identities detect byte differences; they are not an external signature or a substitute for the pending native receiving run.
 
-The earlier 0.1.0 installation also created and reopened the public example through its installed CLI: seventeen original files, ten paired clauses, eight cases and CAD 0.00 collected. The source data remains in this 0.1.1 package. The existing authored browser workflow and private-archive continuation use their original saved project and remain separately tracked.
+## Previous immutable 0.1.1 release
 
-The corrected publisher generated all twenty-eight standard, comparison and management files from the retained editions. Its nonpresentation JSON and CSV files match the preceding edition outputs exactly. The four Word documents and four PDFs rendered to eighty-one page images. All eighty-one pages were visually inspected at their original resolution, including an independent review of the French editions; no material layout defect remained.
+The original [0.1.1 wheel](./scc_standards_workbench-0.1.1-py3-none-any.whl), [source archive](./scc_standards_workbench-0.1.1-source.zip), and [completed installation record](https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/c58b2b78a0becfb2d7cc182a94d9423ac66b66d0/scc-standards-workbench-2026/releases/INSTALL.md) are preserved. On 12 October 2026 at 03:21 UTC, that wheel was built and freshly installed; its packaged source bytes and runtime versions matched. Its publisher's final eighty-one pages were visually reviewed, including independent French review.
 
-## Exact release files
-
-| File | Bytes | SHA-256 |
+| Previous file | Bytes | SHA-256 |
 | --- | ---: | --- |
 | `scc_standards_workbench-0.1.1-py3-none-any.whl` | 277,220 | `8dc0fb9ecca6dfe4cd2699953e5dfecbae1b123b4e6f02d12a6872bd60bf901e` |
 | `scc_standards_workbench-0.1.1-source.zip` | 274,907 | `3e5e100c47e9cbb7dd8302485a8e34f5bc4e812e1f8040363a9457068a70d101` |
-
-[Download the matching source archive](./scc_standards_workbench-0.1.1-source.zip). Its `SOURCE_RELEASE.json` records each selected file's size, SHA-256 and Git blob identity.
-
-The original [0.1.0 installer and installation record](https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/acae3d237cde20602b73d39d334bdab5cd12c9df/scc-standards-workbench-2026/releases/INSTALL.md) remain available at their immutable release.
