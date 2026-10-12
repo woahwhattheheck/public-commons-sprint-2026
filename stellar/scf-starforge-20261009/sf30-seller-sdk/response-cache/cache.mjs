@@ -16,6 +16,23 @@ const integer = (value, min, max, name) => {
 };
 const failed = (status, error) => ({ status, headers: { 'content-type': 'application/json' }, body: { error } });
 const aborted = () => new DOMException('Source read cancelled', 'AbortError');
+const RETENTION = Object.freeze(['ttlMs', 'maxEntries', 'maxBytes', 'maxEntryBytes']);
+
+/** Validate one retention patch without changing source/admission/transport limits. */
+export function normalizeCacheRetention(value, current) {
+  if (!plain(value) || !Object.keys(value).length ||
+      Object.keys(value).some(key => !RETENTION.includes(key))) {
+    throw new TypeError('Retention policy supports only ttlMs, maxEntries, maxBytes and maxEntryBytes');
+  }
+  const next = Object.fromEntries(RETENTION.map(key => [key,
+    Object.hasOwn(value, key) ? value[key] : current[key]]));
+  integer(next.ttlMs, 1, 3600000, 'ttlMs');
+  integer(next.maxEntries, 1, 100000, 'maxEntries');
+  integer(next.maxBytes, 1, 256 * 1024 * 1024, 'maxBytes');
+  integer(next.maxEntryBytes, 1, Math.min(next.maxBytes, current.maxResponseBytes), 'maxEntryBytes');
+  return Object.freeze(next);
+}
+
 const copy = response => ({ status: response.status, headers: { ...response.headers }, body: Buffer.from(response.body) });
 
 /**
@@ -51,7 +68,7 @@ export function createResponseCache({ handler, admit, shareAcrossBuyers,
   const totals = { requests: 0, hits: 0, misses: 0, coalesced: 0, sourceReads: 0,
     sourceErrors: 0, sourceTimeouts: 0, cancelledConsumers: 0, evictions: 0,
     expired: 0, bypasses: 0, invalidations: 0, rejectedAtCapacity: 0 };
-  let bytes = 0, generation = 0, closed = false, consumers = 0;
+  let bytes = 0, generation = 0, revision = 0, closed = false, consumers = 0;
 
   function project(context) {
     if (!plain(context) || !['GET', 'HEAD'].includes(context.method) ||
@@ -263,13 +280,30 @@ export function createResponseCache({ handler, admit, shareAcrossBuyers,
   function stats() {
     sweep();
     return { ...totals, closed, entries: entries.size, bytes, sourceInFlight: tasks.size,
-      sharedReads: flights.size, consumers, generation,
+      sharedReads: flights.size, consumers, generation, revision,
       limits: { ttlMs, maxEntries, maxBytes, maxEntryBytes, maxResponseBytes,
         maxSourceInFlight, maxWaiters, sourceTimeoutMs, varyHeaders: [...vary] } };
   }
   function invalidate() {
-    const removed = entries.size; generation++; entries.clear(); flights.clear(); bytes = 0;
+    const removed = entries.size; generation++; revision++; entries.clear(); flights.clear(); bytes = 0;
     totals.invalidations++; return { removed, generation };
+  }
+  function inspect() {
+    const snapshot = stats();
+    return { kind: 'application', revision, generation, closed,
+      policy: Object.fromEntries(RETENTION.map(key => [key, snapshot.limits[key]])),
+      limits: snapshot.limits, stats: snapshot };
+  }
+  function configure(value) {
+    if (closed) throw Object.assign(new Error('Response cache is closed'), { code: 'CACHE_CONTROL_CLOSED' });
+    const next = normalizeCacheRetention(value, stats().limits);
+    const previous = { ttlMs, maxEntries, maxBytes, maxEntryBytes };
+    // Every admitted consumer keeps its original source promise. Clearing the
+    // shared-flight index advances the epoch so old results cannot refill the
+    // cache under new retention terms or attract a newly admitted buyer.
+    const invalidated = invalidate();
+    ({ ttlMs, maxEntries, maxBytes, maxEntryBytes } = next);
+    return { previous, policy: { ...next }, ...invalidated, revision };
   }
   async function close({ graceMs = 5000 } = {}) {
     integer(graceMs, 1, 300000, 'graceMs');
@@ -280,5 +314,5 @@ export function createResponseCache({ handler, admit, shareAcrossBuyers,
       new Promise(resolve => { timer = setTimeout(resolve, graceMs); })]);
     clearTimeout(timer); return { drained: tasks.size === 0, ...stats() };
   }
-  return Object.freeze({ handler: cached, admit: admission, stats, invalidate, close });
+  return Object.freeze({ handler: cached, admit: admission, stats, inspect, configure, invalidate, close });
 }

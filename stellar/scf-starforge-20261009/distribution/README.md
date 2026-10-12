@@ -4862,3 +4862,8 @@ The package also exposes `@tokenjunkielabs/starforge-merchant/partners/coingecko
 provides `startMarketWorkspace`. Original source collection and browser
 continuation instructions travel with the component in
 `workspace/acceptance/README.md`.
+
+
+## Merchant cache operations
+
+`starforge cache-operations` opens the maintained cache operating workspace or performs its native commands. The original `openapi-workspace` also opens these controls directly for a saved merchant package. Saved activity snapshots, retention comparisons, live changes, restoration, interrupted-response recovery, HTML reporting and complete history receiving share the original seller's cache manager. See the [operating guide](../sf30-seller-sdk/response-cache/workspace/README.md). Installed exports are `@tokenjunkielabs/starforge-merchant/seller/response-cache/workspace`, its `/server`, and `/report`.

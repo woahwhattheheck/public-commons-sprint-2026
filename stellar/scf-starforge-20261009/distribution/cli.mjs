@@ -60,6 +60,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   jobs-buyer                                Receive accepted jobs, follow execution and retrieve saved results
   job-workspace                             Receive paid jobs, retrieve results and organize research collections
   supplier-quotas                            Review supplier account configuration and inspect retained call allowances
+  cache-operations                          Review cache activity, change retention and recover saved operations
   openapi     OpenAPI seller import            pilot       OpenAPI pilot + operations
   buyer       Discover, review, approved call  capture     One HTTP 402 capture
   import-headers  Import original operator HTTP headers
