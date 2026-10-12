@@ -160,9 +160,10 @@ export function createGrpcHealthWorkspace({ directory, loadRevision, selection, 
     for (const id of (await readdir(directory)).filter(name => UUID.test(name)).sort()) {
       const entry = await load(id), summary = await settled(entry);
       if (!['RUNNING', 'PREPARED'].includes(summary.phase)) continue;
-      const terminalEvent = [...entry.events].reverse().find(event => event.kind === 'native' && event.data.type === 'terminal');
+      const epoch = [...entry.events].reverse().find(event => event.kind === 'lifecycle' && event.data.phase === 'RUNNING')?.sequence ?? 0;
+      const terminalEvent = [...entry.events].reverse().find(event => event.sequence > epoch && event.kind === 'native' && event.data.type === 'terminal');
       const statusEvent = [...entry.events].reverse().find(event => event.kind === 'native' && event.data.type === 'status');
-      const control = [...entry.events].reverse().find(event => event.kind === 'control');
+      const control = [...entry.events].reverse().find(event => event.sequence > epoch && event.kind === 'control');
       const terminal = terminalEvent?.data, latest = statusEvent?.data;
       // The unary source emits status only after its original call returned.
       // Both a returned value and a retained failure therefore have a first
