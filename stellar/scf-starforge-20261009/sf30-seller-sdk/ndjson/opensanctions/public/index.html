@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Source monitoring · Starforge</title>
+<link rel="stylesheet" href="/monitor/style.css">
+<script type="module" src="/monitor/app.js"></script>
+</head>
+<body>
+<header><div><strong>Starforge</strong><span>Source monitoring</span></div><div class="header-actions"><span id="connection">Opening workspace</span><button id="refresh" type="button">Refresh</button></div></header>
+<div class="layout">
+<nav aria-label="Workspace views">
+<button data-view="overview" class="selected">Overview</button>
+<button data-view="sources">Source editions</button>
+<button data-view="updates">Data updates</button>
+<button data-view="review">Change review</button>
+<button data-view="portfolios">Counterparties</button>
+<button data-view="screening">Native screening</button>
+<button data-view="receiving">Receiving</button>
+<a id="native-link" href="/">Dataset console</a>
+</nav>
+<main>
+<div id="notice" role="status" aria-live="polite"></div>
+<section id="view-overview">
+<div class="page-heading"><div><p class="eyebrow">Customer workspace</p><h1>Keep source changes and decisions together</h1><p>Receive original data editions, review changes in context and carry the complete operating case to another installation.</p></div></div>
+<div id="metrics" class="metrics"></div>
+<div class="two-columns">
+<article><h2>Current work</h2><div id="recent-work"></div></article>
+<article><h2>Operating sequence</h2><ol class="steps"><li>Receive a published dataset index and its complete flat FtM export.</li><li>Reconcile every published delta between selected editions.</li><li>Review identifier, property and designation changes with prior decisions visible.</li><li>Screen original counterparties through your configured yente service.</li><li>Export and reopen the complete source and case history.</li></ol></article>
+</div>
+<article><h2>Two decisions per case</h2><div class="two-columns"><div><h3>Identity</h3><p>Is the customer counterparty the entity returned by the screening service? Keep confirmed matches, mismatches and undecided cases separate.</p></div><div><h3>Relevance</h3><p>Does the selected source or designation affect the customer’s configured programs and topics? Routine export metadata remains visible without reopening a prior decision.</p></div></div></article>
+</section>
+
+<section id="view-sources" hidden>
+<div class="page-heading"><div><p class="eyebrow">Original data</p><h1>Source editions</h1><p>Each edition retains the original metadata, published checksum, complete FtM records and the original dataset-engine build.</p></div></div>
+<article><h2>Receive a published edition</h2><form id="published-form"><div class="form-grid"><label>Original metadata URL<input name="metadataUrl" type="url" required value="https://data.opensanctions.org/datasets/latest/un_sc_sanctions/index.json"></label><label>Use scope<select name="entitlement"><option value="evaluation">Source evaluation</option><option value="customer_licensed">Customer licensed use</option><option value="public_research">Public research</option></select></label></div><label>Scope note<input name="note" value="Original source evaluation"></label><button type="submit">Receive published edition</button></form>
+<details><summary>Receive original files already on this computer</summary><form id="local-edition-form"><div class="form-grid"><label>Dataset index<input name="metadata" type="file" accept=".json" required></label><label>Flat FtM export<input name="entities" type="file" accept=".json,.ndjson,.jsonl,.gz" required></label><label>Original metadata URL<input name="metadataUrl" type="url" required></label><label>Edition label<input name="label" maxlength="160"></label></div><button type="submit">Receive exact original files</button></form></details></article>
+<article><h2>Retained editions</h2><div id="edition-table" class="table-wrap"></div></article>
+<article><h2>Inspect a selected source</h2><label>Edition<select id="source-edition" data-editions></select></label><div id="source-detail"></div><div id="entity-table" class="table-wrap"></div><div id="entity-pager" class="pager"></div><details><summary>Original selected entity</summary><pre id="entity-detail">Select a record to inspect its original fields and physical line.</pre></details>
+<h3>Query through the native dataset engine</h3><form id="query-form"><label>Native query parameters<textarea name="query" rows="3">{"limit":"10","fields":"id,schema"}</textarea></label><button type="submit">Run native query</button></form><div id="query-summary"></div><pre id="query-result" class="scroll-box"></pre></article>
+<article><h2>Source statements</h2><p>Statement values retain original source IDs, canonical IDs, dataset, native columns and physical row lineage. Observation dates stay separate from designation dates.</p><form id="statement-form"><div class="form-grid"><label>Selected edition<select name="edition" data-editions></select></label><label>Original statement CSV<input name="original" type="file" accept=".csv,.gz" required></label><label>Original source URL<input name="sourceUrl" type="url" required></label></div><label>Population scope<textarea name="scope" rows="2">{"dataset":"un_sc_sanctions"}</textarea></label><label class="check"><input name="complete" type="checkbox">This original export contains the complete declared population.</label><button type="submit">Receive statement source</button></form><div id="statement-table" class="table-wrap"></div></article>
+</section>
+
+<section id="view-updates" hidden>
+<div class="page-heading"><div><p class="eyebrow">Versioned source changes</p><h1>Data updates</h1><p>Apply the complete chronological chain. Classify removed IDs after all ADD, MOD and DEL records have been received.</p></div></div>
+<article><h2>Select original editions</h2><div class="form-grid"><label>Earlier edition<select id="before-edition" data-editions></select></label><label>Later edition<select id="after-edition" data-editions></select></label></div><div class="actions"><button id="compare-editions">Compare complete editions</button><button id="fetch-update">Receive published delta chain</button></div>
+<details><summary>Receive delta files already on this computer</summary><form id="delta-index-form"><label>Original delta index<input name="index" type="file" accept=".json" required></label><button type="submit">Read required versions</button></form><div id="delta-file-inputs"></div><button id="stage-local-update" hidden>Apply selected original deltas</button></details></article>
+<article><h2>Retained update operations</h2><div id="update-table"></div></article>
+<article id="update-inspection" hidden><h2>Update reconciliation</h2><div id="update-detail"></div><form id="select-update-form"><div class="form-grid"><label>Reviewer<input name="reviewer" required maxlength="160"></label><label>Reason<input name="reason" required maxlength="8000"></label></div><button type="submit">Select verified published edition</button></form></article>
+</section>
+
+<section id="view-review" hidden>
+<div class="page-heading"><div><p class="eyebrow">Source and case history</p><h1>Change review</h1><p>Keep the provider’s original operation and the customer’s review decision together.</p></div></div>
+<article><div class="form-grid"><label>Edition comparison<select id="review-comparison"></select></label><label>Show<select id="change-kind"><option value="__material__">Property and identifier changes</option><option value="">All original changes</option></select></label></div><div id="comparison-summary"></div><div id="change-table" class="table-wrap"></div><div id="change-pager" class="pager"></div></article>
+<article id="review-inspection" hidden><h2 id="change-title">Selected source change</h2><div id="change-detail"></div><form id="change-review-form"><div class="form-grid"><label>Decision<select name="decision"><option value="source_change_reviewed">Source change reviewed</option><option value="review_required">Further customer review required</option><option value="retain_decision">Retain prior customer decision</option><option value="authority_change_confirmed">Authority change confirmed from source</option></select></label><label>Reviewer<input name="reviewer" required maxlength="160"></label></div><label>Reason<textarea name="reason" required rows="3"></textarea></label><label>Original authority source URL, when confirming an authority change<input name="authorityUrl" type="url"></label><button type="submit">Save source review</button></form><div id="change-history"></div></article>
+<article><h2>Customer decisions affected by this comparison</h2><div id="impact-table"></div></article>
+<article><h2>Review an original case</h2><aside id="candidate-review-context" hidden><p id="candidate-review-note"></p><div id="candidate-case-choice" hidden><label>Case history for this native candidate<select id="candidate-case-selection"></select></label><button id="use-candidate-case" type="button">Use selected history</button></div></aside><form id="case-form"><input name="case_id" type="hidden"><input name="expected" type="hidden"><input name="match_request" type="hidden"><div class="form-grid"><label>Original portfolio<select name="portfolio_id" data-portfolios></select></label><label>Counterparty ID<input name="counterparty_id" required></label><label>Selected data edition<select name="edition_id" data-editions></select></label><label>Native candidate or retained source ID<input name="candidate_id" required></label><label>Identity decision<select name="resolution"><option value="undecided">Undecided</option><option value="same_entity">Same entity</option><option value="different_entity">Different entity</option></select></label><label>Relevance decision<select name="relevance"><option value="undecided">Undecided</option><option value="in_scope">In scope</option><option value="out_of_scope">Out of scope</option></select></label><label>Reviewer<input name="reviewer" required maxlength="160"></label></div><label>Reason<textarea name="reason" rows="3" required></textarea></label><details><summary>Customer monitoring scope and identity properties</summary><label>Monitoring policy<textarea name="monitoring" rows="8"></textarea></label></details><div class="actions"><button type="submit">Save case decision</button><button id="new-case" type="button">New case</button></div></form><div id="case-table" class="table-wrap"></div><div id="case-history"></div></article>
+</section>
+
+<section id="view-portfolios" hidden>
+<div class="page-heading"><div><p class="eyebrow">Customer-owned source</p><h1>Counterparties</h1><p>Original customer IDs remain in their selected portfolio namespace. The provider receives only the native requests you prepare and dispatch.</p></div></div>
+<article><h2>Receive customer FtM objects</h2><form id="portfolio-form"><div class="form-grid"><label>Stable portfolio key<input name="key" required maxlength="128" placeholder="Customer-selected key"></label><label>Label<input name="label" required maxlength="160"></label><label>Original FtM JSON Lines<input name="original" type="file" required accept=".json,.jsonl,.ndjson,.gz"></label></div><button type="submit">Receive original counterparties</button></form></article>
+<article><h2>Retained portfolio editions</h2><div id="portfolio-table" class="table-wrap"></div><label>Inspect portfolio<select id="portfolio-selection" data-portfolios></select></label><div id="counterparty-table" class="table-wrap"></div><div id="counterparty-pager" class="pager"></div><pre id="counterparty-detail" class="scroll-box"></pre></article>
+</section>
+
+<section id="view-screening" hidden>
+<div class="page-heading"><div><p class="eyebrow">Original provider API</p><h1>Native screening</h1><p>Prepare exact yente requests, keep their actual responses and attach native candidates to customer cases.</p></div></div>
+<article><h2>Configure a service profile</h2><form id="profile-form"><div class="form-grid"><label>Profile label<input name="label" required></label><label>Service base URL<input name="endpoint" type="url" value="https://api.opensanctions.org" required></label><label>Dataset or collection<input name="dataset" value="un_sc_sanctions" required></label><label>Authorization<select name="authKind"><option value="ApiKey">ApiKey environment reference</option><option value="Bearer">Bearer environment reference</option><option value="none">Unauthenticated local service</option></select></label><label>Environment variable name<input name="authEnv" value="OPENSANCTIONS_API_KEY"></label></div><label>Native matching parameters<textarea name="parameters" rows="3">{"algorithm":"logic-v2","limit":10,"threshold":0.7}</textarea></label><label>Service and entitlement note<input name="sourceNote"></label><details><summary>Native algorithm configuration and weights</summary><label>Config<textarea name="config" rows="2">{}</textarea></label><label>Weights<textarea name="weights" rows="2">{}</textarea></label></details><button type="submit">Save immutable service profile</button></form></article>
+<article><h2>Prepare a native request</h2><form id="prepare-form"><div class="form-grid"><label>Service profile<select name="profile" id="profile-selection"></select></label><label>Operation<select name="kind"><option value="match">Screen original counterparties</option><option value="entity">Refresh native entity</option><option value="catalog">Read native catalog</option><option value="statements">Read native statement page</option></select></label><label>Portfolio<select name="portfolio" data-portfolios></select></label><label>Selected source edition<select name="edition" data-editions></select></label></div><label>Counterparty IDs, one per line<textarea name="entity_ids" rows="3"></textarea></label><label>Native entity ID for entity refresh<input name="entity_id"></label><label>Statement query parameters<textarea name="statementParameters" rows="2">{"limit":50,"offset":0}</textarea></label><label>Explicit refresh reason, for a new request after a completed screen<input name="refresh_key" placeholder="Leave empty to reuse the original prepared operation"></label><button type="submit">Prepare original request</button></form></article>
+<article><h2>Original operations</h2><div id="request-table" class="table-wrap"></div></article>
+<article id="request-inspection" hidden><h2>Selected native request</h2><div id="request-detail"></div><pre id="request-body" class="scroll-box"></pre><button id="dispatch-request">Dispatch this original request</button><details><summary>Receive the actual response from an existing remote worker</summary><form id="receive-response-form"><div class="form-grid"><label>Original response JSON<input name="original" type="file" required accept=".json"></label><label>Actual HTTP status<input name="status" type="number" min="100" max="599" value="200" required></label></div><label>Native result source<input name="sourceNote" required></label><button type="submit">Attach original response</button></form></details><div id="candidate-table"></div><pre id="response-body" class="scroll-box"></pre></article>
+</section>
+
+<section id="view-receiving" hidden>
+<div class="page-heading"><div><p class="eyebrow">Complete customer handover</p><h1>Receiving</h1><p>One portable package keeps original source bytes, native builds, deltas, requests, responses and the full decision history.</p></div></div>
+<article><h2>Export the current workspace</h2><p>The receiving application reconstructs each original dataset-engine projection and checks its source, mapping, output and native snapshot. Environment references remain references.</p><button id="export-workspace">Download complete receiving workspace</button><div id="export-detail"></div></article>
+<article><h2>Receive an existing package</h2><p>Compatible original identities are reused. A conflicting local case history remains visible for the operator to resolve.</p><form id="receiving-form"><label>Original receiving ZIP<input name="original" type="file" accept=".zip" required></label><button type="submit">Receive and reconstruct</button></form><pre id="receiving-result"></pre></article>
+<article><h2>Scope of the source</h2><p>Flat FtM exports preserve the selected dataset’s properties and global identifier referents. Statement exports add per-value lineage when supplied. The customer’s configured programs, topics and identity decisions determine which source changes need review.</p><div id="contract-summary"></div></article>
+</section>
+</main>
+</div>
+<footer>Starforge · Original source, native screening, customer decisions</footer>
+</body>
+</html>
