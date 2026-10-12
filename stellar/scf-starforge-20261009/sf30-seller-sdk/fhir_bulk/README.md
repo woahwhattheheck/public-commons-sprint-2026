@@ -221,3 +221,36 @@ Every command accepts `--workspace ABSOLUTE_DIRECTORY` before or after the comma
 This extension and the maintained SF30/SF88 composition use the repository's MIT license. The unchanged SMART sample server identifies Boston Children's Hospital's Apache 2.0 license in its [original license file](https://github.com/smart-on-fhir/bulk-data-server/blob/master/LICENSE). Its sample resources remain classified with their publisher and original endpoint in each capture.
 
 Protocol design references are the linked permanent HL7 Bulk Data and SMART publications. `SOURCE_INDEX.json` identifies those sources and the original native module pins used for this implementation. Exact operating results identify their own complete source file bytes.
+
+## Receive preserved files for the original accepted export
+
+A complete original source packet can finish its existing accepted operation when
+the files were preserved through another authorized receiving surface. Retain
+the original provider manifest chain, exact NDJSON bytes, original request and
+status URLs, and actual file-custody records in the source packet. The ordinary
+`source-add` command validates the complete source and returns its content ID.
+
+```sh
+starforge fhir-bulk source-add --workspace /absolute/fhir-workspace --file /absolute/original-capture.zip
+starforge fhir-bulk receive-capture --workspace /absolute/fhir-workspace --operation ORIGINAL_OPERATION_ID --source ORIGINAL_SOURCE_ID --reason 'Receive the preserved complete original export files'
+starforge fhir-bulk operation --workspace /absolute/fhir-workspace --id ORIGINAL_OPERATION_ID
+```
+
+Use the returned original IDs. This receiving action checks the accepted provider
+job, exact connection and export definition, full manifest chain, all original
+file identities, and the reviewed byte budget. It preserves earlier HTTP receipts
+and any prior failure while recording the actual retained-file receiving. The
+native operation becomes complete with the same operation ID and exact source ID;
+its ordinary `run` then reopens that completion. The complete editable workspace
+archive includes this operation, every source member, and its receiving history.
+
+The HTTP equivalent is `POST /api/operations/:id/receive-capture` with
+`{"sourceId":"ORIGINAL_SOURCE_ID","reason":"Reviewed receiving reason"}`.
+The response is the original operation object. `captureReceivings` identifies the
+retained source, source manifest hashes, original file byte counts and receiving
+time. Files identify their exact source packet members through
+`retainedSource: {sourceId, member}`.
+
+Whole-workspace `state.receives` also exposes each saved `workspaceId` alongside
+its `archiveSha256`. A connected receiver uses that native association to
+reconcile a workspace import whose final response was interrupted.
