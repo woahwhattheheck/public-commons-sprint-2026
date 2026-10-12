@@ -9,6 +9,7 @@ import { atlasApplication, prepareAtlasApplication } from './application-atlas.m
 import { redisApplication, prepareRedisApplication } from './application-redis.mjs';
 import { jobCheckoutApplication, validateJobCheckoutSelection, prepareJobCheckoutApplication } from './application-job-checkout.mjs';
 import { datasetBuyerApplication, prepareDatasetBuyerApplication } from './application-dataset-buyer.mjs';
+import { collectionsApplication, prepareCollectionsApplication } from './application-collections.mjs';
 import { eventFeedApplications, prepareEventFeedApplication } from './application-event-feed.mjs';
 import { tenderlyApplication, prepareTenderlyApplication } from './application-tenderly.mjs';
 import { inspectMerchantRuntime } from '../../sf46-release/runtime-package.mjs';
@@ -45,6 +46,7 @@ export const APPLICATION_CATALOG = Object.freeze([
   redisApplication(common),
   jobCheckoutApplication(common),
   datasetBuyerApplication(common),
+  collectionsApplication(common),
   tenderlyApplication(common),
   { id: 'xml', command: 'dataset', requiredSource: 'stellar/scf-starforge-20261009/sf30-seller-sdk/xml/cli.mjs',
     title: 'XML dataset onboarding', terminal: false,
@@ -216,6 +218,10 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
   } else if (type.id === 'job-checkout') {
     const original = await prepareJobCheckoutApplication(settings, runtimeDirectory, inputPath);
     args.push(...original.args); inputs.push(...original.inputs); createDirectories.push(...original.createDirectories);
+  } else if (type.id === 'buyer-collections') {
+    const prepared = await prepareCollectionsApplication(settings, { inputPath, runtimeDirectory });
+    args.push(...prepared.args); inputs.push(...prepared.inputs);
+    createDirectories.push(...prepared.createDirectories);
   } else if (type.id === 'dataset-buyer') {
     const prepared = await prepareDatasetBuyerApplication(settings, { inputPath, selectedExecutable, runtimeDirectory });
     args.push(...prepared.args); inputs.push(...prepared.inputs); createDirectories.push(...prepared.createDirectories);
