@@ -9,6 +9,7 @@ import {
 import { normalizeResponse, normalizeProjection, sourceView, compareViews } from './normalize.mjs';
 import { markdownReport, htmlReport } from './report.mjs';
 import { portableEntries, encodePortable } from './portable.mjs';
+import {inspectSourceBundle} from './source-bundles.mjs';
 
 const DOCUMENT = 'sf88-research-dossier-v1';
 const PORTABLE = 'sf88-research-dossier-portable-v1';
@@ -265,6 +266,58 @@ export async function openDossierStore(directory, { providers = {} } = {}) {
         mode: 'retained', createdAt: timestamp(), raw, sourceReference,
         sourceTerms: parsed.sourceTerms, origin: origin ? clone(origin) : null });
     }, { projection });
+  }
+
+
+  async function previewSourceBundle(id,{questionId,rawBytes,rawText,bundle}={}){
+    need([rawBytes!==undefined,rawText!==undefined,bundle!==undefined].filter(Boolean).length===1,
+      'ONE_RESEARCH_INPUT_REQUIRED');
+    const prepared=inspectSourceBundle(rawBytes??rawText??bundle),current=await head(id);
+    need(current.state.questions.some(question=>question.id===questionId),'QUESTION_NOT_FOUND');
+    const existing=current.state.editions.find(edition=>edition.questionId===questionId&&
+      edition.origin?.mode==='LOCAL_SOURCE_BUNDLE'&&edition.raw?.sha256===prepared.preview.bundleSha256);
+    return {...prepared.preview,dossierId:id,questionId,expectedRevision:current.state.revision,
+      alreadyReceived:Boolean(existing),...(existing?{editionId:existing.id}:{})};
+  }
+  async function receiveSourceBundle(id,{questionId,rawBytes,rawText,bundle,expectedBundleSha256,
+    expectedRevision,projection='metadata'}={}){
+    need(['full','metadata'].includes(projection),'RESEARCH_PROJECTION_INVALID');
+    need([rawBytes!==undefined,rawText!==undefined,bundle!==undefined].filter(Boolean).length===1,
+      'ONE_RESEARCH_INPUT_REQUIRED');
+    const prepared=inspectSourceBundle(rawBytes??rawText??bundle);
+    need(expectedBundleSha256===undefined||expectedBundleSha256===prepared.preview.bundleSha256,
+      'SOURCE_BUNDLE_CHANGED');
+    const current=await head(id);
+    need(current.state.questions.some(question=>question.id===questionId),'QUESTION_NOT_FOUND');
+    // An interrupted response can be recovered with the same bytes after other
+    // work extends the project. The atomic edition contains its findings too.
+    const existing=current.state.editions.find(edition=>edition.questionId===questionId&&
+      edition.origin?.mode==='LOCAL_SOURCE_BUNDLE'&&edition.raw?.sha256===prepared.preview.bundleSha256);
+    if(existing)return projection==='metadata'?metadata(current.state):get(id);
+    return commit(id,expectedRevision,'Imported original source bundle',async state=>{
+      need(state.questions.some(question=>question.id===questionId),'QUESTION_NOT_FOUND');
+      const raw=await putBlob(prepared.rawBytes),provider='source-bundle';
+      const intentId='source-bundle:'+raw.sha256;
+      const editionId='e_'+digest(Buffer.from(questionId+'\n'+provider+'\n'+raw.sha256+'\n'+intentId));
+      const now=timestamp(),occurrences=new Map(),findingIds=[];
+      for(let index=0;index<prepared.manifest.sources.length;index++){
+        const source=prepared.manifest.sources[index],occurrenceId='o_'+digest(Buffer.from(editionId+'\n'+index));
+        occurrences.set(source.key,occurrenceId);
+        state.selections.push({occurrenceId,editionId,questionId,key:String(index),
+          selected:source.selected??true,note:source.note??'',classification:source.classification??'supports',
+          updatedAt:now});
+      }
+      for(const finding of prepared.manifest.findings??[]){
+        const findingId=newId('f');findingIds.push({key:finding.key,id:findingId});
+        state.findings.push({id:findingId,questionId,title:finding.title,text:finding.text,
+          occurrenceIds:finding.sourceKeys.map(source=>occurrences.get(source)),createdAt:now});
+      }
+      state.editions.push({id:editionId,questionId,label:prepared.manifest.label,provider,mode:'retained',
+        createdAt:now,raw,sourceReference:prepared.manifest.sourceReference??'',
+        sourceTerms:prepared.manifest.sourceTerms,origin:{mode:'LOCAL_SOURCE_BUNDLE',intentId,
+          sourceBundleSha256:raw.sha256,fileCount:prepared.preview.fileCount,fileBytes:prepared.preview.fileBytes,
+          sourceKeys:prepared.manifest.sources.map(source=>source.key),findingIds}});
+    },{projection});
   }
 
   async function receiveBuyerResult(id, { result, questionId, label, provider = 'research',
@@ -628,5 +681,5 @@ export async function openDossierStore(directory, { providers = {} } = {}) {
   }
 
   return Object.freeze({ directory, list, create, get, getMetadata, readRetainedEdition, listRevisions, update, addQuestion, updateQuestion,
-    receive, receiveBuyerResult, receiveReference, selectEvidence, updateSelection, addFinding, updateFinding, compare, exportDossier, exportStream, reopen, reopenStream });
+    receive, previewSourceBundle, receiveSourceBundle, receiveBuyerResult, receiveReference, selectEvidence, updateSelection, addFinding, updateFinding, compare, exportDossier, exportStream, reopen, reopenStream });
 }

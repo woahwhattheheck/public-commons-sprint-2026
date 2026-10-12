@@ -58,6 +58,11 @@ export function researchWorkspaceTools(tool){
     tool('merchant_research_receive_source','Receive a host-declared complete original research response or provider-edition reference under the selected question. Reads the declared source hash before the original receive operation.',{
       ...dossier,source:alias,questionId:nativeId,label,expectedRevision:revision},
       ['workspace','dossierId','source','questionId','label','expectedRevision'],{idempotent:true}),
+    tool('merchant_research_source_bundle_preview','Preview a host-declared original source bundle under one saved question. Returns its exact byte hash, source terms, files, selected source decisions, authored findings and current dossier revision without changing the dossier.',{
+      ...dossier,source:alias,questionId:nativeId},['workspace','dossierId','source','questionId'],read),
+    tool('merchant_research_source_bundle_receive','Receive that same SHA-pinned source bundle, source decisions and findings under its original question in one atomic dossier revision. Use the preview revision and bundle hash; exact-byte retry returns the saved current result after a lost response.',{
+      ...dossier,source:alias,questionId:nativeId,expectedRevision:revision,expectedBundleSha256:digest},
+      ['workspace','dossierId','source','questionId','expectedRevision'],{idempotent:true}),
     tool('merchant_research_openalex_editions','List complete saved OpenAlex work editions from the source already configured on this original Research listener.',workspace,['workspace'],read),
     tool('merchant_research_receive_openalex','Receive a complete existing OpenAlex edition under the original research question through the maintained bridge.',{
       ...dossier,editionId:nativeId,questionId:nativeId,label,expectedRevision:revision},
