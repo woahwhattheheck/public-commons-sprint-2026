@@ -95,6 +95,8 @@ Applications prevents a second managed launch of the same merchant configuration
 
 The [managed Applications guide](../../stellar/scf-starforge-20261009/distribution/runtime-workspace/APPLICATIONS.md) covers the same review/save/start/stop commands for CLI operators.
 
+The existing `census-geocoder-mcp` contribution declares the source-owned [Census application provider](../../stellar/scf-starforge-20261009/distribution/runtime-workspace/providers/census-geocoder.mjs). It delegates catalog, preparation, shared merchant-configuration ownership and startup observation to this same native workflow. The [provider guide](../../stellar/scf-starforge-20261009/distribution/runtime-workspace/APPLICATION_PROVIDERS.md) explains how the maintained distribution retains those original bytes. After receiving a release with this contribution, reopen the original Applications host and review its current source before starting the saved application.
+
 ## Complete source-to-customer workflow
 
 All calls below are MCP tool calls. Every payload uses workspace:"addresses". Keep the original returned IDs and digests; placeholders in the examples mean those returned values.
