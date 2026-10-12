@@ -1,6 +1,6 @@
-# QuickBooks and Xero customer operations
+# Buyer, QuickBooks and Xero customer operations
 
-This customer interface uses the merchant's existing accounting workspace, original QuickBooks and Xero controllers, and the same MCP connection as the other merchant tools. It gives an operator a complete path from original source selection and preview through retained requests, response reconciliation, accountant returns and exact file delivery.
+This customer interface uses the existing accounting workspace, original buyer startup, QuickBooks and Xero controllers, and the same MCP connection as the other merchant tools. It gives an operator a complete path from original source selection and preview through retained requests, response reconciliation, accountant returns and exact file delivery.
 
 The platform adapter is described in [ACCOUNTING-PLATFORMS.md](ACCOUNTING-PLATFORMS.md). Host configuration and ordinary accounting operations remain in [ACCOUNTING.md](ACCOUNTING.md). Backup, pause, restore and reader ownership use [ACCOUNTING-MAINTENANCE-CLIENT.md](ACCOUNTING-MAINTENANCE-CLIENT.md).
 
@@ -31,6 +31,143 @@ import {
 ~~~
 
 The SDK accepts an already initialized MCP caller, including the merchant's original stdio transport. The connected SDK and CLI use the original HTTP MCP endpoint. They keep native plan, context, capture, response, operation and return IDs; they do not create a second financial engine or job queue.
+
+## Buyer-issued source startup and receiving
+
+Choose `--platform buyer` for a host-declared accounting alias configured with `sourceMode: "buyer"`. Host setup is in [ACCOUNTING_BUYER.md](ACCOUNTING_BUYER.md). This mode consumes the original issued buyer period, allocations, credits and outstanding source records. The existing buyer workspace and accounting Store remain their respective owners.
+
+| Native tool | CLI or SDK entry | Result |
+| --- | --- | --- |
+| `merchant_accounting_buyer_source_preview` | `source`; `client.sourcePreview()` | Original declared file, native validation, exact source digest and paged review |
+| `merchant_accounting_buyer_initialize` | `preview --action initialize` → existing `prepare` / `execute` | Explicit Store initialization with reviewed source, name and operator |
+| `merchant_accounting_buyer_startup` | `startup` or `status`; `client.startup()` | Retained source, workspace binding and first-handoff identity |
+| `merchant_accounting_buyer_prepare` | `retained-source`; `client.prepareSource()` | Exact retained source pages and current revision for a named handoff |
+| `merchant_accounting_buyer_handoff` | `preview --action handoff` → existing `prepare` / `execute` | Original startup handoff and exact same-request recovery |
+
+Set the endpoint and workspace variables to the original configured host. Replace `issued_period` with an actual `buyerSources` alias returned by `sources`.
+
+~~~sh
+starforge merchant-accounting-platforms actions --platform buyer
+starforge merchant-accounting-platforms sources \
+  --url "$ACCOUNTING_MCP_URL" --workspace "$ACCOUNTING_WORKSPACE" --platform buyer
+
+starforge merchant-accounting-platforms source \
+  --url "$ACCOUNTING_MCP_URL" --workspace "$ACCOUNTING_WORKSPACE" --platform buyer \
+  --source issued_period --view summary
+~~~
+
+The review returns `sourceSha256`, original byte count, period, monetary dimensions, allocation counts and outstanding source counts. For subsequent pages pass that exact digest in `--sha256`. Views are `allocations`, `outstanding` and `captures`, with `--offset` and `--limit` (maximum 200). Native amounts and source context stay unchanged.
+
+### Initialize the selected source
+
+Create a private JSON argument file with the actual alias and responsible operator. These are example field values:
+
+~~~json
+{
+  "source": "issued_period",
+  "name": "Reviewed buyer period",
+  "actor": "Named operator"
+}
+~~~
+
+An optional `sourceSha256` pins an earlier review. The initialization preview reads the actual file, retains its returned digest and byte count, and builds the exact native command. It does not initialize a directory.
+
+~~~sh
+starforge merchant-accounting-platforms preview \
+  --url "$ACCOUNTING_MCP_URL" --workspace "$ACCOUNTING_WORKSPACE" --platform buyer \
+  --action initialize --request "$CASE_DIR/initialize-arguments.json" \
+  --out "$CASE_DIR/initialize-preview.json"
+
+starforge merchant-accounting-platforms prepare \
+  --dir "$CASE_DIR/initialize-operation" \
+  --url "$ACCOUNTING_MCP_URL" --workspace "$ACCOUNTING_WORKSPACE" --platform buyer \
+  --preview "$CASE_DIR/initialize-preview.json"
+
+starforge merchant-accounting-platforms execute --dir "$CASE_DIR/initialize-operation"
+starforge merchant-accounting-platforms reconcile --dir "$CASE_DIR/initialize-operation"
+~~~
+
+This reuses the existing private `request.json` / `state.json`, lease, send checkpoints and request digest. Before sending, reconciliation looks for retained native startup. Only the explicit native `ACCOUNTING_BUYER_INITIALIZATION_REQUIRED` result means initialization is absent. A different source, name or operator is a conflict. A failed read, paused workspace or uncertain Store does not become an absent result.
+
+After an accepted initialization or lost reply, the same operation reads the retained source identity; its former import file is not needed for that observation. The recovered result includes the original workspace binding and first-handoff UUID. Explicit execute sends the same retained command only when the original initialization is actually absent. Reconcile never initializes.
+
+### Review and recover the first handoff
+
+~~~sh
+starforge merchant-accounting-platforms startup \
+  --url "$ACCOUNTING_MCP_URL" --workspace "$ACCOUNTING_WORKSPACE" --platform buyer
+
+starforge merchant-accounting-platforms retained-source \
+  --url "$ACCOUNTING_MCP_URL" --workspace "$ACCOUNTING_WORKSPACE" --platform buyer \
+  --sha256 "$ISSUED_SOURCE_SHA256" --view allocations --offset 0 --limit 200
+~~~
+
+Prepare a private handoff argument file with its intended `name` and `actor`. You may also provide the previously observed `handoffId`, `sourceSha256` and `revision`; the preview rejects any mismatch instead of changing that choice. Otherwise it reads those identities from current retained startup and source review.
+
+~~~sh
+starforge merchant-accounting-platforms preview \
+  --url "$ACCOUNTING_MCP_URL" --workspace "$ACCOUNTING_WORKSPACE" --platform buyer \
+  --action handoff --request "$CASE_DIR/handoff-arguments.json" \
+  --out "$CASE_DIR/handoff-preview.json"
+
+starforge merchant-accounting-platforms prepare \
+  --dir "$CASE_DIR/handoff-operation" \
+  --url "$ACCOUNTING_MCP_URL" --workspace "$ACCOUNTING_WORKSPACE" --platform buyer \
+  --preview "$CASE_DIR/handoff-preview.json"
+
+starforge merchant-accounting-platforms execute --dir "$CASE_DIR/handoff-operation"
+starforge merchant-accounting-platforms reconcile --dir "$CASE_DIR/handoff-operation"
+~~~
+
+The first-handoff UUID comes from original Store startup. The operation also binds native workspace/source identity, exact issued bytes, named handoff and the original create-request digest. Recovery matches all these values against compact retained handoff metadata. It does not infer acceptance from a matching UUID alone or invoke accountant create during reconcile. Native accepted retries retain the same request before checking an older revision.
+
+Use `--platform xero` on this same configured alias for the existing context, valuation, plan, response and return workflow below. It consumes the handoff already retained by buyer startup. Provider actions and explicit fiat/chart choices stay in those original Xero operations.
+
+### Complete original source and accountant files
+
+Save this private selection JSON:
+
+~~~json
+{"kind":"buyer-source"}
+~~~
+
+Download with the digest returned by source review:
+
+~~~sh
+starforge merchant-accounting-platforms download \
+  --url "$ACCOUNTING_MCP_URL" --workspace "$ACCOUNTING_WORKSPACE" --platform buyer \
+  --selection "$CASE_DIR/buyer-source-selection.json" --sha256 "$ISSUED_SOURCE_SHA256" \
+  --out "$CASE_DIR/original-issued-buyer-source.json"
+~~~
+
+The maintained file reader retains its native handle and selectors, verifies every offset and complete SHA-256, and releases unfinished reads on caller disconnect. Output is the unchanged issued JSON, including every source and allocation record; review pagination does not truncate it. For an accountant packet use `kind: "accountant"` with its actual `handoffId`, optional returned `revisionId` and native `file` descriptor, retaining that file's own SHA-256. Xero files stay under `--platform xero`.
+
+The SDK traverses a complete source view through native pages:
+
+~~~js
+const client = await connectAccountingPlatformClient({
+  url: process.env.ACCOUNTING_MCP_URL,
+  workspace: process.env.ACCOUNTING_WORKSPACE,
+  platform: 'buyer',
+});
+try {
+  const startup = await client.startup();
+  for await (const page of client.sourcePages({
+    sourceSha256: startup.source.sha256,
+    view: 'allocations',
+    limit: 200,
+  })) {
+    consumeOriginalRows(page.page.items);
+  }
+} finally {
+  await client.disconnect();
+}
+~~~
+
+For a pre-initialization source, provide its actual `source` alias to `sourcePages()`. The first page establishes the digest if none was supplied; later pages require the same digest, byte count and complete row count. An empty view still returns its original zero-count page.
+
+Save the operation directories with the complete native project handoff. Encrypted workspace backup/receiving remains the maintained accounting workflow. A received runtime must include `accounting-platform-buyer-client.mjs`, the original buyer catalog and updated retained-file reader from this edition. A source-only download does not include that runtime or the operator's private operation directories.
+
 
 ## Select the actual workspace and inputs
 

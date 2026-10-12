@@ -143,7 +143,7 @@ export function createAccountingMaintenanceClient({ workspace, call } = {}) {
     /** Consume one original file, retaining its selectors and SHA on every chunk. */
     async *fileChunks(selection, { expectedSha256, chunkBytes = 65536, signal } = {}) {
       exact(selection, FILE_FIELDS);
-      if (!['response', 'report', 'export', 'collection', 'pricing', 'period', 'accountant', 'adjustment', 'qbo', 'xero', 'customer-statement', 'customer-statement-preview', 'cryptoworth', 'runbooks'].includes(selection.kind))
+      if (!['response', 'report', 'export', 'collection', 'pricing', 'period', 'accountant', 'adjustment', 'qbo', 'xero', 'customer-statement', 'customer-statement-preview', 'cryptoworth', 'runbooks', 'buyer-source'].includes(selection.kind))
         throw fail('ARGUMENTS', 'Choose an original accounting file kind.');
       if (expectedSha256 !== undefined) identifier(expectedSha256, SHA, 'original file SHA256');
       number(chunkBytes, 1, 196608, 'chunkBytes');
