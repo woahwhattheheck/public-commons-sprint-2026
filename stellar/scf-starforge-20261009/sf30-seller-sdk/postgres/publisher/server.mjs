@@ -16,7 +16,7 @@ async function body(req) {
   try { return JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(Buffer.concat(chunks))); }
   catch { throw fault('JSON_INVALID'); }
 }
-export async function startPostgresPublisherServer({ publisher, port = 8442 } = {}) {
+export async function startPostgresPublisherServer({ publisher, port = 8442, extension = null } = {}) {
   if (!publisher || typeof publisher.startExtraction !== 'function' || !Number.isInteger(port) || port < 0 || port > 65535)
     throw new TypeError('Open publisher and valid port required');
   const assets = new Map(await Promise.all([
@@ -24,6 +24,20 @@ export async function startPostgresPublisherServer({ publisher, port = 8442 } = 
     ['/schedules.mjs', 'schedules.mjs', 'text/javascript; charset=utf-8'],
     ['/style.css', 'style.css', 'text/css; charset=utf-8'],
   ].map(async ([url, file, type]) => [url, { bytes: await readFile(new URL('./public/' + file, import.meta.url)), type }])));
+  // Extensions are trusted host adapters, never selected from an HTTP request.
+  if (extension) {
+    if (!Array.isArray(extension.assets) || typeof extension.handle !== 'function' ||
+        typeof extension.head !== 'string' || extension.head.length > 4096)
+      throw new TypeError('A trusted publisher extension is required');
+    for (const asset of extension.assets) {
+      if (typeof asset.path !== 'string' || !/^\/[A-Za-z0-9_/-]+\.(mjs|css)$/.test(asset.path) ||
+          assets.has(asset.path) || !Buffer.isBuffer(asset.bytes) || typeof asset.type !== 'string')
+        throw new TypeError('Fixed private extension assets are required');
+      assets.set(asset.path,{bytes:asset.bytes,type:asset.type});
+    }
+    const page = assets.get('/');
+    page.bytes = Buffer.from(page.bytes.toString('utf8').replace('</head>',extension.head+'</head>'));
+  }
   if (publisher.sourceName && publisher.sourceName !== 'PostgreSQL') {
     const page = assets.get('/');
     page.bytes = Buffer.from(page.bytes.toString('utf8').replaceAll('PostgreSQL', publisher.sourceName));
@@ -46,6 +60,7 @@ export async function startPostgresPublisherServer({ publisher, port = 8442 } = 
       if (req.method === 'GET' && !url.search && assets.has(path)) {
         const file = assets.get(path); return send(200, file.bytes, file.type);
       }
+      if (extension && await extension.handle({req,res,url,send})) return;
       if (req.method === 'GET') {
         if (path === '/api/schedule') return send(200, schedule.status({
           limit: url.searchParams.has('limit') ? Number(url.searchParams.get('limit')) : undefined,
@@ -103,7 +118,7 @@ export async function startPostgresPublisherServer({ publisher, port = 8442 } = 
       const scheduling = schedule.close(), running = publisher.status().active;
       if (running?.kind === 'extraction') publisher.cancel(running.id);
       try {
-        const results = await Promise.allSettled([stop, scheduling]);
+        const results = await Promise.allSettled([stop, scheduling, extension?.close?.()]);
         const failed = results.find(result => result.status === 'rejected');
         if (failed) throw failed.reason;
       } finally { await publisher.close(); }

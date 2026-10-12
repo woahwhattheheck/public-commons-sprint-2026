@@ -110,6 +110,7 @@ function restorable(name){
   return new RegExp('^(?:versions|decisions)/'+uuid+'/[A-Za-z0-9_./-]+$').test(name)||
     new RegExp('^(?:successors|decision-successors)/'+hash+'\\.json$').test(name)||
     new RegExp('^staged-releases/'+uuid+'\\.json$').test(name)||
+    new RegExp('^scenario-plans/'+uuid+'\\.json$').test(name)||
     new RegExp('^economics/sources/records/'+uuid+'/(?:original|source\\.json)$').test(name)||
     new RegExp('^economics/books/editions/'+uuid+'/[A-Za-z0-9_.-]+$').test(name)||
     new RegExp('^economics/books/successors/'+hash+'\\.json$').test(name)||

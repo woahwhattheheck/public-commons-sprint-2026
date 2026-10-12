@@ -381,3 +381,8 @@ Challenge preview returns the original HTTP 402 challenge. A challenge,
 dashboard counter or backend response does not establish settlement or revenue.
 Native payment verification remains in the original seller and facilitator.
 
+
+
+## Cache operating history and live policy control
+
+Save or reopen an API package and use **Open cache operations** in its run section. The page retains operating snapshots and change history in that saved package, uses its managed seller for live inspection and changes, and remains available for review when the seller is stopped. It supports policy comparisons, explicit apply, restoring prior retention, recovery by operation ID, notes and complete receiving/export. [Cache operations guide](../../sf30-seller-sdk/response-cache/workspace/README.md) covers the same browser, command-line and agent workflow.

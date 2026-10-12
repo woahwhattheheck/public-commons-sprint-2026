@@ -8,8 +8,6 @@ import { normalizeTrafficHistoryReport } from '../../sf30-seller-sdk/operations/
 import { resolveSellerConfigPaths, validateSellerServiceConfig } from '../../sf30-seller-sdk/serve.mjs';
 import { openEconomics } from '../economics/model.mjs';
 import { requireCompletedRestore } from '../economics/archive.mjs';
-import { createRepricingReview } from './repricing.mjs';
-import { prepareRepricingSource, writeRepricingSource, stageRepricingSource } from './repricing-source.mjs';
 
 const MAX_BYTES = 64 * 1024 * 1024;
 const REVISION = /^[a-f0-9]{64}$/;
@@ -405,6 +403,24 @@ export async function openWorkspace({config, directory, snapshot, history:histor
     return {entry,sellerBytes,termsBytes,sellerValue:JSON.parse(sellerBytes.toString('utf8')),
       termsValue:JSON.parse(termsBytes.toString('utf8'))};
   }
+  async function planningSource(version) {
+    const [original,current] = await Promise.all([originalPricing(version),seller()]);
+    const sourceFile = original.entry.value.sourceFile ?? 'snapshot.json';
+    const observationBytes = await savedFile(original.entry,sourceFile);
+    const observation = JSON.parse(observationBytes.toString('utf8'));
+    const savedReport = JSON.parse((await savedFile(original.entry,'report/report.json')).toString('utf8'));
+    const selectedRoutes = new Set(savedReport.routes.map(route => route.routeId));
+    const routes = merchantRoutes(validateSellerServiceConfig(original.sellerValue)).filter(route => selectedRoutes.has(route.routeId));
+    return {version,label:original.entry.value.label,savedAt:original.entry.value.savedAt,
+      seller:original.sellerValue,terms:original.termsValue,observation,routes,
+      commercial:commercialInputs(original.termsValue,routes),
+      sellerChanged:current.hash !== digest(original.sellerBytes),
+      observationSummary:original.entry.value.observation ?? {
+        kind:original.entry.value.observationKind ?? SESSION,sessionId:observation.sessionId ?? null,
+        range:observation.range ?? null},
+      provenance:{seller:digest(original.sellerBytes),terms:digest(original.termsBytes),
+        snapshot:digest(observationBytes),...(sourceFile === 'history.json' ? {history:digest(observationBytes)} : {})}};
+  }
   async function repricingSource(version) {
     const [original,current,decisions] = await Promise.all([originalPricing(version),seller(),decisionHistory()]);
     const routes = merchantRoutes(validateSellerServiceConfig(original.sellerValue));
@@ -421,6 +437,7 @@ export async function openWorkspace({config, directory, snapshot, history:histor
     const sellerSha256 = digest(original.sellerBytes);
     if (input.sellerSha256 !== sellerSha256 || current.hash !== sellerSha256)
       throw fault('SELLER_CHANGED','The configured seller differs from this saved pricing review. Save a review of its current configuration before preparing new prices.',409);
+    const {createRepricingReview} = await import('./repricing.mjs');
     const core = createRepricingReview({seller:original.sellerValue,edits:input.edits});
     const proposedBytes = encode(core.proposedSeller);
     const launchBytes = encode(resolveSellerConfigPaths(structuredClone(core.proposedSeller),configPath));
@@ -428,7 +445,8 @@ export async function openWorkspace({config, directory, snapshot, history:histor
       throw fault('SELLER_CONFIG_TOO_LARGE','The repriced seller exceeds its original 1 MiB configuration limit.');
     const termsBytes = encode(merchantTerms(core.proposedSeller,
       commercialInputs(original.termsValue,merchantRoutes(core.proposedSeller))));
-    const source = sourcePackage ? await prepareRepricingSource(resolve(sourcePackage),core) : null;
+    const source = sourcePackage
+      ? await (await import('./repricing-source.mjs')).prepareRepricingSource(resolve(sourcePackage),core) : null;
     const review = {schema:'stellar-forge.merchant-repricing-preview.v1',sourceVersion:input.version,
       sourceRevision:original.entry.revision,sourceLabel:original.entry.value.label,
       sellerSha256,proposedSellerSha256:digest(proposedBytes),launchSellerSha256:digest(launchBytes),
@@ -465,7 +483,7 @@ export async function openWorkspace({config, directory, snapshot, history:histor
         ['source-seller.json',original.sellerBytes],['terms.json',prepared.termsBytes],
         ['source-terms.json',original.termsBytes],['pricing-report.json',reportBytes],
         ['decision.json',encode({...review,coreReview:core})]]) await writeOnce(join(pending,name),bytes);
-      if (source) await writeRepricingSource(source,pending,final);
+      if (source) await (await import('./repricing-source.mjs')).writeRepricingSource(source,pending,final);
       const files = await filesIn(pending);
       const value = {schema:'stellar-forge.merchant-repricing-decision.v1',decision,
         previousRevision:input.expectedRevision,requestId:input.requestId,requestSha256,
@@ -513,6 +531,7 @@ export async function openWorkspace({config, directory, snapshot, history:histor
     // Verify the committed package and its complete files before original SF82
     // reads it. Staging always uses this retained decision, never authoring paths.
     for (const name of Object.keys(entry.value.files)) await decisionFile(entry,name);
+    const {stageRepricingSource} = await import('./repricing-source.mjs');
     const result = await stageRepricingSource({directory:join(directory,'decisions',decision),
       releaseStore:resolve(releaseStore),runtime:stageRuntime,id:'pricing-'+decision,label:entry.value.label});
     const value = {schema:'stellar-forge.merchant-repricing-stage.v1',decision,reviewSha256,
@@ -564,8 +583,34 @@ export async function openWorkspace({config, directory, snapshot, history:histor
     return save({requestId,expectedRevision,label,sellerSha256:digest(original.sellerBytes),snapshotSha256:observed.hash,
       commercial,costProposal:costBinding},{observed,binding:costBinding,files:costFiles});
   }
+  async function scenarioBackup() {
+    const folder=join(directory,'scenario-plans');let names;
+    try{await privateDirectory(folder);names=await readdir(folder);}
+    catch(error){if(error.code==='ENOENT')return {files:[],plans:[]};throw error;}
+    const {openPlanningWorkspace}=await import('../planning/workspace.mjs');
+    const planning=await openPlanningWorkspace({model:{planningSource},directory}),files=[],plans=[];
+    for(const name of names.filter(name=>name.endsWith('.json')&&VERSION.test(name.slice(0,-5))).sort()){
+      const planId=name.slice(0,-5),record=await planning.load(planId),path=join(folder,name),bytes=await privateBytes(path);
+      const envelope=JSON.parse(bytes.toString('utf8')),recordHash=digest(canonical(record));
+      if(envelope.sha256!==recordHash||digest(canonical(envelope.record))!==recordHash)
+        throw fault('SCENARIO_BACKUP_CHANGED','A saved comparison changed while its original record was captured.',409);
+      const hash=digest(bytes);
+      files.push({name:'scenario-plans/'+name,read:async()=>{
+        const actual=await privateBytes(path);
+        if(digest(actual)!==hash)throw fault('SCENARIO_BACKUP_CHANGED','A retained comparison differs from this backup snapshot.',409);
+        return actual;
+      }});
+      plans.push({planId,version:record.version,sha256:hash});
+    }
+    return {files,plans};
+  }
   async function pricingBackup() {
-    const files=[],decisions=await decisionHistory(),pricingEntries=await history();
+    // Capture independent immutable plans and decisions before the pricing prefix
+    // so every selected original source can be included in the same backup.
+    const scenario=await scenarioBackup(),files=[...scenario.files],decisions=await decisionHistory(),pricingEntries=await history();
+    const versions=new Set(pricingEntries.map(entry=>entry.value.version));
+    if(scenario.plans.some(plan=>!versions.has(plan.version)))
+      throw fault('SCENARIO_BACKUP_SOURCE_MISSING','A saved comparison has no matching original pricing review.');
     for(const entry of pricingEntries){
       const version=entry.value.version;
       for(const name of Object.keys(entry.value.files))files.push({name:'versions/'+version+'/'+name,read:()=>savedFile(entry,name)});
@@ -582,13 +627,13 @@ export async function openWorkspace({config, directory, snapshot, history:histor
       if(await stageReceipt(decision))files.push({name:'staged-releases/'+decision+'.json',
         read:()=>privateBytes(join(directory,'staged-releases',decision+'.json'))});
     }
-    return {files,pricingVersions:pricingEntries.map(entry=>entry.value.version),
+    return {files,scenarioPlans:scenario.plans,pricingVersions:pricingEntries.map(entry=>entry.value.version),
       requiredCostEditions:pricingEntries.map(entry=>entry.value.costOrigin?.edition).filter(Boolean),
       pricingRevision:pricingEntries.at(-1)?.revision??null,decisionRevision:decisions.at(-1)?.revision??null};
   }
   const economics=await openEconomics({directory,pricingSource:economicsSource,
     listPricing:async()=>[...(await history())].reverse().map(summary),
     savePricing:saveCostPricing,previewPricing:previewCostPricing,pricingBackup,supplierUsage,accountingReport});
-  return {state,preview,save,download,loadVersion,compare,repricingSource,previewRepricing,
+  return {state,preview,save,download,loadVersion,compare,planningSource,repricingSource,previewRepricing,
     saveRepricing,downloadRepricing,stageRepricing,economics};
 }

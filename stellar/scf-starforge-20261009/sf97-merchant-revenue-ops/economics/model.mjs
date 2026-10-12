@@ -219,6 +219,7 @@ export async function openEconomics({directory,pricingSource,listPricing,savePri
       }
       descriptor={schema:'stellar-forge.merchant-cost-backup.v1',kind:input.kind,
         snapshot:{pricingRevision:pricingSnapshot.pricingRevision,decisionRevision:pricingSnapshot.decisionRevision,
+          scenarioPlans:pricingSnapshot.scenarioPlans,
           costRevision:entries.at(-1)?.revision??null},
         restore:'Restore into a new directory and reopen with original host-selected seller and observation paths.',
         excludes:['environment and credentials','external release-store runtime and processes','uncommitted pending attempts','previous export packages']};
