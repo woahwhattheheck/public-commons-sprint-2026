@@ -358,7 +358,8 @@
     "fiscaldata": "stellar/scf-starforge-20261009/sf30-seller-sdk/fiscaldata/cli.mjs",
     "coingecko": "stellar/scf-starforge-20261009/partners/coingecko-stellar-market/cli.mjs",
     "webdav": "stellar/scf-starforge-20261009/sf30-seller-sdk/webdav/cli.mjs",
-    "cache-operations": "stellar/scf-starforge-20261009/sf30-seller-sdk/response-cache/workspace/cli.mjs"
+    "cache-operations": "stellar/scf-starforge-20261009/sf30-seller-sdk/response-cache/workspace/cli.mjs",
+    "browser-wallet": "stellar/scf-starforge-20261009/sf103-native-buyer-signer/browser-wallet/cli.mjs"
   },
   "exports": {
     "./seller/openalex": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/openalex/merchant.mjs",
@@ -829,7 +830,9 @@
     "./seller/webdav/packet": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/webdav/packet.mjs",
     "./seller/response-cache/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/response-cache/workspace/model.mjs",
     "./seller/response-cache/workspace/server": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/response-cache/workspace/server.mjs",
-    "./seller/response-cache/workspace/report": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/response-cache/workspace/reports.mjs"
+    "./seller/response-cache/workspace/report": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/response-cache/workspace/reports.mjs",
+    "./buyer/browser-wallet": "./source/stellar/scf-starforge-20261009/sf103-native-buyer-signer/browser-wallet/index.mjs",
+    "./buyer/browser-wallet/server": "./source/stellar/scf-starforge-20261009/sf103-native-buyer-signer/browser-wallet/server.mjs"
   },
   "nativePeers": {
     "@x402/core": {
@@ -894,6 +897,12 @@
       "ssh2": {
         "version": "1.17.0",
         "probe": "ssh2"
+      }
+    },
+    "freighter-wallet": {
+      "@stellar/freighter-api": {
+        "version": "6.0.1",
+        "probe": "@stellar/freighter-api"
       }
     }
   },
