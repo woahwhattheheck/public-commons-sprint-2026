@@ -456,14 +456,14 @@ function renderScheduleSources() {
     renderFilesSourceSummary();paintLocks();return;
   }
   const handoffs=S.sources.handoffs||[];
-  fillOptions($('schedule-handoff'),[{value:'',label:'Choose a local accountant handoff'},...handoffs.map(item=>({value:item.id,label:'Handoff '+short(item.id)+' · run '+short(item.runId)+' · '+when(item.createdAt)}))],draft.handoffId);
+  fillOptions($('schedule-handoff'),[{value:'',label:'Choose a local accountant handoff'},...handoffs.map(item=>({value:item.id,label:'Handoff '+short(item.id)+(item.sourceKind==='buyer-expense-period'?' · buyer close '+short(item.closeId):' · run '+short(item.runId))+' · '+when(item.createdAt)}))],draft.handoffId);
   const selected=handoffs.find(item=>item.id===draft.handoffId);
   let revisions=selected?.revisions||[];
   if(selected&&!revisions.some(item=>item.id==='initial'))revisions=[{id:'initial',label:'Initial accountant handoff'},...revisions];
   fillOptions($('schedule-accountant-revision'),[{value:'',label:selected?'Choose the accountant revision':'Choose a handoff first'},...revisions.map(item=>({value:item.id,label:item.label||short(item.id)}))],draft.accountantRevisionId);
   const closes=(S.sources.closes||[]).filter(item=>selected&&item.id===selected.closeId);
   fillOptions($('schedule-close'),[{value:'',label:'No closed-period selection'},...closes.map(item=>({value:item.id,label:item.label||short(item.id)}))],draft.periodCloseId);
-  put('schedule-source-summary',selected?facts([['Selected source run',selected.runId],['Accountant handoff',selected.id],['Accountant revision',draft.accountantRevisionId||'Choose a revision'],['Frozen period close',selected.closeId?(closes.find(item=>item.id===selected.closeId)?.label||selected.closeId):'The selected handoff has no frozen close']]):empty('Choose an existing local accountant handoff. Receiving a foreign period does not substitute a local source.'));
+  put('schedule-source-summary',selected?facts([[selected.sourceKind==='buyer-expense-period'?'Buyer workspace':'Selected source run',selected.sourceKind==='buyer-expense-period'?selected.buyerWorkspaceId:selected.runId],['Accountant handoff',selected.id],['Accountant revision',draft.accountantRevisionId||'Choose a revision'],['Frozen period close',selected.closeId?(closes.find(item=>item.id===selected.closeId)?.label||selected.closeId):'The selected handoff has no frozen close']]):empty('Choose an existing local accountant handoff. Receiving a foreign period does not substitute a local source.'));
 }
 function renderFilesSourceSummary(){
   const draft=S.schedule;if(!draft)return;
@@ -540,7 +540,7 @@ function renderCycle() {
       button('Start following period',()=>startSchedule({previousCycle:cycle}),{mutation:true}),button('Open procedure edition',()=>openBook(cycle.runbookId,cycle.editionId))));
   const sourceDetails=source.kind==='files'?
     el('details',{className:'panel'},el('summary',{},'Original close files · '+source.label),facts([['Source label',source.label],['Selected files',(source.files||[]).length],['Source snapshot',source.sha256],['Previous worked period',cycle.previousCycleId],['Origin workspace',source.originWorkspaceId]]),prose(source.note),fileList((source.files||[]).map(file=>file.id))):
-    el('details',{className:'panel'},el('summary',{},'Selected accountant source and period lineage'),facts([['Source run',source.runId],['Accountant handoff',source.handoffId||cycle.handoffId],['Accountant revision',source.accountantRevisionId||cycle.accountantRevisionId],['Closed period',cycle.periodCloseId||source.periodCloseId],['Previous worked period',cycle.previousCycleId],['Origin workspace',cycle.origin?.workspaceId||cycle.originWorkspaceId||source.originWorkspaceId]]));
+    el('details',{className:'panel'},el('summary',{},'Selected accountant source and period lineage'),facts([[source.source?.kind==='buyer-expense-period'?'Buyer workspace':'Source run',source.source?.kind==='buyer-expense-period'?source.source.buyer.workspaceId:source.runId],['Accountant handoff',source.handoffId||cycle.handoffId],['Accountant revision',source.accountantRevisionId||cycle.accountantRevisionId],['Closed period',cycle.periodCloseId||source.periodCloseId],['Previous worked period',cycle.previousCycleId],['Origin workspace',cycle.origin?.workspaceId||cycle.originWorkspaceId||source.originWorkspaceId]]));
   const layout=el('div',{className:'cycle-layout'},el('nav',{id:'cycle-step-nav',className:'step-nav','aria-label':'Procedure steps'}),el('div',{className:'cycle-work'},el('div',{id:'cycle-step'}),el('div',{id:'cycle-preparation'}),el('div',{id:'cycle-review'})));
   put('cycle-detail',header,overview,sourceDetails,layout,el('section',{className:'panel'},el('h2',{},'Preparation and review history'),el('div',{id:'cycle-history',className:'history'})));
   renderStepNav();renderWorkStep();renderCyclePreparation();renderCycleReview();renderCycleHistory();paintLocks();

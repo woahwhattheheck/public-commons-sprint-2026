@@ -1,0 +1,29 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "research-clinicaltrials",
+  "description": "Receive original ClinicalTrials cohorts into source-linked Research questions, evidence, reports, portable dossiers and the same authenticated merchant operator.",
+  "commands": {
+    "research-trials": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/clinical-trials-cli.mjs"
+  },
+  "commandDescriptions": {
+    "research-trials": "Import, review and receive original ClinicalTrials packets; inspect whole studies and reopen complete source-linked dossiers."
+  },
+  "exports": {
+    "./buyer/research-dossiers/clinical-trials": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/clinical-trials-workspace.mjs",
+    "./buyer/research-dossiers/clinical-trials/client": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/clinical-trials-client.mjs",
+    "./buyer/research-dossiers/clinical-trials/model": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/clinical-trials-model.mjs",
+    "./buyer/research-dossiers/clinical-trials/analysis": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/clinical-trials-analysis.mjs",
+    "./merchant/mcp/research-clinicaltrials": "./source/stellar-forge/mcp-merchant-operator/research-clinicaltrials.mjs"
+  },
+  "supportFiles": [
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/clinical-trials-packet.py",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/public/clinical-trials.js",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/public/clinical-trials.css",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/CLINICAL_TRIALS.md",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/examples/clinical-trials-dossier.mjs",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/CLINICAL_TRIALS_ANALYSIS.md",
+    "stellar-forge/mcp-merchant-operator/research-clinicaltrials.mjs",
+    "stellar-forge/mcp-merchant-operator/catalog/research-clinicaltrials.mjs",
+    "stellar-forge/mcp-merchant-operator/RESEARCH_CLINICALTRIALS.md"
+  ]
+}

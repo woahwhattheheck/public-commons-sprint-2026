@@ -1,13 +1,13 @@
 <?php
 /**
  * Plugin Name: CSKT Reviewed Migration
- * Description: Native content, verified media, reviewed releases and recoverable migration operations.
- * Version: 1.0.0
+ * Description: Native content, reviewed migration releases, public engagement and recoverable staff operations.
+ * Version: 1.1.0
  * Requires at least: 6.8
  * Requires PHP: 8.1
  */
 if (!defined('ABSPATH')) { exit; }
-define('CSKTM_VERSION', '1.0.0');
+define('CSKTM_VERSION', '1.1.0');
 define('CSKTM_NS', 'cskt-migration/v1');
 define('CSKTM_MAX_MANIFEST', 32 * 1048576);
 define('CSKTM_MAX_ASSET', 1024 * 1048576);
@@ -17,6 +17,7 @@ require_once __DIR__ . '/release.php';
 require_once __DIR__ . '/uploads.php';
 require_once __DIR__ . '/public.php';
 require_once __DIR__ . '/editor.php';
+require_once __DIR__ . '/engagement.php';
 
 function csktm_types() {
     foreach (array('cskt_project'=>'Projects', 'cskt_document'=>'Documents', 'cskt_notice'=>'Notices') as $type=>$label) {
@@ -30,7 +31,7 @@ function csktm_types() {
     }
 }
 add_action('init','csktm_types');
-register_activation_hook(__FILE__,function(){csktm_types();add_option('cskt_migration_mutex','1','','no');add_option('cskt_migration_bindings',array(),'','no');add_option('cskt_migration_routes',array(),'','no');add_option('cskt_migration_releases',array(),'','no');flush_rewrite_rules();});
+register_activation_hook(__FILE__,function(){csktm_types();csktm_eng_types();add_option('cskt_migration_mutex','1','','no');add_option('cskt_migration_bindings',array(),'','no');add_option('cskt_migration_routes',array(),'','no');add_option('cskt_migration_releases',array(),'','no');flush_rewrite_rules();});
 register_deactivation_hook(__FILE__,'flush_rewrite_rules');
 function csktm_allowed() { return current_user_can('manage_options') && current_user_can('edit_pages') && current_user_can('upload_files'); }
 function csktm_endpoint($callback) {

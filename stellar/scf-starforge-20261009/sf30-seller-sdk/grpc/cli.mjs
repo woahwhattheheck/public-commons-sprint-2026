@@ -5,16 +5,20 @@ import { fileURLToPath } from 'node:url';
 import { captureProtoSource, compileProtoSource } from './proto.mjs';
 import { inspectGrpcReflection, captureGrpcReflection } from './reflection.mjs';
 import { grpcMethodSchema } from './values.mjs';
+import { prepareGrpcInput, grpcOperationSchema } from './request-series.mjs';
+import { validateGrpcConfig } from './config.mjs';
 import { prepareGrpcSeller, readGrpcPrepared } from './prepare.mjs';
 import { readJson, jsonBytes, assertProtoArchiveFits } from './common.mjs';
 import { createGrpcWorkspace } from './workspace/model.mjs';
 import { exportGrpcStream } from './stream-capture.mjs';
 import { atomicJson } from '../../sf46-release/release-core.mjs';
 const help = [
+  'node grpc/cli.mjs upgrade --help',
   'node grpc/cli.mjs capture --directory PRIVATE_PROTO_DIRECTORY --entry service.proto [--entry other.proto] --out NEW_PROTO_SOURCE_JSON',
   'node grpc/cli.mjs reflect --source PRIVATE_SOURCE_JSON [--protocol auto|v1|v1alpha]',
   'node grpc/cli.mjs reflect-capture --source PRIVATE_SOURCE_JSON --service package.Service [--service other.Service] --expected-inventory-sha SHA256 [--protocol auto|v1|v1alpha] --out NEW_PROTO_SOURCE_JSON',
-  'node grpc/cli.mjs inspect --proto PRIVATE_PROTO_SOURCE_JSON [--method /package.Service/Method]',
+  'node grpc/cli.mjs inspect --proto PRIVATE_PROTO_SOURCE_JSON [--method /package.Service/Method] [--source PRIVATE_SOURCE_JSON]',
+  'node grpc/cli.mjs validate-request --proto PRIVATE_PROTO_SOURCE_JSON --source PRIVATE_SOURCE_JSON --method /package.Service/Method --input REQUEST_JSON',
   'node grpc/cli.mjs prepare --source PRIVATE_SOURCE_JSON --proto PRIVATE_PROTO_SOURCE_JSON --plan PRIVATE_PLAN_JSON --out NEW_PRIVATE_DIRECTORY',
   'node grpc/cli.mjs verify --directory PRIVATE_PREPARED_DIRECTORY',
   'node grpc/cli.mjs call --state PRIVATE_WORKSPACE --revision SAVED_SHA --method /package.Service/Method --input REQUEST_JSON --id NEW_UUID',
@@ -22,10 +26,12 @@ const help = [
   'node grpc/cli.mjs export-stream --state PRIVATE_WORKSPACE --id ORIGINAL_UUID --out NEW_NDJSON_FILE',
 ].join('\n');
 export async function main(args = process.argv.slice(2), { stdout = process.stdout } = {}) {
+  if (args[0] === 'upgrade') return (await import('./upgrade-cli.mjs')).upgradeMain(args.slice(1), { stdout });
   if (!args.length || args[0] === '--help') { stdout.write(help + '\n'); return; }
   const [action, ...rest] = args, flags = new Map(), entries = [], services = [];
   const allowed = {
-    capture: ['--directory', '--entry', '--out'], inspect: ['--proto', '--method'],
+    capture: ['--directory', '--entry', '--out'], inspect: ['--proto', '--method', '--source'],
+    'validate-request': ['--proto', '--source', '--method', '--input'],
     reflect: ['--source', '--protocol'],
     'reflect-capture': ['--source', '--service', '--expected-inventory-sha', '--protocol', '--out'],
     prepare: ['--source', '--proto', '--plan', '--out'], verify: ['--directory'],
@@ -82,7 +88,17 @@ export async function main(args = process.argv.slice(2), { stdout = process.stdo
       builtins: captured.builtins.length, bytes: jsonBytes(captured, 8388608).length };
   } else if (action === 'inspect') {
     const contract = compileProtoSource(await readJson(need('--proto'), 8388608));
-    result = flags.has('--method') ? grpcMethodSchema(contract, flags.get('--method')) : contract.inventory;
+    const source = flags.has('--source') ? validateGrpcConfig(await readJson(need('--source'), 65536)) : null;
+    result = flags.has('--method') ? source ? grpcOperationSchema(contract, flags.get('--method'), { limits: source.limits })
+      : grpcMethodSchema(contract, flags.get('--method')) : contract.inventory;
+  } else if (action === 'validate-request') {
+    if (!flags.has('--method')) throw new TypeError(help);
+    const contract = compileProtoSource(await readJson(need('--proto'), 8388608));
+    const source = validateGrpcConfig(await readJson(need('--source'), 65536));
+    const value = prepareGrpcInput(contract, flags.get('--method'), await readJson(need('--input'), 17825792), { limits: source.limits });
+    result = { schema: 'stellar-forge.grpc-request-preview.v1', protoSha256: contract.source.sha256,
+      method: flags.get('--method'), input: value.value, requestStream: value.requestStream,
+      messages: value.messages.length, requestBytes: value.requestBytes, requestJsonBytes: value.requestJsonBytes };
   } else if (action === 'prepare') {
     result = await prepareGrpcSeller({ sourceFile: need('--source'), protoFile: need('--proto'),
       planFile: need('--plan'), directory: need('--out') });

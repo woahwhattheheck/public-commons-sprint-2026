@@ -2,6 +2,8 @@
 import {createCrossrefPanel} from './crossref.js';
 import {createUnstructuredPanel} from './unstructured.js';
 import {createUnstructuredPipelinesPanel} from './unstructured-pipelines.js';
+import {createClinicalTrialsPanel} from './clinical-trials.js';
+import {createSourceBundlePanel,renderSourceBundleFiles} from './source-bundles.js';
 'use strict';
 (() => {
   const $ = id => document.getElementById(id);
@@ -9,7 +11,7 @@ import {createUnstructuredPipelinesPanel} from './unstructured-pipelines.js';
   const MAX_RESEARCH_FILE_BYTES = 16 * 1024 * 1024;
   const MAX_PORTABLE_FILE_BYTES = 256 * 1024 * 1024;
   const tokenKey = 'research-dossiers-session:' + location.origin;
-  const state = {token: '', dossiers: [], dossier: null, activeTab: 'sources', sourceId: null, variantDigest: null,
+  const state = {token: '', dossiers: [], dossier: null, activeTab: new URLSearchParams(location.hash.slice(1)).get('view')==='pipelines'?'pipelines':'sources', sourceId: null, variantDigest: null,
     page: 0, busy: false, openalexConfigured: false, openalexEditions: [], editingDossier: false, editingQuestion: null, editingFinding: null, editingSelection: null, importCompleted: new Set(), noteDrafts: new Map(), noteEditVersions: new Map()};
   const safeStorage = {
     get() { try { return sessionStorage.getItem(tokenKey) || ''; } catch { return ''; } },
@@ -91,6 +93,8 @@ import {createUnstructuredPipelinesPanel} from './unstructured-pipelines.js';
     crossrefPanel.updateBusy();
     documentPanel.updateBusy();
     pipelinePanel.updateBusy();
+    clinicalTrialsPanel.updateBusy();
+    sourceBundlePanel.updateBusy();
   }
   async function api(path, {method = 'GET', body, file, download = false} = {}) {
     const response = await fetch(path, {method, headers: {Authorization: 'Bearer ' + state.token,
@@ -144,6 +148,7 @@ import {createUnstructuredPipelinesPanel} from './unstructured-pipelines.js';
     crossrefPanel.configure(result.crossref);
     documentPanel.configure(result.unstructured);
     pipelinePanel.configure(result.pipelines);
+    clinicalTrialsPanel.configure(result.clinicalTrials);
     renderList();
   }
   async function openDossier(id) {
@@ -185,6 +190,8 @@ import {createUnstructuredPipelinesPanel} from './unstructured-pipelines.js';
     crossrefPanel.setDossier(view);
     documentPanel.setDossier(view);
     pipelinePanel.setDossier(view);
+    clinicalTrialsPanel.setDossier(view);
+    sourceBundlePanel.setDossier(view);
     if (!view) return;
     $('dossier-title').textContent = view.title || 'Untitled dossier';
     $('dossier-description').textContent = view.description || '';
@@ -329,6 +336,8 @@ import {createUnstructuredPipelinesPanel} from './unstructured-pipelines.js';
   }
   function renderExcerpt(source, variant) {
     const content = variant?.content ?? source.content ?? source.abstract ?? source.description ?? source.snippet;
+    const bundle=renderSourceBundleFiles($('detail-bundle-files'),content);
+    $('detail-excerpt').hidden=bundle;if(bundle)return;
     $('detail-excerpt').textContent = content === undefined || content === null || content === '' ?
       'This source has no current excerpt. Its original reference and your saved analysis remain available.' : text(content);
     $('detail-excerpt').classList.toggle('typed-content', content !== null && typeof content === 'object');
@@ -545,8 +554,9 @@ import {createUnstructuredPipelinesPanel} from './unstructured-pipelines.js';
   }
   function showTab(tab) {
     if (tab === 'crossref' && $('crossref-tab').hidden) tab = 'sources';
+    if (tab === 'clinical-trials' && $('clinical-trials-tab').hidden) tab = 'sources';
     state.activeTab = tab;
-    ['sources', 'questions', 'findings', 'revisions', 'crossref', 'documents', 'pipelines'].forEach(name => {
+    ['sources', 'questions', 'findings', 'revisions', 'crossref', 'documents', 'pipelines', 'clinical-trials'].forEach(name => {
       $('view-' + name).hidden = name !== tab;
       const button = document.querySelector('[data-tab="' + name + '"]');
       button.classList.toggle('active', name === tab);
@@ -555,6 +565,7 @@ import {createUnstructuredPipelinesPanel} from './unstructured-pipelines.js';
     crossrefPanel.show(tab === 'crossref');
     documentPanel.show(tab === 'documents');
     pipelinePanel.show(tab === 'pipelines');
+    clinicalTrialsPanel.show(tab === 'clinical-trials');
   }
   function clearFormError(form) { const box = form.querySelector('.form-error'); if (box) {box.textContent = ''; box.hidden = true;} }
   function showDossier(edit = false) {
@@ -675,6 +686,12 @@ import {createUnstructuredPipelinesPanel} from './unstructured-pipelines.js';
     onReceived:async view=>{applyDossier(view);await refreshList();}});
   const pipelinePanel = createUnstructuredPipelinesPanel({root:$('view-pipelines'),tab:$('pipelines-tab'),api,task,notify,
     getDossier:()=>state.dossier,isBusy:()=>state.busy,
+    onReceived:async view=>{applyDossier(view);await refreshList();}});
+  const clinicalTrialsPanel = createClinicalTrialsPanel({root:$('view-clinical-trials'),tab:$('clinical-trials-tab'),api,task,notify,
+    getDossier:()=>state.dossier,isBusy:()=>state.busy,
+    onReceived:async view=>{applyDossier(view);await refreshList();}});
+  const sourceBundlePanel=createSourceBundlePanel({root:$('source-bundle-dialog'),openButton:$('source-bundle-open'),
+    api,task,notify,getDossier:()=>state.dossier,isBusy:()=>state.busy,
     onReceived:async view=>{applyDossier(view);await refreshList();}});
   document.querySelectorAll('.dialog-close').forEach(button => button.addEventListener('click', () => {
     if (!state.busy) button.closest('dialog').close();

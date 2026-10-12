@@ -74,7 +74,7 @@ export interface EditionHeader {
 export interface SourceHeader {
   kind:'accountant'|'files';originWorkspaceId:string;fileCount:number;
   label?:string;note?:string;sha256?:string;handoffId?:string;handoffName?:string;
-  accountantRevisionId?:string;accountantRevisionName?:string;runId?:string;periodCloseId?:string|null;
+  accountantRevisionId?:string;accountantRevisionName?:string;runId?:string|null;periodCloseId?:string|null;
   source?:Record<string,unknown>;summary?:Record<string,unknown>;
 }
 export interface CycleHeader {
@@ -89,7 +89,7 @@ export interface ReviewRecord {
   id:string;at:string;actor:string;decision:'APPROVE'|'RETURN';note:string;acceptedExceptions:string[];
   submissionId:string;workSha256:string;
 }
-export interface HandoffHeader { id:string;name:string;runId:string;createdAt:string;closeId:string|null;revisionCount:number }
+export interface HandoffHeader { id:string;name:string;runId:string|null;sourceKind:'merchant-settlement'|'buyer-expense-period';buyerWorkspaceId:string|null;createdAt:string;closeId:string|null;revisionCount:number }
 export interface HandoffRevision { id:string;label:string;createdAt?:string }
 export interface CloseHeader { id:string;label:string;runId:string }
 export interface SourceFile { name:string;bytes:number;sha256:string;type?:string;id?:string }
@@ -153,6 +153,6 @@ export function createAccountingRunbooksClient(options:{
 }):Readonly<AccountingRunbooksClient>;
 export function connectAccountingRunbooksClient(options:{
   workspace:string;url:string;tokenEnv?:string;environment?:NodeJS.ProcessEnv;signal?:AbortSignal;
-  /** Full JSON-RPC response limit; default128MiB, maximum128MiB. */
+  /** Full JSON-RPC response limit; 1024 bytes–128MiB, default128MiB. */
   maxResponseBytes?:number;
 }):Promise<Readonly<AccountingRunbooksClient>>;

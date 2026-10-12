@@ -159,7 +159,7 @@ async function commit(action,input,selection,filename) {
 The Runbooks HTTP connection permits up to128MiB per complete JSON-RPC response,
 including the protocol's text and structured copies of a prepared request.
 Other retained-file clients keep their existing2MiB default. An operator can set
-maxResponseBytes to a smaller positive byte limit when their supported procedure
+maxResponseBytes to a smaller limit, from1024 bytes, when their supported procedure
 sizes permit it. Exceeding a transport limit keeps the saved request available
 for reconciliation.
 
@@ -276,6 +276,8 @@ Disconnect drains this client's unfinished snapshots while leaving the host's
 workspace open. CloseWorkspace drains calls and owned readers before asking the
 original host to close the workspace. Use the latter when this workflow owns
 the open workspace and is handing it back to its browser or maintenance.
+A failed drain or close keeps this same client available for retry with its
+retained read ownership. Concurrent close calls share the original attempt.
 
 Native limits remain8MiB per retained upload,64MiB per portable period packet,
 100 procedures/resources per edition, and the original32MiB workspace state.
@@ -287,3 +289,18 @@ resource family and original command. Startup validates the selected workspace,
 source configuration, desk and local URL. The existing lease prevents a second
 writer over the same workspace. The distribution contribution exports the typed
 client and native operations through the maintained installer.
+
+## Issued buyer close handoffs
+
+The same source selection accepts an original accountant handoff created from an
+issued buyer expense period. The browser identifies the actual buyer workspace
+and issued close. Select its exact accountant return in the same way as a
+merchant handoff. Its buyer close, source context and native allocations stay in
+the frozen source.
+
+Portable receiving carries the complete original-buyer-source.json and recreates
+the original handoff through the maintained buyer-aware accountant engine before
+accepting it. The recreated handoff must match every retained source field, row,
+label and identity. Selected returned CSV bytes and accountant return history
+keep their existing validation. A received period can supply its original
+procedures for the next locally selected close.

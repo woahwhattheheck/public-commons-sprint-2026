@@ -16,7 +16,7 @@ import stat
 import threading
 from urllib.parse import parse_qs, unquote, urlsplit
 
-from . import _duckdb_ui
+from . import _duckdb_ui, _spatial_ui, spatial_http
 from .duckdb_agent import identity as agent_identity, catalog as agent_catalog, request_record, check_report
 from ._analysis_export_http import send_export
 from .errors import BuyerError, StateError
@@ -26,6 +26,7 @@ _MAX_BODY = 1024 * 1024
 _MAX_RECORD = 16 * 1024 * 1024
 _ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,159}")
 _MIMES = {
+    ".gpkg": "application/geopackage+sqlite3",
     ".parquet": "application/vnd.apache.parquet",
     ".csv": "text/csv;charset=utf-8",
     ".json": "application/json",
@@ -98,8 +99,9 @@ def _file_entries(record):
 class DuckDBOperator:
     """Serialize native operations and retain portable handoff records locally."""
 
-    def __init__(self, workspace, *, export_root=None, handoff_root=None):
+    def __init__(self, workspace, *, export_root=None, handoff_root=None, spatial_extension=None):
         self.workspace = workspace
+        self.spatial_extension = spatial_extension
         self.directory = private_directory(Path(workspace.directory))
         self.mutex = threading.RLock()
         self.export_root = Path(export_root or (str(self.directory) + ".exports"))
@@ -148,6 +150,7 @@ class DuckDBOperator:
                 "exports": _rows(self.workspace.exports(), "exports"),
                 "handoffs": self._handoff_rows(),
                 "operations": self.operation_records(),
+                "spatial": spatial_http.spatial(self).status(),
             }
 
     def export_record(self, export_id):
@@ -206,6 +209,8 @@ class DuckDBOperator:
             _fields(body, ("query_id", "expected_revision", "request_id"), ("expected_views",))
             _identifier(body["query_id"])
             _integer(body["expected_revision"], "revision", 1)
+        elif route == "/api/spatial/exports":
+            spatial_http.validate_export(body)
         elif route == "/api/source-handoffs":
             _fields(body, ("edition_id", "request_id"))
             _identifier(body["edition_id"])
@@ -220,7 +225,7 @@ class DuckDBOperator:
                 raise StateError("DUCKDB_OPERATOR_ORIGINAL_REQUEST_CHANGED")
         else:
             original = {"request_id": request_id, "route": route, "body": body,
-                        "directory": self._destination(self.export_root if route == "/api/exports" else self.handoff_root, request_id),
+                        "directory": self._destination(self.export_root if route in {"/api/exports", "/api/spatial/exports"} else self.handoff_root, request_id),
                         "created_at": datetime.now(timezone.utc).isoformat()}
             dump(path, original, exclusive=True)
         dump(status_path, {"state": "RUNNING", "updated_at": datetime.now(timezone.utc).isoformat()})
@@ -228,6 +233,8 @@ class DuckDBOperator:
             if route == "/api/exports":
                 result = self.workspace.export_query(body["query_id"], original["directory"],
                     expected_revision=body["expected_revision"], expected_views=body.get("expected_views"))
+            elif route == "/api/spatial/exports":
+                result = spatial_http.export(self, body, original["directory"])
             else:
                 native = (self.workspace.export_source(body["edition_id"], original["directory"])
                           if route == "/api/source-handoffs" else self.workspace.backup(original["directory"]))
@@ -255,6 +262,8 @@ class DuckDBOperator:
 
     def perform(self, route, body):
         with self.mutex:
+            if route.startswith("/api/spatial/"):
+                return spatial_http.perform(self, route, body)
             if route == "/api/inspect-delivery":
                 _fields(body, ("report_path",))
                 return self.workspace.inspect_delivery(body["report_path"])
@@ -329,10 +338,10 @@ class DuckDBOperator:
             yield stream, {"name": filename, "bytes": expected_size, "sha256": expected_hash, "mime": mime}
 
 
-def serve(workspace, *, port=0, export_root=None, handoff_root=None):
+def serve(workspace, *, port=0, export_root=None, handoff_root=None, spatial_extension=None):
     """Return server, private launch record and browser URL on IPv4 loopback."""
     _integer(port, "port", 0, 65535)
-    operator = DuckDBOperator(workspace, export_root=export_root, handoff_root=handoff_root)
+    operator = DuckDBOperator(workspace, export_root=export_root, handoff_root=handoff_root, spatial_extension=spatial_extension)
     token = secrets.token_urlsafe(32)
 
     class Handler(BaseHTTPRequestHandler):
@@ -379,6 +388,7 @@ def serve(workspace, *, port=0, export_root=None, handoff_root=None):
             assets = {
                 "/": (_duckdb_ui.HTML, "text/html;charset=utf-8"),
                 "/app.js": (_duckdb_ui.JS, "text/javascript;charset=utf-8"),
+                "/spatial.js": (_spatial_ui.JS, "text/javascript;charset=utf-8"),
                 "/style.css": (_duckdb_ui.CSS, "text/css;charset=utf-8"),
             }
             if self.command in {"GET", "HEAD"} and url.path in assets and not url.query:
@@ -421,6 +431,9 @@ def serve(workspace, *, port=0, export_root=None, handoff_root=None):
                     return self._reply(200, agent_identity(operator))
                 if len(parts) == 3 and parts[:2] == ["api", "requests"]:
                     return self._reply(200, request_record(operator, parts[2]))
+                if url.path.startswith("/api/spatial/"):
+                    with operator.mutex:
+                        return self._reply(200, spatial_http.get(operator, url.path))
                 if url.path == "/api/state":
                     return self._reply(200, operator.state())
                 if len(parts) == 4 and parts[:2] == ["api", "editions"] and parts[3] in {"semantics", "semantics-file"}:

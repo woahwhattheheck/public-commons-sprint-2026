@@ -1,0 +1,24 @@
+{
+  "title": "Connecting to Care Fund 2024 grants",
+  "description": "",
+  "identifier": "a00P400000CwBAfIAN",
+  "license": "https://creativecommons.org/licenses/by/4.0/",
+  "license_name": "Creative Commons Attribution 4.0 International (CC BY 4.0)",
+  "issued": "2024-06-14",
+  "modified": "2024-06-14T13:47:08.000+0000",
+  "publisher": {
+    "name": "Scottish Council for Voluntary Organisations",
+    "website": "http://www.scvo.org.uk",
+    "logo": "https://www.360giving.org/wp-content/uploads/scvo-logo-1.png",
+    "prefix": "360G-SCVO",
+    "last_published": "2025-08-06",
+    "org_id": "GB-SC-SC003558"
+  },
+  "distribution": [
+    {
+      "downloadURL": "https://scvo.scot/funding/data/a11N2000000pm7VIAQ/connecting-to-care-fund-2024.json",
+      "accessURL": "https://scvo.scot/transparency",
+      "title": "Connecting to Care Fund 2024 grants"
+    }
+  ]
+}

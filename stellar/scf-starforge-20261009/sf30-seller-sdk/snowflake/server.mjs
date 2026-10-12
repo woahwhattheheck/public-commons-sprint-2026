@@ -2,7 +2,7 @@
 // MIT. Private Snowflake operator UI; original source/release modules own operations.
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
-import { randomBytes, timingSafeEqual } from 'node:crypto';
+import { randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { openSnowflakeWorkspace } from './workspace.mjs';
@@ -64,7 +64,7 @@ export async function startSnowflakeWorkspace({ directory, port = 0, env = proce
     assets = new Map(await Promise.all([...STATIC].map(async ([url, [name, type]]) =>
       [url, { type, bytes: await readFile(new URL('./public/' + name, import.meta.url)) }])));
   } catch (error) { await transfers?.close(); await workspace.close(); throw error; }
-  const token = randomBytes(32).toString('hex'), sockets = new Set();
+  const token = randomBytes(32).toString('hex'), instanceId = randomUUID(), sockets = new Set();
   let origin, closing = false, closePromise;
   const authorized = req => {
     const value = req.headers['x-snowflake-workspace'];
@@ -86,7 +86,7 @@ export async function startSnowflakeWorkspace({ directory, port = 0, env = proce
       if (!authorized(req)) return reply(res, 403, { error: 'SNOWFLAKE_WORKSPACE_KEY_REQUIRED' });
       let match;
       if (req.method === 'GET') {
-        if (path === '/api/state' && !url.search) return reply(res, 200, await workspace.state());
+        if (path === '/api/state' && !url.search) return reply(res, 200, { ...await workspace.state(), instanceId });
         if ((match = /^\/api\/(sources|operations|editions|publications)$/.exec(path))) {
           const result = workspace.store.list(match[1], pageOptions(url));
           if (match[1] === 'editions') result.items = result.items.map(item => ({
@@ -197,7 +197,7 @@ export async function startSnowflakeWorkspace({ directory, port = 0, env = proce
   try { await new Promise((accept, reject) => { server.once('error', reject); server.listen(port, '127.0.0.1', accept); }); }
   catch (error) { await transfers.close(); await workspace.close(); throw error; }
   origin = 'http://127.0.0.1:' + server.address().port;
-  return { server, workspace, transfers, origin, url: origin + '/#' + token,
+  return { server, workspace, transfers, instanceId, origin, url: origin + '/#' + token,
     close() {
       if (closePromise) return closePromise;
       closing = true;

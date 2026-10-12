@@ -1,0 +1,9 @@
+{
+  "idColumn": "record_id",
+  "latitudeColumn": "latitude",
+  "longitudeColumn": "longitude",
+  "options": {},
+  "optionColumns": {
+    "language": "preferred_language"
+  }
+}

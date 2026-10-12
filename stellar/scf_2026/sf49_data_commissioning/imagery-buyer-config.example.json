@@ -1,0 +1,5 @@
+{
+  "runtimeDirectory": "/srv/starforge/source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli",
+  "stateDirectory": "/srv/imagery/private/buyer-state",
+  "operatorProfile": "/srv/imagery/private/original-operator-profile.json"
+}

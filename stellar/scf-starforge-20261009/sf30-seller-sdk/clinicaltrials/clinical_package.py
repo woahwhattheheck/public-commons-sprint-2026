@@ -12,6 +12,7 @@ from clinical_shared import HERE, SourceWorkspace, InputError, json_bytes, load_
 import clinical_source as registry
 
 PACKET = "stellar-forge.clinicaltrials-packet.v1"
+BATCH_PACKET = "stellar-forge.clinicaltrials-packet.v2"
 SOURCE = "stellar-forge.clinicaltrials-source.v1"
 MAX_PACKET = 2 * 1024 * 1024 * 1024
 MAX_MEMBER = 512 * 1024 * 1024
@@ -37,11 +38,12 @@ class PackageOperations:
     def _portable(self,destination):
         base=SourceWorkspace.state(self)
         captures=self._all("registry_captures")
-        metadata={"schema":PACKET,"application":"stellar-forge.clinicaltrials-workspace.v1",
+        batches=self._all("registry_batches")
+        metadata={"schema":BATCH_PACKET if batches else PACKET,"application":"stellar-forge.clinicaltrials-workspace.v1",
             "createdAt":registry.now(),"native":base,"captures":captures,
             "reviews":self._all("registry_reviews"),"prs":self._all("registry_prs"),
             "prsPlans":self._all("registry_prs_plans"),"prsReconciliations":self._all("registry_prs_reconciliations"),
-            "prsPreviews":self._all("registry_prs_previews"),
+            "prsPreviews":self._all("registry_prs_previews"),"batches":batches,
             "metadata":{k:self._meta(k) for k in ["configuration","currentCapture","activeBuild","activePlan","lastQuery","merchant"]}}
         with self.scratch() as temp:
             members={}
@@ -69,9 +71,12 @@ class PackageOperations:
             manifest={**metadata,"files":{name:{k:v for k,v in value.items() if k!="path"} for name,value in members.items()}}
             if len(members)>20000 or sum(v["bytes"] for v in members.values())>MAX_PACKET:
                 raise InputError("Portable source exceeds the 20,000-member / 2 GiB receiving capacity")
+            manifest_bytes=json_bytes(manifest)
+            if len(manifest_bytes)>16*1024*1024:
+                raise InputError("Portable workspace metadata exceeds the receiver's 16 MiB manifest capacity")
             with os.fdopen(os.open(destination,os.O_RDWR|os.O_CREAT|os.O_EXCL,0o600),"w+b") as out:
                 with zipfile.ZipFile(out,"w",zipfile.ZIP_DEFLATED,compresslevel=6) as archive:
-                    archive.writestr("manifest.json",json_bytes(manifest))
+                    archive.writestr("manifest.json",manifest_bytes)
                     for name,value in members.items():archive.write(value["path"],name)
                 out.flush();os.fsync(out.fileno())
             return manifest
@@ -100,6 +105,8 @@ class PackageOperations:
                 private_write(source_folder/"capture.json",json_bytes(capture))
                 reviews=[r for r in self._all("registry_reviews") if r["captureId"]==capture["id"]]
                 private_write(source_folder/"study-reviews.json",json_bytes(reviews))
+                batches=self._all("registry_batches")
+                if batches:private_write(source_folder/"disclosure-batches.json",json_bytes(batches))
                 for path in sorted((self.root/"registry"/capture["id"]).iterdir()):
                     if not path.name.startswith(".stage-"):copy_private(path,source_folder/"responses"/path.name)
                 for path in sorted((HERE/"contracts").iterdir()):
@@ -178,7 +185,11 @@ class PackageOperations:
     def restore_customer(self,path):
         with self.mutex,self.scratch() as temp:
             actual=file_digest(path,MAX_PACKET);previous=self._meta("importing")
-            has_data=bool(SourceWorkspace.state(self)["sources"] or self._all("registry_captures"))
+            native_state=SourceWorkspace.state(self)
+            has_data=any(native_state.get(key) for key in ["sources","plans","builds","comparisons"]) or any(
+                self.db.execute("SELECT 1 FROM "+table+" LIMIT 1").fetchone() is not None for table in [
+                    "registry_captures","registry_prs","registry_prs_plans","registry_prs_previews",
+                    "registry_prs_reconciliations","registry_reviews","registry_batches"])
             if has_data and previous!=actual:
                 if self._meta("restoredFrom")==actual:return {"restored":True,"sourceSha256":actual,"alreadyRestored":True}
                 raise InputError("Receive the portable workspace into an empty original workspace")
@@ -189,8 +200,10 @@ class PackageOperations:
                 manifest_info=archive.getinfo("manifest.json")
                 if manifest_info.file_size>16*1024*1024:raise InputError("Portable manifest is too large")
                 manifest=load_json(archive.read(manifest_info))
-                if manifest.get("schema")!=PACKET or manifest.get("application")!="stellar-forge.clinicaltrials-workspace.v1":
+                if manifest.get("schema") not in {PACKET,BATCH_PACKET} or manifest.get("application")!="stellar-forge.clinicaltrials-workspace.v1":
                     raise InputError("Use an original ClinicalTrials portable workspace")
+                if manifest.get("batches") and manifest["schema"]!=BATCH_PACKET:
+                    raise InputError("A receiving batch requires the complete v2 ClinicalTrials packet")
                 entries=manifest.get("files")
                 if not isinstance(entries,dict) or set(names)!=set(entries)|{"manifest.json"}:
                     raise InputError("Portable member list differs from its manifest")
@@ -299,6 +312,7 @@ class PackageOperations:
                                                 (record["id"],json_bytes(record).decode()))
             for record in manifest["reviews"]:
                 with self.db:self.db.execute("INSERT OR IGNORE INTO registry_reviews VALUES(?,?)",(record["id"],json_bytes(record).decode()))
+            self.restore_batches(manifest.get("batches",[]))
             for key,value in manifest["metadata"].items():
                 if key not in {"configuration","currentCapture","activeBuild","activePlan","lastQuery","merchant"}:
                     raise InputError("Unexpected portable workspace selection")

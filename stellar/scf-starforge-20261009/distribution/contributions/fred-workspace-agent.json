@@ -1,0 +1,44 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "fred-workspace-agent",
+  "description": "Original economic-edition typed customer client, installed workflow CLI and merchant agent",
+  "commands": {
+    "fred-workspace": "stellar-forge/mcp-merchant-operator/fred-workspace-cli.mjs"
+  },
+  "commandDescriptions": {
+    "fred-workspace": "Import, review, publish, purchase, recover and receive original economic editions"
+  },
+  "exports": {
+    "./buyer/fred/workspace-client": {
+      "types": "./source/stellar-forge/mcp-merchant-operator/fred-workspace-client.d.mts",
+      "default": "./source/stellar-forge/mcp-merchant-operator/fred-workspace-client.mjs"
+    },
+    "./buyer/fred/workspace-client/operations": {
+      "types": "./source/stellar-forge/mcp-merchant-operator/fred-workspace-cli.d.mts",
+      "default": "./source/stellar-forge/mcp-merchant-operator/fred-workspace-cli.mjs"
+    },
+    "./merchant/mcp/fred": {
+      "types": "./source/stellar-forge/mcp-merchant-operator/fred-workspace.d.mts",
+      "default": "./source/stellar-forge/mcp-merchant-operator/fred-workspace.mjs"
+    },
+    "./merchant/mcp/fred/setup": {
+      "types": "./source/stellar-forge/mcp-merchant-operator/fred-workspace-setup.d.mts",
+      "default": "./source/stellar-forge/mcp-merchant-operator/fred-workspace-setup.mjs"
+    }
+  },
+  "supportFiles": [
+    "stellar-forge/mcp-merchant-operator/FRED.md",
+    "stellar-forge/mcp-merchant-operator/examples/fred-workspace-inputs.json",
+    "stellar-forge/mcp-merchant-operator/fred-workspace-client.d.mts",
+    "stellar-forge/mcp-merchant-operator/fred-workspace-cli.d.mts",
+    "stellar-forge/mcp-merchant-operator/fred-workspace.d.mts",
+    "stellar-forge/mcp-merchant-operator/fred-workspace-setup.d.mts",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/fred/sources/unrate-20261012.public-table.json",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/fred/sources/cpiaucsl-20261012.public-table.json",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/fred/sources/gdp-20261012.public-table.json",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/fred/sources/MACRO_STARTER.md"
+  ],
+  "merchantProviders": {
+    "fred-workspaces": "stellar-forge/mcp-merchant-operator/providers/fred-workspaces.mjs"
+  }
+}

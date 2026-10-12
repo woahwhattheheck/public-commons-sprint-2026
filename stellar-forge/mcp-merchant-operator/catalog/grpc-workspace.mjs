@@ -1,5 +1,6 @@
 // MIT. Original tool metadata; provider runtimes load only when selected.
 import { MAX_RETAINED_CHUNK_BYTES } from '../retained-file-contracts.mjs';
+import { grpcUpgradeTools } from './grpc-upgrades.mjs';
 
 const SHA = /^[0-9a-f]{64}$/;
 
@@ -35,6 +36,7 @@ const reflectionSource = { ...selection, profile: alias, revision: digest,
   protocol: { type: 'string', enum: ['auto', 'v1', 'v1alpha'] } };
 function grpcWorkspaceTools(tool) {
   return [
+    ...grpcUpgradeTools(tool),
     tool('merchant_grpc_workspaces', 'List original gRPC workspaces and host-declared protobuf capture, reflection, request and receiving handles.', {}, [], read),
     tool('merchant_grpc_status', 'Read the original current revision, generation, native runtime and complete inventory counts. Recover here after an interrupted action.', selection, ['workspace'], read),
     tool('merchant_grpc_inventory', 'Page every original revision, preparation, intent or retained call, or complete delivery exports. Continue with the returned snapshot and nextOffset.', { ...selection, kind: { type: 'string', enum: ['revisions', 'prepared', 'intents', 'attempts', 'reflections', 'exports'] }, ...page }, ['workspace', 'kind'], read),
@@ -52,8 +54,9 @@ function grpcWorkspaceTools(tool) {
     tool('merchant_grpc_import', 'Receive a complete original revision from one host file handle or retained revision export into this native workspace. Native validation and baseRevision apply to the imported closure and plan.', { ...selection, file: alias, exportId: digest, baseRevision, title: { type: 'string', minLength: 1, maxLength: 120 } }, ['workspace', 'baseRevision'], {}),
     tool('merchant_grpc_checkout', 'Select an existing saved revision using the original current-revision check. This preserves its original source and history.', { ...revision, baseRevision }, ['workspace', 'revision', 'baseRevision'], {}),
     tool('merchant_grpc_method', 'Read the native exact request/response schema for one method, including presence, enums, bytes and decimal 64-bit values. Large schemas are retained as complete downloadable JSON.', { ...revision, method: methodName }, ['workspace', 'revision', 'method'], read),
+    tool('merchant_grpc_validate_input', 'Normalize and size an exact request using the saved native contract and limits. Choose one input object or host request file; client-streaming and bidirectional input is {messages:[...]}. This preview performs no application RPC. Large normalized values remain complete in retained JSON.', { ...revision, method: methodName, input: { type: 'object' }, file: alias }, ['workspace', 'revision', 'method'], read),
     tool('merchant_grpc_review', 'Run the original contract/channel readiness review for the selected saved revision and retain its native review.', revision, ['workspace', 'revision'], { openWorld: true }),
-    tool('merchant_grpc_call', 'Intentionally call one selected unary or server-streaming method through the original native service. Choose a stable UUID operationId and exactly one input object or host request file. Repeating the same ID recovers its original outcome.', { ...revision, operationId: uuid, method: methodName, input: { type: 'object' }, file: alias }, ['workspace', 'revision', 'operationId', 'method'], { openWorld: true, idempotent: true }),
+    tool('merchant_grpc_call', 'Intentionally call one selected native method through the original native service. Choose a stable UUID operationId and exactly one input object or host request file. For client-streaming and bidirectional methods, input is the complete ordered messages object from the native operation schema. Repeating the same ID recovers its original outcome.', { ...revision, operationId: uuid, method: methodName, input: { type: 'object' }, file: alias }, ['workspace', 'revision', 'operationId', 'method'], { openWorld: true, idempotent: true }),
     tool('merchant_grpc_cancel_call', 'Request cancellation of this original active call. The same operationId retains its exact received prefix and final native outcome; other calls remain untouched.', { ...selection, operationId: uuid }, ['workspace', 'operationId'], { openWorld: true, idempotent: true }),
     tool('merchant_grpc_attempt', 'Recover the original retained call by its operationId. This reads its exact input/output and completes an already-durable native outcome; it does not dispatch another application RPC.', { ...selection, operationId: uuid }, ['workspace', 'operationId'], { idempotent: true }),
     tool('merchant_grpc_prepare', 'Prepare the selected original merchant and complete generated customer files. Keep the same UUID operationId to recover its preparation intent after interruption.', { ...revision, operationId: uuid }, ['workspace', 'revision', 'operationId'], { idempotent: true }),

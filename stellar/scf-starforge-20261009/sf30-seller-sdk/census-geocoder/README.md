@@ -278,3 +278,7 @@ The root workspace persists selection metadata, batches, attempts, imports, revi
 - [Census Geocoder FAQ](https://www2.census.gov/geo/pdfs/maps-data/data/Census_Geocoder_FAQ.pdf): range-interpolation meaning and repeated-batch outcome guidance.
 
 These are the original provider contracts. Actual publication and customer acquisition use the repository's maintained dataset, SF82, SF88 and SF100 implementations.
+
+## Agent and managed Applications access
+
+`starforge census-geocoder-agent serve` opens this existing browser and the merchant MCP against one original workspace. **Census address operations** in Applications retains the same configuration, native workspace identity, terminal approval and stop/reopen lifecycle. The fifteen Census tools operate official metadata/capture, explicit match review, complete editions, the original publisher and SF88 customer sessions. See the [complete agent and Applications guide](../../../../stellar-forge/mcp-merchant-operator/CENSUS_GEOCODER_WORKSPACE.md) for setup, source-to-customer operations and portable receiving.

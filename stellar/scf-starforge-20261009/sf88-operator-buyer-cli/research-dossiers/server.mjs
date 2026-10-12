@@ -8,10 +8,14 @@ import { randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
 import {privateDirectory,writeJson,digest,jsonBytes as canonicalBytes} from '../node/store.mjs';
 import {RESEARCH_WORKSPACE_API,RESEARCH_WORKSPACE_CONNECTION,researchWorkspaceId,researchSummary,researchPage,researchSection,researchComparison,researchCrossrefReview} from './workspace-protocol.mjs';
 import { openDossierStore } from './dossier.mjs';
+import { openClinicalTrialsWorkspace } from './clinical-trials-workspace.mjs';
+import { handleClinicalTrialsRoute } from './clinical-trials-routes.mjs';
 import { receiveOpenAlexEdition } from './openalex.mjs';
 import { openSavedOpenAlexWorkspace } from './openalex-workspace.mjs';
 import { openUnstructuredWorkspace, openSavedDocumentBuyerSource } from './unstructured-workspace.mjs';
 import { openUnstructuredPipelineWorkspace, openSavedPipelineSource, PIPELINE_UPLOAD_BODY_BYTES } from './unstructured-pipelines-workspace.mjs';
+
+import {openResearchObjectSource} from './object-inputs.mjs';
 
 const PUBLIC = fileURLToPath(new URL('./public/', import.meta.url));
 const TYPES = Object.freeze({
@@ -21,9 +25,15 @@ const TYPES = Object.freeze({
   'crossref.js': 'text/javascript; charset=utf-8',
   'unstructured.js': 'text/javascript; charset=utf-8',
   'unstructured.css': 'text/css; charset=utf-8',
+  'object-inputs.js': 'text/javascript; charset=utf-8',
   'unstructured-pipelines.js': 'text/javascript; charset=utf-8',
   'unstructured-pipelines.css': 'text/css; charset=utf-8',
+  'clinical-trials.js': 'text/javascript; charset=utf-8',
+  'clinical-trials.css': 'text/css; charset=utf-8',
+  'source-bundles.js': 'text/javascript; charset=utf-8',
+  'source-bundles.css': 'text/css; charset=utf-8',
 });
+const MAX_SOURCE_BUNDLE_BODY = 128 * 1024 * 1024 + 65536; // A 64 MiB bundle inside the rawText JSON string.
 const MAX_RESEARCH_BODY = 96 * 1024 * 1024 + 65536; // 16 MiB raw UTF-8, worst-case JSON escaping plus envelope.
 const MAX_PORTABLE_BODY = 256 * 1024 * 1024 + 65536; // Engine caps the serialized portable record at 256 MiB.
 const MAX_CONTROL_BODY = 1024 * 1024;
@@ -99,7 +109,7 @@ export async function loadEditionAdapters(modulePath) {
 
 /** Reuses the existing SF88 loopback / fragment-token operator convention. */
 export async function startDossierWorkspace({directory, port = 0, providers = {}, openalexWorkspace = null,
-  crossrefSource = null, crossrefIdentity = null, documentSource = null, pipelineSource = null} = {}) {
+  crossrefSource = null, crossrefIdentity = null, documentSource = null, pipelineSource = null, objectStateDirectory = null, clinicalTrialsInputs = null, clinicalTrialsPython = 'python3'} = {}) {
   requireValue(typeof directory === 'string' && isAbsolute(directory) && resolve(directory) === directory,
     'WORKSPACE_ABSOLUTE_PATH_REQUIRED');
   requireValue(Number.isInteger(port) && port >= 0 && port <= 65535, 'WORKSPACE_PORT_INVALID');
@@ -110,8 +120,8 @@ export async function startDossierWorkspace({directory, port = 0, providers = {}
     typeof openalexWorkspace?.exportFiles === 'function', 'OPENALEX_WORKSPACE_API_REQUIRED');
   const store = await openDossierStore(directory, {providers});
   const workspaceId = researchWorkspaceId(store.directory), instanceId = randomUUID();
-  const api = {schema:RESEARCH_WORKSPACE_API,metadata:true,revisionPages:true,streamedPortable:true,
-    savedCrossrefOperations:crossrefSource!==null};
+  const api = {schema:RESEARCH_WORKSPACE_API,metadata:true,revisionPages:true,streamedPortable:true,sourceBundles:true,
+    savedCrossrefOperations:crossrefSource!==null,originalObjectInputs:objectStateDirectory!==null};
   await store.list();
   const unstructured = await openUnstructuredWorkspace({dossiers:store,...(documentSource ?? {})});
   if (unstructured.provider) {
@@ -124,7 +134,17 @@ export async function startDossierWorkspace({directory, port = 0, providers = {}
     crossref = await openCrossrefWorkspace({directory:join(directory,'crossref'),dossiers:store,
       source:crossrefSource,identity:crossrefIdentity});
   }
-  const pipelines = await openUnstructuredPipelineWorkspace({dossiers:store,source:pipelineSource});
+  let objectInputs=null,pipelines;
+  try {
+    if(objectStateDirectory!==null)objectInputs=await openResearchObjectSource({
+      directory,objectWorkspaceDirectory:objectStateDirectory});
+    pipelines=await openUnstructuredPipelineWorkspace({dossiers:store,source:pipelineSource,objectSource:objectInputs});
+  } catch(error) {await objectInputs?.close();await crossref?.close();throw error;}
+  let clinicalTrials;
+  try {
+    clinicalTrials = await openClinicalTrialsWorkspace({directory:join(directory,'clinical-trials'),
+      dossiers:store,inputs:clinicalTrialsInputs,python:clinicalTrialsPython});
+  } catch (error) {unstructured.clear(); await objectInputs?.close(); await pipelines.close(); await crossref?.close(); throw error;}
   const token = randomBytes(32).toString('hex');
   const expectedAuthorization = Buffer.from('Bearer ' + token);
   let origin;
@@ -168,7 +188,9 @@ export async function startDossierWorkspace({directory, port = 0, providers = {}
           dossierCount:(await store.list()).length,providers:Object.keys(providers),
           openalex:{configured:openalexWorkspace!==null},
           crossref:{configured:crossref!==null,identity:crossrefIdentity},
-          unstructured:{configured:unstructured.configured,workspaceId:unstructured.workspaceId}});return;
+          unstructured:{configured:unstructured.configured,workspaceId:unstructured.workspaceId},
+          pipelines:await pipelines.configured(),objects:objectInputs?.source()??{configured:false},
+          clinicalTrials:{configured:true,inputFormat:'stellar-forge.clinicaltrials-packet.v1'}});return;
       }
       if (req.method === 'GET' && path === '/api/dossiers') {
         const dossiers=await store.list(),snapshot=digest(canonicalBytes(dossiers));
@@ -184,7 +206,8 @@ export async function startDossierWorkspace({directory, port = 0, providers = {}
           openalex: {configured:openalexWorkspace !== null},
           crossref: {configured:crossref !== null,identity:crossrefIdentity},
           unstructured: {configured:unstructured.configured,workspaceId:unstructured.workspaceId},
-          pipelines: await pipelines.configured()}); return;
+          pipelines: await pipelines.configured(),objects:objectInputs?.source()??{configured:false},
+          clinicalTrials: {configured:true,inputFormat:'stellar-forge.clinicaltrials-packet.v1'}}); return;
       }
       if (req.method === 'GET' && path === '/api/openalex/editions') {
         requireValue(openalexWorkspace !== null, 'OPENALEX_WORKSPACE_NOT_CONFIGURED');
@@ -241,6 +264,8 @@ export async function startDossierWorkspace({directory, port = 0, providers = {}
         const retained=await store.readRetainedEdition(id,retainedMatch[1]);
         send(200,retained.bytes,'application/json; charset=utf-8',retainedMatch[1]+'.research-source.json');return;
       }
+      if (await handleClinicalTrialsRoute({workspace:clinicalTrials,dossierId:id,action,req,url,
+        readBody:()=>readJson(req,MAX_CONTROL_BODY),send,projection})) return;
       if (req.method === 'GET' && action === 'unstructured') {
         send(200, await unstructured.list(id, {
           after:url.searchParams.get('after') ?? '',
@@ -250,6 +275,15 @@ export async function startDossierWorkspace({directory, port = 0, providers = {}
       if (req.method === 'GET' && action === 'pipelines') {
         send(200, await pipelines.list(id, {after:url.searchParams.get('after')??'',
           limit:url.searchParams.has('limit')?revisionQuery(url.searchParams.get('limit')):30})); return;
+      }
+      if(req.method==='GET'&&action==='pipelines/objects') {
+        send(200,await pipelines.objects(id,{after:url.searchParams.get('after')??'',
+          snapshot:url.searchParams.get('snapshot'),
+          limit:url.searchParams.has('limit')?revisionQuery(url.searchParams.get('limit')):25}));return;
+      }
+      if(req.method==='GET'&&action==='pipelines/object-reviews') {
+        send(200,await pipelines.objectReviews(id,{after:url.searchParams.get('after')??'',
+          limit:url.searchParams.has('limit')?revisionQuery(url.searchParams.get('limit')):25}));return;
       }
       const pipelineMatch = action.match(/^pipelines\/operations\/(up_[a-f0-9]{64})(?:\/(submit|refresh|cancel|reconcile|retain|provider-jobs|inputs|outputs)(?:\/((?:in_|out_)[a-f0-9]{64}))?)?$/);
       if (pipelineMatch && req.method === 'GET') {
@@ -308,7 +342,28 @@ export async function startDossierWorkspace({directory, port = 0, providers = {}
       }
       if (req.method !== 'POST') {send(405, {error: 'METHOD_NOT_ALLOWED'}); return;}
       const data = await readJson(req, action === 'pipelines/prepare' ? PIPELINE_UPLOAD_BODY_BYTES :
+        ['source-bundles/preview', 'source-bundles/receive'].includes(action) ? MAX_SOURCE_BUNDLE_BODY :
         ['receive', 'reference'].includes(action) ? MAX_RESEARCH_BODY : MAX_CONTROL_BODY);
+      if(action==='pipelines/objects/review'||action==='pipelines/objects/prepare') {
+        const controller=new AbortController(),abort=()=>controller.abort();
+        // Only a prematurely closed response cancels owned file verification.
+        const ended=()=>{if(!res.writableFinished)abort();};
+        res.once('close',ended);req.once('aborted',abort);
+        if(req.aborted||res.destroyed)abort();
+        try {
+          const result=await pipelines[action.endsWith('/review')?'reviewObject':'prepareObject'](
+            id,data,{signal:controller.signal});
+          if(!res.destroyed)send(201,result);
+        } finally {res.off('close',ended);req.off('aborted',abort);}
+        return;
+      }
+      if(action==='source-bundles/preview'){
+        send(200,await store.previewSourceBundle(id,selectedFields(data,['questionId','rawText'])));return;
+      }
+      if(action==='source-bundles/receive'){
+        send(200,await store.receiveSourceBundle(id,{...selectedFields(data,
+          ['questionId','rawText','expectedBundleSha256']),expectedRevision:revision(data.expectedRevision),projection}));return;
+      }
       if (action === 'pipelines/prepare') {
         send(201,await pipelines.prepare(id,data)); return;
       }
@@ -421,9 +476,11 @@ export async function startDossierWorkspace({directory, port = 0, providers = {}
       if (res.headersSent) {res.destroy(); return;}
       const code = safeCode(error);
       const status = code === 'AUTH_REQUIRED' ? 401 : ['HOST_REFUSED', 'ORIGIN_REFUSED'].includes(code) ? 403 :
-        ['REVISION_CONFLICT','PORTABLE_HISTORY_CONFLICT','ROUTESCAN_RECORD_BUSY','CROSSREF_OPERATION_RUNNING_ELSEWHERE','UNSTRUCTURED_REVIEWED_EDITION_CHANGED','UNSTRUCTURED_RECEIVING_LABEL_CONFLICT','PIPELINE_REVISION_CHANGED','PIPELINE_REVIEWED_EDITION_CHANGED',
+        ['REVISION_CONFLICT','PORTABLE_HISTORY_CONFLICT','ROUTESCAN_RECORD_BUSY','CROSSREF_OPERATION_RUNNING_ELSEWHERE','UNSTRUCTURED_REVIEWED_EDITION_CHANGED','UNSTRUCTURED_RECEIVING_LABEL_CONFLICT','CLINICALTRIALS_REVIEW_CHANGED','CLINICALTRIALS_PLAN_CHANGED','CLINICALTRIALS_QUESTION_CHANGED','CLINICALTRIALS_SOURCE_CONFIGURATION_CHANGED','PIPELINE_REVISION_CHANGED','PIPELINE_REVIEWED_EDITION_CHANGED',
           'PIPELINE_PREPARATION_REQUEST_CHANGED','PIPELINE_RECEIVING_REQUEST_CHANGED','PIPELINE_REVIEWED_PLAN_CHANGED',
-          'PIPELINE_ACTION_REQUEST_REUSED','PIPELINE_OPERATION_RUNNING_ELSEWHERE'].includes(code) ? 409 : code === 'ENOENT' || code === 'DOSSIER_NOT_FOUND' ? 404 :
+          'PIPELINE_ACTION_REQUEST_REUSED','PIPELINE_OPERATION_RUNNING_ELSEWHERE',
+          'RESEARCH_OBJECT_SESSION_CHANGED','RESEARCH_OBJECT_REVIEW_CHANGED','RESEARCH_OBJECT_REVIEW_SOURCE_CHANGED',
+          'RESEARCH_OBJECT_INVENTORY_CHANGED','RESEARCH_OBJECT_CURSOR_CHANGED','RESEARCH_OBJECT_REVIEW_REQUEST_CHANGED'].includes(code) ? 409 : code === 'ENOENT' || code === 'DOSSIER_NOT_FOUND' ? 404 :
           ['UPLOAD_SIZE_LIMIT','PORTABLE_SIZE_LIMIT','PORTABLE_RECORD_SIZE_LIMIT','PIPELINE_UPLOAD_TOO_LARGE'].includes(code) ? 413 : 400;
       send(status, {error: code, ...(error.openAlexImport ? {openAlexImport:error.openAlexImport} : {})});
     }
@@ -436,13 +493,15 @@ export async function startDossierWorkspace({directory, port = 0, providers = {}
       server.once('error', reject);
       server.listen(port, '127.0.0.1', accept);
     });
-  } catch (error) {unstructured.clear(); await pipelines.close(); await crossref?.close(); throw error;}
+  } catch (error) {unstructured.clear(); await clinicalTrials.close(); await objectInputs?.close(); await pipelines.close(); await crossref?.close(); throw error;}
   origin = 'http://127.0.0.1:' + server.address().port;
   let closing;
-  return {server, origin, url: origin + '/#token=' + token, token, workspaceId, instanceId, api, crossref, unstructured, pipelines,
+  return {server, origin, url: origin + '/#token=' + token, token, workspaceId, instanceId, api, crossref, unstructured, pipelines, objectInputs, clinicalTrials,
     close: () => closing ??= (async () => {
       unstructured.clear();
+      await objectInputs?.close();
       await pipelines.close();
+      await clinicalTrials.close();
       await crossref?.close();
       await new Promise((accept, reject) => {
         server.close(error => error ? reject(error) : accept()); server.closeIdleConnections();
@@ -455,7 +514,7 @@ function parseOptions(args) {
   const options = {};
   for (let index = 0; index < args.length; index += 2) {
     const key = args[index];
-    requireValue(['--dir', '--port', '--edition-adapter', '--openalex-workspace', '--openalex-module', '--crossref-config', '--crossref-state', '--document-source', '--pipeline-source', '--connection-file'].includes(key) && !Object.hasOwn(options, key) &&
+    requireValue(['--dir', '--port', '--edition-adapter', '--openalex-workspace', '--openalex-module', '--crossref-config', '--crossref-state', '--document-source', '--pipeline-source', '--connection-file', '--object-state', '--clinical-trials-python'].includes(key) && !Object.hasOwn(options, key) &&
       typeof args[index + 1] === 'string' && args[index + 1].length > 0, 'ARGUMENT_INVALID_OR_REPEATED');
     options[key] = args[index + 1];
   }
@@ -466,11 +525,11 @@ function parseOptions(args) {
   return {directory: options['--dir'], port: Number(rawPort), adapter: options['--edition-adapter'],
     openalexDirectory:options['--openalex-workspace'], openalexModule:options['--openalex-module'],
     crossrefConfig:options['--crossref-config'],crossrefDirectory:options['--crossref-state'],
-    documentSourceConfig:options['--document-source'],pipelineSourceConfig:options['--pipeline-source'],connectionFile:options['--connection-file']};
+    documentSourceConfig:options['--document-source'],pipelineSourceConfig:options['--pipeline-source'],connectionFile:options['--connection-file'],objectStateDirectory:options['--object-state']??null,clinicalTrialsPython:options['--clinical-trials-python']??'python3'};
 }
 async function main(args) {
   if (args.length === 0 || args.length === 1 && ['--help', '-h'].includes(args[0])) {
-    process.stdout.write('Usage: node server.mjs --dir /absolute/private/workspace [--port 8846] [--edition-adapter /absolute/provider-adapters.mjs] [--openalex-workspace /absolute/original/workspace] [--openalex-module /absolute/original/research/workspace.mjs] [--crossref-state /absolute/private/crossref-source] [--crossref-config /absolute/crossref-merchant.json] [--document-source /absolute/private/document-source.json] [--connection-file /absolute/private/research-connection.json] [--pipeline-source /absolute/private/pipeline-source.json]\n');
+    process.stdout.write('Usage: node server.mjs --dir /absolute/private/workspace [--port 8846] [--edition-adapter /absolute/provider-adapters.mjs] [--openalex-workspace /absolute/original/workspace] [--openalex-module /absolute/original/research/workspace.mjs] [--crossref-state /absolute/private/crossref-source] [--crossref-config /absolute/crossref-merchant.json] [--document-source /absolute/private/document-source.json] [--connection-file /absolute/private/research-connection.json] [--pipeline-source /absolute/private/pipeline-source.json] [--object-state /absolute/private/object-buyer] [--clinical-trials-python /absolute/python3]\n');
     return;
   }
   const options = parseOptions(args);
@@ -520,8 +579,9 @@ async function main(args) {
   process.stdout.write(JSON.stringify({...startup,mode: 'RESEARCH_DOSSIER_WORKSPACE', directory: options.directory,
     url: app.url, providers: Object.keys(providers), openalexConfigured:openalexWorkspace !== null,
     crossrefConfigured:crossrefSource !== null, documentSourceConfigured:documentSource !== null,
-    documentWorkspaceId:documentSource?.workspaceId ?? null,
-    pipelineSourceConfigured:pipelineSource !== null,pipelineWorkspaceId:pipelineSource?.workspaceId ?? null}) + '\n');
+    documentWorkspaceId:documentSource?.workspaceId ?? null,clinicalTrialsConfigured:true,
+    pipelineSourceConfigured:pipelineSource !== null,pipelineWorkspaceId:pipelineSource?.workspaceId ?? null,
+    objectSourceConfigured:options.objectStateDirectory!==null,objectWorkspaceId:app.objectInputs?.source().workspaceId??null}) + '\n');
   let closing;
   const stop = () => closing ??= (async () => {
     try {await app.close();} finally {

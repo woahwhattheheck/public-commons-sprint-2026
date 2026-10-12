@@ -52,7 +52,8 @@
     <p id="repricing-source-status" class="source-note"></p>
     <details class="coverage-detail"><summary>Source configuration identity</summary><code id="repricing-source-hash" class="repricing-hash"></code></details>
     <h3>Payment amounts</h3>
-    <p class="muted small">Enter positive whole numbers in the asset’s atomic units. Keep the current amount for any choice you want to retain. Each choice keeps its asset, recipient and payment terms.</p>
+    <label class="repricing-mode">Price entry<select id="repricing-mode"><option value="atomic">Enter exact atomic amounts</option><option value="quote">Use saved USD quotes with entered valuations</option></select></label>
+    <p class="muted small">Enter positive whole atomic amounts, or select payment choices and state the USD value of a specific number of their atomic units. Quote conversion uses the selected saved review and rounds upward to the smallest sufficient amount. Record your valuation source or assumption for each choice.</p>
     <div id="repricing-options"></div>
     <div id="repricing-paging" class="table-paging" hidden><button id="repricing-previous" type="button">Previous services</button><span id="repricing-page-caption"></span><button id="repricing-next" type="button">Next services</button></div>
     <div class="repricing-edit-actions"><span id="repricing-change-count" class="muted small">No amounts changed.</span><div class="button-row"><button id="repricing-reset" type="button">Reset amounts</button><button id="repricing-preview" type="button">Review price change</button></div></div>
@@ -60,6 +61,7 @@
       <div class="section-head"><h3>Reviewed price change</h3><span id="repricing-review-count" class="muted small"></span></div>
       <div id="repricing-change-table"></div>
       <div id="repricing-review-terms"></div>
+      <div id="repricing-quote-review" hidden></div>
       <details class="coverage-detail"><summary>Prepared configuration identity</summary><code id="repricing-proposed-hash" class="repricing-hash"></code></details>
       <div class="review-actions"><label>Price change name<input id="repricing-name" maxlength="100" placeholder="October service prices"></label><button id="repricing-save" class="primary" type="button">Save configuration</button></div>
       <p class="muted small">The saved package includes the complete configuration and its reviewed changes. Use it with the merchant’s existing deployment and release workflow.</p>
