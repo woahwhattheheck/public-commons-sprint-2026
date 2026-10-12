@@ -103,12 +103,17 @@ def main(argv=None):
     init = sub.add_parser("init"); init.add_argument("--title", default="Wherobots operations")
     show = sub.add_parser("show"); show.add_argument("kind"); show.add_argument("id")
     listing = sub.add_parser("list"); listing.add_argument("kind")
-    sub.add_parser("state")
+    state = sub.add_parser("state")
+    for page in (listing, state):
+        page.add_argument("--offset", type=int, default=argparse.SUPPRESS)
+        page.add_argument("--limit", type=int, default=argparse.SUPPRESS)
     sub.add_parser("runtime")
     logs = sub.add_parser("logs"); logs.add_argument("operation_id"); logs.add_argument("--capture", type=int); logs.add_argument("--offset", type=int, default=0); logs.add_argument("--limit", type=int, default=100)
     source = sub.add_parser("import-source"); source.add_argument("path"); source.add_argument("--script", action="store_true"); source.add_argument("--filename")
+    source.add_argument("--expected-sha256"); source.add_argument("--expected-bytes", type=int)
     save = sub.add_parser("save-workflow"); save.add_argument("file"); save.add_argument("--expected-revision"); save.add_argument("--actor", default="operator")
     adopt = sub.add_parser("adopt"); adopt.add_argument("input"); adopt.add_argument("--files", required=True); adopt.add_argument("--account", required=True); adopt.add_argument("--expected-revision"); adopt.add_argument("--actor", default="operator")
+    adopt.add_argument("--input-sha256")
     review = sub.add_parser("review"); review.add_argument("workflow_id"); review.add_argument("--operation-id", required=True); review.add_argument("--expected-revision", required=True); review.add_argument("--actor", default="operator"); review.add_argument("--mode", choices=["submit", "attach"], default="submit")
     for name in ("submit", "recover", "refresh", "cancel", "capture"):
         command = sub.add_parser(name); command.add_argument("operation_id")
@@ -120,7 +125,12 @@ def main(argv=None):
     rows = sub.add_parser("rows"); rows.add_argument("edition_id"); rows.add_argument("dataset_id"); rows.add_argument("--offset", type=int, default=0); rows.add_argument("--limit", type=int, default=100)
     export = sub.add_parser("export"); export.add_argument("workflow_id"); export.add_argument("destination")
     dataset = sub.add_parser("export-dataset"); dataset.add_argument("edition_id"); dataset.add_argument("dataset_id"); dataset.add_argument("destination")
-    receiving = sub.add_parser("import"); receiving.add_argument("source")
+    for selected in (export, dataset):
+        selected.add_argument("--expected-revision")
+        selected.add_argument("--export-id", default=argparse.SUPPRESS)
+        selected.add_argument("--reuse-existing", action="store_true")
+    inspect = sub.add_parser("inspect-export"); inspect.add_argument("export_kind", choices=["workflow", "dataset"]); inspect.add_argument("source")
+    receiving = sub.add_parser("import"); receiving.add_argument("source"); receiving.add_argument("--expected-sha256")
     events = sub.add_parser("events"); events.add_argument("kind"); events.add_argument("id"); events.add_argument("--after", type=int, default=0); events.add_argument("--limit", type=int, default=100)
     server = sub.add_parser("serve"); server.add_argument("--host", default="127.0.0.1"); server.add_argument("--port", type=int, default=0)
     sub.add_parser("rpc", help="One complete JSON operation on standard input")
@@ -148,6 +158,8 @@ def main(argv=None):
                     command = "get"
                 elif command == "export-dataset":
                     command = "export_dataset"
+                elif command == "inspect-export":
+                    command = "inspect_export"
                 elif command == "import-source":
                     command = "import_source"
                     if args.get("filename") is None:

@@ -113,7 +113,11 @@ const logs = await workspace.logs({operation_id: original.id, offset: 0, limit: 
 const rows = await workspace.rows({edition_id: "edition-id", dataset_id: "dataset-id", offset: 0, limit: 100});
 ~~~
 
-workspace.tools() exposes all 20 wherobots_ tool definitions. Runtime inspection and captured-log paging use the same operations in the CLI, browser and Node host. The browser can select any retained log capture and page through every entry; receiving progress continues by its original event cursor. workspace.callTool(name, arguments) calls those operations and returns standard text plus structured content. Registration can use the existing host's selected workspace and Python runtime. The native Wherobots source and run remain the canonical execution objects.
+workspace.tools() exposes all 21 wherobots_ tool definitions. Runtime inspection and captured-log paging use the same operations in the CLI, browser and Node host. The browser can select any retained log capture and page through every entry; receiving progress continues by its original event cursor. workspace.callTool(name, arguments) calls those operations and returns standard text plus structured content. Registration can use the existing host's selected workspace and Python runtime. The native Wherobots source and run remain the canonical execution objects.
+
+## Installable merchant integration
+
+The same source ships through the shared distribution with its own Wherobots provider, 27 merchant operations, private connection initializer, named durable exports and complete resumable file receiving. See [MERCHANT.md](MERCHANT.md) for the installed commands, exact connection schema, original workspace identity binding, full file inventory and restart recovery.
 
 ## Source and dependencies
 
