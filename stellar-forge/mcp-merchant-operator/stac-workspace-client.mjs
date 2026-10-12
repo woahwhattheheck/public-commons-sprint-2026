@@ -3,6 +3,7 @@ import { constants } from 'node:fs';
 import { open, link, unlink } from 'node:fs/promises';
 import { basename, dirname, resolve, join } from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
+import { STAC_PRESCIENT_ACTIONS } from './stac-prescient-contract.mjs';
 
 export const STAC_WORKSPACE_CONNECTION_SCHEMA = 'stellar-forge.stac-workspace-connection.v1';
 export const STAC_CLIENT_MAX_BYTES = 512 * 1024 * 1024;
@@ -90,10 +91,10 @@ export async function readStacWorkspaceConfiguration(path) {
   for (const [alias, value] of Object.entries(raw.workspaces)) {
     if (!/^[a-z0-9][a-z0-9_-]{0,63}$/.test(alias)) fail('STAC_CONNECTION_INVALID', 'Use a lowercase workspace alias.');
     object(value, 'Workspace');
-    if (Object.keys(value).some(k => !['label', 'consoleUrlFile', 'consoleUrlEnv', 'workspaceId', 'timeoutMs', 'maxResponseBytes', 'inputs', 'processingProfiles'].includes(k)) ||
+    if (Object.keys(value).some(k => !['label', 'consoleUrlFile', 'consoleUrlEnv', 'workspaceId', 'timeoutMs', 'maxResponseBytes', 'inputs', 'processingProfiles', 'prescientDeliveries'].includes(k)) ||
         Boolean(value.consoleUrlFile) === Boolean(value.consoleUrlEnv))
       fail('STAC_CONNECTION_INVALID', 'Each workspace needs exactly one original private consoleUrlFile or consoleUrlEnv.');
-    const entry = { label: value.label ?? alias, inputs: Object.create(null), processingProfiles: Object.create(null) };
+    const entry = { label: value.label ?? alias, inputs: Object.create(null), processingProfiles: Object.create(null), prescientDeliveries: Object.create(null) };
     if (typeof entry.label !== 'string' || !entry.label.trim() || entry.label.length > 240 || /[\x00-\x1f\x7f]/.test(entry.label))
       fail('STAC_CONNECTION_INVALID', 'Use a short single-line workspace label.');
     if (value.consoleUrlFile) { id(value.consoleUrlFile, 'Connection file'); entry.consoleUrlFile = resolve(base, value.consoleUrlFile); }
@@ -129,6 +130,23 @@ export async function readStacWorkspaceConfiguration(path) {
           fail('STAC_CONNECTION_INVALID', 'A processing profile needs its original deployment and declared processing-source input.');
         if (profile.sourceMetadata !== undefined) object(profile.sourceMetadata, 'Source metadata');
         entry.processingProfiles[name] = { ...profile, label: profile.label ?? name };
+      }
+    }
+    if (value.prescientDeliveries !== undefined) {
+      object(value.prescientDeliveries, 'Prescient delivery aliases');
+      if (Object.keys(value.prescientDeliveries).length > 128)
+        fail('STAC_CONNECTION_INVALID', 'Use at most 128 host delivery aliases.');
+      for (const [name, delivery] of Object.entries(value.prescientDeliveries)) {
+        if (!/^[a-z0-9][a-z0-9_-]{0,63}$/.test(name)) fail('STAC_CONNECTION_INVALID', 'Use a lowercase delivery alias.');
+        object(delivery, 'Host delivery');
+        if (Object.keys(delivery).some(key => !['directory', 'label', 'manifestSha256'].includes(key)))
+          fail('STAC_CONNECTION_INVALID', 'Declare the original delivery directory, label and optional receiving manifest SHA256.');
+        const label = delivery.label ?? name;
+        if (!cleanId(label) || label.length > 240 || !label.trim() ||
+            delivery.manifestSha256 !== undefined && !sha.test(delivery.manifestSha256))
+          fail('STAC_CONNECTION_INVALID', 'Use a short delivery label and the exact receiving manifest SHA256.');
+        entry.prescientDeliveries[name] = { directory: resolve(base, id(delivery.directory, 'Delivery directory')), label,
+          ...(delivery.manifestSha256 === undefined ? {} : { manifestSha256: delivery.manifestSha256 }) };
       }
     }
     workspaces[alias] = entry;
@@ -352,6 +370,48 @@ export class StacWorkspaceClient {
       fail('STAC_CLIENT_CAPABILITY_UNAVAILABLE', 'This original host has not enabled that processing action.');
     return this.#json('/api/processing/actions/' + encodeURIComponent(name), { ...options, method: 'POST', body: { input, operationId }, operationId });
   }
+  /** Read only: never starts the SDK or refreshes a provider session. */
+  async prescientState(options = {}) {
+    const value = await this.#json('/api/prescient/state', options);
+    if (value?.schema !== 'starforge.prescient-operator-view/v1' || value.workspaceId !== this.#boundId ||
+        !plain(value.configuration) || !Number.isSafeInteger(value.configuration.revision) || value.configuration.revision < 0)
+      fail('STAC_CLIENT_RESPONSE_INVALID', 'The original Prescient state does not match this workspace.');
+    return value;
+  }
+  /** The native portable profile excludes the receiver-owned credential binding. */
+  async prescientProfile(profileSha256, options = {}) {
+    if (!sha.test(profileSha256 ?? '')) fail('STAC_CLIENT_DIGEST_INVALID', 'Choose the original saved profile SHA256.');
+    const value = await this.#json('/api/prescient/profiles/' + profileSha256 + '/export', options);
+    if (!plain(value) || value.schema !== 'starforge.prescient-portable-profile/v1' || !plain(value.configuration) ||
+        Object.hasOwn(value.configuration, 'bindingId') || !sha.test(value.sha256 ?? ''))
+      fail('STAC_CLIENT_RESPONSE_INVALID', 'The original portable profile contract is incomplete.');
+    const { sha256, ...core } = value;
+    if (stacDigest(Buffer.from(canonicalStacJSON(core))) !== sha256)
+      fail('STAC_CLIENT_FILE_CHANGED', 'The portable profile does not match its native digest.');
+    return value;
+  }
+  /** Dispatch once with the caller's retained original body. No mutation retry or SDK fallback. */
+  prescientAction(name, body, options = {}) {
+    if (!Object.hasOwn(STAC_PRESCIENT_ACTIONS, name)) fail('STAC_CLIENT_CAPABILITY_INVALID', 'Choose a declared original Prescient action.');
+    const definition = STAC_PRESCIENT_ACTIONS[name], common = ['actor', 'operationId', 'expectedRevision'];
+    object(body, 'Prescient action');
+    if (Object.keys(body).some(key => !common.includes(key) && !definition.fields.includes(key)) ||
+        [...common, ...definition.required].some(key => !Object.hasOwn(body, key)))
+      fail('STAC_CLIENT_INPUT_INVALID', 'Supply exactly the selected native action fields, actor, operationId and configuration revision.');
+    if (typeof body.actor !== 'string' || !body.actor.trim() || body.actor.length > 240 || /[\x00-\x1f\x7f]/.test(body.actor))
+      fail('STAC_CLIENT_INPUT_INVALID', 'Supply the original reviewer as a short single-line actor.');
+    if (typeof body.operationId !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/.test(body.operationId))
+      fail('STAC_CLIENT_OPERATION_ID_REQUIRED', 'Supply one stable original Prescient operationId.');
+    revision(body.expectedRevision);
+    for (const key of ['profileSha256', 'reviewSha256', 'manifestSha256'])
+      if (body[key] !== undefined && !sha.test(body[key])) fail('STAC_CLIENT_DIGEST_INVALID', 'Supply the exact native ' + key + '.');
+    for (const key of ['reviewId', 'bindingId', 'directory']) if (body[key] !== undefined) id(body[key], key);
+    if (body.profile !== undefined) object(body.profile, 'Complete native profile');
+    if (body.refresh !== undefined && typeof body.refresh !== 'boolean')
+      fail('STAC_CLIENT_INPUT_INVALID', 'Choose an explicit boolean refresh value.');
+    canonicalStacJSON(body);
+    return this.#json('/api/prescient' + definition.path, { ...options, method: 'POST', body, operationId: body.operationId });
+  }
   async #asset(assetId, expectedSha256, options) {
     const state = await this.state(options), asset = state.workspace.assets.find(value => value.id === id(assetId));
     if (!asset || asset.status !== 'COMPLETE' || !sha.test(asset.sha256 ?? '') || !Number.isSafeInteger(asset.bytes) ||
@@ -457,6 +517,8 @@ export class StacWorkspaceClient {
       if (selection.kind === 'state') value = await this.state(options);
       else if (selection.kind === 'edition') value = await this.edition(selection.editionId, options);
       else if (selection.kind === 'comparison') value = await this.compare(selection, options);
+      else if (selection.kind === 'prescient-state') value = await this.prescientState(options);
+      else if (selection.kind === 'prescient-profile') value = await this.prescientProfile(selection.profileSha256, options);
       else if (selection.kind === 'processing-state') value = await this.processingState(options);
       else if (selection.kind === 'processing-read') value = await this.processingRead(selection.name, selection.query ?? {}, options);
       else fail('STAC_CLIENT_FILE_KIND_INVALID', 'Choose an original STAC file or complete JSON view.');
