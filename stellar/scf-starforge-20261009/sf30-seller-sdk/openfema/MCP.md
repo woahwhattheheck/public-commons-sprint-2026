@@ -112,7 +112,8 @@ Names below have the prefix `merchant_openfema_`. The catalog contains 12 read/f
 | dataset_prepare/query | Original SF30 table dataset, full source provenance and native query engine. |
 | release_prepare/inspect/activate/start/stop/rollback | Existing SF82 release, generation and runtime operations. |
 | buyer_inspect/receive | Existing completed SF88/SF100 buyer intents and native customer files. |
-| export_create, source_export, workspace_export | Frozen table/portfolio/report, whole original source and whole native portable workspace. |
+| export_create, source_export | Frozen table/portfolio/report and the whole original source bundle. |
+| workspace_export | The original complete-workspace download descriptor; preserve the actual received archive identity through native workspace receiving. |
 
 Rows select `projects`, `applicants`, `disasters`, `declarations`, `categories` or `issues`. Sorting uses an actual column from the running schema, including the original exact amount ordering. A row request accepts up to 1,000 rows. Continue the same immutable version, table, search, sort and direction with the returned `nextOffset`.
 
@@ -136,7 +137,7 @@ The merchant adapter validates its action field contract against the running con
 | --- | --- | --- |
 | source | Source-edition ID | Every declarations/applicants/projects metadata, field, end-metadata and original page body. |
 | portfolio | Portfolio-version ID | Its complete retained canonical portfolio JSON. |
-| export | Export ID | The native frozen JSON, CSV, HTML report, comparison, full source bundle or workspace ZIP. |
+| export | Export ID | The native frozen JSON, CSV, HTML report, complete portfolio comparison or full source bundle listed in the original exports manifest. |
 | receipt | Native buyer receipt ID | dataset.csv, dataset.jsonl, review.html, delivery.json and manifest.json. |
 
 The source list preserves every occurrence with a deterministic filename and its original response receipt. Shared hashes do not erase distinct source URLs or positions. These are the original retained HTTP body bytes; a separately captured wire representation is not asserted.
@@ -159,11 +160,11 @@ starforge openfema-mcp reopen --out /absolute/private/received-export \
 
 Use `--file EXACT_FILENAME` to select one member from the original list. Without it, download includes every file in that selection. Inspection returns the transfer manifest and its exact digest. Download saves that manifest and every selected full file. The original downloader owns prefix hashes, write progress, exclusive local file ownership, exact completion and interrupted receiving. Repeating the same command continues the same directory and same file identities.
 
-The transfer's endpoint identity is the immutable workspace UUID, so a legitimate listener-port change does not invalidate it. Offline reopen verifies every completed file and the manifest without opening a provider or payment connection. It proves those original saved bytes; it does not assert that a portable workspace has been restored or a merchant release is live. Restore the complete workspace export through the original native receiving workflow described in the main product guide.
+The transfer's endpoint identity is the immutable workspace UUID, so a legitimate listener-port change does not invalidate it. Offline reopen rederives the transfer identity from its workspace, selection and complete file manifest, verifies every completed file, and checks the supplied manifest SHA256 when present, without opening a provider or payment connection. It proves those original saved bytes; it does not assert that a portable workspace has been restored or a merchant release is live. The original `workspace.export` action currently returns a fresh `/api/workspace.zip` download descriptor. That mutable URL is separate from the frozen `kind: export` files. Receive the complete archive and preserve its actual bytes and hash through the native workspace workflow described in the main product guide before restoration.
 
 ### Bounded file reads
 
-Direct reads return `readId`, `file:{name,type,bytes,sha256}`, offset, bytesRead, nextOffset, base64 data and its declared encoding. A new read validates the entire original HTTP file against the retained manifest using fixed-size writes, then gives the existing retained reader a held read-only descriptor. Subsequent chunks use that descriptor. The native maximum chunk is 196,608 bytes; default chunks are 65,536 bytes.
+Direct reads return `readId`, `file:{name,contentType,bytes,sha256}`, offset, bytesRead, nextOffset, base64 data and its declared encoding. A new read validates the entire original HTTP file against the retained manifest using fixed-size writes, then gives the existing retained reader a held read-only descriptor. Subsequent chunks use that descriptor. The native maximum chunk is 196,608 bytes; default chunks are 65,536 bytes.
 
 A retained reader can finish after the original console closes. If it expires, resume the same selected file SHA with a new read at the existing offset. Release closes only that temporary descriptor. The original workspace, source objects, completed exports and local received files remain.
 

@@ -23,7 +23,10 @@
     "./seller/openfema/cli": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/openfema/cli.mjs",
     "./merchant-mcp/openfema": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/openfema/mcp.mjs",
     "./merchant-mcp/openfema/protocol": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/openfema/mcp-protocol.mjs",
-    "./merchant-mcp/openfema/client": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/openfema/mcp-client.mjs",
+    "./merchant-mcp/openfema/client": {
+      "types": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/openfema/mcp-client.d.mts",
+      "default": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/openfema/mcp-client.mjs"
+    },
     "./merchant-mcp/openfema/provider": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/openfema/merchant-provider.mjs",
     "./merchant-mcp/openfema/setup": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/openfema/merchant-setup.mjs",
     "./applications/openfema": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/openfema/application.mjs"
