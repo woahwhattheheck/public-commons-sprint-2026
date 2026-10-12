@@ -145,7 +145,8 @@ export async function receiveDesk(entry) {
       if(item.discarded_response){await remember();await page.reload();await page.locator('#workspace').waitFor({state:'visible'});}
     }
     request=await waitFor(async()=>{
-      const current=await api('/api/requests/'+item.request.request_id);
+      let current;
+      try{current=await api('/api/requests/'+item.request.request_id);}catch(error){if(error.status===404)return null;throw error;}
       if(current.state==='FAILED')throw new Error('Original '+name+' failed: '+JSON.stringify(current.error));
       return current.state==='COMPLETE'?current:null;
     },'The original '+name+' remains pending; its request ID is retained.');
@@ -295,6 +296,7 @@ export async function receiveDesk(entry) {
       requireValue(canonical(before)===canonical(selected.fields.NAME),'The actual source correction preimage changed.');
       await page.locator('#correction-after').fill(JSON.stringify(after));
       await page.locator('#add-correction').click();
+      if(!await page.locator('#source-decisions').isVisible())await page.getByText('Source review decisions',{exact:true}).click();
       await page.locator('#source-decisions').fill(JSON.stringify(entry.review_decisions||{}));
     }
     const reviewed=await action('02-source-review','source_review',()=>page.locator('#review-source').click());
