@@ -4,6 +4,8 @@ from __future__ import annotations
 import contextlib
 import hashlib
 import json
+import ipaddress
+import ssl
 import os
 from pathlib import Path
 import signal
@@ -13,7 +15,7 @@ from http import cookies
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlencode, urlsplit
 
-from . import exchange
+from . import exchange, identity_http
 from .service import AuditService, SOURCE_ROOT, require_auditor
 from .store import Conflict, Forbidden, MAX_SOURCE, encoded, fingerprint, private_bytes
 
@@ -61,15 +63,47 @@ class AuditHTTPServer(ThreadingHTTPServer):
     daemon_threads = True
     allow_reuse_address = True
 
-    def __init__(self, root, port=0):
+    def __init__(self, root, port=0, *, listen="127.0.0.1", public_origin=None, tls_cert=None, tls_key=None):
+        if listen == "localhost":
+            listen = "127.0.0.1"
+        try:
+            address = ipaddress.ip_address(listen)
+            if address.version != 4:
+                raise ValueError()
+        except ValueError:
+            raise ValueError("Choose an explicit IPv4 listening address.") from None
+        if bool(tls_cert) != bool(tls_key):
+            raise ValueError("Direct HTTPS needs both its certificate and private key.")
+        self.public_origin = identity_http.public_origin(public_origin) if public_origin else None
+        self.direct_tls = bool(tls_cert)
+        if not address.is_loopback and not (self.direct_tls and self.public_origin):
+            raise ValueError("A network listener requires direct TLS and its registered HTTPS origin.")
+        context = None
+        if self.direct_tls:
+            private_bytes(Path(tls_key), 65536)
+            context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+            context.minimum_version = ssl.TLSVersion.TLSv1_2
+            context.load_cert_chain(str(tls_cert), str(tls_key))
         self.registry = WorkspaceRegistry(root)
         self.login_attempts = {}
         self.login_lock = threading.Lock()
-        super().__init__(("127.0.0.1", int(port)), AuditHandler)
+        try:
+            super().__init__((listen, int(port)), AuditHandler)
+            if context:
+                self.socket = context.wrap_socket(self.socket, server_side=True)
+        except BaseException:
+            self.registry.close()
+            raise
 
     @property
     def origin(self):
-        return "http://127.0.0.1:" + str(self.server_port)
+        return self.public_origin or ("https" if self.direct_tls else "http") + "://127.0.0.1:" + str(self.server_port)
+
+    @property
+    def accepted_hosts(self):
+        if self.public_origin:
+            return {urlsplit(self.public_origin).netloc}
+        return {"127.0.0.1:" + str(self.server_port), "localhost:" + str(self.server_port)}
 
     def server_close(self):
         super().server_close()
@@ -85,21 +119,19 @@ class AuditHandler(BaseHTTPRequestHandler):
 
     def _context(self):
         raw = urlsplit(self.path)
-        self.query = {k: v[-1] for k, v in parse_qs(raw.query, keep_blank_values=True).items()}
+        if raw.scheme or raw.netloc:
+            raise Forbidden("Use the configured workspace request path.")
+        values = parse_qs(raw.query, keep_blank_values=True, max_num_fields=100, errors="strict")
+        if any(len(value) != 1 for value in values.values()):
+            raise ValueError("A workspace query field must occur exactly once.")
+        self.query = {key: value[0] for key, value in values.items()}
         self.path_only = raw.path
         self.workspace_key = self.query.get("workspace") or self.server.registry.default_key
         self.service = self.server.registry.get(self.workspace_key)
         self.cookie_name = "audit_" + self.workspace_key
-        accepted = {"127.0.0.1:" + str(self.server.server_port), "localhost:" + str(self.server.server_port)}
-        if self.headers.get("Host") not in accepted:
-            raise Forbidden("Use this host's loopback address.")
-        self.request_origin = "http://" + self.headers["Host"]
-        origin = self.headers.get("Origin")
-        if origin is not None and origin != self.request_origin:
-            raise Forbidden("This request originated outside the workspace.")
-        site = self.headers.get("Sec-Fetch-Site")
-        if site in {"cross-site"}:
-            raise Forbidden("Open the workspace directly.")
+        if len(self.headers.get_all("Host", [])) != 1:
+            raise Forbidden("Use one configured workspace host.")
+        identity_http.request_context(self)
 
     def _session(self):
         value = cookies.SimpleCookie()
@@ -127,7 +159,8 @@ class AuditHandler(BaseHTTPRequestHandler):
         if "Content-Security-Policy" not in (headers or {}):
             self.send_header("Content-Security-Policy", csp)
         for key, item in (headers or {}).items():
-            self.send_header(key, item)
+            for header_value in item if isinstance(item, list) else [item]:
+                self.send_header(key, header_value)
         self.end_headers()
         if self.command != "HEAD":
             with contextlib.suppress(BrokenPipeError, ConnectionResetError):
@@ -168,12 +201,16 @@ class AuditHandler(BaseHTTPRequestHandler):
             self._context()
             assets = {"/": ("index.html", "text/html; charset=utf-8"),
                       "/app.js": ("app.js", "text/javascript; charset=utf-8"),
-                      "/style.css": ("style.css", "text/css; charset=utf-8")}
+                      "/style.css": ("style.css", "text/css; charset=utf-8"),
+                      "/identity.js": ("identity.js", "text/javascript; charset=utf-8"),
+                      "/identity.css": ("identity.css", "text/css; charset=utf-8")}
             if self.path_only in assets:
                 name, media = assets[self.path_only]
                 return self._send(200, (SOURCE_ROOT / "ui" / name).read_bytes(), media)
             if self.path_only == "/health":
                 return self._send(200, {"status": "ready", "service": "Commons Audit Operator"})
+            if identity_http.get(self):
+                return
             actor = self._session()
             q, service, path = self.query, self.service, self.path_only
             if path == "/api/state":
@@ -211,10 +248,13 @@ class AuditHandler(BaseHTTPRequestHandler):
                 result = {"grants": service.store.grants()}
             elif path == "/api/operations":
                 require_auditor(actor)
-                result = {"operations": service.store.operations(q.get("before"), q.get("limit", 100)),
-                          "events": service.store.events(q.get("before_sequence"), q.get("event_limit", 100))}
+                result = service.identity.activity(
+                    actor, q.get("before"), q.get("limit", 100),
+                    q.get("before_sequence"), q.get("event_limit", 100))
             elif path == "/api/operation":
-                row = service.store.db.execute("SELECT actor FROM operations WHERE id=?", (q["id"],)).fetchone()
+                row = service.store.db.execute("SELECT actor,action FROM operations WHERE id=?", (q["id"],)).fetchone()
+                if row and row["action"].startswith("identity.") and not actor.get("admin") and row["actor"] != actor["id"]:
+                    raise Forbidden("This institutional operation belongs to its account administrator.")
                 if row and actor.get("role") != "auditor" and row["actor"] != actor["id"]:
                     raise Forbidden("This operation belongs to another operator.")
                 result = service.store.operation(q["id"])
@@ -258,6 +298,8 @@ class AuditHandler(BaseHTTPRequestHandler):
             body = exchange._load_json(data, "workspace request")
             if not isinstance(body, dict):
                 raise ValueError("A workspace request must be a JSON object.")
+            if identity_http.post(self, body):
+                return
             if self.path_only == "/api/login":
                 clock = time.monotonic()
                 with self.server.login_lock:
@@ -273,12 +315,12 @@ class AuditHandler(BaseHTTPRequestHandler):
                 with self.server.login_lock:
                     self.server.login_attempts.pop(self.workspace_key, None)
                 return self._send(200, {"actor": actor, "workspace": self.workspace_key},
-                    headers={"Set-Cookie": self.cookie_name + "=" + token + "; HttpOnly; SameSite=Strict; Path=/; Max-Age=28800"})
+                    headers={"Set-Cookie": identity_http.session_cookie(self, token)})
             actor = self._session()
             if self.path_only == "/api/logout":
                 self.service.store.end_session(self.session_token)
                 return self._send(200, {"signed_out": True},
-                    headers={"Set-Cookie": self.cookie_name + "=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0"})
+                    headers={"Set-Cookie": identity_http.session_cookie(self, "", maximum=0)})
             if self.path_only == "/api/shutdown":
                 if not actor.get("admin"):
                     raise Forbidden("Only the owner can close this host.")
@@ -287,7 +329,9 @@ class AuditHandler(BaseHTTPRequestHandler):
                 return
             if self.path_only != "/api/action":
                 return self._send(404, {"error": "This workspace action route does not exist."})
-            result = self.service.dispatch(actor, body["action"], body.get("inputs", {}), body["operation_id"])
+            result = self.service.dispatch(
+                actor, body["action"], body.get("inputs", {}), body["operation_id"],
+                callback_for=lambda provider: identity_http.callback_url(self, provider))
             if body["action"] == "restore":
                 key = self.server.registry.open(result["directory"])
                 restored = self.server.registry.get(key)
@@ -302,9 +346,9 @@ class AuditHandler(BaseHTTPRequestHandler):
     def do_OPTIONS(self):
         self._send(405, {"error": "Cross-origin workspace access is not enabled."})
 
-def serve(root, port=0, ready_file=None, open_browser=False):
+def serve(root, port=0, ready_file=None, open_browser=False, *, listen="127.0.0.1", public_origin=None, tls_cert=None, tls_key=None):
     from .store import atomic_write
-    server = AuditHTTPServer(root, port)
+    server = AuditHTTPServer(root, port, listen=listen, public_origin=public_origin, tls_cert=tls_cert, tls_key=tls_key)
     root_service = server.registry.get(server.registry.default_key)
     url = server.origin + "/?" + urlencode({"workspace": server.registry.default_key})
     ready = {"url": url, "origin": server.origin, "pid": os.getpid(), "workspace": server.registry.default_key,

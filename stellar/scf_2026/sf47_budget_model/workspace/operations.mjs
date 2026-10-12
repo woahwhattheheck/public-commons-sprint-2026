@@ -1,4 +1,5 @@
 import {mountForecast} from './forecast.mjs';
+import {mountPortfolio} from './portfolio.mjs';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const title = value => String(value ?? '').toLowerCase().replaceAll('_',' ').replace(/^./, c => c.toUpperCase());
@@ -31,11 +32,11 @@ function downloadFile(raw,filename,type='application/json') {const url=URL.creat
 export function mountOperations({container,api:transport,plan,inform:notify,mutationId}) {
   const root=document.createElement('section');root.className='operations';root.setAttribute('aria-label','Delivery and cash operations');container.replaceChildren(root);
   const view={cases:[],current:null,tab:'overview',busy:false,events:[],nextAfter:null,form:null};
-  let active=true,forecastView=null;
-  view.forecastId=null;
+  let active=true,forecastView=null,forecastViewCase=null,portfolioView=null;
+  view.forecastId=null;view.forecastDraft=null;view.portfolioId=null;
   const available=()=>active&&root.isConnected;
   function requireActive() {if(!available()){const error=new Error('This operations view is closed. Reopen the retained case to continue.');error.code='OPERATIONS_VIEW_CLOSED';throw error;}}
-  function dispose() {active=false;forecastView?.dispose();const dialog=root.querySelector('dialog');if(dialog?.open)dialog.close();}
+  function dispose() {active=false;forecastView?.dispose();portfolioView?.dispose();const dialog=root.querySelector('dialog.ops-dialog');if(dialog?.open)dialog.close();}
   const inform=(...args)=>{if(available())notify(...args);};
   const download=(...args)=>{if(available())downloadFile(...args);};
   async function api(...args) {
@@ -68,7 +69,8 @@ export function mountOperations({container,api:transport,plan,inform:notify,muta
   const flag=value=>'<span class="ops-state">'+esc(title(value))+'</span>';
   function setBusy(value) {
     view.busy=value;root.setAttribute('aria-busy',String(value));
-    root.querySelectorAll('button,input,select,textarea').forEach(el=>el.disabled=value||el.dataset.opsFixed==='true');
+    root.querySelectorAll('button,input,select,textarea').forEach(el=>{if(!el.closest('.portfolio'))el.disabled=value||el.dataset.opsFixed==='true';});
+    portfolioView?.setHostBusy(value);
   }
   function alertError(error) {if(!available())return;inform(error.message,true);const target=$('[data-ops-message]');if(target){target.textContent=error.message;target.setAttribute('role','alert');}}
   async function run(action) {if(view.busy||!available())return;setBusy(true);try{await action();}catch(error){alertError(error);}finally{if(available())setBusy(false);}}
@@ -77,7 +79,7 @@ export function mountOperations({container,api:transport,plan,inform:notify,muta
     view.cases=(await api('/api/operations')).cases;
     let retained;try{retained=sessionStorage.getItem('sf47.operations.case.'+plan.id);}catch{}
     const target=prefer||view.cases.find(row=>row.id===retained)?.id||view.cases[0]?.id;
-    if(view.current?.program.id!==target)view.forecastId=null;
+    if(view.current?.program.id!==target){view.forecastId=null;view.forecastDraft=null;view.portfolioId=null;}
     view.current=target?await api('/api/operations/'+target):null;
     if(target)try{sessionStorage.setItem('sf47.operations.case.'+plan.id,target);}catch{}
     view.events=[];view.nextAfter=null;render();
@@ -130,7 +132,9 @@ export function mountOperations({container,api:transport,plan,inform:notify,muta
     +(view.events.length?table(['Version / time','Operator','Action / note'],view.events.map(row=>[esc(row.version)+'<small>'+esc(row.at)+'</small>',esc(row.actor),esc(row.action)+'<p>'+esc(row.note)+'</p><details><summary>Record values</summary><pre>'+esc(JSON.stringify({before:row.before,after:row.after},null,2))+'</pre></details>'])):empty('Open the retained event history.'));}
   function render() {
     if(!available())return;
-    forecastView?.dispose();forecastView=null;
+    if(forecastView&&forecastViewCase===view.current?.program.id){try{view.forecastDraft=forecastView.draftInputs();}catch{}}
+    forecastView?.dispose();forecastView=null;forecastViewCase=null;
+    portfolioView?.dispose();portfolioView=null;
     const c=view.current;
     root.innerHTML='<div class="ops-heading"><div><h2>Delivery and cash operations</h2><p>New cases use saved plan '+esc(plan.name)+' · revision '+plan.revision+'</p></div><div class="ops-actions">'+button('Open case from saved plan','new-case')+button('Import complete case','import')+button('Import original source packet','intake')+'</div></div>'
       +'<div class="ops-toolbar">'+field('Recording operator','recordingActor',actor,{help:'Retained with every saved operation.'})+(view.cases.length?field('Retained case','caseSelect',c?.program.id,{options:view.cases.map(row=>[row.id,row.name+' · '+row.mode+' · v'+row.version])}):'')+'</div>'
@@ -138,16 +142,24 @@ export function mountOperations({container,api:transport,plan,inform:notify,muta
       +(c?'<div class="ops-case-heading"><div><strong>'+esc(c.program.name)+'</strong> '+flag(c.program.state)+' <span>Version '+c.program.version+' · '+esc(c.plan.name)+' · pinned revision '+c.program.planRevision+'</span></div><div class="ops-actions">'+button('Refresh case','refresh')+button('Export complete case','export')+(c.program.state==='CLOSED'?button('Reopen review','reopen'):'')+'</div></div>'
        +(c.program.mode==='WALKTHROUGH'?'<p class="ops-note"><strong>Internal walkthrough.</strong> These fictional workflow records are separate from operating cash, awards and customer outcomes.</p>':'')
        +(c.program.currentPlanRevision!==c.program.planRevision?'<p class="ops-note">The planner has a newer saved revision. This case retains its originally selected revision '+c.program.planRevision+'.</p>':'')
-       +'<nav class="ops-tabs" aria-label="Delivery operations sections">'+[['overview','Plan / actual'],['contributors','Contributors'],['work','Work'],['invoices','Invoices'],['cash','Cash / issuer'],['forecast','Operating forecast'],['delivery','Deployment / buyers'],['sources','Sources'],['reviews','Reviews / history']].map(([id,label])=>'<button type="button" data-ops-tab="'+id+'"'+(view.tab===id?' aria-current="page"':'')+'>'+esc(label)+'</button>').join('')+'</nav><div class="ops-panel">'+({overview,contributors,work,invoices,cash,delivery,sources,reviews,forecast:()=>'<div data-ops-forecast></div>'}[view.tab])()+'</div>'
+       +'<nav class="ops-tabs" aria-label="Delivery operations sections">'+[['overview','Plan / actual'],['contributors','Contributors'],['work','Work'],['invoices','Invoices'],['cash','Cash / issuer'],['forecast','Operating forecast'],['portfolio','Portfolio allocation'],['delivery','Deployment / buyers'],['sources','Sources'],['reviews','Reviews / history']].map(([id,label])=>'<button type="button" data-ops-tab="'+id+'"'+(view.tab===id?' aria-current="page"':'')+'>'+esc(label)+'</button>').join('')+'</nav><div class="ops-panel">'+({overview,contributors,work,invoices,cash,delivery,sources,reviews,forecast:()=>'<div data-ops-forecast></div>',portfolio:()=>'<div data-ops-portfolio></div>'}[view.tab])()+'</div>'
        :empty('Open a case from the selected saved plan or import an original case. Forecast staffing and payouts do not populate actual records.'))
       +'<dialog class="ops-dialog" aria-labelledby="ops-dialog-title"><form method="dialog" data-ops-form><h3 id="ops-dialog-title"></h3><div data-ops-fields class="ops-fields"></div><p data-ops-form-error role="alert"></p><div class="ops-actions"><button type="button" data-ops-action="cancel">Cancel</button><button type="submit" class="primary">Save</button></div></form></dialog>'
       +'<input type="file" data-ops-import hidden accept=".zip,application/zip"><input type="file" data-ops-intake hidden accept=".json,application/json">';
     if(c&&view.tab==='forecast'){
       const retained=c.forecasts.some(row=>row.id===view.forecastId)?view.forecastId:null;
+      forecastViewCase=c.program.id;
       forecastView=mountForecast({container:$('[data-ops-forecast]'),current:c,api,mutationId,recordingActor,
-        initialForecastId:retained,onSelection:id=>{view.forecastId=id;},
-        onSaved:async result=>{view.forecastId=result.recordId;await refresh();inform('Saved the original operating forecast with its source, dated cash and remaining work.');}});
+        initialForecastId:retained,initialInputs:retained?null:view.forecastDraft,onSelection:id=>{view.forecastId=id;if(id)view.forecastDraft=null;},
+        onSaved:async result=>{if(view.current?.program.id!==c.program.id)return;view.forecastId=result.recordId;view.forecastDraft=null;forecastView?.dispose();forecastView=null;await refresh();inform('Saved the original operating forecast with its source, dated cash and remaining work.');}});
       forecastView.ready.catch(alertError);
+    }
+    if(c&&view.tab==='portfolio'){
+      portfolioView=mountPortfolio({container:$('[data-ops-portfolio]'),current:c,api,mutationId,recordingActor,
+        initialPortfolioId:view.portfolioId,onSelection:id=>{view.portfolioId=id;},onReload:refresh,
+        onSaved:async result=>{if(view.current?.program.id!==c.program.id)return;view.portfolioId=result.recordId;await refresh();inform('Saved the complete source-bound delivery allocation and original cash alternatives.');},
+        onForecastInputs:async(inputs,selection)=>{if(view.current?.program.id!==c.program.id)return;view.forecastDraft=structuredClone(inputs);view.forecastId=null;view.tab='forecast';render();inform('Opened an editable forecast from '+selection.alternativeId+'. Review original collection dates before previewing and saving its cash assumptions.');}});
+      portfolioView.ready.catch(alertError);
     }
   }
   function showForm(kind, row={}, meta={}) {
@@ -156,7 +168,7 @@ export function mountOperations({container,api:transport,plan,inform:notify,muta
     if(kind==='work'&&!view.current.records.contributors.length)throw new Error('Add the contributor first.');
     if(kind==='purchases'&&!view.current.records.deployments.length)throw new Error('Add the original deployment first.');
     view.form={kind,row:structuredClone(row),...meta};
-    const dialog=$('dialog'),form=$('[data-ops-form]');form.reset();$('[data-ops-form-error]').textContent='';
+    const dialog=$('dialog.ops-dialog'),form=$('[data-ops-form]');form.reset();$('[data-ops-form-error]').textContent='';
     $('#ops-dialog-title').textContent=meta.title||((row.id?'Update ':'Record ')+(labels[kind]||title(kind)).toLowerCase());
     let html='';
     if(kind==='new-case') html=field('Case name','name',plan.name+' — delivery operations',{required:true,wide:true})+field('Purpose','mode','OPERATIONS',{options:choices.mode})+field('Operational calendar anchor','calendarStart',plan.planning.calendarStart||'',{type:'date',help:'Optional explicit date; it does not record an award or forecast payout.'})+'<p class="ops-wide">This case pins saved revision '+plan.revision+' and its original source. Unsaved planning edits are not used.</p>';
@@ -188,15 +200,20 @@ export function mountOperations({container,api:transport,plan,inform:notify,muta
   }
   root.addEventListener('change',event=>{
     if(event.target.name==='recordingActor'){actor=event.target.value;try{sessionStorage.setItem('sf47.operations.actor',actor);}catch{}}
-    if(event.target.name==='caseSelect')run(async()=>{const selectedCase=await api('/api/operations/'+event.target.value);if(selectedCase.program.id!==view.current?.program.id)view.forecastId=null;view.current=selectedCase;view.events=[];view.nextAfter=null;try{sessionStorage.setItem('sf47.operations.case.'+plan.id,view.current.program.id);}catch{}render();});
+    if(event.target.name==='caseSelect')run(async()=>{const selectedCase=await api('/api/operations/'+event.target.value);if(selectedCase.program.id!==view.current?.program.id){view.forecastId=null;view.forecastDraft=null;view.portfolioId=null;}view.current=selectedCase;view.events=[];view.nextAfter=null;try{sessionStorage.setItem('sf47.operations.case.'+plan.id,view.current.program.id);}catch{}render();});
     if(event.target.matches('[data-ops-import],[data-ops-intake]')){const file=event.target.files[0];if(file)run(async()=>showForm(event.target.matches('[data-ops-intake]')?'intake':'import',{}, {file,filename:file.name,title:'Receive operations source'}));}
   });
   root.addEventListener('click',event=>{
     const tab=event.target.closest('[data-ops-tab]');if(tab&&!view.busy){view.tab=tab.dataset.opsTab;render();return;}
     const target=event.target.closest('[data-ops-action]');if(!target)return;
+    const action=target.dataset.opsAction;
+    // Open native pickers in the click gesture before busy state disables inputs.
+    if(action==='import'||action==='intake'){
+      if(view.busy||!available())return;
+      const input=$(action==='intake'?'[data-ops-intake]':'[data-ops-import]');input.value='';input.click();return;
+    }
     run(async()=>{
-      const action=target.dataset.opsAction;
-      if(action==='cancel'){$('dialog').close();return;}
+      if(action==='cancel'){$('dialog.ops-dialog').close();return;}
       if(action==='new-case')return showForm('new-case',{}, {title:'Open operations from saved plan'});
       if(action==='refresh')return refresh();
       if(action==='record'){const kind=target.dataset.kind;return showForm(kind,view.current.records[kind].find(row=>row.id===target.dataset.id)||{});}
@@ -204,7 +221,6 @@ export function mountOperations({container,api:transport,plan,inform:notify,muta
       if(action==='transition')return showForm('transition',{}, {command:target.dataset.command,id:target.dataset.id,title:title(target.dataset.command.replace('.',' '))});
       if(action==='freeze-review'||action==='reopen')return showForm(action,{}, {title:title(action.replace('-',' '))});
       if(action==='close-review')return showForm('close-review',{}, {review:view.current.reviews.find(row=>row.id===target.dataset.id),title:'Close on this exact review'});
-      if(action==='import'||action==='intake'){const input=$(action==='intake'?'[data-ops-intake]':'[data-ops-import]');input.value='';input.click();return;}
       if(action==='add-line'){$('[data-ops-lines]').insertAdjacentHTML('beforeend',invoiceLines([{}]));return;}
       if(action==='remove-line'){target.closest('[data-ops-line]').remove();return;}
       if(action==='add-allocation'){if(!view.current.records.invoices.length)throw new Error('Record the original invoice before allocating a payment.');$('[data-ops-allocations]').insertAdjacentHTML('beforeend',allocation());return;}

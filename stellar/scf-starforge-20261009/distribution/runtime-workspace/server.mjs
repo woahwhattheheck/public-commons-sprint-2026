@@ -124,7 +124,20 @@ export async function startRuntimeWorkspace({ directory, port = 8465 } = {}) {
         const value = params(url, ['runtimeId']); return send(200, await model.handoff(value.runtimeId));
       }
       if (req.method === 'GET' && url.pathname === '/api/applications/state') {
-        params(url, []); return send(200, await model.applicationsState());
+        const value = params(url, ['historyLimit']);
+        if (value.historyLimit !== undefined) {
+          need(/^(?:[1-9][0-9]?|100)$/.test(value.historyLimit), 'APPLICATION_HISTORY_LIMIT_INVALID');
+          value.historyLimit = Number(value.historyLimit);
+        }
+        return send(200, await model.applicationsState(value));
+      }
+      if (req.method === 'GET' && url.pathname === '/api/applications/history') {
+        const value = params(url, ['applicationId', 'limit', 'cursor']);
+        if (value.limit !== undefined) {
+          need(/^(?:[1-9][0-9]?|100)$/.test(value.limit), 'APPLICATION_HISTORY_LIMIT_INVALID');
+          value.limit = Number(value.limit);
+        }
+        return send(200, await model.applicationsHistory(value));
       }
       if (req.method === 'GET' && url.pathname === '/api/applications/output')
         return send(200, await model.applicationsOutput(params(url, ['applicationId', 'operationId'])));

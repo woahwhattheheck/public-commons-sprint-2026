@@ -16,6 +16,7 @@ import zipfile
 
 from . import exchange, reporting
 from .archive import create_backup, inspect_backup, restore_backup
+from .identity import InstitutionalAccess, KINDS as IDENTITY_KINDS
 from .model import SCHEMAS, STAGES, current_review, engagement_id, follow_up_queue, readiness, risk_score, validate_payload
 from .store import Conflict, DOMAIN_KINDS, Forbidden, MAX_SOURCE, Store, atomic_write, digest, encoded, fingerprint, identifier, now, private_directory, safe_name
 
@@ -71,17 +72,22 @@ def _zip(files):
 class AuditService:
     def __init__(self, root):
         self.store = Store(root)
+        self.identity = InstitutionalAccess(self.store)
         self.output_directory = private_directory(self.store.root / "downloads")
         self.catalog_bytes = (SOURCE_ROOT / "reference/event-catalog.json").read_bytes()
         self.catalog = exchange._load_json(self.catalog_bytes, "original issuer catalog")
         self.catalog_sha = digest(self.catalog_bytes)
         self.contract_bytes = (SOURCE_ROOT / "reference/audit-domain-contract.json").read_bytes()
         self.contract = exchange._load_json(self.contract_bytes, "audit domain contract")
-        request = {"catalog_sha256": self.catalog_sha, "contract_sha256": digest(self.contract_bytes)}
+        self.identity_contract_bytes = (SOURCE_ROOT / "reference/institutional-identity-contract.json").read_bytes()
+        request = {"catalog_sha256": self.catalog_sha, "contract_sha256": digest(self.contract_bytes),
+                   "identity_contract_sha256": digest(self.identity_contract_bytes)}
         def initialize():
             a = self.store._source(self.catalog_bytes, "event-catalog.json", "application/json", "reference", "umich-rfp-1442341", self.catalog["source"])
             b = self.store._source(self.contract_bytes, "audit-domain-contract.json", "application/json", "reference", "umich-public-process")
-            return {"source_ids": [a["id"], b["id"]]}
+            c = self.store._source(self.identity_contract_bytes, "institutional-identity-contract.json",
+                                   "application/json", "reference", "umich-institutional-identity")
+            return {"source_ids": [a["id"], b["id"], c["id"]]}
         self.store.execute("reference-" + fingerprint(request)[:32], "reference_installed", request, "system", initialize)
 
     def close(self):
@@ -150,6 +156,12 @@ class AuditService:
         return {"items": output, "total": len(value), "offset": offset, "limit": limit}
 
     def record(self, actor, kind, record_id, revision=None):
+        if kind in IDENTITY_KINDS:
+            editions = self.identity.history(actor, kind, record_id)
+            for record in editions:
+                if revision is None or record["revision"] == int(revision):
+                    return record
+            raise KeyError("This institutional edition is outside the current account scope.")
         if actor.get("role") == "auditor":
             return self.store.get(kind, record_id, revision)
         if revision is not None:
@@ -160,6 +172,8 @@ class AuditService:
         raise KeyError("This record is not in the selected access scope.")
 
     def history(self, actor, kind, record_id):
+        if kind in IDENTITY_KINDS:
+            return {"records": self.identity.history(actor, kind, record_id)}
         require_auditor(actor)
         return {"records": self.store.history(kind, record_id)}
 
@@ -734,12 +748,18 @@ class AuditService:
                 result = restore_backup(data, p.get("passphrase"), destination)
             return self.store.execute(operation_id, "restore", request, actor["id"], lambda: result)
 
-    def dispatch(self, actor, action, p, operation_id):
+    def dispatch(self, actor, action, p, operation_id, *, callback_for=None):
         if not isinstance(actor, dict) or not actor.get("active"):
             raise Forbidden("Open an active workspace access link.")
         if not isinstance(p, dict):
             raise ValueError("Action inputs must be a JSON object.")
         identifier(operation_id)
+        with self.store.lock:
+            actor = self.identity.current_actor(actor)
+        if action.startswith("identity."):
+            if callback_for is None:
+                raise ValueError("Institutional configuration needs this host's fixed HTTPS callback context.")
+            return self.identity.dispatch(actor, action, p, operation_id, callback_for)
         if action == "create_grant":
             return self.store.create_grant(p, actor, operation_id)
         if action == "revoke_grant":
@@ -756,4 +776,4 @@ class AuditService:
         if action not in handlers:
             raise ValueError("Unknown workspace action.")
         return self.store.execute(operation_id, action, p, actor["id"],
-                                  lambda: handlers[action](actor, p, operation_id))
+                                  lambda: handlers[action](self.identity.current_actor(actor), p, operation_id))

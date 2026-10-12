@@ -1,0 +1,6 @@
+{"invoiceId":"INV-001","lineId":"1","sku":"A","quantity":3,"chargedMinor":"300","currency":"USD"}
+{"invoiceId":"INV-001","lineId":"2","sku":"B","quantity":2,"chargedMinor":"490","currency":"USD"}
+{"invoiceId":"INV-002","lineId":"1","sku":"A","quantity":4,"chargedMinor":"430","currency":"USD"}
+{"invoiceId":"INV-002","lineId":"2","sku":"UNKNOWN","quantity":1,"chargedMinor":"50","currency":"USD"}
+{"invoiceId":"INV-003","lineId":"1","sku":"EUR-SERVICE","quantity":2,"chargedMinor":"900","currency":"EUR"}
+{"invoiceId":"INV-004","lineId":"1","sku":"A","quantity":1,"chargedMinor":"100","currency":"EUR"}

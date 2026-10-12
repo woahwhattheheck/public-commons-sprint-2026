@@ -55,6 +55,173 @@ Record the returned `warehouse_id`. Pass it through `--expect-warehouse` or
 warehouse. A Python instance checks its original warehouse identity on every
 new database connection.
 
+## Open the receiving workspace in a browser
+
+The local receiving workspace uses the same warehouse, delivery reader and
+transactions as the Python API and CLI. It adds saved mapping reviews, an
+operation journal and a browser for receiving, reading and selecting complete
+editions.
+
+With the existing PostgreSQL connection environment configured, start it with:
+
+```sh
+stellar-forge-postgres \
+  --connection-env SF_BUYER_POSTGRES_DSN \
+  --schema sf_received \
+  serve --workspace /srv/private/customer/postgres-receiving --port 0 --open
+```
+
+The global connection and schema options go before `serve`; its private
+workspace and local port follow it. The first launch creates or reopens the
+dedicated receiving schema. A later launch reads the saved operator identity
+before opening PostgreSQL and requires the same warehouse UUID and schema.
+The same command also runs through the installed module:
+
+```sh
+python -m stellar_forge_buyer.postgres_cli \
+  --schema sf_received serve \
+  --workspace /srv/private/customer/postgres-receiving --port 0 --open
+```
+
+The browser listens on an available IPv4 loopback port. Its private launch URL
+is saved in `postgres-launch.json` inside that operator directory; `--open`
+opens it on the receiving host. Standard output announces the address, private
+launch file and warehouse identity. Use the complete saved URL when reopening
+a tab. A new server process creates a new browser capability, while the
+operator identity, reviews, requests and database editions remain the same.
+One receiving process owns an operator directory at a time.
+
+### Launch from the installed Python and Applications screens
+
+Use a source release containing the PostgreSQL receiving implementation, then
+open the existing **Python and workbooks** screen:
+
+1. Select the retained runtime and Python interpreter, enable **PostgreSQL
+   receiving · psycopg 3.3.6**, and complete the original installation review.
+   Reopen that retained installation when configuring the application.
+2. Select **PostgreSQL receiving workspace** under the installed Python
+   commands. Its prepared `serve` command selects the private operator
+   directory, the database schema, connection environment variable name and
+   local port. Choose **Configure in Applications**.
+3. In Applications, select the installed Python environment and the receiving
+   operator directory. Set **Connection environment variable** to
+   `SF_BUYER_POSTGRES_DSN`, or the existing name used on that host. Set
+   **Receiving database schema** to the dedicated schema and **Local port** to
+   `0` for an available port.
+4. Select the existing private environment JSON containing that variable, then
+   complete the application's configuration and start review. For a configured
+   libpq service, the file's relevant entry is:
+
+   ```json
+   {"SF_BUYER_POSTGRES_DSN":"service=customer_warehouse"}
+   ```
+
+5. Start the application and use its retained local browser link. Applications
+   matches the original private launch file, process ID, operator UUID,
+   warehouse UUID, selected schema and loopback address before exposing that
+   link. Stop and reopen it through the same retained application.
+
+The environment file supplies the connection value to the process; the managed
+command records its variable name. The installed `postgres` extra supplies
+the driver, and the selected PostgreSQL server or development runtime supplies
+the database. Its connection and credential configuration remains the receiving
+host's existing configuration.
+
+### Review, import and read
+
+In **Source review**, enter the absolute path of the original SF88
+dataset-delivery report, its original command envelope, the original SF100
+native delivery report, or a finalized SF100 scan. **Inspect delivery** reads
+every original row and checks the complete source binding. The table shows
+every source field, observed JSON types and null count. The first five rows are
+an additional preview of that complete inspection.
+
+Review each database column name, selected PostgreSQL type, null setting and
+business key. Suggested types use the complete input: original integer
+overflow selects exact `numeric`, decimal numbers retain exact `numeric`,
+strings remain `text`, booleans remain `boolean`, and mixed scalar types use
+explicit `json`. Date or timestamp conversion is an explicit reviewed choice.
+All fields remain in the mapping. Key fields must be nonnullable and comparable;
+PostgreSQL checks their uniqueness during the transaction.
+
+Enter the reviewer and any useful mapping note, then choose **Save complete
+mapping review**. That record retains the original report bytes, report digest,
+complete mapping and reviewed edition identity. **Import reviewed edition**
+uses that saved review. An already committed identical edition returns
+`UNCHANGED`; a new source or mapping produces a separately retained edition.
+The import leaves existing application view selections intact.
+
+**Retained editions** shows each original source binding, row count, schema and
+mapping. Row navigation reads the complete retained table in original ordinal
+order, fifty rows at a time. Each row can show its original source JSON beside
+the typed database values. Exact decimal values and integers outside
+JavaScript's safe integer range are displayed as text. The retained mapping
+identifies their database types.
+
+The selected edition provides three downloads:
+
+| Download | Complete retained content |
+| --- | --- |
+| **Original manifest** | The exact original source manifest bytes, checked against the edition digest |
+| **Column mapping** | Every source field, database column, selected type, null setting and business key |
+| **Receiving record** | The original warehouse and edition metadata, mapping, row count and source identity |
+
+### Select, compare and restore
+
+Use **Use in application view** from an edition, or open **Application views**.
+Select the intended view name and retained edition, then **Review current view
+and selection**. The review shows the warehouse's current view revision and
+selected edition. **Select this edition** passes that exact revision into the
+original PostgreSQL transaction.
+
+A concurrent view change leaves the new selection available for review and
+returns `DATASET_PG_VIEW_CHANGED`. Refresh the displayed current selection and
+review the desired change again. A different column signature requires a new
+view name. Existing application readers keep their ordinary SQL view contract
+and grants.
+
+The view's retained history includes each committed selection and its previous
+edition. Choose a historical edition to prepare a restore, review the current
+revision, and select it through the same operation. Restoring creates the next
+selection revision and keeps the later edition available.
+
+In **Compare editions**, select two editions with the same explicit mapping
+and business keys, then **Compare all rows**. PostgreSQL computes complete
+added, removed, changed and unchanged totals. The browser pages through the
+actual changed records; the displayed totals cover the whole key join.
+Inspect the retained original JSON when a source formatting change needs to
+be distinguished from its mapped typed value.
+
+### Recover the original operation
+
+An import or view selection receives its original request ID before the browser
+sends it. The operator saves that request and its exact body before running SQL.
+The **Operations** screen reopens saved results and lets an interrupted request
+resume under the same ID.
+
+For an import, recovery reads the reviewed deterministic edition identity. If
+that edition already committed, it returns the original retained edition. If
+it did not commit, the receiver uses the same retained review and original
+delivery to perform the transaction.
+
+For a view selection, the request retains the exact reviewed current revision
+and prior edition. Recovery first reads PostgreSQL's current state. If the
+original change committed and another operator subsequently selected a newer
+edition, it finds the original committed history entry and returns
+`RECOVERED` with the currently observed selection. It keeps that newer
+selection in place. A request that lost the original revision race returns
+`DATASET_PG_VIEW_CHANGED`; the user can review the new current state and
+create a new intended selection.
+
+The private operator directory contains `postgres-workspace.json`,
+`reviews/`, `reviewed-sources/` and `requests/`. Preserve that directory
+with the same database's receiving schema. Stop its process before taking the
+coordinated backup, retain the complete PostgreSQL schema through the database
+owner's backup procedure, then reopen the restored schema and operator
+directory together. The original source report and its data room remain
+necessary for a reviewed import that has not committed. A committed edition
+retains its rows, manifest and metadata inside PostgreSQL.
+
 ## Review the full delivery and its mapping
 
 Reopen the original complete acquisition and its data room:
@@ -127,10 +294,11 @@ stellar-forge-postgres --out /srv/private/customer/pg-review.json review \
 ```
 
 Alternatively, supply `--report /srv/private/original-delivery-report.json`
-instead of the three session options. That file is the original SF88
-dataset-delivery report or its original `{"report": ...}` command envelope.
-The report points at the existing SF100 data room. All original file and
-manifest checks still run; no source paths are silently relocated.
+instead of the three session options. That file can be the original SF88
+dataset-delivery report or its original `{"report": ...}` command envelope,
+an original SF100 native delivery report, or a finalized SF100 scan. The shared
+loader reopens the existing original data room and checks the complete native
+report when supplied. All original file and manifest checks still run.
 
 ## Commit the complete edition
 
@@ -144,7 +312,9 @@ print(edition["import_status"], edition["qualified_table"])
 
 The constructor creates or reopens the dedicated warehouse by default. Use
 `create=False` for an application that only receives into an already initialized
-warehouse. The command-line interface uses explicit `init` for creation:
+warehouse. The command-line receiving commands use explicit `init` for creation;
+the interactive `serve` command creates or reopens its dedicated receiving
+schema on launch:
 
 ```sh
 stellar-forge-postgres --schema sf_received import \

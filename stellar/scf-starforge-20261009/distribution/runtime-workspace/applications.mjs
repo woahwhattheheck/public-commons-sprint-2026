@@ -1,4 +1,5 @@
 // MIT. Application lifecycle over the original READY runtime and managed-command worker.
+import { readDistributionSpecification } from '../specification.mjs';
 import { grpcApplication, prepareGrpcApplication } from './application-grpc.mjs';
 import { readdir, lstat, realpath, access } from 'node:fs/promises';
 import { constants } from 'node:fs';
@@ -12,23 +13,29 @@ import { odataApplication, prepareODataApplication } from '../../sf30-seller-sdk
 import { secEdgarApplication, prepareSecEdgarApplication } from './application-sec-edgar.mjs';
 import { jobResultReceiverApplication, prepareJobResultReceiverApplication } from './application-job-result-receiver.mjs';
 import { sheetsApplication, prepareSheetsApplication } from './application-sheets.mjs';
+import { nocodbApplication, prepareNocoDBApplication } from './application-nocodb.mjs';
+import { stellarExpertApplication, prepareStellarExpertApplication } from './application-stellar-expert.mjs';
 import { atlasApplication, prepareAtlasApplication } from './application-atlas.mjs';
 import { n8nApplication, prepareN8nApplication } from './application-n8n.mjs';
 import { redisApplication, prepareRedisApplication } from './application-redis.mjs';
 import { openApiApplication, prepareOpenApiApplication } from './application-openapi.mjs';
 import { arcgisAgentApplication, prepareArcgisAgentApplication } from './application-arcgis.mjs';
+import { s3MerchantApplication, prepareS3MerchantApplication } from './application-s3-merchant.mjs';
 import { jobCheckoutApplication, validateJobCheckoutSelection, prepareJobCheckoutApplication } from './application-job-checkout.mjs';
 import { datasetBuyerApplication, prepareDatasetBuyerApplication } from './application-dataset-buyer.mjs';
 import { pricingApplication, validatePricingSelection, preparePricingApplication } from './application-pricing.mjs';
 import { collectionsApplication, prepareCollectionsApplication } from './application-collections.mjs';
+import { baserowApplication, prepareBaserowApplication } from './application-baserow.mjs';
 import { grantApplication, prepareGrantApplication } from './application-grant.mjs';
 import { fredApplication, prepareFredApplication } from './application-fred.mjs';
+import { apiPassWorkspaceApplication, prepareApiPassWorkspaceApplication } from '../../sf101-merchant-receiver/api-access/workspace/application.mjs';
 import { eventFeedApplications, prepareEventFeedApplication } from './application-event-feed.mjs';
 import { tenderlyApplication, prepareTenderlyApplication } from './application-tenderly.mjs';
 import { browserWalletApplication, prepareBrowserWalletApplication } from './application-browser-wallet.mjs';
 import { rssAtomApplication, prepareRssAtomApplication } from './application-rss-atom.mjs';
 import { inspectMerchantRuntime } from '../../sf46-release/runtime-package.mjs';
-import { managedState, openManagedHome, reviewManagedAdoption } from './managed-workspace.mjs';
+import { managedState, managedHome, openManagedHome, reviewManagedAdoption } from './managed-workspace.mjs';
+import { applicationRunPage, applicationHistoryLimit } from './application-history.mjs';
 import { applicationEnvironment, readApplicationTerminal, sendApplicationTerminal } from './application-command.mjs';
 import { PYTHON_APPLICATION_CATALOG, pythonApplicationCommand, pythonApplicationResource } from '../python-runtime/application-lifecycle.mjs';
 import { absolute, privateDirectory, makePrivate, regular, readJSON, saveJSON, recordId, operationId,
@@ -58,6 +65,7 @@ export const APPLICATION_CATALOG = Object.freeze([
   n8nApplication(common),
   ...PYTHON_APPLICATION_CATALOG,
   ...eventFeedApplications(common),
+  apiPassWorkspaceApplication(common),
   blockscoutApplication(common),
   mppApplication(common),
   ndjsonApplication(common),
@@ -66,12 +74,16 @@ export const APPLICATION_CATALOG = Object.freeze([
   secEdgarApplication(common),
   jobResultReceiverApplication(common),
   sheetsApplication(common),
+  nocodbApplication(common),
+  stellarExpertApplication(common),
   redisApplication(common),
   arcgisAgentApplication(common),
+  s3MerchantApplication(common),
   jobCheckoutApplication(common),
   datasetBuyerApplication(common),
   pricingApplication(common),
   collectionsApplication(common),
+  baserowApplication(common),
   grantApplication(common),
   fredApplication(common),
   tenderlyApplication(common),
@@ -124,7 +136,11 @@ export const APPLICATION_CATALOG = Object.freeze([
       field('openalexModule', 'Original OpenAlex workspace module', 'path', false,
         'Optional explicit workspace.mjs from the original provider source; otherwise use this selected runtime.'),
       field('editionAdapter', 'Original provider edition adapter', 'path', false,
-        'Optional local adapter module for retained provider references such as Valyu.'), ...common] },
+        'Optional local adapter module for retained provider references such as Valyu.'),
+      field('crossrefState', 'Private Crossref source directory', 'path', false,
+        'Optional retained source directory. Enables DOI metadata using public Crossref.'),
+      field('crossrefConfig', 'Original Crossref merchant configuration', 'path', false,
+        'Optional existing configuration; requires the Crossref source directory.'), ...common] },
   { id: 'buyer-expenses', command: 'buyer-expenses',
     requiredSource: 'stellar/scf-starforge-20261009/sf36-spend-governor/expense-workspace/server.py',
     title: 'Buyer expenses', terminal: false,
@@ -214,8 +230,12 @@ function normalizeSettings(type, input) {
     need(!settings.create || settings.sourceFile && settings.stateDirectory, 'APPLICATION_PUBLISHER_SOURCE_REQUIRED');
     need(Boolean(settings.seller) === Boolean(settings.resource), 'APPLICATION_BUYER_ENDPOINT_PAIR_REQUIRED');
   }
-  if (type.id === 'research-dossiers') need(!settings.openalexModule || settings.openalexWorkspaceDirectory,
-    'APPLICATION_OPENALEX_WORKSPACE_REQUIRED', 'Choose the original saved OpenAlex workspace with its module');
+  if (type.id === 'research-dossiers') {
+    need(!settings.openalexModule || settings.openalexWorkspaceDirectory,
+      'APPLICATION_OPENALEX_WORKSPACE_REQUIRED', 'Choose the original saved OpenAlex workspace with its module');
+    need(!settings.crossrefConfig || settings.crossrefState,
+      'APPLICATION_CROSSREF_STATE_REQUIRED', 'Choose the original Crossref source directory with its configuration');
+  }
   return settings;
 }
 async function applicationCommand(type, settings, runtimeDirectory, context = {}) {
@@ -223,7 +243,7 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
     ...context, runtimeDirectory, inputPath, selectedExecutable, applicationEnvironment,
   });
   const inputs = [], createDirectories = [], args = [];
-  let terminalPython, eventFeed, mppBinding, selectedResourceKey, jobResultReceiver, stellarApplication, openapi;
+  let terminalPython, eventFeed, apiPassWorkspace, mppBinding, selectedResourceKey, jobResultReceiver, stellarApplication, openapi;
   const path = async (name, kind = 'directory', missing = false, privateOnly = false) => {
     if (!settings[name]) return;
     const value = await inputPath(settings[name], kind, missing, privateOnly); inputs.push(value); return value;
@@ -254,9 +274,19 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
       inputPath, runtimeDirectory, applicationEnvironment,
     });
     args.push(...original.args); inputs.push(...original.inputs); jobResultReceiver = original.identity;
+  } else if (type.id === 'nocodb-authoring') {
+    const original = await prepareNocoDBApplication(settings, { inputPath, runtimeDirectory });
+    args.push(...original.args); inputs.push(...original.inputs); createDirectories.push(...original.createDirectories);
+  } else if (type.id === 'stellar-expert') {
+    const original = await prepareStellarExpertApplication(settings, { inputPath, runtimeDirectory });
+    args.push(...original.args); inputs.push(...original.inputs); createDirectories.push(...original.createDirectories);
   } else if (type.id === 'sheets-authoring') {
     const original = await prepareSheetsApplication(settings, { inputPath, runtimeDirectory });
     args.push(...original.args); inputs.push(...original.inputs); createDirectories.push(...original.createDirectories);
+  } else if (type.id === 'api-pass-customer') {
+    const original = await prepareApiPassWorkspaceApplication(settings, { runtimeDirectory, inputPath, selectedExecutable });
+    args.push(...original.args); inputs.push(...original.inputs); createDirectories.push(...original.createDirectories);
+    apiPassWorkspace = original.identity;
   } else if (['mercury-feed', 'buyer-event-feed'].includes(type.id)) {
     const selected = await prepareEventFeedApplication(type.id, settings, {
       ...context, runtime: { directory: runtimeDirectory }, inputPath, selectedExecutable,
@@ -268,12 +298,20 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
   } else if (type.id === 'redis') {
     const original = await prepareRedisApplication(settings, inputPath, runtimeDirectory);
     args.push(...original.args); inputs.push(...original.inputs);
+  } else if (type.id === 's3-merchant') {
+    const original = await prepareS3MerchantApplication(settings, { ...context, inputPath, runtimeDirectory });
+    args.push(...original.args); inputs.push(...original.inputs);
+    createDirectories.push(...original.createDirectories);
   } else if (type.id === 'arcgis-agent') {
     const original = await prepareArcgisAgentApplication(settings, inputPath, runtimeDirectory);
     args.push(...original.args); inputs.push(...original.inputs);
   } else if (type.id === 'job-checkout') {
     const original = await prepareJobCheckoutApplication(settings, runtimeDirectory, inputPath);
     args.push(...original.args); inputs.push(...original.inputs); createDirectories.push(...original.createDirectories);
+  } else if (type.id === 'baserow-authoring') {
+    const prepared = await prepareBaserowApplication(settings, { inputPath, runtimeDirectory });
+    args.push(...prepared.args); inputs.push(...prepared.inputs);
+    createDirectories.push(...prepared.createDirectories);
   } else if (type.id === 'buyer-collections') {
     const prepared = await prepareCollectionsApplication(settings, { inputPath, runtimeDirectory });
     args.push(...prepared.args); inputs.push(...prepared.inputs);
@@ -384,6 +422,11 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
     if (!workspace.exists) createDirectories.push(workspace.path);
     await path('editionAdapter', 'file');
     await path('openalexModule', 'file');
+    if (settings.crossrefState) {
+      const source = await path('crossrefState', 'directory', true, true);
+      if (!source.exists && !createDirectories.includes(source.path)) createDirectories.push(source.path);
+      await path('crossrefConfig', 'file');
+    }
     if (settings.openalexWorkspaceDirectory) {
       await path('openalexWorkspaceDirectory', 'directory', false, true);
       for (const part of ['queries', 'editions'])
@@ -393,6 +436,8 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
     option('--edition-adapter', settings.editionAdapter);
     option('--openalex-workspace', settings.openalexWorkspaceDirectory);
     option('--openalex-module', settings.openalexModule);
+    option('--crossref-state', settings.crossrefState);
+    option('--crossref-config', settings.crossrefConfig);
   } else if (type.id === 'buyer-expenses') {
     const state = await path('stateDirectory', 'directory', true, true);
     if (!state.exists) createDirectories.push(state.path);
@@ -441,6 +486,7 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
   const environment = await applicationEnvironment(settings.environmentFile);
   return { command: type.command, args, inputs, createDirectories, terminal: type.terminal,
     ...(eventFeed ? { eventFeed } : {}),
+    ...(apiPassWorkspace ? { apiPassWorkspace } : {}),
     ...(mppBinding ? { mppBinding } : {}),
     ...(openapi ? { openapi } : {}),
     ...(stellarApplication ? { stellarApplication } : {}),
@@ -495,24 +541,30 @@ async function busyApplication(root, id) {
   }
   return null;
 }
-async function selectedRelease(root, saved) {
-  const homes = await managedState(root, { homeId: saved.homeId });
-  const home = homes.homes.find(item => item.id === saved.homeId);
+async function selectedRelease(root, saved, homes = null) {
+  // This map belongs to one overview request, never to a lifecycle action.
+  if (homes && !homes.has(saved.homeId)) homes.set(saved.homeId, managedHome(root, saved.homeId));
+  const home = await (homes ? homes.get(saved.homeId) : managedHome(root, saved.homeId));
   const release = home?.releases.find(item => item.runtime &&
     bindingKeys.every(key => item.runtime[key] === saved.runtime[key]));
   return { home, release };
 }
-async function view(root, saved) {
-  const { home, release } = await selectedRelease(root, saved);
-  const history = await runs(root, saved.id);
-  const rows = await Promise.all(history.slice(0, 30).map(async run => {
-    const cancelled = await runCancellation(root, saved.id, run.id);
+async function runViews(root, applicationId, history) {
+  return Promise.all(history.map(async run => {
+    const cancelled = await runCancellation(root, applicationId, run.id);
     const observed = cancelled ? { id: run.id, phase: 'CANCELLED', active: false, result: cancelled } : await operationView(root, run.id);
     return { id: run.id, createdAt: run.createdAt, revision: run.revision, command: run.request.command,
       args: run.request.args, terminal: run.request.terminal === true, ...observed,
       request: undefined, privateUrl: observed.active && !observed.stop ? observed.url?.url ?? null : null,
       privateLinks: observed.active && !observed.stop && Array.isArray(observed.url?.links) ? observed.url.links : [] };
   }));
+}
+async function view(root, saved, { homes = null, historyLimit = 30 } = {}) {
+  const [{ home, release }, page] = await Promise.all([
+    selectedRelease(root, saved, homes),
+    applicationRunPage(root, { applicationId: saved.id, limit: historyLimit }),
+  ]);
+  const rows = await runViews(root, saved.id, page.runs);
   const current = rows[0] ?? null;
   const adoption = !release && saved.adoption ? await operationView(root, saved.adoption.requestId) : null;
   const phase = !release ? 'CONNECTING' : !current ? 'READY' :
@@ -521,17 +573,26 @@ async function view(root, saved) {
         current.phase;
   return { ...saved, phase, release: release ? { id: release.id, digest: release.digest, sourceCommit: release.sourceCommit } : null,
     home: home ? { id: home.id, directory: home.directory, revision: home.revision, phase: home.phase } : null,
-    adoption, current, runs: rows, totalRuns: history.length };
+    adoption, current, runs: rows, totalRuns: page.totalRuns,
+    history: { limit: page.limit, nextCursor: page.nextCursor } };
 }
-export async function applicationsState(root) {
+export async function applicationsState(root, { historyLimit = 30 } = {}) {
+  historyLimit = applicationHistoryLimit(historyLimit);
   await initializeApplications(root);
   const names = (await readdir(join(root, 'applications'))).filter(name => /^[a-f0-9]{24}$/.test(name));
+  const homes = new Map();
   const items = await Promise.all(names.map(async id => {
-    try { return await view(root, await application(root, id)); }
+    try { return await view(root, await application(root, id), { homes, historyLimit }); }
     catch (error) { return { id, label: id, phase: 'UNAVAILABLE', error: errorView(error) }; }
   }));
   items.sort((a, b) => String(a.label).localeCompare(String(b.label)) || a.id.localeCompare(b.id));
   return { schema: 'stellar-forge.runtime-applications.v1', catalog: APPLICATION_CATALOG, applications: items };
+}
+export async function applicationsHistory(root, input = {}) {
+  await application(root, recordId(input.applicationId));
+  const page = await applicationRunPage(root, input);
+  return { schema: 'stellar-forge.application-history.v1', ...page,
+    runs: await runViews(root, input.applicationId, page.runs) };
 }
 export async function reviewApplication(root, { runtimeId, runtimeDirectory, kind, settings: input,
   label, applicationId = null, expectedRevision = null, homeId = null } = {}) {
@@ -545,7 +606,7 @@ export async function reviewApplication(root, { runtimeId, runtimeDirectory, kin
   const type = applicationType(kind), settings = normalizeSettings(type, input);
   need(typeof label === 'string' && label.trim() && label.length <= 120, 'APPLICATION_LABEL_REQUIRED');
   const runtime = await inspectMerchantRuntime(absolute(runtimeDirectory), { load: false });
-  const spec = await readJSON(join(runtime.sourceRoot, 'stellar/scf-starforge-20261009/distribution/distribution.json'));
+  const { spec } = await readDistributionSpecification({ sourceRoot: runtime.sourceRoot });
   need(type.python || Object.hasOwn(spec.commands ?? {}, type.command), 'APPLICATION_NOT_IN_RUNTIME',
     'This selected runtime does not include ' + type.command + '. Choose a runtime containing that original command.');
   if (type.requiredSource) await regular(join(runtime.sourceRoot, type.requiredSource), 4 * 1024 * 1024).catch(() =>
@@ -555,6 +616,18 @@ export async function reviewApplication(root, { runtimeId, runtimeDirectory, kin
       'stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research/workspace.mjs'), 4 * 1024 * 1024).catch(() =>
       need(false, 'APPLICATION_NOT_IN_RUNTIME',
         'Choose a runtime containing the original OpenAlex workspace or select its explicit original module'));
+  if (type.id === 'research-dossiers' && settings.crossrefState) {
+    const required = [
+      'stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/crossref-workspace.mjs',
+      'stellar/scf-starforge-20261009/sf30-seller-sdk/crossref/source.mjs',
+      ...(settings.crossrefConfig ? [
+        'stellar/scf-starforge-20261009/sf30-seller-sdk/crossref/config.mjs',
+        'stellar/scf-starforge-20261009/sf30-seller-sdk/crossref/merchant.mjs',
+      ] : []),
+    ];
+    for (const path of required) await regular(join(runtime.sourceRoot, path), 4 * 1024 * 1024).catch(() =>
+      need(false, 'APPLICATION_NOT_IN_RUNTIME', 'Choose a runtime containing the original Crossref research workspace and source'));
+  }
   const command = await applicationCommand(type, settings, runtime.directory, { root, runtimeId });
   const homes = (await managedState(root)).homes;
   let home = homeId ? homes.find(item => item.id === recordId(homeId)) : homes.find(item => item.releases.some(release =>

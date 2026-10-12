@@ -69,6 +69,14 @@ For an operator's public judge service, use its existing HTTPS hosting and appro
 
 Relevant implementation guides: [Foundry admission](FOUNDRY_ADMISSION.md), [Foundry grounding](FOUNDRY_GROUNDING.md), and [Microsoft's REST specification](https://learn.microsoft.com/en-us/rest/api/microsoft-foundry/azureopenai/chat?view=rest-microsoft-foundry-v1).
 
+## Microsoft Agent Framework tool explanations
+
+The optional **Explain with tools** action uses the pinned Microsoft Agent Framework 1.21.0 worker to explain the exact observed match. Its two local tools expose the current match state and counterpress moment to the operator's existing guarded model runner. The player retains the completed caption, explanation and original tool/provider records with that match.
+
+Follow [Microsoft Agent Framework setup and operation](AGENT_FRAMEWORK.md) to configure the equipped worker, request an explanation and retain its original job. The same guide includes a command for receiving an already completed worker result as an ordinary portable match. [Retained match insights](RETAINED_INSIGHTS.md) covers saved-frame reopening, coach comparisons, archive restart and delivery to another installation.
+
+Coaches use the existing **Saved matches**, **Coach review**, export and import controls for the complete event log, notes, bookmarks and explanations. A recipient can reopen the saved explanation in the Node application from the retained package.
+
 ## Competition and running-product demo
 
 Microsoft's [official Inside the Game rules](https://github.com/microsoft/insidethegamehackathon/blob/main/OFFICIAL%20RULES.md) require registration by **October 20, 2026 at noon Pacific** and submission by **October 27, 2026 at 11:59 PM Pacific**. Delivery includes public source, a public video under two minutes demonstrating actual functionality, and free functioning access or a test build for judges. The solution must use permitted Microsoft technology and fit the entered category.
@@ -84,6 +92,9 @@ The [original browser recorder](demo/README.md) launches the real application an
 | `src/live_sessions.mjs` | Independent session lifecycle, retained-event restoration and native frames |
 | `src/server.mjs` | HTTP/SSE player, archive APIs and optional commentary routes |
 | `src/match_archive.mjs` | Durable original matches, review revisions and portable packages |
+| `src/retained_insight.mjs` | Original insight continuity and saved source binding |
+| `src/opus_agent_bridge.mjs`, `counterpress/microsoft_agent_worker.py` | Microsoft Agent Framework tool workflow and original guarded runner |
+| `src/receive_agent_insight.mjs` | Complete original worker-output receiving into a portable match |
 | `web/app.js` | Pitch, play-by-play, frame controls, personalization and sequence review |
 | `web/archive.js` | Saved collections, autosaved notes, bookmarks and shared replay workflow |
 | `web/index.html`, `web/style.css` | Responsive industrial interface |
