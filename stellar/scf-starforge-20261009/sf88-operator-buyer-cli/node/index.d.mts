@@ -8,6 +8,52 @@ export interface OperatorProfile {
   requestTimeoutMs?: number;
   buyerTransport?: { mode: 'explicit-connect'; origin: string; proxyUrl?: string; proxyEnv?: string };
 }
+/** Allocates the exact caller-owned inode without changing its logical EOF. */
+export interface FileReservationInput {
+  fileHandle: import('node:fs/promises').FileHandle;
+  path: string;
+  kind: string;
+  bytes: number;
+  signal?: AbortSignal;
+}
+/** The helper must settle all I/O before resolving; the caller keeps the descriptor. */
+export type FileReservation = (input: Readonly<FileReservationInput>) => Promise<unknown>;
+export interface NativeFileReservationDescriptor {
+  schema: 'stellar-forge.sf88.file-reservation.v1';
+  executable: string;
+  executableSha256: string;
+  timeoutMs: number;
+}
+export interface NativeRuntimeSourceDescriptor {
+  directory: string;
+  sourceManifestFile: string;
+  sourceManifestSha256: string;
+}
+export interface NativeRuntimeSourceManifest {
+  schema: 'stellar-forge.node-successor-runtime-source.v1';
+  sourceDirectory: string;
+  runtimeDirectory: string;
+  files: Array<{path: string; bytes: number; sha256: string}>;
+}
+export interface NativeRuntimeSourceBinding {
+  schema: 'stellar-forge.node-successor-runtime-binding.v1';
+  directory: string;
+  sourceDirectory: string;
+  sourceManifestFile: string;
+  sourceManifestSha256: string;
+  sourceManifestBytes: number;
+  filesSha256: string;
+  fileCount: number;
+  sourceBytes: number;
+  sha256: string;
+}
+export const FILE_RESERVATION_SCHEMA: 'stellar-forge.sf88.file-reservation.v1';
+export function normalizeNativeFileReservation(value: NativeFileReservationDescriptor | undefined): Readonly<NativeFileReservationDescriptor> | undefined;
+export function inspectNativeFileReservation(options: {executable: string; timeoutMs?: number}): Promise<Readonly<NativeFileReservationDescriptor>>;
+export function createNativeFileReservation(value: NativeFileReservationDescriptor): Promise<FileReservation>;
+export function readSuccessorRuntimeSource(value: NativeRuntimeSourceDescriptor, options?: {signal?: AbortSignal}): Promise<NativeRuntimeSourceBinding>;
+export function verifySuccessorRuntimeSource(value: NativeRuntimeSourceBinding, options?: {signal?: AbortSignal}): Promise<NativeRuntimeSourceBinding>;
+
 export interface BuyerOptions {
   /** Absolute path to the original sf88-operator-buyer-cli directory. */
   runtimeDirectory: string;
@@ -19,6 +65,12 @@ export interface BuyerOptions {
   timeoutMs?: number;
   cleanupGraceMs?: number;
   outputLimit?: number;
+  /** Same-process actual-FD allocator; the native child needs the serializable descriptor below. */
+  reserveFile?: FileReservation;
+  /** Explicit hashed Linux allocation executable used by parent and native bootstrap. */
+  nativeFileReservation?: NativeFileReservationDescriptor;
+  /** Exact complete source binding rechecked before each native invocation. */
+  nativeRuntimeSource?: NativeRuntimeSourceBinding;
   /** Separate original dataset report budget; 32 MiB default, 1–256 MiB allowed. */
   datasetReportLimit?: number;
   /** Separate inbox snapshot/report result budget; 32 MiB default, 1–256 MiB allowed. */
@@ -176,6 +228,8 @@ export class Buyer {
   createInbox(options: { directory: string; signal?: AbortSignal }): Promise<Inbox>;
   inspectOperationHandoff(file: string, options?: { accept?: number; signal?: AbortSignal }): Promise<OperationHandoffView>;
   operation(intentId: string): Operation;
+  /** Reopen this exact ID in its explicitly selected runtime; does not prepare or follow later children. */
+  openOperation(intentId: string, options?: {signal?: AbortSignal}): Promise<Operation>;
   fromConfig(input: string | JsonObject, options?: ImportOptions): Promise<Operation>;
   /** Adopt original operator configuration; keys are loaded only by its native child. */
   fromWorkspace(directory: string, options?: WorkspaceImportOptions): Promise<Operation>;
@@ -1394,7 +1448,10 @@ export interface ExpiredContinuationStatus {
 }
 
 /** Exact original authorization has no durable signed-dispatch record. */
-export interface UndispatchedContinuationOptions extends Omit<ExpiredContinuationOptions,'expiryEvidence'> {}
+export interface UndispatchedContinuationOptions extends Omit<ExpiredContinuationOptions,'expiryEvidence'> {
+  /** Explicit complete replacement source; keeps the original parent and state at their canonical paths. */
+  successorRuntime?: NativeRuntimeSourceDescriptor;
+}
 export interface UndispatchedAuthorizationEvidence {
   schema: 'stellar-forge.sf88.undispatched-authorization-evidence.v1';
   kind: 'ORIGINAL_AUTHORIZATION_NOT_DISPATCHED';
@@ -1412,5 +1469,6 @@ export interface UndispatchedContinuationStatus {
     authorization: UndispatchedAuthorizationEvidence;
     reservation: Record<string, unknown> & {request_id: string; request_digest: string; state: 'reserved'; actual: '0'; amount: string; sourceSha256: string; recordAuthority: string};
     accounting: 'ORIGINAL_RESERVATION_RETAINED; SUCCESSOR_REQUIRES_ORIGINAL_APPROVAL';
+    successorRuntime?: NativeRuntimeSourceBinding;
   };
 }

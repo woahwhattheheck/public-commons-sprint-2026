@@ -521,6 +521,7 @@ export function createBuyerPageFetcher({buyer,requestForPage,buyerOptions={}}){
     check(plain(proposed)&&proposed.method==='GET'&&typeof proposed.url==='string'&&proposed.intentId===intentId,'GENERATED_PAGE_REQUEST_INVALID');
     let operation=buyer.operation(intentId),result;
     if(await exists(operation.configPath)){
+      if(typeof buyer.openOperation==='function')operation=await buyer.openOperation(intentId,{signal});
       const config=await readJson(operation.configPath);
       for(const key of ['url','method','expect'])check(canonical(config.operation[key]??null)===canonical(proposed[key]??null),'NATIVE_PAGE_REQUEST_CHANGED',undefined,409);
       // Follow only a successor explicitly prepared by the original SDK operator.

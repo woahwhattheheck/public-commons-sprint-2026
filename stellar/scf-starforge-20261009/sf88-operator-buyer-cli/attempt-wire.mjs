@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import { isDeepStrictEqual } from 'node:util';
 import {
   BuyerError, digest, now, privateDirectory, readBytes, parseJson, writeBytes,
-  jsonBytes, exists, need,
+  jsonBytes, exists, need, prepareWriteReservations,
 } from './node/store.mjs';
 
 const SCHEMA = 'stellar-forge.sf88.attempt-wire.v1';
@@ -110,7 +110,7 @@ function view(directory, source, events, writerActive = false) {
 /** Called once by original execute before the buyer/approval/signer can run.
  * All wire payloads remain in the caller's existing private evidence directory.
  * No socket, signer, approval or ledger capability is provided by this module. */
-export async function createAttemptWireRecorder({cfg, body, fetchImpl}) {
+export async function createAttemptWireRecorder({cfg, body, fetchImpl, reserveFile, signal}) {
   need(typeof fetchImpl === 'function', 'WIRE_ORIGINAL_TRANSPORT_REQUIRED');
   const frozen = JSON.parse(JSON.stringify(cfg));
   const originalBody = requestBody(body);
@@ -125,9 +125,17 @@ export async function createAttemptWireRecorder({cfg, body, fetchImpl}) {
   need(sourceRaw.length <= SOURCE_LIMIT, 'WIRE_SOURCE_TOO_LARGE');
   const held = await ownership(directory,true);
   need(held,'WIRE_ATTEMPT_ACTIVE');
-  try { await writeBytes(join(directory, 'source.json'), sourceRaw, {exclusive:true}); }
-  catch (error) {
-    await held.close();
+  let reservations;
+  try {
+    // These are the actual future checkpoint inodes, held before approval or signing.
+    reservations = await prepareWriteReservations([
+      {path:join(directory,'source.json'),bytes:sourceRaw.length,exclusive:true},
+      ...EVENTS.map(name=>({path:join(directory,name+'.json'),bytes:RECORD_LIMIT,exclusive:true})),
+    ], {reserveFile,signal});
+    if (reservations) await reservations.writeBytes(join(directory,'source.json'),sourceRaw,{exclusive:true});
+    else await writeBytes(join(directory,'source.json'),sourceRaw,{exclusive:true});
+  } catch (error) {
+    try { await reservations?.close(); } finally { await held.close(); }
     if (error.code === 'EEXIST') throw new BuyerError('WIRE_ATTEMPT_ALREADY_RECORDED_USE_RECOVERY');
     throw error;
   }
@@ -140,7 +148,8 @@ export async function createAttemptWireRecorder({cfg, body, fetchImpl}) {
       phase:name, recordedAt:now(), ...fields});
     const value = parseJson(raw);
     need(raw.length <= RECORD_LIMIT, 'WIRE_RECORD_TOO_LARGE');
-    await writeBytes(join(directory, name + '.json'), raw, {exclusive:true});
+    if (reservations) await reservations.writeBytes(join(directory,name+'.json'),raw,{exclusive:true});
+    else await writeBytes(join(directory,name+'.json'),raw,{exclusive:true});
     events[name] = {raw,value,sha256:digest(raw),bytes:raw.length};
     return events[name];
   }
@@ -212,7 +221,7 @@ export async function createAttemptWireRecorder({cfg, body, fetchImpl}) {
     return response;
   }
   return Object.freeze({fetch,signingInput,signingResult,signingError,
-    async close(){if(!closed){await held.close();closed=true;}},
+    async close(){if(!closed){closed=true;try{await reservations?.close();}finally{await held.close();}}},
     snapshot:() => view(directory,source,events,!closed)});
 }
 
