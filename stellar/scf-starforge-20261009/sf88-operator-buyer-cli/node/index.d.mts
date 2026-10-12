@@ -54,6 +54,20 @@ export function createNativeFileReservation(value: NativeFileReservationDescript
 export function readSuccessorRuntimeSource(value: NativeRuntimeSourceDescriptor, options?: {signal?: AbortSignal}): Promise<NativeRuntimeSourceBinding>;
 export function verifySuccessorRuntimeSource(value: NativeRuntimeSourceBinding, options?: {signal?: AbortSignal}): Promise<NativeRuntimeSourceBinding>;
 
+/** Source selected for one linked preapproval attempt; original operation identity remains fixed. */
+export interface PreapprovalExecutionRuntime {
+  schema: 'stellar-forge.node-preapproval-runtime-selection.v1';
+  originalRuntimeDirectory: string;
+  runtimeSource: NativeRuntimeSourceBinding;
+  nativeFileReservation: NativeFileReservationDescriptor | null;
+}
+export interface PreapprovalNativeDiagnostic {
+  schema: 'stellar-forge.node-preapproval-native-diagnostic.v1';
+  code: string;
+  bytes: number;
+  sha256: string;
+}
+
 export interface BuyerOptions {
   /** Absolute path to the original sf88-operator-buyer-cli directory. */
   runtimeDirectory: string;
@@ -160,6 +174,8 @@ export interface Review {
   readonly native: JsonObject;
   /** Original workspace chosen at preparation; its keys are not in application metadata. */
   readonly nativeWorkspace?: string;
+  /** Exact selected native source for a linked preapproval attempt. */
+  readonly executionRuntime?: PreapprovalExecutionRuntime;
 }
 export interface TransportCheckpointStatus {
   schema: 'stellar-forge.sf88.attempt-wire.v1';
@@ -190,6 +206,10 @@ export interface PreapprovalProcessProof extends JsonObject {
   schema: 'stellar-forge.node-preapproval-process-proof.v1';
   outcome: 'ORIGINAL_ATTEMPT_PROCESS_ABSENT';
   intentId: string; configSha256: string; attemptSha256: string;
+  nativeWorkspace: string | null;
+  executionMode?: 'DIRECT_CONFIG';
+  operatorPaths?: {policy: string; ledger: string; signerModule: string};
+  executionRuntime?: PreapprovalExecutionRuntime;
 }
 export interface PreapprovalLedgerCheck extends JsonObject {
   schema: 'stellar-forge.sf88.unpaid-ledger-check.v1';
@@ -220,6 +240,8 @@ export interface PreapprovalRecoveryPrepared {
   planSha256: string; review: Review;
   originalLedgerCheck: PreapprovalLedgerCheck; processProof: PreapprovalProcessProof;
   originalWire?: PreapprovalWireCheckpoint; wireHistory?: PreapprovalWireHistory;
+  executionRuntime?: PreapprovalExecutionRuntime;
+  nativeDiagnostic?: PreapprovalNativeDiagnostic;
 }
 export interface PreapprovalRecoveryAvailable {
   schema: 'stellar-forge.node-preapproval-recovery.v1'; intentId: string;
@@ -228,12 +250,14 @@ export interface PreapprovalRecoveryAvailable {
     bytes?: number; sha256?: string; device?: number; inode?: number }>;
   originalLedgerCheck: PreapprovalLedgerCheck; processProof: PreapprovalProcessProof;
   originalWire: PreapprovalWireCheckpoint;
+  nativeDiagnostic?: PreapprovalNativeDiagnostic;
 }
 export interface PreapprovalRecoveryHistory {
   schema: 'stellar-forge.node-preapproval-recovery.v1'; intentId: string;
   state: string; directory: string;
   history: Array<{ directory: string; planSha256: string; attemptSha256: string;
-    reason: string; createdAt: string; wireHistory?: PreapprovalWireHistory }>;
+    reason: string; createdAt: string; wireHistory?: PreapprovalWireHistory;
+    executionRuntime?: PreapprovalExecutionRuntime }>;
   pending: PreapprovalRecoveryPrepared | null;
 }
 
@@ -269,6 +293,10 @@ export interface ResultRecord {
   readonly runtimeError: string | null;
   readonly recovered: boolean;
   readonly recordedAt: string;
+  readonly preapprovalRecovery?: {
+    directory: string; planSha256: string; sourceAttemptSha256?: string;
+  };
+  readonly executionRuntime?: PreapprovalExecutionRuntime;
 }
 export class BuyerError extends Error {
   readonly code: string;
@@ -298,7 +326,8 @@ export class Buyer {
   createInbox(options: { directory: string; signal?: AbortSignal }): Promise<Inbox>;
   inspectOperationHandoff(file: string, options?: { accept?: number; signal?: AbortSignal }): Promise<OperationHandoffView>;
   operation(intentId: string): Operation;
-  /** Reopen this exact ID in its explicitly selected runtime; does not prepare or follow later children. */
+  /** Reopen this exact ID and any recorded preapproval controller, preserving the original native identity.
+   * Does not prepare a plan, follow a different intent, authorize or execute. */
   openOperation(intentId: string, options?: {signal?: AbortSignal}): Promise<Operation>;
   fromConfig(input: string | JsonObject, options?: ImportOptions): Promise<Operation>;
   /** Adopt original operator configuration; keys are loaded only by its native child. */
@@ -344,6 +373,9 @@ export class Operation {
   preparePreapprovalRecovery(options: {
     expectedAttemptSha256: string; nativeRecord?: PreapprovalNativeRecord;
     reason: string; signal?: AbortSignal;
+    /** Optional explicit complete runtime source for this same-intent continuation. */
+    nativeRuntimeSource?: NativeRuntimeSourceDescriptor;
+    nativeFileReservation?: NativeFileReservationDescriptor;
   }): Promise<PreapprovalRecoveryPrepared>;
   /** One explicit native attempt after exact plan/review comparison and fresh SF81 approval. */
   executePreapprovalRecovery(options: {

@@ -68,6 +68,17 @@ const PROTECTED_SOURCE_PROFILES = Object.freeze([
     id:'ORIGINAL_AUTHORIZATION_WITH_HELD_FILE_RESERVATIONS_AND_TEMPORARY_INVENTORY_V1',
     store:'dbaac9e39164422318839eb8b6e0de6e362f8d0c687c5d6e2b555c93fc72be04',
   }),
+  Object.freeze({
+    ...PROTECTED_SOURCE_PROFILE,
+    id:'ORIGINAL_AUTHORIZATION_WITH_HELD_FILES_AND_SELECTED_BRIDGE_CHANNEL_V1',
+    execute:'0af1fe73c5884e5ea359cd3c4530ac66d199b235de6a7efe7584c91481a2206a',
+  }),
+  Object.freeze({
+    ...PROTECTED_SOURCE_PROFILE,
+    id:'ORIGINAL_AUTHORIZATION_WITH_HELD_FILES_SELECTED_BRIDGE_AND_TEMPORARY_INVENTORY_V1',
+    execute:'0af1fe73c5884e5ea359cd3c4530ac66d199b235de6a7efe7584c91481a2206a',
+    store:'dbaac9e39164422318839eb8b6e0de6e362f8d0c687c5d6e2b555c93fc72be04',
+  }),
 ]);
 
 async function protectedEntrySource({runtime, directory, operation, bound, reader, signerSources, signal}) {
