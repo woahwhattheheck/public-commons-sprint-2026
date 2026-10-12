@@ -2,7 +2,7 @@
 
 This product opens the native Stellar MPP merchant, customer workbench and merchant agent as one retained application. Operators configure paid resources and exact prices, receive a merchant contract, prepare a purchase, approve it through the original spending governor, recover the same purchase after interruption, and receive the original response or complete customer package.
 
-Recurring channel work uses the same application: select an existing funded channel, authorize a useful task budget, receive each cumulative commitment's original response, add funds, collect the merchant's earned commitments while keeping the channel open, recover remaining funds and hand over the complete operating channel. Open **Channel work** in the browser for this workflow.
+Recurring channel work uses the same application: open and initially fund the selected channel or continue an existing one, authorize a useful task budget, receive each cumulative commitment's original response, add funds, collect the merchant's earned commitments while keeping the channel open, recover remaining funds and hand over the complete operating channel. Open **Channel work** in the browser for this workflow. Its opening form selects the original code, parties, initial deposit and refund period, retains the derived channel identity, and continues the same signed deployment after interruption.
 
 The browser is the existing native console. The agent is the existing merchant MCP with its native MPP tools. Both use the same private workspace, purchase identities, signed credentials and accounting records.
 

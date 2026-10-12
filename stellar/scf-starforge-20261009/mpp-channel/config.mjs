@@ -162,3 +162,28 @@ export function draftTask() {
     budget:{maximumAtomic:'', maximumUnitAtomic:'', maximumPurchases:1, expiresAt:''},
     signer:{keyEnv:'MPP_CHANNEL_COMMITMENT_SECRET'}, dependencyRoot:''};
 }
+
+export function openingConfig(value) {
+  need(plain(value) && plain(value.opening) && plain(value.funding),
+    'MPP_CHANNEL_OPENING_PROFILE_REQUIRED');
+  const terms=channel(value.channel),selected=value.opening;
+  need(validStrKey(terms.funder,'G') && value.funding.account===terms.funder,
+    'MPP_CHANNEL_OPENING_FUNDER_ACCOUNT_REQUIRED');
+  need(['existing','upload'].includes(selected.codeMode),'MPP_CHANNEL_CODE_MODE_REQUIRED');
+  need(Number.isInteger(selected.refundWaitingPeriod) && selected.refundWaitingPeriod>=0 &&
+    selected.refundWaitingPeriod<=4294967295,'MPP_CHANNEL_REFUND_WAITING_PERIOD_INVALID');
+  return {schema:'stellar-forge.mpp-channel-opening-profile.v1',
+    title:text(value.title,200,'MPP_CHANNEL_OPENING_TITLE_REQUIRED'),channel:terms,
+    dependencyRoot:absolute(value.dependencyRoot),
+    opening:{salt:sha(selected.salt),initialAmountAtomic:amount(selected.initialAmountAtomic,{zero:true}),
+      refundWaitingPeriod:selected.refundWaitingPeriod,codeMode:selected.codeMode,
+      ...(selected.codeMode==='upload'?{wasmFile:absolute(selected.wasmFile)}:{})},
+    funding:{account:terms.funder,keyEnv:envName(value.funding.keyEnv),
+      maximumFeeStroops:amount(value.funding.maximumFeeStroops),operator:id(value.funding.operator)}};
+}
+export function draftOpening() {
+  return {schema:'stellar-forge.mpp-channel-opening-profile.v1',title:'',
+    channel:{...draftTask().channel},dependencyRoot:'',
+    opening:{salt:'',initialAmountAtomic:'',refundWaitingPeriod:null,codeMode:'existing',wasmFile:''},
+    funding:{account:'',keyEnv:'MPP_CHANNEL_FUNDER_SECRET',maximumFeeStroops:'',operator:''}};
+}

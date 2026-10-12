@@ -2,6 +2,7 @@ from os import PathLike
 from typing import Any, Literal, Mapping, TypedDict
 
 ChannelAction = Literal[
+    "opening-template", "opening-prepare", "opening-execute", "opening-resume", "opening-reconcile", "opening-cancel",
     "task-template", "task-save", "task-authorize", "task-authority-resume", "task-stop",
     "purchase-prepare", "purchase-execute", "purchase-resume", "purchase-refresh", "purchase-cancel",
     "merchant-save", "merchant-start", "merchant-stop", "delivery-recover",
@@ -9,7 +10,7 @@ ChannelAction = Literal[
     "funder-template", "funder-save", "channel-observe", "funding-prepare", "funding-execute", "funding-resume", "funding-reconcile", "funding-cancel", "collection-prepare", "collection-execute", "collection-resume", "collection-reconcile", "collection-cancel",
     "contract-fetch", "export", "receive",
 ]
-RecordKind = Literal["tasks", "purchases", "contracts", "funders", "funding", "settlements", "observations"]
+RecordKind = Literal["tasks", "purchases", "contracts", "funders", "funding", "settlements", "observations", "openings"]
 FundingAction = Literal["top_up", "close_start", "refund"]
 
 class _FundingSelection(TypedDict):
@@ -121,6 +122,21 @@ class ChannelClient:
     def job(self, job_id: str) -> dict[str, Any]: ...
     def invoke(
         self, action: ChannelAction, arguments: Mapping[str, Any] | None = ..., *,
+        wait_ms: int = ..., timeout: float | None = ...,
+    ) -> dict[str, Any]: ...
+    def opening(self, opening_id: str) -> dict[str, Any]: ...
+    def prepare_opening(
+        self, opening_id: str, profile: Mapping[str, Any], *,
+        wait_ms: int = ..., timeout: float | None = ...,
+    ) -> dict[str, Any]: ...
+    def execute_opening(
+        self, opening_id: str, *, wait_ms: int = ..., timeout: float | None = ...,
+    ) -> dict[str, Any]: ...
+    def resume_opening(
+        self, opening_id: str, *, wait_ms: int = ..., timeout: float | None = ...,
+    ) -> dict[str, Any]: ...
+    def reconcile_opening(
+        self, opening_id: str, *, rpc_url: str | None = ...,
         wait_ms: int = ..., timeout: float | None = ...,
     ) -> dict[str, Any]: ...
     def prepare_purchase(
