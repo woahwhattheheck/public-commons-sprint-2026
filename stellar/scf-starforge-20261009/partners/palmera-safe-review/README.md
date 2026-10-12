@@ -20,7 +20,7 @@ Related original operating surfaces:
 - [Original Node buyer SDK](../../sf88-operator-buyer-cli/node/)
 - [Original Tenderly analysis workspace](../../sf88-operator-buyer-cli/tenderly-analysis/)
 
-The [public Safe receiving guide](receiving/PUBLIC_SAFE_RECEIVING.md) supplies an original Gnosis execution from Safe's maintained source and a read helper using the caller's actual Protocol Kit. It obtains the original outer transaction and receipt, verifies the SDK hash and complete execution calldata, and captures the actual block position, caller, gas limit and value through `prepareSafeSelection`. The saved source, runtime selection and original buyer intent stay together through receiving.
+The [public Safe receiving guide](receiving/PUBLIC_SAFE_RECEIVING.md) supplies an original Gnosis execution from Safe's maintained source. Use `safe-review public-read` with the application's actual Protocol Kit to obtain the outer transaction and receipt, verify the SDK hash and complete execution calldata, and save the original selection with its exact block position, caller, gas limit and value. `public-open` reopens this retained source offline; `public-caller` creates the byte-bound caller module used by the browser or original capture command. The saved source, runtime selection and original buyer intent stay together through receiving.
 
 All CLI paths below are absolute. Set `SAFE_REVIEW_CLI` to this directory's `cli.mjs`; `BUYER_RUNTIME` to the original SF88 runtime directory; and `REVIEW_ROOT` to an operator-owned private working directory.
 
@@ -51,6 +51,7 @@ import { preparePalmeraSelection, prepareSafeSelection } from '@tokenjunkielabs/
 import { prepareSafePurchase } from '@tokenjunkielabs/starforge-merchant/buyer/safe-review/preparation';
 import { exportHandover, openHandover, receiveHandover } from '@tokenjunkielabs/starforge-merchant/buyer/safe-review/handover';
 import { readPublicSafe } from '@tokenjunkielabs/starforge-merchant/buyer/safe-review/receiving';
+import { receivePublicSafe, openPublicSafeRecord, describePublicSafeRecord, writePublicSafeCaller } from '@tokenjunkielabs/starforge-merchant/buyer/safe-review/receiving/record';
 ```
 
 The package includes the original native buyer, Tenderly customer and analysis source dependencies. The calling application supplies its existing Palmera / Safe SDK, provider and wallet connection. For the public receiving input, the loader resolves Protocol Kit from that exact caller-owned Palmera package and checks both recorded SDK versions.
@@ -295,6 +296,8 @@ Receiving copies only the declared original members, publishes the final manifes
 
 | Interrupted step | Continue |
 | --- | --- |
+| Public source receiving | Repeat `public-read` with the same input and output; the saved observation and original selection remain bound. |
+| Generated public caller | Repeat `public-caller` with the same received record, SDK root, environment and output file. |
 | Selection publication | Repeat the same selected input into the same output; matching published bytes are reused. |
 | Purchase preparation | Repeat `prepare` with the same selection, plan, ticket, intent and destination. |
 | Native import before Safe attachment | Use `attach` for the already created original intent. |
@@ -313,5 +316,6 @@ A changed selection, plan, ticket, native configuration or completed file produc
 | `workspace.mjs` | Thin native customer binding, reviewed execution, recovery and comparison. |
 | `handover.mjs` | Original customer/analysis export join and portable receiving. |
 | `report.mjs` | Offline industrial review index. |
-| `cli.mjs` | Complete operator workflow and original analysis listener. |
+| `cli.mjs` | Complete operator workflow, public source receiving and original analysis listener. |
+| `receiving/` | Original public SDK input, retained source/observation/selection, offline reader and generated caller. |
 | `operator/` | Full private browser controller, original Applications provider and operating guide. |
