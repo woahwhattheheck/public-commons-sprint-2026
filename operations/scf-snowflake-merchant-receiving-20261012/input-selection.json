@@ -1,0 +1,27 @@
+{
+  "schema": "commons.snowflake-original-merchant-input.v1",
+  "operationId": "C94-SNOWFLAKE-MERCHANT-MCP-20261012",
+  "inputKind": "Original native SQL API contract fixture",
+  "sourceProgramBlob": "3b055e33534071b70dce727eb8df5e3450388b27",
+  "originalEditionId": "18bbd54c207434b5957ead9a86aecdfa9e75d58b93291c5ef9f0d86decb2ede2",
+  "originalRequestId": "ABCDEF00-1234-1234-ABCD-1234567890AB",
+  "originalStatementHandle": "c121b5ed-1cac-47a6-a9cc-8ff5ee29cb45",
+  "sourceId": "74e23e5fbcdab5e3e36c14945a4abdaa30c0aeb09a76e71110cbd1238a141054",
+  "originalRequestSha256": "0e9988f3a6ef5e0bae125e86969c04b1ae259a746da963b3cf2623c9a9e052fe",
+  "publicationId": "94c00000-0000-4000-8000-000000000002",
+  "productMerge": "ce5f431b16f42ae002e677aadbf7bcb04e6540d7",
+  "partitions": [
+    {
+      "path": "partition-00000.json",
+      "bytes": 808,
+      "sha256": "f9c1caa09af67d3b40d651b2361fecc75b2583ec4cc42241fbffd0d54440269b",
+      "partition": 0
+    },
+    {
+      "path": "partition-00001.json",
+      "bytes": 207,
+      "sha256": "ef5b47f0fe9367d54b11cd871abb33a66cafafb2148b07b6e2eea4591e4728a7",
+      "partition": 1
+    }
+  ]
+}
