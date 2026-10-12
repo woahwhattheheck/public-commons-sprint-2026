@@ -78,6 +78,20 @@
         "operations.css",
         "text/css; charset=utf-8"
       ]
+    ],
+    [
+      "/transfer.mjs",
+      [
+        "transfer.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/transfer.css",
+      [
+        "transfer.css",
+        "text/css; charset=utf-8"
+      ]
     ]
   ]
 }
