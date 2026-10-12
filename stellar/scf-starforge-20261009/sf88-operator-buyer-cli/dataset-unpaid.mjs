@@ -249,3 +249,6 @@ export async function continueUnpaidPage(directory,cfg,{expectedAttemptSha256,en
     completedAt:new Date().toISOString()});
   return view(plan,'ARCHIVED');
 }
+
+// Reuse the original authenticated SF36 absence audit for explicit Node continuations.
+export { ledgerAbsent as inspectOriginalUnpaidLedger };

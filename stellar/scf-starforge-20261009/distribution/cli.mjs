@@ -99,6 +99,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   api-pass                                  Sell and operate purchased API allowances on original orders
   api-pass-client                           Use an allowance, inspect usage and recover an original response
   api-pass-workspace                        Open the API customer workspace, saved requests, recovery and statements
+  merchant-api-pass                         Run retained API customer agent operations and complete-file downloads
   api-purchase                              Buy an API allowance, call approved routes and recover saved responses
   api-application                           Run source-pinned application functions over purchased API allowances
   baserow-source                            Discover, retain and publish original Baserow records and files

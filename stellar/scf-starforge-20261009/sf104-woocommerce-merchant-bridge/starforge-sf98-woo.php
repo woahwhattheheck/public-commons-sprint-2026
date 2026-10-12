@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Starforge SF98 WooCommerce Merchant Bridge
  * Description: Native Stellar x402 checkout, order-bound buyer handoff and authenticated SF98 settlement notices with explicit merchant release.
- * Version: 0.6.0
+ * Version: 0.7.0
  * Requires PHP: 8.0
  * Requires Plugins: woocommerce
  * License: MIT
@@ -405,3 +405,4 @@ require_once __DIR__ . '/merchant-operator.php';
 
 require_once __DIR__ . '/merchant-refunds.php';
 
+require_once __DIR__ . '/merchant-erp.php';

@@ -214,7 +214,7 @@ const current = await recoverRefund(config, delivered.adjustmentId);
 
 ## Install the complete plugin
 
-The portable Woo plugin contains these 16 files:
+The complete portable Woo plugin contains these files:
 
 ```text
 starforge-sf98-woo.php
@@ -233,6 +233,15 @@ OPERATIONS.md
 NATIVE_REVIEW.md
 REFUNDS.md
 BASKET.md
+merchant-erp.php
+merchant-erp-store.php
+merchant-erp-mapping.php
+merchant-erp-acumatica.php
+merchant-erp-console.php
+merchant-erp.js
+merchant-erp.css
+ERP.md
+erp-map.example.json
 ```
 
 Keep `refund-networks.json` byte-identical to the selected release's canonical `sf86-rpc-transfer-reconcile/networks.json`. The installed merchant package includes the refund CLI and its original accounting/verifier dependencies. Source consumers can import the operator through `@tokenjunkielabs/starforge-merchant/merchant/woocommerce/refunds`.
