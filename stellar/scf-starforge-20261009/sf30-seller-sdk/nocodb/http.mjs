@@ -109,8 +109,8 @@ export function inspectTableBytes(content, selected, fields = null) {
       return { id, type: field.type, options: field.options ?? null }; }) };
   return { table, schema, schemaSha256: identity(schema) };
 }
-export function createNocoDBReader(config, { env = process.env, signal } = {}) {
-  const selected = binding(config), options = restOptions(config), token = env[options.tokenEnv];
+export function createNocoDBReader(config, { env = process.env, signal, allowUnordered = false } = {}) {
+  const selected = binding(config, { allowUnordered }), options = restOptions(config, { allowUnordered }), token = env[options.tokenEnv];
   if (typeof token !== 'string' || !token.length || token.length > 16384 || /[^\x21-\x7e]/.test(token))
     throw fault('NOCODB_TOKEN_MISSING', 'Supply the existing read token through the configured environment reference.');
   const timeout = AbortSignal.timeout(options.timeoutMs), abort = signal ? AbortSignal.any([signal, timeout]) : timeout;
@@ -163,7 +163,7 @@ export function createNocoDBReader(config, { env = process.env, signal } = {}) {
   } };
 }
 export async function discoverNocoDBTable(config, options = {}) {
-  const reader = createNocoDBReader(config, options), observation = await reader.get(tableUrl(reader.selected));
+  const reader = createNocoDBReader(config, { ...options, allowUnordered: true }), observation = await reader.get(tableUrl(reader.selected));
   const { table, schemaSha256 } = inspectTableBytes(observation.content, reader.selected);
   return { schema: 'stellar-forge.nocodb-discovery.v1', source: reader.selected, receivedAt: observation.receivedAt,
     requestUrl: observation.requestUrl, schemaSha256, title: table.title, workspaceId: table.workspace_id ?? null,
