@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // MIT. CLI over the same retained water project and original merchant/buyer.
-import { readFile, writeFile } from 'node:fs/promises';
+import { constants } from 'node:fs';
+import { readFile, writeFile, copyFile } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { randomUUID } from 'node:crypto';
@@ -23,6 +24,14 @@ const HELP = [
   'export         Export --review ID --format html|json|csv|geojson --out FILE.',
   'edition        Prepare --review ID --id EDITION.',
   'editions       List editions, or read --id EDITION.',
+  'dss-runtime    Check official HEC-DSS7 Python binding (USGS_HECDSS_PYTHON).',
+  'dss-source     Inspect original --edition ID series for a DSS mapping.',
+  'dss-preview    Review --edition ID --mapping FILE [--previous EXPORT].',
+  'dss-export     Create/reopen --edition ID --mapping FILE --id EXPORT --plan-sha SHA.',
+  'dss-exports    List native handovers, or reopen --id EXPORT.',
+  'dss-verify     Reopen native --id EXPORT and compare every original mapped value.',
+  'dss-handover   Save complete --id EXPORT --out HANDOVER.zip.',
+  'dss-receive    Receive --file HANDOVER.zip into this private project.',
   'stage          Prepare --edition ID --origin HTTPS_ORIGIN --payment terms.json [--path /water].',
   'merchant       Run --edition ID [--port 0 --facilitator HTTPS_URL].',
   'status         Read original merchant --edition ID status.',
@@ -127,6 +136,22 @@ export async function main(argv = process.argv.slice(2)) {
     }
     if (command === 'edition') return output(await project.prepareEdition({ editionId: required(options, 'id'), reviewId: required(options, 'review') }), options.out);
     if (command === 'editions') return output(options.id ? await project.readEdition(options.id) : await project.listEditions(), options.out);
+    if (command === 'dss-runtime') return output(await project.probeDssRuntime(), options.out);
+    if (command === 'dss-source') return output(await project.inspectDssEdition(required(options, 'edition')), options.out);
+    if (command === 'dss-preview' || command === 'dss-export') {
+      const input = { editionId: required(options, 'edition'), mapping: await jsonFile(required(options, 'mapping')),
+        previousExportId: options.previous };
+      return output(command === 'dss-preview' ? await project.previewDssExport(input) : await project.createDssExport({
+        ...input, exportId: required(options, 'id'), expectedPlanSha256: required(options, 'plan-sha') }), options.out);
+    }
+    if (command === 'dss-exports') return output(options.id ? await project.readDssOperation(options.id) : await project.listDssExports(), options.out);
+    if (command === 'dss-verify') return output(await project.verifyDssExport(required(options, 'id')), options.out);
+    if (command === 'dss-handover') {
+      const result = await project.exportDssHandover(required(options, 'id')), destination = resolve(required(options, 'out'));
+      await copyFile(result.path, destination, constants.COPYFILE_EXCL);
+      return output({ ...result, path: destination });
+    }
+    if (command === 'dss-receive') return output(await project.receiveDssHandover(resolve(required(options, 'file'))), options.out);
     if (command === 'stage') return output(await project.stageEdition({ editionId: required(options, 'edition'), origin: required(options, 'origin'),
       path: options.path ?? '/water', payment: await jsonFile(required(options, 'payment')) }), options.out);
     if (command === 'merchant') {
