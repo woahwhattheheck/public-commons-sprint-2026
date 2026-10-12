@@ -99,7 +99,13 @@ def prepare_source(manifest, destination, retained_source):
         os.replace(temporary, output)
         return len(raw)
     with concurrent.futures.ThreadPoolExecutor(max_workers=4) as pool:
-        received = list(pool.map(receive, manifest["files"]))
+        futures = [pool.submit(receive, item) for item in manifest["files"]]
+        try:
+            received = [future.result() for future in concurrent.futures.as_completed(futures)]
+        except BaseException:
+            for future in futures:
+                future.cancel()
+            raise
     return {"files": len(received), "bytes": sum(received), "commit": COMMIT}
 
 
