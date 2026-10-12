@@ -33,7 +33,7 @@ Keep the actual READY installation's source manifest and dependency lock.
 
 The contribution adds `starforge pmtiles-output` and the named exports
 `./pmtiles/output`, `./pmtiles/output-package`,
-`./pmtiles/output-buyer`, `./pmtiles/output-source` and
+`./pmtiles/output-buyer`, `./pmtiles/output-source`, `./pmtiles/output-native-environment` and
 `./pmtiles/output-cli`. The ordinary merchant MCP provider also exposes the
 complete workflow through its existing authenticated connection; see
 [PMTILES_COMMERCE.md](../../../../../stellar-forge/mcp-merchant-operator/PMTILES_COMMERCE.md).
@@ -241,6 +241,7 @@ Create a private customer connection:
   "buyer": {
     "runtimeDirectory": "/private/existing-sf88-runtime",
     "stateDirectory": "/private/existing-buyer-state",
+    "operatorWorkspace": "/private/original-funded-operator",
     "operatorProfile": "/private/existing-operator-profile.json"
   },
   "purchasesDirectory": "/private/purchased-map-outputs"
@@ -279,6 +280,23 @@ After an interrupted payment/receipt operation, use `purchase-recover` on
 the same original request before continuing. `purchase-status` reads the
 original native progress.
 
+### Finish the original purchase accounting
+
+The configured customer `buyer.operatorWorkspace` selects its existing SF88
+financial workspace. `purchase-accounting` reads one original native range;
+`purchase-finalize` finalizes that same range through SF36/SF86. A request
+contains `purchaseRequestId` and optional `offset`/`limit` (default 0/100,
+maximum 250). Continue with `accounting.native.range.nextOffset` until null.
+Retain each complete native response and check its process, interruption
+and entry outcomes.
+
+After a lost reply, `purchase-accounting-recover` reads the original command
+from the same purchase. Supply its `commandId` when available; otherwise it
+returns the latest command and last complete output. Repeated finalization
+uses the original governor's idempotent finalizer. See the complete
+[accounting and receiving guide](NATIVE_ENVIRONMENT.md#read-and-finalize-original-purchase-accounting)
+for MCP, SDK, range continuation and native result details.
+
 The original object engine retains every request and payment receipt, verifies
 each selected chunk and assembles the complete expected SHA-256. Completed
 replay reuses those original files and receipts. Receiving binds the stable
@@ -316,6 +334,12 @@ resource for a later release.
 ## Native receiving and source ownership
 
 `exercisePMTilesOutputCommerce` in the repository-root merchant
+The optional [native environment setup](NATIVE_ENVIRONMENT.md) composes the
+existing funded operator, facilitator HTTP server and original HTTPS/CONNECT
+transport in that same receiving lifetime. Its private descriptor binds the
+actual files and listener selection, and the original accounting phase
+finalizes both complete purchases before the environment drains.
+
 `pmtiles-commerce-native-receiving.mjs` is a callable phase of the existing
 complete PMTiles native operation. It consumes that operation's actual saved
 producer, published release and native profile. The selected private commerce
@@ -344,6 +368,7 @@ Add this selected object as `outputCommerce` in the original
     "runtimeDirectory": "/private/original-sf88-runtime",
     "stateDirectory": "/private/selected-pmtiles-buyer-state",
     "configuration": "/private/original-buyer-configuration.json",
+    "operatorWorkspace": "/private/original-funded-operator",
     "configurationSha256": "ACTUAL_PRIVATE_CONFIGURATION_SHA256",
     "operatorProfile": "/private/original-operator-profile.json",
     "operatorProfileSha256": "ACTUAL_PRIVATE_OPERATOR_PROFILE_SHA256"
