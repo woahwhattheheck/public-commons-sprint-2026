@@ -194,7 +194,9 @@ records with the original baseline and recipe outputs.
 
 The original operation retains `workflow-series-receiving-checkpoint.json`
 and, on completion, `workflow-series-native-run.json` in the selected receiving
-directory. The runner prints `ORIGINAL_NATIVE_DISPATCH` only after it creates
+directory. The runner executes the original merchant, recipe and recurring programmes as sequential native children. Each completed programme is archived before the next child starts; a stopped child retains its current reports and customer files even if the previous artifact-selection file describes an older checkpoint. The final completed programme still requires the complete current artifact selection. `ORIGINAL_NATIVE_RETURNED` records the actual child status before archive construction.
+
+The runner prints `ORIGINAL_NATIVE_DISPATCH` only after it creates
 the actual native child, including that child's PID and source selection.
 It streams the complete child output and retains the log in the same directory.
 
@@ -205,7 +207,7 @@ exports, both Console stores, merchant configuration, merchant release and
 customer-export stores, and the original configured source inputs. The native
 artifact selection and archive manifest record each complete file and application
 directory, including an empty customer-export directory. Archive creation,
-transfer and hashing stream file bodies.
+transfer and hashing stream file bodies. A supplied `--checkpoint-dir` retains each complete programme archive and its current `latest.json` on shared or persistent storage, independently of the private execution directory. The readable summary describes the actual companion archive's retained programmes.
 
 Browser inspection images have their own transient selection. Completed legacy
 reports retain their bytes; only their exact named QA inspection images become

@@ -19,12 +19,13 @@ if _merchant_standalone:
     dependency_source = parser.add_mutually_exclusive_group()
     dependency_source.add_argument("--dependency-transfers", help="Private JSON file containing the two retained original package download references")
     dependency_source.add_argument("--dependency-archives", help="Complete original public package capsule for native offline receiving")
+    parser.add_argument("--checkpoint-dir", help="Shared or persistent directory for each complete original programme archive")
     parser.add_argument("--library-helpers", help="Directory with the complete current Library upload helper and both companions")
     args = parser.parse_args()
     payload = json.loads(Path(args.source_packet).read_bytes())
     names = {"work_dir": "workDir", "directory": "directory", "node": "node", "node_modules": "nodeModules",
              "chromium": "chromiumPath", "playwright_module": "playwrightModule", "restore_archive": "restoreArchive",
-             "restore_source_commit": "restoreSourceCommit"}
+             "restore_source_commit": "restoreSourceCommit", "checkpoint_dir": "checkpointDirectory"}
     payload.setdefault("runtime", {}).update({names[key]: value for key, value in vars(args).items() if key in names and value})
     if args.dependency_transfers:
         payload.pop("dependencyArchives", None)
@@ -280,10 +281,14 @@ def sha_file(path):
             result.update(chunk)
     return result.hexdigest()
 
-def run_native(stage, log_name):
+def run_native(stage, log_name, native_entry=None):
+    selected_entry = native_entry or payload["nativeEntry"]
+    if selected_entry not in payload["file_blobs"]:
+        raise RuntimeError("Run a complete selected original native programme.")
+    selected_argv = [str(node), str(source / selected_entry), *argv[2:]]
     started = datetime.now(timezone.utc).isoformat()
     with (native / log_name).open("ab", buffering=0) as output:
-        child = subprocess.Popen(argv, cwd=source, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+        child = subprocess.Popen(selected_argv, cwd=source, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
             start_new_session=True, pass_fds=(lease.fileno(), operation_lease.fileno()))
         try:
             process_start = Path("/proc/" + str(child.pid) + "/stat").read_text().rsplit(")", 1)[1].split()[19]
@@ -291,7 +296,7 @@ def run_native(stage, log_name):
             process_start = None  # An immediate native exit is still collected from this child below.
         active = {"operationId": operation, "phase": "RUNNING", "stage": stage, "pid": child.pid,
             "processStart": process_start, "controllerPid": os.getpid(), "host": identity,
-            "directory": str(native), "sourceCommit": payload["sourceCommit"], "startedAt": started}
+            "directory": str(native), "sourceCommit": payload["sourceCommit"], "nativeEntry": selected_entry, "startedAt": started}
         atomic(native / "native-active.json", (json.dumps(active) + "\n").encode())
         emit({"event": "ORIGINAL_NATIVE_DISPATCH", **active})
         try:
@@ -311,6 +316,7 @@ def run_native(stage, log_name):
     active.update({"phase": "COMPLETE" if code == 0 else "FAILED", "exitCode": code,
                    "finishedAt": datetime.now(timezone.utc).isoformat()})
     atomic(native / "native-active.json", (json.dumps(active) + "\n").encode())
+    emit({"event": "ORIGINAL_NATIVE_RETURNED", **active})
     return code
 
 def source_path(name):
@@ -331,22 +337,23 @@ def build_archive(require_completed=False):
         required = original_record(required_path)
         if required.get("schema") != "stellar-forge.native-delivery-artifacts.v1" or required.get("directory") != str(native):
             raise RuntimeError("Use the original complete native artifact selection.")
-        for item in required["files"]:
-            path = source_path(item["name"])
-            if path.stat().st_size != item["bytes"] or sha_file(path) != item["sha256"]:
-                raise RuntimeError("A required native artifact changed: " + item["name"])
-            names.add(item["name"])
+        if require_completed:
+            for item in required["files"]:
+                path = source_path(item["name"])
+                if path.stat().st_size != item["bytes"] or sha_file(path) != item["sha256"]:
+                    raise RuntimeError("A required native artifact changed: " + item["name"])
+                names.add(item["name"])
         names.add(required_path.name)
-    else:
-        # Preserve whatever the original child produced when failure preceded its final selection.
-        for name in ("workflow-receiving-checkpoint.json", "workflow-native-run.json",
-                     "workflow-recipes-receiving-checkpoint.json", "workflow-recipes-native-run.json",
-                     "workflow-series-receiving-checkpoint.json", "workflow-series-native-run.json"):
-            record = original_record(native / name)
-            if record:
-                names.add(name)
-                if record.get("artifactContract") == "stellar-forge.native-receiving-artifacts.v2":
-                    names.update(item["name"] for item in record.get("artifacts", []))
+    # A restored selection describes the previous checkpoint. Capture the current original
+    # reports and their customer artifacts after each child, including an interrupted child.
+    for name in ("workflow-receiving-checkpoint.json", "workflow-native-run.json",
+                 "workflow-recipes-receiving-checkpoint.json", "workflow-recipes-native-run.json",
+                 "workflow-series-receiving-checkpoint.json", "workflow-series-native-run.json"):
+        record = original_record(native / name)
+        if record:
+            names.add(name)
+            if record.get("artifactContract") == "stellar-forge.native-receiving-artifacts.v2":
+                names.update(item["name"] for item in record.get("artifacts", []))
     # These are complete owned application stores. Browser profiles and inspection files are transient.
     for role in ("source-console", "receiver-console", "merchant", "merchant-inputs", "series-source-editions"):
         directory = native / role
@@ -537,6 +544,63 @@ def prepare_archive_state(selected_bundle, imported=False, origin_sha256=None):
     atomic(reopen_path, (json.dumps(state, indent=2) + "\n").encode())
     return state
 
+
+def checkpoint_archive(selected_bundle, stage, native_exit):
+    selected_bundle = retain_archive(selected_bundle)
+    result = {"operationId": operation, "stage": stage, "nativeExitCode": native_exit,
+        "directory": str(native), "workDirectory": str(root), "sourceCommit": payload["sourceCommit"],
+        "bytes": selected_bundle.stat().st_size, "sha256": sha_file(selected_bundle),
+        "path": str(selected_bundle), "savedAt": datetime.now(timezone.utc).isoformat()}
+    if runtime.get("checkpointDirectory"):
+        receiving = Path(runtime["checkpointDirectory"]).resolve()
+        receiving.mkdir(parents=True, exist_ok=True, mode=0o700)
+        prior_checkpoint = original_record(receiving / "latest.json")
+        if prior_checkpoint and (prior_checkpoint.get("directory") != str(native)
+                or prior_checkpoint.get("workDirectory") != str(root)):
+            raise RuntimeError("Continue the original shared receiving checkpoint.")
+        target = receiving / (result["sha256"] + ".tar.gz")
+        if target.exists():
+            if target.is_symlink() or target.stat().st_size != result["bytes"] or sha_file(target) != result["sha256"]:
+                raise RuntimeError("Preserve the original shared archive bytes.")
+        else:
+            pending = target.with_name(target.name + "." + str(os.getpid()) + ".pending")
+            with selected_bundle.open("rb") as incoming, pending.open("wb") as outgoing:
+                os.chmod(pending, 0o600); shutil.copyfileobj(incoming, outgoing, 65536)
+                outgoing.flush(); os.fsync(outgoing.fileno())
+            if sha_file(pending) != result["sha256"]:
+                raise RuntimeError("Receive every original checkpoint archive byte.")
+            os.replace(pending, target)
+        result["path"] = str(target)
+        atomic(receiving / "latest.json", (json.dumps(result, indent=2) + "\n").encode())
+    emit({"event": "ORIGINAL_NATIVE_PROGRAMME_SAVED", **result})
+    return result
+
+def run_programmes(stage, log_name):
+    programmes = (
+        ("merchant", "workflow-journey.mjs", "workflow-native-run.json"),
+        ("recipe", "workflow-recipes-journey.mjs", "workflow-recipes-native-run.json"),
+        ("recurring-customers", "workflow-series-journey.mjs", "workflow-series-native-run.json"))
+    selected_bundle, selected_manifest = None, None
+    for label, filename, report_name in programmes:
+        previous = original_record(native / report_name)
+        if previous and previous.get("result") == "PASS":
+            continue
+        selected_entry = "stellar-forge/mcp-merchant-operator/receiving/" + filename
+        native_exit = run_native(stage + "-" + label, log_name, selected_entry)
+        returned = original_record(native / report_name)
+        if native_exit == 0 and (not returned or returned.get("result") != "PASS"):
+            native_exit = 1
+            emit({"event": "ORIGINAL_NATIVE_PROGRAMME_INCOMPLETE", "operationId": operation,
+                "stage": label, "nativeEntry": selected_entry, "report": report_name})
+        selected_bundle, selected_manifest = build_archive(
+            require_completed=label == "recurring-customers" and native_exit == 0)
+        checkpoint_archive(selected_bundle, label, native_exit)
+        if native_exit:
+            return native_exit, selected_bundle, selected_manifest
+    if selected_bundle is None:
+        selected_bundle, selected_manifest = build_archive(require_completed=True)
+    return 0, selected_bundle, selected_manifest
+
 # Restore the original archive, then continue its saved programme. An incomplete delivery
 # becomes a new complete archive before the same customer's cold reopening is attempted.
 if runtime.get("restoreArchive"):
@@ -572,8 +636,7 @@ if runtime.get("restoreArchive"):
                 os.replace(temporary, bundle)
         archive_state = prepare_archive_state(bundle, imported=True)
 if archive_state is None:
-    code = run_native("merchant-and-recurring-customer", "workflow-series-native-output.log")
-    bundle, manifest = build_archive(require_completed=code == 0)
+    code, bundle, manifest = run_programmes("merchant-and-recurring-customer", "workflow-series-native-output.log")
     if code == 0:
         archive_state = prepare_archive_state(bundle)
 while archive_state:
@@ -629,7 +692,10 @@ while archive_state:
             archive_state["phase"] = "REOPEN_RUNNING"
             atomic(reopen_path, (json.dumps(archive_state, indent=2) + "\n").encode())
             stage = "shipped-workspace-reopen" if archive_state["completeAtSelection"] else "saved-workspace-continuation"
-            code = run_native(stage, "workflow-series-archive-reopen-output.log")
+            if archive_state["completeAtSelection"]:
+                code = run_native(stage, "workflow-series-archive-reopen-output.log")
+            else:
+                code, bundle, manifest = run_programmes(stage, "workflow-series-archive-reopen-output.log")
             archive_state["phase"] = "REOPENED" if code == 0 else "REOPEN_FAILED"
             archive_state["exitCode"] = code
             archive_state["finishedAt"] = datetime.now(timezone.utc).isoformat()
@@ -641,7 +707,6 @@ while archive_state:
         if not archive_state["completeAtSelection"]:
             # Save all progress from this actual continuation, including another native failure.
             previous_archive = archive_state
-            bundle, manifest = build_archive(require_completed=code == 0)
             previous_archive["continuedArchive"] = {"path": str(bundle), "bytes": bundle.stat().st_size,
                 "sha256": sha_file(bundle), "exitCode": code}
             atomic(root / ("native-continuation-" + previous_archive["sha256"] + ".json"),
@@ -670,14 +735,13 @@ while archive_state:
         atomic(reopen_path, (json.dumps(archive_state, indent=2) + "\n").encode())
         emit({"event": "ORIGINAL_NATIVE_ARCHIVE_REOPEN_FAILED", "operationId": operation, "error": archive_state["error"]})
         break
-if manifest is None:
-    with tarfile.open(bundle, "r:gz") as archive:
-        manifest = json.load(archive.extractfile("native-delivery-manifest.json"))
+with tarfile.open(bundle, "r:gz") as archive:
+    manifest = json.load(archive.extractfile("native-delivery-manifest.json"))
 bundle_bytes = bundle.stat().st_size
 bundle_sha256 = sha_file(bundle)
 emit({"event": "ORIGINAL_NATIVE_OUTPUT_READY", "operationId": operation, "exitCode": code, "directory": str(native),
       "bundle": str(bundle), "bytes": bundle_bytes, "sha256": bundle_sha256,
-      "artifactCount": len(manifest["files"]) + 1,
+      "artifactCount": len(manifest["files"]) + 1, "archiveSourceCommit": manifest["sourceCommit"],
       "archiveReopen": archive_state.get("phase") if archive_state else None})
 
 # Keep a complete readable customer result alongside the exact archive on every native host.
@@ -689,12 +753,22 @@ lines = ["# Original merchant customer receiving", "",
     "| Programme | Retained result | Original run |",
     "| --- | --- | --- |"]
 saved_programmes = []
-for name, label in (("workflow", "Merchant"), ("workflow-recipes", "Recipe"), ("workflow-series", "Recurring customers")):
-    record = original_record(native / (name + "-native-run.json")) or original_record(native / (name + "-receiving-checkpoint.json"))
-    if record:
-        saved_programmes.append(record)
-        run_id = (record.get("run") or {}).get("id", "")
-        lines.append("| " + label + " | " + str(record.get("result", "")) + " | " + run_id + " |")
+with tarfile.open(bundle, "r:gz") as archive:
+    archived_names = {item.name for item in archive.getmembers()}
+    for name, label in (("workflow", "Merchant"), ("workflow-recipes", "Recipe"), ("workflow-series", "Recurring customers")):
+        selected_report = next((name + suffix for suffix in ("-native-run.json", "-receiving-checkpoint.json")
+            if name + suffix in archived_names), None)
+        if selected_report:
+            record = json.load(archive.extractfile(selected_report))
+            if record.get("operationId") != operation or record.get("directory") != str(native):
+                raise RuntimeError("Summarize the actual original archived programme.")
+            saved_programmes.append(record)
+            run_id = (record.get("run") or {}).get("id", "")
+            lines.append("| " + label + " | " + str(record.get("result", "")) + " | " + run_id + " |")
+last_native = original_record(native / "native-active.json")
+if last_native:
+    lines.extend(["", "Last native stage: " + str(last_native.get("stage", "")),
+        "", "Last native child exit code: " + str(last_native.get("exitCode", "")), ""])
 lines.extend(["", "## Customer periods", "",
     "| Period | Original native run | Complete customer files | Customer archive SHA-256 |",
     "| --- | --- | --- | --- |"])
