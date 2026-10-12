@@ -16,6 +16,8 @@ import {startSupersetMerchant,readSupersetMerchant} from '../merchant.mjs';
 import {reviewSupersetBuyer,inspectSupersetDelivery} from '../customer.mjs';
 import {datasetControl} from '../../dataset-refresh/service.mjs';
 import {createDatasetSession,inspectDatasetSession,runDatasetSession} from '../../../sf88-operator-buyer-cli/dataset-session.mjs';
+import {resolveDatasetSessionPath} from '../../../sf88-operator-buyer-cli/dataset-location.mjs';
+import {deliverDatasetSession} from '../../../sf88-operator-buyer-cli/dataset-delivery.mjs';
 import {X402BuyerClient} from '../../../sf31-buyer-client/buyer.mjs';
 import {prepareBuyerResponseFile} from '../../../sf31-buyer-client/response-file.mjs';
 import {executeWithEvidence} from '../../../sf82-checkout-evidence/evidence.mjs';
@@ -332,11 +334,21 @@ export async function runSupersetNativeCustomer(options={}){
     const receivedResult=await receiveSupersetWorkspace({file:archive,directory:receivingDirectory});
     received=await openSupersetWorkspace({directory:receivingDirectory,env:{},fetchImpl:async()=>{throw new Error('Offline receiving attempted a network read');}});
     const movedBuyer=received.get('buyers',buyerRecord.id);
-    const movedSession=await inspectDatasetSession(join(receivingDirectory,movedBuyer.relative,'session'));
+    const movedSessionDirectory=join(receivingDirectory,movedBuyer.relative,'session');
+    const movedSession=await inspectDatasetSession(movedSessionDirectory);
     assert.equal(movedSession.status,'COMPLETE');assert.equal(movedSession.sessionId,acquired.sessionId);
     assert.equal(movedSession.configurationSha256,acquired.configurationSha256);
     assert.equal(movedSession.snapshot,acquired.snapshot);assert.equal(movedSession.acquiredRows,16);assert.equal(movedSession.completedPages,4);
-    assert.equal(digest(await readFile(movedSession.pages[0].responsePath)),firstPageSha256);
+    const movedResponse=await resolveDatasetSessionPath(movedSessionDirectory,movedSession.pages[0].responsePath);
+    assert.ok(movedResponse.startsWith(movedSessionDirectory+'/'));
+    assert.equal(digest(await readFile(movedResponse)),firstPageSha256);
+    assert.ok(received.buyerCommands(movedBuyer).recover.includes(movedSessionDirectory));
+    if(!saved('received-session-native-delivery')){
+      const nativeDelivery=await deliverDatasetSession(movedSessionDirectory,join(directory,'received-acquisition-data'));
+      await record('received-session-native-delivery',{sessionId:movedSession.sessionId,
+        configurationSha256:movedSession.configurationSha256,sourceBindingSha256:nativeDelivery.sourceBindingSha256,
+        paymentStatus:nativeDelivery.paymentStatus,outputs:nativeDelivery.outputs});
+    }
     await received.materializeDelivery(delivered.id);
     await received.materializeMerchant(prepared.id);
     receivedMerchant=await startSupersetMerchant({directory:join(receivingDirectory,prepared.preparedRelative),
@@ -363,7 +375,11 @@ export async function runSupersetNativeCustomer(options={}){
     if(!priorBack&&!priorForward&&!await exists(join(directory,'received-activate-before-intent.json'))){assert.equal(receivedState.current,current.current);assert.equal(receivedState.revision,current.revision);}
     const reverted=await retainedActivation('received-activate-before',expectedTransferred,initial.edition.snapshot);
     const advanced=await retainedActivation('received-activate-after',{snapshot:reverted.current,revision:reverted.revision},successor.edition.snapshot);
-    await receivedMerchant.close();receivedMerchant=null;await received.close();received=null;
+    await receivedMerchant.close();receivedMerchant=null;
+    let reexport=saved('received-project-reexport');
+    if(!reexport){reexport=await received.exportFile('workspace');await record('received-project-reexport',reexport);}
+    else{const raw=await readFile(reexport.file);assert.equal(raw.length,reexport.bytes);assert.equal(digest(raw),reexport.sha256);}
+    await received.close();received=null;
     await receiveSupersetWorkspace({file:archive,directory:receivingDirectory});
     received=await openSupersetWorkspace({directory:receivingDirectory,env:{},fetchImpl:async()=>{throw new Error('Offline repeat attempted a network read');}});
     const finalState=JSON.parse(await readFile(join(receivingDirectory,'versions',prepared.versionGroup,'state.json'),'utf8'));
@@ -372,10 +388,20 @@ export async function runSupersetNativeCustomer(options={}){
     const finalSession=await inspectDatasetSession(join(receivingDirectory,movedBuyer.relative,'session'));
     assert.equal(finalSession.status,'COMPLETE');assert.equal(finalSession.configurationSha256,acquired.configurationSha256);
     await received.close();received=null;
+    const nextRecipientDirectory=join(directory,'next-recipient');
+    await receiveSupersetWorkspace({file:reexport.file,directory:nextRecipientDirectory});
+    const nextSessionDirectory=join(nextRecipientDirectory,movedBuyer.relative,'session');
+    const nextSession=await inspectDatasetSession(nextSessionDirectory);
+    assert.equal(nextSession.status,'COMPLETE');assert.equal(nextSession.sessionId,acquired.sessionId);
+    assert.equal(nextSession.configurationSha256,acquired.configurationSha256);
+    assert.equal(digest(await readFile(await resolveDatasetSessionPath(nextSessionDirectory,nextSession.pages[0].responsePath))),firstPageSha256);
+    const nextState=JSON.parse(await readFile(join(nextRecipientDirectory,'versions',prepared.versionGroup,'state.json'),'utf8'));
+    assert.equal(nextState.current,advanced.current);assert.equal(nextState.revision,advanced.revision);
     await record('browser-and-offline-receiving',{desktop:browserExport.desktop,mobile:browserExport.mobile,mobileLayout:browserExport.mobileLayout,
       javascriptErrors:browserExport.javascriptErrors,archive:browserExport.archive,
       receivedWorkspaceId:receivedResult.workspaceId??receivedResult.state?.workspaceId??null,sessionId:movedSession.sessionId,
       originalNativeRevision:current.revision,advancedNativeRevision:advanced.revision,repeatedReceivePreservedCurrent:true,
+      reexport:{sha256:reexport.sha256,bytes:reexport.bytes},nextRecipientDirectory,nextRecipientConfigurationSha256:nextSession.configurationSha256,
       rows:16,pages:4,sourceServiceStopped:true});
     const result={schema:'stellar-forge.superset-native-customer-result.v1',status:'PASS',operationId:options.operationId,
       completedAt:new Date().toISOString(),source:ORIGINAL_SOURCE,superset:{version:fixture.supersetVersion,officialCommit:fixture.officialCommit,
