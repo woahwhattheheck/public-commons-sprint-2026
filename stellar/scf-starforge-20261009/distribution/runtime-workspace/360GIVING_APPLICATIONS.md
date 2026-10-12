@@ -177,3 +177,22 @@ Applications retains these original source and file identities in its existing r
 The startup observer then authenticates `/api/launch` on the actual loopback console, compares that live record with the original startup announcement and writes the stable connection file for the same saved application revision and managed run.
 
 The connected CLI uses that original private loopback endpoint directly. It verifies the current workspace identity before each operation and streams complete uploads and downloads. The shared Applications manager continues to own runtime adoption, resource exclusion, worker history, Stop and recovery.
+
+## Complete publisher agent receiving
+
+`dataset-360giving-agent-receiving` runs this original saved Applications
+lifecycle with the direct typed publisher client, the source-owned publisher
+merchant tools, and complete customer file receiving. It exercises the same
+request IDs and archives through all four connected source/receiver stages,
+including every native query and comparison page, a durable interrupted
+download, merchant reopen, receiving with the source stopped, and both saved
+publisher cold reopens.
+
+Use the complete input and command in the
+[publisher merchant guide](../../../../stellar-forge/mcp-merchant-operator/360GIVING.md).
+The selected connected workflow is part of the original receiving journal's
+input. A trusted native caller can supply `connectionWorkflow` and `onConnected`
+to `runManagedPublisherReceiving`; the callback receives the current saved
+connection, original applications, export IDs and receiver request IDs.
+A callback completes before that parent stage commits. The CLI input accepts
+the declared data fields and retains that same journal for continuation.
