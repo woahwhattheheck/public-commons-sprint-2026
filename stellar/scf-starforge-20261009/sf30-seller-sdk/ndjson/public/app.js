@@ -395,13 +395,17 @@ for (const [id, route, name] of [["export-project", "/api/export", "ndjson-proje
     download(await api(route + "?build=" + encodeURIComponent(requireValue("export-build", "an edition")), { download: true }), name); notify("Complete edition export downloaded.");
   });
 }
-function showMerchant(value) {
+function showMerchant(value, selectedId = value.id) {
+  if (value.id !== selectedId) throw new Error("The returned merchant does not match the selected package.");
+  if ($("merchant-saved").value !== selectedId) return false;
   const merchant = value.merchant;
   details($("merchant-detail"), [["Resource", merchant.resource], ["Package SHA-256", value.id],
     ["Download bytes", fmt(value.archive.bytes)], ["Build", merchant.build],
     ["Source", merchant.source], ["Mapping", merchant.plan], ["Native snapshot", merchant.snapshot],
     ["Prepared directory", value.directory]]);
+  return true;
 }
+$("merchant-saved").addEventListener("change", () => $("merchant-detail").replaceChildren());
 listen("merchant-form", "submit", "Preparing and retaining the original merchant and customer SDK…", async () => {
   const payment = JSON.parse($("merchant-payment").value);
   const value = await api("/api/merchants/prepare", { body: { build: requireValue("merchant-build", "a reviewed edition"),
@@ -410,8 +414,9 @@ listen("merchant-form", "submit", "Preparing and retaining the original merchant
   notify("Complete merchant retained. Reopen or download this same package at any time.");
 });
 listen("merchant-show", "click", "Verifying the saved merchant files…", async () => {
-  const value = await api("/api/merchants/package?id=" + encodeURIComponent(requireValue("merchant-saved", "a saved merchant")));
-  showMerchant(value); notify("Complete original merchant verified without recompiling.");
+  const selectedId = requireValue("merchant-saved", "a saved merchant");
+  const value = await api("/api/merchants/package?id=" + encodeURIComponent(selectedId));
+  if (showMerchant(value, selectedId)) notify("Complete original merchant verified without recompiling.");
 });
 listen("merchant-download", "click", "Reading the saved complete merchant ZIP…", async () => {
   const id = requireValue("merchant-saved", "a saved merchant");
