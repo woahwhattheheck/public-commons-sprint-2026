@@ -1,6 +1,14 @@
 /** Guidance from the original merchant host, selected by advertised tool prefixes. */
 const sections = [
   {
+    "prefix": "merchant_research_",
+    "text": "For Research, list host-declared aliases and attach to the original authenticated Research application. The host-selected startup file follows the same managed listener after restart. Read its original dossier revision, selected question and complete paged source/finding records before writing. Keep saved Crossref request and operation IDs through prepare, review, start/resume, stop and reviewed receive; after an uncertain reply read the same original dossier and operation. Complete portable, report, raw-edition and comparison exports retain their source identities and hashes. Page the durable export inventory after reattachment; resume file reads with the same kind/exportId/hash and byte offset, then verify all decoded bytes. Reopen a host-declared portable source or that exact retained export through the original streaming importer. Detach with this attachment ID to drain its calls/readers; Applications keeps ownership of the original listener and saved acquisitions."
+  },
+  {
+    "prefix": "merchant_nocodb_",
+    "text": "For NocoDB authoring, list merchant_nocodb_workspaces and open the declared original model and browser. Inspect host input hashes or discover the actual table through its existing connection, then capture complete original pages with exact field IDs/types and native identity order. Save the draft with its current revision, preview all retained rows and review the source version against the current selection. Open its original publisher and use merchant_nocodb_publisher_* against the SAME publisher and scheduler; original run UUIDs, candidate/review hashes, target revisions and buyer handoffs remain authoritative. Deployment tools use that source model's original SF82 store and console, exact generation/digest/instance and uncertain-command observation. Receive private source packets with original version/capture/hash/offset and reopen the same request after lost replies. Close drains the original model, borrowed publisher calls and owned services."
+  },
+  {
     "prefix": null,
     "text": "For Stellar asset workspaces, discover the host-declared alias and original workspaceId, then read schema/view before actions. Every original action requires operationId and expectedRevision; repeat the identical action identity after an unknown response, and preserve actual errors and revisions. Use retained file reads or stellar-expert-mcp to receive complete original sources, exports and customer receipts with their hashes. The original browser remains the workspace writer."
   },
