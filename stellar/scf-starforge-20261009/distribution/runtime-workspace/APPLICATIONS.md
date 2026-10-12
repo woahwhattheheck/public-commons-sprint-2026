@@ -2,6 +2,8 @@
 
 Applications opens the original merchant and buyer tools from a selected READY runtime. It retains the runtime binding, installed release, data paths, exact argv, original process operation and private session URL. The existing managed worker owns the process. Closing the runtime browser or its web server leaves that process available for reopening.
 
+Buyer receiving: [complete setup, acquisition, Stop and reopen guide](BUYER_RECEIVING_APPLICATIONS.md).
+
 ## Available original tools
 
 | Application | Maintained command | Original workflow |
@@ -33,6 +35,7 @@ Applications opens the original merchant and buyer tools from a selected READY r
 | DuckDB customer and agent | mcp-native serve | Original running customer warehouse, reviewed source reports, saved SQL, complete CSV/Parquet and portable receiving through the same browser and agent connection |
 | Dataset preview | dataset-workspace | A dataset configuration file or retained dataset state, native query and preview |
 | Dataset buyer | buyer-dataset-workspace | Original acquisitions, received rows and files, private customer history and Python analysis |
+| Buyer receiving | buyer-runbook workspace | Original SDK, request and paid-file intake, local buyer setup, browser approvals, acquired resources, accounting and recovery |
 | Request collections | buyer-collections-workspace | Grouped request review, original approvals and runs, retained outcomes and verified customer file downloads |
 | Baserow source authoring | baserow-workspace serve | Original field discovery, retained rows and files, versioned projections, dataset publishing and customer handover |
 | Grant planning and delivery | grant-workspace serve | Retained grant plans and revisions, contributor delivery, invoices, allocations, cash records and original exports |
