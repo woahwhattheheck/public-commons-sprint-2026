@@ -1,10 +1,12 @@
 // MIT. Explicit continuation of a source-bound expired, untransferred Dataset page.
-import {spawn} from 'node:child_process';
-import {lstat,readdir,unlink,realpath} from 'node:fs/promises';
+import {spawn,spawnSync} from 'node:child_process';
+import {constants} from 'node:fs';
+import {lstat,readdir,unlink,realpath,open,rename} from 'node:fs/promises';
 import {join,dirname,resolve,isAbsolute} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {need,InputError} from './config.mjs';
 import {canonical,digest} from './dataset-page.mjs';
+import {readAttemptWireCheckpoint} from './attempt-wire.mjs';
 import {privateDirectory,readBytes,readJson,writeBytes,jsonBytes,syncDirectory,exists} from './node/store.mjs';
 
 const SCHEMA='stellar-forge.sf88.expired-page-continuation.v1';
@@ -172,7 +174,9 @@ function worker(action,cfg,selection,environment,signal) {
 }
 function validateSelection(selection,expectedAttemptSha256) {
   need(selection&&typeof selection==='object'&&!Array.isArray(selection)&&
-    Object.keys(selection).sort().join(',')==='expectedRequestSha256,reportsDirectory,resumePermitFile,sourceFile'&&
+    Object.keys(selection).filter(x=>x!=='expectedUnapprovedAttemptSha256').sort().join(',')===
+      'expectedRequestSha256,reportsDirectory,resumePermitFile,sourceFile'&&
+    (selection.expectedUnapprovedAttemptSha256===undefined||HASH.test(selection.expectedUnapprovedAttemptSha256))&&
     HASH.test(selection.expectedRequestSha256??'')&&HASH.test(expectedAttemptSha256??''),
     'DATASET_EXPIRY_EXACT_REVIEW_REQUIRED');
   for(const name of ['sourceFile','reportsDirectory','resumePermitFile'])absolute(selection[name]);
@@ -211,6 +215,172 @@ async function originalFiles(page,cfg,source) {
   return files;
 }
 
+
+const UNAPPROVED='stellar-forge.sf88.unapproved-expired-successor.v1';
+const WIRE_FILES=new Set(['source.json','unsigned-request.json','unsigned-dispatch.json',
+  'unsigned-response.json','unsigned-error.json']);
+async function wireOwnership(path) {
+  const handle=await open(join(path,'active.lock'),constants.O_RDWR|(constants.O_NOFOLLOW??0));
+  try {
+    const info=await handle.stat(),named=await lstat(join(path,'active.lock'));
+    need(info.isFile()&&info.nlink===1&&!(info.mode&0o077)&&!named.isSymbolicLink()&&
+      info.dev===named.dev&&info.ino===named.ino&&(!process.getuid||info.uid===process.getuid()),
+      'DATASET_EXPIRY_WIRE_LOCK_CHANGED');
+    const locked=spawnSync('flock',['--exclusive','--nonblock','--conflict-exit-code','73','3'],
+      {stdio:['ignore','pipe','pipe',handle.fd],timeout:10000});
+    need(!locked.error&&locked.status===0,locked.status===73?'WIRE_ATTEMPT_ACTIVE':'WIRE_FLOCK_REQUIRED');
+    return handle;
+  }catch(error){await handle.close();throw error;}
+}
+function successorPaths(page,cfg,partial) {
+  const paths=mutablePaths(page,cfg);
+  if(partial!==null) {
+    need(dirname(partial)===page&&/^\.x402-response-[a-f0-9-]{36}\.partial$/.test(partial.slice(page.length+1)),
+      'DATASET_EXPIRY_PARTIAL_PATH_INVALID');
+    paths['response-partial']=partial;
+  }
+  return paths;
+}
+function validSuccessor(value,page,cfg,releasePlan,expected) {
+  need(value?.schema===UNAPPROVED&&value.attemptSha256===expected&&
+    value.parentAttemptSha256===releasePlan.attemptSha256&&
+    value.releaseJournalMac===releasePlan.releaseJournalMac&&value.generation===releasePlan.generation&&
+    value.intentId===cfg.operation.intentId&&value.configurationSha256===digest(canonical(cfg))&&
+    value.historyDirectory===join(releasePlan.historyDirectory,'unapproved',expected)&&
+    value.wireDirectory===join(cfg.evidenceDir,'wire-'+digest(cfg.operation.intentId))&&
+    HASH.test(value.wireSourceSha256??'')&&Array.isArray(value.wireFiles)&&
+    value.wireFiles.length>=1&&value.wireFiles.length<=5&&
+    new Set(value.wireFiles.map(x=>x.name)).size===value.wireFiles.length&&
+    value.wireFiles.every(x=>WIRE_FILES.has(x.name)&&HASH.test(x.sha256??'')&&
+      Number.isSafeInteger(x.bytes)&&x.bytes>=1&&x.bytes<=MAX)&&
+    value.wireFiles.some(x=>x.name==='source.json'&&x.sha256===value.wireSourceSha256),
+    'DATASET_EXPIRY_UNAPPROVED_HISTORY_INVALID');
+  const paths=successorPaths(page,cfg,value.partialPath);
+  need(Array.isArray(value.files)&&value.files.length===Object.keys(paths).length&&
+    new Set(value.files.map(x=>x.name)).size===value.files.length&&
+    value.files.every(x=>paths[x.name]===x.path&&
+      (x.state==='ABSENT'&&x.sha256===null&&x.bytes===0||
+       x.state==='SAVED'&&HASH.test(x.sha256??'')&&Number.isSafeInteger(x.bytes)&&x.bytes>=0&&x.bytes<=MAX))&&
+    ['config.json','attempt.json','result.json'].every(name=>value.files.some(x=>x.name===name&&x.state==='SAVED'))&&
+    value.files.find(x=>x.name==='attempt.json').sha256===expected,
+    'DATASET_EXPIRY_UNAPPROVED_HISTORY_INVALID');
+  return value;
+}
+async function checkUnsignedFiles(wireDirectory,plan) {
+  await directory(wireDirectory);
+  const present=(await readdir(wireDirectory)).filter(name=>name!=='active.lock').sort();
+  need(canonical(present)===canonical(plan.wireFiles.map(x=>x.name).sort()),
+    'DATASET_EXPIRY_UNSIGNED_WIRE_CHANGED');
+  for(const selected of plan.wireFiles) {
+    const raw=await file(join(wireDirectory,selected.name));
+    need(raw.length===selected.bytes&&digest(raw)===selected.sha256,'DATASET_EXPIRY_UNSIGNED_WIRE_CHANGED');
+  }
+}
+
+/** A fresh review can be interrupted before the original gate reserves again.
+ * Retain that exact unsigned successor under its released parent. The original
+ * wire lock and authenticated unchanged generation distinguish it from a newly
+ * reserved or signed attempt, which must use its own original reconciliation. */
+async function archiveUnapprovedSuccessor(page,cfg,releasePlan,selection,environment,signal) {
+  const expected=selection.expectedUnapprovedAttemptSha256;
+  need(HASH.test(expected??'')&&expected!==releasePlan.attemptSha256,
+    'DATASET_EXPIRY_UNAPPROVED_ATTEMPT_REVIEW_REQUIRED');
+  const history=join(releasePlan.historyDirectory,'unapproved',expected);
+  const wireDirectory=join(cfg.evidenceDir,'wire-'+digest(cfg.operation.intentId));
+  let plan=await json(join(history,'plan.json'),true);
+  if(plan)validSuccessor(plan,page,cfg,releasePlan,expected);
+  else {
+    const current=await file(join(page,'attempt.json'),{limit:8192}),attempt=parse(current);
+    need(digest(current)===expected&&attempt.schema==='stellar-forge.sf88.dataset-attempt.v1'&&
+      attempt.index===releasePlan.index&&attempt.intentId===cfg.operation.intentId&&
+      attempt.configurationSha256===digest(canonical(cfg))&&attempt.capAtomic===cfg.operation.expect.maxAtomic,
+      'DATASET_EXPIRY_UNAPPROVED_ATTEMPT_CHANGED');
+    const result=await json(join(page,'result.json'));
+    const summary=result?.summary;
+    need(result?.schema==='stellar-forge.sf88.dataset-attempt-result.v1'&&
+      summary?.mode==='ORIGINAL_OPERATOR_APPROVED_BUYER_ATTEMPT'&&summary.intentId===cfg.operation.intentId&&
+      summary.error?.paymentSent===false&&summary.operatorReservation===null&&summary.status===null&&
+      summary.httpStatus===null&&summary.responseFile?.status==='NOT_STARTED'&&
+      summary.responseFile.destination===cfg.responseFile.destination,
+      'DATASET_EXPIRY_ORIGINAL_UNAPPROVED_RESULT_REQUIRED');
+    const retainedWire=await readAttemptWireCheckpoint({cfg,includeWire:true});
+    const wire=retainedWire?.snapshot;
+    need(wire&&wire.writerActive===false&&wire.signingEntered===false&&
+      wire.signedDispatchRecorded===false&&wire.signedResponseRecorded===false&&
+      wire.sourceSha256===summary.transportCheckpoint?.sourceSha256&&
+      wire.configValueSha256===attempt.configurationSha256&&
+      Date.parse(retainedWire.source.recordedAt)>=Date.parse(attempt.startedAt),
+      'DATASET_EXPIRY_ORIGINAL_UNSIGNED_WIRE_REQUIRED');
+    const partials=(await readdir(page)).filter(x=>/^\.x402-response-[a-f0-9-]{36}\.partial$/.test(x));
+    need(partials.length<=1,'DATASET_EXPIRY_PARTIAL_SELECTION_REQUIRED');
+    const partialPath=partials.length?join(page,partials[0]):null,files=[];
+    for(const [name,path]of Object.entries(successorPaths(page,cfg,partialPath))) {
+      const raw=await file(path,{optional:true});
+      if(name==='response-partial')need(raw.length===0,'DATASET_EXPIRY_UNSIGNED_PARTIAL_NOT_EMPTY');
+      files.push({name,path,state:raw===null?'ABSENT':'SAVED',bytes:raw?.length??0,
+        sha256:raw===null?null:digest(raw)});
+    }
+    const wireFiles=[];
+    for(const name of (await readdir(wireDirectory)).filter(x=>x!=='active.lock')) {
+      need(WIRE_FILES.has(name),'DATASET_EXPIRY_SIGNED_WIRE_REQUIRES_RECONCILIATION');
+      const raw=await file(join(wireDirectory,name));
+      need(name==='source.json'?digest(raw)===wire.sourceSha256:
+        wire.records[name.slice(0,-5)]?.sha256===digest(raw),'DATASET_EXPIRY_UNSIGNED_WIRE_CHANGED');
+      wireFiles.push({name,bytes:raw.length,sha256:digest(raw)});
+    }
+    plan={schema:UNAPPROVED,attemptSha256:expected,parentAttemptSha256:releasePlan.attemptSha256,
+      releaseJournalMac:releasePlan.releaseJournalMac,generation:releasePlan.generation,
+      intentId:cfg.operation.intentId,configurationSha256:digest(canonical(cfg)),historyDirectory:history,
+      wireDirectory,wireSourceSha256:wire.sourceSha256,wireFiles,partialPath,files,
+      originalError:summary.error.code,recordedAt:new Date().toISOString()};
+    validSuccessor(plan,page,cfg,releasePlan,expected);
+    await directory(join(releasePlan.historyDirectory,'unapproved'),{create:true});
+    await directory(history,{create:true});await writeRecord(join(history,'plan.json'),plan);
+  }
+  const archivedWire=join(history,'wire'),originalExists=await exists(wireDirectory);
+  need(!(originalExists&&await exists(archivedWire)),'DATASET_EXPIRY_NEW_WIRE_ALREADY_RECORDED');
+  const selectedWire=originalExists?wireDirectory:archivedWire;
+  await directory(selectedWire);
+  const held=await wireOwnership(selectedWire);
+  try {
+    await checkUnsignedFiles(selectedWire,plan);
+    const checked=await worker('read',cfg,selection,environment,signal);
+    need(checked.generation===plan.generation&&checked.current_generation===plan.generation&&
+      checked.release_journal_mac===plan.releaseJournalMac,'DATASET_EXPIRY_SUCCESSOR_WAS_RESERVED');
+    need(await file(cfg.responseFile.destination,{optional:true})===null,
+      'DATASET_EXPIRY_RESPONSE_ALREADY_RETAINED');
+    const currentCfg=await file(join(page,'config.json'),{limit:262144});
+    need(digest(currentCfg)===plan.files.find(x=>x.name==='config.json').sha256&&
+      canonical(parse(currentCfg))===canonical(cfg),'DATASET_EXPIRY_ORIGINAL_CONFIGURATION_CHANGED');
+    for(const selected of plan.files) {
+      if(selected.state==='ABSENT')continue;
+      const target=join(history,selected.name);let raw=await file(target,{optional:true});
+      if(raw===null){raw=await file(selected.path);need(raw.length===selected.bytes&&digest(raw)===selected.sha256,
+        'DATASET_EXPIRY_UNAPPROVED_SOURCE_CHANGED');await retained(target,raw);}
+      need(raw.length===selected.bytes&&digest(raw)===selected.sha256,'DATASET_EXPIRY_UNAPPROVED_HISTORY_CHANGED');
+    }
+    if(originalExists) {
+      need(!signal?.aborted,'OPERATOR_ABORTED');
+      await rename(wireDirectory,archivedWire);await syncDirectory(dirname(wireDirectory));await syncDirectory(history);
+    }
+    const archived=join(history,'archived.json');
+    if(!await json(archived,true))await writeRecord(archived,{schema:UNAPPROVED,attemptSha256:expected,
+      outcome:'ORIGINAL_UNSIGNED_SUCCESSOR_DURABLY_ARCHIVED',releaseJournalMac:plan.releaseJournalMac,
+      originalLedgerCheck:checked,archivedAt:new Date().toISOString()});
+    for(const name of ['result.json','failure.json','evidence.json','response-lock','response-partial','attempt.json']) {
+      const selected=plan.files.find(x=>x.name===name);if(!selected)continue;
+      const raw=await file(selected.path,{optional:true});if(raw===null)continue;
+      need(selected.state==='SAVED'&&raw.length===selected.bytes&&digest(raw)===selected.sha256,
+        'DATASET_EXPIRY_UNAPPROVED_SOURCE_CHANGED');
+      need(!signal?.aborted,'OPERATOR_ABORTED');await unlink(selected.path);await syncDirectory(dirname(selected.path));
+    }
+    const complete=join(history,'continued.json');
+    if(!await json(complete,true))await writeRecord(complete,{schema:UNAPPROVED,attemptSha256:expected,
+      outcome:'ORIGINAL_UNAPPROVED_SUCCESSOR_ARCHIVED',releaseJournalMac:plan.releaseJournalMac,
+      completedAt:new Date().toISOString()});
+  }finally{await held.close();}
+}
+
 /** Called only under the existing Dataset run lock, with original operator keys.
  * The worker has already observed and released the old generation. This function
  * archives its original files and supplies a private permit for a fresh review. */
@@ -234,8 +404,11 @@ export async function continueExpiredPage(page,cfg,{selection,expectedAttemptSha
       plan.releaseJournalMac===checked.release_journal_mac&&
       plan.previousReleaseJournalMac===checked.previous_release_journal_mac,'DATASET_EXPIRY_SELECTION_CHANGED');
     const current=await file(join(page,'attempt.json'),{optional:true,limit:8192});
-    need(current===null||digest(current)===expectedAttemptSha256,'DATASET_EXPIRY_NEW_ATTEMPT_ALREADY_RECORDED');
+    if(selection.expectedUnapprovedAttemptSha256!==undefined)
+      await archiveUnapprovedSuccessor(page,cfg,plan,selection,environment,signal);
+    else need(current===null||digest(current)===expectedAttemptSha256,'DATASET_EXPIRY_NEW_ATTEMPT_ALREADY_RECORDED');
   } else {
+    need(selection.expectedUnapprovedAttemptSha256===undefined,'DATASET_EXPIRY_ARCHIVED_PARENT_REQUIRED');
     const files=await originalFiles(page,cfg,source);
     const raw=await file(join(page,'attempt.json'),{limit:8192}),attempt=parse(raw);
     need(digest(raw)===expectedAttemptSha256&&attempt.schema==='stellar-forge.sf88.dataset-attempt.v1'&&

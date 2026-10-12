@@ -434,3 +434,7 @@ SF100 export. This acquisition extension reuses its exact checkPage and
 appendMany implementation. Its request mapping and batch process boundary were
 reviewed against those current native contracts; that prior run is not a claim
 that a new paid acquisition or this new boundary has been executed.
+
+### Continue an interrupted fresh approval
+
+If the released page has already been archived and its next original approval was interrupted before a new reservation, keep that successor's exact attempt and native wire records. The same `run --retry-expired` command accepts `--expect-unapproved-attempt ORIGINAL_UNSIGNED_SUCCESSOR_SHA256` in addition to the released parent's `--expect-attempt` and source/report/request inputs. The original wire reader must report a stopped unsigned attempt, and the authenticated Governor journal must still have the same released generation. The helper retains the successor under the parent's `expired-history/<parent>/unapproved/<successor>` directory, including its entire original wire directory and lock, then resumes the same fresh approval. A successor that was reserved, entered signing, or dispatched needs its own original reconciliation. An interrupted archive resumes from its saved plan and exact file hashes.
