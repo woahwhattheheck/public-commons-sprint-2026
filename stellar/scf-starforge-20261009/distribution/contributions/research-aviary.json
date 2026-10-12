@@ -1,0 +1,37 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "research-aviary",
+  "description": "Complete Aviary collection mapping, native packages, original API recovery and managed workspace receiving",
+  "supportFiles": [
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research/aviary/APPLICATIONS.md",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research/aviary/PROVIDER_CONTRACT.md",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research/aviary/README.md",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research/aviary/app.js",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research/aviary/application-provider.mjs",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research/aviary/application.mjs",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research/aviary/aviary.py",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research/aviary/aviary_client.py",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research/aviary/cli.mjs",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research/aviary/examples/receive_usgs_example.py",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research/aviary/examples/run-aviary-receiving.py",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research/aviary/examples/usgs-example-input.json",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research/aviary/index.html",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research/aviary/managed.py",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research/aviary/server.py"
+  ],
+  "commands": {
+    "aviary": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research/aviary/cli.mjs",
+    "aviary-workspace": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research/aviary/cli.mjs"
+  },
+  "commandDescriptions": {
+    "aviary": "Review original collection mappings, build five-table native packages, operate and recover the original Aviary API migration, and export or receive complete workspaces.",
+    "aviary-workspace": "Open the original Aviary workspace through the reviewed Applications lifecycle and selected native Python."
+  },
+  "exports": {
+    "./research/aviary/cli": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research/aviary/cli.mjs",
+    "./research/aviary/application": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research/aviary/application.mjs"
+  },
+  "applicationProviders": {
+    "research-aviary": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research/aviary/application-provider.mjs"
+  }
+}
