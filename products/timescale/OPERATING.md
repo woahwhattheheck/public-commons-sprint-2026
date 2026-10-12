@@ -359,6 +359,27 @@ and request input. Later commissioning receiving adopts the updated product
 source against that completed retained project with explicit lineage. It does
 not rewrite the original run or repeat its native database operations.
 
+## Retain the operator's full working context
+
+The Commissioning desk now keeps complete forms and original selected files
+under their workspace, project and criterion identities. Switching projects,
+native editions or operation choices preserves the previous authored form and
+clears an unrelated loaded result. Reopen the complete retained form to recover
+its exact source identity and full file bytes.
+
+Use its **Retained original requests** panel to inspect or download the complete
+original command after completion, failure or a lost response. A closed local
+request keeps its original file and UUID in history. The completion of an older
+command cannot discard a newer draft or replace another selected project.
+When the saved source or review context advances, explicitly reconcile the
+retained form with the current project before submitting it.
+
+The commissioning browser's requests and downloads bind the original workspace
+UUID even when a listener URL is reused. These controls join the existing native
+journal, installed receiver and Applications lifecycle described above. The
+original native operation and its subsequent installed receiving keep their
+existing source and request identities.
+
 ## Source and operating references
 
 - [Native source, refresh, job, publication and portable project](../../stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/timescale/README.md)
