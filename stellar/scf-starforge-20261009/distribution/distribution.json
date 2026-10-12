@@ -352,7 +352,8 @@
     "crossref": "stellar/scf-starforge-20261009/sf30-seller-sdk/crossref/cli.mjs",
     "crossref-dossier": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/crossref-cli.mjs",
     "fiscaldata": "stellar/scf-starforge-20261009/sf30-seller-sdk/fiscaldata/cli.mjs",
-    "coingecko": "stellar/scf-starforge-20261009/partners/coingecko-stellar-market/cli.mjs"
+    "coingecko": "stellar/scf-starforge-20261009/partners/coingecko-stellar-market/cli.mjs",
+    "upstream-tls": "stellar/scf-starforge-20261009/sf30-seller-sdk/upstream-tls/cli.mjs"
   },
   "exports": {
     "./seller/openalex": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/openalex/merchant.mjs",
@@ -811,7 +812,9 @@
     "./partners/coingecko": "./source/stellar/scf-starforge-20261009/partners/coingecko-stellar-market/provider.mjs",
     "./partners/coingecko/contracts": "./source/stellar/scf-starforge-20261009/partners/coingecko-stellar-market/contracts.mjs",
     "./partners/coingecko/market": "./source/stellar/scf-starforge-20261009/partners/coingecko-stellar-market/market.mjs",
-    "./partners/coingecko/workspace": "./source/stellar/scf-starforge-20261009/partners/coingecko-stellar-market/workspace/server.mjs"
+    "./partners/coingecko/workspace": "./source/stellar/scf-starforge-20261009/partners/coingecko-stellar-market/workspace/server.mjs",
+    "./seller/upstream-tls": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/upstream-tls/profile.mjs",
+    "./seller/upstream-tls/config": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/upstream-tls/config.mjs"
   },
   "nativePeers": {
     "@x402/core": {
@@ -846,7 +849,8 @@
     "stellar/mercury-event-operations/native_journey.py",
     "stellar/mercury-event-operations/verification/README.md",
     "stellar/mercury-event-operations/verification/native-journey.json",
-    "stellar/mercury-event-operations/verification/sqlite-recovery.json"
+    "stellar/mercury-event-operations/verification/sqlite-recovery.json",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/upstream-tls/journey.mjs"
   ],
   "featurePeers": {
     "postgres": {
