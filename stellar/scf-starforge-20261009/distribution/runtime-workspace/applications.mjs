@@ -12,6 +12,8 @@ import { odataApplication, prepareODataApplication } from '../../sf30-seller-sdk
 import { secEdgarApplication, prepareSecEdgarApplication } from './application-sec-edgar.mjs';
 import { jobResultReceiverApplication, prepareJobResultReceiverApplication } from './application-job-result-receiver.mjs';
 import { sheetsApplication, prepareSheetsApplication } from './application-sheets.mjs';
+import { nocodbApplication, prepareNocoDBApplication } from './application-nocodb.mjs';
+import { stellarExpertApplication, prepareStellarExpertApplication } from './application-stellar-expert.mjs';
 import { atlasApplication, prepareAtlasApplication } from './application-atlas.mjs';
 import { n8nApplication, prepareN8nApplication } from './application-n8n.mjs';
 import { redisApplication, prepareRedisApplication } from './application-redis.mjs';
@@ -66,6 +68,8 @@ export const APPLICATION_CATALOG = Object.freeze([
   secEdgarApplication(common),
   jobResultReceiverApplication(common),
   sheetsApplication(common),
+  nocodbApplication(common),
+  stellarExpertApplication(common),
   redisApplication(common),
   arcgisAgentApplication(common),
   jobCheckoutApplication(common),
@@ -254,6 +258,12 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
       inputPath, runtimeDirectory, applicationEnvironment,
     });
     args.push(...original.args); inputs.push(...original.inputs); jobResultReceiver = original.identity;
+  } else if (type.id === 'nocodb-authoring') {
+    const original = await prepareNocoDBApplication(settings, { inputPath, runtimeDirectory });
+    args.push(...original.args); inputs.push(...original.inputs); createDirectories.push(...original.createDirectories);
+  } else if (type.id === 'stellar-expert') {
+    const original = await prepareStellarExpertApplication(settings, { inputPath, runtimeDirectory });
+    args.push(...original.args); inputs.push(...original.inputs); createDirectories.push(...original.createDirectories);
   } else if (type.id === 'sheets-authoring') {
     const original = await prepareSheetsApplication(settings, { inputPath, runtimeDirectory });
     args.push(...original.args); inputs.push(...original.inputs); createDirectories.push(...original.createDirectories);
