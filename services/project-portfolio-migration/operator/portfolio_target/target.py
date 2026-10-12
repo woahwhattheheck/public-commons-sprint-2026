@@ -300,6 +300,8 @@ class NativeTarget:
                    "OData-Version": "4.0", "OData-MaxVersion": "4.0",
                    "Accept-Encoding": "identity",
                    "Prefer": 'odata.include-annotations="OData.Community.Display.V1.FormattedValue"'}
+        if method == "GET":
+            headers["If-None-Match"] = "null"
         if body is not None:
             headers["Content-Type"] = "application/json; charset=utf-8"
         conn = http.client.HTTPSConnection(parsed.hostname, parsed.port or 443,

@@ -156,9 +156,17 @@ If a field changes after review, the original set remains unexecuted. Review tha
 
 ## Actual receiving, comparison and acceptance
 
-Cloud receiving uses the original pinned `org.mpxj.msplanner.MsPlannerReader` against the selected current environment and project. The original `PortfolioWorkspace.capture_native` stores that actual project as a complete source edition with native backing.
+Cloud receiving uses the original pinned `org.mpxj.msplanner.MsPlannerReader` against the selected environment and project. Its private local read transport supplies the original reader requests from complete actual Dataverse responses. The source parser, calendars, assignment logic and native project writer remain the original MPXJ implementation.
 
-Prepared provider GUIDs are matched only to uniquely observed original captured row keys. Cloud comparison calls the source engine with `strict_identity=True`: explicit row maps and unique GUID matches pair rows; regenerated numeric UIDs or ordinals do not guess identities across systems. Unresolved or ambiguous actual identities remain visible.
+The transport retains each provider page with its original URL, response bytes and retrieval time. It follows top-level page cursors and expanded collections. Dataverse single-level expansion links identify the complete relationship collection, so that collection replaces the inline view before its pages are followed. A link carrying a real paging cursor continues the original array. The original inline view and complete collection are both retained. Paging is a sequence of actual reads; its recorded interval remains visible.
+
+The completed JSON delivered to MPXJ, the first accepted target probe and the read manifest are pinned to the original capture request. An interrupted capture reuses retained pages. Closing the reader or host stops further page assembly while preserving the original complete pages already received. After the reader completes, its local continuation can reopen from those saved pages without another provider read. The original `PortfolioWorkspace.capture_native` retains the actual native project and reopens its completed edition under the same request. This source closure is included in the portable workspace.
+
+Task and assignment GUIDs map directly to exact captured rows. Project-team resources join through the actual assignment's bookable-resource lookup, which is the GUID used by this reader. A dependency joins its actual native record to captured task GUIDs, native relation type and exact reader lag. A resource omitted by the original reader, an unsupported native field, or competing identities produces a visible finding.
+
+Cloud comparison calls the source engine with `strict_identity=True`: explicit original-key maps and unique GUID matches pair rows. Captured task UIDs resolve relationships only within that captured model. The comparison preserves unresolved identities and all original differences for acceptance.
+
+The local reader uses its pinned v9.2 path convention; the transport retains and uses the exact API version selected in the private target profile. Response and collection limits fail visibly when a complete result exceeds the selected capacity. They do not publish a truncated capture.
 
 File receiving uses the actual uploaded project and the source engine's ordinary same-format identity rules, with an optional exact per-family identity map.
 
@@ -236,6 +244,8 @@ The original archive download itself is written to a sibling `<workspace>-operat
 
 The product pins MPXJ **16.10.0**, source commit `7ef9e72813d33378c55ec6ceb148cc831ed22033`. Original upstream notices and the source bundle remain with the complete product.
 
+- [Dataverse paging](https://learn.microsoft.com/en-us/power-apps/developer/data-platform/webapi/query/page-results)
+- [Dataverse expanded relationship collections](https://learn.microsoft.com/en-us/power-apps/developer/data-platform/webapi/query/join-tables)
 - [MPXJ Microsoft Planner reader](https://www.mpxj.org/howto-read-msplanner/)
 - [MPXJ MPP reader](https://www.mpxj.org/howto-read-mpp/)
 - [MPXJ MSPDI reader](https://www.mpxj.org/howto-read-mspdi/)
