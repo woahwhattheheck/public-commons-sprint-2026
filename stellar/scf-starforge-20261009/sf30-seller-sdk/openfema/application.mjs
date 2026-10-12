@@ -16,7 +16,7 @@ export function openFemaApplication(common) {
   return {
     id: 'openfema-public-assistance', command: 'openfema-workspace', title: 'Public Assistance portfolios', terminal: false,
     requiredSource: SOURCE + '/workspace.mjs',
-    description: 'Operate complete OpenFEMA declarations, applicants and funded projects; retain source editions, review portfolio versions and exact amounts, publish native datasets and receive completed customer files.',
+    description: 'Operate complete OpenFEMA declarations, applicants and funded projects; retain source editions, review portfolio versions and exact amounts, map the supplied destination schema, reconcile full customer registers, publish native datasets and receive complete deliveries and archives.',
     fields: [
       field('workspaceDirectory', 'Private Public Assistance workspace', 'path', true,
         'Reopen the original workspace, or create one directory in an existing private parent. Saved captures and pending operation identities remain selected.'),
@@ -38,7 +38,7 @@ export async function prepareOpenFemaApplication(settings, { inputPath, runtimeD
   const inputs = [selected], createDirectories = selected.exists ? [] : [directory];
   const runtime = await inspectMerchantRuntime(absolute(runtimeDirectory), { load: false });
   const sourceDirectory = join(runtime.sourceRoot, SOURCE);
-  for (const name of ['workspace.mjs', 'schema.mjs', 'core.mjs'])
+  for (const name of ['workspace.mjs', 'schema.mjs', 'core.mjs', 'delivery.mjs'])
     inputs.push(await inputPath(join(sourceDirectory, name), 'file'));
   inputs.push(await inputPath(join(runtime.sourceRoot, STORE), 'file'));
   const native = await import(pathToFileURL(join(runtime.sourceRoot, STORE)).href);

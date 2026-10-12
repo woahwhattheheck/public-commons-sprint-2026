@@ -7,7 +7,7 @@ import {pathToFileURL,fileURLToPath} from 'node:url';
 import {readBrowserAssets} from '../../distribution/browser-assets.mjs';
 import {inspectWorkspaceIdentity,readOwned} from '../stellar-expert/store.mjs';
 import {openOpenFemaWorkspace} from './core.mjs';
-import {WORKSPACE_SCHEMA} from './schema.mjs';
+import {WORKSPACE_SCHEMA,actionRequestByteLimit} from './schema.mjs';
 import {fault} from './domain.mjs';
 const CSP="default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; base-uri 'none'; frame-ancestors 'none'; form-action 'self'";
 const hash=bytes=>createHash('sha256').update(bytes).digest('hex');
@@ -29,16 +29,20 @@ export async function startOpenFemaWorkspace({directory,inboxDirectory,port=0,re
     try{return {value:JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(Buffer.concat(parts))),size};}
     catch(error){if(error.code)throw error;throw fault('OPENFEMA_JSON','Use a complete UTF-8 JSON request.');}
   }
-  async function selection(path){
+  async function selection(path,expectedRevision){
+    if(expectedRevision!==undefined&&(!Number.isSafeInteger(expectedRevision)||expectedRevision<0||path!=='/api/workspace.zip'))throw fault('OPENFEMA_DOWNLOAD','Only a complete workspace archive accepts its expected revision.');
     let match;
     if((match=/^\/api\/objects\/([a-f0-9]{64})$/.exec(path))){const selected=await app.raw(match[1]);return{...selected,item:{name:'OpenFEMA_Source_'+match[1]+'.json',type:selected.type,sha256:match[1],bytes:selected.bytes.length}};}
     if((match=/^\/api\/exports\/(export-[a-f0-9]{24})$/.exec(path)))return app.exported(match[1]);
     if((match=/^\/api\/receipts\/(buyer-[a-f0-9]{24})\/(dataset\.csv|dataset\.jsonl|review\.html|delivery\.json|manifest\.json)$/.exec(path)))return app.received(match[1],match[2]);
     if(path==='/api/workspace.zip'){
-      const revision=app.store.read().revision,cached=archives.get(revision);
-      if(cached)return cached;
-      const archive=await app.archive(),selected={bytes:archive.bytes,item:{name:archive.name,type:archive.type,bytes:archive.bytes.length,sha256:hash(archive.bytes),revision}};
-      archives.clear();archives.set(revision,selected);return selected;
+      const revision=app.store.read().revision;
+      if(expectedRevision!==undefined&&expectedRevision!==revision)throw fault('OPENFEMA_REVISION_CHANGED','The workspace advanced before archive receiving. Preserve the original archive request and select the current revision for a new archive.',409);
+      const cached=archives.get(revision);if(cached)return cached;
+      const archive=await app.archive(),actualRevision=archive.manifest.revision;
+      if(expectedRevision!==undefined&&expectedRevision!==actualRevision)throw fault('OPENFEMA_REVISION_CHANGED','The workspace advanced while its archive was being prepared.',409);
+      const selected={bytes:archive.bytes,item:{name:archive.name,type:archive.type,bytes:archive.bytes.length,sha256:hash(archive.bytes),revision:actualRevision}};
+      archives.clear();archives.set(actualRevision,selected);return selected;
     }
     throw fault('OPENFEMA_DOWNLOAD','Choose an original source, report, customer file or complete workspace.',404);
   }
@@ -82,15 +86,15 @@ export async function startOpenFemaWorkspace({directory,inboxDirectory,port=0,re
       }
       if(req.method==='POST'&&path==='/api/download-ticket'&&!url.search){
         const {value}=await readJSON(req,8192);
-        if(!value||Object.keys(value).length!==1||typeof value.path!=='string')throw fault('OPENFEMA_DOWNLOAD','Select one original download path.');
-        const selected=await selection(value.path);for(const [id,ticket]of tickets)if(ticket.expiresAt<Date.now())tickets.delete(id);
+        if(!value||Object.keys(value).some(key=>!['path','expectedRevision'].includes(key))||typeof value.path!=='string')throw fault('OPENFEMA_DOWNLOAD','Select one original download path and optional workspace revision.');
+        const selected=await selection(value.path,value.expectedRevision);for(const [id,ticket]of tickets)if(ticket.expiresAt<Date.now())tickets.delete(id);
         if(tickets.size>=24)throw fault('OPENFEMA_DOWNLOAD_CAPACITY','Finish the prepared downloads before opening more.',429);
         const id=randomBytes(24).toString('hex'),expiresAt=Date.now()+120000;tickets.set(id,{selected,expiresAt});
         return reply(200,{url:'/api/download/'+id,expiresAt:new Date(expiresAt).toISOString(),item:selected.item});
       }
       if(req.method==='POST'&&path==='/api/action'&&!url.search){
         const {value,size}=await readJSON(req,256*1024*1024);
-        if(value?.action!=='source.import'&&size>128*1024)throw fault('OPENFEMA_REQUEST_SIZE','Use a complete source bundle for large source receiving; operator actions fit128KiB.',413);
+        if(size>actionRequestByteLimit(value?.action))throw fault('OPENFEMA_REQUEST_SIZE','This action exceeds its declared complete-request limit. Source bundles, full destination schemas and complete customer CSVs have their native receiving limits.',413);
         return reply(200,await app.action(value));
       }
       return reply(404,{error:'OPENFEMA_NOT_FOUND',message:'This workspace route is not available.'});
