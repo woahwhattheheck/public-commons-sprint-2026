@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>SCF delivery planning</title>
   <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/operations.css">
   <script type="module" src="/app.mjs"></script>
 </head>
 <body>
@@ -22,7 +23,7 @@
 <div id="workbench" hidden aria-busy="false">
   <section class="planbar" aria-label="Planning scenarios">
     <label for="plan-select">Saved plan<select id="plan-select"></select></label>
-    <div class="button-row"><button type="button" data-action="clone">Copy saved plan</button><button type="button" data-action="reload">Reopen saved</button><button type="button" data-action="import">Import scenario or workspace</button><button type="button" data-action="export">Export complete workspace</button></div>
+    <div class="button-row"><button type="button" data-action="clone">Copy saved plan</button><button type="button" data-action="reload">Reopen saved</button><button type="button" data-action="import">Import planning scenario or workspace</button><button type="button" data-action="export">Export planning workspace</button></div>
     <input id="import-file" type="file" accept=".json,.zip,application/json,application/zip" hidden>
   </section>
   <div class="shell">

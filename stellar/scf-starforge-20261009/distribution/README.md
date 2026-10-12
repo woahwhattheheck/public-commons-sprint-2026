@@ -2297,6 +2297,97 @@ SQLite uses Node's built-in database module and requires no PostgreSQL driver.
 `starforge sqlite-inspect --help` exposes declaration/query inspection. The
 bundled source guides cover application bindings and current Node requirements.
 
+### Build an OpenSearch merchant and retain search results
+
+The OpenSearch adapter connects an existing **OpenSearch 3.3 or newer** cluster
+to the original seller, operations dashboard and generated customer client.
+It uses native HTTP with Node.js **22.16 or newer**; the private browser workspace
+uses Node's built-in SQLite. The existing SF30 component contains its full source,
+examples and browser assets.
+
+Copy the installed `sf30-seller-sdk/opensearch/examples/source.json` and
+`merchant-plan.json` into a private working directory. Select the index names,
+fixed Query DSL, typed customer parameters, original source fields, business
+ordering and result limits. Set the actual public merchant origin and payment
+terms. The source contains environment variable names for the endpoint and
+chosen basic, bearer or anonymous authentication; supply their values through
+the host's normal credential environment. The complete configuration guide is
+[OpenSearch merchant](../sf30-seller-sdk/opensearch/README.md).
+
+Open the retained authoring workspace from that same environment:
+
+```sh
+npx --no-install starforge opensearch-workspace \
+  --source /private/search/source.json \
+  --plan /private/search/merchant-plan.json \
+  --workspace /private/search/workspace --port 0
+```
+
+The printed loopback URL opens named drafts, exact revision history, native
+inspection, result editions and prepared merchants. Save the query, selected
+input and complete merchant plan. **Inspect source** reads the real cluster
+version, index mappings, field capabilities and native query validation.
+**Capture result** runs the selected query in one native point-in-time snapshot
+and stores the returned result with its frozen draft and input. Reopen the same
+workspace command to recover its saved drafts, operations and result editions.
+
+The result viewer, JSON download and CSV export retain `[_index,_id]` document
+identity, selected source values and exact-integer metadata. Comparison shows
+content changes separately from business ordering and score changes. It records
+both editions' query/input/projection scope, cluster fingerprint, hit limits and
+native total relation; entering or leaving a retained result set is described
+within those captured sets. Full source and nested-array values remain available
+in the original JSON.
+
+**Prepare merchant** creates the original private source/plan, service, bindings,
+public OpenAPI and generated `client/` files in a new retained directory. The
+package panel supplies each file's byte count and SHA-256, download links and its
+startup command. Preparation also works directly:
+
+```sh
+npx --no-install starforge opensearch-prepare \
+  --source /private/search/source.json \
+  --plan /private/search/merchant-plan.json \
+  --directory /private/search/merchant-001
+npx --no-install starforge opensearch \
+  --directory /private/search/merchant-001 --inspect
+npx --no-install starforge opensearch \
+  --directory /private/search/merchant-001 \
+  --port 8423 --operations-port 8424
+```
+
+Preparation validates configuration offline. Inspect and every normal launch
+perform native preflight against the selected cluster. The seller prints its
+existing API, developer documentation and operations URLs. Add the existing
+`--facilitator HTTPS_URL` and [native payment dependencies](#native-payment-dependencies)
+for paid delivery. One customer call gathers the complete configured result
+through one PIT; its internal pages share that original payment operation.
+SIGINT/SIGTERM drain the original service and release its source.
+
+Send customers the public `openapi.json` and complete `client/` directory. Use the
+generated client with the original installed [Node Buyer](#give-customers-a-usable-client)
+and its saved-response recovery. Keep native `total.relation` (`eq` or `gte`),
+`truncated`, `source.clusterFingerprint` and per-hit `exactIntegerPaths` alongside
+the delivered hits. Unsafe native integer tokens are exact decimal strings;
+ordinary strings stay distinguishable through those pointers. The private
+source, native probes and connection environment remain with the merchant.
+
+Application imports are original modules from
+`@tokenjunkielabs/starforge-merchant`:
+
+| Package subpath | Original API |
+| --- | --- |
+| `/seller/opensearch` | `readOpenSearchSourceFile`, `createOpenSearchQuerySource`, `openOpenSearchSourceFile` |
+| `/seller/opensearch/declaration` | Source validation, query compilation and parameter binding |
+| `/seller/opensearch/prepare` | `compileOpenSearchMerchantPlan`, `prepareOpenSearchSeller` |
+| `/seller/opensearch/start` | `startOpenSearchSeller` |
+| `/seller/opensearch/workspace` | `startOpenSearchWorkspace` |
+| `/seller/opensearch/workspace/service` | `createOpenSearchWorkspace` |
+| `/seller/opensearch/workspace/store` | `compareEditions`, `editionCsv` and retained storage |
+
+The [workspace guide](../sf30-seller-sdk/opensearch/workspace/README.md) documents
+operation recovery, revision conflicts, frozen result scope and embedding.
+
 ### Prepare and operate a ClickHouse merchant
 
 The installed ClickHouse adapter uses the original SF30 HTTP transport and
@@ -3919,6 +4010,90 @@ record analysis, comparison and CSV functions. These entries use the original
 Node buyer SDK and Node 22.16+, with no additional runtime package. The complete
 receiving and portable-file guide is included at
 `source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/tenderly-analysis/README.md`.
+
+## GoldRush wallet data and research
+
+The installed product joins the provider's prepared release to the original
+Node Buyer, Inbox and Resource library. It supports the two selected EVM wallet
+operations: token balances and one explicit page of token transfers. Stellar
+is the separately configured merchant's payment network; this does not extend
+GoldRush's existing Base Sepolia client interface or add Stellar source-chain
+data.
+
+Check the original schema runtime, then inspect or prepare the provider's
+retained release:
+
+```sh
+npx --no-install starforge doctor --feature schema
+npx --no-install starforge goldrush-merchant --help
+npx --no-install starforge goldrush-merchant prepare \
+  --plan /private/provider/goldrush-plan.json \
+  --catalog /private/provider/goldrush-catalog.json \
+  --out /private/provider/goldrush-release
+npx --no-install starforge goldrush-merchant inspect \
+  --release /private/provider/goldrush-release
+```
+
+The provider supplies the existing account, named credential environment,
+source-data rights and complete merchant payment terms. Preparation reads
+retained inputs and creates a new release; it performs no provider request.
+The original check/serve argument arrays printed by `inspect` resolve against
+this installation and the selected release directory.
+
+Open the wallet workspace with its original release and private buyer paths:
+
+```sh
+npx --no-install starforge goldrush workbench \
+  --state /private/customer/goldrush-wallet \
+  --release /private/provider/goldrush-release \
+  --buyer-state /private/customer/goldrush-buyer \
+  --inbox /private/customer/goldrush-inbox \
+  --workspace /private/customer/operator-workspace
+```
+
+Use an existing `--profile` instead of `--workspace` when that is the original
+operator configuration; the two options are mutually exclusive. Use the
+configuration required by the original wallet operating guide. Open the private
+URL announced by the process. It exposes the wallet and the original Resource library on
+the same listener and session.
+
+After stopping the process, reopen with only the same `--state`. The retained
+configuration keeps its release, buyer, inbox and operator paths. Use an
+explicit `--port` when browser drafts must reopen at the same local origin.
+Preparation, saved-response reading, comparison, notes and export do not
+execute a purchase. Each selected execution still uses the original operator
+review and terminal; interrupted work returns to the same saved Inbox intent.
+
+`starforge goldrush --help` also exposes the maintained request, prepare,
+review, execute, recover and next-page commands. One transfer response is
+one page; a next page requires a new explicit request and ceiling. The
+pilot's 20-second upstream deadline, 1-MiB response cap and four-request
+concurrency cap remain in force, and provider or delivery failures retain their original outcome.
+
+Applications may use the same argument-vector opening API:
+
+```js
+import { startGoldRushWorkspace } from '@tokenjunkielabs/starforge-merchant';
+
+const running = await startGoldRushWorkspace([
+  '--state', '/private/customer/goldrush-wallet',
+]);
+console.log(running.url);
+// Keep the application running for the operator; close it during host shutdown:
+// await running.close();
+```
+
+This reopens an initialized workspace. Its original low-level
+`openWorkbench` and `main` exports are also available at
+`@tokenjunkielabs/starforge-merchant/buyer/goldrush/workspace`.
+The `/buyer/goldrush` entry exposes original request preparation and
+`/buyer/goldrush/records` exposes the pure saved-response parser, comparison
+and CSV functions. The `/seller/goldrush` entry exposes the original merchant
+preparation command. No additional source component or dependency family is
+introduced: the existing schema feature and native buyer requirements apply.
+Follow the included [wallet operating guide](../sf30-seller-sdk/examples/goldrush-stellar-pilot/WALLET-WORKSPACE.md)
+for exact source lineage, decimal values, saved notes, reference observations
+and explicit recovery.
 
 ## Embed in an application
 

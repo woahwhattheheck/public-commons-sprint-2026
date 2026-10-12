@@ -40,6 +40,8 @@ function setDraft(record) {
 async function updateStatus() {
   const status=await api('/status');
   $('collections-link').hidden=!status.pages?.includes('/collections');
+  $('goldrush-link').hidden=!status.pages?.includes('/goldrush');
+  $('goldrush-link').href='/goldrush#'+token;
   $('source').textContent=`${status.config.kind} · ${status.config.source}`;
   $('refreshed').textContent=status.scan?.completedAt ?? 'No completed refresh';
   const counts=status.scan?.counts ?? {};
