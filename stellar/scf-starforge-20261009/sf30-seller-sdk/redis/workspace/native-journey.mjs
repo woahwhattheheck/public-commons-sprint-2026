@@ -5,14 +5,18 @@ import { join } from 'node:path';
 import { createHash } from 'node:crypto';
 import { createRedisAuthoringWorkspace, openRedisAuthoringWorkspace } from './model.mjs';
 import { startRedisAuthoringServer } from './server.mjs';
-import { inspectRelease, activateRelease, runActiveRelease, releaseStatus } from '../../../sf82-seller-pilot/releases.mjs';
+import { inspectRelease } from '../../../sf82-seller-pilot/releases.mjs';
 
 const hash=value=>createHash('sha256').update(value).digest('hex');
 export async function runRedisWorkspaceJourney({sourceFile,planFile,root,runtime}){
-  let workspace=await createRedisAuthoringWorkspace({directory:root,sourceFile,planFile,label:'Native Redis merchant'});
-  let server,browser,managed;
+  const environment={...process.env},connection=JSON.parse(await readFile(sourceFile,'utf8')).connection;
+  const credential=connection.passwordEnv??connection.tokenEnv,hadCredential=credential&&Object.hasOwn(process.env,credential);
+  let workspace,server,browser;
   const stages=[],downloads=[];
   try{
+    // Preview and the retained seller must use the workspace's explicit environment.
+    if(credential)delete process.env[credential];
+    workspace=await createRedisAuthoringWorkspace({directory:root,sourceFile,planFile,label:'Native Redis merchant',environment});
     const initial=workspace.state(),initialRevision=initial.workspace.head,workspaceId=initial.workspace.id;
     server=await startRedisAuthoringServer({workspace,port:0});
     const call=async(path,input)=>{
@@ -37,6 +41,13 @@ export async function runRedisWorkspaceJourney({sourceFile,planFile,root,runtime
       page.on('pageerror',error=>issues.push(error.message));
       await page.goto(server.operatorUrl);await page.locator('#status').filter({hasText:'Workspace ready.'}).waitFor();
       await page.locator('#query-list button').filter({hasText:'leaderboard'}).click();
+      const originalColumns=await page.locator('#query-columns').inputValue();
+      await page.locator('#query-columns').fill('[]');await page.locator('#save').click();
+      await page.locator('#status[data-error=true]').filter({hasText:'REDIS_COLUMNS_INVALID'}).waitFor();
+      assert.equal(await page.locator('#pending-panel').isVisible(),false);
+      assert.equal(await page.locator('#panel-products').evaluate(node=>node.inert),false);
+      assert.equal(await page.locator('#save').isEnabled(),true);
+      await page.locator('#query-columns').fill(originalColumns);
       await page.locator('#query-rows').fill('1');await page.locator('#query-form button[type=submit]').click();
       await page.locator('#revision-note').fill('One ranking row per request');
       await page.locator('#save').click();await page.locator('#status').filter({hasText:'Revision saved.'}).waitFor();
@@ -61,12 +72,29 @@ export async function runRedisWorkspaceJourney({sourceFile,planFile,root,runtime
       await page.locator('#stage-port').fill('0');await page.locator('#stage-facilitator').fill(runtime.facilitator);await page.locator('#stage-local').check();
       await page.locator('#stage').click();await page.locator('#status').filter({hasText:'Release browser-v2 is staged.'}).waitFor();
       await page.locator('#open-releases').click();await page.locator('#status a').waitFor();
-      await page.locator('[data-tab=versions]').click();assert.ok(await page.locator('#version-list tbody tr').count()>=3);
+      // A real version history beyond the first page must keep the selected old source through preview refreshes.
+      for(let edition=1;edition<=30;edition++){
+        const saved=workspace.state();
+        await call('/api/save',{requestId:'operating-review-'+edition,expectedHead:saved.workspace.head,
+          queries:saved.current.source.queries,plan:saved.current.plan,note:'Operating review '+edition});
+      }
+      await page.locator('#refresh').click();await page.locator('#status').filter({hasText:'Saved work refreshed.'}).waitFor();
+      await page.locator('[data-tab=versions]').click();await page.locator('#older-versions').click();
+      assert.ok(await page.locator('#version-list tbody tr').count()>30);
+      await page.locator('[data-tab=preview]').click();await page.locator('#preview-version').selectOption(initialRevision);
+      await page.locator('#preview-query').selectOption('leaderboard');await page.locator('#preview-input').fill('{"offset":"0"}');
+      await page.locator('#run-preview').click();await page.locator('#status').filter({hasText:'Live source preview completed.'}).waitFor();
+      assert.equal(await page.locator('#preview-version').inputValue(),initialRevision);
+      assert.equal(await page.locator('#preview-query').inputValue(),'leaderboard');
+      assert.equal(await page.locator('#preview-table tbody tr').count(),2);
+      await page.locator('#next-preview').click();await page.locator('#status').filter({hasText:'Live source preview completed.'}).waitFor();
+      assert.equal(await page.locator('#preview-version').inputValue(),initialRevision);
+      assert.match(await page.locator('#preview-table').innerText(),/third/);
       await page.locator('[data-tab=activity]').click();assert.ok(await page.locator('#activity-list tbody tr').count()>=8);
       assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
       if(process.env.SF30_REDIS_WORKSPACE_SCREENSHOT)await page.screenshot({path:process.env.SF30_REDIS_WORKSPACE_SCREENSHOT,fullPage:true});
       assert.deepEqual(issues,[]);await browser.close();browser=null;
-      stages.push({kind:'browser',viewport:{width:1440,height:1000},flow:'product,price,preview,continuation,customer-download,stage,release-controls,versions,activity'});
+      stages.push({kind:'browser',viewport:{width:1440,height:1000},flow:'rejected-edit-recovery,product,price,preview,continuation,customer-download,stage,release-controls,paged-historical-preview,activity'});
     }else{
       const queries=structuredClone(initial.current.source.queries),plan=structuredClone(initial.current.plan);
       queries.leaderboard.maxRows=1;plan.payment.amount='20000';
@@ -91,7 +119,7 @@ export async function runRedisWorkspaceJourney({sourceFile,planFile,root,runtime
     const firstPage=await call('/api/operations?limit=2');assert.equal(firstPage.items.length,2);assert.ok(firstPage.nextCursor);
     const secondPage=await call('/api/operations?limit=2&after='+firstPage.nextCursor);assert.notEqual(secondPage.items[0].id,firstPage.items[0].id);
     await server.close();server=null;
-    workspace=await openRedisAuthoringWorkspace(root);
+    workspace=await openRedisAuthoringWorkspace(root,{environment});
     assert.equal(workspace.metadata().id,workspaceId);assert.equal(workspace.operation(prepared.id).status,'COMPLETED');
     assert.equal(workspace.state().current.plan.payment.amount,'10000');
     const reopened=await workspace.preview({requestId:'reopened-catalog',revisionId:workspace.metadata().head,query:'catalog',input:{region:'north'}});
@@ -100,14 +128,22 @@ export async function runRedisWorkspaceJourney({sourceFile,planFile,root,runtime
     await rm(join(root,'materialized'),{recursive:true});await rm(join(root,'packages'),{recursive:true});
     const releaseRoot=join(root,'releases'),release=await inspectRelease(releaseRoot,'terminal-v2');
     assert.equal(release.redis.queries.leaderboard.maxRows,1);assert.equal(release.routes[0].payment[0].amount,'20000');
-    await activateRelease(releaseRoot,'terminal-v2',{expectedGeneration:0,reason:'Run the workspace retained package'});
-    managed=await runActiveRelease(releaseRoot,{expectedGeneration:1});
-    const running=await releaseStatus(releaseRoot),listener=running.runtime.observed.listener;
+    const controls=await workspace.openReleases(),controlLink=new URL(controls.operatorUrl);
+    const control=async(action,input)=>{
+      const response=await fetch(controls.url+'/api/'+action,{method:'POST',
+        headers:{origin:controls.url,'content-type':'application/json','x-release-token':controlLink.hash.slice(1)},body:JSON.stringify(input)});
+      const value=await response.json();assert.equal(response.status,200,JSON.stringify(value));return value;
+    };
+    await control('activate',{id:'terminal-v2',expectedGeneration:0,reason:'Run the workspace retained package'});
+    const running=await control('run',{expectedGeneration:1}),listener=running.runtime.observed.listener;
     const rankingPath=initial.current.plan.routes.find(route=>route.query==='leaderboard').path;
     const challenge=await fetch(listener+rankingPath+'?offset=0');assert.equal(challenge.status,402);
-    await managed.close();managed=null;
-    stages.push({kind:'retained-release',releaseId:release.id,digest:release.digest,challengeStatus:challenge.status});
+    await control('stop',{instanceId:running.console.instanceId});
+    stages.push({kind:'retained-release',releaseId:release.id,digest:release.digest,challengeStatus:challenge.status,environment:'explicit-workspace'});
     return {result:'PASS',workspaceId,initialRevision,changedRevision,retainedRevision:workspace.metadata().head,
       publicFiles:names.length,stages,downloads};
-  }finally{await browser?.close();await managed?.close();if(server)await server.close();else await workspace?.close();}
+  }finally{
+    if(credential){if(hadCredential)process.env[credential]=environment[credential];else delete process.env[credential];}
+    await browser?.close();if(server)await server.close();else await workspace?.close();
+  }
 }

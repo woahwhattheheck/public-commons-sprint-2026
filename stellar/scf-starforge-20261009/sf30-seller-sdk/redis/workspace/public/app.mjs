@@ -138,10 +138,23 @@ async function loadState({resetDraft=false}={}){
 }
 async function perform(action,input){
   if(pending)throw new Error('Retrieve the saved request outcome before starting another operation.');
-  pending={workspaceId:state.workspace.id,action,input:{...copy(input),requestId:crypto.randomUUID()},createdAt:new Date().toISOString()};
-  await storage.writePending(pending);updatePending();
-  const result=await request('/api/'+action,pending.input);
-  return finish(result);
+  const saved={workspaceId:state.workspace.id,action,input:{...copy(input),requestId:crypto.randomUUID()},createdAt:new Date().toISOString()};
+  await storage.writePending(saved);pending=saved;updatePending();
+  return finish(await sendPending());
+}
+async function sendPending(){
+  const saved=pending;
+  try{return await request('/api/'+saved.action,saved.input);}
+  catch(error){
+    if(error.httpStatus>=400&&error.httpStatus<500){
+      let outcome,unrecorded=false;
+      try{outcome=await request('/api/operation?id='+encodeURIComponent(saved.input.requestId));}
+      catch(inspectError){unrecorded=inspectError.httpStatus===404;}
+      if(outcome)return outcome;
+      if(unrecorded){await storage.deletePending();pending=null;updatePending();}
+    }
+    throw error;
+  }
 }
 async function finish(result){
   if(!result?.id||!['COMPLETED','FAILED','INTERRUPTED','RUNNING'].includes(result.status))throw new Error('The server did not return a retained operation.');
@@ -149,7 +162,7 @@ async function finish(result){
     const kind=result.kind;await storage.deletePending();pending=null;updatePending();
     if(result.status==='FAILED'){await loadState();throw errorOf(result.error);}
     if(kind==='save')await loadState({resetDraft:true});else await loadState();
-    if(kind==='preview')showPreview(result);
+    if(kind==='preview')await showPreview(result);
     if(kind==='stage')status('Release '+result.result.releaseId+' is staged. Open Release controls to select and run it.');
     else status(kind==='save'?'Revision saved.':kind==='prepare'?'Merchant package and customer files are ready.':kind==='preview'?'Live source preview completed.':kind+' completed.');
   }else if(pending){
@@ -165,16 +178,21 @@ async function inspectPending(continueRequest=false){
   catch(error){
     if(error.httpStatus!==404)throw error;
     if(!continueRequest){pending.observedStatus='Ready to send';await storage.writePending(pending);updatePending();return;}
-    result=await request('/api/'+pending.action,pending.input);
+    result=await sendPending();
   }
   if(continueRequest&&result.status==='INTERRUPTED')result=await request('/api/resume',{requestId:pending.input.requestId});
   return finish(result);
 }
 async function previewVersions(){
   const selected=$('preview-version').value;
-  $('preview-version').replaceChildren(...revisionRows.map(revision=>{const option=el('option',revision.id.slice(0,12)+' · '+revision.note);option.value=revision.id;return option;}));
-  $('preview-version').value=revisionRows.some(row=>row.id===selected)?selected:state.workspace.head;
+  const choices=[...revisionRows];
+  if(previewRevision?.id===selected&&!choices.some(row=>row.id===selected))choices.push(previewRevision);
+  $('preview-version').replaceChildren(...choices.map(revisionOption));
+  $('preview-version').value=choices.some(row=>row.id===selected)?selected:state.workspace.head;
   await selectPreviewRevision();
+}
+function revisionOption(revision){
+  const option=el('option',revision.id.slice(0,12)+' · '+revision.note);option.value=revision.id;return option;
 }
 async function selectPreviewRevision(){
   const selected=$('preview-version').value;if(!selected)return;
@@ -190,9 +208,13 @@ function resetPreviewInput(){
   const route=previewRevision?.plan.routes.find(route=>route.query===$('preview-query').value);
   $('preview-input').value=pretty(route?.example??{});
 }
-function showPreview(operation){
-  const result=operation.result,data=result.data;preview=operation;
-  $('preview-version').value=result.revisionId;$('preview-query').value=result.query;$('preview-input').value=pretty(result.input);
+async function showPreview(operation){
+  const result=operation.result,data=result.data;
+  if(![...$('preview-version').options].some(option=>option.value===result.revisionId))
+    $('preview-version').append(revisionOption(await request('/api/revision?id='+encodeURIComponent(result.revisionId))));
+  $('preview-version').value=result.revisionId;
+  if(previewRevision?.id!==result.revisionId)await selectPreviewRevision();
+  preview=operation;$('preview-query').value=result.query;$('preview-input').value=pretty(result.input);
   $('preview-summary').textContent=data.rowCount+' rows · '+result.query+' · '+result.observedAt+(data.truncated?' · more data available':'');
   const table=el('table'),head=el('thead'),row=el('tr');for(const name of data.columns)row.append(el('th',name));head.append(row);table.append(head);
   const body=el('tbody');for(const item of data.rows){const line=el('tr');for(const name of data.columns){const value=item[name];line.append(el('td',value===null?'null':typeof value==='object'?JSON.stringify(value):String(value)));}body.append(line);}table.append(body);
