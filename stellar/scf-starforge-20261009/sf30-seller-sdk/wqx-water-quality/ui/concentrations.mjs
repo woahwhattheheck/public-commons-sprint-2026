@@ -18,6 +18,7 @@ export function mountConcentrations({api, notice, run, context, applyDocument}) 
   function selection() {
     const state = context();
     if ($('cu-scope').value === 'unit') return catalog?.groups.find(row => row.unit === $('cu-source-unit').value)?.resultIds ?? [];
+    if ($('cu-scope').value === 'limits') return catalog?.limitOnly?.resultIds ?? [];
     return state.selectedResultIds ?? [];
   }
   function signature() { return [...selection()].sort().join('\0'); }
@@ -38,7 +39,7 @@ export function mountConcentrations({api, notice, run, context, applyDocument}) 
     $('cu-prev').disabled = state.busy || !offset; $('cu-next').disabled = state.busy || !proposal || offset + PAGE >= proposal.rows.length;
     $('cu-state').textContent = !proposal ? 'Prepare a unit change' : !current() ? 'Draft or selection changed' : reopened ? 'Saved conversion choices' :
       applied ? 'Added to decision draft' : proposal.state === 'PREPARED' ? 'Ready to add' : 'Review selected quantities';
-    $('cu-context').textContent = catalog ? catalog.sourceResults.toLocaleString() + ' original results are available. Select result targets above or choose one exact source-unit group below.' :
+    $('cu-context').textContent = catalog ? catalog.sourceResults.toLocaleString() + ' original results are available. Select result targets, an exact source-unit group, or reported limits whose result unit is unspecified.' :
       'Open an immutable receiving plan to select original results.';
   }
   function clear() {

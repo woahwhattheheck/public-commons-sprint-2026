@@ -18,9 +18,11 @@ The panel pages its display while retaining the complete selection and full expo
 
 ## Scientific representation
 
+The original Potomac cohort contains 220 mg/L, 40 ug/L and 38 ng/L result records, plus 452 non-detects with reported limits and unspecified result units. Those four operator selections cover 750 applicable records while the complete native plan retains all 1,035 original results and 1,112 limits. In the original silica record, 4.65 mg/L becomes exactly 4650 ug/L and its 0.06 mg/L DQCALC limit becomes exactly 60 ug/L. The [complete retained Potomac source graph](./review-sheet/examples/potomac-concentration-source.json) includes the original native rows, source profiles and corrected receiving plan.
+
 The converter retains the original decimal string separately from its converted string. It moves the decimal point using string arithmetic and retains the exact numerator/denominator factor. It accepts signed decimal and scientific-notation source values. It performs no floating-point arithmetic or rounding.
 
-Blank, absent and null reported quantities retain their distinct source states. A blank non-detect result stays blank. Reported inequalities retain their exact comparator. Each attached limit uses its own source unit; a limit with a different unit is converted independently. Empty limit metadata slots retain their original empty value and unspecified unit.
+Blank, absent and null reported quantities retain their distinct source states. A blank non-detect result stays blank. If its result unit is unspecified, **Reported limits with an unspecified result unit** converts only its independently labelled reported/native limits; the result and its unspecified unit remain unchanged. The CLI selects this same complete group with **--reported-limits-only**. Reported inequalities retain their exact comparator. Each attached limit uses its own source unit; a limit with a different unit is converted independently. Empty limit metadata slots retain their original empty value and unspecified unit.
 
 The original characteristic, fraction, method speciation, site, sample context, qualifier, detection condition, estimate label and laboratory method remain attached. Conversion changes representation; it does not change which observations the scientific analysis includes in arithmetic. Source and current receiving context are retained separately where the existing draft already contains explicit contextual choices.
 
@@ -109,3 +111,26 @@ The complete record input is:
 - [Waterborne, Automated Data Collection](https://waterborne-env.com/automated-data-collection/): the original company workflow combines environmental data from multiple sources and standardizes concentration units and reporting levels for analysis.
 - [Open Waters contract](./openwaters-contract.mjs): the original import fields, lengths, limits and aliases used by the receiving application.
 - [Bulk decision workflow](./review-sheet/README.md): source-bound preview, save, CSV/TSV editing and complete independent receiving.
+
+
+## Complete original Potomac receiving operation
+
+The maintained receiver is `review-sheet/concentrations-receiving.mjs`. Its source carrier, `review-sheet/examples/potomac-concentration-source.json`, contains the complete retained capture, original scientific review and corrected source plan. The standard Python ZIP reader verifies every original byte and member before making private copies. The source graph is the retained October 12 receiving packet; the operation makes no provider request.
+
+Copy `review-sheet/examples/potomac-concentrations.json` to the private execution directory and set its source, output, existing Chromium and Playwright paths for that operator. Preserve the original source hashes and operation ID once execution has started.
+
+~~~sh
+node --expose-gc --max-old-space-size=768 \
+  wqx-water-quality/review-sheet/concentrations-receiving.mjs \
+  --config /private/potomac-concentrations.json
+~~~
+
+The complete operation exits each child before starting the next. `--phase source` restores the original capture through the maintained project, reproduces the original scientific review and corrected native plan, and invokes the original CLI for the 220 mg/L, 40 ug/L, 38 ng/L and 452 reported-limits-only records. It previews all 750 choices together and round-trips the entire JSON decision document through complete CSV and TSV tables, including every reason.
+
+`--phase browser` exercises the actual concentration panel and restores the preceding draft, imports the complete 750-record document, previews and saves that same native plan, and downloads all eleven decision/native outputs. It then closes the authoring workspace, receives the complete bundle in an independent empty project, compares all eleven downloads and reopens the received review after a cold workspace restart. Both desktop and mobile layouts are retained.
+
+`--phase verify` reopens both original projects, verifies every original result identifier and all 1,112 reported limits, compares actual browser files to the original native exporters, and reopens the full JSON/CSV conversion report through the maintained CLI. The populated Silica example must remain the exact 4.65 mg/L → 4650 ug/L and 0.06 mg/L → 60 ug/L pair. All 452 unspecified result units and their blank values remain blank.
+
+The phase receipts, private original inputs, complete files and final `result.json` stay in the same selected operation directory. A completed phase verifies its original members before reopening. The same review ID and plan ID resume their existing immutable native records. The receiver preserves original qualified and non-detect records while checking the actual native planner after all existing translations.
+
+For the complete browser operation, reserve 1,536 MiB of memory with 256 MiB headroom and 512 MiB of additional ordinary disk with 64 MiB headroom through the existing native worker. These are planning allowances for the complete source graph, two receiving projects, full table/report exports and sequential browser phases; `result.json` reports the actual retained file lengths. The source-only phase needs no browser and can run first under the same retained source/configuration. Use the existing installed browser and dependency closure.
