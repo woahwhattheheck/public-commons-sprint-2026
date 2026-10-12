@@ -154,3 +154,14 @@ WordPress checks the editing account and the form's session nonce before saving.
 Use the acceptance sequence in `commercial/ACCEPTANCE.md` with the actual selected source cohort and destination. Deliver the maintained source package, exact releases, native readback, source catalog, editorial history and operating backup. Walk through a content correction, document version, GIS text equivalent, notice, source refresh and a controlled rollback with the receiving staff.
 
 Record the receiving CMS, hosting, domain and analytics administrators, the applicable service accounts, backup location, update responsibility and ongoing third-party costs. DEWR's ownership and independent administration are part of the original RFP requirements. The commercial workshare identifies the implementation fee, correction cycles, warranty, optional care and separately priced content work so the prime can integrate this migration arm into its complete engagement.
+
+
+## 9. Operate the complete public website
+
+Install the complete joined plugin and DEWR theme on the selected original WordPress site using [PUBLIC_SITE.md](destination/PUBLIC_SITE.md). Its operating sequence covers page and menu selection, native staff and opportunities, current/archive searches, project patterns, document and GIS presentation, the scheduled announcement, reporting and a complete native backup/restore.
+
+Editors maintain Pages, Posts, Projects, Documents, Notices, Staff and Opportunities in WordPress. Administrators select the existing landing pages and menus under **Settings → Public site settings**; **Settings → Reading** retains the actual home page and posts page. Use **Dashboard → Site reporting** for the complete UTC report and CSV/JSON exports. Public search events use the same native query shown by the theme, including a selected landing page's collection search.
+
+Preserve the original Engagement form and response identities during the same plugin update. Its maintained module and guide remain in the source package. The public-site receiving callback attaches to the original browser and authenticated native context; it uses actual reviewed staff, opportunities, files and settings, then reopens those same native records after the owner's full site restore. Its API and native editor contract appear in [SITE_CMS_API.md](destination/SITE_CMS_API.md).
+
+Deliver the complete maintained source together with the corresponding operating database, original captured material, native media, accepted releases, settings and receiving result. Record any environment-specific path or public URL change in the original operation's handover so the next staff member can reopen and continue the site.
