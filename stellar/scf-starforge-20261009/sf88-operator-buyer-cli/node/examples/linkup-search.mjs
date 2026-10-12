@@ -32,11 +32,9 @@ const help = [
   'Linkup credentials belong to the merchant. The customer supplies query/filters.',
 ].join('\n');
 
-/** Complete native saved bytes are checked by BuyerResult before JSON is exposed. */
-export async function readLinkupResponse(result, { view, signal } = {}) {
+/** Interpret the exact parsed provider object without rewriting fields or citations. */
+export function parseLinkupPayload(payload, { view } = {}) {
   need(Object.hasOwn(views, view), 'LINKUP_VIEW_REQUIRED');
-  need(result.native.httpStatus === 200 && result.delivery.status === 'SAVED', 'LINKUP_RESPONSE_NOT_SAVED');
-  const payload = await result.json({ limit: 1048576, signal });
   need(plain(payload), 'LINKUP_RESPONSE_OBJECT_REQUIRED');
   const text = (value, fields) => plain(value) && fields.every(field => typeof value[field] === 'string') &&
     (value.favicon === undefined || typeof value.favicon === 'string');
@@ -50,6 +48,12 @@ export async function readLinkupResponse(result, { view, signal } = {}) {
   // Keep source order, inline citation text, snippets, favicon and unknown fields.
   // Citation numbers are provider output; this reader never renumbers or invents them.
   return { view, outputType: views[view].outputType, payload };
+}
+
+/** Complete native saved bytes are checked by BuyerResult before JSON is exposed. */
+export async function readLinkupResponse(result, { view, signal } = {}) {
+  need(result.native.httpStatus === 200 && result.delivery.status === 'SAVED', 'LINKUP_RESPONSE_NOT_SAVED');
+  return parseLinkupPayload(await result.json({ limit: 1048576, signal }), { view });
 }
 
 const escape = value => String(value ?? '').replace(/[&<>"']/g, character =>
