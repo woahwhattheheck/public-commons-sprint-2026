@@ -1,5 +1,6 @@
 // MIT. Original tool metadata; provider runtimes load only when selected.
 import { MAX_RETAINED_CHUNK_BYTES } from '../retained-file-contracts.mjs';
+import { odataCollectionTools } from './odata-collections.mjs';
 
 const alias = { type: 'string', pattern: '^[a-z0-9][a-z0-9_-]{0,63}$' };
 
@@ -67,11 +68,12 @@ function odataWorkspaceTools(tool) {
       scoped({ liveServiceId: recordId, intentId: text, receivedId: hash }), ['workspace', 'liveServiceId', 'intentId'], { idempotent: true }),
     tool('merchant_odata_receive', 'Receive the exact saved merchant response from a host-declared response alias or this live product’s original buyer response file. The existing validator retains its original bytes, normalized rows and unchanged next-page request; duplicate bytes reuse the same receivedId.',
       scoped({ liveServiceId: recordId, response: alias, buyerId: hash }), ['workspace', 'liveServiceId'], { idempotent: true }),
+    ...odataCollectionTools(tool),
     tool('merchant_odata_transfer', 'Create/list a complete retained workspace transfer, or restore a declared original transfer file or another declared workspace’s transfer into the empty destination. Create keeps the stable transferId on repeat; restore reconciles the original committed transfer identity.',
       scoped({ action: { enum: ['create', 'list', 'restore'] }, transferId: recordId, sourceImport: alias, sourceWorkspace: alias, ...paging }),
       ['workspace', 'action'], { idempotent: true }),
-    tool('merchant_odata_file', 'Read a complete original source, dataset, live package, SF88 handoff, received page, transfer or comparison through the shared retained-file reader. Continue with readId, expectedSha256 and nextOffset; the original file is loaded once and released at EOF.',
-      scoped({ kind: { enum: ['source', 'dataset', 'live-package', 'buyer', 'receiving', 'transfer', 'comparison'] },
+    tool('merchant_odata_file', 'Read a complete original source, dataset, live package, SF88 handoff, received page, complete collection/Analysis source, transfer or comparison through the shared retained-file reader. Continue with readId, expectedSha256 and nextOffset; the original file is loaded once and released at EOF.',
+      scoped({ kind: { enum: ['source', 'dataset', 'live-package', 'buyer', 'receiving', 'collection', 'transfer', 'comparison'] },
         id: recordId, recordId, filename: { type: 'string', maxLength: 160 }, ...chunks }), ['workspace', 'kind', 'id'], read),
     tool('merchant_odata_file_release', 'Release an unfinished retained-file read while keeping its original file.',
       scoped({ readId: uuid }), ['workspace', 'readId'], { idempotent: true }),
