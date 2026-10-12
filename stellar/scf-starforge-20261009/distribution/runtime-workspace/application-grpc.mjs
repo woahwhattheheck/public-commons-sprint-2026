@@ -137,7 +137,8 @@ async function reviewedModules(request, operationDirectory) {
   const applicationId = recordId(request.applicationId), id = operationId(basename(directory));
   const run = await readJSON(join(root, 'applications', applicationId, 'runs', id + '.json'));
   need(run.schema === 'stellar-forge.application-run.v1' && run.applicationId === applicationId &&
-    run.id === id && request.requestId === id && run.request.command === request.command &&
+    run.id === id && run.request.requestId === id &&
+    (request.requestId === undefined || request.requestId === id) && run.request.command === request.command &&
     run.request.applicationId === applicationId && isDeepStrictEqual(run.request.args, request.args),
   'APPLICATION_GRPC_START_REVIEW_CHANGED');
   const review = await readJSON(join(root, 'application-reviews', recordId(run.reviewId) + '.json'));

@@ -1,0 +1,23 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "valyu",
+  "description": "Valyu research products",
+  "commands": {
+    "valyu-merchant": "stellar/scf-starforge-20261009/sf30-seller-sdk/valyu/merchant-cli.mjs",
+    "valyu-research": "stellar/scf-starforge-20261009/sf30-seller-sdk/valyu/run.mjs"
+  },
+  "commandDescriptions": {
+    "valyu-merchant": "Configure and operate the native research search merchant",
+    "valyu-research": "Save queries, operate purchases, compare research and export editions"
+  },
+  "exports": {
+    "./seller/valyu": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/valyu/adapter.mjs",
+    "./seller/valyu/config": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/valyu/config.mjs",
+    "./seller/valyu/delivery": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/valyu/delivery.mjs",
+    "./seller/valyu/merchant": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/valyu/merchant-cli.mjs",
+    "./buyer/valyu": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/valyu/workspace.mjs",
+    "./buyer/valyu/store": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/valyu/store.mjs",
+    "./buyer/valyu/research": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/valyu/research.mjs",
+    "./buyer/valyu/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/valyu/server.mjs"
+  }
+}

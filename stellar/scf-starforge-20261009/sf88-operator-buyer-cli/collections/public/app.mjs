@@ -1,5 +1,6 @@
 // MIT — Private collections and original browser approval over the same CLI.
 import { createApprovalPanel } from '/approval-panel.mjs';
+import { createCollectionRecoveryPanel } from '/recovery.mjs';
 const $ = id => document.getElementById(id);
 const sessionKey = 'starforge.collections.' + location.origin;
 const state = { token: '', connected: false, busy: false, status: null,
@@ -10,6 +11,9 @@ const state = { token: '', connected: false, busy: false, status: null,
 const activeRunStates = new Set(['STARTING', 'RUNNING', 'PAUSING']);
 const approvalPanel = createApprovalPanel({ host: $('approval-host'),
   decide: decideApproval, refresh: refreshApproval });
+const recoveryPanel = createCollectionRecoveryPanel({ host: $('recovery-panel'), api,
+  onOpen: async () => { await connect(state.token); showView('recovery'); },
+  onBusy: value => { state.recoveryBusy = value; buttons(); } });
 const recordedStates = new Set(['ATTEMPT_RECORDED', 'RECOVERED']);
 const queuedStates = new Set(['QUEUED']);
 const errors = {
@@ -72,7 +76,7 @@ function humanError(error) {
   return 'The operation could not finish. ' + String(code).replaceAll('_', ' ');
 }
 function locked() {
-  state.connected = false; state.token = '';
+  state.connected = false; state.token = ''; recoveryPanel.disconnect();
   state.generation += 1; state.approvalGeneration += 1;
   state.approval = null; state.approvalDecision = null; approvalPanel.disconnect();
   try { sessionStorage.removeItem(sessionKey); } catch {}
@@ -80,11 +84,11 @@ function locked() {
   $('lock').hidden = true; $('connection-state').textContent = 'Locked';
   $('session-key').focus();
 }
-async function api(path, input, { blob = false } = {}) {
+async function api(path, input, { blob = false, stream = false, signal } = {}) {
   const token = state.token;
   const headers = { Authorization: 'Bearer ' + token };
   const options = { method: input === undefined ? 'GET' : 'POST', headers,
-    cache: 'no-store', credentials: 'omit', redirect: 'error' };
+    cache: 'no-store', credentials: 'omit', redirect: 'error', signal };
   if (input !== undefined) {
     headers['Content-Type'] = 'application/json'; options.body = JSON.stringify(input);
   }
@@ -97,18 +101,22 @@ async function api(path, input, { blob = false } = {}) {
     if (response.status === 401 && state.token === token) locked();
     throw error;
   }
-  return blob ? response.blob() : response.json();
+  return stream ? response : blob ? response.blob() : response.json();
 }
 function showView(view) {
   state.view = view;
   $('empty').hidden = view !== 'empty';
   $('create-panel').hidden = view !== 'create';
   $('detail-panel').hidden = view !== 'detail';
+  $('recovery-panel').hidden = view !== 'recovery'; recoveryPanel.setVisible(view === 'recovery');
 }
 const actionIds = ['preview-button', 'save-collection', 'enqueue', 'export',
   'recover', 'cancel', 'run-command', 'run-browser', 'refresh', 'refresh-detail', 'new-collection'];
 function buttons() {
   for (const id of actionIds) $(id).disabled = state.busy || !state.connected;
+  $('open-recovery').disabled = !state.connected;
+  $('new-collection').hidden = !state.status?.directory;
+  $('empty-create').hidden = !state.status?.directory;
   const running = activeRunStates.has(state.execution?.state);
   const hasCurrent = Boolean(state.current && state.view === 'detail');
   for (const id of ['enqueue', 'export', 'refresh-detail'])
@@ -136,6 +144,8 @@ function buttons() {
   $('connection-state').textContent = state.connected
     ? state.busy ? 'Updating' : running ? 'Run in progress' : 'Private session' : 'Locked';
   if (state.approval) redrawApproval(false);
+  if (state.recoveryBusy) for (const id of ['preview-button', 'save-collection', 'enqueue', 'export',
+    'recover', 'cancel', 'run-command', 'run-browser', 'new-collection', 'empty-create']) $(id).disabled = true;
 }
 async function task(label, operation) {
   if (state.busy) return;
@@ -220,7 +230,7 @@ function renderList() {
 function renderLocations() {
   const data = state.status ?? {}, values = [];
   for (const [label, value] of [['Collections', data.directory], ['Original inbox', data.queueRoot],
-    ['Exports', data.exportRoot]]) values.push(node('dt', label), node('dd', value ?? '—'));
+    ['Exports', data.exportRoot], ['Recovery operations', data.recoveryDirectory]]) values.push(node('dt', label), node('dd', value ?? '—'));
   children($('locations'), values);
 }
 function renderProgress(snapshot) {
@@ -358,7 +368,7 @@ async function selectCollection(id) {
   renderList(); buttons();
 }
 function beginCreate() {
-  if (state.busy) return;
+  if (state.busy || state.recoveryBusy || !state.status?.directory) return;
   state.preview = null; $('preview-panel').hidden = true;
   $('collection-id').value = 'collection-' + crypto.randomUUID().slice(0, 8);
   $('collection-name').value = ''; $('config-files').value = '';
@@ -386,7 +396,8 @@ async function connect(token) {
   try { sessionStorage.setItem(sessionKey, state.token); } catch {}
   $('connection').hidden = true; $('workspace').hidden = false; $('lock').hidden = false;
   $('session-key').value = '';
-  renderLocations(); await refresh(); buttons();
+  renderLocations(); await refresh(); await recoveryPanel.connect(status);
+  if (!status.directory) showView('recovery'); buttons();
 }
 function renderExecution() {
   const run = state.execution;
@@ -627,6 +638,7 @@ $('export').addEventListener('click', () => task('Saving results export…', asy
   $('export-panel').hidden = false;
   say('Results exported to the saved workspace location.');
 }));
+$('open-recovery').addEventListener('click', () => { showView('recovery'); buttons(); });
 $('lock').addEventListener('click', () => { locked(); say('Workspace locked in this tab.'); });
 $('connect-form').addEventListener('submit', event => {
   event.preventDefault();
@@ -651,6 +663,7 @@ if (initialToken) {
   });
 } else locked();
 setInterval(() => {
+  void recoveryPanel.refresh();
   if (!state.connected || state.busy || document.hidden || state.view === 'create' && !activeRunStates.has(state.execution?.state)) return;
   refresh({ silent: true }).catch(error => {
     state.approval = null; state.approvalDecision = null; approvalPanel.disconnect();
