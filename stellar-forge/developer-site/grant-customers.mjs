@@ -25,6 +25,9 @@ export function projectGrantMarkdown(markdown, { application = false } = {}) {
     .replace(/ \. /g, '. ').replace(/\.\s*·\s*\[/g, '. [')
     .replaceAll('enterprise@openfn.org', 'OpenFn’s published enterprise mailbox');
   if (application) {
+    // Keep the public commissioning reference when its original correspondence is private.
+    value = value.replace(/(^\*\*Connected Systems commissioning\.\*\*[^\n]*?)\bOriginal workshare(?=\s*·\s*\[Maintained product and receiving guide\])/gm,
+      '$1[Original workshare](./product-and-finance.md#connected-systems-observations-customer-commissioning-and-repeat-use)');
     // The application and its complete companion are one composed edition.
     value = value.replace(/(\]\()https:\/\/github\.com\/woahwhattheheck\/(?:public-commons-sprint-2026|tjlabs-stellar-merchant-workspace)\/blob\/(?:[a-f0-9]{40}|main)\/stellar-forge\/developer-site\/dist\/grant-data\/product-and-finance\.md([?#][^)\s]*)?(\))/g,
       '$1./product-and-finance.md$2$3');

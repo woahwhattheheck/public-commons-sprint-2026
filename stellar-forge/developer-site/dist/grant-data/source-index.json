@@ -5,9 +5,9 @@
   "applicant": "Bryce Muhlnickel / TokenJunkieLabs",
   "application": {
     "path": "application.md",
-    "bytes": 43797,
-    "sha256": "7dedcea63c5ac21df709cb494dac8b0d2bfe45bf68066382397a622a585edebd",
-    "git_blob": "d65a6f5235dc94a14fbe6cda08d4aac66e678cfa"
+    "bytes": 43894,
+    "sha256": "5bf94dafa5f3c08ea80d05e404f6a1cad97a04371dc3622df4b348148c3401d3",
+    "git_blob": "59448620b224d2748b3ae1eb9e7889e47a9242fb"
   },
   "request": {
     "basis": "prospective",
@@ -947,7 +947,7 @@
         "baseline_count_scope": "The eight original archived case records are not added to or substituted for the application's eighteen team-operated development purchases."
       }
     ],
-    "current_application_sha256": "7dedcea63c5ac21df709cb494dac8b0d2bfe45bf68066382397a622a585edebd",
+    "current_application_sha256": "5bf94dafa5f3c08ea80d05e404f6a1cad97a04371dc3622df4b348148c3401d3",
     "economic_product_commit": "be44be564e35b63af23246bad531a95374bbb4c0",
     "economic_application_operation": "SCF-FRED-ECONOMIC-CUSTOMER-APPLICATION-20261012",
     "coastal_product_commit": "92eb1c73a3cab9781ef7dbabdc12067344fb6aa2",
@@ -1018,7 +1018,7 @@
         "10. Open the existing work"
       ],
       "previous_cumulative_commit": "d71b67704cd339f02fa158bf84dc1b70705fb5a6",
-      "projector_git_blob": "19fa78316088acda8f0c832211af48fb9fff31c5",
+      "projector_git_blob": "ed317f34293686ada9f9700f8312711eed7e67d1",
       "delivery_plan_git_blob": "7b35ac67a0930b3cf5eec515152f77e12b035452"
     },
     "datasette_customer_commit": "b1a6ad827c02cdf95c613b23ef07ce1996400fd6",
@@ -1032,8 +1032,8 @@
     "route": "/grant-submission.html",
     "application_route": "/grant-data/application.md",
     "source_index_route": "/grant-data/source-index.json",
-    "application_sha256": "7dedcea63c5ac21df709cb494dac8b0d2bfe45bf68066382397a622a585edebd",
-    "application_git_blob": "d65a6f5235dc94a14fbe6cda08d4aac66e678cfa",
+    "application_sha256": "5bf94dafa5f3c08ea80d05e404f6a1cad97a04371dc3622df4b348148c3401d3",
+    "application_git_blob": "59448620b224d2748b3ae1eb9e7889e47a9242fb",
     "draft_schema": "stellar-forge.grant-submission-draft.v1",
     "export_schema": "stellar-forge.grant-submission-export.v1",
     "form_map_schema": "stellar-forge.grant-form-map.v1",
@@ -1094,8 +1094,8 @@
     "schema": "stellar-forge.grant-review-round-integration.v1",
     "route": "/grant-review-round.html",
     "submission_route": "/grant-submission.html",
-    "application_sha256": "7dedcea63c5ac21df709cb494dac8b0d2bfe45bf68066382397a622a585edebd",
-    "application_git_blob": "d65a6f5235dc94a14fbe6cda08d4aac66e678cfa",
+    "application_sha256": "5bf94dafa5f3c08ea80d05e404f6a1cad97a04371dc3622df4b348148c3401d3",
+    "application_git_blob": "59448620b224d2748b3ae1eb9e7889e47a9242fb",
     "draft_schema": "stellar-forge.grant-submission-draft.v1",
     "draft_export_schema": "stellar-forge.grant-submission-export.v1",
     "review_schema": "stellar-forge.grant-review-round.v1",
