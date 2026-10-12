@@ -1,3 +1,4 @@
+import {merchantCommercial} from './support-commercial.mjs';
 import { supportTools, alias, digest, uuid, notificationStatuses, page, text, selected, metadataSchema, termsSchema, exportNames, object } from './catalog/support.mjs';
 import { MerchantSupportIncidentSources } from './support-incidents.mjs';
 import {readServiceCase,changeServiceCase,previewServiceCase,readServiceCaseReport} from '../../stellar/scf-starforge-20261009/sf74-merchant-support-console/service-cases.mjs';
@@ -149,10 +150,12 @@ function exportFileType(name) {
 }
 
 export class MerchantSupport {
-  #config; #store; #watch = null; #lastWatchExit = null; #closing = false; #close; #incidentSources; #environment;
+  #config; #store; #commercial; #watch = null; #lastWatchExit = null; #closing = false; #close; #incidentSources; #environment;
   #reads = new RetainedFileReads({ errorPrefix: 'SUPPORT' });
   constructor(config, { environment = process.env } = {}) {
     this.#config = config; this.#environment = environment;
+    this.#commercial=merchantCommercial({cases:()=>this.#cases(),casesDirectory:()=>this.#configured().casesDirectory,
+      exportsDirectory:()=>this.#config.exportsDirectory,reads:this.#reads});
     this.#incidentSources = new MerchantSupportIncidentSources(config.support, {
       profiles: () => this.summary.profiles,
       profile: (alias, sourceDigest) => this.#profile(alias, sourceDigest),
@@ -444,6 +447,7 @@ export class MerchantSupport {
     if (this.#closing) throw failure('OPERATOR_CLOSING', 'Merchant support is closing.');
     try {
       return await (async () => {
+      if(this.#commercial.handles(name))return this.#commercial.call(name,args);
       if(name==='merchant_service_read')return readServiceCase({store:await this.#cases(),args});
       if(name==='merchant_service_change')return changeServiceCase({store:await this.#cases(),args,readSnapshot:input=>this.#incidentSources.serviceSnapshot(input)});
       if(name==='merchant_service_preview')return previewServiceCase({store:await this.#cases(),args});
