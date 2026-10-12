@@ -124,9 +124,21 @@ export function upstreamCredentialReferences(config) {
   return Object.freeze([...references].sort());
 }
 
-/** Trusted operator data; static headers are captured once, OAuth stores references. */
-export function compileUpstreamBindings(config,{allowLoopback=false,env=process.env}={}) {
-  if (typeof allowLoopback !== 'boolean' || !plain(config) || config.schema !== SCHEMA || !plain(config.bindings) ||
+function resolveCredentialHeaders(references,env) {
+  const credentials = Object.create(null);
+  for (const [header,variable] of Object.entries(references)) {
+    const value = OWN(env,variable) ? env[variable] : undefined;
+    if (typeof value !== 'string' || !value || value.length > 8192) bad(`Missing or oversized environment variable: ${variable}`);
+    try { validateHeaderValue(header,value); } catch { bad(`Invalid environment header value: ${variable}`); }
+    credentials[header] = value;
+  }
+  return Object.freeze(credentials);
+}
+
+/** Trusted operator data. Deferred credentials retain validated references only;
+ * the shared handler resolves their values inside an admitted backend attempt. */
+export function compileUpstreamBindings(config,{allowLoopback=false,env=process.env,deferCredentials=false}={}) {
+  if (typeof allowLoopback !== 'boolean' || typeof deferCredentials !== 'boolean' || !plain(config) || config.schema !== SCHEMA || !plain(config.bindings) ||
       Object.keys(config).some(k => !['schema','bindings','supplierAccounts'].includes(k)) ||
       Object.keys(config.bindings).length < 1 || Object.keys(config.bindings).length > 64 || env === null || typeof env !== 'object' || Array.isArray(env)) bad('Expected seller-upstreams.v1 with 1–64 bindings');
   compileSupplierAccounts(config.supplierAccounts, config.bindings);
@@ -138,21 +150,20 @@ export function compileUpstreamBindings(config,{allowLoopback=false,env=process.
     const url = originURL(raw.origin,allowLoopback), keys = pathKeys(raw.path);
     const requestHeaders = headerList(raw.requestHeaders,'requestHeaders',name => headerName(name));
     const responseHeaders = headerList(raw.responseHeaders,'responseHeaders',name => responseAllowed.has(name));
-    const credentials = Object.create(null);
+    const credentialRefs = Object.create(null);
     if (raw.headerEnv !== undefined && (!plain(raw.headerEnv) || Object.keys(raw.headerEnv).length > 16)) bad('Invalid headerEnv');
     for (const [header,variable] of Object.entries(raw.headerEnv ?? {})) {
       const key = header.toLowerCase();
-      if (!headerName(header,true) || OWN(credentials,key) || requestHeaders.includes(key) ||
+      if (!headerName(header,true) || OWN(credentialRefs,key) || requestHeaders.includes(key) ||
           typeof variable !== 'string' || !/^[A-Za-z_][A-Za-z0-9_]*$/.test(variable)) bad('Invalid credential header mapping');
-      const value = OWN(env,variable) ? env[variable] : undefined;
-      if (typeof value !== 'string' || !value || value.length > 8192) bad(`Missing or oversized environment variable: ${variable}`);
-      try { validateHeaderValue(header,value); } catch { bad(`Invalid environment header value: ${variable}`); }
-      credentials[key] = value;
+      credentialRefs[key] = variable;
     }
-    const oauth2 = raw.oauth2 === undefined ? undefined : compileOAuthClientCredentials(raw.oauth2,{allowLoopback,env});
+    const credentials = deferCredentials ? Object.freeze(Object.create(null)) : resolveCredentialHeaders(credentialRefs,env);
+    const oauth2 = raw.oauth2 === undefined ? undefined : compileOAuthClientCredentials(raw.oauth2,
+      {allowLoopback,env,validateCredentials:!deferCredentials});
     const oauthConnection = raw.oauthConnection === undefined ? undefined : compileOAuthConnection(raw.oauthConnection,{resourceOrigin:url.origin,allowLoopback});
     if (oauth2 && oauthConnection) bad('Select one OAuth grant flow for an upstream binding');
-    if ((oauth2 || oauthConnection) && OWN(credentials,'authorization')) bad('OAuth cannot be combined with an authorization headerEnv');
+    if ((oauth2 || oauthConnection) && OWN(credentialRefs,'authorization')) bad('OAuth cannot be combined with an authorization headerEnv');
     const method = raw.method ?? 'GET', responseMode = raw.responseMode ?? 'json';
     if (!supportsSellerMethod(method) || !['json','bytes','sse','ndjson'].includes(responseMode)) bad('Invalid upstream method or responseMode');
     const bodyType=raw.bodyType??'json';
@@ -165,7 +176,7 @@ export function compileUpstreamBindings(config,{allowLoopback=false,env=process.
     if (OWN(raw,'responseContract') && responseMode !== 'json') bad('Response contracts require JSON responseMode');
     const responseContract = OWN(raw,'responseContract') ? compileResponseContract(raw.responseContract,{method}).contract : undefined;
     const maxResponseBytes = integer(raw.maxResponseBytes,1_048_576,1_048_576,'maxResponseBytes');
-    const idempotency = compileUpstreamIdempotency(raw.idempotency,{env,method,maxResponseBytes,requestHeaders,credentials});
+    const idempotency = compileUpstreamIdempotency(raw.idempotency,{env,method,maxResponseBytes,requestHeaders,credentials:credentialRefs});
     if (idempotency) {
       if (OWN(config.bindings,idempotency.admission) || admissionNames.has(idempotency.admission) ||
           operationDirectories.has(idempotency.stateDir)) bad('Idempotency admission names and state directories must be distinct');
@@ -175,7 +186,7 @@ export function compileUpstreamBindings(config,{allowLoopback=false,env=process.
       path:raw.path,pathKeys:Object.freeze(keys),method,query:queryMapping(raw.query),
       bodyType,maxRequestBytes:integer(raw.maxRequestBytes,1_048_576,16*1_048_576,'maxRequestBytes'),
       requestHeaders:Object.freeze(requestHeaders),responseHeaders:Object.freeze(responseHeaders),
-      credentials:Object.freeze(credentials),responseMode,...(idempotency ? {idempotency} : {}),
+      credentials,...(deferCredentials ? {credentialRefs:Object.freeze(credentialRefs)} : {}),responseMode,...(idempotency ? {idempotency} : {}),
       ...(raw.supplierAccount === undefined ? {} : {supplierAccount:raw.supplierAccount}),
       ...(stream ? {stream} : {}),
       ...(oauth2 ? {oauth2} : {}),
@@ -238,9 +249,9 @@ function publicLookup(binding,lookup) {
 }
 
 /** One shared transport, no duplicate exchange/decompression/payment implementation. */
-export function createUpstreamHandlers(config,{allowLoopback=false,env=process.env,lookup=systemLookup}={}) {
+export function createUpstreamHandlers(config,{allowLoopback=false,env=process.env,lookup=systemLookup,deferCredentials=false}={}) {
   if (typeof lookup !== 'function') bad('lookup must be a function');
-  const compiled = compileUpstreamBindings(config,{allowLoopback,env});
+  const compiled = compileUpstreamBindings(config,{allowLoopback,env,deferCredentials});
   const handlers = Object.create(null), providers = new Map();
   const supplierQuotas = createSupplierQuotaRegistry(config);
   for (const [name,binding] of Object.entries(compiled)) {
@@ -248,12 +259,13 @@ export function createUpstreamHandlers(config,{allowLoopback=false,env=process.e
       binding.oauth2 ? JSON.stringify(binding.oauth2) : null;
     if (key && !providers.has(key)) providers.set(key,binding.oauthConnection ?
       createOAuthConnectionProvider(binding.oauthConnection,{resourceOrigin:binding.origin,allowLoopback,env,lookup}) :
-      createOAuthClientCredentials(binding.oauth2,{allowLoopback,env,lookup}));
+      createOAuthClientCredentials(binding.oauth2,{allowLoopback,env,lookup,validateCredentials:!deferCredentials}));
     const provider = key ? providers.get(key) : undefined;
     const supplierQuota = binding.supplierAccount ? supplierQuotas.controller(binding.supplierAccount) : undefined;
     const options = {...(supplierQuota ? {supplierQuota} : {}),...(provider ? {credentialProvider:provider} : {}),baseUrl:binding.origin,path:binding.path,method:binding.method,
       bodyType:binding.bodyType,maxRequestBytes:binding.maxRequestBytes,
-      query:binding.query,headers:binding.credentials,requestHeaders:binding.requestHeaders,
+      query:binding.query,headers:binding.credentialRefs ? () => resolveCredentialHeaders(binding.credentialRefs,env) : binding.credentials,
+      requestHeaders:binding.requestHeaders,
       responseHeaders:[...new Set(['content-type',...binding.responseHeaders])],responseType:binding.responseMode,
       ...(binding.stream ? {stream:binding.stream} : {}),
       ...(binding.responseContract === undefined ? {} : {responseContract:binding.responseContract}),
