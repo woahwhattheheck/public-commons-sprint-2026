@@ -150,7 +150,7 @@ export class MerchantReleaseOperator {
       return (await this.#provider(family)).call(name, args);
 
     const root = this.#config.releaseStore;
-    if (name.startsWith('merchant_dataset_')) return (await import('./dataset-lifecycle.mjs')).merchantDatasetOperation(root, name, args);
+    if (name.startsWith('merchant_dataset_')) return (await this.#provider('dataset')).merchantDatasetOperation(root, name, args);
     
     switch (name) {
       case 'merchant_status': return this.#status();
