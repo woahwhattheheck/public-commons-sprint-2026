@@ -104,7 +104,7 @@ Choose **Receive original file** to call the original bitstream download tool an
 
 To attach a file, expand **Attach an original file**, choose the file and bundle, and enter a description. The workspace first receives the local bytes as a retained asset. It then prepares a separate upload plan tied to the original item. Review the file and target before applying it. The browser supplies the retained asset ID; the server assigns the native local file path.
 
-Use **Handover → Retain a supporting file** to keep source manifests, instructions or other original delivery files alongside the workspace. A single received file may be up to 20 MiB.
+Use **Handover → Receive a supporting file** to keep source manifests, instructions or other original delivery files alongside the workspace. A single received file may be up to 20 MiB.
 
 ## Collection moves
 

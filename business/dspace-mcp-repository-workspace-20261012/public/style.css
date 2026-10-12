@@ -22,7 +22,7 @@ h4{font-size:14px;margin-bottom:6px}
 p{margin-bottom:12px}
 h2+p,.panel-heading p{color:var(--muted);margin-bottom:0}
 code,pre,.mono{font-family:Consolas,"Liberation Mono",monospace;font-size:12px}
-code{overflow-wrap:anywhere}
+code,.mono{overflow-wrap:anywhere}
 pre{margin:0;background:#f6f6f6;border:1px solid #ccc;padding:12px;white-space:pre-wrap;overflow-wrap:anywhere;max-height:60vh;overflow:auto}
 label{display:block;font-weight:600;font-size:13px}
 label>input,label>select,label>textarea{display:block;margin-top:5px;font-weight:400}
