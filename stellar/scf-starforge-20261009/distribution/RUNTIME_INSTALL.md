@@ -16,6 +16,21 @@ node /absolute/maintained/source/stellar/scf-starforge-20261009/distribution/run
 
 The maintained installer can consume an earlier original archive. Its runtime selection comes from that selected archive's source, even when the installer itself comes from a newer toolkit. Use the maintained command for subsequent installation and recovery operations; `run` dispatches into the selected archive's own original CLI.
 
+## Complete source package limits
+
+The maintained source archive can contain up to 128 MiB of unpacked file content,
+including all source files, the complete source manifest, package metadata, README
+and license. The compressed archive remains limited to 64 MiB; every installed
+member remains limited to 4 MiB, and the original archive inventory must contain
+at most 10,000 entries. The builder separately limits each source file to
+2 MiB and checks the complete package before materialization.
+
+Use this edition's maintained installer and `runtime-unpack.py` when the selected
+cumulative archive exceeds an earlier toolkit's 64 MiB unpacked limit. The
+current installer continues to accept earlier original archives. Archive and
+member hashes, normalized paths, regular-file restrictions, exact source inventory
+and original installation/profile identity are verified as before.
+
 ## Prepare, install, and run
 
 Choose a new directory and supply the original archive together with its complete SHA-256 digest:

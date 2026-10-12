@@ -36,12 +36,16 @@ configuration when access is required.
 
 After acquisition, the reader checks each blob's type, declared size, complete
 batch framing and Git object hash before passing its original bytes to the
-builder. The reader and builder share a 64 MiB aggregate source limit, while
+builder. The reader and builder share a 128 MiB aggregate source limit, while
 original source files retain their 2 MiB limit. Before materialization, the whole
 package—including its generated manifest, metadata, README and license—must fit
-the original installer's 64 MiB unpacked limit and 4 MiB member limit. The regular-file
-restrictions, component inventory, static-import parsing and pinned runtime
-dependency rules remain part of packaging.
+the original installer's 128 MiB unpacked limit and 4 MiB member limit. The final
+compressed archive remains limited to 64 MiB. Use the maintained object receiver,
+builder and runtime installer from this source edition together when producing a
+cumulative package above the earlier 64 MiB unpacked limit. Earlier original
+archives remain supported. The regular-file restrictions, complete component
+inventory, static-import parsing and pinned runtime dependency rules remain part
+of packaging.
 
 The progress stream reports the resolved commit, selected file count, source
 inspection, each fetch, bytes loaded, materialization, npm packaging and final
