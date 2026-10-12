@@ -30,12 +30,17 @@ const LIBNOVA_SOURCE=Object.freeze([
   'research/preservation/LIBNOVA.md','research/preservation/LIBNOVA_PROVIDER_CONTRACT.md',
   'research/preservation/libnova-requirements.txt',
 ]);
+const ARCHIVEMATICA_SOURCE=Object.freeze([
+  'research/preservation/archivematica.py','research/preservation/archivematica_client.py',
+  'research/preservation/ARCHIVEMATICA.md','research/preservation/ARCHIVEMATICA_PROVIDER_CONTRACT.md',
+  'research/preservation/archivematica-requirements.txt',
+]);
 const field=(name,label,type,required,description)=>({name,label,type,required,description});
 const equal=(a,b)=>JSON.stringify(canonical(a))===JSON.stringify(canonical(b));
 
 function nativeSources(value){
   need(plain(value),'APPLICATION_PRESERVATION_SOURCE_INCOMPLETE');
-  const names=Object.keys(value),groups=[PRESERVICA_SOURCE,LIBNOVA_SOURCE];
+  const names=Object.keys(value),groups=[PRESERVICA_SOURCE,LIBNOVA_SOURCE,ARCHIVEMATICA_SOURCE];
   const optional=groups.flatMap(group=>group.filter(name=>Object.hasOwn(value,name)));
   need(BASE_SOURCE.every(name=>Object.hasOwn(value,name))&&
     groups.every(group=>group.every(name=>Object.hasOwn(value,name))||
