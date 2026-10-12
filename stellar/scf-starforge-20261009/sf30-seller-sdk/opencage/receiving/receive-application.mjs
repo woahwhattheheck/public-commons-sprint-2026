@@ -173,8 +173,30 @@ export async function receiveOpenCageApplication(input){
       run=report.runs.find(value=>value.requestId===application.current?.id);
       need(run,'Reconcile the different retained application operation before this receiving.');
       activeOperation=run.requestId;
-      if(!application.current.active&&['PENDING','QUEUED','INTERRUPTED'].includes(application.phase))
-        await model.applicationsRecover({applicationId,operationId:run.requestId});
+      if(!application.current.active&&['PENDING','QUEUED','INTERRUPTED'].includes(application.phase)){
+        const retainRecovery=async value=>{
+          run.recoveries??=[];run.recoveries.push({at:new Date().toISOString(),phase:value.phase??null,
+            reopened:value.reopened===true,commandActive:value.commandActive===true,
+            reconciled:value.reconciled===true,resultState:value.result?.state??null});
+          await save();
+        };
+        const recovery=await model.applicationsRecover({applicationId,operationId:run.requestId});
+        await retainRecovery(recovery);
+        if(recovery.commandActive===true){
+          await stop(run,{cleanup:true});
+          activeOperation=run.requestId;
+          const reconciled=await model.applicationsRecover({applicationId,operationId:run.requestId});
+          await retainRecovery(reconciled);
+        }
+        application=await current();
+        need(application.current?.id===run.requestId,'Keep the same saved run while reconciling its original outcome.');
+        if(!application.current.active&&application.phase==='STOPPED'){
+          run.reconciledAt??=new Date().toISOString();run.stoppedAt??=run.reconciledAt;
+          activeOperation=null;await save();
+          return start(label);
+        }
+        need(application.phase!=='FAILED','The original application recorded a failed command; retain its output before another start.');
+      }
     }else{
       const previous=report.runs.filter(value=>value.label===label).at(-1);
       run=previous&&!previous.startedAt&&!previous.stoppedAt&&application?.current?.id!==previous.requestId?previous:
