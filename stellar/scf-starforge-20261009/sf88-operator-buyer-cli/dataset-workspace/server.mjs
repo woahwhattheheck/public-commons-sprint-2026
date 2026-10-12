@@ -147,7 +147,8 @@ export async function startDatasetWorkspace({ stateDirectory, profilePath = null
   server.requestTimeout = 15000; server.headersTimeout = 10000; server.keepAliveTimeout = 5000; server.maxRequestsPerSocket = 100;
   try { await new Promise((resolveReady, reject) => { server.once('error', reject); server.listen(port, HOST, resolveReady); }); }
   catch (error) { await model.close(); throw error; }
-  host = HOST + ':' + server.address().port; origin = 'http://' + host;
+  const address = new URL('http://' + HOST + ':' + server.address().port);
+  host = address.host; origin = address.origin;
   async function close() {
     if (closing) return closing;
     closed = true;
