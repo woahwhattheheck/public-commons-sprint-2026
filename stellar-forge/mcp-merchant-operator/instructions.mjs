@@ -1,6 +1,10 @@
 /** Guidance from the original merchant host, selected by advertised tool prefixes. */
 const sections = [
   {
+    "prefix": "merchant_census_geocoder_",
+    "text": "For Census address operations, select the declared workspace and retain its original workspaceId and current instanceId. Inspect or import its exact official benchmark/vintage and complete HTTP capture before choosing a match review bound to batchId, attemptId and responseSha256. Build the original typed edition with visible host merchant terms. The same original publisher owns draft review, release generation and SF88 customer sessions; use the existing terminal approval and retained buyer/session IDs. The borrowed browser shares this writer. Receive complete edition and customer files through retained reads and exact hashes. Cancel only the active metadata/batch request. Close drains accepted publication/customer work; retry an incomplete close with the same instance instead of opening another writer. CENSUS_GEOCODER_WORKSPACE.md documents the complete workflow."
+  },
+  {
     "prefix": null,
     "text": "For Stellar asset workspaces, discover the host-declared alias and original workspaceId, then read schema/view before actions. Every original action requires operationId and expectedRevision; repeat the identical action identity after an unknown response, and preserve actual errors and revisions. Use retained file reads or stellar-expert-mcp to receive complete original sources, exports and customer receipts with their hashes. The original browser remains the workspace writer."
   },

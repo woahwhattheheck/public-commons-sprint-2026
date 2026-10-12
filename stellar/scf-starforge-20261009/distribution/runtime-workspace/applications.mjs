@@ -25,6 +25,7 @@ import { n8nApplication, prepareN8nApplication } from './application-n8n.mjs';
 import { redisApplication, prepareRedisApplication } from './application-redis.mjs';
 import { openApiApplication, prepareOpenApiApplication } from './application-openapi.mjs';
 import { arcgisAgentApplication, prepareArcgisAgentApplication } from './application-arcgis.mjs';
+import { censusGeocoderApplication, prepareCensusGeocoderApplication } from './application-census-geocoder.mjs';
 import { duckdbAgentApplication, prepareDuckDBAgentApplication } from './application-duckdb-agent.mjs';
 import { s3MerchantApplication, prepareS3MerchantApplication } from './application-s3-merchant.mjs';
 import { jobCheckoutApplication, validateJobCheckoutSelection, prepareJobCheckoutApplication } from './application-job-checkout.mjs';
@@ -90,6 +91,7 @@ export const APPLICATION_CATALOG = Object.freeze([
   stellarExpertApplication(common),
   redisApplication(common),
   arcgisAgentApplication(common),
+  censusGeocoderApplication(common),
   duckdbAgentApplication(common),
   s3MerchantApplication(common),
   jobCheckoutApplication(common),
@@ -332,6 +334,9 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
     const original = await prepareS3MerchantApplication(settings, { ...context, inputPath, runtimeDirectory });
     args.push(...original.args); inputs.push(...original.inputs);
     createDirectories.push(...original.createDirectories);
+  } else if (type.id === 'census-geocoder-agent') {
+    const original = await prepareCensusGeocoderApplication(settings, inputPath, runtimeDirectory);
+    args.push(...original.args); inputs.push(...original.inputs);
   } else if (type.id === 'arcgis-agent') {
     const original = await prepareArcgisAgentApplication(settings, inputPath, runtimeDirectory);
     args.push(...original.args); inputs.push(...original.inputs);
@@ -539,7 +544,7 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
 }
 function resourceKey(type, settings) {
   if (type.python) return pythonApplicationResource(type, settings);
-  if (type.id === 'arcgis-agent') return hash({ family: 'merchant-mcp', directory: settings.configurationFile });
+  if (['arcgis-agent', 'census-geocoder-agent'].includes(type.id)) return hash({ family: 'merchant-mcp', directory: settings.configurationFile });
   if (type.id === 'duckdb-agent') return hash({ family: 'native-mcp', directory: settings.nativeDirectory });
   const value = settings.outputParent ?? settings.workspaceDirectory ?? settings.directory ??
     settings.outputDirectory ?? settings.stateDirectory ?? settings.datasetFile;
