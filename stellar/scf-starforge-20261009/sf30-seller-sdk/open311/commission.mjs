@@ -49,8 +49,14 @@ async function retainedFactory(path, config) {
   });
   const used = new Map();
   return connection => {
+    // Retained receipts use the client's redacted URL; replay never needs a live secret.
+    const replayConnection = { ...connection };
+    if (replayConnection.apiKeyEnv) {
+      delete replayConnection.apiKeyEnv;
+      replayConnection.apiKey = '[redacted]';
+    }
     let selected;
-    const client = createClient(connection, { fetchImpl: async (url, init) => {
+    const client = createClient(replayConnection, { fetchImpl: async (url, init) => {
       assert(init.method === 'GET', 'The commissioning source is a GET resource.');
       const matches = sources.filter(entry => entry.receipt.url === String(url));
       assert(matches.length, 'No retained response matches the exact requested URL: ' + String(url).split('?')[0]);
