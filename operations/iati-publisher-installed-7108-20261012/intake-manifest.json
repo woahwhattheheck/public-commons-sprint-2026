@@ -24,12 +24,19 @@
     "gitBlob": "72b72c9b57a255a3481fc01b10e33d9d9c96c048"
   },
   "foreground": {
-    "bytes": 45698,
-    "sha256": "8c445437841532a0902f56b4505f722bcbc342f7144ca6f7f4405e4d27921fb9",
-    "gitBlob": "b4dad00c0381ce67572d1d609bad256442ecc295"
+    "sha256": "c45fd026ba1a908817a825749b84631d6dd5fa335af6d98c27256d07d853f63c",
+    "bytes": 53996,
+    "gitBlob": "6339e2e70385903c35160e70b731147c98c1d385"
   },
   "publishers": [
     "IATI-PUBLISHER-7108-20261012",
     "IATI-PUBLISHER-7108-20261012-TI"
-  ]
+  ],
+  "stdinContinuation": {
+    "configuration": "stdin-input.json",
+    "helper": "stdin-launch.py",
+    "returnMode": "durable",
+    "sharedGrowthMiB": 2,
+    "retainedSharedPrefix": "original hash-qualified .part, verified and preserved"
+  }
 }
