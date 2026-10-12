@@ -722,6 +722,12 @@ exposes the underlying saved-query operator for terminal use. Application
 imports use `./seller/allium`, `./seller/allium/workspace` and
 `./seller/allium/workspace/server`.
 
+## n8n automation merchants
+
+`starforge n8n-merchant` turns selected production n8n workflows into the existing durable paid-job merchant. Import a child workflow, export its native Webhook/Respond to Webhook wrapper, prepare the merchant with the actual workflow and payment configuration, then use its private operator console for job preparation, original customer handoffs, worker monitoring, results and recovery. A retained n8n execution stays attached to the same paid job when local monitoring resumes; a new remote run is an explicit decision after the previous execution fails.
+
+The [complete n8n merchant guide](../sf30-seller-sdk/n8n/README.md) includes native workflow import, authentication references, production publication, seller/customer HTTPS routing, the invoice automation example, browser operations and CLI recovery. Begin with `starforge n8n-merchant --help`. The typed `@tokenjunkielabs/starforge-merchant/merchant/n8n` import exposes the same maintained implementation; `/config`, `/prepare`, `/runtime` and `/workspace` subpaths expose its original modules. The selected n8n instance is operated separately and the existing whole SF30 source component carries this integration.
+
 ## Native payment dependencies
 
 For an actual payment-capable seller, install the native packages in the same
@@ -3611,6 +3617,24 @@ The package exports `@tokenjunkielabs/starforge-merchant/seller/arcgis`,
 reuses the included original publisher, dataset and buyer-delivery modules and
 adds no optional native dependency.
 
+### ArcGIS browser and agent workspace
+
+`starforge arcgis-agent` opens the maintained ArcGIS browser and merchant MCP service over one original publisher, workbench and refresh scheduler. Agents can inspect source files, continue live captures, review mappings, create and select editions, export and stage merchant deployments, and receive complete original files. Existing `merchant_publisher_*` tools operate the same extraction, publication, schedule and buyer-handoff history.
+
+```sh
+starforge merchant-mcp init-arcgis-workspaces --dir /srv/field-agent \
+  --publishers /srv/publisher-connection.json \
+  --connection /srv/arcgis-workspaces.json --release-store /srv/releases
+starforge arcgis-agent serve --config /srv/field-agent/merchant-mcp.json \
+  --workspace field-data --port 0 --mcp-port 0 --token-env MCP_ACCESS_TOKEN
+```
+
+Use actual original paths and aliases, and set the selected MCP token in the host environment. The single startup record provides the live browser URL, MCP endpoint, original workspace identities and configuration SHA-256 without returning the token. `arcgis-agent inspect` reads the selected declarations without opening a publisher.
+
+The same command is available under **Applications → ArcGIS merchant workspace**. Select its original merchant configuration and workspace alias, review the installed source and retained inputs, and start it through the existing managed release worker. The browser and MCP endpoint belong to that one process; stopping the saved application drains its original owner.
+
+The package exports `./merchant/mcp/arcgis` and `./merchant/mcp/arcgis/server`. The full connection format and complete source-to-delivery workflow are in `source/stellar-forge/mcp-merchant-operator/ARCGIS_WORKSPACE.md` inside the installed package.
+
 ## Run an existing Python merchant
 
 The maintained Python merchant entrypoint is included alongside the buyer
@@ -4866,6 +4890,13 @@ to the same `serve` command. That file names the original buyer configuration
 and workspace; preserve their existing signer, budget and transport bindings.
 The [complete operator guide](../partners/coingecko-stellar-market/README.md)
 describes the configuration and all five endpoint families.
+
+The same installed merchant MCP opens this original browser/model for agents:
+`starforge merchant-mcp init-coingecko-workspaces --dir NEW_PRIVATE_DIRECTORY --connection COINGECKO_WORKSPACE_CONNECTION.json`.
+Its [complete agent guide](../../../stellar-forge/mcp-merchant-operator/COINGECKO-WORKSPACE.md)
+covers all 32 tools, complete source/file delivery, research, native purchase
+recovery and portable restoration. Application hosts can import the same adapter
+from `@tokenjunkielabs/starforge-merchant/merchant/mcp/coingecko`.
 
 Keep the private state outside the installation directory so a toolkit upgrade
 retains its projects. One server owns that state; multiple browser operators
