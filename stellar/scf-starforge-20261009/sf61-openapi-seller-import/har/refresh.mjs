@@ -96,7 +96,7 @@ export async function openRefresh(directory) {
   return { root, manifest, previous, candidate, report, draft, bytes };
 }
 
-function result(packet, reused = false) {
+export function describeRefresh(packet, reused = false) {
   return {
     directory: packet.root, operationId: packet.manifest.operationId, reused,
     previousWorkspace: packet.previous.root, candidateWorkspace: packet.candidate.root,
@@ -117,7 +117,7 @@ export async function prepareRefresh({ workspace, revision, harFile, destination
     const retained = await openRefresh(destination);
     if (canonical(retained.manifest.lineage) !== canonical(lineage))
       throw new Error('Refresh destination belongs to a different source/review selection');
-    return result(retained, true);
+    return describeRefresh(retained, true);
   }
   await createDirectory(destination, async stage => {
     await copyWorkspace(previous.root, join(stage, 'previous'));
@@ -143,13 +143,13 @@ export async function prepareRefresh({ workspace, revision, harFile, destination
     await writeNew(join(stage, 'refresh.json'), encode(manifest));
     await openRefresh(stage);
   });
-  return result(await openRefresh(destination));
+  return describeRefresh(await openRefresh(destination));
 }
 
 export async function inspectRefresh(directory) {
   const packet = await openRefresh(directory);
   const candidate = await inspectWorkspace(packet.candidate.root);
-  return { ...result(packet), candidateReviews: candidate.reviews,
+  return { ...describeRefresh(packet), candidateReviews: candidate.reviews,
     changedOperations: packet.report.operations.filter(row => row.status !== 'carried').map(row => ({
       operationId: row.operationId, method: row.method, path: row.path, status: row.status,
       changedSections: row.changes.map(change => change.section),
@@ -214,5 +214,5 @@ export async function copyRefresh(directory, destination) {
     await writeNew(join(stage, 'refresh.json'), encode(packet.manifest));
     await openRefresh(stage);
   });
-  return result(await openRefresh(destination));
+  return describeRefresh(await openRefresh(destination));
 }

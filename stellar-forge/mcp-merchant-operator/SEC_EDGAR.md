@@ -422,3 +422,59 @@ Close cancels acquisition, waits for owned operations, drains the seller, closes
 The SEC engine is F971's original product in [PR1448](https://github.com/woahwhattheheck/public-commons-sprint-2026/pull/1448), with the browser import correction from [PR1476](https://github.com/woahwhattheheck/public-commons-sprint-2026/pull/1476). The [native README](../../stellar/scf-starforge-20261009/sf30-seller-sdk/sec-edgar/README.md) records its complete source/operator/seller/client/export operation.
 
 The source owner's completed Apple/Genpact export contains 15 files and 4,069,588 uncompressed bytes. Apple has 25,135 original facts, source SHA `73a86c6aedc31f77cac2ea4df5f80f0b3bd7e6eb58bb4e01444fbedf3afb9c43`. Genpact has 1,003 original filings, source SHA `fca3d62aff9f2dac8c6c4c201970b8d128269387b71461c77ecae84d845eb1e7`. Their exact timestamps, URLs and source identities remain in the native edition metadata and original package manifest.
+
+## Completed original receiving operation
+
+Operation `SCF-SEC-EDGAR-MCP-20261012-7E4E` completed on 12 October 2026 at
+02:33:27 UTC using the original retained F971 merchant export and the public MCP
+companion. The selected existing dependency carrier was composed with the current
+original SEC modules, current merchant transport dependencies and the reviewed
+companion source published in PR1558.
+
+The input archive contained 321,062 bytes, SHA256
+`f6540a3cfcb0c7a1d53df5b792938b504caf7b305f2ae8033a3e6e3e05886b61`.
+Its original native manifest SHA256 was
+`27ef7f9f05a99530cf72f64ce722dba8e90561444f1581350df8cbdc84374eee`.
+The receiving operation preserved these actual original sources:
+
+| Source edition | Original rows | Original capture time | SHA256 |
+| --- | ---: | --- | --- |
+| `apple-facts-20261011` | 25,135 facts | 2026-10-11T22:24:01.883557+00:00 | `73a86c6aedc31f77cac2ea4df5f80f0b3bd7e6eb58bb4e01444fbedf3afb9c43` |
+| `genpact-filings-20261011` | 1,003 filings | 2026-10-11T23:27:06.972653+00:00 | `fca3d62aff9f2dac8c6c4c201970b8d128269387b71461c77ecae84d845eb1e7` |
+
+The real caller opened the native workspace, inspected and received the original
+package at revision 1, recovered the same receive after a repeated expected
+revision, and replayed the pinned Apple capture. It selected actual Assets
+concepts and Genpact filing forms, then saved `appleAssets` alongside the two
+original products at revision 2. An Assets page of seven rows continued with the
+same original cursor and a page size of eleven. The original buyer handoff,
+OpenAPI, raw source read and retained-read release completed from that revision.
+
+The original merchant started in the selected `CHALLENGE_ONLY` mode, returned its
+original HTTP 402 for the selected Assets query, and drained through its native
+close. The complete export was produced and recovered under the same export ID.
+The workspace then closed while its retained export stayed downloadable.
+
+The receiver deliberately paused after saving 32,768 bytes of the original
+3,789,099-byte Apple capture. After the MCP listener closed and restarted on the
+same selected endpoint, the existing download checkpoint resumed and completed
+every original file. The original compiler and source store reopened the result
+offline; the generated buyer module imported and exposed `buildRequest`,
+`createSellerClient`, `operations` and `source`.
+
+The completed native receiving identity is:
+
+- Workspace: `edgar-0780bac3-c13b-4b38-ac71-b4dc6fd0e5f9`, revision `2`.
+- Export: `sec-original-apple-genpact-20261012`.
+- Complete files: `15`, totaling `4,132,717` bytes.
+- Transfer manifest: `76c8b47709a1d13c3bfb8ed6d48283d98593faf92eccfe982042157ece1992ac`.
+- Original native export manifest: `92c37cfb5cc599ae667f9794aafee93924dcac3462cedf69e0de2944dda46310`.
+- Reopened products: `appleFacts`, `genpactFilings` and `appleAssets`.
+  Their original example queries returned the first 25 rows from 146 matching
+  Assets records, 1,003 filings and 146 matching Assets records respectively.
+
+The retained native case, original operation journal and compact result are
+delivered through the existing SEC and cumulative installation coordination
+threads. The original provider source is PR1448, its browser correction is
+PR1476, and the native command plus six native SDK exports are PR1512. A5F3 and
+D1CC continue the same cumulative package production and installed receiving.
