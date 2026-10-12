@@ -38,6 +38,9 @@
     "stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/examples/mccampbell/observations.md",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/examples/mccampbell/Equis3.zip",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/examples/mccampbell/Equis4_CSV.zip",
-    "stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/examples/mccampbell/McCampbell_Complete_EDD_Model_20261012.zip"
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/examples/mccampbell/McCampbell_Complete_EDD_Model_20261012.zip",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/receiving-processes.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/receiving-process.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/receiving.complete.example.json"
   ]
 }
