@@ -225,9 +225,13 @@ class Store(CreditStore, AccountantStore):
                             rows=report["source"].get("records", report["source"].get("reservations", 0)), portfolio=report["portfolio"],
                             record_kind=report["source"].get("record_kind", "reservations"),
                             source_basis=report.get("basis"), date_basis=report.get("date_basis"))
+                if view["kind"] == "sf36_ledger":
+                    view["reservation_ledger_identity"] = captured["identity"]
                 if view["kind"] == "governed_mcp":
                     view["spending_owner"] = report["source"].get("spending_owner")
                     view["ledger_state"] = report["source"].get("ledger_state")
+                    view["reservation_ledger_identity"] = report["source"].get("reservation_ledger_identity")
+                    view["unlinked_spending_exposures"] = report["source"].get("unlinked_spending_exposures", [])
                     view["source_issues"] = report["source"].get("integrity_issues", [])
                     view["source_notes"] = report["source"].get("source_notes", [])
             result.append(view)
