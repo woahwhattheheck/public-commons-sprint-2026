@@ -311,6 +311,27 @@
       ]
     ],
     [
+      "/grant-plan-core.mjs",
+      [
+        "grant-plan-core.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/grant-plan-source.mjs",
+      [
+        "grant-plan-source.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/grant-plan-workspace.mjs",
+      [
+        "grant-plan-workspace.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
       "/grant-submission-core.mjs",
       [
         "grant-submission-core.mjs",
@@ -468,6 +489,41 @@
       "/setup.mjs",
       [
         "setup.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/source-table-guide.md",
+      [
+        "../SOURCE_TABLES.md",
+        "text/markdown; charset=utf-8"
+      ]
+    ],
+    [
+      "/source-table-workspace.mjs",
+      [
+        "source-table-workspace.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/source-tables.css",
+      [
+        "source-tables.css",
+        "text/css; charset=utf-8"
+      ]
+    ],
+    [
+      "/source-tables.html",
+      [
+        "source-tables.html",
+        "text/html; charset=utf-8"
+      ]
+    ],
+    [
+      "/source-tables.mjs",
+      [
+        "source-tables.mjs",
         "text/javascript; charset=utf-8"
       ]
     ],

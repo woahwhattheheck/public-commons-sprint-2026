@@ -30,7 +30,8 @@
     "./merchant-mcp/openfema/provider": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/openfema/merchant-provider.mjs",
     "./merchant-mcp/openfema/setup": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/openfema/merchant-setup.mjs",
     "./applications/openfema": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/openfema/application.mjs",
-    "./seller/openfema/recorded-source": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/openfema/recorded-source.mjs"
+    "./seller/openfema/recorded-source": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/openfema/recorded-source.mjs",
+    "./seller/openfema/delivery": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/openfema/delivery.mjs"
   },
   "browserAssets": [
     {
@@ -69,6 +70,8 @@
     "stellar/scf-starforge-20261009/sf30-seller-sdk/openfema/examples/recorded-dr4724/projects.csv",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/openfema/examples/testnet-commissioning.mjs",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/openfema/examples/testnet-input.example.json",
-    "stellar/scf-starforge-20261009/sf30-seller-sdk/openfema/examples/testnet-runtime-package.json"
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/openfema/examples/testnet-runtime-package.json",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/openfema/DATA_INTEGRATION.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/openfema/examples/project-staging-mapping.json"
   ]
 }

@@ -29,7 +29,9 @@ const METHODS = Object.freeze({
   inspect: 'inspect', history: 'operationHistory', 'recover-operation': 'recoverOperation',
   stage: 'stage', review: 'review', row: 'readRow',
   promote: 'promote', rollback: 'rollback',
-  'export-receiving': 'exportReceiving', 'export-backup': 'exportBackup', 'restore-backup': 'restoreBackup'
+  'export-receiving': 'exportReceiving', 'export-backup': 'exportBackup', 'restore-backup': 'restoreBackup',
+  'field-inspect':'inspectField','field-import':'importField','field-source':'readField','field-targets':'fieldTargets',
+  'field-preview':'previewField','field-review':'saveFieldReview','field-stage':'stageField'
 });
 export async function runPostgisCommand(argv) {
   const args = argumentsOf([...argv]);
@@ -39,7 +41,8 @@ export async function runPostgisCommand(argv) {
     'node stac/postgis/cli.mjs stage|review|row|promote|rollback|export-receiving|export-backup|restore-backup --connection PRIVATE_JSON --profile PROFILE_JSON --workspace DIRECTORY --request ORIGINAL_REQUEST_JSON',
     'node stac/postgis/cli.mjs verify-receiving --connection PRIVATE_READER_JSON --request ORIGINAL_REQUEST_JSON',
     'node stac/postgis/cli.mjs serve --connection PRIVATE_JSON --profile PROFILE_JSON --workspace DIRECTORY --port 0'
-  ], requestGuide: 'OPERATOR.md',
+  ], requestGuide: 'OPERATOR.md', fieldGuide:'FIELD_PUBLICATION.md',
+    fieldCommands:['field-inspect','field-import','field-source','field-targets','field-preview','field-review','field-stage'],
     recovery: 'recover-operation is read only. It reads a committed original result and verifies its retained export files; it never executes the old request. Use --operation ID or --request JSON containing only operationId.',
     originalOperation: 'Keep the same request file and operationId after an interrupted response. On a restored database, recover the committed result without replaying the old database profile.'};
   need(args.command === 'recover-operation' || args.operation === undefined,

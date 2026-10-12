@@ -29,6 +29,13 @@
         "../vector/json.mjs",
         "text/javascript; charset=utf-8"
       ]
+    ],
+    [
+      "/field.js",
+      [
+        "field-browser.mjs",
+        "text/javascript; charset=utf-8"
+      ]
     ]
   ]
 }

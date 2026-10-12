@@ -93,12 +93,26 @@ states. A known failure to create the native process records NOT_STARTED. An
 unobserved or incomplete closure remains CLOSURE_UNRESOLVED with its original
 process identities and error. On the same host boot, reconcile that exact launch
 and native operation before another start; an empty later PID lookup alone does
-not replace the missing descendant-closure result. After an actual host reboot,
-the changed Linux boot ID establishes that the old process family has ended.
-The launcher retains both boot IDs, the prior result hash and the original
-closure in a separate private launch-closure record before replacing its current
-result. It records original-host-reboot and permits the same original operation
-to continue.
+not replace the missing descendant-closure result.
+
+## Original host identity and recovery
+
+Before dispatch, the launcher reads the native Linux machine ID and the DMI
+product UUID when available. Domain-separated SHA-256 values stay in the
+original private launch owner and result beside the kernel boot ID. Raw machine
+identifiers are neither printed nor added to the customer delivery. All
+available retained identity fields must match; an empty identity cannot
+establish host continuity.
+
+A changed kernel boot ID closes an unfinished launch only when the retained
+stable host identity matches the current host. The original closure record
+retains that identity, both boot IDs and the prior result hash before the
+ordinary launch result is updated. Copying or mounting the private directory on
+a different host does not establish that its original processes ended. Missing
+or changed identity, including an older boot-only closure, preserves the
+original evidence for reconciliation on the original host. The existing
+complete child-closure result continues to permit normal replay through the
+same operation and OS-owned lock.
 
 The Node entry is intentionally invoked through this launcher. The private
 operation directory is mode 0700. Its startup logs and browser profile remain

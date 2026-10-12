@@ -24,7 +24,9 @@ const HELP = 'Merchant payment plans\n\n' +
   'Every mutation carries revision, actor and its original stable requestId. An optional workspaceId binds the request to the original accounting directory.\n' +
   'Save JSON contains plan: {id?, invoiceId, balanceDate, title, reference, customerNote, installments: [{id?, dueDate, amount, label?}]}. Updates also carry expectedVersion.\n' +
   'Activation carries expectedVersion and the preview reviewSha256. Cancellation carries expectedVersion, cancelledDate and reason.\n' +
-  'Generate JSON contains invoiceId, balanceDate, firstDueDate, count, intervalDays and optional title/reference/customerNote.\n' +
+  'Generate JSON contains invoiceId, balanceDate, firstDueDate, count and optional title/reference/customerNote.\n' +
+  'Use intervalDays (default 30) or intervalMonths (1-120), never both. Calendar months accept monthAnchor DAY_OF_MONTH (default) or END_OF_MONTH.\n' +
+  'END_OF_MONTH requires a firstDueDate at month end. Monthly, quarterly and yearly schedules use intervalMonths 1, 3 and 12.\n' +
   'File formats: schedule.json, schedule.csv, schedule.html, manifest.json. Outputs are create-only.\n' +
   'For a new accounting directory, also pass --outbox DIRECTORY --proof-dir DIRECTORY --terms FILE. Reopen an initialized directory without replacing its source settings.\n';
 

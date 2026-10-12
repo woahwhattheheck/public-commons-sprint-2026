@@ -387,9 +387,13 @@ class DuckDBWorkspace:
         return [{"name": name, "edition_id": edition, "revision": revision}
                 for name, edition, revision in db.execute("SELECT name,edition_id,revision FROM sf_views ORDER BY name").fetchall()]
 
-    def _delivery(self, report_path):
+    def _delivery(self, report_path, *, db=None):
         report_path = Path(os.path.abspath(Path(report_path).expanduser()))
         raw = read(report_path, 8 * 1024 * 1024)
+        from .timescale_intake.source import open_delivery as open_timescale_delivery
+        native_table = open_timescale_delivery(report_path, raw, self, db)
+        if native_table is not None:
+            return native_table
         report = parse(raw)
         # Accept the original bridge's whole output or its unchanged report.
         if isinstance(report, dict) and report.get("mode") == "ORIGINAL_PYTHON_DATASET":
@@ -427,6 +431,18 @@ class DuckDBWorkspace:
 
     @staticmethod
     def _rows(delivery, fields, total):
+        if hasattr(delivery, "iter_rows"):
+            count = 0
+            for row in delivery.iter_rows():
+                if not isinstance(row, dict) or set(row) != set(fields):
+                    raise StateError("DUCKDB_ORIGINAL_ROW_FIELDS_CHANGED")
+                count += 1
+                if count > total:
+                    raise StateError("DUCKDB_ORIGINAL_ROW_COUNT_CHANGED")
+                yield row
+            if count != total:
+                raise StateError("DUCKDB_ORIGINAL_ROW_COUNT_CHANGED")
+            return
         with delivery.file("dataset.jsonl").open() as stream:
             count = 0
             while raw := stream.readline(_LINE + 1):
@@ -498,7 +514,7 @@ class DuckDBWorkspace:
             raise StateError("DUCKDB_DELIVERY_CHANGED_DURING_REVIEW")
         for row in self._rows(delivery, inspected["fields"], inspected["row_count"]):
             for column in mapped:
-                _convert(row[column["source"]], column)
+                getattr(delivery, "convert", _convert)(row[column["source"]], column)
         semantic_fields = _semantics.delivery_fields(delivery, source["manifest"], mapped)
         identity = {"schema": SCHEMA, "manifest_sha256": inspected["manifest_sha256"],
                     "source_binding_sha256": inspected["source_binding_sha256"], "columns": mapped, "keys": keys}
@@ -524,7 +540,11 @@ class DuckDBWorkspace:
             if existing:
                 return {**_semantics.edition_fields(db, parse(existing[0].encode())),
                         "import_status": "UNCHANGED"}
-            delivery, manifest_raw, source = self._delivery(review["report_path"])
+            if review.get("timescale_source") is not None:
+                from .timescale_intake.source import open_review_delivery
+                delivery, manifest_raw, source = open_review_delivery(review, self, db)
+            else:
+                delivery, manifest_raw, source = self._delivery(review["report_path"], db=db)
             if source["manifest_sha256"] != review["manifest_sha256"] or source["source_binding_sha256"] != review["source_binding_sha256"]:
                 raise StateError("DUCKDB_REVIEWED_DELIVERY_CHANGED")
             table = "sf_edition_" + review_id
@@ -539,7 +559,7 @@ class DuckDBWorkspace:
                 batch = []
                 for row in self._rows(delivery, source["fields"], source["row_count"]):
                     count += 1
-                    batch.append([count] + [_convert(row[c["source"]], c) for c in columns])
+                    batch.append([count] + [getattr(delivery, "convert", _convert)(row[c["source"]], c) for c in columns])
                     if len(batch) == 256:
                         db.executemany(sql, batch)
                         batch.clear()
@@ -566,7 +586,8 @@ class DuckDBWorkspace:
                         raise StateError("DUCKDB_ORIGINAL_SOURCE_CHANGED")
                     db.execute("INSERT INTO sf_files VALUES(?,?,?,?)", [review_id, name, length, checksum.hexdigest()])
                     files.append({"name": name, "bytes": length, "sha256": checksum.hexdigest()})
-                input_raw = read(Path(review["report_path"]), 8 * 1024 * 1024)
+                input_raw = (delivery.input_raw if hasattr(delivery, "input_raw") else
+                             read(Path(review["report_path"]), 8 * 1024 * 1024))
                 if digest(input_raw) != source["input_report_sha256"]:
                     raise StateError("DUCKDB_ORIGINAL_REPORT_CHANGED")
                 db.execute("INSERT INTO sf_files VALUES(?,?,?,?)", [review_id, "input-report.json", len(input_raw), digest(input_raw)])

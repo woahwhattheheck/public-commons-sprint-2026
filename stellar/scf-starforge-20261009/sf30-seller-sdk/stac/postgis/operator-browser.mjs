@@ -1,9 +1,10 @@
 import {parseExactJSON, stringifyExactJSON} from '/exact-json.js';
+import {installFieldDesk} from '/field.js';
 const $ = selector => document.querySelector(selector);
 const $$ = selector => [...document.querySelectorAll(selector)];
-const mutations = new Set(['stage', 'promote', 'rollback', 'export-receiving', 'export-backup', 'restore-backup']);
+const mutations = new Set(['stage', 'promote', 'rollback', 'export-receiving', 'export-backup', 'restore-backup','field-import','field-review','field-stage']);
 let config, profile, project, review, decisions = new Map(), changePage = 0, historyPage = 0, pending = [], busy = 0;
-let historyTotal = null, selectedRecovery = null, acknowledgedPending = [];
+let historyTotal = null, selectedRecovery = null, acknowledgedPending = [], fieldDesk = null;
 const pendingChecks = new Map();
 const pageSize = 100;
 const jsonText = value => stringifyExactJSON(value, 2);
@@ -46,7 +47,7 @@ function setBusy(change) {
   busy += change;
   $('#busy-label').textContent = busy ? 'Native operation in progress' : 'Ready';
   $$('button').forEach(button => { button.disabled = busy > 0; });
-  if (!busy) { renderReviewControls(); renderPending(); renderHistoryControls(); renderRecoveryControls(); }
+  if (!busy) { renderReviewControls(); renderPending(); renderHistoryControls(); renderRecoveryControls(); fieldDesk?.renderControls(); }
 }
 function describeError(error) {
   const labels = {
@@ -154,7 +155,7 @@ function renderProject() {
   }
 }
 async function refreshProject() {
-  project = await api('inspect'); renderProject();
+  project = await api('inspect'); renderProject(); if(fieldDesk)await fieldDesk.refresh();
 }
 function renderReviewControls() {
   const conflicts = review ? review.changes.filter(row => row.conflict && !decisions.has(keyOf(row))).length : 0;
@@ -320,7 +321,12 @@ async function refreshHistory() {
     const recover = entry('button', 'Recover committed operation'); recover.type = 'button';
     recover.dataset.recoverOperation = operation.operationId;
     recover.addEventListener('click', () => guarded(() => recoverCommitted(operation.operationId)));
-    cell.append(button, recover); tr.append(cell); return tr;
+    cell.append(button, recover);
+    if(['field-import','field-review'].includes(operation.kind)) {
+      const fieldButton=entry('button','Open field workflow');fieldButton.type='button';
+      fieldButton.addEventListener('click',()=>guarded(()=>fieldDesk.openOperation(operation)));cell.append(fieldButton);
+    }
+    tr.append(cell); return tr;
   }));
   historyTotal = result.total;
   $('#history-page').textContent = Math.min(historyPage * 100 + 1, Number(result.total)) + '–' +
@@ -336,6 +342,7 @@ $('#apply-profile').addEventListener('click', () => guarded(async () => {
   const inspected = await api('inspect', {}, selected);
   const changed = project?.selectedProfileSha256 !== inspected.selectedProfileSha256;
   profile = inspected.selectedProfile; project = inspected; retainLocal('profile', profile); renderProject();
+  if(fieldDesk)await fieldDesk.refresh();
   if (changed) {
     review = null; decisions = new Map(); changePage = 0;
     $('#row-comparison').hidden = true; renderChanges();
@@ -369,6 +376,8 @@ $('#review-form').addEventListener('submit', event => {
     $('#review-summary').textContent = review.summaries.map(row => row.layerId + ': ' + row.sourceAdded + ' added, ' +
       row.sourceChanged + ' changed, ' + row.sourceRemoved + ' removed, ' + row.localChanged +
       ' customer edits, ' + row.conflicts + ' conflicts.').join('\n');
+    if(review.fieldCorrection)$('#review-summary').textContent+='\nAccepted field plan '+review.fieldCorrection.reviewOperationId+
+      ': '+review.fieldCorrection.counts.applied+' changes to apply, '+review.fieldCorrection.counts.retained+' kept as evidence.\nField review SHA-256 '+review.fieldCorrection.reviewSha256;
     renderChanges(); status('Review loaded from the current native rows.');
   });
 });
@@ -461,5 +470,8 @@ await guarded(async () => {
   $('#retained-profile-detail').textContent = matchingDatabase ? '' : jsonText(retainedProfile);
   $('#profile-json').value = jsonText(profile); renderPending(); renderRecoveryControls();
   await refreshProject(); await refreshHistory();
+  fieldDesk=await installFieldDesk({perform,guarded,sameValue,status,show,refreshProject,
+    context:()=>({config,profile,project}),busy:()=>busy>0,
+    openStaged:editionId=>{$('#review-edition').value=editionId;show('review');}});
   if (!matchingDatabase) status('Opened the currently configured database. The prior saved mapping and pending requests are retained for review; committed operations can be recovered without executing them.');
 });

@@ -147,9 +147,12 @@ export async function readNativeDatasetteEdition(input) {
     required(!seen.has(file), 'DATASETTE_NATIVE_EDITION_MEMBER_DUPLICATE', file);
     seen.add(file);
     const rawBody = bodyNames.has(file);
+    // ResponseDocument roles identify one original. Bind repeated page/member
+    // kinds to their original edition paths; equal bodies remain distinct sources.
     const role = file === 'capture/capture.json' ? 'original-native-capture' :
       file === 'review.json' ? 'original-native-projection-and-key-review' :
-      rawBody ? 'original-native-response-body' : 'original-native-source-member';
+      rawBody ? 'original-native-response-body-' + digest(Buffer.from(file, 'utf8')).slice(0, 32) :
+      'original-native-source-member-' + digest(Buffer.from(file, 'utf8')).slice(0, 32);
     files.push({ file, absolute_path: resolve(root, file),
       bytes: descriptor.bytes, sha256: descriptor.sha256,
       content_type: file.endsWith('.json') || rawBody ? 'application/json' : 'application/octet-stream',
