@@ -1,23 +1,21 @@
 #!/usr/bin/env node
 // MIT. Original merchant implementation through the SF74 case writer.
-import {constants} from 'node:fs';
-import {mkdir,open,lstat,readFile} from 'node:fs/promises';
-import {resolve,join,dirname,basename,isAbsolute} from 'node:path';
+import {resolve,join,basename,isAbsolute} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {parseArgs} from 'node:util';
 import {createHash} from 'node:crypto';
 import {openCaseStore} from './case-store.mjs';
-import {parseWorkspace} from './workspace-file.mjs';
-import {exportRuntimeHandoff} from './runtime-support.mjs';
+import {createCaseSourceDelivery} from './case-source-delivery.mjs';
+import {exportCaseSourcePackage,inspectCaseSourcePackage,receiveCaseSourcePackage,MAX_CASE_SOURCE_MANIFEST_BYTES} from './case-source-package.mjs';
 import {readPrivateFile} from '../sf93-seller-support-bundle/incident-store.mjs';
 import {inspectCaseCommissioning,prepareCaseCommissioning,operateCaseCommissioning} from './case-commissioning.mjs';
-import {MAX_COMMISSIONING_BYTES,MAX_MATERIAL_BYTES,commissioningSummary,commissioningReport,
-  commissioningTasksCsv,commissioningOriginalFiles,commissioningFileBytes,encodeCommissioningBytes} from './commissioning.mjs';
+import {MAX_COMMISSIONING_BYTES,MAX_MATERIAL_BYTES,encodeCommissioningBytes} from './commissioning.mjs';
 
 const json=value=>JSON.stringify(value,null,2)+'\n';
 const sha=value=>createHash('sha256').update(value).digest('hex');
 const names=['cases-dir','case','revision','implementation-revision','request-id','actor','recorded-at',
-  'section','offset','limit','command-file','file','kind','description','reference','tasks','edition-id','media-type','out','export-id'];
+  'section','offset','limit','command-file','file','kind','description','reference','tasks','edition-id','media-type','out','export-id',
+  'source-dir','from','sha256','python','generated-at'];
 function absolute(value,label) {
   if(typeof value!=='string'||!isAbsolute(value))throw Error(label+' must be an absolute path');
   return resolve(value);
@@ -27,98 +25,73 @@ function integer(value,label) {
   return Number(value);
 }
 function required(values,name) {if(!values[name])throw Error('Supply --'+name);return values[name];}
-async function directory(path) {
-  await mkdir(path,{mode:0o700,recursive:true});
-  const st=await lstat(path);
-  if(!st.isDirectory()||st.isSymbolicLink()||(st.mode&0o077)||st.uid!==process.getuid())throw Error('Export directories must be private and must not be symbolic links');
-}
-async function retainFile(root,name,bytes) {
-  const path=join(root,name);
-  if(!path.startsWith(root+'/'))throw Error('Export filename leaves its selected directory');
-  await directory(dirname(path));
-  let handle;
+async function withSourceDelivery(store,values,operation) {
+  let delivery,primary;
   try {
-    handle=await open(path,constants.O_WRONLY|constants.O_CREAT|constants.O_EXCL|constants.O_NOFOLLOW,0o600);
-    await handle.writeFile(bytes);await handle.sync();
-  } catch(error) {
-    if(error.code!=='EEXIST')throw error;
-    const existing=await readPrivateFile(path,Math.max(bytes.length,1));
-    if(!Buffer.from(existing).equals(Buffer.from(bytes)))throw Error('Retained export differs: '+name);
-  } finally {await handle?.close();}
+    if(values['source-dir'])delivery=await createCaseSourceDelivery({store,
+      directory:absolute(values['source-dir'],'Source delivery directory'),
+      python:values.python??process.env.SCF_PYTHON??'python3'});
+    return await operation(delivery);
+  } catch(error){primary=error;throw error;}
+  finally {
+    try{await delivery?.close();}
+    catch(error){if(primary){primary.closeError=error;throw primary;}throw error;}
+  }
 }
 async function exportImplementation(store,values) {
-  const id=required(values,'case'),revision=required(values,'revision'),record=await store.read(id,revision);
-  const workspace=await parseWorkspace(record.workspaceText),state=workspace.commissioning;
-  if(!state)throw Error('This case has no retained implementation');
-  const output=absolute(required(values,'out'),'Output directory');await directory(output);
-  const {workspaceText,supportText,...caseSummary}=record;
-  const files=[
-    {name:'case.json',body:Buffer.from(json(caseSummary))},
-    {name:'merchant-workspace.json',body:Buffer.from(record.workspaceText)},
-    {name:'merchant-commissioning.json',body:Buffer.from(json(state))},
-    {name:'merchant-implementation.html',body:Buffer.from(commissioningReport(state))},
-    {name:'merchant-implementation-tasks.csv',body:Buffer.from(commissioningTasksCsv(state))},
-    ...commissioningOriginalFiles(state).map(file=>({name:'originals/'+file.name,
-      body:Buffer.from(commissioningFileBytes(state,file.sha256))})),
-  ];
-  if(supportText!==null) {
-    const handoff=await exportRuntimeHandoff({workspaceText,supportText,metadata:record.metadata});
-    files.push({name:'merchant-support.json',body:Buffer.from(handoff.handoff)},
-      {name:'support.html',body:Buffer.from(handoff.html)});
-  }
-  const exportId=values['export-id']??basename(output);
-  if(!/^[a-z0-9][a-z0-9_-]{0,63}$/.test(exportId))
-    throw Error('Supply --export-id using the original lowercase support export identifier');
-  const fileInventory=files.map(file=>({name:file.name,bytes:file.body.length,sha256:sha(file.body)}));
-  for(const file of files)await retainFile(output,file.name,file.body);
-  // The original Support manifest makes this full package directly available
-  // through its existing retained-file reader and the receiving Handoffs desk.
-  const supportManifest={schema:'stellar-forge.merchant-support-export.v1',exportId,
-    case:{id,revision,workspaceSha256:sha(workspaceText),supportSha256:supportText===null?null:sha(supportText)},
-    workorderIncluded:false,files:fileInventory.filter(file=>!file.name.startsWith('originals/'))};
-  let supportManifestBytes;
-  try {
-    supportManifestBytes=await readPrivateFile(join(output,'support-export.json'),65000);
-    const retained=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(supportManifestBytes));
-    const {createdAt,...original}=retained;
-    if(typeof createdAt!=='string'||!Number.isFinite(Date.parse(createdAt))||
-      JSON.stringify(original)!==JSON.stringify(supportManifest))throw Error('The retained Support export belongs to different case bytes');
-  } catch(error) {
-    if(error.code!=='ENOENT')throw error;
-    supportManifestBytes=Buffer.from(json({...supportManifest,createdAt:new Date().toISOString()}));
-    await retainFile(output,'support-export.json',supportManifestBytes);
-  }
-  fileInventory.push({name:'support-export.json',bytes:supportManifestBytes.length,sha256:sha(supportManifestBytes)});
-  const manifest={schema:'stellar-forge.merchant-implementation-export.v1',case:{id,revision},
-    implementationRevision:state.revision,summary:commissioningSummary(state),files:fileInventory};
-  await retainFile(output,'implementation-export.json',Buffer.from(json(manifest)));
-  const handle=await open(output,constants.O_RDONLY|constants.O_DIRECTORY);
-  try{await handle.sync();}finally{await handle.close();}
-  return {...manifest,output,state:'COMPLETE'};
+  const output=absolute(required(values,'out'),'Output directory');
+  const result=await withSourceDelivery(store,values,sourceDelivery=>exportCaseSourcePackage({store,
+    casesDirectory:absolute(required(values,'cases-dir'),'Case directory'),id:required(values,'case'),
+    revision:required(values,'revision'),directory:output,exportId:values['export-id']??basename(output),
+    sourceDelivery,python:values.python??process.env.SCF_PYTHON??'python3',
+    ...(values['generated-at']?{generatedAt:values['generated-at']}:{})}));
+  // Retain the original CLI's implementation inventory shape while exposing the
+  // complete native case/source package identity alongside it.
+  const bytes=await readPrivateFile(join(output,'implementation-export.json'),MAX_CASE_SOURCE_MANIFEST_BYTES);
+  const manifest=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(bytes));
+  return {...manifest,output,state:result.state,caseSource:result};
 }
 export async function commissioningCli(argv=process.argv.slice(2)) {
   const {values,positionals}=parseArgs({args:argv,allowPositionals:true,strict:true,
     options:{...Object.fromEntries(names.map(name=>[name,{type:'string'}])),help:{type:'boolean'}}});
   if(values.help){if(positionals.length||Object.keys(values).length!==1)throw Error('Use --help on its own');return {
-    command:'merchant-implementation',usage:'starforge merchant-implementation read|prepare|apply|attach|export --cases-dir /absolute/private/cases --case UUID [options]',
+    command:'merchant-implementation',usage:'starforge merchant-implementation read|prepare|apply|attach|export|inspect-package|receive-package [options]',
     read:'[--revision SHA256] [--section overview|tasks|materials|receiving|measurements|events|editions|files|comparisons] [--offset N] [--limit N]',
     prepare:'--revision SHA256 --implementation-revision N --request-id ID --actor NAME [--recorded-at UTC]',
     apply:'--revision SHA256 --command-file /absolute/private/original-command.json',
     attach:'--revision SHA256 --implementation-revision N --request-id ID --actor NAME --file /absolute/private/original [--tasks ID,ID] [--kind KIND] [--reference REF]',
-    export:'--revision SHA256 --out /absolute/private/receiving-package [--export-id original-support-export-id]',
-    guide:'sf74-merchant-support-console/IMPLEMENTATION.md'};}
-  if(positionals.length!==1||!['read','prepare','apply','attach','export'].includes(positionals[0]))
-    throw Error('Choose read, prepare, apply, attach or export');
-  const action=positionals[0],id=required(values,'case');
+    export:'--cases-dir /private/cases --case UUID --revision SHA256 --out /private/package [--source-dir /private/original-sources] [--export-id ID] [--generated-at UTC] [--python /absolute/python3]',
+    'inspect-package':'--from /private/package [--sha256 PACKAGE_MANIFEST_SHA256] [--python /absolute/python3]',
+    'receive-package':'--from /private/package --sha256 PACKAGE_MANIFEST_SHA256 --out /private/receiving --cases-dir /private/received-cases --source-dir /private/received-sources --request-id ID --actor NAME [--python /absolute/python3]',
+    guide:'sf74-merchant-support-console/IMPLEMENTATION.md',packageGuide:'sf74-merchant-support-console/CASE_SOURCE_PACKAGE.md'};}
+  if(positionals.length!==1||!['read','prepare','apply','attach','export','inspect-package','receive-package'].includes(positionals[0]))
+    throw Error('Choose read, prepare, apply, attach, export, inspect-package or receive-package');
+  const action=positionals[0];
   const allowed={
     read:['cases-dir','case','revision','section','offset','limit'],
     prepare:['cases-dir','case','revision','implementation-revision','request-id','actor','recorded-at'],
     apply:['cases-dir','case','revision','command-file'],
     attach:['cases-dir','case','revision','implementation-revision','request-id','actor','recorded-at','file','kind','description','reference','tasks','edition-id','media-type'],
-    export:['cases-dir','case','revision','out','export-id'],
+    export:['cases-dir','case','revision','out','export-id','source-dir','generated-at','python'],
+    'inspect-package':['from','sha256','python'],
+    'receive-package':['from','sha256','out','cases-dir','source-dir','request-id','actor','python'],
   }[action];
   for(const key of Object.keys(values))if(!allowed.includes(key))throw Error('Unexpected --'+key+' for '+action);
+  if(action==='inspect-package')return inspectCaseSourcePackage({
+    directory:absolute(required(values,'from'),'Original package directory'),
+    ...(values.sha256?{expectedManifestSha256:values.sha256}:{}),
+    python:values.python??process.env.SCF_PYTHON??'python3'});
   const store=await openCaseStore(absolute(required(values,'cases-dir'),'Case directory'));
+  if(action==='receive-package') {
+    required(values,'source-dir');
+    return withSourceDelivery(store,values,sourceDelivery=>receiveCaseSourcePackage({
+      directory:absolute(required(values,'from'),'Original package directory'),
+      receivingDirectory:absolute(required(values,'out'),'Receiving directory'),
+      casesDirectory:absolute(required(values,'cases-dir'),'Case directory'),sourceDelivery,
+      requestId:required(values,'request-id'),actor:required(values,'actor'),
+      expectedManifestSha256:required(values,'sha256'),python:values.python??process.env.SCF_PYTHON??'python3'}));
+  }
+  const id=required(values,'case');
   if(action==='read')return inspectCaseCommissioning(store,{id,...(values.revision?{revision:values.revision}:{}),
     ...(values.section?{section:values.section}:{}),...(values.offset?{offset:integer(values.offset,'offset')}:{}),
     ...(values.limit?{limit:integer(values.limit,'limit')}:{} )});

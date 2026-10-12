@@ -9,12 +9,14 @@ import {mountRuntimeDesk} from './runtime-desk.mjs';
 import {mountServiceDesk} from './service-desk.mjs';
 import {createServiceRecord} from './service-commitments.mjs';
 import {mountCommissioningDesk} from './commissioning-desk.mjs';
+import {mountSourceBundlePanel} from '/commissioning-source/panel.mjs';
 
 let caseDesk = null;
 let runtimeDesk = null;
 let serviceDesk = null;
 let currentServiceRecord = createServiceRecord();
 let commissioningDesk = null;
+let sourceBundlePanel = null;
 
 const $ = id => document.getElementById(id);
 const form = $('intake-form');
@@ -653,7 +655,30 @@ caseDesk = mountCaseDesk({root:caseRoot,readState:readCase,
   prepareSupport:(text,inputs)=>runtimeDesk.prepare(text,inputs),
   applySupport:(text,review)=>{runtimeDesk.apply(text,review);syncSources();},
   onDraftChange:()=>{runtimeDesk.inputsChanged();invalidateWorkorder();},
-  onNameChange:name=>portable.setName(name)});
+  onNameChange:name=>portable.setName(name),
+  onCurrentCaseChange:()=>{void sourceBundlePanel?.caseChanged().catch(()=>{});}});
+sourceBundlePanel=mountSourceBundlePanel({root:commissioningDesk.sourceRoot,
+  getCase:()=>{
+    const selected=caseDesk.deliveryContext();
+    return selected?{...selected,dirty:selected.dirty||selected.busy,
+      actor:commissioningDesk.currentActor()||selected.actor}:null;
+  },
+  onAttached:async attachment=>{
+    const result=attachment?.result;
+    if(result?.caseId&&caseDesk.currentCase()?.id===result.caseId)
+      await caseDesk.openSavedCase(result.caseId);
+  },
+});
+commissioningDesk.configureSourceDelivery({fileUrl:async original=>{
+  const identity=original?.sourceFile;
+  if(!identity)throw new Error('Choose a retained original source file.');
+  const response=await fetch('/api/commissioning/source-file?'+new URLSearchParams(identity),
+    {credentials:'omit',cache:'no-store'});
+  const result=await response.json();
+  if(!response.ok)throw new Error(result.detail||result.error||'The original source file is unavailable.');
+  return result;
+}});
+window.addEventListener('pagehide',event=>{if(!event.persisted)sourceBundlePanel.close();});
 mountHandoffDesk({root:handoffRoot,onOpenCase:id=>caseDesk.openSavedCase(id)});
 mountIncidentDesk({root:incidentRoot,exportCase:()=>caseDesk.exportSnapshot(),
   importCase:(state,files)=>caseDesk.importWorkspace(state,files)});
