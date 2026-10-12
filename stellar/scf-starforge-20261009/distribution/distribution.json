@@ -181,7 +181,9 @@
     "stellar/scf-starforge-20261009/sf30-seller-sdk/sdmx/examples/ecb-reference-rates.sdmx.zip",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/sdmx/macrobond/examples/ecb-reference-rates.macrobond.zip",
     "stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/checkout-basket.php",
-    "stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/BASKET.md"
+    "stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/BASKET.md",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/dataset-session-portable.py",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/DATASET_SESSION_PORTABILITY.md"
   ],
   "commands": {
     "opencage-workbench": "stellar/scf-starforge-20261009/sf30-seller-sdk/opencage/cli.mjs",
@@ -796,7 +798,9 @@
     "./merchant/accounting-cryptoworth/operations": {
       "types": "./source/stellar-forge/mcp-merchant-operator/accounting-cryptoworth-cli.d.mts",
       "import": "./source/stellar-forge/mcp-merchant-operator/accounting-cryptoworth-cli.mjs"
-    }
+    },
+    "./buyer/dataset-session-portable": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/dataset-session-portable.mjs",
+    "./buyer/dataset-session-location": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/dataset-location.mjs"
   },
   "nativePeers": {
     "@x402/core": {
