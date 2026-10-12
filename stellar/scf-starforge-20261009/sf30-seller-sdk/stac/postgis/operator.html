@@ -16,6 +16,7 @@
 <nav aria-label="Project sections">
 <button data-show="overview" class="selected">Project</button>
 <button data-show="source">Source and mapping</button>
+<button data-show="field">Field corrections</button>
 <button data-show="review">Review and publish</button>
 <button data-show="history">Operations</button>
 <button data-show="recovery">Delivery and recovery</button>
@@ -45,6 +46,78 @@
 <details id="retained-profile-panel" hidden><summary>Saved mapping from another database</summary><p>This previous browser mapping remains retained. The operator uses the currently configured database; recover historical operations from Operations before deciding whether to reopen the original installation.</p><pre id="retained-profile-detail"></pre></details>
 <details><summary>Original source information</summary><pre id="source-detail">No source selected.</pre></details>
 </section>
+
+<section data-pane="field" hidden>
+<h2>Accepted field corrections</h2>
+<p>Start from an office map already accepted by the QField workflow. Bind each original change to the selected database layer and row, review the stored values, then stage the next publication.</p>
+<div class="field-steps"><span>1. Accepted office map</span><span>2. Change decisions</span><span>3. Saved review</span><span>4. Publication and receiving</span></div>
+<form id="field-inspect-form">
+<label>Existing QGIS office workspace directory<input id="field-workspace-directory" name="workspaceDirectory" required spellcheck="false" autocomplete="off"></label>
+<button type="submit">Read accepted office maps</button>
+</form>
+<div id="field-inventory" hidden>
+<p id="field-inventory-summary"></p>
+<form id="field-import-form">
+<label>Accepted office map<select id="field-accepted-map" required></select></label>
+<div class="field-two"><label>Import actor<input id="field-import-actor" required autocomplete="off"></label><label>Reason for this publication<textarea id="field-import-note" rows="2" required></textarea></label></div>
+<button type="submit">Retain accepted field source</button>
+</form>
+<details><summary>Original acceptance and office identity</summary><pre id="field-acceptance"></pre></details>
+</div>
+<form id="field-open-form" class="inline"><label>Retained field import operation<input id="field-source-operation" name="sourceOperationId" required spellcheck="false"></label><button type="submit">Open retained changes</button></form>
+<div id="field-source-panel" hidden>
+<dl id="field-facts" class="facts"></dl>
+<details><summary>Complete retained source manifest and original import</summary><pre id="field-source-detail"></pre></details>
+<details><summary>Original field configuration and map lineage</summary><pre id="field-lineage"></pre></details>
+<h3>Decide each original change</h3>
+<p>Field feature identities and database sf_key values remain separate until you select their binding. Attachments stay in the evidence package; this workflow does not upload them into a database attachment service.</p>
+<div class="table-scroll"><table><thead><tr><th>Original change</th><th>Field layer / identity</th><th>Decision / target</th><th>Review</th></tr></thead><tbody id="field-changes"></tbody></table></div>
+<div class="actions"><button id="field-previous" type="button">Previous changes</button><span id="field-page"></span><button id="field-next" type="button">Next changes</button><span id="field-progress"></span></div>
+<details><summary>Keep remaining changes as field evidence</summary>
+<p>This explicit decision keeps every change without a saved decision out of this publication. Each receives the reason entered below.</p>
+<label>Reason for keeping the remaining changes<textarea id="field-keep-reason" rows="2"></textarea></label><button id="field-keep-remaining" type="button">Keep every undecided change</button>
+</details>
+<div id="field-editor" hidden>
+<h3 id="field-change-title">Original change</h3><p id="field-change-id"></p>
+<div class="comparison"><div><h4>Original field base</h4><pre id="field-before"></pre></div><div><h4>Accepted field return</h4><pre id="field-after"></pre></div><div><h4>Selected database row</h4><pre id="field-target-readback">Select a target row to read its exact current values.</pre></div></div>
+<details><summary>Exact original change record</summary><pre id="field-original-body"></pre></details>
+<form id="field-decision-form">
+<div class="field-two"><label>Decision<select id="field-disposition" required><option value="">Choose explicitly</option><option value="apply">Apply selected values in the next publication</option><option value="keep">Keep as field evidence only</option></select></label><label>Reason for this change<textarea id="field-change-note" required rows="2"></textarea></label></div>
+<div id="field-apply-controls" hidden>
+<div class="field-two"><label>Target database layer<select id="field-target-layer"></select></label><label>Existing database role<select id="field-target-role"></select></label></div>
+<p id="field-role-scope"></p>
+<div id="field-existing-target">
+<label>Selected stable database key (sf_key)<input id="field-target-key" spellcheck="false" autocomplete="off"></label>
+<div class="inline"><label>Find a row by key, ID or attribute text<input id="field-target-search" spellcheck="false"></label><button id="field-find-targets" type="button">Read visible target rows</button></div>
+<div class="table-scroll"><table><thead><tr><th>Stable key / sf_id</th><th>Current attributes</th><th>Bind row</th></tr></thead><tbody id="field-targets"></tbody></table></div>
+<div class="actions"><button id="field-target-previous" type="button">Previous targets</button><span id="field-target-page"></span><button id="field-target-next" type="button">Next targets</button></div>
+</div>
+<p id="field-new-target" hidden>A new row receives the existing database's operator identity. Map every target attribute from the accepted field record.</p>
+<div id="field-attribute-panel"><h4>Attribute decisions</h4><div class="table-scroll"><table><thead><tr><th>Original field attribute</th><th>Base / accepted values</th><th>Decision</th><th>Target column</th></tr></thead><tbody id="field-attributes"></tbody></table></div></div>
+<div class="field-two"><label>Geometry<select id="field-geometry"><option value="current">Keep current database geometry</option><option value="field">Use accepted field geometry</option></select></label><label id="field-source-srid-label" hidden>Accepted field CRS EPSG code<input id="field-source-srid" type="number" min="1" step="1" spellcheck="false"></label></div>
+<p>The native CRS check compares the accepted office CRS with this explicit EPSG definition before transforming the geometry. The target type, dimensions, validity and row permissions are checked by PostGIS.</p>
+</div>
+<button type="submit">Save this change decision</button>
+</form>
+</div>
+<h3>Review the whole publication</h3>
+<form id="field-preview-form">
+<div class="field-two"><label>Review actor<input id="field-review-actor" required autocomplete="off"></label><label>Whole publication reason<textarea id="field-review-note" required rows="2"></textarea></label></div>
+<button id="field-preview-button" type="submit">Preview all decisions against current database</button>
+</form>
+<div id="field-preview-panel" hidden>
+<p id="field-preview-summary"></p>
+<div class="table-scroll"><table><thead><tr><th>Change</th><th>Target / role</th><th>Values and conflicts</th></tr></thead><tbody id="field-preview-rows"></tbody></table></div>
+<details><summary>Complete exact review, values and CRS observations</summary><pre id="field-preview-detail"></pre></details>
+<button id="field-save-review" type="button">Commit this reviewed field plan</button>
+</div>
+<div id="field-saved-panel" hidden>
+<p id="field-saved-summary"></p><pre id="field-saved-detail"></pre>
+<div class="actions"><button id="field-stage" type="button">Stage this field publication</button><button id="field-open-staged" type="button" hidden>Open staged publication review</button><button id="field-open-delivery" type="button">Open receiving and complete backup</button></div>
+</div>
+</div>
+</section>
+
 <section data-pane="review" hidden>
 <h2>Review and publish</h2>
 <p>Review incoming changes against the previous source and current customer edits. A changed live layer requires a fresh review.</p>
