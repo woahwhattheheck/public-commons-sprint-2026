@@ -31,7 +31,7 @@ function facts(rows) {
 const copy = value => JSON.parse(JSON.stringify(value));
 const scopeNames = value => Array.isArray(value) ? value.map(item => typeof item === 'string' ? item : item.name) :
   value && typeof value === 'object' ? Object.keys(value) : [];
-const routeAction = action => ({ 'source.import': 'import-source', 'source.inspect': 'inspect-source' })[action] ?? action;
+const routeAction = action => ({ 'source.import': 'import-source', 'source.provider': 'import-provider', 'source.inspect': 'inspect-source' })[action] ?? action;
 const selectionKey = selection => JSON.stringify([selection.method, selection.path, selection.serverIndex, selection.securityAlternative]);
 const validPort = value => Number.isInteger(Number(value)) && Number(value) >= 1024 && Number(value) <= 65535;
 const sameFlow = (a, b) => a.scheme === b.scheme && a.authorizationEndpoint === b.authorizationEndpoint &&
@@ -49,6 +49,9 @@ function profileFacts(entry) {
   return facts([
     ['Connection', entry.alias ?? entry.retainAlias],
     ['Provider', profile.label ?? entry.label],
+    ...(profile.provider ? [['Provider dialect', profile.provider.kind],
+      ...(profile.provider.environment ? [['Provider environment', profile.provider.environment]] : []),
+      ['Registered callback origin', profile.callbackOrigin], ['PKCE', profile.pkceMethod]] : []),
     ['Original source SHA-256', profile.source?.sha256],
     ['Security scheme', profile.source?.scheme],
     ['Authorization endpoint', profile.authorizationEndpoint],
@@ -68,8 +71,11 @@ function profileFacts(entry) {
  * Mount outside the Applications configuration form. getContext returns
  * {workspaceId,runtimeId,applicationId,kind,environmentFile,connectionsFile,port,
  * allowLoopbackOAuth}. onPrepared receives only the four reviewed settings.
+ * applicationKinds contains the original Applications type IDs mounting this view;
+ * the default is ['openapi']. The accounting integration can reuse this same view.
  */
-export function createOpenApiConnectionSetupView({ root, api, getContext, onPrepared, message, error }) {
+export function createOpenApiConnectionSetupView({ root, api, getContext, onPrepared, message, error, applicationKinds = ['openapi'] }) {
+  const supportedKinds = new Set(applicationKinds);
   let generation = 0, active = null, signature = '', catalog = null, loading = false, busy = false;
   let desired = [], dirty = false, stale = false, inspection = null, editing = null, reviewed = null;
   let prepared = null, pending = null, operationStatus, selectedEdition = null;
@@ -91,7 +97,21 @@ export function createOpenApiConnectionSetupView({ root, api, getContext, onPrep
   const counts = node('p', '', 'note');
   const pendingPanel = node('section', undefined, 'result'); pendingPanel.hidden = true;
   const controls = node('fieldset'); controls.append(node('legend', 'Connection configuration'));
-  const sourceSection = node('details'); sourceSection.open = true; sourceSection.append(node('summary', '1. Import the original provider definition'));
+  const sourceSection = node('details'); sourceSection.open = true; sourceSection.append(node('summary', '1. Choose and import a provider definition'));
+  const providerSelect = node('select'); providerSelect.id = 'openapi-setup-provider';
+  providerSelect.append(new Option('OpenAPI authorization-code provider', 'openapi'),
+    new Option('QuickBooks Online', 'quickbooks'), new Option('Xero accounting', 'xero'));
+  const providerSource = node('section'); providerSource.hidden = true;
+  const providerFacts = node('div'), providerNote = node('p', '', 'note');
+  const importProviderButton = button('Import installed provider definition', () => run(async () => {
+    const provider = selectedProvider();
+    if (!provider?.enabled || !provider.source?.sha256) throw new Error('Choose a runtime containing this original accounting provider.');
+    const result = await mutation('import-provider', { expectedRevision: catalog.revision,
+      provider: provider.provider, sourceSha256: provider.source.sha256 });
+    await acceptResult('import-provider', result);
+  }));
+  providerSource.append(providerFacts, providerNote, importProviderButton);
+  sourceSection.append(field('Connection type', providerSelect), providerSource);
   const sourceForm = node('form');
   const sourceFile = input('openapi-setup-source-file', { type: 'file' });
   sourceFile.accept = '.json,.yaml,.yml,application/json,application/yaml,text/yaml';
@@ -105,16 +125,28 @@ export function createOpenApiConnectionSetupView({ root, api, getContext, onPrep
 
   const editor = node('details'); editor.open = true; editor.append(node('summary', '2. Add or replace a connection'));
   const editorForm = node('form');
-  const alias = input('openapi-setup-alias', { required: true, maxLength: 128 }); alias.pattern = '[A-Za-z0-9][A-Za-z0-9._:-]{0,127}';
+  const alias = input('openapi-setup-alias', { required: true, maxLength: 64 }); alias.pattern = '[a-z][a-z0-9_-]{0,63}';
   const label = input('openapi-setup-label', { required: true, maxLength: 160 });
   const directoryEnv = input('openapi-setup-directory-env', { required: true, maxLength: 128 }); directoryEnv.pattern = '[A-Za-z_][A-Za-z0-9_]{0,127}';
   const sourceSelect = node('select'); sourceSelect.id = 'openapi-setup-source'; sourceSelect.required = true;
   const sourceIdentity = node('p', '', 'note'), operationChoices = node('div');
   const sourceProblems = node('div'), flowFacts = node('div'), scopeChoices = node('div');
+  const sourceField = field('Imported original source', sourceSelect);
+  const scopesHeading = node('h4', 'Source-declared scopes');
+  const callbackOrigin = input('openapi-setup-callback-origin', { type: 'url', maxLength: 4096 });
+  const callbackOriginField = field('Registered callback origin', callbackOrigin,
+    'Enter the origin registered for this client. The full profile-specific callback address appears in the edition review.');
+  const providerEnvironment = node('select'); providerEnvironment.id = 'openapi-setup-provider-environment';
+  providerEnvironment.append(new Option('Choose the registered environment', ''),
+    new Option('Sandbox', 'sandbox'), new Option('Production', 'production'));
+  const providerEnvironmentField = field('QuickBooks environment', providerEnvironment);
+  const nativeFields = node('div', undefined, 'columns'); nativeFields.hidden = true;
+  nativeFields.append(callbackOriginField, providerEnvironmentField);
   const clientId = input('openapi-setup-client-id', { required: true, maxLength: 4096 });
   const authMethod = node('select'); authMethod.id = 'openapi-setup-auth-method';
   authMethod.append(new Option('Public client with PKCE', 'none'), new Option('Client secret in Basic authentication', 'client_secret_basic'),
     new Option('Client secret in token request body', 'client_secret_post'));
+  const authenticationField = field('Token endpoint authentication', authMethod);
   const secretEnv = node('select'); secretEnv.id = 'openapi-setup-secret-env';
   const secretField = field('Client-secret environment name', secretEnv,
     'Select an existing host environment reference. The secret value stays in the receiving host’s private environment.');
@@ -132,12 +164,13 @@ export function createOpenApiConnectionSetupView({ root, api, getContext, onPrep
   const cancelEdit = button('Clear connection form', () => clearEditor());
   const editorActions = node('div', undefined, 'actions'); editorActions.append(addButton, cancelEdit);
   const identityFields = node('div', undefined, 'columns');
-  identityFields.append(field('Connection alias', alias), field('Display name', label));
+  identityFields.append(field('Connection alias', alias,
+    'Start with a lowercase letter; use lowercase letters, digits, underscores or hyphens, up to 64 characters.'), field('Display name', label));
   const clientFields = node('div', undefined, 'columns');
-  clientFields.append(field('Registered client ID', clientId), field('Token endpoint authentication', authMethod));
+  clientFields.append(field('Registered client ID', clientId), authenticationField);
   editorForm.append(editNote, identityFields, field('Private directory environment name', directoryEnv),
-    field('Imported original source', sourceSelect), sourceIdentity, sourceProblems, operationChoices,
-    flowFacts, node('h4', 'Source-declared scopes'), scopeChoices, clientFields, secretField, advanced, editorActions);
+    sourceField, sourceIdentity, sourceProblems, operationChoices,
+    flowFacts, scopesHeading, scopeChoices, clientFields, secretField, nativeFields, advanced, editorActions);
   editor.append(editorForm);
 
   const entriesSection = node('section'); entriesSection.append(node('h3', '3. Review the complete connection edition'));
@@ -177,7 +210,7 @@ export function createOpenApiConnectionSetupView({ root, api, getContext, onPrep
     try {
       const value = JSON.parse(sessionStorage.getItem(storageKey()) ?? 'null');
       return value?.version === 1 && typeof value.requestId === 'string' && value.requestId.length <= 160 &&
-        ['import-source', 'source.import', 'commit', 'activate'].includes(value.action) ? value : null;
+        ['import-source', 'source.import', 'import-provider', 'source.provider', 'commit', 'activate'].includes(value.action) ? value : null;
     } catch { return null; }
   }
   function savePending(value, key = storageKey()) {
@@ -187,7 +220,9 @@ export function createOpenApiConnectionSetupView({ root, api, getContext, onPrep
     if (!active?.runtimeId || !validPort(callbackPort.value)) throw new Error('Choose a ready runtime and a fixed callback port from 1024 through 65535.');
     return { ...active.context, port: Number(callbackPort.value) };
   }
-  function call(action, value = {}, snapshot = active, context = requestContext()) {
+  function call(action, value = {}, snapshot = active, context) {
+    // These actions use their retained original request or edition, not a changed form.
+    context ??= ['status', 'recover', 'download', 'inspect-source'].includes(action) ? {} : requestContext();
     return api('/api/applications/openapi-setup/' + action, { runtimeId: snapshot.runtimeId, context, input: value });
   }
   function invalidate() {
@@ -201,6 +236,10 @@ export function createOpenApiConnectionSetupView({ root, api, getContext, onPrep
     refreshStatus.disabled = busy || loading;
     inspectEdition.disabled = busy || Boolean(pending) || !editionSelect.value;
     reviewButton.disabled = busy || Boolean(pending) || stale || !catalog?.enabled;
+    const provider = selectedProvider(), native = providerSelect.value !== 'openapi';
+    const imported = provider?.source && (catalog?.sources ?? []).some(item => item.id === provider.source.sha256);
+    importProviderButton.disabled = busy || Boolean(pending) || stale || !provider?.enabled || Boolean(imported);
+    addButton.disabled = native && (!provider?.enabled || !imported);
     panel.setAttribute('aria-busy', String(busy || loading));
   }
   async function run(action) {
@@ -264,7 +303,9 @@ export function createOpenApiConnectionSetupView({ root, api, getContext, onPrep
   }
   async function acceptResult(action, result) {
     if (!result) return;
-    if (action === 'import-source') {
+    if (action === 'import-source' || action === 'import-provider') {
+      if (action === 'import-provider') providerSelect.value = result.provider;
+      else providerSelect.value = 'openapi';
       invalidate(); sourceReadGeneration++; loadedSourceText = null;
       sourceText.value = ''; sourceFile.value = '';
       const own = generation;
@@ -273,8 +314,11 @@ export function createOpenApiConnectionSetupView({ root, api, getContext, onPrep
       sourceCache.set(result.source.id, result);
       sourceSelect.value = result.source.id;
       if (!label.value) label.value = result.source.title || result.source.label;
+      renderProvider({ selectSource: true });
       await inspectSelected();
-      status.textContent = 'Original source imported. Select its operations and registered client below.';
+      status.textContent = action === 'import-provider' ?
+        'Original provider definition imported. Enter its registered client and callback origin below.' :
+        'Original source imported. Select its operations and registered client below.';
     } else {
       prepared = result.prepared ?? null;
       if (!prepared?.settings) throw new Error('The completed edition did not return prepared application settings.');
@@ -295,7 +339,7 @@ export function createOpenApiConnectionSetupView({ root, api, getContext, onPrep
     secretEnv.replaceChildren(new Option('Choose an available environment name', ''),
       ...(catalog?.clientSecretEnvs ?? []).map(name => new Option(name, name)));
     if (selectedSecret && [...secretEnv.options].some(item => item.value === selectedSecret)) secretEnv.value = selectedSecret;
-    updateAuthentication();
+    renderProvider({ selectSource: true });
     const previousEdition = editionSelect.value;
     editionSelect.replaceChildren(new Option('Choose a saved edition', ''),
       ...(catalog?.editions ?? []).map(item => new Option('Edition ' + item.sequence + ' · ' + item.createdAt + ' · ' + item.entryCount + ' connections', item.id)));
@@ -372,6 +416,13 @@ export function createOpenApiConnectionSetupView({ root, api, getContext, onPrep
     if (own !== generation || selectedInspection !== inspectionGeneration || sourceSelect.value !== sourceId) return;
     sourceCache.set(sourceId, value); inspection = value;
     sourceIdentity.textContent = value.source.sha256 + ' · ' + value.source.bytes + ' original bytes';
+    if (providerSelect.value !== 'openapi') {
+      const provider = selectedProvider();
+      if (!provider?.enabled || value.source.sha256 !== provider.source.sha256)
+        throw new Error('Import the selected runtime’s exact native provider definition before preparing its registration.');
+      flowFacts.append(facts([['Original security scheme', provider.source.scheme], ['Original provider factory SHA-256', provider.factorySha256]]));
+      return;
+    }
     const selected = new Set(selections.map(selectionKey));
     if (!value.choices?.length) {
       sourceProblems.append(node('p', 'This definition has no supported authorization-code operation. Choose another retained definition or import the provider’s current definition.', 'note'));
@@ -390,17 +441,56 @@ export function createOpenApiConnectionSetupView({ root, api, getContext, onPrep
     for (const warning of warnings) sourceProblems.append(node('p', typeof warning === 'string' ? warning : warning.message ?? JSON.stringify(warning), 'note'));
     renderScopes(scopes);
   }
+  function selectedProvider() {
+    return (catalog?.providers ?? []).find(item => item.provider === providerSelect.value);
+  }
+  function renderProvider({ selectSource = false } = {}) {
+    const native = providerSelect.value !== 'openapi', provider = selectedProvider();
+    providerSource.hidden = !native; sourceForm.hidden = native;
+    for (const control of sourceForm.elements) control.disabled = native;
+    sourceField.hidden = native; sourceSelect.disabled = native;
+    for (const element of [operationChoices, scopeChoices, scopesHeading, authenticationField, advanced])
+      element.hidden = native;
+    authMethod.disabled = native;
+    for (const element of advanced.querySelectorAll('input,textarea,select')) element.disabled = native;
+    nativeFields.hidden = !native;
+    callbackOrigin.disabled = !native; callbackOrigin.required = native;
+    const qbo = providerSelect.value === 'quickbooks';
+    providerEnvironmentField.hidden = !qbo; providerEnvironment.disabled = !qbo;
+    providerEnvironment.required = qbo;
+    providerFacts.replaceChildren();
+    if (native) {
+      if (!provider?.enabled) {
+        providerNote.textContent = provider?.reason || 'The selected runtime does not contain this original provider. Select a compatible installed runtime in Applications.';
+        if (selectSource) sourceSelect.value = '';
+      } else {
+        const imported = (catalog?.sources ?? []).find(item => item.id === provider.source.sha256);
+        providerFacts.append(facts([['Provider', provider.label], ['Original definition', provider.source.file],
+          ['Original source SHA-256', provider.source.sha256], ['Original source bytes', provider.source.bytes],
+          ['Original provider factory SHA-256', provider.factorySha256]]));
+        providerNote.textContent = imported ?
+          'This exact provider definition is retained. Enter the client registration below; review will show the complete original protocol, scopes and callbacks.' :
+          'Import this installed provider definition once to retain it in the connection workspace.';
+        if (selectSource) sourceSelect.value = imported?.id ?? '';
+        sourceIdentity.textContent = imported ? imported.sha256 + ' · ' + imported.bytes + ' original bytes' : '';
+        if (!label.value) label.value = provider.label;
+      }
+    }
+    updateAuthentication(); renderBusy();
+  }
   function updateAuthentication() {
-    secretField.hidden = authMethod.value === 'none'; secretEnv.required = authMethod.value !== 'none';
+    const confidential = providerSelect.value !== 'openapi' || authMethod.value !== 'none';
+    secretField.hidden = !confidential; secretEnv.required = confidential;
   }
   function clearEditor() {
     inspectionGeneration++;
     editing = null; alias.value = ''; alias.readOnly = false; label.value = ''; directoryEnv.value = '';
     clientId.value = ''; authMethod.value = 'none'; secretEnv.value = '';
+    callbackOrigin.value = ''; providerEnvironment.value = '';
     revocationEndpoint.value = ''; issuer.value = ''; authorizationParameters.value = '{}'; resourceParameters.value = '[]';
     sourceSelect.value = ''; inspection = null; sourceIdentity.textContent = '';
     operationChoices.replaceChildren(); scopeChoices.replaceChildren(); flowFacts.replaceChildren(); sourceProblems.replaceChildren();
-    editNote.textContent = ''; addButton.textContent = 'Add connection to review'; updateAuthentication();
+    editNote.textContent = ''; addButton.textContent = 'Add connection to review'; renderProvider({ selectSource: true });
   }
   async function editEntry(index) {
     const item = desired[index]; if (!item) return;
@@ -408,6 +498,10 @@ export function createOpenApiConnectionSetupView({ root, api, getContext, onPrep
       originalProfileSha256: item.entry.expectedProfileSha256 ?? item.entry.replacesProfileSha256 ?? null };
     const definition = item.entry.retainAlias ? item.summary.definition : item.entry;
     const profile = item.summary.profile ?? {};
+    providerSelect.value = definition?.provider ?? (profile.provider?.kind === 'intuit-quickbooks' ? 'quickbooks' :
+      profile.provider?.kind === 'xero-accounting' ? 'xero' : 'openapi');
+    callbackOrigin.value = definition?.callbackOrigin ?? profile.callbackOrigin ?? '';
+    providerEnvironment.value = definition?.environment ?? profile.provider?.environment ?? '';
     alias.value = editing.alias; alias.readOnly = true;
     label.value = definition?.label ?? profile.label ?? item.summary.label ?? editing.alias;
     directoryEnv.value = definition?.directoryEnv ?? item.summary.directoryEnv ?? '';
@@ -422,33 +516,52 @@ export function createOpenApiConnectionSetupView({ root, api, getContext, onPrep
     editNote.textContent = item.entry.retainAlias ?
       'Replacing this connection creates a new source-bound store. The reviewed edition retains the previous store and grant history for reopening.' :
       'Update this connection in the current review list.';
-    if (profile.provider) editNote.textContent += ' Its current native provider dialect remains visible in the full registration review.';
-    addButton.textContent = 'Update connection in review'; updateAuthentication();
+    if (providerSelect.value !== 'openapi') editNote.textContent += ' The original provider factory sets its protocol and scopes; the full review shows every resulting value.';
+    addButton.textContent = 'Update connection in review'; renderProvider({ selectSource: true });
     await inspectSelected({ selections: definition?.selections ?? [], scopes: definition?.scopes ?? profile.scopes ?? [] });
-    editor.open = true; editor.scrollIntoView({ block: 'nearest' }); sourceSelect.focus();
+    editor.open = true; editor.scrollIntoView({ block: 'nearest' });
+    (providerSelect.value === 'openapi' ? sourceSelect : clientId).focus();
   }
   function addEntry() {
-    const choices = selectedChoices();
-    if (!choices.length) throw new Error('Select at least one source-declared operation.');
-    if (choices.length > (catalog?.limits?.maxSelectionsPerEntry ?? 64)) throw new Error('This connection has too many selected operations.');
-    if (!choices.every(item => sameFlow(choices[0], item))) throw new Error('Select operations with the same declared authorization flow.');
-    const entry = { alias: alias.value.trim(), directoryEnv: directoryEnv.value.trim(), sourceId: sourceSelect.value,
-      selections: choices.map(item => copy(item.selection)), label: label.value.trim(), clientId: clientId.value.trim(),
-      authMethod: authMethod.value, scopes: selectedScopes().sort() };
-    if (entry.authMethod !== 'none') entry.clientSecretEnv = secretEnv.value;
-    if (revocationEndpoint.value.trim()) entry.revocationEndpoint = revocationEndpoint.value.trim();
-    if (issuer.value.trim()) entry.issuer = issuer.value.trim();
-    const parameters = jsonField(authorizationParameters.value, 'Authorization parameters');
-    const resources = jsonField(resourceParameters.value, 'Resource parameters', true);
-    if (Object.keys(parameters).length) entry.authorizationParameters = parameters;
-    if (resources.length) entry.resourceParameters = resources;
+    const native = providerSelect.value !== 'openapi';
+    let entry, summary;
+    if (native) {
+      const provider = selectedProvider();
+      if (!provider?.enabled) throw new Error('Choose a runtime containing the original provider factory.');
+      const source = (catalog?.sources ?? []).find(item => item.id === provider.source.sha256);
+      if (!source) throw new Error('Import the exact installed provider definition first.');
+      if (provider.provider === 'quickbooks' && !['sandbox', 'production'].includes(providerEnvironment.value))
+        throw new Error('Choose the registered QuickBooks environment explicitly.');
+      entry = { provider: provider.provider, alias: alias.value.trim(), directoryEnv: directoryEnv.value.trim(),
+        sourceId: source.id, factorySha256: provider.factorySha256, label: label.value.trim(),
+        clientId: clientId.value.trim(), clientSecretEnv: secretEnv.value, callbackOrigin: callbackOrigin.value.trim(),
+        ...(provider.provider === 'quickbooks' ? { environment: providerEnvironment.value } : {}) };
+      summary = { alias: entry.alias, directoryEnv: entry.directoryEnv, label: entry.label,
+        source: copy(source), provider: provider.label };
+    } else {
+      const choices = selectedChoices();
+      if (!choices.length) throw new Error('Select at least one source-declared operation.');
+      if (choices.length > (catalog?.limits?.maxSelectionsPerEntry ?? 64)) throw new Error('This connection has too many selected operations.');
+      if (!choices.every(item => sameFlow(choices[0], item))) throw new Error('Select operations with the same declared authorization flow.');
+      entry = { alias: alias.value.trim(), directoryEnv: directoryEnv.value.trim(), sourceId: sourceSelect.value,
+        selections: choices.map(item => copy(item.selection)), label: label.value.trim(), clientId: clientId.value.trim(),
+        authMethod: authMethod.value, scopes: selectedScopes().sort() };
+      if (entry.authMethod !== 'none') entry.clientSecretEnv = secretEnv.value;
+      if (revocationEndpoint.value.trim()) entry.revocationEndpoint = revocationEndpoint.value.trim();
+      if (issuer.value.trim()) entry.issuer = issuer.value.trim();
+      const parameters = jsonField(authorizationParameters.value, 'Authorization parameters');
+      const resources = jsonField(resourceParameters.value, 'Resource parameters', true);
+      if (Object.keys(parameters).length) entry.authorizationParameters = parameters;
+      if (resources.length) entry.resourceParameters = resources;
+      summary = { alias: entry.alias, directoryEnv: entry.directoryEnv, label: entry.label,
+        source: inspection.source, selections: choices };
+    }
     if (editing?.originalProfileSha256) entry.replacesProfileSha256 = editing.originalProfileSha256;
+    summary.replacement = Boolean(entry.replacesProfileSha256);
     if (desired.some((item, index) => index !== editing?.index && (item.entry.alias ?? item.entry.retainAlias) === entry.alias))
       throw new Error('Each connection needs a distinct alias.');
     if (desired.some((item, index) => index !== editing?.index && (item.entry.directoryEnv ?? item.summary.directoryEnv) === entry.directoryEnv))
       throw new Error('Each connection needs a distinct private directory environment name.');
-    const summary = { alias: entry.alias, directoryEnv: entry.directoryEnv, label: entry.label,
-      source: inspection.source, selections: choices, replacement: Boolean(entry.replacesProfileSha256) };
     if (editing) desired[editing.index] = { entry, summary };
     else {
       if (desired.length >= (catalog?.limits?.maxEntries ?? 64)) throw new Error('The connection edition has reached its supported entry limit.');
@@ -466,6 +579,13 @@ export function createOpenApiConnectionSetupView({ root, api, getContext, onPrep
       detail.append(node('summary', name + ' · ' + (retained ? 'Retain original connection' : item.summary.replacement ? 'Replace with new registration' : 'New connection')));
       if (retained) detail.append(profileFacts(item.summary),
         node('p', 'Current grant: ' + (item.summary.grant?.state ?? item.summary.existingGrant?.state ?? 'Not authorized'), 'note'));
+      else if (item.entry.provider) detail.append(facts([['Provider', item.summary.provider ?? item.entry.provider],
+        ['Registration', item.entry.label], ['Original source SHA-256', item.entry.sourceId],
+        ['Original provider factory SHA-256', item.entry.factorySha256], ['Client ID', item.entry.clientId],
+        ['Client-secret environment name', item.entry.clientSecretEnv], ['Registered callback origin', item.entry.callbackOrigin],
+        ...(item.entry.provider === 'quickbooks' ? [['Provider environment', item.entry.environment]] : []),
+        ['Directory environment name', item.entry.directoryEnv]]),
+        node('p', 'The edition review derives the complete protocol, scopes and exact callback from the original provider factory.', 'note'));
       else detail.append(facts([['Provider', item.entry.label], ['Source', item.summary.source?.label ?? item.entry.sourceId],
         ['Original source SHA-256', item.summary.source?.sha256], ['Selected operations', item.entry.selections.map(value => value.method.toUpperCase() + ' ' + value.path).join('\n')],
         ['Client ID', item.entry.clientId], ['Registered scopes', item.entry.scopes.join('\n') || 'No scopes'],
@@ -564,7 +684,9 @@ export function createOpenApiConnectionSetupView({ root, api, getContext, onPrep
       ['Connections', value.edition.entryCount], ['Registry SHA-256', value.prepared?.registrySha256],
       ['Environment SHA-256', value.prepared?.environmentSha256]]));
     for (const entry of value.connections ?? []) {
-      const detail = node('details'); detail.append(node('summary', entry.alias), profileFacts(entry)); editionPanel.append(detail);
+      const reviewedEntry = value.edition.entries?.find(item => item.alias === entry.alias && item.profileSha256 === entry.profileSha256);
+      const detail = node('details'); detail.append(node('summary', entry.alias),
+        profileFacts({ ...entry, callbackUri: reviewedEntry?.callbackUri })); editionPanel.append(detail);
     }
     editionPanel.append(button('Select this saved edition', () => run(async () => {
       if (selectedEdition !== value) throw new Error('Review the saved edition again.');
@@ -605,6 +727,12 @@ export function createOpenApiConnectionSetupView({ root, api, getContext, onPrep
   });
   editorForm.addEventListener('submit', event => { event.preventDefault(); run(async () => addEntry()); });
   sourceSelect.addEventListener('change', () => run(() => inspectSelected()));
+  providerSelect.addEventListener('change', () => run(async () => {
+    inspectionGeneration++; inspection = null; operationChoices.replaceChildren(); scopeChoices.replaceChildren();
+    flowFacts.replaceChildren(); sourceProblems.replaceChildren(); sourceIdentity.textContent = '';
+    sourceSelect.value = ''; renderProvider({ selectSource: true });
+    await inspectSelected();
+  }));
   authMethod.addEventListener('change', updateAuthentication);
   alias.addEventListener('change', () => {
     if (!directoryEnv.value) directoryEnv.value = alias.value.replace(/[^A-Za-z0-9_]/g, '_').replace(/^[0-9]/, '_$&').toUpperCase().slice(0, 112) + '_OAUTH_DIRECTORY';
@@ -623,12 +751,12 @@ export function createOpenApiConnectionSetupView({ root, api, getContext, onPrep
       generation++; signature = nextSignature; active = next; catalog = null; loading = false; busy = false;
       desired = []; dirty = false; stale = false; inspection = null; sourceCache.clear();
       reviewed = null; prepared = null; selectedEdition = null; pending = null; operationStatus = undefined;
-      sourceReadGeneration++; loadedSourceText = null;
+      sourceReadGeneration++; loadedSourceText = null; providerSelect.value = 'openapi';
       clearEditor(); reviewPanel.hidden = preparedPanel.hidden = editionPanel.hidden = true;
       sourceText.value = ''; sourceFile.value = ''; sourceLabel.value = '';
       callbackPort.value = String(validPort(next.context.port) ? next.context.port : 8787);
       status.textContent = ''; available.hidden = true; unavailable.hidden = false;
-      root.hidden = next.kind !== 'openapi';
+      root.hidden = !supportedKinds.has(next.kind);
       if (root.hidden) return;
       if (!next.workspaceId || !next.runtimeId) { unavailable.textContent = 'Choose a ready runtime to set up its provider connections.'; return; }
       pending = readPending(); force = true;
@@ -643,7 +771,7 @@ export function createOpenApiConnectionSetupView({ root, api, getContext, onPrep
     reset() {
       generation++; signature = ''; active = null; catalog = null; busy = loading = false;
       desired = []; dirty = stale = false; pending = reviewed = prepared = selectedEdition = null; operationStatus = undefined;
-      sourceReadGeneration++; loadedSourceText = null;
+      sourceReadGeneration++; loadedSourceText = null; providerSelect.value = 'openapi';
       sourceCache.clear(); clearEditor(); sourceText.value = ''; sourceFile.value = ''; sourceLabel.value = '';
       root.hidden = true; reviewPanel.hidden = preparedPanel.hidden = editionPanel.hidden = pendingPanel.hidden = true;
     },

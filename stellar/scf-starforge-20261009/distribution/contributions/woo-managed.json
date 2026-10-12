@@ -13,5 +13,8 @@
   },
   "supportFiles": [
     "stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/MANAGED.md"
-  ]
+  ],
+  "applicationProviders": {
+    "woo-managed": "stellar/scf-starforge-20261009/distribution/runtime-workspace/application-woo.mjs"
+  }
 }

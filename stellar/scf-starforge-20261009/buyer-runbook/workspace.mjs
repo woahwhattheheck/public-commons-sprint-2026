@@ -1,11 +1,14 @@
 // MIT. Loopback browser controls for the original operator runbook.
 import {createServer} from 'node:http';
 import {readFile} from 'node:fs/promises';
-import {randomBytes, timingSafeEqual} from 'node:crypto';
+import {randomBytes, randomUUID, timingSafeEqual} from 'node:crypto';
 import {pipeline} from 'node:stream/promises';
 import {openRunbookWorkspace, fault} from './workspace-model.mjs';
 import {OPERATION_HANDOFF_MAX_BYTES} from '../sf88-operator-buyer-cli/operation-handoff.mjs';
 import {CLIENT_FILE_UPLOAD_MAX_BYTES,CLIENT_REQUEST_UPLOAD_MAX_BYTES} from './client-intake.mjs';
+import {createBrowserApprovalBroker,checkOperatorChannel} from '../sf81-buyer-operator-bridge/bridge.mjs';
+import {inspectRunbookWorkspaceSelection,normalizeRunbookApprovalMode,
+  RUNBOOK_WORKSPACE_LAUNCH_SCHEMA} from './launch.mjs';
 
 const CSP = "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'";
 const messages = {
@@ -14,6 +17,10 @@ const messages = {
   RUNBOOK_REVIEW_CHANGED:'A selected config or body changed after review. Save and review a new draft revision.',
   CONTROLLING_TERMINAL_REQUIRED:'Start this workspace in the operator terminal. The original buyer asks for approval there.',
   WORKSPACE_EXECUTION_BUSY:'An acquisition is already running in this workspace.',
+  WORKSPACE_APPROVAL_SELECTION_CHANGED:'This review belongs to a different operation. Refresh the current acquisition.',
+  WORKSPACE_APPROVAL_NO_LONGER_PENDING:'This original review has finished or was cancelled. Refresh its saved result.',
+  OPERATOR_BROWSER_UNAVAILABLE:'The selected browser approval host is unavailable. Restart this workspace and reopen the original acquisition.',
+  WORKSPACE_LAUNCH_SELECTION_CHANGED:'The selected original workspace or source changed. Review the application before starting it.',
   WORKSPACE_RECOVERY_BUSY:'This workspace is capturing or checking its recovery archive.',
   RUNBOOK_RECOVERY_REVIEW_CHANGED:'The selected recovery state changed. Review the current operators and acquisitions again.',
   RUNBOOK_RECOVERY_DEPENDENCY_OUTSIDE_ROOT:'Choose the original private parent containing the workspace, configurations, operator settings, operators and retained outputs.',
@@ -64,9 +71,49 @@ const messages = {
   OPERATION_TICKET_EXPIRED:'This merchant operation ticket has expired. Request a current operation from the merchant.',
 };
 
-export async function startRunbookWorkspace({port = 8460, ...options} = {}) {
+export async function startRunbookWorkspace({port = 8460, approvalMode = 'TERMINAL',
+  expectedSelectionSha256, signal, ...options} = {}) {
   if (!Number.isInteger(port) || port < 0 || port > 65535) throw fault('INVALID_PORT');
-  const model = await openRunbookWorkspace(options), token = randomBytes(32).toString('hex');
+  if (signal !== undefined && !(signal instanceof AbortSignal)) throw fault('INVALID_ABORT_SIGNAL');
+  if (expectedSelectionSha256 !== undefined && !/^[a-f0-9]{64}$/.test(expectedSelectionSha256))
+    throw fault('WORKSPACE_LAUNCH_SELECTION_INVALID');
+  approvalMode = normalizeRunbookApprovalMode(approvalMode);
+  let model, broker, server, launch, closePromise, ready = false, closing = false;
+  const reading = new Set(), token = randomBytes(32).toString('hex');
+  const assertOpen = () => { if (closing || signal?.aborted) throw fault('WORKSPACE_START_INTERRUPTED'); };
+  const stop = () => { closing = true; if (ready) void close().catch(() => {}); };
+  signal?.addEventListener('abort',stop,{once:true});
+  async function close() {
+    return closePromise ??= (async () => {
+      closing = true;
+      signal?.removeEventListener('abort',stop);
+      let failure;
+      const stopped = server?.listening ? new Promise(done => {
+        server.close(error => { if (error) failure ??= error; done(); });
+      }) : Promise.resolve();
+      for (const request of reading) request.destroy();
+      server?.closeIdleConnections?.();
+      try { await model?.close(); } catch (error) { failure ??= error; }
+      server?.closeAllConnections?.();
+      await stopped;
+      try { await broker?.close(); } catch (error) { failure ??= error; }
+      if (failure) throw failure;
+    })();
+  }
+  try {
+  assertOpen();
+  const selection = await inspectRunbookWorkspaceSelection({...options,approvalMode});
+  if (expectedSelectionSha256 !== undefined && selection.selectionSha256 !== expectedSelectionSha256)
+    throw fault('WORKSPACE_LAUNCH_SELECTION_CHANGED');
+  assertOpen();
+  if (approvalMode === 'BROWSER') {
+    broker = await createBrowserApprovalBroker();
+    assertOpen();
+    await checkOperatorChannel('buyer-runbook:workspace',{environment:broker.environment});
+    assertOpen();
+  }
+  model = await openRunbookWorkspace({...options,approvalMode,approvalBroker:broker});
+  assertOpen();
   const assets = new Map(await Promise.all([
     ['/', 'index.html','text/html; charset=utf-8'],
     ['/app.mjs','app.mjs','text/javascript; charset=utf-8'],
@@ -78,11 +125,16 @@ export async function startRunbookWorkspace({port = 8460, ...options} = {}) {
     ['/operator.mjs','operator.mjs','text/javascript; charset=utf-8'],
     ['/style.css','style.css','text/css; charset=utf-8'],
   ].map(async ([path,name,type]) => [path,{type,bytes:await readFile(new URL('workspace-ui/' + name,import.meta.url))}])));
-  let hosts = new Set(), origins = new Set(), closing = false;
-  const reading = new Set();
+  for (const [path,name,type] of [
+    ['/approval-ui/approval-panel.mjs','approval-panel.mjs','text/javascript; charset=utf-8'],
+    ['/approval-ui/approval.css','approval.css','text/css; charset=utf-8'],
+  ]) assets.set(path,{type,bytes:await readFile(
+    new URL('../sf81-buyer-operator-bridge/browser-ui/'+name,import.meta.url))});
+  assertOpen();
+  let hosts = new Set(), origins = new Set();
   const headers = {'cache-control':'no-store','x-content-type-options':'nosniff','referrer-policy':'no-referrer',
     'cross-origin-resource-policy':'same-origin','content-security-policy':CSP};
-  const server = createServer((req,res) => {
+  server = createServer((req,res) => {
     function reply(status,type,data,extra = {}) {
       if (res.destroyed) return;
       const bytes = Buffer.isBuffer(data) ? data : Buffer.from(typeof data === 'string' ? data : JSON.stringify(data));
@@ -121,7 +173,12 @@ export async function startRunbookWorkspace({port = 8460, ...options} = {}) {
       if (req.method === 'GET' || req.method === 'HEAD') {
         const asset = assets.get(url.pathname);
         if (asset) return reply(200,asset.type,asset.bytes);
-        if (url.pathname === '/api/state') return json(200,{...await model.state(),token});
+        if (url.pathname === '/api/launch') {
+          if (!launch) throw fault('WORKSPACE_STARTING',503);
+          return json(200,launch);
+        }
+        if (url.pathname === '/api/approval') return json(200,await model.approvalState());
+        if (url.pathname === '/api/state') return json(200,{...await model.state(),token,launch});
         if (url.pathname === '/api/operator') return json(200,await model.operatorState());
         const operatorRevision=/^\/api\/operator\/(preset-[a-f0-9]{64})$/.exec(url.pathname);
         if(operatorRevision)return json(200,await model.operatorRevision(operatorRevision[1]));
@@ -194,7 +251,8 @@ export async function startRunbookWorkspace({port = 8460, ...options} = {}) {
       const limit=url.pathname==='/api/clients/file'?CLIENT_FILE_UPLOAD_MAX_BYTES:
         url.pathname==='/api/clients/request'?CLIENT_REQUEST_UPLOAD_MAX_BYTES:
         url.pathname==='/api/requests/upload'?4*Math.ceil(OPERATION_HANDOFF_MAX_BYTES/3)+1024:1024*1024;
-      const input=await body(limit);
+      const input=await body(url.pathname==='/api/approval'?8192:limit);
+      if (url.pathname === '/api/approval') return json(200,await model.decideApproval(input));
       if(url.pathname==='/api/operator/review')return json(200,await model.reviewOperatorSettings(input));
       if(url.pathname==='/api/operator/save')return json(200,await model.saveOperatorSettings(input));
       if(url.pathname==='/api/clients/upload')return json(200,await model.receiveClient(input));
@@ -225,6 +283,7 @@ export async function startRunbookWorkspace({port = 8460, ...options} = {}) {
     });
   });
   server.requestTimeout = 20000; server.headersTimeout = 10000; server.keepAliveTimeout = 2000;
+  assertOpen();
   await new Promise((done,fail) => {
     const onError = error => { server.off('listening',onListen); fail(error); };
     const onListen = () => { server.off('error',onError); done(); };
@@ -233,13 +292,22 @@ export async function startRunbookWorkspace({port = 8460, ...options} = {}) {
   const assigned = server.address().port;
   hosts = new Set([`127.0.0.1:${assigned}`,`localhost:${assigned}`]);
   origins = new Set([...hosts].map(host => `http://${host}`));
-  let closePromise;
-  return {url:`http://127.0.0.1:${assigned}`,server,model,
-    close() { return closePromise ??= (async () => {
-      closing = true;
-      const stopped = new Promise((done,fail) => server.close(error => error ? fail(error) : done()));
-      for (const request of reading) request.destroy();
-      server.closeIdleConnections?.();
-      await model.close(); server.closeAllConnections?.(); await stopped;
-    })(); }};
+  assertOpen();
+  const actual = await inspectRunbookWorkspaceSelection({...options,approvalMode});
+  if (actual.selectionSha256 !== selection.selectionSha256)
+    throw fault('WORKSPACE_LAUNCH_SELECTION_CHANGED');
+  const availability = await model.approvalState();
+  assertOpen();
+  launch = Object.freeze({schema:RUNBOOK_WORKSPACE_LAUNCH_SCHEMA,
+    mode:'BUYER_RUNBOOK_WORKSPACE',selection:actual.selection,
+    selectionSha256:actual.selectionSha256,sourceFiles:actual.sourceFiles,
+    pid:process.pid,instanceId:randomUUID(),url:`http://127.0.0.1:${assigned}`,
+    directory:model.directory,terminalAvailable:availability.terminalAvailable,
+    approvalMode,approvalAvailable:availability.approvalAvailable});
+  ready = true;
+  return {url:launch.url,server,model,launch,close};
+  } catch (error) {
+    try { await close(); } catch (cleanupError) { error.cleanupCode = cleanupError.code ?? 'WORKSPACE_SHUTDOWN_FAILED'; }
+    throw error;
+  }
 }

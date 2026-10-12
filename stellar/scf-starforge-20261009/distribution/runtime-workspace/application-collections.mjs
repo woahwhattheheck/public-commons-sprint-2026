@@ -3,7 +3,9 @@ import { join } from 'node:path';
 import { inspectMerchantRuntime } from '../../sf46-release/runtime-package.mjs';
 import { absolute, regular, plain, need } from './storage.mjs';
 import { collectionsWorkspaceSelection, matchCollectionsWorkspaceLaunch,
-  COLLECTIONS_WORKSPACE_LAUNCH_SCHEMA, collectionsWorkspaceUrl } from '../../sf88-operator-buyer-cli/collections/launch.mjs';
+  COLLECTIONS_WORKSPACE_LAUNCH_SCHEMA, collectionsWorkspaceUrl,
+  COLLECTION_RECOVERY_WORKSPACE_LAUNCH_SCHEMA, collectionsRecoveryWorkspaceSelection,
+  matchCollectionsRecoveryWorkspaceLaunch } from '../../sf88-operator-buyer-cli/collections/launch.mjs';
 
 const SOURCE = 'stellar/scf-starforge-20261009/sf88-operator-buyer-cli/collections/';
 const field = (name, label, required = false, description = '') =>
@@ -14,12 +16,14 @@ export function collectionsApplication(common = []) {
     id: 'buyer-collections', command: 'buyer-collections-workspace',
     requiredSource: SOURCE + 'server.mjs',
     title: 'Request collections', terminal: false,
-    description: 'Review grouped requests, run through the original buyer approval, and reopen received results and delivery exports.',
+    description: 'Review and operate original buyer requests, receive an encrypted original workspace, and reopen retained attempts and results.',
     fields: [
       field('stateDirectory', 'Private collection workspace', true,
-        'Reopen an existing collection store, or create one folder in an existing private parent.'),
+        'The original collection store; in receiving mode, select its separate private receiver journal. One new folder in an existing private parent is supported.'),
+      { name: 'receivingMode', label: 'Receive an encrypted original workspace', type: 'boolean', required: false,
+        description: 'Open the original backup receiver before an inbox exists. The workspace above is only its receiver journal; the verified archive supplies its original restore target.' },
       field('queueRoot', 'Original buyer inbox', false,
-        'Choose the existing initialized private inbox for a new collection store. An existing store remembers its inbox.'),
+        'Choose the initialized private inbox for a new collection store. An existing store remembers it. Leave this empty in receiving mode.'),
       ...common,
     ],
   };
@@ -33,15 +37,59 @@ async function selectedRecord(path, inputPath, inputs) {
   need(plain(value), 'APPLICATION_COLLECTION_RECORD_INVALID');
   return value;
 }
+
+async function prepareCollectionReceiving(settings, state, { inputPath, runtimeDirectory, inputs, createDirectories }) {
+  need(!settings.queueRoot, 'APPLICATION_COLLECTION_RECEIVER_INBOX_NOT_SELECTED',
+    'The original encrypted backup supplies its inbox. Leave Original buyer inbox empty in receiving mode.');
+  if (state.exists) {
+    let collection = null, retained = null;
+    try { collection = await selectedRecord(join(state.path, 'collections.json'), inputPath, inputs); }
+    catch (error) { if (error.code !== 'ENOENT') throw error; }
+    need(!collection, 'APPLICATION_COLLECTION_RECEIVER_DIRECTORY_IS_COLLECTION',
+      'Select a separate private receiver journal, or turn off receiving mode to open this collection store.');
+    try { retained = await selectedRecord(join(state.path, 'recovery.json'), inputPath, inputs); }
+    catch (error) { if (error.code !== 'ENOENT') throw error; }
+    if (retained) {
+      need(retained.schema === 'stellar-forge.sf88.collection-recovery-operation.v1' &&
+        retained.directory === state.path, 'APPLICATION_COLLECTION_RECEIVER_CHANGED',
+      'Choose the original receiver journal at its retained path.');
+      inputs.push(await inputPath(join(state.path, 'operations'), 'directory', false, true));
+    }
+  }
+  const runtime = await inspectMerchantRuntime(absolute(runtimeDirectory), { load: false, source: false });
+  for (const name of ['server.mjs', 'launch.mjs', 'recovery.mjs', 'recovery-jobs.mjs', 'browser-run.mjs']) {
+    try { inputs.push(await inputPath(join(runtime.sourceRoot, SOURCE, name), 'file')); }
+    catch (error) {
+      if (error.code !== 'ENOENT') throw error;
+      need(false, 'APPLICATION_COLLECTION_RECOVERY_SOURCE_REQUIRED',
+        'Select the complete Request Collections recovery and browser source edition.');
+    }
+  }
+  inputs.push(await inputPath(join(runtime.sourceRoot,
+    'stellar/scf-starforge-20261009/sf81-buyer-operator-bridge/browser-approval.mjs'), 'file'));
+  return { args: ['--receiving-directory', state.path, '--approval-mode', 'browser', '--startup-format', 'json'],
+    inputs, createDirectories };
+}
+
 export async function prepareCollectionsApplication(settings, { inputPath, runtimeDirectory } = {}) {
   need(plain(settings) && typeof inputPath === 'function', 'APPLICATION_COLLECTION_INPUTS_REQUIRED');
+  need(settings.receivingMode === undefined || typeof settings.receivingMode === 'boolean',
+    'APPLICATION_BOOLEAN_REQUIRED');
   const inputs = [], createDirectories = [];
   const state = await inputPath(absolute(settings.stateDirectory), 'directory', true, true);
   inputs.push(state);
   if (!state.exists) createDirectories.push(state.path);
+  if (settings.receivingMode) return prepareCollectionReceiving(settings, state,
+    { inputPath, runtimeDirectory, inputs, createDirectories });
 
   let retained = null;
   if (state.exists) {
+    let receiver = null;
+    try { receiver = await selectedRecord(join(state.path, 'recovery.json'), inputPath, inputs); }
+    catch (error) { if (error.code !== 'ENOENT') throw error; }
+    need(receiver?.schema !== 'stellar-forge.sf88.collection-recovery-operation.v1',
+      'APPLICATION_COLLECTION_DIRECTORY_IS_RECEIVER',
+      'This is a retained receiver journal. Keep receiving mode selected, or choose a separate original collection store.');
     try { retained = await selectedRecord(join(state.path, 'collections.json'), inputPath, inputs); }
     catch (error) { if (error.code !== 'ENOENT') throw error; }
     if (retained) need(retained.schema === 'stellar-forge.sf88.collections.v1' &&
@@ -85,18 +133,32 @@ export function collectionsStartup(request, text) {
   if (request?.command !== 'buyer-collections-workspace' || !Array.isArray(request.args) ||
       typeof text !== 'string' || text.length > 16384) return null;
   const flags = new Map(), allowed = new Set([
-    '--directory', '--queue-root', '--port', '--approval-mode', '--startup-format',
+    '--directory', '--queue-root', '--receiving-directory', '--port', '--approval-mode', '--startup-format',
   ]);
   for (let index = 0; index < request.args.length; index += 2) {
     const flag = request.args[index], value = request.args[index + 1];
     if (!allowed.has(flag) || flags.has(flag) || typeof value !== 'string' || !value) return null;
     flags.set(flag, value);
   }
-  if (!flags.has('--directory') || !flags.has('--queue-root')) return null;
   const portText = flags.get('--port') ?? '0';
   if (!/^\d{1,5}$/.test(portText)) return null;
   const port = Number(portText);
   if (port > 65535) return null;
+  if (flags.has('--receiving-directory')) {
+    if (flags.has('--directory') || flags.has('--queue-root') ||
+        flags.get('--startup-format') !== 'json' || flags.get('--approval-mode') !== 'browser' ||
+        !text.startsWith('{"schema":"' + COLLECTION_RECOVERY_WORKSPACE_LAUNCH_SCHEMA + '",')) return null;
+    try {
+      const expected = collectionsRecoveryWorkspaceSelection({
+        receivingDirectory: flags.get('--receiving-directory'),
+      });
+      const announcement = JSON.parse(text);
+      const url = matchCollectionsRecoveryWorkspaceLaunch(announcement, expected, port);
+      return url ? { url, original: { schema: COLLECTION_RECOVERY_WORKSPACE_LAUNCH_SCHEMA,
+        ...expected, pid: announcement.pid } } : null;
+    } catch { return null; }
+  }
+  if (!flags.has('--directory') || !flags.has('--queue-root')) return null;
   const structured = flags.has('--startup-format') || flags.has('--approval-mode');
   if (structured && (flags.get('--startup-format') !== 'json' ||
       flags.get('--approval-mode') !== 'browser' ||

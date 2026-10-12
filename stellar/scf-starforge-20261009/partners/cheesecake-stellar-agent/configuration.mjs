@@ -13,11 +13,11 @@ async function configurationSource(file) {
   need(config && typeof config === 'object' && !Array.isArray(config) &&
     config.schema === 'stellar-forge.application-config.v1' &&
     Object.keys(config).every(key => ['schema','applicationId','runtimeDirectory','handoffDirectory',
-      'stateDirectory','subject','operatorProfile','authorizationModule','remoteMcp'].includes(key)),
+      'stateDirectory','subject','operatorProfile','authorizationModule','remoteMcp','projectProfile'].includes(key)),
     'APPLICATION_CONFIG_INVALID');
   need(typeof config.subject === 'string' && config.subject.trim() === config.subject &&
     config.subject.length >= 1 && config.subject.length <= 256, 'APPLICATION_HOST_SUBJECT_REQUIRED');
-  for (const key of ['runtimeDirectory','handoffDirectory','stateDirectory','operatorProfile','authorizationModule','remoteMcp'])
+  for (const key of ['runtimeDirectory','handoffDirectory','stateDirectory','operatorProfile','authorizationModule','remoteMcp','projectProfile'])
     if (config[key] !== undefined) need(typeof config[key] === 'string' && isAbsolute(config[key]) &&
       resolve(config[key]) === config[key], 'APPLICATION_CONFIG_ABSOLUTE_PATH_REQUIRED');
   return {config,configFile,configurationSha256:createHash('sha256').update(raw).digest('hex')};
@@ -25,7 +25,7 @@ async function configurationSource(file) {
 export async function loadConfiguration(file) {
   return (await configurationSource(file)).config;
 }
-export async function loadApplication(file) {
+export async function loadApplication(file,{environment=process.env}={}) {
   const {config,configFile,configurationSha256} = await configurationSource(file);
   let host;
   if (config.authorizationModule) {
@@ -42,7 +42,11 @@ export async function loadApplication(file) {
   try {
     application = await openApplication({ ...config, authorize });
     if (config.remoteMcp) application = await attachRemoteMcpApplication({application,
-      configurationFile:config.remoteMcp,sourceRoot,stateDirectory:config.stateDirectory,authorize});
+      configurationFile:config.remoteMcp,sourceRoot,stateDirectory:config.stateDirectory,authorize,environment});
+    if(config.projectProfile){
+      const {attachApplicationProject}=await import('./project.mjs');
+      application=await attachApplicationProject({application,configFile,configurationSha256,config,sourceRoot,authorize,environment});
+    }
   } catch (error) {
     try { await application?.close(); } finally { await host?.close?.(); }
     throw error;
@@ -51,7 +55,7 @@ export async function loadApplication(file) {
   // Installed hosts compare it before publishing READY; HTTP/MCP keep their public projection.
   const launchBinding = Object.freeze({configFile,configurationSha256,applicationId:config.applicationId,
     subject:config.subject,runtimeDirectory:config.runtimeDirectory,stateDirectory:config.stateDirectory,
-    handoffDirectory:config.handoffDirectory,remoteMcp:config.remoteMcp ?? null});
+    handoffDirectory:config.handoffDirectory,remoteMcp:config.remoteMcp ?? null,projectProfile:config.projectProfile ?? null});
   return { application, context, config, sourceRoot, launchBinding,
     async close() { try { await application.close(); } finally { await host?.close?.(); } } };
 }

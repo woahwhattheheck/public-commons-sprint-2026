@@ -6,3 +6,4 @@ export { openInputStore } from './store.mjs';
 export { openWorkerFiles } from './worker.mjs';
 export { openAllowedInput, planFromHandle } from './source.mjs';
 export { runJobInputCommand } from './cli.mjs';
+export * from './workspace/index.mjs';

@@ -6,6 +6,7 @@ import { inspectMerchantRuntime } from '../../sf46-release/runtime-package.mjs';
 import { inspectDeliveryLease } from '../../sf98-merchant-delivery/delivery-lock.mjs';
 import { readBytes, parse, sha256 } from '../../sf102-cube-paid-query-adapter/onboarding/files.mjs';
 import { absolute, need, plain } from './storage.mjs';
+import { APPLICATION_PROVIDER_SCHEMA, observeApplicationStartup } from './application-provider.mjs';
 
 const SOURCE='stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/';
 const STARTUP='stellar-forge.sf104.managed-startup.v1';
@@ -35,7 +36,7 @@ function navOrigin(raw) {
   let url;try{url=new URL(raw);}catch{need(false,'APPLICATION_WOO_NAVIGATION_INVALID');}
   need(url.protocol==='http:'&&url.hostname==='127.0.0.1'&&url.origin===raw&&
     url.pathname==='/'&&!url.search&&!url.hash&&!url.username&&!url.password&&
-    /^[1-9][0-9]{0,4}$/.test(url.port)&&Number(url.port)<=65535,
+    Number(url.port||80)>0&&Number(url.port||80)<=65535,
     'APPLICATION_WOO_NAVIGATION_INVALID','Use the actual original loopback Applications origin');
   return url.origin;
 }
@@ -151,3 +152,23 @@ export async function wooStartup(request,operationDirectory,text,context={}) {
     seller,deliveryOwner:value.deliveryOwner,pid:value.pid,navigationOrigin,
     mode:value.mode,routeCount:raw.routes.length,basketCatalogs:raw.baskets?.length??0}};
 }
+
+// The maintained registry owns catalog loading and stdout persistence. This
+// adapter preserves the same original preparation, identity and startup checks.
+export default {
+  schema: APPLICATION_PROVIDER_SCHEMA,
+  id: 'woo-managed',
+  catalog({common}) { return [wooApplication(common)]; },
+  async prepare(type,settings,context) {
+    const original=await prepareWooApplication(settings,context);
+    return {args:original.args,inputs:original.inputs,createDirectories:original.createDirectories,
+      resourceKey:original.resourceKey,woo:original.identity};
+  },
+  matchRequest(request) { return !request.pythonCommand&&request.command==='woo-managed'; },
+  createObserver(request,directory,context) {
+    return observeApplicationStartup(request,directory,text=>{
+      if(!text.startsWith('{"schema":"stellar-forge.sf104.managed-startup.v1",'))return null;
+      return ()=>wooStartup(request,directory,text,context);
+    });
+  },
+};

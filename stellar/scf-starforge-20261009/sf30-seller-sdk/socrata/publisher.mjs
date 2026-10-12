@@ -422,8 +422,10 @@ export async function openSocrataPublisher({ directory } = {}) {
       case 'publisher.release.stop': {
         only(input, []);
         if (!ownedRelease) return { state: 'NO_OWNED_PROCESS', status: await releaseStatus(releaseDirectory) };
-        const session = ownedRelease; ownedRelease = null;
-        await session.close(); return { state: 'STOPPED', status: await releaseStatus(releaseDirectory) };
+        const session = ownedRelease;
+        await session.close();
+        if (ownedRelease === session) ownedRelease = null;
+        return { state: 'STOPPED', status: await releaseStatus(releaseDirectory) };
       }
       case 'publisher.buyer.review': return actualBuyerReview(input);
       case 'publisher.buyer.prepare': return buyerPrepare(input);
@@ -468,11 +470,22 @@ export async function openSocrataPublisher({ directory } = {}) {
     }
     throw fault('SOCRATA_EXPORT_KIND', 'Choose a retained dataset, review or buyer export.', 400);
   }
-  const close = () => closePromise ??= (async () => {
-    await tail.catch(() => {}); closed = true;
-    try { if (ownedRelease) { const owned = ownedRelease; ownedRelease = null; await owned.close(); } }
-    finally { await drafts.close(); }
-  })();
+  const close = () => {
+    if (closePromise) return closePromise;
+    const disposing = (async () => {
+      await tail.catch(() => {}); closed = true;
+      if (ownedRelease) {
+        const owned = ownedRelease;
+        await owned.close();
+        if (ownedRelease === owned) ownedRelease = null;
+      }
+      // The draft writer remains owned until the original seller has disposed.
+      await drafts.close();
+    })();
+    closePromise = disposing;
+    void disposing.catch(() => { if (closePromise === disposing) closePromise = null; });
+    return disposing;
+  };
   return { directory, datasetDirectory, releaseDirectory, state, act, readExport, close };
 }
 const USAGE = [

@@ -12,6 +12,10 @@ The [installed SEC EDGAR workflow](SEC_EDGAR.md) covers original JSON capture,
 source review, operator drafts, native serving, complete export and receiving,
 plus the six installed JavaScript interfaces.
 
+Intrinio statements and filing review open with `starforge intrinio`.
+The [installed Intrinio workflow](INTRINIO.md) connects the original source
+collector, exact fact review, customer exports and complete workspace receiving.
+
 The package preserves the original source paths and bytes. Its command interface
 starts those modules directly. It contains no alternative payment implementation,
 install hooks, test suites or GitHub Actions configuration.
@@ -5083,3 +5087,79 @@ inspectGrantDemoWorkspace, startGrantDemo and exportGrantDemo with TypeScript
 declarations. The complete [reviewer receiving guide](../../scf_2026/presentation/reviewer/RECEIVING.md)
 covers installation, access codes, source interpretation, full result export,
 interruption recovery, source-owner capture and same-workflow receiving.
+
+## Opportunity requirements, teaming and proposal handoff
+
+The installed `starforge opportunity` family operates the company and opportunity
+workspace through its original source store and HTTP application:
+
+~~~sh
+starforge opportunity --help
+starforge opportunity serve --workspace /absolute/private/opportunity
+~~~
+
+The workflow retains source bytes and their original dossier editions, receives
+complete USAspending award exports, binds capability and past-performance records
+to evidence, and records each numbered requirement's response disposition,
+coverage review, owner and draft response. Team decisions, dependent milestones,
+questions, source-change review and named handoffs stay in the same versioned
+workspace. The LGNDX/MCC reference seed supplies the retained company and RFI
+sources, its 34 numbered items and the reviewed response rules.
+
+The original `seed`, `action`, `show`, `source` and `compare` commands support
+the same operator work from a terminal. `export` produces complete portable
+JSON with immutable named HTML/Markdown/CSV handoffs and original dossier source
+bytes; `receive` reopens that project or advances an identical history. The
+workspace needs Node's built-in modules; the original optional award-workspace
+path uses its existing SQLite implementation.
+
+Import `openOpportunityStore` from
+`@tokenjunkielabs/starforge-merchant/partners/lgndx-opportunity-operations`.
+The `/package`, `/sources`, `/cli` and `/server` subpaths expose the same
+delivery, source, terminal and HTTP modules. The model, CLI and server declarations
+travel beside their original modules. Follow the
+[complete opportunity operator guide](../partners/lgndx-opportunity-operations/README.md)
+for source-bound decisions, the actual MCC response rules, all terminal options
+and the complete receiving workflow. In an installed package the guide is
+`source/stellar/scf-starforge-20261009/partners/lgndx-opportunity-operations/README.md`.
+
+## SAM.gov notice intake and original merchant handoff
+
+The installed `starforge samgov` command operates one private source workspace from saved
+GSA query through complete retained pages, notice and resource editions, reviewed
+deadlines and changes, explicit selections and frozen handoffs.
+
+~~~sh
+starforge samgov --help
+starforge samgov serve --workspace /absolute/private/sam-opportunities --operator "Procurement operator"
+~~~
+
+The browser and CLI use the same capture and revision history. Capture resumes
+its original saved page index, descriptions and attachments retain their issued
+source URLs, and full portable receiving preserves the original state chain and
+named export bytes. The five operator views cover searches/captures, notices,
+change review, selections, and handoffs. Readable HTML/Markdown and four CSV
+registers render the complete selected packet.
+
+A selected notice set prepares the original CSV dataset and version publisher.
+Supply the existing public payment terms and resource origin together to
+configure its merchant; `merchant-serve` and the browser's local seller controls
+start that same prepared service. Buyer review reads its actual running offer,
+and buyer preparation binds the original SF88 intent to that reviewed digest.
+The optional launch-selected opportunity workspace receives the same retained
+notice and document sources for requirements, teaming and response work.
+
+Typed imports start at
+`@tokenjunkielabs/starforge-merchant/seller/samgov` and its `/core`,
+`/transport`, `/merchant`, `/opportunity`, `/reports`, `/server` and `/cli` subpaths.
+See the [complete SAM.gov operator guide](../sf30-seller-sdk/samgov/README.md).
+The [primary GSA contract](https://open.gsa.gov/api/get-opportunities-public-api/)
+defines the provider's latest active observation, one-year query window and
+zero-based page index. Existing provider credentials remain in the selected
+runtime.
+
+Original SAM website notice JSON can also be received with its attachment index
+and publication history through `samgov notice --notice-file FILE
+--resource-index-file FILE --history-file FILE`. Each original representation
+keeps its own source identity and full bytes; issued attachments join that same
+notice before it moves into merchant preparation or the opportunity workspace.

@@ -331,6 +331,8 @@ command to continue that state. Repeated expiry follows the original governor's
 audited predecessor-release chain, so a later archived generation supersedes its
 own predecessor without relying on directory order or timestamps.
 
+For wire-backed attempts, include each original wire event in the same expiry source selection as `wire-<event-name>` (and `wire-source` for `source.json`). After the authenticated expiry release, the runner verifies that complete selection through the original wire reader, retains a wire archive plan, and moves the entire stopped wire directory—including its held original lock—into the page's existing expiry history before removing the page attempt. Reopening the same operation finishes an interrupted rename from that exact plan. The original response, ledger generation, and every archived authorization byte remain bound to the same release.
+
 The runner obtains a private, short-lived operator permit bound to the release
 journal MAC. Original SF62 terminal or structured approval asks for fresh
 consent over the current complete request. That new consent is independently
