@@ -220,6 +220,9 @@ export async function startManagedWoo(review, {env = process.env, port = 0, sell
         // returned seller. Its original close waits verification/settlement.
         await starting?.catch(() => {});
         try { await merchant?.close(); } catch (error) { failure ??= error; }
+        // A forced socket-close deadline can precede native settlement completion.
+        // Keep the original delivery worker and lease until dispatch is idle.
+        await merchant?.seller.lifecycle.whenIdle();
       } finally {
         controller.abort(fail('WOO_MANAGED_STOP_REQUESTED'));
         const final = await worker;
