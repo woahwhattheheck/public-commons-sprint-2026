@@ -500,12 +500,14 @@ export class MerchantOpenSearchWorkspaces {
     this.#closing = true;
     this.#close = (async () => {
       await Promise.allSettled([...this.#pending.keys()]);
-      const readers = await Promise.allSettled([this.#files.close(),this.#deployment.close()]);
-      const results = await Promise.allSettled([...this.#handles.values()].map(async handle => (await handle).close()));
-      this.#handles.clear();
-      const rejected = [...readers,...results].find(item => item.status === 'rejected');
+      const readers = await Promise.allSettled([this.#files.close(), this.#deployment.close()]);
+      const results = await Promise.allSettled([...this.#handles].map(async ([name, pending]) => {
+        await (await pending).close();
+        if (this.#handles.get(name) === pending) this.#handles.delete(name);
+      }));
+      const rejected = [...readers, ...results].find(item => item.status === 'rejected');
       if (rejected) throw rejected.reason;
-    })();
+    })().catch(error => { this.#close = null; throw error; });
     return this.#close;
   }
 }

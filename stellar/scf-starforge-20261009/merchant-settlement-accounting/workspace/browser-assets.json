@@ -129,6 +129,27 @@
       ]
     ],
     [
+      "/cryptoworth.mjs",
+      [
+        "cryptoworth.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/cryptoworth.html",
+      [
+        "cryptoworth.html",
+        "text/html; charset=utf-8"
+      ]
+    ],
+    [
+      "/cryptoworth.css",
+      [
+        "cryptoworth.css",
+        "text/css; charset=utf-8"
+      ]
+    ],
+    [
       "/qbo.mjs",
       [
         "qbo.mjs",

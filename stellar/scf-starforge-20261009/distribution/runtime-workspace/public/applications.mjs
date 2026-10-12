@@ -67,6 +67,7 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
   const openapiSetupRoot = element('div'); configuration.append(openapiSetupRoot);
   const openapiSetup = createOpenApiConnectionSetupView({
     root: openapiSetupRoot, api, message, error,
+    applicationKinds: ['openapi', 'merchant-accounting'],
     getContext() {
       const value = configurationValue();
       return { workspaceId: getState()?.workspaceId, runtimeId: value.runtimeId,

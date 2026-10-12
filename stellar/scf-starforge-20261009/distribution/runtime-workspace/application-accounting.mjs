@@ -222,7 +222,8 @@ export default {
   catalog({ common }) { return [accountingApplication(common)]; },
   async prepare(type, settings, context) { return prepareAccountingApplication(settings, context); },
   matchRequest(request) {
-    return !request.pythonCommand && request.command === 'merchant-accounting-workspace';
+    return !request.pythonCommand && request.command === 'merchant-accounting-workspace' &&
+      Array.isArray(request.args) && request.args.includes('--managed-launch-sha256');
   },
   createObserver(request, directory, context) {
     return observeApplicationStartup(request, directory, text => {
