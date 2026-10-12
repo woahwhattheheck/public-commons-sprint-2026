@@ -6,16 +6,18 @@ ranges, build an NDJSON dataset, compare editions and receive a complete merchan
 package. The existing Kafka HTTP server owns the databases, native writer and
 consumer. The browser, Node client and merchant tools all use that owner.
 
-The source-owned provider ID is `kafka-workspaces`. Its26 tools use
+The source-owned provider ID is `kafka-workspaces`. Its 26 tools use
 `merchant_kafka_`. [CLIENT.md](CLIENT.md) describes the complete Node client,
-CLI and native route contract. [CONTRACT.md](CONTRACT.md) explains the retained
+CLI and native route contract. [MERCHANT-DOWNLOAD.md](MERCHANT-DOWNLOAD.md)
+covers the customer downloader, durable resume and local reopening.
+[CONTRACT.md](CONTRACT.md) explains the retained
 source, offsets, projection and archive semantics.
 
 ## Configure an existing Application
 
 Open the Kafka Application and retain its private connection file. The client
 accepts the original console URL file or Applications URL record. Keep that file
-on its original operator host with mode0600. The reader checks regular-file
+on its original operator host with mode 0600. The reader checks regular-file
 identity, ownership and permissions; each operation authenticates the original
 `/api/launch` and workspace/source binding.
 
@@ -54,7 +56,7 @@ Declare complete receiving inputs under the selected workspace:
 
 Supported kinds are kafka-project, ndjson-project and ndjson. Add an input only
 when its complete file exists and replace the SHA placeholder with the real hash.
-The host configuration supports32 workspaces and64 inputs per workspace.
+The host configuration supports 32 workspaces and 64 inputs per workspace.
 
 Create setup options with the intended directory and host configuration:
 
@@ -191,7 +193,31 @@ merchant contract. The original publisher prepares the package; customer checkou
 and settlement use that package's existing workflow.
 
 The export result contains the actual artifact, original source binding, complete
-byte count and SHA-256. Read through `merchant_kafka_file_read`:
+byte count and SHA-256. A customer can receive it with the installed command:
+
+~~~sh
+starforge kafka-merchant-download inspect \
+  --url "$KAFKA_MCP_URL" --workspace "$KAFKA_WORKSPACE" --artifact "$KAFKA_ARTIFACT"
+
+starforge kafka-merchant-download download \
+  --url "$KAFKA_MCP_URL" --workspace "$KAFKA_WORKSPACE" --artifact "$KAFKA_ARTIFACT" \
+  --manifest-sha256 "$KAFKA_MANIFEST_SHA256" --directory ./received-kafka-export
+
+starforge kafka-merchant-download verify \
+  --workspace "$KAFKA_WORKSPACE" --artifact "$KAFKA_ARTIFACT" \
+  --manifest-sha256 "$KAFKA_MANIFEST_SHA256" --directory ./received-kafka-export
+~~~
+
+The inspect result supplies the actual manifest hash. The endpoint's bearer token
+uses the existing MCP_ACCESS_TOKEN environment variable. Repeat the same download
+selection and directory to resume its durable checkpoint. Local verification
+reopens the completed manifest and file with the merchant stopped.
+
+[MERCHANT-DOWNLOAD.md](MERCHANT-DOWNLOAD.md) includes source binding pins,
+cancellation, the typed SDK and receiving each native file kind.
+
+For an agent that consumes file chunks directly, use
+`merchant_kafka_file_read`:
 
 ~~~json
 {
@@ -236,7 +262,7 @@ uses `{"$kafkaNumber":"the original numeric token"}`; the native serializer
 writes the original token as a number. Preserve this value instead of coercing it
 to a Number. planJson accepts complete exact JSON text.
 
-Native files stream byte for byte. A native result above128KiB is retained as
+Native files stream byte for byte. A native result above 128 KiB is retained as
 complete exact-number JSON, and its tool response returns the original file
 manifest. A result above the configured in-memory JSON limit can be received
 through the corresponding explicit state, record, projection or query export.
@@ -267,8 +293,8 @@ after dispatch carries outcomeUnknown; reopen its same operation/record.
 
 The source-owned descriptor, catalog, reader and setup stay in this Kafka package.
 The existing contribution preserves dataset-kafka, its browser assets and the
-Kafka Application provider, and adds kafka-client, the client/merchant exports
-and merchantProviders declaration. Runtime imports remain lazy.
+Kafka Application provider, and adds kafka-client, kafka-merchant-download, the typed client/merchant
+exports and merchantProviders declaration. Runtime imports remain lazy.
 
 The complete client/MCP receiving phase belongs inside the original managed Kafka
 customer lifetime, after its browser receiver and before its console closes.

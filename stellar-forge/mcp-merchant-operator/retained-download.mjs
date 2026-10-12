@@ -91,19 +91,22 @@ export function createRetainedDownload({ manifestName, parseManifest, maximumByt
     try { const bytes = await handle.readFile(); if (bytes.length > maximum) throw failure(errorPrefix + '_DOWNLOAD_FILE_CHANGED', 'The saved file grew beyond its limit.'); return bytes; }
     finally { await handle.close(); }
   }
-  async function prefixHash(handle, length) {
+  async function prefixHash(handle, length, signal) {
+    signal?.throwIfAborted();
     const hash = createHash('sha256'), buffer = Buffer.alloc(65536); let offset = 0;
     while (offset < length) {
+      signal?.throwIfAborted();
       const { bytesRead } = await handle.read(buffer, 0, Math.min(buffer.length, length - offset), offset);
       if (!bytesRead) throw failure(errorPrefix + '_DOWNLOAD_FILE_CHANGED', 'The saved file ended before its retained byte count.');
       hash.update(buffer.subarray(0, bytesRead)); offset += bytesRead;
     }
     return hash;
   }
-  async function verifiedFile(path, file) {
+  async function verifiedFile(path, file, signal) {
+    signal?.throwIfAborted();
     const { handle, info } = await regular(path, constants.O_RDONLY, file.bytes);
     try {
-      if (info.size !== file.bytes || (await prefixHash(handle, info.size)).digest('hex') !== file.sha256)
+      if (info.size !== file.bytes || (await prefixHash(handle, info.size, signal)).digest('hex') !== file.sha256)
         throw failure(errorPrefix + '_DOWNLOAD_FILE_CHANGED', 'A saved original file differs from its completion manifest: ' + file.name + '.');
     } finally { await handle.close(); }
   }
@@ -248,7 +251,7 @@ export function createRetainedDownload({ manifestName, parseManifest, maximumByt
     await ensureNativeParents(context, file.name);
     const destination = join(context.root, file.name), partial = join(context.stateDirectory, partialName(file));
     try {
-      await verifiedFile(destination, file);
+      await verifiedFile(destination, file, signal);
       context.state.files[file.name] = { bytes: file.bytes, sha256: file.sha256, complete: true };
       await checkpoint(context);
       await unlink(partial).catch(error => { if (error.code !== 'ENOENT') throw error; });
@@ -266,7 +269,7 @@ export function createRetainedDownload({ manifestName, parseManifest, maximumByt
     }
     const { handle, info } = opened; let readId = saved.readId ?? null, offset = saved.bytes;
     try {
-      const hash = await prefixHash(handle, offset);
+      const hash = await prefixHash(handle, offset, signal);
       if (info.size < offset || hash.copy().digest('hex') !== saved.sha256)
         throw failure(errorPrefix + '_DOWNLOAD_FILE_CHANGED', 'The saved partial bytes differ from their checkpoint: ' + file.name + '.');
       // A killed write may leave an uncheckpointed suffix. Only that owned suffix
