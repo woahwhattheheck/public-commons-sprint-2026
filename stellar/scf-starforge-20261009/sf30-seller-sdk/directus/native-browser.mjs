@@ -203,7 +203,7 @@ export async function runDirectusBrowser({input,directory}={}){
     assert.equal(delivery.manifest.sha256,customer.delivery_sha256);
     const inspected=await clickPost('#inspect-delivery','/api/buyer');assert.equal(inspected.manifest.sha256,delivery.manifest.sha256);
     await step('browser-merchant-and-customer',{snapshot:edition.snapshot,offerSha256:offer.offerSha256,
-      receivedOriginalCustomerSha256:delivery.manifest.sha256,rows:delivery.manifest.rows,pages:delivery.manifest.pages});
+      receivedOriginalCustomerSha256:delivery.manifest.sha256,rows:delivery.manifest.acquisition.rows,pages:delivery.manifest.acquisition.pages});
     await screenshot('directus-publishing-desktop',1440,'#receive-buyer-form');
     await clickPost('#stop-seller','/api/merchant');
 
@@ -216,7 +216,7 @@ export async function runDirectusBrowser({input,directory}={}){
     await step('mobile-and-keyboard',{viewport:390,focus,images:images.length});
 
     await page.setViewportSize({width:1440,height:1000});
-    current=await state();
+    current=await refreshed();
     const downloadEvent=page.waitForEvent('download');await page.locator('#project-download').click();
     const download=await downloadEvent,downloadPath=await download.path(),raw=await readFile(downloadPath);
     assert.equal(await download.failure(),null);
@@ -232,8 +232,31 @@ export async function runDirectusBrowser({input,directory}={}){
     assert.ok(transferred.operator.selected.startsWith('received-'));
     await field('query-form','editionId').selectOption(edition.id);const reopenedQuery=await submit('query-form','/api/query');
     assert.equal(reopenedQuery.dataset.snapshot,edition.snapshot);
+    const retainedCounts=Object.fromEntries(['merchant-packages','buyer-configurations','customer-deliveries']
+      .map(kind=>{assert.equal(transferred[kind].length,current[kind].length);return [kind,transferred[kind].length];}));
+    const originalPublisher=transferred.project_runtime.merchants.find(item=>item.edition.snapshot===customer.snapshot);
+    const originalDelivery=transferred.project_runtime.deliveries.find(item=>item.deliverySha256===customer.delivery_sha256);
+    const savedBuyer=transferred.project_runtime.buyers[0];assert.ok(originalPublisher&&originalDelivery&&savedBuyer);
+    const oldPublisher=current.project_runtime.merchants.find(item=>item.id===originalPublisher.id);
+    assert.notEqual(originalPublisher.versionDirectory,oldPublisher.versionDirectory);
+    await page.locator('[data-project-merchant="'+originalPublisher.id+'"]').click();
+    assert.equal(await field('serve-form','directory').inputValue(),originalPublisher.directory);
+    const receivedSeller=await submit('serve-form','/api/merchant');
+    assert.equal(receivedSeller.current.current,customer.successor_snapshot);
+    const receivedDelivery=await clickPost('[data-project-delivery="'+originalDelivery.id+'"]','/api/buyer');
+    assert.equal(receivedDelivery.manifest.sha256,customer.delivery_sha256);
+    const buyerDownloadEvent=page.waitForEvent('download');
+    await page.locator('[data-project-buyer="'+savedBuyer.id+'"]').click();
+    const buyerDownload=await buyerDownloadEvent;assert.equal(await buyerDownload.failure(),null);
+    const downloadedBuyer=await readFile(await buyerDownload.path()),originalBuyer=await readFile(savedBuyer.configuration);
+    assert.deepEqual(downloadedBuyer,originalBuyer);
+    await screenshot('directus-received-publishing-desktop',1440,'#project-merchants');
+    await screenshot('directus-received-publishing-mobile',390,'#project-merchants');
+    await clickPost('#stop-seller','/api/merchant');
     await step('complete-project-download-receive',{projectSha256:project.sha256,projectBytes:project.bytes,
-      workspaceId:transferred.id,revision:transferred.revision,nativeEvents:transferred['native-events'].length});
+      workspaceId:transferred.id,revision:transferred.revision,nativeEvents:transferred['native-events'].length,
+      retainedArtifacts:retainedCounts,receivedServingSnapshot:receivedSeller.current.current,
+      receivedDeliverySha256:receivedDelivery.manifest.sha256,downloadedBuyerSha256:digest(downloadedBuyer)});
 
     await context.close();context=null;await browser.close();browser=null;
     await service.close();service=null;

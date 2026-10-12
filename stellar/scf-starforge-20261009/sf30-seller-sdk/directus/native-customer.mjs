@@ -12,6 +12,7 @@ import {performDirectusOperation} from './operations.mjs';
 import {prepareDirectusMerchant,startDirectusMerchant,publishDirectusMerchant} from './merchant.mjs';
 import {reviewDirectusBuyer,prepareDirectusBuyer,receiveDirectusBuyer,inspectDirectusDelivery} from './customer.mjs';
 import {datasetControl} from '../dataset-refresh/service.mjs';
+import {openDatasetVersions} from '../dataset-refresh/versions.mjs';
 import {X402BuyerClient} from '../../sf31-buyer-client/buyer.mjs';
 import {prepareBuyerResponseFile} from '../../sf31-buyer-client/response-file.mjs';
 import {executeWithEvidence} from '../../sf82-checkout-evidence/evidence.mjs';
@@ -63,6 +64,41 @@ export async function runDirectusCustomer({input,directory,token=process.env.DIR
       decision:'approved',comment:input.reviewComment??'Review the selected original collection fields, native schema, attribution and distribution basis for this customer run.'});
     return {edition:workspace.get('editions',saved.edition.id),review:reviewed.review};
   }
+
+  async function selectRetainedEdition({file,versionDirectory,previousSnapshot,snapshot}){
+    let selection;
+    if(await exists(file))selection=await readJson(file,1024*1024);
+    else{
+      const status=await datasetControl(versionDirectory,'status');assert.equal(status.current,previousSnapshot);
+      selection={schema:'stellar-forge.directus-native-customer-selection.v1',operationId:input.operationId,
+        versionDirectory,previousSnapshot,previousRevision:status.revision,snapshot};
+      await saveExact(file,selection);
+    }
+    assert.equal(selection.schema,'stellar-forge.directus-native-customer-selection.v1');assert.equal(selection.operationId,input.operationId);
+    assert.equal(selection.versionDirectory,versionDirectory);assert.equal(selection.previousSnapshot,previousSnapshot);
+    assert.equal(selection.snapshot,snapshot);assert.ok(Number.isSafeInteger(selection.previousRevision));
+    let selected=await datasetControl(versionDirectory,'status');
+    if(selected.current===selection.previousSnapshot&&selected.revision===selection.previousRevision){
+      await datasetControl(versionDirectory,'activate',{snapshot:selection.snapshot,
+        expectedSnapshot:selection.previousSnapshot,expectedRevision:selection.previousRevision});
+      selected=await datasetControl(versionDirectory,'status');
+    }
+    assert.equal(selected.current,snapshot);assert.equal(selected.revision,selection.previousRevision+1);
+    return {selection,selected};
+  }
+  async function retainedProject(owner,intentFile){
+    let original;
+    if(await exists(intentFile))original=await readJson(intentFile,1024*1024);
+    else{
+      original={schema:'stellar-forge.directus-native-customer-project.v1',operationId:input.operationId,
+        workspace_id:owner.state().id,revision:owner.revision(),project:await owner.exportFile('project')};
+      await saveExact(intentFile,original);
+    }
+    assert.equal(original.schema,'stellar-forge.directus-native-customer-project.v1');assert.equal(original.operationId,input.operationId);
+    assert.equal(original.workspace_id,owner.state().id);assert.equal(original.revision,owner.revision());
+    const raw=await readFile(original.project.path);assert.equal(raw.length,original.project.bytes);assert.equal(digest(raw),original.project.sha256);
+    return original.project;
+  }
   try{
     await saveExact(join(directory,'customer-intent.json'),intent);
     if(await exists(output)){const result=await readJson(output,8*1024*1024);await inspectDirectusDelivery(result.delivery);return {...result,replayed:true};}
@@ -96,7 +132,7 @@ export async function runDirectusCustomer({input,directory,token=process.env.DIR
     assert.equal(repeated.dataset.executionSha256,prepared.dataset.executionSha256);
     merchant=await startDirectusMerchant({directory:prepared.directory,stageDirectory:join(directory,'native-stage'),runtime:{port:0}});
     const query={limit:'2'},offer=await reviewDirectusBuyer({directory:prepared.directory,seller:merchant.url,query});
-    const buyer=await prepareDirectusBuyer({directory:prepared.directory,seller:merchant.url,query,intentId:operationId('buyer'),
+    const buyer=await prepareDirectusBuyer({workspace,directory:prepared.directory,seller:merchant.url,query,intentId:operationId('buyer'),
       acceptIndex:input.acceptIndex??0,offerSha256:offer.offerSha256,destination:join(directory,'prepared-buyer.json')});
     await record('original-merchant-offer',{merchant_mode:merchant.mode,snapshot:prepared.snapshot,
       execution_sha256:prepared.dataset.executionSha256,offer_sha256:offer.offerSha256,source_files:prepared.sourceFiles.length});
@@ -172,47 +208,75 @@ export async function runDirectusCustomer({input,directory,token=process.env.DIR
     assert.deepEqual([...new Set(acquired.pages.map(page=>page.nativeBuyerStatus))],['NO_PAYMENT_REQUIRED']);
     await record('original-edition-acquisition-after-refresh',{pages:acquired.completedPages,rows:acquired.acquiredRows,
       purchased_snapshot:acquired.snapshot,current_snapshot:publication.snapshot,native_status:'NO_PAYMENT_REQUIRED'});
-    const delivery=await receiveDirectusBuyer({directory:prepared.directory,sessionDirectory:session,destination:join(directory,'customer-delivery'),includeSourceCaptures:true});
+    const delivery=await receiveDirectusBuyer({workspace,directory:prepared.directory,sessionDirectory:session,destination:join(directory,'customer-delivery'),includeSourceCaptures:true});
     const text=await readFile(join(delivery.directory,'dataset/dataset.jsonl'),'utf8');
     const rows=text.trim()?text.trim().split('\n').map(line=>JSON.parse(line)):[];
     assert.deepEqual(rows,initial.edition.records.map(record=>record.row));
-    const requestsBefore=requests,repeatedDelivery=await receiveDirectusBuyer({directory:prepared.directory,sessionDirectory:session,destination:delivery.directory,includeSourceCaptures:true});
+    const requestsBefore=requests,repeatedDelivery=await receiveDirectusBuyer({workspace,directory:prepared.directory,sessionDirectory:session,destination:delivery.directory,includeSourceCaptures:true});
     assert.equal(repeatedDelivery.manifest.sha256,delivery.manifest.sha256);assert.equal(requests,requestsBefore);
     await record('complete-customer-data-room',{files:delivery.manifest.files.length,rows:rows.length,delivery_sha256:delivery.manifest.sha256});
-    const project=await workspace.exportFile('project');
+    // Retain the first complete archive before any later publisher selection.
+    // A continuation keeps that exact original export even after the local writer advances.
+    const project=await retainedProject(workspace,join(directory,'project-export-intent.json'));
     await copyExact(project.path,join(directory,'Directus_Complete_Project.sqlite3'),project);
-    const originalState=workspace.state(),received=await receiveDirectusWorkspace({file:project.path,directory:join(directory,'received-workspace')});
+    const originalState=workspace.state(),receivedDirectory=join(directory,'received-workspace');
+    let received,receivedMerchant,advancedProject;
+    const projectCounts=Object.fromEntries(['merchant-packages','buyer-configurations','customer-deliveries']
+      .map(kind=>[kind,originalState[kind].length]));
+    assert.equal(projectCounts['merchant-packages'],2);assert.equal(projectCounts['buyer-configurations'],1);assert.equal(projectCounts['customer-deliveries'],1);
     try{
-      assert.equal(received.state().id,originalState.id);assert.equal(received.state().revision,originalState.revision);
-      assert.equal(received.state()['native-events'].length,originalState['native-events'].length);
+      received=await receiveDirectusWorkspace({file:project.path,directory:receivedDirectory});
+      const transferred=received.state();
+      assert.equal(transferred.id,originalState.id);assert.equal(transferred.revision,originalState.revision);
+      assert.equal(transferred['native-events'].length,originalState['native-events'].length);
+      for(const [kind,count]of Object.entries(projectCounts))assert.equal(transferred[kind].length,count);
       const page=await received.query(successor.edition.id,{limit:'2'});assert.equal(page.status,200);
+      const originalPublisher=transferred.project_runtime.merchants.find(item=>item.edition.snapshot===initial.edition.snapshot);
+      const successorPublisher=transferred.project_runtime.merchants.find(item=>item.edition.snapshot===successor.edition.snapshot);
+      assert.ok(originalPublisher&&successorPublisher);assert.equal(originalPublisher.versionDirectory,successorPublisher.versionDirectory);
+      assert.notEqual(originalPublisher.directory,prepared.directory);assert.notEqual(originalPublisher.versionDirectory,packageInput.versionDirectory);
+      const movedDelivery=transferred.project_runtime.deliveries.find(item=>item.deliverySha256===delivery.manifest.sha256);
+      assert.ok(movedDelivery);assert.notEqual(movedDelivery.directory,delivery.directory);
+      const inspected=await inspectDirectusDelivery(movedDelivery.directory);
+      assert.equal(inspected.manifest.sha256,delivery.manifest.sha256);assert.equal(inspected.native.rows,rows.length);
+      receivedMerchant=await startDirectusMerchant({directory:originalPublisher.directory,
+        stageDirectory:originalPublisher.stageDirectory,runtime:{port:0}});
+      const changed=await selectRetainedEdition({file:join(directory,'received-selection-intent.json'),
+        versionDirectory:originalPublisher.versionDirectory,previousSnapshot:successor.edition.snapshot,snapshot:initial.edition.snapshot});
+      assert.equal(receivedMerchant.versions.status().current,initial.edition.snapshot);
+      await receivedMerchant.close();receivedMerchant=null;
+      advancedProject=await retainedProject(received,join(directory,'received-project-export-intent.json'));
+      await copyExact(advancedProject.path,join(directory,'Directus_Received_Advanced_Project.sqlite3'),advancedProject);
+      await received.close();received=null;
+
+      // Re-export changed custody, then reopen the SAME incoming archive. The received writer
+      // retains its later selection instead of being reset to the original archive's selection.
+      received=await receiveDirectusWorkspace({file:project.path,directory:receivedDirectory});
+      const reopenedPublisher=received.state().project_runtime.merchants.find(item=>item.id===originalPublisher.id);
+      assert.equal(reopenedPublisher.versionDirectory,originalPublisher.versionDirectory);
+      const reopenedVersions=await openDatasetVersions({directory:reopenedPublisher.versionDirectory,collectOnOpen:false});
+      try{assert.equal(reopenedVersions.status().current,changed.selected.current);assert.equal(reopenedVersions.status().revision,changed.selected.revision);}
+      finally{await reopenedVersions.close();}
+      await received.close();received=null;
+
+      // The changed project is itself a complete new transfer with the original generation history.
+      received=await receiveDirectusWorkspace({file:advancedProject.path,directory:join(directory,'advanced-received-workspace')});
+      const advancedPublisher=received.state().project_runtime.merchants.find(item=>item.id===originalPublisher.id);
+      const advancedVersions=await openDatasetVersions({directory:advancedPublisher.versionDirectory,collectOnOpen:false});
+      try{
+        assert.equal(advancedVersions.status().current,initial.edition.snapshot);assert.equal(advancedVersions.status().revision,changed.selected.revision);
+      }finally{await advancedVersions.close();}
       await record('complete-editable-project-receiving',{workspace_id:originalState.id,revision:originalState.revision,
-        native_events:originalState['native-events'].length,project_sha256:project.sha256,project_bytes:project.bytes});
-    }finally{await received.close();}
+        native_events:originalState['native-events'].length,project_sha256:project.sha256,project_bytes:project.bytes,
+        retained_artifacts:projectCounts,received_delivery_sha256:inspected.manifest.sha256,
+        received_selected_snapshot:changed.selected.current,received_native_revision:changed.selected.revision,
+        advanced_project_sha256:advancedProject.sha256,advanced_project_bytes:advancedProject.bytes});
+    }finally{try{await receivedMerchant?.close();}finally{await received?.close();}}
     freeServer.closeAllConnections();await new Promise(resolve=>freeServer.close(resolve));freeServer=null;
     await merchant.close();merchant=null;
     merchant=await startDirectusMerchant({directory:prepared.directory,stageDirectory:join(directory,'native-stage'),runtime:{port:0}});
-    const selectionFile=join(directory,'native-selection-intent.json');
-    let selection;
-    if(await exists(selectionFile))selection=await readJson(selectionFile,1024*1024);
-    else{
-      const beforeSelection=await datasetControl(packageInput.versionDirectory,'status');
-      assert.equal(beforeSelection.current,successor.edition.snapshot);
-      selection={schema:'stellar-forge.directus-native-customer-selection.v1',operationId:input.operationId,
-        versionDirectory:packageInput.versionDirectory,previousSnapshot:beforeSelection.current,
-        previousRevision:beforeSelection.revision,snapshot:initial.edition.snapshot};
-      await saveExact(selectionFile,selection);
-    }
-    assert.equal(selection.schema,'stellar-forge.directus-native-customer-selection.v1');assert.equal(selection.operationId,input.operationId);
-    assert.equal(selection.versionDirectory,packageInput.versionDirectory);assert.equal(selection.previousSnapshot,successor.edition.snapshot);
-    assert.equal(selection.snapshot,initial.edition.snapshot);assert.ok(Number.isSafeInteger(selection.previousRevision));
-    let selected=await datasetControl(packageInput.versionDirectory,'status');
-    if(selected.current===selection.previousSnapshot&&selected.revision===selection.previousRevision){
-      await datasetControl(packageInput.versionDirectory,'activate',{snapshot:selection.snapshot,
-        expectedSnapshot:selection.previousSnapshot,expectedRevision:selection.previousRevision});
-      selected=await datasetControl(packageInput.versionDirectory,'status');
-    }
-    assert.equal(selected.current,selection.snapshot);assert.equal(selected.revision,selection.previousRevision+1);
+    const {selection,selected}=await selectRetainedEdition({file:join(directory,'native-selection-intent.json'),
+      versionDirectory:packageInput.versionDirectory,previousSnapshot:successor.edition.snapshot,snapshot:initial.edition.snapshot});
     assert.equal(merchant.versions.status().current,initial.edition.snapshot);
     const portable=await inspectDirectusDelivery(delivery.directory);assert.equal(portable.manifest.sha256,delivery.manifest.sha256);
     await record('native-restart-and-edition-selection',{restarted_snapshot:selection.previousSnapshot,selected_snapshot:selected.current,
@@ -223,6 +287,7 @@ export async function runDirectusCustomer({input,directory,token=process.env.DIR
       source_before:originalCapture.source,source_after:editedCapture.source,versionId,
       snapshot:initial.edition.snapshot,successor_snapshot:successor.edition.snapshot,delivery:delivery.directory,
       delivery_sha256:delivery.manifest.sha256,project:join(directory,'Directus_Complete_Project.sqlite3'),project_sha256:project.sha256,
+      advanced_project:join(directory,'Directus_Received_Advanced_Project.sqlite3'),advanced_project_sha256:advancedProject.sha256,
       original_free_http_requests_this_process:requests,original_native_signatures_this_process:signatures,phases};
     await saveExact(output,result);return result;
   }finally{
