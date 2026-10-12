@@ -17,6 +17,15 @@ starforge snowflake serve --directory /private/snowflake-workspace
 starforge snowflake-workspace --directory /private/snowflake-workspace
 ~~~
 
+The installed command help, nine exported interfaces and original browser assets
+are registered together in `distribution/contributions/snowflake.json`.
+Inspect the same source-owned registration used by the pinned builder:
+
+~~~sh
+starforge registrations --source snowflake
+starforge registrations --command snowflake-workspace
+~~~
+
 From source:
 
 ~~~sh

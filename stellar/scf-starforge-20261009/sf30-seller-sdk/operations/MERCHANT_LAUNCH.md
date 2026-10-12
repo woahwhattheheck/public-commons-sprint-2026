@@ -107,12 +107,86 @@ construction. Credential refresh and authorization-code connections still use
 their original provider implementations. Native payment verification and the
 SF98 successful-settlement journal retain their existing path.
 
+## Retain and change the running merchant's cache policy
+
+Add `--cache-control-file /private/merchant/control/cache.json` to the same
+`starforge merchant` command when at least one upstream binding has response
+caching enabled. The launcher attaches the original cache binding and management
+authority to this seller, then opens its maintained private control host. Its
+startup record contains the descriptor path under `cacheControl`.
+
+The original control helper requires a parent directory owned by the operator
+with mode 0700. It creates the descriptor with mode 0600, a random local token
+and an ephemeral loopback port. Keep that file on the merchant host. On Unix,
+`--cache-control-socket /private/merchant/control/cache.sock` selects the original
+private socket instead. Choose one option. Existing control paths stay intact,
+and the helper asks for a fresh path when one already exists.
+
+The `--check` summary includes `cacheBindings` and `cacheControlEnabled`. It
+requires an actual cached upstream binding and validates the selected path
+without creating the descriptor, opening a listener or acquiring source state.
+The existing source admission, supplier account, cache and native payment
+settings remain those of the selected merchant application.
+
+### Open the original cache operating workspace
+
+Save a host-local sources file, for example
+`/private/merchant/cache-sources.json`:
+
+```json
+[
+  {
+    "id": "merchant",
+    "label": "Merchant API",
+    "controlFile": "/private/merchant/control/cache.json"
+  }
+]
+```
+
+Start the existing workspace against that source:
+
+```sh
+starforge cache-operations serve \
+  --state /private/merchant/cache-operations \
+  --sources /private/merchant/cache-sources.json
+```
+
+Open the full loopback URL printed by that command. Select **Inspect current
+runtime**, capture a labeled snapshot, and review the current binding before
+preparing a retention change or invalidation. Applying the prepared operation
+uses the same runtime instance, inspected revision and operation ID. The source
+handler, private control descriptor and browser workspace all use one original
+`cacheManagement` authority. The merchant's existing operations console shows
+the resulting policy and cache activity through its upstream snapshot.
+
+The complete [cache operating workflow](../response-cache/workspace/README.md)
+covers comparison, notes, interrupted-response recovery, reports and the
+`capture`, `prepare`, `apply`, `recover`, `export` and `restore` commands.
+It preserves the source alias in a receiving archive, so a second operator can
+map `merchant` to the receiving host's actual descriptor.
+
+Retention changes apply to the current merchant process. Continue the saved
+operating history after a restart, inspect its new runtime identity, and review
+a fresh change against that instance. The upstream configuration supplies the
+next process's initial policy. For a versioned API merchant package, the existing
+**Save policy for restart** workflow saves the reviewed policy through the
+original package revision engine.
+
+The private control host is acquired inside the same startup transaction as the
+seller and operations listener. A failed control acquisition drains the acquired
+seller and releases its original resources. Once accepted native work becomes
+idle during shutdown, the launcher closes the control host and operations
+listener before releasing the application. The helper removes only the
+descriptor or socket inode it created. The separately running cache workspace
+keeps its durable operating history available for receiving and review.
+
 ## Closing and restarting the native merchant
 
 Use the process's normal SIGINT/SIGTERM lifecycle, or await the returned
 session's `close()` when embedding this launcher. The launcher first drains
-the original seller. When its native work is idle, it drains and closes the
-operations listener and saves its final checkpoint. It then closes the original
+the original seller. When its native work is idle, it closes any original
+cache control host, then drains the operations listener and saves its final
+checkpoint. It then closes the original
 application's cache, OAuth, idempotency and supplier resources. Operator requests
 finish while their original controls remain available. Repeated close calls join
 the same cleanup.

@@ -1,8 +1,9 @@
+import { LIMITS } from './limits-contracts.mjs';
+export { LIMITS } from './limits-contracts.mjs';
 // MIT. Shared product values; native payment authority stays with Starforge.
 import {createHash, randomUUID} from 'node:crypto';
 export const SCHEMA = 'stellar-forge.coingecko-market.v1';
-export const LIMITS = Object.freeze({uploadBytes:15000000, restoreBytes:67108864,
-  restoreExpandedBytes:268435456, pageSize:100, responseBytes:15000000});
+
 export class MarketError extends Error {
   constructor(code, message=code, status=400, details={}) {
     super(message); this.name='MarketError';this.code=code;this.status=status;Object.assign(this,details);

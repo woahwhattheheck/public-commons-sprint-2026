@@ -7,7 +7,8 @@ import { fileURLToPath } from 'node:url';
 import { isDeepStrictEqual } from 'node:util';
 import { verifyPreparedDuckdbSeller, runPreparedDuckdbSeller } from '../sf30-seller-sdk/duckdb/prepare.mjs';
 
-export const DUCKDB_SOURCE_SCHEMA = 'stellar-forge.duckdb-seller-release-manifest.v1';
+import { DUCKDB_SOURCE_SCHEMA } from './release-source-contracts.mjs';
+export { DUCKDB_SOURCE_SCHEMA } from './release-source-contracts.mjs';
 const PACKAGE = 'duckdb/package';
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 const formatted = value => Buffer.from(JSON.stringify(value, null, 2) + '\n');

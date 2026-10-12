@@ -1,6 +1,8 @@
+import { DATASET_SOURCE_SCHEMA } from './release-source-contracts.mjs';
+export { DATASET_SOURCE_SCHEMA } from './release-source-contracts.mjs';
 // MIT. Original versioned CSV datasets in the existing SF82 release lifecycle.
 import { constants } from 'node:fs';
-import { open, mkdir, realpath, lstat, rename, unlink, rm, rmdir } from 'node:fs/promises';
+import { open, mkdir, realpath, lstat, rename, unlink, rm, rmdir, copyFile } from 'node:fs/promises';
 import { createHash, randomUUID } from 'node:crypto';
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -13,7 +15,7 @@ import { compileSellerRoutes } from '../sf30-seller-sdk/resource-server.mjs';
 import { openDatasetVersions, DATASET_SNAPSHOT_PARAMETER } from '../sf30-seller-sdk/dataset-refresh/versions.mjs';
 import { startVersionedDatasetSeller } from '../sf30-seller-sdk/dataset-refresh/service.mjs';
 
-export const DATASET_SOURCE_SCHEMA = 'stellar-forge.dataset-seller-release-manifest.v1';
+
 export const DATASET_BINDING_SCHEMA = 'stellar-forge.dataset-release-binding.v1';
 const SOURCE_FILES = ['dataset.csv', 'dataset.json', 'seller.json', 'source.json', 'binding.json'];
 const MiB = 1024 * 1024;
@@ -101,26 +103,57 @@ function sourceFileDescriptors(source) {
       DATASET_SOURCE_FILE_LIMITS.descriptorBytes) fail('Source provenance descriptors exceed the original release manifest budget.');
   return files;
 }
+const reflinkUnavailable = new Set(['ENOTSUP','EOPNOTSUPP','ENOSYS','ENOTTY','EXDEV','EINVAL']);
 async function sourceFile(path, expected, destination, created) {
   if (await realpath(path) !== resolve(path)) fail('Source provenance paths cannot contain symlinks.');
   const input = await open(path, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
-  let output;
+  let output, method = 'read', cloneErrorCode = null;
   try {
     const before = await input.stat({ bigint: true });
     if (!before.isFile() || before.size !== BigInt(expected.bytes)) fail('Source provenance length changed.');
-    if (destination) { output = await open(destination, 'wx', 0o600); created?.(); }
+    if (destination) {
+      if (expected.bytes > 0 && Number.isInteger(constants.COPYFILE_FICLONE_FORCE)) {
+        try {
+          // FORCE reports genuine filesystem support; EXCL preserves an existing
+          // destination. Unsupported filesystems use the original streamed path.
+          await copyFile(path, destination, constants.COPYFILE_EXCL | constants.COPYFILE_FICLONE_FORCE);
+          created?.(); method = 'reflink';
+          output = await open(destination, constants.O_RDWR | (constants.O_NOFOLLOW ?? 0));
+          await output.chmod(0o600);
+          const selected = await output.stat({ bigint: true });
+          if (!selected.isFile() || selected.nlink !== 1n ||
+              selected.dev === before.dev && selected.ino === before.ino)
+            fail('Retained provenance needs a separate regular destination inode.');
+        } catch (error) {
+          if (method === 'reflink' || !reflinkUnavailable.has(error.code)) throw error;
+          cloneErrorCode = error.code;
+        }
+      }
+      if (!output) {
+        output = await open(destination, 'wx', 0o600); created?.(); method = 'stream';
+      }
+    }
     const hashValue = createHash('sha256'); let count = 0;
-    for await (const chunk of input.createReadStream({ autoClose: false, highWaterMark: 65536 })) {
+    const reader = method === 'reflink' ? output : input;
+    for await (const chunk of reader.createReadStream({ autoClose: false, highWaterMark: 65536, start: 0 })) {
       count += chunk.length;
       if (count > expected.bytes) fail('Source provenance grew while being retained.');
       hashValue.update(chunk);
-      if (output) await output.writeFile(chunk);
+      if (output && method !== 'reflink') await output.writeFile(chunk);
     }
-    const after = await input.stat({ bigint: true });
+    const after = await input.stat({ bigint: true }), named = await lstat(path, { bigint: true });
     if (count !== expected.bytes || hashValue.digest('hex') !== expected.sha256 ||
-        before.size !== after.size || before.mtimeNs !== after.mtimeNs || before.ctimeNs !== after.ctimeNs)
+        before.size !== after.size || before.mtimeNs !== after.mtimeNs || before.ctimeNs !== after.ctimeNs ||
+        named.dev !== before.dev || named.ino !== before.ino || !named.isFile())
       fail('Source provenance bytes differ from their original descriptor.');
     if (output) await output.sync();
+    if (!output) return null;
+    const stored = await output.stat({ bigint: true });
+    return { method, cloneErrorCode, bytes: count, sha256: expected.sha256,
+      source: { device: String(before.dev), inode: String(before.ino), nlink: Number(before.nlink),
+        allocatedBytes: Number(before.blocks) * 512 },
+      destination: { device: String(stored.dev), inode: String(stored.ino), nlink: Number(stored.nlink),
+        allocatedBytes: Number(stored.blocks) * 512 } };
   } finally { await output?.close(); await input.close(); }
 }
 export async function readDatasetSourceFiles(directory, source) {
@@ -129,7 +162,8 @@ export async function readDatasetSourceFiles(directory, source) {
   for (const file of files) await sourceFile(join(root, file.path), file);
   return files;
 }
-export async function copyDatasetSourceFiles(sourceDirectory, targetDirectory, source) {
+export async function copyDatasetSourceFiles(sourceDirectory, targetDirectory, source, { onCopy } = {}) {
+  if (onCopy !== undefined && typeof onCopy !== 'function') throw new TypeError('onCopy must be a function.');
   const from = resolve(sourceDirectory), to = resolve(targetDirectory), files = sourceFileDescriptors(source);
   if (await realpath(from) !== from || await realpath(to) !== to ||
       !(await lstat(from)).isDirectory() || !(await lstat(to)).isDirectory() || from === to)
@@ -148,7 +182,8 @@ export async function copyDatasetSourceFiles(sourceDirectory, targetDirectory, s
       const target = join(to, file.path);
       // Register ownership only after open('wx') succeeds. A racing existing file
       // must never become part of this operation's failure cleanup.
-      await sourceFile(join(from, file.path), file, target, () => createdFiles.push(target));
+      const observed = await sourceFile(join(from, file.path), file, target, () => createdFiles.push(target));
+      if (onCopy) await onCopy({ path: file.path, ...observed });
     }
     const parents = [...new Set([...createdDirectories, ...files.map(file => dirname(join(to, file.path)))])]
       .sort((left, right) => right.length - left.length);

@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from collections import Counter, defaultdict
 import csv
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal, InvalidOperation, localcontext
 import io
 import json
 
@@ -42,6 +42,11 @@ def _number(text, field):
 
 
 def compare_outputs(left_data, right_data, spec):
+    with localcontext() as context:
+        return _compare_outputs(left_data, right_data, spec, context)
+
+
+def _compare_outputs(left_data, right_data, spec, context):
     left_headers, left_rows = read_csv(left_data)
     right_headers, right_rows = read_csv(right_data)
     fields = spec.get("fields") or [{"left": name, "right": name, "type": "text"} for name in left_headers]
@@ -62,9 +67,10 @@ def compare_outputs(left_data, right_data, spec):
     keys = spec.get("keys", [])
     if not isinstance(keys, list) or len(keys) != len(set(keys)) or any(k not in names for k in keys):
         raise ValueError("Comparison keys must be distinct mapped left-side field names.")
-    null_token = spec.get("null_token", None)
+    null_tokens = {side: spec.get(side + "_null_token", spec.get("null_token")) for side in ("left", "right")}
 
-    def normalize(value, field):
+    def normalize(value, field, side):
+        null_token = null_tokens[side]
         if null_token is not None and value == null_token:
             return ("null", "")
         kind = field.get("type", "text")
@@ -78,15 +84,26 @@ def compare_outputs(left_data, right_data, spec):
         if kind == "date":
             from datetime import datetime
             try:
-                return ("date", datetime.fromisoformat(value.replace("Z", "+00:00")).isoformat())
+                import re
+                parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+                fraction = re.search(r"[T ]\d{2}:\d{2}:\d{2}[.,](\d+)", value)
+                digits = fraction.group(1).rstrip("0") if fraction else ""
+                base = parsed.isoformat(timespec="seconds")
+                return ("date", base[:19] + (("." + digits) if digits else "") + base[19:])
             except ValueError:
                 raise ValueError(f"Use ISO dates for {field['left']}.")
         return ("text", value.strip() if field.get("trim", False) else value)
 
     def prepared(rows, side):
-        return [tuple(normalize(row[field[side]], field) for field in fields) for row in rows]
+        return [tuple(normalize(row[field[side]], field, side) for field in fields) for row in rows]
 
     left, right = prepared(left_rows, "left"), prepared(right_rows, "right")
+    numbers = [v[1] for row in (*left, *right) for v in row if v[0] == "number"]
+    if numbers:
+        highest = max(n.adjusted() + 1 for n in numbers)
+        lowest = min(n.as_tuple().exponent for n in numbers)
+        # Exact SQL decimal(38, s), all-row totals and relative tolerances must not use Python's default 28 digits.
+        context.prec = max(80, 2 * (highest - lowest + 1) + len(str(len(numbers))) + 32)
     differences = []
     totals = {"missing_rows": 0, "extra_rows": 0, "different_cells": 0, "duplicate_keys": 0}
     numeric_totals = []

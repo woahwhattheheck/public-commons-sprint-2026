@@ -95,9 +95,10 @@ def node_source_context(source_path, source, governor, payer, ledger, policy, *,
     directory = operation if inspection else operation / 'lost-output'
     private_path(operation, directory=True)
     private_path(directory, directory=True)
-    expected_source = (operation / 'expired-reservation-source.json' if inspection
-                       else directory / (transaction + '.source.json'))
-    require(str(operation) == source.get('operationDirectory') and source_path == expected_source,
+    expected_sources = ({operation / 'expired-reservation-source.json',
+                         operation / 'undispatched-reservation-source.json'} if inspection
+                        else {directory / (transaction + '.source.json')})
+    require(str(operation) == source.get('operationDirectory') and source_path in expected_sources,
             'NODE_LOST_OUTPUT_SOURCE_LOCATION_INVALID')
     source_raw = raw_file(source_path)
     require(decode(source_raw) == source and (inspection or

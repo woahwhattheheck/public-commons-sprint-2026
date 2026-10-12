@@ -12,6 +12,7 @@ from pathlib import Path
 import stat
 
 from .errors import DeliveryError, NativeError, StateError
+from .dataset_semantics import read_delivery_semantics, validate_page_semantics, same_json
 from .result import FileDelivery, SessionAccountingResult
 from .runtime import Runtime
 from .storage import digest, parse, private_directory, read, unique_object
@@ -104,7 +105,8 @@ class DatasetDelivery:
                 or not isinstance(manifest.get("sourcePages"), list)
                 or len(manifest["sourcePages"]) != len(scan["pages"])
                 or not isinstance(manifest.get("outputs"), dict)
-                or set(manifest["outputs"]) != {"dataset.jsonl", "dataset.csv", "review.html"}):
+                or set(manifest["outputs"]) != ({"dataset.jsonl", "dataset.csv", "review.html"} |
+                    ({"semantics.json"} if manifest.get("semantics") is not None else set()))):
             raise DeliveryError("DATASET_NATIVE_SCAN_MANIFEST_CHANGED")
         session_raw = read(directory / "session.json", 4096)
         if parse(session_raw) != scan["session"]:
@@ -173,8 +175,10 @@ class DatasetDelivery:
             return {"path": str(path), "bytes": size, "sha256": checksum.hexdigest()}
 
         outputs = {}
-        for name in ("manifest.json", "dataset.jsonl", "dataset.csv", "review.html"):
-            metadata = capture(name, 4 * 1024 * 1024 if name == "manifest.json" else 256 * 1024 * 1024)
+        for name in ("manifest.json", "dataset.jsonl", "dataset.csv", "review.html") + (
+                ("semantics.json",) if manifest.get("semantics") is not None else ()):
+            metadata = capture(name, 4 * 1024 * 1024 if name == "manifest.json" else
+                               2 * 1024 * 1024 if name == "semantics.json" else 256 * 1024 * 1024)
             expected = ({"bytes": len(manifest_raw), "sha256": digest(manifest_raw)} if name == "manifest.json"
                         else manifest["outputs"][name])
             if {key: metadata[key] for key in ("bytes", "sha256")} != expected:
@@ -195,9 +199,14 @@ class DatasetDelivery:
                                                            sort_keys=True, separators=(",", ":")).encode()),
                   "nativeStatus": {"complete": True, "finalized": True, "pages": len(scan["pages"]),
                                    "rows": scan["count"], "total": scan["total"], "snapshot": scan["snapshot"],
-                                   "lastRecordDigest": scan["chain"]},
-                  "paymentStatus": manifest["paymentStatus"], "outputs": outputs, "archives": archives}
+                                   "lastRecordDigest": scan["chain"],
+                                   **({"semantics": scan["semantics"]} if scan.get("semantics") is not None else {})},
+                  "paymentStatus": manifest["paymentStatus"], "outputs": outputs, "archives": archives,
+                  **({"semantics": manifest["semantics"]} if manifest.get("semantics") is not None else {})}
         delivery = cls(native, directory)
+        receiving = read_delivery_semantics(delivery, manifest=manifest)
+        if not same_json(scan.get("semanticDocument"), receiving["document"] if receiving else None):
+            raise DeliveryError("DATASET_NATIVE_SCAN_SEMANTICS_CHANGED")
 
         def exact(raw):
             try:
@@ -226,7 +235,11 @@ class DatasetDelivery:
                 expected = archive_expected[name]
                 if len(archive_raw) != expected["bytes"] or digest(archive_raw) != expected["sha256"]:
                     raise DeliveryError("DATASET_NATIVE_ARCHIVE_CHANGED_DURING_RECEIVING")
-                source_rows = exact(archive_raw)["payload"]["rows"]
+                payload = exact(archive_raw)["payload"]
+                # Bind the same meaning on every original retained page, including
+                # zero-row pages, before consuming its native typed rows.
+                validate_page_semantics(parse(archive_raw)["payload"], receiving)
+                source_rows = payload["rows"]
                 for source_row in source_rows:
                     raw = stream.readline(2_097_153)
                     if (len(raw) > 2_097_152 or not raw.endswith(b"\n")
@@ -239,12 +252,14 @@ class DatasetDelivery:
     def file_names(self):
         """Original finalized outputs and any direct SF100 session/page archives."""
         names = ("manifest.json", "dataset.jsonl", "dataset.csv", "review.html")
+        if "semantics.json" in self.native.get("outputs", {}):
+            names += ("semantics.json",)
         return names + tuple(sorted(self.native.get("archives", {})))
 
     def file(self, name) -> FileDelivery:
         archive = (self.native.get("sourceFormat") == "SF100_SCAN" and
                    (name == "session.json" or isinstance(name, str) and re.fullmatch(r"pages/[0-9]{5}\.json", name)))
-        if name not in _OUTPUTS and not archive:
+        if name not in (_OUTPUTS | {"semantics.json"}) and not archive:
             raise DeliveryError("DATASET_OUTPUT_NAME_INVALID")
         output = self.native["outputs"].get(name) or self.native.get("archives", {}).get(name)
         path = self.directory / name
@@ -254,6 +269,11 @@ class DatasetDelivery:
             record={"native":{"status":"DELIVERED", "file":dict(output)}, "returncode":0},
             expected_destination=path, max_bytes=256 * 1024 * 1024,
         )
+
+    def read_semantics(self):
+        """Return the verified original dictionary, or None for legacy data."""
+        receiving = read_delivery_semantics(self)
+        return receiving["document"] if receiving is not None else None
 
     def jsonl_rows(self):
         """Yield native typed row dictionaries in the acquired order."""
@@ -397,7 +417,10 @@ class DatasetAcquisition:
         path = _path(destination)
         report = self._invoke("deliver", ["--out", path])
         if (report.get("directory") != str(path) or not isinstance(report.get("outputs"), dict)
-                or set(report["outputs"]) != _OUTPUTS):
+                or set(report["outputs"]) != (_OUTPUTS | ({"semantics.json"} if report.get("semantics") is not None else set()))):
             raise DatasetError("ORIGINAL_DATASET_DELIVERY_INVALID", acquisition=self,
                                native={"mode":_MODE, "report":report})
-        return DatasetDelivery(native=report, directory=path)
+        delivery = DatasetDelivery(native=report, directory=path)
+        if report.get("semantics") is not None:
+            delivery.read_semantics()
+        return delivery
