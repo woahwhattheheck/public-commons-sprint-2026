@@ -149,7 +149,7 @@ export async function runRouteWorksheetJourney({parent}={}) {
       name:'merchant_openapi_routes',arguments:{workspace:'sender',baseName:initialName,worksheet:read.sheet}}});
     assert.ok(Buffer.byteLength(oversized)>mcp.maxRequestBytes);
     const rejected=await originalFetch(mcp.url,{method:'POST',headers:{authorization:'Bearer '+environment.WORKSHEET_NATIVE_TOKEN,
-      'content-type':'application/json',accept:'application/json','mcp-protocol-version':'2025-06-18'},body:oversized});
+      'content-type':'application/json',accept:'application/json, text/event-stream','mcp-protocol-version':'2025-06-18'},body:oversized});
     assert.equal(rejected.status,413);await rejected.body?.cancel();
     const imported={workspace:'sender',baseName:initialName,worksheetFile:'proposed',operationPlans:[extra]};
     const reviewed=await call('route_sheet_review',imported);
