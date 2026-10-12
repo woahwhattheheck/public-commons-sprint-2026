@@ -82,3 +82,8 @@ Repeated clicks and competing original bridge handlers are guarded by the shared
 ## Maintainer acceptance surface
 
 The PHP plugin has no Composer dependencies. The optional Node seller uses the existing SF30/SF31/SF88/SF98 modules and their native x402 packages; install from the existing native dependency manifest as described in [GATEWAY.md](GATEWAY.md). The plugin's authenticated admission, event/order matcher and Woo order-bound manual completion compose via the real WordPress/Woo APIs (`register_rest_route`, `wc_get_order`, `$wpdb`, `WC_Order::payment_complete`). Review real store lifecycle and stock/email effects before enabling on a production shop. The exact original sender source is `../sf98-merchant-delivery/deliver.mjs`, schema in `outbox.mjs`; this checkout uses those canonical native payment and delivery contracts.
+
+
+## Retained Applications service
+
+The [managed Woo merchant](MANAGED.md) joins this original seller with the original SF98 delivery worker in the existing Applications runtime. Select the retained merchant config and private environment, review and start the original service, open its Operations/fulfillment interface and the actual WordPress order console, then stop and reopen the same outbox. Startup waits for both the original exclusive delivery lease and native listeners; shutdown drains seller work before awaiting the worker. The installed `woo-managed` command is the same service entrypoint.

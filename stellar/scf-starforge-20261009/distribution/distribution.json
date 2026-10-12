@@ -194,7 +194,8 @@
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/collections/browser-assets.json",
     "stellar/scf-starforge-20261009/sf44-developer-onramp/onboard.mjs",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/sdmx/examples/ecb-reference-rates.sdmx.zip",
-    "stellar/scf-starforge-20261009/sf30-seller-sdk/sdmx/macrobond/examples/ecb-reference-rates.macrobond.zip"
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/sdmx/macrobond/examples/ecb-reference-rates.macrobond.zip",
+    "stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/MANAGED.md"
   ],
   "commands": {
     "openalex": "stellar/scf-starforge-20261009/sf30-seller-sdk/openalex/cli.mjs",
@@ -436,7 +437,8 @@
     "unstructured-commerce": "stellar/scf-starforge-20261009/partners/unstructured/commerce.mjs",
     "dataset-ndjson-customer": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/consumer/cli.mjs",
     "api-pass-workspace": "stellar/scf-starforge-20261009/sf101-merchant-receiver/api-access/workspace/cli.mjs",
-    "mcp-collections-download": "stellar-forge/mcp-paid-agent/native-collections-download.mjs"
+    "mcp-collections-download": "stellar-forge/mcp-paid-agent/native-collections-download.mjs",
+    "woo-managed": "stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/managed.mjs"
   },
   "exports": {
     "./seller/openalex": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/openalex/merchant.mjs",
@@ -1083,7 +1085,8 @@
     "./merchant/mcp/grpc/export": "./source/stellar-forge/mcp-merchant-operator/grpc-workspace-export.mjs",
     "./buyer/mcp/collections": "./source/stellar-forge/mcp-paid-agent/native-collections.mjs",
     "./buyer/mcp/collections-schema": "./source/stellar-forge/mcp-paid-agent/native-collections-schema.mjs",
-    "./buyer/mcp/collections-download": "./source/stellar-forge/mcp-paid-agent/native-collections-download.mjs"
+    "./buyer/mcp/collections-download": "./source/stellar-forge/mcp-paid-agent/native-collections-download.mjs",
+    "./merchant/woocommerce/managed": "./source/stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/managed.mjs"
   },
   "nativePeers": {
     "@x402/core": {
