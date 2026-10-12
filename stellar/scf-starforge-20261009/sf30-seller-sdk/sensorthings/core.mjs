@@ -10,15 +10,16 @@ import {retainedGet,decodeResponse,requestReceipt} from './provider.mjs';
 import {rowsPage,summarize,comparison} from './domain.mjs';
 import {prepareSensorThingsDataset,queryNativeDataset,nativePublishers,prepareNativeRelease,inspectNativeRelease,controlNativeRelease,
   inspectBuyer,receiveBuyer,readBuyerOutput} from './dataset.mjs';
+import {exportEdition,importEdition} from './portable.mjs';
 const find=(items,id,label)=>{const item=items.find(x=>x.id===id);if(!item)throw fault('SELECTION','Select an existing '+label+'.',404);return item;};
 const errorInfo=e=>({code:e.code??'SENSORTHINGS_OPERATION_FAILED',message:e.message??'The original operation failed.',
   status:e.status??503,details:e.details??{},retryable:e.code==='SENSORTHINGS_REQUEST_INTERRUPTED'||(e.status??503)>=500});
 const short=(label,op)=>label+'-'+identity({operationId:op.operationId,requestSha256:op.requestSha256}).slice(0,24);
-export async function openSensorThingsWorkspace({directory,inboxDirectory=null,buyerWorkspaceDirectory=null,releaseRuntime={port:0},
+export async function openSensorThingsWorkspace({directory,inboxDirectory=null,sourceInboxDirectory=null,buyerWorkspaceDirectory=null,releaseRuntime={port:0},
   fetchImpl=fetch,environment=process.env,transport=null,onProgress=()=>{}}={}){
-  const store=await openWorkspaceStore(directory,{schema:WORKSPACE_SCHEMA,initialState:{sources:[],catalogs:[],plans:[],reviews:[],comparisons:[]}}),
+  const store=await openWorkspaceStore(directory,{schema:WORKSPACE_SCHEMA,initialState:{sources:[],catalogs:[],plans:[],reviews:[],comparisons:[],sourceReceipts:[]}}),
     publishers=nativePublishers(store),running=new Map(),controllers=new Map(),operations=new Map();
-  let closing=false;
+  let closing=false,closePromise=null;
   const schema=()=>workspaceSchema(store.read().workspaceId);
   async function view(){
     const s=store.read();
@@ -32,7 +33,7 @@ export async function openSensorThingsWorkspace({directory,inboxDirectory=null,b
         tasks:c.tasks.length,remaining:c.tasks.filter(t=>t.state!=='COMPLETE').length,editionIds:c.editionIds,
         issues:c.issues,pauseReason:c.pauseReason??null,running:running.has(c.id)})),
       editions:s.editionIds,selectedEditionId:s.selectedEditionId,reviews:s.reviews,datasets:s.datasets,releases:s.releases,
-      receipts:s.receipts,comparisons:s.comparisons,exports:s.exports,
+      receipts:s.receipts,sourceReceipts:s.sourceReceipts??[],comparisons:s.comparisons,exports:s.exports,
       operations:Object.values(s.operations).slice(-100).map(({payload,context,...v})=>v),running:[...running.keys()]};
   }
   async function catalogRows(id,{offset=0,limit=100}={}){
@@ -66,6 +67,8 @@ export async function openSensorThingsWorkspace({directory,inboxDirectory=null,b
       op={operationId,requestSha256,action,payload:structuredClone(payload),expectedRevision,state:'RUNNING',createdAt:now(),error:null,context:{}};
       if(action==='catalog.capture')op.context.source=structuredClone(find(s.sources,payload.sourceId,'source'));
       if(action==='capture.start')op.context.plan=structuredClone(find(s.plans,payload.planId,'plan'));
+      if(action==='edition.export')op.context.reviews=structuredClone(s.reviews.filter(r=>r.editionId===payload.editionId));
+      if(action==='edition.import')op.context.sourceInboxDirectory=sourceInboxDirectory;
       if(action==='dataset.prepare'||action==='release.prepare'){
         const editionId=action==='dataset.prepare'?payload.editionId:find(s.datasets,payload.datasetId,'dataset').editionId;
         const review=s.reviews.filter(r=>r.editionId===editionId).at(-1);
@@ -365,6 +368,22 @@ export async function openSensorThingsWorkspace({directory,inboxDirectory=null,b
       return complete(op,review,state=>{if(!state.reviews.some(x=>x.id===review.id))state.reviews.push(review);});
     }
     if(op.action==='edition.compare')return compareOperation(op);
+    if(op.action==='edition.export'){
+      const selected=await edition(p.editionId),id=short('source-export',op),
+        record=await exportEdition(store,{edition:selected,reviews:op.context.reviews,id,createdAt:op.createdAt});
+      return complete(op,record,state=>{if(!state.exports.some(x=>x.id===id))state.exports.push(record);});
+    }
+    if(op.action==='edition.import'){
+      const id=short('source-receipt',op),record=await importEdition(store,{
+        inboxDirectory:op.context.sourceInboxDirectory,filename:p.filename,expectedSha256:p.expectedSha256,
+        expectedBytes:p.expectedBytes,id,createdAt:op.createdAt});
+      const known=store.read().editionIds.includes(record.editionId),localReview=store.read().reviews.filter(r=>r.editionId===record.editionId).at(-1)??null;
+      return complete(op,{...record,previouslyKnownEdition:known,preservedLocalReviewId:localReview?.id??null},state=>{
+        if(!state.editionIds.includes(record.editionId))state.editionIds.push(record.editionId);
+        state.sourceReceipts??=[];if(!state.sourceReceipts.some(r=>r.id===id))state.sourceReceipts.push(record);
+        state.selectedEditionId=record.editionId;
+      });
+    }
     if(op.action==='dataset.prepare'){
       const selected=await edition(p.editionId);await assertReview(selected.id,op.context.review);
       const id=short('dataset',op),record=await prepareSensorThingsDataset(store,{edition:selected,review:op.context.review,name:p.name??selected.plan.label,table:p.table??'observations',id});
@@ -420,10 +439,12 @@ export async function openSensorThingsWorkspace({directory,inboxDirectory=null,b
   }
   // Holding the existing kernel lease establishes that no earlier workspace
   // writer is alive. Preserve every pending request for explicit reconciliation.
-  await store.mutate(s=>{for(const c of s.captures)if(c.state==='RUNNING'){c.state='INTERRUPTED';c.pauseReason='Reopened after the original process ended; resume this same capture.';}});
-  async function close(){
-    if(closing)return;closing=true;for(const controller of controllers.values())controller.abort();
-    await Promise.allSettled([...running.values(),...operations.values()]);await publishers.close();await store.close();
+  try{await store.mutate(s=>{s.sourceReceipts??=[];for(const c of s.captures)if(c.state==='RUNNING'){c.state='INTERRUPTED';c.pauseReason='Reopened after the original process ended; resume this same capture.';}});}
+  catch(error){await publishers.close().catch(()=>{});await store.close().catch(()=>{});throw error;}
+  function close(){
+    if(closePromise)return closePromise;closing=true;for(const controller of controllers.values())controller.abort();
+    closePromise=(async()=>{await Promise.allSettled([...running.values(),...operations.values()]);await publishers.close();await store.close();})();
+    void closePromise.catch(()=>{closePromise=null;});return closePromise;
   }
   return {store,directory:store.root,schema,view,action,catalogRows,edition,
     capture:id=>structuredClone(find(store.read().captures,id,'capture')),
