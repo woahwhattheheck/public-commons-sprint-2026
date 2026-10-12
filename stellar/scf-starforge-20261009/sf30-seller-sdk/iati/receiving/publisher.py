@@ -47,12 +47,21 @@ def exact_file(path, maximum=4 * 1024 * 1024 * 1024):
         os.close(fd)
 
 
-def save(path, value):
-    """Keep a completed original result; replay must produce that same result."""
+def sync_directory(path):
+    if os.name == "posix":
+        fd = os.open(path, os.O_RDONLY | os.O_DIRECTORY | getattr(os, "O_NOFOLLOW", 0))
+        try:
+            os.fsync(fd)
+        finally:
+            os.close(fd)
+
+
+def save_bytes(path, body):
+    """Publish only a fully synced body; preserve the completed original on replay."""
     path = Path(path)
-    body = encoded(value)
     if path.exists() or path.is_symlink():
-        if path.is_symlink() or path.read_bytes() != body:
+        actual = exact_file(path)
+        if actual["bytes"] != len(body) or actual["sha256"] != hashlib.sha256(body).hexdigest():
             raise ValueError("A retained receiving output already has another identity: " + str(path))
         return
     fd, name = tempfile.mkstemp(prefix="." + path.name + ".", dir=path.parent)
@@ -61,9 +70,20 @@ def save(path, value):
             output.write(body)
             output.flush()
             os.fsync(output.fileno())
-        os.link(name, path)
+        try:
+            os.link(name, path)
+        except FileExistsError:
+            actual = exact_file(path)
+            if actual["bytes"] != len(body) or actual["sha256"] != hashlib.sha256(body).hexdigest():
+                raise ValueError("A retained receiving output already has another identity: " + str(path))
+        sync_directory(path.parent)
     finally:
         os.unlink(name)
+        sync_directory(path.parent)
+
+
+def save(path, value):
+    save_bytes(path, encoded(value))
 
 
 def json_input(path):
@@ -101,6 +121,64 @@ def publisher(value):
     if any(actual[key] != value[key] for key in ("bytes", "sha256")):
         raise ValueError("Acquired publisher bytes differ from their original manifest")
     return {**value, "path": actual["path"]}
+
+
+def native_dataset_identity(target, build):
+    regular_directory(target)
+    members = {"data.csv", "dataset.json", "iati-lineage.json"}
+    if {path.name for path in target.iterdir()} != members:
+        raise ValueError("Native dataset delivery has an incomplete file set")
+    identities = {name: exact_file(target / name) for name in sorted(members)}
+    for name in ("data.csv", "dataset.json"):
+        if any(identities[name][key] != build["files"][name][key] for key in ("bytes", "sha256")):
+            raise ValueError("Native merchant dataset differs from the reviewed original edition")
+    if json_input(target / "iati-lineage.json") != build:
+        raise ValueError("Native merchant lineage differs from the complete source review")
+    return identities
+
+
+def interrupted_dataset_matches(target, complete):
+    """Recognize only exact prefixes of this operation's fully verified export."""
+    regular_directory(target)
+    members = {"data.csv", "dataset.json", "iati-lineage.json"}
+    if not {path.name for path in target.iterdir()} <= members:
+        raise ValueError("The existing dataset destination contains unrelated files")
+    for path in target.iterdir():
+        retained = exact_file(path)
+        reference = exact_file(complete / path.name)
+        if retained["bytes"] > reference["bytes"]:
+            raise ValueError("The existing dataset destination contains another original body")
+        with path.open("rb") as partial, (complete / path.name).open("rb") as original:
+            while block := partial.read(1048576):
+                if block != original.read(len(block)):
+                    raise ValueError("The existing dataset destination contains another original body")
+
+
+def publish_native_dataset(workspace, build, target):
+    """Keep incomplete exports private and publish the complete native directory."""
+    if target.exists() or target.is_symlink():
+        regular_directory(target)
+        try:
+            return native_dataset_identity(target, build)
+        except (ValueError, FileNotFoundError):
+            # A killed older exporter may have exposed only an original prefix.
+            # Confirm it against a complete staged native export before moving it.
+            pass
+    attempt = Path(tempfile.mkdtemp(prefix="." + target.name + "-attempt-", dir=target.parent))
+    save(attempt / "original-export.json", {"build": build["id"], "destination": str(target)})
+    staged = attempt / "complete"
+    workspace.export_dataset(build["id"], staged)
+    native_dataset_identity(staged, build)
+    sync_directory(staged)
+    if target.exists() or target.is_symlink():
+        interrupted_dataset_matches(target, staged)
+        os.rename(target, attempt / "interrupted-original")
+        sync_directory(attempt)
+        sync_directory(target.parent)
+    os.rename(staged, target)
+    sync_directory(attempt)
+    sync_directory(target.parent)
+    return native_dataset_identity(target, build)
 
 
 def all_native_rows(workspace, build, fields):
@@ -294,17 +372,7 @@ def run(config):
             for collection in ("activities", "transactions", "budgets"):
                 build = edition[collection]
                 target = dataset_root / collection
-                if not target.exists():
-                    workspace.export_dataset(build["id"], target)
-                expected_members = {"data.csv", "dataset.json", "iati-lineage.json"}
-                if {path.name for path in target.iterdir()} != expected_members:
-                    raise ValueError("Native dataset delivery has an incomplete file set")
-                member_identities = {name: exact_file(target / name) for name in sorted(expected_members)}
-                for name in ("data.csv", "dataset.json"):
-                    if any(member_identities[name][key] != build["files"][name][key] for key in ("bytes", "sha256")):
-                        raise ValueError("Native merchant dataset differs from the reviewed original edition")
-                if json_input(target / "iati-lineage.json") != build:
-                    raise ValueError("Native merchant lineage differs from the complete source review")
+                member_identities = publish_native_dataset(workspace, build, target)
                 datasets.append({"collection": collection, "build": build["id"], "files": member_identities})
         report_directory = regular_directory(output / "report")
         with zipfile.ZipFile(report_path) as archive:
@@ -316,14 +384,7 @@ def run(config):
                 body = archive.read(name)
                 if len(body) != declared["bytes"] or hashlib.sha256(body).hexdigest() != declared["sha256"]:
                     raise ValueError("Original report member changed")
-                if target.exists():
-                    if target.read_bytes() != body:
-                        raise ValueError("Retained full report already has another body")
-                else:
-                    with os.fdopen(os.open(target, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600), "wb") as out:
-                        out.write(body)
-                        out.flush()
-                        os.fsync(out.fileno())
+                save_bytes(target, body)
         save(output / "saved-portfolio-history.json", workspace.history(first["id"]))
         save(output / "saved-portfolio-comparisons.json",
              [original_comparison, selection_comparison, restored_comparison])
