@@ -25,7 +25,7 @@ export interface WebDavClientOptions {
   maximumResultBytes?: number;
 }
 export interface Scoped { workspace: string }
-export interface Mutation extends Scoped { operationId: Uuid; expectedRevision: number }
+export interface Mutation extends Scoped { operationId: Uuid; expectedRevision: number; expectedProfileSha256?: Sha256 }
 export interface NativeOperation extends JsonObject {
   id: Uuid; action: string; status: 'RUNNING' | 'COMPLETE' | 'INTERRUPTED' | 'FAILED';
   intentSha256: Sha256; createdAt: string; reservedRevision: number;
@@ -61,7 +61,8 @@ export interface ConfiguredWorkspace {
   workspace: string; label: string; state: 'OPEN'|'CLOSED';
   sourceProfiles: Array<{ profile: string; label: string; source: SourceDeclaration }>;
   merchantProfiles: Array<{ profile: string; label: string; origin: string; path: string; payment: JsonObject }>;
-  buyerWorkspaces: Array<{ buyerWorkspace: string; label: string }>;
+  buyerWorkspaces: Array<{ buyerWorkspace: string; label: string; directorySha256: Sha256 }>;
+  runtime: { port: number; facilitator?: string; allowLocalFacilitator?: boolean };
   sourcePackets: Array<{ packet: string; label: string; sha256: Sha256 }>;
 }
 export interface WebDavStatus extends JsonObject {

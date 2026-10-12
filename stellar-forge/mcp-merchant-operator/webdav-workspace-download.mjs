@@ -1,6 +1,8 @@
 // MIT. Full original WebDAV file receiving through the maintained durable writer.
 import { randomUUID } from 'node:crypto';
 import { resolve, join } from 'node:path';
+import { lstat, realpath } from 'node:fs/promises';
+import { privateSupportDirectory } from './host-files.mjs';
 import { createRetainedDownload } from './retained-download.mjs';
 import {
   WEBDAV_RECEIVING_MANIFEST, WEBDAV_MAX_FILE_BYTES, WEBDAV_MAX_MANIFEST_BYTES,
@@ -200,7 +202,34 @@ export async function restoreWebDavSourcePacket({
   const original = await inspectSourcePacket({ input, python, signal });
   if (original.source?.sha256 !== selected.sha256 || original.source?.bytes !== selected.bytes)
     throw webDavError('WEBDAV_RECEIVING_PACKET_CHANGED', 'The original packet differs from the completed receiving selection.');
-  const restored = await importSourcePacket({ input, directory: resolve(destination), python, signal });
+  const target = resolve(destination);
+  let present = false;
+  try { await lstat(target); present = true; } catch (error) { if (error.code !== 'ENOENT') throw error; }
+  if (present) {
+    await privateSupportDirectory(target);
+    if (await realpath(target) !== target) throw webDavError('WEBDAV_RECEIVING_CONFLICT', 'Use the original canonical receiving directory.');
+    const incomplete = await lstat(join(target, 'source-packet-import-incomplete.json')).then(() => true, error => {
+      if (error.code === 'ENOENT') return false; throw error;
+    });
+    if (incomplete) throw webDavError('WEBDAV_RECEIVING_INCOMPLETE', 'This destination retains its incomplete original packet import. Inspect that same native receiving operation.');
+    const writer = receiver();
+    const savedJson = async name => JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(
+      await writer.bytesAt(join(target, name), 16 * 1024 * 1024)));
+    let receipt, state;
+    try { receipt = await savedJson('source-packet-import.json'); state = await savedJson('workspace.json'); }
+    catch (error) {
+      if (error.code === 'ENOENT') throw webDavError('WEBDAV_RECEIVING_INCOMPLETE', 'The existing destination has no complete original import receipt and workspace pair.');
+      throw error;
+    }
+    if (receipt.source?.sha256 !== selected.sha256 || receipt.source?.bytes !== selected.bytes
+        || state.id !== receipt.workspaceId || state.sourcePacket?.sha256 !== selected.sha256
+        || state.sourcePacket?.bytes !== selected.bytes)
+      throw webDavError('WEBDAV_RECEIVING_CONFLICT', 'The saved receipt and receiving workspace belong to a different original packet.');
+    webDavUuid(state.id);
+    return { ...receipt, revision: state.revision, replayed: true,
+      originalReceivingId: inspected.manifest.exportId, originalWorkspaceId: inspected.manifest.workspaceId };
+  }
+  const restored = await importSourcePacket({ input, directory: target, python, signal });
   if (restored.source?.sha256 !== selected.sha256 || restored.source?.bytes !== selected.bytes)
     throw webDavError('WEBDAV_RECEIVING_PACKET_CHANGED', 'Inspect the original receiving destination; its source changed during import.');
   return { ...restored, originalReceivingId: inspected.manifest.exportId, originalWorkspaceId: inspected.manifest.workspaceId };

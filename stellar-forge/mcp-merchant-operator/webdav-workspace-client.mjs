@@ -21,7 +21,7 @@ export async function createWebDavWorkspaceClient({
   maximumResultBytes = WEBDAV_MAX_RESULT_BYTES
 } = {}) {
   if (!Number.isSafeInteger(maximumResultBytes) || maximumResultBytes < 1024 || maximumResultBytes > WEBDAV_MAX_RESULT_BYTES)
-    throw webDavError('WEBDAV_CLIENT_RESULT_LIMIT', 'Choose an original full-result limit from 1024 bytes through 16 MiB.');
+    throw webDavError('WEBDAV_CLIENT_RESULT_LIMIT', 'Choose an original full-result limit from 1024 bytes through 32 MiB.');
   if (provided && (url !== undefined || typeof provided.call !== 'function' || typeof provided.endpoint !== 'string'
       || !provided.endpoint || provided.endpoint.length > 4096 || /[\0\r\n]/.test(provided.endpoint)))
     throw webDavError('WEBDAV_CLIENT_CONFIGURATION', 'Use one original MCP client and endpoint identity, or the selected HTTP endpoint.');
@@ -44,7 +44,7 @@ export async function createWebDavWorkspaceClient({
     selector = validateWebDavFileSelector(selector);
     if (expectedSha256 !== undefined) webDavSha(expectedSha256);
     if (!Number.isSafeInteger(maximumBytes) || maximumBytes < 0 || maximumBytes > WEBDAV_MAX_RESULT_BYTES)
-      throw webDavError('WEBDAV_CLIENT_RESULT_LIMIT', 'Use the disk receiver for files larger than 16 MiB.');
+      throw webDavError('WEBDAV_CLIENT_RESULT_LIMIT', 'Use the disk receiver for files larger than 32 MiB.');
     const chunks = []; let offset = 0, readId = null, file;
     try {
       do {

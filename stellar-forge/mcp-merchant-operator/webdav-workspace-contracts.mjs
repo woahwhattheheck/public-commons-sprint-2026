@@ -7,7 +7,7 @@ export const WEBDAV_RECEIVING_MANIFEST = 'webdav-receiving.json';
 export const WEBDAV_MAX_FILE_BYTES = 553648128;
 export const WEBDAV_MAX_TOTAL_BYTES = 8 * 1024 * 1024 * 1024;
 export const WEBDAV_MAX_MANIFEST_BYTES = 8 * 1024 * 1024;
-export const WEBDAV_MAX_RESULT_BYTES = 16 * 1024 * 1024;
+export const WEBDAV_MAX_RESULT_BYTES = 32 * 1024 * 1024;
 export const WEBDAV_OPERATION_SCHEMA = 'stellar-forge.webdav-client-operation.v1';
 export const WEBDAV_TOOL_CONTRACTS = Object.freeze(Object.fromEntries(webDavWorkspaceTools(
   (name, description, properties, required, annotations = {}) => [name, Object.freeze({
@@ -150,6 +150,10 @@ export function parseWebDavReceivingManifest(bytes, expectedId) {
   webDavCount(total, 'Complete receiving bytes', WEBDAV_MAX_TOTAL_BYTES);
   if (value.source.mode === 'export') {
     webDavUuid(value.source.id); webDavSha(value.source.manifestSha256);
+    webDavUuid(value.source.editionId); webDavUuid(value.source.merchantId);
+    if (typeof value.source.snapshot !== 'string' || !value.source.snapshot || value.source.snapshot.length > 256
+        || /[\0\r\n]/.test(value.source.snapshot))
+      throw webDavError('WEBDAV_RECEIVING_EXPORT_INVALID', 'Keep the original dataset snapshot with this complete merchant export.');
     for (const required of ['manifest.json','dataset.csv','dataset.json','source.json','seller.json'])
       if (!names.has(required)) throw webDavError('WEBDAV_RECEIVING_EXPORT_INCOMPLETE', 'The full original merchant export requires all entrypoints and its manifest.');
     const original = value.files.find(file => file.name === 'manifest.json');

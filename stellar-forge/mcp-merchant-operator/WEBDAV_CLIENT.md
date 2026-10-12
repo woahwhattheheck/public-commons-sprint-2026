@@ -90,7 +90,8 @@ writer must close before another process owns that directory.
 
 **prepare** performs reads, assigns an original operation UUID when omitted,
 captures the exact endpoint/workspace UUID, freezes the selected public source
-or merchant profile, and writes the reviewed request before dispatch. Each new
+or merchant profile, binds the declared publisher runtime or buyer directory when
+that native action uses it, and writes the reviewed request before dispatch. Each new
 decision uses one new private operation directory.
 
 For example, source-input.json contains:
@@ -114,10 +115,15 @@ starforge merchant-webdav run --url http://127.0.0.1:8788 \
 ~~~
 
 The prepared operation contains its original UUID, selected native revision,
-full inputs, endpoint, workspace UUID and profile fingerprint. Profile values
+full inputs, endpoint, workspace UUID and profile fingerprint. Native observations must also match the original action,
+full input and canonical native intent digest before any completion, failure or
+pending state is accepted. Profile values
 are the host's public declaration and environment reference names. Editing a
 host profile to another collection or merchant does not silently retarget a
-retained operation.
+retained operation. The prepared caller supplies expectedProfileSha256 when
+that action uses a host profile; the original host checks it immediately before
+dispatch, including release runtime and buyer-directory selection. Existing direct
+callers can also supply that optional digest.
 
 Repeat this pattern for the following native decisions. The input file contains
 workspace plus the additional fields below. The client fills operationId and
@@ -285,7 +291,7 @@ starforge merchant-webdav plan-files --url http://127.0.0.1:8788 \
 
 Download and inspect that plan through the same commands. Metadata and one small
 read identify each selected file; acquisition is not repeated. Large tool results
-normally resolve automatically from their original result file, up to 16 MiB.
+normally resolve automatically from their original result file, up to 32 MiB, including the native result and its complete original input.
 JavaScript callers can set resolveResult=false and include the returned kind=result
 descriptor in a disk receiving plan when they need to retain it separately.
 
@@ -307,7 +313,10 @@ import preserves the source, capture, mapping, edition and export identities
 and records a new receiving workspace UUID. It uses the original permission
 and source-binding rules. Retain its import receipt. Publisher processes, active
 release ownership and buyer state are opened on the destination using their
-original native workflows.
+original native workflows. Repeating restore-source for a completed destination reads its
+same packet receipt and current workspace revision. It verifies the source digest,
+byte count, workspace UUID and sourcePacket binding and checks for an incomplete
+marker before returning that original receiving result.
 
 The original host-side path is also available: declare an exact sourcePackets
 alias in a **closed** receiving workspace and call merchant_webdav_receive with
@@ -332,6 +341,9 @@ starforge merchant-webdav reconcile --url http://127.0.0.1:8788 \
 | COMPLETE_RESULT_UNREAD | The original mutation completed; reconcile its retained full result file. |
 | FAILED | Inspect the native error. Corrected input is a new reviewed decision. |
 | NATIVE_RECONCILE_REQUIRED | Open the original publisher/release/customer state and its native recovery action. |
+
+A native UUID carrying a different action/input returns NATIVE_INTENT_CHANGED
+with the actual native record. It is never accepted as this request's completion.
 
 A revision conflict does not create another operation. After reviewing the actual
 current native state, use **run --reviewed-revision INTEGER** to explicitly use
