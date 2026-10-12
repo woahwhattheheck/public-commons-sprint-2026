@@ -153,6 +153,7 @@ export default defineMerchantProvider({
   schema: MERCHANT_PROVIDER_SCHEMA, id: 'datasette-workspaces', family: 'datasetteWorkspaces',
   title: 'Datasette source editions', order: 1110, catalogOrder: 1110,
   configKey: 'datasetteWorkspaces', summary: true, dependencies: [],
+  concurrency: 'provider',
   maxRequestBytes: 1024 * 1024,
   configuration: {input: 'datasetteWorkspaceConnection', privateExports: false,
     read: async (value, {hostPath}) => readDatasetteWorkspaceConfiguration(hostPath(value))},

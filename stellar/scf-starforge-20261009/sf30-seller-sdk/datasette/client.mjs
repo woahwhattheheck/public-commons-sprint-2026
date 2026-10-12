@@ -100,7 +100,7 @@ export function createDatasetteClient({url, expectedWorkspaceId, fetchImpl = glo
       try {body = JSON.stringify({operation, input});}
       catch (cause) {throw new DatasetteClientError('DATASETTE_INPUT_INVALID', 'Use serializable JSON operation input.', {operation, operationId, cause});}
       if (utf8.encode(body).byteLength > MAX_REQUEST_BYTES)
-        throw new DatasetteClientError('DATASETTE_INPUT_TOO_LARGE', 'Use a retained input file for the complete operation.', {operation, operationId});
+        throw new DatasetteClientError('DATASETTE_INPUT_TOO_LARGE', 'Operation input exceeds the 1 MiB HTTP limit. Capture by source URL or receive its complete retained source archive.', {operation, operationId});
     }
     const lifetime = linkedSignal(signal, timeoutMs);
     let response, value;

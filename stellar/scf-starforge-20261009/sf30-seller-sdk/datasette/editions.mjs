@@ -1,5 +1,5 @@
 // MIT. Complete source review, immutable editions and portable Datasette receiving.
-import { readdir, lstat, rename, mkdir, rm, unlink } from 'node:fs/promises';
+import { readdir, lstat, rename, mkdir, rm, unlink, link } from 'node:fs/promises';
 import { join, dirname, resolve } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { gzipSync, gunzipSync } from 'node:zlib';
@@ -373,7 +373,8 @@ async function sourcePackageEntries(selected) {
 }
 export async function exportDatasetteEdition({ editionFile, outputFile }) {
   const selected = await readDatasetteEdition(editionFile);
-  outputFile = resolve(outputFile); await privateDirectory(dirname(outputFile), true);
+  outputFile = resolve(outputFile ?? join(dirname(selected.editionFile), 'edition.datasette.json.gz'));
+  await privateDirectory(dirname(outputFile), true);
   const files = await sourcePackageEntries(selected);
   const totalBytes = files.reduce((total, file) => total + file.bytes, 0);
   if (files.length > 20000 || totalBytes > MAX_PACKAGE / 2) throw fault('DATASETTE_PACKAGE_LIMIT_EXCEEDED');
@@ -384,10 +385,42 @@ export async function exportDatasetteEdition({ editionFile, outputFile }) {
   // existing release store continues to own publication, offers and acquisition.
   const content = gzipSync(bytes(manifest), { level: 6, mtime: 0 });
   if (content.length > MAX_PACKAGE) throw fault('DATASETTE_PACKAGE_LIMIT_EXCEEDED');
-  await createFile(outputFile, content); await syncDirectory(dirname(outputFile));
+  const temporary = join(dirname(outputFile), '.pending-export-' + randomUUID());
+  let reused = false;
+  try {
+    await createFile(temporary, content);
+    try { await link(temporary, outputFile); }
+    catch (issue) {
+      if (issue.code !== 'EEXIST') throw issue;
+      reused = true;
+    }
+  } finally {
+    try { await unlink(temporary); } catch (issue) { if (issue.code !== 'ENOENT') throw issue; }
+  }
+  if (reused && !(await readPrivate(outputFile, MAX_PACKAGE)).equals(content))
+    throw fault('DATASETTE_PACKAGE_OUTPUT_CONFLICT');
+  await syncDirectory(dirname(outputFile));
   return { archiveFile: outputFile, file: outputFile, sha256: digest(content), bytes: content.length,
     editionSha256: selected.editionSha256, captureSha256: selected.captureSha256,
-    files: files.length, totalBytes, format: 'stellar-forge-datasette-source-package' };
+    files: files.length, totalBytes, format: 'stellar-forge-datasette-source-package', reused };
+}
+async function verifyReceived(directory, manifest, members) {
+  await privateDirectory(directory);
+  for (const member of members) {
+    const actual = await readPrivate(join(directory, member.file), MAX_FILE);
+    if (actual.length !== member.bytes || digest(actual) !== member.sha256)
+      throw fault('DATASETTE_RECEIVE_DIRECTORY_CONFLICT', member.file);
+  }
+  const selected = await readDatasetteEdition(join(directory, 'edition.json'), { expectedSha256: manifest.editionSha256 });
+  if (selected.captureSha256 !== manifest.captureSha256) throw fault('DATASETTE_PACKAGE_CAPTURE_CHANGED');
+  const expected = new Set(['edition.json', 'edition-operation.json', ...selected.edition.files.map(file => file.file)]);
+  if (members.length !== expected.size || members.some(member => !expected.has(member.file)))
+    throw fault('DATASETTE_PACKAGE_MEMBERS_CHANGED');
+  const operation = await readJson(join(directory, 'edition-operation.json'), MAX_META);
+  if (operation.operationId !== selected.edition.operationId || operation.name !== selected.edition.name ||
+      operation.captureSha256 !== selected.captureSha256 || operation.reviewDigest !== selected.review.digest)
+    throw fault('DATASETTE_PACKAGE_OPERATION_CHANGED');
+  return selected;
 }
 export async function receiveDatasettePackage({ archiveFile, directory, sha256 }) {
   archiveFile = resolve(archiveFile); directory = resolve(directory);
@@ -398,48 +431,47 @@ export async function receiveDatasettePackage({ archiveFile, directory, sha256 }
   try { manifest = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(
     gunzipSync(compressed, { maxOutputLength: MAX_PACKAGE }))); }
   catch { throw fault('DATASETTE_PACKAGE_INVALID'); }
-  if (manifest.schema !== PACKAGE || manifest.encoding !== 'gzip-json-base64' || manifest.editionFile !== 'edition.json' ||
+  if (!object(manifest) || manifest.schema !== PACKAGE || manifest.encoding !== 'gzip-json-base64' || manifest.editionFile !== 'edition.json' ||
       !HASH.test(manifest.editionSha256 ?? '') || !HASH.test(manifest.captureSha256 ?? '') ||
       !Array.isArray(manifest.files) || !manifest.files.length || manifest.files.length > 20000)
     throw fault('DATASETTE_PACKAGE_INVALID');
-  if (await exists(directory)) throw fault('DATASETTE_RECEIVE_DIRECTORY_EXISTS');
+  const names = new Set(), members = []; let total = 0;
+  for (const item of manifest.files) {
+    if (!object(item)) throw fault('DATASETTE_PACKAGE_MEMBER_INVALID');
+    const name = datasetteMember(item.file);
+    if (names.has(name) || !HASH.test(item.sha256 ?? '') || !Number.isSafeInteger(item.bytes) ||
+        item.bytes < 0 || item.bytes > MAX_FILE || typeof item.base64 !== 'string' ||
+        (item.base64.length % 4 !== 0 || !/^[A-Za-z0-9+/]*={0,2}$/.test(item.base64)))
+      throw fault('DATASETTE_PACKAGE_MEMBER_INVALID');
+    names.add(name);
+    const content = Buffer.from(item.base64, 'base64');
+    if (content.length !== item.bytes || digest(content) !== item.sha256 ||
+        content.toString('base64') !== item.base64) throw fault('DATASETTE_PACKAGE_MEMBER_CHANGED', name);
+    total += content.length;
+    if (total > MAX_PACKAGE / 2) throw fault('DATASETTE_PACKAGE_LIMIT_EXCEEDED');
+    members.push({ file: name, bytes: item.bytes, sha256: item.sha256, content });
+  }
+  if (total !== manifest.totalBytes) throw fault('DATASETTE_PACKAGE_BYTE_COUNT_CHANGED');
+  const result = (selected, reused) => ({ directory, archiveSha256: sha256, files: names.size, ...selected, reused });
+  // A completed receive is its own operation receipt: every retained member and
+  // the edition's full source/review bindings must match the verified archive.
+  if (await exists(directory)) return result(await verifyReceived(directory, manifest, members), true);
   const parent = dirname(directory); await privateDirectory(parent, true);
   const temporary = join(parent, '.datasette-receive-' + randomUUID());
   await privateDirectory(temporary, true);
-  const names = new Set(); let total = 0;
   try {
-    for (const item of manifest.files) {
-      const name = datasetteMember(item.file);
-      if (names.has(name) || !HASH.test(item.sha256 ?? '') || !Number.isSafeInteger(item.bytes) ||
-          item.bytes < 0 || item.bytes > MAX_FILE || typeof item.base64 !== 'string' ||
-          (item.base64.length % 4 !== 0 || !/^[A-Za-z0-9+/]*={0,2}$/.test(item.base64)))
-        throw fault('DATASETTE_PACKAGE_MEMBER_INVALID');
-      names.add(name);
-      const content = Buffer.from(item.base64, 'base64');
-      if (content.length !== item.bytes || digest(content) !== item.sha256 ||
-          content.toString('base64') !== item.base64) throw fault('DATASETTE_PACKAGE_MEMBER_CHANGED', name);
-      total += content.length;
-      if (total > MAX_PACKAGE / 2) throw fault('DATASETTE_PACKAGE_LIMIT_EXCEEDED');
-      await immutable(temporary, name, content);
-    }
-    if (total !== manifest.totalBytes) throw fault('DATASETTE_PACKAGE_BYTE_COUNT_CHANGED');
-    const selected = await readDatasetteEdition(join(temporary, 'edition.json'), { expectedSha256: manifest.editionSha256 });
-    if (selected.captureSha256 !== manifest.captureSha256) throw fault('DATASETTE_PACKAGE_CAPTURE_CHANGED');
-    const expected = new Set(['edition.json', 'edition-operation.json', ...selected.edition.files.map(file => file.file)]);
-    if (names.size !== expected.size || [...names].some(name => !expected.has(name)))
-      throw fault('DATASETTE_PACKAGE_MEMBERS_CHANGED');
-    const operation = await readJson(join(temporary, 'edition-operation.json'), MAX_META);
-    if (operation.operationId !== selected.edition.operationId || operation.name !== selected.edition.name ||
-        operation.captureSha256 !== selected.captureSha256 || operation.reviewDigest !== selected.review.digest)
-      throw fault('DATASETTE_PACKAGE_OPERATION_CHANGED');
+    for (const member of members) await immutable(temporary, member.file, member.content);
+    await verifyReceived(temporary, manifest, members);
     await syncDirectory(temporary);
-    // A dedicated destination must still be absent after full verification.
-    if (await exists(directory)) throw fault('DATASETTE_RECEIVE_DIRECTORY_EXISTS');
-    await rename(temporary, directory); await syncDirectory(parent);
-    return { directory, archiveSha256: sha256, files: names.size,
-      ...(await readDatasetteEdition(join(directory, 'edition.json'), { expectedSha256: manifest.editionSha256 })) };
-  } catch (issue) {
+    if (await exists(directory)) return result(await verifyReceived(directory, manifest, members), true);
+    try { await rename(temporary, directory); }
+    catch (issue) {
+      if (!['EEXIST', 'ENOTEMPTY'].includes(issue.code)) throw issue;
+      return result(await verifyReceived(directory, manifest, members), true);
+    }
+    await syncDirectory(parent);
+    return result(await verifyReceived(directory, manifest, members), false);
+  } finally {
     await rm(temporary, { recursive: true, force: true });
-    throw issue;
   }
 }

@@ -14,7 +14,7 @@ const USAGE = `Datasette source editions
   datasette --url http://127.0.0.1:PORT --operation editions.list --input '{}'
   datasette status --url-file /private/datasette-connection.json
   datasette operations --directory /private/workspace
-  datasette receive --directory /private/workspace --archive-file source.zip --destination /private/received
+  datasette receive --directory /private/workspace --archive-file source.datasette.json.gz --sha256 SHA256 --destination /private/received
 
 Options:
   --directory ABS             Original local workspace directory
@@ -32,6 +32,7 @@ Options:
   --resource-file PATH        Original resource configuration for local workspace creation
   --environment-file PATH     Original environment object for local workspace creation
   --archive-file PATH         Complete source archive for the receive command
+  --sha256 SHA256             Expected SHA256 of that original archive
   --destination ABS          Separate source receiving directory
   --help                     Show this guide
 
@@ -41,7 +42,7 @@ runId; publishing takes that same runId and the saved reviewId.
 `;
 const valued = new Set(['directory','url','url-file','operation','input','input-file','out',
   'port','connection-file','startup-format','expected-workspace-id','seller-file','resource-file',
-  'environment-file','archive-file','destination']);
+  'environment-file','archive-file','sha256','destination']);
 const switches = new Set(['create','help']);
 const object = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 const fail = message => Object.assign(new Error(message), {code: 'DATASETTE_CLI_INPUT'});
@@ -75,9 +76,11 @@ export function parseDatasetteArguments(argv) {
     throw fail('Server launch options belong to the serve command.');
   if (result.command === 'operation' && !DATASETTE_OPERATIONS.includes(result.operation)) throw fail('Choose a declared --operation; use the operations command for its input catalog.');
   if (result.command !== 'operation' && result.operation) throw fail('--operation is used without a separate command.');
-  if (result.command === 'receive' && (!result['archive-file'] || !result.destination || result.input || result['input-file']))
-    throw fail('Receive requires --archive-file and --destination; its input is the complete retained archive.');
-  if (result.command !== 'receive' && (result['archive-file'] || result.destination)) throw fail('Archive and destination options belong to receive.');
+  if (result.command === 'receive' && (!result['archive-file'] || !result.destination ||
+      !/^[a-f0-9]{64}$/.test(result.sha256 ?? '') || result.input || result['input-file']))
+    throw fail('Receive requires --archive-file, --sha256 (64 lowercase hexadecimal characters) and --destination.');
+  if (result.command !== 'receive' && (result['archive-file'] || result.sha256 || result.destination))
+    throw fail('Archive, SHA256 and destination options belong to receive.');
   if (['serve','status','operations','health'].includes(result.command) && (result.input || result['input-file']))
     throw fail('This command reads its original state without an operation input.');
   return result;
@@ -137,7 +140,13 @@ async function writeConnection(file, announcement) {
 export async function runDatasetteCLI(argv = process.argv.slice(2), {
   stdout = process.stdout, stderr = process.stderr,
 } = {}) {
-  let workspace, server;
+  let workspace, server, failed = false;
+  const reportError = (error, phase) => {
+    stderr.write(JSON.stringify({error: error?.code ?? 'DATASETTE_CLI_FAILURE',
+      message: error?.message ?? String(error), ...(phase ? {phase} : {}),
+      ...(error instanceof DatasetteClientError ? {operation: error.operation, operationId: error.operationId,
+        status: error.status, uncertain: error.uncertain} : {})}) + '\n');
+  };
   try {
     const args = parseDatasetteArguments(argv);
     if (args.help) {stdout.write(USAGE); return 0;}
@@ -191,7 +200,7 @@ export async function runDatasetteCLI(argv = process.argv.slice(2), {
     else if (args.command === 'operations') value = await (remote ?? workspace).operations();
     else {
       const operation = args.command === 'receive' ? 'source.receive' : args.operation;
-      const input = args.command === 'receive' ? {archiveFile: resolve(args['archive-file']), directory: resolve(args.destination)}
+      const input = args.command === 'receive' ? {archiveFile: resolve(args['archive-file']), sha256: args.sha256, directory: resolve(args.destination)}
         : args['input-file'] ? await jsonFile(args['input-file']) : args.input ? JSON.parse(args.input) : {};
       if (!object(input)) throw fail('Operation input must be a complete JSON object.');
       value = await (remote ?? workspace).dispatch(operation, input);
@@ -199,13 +208,15 @@ export async function runDatasetteCLI(argv = process.argv.slice(2), {
     await resultOutput(value, args.out, stdout);
     return 0;
   } catch (error) {
-    stderr.write(JSON.stringify({error: error.code ?? 'DATASETTE_CLI_FAILURE', message: error.message,
-      ...(error instanceof DatasetteClientError ? {operation: error.operation, operationId: error.operationId,
-        status: error.status, uncertain: error.uncertain} : {})}) + '\n');
-    return 1;
+    failed = true; reportError(error); return 1;
   } finally {
-    await server?.close();
-    await workspace?.close();
+    let closeError;
+    try {await server?.close();} catch (error) {closeError = error;}
+    try {await workspace?.close();} catch (error) {closeError ??= error;}
+    if (closeError) {
+      if (!failed) reportError(closeError, 'close');
+      return 1;
+    }
   }
 }
 
