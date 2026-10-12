@@ -5,8 +5,8 @@ import { record } from '../sqlite/parameters.mjs';
 import { compileRedisQueries, describeRedisQueries } from './declaration.mjs';
 import { createRedisQuerySource } from './source.mjs';
 import { validateUpstashEndpoint } from './upstash-rest.mjs';
+import { validateRedisConnectionProfile, resolveRedisConnectionProfile, describeRedisConnectionProfile } from './connection-profile.mjs';
 const ENV = /^[A-Z_][A-Z0-9_]{0,127}$/;
-const validText = value => typeof value === 'string' && value.isWellFormed() && value.length > 0 && value.length <= 1024 && !/[\x00-\x1f\x7f]/.test(value);
 export function validateRedisSourceConfig(config) {
   if (!record(config) || config.schema !== 'stellar-forge.redis-source.v1' || !record(config.connection) ||
       Object.keys(config).some(key => !['schema', 'connection', 'queries', 'bindings', 'maxConnections',
@@ -22,18 +22,7 @@ export function validateRedisSourceConfig(config) {
     if (Object.keys(c).some(key => !['transport', 'endpoint', 'tokenEnv'].includes(key)) || !ENV.test(c.tokenEnv ?? ''))
       throw new TypeError('REDIS_HTTP_CONNECTION_PROFILE_INVALID');
     validateUpstashEndpoint(c.endpoint);
-  } else {
-    if (Object.keys(c).some(key => !['host', 'port', 'database', 'username', 'passwordEnv', 'tls', 'caFile'].includes(key)) ||
-        !validText(c.host) || /[\s/\\]/.test(c.host) ||
-        c.port !== undefined && (!Number.isInteger(c.port) || c.port < 1 || c.port > 65535) ||
-        c.database !== undefined && (!Number.isInteger(c.database) || c.database < 0 || c.database > 65535) ||
-        c.username !== undefined && !validText(c.username) || c.passwordEnv !== undefined && !ENV.test(c.passwordEnv))
-      throw new TypeError('REDIS_CONNECTION_PROFILE_INVALID');
-    if (!['verify-full', 'local-plaintext'].includes(c.tls ?? 'verify-full')) throw new TypeError('REDIS_TLS_MODE_INVALID');
-    if (c.tls === 'local-plaintext' && !['127.0.0.1', '::1', 'localhost'].includes(c.host))
-      throw new TypeError('REDIS_PLAINTEXT_REQUIRES_LOOPBACK');
-    if (c.caFile !== undefined && (!validText(c.caFile) || c.tls === 'local-plaintext')) throw new TypeError('REDIS_CA_FILE_INVALID');
-  }
+  } else validateRedisConnectionProfile(c);
   compileRedisQueries(config.queries);
   if (config.bindings !== undefined) {
     if (!record(config.bindings)) throw new TypeError('REDIS_BINDINGS_INVALID');
@@ -74,16 +63,8 @@ export async function resolveRedisConnection(declaration, environment = process.
       throw new TypeError('REDIS_HTTP_TOKEN_ENV_UNAVAILABLE');
     return { transport: 'upstash-rest', endpoint: validateUpstashEndpoint(c.endpoint), token };
   }
-  let password, ca;
-  if (c.passwordEnv !== undefined) {
-    password = environment[c.passwordEnv];
-    if (typeof password !== 'string' || !password.length || password.length > 16384 || password.includes('\0'))
-      throw new TypeError('REDIS_PASSWORD_ENV_UNAVAILABLE');
-  }
-  if (c.caFile) ca = await bytes(resolve(dirname(declaration.path), c.caFile), 1048576);
-  return { socket: { host: c.host, port: c.port ?? 6379,
-    ...(c.tls === 'local-plaintext' ? {} : { tls: true, rejectUnauthorized: true, ...(ca ? { ca } : {}) }) },
-    database: c.database ?? 0, ...(c.username ? { username: c.username } : {}), ...(password ? { password } : {}) };
+  return resolveRedisConnectionProfile(c, { environment,
+    readCertificate: filename => bytes(resolve(dirname(declaration.path), filename), 1048576) });
 }
 export async function openRedisSourceFile(filename, { environment = process.env } = {}) {
   const declaration = await readRedisSourceFile(filename), { config } = declaration;
@@ -95,5 +76,7 @@ export async function openRedisSourceFile(filename, { environment = process.env 
 }
 export async function describeRedisFile(filename) {
   const { config, description } = await readRedisSourceFile(filename);
-  return { schema: config.schema, queries: description, bindings: structuredClone(config.bindings ?? {}) };
+  return { schema: config.schema,
+    connection: config.connection.transport === 'upstash-rest' ? {transport:'upstash-rest', topology:'standalone'} : describeRedisConnectionProfile(config.connection),
+    queries: description, bindings: structuredClone(config.bindings ?? {}) };
 }

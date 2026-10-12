@@ -4,6 +4,12 @@ Receive the complete output of the original Finage market processor into a local
 
 The Finage entrypoint uses the maintained Databento receiving engine through a fixed Finage format profile. The original producer application continues to own source acquisition, time interpretation, symbol mapping, reviews, revisions and full market export.
 
+## Use the installed merchant package
+
+The existing distribution includes both `starforge finage-warehouse` for individual native commands and `starforge finage-receive` for the complete two-export receiving operation. Run `starforge finage-receive info` to inspect the selected release, exact shared engine/profile source and actual command paths. Preparation writes a private configuration from the original delivery identities; run and resume continue the original operating program and retain its actual native result.
+
+See the [complete installed operating guide](../../../distribution/FINAGE.md) for source validation, create-only preparation, same-operation continuation, installed APIs and independent customer backup recovery.
+
 ## Start with a complete original delivery
 
 Use Python 3.11 or later on Linux or macOS. The receiving engine uses the standard library. Keep the repository's Finage and Databento receiving directories together when using this source entrypoint.

@@ -15,8 +15,8 @@ async function readBody(req) {
   try { return JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(Buffer.concat(chunks))); }
   catch { throw fault('JSON_INVALID'); }
 }
-export async function startGeocoderServer({ workspace, port = 0 } = {}) {
-  if (!workspace || typeof workspace.act !== 'function' || !Number.isInteger(port) || port < 0 || port > 65535)
+export async function startGeocoderServer({ workspace, port = 0, closeWorkspace = true } = {}) {
+  if (typeof closeWorkspace !== 'boolean' || !workspace || typeof workspace.act !== 'function' || !Number.isInteger(port) || port < 0 || port > 65535)
     throw new TypeError('Open a geocoder workspace and choose a valid local port.');
   const assets = new Map(await Promise.all([
     ['/', 'index.html', 'text/html; charset=utf-8'], ['/app.mjs', 'app.mjs', 'text/javascript; charset=utf-8'],
@@ -67,16 +67,20 @@ export async function startGeocoderServer({ workspace, port = 0 } = {}) {
   });
   server.requestTimeout = 920000; server.headersTimeout = 15000; server.keepAliveTimeout = 1000;
   try { await new Promise((done, reject) => { server.once('error', reject); server.listen(port, '127.0.0.1', done); }); }
-  catch (error) { await workspace.close(); throw error; }
+  catch (error) { if (closeWorkspace) await workspace.close(); throw error; }
   origin = 'http://127.0.0.1:' + server.address().port;
   return { server, workspace, url: origin, operatorUrl: origin + '/#' + token, close() {
-    closing ??= (async () => {
+    if (closing) return closing;
+    const disposing = (async () => {
       const connections = new Promise((done, reject) => {
-        server.close(error => error ? reject(error) : done()); server.closeIdleConnections?.();
+        server.close(error => error && error.code !== 'ERR_SERVER_NOT_RUNNING' ? reject(error) : done());
+        server.closeIdleConnections?.();
       });
-      const result = await Promise.allSettled([workspace.close(), connections]);
+      const result = await Promise.allSettled([...(closeWorkspace ? [workspace.close()] : []), connections]);
       const failure = result.find(item => item.status === 'rejected'); if (failure) throw failure.reason;
     })();
-    return closing;
+    closing = disposing;
+    void disposing.catch(() => { if (closing === disposing) closing = null; });
+    return disposing;
   } };
 }
