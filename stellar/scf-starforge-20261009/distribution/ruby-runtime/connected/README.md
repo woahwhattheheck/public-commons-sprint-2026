@@ -401,3 +401,82 @@ A client closes admission, drains its accepted work and then closes its transpor
 The server keeps at most four open outgoing snapshots and four incoming archive writers per handle. Closed file selections can reopen their immutable original snapshots. A complete JSON tool result over 768 KiB is retained as a readable file; the SDK client receives it in full up to the existing 128 MiB result limit. Explicit MCP consumers follow that returned file descriptor with ruby_file_read and close it afterward. File chunks themselves remain direct results.
 
 Both HTTP and stdio return the original structured error. In particular, status/details needed for same-operation continuation survive the shared HTTP boundary. Inspect the original operation, complete worker log and selected receiving status when an action fails. Correct the underlying issue and continue the retained source/UUID.
+
+## Receive an original source and configure its application mapping
+
+The complete mapping edition adds two choices to the existing `run` method.
+`dataset-source` opens the original source and mapping CLI;
+`dataset-mapping-lifecycle` runs the complete authenticated Rails form journey
+on an existing managed application. The method, operation journal, tool names
+and result receiving are unchanged.
+
+Select an environment installed from this complete customer edition. Before
+admitting either command, the runtime checks its retained mapping capability,
+the complete original client inventory and the selected native support files.
+An older environment keeps its original source; select the new complete package
+through the normal environment installation or receiving flow.
+
+The source CLI uses the actual application-declared catalogue, tenant, stream
+and target schema. Select a persistent review UUID and the candidate's original
+selection SHA, prepare all source rows, inspect the schema and complete original
+CSV/JSONL, then save a revised mapping as a new review. Its mapping context binds
+the current allowed target fields, native key definition and exact source.
+The existing importer prepares the whole change preview and commits the saved
+approval in its original stream transaction.
+
+Managed source inspection, through the same installed launcher:
+
+```sh
+starforge ruby-runtime run --directory RUNTIME_DIRECTORY --id ENVIRONMENT_ID \
+  --operation-id SOURCE_OPERATION_UUID --entry dataset-source --wait -- \
+  candidates --application ORIGINAL_APPLICATION_DIRECTORY \
+  --runtime-source INSTALLED_RUBY_RUNTIME_DIRECTORY \
+  --environment ORIGINAL_ENVIRONMENT_DIRECTORY --out PRIVATE_CANDIDATES_JSON
+```
+
+For an existing application that has installed its tenant resolver, the same
+source command can run through its normal Rails process:
+
+```sh
+bin/rails runner /absolute/operator/source_cli.rb prepare-source \
+  --tenant ACCOUNT --review ORIGINAL_REVIEW_UUID --out PRIVATE_SOURCE_SUMMARY_JSON
+```
+
+The complete commissioning entry uses the current exported client and the
+original managed application. It receives every original source row, follows
+the authenticated mapping form, prepares and downloads the complete preview,
+commits through the original importer, captures the working records, and
+reopens an independent application copy with the producing path parked.
+
+```sh
+starforge ruby-runtime run --directory RUNTIME_DIRECTORY --id ENVIRONMENT_ID \
+  --operation-id MAPPING_OPERATION_UUID --entry dataset-mapping-lifecycle --wait -- \
+  run --application ORIGINAL_APPLICATION_DIRECTORY \
+  --runtime-source INSTALLED_RUBY_RUNTIME_DIRECTORY --out PRIVATE_MAPPING_JOURNEY
+```
+
+The direct entry is
+`developer/ruby-client/examples/rails_dataset/operator/mapping_example.rb`.
+It accepts the same `run` arguments and optional `--candidate ORIGINAL_CANDIDATE_ID`.
+`reopen --runtime-source INSTALLED_RUBY_RUNTIME_DIRECTORY --out PRIVATE_MAPPING_JOURNEY`
+verifies the retained result and independently received application. Keep the
+original operation UUID, output directory and selected input on retry; the
+saved signed operations and source/target context are reused.
+
+The connected call has the same literal argument boundary:
+
+```js
+const operation = await client.run({
+  id: environmentId,
+  operationId: originalOperationId,
+  entry: "dataset-mapping-lifecycle",
+  argv: ["run", "--application", originalApplicationDirectory,
+    "--runtime-source", installedRubyRuntimeDirectory,
+    "--out", privateMappingJourney],
+});
+```
+
+Use the existing operation, log and complete-file methods to receive the
+original command result. The caller never supplies an executable or a
+different importer. The complete operator guide documents source pages,
+mapping selection, import approval, receipt history and portable receiving.

@@ -12,6 +12,9 @@ module Starforge
   class RailsDataset
     SCHEMA = "stellar-forge.rails-dataset-import.v1"
     TYPES = %w[string integer decimal boolean date datetime].freeze
+    COLUMN_TYPES = {"string"=>[:string,:text].freeze, "integer"=>[:integer].freeze,
+      "decimal"=>[:decimal].freeze, "boolean"=>[:boolean].freeze, "date"=>[:date].freeze,
+      "datetime"=>[:datetime,:timestamp].freeze}.freeze
 
     class ImportError < StandardError
       attr_reader :code, :details
@@ -175,6 +178,117 @@ module Starforge
       end
     end
 
+
+    # The same authorized target relation and schema drive both source mapping
+    # and the importer. Mapping authoring never substitutes a request-selected model.
+    class TargetContext
+      attr_reader :scope, :stream, :model, :models, :primary_key, :scope_values,
+        :protected_columns, :scope_sha256
+      def initialize(scope:, stream:, models:)
+        RailsDataset.need(scope.is_a?(ActiveRecord::Relation) && stream.is_a?(ActiveRecord::Base) &&
+          stream.persisted?, "DATASET_NATIVE_SCOPE")
+        RailsDataset.need(models.is_a?(Hash) && %i[edition row entry].all? { |key|
+          models[key].is_a?(Class) && models[key] < ActiveRecord::Base }, "DATASET_NATIVE_MODELS")
+        @scope, @stream = scope.reorder(nil), stream
+        @model, @models = @scope.klass, models.slice(:edition, :row, :entry).freeze
+        RailsDataset.need(@scope.limit_value.nil? && @scope.offset_value.nil? &&
+          @scope.group_values.empty?, "DATASET_COMPLETE_TARGET_SCOPE")
+        pool = @stream.class.connection_pool
+        RailsDataset.need(([@model] + @models.values).all? { |item| item.connection_pool.equal?(pool) },
+          "DATASET_ONE_DATABASE")
+        RailsDataset.need(@model.primary_key.is_a?(String), "DATASET_TARGET_PRIMARY_KEY")
+        @primary_key = @model.primary_key
+        @scope_values = @scope.scope_for_create.stringify_keys
+        @protected_columns = ([@primary_key, @model.inheritance_column, "created_at", "updated_at", "lock_version"] +
+          @scope_values.keys).compact.uniq.freeze
+        @scope_sha256 = RailsDataset.fingerprint({"model"=>@model.name, "sql"=>@scope.to_sql,
+          "creation_values"=>@scope_values}).freeze
+      end
+
+      def original_indexes
+        @model.connection.indexes(@model.table_name).select do |index|
+          index.unique && index.columns.is_a?(Array) && index.columns.all? { |name| name.is_a?(String) } &&
+            (!index.respond_to?(:where) || index.where.nil? || index.where.empty?)
+        end
+      end
+
+      def verify_unique_key!(keys)
+        allowed = (keys + @scope_values.keys).uniq
+        eligible = original_indexes.any? do |index|
+          (keys - index.columns).empty? && (index.columns - allowed).empty?
+        end
+        RailsDataset.need(eligible, "DATASET_UNIQUE_TARGET_KEY",
+          columns: keys, scope_columns: @scope_values.keys)
+      end
+
+      def validate_stream_identity!
+        {"target_model"=>@model.name, "scope_sha256"=>@scope_sha256}.each do |key,expected|
+          actual = @stream.public_send(key)
+          RailsDataset.need(actual.nil? || actual == expected, "DATASET_STREAM_BINDING", field: key)
+        end
+        RailsDataset.need(@stream.revision.is_a?(Integer) && @stream.revision >= 0, "DATASET_STREAM_REVISION")
+      end
+
+      def columns
+        @model.columns_hash.keys.sort.filter_map do |name|
+          next if @protected_columns.include?(name)
+          actual = @model.type_for_attribute(name).type
+          supported = COLUMN_TYPES.find { |_type, accepted| accepted.include?(actual) }&.first
+          next unless supported
+          column = @model.columns_hash.fetch(name)
+          {"name"=>name, "type"=>supported, "native_type"=>actual.to_s, "sql_type"=>column.sql_type,
+            "null"=>column.null, "limit"=>column.limit, "precision"=>column.precision, "scale"=>column.scale,
+            "default_present"=>!column.default.nil? ||
+              (column.respond_to?(:default_function) && !column.default_function.nil?)}
+        end
+      end
+
+      # Read while holding the application's original stream row lock.
+      def metadata
+        validate_stream_identity!
+        selected_columns = columns
+        names = selected_columns.map { |column| column.fetch("name") }
+        unique_keys = original_indexes.filter_map do |index|
+          keys = index.columns - @scope_values.keys
+          next if keys.empty? || (keys - names).any?
+          {"name"=>index.name.to_s, "columns"=>keys}
+        end.sort_by { |index| [index.fetch("name"), index.fetch("columns").join("\0")] }
+        original_key, receipt_sha = nil, nil
+        if @stream.latest_edition_id
+          edition = @models.fetch(:edition).find_by(id: @stream.latest_edition_id, dataset_stream_id: @stream.id)
+          RailsDataset.need(edition, "DATASET_PRIOR_EDITION_MISSING")
+          receipt = RailsDataset.verified_edition_receipt(edition, stream: @stream)
+          binding = receipt.fetch("binding")
+          RailsDataset.need(edition.revision == @stream.revision &&
+            binding["target_model"] == @model.name && binding["scope_sha256"] == @scope_sha256,
+            "DATASET_PRIOR_REVISION_CHANGED")
+          mapping = binding.fetch("mapping")
+          keys, specs = mapping.fetch("key_columns"), mapping.fetch("columns")
+          RailsDataset.need(keys.is_a?(Array) && !keys.empty? && keys.uniq == keys &&
+            keys.all? { |key| key.is_a?(String) && specs.is_a?(Hash) && specs[key].is_a?(Hash) },
+            "DATASET_ORIGINAL_KEY_MAPPING")
+          original_key = {"key_columns"=>RailsDataset.copy_json(keys),
+            "columns"=>RailsDataset.copy_json(specs.slice(*keys))}
+          key_sha = RailsDataset.fingerprint(original_key)
+          RailsDataset.need(key_sha == @stream.key_mapping_sha256 &&
+            RailsDataset.fingerprint(mapping) == edition.mapping_sha256,
+            "DATASET_ORIGINAL_KEY_MAPPING")
+          original_key["sha256"] = key_sha
+          receipt_sha = edition.receipt_sha256
+        else
+          RailsDataset.need(@stream.revision.zero? && @stream.key_mapping_sha256.nil?,
+            "DATASET_STREAM_HISTORY_CHANGED")
+        end
+        {"schema"=>"stellar-forge.dataset-mapping-target.v1",
+          "target_model"=>@model.name, "scope_sha256"=>@scope_sha256,
+          "columns"=>selected_columns, "unique_keys"=>unique_keys,
+          "stream"=>{"id"=>@stream.id.to_s, "revision"=>@stream.revision,
+            "latest_edition_id"=>@stream.latest_edition_id&.to_s,
+            "receipt_sha256"=>receipt_sha, "key_mapping_sha256"=>@stream.key_mapping_sha256},
+          "key_mapping"=>original_key}
+      end
+    end
+
     # Explicit field mapping; a missing field can be preserved, while a supplied
     # null can independently be assigned or preserved. Keys always need values.
     class Mapping
@@ -229,10 +343,7 @@ module Starforge
 
       def verify_type(name, type)
         actual = @model.type_for_attribute(name).type
-        accepted = {"string"=>[:string,:text], "integer"=>[:integer],
-          "decimal"=>[:decimal], "boolean"=>[:boolean], "date"=>[:date],
-          "datetime"=>[:datetime,:timestamp]}
-        RailsDataset.need(accepted.fetch(type).include?(actual), "DATASET_COLUMN_TYPE",
+        RailsDataset.need(COLUMN_TYPES.fetch(type).include?(actual), "DATASET_COLUMN_TYPE",
           column: name, declared: type, actual: actual)
       end
 
@@ -346,25 +457,12 @@ module Starforge
     # tenant relation. Every model must use the very same database connection.
     def initialize(delivery:, scope:, stream:, models:, mapping:)
       self.class.need(delivery.is_a?(DatasetDelivery), "DATASET_ORIGINAL_DELIVERY")
-      self.class.need(scope.is_a?(ActiveRecord::Relation) && stream.is_a?(ActiveRecord::Base) &&
-        stream.persisted?, "DATASET_NATIVE_SCOPE")
-      self.class.need(models.is_a?(Hash) && %i[edition row entry].all? { |key|
-        models[key].is_a?(Class) && models[key] < ActiveRecord::Base }, "DATASET_NATIVE_MODELS")
-      @delivery, @scope, @stream = delivery, scope.reorder(nil), stream
-      @model, @models = @scope.klass, models.slice(:edition, :row, :entry).freeze
-      self.class.need(@scope.limit_value.nil? && @scope.offset_value.nil? &&
-        @scope.group_values.empty?, "DATASET_COMPLETE_TARGET_SCOPE")
-      pool = @stream.class.connection_pool
-      self.class.need(([@model] + @models.values).all? { |model| model.connection_pool.equal?(pool) },
-        "DATASET_ONE_DATABASE")
-      self.class.need(@model.primary_key.is_a?(String), "DATASET_TARGET_PRIMARY_KEY")
-      @pk = @model.primary_key
-      @scope_values = @scope.scope_for_create.stringify_keys
-      protected_columns = ([@pk, @model.inheritance_column, "created_at", "updated_at", "lock_version"] +
-        @scope_values.keys).compact.uniq
-      @mapping = Mapping.new(mapping, @model, @delivery.fields, protected_columns)
-      @scope_sha = self.class.fingerprint({"model"=>@model.name, "sql"=>@scope.to_sql,
-        "creation_values"=>@scope_values})
+      @target_context = TargetContext.new(scope: scope, stream: stream, models: models)
+      @delivery, @scope, @stream = delivery, @target_context.scope, stream
+      @model, @models = @target_context.model, @target_context.models
+      @pk, @scope_values = @target_context.primary_key, @target_context.scope_values
+      @scope_sha = @target_context.scope_sha256
+      @mapping = Mapping.new(mapping, @model, @delivery.fields, @target_context.protected_columns)
       @membership = self.class.copy_json(@delivery.membership)
       self.class.need(@membership.is_a?(Hash) &&
         @membership["query_sha256"].is_a?(String) &&
@@ -381,16 +479,7 @@ module Starforge
     end
 
     def verify_unique_key!
-      allowed = (@mapping.key_columns + @scope_values.keys).uniq
-      indexes = @model.connection.indexes(@model.table_name)
-      eligible = indexes.any? do |index|
-        columns = index.columns
-        index.unique && columns.is_a?(Array) &&
-          (@mapping.key_columns - columns).empty? && (columns - allowed).empty? &&
-          (!index.respond_to?(:where) || index.where.nil? || index.where.empty?)
-      end
-      self.class.need(eligible, "DATASET_UNIQUE_TARGET_KEY",
-        columns: @mapping.key_columns, scope_columns: @scope_values.keys)
+      @target_context.verify_unique_key!(@mapping.key_columns)
     end
 
     def validate_stream!
@@ -550,19 +639,23 @@ module Starforge
       raise
     end
 
-    def verified_receipt(edition)
+    def self.verified_edition_receipt(edition, stream:)
       raw = edition.receipt_json
-      self.class.need(raw.is_a?(String) && self.class.sha(raw) == edition.receipt_sha256,
+      need(raw.is_a?(String) && sha(raw) == edition.receipt_sha256,
         "DATASET_RECEIPT_CHANGED")
       receipt = JSON.parse(raw, create_additions: false, allow_nan: false)
-      self.class.need(receipt["schema"] == SCHEMA &&
-        receipt["stream_id"] == @stream.id.to_s && receipt["edition_id"] == edition.id.to_s &&
+      need(receipt["schema"] == SCHEMA &&
+        receipt["stream_id"] == stream.id.to_s && receipt["edition_id"] == edition.id.to_s &&
         receipt["revision"] == edition.revision && receipt["operation_sha256"] == edition.operation_sha256 &&
         receipt["manifest_sha256"] == edition.manifest_sha256 &&
         receipt["source_sha256"] == edition.source_sha256 && receipt["mapping_sha256"] == edition.mapping_sha256 &&
         receipt["binding"] == JSON.parse(edition.binding_json) &&
         receipt["preview_sha256"] == edition.preview_sha256, "DATASET_RECEIPT_BINDING")
       receipt
+    end
+
+    def verified_receipt(edition)
+      self.class.verified_edition_receipt(edition, stream: @stream)
     end
 
     def receipt(operation_key:)

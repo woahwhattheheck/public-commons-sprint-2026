@@ -1,7 +1,12 @@
 <% chosen = @detail["selection"]; candidate = chosen["candidate"]; review = @detail["review"]; id = chosen["id"] %>
 <div class="heading"><div><h2><%= candidate["title"] %></h2><p>Selected <%= operator_data_time(chosen["selected_at"]) %> by <%= chosen["actor"] %> · Stream <%= candidate["stream_id"] %></p></div><%= link_to "Refresh", action: :show, id: id %></div>
-<p class="notice" role="status">Current state: <strong><%= @detail.dig("state","phase").tr("_"," ") %></strong>
+<p class="notice" role="status">Current state: <strong><%= operator_data_label(@detail.dig("state","phase")) %></strong>
 <% if @detail.dig("state","message") %><br><%= @detail.dig("state","message") %><% end %></p>
+<nav class="actions" aria-label="Source and field selection">
+  <%= link_to "Source and field mapping",action: :mapping,id: id %>
+  <%= link_to "Selected mapping JSON",action: :mapping_export,id: id %>
+  <% if chosen["original_review_id"] %><%= link_to "Original source review",action: :show,id: chosen["original_review_id"] %><% end %>
+</nav>
 <% if review %>
   <div class="metrics">
     <% %w[inserted updated unchanged removed].each do |kind| %><div><span><%= kind.capitalize %></span><strong><%= review.dig("summary","counts",kind) %></strong></div><% end %>
@@ -38,8 +43,15 @@
     </section>
   <% end %>
 <% else %>
-  <section><h3>Preparing the complete source and preview</h3><p>This review retains the selected source and original request. Refresh for the current result. Resume continues its preparation after an interrupted job.</p>
-    <%= button_to "Resume preparation", {action: :prepare,id: id}, method: :post %>
-  </section>
+  <% if @detail.dig("state","phase").to_s.start_with?("source_") || !operator_mapping_configured?(candidate["mapping"]) %>
+    <section><h3>Read the complete source and choose application fields</h3>
+      <p>Open the source and field mapping view to read or resume the complete source, browse every original row, and select the mapping for a new review.</p>
+      <%= link_to "Open source and field mapping",action: :mapping,id: id %>
+    </section>
+  <% else %>
+    <section><h3>Preparing the complete source and preview</h3><p>This review retains the selected source and original request. Refresh for the current result. Resume continues its preparation after an interrupted job. Source and field mapping lets you correct the selected fields in a new review.</p>
+      <%= button_to "Resume preparation",{action: :prepare,id: id},method: :post %>
+    </section>
+  <% end %>
 <% end %>
 <details><summary>Original review selection</summary><p>Review <span class="mono"><%= id %></span></p><p>Source manifest <span class="mono"><%= candidate["manifest_sha256"] %></span></p><p>Format <%= candidate["format"] %></p><p>Original operation <span class="mono"><%= chosen["operation_key"] %></span></p></details>
