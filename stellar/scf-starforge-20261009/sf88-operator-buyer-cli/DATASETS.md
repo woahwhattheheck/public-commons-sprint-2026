@@ -440,3 +440,13 @@ that a new paid acquisition or this new boundary has been executed.
 ### Continue an interrupted fresh approval
 
 If the released page has already been archived and its next original approval was interrupted before a new reservation, keep that successor's exact attempt and native wire records. The same `run --retry-expired` command accepts `--expect-unapproved-attempt ORIGINAL_UNSIGNED_SUCCESSOR_SHA256` in addition to the released parent's `--expect-attempt` and source/report/request inputs. The original wire reader must report a stopped unsigned attempt, and the authenticated Governor journal must still have the same released generation. The helper retains the successor under the parent's `expired-history/<parent>/unapproved/<successor>` directory, including its entire original wire directory and lock, then resumes the same fresh approval. A successor that was reserved, entered signing, or dispatched needs its own original reconciliation. An interrupted archive resumes from its saved plan and exact file hashes.
+
+## Move the complete original session
+
+Use `export-session`, `inspect-session-archive` and `receive-session` to move
+this acquisition under a new private root while preserving the original session,
+page configurations, attempts, response bodies, checkout evidence and wire/history
+bytes. The existing status, run and delivery APIs use an explicit local storage
+selection; original request hashes and buyer/ledger authority remain unchanged.
+The complete CLI, Node API and interrupted receiving workflow are in
+[DATASET_SESSION_PORTABILITY.md](DATASET_SESSION_PORTABILITY.md).
