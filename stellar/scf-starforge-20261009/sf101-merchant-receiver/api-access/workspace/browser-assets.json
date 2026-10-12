@@ -1,0 +1,41 @@
+{
+  "schema": "stellar-forge.browser-assets.v1",
+  "root": "./",
+  "routes": [
+    [
+      "/",
+      [
+        "public/index.html",
+        "text/html; charset=utf-8"
+      ]
+    ],
+    [
+      "/app.mjs",
+      [
+        "public/app.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/style.css",
+      [
+        "public/style.css",
+        "text/css; charset=utf-8"
+      ]
+    ],
+    [
+      "/original-approval/approval-panel.mjs",
+      [
+        "../../../sf81-buyer-operator-bridge/browser-ui/approval-panel.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/original-approval/approval.css",
+      [
+        "../../../sf81-buyer-operator-bridge/browser-ui/approval.css",
+        "text/css; charset=utf-8"
+      ]
+    ]
+  ]
+}

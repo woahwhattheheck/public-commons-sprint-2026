@@ -12,6 +12,10 @@ def main():
     host = commands.add_parser("serve", help="Open the loopback operator interface")
     host.add_argument("--workspace", required=True)
     host.add_argument("--port", type=int, default=0)
+    host.add_argument("--listen", default="127.0.0.1", help="IPv4 listener; network binding requires direct TLS")
+    host.add_argument("--public-origin", help="Registered HTTPS origin; a reverse proxy must preserve this Host")
+    host.add_argument("--tls-cert", help="Direct HTTPS certificate chain")
+    host.add_argument("--tls-key", help="Owned private TLS key file")
     host.add_argument("--ready-file")
     host.add_argument("--open", action="store_true")
     recover = commands.add_parser("restore", help="Restore into a new private workspace")
@@ -22,7 +26,8 @@ def main():
     os.umask(0o077)
     if args.command == "serve":
         from audit_operator.host import serve
-        serve(args.workspace, args.port, args.ready_file, args.open)
+        serve(args.workspace, args.port, args.ready_file, args.open,
+              listen=args.listen, public_origin=args.public_origin, tls_cert=args.tls_cert, tls_key=args.tls_key)
     else:
         from audit_operator.archive import restore_backup
         from audit_operator.store import private_bytes

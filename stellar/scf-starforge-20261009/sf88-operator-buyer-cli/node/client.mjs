@@ -10,7 +10,8 @@ import { BuyerResult } from './result.mjs';
 import { inspectUnpaidContinuation, prepareUnpaidContinuation, followUnpaidContinuation } from './unpaid-continuation.mjs';
 import {inspectNodeLostOutput,recoverNodeLostOutput,readNodeLostOutputRecovery,
   exportNodeLostOutputProof} from './lost-output.mjs';
-import {prepareExpiredContinuation,inspectExpiredContinuation,followContinuation,
+import {prepareExpiredContinuation,inspectExpiredContinuation,
+  prepareUndispatchedContinuation,inspectUndispatchedContinuation,followContinuation,
   assertOperationContinuationBinding} from './expired-continuation.mjs';
 import { Dataset, createDataset, listDatasets } from './dataset.mjs';
 import { ObjectAcquisition, createObject, listObjects } from './object.mjs';
@@ -84,15 +85,18 @@ export class Buyer {
     return { ...config, ...copy(profile) };
   }
 
-  async _create(input, { body, operatorProfile, responseFile, requestTimeoutMs, nativeWorkspace, signal, unpaidContinuation, expiredContinuation } = {}) {
+  async _create(input, { body, operatorProfile, responseFile, requestTimeoutMs, nativeWorkspace, signal, unpaidContinuation, expiredContinuation, undispatchedContinuation } = {}) {
     checkSignal(signal);
     await this.ready();
     // Explicit workspace adoption uses its native operator, never a global profile override.
-    need(!(unpaidContinuation !== undefined && expiredContinuation !== undefined), 'CONTINUATION_LINEAGE_INVALID');
-    const config = nativeWorkspace === undefined && unpaidContinuation === undefined && expiredContinuation === undefined
+    need([unpaidContinuation,expiredContinuation,undispatchedContinuation].filter(value=>value!==undefined).length<=1,
+      'CONTINUATION_LINEAGE_INVALID');
+    const config = nativeWorkspace === undefined && unpaidContinuation === undefined && expiredContinuation === undefined &&
+      undispatchedContinuation === undefined
       ? await this._profile(copy(input), operatorProfile) : copy(input);
     const continuation = unpaidContinuation !== undefined ? { unpaidContinuation: copy(unpaidContinuation) } :
-      expiredContinuation !== undefined ? { expiredContinuation: copy(expiredContinuation) } : {};
+      expiredContinuation !== undefined ? { expiredContinuation: copy(expiredContinuation) } :
+      undispatchedContinuation !== undefined ? {undispatchedContinuation:copy(undispatchedContinuation)} : {};
     const workspace = nativeWorkspace === undefined ? {} : { nativeWorkspace: absolute(nativeWorkspace) };
     need(object(config.operation), 'OPERATION_REQUIRED');
     const op = this.operation(config.operation.intentId);
@@ -300,7 +304,7 @@ export class Operation {
     const ticketHash = config.operation.ticketFile
       ? digest(await readBytes(config.operation.ticketFile, 16384)) : null;
     need(ticketHash === (meta.ticketSha256 ?? null), 'OPERATION_TICKET_CHANGED');
-    if (meta.unpaidContinuation !== undefined || meta.expiredContinuation !== undefined)
+    if (meta.unpaidContinuation !== undefined || meta.expiredContinuation !== undefined || meta.undispatchedContinuation !== undefined)
       await assertOperationContinuationBinding(this, { meta, config });
     return { meta, config };
   }
@@ -310,6 +314,8 @@ export class Operation {
   exportLostOutputProof(options) { return exportNodeLostOutputProof(this,options); }
   inspectExpiredContinuation() { return inspectExpiredContinuation(this); }
   prepareExpiredContinuation(options) { return prepareExpiredContinuation(this,options); }
+  inspectUndispatchedContinuation() { return inspectUndispatchedContinuation(this); }
+  prepareUndispatchedContinuation(options) { return prepareUndispatchedContinuation(this,options); }
   followContinuation() { return followContinuation(this); }
   inspectUnpaidContinuation() { return inspectUnpaidContinuation(this); }
   prepareUnpaidContinuation(options) { return prepareUnpaidContinuation(this, options); }

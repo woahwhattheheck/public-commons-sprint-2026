@@ -1,0 +1,2 @@
+# Optional Microsoft insight worker; the Node player runs independently.
+agent-framework-core==1.21.0

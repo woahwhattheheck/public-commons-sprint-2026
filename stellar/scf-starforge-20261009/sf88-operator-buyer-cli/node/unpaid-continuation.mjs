@@ -208,7 +208,8 @@ export async function prepareUnpaidContinuation(operation, options = {}) {
   return locked(operation, async () => {
     signalCheck(signal);
     await operation._bound();
-    need(!await exists(join(operation.directory, 'expired-continuation.json')),
+    need(!await exists(join(operation.directory, 'expired-continuation.json'))&&
+      !await exists(join(operation.directory, 'undispatched-continuation.json')),
       'CONTINUATION_ALREADY_SELECTED');
     let failure = await originalFailure(operation);
     need(failure.eligible, 'UNPAID_CONTINUATION_REQUIRES_DEFINITIVE_UNPAID_FAILURE');

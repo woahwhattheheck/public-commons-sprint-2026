@@ -63,6 +63,10 @@ export async function startN8nWorkspace({ merchant, port = 0 } = {}) {
           match[1] = id;
         }
         if (['GET', 'HEAD'].includes(request.method)) {
+          if (url.pathname === '/api/launch') {
+            if (!merchant.launch) throw fault('LAUNCH_UNAVAILABLE', 'Use the original merchant launch for this private operator.', 404);
+            return send(200, merchant.launch);
+          }
           if (url.pathname === '/api/state') return send(200, await merchant.snapshot());
           if (url.pathname === '/api/export') return send(200, await merchant.exportState(), undefined,
             { 'content-disposition': 'attachment; filename="automation-merchant.json"' });
