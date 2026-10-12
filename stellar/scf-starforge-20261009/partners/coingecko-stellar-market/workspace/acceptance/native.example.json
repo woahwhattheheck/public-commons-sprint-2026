@@ -1,0 +1,24 @@
+{
+  "schema": "coingecko.native-acceptance-config.v1",
+  "sourceRoot": null,
+  "sourceRef": "",
+  "directory": "./native-run",
+  "vendorSourceDirectory": "./provider-sources",
+  "publicConfigFile": "./public-account-assignment.json",
+  "originalPaidResult": "./original-paid-outcome.json",
+  "originalPaidResultSha256": "REPLACE_WITH_THE_ORIGINAL_PUBLIC_OUTCOME_SHA256",
+  "rpcUrl": "https://soroban-rpc.testnet.stellar.gateway.fm",
+  "signerOwnershipDirectory": "<existing-shared-signer-ownership-directory>",
+  "buyerSecretEnv": "HPD_BUYER_SECRET",
+  "facilitatorSecretEnv": "HPD_FACILITATOR_SECRET",
+  "merchantOrigin": "https://coingecko-staging.example",
+  "profile": {
+    "id": "coingecko-native-testnet",
+    "name": "Existing testnet account / CoinGecko staging"
+  },
+  "browser": {
+    "output": "browser-output",
+    "chromium": null,
+    "playwrightModule": null
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "schema": "stellar-forge.application-config.v1",
+  "applicationId": "selected-stellar-client",
+  "runtimeDirectory": "/srv/starforge/node_modules/@tokenjunkielabs/starforge-merchant/source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli",
+  "handoffDirectory": "/srv/private/selected-stellar-client/merchant-handoff",
+  "stateDirectory": "/srv/private/selected-stellar-client/application",
+  "subject": "receiving-operator"
+}
+
