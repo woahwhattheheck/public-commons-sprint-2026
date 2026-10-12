@@ -128,6 +128,48 @@ def copy_retained_graph(source, destination, inventory_file):
               "source": str(source), "destination": str(destination), "counts": counts, "files": rows})
     return {**counts, "inventory": file_digest(inventory_file)}
 
+def inspect_installed_leaf(leaf):
+    """Bind the complete original installed tree without claiming archive SRI."""
+    selected = leaf["installedDonor"]; root = Path(selected["path"])
+    need(root.is_absolute() and root.resolve(strict=True) == root and root.is_dir(),
+         "ORIGINAL_INSTALLED_LEAF_ROOT_CHANGED")
+    lock = Path(selected["lockPath"])
+    need(file_digest(lock) == {"bytes": selected["lockBytes"], "sha256": selected["lockSha256"]},
+         "ORIGINAL_INSTALLED_LEAF_LOCK_CHANGED")
+    native_lock = json.loads(lock.read_text())
+    need(native_lock.get("lockfileVersion") == 3 and
+         native_lock["packages"]["node_modules/" + leaf["name"]] == selected["lockEntry"],
+         "ORIGINAL_INSTALLED_LEAF_ENTRY_CHANGED")
+    rows, directories = [], []
+    def visit(path):
+        before = path.lstat(); names = sorted(os.listdir(path))
+        need(stat.S_ISDIR(before.st_mode), "INSTALLED_LEAF_DIRECTORY_REQUIRED")
+        directories.append((path, snapshot(before), names))
+        for name in names:
+            child = path / name; info = child.lstat()
+            if stat.S_ISDIR(info.st_mode): visit(child)
+            elif stat.S_ISREG(info.st_mode):
+                rows.append({"path": child.relative_to(root).as_posix(), "kind": "file",
+                             "mode": stat.S_IMODE(info.st_mode), **file_digest(child)})
+            else: raise RuntimeError("INSTALLED_LEAF_SPECIAL_FILE_UNSUPPORTED")
+    visit(root)
+    for path, identity, names in directories:
+        need(snapshot(path.lstat()) == identity and sorted(os.listdir(path)) == names,
+             "ORIGINAL_INSTALLED_LEAF_DIRECTORY_CHANGED")
+    need(rows == selected["files"] and digest_bytes(json_bytes(rows)) == selected["inventorySha256"],
+         "ORIGINAL_INSTALLED_LEAF_BYTES_CHANGED")
+    package = json.loads((root / "package.json").read_text())
+    need(package.get("name") == leaf["name"] and package.get("version") == leaf["version"],
+         "ORIGINAL_INSTALLED_LEAF_PACKAGE_CHANGED")
+    need(file_digest(lock) == {"bytes": selected["lockBytes"], "sha256": selected["lockSha256"]},
+         "ORIGINAL_INSTALLED_LEAF_LOCK_CHANGED_DURING_READ")
+    return {"outcome": "verified", "sourceKind": "received-installed-tree",
+            "source": str(root), "name": leaf["name"], "version": leaf["version"],
+            "files": len(rows), "bytes": sum(row["bytes"] for row in rows),
+            "inventorySha256": selected["inventorySha256"],
+            "originalLockSha256": selected["lockSha256"],
+            "originalLockEntry": selected["lockEntry"], "archiveIntegrityVerified": False}
+
 def compose_lock(originals, package_json):
     need(all(v["lockfileVersion"] == 3 and isinstance(v.get("packages"), dict) for v in originals), "ORIGINAL_LOCK_FORMAT_CHANGED")
     primary = copy.deepcopy(originals[0]); merged = {}
@@ -346,6 +388,8 @@ class Run:
         import node_lockfile_cache as lock_cache
         cached = []
         for leaf in cfg["leaf_packages"]:
+            if leaf.get("installedDonor"):
+                cached.append(inspect_installed_leaf(leaf)); continue
             args = SimpleNamespace(cache_root=leaf["cacheRoot"], package=leaf["name"], version=leaf["version"],
                 integrity=package_cache.integrity(leaf["integrity"]), destination=None, max_archive_bytes=32*1024*1024,
                 max_tar_bytes=128*1024*1024, max_members=20000, scratch_root=str(self.work/"tmp"), capture_paths=False)
@@ -407,12 +451,22 @@ class Run:
         leaf_results = []
         for leaf in cfg["leaf_packages"]:
             target = installation/"node_modules"/leaf["name"]; need(not os.path.lexists(target), "LEAF_COLLIDES_WITH_ORIGINAL_GRAPH")
-            args = SimpleNamespace(cache_root=leaf["cacheRoot"], package=leaf["name"], version=leaf["version"],
-                integrity=package_cache.integrity(leaf["integrity"]), destination=str(target), max_archive_bytes=32*1024*1024,
-                max_tar_bytes=128*1024*1024, max_members=20000, scratch_root=str(self.work/"tmp"), capture_paths=False)
-            report = {"outcome":"error","source":None,"archive":None,"package":None,
-                      "destination":{"path":str(target),"created":False,"complete":False,"files_written":0,"bytes_written":0}}
-            need(package_cache.run(args, report) == 0 and report["destination"]["complete"], "ORIGINAL_LEAF_MATERIALIZATION_FAILED")
+            if leaf.get("installedDonor"):
+                report = inspect_installed_leaf(leaf)
+                inventory = self.output / ("installed-leaf-" + leaf["name"] + ".json")
+                copied = copy_retained_graph(Path(leaf["installedDonor"]["path"]), target, inventory)
+                received = json.loads(inventory.read_text())
+                need(received["files"] == leaf["installedDonor"]["files"],
+                     "RECEIVED_INSTALLED_LEAF_BYTES_CHANGED")
+                inspect_installed_leaf(leaf)
+                report = {**report, "destination": str(target), "received": copied}
+            else:
+                args = SimpleNamespace(cache_root=leaf["cacheRoot"], package=leaf["name"], version=leaf["version"],
+                    integrity=package_cache.integrity(leaf["integrity"]), destination=str(target), max_archive_bytes=32*1024*1024,
+                    max_tar_bytes=128*1024*1024, max_members=20000, scratch_root=str(self.work/"tmp"), capture_paths=False)
+                report = {"outcome":"error","source":None,"archive":None,"package":None,
+                          "destination":{"path":str(target),"created":False,"complete":False,"files_written":0,"bytes_written":0}}
+                need(package_cache.run(args, report) == 0 and report["destination"]["complete"], "ORIGINAL_LEAF_MATERIALIZATION_FAILED")
             actual = json.loads((target/"package.json").read_text())
             bins = lock_cache.create_bins(installation/"node_modules", {"path":"node_modules/"+leaf["name"],"kind":"archive"}, actual)
             leaf_results.append({"result":report,"bins":bins})
