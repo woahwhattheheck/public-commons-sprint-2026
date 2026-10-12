@@ -1,11 +1,11 @@
 // MIT. Resume the original native-plan delivery on the existing grant receiving Page.
 import {mkdir,open,link,rename,unlink} from 'node:fs/promises';
 import {constants} from 'node:fs';
-import {resolve,join,dirname,relative,isAbsolute} from 'node:path';
+import {resolve,join,dirname,relative,isAbsolute,basename} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {createHash,randomUUID} from 'node:crypto';
 import {ENVELOPE,restoreVersion} from './dist/grant-submission-core.mjs';
-import {planSummary} from './dist/grant-plan-core.mjs';
+import {planSummary,reviewBasis} from './dist/grant-plan-core.mjs';
 import {verifyHandover} from './dist/grant-handover-source.mjs';
 import {SUBMISSION_ROUTES} from './grant-submission.mjs';
 
@@ -99,10 +99,18 @@ function nativeSelection(draft,original,planningSha256,{applied=true}={}){
   const reviews=[draft.planningReview,...[...draft.versions].reverse().map(item=>item.planningReview)]
     .filter(item=>item?.sourceSha===planningSha256);
   const selected=reviews.find(item=>item.applications?.some(application=>application.kind==='answer'&&application.id==='delivery'));
-  if(applied)need(selected,'Retain the actual reviewed native plan application to Delivery.');
-  const review=selected||reviews[0]||null;
-  const application=selected?.applications.filter(item=>item.kind==='answer'&&item.id==='delivery').at(-1)||null;
+  const review=applied?draft.planningReview:selected||reviews[0]||null;
+  const application=review?.applications?.filter(item=>item.kind==='answer'&&item.id==='delivery').at(-1)||null;
+  if(applied)need(review?.sourceSha===planningSha256&&review.summaryReviewed&&
+    review.previewBasis===reviewBasis(review)&&application?.mode==='replace'&&
+    application.basis===review.previewBasis&&application.text===review.previewText&&
+    draft.answers.find(item=>item.id==='delivery')?.text===application.text,
+    'Retain the accepted Delivery answer and its exact current reviewed planning application. Later edited work remains a separate complete draft.');
   return {source,review,application,preview:application?.text||review?.previewText||''};
+}
+function hasDeliveryHistory(draft,planningSha256){
+  return [draft.planningReview,...draft.versions.map(item=>item.planningReview)].some(review=>
+    review?.sourceSha===planningSha256&&review.applications?.some(item=>item.kind==='answer'&&item.id==='delivery'));
 }
 async function browserRecords(page,ids,legacySelection=null){
   return page.evaluate(async ({ids,legacySelection})=>{
@@ -139,8 +147,9 @@ export async function receiveGrantPlanning(page,{
   const origin=new URL(expectedOrigin),initialUrl=page.url();
   need(origin.origin===expectedOrigin&&origin.protocol==='http:'&&['127.0.0.1','localhost'].includes(origin.hostname)&&origin.port,
     'Use the original installed loopback listener.');
-  need(new URL(initialUrl).origin===expectedOrigin&&new URL(initialUrl).pathname==='/grant.html',
-    'Continue from the original grant reader on this Page.');
+  need(new URL(initialUrl).origin===expectedOrigin&&['/grant.html','/grant-submission.html'].includes(new URL(initialUrl).pathname),
+    'Continue from the original grant reader or its retained submission editor on this Page.');
+  const startsInEditor=new URL(initialUrl).pathname==='/grant-submission.html';
   const output=resolve(outputDirectory),selected=resolve(planningFile),original=await ordinary(selected);
   need(sha(original)===planningSha256,'The original planning file differs from the selected saved edition.');
   need(!activePages.has(page)&&!activeOutputs.has(output),'Continue the existing callback already operating this Page and output.');
@@ -179,6 +188,12 @@ export async function receiveGrantPlanning(page,{
       return item;
     };
     const commitJournal=async()=>publish(journalPath,json(journal),{replace:true});
+    const inputPath=journal.selectedInput?artifactPath(output,journal.selectedInput):join(output,'selected-input',basename(selected));
+    if(journal.selectedInput){
+      const bytes=await ordinary(inputPath);need(bytes.length===original.length&&sha(bytes)===planningSha256,
+        'Retain the exact selected input copy for this original operation.');
+    }else journal.selectedInput=keep(await retain(output,inputPath,original));
+    await commitJournal();
     const phase=async(name,details={})=>{
       journal.phases[name]={...details,completedAt:journal.phases[name]?.completedAt||new Date().toISOString()};
       await commitJournal();
@@ -208,6 +223,7 @@ export async function receiveGrantPlanning(page,{
     const errors=[],onError=error=>errors.push(String(error.message||error));
     let initialScroll=null,failure=null,viewRestored=false,selection=null,reopened=null;
     let editorOpened=false,currentDocumentSha=null,snapshots=[],activePhase='source';
+    const returnUrl=startsInEditor?(journal.reader?.origin===expectedOrigin?journal.reader.url:new URL('/grant.html',expectedOrigin).href):initialUrl;
     const updateAttempt=async(name)=>{
       activePhase=name;attempt.phase=name;attempt.updatedAt=new Date().toISOString();
       await publish(join(attemptDirectory,'progress.json'),json(attempt),{replace:true});
@@ -246,6 +262,43 @@ export async function receiveGrantPlanning(page,{
       }
       await commitJournal();return result;
     };
+    const boundBrowser=()=>journal.browser?.origin===expectedOrigin?journal.browser:
+      journal.selectedBrowser?.origin===expectedOrigin?journal.selectedBrowser:null;
+    const chooseBrowser=records=>{
+      const bound=boundBrowser();
+      if(bound){
+        const record=records.find(item=>item.id===bound.id);
+        need(record,'The original bound browser record is absent. Retain its exact identity; reopen that record or receive the accepted files in the intended new browser origin.');
+        return record;
+      }
+      need(records.length<=1,'More than one native browser record matches this operation. Their complete snapshots are retained. Open the intended record through Browser drafts and resume from that editor.');
+      return records[0]||null;
+    };
+    const savedStateEvidence=item=>{
+      const accepted=stateHash(full.document.draft),draft=item.document.draft;
+      if(draft.id!==full.document.draft.id)return null;
+      if(stateHash(draft)===accepted)return {recordId:item.id,revision:item.revision,versionId:null,
+        acceptedStateSha256:accepted,snapshot:item.file};
+      for(const version of draft.versions){
+        if(version.planningReview?.sourceSha!==planningSha256||
+          version.answers.find(answer=>answer.id==='delivery')?.text!==selection.preview)continue;
+        if(stateHash(restoreVersion(draft,version.id))===accepted)return {recordId:item.id,revision:item.revision,
+          versionId:version.id,acceptedStateSha256:accepted,snapshot:item.file};
+      }
+      return null;
+    };
+    const retainedSaveEvidence=async record=>{
+      let evidence=savedStateEvidence(record);if(evidence)return evidence;
+      for(const previous of journal.browserSnapshots){
+        if(previous.id!==record.id||previous.origin!==expectedOrigin||previous.revision>record.revision||
+          previous.relativePath===record.file.relativePath)continue;
+        const path=artifactPath(output,previous),bytes=await ordinary(path);
+        need(sha(bytes)===previous.sha256,'Retain the actual saved browser snapshot bytes.');
+        const item={...previous,document:await envelope(bytes),file:receipt(output,path,bytes)};
+        evidence=savedStateEvidence(item);if(evidence)return evidence;
+      }
+      return null;
+    };
     page.on('pageerror',onError);
     try{
       const routes=new Map(SUBMISSION_ROUTES.map(([route,[filename]])=>[route,filename]));
@@ -261,19 +314,50 @@ export async function receiveGrantPlanning(page,{
       const sourceEdition={sourceCommit,files:sourceFiles};
       if(!journal.sourceEditions.some(item=>canonical(item)===canonical(sourceEdition)))journal.sourceEditions.push(sourceEdition);
       await commitJournal();
-      initialScroll=await page.evaluate(()=>({x:scrollX,y:scrollY}));
+      initialScroll=startsInEditor?(journal.reader?.origin===expectedOrigin?journal.reader.scroll:null):await page.evaluate(()=>({x:scrollX,y:scrollY}));
+      if(!startsInEditor){journal.reader={origin:expectedOrigin,url:initialUrl,scroll:initialScroll};await commitJournal();}
+      if(startsInEditor){
+        editorOpened=true;
+        await page.waitForFunction(()=>document.getElementById('workspace-root')&&!document.getElementById('workspace-root').inert&&document.getElementById('draft-title'),null,{timeout:15000});
+        const current=await capture(relative(output,join(attemptDirectory,'Resumed_Editor_Submission.json')));keep(current.file);
+        const ids=[journal.draftId,prepared?.document.draft.id,full?.document.draft.id,journal.browser?.draftId].filter(Boolean);
+        const legacySelected=!ids.length&&legacyRaw&&current.document.draft.title===selectedTitle&&
+          current.document.draft.planSources?.some(source=>source.sha256===planningSha256);
+        need(ids.includes(current.document.draft.id)||legacySelected,
+          'This open editor is a different selected draft. Its complete file is retained; reopen this operation\'s original draft before continuing.');
+        const selectedRecord=await page.locator('#workspace-root').evaluate(root=>({
+          id:root.dataset.savedDraftId||null,revision:Number(root.dataset.savedDraftRevision||0),draftId:root.dataset.draftId||null,
+          dirty:root.dataset.draftDirty==='true'}));
+        if(selectedRecord.id){
+          const records=await retainBrowser([current.document.draft.id]);
+          const record=records.find(item=>item.id===selectedRecord.id),bound=boundBrowser();
+          need(record&&record.draftId===current.document.draft.id&&selectedRecord.draftId===record.draftId&&
+            Number.isSafeInteger(selectedRecord.revision)&&selectedRecord.revision>0&&record.revision===selectedRecord.revision&&
+            (selectedRecord.dirty||stateHash(current.document.draft)===stateHash(record.document.draft)),
+            'Keep the actual native record selected in this editor.');
+          need(!bound||bound.id===record.id,'This editor has another saved copy open. Reopen the original bound browser record before resuming this operation.');
+          if(!bound)journal.selectedBrowser={id:record.id,revision:selectedRecord.revision,draftId:record.draftId,origin:expectedOrigin};
+        }
+        journal.workingDraft=current.file;await commitJournal();
+      }
 
       if(!full&&!prepared&&legacyRaw){
         await updateAttempt('recover_original_browser_save');
         snapshots=await retainBrowser([],{title:selectedTitle,planningSha256});
-        const recovered=snapshots.find(item=>{
-          try{nativeSelection(item.document.draft,original,planningSha256);return true;}catch{return false;}
-        });
+        const selectedRecord=chooseBrowser(snapshots);
+        let recovered=null;
+        if(selectedRecord){
+          try{nativeSelection(selectedRecord.document.draft,original,planningSha256);recovered=selectedRecord;}catch(error){
+            need(!hasDeliveryHistory(selectedRecord.document.draft,planningSha256),
+              'The retained legacy record has a later Delivery answer or planning review. Its complete file is preserved. Open the exact accepted version before recovering the original delivery.');
+            throw error;
+          }
+        }
         if(recovered){
           const bytes=await ordinary(recovered.file.path);
           full={document:await envelope(bytes),bytes,file:await retain(output,join(output,'SCF_Native_Plan_Submission.json'),bytes)};
           journal.recoveredLegacyBrowser={id:recovered.id,revision:recovered.revision,draftId:recovered.draftId,origin:expectedOrigin};
-          await commitJournal();
+          if(!boundBrowser())journal.selectedBrowser=journal.recoveredLegacyBrowser;await commitJournal();
         }
       }
       if(!full){
@@ -284,7 +368,8 @@ export async function receiveGrantPlanning(page,{
           journal.draftId=prepared.document.draft.id;await phase('original_draft',{draftId:journal.draftId});
         }else{journal.draftId=prepared.document.draft.id;keep(prepared.file);await commitJournal();}
         snapshots=await retainBrowser([journal.draftId]);
-        const candidates=[...snapshots.map(item=>({document:item.document,file:item.file}))];
+        const selectedRecord=chooseBrowser(snapshots);
+        const candidates=selectedRecord?[{document:selectedRecord.document,file:selectedRecord.file,browser:selectedRecord}]:[];
         if(journal.workingDraft){
           const file=journal.workingDraft,bytes=await ordinary(artifactPath(output,file));
           need(sha(bytes)===file.sha256,'Retain the interrupted editor bytes.');
@@ -294,15 +379,21 @@ export async function receiveGrantPlanning(page,{
           if(item.document.draft.id!==journal.draftId)return false;
           try{nativeSelection(item.document.draft,original,planningSha256);return true;}catch{return false;}
         });
+        if(selectedRecord&&!boundBrowser()){
+          journal.selectedBrowser={id:selectedRecord.id,revision:selectedRecord.revision,draftId:selectedRecord.draftId,origin:expectedOrigin};
+          await commitJournal();
+        }
         if(recovered){
           const bytes=await ordinary(recovered.file.path);
           full={document:await envelope(bytes),bytes,file:await retain(output,join(output,'SCF_Native_Plan_Submission.json'),bytes)};
         }else{
+          need(!candidates.some(item=>item.document.draft.id===journal.draftId&&hasDeliveryHistory(item.document.draft,planningSha256)),
+            'An applied Delivery is followed by later answer or review edits. Complete interrupted and browser snapshots are retained. Select the exact accepted version or review the intended current Delivery in the original editor before continuing.');
           const working=candidates.find(item=>item.document.draft.id===journal.draftId&&
             item.document.draft.planSources?.some(source=>source.sha256===planningSha256))||prepared;
           await openDraft(working);await page.locator('#view').selectOption('planning');currentDocumentSha=null;
           if(!working.document.draft.planSources?.some(source=>source.sha256===planningSha256)){
-            await choose('Receive native plan or planning ZIP',selected);await ready('native plan revisions');
+            await choose('Receive native plan or planning ZIP',inputPath);await ready('native plan revisions');
           }
           await page.getByLabel('Retained planning file',{exact:true}).selectOption(planningSha256);
           const revisions=page.getByLabel('Native saved revision',{exact:true});
@@ -328,17 +419,25 @@ export async function receiveGrantPlanning(page,{
       reopened=priorReopened;
       if(!reopened){
         await updateAttempt('browser_saved');
-        let record=snapshots.find(item=>item.id===journal.browser?.id&&journal.browser?.origin===expectedOrigin)
-          ||snapshots.find(item=>item.document.draft.id===journal.draftId&&stateHash(item.document.draft)===stateHash(full.document.draft))
-          ||snapshots.find(item=>item.document.draft.id===journal.draftId&&item.document.draft.planSources?.some(source=>source.sha256===planningSha256));
-        if(!record){
-          await openDraft(full);await page.getByRole('button',{name:'Save version',exact:true}).click();await ready('Saved browser revision');currentDocumentSha=null;
+        let record=chooseBrowser(snapshots.filter(item=>item.document.draft.id===journal.draftId));
+        let evidence=record?await retainedSaveEvidence(record):null;
+        if(!evidence){
+          if(record){
+            await editor();
+            const current=await capture(relative(output,join(attemptDirectory,'Before_Pending_Browser_Save.json')));keep(current.file);
+            const bound=await page.locator('#workspace-root').evaluate(root=>({
+              id:root.dataset.savedDraftId||null,revision:Number(root.dataset.savedDraftRevision||0)}));
+            need(bound.id===record.id&&bound.revision===record.revision&&stateHash(current.document.draft)===stateHash(full.document.draft),
+              'The selected browser record does not yet retain the accepted Delivery. Both complete files are preserved. Continue its original editor with the accepted working state and saved-record binding; importing a full draft as a new copy does not update this record.');
+          }else await openDraft(full);
+          await page.getByRole('button',{name:'Save version',exact:true}).click();await ready('Saved browser revision');currentDocumentSha=null;
           snapshots=await retainBrowser([journal.draftId]);
-          record=snapshots.find(item=>stateHash(item.document.draft)===stateHash(full.document.draft));
-          need(record,'Reopen the accepted save in the original browser draft store.');
+          record=chooseBrowser(snapshots.filter(item=>item.document.draft.id===journal.draftId));
+          evidence=record?await retainedSaveEvidence(record):null;
+          need(evidence,'Read back the accepted Delivery from its actual native saved record before completing this phase.');
         }
         journal.browser={id:record.id,revision:record.revision,draftId:record.draftId,origin:expectedOrigin};
-        await phase('browser_saved',journal.browser);
+        await phase('browser_saved',{...journal.browser,accepted:evidence});
       }
 
       await updateAttempt('full_export_reopened');
@@ -375,8 +474,11 @@ export async function receiveGrantPlanning(page,{
         need(record,'Open the original saved browser draft record.');
         await page.locator('#view').selectOption('answers');await page.locator('#view').selectOption('saved');
         await page.getByRole('heading',{name:'Browser drafts',exact:true}).waitFor();
-        const card=page.locator('article.card').filter({has:page.getByRole('heading',{name:record.name,exact:true})})
-          .filter({has:page.getByText('Revision '+record.revision+' · '+record.updatedAt,{exact:true})});
+        const allCards=page.locator('article.card[data-saved-draft-id]');
+        await page.waitForFunction(id=>[...document.querySelectorAll('article.card[data-saved-draft-id]')].some(card=>card.dataset.savedDraftId===id),record.id,{timeout:15000});
+        const cardIndex=await allCards.evaluateAll((cards,id)=>cards.findIndex(card=>card.dataset.savedDraftId===id),record.id);
+        need(cardIndex>=0,'Open the actual original saved record card.');const card=allCards.nth(cardIndex);
+        need(await card.getAttribute('data-saved-draft-id')===record.id,'The original saved record selection changed.');
         await card.getByRole('button',{name:'Open this draft',exact:true}).click();await ready('Opened browser revision');
         reopened=await capture('Reopened_Browser_Submission.json');
         need(reopened.document.draft.id===record.draftId,'Open the exact original saved browser draft identity.');
@@ -400,12 +502,15 @@ export async function receiveGrantPlanning(page,{
       failure={error:String(error.message||error),phase:activePhase,editor:editorState,pageErrors:errors};
     }finally{
       try{
-        if(page.url()!==initialUrl)await page.goto(initialUrl,{waitUntil:'load',timeout:30000});
-        if(initialScroll)await page.evaluate(scroll=>scrollTo(scroll.x,scroll.y),initialScroll);viewRestored=page.url()===initialUrl;
+        if(!failure){
+          if(page.url()!==returnUrl)await page.goto(returnUrl,{waitUntil:'load',timeout:30000});
+          if(initialScroll)await page.evaluate(scroll=>scrollTo(scroll.x,scroll.y),initialScroll);
+        }
+        viewRestored=page.url()===returnUrl;
       }catch(error){failure??={phase:'reader_restored',pageErrors:errors};failure.restoreError=String(error.message||error);}
       page.off('pageerror',onError);
     }
-    if(viewRestored)await phase('reader_restored',{url:initialUrl});
+    if(viewRestored)await phase('reader_restored',{url:returnUrl});
     const summary=selection?planSummary(selection.source,selection.review.revision):null;
     const result={schema:SCHEMA,operationId,intentSha256,sourceCommit:proposed.initialSourceCommit,receivingSourceCommit:sourceCommit,
       planningFile:selected,planningSha256,status:failure||!viewRestored?'INTERRUPTED':'COMPLETE',attemptId,
