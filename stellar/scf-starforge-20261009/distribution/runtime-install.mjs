@@ -299,8 +299,10 @@ async function runNpm(npm, args, { target, log, lease, env }) {
 }
 
 /** Recover a completed interrupted attempt before deciding whether npm must run. */
-export async function installRuntime({ directory, offline = false, cache = null, npm = 'npm', nodeHeaders = null } = {}) {
-  need(typeof offline === 'boolean' && typeof npm === 'string' && npm && !npm.includes('\0') &&
+export async function installRuntime({ directory, offline = false, cache = null, npm = 'npm', nodeHeaders = null,
+  adoptExisting = false } = {}) {
+  need(typeof offline === 'boolean' && typeof adoptExisting === 'boolean' &&
+    typeof npm === 'string' && npm && !npm.includes('\0') &&
     (cache === null || typeof cache === 'string' && cache && !cache.includes('\0')) &&
     (nodeHeaders === null || typeof nodeHeaders === 'string' && nodeHeaders && !nodeHeaders.includes('\0')),
     'RUNTIME_INSTALL_OPTIONS_INVALID');
@@ -317,15 +319,20 @@ export async function installRuntime({ directory, offline = false, cache = null,
       return { status: 'READY', directory: target, reused: true, ...observed,
         sourceRoot: plan.sourceRoot, dependencyRoot: target, entrypoint: plan.entrypoint };
     }
-    if (state.phase === 'INSTALLING' || state.phase === 'FAILED') {
+    if (adoptExisting || state.phase === 'INSTALLING' || state.phase === 'FAILED') {
       observed = await inspect(installed, { checkRecordedLock: false });
       if (observed.ready) {
+        const adoption = { recoveredExistingInstall: state.phase !== 'PREPARED',
+          ...(adoptExisting ? { adoptedRetainedDependencies: true } : {}) };
         state = { ...state, phase: 'READY', stage: 'COMPLETE', completedAt: now(), updatedAt: now(),
-          lockSha256: observed.lockSha256, recoveredExistingInstall: true };
+          lockSha256: observed.lockSha256, ...adoption };
         await save(target, 'install-state.json', state, true);
-        return { status: 'READY', directory: target, recoveredExistingInstall: true, ...observed,
+        return { status: 'READY', directory: target, ...adoption, ...observed,
           sourceRoot: plan.sourceRoot, dependencyRoot: target, entrypoint: plan.entrypoint };
       }
+      if (adoptExisting) throw Object.assign(fail('RUNTIME_RETAINED_DEPENDENCIES_UNAVAILABLE',
+        'The retained dependency graph does not satisfy this selected runtime; inspect the returned findings'),
+        { inspection: observed });
     }
     const existingLock = await lockDigest(target);
     // A completed extraction is durable before native preparation begins.
@@ -422,6 +429,11 @@ export async function installRuntime({ directory, offline = false, cache = null,
     if (log) { await log.sync().catch(() => {}); await log.close(); }
     await lease.close();
   }
+}
+
+/** Adopt a complete retained graph using the original source/profile and kernel lease. */
+export async function adoptRuntimeDependencies({ directory } = {}) {
+  return installRuntime({ directory, adoptExisting: true });
 }
 
 export async function inspectRuntimeInstall({ directory, load = false, source = false, python } = {}) {
@@ -527,5 +539,5 @@ export async function launchRuntime(options) {
 }
 
 function installationRunbook(plan, profile) {
-  return `# Starforge runtime installation\n\nSource: ${plan.source.sourceCommit}\nPackage: ${plan.source.packageVersion}\nProfile: ${profile.profileId}\n\nRun the maintained runtime-install command with --dir pointing at this directory.\nThe original package is at package/; selected dependencies install in the sibling\nnode_modules/. Native module resolution therefore follows the original source.\n\n1. Run runtime-install install --dir DIRECTORY (add --offline for a populated npm cache).\n2. Run runtime-install inspect --dir DIRECTORY --load.\n3. Run runtime-install run --dir DIRECTORY -- source, then use the original product commands.\n\nThe installation has its own package-lock.json. Interrupted installs resume in this\nsame directory; the kernel lock prevents another npm writer. A completed interrupted\nattempt is adopted when the selected dependencies and lock are already present.\n\nUpgrade or recover into a new directory with runtime-install upgrade/recover --from\nTHIS_DIRECTORY --dir NEW_DIRECTORY. Exact recovery reuses the original dependency\nlock through npm ci. Select the new absolute sourceRoot/dependencyRoot in the\noriginal host/container plan and use its existing stop/start/recovery workflow.\nThe previous runtime remains available for that workflow's rollback.\n\nSource root: ${plan.sourceRoot}\nDependency root: ${plan.dependencyRoot}\nOriginal command: ${plan.entrypoint}\n\nDeclared SQLite bindings are prepared with their exact original install hook after\nscript-free dependency extraction. Each readiness inspection operates an isolated\nin-memory database. Offline native builds also need matching local Node headers;\nuse --node-headers NODE_HEADER_PREFIX (containing include/node). Install state\nretains the completed dependency lock before the native stage, so resume preserves\nthat tree and continues preparation under the same kernel lock.\n\nPrivate npm logs remain install-N-UUID.log; install-state.json names the current log. Source, signatures, operator state and\ncredentials belong to their existing original components.\n`;
+  return `# Starforge runtime installation\n\nSource: ${plan.source.sourceCommit}\nPackage: ${plan.source.packageVersion}\nProfile: ${profile.profileId}\n\nRun the maintained runtime-install command with --dir pointing at this directory.\nThe original package is at package/; selected dependencies install in the sibling\nnode_modules/. Native module resolution therefore follows the original source.\n\n1. Run runtime-install install --dir DIRECTORY (add --offline for a populated npm cache).\n2. Run runtime-install inspect --dir DIRECTORY --load.\n3. Run runtime-install run --dir DIRECTORY -- source, then use the original product commands.\n\nThe installation has its own package-lock.json. Interrupted installs resume in this\nsame directory; the kernel lock prevents another npm writer. A completed interrupted\nattempt is adopted when the selected dependencies and lock are already present.\n\nTo receive a complete retained graph, preserve its entire node_modules layout and\noriginal package-lock.json beside this prepared source, then run runtime-install\ninstall --dir DIRECTORY --adopt-existing. The original installer verifies this\nsource-selected profile, exact dependency versions, imports, native operations and\nlock under its existing lease. An incomplete graph returns its actual findings\nwithout starting npm. The prepared package/profile remain the source of selection.\n\nUpgrade or recover into a new directory with runtime-install upgrade/recover --from\nTHIS_DIRECTORY --dir NEW_DIRECTORY. Exact recovery reuses the original dependency\nlock through npm ci. Select the new absolute sourceRoot/dependencyRoot in the\noriginal host/container plan and use its existing stop/start/recovery workflow.\nThe previous runtime remains available for that workflow's rollback.\n\nSource root: ${plan.sourceRoot}\nDependency root: ${plan.dependencyRoot}\nOriginal command: ${plan.entrypoint}\n\nDeclared SQLite bindings are prepared with their exact original install hook after\nscript-free dependency extraction. Each readiness inspection operates an isolated\nin-memory database. Offline native builds also need matching local Node headers;\nuse --node-headers NODE_HEADER_PREFIX (containing include/node). Install state\nretains the completed dependency lock before the native stage, so resume preserves\nthat tree and continues preparation under the same kernel lock.\n\nPrivate npm logs remain install-N-UUID.log; install-state.json names the current log. Source, signatures, operator state and\ncredentials belong to their existing original components.\n`;
 }

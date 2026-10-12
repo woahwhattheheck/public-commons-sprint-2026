@@ -563,7 +563,12 @@ export async function openStacWorkspace({ directory, title = 'Satellite imagery 
       }
       for (const edition of bundle.editions) {
         const existing = s.editions.find(v => v.id === edition.id);
-        if (existing) { const { receivedFrom, ...original } = existing; need(digestJson(original) === digestJson(edition), 'STAC_HANDOVER_EDITION_CONFLICT'); }
+        if (existing) {
+          // Receiving lineage belongs to each workspace; compare the unchanged source edition.
+          const { receivedFrom: existingReceiver, ...original } = existing;
+          const { receivedFrom: incomingReceiver, ...incoming } = edition;
+          need(digestJson(original) === digestJson(incoming), 'STAC_HANDOVER_EDITION_CONFLICT');
+        }
         else s.editions.push({ ...edition, receivedFrom: bundle.sourceWorkspaceId });
       }
       const receipt = { id: identity('import'), digest, sourceWorkspaceId: bundle.sourceWorkspaceId, editionIds: bundle.editions.map(v => v.id),
