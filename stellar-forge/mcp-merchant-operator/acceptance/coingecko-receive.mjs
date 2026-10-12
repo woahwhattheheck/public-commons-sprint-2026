@@ -173,7 +173,7 @@ try{
       const page=await rows('capture',id,projectId);total+=page.length;
       for(const row of page){
         const detail=await native('merchant_coingecko_row',{workspace,projectId,captureId:id,rowId:row.id});
-        insist(detail.row?.id===row.id,'Original row inspection selected another row');linked+=Array.isArray(detail.included)?detail.included.length:Array.isArray(detail.entities)?detail.entities.length:0;
+        insist(detail.row?.id===row.id,'Original row inspection selected another row');insist(Array.isArray(detail.linkedEntities),'Original row inspection omitted linked entities');linked+=detail.linkedEntities.length;
       }
     }
     const baseline=(await write('baseline','merchant_coingecko_snapshot_create',{projectId,name:'All original retained provider examples',captureIds:C.sampleIds,collectionId:C.collectionId})).value;
