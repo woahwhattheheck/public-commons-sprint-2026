@@ -104,6 +104,13 @@ function present(document, libraryKey) {
   return {...summary(document), canEdit, review: document.review};
 }
 
+// The application and completed-worker receiver produce the same portable
+// match schema through the original event and review normalizers.
+export function createMatchPackage(originalMatch, originalReview = {}) {
+  const match = matchData(originalMatch);
+  return {format: MATCH_PACKAGE_FORMAT, match, review: reviewData(originalReview, match)};
+}
+
 export async function createMatchArchiveStore({directory, maxArchives = 256, maxPerOwner = 64} = {}) {
   if (typeof directory !== 'string' || !directory.trim()) throw new TypeError('Archive directory required');
   directory = resolve(directory);
@@ -204,7 +211,7 @@ export async function createMatchArchiveStore({directory, maxArchives = 256, max
     },
     async exportPackage(id) {
       const document = await read(id);
-      return {format: MATCH_PACKAGE_FORMAT, match: document.match, review: document.review};
+      return createMatchPackage(document.match, document.review);
     },
     async update(id, revision, review, libraryKey) {
       const owner = archiveOwner(libraryKey);

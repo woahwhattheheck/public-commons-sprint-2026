@@ -72,6 +72,24 @@ The ordinary response states are `pending`, `ready`, `busy` and `unavailable`. R
 
 Worker input is one JSON object on stdin. Worker output is one JSON envelope on stdout. The application environment and local filesystem paths stay in the operator runtime.
 
+## Receive an already completed worker result
+
+An operator can create the same ordinary match handover directly from the original input and completed worker envelope:
+
+```sh
+node src/receive_agent_insight.mjs \
+  --input /absolute/path/original-worker-input.json \
+  --result /absolute/path/original-worker-result.json \
+  --scenario high-press --seed 2026 \
+  --output /absolute/path/completed-match.json
+```
+
+Alternatively, replace the scenario and seed options with `--match /absolute/path/original-match.json` to use the full original exported match. The receiver derives the selected frame from those original events and requires the complete worker input to equal the native application's payload for that exact view. It applies the same completed-turn, tool and display admission as the running bridge.
+
+The command emits the existing `counterpress.match.v1` package. Import it through **Saved matches** in the normal player, open the original frame, then use the original coach comparison and export controls. The resulting explanation contains its exact provider jobs, request IDs and tool calls. The original input and worker result file hashes are returned with the handover result.
+
+Repeating the command for the same existing handover returns `REOPENED` after comparing the complete normalized package. The receiver preserves that file and its original capture time. A different result requires a separate output path.
+
 ## Source and original receiving case
 
 The original SDK owner supplied the complete v3 application archive [F0C7ZTGUR4P](https://tokenjunkielabs.slack.com/archives/C0BVDDS04G2/p1791767633829729?thread_ts=1791589634.193009), SHA-256 `8e9e22ddf90418fcf607eec4ab876e224fbe1ec30a108ba84c4194ad8cb102df`, plus the [current three-file delta](https://tokenjunkielabs.slack.com/archives/C0BVDDS04G2/p1791771313024439?thread_ts=1791589634.193009), SHA-256 `754e26c7834ab4ce955d74b0706fffa3f5e5acc272ef469314d3a1ee5ae67481`.

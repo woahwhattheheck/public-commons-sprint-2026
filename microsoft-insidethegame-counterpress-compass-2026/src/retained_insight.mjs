@@ -130,7 +130,7 @@ export function presentRetainedInsight(record, sessionId, {retained = true, dura
     retained, durable, insight: record};
 }
 
-function capture(input, output, originalSessionId) {
+export function captureCompletedInsight(input, output, originalSessionId, capturedAt = new Date().toISOString()) {
   const source = insightScope(input);
   if (output.state !== 'ready' || output.sessionId !== originalSessionId ||
       output.recordedCount !== source.count || output.frameSecond !== source.frameSecond ||
@@ -138,7 +138,8 @@ function capture(input, output, originalSessionId) {
       output.audience !== source.audience || output.locale !== source.locale)
     throw fail(502, 'Insight result does not identify the requested original moment');
   const response = responseValues({...output, originalSessionId});
-  const body = {format: INSIGHT_FORMAT, source, response, capturedAt: new Date().toISOString()};
+  if (!Number.isFinite(Date.parse(capturedAt))) throw fail(400, 'Invalid insight capture time');
+  const body = {format: INSIGHT_FORMAT, source, response, capturedAt: new Date(capturedAt).toISOString()};
   return {id: 'insight-' + hash(body), ...body};
 }
 
@@ -247,7 +248,7 @@ export function createCommentaryContinuity({provider, directory, edition, maxRec
           snapshot: input.snapshot, events: input.events});
         if (output.state !== 'ready') return {...output, sessionId: input.sessionId,
           originalSessionId: record.originalSessionId};
-        record.insight = capture(input, output, record.originalSessionId);
+        record.insight = captureCompletedInsight(input, output, record.originalSessionId);
         completed.set(key, record);
         let durable = true;
         try { await write(record); } catch { durable = false; }
