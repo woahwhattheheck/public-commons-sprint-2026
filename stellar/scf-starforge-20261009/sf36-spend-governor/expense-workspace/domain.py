@@ -135,6 +135,36 @@ def spending_reservation_identity(ledger, request_id, request_digest):
             "request_id": request_id, "request_digest": request_digest}
 
 
+def receipt_reference_identity(row):
+    """Normalize only an original transaction hash; retain opaque references."""
+    ref = row.get("receipt_ref", "")
+    if not isinstance(ref, str) or not ref:
+        return None
+    network, asset = row["network"], row["asset"]
+    matched = re.fullmatch(re.escape(network) + r"/([0-9a-fA-F]{64})", ref)
+    if matched:
+        ref = network + "/" + matched.group(1).lower()
+    elif re.fullmatch(r"[0-9a-fA-F]{64}", ref):
+        ref = network + "/" + ref.lower()
+    return {"network": network, "asset": asset, "receipt_ref": ref}
+
+
+def finalized_request_identity(row):
+    """One retained SF36 finalization, without inventing a physical ledger capture."""
+    if row.get("source_kind", "sf36_ledger") not in ("sf36_ledger", "governed_mcp", "node_operation") or row.get("state") != "settled":
+        return None
+    if not all(isinstance(row.get(k), str) and re.fullmatch(r"[0-9a-f]{64}", row[k]) for k in ("request_digest", "proof_sha256")):
+        return None
+    reference = receipt_reference_identity(row)
+    receipt = reference["receipt_ref"] if reference else ""
+    transaction = re.fullmatch(re.escape(row["network"]) + r"/([0-9a-fA-F]{64})", receipt)
+    if not transaction or not isinstance(row.get("settled_base_units"), str) or not INTEGER.fullmatch(row["settled_base_units"]):
+        return None
+    return {"request_id": row["request_id"], "request_digest": row["request_digest"],
+        "network": row["network"], "asset": row["asset"], "actual": row["settled_base_units"],
+        "receipt_ref": row["network"] + "/" + transaction.group(1).lower(), "proof_sha256": row["proof_sha256"]}
+
+
 def period_view(period, items, sources, centers, dispositions, closed_transfers=None):
     """Dates are operator recognition dates; native days never become settlement dates."""
     start, through = period["from_day"], period["through_day"]
@@ -144,10 +174,16 @@ def period_view(period, items, sources, centers, dispositions, closed_transfers=
     issues, candidates, exposures, native_outcomes = [], [], [], []
     disposition_by_key = {(d["item_id"], d["code"]): d for d in dispositions}
     closed_transfers = sorted(closed_transfers or [], key=lambda v:(v["period_id"], v["close_id"], v["item_id"]))
-    previously_issued, previously_reserved = {}, {}
+    previously_issued, previously_reserved, previously_finalized, previously_receipted = {}, {}, {}, {}
     for entry in closed_transfers:
         if entry.get("transfer_identity"):
             previously_issued.setdefault(entry["transfer_identity"], []).append(entry)
+        if entry.get("finalized_request"):
+            previously_finalized.setdefault(digest(entry["finalized_request"]), []).append(entry)
+        if entry.get("receipt_reference"):
+            reference = receipt_reference_identity(entry["receipt_reference"])
+            if reference:
+                previously_receipted.setdefault((reference["network"], reference["asset"], reference["receipt_ref"]), []).append(entry)
         if entry.get("spending_reservation"):
             previously_reserved.setdefault(digest(entry["spending_reservation"]), []).append(entry)
         for historical in entry.get("spending_reservation_history", []):
@@ -247,15 +283,11 @@ def period_view(period, items, sources, centers, dispositions, closed_transfers=
                        "request_digest":key[3],"sources":original_contributions(key)},kinds=[])
 
     def receipt_key(row):
-        ref = row.get("receipt_ref", "")
-        matched = re.fullmatch(re.escape(row["network"]) + r"/([0-9a-fA-F]{64})", ref)
-        if matched:
-            ref = row["network"] + "/" + matched.group(1).lower()
-        elif re.fullmatch(r"[0-9a-fA-F]{64}", ref):
-            ref = row["network"] + "/" + ref.lower()
-        return (row["network"], row["asset"], ref)
+        reference = receipt_reference_identity(row)
+        return ((reference["network"], reference["asset"], reference["receipt_ref"])
+                if reference else (row["network"], row["asset"], ""))
 
-    receipt_groups, exact_transfers, exact_spending = {}, {}, {}
+    receipt_groups, exact_transfers, exact_spending, exact_finalizations = {}, {}, {}, {}
     for item in items:
         row = item["row"]
         if row["state"] == "settled" and row.get("receipt_ref") and not item["missing"]:
@@ -264,6 +296,9 @@ def period_view(period, items, sources, centers, dispositions, closed_transfers=
             transfer = row.get("native_detail", {}).get("transfer_identity")
             if transfer:
                 exact_transfers.setdefault(transfer, []).append(item)
+            finalized = finalized_request_identity(row)
+            if finalized:
+                exact_finalizations.setdefault(digest(finalized), []).append(item)
             spending_key = item_reservation_key(item)
             if spending_key is not None:
                 exact_spending.setdefault(spending_key, []).append(item)
@@ -294,6 +329,10 @@ def period_view(period, items, sources, centers, dispositions, closed_transfers=
                 "result_preview_bytes":(detail.get("result_preview") or {}).get("bodyBytes"),
                 "missing":item["missing"], "source_kind":row.get("source_kind", "sf36_ledger"),
                 "data_context":detail.get("data_context", "operational"),
+                **({key:detail.get(key) for key in ("node_intent_id", "node_command_id", "node_context_sha256",
+                    "node_source_sha256", "node_source_bytes", "source_observed_at", "attempt_created_at",
+                    "accounting_completed_at", "record_authority", "chain_observation", "http_status", "buyer_status")}
+                    if row.get("source_kind") == "node_operation" else {}),
                 "store_currency":detail.get("store_currency"), "store_amount":detail.get("store_amount"),
                 **({key:detail.get(key) for key in ("spending_link","spending_state","spending_maximum","spending_actual",
                     "spending_reserved_base_units","spending_reservation_day","spending_request_sha256",
@@ -322,7 +361,11 @@ def period_view(period, items, sources, centers, dispositions, closed_transfers=
                 if key is not None:
                     seen_reservation_issues.add(key)
             continue
-        if row["state"] == "not_dispatched":
+        if row["state"] in ("not_dispatched", "unpaid"):
+            continue
+        if row["state"] == "accounting_unresolved":
+            issue("NODE_ACCOUNTING_UNRESOLVED", item,
+                  "The original Node accounting command has no finalized SF36 result. Retain its native outcome and carry or exclude it while the original operation owner recovers it; no ledger balance is inferred.")
             continue
         if row["state"] == "failed":
             issue("FAILED_NATIVE_PAYMENT", item, "The original saved RPC observation reports this transaction failed. Record its period disposition; the quote amount is not an expense.")
@@ -348,7 +391,9 @@ def period_view(period, items, sources, centers, dispositions, closed_transfers=
             issue("CODING_SOURCE_CHANGED", item, "The native row differs from the allocation's reviewed source; update coding or record its disposition")
             continue
         transfer_identity = row.get("native_detail", {}).get("transfer_identity")
-        prior = previously_issued.get(transfer_identity, [])
+        finalized = finalized_request_identity(row)
+        prior = list({(value["period_id"], value["close_id"], value["item_id"]): value for value in
+            [*previously_issued.get(transfer_identity, []), *previously_finalized.get(digest(finalized), [])]}.values())
         if original_reservation:
             prior = list({(value["period_id"], value["close_id"], value["item_id"]): value for value in
                 [*prior, *previously_reserved.get(digest(original_reservation), [])]}.values())
@@ -356,6 +401,17 @@ def period_view(period, items, sources, centers, dispositions, closed_transfers=
             issue("TRANSFER_ALREADY_ISSUED", item,
                   "The same original transfer or spending reservation is included in another currently closed period. Exclude this representation, or reopen and correct the earlier period before recognising it here.",
                   group={"issued_charges":prior}, kinds=["exclude_from_period"])
+            continue
+        # If either representation is an original Node export, a shared
+        # transaction without two distinct bound events remains ambiguous.
+        # This is symmetric when the Node source is the earlier closed one.
+        prior_reference = [entry for entry in previously_receipted.get(receipt_key(row), [])
+            if (row.get("source_kind") == "node_operation" or entry.get("source_kind") == "node_operation") and
+            (not transfer_identity or not entry.get("transfer_identity") or entry["transfer_identity"] == transfer_identity)]
+        if prior_reference:
+            issue("NODE_PREVIOUS_RECEIPT", item,
+                "A currently closed source uses this transaction reference without a distinct bound event. Exclude this representation or reopen the prior period and review the exact original source together.",
+                group={"issued_charges": prior_reference}, kinds=["exclude_from_period"])
             continue
         selected_lines = []
         for index, line in enumerate(coding["allocations"]):
@@ -377,9 +433,12 @@ def period_view(period, items, sources, centers, dispositions, closed_transfers=
                                    "memo": line["memo"] or coding["memo"], "coding_id": coding["id"], "line": index + 1,
                                    "source_capture": item["capture_id"], "basis": item["basis"],
                                    "native_payment": row.get("native_detail"),
-                                   "original_spending_reservation": original_reservation})
+                                   "original_spending_reservation": original_reservation,
+                                   "original_finalized_request": finalized})
         group = receipt_groups.get(receipt_key(row), [])
-        exact = exact_transfers.get(row.get("native_detail", {}).get("transfer_identity"), [])
+        exact = list({entry["id"]: entry for entry in [*exact_transfers.get(
+            row.get("native_detail", {}).get("transfer_identity"), []),
+            *exact_finalizations.get(digest(finalized), [])]}.values())
         # The same original ledger row can be exposed directly and through its
         # governed quote. Its physical ledger and complete request identity make
         # this an exact duplicate even when the direct statement has no RPC object.
@@ -402,7 +461,7 @@ def period_view(period, items, sources, centers, dispositions, closed_transfers=
 
     # Two source rows with the same original native event cannot both become expense.
     included = {line["item_id"] for line in candidates}
-    for values in [*exact_transfers.values(), *exact_spending.values()]:
+    for values in [*exact_transfers.values(), *exact_spending.values(), *exact_finalizations.values()]:
         selected = included.intersection(item["id"] for item in values)
         if len(selected) > 1:
             for shared in issues:
@@ -445,6 +504,6 @@ def period_view(period, items, sources, centers, dispositions, closed_transfers=
             "by_cost_center": group_amounts(candidates, ("center_code", "center_name")),
             "by_project": group_amounts(candidates, ("project",)), "outstanding_reservations": exposures,
             "outstanding_totals": group_amounts(exposures), "native_payment_outcomes":native_outcomes,
-            "basis": "Original SF36 ledger projections, retained MCP quote/payment observations and original customer refund packets; each native operation retains its original provenance",
+            "basis": "Original SF36 ledger projections, retained MCP quote/payment observations, original Node accounting exports and original customer refund packets; each native operation retains its original provenance",
             "date_basis": "Operator-assigned recognition dates; original reservation or quote-creation days retain their own source meaning",
             "unit_basis": "Exact native base-unit strings, grouped by network and asset; no fiat conversion"}

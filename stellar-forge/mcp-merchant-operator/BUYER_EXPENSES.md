@@ -64,6 +64,7 @@ All tool names below begin `merchant_buyer_expense_`. `expenses tools` and `buye
 | --- | --- | --- |
 | Select and open | `workspaces`, `open`, `state` | Explicitly open one declared original workspace. Read its current revision, sources, centers, labels and periods. |
 | Register or refresh | `ledger_register`, `mcp_register`, `capture`, `source_rebind` | Use a declared original source of the matching type. Registration captures once; later captures are pending editions. Rebind keeps original native identity continuity. |
+| Import original Node accounting | `node_preview`, `node_capture` | Select a host-declared original export, inspect its complete native outcome and retain a pending or reusable capture under the same request/revision contract. |
 | Review source changes | `captures`, `capture_status`, `capture_review` | Page actual native deltas and retain the named accept/reject decision. Complete original captures remain downloadable. |
 | Allocate actual expense | `items`, `item`, `center_save`, `labels_save`, `coding_save` | Exact string amounts must sum to the original settled actual. Recognition date, project and account code are operator decisions. Network and asset remain separate. |
 | Resolve the period | `period_save`, `period_report`, `disposition` | Preserve outstanding reservations and missing-source indications. Resolve only the actual displayed issue with its current basis and allowed disposition. |
@@ -81,6 +82,18 @@ State/history/report tools accept `offset` and `limit` (1–200). Report views e
 The native reader opens original `quotes.sqlite` read-only and preserves each quote's accepted terms, dispatch state, buyer result and saved original payment observation. Only an exact-bound saved native SF86 `TRANSFER_MATCHED` observation supplies settled actual for allocation. Seller-confirmed results and unresolved or failed payment observations remain visible in the same period workflow. The fixed reader performs no network request, reconciliation, signing or payment. Use the original buyer recovery operation first when its report is absent, then explicitly capture and review that source.
 
 MCP quote creation day is a source date, not a settlement date. Recognition remains the operator's explicit decision. The same exact matched transfer cannot close as two included charges through duplicated source captures or another currently closed period. Raw original observation/result metadata is available in capture exports, and `native_payment_outcomes` is a paged report/review/issued view. Purchased result bodies remain with the original buyer.
+
+## Original Node accounting export to period
+
+Declare `nodeSources` on the existing connection workspace. Each alias has an original private `sourceFile`, exact `sourceSha256`, truthful `name` and `provenance`, and explicit `dataContext` (`operational` or `development`). The unchanged producer format is `stellar-forge.node-operation-accounting-export.v1`. The host checks the exact file bytes before native preview or capture.
+
+Call `node_preview` with `workspace`, `nodeSource` and the actual `operator`. Its source/outcome preview includes `preview_sha256`, any previous exact-file capture, the current parent and whether this intake reopens a valid current capture or creates a new pending one. Persist `node_capture` arguments with that digest as `previewSha256`, the same fields, a stable `requestId` and inspected `expectedRevision`. The original Store commits bytes and response in one transaction. Recover a lost response through `request` before retrying.
+
+Use `capture_review` for the same named accept/reject decision, then original item/allocation/period tools. The unpaid outcome creates no expense or fabricated reservation; unfinalized outcomes remain review items. Original finalized request/proof and matched-event identities prevent duplicate inclusion through other source representations. A Node/closed-source shared transaction without distinct event evidence requires source review in either arrival order.
+
+The SDK exposes `nodePreview` / `nodeCapture` automatically from this same catalog. The CLI uses existing `expenses call --action node_preview` or `--action node_capture` and private argument JSON. The bearer remains in the operator's environment. All earlier source and credit actions remain in the same catalog.
+
+`export` kind `node-operation` with the capture `recordId` retains `original-node-accounting-export.json`. The complete project carries original Node bytes, capture/review/request history and the original reader's ten-file closure. The trusted receiver validates the additive feature and its source counts without executing archive code or launching a new native capture. See [the original operator's complete Node guide](../../stellar/scf-starforge-20261009/sf36-spend-governor/expense-workspace/NODE_OPERATIONS.md).
 
 ## Transactional request recovery
 
@@ -180,6 +193,7 @@ Exports have distinct, immutable selections:
 | `project` | Exact current workspace revision | `buyer-expense-project.zip` |
 | `accountant` | Original close ID | `accountant-edition.zip` |
 | `capture` | Original capture ID | `original-capture.json` |
+| `node-operation` | Original Node capture ID | `original-node-accounting-export.json` |
 | `issued-json` | Original close ID | `issued-edition.json` |
 | `issued-html` | Original close ID | `issued-edition.html` |
 

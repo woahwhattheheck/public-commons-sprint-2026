@@ -1,5 +1,6 @@
 // MIT. Exact Matomo artifact transfer using the original retained-download writer.
 import {createHash} from 'node:crypto';
+import {MATOMO_ARTIFACTS} from '../../../../stellar-forge/mcp-merchant-operator/catalog/matomo-workspace.mjs';
 import {lstat} from 'node:fs/promises';
 import {resolve} from 'node:path';
 import {createRetainedDownload} from '../../../../stellar-forge/mcp-merchant-operator/retained-download.mjs';
@@ -14,7 +15,7 @@ const PREFIX='matomo_retained_transfer',ERROR='MATOMO_REMOTE';
 const HASH=/^[a-f0-9]{64}$/,UUID=/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/;
 const ID=/^[A-Za-z0-9][A-Za-z0-9._-]{0,95}$/;
 const ALIAS=/^[a-z0-9][a-z0-9_-]{0,63}$/;
-const ARTIFACTS=['capture','edition','database','comparison','delivery','handover','source'];
+const ARTIFACTS=MATOMO_ARTIFACTS;
 const KINDS=['csv','config','manifest','archive','scan'];
 const plain=value=>value!==null&&typeof value==='object'&&!Array.isArray(value);
 const digest=value=>createHash('sha256').update(value).digest('hex');

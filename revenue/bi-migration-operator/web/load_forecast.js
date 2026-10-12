@@ -33,7 +33,7 @@ function lfStaleDraft(kind,record){return record&&lfDraftRevision(kind,record)!=
 function lfDraftNotice(kind,record,action){return lfStaleDraft(kind,record)?'<div class="lf-notice">This editor retains revision '+h(lfDraftRevision(kind,record))+'. The workspace now has revision '+h(record.revision)+'. Saving keeps the original revision check. '+lfButton(action,"Discard local edits and reload")+'</div>':"";}
 function lfSourceDraft(record){lfDraftRevision("load_source",record);if(!lfSourceDrafts.has(record.id))lfSourceDrafts.set(record.id,lfClone(record.payload));return lfSourceDrafts.get(record.id);}
 function lfMappingDraft(record){lfDraftRevision("load_source",record);if(!lfMappingDrafts.has(record.id))lfMappingDrafts.set(record.id,lfClone(record.payload.mappings||[]));return lfMappingDrafts.get(record.id);}
-function lfNewMapping(record){const s=record.payload.inspection.sheets.find(s=>s.name===lfSelection.sheet)||record.payload.inspection.sheets[0];return {id:"table-"+crypto.randomUUID().slice(0,8),sheet:s?.name||"",layout:"wide",first_row:2,last_row:s?.rows||2,period_row:1,first_column:2,last_column:s?.columns||2,period_column:1,value_column:2,geography_column:1,aliases:{},defaults:{area:"",geography:"",metric:"peak_demand",signal:"forecast",season:"summer",period_basis:"summer_year",single_year:"end",unit:"MW",coincidence:"coincident",basis:""}};}
+function lfNewMapping(record){const s=record.payload.inspection.sheets.find(s=>s.name===lfSelection.sheet)||record.payload.inspection.sheets[0];return {id:"table-"+crypto.randomUUID().slice(0,8),sheet:s?.name||"",layout:"wide",first_row:2,last_row:s?.rows||2,period_row:1,first_column:2,last_column:s?.columns||2,period_column:1,month_column:0,value_column:2,geography_column:1,aliases:{},defaults:{area:"",geography:"",metric:"peak_demand",signal:"forecast",season:"summer",period_basis:"summer_year",single_year:"end",unit:"MW",coincidence:"coincident",basis:""}};}
 function lfPlanDraft(record){lfDraftRevision("load_plan",record);const id=record?.id||"new";if(!lfPlanDrafts.has(id))lfPlanDrafts.set(id,record?lfClone(record.payload):{label:"",client:"",prepared_for:"",baseline:null,current:null,mode:"forecast_revision",baseline_signal:"forecast",current_signal:"forecast",selection:{areas:[],geographies:[],metrics:[],seasons:[],first_year:1900,last_year:2200},documents:[],explanations:[],purpose:"",assumptions:""});return lfPlanDrafts.get(id);}
 function lfReviewDraft(record){lfDraftRevision("load_review",record);if(!lfReviewDrafts.has(record.id))lfReviewDrafts.set(record.id,lfClone(record.payload.review||{note:"",acknowledged:[],decisions:[]}));return lfReviewDrafts.get(record.id);}
 function lfTable(headers,rows){return '<div class="lf-table"><table><thead><tr>'+headers.map(v=>'<th>'+h(v)+'</th>').join("")+'</tr></thead><tbody>'+rows.map(row=>'<tr>'+row.map(v=>'<td>'+v+'</td>').join("")+'</tr>').join("")+'</tbody></table></div>';}
@@ -53,7 +53,7 @@ function lfMappingForm(mapping,index,sheets){
  input("One geography, when column is 0","defaults.geography",d.geography)+
  (mapping.layout==="wide"?input("Period heading row","period_row",mapping.period_row,'type="number" min="1"')+
  input("First value column","first_column",lfColumnLabel(mapping.first_column))+input("Last value column","last_column",lfColumnLabel(mapping.last_column)):
- input("Period column","period_column",lfColumnLabel(mapping.period_column))+input("Value column","value_column",lfColumnLabel(mapping.value_column)))+
+ input("Period / year column","period_column",lfColumnLabel(mapping.period_column))+input("Separate month column (0 for complete period)","month_column",lfColumnLabel(mapping.month_column)||"0")+input("Value column","value_column",lfColumnLabel(mapping.value_column)))+
  input("Planning area","defaults.area",d.area)+
  choose("Metric","defaults.metric",[["peak_demand","Peak demand"],["energy","Energy"]],d.metric)+
  choose("Signal","defaults.signal",[["forecast","Forecast"],["actual","Actual observation"],["weather_normalized","Weather-normalized observation"],["adjustment","Signed adjustment"]],d.signal)+
@@ -235,7 +235,7 @@ function lfCleanMappingValues(values){
   const aliases=m._aliases??Object.entries(original.aliases||{}).map(([a,b])=>a+" = "+b).join("\n");
   for(const line of aliases.split("\n").map(l=>l.trim()).filter(Boolean)){const at=line.indexOf("=");if(at<1||!line.slice(at+1).trim())throw new Error("Each alias needs original = reviewed label.");const key=line.slice(0,at).trim();if(Object.hasOwn(m.aliases,key))throw new Error("The same original label has two aliases.");m.aliases[key]=line.slice(at+1).trim();}
   delete m._aliases;
-  for(const k of ["geography_column","first_column","last_column","period_column","value_column"])if(m[k]!==undefined)m[k]=lfColumn(m[k]);
+  for(const k of ["geography_column","first_column","last_column","period_column","month_column","value_column"])if(m[k]!==undefined)m[k]=lfColumn(m[k]);
   for(const k of ["first_row","last_row","period_row"])if(m[k]!==undefined)m[k]=Number(m[k]);
   return m;
  });
@@ -314,6 +314,7 @@ function lfCaptureInput(target){
  if(target.dataset.lfMap!==undefined&&lfCurrent.source){
   const mapping=lfMappingDraft(lfCurrent.source)[Number(target.dataset.lfMap)],parts=target.dataset.lfProp.split(".");
   if(parts.length===2)mapping[parts[0]][parts[1]]=target.value;else mapping[parts[0]]=target.value;
+  if(target.dataset.lfProp==="layout"&&target.value==="wide")mapping.month_column=0;
  }
  if(target.dataset.lfPlan!==undefined&&lfCurrent.pane==="plans"){
   const draft=lfPlanDraft(lfCurrent.plan);draft[target.dataset.lfPlan]=target.value;

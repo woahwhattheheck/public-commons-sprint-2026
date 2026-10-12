@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Ruby &amp; Rails — Runtime workspace</title>
+  <link rel="stylesheet" href="/style.css">
+  <script type="module" src="/browser.mjs"></script>
+</head>
+<body>
+  <a class="skip" href="#main">Skip to workspace</a>
+  <header>
+    <div><p class="eyebrow">Runtime workspace</p><h1>Ruby &amp; Rails</h1></div>
+    <div class="connection"><span id="connection-state">Connecting</span><button id="refresh" type="button">Refresh</button><button id="disconnect" type="button">Disconnect</button></div>
+  </header>
+  <div id="workspace-directory" class="directory"></div>
+  <section id="session-panel" class="notice" hidden>
+    <h2>Open this private runtime</h2>
+    <p>Open the complete address printed by the current runtime process, or enter its access token below.</p>
+    <form id="session-form" method="post" action="#">
+      <label>Access token <input name="token" type="password" autocomplete="off" required></label>
+      <button type="submit">Connect</button>
+    </form>
+  </section>
+  <div id="notice" role="status" aria-live="polite"></div>
+  <section id="pending-panel" class="notice" hidden>
+    <h2>Retained action</h2>
+    <label>Saved action <select id="pending-choice"></select></label>
+    <p id="pending-description"></p>
+    <div class="actions"><button type="button" id="pending-read">Read current state</button><button type="button" id="pending-retry">Continue the same action</button><button type="button" id="pending-dismiss">Dismiss saved browser action</button></div>
+    <details><summary>Original action inputs</summary><pre id="pending-record"></pre></details>
+  </section>
+  <nav aria-label="Workspace">
+    <button type="button" data-tab="environments" aria-current="page">Environments</button>
+    <button type="button" data-tab="applications">Applications</button>
+    <button type="button" data-tab="operations">Operations</button>
+    <button type="button" data-tab="receive">Receive</button>
+  </nav>
+  <main id="main">
+    <section id="panel-environments" class="panel">
+      <div class="section-heading"><div><h2>Environments</h2><p>Select Ruby and a saved bundle, then install the environment used by your application.</p></div><button type="button" id="show-create">Add environment</button></div>
+      <details id="create-panel" class="card">
+        <summary>New environment</summary>
+        <form id="create-form" method="post" action="#">
+          <div class="form-grid">
+            <label>Environment ID <input name="id" placeholder="rails-operator" required pattern="[A-Za-z0-9][A-Za-z0-9._\-]{0,79}" maxlength="80"></label>
+            <label>Title <input name="title" placeholder="Rails operator" required maxlength="160"></label>
+            <label class="wide">Ruby executable on this host <input name="ruby" placeholder="/usr/bin/ruby" required spellcheck="false"></label>
+            <label>Bundler version <input name="bundlerVersion" placeholder="Exact version" required spellcheck="false"></label>
+            <div class="field-note">Choose an installed version from the inspection, or an exact version to install privately with this environment.</div>
+          </div>
+          <div class="actions"><button id="probe-ruby" type="button">Inspect Ruby</button><span id="probe-summary"></span></div>
+          <details id="probe-details"><summary>Interpreter and installed Bundler versions</summary><pre id="probe-output"></pre></details>
+          <details class="advanced"><summary>Use an existing project</summary>
+            <p>Leave this empty to select the supplied Rails operator profile. An existing project is copied with its original Gemfile before installation.</p>
+            <label>Project directory on this host <input name="projectDirectory" placeholder="/absolute/private/project" spellcheck="false"></label>
+          </details>
+          <div class="actions"><button type="submit">Save environment selection</button></div>
+        </form>
+      </details>
+      <label class="filter">Find environment <input id="env-filter" type="search" placeholder="Title, ID or interpreter"></label>
+      <div class="table-scroll"><table><thead><tr><th>Environment</th><th>Ruby</th><th>Phase</th><th>Bundle lock</th><th>Open</th></tr></thead><tbody id="environment-rows"></tbody></table></div>
+      <section id="environment-detail" class="card" hidden>
+        <h3 id="environment-title"></h3>
+        <dl id="environment-facts" class="facts"></dl>
+        <div class="actions">
+          <button type="button" data-env-action="install">Install and retain bundle</button>
+          <button type="button" data-env-action="verify">Inspect installed runtime</button>
+          <button type="button" data-env-action="export">Export complete environment</button>
+          <button type="button" id="env-show-operation" hidden>Open latest operation</button>
+        </div>
+        <label class="check"><input id="environment-offline" type="checkbox">Use the retained local bundle only</label>
+        <details><summary>Selected Gemfile</summary><pre id="environment-gemfile"></pre></details>
+        <details><summary>Retained bundle lock</summary><pre id="environment-lock"></pre></details>
+        <details><summary>Complete saved environment and source selection</summary><pre id="environment-record"></pre></details>
+      </section>
+    </section>
+
+    <section id="panel-applications" class="panel" hidden>
+      <div class="section-heading"><div><h2>Applications</h2><p>Receive a complete Rails application into its managed working copy and run it with the selected environment.</p></div><button type="button" id="show-register">Add application</button></div>
+      <details id="register-panel" class="card">
+        <summary>Register received application</summary>
+        <form id="application-form" method="post" action="#">
+          <div class="form-grid">
+            <label>Application ID <input name="id" placeholder="customer-operator" required pattern="[A-Za-z0-9][A-Za-z0-9._\-]{0,79}" maxlength="80"></label>
+            <label>Title <input name="title" required maxlength="160"></label>
+            <label>Environment <select name="environmentId" class="environment-choice" required></select></label>
+            <label class="wide">Received application directory on this host <input name="directory" placeholder="/absolute/private/delivered-application" required spellcheck="false"></label>
+          </div>
+          <p>The runtime retains a private working copy of the original dataset application or complete Baserow operator delivery.</p>
+          <div class="actions"><button type="submit">Receive and register application</button></div>
+        </form>
+      </details>
+      <label class="filter">Find application <input id="app-filter" type="search" placeholder="Title or ID"></label>
+      <div class="table-scroll"><table><thead><tr><th>Application</th><th>Environment</th><th>Phase</th><th>Address</th><th>Open</th></tr></thead><tbody id="application-rows"></tbody></table></div>
+      <section id="application-detail" class="card" hidden>
+        <h3 id="application-title"></h3><dl id="application-facts" class="facts"></dl>
+        <div class="actions"><label>Local port <input id="application-port" type="number" min="1" max="65535" value="9292"></label>
+          <button type="button" id="application-launch">Launch application</button>
+          <button type="button" id="application-stop">Stop application</button>
+          <a id="application-open" class="button" target="_blank" rel="noopener noreferrer" hidden>Open running application</a>
+          <button type="button" id="application-verify">Verify stopped application</button>
+          <button type="button" id="application-export">Export environment and stopped application</button>
+        </div>
+        <p id="application-state-note"></p>
+        <details><summary>Complete application and run history</summary><pre id="application-record"></pre></details>
+      </section>
+    </section>
+
+    <section id="panel-operations" class="panel" hidden>
+      <div class="section-heading"><div><h2>Operations</h2><p>Read the original action, its current worker state, full output and saved files.</p></div></div>
+      <div class="filters"><label>Find operation <input id="operation-filter" type="search" placeholder="ID, environment or action"></label>
+        <label>Phase <select id="operation-phase"><option value="">All phases</option><option>QUEUED</option><option>RUNNING</option><option>SUCCEEDED</option><option>FAILED</option><option>INTERRUPTED</option><option>CANCELLED</option></select></label></div>
+      <div class="table-scroll"><table><thead><tr><th>Action / operation</th><th>Environment</th><th>Phase</th><th>Stage</th><th>Updated</th><th>Open</th></tr></thead><tbody id="operation-rows"></tbody></table></div>
+      <section id="operation-detail" class="card" hidden>
+        <h3 id="operation-title"></h3><dl id="operation-facts" class="facts"></dl>
+        <div class="actions"><button type="button" id="operation-resume">Resume original operation</button><button type="button" id="operation-cancel">Cancel original operation</button><button type="button" id="operation-refresh">Read operation</button><button type="button" id="operation-json">Download operation record</button></div>
+        <p id="operation-error"></p>
+        <h4>Saved files</h4><div id="operation-files" class="actions"></div>
+        <form id="saved-file-form" method="post" action="#" class="inline-form">
+          <label>Original saved filename <input name="name" placeholder="Name from the operation result" required spellcheck="false"></label><button type="submit">Download saved file</button>
+        </form>
+        <h4>Worker output</h4>
+        <div class="actions log-tools"><button type="button" id="log-previous">Previous page</button><button type="button" id="log-next">Next page</button><button type="button" id="log-start">Start</button><label class="check"><input id="log-follow" type="checkbox" checked>Follow latest output</label><span id="log-position"></span></div>
+        <pre id="operation-log" class="log" tabindex="0" aria-label="Current worker output page"></pre>
+        <form id="log-seek-form" method="post" action="#" class="inline-form"><label>Byte offset <input name="offset" type="number" min="0" step="1" value="0" required></label><button type="submit">Read from offset</button></form>
+        <details><summary>Complete original operation record</summary><pre id="operation-record"></pre></details>
+      </section>
+    </section>
+
+    <section id="panel-receive" class="panel" hidden>
+      <div class="section-heading"><div><h2>Receive runtime archive</h2><p>Move the complete environment, retained bundle and optional stopped application onto this host, then install from that retained bundle.</p></div></div>
+      <form id="receive-form" class="card" method="post" action="#">
+        <div class="form-grid">
+          <label>New environment ID <input name="id" placeholder="received-rails" required pattern="[A-Za-z0-9][A-Za-z0-9._\-]{0,79}" maxlength="80"></label>
+          <label>Title <input name="title" required maxlength="160"></label>
+          <label class="wide">Ruby executable on this host <input name="ruby" placeholder="/usr/bin/ruby" required spellcheck="false"></label>
+          <label>Bundler version, if selected <input name="bundlerVersion" placeholder="Use archive selection" spellcheck="false"></label>
+          <label class="wide">Original archive SHA-256 <input name="expectedSha256" pattern="[a-f0-9]{64}" minlength="64" maxlength="64" required spellcheck="false" autocomplete="off"></label>
+        </div>
+        <fieldset><legend>Archive location</legend>
+          <label class="check"><input type="radio" name="location" value="browser" checked>Choose an archive on this computer</label>
+          <label id="receive-file-field">Complete TAR archive <input name="file" type="file" accept=".tar,application/x-tar"></label>
+          <label class="check"><input type="radio" name="location" value="host">Use an archive already on the runtime host</label>
+          <label id="receive-host-field" hidden>Absolute archive path <input name="archive" placeholder="/absolute/private/runtime.tar" spellcheck="false"></label>
+        </fieldset>
+        <p>Use the hash displayed by the original export. Browser transfer streams the complete archive, up to 4 GiB. The saved operation continues after the transfer.</p>
+        <div class="actions"><button type="submit">Receive complete runtime</button></div>
+      </form>
+      <section id="transfer-panel" class="card" hidden>
+        <h3>Original archive transfer</h3><label>Saved transfer <select id="transfer-choice"></select></label><dl id="transfer-facts" class="facts"></dl>
+        <progress id="transfer-progress" max="1" value="0"></progress><p id="transfer-message"></p>
+        <div class="actions"><button type="button" id="transfer-read">Read transfer</button><button type="button" id="transfer-continue">Continue original receiving</button></div>
+        <label id="transfer-reselect" hidden>Re-select the original archive to continue its transfer <input id="transfer-file" type="file" accept=".tar,application/x-tar"></label>
+        <details><summary>Complete receiving selection</summary><pre id="transfer-record"></pre></details>
+      </section>
+    </section>
+  </main>
+  <footer>Private runtime workspace · Saved selections, worker operations and application history remain available when this desk is reopened.</footer>
+</body>
+</html>
