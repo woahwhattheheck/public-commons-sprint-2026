@@ -4,7 +4,7 @@ import { mkdir, readdir, rm } from 'node:fs/promises';
 import { basename, dirname, join, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { RELEASE_SCHEMA, MANIFEST, MAX_BYTES, canonical, sha256, relativePath,
-  plainDirectory, boundedFile, putFile, verifyRelease } from './release-core.mjs';
+  plainDirectory, boundedFile, putFile, copyVerifiedFile, verifyRelease } from './release-core.mjs';
 import { CATALOG_PATH, DOCTOR_PATH, compileCommandCatalog } from './command-catalog.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -185,13 +185,14 @@ export async function prepareMerchantPackage({ packageDirectory, output, expecte
   const out = join(parent, basename(requested));
   if (out === original.root || out.startsWith(original.root + sep))
     throw new Error('Prepare the release outside the original package');
-  const bytesByPath = new Map(original.bytesByPath), files = [...original.files], manager = [];
+  const files = [...original.files], manager = [];
+  const inputs = new Map(files.map(file => [file.path, { root: original.root, relative: file.path }]));
   const managerRoot = await plainDirectory(HERE);
   for (const [source, destination] of [['product.mjs', 'forge.mjs'], ['release-core.mjs', 'release-core.mjs']]) {
     const bytes = await boundedFile(managerRoot, source);
     const identity = { path: destination, sourcePath: BASE + source,
       gitBlob: gitBlob(bytes), sha256: sha256(bytes), bytes: bytes.length };
-    manager.push(identity); bytesByPath.set(destination, bytes);
+    manager.push(identity); inputs.set(destination, { root: managerRoot, relative: source });
     files.push({ path: destination, bytes: bytes.length, sha256: identity.sha256,
       mode: destination === 'forge.mjs' ? 0o755 : 0o644 });
   }
@@ -209,7 +210,10 @@ export async function prepareMerchantPackage({ packageDirectory, output, expecte
   const manifest = { ...body, digest: sha256(canonical(body)) };
   await mkdir(out, { mode: 0o700 });
   try {
-    for (const file of files) await putFile(join(out, file.path), bytesByPath.get(file.path), file.mode);
+    for (const file of files) {
+      const input = inputs.get(file.path);
+      await copyVerifiedFile(input.root, input.relative, join(out, file.path), file);
+    }
     await putFile(join(out, MANIFEST), json(manifest));
     const verified = await verifyRelease(out, manifest.digest);
     return { ...original.summary, state: 'PREPARED', release: out, id: verified.id,

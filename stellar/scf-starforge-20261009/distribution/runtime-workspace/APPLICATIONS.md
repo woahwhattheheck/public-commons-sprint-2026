@@ -6,6 +6,7 @@ Applications opens the original merchant and buyer tools from a selected READY r
 
 | Application | Maintained command | Original workflow |
 | --- | --- | --- |
+| CoinGecko market research | coingecko serve | Original market sources, request collections, comparisons, notes, provider plans, native buyer recovery and complete handover |
 | Catalog Atlas | atlas | Retained catalog intake, offer comparison, exact native buyer preparation and complete workspace receiving |
 | n8n automation merchant | n8n-merchant serve | Configuration review, original preparation, paid jobs, retained workflow executions, customer results and stop/reopen |
 | API-pass customer | api-pass-workspace serve | Original API access, saved requests, exact response recovery, private buyer history and customer statements |
@@ -18,10 +19,14 @@ Applications opens the original merchant and buyer tools from a selected READY r
 | OData source and live merchant | dataset odata | Saved source metadata, typed queries, retained editions, live paid pages, buyer handoffs and received records |
 | SEC EDGAR source operator | sec-edgar workspace | Original company facts and filings, retained source editions, merchant drafts and complete customer exports |
 | Google Sheets source authoring | sheets-source workspace serve | Retained workbook observations, typed source projections, original dataset publisher and merchant receiving |
+| NocoDB source authoring | nocodb-source workspace serve | Original database observations, complete captures, public projections, dataset publisher and retained workspace recovery |
+| Stellar asset investigation | dataset-workspace --stellar-expert | Original asset observations, exact editions, reviewed findings, native dataset and merchant releases, purchased page receiving |
 | ArcGIS merchant workspace | arcgis-agent serve | One original browser and MCP service for source capture, field mapping, publication, staged deployments and complete customer files |
+| S3 object merchant | s3 workspace | Object source and complete prices, retained HEAD reviews and packages, original release controls, customer files and saved-workspace reopening |
 | Dataset preview | dataset-workspace | A dataset configuration file or retained dataset state, native query and preview |
 | Dataset buyer | buyer-dataset-workspace | Original acquisitions, received rows and files, private customer history and Python analysis |
 | Request collections | buyer-collections-workspace | Grouped request review, original approvals and runs, retained outcomes and verified customer file downloads |
+| Baserow source authoring | baserow-workspace serve | Original field discovery, retained rows and files, versioned projections, dataset publishing and customer handover |
 | Grant planning and delivery | grant-workspace serve | Retained grant plans and revisions, contributor delivery, invoices, allocations, cash records and original exports |
 | PostgreSQL publisher | postgres-publisher serve | Plans, extraction, candidate review, publication, schedules and buyer handoff |
 | Google Sheets publisher | sheets-publisher serve | Original authorization/source, range plans, extraction, review and recurring publication |
@@ -47,6 +52,14 @@ Applications opens the original merchant and buyer tools from a selected READY r
 | XML dataset onboarding | dataset xml … serve | An initialized XML workspace, source intake, mapping, native query, comparison and portable editions |
 
 A selected runtime must actually contain the command. XML and Object Buyer additionally require their original forwarding/server source; an older package cannot acquire these capabilities by selecting a label. The chosen original profile supplies the dependencies required by the application. Applications installs no replacement engine or new npm dependency.
+
+### S3 object merchant
+
+Select a READY installation containing the complete S3 Applications source and its original S3 dependency profile. Choose the private merchant workspace; its original release store is reused automatically. Source JSON, complete Stellar payment JSON and public HTTPS origin can initialize the first revision together. Once saved, subsequent starts use that revision even if its original import files have moved.
+
+**Open application** opens the original S3 authoring workspace. **Open merchant releases** opens its own SF82 release console. The same application owns both consoles and the seller started there. **Stop application** drains the original merchant and closes both windows' listeners; its source, prices, reviews, packages, release generation and customer files remain saved. Port **0** retains this workspace's original authoring port after first launch, so the same browser tab can restore unfinished edits on normal Stop/Start.
+
+The complete [S3 merchant Applications guide](./S3_MERCHANT_APPLICATIONS.md) covers installation selection, review/save, customer delivery, same-workspace receiving, ownership and recovery.
 
 ## Save and start
 
@@ -276,7 +289,8 @@ CLI state/output are private operator data and can include original capability U
 
 | Method | API | Purpose |
 | --- | --- | --- |
-| GET | /api/applications/state | Saved bindings, runs and current private URL |
+| GET | /api/applications/state | Saved bindings and current private URL; optional `historyLimit=1..100` (default 30) |
+| GET | /api/applications/history | One application's complete retained chronology, paged by `applicationId`, optional `limit=1..100` and returned `cursor` |
 | POST | /api/applications/review | New configuration or current revision review |
 | POST | /api/applications/save | Save configuration and join original managed adoption |
 | POST | /api/applications/connect | Continue the same pending adoption |
@@ -287,6 +301,21 @@ CLI state/output are private operator data and can include original capability U
 | GET | /api/applications/output | Retained original command output |
 | GET | /api/applications/terminal | Original PTY output, identities and input receipts |
 | POST | /api/applications/input | Explicit idempotent terminal input |
+
+### Browse retained application operations
+
+The Applications overview refreshes the current run for each saved application. Select an application to see its latest 30 operations, then use **Older operations**, **Newer operations** or **Latest operations** to navigate its full retained history. **Open output** works on any selected page. The selected page and operation reopen with the same browser session, while the application controls continue to show the current run.
+
+The CLI supplies the same navigation:
+
+```sh
+starforge runtime-workspace applications --workspace /absolute/workspace
+starforge runtime-workspace application-history --workspace /absolute/workspace --application-id APPLICATION_ID --limit 30
+starforge runtime-workspace application-history --workspace /absolute/workspace --application-id APPLICATION_ID --limit 30 --cursor RETURNED_NEXT_CURSOR
+starforge runtime-workspace application-output --workspace /absolute/workspace --application-id APPLICATION_ID --operation-id OPERATION_UUID
+```
+
+The application list defaults to one run per application in the CLI; use `--history-limit 30` for the earlier expanded list. History responses include `runs`, `totalRuns` and `nextCursor`; a null cursor ends the chronology. Cursors belong to one application and continue after the last returned operation, so newly created runs do not shift an older page. The JavaScript model exposes `applicationsHistory({ applicationId, limit, cursor })` and `applicationsState({ historyLimit })`. Existing model and HTTP state calls retain their default of 30 runs.
 
 These routes use the existing loopback, Host, Origin and capability checks. Output is rendered as text. No original application capability is placed in a public asset.
 
@@ -310,7 +339,11 @@ To read an existing OpenAlex collection, select its original research workspace 
 
 The optional provider edition adapter is the original local module passed as --edition-adapter. It can reopen Valyu editions through the original retained provider store, preserving that store's access and retention behavior. Applications records the module file identity and passes the same path to research-workspace.
 
-The original command announces one JSON line with mode RESEARCH_DOSSIER_WORKSPACE, its selected directory and its actual loopback capability URL. The observer accepts it only for the research-workspace command and matching --dir argument, then applies the existing local URL checks. The source command owns HTTP shutdown and closure of its original provider workspace; saved dossiers remain available for the next reviewed start.
+To enable the original **DOI metadata** tab, select **Private Crossref source directory**. Reopen the retained directory when continuing an acquisition, or create one directory in an existing private parent. This passes `--crossref-state` to the original research command and uses public Crossref by default. **Original Crossref merchant configuration** is optional; it selects an existing host configuration using `--crossref-config` and requires the source directory. Applications retains the directory identity and complete configuration-file fingerprint in Review/Save and Review start. The selected runtime must include the original Crossref workspace and source modules.
+
+Use the existing dossier and question to review its selected DOI scope, acquire or resume metadata, inspect source coverage and exact changes, and retain the reviewed edition. Stop and reopen retain that acquisition and its original receiving receipt. Preserve both the dossier directory and selected Crossref source directory to continue unfinished acquisition; portable dossier export carries received research and authored analysis. The original [Crossref operating guide](../../sf88-operator-buyer-cli/research-dossiers/CROSSREF.md) describes the complete acquisition, partial refresh, receiving recovery, report and reopen flow.
+
+The original command announces one JSON line with mode RESEARCH_DOSSIER_WORKSPACE, its selected directory and its actual loopback capability URL. The observer accepts it only for the research-workspace command and matching --dir argument, then applies the existing local URL checks. A selected Crossref source also requires the original startup to report crossrefConfigured: true. The source command owns HTTP shutdown and closure of its original provider workspaces; saved dossiers and retained Crossref captures remain available for the next reviewed start.
 
 Inside the original research application, create or reopen a question, receive saved source editions, compare provider occurrences, select evidence, write findings, compare revisions and download HTML, Markdown or complete portable JSON. Reopen the same portable dossier through its original API or CLI to retain all revision and source identities.
 
@@ -500,3 +533,37 @@ In the customer workspace, select a connection and adopt an existing pass or pre
 Use the ordinary Applications **Stop**, **Review start** and **Start reviewed application** controls to reopen the same customer directory. Each start reviews the current state, and the existing application resource lease serializes managed use of that directory.
 
 The complete [API-pass customer guide](../../sf101-merchant-receiver/api-access/workspace/README.md) covers configuration, connection setup, purchase approval, exact request recovery, customer reports, browser operations and installed package imports.
+
+## NocoDB source authoring
+
+Choose the original initialized private **NocoDB workspace** and, when live database access is needed, its optional **Private NocoDB connections file**. The connection stores the original server and credential environment references. Use the existing **Local port** and **Private environment JSON** fields for the original native listener and host environment.
+
+Review retains the workspace's original SQLite identity and immutable settings, the complete nine-file native source selection and the exact optional connection file. Start launches the maintained source authoring command with those selections. The original structured startup opens that same workspace and original dataset publisher; captures, projections and draft revisions can continue normally. Stop drains the original process, and a later start reopens its saved work. The complete [NocoDB Applications guide](../../sf30-seller-sdk/nocodb/APPLICATIONS.md) covers initialization, live and retained source intake, publisher/customer delivery and managed recovery.
+
+## Stellar asset investigation
+
+Choose **Stellar asset investigation** with its private **StellarExpert workspace**, optional **Original buyer inbox** and optional **Private merchant runtime JSON**. The workspace may be retained or one new directory in an existing private parent. Use the common **Local port** and **Private environment JSON** settings for the original source command.
+
+The selection carries the stable workspace UUID, source files, original inbox and exact merchant runtime configuration into the existing review and launch. Applications opens the original authenticated workspace from its structured startup record. Capture original asset observations, compare retained editions, review findings, prepare datasets, operate the original merchant releases and receive purchased dataset pages through the existing customer inbox. Captures, editions, notes and receipts remain normal mutable workspace progress across Stop and reopen. The complete [StellarExpert operator guide](../../sf30-seller-sdk/stellar-expert/OPERATOR_GUIDE.md) covers the source, merchant and customer workflow.
+
+## Baserow source authoring
+
+The **Baserow source authoring** application opens the same retained workspace used by `baserow-workspace`. Initialize its private working directory once:
+
+~~~sh
+starforge baserow-workspace init \
+  --directory /PRIVATE/baserow-source \
+  --target /PRIVATE/baserow-dataset
+~~~
+
+In Applications, select the current READY runtime and this original workspace. Choose port `0` for an available local port. Supply an optional private connections file for public-grid or authorized-table observations; token values are provided through the selected private environment file. An existing source packet can be imported with the connection field empty.
+
+Review and save the application, then review its start and select **Start → Open**. The retained start uses the original `baserow-workspace serve` command. It binds the private workspace's immutable settings and SQLite file identity, the nine native launch/browser files, the selected connections file and the actual managed release. The saved URL comes from that child process's `BASEROW_AUTHORING_READY` announcement.
+
+Inside the original workspace, discover the selected fields, retain the complete original rows and files, create a typed projection, preview it and save a reviewed version. Open the original publisher for that selected version; its merchant controls prepare and stage the original release and customer handoff. The source workspace also exports the complete retained packet for another operator. The [source workspace guide](../../sf30-seller-sdk/baserow/workspace/README.md) covers discovery, original file receiving, versions, packet import and merchant operation. The [provider guide](../../sf30-seller-sdk/baserow/README.md) covers the Baserow source and publication contract.
+
+**Stop** drains the owned source and publisher operations before releasing the workspace. **Reopen** returns to its retained captures, request history, versions and deployment state. A closed runtime browser can reopen the existing managed operation. If the selected source installation or connections file changes, review that current input before the next start. Normal source edits and publication versions stay within the retained workspace and preserve its managed identity.
+
+## CoinGecko market research
+
+Choose the original private CoinGecko workspace and optional saved project and buyer profile configuration. The same browser, model and native jobs run through Review/Save, managed connection, Start/Open, Stop and reopen. The startup observer binds the reviewed source to the actual installed release and original project; shutdown drains the original worker and database. Full operating instructions: [CoinGecko in Applications](COINGECKO_APPLICATIONS.md).

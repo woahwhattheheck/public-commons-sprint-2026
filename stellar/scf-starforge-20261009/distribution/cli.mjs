@@ -85,6 +85,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   commerce    Merchant + buyer session        inbox       Durable selected requests
   merchant-mcp                               Operate native merchant releases from an MCP client
   mcp-native                                Prepare and operate the original native buyer MCP workspace
+  mcp-collections-download                  Receive and reopen complete original request-collection exports
   mcp-analysis-archive                      Download and reopen original portable Analysis archives
   mcp-oauth                                 Configure, discover and receive the original OAuth MCP resource
   mcp-buyer                                 Run the existing private HTTP buyer and operator console
@@ -105,6 +106,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   routescan-workspace Operate its saved project through the original local workspace
   buyer-n8n-workflows Generate six original customer workflows for the selected n8n credential
   buyer-agent Operate the original buyer through LangGraph checkpoints and LangChain tools
+  stac                                      Discover imagery, compare scenes and deliver selected assets to customers
   tomorrow                                  Plan weather work, review forecasts, recover resources and deliver licensed files
   coingecko                                 Operate CoinGecko sources, market research and original purchases
   tenderly / tenderly-workspace              Prepare and operate the Tenderly simulation merchant
@@ -129,6 +131,10 @@ Native commands (arguments pass unchanged to the maintained implementation):
   api-application                           Run source-pinned application functions over purchased API allowances
   postgres-init / postgres-inspect            Prepare or inspect a PostgreSQL source
   postgres-workspace                         Build a merchant API from database fields
+  baserow-source                            Discover, retain and publish original Baserow records and files
+  baserow-workspace                         Author Baserow sources, publish and reopen customer delivery
+  baserow-publisher                         Operate the original Baserow dataset publisher
+  baserow-deployment                        Review and stage the original Baserow merchant release
   postgres-publisher                         Publish reviewed query snapshots and keep datasets current
   mysql                                      Inspect, prepare and operate a MySQL/MariaDB merchant
   mysql-workspace                            Build, review and run a database merchant in the browser
@@ -147,9 +153,10 @@ Native commands (arguments pass unchanged to the maintained implementation):
   opensearch                                 Preflight and run a native OpenSearch merchant
   opensearch-prepare                         Prepare named search routes and the original customer client
   opensearch-workspace                       Save drafts, capture and compare search editions, and prepare merchants
+  opensearch-catalog                         Retain material catalogs, review customer matches and reopen complete handovers
   cube-workspace / cube-onboard              Author, review and export paid Cube reports
   openapi-workspace                          Import an API contract or Postman collection and operate its merchant
-  oauth-connection                           Authorize, renew and select a QuickBooks company or API grant
+  oauth-connection                           Authorize, renew and select QuickBooks companies, Xero tenants or API grants
   openapi postman                            Review collections, retain source and create merchant packages
   openapi weather                            Operate the original OpenWeather customer application
   duckdb / duckdb-inspect                     Run or inspect an approved DuckDB/Parquet source
@@ -199,6 +206,9 @@ Native commands (arguments pass unchanged to the maintained implementation):
   python-workspace                           Author Python sources, run private previews and operate native releases
   diffbot-workspace                          Review retained web data, publish customer editions and reopen handoffs
   diffbot-acquire                            Retain original Diffbot Account, Extract and Bulk results
+  databento-workspace                        Review historical source editions, map customer records and reopen handoffs
+  databento-acquire                          Retain original Databento metadata, batch jobs and complete captures
+  databento-warehouse                        Receive complete customer data, select editions and recover the warehouse
   merchant-readiness                         Review every configured Stellar receiving account
   availability                              Review, pause and resume a running seller's selected routes
   cube-onboarding                            Capture and prepare reviewed Cube reports as a merchant
@@ -207,6 +217,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   graphql-deployment                         Prepare original GraphQL release and Linux host handoffs
   woo-seller / woo-buyer                     Connect existing WooCommerce orders to native checkout
   grant-workspace                           Revise, export and receive the original SF47 grant delivery plans
+  grant-demo                                Receive, inspect, open and export the original completed grant purchase
   woo-operator                              Review original Stellar transfers and complete selected Woo orders
   woo-refund                                Record verified order credits and receive original refund handoffs
 
