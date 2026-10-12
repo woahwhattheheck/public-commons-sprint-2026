@@ -127,7 +127,11 @@ export const APPLICATION_CATALOG = Object.freeze([
       field('openalexModule', 'Original OpenAlex workspace module', 'path', false,
         'Optional explicit workspace.mjs from the original provider source; otherwise use this selected runtime.'),
       field('editionAdapter', 'Original provider edition adapter', 'path', false,
-        'Optional local adapter module for retained provider references such as Valyu.'), ...common] },
+        'Optional local adapter module for retained provider references such as Valyu.'),
+      field('crossrefState', 'Private Crossref source directory', 'path', false,
+        'Optional retained source directory. Enables DOI metadata using public Crossref.'),
+      field('crossrefConfig', 'Original Crossref merchant configuration', 'path', false,
+        'Optional existing configuration; requires the Crossref source directory.'), ...common] },
   { id: 'buyer-expenses', command: 'buyer-expenses',
     requiredSource: 'stellar/scf-starforge-20261009/sf36-spend-governor/expense-workspace/server.py',
     title: 'Buyer expenses', terminal: false,
@@ -217,8 +221,12 @@ function normalizeSettings(type, input) {
     need(!settings.create || settings.sourceFile && settings.stateDirectory, 'APPLICATION_PUBLISHER_SOURCE_REQUIRED');
     need(Boolean(settings.seller) === Boolean(settings.resource), 'APPLICATION_BUYER_ENDPOINT_PAIR_REQUIRED');
   }
-  if (type.id === 'research-dossiers') need(!settings.openalexModule || settings.openalexWorkspaceDirectory,
-    'APPLICATION_OPENALEX_WORKSPACE_REQUIRED', 'Choose the original saved OpenAlex workspace with its module');
+  if (type.id === 'research-dossiers') {
+    need(!settings.openalexModule || settings.openalexWorkspaceDirectory,
+      'APPLICATION_OPENALEX_WORKSPACE_REQUIRED', 'Choose the original saved OpenAlex workspace with its module');
+    need(!settings.crossrefConfig || settings.crossrefState,
+      'APPLICATION_CROSSREF_STATE_REQUIRED', 'Choose the original Crossref source directory with its configuration');
+  }
   return settings;
 }
 async function applicationCommand(type, settings, runtimeDirectory, context = {}) {
@@ -391,6 +399,11 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
     if (!workspace.exists) createDirectories.push(workspace.path);
     await path('editionAdapter', 'file');
     await path('openalexModule', 'file');
+    if (settings.crossrefState) {
+      const source = await path('crossrefState', 'directory', true, true);
+      if (!source.exists && !createDirectories.includes(source.path)) createDirectories.push(source.path);
+      await path('crossrefConfig', 'file');
+    }
     if (settings.openalexWorkspaceDirectory) {
       await path('openalexWorkspaceDirectory', 'directory', false, true);
       for (const part of ['queries', 'editions'])
@@ -400,6 +413,8 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
     option('--edition-adapter', settings.editionAdapter);
     option('--openalex-workspace', settings.openalexWorkspaceDirectory);
     option('--openalex-module', settings.openalexModule);
+    option('--crossref-state', settings.crossrefState);
+    option('--crossref-config', settings.crossrefConfig);
   } else if (type.id === 'buyer-expenses') {
     const state = await path('stateDirectory', 'directory', true, true);
     if (!state.exists) createDirectories.push(state.path);
@@ -563,6 +578,18 @@ export async function reviewApplication(root, { runtimeId, runtimeDirectory, kin
       'stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research/workspace.mjs'), 4 * 1024 * 1024).catch(() =>
       need(false, 'APPLICATION_NOT_IN_RUNTIME',
         'Choose a runtime containing the original OpenAlex workspace or select its explicit original module'));
+  if (type.id === 'research-dossiers' && settings.crossrefState) {
+    const required = [
+      'stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/crossref-workspace.mjs',
+      'stellar/scf-starforge-20261009/sf30-seller-sdk/crossref/source.mjs',
+      ...(settings.crossrefConfig ? [
+        'stellar/scf-starforge-20261009/sf30-seller-sdk/crossref/config.mjs',
+        'stellar/scf-starforge-20261009/sf30-seller-sdk/crossref/merchant.mjs',
+      ] : []),
+    ];
+    for (const path of required) await regular(join(runtime.sourceRoot, path), 4 * 1024 * 1024).catch(() =>
+      need(false, 'APPLICATION_NOT_IN_RUNTIME', 'Choose a runtime containing the original Crossref research workspace and source'));
+  }
   const command = await applicationCommand(type, settings, runtime.directory, { root, runtimeId });
   const homes = (await managedState(root)).homes;
   let home = homeId ? homes.find(item => item.id === recordId(homeId)) : homes.find(item => item.releases.some(release =>
