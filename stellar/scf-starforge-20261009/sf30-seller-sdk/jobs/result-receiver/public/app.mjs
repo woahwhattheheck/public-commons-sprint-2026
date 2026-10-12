@@ -26,6 +26,7 @@ function setToken(token) {
 function clearSelection() {
   state.selected = null; state.selection++;
   $('detail').hidden = true; $('select-prompt').hidden = false;
+  $('select-prompt').textContent = 'Select an output to inspect its metadata, verify its bytes or download the original file.';
   $('filename').textContent = ''; $('fields').replaceChildren();
   $('manifest').textContent = ''; $('preview').textContent = ''; $('preview').hidden = true;
   $('verification').hidden = true;
