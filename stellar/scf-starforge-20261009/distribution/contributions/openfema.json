@@ -51,6 +51,24 @@
     "stellar/scf-starforge-20261009/sf30-seller-sdk/openfema/mcp-client.d.mts",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/openfema/RECORDED_SOURCE.md",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/openfema/SOURCE_CONTRACT.md",
-    "stellar/scf-starforge-20261009/sf30-seller-sdk/openfema/source-contract.json"
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/openfema/source-contract.json",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/openfema/COMMISSIONING.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/openfema/examples/commissioning-dr4724.json",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/openfema/examples/commissioning-workorder.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/openfema/examples/TESTNET.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/openfema/examples/native-portfolio-receiving.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/openfema/examples/recorded-dr4724/README.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/openfema/examples/recorded-dr4724/applicants.csv",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/openfema/examples/recorded-dr4724/categories.csv",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/openfema/examples/recorded-dr4724/declarations.csv",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/openfema/examples/recorded-dr4724/disasters.csv",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/openfema/examples/recorded-dr4724/issues.csv",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/openfema/examples/recorded-dr4724/manifest.json",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/openfema/examples/recorded-dr4724/portfolio.html",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/openfema/examples/recorded-dr4724/portfolio.json",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/openfema/examples/recorded-dr4724/projects.csv",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/openfema/examples/testnet-commissioning.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/openfema/examples/testnet-input.example.json",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/openfema/examples/testnet-runtime-package.json"
   ]
 }
