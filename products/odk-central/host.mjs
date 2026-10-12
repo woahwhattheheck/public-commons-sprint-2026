@@ -18,12 +18,15 @@ export function runOriginalCentralPython(filename,args){
     });
     const interrupt=()=>child.kill('SIGINT');
     const terminate=()=>child.kill('SIGTERM');
+    const hangup=()=>child.kill('SIGHUP');
     const detach=()=>{
       process.off('SIGINT',interrupt);
       process.off('SIGTERM',terminate);
+      process.off('SIGHUP',hangup);
     };
     process.on('SIGINT',interrupt);
     process.on('SIGTERM',terminate);
+    process.on('SIGHUP',hangup);
     child.once('error',error=>{
       detach();
       if(error.code==='ENOENT')Object.assign(error,{

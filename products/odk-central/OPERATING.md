@@ -627,6 +627,14 @@ clients attach through the existing connection file.
 
 ### Typed client and merchant tools
 
+A SQL review keeps the complete mapping returned by the original inspection.
+Its required `schema` is `stellar-forge.postgres-dataset-mapping.v1`; preserve
+that marker and the selected original source keys while reviewing each column's
+SQL name, type and null setting. The original mapping accepts 1 through 1,024
+columns and at most 32 keys. The typed tool and SDK declaration expose that
+same complete document.
+
+
 The main `./seller/odk` export and dedicated `./seller/odk/warehouse` export
 include the complete warehouse types and original factories. A client attaches
 to the original application:

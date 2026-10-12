@@ -492,6 +492,7 @@ export interface CentralWarehouseInspectInput extends CentralWarehouseRequest {a
 export type CentralWarehouseSqlType='text'|'boolean'|'bigint'|'numeric'|'double precision'|
   'date'|'timestamp with time zone'|'json';
 export interface CentralWarehouseSqlMapping extends RecordValue {
+  schema:'stellar-forge.postgres-dataset-mapping.v1';
   keys:string[];
   columns:Array<{source:string;column:string;type:CentralWarehouseSqlType;nullable:boolean}>;
 }
