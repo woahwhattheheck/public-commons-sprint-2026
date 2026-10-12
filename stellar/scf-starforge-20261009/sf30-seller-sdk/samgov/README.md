@@ -55,8 +55,12 @@ The primary contract is the [GSA Opportunities Public API documentation](https:/
 | Attachments | Original resourceLinks are retained and selected for acquisition. A provider key is not forwarded to an attachment destination or a redirect. |
 | Deadline | responseDeadLine is preserved as the provider issued it, including its original string. A reviewed operational deadline separately requires an offset, IANA time zone, and reason. |
 | Government amounts | Award amounts and other original values retain their source strings. |
-| Sensitive echoes | Known credential echoes are removed from the shareable source representation while private source custody retains the original hash and redaction description. |
+| Sensitive echoes | Credential query values and known host-key echoes are redacted from shareable source bodies, permitted headers and receipts. Original bytes, their hash and the redaction description remain in the private source record. |
 | Resource size | Each individual retained source may contain up to 64 MiB. A complete portable JSON input may contain up to 512 MiB. |
+
+The same credential-query classifier covers API keys, tokens, signatures, credential fields, AWS and Google signed queries, and encoded parameter names. Public notice links omit those parameters. An attachment service may still issue a signed redirect: the fetch uses that temporary URL in memory, while retained redirect and final-location receipts contain redacted values.
+
+For a redacted source, `sha256` identifies its shareable bytes and `originalSha256` identifies the original response. `representation`, `redactions` and `originalPrivateAtCapture` describe that difference. The separately retained original bodies live under `private-source-originals`; they are outside the portable object set. An untouched source keeps its original bytes. Source views, every export format, merchant preparation, the opportunity bridge and portable receiving check the shareable representation. If an older workspace contains a raw credential echo, receive its original files into a fresh workspace with this version to build the corrected public representation and preserve the private originals.
 
 A notice absent from a later search is labeled as no longer returned in that search. Its absence alone does not establish cancellation or deletion. Compare the original notice fields and source documents before changing the opportunity decision.
 
