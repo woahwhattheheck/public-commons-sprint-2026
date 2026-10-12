@@ -92,7 +92,8 @@
     "./buyer/research-dossiers/customer-quotes/operator": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/customer-quotes/operator.mjs",
     "./buyer/research-dossiers/customer-quotes/workspace": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/customer-quotes/workspace.mjs",
     "./buyer/research-dossiers/customer-quotes/cli": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/customer-quotes/cli.mjs",
-    "./merchant/mcp/research-quotes": "./source/stellar-forge/mcp-merchant-operator/research-quotes.mjs"
+    "./merchant/mcp/research-quotes": "./source/stellar-forge/mcp-merchant-operator/research-quotes.mjs",
+    "./buyer/research-dossiers/customer-quotes/python-bridge": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/research-quotes-delivery.mjs"
   },
   "components": [
     "stellar/scf-starforge-20261009/sf30-seller-sdk/europe-pmc",
@@ -121,7 +122,9 @@
     "stellar/scf-starforge-20261009/sf30-seller-sdk/routescan/primitives.mjs",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/routescan/quota.mjs",
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/RESEARCH-CUSTOMER-UPDATES.md",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/RESEARCH-QUOTES.md",
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/examples/research_customer_delivery.py",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/examples/research_quotes_receiving.py",
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/examples/synthesis-bcg-reference/README.md",
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/examples/synthesis-bcg-reference/bcg-source-rows.json",
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/examples/synthesis-bcg-reference/original/dat.bcg.Rd",
@@ -134,6 +137,7 @@
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/examples/synthesis-bcg-reference/sources.json",
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/research-bridge.mjs",
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/research-customer-delivery.mjs",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/research-quotes-delivery.mjs",
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/__init__.py",
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/research_cli.py",
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/research_customer_cli.py",
@@ -142,6 +146,9 @@
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/research_customer_updates.py",
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/research_extraction.py",
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/research_extraction_cli.py",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/research_quote_types.py",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/research_quotes.py",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/research_quotes_cli.py",
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/research_workspace.py",
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/EXTRACTION-TRANSPORTS.md",
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/README.md",
