@@ -2,15 +2,37 @@
 
 The merchant provider carries the municipal operating workflow through the same durable workspace used by the browser and command line: configure an official source, capture its service catalog and cases, search and assign cases, compare observations, deliver complete files, receive a whole workspace and reopen it.
 
-Provider ID: **open311-workspaces**. Configuration family: **open311Workspaces**. Native host connection field: **open311WorkspaceConnection**. The product uses Node 22.13 or newer and the original merchant host, release store and retained-file reader.
+Provider ID: **open311-workspaces**. Configuration family: **open311Workspaces**. Native host connection field: **open311WorkspaceConnection**. Direct Open311 modules use Node 22.13 or newer; the installed merchant runtime uses Node 22.16 or newer with Linux, Python 3.11 or newer and util-linux flock. The provider shares the original merchant host, release store and retained-file reader.
+
+## Install the merchant transport
+
+For a delivered selected merchant archive, prepare its runtime with the original [runtime installer](../../distribution/RUNTIME_INSTALL.md). Run these commands from the private directory where the source-only merchant package is already installed. Replace the archive filename and SHA-256 with the values retained from that delivered source edition; the parent /private must exist and municipal-runtime must be a new directory.
+
+~~~sh
+npx --no-install starforge runtime-install prepare \
+  --dir /private/municipal-runtime \
+  --archive /private/ORIGINAL_OPEN311_ARCHIVE.tgz \
+  --sha256 ORIGINAL_ARCHIVE_SHA256 \
+  --native --feature schema --feature openapi --feature mcp --operator
+
+npx --no-install starforge runtime-install install \
+  --dir /private/municipal-runtime
+
+npx --no-install starforge runtime-install inspect \
+  --dir /private/municipal-runtime --load --source
+~~~
+
+The original profile selects exact dependencies from the archive's declarations. Its source stays in municipal-runtime/package/source and its dependencies install in municipal-runtime/node_modules. Wait for READY, then use runtime-install run --dir /private/municipal-runtime -- before merchant commands so they execute against that installed source and dependency tree.
+
+An interrupted install resumes with runtime-install resume --dir /private/municipal-runtime. Add --offline --cache /private/npm-cache to install or resume when using a populated existing cache. If a selected native module needs offline preparation, supply a compiler and local Node headers matching the selected executable; --node-headers /private/node-prefix selects a prefix containing include/node. The source-only browser and CLI can operate their saved desks independently.
 
 ## Prepare the operating desks
 
 Open or create the private workspace directories with the original CLI:
 
 ~~~sh
-node open311/cli.mjs state --workspace /private/municipal-desk
-node open311/cli.mjs state --workspace /private/municipal-received
+npx --no-install starforge open311 state --workspace /private/municipal-desk
+npx --no-install starforge open311 state --workspace /private/municipal-received
 ~~~
 
 Keep the existing browser, CLI and merchant alias pointed at that same directory. SQLite transactions preserve operation replay and revision checks across processes.
@@ -59,9 +81,30 @@ Source profiles contain the complete original connection. A profile can specify 
 
 The Helsinki profile follows the city's [October 2025 API description](https://www.hel.fi/static/avoindata/kanslia/Open311_API_description_011025.pdf), including native READY/PROCESSING status values and its 200-response cap. The city's text describes the returned set as the last 90 days or at most 200 first responses. Its [HRI catalog](https://hri.fi/data/en_GB/dataset/helsingin-kaupungin-palauterajapinta) provides attribution and CC BY 4.0 licensing. The [source-client guide](README.md) also covers GeoReport v2 and FixMyStreet differences.
 
+Programmatic examples in this guide use the delivered sf30-seller-sdk directory as their relative import base. For an application outside that source tree, resolve these same modules under the installed runtime's returned sourceRoot.
+
 ## Initialize the original native merchant
 
-The source-owned initializer registers this connection with the maintained merchant configuration and original SF82 release store:
+For an installed runtime, save the original initializer's options as /private/open311-setup.json with mode 0600:
+
+~~~json
+{
+  "directory": "/private/municipal-merchant",
+  "connection": "/private/open311-host.json",
+  "name": "Municipal service operations"
+}
+~~~
+
+Run the initializer through the same prepared runtime:
+
+~~~sh
+npx --no-install starforge runtime-install run \
+  --dir /private/municipal-runtime -- \
+  merchant-providers init open311-workspaces \
+  --options /private/open311-setup.json
+~~~
+
+The equivalent source-owned API registers this connection with the maintained merchant configuration and original SF82 release store:
 
 ~~~js
 import { initializeOpen311MerchantWorkspace } from './open311/mcp-setup.mjs';
@@ -77,6 +120,32 @@ console.log(setup.configuration);
 For an existing release store, pass its absolute path as releaseStore. Setup retains its intent and original initializer attempts. Repeating the same arguments reopens that setup. The resulting merchant-mcp.json selects the existing release store, customer-exports directory and open311WorkspaceConnection. The normal merchant configuration reader loads the registered provider through the distribution contribution.
 
 The provider has host-owned concurrency and drains admitted actions before closing its own database handles and retained readers. The independent browser process continues to use the same workspace.
+
+## Register the installed MCP client
+
+Generate the client configuration on the host that will launch the merchant:
+
+~~~sh
+npx --no-install starforge runtime-install run \
+  --dir /private/municipal-runtime -- \
+  merchant-mcp-client-config \
+  --config /private/municipal-merchant/merchant-mcp.json \
+  --name open311 \
+  --output /private/open311-mcp-client.json
+~~~
+
+The original generator validates that merchant configuration and records the actual absolute Node executable and stdio source entry in the prepared runtime. Apply the generated open311 server entry through the MCP client's existing configuration workflow. To preserve other servers in an existing mcpServers file, add --merge /private/existing-mcp-client.json, choose an unused name and write a separate new output file. The host environment supplies any source apiKeyEnv values.
+
+The equivalent terminal launch is:
+
+~~~sh
+npx --no-install starforge runtime-install run \
+  --dir /private/municipal-runtime -- \
+  merchant-mcp-stdio \
+  --config /private/municipal-merchant/merchant-mcp.json
+~~~
+
+A receiving host prepares the same delivered source archive locally, initializes its own merchant configuration with its own desk/input paths, and runs this generator locally. After a runtime upgrade or recovery into a new directory, generate the new client entry from that runtime so its absolute source path follows the selected installation.
 
 ## Operate a complete customer desk
 
@@ -246,7 +315,7 @@ console.log(received);
 Open the receiving workspace through the Applications launcher or:
 
 ~~~sh
-node open311/cli.mjs serve --workspace /private/municipal-received --port 0
+npx --no-install starforge open311 serve --workspace /private/municipal-received --port 0
 ~~~
 
-The browser startup reports the received workspace identity. Source queries, complete bytes, service cases, review history and saved operation results reopen together.
+The browser startup reports the received workspace identity. Source queries, complete bytes, service cases, review history and saved operation results reopen together. Receive before the first Applications Review/Save of this directory. If an Applications entry was saved against the empty destination, stop its managed process and Review/Save the received directory before Start/Open so the saved binding uses the restored original workspace UUID.
