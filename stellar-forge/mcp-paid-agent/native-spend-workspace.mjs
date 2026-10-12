@@ -107,8 +107,9 @@ export async function configureMcpSpendingModule(configPath, modulePath) {
   await readMcpSpendingHost(configPath);
   absolute(modulePath); await privateParent(modulePath);
   const source = 'import {openMcpSpendingHost} from ' + JSON.stringify(import.meta.url) + ';\n' +
-    'const operator = await openMcpSpendingHost(' + JSON.stringify(resolve(configPath)) + ');\n' +
-    'export const {approve, signPayment, spendingStatus, reconcilePayment, close} = operator;\n';
+    'export const openOperator = () => openMcpSpendingHost(' + JSON.stringify(resolve(configPath)) + ');\n' +
+    'const operator = await openOperator();\n' +
+    'export const {readiness, approve, signPayment, spendingStatus, reconcilePayment, close} = operator;\n';
   const temporary = join(dirname(modulePath),'.mcp-module-'+randomUUID());
   const file = await open(temporary,'wx',0o600);
   try {
