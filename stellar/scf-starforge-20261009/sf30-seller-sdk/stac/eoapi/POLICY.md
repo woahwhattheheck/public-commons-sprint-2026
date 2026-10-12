@@ -60,7 +60,7 @@ The schema is `scf-eoapi-deployment-policy/v1`. The controller supplies the cust
 | `title` | Human-readable configuration title |
 | `deployment` | `id`, `eoapiVersion`, `authProxyVersion`, `sourceRef`, `publicUrl`; optional `rootPath` and `rootPathSkipPrefixes` |
 | `upstream` | `url`, `conformsTo` from the selected upstream, `networkBoundary` describing the selected public or private source boundary |
-| `identity` | OIDC: `discoveryUrl`, `audiences`, `policyOwner`, optional `internalDiscoveryUrl` and `mode: "oidc"`. Public source: `mode: "public"`, `policyOwner` |
+| `identity` | New OIDC intake: `mode: "oidc"`, `discoveryUrl`, `audiences`, `policyOwner`, optional `internalDiscoveryUrl`. Public source: `mode: "public"`, `policyOwner` |
 | `routing` | Explicit `defaultPublic`, ordered `publicEndpoints` and ordered `privateEndpoints` dictionaries |
 | `filtering` | Optional `items` and `collections`, each a factory definition or `null` |
 | `cors` | Optional `origins`, `methods`, `headers`, `credentials`, `exposeHeaders`, `maxAge` |
@@ -119,7 +119,9 @@ The local listener uses port 8080. The receiving deployment can bind its selecte
 
 The original Auth Proxy application always initializes OIDC. Public mode uses this included factory with upstream-only startup checks and removes caller Authorization, Cookie and Proxy-Authorization before forwarding. Its typed settings require public routes, empty record filters and identity settings, and CORS credentials disabled. The native dependency and factory travel as the reviewed source selection and complete included Python file.
 
-An absent identity mode preserves the existing OIDC policy and package bytes. New authenticated intake may use `mode: "oidc"`; this explicit form removes a previous `EOAPI_IDENTITY_MODE` when applying a replacement and launches the original `stac_auth_proxy.app:create_app` factory. The editor preserves absent mode on an existing untouched OIDC policy and records explicit OIDC when switching from a public edition. Complete compilations set native default access, private routes, authentication annotation and CORS credentials, so those values follow the newly approved edition.
+An absent identity mode preserves historical OIDC policy and package bytes. New authenticated intake uses `mode: "oidc"`; this explicit form removes a previous `EOAPI_IDENTITY_MODE` when applying a replacement and launches the original `stac_auth_proxy.app:create_app` factory. New editor drafts start in explicit OIDC mode. Reopening an untouched historical policy preserves its omitted mode; saving an edited edition uses explicit OIDC mode and creates a new reviewed edition. Earlier reviews, approvals and exported packages retain their original contents.
+
+Both explicit modes export one complete `CORS` JSON object with the native keys `allow_origins`, `allow_methods`, `allow_headers`, `allow_credentials`, `expose_headers` and `max_age`, and remove the six earlier `CORS_*` environment variables. This keeps all reviewed values together and preserves each array element, including commas. The selected native settings parser splits nested environment names on every underscore, so separate `CORS_ALLOW_ORIGINS` fields do not map to its `allow_origins` property. Use an explicit mode for every new or changed native deployment. Complete compilations also set native default access, private routes, authentication annotation and CORS credentials, so those values follow the newly approved edition.
 
 ### Routes and precedence
 

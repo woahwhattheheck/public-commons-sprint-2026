@@ -192,13 +192,19 @@ export function compileDeploymentPolicy(input) {
     PUBLIC_ENDPOINTS: json(policy.routing.publicEndpoints), PRIVATE_ENDPOINTS: json(policy.routing.privateEndpoints),
     ROOT_PATH: policy.deployment.rootPath, ROOT_PATH_SKIP_PREFIXES: policy.deployment.rootPathSkipPrefixes.join(','),
     CHECK_CONFORMANCE: 'true', WAIT_FOR_UPSTREAM: 'true', ENABLE_AUTHENTICATION_EXTENSION: publicMode ? 'false' : 'true',
-    CORS_ALLOW_ORIGINS: policy.cors.origins.join(','), CORS_ALLOW_METHODS: policy.cors.methods.join(','),
-    CORS_ALLOW_HEADERS: policy.cors.headers.join(','), CORS_ALLOW_CREDENTIALS: String(policy.cors.credentials),
-    CORS_EXPOSE_HEADERS: policy.cors.exposeHeaders.join(','), CORS_MAX_AGE: String(policy.cors.maxAge)
+    ...(policy.identity.mode ? { CORS: json({ allow_origins: policy.cors.origins, allow_methods: policy.cors.methods,
+      allow_headers: policy.cors.headers, allow_credentials: policy.cors.credentials,
+      expose_headers: policy.cors.exposeHeaders, max_age: policy.cors.maxAge }) } : {
+      CORS_ALLOW_ORIGINS: policy.cors.origins.join(','), CORS_ALLOW_METHODS: policy.cors.methods.join(','),
+      CORS_ALLOW_HEADERS: policy.cors.headers.join(','), CORS_ALLOW_CREDENTIALS: String(policy.cors.credentials),
+      CORS_EXPOSE_HEADERS: policy.cors.exposeHeaders.join(','), CORS_MAX_AGE: String(policy.cors.maxAge)
+    })
   };
   if (publicMode) environment.EOAPI_IDENTITY_MODE = 'public';
   if (policy.identity.internalDiscoveryUrl) environment.OIDC_DISCOVERY_INTERNAL_URL = policy.identity.internalDiscoveryUrl;
   const unset = ['PROXY_OPTIONS', 'ITEMS_FILTER', 'COLLECTIONS_FILTER', 'ITEMS_FILTER_PATH', 'COLLECTIONS_FILTER_PATH'];
+  if (policy.identity.mode) unset.push('CORS_ALLOW_ORIGINS', 'CORS_ALLOW_METHODS', 'CORS_ALLOW_HEADERS',
+    'CORS_ALLOW_CREDENTIALS', 'CORS_EXPOSE_HEADERS', 'CORS_MAX_AGE');
   if (!policy.identity.internalDiscoveryUrl) unset.push('OIDC_DISCOVERY_INTERNAL_URL');
   if (publicMode) unset.push('OIDC_DISCOVERY_URL', 'ALLOWED_JWT_AUDIENCES', ...PUBLIC_OPENAPI_UNSET);
   else if (policy.identity.mode === 'oidc') unset.push('EOAPI_IDENTITY_MODE');
