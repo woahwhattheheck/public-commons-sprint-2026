@@ -11,7 +11,7 @@ import { acquireWorkspace, privateDirectory, readPrivate, readJson, createFile, 
 
 export const FISCAL_PACKAGE_SCHEMA = 'stellar-forge.fiscaldata-source-package.v1';
 const WORKSPACE_SCHEMA = 'stellar-forge.fiscaldata-workspace.v1';
-const ROOTS = new Set(['catalogs','sources','captures','editions','comparisons','exports','staging','restoration','operator-history']);
+const ROOTS = new Set(['catalogs','sources','captures','editions','comparisons','exports','refresh-plans','refresh-runs','staging','restoration','operator-history']);
 const MAX_FILE = 256 * 1024 ** 2, MAX_SOURCE = 512 * 1024 ** 2, MAX_PACKAGE = 256_000_000;
 const MAX_FILES = 20000, CHUNK = 48 * 1024, MAX_LINE = 8 * 1024 ** 2;
 const HASH = /^[a-f0-9]{64}$/, UUID = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/;
@@ -307,7 +307,7 @@ export async function receiveFiscalSourcePackage({directory,packagePath,expected
     const history=join(stage,'restoration',receivingId),originals=join(history,'originals');
     await privateDirectory(originals,true);
     await immutable(join(originals,'workspace.json'),await readPrivate(join(stage,'workspace.json'),1024*1024));
-    const paused=[],generatedPaths=['restoration/'+receivingId+'/originals/workspace.json','restoration/'+receivingId+'/receipt.json'];
+    const paused=[],pausedRefreshRuns=[],generatedPaths=['restoration/'+receivingId+'/originals/workspace.json','restoration/'+receivingId+'/receipt.json'];
     for(const file of parsed.manifest.files.filter(f=>/^captures\/[a-f0-9-]+\/record\.json$/.test(f.path))){
       const record=await readJson(join(stage,file.path),32*1024**2);
       if(record.desiredState==='RUNNING'&&!['COMPLETE','CANCELLED'].includes(record.status)){
@@ -319,13 +319,28 @@ export async function receiveFiscalSourcePackage({directory,packagePath,expected
         await atomicJson(dirname(join(stage,file.path)),'record.json',changed);paused.push(record.id);
       }
     }
+    for(const file of parsed.manifest.files.filter(f=>/^refresh-runs\/[a-f0-9-]+\/record\.json$/.test(f.path))){
+      const record=await readJson(join(stage,file.path),32*1024**2);
+      if(!['COMPLETE','CANCELLED'].includes(record.status)){
+        await privateDirectory(dirname(join(originals,file.path)),true);
+        await immutable(join(originals,file.path),await readPrivate(join(stage,file.path),32*1024**2));
+        generatedPaths.push('restoration/'+receivingId+'/originals/'+file.path);
+        const changed={...record,revision:record.revision+1,status:record.phase==='REVIEW'?'REVIEW_REQUIRED':'PAUSED',
+          desiredState:'PAUSED',updatedAt:intent.createdAt,
+          control:null,restoredFrom:{packageSha256:expectedSha256,revision:record.revision,
+            status:record.status,desiredState:record.desiredState}};
+        // Native source/capture/build/report request identities remain untouched.
+        // The receiver chooses Resume or the exact READY review after reopening.
+        await atomicJson(dirname(join(stage,file.path)),'record.json',changed);pausedRefreshRuns.push(record.id);
+      }
+    }
     const header={...originalHeader,revision:originalHeader.revision+1,updatedAt:intent.createdAt,
       restoredFrom:{packageSha256:expectedSha256,workspaceId:originalHeader.id,revision:originalHeader.revision,operationId}};
     await atomicJson(stage,'workspace.json',header);
     const receipt={schema:FISCAL_PACKAGE_SCHEMA,receivingId,operationId,packageSha256:expectedSha256,
       manifestSha256:parsed.manifestSha256,operator:actor,receivedAt:intent.createdAt,workspace:{id:header.id,revision:header.revision},
       originalWorkspace:parsed.manifest.workspace,originalFiles:parsed.manifest.files.length,originalBytes:parsed.manifest.bytes,
-      pausedCaptures:paused,publication:parsed.manifest.publication,reused:false};
+      pausedCaptures:paused,pausedRefreshRuns,publication:parsed.manifest.publication,reused:false};
     await immutable(join(history,'receipt.json'),bytes(receipt));
     const promoted=[];
     for(const path of new Set([...parsed.manifest.files.map(f=>f.path),...generatedPaths]))promoted.push(await descriptor(stage,path));

@@ -6,9 +6,9 @@ import { open, realpath, lstat, readdir } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { randomUUID, randomBytes } from 'node:crypto';
 import { createServer } from 'node:http';
-import { exact, failure, identifier, line, plain, privateSupportDirectory, fileBytes } from './host-files.mjs';
+import { exact, failure, identifier, line, plain, privateSupportDirectory } from './host-files.mjs';
 import { RetainedFileReads, MAX_RETAINED_CHUNK_BYTES } from './retained-file-reads.mjs';
-import { privateDirectory, readJson, createFile, bytes, identity, digest } from '../../stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/publisher/files.mjs';
+import { privateDirectory, readJson, createFile, bytes, identity } from '../../stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/publisher/files.mjs';
 
 export const FISCALDATA_WORKSPACE_CONNECTION_SCHEMA='stellar-forge.fiscaldata-workspace-connection.v1';
 
@@ -19,7 +19,7 @@ export const FISCALDATA_WORKSPACE_CONNECTION_SCHEMA='stellar-forge.fiscaldata-wo
 
 
 const readActions=new Set(['captures.get','captures.rows','editions.get','editions.rows','editions.query',
-  'comparisons.get','publisher.status','publisher.preview','publisher.release.inspect','publisher.buyer.account']);
+  'comparisons.get','refresh.plans.list','refresh.plans.get','refresh.runs.list','refresh.runs.get','refresh.runs.preview','publisher.status','publisher.preview','publisher.release.inspect','publisher.buyer.account']);
 function count(value,label,min=0,max=Number.MAX_SAFE_INTEGER) {
   if(!Number.isSafeInteger(value)||value<min||value>max)throw failure('INVALID_PARAMS',label+' must be an integer from '+min+' to '+max+'.');
   return value;
@@ -98,9 +98,9 @@ export async function readFiscalDataWorkspaceConfiguration(path){
 function page(values,offset=0,limit=50){count(offset,'Offset');count(limit,'Page size',1,100);return{items:values.slice(offset,offset+limit),offset,limit,total:values.length,nextOffset:offset+limit<values.length?offset+limit:null};}
 function stateView(state,section='overview',offset=0,limit=50){
   if(section==='catalog')return{...state.catalog,endpoints:page(state.catalog.endpoints,offset,limit)};
-  if(['sources','captures','editions','comparisons','exports'].includes(section))return page(state[section],offset,limit);
+  if(['sources','captures','editions','comparisons','exports','refreshPlans','refreshRuns'].includes(section))return page(state[section],offset,limit);
   const result={...state,catalog:{...state.catalog,endpoints:page(state.catalog.endpoints,0,20)}};
-  for(const key of ['sources','captures','editions','comparisons','exports'])result[key]=page(state[key],offset,limit);
+  for(const key of ['sources','captures','editions','comparisons','exports','refreshPlans','refreshRuns'])result[key]=page(state[key],offset,limit);
   return result;
 }
 export class MerchantFiscalDataWorkspaces{
@@ -200,7 +200,7 @@ export class MerchantFiscalDataWorkspaces{
     if(action.startsWith('publisher.')&&!publisherActions.has(action))throw failure('INVALID_PARAMS','Choose an original declared publisher action.');
     return this.#audit(handle,action,selected,origin,async()=>{
       const result=await handle.model.dispatch(action,selected);
-      if(['captures.start','captures.resume'].includes(action))await handle.model.startWorker();
+      if(['captures.start','captures.resume','refresh.runs.start','refresh.runs.resume','refresh.runs.review'].includes(action))await handle.model.startWorker();
       return result;
     });
   }
@@ -246,9 +246,8 @@ export class MerchantFiscalDataWorkspaces{
           if(!handle?.model)throw failure('FISCALDATA_WORKSPACE_CLOSED','Open the original workspace before its file read.');
           file=await handle.model.file(args.kind,args.id,args.filename);
         }
-        const data=await fileBytes(file.path,256_000_000);
-        if(data.length!==file.size||digest(data)!==file.sha256)throw failure('FISCALDATA_FILE_CHANGED','The original file changed before its retained read.');
-        return{bytes:data,name:file.name,type:file.mime};
+        const readonlyFileHandle=await open(file.path,constants.O_RDONLY|(constants.O_NOFOLLOW??0)|(constants.O_NONBLOCK??0));
+        return{readonlyFileHandle,bytes:file.size,sha256:file.sha256,name:file.name,type:file.mime};
       }});
   }
   async #borrowBrowser(name,handle,port){
@@ -337,6 +336,12 @@ export class MerchantFiscalDataWorkspaces{
       case'merchant_fiscaldata_comparison':if(['create','get'].includes(args.action))return call('comparisons.'+args.action,args.payload);break;
       case'merchant_fiscaldata_export':return call('exports.create',args.payload);
       case'merchant_fiscaldata_briefing':return call('briefings.create',args.payload);
+      case'merchant_fiscaldata_refresh_plan':
+        if(['list','get','save'].includes(args.action))return call('refresh.plans.'+args.action,args.payload);
+        if(args.action==='promote')return call('refresh.baseline.promote',args.payload);break;
+      case'merchant_fiscaldata_refresh_run':
+        if(['list','get','preview','start','pause','resume','cancel','review'].includes(args.action))
+          return call('refresh.runs.'+args.action,args.payload);break;
       case'merchant_fiscaldata_merchant':{
         const selected=handle.entry.merchants[identifier(args.profile,'Merchant profile')];
         if(!selected)throw failure('FISCALDATA_MERCHANT_NOT_CONFIGURED','Choose a host-declared public merchant profile.');
