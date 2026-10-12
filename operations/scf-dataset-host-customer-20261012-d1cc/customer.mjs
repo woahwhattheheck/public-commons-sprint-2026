@@ -1,4 +1,5 @@
 // One original dataset host customer continuation, over retained native inputs.
+import {constants} from 'node:fs';
 import {readFile,writeFile,open,mkdir,rename,unlink,lstat,readdir} from 'node:fs/promises';
 import {join,dirname,resolve} from 'node:path';
 import {pathToFileURL} from 'node:url';
@@ -54,15 +55,59 @@ check(hash(definitionRaw)===input.definitionSha256&&definition.configurationSha2
  definition.config.operation.intentId===input.nativeSessionId,'The original acquisition changed');
 const nativeUrl=new URL(definition.config.operation.url);
 const preset=await readBuyerOperatorPreset(input.operatorSettings,{directory:join(input.stateDirectory,'received')});
-check(preset.sha256===input.operatorSettingsSha256,'The original operator preset changed');
+check(preset.sha256===input.operatorSettingsSha256,'The prepared host preset changed');
 const offersRaw=await readFile(input.offersFile);
-check(hash(offersRaw)===input.offersSha256,'The original merchant offers changed');
+check(hash(offersRaw)===input.offersSha256,'The generated original seller offers changed');
 const choices=catalogChoices(offersRaw),terms=definition.config.operation.expect;
 const choiceIndex=choices.findIndex(row=>row.resource===nativeUrl.origin+nativeUrl.pathname&&
  ['network','asset','payTo','maxAtomic'].every(key=>row.terms[key]===terms[key]));
-check(choiceIndex>=0,'The retained original merchant offer does not match this acquisition');
+check(choiceIndex>=0,'The new configured seller offer does not prepare this retained inventory example');
 const choice=choices[choiceIndex],limit=definition.limits;
-const total=BigInt(limit.maxTotalAtomic),daily=BigInt(preset.value.maxDailyAtomic)<total?BigInt(preset.value.maxDailyAtomic):total;
+const generationRaw=await readFile(input.sellerGeneration),generation=JSON.parse(generationRaw);
+check(hash(generationRaw)===input.sellerGenerationSha256&&
+ generation.kind==='NEW_ORIGINAL_SF30_CONFIGURATION'&&generation.sourceCommit===input.sourceCommit&&
+ generation.offersSha256===input.offersSha256&&
+ generation.originalAcquisition.sessionId===input.nativeSessionId&&
+ generation.originalAcquisition.configurationSha256===input.configurationSha256&&
+ generation.originalAcquisition.payments===0,'The new original seller generation changed');
+result.merchantInput={kind:generation.kind,sha256:input.sellerGenerationSha256,
+ priorAcquisitionPayments:0,newProviderRequests:0};
+const environmentPin=input.originalHostEnvironment;
+async function originalHostFile(path,expected){
+ const file=await open(path,constants.O_RDONLY|constants.O_NOFOLLOW);
+ try{
+  const before=await file.stat({bigint:true});
+  check(before.isFile()&&before.size<=16384n&&(before.mode&0o077n)===0n&&
+   (typeof process.getuid!=='function'||before.uid===BigInt(process.getuid())),
+   'The original private host input ownership changed');
+  const raw=await file.readFile(),after=await file.stat({bigint:true}),current=await lstat(path,{bigint:true});
+  check(current.isFile()&&['dev','ino','size','mtimeNs','ctimeNs'].every(key=>
+   before[key]===after[key]&&after[key]===current[key])&&hash(raw)===expected,
+   'The original private host input changed');
+  return JSON.parse(raw);
+ }finally{await file.close()}
+}
+const originalEnvironment=await originalHostFile(environmentPin.path,environmentPin.sha256);
+check(originalEnvironment.payer===preset.value.payer&&environmentPin.payer===preset.value.payer&&
+ originalEnvironment.payTo===terms.payTo,'The original wallet identity changed');
+if(!preset.value.signerProvider){
+ check(preset.value.secretEnv===environmentPin.secretEnv&&
+  /^[A-Z][A-Z0-9_]{0,127}$/.test(environmentPin.secretEnv)&&!environmentPin.secretEnv.startsWith('SF36_')&&
+  typeof originalEnvironment.secret==='string','The original wallet environment binding changed');
+ process.env[environmentPin.secretEnv]=originalEnvironment.secret;
+}
+if(preset.value.httpsProxyEnv){
+ const originalOperator=await originalHostFile(environmentPin.operator,environmentPin.operatorSha256);
+ check(originalOperator.buyerTransport?.mode==='explicit-connect'&&
+  originalOperator.buyerTransport.origin===nativeUrl.origin&&
+  typeof originalOperator.buyerTransport.proxyUrl==='string','The original buyer transport changed');
+ process.env[preset.value.httpsProxyEnv]=originalOperator.buyerTransport.proxyUrl;
+}
+const browserEnvironment={...process.env};
+for(const name of [environmentPin.secretEnv,preset.value.httpsProxyEnv])if(name)delete browserEnvironment[name];
+const retainedTotal=BigInt(limit.maxTotalAtomic),hostTotal=BigInt(preset.value.maxTotalAtomic);
+const total=retainedTotal<hostTotal?retainedTotal:hostTotal;
+const daily=BigInt(preset.value.maxDailyAtomic)<total?BigInt(preset.value.maxDailyAtomic):total;
 check(total<=BigInt(preset.value.maxTotalAtomic)&&daily>=BigInt(terms.maxAtomic),
  'The original selected acquisition limits do not fit the retained host preset');
 const acquisitionInput=name=>({sourceId:input.offersSha256,name,rowIndex:choice.rowIndex,
@@ -103,7 +148,7 @@ async function start(){
   analysis:{python:input.python,checkout:sourceRoot,directory:input.analysisDirectory}});
  appEpoch=hash(new URL(app.url).hash).slice(0,12);
  if(!browser)browser=await chromium.launch({executablePath:input.chromium,headless:true,
-  args:['--no-sandbox','--disable-dev-shm-usage'],downloadsPath:join(root,'downloads')});
+  args:['--no-sandbox','--disable-dev-shm-usage'],env:browserEnvironment,downloadsPath:join(root,'downloads')});
  context=await browser.newContext({viewport:{width:1280,height:900},acceptDownloads:true});
  page=await context.newPage();page.on('pageerror',error=>result.pageErrors.push(error.message));
  await page.goto(app.url);await page.locator('#open-operator').waitFor();
@@ -169,7 +214,7 @@ async function readySnapshot(reviewId){
  }
  const names=(await readdir(ready.workspace)).filter(name=>/\.(pem|key)$/.test(name)).sort();
  const ledger=definition.config.operator.ledger;
- const retained=[...names.map(name=>join(ready.workspace,name)),ledger];
+ const retained=[join(ready.workspace,'operator-keys.json'),...names.map(name=>join(ready.workspace,name)),ledger];
  for(const path of new Set(retained)){
   const stat=await lstat(path);check(stat.isFile(),'The original prepared identity is not a regular file');
   const raw=await readFile(path);files[path]={bytes:raw.length,sha256:hash(raw)};
@@ -220,7 +265,7 @@ try{
  const first=await stage('saved_original_host',()=>saveHost('host-original',preset.value,'Original retained inventory buyer host'));
  await stage('exact_host_download',async()=>{const file=await downloadSettings(first.revision);
   check(file.sha256===first.settingsSha256,'The downloaded host settings changed');return file});
- const prepared=await stage('original_merchant_preparation',async()=>{
+ const prepared=await stage('configured_merchant_preparation',async()=>{
   const review=await reviewedAcquisition('host_inventory_prepared');
   check(review.settingsSha256===first.settingsSha256,'New acquisition did not bind the reviewed original host');
   const value=await api('/api/prepare',{reviewId:review.reviewId});
