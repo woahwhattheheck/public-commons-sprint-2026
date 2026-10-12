@@ -7,6 +7,11 @@ response downloads, generated customer clients, seller configuration releases,
 database and object sources, merchant fleet operations, revenue reconciliation,
 challenge capture, and private support export.
 
+Versioned SEC Company Facts and filings are available through `starforge sec-edgar`.
+The [installed SEC EDGAR workflow](SEC_EDGAR.md) covers original JSON capture,
+source review, operator drafts, native serving, complete export and receiving,
+plus the six installed JavaScript interfaces.
+
 The package preserves the original source paths and bytes. Its command interface
 starts those modules directly. It contains no alternative payment implementation,
 install hooks, test suites or GitHub Actions configuration.
@@ -716,6 +721,12 @@ typed snapshots. `allium-explorer inspect/import/start/collect/status/recover`
 exposes the underlying saved-query operator for terminal use. Application
 imports use `./seller/allium`, `./seller/allium/workspace` and
 `./seller/allium/workspace/server`.
+
+## n8n automation merchants
+
+`starforge n8n-merchant` turns selected production n8n workflows into the existing durable paid-job merchant. Import a child workflow, export its native Webhook/Respond to Webhook wrapper, prepare the merchant with the actual workflow and payment configuration, then use its private operator console for job preparation, original customer handoffs, worker monitoring, results and recovery. A retained n8n execution stays attached to the same paid job when local monitoring resumes; a new remote run is an explicit decision after the previous execution fails.
+
+The [complete n8n merchant guide](../sf30-seller-sdk/n8n/README.md) includes native workflow import, authentication references, production publication, seller/customer HTTPS routing, the invoice automation example, browser operations and CLI recovery. Begin with `starforge n8n-merchant --help`. The typed `@tokenjunkielabs/starforge-merchant/merchant/n8n` import exposes the same maintained implementation; `/config`, `/prepare`, `/runtime` and `/workspace` subpaths expose its original modules. The selected n8n instance is operated separately and the existing whole SF30 source component carries this integration.
 
 ## Native payment dependencies
 
@@ -4935,8 +4946,17 @@ Inside the installed package it is retained at
 installation command catalog and runtime launcher consume this same
 `mcp-analysis-archive` mapping.
 
-## n8n automation merchants
+## Completed paid-job result delivery and customer receiving
 
-`starforge n8n-merchant` turns selected production n8n workflows into the existing durable paid-job merchant. Import a child workflow, export its native Webhook/Respond to Webhook wrapper, prepare the merchant with the actual workflow and payment configuration, then use its private operator console for job preparation, original customer handoffs, worker monitoring, results and recovery. A retained n8n execution stays attached to the same paid job when local monitoring resumes; a new remote run is an explicit decision after the previous execution fails.
+The installed `jobs delivery` commands operate the original merchant's retained completed-result queue. The `jobs receiver` commands initialize and reopen the customer's signed-result store, run its receiving service, inspect verified files and export complete customer deliveries.
 
-The [complete n8n merchant guide](../sf30-seller-sdk/n8n/README.md) includes native workflow import, authentication references, production publication, seller/customer HTTPS routing, the invoice automation example, browser operations and CLI recovery. Begin with `starforge n8n-merchant --help`. The typed `@tokenjunkielabs/starforge-merchant/merchant/n8n` import exposes the same maintained implementation; `/config`, `/prepare`, `/runtime` and `/workspace` subpaths expose its original modules. The selected n8n instance is operated separately and the existing whole SF30 source component carries this integration.
+~~~sh
+starforge jobs delivery --help
+starforge jobs receiver --help
+~~~
+
+Enable the merchant's private delivery desk with `jobs serve --delivery-config FILE` and start its dispatcher with `--start-delivery`. The original jobs page links to **Result delivery**. The customer receiver opens separately through **Paid-job result receiver** in the maintained Applications workspace, using the selected READY runtime and its existing Review, Save, Start, Open and Stop lifecycle.
+
+The receiver runs with Node built-ins and the original Linux delivery lease. Its receiving listener accepts the exact authenticated completed file; its separate loopback desk verifies, previews and downloads the retained result. A lost acknowledgment retries the same delivery identity and returns the original stored receipt.
+
+The [complete installed receiving guide](runtime-workspace/JOB_RESULT_RECEIVER.md) covers archive/runtime selection, paired destination setup, the private environment, HTTPS intake, managed startup, merchant delivery, complete exports and same-state recovery. Stable package imports under `seller/jobs/result-delivery` and `buyer/jobs/result-receiver` expose the same original modules.
