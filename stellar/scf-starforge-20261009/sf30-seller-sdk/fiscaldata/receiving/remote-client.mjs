@@ -1,7 +1,7 @@
 // MIT. One original refresh workspace -> authenticated client -> complete portable receiving.
 // The caller owns the admitted native operation and closes its model before this callback.
 import { constants } from 'node:fs';
-import { mkdir, open, readFile, realpath, lstat, link, rename, unlink } from 'node:fs/promises';
+import { mkdir, open, readFile, realpath, lstat, rename } from 'node:fs/promises';
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import { createServer } from 'node:http';
 import { spawn } from 'node:child_process';
@@ -30,15 +30,18 @@ async function privateDirectory(path){
 }
 async function syncDirectory(path){const h=await open(path,constants.O_RDONLY);try{await h.sync();}finally{await h.close();}}
 async function metadata(path,value,{immutable=false}={}){
-  const data=encode(value),tmp=join(dirname(path),'.receiving-'+randomUUID()+'.partial');
+  const data=encode(value);
+  // Every call is beneath this receiving operation's held kernel lease.
+  // Rename a complete private temporary so a terminated publication cannot leave
+  // a second hard link on the original connection file's required nlink=1.
+  if(immutable){
+    let existing;try{existing=await readFile(path);}catch(error){if(error.code!=='ENOENT')throw error;}
+    if(existing){check(existing.equals(data),'An immutable receiving record changed.');return;}
+  }
+  const tmp=join(dirname(path),'.receiving-'+randomUUID()+'.partial');
   const h=await open(tmp,'wx',0o600);try{await h.writeFile(data);await h.sync();}finally{await h.close();}
   check((await readFile(tmp)).equals(data),'A staged receiving record changed.');
-  if(immutable){
-    try{await link(tmp,path);}
-    catch(error){if(error.code!=='EEXIST'||!(await readFile(path)).equals(data))throw error;}
-  }else await rename(tmp,path);
-  await syncDirectory(dirname(path));
-  if(immutable){await unlink(tmp);await syncDirectory(dirname(path));}
+  await rename(tmp,path);await syncDirectory(dirname(path));
 }
 async function fileIdentity(path){
   const h=await open(path,constants.O_RDONLY|(constants.O_NOFOLLOW??0)|(constants.O_NONBLOCK??0));
