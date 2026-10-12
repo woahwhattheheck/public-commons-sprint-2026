@@ -13,6 +13,7 @@ const argument=name=>{const i=process.argv.indexOf(name);return i<0?null:process
 assert(argument('--config'),'Select the retained --config file.');
 const configPath=resolve(argument('--config')),configBytes=await readFile(configPath),config=JSON.parse(configBytes);
 assert.equal(config.schema,'stellar-forge.wordpress-native-journey.v1');
+assert.match(config.operationId,/^[A-Za-z0-9][A-Za-z0-9._-]{2,120}$/,'Select the retained native operation identity.');
 for(const name of ['sourceRoot','nativeHelper','workDirectory','resultDirectory','python','chromium','playwrightModule','buyerWorkspace'])
   assert(typeof config[name]==='string'&&config[name].startsWith('/'),name+' is an original absolute runtime/source reference.');
 assert.equal(config.merchant.payment.network,'stellar:testnet','Use the selected original testnet merchant.');
@@ -100,7 +101,7 @@ if(argument('--capture-child')){
  }
  async function php(mode,extra={}){
   const seed=(await readFile(join(HERE,'seed.php'),'utf8')).replace(/^<\?php\s*/,'');
-  const code="<?php require '/wordpress/wp-load.php';$mode="+JSON.stringify(mode)+";$needCredentials="+(extra.needCredentials?'true':'false')+';'+seed;
+  const code="<?php require '/wordpress/wp-load.php';$mode="+JSON.stringify(mode)+";$operationId="+JSON.stringify(config.operationId)+";$needCredentials="+(extra.needCredentials?'true':'false')+';'+seed;
   const answer=await wp.playground.run({code});
   assert.equal(answer.exitCode,0,answer.errors||'The actual native WordPress action failed.');
   assert.equal(answer.errors,'');return JSON.parse(answer.text);
@@ -111,7 +112,7 @@ if(argument('--capture-child')){
  async function capture(name,sourceId,discoveryId,selection){
   const started=await act(name,'capture.start',{sourceId,discoveryId,selection});
   const job=await workspace.job(sourceId,started.result.jobId);
-  if(job.status!=='complete'&&!job.active)await act(name+'-resume','capture.resume',{sourceId,captureId:job.id});
+  if(job.status!=='complete'&&!job.active)await act(name+'-resume-'+checkpoint.invocations+'-'+job.revision,'capture.resume',{sourceId,captureId:job.id});
   return await waitJob(started);
  }
  async function edition(name,sourceId,captureId,projection){
@@ -135,7 +136,7 @@ if(argument('--capture-child')){
    await act(name+'-activate','publisher.release.activate',{productId,id:releaseId,expectedGeneration:current.publisher.releases.state.generation});
   }
   current=await workspace.inspect();
-  if(!current.publisher.ownsRelease)await act(name+'-start-'+current.publisher.releases.state.generation+'-'+result.phases.length,'publisher.release.start',
+  if(!current.publisher.ownsRelease)await act(name+'-start-'+current.publisher.releases.state.generation+'-'+checkpoint.invocations,'publisher.release.start',
    {productId,expectedGeneration:current.publisher.releases.state.generation});
   current=await workspace.inspect();
   assert.equal(current.publisher.releases.runtime.state,'RUNNING');
@@ -198,7 +199,7 @@ if(argument('--capture-child')){
   const page=await browser.newPage({viewport:{width:1440,height:1040}});
   const errors=[];page.on('pageerror',error=>errors.push(error.message));
   const response=await page.goto(operator.url,{waitUntil:'networkidle'});assert.equal(response.status(),200);
-  await page.waitForSelector('#source-select option[value="'+checkpoint.sourceId+'"]');
+  await page.waitForSelector('#source-select option[value="'+checkpoint.sourceId+'"]',{state:'attached'});
   for(const asset of ['/app.mjs','/style.css','/publisher.mjs']){const r=await fetch(operator.url+asset);assert.equal(r.status,200);assert((await r.arrayBuffer()).byteLength>100);}
   await page.locator('[data-section="captures"]').click();
   await page.locator('#job-select').selectOption(checkpoint.captureId);
@@ -253,7 +254,7 @@ if(argument('--capture-child')){
   const saved=existingSource?{result:existingSource}:await saveSourceInBrowser(declaration);checkpoint.sourceId=saved.result.id;await saveCheckpoint();
   const discovered=await act('native-discovery','source.discover',{sourceId:checkpoint.sourceId});
   let discovery=await workspace.job(checkpoint.sourceId,discovered.result.jobId);
-  if(discovery.status!=='complete'&&!discovery.active)await act('native-discovery-resume-'+discovery.revision,'capture.resume',{sourceId:checkpoint.sourceId,captureId:discovery.id});
+  if(discovery.status!=='complete'&&!discovery.active)await act('native-discovery-resume-'+checkpoint.invocations+'-'+discovery.revision,'capture.resume',{sourceId:checkpoint.sourceId,captureId:discovery.id});
   discovery=await waitJob(discovered);checkpoint.discoveryId=discovery.id;await saveCheckpoint();
   for(const key of ['type:post','type:page','type:attachment','type:sf_note','taxonomy:category'])
    assert(discovery.complete.collections.some(row=>row.key===key),'Native discovery missing '+key);
@@ -273,7 +274,7 @@ if(argument('--capture-child')){
   }
   const retained=await readJson(join(WORK,'capture-interruption.json')),before=await readFile(retained.path);
   const beforeCounts=await php('counts');
-  const resume=await act('native-capture-resume','capture.resume',{sourceId:checkpoint.sourceId,captureId:checkpoint.captureId});
+  const resume=await act('native-capture-resume-'+checkpoint.invocations,'capture.resume',{sourceId:checkpoint.sourceId,captureId:checkpoint.captureId});
   const completed=await waitJob(resume),afterCounts=await php('counts');
   assert.equal(sha(await readFile(retained.path)),sha(before));
   const firstKey='/wp/v2/posts?page=1&context=edit';assert.equal(beforeCounts[firstKey],1);assert.equal(afterCounts[firstKey],1);
@@ -388,7 +389,7 @@ if(argument('--capture-child')){
   assert(observed?.url);assert.equal(observed.original.workspaceId,binding.workspaceId);
   await launchBrowser();const receivedPage=await browser.newPage({viewport:{width:1440,height:1040}});
   await receivedPage.goto(observed.url,{waitUntil:'networkidle'});
-  await receivedPage.waitForSelector('#edition-select option[value="'+checkpoint.edition2+'"]');
+  await receivedPage.waitForSelector('#edition-select option[value="'+checkpoint.edition2+'"]',{state:'attached'});
   await receivedPage.screenshot({path:join(OUTPUT,'wordpress-received-workspace.png'),fullPage:true});await receivedPage.close();
   await phase('native-cli-and-startup-observer-reopen',{workspaceId:binding.workspaceId,workspaceIdentity:binding.sha256,
    sourceSha256:launchSource.sha256,instanceId:observed.original.instanceId,pid:observed.original.pid,
@@ -400,7 +401,20 @@ if(argument('--capture-child')){
   process.exitCode=1;
  }finally{
   const failures=[];
-  if(managedChild&&managedChild.exitCode===null&&managedChild.signalCode===null){await new Promise(ok=>{const timer=setTimeout(()=>{managedChild.kill('SIGKILL');ok();},10000);managedChild.once('exit',()=>{clearTimeout(timer);ok();});managedChild.kill('SIGTERM');});}
+  if(managedChild&&managedChild.exitCode===null&&managedChild.signalCode===null){
+   try{await new Promise((ok,bad)=>{
+    let graceful,forced,settled=false;
+    const finish=error=>{if(settled)return;settled=true;clearTimeout(graceful);clearTimeout(forced);managedChild.removeListener('exit',exited);managedChild.removeListener('error',failed);error?bad(error):ok();};
+    const exited=()=>finish(),failed=error=>finish(error);
+    managedChild.once('exit',exited);managedChild.once('error',failed);
+    if(managedChild.exitCode!==null||managedChild.signalCode!==null){finish();return;}
+    graceful=setTimeout(()=>{
+     try{managedChild.kill('SIGKILL');}catch(error){finish(error);return;}
+     forced=setTimeout(()=>finish(Error('The managed native child did not confirm exit after SIGKILL.')),10000);
+    },10000);
+    try{managedChild.kill('SIGTERM');}catch(error){finish(error);}
+   });}catch(error){failures.push(error.message);}
+  }
   try{await browser?.close();}catch(e){failures.push(e.message);}
   try{await closeWorkspace();}catch(e){failures.push(e.message);}
   for(const handle of [...owned])try{if(handle[Symbol.asyncDispose])await handle[Symbol.asyncDispose]();else await handle.close();}catch(e){failures.push(e.message);}

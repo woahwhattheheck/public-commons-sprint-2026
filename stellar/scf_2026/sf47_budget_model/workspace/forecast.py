@@ -165,7 +165,7 @@ def normalize(context, raw):
     for row in rows(raw.get("commercial", []), "Commercial delivery scenarios", 50):
         obj(row, "Commercial scenario", ("id", "title", "caseRef", "sourceUrl", "sourceIds", "stage", "selected",
             "priceUsd", "totalDeliveryCostUsd", "remainingHours", "startDate", "endDate", "paymentMode",
-            "receipts", "cashIds", "invoiceIds", "directCashIds", "scope", "note"))
+            "receipts", "cashIds", "invoiceIds", "directCashIds", "scope", "note", "timing"))
         ident = short_id(row.get("id"), "Commercial scenario identity")
         receipt_ids = domain.reference_list(row.get("cashIds", []), cash, "Observed customer receipts")
         for cid in receipt_ids:
@@ -191,6 +191,25 @@ def normalize(context, raw):
         price = domain.usd(row.get("priceUsd"), "Original commercial price", True)
         if not receipts or sum((Decimal(item["amountUsd"]) for item in receipts), ZERO) != Decimal(price):
             domain.fail("Commercial milestone amounts must equal the retained total price exactly.", "INVALID_FORECAST")
+        timing = None
+        if "timing" in row:
+            raw_timing = obj(row["timing"], "Event-dependent commercial timing",
+                             ("mode", "startCondition", "deliveryBusinessDays", "receiptConditions", "reviewedReleaseDate"))
+            if raw_timing.get("mode") != "EVENT_DEPENDENT":
+                domain.fail("Use EVENT_DEPENDENT timing, or omit timing for an ordinary dated scenario.", "INVALID_FORECAST")
+            conditions = []
+            for condition in rows(raw_timing.get("receiptConditions"), "Original collection conditions", 30):
+                obj(condition, "Collection condition", ("receiptId", "condition"))
+                conditions.append({"receiptId": short_id(condition.get("receiptId"), "Original receipt milestone"),
+                    "condition": text(condition.get("condition"), "Original relative collection term", 4000, True)})
+            condition_index = unique(conditions, "receiptId", "Collection conditions")
+            if set(condition_index) != {receipt["id"] for receipt in receipts}:
+                domain.fail("Retain exactly one original collection condition for each quoted milestone.", "INVALID_FORECAST")
+            timing = {"mode": "EVENT_DEPENDENT",
+                "reviewedReleaseDate": domain.calendar(raw_timing.get("reviewedReleaseDate"), "Original reviewed release date", True),
+                "startCondition": text(raw_timing.get("startCondition"), "Original start prerequisite", 4000, True),
+                "deliveryBusinessDays": domain.integer(raw_timing.get("deliveryBusinessDays"), "Quoted delivery working days", 1, MAX_DAYS),
+                "receiptConditions": [condition_index[receipt["id"]] for receipt in receipts]}
         normalized = {"id": ident, "title": text(row.get("title"), "Commercial project", 500, True),
             "caseRef": text(row.get("caseRef"), "Original commercial case / offer identity", 4000, True),
             "sourceUrl": domain.url(row.get("sourceUrl", ""), "Original offer URL"),
@@ -199,14 +218,20 @@ def normalize(context, raw):
             "selected": boolean(row.get("selected", True), "Include commercial scenario"),
             "priceUsd": price, "totalDeliveryCostUsd": domain.usd(row.get("totalDeliveryCostUsd"), "Current customer-specific delivery cost estimate"),
             "remainingHours": domain.quantity(row.get("remainingHours"), "Remaining customer-specific hours", 4),
-            "startDate": future(row.get("startDate"), "Forecast commercial work start"),
-            "endDate": future(row.get("endDate"), "Forecast commercial work finish"),
+            "startDate": future(row.get("startDate"), "Forecast commercial work start", timing is not None),
+            "endDate": future(row.get("endDate"), "Forecast commercial work finish", timing is not None),
             "paymentMode": domain.enum(row.get("paymentMode", "accrual"), ("accrual", "completion"), "Commercial cost timing"),
             "receipts": receipts, "cashIds": receipt_ids, "invoiceIds": invoice_ids,
             "directCashIds": direct_ids(row.get("directCashIds", [])),
             "scope": text(row.get("scope", ""), "Customer-specific scope / prerequisites", 12000),
             "note": text(row.get("note"), "Commercial cost and date assumption", 8000, True)}
-        if normalized["endDate"] < normalized["startDate"]:
+        if timing is not None:
+            normalized["timing"] = timing
+            if timing["reviewedReleaseDate"] and normalized["startDate"] and normalized["startDate"] < timing["reviewedReleaseDate"]:
+                domain.fail("The remaining-work window cannot start before the retained original reviewed release.", "INVALID_FORECAST")
+        if (normalized["startDate"] is None) != (normalized["endDate"] is None):
+            domain.fail("Retain both work dates, or leave both empty while the original start condition is unresolved.", "INVALID_FORECAST")
+        if normalized["endDate"] is not None and normalized["endDate"] < normalized["startDate"]:
             domain.fail("Commercial work must finish on or after it starts.", "INVALID_FORECAST")
         commercial.append(normalized)
     unique(commercial, "id", "Commercial projects")
@@ -402,9 +427,13 @@ def build(context, inputs):
             elif row["selected"] and outstanding:
                 issue("CUSTOMER_DATE_REQUIRED", row["id"] + "/" + receipt["id"], "This customer receipt has no selected collection date and is excluded from the cash curve.", outstanding)
         if row["selected"]:
-            for stamp, amount in schedule(remaining, row["paymentMode"], row["startDate"], row["endDate"]):
-                event(stamp, -amount, "COMMERCIAL_COST", row["id"], row["title"], True, commercialId=row["id"], stage=row["stage"])
-            work(row["id"], row["remainingHours"], row["startDate"], row["endDate"])
+            if row["startDate"] is not None and row["endDate"] is not None:
+                for stamp, amount in schedule(remaining, row["paymentMode"], row["startDate"], row["endDate"]):
+                    event(stamp, -amount, "COMMERCIAL_COST", row["id"], row["title"], True, commercialId=row["id"], stage=row["stage"])
+                work(row["id"], row["remainingHours"], row["startDate"], row["endDate"])
+            else:
+                issue("COMMERCIAL_WORK_DATE_REQUIRED", row["id"],
+                    "Original event-dependent work is retained in scope totals. Select its work window after reviewing the start condition; its uninvoiced costs and hours are outside the dated curves.", remaining)
         commercial_rows.append({**row, "receipts": receipts, "observedReceiptsUsd": money(observed),
             "uncollectedPriceUsd": money(max(ZERO, Decimal(row["priceUsd"]) - observed)),
             "invoicedDeliveryUsd": money(invoiced), "paidInvoiceUsd": money(assigned_paid),
@@ -494,7 +523,34 @@ def build(context, inputs):
             "note": inputs["capacity"]["note"], "originalContributors": people,
             "distribution": "Remaining hours are distributed over inclusive calendar dates. Seven-day equivalent is a planning comparison, not a staff roster."},
         "packages": package_rows, "invoices": invoice_rows, "grants": grant_rows, "commercial": commercial_rows,
-        "events": events, "days": days, "workDays": daily_work, "issues": issues}
+        "events": events, "days": days, "workDays": daily_work, "issues": issues,
+        **({"eventTiming": event_timing(commercial_rows)} if any("timing" in row for row in commercial_rows) else {})}
+
+
+def event_timing(commercial):
+    """Only the new explicit timing mode adds report fields; dated v1 saves stay unchanged."""
+    projects = []
+    for row in commercial:
+        if "timing" not in row:
+            continue
+        undated = row["startDate"] is None or row["endDate"] is None
+        selected = row["selected"]
+        conditions = {item["receiptId"]: item["condition"] for item in row["timing"]["receiptConditions"]}
+        projects.append({"id": row["id"], "title": row["title"], "caseRef": row["caseRef"],
+            "selected": selected, "state": "AWAITING_WORK_DATES" if undated else "DATED",
+            "startDate": row["startDate"], "endDate": row["endDate"],
+            "startCondition": row["timing"]["startCondition"],
+            "reviewedReleaseDate": row["timing"]["reviewedReleaseDate"],
+            "deliveryBusinessDays": row["timing"]["deliveryBusinessDays"],
+            "undatedDeliveryCostUsd": row["remainingUninvoicedCostUsd"] if selected and undated else "0.00",
+            "undatedHours": row["remainingHours"] if selected and undated else "0",
+            "receipts": [{**receipt, "condition": conditions[receipt["id"]]} for receipt in row["receipts"]]})
+    return {"projects": projects,
+        "undatedDeliveryCostUsd": money(sum((Decimal(row["undatedDeliveryCostUsd"]) for row in projects), ZERO)),
+        "undatedHours": hours(sum((Decimal(row["undatedHours"]) for row in projects), ZERO)),
+        "undatedCustomerReceiptsUsd": money(sum((Decimal(receipt["remainingUsd"])
+            for row in projects if row["selected"] for receipt in row["receipts"] if not receipt["date"]), ZERO)),
+        "basis": "Full selected costs and hours stay in scope totals. Dated cash and capacity contain only selected dates; original invoices retain their independent due dates. Relative terms do not create cash or accept a handover."}
 
 
 def preview(context, raw):
@@ -567,6 +623,14 @@ def export(value):
             "Forecasts create no financial observations. Recorded paid invoice allocations are removed once; package defaults retain the non-invoiced budget allocation. "
             "Commercial collections and associated costs are explicit scenarios. Native assets keep their original units. "
             "The optional opening amount is an explicitly entered end-of-day balance or assumption; it is never inferred from a quote or the original plan's capital input.\n").encode()}
+    if "eventTiming" in report:
+        files["event-dependent-timing.json"] = (canonical(report["eventTiming"]) + "\n").encode()
+        files["event-dependent-work.csv"] = csv_bytes(["id", "title", "caseRef", "selected", "state",
+            "startCondition", "reviewedReleaseDate", "deliveryBusinessDays", "startDate", "endDate", "undatedDeliveryCostUsd", "undatedHours"],
+            report["eventTiming"]["projects"])
+        files["event-dependent-receipts.csv"] = csv_bytes(["projectId", "id", "label", "condition", "amountUsd",
+            "appliedObservedUsd", "remainingUsd", "date"], [{"projectId": row["id"], **receipt}
+            for row in report["eventTiming"]["projects"] for receipt in row["receipts"]])
     manifest = {"schema": SCHEMA + ".bundle", "forecastId": value["id"], "forecastSha256": value["sha256"],
                 "files": [{"path": name, "bytes": len(raw), "sha256": hashlib.sha256(raw).hexdigest()} for name, raw in sorted(files.items())]}
     files["MANIFEST.json"] = (canonical(manifest) + "\n").encode()

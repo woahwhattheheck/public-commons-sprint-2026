@@ -10,7 +10,7 @@ If the selected source already has a READY original runtime installation, use it
 
 If the selected source has not been installed, use `installed.mjs`. It calls the original `buildDistribution`, `prepareRuntimeInstall` and `installRuntime` modules from one immutable source commit. It creates a separate bare Git repository for that operation and can read an existing Git object directory through Git alternates. That donor stays read-only and must remain available while the receiving operation uses it.
 
-Use a Node version supported by the original package, Python 3.11 or later, Git, npm, and an existing Playwright installation with Chromium. Browser code and the browser executable are explicit inputs. Browser receiving is part of this complete workflow.
+Use a Node version supported by the original package, Python 3.11 or later, Git, npm, and an existing Playwright installation with Chromium. Browser code and the browser executable are explicit inputs. Browser receiving is part of this complete workflow. `browserArgs`, when supplied, is the exact argument array for the selected Chromium runtime. An omitted array uses Chromium defaults, with `--no-sandbox` and `--disable-dev-shm-usage` for a Linux process running as UID 0. The bootstrap carries an explicitly supplied array into the same immutable receiving manifest.
 
 ## Original project inputs
 
@@ -43,7 +43,7 @@ A runtime manifest has this form:
 
 Replace the placeholders with the original project identity and every selected source. Keep this manifest for the whole operation. The checkpoint binds its exact bytes, so changing a completed or interrupted operation's selection is detected before further work.
 
-Optional application inputs are `applicationLabel`, `port`, `configurationFile`, `allowLocalMerchant` and `sourceManifestSha256`. A saved private configuration is passed to the original launcher by filename. The receiving driver does not serialize that file's contents into its output.
+Optional application inputs are `applicationLabel`, `port`, `configurationFile`, `allowLocalMerchant`, `sourceManifestSha256` and `browserArgs`. A saved private configuration is passed to the original launcher by filename. The receiving driver does not serialize that file's contents into its output.
 
 Run the original installed workflow:
 
@@ -105,7 +105,7 @@ The driver retains seven stages in `output/application-checkpoint.json`.
 | Complete portable delivery | The original export endpoint creates the full source-bearing research handover. The original receiving server restores it into the separate market and reads back the selected original sources. |
 | Final close and data reopen | The recovered application closes. Both original and received databases reopen, the original database identity is retained, and the original jobs remain unchanged. |
 
-Application starts and mutations have retained operation IDs. A retry uses the original request body and revision. If a completed instance must be started again, the driver retains that ended instance in its history and gives the next start a distinct ID. The initial workspace and database identity survive driver restarts.
+Application starts and mutations have retained operation IDs. A retry uses the original request body and revision. If a completed instance must be started again, the driver retains that ended instance in its history and gives the next start a distinct ID. The initial workspace and database identity survive driver restarts. A saved application is connected through the original `applicationsConnect` operation, which resumes its retained adoption when the worker was interrupted. The driver resumes a pending or queued application start through `applicationsRecover` under the same request ID. A later start receives a distinct ID only after the original run has an observed terminal result. If native recovery recognizes a surviving command whose supervisor is gone, its original stop operation ends that same command before a later start; the native response and prior run remain in the checkpoint.
 
 The interruption stage acts on the driver's own managed CoinGecko listener after checking the saved and live instance IDs and PID. The remainder of the project is received through the original interfaces. This journey uses existing captured sources and does not prepare a new provider purchase.
 
@@ -115,7 +115,7 @@ Use the same manifest or bootstrap selection, work directory and output director
 
 The bootstrap leaves a failed original runtime preparation in place. If the original installer reports that incomplete preparation requires recovery, use its maintained `runtime-install recover` workflow into a new directory and consume that completed runtime through the direct manifest path. Existing applications stay bound to their original installation.
 
-Do not remove an original running instance or its workspace to make a restart appear clean. The stored start and launch records allow the actual original instance to be inspected and recovered.
+Do not remove an original running instance or its workspace to make a restart appear clean. The stored start and launch records allow the actual original instance to be inspected and recovered. Shutdown follows the original run until it ends, including reconciliation of an interrupted worker that cannot consume its own stop marker. Original failed adoption messages and native recovery responses stay visible in the receiving checkpoint.
 
 ## Delivery files
 
