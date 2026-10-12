@@ -1,6 +1,7 @@
 // MIT — Reports contain retained source material and the analyst's own work.
 import {eligibilityMarkdown,eligibilityHtml} from './eligibility-review.mjs';
 import {extractionMarkdown,extractionHtml} from './study-extraction-report.mjs';
+import {riskOfBiasMarkdown,riskOfBiasHtml} from './risk-of-bias/report.mjs';
 import {extractionPublicationMarkdownLines,extractionPublicationHtmlFragment} from './extraction-publication.mjs';
 import {hasOriginalFiles,reportSourceRecord,originalFilesMarkdown,originalFilesHtml} from './source-file-reports.mjs';
 const escape = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
@@ -127,6 +128,7 @@ export function markdownReport(view) {
   lines.push(...eligibilityMarkdown(view.eligibility));
   lines.push(...extractionMarkdown(view.extraction));
   lines.push(...extractionPublicationMarkdownLines(view.extractionPublications));
+  lines.push(...riskOfBiasMarkdown(view.riskOfBias));
   lines.push('## Editions and source usage', '',
     '| Edition | Provider | Storage | Status | Source observations |',
     '| --- | --- | --- | --- | --- |');
@@ -190,7 +192,7 @@ export function htmlReport(view) {
     (sourceHtml || '<p>No retained sources selected for this report.</p>') + '</section>' +
     (notes ? '<section><h2>Notes attached to original edition references</h2>' + notes + '</section>' : '') +
     citationReviewHtml(view) + eligibilityHtml(view.eligibility) + extractionHtml(view.extraction) +
-    extractionPublicationHtmlFragment(view.extractionPublications) +
+    extractionPublicationHtmlFragment(view.extractionPublications) + riskOfBiasHtml(view.riskOfBias) +
     '<section><h2>Editions and source usage</h2><div class="table"><table><thead><tr><th>Edition</th><th>Provider</th><th>Storage</th><th>Status</th><th>Source observations</th></tr></thead><tbody>' +
     editions + '</tbody></table></div></section><section><h2>Source terms and original operations</h2>' + origins +
     '</section><footer>' + escape(view.id) + ' · Revision ' + view.revision +
