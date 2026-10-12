@@ -59,7 +59,7 @@ export function cloudWorkspaceTools(tool){
   tool('merchant_cloud_upload_status','Inspect/reconcile the same immutable source/archive upload and its verified prefix.',{...common,editionId:string,fileId:string},['workspace','workspaceInstanceId','editionId','fileId'],local),
   tool('merchant_cloud_upload_chunk','Retain one bounded, SHA256-verified chunk at its exact original offset. Repeated bytes are compared before reuse.',{...common,editionId:string,fileId:string,offset:{type:'string',pattern:'^(0|[1-9][0-9]*)$'},data:{type:'string',maxLength:Math.ceil(MAX_RETAINED_CHUNK_BYTES/3)*4},sha256:sha},
     ['workspace','workspaceInstanceId','editionId','fileId','offset','data','sha256'],local),
-  tool('merchant_cloud_catalog','Inspect original native relation catalog for the currently selected source.',{workspace:alias,sourceSha256:sha,cursor:object},['workspace','sourceSha256'],read),
+  tool('merchant_cloud_catalog','Inspect original native relation catalog for the currently selected source.',{workspace:alias,sourceSha256:sha,cursor:{type:'string',maxLength:256}},['workspace','sourceSha256'],read),
   tool('merchant_cloud_author_review','Review exact native authoring choices against the current source.',{workspace:alias,entry:object,sourceSha256:sha},['workspace','entry','sourceSha256'],read),
   tool('merchant_cloud_author_reopen','Reopen the original query authoring entry against current relation metadata.',{workspace:alias,entry:object,sourceSha256:sha},['workspace','entry','sourceSha256'],read),
   tool('merchant_cloud_draft','Read a retained merchant draft revision; zero selects the current initial editor.',{workspace:alias,revision:integer},['workspace','revision'],read),
