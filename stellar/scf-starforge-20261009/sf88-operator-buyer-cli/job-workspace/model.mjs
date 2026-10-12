@@ -11,7 +11,8 @@ import { SCHEMA, STATES, HASH, canonicalDirectory, readCatalog, saveCatalog, cat
   buyerId, resourceId, delivered, within, now, requireValue, failure } from './state.mjs';
 
 export async function openJobWorkspace({ directory, buyerRoots, fileRoots, transport, fetchImpl,
-  requestTimeoutMs = 60000, maxConcurrent = 4, checkout: checkoutOptions = {} } = {}) {
+  requestTimeoutMs = 60000, maxConcurrent = 4, checkout: checkoutOptions = {}, inputFileStorage,
+  transferTimeoutMs = 3600000 } = {}) {
   directory = await canonicalDirectory(directory, { privateState: true, create: true });
   requireValue(Number.isInteger(maxConcurrent) && maxConcurrent >= 1 && maxConcurrent <= 4,
     'JOB_WORKSPACE_CONCURRENCY_INVALID');
@@ -274,7 +275,8 @@ export async function openJobWorkspace({ directory, buyerRoots, fileRoots, trans
       },
     });
     intake = await openJobIntake({ directory: join(directory, 'requests'), lease, checkout,
-      transport, fetchImpl, requestTimeoutMs, maxConcurrent });
+      transport, fetchImpl, requestTimeoutMs, maxConcurrent, library, fileRoots: roots,
+      inputFileStorage, transferTimeoutMs });
     return Object.freeze({ directory, library, checkout, intake, register, retain, reconcile, update, start, cancel, scan, list, status,
       get(id) { return item(row(id)); },
       async wait(id) {

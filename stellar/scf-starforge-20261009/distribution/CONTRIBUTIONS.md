@@ -20,9 +20,30 @@ The first command returns source IDs, original paths and registration counts.
 effective entrypoint, description and declaring sources. Installed output
 includes the original archive commit. Use `--source base` for legacy entries.
 
-SQL Server is the first migration: [contributions/mssql.json](contributions/mssql.json)
-owns its two commands, seven interfaces, driver manifest and browser contract.
-All implementation paths remain the original ones.
+Seller providers keep their registrations in [contributions/](contributions/).
+Each file combines the provider's existing commands and help, exported interfaces,
+runtime declarations and browser contracts. For example,
+[postgres.json](contributions/postgres.json) owns the PostgreSQL source and publisher
+commands, their interfaces, the original driver manifest and browser entry;
+[mssql.json](contributions/mssql.json) does the same for SQL Server.
+
+The directory includes native databases, file and table sources, geographic and
+statistical data, scholarly and financial feeds, upstream services, and application
+providers. Run `starforge registrations` for the current provider list. A command
+can have a different name from its source: `water-quality` belongs to
+`wqx-water-quality`, `census-publisher` to `census-acs`, and the original Goldrush
+example product to `goldrush`.
+
+Shared seller operations, job delivery, dataset publishing, payment and customer
+components keep their existing base registrations. The source-owned files cover
+the provider implementations under `sf30-seller-sdk`; independently maintained
+buyer and MCP joins use their own current registration owners. A contributor can
+locate either kind with `starforge registrations --command NAME`.
+
+When extending a listed provider, edit its existing contribution. Keep command
+help beside its command registration; the CLI prints it automatically. Driver
+versions stay in the original component package manifest. The base keeps the
+shared SF30 component, so these provider files need no duplicate component entry.
 
 ## Add one source
 

@@ -167,6 +167,15 @@ export function createOperatorApproval({ python, actor, service, policy, ledger,
       throw new TypeError('existing SF36 operator keys are required');
     env[name] = value;
   }
+  const resumeFile = environment.SF36_EXPIRED_RESUME_FILE;
+  if (resumeFile !== undefined) {
+    if (typeof resumeFile !== 'string' || !isAbsolute(resumeFile) ||
+        resumeFile.includes('\0') || resumeFile.length > 4096)
+      throw new TypeError('expired authorization resume must select a private absolute permit file');
+    // The fixed Python helper authenticates this host-selected private file.
+    // Its token and all unrelated parent environment stay outside the wire.
+    env.SF36_EXPIRED_RESUME_FILE = resumeFile;
+  }
   const args = ['-I', '-B', '-u', helper, '--actor', actor, '--service', service,
     '--policy', policy, '--ledger', ledger,
     ...(browser ? ['--review-channel', 'pipe'] : [])];

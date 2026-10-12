@@ -1,5 +1,6 @@
 // MIT. Input preparation borrows the one original merchant model and its durable store.
 import { timingSafeEqual } from 'node:crypto';
+import { createInputIntake } from '../inputs/intake.mjs';
 import { compileJobIntake } from './config.mjs';
 import { CATALOG_SCHEMA, RESPONSE_SCHEMA, REQUEST_PATH, WITHDRAW_PATH, need, sha256,
   functionDigest, catalogDigest, validateCatalog, validateRequest, validateWithdrawal } from './protocol.mjs';
@@ -23,7 +24,8 @@ export function createJobIntake({ model, intakeConfig, env = process.env } = {})
       example: structuredClone(source.example), maxInputBytes: source.maxInputBytes,
       maxOutputBytes: source.maxOutputBytes, timeoutMs: source.timeoutMs,
       output: structuredClone(source.output), payment: structuredClone(source.payment),
-      purchaseUrl: source.offer.resource.url };
+      purchaseUrl: source.offer.resource.url,
+      ...(source.inputFiles ? { inputFiles: structuredClone(source.inputFiles) } : {}) };
     return { ...value, functionSha256: functionDigest(value) };
   };
   const functions = settings.functions.map(describe);
@@ -37,9 +39,11 @@ export function createJobIntake({ model, intakeConfig, env = process.env } = {})
   const serial = work => { const pending = tail.then(work); tail = pending.catch(() => {}); return pending; };
   const authorized = token => !accessDigest || typeof token === 'string' && /^[\x21-\x7e]{16,1024}$/.test(token) &&
     timingSafeEqual(accessDigest, Buffer.from(sha256(token), 'hex'));
+  const inputs = createInputIntake({ model, catalog, authorized });
   return Object.freeze({
+    inputs,
     catalog() { return structuredClone(catalog); },
-    prepare(input, { accessToken } = {}) {
+    prepare(input, { accessToken, signal } = {}) {
       const request = validateRequest(input), selected = functions.find(item => item.id === request.functionId);
       const definition = selected ?? (Object.hasOwn(configuration.functions, request.functionId) ? describe(request.functionId) : null);
       need(definition && request.functionSha256 === definition.functionSha256, 'JOB_INTAKE_CATALOG_CHANGED', 409);
@@ -61,7 +65,7 @@ export function createJobIntake({ model, intakeConfig, env = process.env } = {})
         // Original createJob rechecks input, function and claim on an existing
         // reference, and applies its configured queue/store limits to a new one.
         const handoff = await model.createJob({ functionId: request.functionId, input: request.input,
-          label: request.label, reference: request.reference, claimToken: request.claimToken });
+          label: request.label, reference: request.reference, claimToken: request.claimToken, signal });
         need(handoff.job.label === request.label, 'JOB_INTAKE_REFERENCE_LABEL_CHANGED', 409);
         return { schema: RESPONSE_SCHEMA, reference: request.reference,
           catalogSha256: request.catalogSha256, functionSha256: definition.functionSha256, handoff };

@@ -5,7 +5,8 @@ import {open, mkdir, lstat, realpath, rm} from 'node:fs/promises';
 import {basename, dirname, isAbsolute, join, resolve} from 'node:path';
 import {isDeepStrictEqual} from 'node:util';
 import {openQueue} from './queue.mjs';
-import {InputError, need} from './config.mjs';
+import {InputError, need, config, execution} from './config.mjs';
+import {inspectDatasetPage, bindDatasetResponseMetadata} from './dataset-page.mjs';
 import {aggregateOutcomes} from '../sf52-buyer-outcomes/outcomes.mjs';
 import {init, appendMany, finalize} from '../sf100-buyer-dataset-delivery/deliver.mjs';
 
@@ -140,10 +141,23 @@ export async function exportQueueDataset({root, intents, destination} = {}) {
     await mkdir(sources, {mode:0o700});
     await init(dataset);
     const operations = [], inputs = [];
-    let sourceBytes = 0, requestIdentity = null;
+    let sourceBytes = 0, requestIdentity = null, previous = null;
     for (let index = 0; index < selection.length; index++) {
       const intentId = selection[index];
       const {record, response, evidence, evidenceDigestSource, request} = await savedPage(queue, intentId);
+      let page = inspectDatasetPage(response, {url:record.operation.url, previous});
+      if (page.semantics) {
+        const executionPath = join(queue.root, 'jobs', record.id, 'execution.json');
+        const raw = await readPrivate(executionPath, 65536);
+        need(sha(raw) === record.configSha256, 'DATASET_ORIGINAL_CONFIG_CHANGED');
+        const cfg = await config(executionPath);
+        need(isDeepStrictEqual(execution(cfg).op, record.operation) &&
+          join(cfg.evidenceDir, record.id + '.json') === record.evidencePath,
+          'DATASET_ORIGINAL_CONFIG_CHANGED');
+        page = await bindDatasetResponseMetadata(page, cfg,
+          {status:record.outcome.httpStatus, nativeBuyerStatus:record.outcome.status});
+      }
+      previous = page;
       const operationBytes = encode(record);
       sourceBytes += response.length + operationBytes.length + (evidence?.length ?? 0);
       need(sourceBytes <= MAX_SOURCES, 'DATASET_SOURCE_BYTE_LIMIT');
@@ -162,7 +176,10 @@ export async function exportQueueDataset({root, intents, destination} = {}) {
         configSha256:record.configSha256,
         source:{path:sourcePath, ...sourceFile},
         originalOperation:{path:operationPath, ...operationFile},
-        evidence:evidenceFile === null ? null : {path:evidencePath, ...evidenceFile, digestSource:evidenceDigestSource}});
+        evidence:evidenceFile === null ? null : {path:evidencePath, ...evidenceFile, digestSource:evidenceDigestSource},
+        ...(page.semantics ? {semantics:page.semantics,
+          semanticResponseHeaders:page.semanticResponseHeaders,
+          semanticResponseRecord:page.semanticResponseRecord} : {})});
       inputs.push({page:join(out, sourcePath), intent:intentId,
         ...(request.cursor === undefined ? {} : {cursor:request.cursor}),
         ...(evidencePath === null ? {} : {evidence:join(out, evidencePath)})});
@@ -170,12 +187,19 @@ export async function exportQueueDataset({root, intents, destination} = {}) {
     await appendMany(dataset, inputs);
     const delivery = await finalize(dataset);
     const nativeManifest = await readPrivate(join(dataset, 'manifest.json'), 8 * 1024 * 1024);
+    const dictionary = delivery.semantics ? {
+      file:'dataset/semantics.json', ...delivery.outputs['semantics.json'],
+      semanticSha256:delivery.semantics.sha256,
+      definitionSha256:delivery.semantics.definitionSha256,
+      captureManifestSha256:delivery.semantics.captureManifestSha256,
+    } : null;
     const manifest = {schema:'stellar-forge.sf88.queue-dataset-delivery.v1',
       createdAt:new Date().toISOString(), queueRoot:queue.root,
       selection:{intents:selection, sha256:sha(encode(selection))},
       originalDatasetManifest:{path:'dataset/manifest.json', sha256:sha(nativeManifest), bytes:nativeManifest.length},
       operations, dataset:{name:delivery.dataset, snapshot:delivery.snapshot,
         pages:delivery.pages, rows:delivery.rows, total:delivery.total},
+      ...(dictionary ? {semanticDictionary:dictionary} : {}),
     };
     // Completion is published last. A process interruption leaves an explicitly
     // incomplete local directory; the original inbox and saved files are intact.
@@ -184,7 +208,8 @@ export async function exportQueueDataset({root, intents, destination} = {}) {
     return {action:'DATASET_DELIVERED', directory:out,
       manifest:{path:join(out, 'delivery.json'), ...completion},
       review:join(dataset, 'review.html'), jsonl:join(dataset, 'dataset.jsonl'), csv:join(dataset, 'dataset.csv'),
-      ...manifest.dataset, operations:operations.length};
+      ...manifest.dataset, operations:operations.length,
+      ...(dictionary ? {semanticDictionary:{path:join(out,dictionary.file),...dictionary}} : {})};
   } finally {
     if (!finished) {
       const current = await lstat(out).catch(() => null);
