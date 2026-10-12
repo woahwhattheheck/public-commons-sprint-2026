@@ -1,7 +1,9 @@
 import { mppTools, selected, purchaseSchema, digestSchema, change, read, consoleSchema, worldRead, inputSchema, querySchema, worldChange, rangeSchema } from './catalog/mpp-console.mjs';
 export { mppTools } from './catalog/mpp-console.mjs';
 // MIT. Native MPP customer operations through the original private console.
-import { mkdir } from 'node:fs/promises';
+import { mkdir, open } from 'node:fs/promises';
+import { constants } from 'node:fs';
+import { RetainedFileReads } from './retained-file-reads.mjs';
 import { join } from 'node:path';
 import { digest, privateDirectory, readJSON, saveJSON } from '../../stellar/scf-starforge-20261009/distribution/runtime-workspace/storage.mjs';
 import { MPP_CONNECTION_SCHEMA, MPP_REVIEW_SCHEMA, MAX_MPP_CHUNK_BYTES, stable, fail, need,
@@ -53,12 +55,13 @@ function compactConsole(key,value) {
       configuration:publicConfiguration(row.configuration)}))};
 }
 export class MerchantMppConsole {
-  #configuration;#directory;#environment;#fetch;#closing=false;#inflight=new Set();#closed;#exports;
+  #configuration;#directory;#environment;#fetch;#closing=false;#inflight=new Set();#closed;#exports;#channelReads=new RetainedFileReads({errorPrefix:'MPP_CHANNEL'});#channelDirectory;
   constructor(config,{environment=process.env,fetchImpl=globalThis.fetch}={}) {
     this.#configuration=config.mpp??null;
     this.#directory=join(config.exportsDirectory,'mpp-customer-reviews');
     this.#environment=environment;this.#fetch=fetchImpl;
     this.#exports=new MppFileExports(config.exportsDirectory);
+    this.#channelDirectory=join(config.exportsDirectory,'mpp-channel-files');
   }
   get summary() {return {configured:Boolean(this.#configuration),
     consoles:Object.keys(this.#configuration?.consoles??{}),borrowed:true,closing:this.#closing,
@@ -233,6 +236,39 @@ export class MerchantMppConsole {
       return {bytes,contentType:'application/json',source:{profileId:args.profileId}};
     }});
   }
+  async #channelFile(args,context) {
+    need(['response','handover'].includes(args.kind),'INVALID_PARAMS','Select an original channel response or handover.');
+    if(args.kind==='handover')sha(args.id);else nativeId(args.id);
+    const scope=digest(stable([context.identity,args.kind,args.id]));
+    if(args.release) {
+      need(typeof args.readId==='string','INVALID_PARAMS','Select the original file read.');
+      await this.#channelReads.release(scope,args.readId);
+      return {released:true,readId:args.readId,kind:args.kind,id:args.id};
+    }
+    await mkdir(this.#channelDirectory,{mode:0o700}).catch(error=>{if(error.code!=='EEXIST')throw error;});
+    await privateDirectory(this.#channelDirectory);
+    const result=await this.#channelReads.read({scope,kind:'mpp-channel-file',key:scope,
+      directory:this.#channelDirectory,readId:args.readId,expectedSha256:args.expectedSha256,
+      offset:args.offset,limit:args.limit,load:async()=>{
+        if(args.kind==='handover') {
+          const meta=await this.#request(context,'/api/channel/handover-files/'+args.id);
+          need(meta.schema==='stellar-forge.mpp-channel-handover-file.v1' && meta.bundleSha256===args.id &&
+            typeof meta.path==='string' && meta.path.startsWith(join(context.workspace,'channel-handover')+'/') &&
+            Number.isSafeInteger(meta.bytes) && meta.bytes>=0 && meta.bytes<=128*1024*1024,
+            'MPP_CHANNEL_ORIGINAL_HANDOVER_REQUIRED');
+          sha(meta.sha256);
+          const handle=await open(meta.path,constants.O_RDONLY|constants.O_NOFOLLOW);
+          return {readonlyFileHandle:handle,bytes:meta.bytes,sha256:meta.sha256,
+            name:'channel-handover-'+args.id.slice(0,12)+'.json',type:'application/json'};
+        }
+        const original=await this.#request(context,'/api/channel/purchases/'+encodeURIComponent(args.id));
+        need(original.response && original.phase==='COMPLETE','MPP_CHANNEL_RESPONSE_UNAVAILABLE');
+        const bytes=await this.#request(context,'/api/channel/responses/'+encodeURIComponent(args.id),undefined,{bytes:true});
+        need(digest(bytes)===original.response.sha256,'MPP_CHANNEL_ORIGINAL_RESPONSE_CHANGED');
+        return {name:'channel-response-'+args.id+'.bin',type:original.response.contentType??'application/octet-stream',bytes};
+      }});
+    return {console:args.console,workspaceIdentity:context.identity,kind:args.kind,id:args.id,...result};
+  }
   async #execute(name,args) {
     if(name==='merchant_mpp_export')return this.#export(args);
     if(name.startsWith('merchant_mpp_export_'))return this.#exports.call(name,args);
@@ -243,6 +279,23 @@ export class MerchantMppConsole {
     if(name==='merchant_mpp_customer_review_status')return this.#reviewStatus(args);
     if(name==='merchant_mpp_customer_configure')return this.#configure(args);
     const context=await this.#context(args.console);
+    if(name==='merchant_mpp_channel_status')return this.#request(context,'/api/channel/state');
+    if(name==='merchant_mpp_channel_record') {
+      need(['tasks','purchases','contracts','funders','funding','settlements','observations'].includes(args.kind),'INVALID_PARAMS','Choose a channel record.');
+      return this.#request(context,'/api/channel/'+args.kind+'/'+encodeURIComponent(nativeId(args.id)));
+    }
+    if(name==='merchant_mpp_channel_operate') {
+      const allowed=['task-template','task-save','task-authorize','task-authority-resume','task-stop',
+        'purchase-prepare','purchase-execute','purchase-resume','purchase-refresh','purchase-cancel',
+        'merchant-save','merchant-start','merchant-stop','delivery-recover','close-prepare','close-execute',
+        'close-resume','close-reconcile','close-cancel','funder-template','funder-save','channel-observe','funding-prepare','funding-execute','funding-resume','funding-reconcile','funding-cancel','collection-prepare','collection-execute','collection-resume','collection-reconcile','collection-cancel',
+  'contract-fetch','export','receive'];
+      need(allowed.includes(args.operation) && args.input && typeof args.input==='object' && !Array.isArray(args.input),
+        'INVALID_PARAMS','Select the original channel operation and complete input.');
+      const job=await this.#request(context,'/api/channel/'+args.operation,args.input);
+      return {console:args.console,workspaceIdentity:context.identity,operation:args.operation,job};
+    }
+    if(name==='merchant_mpp_channel_file')return this.#channelFile(args,context);
     if(name==='merchant_mpp_status') {
       const offset=args.offset??0,limit=args.limit??25;
       need(Number.isSafeInteger(offset) && offset>=0 && Number.isInteger(limit) && limit>=1 && limit<=100,
@@ -339,7 +392,7 @@ export class MerchantMppConsole {
   close() {
     if(!this.#closed) {
       this.#closing=true;
-      this.#closed=Promise.allSettled([...this.#inflight]).then(()=>this.#exports.close());
+      this.#closed=Promise.allSettled([...this.#inflight]).then(()=>Promise.all([this.#exports.close(),this.#channelReads.close()]));
     }
     return this.#closed;
   }
