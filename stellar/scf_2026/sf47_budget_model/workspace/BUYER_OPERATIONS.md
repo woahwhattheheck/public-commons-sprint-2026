@@ -135,3 +135,7 @@ Use `deploymentId:null` plus `deployment:{...}` for a new reviewed deployment. A
 Use **Export complete case** or the original `operations export` CLI at the current reviewed version. The bundle contains the pinned planning revision, original Operations records and event history, exact buyer JSON/HTML attachments, associations and ordinary CSV reports. Import that complete case using its original receiving action, then reopen **Native buyer receiving** and the original purchase records. The `buyerHandoff` source metadata retains original job-to-purchase links and the full capture identity through export/import.
 
 Preserve the native Inbox separately with its existing buyer recovery workflow. Restoring a grant case does not substitute for the native buyer state, replay a payment or make a previously saved response file available. To record a later original recovery, capture that same original Inbox again and explicitly associate the source with the existing case purchase.
+
+## Complete native receiving continuation
+
+[Receive the original result through SDK, browser and agent](BUYER_RECEIVING_JOURNEY.md) provides the single retained controller and exact original runtime manifest. It imports the complete original operating case, joins the same buyer source through the Node/Python/CLI, browser and 55-tool grant service, then exports and reopens the final case. It retains the original purchase/deployment and the same request after interruption. The guide distinguishes published source from an actual completed native result.
