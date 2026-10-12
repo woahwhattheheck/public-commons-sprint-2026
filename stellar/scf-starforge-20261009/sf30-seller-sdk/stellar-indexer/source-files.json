@@ -99,8 +99,8 @@
     },
     {
       "path": "stellar/scf-starforge-20261009/distribution/selections/stellar-client-indexer.json",
-      "bytes": 5382,
-      "sha256": "114247c9fd5c6439a202dd70e784249a603e51c2a3f537cbfc25ba5eb9d9697d"
+      "bytes": 8283,
+      "sha256": "02b619cb0c2575a6c4639591955559a50d215633c09bd331bd2e4bf310dee662"
     },
     {
       "path": "stellar/scf-starforge-20261009/distribution/source-selection.mjs",
@@ -303,11 +303,6 @@
       "sha256": "782fbb267fc050b3bc8b1ccc3a877bb57934edcb414aa41c6bb5d65e34893ed9"
     },
     {
-      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/stellar-indexer/CLIENT.md",
-      "bytes": 24645,
-      "sha256": "5c980e5e8c1b1b3ec1dac4ab3ca2751c87ec346a27e8275320545ab50cc65e82"
-    },
-    {
       "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/stellar-indexer/application-provider.mjs",
       "bytes": 1048,
       "sha256": "0831d0bc013140ab2d53c4703ebd3fe2bda1185834039af5dd9b5646a40f21f1"
@@ -326,6 +321,11 @@
       "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/stellar-indexer/cli.mjs",
       "bytes": 22609,
       "sha256": "a2071f1a55285ea80649a34e5ec54ec2457e6a3e9b52f497d3a250ab6ef441f1"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/stellar-indexer/CLIENT.md",
+      "bytes": 25387,
+      "sha256": "f5cecf9aeaca45919c3bde8f4017d297f165d718275edf08764556527a52ce66"
     },
     {
       "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/stellar-indexer/common.mjs",
