@@ -16,7 +16,7 @@ const S = {
   previewSeq: 0, preview: null, offset: 0, selectedRecords: new Set(),
   recordRow: null, recordForm: null, recordDirty: false, recordEpoch: 0,
   destinationDrafts: {}, provider: "roda", destinationEpoch: 0,
-  destinationTouched: false, selectedMigration: null, pendingSelection: null,
+  destinationTouched: false, selectedMigration: null, pendingSelection: null, destinationViewEpoch: 0,
   migrationSeq: 0, migration: null, migrationBusy: false,
   renderedMigrations: "", renderedArtifacts: "", renderedActivity: "",
   renderedHistory: "", externalReview: false, timer: null, searchTimer: null
@@ -563,7 +563,13 @@ function showDestinationDraft() {
   const template = S.data?.providers?.[S.provider], draft = S.destinationDrafts[S.provider];
   $("destination-provider").value = S.provider;
   $("job-template-field").hidden = S.provider !== "roda";
-  $("destination-settings-label").textContent = S.provider === "roda" ? "RODA submission agreement" : "Preservica OPEX package settings";
+  $("destination-settings-label").textContent = ({roda: "RODA submission agreement",
+    preservica: "Preservica OPEX package settings", libnova: "LIBNOVA Dublin Core descriptor mapping"})[S.provider] || "Package settings";
+  $("destination-settings-help").textContent = ({
+    roda: "Use the repository agreement for this existing RODA ingest workflow.",
+    preservica: "Select the original archival parent, security tag, metadata scope and agreed OPEX ingest settings.",
+    libnova: "Replace example descriptor codes and types with the existing target schema. Unmapped Dublin Core values stay in the unchanged BagIt. Preparation saves this exact mapping before any upload."
+  })[S.provider] || "Use the agreed package settings for the selected repository.";
   $("provider-availability").hidden = Boolean(template?.available);
   $("provider-availability").textContent = "Install the complete " + (template?.label || S.provider) +
     " producer, client and guides to prepare this destination.";
@@ -580,6 +586,7 @@ function showDestinationDraft() {
 }
 function destinationChanged() {
   S.destinationTouched = true; S.destinationEpoch += 1;
+  S.destinationViewEpoch += 1; S.pendingSelection = null;
   captureDestinationDraft();
   if (S.destinationDrafts[S.provider]) S.destinationDrafts[S.provider].epoch += 1;
   updateDestinationSelection(); renderControls();
@@ -596,6 +603,7 @@ function updateDestinationSelection() {
 }
 function newDestination() {
   captureDestinationDraft();
+  S.destinationViewEpoch += 1; S.pendingSelection = null;
   S.selectedMigration = null; S.migration = null; S.migrationSeq += 1;
   $("saved-destination").hidden = true; $("destination-draft").hidden = false;
   renderDestinationList(true); showDestinationDraft();
@@ -618,6 +626,7 @@ function renderDestinationList(force = false) {
 }
 function selectMigration(operation) {
   captureDestinationDraft();
+  S.destinationViewEpoch += 1; S.pendingSelection = null;
   S.selectedMigration = operation; S.migration = null; S.migrationSeq += 1;
   $("destination-draft").hidden = true; $("saved-destination").hidden = false;
   $("migration-label").textContent = S.data?.migrations.find(item => item.id === operation)?.label || "Saved destination";
@@ -628,6 +637,8 @@ function selectMigration(operation) {
   $("migration-package").textContent = "";
   $("migration-progress-message").hidden = true;
   $("transfer-uuid").value = ""; $("job-id").value = ""; $("reconcile-json").value = "{}";
+  $("libnova-reconcile-json").value = "{}";
+  $("libnova-evidence").hidden = true; $("libnova-saved-help").hidden = true;
   replace("migration-summary", []);
   renderDestinationList(true); renderControls();
   refreshMigration().catch(report);
@@ -656,7 +667,10 @@ function findScalar(value, names) {
 function renderMigration() {
   const migration = S.migration;
   if (!migration || migration.id !== S.selectedMigration) return;
-  const progress = migration.progress || {};
+  const retained = migration.progress || {};
+  const libnova = migration.provider === "libnova";
+  const progress = libnova && retained.state && typeof retained.state === "object"
+    ? retained.state : retained;
   const state = findScalar(progress, ["state", "status"]) || "PREPARED";
   $("migration-label").textContent = migration.label;
   $("migration-id").textContent = migration.id;
@@ -668,21 +682,48 @@ function renderMigration() {
     ["Prepared", date(migration.createdAt)]
   ];
   const transfer = findScalar(progress, ["transfer.uploadId", "transfer.uuid", "transferUuid", "transferUuid.value"]);
-  const job = findScalar(progress, ["ingest.processId", "job.id", "jobId", "jobId.value"]);
+  const job = findScalar(progress, ["ingest.processId", "job.id", "jobId", "jobId.value",
+    "details.jobId", "summary.originalJobId"]);
   const key = findScalar(progress, ["transfer.key"]);
   const verified = progress.readback?.verifiedRecords, total = progress.readback?.totalRecords;
   if (key) pairs.push(["Original object", key]);
   if (transfer) pairs.push(["Original upload / transfer", transfer]);
   if (job) pairs.push(["Original ingest / job", job]);
   if (Number.isFinite(verified) && Number.isFinite(total)) pairs.push(["Received records", verified + " / " + total + " verified"]);
+  if (libnova) {
+    const config = migration.configuration || {}, summary = progress.summary || {};
+    for (const [label, field] of [["Container", "containerId"], ["Metadata schema", "metadataSchemaId"],
+        ["Storage", "storageId"], ["Function", "functionId"]]) {
+      if (config[field] != null) pairs.push([label, String(config[field])]);
+    }
+    if (retained.operation?.objectPrefix) pairs.push(["Original object prefix", retained.operation.objectPrefix]);
+    if (Number.isFinite(progress.objects)) pairs.push(["Objects in current step",
+      Number.isFinite(progress.observedObjects) ? progress.observedObjects + " / " + progress.objects : progress.objects]);
+    if (Number.isFinite(progress.receivedObjects)) pairs.push(["Objects awaiting index readback", progress.receivedObjects]);
+    if (Number.isFinite(progress.records)) pairs.push(["Records in metadata step", progress.records]);
+    if (Number.isFinite(summary.sourceRecords)) pairs.push(["Source records", summary.sourceRecords]);
+    if (Number.isFinite(summary.includedRecords)) pairs.push(["Received included records", summary.includedRecords]);
+    if (Number.isFinite(summary.excludedRecords)) pairs.push(["Excluded by saved review", summary.excludedRecords]);
+    if (Number.isFinite(summary.objects)) pairs.push(["Verified objects", summary.objects]);
+    if (Number.isFinite(summary.bytes)) pairs.push(["Verified source bytes", size(summary.bytes)]);
+    if (summary.allOriginalBytesVerified === true) pairs.push(["Original byte comparison", "Verified"]);
+    if (summary.allMappedMetadataVerified === true) pairs.push(["Mapped metadata comparison", "Verified"]);
+    if (progress.job?.result) pairs.push(["Original Function result", progress.job.result]);
+    if (Number.isFinite(progress.job?.messageCount)) pairs.push(["Retained job messages", progress.job.messageCount]);
+    if (Array.isArray(progress.job?.assets)) pairs.push(["Retained job assets", progress.job.assets.length]);
+    if (progress.proof?.sha256) pairs.push(["Receiving evidence SHA-256", progress.proof.sha256]);
+    if (progress.previousVerifiedObservation) pairs.push(["Earlier verified observation",
+      date(progress.previousVerifiedObservation.updatedAt) + " · retained in the complete progress record"]);
+  }
   const retry = findScalar(progress, ["retryAt"]);
   if (retry) pairs.push(["Repository retry time", date(retry)]);
+  if (progress.updatedAt) pairs.push(["Saved observation", date(progress.updatedAt)]);
   describe("migration-summary", pairs);
   const notice = progress.message || (migration.operatorRunning ?
     "The original operator action is running. Its latest saved progress is shown below." : "");
   $("migration-progress-message").hidden = !notice;
   $("migration-progress-message").textContent = notice;
-  $("migration-progress").textContent = pretty(progress);
+  $("migration-progress").textContent = pretty(retained);
   $("migration-configuration").textContent = pretty({
     id: migration.id, provider: migration.provider, sourceSelection: migration.selection,
     settings: migration.settings, configuration: migration.configuration, jobTemplate: migration.jobTemplate
@@ -691,6 +732,11 @@ function renderMigration() {
     "Package details are available after the original preparation completes.";
   $("roda-evidence").hidden = migration.provider !== "roda";
   $("preservica-evidence").hidden = migration.provider !== "preservica";
+  $("libnova-evidence").hidden = !libnova;
+  $("libnova-saved-help").hidden = !libnova;
+  $("libnova-saved-help").textContent = state === "VERIFIED"
+    ? "The original content bytes and mapped metadata were verified. The receiving report and complete evidence are available in Delivery."
+    : "Check repository progress to observe the original upload, metadata and Function job. Reconciliation below is for a retained Function response or its original job ID.";
   renderControls();
 }
 async function prepareDestination(event) {
@@ -698,6 +744,7 @@ async function prepareDestination(event) {
   completeDraft();
   captureDestinationDraft();
   const provider = S.provider, draft = S.destinationDrafts[provider], epoch = draft?.epoch;
+  const viewEpoch = S.destinationViewEpoch;
   if (!draft) throw new Error("Install the selected provider's complete source.");
   const request = {
     id: draft.id.trim(), provider, label: draft.label.trim(),
@@ -707,11 +754,14 @@ async function prepareDestination(event) {
     jobTemplate: provider === "roda" ? parseObject(draft.job, "RODA ingest job template") : null
   };
   await mutation("/api/prepare", request);
-  if (draft.epoch === epoch) {
+  if (S.destinationDrafts[provider] === draft && draft.epoch === epoch) {
     draft.touched = false;
     if (S.provider === provider) S.destinationTouched = false;
   }
-  S.pendingSelection = request.id;
+  if (S.destinationDrafts[provider] === draft && viewEpoch === S.destinationViewEpoch &&
+      provider === S.provider && draft.epoch === epoch) {
+    S.pendingSelection = request.id;
+  }
   await refreshState(); renderControls();
 }
 async function migrate(action) {
@@ -731,6 +781,9 @@ async function reconcileMigration(event) {
     evidence = {};
     if (transferUuid) evidence.transferUuid = transferUuid;
     if (jobId) evidence.jobId = jobId;
+  } else if (migration.provider === "libnova") {
+    evidence = parseObject($("libnova-reconcile-json").value, "Original LIBNOVA Function evidence");
+    if (!Object.keys(evidence).length) throw new Error("Enter the original Function response or job ID for this LIBNOVA operation.");
   } else {
     evidence = parseObject($("reconcile-json").value, "Original request evidence");
     if (!Object.keys(evidence).length) throw new Error("Enter the original request evidence for this Preservica operation.");
@@ -872,7 +925,8 @@ on("reset-review-json", "click", () => {
 });
 on("new-destination", "click", newDestination);
 on("destination-provider", "change", () => {
-  captureDestinationDraft(); S.provider = $("destination-provider").value;
+  captureDestinationDraft(); S.destinationViewEpoch += 1; S.pendingSelection = null;
+  S.provider = $("destination-provider").value;
   if (!S.destinationDrafts[S.provider]) S.destinationDrafts[S.provider] = makeDestinationDraft(S.provider);
   showDestinationDraft();
 });
@@ -885,7 +939,8 @@ on("reset-destination-template", "click", () => {
   if (S.destinationDrafts[S.provider]?.touched &&
       !window.confirm("Replace this unsaved destination draft with the provider template and a new operation ID?")) return;
   S.destinationDrafts[S.provider] = makeDestinationDraft(S.provider);
-  S.destinationEpoch += 1; showDestinationDraft();
+  S.destinationEpoch += 1; S.destinationViewEpoch += 1; S.pendingSelection = null;
+  showDestinationDraft();
 });
 on("run-migration", "click", () => migrate("run"));
 on("refresh-migration", "click", () => migrate("refresh"));
@@ -912,6 +967,18 @@ on("load-evidence-template", "click", () => {
   if (kind === "process-observation" && progress.ingest?.processId) value.processId = progress.ingest.processId;
   $("reconcile-json").value = pretty(value);
   $("reconcile-help").textContent = "Known identifiers come from this original saved operation. Replace each remaining template value with its retained original response or observation.";
+});
+
+on("load-libnova-evidence-template", "click", () => {
+  const migration = S.migration, kind = $("libnova-reconcile-kind").value;
+  const template = S.data?.providers?.libnova?.reconciliationTemplates?.[kind];
+  if (!migration || migration.id !== S.selectedMigration || migration.provider !== "libnova") {
+    throw new Error("Load the original LIBNOVA operation first.");
+  }
+  if (!template) throw new Error("Install the current provider template for the selected original evidence type.");
+  if ($("libnova-reconcile-json").value.trim() !== "{}" &&
+      !window.confirm("Replace the entered reconciliation JSON with the selected original evidence template?")) return;
+  $("libnova-reconcile-json").value = pretty(clone(template));
 });
 
 on("build-package", "click", async () => {
