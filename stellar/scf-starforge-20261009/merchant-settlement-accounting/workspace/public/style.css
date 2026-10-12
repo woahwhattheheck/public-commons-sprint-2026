@@ -213,3 +213,11 @@ body.working {cursor:progress}
   .selected-heading {gap:10px}
   .selected-heading h2 {font-size:15px}
 }
+
+/* Buyer source mode reuses the original accountant and recovery areas. */
+.buyer-sidebar{margin-top:20px;overflow-wrap:anywhere}
+.buyer-sidebar h2{font-size:14px;margin:0 0 10px}
+.buyer-sidebar dl{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;font-size:12px}
+.buyer-sidebar dd{margin:0;font-variant-numeric:tabular-nums}
+#accountant-buyer-startup code{overflow-wrap:anywhere;white-space:normal}
+body[data-source-mode="buyer"] #accountant-buyer-origin{max-width:100%;margin-bottom:10px}
