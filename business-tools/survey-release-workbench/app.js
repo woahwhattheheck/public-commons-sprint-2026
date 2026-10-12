@@ -4,6 +4,7 @@
   const escape = value => String(value == null ? "" : value).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
   const safeLink = value => /^https?:\/\//i.test(String(value)) ? String(value) : "#";
   let savedCase = null, model = null, visible = [], page = 0, selected = null, comparison = null, pendingSave = 0;
+  let saveRevision = 0, unsaved = false, storageKey = "active", saveQueue = Promise.resolve();
   const pageSize = 80;
   function notice(message, error) { $("notice").textContent = message; $("notice").classList.toggle("error", !!error); }
   async function busy(message, fn) { notice(message); await new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 20))); try { await fn(); } catch (error) { notice(error.message || String(error), true); } }
@@ -13,18 +14,47 @@
     link.href = url; link.download = name; document.body.appendChild(link); link.click(); link.remove(); setTimeout(() => URL.revokeObjectURL(url), 60000);
   }
   function db() { return new Promise((resolve, reject) => { const request = indexedDB.open("survey-release-workbench", 1); request.onupgradeneeded = () => request.result.createObjectStore("workspace"); request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); }); }
-  async function storeLocal() {
+  async function storeLocal(snapshot, revision, key) {
     const database = await db();
-    try { await new Promise((resolve,reject) => {
-      const tx = database.transaction("workspace", "readwrite"); tx.objectStore("workspace").put(savedCase, "active");
-      tx.oncomplete = resolve; tx.onerror = () => reject(tx.error); tx.onabort = () => reject(tx.error || new Error("Browser storage was not saved."));
-    }); $("save-status").textContent = "Saved in this browser"; }
-    finally { database.close(); }
+    try {
+      await new Promise((resolve,reject) => {
+        const tx = database.transaction("workspace", "readwrite");
+        tx.objectStore("workspace").put(snapshot, key);
+        tx.oncomplete = resolve; tx.onerror = () => reject(tx.error);
+        tx.onabort = () => reject(tx.error || new Error("Browser storage was not saved."));
+      });
+      if (revision === saveRevision) {
+        unsaved = false;
+        $("save-status").textContent = "Saved in this browser";
+      }
+    } finally { database.close(); }
   }
-  function scheduleSave() { clearTimeout(pendingSave); $("save-status").textContent = "Saving…"; pendingSave = setTimeout(() => storeLocal().catch(() => {$("save-status").textContent = "Use Save case to retain changes";}), 350); }
-  async function restoreLocal() {
+  function scheduleSave() {
+    clearTimeout(pendingSave);
+    const revision = ++saveRevision, key = storageKey;
+    // Source files and existing events are immutable; retain this exact review revision.
+    const snapshot = Object.assign({}, savedCase, {review_events:savedCase.review_events.slice()});
+    unsaved = true;
+    $("save-status").textContent = "Saving…";
+    pendingSave = setTimeout(() => {
+      pendingSave = 0;
+      // Serial writes prevent a slower older revision from replacing a newer one.
+      saveQueue = saveQueue.catch(() => {}).then(() => storeLocal(snapshot, revision, key)).catch(() => {
+        if (revision === saveRevision) {
+          unsaved = true;
+          $("save-status").textContent = "Use Save case to retain changes";
+        }
+      });
+    }, 350);
+  }
+  async function restoreLocal(key) {
     const database = await db();
-    try { return await new Promise((resolve,reject) => { const tx = database.transaction("workspace","readonly"), request = tx.objectStore("workspace").get("active"); request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error); }); } finally { database.close(); }
+    try { return await new Promise((resolve,reject) => { const tx = database.transaction("workspace","readonly"), request = tx.objectStore("workspace").get(key || "active"); request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error); }); } finally { database.close(); }
+  }
+  function isContinuation(base, candidate) {
+    return candidate.case_id === base.case_id &&
+      candidate.review_events.length >= base.review_events.length &&
+      base.review_events.every((event,index) => event.event_id === candidate.review_events[index].event_id);
   }
   function optionList(id, rows, first, selectedValue) {
     const select = $(id), existing = selectedValue === undefined ? select.value : selectedValue;
@@ -76,15 +106,17 @@
       if(r.suppressed)badges.push('<span class="badge">Suppressed</span>');
       else if(r.source_note)badges.push('<span class="badge">Source caution</span>');
       if(r.flags.includes("geography-label-unresolved"))badges.push('<span class="badge">Original ID</span>');
-      if(decision)badges.push('<span class="badge '+(decision.action==="exclude"?"excluded":"")+'">'+escape(decision.action==="annotate"?"Annotated":decision.action==="exclude"?"Excluded":"Included")+'</span>');
+      if(decision)badges.push('<span class="badge '+(decision.disposition==="exclude"?"excluded":"")+'">'+escape(decision.disposition==="exclude"?"Excluded":decision.action==="annotate"?"Annotated":"Included")+'</span>');
       return '<tr><td>'+escape(d.measure.MeasureName)+'<span class="minor">'+escape(d.measure.MeasurementType)+'</span></td><td>'+escape(d.geography?d.geography.name:r.geo_type+" / "+r.geo_id)+'<span class="minor">'+escape(r.geo_type+" · "+r.geo_id)+'</span></td><td>'+escape(d.period.TimePeriod)+'</td><td class="numeric">'+escape(r.display_value||"—")+'</td><td>'+escape(r.published_ci||"—")+'</td><td>'+badges.join("")+(decision&&decision.note?'<span class="minor">'+escape(decision.note.slice(0,100))+'</span>':"")+'</td><td><button class="row-review" data-row="'+escape(r.id)+'">Review</button></td></tr>';
     }).join("") || '<tr><td colspan="7">No observations match these filters.</td></tr>';
     $("page-label").textContent=visible.length ? (start+1)+"–"+Math.min(start+pageSize,visible.length)+" of "+visible.length.toLocaleString() : "0 observations";
     $("previous").disabled=page===0; $("next").disabled=start+pageSize>=visible.length;
     renderOverview();
   }
-  function activate(next, restored) {
-    savedCase=next; model=C.buildModel(savedCase,true); C.validateReview(savedCase,model);
+  function activate(next, restored, key) {
+    const nextModel=C.buildModel(next,true); C.validateReview(next,nextModel);
+    clearTimeout(pendingSave); pendingSave=0; saveRevision++; unsaved=false; storageKey=key || "active";
+    savedCase=next; model=nextModel;
     $("workspace").hidden=false; $("overview").hidden=false; $("empty").hidden=true;
     for(const id of ["save-case","export"])$(id).disabled=false;
     loadFilters(true); refresh(true);
@@ -118,7 +150,7 @@
     $("comparison-result").textContent=result.comparable ? result.left_period+" → "+result.right_period+": "+(result.difference>0?"+":"")+result.difference+" ("+result.unit+"). "+result.note : result.reasons.join(" ");
   }
   function exportScope(){return $("export-scope").value==="filtered"?filters():{};}
-  function exportSummary(){const rows=C.selectedRows(model,savedCase,exportScope()),review=C.reviewState(savedCase),n=rows.filter(r=>review.get(r.id)?.action==="exclude").length;$("export-summary").textContent=(rows.length-n).toLocaleString()+" observations in publication · "+n.toLocaleString()+" exclusions retained in handoff";}
+  function exportSummary(){const rows=C.selectedRows(model,savedCase,exportScope()),review=C.reviewState(savedCase),n=rows.filter(r=>review.get(r.id)?.disposition==="exclude").length;$("export-summary").textContent=(rows.length-n).toLocaleString()+" observations in publication · "+n.toLocaleString()+" exclusions retained in handoff";}
   async function exportDelivery(kind) {
     await busy("Preparing the selected edition…",async()=>{
       $("export-result").textContent="Preparing…";
@@ -169,10 +201,28 @@
     $("compare-dialog").showModal();notice("Case comparison complete.");
   });$("compare-file").value="";};
   $("download-comparison").onclick=()=>download("case-comparison.json",C.canonical(comparison)+"\n");
-  window.addEventListener("beforeunload",event=>{if($("save-status").textContent==="Saving…"){event.preventDefault();event.returnValue="";}});
+  window.addEventListener("beforeunload",event=>{if(unsaved){event.preventDefault();event.returnValue="";}});
   busy("Opening workspace…",async()=>{
     const embedded=$("embedded-case");
-    if(embedded){activate(C.openCase(embedded.textContent));return;}
+    if(embedded){
+      const base=C.openCase(embedded.textContent), tail=base.review_events.at(-1)?.event_id || base.case_id;
+      const key="embedded:"+base.case_id+":"+tail;
+      for(const candidateKey of [key,"active"]){
+        try{
+          const previous=await restoreLocal(candidateKey);
+          if(previous){
+            const candidate=C.openCase(previous);
+            if(isContinuation(base,candidate)){
+              activate(candidate,true,key);
+              if(candidateKey!==key)scheduleSave();
+              return;
+            }
+          }
+        }catch(_){}
+      }
+      activate(base,false,key);
+      return;
+    }
     try{const previous=await restoreLocal();if(previous){activate(C.openCase(previous),true);return;}}catch(_){}
     notice("Open the bundled NYC source or a saved case to begin.");
   });
