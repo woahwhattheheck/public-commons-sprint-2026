@@ -16,6 +16,8 @@ export interface PortfolioCriteria {
 export interface AnalystAnnotation {
   subject: string; note?: string; status?: 'open'|'reviewed'|'follow_up'|'resolved';
   disposition?: 'include'|'exclude'; priority?: 'low'|'normal'|'high'; owner?: string; dueDate?: string;
+  /** Exact retained applicant choice; maximum 200 characters. A choice requires an explanatory note. */
+  applicantSourceId?: string;
 }
 export interface NativePayment {
   scheme: 'exact'; network: 'stellar:testnet'|'stellar:pubnet';

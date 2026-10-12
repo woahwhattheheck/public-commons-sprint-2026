@@ -34,13 +34,13 @@ const criteriaFields={
 };
 const annotation=object({
   subject:text(300,1),note:text(12000),status:choice(['open','reviewed','follow_up','resolved']),
-  disposition:choice(['include','exclude']),priority:choice(['low','normal','high']),owner:text(200),dueDate:text(10)
+  disposition:choice(['include','exclude']),priority:choice(['low','normal','high']),owner:text(200),dueDate:text(10),applicantSourceId:text(200)
 },['subject']);
 const payment=object({
   scheme:choice(['exact']),network:choice(['stellar:testnet','stellar:pubnet']),
   asset:text(100,1),amount:matching(/^[1-9][0-9]*$/),payTo:text(100,1),maxTimeoutSeconds:integer(1,86400)
 },['scheme','network','asset','amount','payTo','maxTimeoutSeconds']);
-const intentIds=array(text(160,1),10000,1);
+const intentIds=array(text(128,1),4096,1);
 const actions=[
  ['source.capture','Acquire the complete selected declaration/applicant/project cohort and retain each original response and continuation.',{scope:sourceScope,label:text(200)},['scope'],{openWorld:true}],
  ['source.resume','Resume the original retained capture and accepted response checkpoints.',{captureId:id},['captureId'],{openWorld:true}],
