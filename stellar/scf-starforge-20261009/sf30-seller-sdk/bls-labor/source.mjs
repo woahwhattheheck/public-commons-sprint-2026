@@ -202,7 +202,7 @@ function validateRow(row, columns) {
         spec.type === 'number' && (typeof value !== 'number' || !Number.isFinite(value))) fail('BLS_PROJECTOR_TYPE_INVALID');
   }
 }
-export async function openBlsSourceFile(sourceFile, environment = process.env) {
+export async function openBlsSourceFile(sourceFile, { env = process.env } = {}) {
   const capture = await readBlsSource(sourceFile);
   let closed = false, active = null;
   const source = Object.freeze({
@@ -215,7 +215,7 @@ export async function openBlsSourceFile(sourceFile, environment = process.env) {
       if (typeof options.onRow !== 'function') fail('BLS_ROW_CONSUMER_REQUIRED');
       if (options.signal?.aborted) fail('BLS_EXTRACTION_CANCELLED');
       const child = spawn('python3', [PROGRAM, '--source', capture.sourceFile, '--query', query], {
-        shell: false, stdio: ['ignore', 'pipe', 'pipe'], env: { ...environment, PYTHONUNBUFFERED: '1', PYTHONDONTWRITEBYTECODE: '1' },
+        shell: false, stdio: ['ignore', 'pipe', 'pipe'], env: { ...env, PYTHONUNBUFFERED: '1', PYTHONDONTWRITEBYTECODE: '1' },
       });
       active = child;
       let failure = null, stderr = '', done = null, rowCount = 0, sourceRowBytes = 0, pending = Buffer.alloc(0);
