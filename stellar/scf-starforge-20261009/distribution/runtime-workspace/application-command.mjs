@@ -1,6 +1,7 @@
 // MIT. Optional private terminal and original CLI URL capture inside the managed runner.
 import { blockscoutStartup } from './application-blockscout.mjs';
 import { atlasStartup } from './application-atlas.mjs';
+import { redisStartup } from './application-redis.mjs';
 import { jobCheckoutStartup } from './application-job-checkout.mjs';
 import { datasetBuyerStartup } from './application-dataset-buyer.mjs';
 import { tenderlyStartup } from './application-tenderly.mjs';
@@ -112,13 +113,14 @@ export function observeApplicationOutput(request, directory, context = {}) {
       }).catch(error => { if (error.code !== 'EEXIST') saveError = error; });
       return;
     }
-    if (request.command === 'blockscout' || request.command === 'tenderly-workspace') {
-      const tenderly = request.command === 'tenderly-workspace';
-      if (!text.startsWith(tenderly ? '{"schema":"stellar-forge.tenderly-workspace-startup.v1",' :
-        '{"schema":"stellar-forge.blockscout-startup.v1",')) return;
+    if (request.command === 'blockscout' || request.command === 'tenderly-workspace' || request.command === 'redis') {
+      const tenderly = request.command === 'tenderly-workspace', redis = request.command === 'redis';
+      const startupSchema = redis ? 'stellar-forge.redis-workspace-startup.v1' :
+        tenderly ? 'stellar-forge.tenderly-workspace-startup.v1' : 'stellar-forge.blockscout-startup.v1';
+      if (!text.startsWith('{"schema":"' + startupSchema + '",')) return;
       saving = saving.then(async () => {
         if (seen) return;
-        const startup = await (tenderly ? tenderlyStartup : blockscoutStartup)(request, text);
+        const startup = await (redis ? redisStartup : tenderly ? tenderlyStartup : blockscoutStartup)(request, text);
         const url = startup && privateUrl(startup.url);
         if (!url) return;
         seen = true;

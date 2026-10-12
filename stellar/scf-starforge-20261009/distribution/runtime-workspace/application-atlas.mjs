@@ -73,16 +73,18 @@ export async function atlasStartup(request, text) {
   if (!plain(announcement) || announcement.schema !== STARTUP || announcement.state !== 'LISTENING') return null;
   const directory = absolute(option(request, '--workspace'));
   const sourceDirectory = absolute(option(request, '--managed-source'));
+  const launchSourceDirectory = join(absolute(request.releaseDirectory), 'source', SOURCE);
   const upstream = option(request, '--upstream', true), localUpstream = option(request, '--local-upstream', true);
   need(!(upstream && localUpstream), 'APPLICATION_ATLAS_STARTUP_CHANGED');
   const source = upstream ? 'PUBLIC_FACILITATOR_READ_ONLY' : localUpstream ?
     'ORIGINAL_SF60_DURABLE_CATALOG' : 'RETAINED_CATALOG_WORKSPACE';
   need(announcement.directory === directory && announcement.sourceDirectory === sourceDirectory &&
+    announcement.launchSourceDirectory === launchSourceDirectory &&
     announcement.source === source && announcement.sourceOrigin === (upstream ?? localUpstream ?? null) &&
     Number.isSafeInteger(announcement.pid) && announcement.pid > 0, 'APPLICATION_ATLAS_STARTUP_CHANGED');
   const { readAtlasLaunch } = await import(pathToFileURL(join(sourceDirectory, 'managed-launch.mjs')).href);
   need(typeof readAtlasLaunch === 'function', 'APPLICATION_ATLAS_READER_REQUIRED');
-  const ready = await readAtlasLaunch({ directory, sourceDirectory, pid: announcement.pid,
+  const ready = await readAtlasLaunch({ directory, sourceDirectory, launchSourceDirectory, pid: announcement.pid,
     instanceId: announcement.instanceId });
   need(ready.url === announcement.url && ready.workspaceId === announcement.workspaceId &&
     ready.privateLaunch === announcement.privateLaunch && ready.source === source &&
@@ -92,7 +94,7 @@ export async function atlasStartup(request, text) {
   const port = Number(option(request, '--port', true) ?? 0);
   need(Number.isInteger(port) && port >= 0 && port <= 65535 &&
     (port === 0 || Number(new URL(ready.url).port || 80) === port), 'APPLICATION_ATLAS_PORT_CHANGED');
-  return { url: ready.url, original: { schema: STARTUP, directory, sourceDirectory,
+  return { url: ready.url, original: { schema: STARTUP, directory, sourceDirectory, launchSourceDirectory,
     workspaceId: ready.workspaceId, workspaceFileSha256: ready.workspaceFileSha256,
     sourceFiles: ready.sourceFiles, source, sourceOrigin: ready.sourceOrigin,
     pid: ready.pid, instanceId: ready.instanceId, privateLaunch: ready.privateLaunch } };

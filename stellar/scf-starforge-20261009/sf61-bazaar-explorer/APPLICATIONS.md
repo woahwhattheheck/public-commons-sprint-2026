@@ -25,7 +25,7 @@ An application with both catalog origins empty opens its retained directory dire
 The saved command has this form:
 
 ```text
-starforge atlas --workspace /private/catalog --managed-source /private/runtime/source/stellar/scf-starforge-20261009/sf61-bazaar-explorer --port 0
+starforge atlas --workspace /private/catalog --managed-source /private/runtime/package/source/stellar/scf-starforge-20261009/sf61-bazaar-explorer --port 0
 ```
 
 Applications derives `--managed-source` from the selected installation. Its form presents the runtime and useful data/source choices; the native source path travels with the reviewed command.
@@ -105,7 +105,7 @@ The workspace transfer carries original source pages, selected requests, retaine
 
 `distribution/runtime-workspace/application-atlas.mjs` supplies `atlasApplication(common)`, `prepareAtlasApplication(settings, inputPath, runtimeDirectory)` and `atlasStartup(request, text)`. It derives the original Atlas source from `inspectMerchantRuntime`, retains the selected directory and native input files, and uses the selected server's original source normalizers.
 
-`managed-launch.mjs` supplies a read-only workspace identity inspection and the original process's private launch writer/reader. The compact startup schema is `stellar-forge.sf61.atlas-launch.v1`. Its private record binds the workspace ID, manifest at startup, selected source files, source mode and origin, process ID, launch instance and actual capability URL. Shutdown retires the record while the original workspace lease is held. Applications' existing worker records the process lifetime.
+`managed-launch.mjs` supplies a read-only workspace identity inspection and the original process's private launch writer/reader. The compact startup schema is `stellar-forge.sf61.atlas-launch.v1`. Its private record binds the workspace ID, manifest at startup, selected source files, source mode and origin, process ID, launch instance and actual capability URL. The reviewed runtime package and the adopted release are distinct original directories. Atlas records both, compares their native source bytes, and Applications verifies the executed source against its retained release directory. Shutdown retires the record while the original workspace lease is held. Applications' existing worker records the process lifetime.
 
 The Applications observer reads that original record through the selected runtime's native reader before saving its existing `application-url.json`. It checks the reviewed directory, source, port and announced process/instance. Its URL saving uses the same serialized observer chain as the other original applications.
 
