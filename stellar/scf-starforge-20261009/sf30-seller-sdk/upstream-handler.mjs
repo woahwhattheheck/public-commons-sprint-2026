@@ -180,7 +180,6 @@ export function createUpstreamHandler(options = {}) {
   integer(maxResponseBytes, 1, 16 * 1048576, 'maxResponseBytes');
   integer(maxInFlight, 1, 256, 'maxInFlight');
   const streaming = ['sse','ndjson'].includes(responseType);
-  if (streaming && agent !== undefined) throw new TypeError('Explicit upstream agents currently support buffered response modes');
   if (streaming && (method === 'HEAD' || idempotency !== undefined || responseContract !== undefined || cachePolicyMetadata))
     throw new TypeError('Streaming upstreams require a response body and cannot use buffered response replay, contracts or cache metadata');
   if (!streaming && stream !== undefined) throw new TypeError('stream settings require sse or ndjson responseType');
@@ -430,7 +429,7 @@ export function createUpstreamHandler(options = {}) {
           result = {outcome:'NOT_DISPATCHED',error:allowance.body.error,response:allowance};
         } else {
           startedExchange = true;
-          result = streaming ? await openUpstreamStream({...prepared,method,lookup,expose,tls,
+          result = streaming ? await openUpstreamStream({...prepared,method,lookup,expose,tls,agent,
             format:responseType,policy:streamPolicy,headerSignal:lifetime.signal,signal:context.signal}) :
             await exchange(prepared, lifetime.signal);
           // Only the original source exchange observes provider cooldowns.

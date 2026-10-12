@@ -26,5 +26,5 @@ export function deferUpstreamTls(value: UpstreamTlsDeclaration, options?: { env?
 export function deferUpstreamTls(value: undefined, options?: { env?: Record<string, string | undefined>; origin?: string }): undefined;
 export function assertUpstreamTlsProfile(profile?: UpstreamTlsProfile): void;
 export function upstreamTlsRequestOptions(profile?: UpstreamTlsProfile): Readonly<{
-  secureContext?: SecureContext; rejectUnauthorized?: true; checkServerIdentity?: ConnectionOptions['checkServerIdentity'];
+  secureContext?: SecureContext; sessionIdContext?: string; rejectUnauthorized?: true; checkServerIdentity?: ConnectionOptions['checkServerIdentity'];
 }>;

@@ -199,7 +199,12 @@ const inventory = createUpstreamHandler({
 
 Attach this handler through the existing seller application API. A loaded profile
 can be shared across handlers. The original cache wrapper carries this native
-handle through its immutable request generations without serializing it.
+handle and a configured host agent through its immutable request generations.
+Named host proxy profiles compose with the same TLS declaration. Each loaded
+TLS context has a separate native session identity, so connections and TLS
+resumptions on a shared HTTPS agent retain the correct client certificate.
+The host keeps ownership of agent shutdown through the original transport
+lifecycle.
 
 ## Correct an inspection failure
 
@@ -223,7 +228,8 @@ The source command is
 The single `journey.mjs` beside it uses OpenSSL-created local certificates, an
 actual client-authenticated HTTPS server, the original native x402 2.28.0 seller
 and controlled local facilitator responses. It exercises buffered/cached and
-streaming delivery, release-reference retention, reopen and certificate rotation.
+streaming delivery, named host proxy routing, cache management, shared-agent
+certificate isolation, release-reference retention, reopen and certificate rotation.
 Its temporary credential files are removed on completion. It uses only local
 listeners and is excluded from the installed merchant package.
 

@@ -23,6 +23,9 @@ const help = `Starforge merchant toolkit
   starforge runtime-transfer --help
 
 Native commands (arguments pass unchanged to the maintained implementation):
+  sdmx                                      Retain SDMX sources, publish exact editions and receive original buyer pages
+  buyer-collections                         Review, retain and operate original paid request collections
+  buyer-collections-workspace               Review collections, original queue states and result exports in a private browser
   census-publisher                         Publish Census ACS observations and complete original source deliveries
   usaspending-research                      Capture federal awards, review prime workshares and operate saved editions
   usaspending-dossier                       Receive award editions, write research findings and recover source packets
@@ -59,6 +62,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   job-workspace                             Receive paid jobs, retrieve results and organize research collections
   upstream-tls                               Review supplier certificate references and inspect local TLS credentials
   supplier-quotas                            Review supplier account configuration and inspect retained call allowances
+  cache-operations                          Review cache activity, change retention and recover saved operations
   openapi     OpenAPI seller import            pilot       OpenAPI pilot + operations
   buyer       Discover, review, approved call  capture     One HTTP 402 capture
   import-headers  Import original operator HTTP headers
@@ -149,6 +153,8 @@ Native commands (arguments pass unchanged to the maintained implementation):
   catalog-serve / catalog                     Host and operate live seller discovery
   catalog-withdrawal                         Prepare, sign and apply seller withdrawals
   catalog-workspace                          Review signed declarations and retained catalog operations
+  atlas                                     Browse retained catalog offers and prepare buyer requests
+  atlas-workspace                           Export, inspect and receive retained Atlas workspaces
   checkout / purchase                        Enroll, purchase and retrieve a merchant file
   buyer-object                               Acquire, resume and assemble an existing object
   buyer-runbook                              Plan, run and recover multi-resource acquisitions

@@ -1,6 +1,8 @@
 // MIT. One local native seller and client-certificate operating journey.
 import assert from 'node:assert/strict';
-import { createServer } from 'node:https';
+import { createServer, Agent as HttpsAgent } from 'node:https';
+import { createServer as createProxyServer } from 'node:http';
+import { connect } from 'node:net';
 import { mkdtemp, mkdir, writeFile, readFile, chmod, rm, unlink } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -16,7 +18,8 @@ import { loadUpstreamTls, deferUpstreamTls } from './profile.mjs';
 import { compileUpstreamTls } from './config.mjs';
 
 const work = await mkdtemp(join(tmpdir(), 'sf30-mtls-'));
-let server, session, application;
+let server, session, application, proxy, sharedAgent;
+const proxySockets = new Set(); let proxyTunnels = 0;
 const observed = [], phases = [];
 let nativeVerifies = 0, nativeSettlements = 0;
 const openssl = (...args) => {
@@ -88,15 +91,35 @@ try {
   server.on('tlsClientError', () => {});
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
   const origin = 'https://127.0.0.1:' + server.address().port;
-  const env = { MTLS_CA_FILE: join(work, 'ca.crt'), MTLS_CERT_FILE: join(work, 'client-one.crt'),
+  proxy = createProxyServer((_request,response) => { response.writeHead(405); response.end(); });
+  proxy.on('connect', (request, downstream, head) => {
+    if (request.url !== '127.0.0.1:' + server.address().port) { downstream.destroy(); return; }
+    const upstream = connect(server.address().port, '127.0.0.1');
+    for (const socket of [downstream, upstream]) {
+      proxySockets.add(socket); socket.on('close', () => proxySockets.delete(socket));
+    }
+    downstream.on('error', () => upstream.destroy());
+    upstream.on('error', () => downstream.destroy());
+    downstream.on('close', () => upstream.destroy());
+    upstream.on('close', () => downstream.destroy());
+    upstream.once('connect', () => {
+      proxyTunnels++;
+      downstream.write('HTTP/1.1 200 Connection Established\r\n\r\n');
+      if (head.length) upstream.write(head);
+      downstream.pipe(upstream); upstream.pipe(downstream);
+    });
+  });
+  await new Promise(resolve => proxy.listen(0, '127.0.0.1', resolve));
+  const env = { MTLS_PROXY: 'http://127.0.0.1:' + proxy.address().port, MTLS_CA_FILE: join(work, 'ca.crt'), MTLS_CERT_FILE: join(work, 'client-one.crt'),
     MTLS_KEY_FILE: join(work, 'client-one.key'), MTLS_PFX_FILE: join(work, 'client.p12'), MTLS_PASSWORD: 'local-journey-password' };
   const tls = { caFileEnv: 'MTLS_CA_FILE', certFileEnv: 'MTLS_CERT_FILE', keyFileEnv: 'MTLS_KEY_FILE' };
-  const bindings = { schema: 'stellar-forge.seller-upstreams.v1', bindings: { inventory: {
-    origin, path: '/inventory', tls, cache: { shareAcrossBuyers: true, ttlMs: 60000, maxEntries: 8, maxBytes: 65536,
+  const bindings = { schema: 'stellar-forge.seller-upstreams.v1',
+    transports: { source: { mode: 'environment-proxy', proxyEnv: 'MTLS_PROXY' } }, bindings: { inventory: {
+    origin, path: '/inventory', tls, transport: 'source', cache: { shareAcrossBuyers: true, ttlMs: 60000, maxEntries: 8, maxBytes: 65536,
       maxEntryBytes: 8192, maxSourceInFlight: 4, maxWaiters: 8, sourceTimeoutMs: 10000 },
   } } };
   const references = upstreamCredentialReferences(bindings);
-  assert.deepEqual(references, ['MTLS_CA_FILE', 'MTLS_CERT_FILE', 'MTLS_KEY_FILE']);
+  assert.deepEqual(references, ['MTLS_CA_FILE', 'MTLS_CERT_FILE', 'MTLS_KEY_FILE', 'MTLS_PROXY']);
   compileUpstreamBindings(bindings, { allowLoopback: true, env: {} });
   assert.throws(() => compileUpstreamBindings(bindings, { env: {} }), /public HTTPS/);
   assert.throws(() => compileUpstreamTls({ ...tls, rejectUnauthorized: false }));
@@ -121,7 +144,7 @@ try {
   assert.ok(!(await readFile(join(store, retained.file), 'utf8')).includes(work));
   await unlink(input);
 
-  application = createUpstreamApplication(facade, bindings, { allowLoopback: true, env: {}, deferCredentials: true });
+  application = createUpstreamApplication(facade, bindings, { allowLoopback: true, env: { MTLS_PROXY: env.MTLS_PROXY }, deferCredentials: true });
   session = await startSellerService({ config: application.config, handlers: application.handlers, port: 0 });
   const preview = await fetch(session.url + '/inventory');
   assert.equal(preview.status, 402); await preview.arrayBuffer();
@@ -138,9 +161,23 @@ try {
   assert.equal((await buy()).identity, firstFingerprint);
   assert.equal(observed.length, 1);
   assert.equal(application.snapshot().bindings[0].tls.certificate.sha256, firstFingerprint);
-  phases.push('original native seller, authenticated supplier and paid cache reuse');
+  assert.equal(proxyTunnels, 1);
+  assert.equal(application.snapshot().bindings[0].transport.profile, 'source');
+  assert.equal(application.cacheBinding.inspect('inventory').inventory.policy.ttlMs, 60000);
+  phases.push('original native seller, named host proxy, authenticated supplier and managed paid cache reuse');
 
-  const stream = createUpstreamHandler({ baseUrl: origin, path: '/stream', responseType: 'ndjson', tls: loaded });
+  sharedAgent = new HttpsAgent({ keepAlive: true, maxSockets: 1, maxCachedSessions: 10 });
+  const secondIdentity = loadUpstreamTls(tls, { env: { ...env,
+    MTLS_CERT_FILE: join(work, 'client-two.crt'), MTLS_KEY_FILE: join(work, 'client-two.key') }, origin });
+  for (const [path, profile, identity] of [
+    ['/pooled-first', loaded, firstFingerprint], ['/pooled-second', secondIdentity, secondFingerprint],
+  ]) {
+    const pooled = createUpstreamHandler({ baseUrl: origin, path, tls: profile, agent: sharedAgent });
+    assert.equal(JSON.parse((await pooled(context())).body).identity, identity);
+  }
+  phases.push('distinct certificate identities on one shared native HTTPS agent');
+
+  const stream = createUpstreamHandler({ baseUrl: origin, path: '/stream', responseType: 'ndjson', tls: loaded, agent: sharedAgent });
   const output = await stream(context()); assert.equal(output.status, 200);
   const chunks = []; for await (const chunk of output.stream.body) chunks.push(Buffer.from(chunk));
   assert.equal(JSON.parse(Buffer.concat(chunks)).identity, firstFingerprint);
@@ -172,10 +209,14 @@ try {
   assert.deepEqual(observed.filter(row => row.path === '/inventory').map(row => row.identity), [firstFingerprint, secondFingerprint]);
   phases.push('retained release reopen with explicit credential rotation');
   assert.equal(nativeVerifies, 3); assert.equal(nativeSettlements, 3);
+  assert.equal(proxyTunnels, 2); assert.equal(observed.length, 6);
   console.log(JSON.stringify({ result: 'PASS', nativeSdk: NATIVE_SDK_VERSION, nativeVerifies, nativeSettlements,
-    authenticatedSupplierCalls: observed.length, clientCertificateGenerations: 2, phases }));
+    authenticatedSupplierCalls: observed.length, clientCertificateGenerations: 2, proxyTunnels, phases }));
 } finally {
   await closeSeller();
+  sharedAgent?.destroy();
+  for (const socket of proxySockets) socket.destroy();
+  if (proxy) { proxy.closeAllConnections(); await new Promise(resolve => proxy.close(resolve)); }
   if (server) { server.closeAllConnections(); await new Promise(resolve => server.close(resolve)); }
   await rm(work, { recursive: true, force: true });
 }

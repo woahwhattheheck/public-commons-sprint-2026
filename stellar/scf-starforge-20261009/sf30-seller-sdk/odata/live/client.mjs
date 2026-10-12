@@ -5,7 +5,7 @@ import { join,resolve } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { prepareReview } from '../../../sf88-operator-buyer-cli/prepare.mjs';
 import { compileQuery } from '../source.mjs';
-import { prepareProduct,json } from './config.mjs';
+import { prepareProduct,templatePlan,json } from './config.mjs';
 import { buildQuery,digest,validatePage,plain } from './contract.mjs';
 export async function readBytes(path,limit=16777216) {
   const handle=await open(path,constants.O_RDONLY|constants.O_NOFOLLOW);
@@ -22,14 +22,41 @@ export function prepareDraft({catalog,plan,selection},options={}) {
   const query=buildQuery(prepared.plan,catalog,selection.operation,selection.request);
   return {...prepared,selection:{operation:selection.operation,request:query.query},query};
 }
-/** Consume the original retained operator workspace without a second project store. */
-export async function prepareFromWorkspace(workspace,{planId,plan,operation}={},options={}) {
+async function workspaceSelection(workspace,planId) {
   const state=await workspace.state(),retained=state.plans.find(row=>row.id===planId);
   if(!retained)throw new TypeError('Choose a saved original OData query');
   const connection=state.connections.find(row=>row.id===retained.connectionId);
   if(!connection||connection.catalogHash!==retained.catalogHash)throw new TypeError('The saved query belongs to a different metadata edition');
   const compiled=compileQuery(connection.catalog,retained.query.plan);
   if(compiled.fingerprint!==retained.query.fingerprint)throw new TypeError('The original saved query changed');
+  return {connection,compiled};
+}
+function connectionPlan(plan,connection) {
+  const selected=structuredClone(plan);
+  if(connection.authEnv&&!selected.oauth2&&!Object.keys(selected.headerEnv??{}).some(name=>name.toLowerCase()==='authorization'))
+    selected.headerEnv={...selected.headerEnv,authorization:connection.authEnv};
+  return selected;
+}
+/** Start the operator form from the exact selected query and its source connection. */
+export async function templateFromWorkspace(workspace,{planId,publicOrigin,payment,amountAtomic}={}) {
+  const {connection,compiled}=await workspaceSelection(workspace,planId);
+  const plan=templatePlan(connection.catalog,{entitySet:compiled.plan.entitySet,...(publicOrigin?{publicOrigin}:{})});
+  const operation=plan.operations[0];
+  operation.fields=[...compiled.plan.select];
+  operation.filterFields=[...new Set(compiled.plan.filters.map(filter=>filter.field))];
+  operation.sourceFilters=structuredClone(compiled.plan.filters);
+  operation.sourceFilterMode=compiled.plan.filterMode;
+  operation.orderFields=compiled.plan.orderBy.map(order=>order.field);
+  operation.maxPageRows=Math.max(1000,compiled.plan.pageSize);
+  operation.maxTotalRows=Math.max(1,compiled.plan.top??100000);
+  if(payment)plan.payment=structuredClone(payment);
+  if(amountAtomic!==undefined)operation.amountAtomic=amountAtomic;
+  return connectionPlan(plan,connection);
+}
+/** Consume the original retained operator workspace without a second project store. */
+export async function prepareFromWorkspace(workspace,{planId,plan,operation}={},options={}) {
+  const {connection,compiled}=await workspaceSelection(workspace,planId);
+  plan=connectionPlan(plan,connection);
   const catalog=structuredClone(connection.catalog);
   for(const receipt of Object.values(catalog.receipts)) {
     const bytes=receipt.rawBase64?Buffer.from(receipt.rawBase64,'base64'):await workspace.raw(receipt.sha256);
