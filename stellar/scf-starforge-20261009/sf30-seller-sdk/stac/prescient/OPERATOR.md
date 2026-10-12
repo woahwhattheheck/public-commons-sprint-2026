@@ -12,6 +12,14 @@ Use the existing Node runtime required by the current Starforge distribution and
 
 The original STAC product was merged in [PR1421](https://github.com/woahwhattheheck/public-commons-sprint-2026/pull/1421). The original Prescient worker is maintained in [PR1610](https://github.com/woahwhattheheck/public-commons-sprint-2026/pull/1610), and the shared eoAPI/source-auth host in [PR1573](https://github.com/woahwhattheheck/public-commons-sprint-2026/pull/1573). Use the actual composed source revision recorded by the installed package; those PR references describe the source ownership and do not substitute for its recorded revision.
 
+### Open the same workspace from Applications
+
+The maintained Applications manager can start `prescient-serve` through the original STAC CLI. Select the existing private operator directory and its local deployment JSON; the selection retains the current workspace ID, profile, runtime source and configuration files. Starting the service uses the same host and browser session as the direct CLI. It does not initialize another catalog, acquire another source edition or open the SDK merely to show retained state.
+
+For a deployment supervisor, `prescient-serve --startup-json` emits the original `stellar-forge.stac-managed-startup.v1` record with `status: "STAC_READY"` after the host has returned the selected workspace through its existing session. Preserve that record in the supervisor's private operation state. On service restart, use the new record returned by that same saved application: the original workspace ID stays the same while the local address and browser session rotate. The managed launcher can also supply `--managed-selection` to compare the exact reviewed workspace, source and deployment selection before launch.
+
+Applications Stop uses the original owned service close and waits for its tracked actions to finish. Opening an existing portable delivery remains an offline operation; connecting or renewing customer identity remains an explicit reviewed action in the Prescient tab.
+
 ## 1. Configure the receiving host
 
 Copy `deployment.example.json` into a private operator location. Its binding IDs are names for existing host-owned files; they are not credentials. The browser can select a configured ID but cannot supply an environment file, Python command, proxy, receiving root or other host configuration.

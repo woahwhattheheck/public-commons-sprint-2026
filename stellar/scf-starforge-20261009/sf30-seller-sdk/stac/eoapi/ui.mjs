@@ -28,6 +28,7 @@ export function mountEoapi(element,{api,workspace,editionId}={}) {
   if(!sessions.has(key))sessions.set(key,{reviewer:'',editionId:editionId??'',sourceReviewId:'',deliveryReviewId:'',
     deliveryApprovalId:'',target:'upstream',maxBytes:'16777216',origin:'',payment:'',customerDirectory:'',outputDirectory:'',view:'onboarding'});
   const form=sessions.get(key);let state=null,native=workspace,closed=false,commissioningMount=null,policyMount=null,busy=false;
+  let commissioningElement=null,policyElement=null,renderedView=null;
   const note=el('p',{class:'eoapi-message',role:'status'}),body=el('div',{class:'eoapi-body'});
   element.classList.add('eoapi-panel');element.replaceChildren(note,body);
   const input=(name,props={})=>el('input',{value:form[name]??'',...props,oninput:event=>{form[name]=event.target.value;}});
@@ -160,7 +161,7 @@ export function mountEoapi(element,{api,workspace,editionId}={}) {
   }
   function render() {
     if(closed)return;
-    commissioningMount?.destroy?.();commissioningMount=null;policyMount?.destroy?.();policyMount=null;
+    renderedView=form.view;
     const navigation=el('nav',{class:'actions'},
       button('Customer onboarding',async()=>{form.view='onboarding';return {view:form.view};}),
       button('Deployment policy',async()=>{form.view='policy';return {view:form.view};}),
@@ -168,12 +169,16 @@ export function mountEoapi(element,{api,workspace,editionId}={}) {
       button('Refresh saved workspace',()=>Promise.resolve({refreshed:true})));
     body.replaceChildren(el('h2',{},'Customer imagery operations'),navigation);
     if(form.view==='policy') {
-      const panel=el('div');body.append(panel);
-      policyMount=mountDeploymentPolicy(panel,{reviewer:form.reviewer,
+      if(!policyElement)policyElement=el('div');
+      body.append(policyElement);
+      if(policyMount)return policyMount.refresh();
+      policyMount=mountDeploymentPolicy(policyElement,{reviewer:form.reviewer,
         dispatch:request=>componentDispatch('/policy',request),onApproval:policySaved,onReceived:policySaved});
     }else if(form.view==='commissioning'&&state.commissioning) {
-      const panel=el('div');body.append(panel);
-      commissioningMount=mountCommissioning(panel,{principals:['anonymous',...state.source.principals.filter(row=>row.authenticated).map(row=>row.id)],
+      if(!commissioningElement)commissioningElement=el('div');
+      body.append(commissioningElement);
+      if(commissioningMount)return commissioningMount.refresh();
+      commissioningMount=mountCommissioning(commissioningElement,{principals:['anonymous',...state.source.principals.filter(row=>row.authenticated).map(row=>row.id)],
         dispatch:request=>componentDispatch('/commissioning',request)});
     }else{
       body.append(policyView(),sourceView(),deliveryView(),operationsView());
@@ -183,9 +188,9 @@ export function mountEoapi(element,{api,workspace,editionId}={}) {
   async function reload() {
     const [fresh,original]=await Promise.all([api('/api/eoapi/state'),api('/api/state')]);
     if(closed)return;state=fresh;native=original.workspace;
-    if(form.view==='policy'&&policyMount)await policyMount.refresh();
-    else if(form.view==='commissioning'&&commissioningMount)await commissioningMount.refresh();
-    else render();
+    if(form.view===renderedView&&form.view==='policy'&&policyMount)await policyMount.refresh();
+    else if(form.view===renderedView&&form.view==='commissioning'&&commissioningMount)await commissioningMount.refresh();
+    else await render();
   }
   void reload().catch(error=>{note.textContent=error.message;note.setAttribute('role','alert');});
   return {refresh:reload,destroy(){closed=true;commissioningMount?.destroy?.();policyMount?.destroy?.();}};
