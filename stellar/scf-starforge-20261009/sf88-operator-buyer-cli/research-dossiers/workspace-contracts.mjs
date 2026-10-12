@@ -5,3 +5,4 @@ export const RESEARCH_SECTIONS = Object.freeze(['questions','editions','selectio
 export const RESEARCH_PAGE_LIMIT = 100;
 export const RESEARCH_CONTROL_LIMIT = 16 * 1024 * 1024;
 export const RESEARCH_COMPARISON_SECTIONS = Object.freeze(['added','removed','changed','questions','editions','availability',
+  'findings-added','findings-removed','findings-changed']);
