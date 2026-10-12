@@ -310,10 +310,9 @@ def _json_archive(archive, name, records=None):
 def inspect_handover(archive_path, *, expected_sha256=None, verify_files=True, progress=None):
     """Inspect the entire original QGIS package without creating a workspace."""
     archive_path = Path(archive_path).expanduser().absolute()
-    measured = file_digest(archive_path, progress=progress, phase="archive")
-    require(expected_sha256 is None or measured["sha256"] == expected_sha256,
-            "PACKAGE_HASH_CHANGED", "The complete archive differs from the selected transfer.")
-    with zipfile.ZipFile(archive_path) as archive:
+    with original_model.opened_package_archive(
+            archive_path, expected_sha256=expected_sha256,
+            progress=progress) as (archive, measured, assert_archive):
         names = archive.namelist()
         require(len(names) == len(set(names)) and len(names) <= 1000000
                 and "qgis-package.json" in names,
@@ -375,6 +374,7 @@ def inspect_handover(archive_path, *, expected_sha256=None, verify_files=True, p
                                       "totalFiles": len(records)})
                 require(count == record["bytes"] and digest.hexdigest() == record["sha256"],
                         "PACKAGE_MEMBER_HASH", "The complete original package member changed.", path=record["path"])
+        assert_archive()
         return {
             "schema": INSPECTION_SCHEMA, "path": str(archive_path), **measured,
             "manifestSha256": sha_bytes(manifest_body), "snapshotSha256": sha_bytes(snapshot_body),
