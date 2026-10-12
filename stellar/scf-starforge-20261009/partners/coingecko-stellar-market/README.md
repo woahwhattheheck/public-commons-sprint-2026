@@ -204,3 +204,7 @@ The complete [native acceptance package](workspace/acceptance/README.md) acquire
 - [Original SF88 buyer operator](../../sf88-operator-buyer-cli/README.md)
 
 MIT; preserve the repository's original licence and module authorship.
+
+## Agent operation through the existing merchant MCP
+
+The [CoinGecko MCP workspace guide](../../../../../stellar-forge/mcp-merchant-operator/COINGECKO-WORKSPACE.md) exposes this original browser/model, native buyer jobs and retained files through 32 merchant tools. Configure host-owned directory/input/buyer aliases and run `starforge merchant-mcp init-coingecko-workspaces --dir NEW_PRIVATE_DIRECTORY --connection COINGECKO_WORKSPACE_CONNECTION.json`. Agent edits use the same project revision and record versions as the browser. Recover a lost write response through `merchant_coingecko_operation` and the original `opId`; full handovers preserve source/history and restore purchases as historical records. The original native checkout engine remains the only payment executor.

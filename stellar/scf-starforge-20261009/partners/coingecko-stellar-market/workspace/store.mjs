@@ -51,14 +51,23 @@ export class MarketStore {
   projectConfig(projectId,config) {
     this.db.prepare('UPDATE projects SET config=? WHERE id=?').run(JSON.stringify(config),projectId);return this.project(projectId);
   }
-  write(projectId,body,action,fn) {
+  write(projectId,body,action,fn,target=null) {
     need(plain(body),'INVALID_WRITE');text(body.actor,'operator',240);id(body.opId,'operation ID');
-    const scope=projectId??'workspace',requestSha=sha(jsonBytes(stable({action,body})));
+    if(target){need(plain(target),'INVALID_WRITE_TARGET');id(target.id,'write target');text(target.kind,'write target kind',80);
+      need(target.responseKey===undefined||['id','collectionId'].includes(target.responseKey),'INVALID_WRITE_TARGET')}
+    const scope=projectId??'workspace',submitted={action,body},
+      requestSha=sha(jsonBytes(stable(target?{...submitted,target:{kind:target.kind,id:target.id}}:submitted)));
     return this.transaction(()=>{
       const previous=this.db.prepare('SELECT * FROM operations WHERE scope=? AND op_id=?').get(scope,body.opId);
       if(previous) {
-        need(previous.request_sha===requestSha,'OPERATION_CONFLICT','This operation ID already belongs to different submitted values',409);
-        return JSON.parse(previous.response);
+        const saved=JSON.parse(previous.response);
+        // Existing receipts used the original action/body digest. Accept one
+        // only when its saved result identifies this exact path-selected target.
+        const legacySameTarget=target&&previous.request_sha===sha(jsonBytes(stable(submitted)))&&
+          saved.value?.[target.responseKey??'id']===target.id;
+        need(previous.request_sha===requestSha||legacySameTarget,'OPERATION_CONFLICT',
+          'This operation ID already belongs to different submitted values or a different target',409);
+        return {...saved,replayed:true};
       }
       if(projectId) {
         const current=this.project(projectId);integer(body.revision,'revision');
@@ -76,6 +85,12 @@ export class MarketStore {
       const response={ok:true,opId:body.opId,projectId:actualProjectId,revision,value};
       this.db.prepare('INSERT INTO operations VALUES(?,?,?,?)').run(scope,body.opId,requestSha,JSON.stringify(response));return response;
     });
+  }
+  operation(projectId,opId) {
+    id(opId,'operation ID');if(projectId)this.project(projectId);
+    const scope=projectId??'workspace',row=this.db.prepare('SELECT request_sha,response FROM operations WHERE scope=? AND op_id=?').get(scope,opId);
+    return row?{state:'RETAINED',scope,opId,requestSha256:row.request_sha,response:JSON.parse(row.response)}:
+      {state:'NOT_RETAINED',scope,opId};
   }
   optional(kind,recordId) {return decode(this.db.prepare('SELECT value FROM records WHERE id=? AND kind=?').get(recordId,kind))}
   get(kind,recordId) {const value=this.optional(kind,recordId);need(value,'RECORD_NOT_FOUND',kind+' record not found',404);return value}
