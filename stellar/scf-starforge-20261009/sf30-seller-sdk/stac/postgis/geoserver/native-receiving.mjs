@@ -433,6 +433,10 @@ export async function runGeoServerNativeReceiving(input,{environment=process.env
     stop(error);
   } finally {
     await drain('browser');await drain('server');await drainRecovery();
+    // Keep the original output listeners and lease until queued progress writes finish.
+    for(const stream of new Set([stdout,stderr])) {
+      try{await output(stream,'');}catch(error){primary??=error;}
+    }
     primary??=signal.aborted?signal.reason:null;primary??=closeIssue;
     try {
       if(!primary&&candidate) {
@@ -459,10 +463,19 @@ export async function runGeoServerNativeReceiving(input,{environment=process.env
 }
 async function output(stream,value) {
   await new Promise((resolve,reject)=>{
-    const error=issue=>{stream.removeListener('error',error);reject(issue);};
-    stream.once('error',error);
-    try{stream.write(value,issue=>{stream.removeListener('error',error);issue?reject(issue):resolve();});}
-    catch(issue){stream.removeListener('error',error);reject(issue);}
+    let issue=null,turn=null,finished=false;
+    const finish=()=>{
+      if(finished)return;finished=true;stream.removeListener('error',onError);
+      issue?reject(issue):resolve();
+    };
+    const complete=error=>{
+      issue??=error;
+      // Node may emit the write error after invoking its callback.
+      if(turn===null)turn=setImmediate(finish);
+    };
+    const onError=error=>complete(error);
+    stream.on('error',onError);
+    try{stream.write(value,complete);}catch(error){complete(error);}
   });
 }
 export async function main(argv=process.argv.slice(2)) {
@@ -474,7 +487,7 @@ export async function main(argv=process.argv.slice(2)) {
     need(createHash('sha256').update(raw).digest('hex')===before.sha256,'GEOSERVER_NATIVE_HANDOFF_FILE_CHANGED');
     const input=parseExactJSON(new TextDecoder('utf-8',{fatal:true}).decode(raw));
     const result=await runGeoServerNativeReceiving(input,{processSignals:true,
-      progress:value=>process.stderr.write(nativeBytes(value))});
+      progress:value=>output(process.stderr,nativeBytes(value))});
     await output(process.stdout,nativeBytes(result));return result;
   }catch(error){
     try{await output(process.stderr,nativeBytes({error:failureView(error),exitCode:error.exitCode??2}));}catch{}
