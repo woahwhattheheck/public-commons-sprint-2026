@@ -201,3 +201,19 @@ const page = queryRequests(rows, { status: 'PROCESSING', limit: 100 });
 Methods are services, service, requests, request, token and discovery. Discovery uses a separately supplied discoveryUrl. Request options accept a cancellation signal. HTTP errors, invalid JSON, interrupted bodies and response-size failures carry Open311Error.result with the retained response and receipt. Partial bodies are marked complete: false. Redirect responses produce an HTTP error so an endpoint move can be selected explicitly.
 
 The durable workspace module serves the CLI and local operator server. [Merchant setup, tools and typed SDK](MCP.md) expose that same workspace through the maintained merchant contract. [The browser operating guide](workspace/WORKSPACE.md) follows the complete customer desk. Source definitions are in index.d.mts; workspace.d.mts, server.d.mts and mcp-client.d.mts describe the original operating interfaces.
+
+## Commission the operated workspace
+
+Run the complete original source-to-receiving journey with an absolute path to the commissioning profile. This profile wraps the unchanged Helsinki source connection and selects locale=en for services and extensions=true for requests.
+
+~~~sh
+node stellar/scf-starforge-20261009/sf30-seller-sdk/open311/commission.mjs \
+  --connection /absolute/checkout/stellar/scf-starforge-20261009/sf30-seller-sdk/open311/examples/helsinki.commission.json \
+  --start 2026-10-08T08:00:00Z \
+  --end 2026-10-08T12:00:00Z \
+  --output /absolute/private/open311-commission
+~~~
+
+Choose the actual fixed source interval and a new private output directory. Add --retained /absolute/private/originals.json when using the complete original-source manifest described in the browser guide. The existing helsinki.connection.json remains the flat connection accepted by connection-put; helsinki.commission.json is the complete commissioning input.
+
+The journey captures catalog and request responses, saves an internal review, compares captures, delivers complete files through HTTP and the merchant retained reader, receives the workspace and reopens the original source and review history.

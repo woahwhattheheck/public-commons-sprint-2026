@@ -276,6 +276,8 @@ Save a connection file outside the repository. It can be a flat connection objec
 }
 ~~~
 
+The repository also includes examples/helsinki.commission.json with the complete Helsinki connection, source attribution, and both source queries. Copy that file to the absolute private connection path below, or pass its absolute repository path directly. The separate helsinki.connection.json remains the flat connection profile for the CLI and API.
+
 From the repository root, run:
 
 ~~~bash
