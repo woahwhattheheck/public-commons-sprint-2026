@@ -19,16 +19,33 @@ def terminal_control(fd):
         if error.errno != errno.ENOTTY: raise
         return ("noncontrolling", None)
 
-def slave_identity(fd, path):
+def numbered_slave_path(value):
+    selected = Path(value)
+    need(str(selected) == value and selected.parent == Path("/dev/pts") and
+         selected.name and all("0" <= char <= "9" for char in selected.name),
+         "ORIGINAL_PTY_SLAVE_PROVENANCE_REQUIRED")
+    return str(selected)
+
+def original_slave_path(fd):
+    return numbered_slave_path(os.readlink("/proc/self/fd/" + str(fd)))
+
+def slave_identity(fd, path, *, expected_device=None, expected_slave=None):
     selected = Path(path)
-    need(selected.parent == Path("/dev/pts") and selected.name and
-         all("0" <= char <= "9" for char in selected.name) and
+    if expected_device is None:
+        slave = original_slave_path(fd)
+    else:
+        need(expected_slave is not None, "ORIGINAL_PTY_SLAVE_PROVENANCE_REQUIRED")
+        slave = numbered_slave_path(expected_slave)
+    need(str(selected) == path and
+         (path == slave or selected == Path("/dev/console")) and
          selected.resolve(strict=True) == selected, "ORIGINAL_PTY_SLAVE_PATH_REQUIRED")
     opened, named = os.fstat(fd), selected.lstat()
     need(stat.S_ISCHR(opened.st_mode) and stat.S_ISCHR(named.st_mode) and
          (opened.st_dev, opened.st_ino, opened.st_rdev) ==
          (named.st_dev, named.st_ino, named.st_rdev), "ORIGINAL_PTY_SLAVE_CHANGED")
-    return [opened.st_dev, opened.st_ino, opened.st_rdev]
+    device = [opened.st_dev, opened.st_ino, opened.st_rdev]
+    need(expected_device is None or device == expected_device, "ORIGINAL_PTY_SLAVE_CHANGED")
+    return device
 
 def digest_bytes(data):
     return hashlib.sha256(data).hexdigest()
@@ -342,7 +359,8 @@ class Run:
         need(observed_parent == binding["supervisor"], "SOURCE_SUPERVISOR_CHANGED")
         terminal = os.open(binding["path"], os.O_RDWR | os.O_NOCTTY | os.O_NOFOLLOW)
         try:
-            need(slave_identity(terminal, binding["path"]) == binding["device"],
+            need(slave_identity(terminal, binding["path"], expected_device=binding["device"],
+                                expected_slave=binding["slavePath"]) == binding["device"],
                  "SOURCE_TERMINAL_DEVICE_CHANGED")
             mode, foreground = terminal_control(terminal)
             need(mode == binding["controlMode"] and
