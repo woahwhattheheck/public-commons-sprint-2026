@@ -152,7 +152,9 @@ export async function buildDistribution({ repository = fileURLToPath(new URL('..
     const loaded = source.readFiles(items);
     for (const [path, bytes] of loaded) {
       totalBytes += bytes.length;
-      if (bytes.length > MAX_SOURCE_FILE_BYTES || totalBytes > MAX_SOURCE_BYTES)
+      if (bytes.length > MAX_SOURCE_FILE_BYTES)
+        throw new RangeError(`Distribution source file exceeds ${MAX_SOURCE_FILE_BYTES} bytes (${bytes.length}): ${path}`);
+      if (totalBytes > MAX_SOURCE_BYTES)
         throw new RangeError(`Distribution source exceeds ${MAX_SOURCE_BYTES} bytes: ${totalBytes}`);
       sources.set(path, bytes);
     }
@@ -277,8 +279,8 @@ export async function buildDistribution({ repository = fileURLToPath(new URL('..
   if (packageBytes > MAX_SOURCE_BYTES)
     throw new RangeError(`Distribution package exceeds ${MAX_SOURCE_BYTES} unpacked bytes: ${packageBytes}`);
   for (const file of files)
-    if (file.bytes.length > 4 * 1024 * 1024)
-      throw new RangeError('Distribution package member exceeds 4 MiB: ' + file.path);
+    if (file.bytes.length > MAX_SOURCE_FILE_BYTES)
+      throw new RangeError(`Distribution package member exceeds ${MAX_SOURCE_FILE_BYTES} bytes (${file.bytes.length}): ${file.path}`);
 
   const operation = await openDistributionBuild({ output: out, resume, manifest, files,
     onProgress: (phase, details) => source.progress(phase, details) });

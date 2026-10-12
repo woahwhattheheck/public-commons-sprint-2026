@@ -1,6 +1,7 @@
 import { mountOpenWaters } from '/openwaters.mjs';
 import { mountReviewSheets } from '/review-sheet.mjs';
 import { mountStandardizedAnalysis } from '/standardized-analysis.mjs';
+import { mountKiWIS } from '/kiwis.mjs';
 
 const $ = id => document.getElementById(id);
 const make = (tag, text, attrs = {}) => {
@@ -138,7 +139,7 @@ async function refresh(reset = false) {
   state = await api('/api/workspace');
   if (reset) applyProjectForm(state.project);
   renderCaptures(); renderReviews(); renderEditions();
-  openWaters.update(state); reviewSheets.update(state); standardizedAnalysis.update(state);
+  openWaters.update(state); reviewSheets.update(state); standardizedAnalysis.update(state); await kiwis.refresh();
   if (state.jobs?.some(x => x.status === 'RUNNING')) schedulePoll();
 }
 async function refreshStatus() {
@@ -428,6 +429,7 @@ function showCustomerDelivery(response) {
 }
 
 
+const kiwis = mountKiWIS({ api, notice });
 const standardizedAnalysis = mountStandardizedAnalysis({ api, notice, refresh });
 const openWaters = mountOpenWaters({ api, notice, refresh });
 const reviewSheets = mountReviewSheets({ api, notice, refresh, openPlan: async record => {

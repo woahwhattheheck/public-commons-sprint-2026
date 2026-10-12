@@ -72,6 +72,16 @@ starforge givecredit-statements capture-ledger \
   --label "GiveCredit mainnet original payments"
 ~~~
 
+## Import complete original historical ledgers
+
+The ledger capture options accept `originalLedgerSources` alongside explicit original transaction hashes. Each entry carries `format: "stellar-expert-ledger-json"`, the original `sourceUrl`, its `ledger` and the complete unchanged JSON response in `content`. Optional acquisition observations retain the original source import and the later native receiving time separately.
+
+The engine decodes the original envelope, transaction result and metadata directly from that retained provider format. It preserves the entire original response, exact native outer/inner transaction identities, actual ledger order and source references. Successful classic payments use their original native operation/result amounts; path payments retain both the payer debit and the delivered destination amount. Normal contract, account, provider-event and transaction acquisition then continues from those native records.
+
+The complete [historical source reader](../../stellar/scf-starforge-20261009/partners/carbon-native-receiving/prepare-ledger-inputs.mjs) prepares the existing capture-options input from whole original ledger files and the accompanying source manifest. It derives transaction hashes using the selected original network and the existing Stellar SDK, and keeps both raw files and their precise selection in a new private directory. In the full receiving parcel, the same reader is available at `receiving/prepare-ledger-inputs.mjs`.
+
+Use that generated `capture-options.json` with `givecredit-statements capture-ledger --file`, or pass it through the full native receiving caller’s `--capture-options`. The original source directory and complete operated workspace travel in the final archive.
+
 ## 2. Inspect donations and assign the original payments
 
 In **Donations**, filter the original registry edition by organization, initiative, donor and registry creation period. Each row retains its original registry amount and reported USD value, alongside the number of saved payment assignments and native receipt relations.

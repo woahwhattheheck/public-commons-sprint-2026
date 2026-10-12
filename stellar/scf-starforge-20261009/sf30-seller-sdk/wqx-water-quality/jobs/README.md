@@ -6,6 +6,8 @@ The function is exported as **waterQualityReview** from application.mjs. It uses
 
 The same function now accepts a complete saved paired scientific edition with explicit `mode: "scientific"`. It independently receives/recomputes the current and selected previous source editions and returns all seven native scientific exports. The exact saved scientific name/hash is retained. See [Paid paired scientific editions](PAIRED_SCIENTIFIC.md) for that full input, checkout, result and independent receiving workflow.
 
+The same function also accepts a complete saved KiWIS commissioning review with explicit `mode: "commissioning"`. It retains the exact saved name and both review hashes, reproduces the original KiWIS and WQX/Laboratory/WQM source pair, and returns all eight native exports. The [complete commissioning guide](COMMISSIONING.md) covers the original checkout, typed MCP download, independent customer receiving and same-job worker replay.
+
 The input and choices sections below describe the original review/Open Waters mode (`mode` omitted or `review`).
 
 ## Input contract
@@ -21,7 +23,7 @@ The input and choices sections below describe the original review/Open Waters mo
 
 The original source file remains byte-for-byte intact in the result. Its SHA-256, byte count, declared filename, media type and policy hash are the original descriptors supplied by context.files.
 
-Review mode reads at most 64 MiB of source plus 2 MiB of choices. The shared declared file policy also accepts a 128 MiB complete paired scientific source and has a 130 MiB combined ceiling; scientific mode uses only its source slot. Ordinary JSON input remains below the existing 256 KiB configured input limit. The worker output is application/zip with a 64 MiB compressed limit. The archive writer enforces a 512 MiB expanded total, at most 128 safe relative members and bounded compression streams.
+Review mode reads at most 64 MiB of source plus 2 MiB of choices. The shared declared file policy also accepts a 128 MiB complete paired scientific or commissioning source and has a 130 MiB combined ceiling; both saved-edition modes use only their source slot. These larger declared modes consume the original held sealed-file stream; the existing whole-file read remains capped at 64 MiB. Ordinary JSON input remains below the existing 256 KiB configured input limit. The worker output is application/zip with a 64 MiB compressed limit. The archive writer enforces a 512 MiB expanded total, at most 128 safe relative members and bounded compression streams.
 
 ### Select the original source
 
@@ -90,7 +92,7 @@ The ZIP uses standard DEFLATE entries with fixed metadata and CRC-32, plus SHA-2
 
 ## Run the merchant function
 
-Keep application.mjs, scientific.mjs and archive.mjs under the installed complete water-quality source. Their relative imports use that maintained scientific implementation. Copy merchant.example.json to a merchant-owned configuration directory and set its application path to the actual installed application.mjs.
+Keep application.mjs, scientific.mjs, commissioning.mjs and archive.mjs under the installed complete water-quality source. Their relative imports use that maintained scientific implementation. Copy merchant.example.json to a merchant-owned configuration directory and set its application path to the actual installed application.mjs.
 
 Set publicOrigin and the original payment fields to the merchant's actual HTTPS origin, network, asset, recipient, price and facilitator setup. The template payment values are explicit deployment placeholders. Its inputFiles declarations are executable constraints applied by the existing compiler and native input receiver.
 

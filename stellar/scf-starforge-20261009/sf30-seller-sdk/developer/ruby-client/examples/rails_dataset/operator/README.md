@@ -1,8 +1,8 @@
 # Dataset operator for the original Rails application
 
-This package adds a complete, server-rendered dataset receiving and import interface to Rails. An operator selects a received delivery, reviews every row and the configured mapping, approves the exact preview, and imports an edition through the application's original Active Record models. Original attachments, every historical receipt and a complete review handoff remain available.
+This package adds a complete, server-rendered dataset receiving and import interface to Rails. An operator selects a received delivery, reads every original row, configures application fields, reviews the complete resulting changes, and imports the selected edition through the application's original Active Record models. Original attachments, every historical receipt and a complete review handoff remain available.
 
-The interface uses neutral grayscale styles and ordinary HTML forms. It includes the source inbox, complete paginated change review and filters, typed before/after values, original source JSON, background preparation/import, retry of the same operation, refresh from the review's saved source, edition history, original file downloads, and full JSON/CSV/TAR exports.
+The interface uses neutral grayscale styles and ordinary HTML forms. It includes the source inbox, full source profiles and row browser, field mapping forms, complete paginated change review and filters, typed before/after values, original source JSON, background preparation/import, retry of the same operation, refresh from the review's saved source, edition history, original file downloads, and full JSON/CSV/TAR exports.
 
 ## Use the complete Baserow customer package
 
@@ -90,8 +90,17 @@ Add routes:
 
 ~~~ruby
 resources :dataset_imports, only: [:index, :show, :create] do
-  collection { get :stylesheet }
+  collection do
+    get :stylesheet
+    post :create_source
+  end
   member do
+    get :mapping
+    post :save_mapping
+    post :prepare_source
+    get :source_rows
+    get :source_export
+    get :mapping_export
     post :prepare
     post :refresh
     post :commit
@@ -111,7 +120,7 @@ resources :dataset_imports, only: [:index, :show, :create] do
 end
 ~~~
 
-Configure the shared resolver during application boot so web requests and workers reconstruct the same authorized context. The following uses the supplied example models; replace the target scope and catalogue with the application's actual model relation and received-delivery records:
+Configure the shared resolver during application boot so web requests and workers reconstruct the same authorized context. The following uses the supplied example models; replace the target scope and catalog with the application's actual model relation and received-delivery records:
 
 ~~~ruby
 Starforge::DatasetOperator.workspace_resolver = lambda do |tenant_key|
@@ -140,12 +149,12 @@ end
 
 Create the `storage` parent directory privately before use. The operator creates its own private root and per-tenant review directories. Web and background workers need access to the same private filesystem and database. Configure a durable Active Job adapter in the host; preserve the original review directory while an operation is queued or running.
 
-Each catalogue candidate is a server-controlled object:
+Each catalog candidate is a server-controlled object:
 
 ~~~ruby
 {
   id: "customer-source-edition-3",
-  title: "Customer catalogue / received edition 3",
+  title: "Customer catalog / received edition 3",
   stream_id: original_dataset_stream.id,
   directory: "/private/complete-received-customer",
   format: "baserow", # "dataset" opens a standalone original DatasetDelivery
@@ -154,11 +163,107 @@ Each catalogue candidate is a server-controlled object:
 }
 ~~~
 
-A candidate can supply `mapping_path` instead of a mapping object. The browser receives signed selections; it cannot choose arbitrary filesystem paths or a target model. Each tenant stream is checked against the resolver's original scoped relation.
+A candidate can supply `mapping_path` instead of a mapping object, or omit both to select the complete source before configuring fields. An omitted mapping is retained as an empty definition. The browser receives signed selections; filesystem paths, target models and the authorized relation come from the application. Each tenant stream is checked against the resolver's original scoped relation.
+
+## Configure fields from the complete original source
+
+Choose **Read source and configure fields** in the received-delivery inbox. The application retains the original candidate and review ID, then its `SourcePrepareJob` copies the complete delivery and profiles every row. The source page shows all projected columns, observed value types, separate empty and missing counts, and actual text lengths. **Browse every source row** opens the entire dataset in pages of 100 rows. Each row keeps its original JSON, field names, exact numbers and source order; full CSV and JSONL downloads contain the original dataset bytes.
+
+Source preparation does not require a usable target mapping. A delivery with missing or incomplete mapping can therefore be inspected and handed off before the field choices are ready. **Read or resume complete source** continues the same review after an interrupted queue call. A complete source-only handoff contains its original selection, delivery, source rows, profile and index.
+
+The mapping form is built from the original application's actual target relation and database schema. It lists supported, nonprotected fields and their text lengths or numeric precision. Record-key choices come from existing nonpartial unique indexes within that relation. Composite keys retain every component. The tenant's fixed scope values stay under the application's control.
+
+For an existing stream, the original key columns and every original key-conversion option remain attached to its records. For a new stream, choose an available unique record key and supply a source column for every key field. The complete preview checks the actual values and any duplicate keys.
+
+For each other field, choose its source column and how to handle an explicit empty value or a missing value. Leaving a field unselected keeps it outside the dataset's managed columns. Text fields can explicitly convert numbers and Boolean values to their exact text. Dates and date-times use the original importer's conversion rules. The complete preview reports a value that does not fit the application's type, null constraint or precision.
+
+The absent-record section supports retaining existing values or setting a separate Boolean field. Choose the direction that matches the application: present records can use true and removed records false, or the reverse. Leave that Boolean field unmapped in the field list. A returning source key restores the configured present-record value.
+
+**Save mapping and prepare complete review** creates a new review of the same original source. The first admission saves the complete submitted form or mapping, the validated source/application context, and the selected review together. If saving stops after that admission, the same review ID and original input finish the same selection, even if the live application has since advanced. The ordinary preview and import still apply their current-record and schema checks before an edition is written.
+
+The source review stays available. The resulting import review links back to it and exposes its exact selected mapping, complete changes, original files and full handoff. To revise the fields again, open **Source and field mapping** and save another review. Approval and import continue through the original application transaction and operation key.
+
+### Use the same source and mapping API
+
+The browser and CLI use the same `Workspace` methods:
+
+| Method | Complete result or operation |
+| --- | --- |
+| `prepare_source(id)` | Receive, profile and index the entire retained source |
+| `source_summary(id)` | Original source identity, all field profiles and complete row/page counts |
+| `source_rows(id, page: 0)` | One complete source page; API pages start at zero |
+| `source_export(id, format: "csv")` | Original CSV or JSONL through the existing download owner |
+| `mapping_target(id)` | Actual supported target fields, available unique indexes and established key binding |
+| `mapping_context(id)` | Complete source/target selection and its context checksum |
+| `remap_form(id, new_id:, actor:, form:, expected_context_sha256:)` | Retain a new review from the exact field form |
+| `remap(id, new_id:, actor:, mapping:, expected_context_sha256:)` | Retain a new review from a complete mapping definition |
+| `mapping_export(id)` | Download the exact mapping selected for that review |
+
+A form contains `rows` as an array or numerically indexed object. Each row identifies an allowed application `column`, selected source `field`, `null` (`assign` or `preserve`), `missing` (`error` or `preserve`) and `stringify` (`"0"` or `"1"`). An empty source field leaves that application column unmanaged. A new stream supplies the selected actual `key_index` name. The removal fields are `removal` (`retain` or `archive`), `archive_column`, and `archive_active` (`"true"` or `"false"`). Target types, models and tenant scope are supplied by the server.
+
+Use the context checksum returned by `mapping_context`, the original review ID, one retained new review UUID and the actual authenticated actor. Keep those values and the submitted form together for a retry. The programmatic mapping path uses the same admission and original importer.
+
+### Source CLI in the installed application
+
+`source_cli.rb` exposes the complete source, mapping and import workflow. In an existing Rails application, use its configured tenant resolver:
+
+~~~sh
+bin/rails runner /absolute/operator/source_cli.rb candidates --tenant ACTUAL_ACCOUNT
+bin/rails runner /absolute/operator/source_cli.rb prepare-source \
+  --tenant ACTUAL_ACCOUNT --review ORIGINAL_SOURCE_REVIEW
+bin/rails runner /absolute/operator/source_cli.rb context \
+  --tenant ACTUAL_ACCOUNT --review ORIGINAL_SOURCE_REVIEW --out /private/mapping-context.json
+~~~
+
+For a managed received application, select the original application directory, the current paired runtime source, and an environment containing this complete client edition:
+
+~~~sh
+bundle exec ruby CURRENT_CLIENT/examples/rails_dataset/operator/source_cli.rb candidates \
+  --application ORIGINAL_APPLICATION --runtime-source CURRENT_RUNTIME \
+  --environment CURRENT_ENVIRONMENT
+~~~
+
+The maintained runtime dispatcher also accepts the fixed `dataset-source` entry and passes its literal arguments to the same source CLI. Use the existing runtime environment and original operation UUID.
+
+The complete command sequence is `candidates` → `select` → `prepare-source` → `summary` / `rows` / `source-export` → `context` → `remap` or `remap-form` → `prepare-import` → `preview` / `changes` / `export` → `approve` → `commit` → `receipt` / `history` / `handoff`. Mapping commands take the original source `--review`, a retained new `--id`, the actual `--actor`, `--context-sha256`, and complete `--input` JSON. Subsequent review/import commands select that new review. Approval takes its exact `--preview-sha256`.
+
+Each output file is written once and verified on retry. Keep its original path. CLI row and change pages start at zero; browser source pages start at one. Read `--help` for the exact selection arguments and complete export names.
+
+### Complete installed mapping and receiving example
+
+The `mapping_example.rb` entry continues the original installed application using its actual current received candidate. It loads the complete current client explicitly so an older environment's retained Ruby classes cannot substitute for the selected source-mapping edition.
+
+~~~sh
+bundle exec ruby CURRENT_CLIENT/examples/rails_dataset/operator/mapping_example.rb run \
+  --application ORIGINAL_APPLICATION --runtime-source CURRENT_RUNTIME \
+  --out ORIGINAL_MAPPING_RUN
+~~~
+
+The maintained dispatcher exposes the same complete entry:
+
+~~~sh
+starforge ruby-runtime run --directory ORIGINAL_RUNTIME --id CURRENT_ENV \
+  --operation-id ORIGINAL_UUID --entry dataset-mapping-lifecycle --wait -- \
+  run --application ORIGINAL_APPLICATION --runtime-source CURRENT_RUNTIME \
+  --out ORIGINAL_MAPPING_RUN
+~~~
+
+The journey retains the rendered source-selection and mapping forms before their effects, runs the actual source CLI through the installed resolver, reads every original source row and file, follows the complete preview and import, saves working records and downloads the complete edition history. It keeps both complete HTTP and CLI handoffs and compares their manifests and all members.
+
+It then closes and copies the whole application, temporarily parks the original application path, and opens the recipient in a fresh Ruby process. The received application's source, original receipt, working targets and full exports are compared with the saved selection. Stop other users and workers of this application for that closed-database copying step. Use a stable private output directory for the entire operation and its retries.
+
+Reopen the completed result and recipient using the same current source:
+
+~~~sh
+bundle exec ruby CURRENT_CLIENT/examples/rails_dataset/operator/mapping_example.rb reopen \
+  --runtime-source CURRENT_RUNTIME --out ORIGINAL_MAPPING_RUN
+~~~
+
+The completed result uses schema `stellar-forge.dataset-operator-mapping-journey.v1`. This installed example selects the current source and mapping to exercise the whole unchanged-record continuation; operators use the ordinary mapping forms for substantive new field choices or later source editions.
 
 ## Daily operation
 
-1. **Prepare complete review.** Select a candidate in the inbox. The job copies the full delivery and mapping into its own review, then writes the complete preview before deriving browser pages and exports.
+1. **Select the source and fields.** Open the complete source and mapping form, or use **Prepare complete review** when the inbox already has a configured mapping. Source preparation and mapping review keep their original selections. The preview job copies the full selected source and mapping and writes the entire preview before deriving browser pages and exports.
 2. **Inspect all changes.** Page through inserted, updated, unchanged or removed rows and the adoption, restoration and source-change flags. Every row retains its exact typed before/after values, business key and original JSON.
 3. **Approve and import.** The signed form selects this exact preview. The original importer rechecks the source, mapping, scope, database schema and current records inside its transaction, applying normal validations and callbacks.
 4. **Resume an interruption.** Preparation and import reuse the review ID and original operation key. A lost queue response can be retried on that same review. If the database committed before receipt export completed, retry finishes the original receipt.
@@ -169,7 +274,7 @@ A changed application preview produces a conflict and keeps the original review 
 
 ## Browse and deliver the committed working records
 
-Open **Dataset and source details** on a committed review. Save one complete capture of the current dataset, then browse every retained business key, working value, source row and original attachment through the same tenant and target-model scope. The capture records active and removed keys separately and identifies working targets as unchanged, changed or missing. The original edition receipts and source rows remain attached to each record.
+Open **Working records** on a committed review. Save one complete capture of the current dataset, then browse every retained business key, working value, source row and original attachment through the same tenant and target-model scope. The capture records active and removed keys separately and identifies working targets as unchanged, changed or missing. The original edition receipts and source rows remain attached to each record.
 
 The records view provides full-text search, typed filters, multi-column sorting and complete pagination. CSV and JSON downloads contain the entire selected result, including the raw original source row and exact typed working values. Record details preserve original attachment references and stream the selected complete files. Pending captures use the same signed operation on resume.
 
@@ -195,7 +300,7 @@ The first successful commissioning result is immutable. Operating the copied app
 
 ## Export compatibility
 
-New native exports contain the original 16-file client plus these 14 operator files. New seller exports contain the original 26-file client plus the operator. Inspect and copy continue to accept the original 8-, 21-, 26- and 16-file completed editions using their exact original manifests.
+Current complete exports contain 52 seller-client files or 42 native-client files, including the full operator, working-record browser and source-mapping workflow. Inspect and copy continue to accept the original 8-, 21-, 26-, 40- and 46-file seller editions and the original 16-, 30- and 36-file native editions using their exact original manifests.
 
 If a native export stopped after creating an empty private directory but before saving its source selection, `native-resume` initializes that empty directory with the currently selected complete source. A nonempty interrupted package requires its original retained source selection. Existing files are never silently replaced.
 

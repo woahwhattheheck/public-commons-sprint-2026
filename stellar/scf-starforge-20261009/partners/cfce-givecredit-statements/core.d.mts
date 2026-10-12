@@ -17,7 +17,10 @@ export interface Transfer extends NativeRow {key:string;hash:string;network:Netw
 export interface DonationEvent extends NativeRow {key:string;hash:string;network:Network;ledger:string;createdAt:string|null;contractId:string;donor:string;provider:string;amountAtoms:AtomString;operationIndex?:string;eventIndex?:string;rawRefs?:string[]}
 export interface ContractObservation extends NativeRow {key:string;network:Network;ledger:string;createdAt:string|null;contractId:string;hash?:string;phase?:string;provider:string|null;vendor:string|null;providerFees:string|null;vendorFees:string|null;tokenContractId:string|null;bucketAtoms:AtomString|null;minimumAtoms:AtomString|null;accountedRemainderAtoms:string|null;tokenBalanceAtoms:string|null;rawRefs?:string[];sourceStatus?:NativeRow}
 export interface LedgerTables {transactions:Transaction[];transfers:Transfer[];donationEvents:DonationEvent[];contractObservations:ContractObservation[]}
-export interface SourceResponse {url:string;method?:string;request?:NativeRow;retrievedAt:string;status?:string;content:string;file?:string;sha256?:string}
+export interface RetrievedSourceResponse {url:string;method?:string;request?:NativeRow;retrievedAt:string;status?:string|null;content:string;file?:string;sha256?:string;transport?:'retained-original-import';importedAt?:string;acquisition?:NativeRow}
+/** A retained original import has its own import time; original HTTP retrieval may be unavailable. */
+export interface ImportedSourceResponse {url:string;method?:string;request?:NativeRow;transport:'retained-original-import';retrievedAt:null;importedAt:string;status:null;content:string;file?:string;sha256?:string;acquisition?:NativeRow}
+export type SourceResponse=RetrievedSourceResponse|ImportedSourceResponse;
 export interface SourceBase {schema:'stellar-forge.givecredit-source.v1';kind:SourceKind;metadata:NativeRow&{network?:Network;status?:string};files:Record<string,string>;responses:SourceResponse[];id?:string;label?:string;importedAt?:string;sha256?:string}
 export interface RegistryEdition extends SourceBase {kind:'registry';tables:RegistryTables}
 export interface LedgerEdition extends SourceBase {kind:'ledger';tables:LedgerTables;metadata:NativeRow&{network:Network}}
