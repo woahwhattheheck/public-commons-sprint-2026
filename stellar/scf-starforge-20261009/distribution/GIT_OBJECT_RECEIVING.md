@@ -217,6 +217,39 @@ commit ID must match before cache creation. A GitData response without exact
 raw bytes or a reconstructable signed payload needs its original raw
 `commitText`; normalized date fields alone do not preserve timezone offsets.
 
+### Exact commit bytes for an existing unsigned transfer
+
+An existing unsigned source carrier can retain a GitData response whose dates
+are normalized to UTC while its original Git commit recorded another timezone.
+Receive that same carrier with the exact original commit object body in a
+separate UTF-8 file:
+
+```sh
+python3 /existing/toolkit/git-object-receiving.py \
+  --source-transfer /private/original-source/SOURCE_TRANSFER.json \
+  --commit ORIGINAL_COMMIT \
+  --commit-text /private/original-source/ORIGINAL_COMMIT.txt \
+  --directory /private/original-source-receiving
+```
+
+The file contains only the complete original Git commit body: tree and ordered
+parent headers, original author and committer lines, any original signature
+headers, one empty line, and the exact message bytes. Preserve its final newline
+state. Obtain it from the original Git object or an already captured body whose
+Git commit hash equals `--commit`.
+
+The receiver reads one canonical absolute regular file and checks its complete
+Git commit identity against the transfer index before cache creation. That
+identity also must match the requested commit and the existing full tree.
+A different explicit body fails before receiving. The original index, carrier
+archives, manifests and source objects retain their existing identities.
+
+`--commit-text` belongs to `--source-transfer`. Metadata-based receiving already
+carries its original `commitText` directly in the metadata file. Existing signed
+and captured-commit transfers continue with their original command. For a new
+carrier, an exact original `commitText` can be retained in its commit authority
+before the authority manifest is frozen.
+
 ### Receiving, interruption and reuse
 
 Before creating the cache, the receiver opens each original regular ZIP,
