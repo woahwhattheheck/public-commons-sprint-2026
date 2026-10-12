@@ -66,7 +66,7 @@ export function connectionForPlan(plan) {
   if (plan.connection !== undefined) return normalizeConnection(plan.connection, plan);
   return { schema: CONNECTION_SCHEMA, mode: 'pro', origin: PRO_ORIGIN,
     authentication: { kind: 'bearer' }, providerName: 'Blockscout PRO', sourceUrl: PRO_SOURCE,
-    reviewedAt: '2026-10-11T00:00:00.000Z' };
+    reviewedAt: null };
 }
 export function connectionIdentity(plan) {
   const c = connectionForPlan(plan);

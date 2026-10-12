@@ -244,3 +244,11 @@ All endpoints use the original loopback host/origin restrictions and operator
 capability. Review/prepare accept explicit connection, account, environment
 reference and limits fields; they use the active plan's existing payment terms
 and selected chain prices.
+
+## Receiving packages from the first connection release
+
+An implicit legacy PRO plan has no recorded operator review time. Its connection summary now returns `reviewedAt: null`; preparing an explicit connection still requires the actual ISO timestamp selected by its operator. The original plan bytes, account identity and payment history stay bound to that plan.
+
+The first connection release used a fixed display placeholder in the **before** connection summary. Receiving accepts that exact historical representation only for an unchanged implicit legacy source, while checking the complete original source, target, review hash, routes and changes. Existing package bytes and saved review identities remain usable. Newly created reviews always use the current summary.
+
+`inspectConnectionBundle(bundle).review` returns the reconstructed current review for a receiving interface. Display that review and retain the original bundle for receiving, history and downloads. Its verified target plan, review identity and operator-supplied review time are unchanged.
