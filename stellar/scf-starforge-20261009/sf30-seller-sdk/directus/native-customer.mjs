@@ -23,26 +23,30 @@ export async function runDirectusCustomer({input,directory,token=process.env.DIR
       typeof input.collection!=='string'||typeof input.item!=='string'||typeof input.patchJson!=='string'||
       !Array.isArray(input.fields)||!input.fields.length||!input.rights||!input.payment)
     throw new TypeError('Use an original operationId, API baseUrl, isolated collection/item, exact patchJson, selected fields, rights and public payment terms.');
+  input={...input,baseUrl:input.baseUrl??process.env.DIRECTUS_BASE_URL};
+  if(typeof input.baseUrl!=='string'||!input.baseUrl)throw new TypeError('Set the original Directus API baseUrl before starting this customer operation.');
   directory=resolve(directory);await privateDirectory(directory,true);
   const release=await acquireWorkspace(directory);
   let workspace,merchant,freeServer;
   const intent={schema:'stellar-forge.directus-native-customer-intent.v1',input,directory};
   const operationId=phase=>'customer-'+digest(Buffer.from(input.operationId+'\n'+phase)).slice(0,48);
   const output=join(directory,'CUSTOMER_RESULT.json'),progress=join(directory,'progress.json');
-  const connection={baseUrl:input.baseUrl??process.env.DIRECTUS_BASE_URL,token};
+  const connection={baseUrl:input.baseUrl,token};
   const actor=input.actor??'Directus native customer';
   let requests=0,signatures=0;
   const phases=[];
   async function record(name,result){
-    const prior=phases.findIndex(p=>p.name===name),entry={name,recorded_at:new Date().toISOString(),...result};
-    if(prior>=0)phases[prior]=entry;else phases.push(entry);
+    const prior=phases.find(p=>p.name===name);
+    if(prior)return prior;
+    const entry={name,recorded_at:new Date().toISOString(),...result};phases.push(entry);
     const temporary=progress+'.partial-'+randomUUID();
     try{
       await writeFile(temporary,JSON.stringify({schema:'stellar-forge.directus-native-customer-progress.v1',operationId:input.operationId,phases},null,2)+'\n',{flag:'wx',mode:0o600});
       const handle=await open(temporary,'r');try{await handle.sync();}finally{await handle.close();}
       await rename(temporary,progress);
+      const parent=await open(directory,'r');try{await parent.sync();}finally{await parent.close();}
     }catch(error){throw error;}
-    process.stdout.write(JSON.stringify({phase:name,...result})+'\n');
+    process.stdout.write(JSON.stringify({phase:name,...result})+'\n');return entry;
   }
   async function mutate(action,phase,value){
     const id=operationId(phase);let previous;
@@ -139,9 +143,20 @@ export async function runDirectusCustomer({input,directory,token=process.env.DIR
     await record('original-buyer-prefix',{pages:prefix.completedPages,rows:prefix.acquiredRows,first_page_sha256:digest(firstBytes)});
     const nextPackage=await prepareDirectusMerchant({...packageInput,directory:join(directory,'merchant-package-refreshed'),
       editionId:successor.edition.id,editionSha256:successor.edition.sha256,reviewId:successor.review.id});
-    const current=await datasetControl(packageInput.versionDirectory,'status');
-    const publication=await publishDirectusMerchant({directory:nextPackage.directory,expectedSnapshot:current.current,expectedRevision:current.revision});
-    await mutate('record-publication','record-publication',{editionId:successor.edition.id,publication});
+    let savedPublication;
+    try{savedPublication=workspace.operation(operationId('record-publication'));}
+    catch(error){if(error.code!=='DIRECTUS_OPERATION_MISSING')throw error;}
+    let publication;
+    if(savedPublication){
+      const retained=savedPublication.result?.publication;
+      assert.equal(savedPublication.input.action,'record-publication');
+      assert.equal(retained?.edition_id,successor.edition.id);assert.equal(retained?.edition_sha256,successor.edition.sha256);
+      publication=retained.publication;assert.equal(publication.snapshot,successor.edition.snapshot);
+    }else{
+      const current=await datasetControl(packageInput.versionDirectory,'status');
+      publication=await publishDirectusMerchant({directory:nextPackage.directory,expectedSnapshot:current.current,expectedRevision:current.revision});
+      await mutate('record-publication','record-publication',{editionId:successor.edition.id,publication});
+    }
     const acquired=await runDatasetSession(session,{executePage:executeFreePage,emitPageSummaries:false});
     assert.equal(acquired.status,'COMPLETE');assert.equal(acquired.snapshot,initial.edition.snapshot);assert.equal(acquired.acquiredRows,initial.edition.row_count);
     assert.deepEqual(await readFile(acquired.pages[0].responsePath),firstBytes);
@@ -168,12 +183,31 @@ export async function runDirectusCustomer({input,directory,token=process.env.DIR
     freeServer.closeAllConnections();await new Promise(resolve=>freeServer.close(resolve));freeServer=null;
     await merchant.close();merchant=null;
     merchant=await startDirectusMerchant({directory:prepared.directory,stageDirectory:join(directory,'native-stage'),runtime:{port:0}});
-    const reopened=await datasetControl(packageInput.versionDirectory,'status');assert.equal(reopened.current,successor.edition.snapshot);
-    await datasetControl(packageInput.versionDirectory,'activate',{snapshot:initial.edition.snapshot,expectedSnapshot:reopened.current,expectedRevision:reopened.revision});
+    const selectionFile=join(directory,'native-selection-intent.json');
+    let selection;
+    if(await exists(selectionFile))selection=await readJson(selectionFile,1024*1024);
+    else{
+      const beforeSelection=await datasetControl(packageInput.versionDirectory,'status');
+      assert.equal(beforeSelection.current,successor.edition.snapshot);
+      selection={schema:'stellar-forge.directus-native-customer-selection.v1',operationId:input.operationId,
+        versionDirectory:packageInput.versionDirectory,previousSnapshot:beforeSelection.current,
+        previousRevision:beforeSelection.revision,snapshot:initial.edition.snapshot};
+      await saveExact(selectionFile,selection);
+    }
+    assert.equal(selection.schema,'stellar-forge.directus-native-customer-selection.v1');assert.equal(selection.operationId,input.operationId);
+    assert.equal(selection.versionDirectory,packageInput.versionDirectory);assert.equal(selection.previousSnapshot,successor.edition.snapshot);
+    assert.equal(selection.snapshot,initial.edition.snapshot);assert.ok(Number.isSafeInteger(selection.previousRevision));
+    let selected=await datasetControl(packageInput.versionDirectory,'status');
+    if(selected.current===selection.previousSnapshot&&selected.revision===selection.previousRevision){
+      await datasetControl(packageInput.versionDirectory,'activate',{snapshot:selection.snapshot,
+        expectedSnapshot:selection.previousSnapshot,expectedRevision:selection.previousRevision});
+      selected=await datasetControl(packageInput.versionDirectory,'status');
+    }
+    assert.equal(selected.current,selection.snapshot);assert.equal(selected.revision,selection.previousRevision+1);
     assert.equal(merchant.versions.status().current,initial.edition.snapshot);
     const portable=await inspectDirectusDelivery(delivery.directory);assert.equal(portable.manifest.sha256,delivery.manifest.sha256);
-    await record('native-restart-and-edition-selection',{restarted_snapshot:reopened.current,selected_snapshot:merchant.versions.status().current,
-      delivered_page_chain:portable.native.chain});
+    await record('native-restart-and-edition-selection',{restarted_snapshot:selection.previousSnapshot,selected_snapshot:selected.current,
+      previous_revision:selection.previousRevision,selected_revision:selected.revision,delivered_page_chain:portable.native.chain});
     assert.equal(signatures,0);
     const result={schema:'stellar-forge.directus-native-customer-result.v1',status:'PASS',finished_at:new Date().toISOString(),
       operationId:input.operationId,workspace_id:workspace.state().id,native_server:source.server,collection:input.collection,
@@ -183,8 +217,8 @@ export async function runDirectusCustomer({input,directory,token=process.env.DIR
       original_free_http_requests_this_process:requests,original_native_signatures_this_process:signatures,phases};
     await saveExact(output,result);return result;
   }finally{
-    if(freeServer){freeServer.closeAllConnections();await new Promise(resolve=>freeServer.close(resolve));}
-    await merchant?.close();await workspace?.close();await release();
+    try{if(freeServer){freeServer.closeAllConnections();await new Promise(resolve=>freeServer.close(resolve));}}
+    finally{try{await merchant?.close();}finally{try{await workspace?.close();}finally{await release();}}}
   }
 }
 if(process.argv[1]&&pathToFileURL(resolve(process.argv[1])).href===import.meta.url){
