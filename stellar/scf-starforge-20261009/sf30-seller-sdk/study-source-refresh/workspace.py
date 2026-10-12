@@ -295,7 +295,8 @@ class Workspace:
             return {"id": eid, "reopened": True, **self.record("editions", eid)}
         geographies = {(g["family"], g["source_geography_id"], g["source_geography_vintage"]): g for g in portfolio["geographies"]}
         selected_measures = {(item["family"], item["measure_id"]) for item in portfolio["measures"]}
-        available, matched_geos, matched_measures = set(), set(), set()
+        available, matched_geos, matched_measures, matched_pairs = set(), set(), set(), set()
+        measures_by_definition = defaultdict(set)
         selected, outside, row_issues, export_keys = 0, 0, 0, defaultdict(list)
         with self.mutation():
             self.connection.execute("INSERT INTO editions VALUES(?,?,?)", (eid, encoded(spec).decode(), now()))
@@ -304,12 +305,14 @@ class Workspace:
                     row = unpack(record["body"])
                     family, geo, vintage = row["source_family"], row["source_geography_id"], row["geography_vintage"]
                     available.add((family, vintage))
+                    measures_by_definition[(family, vintage)].add(row["source_measure_id"])
                     chosen = geographies.get((family, geo, vintage))
                     if chosen is None or selected_measures and (family, row["source_measure_id"]) not in selected_measures:
                         outside += 1
                         continue
                     matched_geos.add((family, geo, vintage))
                     matched_measures.add((family, row["source_measure_id"]))
+                    matched_pairs.add((family, geo, vintage, row["source_measure_id"]))
                     value = __import__("model").project_row(row, chosen, mapping)
                     selected += 1
                     row_issues += bool(value["issues"])
@@ -333,6 +336,14 @@ class Workspace:
             for key in sorted(geographies):
                 if (key[0], key[2]) in available and key not in matched_geos:
                     global_issues.append({"code": "selected_geography_absent", "identity": key})
+            for key in sorted(geographies):
+                if (key[0], key[2]) not in available:
+                    continue  # A portfolio can bind both baseline and candidate definition editions.
+                required = {measure for family, measure in selected_measures if family == key[0]} if selected_measures else measures_by_definition[(key[0], key[2])]
+                for measure in sorted(required):
+                    if (*key, measure) not in matched_pairs:
+                        global_issues.append({"code": "selected_geography_measure_absent",
+                                              "identity": (*key, measure)})
             for key in sorted(selected_measures - matched_measures):
                 global_issues.append({"code": "selected_measure_absent", "identity": key})
             for family in sorted({g["family"] for g in portfolio["geographies"]}):
@@ -341,7 +352,8 @@ class Workspace:
             if not selected:
                 global_issues.append({"code": "selection_empty"})
             body = {**spec, "counts": {"selected": selected, "outside_portfolio": outside,
-                                       "rows_with_mapping_issues": row_issues, "duplicate_export_rows": len(duplicate_rows)},
+                                       "rows_with_mapping_issues": row_issues, "duplicate_export_rows": len(duplicate_rows),
+                                       "selected_geography_measure_pairs": len(matched_pairs)},
                     "global_issues": global_issues}
             self.connection.execute("UPDATE editions SET body=? WHERE id=?", (encoded(body).decode(), eid))
             self.event("edition.freeze", eid, body["counts"])

@@ -3,7 +3,7 @@ from pathlib import Path
 
 from model import FIELDS, default_mapping, fail, private_directory
 from workspace import Workspace
-from acquisition import receive_observations, receive_source_files
+from acquisition import receive_observations, receive_source_files, receive_scan
 from delivery import archive_package, export_package, import_package, verify_package
 
 def call(workspace, operation, arguments):
@@ -16,6 +16,7 @@ def call(workspace, operation, arguments):
         "source.import": workspace.import_source,
         "source.receive_files": lambda **args: receive_source_files(workspace, **args),
         "source.receive_rows": lambda **args: receive_observations(workspace, **args),
+        "source.receive_scan": lambda **args: receive_scan(workspace, **args),
         "mapping.template": default_mapping,
         "mapping.fields": lambda: FIELDS,
         "portfolio.freeze": lambda value: workspace.save_revision("portfolio", value),

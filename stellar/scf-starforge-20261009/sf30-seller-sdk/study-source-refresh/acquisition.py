@@ -4,12 +4,14 @@ from __future__ import annotations
 from collections import Counter
 import importlib.util
 import os
+import shutil
+import tempfile
 from pathlib import Path
 import sys
 
 from model import SDK, dump, encoded, fail, identity, now, parse, private_directory, read, write
 from workspace import file_identity, unpack
-from stellar_forge_buyer.datasets import DatasetAcquisition
+from stellar_forge_buyer.datasets import DatasetAcquisition, DatasetDelivery
 
 
 def _consumer(provider):
@@ -70,24 +72,35 @@ def _retain_receipt(workspace, source_id, delivery, binding):
     destination = parent / aid
     with workspace.mutation():
         if not destination.exists():
-            private_directory(destination)
-            write(destination / "manifest.json", original, exclusive=True)
-            dump(destination / "native-result.json", delivery.native, exclusive=True)
-            dump(destination / "binding.json", body, exclusive=True)
-        else:
-            if read(destination / "manifest.json", 4 * 1024 * 1024) != original:
-                fail("NATIVE_INTAKE_RECEIPT_CONFLICT")
+            stage = Path(tempfile.mkdtemp(prefix=".native-intake-", dir=parent))
+            try:
+                write(stage / "manifest.json", original, exclusive=True)
+                dump(stage / "native-result.json", delivery.native, exclusive=True)
+                dump(stage / "binding.json", body, exclusive=True)
+                os.rename(stage, destination)
+                stage = None
+                from model import sync_directory
+                sync_directory(parent)
+            finally:
+                if stage is not None:
+                    shutil.rmtree(stage)
+        if destination.is_symlink() or destination.resolve(strict=True) != destination:
+            fail("NATIVE_INTAKE_RECEIPT_CONFLICT")
+        if (read(destination / "manifest.json", 4 * 1024 * 1024) != original
+                or parse(read(destination / "native-result.json", 16 * 1024 * 1024)) != delivery.native
+                or parse(read(destination / "binding.json", 16 * 1024 * 1024)) != body
+                or {path.name for path in destination.iterdir()} != {"manifest.json", "native-result.json", "binding.json"}):
+            fail("NATIVE_INTAKE_RECEIPT_CONFLICT")
         workspace.connection.execute("INSERT OR IGNORE INTO acquisitions VALUES(?,?,?,?)",
                                      (aid, source_id, encoded(body).decode(), now()))
         workspace.event("acquisition.receive", aid, {"source_id": source_id, "native_status": delivery.status})
     return {"id": aid, "source_id": source_id, **body}
 
 
-def receive_source_files(workspace, provider, *, checkout, session, node=None, timeout=360, expected_capture_id=None):
-    acquisition, status, delivery = _delivery(workspace, checkout, session, node, timeout)
+def _receive_source_delivery(workspace, provider, delivery, intake_key, status, *, node=None, expected_capture_id=None):
     consumer = _consumer(provider)
     parent = private_directory(workspace.directory / "received-sources")
-    capture = consumer.restore_source_files(delivery, parent / identity({"session": str(acquisition.directory), "provider": provider}),
+    capture = consumer.restore_source_files(delivery, parent / identity({"intake": intake_key, "provider": provider}),
                                            expected_capture_id=expected_capture_id)
     source_file = capture.directory.parent / (capture.directory.name + ".source.json")
     declaration = {
@@ -108,7 +121,13 @@ def receive_source_files(workspace, provider, *, checkout, session, node=None, t
     return {"source": source, "acquisition": receipt, "original_status": status}
 
 
-def receive_observations(workspace, source_id, projection, *, checkout, session, node=None, timeout=360):
+def receive_source_files(workspace, provider, *, checkout, session, node=None, timeout=360, expected_capture_id=None):
+    acquisition, status, delivery = _delivery(workspace, checkout, session, node, timeout)
+    return _receive_source_delivery(workspace, provider, delivery, {"session": str(acquisition.directory)}, status,
+                                    node=node, expected_capture_id=expected_capture_id)
+
+
+def _receive_observation_delivery(workspace, source_id, projection, delivery, status):
     source = workspace.record("sources", source_id)
     chosen = next((item for item in source["descriptor"]["projections"] if item["query"] == projection), None)
     if chosen is None:
@@ -120,7 +139,6 @@ def receive_observations(workspace, source_id, projection, *, checkout, session,
     with path.open("rb") as rows:
         for raw in rows:
             native_rows[identity(parse(raw))] += 1
-    _, status, delivery = _delivery(workspace, checkout, session, node, timeout)
     delivered_rows = Counter(identity(row) for row in delivery.jsonl_rows())
     if delivered_rows != native_rows:
         fail("ACQUIRED_SELECTION_DIFFERS_FROM_RETAINED_PROJECTION",
@@ -131,3 +149,29 @@ def receive_observations(workspace, source_id, projection, *, checkout, session,
         "complete_original_projection": True,
     })
     return {"source_id": source_id, "acquisition": receipt, "original_status": status}
+
+
+def receive_observations(workspace, source_id, projection, *, checkout, session, node=None, timeout=360):
+    _, status, delivery = _delivery(workspace, checkout, session, node, timeout)
+    return _receive_observation_delivery(workspace, source_id, projection, delivery, status)
+
+
+def receive_scan(workspace, scan_file, *, provider=None, source_id=None, projection=None,
+                 node=None, expected_capture_id=None):
+    """Consume the existing original SF100 scan without a new buyer session."""
+    if bool(provider) == bool(source_id):
+        fail("ONE_NATIVE_SCAN_RECEIVING_TARGET_REQUIRED")
+    if source_id and (not projection or expected_capture_id is not None):
+        fail("NATIVE_SCAN_PROJECTION_REQUIRED")
+    if provider and projection is not None:
+        fail("NATIVE_SCAN_SOURCE_FILES_TARGET_REQUIRED")
+    path = Path(scan_file).expanduser().resolve(strict=True)
+    raw = read(path, 16 * 1024 * 1024)
+    scan = parse(raw)
+    delivery = DatasetDelivery.from_finalized_scan(scan)
+    status = delivery.native["nativeStatus"]
+    if provider:
+        return _receive_source_delivery(workspace, provider, delivery,
+            {"format": "SF100_SCAN", "source_binding_sha256": delivery.native["sourceBindingSha256"]},
+            status, node=node, expected_capture_id=expected_capture_id)
+    return _receive_observation_delivery(workspace, source_id, projection, delivery, status)

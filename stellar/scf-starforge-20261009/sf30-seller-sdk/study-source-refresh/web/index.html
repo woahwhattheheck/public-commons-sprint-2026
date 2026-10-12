@@ -27,7 +27,8 @@
 <form id="acquisition-form" class="form-grid">
 <label>Receive<select name="mode"><option value="files">Complete source files</option><option value="rows">Complete retained observation projection</option></select></label>
 <label>Source files provider<select name="provider"><option value="acs">Census ACS</option><option value="bls">BLS</option></select></label>
-<label class="wide">Original acquisition session<input name="session" placeholder="/path/to/original/sf88/session" required></label>
+<label>Original delivery format<select name="format"><option value="session">SF88 acquisition session</option><option value="scan">SF100 finalized native scan</option></select></label>
+<label class="wide">Original session directory or saved scan JSON<input name="session" placeholder="/path/to/original/session or native-scan.json" required></label>
 <label>Retained source for observation receipt<select name="source_id" id="acquisition-source"></select></label>
 <label>Projection<select name="projection"><option>observations</option><option>laus</option><option>qcew</option><option>limits</option></select></label>
 <div><button type="submit">Receive original delivery</button></div></form></details>

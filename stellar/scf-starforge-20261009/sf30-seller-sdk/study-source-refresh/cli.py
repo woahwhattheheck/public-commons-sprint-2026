@@ -42,6 +42,14 @@ def main(argv=None):
     command.add_argument("--session", required=True)
     command.add_argument("--node")
     command.add_argument("--timeout", type=int, default=360)
+    command = sub.add_parser("receive-scan")
+    command.add_argument("--scan-file", required=True)
+    target = command.add_mutually_exclusive_group(required=True)
+    target.add_argument("--provider", choices=("acs", "bls"))
+    target.add_argument("--source-id")
+    command.add_argument("--projection")
+    command.add_argument("--node")
+    command.add_argument("--capture-id", dest="expected_capture_id")
     command = sub.add_parser("mapping-template")
     command.add_argument("--name", default="Canonical retained export")
     for kind in ("portfolio", "mapping"):
@@ -125,6 +133,7 @@ def main(argv=None):
         operations = {
             "catalog": "catalog", "import-source": "source.import",
             "receive-source-files": "source.receive_files", "receive-observations": "source.receive_rows",
+            "receive-scan": "source.receive_scan",
             "freeze": "edition.freeze", "compare": "comparison.create", "export": "export.create",
             "import-package": "package.import",
         }

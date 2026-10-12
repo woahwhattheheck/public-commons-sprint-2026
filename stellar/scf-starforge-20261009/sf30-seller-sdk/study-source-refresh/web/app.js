@@ -162,8 +162,8 @@ function renderAll() {
     state.data.editions.map(item => [item.label, item.counts.selected + ' / ' + item.counts.outside_portfolio,
       item.counts.rows_with_mapping_issues + ' / ' + item.global_issues.length,
       button('Open edition', () => show('Frozen edition · ' + item.label, item), true)])));
-  $('export-list').replaceChildren(table(['Package', 'Mapped rows', 'Excluded rows', 'Actions'], state.data.exports.map(item => [
-    item.label, item.rows, item.excluded_rows, h('div', { className: 'actions' },
+  $('export-list').replaceChildren(table(['Package', 'Origin', 'Mapped rows', 'Excluded rows', 'Actions'], state.data.exports.map(item => [
+    item.label, item.origin === 'received' ? 'Received' : 'Produced', item.rows, item.excluded_rows, h('div', { className: 'actions' },
       button('Verify', async () => show('Verified package', await api('export.verify', { directory: item.directory })), true),
       button('Download ZIP', async () => { await api('export.archive', { export_id: item.id }); await download({ kind: 'archive', id: item.id }, 'study-source-refresh-' + short(item.id) + '.zip'); })),
   ])));
@@ -357,8 +357,8 @@ $('source-form').onsubmit = event => {
 };
 $('acquisition-form').onsubmit = event => {
   event.preventDefault(); const values = Object.fromEntries(new FormData(event.target));
-  const args = { checkout: state.data.checkout, session: values.session };
-  const operation = values.mode === 'files' ? 'source.receive_files' : 'source.receive_rows';
+  const args = values.format === 'scan' ? { scan_file: values.session } : { checkout: state.data.checkout, session: values.session };
+  const operation = values.format === 'scan' ? 'source.receive_scan' : values.mode === 'files' ? 'source.receive_files' : 'source.receive_rows';
   if (values.mode === 'files') args.provider = values.provider;
   else { args.source_id = values.source_id; args.projection = values.projection; }
   run('Receive completed original acquisition', async () => { const result = await api(operation, args); await load(); show('Received original delivery', result); });
