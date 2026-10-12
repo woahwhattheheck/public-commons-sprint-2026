@@ -11,6 +11,12 @@ feed merchant module supplies its native CSV contract and complete feed/XML
 lineage. Connecting MCP starts no second feed parser, acquisition store, payment
 engine or browser.
 
+The complete customer SDK and installed `feeds-workspace-client` command cover
+this same tool surface, prepared requests, native operation recovery, streamed
+large results and complete customer/project receiving. See
+[Feed workspace customer SDK and CLI](FEEDS_WORKSPACE_CLIENT.md) for the full
+subscription-to-edition-to-customer workflow and local download reopening.
+
 ## Connect the running application
 
 Use the existing RSS / Atom subscriptions Applications entry. For a manually
