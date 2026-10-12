@@ -1,0 +1,25 @@
+{
+  "schema": "stellar-forge.dataset-host-source-selection.v1",
+  "sourceCommit": "b1aff2c1228adf3f80222e3d6769d3ea89390f0d",
+  "sourceTree": "a867ab69e3b5b018b5f0594942f731ebf904aebe",
+  "repository": "/workspace/scratch/d1ccf784531e/scf-following-release/source.git",
+  "donorClosure": "/workspace/scratch/d1ccf784531e/scf-native-semantic-receiving/source-closure-db3d.json",
+  "donorClosureSha256": "717a81061275b594f5ff5993538dd85b3ccb0f1d2fe82926ce981c07de532669",
+  "inputs": {
+    "build.mjs": "c6c84efa2be91aa03b4c787265cc1a95fa2cd162",
+    "git-source.mjs": "c211d5b344a6d403cf945e5089637746572fed91",
+    "browser-assets.mjs": "63801fa838c0479e6ae156d9f155461f02df0cfb",
+    "specification.mjs": "df832122a098d08ea0287f871b58b3aa91338e93",
+    "product-package.mjs": "2c668933f214f201137ac6d3c6b7410525955c9b"
+  },
+  "hostFiles": {
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/dataset-workspace/receiving.mjs": "e4c693989171e3d0031533e06bff2afdb8b27d02",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/dataset-workspace/model.mjs": "c9734cb1901cc58898caca031a01dd0ebd1adfba",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/dataset-workspace/server.mjs": "cd31fff0105d28cca561d7bd51212c0a9c6aeeca",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/dataset-workspace/public/app.mjs": "f6cf12d6c22f720a5caf5c43242a0ec8341f57b2",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/dataset-workspace/public/index.html": "05b0c31edde790846c92ab40a8f6282ccb97a6b6",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/dataset-workspace/public/style.css": "598df9a60de0f83e7079c9677eb24bec884584d2",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/dataset-workspace/README.md": "1df363bca05e87c2f37ba2e8eeaf16b2dd2212f1",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/dataset-session.mjs": "e1dc725bb6a0d43a69328a1f306c3261063f46b6"
+  }
+}
