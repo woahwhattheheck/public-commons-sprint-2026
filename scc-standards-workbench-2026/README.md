@@ -6,10 +6,10 @@ The application runs on your computer. Its SQLite workspace contains the current
 
 ## Install and open
 
-Python 3.10 or newer is required. The package uses `python-docx 1.2.0` and `reportlab 4.4.9` to generate editable Word documents and PDFs. Download the [complete source package](https://github.com/woahwhattheheck/public-commons-sprint-2026/raw/main/scc-standards-workbench-2026/releases/scc_standards_workbench-0.1.0-source.zip) and install it into your usual Python environment. The archive contains the application, browser assets, original public sources and declared build metadata:
+Python 3.10 or newer is required. The package uses `python-docx 1.2.0` and `reportlab 4.4.9` to generate editable Word documents and PDFs. Download the [complete source package](https://github.com/woahwhattheheck/public-commons-sprint-2026/raw/main/scc-standards-workbench-2026/releases/scc_standards_workbench-0.1.1-source.zip) and install it into your usual Python environment. The archive contains the application, browser assets, original public sources and declared build metadata:
 
 ```sh
-python -m pip install ./scc_standards_workbench-0.1.0-source.zip
+python -m pip install ./scc_standards_workbench-0.1.1-source.zip
 standards-workbench --workspace ./standards-workspace --demo
 ```
 
@@ -125,8 +125,12 @@ The reporting view uses actual phase/progress submission dates for its maximum t
 
 The two added communication/register collections are empty-compatible with earlier workspace snapshots. The next accepted mutation records their explicit addition in history; original sources, prior events and frozen records are preserved. No external announcement, notice, report, invoice or payment is sent by these local records.
 
-## Release contents and execution notes
+## Release 0.1.1
 
-This 0.1.0 source release contains the complete local application and both separately identified examples. The source files were matched to their integrated Git objects, Python and browser-script syntax were checked, and the original public and authored projects were created through the application’s own workspace APIs. The full retained browser, document-rendering and fresh-install/restore continuations are still running through their existing worker records; no completed browser or fresh-install result is claimed for this source release. Those concrete results will accompany the installer release when returned.
+Version 0.1.1 improves the generated English and French documents: clause headings stay with their type and first content, Word tables keep source-record identities together, PDF tables avoid header-only row fragments, French punctuation follows the preceding word, and the Word title uses the application's grayscale design.
 
-The included source archive is independently installable through its `pyproject.toml`; it does not require access to a private repository. Its per-file digest manifest preserves the exact release bytes. The code is licensed under MIT, with Statistics Canada and document-library source notices retained separately. No applicant qualifications, named consortium commitments or grant eligibility are asserted by the package.
+The complete application includes the public municipal example and a separate authored operator exercise. The original 0.1.0 wheel was built from its exact source archive and freshly installed on 12 October 2026. Its installed CLI reopened the public project with all seventeen original files, ten paired clauses, eight cases and CAD 0.00 collected; all retained original sizes and hashes matched.
+
+The publisher generated the actual English/French DOCX, PDF and HTML standards, edition comparison and delivery workpapers. All four Word documents and four PDFs were rendered to pages. Their page review identified the presentation corrections included here; the formatting revision uses those same frozen editions and source records. The original complete authored browser and installed-archive continuation remains separately tracked. See the [installation guide](https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/main/scc-standards-workbench-2026/releases/INSTALL.md) for the current wheel and completed execution results.
+
+The source archive is independently installable through its `pyproject.toml`. Its per-file digest manifest preserves the exact release bytes. The code is licensed under MIT, with Statistics Canada and document-library source notices retained separately. The package supplies engineering and public-source demonstrations; applicant qualifications, consortium commitments and grant eligibility remain the applicant's actual application inputs.

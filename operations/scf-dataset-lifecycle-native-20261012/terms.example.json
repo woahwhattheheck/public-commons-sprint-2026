@@ -1,0 +1,12 @@
+{
+  "publicOrigin": "https://market-data.example",
+  "payment": {
+    "scheme": "exact",
+    "network": "stellar:testnet",
+    "asset": "UNVERIFIED_DEMO_ASSET",
+    "payTo": "UNVERIFIED_DEMO_RECIPIENT",
+    "amount": "10000",
+    "maxTimeoutSeconds": 60
+  },
+  "path": "/inventory"
+}

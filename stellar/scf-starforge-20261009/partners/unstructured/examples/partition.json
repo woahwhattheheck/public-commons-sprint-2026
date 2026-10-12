@@ -1,0 +1,66 @@
+{
+  "schema": "stellar-forge.unstructured-partition.v1",
+  "publicOrigin": "https://replace-with-your-merchant.invalid",
+  "upstream": {
+    "origin": "https://replace-with-your-partition-api.invalid",
+    "apiKeyEnv": "UNSTRUCTURED_API_KEY",
+    "timeoutMs": 110000,
+    "maxInFlight": 2
+  },
+  "requestTimeoutMs": 180000,
+  "handlerTimeoutMs": 115000,
+  "admissionTimeoutMs": 2000,
+  "profiles": [
+    {
+      "id": "quick-text",
+      "title": "Document text",
+      "description": "Partition one document using the configured fast text profile.",
+      "parameters": {
+        "strategy": "fast",
+        "pdf_infer_table_structure": false
+      },
+      "maxDocumentBytes": 8388608,
+      "maxResponseBytes": 1048576,
+      "paymentOptions": [
+        {
+          "scheme": "exact",
+          "network": "stellar:testnet",
+          "amount": "REPLACE_PRICE_ATOMIC",
+          "asset": "REPLACE_SEP41_ASSET_CONTRACT",
+          "payTo": "REPLACE_MERCHANT_PUBLIC_ACCOUNT",
+          "maxTimeoutSeconds": 300,
+          "extra": {
+            "paymentFlow": "authorization"
+          }
+        }
+      ]
+    },
+    {
+      "id": "layout",
+      "title": "Document layout and tables",
+      "description": "Partition one document using the configured layout and English-language OCR profile.",
+      "parameters": {
+        "strategy": "hi_res",
+        "languages": [
+          "eng"
+        ],
+        "pdf_infer_table_structure": true
+      },
+      "maxDocumentBytes": 8388608,
+      "maxResponseBytes": 1048576,
+      "paymentOptions": [
+        {
+          "scheme": "exact",
+          "network": "stellar:testnet",
+          "amount": "REPLACE_PRICE_ATOMIC",
+          "asset": "REPLACE_SEP41_ASSET_CONTRACT",
+          "payTo": "REPLACE_MERCHANT_PUBLIC_ACCOUNT",
+          "maxTimeoutSeconds": 300,
+          "extra": {
+            "paymentFlow": "authorization"
+          }
+        }
+      ]
+    }
+  ]
+}

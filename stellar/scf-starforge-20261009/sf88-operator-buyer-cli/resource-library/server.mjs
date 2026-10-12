@@ -138,7 +138,7 @@ export async function serveLibrary(library,{port=0,additionalAssets=[],authentic
   });
   server.requestTimeout = 30000; server.headersTimeout = 10000; server.maxRequestsPerSocket = 100;
   await new Promise((resolve,reject) => {server.once('error',reject);server.listen(port,'127.0.0.1',resolve);});
-  origin = `http://127.0.0.1:${server.address().port}`;
+  origin = new URL(`http://127.0.0.1:${server.address().port}`).origin;
   return {origin,url:origin + '/#' + token,token,server,
     async close() {
       if (closing) return;

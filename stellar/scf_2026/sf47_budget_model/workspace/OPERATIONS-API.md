@@ -66,3 +66,9 @@ OPERATIONS.md describes the complete operator flow. operations_walkthrough.py at
 `mountOperations({container, api, plan, inform, mutationId})` returns `{ready, refresh, dispose, root}` immediately. Await `ready` for the initial retained-case read. The original app calls `dispose()` before replacing this view or closing access. A disposed view suppresses later messages, downloads and rendering, and checks its lifetime immediately before an API dispatch and after its response. File reading and hashing can finish privately after navigation, but cannot submit a new mutation from the old view.
 
 An already-dispatched mutation keeps its original request identity and native receipt. Disposal does not replay that request or infer that it was rejected. Reopening the case reads its retained version, records and history through the original workspace.
+
+## Operating forecasts
+
+The existing original case supports pure preview and immutable saved forecasts. `POST /api/operations/{case}/forecast-preview` takes `{expectedVersion, inputs}` and returns `source`, normalized `inputs`, the complete `report`, and `previewSha256`. The original command route accepts `action:"forecast.save"` with `data:{inputs,expectedPreviewSha256}` plus its existing expectedVersion/operator/note/requestId fields. Save is atomic with the original case event and stable request receipt.
+
+`GET /api/operations/{case}/forecasts` lists summaries. `GET /api/operations/{case}/forecasts/{forecast}` reopens the complete original record and adds its current-source comparison. Appending `/export.zip` downloads complete saved JSON, dated cash/work and other native CSV reports with their file manifest. Full case archives now include the optional `forecasts` collection; old archives remain valid. The receiver checks each complete snapshot, recalculation, digest and original save-event link. See [FORECAST.md](FORECAST.md) for the input fields and all date/payment semantics.

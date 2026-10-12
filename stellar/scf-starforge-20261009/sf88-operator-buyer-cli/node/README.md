@@ -610,3 +610,20 @@ ticket, private operator workspace, and retained output stay authoritative.
 
 See [Direct Node lost-output recovery](LOST_OUTPUT_RECOVERY.md) for the complete
 inspector, receiving, restart, and proof-export workflow.
+
+## Continue after an original authorization-expiry review
+
+`Operation.prepareExpiredContinuation` selects one successor from an existing
+interrupted direct operation, its exact approved request, a retained expiry
+review and the original HMAC-authenticated reserved row. The original request
+and reservation remain preserved. `inspectExpiredContinuation` and
+`followContinuation` reopen the recorded choice; the original review and
+execute methods handle its fresh approval and result.
+
+See [Authorization-expiry continuation](EXPIRED_CONTINUATION.md) for the complete
+source receiving, preparation, approval and restart flow.
+
+
+### Authorization retained before dispatch
+
+Use [UNDISPATCHED_CONTINUATION.md](./UNDISPATCHED_CONTINUATION.md) when an interrupted original native authorization has a validated wire checkpoint with no signed dispatch. `Operation.prepareUndispatchedContinuation()` keeps the original reservation and prepares one source-bound successor for the normal approval flow. `followContinuation()` reopens existing unpaid, expired and undispatched choices.
