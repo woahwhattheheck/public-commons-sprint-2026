@@ -307,11 +307,15 @@ async function bridge(command, { directory, resultPath, args = [], env = process
     const executable = env.USGS_HECDSS_PYTHON || 'python3';
     need(typeof executable === 'string' && !executable.includes('\0'), 'Configure one Python executable path in USGS_HECDSS_PYTHON.');
     const result = await new Promise((done, reject) => {
+      let childError = null;
       child = spawn(executable, [join(HERE, script), command, ...args], {
         cwd: directory, shell: false, stdio: ['ignore', log.fd, log.fd], signal,
         env: { ...env, LC_ALL: 'C', LANG: 'C', PYTHONDONTWRITEBYTECODE: '1', OPENBLAS_NUM_THREADS: '1', OMP_NUM_THREADS: '1' },
       });
-      child.once('error', reject); child.once('close', (code, terminationSignal) => done({ code, terminationSignal }));
+      // AbortError precedes process close. Keep its files and project ownership
+      // until the original native process and inherited output descriptors close.
+      child.on('error', error => { childError ??= error; });
+      child.once('close', (code, terminationSignal) => childError ? reject(childError) : done({ code, terminationSignal }));
     });
     await log.sync();
     const native = await readOrNull(resultPath);
