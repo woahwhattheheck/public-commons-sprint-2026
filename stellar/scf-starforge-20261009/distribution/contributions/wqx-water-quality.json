@@ -31,5 +31,8 @@
       "server": "stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/workspace.mjs",
       "manifest": "stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/browser-assets.json"
     }
-  ]
+  ],
+  "applicationProviders": {
+    "wqx-water-quality": "stellar/scf-starforge-20261009/distribution/runtime-workspace/providers/wqx-water-quality.mjs"
+  }
 }
