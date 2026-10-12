@@ -1,4 +1,5 @@
 // MIT. Optional private terminal and original CLI URL capture inside the managed runner.
+import { grpcStartup } from './application-grpc.mjs';
 import { blockscoutStartup } from './application-blockscout.mjs';
 import { mppStartup, MPP_READY_SCHEMA } from './application-mpp.mjs';
 import { cheesecakeStartup } from './application-cheesecake.mjs';
@@ -103,6 +104,22 @@ export function observeApplicationOutput(request, directory, context = {}) {
       saving = saving.then(async () => {
         if (seen) return;
         const startup = await n8nStartup(request, text, context);
+        const url = startup && privateUrl(startup.url);
+        if (!url) return;
+        seen = true;
+        await saveJSON(join(directory, 'application-url.json'), {
+          schema: 'stellar-forge.application-url.v1', applicationId: request.applicationId,
+          operationId: directory.split('/').at(-1), command: request.command,
+          source: 'original-command-stdout', observedAt: now(), url, original: startup.original,
+        });
+      }).catch(error => { if (error.code !== 'EEXIST') saveError = error; });
+      return;
+    }
+    if (request.command === 'grpc-workspace') {
+      if (!text.startsWith('{"schema":"stellar-forge.grpc-workspace-launch.v1",')) return;
+      saving = saving.then(async () => {
+        if (seen) return;
+        const startup = await grpcStartup(request, text, directory);
         const url = startup && privateUrl(startup.url);
         if (!url) return;
         seen = true;
