@@ -157,10 +157,14 @@ function indicatorField(capture,definition) {
     throw fault('CENTRAL_INDICATOR_TYPE','This indicator needs an original numeric field.');
   return {table,field};
 }
-function distributionRows(store,captureId,tableId,path,definition={}) {
-  const pointer=jsonPath(path),filtered=Object.hasOwn(definition,'equals'),expected=JSON.stringify(filtered?definition.equals:null);
-  return store.db.prepare('SELECT json_type(body,?) AS sourceType,json_extract(body,?) AS value,COUNT(*) AS count FROM rows WHERE capture=? AND table_id=? AND (?=0 OR (json_type(body,?)=json_type(?,\'$\') AND json_extract(body,?) IS json_extract(?,\'$\'))) GROUP BY json_type(body,?),json_extract(body,?) ORDER BY count DESC,value')
-    .iterate(pointer,pointer,captureId,tableId,filtered?1:0,pointer,expected,pointer,expected,pointer,pointer);
+function* distributionRows(store,captureId,tableId,path,definition={}) {
+  const pointer=jsonPath(path),parts=path.split('/'),ancestors=parts.slice(0,-1).map((_,index)=>jsonPath(parts.slice(0,index+1).join('/')));
+  const type=ancestors.length?'CASE WHEN '+ancestors.map(()=>"json_type(body,?)='null'").join(' OR ')+" THEN 'null' ELSE json_type(body,?) END":'json_type(body,?)';
+  const filtered=Object.hasOwn(definition,'equals'),expected=JSON.stringify(filtered?definition.equals:null);
+  const sql='WITH field_values AS (SELECT '+type+' AS sourceType,json_extract(body,?) AS value FROM rows WHERE capture=? AND table_id=?) '+
+    "SELECT sourceType,value,COUNT(*) AS count FROM field_values WHERE (?=0 OR (sourceType=json_type(?,'$') AND value IS json_extract(?,'$'))) GROUP BY sourceType,value ORDER BY count DESC,value";
+  for(const entry of store.db.prepare(sql).iterate(...ancestors,pointer,pointer,captureId,tableId,filtered?1:0,expected,expected))
+    yield {...entry,value:entry.sourceType==='true'?true:entry.sourceType==='false'?false:entry.value};
 }
 export function measureIndicator(store,capture,definition) {
   const {table,field}=indicatorField(capture,definition),result={name:String(definition.name||definition.field||table.name),
@@ -171,6 +175,7 @@ export function measureIndicator(store,capture,definition) {
     for(const entry of distributionRows(store,capture.id,table.id,field.path,definition)){
       if(entry.sourceType===null){result.missing+=entry.count;continue;}
       if(entry.sourceType==='null'){result.nulls+=entry.count;continue;}
+      if(entry.value==='')result.empty+=entry.count;
       groups++;result.count+=entry.count;
       if(distribution.length<25)distribution.push(entry);
     }
