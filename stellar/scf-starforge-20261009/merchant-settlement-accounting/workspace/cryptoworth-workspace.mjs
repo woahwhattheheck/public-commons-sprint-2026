@@ -282,8 +282,20 @@ export class CryptoworthWorkspace{
         const retained=JSON.parse(utf8(await readExact(directory,saved.stageFiles.find(f=>f.name==='request.json'))));
         check(digest(retained)===requestSha256,'CRYPTOWORTH_RETURN_REQUEST_CHANGED','The original saved accountant request changed.',409);
         if(!original){
-          const fresh=await this.returnPreview(planId,request);
-          check(fresh.previewSha256===saved.previewSha256&&canonical(fresh.nativeRequest)===canonical(nativeRequest),'CRYPTOWORTH_RETURN_SOURCE_CHANGED','The saved return source or current accountant parent changed. Review a new return request.',409);
+          if(saved.status==='SUPERSEDED')return {done:true,saved:copy(saved)};
+          const supersede=async(code,message)=>{
+            saved.status='SUPERSEDED';saved.superseded={at:now(),actor:request.actor,code,message,currentParentId:nativeRecord.revisions.at(-1)?.id??null,originalReturnAbsent:true};
+            await this.workspace.commit('cryptoworth_accountant_return_superseded',request.actor,{planId,returnId:saved.id,...saved.superseded});
+            return {done:true,saved:copy(saved)};
+          };
+          let fresh;
+          try{fresh=await this.returnPreview(planId,request);}
+          catch(error){
+            if(['STALE_ACCOUNTANT_RETURN','CRYPTOWORTH_IMPORT_ROLLED_BACK','CRYPTOWORTH_ACCOUNTANT_MATCH_REQUIRED'].includes(error.code))return supersede(error.code,error.message);
+            throw error;
+          }
+          if(fresh.previewSha256!==saved.previewSha256||canonical(fresh.nativeRequest)!==canonical(nativeRequest))
+            return supersede('CRYPTOWORTH_RETURN_SOURCE_CHANGED','The active native receiving coverage changed after this exact request was prepared.');
         }
       }else{
         this.workspace.expected(value.revision);check(!original,'CRYPTOWORTH_RETURN_ID_IN_USE','Choose a fresh return UUID; this ID already belongs to an original accountant return.',409);
@@ -302,7 +314,7 @@ export class CryptoworthWorkspace{
       }
       return {done:false,saved:copy(saved),nativeRequest:{...nativeRequest,revision:this.workspace.state.revision}};
     });
-    if(prepared.done)return {record:prepared.saved,savedReturn:prepared.saved,duplicate:true,revision:this.workspace.state.revision};
+    if(prepared.done)return {record:prepared.saved,savedReturn:prepared.saved,duplicate:true,superseded:prepared.saved.status==='SUPERSEDED',revision:this.workspace.state.revision};
     // apply() itself acquires the existing workspace queue; nesting that call
     // inside workspace.serial would deadlock its native owner.
     const applied=await this.accountant.apply(prepared.saved.handoffId,prepared.nativeRequest);
@@ -471,7 +483,7 @@ export class CryptoworthWorkspace{
       for(const returned of incoming.returns){
         const index=existing.returns.findIndex(row=>row.id===returned.id);
         if(index<0){existing.returns.push(copy(returned));changes.returns++;}
-        else if(existing.returns[index].status!=='COMMITTED'&&returned.status==='COMMITTED'){existing.returns[index]=copy(returned);changes.returns++;}
+        else if(existing.returns[index].status!=='COMMITTED'&&(returned.status==='COMMITTED'||existing.returns[index].status==='PREPARED'&&returned.status==='SUPERSEDED')){existing.returns[index]=copy(returned);changes.returns++;}
       }
       check(existing.captures.length<=2000&&existing.returns.length<=2000,'CRYPTOWORTH_PACKET_HISTORY_LIMIT','The merged plan exceeds its 2,000 capture/return limit.');
     }
@@ -619,7 +631,7 @@ function validatePacket(input){
   for(const record of packet.plans){
     const plan=plans.get(record.id),{handoff,prefix:planPrefix}=sources.get(record.id),seen=new Set();
     for(const returned of record.returns){
-      id(returned.id);check(!seen.has(returned.id)&&['PREPARED','COMMITTED'].includes(returned.status),'INVALID_CRYPTOWORTH_PACKET_RETURN','Use each retained original return UUID once.');seen.add(returned.id);
+      id(returned.id);check(!seen.has(returned.id)&&['PREPARED','SUPERSEDED','COMMITTED'].includes(returned.status),'INVALID_CRYPTOWORTH_PACKET_RETURN','Use each retained original return UUID once.');seen.add(returned.id);
       const stage='plans/'+record.id+'/returns/'+returned.id+'/stage';scope(stage,returned.stageFiles);check(Array.isArray(returned.files),'INVALID_CRYPTOWORTH_PACKET_RETURN','Retain the complete original returned file list.');
       const request=normalizeCryptoworthReturn(document(stage,'request.json')),native=document(stage,'accountant-request.json'),binding=document(stage,'binding.json'),coverage=document(stage,'coverage.json');
       check(Array.isArray(coverage),'CRYPTOWORTH_PACKET_RETURN_COVERAGE','Retain the original accountant return coverage.');verifyCoverage(coverage,plan.target);
@@ -645,7 +657,10 @@ function validatePacket(input){
           &&bytes(completed,'handoff.json').equals(bytes(planPrefix,'handoff.json')),'CRYPTOWORTH_PACKET_ACCOUNTANT_FILES_CHANGED','The returned original accountant packet changed.',409);
         for(const name of commonNames)if(files.has(planPrefix+'/'+name))check(bytes(completed,name).equals(bytes(planPrefix,name)),'CRYPTOWORTH_PACKET_ACCOUNTANT_SOURCE_CHANGED','Preserve every original selected source and adjustment companion in the returned packet.',409,{name});
         operation(completed,{id:returned.id,requestSha256:returned.requestSha256,accountantReturnSha256:actual.integrity.sha256});
-      }else check(returned.files.length===0,'CRYPTOWORTH_PACKET_RETURN_STATE','A prepared return cannot claim completed original files.');
+      }else {
+        check(returned.files.length===0,'CRYPTOWORTH_PACKET_RETURN_STATE','An unapplied return cannot claim completed original files.');
+        if(returned.status==='SUPERSEDED')check(returned.superseded?.originalReturnAbsent===true&&typeof returned.superseded.code==='string'&&typeof returned.superseded.at==='string','CRYPTOWORTH_PACKET_RETURN_STATE','Retain the original superseded request outcome.');
+      }
     }
   }
   const rolledIds=new Set(),rolledUnits=new Set();

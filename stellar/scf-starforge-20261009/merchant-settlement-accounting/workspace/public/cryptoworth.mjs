@@ -1,5 +1,5 @@
 // MIT. Native Cryptoworth review over the original merchant/accountant workspace.
-const BASE='/api/cryptoworth',LIMIT=50,MAX_FILE=64*1024*1024;
+const BASE='/api/cryptoworth',LIMIT=50,MAX_FILE=64*1024*1024,MAX_PACKET=128*1024*1024;
 const $=id=>document.getElementById(id),esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const enc=encodeURIComponent,copy=x=>structuredClone(x),present=x=>x===null||x===undefined?'Not recorded':typeof x==='object'?JSON.stringify(x,null,2):String(x);
 const names={date:'Date',cryptoId:'Crypto ID',type:'Transaction type',amountOne:'Amount One',amountOneType:'Amount One asset type',amountTwo:'Amount Two',amountTwoType:'Amount Two asset type',transactionHash:'Transaction hash',connectionId:'Connection ID',note:'Note',ledgerId:'Returned ledger ID',rowId:'Returned row ID'};
@@ -51,7 +51,7 @@ async function api(path='',{method='GET',value,signal}={}){
  if(!response.ok)throw problem(data.message??data.error??'The workspace request failed.',response.status,data.error);return data;
 }
 async function inspectFile(key){const file=await getFile(key);return api('/templates/inspect',{method:'POST',value:{file,...(field(key==='template'?'template-delimiter':'capture-delimiter')?{delimiter:field(key==='template'?'template-delimiter':'capture-delimiter')}:{})}});}
-async function saveFile(input,key){const file=input.files?.[0];if(!file)return getFile(key);if(file.size===0||file.size>MAX_FILE)throw problem('Choose a nonempty file up to 64 MiB.');const dataBase64=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result).split(',')[1]);reader.onerror=()=>reject(problem('The selected file could not be read.'));reader.readAsDataURL(file);});const value={name:file.name,dataBase64};await writeStored('file:'+key,value);files.set(key,value);return value;}
+async function saveFile(input,key){const file=input.files?.[0];if(!file)return getFile(key);const limit=key==='packet'?MAX_PACKET:MAX_FILE;if(file.size===0||file.size>limit)throw problem('Choose a nonempty file up to '+(limit/1024/1024)+' MiB.');const dataBase64=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result).split(',')[1]);reader.onerror=()=>reject(problem('The selected file could not be read.'));reader.readAsDataURL(file);});const value={name:file.name,dataBase64};await writeStored('file:'+key,value);files.set(key,value);return value;}
 async function getFile(key){const value=files.get(key)??await stored('file:'+key);if(!value)throw problem('Choose the original '+(key==='template'?'customer template':key==='capture'?'returned CSV':key==='packet'?'packet':'date source file')+'.');files.set(key,value);return value;}
 function fileLabel(id,file){text(id,file?file.name+' · '+(Math.floor(file.dataBase64.length*3/4)-(file.dataBase64.endsWith('==')?2:file.dataBase64.endsWith('=')?1:0)).toLocaleString()+' bytes retained for this workspace':'Choose the original file.');}
 function options(id,items,{empty,selected,initialLabel}={}){const before=selected??field(id),list=Array.isArray(items)?items:[];$(id).innerHTML=(empty!==undefined?'<option value="">'+esc(empty)+'</option>':'')+(initialLabel?'<option value="initial">'+esc(initialLabel)+'</option>':'')+list.map(x=>'<option value="'+esc(x.id)+'">'+esc(x.name??x.label??x.id)+'</option>').join('');if([...$(id).options].some(o=>o.value===before))$(id).value=before;}
@@ -126,9 +126,9 @@ function collectColumns(prefix,all){return Object.fromEntries(all.map(role=>[rol
 function columnControls(target,prefix,headers,all,selected={},required=[]){
  $(target).innerHTML=all.map(role=>'<label>'+esc(names[role]??role)+(required.includes(role)?'':' · optional')+'<select id="'+prefix+'-'+role+'" '+(required.includes(role)?'required':'')+'><option value="">'+(required.includes(role)?'Select exact file column':'Unmapped')+'</option>'+headers.map(header=>'<option value="'+esc(header)+'" '+(selected[role]===header?'selected':'')+'>'+esc(header||'(Empty heading)')+'</option>').join('')+'</select></label>').join('');
 }
-function renderConstants(){
+function renderConstants({preserveInputs=true}={}){
  const template=draft.template;if(!template)return;
- const old={...(draft.constants??{})};for(const input of $('profile-constants').querySelectorAll('[data-constant]'))old[input.dataset.constant]=input.value;
+ const old={...(draft.constants??{})};if(preserveInputs)for(const input of $('profile-constants').querySelectorAll('[data-constant]'))old[input.dataset.constant]=input.value;
  const selected=new Set(Object.values(collectColumns('profile-role',[...roles,...extraRoles])));
  draft.constants=old;
  $('profile-constants').innerHTML=template.headers.filter(header=>!selected.has(header)).map((header,index)=>'<label>Literal · '+esc(header)+'<input id="constant-'+index+'" data-constant="'+esc(header)+'" value="'+esc(old[header]??'')+'" aria-label="Literal value for '+esc(header)+'"></label>').join('');
@@ -138,7 +138,7 @@ function renderTemplate(binding){
  const selected=binding??draft.columns??draft.suggestedColumns??{};
  columnControls('profile-columns','profile-role',t.headers,[...roles,...extraRoles],selected,roles);
  $('template-summary').innerHTML=facts({'Original file':t.name,'SHA-256':t.sha256,'Column order':t.headers,'Delimiter':t.delimiter==='\t'?'Tab':t.delimiter,'Bytes':t.bytes});
- renderConstants();
+ renderConstants({preserveInputs:false});
 }
 function renderCaptureColumns(binding){
  const headers=draft.captureTemplate?.headers??[],selected=binding??draft.captureColumns??{};
@@ -197,6 +197,7 @@ function planFiles(target,id,list,{captureId}={}){
 }
 async function openPlan(id,{select=true}={}){
  if(!id)throw problem('Choose a saved import plan.');
+ const changed=(selectedPlan??draft.selectedPlan)!==id;
  const generation=++planGeneration,value=await api('/plans/'+enc(id));if(generation!==planGeneration)return;
  for(const kind of ['capture','return','rollback'])if(previews[kind]&&previews[kind].planId!==id)await invalidate(kind);
  selectedPlan=id;planDetail=value;
@@ -205,7 +206,7 @@ async function openPlan(id,{select=true}={}){
  const overview={'Plan':plan.name??record.name,'Native entity':plan.target?.entityName??plan.target?.entityId,'Native connection':plan.target?.connectionName??plan.target?.connectionId,'Original handoff':plan.handoffId,'Accountant revision':plan.accountantRevisionId,'Saved mapping':plan.profileId,'Selected rows':plan.summary,'CSV ready':plan.canExport};
  $('saved-summary').innerHTML=facts(overview);$('capture-plan-summary').innerHTML=facts({'Plan':overview.Plan,'Entity':plan.target?.entityName??plan.target?.entityId,'Connection':plan.target?.connectionName??plan.target?.connectionId,'Import rows':plan.summary?.ready,'Blocked rows':plan.summary?.blocked});
  planFiles('saved-files',id,value.files??record.files);planFiles('capture-files',id,(value.files??record.files??[]).filter(x=>['import.csv','source-index.csv','review.html'].includes(typeof x==='string'?x:x.name)));
- $('capture-entity').value=plan.target?.entityId??'';$('capture-connection').value=plan.target?.connectionId??'';
+ if(changed){$('capture-entity').value=plan.target?.entityId??'';$('capture-connection').value=plan.target?.connectionId??'';}
  $('packet-download').href=BASE+'/plans/'+enc(id)+'/packet';$('packet-download').hidden=false;
  const captures=value.captures??record.captures??[],returns=value.returns??record.returns??[],rollbacks=value.rollbacks??record.rollbacks??[];
  options('return-capture',captures,{empty:'Select a saved native capture'});options('rollback-capture',captures,{empty:'Select a saved native capture'});
@@ -285,7 +286,8 @@ async function findPending(){
   if(!record)return {found:false};
   if(pending.kind==='return'){
    if(record.previewSha256!==pending.previewSha256)throw problem('This accountant return belongs to different reviewed bytes. The original request remains retained.',409,'SAVED_REQUEST_CONFLICT');
-   return {found:record.status==='COMMITTED',unresolved:record.status!=='COMMITTED',value:record};
+   const completed=record.status==='COMMITTED'||record.status==='SUPERSEDED';
+   return {found:completed,unresolved:!completed,value:record};
   }
   return {found:true,value:record};
  }
@@ -296,11 +298,12 @@ async function findPending(){
 }
 async function finishPending(value){
  const saved=pending;if(!saved)return;
+ const outcome=value?.savedReturn??value?.record??value,superseded=saved.kind==='return'&&outcome?.status==='SUPERSEDED';
  await writeStored('pending',undefined);pending=null;await invalidate(saved.kind);await refresh();
  const planId=saved.kind==='plan'?saved.lookup.id:saved.lookup.planId;
  if(saved.kind==='profile'){draft.previousProfileId=null;$('plan-profile').value=saved.lookup.id;tab('plan');}
  if(planId){await openPlan(planId);tab(saved.kind==='capture'||saved.kind==='return'||saved.kind==='rollback'?'capture':'saved');}
- tell(saved.label+' saved. Its original records are available in this workspace.');await retainDraft();updateControls();
+ tell(superseded?'Accountant return superseded. Its staged files and reason remain in saved history. Review this capture again against the current accountant revision.':saved.label+' saved. Its original records are available in this workspace.');await retainDraft();updateControls();
 }
 async function sendPending(){
  if(!pending)return;await verifyWorkspace();let result;
