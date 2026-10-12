@@ -32,9 +32,14 @@ Create private source declarations using the existing PostgreSQL source schema. 
 
 The maintenance file uses its original maintenance environment name. For a local development cluster, select the original resolver's `disable-loopback` mode explicitly. Source files and custom CA files must be ordinary private files. A read role must be able to read the selected Timescale information views, aggregate columns, native job schedule timezone and selected aggregate/source definition. Maintenance permissions are needed only for native changes.
 
+Create an operator-owned working directory, then save the two private declarations inside it as `read.json` and `maintenance.json`.
+
 ```sh
-node timescale/cli.mjs init --directory /private/timescale-project --source /private/read.json --maintenance-source /private/maintenance.json --target /private/timescale-dataset --title "Usage operations"
-node timescale/cli.mjs serve --directory /private/timescale-project --port 8446
+umask 077
+TIMESCALE_HOME="$HOME/.local/share/starforge-timescale"
+mkdir -p "$TIMESCALE_HOME"
+node timescale/cli.mjs init --directory "$TIMESCALE_HOME/project" --source "$TIMESCALE_HOME/read.json" --maintenance-source "$TIMESCALE_HOME/maintenance.json" --target "$TIMESCALE_HOME/dataset" --title "Usage operations"
+node timescale/cli.mjs serve --directory "$TIMESCALE_HOME/project" --port 8446
 ```
 
 Open the printed loopback URL. The Timescale section sits above the original dataset publisher. The original extraction review, seller publication, buyer configuration and publication scheduler stay available on that same page. An operator-selected seller origin and resource can be passed with `--seller HTTPS_ORIGIN --resource ROUTE_ID`; the original buyer endpoint validator handles them.
@@ -55,9 +60,9 @@ Open the printed loopback URL. The Timescale section sits above the original dat
 `node timescale/cli.mjs help` lists every command. Read commands print complete JSON. The browser and command line use the same model. Each mutation input has a caller-generated `requestId` UUID. Optional `expectedVersion` comes from the current status. Keep the complete original input after an interrupted response.
 
 ```sh
-node timescale/cli.mjs status --directory /private/timescale-project
-node timescale/cli.mjs capture --directory /private/timescale-project --input /private/capture.json
-node timescale/cli.mjs operation --directory /private/timescale-project --id 55a812f7-32ce-4d2c-910c-d654d7ef0131
+node timescale/cli.mjs status --directory "$TIMESCALE_HOME/project"
+node timescale/cli.mjs capture --directory "$TIMESCALE_HOME/project" --input "$TIMESCALE_HOME/capture.json"
+node timescale/cli.mjs operation --directory "$TIMESCALE_HOME/project" --id 55a812f7-32ce-4d2c-910c-d654d7ef0131
 ```
 
 Example capture request:
@@ -114,17 +119,19 @@ For `job-plan`, supply `editionId`, `editionDigest`, native `jobId`, `title`, `o
 
 ## Full export and receiving
 
+JSON request files require actual absolute paths. Replace the `ABSOLUTE_...` values below with directories on the selected receiving host; shell variables inside JSON are not expanded.
+
 ```json
 {
   "requestId": "796f008b-14f6-45e6-a183-b9c2fd40a86b",
-  "outputDirectory": "/private/handover/timescale-oct12"
+  "outputDirectory": "ABSOLUTE_NEW_PRIVATE_PACKAGE_DIRECTORY"
 }
 ```
 
 ```sh
-node timescale/cli.mjs export --directory /private/timescale-project --input /private/export.json
-node timescale/cli.mjs inspect-package --package /private/handover/timescale-oct12
-node timescale/cli.mjs receive --input /private/receive.json
+node timescale/cli.mjs export --directory "$TIMESCALE_HOME/project" --input "$TIMESCALE_HOME/export.json"
+node timescale/cli.mjs inspect-package --package "$TIMESCALE_HOME/handover/timescale-oct12"
+node timescale/cli.mjs receive --input "$TIMESCALE_HOME/receive.json"
 ```
 
 Receiving input:
@@ -132,13 +139,13 @@ Receiving input:
 ```json
 {
   "requestId": "61df6be9-8a72-48d8-b541-d004b33d4b50",
-  "packageDirectory": "/private/handover/timescale-oct12",
+  "packageDirectory": "ABSOLUTE_ORIGINAL_PACKAGE_DIRECTORY",
   "expectedDigest": "ACTUAL_MANIFEST_SHA256",
-  "directory": "/private/received-timescale"
+  "directory": "ABSOLUTE_NEW_RECEIVING_DIRECTORY"
 }
 ```
 
-The receiver returns `/private/received-timescale/workspace` and its relocated dataset target. Repeating that exact receiving request reuses the completed original receipt even if the package source has since moved. Reopening preserves historical paths in original records as provenance; runtime operations use the two explicitly relocated current binding files. Dataset serving still uses the original seller launch procedure. No expired external process, socket, lock or control token is exported.
+The receiver returns the `workspace` subdirectory under the selected receiving directory and its relocated dataset target. Repeating that exact receiving request reuses the completed original receipt even if the package source has since moved. Reopening preserves historical paths in original records as provenance; runtime operations use the two explicitly relocated current binding files. Dataset serving still uses the original seller launch procedure. No expired external process, socket, lock or control token is exported.
 
 ## Operation outcomes and recovery
 
@@ -168,7 +175,7 @@ TimescaleDB contains Apache and Timescale-licensed components. This adapter conn
 `native-demo.mjs` operates an explicit new private schema in the selected actual TimescaleDB2.30.2 database. Its original input is an identified set of industrial usage readings, including an exact decimal larger than JavaScript's integer range and late-arriving rows. It is a native product demonstration, not customer production data or a competition result. The source declaration must authorize creating that new isolated schema. The script does not install Timescale or modify another customer's existing schema.
 
 ```sh
-node timescale/native-demo.mjs --directory /private/timescale-native-demo --connection /private/timescale-demo-source.json
+node timescale/native-demo.mjs --directory "$TIMESCALE_HOME/native-demo" --connection "$TIMESCALE_HOME/demo-source.json"
 ```
 
 It retains one operation record and native transaction markers for its input setup, then operates two editions, a batched refresh, an atomic refresh after late input, complete aggregate comparisons, a native job schedule change, all edition decisions, original publisher extraction/publication, whole export/receive and the original customer dataset reader. The final customer rows must preserve `9007199254740996.50` exactly. Reuse the same directory to continue its original work. Its HTTP phase reads the actual listener and HTML; DOM/browser execution is a separate real browser step. The new native schema and completed package remain available to the customer engineer after the run. The job is disabled by the operated native schedule change.
