@@ -185,8 +185,10 @@ export async function savePublisherApplicationConnection(request, directory, rec
     record.workspaceId === record.original.workspaceId, 'APPLICATION_360GIVING_CONNECTION_CHANGED');
   const path = join(applicationDirectory, '360giving-connection.json');
   const previous = await readJSON(path, true);
+  // A reviewed new application revision can deliberately select another publisher.
+  // The current saved revision and original run above authorize this replacement.
   need(!previous || previous.schema === 'stellar-forge.application-url.v1' &&
-    previous.applicationId === id && previous.workspaceId === record.workspaceId,
+    previous.applicationId === id && previous.command === 'dataset-360giving-workspace',
   'APPLICATION_360GIVING_CONNECTION_CHANGED');
   await saveJSON(path, record, true);
   return path;
