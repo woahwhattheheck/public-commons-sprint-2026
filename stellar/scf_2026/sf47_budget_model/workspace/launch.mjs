@@ -9,8 +9,52 @@ import { fileURLToPath } from 'node:url';
 export const GRANT_LAUNCH_SCHEMA = 'stellar-forge.sf47.workspace-launch.v1';
 export const GRANT_SELECTION_SCHEMA = 'stellar-forge.sf47.workspace-selection.v1';
 const SOURCE = dirname(fileURLToPath(import.meta.url));
-const BOOT_FILES = ['../budget.py', 'cli.py', 'server.py', 'model.py',
-  'launcher.mjs', 'launch.mjs', 'managed_launch.py'];
+// The reviewed release includes every original operating module and its mounted UI.
+const BOOT_FILES = [
+  '../budget.py',
+  'cli.py',
+  'server.py',
+  'model.py',
+  'launcher.mjs',
+  'launch.mjs',
+  'managed_launch.py',
+  'workshare_intake.py',
+  'operations.py',
+  'operations_domain.py',
+  'operations_http.py',
+  'operations_cli.py',
+  'operations_intake.py',
+  'operations_support.py',
+  'operations_buyer.py',
+  'operations_completion.py',
+  'operations_cohort.py',
+  'operations_installations.py',
+  'forecast.py',
+  'portfolio.py',
+  'portfolio_schedule.py',
+  'index.html',
+  'app.mjs',
+  'style.css',
+  'operations.mjs',
+  'operations.css',
+  'operations_support.mjs',
+  'operations_buyer.mjs',
+  'operations_buyer.css',
+  'operations_completion.mjs',
+  'operations_completion.css',
+  'operations_cohort.mjs',
+  'operations_cohort.css',
+  'operations_installations.mjs',
+  'operations_installations.css',
+  'forecast.mjs',
+  'forecast.css',
+  'portfolio.mjs',
+  'portfolio.css',
+  'support_handoff.mjs',
+  'buyer_handoff.mjs',
+  'agent-client.mjs',
+  'agent-contracts.mjs'
+];
 const HASH = /^[a-f0-9]{64}$/;
 const TOKEN = /^[A-Za-z0-9_-]{32,128}$/;
 const UUID = /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/;
