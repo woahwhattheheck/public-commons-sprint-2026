@@ -1,0 +1,15 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "stellar-expert-mcp",
+  "description": "Original StellarExpert merchant tools and complete file receiving",
+  "commands": {
+    "stellar-expert-mcp": "stellar-forge/mcp-merchant-operator/stellar-expert-client.mjs"
+  },
+  "commandDescriptions": {
+    "stellar-expert-mcp": "Inspect, receive and reopen original StellarExpert source, export and customer files"
+  },
+  "exports": {
+    "./merchant-mcp/stellar-expert": "./source/stellar-forge/mcp-merchant-operator/stellar-expert-workspace.mjs",
+    "./merchant-mcp/stellar-expert/client": "./source/stellar-forge/mcp-merchant-operator/stellar-expert-client.mjs"
+  }
+}
