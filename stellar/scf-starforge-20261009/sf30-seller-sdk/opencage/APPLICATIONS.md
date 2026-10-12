@@ -107,3 +107,9 @@ The original serialized stdout observer routes `request.command === 'opencage-wo
 The OpenCage-owned `launch.mjs` exports the read-only selection and startup functions used by the helper. Its compact authenticated `/api/managed-launch` response belongs to the existing private server and contains only the reviewed launch identities, actual instance ID and PID. Original source plans and environment values remain in their normal private custody.
 
 The whole SF30 source component includes the native launcher and its twelve-file source selection. The existing distribution component includes this helper. The original opencage-workbench command and public OpenCage/MCP exports continue from PR1270.
+
+## Moving an installed source while retaining the workspace
+
+The prepared merchant package records the reviewed provider module bytes. Its generated SF82 handler also records the absolute directory of the selected installation. Staging names that entry by both the portable package identity and the complete generated-entry SHA256. Opening the same package from a new, byte-identical installation therefore publishes a new immutable handler entry, while existing releases keep their original entry path and hash. The original SF82 generation review, activation, restart, and rollback continue to select those saved releases.
+
+This distinction matters when Applications adopts an installed source into a release directory: the source path may change even though the prepared merchant package is identical. No existing handler entry is overwritten, and the package's original source, payment terms, and customer files retain their identity. Prepare and review the currently selected source before staging a new release from that installation.
