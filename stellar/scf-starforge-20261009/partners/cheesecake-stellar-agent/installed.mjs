@@ -90,7 +90,8 @@ async function selection(config, {requireState = true} = {}) {
     remoteMcp = {sourceSha256:remote.sourceSha256,requests:remote.requests.size,
       configurationFile:config.remoteMcp,operatorModule:remote.config.operatorModule};
   }
-  return {applicationId:config.applicationId,stateDirectory:config.stateDirectory,
+  return {applicationId:config.applicationId,subject:config.subject,stateDirectory:config.stateDirectory,
+    handoffDirectory:config.handoffDirectory,remoteMcpFile:config.remoteMcp ?? null,
     runtimeDirectory:config.runtimeDirectory,sourceRoot:paths.sourceRoot,
     handoffId:handoff.manifest.handoffId,manifestSha256:handoff.manifestSha256,
     httpRequests:handoff.requests.size,remoteMcp,directories:[...new Set(directories)],
@@ -151,6 +152,14 @@ export async function startInstalledApplication({configFile,expectedSelectionSha
   const {createApplicationServer} = await import('./server.mjs');
   const opened = await createApplicationServer({configFile,bearerToken,host,port});
   try {
+    const expectedBinding = {configFile:selected.configFile,configurationSha256:selected.configurationSha256,
+      applicationId:selected.applicationId,subject:selected.subject,runtimeDirectory:selected.runtimeDirectory,
+      stateDirectory:selected.stateDirectory,handoffDirectory:selected.handoffDirectory,remoteMcp:selected.remoteMcpFile};
+    need(isDeepStrictEqual(opened.launchBinding,expectedBinding), 'APPLICATION_OPENED_CONFIGURATION_CHANGED');
+    need(opened.identity.applicationId === selected.applicationId && opened.identity.subject === selected.subject &&
+      opened.identity.handoffId === selected.handoffId && opened.identity.manifestSha256 === selected.manifestSha256 &&
+      (opened.identity.remoteMcp?.sourceSha256 ?? null) === (selected.remoteMcp?.sourceSha256 ?? null),
+      'APPLICATION_OPENED_SOURCE_CHANGED');
     await inspectInstalledApplication(configFile,{expectedSelectionSha256:selected.selectionSha256});
     const startup = {schema:STARTUP,status:'STELLAR_APPLICATION_READY',configFile,
       configurationSha256:selected.configurationSha256,selectionSha256:selected.selectionSha256,
