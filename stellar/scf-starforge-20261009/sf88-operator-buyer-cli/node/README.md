@@ -410,8 +410,35 @@ consumed. This is not a claim that settlement or process success was proven.
 Partial/missing output remains recoverable only when the original native process
 actually finishes; `recover()` does not fabricate a result.
 
-Pass an `AbortSignal` to `execute` or generated `call`. On abort/timeout the SDK
-sends SIGTERM to its own tracked native child, waits for `close`, and allows the
+Use one `AbortController` for the whole application task:
+
+```js
+const controller = new AbortController();
+const { signal } = controller;
+const operation = await buyer.fromRequest(request, { signal });
+const review = await operation.review({ signal });
+const result = await operation.execute({ review, signal });
+// A Stop action calls controller.abort(); await the task before closing its workspace.
+```
+
+Preparation accepts `{signal}` in `fromConfig`, `fromWorkspace`,
+`fromOperationHandoff`, and `prepare`. A generated `fromRequest` or `call`
+accepts either `request.signal` or `options.signal`; when both are supplied,
+aborting either stops the task. `call` carries the same combined signal through
+preparation, offline review, and its original execution. A signal that is already
+aborted is rejected before creating an operation or launching a review child.
+The signal is an in-memory task control and is never written into the operation.
+
+When preparation is cancelled, the creating call drains its native review and
+removes its own unpublished operation. The same intent can then be prepared
+again. Cancelling `operation.review({signal})` retains the already prepared
+operation, so the application can review it again using a fresh signal.
+Cancelling execution retains its original attempt and uses the recovery workflow
+above. A workspace Stop/close handler should abort and await the active task
+before releasing its lease.
+
+On abort/timeout the SDK sends SIGTERM to its own tracked native child, waits for
+`close`, and allows the
 configured cleanup grace (default 15 seconds). If the native child does not exit,
 it sends SIGKILL and records `NATIVE_CLEANUP_DEADLINE_EXCEEDED`. It does not promise
 that forced termination reconciles payment or kills arbitrary grandchildren.
@@ -495,3 +522,79 @@ and reopening the same Node and Python applications without repeating purchases.
 ## LangGraph and LangChain applications
 
 [FRAMEWORKS.md](FRAMEWORKS.md) provides the optional persistent graph, standard LangChain tools, TypeScript customer program, and executable operator CLI. Select one existing `buyer.operation(intentId)` and retain its original state. Graph checkpoints and ToolMessages refer to that same operation, native attempt, and verified response. The base package remains dependency-free; install the optional frameworks only for their corresponding subpath imports.
+
+## Explicit continuation after an unpaid transport failure
+
+When the original native buyer records `INITIAL_TRANSPORT_FAILED` before any
+signature, the application can preserve that result and prepare one explicit
+successor after correcting the connection. For example, a merchant's existing
+CA bundle may need to be included in the native child environment. Continue to
+verify the merchant hostname and certificate chain, and retain the original
+operator, ledger, signer, URL, request bytes and accepted terms.
+
+`operation.recover()` always returns the original operation's saved outcome.
+Use the following separate preparation call when the application operator has
+selected a continuation:
+
+```js
+const original = buyer.operation('customer-report-2026-10-11');
+const status = await original.inspectUnpaidContinuation();
+if (!status.eligible) throw new Error(status.reason);
+
+const successor = await original.prepareUnpaidContinuation({
+  intentId: 'customer-report-2026-10-11-transport-repaired',
+  expectedResultSha256: status.resultSha256,
+  reason: 'Included the existing merchant CA and verified the unchanged HTTPS endpoint.',
+  signal,
+});
+
+// Existing terminal approval, original policy and native attempt gate all apply.
+const result = await successor.execute({
+  review: await successor.review({ signal }),
+  signal,
+});
+const data = await result.json();
+```
+
+Preparation requires the exact final result digest, the chosen successor ID and
+a recorded remediation reason. It checks the original recorded process exit,
+native stdout, original checkout evidence and outcome report together. Eligibility
+requires the native initial-transport failure, explicit `paymentSent: false`,
+zero signature/transfer/uncertain outcomes and no operator reservation or response
+file. The request, body, operation ticket, operator configuration and native
+workspace remain bound to their original bytes and settings.
+
+One immutable `unpaid-continuation.json` chooses the successor under the original
+private descriptor/flock serialization pattern. Its ready record binds the
+successor's prepared configuration and metadata before that successor can execute.
+Repeating preparation with the same ID, result digest and reason returns that
+same operation. Selecting a different successor for that parent fails with
+`UNPAID_CONTINUATION_ALREADY_SELECTED`. A process interruption during preparation
+retains the partial private files and resumes the same chosen ID; a completed
+preparation or native attempt is reopened. Linux util-linux `flock` is required
+for this explicit feature.
+
+To resume an application, follow an already prepared lineage and recover its
+actual selected operation:
+
+```js
+const active = await buyer.operation('customer-report-2026-10-11')
+  .followUnpaidContinuation();
+let result = await active.recover();
+if (result === null && (await active.inspect()).state === 'PREPARED') {
+  result = await active.execute({ review: await active.review({ signal }), signal });
+}
+```
+
+`followUnpaidContinuation()` is read-only. It validates each existing parent and
+successor binding; it does not select a successor, prepare an operation, authorize
+a payment or execute a buyer. The research page fetcher uses this same following
+method before its normal recovery and execution path, so the saved logical page
+request and edition cursor survive a corrected transport. Every successor still
+has its own nonreplaceable native attempt marker. A further continuation requires
+another explicit call against an eligible final outcome.
+
+The original failed result, attempt, evidence and configuration remain available
+under their original ID. Errors with a missing final process outcome, possible
+signature, reservation, response or uncertain transfer must use their existing
+native recovery/accounting path.

@@ -4,6 +4,7 @@ import { adaptOpenApi30Schema, adaptOpenApi31Schema, applyOpenApiDirection } fro
 import { validateBazaarExtension } from '../../../stellar-forge/payment-auto-catalog/schema-validation.mjs';
 import { openApiRequestBody } from './request-body.mjs';
 import { selectOpenApiResponseStream } from './response-stream.mjs';
+import { QUERY_SERIALIZATION_SCHEMA, validateQueryParameter, validateQuerySerialization } from '../sf30-seller-sdk/query-parameters.mjs';
 
 const plain = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 const own = (o, k) => Object.hasOwn(o, k);
@@ -163,17 +164,19 @@ function makeOffer(document, selection, refs) {
   let concretePath = path;
   const pathNames = [...path.matchAll(/\{([^{}]+)\}/g)].map(m => m[1]);
   if (/[{}]/.test(path.replace(/\{[^{}]+\}/g, ''))) fail('Unbalanced path template');
-  const properties = {}, required = [], pathProperties = {}, pathExamples = {};
+  const properties = {}, required = [], pathProperties = {}, pathExamples = {}, querySerialization = {};
   for (const p of merged.values()) {
     if (!['query', 'path'].includes(p.in)) fail('Header and cookie parameters require a manual seller integration');
     if (p.content || !p.schema) fail('Parameter content encodings are not supported');
     if (p.allowReserved === true || p.allowEmptyValue === true) fail('Reserved or empty parameter serialization requires manual integration');
     if (p.style && p.style !== (p.in === 'query' ? 'form' : 'simple')) fail('Unsupported parameter style');
-    if (p.explode !== undefined && p.explode !== (p.in === 'query')) fail('Nondefault parameter explode requires manual integration');
+    if (p.explode !== undefined && typeof p.explode !== 'boolean') fail('Parameter explode must be boolean');
+    if (p.in === 'path' && p.explode === true) fail('Nondefault path explode requires manual integration');
     let schema = withExample(refs.schema(p.schema), declaredExample(p, refs.reference));
     if (p.description !== undefined) schema.description = p.description;
     const value = sampleOf(schema);
-    scalarParameter(schema, value, p.name);
+    if (p.in === 'query') validateQueryParameter(schema, value, p.name);
+    else scalarParameter(schema, value, p.name);
     if (p.in === 'path') {
       if (p.required !== true || !pathNames.includes(p.name) || value === undefined || String(value) === '') fail('Path parameter must be required and have a declared example: ' + p.name);
       if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(p.name)) fail('Path parameter name cannot be represented in Bazaar routeTemplate');
@@ -183,6 +186,7 @@ function makeOffer(document, selection, refs) {
       pathExamples[p.name] = value;
     } else {
       properties[p.name] = schema;
+      querySerialization[p.name] = { style: 'form', explode: p.explode ?? true };
       if (p.required === true) required.push(p.name);
     }
   }
@@ -223,6 +227,11 @@ function makeOffer(document, selection, refs) {
     inputSchema.properties.pathParams = { type: 'object', properties: pathProperties,
       required: Object.keys(pathProperties), additionalProperties: false };
     inputSchema.required.push('pathParams');
+  }
+  if (Object.keys(properties).length) {
+    const serialization = { schema: QUERY_SERIALIZATION_SCHEMA, parameters: querySerialization };
+    validateQuerySerialization(input.querySchema, serialization);
+    seller.extensions.bazaar.querySerialization = serialization;
   }
   const validated = validateBazaarExtension(seller.extensions.bazaar);
   if (!validated.ok) fail('Original SF25 schema acceptance rejected metadata: ' + JSON.stringify(validated));

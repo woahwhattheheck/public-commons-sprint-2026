@@ -81,9 +81,13 @@ preserve matched count, returned items, duplicate count and completion reason.
 
 Repeated scene identities across pages are deduplicated only when their complete
 metadata hashes agree. A conflicting version in one traversal ends that capture
-with original bytes retained. Interrupted read-only requests can resume after
-the dead process lease is recovered. Cancellation aborts an active local request
-or persists the request for the owning process.
+with original bytes retained. Per-operation and edition locks use the existing
+Linux file-lock implementation; process exit releases the held descriptor, so a
+resumed operation works across container PID namespaces. Cancellation aborts an
+active local request or persists the request for its owning process. An old PID
+lease from a pre-release workspace is preserved. Finish its original process;
+for an interrupted legacy operation, export its retained handover and import it
+into a fresh workspace before resuming the same edition.
 
 Every application scene identity is:
 
@@ -157,6 +161,23 @@ customer requests, recovery and acquired delivery. Small files use the original
 one-shot buyer; large imagery uses maintained object byte windows and chunk
 hashes under the same aggregate customer cap. The acquired local directory is
 the input to customer receiving and the offline GIS explorer.
+
+## Offline GIS for the received delivery
+
+Export the original customer delivery and its scene explorer with the same CLI:
+
+~~~sh
+node cli.mjs portable-export --directory /private/received-stac --out /private/portable-stac
+node cli.mjs portable-open --directory /private/portable-stac
+~~~
+
+Open `scene-explorer.html` in the portable directory for scene search, date/cloud
+filters, original footprints, retained previews and source metadata. The directory
+also contains a local STAC Catalog, complete GeoJSON and an asset inventory.
+`portable-open` verifies the original customer delivery and every derived file;
+use `--expected-manifest-sha256` to bind the exact export receipt as well.
+[PORTABLE_GIS.md](receiving/PORTABLE_GIS.md) documents the receiving API and files.
+The installed API is `@tokenjunkielabs/starforge-merchant/buyer/stac/receiving`.
 
 ## API and native example
 

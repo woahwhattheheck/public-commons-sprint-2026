@@ -1,11 +1,11 @@
 // MIT. Durable STAC analyst workspace; native settlement stays in SF30/SF88.
 import { randomUUID, createHash } from 'node:crypto';
 import { constants } from 'node:fs';
-import { hostname } from 'node:os';
 import { open, readdir, unlink, stat, lstat, copyFile } from 'node:fs/promises';
 import { join, dirname, resolve } from 'node:path';
 import { privateDirectory, readBytes, readJson, writeBytes, writeJson, jsonBytes, exists, need }
   from '../../sf88-operator-buyer-cli/node/store.mjs';
+import { withPrivateLock } from '../routescan/quota.mjs';
 import { DEFAULT_ENDPOINT, normalizeEndpoint, normalizeQuery, canonicalJson, sha256, stacItemKey,
   searchRequest, nextRequest, createStacProvider, assetDescriptor, scenesCsv, sceneRows, publicURL } from './provider.mjs';
 
@@ -69,25 +69,22 @@ export async function openStacWorkspace({ directory, title = 'Satellite imagery 
     queue = action.catch(() => {}); return action;
   }
   async function lease(key, run) {
-    const file = join(directory, 'locks', sha256(key) + '.json');
-    const token = identity('lease'); let handle;
-    for (let attempt = 0; attempt < 2; attempt++) {
-      try { handle = await open(file, 'wx', 0o600); break; }
-      catch (e) {
-        if (e.code !== 'EEXIST') throw e;
-        const previous = await readJson(file);
-        need(previous.host === hostname(), 'STAC_OPERATION_ACTIVE_ON_OTHER_HOST');
-        let alive = true; try { process.kill(previous.pid, 0); } catch (error) { if (error.code === 'ESRCH') alive = false; else throw error; }
-        need(!alive, 'STAC_OPERATION_ALREADY_RUNNING');
-        const current = await readJson(file); need(current.token === previous.token, 'STAC_OPERATION_LEASE_CHANGED');
-        await unlink(file);
-      }
+    const locks = join(directory, 'locks'), name = sha256(key);
+    try {
+      return await withPrivateLock(locks, name + '.lock', async () => {
+        // Legacy PID leases cannot identify an owner across container namespaces.
+        // Preserve them: after the original process is settled, an exported
+        // handover imports all retained operations into a fresh workspace.
+        need(!await exists(join(locks, name + '.json')),
+          'STAC_LEGACY_OPERATION_LEASE',
+          'Finish the original process, or import its retained handover into a fresh workspace before resuming.');
+        return run();
+      });
+    } catch (error) {
+      if (error.code === 'ROUTESCAN_RECORD_BUSY')
+        need(false, 'STAC_OPERATION_ALREADY_RUNNING', 'The same operation is active in another process.');
+      throw error;
     }
-    need(handle, 'STAC_OPERATION_LEASE_UNAVAILABLE');
-    await handle.writeFile(jsonBytes({ token, pid: process.pid, host: hostname(), startedAt: stamp(), key }));
-    await handle.sync(); await handle.close();
-    try { return await run(); }
-    finally { if (await exists(file)) { const current = await readJson(file); if (current.token === token) await unlink(file); } }
   }
   async function capture(request, kind, register, signal) {
     const relative = 'captures/' + identity(kind);
