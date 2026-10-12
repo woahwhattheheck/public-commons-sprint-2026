@@ -1,7 +1,7 @@
 {
   "schema": "stellar-forge.merchant-distribution-contribution.v1",
   "id": "dbnomics",
-  "description": "DBnomics economic source, saved analysis and original merchant/customer workspace",
+  "description": "DBnomics economic source, complete Python analysis/workbook receiving and original merchant/customer workspace",
   "commands": {
     "dbnomics": "stellar/scf-starforge-20261009/sf30-seller-sdk/dbnomics/cli.mjs"
   },
@@ -25,7 +25,8 @@
     "./seller/dbnomics/provider": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/dbnomics/provider.mjs",
     "./seller/dbnomics/server": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/dbnomics/server.mjs",
     "./seller/dbnomics/customer": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/dbnomics/customer.mjs",
-    "./seller/dbnomics/mcp": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/dbnomics/mcp.mjs"
+    "./seller/dbnomics/mcp": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/dbnomics/mcp.mjs",
+    "./seller/dbnomics/analysis-source": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/dbnomics/analysis-source.mjs"
   },
   "browserAssets": [
     {

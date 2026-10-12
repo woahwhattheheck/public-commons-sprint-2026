@@ -7,6 +7,7 @@ from importlib import import_module as _import_module
 from typing import TYPE_CHECKING as _TYPE_CHECKING
 
 if _TYPE_CHECKING:
+    from .dbnomics import DbnomicsAnalysisSource, DbnomicsEconomicWorkflow
     from .client import Buyer, Operation, Review
     from .inbox import Inbox, InboxResult, InboxError
     from .acquisitions import AcquisitionWorkspace, AcquisitionResult, AcquisitionProcess, AcquisitionError
@@ -24,6 +25,7 @@ if _TYPE_CHECKING:
     from .streams import SSEEvent, NDJSONRecord, StreamDelivery, read_retained_response, export_saved_stream
 
 __all__ = [
+    "DbnomicsAnalysisSource", "DbnomicsEconomicWorkflow",
     "ResearchWorkspace", "ResearchError", "ResearchDocuments", "ResearchPipelines",
     "ResearchSelection", "ResearchInputFile", "ResearchDocumentSource",
     "AcquisitionWorkspace", "AcquisitionResult", "AcquisitionProcess", "AcquisitionError",
@@ -38,6 +40,8 @@ __all__ = [
 ]
 
 _EXPORTS = {
+    "DbnomicsAnalysisSource": ".dbnomics",
+    "DbnomicsEconomicWorkflow": ".dbnomics",
     "ResearchWorkspace": ".research_workspace",
     "ResearchError": ".research_workspace",
     "ResearchDocuments": ".research_documents",
