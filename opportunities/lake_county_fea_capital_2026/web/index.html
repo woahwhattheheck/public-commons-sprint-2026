@@ -9,6 +9,8 @@
 <div class="sidebar-note"><strong>Keep the evidence with the decision.</strong><p>Original files, source editions and reviewed choices travel with the complete handover.</p></div>
 </aside>
 <div class="workspace"><header class="topbar"><div><span class="eyebrow">Facilities &amp; capital planning</span><p id="workspace-label">Opening the selected workspace…</p></div><div class="operator"><label for="actor">Operator</label><input id="actor" autocomplete="off" spellcheck="false" maxlength="200"><button id="refresh" class="quiet">Refresh</button></div></header>
+<div class="draft-tools" aria-label="Draft backups"><button id="download-browser-backup" class="quiet">Download draft backup</button><button id="open-browser-backup" class="quiet">Open draft backup</button><input id="browser-backup-file" type="file" accept=".json,application/json" hidden><span>Recover open edits in this workspace. Full workspace archives are in Handover.</span></div>
+<div id="browser-recovery" class="browser-recovery" hidden role="status" aria-live="polite"><p id="browser-recovery-message"></p><div class="actions"><button id="download-unsaved-backup" class="quiet">Download unsaved drafts</button><button id="retry-browser-save">Try saving again</button></div></div>
 <div id="pending" role="status" aria-live="polite"></div><div id="notice" role="status" aria-live="polite"></div>
 <main id="main"><div class="empty">Opening the original workspace…</div></main>
 <footer>Original findings and the selected model remain authoritative. A local review does not establish client approval.</footer></div>

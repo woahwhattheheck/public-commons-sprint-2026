@@ -8,12 +8,131 @@ const uid = () => crypto.randomUUID();
 const tabs = [["overview","Program overview"],["sources","Sources & editions"],["registers","Registers"],["exchange","Model exchange"],["scenarios","Capital scenarios"],["decisions","Review decisions"],["handover","Handover"]];
 let A={status:null,rows:null,rowsToken:0,preparing:false,tab:"overview"};
 let B={schema:"lake-county.browser-workspace/v1",workspaceId:null,drafts:{},pending:null,completed:[],operator:"",selectedEdition:null,table:"asset_observations",offset:0};
-let db, queue=Promise.resolve(), token=sessionStorage.getItem("fea-private-token");
+let db, token=sessionStorage.getItem("fea-private-token");
 const fragment=new URLSearchParams(location.hash.slice(1));
 if(fragment.has("token")){ token=fragment.get("token"); sessionStorage.setItem("fea-private-token",token); history.replaceState(null,"",location.pathname); }
 function database(){return new Promise((resolve,reject)=>{const q=indexedDB.open("lake-county-capital-program-v1",1);q.onupgradeneeded=()=>q.result.createObjectStore("workspaces");q.onsuccess=()=>resolve(q.result);q.onerror=()=>reject(q.error);});}
 function getStored(key){return new Promise((resolve,reject)=>{const q=db.transaction("workspaces").objectStore("workspaces").get(key);q.onsuccess=()=>resolve(q.result);q.onerror=()=>reject(q.error);});}
-function persist(){const snapshot=structuredClone(B);queue=queue.catch(()=>{}).then(()=>new Promise((resolve,reject)=>{const tx=db.transaction("workspaces","readwrite");tx.objectStore("workspaces").put(snapshot,snapshot.workspaceId);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error||new Error("Browser journal could not be saved."));}));return queue;}
+function storageControls(){
+  const box=$("#browser-recovery");
+  if(!box)return;
+  box.hidden=!A.storageError;
+  $("#browser-recovery-message").textContent=A.storageError
+    ? "Your latest edits could not be saved in this browser. Download a draft backup before closing or reloading."
+    : "";
+}
+function persist(){
+  A.saveRequested=true;
+  if(!A.saveTask){
+    A.saveTask=Promise.resolve().then(async()=>{
+      try{
+        while(A.saveRequested){
+          A.saveRequested=false;
+          const snapshot=structuredClone(B);
+          await new Promise((resolve,reject)=>{
+            if(!db){reject(new Error("Browser storage is unavailable."));return;}
+            const tx=db.transaction("workspaces","readwrite");
+            tx.objectStore("workspaces").put(snapshot,snapshot.workspaceId);
+            tx.oncomplete=resolve;
+            tx.onerror=()=>reject(tx.error);
+            tx.onabort=()=>reject(tx.error||new Error("Browser drafts could not be saved."));
+          });
+        }
+        A.storageError=null;
+        storageControls();
+      }catch(error){
+        A.storageError=error?.message||"Browser drafts could not be saved.";
+        storageControls();
+        throw error;
+      }finally{
+        A.saveTask=null;
+      }
+    });
+    // Input handlers can save in the background; awaited mutation saves still
+    // reject before any native operation is sent.
+    A.saveTask.catch(()=>{});
+  }
+  return A.saveTask;
+}
+function compactCompleted(record){
+  const req=record?.request,res=record?.response,p=req?.payload,f=res?.result;
+  if(req?.action!=="file.retain"||typeof p?.base64!=="string"
+      ||res?.operation_id!==req.operation_id||res?.workspace_id!==req.workspace_id
+      ||!/^[a-f0-9]{64}$/.test(res?.request_sha256||"")
+      ||f?.sha256!==p.sha256||f?.bytes!==p.bytes||!f?.id)return record;
+  // The acknowledged native operation retains the exact request and file.
+  // Browser edits need its identity, not another full base64 copy per keypress.
+  const {request,...kept}=record;
+  return {...kept,request_reference:{operation_id:req.operation_id,
+    request_sha256:res.request_sha256,workspace_id:req.workspace_id,
+    actor:req.actor,expected_revision:req.expected_revision,action:req.action,
+    file:{id:f.id,name:f.name,bytes:f.bytes,sha256:f.sha256}}};
+}
+function browserBackup(){
+  return {schema:"lake-county.browser-backup/v1",workspace_id:B.workspaceId,
+    exported_at:new Date().toISOString(),workspace_revision:A.status?.revision,
+    browser_state:structuredClone(B)};
+}
+function saveBrowserBackup(){
+  if(!B.workspaceId)throw new Error("Open the selected workspace before downloading its drafts.");
+  const blob=new Blob([JSON.stringify(browserBackup(),null,2)],{type:"application/json"});
+  const url=URL.createObjectURL(blob),a=document.createElement("a");
+  a.href=url;a.download="Lake_County_Drafts_"+new Date().toISOString().replace(/[:.]/g,"-")+".json";
+  a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+function validateBrowserBackup(value){
+  const s=value?.browser_state,plain=x=>x&&typeof x==="object"&&!Array.isArray(x);
+  if(value?.schema!=="lake-county.browser-backup/v1"||value.workspace_id!==B.workspaceId
+      ||s?.schema!==B.schema||s.workspaceId!==B.workspaceId)
+    throw new Error("Select a draft backup for this same workspace.");
+  if(!plain(s.drafts)||!Array.isArray(s.completed)||s.completed.some(r=>!plain(r))||typeof s.operator!=="string"
+      ||!Object.hasOwn(A.status.tables,s.table)||!Number.isSafeInteger(s.offset)||s.offset<0)
+    throw new Error("The draft backup has an invalid browser state.");
+  for(const d of Object.values(s.drafts)){
+    if(!plain(d)||typeof d.token!=="string"||typeof d.baseRevision!=="string"||!plain(d.values))
+      throw new Error("The draft backup contains an invalid draft.");
+  }
+  if(s.pending!==null&&(!plain(s.pending)||!plain(s.pending.request)
+      ||s.pending.request.workspace_id!==B.workspaceId||typeof s.pending.request.operation_id!=="string"))
+    throw new Error("The saved pending request does not identify this workspace.");
+  if(B.pending&&stable(B.pending.request)!==stable(s.pending?.request))
+    throw new Error("Reconcile the current pending request before opening a different saved request.");
+  return structuredClone(s);
+}
+async function offerBrowserBackup(selected){
+  const value=JSON.parse(await selected.text()),candidate=validateBrowserBackup(value);
+  A.restoreCandidate=candidate;
+  showDetails("Open draft backup",'<p>This backup contains '+Object.keys(candidate.drafts).length+
+    ' open drafts and '+candidate.completed.length+' completed or rejected records.</p><p>Saved '+
+    E(dateText(value.exported_at))+'. '+(candidate.pending?'Its original pending request will remain available for reconciliation.':'No pending request is stored.')+
+    '</p><p>Your current drafts will download before this backup opens. Source editions and saved native records stay in the workspace.</p>'+
+    '<div class="actions"><button id="restore-browser-backup">Save current drafts and open backup</button></div>');
+}
+async function restoreBrowserBackup(){
+  if(!A.restoreCandidate)throw new Error("Choose the draft backup again.");
+  const candidate=validateBrowserBackup({schema:"lake-county.browser-backup/v1",
+    workspace_id:B.workspaceId,browser_state:A.restoreCandidate});
+  saveBrowserBackup();
+  // Preserve both histories without duplicating the same original operation.
+  const kept=new Map();
+  for(const record of [...B.completed,...candidate.completed]){
+    const key=record.request?.operation_id||record.request_reference?.operation_id||JSON.stringify(record);
+    kept.set(key,compactCompleted(record));
+  }
+  candidate.completed=[...kept.values()];
+  B=candidate;A.restoreCandidate=null;A.rows=null;A.scenarioRows=null;
+  $("#detail").close();render();
+  await persist();
+  notify("Opened the saved drafts. Review their source basis before applying changes.");
+  if(A.tab==="registers")await loadRows();
+}
+async function retryBrowserSave(){
+  if(!A.initialized){await initialize();return;}
+  if(A.saveTask)await A.saveTask.catch(()=>{});
+  const previous=db;db=await database();previous?.close();
+  await persist();
+  notify("Saved the latest drafts in this browser.");
+}
 async function api(path,body){const response=await fetch(path,{method:body===undefined?"GET":"POST",headers:{"Authorization":"Bearer "+token,...(body===undefined?{}:{"Content-Type":"application/json"})},...(body===undefined?{}:{body:JSON.stringify(body)})});const text=await response.text();let result;try{result=JSON.parse(text);}catch{throw new Error("The local server returned an unreadable response. Retain the original request.");}if(!response.ok){const error=new Error(result.message||"The original operation did not complete.");error.status=response.status;error.result=result;throw error;}return result;}
 function notify(message,error=false){$("#notice").className=error?"error":"";$("#notice").textContent=message;}
 function files(){return A.status.files||[];}
@@ -35,7 +154,7 @@ function fullDetails(value){return '<details><summary>Complete source and native
 function showDetails(title,body){$("#detail-title").textContent=title;$("#detail-body").innerHTML=body;$("#detail").showModal();}
 function lockControls(){const locked=A.preparing||!!B.pending;document.querySelectorAll("fieldset[data-mutate]").forEach(x=>x.disabled=locked);document.querySelectorAll("button[data-mutate]").forEach(x=>x.disabled=locked);$("#actor").disabled=locked;$("#pending").innerHTML=B.pending?'<strong>Original '+E(label(B.pending.request.action))+' request is retained.</strong><div>'+E(B.pending.message||"If the response was interrupted, resume this same request.")+'</div><div class="actions"><button id="resume-pending"'+(A.preparing?" disabled":"")+'>Reconcile original request</button><button id="inspect-pending" class="quiet"'+(A.preparing?" disabled":"")+'>Inspect saved outcome</button>'+(B.pending.definiteRejection?'<button id="release-pending" class="quiet">Keep rejected request; reopen draft</button>':"")+'</div>':"";}
 async function refresh(){A.status=await api("/api/status");if(A.status.context.workspace_id!==B.workspaceId)throw new Error("The server now contains another workspace. Preserve this browser journal and reopen the original workspace.");if(!B.selectedEdition||!edition())B.selectedEdition=editions().at(-1)?.id||null;await persist();render();}
-async function completePending(response){const p=B.pending;if(!p||response.operation_id!==p.request.operation_id||response.workspace_id!==B.workspaceId)throw new Error("The response belongs to another original operation.");const r=response.result;if(p.effect?.selectEdition)B.selectedEdition=r.id;if(p.effect?.tab)A.tab=p.effect.tab;if(p.effect?.clearIdentity)B.identityRows=[];if(p.effect?.draft&&B.drafts[p.effect.draft]?.token===p.effect.draftToken)delete B.drafts[p.effect.draft];B.completed.push({request:p.request,response,completedAt:new Date().toISOString()});B.pending=null;await persist();notify("Saved the original request and its complete result.");await refresh();}
+async function completePending(response){const p=B.pending;if(!p||response.operation_id!==p.request.operation_id||response.workspace_id!==B.workspaceId)throw new Error("The response belongs to another original operation.");const r=response.result;if(p.effect?.selectEdition)B.selectedEdition=r.id;if(p.effect?.tab)A.tab=p.effect.tab;if(p.effect?.clearIdentity)B.identityRows=[];if(p.effect?.draft&&B.drafts[p.effect.draft]?.token===p.effect.draftToken)delete B.drafts[p.effect.draft];B.completed.push(compactCompleted({request:p.request,response,completedAt:new Date().toISOString()}));B.pending=null;await persist();notify("Saved the original request and its complete result.");await refresh();}
 async function dispatch(){const p=B.pending;if(!p)throw new Error("No original request is pending.");try{const r=await api("/api/action",p.request);await completePending(r);}catch(error){if(B.pending){B.pending.message=error.message;B.pending.definiteRejection=error.status>=400&&error.status<500&&error.result?.error!=="operation_conflict";B.pending.error=error.result||null;await persist();}throw error;}}
 async function submit(action,payload,key,effect={}){if(B.pending)throw new Error("Reconcile the existing original request first.");const draft=key?B.drafts[key]:null;const actor=B.operator.trim();if(!/^[A-Za-z0-9][A-Za-z0-9._:/-]{0,199}$/.test(actor))throw new Error("Enter the actual local operator identifier.");B.pending={request:{operation_id:"FEA-UI-"+uid(),actor,workspace_id:B.workspaceId,expected_revision:draft?.baseRevision||A.status.revision,action,payload},effect:{...effect,...(draft?{draft:key,draftToken:draft.token}:{})},message:null};await persist();lockControls();await dispatch();}
 async function run(fn){if(A.preparing)return;A.preparing=true;lockControls();try{await fn();}catch(error){notify(error.message,true);}finally{A.preparing=false;lockControls();}}
@@ -89,13 +208,17 @@ function reviewObject(kind,id){const selected=kind==="edition"?edition(id):chose
 async function rowDetail(id){const r=A.rows?.rows.find(x=>x.row_id===id);if(!r)return;showDetails("Original source row",'<dl class="definition">'+Object.entries(r.values).map(([k,v])=>'<dt>'+E(label(k))+'</dt><dd>'+display(v)+'</dd>').join("")+'</dl><div class="callout '+(r.issues.length?"warn":"")+'">'+(r.issues.length?r.issues.map(i=>'<p><strong>'+E(label(i.kind))+'</strong> · '+E(i.message)+'</p>').join(""):"No mapped source issues were recorded.")+'</div><p class="help">'+E(fileName(r.file_id))+' · source row '+r.source_row+(r.physical_line?" · physical line "+r.physical_line:"")+'</p><div class="actions"><button data-review-row="'+E(r.row_id)+'" data-mutate>Record row review</button><button class="quiet" data-identity-row="'+E(r.row_id)+'" data-mutate>Add to identity review</button><button class="quiet" data-download-file="'+E(r.file_id)+'">Download original</button></div>'+fullDetails(r));lockControls();}
 function scenarioDetail(id){const o=chosen("scenario",id),r=o?.body.result;if(!r)return;const metrics=["capital_need","planned_expenditure","authorized_funding","contingent_funding","cash_receipt","cash_payment","closing_cash"];showDetails(r.name,'<p>'+E(r.currency)+' · '+E(label(r.price_basis))+'</p>'+(r.required_inputs.length||r.unresolved.length?'<div class="callout warn"><strong>Inputs still required</strong>'+r.required_inputs.map(x=>'<p>'+E(x)+'</p>').join("")+r.unresolved.map(x=>'<p>'+E(x.reason)+'</p>').join("")+'</div>':"")+'<div class="table-wrap"><table><thead><tr><th>Year</th>'+metrics.map(m=>'<th>'+E(label(m))+'</th>').join("")+'</tr></thead><tbody>'+r.years.map(y=>'<tr><td>'+y.year+'</td>'+metrics.map(m=>'<td class="number">'+display(y[m])+'</td>').join("")+'</tr>').join("")+'</tbody></table></div><p class="help">“Not supplied” is distinct from a supplied zero. Funding and cash columns must not be combined as available funds.</p>'+[5,10,15].map(n=>'<details><summary>'+n+'-year view · exact coverage and known amounts</summary><pre>'+E(JSON.stringify(r.views[String(n)],null,2))+'</pre></details>').join("")+fullDetails(o));}
 document.addEventListener("input",event=>{const el=event.target;if(el.id==="actor"){B.operator=el.value;persist();return;}if(el.dataset.draft){const d=B.drafts[el.dataset.draft];if(d){d.values[el.dataset.field]=el.value;persist();}}});
-document.addEventListener("change",event=>{const el=event.target;run(async()=>{if(el.dataset.arrayDraft){const v=B.drafts[el.dataset.arrayDraft].values,field=el.dataset.arrayField,set=new Set(v[field]||[]);el.checked?set.add(el.value):set.delete(el.value);v[field]=[...set];await persist();return;}
+document.addEventListener("change",event=>{const el=event.target;run(async()=>{if(el.id==="browser-backup-file"){const selected=el.files[0];el.value="";if(selected)await offerBrowserBackup(selected);return;}if(el.dataset.arrayDraft){const v=B.drafts[el.dataset.arrayDraft].values,field=el.dataset.arrayField,set=new Set(v[field]||[]);el.checked?set.add(el.value):set.delete(el.value);v[field]=[...set];await persist();return;}
 if(el.dataset.selection!==undefined){const s=B.drafts.edition.values.selections[Number(el.dataset.selection)];s[el.dataset.property]=el.value;if(["table","format","pointer","delimiter"].includes(el.dataset.property)){delete s.fields;delete s.sample;s.columns={};}if(s.table!=="document"&&s.format==="document")s.format="csv";await persist();render();return;}
 if(el.dataset.mapSelection!==undefined){const s=B.drafts.edition.values.selections[Number(el.dataset.mapSelection)];s.columns||={};if(el.value)s.columns[el.dataset.mapField]=el.value;else delete s.columns[el.dataset.mapField];await persist();return;}
 if(["register-edition","register-table","issues-only"].includes(el.id)){if(el.id==="register-edition")B.selectedEdition=el.value;if(el.id==="register-table")B.table=el.value;if(el.id==="issues-only")B.onlyIssues=el.checked;B.offset=0;A.rows=null;await persist();render();await loadRows();return;}
 if(el.dataset.draft){const k=el.dataset.draft;B.drafts[k].values[el.dataset.field]=el.value;if(k==="scenario"&&["mode","edition_id"].includes(el.dataset.field)){A.scenarioRows=null;B.drafts[k].values.selected_row_ids=[];B.drafts[k].values.funding_row_ids=[];}await persist();if(["scenario","publication"].includes(k))render();}});});
 document.addEventListener("click",event=>{const el=event.target.closest("button");if(!el)return;if(el.id==="close-detail"){$("#detail").close();return;}run(async()=>{
 if(el.dataset.tab){A.tab=el.dataset.tab;render();if(A.tab==="registers"){A.rows=null;await loadRows();}return;}
+if(el.id==="download-browser-backup"||el.id==="download-unsaved-backup"){saveBrowserBackup();return;}
+if(el.id==="open-browser-backup"){$("#browser-backup-file").click();return;}
+if(el.id==="restore-browser-backup"){await restoreBrowserBackup();return;}
+if(el.id==="retry-browser-save"){await retryBrowserSave();return;}
 if(el.id==="refresh"){await refresh();if(A.tab==="registers")await loadRows();return;}
 if(el.id==="resume-pending"){await dispatch();return;}
 if(el.id==="inspect-pending"){const outcome=await api("/api/operation?"+new URLSearchParams({id:B.pending.request.operation_id}));if(outcome.status==="complete"){if(JSON.stringify(outcome.request)!==JSON.stringify(B.pending.request)){if(outcome.request_sha256!==await hashJSON(B.pending.request))throw new Error("The saved operation is bound to another request.");}await completePending(outcome.result);}else notify("No completed native result exists. The original request remains ready for exact reconciliation.");return;}
@@ -133,5 +256,30 @@ function base64(raw){let result="";for(let i=0;i<raw.length;i+=32768)result+=Str
 async function hash(raw){return [...new Uint8Array(await crypto.subtle.digest("SHA-256",raw))].map(v=>v.toString(16).padStart(2,"0")).join("");}
 function stable(value){if(Array.isArray(value))return"["+value.map(stable).join(",")+"]";if(value&&typeof value==="object")return"{"+Object.keys(value).sort().map(k=>JSON.stringify(k)+":"+stable(value[k])).join(",")+"}";return JSON.stringify(value);}
 async function hashJSON(value){return hash(new TextEncoder().encode(stable(value)));}
-async function initialize(){try{if(!token)throw new Error("Open the original private startup link printed by the local CLI.");db=await database();A.status=await api("/api/status");const id=A.status.context.workspace_id,stored=await getStored(id);if(stored){if(stored.schema!==B.schema||stored.workspaceId!==id)throw new Error("The retained browser state belongs to another workspace.");B=stored;}else{B.workspaceId=id;B.operator=A.status.context.created_by||"";B.selectedEdition=editions().at(-1)?.id||null;await persist();}render();}catch(error){notify(error.message,true);$("#main").innerHTML='<div class="empty">This page needs the selected local workspace and its private startup link.</div>';}}
+async function initialize(){
+  try{
+    if(!token)throw new Error("Open the original private startup link printed by the local CLI.");
+    A.status=await api("/api/status");
+    const id=A.status.context.workspace_id;
+    B.workspaceId=id;B.operator=A.status.context.created_by||"";
+    B.selectedEdition=editions().at(-1)?.id||null;
+    let stored;
+    try{db=await database();stored=await getStored(id);}
+    catch(error){A.storageError=error?.message||"Browser drafts could not be opened.";storageControls();throw error;}
+    if(stored){
+      if(stored.schema!==B.schema||stored.workspaceId!==id)
+        throw new Error("The retained browser state belongs to another workspace.");
+      B=stored;
+      B.completed=B.completed.map(compactCompleted);
+    }
+    A.initialized=true;
+    try{await persist();}catch{}
+    render();storageControls();
+  }catch(error){
+    notify(error.message,true);
+    $("#main").innerHTML=A.storageError
+      ? '<div class="empty">The saved drafts could not be opened. Keep this page open and use “Try saving again” to reconnect to browser storage.</div>'
+      : '<div class="empty">This page needs the selected local workspace and its private startup link.</div>';
+  }
+}
 initialize();

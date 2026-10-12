@@ -846,11 +846,11 @@ def render_report(publication):
     issues = [dict(row_id=r["row_id"], table=r["table"], source_row=r["source_row"], **issue)
               for r in p["rows"] for issue in r["issues"]]
     return ("""<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>""" + title + """</title><style>body{font:16px/1.6 system-ui;color:#17372f;background:#f6f8f5;margin:0}
-main{max-width:1100px;margin:auto;padding:40px 24px}section{background:white;padding:24px;margin:24px 0;border:1px solid #d4dfd8;border-radius:12px}
-h1{font-size:36px;line-height:1.15}h2{font-size:24px}small,code{overflow-wrap:anywhere}.state{padding:14px;background:#fff0c9;border-left:4px solid #c38e23}
-table{border-collapse:collapse;width:100%;font-size:13px}td,th{padding:10px;text-align:left;border-bottom:1px solid #d4dfd8;overflow-wrap:anywhere}
-.scroll{overflow:auto}pre{white-space:pre-wrap;overflow-wrap:anywhere}.muted{color:#536a62}@media print{body{background:white}section{break-inside:avoid;border:0;padding:0}.scroll{overflow:visible}main{padding:0}}</style><main>
+<title>""" + title + """</title><style>body{font:16px/1.6 system-ui;color:#171717;background:#fff;margin:0}
+main{max-width:1100px;margin:auto;padding:40px 24px}section{background:white;padding:24px;margin:24px 0;border:1px solid #d0d0d0;border-radius:0}
+h1{font-size:36px;line-height:1.15}h2{font-size:24px}small,code{overflow-wrap:anywhere}.state{padding:14px;background:#f0f0f0;border-left:4px solid #333}
+table{border-collapse:collapse;width:100%;font-size:13px}td,th{padding:10px;text-align:left;border-bottom:1px solid #d0d0d0;overflow-wrap:anywhere}
+.scroll{overflow:auto}pre{white-space:pre-wrap;overflow-wrap:anywhere}.muted{color:#555}@media print{body{background:white}section{break-inside:avoid;border:0;padding:0}.scroll{overflow:visible}main{padding:0}}</style><main>
 <p class="muted">Lake County, Colorado · FEA proposed workshare</p><h1>""" + title + """</h1><p class="state">""" + escape(state) + """</p>
 <p>No accepted County contract or client approval is represented. Professional findings, valuations and the selected existing model remain FEA-owned inputs.</p>
 <section><h2>Selected source</h2><p>""" + escape(p["edition"]["name"]) + """</p><p>Client asset register present: """ + escape(p["edition"]["client_records_present"]) + """</p>
