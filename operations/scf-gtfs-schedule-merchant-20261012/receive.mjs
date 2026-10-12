@@ -2,6 +2,7 @@
 // MIT. Complete original NWConnector source receiving through the shipped GTFS product.
 import { readFile, mkdir, open, lstat, realpath, link, unlink } from 'node:fs/promises';
 import { createHash, randomUUID } from 'node:crypto';
+import { constants } from 'node:fs';
 import { join, resolve, basename } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
@@ -124,6 +125,10 @@ export async function receiveGtfsSchedule({sourceRoot,directory,archive,sourceMa
   async function download(call,kind,id,item,target){
     const partial=target+'.part';
     if(await exists(target)){
+      const targetInfo=await lstat(target);
+      need(targetInfo.isFile()&&!targetInfo.isSymbolicLink()&&!(targetInfo.mode&0o077)&&[1,2].includes(targetInfo.nlink),
+        'Use the original private completed download.');
+      need(targetInfo.nlink===1||await exists(partial),'Reconcile the original completed download link.');
       const current=await shaFile(target);need(current.sha256===item.sha256&&current.bytes===item.bytes,'Retained completed download changed.');
       if(await exists(partial)){
         const [named,staged]=await Promise.all([lstat(target),lstat(partial)]);
@@ -135,7 +140,16 @@ export async function receiveGtfsSchedule({sourceRoot,directory,archive,sourceMa
     }
     let file,retained=0,offset=0,readId;
     try{
-      file=await open(partial,'a+',0o600);retained=(await file.stat()).size;
+      if(await exists(partial)){
+        const staged=await lstat(partial);
+        need(staged.isFile()&&!staged.isSymbolicLink()&&!(staged.mode&0o077)&&staged.nlink===1,
+          'Use the original private single-link download prefix.');
+      }
+      file=await open(partial,constants.O_RDWR|constants.O_CREAT|constants.O_APPEND|constants.O_NOFOLLOW|constants.O_NONBLOCK,0o600);
+      const held=await file.stat(),named=await lstat(partial);
+      need(held.isFile()&&held.nlink===1&&!(held.mode&0o077)&&!named.isSymbolicLink()&&named.dev===held.dev&&named.ino===held.ino,
+        'The original private download prefix changed while opening.');
+      retained=held.size;
       need(retained<=item.bytes,'Retained download prefix exceeds the original file.');
       for(;;){
         const response=await call('merchant_gtfs_file_read',{kind,id,file:item.file,expectedSha256:item.sha256,
@@ -145,7 +159,15 @@ export async function receiveGtfsSchedule({sourceRoot,directory,archive,sourceMa
         const matched=Math.max(0,Math.min(chunk.length,retained-offset));
         if(matched){const original=Buffer.alloc(matched),got=await file.read(original,0,matched,offset);
           need(got.bytesRead===matched&&original.equals(chunk.subarray(0,matched)),'Retained download prefix changed.');}
-        if(matched<chunk.length){await file.write(chunk.subarray(matched));await file.sync();}
+        if(matched<chunk.length){
+          const remaining=chunk.subarray(matched);let written=0;
+          while(written<remaining.length){
+            const progress=await file.write(remaining,written,remaining.length-written,null);
+            need(progress.bytesWritten>0,'The original download write made no progress.');
+            written+=progress.bytesWritten;
+          }
+          await file.sync();
+        }
         if(value.nextOffset===null)break;
         need(value.nextOffset===offset+chunk.length,'Original file-read offset changed.');offset=value.nextOffset;
       }
