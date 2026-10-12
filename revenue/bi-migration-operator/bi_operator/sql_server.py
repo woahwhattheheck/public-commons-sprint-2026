@@ -684,10 +684,13 @@ class SqlServer:
         if table is None:
             raise ValueError("Select an actual table in the retained migration plan.")
         fields = request.get("fields", [])
-        names = [c["name"] for c in table["columns"]]
-        if (not isinstance(fields, list) or {f.get("target") for f in fields} != set(names) or len(fields) != len(names)
+        names = [c["name"] for c in table["columns"] if not c.get("is_calculated")]
+        if not names:
+            raise ValueError("This table has no imported model columns to bind to a SQL capture.")
+        if (not isinstance(fields, list) or any(not isinstance(f, dict) for f in fields)
+            or {f.get("target") for f in fields} != set(names) or len(fields) != len(names)
             or any(f.get("source") not in capture["payload"]["columns"] for f in fields)):
-            raise ValueError("Map every model column exactly once to a retained native output field.")
+            raise ValueError("Map every imported model column exactly once to a retained native output field.")
         metadata = {c["name"]: c for c in capture["payload"]["column_types"]}
         findings = []
         for field in fields:
@@ -716,8 +719,15 @@ class SqlServer:
         if capture["payload"]["file"]["digest"] != p["capture_sha256"] or not capture["payload"]["complete"]:
             raise ValueError("The original reviewed complete SQL capture differs.")
         headers, rows = read_csv(self.store.bytes(capture["payload"]["file"]["digest"]))
-        fields = p["fields"]
+        value = copy.deepcopy(plan["payload"])
+        target_table = next(t for t in value["project"]["tables"] if t["name"] == p["table"])
+        names = {c["name"] for c in target_table["columns"] if not c.get("is_calculated")}
+        # Older reviewed mappings also named calculated columns; only imported
+        # fields belong in the CSV consumed by the original native builder.
+        fields = [f for f in p["fields"] if f["target"] in names]
         targets = [f["target"] for f in fields]
+        if not names or set(targets) != names or len(targets) != len(names):
+            raise ValueError("The reviewed mapping must bind every imported model column exactly once.")
         mapped = []
         null_token = capture["payload"]["null_token"]
         for row in rows:
@@ -731,10 +741,9 @@ class SqlServer:
                 converted[field["target"]] = cell
             mapped.append(converted)
         blob = self.store.blob(csv_bytes(targets, mapped), p["table"] + "-sql-source.csv", "text/csv")
-        value = copy.deepcopy(plan["payload"])
-        target_table = next(t for t in value["project"]["tables"] if t["name"] == p["table"])
         for column in target_table["columns"]:
-            column["source_column"] = column["name"]
+            if not column.get("is_calculated"):
+                column["source_column"] = column["name"]
         value["bindings"][p["table"]] = {"kind": "csv", "digest": blob["digest"],
             "null_token": capture["payload"]["null_token"], "source": {"sql_mapping": record_ref(mapping),
             "sql_capture": p["capture"], "native_types": capture["payload"]["column_types"],

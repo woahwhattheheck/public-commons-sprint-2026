@@ -121,11 +121,13 @@ async function sqlMappings(){
   sqlMappingCapture=selectedCapture;sqlMappingPlan=selectedPlan;
   const tables=sqlMappingPlan?.payload.project.tables||[],tableName=sqlSelection.table||tables[0]?.name;
   const table=tables.find(t=>t.name===tableName);sqlSelection.table=table?.name||null;
+  const importedColumns=(table?.columns||[]).filter(c=>!c.is_calculated);
   sqlDraftKey="mapping:"+captureId+":"+planId+":"+(sqlMappingPlan?.revision||0)+":"+tableName;
   let fields="";
   if(table&&sqlMappingCapture){
     const types=Object.fromEntries(sqlMappingCapture.payload.column_types.map(c=>[c.name,c]));
-    fields=rowsTable(["Model field / type","Original captured SQL alias","Native information"],table.columns.map((c,i)=>{
+    fields=rowsTable(["Model field / type","Source or calculation","Native information"],table.columns.map(c=>{
+      if(c.is_calculated)return '<tr><td><strong>'+h(c.name)+'</strong><div class="muted">'+h(c.data_type||c.dataType||c.type||"")+'</div></td><td><strong>Calculated in the model</strong><pre>'+h(c.dax_expression||"")+'</pre></td><td>Uses the retained model expression.</td></tr>';
       const prior=(workspace.sql_mapping||[]).find(m=>m.payload.capture.id===captureId&&m.payload.plan.id===planId&&m.payload.table===tableName)?.payload.fields.find(f=>f.target===c.name)?.source;
       const match=[prior,c.source_column,c.name].find(n=>sqlMappingCapture.payload.columns.includes(n))||"";
       return '<tr><td><strong>'+h(c.name)+'</strong><div class="muted">'+h(c.data_type||c.dataType||c.type||"")+'</div></td><td><select class="sql-binding-field" data-target="'+h(c.name)+'"><option value="">Choose…</option>'+sqlMappingCapture.payload.columns.map(n=>'<option value="'+h(n)+'"'+(n===match?" selected":"")+'>'+h(n)+'</option>').join("")+'</select></td><td>'+h(match?types[match]?.type:"Review the complete native type list below")+'</td></tr>';
@@ -133,7 +135,7 @@ async function sqlMappings(){
   }
   const mappings=workspace.sql_mapping||[];
   return '<div class="panel"><h2>Bind complete native captures to the original model</h2><div class="grid">'+formSelect("Complete SQL capture","sql-mapping-capture",captures,captureId)+formSelect("Migration plan","sql-mapping-plan",workspace.plan,planId)+'</div>'+sqlSelect("Actual model table","sql-mapping-table",tables.map(t=>({value:t.name,label:t.name})),tableName)+fields
-    +(fields?'<label>Precision, schema and source-selection review<textarea id="sql-mapping-note"></textarea></label><button data-action="sql-save-mapping" class="primary">Retain reviewed field mapping</button><p class="muted">Every model field requires an exact captured alias. Applying the mapping creates a plan revision with the complete mapped CSV, the original NULL marker, native types, parameters and capture-window lineage. Existing baselines and source files remain retained.</p>':empty("Choose a capture and migration plan","Complete a reviewed SQL capture and retain an original report/model source first."))
+    +(fields?(importedColumns.length?'<label>Precision, schema and source-selection review<textarea id="sql-mapping-note"></textarea></label><button data-action="sql-save-mapping" class="primary">Retain reviewed field mapping</button><p class="muted">Every imported model field requires an exact captured alias. Calculated fields keep their model expressions. Applying the mapping creates a plan revision with the complete mapped CSV, the original NULL marker, native types, parameters and capture-window lineage. Existing baselines and source files remain retained.</p>':'<p class="muted">This table has no imported model columns to bind to a SQL capture.</p>'):empty("Choose a capture and migration plan","Complete a reviewed SQL capture and retain an original report/model source first."))
     +(sqlMappingCapture?'<details><summary>Original native types and capture window</summary><pre>'+h(sqlJson({types:sqlMappingCapture.payload.column_types,parameters:sqlMappingCapture.payload.parameters,consistency:sqlMappingCapture.payload.consistency,captured_at:sqlMappingCapture.payload.captured_at}))+'</pre></details>':"")+'</div>'
     +'<div class="panel"><h2>Reviewed mappings</h2>'+(mappings.length?rowsTable(["Mapping","Review","Original plan",""],mappings.map(r=>'<tr><td>'+h(label(r))+'</td><td>'+h(r.payload.review_note)+'</td><td>'+h(r.payload.plan.id)+' · r'+h(r.payload.plan.revision)+'</td><td><button data-action="sql-apply-mapping" data-id="'+r.id+'">Apply as plan revision</button> '+inspectButton(r)+'</td></tr>')):empty("No reviewed mapping","Save the complete source-to-model mapping above."))+'</div>';
 }
