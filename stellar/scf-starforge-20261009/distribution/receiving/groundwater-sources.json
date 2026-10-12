@@ -1,7 +1,7 @@
 {
   "schema": "stellar-forge.groundwater-original-source.v1",
-  "sourceHead": "b66c57542bf125c2d4a56dc3b57538afd8858646",
-  "sourceCapsule": "e0ea40cad53386320062f30b6c2a480859058008",
+  "sourceHead": "96a1d66ad032cbbb2640252fedd3f4048a6c8dd6",
+  "sourceCapsule": "ec6a1d1faa4d641835d2853715887ad5481be800",
   "sourcePrefix": "stellar/scf-starforge-20261009/sf30-seller-sdk/groundwater/",
   "files": [
     {
@@ -41,8 +41,8 @@
     },
     {
       "path": "examples/NATIVE_WORKFLOW.md",
-      "gitBlob": "486c391c7806757428a2b45ccab10c9b8902c9ee",
-      "bytes": 11779
+      "gitBlob": "60c77723b568704b66eb3497cbf39bc649b03e28",
+      "bytes": 12903
     },
     {
       "path": "examples/browser_workflow.mjs",
@@ -66,8 +66,8 @@
     },
     {
       "path": "examples/run_publisher_workflow.py",
-      "gitBlob": "9fd959ed1415ec8e47cfe70b152f66f040af5998",
-      "bytes": 28142
+      "gitBlob": "6b10c8951eed4f265fbbaaa412a97cd9f411af24",
+      "bytes": 28650
     },
     {
       "path": "groundwater_workspace/__init__.py",
