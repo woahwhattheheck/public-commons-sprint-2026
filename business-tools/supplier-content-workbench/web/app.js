@@ -93,7 +93,7 @@ function resultIdentity(d){if(!d||typeof d!=="object")return{};return Object.fro
 async function performRequest(r,body){
  r.state="pending";r.lastAttemptAt=new Date().toISOString();await saveRequest(r);state.pendingMemory.set(r.id,body);
  try{const data=await api(r.path,{method:"POST",body,requestId:r.id});r.state="accepted";r.result=resultIdentity(data);r.completedAt=new Date().toISOString();r.bodyJSON=null;r.error=null;await saveRequest(r);state.pendingMemory.delete(r.id);return data;}
- catch(e){r.state=e.status>=400&&e.status<500?"rejected":"unknown";r.error={message:e.message,code:e.code,status:e.status};try{await saveRequest(r);}catch{}if(r.state==="unknown")e.message+=" Review the saved original request in Request recovery; keep UUID "+r.id+".";throw e;}
+ catch(e){r.state=e.status>=400&&e.status<500&&!["transport_unknown","response_unknown"].includes(e.code)?"rejected":"unknown";r.error={message:e.message,code:e.code,status:e.status};try{await saveRequest(r);}catch{}if(r.state==="unknown")e.message+=" Review the saved original request in Request recovery; keep UUID "+r.id+".";throw e;}
 }
 async function mutate(path,body,{name="Save change",sensitive=false}={}){
  const serialized=JSON.stringify(body),identity=sensitive?JSON.stringify(body,(key,value)=>/^(password|otp|secret|client_secret)$/i.test(key)?"[protected value omitted]":value):serialized,bodySHA256=await shaText(identity),existing=(await savedRequests()).find(r=>r.path===path&&r.bodySHA256===bodySHA256&&["pending","unknown"].includes(r.state));
