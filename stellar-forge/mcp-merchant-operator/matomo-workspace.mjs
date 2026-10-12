@@ -1,14 +1,14 @@
 // MIT. Typed agent and browser work over the one original retained Matomo workspace.
 import {constants} from 'node:fs';
-import {open,realpath,access} from 'node:fs/promises';
-import {createHash} from 'node:crypto';
-import {dirname,isAbsolute,resolve} from 'node:path';
+import {open,realpath,access,readdir,rename,rm} from 'node:fs/promises';
+import {createHash,randomUUID} from 'node:crypto';
+import {dirname,isAbsolute,resolve,join,relative,sep} from 'node:path';
 import {exact,failure,identifier,line,plain} from './host-files.mjs';
 import {RetainedFileReads,MAX_RETAINED_IMMUTABLE_FILE_BYTES} from './retained-file-reads.mjs';
 import {MATOMO_MUTATIONS,MATOMO_ARTIFACTS} from './catalog/matomo-workspace.mjs';
 import {inspectMatomoWorkspace} from '../../stellar/scf-starforge-20261009/sf30-seller-sdk/matomo/launch.mjs';
 import {identifier as nativeId} from '../../stellar/scf-starforge-20261009/sf30-seller-sdk/matomo/contract.mjs';
-import {hashPrivate} from '../../stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/publisher/files.mjs';
+import {hashPrivate,privateDirectory,acquireWorkspace,syncDirectory,bytes} from '../../stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/publisher/files.mjs';
 export {matomoWorkspaceTools} from './catalog/matomo-workspace.mjs';
 
 export const MATOMO_WORKSPACE_CONNECTION_SCHEMA='stellar-forge.matomo-workspace-connection.v1';
@@ -78,6 +78,93 @@ export async function readMatomoWorkspaceConfiguration(path) {
   }
   return {schema:MATOMO_WORKSPACE_CONNECTION_SCHEMA,workspaces};
 }
+
+/** Set up the shared host against the selected original Matomo release store. */
+export async function initializeMatomoWorkspaceMerchant(options) {
+  exact(options,['directory','connection','workspace','name'],['directory','connection']);
+  const root=hostPath(options.directory,process.cwd()),connection=hostPath(options.connection,process.cwd());
+  const name=line(options.name??'Starforge Matomo operator','Merchant name');
+  const selection=await readMatomoWorkspaceConfiguration(connection),aliases=Object.keys(selection.workspaces);
+  const selected=options.workspace??(aliases.length===1?aliases[0]:undefined);
+  if(typeof selected!=='string'||!Object.hasOwn(selection.workspaces,selected))
+    throw failure('CONFIGURATION_ERROR','Choose workspace from the declared aliases when the connection contains more than one.');
+  identifier(selected,'Matomo workspace alias');
+  for(const definition of Object.values(selection.workspaces)) {
+    const within=relative(definition.directory,root);
+    if(!within||!isAbsolute(within)&&within!=='..'&&!within.startsWith('..'+sep))
+      throw failure('CONFIGURATION_ERROR','Keep the MCP host directory outside every original Matomo workspace.');
+  }
+  const definition=selection.workspaces[selected],releaseStore=join(definition.directory,'merchant','releases');
+  const configuration=join(root,'merchant-mcp.json');
+  const raw={schema:'stellar-forge.merchant-mcp.v1',name,releaseStore,
+    exportsDirectory:'./customer-exports',sources:{},matomoWorkspaceConnection:connection};
+  const binding={schema:'stellar-forge.matomo-host-setup.v1',configuration:raw,workspace:selected,
+    workspaces:Object.fromEntries(Object.entries(selection.workspaces).map(([alias,value])=>
+      [alias,{directory:value.directory,workspaceId:value.workspaceId,identity:value.identity,
+        label:value.label,python:value.python??null,environmentFile:value.environmentFile??null,
+        environmentSha256:value.environmentSha256??null,allowLoopbackSource:value.allowLoopbackSource}]))};
+  await privateDirectory(root,true);
+  const releaseHost=await acquireWorkspace(root);
+  try {
+    const {writeNew,readRetained}=await import('../../stellar/scf-starforge-20261009/sf30-seller-sdk/matomo/store.mjs');
+    const allowed=new Set(['publisher.lock','matomo-host-setup.json','matomo-host-setup.json.matomo-pending',
+      'merchant-mcp.json','merchant-mcp.json.matomo-pending','customer-exports']);
+    if((await readdir(root)).some(item=>!allowed.has(item)))
+      throw failure('MATOMO_HOST_NOT_EMPTY','Use a new private host directory or reopen this exact retained Matomo setup.');
+    await writeNew(join(root,'matomo-host-setup.json'),bytes(binding));
+    let retained;
+    try{retained=await readRetained(configuration,1048576);}catch(issue){if(issue.code!=='ENOENT')throw issue;}
+    const expected=Buffer.from(JSON.stringify(raw,null,2)+'\n');
+    if(retained&&!retained.equals(expected))
+      throw failure('MATOMO_HOST_CONFIGURATION_CONFLICT','The retained host configuration differs from this original setup.');
+    if(!retained) {
+      // Use the same native workspace lease as the report model, and the
+      // original SF82 initializer. No report or provider request is involved.
+      const releaseOriginal=await acquireWorkspace(definition.directory);
+      try {
+        await inspectMatomoWorkspace(definition.directory,{expectedIdentity:definition.identity,
+          allowLoopback:definition.allowLoopbackSource});
+        const {readReleaseState,initReleaseStore}=await import('../../stellar/scf-starforge-20261009/sf82-seller-pilot/releases.mjs');
+        let missing=false;
+        try{await access(releaseStore);}catch(issue){if(issue.code!=='ENOENT')throw issue;missing=true;}
+        if(missing) {
+          const parent=join(definition.directory,'merchant');
+          await privateDirectory(parent,true);
+          const staging=join(parent,'.matomo-host-release-'+randomUUID());
+          let published=false;
+          try {
+            // Build the original empty SF82 store completely before its
+            // canonical directory appears. A short write is not a saved store.
+            await initReleaseStore(staging);
+            await readReleaseState(staging);
+            try {
+              await access(releaseStore);
+              throw failure('MATOMO_RELEASE_STORE_APPEARED','The original release store appeared during setup; inspect it before continuing.');
+            } catch(issue) {if(issue.code!=='ENOENT')throw issue;}
+            await rename(staging,releaseStore);published=true;
+            await syncDirectory(parent);
+          } finally {
+            if(!published)await rm(staging,{recursive:true,force:true});
+          }
+        }
+        await readReleaseState(releaseStore);
+      } finally {await releaseOriginal();}
+      await privateDirectory(join(root,'customer-exports'),true);
+      await writeNew(configuration,expected);
+    }
+    const configured=await (await import('./config.mjs')).readMerchantConfig(configuration);
+    if(!configured.matomoWorkspaces)
+      throw failure('MATOMO_PROVIDER_NOT_INSTALLED','Use the maintained merchant host with this source contribution selected.');
+    const current=await readMatomoWorkspaceConfiguration(connection);
+    if(JSON.stringify(current)!==JSON.stringify(selection))
+      throw failure('MATOMO_CONFIGURATION_CHANGED','The original connection changed during host setup; inspect its retained configuration.');
+    return {schema:raw.schema,state:retained?'REOPENED':'INITIALIZED',configuration,
+      matomoWorkspacesConfigured:true,workspace:selected,releaseStore,
+      ownership:'ORIGINAL_MATOMO_WORKSPACE',workspaces:Object.entries(selection.workspaces).map(([workspace,value])=>
+        ({workspace,label:value.label,workspaceId:value.workspaceId,workspaceIdentity:value.identity}))};
+  } finally {await releaseHost();}
+}
+
 function view(value,root) {
   if(Array.isArray(value))return value.map(item=>view(item,root));
   if(typeof value==='string')return value===root||value.startsWith(root+'/')?'[private workspace]'+value.slice(root.length):value;

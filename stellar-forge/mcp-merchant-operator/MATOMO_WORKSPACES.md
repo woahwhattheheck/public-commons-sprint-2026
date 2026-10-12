@@ -112,13 +112,54 @@ The source leaf exports the following maintained integration points:
 | MATOMO_WORKSPACE_CONNECTION_SCHEMA | Versioned connection schema above. |
 | MerchantMatomoWorkspaces(config) | Native owner with summary, call(name,args) and close(). |
 | matomoWorkspaceTools(tool) | Complete typed tool metadata using the host's existing tool helper. |
+| initializeMatomoWorkspaceMerchant(options) | Bind/reopen the original source workspace and release store in the maintained merchant host. |
 
 The normalized host field is matomoWorkspaces. This leaf has no publishers
 dependency: the original Matomo model already opens and serializes its original
-SQLite publisher. The maintained source-contribution MCP owner supplies the
-shared configuration, initializer, catalog and lazy factory registration. Inspect
-the selected host's registrations before assuming an older installed cut contains
-that declaration. The public leaf can also be called directly by an equipped
+SQLite publisher. Its source-owned descriptor is
+providers/matomo-workspaces.mjs; the existing contribution declares it as
+merchantProviders.matomo-workspaces. It uses the maintained provider loader,
+configuration reader, lazy owner and shutdown lifecycle. An older installed cut
+must include this declaration before it can advertise the Matomo tool family.
+
+Save one private setup JSON after saving the connection above:
+
+~~~json
+{
+  "directory": "/private/matomo-agent",
+  "connection": "/private/matomo/connection.json",
+  "workspace": "analytics",
+  "name": "Retained Matomo operations"
+}
+~~~
+
+Run the original source-contribution commands:
+
+~~~sh
+starforge merchant-providers inspect matomo-workspaces
+starforge merchant-providers init matomo-workspaces --options /private/matomo/agent-setup.json
+~~~
+
+The initializer returns the original host configuration path
+/private/matomo-agent/merchant-mcp.json. Select that path with the installed
+merchant MCP host's normal configuration option. Only directory and connection
+are required; workspace is required when the connection has multiple aliases.
+The selected alias binds the host's common releaseStore to that original
+workspace's merchant/releases. All other aliases keep their own native Matomo
+release and report history.
+
+Setup validates the original workspace identity and takes its existing native
+lease only if it must initialize that same SF82 release store. It neither opens
+a report nor dispatches a provider request. Keep the private host directory
+outside the selected original workspaces. Its retained setup binding and final
+configuration use the original create-only atomic writer. Repeating the same
+setup reopens it; different paths, identities or settings under that host
+directory fail with a retained-configuration conflict. An interrupted incomplete
+setup can continue with the same options after the original owner is closed.
+The original report workspace remains the sole data owner.
+
+The leaf also exports initializeMatomoWorkspaceMerchant(options), used by that
+same provider hook. The public owner can be called directly by an equipped
 Node application:
 
 ~~~js
