@@ -134,7 +134,7 @@ export async function main(argv = process.argv.slice(2)) {
   }
   throw new Error("Unknown command. Use --help.");
 }
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url))
+if (process.argv[1] && await fs.realpath(resolve(process.argv[1])).then(path => path === fileURLToPath(import.meta.url), () => false))
   main().then(code => { if (Number.isInteger(code)) process.exitCode = code; }).catch(error => {
     console.error(JSON.stringify({ error: error.message, status: error.status ?? 1, ...(error.details ? { details: error.details } : {}) }));
     process.exitCode = 1;

@@ -22,5 +22,5 @@ export class LineageClient {
   saveReview(args: Mutation & {id?: string; title: string; reason: string; decision: Decision; entityKeys: EntityKey[]; editionId?: string | null}): Promise<{revision: number; review: Review}>;
   attachResult(bytes: Uint8Array | string, args: Mutation & {name: string; mediaType?: string; entityKeys: EntityKey[]; editionId: string; sourceReference: string; query?: unknown}): Promise<{revision: number; result: Record<string, unknown>}>;
   exportWorkspace(options?: {includeApplication?: boolean}): Promise<Export>;
-  downloadExport(id: string, destination: string, options?: {chunkBytes?: number}): Promise<{id: string; bytes: number; destination: string}>;
+  downloadExport(id: string, destination: string, options?: {chunkBytes?: number}): Promise<{id: string; bytes: number; destination: string; alreadyPresent?: boolean}>;
 }

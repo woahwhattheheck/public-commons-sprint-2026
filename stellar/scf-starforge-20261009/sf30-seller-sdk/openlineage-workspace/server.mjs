@@ -21,6 +21,14 @@ async function body(request, maximum) {
   }
   return Buffer.concat(chunks);
 }
+async function jsonBody(request, maximum) {
+  const bytes = await body(request, maximum);
+  try { return JSON.parse(bytes.toString("utf8")); }
+  catch (error) {
+    if (error instanceof SyntaxError) throw new WorkspaceError("Invalid JSON request", 400);
+    throw error;
+  }
+}
 function json(response, status, value) {
   const bytes = Buffer.from(JSON.stringify(value));
   response.writeHead(status, { "Content-Type": "application/json; charset=utf-8", "Content-Length": bytes.length, "Cache-Control": "no-store" });
@@ -70,11 +78,12 @@ export async function startServer({ directory, title, host = "127.0.0.1", port =
         json(response, 200, result); return;
       }
       if (request.method === "POST" && requestUrl.pathname === "/api/action") {
-        const payload = JSON.parse((await body(request, maxBodyBytes)).toString("utf8"));
+        const payload = await jsonBody(request, maxBodyBytes);
+        if (!payload || typeof payload !== "object" || Array.isArray(payload) || typeof payload.action !== "string" || (payload.args !== undefined && (!payload.args || typeof payload.args !== "object" || Array.isArray(payload.args)))) throw new WorkspaceError("Action requests require an action name and an arguments object", 400);
         json(response, 200, await workspace.dispatch(payload.action, payload.args ?? {})); return;
       }
       if (request.method === "POST" && requestUrl.pathname === "/mcp") {
-        const payload = JSON.parse((await body(request, maxBodyBytes)).toString("utf8"));
+        const payload = await jsonBody(request, maxBodyBytes);
         const result = await handleRpc(workspace, payload);
         if (result === null) { response.writeHead(202); response.end(); } else json(response, 200, result);
         return;
@@ -88,7 +97,10 @@ export async function startServer({ directory, title, host = "127.0.0.1", port =
       }
       const exportMatch = /^\/api\/exports\/([0-9a-f]{64})$/.exec(requestUrl.pathname);
       if (request.method === "GET" && exportMatch) {
-        const id = exportMatch[1], data = await fs.readFile(join(workspace.directory, "exports", id + ".json"));
+        const id = exportMatch[1];
+        let data;
+        try { data = await fs.readFile(join(workspace.directory, "exports", id + ".json")); }
+        catch (error) { if (error.code === "ENOENT") throw new WorkspaceError("Unknown workspace export", 404); throw error; }
         if (sha256(data) !== id) throw new WorkspaceError("Export hash mismatch", 409);
         const range = request.headers.range;
         if (range) {
@@ -102,7 +114,7 @@ export async function startServer({ directory, title, host = "127.0.0.1", port =
       }
       throw new WorkspaceError("Not found", 404);
     } catch (error) {
-      if (!response.headersSent) json(response, error.status ?? (error.code === "ENOENT" ? 404 : 400), { error: error.message, ...(error.details ? { details: error.details } : {}) });
+      if (!response.headersSent) json(response, error instanceof WorkspaceError ? error.status : 500, { error: error.message, ...(error.details ? { details: error.details } : {}) });
       else response.destroy();
     }
   });

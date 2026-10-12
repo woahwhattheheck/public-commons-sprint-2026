@@ -4,7 +4,7 @@ const stringList = { type: "array", items: string, minItems: 1 };
 const mutation = { operationId: string, expectedRevision: integer };
 const definitions = [
   ["workspace.metadata", "Read the exact original workspace identity, revision and complete record counts.", {}, []],
-  ["records.read", "Page an original collection at its selected workspace revision; continue nextOffset until null.", { collection: { enum: ["jobs", "datasets", "runs", "edges", "observedEdges", "sources", "events", "editions", "reviews", "results", "diagnostics"] }, edition: string, expectedRevision: integer, offset: integer, limit: { type: "integer", minimum: 1, maximum: 1000 } }, ["collection", "expectedRevision"]],
+  ["records.read", "Page an original collection at its selected workspace revision; continue nextOffset until null. Operation history is workspace-wide: omit edition.", { collection: { enum: ["jobs", "datasets", "runs", "edges", "observedEdges", "sources", "events", "editions", "reviews", "results", "diagnostics", "operations"] }, edition: string, expectedRevision: integer, offset: integer, limit: { type: "integer", minimum: 1, maximum: 1000 } }, ["collection", "expectedRevision"]],
   ["object.read", "Read exact original source/result bytes in content-bound ranges.", { id: string, offset: integer, length: { type: "integer", minimum: 1, maximum: 4194304 } }, ["id"]],
   ["workspace.read", "Read the saved project and original jobs, datasets and runs.", { edition: string }, []],
   ["source.import", "Retain original OpenLineage JSON/NDJSON bytes and import their event observations.", { ...mutation, name: string, sourceUrl: string, text: string, base64: string }, ["operationId", "expectedRevision", "name"]],

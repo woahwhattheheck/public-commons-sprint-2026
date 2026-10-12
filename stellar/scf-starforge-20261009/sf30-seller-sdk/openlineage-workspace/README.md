@@ -9,7 +9,8 @@ another operator.
 
 The browser, command line, Node SDK and MCP tools use the same revisioned
 workspace. The maintained SCF distribution adds this product to its existing
-command catalog and Applications lifecycle.
+command catalog and Applications lifecycle. Its source-owned merchant provider adds
+22 tools over this same original application; see [MERCHANT.md](MERCHANT.md).
 
 ## Start
 
