@@ -7,6 +7,8 @@ import {privateDirectory,readBytes,readJson,writeJson,jsonBytes,parseJson,digest
   exists,intent,need,object,now,syncDirectory,absolute,BuyerError} from './store.mjs';
 import {inspectNodeLostOutput} from './lost-output.mjs';
 import {readAuthorizationExpiryEvidence} from './expiry-evidence.mjs';
+import {readSuccessorRuntimeSource,verifySuccessorRuntimeSource,successorOperation,
+  originalRuntimeParent} from './runtime-source.mjs';
 import {readUndispatchedAuthorizationEvidence} from './authorization-dispatch.mjs';
 import {readContinuationOperation,continuationRequestIdentity,withContinuationLock,
   readUnpaidContinuationEdge} from './unpaid-continuation.mjs';
@@ -51,9 +53,17 @@ async function selected(operation){
     sha(value[evidenceKey]?.sha256)&&object(value[inputsKey])&&object(value.reservation)&&
     typeof value.reason==='string'&&value.reason.length>0,
     code('CHOICE_INVALID'));
+  if(value.successorRuntime!==undefined)
+    need(!isExpired&&object(value.successorRuntime)&&sha(value.successorRuntime.sha256)&&
+      value.source.runtimeDirectory===operation.buyer.runtime.directory&&
+      value.source.stateDirectory===operation.buyer.stateDirectory&&
+      value.successorRuntime.directory!==operation.buyer.runtime.directory,code('RUNTIME_CHOICE_INVALID'));
   return{raw,value,sha256:digest(raw)};
 }
-const marker=choice=>({parentIntentId:choice.value.parentIntentId,choiceSha256:choice.sha256});
+const marker=choice=>({parentIntentId:choice.value.parentIntentId,choiceSha256:choice.sha256,
+  ...(choice.value.successorRuntime===undefined?{}:{
+    parentRuntimeDirectory:choice.value.source.runtimeDirectory,
+    successorRuntimeSha256:choice.value.successorRuntime.sha256})});
 
 async function originalFiles(operation,source){
   const bound=await readContinuationOperation(operation);
@@ -84,7 +94,12 @@ async function recheckEvidence(operation,choice){
     code(isExpired?'EXPIRY_SOURCE_CHANGED':'AUTHORIZATION_SOURCE_CHANGED'));
   return evidence;
 }
-async function childBinding(parent,choice,child,{ready=true}={}){
+async function childBinding(parent,choice,child,{ready=true,signal}={}){
+  if(choice.value.successorRuntime!==undefined){
+    await verifySuccessorRuntimeSource(choice.value.successorRuntime,{signal});
+    need(child.buyer.runtime.directory===choice.value.successorRuntime.directory&&
+      child.buyer.stateDirectory===parent.buyer.stateDirectory,code('RUNTIME_CHANGED'));
+  }
   const bound=await originalFiles(parent,choice.value.source);
   await recheckEvidence(parent,choice);
   const next=await readContinuationOperation(child);
@@ -108,7 +123,8 @@ async function childBinding(parent,choice,child,{ready=true}={}){
 }
 async function edge(operation,meta){
   need(object(meta[markerKey]),code('LINEAGE_INVALID'));
-  const parent=operation.buyer.operation(intent(meta[markerKey].parentIntentId));
+  intent(meta[markerKey].parentIntentId);
+  const parent=originalRuntimeParent(operation,meta[markerKey]);
   const choice=await selected(parent);
   need(choice&&choice.sha256===meta[markerKey].choiceSha256&&
     choice.value.intentId===operation.intentId,code('CHOICE_CHANGED'));
@@ -151,7 +167,7 @@ async function auditedReservation(operation,snapshot,approvedRequest,{signal,env
 
 async function prepare(operation,options={}){
   const {intentId,expectedRequestSha256,expectedAttemptId,expectedConfigSha256,reason,
-    workspace,approvedRequest:inputRequest,approvedRequestFile,expiryEvidence,
+    workspace,approvedRequest:inputRequest,approvedRequestFile,expiryEvidence,successorRuntime,
     signal,node=process.execPath,environment=process.env,...extra}=options;
   need(Object.keys(extra).length===0,code('FIELDS_INVALID'));
   intent(intentId);
@@ -164,6 +180,8 @@ async function prepare(operation,options={}){
     expiryEvidence===undefined,code('EVIDENCE_INPUT_REQUIRED'));
   need((inputRequest!==undefined)!==(approvedRequestFile!==undefined),
     code('ONE_APPROVED_REQUEST_REQUIRED'));
+  need(successorRuntime===undefined||!isExpired&&object(successorRuntime),code('RUNTIME_SELECTION_INVALID'));
+  const selectedRuntime=successorRuntime===undefined?undefined:copy(successorRuntime);
   const approvedRequest=inputRequest===undefined?null:copy(inputRequest);
   const inputs=isExpired?copy(expiryEvidence):{},workerEnvironment={...environment};
   for(const key of ['boundFile','observationFile','providerSourceFile','sdkSourceIndexFile'])
@@ -181,6 +199,14 @@ async function prepare(operation,options={}){
       snapshot.localOutcome.result.condition!=='JSON'&&snapshot.localOutcome.response?.condition==='ABSENT',
       code('UNRESOLVED_ORIGINAL_ATTEMPT_REQUIRED'));
     const bound=await readContinuationOperation(operation);
+    // A native-workspace import may pin its own original sourceCli. Moving
+    // that command needs the workspace's existing explicit adoption contract.
+    need(selectedRuntime===undefined||bound.meta.nativeWorkspace===undefined,
+      code('RUNTIME_WORKSPACE_ADOPTION_REQUIRED'));
+    const runtimeBinding=selectedRuntime===undefined?undefined:
+      await readSuccessorRuntimeSource(selectedRuntime,{signal});
+    need(runtimeBinding===undefined||runtimeBinding.directory!==operation.buyer.runtime.directory,
+      code('RUNTIME_MUST_BE_DISTINCT'));
     snapshot.requestIdentity=continuationRequestIdentity(bound.config);
     const evidenceInputs=isExpired?{...inputs,expectedIntentId:operation.intentId,expectedRequestSha256,
       acceptedMaxTimeoutSeconds:request.max_timeout_seconds,expectedAttemptStartedAt:snapshot.attemptStartedAt}:
@@ -188,13 +214,14 @@ async function prepare(operation,options={}){
         expectedAttemptId:snapshot.attemptId,expectedConfigSha256:snapshot.configSha256};
     const evidence=await readEvidence(operation,evidenceInputs,signal);
     let choice=await selected(operation);
-    const child=operation.buyer.operation(intentId);
+    const child=await successorOperation(operation,intentId,runtimeBinding,{signal});
     if(choice){
       need(choice.value.intentId===intentId&&choice.value.reason===reason&&
         same(choice.value.source,snapshot)&&same(choice.value[inputsKey],evidenceInputs)&&
-        same(choice.value[evidenceKey],evidence),code('ALREADY_SELECTED'));
+        same(choice.value[evidenceKey],evidence)&&
+        same(choice.value.successorRuntime??null,runtimeBinding??null),code('ALREADY_SELECTED'));
       if(await exists(join(operation.directory,READY))){
-        await childBinding(operation,choice,child);return child;
+        await childBinding(operation,choice,child,{signal});return child;
       }
     }else{
       need(!await exists(child.directory),code('INTENT_ALREADY_EXISTS'));
@@ -208,6 +235,7 @@ async function prepare(operation,options={}){
     if(!choice){
       await writeJson(join(operation.directory,CHOICE),{schema:SCHEMA,parentIntentId:operation.intentId,
         intentId,reason,createdAt:now(),source:snapshot,[inputsKey]:evidenceInputs,[evidenceKey]:evidence,reservation,
+        ...(runtimeBinding===undefined?{}:{successorRuntime:runtimeBinding}),
         accounting:'ORIGINAL_RESERVATION_RETAINED; SUCCESSOR_REQUIRES_ORIGINAL_APPROVAL'},
         {exclusive:true});
       choice=await selected(operation);
@@ -220,7 +248,7 @@ async function prepare(operation,options={}){
       const metaPath=join(child.directory,'operation.json');
       const existing=await exists(metaPath)?await readJson(metaPath):null;
       if(existing?.state==='PREPARED'){
-        await childBinding(operation,choice,child,{ready:false});
+        await childBinding(operation,choice,child,{ready:false,signal});
       }else{
         const names=await readdir(child.directory);
         need(existing?existing.schema===OP_SCHEMA&&existing.intentId===intentId&&
@@ -234,7 +262,7 @@ async function prepare(operation,options={}){
     }
     if(!await exists(child.directory)){
       checkSignal(signal);const config=copy(bound.config);config.operation.intentId=intentId;
-      await operation.buyer._create(config,{
+      await child.buyer._create(config,{
         ...(bound.meta.nativeWorkspace===undefined?{}:{nativeWorkspace:bound.meta.nativeWorkspace}),
         [markerKey]:marker(choice),signal});
     }
@@ -250,11 +278,13 @@ async function inspect(operation){
   if(!choice)return{intentId:operation.intentId,continuation:null};
   const prepared=await exists(join(operation.directory,READY));
   await originalFiles(operation,choice.value.source);await recheckEvidence(operation,choice);
-  if(prepared)await childBinding(operation,choice,operation.buyer.operation(choice.value.intentId));
+  if(prepared)await childBinding(operation,choice,
+    await successorOperation(operation,choice.value.intentId,choice.value.successorRuntime));
   return{intentId:operation.intentId,continuation:{intentId:choice.value.intentId,
     reason:choice.value.reason,state:prepared?'PREPARED':'PREPARING',createdAt:choice.value.createdAt,
     choiceSha256:choice.sha256,source:choice.value.source,[evidenceKey]:choice.value[evidenceKey],
-    reservation:choice.value.reservation,accounting:choice.value.accounting}};
+    reservation:choice.value.reservation,accounting:choice.value.accounting,
+    ...(choice.value.successorRuntime===undefined?{}:{successorRuntime:choice.value.successorRuntime})}};
 }
 
 return {prepare,inspect,selected,childBinding,edge};
@@ -264,6 +294,35 @@ export const prepareExpiredContinuation=(operation,options)=>expired.prepare(ope
 export const inspectExpiredContinuation=operation=>expired.inspect(operation);
 export const prepareUndispatchedContinuation=(operation,options)=>undispatched.prepare(operation,options);
 export const inspectUndispatchedContinuation=operation=>undispatched.inspect(operation);
+
+// Open one recorded operation in the runtime explicitly bound to its parent choice.
+// This is distinct from following later children: the requested intent ID stays exact.
+export async function openOperationRuntime(operation,{signal}={}){
+  checkSignal(signal);
+  await privateDirectory(operation.directory,{create:false});
+  const meta=await readJson(join(operation.directory,'operation.json'));
+  need(meta.schema===OP_SCHEMA&&meta.intentId===operation.intentId&&meta.state==='PREPARED',
+    'OPERATION_PREPARATION_INCOMPLETE');
+  if(meta.runtimeDirectory===operation.buyer.runtime.directory){
+    await operation._bound();checkSignal(signal);return operation;
+  }
+  need(object(meta.undispatchedContinuation)&&
+    meta.undispatchedContinuation.parentRuntimeDirectory!==undefined&&
+    meta.unpaidContinuation===undefined&&meta.expiredContinuation===undefined,
+    'CONTINUATION_RUNTIME_SELECTION_REQUIRED');
+  intent(meta.undispatchedContinuation.parentIntentId);
+  const parent=originalRuntimeParent(operation,meta.undispatchedContinuation);
+  await parent._bound();
+  const choice=await undispatched.selected(parent);
+  need(choice&&choice.sha256===meta.undispatchedContinuation.choiceSha256&&
+    choice.value.intentId===operation.intentId&&
+    choice.value.successorRuntime?.directory===meta.runtimeDirectory&&
+    choice.value.successorRuntime.sha256===meta.undispatchedContinuation.successorRuntimeSha256,
+    'CONTINUATION_RUNTIME_CHOICE_CHANGED');
+  const child=await successorOperation(parent,operation.intentId,choice.value.successorRuntime,{signal});
+  await undispatched.childBinding(parent,choice,child,{signal});
+  checkSignal(signal);return child;
+}
 
 // Validate existing choices without creating a successor or entering a signer.
 export async function assertOperationContinuationBinding(operation,{meta}){
@@ -291,7 +350,8 @@ export async function followContinuation(operation){
     need([old,held,unpaid].filter(Boolean).length<=1,'CONTINUATION_CHOICES_CONFLICT');
     if(!old&&!held&&!unpaid)return current;
     const selected=old??held;
-    const next=current.buyer.operation(intent(selected?selected.value.intentId:unpaid.intentId));
+    const next=selected?await successorOperation(current,intent(selected.value.intentId),selected.value.successorRuntime):
+      current.buyer.operation(intent(unpaid.intentId));
     if(selected)await (old?expired:undispatched).childBinding(current,selected,next);
     await next._bound();current=next;
   }

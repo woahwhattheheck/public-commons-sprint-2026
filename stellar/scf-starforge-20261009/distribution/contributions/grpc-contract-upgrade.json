@@ -1,0 +1,12 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "grpc-contract-upgrade",
+  "description": "Retained gRPC contract and merchant-plan upgrade review in the original operator workspace",
+  "supportFiles": [
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/grpc/UPGRADES.md"
+  ],
+  "exports": {
+    "./seller/grpc/contract-upgrade": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/grpc/contract-upgrade.mjs",
+    "./seller/grpc/workspace/upgrade": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/grpc/workspace/upgrade.mjs"
+  }
+}

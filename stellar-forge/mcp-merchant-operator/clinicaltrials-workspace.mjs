@@ -255,13 +255,14 @@ function nativeFileSelection(input) {
   if (!plain(input)) throw fail('INVALID_PARAMS', 'Choose one original native file selection.');
   const spec = {
     export: { keys: ['kind','exportId','file'], route: 'export', fallback: () => basename(input.file) },
+    batch: { keys: ['kind','exportId','file'], route: 'batch-export', fallback: () => basename(input.file) },
     source: { keys: ['kind','captureId','file'], route: 'source-file', fallback: () => basename(input.file) },
     contract: { keys: ['kind','name'], route: 'contract', fallback: () => input.name },
     prs: { keys: ['kind','documentId','prsKind'], route: 'prs-file', fallback: () => 'prs-' + input.documentId + (input.prsKind === 'xml' ? '.xml' : '-report.json') },
     publisher: { keys: ['kind','publisherKind','id'], route: 'publisher-export',
       fallback: () => input.publisherKind + (input.publisherKind.endsWith('csv') ? '.csv' : input.publisherKind.endsWith('jsonl') ? '.jsonl' : input.publisherKind === 'session-review' ? '.html' : '.json') }
   }[input.kind];
-  if (!spec) throw fail('INVALID_PARAMS', 'Choose export, source, contract, prs or publisher.');
+  if (!spec) throw fail('INVALID_PARAMS', 'Choose export, batch, source, contract, prs or publisher.');
   exact(input, spec.keys, spec.keys);
   const parameters = {};
   for (const key of spec.keys.slice(1)) {
@@ -604,6 +605,8 @@ export class MerchantClinicalTrialsWorkspaces {
       merchant_clinicaltrials_prs_reconciliation: ['prs-reconciliation',['reportId']],
       merchant_clinicaltrials_prs_preview: ['prs-preview',['previewId']],
       merchant_clinicaltrials_prs_catalog: ['prs-catalog',[]],
+      merchant_clinicaltrials_batch: ['batch',['batchId']],
+      merchant_clinicaltrials_batch_entry: ['batch-entry',['batchId','entryId']],
       merchant_clinicaltrials_operation: ['operation',['requestId']]
     };
     const route = routes[name];

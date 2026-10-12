@@ -8,7 +8,7 @@ import { managedState, managedHome, openManagedHome, reviewManagedAdoption } fro
 import { applicationRunPage, applicationHistoryLimit } from './application-history.mjs';
 import { applicationEnvironment, readApplicationTerminal, sendApplicationTerminal } from './application-command.mjs';
 import { defaultApplicationProviders } from './application-providers.mjs';
-import { prepareProviderApplication } from './application-provider.mjs';
+import { prepareProviderApplication, retainedApplicationArguments } from './application-provider.mjs';
 import { absolute, privateDirectory, makePrivate, regular, readJSON, saveJSON, recordId, operationId,
   operationLease, operationRunning, tailFile, plain, need, digest, json, canonical, now } from './storage.mjs';
 
@@ -324,7 +324,8 @@ export async function prepareApplicationStart(root, { applicationId, requestId, 
     need(home?.revision === reviewed.homeRevision && release?.id === reviewed.releaseId &&
       release?.digest === reviewed.releaseDigest, 'APPLICATION_RELEASE_CHANGED');
     const request = { requestId, operation: 'managed-run', homeId: home.id, releaseId: release.id,
-      expectedRevision: home.revision, applicationId: id, command: current.command, args: current.args,
+      expectedRevision: home.revision, applicationId: id, command: current.command,
+      args: retainedApplicationArguments(providers.forKind(saved.kind), current, requestId),
       terminal: current.terminal, ...(current.terminalPython ? { terminalPython: current.terminalPython } : {}),
       ...(current.pythonCommand ? { pythonCommand: current.pythonCommand } : {}),
       ...(current.jobResultReceiver ? { jobResultReceiver: current.jobResultReceiver } : {}),

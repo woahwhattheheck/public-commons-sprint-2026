@@ -52,3 +52,15 @@
 @media(max-width:800px){.repricing-option{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px 18px}.repricing-option>div:first-child{grid-column:1/-1}.repricing-current code{margin-top:17px}.repricing-term-pair{grid-template-columns:1fr}.repricing-edit-actions{flex-wrap:wrap}.repricing-quote{max-width:40%}}
 @media(max-width:480px){.repricing-source-controls{grid-template-columns:1fr}.repricing-route-heading{display:block}.repricing-quote{max-width:none;text-align:left;margin-top:8px}.repricing-option{grid-template-columns:1fr;padding:14px}.repricing-option[data-changed=true]{padding-left:11px}.repricing-current code{margin-top:0}.repricing-current span{margin-bottom:5px}.repricing-edit-actions>.button-row{width:100%}.repricing-edit-actions button{flex:1}.repricing-terms{padding:12px}.repricing-term-pair dl{grid-template-columns:1fr;gap:3px}.repricing-term-pair dd{margin-bottom:6px}}
 @media print{.repricing-source-controls,.repricing-edit-actions,.repricing-review .review-actions{display:none}.repricing-route,.repricing-terms{break-inside:avoid}.repricing-history .button{display:none}}
+
+/* Explicit quote valuation uses the existing industrial pricing form. */
+.repricing-mode{max-width:540px;margin:12px 0}
+.repricing-valuation{min-width:0}
+.repricing-valuation-choice{display:flex;align-items:center;gap:8px;font-size:.8rem}
+.repricing-valuation-choice input{width:auto;margin:0}
+.repricing-valuation-fields{display:grid;gap:12px;margin-top:12px}
+.repricing-valuation-fields[hidden]{display:none}
+.repricing-valuation-fields label{font-size:.75rem}
+#repricing-quote-review{border-top:1px solid #d3d3d3;margin-top:18px;padding-top:14px}
+#repricing-quote-review details{min-width:130px;max-width:420px}
+#repricing-quote-review details p{overflow-wrap:anywhere;font-size:.76rem}

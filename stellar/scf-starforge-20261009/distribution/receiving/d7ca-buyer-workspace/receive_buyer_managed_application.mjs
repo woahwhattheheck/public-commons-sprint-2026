@@ -332,7 +332,7 @@ async function until(read,accept,{timeoutMs,label,onProgress}) {
   }
 }
 
-export async function receiveBuyerManagedApplication(config,{onProgress=()=>{}}={}) {
+export async function receiveBuyerManagedApplication(config,{onProgress=()=>{},openWorkspaceClient}={}) {
   process.umask(0o077);
   need(plain(config)&&config.schema===INPUT,'BUYER_RECEIVING_CONFIGURATION_REQUIRED');
   for(const name of ['runtimeDirectory','receptionDirectory','sdkDirectory','handoffFile','customerFile'])
@@ -356,7 +356,8 @@ export async function receiveBuyerManagedApplication(config,{onProgress=()=>{}}=
   await privateDir(config.receptionDirectory,true);
   const lease=await operationLease(join(config.receptionDirectory,'receiving.lock'));
   const receiptPath=join(config.receptionDirectory,'buyer-managed-reception.json');
-  let journal,model,fixture,stage='OPEN_RECEIVING',failed=true;
+  let journal,model,fixture,workspaceClient,stage='OPEN_RECEIVING',failed=true;
+  need(openWorkspaceClient===undefined||typeof openWorkspaceClient==='function','BUYER_RECEIVING_WORKSPACE_CLIENT_REQUIRED');
   try {
     journal=await readJSON(receiptPath,true);
     const continuing=Boolean(journal);
@@ -488,7 +489,7 @@ export async function receiveBuyerManagedApplication(config,{onProgress=()=>{}}=
       const running=await awaitState('Original buyer startup',value=>Boolean(ownedUrl(value)),recoverPass);
       const request=await readJSON(join(selection.applicationWorkspace,'operations',pass.requestId,'request.json'));
       checkBinding(request);
-      const api=nativeApi(ownedUrl(running));
+      let api=nativeApi(ownedUrl(running));
       const announcement=await api.request('/api/launch');
       const startup=await buyerRunbookStartup(request,JSON.stringify(announcement));
       need(startup?.url===api.url.href&&startup.original.instanceId===announcement.instanceId&&
@@ -498,6 +499,12 @@ export async function receiveBuyerManagedApplication(config,{onProgress=()=>{}}=
       if(journal.launchSelectionSha256)
         need(journal.launchSelectionSha256===announcement.selectionSha256,'BUYER_RECEIVING_REOPEN_SELECTION_CHANGED');
       else{journal.launchSelectionSha256=announcement.selectionSha256;await persist();}
+      if(openWorkspaceClient){
+        workspaceClient=await openWorkspaceClient({api,announcement,pass,config,installed,original,journal,selection});
+        need(workspaceClient&&typeof workspaceClient.request==='function'&&typeof workspaceClient.close==='function',
+          'BUYER_RECEIVING_WORKSPACE_CLIENT_INVALID');
+        api={...api,request:workspaceClient.request};
+      }
       const initial=await api.request('/api/state');
       need(initial.launch.instanceId===announcement.instanceId&&initial.approvalMode==='BROWSER'&&
         initial.approvalAvailable===true,'BUYER_RECEIVING_BROWSER_CHANNEL_NOT_AVAILABLE');
@@ -698,6 +705,10 @@ export async function receiveBuyerManagedApplication(config,{onProgress=()=>{}}=
         need(signatures.length===journal.originalResult.signatures.length&&
           calls.length===journal.originalResult.calls.length,'BUYER_RECEIVING_REOPEN_EXECUTED_AGAIN');
       }
+      if(workspaceClient){
+        await workspaceClient.received?.({journal,pass,announcement});
+        await workspaceClient.close();workspaceClient=null;
+      }
       pass.observed={at:new Date().toISOString(),instanceId:announcement.instanceId,pid:announcement.pid,
         selectionSha256:announcement.selectionSha256,sourceFiles:announcement.sourceFiles,
         operatorRevision:journal.operator.revision,sdkId:journal.sdk.id,paidFileId:journal.paidFile.id,
@@ -722,6 +733,7 @@ export async function receiveBuyerManagedApplication(config,{onProgress=()=>{}}=
       await saveJSON(receiptPath,journal,true).catch(()=>{});}
     throw error;
   }finally{
+    try{await workspaceClient?.close();}catch(error){if(journal){journal.agentCloseIssue={code:error.code??'BUYER_AGENT_CLOSE_INCOMPLETE',at:new Date().toISOString()};await saveJSON(receiptPath,journal,true).catch(()=>{});}}
     if(failed&&model&&journal?.applicationId) {
       try {
         const current=(await model.applicationsState()).applications.find(item=>item.id===journal.applicationId);

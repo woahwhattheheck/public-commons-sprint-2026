@@ -1,7 +1,7 @@
 import { MerchantProviderOwners } from './provider-lifecycle.mjs';
 import { merchantToolCatalog, merchantToolFamilies, merchantToolFamily } from './catalog.mjs';
 export { MERCHANT_TOOLS } from './catalog.mjs';
-import { MERCHANT_PROVIDERS, merchantProviderConfigured } from './providers.mjs';
+import { MERCHANT_PROVIDERS, merchantProviderConfigured, merchantRequestBytes } from './providers.mjs';
 
 
 // MIT. MCP merchant operations over the original SF82 release lifecycle and SF30 SDK.
@@ -60,9 +60,9 @@ export class MerchantReleaseOperator {
   #config; #managed = null; #busy = false; #closing = false; #active = new Set(); #close; #lastFailure = null;                                  
        
   
-  constructor(config, { stellarExpert, woocommerce, mpp, opensearch, grpc, openapi, accounting, arcgis, opencage } = {}) {
+  constructor(config, options = {}) {
     this.#config = config;
-    this.#options = { stellarExpert, woocommerce, mpp, opensearch, grpc, openapi, accounting, arcgis, opencage };
+    this.#options = { ...options };
     this.#providerOwners = new MerchantProviderOwners({ definitions: MERCHANT_PROVIDERS, config: this.#config, options: this.#options,
       loads: this.#providers, instances: this.#loaded, states: this.#loadStates, failure });
     this.#tools = structuredClone(merchantToolCatalog(config));
@@ -92,18 +92,7 @@ export class MerchantReleaseOperator {
         managesRunningSeller:Boolean(this.#managed),instanceId:this.#managed?.observation.instanceId??null}};
   }
 
-  get maxRequestBytes() {
-    const configuredMaximum = (() => {
-      if (this.#config.grantWorkspaces) return 32 * 1024 * 1024;
-      if (this.#config.graphqlWorkspaces || this.#config.dspaceOperators) return 8 * 1024 * 1024;
-      return this.#config.mpp ? 3 * 1024 * 1024 : (this.#config.opensearchWorkspaces || this.#config.grpcWorkspaces || this.#config.usgsWorkspaces) ? 2 * 1024 * 1024 : this.#config.grantsWorkspaces ? 512 * 1024 : 128 * 1024;
-    })();
-    return Math.max(configuredMaximum, this.#config.feedsWorkspaces ? 16 * 1024 * 1024 + 65536 : 0,
-      this.#config.researchWorkspaces ? 2 * 1024 * 1024 : 0,
-      this.#config.nocodbWorkspaces ? 1024 * 1024 : 0,
-      this.#config.n8nWorkspaces ? 2 * 1024 * 1024 : 0,
-      this.#config.paidJobWorkspaces ? 2 * 1024 * 1024 : 0);
-  }
+  get maxRequestBytes() { return merchantRequestBytes(this.#config); }
   async #status() {
     const result = await (await import('../../stellar/scf-starforge-20261009/sf82-seller-pilot/releases.mjs')).releaseStatus(this.#config.releaseStore);
     const summaries = Object.fromEntries(await Promise.all(Object.entries(MERCHANT_PROVIDERS)

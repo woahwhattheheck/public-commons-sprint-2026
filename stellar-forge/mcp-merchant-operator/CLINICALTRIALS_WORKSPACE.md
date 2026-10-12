@@ -99,6 +99,8 @@ It prints every exact schema. The call command accepts a short action such as st
 | prs | Original/candidate XML record and original validation/comparison |
 | prs_plan | Frozen original modernization decisions |
 | prs_reconciliation | Original typed comparison and study/field reconciliation |
+| batch | Complete client receiving batch, findings, row history and declared deliveries |
+| batch_entry | One retained entry with original/current documents and full selected PRS reports |
 | operation | Original request journal after completed or interrupted action |
 | action | Reviewed native action with original integer revision and UUID |
 | files | Actual declared input byte counts and hashes |
@@ -171,6 +173,7 @@ The native acquisition preserves complete fields, requests the count on the firs
 | Query retained edition | dataset.query |
 | Prepare merchant/package | merchant.configure, package.export |
 | PRS operations | prs.candidate, prs.plan, prs.apply, prs.reconcile, prs.preview |
+| Disclosure batch | batch.create, batch.links, batch.plan, batch.apply, batch.preview, batch.select, batch.reconcile, batch.review, batch.export |
 | Publisher | Installed original publisher.* actions |
 | Dossier | Installed original dossier.* actions, validated by the controller's joined leaf |
 
@@ -200,7 +203,7 @@ Prs.reconcile accepts documentId, captureId and the original plan:
 {
   "studyLinks": [
     {
-      "studyIndex": 0,
+      "studyIndex": 1,
       "nctId": "ORIGINAL_NCT_ID",
       "reason": "Reviewed original study match"
     }
@@ -211,6 +214,31 @@ Prs.reconcile accepts documentId, captureId and the original plan:
 ~~~
 
 The leaf also accepts its fieldIds and field decisions. Read the retained report with prs_reconciliation. Original XML, candidate XML, plans and reconciliation reports remain in the native package/source closure.
+
+## Disclosure batches and exact XML handover
+
+The batch-enabled contribution exposes 43 tools: 25 Clinical tools and the same 18 original source tools. Use `inventory` with `kind: "batches"` or `"batchExports"` for snapshot-paged history, `batch` for the selected batch, and `batch_entry` for a row's original/current documents, composition, modernization and source reconciliation.
+
+Retain each host-declared XML through `prs_upload`, then call the normal `action` tool with `batch.create`. Supply the name, reviewer and entries containing distinct client keys, retained `documentId` values and explicitly reviewed `sourceLinks`. The original controller preserves duplicate client references to identical XML as separate entries.
+
+Every row action carries `batchId`, `entryId` and `expectedDocumentId` in addition to the same workspace revision and request UUID. `batch.review` also carries the exact `expectedContextSha256` returned by `batch_entry`, its decision `ready`, `follow-up` or `exclude`, reviewer and note. Prepare/apply, preview/select and source reconciliation delegate to the original PRS engine. The full payload contract is [Disclosure batch receiving](../../stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/BATCH_RECEIVING.md).
+
+Selecting the same composed document retains its composition findings. A prepared composition is selected with its original `previewId`; the controller keeps unresolved source units visible. Native unlinked XML study indices and typed differences remain in the same entry review.
+
+After `batch.export`, inspect its declared `files`. Prepare any member with:
+
+~~~json
+{
+  "workspace": "portfolio",
+  "kind": "batch",
+  "exportId": "export-ORIGINAL_ACTION_UUID",
+  "file": "disclosure-batch.zip",
+  "expectedSha256": "ORIGINAL_DECLARED_FILE_SHA256",
+  "expectedRevision": 12
+}
+~~~
+
+This uses the same verified file reader, completion manifest, chunked client download and local reopening as other Clinical deliveries. The archive includes all client references, exceptions, exact original/candidate XML and their transitive plan/composition inputs, linked study sources, contracts and a complete v2 portable workspace. Restore that portable ZIP in an empty receiver; an existing XML-only batch workspace remains populated. The attachment closes its own requests and readers while the original console continues to own the batch.
 
 ## Native publication and customer work
 
@@ -241,6 +269,7 @@ File_prepare accepts the original declared selection:
 | Kind | Required selector |
 | --- | --- |
 | export | exportId and file from that original export's declared members |
+| batch | exportId and file from the original batch delivery's declared members |
 | source | captureId and file from the original capture's declared members |
 | contract | Installed original contract name |
 | prs | documentId and prsKind xml/report |

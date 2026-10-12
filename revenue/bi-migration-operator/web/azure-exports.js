@@ -155,7 +155,7 @@ async function azureConnectionView(){
   const discovery=await azureRecord("azure_discovery",azureSelection.discovery);
   let query='<p>Read existing export definitions or the actual files in this container. Every page and native continuation stays attached to this selection.</p><div class="actions">'+
     azButton("discover-exports","Read exports",record)+azButton("discover-blobs","Read container files",record)+'</div>';
-  if(azList("azure_discovery").length)query+=rowsTable(["Retained discovery","Pages","State",""],azList("azure_discovery").map(r=>'<tr><td>'+h(label(r))+'</td><td>'+r.payload.pages.length+'</td><td>'+azState(r.payload.state)+'</td><td>'+azButton("open-discovery","Open retained discovery",r)+'</td></tr>'));
+  if(azList("azure_discovery").length)query+=rowsTable(["Retained discovery","Entries","State",""],azList("azure_discovery").map(r=>'<tr><td>'+h(label(r))+'</td><td>'+r.payload.item_count+'</td><td>'+azState(r.payload.state)+'</td><td>'+azButton("open-discovery","Open retained discovery",r)+'</td></tr>'));
   if(discovery){
     const d=discovery.payload,profileData=' data-profile="'+h(d.profile.id)+'" data-profile-revision="'+d.profile.revision+'"';
     query+='<div class="panel-head"><h3>'+h(d.label)+'</h3>'+azState(d.state)+'</div><p>Connection revision '+d.profile.revision+' · '+d.items.length+' retained entries · '+d.pages.length+' pages</p>'+

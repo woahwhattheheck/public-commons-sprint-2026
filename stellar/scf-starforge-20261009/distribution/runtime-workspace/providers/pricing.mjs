@@ -13,7 +13,7 @@ export default {
     const { args, inputs, createDirectories, path, option } = applicationPreparation(settings, inputPath);
     const prepared = await preparePricingApplication(settings, { ...context, inputPath, runtimeDirectory });
     args.push(...prepared.args); inputs.push(...prepared.inputs); createDirectories.push(...prepared.createDirectories);
-    return { args, inputs, createDirectories };
+    return { ...prepared, args, inputs, createDirectories };
   },
   matchRequest(request) { return !request.pythonCommand && request.command === "revenue-workspace"; },
   createObserver(request, directory, context) {
