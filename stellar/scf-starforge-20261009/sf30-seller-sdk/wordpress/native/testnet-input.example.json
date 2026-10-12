@@ -1,0 +1,20 @@
+{
+  "schema": "stellar-forge.wordpress-testnet-host.v1",
+  "operationId": "scf-wordpress-native-receiving-83dd-20261012",
+  "sourceRoot": "/SELECTED_RELEASE/source",
+  "nativeHelper": "/SELECTED_NATIVE_WORDPRESS_HELPER/native-php.mjs",
+  "operationDirectory": "/SELECTED_PRIVATE_OPERATION",
+  "python": "/SELECTED_RUNTIME/python3",
+  "openssl": "/SELECTED_RUNTIME/openssl",
+  "chromium": "/SELECTED_RUNTIME/chromium",
+  "playwrightModule": "/SELECTED_RUNTIME/node_modules/playwright/index.mjs",
+  "php": "/SELECTED_RUNTIME/php",
+  "wordpressCore": "/SELECTED_RUNTIME/wordpress-6.8.3",
+  "sqlite": "/SELECTED_RUNTIME/sqlite-database-integration",
+  "origin": "https://wordpress-receiving-83dd.test",
+  "path": "/wordpress-native",
+  "amountAtomic": "50000",
+  "maxPages": 512,
+  "maxTotalAtomic": "25600000",
+  "maxTimeoutSeconds": 120
+}
