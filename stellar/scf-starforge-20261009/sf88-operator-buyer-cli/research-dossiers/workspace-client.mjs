@@ -19,6 +19,7 @@ const parameters=value=>{
 };
 const dossierPath=id=>'/api/dossiers/'+pathId(id);
 const operationPath=(id,operationId)=>dossierPath(id)+'/crossref/operations/'+pathId(operationId);
+const sourcePath=(id,editionId,key)=>dossierPath(id)+'/retained-editions/'+pathId(editionId)+'/occurrences/'+pathId(key);
 
 export async function readResearchConnectionFile(file){
   need(typeof file==='string'&&isAbsolute(file)&&resolve(file)===file,'RESEARCH_CONNECTION_ABSOLUTE_PATH_REQUIRED');
@@ -125,6 +126,9 @@ export class ResearchWorkspaceClient{
     need(typeof section==='string'&&/^[a-z]+$/.test(section),'RESEARCH_SECTION_INVALID');
     return this.#json(dossierPath(id)+'/sections/'+section+parameters(options));
   }
+  source(id,{editionId,key,revision}={}){
+    return this.#json(sourcePath(id,editionId,key)+parameters({revision}));
+  }
   createDossier(input){return this.#json('/api/dossiers?projection=metadata',input);}
   updateDossier(id,input){return this.#json(dossierPath(id)+'?projection=metadata',input);}
   addQuestion(id,input){return this.#json(dossierPath(id)+'/questions?projection=metadata',input);}
@@ -225,7 +229,10 @@ export class ResearchWorkspaceClient{
       if(expectedSha256!==undefined&&result.sha256!==expectedSha256)
         throw new BuyerError('RESEARCH_EXPORTED_FILE_CHANGED',{file:result,destinationPublished:true});
       const revision=response.headers.get('x-research-dossier-revision');
-      return {...result,...(revision&&/^[0-9]+$/.test(revision)?{revision:Number(revision)}:{})};
+      const editionId=response.headers.get('x-research-edition-id'),occurrenceId=response.headers.get('x-research-occurrence-id');
+      return {...result,...(revision&&/^[0-9]+$/.test(revision)?{revision:Number(revision)}:{}),
+        ...(editionId&&/^e_[a-f0-9]{64}$/.test(editionId)?{editionId}:{}),
+        ...(occurrenceId&&/^o_[a-f0-9]{64}$/.test(occurrenceId)?{occurrenceId}:{})};
     }));
   }
   exportDossier(id,{format='json.gz',file,...options}={}){
@@ -235,8 +242,19 @@ export class ResearchWorkspaceClient{
   exportCrossrefEdition(id,operationId,{file,...options}={}){
     return this.#download(operationPath(id,operationId)+'/edition',file,options);
   }
-  exportRetainedEdition(id,editionId,{file,...options}={}){
-    return this.#download(dossierPath(id)+'/retained-editions/'+pathId(editionId),file,options);
+  exportRetainedEdition(id,editionId,{file,revision,...options}={}){
+    return this.#download(dossierPath(id)+'/retained-editions/'+pathId(editionId)+parameters({revision}),file,options);
+  }
+  exportSource(id,{editionId,key,revision,part='content',file,expectedSha256,...options}={}){
+    need(['content','record'].includes(part),'RESEARCH_SOURCE_PART_INVALID');
+    return this.#download(sourcePath(id,editionId,key)+'/'+part+parameters({revision,sha256:expectedSha256}),
+      file,{...options,expectedSha256});
+  }
+  exportSourceFile(id,{editionId,key,revision,name,expectedSha256,file,...options}={}){
+    need(typeof name==='string'&&name.length>0&&name.length<=1024&&
+      typeof expectedSha256==='string'&&/^[a-f0-9]{64}$/.test(expectedSha256),'RESEARCH_SOURCE_FILE_SELECTION_REQUIRED');
+    return this.#download(sourcePath(id,editionId,key)+'/file'+parameters({revision,name,sha256:expectedSha256}),
+      file,{...options,expectedSha256});
   }
   exportComparison(id,{before,after,file,...options}={}){
     return this.#download(dossierPath(id)+'/compare'+parameters({before,after}),file,options);

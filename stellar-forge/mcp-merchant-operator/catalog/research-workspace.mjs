@@ -19,6 +19,7 @@ export const RESEARCH_EXPORTS=Object.freeze({
   'portable-gzip':{format:'json.gz',extension:'json.gz'},
   markdown:{format:'md',extension:'md'},html:{format:'html',extension:'html'},
   'crossref-edition':{extension:'json'},'retained-edition':{extension:'json'},comparison:{extension:'json'},
+  'source-content':{extension:'bin'},'source-record':{extension:'json'},'source-file':{extension:'bin'},
   ...RESEARCH_CLINICALTRIALS_EXPORTS,
 });
 const exportKind={type:'string',enum:Object.keys(RESEARCH_EXPORTS)};
@@ -33,9 +34,12 @@ export function researchWorkspaceTools(tool){
       ...workspace,offset,limit,snapshot:digest},['workspace'],read),
     tool('merchant_research_dossier','Read original dossier metadata and counts, optionally at a retained revision. Use sections for complete question, source, finding and history records.',{
       ...dossier,revision},['workspace','dossierId'],read),
-    tool('merchant_research_section','Read a page from the exact original dossier revision. Continue with returned revision and offset. Sources project retained original responses; reference handles remain in editions.',{
+    tool('merchant_research_section','Read a page from the exact original dossier revision. Continue with returned revision and offset. Sources carry compact previews, complete descriptive metadata and exact occurrence selectors. Original content and files are downloaded explicitly; reference handles remain in editions.',{
       ...dossier,section:{type:'string',enum:RESEARCH_SECTIONS},revision,offset,limit,questionId:nativeId,
       query:{type:'string',maxLength:1000},selected:{type:'boolean'}},['workspace','dossierId','section'],read),
+    tool('merchant_research_source','Inspect one retained source occurrence at the selected saved revision. Use the original citation editionId and key; returns content/file sizes and SHA256 selectors with its descriptive metadata and saved review.',{
+      ...dossier,editionId:nativeId,key:{type:'string',pattern:'^(0|[1-9][0-9]{0,8})$'},revision},
+      ['workspace','dossierId','editionId','key'],read),
     tool('merchant_research_create','Create a research dossier through the original server and return its saved identity.',{
       ...workspace,title:label,description:{type:'string',maxLength:20000}},['workspace','title'],{}),
     tool('merchant_research_update','Update the original dossier title or description using the reviewed current revision.',{
@@ -84,8 +88,9 @@ export function researchWorkspaceTools(tool){
     tool('merchant_research_crossref_receive','Receive the exact reviewed Crossref edition into the original question using its plan hash, edition hash and current dossier revision. The native receiver reconciles a lost committed reply.',{
       ...operation,expectedRevision:revision,expectedPlanSha256:digest,expectedEditionSha256:digest},
       ['workspace','dossierId','operationId','expectedRevision','expectedPlanSha256','expectedEditionSha256'],{idempotent:true}),
-    tool('merchant_research_export','Stream and retain a complete portable dossier, analyst report, original source edition or revision comparison. Returns its content-addressed export ID for reads and restart recovery.',{
-      ...dossier,kind:exportKind,operationId:nativeId,editionId:nativeId,before:revision,after:revision,
+    tool('merchant_research_export','Stream and retain a complete portable dossier, report, edition, comparison, original occurrence content/record or selected bundle file. Source kinds bind editionId/key; source-file also requires original fileName and expectedSha256. Returns the same content-addressed export ID for reads and restart recovery.',{
+      ...dossier,kind:exportKind,operationId:nativeId,editionId:nativeId,before:revision,after:revision,revision,
+      key:{type:'string',pattern:'^(0|[1-9][0-9]{0,8})$'},fileName:{type:'string',minLength:1,maxLength:1024},
       sourceId:{type:'string',pattern:'^ctsrc_[a-f0-9]{64}$'},criteria:RESEARCH_CLINICALTRIALS_CRITERIA,expectedSha256:digest},
       ['workspace','dossierId','kind'],{}),
     tool('merchant_research_exports','Page complete exports already retained by this attachment. Recover a lost export reply by its original dossier ID, content hash and saved export receipt.',{
