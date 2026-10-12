@@ -2,15 +2,37 @@
 
 The merchant provider carries the municipal operating workflow through the same durable workspace used by the browser and command line: configure an official source, capture its service catalog and cases, search and assign cases, compare observations, deliver complete files, receive a whole workspace and reopen it.
 
-Provider ID: **open311-workspaces**. Configuration family: **open311Workspaces**. Native host connection field: **open311WorkspaceConnection**. The product uses Node 22.13 or newer and the original merchant host, release store and retained-file reader.
+Provider ID: **open311-workspaces**. Configuration family: **open311Workspaces**. Native host connection field: **open311WorkspaceConnection**. Direct Open311 modules use Node 22.13 or newer; the installed merchant runtime uses Node 22.16 or newer with Linux, Python 3.11 or newer and util-linux flock. The provider shares the original merchant host, release store and retained-file reader.
+
+## Install the merchant transport
+
+For a delivered selected merchant archive, prepare its runtime with the original [runtime installer](../../distribution/RUNTIME_INSTALL.md). Run these commands from the private directory where the source-only merchant package is already installed. Replace the archive filename and SHA-256 with the values retained from that delivered source edition; the parent /private must exist and municipal-runtime must be a new directory.
+
+~~~sh
+npx --no-install starforge runtime-install prepare \
+  --dir /private/municipal-runtime \
+  --archive /private/ORIGINAL_OPEN311_ARCHIVE.tgz \
+  --sha256 ORIGINAL_ARCHIVE_SHA256 \
+  --native --feature schema --feature openapi --feature mcp --operator
+
+npx --no-install starforge runtime-install install \
+  --dir /private/municipal-runtime
+
+npx --no-install starforge runtime-install inspect \
+  --dir /private/municipal-runtime --load --source
+~~~
+
+The original profile selects exact dependencies from the archive's declarations. Its source stays in municipal-runtime/package/source and its dependencies install in municipal-runtime/node_modules. Wait for READY, then use runtime-install run --dir /private/municipal-runtime -- before merchant commands so they execute against that installed source and dependency tree.
+
+An interrupted install resumes with runtime-install resume --dir /private/municipal-runtime. Add --offline --cache /private/npm-cache to install or resume when using a populated existing cache. If a selected native module needs offline preparation, supply a compiler and local Node headers matching the selected executable; --node-headers /private/node-prefix selects a prefix containing include/node. The source-only browser and CLI can operate their saved desks independently.
 
 ## Prepare the operating desks
 
 Open or create the private workspace directories with the original CLI:
 
 ~~~sh
-node open311/cli.mjs state --workspace /private/municipal-desk
-node open311/cli.mjs state --workspace /private/municipal-received
+npx --no-install starforge open311 state --workspace /private/municipal-desk
+npx --no-install starforge open311 state --workspace /private/municipal-received
 ~~~
 
 Keep the existing browser, CLI and merchant alias pointed at that same directory. SQLite transactions preserve operation replay and revision checks across processes.
@@ -55,13 +77,34 @@ Create a private host connection file, for example /private/open311-host.json, w
 }
 ~~~
 
-Source profiles contain the complete original connection. A profile can specify apiKeyEnv for a host environment variable. The profile's ID becomes the stable connection ID; profile alias is used when applying it through the merchant. Credential values remain on the selected host. Changing an endpoint or jurisdiction after captures exist requires a distinct connection ID so its original source history retains its identity.
+Source profiles contain the complete original connection. A profile can specify apiKeyEnv for a host environment variable. The profile's ID becomes the stable connection ID; profile alias is used when applying it through the merchant. Credential values remain on the selected host. Changing an endpoint or jurisdiction after captures or saved collection plans exist requires a distinct connection ID so the original source selection retains its identity.
 
 The Helsinki profile follows the city's [October 2025 API description](https://www.hel.fi/static/avoindata/kanslia/Open311_API_description_011025.pdf), including native READY/PROCESSING status values and its 200-response cap. The city's text describes the returned set as the last 90 days or at most 200 first responses. Its [HRI catalog](https://hri.fi/data/en_GB/dataset/helsingin-kaupungin-palauterajapinta) provides attribution and CC BY 4.0 licensing. The [source-client guide](README.md) also covers GeoReport v2 and FixMyStreet differences.
 
+Programmatic examples in this guide use the delivered sf30-seller-sdk directory as their relative import base. For an application outside that source tree, resolve these same modules under the installed runtime's returned sourceRoot.
+
 ## Initialize the original native merchant
 
-The source-owned initializer registers this connection with the maintained merchant configuration and original SF82 release store:
+For an installed runtime, save the original initializer's options as /private/open311-setup.json with mode 0600:
+
+~~~json
+{
+  "directory": "/private/municipal-merchant",
+  "connection": "/private/open311-host.json",
+  "name": "Municipal service operations"
+}
+~~~
+
+Run the initializer through the same prepared runtime:
+
+~~~sh
+npx --no-install starforge runtime-install run \
+  --dir /private/municipal-runtime -- \
+  merchant-providers init open311-workspaces \
+  --options /private/open311-setup.json
+~~~
+
+The equivalent source-owned API registers this connection with the maintained merchant configuration and original SF82 release store:
 
 ~~~js
 import { initializeOpen311MerchantWorkspace } from './open311/mcp-setup.mjs';
@@ -77,6 +120,32 @@ console.log(setup.configuration);
 For an existing release store, pass its absolute path as releaseStore. Setup retains its intent and original initializer attempts. Repeating the same arguments reopens that setup. The resulting merchant-mcp.json selects the existing release store, customer-exports directory and open311WorkspaceConnection. The normal merchant configuration reader loads the registered provider through the distribution contribution.
 
 The provider has host-owned concurrency and drains admitted actions before closing its own database handles and retained readers. The independent browser process continues to use the same workspace.
+
+## Register the installed MCP client
+
+Generate the client configuration on the host that will launch the merchant:
+
+~~~sh
+npx --no-install starforge runtime-install run \
+  --dir /private/municipal-runtime -- \
+  merchant-mcp-client-config \
+  --config /private/municipal-merchant/merchant-mcp.json \
+  --name open311 \
+  --output /private/open311-mcp-client.json
+~~~
+
+The original generator validates that merchant configuration and records the actual absolute Node executable and stdio source entry in the prepared runtime. Apply the generated open311 server entry through the MCP client's existing configuration workflow. To preserve other servers in an existing mcpServers file, add --merge /private/existing-mcp-client.json, choose an unused name and write a separate new output file. The host environment supplies any source apiKeyEnv values.
+
+The equivalent terminal launch is:
+
+~~~sh
+npx --no-install starforge runtime-install run \
+  --dir /private/municipal-runtime -- \
+  merchant-mcp-stdio \
+  --config /private/municipal-merchant/merchant-mcp.json
+~~~
+
+A receiving host prepares the same delivered source archive locally, initializes its own merchant configuration with its own desk/input paths, and runs this generator locally. After a runtime upgrade or recovery into a new directory, generate the new client entry from that runtime so its absolute source path follows the selected installation.
 
 ## Operate a complete customer desk
 
@@ -184,7 +253,7 @@ File selections are exact:
 | --- | --- |
 | workspace | expectedRevision |
 | source | capture |
-| json, csv, report | capture and expectedRevision |
+| json, csv, report | capture or collection, plus expectedRevision |
 | comparison | before and after |
 | operation | operationId |
 
@@ -246,7 +315,145 @@ console.log(received);
 Open the receiving workspace through the Applications launcher or:
 
 ~~~sh
-node open311/cli.mjs serve --workspace /private/municipal-received --port 0
+npx --no-install starforge open311 serve --workspace /private/municipal-received --port 0
 ~~~
 
-The browser startup reports the received workspace identity. Source queries, complete bytes, service cases, review history and saved operation results reopen together.
+The browser startup reports the received workspace identity. Source queries, complete bytes, service cases, review history and saved operation results reopen together. Receive before the first Applications Review/Save of this directory. If an Applications entry was saved against the empty destination, stop its managed process and Review/Save the received directory before Start/Open so the saved binding uses the restored original workspace UUID.
+
+## Operate complete source collections through the same merchant
+
+A collection saves a fixed requested-time interval, the exact source filters and the original connection before its first request. The provider retains capped parent responses, refines their windows with the configured boundary policy, and consolidates all observed source versions. See [Source collections](COLLECTIONS.md) for provider-specific limits, overlap, pause/recovery, source-version review and complete receiving.
+
+The merchant exposes four collection tools in addition to the original tools above:
+
+| Tool | Operating purpose |
+| --- | --- |
+| merchant_open311_collection_create | Save the fixed source plan, original connection and refinement policy |
+| merchant_open311_collection_run | Run or resume the saved plan using a durable original request |
+| merchant_open311_collection_pause | Save an independent request to pause after the in-flight source response is retained |
+| merchant_open311_collection_info | Page original plan windows, progress and retained member captures |
+
+Use the same Open311MerchantClient and host-selected workspace alias. The following example selects an explicit operating interval; retain its original run intent before the first call.
+
+~~~js
+import { writeFile } from 'node:fs/promises';
+
+const initial = await desk.status();
+const plan = await desk.createCollection({
+  requestId: 'helsinki-collection-october-01',
+  expectedRevision: initial.revision,
+  connectionId: 'helsinki',
+  name: 'Helsinki original October service requests',
+  query: {
+    start_date: '2026-10-01T00:00:00Z',
+    end_date: '2026-10-12T00:00:00Z',
+    extensions: true,
+  },
+  policy: {
+    maxWindowDays: 90,
+    queryQuantumMs: 1000,
+    minimumWindowMs: 1000,
+    boundaryOverlapMs: 1000,
+  },
+});
+const runIntent = {
+  requestId: 'helsinki-collection-october-run-01',
+  expectedRevision: plan.revision,
+  collectionId: plan.collection.id,
+};
+await writeFile('/private/municipal-collection-run.json',
+  JSON.stringify(runIntent, null, 2) + '\n', { flag: 'wx', mode: 0o600 });
+await desk.runCollection(runIntent);
+
+let offset = 0;
+do {
+  const page = await desk.collectionInfo({
+    id: plan.collection.id,
+    offset,
+    limit: 100,
+  });
+  console.log(page.collection, page.items);
+  offset = page.nextOffset;
+} while (offset !== null);
+~~~
+
+The merchant's collection-info page limit is 100. Follow nextOffset until null to inspect every original and refined window. A capped unsplittable leaf remains LIMITED with its actual source records and interval visible. The completed traversal retains the exact source population and observation times in its coverage metadata.
+
+After an uncertain run response, inspect desk.operation(runIntent.requestId) and repeat that exact saved run intent to recover its original result or resume its admitted work. When the original run is still active, a new run request returns its pending operation identity. A separate pause command uses the currently observed workspace revision and its own stable request ID; the admitted source response is saved before the pause takes effect. Resume a completed PAUSED or INTERRUPTED run with a fresh run intent at the current revision.
+
+Search the consolidated collection and pin the selected source edition when assigning a review:
+
+~~~js
+const worklist = await desk.requests({
+  collection: plan.collection.id,
+  limit: 25,
+});
+if (worklist.items.length) {
+  const selected = worklist.items[0];
+  const current = await desk.status();
+  await desk.review({
+    requestId: 'helsinki-collection-assignment-01',
+    expectedRevision: current.revision,
+    connectionId: selected.connectionId,
+    serviceRequestId: selected.serviceRequestId,
+    captureId: selected.captureId,
+    expectedSourceSha256: selected.sourceSha256,
+    review: {
+      status: 'assigned',
+      assignee: 'Operations',
+      note: 'Review this retained source edition and its service routing.',
+    },
+  });
+}
+~~~
+
+Internal assignment and status remain attached to that exact retained source version. The original civic status, missing service code and every changed source object remain available through desk.request({ collection, id }) with its history and versions. A changed edition exposes its previous review for explicit reconsideration.
+
+Collection file selections use collection instead of capture. Keep expectedRevision on the complete json, csv and report selections. The json file contains the original collection plan, consolidated requests, all source versions and observations, complete parent/leaf source responses, operation history and provider attribution.
+
+~~~js
+const selectedRevision = await desk.status();
+const complete = await desk.downloadFile({
+  kind: 'json',
+  collection: plan.collection.id,
+  expectedRevision: selectedRevision.revision,
+});
+await writeFile('/private/municipal-complete-collection.json', complete.bytes,
+  { flag: 'wx', mode: 0o600 });
+console.log(complete.file);
+~~~
+
+Use kind: source with an individual capture ID for its unchanged original response body. Collection comparisons use kind: comparison, comparisonKind: collection, before and after. The whole workspace export also carries all collection plans and retained run intents. It uses the v2 workspace envelope when collections exist; receiving accepts both the original v1 and complete v2 formats.
+
+## Hand the collection to service-performance reporting
+
+The combined open311-reporting distribution selection includes both the municipal operations desk and the service-performance workbench. Prepare that selected archive with the same maintained runtime installer described above. The complete [reporting installation guide](reporting/INSTALL.md) supplies source packaging, runtime setup, managed Applications and receiving commands.
+
+Import the complete collection JSON into a separate private reporting workspace. The file exported above contains the original provider response bytes and the selected internal reviews required by reporting. Initialize the reporting desk, then import that original file using one saved request ID and revision:
+
+~~~sh
+npx --no-install starforge runtime-install run \
+  --dir /private/municipal-runtime -- \
+  open311-reporting init --workspace /private/municipal-reporting
+
+npx --no-install starforge runtime-install run \
+  --dir /private/municipal-runtime -- \
+  open311-reporting import \
+  --workspace /private/municipal-reporting \
+  --file /private/municipal-complete-collection.json \
+  --request-id reporting-original-october-import \
+  --expected-revision 0
+~~~
+
+Open **Open311 service performance** in the maintained Applications launcher, select that initialized reporting directory, and Review/Save before Start/Open. The launcher binds the original directory, workspace identity and live server instance. The reporting browser then carries the complete operator workflow:
+
+1. Inspect the imported source selection, all original windows and any unresolved source limits.
+2. Save a named profile with explicit service/status mappings, target policies, working calendars, time zones and date overrides. Calendar and target rules record who supplied those choices.
+3. Build a fixed creation-period report with an explicit observation cutoff, display time zone and selected target basis.
+4. Inspect each case's original source version, review, target calculation and issues; compare saved reports and export HTML, CSV or a complete editable report package.
+5. Export a reviewer template, import its completed return, select individual source-linked comments and save the reviewed report edition.
+6. Export the complete reporting workspace and receive it into an independently initialized empty reporting desk.
+
+Helsinki's READY and PROCESSING values retain their published processing meanings. The profile keeps the original expected_datetime field separate from operator-defined target dates. A saved reporting period and observation cutoff select the actual retained source editions; the calculation retains unresolved coverage and source-version review issues with the result.
+
+The collection workspace and reporting workspace each retain their own exact mutation history and complete portable exports. Keep the original complete collection beside the reporting handoff so another operator can continue municipal review as well as reopen its service-performance reports.
