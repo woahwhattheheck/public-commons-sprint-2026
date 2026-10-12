@@ -126,6 +126,25 @@ async function checkedHost(saved){
   same(prepared,saved.review.host,'GEOCODE_HOST_BUNDLE_PLAN_CHANGED');
   return {bundle,manifest,manifestSha256:digest(await readBytes(join(bundle,'deployment.json'),4194304))};
 }
+async function incompleteGeneration(saved){
+  const bundle=join(saved.directory,'host');
+  if(!await exists(bundle))return {schema:HOST_REVIEW,state:'HOST_BUNDLE_NOT_GENERATED',
+    directory:saved.directory,reviewSha256:saved.reviewSha256,bundle,
+    generation:{command:'host-bundle',directory:saved.directory,expectedReviewSha256:saved.reviewSha256}};
+  let manifest;
+  try{manifest=await readJson(join(bundle,'deployment.json'),4194304);}
+  catch(error){
+    if(!['ENOENT','JSON_INVALID','JSON_OBJECT_REQUIRED'].includes(error.code))throw error;
+    return {schema:HOST_REVIEW,state:'HOST_BUNDLE_INCOMPLETE',directory:saved.directory,
+      reviewSha256:saved.reviewSha256,bundle,packageIdentity:saved.review.package.identity,
+      reason:error.code==='ENOENT'?'ORIGINAL_MANIFEST_MISSING':'ORIGINAL_MANIFEST_INCOMPLETE',
+      recovery:{command:'host-review',packageDirectory:saved.request.package.directory,
+        hostPlanFile:join(saved.directory,'host-settings.json'),
+        directory:saved.directory+'-recovery-'+saved.reviewSha256.slice(0,12),
+        previousDirectory:saved.directory,previousReviewSha256:saved.reviewSha256}};
+  }
+  return null;
+}
 /** Generate the existing SF99 bundle only for the exact review selected by the operator. */
 export async function generateGeocodeDeployment({directory,expectedReviewSha256}){
   if(!SHA.test(expectedReviewSha256??''))fail('GEOCODE_HOST_REVIEW_REQUIRED');
@@ -133,6 +152,7 @@ export async function generateGeocodeDeployment({directory,expectedReviewSha256}
   if(saved.reviewSha256!==expectedReviewSha256)fail('GEOCODE_HOST_REVIEW_CHANGED');
   const bundle=join(saved.directory,'host'),reused=await exists(bundle);
   if(!reused)await generate(saved.review.hostPlan.path,bundle,{sourceRoot:saved.request.sourceRoot});
+  const incomplete=await incompleteGeneration(saved);if(incomplete)return incomplete;
   const checked=await checkedHost(saved);
   return hostSummary(saved,checked,reused);
 }
@@ -148,5 +168,6 @@ function hostSummary(saved,checked,reused){
 /** Reopen the prepared operation and the original generated host bundle. */
 export async function checkGeocodeDeployment(directory){
   const saved=await inspectGeocodeDeployment(directory);
+  const incomplete=await incompleteGeneration(saved);if(incomplete)return incomplete;
   return hostSummary(saved,await checkedHost(saved),true);
 }
