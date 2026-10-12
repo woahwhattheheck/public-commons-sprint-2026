@@ -19,6 +19,8 @@ const assets = new Map([
   ['/operator/workflow-recipes.mjs', ['workflow-recipes.mjs', 'text/javascript; charset=utf-8']],
   ['/operator/customer-reviewer.mjs', ['customer-reviewer.mjs', 'text/javascript; charset=utf-8']],
   ['/operator/customer-grpc.mjs', ['customer-grpc.mjs', 'text/javascript; charset=utf-8']],
+  ['/operator/operations.mjs', ['../../../../stellar/scf-starforge-20261009/sf30-seller-sdk/grpc/workspace/public/operations.mjs', 'text/javascript; charset=utf-8']],
+  ['/operator/operations.css', ['../../../../stellar/scf-starforge-20261009/sf30-seller-sdk/grpc/workspace/public/operations.css', 'text/css; charset=utf-8']],
   ['/operator/style.css', ['style.css', 'text/css; charset=utf-8']]
 ]);
 const equal = (a,b) => typeof a === 'string' && typeof b === 'string' &&
@@ -209,6 +211,12 @@ export async function createMerchantConsole({operator,configPath,directory,autho
         await requireTool(context,record.tool,JSON.parse(record.argumentsJson));
         const {readReviewerConsoleCall}=await import('./customer-reviewer.mjs');
         send(res,200,await readReviewerConsoleCall({record,operator,authorize:authorizeRequest,request:req}));return true;
+      }
+      if(req.method==='GET'&&route.startsWith('grpc-operations-value/')){
+        const record=store.call(decodeURIComponent(route.slice('grpc-operations-value/'.length)));
+        await requireTool(context,record.tool,JSON.parse(record.argumentsJson));
+        const {readGrpcOperationsConsoleCall}=await import('./grpc-operations.mjs');
+        send(res,200,await readGrpcOperationsConsoleCall({record,operator,authorize:authorizeRequest,request:req}));return true;
       }
       if(req.method==='GET'&&route==='grpc-recipe'){
         const recipe=buildGrpcCustomerRecipe({definitions,mode:url.searchParams.get('mode')??'customer'});

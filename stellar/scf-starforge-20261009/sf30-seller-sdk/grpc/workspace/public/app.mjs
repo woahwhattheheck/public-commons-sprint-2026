@@ -1,6 +1,7 @@
 // MIT. Browser controls for the original retained gRPC workspace.
 import { mountGrpcUpgrades } from './upgrade.mjs';
 import { mountGrpcHealth } from './health.mjs';
+import { mountGrpcOperations } from './operations.mjs';
 import { renderGrpcFields } from './fields.mjs';
 import { renderGrpcRequestSeries } from './request-series.mjs';
 let fieldTicket = 0;
@@ -80,6 +81,7 @@ async function work(action, message) {
 }
 function buttons() {
   healthPanel.update(inventory, !dirty && !routeDirty && !planDirty);
+  operationsPanel.update(inventory);
   $('save').disabled = !protoSource || planDirty || routeDirty;
   $('checkout').disabled = !adopted || adopted.id === inventory?.currentRevision || dirty || routeDirty || planDirty;
   for (const name of ['review', 'prepare']) $(name).disabled = !adopted || dirty || routeDirty || planDirty ||
@@ -530,6 +532,7 @@ async function download(action, value) {
   const blob = await response.blob(); saveBlob(blob, filename);
   notice('Downloaded ' + filename + ' · SHA256 ' + response.headers.get('x-content-sha256'));
 }
+const operationsPanel = mountGrpcOperations({ root: $('view-operations'), json, api, work, notice, storageKey });
 const healthPanel = mountGrpcHealth({ root: $('view-health'), json, work, notice, storageKey,
   savedCurrent, getRevision: () => adopted });
 const upgradePanel = mountGrpcUpgrades({ root: $('view-upgrades'), json, work, notice, storageKey,

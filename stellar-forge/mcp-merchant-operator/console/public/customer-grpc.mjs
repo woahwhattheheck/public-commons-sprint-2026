@@ -1,4 +1,5 @@
 // MIT. Customer delivery over saved original gRPC workspaces in Merchant Console.
+import {mountGrpcOperations} from './operations.mjs';
 const PREFIX='merchant_grpc_',SHA=/^[a-f0-9]{64}$/,UUID=/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/;
 const PAGE_SIZE=50,plain=value=>Boolean(value&&typeof value==='object'&&!Array.isArray(value));
 const canonical=value=>JSON.stringify(sort(value));
@@ -19,7 +20,7 @@ function nativeResult(result){
   if(error)throw new Error(error.content?.find(item=>item.type==='text')?.text??'The original gRPC tool returned an error.');
   const value=values.find(value=>typeof value.schema==='string'||typeof value.state==='string'||
     typeof value.workspace==='string'||typeof value.revision==='string'||typeof value.id==='string'||
-    typeof value.configured==='boolean'||Array.isArray(value.items));
+    typeof value.configured==='boolean'||plain(value.case)&&plain(value.revision)||typeof value.captureId==='string'||Array.isArray(value.items));
   if(!value)throw new Error('The saved original gRPC call has no complete structured return.');
   return value;
 }
@@ -43,7 +44,7 @@ export function createGrpcCustomerPage({state,$,node,text,pretty,when,properties
   const own={identity:null,session:null,epoch:0,workspaces:[],workspace:'',status:null,inventory:null,
     selected:null,detail:null,detailPage:null,health:null,eventPage:null,servicePage:null,
     last:null,delivery:null,recovery:null,recipe:null,pending:false};
-  const ui={},gates=[],controls=[];
+  const ui={},gates=[],controls=[];let operationsPanel=null;
   function block(title){const section=node('section',undefined,'panel');section.append(node('h4',title));panel.append(section);return section;}
   function field(parent,label,id,type='text',value=''){
     const wrap=node('div'),control=type==='select'?node('select'):node('input');control.id=id;control.setAttribute('aria-label',label);
@@ -164,6 +165,30 @@ export function createGrpcCustomerPage({state,$,node,text,pretty,when,properties
   ui.actionStatus=node('p','','hint');ui.actionStatus.setAttribute('role','status');
   ui.pending=node('div');ui.history=node('div',undefined,'select-list');ui.returned=node('div');history.append(ui.actionStatus,ui.pending,ui.history,ui.returned);
 
+  const operationsRoot=block('7. Investigate operations and manage incidents');
+  const operationsRecipe=row(operationsRoot);
+  button(operationsRecipe,'Prepare incident delivery recipe','grpc-recipe-operations',()=>prepareRecipe('operations'),()=>Boolean(operationsPanel?.selection));
+  const operationsEditor=node('div');operationsRoot.append(operationsEditor);
+  operationsPanel=mountGrpcOperations({root:operationsEditor,storageKey:'starforge-grpc-console-operations:'+location.origin,
+    json:async(action,body={})=>{
+      if(!action.startsWith('operations-'))throw new Error('Choose an original operations action.');
+      const name=action.slice('operations-'.length),args={workspace:workspace(),...body};
+      if(['capture','read'].includes(name)){args.captureId=args.id;delete args.id;}
+      if(['case','save','export'].includes(name)){args.caseId=args.id;delete args.id;}
+      return run('operations_'+name,args);
+    },
+    work:async(fn)=>{try{return await exclusive(fn);}catch(error){notice(error.message,true);}},
+    notice:(message,kind)=>notice(message,kind==='error'),receiveMode:'host',
+    onReceive:body=>run('operations_receive',{workspace:workspace(),...body}),
+    onExport:async selected=>{
+      const ctx=context(),retained=await run('operations_export',{workspace:workspace(),caseId:selected.id,version:selected.version});check(ctx);
+      if(!SHA.test(retained.exportId??''))throw new Error('The original incident did not return its complete export identity.');
+      await run('export_manifest',{exportId:retained.exportId});check(ctx);
+      const selection=own.delivery?.selection;if(!selection)throw new Error('Inspect the original incident manifest before receiving.');
+      fillCustomer(selection);await receiveCustomer(selection);check(ctx);renderDelivery();
+      return {exportId:retained.exportId,selection,files:retained.files};
+    }});
+
   function binding(){return canonical({host:state.host?.configurationFingerprint??null,
     profile:state.profile?.hostFingerprint??null,composition:state.host?.composition?.fingerprint??null,
     boundComposition:state.profile?.compositionFingerprint??state.profile?.host?.composition?.fingerprint??null});}
@@ -237,8 +262,14 @@ export function createGrpcCustomerPage({state,$,node,text,pretty,when,properties
     check(ctx);let call;
     try{call=await awaitCall(pending.callId,ctx);}finally{if(current(ctx))await loadProfile();}
     check(ctx);
-    const result=JSON.parse(call.resultJson),value=nativeResult(result);
-    adopt(name,args,call,result,value);
+    const result=JSON.parse(call.resultJson),returned=nativeResult(result);
+    let value=returned;
+    if(name.startsWith('operations_')&&returned.state==='COMPLETE_RESULT_RETAINED'){
+      const complete=await api('grpc-operations-value/'+encodeURIComponent(call.id),{epoch:ctx.session});check(ctx);
+      if(complete.callId!==call.id||complete.originalResultSha256!==call.resultSha256)throw new Error('The saved original operations result changed.');
+      value=complete.value;
+    }
+    adopt(name,args,call,result,returned);
     try{sessionStorage.removeItem(key);}catch{}
     own.recovery=null;renderRecovery();render();
     notice('Saved '+name.replaceAll('_',' ')+' · '+call.id+'.');return value;
@@ -333,6 +364,11 @@ export function createGrpcCustomerPage({state,$,node,text,pretty,when,properties
   function recoverSelection(call){
     const args=JSON.parse(call.argumentsJson),name=call.tool.slice(PREFIX.length);
     if(name==='export_manifest')return {name,args};
+    if(name.startsWith('operations_')){
+      if(args.caseId)return {name:'operations_case',args:{workspace:args.workspace,caseId:args.caseId}};
+      if(args.captureId)return {name:'operations_read',args:{workspace:args.workspace,captureId:args.captureId,section:'summary'}};
+      return {name:'operations_cases',args:{workspace:args.workspace,offset:0,limit:PAGE_SIZE}};
+    }
     if(name.startsWith('health_')&&args.operationId)return {name:'health_read',args:{workspace:args.workspace,operationId:args.operationId,section:'summary'}};
     if(name.startsWith('upgrade_')&&args.operationId)return {name:'upgrade_open',args:{workspace:args.workspace,operationId:args.operationId,section:'summary'}};
     if(['attempt','call','cancel_call'].includes(name)&&args.operationId)return {name:'attempt',args:{workspace:args.workspace,operationId:args.operationId}};
@@ -357,7 +393,7 @@ export function createGrpcCustomerPage({state,$,node,text,pretty,when,properties
     if(selected!==previous)changeWorkspace(selected);else alias.value=selected;
   }
   function changeWorkspace(value){
-    own.epoch++;own.workspace=value;own.status=null;own.inventory=null;own.selected=null;own.detail=null;own.detailPage=null;
+    own.epoch++;own.workspace=value;operationsPanel?.reset(value?own.identity+':'+value:false);own.status=null;own.inventory=null;own.selected=null;own.detail=null;own.detailPage=null;
     own.health=null;own.eventPage=null;own.servicePage=null;own.delivery=null;own.recipe=null;
     for(const control of [revision,preparation,operation,upgrade,reviewSha,healthId,exportId])control.value='';
     ui.healthEvents.replaceChildren();ui.healthServices.replaceChildren();ui.recipeInfo.replaceChildren();alias.value=value;sectionOptions();
@@ -371,6 +407,7 @@ export function createGrpcCustomerPage({state,$,node,text,pretty,when,properties
       ['Retained calls',own.status.counts?.attempts],['Contract reviews',own.status.counts?.upgrades],
       ['Health observations',own.status.counts?.health]
     ]:[['Workspace','Inspect the current original selection.']]);
+    operationsPanel?.update({revisions:own.status?.currentRevision?[{id:own.status.currentRevision,title:'Current saved source'}]:[]});
     renderInventory();renderDetail();renderHealth();renderDelivery();renderHistory();renderReturn();sync();
   }
   function renderInventory(){
@@ -449,7 +486,8 @@ export function createGrpcCustomerPage({state,$,node,text,pretty,when,properties
   async function prepareRecipe(mode){
     const ctx=context(),packet=await api('grpc-recipe?'+new URLSearchParams({mode}),{epoch:ctx.session});check(ctx);
     const inputs={workspace:workspace()};
-    if(mode==='customer')inputs.preparation=preparation.value;
+    if(mode==='operations'){const selected=operationsPanel?.selection;if(!selected)throw new Error('Open a saved incident revision first.');Object.assign(inputs,{caseId:selected.id,version:selected.version,captureId:selected.captureId});}
+    else if(mode==='customer')inputs.preparation=preparation.value;
     else if(mode==='upgrade')Object.assign(inputs,{operationId:upgrade.value,expectedReviewSha256:reviewSha.value});
     else if(mode==='health'){const original=frozenHealth();Object.assign(inputs,{operationId:original.operationId,throughSequence:original.throughSequence,expectedSnapshot:original.expectedSnapshot});}
     else inputs.operationId=operation.value;

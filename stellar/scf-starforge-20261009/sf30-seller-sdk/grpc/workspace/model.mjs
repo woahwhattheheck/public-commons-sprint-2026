@@ -17,6 +17,8 @@ import { startGrpcMerchant } from '../merchant.mjs';
 import { assertGrpcWorkspaceBinding } from './binding.mjs';
 import { createGrpcUpgradeWorkspace } from './upgrade.mjs';
 import { createGrpcHealthWorkspace } from './health.mjs';
+import { createGrpcOperationsWorkspace } from '../operations/workspace.mjs';
+import { selectedCall, selectedHealth, OPERATIONS_MAX_BYTES } from '../operations/domain.mjs';
 import { fields, text, canonical, sha256, jsonBytes, readJson, readBytes, writeNew,
   syncDirectory, privateDirectory, fail, assertProtoArchiveFits, writeJsonSnapshot } from '../common.mjs';
 
@@ -81,7 +83,7 @@ export async function createGrpcWorkspace({ stateDirectory, sourceFile, protoDir
   const root = await privateDirectory(stateDirectory, true), lease = await acquireStateLease(root);
   const environment = { ...env };
   const retainedRuntime = releaseRuntime === undefined ? (nativeFactory ? null : { port: sellerPort }) : structuredClone(releaseRuntime);
-  const folders = Object.fromEntries(['revisions', 'prepared', 'intents', 'attempts', 'temporary', 'reflections', 'upgrades', 'health'].map(name => [name, join(root, name)]));
+  const folders = Object.fromEntries(['revisions', 'prepared', 'intents', 'attempts', 'temporary', 'reflections', 'upgrades', 'health', 'operations'].map(name => [name, join(root, name)]));
   let current = null, revisionIndex = [], reflectionIndex = [], busy = null, closing = false, closePromise, active = null, previousRun = null;
   let navigationOrigin = null, releaseConsole = null, activeCall = null;
   const cached = new Map(), reflectionControllers = new Set();
@@ -99,6 +101,57 @@ export async function createGrpcWorkspace({ stateDirectory, sourceFile, protoDir
   const health = createGrpcHealthWorkspace({ directory: folders.health, loadRevision: revision,
     selection: () => ({ revision: currentId(), generation: current?.generation ?? 0 }),
     assertHeld: () => lease.assertHeld(), env: environment });
+
+  const operations = createGrpcOperationsWorkspace({ directory: folders.operations,
+    assertHeld: () => lease.assertHeld(), collect: collectOperations });
+  const operationsCapture = body => execute(() => operations.captureCreate(body));
+  const operationsRead = body => execute(() => operations.captureRead(body));
+  const operationsCaptures = body => execute(() => operations.captureList(body));
+  const operationsSave = body => execute(() => operations.caseSave(body));
+  const operationsCase = body => execute(() => operations.caseRead(body));
+  const operationsCases = body => execute(() => operations.caseList(body));
+  const operationsExport = body => execute(() => operations.exportCreate(body));
+  const operationsDownload = body => execute(() => operations.download(body));
+  const operationsReceive = body => execute(() => operations.receive(body));
+  async function collectOperations(selection) {
+    // Count each complete original record before retaining the next one. Reserve
+    // envelope space; final capture validation checks its exact encoded size.
+    let accumulatedBytes = 65536;
+    const account = value => {
+      accumulatedBytes += Buffer.byteLength(JSON.stringify(value)) + 1;
+      if (accumulatedBytes > OPERATIONS_MAX_BYTES) fail('GRPC_OPERATIONS_CAPTURE_TOO_LARGE', 413);
+      return value;
+    };
+    const originalCalls = [];
+    for (const row of await attemptInventory()) if (selectedCall(row, selection)) {
+      const original = await attemptResult(row.id, true);
+      account(original); originalCalls.push(original);
+    }
+    const observations = await health.captureSnapshots(row => selectedHealth(row, selection), selection.to,
+      OPERATIONS_MAX_BYTES - accumulatedBytes);
+    for (const observation of observations) account(observation);
+    const ids = new Set([...selection.revisions, ...originalCalls.map(row => row.revision),
+      ...observations.map(row => row.operation.revision)]);
+    if (!ids.size && currentId()) ids.add(currentId());
+    const originals = [];
+    for (const id of [...ids].sort()) {
+      const value = await revision(id);
+      const original = Object.fromEntries(['schema', 'id', 'parent', 'createdAt', 'title', 'source', 'protoSource', 'plan']
+        .map(key => [key, value[key]]));
+      account(original); originals.push(original);
+    }
+    const prepared = [];
+    for (const id of await readdir(folders.prepared)) if (UUID.test(id)) {
+      const row = await readJson(join(folders.prepared, id, 'workspace-release.json'), 65536);
+      if (ids.has(row.revision)) { account(row); prepared.push(row); }
+    }
+    prepared.sort((a,b) => a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id));
+    const finalInventory = await attemptInventory();
+    return { selectedRevision: currentId(), generation: current?.generation ?? 0,
+      attemptInventorySnapshot: sha256(canonical(finalInventory)), calls: originalCalls,
+      health: observations, revisions: originals, prepared };
+  }
+
   const healthStart = body => execute(() => health.start(body));
   const healthResume = body => execute(() => health.resume(body));
   const healthRead = body => health.read(body), healthList = body => health.list(body);
@@ -653,6 +706,7 @@ export async function createGrpcWorkspace({ stateDirectory, sourceFile, protoDir
     if (current) await revision(current.revision);
     await upgrades.initialize();
     await health.initialize();
+    await operations.initialize();
     previousRun = await optional(join(root, 'run.json'), 65536);
     if (previousRun && !['STOPPED', 'START_FAILED'].includes(previousRun.phase))
       previousRun = { ...previousRun, phase: 'PREVIOUS_OWNER_ENDED', note: 'The prior workspace process ended before recording its final stop. Select a retained merchant to run again.' };
@@ -664,7 +718,7 @@ export async function createGrpcWorkspace({ stateDirectory, sourceFile, protoDir
       await saveInside({ source, protoSource, plan, baseRevision: null, title: 'gRPC merchant' });
     }
   } catch (issue) { await lease.close(); throw issue; }
-  return { stateDirectory: root, state, attemptsPage, runtime, healthStart, healthRead, healthList, healthResume, healthCancel, healthExport, save, capture, reflectionInventory, reflectionCapture, reflectionOpen, reflectionSave, upgradeReview, upgradeOpen, upgradeAdopt, upgradeMethod, open, checkout, method, validateInput, review,
+  return { stateDirectory: root, state, attemptsPage, runtime, operationsCapture, operationsRead, operationsCaptures, operationsSave, operationsCase, operationsCases, operationsExport, operationsDownload, operationsReceive, healthStart, healthRead, healthList, healthResume, healthCancel, healthExport, save, capture, reflectionInventory, reflectionCapture, reflectionOpen, reflectionSave, upgradeReview, upgradeOpen, upgradeAdopt, upgradeMethod, open, checkout, method, validateInput, review,
     call, readAttempt, cancelCall, streamDownload, prepare, run, stop, download, archive, stage, openReleaseConsole, closeReleaseConsole, close,
     bindOperationsNavigationOrigin(origin) {
       const url = new URL(origin);
