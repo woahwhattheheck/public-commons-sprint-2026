@@ -247,22 +247,21 @@ def customer_selection(client, edition, original, country, operation_id, timeout
     fields = {"sql": sql, "parameters_text": json.dumps([country]), "max_rows": 100000}
     name = "datasette_customer_" + operation_id[:12]
     try:
-        saved = client._json("/api/queries/" + name)
+        saved = client.saved_query(name)
     except DatasetteClientError as error:
         if error.code != "ANALYSIS_QUERY_NOT_FOUND":
             raise
-        saved = client._json("/api/queries/" + name, body={**fields, "expected_revision": 0})
+        saved = client.save_query(name, fields, expected_revision=0)
     require(all(saved.get(key) == value for key, value in fields.items()),
             "DATASETTE_CUSTOMER_QUERY_CHANGED", name)
-    state = client._json("/api/state")
+    state = client.analysis_state()
     job_id = identify(operation_id, "CUSTOMER_COUNTRY_QUERY")
-    job = client._json("/api/start/query", body={
-        "id": job_id, **fields, "expected_views": state["views"]})
+    job = client.start_query({**fields, "expected_views": state["views"]}, job_id=job_id)
     deadline = time.monotonic() + timeout
     while job["status"] == "RUNNING":
         require(time.monotonic() < deadline, "DATASETTE_CUSTOMER_QUERY_STILL_RUNNING", job_id)
         time.sleep(0.05)
-        job = client._json("/api/jobs/" + job_id)
+        job = client.analysis_job(job_id)
     require(job["status"] == "COMPLETE" and not job["result"]["truncated"]
             and job["result"]["total_rows"] == expected_count,
             "DATASETTE_CUSTOMER_QUERY_INCOMPLETE")
@@ -451,12 +450,12 @@ def main(argv=None):
                 expected_sha256=customer_archive["sha256"])
             with operator(customer_workspace, checkout=checkout, node=args.node,
                           operation_id=operation_id) as (client, customer_workspace_id):
-                saved = client._json("/api/queries/" + customer["saved_query"]["name"])
+                saved = client.saved_query(customer["saved_query"]["name"])
                 require(customer_workspace_id == workspace_id
                         and all(saved.get(key) == value
                                 for key, value in customer["saved_query"].items()),
                         "DATASETTE_CUSTOMER_EDIT_NOT_RETAINED")
-                result = client._json("/api/jobs/" + customer["job_id"])
+                result = client.analysis_job(customer["job_id"])
                 require(result["status"] == "COMPLETE"
                         and result["result"]["total_rows"] == customer["rows"]
                         and result["result"]["result_sha256"] == customer["result_sha256"],
