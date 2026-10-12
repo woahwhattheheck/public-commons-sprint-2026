@@ -1,6 +1,7 @@
 // MIT. Xero manual journals from original merchant accounting source.
 import {createHash,randomUUID} from 'node:crypto';
 import {validateHandoff,validateRevision,inspectHandoff,renderCsv,parseReturnCsv,accountantColumns,EDITABLE_COLUMNS} from './engine.mjs';
+import {isBuyerHandoff} from './buyer-source.mjs';
 import {validateAdjustment} from '../adjustments.mjs';
 
 export const XERO_CONTEXT_SCHEMA='stellar-forge.xero-context.v1';
@@ -72,8 +73,24 @@ export function createXeroContext({id=randomUUID(),name,actor,createdAt=new Date
     accounts,source:[sourceFile('organization.json',organizationBytes),sourceFile('accounts.json',accountsBytes)],docs:XERO_DOCS});
 }
 export function validateXeroContext(context){verify(context,XERO_CONTEXT_SCHEMA);xeroId(context.id);xeroId(context.tenantId);xeroCheck(context.organization?.id===context.tenantId&&Array.isArray(context.accounts),'INVALID_XERO_CONTEXT','The retained organization or accounts are invalid.');return context;}
+function buyerComponents(handoff){
+  const occurrences=new Map();
+  return handoff.rows.map(row=>{
+    const source=row.original,kind=row.kind==='EXPENSE'?'BUYER_EXPENSE':'BUYER_CREDIT',native=source.native_payment??null;
+    const economicId=xeroHash(xeroCanonical({workspaceId:handoff.source.buyer.workspaceId,kind,network:source.network,asset:source.asset,identity:source.transfer_identity??native?.transfer_identity??source.item_id}));
+    const dimension=xeroCanonical([economicId,source.center_id,source.project,source.account_code]),occurrence=(occurrences.get(dimension)??0)+1;occurrences.set(dimension,occurrence);
+    return {id:xeroHash('stellar-forge.xero-buyer-component.v1\n'+dimension+'\n'+occurrence),kind,rowId:row.rowId,sourceLineId:row.sourceLineId,sourceRowSha256:row.sourceRowSha256,
+      economicId,network:source.network,sourceAt:source.recognition_date,sourceTimeBasis:'BUYER_REVIEWED_RECOGNITION_DATE',amountAtomic:source.amount,originalEconomicAmount:row.kind==='CREDIT'?source.native_return:source.settled_actual,
+      asset:source.asset,assetLabel:row.label.assetLabel,unitLabel:row.label.unitLabel,transfer:row.kind==='CREDIT'?'TRANSFER_MATCHED':native?.classification??'SF36_FINALIZED_RECEIPT',
+      transactionFingerprint:source.transaction??native?.observation?.transactionHash??source.receipt_ref??null,observationSha256:source.observation_sha256??native?.observation_sha256??null,
+      dataContext:source.data_context??native?.data_context??handoff.source.buyer.dataContext,costCenter:source.center_code,project:source.project,sourceAccountCode:source.account_code,
+      codingId:source.coding_id,line:source.line,itemId:source.item_id,creditId:source.credit_id??null};
+  });
+}
 export function xeroSourceComponents(handoff,adjustmentsBytes){
-  validateHandoff(handoff);const components=[],byEvent=new Map(),seen=new Set();
+  validateHandoff(handoff,{allowBuyer:true});
+  if(isBuyerHandoff(handoff)){xeroCheck(!adjustmentsBytes,'XERO_BUYER_SOURCE_AMBIGUOUS','Buyer credits come from their original issued allocations.');return buyerComponents(handoff);}
+  const components=[],byEvent=new Map(),seen=new Set();
   for(const row of handoff.rows){const event=row.original,component={id:xeroHash('stellar-forge.xero-component.v1\n'+event.network+'\n'+event.eventId+'\nPAYMENT'),kind:'PAYMENT',rowId:row.rowId,sourceRowSha256:row.sourceRowSha256,eventId:event.eventId,network:event.network,sourceAt:event.at,amountAtomic:event.amountAtomic,assetDigest:event.assetDigest,assetLabel:row.label.assetLabel,unitLabel:row.label.unitLabel,transfer:event.transfer,transactionFingerprint:event.transactionFingerprint??null,adjustmentId:null};
     components.push(component);seen.add(component.id);byEvent.set(event.network+'\n'+event.eventId,row);
   }
@@ -93,21 +110,23 @@ export function xeroSourceComponents(handoff,adjustmentsBytes){
   return components;
 }
 export function createXeroPlan({id=randomUUID(),name,actor,createdAt=new Date().toISOString(),handoff,revision=null,context,adjustmentsBytes,entries,purpose,valuationBasis,showOnCashBasisReports=false}={}){
-  xeroId(id);xeroText(name,'Journal plan name',160);xeroText(actor,'Operator',1000);instant(createdAt);validateHandoff(handoff);if(revision)validateRevision(handoff,revision);validateXeroContext(context);
-  xeroCheck(['demo','books'].includes(purpose),'XERO_PURPOSE_REQUIRED','Choose the demo organization or merchant books purpose.');
+  xeroId(id);xeroText(name,'Journal plan name',160);xeroText(actor,'Operator',1000);instant(createdAt);validateHandoff(handoff,{allowBuyer:true});if(revision)validateRevision(handoff,revision);validateXeroContext(context);
+  xeroCheck(['demo','books'].includes(purpose),'XERO_PURPOSE_REQUIRED','Choose the demo organization or books purpose.');
   xeroCheck(purpose!=='demo'||context.organization.isDemoCompany,'XERO_DEMO_ORGANIZATION_REQUIRED','A demo plan requires a native Xero demo organization.');
-  xeroCheck(purpose!=='books'||!context.organization.isDemoCompany,'XERO_BOOKS_ORGANIZATION_REQUIRED','Merchant books require a native organization whose demo flag is false.');
+  xeroCheck(purpose!=='books'||!context.organization.isDemoCompany,'XERO_BOOKS_ORGANIZATION_REQUIRED','Books require a native organization whose demo flag is false.');
   xeroText(valuationBasis,'Valuation and tax treatment',2000,{multiline:true});xeroCheck(typeof showOnCashBasisReports==='boolean','XERO_CASH_BASIS_REQUIRED','Choose whether the drafts appear on cash basis reports.');
   const source=xeroSourceComponents(handoff,adjustmentsBytes),known=new Map(source.map(component=>[component.id,component])),seen=new Set(),accounts=new Map(context.accounts.filter(account=>account.eligible).map(account=>[account.code,account]));
-  xeroCheck(Array.isArray(entries)&&entries.length===source.length,'XERO_COMPONENT_DECISIONS_REQUIRED','Choose include or exclude for every original payment and verified refund.');
+  xeroCheck(Array.isArray(entries)&&entries.length===source.length,'XERO_COMPONENT_DECISIONS_REQUIRED','Choose include or exclude for every retained source component.');
   const included=[],excluded=[];
   for(const entry of entries){const component=known.get(entry.componentId);xeroCheck(object(entry)&&component&&!seen.has(entry.componentId),'INVALID_XERO_COMPONENT','A source component is unknown or repeated.');seen.add(entry.componentId);
     xeroCheck(['include','exclude'].includes(entry.decision),'XERO_COMPONENT_DECISION_REQUIRED','Choose include or exclude for each source component.');
     if(entry.decision==='exclude'){excluded.push({...component,decision:'exclude',reason:xeroText(entry.reason,'Exclusion reason',2000,{multiline:true})});continue;}
-    xeroCheck(purpose!=='books'||component.network==='stellar:pubnet'&&(component.kind==='REFUND'||component.transfer==='OFFICIAL_TRANSFER_MATCHED'),'XERO_BOOKS_SOURCE_REQUIRED','Merchant books require each selected public-network payment or refund to have its original independently matched transfer.');
+    xeroCheck(!isBuyerHandoff(handoff)||BigInt(component.amountAtomic)>0n,'XERO_ZERO_NATIVE_ALLOCATION','A zero native buyer allocation must be explicitly excluded with its retained reason; a distinct fee needs its own original source.');
+    const matchedBuyer=isBuyerHandoff(handoff)&&component.dataContext==='operational'&&component.transfer==='TRANSFER_MATCHED'&&SHA.test(component.observationSha256??'');
+    xeroCheck(purpose!=='books'||component.network==='stellar:pubnet'&&(isBuyerHandoff(handoff)?matchedBuyer:(component.kind==='REFUND'||component.transfer==='OFFICIAL_TRANSFER_MATCHED')),'XERO_BOOKS_SOURCE_REQUIRED','Books require each selected public-network component to retain its original independently matched transfer and operational source context.');
     const cents=xeroCents(entry.amount),date=xeroDate(entry.date),debit=accounts.get(entry.debitAccountCode),credit=accounts.get(entry.creditAccountCode);
     xeroCheck(debit&&credit&&debit.id!==credit.id,'XERO_ACCOUNTS_REQUIRED','Choose distinct active debit and credit accounts from the retained chart.');
-    included.push({...component,decision:'include',date,amount:xeroMoney(cents),debitAccount:clone(debit),creditAccount:clone(credit),valuationNote:xeroText(entry.valuationNote,'Component valuation source',2000,{multiline:true}),description:xeroText(entry.description??component.kind+' '+component.eventId,'Line description',2000)});
+    included.push({...component,decision:'include',date,amount:xeroMoney(cents),debitAccount:clone(debit),creditAccount:clone(credit),valuationNote:xeroText(entry.valuationNote,'Component valuation source',2000,{multiline:true}),description:xeroText(entry.description??component.kind+' '+(component.sourceLineId??component.eventId),'Line description',2000)});
   }
   xeroCheck(included.length>0,'XERO_EMPTY_PLAN','Include at least one explicitly valued source component.');
   const groups=new Map();for(const entry of included){const group=groups.get(entry.date)??[];group.push(entry);groups.set(entry.date,group);}
@@ -120,9 +139,9 @@ export function createXeroPlan({id=randomUUID(),name,actor,createdAt=new Date().
   }}
   const baseline=inspectHandoff(handoff,revision).rows.map(row=>({rowId:row.rowId,...Object.fromEntries(EDITABLE_COLUMNS.map(key=>[key,row[key]]))}));
   return seal({schema:XERO_PLAN_SCHEMA,id,name,actor,createdAt,purpose,valuationBasis,showOnCashBasisReports,
-    source:{handoffId:handoff.id,handoffSha256:handoff.integrity.sha256,reportSha256:handoff.source.reportSha256,runId:handoff.source.runId,accountantRevisionId:revision?.id??null,periodClose:clone(handoff.source.periodClose??null),adjustmentsSha256:handoff.source.adjustments?.sha256??null},
+    source:{handoffId:handoff.id,handoffSha256:handoff.integrity.sha256,reportSha256:handoff.source.reportSha256,runId:handoff.source.runId,accountantRevisionId:revision?.id??null,periodClose:clone(handoff.source.periodClose??null),adjustmentsSha256:handoff.source.adjustments?.sha256??null,...(isBuyerHandoff(handoff)?{kind:'buyer-expense-period',buyer:clone(handoff.source.buyer)}:{})},
     context:{id:context.id,sha256:context.sha256,tenantId:context.tenantId,organization:clone(context.organization)},baseline,entries:included,excluded,journals,
-    summary:{includedComponents:included.length,excludedComponents:excluded.length,paymentComponents:included.filter(entry=>entry.kind==='PAYMENT').length,refundComponents:included.filter(entry=>entry.kind==='REFUND').length,journals:journals.length,baseCurrency:context.organization.baseCurrency,debits:xeroMoney(included.reduce((sum,entry)=>sum+xeroCents(entry.amount),0n)),credits:xeroMoney(included.reduce((sum,entry)=>sum+xeroCents(entry.amount),0n)),taxTreatment:'NoTax'},docs:XERO_DOCS});
+    summary:{includedComponents:included.length,excludedComponents:excluded.length,paymentComponents:included.filter(entry=>entry.kind==='PAYMENT').length,refundComponents:included.filter(entry=>entry.kind==='REFUND').length,...(isBuyerHandoff(handoff)?{buyerExpenseComponents:included.filter(entry=>entry.kind==='BUYER_EXPENSE').length,buyerCreditComponents:included.filter(entry=>entry.kind==='BUYER_CREDIT').length}:{}),journals:journals.length,baseCurrency:context.organization.baseCurrency,debits:xeroMoney(included.reduce((sum,entry)=>sum+xeroCents(entry.amount),0n)),credits:xeroMoney(included.reduce((sum,entry)=>sum+xeroCents(entry.amount),0n)),taxTreatment:'NoTax'},docs:XERO_DOCS});
 }
 export function validateXeroPlan(plan){verify(plan,XERO_PLAN_SCHEMA);xeroId(plan.id);xeroId(plan.context?.tenantId);xeroCheck(Array.isArray(plan.entries)&&Array.isArray(plan.journals)&&plan.journals.length>0,'INVALID_XERO_PLAN','The retained journal plan is incomplete.');return plan;}
 export function xeroCreateRequest(plan,index){validateXeroPlan(plan);const journal=plan.journals[index];xeroCheck(journal,'XERO_JOURNAL_NOT_FOUND','Choose a journal from the retained plan.',404);return {method:'PUT',path:'ManualJournals?summarizeErrors=false',tenantId:plan.context.tenantId,idempotencyKey:journal.idempotencyKey,body:{ManualJournals:[clone(journal.payload)]}};}
@@ -174,15 +193,15 @@ const editable=row=>Object.fromEntries(EDITABLE_COLUMNS.map(key=>[key,row[key]])
 const quoteRaw=value=>'"'+String(value??'').replaceAll('"','""')+'"';
 const encodeEditable=value=>/^['\t\r\n]/.test(value)||/^\s*[=+\-@]/u.test(value)||/^(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+\-]?\d+)?$/.test(value)&&value.replace(/\D/g,'').length>15?"'"+value:value;
 export function prepareXeroReturn({plan,capture,handoff,revision=null,previousAssignments=[]}={}){
-  validateXeroPlan(plan);verify(capture,XERO_CAPTURE_SCHEMA);validateHandoff(handoff);if(revision)validateRevision(handoff,revision);
+  validateXeroPlan(plan);verify(capture,XERO_CAPTURE_SCHEMA);validateHandoff(handoff,{allowBuyer:true});if(revision)validateRevision(handoff,revision);
   xeroCheck(capture.planId===plan.id&&capture.planSha256===plan.sha256&&handoff.id===plan.source.handoffId&&handoff.integrity.sha256===plan.source.handoffSha256,'XERO_RETURN_SOURCE_MISMATCH','Use this plan’s original handoff and retained comparison.',409);
   const current=new Map(inspectHandoff(handoff,revision).rows.map(row=>[row.rowId,row])),baseline=new Map(plan.baseline.map(row=>[row.rowId,row])),previous=new Map(previousAssignments.map(row=>[row.rowId,row])),byRow=new Map(),matches=new Map(capture.journals.map(row=>[row.index,row]));
   for(const entry of plan.entries){const items=byRow.get(entry.rowId)??[];items.push(entry);byRow.set(entry.rowId,items);}
   const proposed=new Map(),conflicts=[],skipped=[];
   for(const [rowId,entries]of byRow){const journals=plan.journals.filter(journal=>journal.componentIds.some(id=>entries.some(entry=>entry.id===id))),native=journals.map(journal=>matches.get(journal.index));
     if(native.some(row=>!row||row.status!=='MATCHED'||!['DRAFT','POSTED'].includes(row.nativeStatus))){skipped.push({rowId,reason:'Each selected component needs an exact active native journal match.'});continue;}
-    const base=baseline.get(rowId),now=current.get(rowId),prior=previous.get(rowId),values=editable(base),payment=entries.find(entry=>entry.kind==='PAYMENT'),references=[...new Set(native.map(row=>row.journalId))],posted=native.every(row=>row.nativeStatus==='POSTED');
-    if(payment){const journal=plan.journals.find(journal=>journal.componentIds.includes(payment.id)),matched=matches.get(journal.index);values.externalStatus=posted&&plan.purpose==='books'?'BOOKED':'REVIEWED';values.externalBookRef='xero:'+matched.journalId;values.externalAccountCode=payment.creditAccount.code;}
+    const base=baseline.get(rowId),now=current.get(rowId),prior=previous.get(rowId),values=editable(base),payment=entries.find(entry=>['PAYMENT','BUYER_EXPENSE','BUYER_CREDIT'].includes(entry.kind)),references=[...new Set(native.map(row=>row.journalId))],posted=native.every(row=>row.nativeStatus==='POSTED');
+    if(payment){const journal=plan.journals.find(journal=>journal.componentIds.includes(payment.id)),matched=matches.get(journal.index);values.externalStatus=posted&&plan.purpose==='books'?'BOOKED':'REVIEWED';values.externalBookRef='xero:'+matched.journalId;values.externalAccountCode=payment.kind==='BUYER_EXPENSE'?payment.debitAccount.code:payment.creditAccount.code;}
     const note='[Xero plan '+plan.id+'] '+plan.context.organization.name+' ('+plan.context.organization.baseCurrency+', '+plan.purpose+'); '+(posted?'posted':'draft')+' journals: '+references.join(', ')+'.';
     values.externalNote=(base.externalNote?base.externalNote+'\n':'')+note;
     if(values.externalNote.length>4000){skipped.push({rowId,reason:'The combined original note and native journal references exceed the accountant note limit.'});continue;}
@@ -199,7 +218,7 @@ export function prepareXeroReturn({plan,capture,handoff,revision=null,previousAs
 const html=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 export function renderXeroReview(plan,capture){
   validateXeroPlan(plan);
-  const rows=plan.entries.map(entry=>'<tr><td>'+html(entry.kind)+'<br><small>'+html(entry.eventId)+'</small></td><td>'+html(entry.amountAtomic)+'<br>'+html(entry.assetLabel||entry.assetDigest)+'</td><td>'+html(entry.date)+'</td><td>'+html(entry.amount)+' '+html(plan.context.organization.baseCurrency)+'</td><td>'+html(entry.debitAccount.code)+' / '+html(entry.creditAccount.code)+'</td><td>'+html(entry.valuationNote)+'</td></tr>').join('');
+  const rows=plan.entries.map(entry=>'<tr><td>'+html(entry.kind)+'<br><small>'+html(entry.sourceLineId??entry.eventId)+'</small></td><td>'+html(entry.amountAtomic)+'<br>'+html(entry.assetLabel||entry.asset||entry.assetDigest)+'</td><td>'+html(entry.date)+'</td><td>'+html(entry.amount)+' '+html(plan.context.organization.baseCurrency)+'</td><td>'+html(entry.debitAccount.code)+' / '+html(entry.creditAccount.code)+'</td><td>'+html(entry.valuationNote)+'</td></tr>').join('');
   const body='<h1>'+html(plan.name)+'</h1><p>'+html(plan.context.organization.name)+' · '+html(plan.context.organization.baseCurrency)+' · '+html(plan.purpose)+'</p><p>'+html(plan.valuationBasis)+'</p><p>Original handoff '+html(plan.source.handoffId)+'<br>Plan '+html(plan.id)+'<br>Source report '+html(plan.source.reportSha256)+'</p><table><thead><tr><th>Original component</th><th>Native amount and asset</th><th>Journal date</th><th>Base-currency value</th><th>Debit / credit</th><th>Valuation source</th></tr></thead><tbody>'+rows+'</tbody></table><h2>Exact draft journals</h2><pre>'+html(JSON.stringify(plan.journals,null,2))+'</pre><h2>Explicit exclusions</h2><pre>'+html(JSON.stringify(plan.excluded,null,2))+'</pre>'+(capture?'<h2>Retained native comparison</h2><pre>'+html(JSON.stringify(capture,null,2))+'</pre>':'');
   return Buffer.from('<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+html(plan.name)+'</title><style>body{font:15px system-ui;color:#202428;background:#fff;max-width:1500px;margin:auto;padding:30px}p{line-height:1.6}table{border-collapse:collapse;width:100%}th,td{text-align:left;border:1px solid #c7ccd0;padding:10px;vertical-align:top;overflow-wrap:anywhere}th{background:#f0f2f3}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f2f3f4;padding:16px}small{font-size:11px}</style><main>'+body+'</main></html>');
 }

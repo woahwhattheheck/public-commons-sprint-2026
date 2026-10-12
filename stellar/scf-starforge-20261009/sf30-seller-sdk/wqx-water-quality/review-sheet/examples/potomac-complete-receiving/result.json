@@ -1,0 +1,319 @@
+{
+  "schema": "starforge.wqx-potomac-complete-receiving-result.v1",
+  "outcome": "PASS",
+  "operationId": "SCF-WQX-BULK-RECEIVING-9F77-20261012-01",
+  "source": {
+    "schema": "starforge.wqx-review-sheet.v1",
+    "sourcePlanId": "potomac-quarter-open-waters-01",
+    "sourcePlanSha256": "4f9b1f612d1f9cb5bf3c90720d67cc37b5bd8fcd0c51476e669a340cde514610",
+    "reviewId": "potomac-quarter-open-waters",
+    "reviewSha256": "ba122f919127c23f701dcbf9cb88314fee46cdace3fd881b971a23b959489631",
+    "captureId": "potomac-2025-q1",
+    "captureSha256": "cbb29504ab01598cddb21bde33c918ca92075aad7f53fdac4fb07581371d29d7",
+    "title": "Potomac Chain Bridge — complete Q1 2025 receiving",
+    "summary": {
+      "sourceResults": 1035,
+      "selectedResults": 1035,
+      "distinctActivities": 13,
+      "distinctStations": 1,
+      "readyResults": 571,
+      "reviewResults": 464,
+      "readyLocations": 0,
+      "existingLocations": 1,
+      "issueCounts": {
+        "FIELD_LENGTH": 12,
+        "RECEIVER_VALUE_REWRITE": 1,
+        "LIMIT_RETAINED_IN_SOURCE": 1112,
+        "DETECTION_REPRESENTATION": 452
+      },
+      "mappedLimits": 0,
+      "retainedLimits": 1112
+    }
+  },
+  "code": {
+    "release": "ac38372782d0d0884686aea3cf5d8c619882c6e4",
+    "model": "4a9bcaa570dec70118f6a7acd607e09afd6e91b2",
+    "table": "0df7d2989fcd43f5dab068b32630471535c7ef07",
+    "planner": "27f66d3aa93e7ba9b4dafd5905b7a19fceaa8de1",
+    "browserDriver": "553c422d91aa4a3e200227ebc4a815baccccad29",
+    "workflow": "c44e63e99a90f5fbf50d8edc4a7a20a068c22755"
+  },
+  "decisions": {
+    "documentSha256": "af72dc3cd44ff094bc534bfe07c8f0caa2b31b88976567aa1ac3a6c0d231bad4",
+    "previewSha256": "371b35854b68354dad2db096034dd9db9f6859941f3109939b5990c6959fc096",
+    "newPlanId": "potomac-complete-receiving-plan-01",
+    "newPlanSha256": "893c32bd0b9729cc3504244670ecd05c34c51ddf1e44887296c7ea2cb0788e21",
+    "counts": {
+      "keep": 6,
+      "set": 4,
+      "clear": 0,
+      "changed": 4,
+      "noOp": 6
+    }
+  },
+  "before": {
+    "sourceResults": 1035,
+    "selectedResults": 1035,
+    "distinctActivities": 13,
+    "distinctStations": 1,
+    "readyResults": 571,
+    "reviewResults": 464,
+    "readyLocations": 0,
+    "existingLocations": 1,
+    "issueCounts": {
+      "FIELD_LENGTH": 12,
+      "RECEIVER_VALUE_REWRITE": 1,
+      "LIMIT_RETAINED_IN_SOURCE": 1112,
+      "DETECTION_REPRESENTATION": 452
+    },
+    "mappedLimits": 0,
+    "retainedLimits": 1112
+  },
+  "after": {
+    "sourceResults": 1035,
+    "selectedResults": 1035,
+    "distinctActivities": 13,
+    "distinctStations": 1,
+    "readyResults": 1035,
+    "reviewResults": 0,
+    "readyLocations": 0,
+    "existingLocations": 1,
+    "issueCounts": {
+      "LIMIT_RETAINED_IN_SOURCE": 660
+    },
+    "mappedLimits": 452,
+    "retainedLimits": 660
+  },
+  "impact": {
+    "changedLocations": 0,
+    "changedActivities": 0,
+    "changedResults": 464,
+    "changedFieldValues": 916,
+    "changedLimitLists": 452,
+    "becameReady": 464,
+    "becameReview": 0,
+    "summaryDelta": {
+      "sourceResults": 0,
+      "selectedResults": 0,
+      "distinctActivities": 0,
+      "distinctStations": 0,
+      "readyResults": 464,
+      "reviewResults": -464,
+      "readyLocations": 0,
+      "existingLocations": 0,
+      "mappedLimits": 452,
+      "retainedLimits": -452
+    },
+    "byField": [
+      {
+        "kind": "result",
+        "field": "DETECTION_LIMIT_UNIT",
+        "count": 452
+      },
+      {
+        "kind": "result",
+        "field": "LAB_REPORTING_LEVEL",
+        "count": 452
+      },
+      {
+        "kind": "result",
+        "field": "RESULT_MSR",
+        "count": 1
+      },
+      {
+        "kind": "result",
+        "field": "RESULT_MSR_UNIT",
+        "count": 11
+      }
+    ]
+  },
+  "invariants": {
+    "allOriginalResultIdentities": true,
+    "allOriginalLocationActivityObjects": true,
+    "originalResultRecords": 1035,
+    "originalLimitRecords": 1112,
+    "unchangedLimitRecords": 1112,
+    "originalLimitsSha256": "cf511de2b91b9bd243d6db2e29f0d8ef40f973662bfcbc291572f5f072c0204e",
+    "blankCensoredObservations": 452,
+    "exactCensoringThresholds": 452,
+    "unchangedResultValueStrings": 1034,
+    "changedCategoricalLabels": 1,
+    "changedPhReceivingLabels": 11,
+    "nominalThresholdDifferencesRetained": 35,
+    "sourceBindingPreserved": true,
+    "sameNativeBaselineRows": true
+  },
+  "rowIntersections": {
+    "FIELD_LENGTH:RESULT_MSR_UNIT": 11,
+    "FIELD_LENGTH:RESULT_MSR|RECEIVER_VALUE_REWRITE:RESULT_MSR": 1,
+    "DETECTION_REPRESENTATION:RESULT_DETECT_CONDITION": 452
+  },
+  "limitFamilies": [
+    {
+      "type": "Censoring Level",
+      "records": 452,
+      "distinctRows": 452,
+      "reviewRows": 452,
+      "units": {
+        "NTRU": 1,
+        "mg/L": 44,
+        "ng/L": 392,
+        "ug/L": 15
+      },
+      "intersections": {
+        "Censoring Level|Lower Reporting Limit": 16,
+        "Censoring Level|Detection limit by DQCALC": 13,
+        "Censoring Level|Reporting limit by DQCALC": 392,
+        "Censoring Level|Long Term Method Detection Level": 6,
+        "Censoring Level": 25
+      },
+      "receiverField": "LAB_REPORTING_LEVEL"
+    },
+    {
+      "type": "Lower Reporting Limit",
+      "records": 69,
+      "distinctRows": 69,
+      "reviewRows": 21,
+      "units": {
+        "NTRU": 6,
+        "mg/L": 27,
+        "standard units": 5,
+        "uS/cm": 6,
+        "% passing": 5,
+        "ug/L": 20
+      },
+      "intersections": {
+        "Censoring Level|Lower Reporting Limit": 16,
+        "Lower Reporting Limit": 53
+      },
+      "receiverField": null
+    },
+    {
+      "type": "Detection limit by DQCALC",
+      "records": 97,
+      "distinctRows": 97,
+      "reviewRows": 13,
+      "units": {
+        "mg/L": 92,
+        "ug/L": 5
+      },
+      "intersections": {
+        "Detection limit by DQCALC": 84,
+        "Censoring Level|Detection limit by DQCALC": 13
+      },
+      "receiverField": null
+    },
+    {
+      "type": "Reporting limit by DQCALC",
+      "records": 430,
+      "distinctRows": 430,
+      "reviewRows": 392,
+      "units": {
+        "ng/L": 430
+      },
+      "intersections": {
+        "Reporting limit by DQCALC": 38,
+        "Censoring Level|Reporting limit by DQCALC": 392
+      },
+      "receiverField": null
+    },
+    {
+      "type": "Detection limit by blank data",
+      "records": 46,
+      "distinctRows": 46,
+      "reviewRows": 0,
+      "units": {
+        "ug/L": 30,
+        "mg/L": 16
+      },
+      "intersections": {
+        "Detection limit by blank data": 46
+      },
+      "receiverField": null
+    },
+    {
+      "type": "Long Term Method Detection Level",
+      "records": 18,
+      "distinctRows": 18,
+      "reviewRows": 6,
+      "units": {
+        "mg/L": 18
+      },
+      "intersections": {
+        "Censoring Level|Long Term Method Detection Level": 6,
+        "Long Term Method Detection Level": 12
+      },
+      "receiverField": null
+    }
+  ],
+  "nativeResults": {
+    "beforeRows": 571,
+    "afterRows": 1035,
+    "filename": "potomac-complete-receiving-plan-01-results.tsv",
+    "mime": "text/tab-separated-values; charset=utf-8",
+    "bytes": 780731,
+    "sha256": "61c13bb7b3c62c264588a6327e9e54743fd3782db8bcdbbae0847d9476b2570a"
+  },
+  "outputs": {
+    "locations": {
+      "filename": "potomac-complete-receiving-plan-01-locations.tsv",
+      "mime": "text/tab-separated-values; charset=utf-8",
+      "bytes": 96,
+      "sha256": "20ff61f585ad7c85cab815271655528c5b1e7f9d7768e188366e5fa61f3700c0"
+    },
+    "results": {
+      "filename": "potomac-complete-receiving-plan-01-results.tsv",
+      "mime": "text/tab-separated-values; charset=utf-8",
+      "bytes": 780731,
+      "sha256": "61c13bb7b3c62c264588a6327e9e54743fd3782db8bcdbbae0847d9476b2570a"
+    },
+    "crosswalk": {
+      "filename": "potomac-complete-receiving-plan-01-crosswalk.json",
+      "mime": "application/json",
+      "bytes": 5572563,
+      "sha256": "708d265ac3944bf85bdff51ecd2f6724c31fd08b3124bea2647a76ed4b5f507a"
+    },
+    "report": {
+      "filename": "potomac-complete-receiving-plan-01-receiving.html",
+      "mime": "text/html; charset=utf-8",
+      "bytes": 160773,
+      "sha256": "99be6d183b215a1e4efb42001756c8b0b732ceb99ad630f7181b6492fc60fba5"
+    },
+    "references": {
+      "filename": "potomac-complete-receiving-plan-01-references.csv",
+      "mime": "text/csv; charset=utf-8",
+      "bytes": 5587,
+      "sha256": "6370aa8fdfab2b8f6bad0445c72fcaffcea01fcfdf178f35b35c744734452ff0"
+    }
+  },
+  "correctedBrowser": {
+    "sourcePlanId": "potomac-complete-receiving-plan-01",
+    "sourcePlanSha256": "893c32bd0b9729cc3504244670ecd05c34c51ddf1e44887296c7ea2cb0788e21",
+    "documentSha256": "e4ca190ce3b24bc2b3ee4be90824228a4d84693cc66a7bb82ec68b71de1f44a6",
+    "previewSha256": "994424e6f2381fd8d518b24e4f9985e719d50e15314a26698dfa6036f67819d8",
+    "newPlanId": "potomac-complete-bulk-metadata-plan-01",
+    "newPlanSha256": "5f6f2564d8098c0391d2ecd486a4124f96c09fe2f501fc5592dbbba70d8b5da4",
+    "decisionCounts": {
+      "keep": 1,
+      "set": 1035,
+      "clear": 0,
+      "changed": 1035,
+      "noOp": 1
+    },
+    "allNativeRowsAndFieldsIdenticalToMappedSource": true
+  },
+  "primarySources": {
+    "importer": "https://github.com/open-environment/open-waters/blob/e2cd705ed68b322808b46225b90ae86fc71a7e70/OpenWaters/OpenWaters/App_Pages/Secure/WQXImport.aspx.cs",
+    "fieldContract": "https://github.com/open-environment/open-waters/blob/e2cd705ed68b322808b46225b90ae86fc71a7e70/OpenWaters/OpenWaters/App_Docs/ImportColumnsConfig.xml",
+    "headerMapper": "https://github.com/open-environment/open-waters/blob/e2cd705ed68b322808b46225b90ae86fc71a7e70/OpenWaters/OpenWaters/App_Logic/BusinessLogicLayer/Utils.cs",
+    "validation": "https://github.com/open-environment/open-waters/blob/e2cd705ed68b322808b46225b90ae86fc71a7e70/OpenWaters/OpenWaters/App_Logic/DataAccessLayer/db_WQX.cs",
+    "interpretation": "https://water.usgs.gov/owq/OFR_99-193/data.html",
+    "epaGuide": "https://www.epa.gov/system/files/documents/2025-09/wqxdetectionlimitsbestpracticesguide_final.pdf",
+    "product": "https://github.com/woahwhattheheck/public-commons-sprint-2026/tree/ac38372782d0d0884686aea3cf5d8c619882c6e4/stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality"
+  },
+  "interpretation": {
+    "reportingThreshold": "The original per-result Censoring Level is the effective reported censoring threshold. The receiver's LAB_REPORTING_LEVEL field carries that exact threshold and unit, while the complete original limit types and comments remain attached. Statistical interpretation can use the retained method-specific limits.",
+    "units": "The source pH label standard units is represented by literal None in the receiving field, matching the EPA guide's pH example. Numeric pH values and original source units remain unchanged.",
+    "categorical": "The sole shortened value retains code 30, churn splitter, plastic, eight-litre capacity and cubitainer-type spigot; it uses semicolon separators and L to satisfy the original native field and importer."
+  }
+}

@@ -1,5 +1,7 @@
+import {createBatchWorkbench} from './batch.js';
 const $=id=>document.getElementById(id);
-const state={workspace:null,request:null,chosen:null,package:null,packages:[],deliveries:[],compared:null,readOnly:false,view:'requests',busy:false};
+const state={workspace:null,request:null,chosen:null,package:null,packages:[],deliveries:[],compared:null,readOnly:false,view:'requests',busy:false,requestOffset:0};
+let batch;
 const sessionKey='starforge-geocoding:'+location.origin;
 let token=location.hash.slice(1);
 if(/^[a-f0-9]{64}$/.test(token)){sessionStorage.setItem(sessionKey,token);history.replaceState(null,'',location.pathname);}
@@ -15,30 +17,34 @@ async function api(path,data){
   if(!response.ok)throw new Error(value.message??value.error??'Request failed');
   return value;
 }
-async function download(path,name){
+async function readBytes(path){
   const response=await fetch(path,{headers:{authorization:'Bearer '+token}});
   if(!response.ok){const value=await response.json();throw new Error(value.message??value.error);}
-  const url=URL.createObjectURL(await response.blob()),link=document.createElement('a');link.href=url;link.download=name;
+  return response.arrayBuffer();
+}
+async function download(path,name){
+  const url=URL.createObjectURL(new Blob([await readBytes(path)])),link=document.createElement('a');link.href=url;link.download=name;
   link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
 const actionButtons=new Set();
+async function perform(callback,event){
+  event?.preventDefault();
+  if(state.busy)return;
+  state.busy=true;
+  const previous=[...actionButtons].map(control=>[control,control.disabled]);
+  for(const control of actionButtons)control.disabled=true;
+  document.body.setAttribute('aria-busy','true');syncButtons();
+  try{await callback(event);}catch(error){notify(error.message,true);}
+  finally{
+    state.busy=false;
+    for(const [control,disabled] of previous)control.disabled=disabled;
+    document.body.removeAttribute('aria-busy');syncButtons();
+  }
+}
 function action(id,callback,event='click'){
   const target=$(id),button=target.tagName==='FORM'?target.querySelector('button[type=submit]'):target;
   if(button)actionButtons.add(button);
-  target.addEventListener(event,async e=>{
-    e.preventDefault();
-    if(state.busy)return;
-    state.busy=true;
-    const previous=[...actionButtons].map(control=>[control,control.disabled]);
-    for(const control of actionButtons)control.disabled=true;
-    document.body.setAttribute('aria-busy','true');syncButtons();
-    try{await callback(e);}catch(error){notify(error.message,true);}
-    finally{
-      state.busy=false;
-      for(const [control,disabled] of previous)control.disabled=disabled;
-      document.body.removeAttribute('aria-busy');syncButtons();
-    }
-  });
+  target.addEventListener(event,e=>perform(callback,e));
 }
 function facts(id,items){
   const target=$(id);empty(target);
@@ -70,13 +76,19 @@ function syncButtons(){
   $('start-release').disabled=busy||!merchant?.state?.active||Boolean(state.workspace?.ownsRunningRelease);
   $('stop-release').disabled=busy||!state.workspace?.ownsRunningRelease;
   $('rollback-release').disabled=busy||!merchant?.state?.previous;
+  const pagination=state.workspace?.pagination;
+  $('request-prev').disabled=busy||!pagination||pagination.offset===0;
+  $('request-next').disabled=busy||pagination?.nextOffset==null;
+  batch?.syncButtons();
 }
 async function setView(view){
   state.view=view;
   for(const element of document.querySelectorAll('.view'))element.hidden=element.id!=='view-'+view;
   for(const button of document.querySelectorAll('nav button'))button.classList.toggle('active',button.dataset.view===view);
+  batch?.setVisible(view==='batches');
   if(view==='merchant')await refreshMerchant();
   if(view==='deliveries')await refreshDeliveries();
+  if(view==='batches')await batch.activate();
 }
 for(const button of document.querySelectorAll('nav button'))button.addEventListener('click',()=>setView(button.dataset.view).catch(e=>notify(e.message,true)));
 function outcomeText(value){
@@ -99,7 +111,11 @@ function outcomeText(value){
 function renderRequests(){
   empty($('request-list'));
   const requests=state.workspace.requests??[];
-  $('request-count').textContent=requests.length+' retained';
+  const pagination=state.workspace.pagination;
+  $('request-count').textContent=(pagination?.total??requests.length)+' retained';
+  $('request-pagination').hidden=!pagination||pagination.total<=pagination.limit;
+  $('request-page-count').textContent=pagination?(pagination.total?(pagination.offset+1)+'–'+(pagination.offset+requests.length):'0')+' of '+pagination.total:'';
+  syncButtons();
   if(!requests.length){const row=node('tr');const cell=node('td','No source requests yet.');cell.colSpan=4;row.append(cell);$('request-list').append(row);}
   for(const value of [...requests].reverse()){
     const row=node('tr');row.classList.toggle('selected',state.request?.request.id===value.id);
@@ -165,9 +181,16 @@ function renderContract(){
   $('configuration').textContent=json(configuration);
 }
 async function refresh(){
-  const value=await api('/api/workspace');state.readOnly=Boolean(value.readOnly);
+  const value=await api('/api/workspace?'+qs({offset:state.requestOffset,limit:100}));state.readOnly=Boolean(value.readOnly);
+  if(value.pagination)state.requestOffset=value.pagination.offset;
+  if(state.readOnly&&value.batchDelivery){
+    state.workspace=value;$('connection').textContent='Reopened CSV customer delivery';
+    $('intake').hidden=true;$('refresh').hidden=true;
+    for(const button of document.querySelectorAll('nav button'))button.hidden=button.dataset.view!=='batches';
+    batch.setWorkspace(value);await setView('batches');return;
+  }
   if(state.readOnly){
-    state.workspace=value;$('connection').textContent='Reopened customer delivery';$('workspace-title').textContent='Customer geocoding delivery';
+    state.workspace=value;batch.setWorkspace(value);$('connection').textContent='Reopened customer delivery';$('workspace-title').textContent='Customer geocoding delivery';
     $('workspace-subtitle').textContent='Original result and saved decision revision '+value.delivery.decision.revision+'.';
     $('intake').hidden=true;$('refresh').hidden=true;
     for(const button of document.querySelectorAll('nav button'))button.hidden=button.dataset.view!=='requests';
@@ -178,8 +201,10 @@ async function refresh(){
       state:{state:'COMPLETE',outcome:delivery.state,providerStatus:200}});
     return;
   }
-  const previous=state.workspace?.identity;state.workspace=value;
-  $('connection').textContent=value.configuration.plan.name+' · '+value.totals.completed+' complete · '+value.totals.selected+' selected';
+  const previous=state.workspace?.identity;state.workspace=value;batch.setWorkspace(value);
+  $('connection').textContent=value.configuration.plan.name+' · '+
+    (value.totals.completed===null?(value.pagination?.total??value.requests.length)+' retained requests':
+      value.totals.completed+' complete · '+value.totals.selected+' selected');
   $('workspace-title').textContent=value.configuration.plan.name;
   if(previous!==value.identity){
     empty($('product'));
@@ -215,6 +240,8 @@ async function runQuery(imported=false){
 action('query-form',()=>runQuery(),'submit');action('import-result',()=>runQuery(true));
 $('product').addEventListener('change',()=>{$('query').value=product().mode==='reverse'?'51.952659,7.632473':'Münster, Germany';$('options').value='{}';preview();});
 $('query').addEventListener('input',preview);$('options').addEventListener('input',preview);
+action('request-prev',async()=>{state.requestOffset=Math.max(0,state.requestOffset-(state.workspace.pagination?.limit??100));await refresh();});
+action('request-next',async()=>{const next=state.workspace.pagination?.nextOffset;if(next==null)return;state.requestOffset=next;await refresh();});
 action('refresh',refresh);action('refresh-merchant',refreshMerchant);action('refresh-deliveries',refreshDeliveries);
 action('save-choice',async()=>{
   const value=state.request;
@@ -325,4 +352,6 @@ async function showDelivery(exportId){
   }
   $('delivery-native').textContent=json(value);
 }
+batch=createBatchWorkbench({api,download,readBytes,notify,action,perform,node,empty,getWorkspace:()=>state.workspace,
+  isBusy:()=>state.busy,outcomeText,openRequest:async id=>{await loadRequest(id);await setView('requests');}});
 refresh().catch(error=>{notify(error.message,true);$('connection').textContent='Operator session unavailable';});

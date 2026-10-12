@@ -31,8 +31,15 @@ export function createAccountingRunbooksClient({workspace,call}={}){
   }
   async function transition(work,permanent=false){
     accepting();transitioning=true;
-    try{await Promise.allSettled([...pending]);return await work();}
-    finally{transitioning=false;if(permanent)closed=true;}
+    try{await Promise.allSettled([...pending]);const result=await work();if(permanent)closed=true;return result;}
+    finally{transitioning=false;}
+  }
+  function finish(work){
+    if(!closePromise){
+      const attempt=transition(work,true);closePromise=attempt;
+      attempt.catch(()=>{if(closePromise===attempt)closePromise=null;});
+    }
+    return closePromise;
   }
   async function all(fetch,view){
     const items=[];let offset=0,workspaceId,revision,total;
@@ -95,7 +102,7 @@ export function createAccountingRunbooksClient({workspace,call}={}){
       }
       return result;
     },
-    registerFileRead:readId=>maintenance.registerFileRead(readId),
+    registerFileRead:readId=>{accepting();return maintenance.registerFileRead(readId);},
     releaseFile:(readId,options)=>maintenance.releaseFile(readId,options),
     drainFileReads:()=>transition(()=>maintenance.drainFileReads()),
     async *fileChunks(selection,options){
@@ -114,15 +121,15 @@ export function createAccountingRunbooksClient({workspace,call}={}){
       return downloadAccountingMaintenanceFile({client,selection:copy(selection),expectedSha256,output,chunkBytes,signal});
     },
     disconnect(){
-      if(!closePromise)closePromise=transition(()=>maintenance.drainFileReads(),true);return closePromise;
+      return finish(()=>maintenance.drainFileReads());
     },
     closeWorkspace(options){
-      if(!closePromise)closePromise=transition(()=>maintenance.closeWorkspace(options),true);return closePromise;
+      return finish(()=>maintenance.closeWorkspace(options));
     },
   };
   return Object.freeze(client);
 }
 export async function connectAccountingRunbooksClient({workspace,maxResponseBytes=128*1024*1024,...options}={}){
-  const connection=await openMerchantFileClient({...options,maxResponseBytes,errorPrefix:'ACCOUNTING_RUNBOOK',clientName:'starforge-accounting-runbooks'});
+  const connection=await openMerchantFileClient({...options,maximumResponseBytes:maxResponseBytes,errorPrefix:'ACCOUNTING_RUNBOOK',clientName:'starforge-accounting-runbooks'});
   return Object.freeze({...createAccountingRunbooksClient({workspace,call:connection.call}),endpoint:connection.endpoint});
 }

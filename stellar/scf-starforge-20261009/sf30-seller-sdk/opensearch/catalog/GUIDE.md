@@ -284,3 +284,7 @@ The browser API retains the original loopback Host/Origin gate. POST calls addit
 Upload/import requests use `application/octet-stream` and the `x-catalog-metadata` JSON header, limited to 12 KiB. Metadata includes `requestId`, `name`, exact `bytes` and `sha256`; source upload also supplies `format` and optional `provenance`. Encode non-ASCII metadata characters with JSON Unicode escapes when transmitting an HTTP header. A supplied Content-Length must match the selected size.
 
 Catalog export responses consume the original synchronous or asynchronous byte iterable with backpressure. Large file content remains outside request JSON and catalog operation records. The byte stream, source metadata and original retained request identify the delivered source together.
+
+## Supplier submission and BMEcat delivery
+
+Open **Supplier delivery** to map a retained catalog edition to supplier requirements, resolve product findings, create BMEcat XML and carry the complete submission history into a customer handover. The [supplier operating guide](supplier/GUIDE.md) covers receiving profiles, reasoned corrections, CLI/HTTP use and the published ETIM example.

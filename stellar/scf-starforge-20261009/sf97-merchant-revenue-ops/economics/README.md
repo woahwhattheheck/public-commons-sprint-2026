@@ -4,6 +4,10 @@ Use this workspace to retain the supplier's original bill, credit note or quotat
 
 The source documents, their classified line editions, allocations and saved pricing reviews have separate identities. This lets an operator correct a supplier document or change an allocation without rewriting the earlier decision.
 
+## Receive a complete review from another merchant
+
+[Receive a complete supplier-cost review](RECEIVING.md) covers the full selected `COST_EDITION` workflow: retain the original TAR and source documents, review every original-to-local route mapping, open a native cost draft, save and apply its costs, and carry the original lineage through export and recovery. The browser, existing merchant MCP, CLI and HTTP paths use the same native source and cost stores. For a complete private workspace move, continue through the existing Applications backup receiving workflow described below.
+
 ## Open the existing merchant
 
 Start the original pricing workspace with its existing seller configuration and either its operations listener or retained operations export. Open `/economics` on its printed loopback URL. The page follows Saved pricing source, Original cost and usage files, Map charge columns, Charges and allocations, Cost scope and coverage, Review and save, Saved editions and comparison, Apply costs to pricing, and Exports and recovery. Existing host captures can be supplied with `--supplier-usage FILE` and `--accounting-report FILE`; retain their original files and use the selected captures as source context. The existing startup, private-state and source-selection instructions are in [Merchant pricing workspace](../WORKSPACE.md).
@@ -123,6 +127,32 @@ A useful operator handover identifies the merchant configuration, supplier and a
 | Line `allocations` | Preserve route ID, signed amount, optional quantity, basis, weight and reason |
 
 ## Recover the whole private workspace
+
+The installed **Applications → Merchant pricing and scenario planning** form
+accepts the original TAR in **Complete pricing and supplier-cost backup**.
+Select a new private pricing directory, the original merchant configuration and
+its original observation source. **Review application** and **Review start**
+show the complete archive digest, byte/file counts, included source and saved
+edition counts, and whether the target is new, interrupted or already restored.
+The original native writer receives those reviewed bytes before the same pricing
+process opens. **Supplier costs**, **Scenario planning** and pricing history all
+use that restored directory. The
+[Applications receiving guide](../../distribution/runtime-workspace/PRICING_APPLICATIONS.md#receive-a-complete-merchant-workspace-in-applications)
+covers the full browser and CLI journey.
+
+For direct receiving, inspect the original backup first:
+
+```bash
+node stellar/scf-starforge-20261009/sf97-merchant-revenue-ops/workspace/cli.mjs \
+  --inspect-cost-workspace /private/merchant/pricing-cost-backup.tar \
+  --state /private/merchant/restored-pricing-cost
+```
+
+This reads the full original archive and checks the selected destination without
+creating a workspace or opening a listener. Retain its `sourceArchiveSha256`.
+Use that exact value as the optional `--expected-cost-backup-sha256` argument
+on the restore command below; Applications supplies it automatically. The native
+writer checks the whole archive digest before publishing any receiving files.
 
 Use the original workspace command and a new private state directory:
 

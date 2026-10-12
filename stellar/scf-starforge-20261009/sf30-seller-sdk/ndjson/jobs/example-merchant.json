@@ -1,0 +1,134 @@
+{
+  "schema": "stellar-forge.paid-jobs.v1",
+  "application": "./application.mjs",
+  "publicOrigin": "https://jobs-merchant.example",
+  "serviceName": "Dataset Preparation and Edition Review",
+  "environment": [
+    "SF30_NDJSON_PYTHON",
+    "SF30_XML_NODE"
+  ],
+  "workerCount": 1,
+  "maxPending": 128,
+  "maxJobs": 10000,
+  "memoryLimitMb": 256,
+  "inputFileStorage": {
+    "maxBytes": 536870912,
+    "maxUploads": 4096
+  },
+  "functions": {
+    "prepareDataset": {
+      "path": "/dataset-preparation",
+      "description": "Prepare a complete queryable dataset and portable source project from original JSON files, with exact keys, optional baseline comparison and a customer review package.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "reportName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "sourceLabel": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 160
+          },
+          "sourceFormat": {
+            "type": "string",
+            "enum": [
+              "ndjson",
+              "json-array"
+            ]
+          },
+          "sourceArrayPointer": {
+            "type": "string",
+            "maxLength": 4096
+          },
+          "baselineLabel": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 160
+          },
+          "baselineFormat": {
+            "type": "string",
+            "enum": [
+              "ndjson",
+              "json-array"
+            ]
+          },
+          "baselineArrayPointer": {
+            "type": "string",
+            "maxLength": 4096
+          },
+          "queryJson": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 65536
+          }
+        },
+        "required": [
+          "reportName"
+        ],
+        "additionalProperties": false
+      },
+      "example": {
+        "reportName": "Original publisher dataset",
+        "sourceFormat": "json-array",
+        "sourceArrayPointer": "/grants",
+        "queryJson": "{\"limit\":\"50\"}"
+      },
+      "inputFiles": {
+        "slots": {
+          "source": {
+            "required": true,
+            "description": "Complete original NDJSON edition or JSON package with an explicitly selected array.",
+            "mediaTypes": [
+              "application/x-ndjson",
+              "application/json"
+            ],
+            "maxBytes": 33554432
+          },
+          "mapping": {
+            "required": true,
+            "description": "Original stellar-forge.ndjson-mapping.v1 field mapping.",
+            "mediaTypes": [
+              "application/json"
+            ],
+            "maxBytes": 65536
+          },
+          "baseline": {
+            "required": false,
+            "description": "Optional previous edition of the same dataset, projected with the same mapping.",
+            "mediaTypes": [
+              "application/x-ndjson",
+              "application/json"
+            ],
+            "maxBytes": 33554432
+          }
+        },
+        "maxTotalBytes": 67174400
+      },
+      "payment": {
+        "scheme": "exact",
+        "network": "stellar:testnet",
+        "asset": "UNVERIFIED_DEMO_ASSET",
+        "payTo": "UNVERIFIED_DEMO_RECIPIENT",
+        "amount": "10000",
+        "maxTimeoutSeconds": 60
+      },
+      "timeoutMs": 600000,
+      "maxInputBytes": 262144,
+      "maxOutputBytes": 67108864,
+      "output": {
+        "format": "bytes",
+        "contentType": "application/zip",
+        "filename": "dataset-project.zip"
+      }
+    }
+  },
+  "intake": {
+    "enabled": true,
+    "functions": [
+      "prepareDataset"
+    ]
+  }
+}

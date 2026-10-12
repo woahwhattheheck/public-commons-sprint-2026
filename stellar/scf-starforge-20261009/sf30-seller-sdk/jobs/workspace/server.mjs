@@ -1,9 +1,13 @@
 // MIT. Private operator view of the original durable job merchant.
 import { createServer } from 'node:http';
-import { readFile } from 'node:fs/promises';
-import { randomBytes, timingSafeEqual } from 'node:crypto';
+import { readFile, realpath } from 'node:fs/promises';
+import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
 import { JOB_ID } from '../config.mjs';
+import { JOB_WORKSPACE_IDENTITY_SCHEMA, assertJobWorkspaceIdentity, validateJobServiceIdentity } from './identity.mjs';
 import { jobInputWorkspaceExtension } from '../inputs/workspace/server.mjs';
+import { paidJobAgentExtension } from '../agent/http.mjs';
 import { jobResolutionAssets, resolutionOperatorPath, handleJobResolutionOperator,
   readResolutionRequest, RESOLUTION_REQUEST_BYTES } from '../resolution/http.mjs';
 
@@ -43,11 +47,15 @@ function name(value) {
   return String(value || 'job-result.bin').replace(/[^A-Za-z0-9._-]/g, '_').slice(0, 160) || 'job-result.bin';
 }
 /** The owning merchant retains the model, lease and worker lifetime. */
-export async function startJobsWorkspace({ model, delivery = null, port = 0 } = {}) {
+export async function startJobsWorkspace({ model, delivery = null, port = 0, serviceIdentity = null } = {}) {
   if (!model || typeof model.snapshot !== 'function' || typeof model.get !== 'function')
     throw fault('JOB_MODEL_REQUIRED', 'Open the original job merchant first.');
   if (!Number.isInteger(port) || port < 0 || port > 65535)
     throw fault('INVALID_PORT', 'Choose an integer port from 0 to 65535.');
+  const service = validateJobServiceIdentity(serviceIdentity);
+  const instanceId = service?.instanceId ?? randomUUID();
+  const identitySnapshot = await model.snapshot();
+  const runtimeDirectory = await realpath(resolve(fileURLToPath(new URL('../', import.meta.url))));
   const token = randomBytes(32).toString('hex'), expected = Buffer.from('Bearer ' + token);
   const staticAssets = new Map(await Promise.all([...assets].map(async ([path, [file, type]]) =>
     [path, { body: await readFile(new URL('./public/' + file, import.meta.url)), type }])));
@@ -63,9 +71,10 @@ export async function startJobsWorkspace({ model, delivery = null, port = 0 } = 
   for (const asset of await jobResolutionAssets())
     staticAssets.set(asset.route, { body: asset.bytes, type: asset.type });
   const inputReceiving = await jobInputWorkspaceExtension({ model });
+  const agent = paidJobAgentExtension({ model, inputDesk: inputReceiving.desk });
   for (const asset of inputReceiving.assets) staticAssets.set(asset.route, { body: asset.bytes, type: asset.type + '; charset=utf-8' });
   const pending = new Set(), readers = new Set(), controllers = new Set();
-  let origin, hostname, closing = false, closingPromise, drainPromise, drainError;
+  let origin, hostname, workspaceIdentity, closing = false, closingPromise, drainPromise, drainError;
   const snapshot = async () => ({ ...await model.snapshot(), operator: { drainError: drainError ?? null },
     ...(delivery ? { resultDelivery: { workspace: '/deliveries' } } : {}), inputReceiving: inputReceiving.status(),
     resolution: { workspace: '/resolutions/' } });
@@ -97,7 +106,15 @@ export async function startJobsWorkspace({ model, delivery = null, port = 0 } = 
         const supplied = Buffer.from(String(req.headers.authorization ?? ''));
         if (supplied.length !== expected.length || !timingSafeEqual(supplied, expected))
           throw fault('WORKSPACE_AUTH_REQUIRED', 'Open the complete private launch address from your terminal.', 401);
+        if (['GET', 'HEAD'].includes(req.method) && url.pathname === '/api/identity')
+          return send(200, workspaceIdentity);
         if (await inputReceiving.authenticatedRoute({ request: req, response: res, url, signal: controller.signal,
+          send: (value, status = 200) => send(status, value), body: async maximum => {
+            readers.add(req);
+            try { controller.signal.throwIfAborted(); return await readJSON(req, maximum); }
+            finally { readers.delete(req); }
+          } })) return;
+        if (await agent.authenticatedRoute({ request: req, url, signal: controller.signal,
           send: (value, status = 200) => send(status, value), body: async maximum => {
             readers.add(req);
             try { controller.signal.throwIfAborted(); return await readJSON(req, maximum); }
@@ -218,12 +235,20 @@ export async function startJobsWorkspace({ model, delivery = null, port = 0 } = 
   server.requestTimeout = 30000; server.headersTimeout = 10000; server.keepAliveTimeout = 2000;
   try {
     await new Promise((done, fail) => { server.once('error', fail); server.listen(port, '127.0.0.1', () => { server.off('error', fail); done(); }); });
+    origin = new URL('http://127.0.0.1:' + server.address().port).origin;
+    hostname = new URL(origin).host;
+    workspaceIdentity = Object.freeze(assertJobWorkspaceIdentity({
+      schema: JOB_WORKSPACE_IDENTITY_SCHEMA, instanceId, pid: process.pid,
+      directory: identitySnapshot.directory, configPath: identitySnapshot.configPath, runtimeDirectory,
+      source: Object.freeze(structuredClone(identitySnapshot.source)), origin,
+      capabilities: Object.freeze({ inputs: true, resolution: true, delivery: Boolean(delivery) }), service,
+    }));
   } catch (error) {
-    try { await inputReceiving.close(); } catch (cleanup) { throw new AggregateError([error, cleanup], 'JOB_WORKSPACE_OPEN_FAILED'); }
+    if (server.listening) await new Promise(done => { server.close(() => done()); server.closeAllConnections?.(); });
+    try { await agent.close(); await inputReceiving.close(); } catch (cleanup) { throw new AggregateError([error, cleanup], 'JOB_WORKSPACE_OPEN_FAILED'); }
     throw error;
   }
-  hostname = '127.0.0.1:' + server.address().port; origin = 'http://' + hostname;
-  return { server, model, origin, token, url: origin + '/#' + token,
+  return { server, model, origin, token, identity: workspaceIdentity, url: origin + '/#' + token,
     inputReceivingUrl: origin + '/inputs/#' + token, resolutionUrl: origin + '/resolutions/#' + token, close() {
     return closingPromise ??= (async () => {
       closing = true;
@@ -231,7 +256,8 @@ export async function startJobsWorkspace({ model, delivery = null, port = 0 } = 
       for (const request of readers) request.destroy();
       const stopped = new Promise((done, fail) => server.close(error => error ? fail(error) : done()));
       stopped.catch(() => {}); server.closeIdleConnections?.();
-      const results = await Promise.allSettled([inputReceiving.close(), ...pending]);
+      const results = await Promise.allSettled([agent.close(), ...pending]);
+      results.push(...await Promise.allSettled([inputReceiving.close()]));
       server.closeAllConnections?.();
       try { await stopped; } catch (error) { results.push({ status: 'rejected', reason: error }); }
       const failures = results.filter(result => result.status === 'rejected').map(result => result.reason);

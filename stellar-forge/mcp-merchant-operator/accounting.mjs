@@ -43,7 +43,7 @@ const digest = bytes => createHash('sha256').update(bytes).digest('hex');
 
 
 
-const sourceKinds = ['recoveredSources', 'recoveryRequests', 'proofFiles', 'termsFiles', 'pricingReports', 'accountantReturns', 'platformInputs', 'statementUsageInputs', 'cryptoworthInputs', 'runbookInputs'];
+const sourceKinds = ['recoveredSources', 'recoveryRequests', 'proofFiles', 'termsFiles', 'pricingReports', 'accountantReturns', 'buyerSources', 'platformInputs', 'statementUsageInputs', 'cryptoworthInputs', 'runbookInputs'];
 
 
 
@@ -479,6 +479,15 @@ export class MerchantAccounting {
       case 'merchant_accounting_period':
         if (args.view === 'notes') return { closeId: args.closeId, ...(await workspace.periods.notes(args.closeId, args)) };
         return workspace.periods.detail(args.closeId);
+      case 'merchant_accounting_accountant_buyer_prepare':
+      case 'merchant_accounting_accountant_buyer_create': {
+        const bytes=await sourceBytes(this.#source(key,'buyerSources',args.source),ACCOUNTANT_CSV_BYTES),sha256=digest(bytes);
+        if(sha256!==args.sourceSha256)throw fail('ACCOUNTING_BUYER_SOURCE_CHANGED','The original issued buyer file differs from the reviewed SHA-256.');
+        const buyerSource={contentBase64:bytes.toString('base64'),sha256};
+        if(operation==='merchant_accounting_accountant_buyer_create')
+          return session.accountant.create({id:args.id,name:args.name,actor:args.actor,revision:args.revision,buyerSource});
+        return {...await session.accountant.prepareBuyer({buyerSource}),input:{alias:args.source,bytes:bytes.length,sha256}};
+      }
       case 'merchant_accounting_accountant_prepare': {
         if (!args.runId && !args.closeId) throw fail('ACCOUNTING_INVALID_ARGUMENTS', 'Choose the original completed runId or retained closeId.');
         const { options, ...result } = await session.accountant.prepare(args);

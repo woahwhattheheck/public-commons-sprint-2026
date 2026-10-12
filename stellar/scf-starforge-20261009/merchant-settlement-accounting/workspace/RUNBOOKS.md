@@ -144,3 +144,18 @@ A portable packet verifies its canonical content, every attachment, each prepara
 Operational limits are 8 MiB per supporting upload, 64 MiB per complete portable packet, 100 procedures/resources per edition, 200 runbooks, 200 retained editions per book, 2,000 periods/files and 20,000 compact operation entries. The underlying workspace retains its existing 32 MB state limit. Client-file mode retains the exact source documents without translating their currencies, accounts or accounting system. Keep long recordings at their source URL, retain the working instructions in the procedure, and include the original files needed by the next operator.
 
 The browser keeps procedure, period, work, review and receiving drafts in its local IndexedDB, scoped to the original workspace and selected record. A retained pending request is reconciled against its original kind, target and digest before the browser accepts a committed result. The next operator receives the same complete period and opens the next close from its retained procedures.
+
+## Issued buyer close handoffs
+
+The same source selection accepts an original accountant handoff created from an
+issued buyer expense period. The browser identifies the actual buyer workspace
+and issued close. Select its exact accountant return in the same way as a
+merchant handoff. Its buyer close, source context and native allocations stay in
+the frozen source.
+
+Portable receiving carries the complete original-buyer-source.json and recreates
+the original handoff through the maintained buyer-aware accountant engine before
+accepting it. The recreated handoff must match every retained source field, row,
+label and identity. Selected returned CSV bytes and accountant return history
+keep their existing validation. A received period can supply its original
+procedures for the next locally selected close.

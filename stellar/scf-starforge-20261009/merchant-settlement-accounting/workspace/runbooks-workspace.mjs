@@ -4,7 +4,7 @@ import {constants} from 'node:fs';
 import {link,lstat,mkdir,open,rm} from 'node:fs/promises';
 import {join} from 'node:path';
 import {accountingWorkspaceBinding} from './binding.mjs';
-import {validateHandoff,validateRevision,inspectHandoff} from '../accountant/engine.mjs';
+import {createHandoff,isBuyerHandoff,validateHandoff,validateRevision,inspectHandoff} from '../accountant/engine.mjs';
 
 export const RUNBOOK_SCHEMA='stellar-forge.accounting-runbooks.v1';
 export const RUNBOOK_PACKET_SCHEMA='stellar-forge.accounting-runbook-packet.v1';
@@ -117,7 +117,7 @@ export class RunbookWorkspace{
   async cycleDetail(id){await this.workspace.tail;return this.envelope({cycle:stripCycle(this.cycle(id))});}
   async sources(){
     await this.workspace.tail;const current=this.accountant.view();
-    return this.envelope({handoffs:current.handoffs.map(row=>({id:row.id,name:row.name,runId:row.source.runId,createdAt:row.createdAt,closeId:row.source.periodClose?.id??null,revisions:[{id:'initial',label:'Original handoff'},...row.revisions.map(item=>({id:item.id,label:item.name,createdAt:item.createdAt}))]})),closes:current.closes.map(row=>({id:row.id,label:row.name??row.label??row.id,runId:row.runId}))});
+    return this.envelope({handoffs:current.handoffs.map(row=>({id:row.id,name:row.name,runId:row.source.runId,sourceKind:row.source.kind==='buyer-expense-period'?'buyer-expense-period':'merchant-settlement',buyerWorkspaceId:row.source.buyer?.workspaceId??null,createdAt:row.createdAt,closeId:row.source.periodClose?.id??null,revisions:[{id:'initial',label:'Original handoff'},...row.revisions.map(item=>({id:item.id,label:item.name,createdAt:item.createdAt}))]})),closes:current.closes.map(row=>({id:row.id,label:row.name??row.label??row.id,runId:row.runId}))});
   }
   async operation(id){
     await this.workspace.tail;uuid(id,'saved request');
@@ -221,7 +221,7 @@ export class RunbookWorkspace{
       uuid(input.handoffId,'accountant handoff');const revisionId=input.accountantRevisionId;
       need(revisionId==='initial'||(typeof revisionId==='string'&&UUID.test(revisionId)),'RUNBOOK_ACCOUNTANT_REVISION_REQUIRED','Select the original handoff or an exact accountant return.');
       const record=this.accountant.row(input.handoffId),detail=await this.accountant.detail(input.handoffId,{revisionId}),selected=this.accountant.revisionRow(record,revisionId);
-      if(input.periodCloseId){uuid(input.periodCloseId,'period close');need(detail.source.periodClose?.id===input.periodCloseId,'RUNBOOK_CLOSE_MISMATCH','Select the period close already frozen into this accountant handoff.');}
+      if(input.periodCloseId){if(detail.source.kind!=='buyer-expense-period')uuid(input.periodCloseId,'period close');need(detail.source.periodClose?.id===input.periodCloseId,'RUNBOOK_CLOSE_MISMATCH','Select the period close already frozen into this accountant handoff.');}
       const files=clone((selected?.files??record.files).filter(file=>!['accountant-handoff.tar','packet-manifest.json'].includes(file.name)));
       source={kind,originWorkspaceId:this.workspaceId,handoffId:record.id,handoffName:record.name,accountantRevisionId:revisionId,accountantRevisionName:selected?.name??'Original handoff',runId:record.source.runId,periodCloseId:record.source.periodClose?.id??null,source:clone(detail.source),summary:clone(detail.summary),files};
     }
@@ -396,7 +396,7 @@ export class RunbookWorkspace{
       }
       return attachments;
     }
-    uuid(cycle.source.handoffId,'original handoff');uuid(cycle.source.runId,'original reconciliation');
+    uuid(cycle.source.handoffId,'original handoff');
     need(cycle.source.accountantRevisionId==='initial'||UUID.test(cycle.source.accountantRevisionId??''),'RUNBOOK_INVALID_PACKET','The packet needs its exact accountant revision.');
     need(new Set(packet.sourceFiles.map(row=>row?.name)).size===packet.sourceFiles.length&&packet.sourceFiles.length===cycle.source.files.length,'RUNBOOK_SOURCE_CHANGED','The original source inventory changed.',409);
     const sourceBytes=new Map();
@@ -407,12 +407,22 @@ export class RunbookWorkspace{
       sourceBytes.set(row.name,bytes);
     }
     const sourceJson=name=>{need(sourceBytes.has(name),'RUNBOOK_SOURCE_MISSING','The packet needs its original '+name+'.');try{return JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(sourceBytes.get(name)));}catch{need(false,'RUNBOOK_INVALID_PACKET','The original '+name+' is not complete JSON.');}};
-    const handoff=validateHandoff(sourceJson('handoff.json'));
+    const handoff=validateHandoff(sourceJson('handoff.json'),{allowBuyer:true}),buyer=isBuyerHandoff(handoff);
+    if(buyer)need(cycle.source.runId===null,'RUNBOOK_SOURCE_CHANGED','Retain the original buyer close without a merchant reconciliation.',409);
+    else uuid(cycle.source.runId,'original reconciliation');
     const revision=cycle.source.accountantRevisionId==='initial'?null:validateRevision(handoff,sourceJson('return.json'));
     need(handoff.id===cycle.source.handoffId&&handoff.name===cycle.source.handoffName&&(!revision||revision.id===cycle.source.accountantRevisionId),'RUNBOOK_SOURCE_CHANGED','The packet must retain the selected original handoff and accountant return.',409);
     const inspected=inspectHandoff(handoff,revision);
     need(hash(inspected.source)===hash(cycle.source.source)&&hash(inspected.summary)===hash(cycle.source.summary)&&cycle.source.runId===inspected.source.runId&&cycle.source.periodCloseId===(inspected.source.periodClose?.id??null)&&cycle.source.accountantRevisionName===(revision?.name??'Original handoff'),'RUNBOOK_SOURCE_CHANGED','The period source summary must come from its retained accountant files.',409);
-    for(const [name,expected] of [['original-report.json',handoff.source.reportSha256],['original-manifest.json',handoff.source.manifestSha256],['input-manifest.json',handoff.source.inputManifestSha256],...(handoff.source.periodClose?[['period-close.json',handoff.source.periodClose.sha256]]:[]),...(handoff.source.adjustments?[['adjustments.json',handoff.source.adjustments.sha256]]:[]),...(revision?[['returned.csv',revision.importSha256]]:[])]){
+    if(buyer){
+      need(sourceBytes.has('original-buyer-source.json'),'RUNBOOK_SOURCE_MISSING','The packet needs its complete original issued buyer source.');
+      const recreated=createHandoff({buyerSourceBytes:sourceBytes.get('original-buyer-source.json'),
+        id:handoff.id,name:handoff.name,actor:handoff.actor,createdAt:handoff.createdAt,labels:handoff.labels});
+      need(hash(recreated)===hash(handoff),'RUNBOOK_SOURCE_CHANGED','The buyer handoff differs from its original issued source, allocations or labels.',409);
+    }
+    const originals=buyer?[]:[['original-report.json',handoff.source.reportSha256],['original-manifest.json',handoff.source.manifestSha256],['input-manifest.json',handoff.source.inputManifestSha256],
+      ...(handoff.source.periodClose?[['period-close.json',handoff.source.periodClose.sha256]]:[]),...(handoff.source.adjustments?[['adjustments.json',handoff.source.adjustments.sha256]]:[])];
+    for(const [name,expected] of [...originals,...(revision?[['returned.csv',revision.importSha256]]:[])]){
       need(sourceBytes.has(name)&&digest(sourceBytes.get(name))===expected,'RUNBOOK_SOURCE_CHANGED','The original '+name+' no longer matches the accountant handoff.',409);
     }
     return attachments;

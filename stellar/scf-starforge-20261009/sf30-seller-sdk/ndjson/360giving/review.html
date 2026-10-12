@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Publisher edition review</title><style>__PUBLISHER_CSS__</style></head>
+<body>
+<header><p class="eyebrow">Publisher operations</p><h1 id="title">360Giving edition review</h1><p id="publisher"></p></header>
+<main>
+<section aria-labelledby="edition-heading"><h2 id="edition-heading">Source edition</h2><dl id="source"></dl><div id="totals" class="totals"></div><p id="schema-summary"></p><details id="schema-detail"><summary>Official schema results</summary><div id="schema-errors"></div></details></section>
+<section aria-labelledby="review-heading"><h2 id="review-heading">Publisher review</h2><p>Keep the original values while the publisher resolves a question. Add an explicit, sourced correction when a replacement is available. The downloaded decision file preserves the selected edition and every entered value.</p><div class="reviewer"><label>Reviewing operator<input id="reviewer" autocomplete="name" placeholder="Name or responsible team"></label><span id="save-state" role="status"></span></div><div id="questions"></div></section>
+<section aria-labelledby="records-heading"><h2 id="records-heading">Complete grant records</h2><label>Find a grant<input id="search" type="search" placeholder="Identifier, title, recipient or date"></label><div class="table-scroll"><table><thead><tr><th>Grant / recipient</th><th>Awarded</th><th>Applied for</th><th>Award date</th><th>Modified</th><th>Original record</th></tr></thead><tbody id="records"></tbody></table></div><div class="pagination"><button id="previous" type="button">Previous</button><span id="record-count"></span><button id="next" type="button">Next</button></div></section>
+<section aria-labelledby="candidate-heading"><h2 id="candidate-heading">Prepare the candidate</h2><p>Select any package metadata to copy from the retained 360Giving registry entry. Grant values remain attached to their original identifiers. Registry modification time describes registry metadata and is kept in the registry record.</p><div id="metadata"></div><details><summary>Explicit grant corrections</summary><p>Enter an array of changes. Each change identifies a grant, an exact JSON pointer, the original value and replacement as JSON <strong>text strings</strong>, a reason and a publisher/source reference. Exact JSON text keeps long numbers and significant zeros intact.</p><pre>{"grantId":"original grant identifier","path":"/description","operation":"replace","expectedJson":"\"original description\"","replacementJson":"\"publisher-supplied description\"","reason":"Publisher correction","sourceReference":"Publisher message or file reference"}</pre><label>Changes<textarea id="changes" rows="12" spellcheck="false">[]</textarea></label></details><div class="actions"><button id="download" type="button">Download review decisions</button><label class="file-button">Open saved decisions<input id="load" type="file" accept=".json,application/json"></label><button id="clear" type="button">Clear saved browser draft</button></div><p id="action-state" role="status"></p><details><summary>Operator commands</summary><pre>python operator/publisher.py candidate --workspace . \
+  --decisions /absolute/review-decisions.json \
+  --out /absolute/candidate-edition
+
+starforge dataset-ndjson --workspace /absolute/native-workspace source \
+  --file /absolute/candidate-edition/grants.ndjson \
+  --label "Reviewed publisher candidate"</pre><p>Build the candidate with the original mapping, then compare it to the preceding build in the native source workspace. Carry the candidate package, decisions and complete native project to the publisher's usual release process.</p></details></section>
+<footer><p id="attribution"></p></footer>
+</main>
+<script id="publisher-data" type="application/json">__PUBLISHER_DATA__</script><script>__PUBLISHER_JS__</script>
+</body></html>

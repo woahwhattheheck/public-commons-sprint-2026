@@ -85,22 +85,55 @@ async function bindTarget(registry, expected, options={}) {
   return {source,status,binding};
 }
 
-async function createClientOwner({registry,target,binding,source,companyName=null,env=process.env,allowLoopback=false,lookup,
+function createCompanyAuthorization({registry,target,binding,source,companyName=null,env=process.env,
+  allowLoopback=false,lookup,agent}) {
+  const pin=Object.freeze({alias:target.alias,profileSha256:target.profileSha256,grantId:target.grantId,
+    realmId:target.realmId,environment:target.environment});
+  const provider=createOAuthConnectionProvider(binding,{
+    resourceOrigin:INTUIT_QBO_ENDPOINTS[pin.environment],env:{...env},allowLoopback,
+    ...(lookup?{lookup}:{}),...(agent?{agent}:{}),
+  });
+  let closed=false,closing;
+  return Object.freeze({
+    ...pin,
+    async headers({realmId=pin.realmId,environment=pin.environment,signal}={}) {
+      need(!closed,'QBO_OAUTH_CLOSED','The OAuth-connected accounting owner is closed.');
+      need(realmId===pin.realmId&&environment===pin.environment,
+        'QBO_OAUTH_COMPANY_CHANGED','Use the exact selected QuickBooks company.');
+      signal?.throwIfAborted();
+      currentTarget(await registry.status(pin.alias),pin,source,{requireConnected:false});
+      return provider.headers({signal});
+    },
+    invalidate(authorization){provider.invalidate(authorization);},
+    snapshot(){return {authorization:{kind:'oauth-connection',...pin,companyName},provider:provider.snapshot()};},
+    close(){if(!closing){closed=true;closing=provider.close();}return closing;},
+  });
+}
+
+/**
+ * Reviewed native company authorization for maintained accounting transports.
+ * Callers keep their own company-scoped route/body policy and response custody.
+ * This owner borrows the original registry and any injected Agent.
+ */
+export async function openQuickBooksCompanyAuthorization({registry,selection,...runtime}={}) {
+  const retained=safe(await validateQuickBooksSelection(selection)),selected=await bindTarget(registry,retained);
+  need(identity(selected.binding)===identity(retained.binding),'QBO_OAUTH_COMPANY_CHANGED',
+    'Select the current reviewed grant for this company.');
+  return createCompanyAuthorization({registry,target:retained,...selected,...runtime,
+    companyName:retained.company.companyName});
+}
+
+async function createClientOwner({registry,target,binding,source,companyName=null,env=process.env,allowLoopback=false,lookup,agent,
   fetchImpl=globalThis.fetch,minorVersion=null}) {
   const pin=Object.freeze({alias:target.alias,profileSha256:target.profileSha256,grantId:target.grantId,
     realmId:target.realmId,environment:target.environment});
-  const origin=INTUIT_QBO_ENDPOINTS[pin.environment], environment={...env};
+  const origin=INTUIT_QBO_ENDPOINTS[pin.environment];
   need(typeof fetchImpl==='function','QBO_OAUTH_TRANSPORT','Use the native HTTP transport.',400);
-  const provider=createOAuthConnectionProvider(binding,{resourceOrigin:origin,env:environment,allowLoopback,...(lookup?{lookup}:{})});
-  let closed=false;
+  const authorization=createCompanyAuthorization({registry,target,binding,source,companyName,env,allowLoopback,lookup,agent});
   const client=new QboHttpClient({
     realmId:pin.realmId,environment:pin.environment,minorVersion,
     tokenProvider:async({realmId,environment,signal})=>{
-      need(!closed,'QBO_OAUTH_CLOSED','The OAuth-connected accounting workspace is closed.');
-      need(realmId===pin.realmId&&environment===pin.environment,'QBO_OAUTH_COMPANY_CHANGED','Use the exact selected QuickBooks company.');
-      signal?.throwIfAborted();
-      currentTarget(await registry.status(pin.alias),pin,source,{requireConnected:false});
-      const headers=await provider.headers({signal});
+      const headers=await authorization.headers({realmId,environment,signal});
       return headers.authorization.slice(7);
     },
     fetchImpl:async(url,init)=>{
@@ -108,10 +141,10 @@ async function createClientOwner({registry,target,binding,source,companyName=nul
         'QBO_OAUTH_RESOURCE_CHANGED','Send this grant only to its reviewed native company.');
       const response=await fetchImpl(url,init);
       if(response.status===401) {
-        // Keep the actual original response. A later explicit native resume
-        // acquires the renewed grant; no accounting request is replayed here.
-        const authorization=new Headers(init.headers).get('authorization');
-        provider.invalidate(authorization ?? undefined);
+        // Keep the original HTTP response. A later explicit accounting resume
+        // acquires a renewed grant without replaying a request in this layer.
+        const bearer=new Headers(init.headers).get('authorization');
+        authorization.invalidate(bearer ?? undefined);
       }
       return response;
     },
@@ -121,25 +154,16 @@ async function createClientOwner({registry,target,binding,source,companyName=nul
     try{return await company(value,options);}
     catch(error){
       if(error.code!=='QBO_COMPANY_FETCH_FAILED'||error.nativeStatus!==401)throw error;
-      // Company setup is a read. Renew the rejected bearer in the original
-      // owner, then restart this complete source capture once. Journal writes
-      // retain their original HTTP result and require the native resume path.
-      await provider.headers({signal:options.signal});
+      await authorization.headers({signal:options.signal});
       return company(value,options);
     }
   };
   client.info=()=>{
-    const status=provider.snapshot();
-    return {...info(),authorization:{kind:'oauth-connection',...pin,companyName,
-      state:status.state,lastError:status.lastError}};
+    const snapshot=authorization.snapshot(),status=snapshot.provider;
+    return {...info(),authorization:{...snapshot.authorization,state:status.state,lastError:status.lastError}};
   };
   Object.freeze(client);
-  let closing;
-  return Object.freeze({
-    client,
-    snapshot:()=>({authorization:{kind:'oauth-connection',...pin,companyName},provider:provider.snapshot()}),
-    close(){if(!closing){closed=true;closing=provider.close();}return closing;},
-  });
+  return Object.freeze({client,snapshot:authorization.snapshot,close:authorization.close});
 }
 
 /** Read native company/settings/all account pages through the approved private grant. */
@@ -236,12 +260,12 @@ export async function openQuickBooksOAuthClient({registry,selection,...runtime}=
 
 /** Reuse the original accounting server and all its controllers, routes and recovery. */
 export async function startQuickBooksAccountingWorkspace({
-  connectionsFile,selectionDirectory,env=process.env,allowLoopback=false,lookup,fetchImpl,...accountingOptions
+  connectionsFile,selectionDirectory,env=process.env,allowLoopback=false,lookup,agent,fetchImpl,...accountingOptions
 }={}) {
   need(accountingOptions.qboClient===undefined,'QBO_OAUTH_CLIENT_OVERRIDE','The selected OAuth company supplies this accounting client.',400);
   const environment={...env};
   const registry=await openOAuthConnectionRegistry({connections:await readOAuthHostConnections(connectionsFile),
-    env:environment,allowLoopback,...(lookup?{lookup}:{})});
+    env:environment,allowLoopback,...(lookup?{lookup}:{}),...(agent?{agent}:{})});
   let owner,accounting,closing;
   const close=()=>{
     if(!closing)closing=(async()=>{
@@ -258,7 +282,7 @@ export async function startQuickBooksAccountingWorkspace({
   try {
     const selection=await readQuickBooksSelection(selectionDirectory);
     owner=await openQuickBooksOAuthClient({registry,selection,env:environment,allowLoopback,
-      ...(lookup?{lookup}:{}),...(fetchImpl?{fetchImpl}:{})});
+      ...(lookup?{lookup}:{}),...(agent?{agent}:{}),...(fetchImpl?{fetchImpl}:{})});
     const {startAccountingWorkspace}=await import('../../merchant-settlement-accounting/workspace/server.mjs');
     accounting=await startAccountingWorkspace({...accountingOptions,qboClient:owner.client});
     return Object.freeze({accounting,selection:quickBooksSelectionSummary(selection),

@@ -30,6 +30,26 @@ Write an original reviewed request from JSON:
   openalex-editions
   receive-openalex --id DOSSIER --input REQUEST.json
 
+Review and receive an original source bundle:
+  bundle-preview --id DOSSIER --question QUESTION --file BUNDLE.json [--sha256 SHA256]
+  import-bundle --id DOSSIER --question QUESTION --file BUNDLE.json --revision N [--sha256 SHA256]
+
+Preview returns the exact bundle hash, current revision, source terms and findings.
+Import binds those original bytes to that question in one saved revision.
+Repeat the same file and question after a lost reply to recover the saved result.
+
+Receive a completed original Object Buyer file:
+  object-inputs --id DOSSIER [--after-session NAME --snapshot SHA256 --limit N]
+  object-reviews --id DOSSIER [--after-review ID --limit N]
+  object-review --id DOSSIER --input REVIEW_REQUEST.json
+  object-prepare --id DOSSIER --input PREPARE_REQUEST.json
+  pipeline-list --id DOSSIER [--after-operation ID --limit N]
+  pipeline-review --id DOSSIER --operation ID
+
+Review captures the exact saved delivery; it does not acquire, assemble or pay.
+Preparation binds that review to an original managed processing operation.
+Submit, monitor and receive that same operation in the existing Pipelines pane.
+
 Operate the saved original Crossref acquisition:
   crossref-prepare --id DOSSIER --input PLAN_REQUEST.json
   crossref-list --id DOSSIER [--after-operation ID --limit N]
@@ -63,6 +83,11 @@ const commandOptions=Object.freeze({
   compare:['id','before','after','section','offset','limit'],
   receive:['id','input','source-file','sha256'],reference:['id','input','source-file','sha256'],
   'openalex-editions':[],'receive-openalex':['id','input'],
+  'bundle-preview':['id','question','file','sha256'],
+  'import-bundle':['id','question','file','sha256','revision'],
+  'object-inputs':['id','after-session','snapshot','limit'],
+  'object-reviews':['id','after-review','limit'],'object-review':['id','input'],'object-prepare':['id','input'],
+  'pipeline-list':['id','after-operation','limit'],'pipeline-review':['id','operation'],
   'crossref-prepare':['id','input'],'crossref-list':['id','after-operation','limit'],
   'crossref-review':['id','operation','section','offset','limit'],
   'crossref-start':['id','operation','plan-sha256'],'crossref-stop':['id','operation'],
@@ -121,6 +146,28 @@ export async function main(argv=process.argv.slice(2),{output=process.stdout}={}
       }
       case 'openalex-editions':result=await client.openAlexEditions();break;
       case 'receive-openalex':result=await client.receiveOpenAlex(required('id'),await input());break;
+      case 'bundle-preview':{
+        result=await client.previewSourceBundleFile(required('id'),{
+          questionId:required('question'),file:resolve(required('file')),
+          ...selected({sha256:values.sha256===undefined?undefined:digest('sha256')})});break;
+      }
+      case 'import-bundle':{
+        required('revision');const expectedRevision=number('revision');
+        need(expectedRevision>=1,'INTEGER_ARGUMENT_REQUIRED');
+        const sha256=values.sha256===undefined?undefined:digest('sha256');
+        result=await client.receiveSourceBundleFile(required('id'),{
+          questionId:required('question'),file:resolve(required('file')),expectedRevision,
+          ...selected({sha256,expectedBundleSha256:sha256})});break;
+      }
+      case 'object-inputs':result=await client.objectInputs(required('id'),selected({
+        after:values['after-session'],snapshot:values.snapshot,limit:number('limit')}));break;
+      case 'object-reviews':result=await client.objectReviews(required('id'),selected({
+        after:values['after-review'],limit:number('limit')}));break;
+      case 'object-review':result=await client.reviewObjectInput(required('id'),await input());break;
+      case 'object-prepare':result=await client.prepareObjectPipeline(required('id'),await input());break;
+      case 'pipeline-list':result=await client.pipelineOperations(required('id'),selected({
+        after:values['after-operation'],limit:number('limit')}));break;
+      case 'pipeline-review':result=await client.pipelineOperation(required('id'),required('operation'));break;
       case 'crossref-prepare':result=await client.prepareCrossref(required('id'),await input());break;
       case 'crossref-list':result=await client.crossrefOperations(required('id'),selected({after:values['after-operation'],limit:number('limit')}));break;
       case 'crossref-review':result=await client.reviewCrossref(required('id'),required('operation'),
