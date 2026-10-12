@@ -10,6 +10,8 @@ import {exportDatabaseBackup, restoreDatabaseBackup} from './backup.mjs';
 
 export {normalizeProfile, parseExactJSON, stringifyExactJSON, ExactNumber} from './contract.mjs';
 export {openReceiving} from './files.mjs';
+export {verifyReceiving} from './verify.mjs';
+export {openBackup} from './backup.mjs';
 
 export async function openPostgisIntake({connection, profile: inputProfile, directory, python} = {}) {
   const profile = normalizeProfile(inputProfile);
@@ -285,38 +287,61 @@ export async function openPostgisIntake({connection, profile: inputProfile, dire
 
   async function exportReceiving({operationId, directory: destination}) {
     id(operationId);
+    need(typeof destination === 'string' && destination.length, 'POSTGIS_RECEIVING_DESTINATION_REQUIRED');
     const request = {schema: 'starforge.postgis-receiving-request.v1', operationId,
       projectId: profile.projectId, directory: resolve(destination)};
     const output = await claimDirectory(destination, request);
     let existing = null;
     try { existing = await openReceiving(output); }
     catch (error) { if (error.code !== 'ENOENT') throw error; }
-    if (existing) {
-      need(existing.manifest.operationId === operationId && existing.manifest.projectId === profile.projectId,
-        'POSTGIS_EXISTING_RECEIVING_OPERATION_CHANGED');
-      return {...existing, replayed: true};
-    }
+    if (existing) need(existing.manifest.operationId === operationId &&
+      existing.manifest.projectId === profile.projectId && existing.manifest.requestSha256 === digest(request),
+      'POSTGIS_EXISTING_RECEIVING_OPERATION_CHANGED');
     return db.mutate(operationId, 'export-receiving', request, async (client, current, requestSha256) => {
-      need(current.activeEditionId, 'POSTGIS_ACCEPTED_EDITION_REQUIRED');
-      const selected = await db.edition(client, current.activeEditionId);
-      await db.lockTables(client, selected.layers.map(layer => layer.liveTable));
-      const original = await openRetainedSource(sourcePath(selected.source), selected.source.manifest.sha256, sourceOptions);
+      if (existing) return {...existing, recoveredCompletedFile: true};
+      let observation;
+      try { observation = await readJSON(member(output, 'database-observation.json')); }
+      catch (error) { if (error.code !== 'ENOENT') throw error; }
+      if (!observation) {
+        need(current.activeEditionId, 'POSTGIS_ACCEPTED_EDITION_REQUIRED');
+        const selected = await db.edition(client, current.activeEditionId);
+        await db.lockTables(client, selected.layers.map(layer => layer.liveTable));
+        observation = {schema: 'starforge.postgis-receiving-observation.v1',
+          projectId: profile.projectId, operationId, requestSha256,
+          editionId: selected.editionId, revision: current.revision, acceptedAt: current.updatedAt,
+          observedAt: await currentTime(client), database: {
+            profileId: selected.profile.database.profileId, name: db.environment.name,
+            schema: db.environment.schema, postgresVersion: db.environment.postgresVersion,
+            postgisVersion: db.environment.postgisVersion, metadataRelation: META.projects},
+          source: selected.source, profile: selected.profile, layers: await db.describeLayers(client, selected)};
+        // Freeze the actual complete native observation before any source copies.
+        // A retry completes this original historical receipt even if later edits
+        // or a successor exist. Each consumer independently checks currentness.
+        await writeJSONOnce(member(output, 'database-observation.json'), observation);
+      }
+      need(observation.schema === 'starforge.postgis-receiving-observation.v1' &&
+        observation.projectId === profile.projectId && observation.operationId === operationId &&
+        observation.requestSha256 === requestSha256, 'POSTGIS_ORIGINAL_NATIVE_OBSERVATION_CHANGED');
+      const retained = await db.edition(client, observation.editionId);
+      need(canonical(retained.source) === canonical(observation.source) &&
+        canonical(retained.profile) === canonical(observation.profile),
+        'POSTGIS_RETAINED_EDITION_SOURCE_CHANGED');
+      const original = await openRetainedSource(sourcePath(observation.source),
+        observation.source.manifest.sha256, sourceOptions);
       const sourceRoot = member(output, 'source');
       await privateDirectory(sourceRoot);
       for (const record of [...original.manifest.files, original.manifestFile])
         await copyVerified(original.directory, sourceRoot, record);
-      await writeJSONOnce(member(output, 'profile.json'), selected.profile);
+      await writeJSONOnce(member(output, 'profile.json'), observation.profile);
       const sourceManifest = await fileRecord(member(output, 'source/vector-export.json'), 'source/vector-export.json');
       const mapping = await fileRecord(member(output, 'profile.json'), 'profile.json');
       const receipt = {schema: RECEIVING, projectId: profile.projectId, operationId, requestSha256,
-        editionId: selected.editionId, revision: current.revision, acceptedAt: current.updatedAt,
-        database: {profileId: selected.profile.database.profileId, name: db.environment.name,
-          schema: db.environment.schema, postgresVersion: db.environment.postgresVersion,
-          postgisVersion: db.environment.postgisVersion, metadataRelation: META.projects},
-        source: {manifest: sourceManifest, captureSha256: selected.source.captureSha256,
-          selectionSha256: selected.source.selectionSha256, sourceEdition: selected.source.sourceEdition,
-          selectionId: selected.source.selectionId},
-        mapping, layers: await db.describeLayers(client, selected),
+        editionId: observation.editionId, revision: observation.revision, acceptedAt: observation.acceptedAt,
+        observedAt: observation.observedAt, database: observation.database,
+        source: {manifest: sourceManifest, captureSha256: observation.source.captureSha256,
+          selectionSha256: observation.source.selectionSha256, sourceEdition: observation.source.sourceEdition,
+          selectionId: observation.source.selectionId},
+        mapping, layers: observation.layers,
         files: await listFiles(output, new Set(['postgis-receiving.json']))};
       await writeJSONOnce(member(output, 'postgis-receiving.json'), receipt);
       return openReceiving(output);
