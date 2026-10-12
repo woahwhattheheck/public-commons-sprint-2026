@@ -144,7 +144,9 @@ configuration read, then the provider verifies them before opening the manager.
 Changing that host mapping requires reviewing and restarting the merchant
 configuration. Live incident updates and explicit watch-configuration revisions
 do not change the host source binding. The source parser reads original state
-without starting observation.
+without starting observation. A failed opening can be retried after the original
+store recovers; each attempt still checks the same host-selected file and store
+identities.
 
 ## Inspect the actual destination and retained route choices
 
@@ -365,13 +367,37 @@ under the original watcher's recovery logic. MCP cannot mark it recovered.
 For `merchant_incident_case`, supply a new case UUID in `id`, the original
 `incidentId` and `expectedIncidentRevision`, a configured workspace alias in
 `template`, its inspected `expectedTemplateSha256`, and the actual `routeId` in
-the retained capture. SF93 exports the original before/follow-up packets through
-its existing operator function. The importer retains its exact case metadata,
+the retained capture. In single-directory mode, SF93 exports the original
+before/follow-up packets through its existing operator function. The importer retains its exact case metadata,
 including incident identity, timestamps and acknowledgment, in the original SF74
 store. It snapshots the inspected template before passing it to SF93, so a host
 edit cannot silently change that mapping during export. The temporary SF93 export
 is removed after the original case save; retained capture bytes live in the saved
 case and remain available through its complete handoff.
+
+### Recover an interrupted incident-to-case save
+
+Retain the chosen case UUID before sending `merchant_incident_case`. If its reply
+is interrupted, call `merchant_case_read` with that same UUID first. An identical
+save can reuse the original first case version while the incident revision and
+case inputs still match. A watcher observation, acknowledgment or recovery can
+advance the incident before a retry; the original revision check then rejects
+that old incident selection even when its case was already saved successfully.
+
+The saved case remains independent of that later incident change. Inspect its
+original incident identity in metadata, retained capture route and observation
+times, and `workspaceSha256` against the inspected template digest. If a browser
+or another agent has edited the case, page its existing `merchant_case_history`
+and open the matching retained revision with `merchant_case_read`. Continue
+from the actual current case rather than sending the create request again.
+A same-ID case with different original inputs requires inspection; it is never
+silently accepted as this request's result.
+
+If the original case ID is absent, inspect the current incident and its retained
+routes before preparing the still-needed case. Keep the existing intent and case
+ID, but explicitly review any changed incident revision or template before
+sending the corresponding new selection. This recovery uses the original saved
+versions and source hashes shared by the browser and MCP.
 
 ### Record the owner's work and reopen it
 

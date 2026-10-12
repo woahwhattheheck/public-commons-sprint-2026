@@ -61,7 +61,7 @@ function supportTools(tool) {
       { id: uuid, status: { enum: ['OPEN', 'ACKNOWLEDGED', 'RECOVERED', 'RETIRED'] }, ...page }, [], read),
     tool('merchant_incident_ack', 'Acknowledge an original OPEN incident with its exact revision and named operator. The existing watcher may deliver its configured acknowledgment notification. Recovery remains based on original observations.',
       { id: uuid, expectedRevision: { type: 'integer', minimum: 1 }, by: text(160), notes: text(2000) }, ['id', 'expectedRevision', 'by']),
-    tool('merchant_incident_case', 'Export one exact original incident through SF93 using a host-configured SF74 workspace template and explicit route, then retain it as a new original support case. Supply a new UUID; an identical retry reuses its case version.',
+    tool('merchant_incident_case', 'Save one exact original incident using its host-configured SF74 workspace template and retained route. Supply a new case UUID. An identical retry reuses the initial case version while the incident selection is current. After an interrupted reply, read that original case ID and history first, especially if the incident or saved case has advanced.',
       { id: uuid, incidentId: uuid, expectedIncidentRevision: { type: 'integer', minimum: 1 }, template: alias,
         expectedTemplateSha256: digest, routeId: text(160) }, ['id', 'incidentId', 'expectedIncidentRevision', 'template', 'expectedTemplateSha256', 'routeId']),
     tool('merchant_cases', 'Search original saved cases by text, work status or follow-up date, with their actual current revisions.',
