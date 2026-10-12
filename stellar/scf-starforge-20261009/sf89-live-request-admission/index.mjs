@@ -2,55 +2,15 @@
 // Reuses the exact original SF25 Draft 2020-12 validator; never touches payment.
 import { validateBazaarExtension } from '../../../stellar-forge/payment-auto-catalog/schema-validation.mjs';
 import { supportsSellerMethod } from '../sf30-seller-sdk/http-methods.mjs';
+import { decodeQueryParameters, validateQuerySerialization } from '../sf30-seller-sdk/query-parameters.mjs';
 
 const object = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 const own = (value, key) => Object.hasOwn(value, key);
-const decimalInteger = /^-?(?:0|[1-9][0-9]*)$/;
-const decimalNumber = /^-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?$/;
-
 const rejected = (code = 'LIVE_REQUEST_SCHEMA_REJECTED', issues = []) => ({
   status: 422,
   body: { error: code, ...(issues.length ? { issues: issues.slice(0, 5) } : {}) },
 });
 
-/** OpenAPI simple-form scalar query parameters arrive from Node HTTP as strings.
- * Convert ONLY the explicitly declared scalar types for schema evaluation. */
-function queryValue(value, property) {
-  if (typeof value !== 'string' || !object(property) || Array.isArray(property.type)) {
-    return { ok: false };
-  }
-  const type = property.type;
-  if (type === 'string') return { ok: true, value };
-  if (type === 'boolean') {
-    if (value === 'true' || value === 'false') return { ok: true, value: value === 'true' };
-    return { ok: false };
-  }
-  if (type === 'integer' && decimalInteger.test(value)) {
-    const number = Number(value);
-    return Number.isSafeInteger(number) ? { ok: true, value: number } : { ok: false };
-  }
-  if (type === 'number' && decimalNumber.test(value)) {
-    const number = Number(value);
-    return Number.isFinite(number) ? { ok: true, value: number } : { ok: false };
-  }
-  // The original SF61 OpenAPI importer does not support object/array or custom
-  // query serialization; do not invent implicit coercions here.
-  return { ok: false };
-}
-
-function normalizeQuery(query, schema) {
-  if (!object(query)) return { ok: false };
-  if (!schema) return Object.keys(query).length ? { ok: false } : { ok: true };
-  if (!object(schema) || schema.type !== 'object' || !object(schema.properties)) return { ok: false };
-  const result = Object.create(null);
-  for (const [key, value] of Object.entries(query)) {
-    if (!own(schema.properties, key)) return { ok: false };
-    const parsed = queryValue(value, schema.properties[key]);
-    if (!parsed.ok) return { ok: false };
-    result[key] = parsed.value;
-  }
-  return { ok: true, value: result };
-}
 
 /** Construct one trusted admission callback per ORIGINAL imported offer.
  *
@@ -71,6 +31,8 @@ export function createLiveRequestAdmission(offer) {
   }
   const properties = schemaInput.properties;
   const querySchema = properties.queryParams;
+  const querySerialization = structuredClone(extension.querySerialization);
+  validateQuerySerialization(querySchema, querySerialization);
   const pathSchema = properties.pathParams;
   const bodySchema = properties.body;
   // A genuine imported schema, not an advertiser-supplied "required" guess.
@@ -82,14 +44,15 @@ export function createLiveRequestAdmission(offer) {
     if (!object(context) || context.method !== method || context.signal?.aborted) {
       return rejected('LIVE_REQUEST_METHOD_REJECTED');
     }
-    const query = normalizeQuery(context.query ?? {}, querySchema);
-    if (!query.ok) return rejected('LIVE_QUERY_PARAMETERS_REJECTED');
+    let query;
+    try { query = decodeQueryParameters(context.query ?? {}, querySchema, querySerialization); }
+    catch { return rejected('LIVE_QUERY_PARAMETERS_REJECTED'); }
     const input = structuredClone(originalInfo.input);
     // Strip the seller's examples; they MUST NOT satisfy actual request fields.
     delete input.queryParams;
     delete input.pathParams;
     delete input.body;
-    if (querySchema) input.queryParams = query.value;
+    if (querySchema) input.queryParams = query;
     if (pathSchema) {
       if (!object(context.pathParams)) return rejected('LIVE_PATH_PARAMETERS_REJECTED');
       input.pathParams = { ...context.pathParams };

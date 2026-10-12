@@ -15,8 +15,8 @@ Both JSON paths resolve from the current directory. Backend origins are fixed;
 credential headers name environment variables, not values in JSON.
 --check validates both configs and their route bindings without network/listening.
 Without --facilitator, requests return payment challenges and never call a backend.
-See UPSTREAM.md for merchant setup, UPSTREAM_TRANSPORT.md for named host egress,
-OAUTH.md for client credentials, and
+See UPSTREAM.md for merchant setup, upstream-tls/README.md for client certificates,
+UPSTREAM_TRANSPORT.md for named host egress, OAUTH.md for client credentials, and
 oauth-connections/README.md for reviewed authorization-code connections.`;
 
 function parse(args) {
@@ -63,7 +63,8 @@ export async function main(args = process.argv.slice(2), {env=process.env}={}) {
     [config,bindings] = await Promise.all([readSellerConfig(options.configPath),readUpstreamBindings(options.upstreamPath)]);
     // Capture environment values once for a stable launch-time credential snapshot.
     const environment = {...env};
-    application = createUpstreamApplication(config,bindings,{allowLoopback:options.allowLoopback,env:environment});
+    application = createUpstreamApplication(config,bindings,{allowLoopback:options.allowLoopback,env:environment,
+      deferCredentials:!options.facilitator && !options.check});
     if (options.check) {
       const {compileSellerRoutes} = await import('./resource-server.mjs');
       const origin = config.publicOrigin ? new URL(config.publicOrigin).origin : 'http://127.0.0.1:8423';
@@ -75,7 +76,8 @@ export async function main(args = process.argv.slice(2), {env=process.env}={}) {
       })),{allowLocalhost:!config.publicOrigin});
     }
   } catch (error) {
-    error.cliMessage = error instanceof TypeError ? error.message : 'Cannot read valid seller/upstream JSON files';
+    error.cliMessage = error instanceof TypeError ? error.message :
+      /^UPSTREAM_TLS_[A-Z_]+$/.test(error?.code ?? '') ? error.code : 'Cannot read valid seller/upstream JSON files';
     throw error;
   }
   if (options.check) {
@@ -84,6 +86,7 @@ export async function main(args = process.argv.slice(2), {env=process.env}={}) {
       upstreamBindings:upstreams.length,protectedUpstreamBindings:upstreams.filter(row => row.protected).length,
       cachedUpstreamBindings:upstreams.filter(row => row.cache).length,
       oauthUpstreamBindings:upstreams.filter(row => row.oauth2||row.oauthConnection).length,
+      tlsUpstreamBindings:upstreams.filter(row => row.tls).length,
       supplierQuotaBindings:upstreams.filter(row => row.supplierAccount).length,
       upstreamTransports:upstreams.filter(row => row.transport).map(row => ({binding:row.name,...row.transport}))}) + '\n');
     await application.close();
@@ -109,6 +112,8 @@ export async function main(args = process.argv.slice(2), {env=process.env}={}) {
   if (application.supplierQuotaSnapshot) session.supplierQuotaSnapshot = application.supplierQuotaSnapshot;
   session.operationControl = application.operationControl;
   session.invalidateUpstreamCache = application.invalidateCache;
+  session.cacheBinding = application.cacheBinding;
+  session.cacheManagement = application.cacheManagement;
   const nativeClose = session.close.bind(session);
   let closing, cleanup;
   const closeApplication = () => cleanup ??= session.lifecycle.whenIdle().then(() => application.close());

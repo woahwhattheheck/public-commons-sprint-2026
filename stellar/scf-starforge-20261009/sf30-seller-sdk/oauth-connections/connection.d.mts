@@ -1,7 +1,11 @@
 // MIT. Declarations for the original private grant owner and its public projections.
+import type { Agent as NodeHttpAgent } from 'node:http';
 import type { OAuthProfile, OAuthProfileOptions } from './profile.mjs';
 
 export type OAuthEnvironment = Readonly<Record<string, string | undefined>>;
+
+/** Borrowed host-owned HTTP(S) Agent. Its protocol must match the selected endpoint. */
+export type OAuthAgent = NodeHttpAgent;
 
 /** The original transport validates every returned address before using one. */
 export interface OAuthLookupAddress { address: string; family: number }
@@ -14,6 +18,8 @@ export interface OAuthConnectionOptions extends OAuthProfileOptions {
   /** Host-owned values only; never send this object to a browser or saved package. */
   env?: OAuthEnvironment;
   lookup?: OAuthLookup;
+  /** Runtime only. Close the connection/provider before its owner destroys this Agent. */
+  agent?: OAuthAgent;
 }
 
 export type OAuthGrantState = 'disconnected' | 'connected' | 'refreshing' | 'reconnect_required';

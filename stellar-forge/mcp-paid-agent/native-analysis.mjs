@@ -8,6 +8,8 @@ import {initializationDirectory as directory, initializationBytes as bytes,
   from '../../stellar/scf-starforge-20261009/sf88-operator-buyer-cli/initialization.mjs';
 import {need,InputError} from '../../stellar/scf-starforge-20261009/sf88-operator-buyer-cli/config.mjs';
 import {createSavedFileReader} from './native-file.mjs';
+import {createNativeWorkbookActions} from './native-analysis-workbooks.mjs';
+import {createNativeArchiveActions} from './native-analysis-archives.mjs';
 
 const SCHEMA='stellar-forge.mcp-native-analysis.v1';
 const CUSTOMER='stellar-forge.customer-analysis.v1';
@@ -113,6 +115,8 @@ export function createNativeAnalysis({manifest,completedDataset,isClosed=()=>fal
   need(object(manifest),'MCP_ANALYSIS_NATIVE_WORKSPACE_REQUIRED');
   const root=join(localPath(manifest.directory),'analysis'),aliases=join(root,'workspaces');
   const shutdown=new AbortController(),reads=createSavedFileReader(),pending=new Set();
+  const workbooks=createNativeWorkbookActions({reads,parse});
+  const archives=createNativeArchiveActions({reads,parse});
   let closed=false;
   const available=()=>need(!closed&&!isClosed(),'MCP_NATIVE_WORKSPACE_CLOSING');
   async function roots(create=false){
@@ -179,13 +183,20 @@ export function createNativeAnalysis({manifest,completedDataset,isClosed=()=>fal
     return result;
   }
   async function file(record,connection,args,signal){
-    const job=await request(connection,'/api/jobs/'+id(args.id),undefined,signal);
-    need(job.status==='COMPLETE'&&['report-export','change-export','backup'].includes(job.kind)&&
+    const identifier=id(args.id),job=await request(connection,'/api/jobs/'+identifier,undefined,signal);
+    need(job.id===identifier&&job.status==='COMPLETE'&&['report-export','change-export','backup'].includes(job.kind)&&
       object(job.result),'MCP_ANALYSIS_COMPLETE_FILE_JOB_REQUIRED');
-    const file=job.result,path=localPath(file.path),within=relative(record.database,path);
-    need(within&&!within.startsWith('..')&&!isAbsolute(within),'MCP_ANALYSIS_FILE_BELONGS_TO_OTHER_WORKSPACE');
-    const allowed=job.kind==='backup'?within.split('/')[0]==='analysis-backups':within.split('/')[0]==='analysis-exports';
-    need(allowed,'MCP_ANALYSIS_FILE_PATH_INVALID');
+    const file=job.result;let root,path;
+    // Original jobs retain producer provenance. Resolve only below this host's
+    // currently selected customer database, including after portable receiving.
+    if(job.kind==='backup'){
+      root=join(record.database,'analysis-backups');await directory(root);
+      const folder=join(root,identifier);await directory(folder);path=join(folder,'datasets.sqlite3');
+    }else{
+      const pattern=job.kind==='report-export'?/^report-[a-f0-9]{64}\.(?:html|json|zip)$/:/^changes-[a-f0-9]{64}\.(?:json|csv)$/;
+      need(typeof file.filename==='string'&&pattern.test(file.filename),'MCP_ANALYSIS_FILE_PATH_INVALID');
+      root=join(record.database,'analysis-exports');await directory(root);path=join(root,file.filename);
+    }
     hash(file.sha256);positive(file.bytes,true);
     if(args.sha256!==undefined)need(hash(args.sha256)===file.sha256,'MCP_ANALYSIS_FILE_IDENTITY_CHANGED');
     return {id:job.id,kind:job.kind,originalResultSha256:job.result.sha256,
@@ -193,13 +204,17 @@ export function createNativeAnalysis({manifest,completedDataset,isClosed=()=>fal
         contentType:file.mime??(job.kind==='backup'?'application/vnd.sqlite3':null)},args)};
   }
   async function queryExportFile(record,connection,args,signal){
-    const job=await request(connection,'/api/jobs/'+id(args.id),undefined,signal);
-    need(job.status==='COMPLETE'&&job.kind==='query-export'&&object(job.result),
+    const identifier=id(args.id),job=await request(connection,'/api/jobs/'+identifier,undefined,signal);
+    need(job.id===identifier&&job.status==='COMPLETE'&&job.kind==='query-export'&&object(job.result),
       'MCP_ANALYSIS_COMPLETE_QUERY_EXPORT_REQUIRED');
     need(['rows.jsonl','rows.csv','rows.sqlite3','manifest.json'].includes(args.filename),
       'MCP_ANALYSIS_FILE_NAME_INVALID');
-    const native=job.result,expected=join(record.database,'analysis-query-exports',job.id);
-    need(native.schema==='stellar-forge.analysis-query-export.v1'&&native.directory===expected,
+    const native=job.result,expected=join(record.database,'analysis-query-exports',identifier);
+    // A received workspace keeps the producer location in its original result.
+    // Resolve only this host's selected database and the original validated ID.
+    need(native.schema==='stellar-forge.analysis-query-export.v1'&&typeof native.directory==='string'&&
+      native.source_query?.id===job.request?.query_id&&
+      native.source_query?.result_sha256===job.request?.result_sha256,
       'MCP_ANALYSIS_EXPORT_BELONGS_TO_OTHER_WORKSPACE');
     await directory(join(record.database,'analysis-query-exports'));await directory(expected);
     const manifest=native.files?.find(file=>file.name==='manifest.json');
@@ -275,6 +290,8 @@ export function createNativeAnalysis({manifest,completedDataset,isClosed=()=>fal
     else if(op==='cancel-query-export')value=publicJob(await post('/api/query-exports/'+id(body.id)+'/cancel',{}));
     else if(op==='query-export-file')value=await queryExportFile(record,connection,body,context.signal);
     else if(op==='file')value=await file(record,connection,body,context.signal);
+    else if(workbooks.handles(op))value=await workbooks.call({operation:op,body,record,state:connection.state,get,post});
+    else if(archives.handles(op))value=await archives.call({operation:op,body,record,state:connection.state,get,post});
     else fail('MCP_ANALYSIS_OPERATION_UNKNOWN');
     return finish(alias,op,value);
   }
@@ -282,6 +299,8 @@ export function createNativeAnalysis({manifest,completedDataset,isClosed=()=>fal
     const task=dispatch(args,context);pending.add(task);try{return await task;}finally{pending.delete(task);}
   },async close(){
     if(closed)return;closed=true;shutdown.abort();await Promise.allSettled([...pending]);
+    workbooks.close();
+    archives.close();
     // The original analysis service belongs to its host/browser. It keeps its own jobs and lease.
   }};
 }

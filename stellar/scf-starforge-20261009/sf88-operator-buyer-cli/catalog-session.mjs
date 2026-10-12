@@ -4,7 +4,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { constants } from 'node:fs';
 import { open, mkdir, lstat, realpath, readdir, rename, unlink, link } from 'node:fs/promises';
 import { join } from 'node:path';
-import { createServer } from 'node:net';
+import { lockPrivateDirectory } from './private-directory-lock.mjs';
 import { isDeepStrictEqual } from 'node:util';
 import { need, InputError } from './config.mjs';
 import { catalogPageView, catalogIndexView } from './catalog-view.mjs';
@@ -49,24 +49,6 @@ async function atomic(dir, name, data, exclusive = false) {
     await unlink(temporary).catch(error => { if (error.code !== 'ENOENT') throw error; });
   }
 }
-async function lockDirectory(dir) {
-  // OS-managed lifetime on Linux and Windows: SIGKILL does not strand a PID lock.
-  // Other Unix systems use a private socket; see CATALOGS.md for crash cleanup.
-  const name = `sf88-catalog-${hash(Buffer.from(dir))}`;
-  const path = process.platform === 'linux' ? `\0${name}` : process.platform === 'win32'
-    ? `\\\\.\\pipe\\${name}` : join(dir, '.catalog-writer.sock');
-  const server = createServer(socket => socket.destroy());
-  await new Promise((resolve, reject) => {
-    const fail = error => {
-      server.close();
-      reject(new InputError(error.code === 'EADDRINUSE' ? 'CATALOG_WRITER_ACTIVE_OR_STALE_SOCKET' : 'CATALOG_LOCK_UNAVAILABLE'));
-    };
-    server.once('error', fail);
-    server.listen(path, () => { server.off('error', fail); resolve(); });
-  });
-  server.unref();
-  return () => new Promise((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
-}
 function identity(options) {
   const request = { origin: options.request.origin, query: options.request.query ?? '',
     filters: Object.fromEntries(Object.entries(options.request.filters ?? {}).sort(([a], [b]) => a.localeCompare(b))),
@@ -108,7 +90,9 @@ export async function acquireCatalog(options, readPage) {
     (process.platform === 'win32' || (info.mode & 0o077) === 0 && info.uid === process.getuid()),
   'CATALOG_DIRECTORY_MUST_BE_PRIVATE_AND_OWNED');
   const dir = await realpath(options.captureDir);
-  const release = await lockDirectory(dir);
+  const release = await lockPrivateDirectory({ directory: dir, filename: '.catalog-writer.lock',
+    namespace: 'sf88-catalog', busyCode: 'CATALOG_WRITER_ACTIVE_OR_STALE_SOCKET',
+    unavailableCode: 'CATALOG_LOCK_UNAVAILABLE' });
   let state, initialized = false;
   try {
     const requestIdentity = identity(options), requestSha256 = hash(json(requestIdentity));
@@ -116,7 +100,7 @@ export async function acquireCatalog(options, readPage) {
     if (priorSession) need(isDeepStrictEqual(priorSession.value, requestIdentity), 'CATALOG_SESSION_REQUEST_CHANGED');
     else {
       const files = await readdir(dir);
-      need(files.every(name => name === '.catalog-writer.sock' || name.startsWith('.write-')),
+      need(files.every(name => name === '.catalog-writer.sock' || name === '.catalog-writer.lock' || name.startsWith('.write-')),
         'CATALOG_DIRECTORY_NOT_EMPTY');
       await atomic(dir, 'session.json', json(requestIdentity), true);
     }

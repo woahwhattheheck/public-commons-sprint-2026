@@ -205,7 +205,7 @@ The original controller binds the saved SQL, exact parameters and reviewed views
 
 Use job or query-exports for progress and cancel-query-export for original worker cancellation. A published complete native manifest remains complete after a late cancellation or interruption.
 
-After COMPLETE, query-export-file reads the job's selected manifest.json, rows.jsonl, rows.csv or rows.sqlite3. It checks the original job-bound directory and native manifest, then reuses the shared verified saved-file descriptor/hash cache. Unchanged file ranges do not rerun SQL, copy the output or hash/download its entire payload again. Preserve the returned SHA256 across ranges.
+After COMPLETE, query-export-file reads the job's selected manifest.json, rows.jsonl, rows.csv or rows.sqlite3. It checks the original job/request/source identity and native manifest, selects `analysis-query-exports/JOB_ID` under the host-registered customer database, and reuses the shared verified saved-file descriptor/hash cache. A copied workspace keeps the earlier producer directory in its original result; that provenance never selects a file path. Unchanged file ranges do not rerun SQL, copy the output or hash/download its entire payload again. Preserve the returned SHA256 across ranges.
 
 ### Retain and publish a complete report
 
@@ -291,6 +291,15 @@ The original native session/page/evidence/SF100 files, raw response files, full-
 
 Save the verified backup bytes as datasets.sqlite3 in a new private directory, then start the original AnalysisWorkspace there. Register a new native analytical alias for that running service. The restored database preserves its original analytical identity and histories.
 
-Old file-job paths may still name the earlier directory; the adapter rejects files belonging to another workspace directory. A new report-export job can regenerate bytes from the original retained publication without source files or another query. New full-query exports use the original controller and retained SQL data.
+Copied full-query exports and customer workbooks can reopen their existing bytes when their complete original `analysis-query-exports/JOB_ID` or `analysis-workbooks/BUILD_ID` directories are retained under the registered receiving database. The adapter derives local paths from that selected database and validated job ID, preserves the producer location in the original result, and checks the original manifest and file digests. Copied complete report/change exports and SQLite backups likewise resolve from the selected receiving database and their original job, filename and file-hash bindings. A database backup alone does not restore external export or workbook files.
 
 The original database service remains the single process/worker owner. This integration needs no additional scheduler, proxy, lock service or recovery daemon.
+
+
+## Customer workbooks
+
+Native agents can also use the original customer Workbooks application through this same registered analysis service. The [complete native workbook workflow](WORKBOOKS.md) covers retained complete query/report sources, typed sheet mappings, saved definition review, original full builds and cancellation, verified file receiving, recurring-edition review/save and historical reopening. It uses the existing workbook engine and its original source/definition/build identities. The host must select the complete maintained workbook and recurring-edition source with the original Python workbooks extra; no additional analysis service or package producer is introduced.
+
+## Complete portable workspace delivery
+
+Use the [native portable workspace workflow](ARCHIVES.md) to export and receive the original SQLite snapshot together with its retained query-export, report and workbook files. The same analysis host exposes complete selection review, export history, progress, cancellation, exact same-ID recovery and verified file ranges. The installed MCP download client retains durable partial transport; the original Python receiver validates and atomically publishes the complete customer workspace for offline and live reopening.

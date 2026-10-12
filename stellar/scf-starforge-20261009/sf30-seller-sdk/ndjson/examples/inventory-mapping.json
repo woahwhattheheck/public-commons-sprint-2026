@@ -1,0 +1,95 @@
+{
+  "schema": "stellar-forge.ndjson-mapping.v1",
+  "name": "Merchant inventory",
+  "recordPath": [
+    "item"
+  ],
+  "columns": [
+    {
+      "name": "id",
+      "path": [
+        "id"
+      ],
+      "type": "string"
+    },
+    {
+      "name": "sku",
+      "path": [
+        "sku"
+      ],
+      "type": "string"
+    },
+    {
+      "name": "quantity",
+      "path": [
+        "quantity"
+      ],
+      "type": "integer"
+    },
+    {
+      "name": "unitPrice",
+      "path": [
+        "unitPrice"
+      ],
+      "type": "string"
+    },
+    {
+      "name": "active",
+      "path": [
+        "active"
+      ],
+      "type": "boolean"
+    },
+    {
+      "name": "note",
+      "path": [
+        "note"
+      ],
+      "type": "string",
+      "nullable": true,
+      "missing": "null"
+    },
+    {
+      "name": "noteState",
+      "path": [
+        "note"
+      ],
+      "mode": "state"
+    },
+    {
+      "name": "dimensions",
+      "path": [
+        "dimensions"
+      ],
+      "mode": "json"
+    },
+    {
+      "name": "tags",
+      "path": [
+        "tags"
+      ],
+      "mode": "json"
+    }
+  ],
+  "filters": [
+    "id",
+    "sku",
+    "active",
+    "noteState"
+  ],
+  "ranges": [
+    "quantity"
+  ],
+  "sorts": [
+    "quantity",
+    "sku"
+  ],
+  "keys": [
+    "id"
+  ],
+  "defaultLimit": 50,
+  "maxLimit": 250,
+  "maxRows": 250000,
+  "maxBytes": 268435456,
+  "maxCellChars": 65536
+}
