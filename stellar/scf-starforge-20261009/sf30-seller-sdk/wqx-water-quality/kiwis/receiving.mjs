@@ -270,11 +270,11 @@ export async function receiveProgramme(configuration,{baseDirectory=process.cwd(
     }
     await received.close();received=null;
     if(configuration.browser){
-      const chosen=configuration.reviews.find(review=>review.browser===true);
-      if(chosen){
+      const selectedReviews=configuration.reviews.filter(review=>review.browser===true);
+      for(const [index,chosen]of selectedReviews.entries()){
         const original=reviews.find(r=>r.reviewId===chosen.reviewId);
         operator.push(await operatorBrowser({projectDirectory:receivingDirectory,reviewId:chosen.reviewId,previousReviewId:chosen.previousReviewId,expectedCounts:original.counts,
-          output:join(output,'browser','independent-receiving'),configuration:configuration.browser}));
+          output:join(output,'browser',index===0?'independent-receiving':'independent-receiving-'+chosen.reviewId),configuration:configuration.browser}));
       }
     }
     async function inventory(directory){
