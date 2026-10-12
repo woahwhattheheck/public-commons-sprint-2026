@@ -6,7 +6,7 @@ The included University of Michigan references describe the public audit process
 
 ## Start the application
 
-Use POSIX Python 3.11 or later with the dependency in `requirements.txt`. The completed native demonstration used an existing environment with `cryptography 50.0.1`. The runtime has no database server, Node, npm, or hosted build dependency.
+Use POSIX Python 3.11 or later with the dependencies in `requirements.txt`. The original native audit demonstration used `cryptography 50.0.1`; institutional sign-in additionally uses PyJWT 2.15.1. The runtime has no database server, Node, npm, or hosted build dependency.
 
 From this source directory:
 
@@ -58,6 +58,14 @@ A viewer's identity comes from its authenticated grant. Choosing a report audien
 An advisory memo has its own purpose, body, selected records, and recipient units. It does not confer access to every observation in the engagement.
 
 Auditors perform edits, source imports, verification, native receiving, and recovery. Other roles can read and produce the outputs permitted by their existing scope. Original source files and raw evidence do not travel in their handoffs. Evidence with an unknown classification stays with auditors until its classification is reviewed.
+
+## Institutional sign-in and account administration
+
+The same workspace supports OpenID Connect sign-in, exact issuer/subject accounts, reviewed claim mappings, delegated unit administration, per-device session closure, and immutable access reviews. Open **Institutional access** from the navigation. The private owner configures the registered provider; delegates manage only the roles and units explicitly assigned to them.
+
+The application retains the eight existing audit roles and report projections. An institutional Auditor has the original audit and encrypted-backup capabilities. New-folder restoration, provider configuration, and privileged identity administration remain with the private workspace owner. Provider, mapping, and account changes take effect through the current original grant/session authority.
+
+See [INSTITUTIONAL_ACCESS.md](INSTITUTIONAL_ACCESS.md) for HTTPS deployment, actual institutional registration inputs, complete account/session workflows, the source-linked contract, and receiving procedures. Restoration preserves identity and audit history, creates a fresh owner, closes old sessions, and requires deliberate provider/delegation reactivation.
 
 ## 1. Retain original sources
 
