@@ -40,7 +40,7 @@ Blank, dash and the configured missing markers stay in **Missing original cells*
 
 ### Preserve the published period
 
-A calendar or summer year remains its labeled year. Winter and delivery periods accept an explicit consecutive-year span such as 2026/27. When a publisher uses only one winter or delivery year, choose whether it names the start or end year. This retains the actual year span; it does not assign invented seasonal months. Monthly inputs use YYYY-MM and their calendar boundaries. Keep distinct period definitions distinct even when they end in the same year.
+A calendar or summer year remains its labeled year. Winter and delivery periods accept an explicit consecutive-year span such as 2026/27. When a publisher uses only one winter or delivery year, choose whether it names the start or end year. This retains the actual year span; it does not assign invented seasonal months. Monthly inputs use YYYY-MM and their calendar boundaries. For an original long table with separate YEAR and MONTH columns, select the year as Period / year column and choose the Separate month column explicitly. The normal mapping creates the calendar label while retaining both original values and both source cell addresses. Set that optional column to 0 when the period is already complete. Keep distinct period definitions distinct even when they end in the same year.
 
 ## Prepare an analyst comparison
 
@@ -124,3 +124,15 @@ The original backup retains all source bytes, revisions, operation outcomes, ado
 The Source view shows mapped observations and missing cells for structured source packets as well as workbooks. Save a changed source description before mapping edited tables; the table edits remain in the editor. Accept is available after the description and mappings match their saved edition. Finalize likewise uses the saved conclusion and row decisions. Revision checks still reject a stale editor when another operator has saved the same record.
 
 A complete receiving package supports at most 64 MiB compressed, 6,000 files, 64 MiB per member, 256 MiB expanded and a 2 MiB member manifest. Export and receiving share the member envelope. If a review exceeds it, narrow the selected original source scope and produce separate complete reviews. Editable receiving preserves the source's original acceptance note and binds its provenance through the retained package and source map.
+
+## Run the complete original-source receiving exercise
+
+The included driver uses the original 2025 and 2026 PJM `load-report-data.xlsx` workbooks and the installed workspace, browser and backup engines:
+
+```sh
+python tools/load_forecast_operating_journey.py --output /private/load-review-operation --node /path/to/node --chromium /path/to/chrome-headless-shell
+```
+
+Use `--baseline-file` and `--current-file` to reuse complete retained publisher files. The default reads the original PJM URLs. The 2026 input is pinned to the 217,177-byte workbook inspected for this implementation (SHA-256 `35083a04c6c423ff9cdc006b77dc46783e46e157b53ecd1db8982f54b30111c4`); a changed publisher edition needs source review. Supply the existing Playwright installation through `CODEX_PRIMARY_RUNTIME_NODE_MODULES` or `PLAYWRIGHT_NODE_MODULES`.
+
+The single operation maps the actual separate `YEAR` and `MONTH` columns, opens mapped packet observations in the staff screen, saves and accepts edited source mappings, reviews and finalizes an original plan, downloads the complete ten-sheet delivery, receives it into a fresh workspace, continues its editable plan, and restores an encrypted workspace backup. It checks the same completed adoption and unchanged complete package after restoration. Selected named areas stay separate; the worked energy comparison converts GWh to MWh and does not infer peak coincidence. Its source records, full output, two staff screenshots and compact `result.json` remain in the requested private directory. The backup and browser action log belong to that private operating directory; distribute the complete analyst ZIP and product source separately.

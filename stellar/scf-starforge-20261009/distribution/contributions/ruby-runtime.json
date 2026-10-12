@@ -1,0 +1,29 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "ruby-runtime",
+  "description": "Complete private Ruby and Bundler environments, original customer execution, received Rails applications and whole offline runtime receiving",
+  "components": [
+    "stellar/scf-starforge-20261009/distribution/ruby-runtime"
+  ],
+  "commands": {
+    "ruby-runtime": "stellar/scf-starforge-20261009/distribution/ruby-runtime/cli.mjs"
+  },
+  "commandDescriptions": {
+    "ruby-runtime": "Install and operate exact Ruby environments, original customer programs and received Rails applications"
+  },
+  "exports": {
+    "./ruby-runtime": "./source/stellar/scf-starforge-20261009/distribution/ruby-runtime/model.mjs",
+    "./ruby-runtime/cli": "./source/stellar/scf-starforge-20261009/distribution/ruby-runtime/cli.mjs",
+    "./ruby-runtime/applications": "./source/stellar/scf-starforge-20261009/distribution/ruby-runtime/application-provider.mjs",
+    "./ruby-runtime/workspace": "./source/stellar/scf-starforge-20261009/distribution/ruby-runtime/workspace/server.mjs"
+  },
+  "applicationProviders": {
+    "ruby-runtime": "stellar/scf-starforge-20261009/distribution/ruby-runtime/application-provider.mjs"
+  },
+  "browserAssets": [
+    {
+      "server": "stellar/scf-starforge-20261009/distribution/ruby-runtime/workspace/server.mjs",
+      "manifest": "stellar/scf-starforge-20261009/distribution/ruby-runtime/workspace/browser-assets.json"
+    }
+  ]
+}

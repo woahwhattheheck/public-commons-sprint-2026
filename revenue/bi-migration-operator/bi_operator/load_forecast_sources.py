@@ -32,7 +32,8 @@ UNITS = {
 KEY_FIELDS = ("area", "geography", "metric", "season", "period_start", "period_end",
               "period_basis", "coincidence", "basis", "canonical_unit")
 ROW_FIELDS = ("row_id", *KEY_FIELDS, "period_label", "signal", "value", "unit", "canonical_value",
-              "source_geography", "sheet", "cell", "period_cell", "mapping_id")
+              "source_geography", "sheet", "cell", "period_cell", "mapping_id",
+              "source_year", "source_month", "year_cell", "month_cell")
 
 
 def text(value, maximum=10000, required=False):
@@ -365,6 +366,9 @@ def normalise(raw):
         "sheet": text(raw.get("sheet", "packet"), 300, True), "cell": text(raw.get("cell"), 200, True),
         "period_cell": text(raw.get("period_cell", ""), 200), "mapping_id": identifier(raw.get("mapping_id", "packet")),
         "source_ref": text(raw.get("source_ref", ""), 3000)})
+    if raw.get("month_cell"):
+        result.update({field: text(raw.get(field), 200, True)
+                       for field in ("source_year", "source_month", "year_cell", "month_cell")})
     result["key"] = digest(encoded([result[k] for k in KEY_FIELDS]).encode())
     result["row_id"] = digest(encoded([result["sheet"], result["cell"], result["mapping_id"],
                                      result["key"], result["signal"]]).encode())[:24]
@@ -404,6 +408,9 @@ def map_source(data, inspection, mappings):
                 raise ValueError("Complete the table's source definitions.")
             if not geo_col and not text(defaults.get("geography")):
                 raise ValueError("Select a geography column or enter this table's one geography.")
+            month_col = integer(mapping.get("month_column", 0), 0, 16384, "Separate month column")
+            if month_col and (layout != "long" or defaults.get("period_basis") != "calendar_month"):
+                raise ValueError("A separate month column needs the monthly one-observation-per-row mapping.")
             if layout == "wide":
                 period_row = integer(mapping.get("period_row"), 1, 1048576, "Period heading row")
                 first_col = integer(mapping.get("first_column"), 1, 16384, "First value column")
@@ -416,7 +423,9 @@ def map_source(data, inspection, mappings):
             else:
                 period_col = integer(mapping.get("period_column"), 1, 16384, "Period column")
                 value_col = integer(mapping.get("value_column"), 1, 16384, "Value column")
-                lo, hi, end_col = first, last, max(period_col, value_col, geo_col)
+                if month_col == period_col:
+                    raise ValueError("Select separate year and month columns, or set the month column to zero.")
+                lo, hi, end_col = first, last, max(period_col, month_col, value_col, geo_col)
                 values = sheet_rows(data, inspection, sheet, lo, hi, end_col)
                 at = lambda row, col: values[row - lo][col - 1]
                 candidates = ((row, value_col, at(row, period_col), cell_name(row, period_col), at(row, value_col))
@@ -428,11 +437,21 @@ def map_source(data, inspection, mappings):
                     missing.append({"mapping_id": mid, "sheet": sheet, "cell": cell_name(row, col),
                                     "period_label": str(label or ""), "source_geography": original_geo})
                     continue
+                period_parts = {}
+                if month_col:
+                    source_year, source_month = text(at(row, period_col), 100, True), text(at(row, month_col), 100, True)
+                    year = integer(source_year, 1900, 2200, "Original year column")
+                    month = integer(source_month, 1, 12, "Original month column")
+                    label = f"{year:04d}-{month:02d}"
+                    period_parts = {"source_year": source_year, "source_month": source_month,
+                                    "year_cell": cell_name(row, period_col), "month_cell": cell_name(row, month_col)}
+                    period_cell = period_parts["year_cell"] + " + " + period_parts["month_cell"]
                 if not original_geo:
                     raise ValueError(f"{sheet}!{cell_name(row, col)} has a value but no selected geography label.")
                 raw = {**defaults, "geography": aliases.get(original_geo, original_geo),
                        "source_geography": original_geo, "period": label, "value": value,
-                       "sheet": sheet, "cell": cell_name(row, col), "period_cell": period_cell, "mapping_id": mid}
+                       "sheet": sheet, "cell": cell_name(row, col), "period_cell": period_cell, "mapping_id": mid,
+                       **period_parts}
                 try:
                     rows.append(normalise(raw))
                 except ValueError as error:

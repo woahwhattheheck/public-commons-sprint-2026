@@ -15,7 +15,8 @@ import zipfile
 def build(out, source=None):
     root = Path(source or __file__).resolve().parent
     plugin = root / "starforge_stac"
-    names = ["__init__.py", "model.py", "vector_source.py", "qgis_project.py", "plugin.py", "cli.py", "metadata.txt"]
+    names = ["__init__.py", "model.py", "vector_source.py", "qgis_project.py", "plugin.py", "cli.py",
+             "field.py", "field_native.py", "field_bridge.py", "field_ui.py", "metadata.txt"]
     files = {}
     for name in names:
         path = plugin / name
@@ -25,7 +26,7 @@ def build(out, source=None):
         if name.endswith(".py"):
             ast.parse(body, filename=str(path))
         files["starforge_stac/" + name] = body
-    for name in ("OPERATIONS.md", "VECTOR_RECEIVING.md", "LICENSE"):
+    for name in ("OPERATIONS.md", "VECTOR_RECEIVING.md", "FIELD_OPERATIONS.md", "LICENSE"):
         path = root / name
         if not path.is_file():
             path = plugin / name

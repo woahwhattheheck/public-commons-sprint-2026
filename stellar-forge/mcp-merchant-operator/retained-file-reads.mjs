@@ -71,13 +71,17 @@ export class RetainedFileReads {
   }
 
   #reads = new Map(); #readTail = Promise.resolve(); #readStats = new Map();
-  #prefix; #closing = false; #close; #maxSnapshotBytes;
+  #prefix; #closing = false; #close; #maxSnapshotBytes; #maxImmutableFileBytes;
   #opening = new Map(); #scopeClosures = new Map(); #ownedHandles = new WeakSet();
-  constructor({ errorPrefix = 'RETAINED', maxSnapshotBytes = DEFAULT_SNAPSHOT_BYTES_LIMIT } = {}) {
+  constructor({ errorPrefix = 'RETAINED', maxSnapshotBytes = DEFAULT_SNAPSHOT_BYTES_LIMIT,
+    maxImmutableFileBytes = MAX_RETAINED_IMMUTABLE_FILE_BYTES } = {}) {
     this.#prefix = errorPrefix;
     if (!Number.isSafeInteger(maxSnapshotBytes) || maxSnapshotBytes < 1)
       throw this.#fail('INVALID_CAPACITY', 'Use an explicit positive safe-integer snapshot byte budget.');
     this.#maxSnapshotBytes = maxSnapshotBytes;
+    if (!Number.isSafeInteger(maxImmutableFileBytes) || maxImmutableFileBytes < 1)
+      throw this.#fail('INVALID_CAPACITY', 'Use the source owner’s explicit positive native immutable-file byte limit.');
+    this.#maxImmutableFileBytes = maxImmutableFileBytes;
   }
   #fail(code, message) { return Object.assign(new Error(message), { code: this.#prefix + '_' + code }); }
   get summary() {
@@ -285,9 +289,9 @@ export class RetainedFileReads {
           size = copied.size; sha = copied.sha256; handle = copied.handle;
         } else if (native) {
           size = original.bytes; sha = original.sha256;
-          if (!Number.isSafeInteger(size) || size < 0 || size > MAX_RETAINED_IMMUTABLE_FILE_BYTES ||
+          if (!Number.isSafeInteger(size) || size < 0 || size > this.#maxImmutableFileBytes ||
               typeof sha !== 'string' || !SHA256.test(sha) || typeof original.name !== 'string' || !original.name)
-            throw this.#fail('FILE_SOURCE_INVALID', 'Use exact native file metadata with a SHA256 and a byte count up to 8 GiB.');
+            throw this.#fail('FILE_SOURCE_INVALID', 'Use exact native file metadata with a SHA256 and a byte count within this source owner’s declared native file limit.');
           if (expectedSha256 && sha !== expectedSha256)
             throw this.#fail('FILE_CHANGED', 'The native file metadata differs from the requested SHA256.');
           identity = await this.#verifyNative(handle, size, sha, scope);
