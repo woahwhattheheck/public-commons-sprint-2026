@@ -109,6 +109,16 @@ credential, changing prices, or selecting an earlier package. The account
 alias binds the existing provider database to the intended account. One
 Linux file lease owns that database at a time.
 
+## Open from Applications
+
+The original runtime workspace can retain this merchant as a Blockscout application. Select its verified package and one private merchant-state directory, the original facilitator URL and the seller, operations and provider-desk ports. Port 0 chooses an available local listener. The original plan supplies the API-key environment reference; use that variable in the inherited environment or the runtime's reviewed private environment file.
+
+The application binding verifies the manifest and all eight package leaves, then passes `--expected-plan-sha256` and `--expected-package-sha256` to `blockscout serve`. These optional flags are also available to direct launch automation. They require lowercase SHA-256 values; a changed manifest or compiled plan fails before the provider application is created. Preserve the exact values displayed by the original package and launch review when an operation waits in a queue.
+
+A successful serve prints one JSON startup line with schema `stellar-forge.blockscout-startup.v1`, status, canonical `packageDirectory` and `stateDirectory`, `planSha256`, `packageManifestSha256` and the original listener URLs. The Applications adapter accepts `providerDesk` only when the startup package, state and digests match its retained command and the current verified manifest. The private desk links the original availability and fulfillment controls. This startup record stays with the original managed operation.
+
+Use the same merchant-state directory for restart, provider-key rotation and a selected price rollback. Reopening an application resumes its merchant controls and saved account history. Buyer execution continues through the original separately reviewed SF88 intent. The Applications catalogue and observer are composed by the original runtime-workspace owner; select a source release containing `application-blockscout.mjs` and its matching startup CLI.
+
 ## Read quota and account history
 
 Open the private provider desk, select a chain and token address, and choose

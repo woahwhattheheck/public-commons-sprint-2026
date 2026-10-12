@@ -50,6 +50,10 @@ export interface OAuthGrantStatus {
   issuedAt: string | null;
   expiresAt: string | null;
   refreshExpiresAt: string | null;
+  /** QuickBooks company from the state-validated callback; present only for the Intuit dialect. */
+  realmId?: string | null;
+  /** Previously observed hard deadline survives refresh-token rotation. */
+  refreshHardExpiresAt?: string | null;
   hasRefreshToken: boolean;
   generation: number;
   review: OAuthRecordedReview | null;
@@ -90,6 +94,9 @@ export interface OAuthFlow {
   scopes?: string[];
   refreshable?: boolean;
   tokenExpiresAt?: string | null;
+  realmId?: string | null;
+  refreshExpiresAt?: string | null;
+  refreshHardExpiresAt?: string | null;
   lastError?: OAuthFlowError;
 }
 
@@ -105,7 +112,7 @@ export interface OAuthRevisionCommand {
   requestId: string;
 }
 export interface OAuthBeginRequest extends OAuthRevisionCommand {
-  /** Exact registered http://127.0.0.1:PORT plus this profile's callbackPath. */
+  /** Exact original loopback or profile-configured callback origin plus its callbackPath. */
   redirectUri: string;
 }
 export interface OAuthAuthorizationStart {

@@ -4,6 +4,10 @@ This adapter connects an upstream API that declares the OAuth authorization-code
 
 The generic adapter supports an OAuth access grant, not a provider account identity assertion. The provider's registered application, account access, declared scopes, API permissions, and endpoint support determine what that grant can do.
 
+## QuickBooks company and merchant accounting
+
+The maintained [QuickBooks connection guide](./QUICKBOOKS.md) uses this same controller for Intuit consent, reviewed callback realm, refresh-token rotation, and revocation. Its company selector reads actual native settings and all account pages, saves the reviewed company, and launches the original accounting workspace with that grant. Use `oauth-connection quickbooks --help` for the CLI or the typed `seller/oauth-connections/quickbooks` export. The explicit Intuit profile uses the provider's confidential-client flow and registered localhost or HTTPS callback.
+
 ## What is installed
 
 Use Node 22 or later and the normal merchant source dependencies. The entry point is `sf30-seller-sdk/oauth-connections/cli.mjs`. There is no extra OAuth package to install.
@@ -22,7 +26,7 @@ The compiled package does not contain an access token, refresh token, client sec
 
 ## 1. Register the provider application and exact source
 
-Read the provider's own registration and API documentation. This implementation uses authorization code with PKCE S256, a public client or one of the provider's supported confidential-client methods, and a loopback callback at an explicitly selected port.
+Read the provider's own registration and API documentation. The generic profile uses authorization code with PKCE S256, a public client or one of the provider's supported confidential-client methods, and a loopback callback at an explicitly selected port.
 
 Select the original OpenAPI file, its OAuth security scheme and the operation scopes. Keep the original file bytes: changing formatting also changes its source hash. If the provider publishes another document version, create and review a new matching profile.
 

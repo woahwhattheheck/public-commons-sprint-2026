@@ -107,17 +107,21 @@ export async function configureApplication({ merchant, gateway: gatewayPath, dir
   return { schema: PROFILE_SCHEMA, profile: profilePath, gateway: nextGatewayPath, store: storePath,
     merchantState: gateway.state, origin, routes, source: source.identity };
 }
-export async function readApplication(profilePath) {
-  profilePath = resolve(profilePath);
-  const profileBytes = await readPrivateFile(profilePath);
+export function parseApplicationProfile(profileBytes) {
   const profile = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(profileBytes));
   if (!object(profile) || profile.schema !== PROFILE_SCHEMA ||
       !['merchant', 'gateway', 'store', 'key'].every(key => typeof profile[key] === 'string' && isAbsolute(profile[key])) ||
       !Number.isSafeInteger(profile.port) || profile.port < 1 || profile.port > 65535 ||
       profile.origin !== 'http://127.0.0.1:' + profile.port) fail('APP_PROFILE_REQUIRED');
-  const source = await readJobMerchant(profile.merchant);
-  if (canonical(source.identity) !== canonical(profile.source)) fail('APP_ORIGINAL_SOURCE_CHANGED', 409);
-  const gatewayBytes = await readPrivateFile(profile.gateway);
+  return profile;
+}
+/** Shared logical validation. Recovery supplies byte-identical captured sources. */
+export function applicationFromSources(profilePath, profileBytes, source, gatewayBytes, capability) {
+  const profile = parseApplicationProfile(profileBytes);
+  if (canonical(source.identity) !== canonical(profile.source) ||
+      digest(source.configSource) !== profile.source.configSha256 ||
+      digest(source.applicationSource) !== profile.source.applicationSha256)
+    fail('APP_ORIGINAL_SOURCE_CHANGED', 409);
   if (digest(gatewayBytes) !== profile.gatewaySha256) fail('APP_GATEWAY_SOURCE_CHANGED', 409);
   const gateway = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(gatewayBytes));
   const routes = routesFor(source, gateway, profile.routes, profile.origin);
@@ -128,13 +132,21 @@ export async function readApplication(profilePath) {
         actual.maxRequestBytes !== route.maxInputBytes || actual.maxResponseBytes !== route.maxOutputBytes)
       fail('APP_GATEWAY_ROUTE_CHANGED', 409);
   }
-  const keyInfo = await lstat(profile.key);
-  if (keyInfo.mode & 0o077) fail('APP_CAPABILITY_FILE_MUST_BE_PRIVATE', 403);
-  const capability = (await readPrivateFile(profile.key, 256)).toString('ascii').trim();
   if (!/^[a-f0-9]{64}$/.test(capability) || digest(capability) !== profile.capabilitySha256)
     fail('APP_CAPABILITY_FILE_INVALID');
   const upstreamHeadersSha256 = digest(canonical({ [KEY_HEADER]: capability }));
   return { profilePath, profileSha256: digest(profileBytes), profile, source, gateway, routes, capability, upstreamHeadersSha256 };
+}
+export async function readApplication(profilePath) {
+  profilePath = resolve(profilePath);
+  const profileBytes = await readPrivateFile(profilePath);
+  const profile = parseApplicationProfile(profileBytes);
+  const source = await readJobMerchant(profile.merchant);
+  const gatewayBytes = await readPrivateFile(profile.gateway);
+  const keyInfo = await lstat(profile.key);
+  if (keyInfo.mode & 0o077) fail('APP_CAPABILITY_FILE_MUST_BE_PRIVATE', 403);
+  const capability = (await readPrivateFile(profile.key, 256)).toString('ascii').trim();
+  return applicationFromSources(profilePath, profileBytes, source, gatewayBytes, capability);
 }
 export function requestIdentity(runtime, route, body, contentType, accept) {
   return { route: route.id, method: 'POST', path: route.path, origin: runtime.profile.origin,
