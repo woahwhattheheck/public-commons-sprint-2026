@@ -187,15 +187,19 @@ An interrupted receive continues from its original private receiving state. Repe
 
 ## Native operating example
 
-The original October12 repository source used for the complete receiving exercise contains:
+The original October 12 repository source used for the complete receiving exercise contains:
 
 | Source | Actual captured coverage |
 | --- | --- |
-| DSpace Publications 2 collection `dd1240ae-d7dd-405c-bdc3-d6c960609433` | All44 publications across pages0,1,2. |
+| DSpace Publications 2 collection `dd1240ae-d7dd-405c-bdc3-d6c960609433` | All 44 publications across pages 0, 1 and 2. |
 | Original public-reader capture | 49 distinct native items, including linked/out-of-collection objects. |
 | Separately retained Person capture | Original linked researcher `1b19bcc0-4f83-446d-95b7-ec0c806d1578`. |
-| Explicit complete demonstration selection | The44 collection records plus that one Person:45 rows,1,230 metadata values. |
+| Explicit complete demonstration selection | The 44 collection records plus that one Person: 45 rows, 1,230 metadata values. |
 
-The first publication retains all85 author values, including the original `virtual::1019` authority and placement for the linked Person. Removing `dc.description` in a second complete projection changes42 of the45 item rows. The original core operating run read every native cursor page, exported the exact approved dataset, received the complete project, replayed its original request, and reopened the saved native workspace.
+The first publication retains all 85 author values, including the original `virtual::1019` authority and placement for the linked Person. Removing `dc.description` in a second complete projection changes 42 of the 45 item rows. The original core operating run read every native cursor page, exported the exact approved dataset, received the complete project, replayed its original request, and reopened the saved native workspace.
 
 The original capture's complete bytes remain the source of those counts. Its stated distribution basis is the internal public-sandbox engineering demonstration recorded in the named review.
+
+The complete browser journey saved and reviewed the 45-record edition, followed all three native query pages (20, 20 and 5 rows), downloaded the full dataset and comparison, and transferred the complete 520,192-byte project. It recovered the original receiving request after its response was lost and reopened the same received project at revision 11 after a host restart. The desktop and 390-pixel mobile layouts were exercised in that journey.
+
+The merchant/customer journey prepared the reviewed edition through SF82 and began the original SF88 buyer. After the first two pages, it published a 44-record successor through SF30, then completed all seven pages of the buyer's original 45-record snapshot. It recovered the original customer result, assembled the complete customer data room, and reopened both the current and retained dataset versions.

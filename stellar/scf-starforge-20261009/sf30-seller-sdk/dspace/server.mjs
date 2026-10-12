@@ -79,12 +79,12 @@ export async function startDspaceOperator({directory,workspaceDirectory,host='12
         const cookie=(req.headers.cookie??'').split(';').map(s=>s.trim()).find(s=>s.startsWith('dspace_operator='))?.slice(16);
         if(!sameToken(req.headers.authorization?.replace(/^Bearer /,''))&&!sameToken(cookie))
           throw fault('OPERATOR_AUTH','Open the local operator or supply its bearer credential.',401);
-        if(req.method==='GET'&&u.pathname==='/api/state'){send(res,200,state());return;}
+        if(req.method==='GET'&&u.pathname==='/api/state'){send(res,200,await serial(state));return;}
         if(req.method==='GET'&&u.pathname==='/api/record'){
-          send(res,200,workspace.read(u.searchParams.get('kind'),u.searchParams.get('id'),{offset:Number(u.searchParams.get('offset')??0),limit:Number(u.searchParams.get('limit')??20)}));return;
+          send(res,200,await serial(()=>workspace.read(u.searchParams.get('kind'),u.searchParams.get('id'),{offset:Number(u.searchParams.get('offset')??0),limit:Number(u.searchParams.get('limit')??20)})));return;
         }
         if(req.method==='GET'&&u.pathname==='/api/items'){
-          const source=workspace.get('sources',u.searchParams.get('id')),offset=Number(u.searchParams.get('offset')??0),limit=Number(u.searchParams.get('limit')??20);
+          const source=await serial(()=>workspace.get('sources',u.searchParams.get('id'))),offset=Number(u.searchParams.get('offset')??0),limit=Number(u.searchParams.get('limit')??20);
           if(!Number.isSafeInteger(offset)||offset<0||!Number.isSafeInteger(limit)||limit<1||limit>100)throw fault('OPERATOR_PAGE','Choose a valid source page.');
           let items=source.items;
           if(u.searchParams.get('scope')==='collection')items=items.filter(i=>i.in_scope);
@@ -92,10 +92,10 @@ export async function startDspaceOperator({directory,workspaceDirectory,host='12
           send(res,200,{sourceId:source.id,items:items.slice(offset,offset+limit).map(brief),total:items.length,offset,limit});return;
         }
         if(req.method==='GET'&&u.pathname==='/api/item'){
-          const source=workspace.get('sources',u.searchParams.get('source')),item=source.items.find(i=>i.uuid===u.searchParams.get('uuid')&&i.object_sha256===u.searchParams.get('variant'));
+          const source=await serial(()=>workspace.get('sources',u.searchParams.get('source'))),item=source.items.find(i=>i.uuid===u.searchParams.get('uuid')&&i.object_sha256===u.searchParams.get('variant'));
           if(!item)throw fault('OPERATOR_ITEM','Choose an original source variant.',404);send(res,200,item);return;
         }
-        if(req.method==='GET'&&u.pathname==='/api/operation'){send(res,200,workspace.operation(u.searchParams.get('id')));return;}
+        if(req.method==='GET'&&u.pathname==='/api/operation'){send(res,200,await serial(()=>workspace.operation(u.searchParams.get('id'))));return;}
         if(req.method==='GET'&&u.pathname==='/api/download'){
           const file=await serial(()=>workspace.exportFile(u.searchParams.get('kind'),u.searchParams.get('id')));
           res.writeHead(200,{'content-type':file.contentType,'content-length':file.bytes,'content-disposition':'attachment; filename="'+file.filename+'"','x-file-sha256':file.sha256});

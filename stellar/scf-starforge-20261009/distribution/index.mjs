@@ -49,3 +49,8 @@ export { reviewSdmxBuyer, prepareSdmxBuyer } from '../sf30-seller-sdk/sdmx/custo
 
 export { openFrictionlessPublisher } from '../sf30-seller-sdk/frictionless/model.mjs';
 export { prepareFrictionlessRelease, stageFrictionlessRelease } from '../sf30-seller-sdk/frictionless/release.mjs';
+
+export { DspaceWorkspace, openDspaceWorkspace, receiveDspaceWorkspace } from '../sf30-seller-sdk/dspace/workspace.mjs';
+export { prepareDspaceMerchant, readDspaceMerchant, initializeDspaceVersions, startDspaceMerchant, publishDspaceMerchant,
+  stageDspaceRelease, activateDspaceRelease, rollbackDspaceRelease, runDspaceRelease } from '../sf30-seller-sdk/dspace/merchant.mjs';
+export { reviewDspaceBuyer, prepareDspaceBuyer, receiveDspaceBuyer, inspectDspaceDelivery } from '../sf30-seller-sdk/dspace/customer.mjs';
