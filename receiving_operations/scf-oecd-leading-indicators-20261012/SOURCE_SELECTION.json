@@ -2329,6 +2329,6 @@
       "receiving_operations/scf-oecd-leading-indicators-20261012/SOURCE_SELECTION.json"
     ],
     "authorities": "The maintained source carrier includes the actual projection Git commit and complete recursive tree responses. Its exact original source index is checked by the unchanged Git receiver.",
-    "followingEdition": "This source edition follows the original ae69240a441001bdb18e367d395af7bd39dd4fb1 carrier. Preserve its in-flight request, native project, existing merchant/buyer configuration, source captures and operation records. Receive the new source into a distinct cache and materialized source directory; continue the same project after its current native process finishes."
+    "followingEdition": "Receive a new source release into a distinct source cache and source directory, then reopen the saved project after the running application exits. Existing saved operation inputs, reports, data and settings remain bound to their original records."
   }
 }
