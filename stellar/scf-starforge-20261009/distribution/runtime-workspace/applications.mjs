@@ -2,6 +2,8 @@
 import { readdir, lstat, realpath, access } from 'node:fs/promises';
 import { constants } from 'node:fs';
 import { join, dirname, basename } from 'node:path';
+import { pathToFileURL } from 'node:url';
+import { blockscoutApplication, prepareBlockscoutApplication } from './application-blockscout.mjs';
 import { inspectMerchantRuntime } from '../../sf46-release/runtime-package.mjs';
 import { managedState, openManagedHome, reviewManagedAdoption } from './managed-workspace.mjs';
 import { applicationEnvironment, readApplicationTerminal, sendApplicationTerminal } from './application-command.mjs';
@@ -27,6 +29,7 @@ const common = [
   field('environmentFile', 'Private environment JSON', 'path', false, 'Optional private file containing environment names and string values. Values stay on this host.'),
 ];
 export const APPLICATION_CATALOG = Object.freeze([
+  blockscoutApplication(common),
   { id: 'xml', command: 'dataset', requiredSource: 'stellar/scf-starforge-20261009/sf30-seller-sdk/xml/cli.mjs',
     title: 'XML dataset onboarding', terminal: false,
     description: 'Reopen an initialized XML workspace with its original sources, mappings, native datasets, comparison and portable editions.',
@@ -77,6 +80,19 @@ export const APPLICATION_CATALOG = Object.freeze([
         'Optional explicit workspace.mjs from the original provider source; otherwise use this selected runtime.'),
       field('editionAdapter', 'Original provider edition adapter', 'path', false,
         'Optional local adapter module for retained provider references such as Valyu.'), ...common] },
+  { id: 'buyer-expenses', command: 'buyer-expenses',
+    requiredSource: 'stellar/scf-starforge-20261009/sf36-spend-governor/expense-workspace/server.py',
+    title: 'Buyer expenses', terminal: false,
+    description: 'Reopen statement captures, cost centers, allocations, period reviews and accountant editions.',
+    fields: [field('stateDirectory', 'Private buyer expense workspace', 'path', true,
+      'Reopen the original or received workspace, or create one directory in an existing private parent.'), ...common] },
+  { id: 'merchant-recovery', command: 'merchant-recovery-remote',
+    requiredSource: 'stellar/scf-starforge-20261009/sf101-merchant-recovery/workspace/cli.mjs',
+    title: 'Merchant recovery', terminal: false,
+    description: 'Review retained snapshots, off-host inventory, original transfers and cold restore in the original recovery workspace. Select a runtime with its S3 feature.',
+    fields: [field('hostConfig', 'Original private recovery host configuration', 'path', true),
+      field('workspaceDirectory', 'Private recovery workspace directory', 'path', true,
+        'An existing directory or one new directory in an existing private parent. Original transfer journals remain at the host-selected paths.'), ...common] },
   { id: 'commerce', command: 'commerce-console', title: 'Commerce session', terminal: true,
     description: 'Reopen an initialized original commerce session. Its buyer approval remains in the connected original terminal.',
     fields: [field('directory', 'Initialized commerce session', 'path', true), field('finalityNode', 'Finality Node executable'),
@@ -155,7 +171,7 @@ function normalizeSettings(type, input) {
     'APPLICATION_OPENALEX_WORKSPACE_REQUIRED', 'Choose the original saved OpenAlex workspace with its module');
   return settings;
 }
-async function applicationCommand(type, settings) {
+async function applicationCommand(type, settings, runtimeDirectory) {
   const inputs = [], createDirectories = [], args = [];
   let terminalPython;
   const path = async (name, kind = 'directory', missing = false, privateOnly = false) => {
@@ -163,7 +179,10 @@ async function applicationCommand(type, settings) {
     const value = await inputPath(settings[name], kind, missing, privateOnly); inputs.push(value); return value;
   };
   const option = (name, value) => { if (value !== undefined && value !== '') args.push(name, String(value)); };
-  if (type.id === 'xml') {
+  if (type.id === 'blockscout') {
+    const original = await prepareBlockscoutApplication(settings, inputPath);
+    args.push(...original.args); inputs.push(...original.inputs);
+  } else if (type.id === 'xml') {
     await path('workspaceDirectory', 'directory', false, true);
     args.push('xml', '--workspace', settings.workspaceDirectory, 'serve');
   } else if (type.id === 'openapi') {
@@ -244,6 +263,37 @@ async function applicationCommand(type, settings) {
     option('--edition-adapter', settings.editionAdapter);
     option('--openalex-workspace', settings.openalexWorkspaceDirectory);
     option('--openalex-module', settings.openalexModule);
+  } else if (type.id === 'buyer-expenses') {
+    const state = await path('stateDirectory', 'directory', true, true);
+    if (!state.exists) createDirectories.push(state.path);
+    option('--state', settings.stateDirectory);
+  } else if (type.id === 'merchant-recovery') {
+    const config = await path('hostConfig', 'file');
+    await path('workspaceDirectory', 'directory', true, true);
+    const selected = await inspectMerchantRuntime(runtimeDirectory, { load: false });
+    const originalModule = join(selected.sourceRoot,
+      'stellar/scf-starforge-20261009/sf101-merchant-recovery/workspace/model.mjs');
+    inputs.push(await inputPath(originalModule, 'file'));
+    const { readRecoveryConfiguration } = await import(pathToFileURL(originalModule).href);
+    const original = await readRecoveryConfiguration(settings.hostConfig);
+    need(original.sha256 === config.sha256, 'APPLICATION_RECOVERY_CONFIG_CHANGED',
+      'Review the original current recovery host configuration');
+    const retained = new Set(inputs.map(item => item.path));
+    const retain = async (value, kind = 'directory', missing = false) => {
+      if (!retained.has(value)) {
+        inputs.push(await inputPath(value, kind, missing, true));
+        retained.add(value);
+      }
+    };
+    for (const profile of original.host.profiles) {
+      await retain(profile.storeConfig, 'file');
+      await retain(profile.operations, 'directory', true);
+      for (const root of profile.bundleRoots) await retain(root.directory);
+      await retain(profile.downloadRoot);
+      await retain(profile.restoreRoot);
+    }
+    args.push('workspace', 'serve');
+    option('--config', settings.hostConfig); option('--directory', settings.workspaceDirectory);
   } else if (type.id === 'commerce') {
     await path('directory', 'directory', false, true); await path('recoveryConfig', 'file');
     const finalityNode = settings.finalityNode ? await realpath(settings.finalityNode) : null;
@@ -363,7 +413,7 @@ export async function reviewApplication(root, { runtimeId, runtimeDirectory, kin
       'stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research/workspace.mjs'), 4 * 1024 * 1024).catch(() =>
       need(false, 'APPLICATION_NOT_IN_RUNTIME',
         'Choose a runtime containing the original OpenAlex workspace or select its explicit original module'));
-  const command = await applicationCommand(type, settings);
+  const command = await applicationCommand(type, settings, runtime.directory);
   const homes = (await managedState(root)).homes;
   let home = homeId ? homes.find(item => item.id === recordId(homeId)) : homes.find(item => item.releases.some(release =>
     release.runtime && bindingKeys.every(key => release.runtime[key] === runtime[key])));
@@ -402,7 +452,7 @@ export async function saveApplication(root, { requestId, reviewId, applicationId
     }
     need((previous?.revision ?? null) === reviewed.previousRevision, 'APPLICATION_REVIEW_CHANGED');
     if (previous) need(!await busyApplication(root, id), 'APPLICATION_RUNNING');
-    const current = await applicationCommand(applicationType(reviewed.kind), reviewed.settings);
+    const current = await applicationCommand(applicationType(reviewed.kind), reviewed.settings, reviewed.runtime.directory);
     need(hash(current) === hash(reviewed.command), 'APPLICATION_INPUTS_CHANGED', 'Review the current application files before saving', 409);
     for (const path of reviewed.command.createDirectories) {
       try { await makePrivate(path); } catch (error) { if (error.code !== 'EEXIST') throw error; await privateDirectory(path); }
@@ -429,7 +479,7 @@ export async function reviewApplicationStart(root, id) {
   need(hash(binding(runtime)) === hash(saved.runtime), 'APPLICATION_RUNTIME_CHANGED');
   const { home, release } = await selectedRelease(root, saved);
   need(release && Object.hasOwn(release.commands, applicationType(saved.kind).command), 'APPLICATION_CONNECTION_REQUIRED');
-  const command = await applicationCommand(applicationType(saved.kind), saved.settings);
+  const command = await applicationCommand(applicationType(saved.kind), saved.settings, saved.runtime.directory);
   const value = { schema: 'stellar-forge.application-start-review.v1', applicationId: id,
     applicationRevision: saved.revision, runtime: saved.runtime, homeId: home.id, homeRevision: home.revision,
     releaseId: release.id, releaseDigest: release.digest, resourceKey: saved.resourceKey, command };
@@ -458,7 +508,7 @@ export async function prepareApplicationStart(root, { applicationId, requestId, 
         need(!await busyApplication(root, other), 'APPLICATION_WORKSPACE_BUSY',
           'The original application for this data directory already has a retained operation. Reopen or stop that operation.', 409);
     }
-    const current = await applicationCommand(applicationType(saved.kind), saved.settings);
+    const current = await applicationCommand(applicationType(saved.kind), saved.settings, saved.runtime.directory);
     need(hash(current) === hash(reviewed.command), 'APPLICATION_INPUTS_CHANGED', 'Review the original current inputs again', 409);
     const { home, release } = await selectedRelease(root, saved);
     need(home?.revision === reviewed.homeRevision && release?.id === reviewed.releaseId &&

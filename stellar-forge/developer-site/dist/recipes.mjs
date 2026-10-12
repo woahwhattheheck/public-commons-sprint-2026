@@ -117,18 +117,19 @@ export const ROLES = Object.freeze({
     "result": "The original workspace reads the configured database catalog, validates the selected projection and exports source.json, service.json and launch guidance. Saved packages preserve the original database role and source limits; a changed schema requires a new selection and review."
   },
   "opensearch": {
-    "meta": "OPENSEARCH / SEARCH WORKSPACE",
+    "meta": "OPENSEARCH / SEARCH AND RELEVANCE",
     "title": "Turn selected index searches into a merchant.",
-    "description": "Author named queries, inspect native mappings, keep result editions and export the original merchant and customer client.",
+    "description": "Author native searches, retain result editions, compare judged query variants and export the merchant and customer report.",
     "checklist": [
       "Use Node.js 22.16+ with an existing OpenSearch 3.3+ cluster and the current toolkit source.",
       "Prepare the private source and merchant plan from the OpenSearch guide; load the selected endpoint and credentials into the launching environment.",
-      "Open the local workspace, save a draft, inspect and capture its search, then prepare the merchant and give customers its generated client."
+      "Save and capture query drafts. In Search relevance, add cases, judge original document identities and evaluate the saved query variants.",
+      "Review the native outcomes, export the customer report and open the chosen variant as a merchant draft for the original preparation flow."
     ],
     "docs": "https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/main/stellar/scf-starforge-20261009/sf30-seller-sdk/opensearch/workspace/README.md",
     "label": "TERMINAL / OPENSEARCH WORKSPACE",
     "command": "# From the current toolkit source checkout:\nnode stellar/scf-starforge-20261009/distribution/cli.mjs opensearch-workspace \\\n  --source /private/search/source.json \\\n  --plan /private/search/merchant-plan.json \\\n  --workspace /private/search/workspace --port 0\n\n# Open the printed local URL. Save a draft, inspect its native source,\n# capture a result edition, and prepare the original merchant package.\n# An installed toolkit uses the same arguments with:\n# npx --no-install starforge opensearch-workspace",
-    "result": "Each search captures one native point-in-time result with exact document identities and integer metadata. Saved editions reopen and compare by their query and cluster scope; merchant preparation exports the original service, OpenAPI and customer client."
+    "result": "Search editions and relevance evaluations retain their original query revisions, document identities, judgments and cluster scope. The chosen variant prepares through the original seller compiler and generated customer client."
   },
   "s3": {
     "meta": "S3 / PRIVATE OBJECT DELIVERY",
