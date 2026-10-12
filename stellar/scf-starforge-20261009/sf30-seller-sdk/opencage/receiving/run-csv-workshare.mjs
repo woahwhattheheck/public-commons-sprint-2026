@@ -48,11 +48,13 @@ async function pinned(path,sha,bytes){
   must(HASH.test(sha)&&digest(value)===sha&&(bytes===undefined||value.length===bytes),'CSV_RECEIVING_SOURCE_CHANGED');
   return value;
 }
-async function nativeRecord(selection){
+async function nativeRecord(selection,{successful=true}={}){
   const records={};
   for(const name of ['request','result','artifacts'])records[name]=JSON.parse(await pinned(join(selection.record,name+'.json'),selection[name+'Sha256']));
   const {request,result,artifacts}=records;
-  must(request.intent&&result.state==='completed'&&result.exit_code===0&&Array.isArray(artifacts.files)&&
+  must(request.intent&&(!selection.operationId||request.intent.operation_id===selection.operationId)&&
+    (successful?result.state==='completed'&&result.exit_code===0:
+      result.state==='completed'&&result.exit_code===0||result.state==='failed'&&Number.isSafeInteger(result.exit_code)&&result.exit_code!==0)&&Array.isArray(artifacts.files)&&
     !(artifacts.errors??[]).length&&result.artifacts?.files===artifacts.files.length&&
     result.artifacts.bytes===artifacts.files.reduce((n,row)=>n+row.bytes,0),'CSV_RECEIVING_NATIVE_OUTCOME_REQUIRED');
   const files=new Map();
@@ -209,7 +211,7 @@ export async function receiveCsvWorkshare({input,inputBytes,inputPath,record}){
     const finished=JSON.parse(await completed.artifact('run/journey.json'));
     must(finished.schema==='commons.scf-opencage-release-completion/v1'&&finished.outcome==='COMPLETE'&&
       finished.receiving.operationId===completed.request.intent.operation_id,'CSV_RECEIVING_ORIGINAL_COMPLETION_CHANGED');
-    const original=await nativeRecord(finished.original);
+    const original=await nativeRecord(finished.original,{successful:false});
     const sourceDirectory=finished.original.customer.directory;
     const originals=await nativeDirectory(original,sourceDirectory);
     const source=await GeocodeDelivery.open(sourceDirectory);
@@ -238,7 +240,8 @@ export async function receiveCsvWorkshare({input,inputBytes,inputPath,record}){
     await putOnce(join(inputRoot,'mapping.json'),jsonBytes(mapping));
     await stage('original-native-response-and-csv-source-joined',{
       completedNative:input.completedNative,sourceNative:finished.original.operationId,sourceManifestSha256:finished.original.customer.manifestSha256,
-      sourceFiles:originals.length,sourceRequestId:sourceId,sourceCaptureIdentity:source.provenance.captureIdentity,
+      sourceFiles:originals.length,sourceOutcome:{state:original.result.state,exitCode:original.result.exit_code},
+      sourceRequestId:sourceId,sourceCaptureIdentity:source.provenance.captureIdentity,
       responseSha256:source.responseSha256,responseBytes:source.bytes().length,csvSha256:digest(csv),rows:52,
       sampleMeaning:'The input rows exercise retained review and delivery. Their successful responses reuse one actual official OpenCage test-key response, which returns its fixed Münster location.'});
     const workspaceDirectory=join(input.outputDirectory,'workspace');

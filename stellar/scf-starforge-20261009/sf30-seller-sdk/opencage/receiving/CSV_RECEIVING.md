@@ -51,7 +51,7 @@ Prepare this private input:
 }
 ```
 
-The selected original completion is the `commons.scf-opencage-release-completion/v1` result. Its declared `run/journey.json` retains the completed provider/customer native operation and the original customer directory, manifest, response and request identity. The command verifies both native outcomes and every selected original customer file before consuming those bytes.
+The selected original completion is the `commons.scf-opencage-release-completion/v1` result. Its declared `run/journey.json` retains the earlier provider/customer operation and the original customer directory, manifest, response and request identity. That earlier operation can have a retained failure after successful customer delivery; the selected completion must be successful and must bind that exact earlier terminal result. The command checks both original request/result/artifact digests and every selected customer file before consuming those bytes.
 
 The immutable native argv is exactly:
 
@@ -60,6 +60,29 @@ The immutable native argv is exactly:
 ```
 
 Use the actual canonical Node executable. The command verifies that argv against the original native request before preparing output. Keep the same admitted operation and original worker when reconnecting.
+
+## Place the original native operation
+
+The included `launch-csv-native.py` composes the maintained worker's original foreground launch. Put the private input and source manifest beneath the existing native project, then choose the real output, temporary and retained-record capacity paths. For example:
+
+```sh
+python3 launch-csv-native.py \
+  --host-root /absolute/maintained/native/host \
+  --input /absolute/native-project/input.json \
+  --node /absolute/canonical/node \
+  --project /absolute/native-project \
+  --records-root /absolute/native-records \
+  --peer YOUR_EXISTING_PEER \
+  --worker-root /absolute/native-workers \
+  --temp-root /absolute/native-temp \
+  --memory-mib 512 --memory-reserve-mib 128 \
+  --disk-space /absolute/native-project=64 \
+  --disk-space /absolute/native-temp=32 \
+  --disk-space /absolute/native-records=16 \
+  --runtime-path /absolute/installed/dependencies
+```
+
+The example's capacity values are explicit declarations to adjust to the chosen installation and measured workload. The launcher selects the original `clean-cache` admission and retains input, source manifest, successful customer outputs or the actual failed run. Its first accepted launch becomes the original foreground supervisor. Reopening an existing operation returns that original operation; use its maintained `native_foreground resume-capacity` or status command when its recorded state calls for recovery.
 
 ## Complete receiving flow
 
@@ -81,4 +104,4 @@ The three complete portable customer directories are `customer-delivery/`, `retr
 
 Select these complete customer directories, `journey.json`, `browser/`, `inputs/`, `agent-results.csv`, the exact input/source manifests and the receiving source as native artifacts. The mutable operator workspace stays in its own retained run directory for reopening.
 
-If a stage fails, its actual earlier records remain the continuation source. Inspect the current original request/result before using its worker's supported recovery. A completed provider response or completed original native operation is never replaced by a fresh lookup simply to fill a missing local file.
+If a stage fails, its actual earlier records remain the continuation source. Inspect the current original request/result and continue through the maintained worker's recovery, retaining completed response bytes, the selected installation and original operation identities.
