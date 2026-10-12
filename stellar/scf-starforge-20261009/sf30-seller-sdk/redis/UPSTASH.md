@@ -56,7 +56,10 @@ database.
 ## Map the customer's data
 
 The supplied source demonstrates four named products: a string value, selected
-hash fields, a sorted ranking and a stream projection. Replace those fixed keys
+hash fields, a sorted ranking and a stream projection. The [collection source and
+plan](COLLECTIONS.md) adds List and Set products over this same HTTP transport.
+Its native `LRANGE`/`LLEN` and `SSCAN` reads preserve exact values, complete scan
+batches and the returned continuation input. Replace those fixed keys
 and field mappings with the agreed customer schema. Typed parameters select only
 the alternatives declared in the source. Keep atomic amounts as strings.
 
