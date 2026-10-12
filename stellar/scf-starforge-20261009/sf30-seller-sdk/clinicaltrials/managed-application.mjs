@@ -29,6 +29,7 @@ const SOURCE_FILES = [
   "clinicaltrials/application-provider.mjs",
   "clinicaltrials/cli.mjs",
   "clinicaltrials/cli.py",
+  "clinicaltrials/clinical_batch.py",
   "clinicaltrials/clinical_package.py",
   "clinicaltrials/clinical_prs.py",
   "clinicaltrials/clinical_server.py",
@@ -55,6 +56,7 @@ const SOURCE_FILES = [
   "clinicaltrials/prs/schemas/source-contracts.json",
   "clinicaltrials/prs/upload.py",
   "clinicaltrials/public/app.js",
+  "clinicaltrials/public/batch.js",
   "clinicaltrials/public/index.html",
   "clinicaltrials/public/style.css",
   "clinicaltrials/publisher-bridge.mjs"

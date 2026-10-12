@@ -63,7 +63,7 @@ Each disposition records reviewer, explanation, current document SHA256 and comp
 - **Follow-up required** retains the row, input and findings with the operator's explanation.
 - **Exclude from selected delivery** records the exclusion while preserving its original reference and history.
 
-Changing the document or source selection clears the current disposition. Earlier decisions remain in the row history. An existing ready decision cannot silently follow another candidate or new source link.
+Changing the document or source selection clears the current disposition. Earlier decisions remain in the row history. Selecting the same composed document keeps its original composition and unresolved findings; choose a prepared candidate through its retained composition. An existing ready decision cannot silently follow another candidate or new source link.
 
 The batch is READY when it contains at least one ready entry and no pending or follow-up entries. The full delivery includes all original references and explanations for exclusions.
 
@@ -132,7 +132,7 @@ The original reconciler consumes retained study JSON bytes and their capture/pag
 | batch-register.csv | Client references, input/current hashes, schema, study count, disposition, reviewer, note and linked NCT IDs |
 | exceptions.csv | Original finding identities, source detail and current dispositions |
 | batch.json | Complete entries, artifact references and row history |
-| prs/ | Exact original/candidate XML, inspections, plans, previews and reconciliations |
+| prs/ | Exact original/candidate XML, inspections, plans, previews and reconciliations, including original-document ancestors and both composition inputs |
 | studies/ | Explicitly linked original study JSON and capture metadata |
 | contracts/ | Original OpenAPI, XSDs and contract provenance |
 | clinicaltrials-workspace.zip | Complete portable Clinical workspace |
@@ -149,7 +149,7 @@ starforge clinicaltrials --workspace /absolute/private/received restore --file /
 starforge clinicaltrials --workspace /absolute/private/received serve
 ~~~
 
-The same batch and entry IDs, input identities, source links and dispositions reopen. A receiver may create another delivery from that preserved state.
+The same batch and entry IDs, input identities, source links and dispositions reopen. A receiver may create another delivery from that preserved state. A workspace that already contains XML, plans or batch reviews receives further work through its normal source actions; restore opens a new empty receiver or resumes the same original packet.
 
 Batch-capable packets use schema stellar-forge.clinicaltrials-packet.v2 and require a batch-capable receiver. Existing packets without batches keep the original v1 format.
 

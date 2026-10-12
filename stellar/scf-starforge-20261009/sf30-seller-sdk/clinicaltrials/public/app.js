@@ -179,6 +179,10 @@ const publisherPanel = createPublisherPanel({
   handle,notice,selectSection,
 });
 const batchPanel = createBatchPanel({getState:() => model,perform,upload,api,download,handle,notice,params,selectSection,getPending:() => pending});
+function hasRetainedWorkspaceData() {
+  return ['sources','plans','builds','comparisons','captures','prs','prsPlans','prsPreviews','prsReconciliations','reviews','batches']
+    .some(name => model?.[name]?.length);
+}
 function controls() {
   const locked = !model || busy || !!pending;
   document.querySelectorAll('[data-write]').forEach(control => { control.disabled = locked; });
@@ -191,7 +195,7 @@ function controls() {
   $('edition-build').disabled = locked || status !== 'completed' || !model?.activePlan;
   $('package-export').disabled = locked || !model?.activeBuild;
   $('query-next').disabled = locked || !queryResult?.body?.page?.nextCursor;
-  $('restore-submit').disabled = locked || !!model?.sources?.length;
+  $('restore-submit').disabled = locked || hasRetainedWorkspaceData();
   $('pending').hidden = !pending || busy;
   if (pending) {
     $('pending-summary').textContent = pending.action + ' · ' + (pending.outcome?.status || 'Response needs reconciliation');
@@ -269,7 +273,7 @@ function renderExport() {
   table($('export-files'),['File','Bytes','SHA256',''],(selected?.files || []).map(file => [
     file.name,number(file.bytes),short(file.sha256),button('Download',() => download('/api/clinical/export?'+params({exportId:selected.id,file:file.name}),file.name.split('/').at(-1))),
   ]));
-  $('restore-hint').textContent = model.sources.length ? 'For independent receiving, initialize a new private workspace and open its console. This workspace retains its current source.' : 'This original workspace is empty and ready to receive a complete portable packet.';
+  $('restore-hint').textContent = hasRetainedWorkspaceData() ? 'For independent receiving, initialize a new private workspace and open its console. This workspace retains its source, XML and review records.' : 'This original workspace is empty and ready to receive a complete portable packet.';
 }
 function render() {
   if (!model) { controls(); return; }
