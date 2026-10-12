@@ -16,6 +16,7 @@ Applications opens the original merchant and buyer tools from a selected READY r
 | Research dossiers | research-workspace | Questions, saved source editions, findings, comparison and portable reports |
 | Buyer expenses | buyer-expenses | Statement captures, allocation, period review and accountant editions |
 | Blockscout token merchant | blockscout serve | Original provider desk, seller operations, quota and attempt recovery |
+| Tenderly simulation merchant | tenderly-workspace | Pinned EVM requests, original merchant, saved-provider observation review, exact-generation recovery and complete customer results |
 | Merchant recovery | merchant-recovery-remote workspace serve | Off-host inventory, original transfer journals and encrypted cold restore |
 | Commerce session | commerce-console start | An initialized SF66 session, original buyer/delivery/recovery and terminal approval |
 | XML dataset onboarding | dataset xml … serve | An initialized XML workspace, source intake, mapping, native query, comparison and portable editions |
@@ -186,3 +187,7 @@ A successful serve prints one JSON startup line with schema `stellar-forge.block
 
 Use the same merchant-state directory for restart, provider-key rotation and a selected price rollback. Reopening an application resumes its merchant controls and saved account history. Buyer execution continues through the original separately reviewed SF88 intent. The Applications catalogue and observer are composed by the original runtime-workspace owner; select a source release containing `application-blockscout.mjs` and its matching startup CLI.
 
+
+## Tenderly simulation merchant
+
+Select the original or received private workspace, an optional initial product plan, the original HTTPS facilitator and its private environment reference. Applications binds the exact workspace identity and plan bytes to its queued original command, captures that command’s actual private startup URL, and uses the existing managed stop/reopen path. The full profile → request → merchant → saved-provider recovery → customer-result workflow stays in the original product. Follow [Tenderly in Applications](../../partners/tenderly-stellar-pilot/workspace/APPLICATIONS.md) for complete initialization, operating, receiving and MCP handover.

@@ -18,6 +18,8 @@ const HELP = [
   'node workspace/server.mjs --state /private/tenderly-workspace',
   '  [--plan /private/plan.json] [--port 0]',
   '  [--facilitator https://selected-facilitator.example]',
+  '  [--expected-workspace-sha256 ORIGINAL_SHA256_OR_new]',
+  '  [--expected-plan-sha256 ORIGINAL_PLAN_FILE_SHA256]',
   '',
   'Set the access-key and operation-key environment references named by your plan.',
   'Keep the same private directory and operation key when reopening.',
@@ -169,20 +171,33 @@ export async function startTenderlyWorkspace({ port = 0, ...options } = {}) {
 
 export async function main(args = process.argv.slice(2)) {
   if (!args.length || args.length === 1 && args[0] === '--help') { console.log(HELP); return; }
-  const options = {}, merchantOptions = {};
-  const mapping = { '--state': 'directory', '--plan': 'planPath', '--port': 'port', '--facilitator': 'facilitator' };
+  const options = {}, merchantOptions = {}, expected = {};
+  const mapping = { '--state': 'directory', '--plan': 'planPath', '--port': 'port', '--facilitator': 'facilitator',
+    '--expected-workspace-sha256': 'workspaceSha256', '--expected-plan-sha256': 'planSha256' };
   for (let i = 0; i < args.length; i += 2) {
     const key = mapping[args[i]], value = args[i + 1];
     need(key && value && !value.startsWith('--') && !Object.hasOwn(options, key) &&
-      !Object.hasOwn(merchantOptions, key), HELP);
+      !Object.hasOwn(merchantOptions, key) && !Object.hasOwn(expected, key), HELP);
     if (key === 'port') {
       need(/^(0|[1-9][0-9]{0,4})$/.test(value), 'port must be 0–65535'); options.port = Number(value);
     } else if (key === 'facilitator') merchantOptions.facilitator = value;
-    else options[key] = resolve(value);
+    else if (key === 'workspaceSha256' || key === 'planSha256') {
+      need(/^[a-f0-9]{64}$/.test(value) || key === 'workspaceSha256' && value === 'new',
+        'Expected bindings must be lowercase SHA256; new selects an uninitialized workspace');
+      expected[key] = value;
+    } else options[key] = resolve(value);
   }
+  need(!expected.planSha256 || expected.workspaceSha256 && options.planPath,
+    'Bind the reviewed workspace and select --plan with its expected hash');
+  if (Object.keys(expected).length) options.launchBinding = expected;
   options.merchantOptions = merchantOptions;
   const workspace = await startTenderlyWorkspace(options);
-  console.log(JSON.stringify({ tenderlyWorkspace: workspace.url, directory: workspace.model.root }));
+  console.log(JSON.stringify({
+    schema: 'stellar-forge.tenderly-workspace-startup.v1', status: 'TENDERLY_WORKSPACE_READY',
+    tenderlyWorkspace: workspace.url, directory: workspace.model.root, workspace: workspace.model.manifest.id,
+    workspaceSha256: workspace.model.manifestSha256, planFile: options.planPath ?? null,
+    planSha256: workspace.model.initialPlanSha256, facilitator: merchantOptions.facilitator ?? null,
+  }));
   const stop = () => workspace.close().catch(error => { console.error(error.message); process.exitCode = 1; });
   process.once('SIGINT', stop); process.once('SIGTERM', stop);
   return workspace;

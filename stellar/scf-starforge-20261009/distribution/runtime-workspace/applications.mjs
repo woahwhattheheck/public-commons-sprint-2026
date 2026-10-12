@@ -4,6 +4,7 @@ import { constants } from 'node:fs';
 import { join, dirname, basename } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { blockscoutApplication, prepareBlockscoutApplication } from './application-blockscout.mjs';
+import { tenderlyApplication, prepareTenderlyApplication } from './application-tenderly.mjs';
 import { inspectMerchantRuntime } from '../../sf46-release/runtime-package.mjs';
 import { managedState, openManagedHome, reviewManagedAdoption } from './managed-workspace.mjs';
 import { applicationEnvironment, readApplicationTerminal, sendApplicationTerminal } from './application-command.mjs';
@@ -30,6 +31,7 @@ const common = [
 ];
 export const APPLICATION_CATALOG = Object.freeze([
   blockscoutApplication(common),
+  tenderlyApplication(common),
   { id: 'xml', command: 'dataset', requiredSource: 'stellar/scf-starforge-20261009/sf30-seller-sdk/xml/cli.mjs',
     title: 'XML dataset onboarding', terminal: false,
     description: 'Reopen an initialized XML workspace with its original sources, mappings, native datasets, comparison and portable editions.',
@@ -181,6 +183,9 @@ async function applicationCommand(type, settings, runtimeDirectory) {
   const option = (name, value) => { if (value !== undefined && value !== '') args.push(name, String(value)); };
   if (type.id === 'blockscout') {
     const original = await prepareBlockscoutApplication(settings, inputPath);
+    args.push(...original.args); inputs.push(...original.inputs);
+  } else if (type.id === 'tenderly') {
+    const original = await prepareTenderlyApplication(settings, inputPath, runtimeDirectory);
     args.push(...original.args); inputs.push(...original.inputs);
   } else if (type.id === 'xml') {
     await path('workspaceDirectory', 'directory', false, true);
