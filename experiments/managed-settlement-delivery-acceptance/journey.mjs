@@ -65,11 +65,11 @@ const closeServer=server=>new Promise((done,fail)=>{
 async function findPorts(){
  for(let attempt=0;attempt<40;attempt++){
   const first=21000+Math.floor(Math.random()*30000),held=[];
-  try{for(let i=0;i<6;i++){const s=createServer();held.push(s);await new Promise((done,fail)=>{s.once('error',fail);s.listen(first+i,'127.0.0.1',done);});}return first;}
+  try{for(let i=0;i<8;i++){const s=createServer();held.push(s);await new Promise((done,fail)=>{s.once('error',fail);s.listen(first+i,'127.0.0.1',done);});}return first;}
   catch{}finally{await Promise.all(held.map(closeServer));}
- }throw Error('Six original loopback ports unavailable');
+ }throw Error('Eight original loopback ports unavailable');
 }
-const publicHost='delivery.fleet.example',scope={tenant:'python',slot:'blue'};
+const publicHost='delivery.fleet.example',referenceHost='reference.delivery.fleet.example',scope={tenant:'python',slot:'blue'};
 let workspace,accounting,receiver,browser,mcp,operator,sessionKey,wireId=0;
 let closed=false,facilitator,receiverSpawnError;
 function receiverExited(child){
@@ -166,7 +166,7 @@ async function startFacilitator(){
    res.writeHead(value?200:404,{'content-type':'application/json'});res.end(JSON.stringify(value??{}));
   }catch{res.writeHead(500);res.end();}
  });
- await new Promise((done,fail)=>{facilitator.once('error',fail);facilitator.listen(receipt.portStart+4,'127.0.0.1',done);});
+ await new Promise((done,fail)=>{facilitator.once('error',fail);facilitator.listen(receipt.portStart+6,'127.0.0.1',done);});
 }
 async function prepare(){
  if(!receipt.portStart){receipt.portStart=await findPorts();await save(receiptFile,receipt);}
@@ -182,21 +182,31 @@ async function prepare(){
   for(const f of Object.values(declaration.functions))f.payment={...payment,amount};
   await onceFile(join(root,declaration.application),application);await onceFile(join(root,'merchant.json'),Buffer.from(json(declaration)));
   packages[name]={python:join(root,'merchant.json'),pythonRoot:root,runtime:{
-   facilitator:'http://127.0.0.1:'+(receipt.portStart+4),allowLocalFacilitator:true}};
+   facilitator:'http://127.0.0.1:'+(receipt.portStart+6),allowLocalFacilitator:true}};
  }
+ const referenceRoot=join(base,'python-reference');
+ const referenceDeclaration={...JSON.parse(originalDeclaration),publicOrigin:'https://'+referenceHost,python,workerCount:1};
+ for(const f of Object.values(referenceDeclaration.functions))f.payment={...payment};
+ await onceFile(join(referenceRoot,referenceDeclaration.application),application);
+ await onceFile(join(referenceRoot,'merchant.json'),Buffer.from(json(referenceDeclaration)));
+ const referenceSource={python:join(referenceRoot,'merchant.json'),pythonRoot:referenceRoot,
+  runtime:{facilitator:'http://127.0.0.1:'+(receipt.portStart+6),allowLocalFacilitator:true}};
  const declaration={schema:'stellar-forge.fleet-bootstrap.v1',gateway:{port:receipt.portStart,adminPort:receipt.portStart+1},
   merchantPortStart:receipt.portStart+2,slots:['blue','green'],
-  tenants:[{id:'python',host:publicHost,packages,initial:{package:'current',releaseId:'python-v1'}}]};
+  tenants:[{id:'python',host:publicHost,packages,initial:{package:'current',releaseId:'python-v1'}},
+   {id:'reference',host:referenceHost,packages:{current:referenceSource},initial:{package:'current',releaseId:'reference-v1'}}]};
  const declarationFile=join(base,'fleet-setup.json');await onceFile(declarationFile,Buffer.from(json(declaration)));
  const prepared=await bootstrapFleet({declarationFile,directory});
  receipt.planFile=prepared.planFile;receipt.payment=payment;receipt.originalInputs={
   merchantSha256:sha(originalDeclaration),applicationSha256:sha(application)};
- receipt.packageIdentities=Object.fromEntries(await Promise.all(Object.entries(packages).map(async([name,p])=>
+ receipt.packageIdentities=Object.fromEntries(await Promise.all(Object.entries({...packages,reference:referenceSource}).map(async([name,p])=>
   [name,{directory:p.pythonRoot,files:{'merchant.json':sha(await readFile(p.python)),
    'example-application.py':sha(application)}}])));
  const plan=await readFleetReleasePlan(receipt.planFile);
- receipt.stores=Object.fromEntries(Object.entries(plan.tenants[0].slots).map(([name,slot])=>[name,slot.store]));
- await mark('Original bootstrap prepared the two native release stores and explicit local-facilitator runtime',{planFile:receipt.planFile});
+ receipt.stores=Object.fromEntries(Object.entries(plan.tenants.find(row=>row.id==='python').slots).map(([name,slot])=>[name,slot.store]));
+ receipt.referenceStores=Object.fromEntries(Object.entries(plan.tenants.find(row=>row.id==='reference').slots).map(([name,slot])=>[name,slot.store]));
+ assert.equal(plan.tenants.length,2);assert.equal(Object.keys(receipt.stores).length+Object.keys(receipt.referenceStores).length,4);
+ await mark('Original bootstrap prepared two merchants, four native release stores and the explicit local-facilitator runtime',{planFile:receipt.planFile});
 }
 async function enrollDestinations(){
  const state=await delivery();
@@ -233,14 +243,14 @@ async function startReceivers(){
  }
  receiverSpawnError=null;
  receiver=spawn(python,['-B',join(sdk,'sf101-merchant-receiver/receiver.py'),'serve','--state',receiveState,
-  '--port',String(receipt.portStart+5),'--secret-env','E49_SF98_FULFILLMENT_SECRET'],
+  '--port',String(receipt.portStart+7),'--secret-env','E49_SF98_FULFILLMENT_SECRET'],
   {env:{...process.env},stdio:['ignore','ignore','pipe']});
  receiver.on('error',error=>{receiverSpawnError=error;});
  receiver.stderr.setEncoding('utf8');receiver.stderr.on('data',value=>{receipt.receiverLog=(receipt.receiverLog??'')+value.slice(0,4000);});
  await until(async()=>{
   if(receiverSpawnError)throw receiverSpawnError;
   if(receiverExited(receiver))throw Error('Original SF101 receiver exited before readiness: '+String(receipt.receiverLog??'').slice(-4000));
-  try{return(await fetch('http://127.0.0.1:'+(receipt.portStart+5)+'/health')).ok;}catch{return false;}
+  try{return(await fetch('http://127.0.0.1:'+(receipt.portStart+7)+'/health')).ok;}catch{return false;}
  },Boolean,'Original SF101 receiver did not start');
  await mkdir(join(base,'proofs'),{recursive:true,mode:0o700});
  const terms={schema:'stellar-forge.merchant-accounting-terms.v1',routes:[{
@@ -256,7 +266,7 @@ function sender(id){
  return args=>sendSignedWebhook({...args,resolver:async()=>[{address:'8.8.8.8',family:4}],
   transport:(endpoint,options,callback)=>{
    assert.equal(endpoint.hostname,id+'.native-e49.example');
-   const target=new URL(id==='accounting'?accounting.url:'http://127.0.0.1:'+(receipt.portStart+5));
+   const target=new URL(id==='accounting'?accounting.url:'http://127.0.0.1:'+(receipt.portStart+7));
    target.pathname=endpoint.pathname;
    return httpRequest(target,{...options,lookup:undefined},response=>{
     receipt.webhooks.push({destination:id,status:response.statusCode,eventId:args.event.id,
@@ -325,7 +335,7 @@ async function nativePhase(){
    {eventId:first.id,accountingReplay:duplicate.status});
  }
  await captureAccounting(first);
- const file=await fetch('http://127.0.0.1:'+(receipt.portStart+5)+'/deliver/e49-delivery-first',{
+ const file=await fetch('http://127.0.0.1:'+(receipt.portStart+7)+'/deliver/e49-delivery-first',{
   headers:{authorization:'Bearer '+secrets.E49_SF98_CLAIM}});
  const body=Buffer.from(await file.arrayBuffer());assert.equal(file.status,200);assert.equal(sha(body),receipt.fulfilledFile.sha256);
  if(!receipt.upgradeComplete){
@@ -361,6 +371,12 @@ async function nativePhase(){
  const all=await(await openOutbox(receipt.boundSource)).rows();
  await captureAccounting(all.find(row=>row.event.orderReference==='e49-delivery-reopened').event);
  state=await delivery();assert(state.destinations.destinations.every(row=>row.outbox.delivered===2&&row.cursor.count===2));
+ const reference=await delivery({tenant:'reference',slot:'blue'});
+ assert.notEqual(reference.originalSource.directory,receipt.boundSource);
+ assert.equal(reference.originalSource.directory,join(receipt.referenceStores.blue,'settlement-delivery/outbox'));
+ assert.equal(reference.originalSource.uniqueNativeReceipts,0);
+ assert.equal((await(await openOutbox(reference.originalSource.directory)).rows()).length,0);
+ receipt.tenantIsolation={tenants:2,stores:4,referenceEvents:0,referenceSource:reference.originalSource.directory};
  await mark('Original release upgrade, retired child and rollback preserved per-store source identity, exact prices and two completed receiver histories',
   {prices:['20000','25000','20000'],revision:3,blueEvents:2,greenEvents:1,fulfilledFile:receipt.fulfilledFile});
  await accounting.close();accounting=null;

@@ -7,6 +7,7 @@ import { acquirePrivateDirectoryWriter } from '../../operations/history.mjs';
 import { validateRedisSourceConfig, readRedisSourceFile, openRedisSourceFile } from '../config.mjs';
 import { compileRedisMerchantPlan, prepareRedisSeller, verifyPreparedRedisSeller } from '../prepare.mjs';
 import { compileRedisQueries, describeRedisQueries } from '../declaration.mjs';
+import { REDIS_CERTIFICATE_FILES, requiredRedisEnvironment } from '../connection-profile.mjs';
 
 export const REDIS_WORKSPACE_SCHEMA = 'stellar-forge.redis-authoring-workspace.v1';
 const TABLES = new Set(['revisions', 'operations']);
@@ -86,10 +87,11 @@ export async function createRedisAuthoringWorkspace({ directory, sourceFile, pla
   const original = await readRedisSourceFile(sourceFile), plan = decode(await bytes(resolve(planFile),262144));
   compileRedisMerchantPlan(original.config.queries, plan);
   const { queries, bindings, ...profile } = clone(original.config);
-  let ca;
-  if (profile.connection.caFile) {
-    ca = await bytes(resolve(dirname(original.path), profile.connection.caFile));
-    profile.connection.caFile = 'database-ca.pem';
+  const certificates = new Map();
+  for (const certificate of REDIS_CERTIFICATE_FILES) {
+    if (!profile.connection[certificate.profile]) continue;
+    certificates.set(certificate.fingerprint, await bytes(resolve(dirname(original.path), profile.connection[certificate.profile]), 1048576));
+    profile.connection[certificate.profile] = certificate.file;
   }
   const root = resolve(directory); await mkdir(root,{mode:0o700});
   let workspace, lease, db;
@@ -99,9 +101,11 @@ export async function createRedisAuthoringWorkspace({ directory, sourceFile, pla
     await privateDirectory(root);
     lease = await acquirePrivateDirectoryWriter(root); db = database(join(root,'workspace.sqlite3'),true);
     const meta = { schema:REDIS_WORKSPACE_SCHEMA,id:'redis-workspace-'+randomUUID(),label:text(label,200),
-      createdAt:now(),head:null,profile,...(ca ? {caSha256:hash(ca)} : {}) };
+      createdAt:now(),head:null,profile,
+      ...Object.fromEntries([...certificates].map(([name, value]) => [name, hash(value)])) };
     db.prepare('INSERT INTO metadata(id,value) VALUES(1,?)').run(JSON.stringify(meta));
-    if (ca) db.prepare('INSERT INTO blobs(sha,bytes) VALUES(?,?)').run(hash(ca),ca);
+    for (const value of certificates.values())
+      db.prepare('INSERT OR IGNORE INTO blobs(sha,bytes) VALUES(?,?)').run(hash(value),value);
     workspace = new RedisAuthoringWorkspace(root,db,lease,environment);
     const imported = await workspace.save({requestId:'import-'+randomUUID(),expectedHead:null,queries,plan,note:'Imported the selected Redis products and merchant terms'});
     if(imported.status!=='COMPLETED')throw problem(imported.error.code,imported.error.message);
@@ -144,17 +148,17 @@ export function redisWorkspaceBinding(meta) {
       typeof meta.id !== 'string' || !/^redis-workspace-[a-f0-9-]{36}$/.test(meta.id) ||
       !plain(meta.profile) || meta.profile.schema !== 'stellar-forge.redis-source.v1' ||
       !plain(meta.profile.connection) ||
-      meta.caSha256 !== undefined && !/^[a-f0-9]{64}$/.test(meta.caSha256))
+      REDIS_CERTIFICATE_FILES.some(certificate => meta[certificate.fingerprint] !== undefined &&
+        !/^[a-f0-9]{64}$/.test(meta[certificate.fingerprint])))
     throw problem('REDIS_WORKSPACE_BINDING_INVALID', 'Choose the original Redis workspace and its saved connection profile.');
   revisionId(meta.head);
-  const environmentNames = [...new Set([
-    meta.profile.connection.passwordEnv, meta.profile.connection.tokenEnv,
-  ].filter(value => value !== undefined))].sort();
+  const environmentNames = requiredRedisEnvironment(meta.profile.connection).sort();
   if (!environmentNames.every(value => typeof value === 'string' && /^[A-Z_][A-Z0-9_]{0,127}$/.test(value)))
     throw problem('REDIS_WORKSPACE_BINDING_INVALID', 'The saved source must use its original environment reference names.');
   return {
     schema: 'stellar-forge.redis-workspace-binding.v1', workspaceId: meta.id,
-    profileSha256: hash(stable({ schema: meta.schema, profile: meta.profile, caSha256: meta.caSha256 ?? null })),
+    profileSha256: hash(stable({ schema: meta.schema, profile: meta.profile, caSha256: meta.caSha256 ?? null,
+      ...(meta.sentinelCaSha256 === undefined ? {} : {sentinelCaSha256:meta.sentinelCaSha256}) })),
     head: meta.head, label: text(meta.label, 200), environmentNames,
   };
 }
@@ -399,10 +403,11 @@ export class RedisAuthoringWorkspace {
   async materialize(value) {
     const revision=this.revision(value),root=join(this.root,'materialized',revision.id),meta=this.metadata();
     const files={'source.json':Buffer.from(json(revision.source)),'merchant-plan.json':Buffer.from(json(revision.plan))};
-    if(meta.caSha256){
-      const row=this.db.prepare('SELECT bytes FROM blobs WHERE sha=?').get(meta.caSha256);
-      if(!row||hash(row.bytes)!==meta.caSha256)throw problem('REDIS_WORKSPACE_CERTIFICATE_CHANGED','The retained database certificate is missing or changed.');
-      files['database-ca.pem']=Buffer.from(row.bytes);
+    for(const certificate of REDIS_CERTIFICATE_FILES){
+      const expected=meta[certificate.fingerprint];if(!expected)continue;
+      const row=this.db.prepare('SELECT bytes FROM blobs WHERE sha=?').get(expected);
+      if(!row||hash(row.bytes)!==expected)throw problem('REDIS_WORKSPACE_CERTIFICATE_CHANGED','A retained Redis connection certificate is missing or changed.');
+      files[certificate.file]=Buffer.from(row.bytes);
     }
     try{await mkdir(root,{mode:0o700});}
     catch(error){if(error.code!=='EEXIST')throw error;await privateDirectory(root);}

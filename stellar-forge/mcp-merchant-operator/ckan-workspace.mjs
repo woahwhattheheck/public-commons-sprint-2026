@@ -242,9 +242,10 @@ export class MerchantCkanWorkspaces {
       let model, service;
       try {
         model = await openCkanWorkbench({ directory: definition.directory });
-        service = await startCkanServer({ workbench: model, port: 0 });
+        const instanceId = randomUUID();
+        service = await startCkanServer({ workbench: model, port: 0, instanceId });
         if (this.#closing) throw failure('CKAN_WORKSPACE_CLOSING', 'The merchant operator is closing.');
-        const entry = { alias, model, service, instanceId: randomUUID(), pending: new Set(), packageFiles: new Map(), closing: null };
+        const entry = { alias, model, service, instanceId, pending: new Set(), packageFiles: new Map(), closing: null };
         this.#entries.set(alias, entry);
         try { return this.#state(entry); }
         catch (issue) { this.#entries.delete(alias); throw issue; }

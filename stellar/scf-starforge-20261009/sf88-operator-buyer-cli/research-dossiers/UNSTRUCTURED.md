@@ -54,6 +54,33 @@ load the same private configuration, and pass the returned `documentSource` to
 server owns authentication, limits, origin checks and shutdown. Its startup
 record adds `documentSourceConfigured` and `documentWorkspaceId`.
 
+## Open the saved buyer from Applications
+
+In the original runtime workspace, choose **Applications → Research dossiers**.
+Select the private research directory and set **Original document buyer source
+selection** to the absolute path of the existing source JSON above. This saved
+setting is `documentSourceConfig`; the original command receives it as
+`--document-source`.
+
+**Review** opens the source selection through the original document buyer reader
+and retains the selected file and its existing runtime, buyer state and optional
+inbox directories. This uses the saved buyer configuration and its original
+purchases. Choose **Save**, connect the selected runtime, then
+**Review Start → Start**. Applications retains the original authenticated
+listener only after its startup identifies the selected research directory and
+document workspace.
+
+Open **Documents** to review and receive the existing buyer output. **Stop**
+closes the managed Research listener. Start the same saved application again to
+continue the original inbox, completed documents, retained editions and research
+history. Changed source settings go through the ordinary current-input review.
+
+The same application can also select **Original document-pipeline source
+selection** for the managed **Pipeline jobs** view described in
+[the Pipelines guide](UNSTRUCTURED_PIPELINES.md). Both source selections keep
+their own original workspace identities. OpenAlex, Crossref and provider edition
+adapters remain available in this same saved Research application.
+
 ## Review and receive the document
 
 1. Open the intended dossier and add or select its actual research question.

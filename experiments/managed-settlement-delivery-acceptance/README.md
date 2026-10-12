@@ -2,7 +2,7 @@
 
 This single original receiving operation uses the public Python merchant example, native x402 SDK, original SF82 fleet stores, SF98 destination engine, SF101 fulfillment receiver and merchant accounting workspace.
 
-Run from one selected product source after installing its original production runtime through the maintained merchant distribution. Preserve the same output directory on continuation.
+Run from one selected product source after installing its original production runtime through the maintained merchant distribution. The source root needs the native SDK and merchant MCP dependency profile, including jose. SF98_DELIVERY_NODE_MODULES selects the existing Playwright module directory. Preserve the same output directory on continuation.
 
 ```sh
 SF98_DELIVERY_SOURCE=/absolute/selected/source \
@@ -13,7 +13,9 @@ SF98_DELIVERY_CHROMIUM=/absolute/existing/chromium \
 node experiments/managed-settlement-delivery-acceptance/journey.mjs all
 ```
 
-The selected product is b37adf4292b0a424fe14da153ae88e5815a492f1. The operation ID is SCF-MANAGED-SF98-DELIVERY-E49D-20261012. The driver generates its own private signing and claim values in its output directory; the published source includes no account credentials or customer input.
+The selected product is 5ea93bab2847142462087b6785169deaeebee267. The operation ID is SCF-MANAGED-SF98-DELIVERY-E49D-20261012. The driver generates its own private signing and claim values in its output directory.
+
+The fixture follows the original fleet contract with two separately declared Python merchants, four blue/green release stores and eight selected loopback ports. The primary merchant exercises the complete delivery lifecycle; the second merchant retains its own source and verifies that the primary merchant’s events remain isolated. Source relocation covers all three original input packages.
 
 The native phase serves and settles original Python requests with the existing local facilitator fixture, journals the original SF98 events, and sends signed bytes through the original sender. Its transport adapter follows the original7E23 loopback receiving pattern, with HTTPS destination identities retained in the original configuration. It verifies independent accounting retry, actual SF101 file fulfillment, original accounting capture replay, upgrade, retirement and rollback.
 
