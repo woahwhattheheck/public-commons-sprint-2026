@@ -21,13 +21,14 @@ import uuid
 from portfolio import PortfolioWorkspace
 
 from .adjustments import prepare_adjustment, verify_native_before
+from .capture import NativeReaderTransport, native_capture_identity
 from .planner import (
     check_edition, metadata_from_probe, prepare_schedule, review_schedule,
     target_identity, verify_plan,
 )
 from .storage import Store, checked_id, write_bytes
 from .target import (
-    NativeTarget, TargetError, access_token, canonical, digest, guid,
+    NativeTarget, TargetError, canonical, digest, guid,
     operation_response, public_profile, read_profiles, utcnow,
 )
 
@@ -728,34 +729,8 @@ class TargetWorkspace:
         value["state"] = "REVIEWED"
         return self._save(value)
 
-    def capture_identity_map(self, plan, capture):
-        """Resolve prepared provider GUIDs to exact original reader keys, never ordinal guesses."""
-        result, findings = {}, []
-        for family, expected in plan["row_ids"].items():
-            if family == "calendars":
-                continue
-            rows = capture["model"].get(family, [])
-            index = {}
-            for row in rows:
-                native_guid = row.get("guid")
-                if native_guid is None:
-                    native_guid = row.get("fields", {}).get("GUID", {}).get("value")
-                if native_guid is not None:
-                    try:
-                        index.setdefault(guid(native_guid), []).append(row["key"])
-                    except TargetError:
-                        pass
-            selected = {}
-            for original_key, native_guid in expected.items():
-                candidates = index.get(guid(native_guid), [])
-                if len(candidates) == 1:
-                    selected[original_key] = candidates[0]
-                else:
-                    findings.append({"family": family, "source_key": original_key,
-                                     "native_guid": native_guid, "candidates": candidates,
-                                     "code": "CAPTURE_IDENTITY_UNRESOLVED"})
-            result[family] = selected
-        return result, findings
+    def capture_identity_map(self, plan, capture, transport, metadata):
+        return native_capture_identity(plan, capture, transport, metadata)
 
     def _capture_start(self, request_id, identity, expected_revision):
         value = self.store.index("deployments", identity)
@@ -771,18 +746,23 @@ class TargetWorkspace:
             value = self._save(value)
         return value, None
 
-    def _capture_finish(self, value, request_id, capture_id, comparison, *, identity_map=None, findings=None):
+    def _capture_finish(self, value, request_id, capture_id, comparison, *, identity_map=None, findings=None,
+                        transport_sha256=None, identity_evidence=None):
         result = {"schema": "portfolio.target-capture-result.v1", "request_id": request_id,
                   "deployment_id": value["id"], "source_edition_id": value["source_edition_id"],
                   "intended_edition_id": value.get("intended_edition_id", value["source_edition_id"]),
                   "capture_edition_id": capture_id, "comparison_sha256": self.store.put(comparison)["sha256"],
                   "identity_map": identity_map or {}, "identity_findings": findings or [], "captured_at": utcnow()}
+        result["read_transport_sha256"] = transport_sha256
+        result["identity_evidence_sha256"] = self.store.put(identity_evidence)["sha256"] if identity_evidence else None
         value.setdefault("capture_results", {})[request_id] = self.store.put(result)["sha256"]
         value["capture_request_id"] = request_id
         value["capture_edition_id"] = capture_id
         value["comparison_sha256"] = result["comparison_sha256"]
         value["capture_identity_findings"] = result["identity_findings"]
         value["capture_identity_map"] = result["identity_map"]
+        value["capture_read_transport_sha256"] = result["read_transport_sha256"]
+        value["capture_identity_evidence_sha256"] = result["identity_evidence_sha256"]
         value["state"] = "CAPTURED"
         value.pop("capture_in_progress", None)
         value.pop("acceptance_sha256", None)
@@ -793,35 +773,86 @@ class TargetWorkspace:
         if previous is not None:
             return {**value, "original_capture": previous}
         plan = self.store.read(value["plan_sha256"])
-        profile = self.profile(value["profile_id"])
-        if profile["kind"] != "project_operations":
-            raise TargetError("TARGET_FILE_RECEIVING", "Upload the actual returned target project file for this handover.")
         if value["state"] not in ("NATIVE_COMPLETE", "CAPTURED", "ACCEPTED"):
             raise TargetError("TARGET_NOT_COMPLETE", "Read the original OperationSets to completion before final target capture.")
-        target = self._observed_target(profile, value)
-        probe = target.probe()
+        progress = value["capture_in_progress"]
+        previous_transport = self.store.read(progress["reader_transport_sha256"]) if progress.get("reader_transport_sha256") else None
+        if previous_transport and previous_transport.get("complete"):
+            # Original completed pages and their probe are sufficient for a local
+            # receipt continuation, including after a portable workspace restore.
+            profile = {**plan["target_identity"]["profile"],
+                       "max_response_bytes": previous_transport["binding"]["max_response_bytes"]}
+            target = NativeTarget(profile)
+            probe = self.store.read(progress["capture_probe_sha256"])
+            target.metadata = metadata_from_probe(probe)
+        else:
+            profile = self.profile(value["profile_id"])
+            if profile["kind"] != "project_operations":
+                raise TargetError("TARGET_FILE_RECEIVING", "Upload the actual returned target project file for this handover.")
+            target = self._observed_target(profile, value)
+            current_probe = target.probe()
+            if target_identity(profile, current_probe) != plan["target_identity"]:
+                raise TargetError("TARGET_CHANGED", "The actual target identity or metadata changed.")
+            progress = value["capture_in_progress"]
+            if progress.get("capture_probe_sha256"):
+                probe = self.store.read(progress["capture_probe_sha256"])
+            else:
+                probe = current_probe
+                progress["capture_probe_sha256"] = self.store.put(probe)["sha256"]
+                saved = self._save(value)
+                value.clear()
+                value.update(saved)
         if target_identity(profile, probe) != plan["target_identity"]:
-            raise TargetError("TARGET_CHANGED", "The actual target identity or metadata changed.")
-        native = self.portfolio.native
-        token = access_token(profile)
-        with native.locked():
-            reader_class = native.jclass("org.mpxj.msplanner.MsPlannerReader")
-            uuid_class = native.jclass("java.util.UUID")
-            reader = reader_class(profile["api_origin"], token)
-            project = reader.readProject(uuid_class.fromString(plan["project_id"]))
-            capture = self.portfolio.capture_native(request_id, project, provenance={
-                "kind": "project_operations", "api_origin": profile["api_origin"],
-                "project_id": plan["project_id"], "user_id": profile["user_id"],
-                "organization_id": profile["organization_id"], "deployment_id": identity,
-                "probe_sha256": probe["sha256"], "native_reader": "org.mpxj.msplanner.MsPlannerReader",
-            })
-        token = ""
-        capture_id = capture["id"]
-        identity_map, identity_findings = self.capture_identity_map(plan, capture)
-        comparison = self.portfolio.compare(value["source_edition_id"], capture_id,
+            raise TargetError("TARGET_CAPTURE_PROBE", "The retained original capture probe names another target.")
+
+        def keep_transport(state):
+            value["capture_in_progress"]["reader_transport_sha256"] = self.store.put(state)["sha256"]
+            saved = self._save(value)
+            value.clear()
+            value.update(saved)
+
+        transport = NativeReaderTransport(target, self.store, request_id=request_id,
+            project_id=plan["project_id"], target_identity=plan["target_identity"],
+            previous=previous_transport, persist=keep_transport, closing=self.closing)
+        progress = value["capture_in_progress"]
+        if progress.get("capture_edition_id"):
+            if not transport.state.get("complete"):
+                raise TargetError("TARGET_CAPTURE_SOURCE", "The received edition lacks its complete original read transport.")
+            capture = self.portfolio.read_edition(progress["capture_edition_id"])
+            transport_ref = transport.finish()
+        else:
+            native = self.portfolio.native
+            with native.locked():
+                reader_class = native.jclass("org.mpxj.msplanner.MsPlannerReader")
+                uuid_class = native.jclass("java.util.UUID")
+                with transport:
+                    reader = reader_class(transport.origin, transport.token)
+                    try:
+                        project = reader.readProject(uuid_class.fromString(plan["project_id"]))
+                    except Exception:
+                        transport.raise_if_failed()
+                        raise
+                transport_ref = transport.finish()
+                capture = self.portfolio.capture_native(request_id, project, provenance={
+                    "kind": "project_operations", "api_origin": profile["api_origin"],
+                    "api_version": profile["api_version"], "project_id": plan["project_id"],
+                    "user_id": profile["user_id"], "organization_id": profile["organization_id"],
+                    "deployment_id": identity, "probe_sha256": probe["sha256"],
+                    "probe_object_sha256": value["capture_in_progress"]["capture_probe_sha256"],
+                    "native_reader": "org.mpxj.msplanner.MsPlannerReader",
+                    "read_transport_sha256": transport_ref["sha256"],
+                })
+            value["capture_in_progress"]["capture_edition_id"] = capture["id"]
+            saved = self._save(value)
+            value.clear()
+            value.update(saved)
+        identity_map, identity_findings, identity_evidence = self.capture_identity_map(
+            plan, capture, transport, target.metadata)
+        comparison = self.portfolio.compare(value["source_edition_id"], capture["id"],
                                             identity_map=identity_map, strict_identity=True)
-        return self._capture_finish(value, request_id, capture_id, comparison,
-                                    identity_map=identity_map, findings=identity_findings)
+        return self._capture_finish(value, request_id, capture["id"], comparison,
+            identity_map=identity_map, findings=identity_findings,
+            transport_sha256=transport_ref["sha256"], identity_evidence=identity_evidence)
 
     def receive_target_file(self, request_id, args):
         value, previous = self._capture_start(request_id, args["deployment_id"], args.get("expected_revision"))

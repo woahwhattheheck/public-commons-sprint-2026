@@ -12,7 +12,7 @@ Pinned small upstream input options at joniles/mpxj commit 7ef9e72813d33378c55ec
 
 | Original fixture | Git blob |
 | --- | --- |
-| junit/data/assignment/resource-rates-test.xml | 8346114a2e164a10a00642d2aa6efefc5468d680 |
+| junit/data/generated/assignment-assignments/assignment-assignments-project2019-mspdi.xml | 229c381968ee1b23d2027a20eff0983dab3e855b |
 
 The exact selected file bytes and source SHA-256 are saved before intake. The browser chooses its task from the actual returned model and preserves the exact row key and typed before value. It does not select a guessed numeric UID.
 
@@ -23,7 +23,7 @@ From the service directory, with actual absolute paths:
 ~~~bash
 python3 operator/native/receive.py \
   --workspace /absolute/portfolio-receiving/workspace \
-  --source /absolute/mpxj/selected-resource-rates-test.xml \
+  --source /absolute/mpxj/assignment-assignments-project2019-mspdi.xml \
   --output /absolute/portfolio-receiving/output \
   --operation-id SENSEI-PORTFOLIO-TARGET-RECEIVING-20261012-B9D2-V1 \
   --node /absolute/existing/node \

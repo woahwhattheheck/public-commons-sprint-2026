@@ -12,7 +12,15 @@
     "release_url": "https://github.com/joniles/mpxj/releases/download/v16.10.0/mpxj-16.10.0.zip",
     "release_bytes": 70113738,
     "release_sha256": "2a22e2e2fb6bc6b386821fcaf1918022d419317db69c220e05d743d85042d171",
-    "planner_reader_doc_blob": "3f661696916856ea0c27bf15346b2682e5bbdb45"
+    "planner_reader_doc_blob": "3f661696916856ea0c27bf15346b2682e5bbdb45",
+    "planner_reader_source": {
+      "path": "src/main/java/org/mpxj/msplanner/MsPlannerReader.java",
+      "blob": "91a32aeb9613e69485a4ac3771cb36401201dfd3"
+    },
+    "planner_map_row_source": {
+      "path": "src/main/java/org/mpxj/msplanner/MapRow.java",
+      "blob": "f1ccddab4938195af7310569bcdf3cd209eb6cd0"
+    }
   },
   "microsoft_docs": {
     "repository": "MicrosoftDocs/dynamics-365-project-operations",
@@ -26,7 +34,9 @@
       "https://learn.microsoft.com/en-us/dynamics365/project-operations/project-management/schedule-api-logs",
       "https://learn.microsoft.com/en-us/dynamics365/project-operations/project-management/scheduling-apis-powerautomate",
       "https://learn.microsoft.com/en-us/power-apps/developer/data-platform/webapi/reference/whoami",
-      "https://learn.microsoft.com/en-us/power-apps/developer/data-platform/webapi/query-metadata-web-api"
+      "https://learn.microsoft.com/en-us/power-apps/developer/data-platform/webapi/query-metadata-web-api",
+      "https://learn.microsoft.com/en-us/power-apps/developer/data-platform/webapi/query/page-results",
+      "https://learn.microsoft.com/en-us/power-apps/developer/data-platform/webapi/query/join-tables"
     ]
   },
   "native_contract": {
@@ -38,5 +48,11 @@
     "open_sets_per_user": 10,
     "contour_slices_per_update": 100,
     "selection": "Actual native CSDL, current delegated identity and option metadata are retained for each target."
+  },
+  "native_reader": {
+    "transport": "Unchanged pinned MsPlannerReader receives complete original JSON through a private loopback read transport.",
+    "pages": "Successful original GET response bytes and combined reader JSON are retained by SHA-256 under the original capture request.",
+    "expanded_relationship": "Single-level expansion URLs identify the complete relationship collection. True continuation URLs carry paging information.",
+    "identity": "Task and assignment native GUIDs; project-team-to-bookable-resource lookup from actual assignments; exact native dependency endpoints/type/lag."
   }
 }
