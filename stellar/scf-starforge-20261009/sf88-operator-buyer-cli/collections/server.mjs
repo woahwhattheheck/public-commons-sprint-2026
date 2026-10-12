@@ -133,6 +133,8 @@ export async function serveCollections(collections, {
     const controller = new AbortController();
     const cancel = () => { if (!response.writableFinished) controller.abort(); };
     response.once('close', cancel); transfers.add(controller);
+    // Descriptor lookup may have yielded while the host began shutdown.
+    if (closing) controller.abort();
     try { await sendCollectionFile(response, file, { signal: controller.signal }); }
     finally { response.off('close', cancel); transfers.delete(controller); }
   }
