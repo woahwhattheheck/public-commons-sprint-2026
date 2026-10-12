@@ -4,6 +4,8 @@ Turn an existing OpenSearch index into a paid search product using the maintaine
 
 One customer call runs one point-in-time search and gathers its pages before the original seller releases the result. The same source powers the [search workspace](workspace/README.md), where the operator keeps query drafts, captures retained editions, compares documents, exports results and prepares a merchant folder. Source credentials stay in the host environment.
 
+Agent hosts can use [merchant MCP](../../../../stellar-forge/mcp-merchant-operator/OPENSEARCH_WORKSPACE.md) to author queries, maintain relevance judgments, operate managed releases and deliver original customer files. Its 44 OpenSearch tools use the existing source, plan, workspace and per-alias deployment store. After preparing a query, stage and compare its retained release, select and run it, generate the customer client from the actual seller, then use the same lifecycle for upgrades and rollback. Intact customer exports can recover their original completion manifest through the same alias. Original request recovery and SHA-pinned result, report, client and archive reads continue from the saved records.
+
 ## Requirements
 
 Use Node.js **22.16 or newer** with JSON.parse source-context support, and an existing **OpenSearch 3.3 or newer** cluster. The adapter uses native HTTP and Node TLS; it needs no OpenSearch client package. Paid delivery uses the original installed x402 packages and configured facilitator.

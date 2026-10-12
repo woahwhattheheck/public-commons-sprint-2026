@@ -103,6 +103,164 @@ same saved workspace.
 compatibility. The original report retains how merchant-entered valuations and
 native observations contribute to each calculation.
 
+## Compare and apply saved commercial scenarios
+
+The same pricing aliases expose the original saved scenario workspace. Open the
+existing alias, then choose a saved pricing review from
+**merchant_pricing_source** with **view: "reviews"**. The scenario source is that
+immutable review's seller, original observations and commercial terms. Later
+live captures do not rewrite it.
+
+| Operation | Required selectors | Result |
+| --- | --- | --- |
+| merchant_pricing_planning_source | workspace, version | Original selected routes, commercial inputs and source provenance |
+| merchant_pricing_planning_preview | workspace, version, scenarios | Original-analyzer comparison and reviewSha256 |
+| merchant_pricing_planning_save | Same inputs, requestId, label, reviewSha256 | Durable planId; optional explicit selectedScenarioId |
+| merchant_pricing_planning_list | workspace | Paged summaries from the original newest-100 listing |
+| merchant_pricing_planning_load | workspace, planId | The exact retained comparison, including after restart |
+| merchant_pricing_planning_selection | workspace, planId, scenarioId | Complete commercial draft, paged by route |
+| merchant_pricing_planning_apply | Selected plan/scenario and review hash; current seller/snapshot hashes; original save ID, label and revision | A new original pricing review with the selected commercial terms |
+
+A comparison accepts at most twelve named scenarios. IDs use 1–64 letters,
+digits, underscores or hyphens, beginning with a letter or digit; **baseline**
+is reserved. Labels have at most 120 characters. Each scenario contains sparse
+route changes, an optional shared fixed cost, and optional goals:
+
+~~~json
+{
+  "id": "growth",
+  "label": "Supplier cost and volume plan",
+  "sharedMonthlyFixedUsd": "12",
+  "routes": {
+    "forecast": {
+      "monthlyPaidTarget": 9000,
+      "unitPriceUsd": "0.02825",
+      "perFulfilledUsd": "0.002"
+    }
+  },
+  "goal": {
+    "monthlyContributionUsd": "100",
+    "marginPct": "70"
+  }
+}
+~~~
+
+Use the actual route ID from the selected source. Only routes included in that
+saved review's scope accept patches. Available route fields are unitPriceUsd,
+priceBasis, monthlyPaidTarget, perFulfilledUsd and perChallengeUsd. USD values
+use exact decimal strings with up to six fractional places. Unknown costs
+remain null; monthly paid targets are nonnegative safe integers. A changed quote
+gets an explicit planning-assumption basis unless a source basis is supplied.
+Target margin is a decimal percentage from zero to less than 100, with at most
+four fractional places.
+
+The original analyzer evaluates all scenarios. Whole-seller goals use
+contribution after shared fixed cost. Price suggestions calculate the smallest
+common micro-USD uplift at the selected targets; volume suggestions calculate
+whole baskets preserving the selected route mix. Each ready suggestion contains
+original-analyzer results. Unknown costs or a route-filtered review carry the
+native explanation and required inputs.
+
+### Page a comparison and its suggestions
+
+Preview and load use **view: "scenarios"** by default. Every reply includes compact
+baseline and selected-scenario totals; route arrays, terms and observation
+payloads are read through explicit pages or complete files.
+
+- **view: "routes"**, with scenarioId, returns route economics, complete commercial
+  inputs and original ordered payment terms.
+- **view: "goals"** returns that scenario's break-even and target suggestions.
+- **view: "suggestionRoutes"**, with scenarioId and an exact suggestionKind,
+  returns a ready suggestion's complete route inputs. Kinds are BREAK_EVEN_PRICE,
+  BREAK_EVEN_VOLUME, TARGET_PRICE and TARGET_VOLUME.
+- Use offset and limit (1–200), continuing at page.nextOffset. Omit the scenario
+  selector to inspect baseline.
+
+To adopt a suggestion, explicitly construct a scenario from its returned
+commercial route inputs and preview that chosen scenario before saving.
+Planning save retains the complete comparison even though its MCP response is
+paged. Full plan.json includes all original explicit inputs, metrics, goals and
+calculated terms. Older comparisons outside the newest-100 listing remain
+available through their saved planId.
+
+### Apply a selected saved plan
+
+Capture current observations through **merchant_pricing_source** and retain its
+current seller.sha256, snapshot.sha256 and pricing revision. Read the saved plan
+and choose its exact scenario ID. Call **merchant_pricing_planning_apply** with:
+
+~~~json
+{
+  "workspace": "dataset",
+  "planId": "<retained-plan-uuid>",
+  "scenarioId": "growth",
+  "reviewSha256": "<saved-comparison-sha256>",
+  "sellerSha256": "<current-seller-sha256>",
+  "snapshotSha256": "<current-capture-sha256>",
+  "requestId": "<stable-new-review-uuid>",
+  "expectedRevision": "<current-pricing-revision-or-null>",
+  "label": "Selected commercial plan"
+}
+~~~
+
+Replace each placeholder with the inspected value, using JSON null for an absent
+revision. Application delegates to the original pricing save, which validates
+the current seller, captured observations and revision, and recovers an equal
+retry by the same request UUID. Preserve the entire input after an interrupted
+reply. Its returned version is the new pricing review and can feed the existing
+exact-atomic repricing/source-release workflow below.
+
+### Complete scenario exports
+
+Use **merchant_pricing_manifest** with:
+
+~~~json
+{"workspace":"dataset","kind":"scenario","id":"<planId>"}
+~~~
+
+The immutable file set consists of plan.json, comparison.csv and
+terms-<scenarioId>.json for each alternative. The original
+merchant_pricing_file and merchant_pricing_file_release operations read and
+release SHA-pinned chunks. Retain manifestFile.sha256 as expectedManifestSha256
+and each selected file's digest across interruption or process restart. The CSV
+preserves unknown values as empty cells and neutralizes formula-leading labels.
+
+## Pricing CLI over the same MCP connection
+
+The maintained **merchant-mcp** executable exposes **pricing**. It uses the
+existing HTTPS or loopback MCP endpoint and bearer token environment variable.
+Original workspace aliases, request IDs and private files are shared with the
+browser and other MCP clients.
+
+~~~sh
+merchant-mcp pricing status --url "$MCP_URL"
+merchant-mcp pricing capture --url "$MCP_URL" --workspace dataset
+merchant-mcp pricing source --url "$MCP_URL" --workspace dataset --version "$SAVED_REVIEW"
+merchant-mcp pricing preview --url "$MCP_URL" --input /private/scenario-preview.json
+merchant-mcp pricing save --url "$MCP_URL" --input /private/scenario-save.json
+merchant-mcp pricing load --url "$MCP_URL" --workspace dataset --plan-id "$PLAN_ID"
+merchant-mcp pricing capture --url "$MCP_URL" --workspace dataset
+merchant-mcp pricing apply --url "$MCP_URL" --input /private/scenario-apply.json
+merchant-mcp pricing manifest --url "$MCP_URL" --workspace dataset --plan-id "$PLAN_ID"
+merchant-mcp pricing download --url "$MCP_URL" --workspace dataset --plan-id "$PLAN_ID" \
+  --manifest-sha256 "$MANIFEST_SHA256" --out /private/scenario-export
+~~~
+
+Private input files contain the exact MCP argument object and use mode 0600.
+Writes keep caller-provided request IDs; repeating a command reads the same
+input. A changed flag cannot silently override an existing input field.
+Read operations accept the same page selectors. **review-preview**,
+**review-save** and **review-load** expose the original pricing operations.
+**open** and **close** explicitly manage the shared capture handle; ordinary
+operations open the declared alias as needed and reuse its capture.
+
+The download command uses the original retained downloader's private directory,
+lease, manifest identity and checkpointed chunk offsets. Run the same command
+and output directory after interruption. Completed bytes are verified and
+retained. --chunk-bytes accepts 1–196608, and --token-env selects an existing token
+environment variable. Standard output is structured JSON; download progress and
+failures use standard error.
+
 ## Save exact seller price changes
 
 Call `merchant_pricing_repricing_source` with the saved pricing `version`.
@@ -144,14 +302,16 @@ explicit original start/restart controls apply it to a running seller.
 
 ## Retained files and interrupted operations
 
-Both save tools recover equal retries by their original `requestId`. Keep the
-whole input unchanged, including its original revision. If another edit won the
+Pricing reviews, commercial plans and exact-price saves recover equal retries by
+their original `requestId`. Keep the whole input unchanged, including the
+original revision when that operation requires it. If another edit won the
 revision, reload the saved source and review the intended change before saving
 with a new request. Repricing save rechecks the seller and original package
 against the displayed review; staging recovers its same stable release ID.
 
 `merchant_pricing_manifest` accepts `kind: "review"` with a saved version
-`id`, or `kind: "decision"` with a saved decision `id`. Retain its
+`id`, `kind: "decision"` with a saved decision `id`, or `kind: "scenario"`
+with a saved plan `id`. Retain its
 `manifestFile.sha256` and the selected file entry from `manifest.files`.
 Use `merchant_pricing_file` with those selectors, `file`,
 `expectedManifestSha256`, and optionally the expected file SHA-256.
@@ -168,4 +328,4 @@ this same retained-file path.
 `merchant_pricing_file_release` releases an unfinished temporary snapshot.
 `merchant_pricing_close` drains accepted work, releases temporary readers,
 and closes this process's capture view. Reopening loads the original saved
-reviews and decisions.
+reviews, decisions and scenario plans.

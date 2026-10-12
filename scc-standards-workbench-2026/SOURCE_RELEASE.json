@@ -1,0 +1,217 @@
+{
+  "schema": "standards-workbench/source-release/v1",
+  "name": "scc-standards-workbench",
+  "version": "0.1.0",
+  "files": [
+    {
+      "path": "API.md",
+      "bytes": 11912,
+      "sha256": "16aa7e1ddc33c530cf65a24d6c6b83fdf26adb22c237b5ab9a7241026a82dea2",
+      "git_blob": "60511dec8f4aacfa8f297345cd41640a2f55aed8"
+    },
+    {
+      "path": "LICENSE",
+      "bytes": 1365,
+      "sha256": "0f8a14a192a99600d73f61efd77a1806dd29a17fb690a2d4e0f4f13e05add325",
+      "git_blob": "ae4af7b573be649fe306a1c2de69e4b8e381d9a2"
+    },
+    {
+      "path": "PUBLICATION.md",
+      "bytes": 9750,
+      "sha256": "fae4cfb035a41475419f9a115caa694634c2c7c55a719a08656aa3f3cffd8243",
+      "git_blob": "e531f91b22e3b4dcff8a3c881d5e23af6ff176f8"
+    },
+    {
+      "path": "README.md",
+      "bytes": 17685,
+      "sha256": "91e4432eb28b6a65cd314a454ca063cbcd5ffb74b98d76b74c1194cef8ec7a1f",
+      "git_blob": "13458c16f17a3fe88921c4da9988ef5efbad8562"
+    },
+    {
+      "path": "SOURCE-NOTICES.md",
+      "bytes": 5089,
+      "sha256": "fd1ce752366cb75f6148670e12f29f13e23cdc3ecda15bd3571eaae680e4bc45",
+      "git_blob": "7824144ae9c304f0c0ec713c24f1bfebb6f5b027"
+    },
+    {
+      "path": "__init__.py",
+      "bytes": 81,
+      "sha256": "cf10e3dbb01986c1f1c90ca53d91347d8d236a861e0726153ec1f5cb14dd4fd6",
+      "git_blob": "eb2e71aead9ecc6c4acb4b81e4b04052d8cf1e70"
+    },
+    {
+      "path": "__main__.py",
+      "bytes": 64,
+      "sha256": "f62b759b2fe633bc41a4387bf504a2ec502f643dd5922dc64053c9203670ff3b",
+      "git_blob": "f5f6e402df1b5c89dadf67fce4c71897dba19cc1"
+    },
+    {
+      "path": "demo.py",
+      "bytes": 18199,
+      "sha256": "3d1036654efb81e33710c6ebc4081b9769fc9c8170df2ba22c94518758399225",
+      "git_blob": "cfdcffe9655aec1c5532c29ebb52c4f765da12b9"
+    },
+    {
+      "path": "demo/procedural-profiles.json",
+      "bytes": 14143,
+      "sha256": "dc9c16e7415ca3d44e515ae6c23a70a09c05f6332ef305ad1194140808223edc",
+      "git_blob": "9e928b402247e0a62f178a66aa9fce9ad64c4fc9"
+    },
+    {
+      "path": "demo/profile-annex.json",
+      "bytes": 154896,
+      "sha256": "f120629ce45345b8a188347a91501183846d47042f01f2b0be3d8ccb8b2b1656",
+      "git_blob": "86b131abb76965672cf5ebb69c720ce8d632e73f"
+    },
+    {
+      "path": "demo/source-manifest.json",
+      "bytes": 10671,
+      "sha256": "257c05833d93b4dd71cf6211b8486d08016a875672b65fa1df1eed1867cafb46",
+      "git_blob": "972ba1e7e816cc15fdaf0571f4c19a9fb9fcacf7"
+    },
+    {
+      "path": "demo/sources/statcan-boundary-guide-2025-en.html",
+      "bytes": 41538,
+      "sha256": "28c24cf5ab07010f1a205f049ef000aafff3047ea79dfc1d46b439345e151d9e",
+      "git_blob": "6f8aa9ad52932a4e52277dff4e0b47dd467f510e"
+    },
+    {
+      "path": "demo/sources/statcan-boundary-guide-2025-fr.html",
+      "bytes": 49318,
+      "sha256": "9c5763f5e7fc70dd557fdb438e4ef6fd1e877ddc8abb368b2a89ee9fde2bdad3",
+      "git_blob": "51a0269880caeaebf9eff05971e2a122ea5d2cb9"
+    },
+    {
+      "path": "demo/sources/statcan-change-codes-en.html",
+      "bytes": 21700,
+      "sha256": "60c8fcac9ba6df00cb6b90877cf65131c08af3a182324b5d7897fa157df3a5c2",
+      "git_blob": "262214f7e0ac2ccb91e761f7436d699386cd3d17"
+    },
+    {
+      "path": "demo/sources/statcan-change-codes-fr.html",
+      "bytes": 20761,
+      "sha256": "435234dc62e94c419a95b301156ef9056764923b98214ca9ebd9fb0d31772ca3",
+      "git_blob": "1b632c444f2117f09473f2e16a9f6a5f9bb320c0"
+    },
+    {
+      "path": "demo/sources/statcan-language-switch.html",
+      "bytes": 28592,
+      "sha256": "dd7388c2632195eaca2d4a691bf694fb3785e1781a16b6be6ab6ae77137deb0a",
+      "git_blob": "dcd59ae0c1456dcded30f6e667802e6fcc43e323"
+    },
+    {
+      "path": "demo/sources/statcan-municipal-change-2025-en.csv",
+      "bytes": 47722,
+      "sha256": "b8a29420b27fa1f6387a01655ffac3f30b40e8193256992efd3facd4782b887e",
+      "git_blob": "4428ffa1221449caf960790e2e6a560fff2af173"
+    },
+    {
+      "path": "demo/sources/statcan-municipal-change-2025-en.html",
+      "bytes": 27010,
+      "sha256": "e123655d3cf1ceea9de96c406de58a99c0b8983d57252d75fb8124701e523351",
+      "git_blob": "3af5e63f16275600696f1b18b33e96463b4e3964"
+    },
+    {
+      "path": "demo/sources/statcan-municipal-change-2025-en.utf8.csv",
+      "bytes": 47753,
+      "sha256": "83b0a4beeaaa9ab9344b3f08e0cea78063a8a89cde3fe76ad8689c0fd0b78072",
+      "git_blob": "baa3c2bf897c1f687a502b0785636484b60044ff"
+    },
+    {
+      "path": "demo/sources/statcan-municipal-change-2025-fr.csv",
+      "bytes": 58408,
+      "sha256": "1cf1de44bbe0c8350534076fa7a97bac9d21c1b05ded2ff1a677a7b4a69108cd",
+      "git_blob": "3751ff5ad883891c649611b90b751ab998ca0a35"
+    },
+    {
+      "path": "demo/sources/statcan-municipal-change-2025-fr.utf8.csv",
+      "bytes": 58462,
+      "sha256": "05b8681f908d873586bf645258c33e670b41426171a788dec7a931507aa2cecd",
+      "git_blob": "eb8aa4cbafa0d0779a295f6028afe1bba9178452"
+    },
+    {
+      "path": "demo/sources/statcan-open-licence-en.html",
+      "bytes": 27044,
+      "sha256": "d441c0159f7eeaa3e6b1904d1f27f6cb601a225ec5fe8e85502c02b9789bc11f",
+      "git_blob": "c150bb1e8f4f490c323b605637be0e9d5d589a93"
+    },
+    {
+      "path": "demo/sources/statcan-record-layout-en.html",
+      "bytes": 25361,
+      "sha256": "551ebf72fc5aaec4bb42c1b0e633024524777271ab8883c9829c90038798b84d",
+      "git_blob": "b16a78969f4fe62ee84faa031a6563259503990e"
+    },
+    {
+      "path": "demo/sources/statcan-record-layout-fr.html",
+      "bytes": 24821,
+      "sha256": "d7a5fa2625c2956faffd772993296ab4d5d9d89480a232b748766e659ec15ebe",
+      "git_blob": "7c1c9821e6e7737e33c75b18f3a751fb686b4765"
+    },
+    {
+      "path": "demo/work-program.json",
+      "bytes": 15538,
+      "sha256": "f65e1fd3d3f62e949513495fc908884283c13dee8330d0da5028ae5825eaf627",
+      "git_blob": "7400604df9d759777e661ee5271914483ac5ce3e"
+    },
+    {
+      "path": "engine.py",
+      "bytes": 82563,
+      "sha256": "ace42c88f39e89af15980629693c0faba8e5936d0b3dce7306abe58295a3efd8",
+      "git_blob": "dea54db303ac66f8a857de2faae654a057700725"
+    },
+    {
+      "path": "exports.py",
+      "bytes": 10323,
+      "sha256": "e5e29d7f4d41252913596c900be4488c62ab81e258d044cd02943a7c2688b5c7",
+      "git_blob": "b34a1c9a3c749fcddb6f28616d026bfb0f26d6aa"
+    },
+    {
+      "path": "publisher.py",
+      "bytes": 69729,
+      "sha256": "1fd76b6584d913a63a15b849a73b14cfb0924039c0d673b4817ac47e4bd84887",
+      "git_blob": "31323e8c47e58e436a329eed830f46237958dbe8"
+    },
+    {
+      "path": "pyproject.toml",
+      "bytes": 807,
+      "sha256": "d4da911d5eeb94c2c3f3bbce4c1785d50409512fc5e9380378a64555a2047666",
+      "git_blob": "e8489a4c1742eea5df1858804e0d4d77f313c58b"
+    },
+    {
+      "path": "server.py",
+      "bytes": 14140,
+      "sha256": "0411f3388f80c73dbf589e0f5925faf18c59a17e302e39f57f446cabfa060d43",
+      "git_blob": "d3e41e5f30f6d2180106ed47845e327a6cf77bfc"
+    },
+    {
+      "path": "source_intake.py",
+      "bytes": 78645,
+      "sha256": "ba4de76acc4867e0a5f17dd1bfedb6d9e9ab48e2a71216d4cfc9df113e9b6684",
+      "git_blob": "28ca25b41c5dfdc2586b64f815b3a238aa0e9b66"
+    },
+    {
+      "path": "web/app.js",
+      "bytes": 71743,
+      "sha256": "808b9abbda6ef5a7eb96cd05206c42f2dff04fa04ee1b7903602b21ecc46a78f",
+      "git_blob": "b48fb1bfaf8821b8762c6e8ce4e74beafd1c83b9"
+    },
+    {
+      "path": "web/index.html",
+      "bytes": 2418,
+      "sha256": "089ef78c1e416b98c5b93136f0e571187d2f449723138055b1525aa2fcf28f97",
+      "git_blob": "947e4f732cdf32e122b43fc46dd3ad97a695f354"
+    },
+    {
+      "path": "web/style.css",
+      "bytes": 11793,
+      "sha256": "2418c725249e61b9f9d69eaf07c92f8881c80957a9f2bdba58c0daaff130aeac",
+      "git_blob": "95a9e72fc9fb5dd34b94bce21b84f252fd2e5b86"
+    },
+    {
+      "path": "workspace.py",
+      "bytes": 40694,
+      "sha256": "3f8071a84f622fbeb8e845e4cf897332128aae5b3d5fc717dbd5db644101934e",
+      "git_blob": "50e1b24cdbc2514ac434287ad0c7ad7de80fd68d"
+    }
+  ]
+}

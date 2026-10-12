@@ -4,12 +4,14 @@ import { isAbsolute, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { McpPaidToolBroker, createMcpHttpHandler } from './agent-server.mjs';
 import { createOperatorConsoleHandler } from './operator-console.mjs';
+import { loadOAuthResourceHost } from './oauth-host.mjs';
 
-export async function startMcpWorkspace({ environment = process.env } = {}) {
+export async function startMcpWorkspace({ environment = process.env, oauthFetchImpl } = {}) {
   const discoveryUrl = environment.BAZAAR_DISCOVERY_URL;
   const bearerToken = environment.MCP_ACCESS_TOKEN;
-  if (!discoveryUrl || !bearerToken)
-    throw new TypeError('Configure BAZAAR_DISCOVERY_URL and MCP_ACCESS_TOKEN.');
+  const oauthConfigPath = environment.MCP_OAUTH_CONFIG;
+  if (!discoveryUrl || (!bearerToken && !oauthConfigPath))
+    throw new TypeError('Configure BAZAAR_DISCOVERY_URL and either MCP_ACCESS_TOKEN or MCP_OAUTH_CONFIG.');
   const modulePath = environment.MCP_OPERATOR_MODULE;
   const directory = environment.MCP_STATE_DIR;
   if (modulePath && (!isAbsolute(modulePath) || !directory))
@@ -21,8 +23,9 @@ export async function startMcpWorkspace({ environment = process.env } = {}) {
   const timeoutMs = Number(environment.MCP_PROVIDER_TIMEOUT_MS ?? 8000);
   if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > 300000)
     throw new RangeError('MCP_PROVIDER_TIMEOUT_MS must be 1..300000');
-  let quoteStore, resultStore, broker, server, operator, address;
+  let quoteStore, resultStore, broker, server, operator, address, access;
   try {
+    access = await loadOAuthResourceHost({configPath:oauthConfigPath,bearerToken,fetchImpl:oauthFetchImpl});
     if (directory) {
       const { SqliteQuoteStore } = await import('./quote-store.mjs');
       quoteStore = new SqliteQuoteStore({ directory });
@@ -57,9 +60,9 @@ export async function startMcpWorkspace({ environment = process.env } = {}) {
       server.listen(port, '127.0.0.1', () => { server.removeListener('error', reject); done(); });
     });
     address = `http://127.0.0.1:${server.address().port}`;
-    handler = createOperatorConsoleHandler(createMcpHttpHandler(broker, {
-      bearerToken, allowedClientOrigins: [...new Set([...allowedClientOrigins, address])],
-    }), {origin: address});
+    handler = createOperatorConsoleHandler(access.wrap(createMcpHttpHandler(broker, {
+      ...access.transportOptions, allowedClientOrigins: [...new Set([...allowedClientOrigins, address])],
+    })), {origin: address});
   } catch (failure) {
     server?.close();
     try {
@@ -67,12 +70,15 @@ export async function startMcpWorkspace({ environment = process.env } = {}) {
       else { try { await resultStore?.close(); } finally { quoteStore?.close(); } }
     }
     catch { /* report the original startup failure after closing operator resources */ }
-    finally { try { await operator?.close?.(); } catch { /* preserve original failure */ } }
+    finally {
+      try { await access?.close(); } catch { /* preserve original failure */ }
+      try { await operator?.close?.(); } catch { /* preserve original failure */ }
+    }
     throw failure;
   }
   let closing;
   return {
-    broker, server, address, consoleUrl: `${address}/console/`,
+    broker, server, address, consoleUrl: `${address}/console/`, authorization:access.describe(),
     durable: Boolean(quoteStore), paymentAdapterConnected: typeof operator?.signPayment === 'function',
     paymentReconciliationConnected: typeof operator?.reconcilePayment === 'function',
     aggregateSpendingConnected: typeof operator?.spendingStatus === 'function',
@@ -81,7 +87,8 @@ export async function startMcpWorkspace({ environment = process.env } = {}) {
       closing = (async () => {
         const stopped = new Promise(done => server.close(done));
         let failure;
-        try { await broker.close(); } catch (error) { failure = error; }
+        try { await access.close(); } catch (error) { failure = error; }
+        try { await broker.close(); } catch (error) { failure ??= error; }
         finally {
           server.closeAllConnections(); await stopped;
           try { await operator?.close?.(); } catch (error) { failure ??= error; }
@@ -97,7 +104,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1]
   try {
     const args = process.argv.slice(2);
     if (args.length === 1 && ['--help', '-h'].includes(args[0])) {
-      process.stdout.write(`Usage: node serve.mjs\n\nStart the original loopback MCP buyer and browser console.\nRequired: BAZAAR_DISCOVERY_URL, MCP_ACCESS_TOKEN (at least 24 characters).\nMCP_STATE_DIR retains original quotes and complete native results.\nMCP_PORT defaults to 3210; 0 selects an available port.\nOpen the printed http://127.0.0.1:PORT/console/ URL and enter the same access token.\nPAID_RESOURCE_ORIGINS selects the merchant origins permitted for quotes.\nMCP_CLIENT_ORIGINS allows additional original MCP client origins.\nPaid execution requires an absolute trusted MCP_OPERATOR_MODULE and MCP_STATE_DIR.\nThat host module owns independent approval and signing; the browser cannot approve for it.\nMCP_PROVIDER_TIMEOUT_MS: 1..300000, default 8000.\nGuides: README.md, CONSOLE.md, REMOTE_MCP.md, RESULTS.md.\n`);
+      process.stdout.write(`Usage: node serve.mjs\n\nStart the original loopback MCP buyer and browser console.\nRequired: BAZAAR_DISCOVERY_URL and either MCP_ACCESS_TOKEN (at least 24 characters)\nor an absolute MCP_OAUTH_CONFIG path. The two access modes are exclusive.\nOAuth uses the existing issuer, explicit operator subjects and original tool scopes.\nMCP_STATE_DIR retains original quotes and complete native results.\nMCP_PORT defaults to 3210; 0 selects an available port.\nOpen the printed http://127.0.0.1:PORT/console/ URL and enter the same access token.\nPAID_RESOURCE_ORIGINS selects the merchant origins permitted for quotes.\nMCP_CLIENT_ORIGINS allows additional original MCP client origins.\nPaid execution requires an absolute trusted MCP_OPERATOR_MODULE and MCP_STATE_DIR.\nThat host module owns independent approval and signing; the browser cannot approve for it.\nMCP_PROVIDER_TIMEOUT_MS: 1..300000, default 8000.\nGuides: README.md, CONSOLE.md, REMOTE_MCP.md, RESULTS.md, OAUTH_RESOURCE.md.\n`);
     } else {
       if (args.length) throw new TypeError('This launcher uses environment configuration. Use --help for its settings.');
       const workspace = await startMcpWorkspace();

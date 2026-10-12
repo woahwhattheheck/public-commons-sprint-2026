@@ -1,0 +1,4375 @@
+{
+  "attribution_en": "Contains information from Statistics Canada, Interim List of Changes to Municipal Boundaries, Status, and Names, up to January 1, 2025, released June 18, 2025; and related 2025 boundary guidance, reproduced under the Statistics Canada Open Licence. Our transformations and interpretations are identified separately.",
+  "attribution_fr": "Contient des renseignements de Statistique Canada, Liste intérimaire des changements aux limites municipales, statut et noms, jusqu’au 1er janvier 2025, diffusée le 18 juin 2025, et du guide connexe des limites de 2025, reproduits conformément à la Licence ouverte de Statistique Canada. Nos transformations et interprétations sont indiquées séparément.",
+  "authority_statement_en": "These clauses and review outcomes are our proposed draft. They have not been approved as an SCC or DGSI standard, and the source publisher has not endorsed this application.",
+  "authority_statement_fr": "Ces clauses et suites proposées à l’examen constituent notre projet. Elles ne sont pas approuvées comme norme du CCN ou du DGSI, et l’éditeur des sources n’a pas cautionné cette application.",
+  "authorship": "Token Junkie Labs, authored engineering proposal, 2026-10-11",
+  "cases": [
+    {
+      "derived_quantities": {
+        "Census Population Affected": "13701.0",
+        "Private Dwellings Occupied by Usual Residents Affected": "6186.0",
+        "Total Private Dwellings Affected": "6465.0"
+      },
+      "expected_observations": [
+        "Both records belong to file 240087, effective 26/12/2024. Gaining identifier 2488057 has code 1; losing identifiers 2488060 and 2488055 have code 4.",
+        "Keep two incoming relationships. The original Amos name appears on both sides of record 53 with different identifiers.",
+        "The computed sum describes the source 2021 Census counts affected by this recorded amalgamation; it is not an estimate of the 2025 population."
+      ],
+      "id": "case-amos-amalgamation",
+      "input_rows": [
+        {
+          "cells": [
+            {
+              "column": 1,
+              "name": "Gaining CSDuid",
+              "value": "2488057"
+            },
+            {
+              "column": 2,
+              "name": "Gaining CSDname",
+              "value": "Amos"
+            },
+            {
+              "column": 3,
+              "name": "Gaining CSDtype",
+              "value": "V"
+            },
+            {
+              "column": 4,
+              "name": "Gaining CSD Change Code",
+              "value": "1"
+            },
+            {
+              "column": 5,
+              "name": "Gaining CSD Change Code Description",
+              "value": "Incorporation from amalgamation"
+            },
+            {
+              "column": 6,
+              "name": "Losing CSDuid",
+              "value": "2488060"
+            },
+            {
+              "column": 7,
+              "name": "Losing CSDname",
+              "value": "Saint-Félix-de-Dalquier"
+            },
+            {
+              "column": 8,
+              "name": "Losing CSDtype",
+              "value": "MÉ"
+            },
+            {
+              "column": 9,
+              "name": "Losing CSD Change Code",
+              "value": "4"
+            },
+            {
+              "column": 10,
+              "name": "Losing CSD Change Code Description",
+              "value": "Dissolution"
+            },
+            {
+              "column": 11,
+              "name": "Census Population Affected",
+              "value": "1026.0"
+            },
+            {
+              "column": 12,
+              "name": "Total Private Dwellings Affected",
+              "value": "414.0"
+            },
+            {
+              "column": 13,
+              "name": "Private Dwellings Occupied by Usual Residents Affected",
+              "value": "406.0"
+            },
+            {
+              "column": 14,
+              "name": "Effective Date",
+              "value": "26/12/2024"
+            },
+            {
+              "column": 15,
+              "name": "File Number",
+              "value": "240087"
+            }
+          ],
+          "csv_record": 52,
+          "language": "en",
+          "row_hash_basis": "UTF-8 canonical JSON of ordered decoded original cells",
+          "row_sha256": "1a934345303385acb8c57319ee3553b037d94a6b7869bd5e46f9a67b8b3535f6",
+          "source_id": "statcan-interim-en-csv"
+        },
+        {
+          "cells": [
+            {
+              "column": 1,
+              "name": "SDRidu gagnante",
+              "value": "2488057"
+            },
+            {
+              "column": 2,
+              "name": "SDRnom gagnante",
+              "value": "Amos"
+            },
+            {
+              "column": 3,
+              "name": "SDRgenre gagnante",
+              "value": "V"
+            },
+            {
+              "column": 4,
+              "name": "Code du changement de la SDR gagnante",
+              "value": "1"
+            },
+            {
+              "column": 5,
+              "name": "Description du code de changement de la SDR gagnante",
+              "value": "Constitution due à une amalgamation"
+            },
+            {
+              "column": 6,
+              "name": "SDRidu perdante",
+              "value": "2488060"
+            },
+            {
+              "column": 7,
+              "name": "SDRnom perdante",
+              "value": "Saint-Félix-de-Dalquier"
+            },
+            {
+              "column": 8,
+              "name": "SDRgenre perdante",
+              "value": "MÉ"
+            },
+            {
+              "column": 9,
+              "name": "Code du changement de la SDR perdante",
+              "value": "4"
+            },
+            {
+              "column": 10,
+              "name": "Description du code de changement de la SDR perdante",
+              "value": "Dissolution"
+            },
+            {
+              "column": 11,
+              "name": "Population du recensement affectée",
+              "value": "1026.0"
+            },
+            {
+              "column": 12,
+              "name": "Total des logements privés affectés",
+              "value": "414.0"
+            },
+            {
+              "column": 13,
+              "name": "Logements privés occupés par des résidents habituels affectés",
+              "value": "406.0"
+            },
+            {
+              "column": 14,
+              "name": "Date d'entrée en vigueur",
+              "value": "26/12/2024"
+            },
+            {
+              "column": 15,
+              "name": "No. du fichier",
+              "value": "240087"
+            }
+          ],
+          "csv_record": 52,
+          "language": "fr",
+          "row_hash_basis": "UTF-8 canonical JSON of ordered decoded original cells",
+          "row_sha256": "36dc9555281255530aaa5fef190044e2201626addc2b6b4b5da05980a009085b",
+          "source_id": "statcan-interim-fr-csv"
+        },
+        {
+          "cells": [
+            {
+              "column": 1,
+              "name": "Gaining CSDuid",
+              "value": "2488057"
+            },
+            {
+              "column": 2,
+              "name": "Gaining CSDname",
+              "value": "Amos"
+            },
+            {
+              "column": 3,
+              "name": "Gaining CSDtype",
+              "value": "V"
+            },
+            {
+              "column": 4,
+              "name": "Gaining CSD Change Code",
+              "value": "1"
+            },
+            {
+              "column": 5,
+              "name": "Gaining CSD Change Code Description",
+              "value": "Incorporation from amalgamation"
+            },
+            {
+              "column": 6,
+              "name": "Losing CSDuid",
+              "value": "2488055"
+            },
+            {
+              "column": 7,
+              "name": "Losing CSDname",
+              "value": "Amos"
+            },
+            {
+              "column": 8,
+              "name": "Losing CSDtype",
+              "value": "V"
+            },
+            {
+              "column": 9,
+              "name": "Losing CSD Change Code",
+              "value": "4"
+            },
+            {
+              "column": 10,
+              "name": "Losing CSD Change Code Description",
+              "value": "Dissolution"
+            },
+            {
+              "column": 11,
+              "name": "Census Population Affected",
+              "value": "12675.0"
+            },
+            {
+              "column": 12,
+              "name": "Total Private Dwellings Affected",
+              "value": "6051.0"
+            },
+            {
+              "column": 13,
+              "name": "Private Dwellings Occupied by Usual Residents Affected",
+              "value": "5780.0"
+            },
+            {
+              "column": 14,
+              "name": "Effective Date",
+              "value": "26/12/2024"
+            },
+            {
+              "column": 15,
+              "name": "File Number",
+              "value": "240087"
+            }
+          ],
+          "csv_record": 53,
+          "language": "en",
+          "row_hash_basis": "UTF-8 canonical JSON of ordered decoded original cells",
+          "row_sha256": "9415f15faadbced99d7dce14711fa9af56ee4ba557f147dadde00b3b55cb5492",
+          "source_id": "statcan-interim-en-csv"
+        },
+        {
+          "cells": [
+            {
+              "column": 1,
+              "name": "SDRidu gagnante",
+              "value": "2488057"
+            },
+            {
+              "column": 2,
+              "name": "SDRnom gagnante",
+              "value": "Amos"
+            },
+            {
+              "column": 3,
+              "name": "SDRgenre gagnante",
+              "value": "V"
+            },
+            {
+              "column": 4,
+              "name": "Code du changement de la SDR gagnante",
+              "value": "1"
+            },
+            {
+              "column": 5,
+              "name": "Description du code de changement de la SDR gagnante",
+              "value": "Constitution due à une amalgamation"
+            },
+            {
+              "column": 6,
+              "name": "SDRidu perdante",
+              "value": "2488055"
+            },
+            {
+              "column": 7,
+              "name": "SDRnom perdante",
+              "value": "Amos"
+            },
+            {
+              "column": 8,
+              "name": "SDRgenre perdante",
+              "value": "V"
+            },
+            {
+              "column": 9,
+              "name": "Code du changement de la SDR perdante",
+              "value": "4"
+            },
+            {
+              "column": 10,
+              "name": "Description du code de changement de la SDR perdante",
+              "value": "Dissolution"
+            },
+            {
+              "column": 11,
+              "name": "Population du recensement affectée",
+              "value": "12675.0"
+            },
+            {
+              "column": 12,
+              "name": "Total des logements privés affectés",
+              "value": "6051.0"
+            },
+            {
+              "column": 13,
+              "name": "Logements privés occupés par des résidents habituels affectés",
+              "value": "5780.0"
+            },
+            {
+              "column": 14,
+              "name": "Date d'entrée en vigueur",
+              "value": "26/12/2024"
+            },
+            {
+              "column": 15,
+              "name": "No. du fichier",
+              "value": "240087"
+            }
+          ],
+          "csv_record": 53,
+          "language": "fr",
+          "row_hash_basis": "UTF-8 canonical JSON of ordered decoded original cells",
+          "row_sha256": "e9bfc1babb7d84bac5839589b6cbc1d7d57e392ae95686d05b1b07970f1a0b49",
+          "source_id": "statcan-interim-fr-csv"
+        }
+      ],
+      "proposed_review_outcome": "Retain two predecessor links and the new entity, carrying original counts, codes and effective date into a reviewed mapping.",
+      "review_questions": [
+        "Which original entities dissolve, and which identifier is created?",
+        "What exactly do the affected population and dwelling counts measure?",
+        "Can the shared name Amos establish continuity of the old identifier?"
+      ],
+      "source_refs": [
+        {
+          "locator": {
+            "csv_record": 52,
+            "record_numbering": "one-based including header, section rows and final note"
+          },
+          "source_id": "statcan-interim-en-csv"
+        },
+        {
+          "locator": {
+            "csv_record": 52,
+            "record_numbering": "one-based including header, section rows and final note"
+          },
+          "source_id": "statcan-interim-fr-csv"
+        },
+        {
+          "locator": {
+            "csv_record": 53,
+            "record_numbering": "one-based including header, section rows and final note"
+          },
+          "source_id": "statcan-interim-en-csv"
+        },
+        {
+          "locator": {
+            "csv_record": 53,
+            "record_numbering": "one-based including header, section rows and final note"
+          },
+          "source_id": "statcan-interim-fr-csv"
+        }
+      ],
+      "title": "Amos: two predecessor entities and one new identifier",
+      "title_fr": "Amos : deux entités antérieures et un nouvel identifiant",
+      "review_questions_fr": [
+        "Quelles entités originales sont dissoutes et quel identifiant est créé ?",
+        "Que mesurent exactement les chiffres de population et de logements touchés ?",
+        "Le nom commun Amos permet-il d’établir la continuité de l’ancien identifiant ?"
+      ],
+      "expected_observations_fr": [
+        "Les deux enregistrements appartiennent au dossier 240087, dont la date d’effet est le 26/12/2024. L’identifiant de l’entité gagnante, 2488057, porte le code 1; les identifiants des entités perdantes, 2488060 et 2488055, portent le code 4.",
+        "Conserver deux relations entrantes. Le nom original Amos apparaît des deux côtés de l’enregistrement 53, avec des identifiants différents.",
+        "La somme calculée décrit les chiffres du Recensement de 2021 touchés par cette fusion enregistrée; elle ne constitue pas une estimation de la population de 2025."
+      ]
+    },
+    {
+      "expected_observations": [
+        "The gaining Amos identifier is 2488057; the losing Amos identifier is 2488055.",
+        "The source explicitly records incorporation from amalgamation and dissolution, rather than a stable-identifier name update."
+      ],
+      "id": "case-name-is-not-identity",
+      "input_rows": [
+        {
+          "cells": [
+            {
+              "column": 1,
+              "name": "Gaining CSDuid",
+              "value": "2488057"
+            },
+            {
+              "column": 2,
+              "name": "Gaining CSDname",
+              "value": "Amos"
+            },
+            {
+              "column": 3,
+              "name": "Gaining CSDtype",
+              "value": "V"
+            },
+            {
+              "column": 4,
+              "name": "Gaining CSD Change Code",
+              "value": "1"
+            },
+            {
+              "column": 5,
+              "name": "Gaining CSD Change Code Description",
+              "value": "Incorporation from amalgamation"
+            },
+            {
+              "column": 6,
+              "name": "Losing CSDuid",
+              "value": "2488055"
+            },
+            {
+              "column": 7,
+              "name": "Losing CSDname",
+              "value": "Amos"
+            },
+            {
+              "column": 8,
+              "name": "Losing CSDtype",
+              "value": "V"
+            },
+            {
+              "column": 9,
+              "name": "Losing CSD Change Code",
+              "value": "4"
+            },
+            {
+              "column": 10,
+              "name": "Losing CSD Change Code Description",
+              "value": "Dissolution"
+            },
+            {
+              "column": 11,
+              "name": "Census Population Affected",
+              "value": "12675.0"
+            },
+            {
+              "column": 12,
+              "name": "Total Private Dwellings Affected",
+              "value": "6051.0"
+            },
+            {
+              "column": 13,
+              "name": "Private Dwellings Occupied by Usual Residents Affected",
+              "value": "5780.0"
+            },
+            {
+              "column": 14,
+              "name": "Effective Date",
+              "value": "26/12/2024"
+            },
+            {
+              "column": 15,
+              "name": "File Number",
+              "value": "240087"
+            }
+          ],
+          "csv_record": 53,
+          "language": "en",
+          "row_hash_basis": "UTF-8 canonical JSON of ordered decoded original cells",
+          "row_sha256": "9415f15faadbced99d7dce14711fa9af56ee4ba557f147dadde00b3b55cb5492",
+          "source_id": "statcan-interim-en-csv"
+        },
+        {
+          "cells": [
+            {
+              "column": 1,
+              "name": "SDRidu gagnante",
+              "value": "2488057"
+            },
+            {
+              "column": 2,
+              "name": "SDRnom gagnante",
+              "value": "Amos"
+            },
+            {
+              "column": 3,
+              "name": "SDRgenre gagnante",
+              "value": "V"
+            },
+            {
+              "column": 4,
+              "name": "Code du changement de la SDR gagnante",
+              "value": "1"
+            },
+            {
+              "column": 5,
+              "name": "Description du code de changement de la SDR gagnante",
+              "value": "Constitution due à une amalgamation"
+            },
+            {
+              "column": 6,
+              "name": "SDRidu perdante",
+              "value": "2488055"
+            },
+            {
+              "column": 7,
+              "name": "SDRnom perdante",
+              "value": "Amos"
+            },
+            {
+              "column": 8,
+              "name": "SDRgenre perdante",
+              "value": "V"
+            },
+            {
+              "column": 9,
+              "name": "Code du changement de la SDR perdante",
+              "value": "4"
+            },
+            {
+              "column": 10,
+              "name": "Description du code de changement de la SDR perdante",
+              "value": "Dissolution"
+            },
+            {
+              "column": 11,
+              "name": "Population du recensement affectée",
+              "value": "12675.0"
+            },
+            {
+              "column": 12,
+              "name": "Total des logements privés affectés",
+              "value": "6051.0"
+            },
+            {
+              "column": 13,
+              "name": "Logements privés occupés par des résidents habituels affectés",
+              "value": "5780.0"
+            },
+            {
+              "column": 14,
+              "name": "Date d'entrée en vigueur",
+              "value": "26/12/2024"
+            },
+            {
+              "column": 15,
+              "name": "No. du fichier",
+              "value": "240087"
+            }
+          ],
+          "csv_record": 53,
+          "language": "fr",
+          "row_hash_basis": "UTF-8 canonical JSON of ordered decoded original cells",
+          "row_sha256": "e9bfc1babb7d84bac5839589b6cbc1d7d57e392ae95686d05b1b07970f1a0b49",
+          "source_id": "statcan-interim-fr-csv"
+        }
+      ],
+      "proposed_review_outcome": "Resolve the identity by source identifiers and the documented event relationship; preserve the name in its original display field.",
+      "review_questions": [
+        "Would a name-only join collapse the gaining and losing records?",
+        "Which namespace, edition and identifiers must a receiving system retain?"
+      ],
+      "source_refs": [
+        {
+          "locator": {
+            "csv_record": 53,
+            "record_numbering": "one-based including header, section rows and final note"
+          },
+          "source_id": "statcan-interim-en-csv"
+        },
+        {
+          "locator": {
+            "csv_record": 53,
+            "record_numbering": "one-based including header, section rows and final note"
+          },
+          "source_id": "statcan-interim-fr-csv"
+        }
+      ],
+      "title": "Same Amos name, different original identifiers",
+      "title_fr": "Même nom Amos, identifiants originaux distincts",
+      "review_questions_fr": [
+        "Une jointure fondée uniquement sur le nom fusionnerait-elle à tort les enregistrements gagnant et perdant ?",
+        "Quels espace de noms, édition et identifiants le système récepteur doit-il conserver ?"
+      ],
+      "expected_observations_fr": [
+        "L’identifiant de l’entité gagnante Amos est 2488057; celui de l’entité perdante Amos est 2488055.",
+        "La source consigne explicitement une constitution issue d’une fusion et une dissolution, plutôt qu’une modification de nom conservant le même identifiant."
+      ]
+    },
+    {
+      "expected_observations": [
+        "Record 4 has literal ... in all three affected-count columns; record 301 explicitly defines that notation as not applicable.",
+        "Membertou 28B record 37 publishes 0.0 for all three counts.",
+        "The complete file has 286 data rows, thirteen province/territory section rows, one header and one explanatory note. Nunavut has a section heading but no data rows in this edition."
+      ],
+      "id": "case-na-zero-sections",
+      "input_rows": [
+        {
+          "cells": [
+            {
+              "column": 1,
+              "name": "Gaining CSDuid",
+              "value": "Newfoundland and Labrador"
+            },
+            {
+              "column": 2,
+              "name": "Gaining CSDname",
+              "value": ""
+            },
+            {
+              "column": 3,
+              "name": "Gaining CSDtype",
+              "value": ""
+            },
+            {
+              "column": 4,
+              "name": "Gaining CSD Change Code",
+              "value": ""
+            },
+            {
+              "column": 5,
+              "name": "Gaining CSD Change Code Description",
+              "value": ""
+            },
+            {
+              "column": 6,
+              "name": "Losing CSDuid",
+              "value": ""
+            },
+            {
+              "column": 7,
+              "name": "Losing CSDname",
+              "value": ""
+            },
+            {
+              "column": 8,
+              "name": "Losing CSDtype",
+              "value": ""
+            },
+            {
+              "column": 9,
+              "name": "Losing CSD Change Code",
+              "value": ""
+            },
+            {
+              "column": 10,
+              "name": "Losing CSD Change Code Description",
+              "value": ""
+            },
+            {
+              "column": 11,
+              "name": "Census Population Affected",
+              "value": ""
+            },
+            {
+              "column": 12,
+              "name": "Total Private Dwellings Affected",
+              "value": ""
+            },
+            {
+              "column": 13,
+              "name": "Private Dwellings Occupied by Usual Residents Affected",
+              "value": ""
+            },
+            {
+              "column": 14,
+              "name": "Effective Date",
+              "value": ""
+            },
+            {
+              "column": 15,
+              "name": "File Number",
+              "value": ""
+            }
+          ],
+          "csv_record": 2,
+          "language": "en",
+          "row_hash_basis": "UTF-8 canonical JSON of ordered decoded original cells",
+          "row_sha256": "8742dfba6f9f2222b927c077094435964423c7402f8f781dcd0bef8028ca054a",
+          "source_id": "statcan-interim-en-csv"
+        },
+        {
+          "cells": [
+            {
+              "column": 1,
+              "name": "SDRidu gagnante",
+              "value": "Terre-Neuve-et-Labrador"
+            },
+            {
+              "column": 2,
+              "name": "SDRnom gagnante",
+              "value": ""
+            },
+            {
+              "column": 3,
+              "name": "SDRgenre gagnante",
+              "value": ""
+            },
+            {
+              "column": 4,
+              "name": "Code du changement de la SDR gagnante",
+              "value": ""
+            },
+            {
+              "column": 5,
+              "name": "Description du code de changement de la SDR gagnante",
+              "value": ""
+            },
+            {
+              "column": 6,
+              "name": "SDRidu perdante",
+              "value": ""
+            },
+            {
+              "column": 7,
+              "name": "SDRnom perdante",
+              "value": ""
+            },
+            {
+              "column": 8,
+              "name": "SDRgenre perdante",
+              "value": ""
+            },
+            {
+              "column": 9,
+              "name": "Code du changement de la SDR perdante",
+              "value": ""
+            },
+            {
+              "column": 10,
+              "name": "Description du code de changement de la SDR perdante",
+              "value": ""
+            },
+            {
+              "column": 11,
+              "name": "Population du recensement affectée",
+              "value": ""
+            },
+            {
+              "column": 12,
+              "name": "Total des logements privés affectés",
+              "value": ""
+            },
+            {
+              "column": 13,
+              "name": "Logements privés occupés par des résidents habituels affectés",
+              "value": ""
+            },
+            {
+              "column": 14,
+              "name": "Date d'entrée en vigueur",
+              "value": ""
+            },
+            {
+              "column": 15,
+              "name": "No. du fichier",
+              "value": ""
+            }
+          ],
+          "csv_record": 2,
+          "language": "fr",
+          "row_hash_basis": "UTF-8 canonical JSON of ordered decoded original cells",
+          "row_sha256": "b8f03ac0ebff13bbf70d523dcfcc27e96af9929a046342f1a6d0fe59f17fa44f",
+          "source_id": "statcan-interim-fr-csv"
+        },
+        {
+          "cells": [
+            {
+              "column": 1,
+              "name": "Gaining CSDuid",
+              "value": "1001485"
+            },
+            {
+              "column": 2,
+              "name": "Gaining CSDname",
+              "value": "Conception Bay South"
+            },
+            {
+              "column": 3,
+              "name": "Gaining CSDtype",
+              "value": "T"
+            },
+            {
+              "column": 4,
+              "name": "Gaining CSD Change Code",
+              "value": "8C"
+            },
+            {
+              "column": 5,
+              "name": "Gaining CSD Change Code Description",
+              "value": "Area gained due to boundary correction"
+            },
+            {
+              "column": 6,
+              "name": "Losing CSDuid",
+              "value": "1001519"
+            },
+            {
+              "column": 7,
+              "name": "Losing CSDname",
+              "value": "St. John's"
+            },
+            {
+              "column": 8,
+              "name": "Losing CSDtype",
+              "value": "CY"
+            },
+            {
+              "column": 9,
+              "name": "Losing CSD Change Code",
+              "value": "9C"
+            },
+            {
+              "column": 10,
+              "name": "Losing CSD Change Code Description",
+              "value": "Area lost due to boundary correction"
+            },
+            {
+              "column": 11,
+              "name": "Census Population Affected",
+              "value": "..."
+            },
+            {
+              "column": 12,
+              "name": "Total Private Dwellings Affected",
+              "value": "..."
+            },
+            {
+              "column": 13,
+              "name": "Private Dwellings Occupied by Usual Residents Affected",
+              "value": "..."
+            },
+            {
+              "column": 14,
+              "name": "Effective Date",
+              "value": "02/01/2021"
+            },
+            {
+              "column": 15,
+              "name": "File Number",
+              "value": "100010"
+            }
+          ],
+          "csv_record": 4,
+          "language": "en",
+          "row_hash_basis": "UTF-8 canonical JSON of ordered decoded original cells",
+          "row_sha256": "ad804761d86f818863f3a6a0360a38a5f4d3779c735d3b31f14ae91aa1ff391c",
+          "source_id": "statcan-interim-en-csv"
+        },
+        {
+          "cells": [
+            {
+              "column": 1,
+              "name": "SDRidu gagnante",
+              "value": "1001485"
+            },
+            {
+              "column": 2,
+              "name": "SDRnom gagnante",
+              "value": "Conception Bay South"
+            },
+            {
+              "column": 3,
+              "name": "SDRgenre gagnante",
+              "value": "T"
+            },
+            {
+              "column": 4,
+              "name": "Code du changement de la SDR gagnante",
+              "value": "8C"
+            },
+            {
+              "column": 5,
+              "name": "Description du code de changement de la SDR gagnante",
+              "value": "Augmentation de superficie en raison d'une correction de limite"
+            },
+            {
+              "column": 6,
+              "name": "SDRidu perdante",
+              "value": "1001519"
+            },
+            {
+              "column": 7,
+              "name": "SDRnom perdante",
+              "value": "St. John's"
+            },
+            {
+              "column": 8,
+              "name": "SDRgenre perdante",
+              "value": "CY"
+            },
+            {
+              "column": 9,
+              "name": "Code du changement de la SDR perdante",
+              "value": "9C"
+            },
+            {
+              "column": 10,
+              "name": "Description du code de changement de la SDR perdante",
+              "value": "Perte de superficie en raison d'une correction de limite"
+            },
+            {
+              "column": 11,
+              "name": "Population du recensement affectée",
+              "value": "..."
+            },
+            {
+              "column": 12,
+              "name": "Total des logements privés affectés",
+              "value": "..."
+            },
+            {
+              "column": 13,
+              "name": "Logements privés occupés par des résidents habituels affectés",
+              "value": "..."
+            },
+            {
+              "column": 14,
+              "name": "Date d'entrée en vigueur",
+              "value": "02/01/2021"
+            },
+            {
+              "column": 15,
+              "name": "No. du fichier",
+              "value": "100010"
+            }
+          ],
+          "csv_record": 4,
+          "language": "fr",
+          "row_hash_basis": "UTF-8 canonical JSON of ordered decoded original cells",
+          "row_sha256": "2febb1ca1344b7f29ee3067ecaec5cd34211dc4b6866aa8cc8a5584f48e6c756",
+          "source_id": "statcan-interim-fr-csv"
+        },
+        {
+          "cells": [
+            {
+              "column": 1,
+              "name": "Gaining CSDuid",
+              "value": "1217008"
+            },
+            {
+              "column": 2,
+              "name": "Gaining CSDname",
+              "value": "Membertou 28B"
+            },
+            {
+              "column": 3,
+              "name": "Gaining CSDtype",
+              "value": "IRI"
+            },
+            {
+              "column": 4,
+              "name": "Gaining CSD Change Code",
+              "value": "5"
+            },
+            {
+              "column": 5,
+              "name": "Gaining CSD Change Code Description",
+              "value": "Area gained due to partial annexation"
+            },
+            {
+              "column": 6,
+              "name": "Losing CSDuid",
+              "value": "1217030"
+            },
+            {
+              "column": 7,
+              "name": "Losing CSDname",
+              "value": "Cape Breton"
+            },
+            {
+              "column": 8,
+              "name": "Losing CSDtype",
+              "value": "RGM"
+            },
+            {
+              "column": 9,
+              "name": "Losing CSD Change Code",
+              "value": "6"
+            },
+            {
+              "column": 10,
+              "name": "Losing CSD Change Code Description",
+              "value": "Area lost due to partial annexation"
+            },
+            {
+              "column": 11,
+              "name": "Census Population Affected",
+              "value": "0.0"
+            },
+            {
+              "column": 12,
+              "name": "Total Private Dwellings Affected",
+              "value": "0.0"
+            },
+            {
+              "column": 13,
+              "name": "Private Dwellings Occupied by Usual Residents Affected",
+              "value": "0.0"
+            },
+            {
+              "column": 14,
+              "name": "Effective Date",
+              "value": "05/03/2024"
+            },
+            {
+              "column": 15,
+              "name": "File Number",
+              "value": "120020"
+            }
+          ],
+          "csv_record": 37,
+          "language": "en",
+          "row_hash_basis": "UTF-8 canonical JSON of ordered decoded original cells",
+          "row_sha256": "dc7d2b1fc568a98d2e8f73354ab3fa970a0e1899fc0131cb2cc0376e0be8dc33",
+          "source_id": "statcan-interim-en-csv"
+        },
+        {
+          "cells": [
+            {
+              "column": 1,
+              "name": "SDRidu gagnante",
+              "value": "1217008"
+            },
+            {
+              "column": 2,
+              "name": "SDRnom gagnante",
+              "value": "Membertou 28B"
+            },
+            {
+              "column": 3,
+              "name": "SDRgenre gagnante",
+              "value": "IRI"
+            },
+            {
+              "column": 4,
+              "name": "Code du changement de la SDR gagnante",
+              "value": "5"
+            },
+            {
+              "column": 5,
+              "name": "Description du code de changement de la SDR gagnante",
+              "value": "Augmentation de superficie en raison d'une annexion partielle"
+            },
+            {
+              "column": 6,
+              "name": "SDRidu perdante",
+              "value": "1217030"
+            },
+            {
+              "column": 7,
+              "name": "SDRnom perdante",
+              "value": "Cape Breton"
+            },
+            {
+              "column": 8,
+              "name": "SDRgenre perdante",
+              "value": "RGM"
+            },
+            {
+              "column": 9,
+              "name": "Code du changement de la SDR perdante",
+              "value": "6"
+            },
+            {
+              "column": 10,
+              "name": "Description du code de changement de la SDR perdante",
+              "value": "Perte de superficie en raison d'une annexion partielle"
+            },
+            {
+              "column": 11,
+              "name": "Population du recensement affectée",
+              "value": "0.0"
+            },
+            {
+              "column": 12,
+              "name": "Total des logements privés affectés",
+              "value": "0.0"
+            },
+            {
+              "column": 13,
+              "name": "Logements privés occupés par des résidents habituels affectés",
+              "value": "0.0"
+            },
+            {
+              "column": 14,
+              "name": "Date d'entrée en vigueur",
+              "value": "05/03/2024"
+            },
+            {
+              "column": 15,
+              "name": "No. du fichier",
+              "value": "120020"
+            }
+          ],
+          "csv_record": 37,
+          "language": "fr",
+          "row_hash_basis": "UTF-8 canonical JSON of ordered decoded original cells",
+          "row_sha256": "c101532cd38587474ad761b79a197bc1b706aed40d496c62c6bf06b5fbc0cadb",
+          "source_id": "statcan-interim-fr-csv"
+        },
+        {
+          "cells": [
+            {
+              "column": 1,
+              "name": "Gaining CSDuid",
+              "value": "Nunavut"
+            },
+            {
+              "column": 2,
+              "name": "Gaining CSDname",
+              "value": ""
+            },
+            {
+              "column": 3,
+              "name": "Gaining CSDtype",
+              "value": ""
+            },
+            {
+              "column": 4,
+              "name": "Gaining CSD Change Code",
+              "value": ""
+            },
+            {
+              "column": 5,
+              "name": "Gaining CSD Change Code Description",
+              "value": ""
+            },
+            {
+              "column": 6,
+              "name": "Losing CSDuid",
+              "value": ""
+            },
+            {
+              "column": 7,
+              "name": "Losing CSDname",
+              "value": ""
+            },
+            {
+              "column": 8,
+              "name": "Losing CSDtype",
+              "value": ""
+            },
+            {
+              "column": 9,
+              "name": "Losing CSD Change Code",
+              "value": ""
+            },
+            {
+              "column": 10,
+              "name": "Losing CSD Change Code Description",
+              "value": ""
+            },
+            {
+              "column": 11,
+              "name": "Census Population Affected",
+              "value": ""
+            },
+            {
+              "column": 12,
+              "name": "Total Private Dwellings Affected",
+              "value": ""
+            },
+            {
+              "column": 13,
+              "name": "Private Dwellings Occupied by Usual Residents Affected",
+              "value": ""
+            },
+            {
+              "column": 14,
+              "name": "Effective Date",
+              "value": ""
+            },
+            {
+              "column": 15,
+              "name": "File Number",
+              "value": ""
+            }
+          ],
+          "csv_record": 300,
+          "language": "en",
+          "row_hash_basis": "UTF-8 canonical JSON of ordered decoded original cells",
+          "row_sha256": "546eb4b627f5975eb7e0c88149a57007053ba52755818df1f9b9d72c488ee56e",
+          "source_id": "statcan-interim-en-csv"
+        },
+        {
+          "cells": [
+            {
+              "column": 1,
+              "name": "SDRidu gagnante",
+              "value": "Nunavut"
+            },
+            {
+              "column": 2,
+              "name": "SDRnom gagnante",
+              "value": ""
+            },
+            {
+              "column": 3,
+              "name": "SDRgenre gagnante",
+              "value": ""
+            },
+            {
+              "column": 4,
+              "name": "Code du changement de la SDR gagnante",
+              "value": ""
+            },
+            {
+              "column": 5,
+              "name": "Description du code de changement de la SDR gagnante",
+              "value": ""
+            },
+            {
+              "column": 6,
+              "name": "SDRidu perdante",
+              "value": ""
+            },
+            {
+              "column": 7,
+              "name": "SDRnom perdante",
+              "value": ""
+            },
+            {
+              "column": 8,
+              "name": "SDRgenre perdante",
+              "value": ""
+            },
+            {
+              "column": 9,
+              "name": "Code du changement de la SDR perdante",
+              "value": ""
+            },
+            {
+              "column": 10,
+              "name": "Description du code de changement de la SDR perdante",
+              "value": ""
+            },
+            {
+              "column": 11,
+              "name": "Population du recensement affectée",
+              "value": ""
+            },
+            {
+              "column": 12,
+              "name": "Total des logements privés affectés",
+              "value": ""
+            },
+            {
+              "column": 13,
+              "name": "Logements privés occupés par des résidents habituels affectés",
+              "value": ""
+            },
+            {
+              "column": 14,
+              "name": "Date d'entrée en vigueur",
+              "value": ""
+            },
+            {
+              "column": 15,
+              "name": "No. du fichier",
+              "value": ""
+            }
+          ],
+          "csv_record": 300,
+          "language": "fr",
+          "row_hash_basis": "UTF-8 canonical JSON of ordered decoded original cells",
+          "row_sha256": "546eb4b627f5975eb7e0c88149a57007053ba52755818df1f9b9d72c488ee56e",
+          "source_id": "statcan-interim-fr-csv"
+        },
+        {
+          "cells": [
+            {
+              "column": 1,
+              "name": "Gaining CSDuid",
+              "value": "... not applicable"
+            },
+            {
+              "column": 2,
+              "name": "Gaining CSDname",
+              "value": ""
+            },
+            {
+              "column": 3,
+              "name": "Gaining CSDtype",
+              "value": ""
+            },
+            {
+              "column": 4,
+              "name": "Gaining CSD Change Code",
+              "value": ""
+            },
+            {
+              "column": 5,
+              "name": "Gaining CSD Change Code Description",
+              "value": ""
+            },
+            {
+              "column": 6,
+              "name": "Losing CSDuid",
+              "value": ""
+            },
+            {
+              "column": 7,
+              "name": "Losing CSDname",
+              "value": ""
+            },
+            {
+              "column": 8,
+              "name": "Losing CSDtype",
+              "value": ""
+            },
+            {
+              "column": 9,
+              "name": "Losing CSD Change Code",
+              "value": ""
+            },
+            {
+              "column": 10,
+              "name": "Losing CSD Change Code Description",
+              "value": ""
+            },
+            {
+              "column": 11,
+              "name": "Census Population Affected",
+              "value": ""
+            },
+            {
+              "column": 12,
+              "name": "Total Private Dwellings Affected",
+              "value": ""
+            },
+            {
+              "column": 13,
+              "name": "Private Dwellings Occupied by Usual Residents Affected",
+              "value": ""
+            },
+            {
+              "column": 14,
+              "name": "Effective Date",
+              "value": ""
+            },
+            {
+              "column": 15,
+              "name": "File Number",
+              "value": ""
+            }
+          ],
+          "csv_record": 301,
+          "language": "en",
+          "row_hash_basis": "UTF-8 canonical JSON of ordered decoded original cells",
+          "row_sha256": "d1ed15fb3e264a86b210cf1e8aef9f26ae71f886fb1251fce030a48fad4eeda1",
+          "source_id": "statcan-interim-en-csv"
+        },
+        {
+          "cells": [
+            {
+              "column": 1,
+              "name": "SDRidu gagnante",
+              "value": "... n'ayant pas lieu de figurer"
+            },
+            {
+              "column": 2,
+              "name": "SDRnom gagnante",
+              "value": ""
+            },
+            {
+              "column": 3,
+              "name": "SDRgenre gagnante",
+              "value": ""
+            },
+            {
+              "column": 4,
+              "name": "Code du changement de la SDR gagnante",
+              "value": ""
+            },
+            {
+              "column": 5,
+              "name": "Description du code de changement de la SDR gagnante",
+              "value": ""
+            },
+            {
+              "column": 6,
+              "name": "SDRidu perdante",
+              "value": ""
+            },
+            {
+              "column": 7,
+              "name": "SDRnom perdante",
+              "value": ""
+            },
+            {
+              "column": 8,
+              "name": "SDRgenre perdante",
+              "value": ""
+            },
+            {
+              "column": 9,
+              "name": "Code du changement de la SDR perdante",
+              "value": ""
+            },
+            {
+              "column": 10,
+              "name": "Description du code de changement de la SDR perdante",
+              "value": ""
+            },
+            {
+              "column": 11,
+              "name": "Population du recensement affectée",
+              "value": ""
+            },
+            {
+              "column": 12,
+              "name": "Total des logements privés affectés",
+              "value": ""
+            },
+            {
+              "column": 13,
+              "name": "Logements privés occupés par des résidents habituels affectés",
+              "value": ""
+            },
+            {
+              "column": 14,
+              "name": "Date d'entrée en vigueur",
+              "value": ""
+            },
+            {
+              "column": 15,
+              "name": "No. du fichier",
+              "value": ""
+            }
+          ],
+          "csv_record": 301,
+          "language": "fr",
+          "row_hash_basis": "UTF-8 canonical JSON of ordered decoded original cells",
+          "row_sha256": "6d51d7401797ae38b168523558e1d87119ea8a75bba502e680d7de516b2fba0e",
+          "source_id": "statcan-interim-fr-csv"
+        }
+      ],
+      "proposed_review_outcome": "Keep zero as a numeric source value, ... as an explicit not-applicable state, and retain headings/notes as metadata outside the 286-row data population.",
+      "review_questions": [
+        "Does ... have the same meaning as 0.0?",
+        "Do province headings or the final explanatory note belong in the municipal record population?",
+        "How should the receiving dictionary expose each original value?"
+      ],
+      "source_refs": [
+        {
+          "locator": {
+            "csv_record": 2,
+            "record_numbering": "one-based including header, section rows and final note"
+          },
+          "source_id": "statcan-interim-en-csv"
+        },
+        {
+          "locator": {
+            "csv_record": 2,
+            "record_numbering": "one-based including header, section rows and final note"
+          },
+          "source_id": "statcan-interim-fr-csv"
+        },
+        {
+          "locator": {
+            "csv_record": 4,
+            "record_numbering": "one-based including header, section rows and final note"
+          },
+          "source_id": "statcan-interim-en-csv"
+        },
+        {
+          "locator": {
+            "csv_record": 4,
+            "record_numbering": "one-based including header, section rows and final note"
+          },
+          "source_id": "statcan-interim-fr-csv"
+        },
+        {
+          "locator": {
+            "csv_record": 37,
+            "record_numbering": "one-based including header, section rows and final note"
+          },
+          "source_id": "statcan-interim-en-csv"
+        },
+        {
+          "locator": {
+            "csv_record": 37,
+            "record_numbering": "one-based including header, section rows and final note"
+          },
+          "source_id": "statcan-interim-fr-csv"
+        },
+        {
+          "locator": {
+            "csv_record": 300,
+            "record_numbering": "one-based including header, section rows and final note"
+          },
+          "source_id": "statcan-interim-en-csv"
+        },
+        {
+          "locator": {
+            "csv_record": 300,
+            "record_numbering": "one-based including header, section rows and final note"
+          },
+          "source_id": "statcan-interim-fr-csv"
+        },
+        {
+          "locator": {
+            "csv_record": 301,
+            "record_numbering": "one-based including header, section rows and final note"
+          },
+          "source_id": "statcan-interim-en-csv"
+        },
+        {
+          "locator": {
+            "csv_record": 301,
+            "record_numbering": "one-based including header, section rows and final note"
+          },
+          "source_id": "statcan-interim-fr-csv"
+        }
+      ],
+      "title": "Not applicable, measured zero and non-data section rows",
+      "title_fr": "Sans objet, zéro publié et lignes de section",
+      "review_questions_fr": [
+        "La notation ... a-t-elle le même sens que la valeur 0.0 ?",
+        "Les en-têtes de province ou la note explicative finale font-ils partie de l’ensemble des enregistrements municipaux ?",
+        "Comment le dictionnaire du système récepteur doit-il représenter chaque valeur originale ?"
+      ],
+      "expected_observations_fr": [
+        "L’enregistrement 4 contient la notation littérale ... dans les trois colonnes de chiffres touchés; l’enregistrement 301 définit explicitement cette notation comme sans objet.",
+        "L’enregistrement 37, Membertou 28B, publie la valeur 0.0 pour les trois chiffres.",
+        "Le fichier complet comprend 286 lignes de données, treize lignes de section correspondant aux provinces et territoires, un en-tête et une note explicative. Le Nunavut comporte un en-tête de section, mais aucune ligne de données dans cette édition."
+      ]
+    },
+    {
+      "derived_quantities": {
+        "Census Population Affected": "156.0",
+        "Private Dwellings Occupied by Usual Residents Affected": "67.0",
+        "Total Private Dwellings Affected": "68.0"
+      },
+      "expected_observations": [
+        "Meadows 1005025 gains from Corner Brook 1005018, Gillams 1005015 and McIvers 1005022 under the same file 100012.",
+        "The rows are population corrections (codes 10/11) effective 02/01/2021, with population counts 17.0,77.0 and 62.0.",
+        "Their 156.0 sum is the recorded affected population flowing into Meadows. Retain the three opposite losing-side effects; an all-sides signed transfer ledger balances at zero."
+      ],
+      "id": "case-meadows-paired-transfer",
+      "input_rows": [
+        {
+          "cells": [
+            {
+              "column": 1,
+              "name": "Gaining CSDuid",
+              "value": "1005025"
+            },
+            {
+              "column": 2,
+              "name": "Gaining CSDname",
+              "value": "Meadows"
+            },
+            {
+              "column": 3,
+              "name": "Gaining CSDtype",
+              "value": "T"
+            },
+            {
+              "column": 4,
+              "name": "Gaining CSD Change Code",
+              "value": "10"
+            },
+            {
+              "column": 5,
+              "name": "Gaining CSD Change Code Description",
+              "value": "Population gained due to correction"
+            },
+            {
+              "column": 6,
+              "name": "Losing CSDuid",
+              "value": "1005018"
+            },
+            {
+              "column": 7,
+              "name": "Losing CSDname",
+              "value": "Corner Brook"
+            },
+            {
+              "column": 8,
+              "name": "Losing CSDtype",
+              "value": "CY"
+            },
+            {
+              "column": 9,
+              "name": "Losing CSD Change Code",
+              "value": "11"
+            },
+            {
+              "column": 10,
+              "name": "Losing CSD Change Code Description",
+              "value": "Population lost due to correction"
+            },
+            {
+              "column": 11,
+              "name": "Census Population Affected",
+              "value": "17.0"
+            },
+            {
+              "column": 12,
+              "name": "Total Private Dwellings Affected",
+              "value": "6.0"
+            },
+            {
+              "column": 13,
+              "name": "Private Dwellings Occupied by Usual Residents Affected",
+              "value": "6.0"
+            },
+            {
+              "column": 14,
+              "name": "Effective Date",
+              "value": "02/01/2021"
+            },
+            {
+              "column": 15,
+              "name": "File Number",
+              "value": "100012"
+            }
+          ],
+          "csv_record": 10,
+          "language": "en",
+          "row_hash_basis": "UTF-8 canonical JSON of ordered decoded original cells",
+          "row_sha256": "f0c942673e23940c0c4fe13ac8002a2f6d879316f4360c3fe74dd79b87b50b8c",
+          "source_id": "statcan-interim-en-csv"
+        },
+        {
+          "cells": [
+            {
+              "column": 1,
+              "name": "SDRidu gagnante",
+              "value": "1005025"
+            },
+            {
+              "column": 2,
+              "name": "SDRnom gagnante",
+              "value": "Meadows"
+            },
+            {
+              "column": 3,
+              "name": "SDRgenre gagnante",
+              "value": "T"
+            },
+            {
+              "column": 4,
+              "name": "Code du changement de la SDR gagnante",
+              "value": "10"
+            },
+            {
+              "column": 5,
+              "name": "Description du code de changement de la SDR gagnante",
+              "value": "Augmentation de la population en raison d'une correction"
+            },
+            {
+              "column": 6,
+              "name": "SDRidu perdante",
+              "value": "1005018"
+            },
+            {
+              "column": 7,
+              "name": "SDRnom perdante",
+              "value": "Corner Brook"
+            },
+            {
+              "column": 8,
+              "name": "SDRgenre perdante",
+              "value": "CY"
+            },
+            {
+              "column": 9,
+              "name": "Code du changement de la SDR perdante",
+              "value": "11"
+            },
+            {
+              "column": 10,
+              "name": "Description du code de changement de la SDR perdante",
+              "value": "Perte de population en raison d'une correction"
+            },
+            {
+              "column": 11,
+              "name": "Population du recensement affectée",
+              "value": "17.0"
+            },
+            {
+              "column": 12,
+              "name": "Total des logements privés affectés",
+              "value": "6.0"
+            },
+            {
+              "column": 13,
+              "name": "Logements privés occupés par des résidents habituels affectés",
+              "value": "6.0"
+            },
+            {
+              "column": 14,
+              "name": "Date d'entrée en vigueur",
+              "value": "02/01/2021"
+            },
+            {
+              "column": 15,
+              "name": "No. du fichier",
+              "value": "100012"
+            }
+          ],
+          "csv_record": 10,
+          "language": "fr",
+          "row_hash_basis": "UTF-8 canonical JSON of ordered decoded original cells",
+          "row_sha256": "07ad09deee2fbc1f72fd9ae6f3e2b99cb32f3977ba1587f40f06f7706f16e9cd",
+          "source_id": "statcan-interim-fr-csv"
+        },
+        {
+          "cells": [
+            {
+              "column": 1,
+              "name": "Gaining CSDuid",
+              "value": "1005025"
+            },
+            {
+              "column": 2,
+              "name": "Gaining CSDname",
+              "value": "Meadows"
+            },
+            {
+              "column": 3,
+              "name": "Gaining CSDtype",
+              "value": "T"
+            },
+            {
+              "column": 4,
+              "name": "Gaining CSD Change Code",
+              "value": "10"
+            },
+            {
+              "column": 5,
+              "name": "Gaining CSD Change Code Description",
+              "value": "Population gained due to correction"
+            },
+            {
+              "column": 6,
+              "name": "Losing CSDuid",
+              "value": "1005015"
+            },
+            {
+              "column": 7,
+              "name": "Losing CSDname",
+              "value": "Gillams"
+            },
+            {
+              "column": 8,
+              "name": "Losing CSDtype",
+              "value": "T"
+            },
+            {
+              "column": 9,
+              "name": "Losing CSD Change Code",
+              "value": "11"
+            },
+            {
+              "column": 10,
+              "name": "Losing CSD Change Code Description",
+              "value": "Population lost due to correction"
+            },
+            {
+              "column": 11,
+              "name": "Census Population Affected",
+              "value": "77.0"
+            },
+            {
+              "column": 12,
+              "name": "Total Private Dwellings Affected",
+              "value": "35.0"
+            },
+            {
+              "column": 13,
+              "name": "Private Dwellings Occupied by Usual Residents Affected",
+              "value": "34.0"
+            },
+            {
+              "column": 14,
+              "name": "Effective Date",
+              "value": "02/01/2021"
+            },
+            {
+              "column": 15,
+              "name": "File Number",
+              "value": "100012"
+            }
+          ],
+          "csv_record": 11,
+          "language": "en",
+          "row_hash_basis": "UTF-8 canonical JSON of ordered decoded original cells",
+          "row_sha256": "6a13480a9c9d49833e13057403e8dca58ce91eaaeee4a95a37d8e7f85f0cc464",
+          "source_id": "statcan-interim-en-csv"
+        },
+        {
+          "cells": [
+            {
+              "column": 1,
+              "name": "SDRidu gagnante",
+              "value": "1005025"
+            },
+            {
+              "column": 2,
+              "name": "SDRnom gagnante",
+              "value": "Meadows"
+            },
+            {
+              "column": 3,
+              "name": "SDRgenre gagnante",
+              "value": "T"
+            },
+            {
+              "column": 4,
+              "name": "Code du changement de la SDR gagnante",
+              "value": "10"
+            },
+            {
+              "column": 5,
+              "name": "Description du code de changement de la SDR gagnante",
+              "value": "Augmentation de la population en raison d'une correction"
+            },
+            {
+              "column": 6,
+              "name": "SDRidu perdante",
+              "value": "1005015"
+            },
+            {
+              "column": 7,
+              "name": "SDRnom perdante",
+              "value": "Gillams"
+            },
+            {
+              "column": 8,
+              "name": "SDRgenre perdante",
+              "value": "T"
+            },
+            {
+              "column": 9,
+              "name": "Code du changement de la SDR perdante",
+              "value": "11"
+            },
+            {
+              "column": 10,
+              "name": "Description du code de changement de la SDR perdante",
+              "value": "Perte de population en raison d'une correction"
+            },
+            {
+              "column": 11,
+              "name": "Population du recensement affectée",
+              "value": "77.0"
+            },
+            {
+              "column": 12,
+              "name": "Total des logements privés affectés",
+              "value": "35.0"
+            },
+            {
+              "column": 13,
+              "name": "Logements privés occupés par des résidents habituels affectés",
+              "value": "34.0"
+            },
+            {
+              "column": 14,
+              "name": "Date d'entrée en vigueur",
+              "value": "02/01/2021"
+            },
+            {
+              "column": 15,
+              "name": "No. du fichier",
+              "value": "100012"
+            }
+          ],
+          "csv_record": 11,
+          "language": "fr",
+          "row_hash_basis": "UTF-8 canonical JSON of ordered decoded original cells",
+          "row_sha256": "7f1efbfc6fac8be26170efe26073168c50dcc9ccf0a0925202225432d357fdeb",
+          "source_id": "statcan-interim-fr-csv"
+        },
+        {
+          "cells": [
+            {
+              "column": 1,
+              "name": "Gaining CSDuid",
+              "value": "1005025"
+            },
+            {
+              "column": 2,
+              "name": "Gaining CSDname",
+              "value": "Meadows"
+            },
+            {
+              "column": 3,
+              "name": "Gaining CSDtype",
+              "value": "T"
+            },
+            {
+              "column": 4,
+              "name": "Gaining CSD Change Code",
+              "value": "10"
+            },
+            {
+              "column": 5,
+              "name": "Gaining CSD Change Code Description",
+              "value": "Population gained due to correction"
+            },
+            {
+              "column": 6,
+              "name": "Losing CSDuid",
+              "value": "1005022"
+            },
+            {
+              "column": 7,
+              "name": "Losing CSDname",
+              "value": "McIvers"
+            },
+            {
+              "column": 8,
+              "name": "Losing CSDtype",
+              "value": "T"
+            },
+            {
+              "column": 9,
+              "name": "Losing CSD Change Code",
+              "value": "11"
+            },
+            {
+              "column": 10,
+              "name": "Losing CSD Change Code Description",
+              "value": "Population lost due to correction"
+            },
+            {
+              "column": 11,
+              "name": "Census Population Affected",
+              "value": "62.0"
+            },
+            {
+              "column": 12,
+              "name": "Total Private Dwellings Affected",
+              "value": "27.0"
+            },
+            {
+              "column": 13,
+              "name": "Private Dwellings Occupied by Usual Residents Affected",
+              "value": "27.0"
+            },
+            {
+              "column": 14,
+              "name": "Effective Date",
+              "value": "02/01/2021"
+            },
+            {
+              "column": 15,
+              "name": "File Number",
+              "value": "100012"
+            }
+          ],
+          "csv_record": 12,
+          "language": "en",
+          "row_hash_basis": "UTF-8 canonical JSON of ordered decoded original cells",
+          "row_sha256": "67ac325519d3339b915ee371a0baeb344d7d755db44988db11950024fdd65664",
+          "source_id": "statcan-interim-en-csv"
+        },
+        {
+          "cells": [
+            {
+              "column": 1,
+              "name": "SDRidu gagnante",
+              "value": "1005025"
+            },
+            {
+              "column": 2,
+              "name": "SDRnom gagnante",
+              "value": "Meadows"
+            },
+            {
+              "column": 3,
+              "name": "SDRgenre gagnante",
+              "value": "T"
+            },
+            {
+              "column": 4,
+              "name": "Code du changement de la SDR gagnante",
+              "value": "10"
+            },
+            {
+              "column": 5,
+              "name": "Description du code de changement de la SDR gagnante",
+              "value": "Augmentation de la population en raison d'une correction"
+            },
+            {
+              "column": 6,
+              "name": "SDRidu perdante",
+              "value": "1005022"
+            },
+            {
+              "column": 7,
+              "name": "SDRnom perdante",
+              "value": "McIvers"
+            },
+            {
+              "column": 8,
+              "name": "SDRgenre perdante",
+              "value": "T"
+            },
+            {
+              "column": 9,
+              "name": "Code du changement de la SDR perdante",
+              "value": "11"
+            },
+            {
+              "column": 10,
+              "name": "Description du code de changement de la SDR perdante",
+              "value": "Perte de population en raison d'une correction"
+            },
+            {
+              "column": 11,
+              "name": "Population du recensement affectée",
+              "value": "62.0"
+            },
+            {
+              "column": 12,
+              "name": "Total des logements privés affectés",
+              "value": "27.0"
+            },
+            {
+              "column": 13,
+              "name": "Logements privés occupés par des résidents habituels affectés",
+              "value": "27.0"
+            },
+            {
+              "column": 14,
+              "name": "Date d'entrée en vigueur",
+              "value": "02/01/2021"
+            },
+            {
+              "column": 15,
+              "name": "No. du fichier",
+              "value": "100012"
+            }
+          ],
+          "csv_record": 12,
+          "language": "fr",
+          "row_hash_basis": "UTF-8 canonical JSON of ordered decoded original cells",
+          "row_sha256": "c53902e4f483c6a64e9a75595bf9e13a6c79ab7926339a340eec39e32d48b903",
+          "source_id": "statcan-interim-fr-csv"
+        }
+      ],
+      "proposed_review_outcome": "Group by the original file number while preserving every constituent source row and both directional roles.",
+      "review_questions": [
+        "How many losing entities occur in file 100012?",
+        "Which signs apply when preparing a change ledger?",
+        "Would adding both gaining and losing sides double-count affected people?"
+      ],
+      "source_refs": [
+        {
+          "locator": {
+            "csv_record": 10,
+            "record_numbering": "one-based including header, section rows and final note"
+          },
+          "source_id": "statcan-interim-en-csv"
+        },
+        {
+          "locator": {
+            "csv_record": 10,
+            "record_numbering": "one-based including header, section rows and final note"
+          },
+          "source_id": "statcan-interim-fr-csv"
+        },
+        {
+          "locator": {
+            "csv_record": 11,
+            "record_numbering": "one-based including header, section rows and final note"
+          },
+          "source_id": "statcan-interim-en-csv"
+        },
+        {
+          "locator": {
+            "csv_record": 11,
+            "record_numbering": "one-based including header, section rows and final note"
+          },
+          "source_id": "statcan-interim-fr-csv"
+        },
+        {
+          "locator": {
+            "csv_record": 12,
+            "record_numbering": "one-based including header, section rows and final note"
+          },
+          "source_id": "statcan-interim-en-csv"
+        },
+        {
+          "locator": {
+            "csv_record": 12,
+            "record_numbering": "one-based including header, section rows and final note"
+          },
+          "source_id": "statcan-interim-fr-csv"
+        }
+      ],
+      "title": "Three paired population corrections into Meadows",
+      "title_fr": "Trois corrections de population appariées vers Meadows",
+      "review_questions_fr": [
+        "Combien d’entités perdantes figurent dans le dossier 100012 ?",
+        "Quels signes faut-il appliquer lors de la préparation d’un registre des variations ?",
+        "L’addition des côtés gagnant et perdant compterait-elle deux fois les personnes touchées ?"
+      ],
+      "expected_observations_fr": [
+        "Meadows, identifiant 1005025, gagne à partir de Corner Brook, identifiant 1005018, de Gillams, identifiant 1005015, et de McIvers, identifiant 1005022, dans le même dossier 100012.",
+        "Les lignes correspondent à des corrections de population, codes 10 et 11, prenant effet le 02/01/2021; les chiffres de population sont 17.0, 77.0 et 62.0.",
+        "Leur somme, 156.0, représente la population touchée enregistrée du côté gagnant de Meadows. Conserver les trois effets opposés du côté perdant; le solde d’un registre signé comprenant tous les côtés du transfert est nul."
+      ]
+    },
+    {
+      "expected_observations": [
+        "Both records relate Gore 2476025 and Wentworth 2476035 on 02/01/2021.",
+        "Record 56 is file 240080 with area-and-population correction codes 8/9 and 10.0 affected people; record 57 is file 240093 with population-only codes 10/11 and 13.0.",
+        "The source supplies distinct event records. It does not supply person-level identities that would establish a deduplicated count across them."
+      ],
+      "id": "case-gore-event-identity",
+      "input_rows": [
+        {
+          "cells": [
+            {
+              "column": 1,
+              "name": "Gaining CSDuid",
+              "value": "2476025"
+            },
+            {
+              "column": 2,
+              "name": "Gaining CSDname",
+              "value": "Gore"
+            },
+            {
+              "column": 3,
+              "name": "Gaining CSDtype",
+              "value": "CT"
+            },
+            {
+              "column": 4,
+              "name": "Gaining CSD Change Code",
+              "value": "8"
+            },
+            {
+              "column": 5,
+              "name": "Gaining CSD Change Code Description",
+              "value": "Area and population gained due to correction"
+            },
+            {
+              "column": 6,
+              "name": "Losing CSDuid",
+              "value": "2476035"
+            },
+            {
+              "column": 7,
+              "name": "Losing CSDname",
+              "value": "Wentworth"
+            },
+            {
+              "column": 8,
+              "name": "Losing CSDtype",
+              "value": "CT"
+            },
+            {
+              "column": 9,
+              "name": "Losing CSD Change Code",
+              "value": "9"
+            },
+            {
+              "column": 10,
+              "name": "Losing CSD Change Code Description",
+              "value": "Area and population lost due to correction"
+            },
+            {
+              "column": 11,
+              "name": "Census Population Affected",
+              "value": "10.0"
+            },
+            {
+              "column": 12,
+              "name": "Total Private Dwellings Affected",
+              "value": "9.0"
+            },
+            {
+              "column": 13,
+              "name": "Private Dwellings Occupied by Usual Residents Affected",
+              "value": "8.0"
+            },
+            {
+              "column": 14,
+              "name": "Effective Date",
+              "value": "02/01/2021"
+            },
+            {
+              "column": 15,
+              "name": "File Number",
+              "value": "240080"
+            }
+          ],
+          "csv_record": 56,
+          "language": "en",
+          "row_hash_basis": "UTF-8 canonical JSON of ordered decoded original cells",
+          "row_sha256": "a7cc2ad3724ed321fe7aec94e972d2c232f91ec49211b800d08e0e07650b3630",
+          "source_id": "statcan-interim-en-csv"
+        },
+        {
+          "cells": [
+            {
+              "column": 1,
+              "name": "SDRidu gagnante",
+              "value": "2476025"
+            },
+            {
+              "column": 2,
+              "name": "SDRnom gagnante",
+              "value": "Gore"
+            },
+            {
+              "column": 3,
+              "name": "SDRgenre gagnante",
+              "value": "CT"
+            },
+            {
+              "column": 4,
+              "name": "Code du changement de la SDR gagnante",
+              "value": "8"
+            },
+            {
+              "column": 5,
+              "name": "Description du code de changement de la SDR gagnante",
+              "value": "Augmentation de superficie et population en raison d'une correction"
+            },
+            {
+              "column": 6,
+              "name": "SDRidu perdante",
+              "value": "2476035"
+            },
+            {
+              "column": 7,
+              "name": "SDRnom perdante",
+              "value": "Wentworth"
+            },
+            {
+              "column": 8,
+              "name": "SDRgenre perdante",
+              "value": "CT"
+            },
+            {
+              "column": 9,
+              "name": "Code du changement de la SDR perdante",
+              "value": "9"
+            },
+            {
+              "column": 10,
+              "name": "Description du code de changement de la SDR perdante",
+              "value": "Perte de superficie et population en raison d'une correction"
+            },
+            {
+              "column": 11,
+              "name": "Population du recensement affectée",
+              "value": "10.0"
+            },
+            {
+              "column": 12,
+              "name": "Total des logements privés affectés",
+              "value": "9.0"
+            },
+            {
+              "column": 13,
+              "name": "Logements privés occupés par des résidents habituels affectés",
+              "value": "8.0"
+            },
+            {
+              "column": 14,
+              "name": "Date d'entrée en vigueur",
+              "value": "02/01/2021"
+            },
+            {
+              "column": 15,
+              "name": "No. du fichier",
+              "value": "240080"
+            }
+          ],
+          "csv_record": 56,
+          "language": "fr",
+          "row_hash_basis": "UTF-8 canonical JSON of ordered decoded original cells",
+          "row_sha256": "34647c2115c529604e064432806e0cdd23ca0dc45a0b8aa01072162c0f05f0c5",
+          "source_id": "statcan-interim-fr-csv"
+        },
+        {
+          "cells": [
+            {
+              "column": 1,
+              "name": "Gaining CSDuid",
+              "value": "2476025"
+            },
+            {
+              "column": 2,
+              "name": "Gaining CSDname",
+              "value": "Gore"
+            },
+            {
+              "column": 3,
+              "name": "Gaining CSDtype",
+              "value": "CT"
+            },
+            {
+              "column": 4,
+              "name": "Gaining CSD Change Code",
+              "value": "10"
+            },
+            {
+              "column": 5,
+              "name": "Gaining CSD Change Code Description",
+              "value": "Population gained due to correction"
+            },
+            {
+              "column": 6,
+              "name": "Losing CSDuid",
+              "value": "2476035"
+            },
+            {
+              "column": 7,
+              "name": "Losing CSDname",
+              "value": "Wentworth"
+            },
+            {
+              "column": 8,
+              "name": "Losing CSDtype",
+              "value": "CT"
+            },
+            {
+              "column": 9,
+              "name": "Losing CSD Change Code",
+              "value": "11"
+            },
+            {
+              "column": 10,
+              "name": "Losing CSD Change Code Description",
+              "value": "Population lost due to correction"
+            },
+            {
+              "column": 11,
+              "name": "Census Population Affected",
+              "value": "13.0"
+            },
+            {
+              "column": 12,
+              "name": "Total Private Dwellings Affected",
+              "value": "8.0"
+            },
+            {
+              "column": 13,
+              "name": "Private Dwellings Occupied by Usual Residents Affected",
+              "value": "7.0"
+            },
+            {
+              "column": 14,
+              "name": "Effective Date",
+              "value": "02/01/2021"
+            },
+            {
+              "column": 15,
+              "name": "File Number",
+              "value": "240093"
+            }
+          ],
+          "csv_record": 57,
+          "language": "en",
+          "row_hash_basis": "UTF-8 canonical JSON of ordered decoded original cells",
+          "row_sha256": "cdad2936fb2392a7ba3b1a42036a619537967588ef613ff237b900524a17ec91",
+          "source_id": "statcan-interim-en-csv"
+        },
+        {
+          "cells": [
+            {
+              "column": 1,
+              "name": "SDRidu gagnante",
+              "value": "2476025"
+            },
+            {
+              "column": 2,
+              "name": "SDRnom gagnante",
+              "value": "Gore"
+            },
+            {
+              "column": 3,
+              "name": "SDRgenre gagnante",
+              "value": "CT"
+            },
+            {
+              "column": 4,
+              "name": "Code du changement de la SDR gagnante",
+              "value": "10"
+            },
+            {
+              "column": 5,
+              "name": "Description du code de changement de la SDR gagnante",
+              "value": "Augmentation de la population en raison d'une correction"
+            },
+            {
+              "column": 6,
+              "name": "SDRidu perdante",
+              "value": "2476035"
+            },
+            {
+              "column": 7,
+              "name": "SDRnom perdante",
+              "value": "Wentworth"
+            },
+            {
+              "column": 8,
+              "name": "SDRgenre perdante",
+              "value": "CT"
+            },
+            {
+              "column": 9,
+              "name": "Code du changement de la SDR perdante",
+              "value": "11"
+            },
+            {
+              "column": 10,
+              "name": "Description du code de changement de la SDR perdante",
+              "value": "Perte de population en raison d'une correction"
+            },
+            {
+              "column": 11,
+              "name": "Population du recensement affectée",
+              "value": "13.0"
+            },
+            {
+              "column": 12,
+              "name": "Total des logements privés affectés",
+              "value": "8.0"
+            },
+            {
+              "column": 13,
+              "name": "Logements privés occupés par des résidents habituels affectés",
+              "value": "7.0"
+            },
+            {
+              "column": 14,
+              "name": "Date d'entrée en vigueur",
+              "value": "02/01/2021"
+            },
+            {
+              "column": 15,
+              "name": "No. du fichier",
+              "value": "240093"
+            }
+          ],
+          "csv_record": 57,
+          "language": "fr",
+          "row_hash_basis": "UTF-8 canonical JSON of ordered decoded original cells",
+          "row_sha256": "8da83147df068ba0dd481d078daece41b67f715d0bf4619c4facac56d4c6fa3e",
+          "source_id": "statcan-interim-fr-csv"
+        }
+      ],
+      "proposed_review_outcome": "Keep both file identities and change kinds; do not silently deduplicate by names, entity pair or effective date.",
+      "review_questions": [
+        "Would a key made only from the two CSD identifiers and effective date discard a record?",
+        "What distinguishes these source events?",
+        "Does the source establish disjoint people across the two corrections?"
+      ],
+      "source_refs": [
+        {
+          "locator": {
+            "csv_record": 56,
+            "record_numbering": "one-based including header, section rows and final note"
+          },
+          "source_id": "statcan-interim-en-csv"
+        },
+        {
+          "locator": {
+            "csv_record": 56,
+            "record_numbering": "one-based including header, section rows and final note"
+          },
+          "source_id": "statcan-interim-fr-csv"
+        },
+        {
+          "locator": {
+            "csv_record": 57,
+            "record_numbering": "one-based including header, section rows and final note"
+          },
+          "source_id": "statcan-interim-en-csv"
+        },
+        {
+          "locator": {
+            "csv_record": 57,
+            "record_numbering": "one-based including header, section rows and final note"
+          },
+          "source_id": "statcan-interim-fr-csv"
+        }
+      ],
+      "title": "Same entity pair and date, two different correction files",
+      "title_fr": "Même paire d’entités et même date, deux dossiers de correction",
+      "review_questions_fr": [
+        "Une clé composée uniquement des deux identifiants de SDR et de la date d’effet éliminerait-elle un enregistrement ?",
+        "Qu’est-ce qui distingue ces événements dans la source ?",
+        "La source permet-elle d’établir que les personnes concernées par les deux corrections sont distinctes ?"
+      ],
+      "expected_observations_fr": [
+        "Les deux enregistrements concernent Gore, identifiant 2476025, et Wentworth, identifiant 2476035, au 02/01/2021.",
+        "L’enregistrement 56 correspond au dossier 240080, avec les codes 8 et 9 de correction de superficie et de population et un chiffre de population touchée de 10.0; l’enregistrement 57 correspond au dossier 240093, avec les codes 10 et 11 de correction de population seulement et un chiffre de 13.0.",
+        "La source fournit des enregistrements d’événements distincts. Elle ne fournit pas d’identifiants individuels permettant d’établir un dénombrement sans double compte entre ces événements."
+      ]
+    },
+    {
+      "expected_observations": [
+        "File 110011, effective 31/03/2024, records Miminegash 1103063 (FD) gaining by complete annexation, code 5A.",
+        "The losing St. Louis 1103057 (RM) is recorded as dissolved, code 4; affected population is 69.0.",
+        "This is a different source change category from the Amos incorporation-from-amalgamation case."
+      ],
+      "id": "case-complete-annexation",
+      "input_rows": [
+        {
+          "cells": [
+            {
+              "column": 1,
+              "name": "Gaining CSDuid",
+              "value": "1103063"
+            },
+            {
+              "column": 2,
+              "name": "Gaining CSDname",
+              "value": "Miminegash"
+            },
+            {
+              "column": 3,
+              "name": "Gaining CSDtype",
+              "value": "FD"
+            },
+            {
+              "column": 4,
+              "name": "Gaining CSD Change Code",
+              "value": "5A"
+            },
+            {
+              "column": 5,
+              "name": "Gaining CSD Change Code Description",
+              "value": "Area gained due to complete annexation"
+            },
+            {
+              "column": 6,
+              "name": "Losing CSDuid",
+              "value": "1103057"
+            },
+            {
+              "column": 7,
+              "name": "Losing CSDname",
+              "value": "St. Louis"
+            },
+            {
+              "column": 8,
+              "name": "Losing CSDtype",
+              "value": "RM"
+            },
+            {
+              "column": 9,
+              "name": "Losing CSD Change Code",
+              "value": "4"
+            },
+            {
+              "column": 10,
+              "name": "Losing CSD Change Code Description",
+              "value": "Dissolution"
+            },
+            {
+              "column": 11,
+              "name": "Census Population Affected",
+              "value": "69.0"
+            },
+            {
+              "column": 12,
+              "name": "Total Private Dwellings Affected",
+              "value": "35.0"
+            },
+            {
+              "column": 13,
+              "name": "Private Dwellings Occupied by Usual Residents Affected",
+              "value": "33.0"
+            },
+            {
+              "column": 14,
+              "name": "Effective Date",
+              "value": "31/03/2024"
+            },
+            {
+              "column": 15,
+              "name": "File Number",
+              "value": "110011"
+            }
+          ],
+          "csv_record": 22,
+          "language": "en",
+          "row_hash_basis": "UTF-8 canonical JSON of ordered decoded original cells",
+          "row_sha256": "14810682ac876bacb2d723372b7d55d73620e4369b6b1a7a346fd4b0f5c814d7",
+          "source_id": "statcan-interim-en-csv"
+        },
+        {
+          "cells": [
+            {
+              "column": 1,
+              "name": "SDRidu gagnante",
+              "value": "1103063"
+            },
+            {
+              "column": 2,
+              "name": "SDRnom gagnante",
+              "value": "Miminegash"
+            },
+            {
+              "column": 3,
+              "name": "SDRgenre gagnante",
+              "value": "FD"
+            },
+            {
+              "column": 4,
+              "name": "Code du changement de la SDR gagnante",
+              "value": "5A"
+            },
+            {
+              "column": 5,
+              "name": "Description du code de changement de la SDR gagnante",
+              "value": "Augmentation de superficie en raison d'une annexion complète"
+            },
+            {
+              "column": 6,
+              "name": "SDRidu perdante",
+              "value": "1103057"
+            },
+            {
+              "column": 7,
+              "name": "SDRnom perdante",
+              "value": "St. Louis"
+            },
+            {
+              "column": 8,
+              "name": "SDRgenre perdante",
+              "value": "RM"
+            },
+            {
+              "column": 9,
+              "name": "Code du changement de la SDR perdante",
+              "value": "4"
+            },
+            {
+              "column": 10,
+              "name": "Description du code de changement de la SDR perdante",
+              "value": "Dissolution"
+            },
+            {
+              "column": 11,
+              "name": "Population du recensement affectée",
+              "value": "69.0"
+            },
+            {
+              "column": 12,
+              "name": "Total des logements privés affectés",
+              "value": "35.0"
+            },
+            {
+              "column": 13,
+              "name": "Logements privés occupés par des résidents habituels affectés",
+              "value": "33.0"
+            },
+            {
+              "column": 14,
+              "name": "Date d'entrée en vigueur",
+              "value": "31/03/2024"
+            },
+            {
+              "column": 15,
+              "name": "No. du fichier",
+              "value": "110011"
+            }
+          ],
+          "csv_record": 22,
+          "language": "fr",
+          "row_hash_basis": "UTF-8 canonical JSON of ordered decoded original cells",
+          "row_sha256": "a923fcd94ace9c215a3101d4ce5221b51d69e69bd9258cacba20e8f0f9dca70e",
+          "source_id": "statcan-interim-fr-csv"
+        }
+      ],
+      "proposed_review_outcome": "Preserve the source event categories and retain the dissolved entity in the lineage and receiving history.",
+      "review_questions": [
+        "Does code 5A mean the gaining entity was newly created?",
+        "Which identifier and type belong to each side?",
+        "Where should the losing entity remain visible after a current-entity view is built?"
+      ],
+      "source_refs": [
+        {
+          "locator": {
+            "csv_record": 22,
+            "record_numbering": "one-based including header, section rows and final note"
+          },
+          "source_id": "statcan-interim-en-csv"
+        },
+        {
+          "locator": {
+            "csv_record": 22,
+            "record_numbering": "one-based including header, section rows and final note"
+          },
+          "source_id": "statcan-interim-fr-csv"
+        }
+      ],
+      "title": "Complete annexation and dissolution retain their different roles",
+      "title_fr": "Annexion complète et dissolution : conserver les rôles distincts",
+      "review_questions_fr": [
+        "Le code 5A signifie-t-il que l’entité gagnante vient d’être créée ?",
+        "Quels identifiant et type appartiennent à chaque côté ?",
+        "Où l’entité perdante doit-elle rester visible après la création d’une vue des entités actuelles ?"
+      ],
+      "expected_observations_fr": [
+        "Le dossier 110011, prenant effet le 31/03/2024, indique que Miminegash, identifiant 1103063 et type original FD, gagne par annexion complète, code 5A.",
+        "L’entité perdante St. Louis, identifiant 1103057 et type original RM, est enregistrée comme dissoute, code 4; le chiffre de population touchée est 69.0.",
+        "Cette catégorie de changement diffère de la constitution issue d’une fusion décrite dans le cas d’Amos."
+      ]
+    },
+    {
+      "expected_observations": [
+        "Both independently downloaded files have 286 data rows at matching source-record positions.",
+        "Gaining/losing identifiers, their change codes, all three count strings, effective dates and file numbers match exactly for all 286 paired rows.",
+        "Headers, change descriptions and explanatory notes remain in their original language. Explicit cp 1252 decoding round-trips the original bytes; separately named UTF-8 derivatives retain every character and newline."
+      ],
+      "id": "case-bilingual-correspondence",
+      "input_rows": [
+        {
+          "cells": [
+            {
+              "column": 1,
+              "name": "Gaining CSDuid",
+              "value": "2488057"
+            },
+            {
+              "column": 2,
+              "name": "Gaining CSDname",
+              "value": "Amos"
+            },
+            {
+              "column": 3,
+              "name": "Gaining CSDtype",
+              "value": "V"
+            },
+            {
+              "column": 4,
+              "name": "Gaining CSD Change Code",
+              "value": "1"
+            },
+            {
+              "column": 5,
+              "name": "Gaining CSD Change Code Description",
+              "value": "Incorporation from amalgamation"
+            },
+            {
+              "column": 6,
+              "name": "Losing CSDuid",
+              "value": "2488060"
+            },
+            {
+              "column": 7,
+              "name": "Losing CSDname",
+              "value": "Saint-Félix-de-Dalquier"
+            },
+            {
+              "column": 8,
+              "name": "Losing CSDtype",
+              "value": "MÉ"
+            },
+            {
+              "column": 9,
+              "name": "Losing CSD Change Code",
+              "value": "4"
+            },
+            {
+              "column": 10,
+              "name": "Losing CSD Change Code Description",
+              "value": "Dissolution"
+            },
+            {
+              "column": 11,
+              "name": "Census Population Affected",
+              "value": "1026.0"
+            },
+            {
+              "column": 12,
+              "name": "Total Private Dwellings Affected",
+              "value": "414.0"
+            },
+            {
+              "column": 13,
+              "name": "Private Dwellings Occupied by Usual Residents Affected",
+              "value": "406.0"
+            },
+            {
+              "column": 14,
+              "name": "Effective Date",
+              "value": "26/12/2024"
+            },
+            {
+              "column": 15,
+              "name": "File Number",
+              "value": "240087"
+            }
+          ],
+          "csv_record": 52,
+          "language": "en",
+          "row_hash_basis": "UTF-8 canonical JSON of ordered decoded original cells",
+          "row_sha256": "1a934345303385acb8c57319ee3553b037d94a6b7869bd5e46f9a67b8b3535f6",
+          "source_id": "statcan-interim-en-csv"
+        },
+        {
+          "cells": [
+            {
+              "column": 1,
+              "name": "SDRidu gagnante",
+              "value": "2488057"
+            },
+            {
+              "column": 2,
+              "name": "SDRnom gagnante",
+              "value": "Amos"
+            },
+            {
+              "column": 3,
+              "name": "SDRgenre gagnante",
+              "value": "V"
+            },
+            {
+              "column": 4,
+              "name": "Code du changement de la SDR gagnante",
+              "value": "1"
+            },
+            {
+              "column": 5,
+              "name": "Description du code de changement de la SDR gagnante",
+              "value": "Constitution due à une amalgamation"
+            },
+            {
+              "column": 6,
+              "name": "SDRidu perdante",
+              "value": "2488060"
+            },
+            {
+              "column": 7,
+              "name": "SDRnom perdante",
+              "value": "Saint-Félix-de-Dalquier"
+            },
+            {
+              "column": 8,
+              "name": "SDRgenre perdante",
+              "value": "MÉ"
+            },
+            {
+              "column": 9,
+              "name": "Code du changement de la SDR perdante",
+              "value": "4"
+            },
+            {
+              "column": 10,
+              "name": "Description du code de changement de la SDR perdante",
+              "value": "Dissolution"
+            },
+            {
+              "column": 11,
+              "name": "Population du recensement affectée",
+              "value": "1026.0"
+            },
+            {
+              "column": 12,
+              "name": "Total des logements privés affectés",
+              "value": "414.0"
+            },
+            {
+              "column": 13,
+              "name": "Logements privés occupés par des résidents habituels affectés",
+              "value": "406.0"
+            },
+            {
+              "column": 14,
+              "name": "Date d'entrée en vigueur",
+              "value": "26/12/2024"
+            },
+            {
+              "column": 15,
+              "name": "No. du fichier",
+              "value": "240087"
+            }
+          ],
+          "csv_record": 52,
+          "language": "fr",
+          "row_hash_basis": "UTF-8 canonical JSON of ordered decoded original cells",
+          "row_sha256": "36dc9555281255530aaa5fef190044e2201626addc2b6b4b5da05980a009085b",
+          "source_id": "statcan-interim-fr-csv"
+        },
+        {
+          "cells": [
+            {
+              "column": 1,
+              "name": "Gaining CSDuid",
+              "value": "2488057"
+            },
+            {
+              "column": 2,
+              "name": "Gaining CSDname",
+              "value": "Amos"
+            },
+            {
+              "column": 3,
+              "name": "Gaining CSDtype",
+              "value": "V"
+            },
+            {
+              "column": 4,
+              "name": "Gaining CSD Change Code",
+              "value": "1"
+            },
+            {
+              "column": 5,
+              "name": "Gaining CSD Change Code Description",
+              "value": "Incorporation from amalgamation"
+            },
+            {
+              "column": 6,
+              "name": "Losing CSDuid",
+              "value": "2488055"
+            },
+            {
+              "column": 7,
+              "name": "Losing CSDname",
+              "value": "Amos"
+            },
+            {
+              "column": 8,
+              "name": "Losing CSDtype",
+              "value": "V"
+            },
+            {
+              "column": 9,
+              "name": "Losing CSD Change Code",
+              "value": "4"
+            },
+            {
+              "column": 10,
+              "name": "Losing CSD Change Code Description",
+              "value": "Dissolution"
+            },
+            {
+              "column": 11,
+              "name": "Census Population Affected",
+              "value": "12675.0"
+            },
+            {
+              "column": 12,
+              "name": "Total Private Dwellings Affected",
+              "value": "6051.0"
+            },
+            {
+              "column": 13,
+              "name": "Private Dwellings Occupied by Usual Residents Affected",
+              "value": "5780.0"
+            },
+            {
+              "column": 14,
+              "name": "Effective Date",
+              "value": "26/12/2024"
+            },
+            {
+              "column": 15,
+              "name": "File Number",
+              "value": "240087"
+            }
+          ],
+          "csv_record": 53,
+          "language": "en",
+          "row_hash_basis": "UTF-8 canonical JSON of ordered decoded original cells",
+          "row_sha256": "9415f15faadbced99d7dce14711fa9af56ee4ba557f147dadde00b3b55cb5492",
+          "source_id": "statcan-interim-en-csv"
+        },
+        {
+          "cells": [
+            {
+              "column": 1,
+              "name": "SDRidu gagnante",
+              "value": "2488057"
+            },
+            {
+              "column": 2,
+              "name": "SDRnom gagnante",
+              "value": "Amos"
+            },
+            {
+              "column": 3,
+              "name": "SDRgenre gagnante",
+              "value": "V"
+            },
+            {
+              "column": 4,
+              "name": "Code du changement de la SDR gagnante",
+              "value": "1"
+            },
+            {
+              "column": 5,
+              "name": "Description du code de changement de la SDR gagnante",
+              "value": "Constitution due à une amalgamation"
+            },
+            {
+              "column": 6,
+              "name": "SDRidu perdante",
+              "value": "2488055"
+            },
+            {
+              "column": 7,
+              "name": "SDRnom perdante",
+              "value": "Amos"
+            },
+            {
+              "column": 8,
+              "name": "SDRgenre perdante",
+              "value": "V"
+            },
+            {
+              "column": 9,
+              "name": "Code du changement de la SDR perdante",
+              "value": "4"
+            },
+            {
+              "column": 10,
+              "name": "Description du code de changement de la SDR perdante",
+              "value": "Dissolution"
+            },
+            {
+              "column": 11,
+              "name": "Population du recensement affectée",
+              "value": "12675.0"
+            },
+            {
+              "column": 12,
+              "name": "Total des logements privés affectés",
+              "value": "6051.0"
+            },
+            {
+              "column": 13,
+              "name": "Logements privés occupés par des résidents habituels affectés",
+              "value": "5780.0"
+            },
+            {
+              "column": 14,
+              "name": "Date d'entrée en vigueur",
+              "value": "26/12/2024"
+            },
+            {
+              "column": 15,
+              "name": "No. du fichier",
+              "value": "240087"
+            }
+          ],
+          "csv_record": 53,
+          "language": "fr",
+          "row_hash_basis": "UTF-8 canonical JSON of ordered decoded original cells",
+          "row_sha256": "e9bfc1babb7d84bac5839589b6cbc1d7d57e392ae95686d05b1b07970f1a0b49",
+          "source_id": "statcan-interim-fr-csv"
+        },
+        {
+          "cells": [
+            {
+              "column": 1,
+              "name": "Gaining CSDuid",
+              "value": "... not applicable"
+            },
+            {
+              "column": 2,
+              "name": "Gaining CSDname",
+              "value": ""
+            },
+            {
+              "column": 3,
+              "name": "Gaining CSDtype",
+              "value": ""
+            },
+            {
+              "column": 4,
+              "name": "Gaining CSD Change Code",
+              "value": ""
+            },
+            {
+              "column": 5,
+              "name": "Gaining CSD Change Code Description",
+              "value": ""
+            },
+            {
+              "column": 6,
+              "name": "Losing CSDuid",
+              "value": ""
+            },
+            {
+              "column": 7,
+              "name": "Losing CSDname",
+              "value": ""
+            },
+            {
+              "column": 8,
+              "name": "Losing CSDtype",
+              "value": ""
+            },
+            {
+              "column": 9,
+              "name": "Losing CSD Change Code",
+              "value": ""
+            },
+            {
+              "column": 10,
+              "name": "Losing CSD Change Code Description",
+              "value": ""
+            },
+            {
+              "column": 11,
+              "name": "Census Population Affected",
+              "value": ""
+            },
+            {
+              "column": 12,
+              "name": "Total Private Dwellings Affected",
+              "value": ""
+            },
+            {
+              "column": 13,
+              "name": "Private Dwellings Occupied by Usual Residents Affected",
+              "value": ""
+            },
+            {
+              "column": 14,
+              "name": "Effective Date",
+              "value": ""
+            },
+            {
+              "column": 15,
+              "name": "File Number",
+              "value": ""
+            }
+          ],
+          "csv_record": 301,
+          "language": "en",
+          "row_hash_basis": "UTF-8 canonical JSON of ordered decoded original cells",
+          "row_sha256": "d1ed15fb3e264a86b210cf1e8aef9f26ae71f886fb1251fce030a48fad4eeda1",
+          "source_id": "statcan-interim-en-csv"
+        },
+        {
+          "cells": [
+            {
+              "column": 1,
+              "name": "SDRidu gagnante",
+              "value": "... n'ayant pas lieu de figurer"
+            },
+            {
+              "column": 2,
+              "name": "SDRnom gagnante",
+              "value": ""
+            },
+            {
+              "column": 3,
+              "name": "SDRgenre gagnante",
+              "value": ""
+            },
+            {
+              "column": 4,
+              "name": "Code du changement de la SDR gagnante",
+              "value": ""
+            },
+            {
+              "column": 5,
+              "name": "Description du code de changement de la SDR gagnante",
+              "value": ""
+            },
+            {
+              "column": 6,
+              "name": "SDRidu perdante",
+              "value": ""
+            },
+            {
+              "column": 7,
+              "name": "SDRnom perdante",
+              "value": ""
+            },
+            {
+              "column": 8,
+              "name": "SDRgenre perdante",
+              "value": ""
+            },
+            {
+              "column": 9,
+              "name": "Code du changement de la SDR perdante",
+              "value": ""
+            },
+            {
+              "column": 10,
+              "name": "Description du code de changement de la SDR perdante",
+              "value": ""
+            },
+            {
+              "column": 11,
+              "name": "Population du recensement affectée",
+              "value": ""
+            },
+            {
+              "column": 12,
+              "name": "Total des logements privés affectés",
+              "value": ""
+            },
+            {
+              "column": 13,
+              "name": "Logements privés occupés par des résidents habituels affectés",
+              "value": ""
+            },
+            {
+              "column": 14,
+              "name": "Date d'entrée en vigueur",
+              "value": ""
+            },
+            {
+              "column": 15,
+              "name": "No. du fichier",
+              "value": ""
+            }
+          ],
+          "csv_record": 301,
+          "language": "fr",
+          "row_hash_basis": "UTF-8 canonical JSON of ordered decoded original cells",
+          "row_sha256": "6d51d7401797ae38b168523558e1d87119ea8a75bba502e680d7de516b2fba0e",
+          "source_id": "statcan-interim-fr-csv"
+        }
+      ],
+      "proposed_review_outcome": "Retain both original sources and a declared column correspondence; review the authored EN/FR clauses against the same source-bound case IDs.",
+      "review_questions": [
+        "Which columns establish correspondence without depending on translated labels?",
+        "Does decoding change any original value?",
+        "How will each draft language point to the same source case?"
+      ],
+      "source_refs": [
+        {
+          "locator": {
+            "csv_record": 52,
+            "record_numbering": "one-based including header, section rows and final note"
+          },
+          "source_id": "statcan-interim-en-csv"
+        },
+        {
+          "locator": {
+            "csv_record": 52,
+            "record_numbering": "one-based including header, section rows and final note"
+          },
+          "source_id": "statcan-interim-fr-csv"
+        },
+        {
+          "locator": {
+            "csv_record": 53,
+            "record_numbering": "one-based including header, section rows and final note"
+          },
+          "source_id": "statcan-interim-en-csv"
+        },
+        {
+          "locator": {
+            "csv_record": 53,
+            "record_numbering": "one-based including header, section rows and final note"
+          },
+          "source_id": "statcan-interim-fr-csv"
+        },
+        {
+          "locator": {
+            "csv_record": 301,
+            "record_numbering": "one-based including header, section rows and final note"
+          },
+          "source_id": "statcan-interim-en-csv"
+        },
+        {
+          "locator": {
+            "csv_record": 301,
+            "record_numbering": "one-based including header, section rows and final note"
+          },
+          "source_id": "statcan-interim-fr-csv"
+        }
+      ],
+      "title": "Two original language editions, one reviewed row correspondence",
+      "title_fr": "Deux éditions linguistiques originales et une correspondance vérifiée",
+      "review_questions_fr": [
+        "Quelles colonnes établissent la correspondance sans dépendre de libellés traduits ?",
+        "Le décodage modifie-t-il une valeur originale ?",
+        "Comment chaque version linguistique du projet renverra-t-elle au même cas source ?"
+      ],
+      "expected_observations_fr": [
+        "Les deux fichiers téléchargés indépendamment contiennent chacun 286 lignes de données aux mêmes positions d’enregistrement dans la source.",
+        "Les identifiants gagnants et perdants, leurs codes de changement, les trois chaînes de caractères représentant les chiffres, les dates d’effet et les numéros de dossier correspondent exactement pour les 286 paires de lignes.",
+        "Les en-têtes, descriptions des changements et notes explicatives restent dans leur langue originale. Le décodage explicite en cp1252 permet de retrouver exactement les octets originaux par réencodage; les dérivés UTF-8, enregistrés sous des noms distincts, conservent chaque caractère et chaque fin de ligne."
+      ]
+    },
+    {
+      "expected_observations": [
+        "The interim list is published 18/06/2025 and covers changes effective on or before 01/01/2025; Amos is effective 26/12/2024.",
+        "Table 1 uses 2021 Census counts adjusted to the modified CSD limits where applicable.",
+        "The 2025 boundary guide identifies its 01/01/2025 geographic reference and compatibility with the 2025 interim list; it warns that 2025 products are not necessarily consistent with the 2021 Census geography."
+      ],
+      "id": "case-geographic-vintages",
+      "input_rows": [
+        {
+          "cells": [
+            {
+              "column": 1,
+              "name": "Gaining CSDuid",
+              "value": "2488057"
+            },
+            {
+              "column": 2,
+              "name": "Gaining CSDname",
+              "value": "Amos"
+            },
+            {
+              "column": 3,
+              "name": "Gaining CSDtype",
+              "value": "V"
+            },
+            {
+              "column": 4,
+              "name": "Gaining CSD Change Code",
+              "value": "1"
+            },
+            {
+              "column": 5,
+              "name": "Gaining CSD Change Code Description",
+              "value": "Incorporation from amalgamation"
+            },
+            {
+              "column": 6,
+              "name": "Losing CSDuid",
+              "value": "2488060"
+            },
+            {
+              "column": 7,
+              "name": "Losing CSDname",
+              "value": "Saint-Félix-de-Dalquier"
+            },
+            {
+              "column": 8,
+              "name": "Losing CSDtype",
+              "value": "MÉ"
+            },
+            {
+              "column": 9,
+              "name": "Losing CSD Change Code",
+              "value": "4"
+            },
+            {
+              "column": 10,
+              "name": "Losing CSD Change Code Description",
+              "value": "Dissolution"
+            },
+            {
+              "column": 11,
+              "name": "Census Population Affected",
+              "value": "1026.0"
+            },
+            {
+              "column": 12,
+              "name": "Total Private Dwellings Affected",
+              "value": "414.0"
+            },
+            {
+              "column": 13,
+              "name": "Private Dwellings Occupied by Usual Residents Affected",
+              "value": "406.0"
+            },
+            {
+              "column": 14,
+              "name": "Effective Date",
+              "value": "26/12/2024"
+            },
+            {
+              "column": 15,
+              "name": "File Number",
+              "value": "240087"
+            }
+          ],
+          "csv_record": 52,
+          "language": "en",
+          "row_hash_basis": "UTF-8 canonical JSON of ordered decoded original cells",
+          "row_sha256": "1a934345303385acb8c57319ee3553b037d94a6b7869bd5e46f9a67b8b3535f6",
+          "source_id": "statcan-interim-en-csv"
+        },
+        {
+          "cells": [
+            {
+              "column": 1,
+              "name": "SDRidu gagnante",
+              "value": "2488057"
+            },
+            {
+              "column": 2,
+              "name": "SDRnom gagnante",
+              "value": "Amos"
+            },
+            {
+              "column": 3,
+              "name": "SDRgenre gagnante",
+              "value": "V"
+            },
+            {
+              "column": 4,
+              "name": "Code du changement de la SDR gagnante",
+              "value": "1"
+            },
+            {
+              "column": 5,
+              "name": "Description du code de changement de la SDR gagnante",
+              "value": "Constitution due à une amalgamation"
+            },
+            {
+              "column": 6,
+              "name": "SDRidu perdante",
+              "value": "2488060"
+            },
+            {
+              "column": 7,
+              "name": "SDRnom perdante",
+              "value": "Saint-Félix-de-Dalquier"
+            },
+            {
+              "column": 8,
+              "name": "SDRgenre perdante",
+              "value": "MÉ"
+            },
+            {
+              "column": 9,
+              "name": "Code du changement de la SDR perdante",
+              "value": "4"
+            },
+            {
+              "column": 10,
+              "name": "Description du code de changement de la SDR perdante",
+              "value": "Dissolution"
+            },
+            {
+              "column": 11,
+              "name": "Population du recensement affectée",
+              "value": "1026.0"
+            },
+            {
+              "column": 12,
+              "name": "Total des logements privés affectés",
+              "value": "414.0"
+            },
+            {
+              "column": 13,
+              "name": "Logements privés occupés par des résidents habituels affectés",
+              "value": "406.0"
+            },
+            {
+              "column": 14,
+              "name": "Date d'entrée en vigueur",
+              "value": "26/12/2024"
+            },
+            {
+              "column": 15,
+              "name": "No. du fichier",
+              "value": "240087"
+            }
+          ],
+          "csv_record": 52,
+          "language": "fr",
+          "row_hash_basis": "UTF-8 canonical JSON of ordered decoded original cells",
+          "row_sha256": "36dc9555281255530aaa5fef190044e2201626addc2b6b4b5da05980a009085b",
+          "source_id": "statcan-interim-fr-csv"
+        },
+        {
+          "cells": [
+            {
+              "column": 1,
+              "name": "Gaining CSDuid",
+              "value": "2488057"
+            },
+            {
+              "column": 2,
+              "name": "Gaining CSDname",
+              "value": "Amos"
+            },
+            {
+              "column": 3,
+              "name": "Gaining CSDtype",
+              "value": "V"
+            },
+            {
+              "column": 4,
+              "name": "Gaining CSD Change Code",
+              "value": "1"
+            },
+            {
+              "column": 5,
+              "name": "Gaining CSD Change Code Description",
+              "value": "Incorporation from amalgamation"
+            },
+            {
+              "column": 6,
+              "name": "Losing CSDuid",
+              "value": "2488055"
+            },
+            {
+              "column": 7,
+              "name": "Losing CSDname",
+              "value": "Amos"
+            },
+            {
+              "column": 8,
+              "name": "Losing CSDtype",
+              "value": "V"
+            },
+            {
+              "column": 9,
+              "name": "Losing CSD Change Code",
+              "value": "4"
+            },
+            {
+              "column": 10,
+              "name": "Losing CSD Change Code Description",
+              "value": "Dissolution"
+            },
+            {
+              "column": 11,
+              "name": "Census Population Affected",
+              "value": "12675.0"
+            },
+            {
+              "column": 12,
+              "name": "Total Private Dwellings Affected",
+              "value": "6051.0"
+            },
+            {
+              "column": 13,
+              "name": "Private Dwellings Occupied by Usual Residents Affected",
+              "value": "5780.0"
+            },
+            {
+              "column": 14,
+              "name": "Effective Date",
+              "value": "26/12/2024"
+            },
+            {
+              "column": 15,
+              "name": "File Number",
+              "value": "240087"
+            }
+          ],
+          "csv_record": 53,
+          "language": "en",
+          "row_hash_basis": "UTF-8 canonical JSON of ordered decoded original cells",
+          "row_sha256": "9415f15faadbced99d7dce14711fa9af56ee4ba557f147dadde00b3b55cb5492",
+          "source_id": "statcan-interim-en-csv"
+        },
+        {
+          "cells": [
+            {
+              "column": 1,
+              "name": "SDRidu gagnante",
+              "value": "2488057"
+            },
+            {
+              "column": 2,
+              "name": "SDRnom gagnante",
+              "value": "Amos"
+            },
+            {
+              "column": 3,
+              "name": "SDRgenre gagnante",
+              "value": "V"
+            },
+            {
+              "column": 4,
+              "name": "Code du changement de la SDR gagnante",
+              "value": "1"
+            },
+            {
+              "column": 5,
+              "name": "Description du code de changement de la SDR gagnante",
+              "value": "Constitution due à une amalgamation"
+            },
+            {
+              "column": 6,
+              "name": "SDRidu perdante",
+              "value": "2488055"
+            },
+            {
+              "column": 7,
+              "name": "SDRnom perdante",
+              "value": "Amos"
+            },
+            {
+              "column": 8,
+              "name": "SDRgenre perdante",
+              "value": "V"
+            },
+            {
+              "column": 9,
+              "name": "Code du changement de la SDR perdante",
+              "value": "4"
+            },
+            {
+              "column": 10,
+              "name": "Description du code de changement de la SDR perdante",
+              "value": "Dissolution"
+            },
+            {
+              "column": 11,
+              "name": "Population du recensement affectée",
+              "value": "12675.0"
+            },
+            {
+              "column": 12,
+              "name": "Total des logements privés affectés",
+              "value": "6051.0"
+            },
+            {
+              "column": 13,
+              "name": "Logements privés occupés par des résidents habituels affectés",
+              "value": "5780.0"
+            },
+            {
+              "column": 14,
+              "name": "Date d'entrée en vigueur",
+              "value": "26/12/2024"
+            },
+            {
+              "column": 15,
+              "name": "No. du fichier",
+              "value": "240087"
+            }
+          ],
+          "csv_record": 53,
+          "language": "fr",
+          "row_hash_basis": "UTF-8 canonical JSON of ordered decoded original cells",
+          "row_sha256": "e9bfc1babb7d84bac5839589b6cbc1d7d57e392ae95686d05b1b07970f1a0b49",
+          "source_id": "statcan-interim-fr-csv"
+        }
+      ],
+      "proposed_review_outcome": "Record each date and vintage in a separate field and require an explicit, supported compatibility decision for any cross-vintage join.",
+      "review_questions": [
+        "Which date describes publication, the legal change, the geographic reference and the original count?",
+        "Which boundary edition can be joined without an additional documented compatibility decision?"
+      ],
+      "source_refs": [
+        {
+          "locator": {
+            "csv_record": 52,
+            "record_numbering": "one-based including header, section rows and final note"
+          },
+          "source_id": "statcan-interim-en-csv"
+        },
+        {
+          "locator": {
+            "csv_record": 52,
+            "record_numbering": "one-based including header, section rows and final note"
+          },
+          "source_id": "statcan-interim-fr-csv"
+        },
+        {
+          "locator": {
+            "csv_record": 53,
+            "record_numbering": "one-based including header, section rows and final note"
+          },
+          "source_id": "statcan-interim-en-csv"
+        },
+        {
+          "locator": {
+            "csv_record": 53,
+            "record_numbering": "one-based including header, section rows and final note"
+          },
+          "source_id": "statcan-interim-fr-csv"
+        },
+        {
+          "locator": {
+            "section": "Tables / Geographic changes"
+          },
+          "source_id": "statcan-overview-en"
+        },
+        {
+          "locator": {
+            "section": "Tableaux / Changements géographiques"
+          },
+          "source_id": "statcan-overview-fr"
+        },
+        {
+          "locator": {
+            "section": "Comparison to other products/versions / Reference date"
+          },
+          "source_id": "statcan-boundaries-en"
+        },
+        {
+          "locator": {
+            "section": "Comparaison avec d’autres produits ou versions / Date de référence"
+          },
+          "source_id": "statcan-boundaries-fr"
+        }
+      ],
+      "title": "Publication year, effective date and Census-count vintage",
+      "title_fr": "Année de publication, date d’effet et millésime du recensement",
+      "review_questions_fr": [
+        "Quelle date décrit la publication, le changement juridique, la référence géographique et le dénombrement original ?",
+        "Quelle édition des limites peut être jointe sans décision de compatibilité supplémentaire et documentée ?"
+      ],
+      "expected_observations_fr": [
+        "La liste intérimaire est publiée le 18/06/2025 et couvre les changements prenant effet au plus tard le 01/01/2025; le changement d’Amos prend effet le 26/12/2024.",
+        "Le tableau 1 utilise les chiffres du Recensement de 2021, ajustés, s’il y a lieu, aux limites modifiées des SDR.",
+        "Le guide des limites de 2025 indique une date de référence géographique du 01/01/2025 et une compatibilité avec la liste intérimaire de 2025; il avertit que les produits de 2025 ne sont pas nécessairement compatibles avec la géographie du Recensement de 2021."
+      ]
+    }
+  ],
+  "clauses": [
+    {
+      "body_en": "The reconciliation package shall identify its reporting purpose, geographic coverage, source editions, observation units and intended receiving system. Each quantity shall state whether it represents an original count, a change affecting that count or a derived calculation. The package shall identify unresolved coverage and source limitations so that its conclusions remain within the documented use.",
+      "body_fr": "Le dossier de rapprochement doit préciser la finalité du rapport, la couverture géographique, les éditions des sources, les unités d’observation et le système destinataire prévu. Chaque quantité doit indiquer s’il s’agit d’un dénombrement original, d’un changement touchant ce dénombrement ou d’un calcul dérivé. Le dossier doit rendre visibles les limites de couverture et des sources afin de circonscrire ses conclusions à l’usage documenté.",
+      "case_ids": [
+        "case-geographic-vintages",
+        "case-meadows-paired-transfer"
+      ],
+      "id": "municipal-reconciliation-1",
+      "kind": "proposed_requirement",
+      "number": "1",
+      "parent_id": null,
+      "source_ids": [
+        "statcan-overview-en",
+        "statcan-overview-fr"
+      ],
+      "source_refs": [
+        {
+          "source_id": "statcan-overview-en"
+        },
+        {
+          "source_id": "statcan-overview-fr"
+        }
+      ],
+      "table_en": [],
+      "table_fr": [],
+      "title_en": "Scope and intended use",
+      "title_fr": "Domaine d’application et usage prévu"
+    },
+    {
+      "body_en": "The package shall retain the original source bytes or an authorized retrievable copy and record the publisher, source URL, retrieval time, publication date where supplied, media type, byte length and cryptographic digest. A transformed representation shall retain a reference to its original, its transformation instructions and its own digest. Attribution and permitted use shall accompany the receiving copy.",
+      "body_fr": "Le dossier doit conserver les octets originaux des sources ou une copie accessible dont l’utilisation est autorisée, et consigner l’éditeur, l’URL, la date de récupération, la date de publication lorsqu’elle est fournie, le type de média, la taille et l’empreinte cryptographique. Toute représentation transformée doit renvoyer à l’original, aux instructions de transformation et à sa propre empreinte. L’attribution et les conditions d’utilisation doivent accompagner la copie transmise.",
+      "case_ids": [
+        "case-bilingual-correspondence"
+      ],
+      "id": "municipal-reconciliation-2",
+      "kind": "proposed_requirement",
+      "number": "2",
+      "parent_id": null,
+      "source_ids": [
+        "statcan-overview-en",
+        "statcan-overview-fr",
+        "statcan-open-licence"
+      ],
+      "source_refs": [
+        {
+          "source_id": "statcan-overview-en"
+        },
+        {
+          "source_id": "statcan-overview-fr"
+        },
+        {
+          "source_id": "statcan-open-licence"
+        }
+      ],
+      "table_en": [],
+      "table_fr": [],
+      "title_en": "Original sources and traceability",
+      "title_fr": "Sources originales et traçabilité"
+    },
+    {
+      "body_en": "Identifiers shall be retained as source strings together with their issuing namespace and source edition. A display name shall not substitute for an identifier. The receiving model shall distinguish an entity from a change event and preserve the original file number, source-record locator and participating identifiers. Where a source key is not unique, the package shall retain the alternatives and document the reviewed correspondence.",
+      "body_fr": "Les identifiants doivent être conservés comme chaînes de caractères originales, avec leur espace de noms et l’édition de la source. Un nom d’affichage ne doit pas remplacer un identifiant. Le modèle destinataire doit distinguer une entité d’un événement de changement et conserver le numéro de dossier, le repère de l’enregistrement source et les identifiants participants. Lorsqu’une clé source n’est pas unique, le dossier doit conserver les possibilités et documenter la correspondance examinée.",
+      "case_ids": [
+        "case-name-is-not-identity",
+        "case-gore-event-identity"
+      ],
+      "id": "municipal-reconciliation-3",
+      "kind": "proposed_requirement",
+      "number": "3",
+      "parent_id": null,
+      "source_ids": [
+        "statcan-record-layout-en",
+        "statcan-record-layout-fr"
+      ],
+      "source_refs": [
+        {
+          "source_id": "statcan-record-layout-en"
+        },
+        {
+          "source_id": "statcan-record-layout-fr"
+        }
+      ],
+      "table_en": [],
+      "table_fr": [],
+      "title_en": "Entity and change-event identity",
+      "title_fr": "Identité des entités et des événements de changement"
+    },
+    {
+      "body_en": "The package shall preserve every contributing row in an amalgamation, annexation, transfer or correction. It shall record the gaining and losing roles, change codes and source-defined meaning of each relationship. A grouped event shall remain expandable to its original rows. A derived transfer ledger shall declare its sign convention, geographic boundary and counting rule so that the two sides of one change are not counted as two independent populations.",
+      "body_fr": "Le dossier doit conserver chaque ligne contribuant à une fusion, une annexion, un transfert ou une correction. Il doit indiquer les rôles gagnant et perdant, les codes de changement et le sens attribué à chaque relation par la source. Un événement regroupé doit pouvoir être décomposé en ses lignes originales. Un registre de transferts dérivé doit préciser sa convention de signe, son périmètre géographique et sa règle de dénombrement afin de ne pas traiter les deux côtés d’un même changement comme deux populations indépendantes.",
+      "case_ids": [
+        "case-amos-amalgamation",
+        "case-meadows-paired-transfer",
+        "case-complete-annexation"
+      ],
+      "id": "municipal-reconciliation-4",
+      "kind": "proposed_requirement",
+      "number": "4",
+      "parent_id": null,
+      "source_ids": [
+        "statcan-overview-en",
+        "statcan-overview-fr",
+        "statcan-change-codes-en",
+        "statcan-change-codes-fr"
+      ],
+      "source_refs": [
+        {
+          "source_id": "statcan-overview-en"
+        },
+        {
+          "source_id": "statcan-overview-fr"
+        },
+        {
+          "source_id": "statcan-change-codes-en"
+        },
+        {
+          "source_id": "statcan-change-codes-fr"
+        }
+      ],
+      "table_en": [],
+      "table_fr": [],
+      "title_en": "Relationship roles and cardinality",
+      "title_fr": "Rôles et cardinalité des relations"
+    },
+    {
+      "body_en": "The package shall preserve each original cell value and distinguish numeric zero, not applicable, missing, suppressed and unreported states when those states occur in the source. Parsing shall use a recorded locale and exact numeric representation suitable for the original precision. A derived value shall identify its input rows, unit, formula and exclusions. Missing-value markers shall not be silently replaced with zero or included as numeric observations.",
+      "body_fr": "Le dossier doit conserver la valeur originale de chaque cellule et distinguer le zéro numérique, la valeur sans objet, la valeur manquante, la valeur supprimée et la valeur non déclarée lorsque ces états figurent dans la source. L’analyse doit utiliser des paramètres régionaux consignés et une représentation numérique exacte adaptée à la précision originale. Une valeur dérivée doit préciser ses lignes d’entrée, son unité, sa formule et ses exclusions. Les marqueurs de valeurs manquantes ne doivent pas être remplacés silencieusement par zéro ni comptés comme observations numériques.",
+      "case_ids": [
+        "case-na-zero-sections",
+        "case-meadows-paired-transfer"
+      ],
+      "id": "municipal-reconciliation-5",
+      "kind": "proposed_requirement",
+      "number": "5",
+      "parent_id": null,
+      "source_ids": [
+        "statcan-record-layout-en",
+        "statcan-record-layout-fr"
+      ],
+      "source_refs": [
+        {
+          "source_id": "statcan-record-layout-en"
+        },
+        {
+          "source_id": "statcan-record-layout-fr"
+        }
+      ],
+      "table_en": [],
+      "table_fr": [],
+      "title_en": "Values, units and missing-value meaning",
+      "title_fr": "Valeurs, unités et sens des valeurs manquantes"
+    },
+    {
+      "body_en": "The package shall record publication, retrieval, effective-change and geographic-reference dates separately from the vintage of statistical counts. Any join between different geographic editions shall carry a source-supported compatibility decision, its responsible reviewer and its applicable scope. A receiving report shall label adjusted historical counts with their original Census vintage and shall retain the relevant boundary-change relationships.",
+      "body_fr": "Le dossier doit consigner séparément la date de publication, la date de récupération, la date d’effet du changement, la date de référence géographique et le millésime des dénombrements statistiques. Tout rapprochement entre éditions géographiques différentes doit comporter une décision de compatibilité étayée par les sources, le responsable de son examen et son domaine d’application. Le rapport destinataire doit indiquer le millésime du recensement des dénombrements historiques ajustés et conserver les relations pertinentes de changement de limites.",
+      "case_ids": [
+        "case-geographic-vintages"
+      ],
+      "id": "municipal-reconciliation-6",
+      "kind": "proposed_requirement",
+      "number": "6",
+      "parent_id": null,
+      "source_ids": [
+        "statcan-overview-en",
+        "statcan-overview-fr",
+        "statcan-boundaries-en",
+        "statcan-boundaries-fr"
+      ],
+      "source_refs": [
+        {
+          "source_id": "statcan-overview-en"
+        },
+        {
+          "source_id": "statcan-overview-fr"
+        },
+        {
+          "source_id": "statcan-boundaries-en"
+        },
+        {
+          "source_id": "statcan-boundaries-fr"
+        }
+      ],
+      "table_en": [],
+      "table_fr": [],
+      "title_en": "Dates and geographic comparability",
+      "title_fr": "Dates et comparabilité géographique"
+    },
+    {
+      "body_en": "Each decoding, field mapping, normalization and crosswalk shall be declared as a reproducible transformation with its input edition, selected rules and output identity. The operator shall be able to inspect original and proposed values together. A correspondence decision shall preserve one-to-many and many-to-many relations when supported by the source and shall expose unmatched or ambiguous records. Source rows shall remain recoverable after a correction.",
+      "body_fr": "Chaque décodage, mise en correspondance de champs, normalisation et table de concordance doit être déclaré comme une transformation reproductible avec son édition d’entrée, ses règles sélectionnées et l’identité de sa sortie. L’opérateur doit pouvoir examiner ensemble les valeurs originales et proposées. Une décision de correspondance doit conserver les relations un-à-plusieurs et plusieurs-à-plusieurs étayées par la source, et rendre visibles les enregistrements sans correspondance ou ambigus. Les lignes sources doivent rester récupérables après une correction.",
+      "case_ids": [
+        "case-amos-amalgamation",
+        "case-gore-event-identity",
+        "case-bilingual-correspondence"
+      ],
+      "id": "municipal-reconciliation-7",
+      "kind": "proposed_requirement",
+      "number": "7",
+      "parent_id": null,
+      "source_ids": [
+        "statcan-record-layout-en",
+        "statcan-record-layout-fr",
+        "statcan-overview-en",
+        "statcan-overview-fr"
+      ],
+      "source_refs": [
+        {
+          "source_id": "statcan-record-layout-en"
+        },
+        {
+          "source_id": "statcan-record-layout-fr"
+        },
+        {
+          "source_id": "statcan-overview-en"
+        },
+        {
+          "source_id": "statcan-overview-fr"
+        }
+      ],
+      "table_en": [],
+      "table_fr": [],
+      "title_en": "Explicit transformation and correspondence decisions",
+      "title_fr": "Décisions explicites de transformation et de correspondance"
+    },
+    {
+      "body_en": "A review record shall identify the exact source and draft edition reviewed, the reviewer, the issue, the proposed disposition, the rationale and the recorded decision. The package shall distinguish source observations, authored proposals and accepted decisions. An unresolved question shall remain visible in the receiving handover with the affected rows and conclusions. A later source or draft revision shall preserve the earlier decision and identify the scope requiring renewed review.",
+      "body_fr": "Un dossier d’examen doit identifier la source exacte et l’édition du projet examinées, l’examinateur, la question, la suite proposée, la justification et la décision consignée. Il doit distinguer les observations tirées des sources, les propositions rédigées et les décisions acceptées. Une question non résolue doit rester visible dans le dossier transmis, avec les lignes et conclusions concernées. Une révision ultérieure de la source ou du projet doit conserver la décision antérieure et indiquer les éléments à réexaminer.",
+      "case_ids": [
+        "case-gore-event-identity",
+        "case-geographic-vintages"
+      ],
+      "id": "municipal-reconciliation-8",
+      "kind": "proposed_requirement",
+      "number": "8",
+      "parent_id": null,
+      "source_ids": [
+        "statcan-overview-en",
+        "statcan-overview-fr"
+      ],
+      "source_refs": [
+        {
+          "source_id": "statcan-overview-en"
+        },
+        {
+          "source_id": "statcan-overview-fr"
+        }
+      ],
+      "table_en": [],
+      "table_fr": [],
+      "title_en": "Review records and unresolved questions",
+      "title_fr": "Dossiers d’examen et questions non résolues"
+    },
+    {
+      "body_en": "English and French drafts shall share stable clause and case identifiers while retaining their separate text and review history. Each edition shall bind its clause text, tables, source references and language-review status to one immutable snapshot. The receiving package shall identify the relationship between original language editions and shall preserve source identifiers and quantitative values through translation. Publication status shall reflect the actual authorized decisions for that edition.",
+      "body_fr": "Les projets anglais et français doivent partager des identifiants stables de clauses et de cas, tout en conservant des textes et des historiques d’examen distincts. Chaque édition doit rattacher le texte, les tableaux, les références et l’état de l’examen linguistique à un instantané immuable. Le dossier transmis doit préciser la relation entre les éditions linguistiques originales et préserver les identifiants sources ainsi que les valeurs quantitatives lors de la traduction. L’état de publication doit correspondre aux décisions effectivement autorisées pour cette édition.",
+      "case_ids": [
+        "case-bilingual-correspondence",
+        "case-name-is-not-identity"
+      ],
+      "id": "municipal-reconciliation-9",
+      "kind": "proposed_requirement",
+      "number": "9",
+      "parent_id": null,
+      "source_ids": [
+        "statcan-overview-en",
+        "statcan-overview-fr",
+        "statcan-interim-en-csv",
+        "statcan-interim-fr-csv"
+      ],
+      "source_refs": [
+        {
+          "source_id": "statcan-overview-en"
+        },
+        {
+          "source_id": "statcan-overview-fr"
+        },
+        {
+          "source_id": "statcan-interim-en-csv"
+        },
+        {
+          "source_id": "statcan-interim-fr-csv"
+        }
+      ],
+      "table_en": [],
+      "table_fr": [],
+      "title_en": "Bilingual editions and stable references",
+      "title_fr": "Éditions bilingues et références stables"
+    },
+    {
+      "body_en": "A handover shall include the selected draft or publication, source register, permitted original sources, transformations, reviewed mappings, derived calculations, open questions and instructions for reopening the retained work. A receiver shall be able to verify the manifest and trace a reported quantity back to its original cells. A new source edition shall create a retained comparison and correction record; it shall not overwrite the provenance of an earlier delivered edition.",
+      "body_fr": "La transmission doit comprendre le projet ou la publication sélectionnés, le registre des sources, les originaux dont l’utilisation est permise, les transformations, les correspondances examinées, les calculs dérivés, les questions ouvertes et les instructions de réouverture. Le destinataire doit pouvoir vérifier le manifeste et relier une quantité publiée aux cellules originales. Une nouvelle édition de la source doit créer un dossier conservé de comparaison et de correction ; elle ne doit pas écraser la provenance d’une édition déjà livrée.",
+      "case_ids": [
+        "case-amos-amalgamation",
+        "case-bilingual-correspondence",
+        "case-geographic-vintages"
+      ],
+      "id": "municipal-reconciliation-10",
+      "kind": "proposed_requirement",
+      "number": "10",
+      "parent_id": null,
+      "source_ids": [
+        "statcan-overview-en",
+        "statcan-overview-fr",
+        "statcan-open-licence"
+      ],
+      "source_refs": [
+        {
+          "source_id": "statcan-overview-en"
+        },
+        {
+          "source_id": "statcan-overview-fr"
+        },
+        {
+          "source_id": "statcan-open-licence"
+        }
+      ],
+      "table_en": [],
+      "table_fr": [],
+      "title_en": "Usable receiving package and maintenance",
+      "title_fr": "Dossier de transmission utilisable et maintien"
+    }
+  ],
+  "column_correspondence": [
+    {
+      "column": 1,
+      "name_en": "Gaining CSDuid",
+      "name_fr": "SDRidu gagnante"
+    },
+    {
+      "column": 2,
+      "name_en": "Gaining CSDname",
+      "name_fr": "SDRnom gagnante"
+    },
+    {
+      "column": 3,
+      "name_en": "Gaining CSDtype",
+      "name_fr": "SDRgenre gagnante"
+    },
+    {
+      "column": 4,
+      "name_en": "Gaining CSD Change Code",
+      "name_fr": "Code du changement de la SDR gagnante"
+    },
+    {
+      "column": 5,
+      "name_en": "Gaining CSD Change Code Description",
+      "name_fr": "Description du code de changement de la SDR gagnante"
+    },
+    {
+      "column": 6,
+      "name_en": "Losing CSDuid",
+      "name_fr": "SDRidu perdante"
+    },
+    {
+      "column": 7,
+      "name_en": "Losing CSDname",
+      "name_fr": "SDRnom perdante"
+    },
+    {
+      "column": 8,
+      "name_en": "Losing CSDtype",
+      "name_fr": "SDRgenre perdante"
+    },
+    {
+      "column": 9,
+      "name_en": "Losing CSD Change Code",
+      "name_fr": "Code du changement de la SDR perdante"
+    },
+    {
+      "column": 10,
+      "name_en": "Losing CSD Change Code Description",
+      "name_fr": "Description du code de changement de la SDR perdante"
+    },
+    {
+      "column": 11,
+      "name_en": "Census Population Affected",
+      "name_fr": "Population du recensement affectée"
+    },
+    {
+      "column": 12,
+      "name_en": "Total Private Dwellings Affected",
+      "name_fr": "Total des logements privés affectés"
+    },
+    {
+      "column": 13,
+      "name_en": "Private Dwellings Occupied by Usual Residents Affected",
+      "name_fr": "Logements privés occupés par des résidents habituels affectés"
+    },
+    {
+      "column": 14,
+      "name_en": "Effective Date",
+      "name_fr": "Date d'entrée en vigueur"
+    },
+    {
+      "column": 15,
+      "name_en": "File Number",
+      "name_fr": "No. du fichier"
+    }
+  ],
+  "id": "municipal-reconciliation-draft-20261011",
+  "language_reviews": [],
+  "preface_en": "Token Junkie Labs prepared this bilingual working draft to demonstrate a source-linked standards drafting and delivery workflow. Its ten proposed clauses and eight worked cases are available for technical and language review. Original Statistics Canada data and explanatory sources remain separately identifiable; the proposals, transformations and review outcomes are authored here. No committee ballot or publication approval has been recorded for this draft.",
+  "preface_fr": "Token Junkie Labs a préparé ce document de travail bilingue afin de démontrer un processus de rédaction et de transmission de normes relié aux sources. Les dix clauses proposées et les huit cas pratiques sont soumis à l’examen technique et linguistique. Les données originales et les documents explicatifs de Statistique Canada restent identifiables séparément ; les propositions, transformations et suites de l’examen sont rédigées ici. Aucun scrutin de comité ni aucune approbation de publication n’ont été consignés pour ce projet.",
+  "review_state": {
+    "approvals": [],
+    "committee_members": [],
+    "publication": null,
+    "votes": []
+  },
+  "schema": "tjl.scc.municipal-reconciliation-annex.v1",
+  "scope_en": "This proposed profile specifies how to prepare, review and hand over reconciliation records for municipal reporting datasets. It covers original-source custody, entity and event identity, directional change relationships, statistical units and vintages, explicit transformations, bilingual review and portable maintenance history. Its worked annex uses Statistics Canada municipal-change records. The profile does not define legal boundaries, revise the publisher’s original data or establish a new population estimate.",
+  "scope_fr": "Ce projet de profil précise la préparation, l’examen et la transmission des enregistrements de rapprochement destinés aux rapports municipaux. Il couvre la conservation des sources originales, l’identité des entités et des événements, les relations directionnelles de changement, les unités et millésimes statistiques, les transformations explicites, l’examen bilingue et un historique de maintien transférable. Son annexe utilise des enregistrements de changements municipaux de Statistique Canada. Le profil ne définit pas de limites juridiques, ne révise pas les données originales de l’éditeur et n’établit pas une nouvelle estimation de population.",
+  "source_domain_limitations": [
+    "The source reports changes processed by Statistics Canada, not every possible change in the period.",
+    "Affected counts use 2021 Census values adjusted where applicable. They are not 2025 population estimates.",
+    "No geometry, legal parcel boundaries, person-level identities or Canadian stakeholder commitments are created by this package."
+  ],
+  "source_inventory": {
+    "bilingual_identity_columns_one_based": [
+      1,
+      4,
+      6,
+      9,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "bilingual_identity_count_date_correspondence": "286 of 286 exact matches at original record positions",
+    "columns": 15,
+    "csv_records_per_language": 301,
+    "data_rows_per_language": 286,
+    "explanatory_note_rows": 1,
+    "header_rows": 1,
+    "languages": [
+      "en",
+      "fr"
+    ],
+    "province_territory_section_rows": 13
+  },
+  "sources": [
+    {
+      "bytes": 47722,
+      "file": "sources/statcan-municipal-change-2025-en.csv",
+      "http_status": 200,
+      "id": "statcan-interim-en-csv",
+      "licence": "Statistics Canada Open Licence",
+      "licence_url": "https://www.statcan.gc.ca/en/terms-conditions/open-licence",
+      "publisher": "Statistics Canada / Statistique Canada",
+      "representation": "original_response_bytes",
+      "request_url": "https://www150.statcan.gc.ca/n1/pub/92f0009x/2025001/csv/Table1_InterimList_2025_E.csv",
+      "retrieved_at": "2026-10-11T21:22:15.757487+00:00",
+      "sha256": "b8a29420b27fa1f6387a01655ffac3f30b40e8193256992efd3facd4782b887e",
+      "title": "statcan-municipal-change-2025-en.csv",
+      "url": "https://www150.statcan.gc.ca/n1/pub/92f0009x/2025001/csv/Table1_InterimList_2025_E.csv"
+    },
+    {
+      "bytes": 58408,
+      "file": "sources/statcan-municipal-change-2025-fr.csv",
+      "http_status": 200,
+      "id": "statcan-interim-fr-csv",
+      "licence": "Statistics Canada Open Licence",
+      "licence_url": "https://www.statcan.gc.ca/en/terms-conditions/open-licence",
+      "publisher": "Statistics Canada / Statistique Canada",
+      "representation": "original_response_bytes",
+      "request_url": "https://www150.statcan.gc.ca/n1/pub/92f0009x/2025001/csv/Table1_InterimList_2025_F.csv",
+      "retrieved_at": "2026-10-11T21:24:00.470171+00:00",
+      "sha256": "1cf1de44bbe0c8350534076fa7a97bac9d21c1b05ded2ff1a677a7b4a69108cd",
+      "title": "statcan-municipal-change-2025-fr.csv",
+      "url": "https://www150.statcan.gc.ca/n1/pub/92f0009x/2025001/csv/Table1_InterimList_2025_F.csv"
+    },
+    {
+      "bytes": 27010,
+      "file": "sources/statcan-municipal-change-2025-en.html",
+      "http_status": 200,
+      "id": "statcan-overview-en",
+      "licence": "Statistics Canada Open Licence",
+      "licence_url": "https://www.statcan.gc.ca/en/terms-conditions/open-licence",
+      "publisher": "Statistics Canada / Statistique Canada",
+      "representation": "original_response_bytes",
+      "request_url": "https://www150.statcan.gc.ca/n1/pub/92f0009x/92f0009x2025001-eng.htm",
+      "retrieved_at": "2026-10-11T21:20:26.653032+00:00",
+      "sha256": "e123655d3cf1ceea9de96c406de58a99c0b8983d57252d75fb8124701e523351",
+      "title": "statcan-municipal-change-2025-en.html",
+      "url": "https://www150.statcan.gc.ca/n1/pub/92f0009x/92f0009x2025001-eng.htm"
+    },
+    {
+      "bytes": 28592,
+      "file": "sources/statcan-language-switch.html",
+      "http_status": 200,
+      "id": "statcan-overview-fr",
+      "licence": "Statistics Canada Open Licence",
+      "licence_url": "https://www.statcan.gc.ca/en/terms-conditions/open-licence",
+      "publisher": "Statistics Canada / Statistique Canada",
+      "representation": "original_response_bytes",
+      "request_url": "https://www150.statcan.gc.ca/cgi-bin/change.cgi",
+      "retrieved_at": "2026-10-11T21:22:26.879760+00:00",
+      "sha256": "dd7388c2632195eaca2d4a691bf694fb3785e1781a16b6be6ab6ae77137deb0a",
+      "title": "statcan-language-switch.html",
+      "url": "https://www150.statcan.gc.ca/n1/pub/92f0009x/92f0009x2025001-fra.htm"
+    },
+    {
+      "bytes": 25361,
+      "file": "sources/statcan-record-layout-en.html",
+      "http_status": 200,
+      "id": "statcan-record-layout-en",
+      "licence": "Statistics Canada Open Licence",
+      "licence_url": "https://www.statcan.gc.ca/en/terms-conditions/open-licence",
+      "publisher": "Statistics Canada / Statistique Canada",
+      "representation": "original_response_bytes",
+      "request_url": "https://www150.statcan.gc.ca/n1/pub/92f0009x/2025001/tbl/tbl02-eng.htm",
+      "retrieved_at": "2026-10-11T21:28:29.880872+00:00",
+      "sha256": "551ebf72fc5aaec4bb42c1b0e633024524777271ab8883c9829c90038798b84d",
+      "title": "statcan-record-layout-en.html",
+      "url": "https://www150.statcan.gc.ca/n1/pub/92f0009x/2025001/tbl/tbl02-eng.htm"
+    },
+    {
+      "bytes": 24821,
+      "file": "sources/statcan-record-layout-fr.html",
+      "http_status": 200,
+      "id": "statcan-record-layout-fr",
+      "licence": "Statistics Canada Open Licence",
+      "licence_url": "https://www.statcan.gc.ca/en/terms-conditions/open-licence",
+      "publisher": "Statistics Canada / Statistique Canada",
+      "representation": "original_response_bytes",
+      "request_url": "https://www150.statcan.gc.ca/n1/pub/92f0009x/2025001/tbl/tbl02-fra.htm",
+      "retrieved_at": "2026-10-11T21:28:29.811184+00:00",
+      "sha256": "d7a5fa2625c2956faffd772993296ab4d5d9d89480a232b748766e659ec15ebe",
+      "title": "statcan-record-layout-fr.html",
+      "url": "https://www150.statcan.gc.ca/n1/pub/92f0009x/2025001/tbl/tbl02-fra.htm"
+    },
+    {
+      "bytes": 21700,
+      "file": "sources/statcan-change-codes-en.html",
+      "http_status": 200,
+      "id": "statcan-change-codes-en",
+      "licence": "Statistics Canada Open Licence",
+      "licence_url": "https://www.statcan.gc.ca/en/terms-conditions/open-licence",
+      "publisher": "Statistics Canada / Statistique Canada",
+      "representation": "original_response_bytes",
+      "request_url": "https://www150.statcan.gc.ca/n1/pub/92f0009x/2025001/tbl/tbl04-eng.htm",
+      "retrieved_at": "2026-10-11T21:28:29.775509+00:00",
+      "sha256": "60c8fcac9ba6df00cb6b90877cf65131c08af3a182324b5d7897fa157df3a5c2",
+      "title": "statcan-change-codes-en.html",
+      "url": "https://www150.statcan.gc.ca/n1/pub/92f0009x/2025001/tbl/tbl04-eng.htm"
+    },
+    {
+      "bytes": 20761,
+      "file": "sources/statcan-change-codes-fr.html",
+      "http_status": 200,
+      "id": "statcan-change-codes-fr",
+      "licence": "Statistics Canada Open Licence",
+      "licence_url": "https://www.statcan.gc.ca/en/terms-conditions/open-licence",
+      "publisher": "Statistics Canada / Statistique Canada",
+      "representation": "original_response_bytes",
+      "request_url": "https://www150.statcan.gc.ca/n1/pub/92f0009x/2025001/tbl/tbl04-fra.htm",
+      "retrieved_at": "2026-10-11T21:28:34.299536+00:00",
+      "sha256": "435234dc62e94c419a95b301156ef9056764923b98214ca9ebd9fb0d31772ca3",
+      "title": "statcan-change-codes-fr.html",
+      "url": "https://www150.statcan.gc.ca/n1/pub/92f0009x/2025001/tbl/tbl04-fra.htm"
+    },
+    {
+      "bytes": 41538,
+      "file": "sources/statcan-boundary-guide-2025-en.html",
+      "http_status": 200,
+      "id": "statcan-boundaries-en",
+      "licence": "Statistics Canada Open Licence",
+      "licence_url": "https://www.statcan.gc.ca/en/terms-conditions/open-licence",
+      "publisher": "Statistics Canada / Statistique Canada",
+      "representation": "original_response_bytes",
+      "request_url": "https://www150.statcan.gc.ca/n1/pub/92-162-g/92-162-g2025001-eng.htm",
+      "retrieved_at": "2026-10-11T21:28:34.457940+00:00",
+      "sha256": "28c24cf5ab07010f1a205f049ef000aafff3047ea79dfc1d46b439345e151d9e",
+      "title": "statcan-boundary-guide-2025-en.html",
+      "url": "https://www150.statcan.gc.ca/n1/pub/92-162-g/92-162-g2025001-eng.htm"
+    },
+    {
+      "bytes": 49318,
+      "file": "sources/statcan-boundary-guide-2025-fr.html",
+      "http_status": 200,
+      "id": "statcan-boundaries-fr",
+      "licence": "Statistics Canada Open Licence",
+      "licence_url": "https://www.statcan.gc.ca/en/terms-conditions/open-licence",
+      "publisher": "Statistics Canada / Statistique Canada",
+      "representation": "original_response_bytes",
+      "request_url": "https://www150.statcan.gc.ca/n1/pub/92-162-g/92-162-g2025001-fra.htm",
+      "retrieved_at": "2026-10-11T21:28:34.228553+00:00",
+      "sha256": "9c5763f5e7fc70dd557fdb438e4ef6fd1e877ddc8abb368b2a89ee9fde2bdad3",
+      "title": "statcan-boundary-guide-2025-fr.html",
+      "url": "https://www150.statcan.gc.ca/n1/pub/92-162-g/92-162-g2025001-fra.htm"
+    },
+    {
+      "bytes": 27044,
+      "file": "sources/statcan-open-licence-en.html",
+      "http_status": 200,
+      "id": "statcan-open-licence",
+      "licence": "Statistics Canada Open Licence",
+      "licence_url": "https://www.statcan.gc.ca/en/terms-conditions/open-licence",
+      "publisher": "Statistics Canada / Statistique Canada",
+      "representation": "original_response_bytes",
+      "request_url": "https://www.statcan.gc.ca/en/terms-conditions/open-licence",
+      "retrieved_at": "2026-10-11T21:28:37.965547+00:00",
+      "sha256": "d441c0159f7eeaa3e6b1904d1f27f6cb601a225ec5fe8e85502c02b9789bc11f",
+      "title": "statcan-open-licence-en.html",
+      "url": "https://www.statcan.gc.ca/en/terms-conditions/open-licence"
+    }
+  ],
+  "status": "author_draft_for_review",
+  "title_en": "Proposed reconciliation handover profile for municipal reporting datasets",
+  "title_fr": "Projet de profil de transmission des rapprochements de données municipales",
+  "transformations": [
+    {
+      "encoding_basis": "Explicit selected decoder; strict UTF-8 fails and cp1252 round-trips every original byte. Publisher Content-Type supplies no charset.",
+      "id": "decode-en",
+      "input_encoding": "cp1252",
+      "input_sha256": "b8a29420b27fa1f6387a01655ffac3f30b40e8193256992efd3facd4782b887e",
+      "lossless_round_trip": true,
+      "operation": "Decode cp1252 then encode UTF-8, retaining every character, delimiter, quote and newline; no CSV parse/rewrite.",
+      "output_bytes": 47753,
+      "output_encoding": "utf-8",
+      "output_file": "sources/statcan-municipal-change-2025-en.utf8.csv",
+      "output_sha256": "83b0a4beeaaa9ab9344b3f08e0cea78063a8a89cde3fe76ad8689c0fd0b78072",
+      "source_id": "statcan-interim-en-csv"
+    },
+    {
+      "encoding_basis": "Explicit selected decoder; strict UTF-8 fails and cp1252 round-trips every original byte. Publisher Content-Type supplies no charset.",
+      "id": "decode-fr",
+      "input_encoding": "cp1252",
+      "input_sha256": "1cf1de44bbe0c8350534076fa7a97bac9d21c1b05ded2ff1a677a7b4a69108cd",
+      "lossless_round_trip": true,
+      "operation": "Decode cp1252 then encode UTF-8, retaining every character, delimiter, quote and newline; no CSV parse/rewrite.",
+      "output_bytes": 58462,
+      "output_encoding": "utf-8",
+      "output_file": "sources/statcan-municipal-change-2025-fr.utf8.csv",
+      "output_sha256": "05b8681f908d873586bf645258c33e670b41426171a788dec7a931507aa2cecd",
+      "source_id": "statcan-interim-fr-csv"
+    }
+  ]
+}

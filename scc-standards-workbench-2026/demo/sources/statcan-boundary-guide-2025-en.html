@@ -1,0 +1,671 @@
+﻿<!DOCTYPE html>
+
+<!--[if lt IE 9]><html class="no-js lt-ie9" lang="en" dir="ltr" xmlns="http://www.w3.org/1999/xhtml"><![endif]--><!--[if gt IE 8]><!--> <html class="no-js" lang="en" dir="ltr" xmlns="http://www.w3.org/1999/xhtml"> <!--<![endif]-->
+
+
+<!-- METADATA BEGINS | DEBUT DES METADONNEES -->
+<head>
+<meta charset="utf-8">
+<meta content="width=device-width,initial-scale=1" name="viewport"/>
+<meta name="description" content="This reference guide is intended for users of the Census Subdivisions Boundary File. The guide provides an overview of the file, the general methodology used to create it, and important technical information for users."/>
+<meta name="keywords" content="CD, Reference guide"/>
+
+
+<!-- Page Title -->
+<title>Census Subdivision Boundary File, Reference Guide, 2025</title>
+
+<!--Dublin Core Metadata-->
+<link rel="schema.dcterms" href="http://purl.org/dc/terms/"/>
+<meta name="dcterms.title" content="Census Subdivision Boundary File, Reference Guide, 2025"/>
+<meta name="dcterms.language" title="ISO639-2/T" content="eng"/>
+<meta name="dcterms.creator" content="Government of Canada, Statistics Canada" data-gc-analytics-owner="62700|SGC|3901|N/A"/>
+<meta name="dcterms.issued" title="W3CDTF" content="2025-06-18"/>
+<meta name="dcterms.modified" title="W3CDTF" content="2025-06-18"/>
+<meta name="dcterms.subject" title="gcstc" content="Census divisions; Census of population; Data quality; Geographic areas; Methodology; Reference guides"/>
+
+<!--Additional Metadata-->
+<script type="application/ld+json">
+{
+    "@context" : "http://schema.org",
+    "@type" : "CreativeWork",
+    "additionalType" : "ScholarlyArticle",
+    "name" : "Census Subdivision Boundary File, Reference Guide, 2025",
+    "alternateName" : "92-162-G2025001",
+    "headline" : "This reference guide is intended for users of the Census Subdivisions Boundary File. The guide provides an overview of the file, the general methodology used to create it, and important technical information for users.",
+    "url" : "https://www150.statcan.gc.ca/n1/pub/92-162-g/92-162-g2024001-eng.htm",
+    "sameAs" : "https://www150.statcan.gc.ca/n1/pub/92-162-g/92-162-g2024001-fra.htm",
+    "keywords" : "CD, Reference guide",
+    "about" : "Geography",
+    "isBasedOn" : "http://www23.statcan.gc.ca/imdb/p2SV.pl?Function=getSurvey&SDDS=3901",
+    "datePublished" : "2025-06-18",
+    "spatialCoverage" : "Canada",
+    "publisher" : {
+        "@type" : "Organization",
+        "additionalType" : "GovernmentOrganization",
+        "url" : "https://www.statcan.gc.ca/en/start",
+        "name" : "Government of Canada, Statistics Canada",
+        "sameAs" : ["https://en.wikipedia.org/wiki/Statistics_Canada", "https://x.com/statcan_eng", "https://www.facebook.com/StatisticsCanada", "https://www.youtube.com/statisticscanada", "https://www.instagram.com/statcan_eng", "https://ca.linkedin.com/company/statcan", "https://www.reddit.com/user/StatCanada"]
+    }
+}
+</script>
+<!-- METADATA ENDS | FIN DES METADONNEES -->
+
+
+
+<meta property="dcterms:service" content="StatCan"/> 
+<meta property="dcterms:accessRights" content="2"/>
+
+<link href="/wet-boew4b/assets/favicon.ico" rel="icon" type="image/x-icon">
+<link rel="stylesheet" href="/wet-boew4b/css/wet-boew.min.css">
+<script src="/wet-boew4b/js/jquery.min.js"></script>
+
+<link rel="stylesheet" href="/wet-boew4b/css/theme.min.css">
+<link rel="stylesheet" href="/wet-boew4b/css/statcan.css">
+<link rel="stylesheet" href="/wet-boew4b/invitation-manager/Overlay.css"> 
+
+<noscript><link rel="stylesheet" href="/wet-boew4b/css/noscript.min.css" /></noscript>
+<!-- Adobe Analytics v5 production version --><!--script src="//assets.adobedtm.com/be5dfd287373/8cdb3d539c44/launch-6df9e9b447f9.min.js"></script-->
+<!-- Adobe Analytics v5 staging version --><!--script src="//assets.adobedtm.com/be5dfd287373/8cdb3d539c44/launch-dfa8abb35555-staging.min.js"></script-->
+<!-- Adobe Analytics v10 production version --><script src="//assets.adobedtm.com/be5dfd287373/8f0ead8a37e7/launch-09394abc039d.min.js"></script>
+
+<script>dataLayer1 = [];</script>
+
+
+<script src="/Framework/js/jquery.tooltipster.min.js"></script>
+<link rel="stylesheet" type="text/css" href="/Framework/css/tooltipster.css">
+<link rel="stylesheet" type="text/css" href="/Framework/css/pubs_wet4.css">
+<link rel="stylesheet" type="text/css" href="/wet-boew4b/css/font-awesome.min.css">
+
+<!-- CustomScriptsCSSEnd -->
+</head>
+
+<body vocab="http://schema.org/" typeof="WebPage">
+
+<ul id="wb-tphp">
+<li class="wb-slc">
+<a class="wb-sl" href="#wb-cont">Skip to main content</a>
+</li>
+<li class="wb-slc visible-sm visible-md visible-lg">
+<a class="wb-sl" href="#wb-info">Skip to "About this site"</a>
+</li>
+</ul>
+<header role="banner">
+<div id="wb-bnr" class="container">
+<section id="wb-lng" class="visible-md visible-lg text-right">
+<h2 class="wb-inv">Language selection</h2>
+<div class="row">
+<div class="col-md-12">
+<ul class="list-inline margin-bottom-none">
+<li><a lang="fr" href="
+/cgi-bin/change.cgi
+">Fran&#231;ais</a></li>
+</ul>
+</div>
+</div>
+</section>
+<div class="row">
+<div class="brand col-xs-9 col-sm-5 col-md-4">
+<a href="https://www.canada.ca/en.html"><img src="/wet-boew4b/assets/sig-blk-gov-en.svg" alt="Government of Canada"><span class="wb-inv"> / <span lang="fr">Gouvernement du Canada</span></span></a>
+</div>
+<section class="wb-mb-links col-sm-offset-4 col-xs-4 col-sm-3 visible-sm visible-xs" id="wb-glb-mn">
+<h2>Search and menus</h2>
+<ul class="list-inline text-right chvrn">
+<li><a href="#mb-pnl" title="Search and menus" aria-controls="mb-pnl" class="overlay-lnk" role="button"><span class="glyphicon glyphicon-search"><span class="glyphicon glyphicon-th-list"><span class="wb-inv">Search and menus</span></span></span></a></li>
+</ul>
+<div id="mb-pnl"></div>
+</section>
+
+<section id="wb-srch" class="col-lg-offset-2 col-md-offset-2 col-xs-6 text-right visible-md visible-lg">
+<h2 class="wb-inv">Search</h2>
+<form action="https://www.statcan.gc.ca/search/results/site-search" method="get" name="cse-search-box" role="search" class="form-inline">
+<div class="form-group wb-srch-qry">
+<label for="wb-srch-q" class="wb-inv">Search Statistics Canada</label>
+<input type="hidden" name="fq" value="stclac:2" />
+<input id="wb-srch-q" list="wb-srch-q-ac" class="wb-srch-q form-control" name="q" type="search" value="" size="27" maxlength="150" placeholder="Search Statistics Canada">
+<datalist id="wb-srch-q-ac">
+</datalist>
+</div>
+<div class="form-group submit">
+<button type="submit" id="wb-srch-sub" class="btn btn-primary btn-small" name="wb-srch-sub"><span class="glyphicon-search glyphicon"></span><span class="wb-inv">Search</span></button>
+</div>
+</form>
+</section>
+</div>
+</div>
+
+<nav role="navigation" id="wb-sm" class="wb-menu visible-md visible-lg" data-trgt="mb-pnl" data-ajax-replace="/wet-boew4b/ajax/sitemenu-en.html" typeof="SiteNavigationElement">
+	<div class="container nvbar">
+		<h2 class="wb-inv">Topics menu</h2>
+		<div class="row">
+			<ul class="list-inline menu">
+				<li><a href="https://www150.statcan.gc.ca/n1/en/subjects?MM=1">Subjects</a></li>
+				<li><a href="https://www150.statcan.gc.ca/n1/en/type/data?MM=1">Data</a></li>
+				<li><a href="https://www150.statcan.gc.ca/n1/en/type/analysis?MM=1">Analysis</a></li>
+				<li><a href="https://www.statcan.gc.ca/en/reference?MM=1">Reference</a></li>
+				<li><a href="https://www.statcan.gc.ca/en/geography?MM=1">Geography</a></li>
+				<li><a href="https://www.statcan.gc.ca/en/census?MM=1">Census</a></li>
+				<li><a href="https://www.statcan.gc.ca/en/surveys?MM=1">Surveys and statistical programs</a></li>
+				<li><a href="https://www.statcan.gc.ca/en/about/statcan?MM=1">About StatCan</a></li>
+				<li><a href="https://www.canada.ca/en.html">Canada.ca</a></li>
+			</ul>
+		</div>
+	</div>
+</nav>
+
+<nav role="navigation" id="wb-bc" class="" property="breadcrumb">
+	<div class="container">
+		<div class="row">
+
+<!-- Breadcrumb trail -->
+<ol class="breadcrumb">
+<li> <a href="/eng/start">Home</a></li>
+<li> <a href="/n1/en/catalogue/92-162-G" title="Online catalogue: 92-162-g">92-162-G</a></li> 
+<li>Main page</li> 
+</ol>
+
+</div>
+</div>
+</nav>
+</header>
+
+<main role="main" property="mainContentOfPage" class="container">
+
+<section>
+
+<div class="row">
+ <div class="col-md-9">
+<h1 property="name" id="wb-cont">Census Subdivision Boundary File, Reference Guide, 2025</h1>
+</div>
+ <div class="col-md-3"> <img src="/pub/92-162-g/image/logo2016.jpg" alt="2017 logo" class="img-responsive mrgn-tp-lg hidden-xs hidden-sm brdr-all pull-right"> </div>
+</div>
+
+ <!--AUTHORS--><div class="row"> 
+ <div class="col-md-6"> 
+ <span class="label label-primary mrgn-rght-md"><strong>Release date:</strong> June 18, 2025</span></div>
+ <div class="col-md-6">
+ <div class="pull-right mrgn-bttm-sm mrgn-tp-sm">
+ <a href="#moreinfo" aria-controls="moreinfo" role="button" class="wb-lbx btn btn-default btn-xs" title="More information: Census Subdivision Boundary File, Reference Guide, 2025"><span class="fa fa-info-circle mrgn-rght-sm"></span>More information</a>
+ <a href="/pub/92-162-g/92-162-g2025001-eng.pdf" class="btn btn-default btn-xs" title="PDF version: Census Subdivision Boundary File, Reference Guide, 2025"><span class="glyphicon glyphicon-download-alt mrgn-rght-sm"></span>PDF version</a>
+ </div>
+</div>
+</div>
+
+<details class="hidden-xs hidden-sm rel-article mrgn-bttm-md hidden-print"><summary class="rel-article"><span class="h4">On this page</span></summary>
+    <ul>
+      <li><a href="#a0">What's new?</a></li>
+      <li><a href="#a1">1. About this guide</a></li>
+      <li><a href="#a2">2. Overview</a></li>
+      <li><a href="#a3">3. About this product</a>
+      	<ul>
+      		<li><a href="#a3_1">Purpose of the product</a></li>
+      		<li><a href="#a3_2">Definitions and concepts</a></li>
+      		<li><a href="#a3_3">Content</a></li>
+      		<li><a href="#a3_4">General methodology</a></li>
+      		<li><a href="#a3_5">Limitations</a></li>
+      		<li><a href="#a3_6">Comparison to other products or versions</a></li>
+      		<li><a href="#a3_7">Using with other products</a></li>
+      		<li><a href="#a3_8">Reference date</a></li>
+      	</ul>
+      </li>
+      <li><a href="#a4">4. Technical specifications</a>
+      	<ul>
+      		<li><a href="#a4_1">Record layout and data descriptions</a></li>
+      		<li><a href="#a4_2">File specifications</a></li>
+            <li><a href="#a4_3">Software formats</a></li>
+      		<li><a href="#a4_4">File extension and accented character information</a></li>
+       		<li><a href="#a4_4b">Metadata</a></li>
+     		<li><a href="#a4_5">Geographic representation</a></li>
+      		<li><a href="#a4_6">File naming convention</a></li>
+        </ul>
+      </li>
+      <li><a href="#a5">5. Data quality</a>
+     	<ul>
+      		<li><a href="#a5_1">Lineage</a></li>
+      		<li><a href="#a5_2">Positional accuracy</a></li>
+      		<li><a href="#a5_3">Attribute accuracy</a></li>
+     		<li><a href="#a5_4">Logical consistency</a></li>
+      		<li><a href="#a5_5">Consistency with other products</a></li>
+        	<li><a href="#a5_6">Completeness</a></li>
+      	</ul>
+      </li>
+      <li><a href="#a6">Appendices</a></li>
+</ul>
+</details>
+
+
+<p>This reference guide is intended for users of the&nbsp;<em>2025 Census Subdivision Boundary File</em>. The guide provides an overview of the file, the general methodology used to create it, and important technical information.</p>
+<h2 id="a0">What's new?</h2>
+<ul>
+  <li>Some census subdivision (CSD) boundaries have been adjusted to  the <em>Quarter-Section-Township-Range-Meridian</em> in the provinces west of Ontario.</li>
+  <li>The&nbsp;<em>2025 Census Subdivision Boundary  File</em>&nbsp;portrays the  boundaries of all 5,054&nbsp;<abbr title="census subdivisions">CSDs</abbr>, which combined, cover all of Canada.</li>
+  <li>The boundaries, names, and codes of <abbr title="census subdivisions">CSDs</abbr> reflect those in effect  on January 1, 2025, the geographic reference date for this edition of the  <em>Census Subdivision Boundary File</em>.</li>
+  <li>An adjustment of the boundary  between the Northwest Territories and Nunavut was made.</li>
+  <li>The <em>2025 Census Subdivision Boundary File</em> is now available in GeoPackage (.gpkg) format. </li>
+</ul>
+
+
+<h2 id="a1">1. About this guide</h2>
+
+<p>This reference guide does not provide details on specific software packages that are available for use with the <em>2025 Census Subdivision Boundary File</em>. Users are advised to contact the appropriate software vendor for information.</p>
+This data product is provided 'as-is', and Statistics Canada makes no warranty, express or implied, including but not limited to, warranties of merchantability or fitness for a particular purpose. In no event will Statistics Canada be liable for any direct, special, indirect, consequential or other damages, however caused.
+
+<h2 id="a2">2. Overview</h2>
+
+<p>The <em>2025 Census Subdivision Boundary File</em> depicts the boundaries of all 5,054 <abbr title="census subdivisions">CSD</abbr>s, which combined, cover all of Canada. It contains the unique identifier (UID), name and type, as well as the <abbr title="unique identifiers">UIDs</abbr>, names and types (where applicable) of selected higher geographic levels.</p>
+<p>The <em>2025 Census Subdivision Boundary File</em> is  portrayed in Lambert conformal conic projection (North American Datum  of&nbsp;1983&nbsp;[NAD83]) and is available as a national file. </p>
+
+<h2 id="a3">3. About this product</h2>
+
+<h3 id="a3_1">Purpose of the product</h3>
+
+<p>The purpose of the <em>2025 Census Subdivision Boundary File</em> is to provide a framework for mapping and spatial analysis, and to support Geographic Information System (GIS) applications used for land use and demographic studies, as well as social, economic and market research.</p>
+<p> The <em>2025 Census Subdivision Boundary File</em> is positionally consistent with the <em>2025&nbsp;Road Network File</em>, which provides additional reference for mapping.</p>
+<p> <strong>Note:</strong> It is recommended that the &quot;2021&nbsp;Census Subdivision Boundary File&quot; and the <em>2021 Road Network File</em> be used as a basis for the retrieval of 2021 Census data for user-defined areas. Users can define their custom areas based on the roads in the <em>2021&nbsp;Road Network File</em>. Roads within the <em>2021 Road Network File</em> correspond to the 2021 geographic frame and therefore do not require additional boundary reconciliation work, which facilitates the geocoding process. For information on custom area creation and geocoding services, please contact us at 1-800-263-1136 or <u><a href="mailto:infostats@statcan.gc.ca">infostats@statcan.gc.ca</a></u>.</p>
+
+<h3 id="a3_2">Definitions and concepts</h3>
+
+<p>Geographic terms and concepts are briefly defined in the <em><a href="https://www12.statcan.gc.ca/census-recensement/2021/ref/dict/index-eng.cfm">Dictionary, Census of Population, 2021</a></em>.</p>
+<h3 id="a3_3">Content</h3>
+
+<p>The <em>2025 Census Subdivision Boundary File</em> contains the <abbr title="unique identifier">UID</abbr>, name and type of the geographic areas represented, as well as the <abbr title="unique identifiers">UIDs</abbr>, names and types (where applicable) of the following higher geographic levels:</p>
+<ul>
+ <li>Provinces and territories (PRs)</li>
+ <li>Census divisions (CDs)</li>
+</ul>
+<h3 id="a3_4">General methodology</h3>
+
+<p>The National Geographic Database (NGD) is a joint Statistics Canada-Elections Canada initiative to develop and maintain a spatial database that serves the needs of both organizations. The main objective of the <abbr title="National Geographic Database">NGD</abbr> is the continual improvement of quality and currency of spatial coverage using updates from provinces, territories and local sources. The source files used for the creation of the boundary file reside on Statistics Canada's Spatial Data Infrastructure (SDI), which was derived directly from data stored in the <abbr title="National Geographic Database">NGD</abbr>.</p>
+<h4>Creation of the <em>2025 Census Subdivision Boundary File</em></h4>
+
+<p>The <em>2025 Census Subdivision Boundary File</em> was created from the lowest level of geography maintained in the <abbr title="National Geographic Database">NGD</abbr>. Primary data manipulation of the product file included preserving the geographic hierarchy of the attributes inherent within a geographic level. A copy of the source <abbr title="census subdivision">CSD</abbr> boundary file in its original format was created to facilitate geoprocessing (<abbr title="for example">e.g.</abbr>, joins, modifications and verification operations).</p>
+<p> The file was verified for spatial and attribute content, translated into French and English, and appropriately named according to the <u><a href="#a4_6">file naming convention</a></u>. Final data processing consisted of the conversion from the SDE feature dataset feature class format, using FME® (Safe Software), into the following file formats supported by Geographic Information System (GIS) software: Shapefile (.shp), Geography Markup Language&nbsp;(.gml), File Geodatabase (.gdb) and GeoPackage (.gpkg).</p>
+<p> The Esri<sup>®</sup> REST service and Web Map Service (WMS) were created and published using ArcGIS<sup>®</sup> Enterprise. </p>
+The Shapefile, Geography Markup Language, File Geodatabase and GeoPackage files were compressed into WinZip<sup>®</sup> files (file extension&nbsp;.zip) and made available for download from the Statistics Canada website.
+
+<h3 id="a3_5">Limitations </h3>
+
+<p>The input data used to create the file was originally obtained from several sources having a wide range of scales. This boundary file will not be precise if plotted at a larger scale than the scale of the source material used in its creation. Maps created from the boundary file should not be used to determine the precise location of boundaries. </p>
+The positional accuracy of the file does not support cadastral, legal, surveying, digitizing or engineering applications.
+
+<h3 id="a3_6">Comparison to other products or versions</h3>
+
+<p>Differences between the <em>2025 Census Subdivision Boundary File</em> and previous  versions of the <em>Census Subdivision Boundary File</em> include:</p>
+
+<ul type="disc">
+  <li>The <em>2025&nbsp;Census Subdivision Boundary File</em> is compatible with the 2025&nbsp;edition of the <em>Road Network File</em> as well as the 2025 edition of the <em>Interim List of Change to Municipal Boundaries, Status and Names</em>.</li>
+  <li>The <em>2025 Census Subdivision Boundary File</em> is similar but not necessarily consistent with the suite of boundary files made available as a part of the 2021&nbsp;Census geographic product line.</li>
+</ul>
+<h3 id="a3_7">Use with other products</h3>
+
+<p>When considering using the <em>2025 Census Subdivision Boundary File</em>, users should be aware of the compatibility of this file with those that are available from other sources. They may not be consistent with Statistics Canada files.</p>
+<h3 id="a3_8">Reference date</h3>
+
+<p>The geographic reference date is a date determined by Statistics Canada to finalize the geographic framework for which statistical data are collected, tabulated and reported. The geographic reference date for the <em>2025 Census Subdivision Boundary File</em> is January 1, 2025.</p>
+<h2 id="a4">4. Technical specifications</h2>
+
+<h3 id="a4_1">Record layout and data descriptions</h3>
+
+<p>The following table identifies and briefly describes the selected attributes comprising the content of the <em>2025 Census Subdivision Boundary File</em>.</p>
+<div class="row mrgn-tp-md mrgn-bttm-md">
+ <div class="col-md-1 col-sm-2 col-xs-2 text-center">
+    <span class="fa fa-table text-primary fa-3-5x"></span>
+ </div>
+ <div class="col-md-11 col-sm-10 col-xs-10"><a href="2025001/tbl/tbl4.1-eng.htm">Table 4.1<br>
+   Record layout - 2025 Census Subdivision Boundary File</a>
+   
+ </div>
+</div>
+  
+<h4>Attribute domain values</h4>
+
+<p><strong>Province and territory unique identifier (PRUID)</strong></p>
+<p> For information on province and territory unique identifiers, refer to the &ldquo;<a href="https://www12.statcan.gc.ca/census-recensement/2021/geo/aip-pia/domain-domaine/index2021-eng.cfm?lang=e&id=PRUID">Provinces and territories (PRUID), 2021 Census</a>&rdquo; table<em>.</em></p>
+<p><strong>Census subdivision type (CSDTYPE)</strong></p>
+<p><abbr title="census subdivisions">CSD</abbr>s are  classified according to designations adopted by provincial, territorial or  federal authorities. The  following is a list of the types of <abbr title="census subdivisions">CSD</abbr>s and their counts by province and  territory. </p>
+
+<div class="row mrgn-tp-md mrgn-bttm-md">
+  <div class="col-md-1 col-sm-2 col-xs-2 text-center">
+    <span class="fa fa-table text-primary fa-3-5x"></span>
+    </div>
+  <div class="col-md-11 col-sm-10 col-xs-10"><a href="2025001/tbl/tbl4.2-eng.htm">Table 4.2<br>
+    Number of census subdivision types by province and territory</a>
+    
+    </div>
+</div>
+<p><strong>Census division type (CDTYPE)</strong></p>
+<p>The following is a list of the types of <abbr title="census divisions">CDs</abbr> and their counts by  province and territory. </p>
+
+<div class="row mrgn-tp-md mrgn-bttm-md">
+  <div class="col-md-1 col-sm-2 col-xs-2 text-center">
+    <span class="fa fa-table text-primary fa-3-5x"></span>
+    </div>
+  <div class="col-md-11 col-sm-10 col-xs-10"><a href="2025001/tbl/tbl4.3-eng.htm">Table 4.3<br>
+    Number of census division types by province and territory</a>
+    </div>
+</div>
+	
+  <h3 id="a4_2">File specifications </h3>
+<p>Not applicable</p>
+<h3 id="a4_3">Software formats</h3>
+
+<p>The <em>2025 Census Subdivision Boundary File</em> is available for download from the Statistics Canada website in the following formats:</p>
+<ul>
+ <li>Shapefile <br>
+   File extension:&nbsp;.shp</li>
+ <li>Geography Markup Language&nbsp;(GML)&nbsp;3.1.1<br>
+   File extension:&nbsp;.gml</li>
+ <li>File Geodatabase<br>
+   File extension:&nbsp;.gdb</li>
+    <li>GeoPackage<br />
+	File extension: .gpkg </li>
+	</ul>
+     
+<p>The <em>2025 Census Subdivision Boundary File</em> is also available as map services from the Statistics Canada website in the following formats:</p>
+<ul>
+ <li>Esri<sup>®</sup> REST service</li>
+ <li>Web Map Service (WMS)</li>
+</ul>
+<p>This reference guide does not provide details on specific software packages available for use with the <em>2025 Census Subdivision Boundary File</em>. Users should contact the appropriate software vendor for such information.</p>
+<h3 id="a4_4">File extension and accented character information</h3>
+
+<p>The Shapefile, Geography Markup Language, File Geodatabase and GeoPackage files are compressed into WinZip<sup>®</sup> files (file extension&nbsp;.zip).</p>
+<p>The <em>2025 Census Subdivision Boundary File</em> contains attributes with accented characters. They were successfully tested in ArcGIS<sup>®</sup>&nbsp;desktop applications version 10.8.2, ArcGIS® Pro 3.3 and FME&nbsp;Data Inspector&nbsp;2024.1.3<sup>®</sup>.
+</p>
+<h3 id="a4_4b">Metadata</h3>
+<p> The downloadable compressed packages (.zip) include a metadata file (.xml) that describes and validates the structure and content of the <em>2025 Census Subdivision Boundary File</em>.</p>
+<p> The same metadata are applied to the Esri<sup>®</sup> REST service and Web Map Service (WMS).</p>
+<h3 id="a4_5">Geographic representation</h3>
+
+<p>The <em>2025 Census Subdivision Boundary File</em> is available from the Statistics Canada website in the following geographic representation:</p>
+<ul>
+  <li>Projection: Lambert conformal conic</li>
+  <li>False easting: 6200000.000000</li>
+  <li>False northing: 3000000.000000</li>
+  <li>Central meridian: -91.866667</li>
+  <li>Standard parallel 1: 49.000000</li>
+  <li>Standard parallel 2: 77.000000</li>
+  <li>Latitude of origin: 63.390675</li>
+  <li>Linear unit: metre (1.000000)</li>
+  <li>Datum: North American 1983 (NAD83)</li>
+  <li>Prime meridian: Greenwich</li>
+  <li>Angular unit: degree</li>
+  <li>Spheroid: GRS 1980</li>
+</ul>
+<p>The North American Datum of&nbsp;1983 (NAD83) is an adjustment of the 1927&nbsp;datum (NAD27) that reflects the higher accuracy of geodetic surveying.</p>
+Users of the <em>2025&nbsp;Census Subdivision Boundary File</em> can transform the file into the representation that best satisfies their needs, knowing of the effects these representations have on angles, areas, distances and direction. Users have the option to choose the best projection in concert with display objectives.
+<h3 id="a4_6">File naming convention</h3>
+
+<p>Spatial product file names follow a file naming convention. The file projection, geographic level, geographic coverage, file type, geographic reference date, file format and language are embedded within the file name. Standardizing file names facilitates storage of compressed files, which will all have the .zip extension.</p>
+<p>Each file name has 13&nbsp;characters. All alphabetic characters are lowercase to maintain consistency.</p>
+<p> <strong>First character:</strong> projection of file</p>
+<ul>
+ <li>l – projection in Lambert conformal conic</li>
+</ul>
+<p><strong>Next three characters:</strong> primary geographic level of file</p>
+<ul>
+ <li>csd – census subdivision</li>
+</ul>
+<p><strong>Next three numbers:</strong> geographic code of coverage</p>
+<ul>
+ <li>000 – Canada</li>
+</ul>
+<p><strong>Next character:</strong> file type</p>
+<ul>
+ <li>a – digital boundary file</li>
+</ul>
+<p><strong>Next two numbers:</strong> geographic reference date</p>
+<p>The geographic reference date is a date determined by Statistics Canada for the purpose of finalizing the geographic framework for which census data will be collected, tabulated and reported. The geographic reference date for the <em>2025 Census Subdivision Boundary File</em> is January 1, 2025.</p>
+<ul type="disc">
+ <li>25 - geographic reference date is 2025</li>
+</ul>
+<p><strong>Next character:</strong> file format</p>
+<ul>
+ <li>a - Shapefile (.shp)</li>
+ <li>f - File Geodatabase (.gdb)</li>
+ <li>g - Geography Markup Language&nbsp;(.gml)</li>
+ <li>p - GeoPackage (.gpkg)</li>
+ <li>s - Services (Esri® REST and Web Map Service [WMS])</li>
+</ul>
+<p><strong>Final two characters:</strong> language</p>
+<ul>
+ <li>_e - English</li>
+ <li>_f - French</li>
+</ul>
+<h2 id="a5">5. Data quality</h2>
+
+<p>Spatial data  quality elements provide information on the fitness for use of a spatial  database by describing why, when and how the data are created, and how accurate  the data are. The elements include an overview describing the purpose and  usage, as well as specific quality elements reporting on lineage, positional accuracy,  attribute accuracy, logical consistency and completeness. This information is  provided to users for all spatial data products disseminated for the census.</p>
+<h3 id="a5_1">Lineage</h3>
+
+<p>Lineage describes the history of the spatial data, including descriptions of the source material from which the data were derived, and the methods of derivation. It also contains the dates of the source material, and all transformations involved in producing the final digital files or map  products.</p>
+<p>For the <em>2025 Census Subdivision Boundary File</em> lineage information, please refer to the <a href="#a3_4">General methodology</a> section. </p>
+
+<h3 id="a5_2">Positional accuracy </h3>
+
+<p>Positional accuracy refers to the absolute and relative accuracy of the positions of geographic features. Absolute accuracy is the closeness of the coordinate values in a dataset to true values or values accepted as true. &lsquo;Relative accuracy&rsquo; is the closeness of the relative positions of features to their respective relative positions accepted as or being true. Descriptions of positional accuracy include the quality of the final file or product after all transformations.</p>
+<p>The <abbr title="National Geographic Database">NGD</abbr> is not fully Global Positioning Systems (GPS)-compliant. However, every possible attempt is made to ensure that the standard geographic area boundaries maintained in the <abbr title="National Geographic Database">NGD</abbr> respect the limits of the administrative entities that they represent (<abbr title="for example">e.g.</abbr>, <abbr title="census division">CD</abbr> and <abbr title="census subdivision">CSD</abbr>) or on which they are based (<abbr title="for example">e.g.</abbr>, census metropolitan area or census agglomeration). The positional accuracy of these limits is dependent upon source materials used by Statistics Canada to identify the location of limits. In addition, due to the importance placed on relative positional accuracy, the positional accuracy of other geographic data (<abbr title="for example">e.g.</abbr>, road network data and hydrographic data) that are stored within the <abbr title="National Geographic Database">NGD</abbr> is considered when positioning the limits of the standard geographic areas.</p>
+
+<h3 id="a5_3">Attribute accuracy</h3>
+
+<p>Attribute accuracy refers to the accuracy of the quantitative and qualitative information attached to each feature (such as population for a population centre, a street name, or a <abbr title="census subdivision">CSD</abbr> name and code).</p>
+<p> As noted under the General methodology section, the attributes (names, types and <abbr title="unique identifiers">UIDs</abbr>) for all standard geographic areas are sourced from Statistics Canada's <abbr title="Spatial Data Infrastructure">SDI</abbr>. The names and types of standard geographic areas have been updated using source materials from provincial, territorial and federal authorities.</p>
+<p> The attribute data associated with the polygons in the <em>2025 Census Subdivision Boundary File</em> were verified against data in the <abbr title="Spatial Data Infrastructure">SDI</abbr> and found to accurately reflect them.</p>
+<h3 id="a5_4">Logical consistency</h3>
+
+<p>Logical consistency describes the dependability of relationships encoded in the data structure of the digital spatial data.</p>
+<p>The <em>2025 Census Subdivision Boundary File</em> was verified against data in the <abbr title="Spatial Data Infrastructure">SDI</abbr> and found to be logically consistent.</p>
+<h3 id="a5_5">Consistency with other products</h3>
+
+<p>The position of the boundaries in the <em>2025 Census Subdivision Boundary File</em> is not necessarily consistent with previous editions of boundary files or road network files as a result of updates made using provincially, territorially and locally sourced data.</p>
+<p>Topology checks were performed with the <em>2025&nbsp;Road Network File</em> and the <em>2025 Census Subdivision Boundary File</em> to measure the degree of integration amongst these products. The results indicated that the degree of integration was within the default tolerance parameters, as defined below.</p>
+<ul type="disc">
+ <li>Tolerance: 0.00001 metres</li>
+ <li>Resolution: 0.000005 metres </li>
+</ul>
+
+<h3 id="a5_6">Completeness</h3>
+
+<p>Completeness refers to the degree to which geographic features, their attributes and their relationships are included or omitted in a dataset. It also includes information on selection criteria, definitions used and other relevant mapping rules.</p>
+<p>The <em>2025 Census Subdivision Boundary File</em> contains the complete set of standard geographic areas for this level of the geographic hierarchy. Users should be aware that individual <abbr title="census subdivisions">CSDs</abbr> may consist of two or more geographic parts.</p>
+<p>Information about any <abbr title="census subdivision">CSD</abbr> changes  that were effective on or before January 1, 2025 reference date must have been  received by Statistics Canada within a reasonable time in order to be integrated  into the product. </p>
+
+
+<h2 id="a6">Appendices</h2>
+<p>See the <a href="https://www12.statcan.gc.ca/census-recensement/2011/geo/bound-limit/bound-limit-s-eng.cfm?year=25"><em>2025 Census Subdivision  Boundary File</em></a>.<u> </u></p>
+<p>
+ See  the <a href="https://www12.statcan.gc.ca/census-recensement/2011/geo/RNF-FRR/index-s-eng.cfm?year=25"><em>2025 Road Network File</em></a><em>.</em></p><p>
+See  the <a href="https://www12.statcan.gc.ca/census-recensement/2021/geo/sip-pis/boundary-limites/index2021-eng.cfm?year=21"><em>2021 Boundary Files</em>.</a><u> </u></p><p>
+See  the <a href="https://www12.statcan.gc.ca/census-recensement/2021/geo/sip-pis/rnf-frr/index2021-eng.cfm?year=21"><em>2021 Road Network File</em></a><em>.</em></p>
+
+<p>See <a href="https://www12.statcan.gc.ca/census-recensement/2021/ref/dict/fig/index-eng.cfm?ID=F1_1">Figure&nbsp;1.1, &quot;Hierarchy of standard geographic areas for dissemination, 2021 Census,&quot;</a> from the <em>Dictionary, Census of Population, 2021</em>.</p>
+<p> See <a href="/n1/pub/92f0009x/92f0009x2025001-eng.htm"><em>Interim List of Changes to Municipal Boundaries, Status, and Names, Up to January 1st, 2025</em></a>.</p>
+</section>
+<!-- More info button text --> 
+<!-- More info page -->
+<section id="moreinfo" class="mfp-hide modal-dialog modal-content overlay-def">
+  <header class="modal-header">
+    <h2 class="modal-title">More information</h2>
+  </header>
+  <div class="modal-body">
+  
+<div class="pstn-rght-lg pstn-rght-md pstn-lft-md pstn-lft-sm pstn-lft-xs mrgn-lft-md mrgn-rght-sm">
+    <span class="label label-primary">ISSN: 1911-5768</span>
+  </div>
+  <span class="clearfix"></span>
+    <h3>Note of appreciation </h3>
+    <p>Canada owes the success of its statistical system to a long-standing partnership between Statistics Canada, the citizens of Canada, its businesses, governments and other institutions. Accurate and timely statistical information could not be produced without their continued co-operation and goodwill.</p>
+    <h3>Standards of service to the public</h3>
+    <p>Statistics Canada is committed to serving its clients in a prompt, reliable and courteous manner. To this end, the Agency has developed <a href="https://www.statcan.gc.ca/eng/about/service/standards">standards of service</a> which its employees observe in serving its clients.</p>
+    <h3>Copyright</h3>
+    <p>Published by authority of the Minister responsible for Statistics Canada.</p>
+<p>© His Majesty the King in Right of Canada as represented by the Minister of Industry, 2025</p>
+  <p>Use of this publication is governed by the <a href="https://www.statcan.gc.ca/eng/reference/licence">Statistics Canada Open Licence Agreement</a>.</p>
+    <p>Catalogue <abbr title="number">no.</abbr> 92-162-G</p>
+<p> Frequency: Ocassional</p>
+<p> Ottawa</p>
+    
+    <a class="btn btn-primary popup-modal-dismiss">close</a> </div>
+</section>
+<!-- END More info page --> 
+
+
+
+
+<div class="pagedetails">
+	<dl id="wb-dtmd">
+		<dt>Date modified:&#32;</dt>
+		<dd><time property="dateModified">
+ 2025-06-19
+</time></dd>
+	</dl>
+</div>
+</main>
+
+<footer id="wb-info">
+	<h2 class="wb-inv">About this site</h2>
+	<div class="gc-contextual">
+		<div class="container">
+			<nav>
+				<h3>Statistics Canada</h3>
+				<ul class="list-unstyled colcount-sm-2 colcount-md-3">
+					<li><a href="https://www.statcan.gc.ca/en/reference/refcentre/index">Contact StatCan</a></li>
+					<li><a href="https://www.statcan.gc.ca/en/trust">Trust Centre</a></li>
+				</ul>
+			</nav>
+		</div>
+	</div>
+	<div class="gc-main-footer">
+		<div class="container">
+			<nav>
+				<h3>Government of Canada</h3>
+				<ul class="list-unstyled colcount-sm-2 colcount-md-3">
+					<li><a href="https://www.canada.ca/en/contact.html">All contacts</a></li>
+					<li><a href="https://www.canada.ca/en/government/dept.html">Departments and agencies</a></li>
+					<li><a href="https://www.canada.ca/en/government/system.html">About government</a></li>
+				</ul>
+				<h4><span class="wb-inv">Themes and topics</span></h4>
+				<ul class="list-unstyled colcount-sm-2 colcount-md-3">
+					<li><a href="https://www.canada.ca/en/services/jobs.html">Jobs</a></li>
+					<li><a href="https://www.canada.ca/en/services/immigration-citizenship.html">Immigration and citizenship</a></li>
+					<li><a href="https://travel.gc.ca/">Travel and tourism</a></li>
+					<li><a href="https://www.canada.ca/en/services/business.html">Business</a></li>
+					<li><a href="https://www.canada.ca/en/services/benefits.html">Benefits</a></li>
+					<li><a href="https://www.canada.ca/en/services/health.html">Health</a></li>
+					<li><a href="https://www.canada.ca/en/services/taxes.html">Taxes</a></li>
+					<li><a href="https://www.canada.ca/en/services/environment.html">Environment and natural resources</a></li>
+					<li><a href="https://www.canada.ca/en/services/defence.html">National security and defence</a></li>
+					<li><a href="https://www.canada.ca/en/services/culture.html">Culture, history and sport</a></li>
+					<li><a href="https://www.canada.ca/en/services/policing.html">Policing, justice and emergencies</a></li>
+					<li><a href="https://www.canada.ca/en/services/transport.html">Transport and infrastructure</a></li>
+					<li><a href="https://international.gc.ca/world-monde/index.aspx?lang=eng">Canada and the world</a></li>
+					<li><a href="https://www.canada.ca/en/services/finance.html">Money and finance</a></li>
+					<li><a href="https://www.canada.ca/en/services/science.html">Science and innovation</a></li>
+					<li><a href="https://www.canada.ca/en/services/indigenous-peoples.html">Indigenous peoples</a></li>
+					<li><a href="https://www.canada.ca/en/services/veterans.html">Veterans and military</a></li>
+					<li><a href="https://www.canada.ca/en/services/youth.html">Youth</a></li>
+					<li><a href="https://www.canada.ca/en/services/life-events.html">Manage life events</a></li>
+				</ul>
+			</nav>
+		</div>
+	</div>
+	<div class="gc-sub-footer">
+		<div class="container d-flex align-items-center">
+			<nav>
+				<h3 class="wb-inv">Government of Canada Corporate</h3>
+				<ul>
+					<li><a href="https://www.canada.ca/en/social.html">Social media</a></li>
+					<li><a href="https://www.canada.ca/en/mobile.html">Mobile applications</a></li>
+					<li><a href="https://www.canada.ca/en/government/about-canada-ca.html">About Canada.ca</a></li>
+					<li><a href="https://www.statcan.gc.ca/en/terms-conditions">Terms and conditions</a></li>
+					<li><a href="https://www.statcan.gc.ca/en/about/transparency/privacy">Privacy</a></li>
+				</ul>
+			</nav>
+			<div class="wtrmrk align-self-end">
+				<img src="/wet-boew4b/assets/wmms-blk.svg" alt="Symbol of the Government of Canada">
+			</div>
+		</div>
+	</div>
+</footer>
+
+<script>
+
+    modifyBreadCrum();
+    
+
+    function modifyBreadCrum(){
+        
+    let dailyEn = "n1/dai-quo/index-eng.htm";
+    let dailyFr = "n1/dai-quo/index-fra.htm";
+ 
+    let breadcrumb = document.querySelector("#wb-bc ol.breadcrumb");
+        
+    if(breadcrumb === undefined || breadcrumb === null || breadcrumb.children.length == 0){
+        return;
+    } 
+        
+    let lastListNode = breadcrumb.children[breadcrumb.children.length -1];
+    
+    if(window.location.href.indexOf("daily-quotidien") != -1 || window.location.href.indexOf("dai-quo") != -1){
+        let href = window.location.href;
+        let env = href.split("n1")[0];
+        href = href.indexOf("eng") != -1 ? env + dailyEn : env + dailyFr;
+
+        createBreadcrumAnchor(href);
+    }
+    else{
+        removeBreadcrumNotAnchor();
+    }
+
+    return;
+
+    function createBreadcrumAnchor(href){
+
+        let anchor = document.createElement("a");
+    
+        if(lastListNode.lastChild !== undefined && lastListNode.lastChild !== null){
+            if(lastListNode.lastChild.nodeName === anchor.nodeName){
+                return;
+            } 
+
+            anchor.innerHTML = lastListNode.innerHTML;
+            anchor.href = href;
+            lastListNode.innerHTML = anchor.outerHTML; 
+        }
+    }
+
+    function removeBreadcrumNotAnchor(){
+
+        let anchor = document.createElement("a");
+
+        if(lastListNode.lastChild !== undefined && lastListNode.lastChild !== null){
+            if(lastListNode.lastChild.nodeName === anchor.nodeName){
+                return;
+            } 
+        
+            breadcrumb.removeChild(lastListNode);
+        }
+
+    }
+
+    }
+
+</script>
+
+<!--[if gte IE 9 | !IE ]><!-->
+<script src="/wet-boew4b/js/wet-boew.min.js"></script>
+<script src="/wet-boew4b/js/theme.min.js"></script>
+<!--<![endif]-->
+<!--[if lt IE 9]>
+<script src="/wet-boew4b/js/ie8-wet-boew2.min.js"></script>
+<![endif]-->
+<!-- InvitationManager -->
+<script src="/wet-boew4b/invitation-manager/Overlay.js"></script>
+<script src="/wet-boew4b/invitation-manager/InvitationManager.js"></script>
+<!-- End InvitationManager -->
+<script type="text/javascript">_satellite.pageBottom();</script>
+
+<!-- CustomScriptsJSStart -->
+
+<!-- CustomScriptsJSEnd -->
+
+</body>
+</html>

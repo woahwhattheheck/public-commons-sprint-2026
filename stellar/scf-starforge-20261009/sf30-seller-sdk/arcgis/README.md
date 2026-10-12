@@ -2,6 +2,10 @@
 
 The ArcGIS adapter imports a selected FeatureServer or MapServer layer into the existing SF30 data publisher. The same publisher owns saved plans, extraction, typed review, dataset versions, schedules, local operator UI and SF88 buyer preparation. The adapter supplies source capture and projection; public queries and payment handling use the existing implementations.
 
+## Open the complete source workbench
+
+[WORKBENCH.md](WORKBENCH.md) covers capture or exact-file import, native field mapping, immutable source-edition selection, the existing publication workflow, managed deployment and receiving downloads in one local interface. Reopen an existing publisher with `starforge arcgis workbench --workspace ABSOLUTE_WORKSPACE`; create a new one with `--create --state ABSOLUTE_DATASET_DIRECTORY`. The same CLI is available directly as `node stellar/scf-starforge-20261009/sf30-seller-sdk/arcgis/cli.mjs workbench`.
+
 ## Start with a live layer
 
 Use Linux, Node 22.16 or later and util-linux `flock`. From the repository or extracted source root:

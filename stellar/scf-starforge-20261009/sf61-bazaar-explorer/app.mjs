@@ -1,4 +1,5 @@
 // MIT. SF61 browser: display original provider rows safely; never initiate paid-origin calls.
+import { mountAtlasWorkspace } from './workspace-ui.mjs';
 const $ = id => document.getElementById(id);
 const form = $('query-form');
 const status = $('status');
@@ -9,6 +10,7 @@ const next = $('next');
 const exportButton = $('export');
 const pageInfo = $('page-info');
 const PAGE_SIZE = 25;
+let retainedWorkspace = null;
 const reviewState = {choice:null, prepared:null, generation:0, controller:null};
 const state = {
   nav:null, request:null, report:null, loading:false,
@@ -364,6 +366,7 @@ async function load(nav) {
     state.nav = nav; state.request = request; state.report = data;
     state.loading = false; state.pending = null; state.controller = null;
     render(data);
+    retainedWorkspace?.observationChanged();
   } catch (error) {
     if (requestId !== state.requestId) return;
     state.loading = false; state.pending = null; state.controller = null;
@@ -428,12 +431,24 @@ async function source() {
     $('source-kind').textContent = origin.mode === 'LOCAL_NONPAYABLE_SF44_FIXTURE' ?
       'Original SF44 nonpayable development catalog' :
       origin.mode === 'ORIGINAL_SF60_DURABLE_CATALOG' ?
-      'Original SF60 persistent catalog · local source' : 'Operator-selected public facilitator';
+      'Original SF60 persistent catalog · local source' :
+      origin.mode === 'RETAINED_CATALOG_WORKSPACE' ? 'Saved catalog workspace' : 'Operator-selected public facilitator';
     $('source-origin').textContent = origin.origin;
+    return origin;
   } catch {
     $('source-kind').textContent = 'Discovery source unavailable';
     $('source-origin').textContent = 'Check the local explorer server';
   }
 }
-await source();
-await load(firstPage(draftFilters()));
+const sourceDetails = await source();
+if (sourceDetails?.workspaceEnabled) retainedWorkspace = await mountAtlasWorkspace({
+  getObservedPage: () => state.report?.resources?.length && state.request && state.report.mode !== 'LOCAL_NONPAYABLE_SF44_FIXTURE'
+    ? observedPage(state.report, state.request) : null,
+});
+if (sourceDetails?.mode === 'RETAINED_CATALOG_WORKSPACE') {
+  $('status').textContent = 'Open a saved capture below to browse retained catalog offers.';
+  $('source-origin').textContent = 'Original catalog observations retained on this operator host';
+  form.querySelector('button[type="submit"]').disabled = true;
+  $('clear').disabled = true;
+  $('query-form').setAttribute('aria-disabled', 'true');
+} else await load(firstPage(draftFilters()));

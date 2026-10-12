@@ -85,7 +85,7 @@ function runWorker(python,args,operatorEnvironment,signal,rpcProxyUrl,observerEn
       try {
         const result=JSON.parse(Buffer.concat(chunks).toString('utf8'));
         need(result?.schema===WORKER_SCHEMA&&
-          ['FINALIZED','IDEMPOTENT_FINALIZED','NOT_FINALIZED','WORKER_ERROR'].includes(result.outcome)&&
+          ['FINALIZED','IDEMPOTENT_FINALIZED','NOT_FINALIZED','WORKER_ERROR','RESERVATION_VERIFIED'].includes(result.outcome)&&
           (code===0||code===2),'INBOX_FINALIZATION_RESULT_INVALID');
         finish(null,result);
       } catch {finish(new InputError('INBOX_FINALIZATION_WORKER_FAILED'));}

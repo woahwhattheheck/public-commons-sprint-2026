@@ -4,6 +4,7 @@ import {createHash, randomBytes} from 'node:crypto';
 import {readFile, open, mkdir, lstat, readdir, link, unlink, realpath} from 'node:fs/promises';
 import {dirname, join, resolve, relative, isAbsolute} from 'node:path';
 import {fileURLToPath, pathToFileURL} from 'node:url';
+import {readBrowserAssets} from '../../distribution/browser-assets.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const NATIVE = 'stellar/scf-starforge-20261009/sf30-seller-sdk/python/workspace';
@@ -213,9 +214,14 @@ function port(value) {
 }
 async function operatorOptions(value) {
   if (!value) {
-    const candidate = join(HERE, 'web');
-    if (!(await present(candidate))) return {};
-    value = candidate;
+    if (!(await present(join(HERE, 'web')))) return {};
+    const operatorPath = '/diffbot-dataset/';
+    const routes = await readBrowserAssets(new URL('./browser-assets.json', import.meta.url));
+    // The original Python server owns /local-draft-store.mjs. This same manifest
+    // also maps that shared import for the distribution's browser module graph.
+    const operatorAssets = [...routes].filter(([path]) => path.startsWith(operatorPath))
+      .map(([path, {url, type}]) => ({path, file: url, type}));
+    return {operatorPath, operatorAssets};
   }
   const selected = await realpath(resolve(value)), info = await lstat(selected);
   if (info.isDirectory()) {

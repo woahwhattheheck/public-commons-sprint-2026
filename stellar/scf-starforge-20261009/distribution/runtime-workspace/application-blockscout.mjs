@@ -111,7 +111,8 @@ export async function blockscoutStartup(request, text) {
     'APPLICATION_BLOCKSCOUT_STARTUP_CHANGED');
   let url;
   try { url = new URL(value.providerDesk); } catch { need(false, 'APPLICATION_BLOCKSCOUT_STARTUP_CHANGED'); }
-  need(url.protocol === 'http:' && url.hostname === '127.0.0.1' && Boolean(url.port) &&
+  need(url.protocol === 'http:' && url.hostname === '127.0.0.1' &&
+    Number(url.port || 80) >= 1 && Number(url.port || 80) <= 65535 &&
     !url.username && !url.password && !url.search && url.pathname === '/' &&
     /^[a-f0-9]{64}$/.test(url.hash.slice(1)), 'APPLICATION_BLOCKSCOUT_STARTUP_CHANGED');
   return { url: url.href, original: { schema: STARTUP, packageDirectory, stateDirectory,

@@ -49,13 +49,13 @@ const policy = {
 
 export function publisherTools(tool) {
   return [
-    tool('merchant_publishers', 'List host-declared retained PostgreSQL/SQLite/MySQL/MongoDB/Google Sheets/Sheet Best/SFTP/ArcGIS publisher aliases, including Census ACS, and process ownership. Does not open a workspace, start a timer or query a source.', {}, [], read),
+    tool('merchant_publishers', 'List host-declared retained PostgreSQL/SQLite/MySQL/MongoDB/Google Sheets/Sheet Best/NocoDB/SFTP/ArcGIS publisher aliases, including Census ACS, and process ownership. Does not open a workspace, start a timer or query a source.', {}, [], read),
     tool('merchant_publisher_open', 'Open the original retained publisher and its single native scheduler under the original workspace lease. Previously enabled refreshes resume as in the original browser server. An already-open alias returns the same instance.', selected, ['publisher'], { idempotent: true, openWorld: true }),
     tool('merchant_publisher_close', 'Close this exact process-owned publisher instance. Original scheduler stops future intervals, original active work drains or cancels through its existing close method, and the workspace lease is released. Saved policy and operations remain.', { ...selected, instanceId: uuid }, ['publisher', 'instanceId'], { destructive: true }),
     tool('merchant_publisher_status', 'Read native saved plans, extraction runs, events and active progress, with original pagination. Local source paths are omitted; native hashes and identities are unchanged. Open the alias first.', {
       ...selected, limit: page.limit, plansOffset: revision, runsOffset: revision, historyOffset: revision,
     }, ['publisher'], read),
-    tool('merchant_publisher_source', 'Inspect the original configured source hash, approved named source definitions, public projections and parameter schemas. MongoDB retains its collection/pipeline/read concern; Sheets retains its range/type/formula bindings; Sheet Best retains its selected connection/tab/value mode and complete records response; SFTP retains the pinned host, file path, format, pointers and typed comparisons. Reads the declaration without querying the provider or returning credentials.', selected, ['publisher'], read),
+    tool('merchant_publisher_source', 'Inspect the original configured source hash, approved named source definitions, public projections and parameter schemas. MongoDB retains its collection/pipeline/read concern; Sheets retains its range/type/formula bindings; Sheet Best retains its selected connection/tab/value mode and complete records response; NocoDB retains exact v3 table/view/field IDs, complete page/count observations and explicit scalar encodings; SFTP retains the pinned host, file path, format, pointers and typed comparisons. Reads the declaration without querying the provider or returning credentials.', selected, ['publisher'], read),
     tool('merchant_publisher_target', 'Read the original versioned seller control schema, current snapshot/revision, retained versions and public resources. Uses only the existing host-bound private control connection.', selected, ['publisher'], read),
     tool('merchant_publisher_plan_save', 'Save an original immutable extraction plan using the inspected sourceHash, approved query and source-specific input (empty for Sheets), explicit public column mapping and extraction limits/order. The original driver retains and validates its own source. After a lost reply inspect native plans before saving again.', { ...selected, plan: planSchema }, ['publisher', 'plan']),
     tool('merchant_publisher_extract', 'Start the original read-only extraction with an explicit native run UUID and exact saved plan digest. Returns immediately; inspect this same run to follow progress. Repeating the same UUID/plan returns its retained run without another query.', {
@@ -172,12 +172,14 @@ function operationFailure(error) {
 /** Only constant original driver imports are selected by a host-declared kind.
  * No module, path, connection URL, source JSON or executable is an MCP argument. */
 async function originalFactory(kind) {
+  if (kind === 'bls-labor') return (await import('../../stellar/scf-starforge-20261009/sf30-seller-sdk/bls-labor/publisher/model.mjs')).openBlsPublisher;
   if (kind === 'census-acs') return (await import('../../stellar/scf-starforge-20261009/sf30-seller-sdk/census-acs/publisher/model.mjs')).openCensusPublisher;
   if (kind === 'postgres') return (await import('../../stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/publisher/model.mjs')).openPostgresPublisher;
   if (kind === 'sqlite') return (await import('../../stellar/scf-starforge-20261009/sf30-seller-sdk/sqlite/publisher/model.mjs')).openSqlitePublisher;
   if (kind === 'mysql') return (await import('../../stellar/scf-starforge-20261009/sf30-seller-sdk/mysql/publisher/model.mjs')).openMysqlPublisher;
   if (kind === 'mongodb') return (await import('../../stellar/scf-starforge-20261009/sf30-seller-sdk/mongodb/publisher/model.mjs')).openMongoPublisher;
   if (kind === 'sheets') return (await import('../../stellar/scf-starforge-20261009/sf30-seller-sdk/sheets/publisher/model.mjs')).openSheetsPublisher;
+  if (kind === 'nocodb') return (await import('../../stellar/scf-starforge-20261009/sf30-seller-sdk/nocodb/publisher/model.mjs')).openNocoDBPublisher;
   if (kind === 'sheetbest') return (await import('../../stellar/scf-starforge-20261009/sf30-seller-sdk/sheetbest/publisher/model.mjs')).openSheetBestPublisher;
   if (kind === 'sftp') return (await import('../../stellar/scf-starforge-20261009/sf30-seller-sdk/sftp/publisher/model.mjs')).openSftpPublisher;
   if (kind === 'arcgis') return (await import('../../stellar/scf-starforge-20261009/sf30-seller-sdk/arcgis/publisher.mjs')).openArcgisPublisher;
@@ -185,7 +187,7 @@ async function originalFactory(kind) {
 }
 
 export class MerchantPublisher {
-  #config; #entries = new Map(); #closing = false; #close;
+  #config; #entries = new Map(); #opening = new Map(); #closing = false; #close;
   constructor(config) { this.#config = config; }
   get summary() {
     return { configured: Boolean(this.#config.publishers),
@@ -214,8 +216,20 @@ export class MerchantPublisher {
       native: statusView(entry.publisher.status(options)), schedule: entry.schedule.status() };
   }
   async #open(alias) {
-    const configured = this.#declared(alias), existing = this.#entries.get(alias);
-    if (existing) return this.#view(this.#entry(alias));
+    this.#declared(alias);
+    if (this.#closing) throw failure('PUBLISHER_CLOSING', 'The merchant publisher adapter is closing.');
+    if (this.#entries.has(alias)) return this.#view(this.#entry(alias));
+    if (!this.#opening.has(alias)) {
+      const opening = this.#openOriginal(alias);
+      this.#opening.set(alias, opening);
+      opening.finally(() => { if (this.#opening.get(alias) === opening) this.#opening.delete(alias); }).catch(() => {});
+    }
+    await this.#opening.get(alias);
+    if (this.#closing) throw failure('PUBLISHER_CLOSING', 'The merchant publisher adapter is closing.');
+    return this.#view(this.#entry(alias));
+  }
+  async #openOriginal(alias) {
+    const configured = this.#declared(alias);
     const factory = await originalFactory(configured.kind);
     const publisher = await factory({ directory: configured.directory,
       ...(configured.seller ? { seller: configured.seller, resource: configured.resource } : {}) });
@@ -223,9 +237,9 @@ export class MerchantPublisher {
     try {
       const { openPostgresSchedule } = await import('../../stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/publisher/schedule.mjs');
       schedule = await openPostgresSchedule({ publisher });
-      const entry = { alias, publisher, schedule, instanceId: randomUUID(), pending: new Set(), closing: null };
+      const entry = { alias, publisher, schedule, instanceId: randomUUID(), pending: new Set(), children: new Map(), closing: null };
       this.#entries.set(alias, entry);
-      schedule.start();
+      if (!this.#closing) schedule.start();
       return this.#view(entry);
     } catch (error) {
       this.#entries.delete(alias);
@@ -233,17 +247,71 @@ export class MerchantPublisher {
       throw error;
     }
   }
+  /** Borrow the same native publisher/scheduler. This host-only hook is never an MCP payload.
+   * A child owns only its listeners/models/reads. Its close must not close publisher or schedule. */
+  async borrow(alias, { kind, key, open } = {}) {
+    const configured = this.#declared(alias);
+    if (configured.kind !== kind || typeof key !== 'string' || !key || key.length > 160 || typeof open !== 'function')
+      throw failure('PUBLISHER_BORROW_INVALID', 'Bind the declared native kind and one stable host child key.');
+    await this.#open(alias);
+    const entry = this.#entry(alias);
+    let child = entry.children.get(key);
+    if (!child) {
+      child = { key, pending: new Set(), closing: null, resource: null, ready: null, lease: null };
+      entry.children.set(key, child);
+      child.ready = Promise.resolve().then(() => open({ publisher: entry.publisher, schedule: entry.schedule,
+        instanceId: entry.instanceId })).then(resource => {
+        if (!resource || typeof resource.close !== 'function')
+          throw failure('PUBLISHER_BORROW_INVALID', 'The owned child must provide its native close operation.');
+        child.resource = resource; return resource;
+      }).catch(error => { if (entry.children.get(key) === child) entry.children.delete(key); throw error; });
+      const owner = this;
+      child.lease = Object.freeze({
+        publisher: entry.publisher, schedule: entry.schedule, instanceId: entry.instanceId,
+        get resource() { return child.resource; },
+        get closed() { return Boolean(child.closing || entry.closing || owner.#closing); },
+        run(action) {
+          if (typeof action !== 'function') throw failure('PUBLISHER_BORROW_INVALID', 'A host operation is required.');
+          if (owner.#closing || owner.#entry(alias) !== entry || child.closing)
+            throw failure('PUBLISHER_CLOSING', 'This original publisher child is closing.');
+          const operation = Promise.resolve().then(() => action(child.resource));
+          child.pending.add(operation); entry.pending.add(operation);
+          return operation.finally(() => { child.pending.delete(operation); entry.pending.delete(operation); });
+        },
+        release: () => owner.#closeChild(entry, child),
+      });
+    }
+    await child.ready;
+    if (this.#closing || this.#entry(alias) !== entry || child.closing)
+      throw failure('PUBLISHER_CLOSING', 'This original publisher child is closing.');
+    return child.lease;
+  }
+  #closeChild(entry, child) {
+    if (!child.closing) child.closing = (async () => {
+      try {
+        let resource;
+        try { resource = await child.ready; } catch { return; }
+        await Promise.allSettled([...child.pending]);
+        await resource.close();
+      } finally { if (entry.children.get(child.key) === child) entry.children.delete(child.key); }
+    })();
+    return child.closing;
+  }
   async #stop(entry) {
     if (!entry.closing) {
       entry.closing = (async () => {
-        // Stop future native intervals immediately while already accepted
-        // reads and the original scheduler's current operation drain.
-        const scheduleClosing = (async () => entry.schedule.close())();
+        // Stop new schedules and close each borrowed lifetime before releasing the core lease.
+        const scheduling = (async () => entry.schedule.close())();
+        const children = [...entry.children.values()].map(child => this.#closeChild(entry, child));
+        let failed;
         try {
-          const [scheduled] = await Promise.allSettled([scheduleClosing, ...entry.pending]);
-          if (scheduled.status === 'rejected') throw scheduled.reason;
-        } finally { await entry.publisher.close(); }
-        if (this.#entries.get(entry.alias) === entry) this.#entries.delete(entry.alias);
+          const results = await Promise.allSettled([scheduling, ...children, ...entry.pending]);
+          failed = results.find(result => result.status === 'rejected');
+        } finally {
+          await entry.publisher.close();
+          if (this.#entries.get(entry.alias) === entry) this.#entries.delete(entry.alias);
+        }
+        if (failed) throw failed.reason;
         return { publisher: entry.alias, instanceId: entry.instanceId, state: 'CLOSED' };
       })();
     }
@@ -357,6 +425,7 @@ export class MerchantPublisher {
     if (this.#close) return this.#close;
     this.#closing = true;
     this.#close = (async () => {
+      await Promise.allSettled([...this.#opening.values()]);
       const outcomes = await Promise.allSettled([...this.#entries.values()].map(entry => this.#stop(entry)));
       if (outcomes.some(result => result.status === 'rejected'))
         throw failure('PUBLISHER_SHUTDOWN_INCOMPLETE', 'An original publisher reported incomplete shutdown; inspect its retained workspace.');

@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Review the original AgentSmith x402 offer and prepare a portable Stellar buyer and Freighter receiving packet.">
+  <meta name="theme-color" content="#f4f4f4">
+  <title>Stellar Forge — AgentSmith buyer</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/agentsmith.css">
+  <script type="module" src="/agentsmith-setup.mjs"></script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="site-header">
+  <a class="brand" href="/" aria-label="Stellar Forge home"><svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 0 21 11 32 16 21 21 16 32 11 21 0 16 11 11Z" fill="currentColor"/><path d="m16 9 2.2 4.8L23 16l-4.8 2.2L16 23l-2.2-4.8L9 16l4.8-2.2Z" fill="#f4f4f4"/></svg><span>Stellar Forge<span class="brand-caption">DEVELOPER TOOLKIT</span></span></a>
+  <nav aria-label="Primary"><a href="/#configure">Merchant workspace</a><a href="/woo.html">WooCommerce</a><a href="/fleet.html">Fleet</a><a href="/agentsmith.html" aria-current="page">AgentSmith buyer</a></nav>
+</header>
+<main id="main" class="shell agentsmith-shell">
+  <section class="agentsmith-heading" aria-labelledby="page-title">
+    <div><p class="eyebrow">BUYER / STELLAR TESTNET</p><h1 id="page-title">An offer. One operation.</h1><p class="agentsmith-intro">Carry an AgentSmith request into the original Stellar buyer. Review its terms, prepare the receiving host, then authorize its transfer with Freighter.</p></div>
+    <div class="agentsmith-context"><span class="small-label">DELIVERY</span><strong>Original source → private operator</strong><p>Exact request bytes, a saved preparation, and the native wallet workflow travel together.</p></div>
+  </section>
+  <div class="agentsmith-toolbar" role="group" aria-label="Receiving packet files">
+    <div><strong>Receiving packet</strong><span id="source-status" class="mono" role="status">Loading retained HTTP source…</span></div>
+    <div class="setup-actions">
+      <button class="button small" id="load-default" type="button">Use captured METAR request</button>
+      <label class="button small file-label">Open source bundle<input id="source-file" type="file" accept="application/json,.json"></label>
+      <label class="button small file-label">Open saved draft<input id="draft-file" type="file" accept="application/json,.json"></label>
+    </div>
+  </div>
+  <p id="notice" class="agentsmith-notice" role="status" aria-live="polite" hidden></p>
+  <noscript><p class="agentsmith-notice">Enable JavaScript to review the original source and download the receiving packet.</p></noscript>
+  <div class="agentsmith-layout">
+    <section id="source-section" class="agentsmith-panel" aria-labelledby="source-heading">
+      <div class="agentsmith-panel-heading"><span class="small-label">01 / ORIGINAL HTTP SOURCE</span><h2 id="source-heading">Review the request and terms.</h2></div>
+      <dl class="agentsmith-facts">
+        <div><dt>Captured</dt><dd id="capture-time">Loading…</dd></div>
+        <div><dt>Resource</dt><dd><a id="resource-url" rel="noopener noreferrer" target="_blank">Loading…</a></dd></div>
+        <div><dt>Response</dt><dd id="http-response">Loading…</dd></div>
+        <div><dt>Network</dt><dd id="offer-network">Loading…</dd></div>
+        <div><dt>Maximum</dt><dd id="offer-amount">Loading…</dd></div>
+        <div><dt>Authorization</dt><dd id="offer-lifetime">Loading…</dd></div>
+        <div><dt>Asset</dt><dd id="offer-asset" class="agentsmith-hash">Loading…</dd></div>
+        <div><dt>Recipient</dt><dd id="offer-recipient" class="agentsmith-hash">Loading…</dd></div>
+      </dl>
+      <div class="agentsmith-request"><div><strong>POST body</strong><span class="mono" id="request-size"></span></div><pre id="request-body" aria-label="Original request body"></pre></div>
+      <details class="agentsmith-details"><summary>All original payment choices</summary><pre id="original-choices"></pre></details>
+      <details class="agentsmith-details"><summary>Original source digests</summary><dl class="agentsmith-facts compact"><div><dt>Request</dt><dd id="request-sha" class="agentsmith-hash"></dd></div><div><dt>Bundle</dt><dd id="bundle-sha" class="agentsmith-hash"></dd></div></dl></details>
+    </section>
+    <section class="agentsmith-panel" aria-labelledby="receiving-heading">
+      <div class="agentsmith-panel-heading"><span class="small-label">02 / RECEIVING HOST</span><h2 id="receiving-heading">Keep the operation together.</h2></div>
+      <form id="receiving-form" class="agentsmith-form" novalidate>
+        <label>Packet folder<input id="packet-folder" name="folder" autocomplete="off" value="agentsmith-receiving" maxlength="80" required><span>The folder inside the downloaded ZIP.</span></label>
+        <label>Private operation directory<input id="private-directory" name="privateDirectory" autocomplete="off" spellcheck="false" placeholder="/absolute/private/agentsmith-operation" required><span>A new absolute directory on the Linux receiving host. Reopen an existing operation with its saved draft.</span></label>
+        <label>Stable operation ID<input id="intent-id" name="intentId" autocomplete="off" spellcheck="false" maxlength="128" required><span>Keep this ID with the request, approval, wallet and result.</span></label>
+        <label>Operator ID<input id="actor" name="actor" autocomplete="off" spellcheck="false" value="agentsmith-receiver" maxlength="128" required><span>The operator responsible for this purchase.</span></label>
+        <label>Freighter public account <span class="field-optional">Optional until initialization</span><input id="payer" name="payer" autocomplete="off" spellcheck="false" placeholder="G…" maxlength="56"><span>Use the account selected in Freighter on Stellar testnet.</span></label>
+        <div class="agentsmith-export"><button id="download-packet" class="button primary" type="submit" disabled>Download receiving packet <span aria-hidden="true">↓</span></button><button id="save-draft" class="button" type="button" disabled>Save editable draft</button></div>
+      </form>
+      <p class="agentsmith-local">Preparation happens in this browser. The download includes the original source and a complete local launch guide.</p>
+    </section>
+  </div>
+  <section id="receiving-run" class="agentsmith-run" aria-labelledby="run-heading">
+    <div class="section-heading"><div><p class="eyebrow">03 / RUN ON THE RECEIVING HOST</p><h2 id="run-heading">Prepare. Connect. Receive.</h2></div><p>Unzip the packet and use Linux, Node.js 22.16 or later, Python 3.11 or later, and the existing Stellar Forge toolkit with its native and freighter-wallet features.</p></div>
+    <ol class="agentsmith-steps">
+      <li><div><span class="small-label">PREPARE AND REVIEW</span><h3>Open the exact request.</h3><p>Restore the captured offer and prepare the original buyer. Replace the toolkit path with the receiving machine’s existing installation or checkout.</p></div><pre><code>node buyer.mjs prepare --toolkit /ABSOLUTE/EXISTING/TOOLKIT
+node buyer.mjs review --toolkit /ABSOLUTE/EXISTING/TOOLKIT</code></pre></li>
+      <li><div><span class="small-label">INITIALIZE ONCE</span><h3>Bind the private operator.</h3><p>The original operator creates its policy, keys and reservation ledger. Add <code>--payer</code> and the actual public account if it is still empty in the packet.</p></div><pre><code>node buyer.mjs operator-init --toolkit /ABSOLUTE/EXISTING/TOOLKIT
+node buyer.mjs wallet-prepare --toolkit /ABSOLUTE/EXISTING/TOOLKIT</code></pre></li>
+      <li><div><span class="small-label">CONNECT FREIGHTER</span><h3>Open the local wallet.</h3><p>Start the private server. Open its printed loopback URL in the browser with Freighter, select the intended testnet account, and connect.</p></div><pre><code>node buyer.mjs wallet-serve --toolkit /ABSOLUTE/EXISTING/TOOLKIT</code></pre></li>
+      <li><div><span class="small-label">EXECUTE AND REOPEN</span><h3>Receive the merchant response.</h3><p>Run execute in a second terminal. Review the original approval and sign the exact native authorization in Freighter. The request directory retains the returned METAR result.</p></div><pre><code>node buyer.mjs execute --toolkit /ABSOLUTE/EXISTING/TOOLKIT
+node buyer.mjs inspect --toolkit /ABSOLUTE/EXISTING/TOOLKIT</code></pre></li>
+    </ol>
+  </section>
+  <section class="agentsmith-handoff" aria-labelledby="handoff-heading"><div><p class="eyebrow">PORTABLE HANDOFF</p><h2 id="handoff-heading">A packet another engineer can use.</h2></div><p>The ZIP includes the original HTTP source, request bytes, native capture program, receiving runner, license, command arrays and complete run guide. Open <code>setup-input.json</code> here to continue the same preparation. Keep the initialized operator and its ledger on their private receiving host.</p></section>
+</main>
+<footer class="agentsmith-footer shell"><a href="/">Stellar Forge</a><span>TokenJunkieLabs</span><a href="#main">Back to receiving packet ↑</a></footer>
+</body>
+</html>

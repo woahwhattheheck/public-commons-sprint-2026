@@ -36,8 +36,8 @@ export async function startODataMerchant({ plan, catalog, directory, env = proce
   port = 0, operationsPort = 0, nativeFactory = null, allowLoopback = false, lookup,
   historyRetentionDays = 90, navigationOrigin = null } = {}) {
   const root = await privateDirectory(directory), cursorKey = await retainedCursorKey(root);
-  const application = createODataApplication(plan,catalog,{ cursorKey,env,allowLoopback,lookup });
   const outbox=await openOutbox(join(root,'delivery'));
+  const application = createODataApplication(plan,catalog,{ cursorKey,env,allowLoopback,lookup });
   const settlementFactory=nativeFactory?async compiled=>instrumentNativeSettlement(await nativeFactory(compiled),{compiled,outbox}):null;
   let seller, operations, closing;
   try {

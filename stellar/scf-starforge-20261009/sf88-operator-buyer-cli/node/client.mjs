@@ -7,8 +7,11 @@ import { WorkspaceRecovery } from './workspace-recovery.mjs';
 import {AcquisitionWorkspace} from './acquisitions.mjs';
 import { readWorkspace, checkWorkspace, workspaceCommand } from './workspace.mjs';
 import { BuyerResult } from './result.mjs';
-import { inspectUnpaidContinuation, prepareUnpaidContinuation, followUnpaidContinuation,
-  assertUnpaidContinuationBinding } from './unpaid-continuation.mjs';
+import { inspectUnpaidContinuation, prepareUnpaidContinuation, followUnpaidContinuation } from './unpaid-continuation.mjs';
+import {inspectNodeLostOutput,recoverNodeLostOutput,readNodeLostOutputRecovery,
+  exportNodeLostOutputProof} from './lost-output.mjs';
+import {prepareExpiredContinuation,inspectExpiredContinuation,followContinuation,
+  assertOperationContinuationBinding} from './expired-continuation.mjs';
 import { Dataset, createDataset, listDatasets } from './dataset.mjs';
 import { ObjectAcquisition, createObject, listObjects } from './object.mjs';
 import { Inbox, createInbox, inspectOperationHandoff } from './inbox.mjs';
@@ -81,13 +84,15 @@ export class Buyer {
     return { ...config, ...copy(profile) };
   }
 
-  async _create(input, { body, operatorProfile, responseFile, requestTimeoutMs, nativeWorkspace, signal, unpaidContinuation } = {}) {
+  async _create(input, { body, operatorProfile, responseFile, requestTimeoutMs, nativeWorkspace, signal, unpaidContinuation, expiredContinuation } = {}) {
     checkSignal(signal);
     await this.ready();
     // Explicit workspace adoption uses its native operator, never a global profile override.
-    const config = nativeWorkspace === undefined && unpaidContinuation === undefined
+    need(!(unpaidContinuation !== undefined && expiredContinuation !== undefined), 'CONTINUATION_LINEAGE_INVALID');
+    const config = nativeWorkspace === undefined && unpaidContinuation === undefined && expiredContinuation === undefined
       ? await this._profile(copy(input), operatorProfile) : copy(input);
-    const continuation = unpaidContinuation === undefined ? {} : { unpaidContinuation: copy(unpaidContinuation) };
+    const continuation = unpaidContinuation !== undefined ? { unpaidContinuation: copy(unpaidContinuation) } :
+      expiredContinuation !== undefined ? { expiredContinuation: copy(expiredContinuation) } : {};
     const workspace = nativeWorkspace === undefined ? {} : { nativeWorkspace: absolute(nativeWorkspace) };
     need(object(config.operation), 'OPERATION_REQUIRED');
     const op = this.operation(config.operation.intentId);
@@ -295,9 +300,17 @@ export class Operation {
     const ticketHash = config.operation.ticketFile
       ? digest(await readBytes(config.operation.ticketFile, 16384)) : null;
     need(ticketHash === (meta.ticketSha256 ?? null), 'OPERATION_TICKET_CHANGED');
-    if (meta.unpaidContinuation !== undefined) await assertUnpaidContinuationBinding(this, { meta, config });
+    if (meta.unpaidContinuation !== undefined || meta.expiredContinuation !== undefined)
+      await assertOperationContinuationBinding(this, { meta, config });
     return { meta, config };
   }
+  inspectLostOutput(options) { return inspectNodeLostOutput(this,options); }
+  recoverLostOutput(options) { return recoverNodeLostOutput(this,options); }
+  readLostOutputRecovery(options) { return readNodeLostOutputRecovery(this,options); }
+  exportLostOutputProof(options) { return exportNodeLostOutputProof(this,options); }
+  inspectExpiredContinuation() { return inspectExpiredContinuation(this); }
+  prepareExpiredContinuation(options) { return prepareExpiredContinuation(this,options); }
+  followContinuation() { return followContinuation(this); }
   inspectUnpaidContinuation() { return inspectUnpaidContinuation(this); }
   prepareUnpaidContinuation(options) { return prepareUnpaidContinuation(this, options); }
   followUnpaidContinuation() { return followUnpaidContinuation(this); }
@@ -408,13 +421,23 @@ export class Operation {
       recovered: true, recordedAt: now() });
   }
   async inspect() {
-    const { meta } = await this._bound();
+    const { meta, config } = await this._bound();
     const attemptPath = join(this.directory, 'attempt.json');
     const attempt = await exists(attemptPath) ? await readJson(attemptPath) : null;
     const result = await this.recover();
+    let transportCheckpoint = null;
+    if (await exists(join(config.evidenceDir, 'wire-' + digest(Buffer.from(this.intentId))))) {
+      // The selected native runtime owns its checkpoint version. The standalone
+      // Node package remains independent of the sibling runtime source tree.
+      const reader = await import(pathToFileURL(join(this.buyer.runtime.directory, 'attempt-wire.mjs')).href);
+      need(typeof reader.readAttemptWireCheckpoint === 'function', 'ORIGINAL_WIRE_CHECKPOINT_READER_REQUIRED');
+      const body = config.operation.bodyFile === undefined ? undefined :
+        await (await this.buyer._requestFiles()).readRequestFile(config.operation.bodyFile);
+      transportCheckpoint = await reader.readAttemptWireCheckpoint({cfg:config,body});
+    }
     return { intentId: this.intentId, directory: this.directory, state: attempt?.state ?? meta.state,
       resultRecoverable: result !== null, nativeStatus: result?.status ?? null,
-      deliveryStatus: result?.delivery.status ?? null,
+      deliveryStatus: result?.delivery.status ?? null, transportCheckpoint,
       ...(attempt?.kind === 'INBOX_DELEGATED' ? {inboxDirectory:attempt.inboxDirectory} : {}),
       ...(meta.nativeWorkspace === undefined ? {} : {nativeWorkspace:meta.nativeWorkspace}),
       retry: 'NO_AUTOMATIC_RETRY' };

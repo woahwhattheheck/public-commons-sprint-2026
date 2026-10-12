@@ -163,6 +163,7 @@ function inspectExport(exported, editionId) {
 
 /**
  * Receive the original workspace's current saved cohort through exportFiles exactly once.
+ * Request only original inputs, and project the full dossier once after all retained pages.
  * The original workspace owns its lifetime, collection, native buyer and review decisions.
  * Each page is retained unchanged; one metadata edition holds the complete source snapshot.
  * A retry preserves the first snapshot for the same source signature and resumes missing pages.
@@ -176,10 +177,11 @@ export async function receiveOpenAlexEdition(dossierStore, dossierId, {
   need(named(editionId) && typeof questionId === 'string', 'OPENALEX_IMPORT_TARGET_REQUIRED');
   need(onPage === undefined || typeof onPage === 'function', 'OPENALEX_IMPORT_CALLBACK_INVALID');
   signal?.throwIfAborted();
-  let dossier = await dossierStore.get(dossierId);
+  let dossier = typeof dossierStore.getMetadata === 'function'
+    ? await dossierStore.getMetadata(dossierId) : await dossierStore.get(dossierId);
   need(Number.isSafeInteger(expectedRevision) && dossier.revision === expectedRevision, 'REVISION_CONFLICT');
   need(dossier.questions.some(question => question.id === questionId), 'QUESTION_NOT_FOUND');
-  const exported = await workspace.exportFiles(editionId, {includePages:true,includeNative:true});
+  const exported = await workspace.exportFiles(editionId, {includePages:true,includeNative:true,includeAnalysis:false});
   signal?.throwIfAborted();
   const source = inspectExport(exported, editionId);
   label ??= source.record.label;
@@ -232,7 +234,7 @@ export async function receiveOpenAlexEdition(dossierStore, dossierId, {
       dossier = await dossierStore.receive(dossierId, {
         questionId,label:label + ' · source cohort',provider:META_PROVIDER,rawBytes:metadataBytes,
         sourceReference:source.pages[0]?.sourceReference ?? 'https://api.openalex.org/works',
-        expectedRevision:dossier.revision,
+        expectedRevision:dossier.revision,projection:'metadata',
         origin:{mode:META_MODE,intentId:metadataIdentity,sourceFingerprint:source.signature.sha256,
           sourceEditionId:editionId,querySha256:source.query.sha256,decisionsRevision:source.decisions.revision,
           sourceCoverage:source.coverage.state,sourcePages:source.coverage.pages,
@@ -251,7 +253,7 @@ export async function receiveOpenAlexEdition(dossierStore, dossierId, {
       } else {
         dossier = await dossierStore.receive(dossierId, {
           questionId,label:label + ' · page ' + item.page.index,
-          provider:'openalex',rawBytes:item.bytes,sourceReference:item.sourceReference,expectedRevision:dossier.revision,
+          provider:'openalex',rawBytes:item.bytes,sourceReference:item.sourceReference,expectedRevision:dossier.revision,projection:'metadata',
           origin:{mode:PAGE_MODE,intentId:item.identity,intentKind:binding.intentKind,
             nativeIntentId:item.nativeIntentId,sourceEditionId:editionId,queryId:source.query.id,
             queryRevision:source.query.revision,querySha256:source.query.sha256,pageIndex:item.page.index,
@@ -271,7 +273,7 @@ export async function receiveOpenAlexEdition(dossierStore, dossierId, {
       });
     }
     result.complete = true;
-    return {...result,dossier};
+    return {...result,dossier:await dossierStore.get(dossierId, {revision:result.revision})};
   } catch (error) {
     // CAS, interruption, or I/O failures retain already committed pages for the same retry.
     if (error && typeof error === 'object') error.openAlexImport = structuredClone(result);

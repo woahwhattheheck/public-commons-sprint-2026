@@ -1,4 +1,5 @@
 // MIT. Applications presentation over the original runtime and managed-command APIs.
+import { renderOpenApiApplicationReview } from './openapi-application.mjs';
 const element = (tag, text, className) => {
   const node = document.createElement(tag);
   if (text !== undefined) node.textContent = text;
@@ -18,6 +19,17 @@ function facts(rows) {
     const row = element('div'); row.append(element('dt', label), element('dd', value ?? '—')); node.append(row);
   }
   return node;
+}
+function mppReviewRows(command) {
+  const workspace = command?.mppBinding;
+  if (!workspace) return [];
+  const roles = Object.entries(workspace.profiles).filter(([, profile]) => profile).map(([role]) => role);
+  return [
+    ['MPP workspace', workspace.workspace],
+    ['Workspace created', workspace.createdAt],
+    ['Saved profile revision', workspace.revision],
+    ['Configured roles', roles.join(', ') || 'Ready for merchant or customer configuration'],
+  ];
 }
 async function textHash(text) {
   const bytes = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text)));
@@ -56,6 +68,8 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
   operationReview.hidden = true;
   const open = element('a', 'Open application'); open.target = '_blank'; open.rel = 'noopener noreferrer'; open.referrerPolicy = 'no-referrer'; open.hidden = true;
   const urlNote = element('p', '', 'note');
+  const relatedApplications = element('div', undefined, 'actions');
+  relatedApplications.hidden = true;
   const reviewStart = button('Review start', () => act(async () => {
     const app = selected(); if (!app) return;
     startReview = await api('/api/applications/start-review', { applicationId: app.id });
@@ -77,7 +91,7 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
   }));
   const editButton = button('Edit settings', () => edit(selected()));
   actions.append(open, reviewStart, stop, reconnect, continueRun, editButton);
-  selectedPanel.append(selectedTitle, details, actions, urlNote, operationReview);
+  selectedPanel.append(selectedTitle, details, actions, relatedApplications, urlNote, operationReview);
   const history = element('section', undefined, 'panel'); history.hidden = true;
   history.append(element('h3', 'Original operations'));
   const historyRows = element('div'); history.append(historyRows);
@@ -182,6 +196,7 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
         ['Managed home', reviewed.homeDirectory], ['Connection', reviewed.releaseId ? 'Existing original release ' + reviewed.releaseId : 'Adopt this original ready runtime'],
         ['Input', reviewed.command.terminal ? 'Connected original terminal, explicit operator responses' : 'Original application output'],
         ['Environment file', reviewed.settings.environmentFile ?? 'Inherited operator environment'],
+        ...mppReviewRows(reviewed.command),
       ]);
       const save = button(editingId ? 'Save reviewed settings' : 'Save application', () => act(async () => {
         if (configurationReview !== reviewed) return;
@@ -193,7 +208,8 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
         configuration.open = false; configurationReview = null; reviewResult.hidden = true;
         await refresh(); await refreshWorkspace(); message(result.connectionError?.message ?? 'Application saved with its original runtime and data locations.');
       }));
-      reviewResult.replaceChildren(element('h3', 'Reviewed application'), rows, save);
+      reviewResult.replaceChildren(element('h3', 'Reviewed application'), rows,
+        renderOpenApiApplicationReview(reviewed.command), save);
       if (reviewed.command.createDirectories.length) reviewResult.append(element('p', 'Creates private folder: ' + reviewed.command.createDirectories.join(', '), 'note'));
       reviewResult.hidden = false;
     });
@@ -219,7 +235,8 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
       ['Release', reviewed.releaseId], ['Source', reviewed.runtime.sourceCommit],
       ['Inputs', reviewed.command.inputs.map(item => item.path).join('\n')],
       ['Terminal', reviewed.command.terminal ? 'Explicit operator input through the original controlling terminal' : 'Retained original output'],
-    ]), start); operationReview.hidden = false;
+      ...mppReviewRows(reviewed.command),
+    ]), renderOpenApiApplicationReview(reviewed.command), start); operationReview.hidden = false;
   }
   function renderSelected() {
     const app = selected(); selectedPanel.hidden = !app; history.hidden = !app;
@@ -243,6 +260,17 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
     editButton.disabled = active || unsettled;
     open.hidden = !current?.privateUrl;
     if (current?.privateUrl) open.href = current.privateUrl; else open.removeAttribute('href');
+    open.textContent = app.kind === 'mercury-feed' ? 'Open event feed' : 'Open application';
+    relatedApplications.replaceChildren(...(current?.privateLinks ?? []).flatMap(link => {
+      let url;
+      try { url = new URL(link.url); } catch { return []; }
+      if (url.protocol !== 'http:' || url.hostname !== '127.0.0.1' ||
+          Number(url.port || 80) < 1 || Number(url.port || 80) > 65535 ||
+          url.username || url.password || typeof link.label !== 'string') return [];
+      const anchor = element('a', link.label); anchor.href = url.href; anchor.target = '_blank';
+      anchor.rel = 'noopener noreferrer'; anchor.referrerPolicy = 'no-referrer'; return [anchor];
+    }));
+    relatedApplications.hidden = !relatedApplications.childElementCount;
     const workbookCommand = ['python-workbooks', 'python-workbook-delivery'].includes(app.kind);
     urlNote.textContent = workbookCommand ? (active ? 'The original workbook command is running. Its output is retained below.' :
       current ? 'The original workbook command has ended. Open its retained outcome and complete output below.' :
@@ -370,7 +398,23 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
       editingId = null; configurationReview = startReview = null;
       label.value = type.title; runtime.value = descriptor.runtime.runtimeId; kind.value = type.id;
       const values = { installationId: descriptor.installationId };
-      if (descriptor.command === 'analysis') {
+      if (descriptor.command === 'postgres') {
+        if (!descriptor.args.includes('serve')) throw new Error('Prepare the PostgreSQL serve command with its private operator directory.');
+        const option = (name, fallback) => {
+          const index = descriptor.args.indexOf(name);
+          return index >= 0 ? descriptor.args[index + 1] :
+            descriptor.args.find(item => item.startsWith(name + '='))?.slice(name.length + 1) ?? fallback;
+        };
+        values.workspaceDirectory = option('--workspace');
+        values.connectionEnvironment = option('--connection-env', 'SF_BUYER_POSTGRES_DSN');
+        values.databaseSchema = option('--schema', 'sf_received');
+        values.port = Number(option('--port', '0'));
+      } else if (descriptor.command === 'duckdb') {
+        values.workspaceDirectory = value('--workspace');
+        values.port = descriptor.args.includes('--port') ? Number(value('--port')) : 0;
+        if (descriptor.args.includes('--export-root')) values.exportRoot = value('--export-root');
+        if (descriptor.args.includes('--handoff-root')) values.handoffRoot = value('--handoff-root');
+      } else if (descriptor.command === 'analysis') {
         values.databaseDirectory = value('--database');
         if (descriptor.args.includes('--node')) values.nodeExecutable = value('--node');
         values.port = descriptor.args.includes('--port') ? Number(value('--port')) : 0;

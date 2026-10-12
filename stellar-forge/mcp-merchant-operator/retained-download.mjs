@@ -2,10 +2,10 @@
 import { constants } from 'node:fs';
 import { open, mkdir, readdir, realpath, link, unlink, rename } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
-import { resolve, join } from 'node:path';
+import { resolve, join, dirname } from 'node:path';
 import { MCP_VERSION } from '../mcp-paid-agent/http-tools.mjs';
 import { MAX_RETAINED_CHUNK_BYTES } from './retained-file-reads.mjs';
-import { failure, identifier, privateSupportDirectory, writePrivate } from './config.mjs';
+import { failure, identifier, privateSupportDirectory, writePrivate } from './host-files.mjs';
 import { acquireStateLease } from '../../stellar/scf-starforge-20261009/merchant-fleet-gateway/state-lease.mjs';
 
 const sha = bytes => createHash('sha256').update(bytes).digest('hex');
@@ -63,7 +63,8 @@ export async function openMerchantFileClient({ url, tokenEnv = 'MCP_ACCESS_TOKEN
 
 /** Owner adapters supply the original manifest parser, names and identity schema. */
 export function createRetainedDownload({ manifestName, parseManifest, maximumBytes, stateSchema,
-  resultSchema, toolPrefix, errorPrefix, clientName, describe = () => ({}) }) {
+  resultSchema, toolPrefix, errorPrefix, clientName, describe = () => ({}), connect = openMerchantFileClient, nestedFiles = false, readLease = true,
+  validateExportId = value => identifier(value, 'Export ID') }) {
   async function regular(path, flags = constants.O_RDONLY, maximum = maximumBytes) {
     const handle = await open(path, flags | (constants.O_NOFOLLOW ?? 0) | (constants.O_NONBLOCK ?? 0), 0o600);
     try {
@@ -143,11 +144,53 @@ export function createRetainedDownload({ manifestName, parseManifest, maximumByt
     try { return await operation({ root, stateDirectory, lease }); }
     finally { await lease.close(); }
   }
+  const partialName = file => nestedFiles ? 'part-' + sha(Buffer.from(file.name)) + '.part' : file.name + '.part';
+  async function validateNestedRoot(context, manifest) {
+    const files = new Set([manifestName, ...manifest.files.map(file => file.name)]), directories = new Set();
+    for (const name of files) {
+      if (typeof name !== 'string' || !name || name.startsWith('/') || /[\\:\u0000-\u001f\u007f]/.test(name)
+          || name.split('/').some(part => !part || part === '.' || part === '..') || name.split('/').length > 32
+          || name === 'download-state' || name.startsWith('download-state/'))
+        throw failure(errorPrefix + '_DOWNLOAD_MANIFEST_INVALID', 'Use canonical original relative file paths outside download-state.');
+      const parts = name.split('/');
+      for (let index = 1; index < parts.length; index++) directories.add(parts.slice(0, index).join('/'));
+    }
+    if ([...directories].some(name => files.has(name)))
+      throw failure(errorPrefix + '_DOWNLOAD_MANIFEST_INVALID', 'A retained file conflicts with another file’s directory.');
+    async function visit(path, relative = '') {
+      for (const entry of await readdir(path, { withFileTypes: true })) {
+        if (!relative && entry.name === 'download-state') continue;
+        const name = relative ? relative + '/' + entry.name : entry.name;
+        if (entry.isDirectory() && directories.has(name)) {
+          const child = join(path, entry.name);
+          await privateSupportDirectory(child);
+          if (await realpath(child) !== child) throw failure(errorPrefix + '_DOWNLOAD_DIRECTORY_IN_USE', 'A retained directory changed identity.');
+          await visit(child, name);
+        } else if (!entry.isFile() || !files.has(name))
+          throw failure(errorPrefix + '_DOWNLOAD_DIRECTORY_IN_USE', 'This directory contains files outside the selected original retained download.');
+      }
+    }
+    await visit(context.root);
+  }
+  async function ensureNativeParents(context, name) {
+    if (!nestedFiles) return;
+    let parent = context.root;
+    for (const part of name.split('/').slice(0, -1)) {
+      const child = join(parent, part); let created = false;
+      try { await mkdir(child, { mode: 0o700 }); created = true; }
+      catch (error) { if (error.code !== 'EEXIST') throw error; }
+      await privateSupportDirectory(child);
+      if (await realpath(child) !== child) throw failure(errorPrefix + '_DOWNLOAD_DIRECTORY_IN_USE', 'An original file parent changed identity.');
+      if (created) await syncDirectory(parent);
+      parent = child;
+    }
+  }
   async function loadContext(context, manifestBytes, exportId, endpoint) {
     const manifest = parseManifest(manifestBytes, exportId), manifestSha256 = sha(manifestBytes);
     const rootNames = new Set(['download-state', manifestName, ...manifest.files.map(file => file.name)]);
-    const stateNames = new Set(['lease.lock', 'checkpoint.json', 'checkpoint.next', manifestName, manifestName + '.next', ...manifest.files.map(file => file.name + '.part')]);
-    if ((await readdir(context.root)).some(name => !rootNames.has(name)) || (await readdir(context.stateDirectory)).some(name => !stateNames.has(name)))
+    const stateNames = new Set(['lease.lock', 'checkpoint.json', 'checkpoint.next', manifestName, manifestName + '.next', ...manifest.files.map(partialName)]);
+    if (nestedFiles) await validateNestedRoot(context, manifest);
+    if ((!nestedFiles && (await readdir(context.root)).some(name => !rootNames.has(name))) || (await readdir(context.stateDirectory)).some(name => !stateNames.has(name)))
       throw failure(errorPrefix + '_DOWNLOAD_DIRECTORY_IN_USE', 'This directory contains files outside the selected original retained download.');
     let savedBytes;
     try { savedBytes = await bytesAt(join(context.stateDirectory, manifestName), 65000); }
@@ -168,8 +211,9 @@ export function createRetainedDownload({ manifestName, parseManifest, maximumByt
   function chunkBytes(result, file, offset, limit, exportId, manifestSha256, readId) {
     const size = Math.min(limit, file.bytes - offset);
     if (result.exportId !== exportId || result.manifestSha256 !== manifestSha256 || result.file?.name !== file.name ||
-        result.file?.bytes !== file.bytes || result.file?.sha256 !== file.sha256 || !validReadId(result.readId) ||
-        readId && result.readId !== readId || result.offset !== offset || result.bytesRead !== size || result.encoding !== 'base64' ||
+        result.file?.bytes !== file.bytes || result.file?.sha256 !== file.sha256 ||
+        (readLease ? !validReadId(result.readId) || readId && result.readId !== readId
+          : result.readId !== undefined && result.readId !== null) || result.offset !== offset || result.bytesRead !== size || result.encoding !== 'base64' ||
         result.nextOffset !== (offset + size < file.bytes ? offset + size : null) || typeof result.data !== 'string')
       throw failure(errorPrefix + '_DOWNLOAD_CHUNK_CONFLICT', 'The returned chunk does not match its pinned original file and byte offset.');
     const bytes = Buffer.from(result.data, 'base64');
@@ -189,7 +233,8 @@ export function createRetainedDownload({ manifestName, parseManifest, maximumByt
     parseManifest(bytes, exportId); return bytes;
   }
   async function persistFile(context, client, file, { chunkSize, signal, onProgress }) {
-    const destination = join(context.root, file.name), partial = join(context.stateDirectory, file.name + '.part');
+    await ensureNativeParents(context, file.name);
+    const destination = join(context.root, file.name), partial = join(context.stateDirectory, partialName(file));
     try {
       await verifiedFile(destination, file);
       context.state.files[file.name] = { bytes: file.bytes, sha256: file.sha256, complete: true };
@@ -236,7 +281,8 @@ export function createRetainedDownload({ manifestName, parseManifest, maximumByt
       }
       if (hash.digest('hex') !== file.sha256) throw failure(errorPrefix + '_DOWNLOAD_FILE_CHANGED', 'The complete downloaded file differs from the original SHA256: ' + file.name + '.');
       context.lease.assertHeld();
-      await link(partial, destination); await unlink(partial); await syncDirectory(context.root);
+      await link(partial, destination); await syncDirectory(dirname(destination));
+      await unlink(partial); await syncDirectory(context.stateDirectory);
       context.state.files[file.name] = { bytes: file.bytes, sha256: file.sha256, complete: true }; await checkpoint(context);
     } finally {
       await handle.close();
@@ -248,10 +294,10 @@ export function createRetainedDownload({ manifestName, parseManifest, maximumByt
   /** Saves the exact original files; a second invocation resumes the same directory. */
   async function download({ url, exportId, directory, tokenEnv, environment, signal,
     chunkSize = MAX_RETAINED_CHUNK_BYTES, onProgress, expectedManifestSha256 } = {}) {
-    identifier(exportId, 'Export ID');
+    validateExportId(exportId);
     if (!Number.isSafeInteger(chunkSize) || chunkSize < 1 || chunkSize > MAX_RETAINED_CHUNK_BYTES)
       throw failure(errorPrefix + '_DOWNLOAD_CONFIGURATION', 'Chunk size must be 1–196608 bytes.');
-    const client = await openMerchantFileClient({ url, tokenEnv, environment, signal, errorPrefix, clientName });
+    const client = await connect({ url, tokenEnv, environment, signal, errorPrefix, clientName });
     const manifestBytes = await retainedManifest(client, exportId);
     if (expectedManifestSha256 !== undefined && (!validSha(expectedManifestSha256) || sha(manifestBytes) !== expectedManifestSha256))
       throw failure(errorPrefix + '_DOWNLOAD_EXPORT_CHANGED', 'The retained completion manifest differs from the reviewed original export.');
@@ -268,8 +314,8 @@ export function createRetainedDownload({ manifestName, parseManifest, maximumByt
   }
 
   async function inspect({ url, exportId, tokenEnv, environment, signal } = {}) {
-    identifier(exportId, 'Export ID');
-    const client = await openMerchantFileClient({ url, tokenEnv, environment, signal, errorPrefix, clientName });
+    validateExportId(exportId);
+    const client = await connect({ url, tokenEnv, environment, signal, errorPrefix, clientName });
     const bytes = await retainedManifest(client, exportId);
     return { manifest: parseManifest(bytes, exportId), manifestSha256: sha(bytes) };
   }

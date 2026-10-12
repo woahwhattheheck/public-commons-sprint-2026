@@ -1,0 +1,11 @@
+{
+  "schema": "stellar-forge.fred-selection.v1",
+  "series": [
+    "UNRATE"
+  ],
+  "asOf": "2026-10-12",
+  "start": "1948-01-01",
+  "end": "2026-09-01",
+  "pageSize": 1000,
+  "maxRows": 1000000
+}

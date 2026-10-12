@@ -162,8 +162,12 @@ async function preflight(report) {
     'DATASET_DELIVERY_PAGE_IDENTITY_INVALID');
     const expectedIntent = 'dataset:' + digest(canonical({session:report.configurationSha256,
       id:report.sessionId, index:i + 1, url:p.requestUrl}));
+    const recovered=p.evidenceKind==='ORIGINAL_SF36_LOST_OUTPUT_RECOVERY';
+    const originalEvidencePath=join(report.directory,'evidence',digest(p.intentId)+'.json');
+    need(p.evidenceKind===undefined||recovered,'DATASET_DELIVERY_EVIDENCE_KIND_INVALID');
     need(p.intentId === expectedIntent && p.responsePath === join(pageDir, 'response.json') &&
-      p.evidencePath === join(report.directory, 'evidence', digest(p.intentId) + '.json'),
+      p.evidencePath === (recovered?join(pageDir,'lost-output','transfer.json'):originalEvidencePath)&&
+      (!recovered||p.originalEvidencePath===originalEvidencePath),
     'DATASET_DELIVERY_SOURCE_PATH_MISMATCH');
     await directory(pageDir);
     const bytes = await bounded(p.responsePath, MAX_INPUT);
@@ -176,7 +180,15 @@ async function preflight(report) {
     'DATASET_DELIVERY_SOURCE_CHANGED');
     const payload = json(bytes), evidenceBytes = await bounded(p.evidencePath, MAX_INPUT);
     const evidence = json(evidenceBytes), evidenceSha256 = digest(evidenceBytes);
-    need(evidenceSha256 === p.evidenceSha256 && evidence.schema === 'scf82.checkout-evidence.v1' &&
+    need(evidenceSha256===p.evidenceSha256,'DATASET_DELIVERY_EVIDENCE_CHANGED');
+    if(recovered) {
+      const {recoveredDatasetPage}=await import('./dataset-lost-output.mjs');
+      const original=await recoveredDatasetPage({directory:report.directory,index:p.index,
+        cfg:await jsonFile(join(pageDir,'config.json'),262144),previous,
+        expectedSnapshot:report.snapshot,maxRows:1000000});
+      need(original?.evidenceSha256===evidenceSha256&&original.sha256===inspected.sha256,
+        'DATASET_DELIVERY_RECOVERED_SOURCE_CHANGED');
+    } else need(evidence.schema === 'scf82.checkout-evidence.v1' &&
       evidence.intentId === p.intentId && evidence.observation?.intentId === p.intentId,
     'DATASET_DELIVERY_EVIDENCE_CHANGED');
     const pageSignature = nativeDatasetContract(payload).signature;

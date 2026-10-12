@@ -1,0 +1,21 @@
+/* MIT. Extend the original restrained merchant workspace. */
+.workflow.has-incidents{grid-template-columns:repeat(auto-fit,minmax(105px,1fr))}
+.incident-filters{display:grid;grid-template-columns:minmax(150px,1.4fr) minmax(180px,2fr) minmax(110px,1fr) minmax(130px,1fr) auto;gap:12px;align-items:end}
+.incident-counters{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:1px;border:1px solid var(--border);background:var(--border);margin:18px 0}
+.incident-counters>div{display:flex;flex-direction:column;gap:3px;padding:12px;background:var(--surface-soft)}
+.incident-counters strong{font-size:23px;font-variant-numeric:tabular-nums}.incident-counters span{font-size:11px;color:var(--muted)}
+.incident-worker{display:flex;gap:14px;align-items:center;flex-wrap:wrap;padding:15px 0;border-top:1px solid var(--border);margin-bottom:12px}
+.incident-worker>div:first-child{flex:1;min-width:180px}.incident-worker h3{margin:0}.incident-worker p{margin:5px 0}
+.incident-live{display:flex;flex-direction:row;align-items:center;gap:7px;font-size:11px;font-weight:400}
+.incident-table td:first-child{width:32%;min-width:180px}.incident-table td:not(:first-child){min-width:90px}
+.incident-detail{border-top:2px solid #777;margin-top:20px;padding-top:20px}.incident-detail h3{margin-top:0}
+.incident-detail .section-heading{margin-bottom:14px}.incident-detail .hint,.incident-worker-state{overflow-wrap:anywhere}
+.incident-ack-form{display:grid;grid-template-columns:minmax(160px,1fr) minmax(240px,2fr);gap:15px;margin:20px 0 10px}
+.incident-ack-form .full{grid-column:1/-1}.incident-queue td:first-child{width:auto;min-width:125px}.incident-queue td{max-width:250px;overflow-wrap:anywhere}
+.incident-queue a,.incident-downloads a{text-decoration:underline;text-underline-offset:3px}
+.incident-case-panel{margin:22px 0;padding:16px;border:1px solid var(--border);background:var(--surface-soft)}
+.incident-case-panel>label{max-width:440px}.incident-case-panel .actions{margin-top:12px}
+.incident-config{margin-top:22px}.incident-config .actions{margin-top:12px}.incident-config textarea{font:12px/1.5 ui-monospace,monospace;white-space:pre;tab-size:2}
+.incident-detail pre{white-space:pre-wrap;max-height:350px;overflow:auto;font-size:11px}
+@media(max-width:1000px){.incident-filters{grid-template-columns:1fr 1fr}.incident-filters>button{align-self:end}.incident-counters{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:620px){.incident-filters,.incident-ack-form{grid-template-columns:1fr}.incident-counters{grid-template-columns:repeat(2,minmax(0,1fr))}.incident-ack-form .full{grid-column:auto}.incident-worker .actions{width:100%;display:grid;grid-template-columns:1fr 1fr}.incident-worker .actions>button:last-child{grid-column:1/-1}.incident-config textarea{font-size:16px}.incident-detail .scope{grid-template-columns:1fr}}

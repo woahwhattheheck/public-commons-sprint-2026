@@ -1,4 +1,6 @@
 // MIT. Research dossier operator; all provider and persistence operations stay in the original server.
+import {createCrossrefPanel} from './crossref.js';
+import {createUnstructuredPanel} from './unstructured.js';
 'use strict';
 (() => {
   const $ = id => document.getElementById(id);
@@ -59,6 +61,10 @@
       AUTH_REQUIRED: 'The local session needs to be reopened with its complete workspace address.',
       JSON_INVALID: 'This file is not valid JSON. Choose the original saved result file.',
       UPLOAD_SIZE_LIMIT: 'The selected upload is larger than the workspace accepts.',
+      PORTABLE_SIZE_LIMIT: 'The complete uncompressed dossier exceeds 256 MiB.',
+      PORTABLE_JSON_INVALID: 'Choose a complete portable dossier JSON or gzip file.',
+      PORTABLE_TRUNCATED: 'The dossier file is incomplete. Choose the complete saved archive.',
+      PORTABLE_HISTORY_CONFLICT: 'This file and the saved dossier contain different changes. Open the file in a separate workspace to keep both histories.',
       VALYU_REFERENCE_REQUIRED: 'Add this research through Provider edition using its original edition reference.',
       PROVIDER_REFERENCE_REQUIRED: 'Choose Provider edition and use the reference from the original provider workspace.'
     };
@@ -81,11 +87,13 @@
     $('detail-classification').disabled = value;
     $('connection').textContent = value ? 'Saving / loading' : 'Local workspace';
     if (!value) renderNoteState();
+    crossrefPanel.updateBusy();
+    documentPanel.updateBusy();
   }
-  async function api(path, {method = 'GET', body, download = false} = {}) {
+  async function api(path, {method = 'GET', body, file, download = false} = {}) {
     const response = await fetch(path, {method, headers: {Authorization: 'Bearer ' + state.token,
-      ...(body === undefined ? {} : {'Content-Type': 'application/json'})},
-      ...(body === undefined ? {} : {body: JSON.stringify(body)}), credentials: 'omit', cache: 'no-store'});
+      ...(file ? {'Content-Type': 'application/octet-stream'} : body === undefined ? {} : {'Content-Type': 'application/json'})},
+      ...(file ? {body: file} : body === undefined ? {} : {body: JSON.stringify(body)}), credentials: 'omit', cache: 'no-store'});
     if (!response.ok) {
       let value = {};
       try { value = await response.json(); } catch {}
@@ -123,7 +131,7 @@
   function summaryOf(view) {
     return {id: view.id, title: view.title, description: view.description, revision: view.revision,
       updatedAt: view.updatedAt, questionCount: asArray(view.questions).length,
-      sourceCount: asArray(view.sources).length,
+      sourceCount: asArray(view.sources).length, editionCount: asArray(view.editions).length,
       selectedCount: asArray(view.sources).filter(source => source.selected).length};
   }
   async function refreshList() {
@@ -131,6 +139,8 @@
     state.dossiers = asArray(result.dossiers);
     state.openalexConfigured = result.openalex?.configured === true;
     $('import-openalex-mode').hidden = !state.openalexConfigured;
+    crossrefPanel.configure(result.crossref);
+    documentPanel.configure(result.unstructured);
     renderList();
   }
   async function openDossier(id) {
@@ -157,7 +167,7 @@
       const button = node('button', null, 'dossier-item' + (item.id === state.dossier?.id ? ' active' : ''));
       if (item.id === state.dossier?.id) button.setAttribute('aria-current', 'page');
       button.append(node('strong', item.title || 'Untitled dossier'),
-        node('span', 'Revision ' + (item.revision ?? '—') + ' · ' + count(item.sourceCount ?? item.sources) + ' sources'));
+        node('span', 'Revision ' + (item.revision ?? '—') + ' · ' + count(item.editionCount) + ' retained editions'));
       button.addEventListener('click', () => task(() => openDossier(item.id)));
       return button;
     }));
@@ -169,6 +179,8 @@
     const view = state.dossier;
     $('empty-workspace').hidden = !!view;
     $('dossier-workspace').hidden = !view;
+    crossrefPanel.setDossier(view);
+    documentPanel.setDossier(view);
     if (!view) return;
     $('dossier-title').textContent = view.title || 'Untitled dossier';
     $('dossier-description').textContent = view.description || '';
@@ -528,13 +540,16 @@
     $('compare-output').replaceChildren(...output);
   }
   function showTab(tab) {
+    if (tab === 'crossref' && $('crossref-tab').hidden) tab = 'sources';
     state.activeTab = tab;
-    ['sources', 'questions', 'findings', 'revisions'].forEach(name => {
+    ['sources', 'questions', 'findings', 'revisions', 'crossref', 'documents'].forEach(name => {
       $('view-' + name).hidden = name !== tab;
       const button = document.querySelector('[data-tab="' + name + '"]');
       button.classList.toggle('active', name === tab);
       if (name === tab) button.setAttribute('aria-current', 'page'); else button.removeAttribute('aria-current');
     });
+    crossrefPanel.show(tab === 'crossref');
+    documentPanel.show(tab === 'documents');
   }
   function clearFormError(form) { const box = form.querySelector('.form-error'); if (box) {box.textContent = ''; box.hidden = true;} }
   function showDossier(edit = false) {
@@ -647,6 +662,12 @@
   function parseJson(raw) {
     try { return JSON.parse(raw); } catch { throw Object.assign(new Error('JSON_INVALID'), {code: 'JSON_INVALID'}); }
   }
+  const crossrefPanel = createCrossrefPanel({root:$('view-crossref'),tab:$('crossref-tab'),api,task,notify,
+    getDossier:()=>state.dossier,isBusy:()=>state.busy,
+    onReceived:async view=>{applyDossier(view);await refreshList();}});
+  const documentPanel = createUnstructuredPanel({root:$('view-documents'),tab:$('documents-tab'),api,task,notify,
+    getDossier:()=>state.dossier,isBusy:()=>state.busy,
+    onReceived:async view=>{applyDossier(view);await refreshList();}});
   document.querySelectorAll('.dialog-close').forEach(button => button.addEventListener('click', () => {
     if (!state.busy) button.closest('dialog').close();
   }));
@@ -815,8 +836,10 @@
   ['open-portable', 'empty-open'].forEach(id => $(id).addEventListener('click', () => {if (!state.busy) {$('portable-file').value = ''; $('portable-file').click();}}));
   $('portable-file').addEventListener('change', () => task(async () => {
     const file = $('portable-file').files?.[0]; if (!file) return;
-    const portable = parseJson(await readOriginalFile(file, {portable: true}));
-    const view = await api('/api/reopen', {method: 'POST', body: {portable}});
+    if (file.size > MAX_PORTABLE_FILE_BYTES)
+      throw Object.assign(new Error('FILE_TOO_LARGE'), {detail: 'Choose a portable JSON or gzip file up to 256 MiB.'});
+    notify('Opening the dossier and its retained sources…');
+    const view = await api('/api/reopen-stream', {method: 'POST', file});
     applyDossier(view); await refreshList(); notify('Portable dossier reopened.');
   }));
   $('session-form').addEventListener('submit', event => {

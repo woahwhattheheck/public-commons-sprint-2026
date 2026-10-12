@@ -53,7 +53,10 @@ class Server(ThreadingHTTPServer):
     def __init__(self, port, workspace, token):
         self.workspace, self.token = workspace, token
         super().__init__(("127.0.0.1", port), Handler)
-        self.origin = f"http://127.0.0.1:{self.server_port}"
+        authority = "127.0.0.1" if self.server_port == 80 else f"127.0.0.1:{self.server_port}"
+        self.origin = "http://" + authority
+        self.allowed_hosts = {authority, f"127.0.0.1:{self.server_port}"}
+        self.allowed_origins = {self.origin, f"http://127.0.0.1:{self.server_port}"}
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -90,10 +93,10 @@ class Handler(BaseHTTPRequestHandler):
                 pass
 
     def guard(self, api=False):
-        if self.headers.get("Host", "") != urlsplit(self.server.origin).netloc:
+        if self.headers.get("Host", "") not in self.server.allowed_hosts:
             raise Problem("Open the workspace through its local access link.", 421, "HOST_MISMATCH")
         origin = self.headers.get("Origin")
-        if origin and origin != self.server.origin:
+        if origin and origin not in self.server.allowed_origins:
             raise Problem("This request came from another origin.", 403, "ORIGIN_MISMATCH")
         if self.headers.get("Sec-Fetch-Site") == "cross-site" and api:
             raise Problem("Open the workspace through its local access link.", 403, "CROSS_SITE")
@@ -156,7 +159,13 @@ class Handler(BaseHTTPRequestHandler):
             return
         workspace = self.server.workspace
         if path == "/api/access":
-            return self.send(200, {"available": True, "version": VERSION, "sourceUrl": SOURCE_URL})
+            result = {"available": True, "version": VERSION, "sourceUrl": SOURCE_URL}
+            if getattr(self.server, "managed_launch", None) is not None:
+                from managed_launch import public_launch
+                result["launch"] = public_launch(self.server.managed_launch)
+                if getattr(self.server, "managed_stopping", False):
+                    result["launch"] = {**result["launch"], "state": "STOPPING"}
+            return self.send(200, result)
         if path == "/api/plans":
             return self.send(200, {"plans": workspace.list()})
         match = re.fullmatch(r"/api/plans/(plan-[a-f0-9]{32})(?:/(history|revision/[0-9]+|export.zip|scenario.json|daily.csv|costs.csv))?", path)
@@ -269,25 +278,53 @@ def main(argv=None):
     parser.add_argument("--scenario", type=Path, help="Original scenario for an empty workspace")
     parser.add_argument("--port", type=int, default=0, help="Local port; default chooses an available port")
     parser.add_argument("--access-file", type=Path, help="Private HTML access link; defaults inside workspace")
+    parser.add_argument("--startup-format", choices=("legacy", "managed"), default="legacy")
+    parser.add_argument("--expected-selection-sha256", help="Exact original managed launch review")
+    parser.add_argument("--source-directory", type=Path, help="Installed original source selected by Applications")
     args = parser.parse_args(argv)
     if not 0 <= args.port <= 65535:
         parser.error("port must be from 0 to 65535")
-    server = create_server(args.workspace, args.scenario, args.port, args.access_file)
-    stopping = threading.Event()
-    def stop(_signum, _frame):
-        if not stopping.is_set():
-            stopping.set()
-            threading.Thread(target=server.shutdown, daemon=True).start()
-    signal.signal(signal.SIGINT, stop)
-    signal.signal(signal.SIGTERM, stop)
-    print(json.dumps({"url": server.origin, "access_file": str(server.access_file)}), flush=True)
+    selected = digest = execution = None
+    scenario = args.scenario or HERE.parent / "sf10_current_candidate.json"
+    if args.startup_format == "managed":
+        from managed_launch import require_selection
+        selected, digest, execution = require_selection(args.workspace, scenario, args.expected_selection_sha256,
+                                                        args.access_file, args.source_directory)
+    elif args.expected_selection_sha256 is not None or args.source_directory is not None:
+        parser.error("managed source and review arguments require --startup-format managed")
+    server = create_server(args.workspace, scenario, args.port, args.access_file)
     try:
+        stopping = threading.Event()
+
+        def stop(_signum, _frame):
+            if not stopping.is_set():
+                stopping.set()
+                server.managed_stopping = True
+                threading.Thread(target=server.shutdown, daemon=True).start()
+
+        signal.signal(signal.SIGINT, stop)
+        signal.signal(signal.SIGTERM, stop)
+        if selected is not None:
+            if not stopping.is_set():
+                from managed_launch import retain_launch
+                announcement = retain_launch(server, selected, digest, execution, atomic_private)
+                if not stopping.is_set():
+                    print(json.dumps(announcement, ensure_ascii=False, separators=(",", ":")), flush=True)
+        elif not stopping.is_set():
+            print(json.dumps({"url": server.origin, "access_file": str(server.access_file)}), flush=True)
+        # shutdown may already be waiting in the signal thread. Enter the server
+        # loop so that an early Stop completes the original shutdown handshake.
         server.serve_forever(poll_interval=0.2)
     finally:
         try:
             server.server_close()
         finally:
-            server.workspace.close()
+            try:
+                if getattr(server, "managed_launch", None) is not None:
+                    from managed_launch import retire_launch
+                    retire_launch(server, atomic_private)
+            finally:
+                server.workspace.close()
     return 0
 
 
