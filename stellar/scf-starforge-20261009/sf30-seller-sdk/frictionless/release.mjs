@@ -58,9 +58,10 @@ export async function prepareFrictionlessRelease({
   await privateDirectory(targetDirectory);
   // A package cannot replace any part of its source workspace or target store.
   for (const protectedDirectory of [directory, targetDirectory]) {
-    const relation = relative(outputDirectory, protectedDirectory);
-    if (!relation || relation !== '..' && !relation.startsWith('..' + sep))
-      throw fault('PACKAGE_RELEASE_LOCATION', 'Keep the release package outside its source workspace and dataset store.');
+    for (const relation of [relative(outputDirectory, protectedDirectory), relative(protectedDirectory, outputDirectory)]) {
+      if (!relation || relation !== '..' && !relation.startsWith('..' + sep))
+        throw fault('PACKAGE_RELEASE_LOCATION', 'Keep the release package outside its source workspace and dataset store.');
+    }
   }
   const saved = publisher.run(runId), selected = publisher.plan(saved.plan);
   const candidate = await publisher.candidate(runId), description = candidate.dataset.describe();
