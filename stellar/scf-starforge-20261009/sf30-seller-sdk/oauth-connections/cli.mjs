@@ -16,11 +16,12 @@ const help=String.raw`Usage:
   node cli.mjs disconnect --directory PATH --revision N --grant ID --request-id ID [--revoke] [--allow-loopback]
   node cli.mjs revoke --directory PATH --revision N --request-id ID [--revocation-grant ID] [--allow-loopback]
   node cli.mjs quickbooks --help
+  node cli.mjs xero --help
 
 Profile files contain public registration data. Client secrets are read only from
 the profile's named environment variable. The private directory stores grants.
 connect requires an interactive terminal and an explicitly registered listener
-port. QuickBooks uses its profile's registered localhost or HTTPS callback
+port. Native provider profiles use their registered localhost or HTTPS callback
 origin; HTTPS ingress forwards the callback to this same local listener. It displays a browser URL, receives the exact callback, then asks you to
 review and approve the returned grant. No token is printed.
 --allow-loopback permits a local HTTP OAuth provider only for development.
@@ -49,7 +50,7 @@ function argumentsFor(argv) {
   return out;
 }
 const print=value=>process.stdout.write(JSON.stringify(value,null,2)+'\n');
-const safeCode=error=>/^OAUTH_[A-Z0-9_]{1,100}$/.test(error?.code??'')?error.code:'OAUTH_CONNECTION_COMMAND_FAILED';
+const safeCode=error=>/^(?:OAUTH|QBO|XERO)_[A-Z0-9_]{1,100}$/.test(error?.code??'')?error.code:'OAUTH_CONNECTION_COMMAND_FAILED';
 function revision(value){
   if(typeof value!=='string'||!/^(?:0|[1-9]\d*)$/.test(value)||!Number.isSafeInteger(Number(value)))
     fail('--revision must be the exact current nonnegative revision.');
@@ -122,6 +123,7 @@ async function connect(directory,args,options){
   }
 }
 export async function main(argv=process.argv.slice(2)){
+  if(argv[0]==='xero'){const {xeroMain}=await import('./xero-cli.mjs');return xeroMain(argv.slice(1));}
   if(argv[0]==='quickbooks'){const {quickbooksMain}=await import('./quickbooks-cli.mjs');return quickbooksMain(argv.slice(1));}
   const args=argumentsFor(argv);if(args.command==='help'){process.stdout.write(help);return;}
   const options={allowLoopback:args['allow-loopback']===true,env:process.env};

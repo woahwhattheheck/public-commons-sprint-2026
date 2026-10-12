@@ -47,7 +47,7 @@ export class XeroWorkspace{
     handoffs:(state.accountantHandoffs??[]).map(row=>({id:row.id,name:row.name,rowCount:row.rowCount,createdAt:row.createdAt,source:clone(row.source),accountantRevisionId:row.revisions.at(-1)?.id??null})),
     contexts:clone(state.xeroContexts??[]).map(({files,...row})=>row),
     plans:(state.xeroPlans??[]).map(row=>({id:row.id,name:row.name,actor:row.actor,createdAt:row.createdAt,handoffId:row.handoffId,tenantId:row.tenantId,planSha256:row.planSha256,cancelledAt:row.cancelledAt,summary:clone(row.summary),operations:row.operations.length,returns:row.returns.length})),
-    connection:{available:this.client.available(),tokenEnv:this.client.tokenEnv??null},docs:XERO_DOCS};}
+    connection:this.client.info?.()??{available:this.client.available(),tokenEnv:this.client.tokenEnv??null},docs:XERO_DOCS};}
   contextRow(id){xeroId(id);const row=(this.workspace.state.xeroContexts??[]).find(row=>row.id===id);need(row,'XERO_CONTEXT_NOT_FOUND','Choose a retained Xero organization.',404);return row;}
   row(id){xeroId(id);const row=(this.workspace.state.xeroPlans??[]).find(row=>row.id===id);need(row,'XERO_PLAN_NOT_FOUND','Choose a retained Xero journal plan.',404);return row;}
   path(id){return join(this.root,'plans',xeroId(id));}

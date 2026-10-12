@@ -212,3 +212,7 @@ Private directory backups contain account access material. Keep them under the o
 - [OpenAPI 3.1 OAuth flow declarations](https://spec.openapis.org/oas/v3.1.1.html#oauth-flow-object)
 
 These references explain the protocol choices. The supported provider features and exact endpoint values still come from the selected provider's documentation and the retained original OpenAPI source.
+
+## Native Xero tenant and accounting workflow
+
+Use the [Xero managed connection guide](./XERO.md) to authorize the original connection, review an actual connected organization and its chart of accounts, retain the exact tenant selection, and run the existing accounting workspace with managed renewal. The typed `seller/oauth-connections/xero` export and `oauth-connection xero` CLI share the original grant, source, native journal and accountant-return lifecycle.

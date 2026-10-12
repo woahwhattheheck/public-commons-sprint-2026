@@ -509,6 +509,10 @@
       "types": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/oauth-connections/quickbooks.d.mts",
       "import": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/oauth-connections/quickbooks.mjs"
     },
+    "./seller/oauth-connections/xero": {
+      "types": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/oauth-connections/xero.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/oauth-connections/xero.mjs"
+    },
     "./seller/client": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/developer/client-generator.mjs",
     "./seller/client-export": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/developer/client-export.mjs",
     "./seller/releases": "./source/stellar/scf-starforge-20261009/sf82-seller-pilot/releases.mjs",
