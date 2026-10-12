@@ -16,9 +16,11 @@ from migration.receiving import (
     _native_operation, build_projects, export_handover, inspect_handover, receive, reopen_handover,
 )
 from migration.workspace import Workspace
-from starforge_stac.model import (
-    directory, file_digest, json_bytes, read_json, require, retain_bytes, value_sha,
-)
+from migration.native import files as native_files, model as original_model, qgis_project as original_qgis
+
+directory, file_digest, json_bytes = original_model.directory, original_model.file_digest, original_model.json_bytes
+read_json, require = original_model.read_json, original_model.require
+retain_bytes, value_sha = original_model.retain_bytes, original_model.value_sha
 
 
 def _keep(root, name, value):
@@ -58,7 +60,7 @@ def _same_history(before, current):
                 "JOURNEY_SOURCE_CHANGED", "Preserve the original retained sources and projects.", collection=name)
     old_migration = before["state"].get("migration", {})
     migration = current["state"].get("migration", {})
-    for name in ("captures", "plans", "editions", "projectDeliveries", "reviews", "inputs"):
+    for name in ("captures", "plans", "editions", "projectDeliveries", "reviews", "inputs", "software"):
         retained = {row["id"]: row for row in migration.get(name, [])}
         require(all(retained.get(row["id"]) == row for row in old_migration.get(name, [])),
                 "JOURNEY_MIGRATION_CHANGED", "Preserve the original migration records.", collection=name)
@@ -71,7 +73,7 @@ def _bind_workspace(root, workspace, config, remap):
         "operationId": config["operationId"], "configSha256": value_sha(config),
         "workspaceId": current["state"]["id"],
         "editions": [{"editionId": row["editionId"],
-                      "documentSha256": value_sha(workspace.document("edition", row["editionId"]))}
+                      "documentSha256": native_files.digest(workspace.document("edition", row["editionId"]))}
                      for row in config["editions"]],
     }
     binding_path = root / "workspace-input.json"
@@ -176,29 +178,124 @@ def _current_locations(root, workspace):
     }
 
 
-@_native_operation
-def reopen_received(workspace_path, output_file):
-    """Called from the received source tree by a separate selected-QGIS process."""
-    workspace = Workspace(directory(workspace_path))
+def _software_candidates(workspace):
+    """Resolve the complete application only through retained software metadata."""
+    rows = workspace.read().get("migration", {}).get("software", [])
+    require(isinstance(rows, list) and rows, "COMPLETE_MIGRATION_SOFTWARE",
+            "Retain the complete migration application in the original workspace software records.")
+    candidates, identities = [], set()
+    for row in rows:
+        require(isinstance(row, dict) and isinstance(row.get("id"), str) and row["id"]
+                and row["id"] not in identities and isinstance(row.get("files"), list),
+                "MIGRATION_SOFTWARE_RECORD", "Keep each original software record and complete file inventory.")
+        identities.add(row["id"])
+        prefix = original_model.relative_name(row.get("path"))
+        require(prefix.startswith("migration/software/"), "MIGRATION_SOFTWARE_PATH",
+                "Use the declared original migration software location.")
+        records = {}
+        for item in row["files"]:
+            record = original_model.descriptor(item)
+            require(record["path"].startswith(prefix + "/") and record["path"] not in records,
+                    "MIGRATION_SOFTWARE_CLOSURE", "Keep the selected software's complete original file closure.")
+            records[record["path"]] = record
+        entries = [record for name, record in records.items()
+                   if name.endswith("/stac/migration/examples/receiving_journey.py")]
+        require(len(entries) == 1, "COMPLETE_MIGRATION_SOFTWARE",
+                "Each complete application needs its own original receiving entrypoint.", softwareId=row["id"])
+        entry = entries[0]
+        stac = entry["path"].removesuffix("/migration/examples/receiving_journey.py")
+        required = ("migration/receiving.py", "migration/workspace.py", "migration/native.py",
+                    "qgis/starforge_stac/__init__.py", "qgis/starforge_stac/model.py",
+                    "qgis/starforge_stac/qgis_project.py", "vector/__init__.py", "vector/common.py")
+        require(all(stac + "/" + name in records for name in required),
+                "COMPLETE_MIGRATION_SOFTWARE", "Include the original application and its paired native engines.",
+                softwareId=row["id"])
+        candidates.append({"id": row["id"], "recordSha256": native_files.digest(row),
+                           "path": prefix, "stac": stac, "entrypoint": entry, "records": records})
+    return candidates
+
+
+def _matches_running_source(candidate):
+    """Choose a retained edition only when its complete source matches this installation."""
+    current = _COMPONENT.parent
+    selected = candidate["stac"] + "/"
+    for name, record in candidate["records"].items():
+        if not name.startswith(selected):
+            continue
+        try:
+            path = original_model.member(current, name[len(selected):])
+            file_digest(path, expected=record)
+        except (OSError, ValueError):
+            return False
+    return True
+
+
+def _select_software(workspace, software_id=None):
+    candidates = _software_candidates(workspace)
+    if software_id is not None:
+        require(isinstance(software_id, str) and software_id, "MIGRATION_SOFTWARE_SELECTION",
+                "Use an original retained software ID.")
+        selected = [row for row in candidates if row["id"] == software_id]
+    elif len(candidates) == 1:
+        selected = candidates
+    else:
+        selected = [row for row in candidates if _matches_running_source(row)]
+    require(len(selected) == 1, "MIGRATION_SOFTWARE_SELECTION",
+            "Select the original application edition explicitly when several retained editions are available.",
+            softwareIds=[row["id"] for row in candidates])
+    choice = selected[0]
+    for record in choice["records"].values():
+        file_digest(original_model.member(workspace.root, record["path"]), expected=record)
+    return choice
+
+
+def _software_binding(choice):
+    return {name: choice[name] for name in ("id", "recordSha256", "path", "stac", "entrypoint")}
+
+
+def _loaded_received_sources(workspace, choice):
+    """All loaded product modules must be declared members of this received application."""
     import migration.receiving as receiving_module
     import migration.workspace as workspace_module
-    import starforge_stac.model as model_module
-    from starforge_stac.qgis_project import native_version
-    software = workspace.root / "software"
-    source_files = {}
-    for label, module in (("migration.receiving", receiving_module),
-                          ("migration.workspace", workspace_module),
-                          ("starforge_stac.model", model_module)):
-        path = Path(module.__file__).resolve()
-        require(path.is_relative_to(software.resolve()), "RECEIVED_SOFTWARE_SOURCE",
-                "Run independent receiving with this archive's complete original application source.", module=label)
-        source_files[label] = {"path": path.relative_to(workspace.root).as_posix(), **file_digest(path)}
+    import migration.native as native_module
+    prefixes = {"migration", original_model.__package__, native_files.__package__}
+    modules = {"migration.receiving": receiving_module, "migration.workspace": workspace_module,
+               "migration.native": native_module, "starforge_stac.model": original_model,
+               "starforge_stac.qgis_project": original_qgis, "vector.common": native_files}
+    for name, module in sorted(sys.modules.items()):
+        if module is not None and getattr(module, "__file__", None) and any(
+                name == prefix or name.startswith(prefix + ".") for prefix in prefixes):
+            modules[name] = module
+    paths = {label: Path(module.__file__).resolve() for label, module in modules.items()}
+    paths["receiving_entrypoint"] = Path(__file__).resolve()
+    records = {}
+    for label, path in sorted(paths.items()):
+        require(path.is_relative_to(workspace.root), "RECEIVED_SOFTWARE_SOURCE",
+                "Run the complete application from this independently received workspace.", module=label)
+        relative = path.relative_to(workspace.root).as_posix()
+        record = choice["records"].get(relative)
+        require(record is not None, "RECEIVED_SOFTWARE_SOURCE",
+                "The loaded original module must belong to the selected software edition.", module=label)
+        file_digest(original_model.member(workspace.root, relative), expected=record)
+        records[label] = record
+    require(records["receiving_entrypoint"] == choice["entrypoint"], "RECEIVED_SOFTWARE_SOURCE",
+            "Run this software edition's declared original receiving entrypoint.")
+    return records
+
+
+@_native_operation
+def reopen_received(workspace_path, output_file, software_id=None):
+    """Called from the received source tree by a separate selected-QGIS process."""
+    workspace = Workspace(directory(workspace_path))
+    choice = _select_software(workspace, software_id)
+    reopened = reopen_handover(workspace, progress=_progress)
+    source_files = _loaded_received_sources(workspace, choice)
     result = {
         "schema": "starforge.migration-independent-reopen.v1",
         "workspaceId": workspace.read()["id"], "revision": workspace.read()["revision"],
         "snapshotSha256": value_sha(workspace.snapshot()),
-        "sourceFiles": source_files, "native": native_version(),
-        "reopened": reopen_handover(workspace, progress=_progress),
+        "software": _software_binding(choice), "sourceFiles": source_files,
+        "native": original_qgis.native_version(), "reopened": reopened,
     }
     output = Path(output_file).expanduser().absolute()
     output.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
@@ -206,47 +303,49 @@ def reopen_received(workspace_path, output_file):
         old, _ = read_json(output)
         require(old["workspaceId"] == result["workspaceId"]
                 and old["snapshotSha256"] == result["snapshotSha256"]
+                and old.get("software") == result["software"]
                 and old["sourceFiles"] == result["sourceFiles"],
                 "RECEIVED_REOPEN_CHANGED", "Retain the original independent receiving result.")
         result = old
     else:
         retain_bytes(output.parent, output.name, json_bytes(result))
     print(json.dumps({"independentReopen": "complete", "workspaceId": result["workspaceId"],
-                      "projects": len(result["reopened"]["projects"]), "result": str(output)}), flush=True)
+                      "softwareId": choice["id"], "projects": len(result["reopened"]["projects"]),
+                      "result": str(output)}), flush=True)
     return result
 
 
-def _independent_receiver(workspace, output):
-    software = workspace.root / "software"
-    candidates = [
-        software / "migration" / "examples" / "receiving_journey.py",
-        software / "stac" / "migration" / "examples" / "receiving_journey.py",
-    ]
-    present = [path for path in candidates if path.is_file() and not path.is_symlink()]
-    require(len(present) == 1, "COMPLETE_MIGRATION_SOFTWARE",
-            "The handover must include one complete migration application and this original receiving entrypoint.")
-    entry = present[0]
+def _independent_receiver(workspace, output, software_id=None):
+    choice = _select_software(workspace, software_id)
+    entry = original_model.member(workspace.root, choice["entrypoint"]["path"])
     if output.exists():
         original, _ = read_json(output)
         require(original["workspaceId"] == workspace.read()["id"]
-                and original["snapshotSha256"] == value_sha(workspace.snapshot()),
-                "RECEIVED_REOPEN_CHANGED", "Keep the original independent receiving workspace.")
+                and original["snapshotSha256"] == value_sha(workspace.snapshot())
+                and original.get("software") == _software_binding(choice),
+                "RECEIVED_REOPEN_CHANGED", "Keep the original independent workspace and application edition.")
         for record in original["sourceFiles"].values():
-            file_digest(workspace.root / record["path"], expected=record)
+            require(choice["records"].get(record["path"]) == record, "RECEIVED_SOFTWARE_SOURCE",
+                    "Retain the original complete application module binding.")
+            file_digest(original_model.member(workspace.root, record["path"]), expected=record)
         return original
     environment = dict(os.environ)
     environment.setdefault("QT_QPA_PLATFORM", "offscreen")
-    # The child resolves application modules from its received entrypoint.
+    # The child resolves all product modules through its own received application.
     # The selected QGIS Python retains its original native provider installation.
     with output.with_suffix(".stdout.log").open("ab") as log:
         child = subprocess.run(
-            [sys.executable, str(entry), "--reopen-received", str(workspace.root), "--output", str(output)],
+            [sys.executable, str(entry), "--reopen-received", str(workspace.root),
+             "--software-id", choice["id"], "--output", str(output)],
             cwd=workspace.root, env=environment, stdout=log, stderr=subprocess.STDOUT, check=False,
         )
     require(child.returncode == 0 and output.is_file(), "INDEPENDENT_RECEIVING",
             "The selected QGIS process did not complete the original independent reopen.",
             returncode=child.returncode, log=str(output.with_suffix(".stdout.log")))
-    return read_json(output)[0]
+    original, _ = read_json(output)
+    require(original.get("software") == _software_binding(choice), "RECEIVED_SOFTWARE_SOURCE",
+            "The independent native process must retain the selected original application edition.")
+    return original
 
 
 @_native_operation
@@ -342,13 +441,14 @@ def perform(config_file, remap=None):
     receiver = incoming["workspace"]
     require(again["replayed"] and value_sha(receiver.snapshot()) == inspected["snapshotSha256"],
             "JOURNEY_SNAPSHOT", "The independent receiving must retain the exact full original snapshot.")
-    independent = _independent_receiver(receiver, root / "independent-reopen.json")
+    independent = _independent_receiver(receiver, root / "independent-reopen.json", config.get("softwareId"))
     onward = _archive(root, "onward-archive.json", receiver, "onward-migration.zip", receiver.read()["revision"])
     onward_received = receive(root / "onward-migration.zip", root / "onward-workspace",
                               expected_sha256=onward["sha256"], native_reopen="required", progress=_progress)
     require(onward_received["workspace"].snapshot() == receiver.snapshot(), "JOURNEY_ONWARD_SNAPSHOT",
             "The complete onward handover must retain the original migration and project history.")
-    onward_independent = _independent_receiver(onward_received["workspace"], root / "onward-independent-reopen.json")
+    onward_independent = _independent_receiver(onward_received["workspace"], root / "onward-independent-reopen.json",
+                                               independent["software"]["id"])
     result = {
         "schema": "starforge.migration-receiving-result.v1", "operationId": config["operationId"],
         "workspaceId": inspected["workspaceId"], "revision": inspected["revision"],
@@ -373,12 +473,14 @@ def main():
     action.add_argument("--config")
     action.add_argument("--reopen-received")
     parser.add_argument("--output")
+    parser.add_argument("--software-id", help="Original retained application edition for an independent reopen.")
     parser.add_argument("--remap", help="Explicit host paths bound to the original operation and workspace snapshot.")
     args = parser.parse_args()
     if args.reopen_received:
         require(args.remap is None, "JOURNEY_HOST_CONFIGURATION", "Use --remap only with the original --config.")
         require(args.output is not None, "RECEIVED_RESULT_PATH", "Choose the original independent result file.")
-        return reopen_received(args.reopen_received, args.output)
+        return reopen_received(args.reopen_received, args.output, args.software_id)
+    require(args.software_id is None, "MIGRATION_SOFTWARE_SELECTION", "Keep the softwareId in the original journey config.")
     return perform(args.config, remap=args.remap)
 
 
