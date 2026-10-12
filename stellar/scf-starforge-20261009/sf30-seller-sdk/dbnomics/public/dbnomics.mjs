@@ -56,7 +56,23 @@ async function write(slot,route,value){
   const result=await api(route,{id:request.id,...value});
   localStorage.removeItem(key);return result;
 }
-function download(route){const a=el('a','Download',{href:'/api/dbnomics/'+route,download:''});a.click();}
+const downloads=[];
+function refreshDownloads(){
+  for(const {node,route} of downloads){
+    const target=typeof route==='function'?route():route;
+    if(target){node.href='/api/dbnomics/'+target;node.removeAttribute('aria-disabled');node.tabIndex=0;}
+    else{node.removeAttribute('href');node.setAttribute('aria-disabled','true');node.tabIndex=-1;}
+  }
+}
+function fileLink(label,route){
+  const node=el('a',label,{download:'',className:'db-download'});
+  downloads.push({node,route});refreshDownloads();
+  node.addEventListener('click',event=>{
+    refreshDownloads();
+    if(busy||!node.hasAttribute('href')){event.preventDefault();message(busy?'Wait for the selected edition to finish opening.':'Choose a saved source or analyst report.');}
+  });
+  return node;
+}
 function ids(select){return [...select.selectedOptions].map(option=>option.value);}
 function fillSelect(node,items,current=node.value){node.replaceChildren();for(const [value,label]of items)node.append(el('option',label,{value,selected:value===current}));}
 function multiline(value){return value.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);}
@@ -73,7 +89,7 @@ captureSelect.addEventListener('change',action(async()=>{if(!keepNotes()){captur
 const sourceInfo=el('div'),metadata=el('pre',undefined,{className:'db-pre'});
 sourcePane.append(sourceInfo,details('Complete provider metadata, acquisition and reuse terms',metadata));
 const openOriginal=row();
-openOriginal.append(button('Download complete source capture',async()=>{if(!selectedId)throw Error('Choose a retained edition.');download('capture-export?id='+selectedId);}),
+openOriginal.append(fileLink('Download complete source capture',()=>selectedId?'capture-export?id='+selectedId:null),
   button('Open captured INSEE example',async()=>{const result=await write('insee-example','seed',{});await refresh(result.captureId);message('Opened the original 468-observation INSEE source. Its source dates and attributes are retained.');}));
 sourcePane.append(openOriginal);
 const discovery=section(sourcePane,'Find provider datasets and series'),discoveryForm=el('form'),discoverFields=group();
@@ -166,7 +182,7 @@ reportForm.addEventListener('submit',action(async()=>{
 }));
 const reportSelection=group(),reportSelect=select(),reportSummary=el('p'),chart=el('div',undefined,{className:'db-chart'}),chartSeries=select(),reportTable=el('div'),reportPages=row(),reportDownloads=row();
 reportSelection.append(field('Saved analyst report',reportSelect),field('Chart series',chartSeries));
-for(const format of ['html','csv','json'])reportDownloads.append(button('Download '+format.toUpperCase(),async()=>{if(!selectedReport)throw Error('Choose a saved report.');download('report-export?'+new URLSearchParams({id:selectedReport,format}));}));
+for(const format of ['html','csv','json'])reportDownloads.append(fileLink('Download '+format.toUpperCase(),()=>selectedReport?'report-export?'+new URLSearchParams({id:selectedReport,format}):null));
 analysisPane.append(reportSelection,reportSummary,chart,reportDownloads,reportTable,reportPages);
 reportSelect.addEventListener('change',action(async()=>{selectedReport=reportSelect.value;reportOffset=0;await showReport();}));
 chartSeries.addEventListener('change',()=>drawChart());
@@ -175,7 +191,7 @@ async function showReport(){
   reportData=await api('report?'+new URLSearchParams({id:selectedReport,offset:'0',limit:'5000'}));
   fillSelect(chartSeries,reportData.series.map(item=>[item.id,item.name+' · '+item.frequency]));
   reportSummary.textContent=reportData.spec.title+' · '+reportData.rowCount+' observations · '+reportData.missingCalculations+' unavailable calculations · notes revision '+reportData.notesRevision+'. '+reportData.methodology;
-  drawChart();await showReportRows();
+  drawChart();await showReportRows();refreshDownloads();
 }
 async function showReportRows(){
   const result=reportOffset<5000&&reportOffset+50<=reportData.rows.length?{...reportData,rows:reportData.rows.slice(reportOffset,reportOffset+50),
@@ -273,7 +289,7 @@ publisherControls.append(field('Saved source query',querySelect),button('Save ex
   document.getElementById('candidate').scrollIntoView({behavior:'smooth',block:'start'});deliveryStatus.textContent='Original extraction '+result.id+' is '+result.state+'. Inspect, review and publish it in the native publisher below.';
 }));
 deliveryPane.append(publisherControls,deliveryStatus,row());
-const downloadControls=row();downloadControls.append(button('Export sources, reports and note history',async()=>download('source-export')),
+const downloadControls=row();downloadControls.append(fileLink('Export sources, reports and note history','source-export'),
   button('Open native publisher',async()=>document.getElementById('configuration').scrollIntoView({behavior:'smooth',block:'start'})));
 deliveryPane.append(downloadControls);
 const release=details('Package a published edition for the original merchant');
@@ -329,7 +345,7 @@ async function refresh(preferred,loadCapture=true){
   else await refreshReportChoices();
   if(!releaseDirectory.value)releaseDirectory.value=saved.project.directory+'/merchant-package';
   if(!lastPlan&&saved.publisher.plans.length)lastPlan=saved.publisher.plans[0];
-  await showOperations();message(saved.active?'Active: '+saved.active.kind:'Saved project '+saved.project.id+' · '+saved.captures.length+' complete source editions.');
+  await showOperations();refreshDownloads();message(saved.active?'Active: '+saved.active.kind:'Saved project '+saved.project.id+' · '+saved.captures.length+' complete source editions.');
 }
 window.addEventListener('beforeunload',event=>{if(notesDirty||noteText.value.trim()){event.preventDefault();event.returnValue='';}});
 window.addEventListener('publisher:change',()=>{const run=publisherHost.context().selected;if(run)releaseRun.value=run;});
