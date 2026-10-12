@@ -1,9 +1,10 @@
 // MIT. Browser presentation; acquisition, payment and SQL remain original services.
+import { createBuyerOperatorUI } from '../../../buyer-runbook/workspace-ui/operator.mjs';
 const $ = selector => document.querySelector(selector);
 let token = location.hash.slice(1) || sessionStorage.getItem('dataset-capability') || '';
 if (/^[a-f0-9]{64}$/.test(token)) { sessionStorage.setItem('dataset-capability', token); history.replaceState(null, '', '/'); }
 let saved = null, selected = null, selectedId = sessionStorage.getItem('dataset-selected') || null;
-let receiving = !selectedId, source = null, review = null, busy = false, tab = 'progress', epoch = 0;
+let receiving = !selectedId, source = null, review = null, busy = false, tab = 'progress', epoch = 0, hostOpen = false;
 let page = 0, preview = null, purchases = null, handoff = null, alias = '', fileGeneration = 0;
 const draft = { name: '', choice: 0, query: 'limit=100', maxPages: 8, maxRows: 1000000, maxPageBytes: 1048576, maxTotalAtomic: '', dailyAtomic: '' };
 const display = value => value === null ? 'null' : typeof value === 'object' ? JSON.stringify(value) : String(value ?? '—');
@@ -72,7 +73,7 @@ function inspectedSelection(value) {
   if (listed) listed.status = value.status;
 }
 async function chooseSession(id) {
-  selectedId = id; receiving = false; selected = null; preview = purchases = handoff = null; page = 0;
+  selectedId = id; receiving = false; hostOpen = false; selected = null; preview = purchases = handoff = null; page = 0;
   sessionStorage.setItem('dataset-selected', id); alias = id.replaceAll('-', '_').slice(0, 48);
   const current = ++epoch, result = await api('/api/session?id=' + encodeURIComponent(id));
   if (current === epoch && selectedId === id) inspectedSelection(result);
@@ -120,8 +121,13 @@ function renderReceiving() {
   if (source) imports.append(definition([['Original file', source.name], ['SHA-256', source.id]]));
   const contents = [heading, imports];
   const operator = saved.operator.operator;
-  if (!operator) contents.push(card(text('h3', 'Operator setup'), text('p', 'Offer files can be received now. Creating an acquisition requires the operator’s existing settings on this host.'),
-    text('p', 'Reopen this customer workspace with --operator-settings pointing to the original private preset. Existing completed datasets remain available.', 'help')));
+  if (!operator) contents.push(card(text('h3', 'Set up the buyer host'),
+    text('p', 'Receive offers now, then review and save the local payer, signing reference and limits before creating an acquisition. Existing completed datasets remain available.'),
+    el('button', { type: 'button', 'data-operator-setup': '', disabled: busy }, 'Open local buyer setup')));
+  else contents.push(card(text('h3', 'Selected buyer host'),
+    definition([['Actor / service', operator.actor + ' / ' + operator.service], ['Payer', operator.payer]]),
+    text('p', 'New acquisition reviews use the selected host. Prepared acquisitions keep their original settings and ledger.', 'help'),
+    el('button', { type: 'button', 'data-operator-setup': '', disabled: busy }, 'Review host settings')));
   if (source) {
     const select = el('select', { name: 'offer', disabled: busy, 'aria-label': 'Original dataset offer', onChange: event => { draft.choice = Number(event.target.value); review = null; render(); } },
       source.choices.map((item, index) => el('option', { value: index, selected: index === draft.choice }, `${item.resource} · ${item.terms.maxAtomic} atomic / page · ${item.terms.network}`)));
@@ -290,15 +296,40 @@ function renderSession() {
 function render() {
   if (!saved) return;
   $('#receive-nav').disabled = busy;
+  for (const id of ['open-operator', 'welcome-operator', 'close-operator']) $('#' + id).disabled = busy;
+  $('#welcome-operator').hidden = Boolean(saved.operator.operator);
+  $('#main').hidden = hostOpen; $('#operator-panel').hidden = !hostOpen;
   $('#sessions').replaceChildren(...saved.sessions.map(item => button('', () => chooseSession(item.id), {
     class: 'session-button' + (!receiving && item.id === selectedId ? ' selected' : ''),
     'aria-current': !receiving && item.id === selectedId ? 'page' : 'false',
   })).map((node, index) => { const item = saved.sessions[index]; node.append(text('strong', item.label), text('small', statusText(saved.active?.session === item.id ? 'RUNNING' : item.status))); return node; }));
   if (!saved.sessions.length) $('#sessions').append(text('p', 'No acquisitions yet.', 'muted'));
-  if (receiving) renderReceiving(); else renderSession();
+  if (!hostOpen) { if (receiving) renderReceiving(); else renderSession(); }
 }
-$('#receive-nav').addEventListener('click', () => execute(async () => { receiving = true; epoch++; }));
-try { await refresh(); if (selectedId && saved.sessions.some(item => item.id === selectedId)) await chooseSession(selectedId); else receiving = true; render(); }
+const operatorUI = createBuyerOperatorUI({
+  request: api, notice,
+  openPanel: () => { hostOpen = true; render(); },
+  refreshState: async () => {
+    review = null;
+    await refresh(); render();
+  },
+});
+$('#close-operator').addEventListener('click', () => { hostOpen = false; render(); });
+$('#operator-history').addEventListener('click', event => {
+  const link = event.target.closest('a[href^="/files/operator/"]');
+  if (!link) return;
+  event.preventDefault(); event.stopImmediatePropagation();
+  (async () => {
+    const response = await fetchWorkspace(link.getAttribute('href'));
+    const url = URL.createObjectURL(await response.blob());
+    const anchor = el('a', { href: url, download: link.getAttribute('href').split('/')[3] + '.settings.json' });
+    document.body.append(anchor); anchor.click(); anchor.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 30000);
+    notice('The exact original private settings file was downloaded.');
+  })().catch(error => notice(error.message, true));
+}, true);
+$('#receive-nav').addEventListener('click', () => execute(async () => { receiving = true; hostOpen = false; epoch++; }));
+try { await refresh(); if (selectedId && saved.sessions.some(item => item.id === selectedId)) await chooseSession(selectedId); else receiving = true; render(); await operatorUI.refresh(); }
 catch (error) { $('#connection').textContent = 'Workspace unavailable'; notice(error.message, true); }
 let polling = false;
 setInterval(async () => {

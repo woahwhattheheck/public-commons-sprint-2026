@@ -5,9 +5,10 @@ import {createHash} from 'node:crypto';
 import {TextDecoder} from 'node:util';
 import protobuf from 'protobufjs';
 import protoLoader from '@grpc/proto-loader';
+import {DESCRIPTOR_SOURCE_SCHEMA, PROTO_LIMITS, compileDescriptorSource} from './descriptor.mjs';
 
 export const PROTO_SOURCE_SCHEMA = 'sf30-grpc-proto-source-v1';
-export const PROTO_LIMITS = Object.freeze({files:512, fileBytes:4*1024*1024, sourceBytes:32*1024*1024, types:8192, fields:65536});
+export {PROTO_LIMITS};
 export const GRPC_OBJECT_OPTIONS = Object.freeze({keepCase:true, longs:String, enums:String, bytes:String, defaults:false, arrays:false, objects:false, oneofs:false, json:false});
 const SCALARS = new Set(['double','float','int32','uint32','sint32','fixed32','sfixed32','int64','uint64','sint64','fixed64','sfixed64','bool','string','bytes']);
 const own = (value,key) => Object.prototype.hasOwnProperty.call(value,key);
@@ -205,6 +206,10 @@ export async function captureProtoSource({directory,entrypoints}={}){
 }
 
 export function compileProtoSource(input){
+  if(input?.schema===DESCRIPTOR_SOURCE_SCHEMA){
+    const {source,root,metadata}=compileDescriptorSource(input);
+    return compileRetainedRoot({source,root,entrypoints:source.entrypoints,files:source.files,builtins:[],missingWeak:[],selectedServices:new Set(source.services),descriptorMetadata:metadata});
+  }
   requireValue(plain(input)&&input.schema===PROTO_SOURCE_SCHEMA,'Use a complete retained gRPC .proto source.');
   const entrypoints=entries(input.entrypoints);
   requireValue(Array.isArray(input.files)&&Array.isArray(input.builtins||[])&&input.files.length+(input.builtins||[]).length<=PROTO_LIMITS.files,'The retained source file inventory is invalid.');
@@ -235,6 +240,10 @@ export function compileProtoSource(input){
     }
   }
   try{root.resolveAll();}catch(error){const problem=new Error('The captured protobuf types do not resolve: '+error.message);problem.code='grpc_proto_types';throw problem;}
+  return compileRetainedRoot({source,root,entrypoints,files,builtins,missingWeak});
+}
+
+function compileRetainedRoot({source,root,entrypoints,files,builtins,missingWeak,selectedServices=null,descriptorMetadata=null}){
   const objects=reflected(root);requireValue(objects.length<=PROTO_LIMITS.types,'The protobuf contract has too many types.');
   requireValue(objects.reduce((n,type)=>n+(type.fieldsArray||[]).length,0)<=PROTO_LIMITS.fields,'The protobuf contract has too many fields.');
   const definition=protoLoader.fromJSON(root.toJSON(),GRPC_OBJECT_OPTIONS);
@@ -242,6 +251,7 @@ export function compileProtoSource(input){
   for(const object of objects){
     const name=fullName(object);
     if(object instanceof protobuf.Service){
+      if(selectedServices&&!selectedServices.has(name)){delete definition[name];continue;}
       const service={name,methods:[]};
       for(const method of object.methodsArray){
         method.resolve();const methodPath='/'+name+'/'+method.name,wire=definition[name]?.[method.name];
@@ -252,11 +262,13 @@ export function compileProtoSource(input){
       }
       services.push(service);
     }else if(object instanceof protobuf.Type){
-      messages.push({name,fields:object.fieldsArray.map(field=>({name:field.name,id:field.id,type:field.resolvedType?fullName(field.resolvedType):field.type,scalar:SCALARS.has(field.type),repeated:!!field.repeated,map:!!field.map,keyType:field.keyType||null,required:!!field.required,oneof:field.partOf?.name||null,jsonName:field.getOption('json_name')||field.name,comment:field.comment||null})),oneofs:(object.oneofsArray||[]).map(oneof=>({name:oneof.name,fields:[...oneof.oneof],synthetic:!!oneof.isProto3Optional}))});
+      messages.push({name,fields:object.fieldsArray.map(field=>({name:field.name,id:field.id,type:field.resolvedType?fullName(field.resolvedType):field.type,scalar:SCALARS.has(field.type),repeated:!!field.repeated,map:!!field.map,keyType:field.keyType||null,required:!!field.required,oneof:field.partOf?.name||null,jsonName:field.getOption('json_name')||field.name,comment:field.comment||null,...(field.descriptorMetadata?{descriptor:field.descriptorMetadata}:{})})),oneofs:(object.oneofsArray||[]).map(oneof=>({name:oneof.name,fields:[...oneof.oneof],synthetic:!!oneof.isProto3Optional}))});
     }else if(object instanceof protobuf.Enum){enums.push({name,values:Object.entries(object.values).map(([name,number])=>({name,number})),allowAlias:object.getOption('allow_alias')===true});}
   }
   services.sort((a,b)=>a.name>b.name?1:a.name<b.name?-1:0);messages.sort((a,b)=>a.name>b.name?1:a.name<b.name?-1:0);enums.sort((a,b)=>a.name>b.name?1:a.name<b.name?-1:0);
   requireValue(services.some(service=>service.methods.length),'The captured source contains no gRPC service methods.','grpc_proto_no_services');
-  const inventory={schema:'sf30-grpc-inventory-v1',source_sha256:source.sha256,entrypoints:[...entrypoints],files:files.map(({path,bytes,sha256})=>({path,bytes,sha256,kind:'proto'})),builtins:builtins.map(({path,bytes,sha256})=>({path,bytes,sha256,kind:'runtime_descriptor'})),missing_weak_imports:missingWeak,services,messages,enums,method_count:Object.keys(methods).length,unary_method_count:Object.values(methods).filter(method=>method.unary).length,representation:{field_names:'captured descriptor names',longs:'decimal strings',bytes:'base64',enums:'declared names or integer values',well_known_types:'native message fields',defaults:'absent fields are not filled'}};
+  const inventory={schema:'sf30-grpc-inventory-v1',source_sha256:source.sha256,entrypoints:[...entrypoints],files:files.map(({path,bytes,sha256})=>({path,bytes,sha256,kind:selectedServices?'file_descriptor_proto':'proto'})),builtins:builtins.map(({path,bytes,sha256})=>({path,bytes,sha256,kind:'runtime_descriptor'})),missing_weak_imports:missingWeak,services,messages,enums,method_count:Object.keys(methods).length,unary_method_count:Object.values(methods).filter(method=>method.unary).length,representation:{field_names:'captured descriptor names',longs:'decimal strings',bytes:'base64',enums:'declared names or integer values',well_known_types:'native message fields',defaults:'absent fields are not filled'}};
+  if(selectedServices){inventory.source_format='file_descriptor_proto';inventory.selected_services=[...source.services];inventory.reflection={...source.reflection};inventory.descriptor_files=descriptorMetadata.files;}
   return {source,inventory,methods,root,definition,runtime:originalLoaderRuntime()};
 }
+
