@@ -221,7 +221,7 @@ export async function openFleetReleaseOperator({ planFile, directory, gatewaySta
   if (directory === stateDirectory) throw fail('FLEET_RELEASE_SEPARATE_STATE_REQUIRED', 400);
   const lease = await acquireStateLease(directory), journalPath = join(directory, 'links.json');
   const manifestPath = join(directory, 'prepared-fleet.json');
-  let journal, gateway, operation = null, stagingController, closing = false, closed = false, closingPromise, clientClosePromise, deliveryClosePromise, deliveryCloseFailed = false;
+  let journal, gateway, operation = null, stagingController, closing = false, closed = false, closingPromise, clientClosePromise, clientCloseFailed = false, deliveryClosePromise, deliveryCloseFailed = false;
   const owned = new Map(), reviews = new Map(), tenants = new Map(plan.tenants.map(row => [row.id, row]));
   function locate(tenantId, slotName) {
     const tenant = tenants.get(tenantId), slot = tenant?.slots[slotName];
@@ -628,8 +628,11 @@ export async function openFleetReleaseOperator({ planFile, directory, gatewaySta
       stagingController.abort(fail('FLEET_RELEASE_STAGE_CANCELLED')); return true;
     },
     cancelClientTransfers() {
-      if (clientClosePromise) return false;
-      clientClosePromise = clients.close(); clientClosePromise.catch(() => {}); return true;
+      if (clientClosePromise && !clientCloseFailed) return false;
+      clientCloseFailed = false;
+      clientClosePromise = clients.close();
+      clientClosePromise.catch(() => { clientCloseFailed = true; });
+      return true;
     },
     cancelDeliveryOperations() {
       if (deliveryClosePromise && !deliveryCloseFailed) return false;

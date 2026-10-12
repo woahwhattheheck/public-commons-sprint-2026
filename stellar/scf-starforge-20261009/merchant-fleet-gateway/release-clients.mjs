@@ -96,22 +96,23 @@ export function createFleetClientDesk({ directory, planDigest, locate, getManage
     },
     get summary() { return { available: !closing, openedSlots: opened.size }; },
     close() {
-      if (!closed) {
-        closing = true;
-        closed = (async () => {
-          const results = await Promise.allSettled([...opened.values()].map(async pending => {
-            const desk = await pending;
-            const result = await Promise.allSettled([desk.console.close(), desk.reads.close()]);
-            const failures = result.filter(row => row.status === 'rejected').map(row => row.reason);
-            if (failures.length) throw new AggregateError(failures, 'Original customer handover close failed');
-          }));
-          const errors = results.filter(row => row.status === 'rejected' && row.reason?.code !== 'FLEET_CLIENT_CLOSING').map(row => row.reason);
-          opened.clear();
-          if (errors.length) throw Object.assign(failure('FLEET_CLIENT_SHUTDOWN_INCOMPLETE', 500),
-            { cause: new AggregateError(errors, 'Original customer handover close failed') });
-        })();
-      }
-      return closed;
+      if (closed) return closed;
+      closing = true;
+      const attempt = (async () => {
+        const results = await Promise.allSettled([...opened].map(async ([key, pending]) => {
+          const desk = await pending;
+          const result = await Promise.allSettled([desk.console.close(), desk.reads.close()]);
+          const failures = result.filter(row => row.status === 'rejected').map(row => row.reason);
+          if (failures.length) throw new AggregateError(failures, 'Original customer handover close failed');
+          if (opened.get(key) === pending) opened.delete(key);
+        }));
+        const errors = results.filter(row => row.status === 'rejected' && row.reason?.code !== 'FLEET_CLIENT_CLOSING').map(row => row.reason);
+        if (errors.length) throw Object.assign(failure('FLEET_CLIENT_SHUTDOWN_INCOMPLETE', 500),
+          { cause: new AggregateError(errors, 'Original customer handover close failed') });
+      })();
+      closed = attempt;
+      attempt.catch(() => { if (closed === attempt) closed = undefined; });
+      return attempt;
     },
   };
   return api;
