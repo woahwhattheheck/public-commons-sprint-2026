@@ -4,7 +4,7 @@ import {join} from 'node:path';
 import {createHash} from 'node:crypto';
 import {normalizeCrs} from '../protocol.mjs';
 import {inspectWfsVector,listWfsVectors} from '../vector.mjs';
-import {optionalJson,exactFile} from '../source.mjs';
+import {exactFile} from '../source.mjs';
 import {parseExactJSON,stringifyExactJSON} from '../../stac/vector/json.mjs';
 
 const hash=bytes=>createHash('sha256').update(bytes).digest('hex');
@@ -65,7 +65,7 @@ export async function prepareNativeVectorCustomer({app,call,source,orders,root,o
     // The original WFS parser has already checked each retained GeoJSON response against this CRS.
     const input={id:ids.captures[index],orderId:orders[index],sourceCrs,coordinateOrder:'x,y',
       identityJson:'{"mode":"feature-id"}'};
-    const saved=await retained('native-vector/capture-'+(index+1)+'.json',async()=>input);assert.deepEqual(saved,input);
+    const saved=await retained('requests/native-vector/capture-'+(index+1)+'.json',async()=>input);assert.deepEqual(saved,input);
     complete(await call('vector_capture',saved));
     const view=complete(await app.query('vector',{id:input.id})),manifest=parseExactJSON(view.manifestJson),
       inspection=parseExactJSON(view.inspectionJson);
@@ -89,8 +89,8 @@ export async function prepareNativeVectorCustomer({app,call,source,orders,root,o
   const capture=captures[1],inspection=parseExactJSON(capture.inspectionJson),layer=inspection.layers[0];
   assert(layer.fields.STATE_NAME,'The selected original states source must retain STATE_NAME.');
   const numeric=Object.keys(layer.fields).find(name=>name==='PERSONS'&&
-    Object.keys(layer.fields[name].kinds).some(kind=>['integer','number'].includes(kind)))??
-    Object.keys(layer.fields).find(name=>Object.keys(layer.fields[name].kinds).some(kind=>['integer','number'].includes(kind)));
+    (layer.fields[name].kinds??[]).some(kind=>['integer','number'].includes(kind)))??
+    Object.keys(layer.fields).find(name=>(layer.fields[name].kinds??[]).some(kind=>['integer','number'].includes(kind)));
   assert(numeric,'Choose an actual numeric field from the original source.');
   const page=await(await nativeBrowser()).newPage({viewport:{width:1440,height:1000}});
   page.setDefaultTimeout(180000);const errors=[];page.on('pageerror',error=>errors.push(String(error)));
@@ -106,7 +106,7 @@ export async function prepareNativeVectorCustomer({app,call,source,orders,root,o
     await page.getByLabel('STATE_NAME GeoPackage name',{exact:true}).fill('state_name');
     await page.getByLabel('STATE_NAME Shapefile name',{exact:true}).fill('ST_NAME');
     await page.getByLabel(numeric+' representation',{exact:true}).selectOption('json');
-    const earlier=await optionalJson(join(root,'native-vector/ui-export-request.json'),8*1024*1024);
+    const earlier=await retained('requests/native-vector/ui-export-request.json');
     if(earlier){
       request=JSON.parse(earlier.bodyText);
       assert.equal(request.action,'vector-export');assert.equal(request.captureId,capture.id);
@@ -138,11 +138,11 @@ export async function prepareNativeVectorCustomer({app,call,source,orders,root,o
           if(interceptCount>1){assert.equal(raw,firstBody);return route.continue();}
           assert.equal(body.captureId,capture.id);assert.equal(body.profileJson,reviewed);
           firstBody=raw;request=body;
-          const saved=await retained('native-vector/ui-export-request.json',async()=>({bodyText:raw}));
+          const saved=await retained('requests/native-vector/ui-export-request.json',async()=>({bodyText:raw}));
           assert.equal(saved.bodyText,raw);
           const response=await route.fetch({timeout:180000});assert.equal(response.status(),200,await response.text());
           const result=complete(await response.json());assert.equal(result.id,request.id);
-          loss=await retained('native-vector/lost-export-reply.json',async()=>({
+          loss=await retained('requests/native-vector/lost-export-reply.json',async()=>({
             id:request.id,bodySha256:hash(raw),receipt:result.receipt,interruptedAfter:'COMMITTED_HTTP_RESULT'}));
           assert.equal(loss.id,request.id);assert.equal(loss.bodySha256,hash(raw));
           await route.abort('connectionreset');accept(result);
@@ -195,7 +195,7 @@ export async function prepareNativeVectorCustomer({app,call,source,orders,root,o
     exportId:exported.id,comparisonId:compared.id,receivedId:received.id,counts,
     reviewedProfile:{path:'native-reviewed-profile.json',bytes:Buffer.byteLength(reviewed),sha256:hash(reviewed)},
     archive:{path:'wfs-original-native-vectors.zip',bytes:zip.length,sha256:hash(zip)},
-    interruptedReply:await optionalJson(join(root,'native-vector/lost-export-reply.json'),4*1024*1024),
+    interruptedReply:await retained('requests/native-vector/lost-export-reply.json'),
     browserErrors:errors};
   await step('native-vectors-before-original-publication',result);return result;
 }

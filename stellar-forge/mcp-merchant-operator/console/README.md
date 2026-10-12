@@ -16,6 +16,8 @@ The console contains five working areas:
 
 Use [Workflow recipes](WORKFLOW_RECIPES.md) to export a complete saved operation, review another profile’s configured native tools and inputs, and install all of its requests and first workflow edition together. The complete source, review and original installation travel with its profile.
 
+Use [OpenAPI policy workflows and customer delivery](OPENAPI_WORKFLOWS.md) for a complete reusable API operation: retain explicit policy inputs, pause on the original native review, publish and export the selected package, receive every customer file, and install its portable receiving procedure. The browser and `starforge merchant-openapi-workflows` command share the same saved profiles, editions and run IDs.
+
 ## Open the existing host
 
 Use the original merchant configuration and its existing access-token environment. Supply a private, owned console directory when starting that same host:
@@ -107,12 +109,13 @@ Customer receiving composes the maintained retained-file transport and SF82 cust
 | --- | --- |
 | Merchant release store | `merchant_client_export_manifest`, `merchant_client_export_file`, `merchant_client_export_file_release` |
 | OpenSearch workspace deployment | `merchant_opensearch_deployment_manifest`, `merchant_opensearch_deployment_file`, `merchant_opensearch_deployment_file_release` |
+| OpenAPI workspace package | `merchant_openapi_manifest`, `merchant_openapi_file`, `merchant_openapi_file_release` |
 
-For OpenSearch, select the configured workspace alias. Its original per-alias deployment store remains authoritative. Use the export ID and manifest SHA-256 returned by the original merchant. A compatible returned request can prefill those identities through **Receive this customer**.
+For OpenSearch and OpenAPI, select the configured workspace alias. An OpenAPI package uses its original 64-character export ID and the SHA-256 of the complete `package-export.json` manifest. Its completed workflow export step can prepare the exact customer selection directly. The original per-alias deployment or package store remains authoritative. Use the export ID and manifest SHA-256 returned by the original merchant. A compatible returned request can prefill those identities through **Receive this customer**.
 
 The adapter calls the original manifest reader, verifies each native file chunk against the reviewed export and preserves the existing Linux file lease, partial-file checkpoint and read-ID recovery. Pausing records the durable prefix. Resuming the same selection continues those original files. A restarted listener can use a new port because the local adapter binds the original host fingerprint and provider/workspace identity.
 
-A completed customer contains the original five SDK payloads and the original completion manifest. Concurrent archive responses reuse that customer's original reader owner and its existing concurrency limit. The console retains accepted HTTP handlers through shutdown and cancels incomplete request bodies. Authorization completion rechecks native mutation admission before creating an operation. A disconnected archive finishes through its original response framing. Host close enters the original archive cancellation/drain, retains failed owner handles for a same-instance retry and waits for those responses before closing the operator database. Individual downloads verify the exact file identity again. **Download original customer archive** streams the existing SF82 `.tar.gz` encoder over those retained files. The generated client, OpenAPI definition and original provenance remain intact.
+A completed seller-client customer contains the original five SDK payloads and completion manifest. A completed OpenAPI customer contains its entire original source, plan, merchant manifest, compiled seller files, export manifest and retained policy or capture provenance. Its archive places that full package under `package/` for the destination’s declared delivery handle. Concurrent archive responses reuse that customer's original reader owner and its existing concurrency limit. The console retains accepted HTTP handlers through shutdown and cancels incomplete request bodies. Authorization completion rechecks native mutation admission before creating an operation. A disconnected archive finishes through its original response framing. Host close enters the original archive cancellation/drain, retains failed owner handles for a same-instance retry and waits for those responses before closing the operator database. Individual downloads verify the exact file identity again. **Download original customer archive** streams the existing SF82 `.tar.gz` encoder over those retained files. The generated client, OpenAPI definition and original provenance remain intact.
 
 The console's customer receiving action reads an existing generated export. Generate, adopt or recover that export through the original configured merchant or deployment tools. The same console can prepare those native tools as saved requests.
 
@@ -174,6 +177,8 @@ Static assets use the original loopback host, same-origin requests and a restric
 - `workflow-records.mjs`, `workflows.mjs`: saved workflow editions, original request guards, progress, recovery and receiving ownership.
 - `service.mjs`: authenticated API and original native dispatch.
 - `customers.mjs`: original retained download and SF82 archive composition.
+- `openapi-customer-records.mjs`, `openapi-customers.mjs`: exact original API package identity, full manifest validation and streamed package archive.
+- `openapi-workflow-recipes.mjs`, `openapi-workflow-client.mjs`, `openapi-workflow-cli.mjs`: retained OpenAPI procedures and complete customer receiving through the same Console APIs.
 - `public/index.html`, `public/app.mjs`, `public/workflows.mjs`, `public/style.css`: the industrial browser interface and durable original workflow actions.
 - `../operator.mjs`: pure configured-host snapshot and original operator lifecycle.
 - `../serve.mjs`: opt-in same-listener startup and existing authorization.

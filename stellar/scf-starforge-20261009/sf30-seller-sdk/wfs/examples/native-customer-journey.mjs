@@ -53,7 +53,17 @@ async function save(name,value){
   await atomicJson(dirname(path),path.slice(dirname(path).length+1),value);return value;
 }
 async function retained(name,make){
-  const path=join(ROOT,name);let value=await optionalJson(path,16*1024*1024);if(value!==null)return value;
+  const path=join(ROOT,name);let value;
+  try{value=await optionalJson(path,16*1024*1024);}
+  catch(error){
+    if(error.code!=='PRIVATE_FILE_REQUIRED')throw error;
+    // The original journey lease owns this immutable journal. Recover its
+    // committed inode if interruption left the matching staged link attached.
+    await exactFile(path,await originalMember(ROOT,name,16*1024*1024));
+    value=await optionalJson(path,16*1024*1024);
+  }
+  if(value!==null)return value;
+  if(make===undefined)return null;
   value=await make();await durableDirectory(dirname(path));await exactFile(path,Buffer.from(json(value)));return value;
 }
 async function port(){

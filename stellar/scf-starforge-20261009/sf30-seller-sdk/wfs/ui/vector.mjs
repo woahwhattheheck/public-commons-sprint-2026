@@ -193,7 +193,7 @@ export function initializeVectorPanel(ctx){
       layer.fields?.length??0,layer.crsWkt??'No declared CRS']),5,'The selected operation has no native output layers.');
     const fields=[];
     for(const layer of inspection.layers??[])for(const name of layer.fieldOrder??Object.keys(layer.fields??{})){
-      const stat=layer.fields[name];fields.push([layer.id,name,Object.keys(stat.kinds??{}).join(', '),
+      const stat=layer.fields[name];fields.push([layer.id,name,(stat.kinds??[]).join(', '),
         stat.requiresExactNumber?'Exact JSON codec required':'Native profile review']);
     }
     ctx.table('vector-fields',fields,4,'Original captured field kinds appear after source inspection.');
@@ -279,7 +279,7 @@ export function initializeVectorPanel(ctx){
       physical.addEventListener('input',()=>localEdit(()=>fieldChange(layer.id,name,current=>{
         if(physical.value)current.physicalType=physical.value;else delete current.physicalType;
       })));
-      return [name,Object.keys(stat.kinds??{}).join(', ')+(stat.requiresExactNumber?' · exact numeric storage':''),gpkg,shape,mode,physical];
+      return [name,(stat.kinds??[]).join(', ')+(stat.requiresExactNumber?' · exact numeric storage':''),gpkg,shape,mode,physical];
     });
     ctx.table('vector-mapping-fields',fields,6,'The original source layer has no property fields.');
     $('vector-mapping-status').textContent=layer.id+' · '+fields.length+' original fields · '+mappingCapture.manifestSha256;

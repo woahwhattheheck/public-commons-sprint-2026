@@ -155,3 +155,11 @@ A complete source-to-receiving operation follows this sequence:
 5. Export the complete operator package, reopen it using the original application and reproduce the same selected customer output with source and review history retained.
 
 The recorded result describes the selected source operation and delivered files. A finding is not collected cash, a draft response is not a supplier certification, and a planned or digitally accepted transition is not a physical carton movement. Actual commercial acceptance, account obligations and physical services remain with their named parties.
+
+## Original workbook and custody evidence inputs
+
+For an original XLSX transfer list or custody inventory, retain its exact bytes in `edition.workbooks` and use the Workbooks view for original sheets, inclusive ranges, explicit source mapping and attributed row decisions. See [WORKBOOKS.md](WORKBOOKS.md) for the complete descriptor and receiving commands. An original workbook is never replaced with an inferred CSV or silently recalculated formula output.
+
+Keep template, transfer request, actual custody inventory, rate authority and independent receipt distinct. Blank rows remain in the source and complete delivery. Temporary numbers, request dates and scheduled destruction dates remain their original fields. Promotion into `edition.sources` requires the exact reviewed custody descriptor and original actual evidence. The source owner supplies any required context and any requirement for both custody acknowledgments; the software does not infer that requirement or sign either side.
+
+This adds a custody-source bridge; the complete original policy, services, invoices and custody metadata still define financial reconciliation. A received blank template does not fill missing ledgers or confirm an empty departmental population.
