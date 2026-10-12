@@ -219,6 +219,8 @@ def remember_exception(error,stage):
            'traceback_retained_bytes':len(retained),'traceback_clipped':len(retained)!=len(trace),
            'traceback_file':{'scope':'courier','path':'native-launch-error.txt'}}
     LAST_ERROR=value
+    try:value['courier_sha256']=digest(pathlib.Path(__file__))
+    except OSError as failed:value['courier_source_error']=exception_value(failed,'courier-source-read')
     for name,raw in [('native-launch-error.txt',retained),('native-launch-error.json',compact(value))]:
         try:write_atomic(COURIER/name,raw)
         except OSError as failed:
@@ -352,6 +354,14 @@ def native_status(native=None):
         value['recovery_reasons'].append('The original command has dispatch, completion or stop state')
     if terminal and terminal.get('state')!='launch_failed':
         value['recovery_reasons'].append('The retained result belongs to an already-started or completed command')
+    if terminal and terminal.get('state')=='launch_failed' and report is not None:
+        recovery=report.get('failure_recovery') or {}
+        value['native_recovery']={key:recovery[key] for key in
+            ('failure_sha256','can_recover','reason','phase','archive') if key in recovery}
+        if recovery.get('can_recover') is not True:
+            value['recovery_reasons'].append('Original native recovery: '+str(recovery.get('reason') or 'selector_unavailable'))
+        if recovery.get('failure_sha256')!=(value.get('result') or {}).get('sha256'):
+            value['recovery_reasons'].append('The original failure changed during native inspection')
     if not terminal and request and native is not None and state.get('state') not in set(native.CAPACITY_RESUMABLE_STATES)|{'starting'}:
         value['recovery_reasons'].append('The original state is not a pre-dispatch capacity state')
     try:
@@ -368,6 +378,14 @@ def native_status(native=None):
         if terminal:value['resume_request']['recover_failure']=value['result']['sha256']
     if LAST_CHECKPOINT:
         value['checkpoint']={k:LAST_CHECKPOINT[k] for k in ('path','bytes','sha256','compressed_bytes','compressed_sha256','shared_path','shared_persistence_error') if k in LAST_CHECKPOINT}
+    elif CHECKPOINT_PATH.exists():
+        try:
+            raw,identity=read_stable(CHECKPOINT_PATH,CHECKPOINT_MAX)
+            packet=json.loads(raw)
+            value['checkpoint']={'path':str(CHECKPOINT_PATH),'bytes':identity['bytes'],'sha256':identity['sha256'],
+                'current_request_match':packet.get('request_sha256')==(value.get('request') or {}).get('sha256'),
+                'current_failure_match':packet.get('native_failure_sha256')==(value.get('result') or {}).get('sha256')}
+        except Exception as error:value['checkpoint_error']=exception_value(error,'checkpoint-inspect')
     return value
 
 def retained_launch_bytes():
@@ -457,7 +475,7 @@ def checkpoint_build(native):
         if len(raw)>CHECKPOINT_MAX:raise ValueError('Checkpoint JSON exceeds its transport envelope')
         return raw
 
-def retain_checkpoint(native,*,emit_frames=False):
+def retain_checkpoint(native,*,emit_frames=False,force_frames=False):
     global LAST_CHECKPOINT,LAST_EMITTED_CHECKPOINT
     raw=checkpoint_build(native)
     compressed=zlib.compress(raw,6)
@@ -477,7 +495,7 @@ def retain_checkpoint(native,*,emit_frames=False):
         if key in identity:metadata[key]=identity[key]
     if identity.get('persistence_error'):metadata['persistence_error']=identity['persistence_error']
     emit({'event':'checkpoint-ready','operation_id':OPERATION,'checkpoint':metadata})
-    if emit_frames and LAST_EMITTED_CHECKPOINT!=identity['sha256']:
+    if emit_frames and (force_frames or LAST_EMITTED_CHECKPOINT!=identity['sha256']):
         # A caller can retain these complete frames even if this private
         # namespace subsequently vanishes. They are private control data.
         emit({'action':'checkpoint-begin','operation_id':OPERATION,**metadata})
@@ -727,7 +745,7 @@ def create_archive(report,child_code):
     for root,prefix in ((PROJECT,'project'),(RECORD,'record')):
         f,d,l,s=snapshot_files(root,prefix)
         files+=f;directories+=d;links+=l;special+=s
-    for name in ('native-observation.json','native-launch.log','native-finalization-error.txt','native-launch-error.txt','original-host-selection.json','original-source-closure.json','original-finalizer-host.json'):
+    for name in ('native-observation.json','native-launch.log','native-finalization-error.txt','native-launch-error.txt','native-launch-error.json','launcher-adoption.json','pre-dispatch-checkpoint.json','checkpoint-restore.json','original-host-selection.json','original-source-closure.json','original-finalizer-host.json'):
         path=COURIER/name
         if path.is_file() and not path.is_symlink():
             st=path.stat()
@@ -947,7 +965,7 @@ def hold(state,*,reservation_live=False):
             if action=='checkpoint-read':
                 emit({'event':'checkpoint-range','value':checkpoint_read(request)});continue
             if action=='checkpoint' and not reservation_live:
-                retain_checkpoint(native_module(),emit_frames=True);continue
+                retain_checkpoint(native_module(),emit_frames=True,force_frames=True);continue
             if (action=='resume-native' and not reservation_live
                     and state.get('state')=='native-owner-recovery'):
                 report,code=resume_undispatched(request)
