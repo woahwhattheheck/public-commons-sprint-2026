@@ -99,7 +99,10 @@ export class FacilityStore {
   }
   importSource(projectId,bytes,input,revision,operationId) {
     return this.transaction(projectId,{command:'source',bodySha256:hash(bytes),metadata:input},revision,operationId,project=>{
-      const selected=sourceRecord(bytes,input);this.putBlob(bytes);this.addEntry(projectId,'source',selected,project.revision+1);return {id:selected.id};
+      const selected=sourceRecord(bytes,input);
+      if(selected.acquisition){const collection=this.entry(projectId,'collection',selected.acquisition.collectionId);
+        validateBuyerSource(selected,collection,this.blob(collection.manifestSha256));}
+      this.putBlob(bytes);this.addEntry(projectId,'source',selected,project.revision+1);return {id:selected.id};
     });
   }
   async collectionTransaction(projectId,input,expectedRevision,operationId,fn) {
