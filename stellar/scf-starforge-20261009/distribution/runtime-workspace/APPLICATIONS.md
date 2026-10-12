@@ -9,6 +9,7 @@ Applications opens the original merchant and buyer tools from a selected READY r
 | Catalog Atlas | atlas | Retained catalog intake, offer comparison, exact native buyer preparation and complete workspace receiving |
 | API merchant authoring | openapi-workspace | Source intake, paid routes, saved packages, seller preview and operations |
 | Redis and Valkey merchant authoring | redis workspace open | Saved products, source profiles, live previews, customer packages and managed release controls |
+| ArcGIS merchant workspace | arcgis-agent serve | One original browser and MCP service for source capture, field mapping, publication, staged deployments and complete customer files |
 | Dataset preview | dataset-workspace | A dataset configuration file or retained dataset state, native query and preview |
 | Dataset buyer | buyer-dataset-workspace | Original acquisitions, received rows and files, private customer history and Python analysis |
 | PostgreSQL publisher | postgres-publisher serve | Plans, extraction, candidate review, publication, schedules and buyer handoff |
@@ -48,6 +49,20 @@ The runtime console and original application have separate capability URLs. The 
 ## Catalog Atlas
 
 The complete [managed Atlas workflow](../../sf61-bazaar-explorer/APPLICATIONS.md) covers new and retained directories, reviewed installed source, original private launch, stop/reopen, native buyer continuation and whole-workspace receiving.
+
+## ArcGIS merchant workspace
+
+Select the original merchant configuration JSON and an ArcGIS workspace alias from its `arcgisWorkspaceConnection`. The configuration also references the original `publisherConnection` and release store. The installed runtime must contain `arcgis-workspace-launcher.mjs` and the maintained ArcGIS publisher/workbench.
+
+Use **Local port** for the browser and **MCP port** for the agent service; each accepts `0` for an available loopback port. **MCP token environment name** defaults to `MCP_ACCESS_TOKEN`. Set its value, together with any declared source credential, through the host environment or the existing private environment JSON field. Credential values remain on the host.
+
+Review retains the exact merchant JSON and both connection files, the original publisher directory and the installed launcher/configuration source. Startup checks their configuration SHA-256, opens one original merchant MCP owner, and attaches the browser to that owner. Its native startup record supplies the actual browser URL, MCP endpoint, persistent workbench ID and current publisher/workbench instance IDs to the saved managed operation.
+
+Use the browser for source intake, field mapping, edition selection, extraction, publication and deployment, or use the MCP tools against that same state. Closing only the ArcGIS browser listener leaves the merchant owner available. Stopping the saved application closes the owner and drains all attached resources. A later start reopens its saved captures, editions, plans and delivery history.
+
+Applications prevents a second managed launch of the same merchant configuration. The publisher retains its own native writer lease. A changed connection file requires a fresh application review; source records and ordinary workspace progress continue through their original controls.
+
+See `stellar-forge/mcp-merchant-operator/ARCGIS_WORKSPACE.md` in the selected source for complete configuration, native request recovery, deployment and file-delivery instructions.
 
 ## Publisher initialization and reopening
 

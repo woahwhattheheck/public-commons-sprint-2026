@@ -3611,6 +3611,24 @@ The package exports `@tokenjunkielabs/starforge-merchant/seller/arcgis`,
 reuses the included original publisher, dataset and buyer-delivery modules and
 adds no optional native dependency.
 
+### ArcGIS browser and agent workspace
+
+`starforge arcgis-agent` opens the maintained ArcGIS browser and merchant MCP service over one original publisher, workbench and refresh scheduler. Agents can inspect source files, continue live captures, review mappings, create and select editions, export and stage merchant deployments, and receive complete original files. Existing `merchant_publisher_*` tools operate the same extraction, publication, schedule and buyer-handoff history.
+
+```sh
+starforge merchant-mcp init-arcgis-workspaces --dir /srv/field-agent \
+  --publishers /srv/publisher-connection.json \
+  --connection /srv/arcgis-workspaces.json --release-store /srv/releases
+starforge arcgis-agent serve --config /srv/field-agent/merchant-mcp.json \
+  --workspace field-data --port 0 --mcp-port 0 --token-env MCP_ACCESS_TOKEN
+```
+
+Use actual original paths and aliases, and set the selected MCP token in the host environment. The single startup record provides the live browser URL, MCP endpoint, original workspace identities and configuration SHA-256 without returning the token. `arcgis-agent inspect` reads the selected declarations without opening a publisher.
+
+The same command is available under **Applications → ArcGIS merchant workspace**. Select its original merchant configuration and workspace alias, review the installed source and retained inputs, and start it through the existing managed release worker. The browser and MCP endpoint belong to that one process; stopping the saved application drains its original owner.
+
+The package exports `./merchant/mcp/arcgis` and `./merchant/mcp/arcgis/server`. The full connection format and complete source-to-delivery workflow are in `source/stellar-forge/mcp-merchant-operator/ARCGIS_WORKSPACE.md` inside the installed package.
+
 ## Run an existing Python merchant
 
 The maintained Python merchant entrypoint is included alongside the buyer

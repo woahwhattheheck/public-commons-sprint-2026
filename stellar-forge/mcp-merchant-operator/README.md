@@ -40,6 +40,13 @@ review survives reopen and is checked at native startup. See
 [Retained facilitator workflow](../../stellar/scf-starforge-20261009/sf82-seller-pilot/FACILITATORS.md)
 for the three MCP tools, console and CLI commands.
 
+## ArcGIS merchant workspace
+
+The same interface now operates the original ArcGIS source workbench: source-file intake and live capture, reviewed field mappings, immutable editions, deployment exports and staging, release controls and complete customer file delivery. The existing publisher tools share that workbench’s original publisher, saved plans, publication history and scheduler.
+
+Use `starforge arcgis-agent serve` to open the browser and MCP service together, or select **ArcGIS merchant workspace** in the installed runtime’s Applications screen. Both surfaces use one merchant owner and the original release store. Full host configuration, native request recovery and source-to-delivery commands are in [ARCGIS_WORKSPACE.md](ARCGIS_WORKSPACE.md).
+
+
 ## Operate native OpenSearch queries and relevance
 
 Use the same operator for the original OpenSearch workspace: save query revisions,

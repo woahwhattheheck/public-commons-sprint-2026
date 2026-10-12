@@ -57,8 +57,12 @@ async function streamFile(res, file) {
   } catch(issue){if(res.headersSent)res.destroy();throw issue;}
   finally{await handle.close();}
 }
-export async function startArcgisWorkbenchServer({publisher,port=8457,releaseDirectory,environment=process.env}={}) {
-  const workbench=await openArcgisWorkbench({publisher,releaseDirectory,environment});
+export async function startArcgisWorkbenchServer({publisher,port=8457,releaseDirectory,environment=process.env,
+  workbench:borrowedWorkbench=null,schedule=null,ownsPublisher=true}={}) {
+  if(typeof ownsPublisher!=='boolean'||ownsPublisher&&(borrowedWorkbench||schedule)||!ownsPublisher&&
+      (!borrowedWorkbench||borrowedWorkbench.publisher!==publisher||!schedule))
+    throw new TypeError('Borrow the exact original workbench, publisher and scheduler with ownsPublisher:false');
+  const workbench=borrowedWorkbench??await openArcgisWorkbench({publisher,releaseDirectory,environment});
   try {
   const manifest=JSON.parse(await readFile(new URL('./browser-assets.json',import.meta.url),'utf8'));
   const assets=await Promise.all(manifest.routes.filter(([path])=>path.startsWith('/arcgis-workbench/'))
@@ -108,9 +112,9 @@ export async function startArcgisWorkbenchServer({publisher,port=8457,releaseDir
       const result=await operations[path]();
       send(result?.request?.state==='RUNNING'?202:200,result);return true;
     },
-    close:()=>workbench.close(),
+    ...(ownsPublisher?{close:()=>workbench.close()}:{}),
   };
-    const service=await startPostgresPublisherServer({publisher,port,extension});
+    const service=await startPostgresPublisherServer({publisher,port,extension,schedule,ownsPublisher});
     return {...service,workbench};
-  } catch(issue){await workbench.close();await publisher.close();throw issue;}
+  } catch(issue){if(ownsPublisher){try{await workbench.close();}finally{await publisher.close();}}throw issue;}
 }
