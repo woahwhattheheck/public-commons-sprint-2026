@@ -1,0 +1,1236 @@
+{
+  "schema": "umich.internal-audit-rfp.event-catalog/v1",
+  "source": {
+    "filename": "1442341-event.pdf",
+    "sha256": "31ad185f5770c3c4a3d341df260ef8c7bf0027fec6b04b115fdfb59fe2ed4c32",
+    "pages": 11,
+    "event_id": "1442341",
+    "rfp": "RFP-0012413-TECH-2026",
+    "original_thread": "C0BTTA66TK3/1791758494.393019",
+    "public_listing": "https://bids.sciquest.com/apps/Router/PublicEvent?CustomerOrg=UMich"
+  },
+  "normalization": "Question IDs, wording, source page spans and group identities are preserved from the original PDF text extraction; repeated date footers and page markers are excluded from question text. Group4.2 and4.3 remain distinct despite their identical titles. An empty original Group5.1 title is retained.",
+  "event": {
+    "title": "Internal Audit Software",
+    "currency": "USD",
+    "released_as_printed": "9/28/2026, 6:00 PM EDT",
+    "open_as_printed": "9/28/2026, 6:30 PM EDT",
+    "close_as_printed": "11/2/2026, 12:00 PM EST",
+    "close_iso": "2026-11-02T12:00:00-05:00",
+    "payment_terms_as_printed": "0% 0, Net 45",
+    "source_page": 1
+  },
+  "contacts": [
+    {
+      "name_as_printed": "MAKENZIE COULING",
+      "email": "mcouling@umich.edu",
+      "phone": "+1 734-764-1817",
+      "source_page": 1
+    },
+    {
+      "name_as_printed": "ANUSHALIE DIAS WEERASINHA",
+      "email": "aydw@umich.edu",
+      "phone": "+1 734-647-0503",
+      "source_page": 1
+    }
+  ],
+  "conference": {
+    "date_as_printed": "October 5, 2026, 10:30 a.m.- 11:30 a.m. EST",
+    "mandatory": false,
+    "source_page": 3
+  },
+  "question_submission": {
+    "route": "Question and Answer Board",
+    "requires_intent_to_bid": true,
+    "deadline": null,
+    "deadline_source_to_retrieve": "Buyer Attachments: planned procurement schedule",
+    "source_page": 3
+  },
+  "prerequisites": [
+    {
+      "number": 1,
+      "label": "SCOPE OF OPPORTUNITY",
+      "action_as_printed": "Read & Certify",
+      "source_page": 4
+    },
+    {
+      "number": 2,
+      "label": "REQUIREMENTS AND SPECIFICATIONS",
+      "action_as_printed": "Read & Certify",
+      "source_page": 4
+    },
+    {
+      "number": 3,
+      "label": "PLANNED PROCUREMENT SCHEDULE",
+      "action_as_printed": "Read & Certify",
+      "source_page": 4
+    },
+    {
+      "number": 4,
+      "label": "EVALUATION CRITERIA",
+      "action_as_printed": "Read & Certify",
+      "source_page": 4
+    },
+    {
+      "number": 5,
+      "label": "SUPPLIER CODE OF CONDUCT",
+      "action_as_printed": "Read & Certify",
+      "source_page": 4
+    },
+    {
+      "number": 6,
+      "label": "SUBMISSION DIRECTIONS",
+      "action_as_printed": "Read & Certify",
+      "source_page": 4
+    },
+    {
+      "number": 7,
+      "label": "RIGHTS RESERVED BY THE UNIVERSITY AND RESTRICTIONS ON SOURCING EVENTS",
+      "action_as_printed": "Read & Certify",
+      "source_page": 4
+    },
+    {
+      "number": 8,
+      "label": "ELECTRONIC SIGNATURE",
+      "action_as_printed": "Read & Certify",
+      "source_page": 4
+    }
+  ],
+  "groups": [
+    {
+      "id": "1.1",
+      "title": "Supplier Information and Background",
+      "source_page": 5,
+      "instructions": "",
+      "question_ids": [
+        "1.1.1",
+        "1.1.2",
+        "1.1.3",
+        "1.1.4",
+        "1.1.5",
+        "1.1.6",
+        "1.1.7"
+      ]
+    },
+    {
+      "id": "2.1",
+      "title": "Company Sustainability Profile",
+      "source_page": 5,
+      "instructions": "",
+      "question_ids": [
+        "2.1.1",
+        "2.1.2",
+        "2.1.3",
+        "2.1.4",
+        "2.1.5",
+        "2.1.6",
+        "2.1.7",
+        "2.1.8"
+      ]
+    },
+    {
+      "id": "3.1",
+      "title": "Relationship with the University",
+      "source_page": 5,
+      "instructions": "",
+      "question_ids": [
+        "3.1.1",
+        "3.1.2",
+        "3.1.3"
+      ]
+    },
+    {
+      "id": "3.2",
+      "title": "University's Terms and Conditions",
+      "source_page": 5,
+      "instructions": "",
+      "question_ids": [
+        "3.2.1",
+        "3.2.2",
+        "3.2.3",
+        "3.2.4",
+        "3.2.5",
+        "3.2.6"
+      ]
+    },
+    {
+      "id": "3.3",
+      "title": "Data Security Questionnaire",
+      "source_page": 6,
+      "instructions": "",
+      "question_ids": [
+        "3.3.1",
+        "3.3.2",
+        "3.3.3",
+        "3.3.4",
+        "3.3.5",
+        "3.3.6",
+        "3.3.7",
+        "3.3.8",
+        "3.3.9",
+        "3.3.10",
+        "3.3.11",
+        "3.3.12",
+        "3.3.13",
+        "3.3.14",
+        "3.3.15",
+        "3.3.16",
+        "3.3.17",
+        "3.3.18",
+        "3.3.19",
+        "3.3.20",
+        "3.3.21",
+        "3.3.22",
+        "3.3.23",
+        "3.3.24",
+        "3.3.25",
+        "3.3.26",
+        "3.3.27",
+        "3.3.28",
+        "3.3.29",
+        "3.3.30",
+        "3.3.31",
+        "3.3.32",
+        "3.3.33",
+        "3.3.34",
+        "3.3.35",
+        "3.3.36",
+        "3.3.37",
+        "3.3.38",
+        "3.3.39",
+        "3.3.40",
+        "3.3.41",
+        "3.3.42",
+        "3.3.43",
+        "3.3.44",
+        "3.3.45",
+        "3.3.46",
+        "3.3.47",
+        "3.3.48"
+      ]
+    },
+    {
+      "id": "3.4",
+      "title": "Accessibility Questionnaire",
+      "source_page": 7,
+      "instructions": "The University must comply with the Americans with Disabilities Act of 1990 (ADA) and Sections\n504 and 508 of the Rehabilitation Act.  All digital content, software, webpages, ICT systems, and\ndocuments from Supplier must meet WCAG 2.1 Level AA and Section 508 Standards.  Provide\ncomplete, concise, responses to the questions below to help assess how accessibility is\naddressed.  If submitting HECVAT v4 or later, you may reference it in your response.",
+      "question_ids": [
+        "3.4.1",
+        "3.4.2",
+        "3.4.3",
+        "3.4.4",
+        "3.4.5",
+        "3.4.6",
+        "3.4.7",
+        "3.4.8",
+        "3.4.9",
+        "3.4.10",
+        "3.4.11",
+        "3.4.12",
+        "3.4.13",
+        "3.4.14",
+        "3.4.15"
+      ]
+    },
+    {
+      "id": "4.1",
+      "title": "Supplier Proposal",
+      "source_page": 8,
+      "instructions": "",
+      "question_ids": [
+        "4.1.1",
+        "4.1.2",
+        "4.1.3",
+        "4.1.4",
+        "4.1.5",
+        "4.1.6",
+        "4.1.7"
+      ]
+    },
+    {
+      "id": "4.2",
+      "title": "Pricing and Payment Terms",
+      "source_page": 9,
+      "instructions": "",
+      "question_ids": [
+        "4.2.1",
+        "4.2.2",
+        "4.2.3",
+        "4.2.4"
+      ]
+    },
+    {
+      "id": "4.3",
+      "title": "Pricing and Payment Terms",
+      "source_page": 9,
+      "instructions": "",
+      "question_ids": [
+        "4.3.1",
+        "4.3.2",
+        "4.3.3",
+        "4.3.4",
+        "4.3.5"
+      ]
+    },
+    {
+      "id": "5.1",
+      "title": "",
+      "source_page": 9,
+      "instructions": "",
+      "question_ids": [
+        "5.1.1",
+        "5.1.2",
+        "5.1.3"
+      ]
+    },
+    {
+      "id": "6.1",
+      "title": "References",
+      "source_page": 9,
+      "instructions": "",
+      "question_ids": [
+        "6.1.1",
+        "6.1.2",
+        "6.1.3"
+      ]
+    }
+  ],
+  "questions": [
+    {
+      "id": "1.1.1",
+      "group_id": "1.1",
+      "source_pages": [
+        5
+      ],
+      "text": "How long has the company been in business?"
+    },
+    {
+      "id": "1.1.2",
+      "group_id": "1.1",
+      "source_pages": [
+        5
+      ],
+      "text": "Provide a brief description of the company size and organizational structure as it relates\nto services/products proposed?"
+    },
+    {
+      "id": "1.1.3",
+      "group_id": "1.1",
+      "source_pages": [
+        5
+      ],
+      "text": "How long the company has been working with a) higher education clients; b)\ngovernment clients; and c) commercial clients?"
+    },
+    {
+      "id": "1.1.4",
+      "group_id": "1.1",
+      "source_pages": [
+        5
+      ],
+      "text": "Provide your company Information including supplier name, date established,\nheadquarters location, name of CEO, President and VP of Sales."
+    },
+    {
+      "id": "1.1.5",
+      "group_id": "1.1",
+      "source_pages": [
+        5
+      ],
+      "text": "What is your Dun & Bradstreet Number and/or Tax ID?"
+    },
+    {
+      "id": "1.1.6",
+      "group_id": "1.1",
+      "source_pages": [
+        5
+      ],
+      "text": "The University will make payment immediately upon invoice (Net 0 days) approval with\nsupplier enrollment in a University accepted virtual card payment program. Supplier\nenrollment in this program is encouraged and preferred. Otherwise, payment will be\nmade within forty-five (45) days (Net 45 days) after the University’s receipt of an\ninvoice, with payment through Check, ACH or Wire transfer as applicable. Indicate\nacceptance and form of payment."
+    },
+    {
+      "id": "1.1.7",
+      "group_id": "1.1",
+      "source_pages": [
+        5
+      ],
+      "text": "Preference will be given to goods or services manufactured or provided by Michigan businesses if\nthey are competitively priced and of comparable quality. Preference will be given to goods or\nservices manufactured or provided in America if they are competitively priced and of comparable\nquality. Indicate whether goods or services are:"
+    },
+    {
+      "id": "2.1.1",
+      "group_id": "2.1",
+      "source_pages": [
+        5
+      ],
+      "text": "Does your firm have a designated Sustainability Coordinator or Director?"
+    },
+    {
+      "id": "2.1.2",
+      "group_id": "2.1",
+      "source_pages": [
+        5
+      ],
+      "text": "Provide the direct contact information for the Sustainability Coordinator or Director's\nOffice to discuss sustainability related issues/data requests."
+    },
+    {
+      "id": "2.1.3",
+      "group_id": "2.1",
+      "source_pages": [
+        5
+      ],
+      "text": "Does your company agree to notify University Procurement Services at least 30 calendar days\nbefore removing or assigning a new Sustainability Coordinator or Director?"
+    },
+    {
+      "id": "2.1.4",
+      "group_id": "2.1",
+      "source_pages": [
+        5
+      ],
+      "text": "Does your company agree to have the Sustainability Coordinator or  Director available during\nNormal Business hours?"
+    },
+    {
+      "id": "2.1.5",
+      "group_id": "2.1",
+      "source_pages": [
+        5
+      ],
+      "text": "Does your company have a written commitment to sustainability, supplier code of\nconduct, and company-wide sustainability or environmental certifications?"
+    },
+    {
+      "id": "2.1.6",
+      "group_id": "2.1",
+      "source_pages": [
+        5
+      ],
+      "text": "If this information is publicly posted to your company website, please provide the address."
+    },
+    {
+      "id": "2.1.7",
+      "group_id": "2.1",
+      "source_pages": [
+        5
+      ],
+      "text": "Can you provide examples of sustainability campaigns or initiatives that your company has\nundertaken in the past or that are currently underway?"
+    },
+    {
+      "id": "2.1.8",
+      "group_id": "2.1",
+      "source_pages": [
+        5
+      ],
+      "text": "Please provide a brief description of the campaigns or initiatives and attach any additional relevant\ninformation."
+    },
+    {
+      "id": "3.1.1",
+      "group_id": "3.1",
+      "source_pages": [
+        5
+      ],
+      "text": "Describe any current lawsuits, legal actions or governmental investigations against your\ncompany including, but not limited to, parties of dispute, any equipment affected, cause\nof action, jurisdiction and date of legal complaint."
+    },
+    {
+      "id": "3.1.2",
+      "group_id": "3.1",
+      "source_pages": [
+        5
+      ],
+      "text": "Describe any business relations that Supplier currently has or has had with the\nUniversity; include relationships any parent, subsidiary, or other affiliate company may\nhave with the University."
+    },
+    {
+      "id": "3.1.3",
+      "group_id": "3.1",
+      "source_pages": [
+        5
+      ],
+      "text": "Indicate if any employees, officers, directors, members, agents or consultants of\nSupplier are also an employee of the University.  Please refer to the University’s\nConflict of Interest Policy      available on the Procurement Services Web page.\nhttp://procurement.umich.edu/buying/process-policies/conflict-interest"
+    },
+    {
+      "id": "3.2.1",
+      "group_id": "3.2",
+      "source_pages": [
+        6
+      ],
+      "text": "This sourcing event and any subsequently offered contracts will be governed by the\nlaws of the State of Michigan. Any and all applicable valid executive orders, Federal,\nState or local laws, ordinances or rules or regulations shall apply to any contract if and\nwhen offered and are deemed incorporated herein. It is the University’s preference that\nthe supplier sign the standard agreement “as is” and in fact may consider extensive\nchanges to the agreement as a reason to exclude a supplier from further consideration.\nIf suppliers take exception to the attached Agreement, the supplier must clearly set\nforth each exception in a response to this event question, referencing the affected\nagreement section, paragraph and page. The supplier must set forth the reason(s) for\nthe exception and indicate what alternative is being offered by the supplier. University\nshall determine the acceptability of any proposed exception. If taking no exceptions,\nplease upload a document stating \"no exceptions.\""
+    },
+    {
+      "id": "3.2.2",
+      "group_id": "3.2",
+      "source_pages": [
+        6
+      ],
+      "text": "This sourcing event and any subsequently offered contracts will be governed by the\nlaws of the State of Michigan. Any and all applicable valid executive orders, Federal,\nState or local laws, ordinances or rules or regulations shall apply to any contract if and\nwhen offered and are deemed incorporated herein. If selected, your company may\nhave access to HIPAA information. It is the University’s requirement (if selected) to sign\nthe standard Business Associate agreement “as is.\" Please review the attached\nagreement and confirm that you will agree to signing the BAA IF awarded a contract for\nservices requested in this sourcing event. If taking no exceptions to agreement terms\nand conditions, please upload the agreement document stating \"no exceptions.\""
+    },
+    {
+      "id": "3.2.3",
+      "group_id": "3.2",
+      "source_pages": [
+        6
+      ],
+      "text": "You may be providing hosting services and/or will have access to University data. It is\nthe University’s requirement that the supplier sign the Data Security Agreement\n(attached) “as is” & in fact may consider extensive changes to the agreement as a\nreason to exclude a supplier from further consideration. If suppliers takes exception to\nthe DSA, the supplier must clearly set forth each exception in a response to this event\nquestion as a file upload, referencing the affected agreement section, paragraph &\npage. The supplier must set forth the reason(s) for the exception & indicate what (if\nany) alternative is being offered by the supplier. University shall determine (in its sole\ndiscretion) the acceptability of any proposed exceptions. If taking no exceptions to\nagreement terms and conditions, please upload the agreement document stating \"no\nexceptions.\""
+    },
+    {
+      "id": "3.2.4",
+      "group_id": "3.2",
+      "source_pages": [
+        6
+      ],
+      "text": "If Supplier takes exception to select terms and conditions, the supplier must clearly set\nforth each exception in a response to this event question, referencing the affected\nagreement section, paragraph and page. The supplier must set forth the reason(s) for\nthe exception and indicate what (if any) alternative is being offered by the supplier.\nUniversity shall determine (in its sole discretion) the acceptability of any proposed\nexceptions."
+    },
+    {
+      "id": "3.2.5",
+      "group_id": "3.2",
+      "source_pages": [
+        6
+      ],
+      "text": "The University is requesting the Supplier to submit pro-forma terms and conditions for\nthe products and/or services contemplated for the subsequent award of this sourcing\nevent. All terms and conditions submitted are subject to further review and negotiation\nby the University.  The University shall determine (in its sole discretion) the\nacceptability of any proposed terms and conditions. This sourcing event and any\nsubsequently offered contracts will be governed by the laws of the State of Michigan.\nAny and all applicable valid executive orders, Federal, State or local laws, ordinances\nor rules or regulations shall apply to any contract if and when offered and are deemed\nincorporated herein."
+    },
+    {
+      "id": "3.2.6",
+      "group_id": "3.2",
+      "source_pages": [
+        6
+      ],
+      "text": "Are any of the quoted/proposed items export controlled? If so, list the items and the\nExport Control Classification Numbers (ECCN). If not, enter a response of \"none\"."
+    },
+    {
+      "id": "3.3.1",
+      "group_id": "3.3",
+      "source_pages": [
+        6
+      ],
+      "text": "Does your company have a cybersecurity program?"
+    },
+    {
+      "id": "3.3.2",
+      "group_id": "3.3",
+      "source_pages": [
+        6
+      ],
+      "text": "If yes, describe the cybersecurity program."
+    },
+    {
+      "id": "3.3.3",
+      "group_id": "3.3",
+      "source_pages": [
+        6
+      ],
+      "text": "How do you provide proof to customers?"
+    },
+    {
+      "id": "3.3.4",
+      "group_id": "3.3",
+      "source_pages": [
+        6
+      ],
+      "text": "Please provide all public, company-related cybersecurity documentation."
+    },
+    {
+      "id": "3.3.5",
+      "group_id": "3.3",
+      "source_pages": [
+        6
+      ],
+      "text": "Please provide all products/services you are proposing for implementation in the Michigan\nMedicine environment, including all product-related data flow diagrams and safeguards to\nregulated data\n(e.g., protected health information – HIPAA, personal identifiable information – PII, payment card\ninformation – PCI, etc.)"
+    },
+    {
+      "id": "3.3.6",
+      "group_id": "3.3",
+      "source_pages": [
+        6
+      ],
+      "text": "Please provide a listing of all current company-related cybersecurity certifications (e.g., SOC2\nType 2, ISO 27001, HITRUST, FedRAMP, etc.)."
+    },
+    {
+      "id": "3.3.7",
+      "group_id": "3.3",
+      "source_pages": [
+        6
+      ],
+      "text": "Does your company follow established cybersecurity standards (e.g., PCI, DSS, ISO,\nNIST, etc.)?"
+    },
+    {
+      "id": "3.3.8",
+      "group_id": "3.3",
+      "source_pages": [
+        6
+      ],
+      "text": "List all applicable standards."
+    },
+    {
+      "id": "3.3.9",
+      "group_id": "3.3",
+      "source_pages": [
+        6
+      ],
+      "text": "How do you demonstrate compliance with these standards? How do you provide proof to\ncustomers?"
+    },
+    {
+      "id": "3.3.10",
+      "group_id": "3.3",
+      "source_pages": [
+        6
+      ],
+      "text": "Is your company required to comply with cybersecurity regulatory standards?"
+    },
+    {
+      "id": "3.3.11",
+      "group_id": "3.3",
+      "source_pages": [
+        7
+      ],
+      "text": "List all applicable standards (including national and state/province-specific)."
+    },
+    {
+      "id": "3.3.12",
+      "group_id": "3.3",
+      "source_pages": [
+        7
+      ],
+      "text": "How do you demonstrate compliance with these standards? How do you provide proof to\ncustomers?"
+    },
+    {
+      "id": "3.3.13",
+      "group_id": "3.3",
+      "source_pages": [
+        7
+      ],
+      "text": "Are there disaster recovery and contingency management plans for your proposed\nproducts/services?"
+    },
+    {
+      "id": "3.3.14",
+      "group_id": "3.3",
+      "source_pages": [
+        7
+      ],
+      "text": "Describe the disaster recovery and contingency management plan(s)."
+    },
+    {
+      "id": "3.3.15",
+      "group_id": "3.3",
+      "source_pages": [
+        7
+      ],
+      "text": "Is there an institution contact in case of a security issue involving or impacting your company’s\nproduct(s)/service(s)?"
+    },
+    {
+      "id": "3.3.16",
+      "group_id": "3.3",
+      "source_pages": [
+        7
+      ],
+      "text": "Has your company been data breach-free for the last five years?"
+    },
+    {
+      "id": "3.3.17",
+      "group_id": "3.3",
+      "source_pages": [
+        7
+      ],
+      "text": "If no, describe the incident(s) and how your company remediated the breach(es)."
+    },
+    {
+      "id": "3.3.18",
+      "group_id": "3.3",
+      "source_pages": [
+        7
+      ],
+      "text": "Can our institution perform penetration and security tests on your proposed\nproducts/services?"
+    },
+    {
+      "id": "3.3.19",
+      "group_id": "3.3",
+      "source_pages": [
+        7
+      ],
+      "text": "If no, can you provide independent testing of the proposed products/services?"
+    },
+    {
+      "id": "3.3.20",
+      "group_id": "3.3",
+      "source_pages": [
+        7
+      ],
+      "text": "Will sub-contractors or external vendors be used for developing/deploying the proposed\nproducts/services?"
+    },
+    {
+      "id": "3.3.21",
+      "group_id": "3.3",
+      "source_pages": [
+        7
+      ],
+      "text": "List all sub-contractors and/or external vendors who have access to customer data."
+    },
+    {
+      "id": "3.3.22",
+      "group_id": "3.3",
+      "source_pages": [
+        7
+      ],
+      "text": "Describe your procedures for onboarding and off boarding sub-contractors and/or external\nvendors."
+    },
+    {
+      "id": "3.3.23",
+      "group_id": "3.3",
+      "source_pages": [
+        7
+      ],
+      "text": "Do the external vendors employ background screening for employees? Explain."
+    },
+    {
+      "id": "3.3.24",
+      "group_id": "3.3",
+      "source_pages": [
+        7
+      ],
+      "text": "Describe how you ensure subcontractors and/or external vendors comply with regulatory and\ncybersecurity standards."
+    },
+    {
+      "id": "3.3.25",
+      "group_id": "3.3",
+      "source_pages": [
+        7
+      ],
+      "text": "Does your company and/or products utilize third party software in the proposed\nproducts/services?"
+    },
+    {
+      "id": "3.3.26",
+      "group_id": "3.3",
+      "source_pages": [
+        7
+      ],
+      "text": "List all vendor outsourcing of service operations and/or third-party software."
+    },
+    {
+      "id": "3.3.27",
+      "group_id": "3.3",
+      "source_pages": [
+        7
+      ],
+      "text": "List all applicable components."
+    },
+    {
+      "id": "3.3.28",
+      "group_id": "3.3",
+      "source_pages": [
+        7
+      ],
+      "text": "Does your company maintain physical security where customer data is stored?"
+    },
+    {
+      "id": "3.3.29",
+      "group_id": "3.3",
+      "source_pages": [
+        7
+      ],
+      "text": "Describe the physical security safeguards."
+    },
+    {
+      "id": "3.3.30",
+      "group_id": "3.3",
+      "source_pages": [
+        7
+      ],
+      "text": "Is any customer data stored outside of the continental United States?"
+    },
+    {
+      "id": "3.3.31",
+      "group_id": "3.3",
+      "source_pages": [
+        7
+      ],
+      "text": "Describe the nature of this data storage."
+    },
+    {
+      "id": "3.3.32",
+      "group_id": "3.3",
+      "source_pages": [
+        7
+      ],
+      "text": "Is there any international access to your company’s systems or data?"
+    },
+    {
+      "id": "3.3.33",
+      "group_id": "3.3",
+      "source_pages": [
+        7
+      ],
+      "text": "Describe the nature of international access."
+    },
+    {
+      "id": "3.3.34",
+      "group_id": "3.3",
+      "source_pages": [
+        7
+      ],
+      "text": "Does your company encrypt its data at rest with the proposed products/services?"
+    },
+    {
+      "id": "3.3.35",
+      "group_id": "3.3",
+      "source_pages": [
+        7
+      ],
+      "text": "Describe your company’s encryption method(s)."
+    },
+    {
+      "id": "3.3.36",
+      "group_id": "3.3",
+      "source_pages": [
+        7
+      ],
+      "text": "Does your company encrypt it’s data in transit with the proposed products/services?"
+    },
+    {
+      "id": "3.3.37",
+      "group_id": "3.3",
+      "source_pages": [
+        7
+      ],
+      "text": "Describe your company’s encryption method(s)."
+    },
+    {
+      "id": "3.3.38",
+      "group_id": "3.3",
+      "source_pages": [
+        7
+      ],
+      "text": "Does your solution have integration with a centralized authentication method (SAML,\nLDAP, etc.)?"
+    },
+    {
+      "id": "3.3.39",
+      "group_id": "3.3",
+      "source_pages": [
+        7
+      ],
+      "text": "Describe your company’s centralized authentication method(s)."
+    },
+    {
+      "id": "3.3.40",
+      "group_id": "3.3",
+      "source_pages": [
+        7
+      ],
+      "text": "CLOUD-RELATED:\n Does your company provide cloud-based services?"
+    },
+    {
+      "id": "3.3.41",
+      "group_id": "3.3",
+      "source_pages": [
+        7
+      ],
+      "text": "Describe the cloud-based service models and deployment models."
+    },
+    {
+      "id": "3.3.42",
+      "group_id": "3.3",
+      "source_pages": [
+        7
+      ],
+      "text": "Does your company manage the applicable encryption keys? Describe the method."
+    },
+    {
+      "id": "3.3.43",
+      "group_id": "3.3",
+      "source_pages": [
+        7
+      ],
+      "text": "Do any of the cloud-based service models/deployment models require multi-tenancy?"
+    },
+    {
+      "id": "3.3.44",
+      "group_id": "3.3",
+      "source_pages": [
+        7
+      ],
+      "text": "How does your company enforce segmentation and prevent data leakage?"
+    },
+    {
+      "id": "3.3.45",
+      "group_id": "3.3",
+      "source_pages": [
+        7
+      ],
+      "text": "CLOUD-RELATED:  Does your company use cloud service providers (e.g., AWS,\nAzure, etc.) to provide service(s) to customers?"
+    },
+    {
+      "id": "3.3.46",
+      "group_id": "3.3",
+      "source_pages": [
+        7
+      ],
+      "text": "List all applicable cloud service providers."
+    },
+    {
+      "id": "3.3.47",
+      "group_id": "3.3",
+      "source_pages": [
+        7
+      ],
+      "text": "Does your company manage the applicable encryption keys? Describe the method."
+    },
+    {
+      "id": "3.3.48",
+      "group_id": "3.3",
+      "source_pages": [
+        7
+      ],
+      "text": "How does your company ensure customer data storage is secure?"
+    },
+    {
+      "id": "3.4.1",
+      "group_id": "3.4",
+      "source_pages": [
+        8
+      ],
+      "text": "Who in your company is responsible for the digital accessibility policy (or equivalent)\nand compliance? (Provide the contact information for that individual or group, including\ntheir name, title, email, and phone number.)"
+    },
+    {
+      "id": "3.4.2",
+      "group_id": "3.4",
+      "source_pages": [
+        8
+      ],
+      "text": "Has a VPAT or ACR been created or updated for the solution and version under\nconsideration within the past 12 months? (Upload VPAT.)"
+    },
+    {
+      "id": "3.4.3",
+      "group_id": "3.4",
+      "source_pages": [
+        8
+      ],
+      "text": "Will your company agree to meet your stated accessibility standard or WCAG 2.1 AA\nas part of your contractual agreement for the solution?"
+    },
+    {
+      "id": "3.4.4",
+      "group_id": "3.4",
+      "source_pages": [
+        8
+      ],
+      "text": "Does the solution substantially conform to WCAG 2.1 AA?"
+    },
+    {
+      "id": "3.4.5",
+      "group_id": "3.4",
+      "source_pages": [
+        8
+      ],
+      "text": "Do you have a documented and implemented process for reporting and tracking\naccessibility issues? (Describe the process and results.)"
+    },
+    {
+      "id": "3.4.6",
+      "group_id": "3.4",
+      "source_pages": [
+        8
+      ],
+      "text": "Do you have documentation to support the accessibility features of your solution? (Link\nto documentation or describe plans for documentation.)"
+    },
+    {
+      "id": "3.4.7",
+      "group_id": "3.4",
+      "source_pages": [
+        8
+      ],
+      "text": "Has a third-party expert conducted an audit of the most recent version of your solution?\n(Provide the date of audit and the expert who conducted it.)"
+    },
+    {
+      "id": "3.4.8",
+      "group_id": "3.4",
+      "source_pages": [
+        8
+      ],
+      "text": "Do you have a documented and implemented process for verifying accessibility\nconformance? (Describe process and methodologies.)"
+    },
+    {
+      "id": "3.4.9",
+      "group_id": "3.4",
+      "source_pages": [
+        8
+      ],
+      "text": "Have you adopted a technical or legal standard of conformance for the solution?\n(Indicate which standard the solution meets.)"
+    },
+    {
+      "id": "3.4.10",
+      "group_id": "3.4",
+      "source_pages": [
+        8
+      ],
+      "text": "Can you provide a current, detailed accessibility roadmap with delivery timelines?\n(Describe plans to develop and share roadmap.)"
+    },
+    {
+      "id": "3.4.11",
+      "group_id": "3.4",
+      "source_pages": [
+        8
+      ],
+      "text": "Do you expect your staff to maintain a current skill set in IT accessibility? (Describe\nhow you ensure appropriate and ongoing staff knowledge about accessibility.)"
+    },
+    {
+      "id": "3.4.12",
+      "group_id": "3.4",
+      "source_pages": [
+        8
+      ],
+      "text": "Do you have documented processes and procedures for implementing accessibility into\nyour development lifecycle? (Describe processes or plans to update processes.)"
+    },
+    {
+      "id": "3.4.13",
+      "group_id": "3.4",
+      "source_pages": [
+        8
+      ],
+      "text": "Can all functions of the application or service be performed using only the keyboard?\n(State when and on which platform this was verified.)"
+    },
+    {
+      "id": "3.4.14",
+      "group_id": "3.4",
+      "source_pages": [
+        8
+      ],
+      "text": "Does your product rely on activating a special \"accessibility mode,\" a \"lite version,\" or\nusing an alternate interface (including “overlay” or AI-based alternates) for accessibility\npurposes?"
+    },
+    {
+      "id": "3.4.15",
+      "group_id": "3.4",
+      "source_pages": [
+        8
+      ],
+      "text": "Are you able to provide test access to the solution and version under consideration?\nProvide additional detail on provisioning and support."
+    },
+    {
+      "id": "4.1.1",
+      "group_id": "4.1",
+      "source_pages": [
+        8
+      ],
+      "text": "Executive Summary: This part of the response to the RFP should be limited to a brief\nnarrative highlighting the supplier’s proposal. The summary should contain as little\ntechnical jargon as possible and should be oriented toward non-technical personnel.\nThe summary should describe the following:\n• Key differentiators in service offerings, account management, and value added\nservices proposed by your company.\n• Your understanding of the scope of requirements and the level to which your proposal\nhas met the requirements.\n• The summary should also specify the names of similar sized higher\neducation/healthcare and other comparably sized clients that have used the services\nbeing proposed.\n• High level project execution plan.\n•Risk management considerations.\n•Cost by service type.\n•Value and outcomes delivered to University."
+    },
+    {
+      "id": "4.1.2",
+      "group_id": "4.1",
+      "source_pages": [
+        8
+      ],
+      "text": "Scope of Proposed Solution: Provide a description of the overall solution or\nmethodology for this event. Include a high-level description of the steps of how the\nservices will be provided and any associated value added services solution that meets\nthe requirements. Confirm that the solution being provided is comprehensive as defined\nin Project Scope and Requirements. In addition, describe the methodology for solution\ndelivery. Finally, describe the client relationship management approach (e.g., steering\ncommittee, status reporting)."
+    },
+    {
+      "id": "4.1.3",
+      "group_id": "4.1",
+      "source_pages": [
+        8
+      ],
+      "text": "Comprehensive List of Assumptions: The University requires that all assumptions for\nthis proposal be listed and explained here. Please ensure that all assumptions listed\nreference the appropriate section of the RFP and/or associated product or services."
+    },
+    {
+      "id": "4.1.4",
+      "group_id": "4.1",
+      "source_pages": [
+        8
+      ],
+      "text": "Project Staffing/Resumes: Describe your proposed Project Organization Chart and\nprovide resumes for the Project Manager and all staffing plans on the Organization\nChart. University may require interviews for Key Personnel prior to project start.\nSuppliers are encouraged to submit resumes. However, we will defer to resume\nrequirements on a later date. Note: Since project staffing/resumes will be evaluated\nacross suppliers, it is in the supplier’s interest to customize the resumes/staffing to the\nskill sets and experiences required to do this work"
+    },
+    {
+      "id": "4.1.5",
+      "group_id": "4.1",
+      "source_pages": [
+        9
+      ],
+      "text": "Provide an overview of your service teams' qualifications and credentials, including\ntypical years of experience and specialties in certain products, services or OEMs.  Is\nthere a minimum experience level required to execute services for your clients?"
+    },
+    {
+      "id": "4.1.6",
+      "group_id": "4.1",
+      "source_pages": [
+        9
+      ],
+      "text": "Cost Proposal Attachment: Refer to the Excel spreadsheet attached and upload a\ncompleted file to this question."
+    },
+    {
+      "id": "4.1.7",
+      "group_id": "4.1",
+      "source_pages": [
+        9
+      ],
+      "text": "Cost Proposal Narrative: Provide in narrative form an explanation of the comprehensive\ncost proposal for this project as well as any assumptions being made. Suppliers should\nprovide University with breakdown of the following:\n•Number of Weeks for Project Timeline\n•Hours and Rates by Supplier Role (including time that is on-site vs. off-site although\nthe University expects the vast majority of the work to be completed off-site)\n•Hours by University Role (expected time the University is to contribute by role)\n•Travel Cost Breakdown\n•Firm Fixed Price for the Assessment Phase of Project\n•Payment Schedule by Milestone/Deliverables"
+    },
+    {
+      "id": "4.2.1",
+      "group_id": "4.2",
+      "source_pages": [
+        9
+      ],
+      "text": "The University requires strategic suppliers to comply with its purchasing processes and\npayment terms, including eSettlements Terms and Conditions, as provided in the\nfollowing link. Please state your company’s ability to comply with these terms or provide\nbetter terms.\nhttp://procurement.umich.edu/supplier-resources/supplier-portal/electronic-settlements"
+    },
+    {
+      "id": "4.2.2",
+      "group_id": "4.2",
+      "source_pages": [
+        9
+      ],
+      "text": "In addition to the payment terms noted in the sourcing event specifications, what other\npayment terms do you offer that are more favorable to the University?"
+    },
+    {
+      "id": "4.2.3",
+      "group_id": "4.2",
+      "source_pages": [
+        9
+      ],
+      "text": "How will your company work with U-M to ensure the university always receives the\nmost competitive service price on the market?"
+    },
+    {
+      "id": "4.2.4",
+      "group_id": "4.2",
+      "source_pages": [
+        9
+      ],
+      "text": "Describe any volume discounts or pricing incentives you can offer to U-M if contracted\nas a strategic supplier for services."
+    },
+    {
+      "id": "4.3.1",
+      "group_id": "4.3",
+      "source_pages": [
+        9
+      ],
+      "text": "Prices quoted will be held firm for a minimum of three (3) year(s). State your ability to\nhold prices for a longer period of time."
+    },
+    {
+      "id": "4.3.2",
+      "group_id": "4.3",
+      "source_pages": [
+        9
+      ],
+      "text": "What is the process of notifying the University of price decreases?"
+    },
+    {
+      "id": "4.3.3",
+      "group_id": "4.3",
+      "source_pages": [
+        9
+      ],
+      "text": "How will your company work with U-M to ensure the university always receives the\nmost competitive product price on the market?"
+    },
+    {
+      "id": "4.3.4",
+      "group_id": "4.3",
+      "source_pages": [
+        9
+      ],
+      "text": "Many suppliers offer special pricing that may influence U-M end users to purchase\noutside preferred programs. Are you willing to meet or beat product pricing if U-M\nnotifies you of a better deal?"
+    },
+    {
+      "id": "4.3.5",
+      "group_id": "4.3",
+      "source_pages": [
+        9
+      ],
+      "text": "Provide an overview of any other value added service offerings that may benefit U-M"
+    },
+    {
+      "id": "5.1.1",
+      "group_id": "5.1",
+      "source_pages": [
+        9
+      ],
+      "text": "Please upload additional documentation here (Note: Files must be combined into one pdf before\nuploading)"
+    },
+    {
+      "id": "5.1.2",
+      "group_id": "5.1",
+      "source_pages": [
+        9
+      ],
+      "text": "Please upload additional documentation here (Note: Files must be combined into one pdf before\nuploading)"
+    },
+    {
+      "id": "5.1.3",
+      "group_id": "5.1",
+      "source_pages": [
+        9
+      ],
+      "text": "Please upload additional documentation here (Note: Files must be combined into one pdf before\nuploading)"
+    },
+    {
+      "id": "6.1.1",
+      "group_id": "6.1",
+      "source_pages": [
+        9
+      ],
+      "text": "Reference 1: Include Client Company, client contact name, title, email, phone, address\nand overview of the project (i.e. Size of project, start and end date, and overview of\nscope of project)"
+    },
+    {
+      "id": "6.1.2",
+      "group_id": "6.1",
+      "source_pages": [
+        9
+      ],
+      "text": "Reference 2: Include Client Company, client contact name, title, email, phone, address\nand overview of the project (i.e. Size of project, start and end date, and overview of\nscope of project)"
+    },
+    {
+      "id": "6.1.3",
+      "group_id": "6.1",
+      "source_pages": [
+        9
+      ],
+      "text": "Reference 3: Include Client Company, client contact name, title, email, phone, address\nand overview of the project (i.e. Size of project, start and end date, and overview of\nscope of project)"
+    }
+  ],
+  "line_items": [
+    {
+      "id": "P1",
+      "label": "Total Pricing",
+      "quantity": 1,
+      "uom_as_printed": "LS - Lump Sum",
+      "instruction": "Enter total proposal cost and complete Attachment F pricing spreadsheet in Buyer Attachments.",
+      "source_page": 10
+    },
+    {
+      "id": "S1",
+      "label": "[Placeholder Service Item]",
+      "quantity": 1,
+      "uom_as_printed": "EA - Each",
+      "instruction": "Update the placeholder to the actual services applicable to the response.",
+      "source_page": 11
+    }
+  ],
+  "issued_attachments_to_join": [
+    {
+      "role": "Detailed project scope, functional and technical requirements",
+      "source_page": 3
+    },
+    {
+      "role": "Planned procurement schedule and Q&A deadline",
+      "source_page": 3
+    },
+    {
+      "role": "Evaluation criteria and submission directions",
+      "source_page": 4
+    },
+    {
+      "role": "Agreement",
+      "question_ids": [
+        "3.2.1",
+        "3.2.4",
+        "3.2.5"
+      ]
+    },
+    {
+      "role": "Business Associate Agreement",
+      "question_ids": [
+        "3.2.2"
+      ]
+    },
+    {
+      "role": "Data Security Agreement",
+      "question_ids": [
+        "3.2.3"
+      ]
+    },
+    {
+      "role": "Attachment F Excel pricing workbook",
+      "question_ids": [
+        "4.1.6",
+        "4.1.7"
+      ],
+      "source_page": 10
+    },
+    {
+      "role": "Current Q&A, conference clarifications and amendments",
+      "source_page": 3
+    }
+  ]
+}
