@@ -1,5 +1,5 @@
 const $=id=>document.getElementById(id);
-const state={workspace:null,request:null,chosen:null,package:null,packages:[],deliveries:[],compared:null,readOnly:false,view:'requests'};
+const state={workspace:null,request:null,chosen:null,package:null,packages:[],deliveries:[],compared:null,readOnly:false,view:'requests',busy:false};
 const sessionKey='starforge-geocoding:'+location.origin;
 let token=location.hash.slice(1);
 if(/^[a-f0-9]{64}$/.test(token)){sessionStorage.setItem(sessionKey,token);history.replaceState(null,'',location.pathname);}
@@ -21,12 +21,23 @@ async function download(path,name){
   const url=URL.createObjectURL(await response.blob()),link=document.createElement('a');link.href=url;link.download=name;
   link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
+const actionButtons=new Set();
 function action(id,callback,event='click'){
-  $(id).addEventListener(event,async e=>{
-    e.preventDefault();const target=e.currentTarget,button=target.tagName==='FORM'?target.querySelector('button[type=submit]'):target;
-    const previous=button?.disabled;if(button)button.disabled=true;
+  const target=$(id),button=target.tagName==='FORM'?target.querySelector('button[type=submit]'):target;
+  if(button)actionButtons.add(button);
+  target.addEventListener(event,async e=>{
+    e.preventDefault();
+    if(state.busy)return;
+    state.busy=true;
+    const previous=[...actionButtons].map(control=>[control,control.disabled]);
+    for(const control of actionButtons)control.disabled=true;
+    document.body.setAttribute('aria-busy','true');syncButtons();
     try{await callback(e);}catch(error){notify(error.message,true);}
-    finally{if(button)button.disabled=previous;syncButtons();}
+    finally{
+      state.busy=false;
+      for(const [control,disabled] of previous)control.disabled=disabled;
+      document.body.removeAttribute('aria-busy');syncButtons();
+    }
   });
 }
 function facts(id,items){
@@ -48,16 +59,17 @@ function preview(){
   }catch(error){$('query-preview').textContent=error.message;}
 }
 function syncButtons(){
-  const result=state.request,selectable=Boolean(result&&result.state.providerStatus===200);
-  $('save-choice').disabled=state.readOnly||!selectable||state.chosen===null;
-  $('clear-choice').disabled=state.readOnly||!selectable||result?.decision.current?.index===null||!result?.decision.current;
-  $('export-result').disabled=state.readOnly||!selectable;
-  $('stage-package').disabled=!state.package;
+  const busy=state.busy,result=state.request,selectable=Boolean(result&&result.state.providerStatus===200);
+  $('save-choice').disabled=busy||state.readOnly||!selectable||state.chosen===null;
+  $('clear-choice').disabled=busy||state.readOnly||!selectable||result?.decision.current?.index===null||!result?.decision.current;
+  $('export-result').disabled=busy||state.readOnly||!selectable;
+  $('stage-package').disabled=busy||!state.package;
   const merchant=state.workspace?.merchant,generation=merchant?.state?.generation;
-  $('activate-release').disabled=!state.compared||state.compared.id!==$('release-select').value||state.compared.generation!==generation;
-  $('start-release').disabled=!merchant?.state?.active||Boolean(state.workspace?.ownsRunningRelease);
-  $('stop-release').disabled=!state.workspace?.ownsRunningRelease;
-  $('rollback-release').disabled=!merchant?.state?.previous;
+  $('compare-release').disabled=busy||!merchant?.releases?.some(release=>release.id===$('release-select').value);
+  $('activate-release').disabled=busy||!state.compared||state.compared.id!==$('release-select').value||state.compared.generation!==generation;
+  $('start-release').disabled=busy||!merchant?.state?.active||Boolean(state.workspace?.ownsRunningRelease);
+  $('stop-release').disabled=busy||!state.workspace?.ownsRunningRelease;
+  $('rollback-release').disabled=busy||!merchant?.state?.previous;
 }
 async function setView(view){
   state.view=view;
@@ -266,10 +278,11 @@ action('prepare-package',async()=>{
 action('stage-form',async()=>{
   if(!state.package)throw new Error('Prepare and review a package first.');
   const facilitator=$('facilitator').value.trim();
-  const result=await api('/api/stage',{packageId:state.package.packageId,id:$('release-id').value,
+  const id=$('release-id').value;
+  const result=await api('/api/stage',{packageId:state.package.packageId,id,
     label:$('release-label').value,port:0,...(facilitator?{facilitator}:{})});
-  state.compared=null;await refresh();$('release-select').value=$('release-id').value;
-  notify('Staged original SF82 release '+$('release-id').value+'. Review its request and payment changes before activation.');
+  state.compared=null;await refresh();$('release-select').value=id;
+  notify('Staged original SF82 release '+id+'. Review its request and payment changes before activation.');
 },'submit');
 action('compare-release',async()=>{
   const id=$('release-select').value;

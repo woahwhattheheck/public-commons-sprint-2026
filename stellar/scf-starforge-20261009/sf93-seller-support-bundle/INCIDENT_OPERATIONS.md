@@ -73,6 +73,13 @@ After repairing/restarting the original seller or delivery worker, leave the wat
 
 ## Notification delivery and destination changes
 
+For a Slack channel, use the original queue's `transport: "slack"` configuration
+and [Slack operating guide](SLACK_OPERATIONS.md). It verifies the selected
+workspace, posts transitions into the same retained incident thread, saves
+Slack channel/timestamp receipts and preserves provider rate waits through
+restart. The `destination` command checks the configured actor/workspace.
+The webhook configuration below retains its original body and signature format.
+
 Payload schema is `stellar-forge.seller-incident-notification.v1`. It contains stable event/incident IDs, the registered merchant ID, condition, transition, current incident status, timestamps, source session and explicitly selected numeric counts. It contains no merchant endpoint, full offer, amount/payee, URL/query/header/body, acknowledgment note or raw network error.
 
 The receiver validates these headers against the exact received UTF-8 body:
@@ -143,3 +150,4 @@ For a consistent backup, stop this watcher and pause its operator commands, copy
 ## Native integration result
 
 The complete operating journey passed on Node 24.19.0 using the original SF30 challenge-only seller, original operations listener and attached empty SF98 outbox. A real seller/ops outage opened one incident; a signed HTTP 503→204 retry retained identical event/body bytes; a separate CLI process acknowledged it. Killing the watcher during an actual hook request and reopening it at a changed receiver paused the old event. Only an explicitly selected new event reached that receiver. Restarting the original seller on the same ports created a second native session and recovered the incident. Clean watcher reopen retained its acknowledgment, and the original SF74 case store imported, saved and reopened both captures as `SEPARATE_SESSIONS`. There were no receiver errors, chain calls or hosted Actions.
+

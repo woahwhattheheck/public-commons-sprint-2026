@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Starforge · Browser wallet</title>
+  <link rel="stylesheet" href="/style.css">
+  <script src="/vendor/freighter-api.js" defer></script>
+  <script src="/app.mjs" type="module"></script>
+</head>
+<body>
+  <header class="masthead"><div><p class="eyebrow">STARFORGE / OPERATOR</p><h1>Browser wallet</h1></div><span id="connection-status" class="badge">Opening workspace</span></header>
+  <main>
+    <div id="notice" role="status" aria-live="polite">Opening the retained operation.</div>
+    <div class="columns">
+      <section aria-labelledby="operation-title">
+        <div class="section-heading"><h2 id="operation-title">Operation</h2><span id="network" class="badge"></span></div>
+        <dl id="operation"></dl>
+        <p class="help">The existing buyer requests approval before asking this wallet to authorize the displayed transfer.</p>
+      </section>
+      <section aria-labelledby="wallet-title">
+        <div class="section-heading"><h2 id="wallet-title">Freighter connection</h2><span id="wallet-state">Disconnected</span></div>
+        <p>Connect the payer account on the operation's Stellar network.</p>
+        <dl id="wallet"></dl>
+        <div class="actions"><button id="connect" type="button">Connect Freighter</button><button id="disconnect" type="button" class="secondary" disabled>Disconnect</button></div>
+        <p class="help">Keep this window open. Each authorization requires its own Sign action and confirmation in Freighter.</p>
+      </section>
+    </div>
+    <section aria-labelledby="request-title">
+      <div class="section-heading"><h2 id="request-title">Authorization request</h2><span id="request-state" class="badge">Waiting</span></div>
+      <div id="request"><p class="empty">Connect your wallet, then run the original buyer operation from its terminal.</p></div>
+    </section>
+    <section aria-labelledby="history-title">
+      <div class="section-heading"><h2 id="history-title">Retained activity</h2><span id="history-count"></span></div>
+      <div class="table-wrap"><table><thead><tr><th scope="col">Created</th><th scope="col">State</th><th scope="col">Amount (atomic)</th><th scope="col">Request</th></tr></thead><tbody id="history"></tbody></table></div>
+    </section>
+    <footer><span id="workspace-id"></span><span id="runtime"></span></footer>
+  </main>
+</body>
+</html>

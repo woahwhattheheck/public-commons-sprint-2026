@@ -3,6 +3,8 @@ import { mkdir, readdir, lstat, realpath } from 'node:fs/promises';
 import { join, dirname, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawn } from 'node:child_process';
+import { applicationEnvironment } from './application-command.mjs';
+import { validatePythonManagedCommand, pythonManagedLaunch } from '../python-runtime/application-lifecycle.mjs';
 import { activate, rollback, doctor } from '../../sf46-release/product.mjs';
 import { inspectMerchantRuntime, adoptMerchantRuntime, inspectInstalledRuntime } from '../../sf46-release/runtime-package.mjs';
 import { HOME_SCHEMA, MANIFEST, releaseId, validateId, verifyRelease, atomicFile, withHomeLock } from '../../sf46-release/release-core.mjs';
@@ -16,7 +18,7 @@ export const managedOperationFields = Object.freeze({
   'managed-inspect': ['homeId', 'releaseId', 'load'],
   'managed-doctor': ['homeId', 'releaseId', 'requireNative', 'requiredFeatures'],
   'managed-config-save': ['homeId', 'path', 'content', 'expectedSha256'],
-  'managed-run': ['homeId', 'releaseId', 'command', 'args', 'expectedRevision'],
+  'managed-run': ['homeId', 'releaseId', 'command', 'args', 'expectedRevision', 'applicationId', 'terminal', 'terminalPython', 'environmentFile', 'environmentSha256', 'pythonCommand'],
 });
 const TYPES = ['managed-homes', 'managed-reviews', 'managed-observations'];
 const pathFor = (root, type, id) => join(root, type, recordId(id) + '.json');
@@ -231,7 +233,16 @@ export async function normalizeManagedOperation(root, request) {
     'MANAGED_FEATURE_LIST_INVALID');
   }
   if (request.operation === 'managed-run') {
-    need(typeof request.command === 'string' && Object.hasOwn(selected.commands, request.command), 'MANAGED_ORIGINAL_COMMAND_REQUIRED');
+    need(request.terminal === undefined || typeof request.terminal === 'boolean', 'MANAGED_TERMINAL_BOOLEAN_REQUIRED');
+    if (request.applicationId !== undefined) recordId(request.applicationId);
+    if (request.terminalPython !== undefined) { need(request.terminal === true, 'MANAGED_TERMINAL_REQUIRED'); absolute(request.terminalPython); }
+    if (request.environmentFile !== undefined) {
+      absolute(request.environmentFile);
+      const environment = await applicationEnvironment(request.environmentFile, request.environmentSha256);
+      request.environmentSha256 = environment.sha256;
+    } else need(request.environmentSha256 === undefined, 'MANAGED_ENVIRONMENT_FILE_REQUIRED');
+    if (request.pythonCommand) await validatePythonManagedCommand(root, request, selected);
+    else need(typeof request.command === 'string' && Object.hasOwn(selected.commands, request.command), 'MANAGED_ORIGINAL_COMMAND_REQUIRED');
     need(Array.isArray(request.args) && request.args.length <= 100 && request.args.every(arg =>
       typeof arg === 'string' && !arg.includes('\0') && Buffer.byteLength(arg) <= 8000) &&
       Buffer.byteLength(json(request.args)) <= 20000, 'MANAGED_COMMAND_ARGUMENTS_INVALID');
@@ -246,7 +257,7 @@ async function checkedRelease(request) {
   need(release.id === request.releaseId, 'MANAGED_RELEASE_CHANGED');
   return release;
 }
-async function runOriginalCommand(request, operationDirectory, checkpoint, leaseFd) {
+async function runOriginalCommand(root, request, operationDirectory, checkpoint, leaseFd) {
   await checkedRelease(request);
   const existingResult = await readJSON(join(operationDirectory, 'command-result.json'), true);
   if (existingResult) return existingResult;
@@ -254,9 +265,12 @@ async function runOriginalCommand(request, operationDirectory, checkpoint, lease
   const launchFile = join(operationDirectory, 'command-launch.json');
   need(!await readJSON(launchFile, true), 'MANAGED_COMMAND_ALREADY_LAUNCHED',
     'Reopen the retained command process and output for this operation');
-  await saveJSON(launchFile, { schema: 'stellar-forge.managed-command-launch.v1', createdAt: now(),
+  const launch = request.pythonCommand ? await pythonManagedLaunch(root, request, { leaseFd }) : {
+    schema: 'stellar-forge.managed-command-launch.v1', createdAt: now(),
     releaseId: request.releaseId, digest: request.releaseDigest, executable: process.execPath, args: argv,
-    cwd: request.homeDirectory });
+    cwd: request.homeDirectory,
+  };
+  await saveJSON(launchFile, launch);
   const child = spawn(process.execPath, [fileURLToPath(new URL('./managed-command.mjs', import.meta.url)),
     '--operation', operationDirectory], { cwd: request.homeDirectory, shell: false,
       stdio: ['ignore', 'inherit', 'inherit', leaseFd] });
@@ -266,7 +280,7 @@ async function runOriginalCommand(request, operationDirectory, checkpoint, lease
   outcome.catch(() => {});
   await new Promise((resolve, reject) => { child.once('spawn', resolve); child.once('error', reject); });
   const commandProcess = { pid: child.pid, processStart: await processIdentity(child.pid), role: 'original-command-runner',
-    executable: process.execPath, args: argv, cwd: request.homeDirectory };
+    executable: process.execPath, args: launch.args, cwd: launch.cwd };
   try { await checkpoint({ commandProcess }); }
   catch (error) { child.kill('SIGTERM'); await outcome.catch(() => {}); throw error; }
   await outcome;
@@ -312,7 +326,7 @@ export async function executeManagedOperation({ root, request, operationDirector
       await atomicFile(path, Buffer.from(request.content), 0o600);
       return { path: request.path, previousSha256: before, sha256: request.contentSha256, bytes: Buffer.byteLength(request.content) };
     });
-  } else if (request.operation === 'managed-run') result = await runOriginalCommand(request, operationDirectory, checkpoint, leaseFd);
+  } else if (request.operation === 'managed-run') result = await runOriginalCommand(root, request, operationDirectory, checkpoint, leaseFd);
   else need(false, 'MANAGED_OPERATION_INVALID');
   await saveJSON(pathFor(root, 'managed-observations', request.homeId),
     { operationId: basename(operationDirectory), operation: request.operation, observedAt: now(), result }, true);
@@ -322,7 +336,24 @@ export async function stopManagedCommand(root, id) {
   const directory = operationPath(root, id), request = await readJSON(join(directory, 'request.json'));
   need(request.operation === 'managed-run', 'MANAGED_COMMAND_REQUIRED');
   const state = await readJSON(join(directory, 'state.json'));
-  if (state.phase !== 'RUNNING') return { operationId: id, phase: state.phase, stopped: false, reopened: true };
+  if (!['QUEUED', 'RUNNING'].includes(state.phase)) return { operationId: id, phase: state.phase, stopped: false, reopened: true };
+  if (state.phase === 'QUEUED') {
+    let lease;
+    try {
+      lease = await operationLease(join(directory, 'worker.lock'));
+      const latest = await readJSON(join(directory, 'state.json'));
+      if (latest.phase === 'QUEUED') {
+        const result = { operation: 'original-command', releaseId: request.releaseId, digest: request.releaseDigest,
+          command: request.command, args: request.args, cwd: request.homeDirectory,
+          state: 'STOPPED', stopped: true, launched: false, exitCode: null, signal: null, completedAt: now() };
+        await saveJSON(join(directory, 'command-result.json'), result);
+        await saveJSON(join(directory, 'state.json'), { ...latest, phase: 'SUCCEEDED', updatedAt: now(),
+          completedAt: result.completedAt, result }, true);
+        return { operationId: id, phase: 'SUCCEEDED', stopped: true, result };
+      }
+    } catch (error) { if (error.code !== 'RUNTIME_WORKSPACE_OPERATION_RUNNING') throw error; }
+    finally { if (lease) await lease.close(); }
+  }
   const path = join(directory, 'stop.json');
   if (!await readJSON(path, true)) {
     try { await saveJSON(path, { requestedAt: now(), signal: 'SIGTERM' }); }
