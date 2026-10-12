@@ -8,7 +8,9 @@ The maintained implementation is [the journal engine](../accountant/qbo.mjs), [n
 
 ## Configure the native company connection
 
-Configure the existing private accounting server for the authorized QuickBooks company. Its native client reads the following server settings:
+Use the maintained [OAuth-connected QuickBooks setup](../../sf30-seller-sdk/oauth-connections/QUICKBOOKS.md) to authorize the actual company through the original connection manager, review its native account chart, and save the company selection. Its `oauth-connection quickbooks serve` command opens this same workspace with the original token provider, including persisted refresh rotation and revocation. The connection panel displays the selected alias, reviewed grant, company, realm, and environment.
+
+A host with an existing access-token source can configure the original private accounting server directly. Its native client reads the following server settings:
 
 | Setting | Purpose |
 | --- | --- |

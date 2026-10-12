@@ -238,7 +238,8 @@ class WorkspaceStore {
     return { workspaceId: this.id, sourceProfileSha256: this.profileHash,
       drafts: list('drafts', 'updated_at DESC').map(({ query, input, plan, ...draft }) => draft),
       editions: list('editions', 'created_at DESC'), packages: list('packages', 'created_at DESC'),
-      operations: list('operations', 'created_at DESC').slice(0, 30).map(({ draft, request, ...operation }) => operation) };
+      operations: list('operations', 'created_at DESC').slice(0, 30).map(({ draft, request, relevanceSet, evaluation, result, ...operation }) => ({ ...operation,
+        ...(result ? { result: { ...result, relevanceSet: undefined } } : {}) })) };
   }
   history(id) {
     this.draft(id);
