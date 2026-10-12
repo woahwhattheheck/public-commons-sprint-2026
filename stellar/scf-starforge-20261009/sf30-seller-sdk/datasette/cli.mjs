@@ -14,6 +14,8 @@ const USAGE = `Datasette source editions
   datasette --url http://127.0.0.1:PORT --operation editions.list --input '{}'
   datasette status --url-file /private/datasette-connection.json
   datasette operations --directory /private/workspace
+  datasette export-workspace --directory /private/workspace --archive-file /private/workspace.zip
+  datasette receive-workspace --archive-file /private/workspace.zip --sha256 SHA256 --destination /private/restored
   datasette receive --directory /private/workspace --archive-file source.datasette.json.gz --sha256 SHA256 --destination /private/received
 
 Options:
@@ -31,9 +33,9 @@ Options:
   --seller-file PATH          Original seller configuration for local workspace creation
   --resource-file PATH        Original resource configuration for local workspace creation
   --environment-file PATH     Original environment object for local workspace creation
-  --archive-file PATH         Complete source archive for the receive command
+  --archive-file PATH         Complete source/workspace archive for export or receiving
   --sha256 SHA256             Expected SHA256 of that original archive
-  --destination ABS          Separate source receiving directory
+  --destination ABS           Separate source or workspace receiving directory
   --help                     Show this guide
 
 Resume a capture with the same operationId and selection. Inspect status after an
@@ -52,7 +54,7 @@ export function parseDatasetteArguments(argv) {
   for (let index = 0; index < argv.length; index++) {
     const value = argv[index];
     if (!value.startsWith('--')) {
-      if (index !== 0 || !['serve','receive','status','operations','health'].includes(value)) throw fail('Choose one declared Datasette command.');
+      if (index !== 0 || !['serve','receive','export-workspace','receive-workspace','status','operations','health'].includes(value)) throw fail('Choose one declared Datasette command.');
       result.command = value; continue;
     }
     const name = value.slice(2);
@@ -71,17 +73,23 @@ export function parseDatasetteArguments(argv) {
   if (remote && (result.directory || result.create || result.command === 'serve' ||
       ['seller-file','resource-file','environment-file'].some(key => result[key])))
     throw fail('Remote access uses the original running workspace URL. Local creation uses --directory.');
-  if (!remote && !result.directory) throw fail('Supply the original --directory, --url or --url-file.');
+  const offlineReceive = result.command === 'receive-workspace' && !remote && !result.directory;
+  if (!remote && !result.directory && !offlineReceive) throw fail('Supply the original --directory, --url or --url-file.');
+  if (offlineReceive && (result.create || result['expected-workspace-id'] ||
+      ['seller-file','resource-file','environment-file'].some(key => result[key])))
+    throw fail('Offline workspace receiving uses its archive, SHA256 and separate destination.');
   if (result.command !== 'serve' && ['port','connection-file','startup-format'].some(key => result[key]))
     throw fail('Server launch options belong to the serve command.');
   if (result.command === 'operation' && !DATASETTE_OPERATIONS.includes(result.operation)) throw fail('Choose a declared --operation; use the operations command for its input catalog.');
   if (result.command !== 'operation' && result.operation) throw fail('--operation is used without a separate command.');
-  if (result.command === 'receive' && (!result['archive-file'] || !result.destination ||
+  if (['receive','receive-workspace'].includes(result.command) && (!result['archive-file'] || !result.destination ||
       !/^[a-f0-9]{64}$/.test(result.sha256 ?? '') || result.input || result['input-file']))
     throw fail('Receive requires --archive-file, --sha256 (64 lowercase hexadecimal characters) and --destination.');
-  if (result.command !== 'receive' && (result['archive-file'] || result.sha256 || result.destination))
-    throw fail('Archive, SHA256 and destination options belong to receive.');
-  if (['serve','status','operations','health'].includes(result.command) && (result.input || result['input-file']))
+  if (!['receive','receive-workspace'].includes(result.command) && (result.sha256 || result.destination))
+    throw fail('SHA256 and destination options belong to source or workspace receiving.');
+  if (!['receive','receive-workspace','export-workspace'].includes(result.command) && result['archive-file'])
+    throw fail('An archive file belongs to an export or receiving command.');
+  if (['serve','status','operations','health','export-workspace'].includes(result.command) && (result.input || result['input-file']))
     throw fail('This command reads its original state without an operation input.');
   return result;
 }
@@ -145,11 +153,20 @@ export async function runDatasetteCLI(argv = process.argv.slice(2), {
     stderr.write(JSON.stringify({error: error?.code ?? 'DATASETTE_CLI_FAILURE',
       message: error?.message ?? String(error), ...(phase ? {phase} : {}),
       ...(error instanceof DatasetteClientError ? {operation: error.operation, operationId: error.operationId,
-        status: error.status, uncertain: error.uncertain} : {})}) + '\n');
+        status: error.status, uncertain: error.uncertain} : {}),
+      ...(typeof error?.uncertain === 'boolean' ? {uncertain: error.uncertain} : {}),
+      ...(typeof error?.directory === 'string' ? {directory: error.directory} : {})}) + '\n');
   };
   try {
     const args = parseDatasetteArguments(argv);
     if (args.help) {stdout.write(USAGE); return 0;}
+    if (args.command === 'receive-workspace' && !args.directory && !args.url && !args['url-file']) {
+      const {receiveDatasetteWorkspace} = await import('./archive.mjs');
+      const result = await receiveDatasetteWorkspace({archiveFile: resolve(args['archive-file']),
+        sha256: args.sha256, directory: resolve(args.destination)});
+      await resultOutput(result, args.out, stdout);
+      return 0;
+    }
     let remote, connection;
     if (args.url || args['url-file']) {
       connection = args.url;
@@ -199,8 +216,12 @@ export async function runDatasetteCLI(argv = process.argv.slice(2), {
     else if (args.command === 'status') value = await (remote ?? workspace).status();
     else if (args.command === 'operations') value = await (remote ?? workspace).operations();
     else {
-      const operation = args.command === 'receive' ? 'source.receive' : args.operation;
-      const input = args.command === 'receive' ? {archiveFile: resolve(args['archive-file']), sha256: args.sha256, directory: resolve(args.destination)}
+      const receiving = ['receive','receive-workspace'].includes(args.command);
+      const operation = args.command === 'receive' ? 'source.receive'
+        : args.command === 'receive-workspace' ? 'workspace.receive'
+        : args.command === 'export-workspace' ? 'workspace.export' : args.operation;
+      const input = receiving ? {archiveFile: resolve(args['archive-file']), sha256: args.sha256, directory: resolve(args.destination)}
+        : args.command === 'export-workspace' ? (args['archive-file'] ? {outputFile: resolve(args['archive-file'])} : {})
         : args['input-file'] ? await jsonFile(args['input-file']) : args.input ? JSON.parse(args.input) : {};
       if (!object(input)) throw fail('Operation input must be a complete JSON object.');
       value = await (remote ?? workspace).dispatch(operation, input);

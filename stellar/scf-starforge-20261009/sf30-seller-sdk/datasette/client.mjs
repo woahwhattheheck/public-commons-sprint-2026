@@ -10,7 +10,8 @@ export const DATASETTE_OPERATIONS = Object.freeze([
   'publisher.plan', 'publisher.extract', 'publisher.inspect', 'publisher.review',
   'publisher.publish', 'publisher.recover', 'publisher.buyer-offer',
   'publisher.prepare-buyer', 'release.prepare', 'release.stage',
-  'source.export', 'source.receive', 'operations.cancel',
+  'source.export', 'source.receive', 'files.list', 'files.inspect', 'files.read',
+  'workspace.export', 'workspace.receive', 'operations.inspect', 'operations.cancel',
 ]);
 const operationNames = new Set(DATASETTE_OPERATIONS);
 
