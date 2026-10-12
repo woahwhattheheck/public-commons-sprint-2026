@@ -216,16 +216,19 @@ export async function receiveOpportunityOperation(options={}){
     const original=journal.context.firstFiles.find(item=>item.format==='html');
     requireThat(sha(browserBytes)===original.sha256,'Named browser download changed after source review','BROWSER_NAMED_EXPORT_CHANGED');
     await page.locator('[data-tab="overview"]').click();
-    const desktopPath=join(directory,'desktop.png');await page.screenshot({path:desktopPath,fullPage:true});
+    await page.waitForFunction(()=>document.querySelector('#busy-indicator')?.hidden!==false);
+    const desktopLayout=await page.evaluate(()=>({viewportWidth:innerWidth,viewportHeight:innerHeight,documentWidth:document.documentElement.scrollWidth,documentHeight:document.documentElement.scrollHeight}));
+    const desktopPath=join(directory,'desktop.png');await page.screenshot({path:desktopPath,fullPage:false,animations:'disabled',scale:'css'});
     await page.setViewportSize({width:390,height:844});
     await page.locator('[data-tab="requirements"]').click();
-    const mobileWidth=await page.evaluate(()=>({viewport:innerWidth,document:document.documentElement.scrollWidth}));
+    await page.waitForFunction(()=>document.querySelector('#busy-indicator')?.hidden!==false);
+    const mobileWidth=await page.evaluate(()=>({viewport:innerWidth,document:document.documentElement.scrollWidth,viewportHeight:innerHeight,documentHeight:document.documentElement.scrollHeight}));
     requireThat(mobileWidth.document<=mobileWidth.viewport+1,'The mobile operator overflows the viewport','BROWSER_LAYOUT_OVERFLOW');
-    const mobilePath=join(directory,'mobile.png');await page.screenshot({path:mobilePath,fullPage:true});
+    const mobilePath=join(directory,'mobile.png');await page.screenshot({path:mobilePath,fullPage:false,animations:'disabled',scale:'css'});
     requireThat(errors.length===0,'Browser page errors: '+errors.join('; '),'BROWSER_PAGE_ERROR');
     await context.close();await browser.close();browser=null;
     return {views,questionId:receivingQuestion.id,revision:after.revision,sourceSha256:sha(viewedText),
-      originalNamedHtmlSha256:sha(browserBytes),desktopPath,mobilePath,mobileWidth,pageErrors:errors};
+      originalNamedHtmlSha256:sha(browserBytes),desktopPath,mobilePath,desktopLayout,mobileWidth,pageErrors:errors};
   }
   try{
     journal.status='running';await save();
