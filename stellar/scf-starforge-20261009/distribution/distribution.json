@@ -428,6 +428,7 @@
     "grpc-example": "stellar/scf-starforge-20261009/sf30-seller-sdk/grpc/examples/server.mjs",
     "stellar-application": "stellar/scf-starforge-20261009/partners/cheesecake-stellar-agent/installed.mjs",
     "sec-edgar-download": "stellar-forge/mcp-merchant-operator/sec-edgar-download.mjs",
+    "nocodb-workspace": "stellar/scf-starforge-20261009/sf30-seller-sdk/nocodb/workspace/cli.mjs",
     "unstructured-merchant": "stellar/scf-starforge-20261009/partners/unstructured/merchant.mjs",
     "unstructured-commerce": "stellar/scf-starforge-20261009/partners/unstructured/commerce.mjs"
   },
@@ -1044,6 +1045,10 @@
     "./seller/jobs/recovery/cli": "./source/stellar/scf-starforge-20261009/sf101-merchant-recovery/paid-jobs-cli.mjs",
     "./seller/jobs/source-binding": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/jobs/source-binding.mjs",
     "./seller/jobs/recovery-state": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/jobs/recovery-state.mjs",
+    "./seller/nocodb/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/nocodb/workspace/model.mjs",
+    "./seller/nocodb/workspace/server": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/nocodb/workspace/server.mjs",
+    "./seller/nocodb/workspace/launch": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/nocodb/workspace/launch.mjs",
+    "./seller/nocodb/workspace/packet": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/nocodb/workspace/packet.mjs",
     "./seller/unstructured-partition": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/unstructured-partition.mjs",
     "./buyer/unstructured": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/node/unstructured/index.mjs",
     "./buyer/research-dossiers/unstructured-workspace": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/unstructured-workspace.mjs",
