@@ -11,7 +11,7 @@ function csvCell(value) {
 export function reportCsv(report) {
   const fields = ['reportId', 'reportSha256', 'periodStart', 'periodEndExclusive', 'asOf', 'key', 'serviceRequestId',
     'sourceId', 'captureId', 'sourceSha256', 'observedAt', 'serviceCode', 'serviceName', 'sourceStatus', 'reportingStatus',
-    'group', 'priority', 'mappingId', 'agency', 'address', 'description', 'requestedAt', 'updatedAt', 'sourceExpectedAt',
+    'group', 'priority', 'mappingId', 'agency', 'address', 'description', 'requestedAt', 'updatedAt', 'sourceExpectedAt', 'sourceClosedAt', 'sourceStatusNotes',
     'reviewStatus', 'assignee', 'reviewDueDate', 'reviewDueAt', 'reviewNeedsRebase', 'policyId', 'policyDueAt',
     'targetBasis', 'targetState', 'targetDueAt', 'targetCompletedAt', 'targetReason', 'ageMinutes', 'resolutionMinutes',
     'businessMinutes', 'observationCount', 'versionCount', 'calculationIssues', 'reportComment', 'requestComment'];
@@ -44,11 +44,12 @@ export function reportHtml(report) {
       ['Original workspace / revision', c.originalWorkspaceId + ' / ' + c.originalRevision],
       ['Original full-file SHA-256', c.sha256], ['Original bytes', c.bytes],
       ['First retained observation', c.summary.firstObservedAt], ['Last retained observation', c.summary.lastObservedAt],
+      ['Date basis', c.selectionTimeBasis ?? 'created'], ['Traversal', c.traversal ?? 'windows'],
       ['Source state', c.summary.state], ['All terminal source windows below cap', c.summary.capResolved ? 'Yes' : 'No'],
       ['Unique source requests', c.summary.counts.uniqueRequests], ['Returned row occurrences', c.summary.counts.returnedRows],
       ['Unresolved capped windows', c.summary.counts.limitedWindows], ['Failed windows', c.summary.counts.failedWindows],
-      ['Source rows outside requested windows', c.summary.counts.outOfWindowRows], ['Source rows without a usable creation date', c.summary.counts.unknownDateRows]
-    ]) + '<h4>Exact retained provider filters</h4><pre>' + e(JSON.stringify(c.query, null, 2)) + '</pre>' +
+      ['Source rows outside selected time windows', c.summary.counts.outOfWindowRows], ['Source rows without a usable selected datetime', c.summary.counts.unknownDateRows]
+    ]) + '<p>' + e(c.populationDescription ?? '') + '</p><h4>Exact retained provider filters</h4><pre>' + e(JSON.stringify(c.query, null, 2)) + '</pre>' +
     (c.unresolvedWindows.length ? '<h4>Unresolved source intervals</h4>' + table(['Window', 'Start', 'End', 'State', 'Problem'],
       c.unresolvedWindows.map(n => [n.id, n.startDate, n.endDate, n.state, n.problem ?? n.error?.message ?? ''])) : '') +
     '<p>Publisher: ' + e(c.connection.attribution?.publisher) + '. Dataset: ' + e(c.connection.attribution?.title) +
@@ -56,13 +57,14 @@ export function reportHtml(report) {
     sourceLink(c.connection.attribution?.sourceUrl, 'Source catalogue') + '</p></section>').join('');
   const requests = report.rows.map(r => '<tr><td><strong>' + e(r.serviceRequestId) + '</strong><br>' + e(local(r.requestedAt)) +
     '</td><td>' + e(r.group) + '<br><span class="muted">' + e(r.serviceCode ?? 'Missing service code') + '</span><br>' + e(r.priority) +
-    '</td><td>' + e(r.sourceStatus) + '<br><span class="muted">Reporting group: ' + e(r.reportingStatus) + '</span><br>' +
+    '</td><td>' + e(r.sourceStatus) + '<br><span class="muted">Reporting group: ' + e(r.reportingStatus) + '</span>' +
+    (r.sourceStatusNotes ? '<p>Source disposition: ' + e(r.sourceStatusNotes) + '</p>' : '') + '<br>' +
     e(r.reviewStatus) + ' · ' + e(r.assignee || 'Unassigned') + (r.reviewNeedsRebase ? '<p>Review references an earlier source version.</p>' : '') +
     '</td><td>' + e(r.target.state) + '<br>' + e(local(r.target.dueAt)) + '<br><span class="muted">' + e(r.target.reason) + '</span>' +
-    '<p>Age: ' + e(number(r.ageMinutes)) + ' min<br>Resolution: ' + e(number(r.resolutionMinutes)) + ' min</p></td><td>' +
+    '<p>Age: ' + e(number(r.ageMinutes)) + ' min<br>Source case closure: ' + e(number(r.resolutionMinutes)) + ' min</p></td><td>' +
     '<details><summary>Request details and original source</summary><p>' + e(r.description) + '</p><p>' + e(r.address) + '</p>' +
     table(['Field', 'Retained value'], [['Request key', r.key], ['Source edition', r.sourceId], ['Capture', r.captureId],
-      ['Original version SHA-256', r.sourceSha256], ['Observed at', r.observedAt], ['Source last update', r.updatedAt],
+      ['Original version SHA-256', r.sourceSha256], ['Observed at', r.observedAt], ['Source last update', r.updatedAt], ['Source case closed at', r.sourceClosedAt], ['Original status notes', r.sourceStatusNotes],
       ['Provider expected datetime', r.sourceExpectedAt], ['Internal review due date', r.reviewDueDate], ['Interpreted review cutoff', r.reviewDueAt],
       ['Operator policy deadline', r.policyDueAt], ['Policy edition', r.policyId], ['Selected target basis', r.target.basis],
       ['Target completion time', r.target.completedAt], ['Observed original versions', r.versionCount], ['Distinct observations', r.observationCount],
@@ -93,8 +95,8 @@ export function reportHtml(report) {
     table(['Metric', 'Result'], [['Completed on time', rate(t.completedOnTime)], ['Open requests overdue', rate(t.openOverdue)],
       ['Currently within selected target', rate(t.currentlyWithinTarget)], ['Requests assessed against a valid target', t.assessedTargets],
       ['Requests with an unassessed target', t.unassessedTargets], ['Requests with a calculation issue', t.calculationIssues],
-      ['Median age at observation cutoff, minutes', number(t.age.medianMinutes)], ['Valid source resolution durations', t.resolution.count],
-      ['Median valid resolution duration, minutes', number(t.resolution.medianMinutes)]]) +
+      ['Median age at observation cutoff, minutes', number(t.age.medianMinutes)], ['Valid source case-closure durations', t.resolution.count],
+      ['Median source case-closure duration, minutes', number(t.resolution.medianMinutes)]]) +
     '<div class="columns">' + grouping('Source status', report.groups.sourceStatus) + grouping('Mapped service groups', report.groups.service) +
     grouping('Internal review workload', report.groups.review) + grouping('Assigned workload', report.groups.assignee) + '</div>' +
     '<h2>Population and time interpretation</h2><p>' + e(report.interpretation) + '</p>' +
@@ -103,7 +105,7 @@ export function reportHtml(report) {
       ['Missing usable creation time', t.missingCreationDate], ['Outside the half-open creation period', t.outsidePeriod],
       ['Excluded by saved report filters', t.filtered], ['Included in the report', t.intake]]) +
     '<p>' + (profile.provider === 'helsinki' ? 'Helsinki READY and PROCESSING remain source processing states. Its last-update datetime does not establish physical resolution. ' :
-      'The GeoReport v2 profile uses updated_datetime as closure time only for a source request whose status is closed. ') +
+      'The GeoReport v2 profile uses updated_datetime as case-closure time when the original status is closed. Read the retained disposition to understand how the case was handled. ') +
     'Operator calendars, review cutoffs and target policies are saved with this report. Provider values remain in each original object.</p>' +
     '<h2>Request drilldown</h2><table><thead><tr><th>Request / creation</th><th>Service / priority</th><th>Source / review</th><th>Selected target</th><th>Original detail</th>' +
     '</tr></thead><tbody>' + requests + '</tbody></table>' +
