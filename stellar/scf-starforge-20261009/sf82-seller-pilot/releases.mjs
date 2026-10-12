@@ -6,8 +6,7 @@ import { join, resolve, dirname, relative, isAbsolute, sep } from 'node:path';
 import { hostname } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { spawn } from 'node:child_process';
-import { upstreamReleaseSnapshot, stageReleaseUpstreams, inspectReleaseUpstreams, readReleaseWorkspace } from './release-upstreams.mjs';
-import { releaseCacheControlPath } from './release-cache.mjs';
+import { upstreamReleaseSnapshot, releaseCacheControlPath } from './release-input-contracts.mjs';
 import {
   PYTHON_SOURCE_SCHEMA,
   DUCKDB_SOURCE_SCHEMA,
@@ -55,6 +54,11 @@ const stageClickHouseRelease = async (...args) => (await import('./release-click
 const inspectClickHouseRelease = async (...args) => (await import('./release-clickhouse.mjs')).inspectClickHouseRelease(...args);
 const stageGrpcRelease = async (...args) => (await import('./release-grpc.mjs')).stageGrpcRelease(...args);
 const inspectGrpcRelease = async (...args) => (await import('./release-grpc.mjs')).inspectGrpcRelease(...args);
+
+// Preserve synchronous input contracts while selecting original upstream readers on use.
+const stageReleaseUpstreams = async (...args) => (await import('./release-upstreams.mjs')).stageReleaseUpstreams(...args);
+const inspectReleaseUpstreams = async (...args) => (await import('./release-upstreams.mjs')).inspectReleaseUpstreams(...args);
+const readReleaseWorkspace = async (...args) => (await import('./release-upstreams.mjs')).readReleaseWorkspace(...args);
 
 const STORE = 'stellar-forge.seller-release-store.v1';
 const RELEASE = 'stellar-forge.seller-release.v1';
@@ -250,6 +254,8 @@ function runtimeOptions(value = {}) {
   return result;
 }
 export { runtimeOptions as normalizeReleaseRuntime };
+
+export { sourceSnapshot as inspectReleaseSource };
 
 async function sourceSnapshot(path, upstreams, allowLoopback = false) {
   const manifestBytes = await regular(join(path, 'manifest.json'), 2 * 1024 * 1024);
@@ -475,7 +481,7 @@ export async function stageRelease(root, options) {
   const releaseId = id(options.id), label = text(options.label ?? releaseId, 'Release label');
   const datasetSource = options.datasetPackage !== undefined;
   if (datasetSource && (Object.keys(options).some(key =>
-      !['id','label','runtime','datasetPackage'].includes(key) && options[key] !== undefined) ||
+      !['id','label','alias','runtime','datasetPackage'].includes(key) && options[key] !== undefined) ||
       options.runtime?.handlers || options.runtime?.upstreams || options.runtime?.allowLoopbackUpstream))
     throw new TypeError('Choose the prepared dataset package or another source; the dataset owns its original controller and query bindings.');
   const pythonSource = options.python !== undefined;
@@ -825,6 +831,8 @@ export async function compareReleases(root, beforeId, afterId, { beforeRoot = ro
     runtimeChanges.push({ field: 'clickhouse', before: before?.clickhouse ?? null, after: after.clickhouse ?? null });
   if (stable(before?.grpc ?? null) !== stable(after.grpc ?? null))
     runtimeChanges.push({ field: 'grpc', before: before?.grpc ?? null, after: after.grpc ?? null });
+  if (stable(before?.dataset ?? null) !== stable(after.dataset ?? null))
+    runtimeChanges.push({ field: 'dataset', before: before?.dataset ?? null, after: after.dataset ?? null });
   if (stable(before?.facilitatorReview ?? null) !== stable(after.facilitatorReview ?? null))
     runtimeChanges.push({ field: 'facilitatorReview', before: before?.facilitatorReview ?? null, after: after.facilitatorReview ?? null });
   return { schema: 'stellar-forge.seller-release-diff.v1', before, after, changes, runtimeChanges,
