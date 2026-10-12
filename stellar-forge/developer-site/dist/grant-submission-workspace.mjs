@@ -36,6 +36,8 @@ function select(label,value,options,onChange){
 function link(label,url){const a=node('a',label);a.href=url;a.target='_blank';a.rel='noopener noreferrer';return a;}
 function touch(message){dirty=true;if(draft)draft.updatedAt=new Date().toISOString();metadata();updateStats();if(message)status(message);}
 function metadata(){
+  const root=$('workspace-root');root.dataset.draftId=draft?.id||'';
+  root.dataset.savedDraftId=savedId||'';root.dataset.savedDraftRevision=String(savedRevision);root.dataset.draftDirty=String(dirty);
   $('draft-meta').textContent=(savedId?'Browser revision '+savedRevision:'Local working draft')+(dirty?' · unsaved edits':'')+(draft?' · '+draft.versions.length+' retained versions':'');
 }
 function download(body,name,type='application/json'){
@@ -278,7 +280,7 @@ async function savedView(root){
     const records=(await listDrafts()).filter(x=>x.name?.startsWith('SCF submission — '));
     if(!records.length)cards.append(node('p','No SCF submission drafts are saved in this browser yet.','empty'));
     for(const record of records){
-      const card=node('article',undefined,'card');card.append(node('h3',record.name),node('p','Revision '+record.revision+' · '+record.updatedAt,'muted'),
+      const card=node('article',undefined,'card');card.dataset.savedDraftId=record.id;card.append(node('h3',record.name),node('p','Revision '+record.revision+' · '+record.updatedAt,'muted'),
         button('Open this draft',async()=>{await preserveWorking();const current=await loadDraft(record.id);if(!current)throw new Error('This draft is no longer in the browser store.');await verifyDraft(current.input);draft=current.input;savedId=current.id;savedRevision=current.revision;dirty=false;$('view').value='answers';render();status('Opened browser revision '+savedRevision+' and all retained versions.');}));
       cards.append(card);
     }

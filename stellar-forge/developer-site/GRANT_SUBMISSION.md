@@ -147,7 +147,7 @@ Reviewed October 12, 2026:
 
 ## Continue the original browser receiving with its existing Page
 
-The installed receiving operator imports `receiveGrantPlanning` from `GRANT_PLANNING_RECEIVING.mjs` alongside the existing grant callback. Pass the original Playwright Page while it is on the installed `/grant.html` reader, the exact original planning file and SHA-256, the selected installed source commit, and the operation's private output directory:
+The installed receiving operator imports `receiveGrantPlanning` from `GRANT_PLANNING_RECEIVING.mjs` alongside the existing grant callback. Pass the original Playwright Page while it is on the installed `/grant.html` reader or the retained `/grant-submission.html` editor, the exact original planning file and SHA-256, the selected installed source commit, and the operation's private output directory:
 
 ```js
 import {receiveGrantPlanning} from './GRANT_PLANNING_RECEIVING.mjs';
@@ -169,9 +169,13 @@ The first invocation retains its original manuscript draft identity, receives th
 
 ### Resume a retained operation
 
-Repeat the same call with the original operation ID, planning file identity, title and output directory. The source file and output directory may be moved together to another equipped installation. Select that installation's actual listener and source commit; the journal retains the original input/source selection and each subsequent installed source edition separately.
+Repeat the same call with the original operation ID, planning file identity, title and output directory. The source file and output directory may be moved together to another equipped installation. The callback retains the selected file's exact bytes in `selected-input/` and uses that retained copy for native file intake. It checks that copy against the original input identity on every continuation. Select that installation's actual listener and source commit; the journal retains the original input/source selection and each subsequent installed source edition separately.
 
-The continuation first reads its accepted files. An existing `SCF_Native_Plan_Submission.json` supplies the draft identity and complete original planning source. Intake and plan application resume only when the original delivery has not yet been accepted. If the earlier callback saved in IndexedDB and stopped before its full export, the continuation can recover a complete saved record with the same original title and planning file. It retains the matching browser records before selecting that saved working edition.
+The continuation first reads its accepted files. An existing `SCF_Native_Plan_Submission.json` supplies the draft identity and complete original planning source. Intake and plan application resume only when the original delivery has not yet been accepted. If the earlier callback saved in IndexedDB and stopped before its full export, the continuation can recover a complete saved record with the same original title and planning file. It retains the matching browser records before selecting that saved working edition. Until a native browser record is bound, more than one matching record leaves the selection unresolved. Open the intended record through **Browser drafts** and repeat the same callback from that editor. The visible editor carries its actual saved record ID and revision; the callback reads and verifies the full record through the original draft store before retaining that choice. A missing bound record stays unresolved instead of selecting another copy with the same logical draft ID.
+
+The accepted full draft must have a current planning review for the selected source, the exact selected preview basis, and the same reviewed replacement text in its current Delivery answer. An application retained only in an earlier version does not establish that current answer. If the accepted export is missing and later answer or review edits prevent that match, the callback retains the complete working and browser snapshots and leaves the original delivery unresolved. Open the exact accepted version, or explicitly review and apply the intended current Delivery in the original editor, before continuing. An already retained accepted export remains separate from later editorial work.
+
+An interrupted call leaves the existing editor open and retains its complete working draft. On resumption, the callback verifies that open draft belongs to the same operation before navigating or opening another file. Successful completion returns the Page to its original reader and scroll position.
 
 The remaining phases are explicit:
 
@@ -187,7 +191,7 @@ The remaining phases are explicit:
 
 A phase's accepted export is read and verified before a retry repeats any browser action. Version restoration selects the retained version ID displayed by the editor. A later browser save is opened through its actual record and revision; the callback keeps its full newer answers, fields, notes, source selections and versions. The accepted native-plan delivery stays available beside that later editorial state.
 
-The callback preserves complete matching browser revisions in `browser-snapshots/`. It uses the maintained `listDrafts` and `loadDraft` functions for those reads. When the selected browser has no saved copy yet, it receives the accepted draft and saves it through the existing editor. A retry recovers an already accepted browser save before issuing another save.
+The callback preserves complete matching browser revisions in `browser-snapshots/`. It uses the maintained `listDrafts` and `loadDraft` functions for those reads. When the selected browser has no saved copy yet, it receives the accepted draft and saves it through the existing editor. A retry recovers an already accepted browser save before issuing another save. The save phase requires the accepted full state in the actual record, one of its retained versions, or a verified earlier snapshot of that same saved record. A record containing only the prepared manuscript does not complete that phase. If the original editor still holds the accepted working state with the same record ID and revision, **Save version** finishes through the native revision check. If that live binding is gone, the callback retains the complete files and reports the unfinished save for an explicit receiving decision; the ordinary **Open draft file** control creates a separate working copy and is not treated as an update to a bound record.
 
 ### Receive the useful complete files
 
@@ -199,6 +203,7 @@ The callback preserves complete matching browser revisions in `browser-snapshots
 | `Restored_Previous_Submission.json` | The actual preceding manuscript restored through the editor. |
 | `Reopened_Browser_Submission.json` | The original saved browser draft, including later editorial work present when it is reopened. |
 | `Prepared_Source_Draft.json` | The original manuscript and draft identity retained before first native intake. |
+| `selected-input/` | The exact selected native planning bytes used by the original file chooser. |
 | `Planning_Delivery_Intent.json` | Fixed operation, planning bytes and input intent. |
 | `Planning_Delivery_Journal.json` | Current named phases, accepted artifacts, installed editions and saved browser records. |
 | `Planning_Delivery_Result.json` | The latest actual attempt result, updated atomically as the same operation continues. |
