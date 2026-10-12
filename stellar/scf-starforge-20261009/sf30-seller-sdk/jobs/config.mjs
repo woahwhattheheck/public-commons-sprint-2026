@@ -127,21 +127,26 @@ export function compileJobMerchant(input, { baseDir = process.cwd() } = {}) {
     memoryLimitMb: integer(input.memoryLimitMb, 256, 32, 4096, 'WORKER_MEMORY'), functions, service });
 }
 
-export async function readJobMerchant(configPath) {
+export async function readJobMerchant(configPath, { applicationPath } = {}) {
   configPath = resolve(configPath);
   const info = await lstat(configPath);
   if (!info.isFile() || info.isSymbolicLink() || info.size > 1048576) fail('JOB_CONFIG_FILE_REQUIRED');
   const bytes = await readFile(configPath);
   if (bytes.length > 1048576) fail('JOB_CONFIG_TOO_LARGE');
   const raw = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes));
-  const compiled = compileJobMerchant(raw, { baseDir: dirname(configPath) });
-  const application = await realpath(compiled.application), appInfo = await lstat(application);
+  let compiled = compileJobMerchant(raw, { baseDir: dirname(configPath) });
+  // A reviewed restored binding selects the executable; raw configuration bytes stay original.
+  if (applicationPath !== undefined && (typeof applicationPath !== 'string' ||
+      !applicationPath.endsWith('.mjs') || /[\x00-\x1f]/.test(applicationPath)))
+    fail('JOB_APPLICATION_MODULE_REQUIRED');
+  const application = await realpath(applicationPath ?? compiled.application), appInfo = await lstat(application);
+  compiled = Object.freeze({ ...compiled, application });
   if (!appInfo.isFile() || appInfo.size > 4194304) fail('JOB_APPLICATION_FILE_REQUIRED');
   const applicationBytes = await readFile(application);
   if (applicationBytes.length > 4194304) fail('JOB_APPLICATION_TOO_LARGE');
   const identity = { schema: 'stellar-forge.job-source.v1', configSha256: digest(bytes),
     applicationSha256: digest(applicationBytes), application, publicOrigin: compiled.publicOrigin };
-  return { configPath, raw, compiled, identity, configSource: bytes.toString('utf8'), applicationSource: new TextDecoder('utf-8', { fatal: true }).decode(applicationBytes) };
+  return { configPath, applicationPath: application, raw, compiled, identity, configSource: bytes.toString('utf8'), applicationSource: new TextDecoder('utf-8', { fatal: true }).decode(applicationBytes) };
 }
 
 export function validateJobInput(definition, input) {
