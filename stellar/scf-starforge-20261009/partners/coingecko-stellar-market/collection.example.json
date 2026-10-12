@@ -1,0 +1,77 @@
+{
+  "schema": "stellar-forge.coingecko-collection.v1",
+  "collection": {
+    "name": "Five-family market collection",
+    "description": "Original documented request definitions, ready for source intake or provider setup. No observations are included."
+  },
+  "requests": [
+    {
+      "name": "Coin prices in USD",
+      "endpoint": "simple-price",
+      "path": {},
+      "query": {
+        "ids": "bitcoin,ethereum",
+        "vs_currencies": "usd",
+        "include_last_updated_at": true,
+        "precision": "full"
+      },
+      "enabled": true,
+      "notes": "Documented request definition; this file contains no market observations."
+    },
+    {
+      "name": "WETH onchain prices",
+      "endpoint": "token-prices",
+      "path": {
+        "network": "eth",
+        "addresses": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
+      },
+      "query": {
+        "include_market_cap": true,
+        "include_24hr_vol": true
+      },
+      "enabled": true,
+      "notes": "Data network eth is independent from the network used to pay."
+    },
+    {
+      "name": "WETH pools",
+      "endpoint": "search-pools",
+      "path": {},
+      "query": {
+        "query": "WETH",
+        "network": "eth",
+        "include": "base_token,quote_token,dex",
+        "page": 1
+      },
+      "enabled": true,
+      "notes": "A later page is a separate explicit request."
+    },
+    {
+      "name": "Base trending pools",
+      "endpoint": "trending-pools",
+      "path": {
+        "network": "base"
+      },
+      "query": {
+        "duration": "24h",
+        "include": "base_token,quote_token,dex",
+        "page": 1
+      },
+      "enabled": true,
+      "notes": "Uses the separate documented duration enum; the original vendor challenge remains unchanged."
+    },
+    {
+      "name": "WETH token details",
+      "endpoint": "token-data",
+      "path": {
+        "network": "eth",
+        "address": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
+      },
+      "query": {
+        "include": "top_pools",
+        "include_composition": true
+      },
+      "enabled": true,
+      "notes": "Keep token reserves and returned pool reserves distinct."
+    }
+  ]
+}

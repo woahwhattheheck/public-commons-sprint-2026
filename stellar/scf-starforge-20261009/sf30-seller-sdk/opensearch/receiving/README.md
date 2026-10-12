@@ -37,3 +37,18 @@ If capture completed before a later handover failure, set `OPENSEARCH_CAPTURE_RE
 The wrapper returns the driver's exit code. Read the driver's actual result together with `receiver-state.json` and `native-requests.jsonl`; a ready transport alone does not establish a completed merchant journey. A failed bootstrap retains its own error and leaves the original workspace available. The wrapper closes only its own bridge and driver children.
 
 Public API references: [PIT lifecycle](https://docs.opensearch.org/latest/api-reference/search-apis/point-in-time-api/) and [Search API](https://docs.opensearch.org/latest/api-reference/search-apis/search/).
+
+## Native relevance and customer handover
+
+The same wrapper runs the retained operator relevance journey with its original workspace server:
+
+```bash
+python3 stellar/scf-starforge-20261009/sf30-seller-sdk/opensearch/receiving/run-playground.py \
+  --journey relevance --directory /absolute/private/opensearch-relevance
+```
+
+`--journey merchant` is the default. Both journeys use the same private anonymous session, pooled transport, original source environment and attempt records. The relevance route adds the native root `POST /_rank_eval` capability to the existing metadata/search/PIT allowlist.
+
+The bundled `flight-cohort.json` retains the seven actual source documents captured on 2026-10-11. Its `resultJson` string is the exact original native JSON, checked against `provenance.resultSha256`; provenance also carries the engine build, source declaration, query input, capture request and retained edition identity. `merchant-native-run.json` records the completed original merchant, customer export, typed admission and workspace reopen journey. Its source hashes identify the implementation that ran.
+
+The relevance driver reads this cohort by default. Set `STARFORGE_OPENSEARCH_COHORT_FILE` to another complete cohort envelope when intentionally selecting another retained source. The original relevance driver declares its engineering criterion and freezes these exact native document IDs into its query scope before comparing price-order variants. Its judgments, metric request, native responses, coverage and customer handover remain in the retained operator workspace.
