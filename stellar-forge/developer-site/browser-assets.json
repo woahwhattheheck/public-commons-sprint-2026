@@ -311,6 +311,27 @@
       ]
     ],
     [
+      "/grant-handover-core.mjs",
+      [
+        "grant-handover-core.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/grant-handover-source.mjs",
+      [
+        "grant-handover-source.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/grant-handover-workspace.mjs",
+      [
+        "grant-handover-workspace.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
       "/grant-plan-core.mjs",
       [
         "grant-plan-core.mjs",
@@ -329,6 +350,34 @@
       [
         "grant-plan-workspace.mjs",
         "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/grant-review-round-core.mjs",
+      [
+        "grant-review-round-core.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/grant-review-round-workspace.mjs",
+      [
+        "grant-review-round-workspace.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/grant-review-round.css",
+      [
+        "grant-review-round.css",
+        "text/css; charset=utf-8"
+      ]
+    ],
+    [
+      "/grant-review-round.html",
+      [
+        "grant-review-round.html",
+        "text/html; charset=utf-8"
       ]
     ],
     [
