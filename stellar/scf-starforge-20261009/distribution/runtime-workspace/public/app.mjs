@@ -409,6 +409,7 @@ const applications = createApplicationsWorkspaceView({ root: $('applications-wor
   refreshWorkspace: refresh, switchView, message, error });
 const python = createPythonWorkspaceView({ api, getState: () => state, operation, refreshWorkspace: refresh,
   openLog, switchView, message, error,
+  openApplication: descriptor => applications.beginPython(descriptor),
   upload: async (file, sha256) => {
     const response = await fetch('/api/python/upload?' + new URLSearchParams({ sha256 }), {
       method: 'POST', headers: { 'x-runtime-workspace-token': token, 'content-type': 'application/octet-stream' }, body: file,

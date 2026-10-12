@@ -210,3 +210,13 @@ https://github.com/woahwhattheheck/public-commons-sprint-2026/tree/1d22a89144b99
 
 Original installer:
 https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/1d22a89144b9903e63b3c2eabb0297a19852d036/stellar/scf-starforge-20261009/distribution/runtime-install.mjs
+
+## Open through Applications
+
+The original Applications integration consumes `application-lifecycle.mjs` through its existing catalog, reviews and managed worker. The three Python entries are **Analysis and workbook workspace**, **Workbook build and receiving**, and **Workbook delivery and refresh**. Select an installed environment from the runtime's retained inventory; the original source release remains pinned. The Python pane's **Configure in Applications** action carries the selected installation and original arguments into this same form.
+
+Analysis takes the private database directory, original Node executable and loopback port. Its command keeps the installed venv Python and exact original `--checkout`. The existing review/save/start controls retain its data location and managed release. The opening observer matches `LISTENING.private_launch` to the selected database, reads that private record, matches the actual child PID and verifies its workspace identity using the original readonly `AnalysisWorkspace.read_state` function before exposing the private URL. **Stop** sends the original Analysis command an interrupt, so its existing server and workspace cleanup run before the operation finishes. Reopening starts the same saved database with the same installation.
+
+Workbook and delivery entries take the original argument array. The shared review pins each selected recipe, archive and existing data location, while the native command enforces its original workbook/review/receiving contract. Its complete stdout, exit outcome and installation fingerprint stay in the same managed operation. A completed workbook command has an output/result view; Analysis additionally opens its original browser workspace.
+
+The same operation's `command-launch.json` uses schema `stellar-forge.python-command-launch.v1` and retains the exact executable, argv, cwd, source/installation descriptor and request hash. The existing worker lease, operation IDs, process recording, stop and recovery remain the process authority. Python-engine bytes are retained by SHA when a Python operation is admitted, so a workspace source upgrade cannot replace a queued operation's engine before its first dispatch.
