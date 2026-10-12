@@ -30,7 +30,7 @@ Use the existing Fiscal workspace or its managed Applications entry:
 8. Select the comparison and export below, create the briefing, and give the complete archive to its intended reader.
 
 The managed Applications guide is at
-[FISCALDATA_APPLICATIONS.md](../../../distribution/runtime-workspace/FISCALDATA_APPLICATIONS.md).
+[FISCALDATA_APPLICATIONS.md](../../distribution/runtime-workspace/FISCALDATA_APPLICATIONS.md).
 The original [README](README.md) and [domain contract](DOMAIN.md) describe the model actions and exact source semantics.
 
 ## Installed command
