@@ -12,6 +12,7 @@ export default defineMerchantProvider({
     read: async (value, { base, config, hostPath }) => await (await import("../config.mjs")).readSupportConfiguration(hostPath(value)) },
   tools: supportTools,
   instructions: [
+    {prefix:'merchant_case_commercial',order:296,text:'Use the original saved case and retained SF97 plan source. Preserve exact request UUID, actor, revision and full input after an interrupted quote write. Preview before saving an edition; record actual customer responses against its complete SHA. Quotation acceptance preserves implementation and service receiving. Read bounded customer files at their original saved revision, or export the complete original case for another operator.'},
     {prefix:"merchant_service_",order:285,text:"Use the original saved case for versioned service terms and reports. Inspect the current case and original merchant_support_service_snapshot before capture. Keep the exact requestId, expectedRevision and body across a lost change response; replay returns its original result after later case edits. Reports select exact terms history, retained captures and reviewed exclusions. Download the complete case export for staff receiving."},
     {prefix:"merchant_case_implementation",order:295,
       text:"Reopen the original case and implementation revision. Prepare from its saved SF77 workorder sources; use one retained request ID and exact payload for recovery. Receiving binds the task definition and original delivery files. Page original history and export the complete case for another operator."},
