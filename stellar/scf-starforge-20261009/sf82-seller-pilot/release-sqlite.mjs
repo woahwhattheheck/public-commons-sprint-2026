@@ -11,7 +11,8 @@ import { openSqliteQueryFile } from '../sf30-seller-sdk/sqlite/config.mjs';
 import { readSellerConfig, startSellerService } from '../sf30-seller-sdk/serve.mjs';
 import { compileHttpSellerOffer, paymentRequiredResponse } from '../sf30-seller-sdk/seller.mjs';
 
-export const SQLITE_SOURCE_SCHEMA = 'stellar-forge.sqlite-seller-release-manifest.v1';
+import { SQLITE_SOURCE_SCHEMA } from './release-source-contracts.mjs';
+export { SQLITE_SOURCE_SCHEMA } from './release-source-contracts.mjs';
 const ORIGINAL = 'sqlite/original', DATABASE = 'sqlite/snapshot.sqlite', SOURCE = 'sqlite/source.json';
 const PACKAGE_FILES = ['source.json', 'service.json', 'handlers.mjs', 'launch.mjs', 'RUN.md'];
 const SNAPSHOT_WORKER = fileURLToPath(new URL('./release-sqlite-snapshot.mjs', import.meta.url));

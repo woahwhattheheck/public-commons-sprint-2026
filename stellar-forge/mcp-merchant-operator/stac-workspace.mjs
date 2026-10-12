@@ -1,66 +1,14 @@
 // MIT. Complete agent workflow on the ORIGINAL STAC imagery/processing host.
 import { basename } from 'node:path';
-import { RetainedFileReads, MAX_RETAINED_CHUNK_BYTES } from './retained-file-reads.mjs';
+import { RetainedFileReads } from './retained-file-reads.mjs';
 import { StacWorkspaceClient, StacWorkspaceError, STAC_WORKSPACE_CONNECTION_SCHEMA,
   readStacWorkspaceConfiguration, readStacHostFile, canonicalStacJSON, nativeStacItemId, stacDigest } from './stac-workspace-client.mjs';
 
 export { readStacWorkspaceConfiguration, STAC_WORKSPACE_CONNECTION_SCHEMA };
 const fail = (code, message, details) => { throw new StacWorkspaceError(code, message, details); };
 const plain = value => value !== null && typeof value === 'object' && !Array.isArray(value);
-const alias = { type: 'string', pattern: '^[a-z0-9][a-z0-9_-]{0,63}$' };
-const id = { type: 'string', minLength: 1, maxLength: 2048 };
-const operation = { type: 'string', pattern: '^[A-Za-z0-9._:-]{1,128}$' };
-const digest = { type: 'string', pattern: '^[a-f0-9]{64}$' };
-const number = { type: 'integer', minimum: 0, maximum: Number.MAX_SAFE_INTEGER };
-const object = { type: 'object' }, boolean = { type: 'boolean' };
-const workspace = { workspace: alias };
-const page = { offset: number, limit: { type: 'integer', minimum: 1, maximum: 100 },
-  expectedViewSha256: digest };
-const read = { readOnly: true, idempotent: true };
-const localWrite = { idempotent: false };
-const records = ['collections', 'catalogSources', 'queries', 'reviews', 'editions', 'assetReviews', 'assets', 'decisions', 'imports', 'operations'];
-const kinds = ['state', 'edition', 'comparison', 'report', 'asset', 'handover', 'processing-state', 'processing-read', 'processing-source', 'processing-handover'];
-const fileSelection = {
-  kind: { type: 'string', enum: kinds }, editionId: id, assetId: id, leftEditionId: id, rightEditionId: id,
-  editionIds: { type: 'array', items: id, minItems: 1, uniqueItems: true },
-  format: { type: 'string', enum: ['json', 'csv', 'html'] }, includeAssets: boolean,
-  name: { type: 'string', pattern: '^[A-Za-z][A-Za-z0-9-]{0,63}$' }, query: object, deploymentKey: id, exportId: id
-};
-const sourceInput = { ...workspace, input: alias, expectedSha256: digest };
-const selectionDescription = 'Use the original edition/asset IDs. Full byte reads preserve complete records and native report/handover bytes.';
-export function stacWorkspaceTools(tool) {
-  return [
-    tool('merchant_stac_workspaces', 'List configured original imagery/processing host aliases and input/profile names. Does not open a session or expose its private URL.', {}, [], read),
-    tool('merchant_stac_status', 'Read original workspace identity, current revision, collection counts, recent job counts and declared processing capabilities. No provider acquisition.', workspace, ['workspace'], read),
-    tool('merchant_stac_records', 'Page an original saved collection. Continue with nextOffset and expectedRevision to prevent mixed revisions. Operations are durable native records; recent server jobs are separate.', { ...workspace, kind: { type: 'string', enum: records }, offset: number, limit: page.limit, expectedRevision: number }, ['workspace', 'kind'], read),
-    tool('merchant_stac_record', 'Inspect one original saved query, review, edition, asset, decision, import, operation or catalog source. Includes complete native review values; large files use file_read.', { ...workspace, kind: { type: 'string', enum: ['catalog', ...records] }, id, expectedRevision: number }, ['workspace', 'kind'], read),
-    tool('merchant_stac_edition', 'Inspect one original edition and its exact coverage, original page sources, asset/decision counts and full-item view digest. No provider request.', { ...workspace, editionId: id }, ['workspace', 'editionId'], read),
-    tool('merchant_stac_items', 'Page every original STAC item in one saved edition, including full geometry/properties/assets. Pin expectedViewSha256 after the first page; it changes if an active capture adds pages or decisions.', { ...workspace, editionId: id, ...page }, ['workspace', 'editionId'], read),
-    tool('merchant_stac_item', 'Inspect one original collection-qualified item with complete properties/geometry/assets plus its saved analyst decision and captures.', { ...workspace, editionId: id, itemId: id, expectedViewSha256: digest }, ['workspace', 'editionId', 'itemId'], read),
-    tool('merchant_stac_compare', 'Use the native comparison for two editions, preserving coverage and comparableQuery. Choose added/removed/changed/unchanged and page all original rows with the same view digest.', { ...workspace, leftEditionId: id, rightEditionId: id, kind: { type: 'string', enum: ['added', 'removed', 'changed', 'unchanged'] }, ...page }, ['workspace', 'leftEditionId', 'rightEditionId', 'kind'], read),
-    tool('merchant_stac_operation', 'Read the same stable operation ID from the durable workspace plus its recent original host job if retained. A missing recent job after host restart does not repeat the action.', { ...workspace, operationId: operation }, ['workspace', 'operationId'], read),
-    tool('merchant_stac_discover', 'Discover the configured catalog and all collection pages through the original provider. Supply the current revision and one stable operationId; inspect that operation after an uncertain response.', { ...workspace, operationId: operation, expectedRevision: number }, ['workspace', 'operationId', 'expectedRevision'], { idempotent: true, openWorld: true }),
-    tool('merchant_stac_query_save', 'Save or update an original spatial/date/cloud-filter query with current expectedRevision. query uses native collections, exactly one bbox/intersects, datetime, optional cloudCoverMax, pageSize/maxPages; id updates the same query.', { ...workspace, query: object, expectedRevision: number }, ['workspace', 'query', 'expectedRevision'], localWrite),
-    tool('merchant_stac_search_review', 'Retain the exact original catalog/query/source review before capture. The native review binds query digest, collection contracts and page budget; no imagery acquisition yet.', { ...workspace, queryId: id }, ['workspace', 'queryId'], localWrite),
-    tool('merchant_stac_search_acquire', 'Start acquisition of the saved native review under one stable operationId. Returns the original recent job; native edition/page progress survives interrupted client polling.', { ...workspace, reviewId: id, operationId: operation }, ['workspace', 'reviewId', 'operationId'], { idempotent: true, openWorld: true }),
-    tool('merchant_stac_search_resume', 'Continue this original saved edition using the existing native page/capture state. Supply a stable host operationId for the explicit continuation; never create a replacement edition.', { ...workspace, editionId: id, operationId: operation }, ['workspace', 'editionId', 'operationId'], { idempotent: true, openWorld: true }),
-    tool('merchant_stac_search_cancel', 'Request cancellation of the original edition. Client disconnect alone does not cancel a native capture. Inspect edition and operation state to see the saved outcome.', { ...workspace, editionId: id }, ['workspace', 'editionId'], { idempotent: true, destructive: true }),
-    tool('merchant_stac_asset_review', 'Retain an original item-asset review with its exact source/item digest and explicit maximum bytes. The native provider controls eligibility and acquisition.', { ...workspace, editionId: id, itemId: id, assetKey: id, maxBytes: { type: 'integer', minimum: 1, maximum: Number.MAX_SAFE_INTEGER } }, ['workspace', 'editionId', 'itemId', 'assetKey', 'maxBytes'], localWrite),
-    tool('merchant_stac_asset_range', 'Read a bounded original asset range without a whole-file snapshot. The native SHA256, ETag and content range bind every chunk; use expectedSha256 after the first range and verify the complete digest after assembly. Supports native saved assets up to 2GiB.', { ...workspace, assetId: id, expectedSha256: digest, offset: number, limit: { type: 'integer', minimum: 1, maximum: 196608 } }, ['workspace', 'assetId'], read),
-    tool('merchant_stac_asset_acquire', 'Acquire exactly the selected native asset review under its stable original operationId. Download completed bytes separately through file_read.', { ...workspace, reviewId: id, operationId: operation }, ['workspace', 'reviewId', 'operationId'], { idempotent: true, openWorld: true }),
-    tool('merchant_stac_decision_save', 'Save a complete SELECTED/REJECTED/REVIEW analyst decision against the current revision, original edition and collection-qualified item ID. Native asset keys, actor and note remain in the handover.', { ...workspace, editionId: id, itemId: id, status: { type: 'string', enum: ['SELECTED', 'REJECTED', 'REVIEW'] }, actor: { type: 'string', minLength: 1, maxLength: 240 }, note: { type: 'string', maxLength: 10000 }, assetKeys: { type: 'array', items: id, uniqueItems: true }, expectedRevision: number }, ['workspace', 'editionId', 'itemId', 'status', 'actor', 'expectedRevision'], localWrite),
-    tool('merchant_stac_inputs', 'List original host-declared imagery/processing handover and source aliases. File paths and credential values are not agent arguments.', workspace, ['workspace'], read),
-    tool('merchant_stac_input_inspect', 'Inspect exact bytes, SHA256 and original schema/digest of a host input before import; does not acquire provider data or import the file.', { ...workspace, input: alias }, ['workspace', 'input'], read),
-    tool('merchant_stac_input_import', 'Import the complete reviewed original imagery or processing handover, or retained processing-page body from its host alias. Pin expectedSha256; processing imports require stable operationId. Original endpoint/file/digest conflicts are native errors.', { ...sourceInput, operationId: operation, editionId: id, taskId: id, metadata: object }, ['workspace', 'input', 'expectedSha256'], localWrite),
-    tool('merchant_stac_processing_status', 'Read the original configured Cirrus processing workspace, saved deployments, operations, edition/review/import/export counts and revision. Credentials remain with the original host.', workspace, ['workspace'], read),
-    tool('merchant_stac_processing_read', 'Read an enabled native processing view: inventory, statistics, edition, runs, run or associations. Optionally page a named array using path, offset and expectedViewSha256. Original source and handover bytes use file_read.', { ...workspace, name: fileSelection.name, query: object, path: { type: 'array', items: { type: 'string', minLength: 1, maxLength: 160 }, maxItems: 12 }, ...page }, ['workspace', 'name'], read),
-    tool('merchant_stac_processing_configure', 'Configure processing through a host-declared exact deployment profile and reviewed original source input. Native auth/env selections stay in the private host profile. Supply the current processing revision and one stable operationId.', { ...workspace, profile: alias, expectedSha256: digest, expectedRevision: number, operationId: operation }, ['workspace', 'profile', 'expectedSha256', 'expectedRevision', 'operationId'], localWrite),
-    tool('merchant_stac_processing_action', 'Apply an enabled original processing discover/review/capture/prepare/resume/cancel/continue/associate/export action under one stable operationId. Uses native input exactly. Configuration and full file imports have dedicated alias-based tools.', { ...workspace, name: fileSelection.name, input: object, operationId: operation }, ['workspace', 'name', 'input', 'operationId'], { idempotent: false, openWorld: true }),
-    tool('merchant_stac_file_read', 'Read a complete original asset/report/handover, or full JSON view, in bounded chunks. ' + selectionDescription + ' First read returns readId, SHA256 and bytes; continue with the same selection, readId, expectedSha256 and nextOffset. Native exports run once per retained read.', { ...workspace, ...fileSelection, readId: { type: 'string', pattern: '^[a-f0-9-]{36}$' }, expectedSha256: digest, offset: number, limit: { type: 'integer', minimum: 1, maximum: MAX_RETAINED_CHUNK_BYTES } }, ['workspace', 'kind'], read),
-    tool('merchant_stac_file_release', 'Close an incomplete retained file read. Original assets and source files remain in their native workspace.', { ...workspace, readId: { type: 'string', pattern: '^[a-f0-9-]{36}$' } }, ['workspace', 'readId'], { idempotent: true }),
-    tool('merchant_stac_disconnect', 'Drop this client session and retained reads only. The original host, saved workspace and any active native capture remain under their original operator.', workspace, ['workspace'], { idempotent: true }),
-  ];
-}
+import { stacWorkspaceTools, fileSelection } from './catalog/stac-workspace.mjs';
+export { stacWorkspaceTools } from './catalog/stac-workspace.mjs';
 const definitions = new Map(stacWorkspaceTools((name, _description, properties, required) => ({ name, properties, required })).map(d => [d.name, d]));
 function check(value, schema, key) {
   if (schema.type === 'string' && (typeof value !== 'string' || schema.minLength !== undefined && value.length < schema.minLength ||

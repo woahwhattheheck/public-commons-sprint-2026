@@ -39,8 +39,13 @@ Keep these files together in the installed `starforge-sf98-woo` plugin folder:
   verified-return review, native Woo credits and same-refund recovery.
 - `refund-networks.json`: the release's canonical Stellar network profiles.
 - `REFUNDS.md`: the verified refund, store-credit and operator CLI guide.
+- `merchant-erp.php`, `merchant-erp-store.php`, `merchant-erp-mapping.php` and
+  `merchant-erp-acumatica.php`: original-order ERP delivery, receiving and correction.
+- `merchant-erp-console.php`, `merchant-erp.js` and `merchant-erp.css`:
+  the integrated Order ERP delivery workspace.
+- `ERP.md` and `erp-map.example.json`: ERP connection, mapping and complete-project handoff.
 
-Keep all 16 files when upgrading an existing installation; the original
+Keep this complete folder when upgrading an existing installation; the original
 plugin loads the console PHP and its matching browser assets. The maintained
 [Site setup tool](../../../stellar-forge/developer-site/dist/woo.html) copies
 the complete plugin from its selected toolkit source.

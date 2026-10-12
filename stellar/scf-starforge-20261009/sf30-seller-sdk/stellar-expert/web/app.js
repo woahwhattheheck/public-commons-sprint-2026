@@ -119,20 +119,27 @@ function panel(title, ...children) {
 function empty(title, message) {
   return element('div', {class: 'empty'}, element('h3', {}, title), paragraph(message));
 }
-function table(columns, rows, narrow = false) {
-  const head = element('tr', {});
-  for (const column of columns) head.append(element('th', {scope: 'col'}, column.label));
-  const body = element('tbody', {});
+function table(columns, rows, narrow = false, options = {}) {
+  const records = options.mobile === 'records';
+  const head = element('tr', {role: records ? 'row' : null});
+  for (const column of columns) head.append(element('th', {scope: 'col', role: records ? 'columnheader' : null}, column.label));
+  const body = element('tbody', {role: records ? 'rowgroup' : null});
   for (const row of rows) {
-    const tr = element('tr', {});
+    const tr = element('tr', {role: records ? 'row' : null});
     for (const column of columns) {
       const value = column.render ? column.render(row) : row[column.key];
-      tr.append(element('td', {}, value === null || value === undefined ? '—' : value));
+      const content = value === null || value === undefined ? '—' : value;
+      tr.append(records ? element('td', {role: 'cell', class: column.mobileFull ? 'record-cell-full' : ''},
+        element('span', {class: 'record-cell-label', 'aria-hidden': 'true'}, column.label),
+        element('div', {class: 'record-cell-value'}, content)) : element('td', {}, content));
     }
     body.append(tr);
   }
-  return element('div', {class: 'table-wrap', tabindex: '0', 'aria-label': 'Scrollable data table'},
-    element('table', {class: narrow ? 'table-narrow' : 'table-wide'}, element('thead', {}, head), body));
+  return element('div', {class: 'table-wrap' + (records ? ' record-table-wrap' : ''), tabindex: '0',
+    'aria-label': options.label || 'Scrollable data table'},
+    element('table', {class: (narrow ? 'table-narrow' : 'table-wide') + (records ? ' record-table' : ''),
+      role: records ? 'table' : null, 'aria-label': options.label},
+      element('thead', {role: records ? 'rowgroup' : null}, head), body));
 }
 function rowTable(columns, rows) {
   return table(items(columns).map(column => {
@@ -597,10 +604,10 @@ function datasetPanel() {
       paragraph('Source edition ' + short(row.editionId), 'small muted'))},
     {label: 'Records', render: row => count(row.rows ?? row.recordCount ?? row.dataset?.rows)},
     {label: 'State', render: row => badge(row.state || row.status || 'prepared')},
-    {label: 'Actions', render: row => element('div', {class: 'actions'},
+    {label: 'Actions', mobileFull: true, render: row => element('div', {class: 'actions'},
       button('Use dataset', () => {rememberAll(); ui.selectedDatasetId = row.id; render();}),
       button('Dataset details', () => detail('Original dataset description', row)))}
-  ], datasets) : paragraph('Prepared datasets use the selected edition and the original merchant dataset engine.', 'help');
+  ], datasets, false, {mobile: 'records', label: 'Prepared datasets'}) : paragraph('Prepared datasets use the selected edition and the original merchant dataset engine.', 'help');
   return panel('Prepare and select a dataset', prepare, list);
 }
 function selectedDataset() {
@@ -764,10 +771,10 @@ function releasePanel() {
       {label: 'Dataset', render: row => datasetById(row.datasetId)?.name || short(row.datasetId)},
       {label: 'Resource', render: row => row.resource || row.resourceUrl || row.routes?.[0]?.definition?.resource || row.release?.publicOrigin || ((row.origin || '') + (row.path || '')) || '—'},
       {label: 'State', render: row => badge(row.publisher?.releases?.runtime?.state || row.state || row.status || 'prepared')},
-      {label: 'Merchant controls', render: row => element('div', {}, releaseControls(row),
+      {label: 'Merchant controls', mobileFull: true, render: row => element('div', {}, releaseControls(row),
         mutation('Inspect original release', 'release.inspect', {releaseId: row.id}, false,
           {after: result => {ui.releaseResult = result.result || result;}}))}
-    ], releases) : null,
+    ], releases, false, {mobile: 'records', label: 'Merchant releases'}) : null,
     ui.releaseResult ? jsonDetails('Original release result and operating instructions', ui.releaseResult) : null);
 }
 function publicationsView() {
@@ -805,7 +812,7 @@ function receivingView() {
         element('summary', {text: count(row.intentIds?.length) + ' ordered intents'}),
         element('ol', {}, ...(row.intentIds || []).map(id => element('li', {}, element('code', {text: id})))))},
       {label: 'Received', render: row => element('div', {}, badge(row.mode || 'received'), paragraph(date(row.createdAt), 'help'))},
-      {label: 'Dataset and handover files', render: row => element('div', {class: 'form-actions'},
+      {label: 'Dataset and handover files', mobileFull: true, render: row => element('div', {class: 'form-actions'},
         ...(row.downloads || []).map(file => button('Download ' + file.name, async () => {
           try {
             if (!file.downloadUrl?.startsWith('/api/receipts/' + encodeURIComponent(row.id) + '/')) throw Error('Reopen the original receiving result to load its download.');
@@ -813,7 +820,7 @@ function receivingView() {
           } catch (error) { notify(error.message, true); }
         }, false, {title: count(file.bytes) + ' bytes'})))},
       {label: 'Detail', render: row => button('Open receiving details', () => detail('Retained customer dataset', row))}
-    ], receipts) : empty('Receiving results appear here', 'Use the original inbox intents to receive their complete dataset and handover files.')),
+    ], receipts, false, {mobile: 'records', label: 'Received datasets'}) : empty('Receiving results appear here', 'Use the original inbox intents to receive their complete dataset and handover files.')),
     operationsPanel()
   ];
 }

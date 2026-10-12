@@ -344,7 +344,8 @@
     "baserow-deployment": "stellar/scf-starforge-20261009/sf30-seller-sdk/baserow/deployment-cli.mjs",
     "baserow-workspace": "stellar/scf-starforge-20261009/sf30-seller-sdk/baserow/workspace/cli.mjs",
     "stac": "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/cli.mjs",
-    "grant-demo": "stellar/scf_2026/presentation/reviewer/cli.mjs"
+    "grant-demo": "stellar/scf_2026/presentation/reviewer/cli.mjs",
+    "merchant-api-pass": "stellar-forge/mcp-merchant-operator/api-pass-cli.mjs"
   },
   "exports": {
     "./seller/opencage": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opencage/index.mjs",
@@ -471,6 +472,7 @@
     "./buyer/object": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/object-session.mjs",
     "./buyer/object-description": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/object-description.mjs",
     "./merchant/mcp": "./source/stellar-forge/mcp-merchant-operator/operator.mjs",
+    "./merchant/mcp/catalog": "./source/stellar-forge/mcp-merchant-operator/catalog.mjs",
     "./merchant/mcp/openapi": "./source/stellar-forge/mcp-merchant-operator/openapi-workspace.mjs",
     "./merchant/mcp/openapi/client": "./source/stellar-forge/mcp-merchant-operator/openapi-workspace-client.mjs",
     "./merchant/mcp/sf61-connection": "./source/stellar-forge/mcp-merchant-operator/sf61-connection.mjs",
@@ -770,7 +772,21 @@
     "./grant/demo": {
       "types": "./source/stellar/scf_2026/presentation/reviewer/workspace.d.mts",
       "import": "./source/stellar/scf_2026/presentation/reviewer/workspace.mjs"
-    }
+    },
+    "./merchant/mcp/api-pass": "./source/stellar-forge/mcp-merchant-operator/api-pass-workspace.mjs",
+    "./merchant/mcp/api-pass/client": {
+      "types": "./source/stellar-forge/mcp-merchant-operator/api-pass-client.d.mts",
+      "import": "./source/stellar-forge/mcp-merchant-operator/api-pass-client.mjs"
+    },
+    "./merchant/mcp/api-pass/operations": {
+      "types": "./source/stellar-forge/mcp-merchant-operator/api-pass-cli.d.mts",
+      "import": "./source/stellar-forge/mcp-merchant-operator/api-pass-cli.mjs"
+    },
+    "./merchant/mcp/api-pass/setup": {
+      "types": "./source/stellar-forge/mcp-merchant-operator/api-pass-setup.d.mts",
+      "import": "./source/stellar-forge/mcp-merchant-operator/api-pass-setup.mjs"
+    },
+    "./merchant/api-pass-workspace/agent-setup": "./source/stellar/scf-starforge-20261009/sf101-merchant-receiver/api-access/workspace/agent-setup.mjs"
   },
   "nativePeers": {
     "@x402/core": {
