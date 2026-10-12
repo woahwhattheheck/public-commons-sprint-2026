@@ -1,0 +1,822 @@
+{
+  "schema": "dpsa.diso.module.v1",
+  "id": "M10",
+  "title": "Security awareness, culture and human factors",
+  "rfpSection": "Terms of Reference §8, Module 10",
+  "summary": "Make secure work understandable and achievable, then build a role-specific learning programme that improves everyday decisions and encourages early reporting.",
+  "outcomes": [
+    "Diagnose human and process factors without presuming intent.",
+    "Design workable verification and reporting practices for high-risk tasks.",
+    "Plan accessible, role-specific learning with meaningful practice.",
+    "Evaluate behaviour and service effects using fair, interpretable measures."
+  ],
+  "realExample": {
+    "title": "Public services rehearse decisions with Exercise in a Box",
+    "sourceIds": [
+      "CASE-NCSC-EXERCISE"
+    ],
+    "documentedOutcome": "The UK NCSC reports that its Exercise in a Box resource is used by local government and emergency services, alongside other organisations.",
+    "discussion": "The documented adoption demonstrates a practical way to rehearse difficult decisions with the people who must make them. Use this case to design a local exercise and a follow-through process.",
+    "scope": "An actual public-service training initiative. The source does not establish a numerical reduction in incidents or make the UK programme a South African requirement."
+  },
+  "units": [
+    {
+      "id": "M10-U01",
+      "title": "Make the secure action workable",
+      "estimatedMinutes": 150,
+      "objectives": [
+        "Distinguish mistakes, constrained workarounds and suspected deliberate abuse.",
+        "Identify social-engineering pressure without relying on appearance alone.",
+        "Design verification and reporting that staff can perform under real service conditions."
+      ],
+      "chapters": [
+        {
+          "id": "M10-U01-C01",
+          "title": "Understand the work before blaming the person",
+          "bodyHtml": "<p>A clerk shares a login during a queue surge. The action creates an accountability problem, but its cause is not yet known. Perhaps temporary staff cannot obtain accounts before their shifts, the workstation signs out repeatedly, or the supervisor has informally encouraged sharing. Investigate the task, available tools, incentives and supervision alongside individual choices. Correcting only the person can leave the same conditions for the next shift.</p>\n<p>Separate the observation from an explanation and from a finding of intent. 'Four people used the supervisor account' is an observation. 'Provisioning took seven days' is a possible contributing condition. 'The clerk intended fraud' requires evidence and an appropriate employment or investigative process. The DISO should preserve relevant facts and work with HR, managers and investigators within their authority.</p>\n<p>Make the safer method usable. A workable alternative might combine individual temporary accounts, limited permissions, a manager-approved queue for urgent provisioning and an end-of-shift expiry. Explain what staff should do when the normal route fails. A policy that forbids sharing but gives staff no operational escalation is difficult to sustain. Awareness and reliable technical or management controls must support each other.</p>",
+          "sourceIds": [
+            "DPSA-IS-2022"
+          ]
+        },
+        {
+          "id": "M10-U01-C02",
+          "title": "Verification under pressure",
+          "bodyHtml": "<p>Social engineering often exploits a plausible work context: an urgent payment, an executive travelling, an expiring contract or a resident facing a deadline. Good grammar, a familiar display name and knowledge of a project are weak substitutes for verification. A convincing message may arrive through a compromised legitimate account, so identifying a sender and authorising a requested action are different checks.</p>\n<p>For a change to bank details, use the department's approved independent verification and segregation-of-duties process. Obtain the contact route from an authoritative record already held by the department, not from the message requesting the change. Record who verified what, when and against which record. Do not improvise a new payment-control procedure solely from this training; align it with finance policy and delegated authority.</p>\n<p>Support staff who pause a suspicious request. Define a short escalation path that works when the normal approver is absent, including a way to preserve the request and continue unrelated service work. If the service target rewards speed while supervisors penalise verification delays, the stated policy and actual incentives conflict. The DISO should bring that conflict to the relevant business owner.</p>",
+          "sourceIds": []
+        },
+        {
+          "id": "M10-U01-C03",
+          "title": "Reporting is part of the control",
+          "bodyHtml": "<p>An employee who entered a password into a suspicious site should know where to report, what basic facts to provide and what immediate action the incident team recommends. Requiring a polished incident report before accepting a warning wastes time. A useful first report identifies the service, time, action taken and available message or event reference; the incident team can collect further detail securely.</p>\n<p>Create a reporting culture that distinguishes honest disclosure and learning from accountability for deliberate misconduct. Promise a fair process, not immunity from every consequence. Thank people for timely reports, acknowledge receipt, explain immediate next steps and avoid public rankings of individual mistakes. Use authorised channels for personal or sensitive details, and limit access to those who need them.</p>\n<p>A rise in reports after training can indicate better visibility rather than worsening security. Check whether reporting became easier, more people were covered, or a real threat campaign increased. Protect reporters from avoidable embarrassment and collect only the information needed for the stated purpose. A security-learning dataset is still information requiring appropriate handling.</p>",
+          "sourceIds": [
+            "POPIA",
+            "DPSA-IS-2022"
+          ]
+        }
+      ],
+      "application": {
+        "title": "The urgent bank-detail change",
+        "instructionsHtml": "<p>Allow about 60 minutes. The fictional Umzi Services office pays small suppliers. Finance assistants have been told to clear the month-end queue quickly. One receives a message apparently from a known supplier requesting new bank details. The message supplies a new phone number, copies the assistant's manager and says the supplier will suspend deliveries today. The existing supplier record lists a different number. The normal verifier is on leave. Two assistants previously used the manager's account because temporary access took a week.</p>\n<p>Prepare a practical response and a process improvement. Identify the immediate verification and escalation steps, what can continue safely, what information to preserve, and the conditions that encouraged unsafe work. Do not accuse a person of fraud on the facts supplied. Include a short message a manager can send to support the correct behaviour.</p>",
+        "deliverable": "One-page decision note, a revised verification/escalation workflow and a 100-word manager message.",
+        "suggestedAnswerHtml": "<p>Pause the bank-detail change and any affected payment until the authorised independent verification and approval steps are completed. Use the trusted supplier record to obtain the verification route, not the supplied new number. Escalate the absent verifier through finance's delegated alternate; record the original request and the verification outcome. Continue unrelated validated payments where the finance process permits.</p>\n<p>Separate the suspicious request from the account-sharing problem. Preserve relevant records, arrange individual limited temporary access and investigate provisioning delay and supervisory instructions. Do not treat copied managers or urgency as approval. The manager should say that staff are expected to verify high-impact changes, can use the named alternate and will receive support when a genuine service deadline creates a conflict.</p>\n<p>Assign the finance owner to repair the alternate-verifier process and the access owner to shorten controlled provisioning. Review a sample of later changes for completed verification, and ask staff whether the alternative actually works during busy periods.</p>",
+        "rubric": [
+          {
+            "criterion": "Uses an independently held verification route and proper authority",
+            "points": 3
+          },
+          {
+            "criterion": "Protects the affected transaction while preserving useful service work",
+            "points": 2
+          },
+          {
+            "criterion": "Separates evidence from assumptions about intent",
+            "points": 2
+          },
+          {
+            "criterion": "Repairs process conditions with owners and a practical message",
+            "points": 3
+          }
+        ]
+      },
+      "reflection": {
+        "prompt": "Which rule in your workplace is hardest to follow during a busy service period, and what would make the intended action feasible?",
+        "guidanceHtml": "<p>Describe the task, the constraint, the safer behaviour and the owner who could change the process. Use a fictionalised example and omit personal or confidential details.</p>"
+      },
+      "quiz": {
+        "id": "M10-U01-QUIZ",
+        "title": "Make the secure action workable — knowledge check",
+        "passPercent": 75,
+        "attempts": 0,
+        "questions": [
+          {
+            "id": "M10-U01-Q01",
+            "type": "multichoice",
+            "name": "M10-U01-Q01",
+            "promptHtml": "<p>A clerk used a colleague's account because temporary provisioning had not completed. What should the DISO do first?</p>",
+            "single": true,
+            "answers": [
+              {
+                "textHtml": "Establish the facts and service conditions, contain the access problem and involve the responsible managers.",
+                "fraction": 100,
+                "feedbackHtml": "Investigate the behaviour and the conditions, while addressing the current exposure and preserving fair accountability."
+              },
+              {
+                "textHtml": "Classify the act as deliberate fraud because account sharing is prohibited.",
+                "fraction": 0,
+                "feedbackHtml": "A prohibited action is evidence of a control failure; intent still requires a fair investigation."
+              },
+              {
+                "textHtml": "Treat the provisioning delay as full authorisation to share accounts.",
+                "fraction": 0,
+                "feedbackHtml": "A difficult process explains a condition but does not supply authority."
+              },
+              {
+                "textHtml": "Repeat the annual awareness presentation and close the matter.",
+                "fraction": 0,
+                "feedbackHtml": "Training alone leaves the actual access and management problem unresolved."
+              }
+            ],
+            "generalFeedbackHtml": "<p>Investigate the behaviour and the conditions, while addressing the current exposure and preserving fair accountability.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M10-U01-Q02",
+            "type": "multichoice",
+            "name": "M10-U01-Q02",
+            "promptHtml": "<p>A supplier's email requests a bank-detail change and provides a number for verification. Which route best supports independent checking?</p>",
+            "single": true,
+            "answers": [
+              {
+                "textHtml": "Use the approved process and a trusted contact record held independently of the change request.",
+                "fraction": 100,
+                "feedbackHtml": "Verification must use the authorised finance process and an independent trusted source."
+              },
+              {
+                "textHtml": "Call the number in the same email because the supplier supplied it.",
+                "fraction": 0,
+                "feedbackHtml": "The purported requester controls both the change and this verification route."
+              },
+              {
+                "textHtml": "Accept the change if the sender's display name matches the vendor name.",
+                "fraction": 0,
+                "feedbackHtml": "Display names do not establish authority over payment details."
+              },
+              {
+                "textHtml": "Ask a second colleague to reread the same email as the only verification.",
+                "fraction": 0,
+                "feedbackHtml": "A second reader of the same unverified assertion does not make it independent."
+              }
+            ],
+            "generalFeedbackHtml": "<p>Verification must use the authorised finance process and an independent trusted source.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M10-U01-Q03",
+            "type": "multichoice",
+            "name": "M10-U01-Q03",
+            "promptHtml": "<p>A supervisor tells staff to bypass verification whenever a queue target is at risk. What is the most useful governance response?</p>",
+            "single": true,
+            "answers": [
+              {
+                "textHtml": "Resolve the conflict between the service target and the control with the business owner and a workable escalation.",
+                "fraction": 100,
+                "feedbackHtml": "Managers need an explicit, usable way to meet service obligations without silently abandoning required checks."
+              },
+              {
+                "textHtml": "Keep both instructions and tell each clerk to choose according to personal judgement.",
+                "fraction": 0,
+                "feedbackHtml": "Conflicting instructions leave staff carrying an unresolved management decision."
+              },
+              {
+                "textHtml": "Remove all service targets so verification cannot be challenged.",
+                "fraction": 0,
+                "feedbackHtml": "Service goals remain legitimate; the task is to reconcile them with safe delivery."
+              },
+              {
+                "textHtml": "Assume staff will follow the written policy because it outranks informal advice.",
+                "fraction": 0,
+                "feedbackHtml": "Actual incentives and supervision affect whether a control operates."
+              }
+            ],
+            "generalFeedbackHtml": "<p>Managers need an explicit, usable way to meet service obligations without silently abandoning required checks.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M10-U01-Q04",
+            "type": "multichoice",
+            "name": "M10-U01-Q04",
+            "promptHtml": "<p>An employee promptly reports entering credentials into a suspicious site. Which initial response best supports containment?</p>",
+            "single": true,
+            "answers": [
+              {
+                "textHtml": "Acknowledge the report, obtain essential facts securely and connect the employee to the incident response route.",
+                "fraction": 100,
+                "feedbackHtml": "Accept the warning quickly, guide the next action and use a fair process for later assessment."
+              },
+              {
+                "textHtml": "Require a complete signed narrative before the incident team is contacted.",
+                "fraction": 0,
+                "feedbackHtml": "Initial containment should not wait for a polished report."
+              },
+              {
+                "textHtml": "Publish the employee's name as an example to deter others.",
+                "fraction": 0,
+                "feedbackHtml": "Public blame can discourage timely reporting and exposes unnecessary personal information."
+              },
+              {
+                "textHtml": "Promise that no accountability process can ever follow a report.",
+                "fraction": 0,
+                "feedbackHtml": "A fair reporting culture does not grant blanket immunity from deliberate misconduct."
+              }
+            ],
+            "generalFeedbackHtml": "<p>Accept the warning quickly, guide the next action and use a fair process for later assessment.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M10-U01-Q05",
+            "type": "multichoice",
+            "name": "M10-U01-Q05",
+            "promptHtml": "<p>Reports of suspicious messages doubled after a new reporting button and training were introduced. What can be concluded from the count alone?</p>",
+            "single": true,
+            "answers": [
+              {
+                "textHtml": "Visibility changed; investigate reporting coverage, behaviour and threat activity before judging the trend.",
+                "fraction": 100,
+                "feedbackHtml": "Interpret measures in the context of the process that generated them."
+              },
+              {
+                "textHtml": "The department suffered twice as many successful compromises.",
+                "fraction": 0,
+                "feedbackHtml": "A report is not the same event as a confirmed compromise."
+              },
+              {
+                "textHtml": "The training failed because a successful programme always reduces reports.",
+                "fraction": 0,
+                "feedbackHtml": "Improved awareness can increase useful reports."
+              },
+              {
+                "textHtml": "The reporting button is effective enough to remove other controls.",
+                "fraction": 0,
+                "feedbackHtml": "A reporting signal does not establish complete prevention or response."
+              }
+            ],
+            "generalFeedbackHtml": "<p>Interpret measures in the context of the process that generated them.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M10-U01-Q06",
+            "type": "multichoice",
+            "name": "M10-U01-Q06",
+            "promptHtml": "<p>A message comes from a genuine executive account and requests an unusual release of confidential data. Which judgement is sound?</p>",
+            "single": true,
+            "answers": [
+              {
+                "textHtml": "The account may be genuine, but the purpose, recipient and release authority still need verification.",
+                "fraction": 100,
+                "feedbackHtml": "Check the specific action and information handling requirements, not merely the apparent sender."
+              },
+              {
+                "textHtml": "A genuine sender account authorises any action requested by its holder.",
+                "fraction": 0,
+                "feedbackHtml": "Identity and authority are separate, and legitimate accounts can be compromised."
+              },
+              {
+                "textHtml": "All executive requests should be rejected regardless of purpose.",
+                "fraction": 0,
+                "feedbackHtml": "A blanket rejection prevents legitimate work and avoids the necessary authority assessment."
+              },
+              {
+                "textHtml": "Forward the data to a personal address so the executive can approve it later.",
+                "fraction": 0,
+                "feedbackHtml": "Moving the data creates an additional disclosure before authority is established."
+              }
+            ],
+            "generalFeedbackHtml": "<p>Check the specific action and information handling requirements, not merely the apparent sender.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M10-U01-Q07",
+            "type": "multichoice",
+            "name": "M10-U01-Q07",
+            "promptHtml": "<p>Which changes directly help staff perform a safe high-pressure task? Select all correct answers.</p>",
+            "single": false,
+            "answers": [
+              {
+                "textHtml": "A named authorised alternate when the usual verifier is unavailable.",
+                "fraction": 50,
+                "feedbackHtml": "An available escalation makes the approved process usable."
+              },
+              {
+                "textHtml": "Individual temporary access with appropriate scope and expiry.",
+                "fraction": 50,
+                "feedbackHtml": "This supports the task while retaining accountability."
+              },
+              {
+                "textHtml": "A shared emergency password used by everyone on the shift.",
+                "fraction": -50,
+                "feedbackHtml": "Shared credentials undermine individual attribution and controlled access."
+              },
+              {
+                "textHtml": "A rule that staff may never report uncertainty about an executive request.",
+                "fraction": -50,
+                "feedbackHtml": "Suppressing uncertainty weakens verification and early detection."
+              }
+            ],
+            "generalFeedbackHtml": "<p>Pair clear instructions with practical operational support.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M10-U01-Q08",
+            "type": "multichoice",
+            "name": "M10-U01-Q08",
+            "promptHtml": "<p>Which statements support fair human-factor analysis? Select all correct answers.</p>",
+            "single": false,
+            "answers": [
+              {
+                "textHtml": "Distinguish an observed action from an unproven explanation of intent.",
+                "fraction": 50,
+                "feedbackHtml": "This protects the quality of the investigation."
+              },
+              {
+                "textHtml": "Examine tools, workload, incentives and supervision alongside individual choices.",
+                "fraction": 50,
+                "feedbackHtml": "These conditions can make unsafe work more likely."
+              },
+              {
+                "textHtml": "A process weakness means the individual can never be accountable.",
+                "fraction": -50,
+                "feedbackHtml": "Process and individual accountability can both matter."
+              },
+              {
+                "textHtml": "The same sanction should apply to every mistake before the facts are reviewed.",
+                "fraction": -50,
+                "feedbackHtml": "A fair process considers evidence and relevant circumstances."
+              }
+            ],
+            "generalFeedbackHtml": "<p>Learn from the whole work system without replacing evidence or accountability.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M10-U01-Q09",
+            "type": "truefalse",
+            "name": "M10-U01-Q09",
+            "promptHtml": "<p>A security awareness session is sufficient compensation for a verification process that staff cannot access during their actual shifts.</p>",
+            "correct": false,
+            "trueFeedbackHtml": "This is incorrect. People need a feasible process and available support as well as knowledge.",
+            "falseFeedbackHtml": "People need a feasible process and available support as well as knowledge.",
+            "generalFeedbackHtml": "<p>People need a feasible process and available support as well as knowledge.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M10-U01-Q10",
+            "type": "truefalse",
+            "name": "M10-U01-Q10",
+            "promptHtml": "<p>Reporting information should be collected and shared for a defined purpose with appropriate access controls.</p>",
+            "correct": true,
+            "trueFeedbackHtml": "Reports can contain personal or sensitive details; useful reporting does not require unrestricted exposure.",
+            "falseFeedbackHtml": "This is incorrect. Reports can contain personal or sensitive details; useful reporting does not require unrestricted exposure.",
+            "generalFeedbackHtml": "<p>Reports can contain personal or sensitive details; useful reporting does not require unrestricted exposure.</p>",
+            "sourceIds": [
+              "POPIA"
+            ]
+          },
+          {
+            "id": "M10-U01-Q11",
+            "type": "matching",
+            "name": "M10-U01-Q11",
+            "promptHtml": "<p>Match each observation to the most relevant response.</p>",
+            "pairs": [
+              {
+                "promptHtml": "Unverified bank-detail request",
+                "answer": "Independent verification through the approved finance process"
+              },
+              {
+                "promptHtml": "Temporary account provisioning takes a week",
+                "answer": "Repair the controlled access workflow"
+              },
+              {
+                "promptHtml": "Employee admits entering credentials",
+                "answer": "Prompt incident triage and guidance"
+              },
+              {
+                "promptHtml": "Claim that a clerk intended fraud",
+                "answer": "Evidence-based investigation through proper authority"
+              }
+            ],
+            "generalFeedbackHtml": "<p>Different problems require distinct responses; a generic awareness message cannot replace each operational control.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M10-U01-Q12",
+            "type": "gapselect",
+            "name": "M10-U01-Q12",
+            "promptHtml": "<p>A reliable verification process uses a [[1]] contact route and a clearly authorised [[2]] when the normal approver is absent.</p>",
+            "choices": [
+              {
+                "text": "trusted independent",
+                "group": 1
+              },
+              {
+                "text": "message-supplied",
+                "group": 1
+              },
+              {
+                "text": "alternate",
+                "group": 1
+              },
+              {
+                "text": "shared password",
+                "group": 1
+              }
+            ],
+            "correctChoices": [
+              1,
+              3
+            ],
+            "generalFeedbackHtml": "<p>Independence and delegated continuity make verification workable.</p>",
+            "sourceIds": []
+          }
+        ]
+      }
+    },
+    {
+      "id": "M10-U02",
+      "title": "Run a learning programme that changes decisions",
+      "estimatedMinutes": 150,
+      "objectives": [
+        "Segment learning by tasks and exposure rather than job title alone.",
+        "Design accessible practice with a clear objective and follow-through.",
+        "Use behavioural measures without confusing attendance with effectiveness."
+      ],
+      "chapters": [
+        {
+          "id": "M10-U02-C01",
+          "title": "Teach the decisions a role actually makes",
+          "bodyHtml": "<p>Start with a short task analysis. A reception officer handles identity documents and visitors; a finance approver verifies payments; a service desk resets credentials; a senior manager accepts or escalates risk. They share core responsibilities but need different examples, practice and job aids. A specialist administrator also needs technical competence beyond this governance course. Assign training according to the work and authority actually exercised.</p>\n<p>Write an observable objective: 'Given a changed bank-detail request, use the approved independent verification route and record the decision.' 'Understand phishing' is too vague to assess reliably. Identify the acceptable action, conditions and evidence before choosing a format. A five-minute shift briefing, a supervised practice task and an accessible checklist may serve this objective better than a long generic slide deck.</p>\n<p>Design for the department's staff and service environment. Provide readable text, captions or transcripts for media, keyboard-operable interactions and low-bandwidth access. Check language and terminology with representative learners. Do not treat a worker's need for an accessible format as a security weakness. Managers must give staff enough time and access to complete the learning and apply it.</p>",
+          "sourceIds": [
+            "DPSA-IS-2022"
+          ]
+        },
+        {
+          "id": "M10-U02-C02",
+          "title": "Rehearse safely and retain the learning",
+          "bodyHtml": "<p>The NCSC's public exercise resource provides a useful model of structured rehearsal. In this course's fictional departmental exercise, participants receive a sequence of developments, discuss decisions and identify improvements. It is a learning activity; the exercise plan must state whether any live system or person will be involved. A tabletop can test judgement and coordination without sending real deceptive messages or changing production data.</p>\n<p>Set a narrow, meaningful objective such as 'the duty manager and incident lead agree how to suspend a compromised supplier connection while preserving essential service'. Define participants, facilitator, timing, accessible materials, safe boundaries and the evidence to collect. Introduce realistic uncertainty: a supplier is unreachable, the first estimate is incomplete, or the usual decision-maker is absent. Avoid judging participants against information they were not given.</p>\n<p>Finish with a short, facilitated review. What was expected, what happened, why did it matter and what will change? Assign each action to an owner with a due date and a way to demonstrate completion. Rehearse the repaired part after a material change. An exercise that produces only a certificate and an unowned action list does not show that the identified weakness was addressed.</p>",
+          "sourceIds": [
+            "CASE-NCSC-EXERCISE",
+            "NCSC-EXERCISE-GUIDE"
+          ]
+        },
+        {
+          "id": "M10-U02-C03",
+          "title": "Measure learning without distorting behaviour",
+          "bodyHtml": "<p>Separate reach, capability, behaviour and service outcomes. Completion tells you who reached the material. A realistic assessment shows a decision made under stated conditions. A sampled real workflow shows whether the behaviour occurs at work. Incident or loss trends can inform the programme, but many factors affect them. Select a small set that collectively addresses the programme's purpose.</p>\n<p>Compare like with like. If a later exercise is harder, covers more people or changes the reporting window, do not present its raw score as a simple before-and-after improvement. Record cohort, task, difficulty, definitions and missing observations. For a reporting exercise, consider timely correct reports and appropriate escalation as well as unsafe actions. Penalising every report that turns out benign may train people to stay silent.</p>\n<p>Give managers and learners useful feedback, and use aggregate results for programme decisions where appropriate. Restrict identifiable records to justified uses, explain those uses and apply retention rules. Do not turn a learning exercise into an undisclosed disciplinary test. The DISO should be able to show both a practical improvement and the limits of the measurement.</p>",
+          "sourceIds": []
+        }
+      ],
+      "application": {
+        "title": "Build a six-week learning intervention",
+        "instructionsHtml": "<p>Allow about 60 minutes. The fictional North Valley department has 240 staff across six offices. Forty staff approve payments, 30 reset accounts or grant access, and 170 perform other functions. A recent exercise found that the approved verification route was used in 11 of 20 comparable payment cases. Staff report that the checklist is difficult to read on mobile and the alternate approver is unclear. Only 18 of 30 access staff completed the last online module because two offices had unreliable connections.</p>\n<p>Design a six-week intervention. Give two role-specific objectives, accessible formats, a controlled practice, management responsibilities and an action review. Define four measures with denominators and explain what each can and cannot establish. Use the supplied data as a baseline, not as proof of deliberate negligence.</p>",
+        "deliverable": "A short programme plan, two job-aid outlines and a four-measure evaluation table.",
+        "suggestedAnswerHtml": "<p>First repair the verification checklist and name the authorised alternate. Payment staff practise independent verification on matched scenarios and record the result; access staff practise identity verification and scoped account changes under the actual approved process. Offer low-bandwidth text and a facilitated local session where connectivity is unreliable, with an equivalent assessment.</p>\n<p>Use weeks one and two for task review, access and materials; weeks three and four for practice; weeks five and six for sampled work and an action review. Managers provide time and nominate available delegates. Keep practice data fictional and explain how learner records will be used.</p>\n<p>Suitable measures are programme reach by relevant cohort, correct decisions in comparable practice, completed verification in a defined sample of actual changes, and time to route a useful report or escalation. Retain numerator, denominator, sampling period and missing data. Eleven of twenty is a 55% sample result, not the measured rate for every payment. Eighteen of thirty is 60% completion for the access cohort and identifies an access problem worth repairing.</p>",
+        "rubric": [
+          {
+            "criterion": "Objectives are observable and matched to the two tasks",
+            "points": 3
+          },
+          {
+            "criterion": "Accessibility and management constraints are addressed",
+            "points": 2
+          },
+          {
+            "criterion": "Practice and follow-through have clear owners",
+            "points": 2
+          },
+          {
+            "criterion": "Four measures retain denominators and limits",
+            "points": 3
+          }
+        ]
+      },
+      "reflection": {
+        "prompt": "What evidence would convince you that a training programme changed a risky decision at work?",
+        "guidanceHtml": "<p>Name one observable behaviour, a fair way to observe it and a competing explanation you would check before crediting the programme.</p>"
+      },
+      "quiz": {
+        "id": "M10-U02-QUIZ",
+        "title": "Run a learning programme that changes decisions — knowledge check",
+        "passPercent": 75,
+        "attempts": 0,
+        "questions": [
+          {
+            "id": "M10-U02-Q01",
+            "type": "multichoice",
+            "name": "M10-U02-Q01",
+            "promptHtml": "<p>Which learning objective is most assessable?</p>",
+            "single": true,
+            "answers": [
+              {
+                "textHtml": "Given a payment-detail change, use the approved independent verification route and record the decision.",
+                "fraction": 100,
+                "feedbackHtml": "Specify the action, context and observable result."
+              },
+              {
+                "textHtml": "Improve general cyber awareness throughout the organisation.",
+                "fraction": 0,
+                "feedbackHtml": "This gives no specific behaviour or assessment condition."
+              },
+              {
+                "textHtml": "Read every page of the security policy.",
+                "fraction": 0,
+                "feedbackHtml": "Reading is an activity, not evidence of applying a decision."
+              },
+              {
+                "textHtml": "Ensure no future employee ever makes a security mistake.",
+                "fraction": 0,
+                "feedbackHtml": "This is not a realistic or measurable learning objective."
+              }
+            ],
+            "generalFeedbackHtml": "<p>Specify the action, context and observable result.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M10-U02-Q02",
+            "type": "multichoice",
+            "name": "M10-U02-Q02",
+            "promptHtml": "<p>Two offices cannot reliably stream the compulsory training video. What is the best response?</p>",
+            "single": true,
+            "answers": [
+              {
+                "textHtml": "Provide an equivalent accessible low-bandwidth route and assessment, and time for staff to complete it.",
+                "fraction": 100,
+                "feedbackHtml": "Accessibility concerns the route to the learning, not an assumption of lower capability."
+              },
+              {
+                "textHtml": "Record all affected staff as non-compliant until connectivity improves.",
+                "fraction": 0,
+                "feedbackHtml": "This treats an access constraint as an individual failure without repairing it."
+              },
+              {
+                "textHtml": "Exempt those offices from the required learning and assessment permanently.",
+                "fraction": 0,
+                "feedbackHtml": "The learning need remains; a suitable alternative can meet it."
+              },
+              {
+                "textHtml": "Lower the pass requirement only for those offices.",
+                "fraction": 0,
+                "feedbackHtml": "Changing the standard is not the same as providing access to learning."
+              }
+            ],
+            "generalFeedbackHtml": "<p>Accessibility concerns the route to the learning, not an assumption of lower capability.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M10-U02-Q03",
+            "type": "multichoice",
+            "name": "M10-U02-Q03",
+            "promptHtml": "<p>What makes a tabletop exercise useful for governance?</p>",
+            "single": true,
+            "answers": [
+              {
+                "textHtml": "A defined decision objective, realistic information, agreed boundaries and owned improvement actions.",
+                "fraction": 100,
+                "feedbackHtml": "The exercise should produce usable evidence about decisions and coordination."
+              },
+              {
+                "textHtml": "A surprise live disruption regardless of prior authority.",
+                "fraction": 0,
+                "feedbackHtml": "An exercise needs a deliberate scope and safe operating boundaries."
+              },
+              {
+                "textHtml": "A facilitator who reveals the preferred answer before each decision.",
+                "fraction": 0,
+                "feedbackHtml": "This prevents observation of the participants' actual reasoning."
+              },
+              {
+                "textHtml": "A certificate for every participant without recording any decisions.",
+                "fraction": 0,
+                "feedbackHtml": "Attendance does not establish what was learned or repaired."
+              }
+            ],
+            "generalFeedbackHtml": "<p>The exercise should produce usable evidence about decisions and coordination.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M10-U02-Q04",
+            "type": "multichoice",
+            "name": "M10-U02-Q04",
+            "promptHtml": "<p>A programme reports 98% completion. What does that establish directly?</p>",
+            "single": true,
+            "answers": [
+              {
+                "textHtml": "Almost all of the defined cohort completed the specified learning activity, if the denominator is valid.",
+                "fraction": 100,
+                "feedbackHtml": "Reach is valuable, but it is distinct from capability, behaviour and outcomes."
+              },
+              {
+                "textHtml": "Almost all staff can correctly perform every relevant security task.",
+                "fraction": 0,
+                "feedbackHtml": "Completion does not demonstrate that breadth of competence."
+              },
+              {
+                "textHtml": "Security incidents will fall by 98%.",
+                "fraction": 0,
+                "feedbackHtml": "An attendance measure cannot establish a causal outcome of that size."
+              },
+              {
+                "textHtml": "No further assessment or work observation is useful.",
+                "fraction": 0,
+                "feedbackHtml": "Different measures answer different questions."
+              }
+            ],
+            "generalFeedbackHtml": "<p>Reach is valuable, but it is distinct from capability, behaviour and outcomes.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M10-U02-Q05",
+            "type": "multichoice",
+            "name": "M10-U02-Q05",
+            "promptHtml": "<p>An exercise score fell after the scenario became substantially harder. Which report is appropriate?</p>",
+            "single": true,
+            "answers": [
+              {
+                "textHtml": "Explain the changed difficulty and avoid a simple trend claim until comparable evidence is available.",
+                "fraction": 100,
+                "feedbackHtml": "Keep the original results and disclose material changes in their meaning."
+              },
+              {
+                "textHtml": "State that staff competence definitely declined by the score difference.",
+                "fraction": 0,
+                "feedbackHtml": "The changed assessment is a competing explanation."
+              },
+              {
+                "textHtml": "Discard the new result because it is less favourable.",
+                "fraction": 0,
+                "feedbackHtml": "The result can still identify learning needs if interpreted honestly."
+              },
+              {
+                "textHtml": "Adjust the old score informally until both results match.",
+                "fraction": 0,
+                "feedbackHtml": "Unexplained adjustments destroy comparability and source integrity."
+              }
+            ],
+            "generalFeedbackHtml": "<p>Keep the original results and disclose material changes in their meaning.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M10-U02-Q06",
+            "type": "multichoice",
+            "name": "M10-U02-Q06",
+            "promptHtml": "<p>An exercise identified an unreachable duty contact. What closes the learning loop?</p>",
+            "single": true,
+            "answers": [
+              {
+                "textHtml": "Assign an owner to repair the contact route and demonstrate it works in a later check.",
+                "fraction": 100,
+                "feedbackHtml": "An owned, verified action connects rehearsal to an operating improvement."
+              },
+              {
+                "textHtml": "Record the issue in a report and treat publication of the report as closure.",
+                "fraction": 0,
+                "feedbackHtml": "A documented finding is not a completed improvement."
+              },
+              {
+                "textHtml": "Repeat the same exercise annually without changing the route.",
+                "fraction": 0,
+                "feedbackHtml": "Repetition alone leaves the known weakness in place."
+              },
+              {
+                "textHtml": "Ask each participant to remember a different personal contact.",
+                "fraction": 0,
+                "feedbackHtml": "An informal workaround may be unavailable, unauthorised or unmaintained."
+              }
+            ],
+            "generalFeedbackHtml": "<p>An owned, verified action connects rehearsal to an operating improvement.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M10-U02-Q07",
+            "type": "multichoice",
+            "name": "M10-U02-Q07",
+            "promptHtml": "<p>Which measures provide evidence beyond attendance? Select all correct answers.</p>",
+            "single": false,
+            "answers": [
+              {
+                "textHtml": "Correct decisions on a task-matched assessment with recorded conditions.",
+                "fraction": 50,
+                "feedbackHtml": "This observes capability under the stated scenario."
+              },
+              {
+                "textHtml": "A defined sample of real changes with completed independent verification.",
+                "fraction": 50,
+                "feedbackHtml": "This observes the behaviour in actual work."
+              },
+              {
+                "textHtml": "The number of staff who opened the invitation email, used as proof of correct decisions",
+                "fraction": -50,
+                "feedbackHtml": "Opening an invitation measures reach rather than applied capability."
+              },
+              {
+                "textHtml": "Self-reported confidence alone, used as proof that the actual verification task improved",
+                "fraction": -50,
+                "feedbackHtml": "Confidence may be useful feedback but does not directly observe the behaviour."
+              }
+            ],
+            "generalFeedbackHtml": "<p>Choose evidence that is linked to the desired action.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M10-U02-Q08",
+            "type": "multichoice",
+            "name": "M10-U02-Q08",
+            "promptHtml": "<p>Which practices support a fair and useful exercise? Select all correct answers.</p>",
+            "single": false,
+            "answers": [
+              {
+                "textHtml": "Tell participants the learning purpose and how identifiable results will be used.",
+                "fraction": 50,
+                "feedbackHtml": "Clear use supports trust and appropriate handling."
+              },
+              {
+                "textHtml": "Record the information available when participants made each decision.",
+                "fraction": 50,
+                "feedbackHtml": "Assessment should reflect the actual conditions."
+              },
+              {
+                "textHtml": "Mark an answer wrong using a fact disclosed only after the decision.",
+                "fraction": -50,
+                "feedbackHtml": "That tests hindsight rather than the stated task."
+              },
+              {
+                "textHtml": "Publish named mistake rankings to motivate staff without prior justification.",
+                "fraction": -50,
+                "feedbackHtml": "This can discourage reporting and creates unnecessary exposure."
+              }
+            ],
+            "generalFeedbackHtml": "<p>A realistic exercise can be challenging without being misleading or punitive.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M10-U02-Q09",
+            "type": "truefalse",
+            "name": "M10-U02-Q09",
+            "promptHtml": "<p>The same generic training is sufficient for payment approvers, access administrators and reception staff because all work in one department.</p>",
+            "correct": false,
+            "trueFeedbackHtml": "This is incorrect. Shared foundations are useful, but practice should also reflect each role's tasks and authority.",
+            "falseFeedbackHtml": "Shared foundations are useful, but practice should also reflect each role's tasks and authority.",
+            "generalFeedbackHtml": "<p>Shared foundations are useful, but practice should also reflect each role's tasks and authority.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M10-U02-Q10",
+            "type": "truefalse",
+            "name": "M10-U02-Q10",
+            "promptHtml": "<p>The documented use of Exercise in a Box by local government supports it as an actual public-service learning example, but does not alone prove a numerical fall in incidents.</p>",
+            "correct": true,
+            "trueFeedbackHtml": "Keep the source's adoption claim separate from an unmeasured outcome.",
+            "falseFeedbackHtml": "This is incorrect. Keep the source's adoption claim separate from an unmeasured outcome.",
+            "generalFeedbackHtml": "<p>Keep the source's adoption claim separate from an unmeasured outcome.</p>",
+            "sourceIds": [
+              "CASE-NCSC-EXERCISE"
+            ]
+          },
+          {
+            "id": "M10-U02-Q11",
+            "type": "matching",
+            "name": "M10-U02-Q11",
+            "promptHtml": "<p>Match each measure to the question it most directly answers.</p>",
+            "pairs": [
+              {
+                "promptHtml": "Completion within the defined cohort",
+                "answer": "Who reached the learning activity?"
+              },
+              {
+                "promptHtml": "Correct decision in matched practice",
+                "answer": "Can the learner apply the task under these conditions?"
+              },
+              {
+                "promptHtml": "Sampled verification in actual payment changes",
+                "answer": "Does the behaviour occur at work?"
+              },
+              {
+                "promptHtml": "Observed service loss over time",
+                "answer": "What outcome occurred, with other causes still to assess?"
+              }
+            ],
+            "generalFeedbackHtml": "<p>An evaluation combines distinct measures rather than relabelling all of them as effectiveness.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M10-U02-Q12",
+            "type": "ddwtos",
+            "name": "M10-U02-Q12",
+            "promptHtml": "<p>A useful programme links an observable [[1]] to realistic practice, then assigns each improvement an [[2]].</p>",
+            "choices": [
+              {
+                "text": "objective",
+                "group": 1
+              },
+              {
+                "text": "attendance target only",
+                "group": 1
+              },
+              {
+                "text": "owner",
+                "group": 1
+              },
+              {
+                "text": "unrecorded promise",
+                "group": 1
+              }
+            ],
+            "correctChoices": [
+              1,
+              3
+            ],
+            "generalFeedbackHtml": "<p>Objectives guide the learning; owners make the resulting improvements actionable.</p>",
+            "sourceIds": []
+          }
+        ]
+      }
+    }
+  ]
+}
