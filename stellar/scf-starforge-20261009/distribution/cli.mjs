@@ -27,6 +27,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   buyer-collections                         Review, retain and operate original paid request collections
   buyer-collections-workspace               Review collections, original queue states and result exports in a private browser
   census-publisher                         Publish Census ACS observations and complete original source deliveries
+  bls-publisher                            Publish official BLS labor observations and original customer deliveries
   usaspending-research                      Capture federal awards, review prime workshares and operate saved editions
   usaspending-dossier                       Receive award editions, write research findings and recover source packets
   weather-operations                        Operate weather sources, decisions, frozen reports and original recovery
