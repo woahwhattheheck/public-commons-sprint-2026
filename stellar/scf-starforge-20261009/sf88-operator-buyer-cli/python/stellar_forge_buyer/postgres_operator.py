@@ -96,6 +96,7 @@ class PostgresOperator:
             self.reviews = private_directory(self.directory / "reviews")
             self.requests = private_directory(self.directory / "requests")
             self.sources = private_directory(self.directory / "reviewed-sources")
+            self.reports = private_directory(self.directory / "period-reports")
             path = self.directory / "postgres-workspace.json"
             if path.exists():
                 identity = parse(read(path, 65536))
@@ -221,17 +222,22 @@ class PostgresOperator:
                 used.add(sql_name)
                 columns.append(Column(name, sql_name, kind, nulls[name] > 0 or not kinds))
             mapping = DatasetMapping(tuple(columns))
+            from .postgres_central import CentralAcceptedDelivery
+            if isinstance(delivery, CentralAcceptedDelivery):
+                mapping = delivery.suggested_mapping(nulls)
             native = review_delivery(delivery, mapping)
             return {"source_path": str(path), "source_sha256": digest(raw),
                     "dataset": native["dataset"], "row_count": native["row_count"],
                     "source_pages": native["source_pages"],
-                    "payment_status": native["originalPaymentStatus"],
+                    "payment_status": native.get("originalPaymentStatus"),
+                    "source_kind": native.get("source_kind", "SF100_DELIVERY"),
                     "mapping": mapping.record(), "columns": native["columns"], "preview": preview,
                     "semantics": native["semantics"], "semantics_status": native["semantics_status"],
                     "semantic_dictionary": native["semantic_dictionary"]}
 
     def review(self, body):
-        fields(body, ("report_path", "mapping", "reviewer", "note", "expected_report_sha256"))
+        fields(body, ("report_path", "mapping", "reviewer", "note", "expected_report_sha256"),
+               ("review_id",))
         _text(body["reviewer"], 160, required=True)
         _text(body["note"], 4000)
         if not isinstance(body["expected_report_sha256"], str) or not re.fullmatch(
@@ -242,15 +248,49 @@ class PostgresOperator:
             raise WarehouseError("DATASET_PG_REVIEWED_INPUT_CHANGED")
         mapping = DatasetMapping.from_record(body["mapping"])
         native = review_delivery(delivery, mapping)
-        record_id = secrets.token_hex(16)
+        record_id = _id(body["review_id"]) if "review_id" in body else secrets.token_hex(16)
         source = self.sources / (record_id + ".json")
-        write(source, raw, exclusive=True)
+        target = self.reviews / (record_id + ".json")
+        intent_path = self.reviews / (record_id + ".intent")
+        # Preserve the caller's complete intent before either durable review
+        # member. The input bytes identify the source independently of where
+        # the same private operator directory is restored.
+        intent = {"source_sha256": digest(raw), "mapping": mapping.record(),
+                  "reviewer": body["reviewer"], "note": body["note"]}
+        if intent_path.exists():
+            if parse(read(intent_path, _MAX_RECORD)) != intent:
+                raise WarehouseError("DATASET_PG_REVIEW_ID_REUSED")
+        elif target.exists():
+            previous = self._record(self.reviews, record_id)
+            if (previous.get("source_sha256") != intent["source_sha256"]
+                    or previous.get("mapping") != intent["mapping"]
+                    or previous.get("reviewer") != body["reviewer"].strip()
+                    or previous.get("note") != body["note"]):
+                raise WarehouseError("DATASET_PG_REVIEW_ID_REUSED")
+            dump(intent_path, intent, exclusive=True)
+        else:
+            dump(intent_path, intent, exclusive=True)
+        if source.exists():
+            if read(source, _MAX_REPORT) != raw:
+                raise WarehouseError("DATASET_PG_OPERATOR_REVIEW_CHANGED")
+        else:
+            write(source, raw, exclusive=True)
+        if target.exists():
+            previous = self._record(self.reviews, record_id)
+            if (previous.get("state") != "REVIEWED" or previous.get("version_id") != native["version_id"]
+                    or previous.get("source_sha256") != intent["source_sha256"]
+                    or previous.get("mapping") != intent["mapping"]
+                    or previous.get("reviewer") != body["reviewer"].strip()
+                    or previous.get("note") != body["note"]
+                    or previous.get("review") != native):
+                raise WarehouseError("DATASET_PG_OPERATOR_REVIEW_CHANGED")
+            return previous
         record = {**self.identity, "record_id": record_id, "created_at": _now(),
                   "state": "REVIEWED", "source_path": str(path),
                   "source_sha256": digest(raw), "reviewer": body["reviewer"].strip(),
                   "note": body["note"], "mapping": mapping.record(),
                   "version_id": native["version_id"], "row_count": native["row_count"], "review": native}
-        dump(self.reviews / (record_id + ".json"), record, exclusive=True)
+        dump(target, record, exclusive=True)
         return record
 
     def _review_delivery(self, review):
@@ -258,6 +298,17 @@ class PostgresOperator:
         raw = read(path, _MAX_REPORT)
         if digest(raw) != review["source_sha256"]:
             raise WarehouseError("DATASET_PG_OPERATOR_REVIEW_CHANGED")
+        from .postgres_central import SCHEMA as CENTRAL_SCHEMA
+        retained = parse(raw)
+        if retained.get("schema") == CENTRAL_SCHEMA:
+            approval = retained.get("sourceBindingSha256")
+            if not isinstance(approval, str) or not re.fullmatch(r"[a-f0-9]{64}", approval):
+                raise WarehouseError("DATASET_PG_OPERATOR_REVIEW_CHANGED")
+            # Central's approved CSV projection and original dictionary live
+            # beside its managed manifest, inside this same operator archive.
+            path = self.sources / "central" / approval / "manifest.json"
+            if read(path, _MAX_REPORT) != raw:
+                raise WarehouseError("DATASET_PG_OPERATOR_REVIEW_CHANGED")
         return load_delivery_report(path)
 
     def _import(self, request):
@@ -312,6 +363,10 @@ class PostgresOperator:
             fields(body, ("name", "version_id", "expected_revision", "request_id"))
             _text(body["name"], 63, required=True)
             integer(body["expected_revision"], maximum=9007199254740991)
+        elif route == "/api/period-reports":
+            fields(body, ("selection", "request_id"))
+            from .postgres_reports import selection
+            selection(body["selection"])
         else:
             raise WarehouseError("DATASET_PG_OPERATOR_ROUTE_NOT_FOUND")
         request_id = _id(body["request_id"])
@@ -325,6 +380,9 @@ class PostgresOperator:
                        "state": "PREPARED", "route": route, "body": body}
             if route == "/api/import":
                 self._record(self.reviews, body["review_id"])
+            elif route == "/api/period-reports":
+                self.warehouse.version(body["selection"]["previous_version"])
+                self.warehouse.version(body["selection"]["current_version"])
             else:
                 self.warehouse.version(body["version_id"])
                 baseline = self.warehouse.current(body["name"])
@@ -333,12 +391,28 @@ class PostgresOperator:
                 request["baseline"] = baseline
             dump(path, request, exclusive=True)
         if request["state"] == "COMPLETE":
+            if route == "/api/period-reports":
+                from .postgres_reports import build_report
+                reopened = build_report(self.warehouse, self.reports, request_id, body["selection"])
+                prior = request.get("result") or {}
+                artifact = dict(prior.get("artifact") or {})
+                artifact["path"] = reopened["artifact"]["path"]
+                if {**prior, "artifact": artifact} != wire(reopened):
+                    raise WarehouseError("DATASET_PG_REPORT_RECORD_CHANGED")
+                if prior != wire(reopened):
+                    request["result"] = wire(reopened)
+                    request["updated_at"] = _now()
+                    dump(path, request)
             return request
         request.update(state="RUNNING", updated_at=_now())
         request.pop("error", None)
         dump(path, request)
         try:
-            result = self._import(request) if route == "/api/import" else self._activate(request)
+            if route == "/api/period-reports":
+                from .postgres_reports import build_report
+                result = build_report(self.warehouse, self.reports, request_id, body["selection"])
+            else:
+                result = self._import(request) if route == "/api/import" else self._activate(request)
             request.update(state="COMPLETE", result=wire(result), updated_at=_now())
             dump(path, request)
             return request
@@ -352,6 +426,18 @@ class PostgresOperator:
             except (OSError, BuyerError):
                 pass
             raise
+
+    def report_stream(self, request_id):
+        from .postgres_reports import open_report
+        request = self._record(self.requests, request_id)
+        if request.get("route") != "/api/period-reports" or request.get("state") != "COMPLETE":
+            raise WarehouseError("DATASET_PG_REPORT_COMPLETE_REQUEST_REQUIRED")
+        return open_report(self.reports, request_id, request["result"]["artifact"])
+
+    def central_source(self, approval_path, expected_approval_sha256, source_workspace):
+        from .postgres_central import prepare_central
+        return prepare_central(approval_path, expected_approval_sha256, source_workspace,
+                               self.sources / "central")
 
     def perform(self, route, body):
         with self.mutex:
