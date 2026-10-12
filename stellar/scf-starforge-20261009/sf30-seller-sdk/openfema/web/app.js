@@ -394,7 +394,7 @@ async function submitForm(event){
 }
 
 // Original project data exchange: mappings, files and decisions use this workspace's actions.
-const I={document:null,offset:0,generation:0,selected:new Set(),draft:null,mappingId:'',deliveryId:''};
+const I={document:null,offset:0,generation:0,selected:new Set(),draft:null,mappingId:'',deliveryId:'',receivingReviewer:'',receivingNote:''};
 const integrationRows=key=>S.view[key]||[];
 function integrationDraft(){
   if(I.draft)return I.draft;
@@ -464,7 +464,7 @@ function renderIntegrationDocument(){
     '<details><summary>Scope, mapping and counts</summary><pre>'+esc(JSON.stringify({summary:body.summary,sourceScope:body.sourceScope,criteria:body.criteria,mapping:body.mapping?.name,mappingSha256:body.mappingSha256,sameScope:body.sameScope,sameMapping:body.sameMapping,interpretation:body.interpretation,treatment:body.treatment,customerBase:body.customerBase},null,2))+'</pre></details>'+
     (kind==='reconciliation'?'<p>Only checked, valid analyst fields enter a new portfolio version. Source differences remain reconciliation items. Each selected review must still match its original export baseline.</p><div class="actions">'+button('integration-select-reviews','Select all valid review changes ('+value.reviewProposals.length+')')+button('integration-clear-reviews','Clear selection')+'</div>':'')+
     (rows.length?'<div class="table-wrap"><table><thead><tr>'+headings.map(h=>'<th>'+esc(h)+'</th>').join('')+'</tr></thead><tbody>'+rowHtml+'</tbody></table></div><div class="actions">'+button('integration-page','Previous 50','data-offset="'+Math.max(0,I.offset-50)+'" '+(I.offset===0?'disabled':''))+'<span>'+number(I.offset+1)+'–'+number(Math.min(I.offset+50,rows.length))+' of '+number(rows.length)+'</span>'+button('integration-page','Next 50','data-offset="'+(I.offset+50)+'" '+(I.offset+50>=rows.length?'disabled':''))+'</div>':empty('No project changes or rows in this selection','The saved source scope, declarations, customer input and complete report remain available.'))+
-    (kind==='reconciliation'&&value.reviewProposals.length?'<form id="integration-apply-form"><p>'+number(I.selected.size)+' analyst rows selected. '+esc(canApply?'Current displayed version is eligible for these decisions.':'Select this receiving’s current portfolio and source edition in the header before applying decisions.')+'</p><div class="form-grid">'+input('integration-import-reviewer','Receiving analyst','','text','required maxlength="200"')+input('integration-import-note','Reason for applying selected review fields','','text','required maxlength="12000"')+'</div><button class="primary" '+(!canApply?'disabled':'')+'>Save selected decisions in new version</button></form>':'')+'</section>';
+    (kind==='reconciliation'&&value.reviewProposals.length?'<form id="integration-apply-form"><p><span id="integration-selected-count">'+number(I.selected.size)+'</span> analyst rows selected. '+esc(canApply?'Current displayed version is eligible for these decisions.':'Select this receiving’s current portfolio and source edition in the header before applying decisions.')+'</p><div class="form-grid">'+input('integration-import-reviewer','Receiving analyst',I.receivingReviewer,'text','required maxlength="200"')+input('integration-import-note','Reason for applying selected review fields',I.receivingNote,'text','required maxlength="12000"')+'</div><button class="primary" '+(!canApply?'disabled':'')+'>Save selected decisions in new version</button></form>':'')+'</section>';
 }
 async function openIntegrationDocument(kind,id){
   const key={delivery:'projectDeliveries',reconciliation:'deliveryReconciliations',comparison:'deliveryComparisons'}[kind];
@@ -472,7 +472,7 @@ async function openIntegrationDocument(kind,id){
   const generation=++I.generation,workspaceId=S.view.workspaceId;
   const value=await api('/api/objects/'+record.documentSha256);
   if(generation!==I.generation||S.view.workspaceId!==workspaceId)return;
-  I.document={kind,record,value};I.offset=0;I.selected=new Set();S.section='integration';render();$('#integration-document').scrollIntoView({block:'start'});
+  I.document={kind,record,value};I.offset=0;I.selected=new Set();I.receivingReviewer='';I.receivingNote='';S.section='integration';render();$('#integration-document').scrollIntoView({block:'start'});
 }
 async function readCustomerFile(file){
   if(!file)throw new Error('Choose the complete original customer CSV.');
@@ -542,10 +542,12 @@ async function integrationForm(form,data){
   }
 }
 document.addEventListener('input',event=>{
+  if(event.target.id==='integration-import-reviewer')I.receivingReviewer=event.target.value;
+  if(event.target.id==='integration-import-note')I.receivingNote=event.target.value;
   if(event.target.id==='integration-mapping-json')try{saveIntegrationDraft(event.target.value);}catch(error){notify('The mapping remains in the editor; browser draft storage is full. Save the mapping or download this text before leaving.',true);}
 });
 document.addEventListener('change',event=>{
-  if(event.target.matches('.integration-review-row')){const row=Number(event.target.value);if(event.target.checked)I.selected.add(row);else I.selected.delete(row);}
+  if(event.target.matches('.integration-review-row')){const row=Number(event.target.value);if(event.target.checked)I.selected.add(row);else I.selected.delete(row);const count=$('#integration-selected-count');if(count)count.textContent=number(I.selected.size);}
 });
 
 document.addEventListener('click',event=>{const target=event.target.closest('button[data-command]');if(target){void executeCommand(target).catch(error=>notify(error.message,true));}});
