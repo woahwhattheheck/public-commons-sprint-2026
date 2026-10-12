@@ -56,7 +56,7 @@ function buttons() {
 function inputChanged() { state.dirty = true; buttons(); }
 function renderQuery(definition, saved) {
   state.query = definition;
-  $('source-sql').textContent = typeof definition.sql === 'string' ? definition.sql : JSON.stringify(definition.path ? {
+  $('source-sql').textContent = typeof definition.sql === 'string' ? definition.sql : JSON.stringify(definition.serviceQuery && typeof definition.serviceQuery === 'object' && !Array.isArray(definition.serviceQuery) ? definition.serviceQuery : definition.path ? {
     path: definition.path, format: definition.format, recordsPointer: definition.recordsPointer,
     expectedSha256: definition.expectedSha256, mapping: definition.mapping, where: definition.where,
   } : { collection: definition.collection, pipeline: definition.pipeline, readConcern: definition.readConcern }, null, 2);

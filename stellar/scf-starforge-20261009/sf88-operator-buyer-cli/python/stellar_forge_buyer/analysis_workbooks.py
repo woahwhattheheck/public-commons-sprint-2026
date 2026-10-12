@@ -27,7 +27,7 @@ import zipfile
 from .analysis_reports import AnalysisReports
 from .errors import BuyerError, StateError
 from .query_export import QueryExport
-from .storage import digest, parse, private_directory, read, sync_directory, write
+from .storage import digest, lock, parse, private_directory, read, sync_directory, write
 
 _SCHEMA = "stellar-forge.customer-workbook.v1"
 _DEFINITION = "stellar-forge.customer-workbook-definition.v1"
@@ -119,6 +119,8 @@ def _relative(value):
         _error("FILE_INVALID")
     if value in {"workbook.xlsx", "definition.json"}:
         return value
+    if len(path.parts) == 2 and path.parts[0] == "history" and re.fullmatch(r"definition-[1-9][0-9]*\.json", path.parts[1]):
+        return value
     if (len(path.parts) == 3 and path.parts[0] == "sources"
             and re.fullmatch(r"(?:query-export|report)-[a-f0-9]{32}", path.parts[1])
             and path.parts[2] in {"manifest.json", "rows.jsonl", "rows.csv", "rows.sqlite3", "report.json"}):
@@ -140,6 +142,31 @@ def _open_private(path):
 def _file_record(path):
     with _open_private(path) as stream:
         return {"bytes": os.fstat(stream.fileno()).st_size, "sha256": hashlib.file_digest(stream, "sha256").hexdigest()}
+
+
+
+def _publish_received_directory(source, target):
+    """Atomically publish a complete directory without replacing any destination."""
+    import ctypes
+    import sys
+
+    libc = ctypes.CDLL(None, use_errno=True)
+    if sys.platform.startswith("linux") and hasattr(libc, "renameat2"):
+        rename = libc.renameat2
+        rename.argtypes = [ctypes.c_int, ctypes.c_char_p, ctypes.c_int, ctypes.c_char_p, ctypes.c_uint]
+        rename.restype = ctypes.c_int
+        result = rename(-100, os.fsencode(source), -100, os.fsencode(target), 1)  # RENAME_NOREPLACE
+    elif sys.platform == "darwin" and hasattr(libc, "renamex_np"):
+        rename = libc.renamex_np
+        rename.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_uint]
+        rename.restype = ctypes.c_int
+        result = rename(os.fsencode(source), os.fsencode(target), 4)  # RENAME_EXCL
+    else:
+        _error("ATOMIC_DIRECTORY_PUBLICATION_UNAVAILABLE")
+    if result:
+        code = ctypes.get_errno()
+        raise OSError(code, os.strerror(code), os.fspath(target))
+    sync_directory(target.parent)
 
 
 def _literal(value):
@@ -329,6 +356,24 @@ class WorkbookDelivery:
             raw = stream.read(_MAX_MANIFEST + 1)
         if len(raw) > _MAX_MANIFEST or digest(raw) != self.manifest["definition_sha256"]:
             _error("DEFINITION_CHANGED")
+        current = parse(raw)
+        while current.get("refresh_origin"):
+            origin = current["refresh_origin"]
+            revision = origin.get("base_revision")
+            if type(revision) is not int or not 1 <= revision < current["revision"]:
+                _error("REFRESH_HISTORY_CHANGED")
+            name = "history/definition-" + str(revision) + ".json"
+            if origin.get("base_definition_file") != name:
+                _error("REFRESH_HISTORY_CHANGED")
+            with self.open(name) as stream:
+                previous_raw = stream.read(_MAX_MANIFEST + 1)
+            if len(previous_raw) > _MAX_MANIFEST or digest(previous_raw) != origin.get("base_definition_sha256"):
+                _error("REFRESH_HISTORY_CHANGED")
+            previous = parse(previous_raw)
+            if (previous.get("name") != current["name"] or previous.get("revision") != revision
+                    or previous.get("workspace_id") != current["workspace_id"]):
+                _error("REFRESH_HISTORY_CHANGED")
+            current = previous
         return {**self.manifest, "manifest_sha256": digest(self.raw)}
 
     def verify_archive(self, path):
@@ -372,67 +417,99 @@ class WorkbookDelivery:
 
     @classmethod
     def receive(cls, archive, destination, *, expected_sha256=None, max_bytes=1024 * 1024 * 1024):
-        """Receive the selected handoff with exact member hashes and no extraction paths."""
+        """Receive into private staging, then publish one verified complete directory."""
         if type(max_bytes) is not int or max_bytes < 1:
             _error("RECEIVING_LIMIT_REQUIRED")
         target = Path(destination).absolute()
-        private_directory(target.parent)
-        target.mkdir(mode=0o700)
-        try:
-            with _open_private(Path(archive).absolute()) as source:
-                archive_sha = hashlib.file_digest(source, "sha256").hexdigest()
-                if expected_sha256 is not None and archive_sha != _hash(expected_sha256):
-                    _error("ARCHIVE_CHANGED")
-                source.seek(0)
-                with zipfile.ZipFile(source) as package:
-                    infos = package.infolist()
-                    names = [entry.filename for entry in infos]
-                    if len(names) != len(set(names)) or "manifest.json" not in names:
-                        _error("ARCHIVE_MEMBERS_INVALID")
-                    meta = package.getinfo("manifest.json")
-                    if meta.file_size > _MAX_MANIFEST:
-                        _error("MANIFEST_TOO_LARGE")
-                    raw = package.read(meta)
-                    manifest = parse(raw)
-                    if manifest.get("schema") != _SCHEMA or manifest.get("complete") is not True or not isinstance(manifest.get("files"), dict):
-                        _error("COMPLETE_DELIVERY_REQUIRED")
-                    if set(names) != set(manifest["files"]) | {"manifest.json"}:
-                        _error("ARCHIVE_MEMBERS_INVALID")
-                    if sum(entry.file_size for entry in infos) > max_bytes:
-                        _error("RECEIVING_BYTE_LIMIT_EXCEEDED")
-                    for name, expected in manifest["files"].items():
-                        _relative(name)
-                        entry = package.getinfo(name)
-                        if entry.file_size != expected["bytes"] or stat.S_ISLNK(entry.external_attr >> 16):
-                            _error("ARCHIVE_MEMBER_CHANGED")
-                        path = target / name
-                        private_directory(path.parent)
-                        sha, size = hashlib.sha256(), 0
-                        with package.open(entry) as input_stream, path.open("xb") as output:
-                            os.fchmod(output.fileno(), 0o600)
-                            for block in iter(lambda: input_stream.read(1024 * 1024), b""):
-                                sha.update(block)
-                                size += len(block)
-                                if size > expected["bytes"]:
-                                    _error("ARCHIVE_MEMBER_CHANGED")
-                                output.write(block)
-                            output.flush()
-                            os.fsync(output.fileno())
-                        if size != expected["bytes"] or sha.hexdigest() != expected["sha256"]:
-                            _error("ARCHIVE_MEMBER_CHANGED")
-                    write(target / "manifest.json", raw)
-                    sync_directory(target)
-            result = cls(target)
-            result.inspect()
-            return result
-        except BaseException:
-            shutil.rmtree(target)
-            raise
+        parent = private_directory(target.parent)
+        target = parent / target.name
+        if os.path.lexists(target):
+            raise FileExistsError(str(target))
+        with _open_private(Path(archive).absolute()) as source:
+            archive_sha = hashlib.file_digest(source, "sha256").hexdigest()
+            if expected_sha256 is not None and archive_sha != _hash(expected_sha256):
+                _error("ARCHIVE_CHANGED")
+            source.seek(0)
+            # The original operation can reclaim its own unfinished staging after
+            # process termination. The retained archive remains the only input.
+            control = private_directory(parent / (".workbook-receive-" + digest(os.fsencode(target.name))[:24]))
+            with lock(control):
+                if os.path.lexists(target):
+                    raise FileExistsError(str(target))
+                intent_path, staging = control / "source.json", control / "content"
+                intent = {"schema": "stellar-forge.workbook-receiving.v1", "destination": str(target),
+                          "archive_sha256": archive_sha}
+                if intent_path.exists():
+                    with _open_private(intent_path) as retained:
+                        old = retained.read(64 * 1024 + 1)
+                    if len(old) > 64 * 1024 or parse(old) != intent:
+                        _error("RECEIVING_OPERATION_CHANGED")
+                else:
+                    if os.path.lexists(staging):
+                        _error("RECEIVING_STATE_INVALID")
+                    write(intent_path, _json(intent).encode(), exclusive=True)
+                if os.path.lexists(staging):
+                    private_directory(staging, create=False)
+                    shutil.rmtree(staging)
+                staging.mkdir(mode=0o700)
+                try:
+                    with zipfile.ZipFile(source) as package:
+                        infos = package.infolist()
+                        names = [entry.filename for entry in infos]
+                        if len(names) != len(set(names)) or "manifest.json" not in names:
+                            _error("ARCHIVE_MEMBERS_INVALID")
+                        meta = package.getinfo("manifest.json")
+                        if meta.file_size > _MAX_MANIFEST:
+                            _error("MANIFEST_TOO_LARGE")
+                        raw = package.read(meta)
+                        manifest = parse(raw)
+                        if manifest.get("schema") != _SCHEMA or manifest.get("complete") is not True or not isinstance(manifest.get("files"), dict):
+                            _error("COMPLETE_DELIVERY_REQUIRED")
+                        if set(names) != set(manifest["files"]) | {"manifest.json"}:
+                            _error("ARCHIVE_MEMBERS_INVALID")
+                        if sum(entry.file_size for entry in infos) > max_bytes:
+                            _error("RECEIVING_BYTE_LIMIT_EXCEEDED")
+                        for name, expected in manifest["files"].items():
+                            _relative(name)
+                            entry = package.getinfo(name)
+                            if entry.file_size != expected["bytes"] or stat.S_ISLNK(entry.external_attr >> 16):
+                                _error("ARCHIVE_MEMBER_CHANGED")
+                            path = staging / name
+                            private_directory(path.parent)
+                            sha, size = hashlib.sha256(), 0
+                            with package.open(entry) as input_stream, path.open("xb") as output:
+                                os.fchmod(output.fileno(), 0o600)
+                                for block in iter(lambda: input_stream.read(1024 * 1024), b""):
+                                    sha.update(block)
+                                    size += len(block)
+                                    if size > expected["bytes"]:
+                                        _error("ARCHIVE_MEMBER_CHANGED")
+                                    output.write(block)
+                                output.flush()
+                                os.fsync(output.fileno())
+                            if size != expected["bytes"] or sha.hexdigest() != expected["sha256"]:
+                                _error("ARCHIVE_MEMBER_CHANGED")
+                        write(staging / "manifest.json", raw)
+                        for directory in sorted((p for p in staging.rglob("*") if p.is_dir()),
+                                                key=lambda p: len(p.parts), reverse=True):
+                            sync_directory(directory)
+                        sync_directory(staging)
+                    result = cls(staging)
+                    result.inspect()
+                    _publish_received_directory(staging, target)
+                    sync_directory(control)
+                    return cls(target)
+                except BaseException:
+                    if staging.exists():
+                        shutil.rmtree(staging)
+                    raise
 
 
 class AnalysisWorkbooks:
     def __init__(self, database, *, identity, reports=None, initialize=True):
         self.database, self.identity, self.reports = database, identity, reports
+        from .workbook_refresh import WorkbookRefresh
+        self.refresh = WorkbookRefresh(self)
         self.directory = database.directory / "analysis-workbooks"
         self._mutex = threading.Lock()
         self._signals = {}
@@ -557,12 +634,14 @@ class AnalysisWorkbooks:
         _sheet_layout(result)
         return {"schema": _DEFINITION, "name": name, "title": title, "notes": notes, "sheets": result}
 
-    def save(self, name, request):
+    def save(self, name, request, *, refresh_origin=None):
         request_id = _id(request.get("id"))
         expected = request.get("expected_revision")
         if type(expected) is not int or expected < 0:
             _error("REVISION_REQUIRED")
         normalized = self.compose(name, request)
+        if refresh_origin is not None:
+            normalized["refresh_origin"] = refresh_origin
         request_sha = digest(_json({"id": request_id, "expected_revision": expected, **normalized}).encode())
         with self.database._connection() as db:
             db.execute("BEGIN IMMEDIATE")
@@ -723,6 +802,7 @@ class AnalysisWorkbooks:
 
         try:
             write(target / "definition.json", raw)
+            definition_history = self.refresh.retain_history(definition, target, cancel=cancel)
             for ordinal, logical in enumerate(definition["sheets"]):
                 stopped()
                 source = logical["source"]
@@ -769,6 +849,10 @@ class AnalysisWorkbooks:
                                ("Complete rows", "Each data sheet includes every selected source row. Larger results continue on numbered sheets, with a header repeated on each sheet."),
                                ("Offline handoff", "Open manifest.json and the original source exports alongside this workbook to recover exact input types, query bindings, and projections.")]:
                 readme.append([cell(readme, key, heading=True), cell(readme, _literal(value))])
+            if definition.get("refresh_origin"):
+                origin = definition["refresh_origin"]
+                readme.append([cell(readme, "Edition note", heading=True), cell(readme, _literal(origin["reason"]))])
+                readme.append([cell(readme, "Previous definition", heading=True), cell(readme, origin["base_definition_file"])])
             meta = new_sheet("Sources", [{"header": h} for h in ["Sheet", "Source kind", "Source ID", "Source SHA-256", "Rows", "Input column", "Input ordinal", "Excel heading", "Type", "Null", "Precision"]], sum(len(s["columns"]) for s in outputs))
             for logical in outputs:
                 for column in logical["columns"]:
@@ -790,7 +874,7 @@ class AnalysisWorkbooks:
             manifest = {"schema": _SCHEMA, "complete": True, "id": job_id, "workspace_id": self.identity,
                         "name": definition["name"], "revision": definition["revision"], "title": definition["title"],
                         "definition_sha256": definition_sha, "created_at": _now(), "row_count": total_rows,
-                        "sheets": outputs, "files": files, "excel": {"date_system": "1900", "date_encoding": "ISO8601", "strings": "literal", "data_rows_per_sheet": _ROWS_PER_SHEET}}
+                        "sheets": outputs, "files": files, "definition_history": definition_history, "excel": {"date_system": "1900", "date_encoding": "ISO8601", "strings": "literal", "data_rows_per_sheet": _ROWS_PER_SHEET}}
             manifest_raw = _json(manifest).encode()
             if len(manifest_raw) > _MAX_MANIFEST:
                 _error("MANIFEST_TOO_LARGE")
@@ -985,3 +1069,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
