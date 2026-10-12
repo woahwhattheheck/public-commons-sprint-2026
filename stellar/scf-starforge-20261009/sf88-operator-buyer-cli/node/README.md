@@ -627,3 +627,83 @@ source receiving, preparation, approval and restart flow.
 ### Authorization retained before dispatch
 
 Use [UNDISPATCHED_CONTINUATION.md](./UNDISPATCHED_CONTINUATION.md) when an interrupted original native authorization has a validated wire checkpoint with no signed dispatch. `Operation.prepareUndispatchedContinuation()` keeps the original reservation and prepares one source-bound successor for the normal approval flow. `followContinuation()` reopens existing unpaid, expired and undispatched choices.
+
+## Finalize one existing operation
+
+A direct `Operation` now exposes the same original financial continuation used by
+the existing session and inbox workflows. After `execute()` returns, or after
+`recover()` finds the original result, call `finalize()` on that **same intent**:
+
+```js
+const saved = buyer.operation(originalIntentId);
+const accounting = await saved.finalize({
+  workspaceDirectory: '/srv/private/original-operator',
+});
+console.log(accounting.native.kind, accounting.native.result);
+```
+
+A `fromWorkspace` operation already retains its workspace, so that argument is
+optional. A paid `fromConfig` or SF103-prepared operation selects the existing
+accounting workspace explicitly. The original Python executable, actor, service,
+policy, ledger, payer, accepted network/asset/recipient and transport must match.
+The retained fromConfig signer can differ from the historical workspace signer:
+the original approved request and authenticated SF36 reservation bind the actual
+attempt. An earlier signer limit or a later spending-cap reduction does not undo
+an already authorized reservation.
+
+The SDK retains a named `accounting/finalize-XXXXXX` command, the exact original
+attempt snapshot and SF82 evidence before opening the original finality worker.
+The worker loads the original three accounting keys in its child process,
+authenticates the existing reservation, observes finality through original SF86
+and reconciles the same SF36 ledger. It never opens a signer or invokes a buyer.
+A settled payment is accounted even if its later product response failed.
+
+The returned `native.result` is the original SF36 record. `FINALIZED` and
+`IDEMPOTENT_FINALIZED` carry its actual amount and receipt. `NOT_FINALIZED` and
+`WORKER_ERROR` retain the original reason and reports. An original free response
+returns `kind: 'UNPAID_RESPONSE'` with `NO_PAYMENT_REQUIRED`; a fromConfig free
+response needs no accounting workspace. It has an unsigned-response view rather
+than a ledger-finalization result.
+
+### Reopen a native accounting result
+
+```js
+const view = await saved.accounting();
+const recovered = await saved.recoverAccounting({
+  commandId: accounting.commandId,
+});
+const archive = await saved.exportAccounting('/srv/private/original-accounting.json', {
+  commandId: accounting.commandId,
+});
+console.log(archive.sha256, archive.bytes);
+```
+
+`accounting()` and `recoverAccounting()` are local reads. They can recover a
+complete original native stdout file when the calling process ended before
+saving its reply. A later incomplete command leaves the previous complete and
+finalized views visible as `lastComplete` and `lastFinalized`.
+`exportAccounting()` publishes a new private JSON file containing the selected
+view, exact command context and original attempt/evidence bytes with hashes.
+The policy, ledger and key files stay in the original operator workspace.
+
+A result with `viewStatus: 'SAVE_FAILED'` still carries the original native
+financial result. Retain its `commandId`, then reopen that named command.
+If native output itself is incomplete, an explicit later `finalize()` performs
+the original idempotent one-record reconciliation. It creates no new purchase.
+A live producing process or active wire writer is refused with its original
+operation intact; finish or recover that producer through its existing route.
+
+The producing `operation.json.runtimeDirectory` is retained separately from the
+accounting runtime selected by the `Buyer` constructor. A newer complete SF88
+installation can finish an older retained attempt without modifying its
+producing source. The command records both roots and the selected SDK worker and
+original financial entry hashes. The selected runtime must include its original
+SF36/SF86, workspace, finalization and wire modules. The private state directory,
+body, ticket, configuration and selected preapproval chain remain unchanged.
+
+For a complete runnable interface, use
+[examples/operation_accounting.mjs](examples/operation_accounting.mjs). Its
+`finalize`, `recover` and `export` stages accept an existing runtime/state/intent.
+Use `--view-file` for an exact private receiving artifact. The example uses a
+4 MiB native-output budget and an eight-minute native timeout; callers may
+configure their existing `Buyer` limits for the same original worker.
