@@ -30,6 +30,8 @@ Omit `--manuscript` when rendering edits already saved in the application and co
 
 Composition preserves all nine original answer headings and every unrelated companion section. Selected installation subsections are replaced once, and the existing tenth section receives the product entry. Source identifiers and hashes are refreshed from the complete result. The command reads its installed composer and customer module to refresh their source identities; when a manuscript is supplied, it also records the selected nine-answer front’s current size and hash. The guided product opening and submission navigation are then composed into the same edition. Repeating the same composition produces identical files.
 
+The maintained delivery-plan module owns three H3 subsections inside answers 6–8. It updates each subsection in place and preserves all other answer text, the six cost rows and the original capacity, cash and submission fields. A fresh canonical manuscript therefore retains the same component mapping, installation responsibilities and maintenance handover in the composed reader. The source index records that module’s Git blob beside the composer and customer projection. Edit these owned subsections in the module when changing this delivery narrative; the next normal composition updates the Markdown and HTML together.
+
 ## Receive the four reader files
 
 The original receiving callback accepts the four Git blob overrides emitted by `--source-pins-output`:
@@ -81,6 +83,7 @@ complete authoring source used by the existing command:
 | Source | Role in the same composition |
 | --- | --- |
 | grant-compose.mjs | Receives the accepted nine-answer front, complete companion and original source index; writes the four reader files. |
+| grant-delivery-plan.mjs | Receives the product-to-funded-package map, installed responsibility and maintenance handover into the original answers 6–8. |
 | grant-financial-operations.mjs | Receives the financial chapter and records the selected settlement, receivables, wallet collection, payment-plan and Xero source. |
 | grant-customers.mjs | Receives complete accepted customer sections and publishes their source-linked prose. |
 | grant-datasette.mjs | Keeps the paired original publisher and customer Analysis selections together. |
