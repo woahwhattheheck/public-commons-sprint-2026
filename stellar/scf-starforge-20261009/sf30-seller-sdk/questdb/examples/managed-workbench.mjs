@@ -160,7 +160,13 @@ async function readLoopbackFile(url,path,expected,destination){
 async function startMcpProcess({modulePath,url,environment,directory,label}){
   const child=spawn(process.execPath,[modulePath],{cwd:directory,shell:false,
     env:{...environment,QUESTDB_WORKSPACE_URL:url},stdio:['pipe','pipe','pipe']});
-  const pending=new Map(),stderr=[],notifications=[];let serial=0,stderrBytes=0,ended=false;
+  const pending=new Map(),stderr=[],notifications=[];let serial=0,stderrBytes=0,ended=false,inputFailure=null;
+  let closingRequested=false,closePromise=null,closedTrace=null;
+  const failInput=issue=>{
+    inputFailure??=Object.assign(new Error('Original MCP input stream failed.'),{code:'MCP_INPUT_FAILED',causeCode:issue?.code??null});
+    for(const item of pending.values()){clearTimeout(item.timer);item.reject(inputFailure);}pending.clear();
+  };
+  child.stdin.on('error',failInput);
   const terminal=new Promise(done=>child.once('close',(code,signal)=>{ended=true;for(const item of pending.values()){clearTimeout(item.timer);item.reject(Object.assign(new Error('Original MCP process ended.'),{code:'MCP_PROCESS_ENDED'}));}pending.clear();done({code,signal});}));
   const lines=createInterface({input:child.stdout,crlfDelay:Infinity});
   lines.on('line',line=>{
@@ -174,8 +180,12 @@ async function startMcpProcess({modulePath,url,environment,directory,label}){
   });
   child.stderr.on('data',data=>{const remain=131072-stderrBytes;if(remain>0){const part=data.subarray(0,remain);stderr.push(part);stderrBytes+=part.length;}});
   await new Promise((done,reject)=>{child.once('spawn',done);child.once('error',reject);});
+  function requireInput(){
+    if(inputFailure)throw inputFailure;
+    need(!ended,'MCP_PROCESS_ENDED');need(!closingRequested,'MCP_PROCESS_CLOSING');
+  }
   function request(method,params){
-    need(!ended,'MCP_PROCESS_ENDED');const id=++serial;
+    requireInput();const id=++serial;
     return new Promise((done,reject)=>{
       const timer=setTimeout(()=>{pending.delete(id);reject(Object.assign(new Error('Original MCP request did not finish: '+method),{code:'MCP_REQUEST_TIMEOUT'}));},120000);
       pending.set(id,{resolve:done,reject,timer});
@@ -184,7 +194,7 @@ async function startMcpProcess({modulePath,url,environment,directory,label}){
       });
     });
   }
-  const notify=(method,params)=>child.stdin.write(JSON.stringify({jsonrpc:'2.0',method,...(params===undefined?{}:{params})})+'\n');
+  const notify=(method,params)=>{requireInput();return child.stdin.write(JSON.stringify({jsonrpc:'2.0',method,...(params===undefined?{}:{params})})+'\n');};
   async function call(name,input={}){
     const result=await request('tools/call',{name,arguments:input});
     if(result?.isError){
@@ -195,17 +205,30 @@ async function startMcpProcess({modulePath,url,environment,directory,label}){
     const text=result?.content?.find(value=>value.type==='text')?.text;
     need(typeof text==='string','MCP_TOOL_RESULT_REQUIRED');return JSON.parse(text);
   }
-  let stopped=false;
-  return{pid:child.pid,request,notify,call,close:async()=>{
-    if(stopped)return;stopped=true;child.stdin.end();
-    let result=await Promise.race([terminal,delay(5000).then(()=>null)]);
-    if(!result){child.kill('SIGTERM');result=await Promise.race([terminal,delay(5000).then(()=>null)]);}
-    need(result,'MCP_PROCESS_STILL_ACTIVE');
-    lines.close();
-    const trace={schema:'native.questdb-managed-mcp-process.v1',pid:child.pid,...result,
-      requests:serial,notifications,stderr:Buffer.concat(stderr).toString('utf8')};
-    await atomic(join(directory,label+'-mcp-process.json'),trace);return trace;
-  }};
+  async function within(milliseconds){
+    const timeout=new AbortController();
+    try{return await Promise.race([terminal,delay(milliseconds,null,{signal:timeout.signal,ref:false})]);}
+    finally{timeout.abort();}
+  }
+  async function close(){
+    if(closedTrace)return closedTrace;
+    if(closePromise)return closePromise;
+    closingRequested=true;
+    closePromise=(async()=>{
+      if(!ended)try{child.stdin.end();}catch(issue){failInput(issue);}
+      let result=await within(5000);
+      if(!result){child.kill('SIGTERM');result=await within(5000);}
+      if(!result){child.kill('SIGKILL');result=await within(5000);}
+      need(result,'MCP_PROCESS_STILL_ACTIVE');
+      lines.close();
+      const trace={schema:'native.questdb-managed-mcp-process.v1',pid:child.pid,...result,
+        requests:serial,notifications,inputFailure:inputFailure?{code:inputFailure.code,causeCode:inputFailure.causeCode}:null,
+        stderr:Buffer.concat(stderr).toString('utf8')};
+      await atomic(join(directory,label+'-mcp-process.json'),trace);closedTrace=trace;return trace;
+    })();
+    try{return await closePromise;}finally{closePromise=null;}
+  }
+  return{pid:child.pid,request,notify,call,close};
 }
 async function allCaptures(client){
   const rows=[];let offset=0;
