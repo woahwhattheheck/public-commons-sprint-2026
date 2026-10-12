@@ -115,6 +115,35 @@ Each capture contains source row keys and original column keys. A mapping
 selects those keys, the exact native family, and a native `key`, `uid` or `guid`
 identity. No source number, locale or duration unit is inferred from a label.
 
+
+### Select a particular companion capture
+
+One original file can supply several captured views: for example, different
+roles or JSON pointers within an enterprise export. Read the selected edition's
+`companion_captures` array to select its exact view. Each descriptor includes
+`capture_id`, its original ordinal, source ID, label, role, format, full input
+profile, profile hash, original column keys and row count.
+
+A companion mapping may include the returned `capture_id` alongside its
+`source_id`:
+
+~~~json
+{
+  "source_id": "ORIGINAL_SOURCE_SHA256",
+  "capture_id": "CAPTURE_ID_FROM_THIS_EDITION",
+  "family": "tasks",
+  "identity": {"kind": "uid", "column": "column:0"},
+  "columns": [{"column": "column:1", "field": "TEXT1", "type": "string"}]
+}
+~~~
+
+A source ID alone continues to select a file with one capture. When several
+captures share its bytes, the mapping response supplies their descriptors for
+an explicit choice. Source-cell links retain the chosen capture ID, ordinal
+and profile hash. These selectors are derived beside the captured model;
+reading an older edition preserves its original model and content hash.
+
+
 ## What a captured edition contains
 
 | Content | Retained representation |

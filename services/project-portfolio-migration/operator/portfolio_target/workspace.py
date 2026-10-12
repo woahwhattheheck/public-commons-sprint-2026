@@ -128,7 +128,28 @@ class TargetWorkspace:
     def _run(self, kind, args, request_id):
         if kind == "intake":
             source = self.store.selected_upload(args["source"])
-            companions = [str(self.store.selected_upload(x)) for x in args.get("companions", [])]
+            companions = []
+            selected_companions = args.get("companions", [])
+            if not isinstance(selected_companions, list):
+                raise TargetError("COMPANION_UPLOADS", "Choose the original uploaded companion list.")
+            profile_fields = {"format", "role", "encoding", "delimiter", "json_pointer"}
+            for selected in selected_companions:
+                if not isinstance(selected, dict):
+                    raise TargetError("COMPANION_UPLOAD", "Keep each selected companion and its reader profile.")
+                if "source" in selected:
+                    if set(selected) - {"source", "label", "profile"}:
+                        raise TargetError("COMPANION_OPTIONS", "Use source, label and the original companion profile.")
+                    uploaded = selected["source"]
+                    profile = selected.get("profile", {})
+                    if not isinstance(profile, dict) or set(profile) - profile_fields:
+                        raise TargetError("COMPANION_PROFILE", "Choose format, role, encoding, delimiter and json_pointer.")
+                    label = selected.get("label")
+                else:
+                    # Original saved browser requests contain the upload object itself.
+                    uploaded, profile, label = selected, {}, None
+                path = self.store.selected_upload(uploaded)
+                companions.append({"path": str(path), "label": label if label is not None else path.name,
+                                   **profile})
             return self.portfolio.intake(request_id, source, label=args.get("label") or source.name,
                                          profile=args.get("profile"), companions=companions or None)
         if kind == "source_review":
