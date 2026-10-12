@@ -19,7 +19,7 @@ The second command prints the exact loopback URL and PID. Open that URL. Set `SF
 2. **Harvests:** Choose the discovered metadata prefix and explicit optional set/from/until. A stable operation ID identifies the entire continuation. The console follows all pages and retains every observed response.
 3. **Edition review:** Review added, updated, deleted, reinstated, unchanged, retained and older records. Choose an exact observation and reason for each conflicting record with the same identifier and datestamp. Record the reviewer and edition note.
 4. **Records:** Search every reviewed identifier, inspect its original header and metadata tree, and trace it to its original response page.
-5. **Projection:** Select an existing XML mapping or edit the exposed columns and capabilities. Inspect actual record metadata to choose namespace-expanded paths. The Dublin Core button is available when the selected prefix is `oai_dc`; each repeated field is preserved as a JSON-array string with an explicit missing-value policy.
+5. **Projection:** Select an existing XML mapping or edit the exposed columns and capabilities. Inspect actual record metadata to choose namespace-expanded paths. The metadata-fields button inspects the selected edition and offers an editable Dublin Core or DataCite preset; each repeated field is preserved as a JSON-array string with an explicit missing-value policy.
 6. **Exports:** Download the complete publisher source or save the whole workspace. The source package includes the reviewed dataset and complete response lineage. The workspace backup also retains interrupted work, prior attempts, conflicts and saved operator state.
 
 ## Repository and continuation semantics
@@ -147,10 +147,23 @@ In Projection, choose **Use repository metadata fields** after selecting a revie
 
 The DataCite preset retains the repository identifier and datestamp separately from the metadata identifier and its declared type. It exposes titles, creator names, subjects, related identifiers, rights, rights URIs and descriptions as JSON-array strings, preserving repeated values and order. Publication year is an explicit nullable integer; publisher, resource type, language and version are explicit nullable strings. Missing arrays become an explicitly selected empty array. The complete original XML remains available for attributes, entity relationships and richer future mappings.
 
-The original dataset engine supplies identifier, date, metadata identifier, publication year, publisher, resource type and language filters/sorts, plus publication-year ranges. The metadata preset allows up to 1 MiB of UTF-16 cell text so complete long descriptions can be preserved; the editable 64 MiB dataset budget and native response page budget remain explicit. Saving the mapping checks every row of the complete edition before creating a dataset. The preset is an editable operator choice; it does not change a source record.
+The original dataset engine supplies identifier, date, metadata identifier, publication year, publisher, resource type and language filters/sorts, plus publication-year ranges. The metadata preset allows up to 1,048,576 UTF-16 code units per cell so complete long descriptions can be preserved; the editable 64 MiB dataset budget and native response page budget remain explicit. Saving the mapping checks every row of the complete edition before creating a dataset. The preset is an editable operator choice; it does not change a source record.
 
 Use `python cli.py --workspace /absolute/workspace metadata-mapping --edition EDITION` to print the same plan for native use.
 
 ### Portable transport and private sessions
 
 Source exports retain the exact original XML and HTTP response bodies. The portable request log omits Cookie, Set-Cookie, Set-Cookie2, Authorization and Proxy-Authorization header values and lists the omitted header names. Each exchange retains a SHA-256 binding to its original canonical private exchange, and the capture manifest declares this transport policy. The complete original headers remain in the private workspace and its full backup. Publisher plans and merchant source packages carry the declared portable source bytes.
+
+
+## Reopen the complete Zenodo worked case
+
+The source-only entry point `examples/zenodo_20261011.py` imports the original unchanged acquisition archive, resumes the same retained operation IDs, reviews the complete selected population, and opens its original typed dataset. The archive is the 356,305-byte `adc6-oai-records-20261011.zip`, retained in the original [acquisition thread](https://tokenjunkielabs.slack.com/archives/C0BTB4SUCP9/p1791761425735799), file `F0C8EUSGMLJ`. Its expected SHA-256 is built into the entry point.
+
+```bash
+python sf30-seller-sdk/oai-pmh/examples/zenodo_20261011.py --archive /absolute/adc6-oai-records-20261011.zip --workspace /absolute/zenodo-workspace --serve
+```
+
+A new workspace receives the exact captured response bodies and observed transport; an existing matching workspace reuses its retained pages, edition and build. The script prints the same edition ID, build ID and native dataset snapshot, followed by the console URL. Add `--export /absolute/new-source-directory` or `--backup /absolute/new-backup.zip` to produce complete receiving artifacts before opening the console. A newly imported workspace records its actual current review time; the complete original saved backup preserves the earlier operator history.
+
+This case uses all 231 actual DataCite records from 2026-10-11T00:00:00Z through 2026-10-11T01:00:00Z. The five record pages are complete, and the separately retained first set-catalog page keeps its actual continuation.
