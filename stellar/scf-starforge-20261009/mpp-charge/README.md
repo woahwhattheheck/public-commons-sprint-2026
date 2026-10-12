@@ -30,6 +30,62 @@ The caller provides the existing private parent directory. The runtime template 
 
 The maintained package includes command **starforge mpp** and API export **@tokenjunkielabs/starforge-merchant/mpp**. Replace the source CLI path with `starforge mpp` for all commands below.
 
+### Receive the runtime with a small memory footprint
+
+The maintained streamed receiver installs the same original manifest and lockfile
+directly into the native dependency directory. It uses Python's standard library
+and keeps one package archive and one package extraction in flight:
+
+~~~sh
+starforge mpp runtime-receive /private/mpp-dependencies
+starforge mpp runtime-receive /private/mpp-dependencies --inspect
+~~~
+
+The original lock selects 82 packages, including the four nested dependency
+locations under ox and viem. Each package is fetched from its locked npm registry
+URL and checked against the original SHA512 integrity before extraction. The
+receiver preserves the complete locked package paths, package identities,
+executable files and command links. The native merchant and buyer continue to
+load this same directory through their existing dependencyRoot and loadNative
+interfaces.
+
+The receiver retains completed packages and their exact file descriptions under
+the private directory's .mpp-runtime state. Repeat the same command after an
+interruption to inspect completed packages and continue from the next unfinished
+package. Existing matching template files or package files can be adopted;
+conflicting original bytes identify the precise file that needs a separate
+installation directory. --inspect checks the completed tree and command links
+without registry requests.
+
+A named archive cache supports shared-worker receiving and an offline
+installation from retained original archives:
+
+~~~sh
+starforge mpp runtime-receive /private/mpp-dependencies \
+  --cache /private/mpp-archives
+
+starforge mpp runtime-receive /private/second-mpp-runtime \
+  --cache /private/mpp-archives --offline
+~~~
+
+The default per-install archive is released after that package is retained.
+An explicit cache keeps the original SHA512-addressed archives for another
+worker or installation. The final READY result includes the original lock and
+manifest hashes, received package/file counts, downloaded and installed byte
+counts, elapsed time and this receiver process's measured maximum resident
+memory.
+
+This command follows the current installation's --ignore-scripts --omit=dev
+selection. It uses locked production package locations and respects the lock's
+platform/optional flags. A private filesystem lease coordinates reception into
+one destination. MPP_RUNTIME_PYTHON selects an existing Python executable when
+the host does not name it python3. Node and the native MPP engine are used by the
+original merchant or customer command after receiving completes.
+
+The root manifest and lock are interpreted according to the original
+[npm lockfile format](https://docs.npmjs.com/cli/v11/configuring-npm/package-lock-json/)
+and [npm ci installation settings](https://docs.npmjs.com/cli/v11/commands/npm-ci/).
+
 ## Operate the workspace
 
 ~~~sh
