@@ -29,6 +29,7 @@ import { createMigrationRoutes } from '../blockworks/routes.mjs';
 import { readBrowserAssets } from '../../distribution/browser-assets.mjs';
 import { cachePackageBinding, cachePolicyRevisionApi } from './cache-policy-revisions.mjs';
 import { createHarConsoleRoutes } from '../har/workspace-http.mjs';
+import { createPackageTransferRoutes } from './package-transfer-http.mjs';
 
 const here = fileURLToPath(new URL('.', import.meta.url));
 const STATIC = await readBrowserAssets(new URL('./browser-assets.json',import.meta.url));
@@ -77,6 +78,7 @@ export async function startWorkspace({ parent, port=0, noSignals=false, oauthCon
   if(typeof allowLoopbackOAuth!=='boolean')throw new TypeError('Loopback OAuth must be an explicit host option');
   const registry=await openOAuthConnectionRegistry({connections:oauthConnections,env:runtimeEnv,allowLoopback:allowLoopbackOAuth,lookup:oauthLookup});
   const oauth=createOAuthWorkspaceAdapter({registry,origin:()=>origin,allowLoopback:allowLoopbackOAuth});
+  const packageTransfer=createPackageTransferRoutes({parent:output,validatePlan:oauth.validatePlan});
   let harPromise;
   const har = () => harPromise ??= createHarConsoleRoutes({parent:output}).catch(error=>{harPromise=null;throw error;});
   let migrationPromise, migrationInstance;
@@ -177,6 +179,7 @@ export async function startWorkspace({ parent, port=0, noSignals=false, oauthCon
       if (!pathname.startsWith('/api/')) return send(404,{error:'Not found'});
       if (!constantEqual(req.headers['x-workspace-token'],token)) return send(401,{error:'Open the complete workspace URL printed by the launcher'});
       if (req.method==='GET') {
+        if (pathname.startsWith('/api/package-transfer/')) return await packageTransfer.get(pathname,url,send);
         if (pathname.startsWith('/api/har/')) return await (await har()).get(pathname,url,send,res);
         if(pathname.startsWith('/api/cache-operations/'))return await cacheOperation(req,res,url);
         if(pathname==='/api/oauth/connections')return send(200,await oauth.list());
@@ -265,12 +268,13 @@ export async function startWorkspace({ parent, port=0, noSignals=false, oauthCon
       if (pathname==='/api/revisions/review')return send(200,await reviewMerchantRevision({...body,parent:output,validatePlan:oauth.validatePlan}));
       if (!['/api/save','/api/start','/api/stop','/api/accept','/api/cache/invalidate','/api/operations/issue','/api/operations/download','/api/operations/load','/api/operations/handoff',
         '/api/customer/create','/api/customer/prepare','/api/customer/open','/api/customer/close','/api/oauth/command',
-        '/api/revisions/draft','/api/revisions/save','/api/revisions/stage'].includes(pathname) && !pathname.startsWith('/api/migrations/') && !pathname.startsWith('/api/har/')) return send(404,{error:'Not found'});
+        '/api/revisions/draft','/api/revisions/save','/api/revisions/stage'].includes(pathname) && !pathname.startsWith('/api/migrations/') && !pathname.startsWith('/api/har/') && !pathname.startsWith('/api/package-transfer/')) return send(404,{error:'Not found'});
       if (busy) return send(409,{error:'A workspace operation is in progress'});
       busy=true;
       let finishMutation;
       mutationDone=new Promise(yes=>{finishMutation=yes;});
       try {
+        if (pathname.startsWith('/api/package-transfer/')) return await packageTransfer.post(pathname,body,send);
         if (pathname.startsWith('/api/har/')) return await (await har()).post(pathname,body,send,res);
         if (pathname.startsWith('/api/migrations/')) return await (await migrations()).post(pathname,body,send);
         if ((pathname==='/api/start'||pathname==='/api/customer/open') && migrationInstance?.app.releases.owned().length)
@@ -316,6 +320,8 @@ export async function startWorkspace({ parent, port=0, noSignals=false, oauthCon
           return send(200,customerView());
         }
         if (pathname==='/api/stop') {
+          if(body.runtimeId!==undefined&&(!active||body.runtimeId!==active.runtimeId))
+            return send(409,{error:'The managed runtime changed. Refresh its current status before stopping.'});
           if (active) { await active.session.close(); active=null; }
           return send(200,view());
         }
@@ -431,6 +437,7 @@ export async function startWorkspace({ parent, port=0, noSignals=false, oauthCon
     const closed=new Promise((yes,no)=>server.close(e=>e?no(e):yes())).catch(error=>{errors.push(error);});
     await mutationDone;
     await Promise.allSettled([...cacheRequests]);
+    await attempt(()=>packageTransfer.close());
     for(const opening of cacheWorkspaces.values()) await attempt(async()=>{
       const workspace=await opening.catch(()=>null);if(workspace)await workspace.close();
     });
