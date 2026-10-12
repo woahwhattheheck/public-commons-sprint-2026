@@ -32,6 +32,14 @@ The software's license and the included research database's license are
 separate. Every dataset and financial total for this input is computed by the
 original IATI parser and native workspace.
 
+The complete original Transparency International publisher and official metadata
+are included under `examples/transparency-international-2026/`. The public XML
+was acquired on 12 October 2026 and retains its declared 2 April 2026 generation
+time. Its adjacent notice and unchanged official `cc-by` metadata travel with
+the complete customer package through the optional `publisherFiles` selection.
+The two included publishers run through separate complete installed operations
+with their original review histories and source identities.
+
 ## Source-owned components
 
 | Component | Responsibility |
