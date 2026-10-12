@@ -439,7 +439,9 @@ function renderConnectionContext() {
   $('capture-page-size').max = current?.responseLimit || 1000;
   $('capture-page').value = '1';
   const extensionFields = document.createDocumentFragment();
+  const reservedQueryFields=new Set(['service_request_id','page','page_size','per_page','start_date','end_date','service_code','status','extensions',sourcePageSizeParameter(current)]);
   for (const key of current?.queryExtensions || []) {
+    if(reservedQueryFields.has(key))continue;
     const label = element('label',null,'field');
     label.append(element('span',key));
     const input = element('input');
@@ -449,7 +451,7 @@ function renderConnectionContext() {
     extensionFields.append(label);
   }
   $('capture-extension-fields').replaceChildren(extensionFields);
-  text('capture-scope-help',current ? 'This provider is configured for ' + (current.pagination ? 'page / page_size pagination' : 'a single returned collection') + ' with response limit ' + (current.responseLimit || 1000) + '. The capture retains its exact query and returned source.' : 'Choose a connection to capture its source.');
+  text('capture-scope-help',current ? 'This provider is configured for ' + (current.pagination ? 'page / '+sourcePageSizeParameter(current)+' pagination' : 'a single returned response') + ' with response limit ' + (current.responseLimit || 1000) + '. The capture retains its exact query and returned source.'+(current.minimumRequestIntervalMs ? ' Source calls are spaced by at least '+current.minimumRequestIntervalMs+' milliseconds.' : '') : 'Choose a connection to capture its source.');
   renderStatusOptions();
   renderCaptureKind();
   renderCollectionForm();
@@ -606,6 +608,24 @@ function clearDraft(key=draftId()) {
   delete draftCache[key];
   try{sessionStorage.setItem(draftsKey,JSON.stringify(draftCache));}catch{}
 }
+function renderSourceNotes(item) {
+  const source=item?.source || {},fragment=document.createDocumentFragment();
+  if(source.status_notes!==undefined && source.status_notes!==null && source.status_notes!==''){
+    const note=element('section',null,'source-note');
+    note.append(element('strong','Source status note'),element('p',objectText(source.status_notes)));
+    fragment.append(note);
+  }
+  if(Array.isArray(source.notes))for(const original of source.notes){
+    const note=element('section',null,'source-note');
+    const object=original && typeof original==='object' ? original : null;
+    note.append(element('strong',object?.datetime ? 'Public note · '+date(object.datetime) : 'Public source note'));
+    note.append(element('p',object?.description===undefined ? objectText(original) : objectText(object.description)));
+    note.append(button('Original note',()=>showInspector('Original public source note',original,'Retained from request '+selected.id+' in this exact source edition.')));
+    fragment.append(note);
+  }
+  if(!fragment.childNodes.length)fragment.append(element('p','No public notes were returned in this source edition.','small muted'));
+  $('detail-source-notes').replaceChildren(fragment);
+}
 function renderDetail() {
   if(!selected)return;
   const item=selected.item;
@@ -629,6 +649,7 @@ function renderDetail() {
   addFact(facts,'Retained versions',item.versionCount);
   addFact(facts,'Selected source capture',item.captureId);
   $('detail-facts').replaceChildren(facts);
+  renderSourceNotes(item);
   text('detail-source',json(item.source ?? item));
   const links=[];
   for(const [label,value] of [['Source record',item.source?.service_request_url || item.source?.url],['Source media',item.source?.media_url]]){
@@ -875,7 +896,7 @@ async function captureSource() {
     if(start)query.start_date=start;
     if(end)query.end_date=end;
     if(connection().extendedAttributes && $('capture-extended').checked)query.extensions=true;
-    if(connection().pagination){query.page=Number($('capture-page').value);query.page_size=Number($('capture-page-size').value);}
+    if(connection().pagination){query.page=Number($('capture-page').value);query[sourcePageSizeParameter(connection())]=Number($('capture-page-size').value);}
     for(const input of $('capture-extension-fields').querySelectorAll('[data-query-extension]'))if(input.value.trim())query[input.dataset.queryExtension]=input.value.trim();
   }
   const input={connectionId:targetConnection,kind,query};
@@ -893,15 +914,66 @@ function collectionsFor(id = connectionId) {
   return (workspace?.collections || []).filter((item)=>item.connectionId===id).sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt)) || String(b.id).localeCompare(String(a.id)));
 }
 function selectedCollection() { return workspace?.collections?.find((item)=>item.id===collectionId) || null; }
+function collectionTimeBasis(item) { return item?.policy?.timeBasis==='updated' ? 'updated' : 'created'; }
+function collectionStrategy(item) { return item?.policy?.strategy==='pages' ? 'pages' : 'windows'; }
+function collectionRangeFields(basis) {
+  return basis==='updated' ? {start:'updated_after',end:'updated_before',label:'Updated'} : {start:'start_date',end:'end_date',label:'Created'};
+}
+function supportsUpdatedCollection(value) {
+  const fields=new Set(value?.queryExtensions || []);
+  for(const range of value?.queryDateRanges || []){fields.add(range.start);fields.add(range.end);}
+  return fields.has('updated_after') && fields.has('updated_before');
+}
+function sourcePageSizeParameter(value) {
+  return value?.responseLimitParameter || (value?.pagination ? 'page_size' : '');
+}
+function collectionSizeParameter(value,strategy) {
+  return value?.responseLimitParameter || (strategy==='pages' && value?.pagination ? 'page_size' : '');
+}
+function localUtcValue(value) {
+  if(!value)return '';
+  const instant=new Date(value);
+  return Number.isNaN(instant.getTime()) ? '' : instant.toISOString().replace(/Z$/,'');
+}
+function renderCollectionModes(resetAdditional=false) {
+  const current=connection(),basis=$('collection-time-basis').value,strategy=$('collection-strategy').value;
+  const fields=collectionRangeFields(basis),other=collectionRangeFields(basis==='updated' ? 'created' : 'updated');
+  $('collection-time-basis').querySelector('option[value="updated"]').disabled=!supportsUpdatedCollection(current);
+  $('collection-strategy').querySelector('option[value="pages"]').disabled=!current?.pagination;
+  text('collection-start-label',fields.label+' since · UTC');text('collection-end-label',fields.label+' until · UTC');
+  text('collection-other-start-label','Additional '+other.label.toLowerCase()+' since · UTC');
+  text('collection-other-end-label','Additional '+other.label.toLowerCase()+' until · UTC');
+  $('collection-additional-range').hidden=basis==='created' && !supportsUpdatedCollection(current);
+  if(resetAdditional){$('collection-other-start').value='';$('collection-other-end').value='';}
+  const parameter=collectionSizeParameter(current,strategy);
+  $('collection-source-size-field').hidden=!parameter;
+  text('collection-source-size-label',strategy==='pages' ? 'Results per source page' : 'Results per source response');
+  text('collection-source-size-help',parameter ? 'Original '+parameter+' parameter; at most '+(current?.responseLimit || 1000)+'.' : '');
+  $('collection-source-size').max=String(current?.responseLimit || 1000);
+  text('collection-refinement-help',strategy==='pages'
+    ? 'Maximum size, overlap and query precision define the initial date intervals. Full responses continue by source page; the saved minimum refinement applies to window traversal.'
+    : 'A response at its source limit refines into smaller intervals using this precision, minimum size and overlap.');
+  text('collection-traversal-help',strategy==='pages'
+    ? 'Page traversal keeps the same date bounds and original numbered pages. A full page leads to its successor; a short page ends the sequence. A repeated complete page remains visible as limited.'
+    : 'Window traversal retains each capped response and refines its interval using the saved precision and overlap.');
+  const spacing=current?.minimumRequestIntervalMs ? ' Source calls are spaced by at least '+current.minimumRequestIntervalMs+' milliseconds.' : '';
+  text('collection-policy-help',current
+    ? 'The saved '+fields.label.toLowerCase()+' period uses '+current.name+' with declared response limit '+(current.responseLimit || 1000)+'. Every original response and source edition remains retained.'+spacing
+    : 'Save a jurisdiction connection before planning a source collection.');
+}
 function collectionLabel(item) {
   return (item.name || short(item.id,16))+' · '+(item.state || 'PLANNED')+' · '+(item.counts?.uniqueRequests ?? 0)+' requests';
 }
 function collectionCoverage(item) {
-  if(item.state==='COMPLETE' && item.capResolved===true)return 'All planned source windows resolved within the declared response limit';
-  if(item.state==='LIMITED')return 'Retained selection includes '+(item.counts?.limitedWindows ?? 0)+' windows still at the source limit';
-  if(item.state==='COMPLETE')return 'All planned source windows retained; inspect the recorded coverage';
-  return (item.counts?.capturedWindows ?? 0)+' captured windows · '+(item.counts?.pendingWindows ?? 0)+' pending · '+(item.counts?.activeWindows ?? 0)+' active';
+  const pages=collectionStrategy(item)==='pages',members=pages ? 'source pages' : 'source windows';
+  if(item.state==='COMPLETE' && item.capResolved===true)return pages
+    ? 'Every planned source-page sequence reached a short response'
+    : 'All planned source windows resolved within the declared response limit';
+  if(item.state==='LIMITED')return 'Retained selection includes '+(item.counts?.limitedWindows ?? 0)+' unresolved '+members;
+  if(item.state==='COMPLETE')return 'All planned '+members+' retained; inspect the recorded coverage';
+  return (item.counts?.capturedWindows ?? 0)+' completed '+members+' · '+(item.counts?.pendingWindows ?? 0)+' pending · '+(item.counts?.activeWindows ?? 0)+' active';
 }
+
 function sourceChoice(kind,id) { return id ? kind+':'+id : ''; }
 function parseSourceChoice(value) {
   if(value.startsWith('collection:'))return {kind:'collection',id:value.slice(11)};
@@ -921,29 +993,32 @@ function updateCollectionSummary(summary) {
 function renderCollectionForm() {
   const current=connection();
   text('collection-connection',current?.name || 'No connection selected');
-  const context=JSON.stringify([connectionId,current?.queryExtensions,current?.extendedAttributes,current?.responseLimit]);
+  const context=JSON.stringify([connectionId,current?.queryExtensions,current?.queryDateRanges,current?.extendedAttributes,current?.responseLimit,current?.responseLimitParameter,current?.pagination,current?.minimumRequestIntervalMs]);
   if(collectionFormContext===context)return;
   collectionFormContext=context;
   const previous=capturesFor().find((item)=>item.kind==='requests')?.query || {};
   const fragment=document.createDocumentFragment();
+  const reserved=new Set(['service_request_id','page','page_size','per_page','start_date','end_date','updated_after','updated_before','service_code','status','extensions',sourcePageSizeParameter(current)]);
   for(const key of current?.queryExtensions || []){
-    if(['service_request_id','page','page_size','start_date','end_date','service_code','status','extensions'].includes(key))continue;
-    const label=element('label',null,'field');
-    label.append(element('span',key));
-    const input=element('input');
-    input.dataset.collectionExtension=key;
-    input.autocomplete='off';
+    if(reserved.has(key))continue;
+    const label=element('label',null,'field');label.append(element('span',key));
+    const input=element('input');input.dataset.collectionExtension=key;input.autocomplete='off';
     input.value=previous[key]===undefined ? '' : String(previous[key]);
     label.append(input);fragment.append(label);
   }
   $('collection-extension-fields').replaceChildren(fragment);
   $('collection-service').value=previous.service_code || '';
   $('collection-status').value=previous.status || '';
+  $('collection-time-basis').value='created';$('collection-strategy').value='windows';
+  $('collection-other-start').value='';$('collection-other-end').value='';
+  const parameter=sourcePageSizeParameter(current);
+  $('collection-source-size').value=String(previous[parameter] || current?.responseLimit || 1000);
   $('collection-extended-field').hidden=!current?.extendedAttributes;
   $('collection-extended').checked=!!current?.extendedAttributes && previous.extensions!=='false';
   $('collection-editor').hidden=true;
-  text('collection-policy-help',current ? 'The saved plan uses '+current.name+' with declared response limit '+(current.responseLimit || 1000)+'. Responses at that limit refine into smaller date windows; parent originals and repeated observations remain retained. Query precision is an operator setting.' : 'Save a jurisdiction connection before planning a source collection.');
+  renderCollectionModes();
 }
+
 function renderCollectionSelectors() {
   const entries=collectionsFor().map((item)=>({value:item.id,label:collectionLabel(item)}));
   options('collection-choice',entries,collectionId,entries.length ? 'Choose a saved collection' : 'No saved collections');
@@ -969,9 +1044,9 @@ function renderCollectionControls() {
   text('collection-pause',current?.pauseRequested ? 'Pause requested' : 'Pause after current source');
   for(const id of ['collection-inspect','collection-copy','collection-export-report','collection-export-csv','collection-export-json','collection-export-workspace'])$(id).disabled=!current;
   if(waiting)text('collection-run-help','The saved source outcome gives a resume time of '+date(current.resumeAt)+'. The original progress remains available below.');
-  else if(current?.state==='LIMITED')text('collection-run-help','These minimum-size source windows still reached the declared cap. Copy this plan to choose a finer supported query precision or a more specific source filter; the current originals stay available.');
+  else if(current?.state==='LIMITED')text('collection-run-help',collectionStrategy(current)==='pages' ? 'The source repeated a full page or reached a saved traversal limit. Inspect the original page and problem, then copy this plan with a useful source filter when appropriate; the current originals stay available.' : 'These minimum-size source windows still reached the declared cap. Copy this plan to choose a finer supported query precision or a more specific source filter; the current originals stay available.');
   else if(current?.state==='RUNNING')text('collection-run-help','This original run is collecting the saved period. Pause retains the current source response before stopping. Progress refreshes from the local journal.');
-  else text('collection-run-help','Run processes this saved plan. A paused or interrupted run resumes its remaining windows through a new retained run command after the original outcome is reconciled.');
+  else text('collection-run-help','Run processes this saved plan. A paused or interrupted run resumes its remaining source members through a new retained run command after the original outcome is reconciled.');
 }
 function scheduleCollectionRefresh(delay=2500) {
   clearTimeout(collectionRefreshTimer);
@@ -1008,23 +1083,24 @@ function renderCollectionDetail() {
   const current=collectionPage.collection;
   if(!current || current.id!==collectionId){$('collection-detail').hidden=true;return;}
   $('collection-detail').hidden=false;
-  text('collection-context',(current.name || short(current.id))+' · '+date(current.query?.start_date)+' through '+date(current.query?.end_date)+' · '+connectionName(current.connectionId));
+  const pages=collectionStrategy(current)==='pages',range=collectionRangeFields(collectionTimeBasis(current));
+  text('collection-context',(current.name || short(current.id))+' · '+range.label+' '+date(current.query?.[range.start])+' through '+date(current.query?.[range.end])+' · '+(pages ? 'Source pages' : 'Source windows')+' · '+connectionName(current.connectionId));
   text('collection-state',current.state);
   const outcomes={
     PLANNED:'The fixed source period and provider settings are saved. Run this plan to collect its original responses.',
-    RUNNING:'Collecting the saved source windows. Every completed response and refinement is retained as progress is made.',
-    PAUSED:'The requested pause is saved after retaining the current source response. Resume continues the remaining windows.',
-    INTERRUPTED:'The run retained its progress and source outcome. Inspect the saved error and resume the remaining windows when its cause is resolved.',
+    RUNNING:'Collecting the saved '+(pages ? 'source pages' : 'source windows')+'. Every completed response is retained as progress is made.',
+    PAUSED:'The requested pause is saved after retaining the current source response. Resume continues the remaining '+(pages ? 'pages' : 'windows')+'.',
+    INTERRUPTED:'The run retained its progress and source outcome. Inspect the saved error and resume the remaining source members when its cause is resolved.',
     COMPLETE:collectionCoverage(current)+'.',
-    LIMITED:collectionCoverage(current)+'. Inspect those windows and their exact source responses.'
+    LIMITED:collectionCoverage(current)+'. Inspect those members and their exact source responses.'
   };
   text('collection-outcome',outcomes[current.state] || String(current.state || 'Saved collection'));
   const counts=current.counts || {};
   $('collection-counts').replaceChildren(...[
     ['Unique requests',counts.uniqueRequests],
     ['Original captures',counts.originalCaptureCount],
-    ['Pending windows',counts.pendingWindows],
-    ['Windows at the limit',counts.limitedWindows]
+    [pages ? 'Pending pages' : 'Pending windows',counts.pendingWindows],
+    ['Unresolved source members',counts.limitedWindows]
   ].map(([label,value])=>{const node=element('div',null,'summary-item');node.append(element('strong',value ?? 0),element('span',label));return node;}));
   const facts=document.createDocumentFragment();
   addFact(facts,'Created',date(current.createdAt));
@@ -1032,41 +1108,45 @@ function renderCollectionDetail() {
   addFact(facts,'Returned source rows',counts.returnedRows);
   addFact(facts,'Repeated observations',counts.duplicateObservations);
   addFact(facts,'Requests with versions',counts.changedRequests);
-  addFact(facts,'Outside requested period',counts.outOfWindowRows);
+  addFact(facts,'Collection date basis',range.label+' time');
+  addFact(facts,'Traversal',pages ? 'Original numbered pages' : 'Refined date windows');
+  addFact(facts,'Outside selected '+range.label.toLowerCase()+' period',counts.outOfWindowRows);
   addFact(facts,'Unspecified source date',counts.unknownDateRows);
-  addFact(facts,'Windows refined',counts.splitWindows);
-  addFact(facts,'Failed source windows',counts.failedWindows);
+  addFact(facts,pages ? 'Full pages continued' : 'Windows refined',pages ? counts.pagedWindows : counts.splitWindows);
+  addFact(facts,'Failed source members',counts.failedWindows);
+  addFact(facts,'Recorded source population',current.interpretation);
   addFact(facts,'Pause requested',current.pauseRequested ? 'Yes; the current response is retained first' : null);
   addFact(facts,'Resume time',current.resumeAt ? date(current.resumeAt) : null);
   $('collection-facts').replaceChildren(facts);
   text('collection-plan-json',json({id:current.id,connection:collectionPage.connection,query:current.query,policy:current.policy}));
   $('collection-error').hidden=!current.lastError;
   text('collection-error-json',current.lastError ? json(current.lastError) : '');
-  text('collection-window-total',collectionPage.total+' saved windows · '+(counts.activeWindows || 0)+' active');
+  text('collection-window-total',collectionPage.total+' saved '+(pages ? 'pages' : 'windows')+' · '+(counts.activeWindows || 0)+' active');
   const nodes=collectionPage.items;
-  if(!nodes.length)emptyRows('collection-windows',6,'The saved collection currently has no source windows.');
+  if(!nodes.length)emptyRows('collection-windows',6,'The saved collection currently has no source members.');
   else $('collection-windows').replaceChildren(...nodes.map((item)=>{
     const row=element('tr');
-    const period=cell(row,date(item.startDate));
+    const period=cell(row,item.page ? 'Page '+item.page+' · '+date(item.startDate) : date(item.startDate));
     period.append(element('span','to '+date(item.endDate),'muted small'));
-    if(item.parentId)period.append(element('div','Refined from '+short(item.parentId,14),'collection-refinement'));
-    if(item.children?.length)period.append(element('div',item.children.length+' retained child windows','collection-refinement'));
+    if(item.parentId)period.append(element('div',(pages ? 'Continued from ' : 'Refined from ')+short(item.parentId,14),'collection-refinement'));
+    if(item.children?.length)period.append(element('div',pages ? 'Next source page retained in plan' : item.children.length+' retained child windows','collection-refinement'));
+    if(item.problem)period.append(element('div',item.problem==='REPEATED_SOURCE_PAGE' ? 'The source repeated a complete page; retained as limited.' : item.problem,'small'));
     cell(row).append(element('span',item.state,'badge'));
     const capture=item.capture;
     cell(row,capture?.rowCount ?? '—');
     const limit=capture?.receipt?.coverage?.documentedLimit ?? capture?.responseLimit ?? collectionPage.connection?.responseLimit;
     const cap=cell(row,limit ?? '—');
-    if(capture?.saturated || capture?.receipt?.coverage?.mayBeTruncated)cap.append(element('span','Returned at limit','small muted'));
+    if(capture?.saturated || capture?.receipt?.coverage?.mayBeTruncated)cap.append(element('span',pages ? 'Full source page' : 'Returned at limit','small muted'));
     cell(row,Array.isArray(item.attempts) ? item.attempts.length : item.attempts ?? 0);
     const actions=element('div',null,'collection-member-actions');
-    actions.append(button('Window',()=>showInspector('Source window '+short(item.id),item,'Saved interval, attempts, refinement, and source metadata.')));
+    actions.append(button(pages ? 'Page' : 'Window',()=>showInspector((pages ? 'Source page '+item.page+' · ' : 'Source window ')+short(item.id),item,'Saved date bounds, original source page, attempts, continuation and source metadata.')));
     if(capture?.id){
       actions.append(button('Receipt',()=>inspectCapture(capture.id)),button('Original',()=>downloadExport('source',capture.id)));
     }
     cell(row).append(actions);
     return row;
   }));
-  text('collection-window-range',collectionPage.total ? (collectionPage.offset+1)+'–'+Math.min(collectionPage.offset+nodes.length,collectionPage.total)+' of '+collectionPage.total+' source windows' : '0 source windows');
+  text('collection-window-range',collectionPage.total ? (collectionPage.offset+1)+'–'+Math.min(collectionPage.offset+nodes.length,collectionPage.total)+' of '+collectionPage.total+(pages ? ' source pages' : ' source windows') : '0 source members');
   $('collection-window-prev').disabled=collectionPage.offset<=0;
   $('collection-window-next').disabled=collectionPage.nextOffset===null;
   renderCollectionControls();
@@ -1084,10 +1164,12 @@ async function chooseCollection(id) {
   if(requestSource==='collection')await loadRequests();
 }
 function collectionFormValue() {
-  if(!connection())throw new Error('Select a saved jurisdiction connection.');
-  const name=$('collection-name').value.trim();
-  const start=utcInput($('collection-start').value);
-  const end=utcInput($('collection-end').value);
+  const current=connection();if(!current)throw new Error('Select a saved jurisdiction connection.');
+  const name=$('collection-name').value.trim(),basis=$('collection-time-basis').value,strategy=$('collection-strategy').value;
+  if(!['created','updated'].includes(basis) || !['windows','pages'].includes(strategy))throw new Error('Select a source date basis and traversal.');
+  if(basis==='updated' && !supportsUpdatedCollection(current))throw new Error('This connection must declare updated_after and updated_before before collecting by update time.');
+  if(strategy==='pages' && !current.pagination)throw new Error('Page traversal requires a connection with declared pagination.');
+  const start=utcInput($('collection-start').value),end=utcInput($('collection-end').value);
   if(!name || !start || !end)throw new Error('Enter a collection name and the complete fixed UTC period.');
   if(start>=end)throw new Error('The collection Until timestamp must be later than Since.');
   const policy={
@@ -1096,6 +1178,8 @@ function collectionFormValue() {
     boundaryOverlapMs:Number($('collection-overlap-ms').value),
     queryQuantumMs:Number($('collection-quantum-ms').value)
   };
+  if(basis==='updated')policy.timeBasis='updated';
+  if(strategy==='pages')policy.strategy='pages';
   if(!Number.isSafeInteger(policy.maxWindowDays) || policy.maxWindowDays<1 || policy.maxWindowDays>90)throw new Error('Choose a whole number from 1 to 90 days for the maximum initial window.');
   if(!Number.isSafeInteger(policy.queryQuantumMs) || policy.queryQuantumMs<1 || policy.queryQuantumMs>86400000)throw new Error('Choose a positive whole-millisecond query precision of at most one day.');
   if(!Number.isSafeInteger(policy.minimumWindowMs) || policy.minimumWindowMs<policy.queryQuantumMs || policy.minimumWindowMs>policy.maxWindowDays*86400000 || policy.minimumWindowMs%policy.queryQuantumMs!==0)throw new Error('The minimum window must be a positive multiple of the selected query precision within the maximum initial window.');
@@ -1104,10 +1188,26 @@ function collectionFormValue() {
   for(const node of $('collection-extension-fields').querySelectorAll('[data-collection-extension]'))if(node.value.trim())query[node.dataset.collectionExtension]=node.value.trim();
   if($('collection-service').value.trim())query.service_code=$('collection-service').value.trim();
   if($('collection-status').value.trim())query.status=$('collection-status').value.trim();
-  query.start_date=start;query.end_date=end;
-  if(connection().extendedAttributes && $('collection-extended').checked)query.extensions=true;
+  const fields=collectionRangeFields(basis);query[fields.start]=start;query[fields.end]=end;
+  if(!$('collection-additional-range').hidden){
+    const otherStart=utcInput($('collection-other-start').value),otherEnd=utcInput($('collection-other-end').value);
+    if(!!otherStart!==!!otherEnd)throw new Error('Enter both ends of the additional source-date filter, or leave both empty.');
+    if(otherStart && otherEnd){
+      if(otherStart>=otherEnd)throw new Error('The additional source-date filter must end after it starts.');
+      const other=collectionRangeFields(basis==='updated' ? 'created' : 'updated');
+      query[other.start]=otherStart;query[other.end]=otherEnd;
+    }
+  }
+  const sizeParameter=collectionSizeParameter(current,strategy);
+  if(sizeParameter){
+    const size=Number($('collection-source-size').value),cap=current.responseLimit || 1000;
+    if(!Number.isSafeInteger(size) || size<1 || size>cap)throw new Error('Choose a source response size from 1 to '+cap+'.');
+    query[sizeParameter]=size;
+  }
+  if(current.extendedAttributes && $('collection-extended').checked)query.extensions=true;
   return {connectionId,name,query,policy};
 }
+
 async function createCollection(runNow=false) {
   if(!$('collection-form').reportValidity())return;
   const input=collectionFormValue();
@@ -1160,23 +1260,23 @@ async function recoverCollectionRun() {
   notify('Recovered the complete original run command. Inspect its current outcome or retry the same saved request to continue its remaining windows.');
 }
 function copyCollectionPlan() {
-  const current=selectedCollection();
-  if(!current)return;
-  $('collection-editor').hidden=false;
-  $('collection-name').value=(current.name || 'Collection')+' — next selection';
-  $('collection-start').value=new Date(current.query.start_date).toISOString().slice(0,19);
-  $('collection-end').value=new Date(current.query.end_date).toISOString().slice(0,19);
-  $('collection-service').value=current.query.service_code || '';
-  $('collection-status').value=current.query.status || '';
+  const current=selectedCollection();if(!current)return;
+  $('collection-editor').hidden=false;$('collection-name').value=(current.name || 'Collection')+' — next selection';
+  const basis=collectionTimeBasis(current),fields=collectionRangeFields(basis),other=collectionRangeFields(basis==='updated' ? 'created' : 'updated');
+  $('collection-time-basis').value=basis;$('collection-strategy').value=collectionStrategy(current);
+  $('collection-start').value=localUtcValue(current.query[fields.start]);$('collection-end').value=localUtcValue(current.query[fields.end]);
+  $('collection-other-start').value=localUtcValue(current.query[other.start]);$('collection-other-end').value=localUtcValue(current.query[other.end]);
+  $('collection-service').value=current.query.service_code || '';$('collection-status').value=current.query.status || '';
   for(const node of $('collection-extension-fields').querySelectorAll('[data-collection-extension]'))node.value=current.query[node.dataset.collectionExtension] ?? '';
   $('collection-extended').checked=current.query.extensions===true || current.query.extensions==='true';
-  $('collection-max-days').value=current.policy.maxWindowDays;
-  $('collection-min-ms').value=current.policy.minimumWindowMs;
-  $('collection-overlap-ms').value=current.policy.boundaryOverlapMs;
-  $('collection-quantum-ms').value=current.policy.queryQuantumMs ?? 1000;
-  $('collection-editor').scrollIntoView({behavior:'smooth',block:'start'});
-  $('collection-name').focus();
+  $('collection-max-days').value=current.policy.maxWindowDays;$('collection-min-ms').value=current.policy.minimumWindowMs;
+  $('collection-overlap-ms').value=current.policy.boundaryOverlapMs;$('collection-quantum-ms').value=current.policy.queryQuantumMs ?? 1000;
+  const parameter=sourcePageSizeParameter(connection());
+  $('collection-source-size').value=String(current.query[parameter] || connection()?.responseLimit || 1000);
+  renderCollectionModes();
+  $('collection-editor').scrollIntoView({behavior:'smooth',block:'start'});$('collection-name').focus();
 }
+
 async function openCollectionRequests() {
   if(!selectedCollection())throw new Error('Select a saved source collection.');
   requestSource='collection';
@@ -1370,7 +1470,7 @@ function renderConnections() {
     const identity=cell(row,item.name || item.id);identity.append(element('span',item.id,'small muted'));
     const endpoint=cell(row);const link=sourceLink(item.baseUrl,item.baseUrl);endpoint.append(link || element('span',item.baseUrl));
     cell(row,item.jurisdictionId || 'Provider default');
-    cell(row,[(item.pagination ? 'Paginated' : 'Single collection'),'limit '+(item.responseLimit || 1000),item.extendedAttributes ? 'extended attributes' : '',item.apiKeyEnv ? 'key: '+item.apiKeyEnv : ''].filter(Boolean).join(' · '));
+    cell(row,[(item.pagination ? 'Paged source' : 'Single response'),'limit '+(item.responseLimit || 1000)+(item.responseLimitParameter ? ' via '+item.responseLimitParameter : ''),item.extendedAttributes ? 'extended attributes' : '',item.minimumRequestIntervalMs ? 'spacing '+item.minimumRequestIntervalMs+' ms' : '',item.apiKeyEnv ? (item.apiKeyTransport==='bearer' ? 'Bearer key: ' : 'key: ')+item.apiKeyEnv : ''].filter(Boolean).join(' · '));
     const actions=element('div',null,'actions');
     actions.append(button('Use',async()=>{await chooseConnection(item.id);$('active-connection').value=item.id;switchView('requests');}));
     actions.append(button('Edit',()=>editConnection(item.id)));
@@ -1397,6 +1497,10 @@ function editConnection(id='') {
   $('connection-discovery-url').value=value.discoveryUrl || '';
   $('connection-key-parameter').value=value.apiKeyParameter || '';
   $('connection-key-env').value=value.apiKeyEnv || '';
+  $('connection-key-transport').value=value.apiKeyTransport || 'query';
+  $('connection-request-spacing').value=value.minimumRequestIntervalMs ?? 0;
+  $('connection-limit-parameter').value=value.responseLimitParameter || '';
+  $('connection-date-ranges').value=value.queryDateRanges?.length ? json(value.queryDateRanges) : '';
   $('connection-response-limit').value=value.responseLimit || 1000;
   $('connection-statuses').value=(value.statusValues || []).join(', ');
   $('connection-query-extensions').value=(value.queryExtensions || []).join(', ');
@@ -1424,11 +1528,23 @@ async function saveConnection() {
     extendedAttributes:$('connection-extended').checked,
     responseLimit:Number($('connection-response-limit').value)
   };
-  for(const [key,input] of [['apiKeyEnv','connection-key-env'],['discoveryUrl','connection-discovery-url'],['apiKeyParameter','connection-key-parameter'],['statusValues','connection-statuses'],['queryExtensions','connection-query-extensions']]){
+  for(const [key,input] of [['apiKeyEnv','connection-key-env'],['discoveryUrl','connection-discovery-url'],['apiKeyParameter','connection-key-parameter'],['responseLimitParameter','connection-limit-parameter'],['statusValues','connection-statuses'],['queryExtensions','connection-query-extensions']]){
     const entered=$(input).value.trim();
     if(entered)value[key]=['statusValues','queryExtensions'].includes(key) ? commaValues(entered) : entered;
     else delete value[key];
   }
+  const transport=$('connection-key-transport').value;
+  if(!['query','bearer'].includes(transport))throw new Error('Choose query parameter or Bearer header credential transport.');
+  if(transport==='bearer')value.apiKeyTransport=transport;else delete value.apiKeyTransport;
+  const spacing=Number($('connection-request-spacing').value);
+  if(!Number.isSafeInteger(spacing) || spacing<0)throw new Error('Source request spacing must be a nonnegative whole number of milliseconds.');
+  if(spacing>0)value.minimumRequestIntervalMs=spacing;else delete value.minimumRequestIntervalMs;
+  const rangeText=$('connection-date-ranges').value.trim();
+  if(rangeText){
+    let ranges;try{ranges=JSON.parse(rangeText);}catch{throw new Error('Enter source date-range declarations as a complete JSON array.');}
+    if(!Array.isArray(ranges) || ranges.some(range=>!range || Array.isArray(range) || typeof range!=='object' || Object.keys(range).some(key=>!['start','end','maxDays'].includes(key)) || typeof range.start!=='string' || !range.start.trim() || typeof range.end!=='string' || !range.end.trim() || range.start===range.end || typeof range.maxDays!=='number' || !Number.isFinite(range.maxDays) || range.maxDays<=0))throw new Error('Each date range needs distinct start/end field names and a positive maxDays number.');
+    if(ranges.length)value.queryDateRanges=ranges;else delete value.queryDateRanges;
+  }else delete value.queryDateRanges;
   const attribution={...(old.attribution || {})};
   for(const key of ['publisher','title','license','licenseUrl','sourceUrl']){
     const entered=$('connection-attribution-'+key)?.value.trim();
@@ -1625,6 +1741,8 @@ function bind() {
   $('command-file').addEventListener('change',()=>safely(restoreOriginalCommand));
   $('collection-new').addEventListener('click',()=>{$('collection-editor').hidden=false;$('collection-name').focus();});
   $('collection-cancel').addEventListener('click',()=>{$('collection-editor').hidden=true;});
+  $('collection-time-basis').addEventListener('change',()=>renderCollectionModes(true));
+  $('collection-strategy').addEventListener('change',()=>renderCollectionModes());
   $('collection-form').addEventListener('submit',(event)=>{event.preventDefault();safely(()=>createCollection(false));});
   $('collection-create-run').addEventListener('click',()=>safely(()=>createCollection(true)));
   $('collection-choice').addEventListener('change',()=>safely(()=>chooseCollection($('collection-choice').value)));
