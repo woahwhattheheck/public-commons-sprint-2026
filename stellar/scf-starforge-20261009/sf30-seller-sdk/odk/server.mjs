@@ -11,7 +11,7 @@ import { verifyFile } from './store.mjs';
 const assets=new Map([['/',{file:'index.html',type:'text/html; charset=utf-8'}],
   ['/ui.mjs',{file:'ui.mjs',type:'text/javascript; charset=utf-8'}],['/ui.css',{file:'ui.css',type:'text/css; charset=utf-8'}]]);
 const actions=new Set(['connect','projects','forms','createPlan','capture','resume','pause','wait','edition','rows','row',
-  'resources','quality','review','compare','exportDataset','report','backup','prepareRelease','releaseStatus','activateRelease','rollbackRelease']);
+  'resources','quality','review','compare','sourceFile','exportFile','exportDataset','report','backup','prepareRelease','releaseStatus','activateRelease','rollbackRelease']);
 const same=(a,b)=>typeof a==='string'&&Buffer.byteLength(a)===Buffer.byteLength(b)&&timingSafeEqual(Buffer.from(a),Buffer.from(b));
 const filename=value=>String(value||'source').replace(/[^\p{L}\p{N}_. -]/gu,'_').slice(0,180)||'source';
 const errorRecord=(error,operationId)=>({code:error.code||'CENTRAL_HTTP',message:error.message||'The operation could not finish.',

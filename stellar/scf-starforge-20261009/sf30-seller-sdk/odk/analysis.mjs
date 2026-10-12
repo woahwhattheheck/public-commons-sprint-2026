@@ -180,9 +180,10 @@ export function measureIndicator(store,capture,definition) {
   for(const row of store.iterateRows(capture.id,table.id)){
     if(definition.operation==='rows'&&!field){result.count++;continue;}
     const cell=fieldValue(row,field.path);
-    if(cell.state==='missing'){result.missing++;continue;}if(cell.state==='null'){result.nulls++;continue;}
-    if(cell.value===''){result.empty++;continue;}
-    if(Object.hasOwn(definition,'equals')&&stable(cell.value)!==stable(definition.equals))continue;
+    if(Object.hasOwn(definition,'equals')&&(cell.state==='missing'||stable(cell.value)!==stable(definition.equals)))continue;
+    if(cell.state==='missing')result.missing++;else if(cell.state==='null')result.nulls++;else if(cell.value==='')result.empty++;
+    if(definition.operation==='rows'){result.count++;continue;}
+    if(cell.state!=='value'||cell.value==='')continue;
     result.count++;
     if(['sum','mean','minimum','maximum'].includes(definition.operation)){
       const value=decimal(cell.value),pair=aligned(sum,value);sum={n:pair.a+pair.b,s:pair.s};
@@ -198,12 +199,7 @@ export function measureIndicator(store,capture,definition) {
   }
   return result;
 }
-async function save(path,bytes) {
-  await mkdir(dirname(path),{recursive:true,mode:0o700});
-  try{await writeNew(path,bytes);}catch(error){if(error.code!=='EEXIST')throw error;
-    if(digest(await readFile(path))!==digest(bytes))throw fault('CENTRAL_EXPORT_CHANGED','An existing immutable output differs.',409);}
-  return {bytes:bytes.length,sha256:digest(bytes)};
-}
+async function save(path,bytes) {return saveStream(path,emit=>emit(bytes));}
 async function saveStream(path,producer) {
   await mkdir(dirname(path),{recursive:true,mode:0o700});
   const temporary=path+'.'+randomUUID()+'.part',handle=await open(temporary,'wx',0o600),hash=createHash('sha256');let bytes=0;
@@ -212,6 +208,7 @@ async function saveStream(path,producer) {
     try{await producer(emit);await handle.sync();}finally{await handle.close();}
     const sha256=hash.digest('hex');
     try{await link(temporary,path);}catch(error){if(error.code!=='EEXIST')throw error;await verifyFile(path,sha256);}
+    const directory=await open(dirname(path),'r');try{await directory.sync();}finally{await directory.close();}
     return {sha256,bytes};
   }finally{await unlink(temporary).catch(error=>{if(error.code!=='ENOENT')throw error;});}
 }
@@ -234,8 +231,13 @@ export function centralTableEdition(store,capture,table) {
     contentHash:digest(stable(pages.map(page=>({source:page.source.sha256,rows:page.rowsSha256}))))};
 }
 export async function exportCentralDataset(store,input) {
+  const requestFingerprint=digest(stable(input)),suppliedId=input.exportId?identifier(input.exportId,'dataset export ID'):null;
+  const received=suppliedId?store.get('export',suppliedId,false):null;
+  if(received){if(received.requestFingerprint!==requestFingerprint)throw fault('CENTRAL_EXPORT_EXISTS','This export ID already identifies another original request.',409);return received;}
+  const retainedOperation=suppliedId?store.get('dataset-operation',suppliedId,false):null;
+  if(retainedOperation&&retainedOperation.requestFingerprint!==requestFingerprint)throw fault('CENTRAL_EXPORT_EXISTS','This export ID already identifies another original request.',409);
   const capture=complete(store,input.id),table=tableFor(capture,input.tableId),form=formFor(capture,table),
-    review=capture.decisions.at(-1),edition=centralTableEdition(store,capture,table);
+    review=retainedOperation?retainedOperation.review:capture.decisions.at(-1),edition=centralTableEdition(store,capture,table);
   if(review?.decision!=='accept')throw fault('CENTRAL_EXPORT_REVIEW','Accept the reporting edition with its source interpretation before publishing a dataset.',409);
   const available=new Map(table.query.fields.map(field=>[field.path,field]));
   if(input.fields!==undefined&&!Array.isArray(input.fields))throw fault('CENTRAL_DATASET_FIELDS','Select a list of captured field paths.');
@@ -276,6 +278,7 @@ export async function exportCentralDataset(store,input) {
   const fingerprint=digest(stable({config,source,payment:input.payment??null,origin:input.origin??null,path:input.path??'/data'})),
     exportId=input.exportId?identifier(input.exportId,'dataset export ID'):fingerprint,existing=store.get('export',exportId,false);
   if(existing){if(existing.fingerprint!==fingerprint)throw fault('CENTRAL_EXPORT_EXISTS','This export ID already identifies another immutable dataset.',409);return existing;}
+  if(suppliedId&&!retainedOperation)store.put('dataset-operation',suppliedId,{requestFingerprint,review,createdAt:now()},0);
   const output=join(store.directory,'exports',exportId),receipts={};
   const retainOutput=async(name,body)=>{receipts[name]=await save(join(output,name),body);};
   await retainOutput('dataset.json',formatted(config));await retainOutput('source.json',formatted(source));
@@ -305,7 +308,8 @@ export async function exportCentralDataset(store,input) {
     const seller=await buildDatasetSellerConfig(dataset,{payment:input.payment,origin:input.origin,path:input.path??'/data'});
     await retainOutput('seller.json',formatted(seller));merchant=true;
   }
-  return store.put('export',exportId,{id:exportId,fingerprint,kind:'dataset',captureId:capture.id,editionId:edition.id,tableId:table.id,
+  const completed=store.get('export',exportId,false);if(completed)return completed;
+  return store.put('export',exportId,{id:exportId,fingerprint,requestFingerprint,kind:'dataset',captureId:capture.id,editionId:edition.id,tableId:table.id,
     directory:output,createdAt:now(),dataset:dataset.describe(),mapping,merchant,semantics:source.semantics,
     files:Object.keys(receipts),receipts},0);
 }
@@ -314,14 +318,20 @@ const markdownCell=value=>String(value??'').replaceAll('|','\\|').replace(/\r?\n
 function tableHtml(headers,rows){return '<table><thead><tr>'+headers.map(value=>'<th>'+escape(value)+'</th>').join('')+'</tr></thead><tbody>'+
   rows.map(row=>'<tr>'+row.map(value=>'<td>'+escape(value)+'</td>').join('')+'</tr>').join('')+'</tbody></table>';}
 export async function createCentralReport(store,{id,baselineId=null,title,narrative='',indicators,reportId:suppliedReportId}) {
-  const capture=complete(store,id),quality=analyzeCapture(store,id),review=capture.decisions.at(-1)??null;
-  const definitions=indicators??review?.indicators??capture.tables.map(table=>({tableId:table.id,operation:'rows',name:table.name+' rows'}));
+  const capture=complete(store,id),baseline=baselineId?complete(store,baselineId):null,results=[];
+  const requestFingerprint=digest(stable({id,baselineId,title:title??null,narrative:String(narrative),indicators:indicators??null}));
+  let quality=analyzeCapture(store,id),review=capture.decisions.at(-1)??null;
+  let definitions=indicators??review?.indicators??capture.tables.map(table=>({tableId:table.id,operation:'rows',name:table.name+' rows'}));
   if(!Array.isArray(definitions))throw fault('CENTRAL_REPORT_INDICATORS','Choose an indicators array.');
-  const baseline=baselineId?complete(store,baselineId):null,results=[];
-  const fingerprint=digest(stable({captureId:id,contentHash:capture.contentHash,baselineId,baselineHash:baseline?.contentHash??null,
-    reviewId:review?.id??null,title:String(title||capture.label),narrative:String(narrative),indicators:definitions,reporterVersion:1})),
-    reportId=suppliedReportId?identifier(suppliedReportId,'report ID'):fingerprint,existing=store.get('report',reportId,false);
-  if(existing){if(existing.fingerprint!==fingerprint)throw fault('CENTRAL_REPORT_EXISTS','This report ID already identifies another immutable analysis.',409);return existing;}
+  let fingerprint=digest(stable({captureId:id,contentHash:capture.contentHash,baselineId,baselineHash:baseline?.contentHash??null,
+    reviewId:review?.id??null,title:String(title||capture.label),narrative:String(narrative),indicators:definitions,reporterVersion:1}));
+  const reportId=suppliedReportId?identifier(suppliedReportId,'report ID'):fingerprint,existing=store.get('report',reportId,false);
+  if(existing){if(existing.requestFingerprint!==requestFingerprint)throw fault('CENTRAL_REPORT_EXISTS','This report ID already identifies another immutable analysis.',409);return existing;}
+  const retainedOperation=store.get('report-operation',reportId,false);
+  if(retainedOperation){
+    if(retainedOperation.requestFingerprint!==requestFingerprint)throw fault('CENTRAL_REPORT_EXISTS','This report ID already identifies another original request.',409);
+    ({quality,review,definitions,fingerprint}=retainedOperation);
+  }
   for(const definition of definitions){
     const current=measureIndicator(store,capture,definition);let previous=null;
     if(baseline){
@@ -331,8 +341,9 @@ export async function createCentralReport(store,{id,baselineId=null,title,narrat
     }
     results.push({...current,baseline:previous});
   }
+  const operation=retainedOperation??store.put('report-operation',reportId,{requestFingerprint,fingerprint,createdAt:now(),quality,review,definitions},0);
   const report={schema:'stellar-forge.odk-field-report.v1',id:reportId,fingerprint,captureId:id,baselineId,title:String(title||capture.label).slice(0,240),
-    narrative:String(narrative),createdAt:now(),review,scope:capture.scope,startedAt:capture.startedAt,completedAt:capture.completedAt,
+    narrative:String(narrative),createdAt:operation.createdAt,review,scope:capture.scope,startedAt:capture.startedAt,completedAt:capture.completedAt,
     indicators:results,quality,findings:review?.findings??[],source: capture.source,
     methods:[
       'Every original OData continuation page was retained with its source bytes and timestamp. Counts refer to the selected reporting cohort.',
@@ -416,6 +427,7 @@ export async function createCentralReport(store,{id,baselineId=null,title,narrat
   if(comparisons.length)markdown+='\n## Changes between periods\n\n'+mdTable(['Table','Added IDs','Removed IDs','Changed IDs','File'],
     comparisons.map(value=>[value.table,value.counts.added,value.counts.removed,value.counts.changed,value.file]));
   await put('report.html',Buffer.from(html));await put('report.md',Buffer.from(markdown));
-  return store.put('report',reportId,{id:reportId,fingerprint,kind:'report',captureId:id,baselineId,title:report.title,createdAt:report.createdAt,
+  const received=store.get('report',reportId,false);if(received)return received;
+  return store.put('report',reportId,{id:reportId,fingerprint,requestFingerprint,kind:'report',captureId:id,baselineId,title:report.title,createdAt:report.createdAt,
     directory:output,files:Object.keys(receipts),receipts,indicators:results,comparisons},0);
 }

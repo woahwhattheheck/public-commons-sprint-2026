@@ -39,6 +39,7 @@ export async function openCentralWorkspace({directory,fetchImpl=globalThis.fetch
   function state() {
     const identity=store.identity();
     return {schema:identity.schema,id:identity.workspaceId,revision:Number(identity.revision),createdAt:identity.createdAt,
+      receivedArchive:identity.receivedArchive?JSON.parse(identity.receivedArchive):null,
       connections:store.list('connection'),plans:store.list('plan'),captures:store.list('capture').map(summary),
       reviews:store.list('review').map(({quality,findings,indicators,...record})=>record),
       exports:store.list('export').map(({receipts,mapping,...record})=>record),
