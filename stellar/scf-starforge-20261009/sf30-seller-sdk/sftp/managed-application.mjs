@@ -186,6 +186,17 @@ export async function inspectSftpApplicationSource(sourceRoot, { expectedSha256 
   return { sourceRoot: root, sha256, files };
 }
 
+/** Require the actual installed peers used by the complete file and native seller workflow. */
+export function checkSftpApplicationRuntime(runtime) {
+  const required = ['ssh2', '@x402/core', '@x402/stellar', '@x402/extensions'];
+  const selected = new Map((runtime?.dependencies ?? []).map(value => [value.name, value]));
+  const missing = required.filter(name => !selected.has(name));
+  need(missing.length === 0, 'APPLICATION_SFTP_RUNTIME_REQUIRED',
+    'Select the original READY runtime with native payment support and the sftp feature. Missing installed profile dependencies: ' +
+      missing.join(', ') + '.');
+  return required.map(name => ({ name, version: selected.get(name).version }));
+}
+
 export async function prepareSftpApplication(settings, { inputPath, runtimeDirectory } = {}) {
   need(typeof inputPath === 'function', 'APPLICATION_SFTP_INPUT_READER_REQUIRED');
   validateSftpApplicationSettings(null, settings);
@@ -193,6 +204,7 @@ export async function prepareSftpApplication(settings, { inputPath, runtimeDirec
   const inputs = [await inputPath(directory, 'directory', false, true)];
   const binding = await inspectSftpApplicationWorkspace(directory);
   const runtime = await inspectMerchantRuntime(absolute(runtimeDirectory), { load: false });
+  checkSftpApplicationRuntime(runtime);
   const source = await inspectSftpApplicationSource(runtime.sourceRoot);
   for (const file of source.files) {
     const selected = await inputPath(join(runtime.sourceRoot, file.path), 'file');
