@@ -92,19 +92,19 @@ export async function readPackage(directory,options={}) {
     throw new TypeError('Original OData compiler and selected package disagree');
   return {...prepared,directory:root,manifest};
 }
-export async function prepareBuyerHandoff(prepared,{operation,request,intentId,directory,acceptIndex=0}={}) {
+export async function prepareBuyerHandoff(prepared,{operation,request,intentId,directory,requestDirectory=directory,acceptIndex=0}={}) {
   const rowIndex=prepared.plan.operations.findIndex(row=>row.id===operation);
   if(rowIndex<0)throw new TypeError('Select an exported live OData product');
   if(Object.hasOwn(request??{},'cursor')) {
     if(!plain(request)||Object.keys(request).length!==1||typeof request.cursor!=='string'||!request.cursor||request.cursor.length>32768)
       throw new TypeError('A next-page handoff takes its original cursor only');
   }else request=buildQuery(prepared.plan,prepared.catalog,operation,request).query;
-  const root=resolve(directory),config=prepareReview(Buffer.from(json(prepared.offers)),{rowIndex,acceptIndex,intentId,
-    url:prepared.plan.publicOrigin+prepared.plan.operations[rowIndex].path,method:'POST',bodyFile:join(root,'request.json'),bodyBytes:Buffer.byteLength(json(request)),bodySha256:digest(json(request)),responseOut:join(root,'response.json')});
+  const root=resolve(directory),requestRoot=resolve(requestDirectory),config=prepareReview(Buffer.from(json(prepared.offers)),{rowIndex,acceptIndex,intentId,
+    url:prepared.plan.publicOrigin+prepared.plan.operations[rowIndex].path,method:'POST',bodyFile:join(requestRoot,'request.json'),bodyBytes:Buffer.byteLength(json(request)),bodySha256:digest(json(request)),responseOut:join(requestRoot,'response.json')});
   await mkdir(root,{mode:0o700});
   for(const [name,value]of Object.entries({'request.json':request,'offers.json':prepared.offers,'buyer.json':config.draft}))
     await writeFile(join(root,name),json(value),{flag:'wx',mode:0o600});
-  const result={schema:'stellar-forge.odata-live-buyer-handoff.v1',directory:root,operation,intentId,metadataSha256:prepared.catalog.receipts.metadata.sha256,
+  const result={schema:'stellar-forge.odata-live-buyer-handoff.v1',directory:requestRoot,operation,intentId,metadataSha256:prepared.catalog.receipts.metadata.sha256,
     requestSha256:digest(json(request)),buyerSha256:config.configSha256};
   await writeFile(join(root,'handoff.json'),json(result),{flag:'wx',mode:0o600});return result;
 }

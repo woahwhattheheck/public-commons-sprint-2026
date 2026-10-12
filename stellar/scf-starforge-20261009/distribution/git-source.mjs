@@ -5,8 +5,8 @@ import { performance } from 'node:perf_hooks';
 import { resolve } from 'node:path';
 
 const OID = /^(?:[a-f0-9]{40}|[a-f0-9]{64})$/;
-const MAX_FILE = 2 * 1024 * 1024;
-const MAX_SOURCE = 32 * 1024 * 1024;
+export const MAX_SOURCE_FILE_BYTES = 2 * 1024 * 1024;
+export const MAX_SOURCE_BYTES = 64 * 1024 * 1024;
 const round = value => Math.round(value * 100) / 100;
 
 export function openGitSource({ repository, ref = 'HEAD', offline = false, onProgress = () => {} }) {
@@ -18,7 +18,7 @@ export function openGitSource({ repository, ref = 'HEAD', offline = false, onPro
   let commit, remotes;
   const progress = (phase, details = {}) => onProgress({ phase, ...(commit ? { sourceCommit: commit } : {}),
     elapsedMilliseconds: round(performance.now() - started), ...details });
-  function git(args, { input, maxBuffer = MAX_SOURCE + 1024 * 1024, optional = false } = {}) {
+  function git(args, { input, maxBuffer = MAX_SOURCE_BYTES + 1024 * 1024, optional = false } = {}) {
     const begin = performance.now();
     counts.gitCommands++;
     try {
@@ -61,7 +61,7 @@ export function openGitSource({ repository, ref = 'HEAD', offline = false, onPro
       const size = Number(fields[2]);
       if (fields.length !== 3 || fields[1] !== 'blob' || !Number.isSafeInteger(size) || size < 0)
         throw new TypeError('Expected regular Git blob metadata');
-      if (size > MAX_FILE) throw new RangeError('Distribution source file size exceeded');
+      if (size > MAX_SOURCE_FILE_BYTES) throw new RangeError('Distribution source file size exceeded');
       result.set(blobs[i], size);
     }
     return result;
@@ -129,7 +129,7 @@ export function openGitSource({ repository, ref = 'HEAD', offline = false, onPro
       counts.cachedObjects += blobs.filter(blob => metadata.get(blob) !== null).length;
       acquire(blobs, metadata);
       const size = blobs.reduce((sum, blob) => sum + metadata.get(blob), 0);
-      if (counts.uniqueBytes + size > MAX_SOURCE) throw new RangeError('Distribution source size exceeded');
+      if (counts.uniqueBytes + size > MAX_SOURCE_BYTES) throw new RangeError(`Distribution Git source exceeds ${MAX_SOURCE_BYTES} bytes: ${counts.uniqueBytes + size}`);
       counts.contentBatches++;
       const data = git(['cat-file', '--batch'], { input: blobs.join('\n') + '\n',
         maxBuffer: size + blobs.length * 128 + 1024 });
