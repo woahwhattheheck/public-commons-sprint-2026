@@ -1,5 +1,6 @@
 // MIT. Native Matomo source selection; no tracking or management writes.
-import { fault, identity, object } from '../postgres/publisher/files.mjs';
+import { fault, object } from '../postgres/publisher/files.mjs';
+import { nativeHash } from './values.mjs';
 
 export const SOURCE_SCHEMA = 'stellar-forge.matomo-source.v1';
 export const SCOPE_SCHEMA = 'stellar-forge.matomo-report-selection.v1';
@@ -91,7 +92,7 @@ export function reportingScope(input) {
   return {period: input.period, date: dates.join(','), segment: text(input.segment ?? '', 'the exact segment expression', 8192, {empty: true}), language};
 }
 export function selection(input) {
-  only(input, ['schema', 'catalogId', 'reportId', 'scope', 'pageSize', 'maxRows', 'maxRequests', 'maxBytes', 'maxDepth', 'subtables', 'note']);
+  only(input, ['schema', 'catalogId', 'reportId', 'scope', 'pageSize', 'maxRows', 'maxRequests', 'maxBytes', 'maxDepth', 'subtables', 'subtableRules', 'note']);
   if (input.schema !== SCOPE_SCHEMA) throw fault('MATOMO_SELECTION_SCHEMA');
   return {schema: SCOPE_SCHEMA, catalogId: identifier(input.catalogId, 'catalog'),
     reportId: text(input.reportId, 'the discovered report ID', 1024), scope: reportingScope(input.scope),
@@ -101,6 +102,11 @@ export function selection(input) {
     maxBytes: integer(input.maxBytes, 134217728, 1024, 536870912, 'MATOMO_CAPTURE_BYTE_LIMIT'),
     maxDepth: integer(input.maxDepth, 32, 0, 128, 'MATOMO_SUBTABLE_DEPTH'),
     subtables: input.subtables === undefined ? true : typeof input.subtables === 'boolean' ? input.subtables : (()=>{throw fault('MATOMO_SUBTABLE_SELECTION');})(),
+    subtableRules: (() => {
+      const rules = input.subtableRules ?? {};
+      if (!plain(rules) || Object.keys(rules).length > 64 || Object.entries(rules).some(([key, value]) => typeof key !== 'string' || key.length > 1024 || typeof value !== 'string' || !value || value.length > 1024)) throw fault('MATOMO_SUBTABLE_RULES');
+      return {...rules};
+    })(),
     note: text(input.note ?? 'Selected native processed report and its retained archive rows.', 'the source selection note', 2000)};
 }
 export function reportIdentity(report) {
@@ -108,7 +114,7 @@ export function reportIdentity(report) {
   const parameters = report.parameters ?? {};
   if (!plain(parameters) || Object.keys(parameters).some(key => !NAME.test(key))) throw fault('MATOMO_REPORT_PARAMETERS_INVALID');
   const result = {module: report.module, action: report.action, parameters};
-  return typeof report.uniqueId === 'string' && report.uniqueId ? report.uniqueId : identity(result);
+  return typeof report.uniqueId === 'string' && report.uniqueId ? report.uniqueId : nativeHash(result);
 }
 export function safeError(error) {
   const code = typeof error?.code === 'string' && /^[A-Z][A-Z0-9_]{0,100}$/.test(error.code) ? error.code : 'MATOMO_OPERATION_FAILED';

@@ -3,24 +3,54 @@ import { DatabaseSync } from 'node:sqlite';
 import { chmod, lstat, link, unlink } from 'node:fs/promises';
 import { join, dirname } from 'node:path';
 import { randomUUID } from 'node:crypto';
-import { acquireWorkspace, privateDirectory, readPrivate, readJson, createFile, syncDirectory, identity, digest, bytes, fault, stamp } from '../postgres/publisher/files.mjs';
+import { acquireWorkspace, privateDirectory, readPrivate as rawReadPrivate, createFile, syncDirectory, identity, digest, bytes, fault, stamp } from '../postgres/publisher/files.mjs';
 import { sourceConfig, identifier, safeError } from './contract.mjs';
 import { parseNative } from './values.mjs';
 import { createMatomoSource } from './provider.mjs';
 
 const SETTINGS = 'stellar-forge.matomo-workspace.v1';
+async function recoverPending(path) {
+  const pending = path + '.matomo-pending';
+  let a, b;
+  try { a = await lstat(pending); } catch (error) { if (error.code === 'ENOENT') return; throw error; }
+  if (!a.isFile() || a.isSymbolicLink() || a.mode & 0o077 || a.nlink > 2) throw fault('MATOMO_STAGING_FILE_INVALID');
+  try { b = await lstat(path); } catch (error) { if (error.code === 'ENOENT') return; throw error; }
+  if (a.dev === b.dev && a.ino === b.ino) { await unlink(pending); await syncDirectory(dirname(path)); }
+}
+export async function readRetained(path, limit = 16777216) {
+  await recoverPending(path);
+  return rawReadPrivate(path, limit);
+}
+export async function readRetainedJson(path, limit = 16777216) {
+  return JSON.parse(new TextDecoder('utf-8', {fatal: true}).decode(await readRetained(path, limit)));
+}
+const readPrivate = readRetained, readJson = readRetainedJson;
 export async function writeNew(path, content) {
-  const temporary = join(dirname(path), '.matomo-' + randomUUID());
+  const data = Buffer.from(content), pending = path + '.matomo-pending';
+  await recoverPending(path);
   try {
-    await createFile(temporary, content);
-    try { await link(temporary, path); }
+    const existing = await readPrivate(path, Math.max(data.length, 1));
+    if (!existing.equals(data)) throw fault('MATOMO_FILE_CONFLICT', 'The retained output already contains different bytes.', 409);
+    return;
+  } catch (error) { if (error.code !== 'ENOENT') throw error; }
+  let owned = false;
+  try {
+    try {
+      const stat = await lstat(pending);
+      if (!stat.isFile() || stat.isSymbolicLink() || stat.nlink !== 1 || stat.mode & 0o077) throw fault('MATOMO_STAGING_FILE_INVALID');
+      // This exact pending name belongs to this immutable destination under the
+      // original workspace lease. An incomplete prior write is not a result.
+      await unlink(pending);
+    } catch (error) { if (error.code !== 'ENOENT') throw error; }
+    owned = true; await createFile(pending, data);
+    try { await link(pending, path); }
     catch (error) {
       if (error.code !== 'EEXIST') throw error;
-      const existing = await readPrivate(path, Math.max(content.length, 1));
-      if (!existing.equals(Buffer.from(content))) throw fault('MATOMO_FILE_CONFLICT', 'The retained output already contains different bytes.', 409);
+      const existing = await readPrivate(path, Math.max(data.length, 1));
+      if (!existing.equals(data)) throw fault('MATOMO_FILE_CONFLICT', 'The retained output already contains different bytes.', 409);
     }
   } finally {
-    await unlink(temporary).catch(error => {if (error.code !== 'ENOENT') throw error;});
+    if (owned) await unlink(pending).catch(error => {if (error.code !== 'ENOENT') throw error;});
   }
   await syncDirectory(dirname(path));
 }
