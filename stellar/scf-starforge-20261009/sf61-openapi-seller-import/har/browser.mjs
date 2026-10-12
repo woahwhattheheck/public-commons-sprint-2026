@@ -85,11 +85,11 @@ export function createHarPanel({container,api,act,notice,token,onSource}) {
   const decisions=field('Completed reviewed decisions JSON','file');decisions.input.accept='.json,application/json';
   const save=button('Retain reviewed decisions'), use=button('Use approved source');
   const decisionTools=make('div',undefined,'inline');decisionTools.append(decisions.label,save,use);
-  const receiving=make('details'), destination=field('New receiving directory on this host'), copy=button('Copy retained source');
+  const receiving=make('details'), destination=field('Receiving directory on this host'), copy=button('Copy retained source');
   destination.input.placeholder='/private/receiving/provider-capture';destination.label.className='wide';
   const receivingResult=make('pre','','wrap');receivingResult.hidden=true;
   receiving.append(make('summary','Copy to a receiving workspace'),
-    make('p','Choose a new child of an existing private directory. A refresh copy includes its previous and candidate captures, original comparison and all saved reviews.','hint'),
+    make('p','Choose a directory beneath an existing private parent. Reuse the same original receiving copy to retain later reviews. A refresh copy includes both source editions, its original comparison and all saved reviews.','hint'),
     destination.label,copy,receivingResult);
   selectionArea.append(heading,sourceSummary,reviewChoice.label,moreReviews,revisionSummary,comparisons,reviewTools,
     make('p','Open the downloaded HTML file, complete its source and route decisions, then download reviewed decisions. Return that JSON file here to save its immutable revision.','hint'),
