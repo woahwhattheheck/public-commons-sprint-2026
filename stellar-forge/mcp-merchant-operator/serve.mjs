@@ -6,13 +6,17 @@ import { pathToFileURL } from 'node:url';
 import { createMcpToolHandler } from '../mcp-paid-agent/http-tools.mjs';
 import { loadOAuthResourceHost } from '../mcp-paid-agent/oauth-host.mjs';
 import { openMerchantOperator } from './operator.mjs';
-import { initializeMerchant, initializeFleetMerchant, initializeAccountingMerchant, initializeReceivingMerchant, initializePythonWorkspaceMerchant, initializePublisherMerchant, initializeS3WorkspaceMerchant, initializeOpenSearchWorkspaceMerchant, initializeSocrataWorkspaceMerchant, initializeGeocodioWorkspaceMerchant, initializeWebDavWorkspaceMerchant, initializeSheetsWorkspaceMerchant, initializeCkanWorkspaceMerchant, initializeTenderlyWorkspaceMerchant, initializeRedisWorkspaceMerchant, initializeUSASpendingWorkspaceMerchant, initializeSourceWorkspaceMerchant, initializeHarWorkspaceMerchant, initializePricingMerchant, initializeWooCommerceMerchant, initializeBuyerExpenseMerchant, failure } from './config.mjs';
+import { initializeMerchant, initializeFleetMerchant, initializeAccountingMerchant, initializeReceivingMerchant, initializePythonWorkspaceMerchant, initializeGraphqlWorkspaceMerchant, initializePublisherMerchant, initializeArcgisWorkspaceMerchant, initializeS3WorkspaceMerchant, initializeOpenSearchWorkspaceMerchant, initializeSocrataWorkspaceMerchant, initializeODataWorkspaceMerchant, initializeFiscalDataWorkspaceMerchant, initializeGeocodioWorkspaceMerchant, initializeWorldBankWorkspaceMerchant, initializeWebDavWorkspaceMerchant, initializeEdgarWorkspaceMerchant, initializeSheetsWorkspaceMerchant, initializeCkanWorkspaceMerchant, initializeTenderlyWorkspaceMerchant, initializeCoinGeckoWorkspaceMerchant, initializeRedisWorkspaceMerchant, initializeUSASpendingWorkspaceMerchant, initializeSourceWorkspaceMerchant, initializeGrpcWorkspaceMerchant, initializeOpenApiWorkspaceMerchant, initializeHarWorkspaceMerchant, initializePricingMerchant, initializeWooCommerceMerchant, initializeMppMerchant, initializeBuyerExpenseMerchant, failure } from './config.mjs';
 
 const HELP = `Starforge merchant MCP
 
   init-buyer-expenses --dir NEW_DIRECTORY --connection PRIVATE_CONNECTION_JSON [--name NAME]
   expenses tools|call|inspect|download|receive ...    (see expenses --help)
 
+  init-mpp --dir NEW_DIRECTORY --connection MPP_CONNECTION_JSON [--name NAME]
+  inspect-mpp --url MCP_URL --export-id ID [--token-env ENV]
+  download-mpp --url MCP_URL --export-id ID --out PRIVATE_DIRECTORY
+       [--token-env ENV] [--chunk-bytes BYTES] [--manifest-sha256 SHA256]
   init-woocommerce --dir NEW_DIRECTORY --connection WOO_CONNECTION_JSON [--name NAME]
   init-pricing --dir NEW_DIRECTORY --pricing PRICING_CONNECTION_JSON [--release-store EXISTING_STORE] [--name NAME]
   init-accounting --dir NEW_DIRECTORY --accounting ACCOUNTING_JSON [--name NAME]
@@ -20,19 +24,39 @@ const HELP = `Starforge merchant MCP
        [--accounting ACCOUNTING_JSON]
   init-receiving --dir NEW_DIRECTORY --receiving RECEIVING_CONNECTION_JSON [--name NAME]
   init-python-workspaces --dir NEW_DIRECTORY --python-workspaces CONNECTION_JSON [--name NAME]
+  init-graphql-workspaces --dir NEW_DIRECTORY --connection GRAPHQL_WORKSPACE_CONNECTION.json [--name NAME]
   init-publishers --dir NEW_DIRECTORY --connection PUBLISHER_CONNECTION.json [--name NAME]
+       [--arcgis-workspaces ARCGIS_CONNECTION.json] [--release-store EXISTING_STORE]
+  init-arcgis-workspaces --dir NEW_DIRECTORY --publishers PUBLISHER_CONNECTION.json
+       --connection ARCGIS_CONNECTION.json [--release-store EXISTING_STORE] [--name NAME]
   init-s3-workspaces --dir NEW_DIRECTORY --connection S3_WORKSPACE_CONNECTION.json [--name NAME]
+  init-worldbank-workspaces --dir NEW_DIRECTORY --connection WORLDBANK_WORKSPACE_CONNECTION.json [--name NAME]
+  inspect-worldbank --url MCP_ENDPOINT --workspace ALIAS --export-id EXPORT_ID [--token-env ENVIRONMENT_NAME]
+  download-worldbank --url MCP_ENDPOINT --workspace ALIAS --export-id EXPORT_ID --out PRIVATE_DIRECTORY
+       [--token-env ENVIRONMENT_NAME] [--chunk-bytes BYTES] [--manifest-sha256 SHA256]
   init-opensearch-workspaces --dir NEW_DIRECTORY --connection OPENSEARCH_WORKSPACE_CONNECTION.json
        [--release-store ORIGINAL_SF82_STORE] [--name NAME]
   init-socrata-workspaces --dir NEW_DIRECTORY --connection SOCRATA_WORKSPACE_CONNECTION.json [--name NAME]
+  init-odata-workspaces --dir NEW_DIRECTORY --connection ODATA_WORKSPACE_CONNECTION.json [--name NAME]
+  init-fiscaldata-workspaces --dir NEW_DIRECTORY --connection FISCALDATA_WORKSPACE_CONNECTION.json [--name NAME]
   init-geocodio-workspaces --dir NEW_DIRECTORY --connection GEOCODIO_WORKSPACE_CONNECTION.json [--name NAME]
   init-webdav-workspaces --dir NEW_DIRECTORY --connection WEBDAV_WORKSPACE_CONNECTION.json [--name NAME]
+  init-edgar-workspaces --dir NEW_DIRECTORY --connection EDGAR_WORKSPACE_CONNECTION.json [--name NAME]
   init-sheets-workspaces --dir NEW_DIRECTORY --connection SHEETS_WORKSPACE_CONNECTION.json [--name NAME]
   init-ckan-workspaces --dir NEW_DIRECTORY --connection CKAN_WORKSPACE_CONNECTION.json [--workspace ALIAS] [--name NAME]
+  init-coingecko-workspaces --dir NEW_DIRECTORY --connection COINGECKO_WORKSPACE_CONNECTION.json [--name NAME]
   init-tenderly-workspaces --dir NEW_DIRECTORY --connection TENDERLY_WORKSPACE_CONNECTION.json [--name NAME]
   init-redis-workspaces --dir NEW_DIRECTORY --connection REDIS_WORKSPACE_CONNECTION.json [--workspace ALIAS] [--name NAME]
   init-usaspending-workspaces --dir NEW_DIRECTORY --connection USASPENDING_WORKSPACE_CONNECTION.json [--name NAME]
   init-source-workspaces --dir NEW_DIRECTORY --connection SOURCE_WORKSPACE_CONNECTION.json [--name NAME]
+  init-grpc-workspaces --dir NEW_DIRECTORY --connection GRPC_WORKSPACE_CONNECTION.json [--name NAME]
+  inspect-grpc --url MCP_ENDPOINT --export-id EXPORT_ID [--token-env ENVIRONMENT_NAME]
+  download-grpc --url MCP_ENDPOINT --export-id EXPORT_ID --out PRIVATE_DIRECTORY
+       [--token-env ENVIRONMENT_NAME] [--chunk-bytes BYTES] [--manifest-sha256 REVIEWED_DIGEST]
+  init-openapi-workspaces --dir NEW_DIRECTORY --connection SF61_CONNECTION.json [--release-store EXISTING_STORE] [--name NAME]
+  download-openapi --url MCP_URL --workspace ALIAS --export-id SHA256 --out DIRECTORY [--token-env ENV] [--manifest-sha256 SHA256] [--chunk-bytes 196608]
+  inspect-openapi --url MCP_URL --workspace ALIAS --export-id SHA256 [--token-env ENV]
+  reopen-openapi --dir DOWNLOADED_DIRECTORY [--manifest-sha256 SHA256]
   init-har-workspaces --dir NEW_DIRECTORY --connection HAR_WORKSPACE_CONNECTION.json [--name NAME]
   init --dir NEW_DIRECTORY --spec OPENAPI.json --selections SELECTIONS.json
        --bindings BINDINGS.json [--name NAME] [--seller-port PORT]
@@ -46,6 +70,7 @@ const HELP = `Starforge merchant MCP
        [--name NAME] [--seller-port PORT] [--facilitator URL] [--allow-local-facilitator]
        [--catalog CATALOG_CONNECTION_JSON] [--support SUPPORT_CONNECTION_JSON] [--fleet-plan ORIGINAL_FLEET_PLAN.json]
   init --dir NEW_DIRECTORY --duckdb-package PREPARED_DIRECTORY [--duckdb-python EXECUTABLE]
+  init --dir NEW_DIRECTORY --dataset-package PREPARED_SF82_DATASET_DIRECTORY
   init --dir NEW_DIRECTORY --s3-package CONFIGURED_DIRECTORY
   init --dir NEW_DIRECTORY --postgres-package PREPARED_DIRECTORY
   init --dir NEW_DIRECTORY --mysql-package PREPARED_DIRECTORY
@@ -62,6 +87,9 @@ const HELP = `Starforge merchant MCP
   platforms actions|sources|open|status|plan|read|preview|prepare|execute|reconcile|download|close ...
   inspect-har --url MCP_ENDPOINT --export-id EXPORT_ID [--token-env ENVIRONMENT_NAME]
   download-har --url MCP_ENDPOINT --export-id EXPORT_ID --out PRIVATE_DIRECTORY
+       [--token-env ENVIRONMENT_NAME] [--chunk-bytes BYTES] [--manifest-sha256 REVIEWED_DIGEST]
+  inspect-graphql --url MCP_ENDPOINT --export-id EXPORT_ID [--token-env ENVIRONMENT_NAME]
+  download-graphql --url MCP_ENDPOINT --export-id EXPORT_ID --out PRIVATE_DIRECTORY
        [--token-env ENVIRONMENT_NAME] [--chunk-bytes BYTES] [--manifest-sha256 REVIEWED_DIGEST]
   inspect-support|inspect-client --url MCP_ENDPOINT --export-id EXPORT_ID [--token-env ENVIRONMENT_NAME]
   download-support --url MCP_ENDPOINT --export-id EXPORT_ID --out PRIVATE_DIRECTORY
@@ -83,10 +111,17 @@ Ordinary init also accepts --pricing PRICING_CONNECTION_JSON and --release-store
 EXISTING_STORE. init-pricing uses the sole common store declared by its pricing
 aliases; select --release-store explicitly for multiple or no staging stores.
 PRICING.md describes original captures, reviewed atomic prices and retained exports.
+Ordinary init also accepts --mpp MPP_CONNECTION_JSON. MPP.md describes original
+customer receiving, exact review, native payment jobs and resumable file delivery.
 Ordinary init also accepts --woocommerce WOO_CONNECTION_JSON. init-woocommerce
 connects existing Woo stores directly. WOO_COMMERCE.md describes native order
 review, selected-order completion, verified refunds and original-file delivery.
 
+ArcGIS connects an existing publisher alias and its source editions through
+init-arcgis-workspaces. Supply --release-store to retain the existing workbench's
+original merchant releases; omitting it creates this operator's native store.
+ARCGIS_WORKSPACE.md covers host input profiles, shared browser/agent operations,
+complete source publication, original release controls and resumable receiving.
 Use --oauth-config ABSOLUTE_OAUTH_RESOURCE.json (or MCP_OAUTH_CONFIG) for incoming\nOAuth with explicit issuer subjects; clear the fixed token setting in this mode.\nThe original mcp-paid-agent/OAUTH_RESOURCE.md guide covers provider setup and clients.\nSupply the bearer token through MCP_ACCESS_TOKEN (or --token-env). It is never
 stored in the merchant configuration or printed. MCP_CLIENT_ORIGINS is an
 optional comma-separated allowlist. The listener binds only to 127.0.0.1.
@@ -94,9 +129,14 @@ BUYER_EXPENSES.md covers original buyer ledger capture, exact allocations, named
 review/close/reopen, transactional request recovery, customer SDK and receiving.
 An existing merchant can attach --buyer-expenses PRIVATE_CONNECTION_JSON.
 Every ordinary init form also accepts --receiving RECEIVING_CONNECTION_JSON
-and --python-workspaces CONNECTION_JSON. Attach original XML/NDJSON consoles with
---source-workspaces CONNECTION_JSON; SOURCE_WORKSPACES.md covers shared browser/agent
-operations and complete resumable exports. Attach original HAR consoles with
+and --python-workspaces CONNECTION_JSON. Add --graphql-workspaces CONNECTION_JSON
+for the original saved GraphQL authoring, retained preview, merchant/revision,
+deployment and host workflow. GRAPHQL_WORKSPACES.md covers browser handover,
+native release ownership and resumable original files. Attach original XML/NDJSON
+consoles with --source-workspaces CONNECTION_JSON; SOURCE_WORKSPACES.md covers
+shared browser/agent operations and complete resumable exports.
+--grpc-workspaces CONNECTION_JSON attaches the original gRPC operator; GRPC_WORKSPACE.md
+covers captured services, exact requests, retained calls, native release and complete SDK receiving. Attach original HAR consoles with
 --har-workspaces CONNECTION_JSON; HAR_WORKSPACE.md covers source review, capture editions,
 exact merchant packages, complete receiving adoption and resumable native files.
 Attach CKAN with --ckan-workspaces CONNECTION_JSON
@@ -134,11 +174,11 @@ function portNumber(value, fallback) {
   return Number(value);
 }
 export async function startMerchantMcp({ configPath, port = 3211, tokenEnv = 'MCP_ACCESS_TOKEN',
-  environment = process.env, woocommerceFetchImpl, oauthConfigPath, oauthFetchImpl } = {}) {
+  environment = process.env, woocommerceFetchImpl, mppFetchImpl, oauthConfigPath, oauthFetchImpl, accounting } = {}) {
   if (!configPath || !/^[A-Za-z_][A-Za-z0-9_]*$/.test(tokenEnv)) throw failure('CONFIGURATION_ERROR', 'Supply a merchant configuration and token environment-variable name.');
   port = portNumber(port, 3211);
   const operator = await openMerchantOperator(configPath,
-    { woocommerce: { environment, fetchImpl: woocommerceFetchImpl }, opensearch: { environment } });
+    { woocommerce: { environment, fetchImpl: woocommerceFetchImpl }, mpp: { environment, fetchImpl: mppFetchImpl }, opensearch: { environment }, grpc: { environment }, openapi: { environment }, arcgis: { environment }, accounting: { ...accounting, environment } });
   let server, access;
   try {
     access = await loadOAuthResourceHost({configPath:oauthConfigPath ?? environment.MCP_OAUTH_CONFIG,
@@ -146,7 +186,7 @@ export async function startMerchantMcp({ configPath, port = 3211, tokenEnv = 'MC
     const handler = createMcpToolHandler(operator, { ...access.transportOptions, maxRequestBytes: operator.maxRequestBytes,
       allowedClientOrigins: String(environment.MCP_CLIENT_ORIGINS ?? '').split(',').map(value => value.trim()).filter(Boolean),
       serverName: 'starforge-merchant-operator', serverVersion: '0.1.0',
-      instructions: 'For buyer expenses, open only a declared workspace and ledger alias. Inspect the current original revision and retain an exact requestId/payload before each change. Recover merchant_buyer_expense_request after an interrupted reply before retrying that same request. Capture and accept original statement editions, supply exact allocations and explicit outstanding dispositions, then use current period review before close. Reopen preserves issued editions. Export a project at its reviewed revision and use the existing manifest-pinned download and trusted receive commands. For Woo stores, inspect merchant_woo_stores and merchant_woo_store_status, select an actual order from merchant_woo_queue, then read its current original order. Inspect a host-declared native receipt, retain its recordSha256 and a stable reviewId, then review or resume that same native source. Release only with the exact review SHA256 and selected confirmOrder; after interruption use live review_status before another explicit release. For refunds, inspect the original accounting export and current Woo refund snapshot, then prepare the selected verified adjustment UUID with its exact export hash, explicit Woo amount and currency. Apply only the saved prepared review hash with the selected confirmOrder. Refund recovery reads the same original order without a POST; REFUND_SAVED_JOURNAL_PENDING requires explicit same-ID apply to reconcile its existing native child. Preserve all original operation IDs, and use export/status plus SHA-pinned file chunks for complete handoff. Full Woo refund status can affect download access. For a retained facilitator change, use merchant_facilitators and merchant_facilitator_review, inspect every generated native payment alternative, then stage the exact reviewId. Its complete review remains in merchant_inspect/compare and must match at native startup. After a lost stage reply inspect the proposed release ID. Use merchant_sources, stage, inspect and compare to prepare a release. Activate with the current generation and exact digest. Start or restart explicitly. Use merchant_discovery_status and review before applying the returned reviewId to publish or withdraw offers; after an interrupted apply, inspect current discovery instead of replaying it. Cache invalidation requires the current owned instance and an explicit route or all:true. For a configured fleet, inspect merchant_fleet_plan and start with its digest; stage/review/prepare/activate uses the original exact candidate and revision. Keep draining sessions until fleet_status reports canRetire, then retire their exact child instance. Rollback uses a fresh retained-revision review; stop/restart uses this process-owned managerId. After a lost response inspect current status before another change. Only this MCP process can stop its owned runtimes. For support observation, inspect host profiles and the current configuration revision, start explicitly and retain the owned watcher instance. Recover notifications using their original event IDs and attempt counts. With a configured support connection, inspect source aliases or incidents, import exact original captures, and reopen the original case before changing owner terms. Case writes use its current revision; workorder and export use that exact saved revision. Inspect support export status after an interrupted reply. For Tenderly merchants, list declared workspace aliases and open their original browser/model. Review and save a profile, open it, issue the exact request with the original id, subject and expiry in Unix milliseconds, then start its seller explicitly. Browser and MCP share the original profile, operation generation and provider observations. Read a saved simulation with provider_lookup; default reopens retained observations and refresh explicitly reads the provider again. Review a MATCHED observation before provider_recover. Keep the original lookup ID, observation ID and expected generation after a lost response. Merchant and provider responses use exact file-read selection, SHA256 and resumable chunks. Stop the merchant before selecting another profile; close drains only this owned instance. For Sheets authoring, list host-declared workspaces and explicitly open the original source model and its borrowed browser. Browser and agent edits share the same original draft revision, capture and source-version IDs. Inspect declared input hashes or choose an existing Google connection and exact tab/range. Save the explicit projection, preview the same draft revision, then review and save its source version against the current selection. Retain the original request UUID and inspect/resume that same operation after an uncertain reply; never repeat an uncertain Google read under a fresh ID. Open the original publisher explicitly. Only currentPublisher reports its live URL; a historical receipt may contain an expired URL. Private source packets use their original version, verified SHA256 and retained chunk-read identity. Closing drains this owned browser/model/publisher and releases its native lease; reopen the same directory through its alias and reconcile original receipts. For CKAN authoring, list host-declared workspaces and open the original saved project. Read its current operation before every mutation and pass that exact expectedOperationId. Capture, source review, publication, export and staging return the original operation ID immediately; inspect its saved completion before continuing. After a lost reply read the same native state. Stage into the project store bound to this operator, then use the original merchant inspect, compare, activate and start tools. Customer downloads retain the original file hash and byte offset. Close the owned model to release its original lease. For Python authoring, list declared aliases and explicitly open the original saved model. Read revision/declaration/source before editing with the expected head. Retain preview operationId and inspect the same original job after an interrupted reply. Stage a saved revision, review its native digest and current generation, and explicitly activate/start/restart. Only this model handle can cancel its previews or stop its managed seller. Customer exports reuse original saved files; portable exports retain source, native release history and clients. Resume chunk downloads with the same file SHA256 and offset. For receiving, inspect host source aliases, open the original saved workspace, and retain prepare/import/review IDs with exact source and plan digests. Read saved review status before retrying; replay uses the original capture. Close receiving to hand the same directory to its browser. Customer client export reads original metadata and retains its completion receipt. After a lost response, inspect merchant_client_export_status; legacy exports require explicit adoption of the inspected complete files digest. File delivery reads the original five payloads and receipt without running the seller or generated code. For accounting, list declared sources and explicitly open their original workspace. Review a recovery request before importing its retained preview, follow jobs and refresh the current revision, then capture and inspect the original report. File retrieval returns SHA-pinned chunks of the saved response or original report/archive; it never purchases again. Close the accounting workspace to release its original lease. For a publisher connection, list merchant_publishers and explicitly open its declared workspace; saved enabled refreshes resume. Inspect native source, plan, candidate and target before review/publication. Use original run UUIDs, review IDs and schedule revisions; reopen buyer files by the recorded handoff UUID. Close only the exact owned publisher instance. For pricing, inspect declared aliases and open the original SF97 model. Capture seller and native observations through merchant_pricing_source; use captureSha256 to page the same source. Save merchant pricing reviews with the current original revision and a stable requestId. Repricing starts from a saved version and complete ordered options: preview explicit atomic edits, retain its exact reviewSha256, and save with the current price-decision revision. Inspect the saved manifest after an interrupted reply. Stage a retained original API package by its decision and review hash, then use the original release digest/generation controls for activation and startup. Each alias reports whether its staging store is this operator release store. Download original files through SHA-pinned chunks. For OpenSearch, inspect merchant_opensearch_status and open only a host-declared workspace. Read the original draft or relevance-set revision before saving or judging, and retain its original requestId. Capture, preparation and native relevance evaluation use that same operation journal. After an interrupted response inspect merchant_opensearch_operation with the original request ID. Read the saved edition, compare actual query scope and judgments, then promote the selected evaluated variant into an original merchant draft for preparation. Full native results, reports, CSV and customer files use original SHA-pinned retained reads; resume with the same readId, file hash and byte offset. Close releases this process-owned workspace and temporary reads. For captured API sources, use merchant_har_workspaces, status and files to select the existing SF61 console and exact input hash. Ingest or adopt the original source, page every native group and review, then retain the complete decision document. Keep the immutable source selection and revision through native source, merchant preview and save. Later captures select the exact previous saved review; merchant_har_plan reuses the browser unchanged-route carry. Copy or receive the whole original source and use retained export manifests and SHA-pinned chunks after an interrupted reply. Closing HAR access drains only its calls and temporary reads; the existing source consoles retain their lifetimes. Payment verification and settlement remain in the original seller and configured facilitator.' });
+      instructions: 'For gRPC merchants, inspect host-declared workspaces and capture or receive an original protobuf closure. Read its exact revision, method schemas and complete plan before saving with baseRevision. Review the selected native channel, retain a stable operationId for each intentional unary call or preparation, and recover that same native attempt after an interrupted reply. Page every retained attempt with its original snapshot. Stop the direct merchant before staging into its own SF82 store; use merchant_grpc_release controls with the observed generation and instance. Customer exports contain all seven original files; inspect the manifest and use download-grpc to resume and restore the native client directory. Revision exports retain complete source for another original workspace. For native MPP, inspect merchant_mpp_consoles and status, retain a customer review from the original contract using a declared customer alias, then configure its exact review SHA256 and revision. Preview the exact offer/query/body before prepare and retain the original purchaseId and job ID. The existing console host runs original terminal approval, SF36 reservation, native MPP signing and SF86 accounting. Read original job/purchase state after interruption; retry preparation or resume the same saved purchase. Original response retrieval and handoff export use SHA-pinned chunks; merchant_mpp_export plus the maintained download-mpp receiver retains complete original files across MCP restart. For ArcGIS source merchants, inspect merchant_arcgis_status and open the host-declared workspace. It borrows the existing MerchantPublisher and its one refresh scheduler; the browser uses the same original workbench. Inspect declared file bytes and SHA256 before uploading an alias. Prepare a source from selected host connection/profile and exact original inputs; retain workbenchId and request UUID for every change, then inspect the same saved request after a lost response. Complete capture before mapping an immutable source edition, and select it against the current source revision. Use merchant_publisher_* for the original plan, extraction, candidate review, publication, buyer preparation and refresh schedule. Export only a published run, stage with the host runtime, then use original merchant release digest/generation controls to inspect, select and start. Read all seven saved deployment files through exact hashes and offsets. Closing a borrowed browser leaves the publisher and scheduler open; closing its owner drains the workbench and retained reads before releasing the publisher. No source or deployment step purchases data. For buyer expenses, open only a declared workspace and ledger alias. Inspect the current original revision and retain an exact requestId/payload before each change. Recover merchant_buyer_expense_request after an interrupted reply before retrying that same request. Capture and accept original statement editions, supply exact allocations and explicit outstanding dispositions, then use current period review before close. Reopen preserves issued editions. Export a project at its reviewed revision and use the existing manifest-pinned download and trusted receive commands. For World Bank workspaces, list declared aliases and open the original model. Save a source selection with its exact revision. Start or resume the same original capture ID, inspect its retained job until COMPLETE, and preserve its capture SHA256 for comparison, review and export. Original imported page receipts and handover packages require a host alias and inspected source hash. Merchant preparation uses a host profile; native publisher revisions, release generations and buyer intent/session IDs govern the full lifecycle. Browser and agent share the same model. Read original files in SHA-pinned chunks or use download-worldbank for durable complete receiving. Reopen the same original directory after interruption. For Woo stores, inspect merchant_woo_stores and merchant_woo_store_status, select an actual order from merchant_woo_queue, then read its current original order. Inspect a host-declared native receipt, retain its recordSha256 and a stable reviewId, then review or resume that same native source. Release only with the exact review SHA256 and selected confirmOrder; after interruption use live review_status before another explicit release. For refunds, inspect the original accounting export and current Woo refund snapshot, then prepare the selected verified adjustment UUID with its exact export hash, explicit Woo amount and currency. Apply only the saved prepared review hash with the selected confirmOrder. Refund recovery reads the same original order without a POST; REFUND_SAVED_JOURNAL_PENDING requires explicit same-ID apply to reconcile its existing native child. Preserve all original operation IDs, and use export/status plus SHA-pinned file chunks for complete handoff. Full Woo refund status can affect download access. For a retained facilitator change, use merchant_facilitators and merchant_facilitator_review, inspect every generated native payment alternative, then stage the exact reviewId. Its complete review remains in merchant_inspect/compare and must match at native startup. After a lost stage reply inspect the proposed release ID. Use merchant_sources, stage, inspect and compare to prepare a release. Activate with the current generation and exact digest. Start or restart explicitly. Use merchant_discovery_status and review before applying the returned reviewId to publish or withdraw offers; after an interrupted apply, inspect current discovery instead of replaying it. Cache invalidation requires the current owned instance and an explicit route or all:true. For a configured fleet, inspect merchant_fleet_plan and start with its digest; stage/review/prepare/activate uses the original exact candidate and revision. Keep draining sessions until fleet_status reports canRetire, then retire their exact child instance. Rollback uses a fresh retained-revision review; stop/restart uses this process-owned managerId. After a lost response inspect current status before another change. Only this MCP process can stop its owned runtimes. For support observation, inspect host profiles and the current configuration revision, start explicitly and retain the owned watcher instance. Recover notifications using their original event IDs and attempt counts. With a configured support connection, inspect source aliases or incidents, import exact original captures, and reopen the original case before changing owner terms. Case writes use its current revision; workorder and export use that exact saved revision. Inspect support export status after an interrupted reply. For CoinGecko research, list host-declared workspaces and open their original browser/model. Save complete requests and collections with stable opId, current project revision and current record version for updates. Inspect original host inputs and pin their SHA256 before importing full source bytes. Page every original capture, snapshot and comparison row; retain their source basis and exact numeric values. Provider plans use the original compiler and complete deployment download. Prepare native purchases from the current exact merchant challenge and inspect the same job before explicitly executing it. Preserve native SF31/SF36/SF88 identities, budgets and attempts. Recover an uncertain write with merchant_coingecko_operation and the same opId; use currentJob or inspect for present native action availability. Full project handovers restore through original source aliases or retained export IDs, with historical jobs archived. Download complete original files with their SHA256, readId and byte offset; close only the current owned instance. For Tenderly merchants, list declared workspace aliases and open their original browser/model. Review and save a profile, open it, issue the exact request with the original id, subject and expiry in Unix milliseconds, then start its seller explicitly. Browser and MCP share the original profile, operation generation and provider observations. Read a saved simulation with provider_lookup; default reopens retained observations and refresh explicitly reads the provider again. Review a MATCHED observation before provider_recover. Keep the original lookup ID, observation ID and expected generation after a lost response. Merchant and provider responses use exact file-read selection, SHA256 and resumable chunks. Stop the merchant before selecting another profile; close drains only this owned instance. For Sheets authoring, list host-declared workspaces and explicitly open the original source model and its borrowed browser. Browser and agent edits share the same original draft revision, capture and source-version IDs. Inspect declared input hashes or choose an existing Google connection and exact tab/range. Save the explicit projection, preview the same draft revision, then review and save its source version against the current selection. Retain the original request UUID and inspect/resume that same operation after an uncertain reply; never repeat an uncertain Google read under a fresh ID. Open the original publisher explicitly. Only currentPublisher reports its live URL; a historical receipt may contain an expired URL. Private source packets use their original version, verified SHA256 and retained chunk-read identity. Closing drains this owned browser/model/publisher and releases its native lease; reopen the same directory through its alias and reconcile original receipts. For CKAN authoring, list host-declared workspaces and open the original saved project. Read its current operation before every mutation and pass that exact expectedOperationId. Capture, source review, publication, export and staging return the original operation ID immediately; inspect its saved completion before continuing. After a lost reply read the same native state. Stage into the project store bound to this operator, then use the original merchant inspect, compare, activate and start tools. Customer downloads retain the original file hash and byte offset. Close the owned model to release its original lease. For Python authoring, list declared aliases and explicitly open the original saved model. Read revision/declaration/source before editing with the expected head. Retain preview operationId and inspect the same original job after an interrupted reply. Stage a saved revision, review its native digest and current generation, and explicitly activate/start/restart. Only this model handle can cancel its previews or stop its managed seller. Customer exports reuse original saved files; portable exports retain source, native release history and clients. Resume chunk downloads with the same file SHA256 and offset. For receiving, inspect host source aliases, open the original saved workspace, and retain prepare/import/review IDs with exact source and plan digests. Read saved review status before retrying; replay uses the original capture. Close receiving to hand the same directory to its browser. Customer client export reads original metadata and retains its completion receipt. After a lost response, inspect merchant_client_export_status; legacy exports require explicit adoption of the inspected complete files digest. File delivery reads the original five payloads and receipt without running the seller or generated code. For accounting, list declared sources and explicitly open their original workspace. Review a recovery request before importing its retained preview, follow jobs and refresh the current revision, then capture and inspect the original report. File retrieval returns SHA-pinned chunks of the saved response or original report/archive; it never purchases again. Close the accounting workspace to release its original lease. For a publisher connection, list merchant_publishers and explicitly open its declared workspace; saved enabled refreshes resume. Inspect native source, plan, candidate and target before review/publication. Use original run UUIDs, review IDs and schedule revisions; reopen buyer files by the recorded handoff UUID. Close only the exact owned publisher instance. For pricing, inspect declared aliases and open the original SF97 model. Capture seller and native observations through merchant_pricing_source; use captureSha256 to page the same source. Save merchant pricing reviews with the current original revision and a stable requestId. Repricing starts from a saved version and complete ordered options: preview explicit atomic edits, retain its exact reviewSha256, and save with the current price-decision revision. Inspect the saved manifest after an interrupted reply. Stage a retained original API package by its decision and review hash, then use the original release digest/generation controls for activation and startup. Each alias reports whether its staging store is this operator release store. Download original files through SHA-pinned chunks. For Fiscal Data, list declared workspaces and explicitly open the original model. Review exact source revisions, fields, units, scales and stock-series notes before building native CSV editions. The browser and MCP share the same model and host operator identity. Keep original request IDs, reviewed offer digests and release generations. Checkpoint drains the original source model into a complete retained source/review package; receive only into an empty closed declared alias and resume unfinished captures explicitly. Source pages, native delivery archives and portable packages use SHA-pinned retained chunks. The original publisher, SF82 seller and SF88 buyer own every payment and approval. For OpenSearch, inspect merchant_opensearch_status and open only a host-declared workspace. Read the original draft or relevance-set revision before saving or judging, and retain its original requestId. Capture, preparation and native relevance evaluation use that same operation journal. After an interrupted response inspect merchant_opensearch_operation with the original request ID. Read the saved edition, compare actual query scope and judgments, then promote the selected evaluated variant into an original merchant draft for preparation. Full native results, reports, CSV and customer files use original SHA-pinned retained reads; resume with the same readId, file hash and byte offset. Close releases this process-owned workspace and temporary reads. For captured API sources, use merchant_har_workspaces, status and files to select the existing SF61 console and exact input hash. Ingest or adopt the original source, page every native group and review, then retain the complete decision document. Keep the immutable source selection and revision through native source, merchant preview and save. Later captures select the exact previous saved review; merchant_har_plan reuses the browser unchanged-route carry. Copy or receive the whole original source and use retained export manifests and SHA-pinned chunks after an interrupted reply. Closing HAR access drains only its calls and temporary reads; the existing source consoles retain their lifetimes. Payment verification and settlement remain in the original seller and configured facilitator.' });
     server = createServer(access.wrap(handler));
     server.requestTimeout = 150000; server.headersTimeout = 10000; server.keepAliveTimeout = 2000;
     await new Promise((done, reject) => {
@@ -233,6 +273,103 @@ export async function main(args = process.argv.slice(2)) {
       process.stdout.write(JSON.stringify(result)+'\n');return result;
     }finally{process.off('SIGINT',stop);process.off('SIGTERM',stop);}
   }
+  if (command === 'init-openapi-workspaces') {
+    const options = pairs(rest, ['--dir', '--connection', '--name', '--release-store']);
+    if (!options.has('--dir') || !options.has('--connection')) throw failure('CONFIGURATION_ERROR', 'Supply --dir and --connection.');
+    const result = await initializeOpenApiWorkspaceMerchant({ directory: options.get('--dir'), connection: options.get('--connection'),
+      name: options.get('--name'), releaseStore: options.get('--release-store') });
+    process.stdout.write(JSON.stringify(result, null, 2) + '\n'); return result;
+  }
+  if (['download-openapi', 'inspect-openapi', 'reopen-openapi'].includes(command)) {
+    const { downloadOpenApiPackage, inspectOpenApiPackageDownload, reopenOpenApiPackageDownload } = await import('./openapi-workspace-client.mjs');
+    if (command === 'reopen-openapi') {
+      const options = pairs(rest, ['--dir', '--manifest-sha256']);
+      if (!options.has('--dir')) throw failure('CONFIGURATION_ERROR', 'Supply --dir.');
+      const result = await reopenOpenApiPackageDownload({ directory: options.get('--dir'), expectedManifestSha256: options.get('--manifest-sha256') });
+      process.stdout.write(JSON.stringify(result, null, 2) + '\n'); return result;
+    }
+    const download = command === 'download-openapi';
+    const options = pairs(rest, ['--url', '--workspace', '--export-id', '--token-env', '--manifest-sha256', ...(download ? ['--out', '--chunk-bytes'] : [])]);
+    for (const key of ['--url', '--workspace', '--export-id', ...(download ? ['--out'] : [])])
+      if (!options.has(key)) throw failure('CONFIGURATION_ERROR', 'Supply ' + key + '.');
+    const rawChunk = options.get('--chunk-bytes');
+    if (rawChunk !== undefined && (!/^[1-9][0-9]{0,5}$/.test(rawChunk) || Number(rawChunk) > 196608))
+      throw failure('CONFIGURATION_ERROR', 'Use a whole chunk byte count from 1 to 196608.');
+    const controller = new AbortController(), stop = () => controller.abort(failure('OPENAPI_DOWNLOAD_INTERRUPTED',
+      'Download interrupted. Run the same command to continue the retained original files.'));
+    process.once('SIGINT', stop); process.once('SIGTERM', stop);
+    try {
+      const selected = { url: options.get('--url'), workspace: options.get('--workspace'), exportId: options.get('--export-id'),
+        tokenEnv: options.get('--token-env') ?? 'MCP_ACCESS_TOKEN', signal: controller.signal,
+        expectedManifestSha256: options.get('--manifest-sha256') };
+      const result = download ? await downloadOpenApiPackage({ ...selected, directory: options.get('--out'),
+        ...(rawChunk === undefined ? {} : { chunkSize: Number(rawChunk) }),
+        onProgress: value => process.stderr.write(JSON.stringify(value) + '\n') }) : await inspectOpenApiPackageDownload(selected);
+      controller.signal.throwIfAborted(); process.stdout.write(JSON.stringify(result, null, 2) + '\n'); return result;
+    } finally { process.off('SIGINT', stop); process.off('SIGTERM', stop); }
+  }
+  if (command === 'init-worldbank-workspaces') {
+    const options = pairs(rest, ['--dir', '--connection', '--name']);
+    if (!options.has('--dir') || !options.has('--connection')) throw failure('CONFIGURATION_ERROR', 'Supply --dir and --connection.');
+    const result = await initializeWorldBankWorkspaceMerchant({ directory: options.get('--dir'),
+      connection: options.get('--connection'), name: options.get('--name') });
+    process.stdout.write(JSON.stringify(result, null, 2) + '\n'); return result;
+  }
+  if (command === 'inspect-worldbank' || command === 'download-worldbank') {
+    const download = command === 'download-worldbank';
+    const options = pairs(rest, ['--url','--workspace','--export-id','--token-env',
+      ...(download ? ['--out','--chunk-bytes','--manifest-sha256'] : [])]);
+    for (const key of ['--url','--workspace','--export-id',...(download ? ['--out'] : [])])
+      if (!options.has(key)) throw failure('CONFIGURATION_ERROR', 'Supply ' + key + '.');
+    const rawChunk = options.get('--chunk-bytes');
+    if (rawChunk !== undefined && (!/^[1-9][0-9]{0,5}$/.test(rawChunk) || Number(rawChunk) > 196608))
+      throw failure('CONFIGURATION_ERROR', 'Use a whole chunk byte count from 1 to 196608.');
+    const { inspectWorldBankDownload, downloadWorldBankWorkspace } = await import('./worldbank-workspace-download.mjs');
+    const controller = new AbortController();
+    const stop = () => controller.abort(failure('WORLDBANK_DOWNLOAD_INTERRUPTED',
+      'Download interrupted. Resume with the same export and output directory.'));
+    process.once('SIGINT',stop); process.once('SIGTERM',stop);
+    try {
+      const selected = { url:options.get('--url'), workspace:options.get('--workspace'),
+        exportId:options.get('--export-id'), tokenEnv:options.get('--token-env') ?? 'MCP_ACCESS_TOKEN',
+        signal:controller.signal };
+      const result = download ? await downloadWorldBankWorkspace({ ...selected, directory:options.get('--out'),
+        expectedManifestSha256:options.get('--manifest-sha256'),
+        ...(rawChunk === undefined ? {} : {chunkSize:Number(rawChunk)}),
+        onProgress:progress => process.stderr.write(JSON.stringify(progress) + '\n') })
+        : await inspectWorldBankDownload(selected);
+      process.stdout.write(JSON.stringify(result) + '\n'); return result;
+    } finally { process.off('SIGINT',stop); process.off('SIGTERM',stop); }
+  }
+  if (command === 'init-grpc-workspaces') {
+    const options = pairs(rest, ['--dir', '--connection', '--name']);
+    if (!options.has('--dir') || !options.has('--connection')) throw failure('CONFIGURATION_ERROR', 'Supply --dir and --connection.');
+    const result = await initializeGrpcWorkspaceMerchant({ directory: options.get('--dir'), connection: options.get('--connection'), name: options.get('--name') });
+    process.stdout.write(JSON.stringify(result, null, 2) + '\n'); return result;
+  }
+  if (command === 'inspect-grpc' || command === 'download-grpc') {
+    const inspect = command === 'inspect-grpc';
+    const options = pairs(rest, ['--url', '--export-id', '--token-env', ...(inspect ? [] : ['--out', '--chunk-bytes', '--manifest-sha256'])]);
+    for (const key of ['--url', '--export-id', ...(inspect ? [] : ['--out'])])
+      if (!options.has(key)) throw failure('CONFIGURATION_ERROR', 'Supply ' + key + '.');
+    const { inspectGrpcExport, downloadGrpcExport } = await import('./grpc-workspace-download.mjs');
+    const rawChunk = options.get('--chunk-bytes');
+    if (rawChunk !== undefined && !/^[1-9][0-9]{0,5}$/.test(rawChunk))
+      throw failure('CONFIGURATION_ERROR', 'Use a whole chunk byte count from 1 to 196608.');
+    const controller = new AbortController();
+    const stop = () => controller.abort(failure('GRPC_EXPORT_DOWNLOAD_INTERRUPTED', 'Run the same command and receiving directory to continue the original files.'));
+    process.once('SIGINT', stop); process.once('SIGTERM', stop);
+    try {
+      const common = { url: options.get('--url'), exportId: options.get('--export-id'),
+        tokenEnv: options.get('--token-env') ?? 'MCP_ACCESS_TOKEN', signal: controller.signal };
+      const result = inspect ? await inspectGrpcExport(common) : await downloadGrpcExport({ ...common, directory: options.get('--out'),
+        ...(options.has('--manifest-sha256') ? { expectedManifestSha256: options.get('--manifest-sha256') } : {}),
+        ...(rawChunk === undefined ? {} : { chunkSize: Number(rawChunk) }),
+        onProgress: value => process.stderr.write(JSON.stringify(value) + '\n') });
+      controller.signal.throwIfAborted();
+      process.stdout.write(JSON.stringify(result) + '\n'); return result;
+    } finally { process.off('SIGINT', stop); process.off('SIGTERM', stop); }
+  }
   if (command === 'init-source-workspaces') {
     const options = pairs(rest, ['--dir', '--connection', '--name']);
     if (!options.has('--dir') || !options.has('--connection')) throw failure('CONFIGURATION_ERROR', 'Supply --dir and --connection.');
@@ -250,6 +387,12 @@ export async function main(args = process.argv.slice(2)) {
     if (!options.has('--dir') || !options.has('--connection')) throw failure('CONFIGURATION_ERROR', 'Supply --dir and --connection.');
     const result = await initializeRedisWorkspaceMerchant({ directory: options.get('--dir'), connection: options.get('--connection'),
       workspace: options.get('--workspace'), name: options.get('--name') });
+    process.stdout.write(JSON.stringify(result, null, 2) + '\n'); return result;
+  }
+  if (command === 'init-coingecko-workspaces') {
+    const options = pairs(rest, ['--dir', '--connection', '--name']);
+    if (!options.has('--dir') || !options.has('--connection')) throw failure('CONFIGURATION_ERROR', 'Supply --dir and --connection.');
+    const result = await initializeCoinGeckoWorkspaceMerchant({ directory: options.get('--dir'), connection: options.get('--connection'), name: options.get('--name') });
     process.stdout.write(JSON.stringify(result, null, 2) + '\n'); return result;
   }
   if (command === 'init-tenderly-workspaces') {
@@ -271,6 +414,25 @@ export async function main(args = process.argv.slice(2)) {
     const result = await initializeSheetsWorkspaceMerchant({ directory: options.get('--dir'), connection: options.get('--connection'), name: options.get('--name') });
     process.stdout.write(JSON.stringify(result, null, 2) + '\n'); return result;
   }
+  if (command === 'init-mpp') {
+    const options = pairs(rest, ['--dir', '--connection', '--name']);
+    if (!options.has('--dir') || !options.has('--connection')) throw failure('CONFIGURATION_ERROR', 'Supply --dir and --connection.');
+    const result = await initializeMppMerchant({ directory: options.get('--dir'), connection: options.get('--connection'), name: options.get('--name') });
+    process.stdout.write(JSON.stringify(result, null, 2) + '\n'); return result;
+  }
+  if (command === 'inspect-mpp' || command === 'download-mpp') {
+    const download = command === 'download-mpp';
+    const options = pairs(rest, ['--url', '--export-id', '--token-env', ...(download ? ['--out', '--chunk-bytes', '--manifest-sha256'] : [])]);
+    if (!options.has('--url') || !options.has('--export-id') || download && !options.has('--out'))
+      throw failure('CONFIGURATION_ERROR', 'Supply the MCP URL, original export ID, and download directory when downloading.');
+    const { inspectMppDownload, downloadMppExport } = await import('./mpp-download.mjs');
+    const selected = { url: options.get('--url'), exportId: options.get('--export-id'), tokenEnv: options.get('--token-env') };
+    const result = download ? await downloadMppExport({ ...selected, directory: options.get('--out'),
+      ...(options.has('--chunk-bytes') ? { chunkSize: Number(options.get('--chunk-bytes')) } : {}),
+      ...(options.has('--manifest-sha256') ? { expectedManifestSha256: options.get('--manifest-sha256') } : {}) })
+      : await inspectMppDownload(selected);
+    process.stdout.write(JSON.stringify(result, null, 2) + '\n'); return result;
+  }
   if (command === 'init-woocommerce') {
     const options = pairs(rest, ['--dir', '--connection', '--name']);
     if (!options.has('--dir') || !options.has('--connection')) throw failure('CONFIGURATION_ERROR', 'Supply --dir and --connection.');
@@ -283,10 +445,22 @@ export async function main(args = process.argv.slice(2)) {
     const result = await initializeGeocodioWorkspaceMerchant({ directory: options.get('--dir'), connection: options.get('--connection'), name: options.get('--name') });
     process.stdout.write(JSON.stringify(result, null, 2) + '\n'); return result;
   }
+  if (command === 'init-odata-workspaces') {
+    const options = pairs(rest, ['--dir', '--connection', '--name']);
+    if (!options.has('--dir') || !options.has('--connection')) throw failure('CONFIGURATION_ERROR', 'Supply --dir and --connection.');
+    const result = await initializeODataWorkspaceMerchant({ directory: options.get('--dir'), connection: options.get('--connection'), name: options.get('--name') });
+    process.stdout.write(JSON.stringify(result, null, 2) + '\n'); return result;
+  }
   if (command === 'init-socrata-workspaces') {
     const options = pairs(rest, ['--dir', '--connection', '--name']);
     if (!options.has('--dir') || !options.has('--connection')) throw failure('CONFIGURATION_ERROR', 'Supply --dir and --connection.');
     const result = await initializeSocrataWorkspaceMerchant({ directory: options.get('--dir'), connection: options.get('--connection'), name: options.get('--name') });
+    process.stdout.write(JSON.stringify(result, null, 2) + '\n'); return result;
+  }
+  if (command === 'init-fiscaldata-workspaces') {
+    const options = pairs(rest, ['--dir', '--connection', '--name']);
+    if (!options.has('--dir') || !options.has('--connection')) throw failure('CONFIGURATION_ERROR', 'Supply --dir and --connection.');
+    const result = await initializeFiscalDataWorkspaceMerchant({ directory: options.get('--dir'), connection: options.get('--connection'), name: options.get('--name') });
     process.stdout.write(JSON.stringify(result, null, 2) + '\n'); return result;
   }
   if (command === 'init-opensearch-workspaces') {
@@ -294,6 +468,12 @@ export async function main(args = process.argv.slice(2)) {
     if (!options.has('--dir') || !options.has('--connection')) throw failure('CONFIGURATION_ERROR', 'Supply --dir and --connection.');
     const result = await initializeOpenSearchWorkspaceMerchant({ directory: options.get('--dir'), connection: options.get('--connection'),
       releaseStore: options.get('--release-store'), name: options.get('--name') });
+    process.stdout.write(JSON.stringify(result, null, 2) + '\n'); return result;
+  }
+  if (command === 'init-edgar-workspaces') {
+    const options = pairs(rest, ['--dir', '--connection', '--name']);
+    if (!options.has('--dir') || !options.has('--connection')) throw failure('CONFIGURATION_ERROR', 'Supply --dir and --connection.');
+    const result = await initializeEdgarWorkspaceMerchant({ directory: options.get('--dir'), connection: options.get('--connection'), name: options.get('--name') });
     process.stdout.write(JSON.stringify(result, null, 2) + '\n'); return result;
   }
   if (command === 'init-webdav-workspaces') {
@@ -325,6 +505,37 @@ export async function main(args = process.argv.slice(2)) {
     process.once('SIGINT', stop); process.once('SIGTERM', stop);
     try {
       const result = await downloadPythonWorkspace({ url: options.get('--url'), workspace: options.get('--workspace'), id: options.get('--export-id'), directory: options.get('--out'), kind: options.get('--kind') ?? 'export', tokenEnv: options.get('--token-env') ?? 'MCP_ACCESS_TOKEN', signal: controller.signal, ...(rawChunk === undefined ? {} : { chunkSize: Number(rawChunk) }), onProgress: progress => process.stderr.write(JSON.stringify(progress) + '\n') });
+      process.stdout.write(JSON.stringify(result) + '\n'); return result;
+    } finally { process.off('SIGINT', stop); process.off('SIGTERM', stop); }
+  }
+  if (command === 'init-graphql-workspaces') {
+    const options = pairs(rest, ['--dir', '--connection', '--name']);
+    if (!options.has('--dir') || !options.has('--connection')) throw failure('CONFIGURATION_ERROR', 'Supply --dir and --connection.');
+    const result = await initializeGraphqlWorkspaceMerchant({ directory: options.get('--dir'), connection: options.get('--connection'),
+      ...(options.has('--name') ? { name: options.get('--name') } : {}) });
+    process.stdout.write(JSON.stringify(result) + '\n'); return result;
+  }
+  if (command === 'inspect-graphql' || command === 'download-graphql') {
+    const downloading = command === 'download-graphql';
+    const options = pairs(rest, ['--url', '--export-id', '--token-env',
+      ...(downloading ? ['--out', '--chunk-bytes', '--manifest-sha256'] : [])]);
+    for (const key of ['--url', '--export-id', ...(downloading ? ['--out'] : [])])
+      if (!options.has(key)) throw failure('CONFIGURATION_ERROR', 'Supply ' + key + '.');
+    const rawChunk = options.get('--chunk-bytes');
+    if (rawChunk !== undefined && !/^[1-9][0-9]{0,5}$/.test(rawChunk))
+      throw failure('CONFIGURATION_ERROR', 'Use a whole chunk byte count from 1 to 196608.');
+    const { inspectGraphqlWorkspaceFiles, downloadGraphqlWorkspaceFiles } = await import('./graphql-workspace-download.mjs');
+    const controller = new AbortController();
+    const stop = () => controller.abort(failure('GRAPHQL_DOWNLOAD_INTERRUPTED', 'Run the same download command to continue its verified original files.'));
+    process.once('SIGINT', stop); process.once('SIGTERM', stop);
+    try {
+      const common = { url: options.get('--url'), exportId: options.get('--export-id'),
+        tokenEnv: options.get('--token-env') ?? 'MCP_ACCESS_TOKEN', signal: controller.signal };
+      const result = downloading ? await downloadGraphqlWorkspaceFiles({ ...common, directory: options.get('--out'),
+        ...(rawChunk === undefined ? {} : { chunkSize: Number(rawChunk) }),
+        ...(options.has('--manifest-sha256') ? { expectedManifestSha256: options.get('--manifest-sha256') } : {}),
+        onProgress: value => process.stderr.write(JSON.stringify(value) + '\n') })
+        : await inspectGraphqlWorkspaceFiles(common);
       process.stdout.write(JSON.stringify(result) + '\n'); return result;
     } finally { process.off('SIGINT', stop); process.off('SIGTERM', stop); }
   }
@@ -377,10 +588,19 @@ export async function main(args = process.argv.slice(2)) {
       process.stdout.write(JSON.stringify(result) + '\n'); return result;
     } finally { process.off('SIGINT', stop); process.off('SIGTERM', stop); }
   }
+  if (command === 'init-arcgis-workspaces') {
+    const options = pairs(rest, ['--dir','--publishers','--connection','--release-store','--name']);
+    for (const key of ['--dir','--publishers','--connection'])
+      if (!options.has(key)) throw failure('CONFIGURATION_ERROR', 'Missing ' + key);
+    const result = await initializeArcgisWorkspaceMerchant({ directory: options.get('--dir'),
+      publishers: options.get('--publishers'), connection: options.get('--connection'),
+      releaseStore: options.get('--release-store'), ...(options.has('--name') ? {name:options.get('--name')} : {}) });
+    process.stdout.write(JSON.stringify(result) + '\n'); return result;
+  }
   if (command === 'init-publishers') {
-    const options = pairs(rest, ['--dir', '--connection', '--name']);
+    const options = pairs(rest, ['--dir', '--connection', '--name', '--arcgis-workspaces', '--release-store']);
     if (!options.has('--dir') || !options.has('--connection')) throw failure('CONFIGURATION_ERROR', 'Supply --dir and --connection.');
-    const result = await initializePublisherMerchant({ directory: options.get('--dir'), connection: options.get('--connection'),
+    const result = await initializePublisherMerchant({ directory: options.get('--dir'), connection: options.get('--connection'), arcgisWorkspaces: options.get('--arcgis-workspaces'), releaseStore: options.get('--release-store'),
       ...(options.has('--name') ? { name: options.get('--name') } : {}) });
     process.stdout.write(JSON.stringify(result) + '\n'); return result;
   }
@@ -414,8 +634,8 @@ export async function main(args = process.argv.slice(2)) {
     process.stdout.write(JSON.stringify(result) + '\n'); return result;
   }
   if (command === 'init') {
-    const options = pairs(rest, ['--dir', '--workspace', '--python', '--python-root', '--duckdb-package', '--duckdb-python', '--s3-package', '--postgres-package', '--mysql-package', '--clickhouse-package', '--jsonrpc-package', '--sqlite-package', '--sqlite-snapshot-max-bytes', '--sqlite-snapshot-timeout-ms', '--spec', '--selections', '--bindings', '--upstreams', '--name', '--seller-port', '--handlers', '--facilitator', '--catalog', '--facilitators', '--fleet-plan', '--accounting', '--support', '--receiving', '--python-workspaces', '--source-workspaces', '--har-workspaces', '--ckan-workspaces', '--pricing', '--woocommerce', '--buyer-expenses', '--release-store'], ['--allow-local-facilitator', '--allow-loopback-upstream']);
-    for (const key of options.has('--workspace') || options.has('--python') || options.has('--duckdb-package') || options.has('--s3-package') || options.has('--postgres-package') || options.has('--mysql-package') || options.has('--jsonrpc-package') || options.has('--sqlite-package') || options.has('--clickhouse-package') ? ['--dir'] : ['--dir', '--spec', '--selections', '--bindings'])
+    const options = pairs(rest, ['--dir', '--workspace', '--python', '--python-root', '--duckdb-package', '--duckdb-python', '--dataset-package', '--s3-package', '--postgres-package', '--mysql-package', '--clickhouse-package', '--jsonrpc-package', '--sqlite-package', '--sqlite-snapshot-max-bytes', '--sqlite-snapshot-timeout-ms', '--spec', '--selections', '--bindings', '--upstreams', '--name', '--seller-port', '--handlers', '--facilitator', '--catalog', '--facilitators', '--fleet-plan', '--accounting', '--support', '--receiving', '--python-workspaces', '--graphql-workspaces', '--source-workspaces', '--grpc-workspaces', '--openapi-workspaces', '--har-workspaces', '--ckan-workspaces', '--pricing', '--woocommerce', '--mpp', '--buyer-expenses', '--release-store'], ['--allow-local-facilitator', '--allow-loopback-upstream']);
+    for (const key of options.has('--workspace') || options.has('--python') || options.has('--duckdb-package') || options.has('--dataset-package') || options.has('--s3-package') || options.has('--postgres-package') || options.has('--mysql-package') || options.has('--jsonrpc-package') || options.has('--sqlite-package') || options.has('--clickhouse-package') ? ['--dir'] : ['--dir', '--spec', '--selections', '--bindings'])
       if (!options.has(key)) throw failure('CONFIGURATION_ERROR', 'Missing ' + key);
     const runtime = { port: portNumber(options.get('--seller-port'), 0) };
     if (options.has('--handlers')) runtime.handlers = options.get('--handlers');
@@ -424,9 +644,10 @@ export async function main(args = process.argv.slice(2)) {
     if (options.has('--allow-loopback-upstream')) runtime.allowLoopbackUpstream = true;
     const result = await initializeMerchant({ directory: options.get('--dir'), spec: options.get('--spec'),
       selections: options.get('--selections'), bindings: options.get('--bindings'),
-      workspace: options.get('--workspace'), upstreams: options.get('--upstreams'), runtime, catalog: options.get('--catalog'), facilitators: options.get('--facilitators'), fleetPlan: options.get('--fleet-plan'), accounting: options.get('--accounting'), support: options.get('--support'), receiving: options.get('--receiving'), pythonWorkspaces: options.get('--python-workspaces'), sourceWorkspaces: options.get('--source-workspaces'), harWorkspaces: options.get('--har-workspaces'), ckanWorkspaces: options.get('--ckan-workspaces'), pricing: options.get('--pricing'), woocommerce: options.get('--woocommerce'), buyerExpenses: options.get('--buyer-expenses'), releaseStore: options.get('--release-store'),
+      workspace: options.get('--workspace'), upstreams: options.get('--upstreams'), runtime, catalog: options.get('--catalog'), facilitators: options.get('--facilitators'), fleetPlan: options.get('--fleet-plan'), accounting: options.get('--accounting'), support: options.get('--support'), receiving: options.get('--receiving'), pythonWorkspaces: options.get('--python-workspaces'), graphqlWorkspaces: options.get('--graphql-workspaces'), sourceWorkspaces: options.get('--source-workspaces'), grpcWorkspaces: options.get('--grpc-workspaces'), openapiWorkspaces: options.get('--openapi-workspaces'), harWorkspaces: options.get('--har-workspaces'), ckanWorkspaces: options.get('--ckan-workspaces'), pricing: options.get('--pricing'), woocommerce: options.get('--woocommerce'), mpp: options.get('--mpp'), buyerExpenses: options.get('--buyer-expenses'), releaseStore: options.get('--release-store'),
       python: options.get('--python'), pythonRoot: options.get('--python-root'),
       duckdbPackage: options.get('--duckdb-package'), duckdbPython: options.get('--duckdb-python'),
+      datasetPackage: options.get('--dataset-package'),
       s3Package: options.get('--s3-package'), postgresPackage: options.get('--postgres-package'), mysqlPackage: options.get('--mysql-package'),
       jsonrpcPackage: options.get('--jsonrpc-package'),
       clickhousePackage: options.get('--clickhouse-package'),
@@ -436,7 +657,7 @@ export async function main(args = process.argv.slice(2)) {
       ...(options.has('--name') ? { name: options.get('--name') } : {}) });
     process.stdout.write(JSON.stringify(result) + '\n'); return result;
   }
-  if (command !== 'serve') throw failure('CONFIGURATION_ERROR', 'Choose init, init-buyer-expenses, expenses, init-woocommerce, init-fleet, init-pricing, init-accounting, init-receiving, init-python-workspaces, init-sheets-workspaces, init-ckan-workspaces, init-tenderly-workspaces, init-redis-workspaces, init-usaspending-workspaces, init-source-workspaces, init-har-workspaces, inspect-har, download-har, init-s3-workspaces, init-opensearch-workspaces, init-publishers, serve, maintenance, adjustments, platforms, statements, inspect-support, inspect-client, inspect-s3, download-support, download-client, download-s3, reopen-support, download-python or reopen-python.');
+  if (command !== 'serve') throw failure('CONFIGURATION_ERROR', 'Choose init, init-mpp, inspect-mpp, download-mpp, init-buyer-expenses, expenses, init-woocommerce, init-fleet, init-pricing, init-accounting, init-receiving, init-python-workspaces, init-graphql-workspaces, init-sheets-workspaces, init-ckan-workspaces, init-tenderly-workspaces, init-coingecko-workspaces, init-redis-workspaces, init-usaspending-workspaces, init-source-workspaces, init-grpc-workspaces, inspect-grpc, download-grpc, init-openapi-workspaces, download-openapi, inspect-openapi, reopen-openapi, init-har-workspaces, inspect-har, download-har, init-s3-workspaces, init-opensearch-workspaces, init-publishers, init-arcgis-workspaces, serve, maintenance, adjustments, platforms, statements, inspect-support, inspect-client, inspect-graphql, inspect-s3, download-support, download-client, download-graphql, download-s3, reopen-support, download-python or reopen-python.');
   const options = pairs(rest, ['--config', '--port', '--token-env', '--oauth-config']);
   if (!options.has('--config')) throw failure('CONFIGURATION_ERROR', 'Supply --config.');
   const session = await startMerchantMcp({ configPath: options.get('--config'), port: portNumber(options.get('--port'), 3211),

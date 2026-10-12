@@ -60,6 +60,15 @@ def private_directory(path):
     value = path.stat()
     if not stat.S_ISDIR(value.st_mode) or value.st_mode & 0o077 or path.resolve() != path:
         fault("WEBDAV_PACKET_DIRECTORY", "Use a private canonical directory.")
+def create_private_parents(root, path):
+    current = root
+    for part in path.relative_to(root).parts:
+        current = current / part
+        try:
+            current.mkdir(mode=0o700)
+        except FileExistsError:
+            pass
+        private_directory(current)
 def signature(value):
     return (value.st_dev, value.st_ino, value.st_size, value.st_mtime_ns, value.st_ctime_ns, value.st_mode, value.st_nlink)
 def regular(path, private=False):
@@ -107,6 +116,7 @@ def source_projection(value):
         fault("WEBDAV_PACKET_STATE", "The original workspace collections are invalid.")
     result = dict(value)
     result["operations"] = []
+    result["products"] = []  # Publisher directories are host-owned and are not part of this packet.
     result["activeProductId"] = None
     result["handoff"] = {
         "kind": "portable_source_packet",
@@ -243,7 +253,7 @@ def unpack(path, destination=None):
             output = None; chunks = []
             if destination is not None and row["path"] != "workspace.json":
                 target = destination / row["path"]
-                target.parent.mkdir(parents=True, mode=0o700, exist_ok=True)
+                create_private_parents(destination, target.parent)
                 output = open(target, "xb"); os.chmod(target, 0o600)
             try:
                 with packet.open(row["path"]) as member:

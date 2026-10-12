@@ -12,7 +12,7 @@ import { readDispatch, readDispatchResult, privateDirectory, writePrivate } from
 import { startN8nWorkspace } from '../workspace/server.mjs';
 
 const HELP = 'node examples/native-receiving.mjs --api-base http://127.0.0.1:5678/api/v1 --api-key-file /private/n8n-api-key --directory /private/NEW-merchant-journey\n'
-  + 'Use an existing same-host n8n engine and its installed original SF30 dependency closure. The API key needs workflow:read, workflow:create, workflow:activate, workflow:deactivate and execution:read.\n'
+  + 'Use an existing same-host n8n engine and its installed original SF30 dependency closure. The receiving API key needs workflow:list, workflow:read, workflow:create, workflow:activate, workflow:deactivate, execution:list and execution:read.\n'
   + 'The new private directory retains the selected source, imported workflow IDs, actual execution, result, dispatch and operator export. Keep it on the same host for reopen.\n';
 const args = new Map();
 for (let i = 2; i < process.argv.length; i += 2) {
@@ -211,6 +211,7 @@ try {
   assert.deepEqual(raw.automations[functionId].example, input);
   await checkpoint('native-access');
   const access = await api('/workflows?limit=1'); assert.ok(Array.isArray(access.data));
+  const executionAccess = await api('/executions?limit=1'); assert.ok(Array.isArray(executionAccess.data));
   try {
     const settingsUrl = new URL(engineRoot); settingsUrl.pathname += '/rest/settings';
     const response = await fetch(settingsUrl, { redirect: 'error', signal: AbortSignal.timeout(10000) });

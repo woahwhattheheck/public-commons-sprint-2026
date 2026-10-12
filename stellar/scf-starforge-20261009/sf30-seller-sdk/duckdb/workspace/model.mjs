@@ -12,6 +12,7 @@ import { startSellerOperations } from '../../operations/server.mjs';
 import { validateAvailabilityDirectory } from '../../availability/store.mjs';
 import { openWorkspaceStore, WorkspaceError, sha256, json, operationId, revisionNumber, encodePlan } from './store.mjs';
 import { createWorkspaceAuthoring } from './authoring.mjs';
+import { createCloudDelivery } from '../cloud-delivery/model.mjs';
 
 export { WorkspaceError };
 export const ARTIFACTS = Object.freeze({
@@ -89,7 +90,14 @@ export async function createDuckdbWorkspace({ directory, sourceFile, planFile,
       sourceSha256: originalSource.sourceSha256, plan: await readDuckdbMerchantPlan(planFile) });
   } catch (error) { store.close(); throw error; }
   const currentSource = () => readDuckdbSourceFile(store.sourceFile);
-  const author = createWorkspaceAuthoring({ sourceFile: store.sourceFile, python, environment });
+  let authorPath, authorInstance;
+  const author = () => {
+    if (authorPath !== store.sourceFile) {
+      authorPath = store.sourceFile;
+      authorInstance = createWorkspaceAuthoring({ sourceFile: authorPath, python, environment });
+    }
+    return authorInstance;
+  };
   const packagePath = id => resolve(store.directory, 'packages', operationId(id));
   const mutate = fn => {
     if (closing) return Promise.reject(new WorkspaceError('WORKSPACE_CLOSING', 503));
@@ -110,7 +118,7 @@ export async function createDuckdbWorkspace({ directory, sourceFile, planFile,
     if (store.latest()?.revision !== revision) throw new WorkspaceError('DRAFT_REVISION_CHANGED', 409,
       'Reopen the current draft before preparing a package.');
     sameSource(declaration, draft.sourceSha256);
-    const authored = await author.compile(draft.authoring, draft.sourceSha256);
+    const authored = await author().compile(draft.authoring, draft.sourceSha256);
     const compiled = compiledPlan(authored.declaration, draft.plan);
     const reviewId = sha256(json({ revision, sourceSha256: authored.declaration.sourceSha256,
       authoring: draft.authoring, review: compiled.review }));
@@ -165,8 +173,16 @@ export async function createDuckdbWorkspace({ directory, sourceFile, planFile,
     }
     return runtime();
   }
+  let cloud;
+  try {
+    cloud = await createCloudDelivery({ workspaceStore: store, python, environment, currentSource,
+      canSelect: () => { if (active) throw new WorkspaceError('MERCHANT_ALREADY_RUNNING', 409,
+        'Stop the current merchant before selecting a different retained data edition.'); },
+      inspectPackage: async id => (await inspectedPackage(id)).item, packageDirectory: packagePath });
+  } catch (error) { store.close(); throw error; }
   return {
     directory: store.directory,
+    cloud: Object.fromEntries(Object.entries(cloud).map(([name, method]) => [name, (...args) => mutate(() => method(...args))])),
     state() { return mutate(async () => {
       let source, sourceError = null, authoringError = null;
       const draft = store.latest();
@@ -180,19 +196,19 @@ export async function createDuckdbWorkspace({ directory, sourceFile, planFile,
       }
       if (source.available && draft?.authoring.length) {
         try {
-          const authored = await author.compile(draft.authoring, draft.sourceSha256);
+          const authored = await author().compile(draft.authoring, draft.sourceSha256);
           source.queries = publicDescription(authored.declaration).queries;
         } catch (error) { authoringError = publicIssue(error).error; }
       }
       return { schema: 'stellar-forge.duckdb-workspace.v1', workspaceId: store.workspaceId, source, sourceError, authoringError,
         draft, initialPlan: draft ? null : initialPlan(), drafts: store.drafts(), packages: store.packages(),
-        sourceChanged: Boolean(draft && draft.sourceSha256 !== source.sourceSha256), runtime: runtime() };
+        sourceChanged: Boolean(draft && draft.sourceSha256 !== source.sourceSha256), runtime: runtime(), cloud: cloud.state() };
     }); },
     draft(revision) { return draftFor(revision); },
     runtime,
-    catalog: input => mutate(() => author.catalog(input)),
-    authorReview: input => mutate(() => author.review(input)),
-    reopenAuthor: input => mutate(() => author.reopen(input)),
+    catalog: input => mutate(() => author().catalog(input)),
+    authorReview: input => mutate(() => author().review(input)),
+    reopenAuthor: input => mutate(() => author().reopen(input)),
     save(input) { return mutate(async () => {
       const declaration = await currentSource(); sameSource(declaration, input.sourceSha256);
       encodePlan(input.plan);
@@ -201,8 +217,8 @@ export async function createDuckdbWorkspace({ directory, sourceFile, planFile,
     review: input => mutate(() => review(input.revision)),
     preview(input, { signal } = {}) { return mutate(async () => {
       const declaration = await currentSource(); sameSource(declaration, input.sourceSha256);
-      const authored = await author.compile(input.authoring ?? [], input.sourceSha256);
-      return author.withSource(authored, async (sourceFile, exact) => {
+      const authored = await author().compile(input.authoring ?? [], input.sourceSha256);
+      return author().withSource(authored, async (sourceFile, exact) => {
         const opened = await openDuckdbSourceFile(sourceFile, { python, environment });
         try {
           if (opened.source.describe().sourceSha256 !== exact.sourceSha256) throw new WorkspaceError('SOURCE_CHANGED', 409);
@@ -226,9 +242,9 @@ export async function createDuckdbWorkspace({ directory, sourceFile, planFile,
       try {
         const plan = resolve(store.directory, 'inputs', id + '.json');
         await writeOnce(plan, json(draft.plan));
-        const authored = await author.compile(draft.authoring, draft.sourceSha256);
+        const authored = await author().compile(draft.authoring, draft.sourceSha256);
         if (authored.declaration.sourceSha256 !== reviewed.sourceSha256) throw new WorkspaceError('REVIEW_CHANGED', 409);
-        await author.withSource(authored, sourceFile => prepareDuckdbSeller({ sourceFile, planFile: plan,
+        await author().withSource(authored, sourceFile => prepareDuckdbSeller({ sourceFile, planFile: plan,
           directory: packagePath(id), python, environment }));
         return (await inspectedPackage(id)).item;
       } catch (error) {
