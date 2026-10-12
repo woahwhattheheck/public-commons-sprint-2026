@@ -1,0 +1,8 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Weather operations</title><link rel="stylesheet" href="/app.css"></head>
+<body><header><div><p class="eyebrow">STELLAR FORGE</p><h1>Weather operations</h1><p id="mode" class="muted">Loading workspace…</p></div><button id="refresh" type="button">Refresh</button></header>
+<nav aria-label="Workspace"><button data-tab="requests" aria-current="page">Sites & requests</button><button data-tab="analysis">Sources & decisions</button><button data-tab="reports">Frozen reports</button><button data-tab="recovery">Recovery</button></nav>
+<div id="notice" role="status" aria-live="polite"></div><aside id="job" aria-live="polite"></aside><main id="main"></main>
+<footer>Weather data: <a href="https://open-meteo.com/" target="_blank" rel="noreferrer">Open-Meteo</a> · <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noreferrer">CC BY 4.0</a>. Raw JSON is retained; display, coverage calculations and operating decisions are derived.</footer>
+<script type="module" src="/app.js"></script></body></html>

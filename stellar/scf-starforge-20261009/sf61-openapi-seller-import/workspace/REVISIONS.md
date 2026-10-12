@@ -58,6 +58,39 @@ The source-refresh engine retains stream authoring through the same current
 the original selected response format remain its maintained fields. The desk
 does not maintain another setting allowlist or stream compiler.
 
+## Authorization-code connections in a replacement
+
+The same revision desk uses the workspace's configured OAuth connection registry.
+A profile binds the exact provider description bytes, its declared security scheme,
+endpoints and resource origin. When those source bytes change, the receiving host
+registers the replacement source profile under a trusted alias; the operator uses
+**Provider authorization connections** to complete provider consent and review the
+actual returned grant. No private directory, client secret or token is entered into
+the browser.
+
+For an existing route, choose its keep or remap decision, then expand **Provider
+authorization for the replacement**. Select the reviewed replacement alias and
+choose **Use reviewed grant for the replacement**. This calls the same original
+source/binding validator as ordinary route authoring and updates only that row's
+public OAuth references. Header references, stream settings, examples, policies,
+atomic price and retained route identity remain available in the existing settings
+editor. An authorization-code selection replaces the row's client-credentials
+configuration only after the original declaration and current grant check succeed.
+
+**Review replacement** and **Reopen review** recheck the current host bindings. A
+missing, disconnected or replaced grant remains visible while the operator can
+retain an unfinished review. **Save reviewed candidate** checks the exact candidate
+again before package creation; **Stage this saved candidate** checks that saved
+source and plan before creating or changing the original release store. A later
+connection replacement requires an explicit new selection and a new saved package.
+The original runtime also rechecks the exact referenced grant when serving it.
+
+The maintained revision functions accept an optional trusted `validatePlan` callback
+for this host integration. The workspace supplies it; it is never accepted as a
+browser-supplied function. `readMerchantRevisionDraft(parent, name, {validatePlan})`
+uses the same check when reopening. Standalone source comparison remains the shared
+pure refresh engine, while credential access belongs to the receiving host.
+
 ## Retain unfinished reviews
 
 **Save review snapshot** writes a new private snapshot even while selections still

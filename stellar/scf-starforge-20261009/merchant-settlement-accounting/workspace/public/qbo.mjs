@@ -9,20 +9,21 @@ const short=value=>typeof value==='string'&&value.length>30?value.slice(0,14)+'�
 const badge=value=>'<span class="badge">'+esc(value)+'</span>';
 const metrics=items=>items.map(([label,value])=>'<div class="metric"><span>'+esc(label)+'</span><strong>'+esc(exact(value))+'</strong></div>').join('');
 const definitions=value=>Object.entries(value??{}).map(([key,item])=>'<dt>'+esc(key.replace(/([a-z])([A-Z])/g,'$1 $2'))+'</dt><dd>'+esc(exact(item))+'</dd>').join('');
-const PAGE=50,MAX_ROWS=500,MAX_RESPONSE_BYTES=8*1024*1024;
+const PAGE=50,NATIVE_PAGE=20,MAX_ROWS=500,MAX_RESPONSE_BYTES=8*1024*1024;
 const query=new URLSearchParams(location.search);
 let metadata=null,revision=0,busy=false,pending=null,refreshToken=0,detailToken=0,sourceToken=0,fileToken=0,responseToken=0;
 let selected=query.get('plan')||'',detail=null,source=null,sourceChoice='',currentAccountant=null;
 let selectedResponse=query.get('response')||'',responseDetail=null,planLimit=24,lineOffset=0,lineIndex=-1,draftOffset=0,comparisonOffset=0,previewOffset=0;
 let draftRows=new Map(),draftSelected=new Set(),sourceDrafts=new Map(),planPreview=null,responsePreview=null,loadedFile=null,fileLoading=false,previewUrl='',loadedCompany=null;
+let connection=null,connectionIssue='',nativePreview=null,nativeToken=0,nativeAttemptOffset=0,loadedCompanyOrigin=null;
 const identity=()=>({id:crypto.randomUUID(),createdAt:new Date().toISOString()});
 let createIdentity=identity();
 const base=()=>'/api/qbo/plans/'+encode(selected);
 const cancelled=()=>detail?.record?.status==='CANCELLED';
-const receivable=()=>detail?.record?.status==='REVIEWED';
+const receivable=()=>detail?.record?.status==='REVIEWED'&&!nativeOwnsReturn();
 const approved=()=>!cancelled()&&(Boolean(detail?.record?.review)||['REVIEWED','BOOKED'].includes(detail?.record?.status));
 const resumable=item=>responseRecord(item)?.status==='PENDING'&&!cancelled();
-const cancellable=()=>Boolean(detail)&&!['BOOKED','CANCELLED'].includes(detail.record.status)&&!responses().some(item=>responseRecord(item).status==='PENDING');
+const cancellable=()=>Boolean(detail)&&!['BOOKED','CANCELLED'].includes(detail.record.status)&&nativeAllowsCancellation()&&!responses().some(item=>responseRecord(item).status==='PENDING');
 const eligible=row=>!['BOOKED','EXCLUDED'].includes(String(row?.externalStatus??'').toUpperCase());
 const planRows=(plan=detail?.plan)=>plan?.rows??[];
 const journal=(plan=detail?.plan)=>plan?.journalEntry??{};
@@ -63,6 +64,11 @@ function remember(){
 function controls(){
   const writable=Boolean(metadata)&&!busy&&!pending;
   $('qbo-refresh').disabled=busy;
+  $('qbo-connection-refresh').disabled=busy||Boolean(pending);$('qbo-company-fetch').disabled=!writable||!connection?.available;
+  $('qbo-native-refresh').disabled=busy;
+  $('qbo-native-preview').disabled=!writable||!nativeCanStart();$('qbo-native-post').disabled=!writable||!nativePreviewCurrent()||!$('qbo-native-confirm').checked;
+  $('qbo-native-confirm').disabled=!writable||!nativePreviewCurrent();$('qbo-native-clear-preview').disabled=busy;
+  $('qbo-native-resume').disabled=!writable||!nativeCanResume();
   $('qbo-create').disabled=!writable||!source||!draftSelected.size;
   $('qbo-retain-plan').disabled=!writable||!planPreview;
   $('qbo-clear-plan-preview').disabled=busy;
@@ -89,7 +95,7 @@ function controls(){
 }
 function invalidatePlan(){planPreview=null;createIdentity=identity();$('qbo-plan-preview-panel').hidden=true;controls();}
 function invalidateResponse(){
-  responsePreview=null;++responseToken;previewOffset=0;$('qbo-preview-panel').hidden=true;$('qbo-return-empty').hidden=false;
+  responsePreview=null;++responseToken;previewOffset=0;$('qbo-preview-panel').hidden=true;$('qbo-return-empty').hidden=detail?.record?.status==='BOOKED';
   if(previewUrl){URL.revokeObjectURL(previewUrl);previewUrl='';}
   $('qbo-preview-download').hidden=true;$('qbo-preview-download').removeAttribute('href');controls();
 }
@@ -101,11 +107,11 @@ async function perform(intent,retrying=false){
   try{
     const result=await api(intent.path,intent.body);received=true;pending=null;$('qbo-retry-panel').hidden=true;
     if(intent.success)await intent.success(result);
-    await refresh();notify(intent.message||'Saved to the original accounting workspace.');
+    await refresh();notify(typeof intent.message==='function'?intent.message(result):intent.message||'Saved to the original accounting workspace.');
   }catch(error){
     if(received)notify('The operation was saved, but its updated view could not be loaded. Refresh saved state to reopen it. '+error.message,true);
     else if(error.status===409){
-      pending=null;$('qbo-retry-panel').hidden=true;invalidatePlan();invalidateResponse();
+      pending=null;$('qbo-retry-panel').hidden=true;invalidatePlan();invalidateResponse();invalidateNative();
       await refresh().catch(()=>{});notify(error.message+' Saved state has changed; the form is retained for a new preview.',true);
     }else if(!error.status||error.status>=500){
       pending=intent;$('qbo-retry-panel').hidden=false;$('qbo-retry-message').textContent=error.message+' The exact operation ID and submitted values remain in this tab.';
@@ -121,7 +127,7 @@ function renderIssues(element,issues,title='Details requiring review'){
 function renderHistory(){
   const search=$('qbo-plan-search').value.trim().toLowerCase();
   const plans=(metadata?.plans??[]).filter(row=>!search||[row.name,row.id,row.realmId,row.companyName,row.handoffId,row.actor].some(value=>String(value??'').toLowerCase().includes(search)));
-  $('qbo-plan-list').innerHTML=plans.slice(0,planLimit).map(row=>'<button type="button" data-qbo-plan="'+esc(row.id)+'"'+(selected===row.id?' class="selected" aria-current="true"':'')+'><strong>'+esc(row.name)+'</strong><span>'+esc(row.companyName??row.realmId??'')+' · '+esc(row.environment??'')+'</span><span>'+esc(date(row.createdAt))+' · '+esc(row.status??'DRAFT')+'</span></button>').join('')||'<p class="hint">No retained plans match this search.</p>';
+  $('qbo-plan-list').innerHTML=plans.slice(0,planLimit).map(row=>'<button type="button" data-qbo-plan="'+esc(row.id)+'"'+(selected===row.id?' class="selected" aria-current="true"':'')+'><strong>'+esc(row.name)+'</strong><span>'+esc(row.companyName??row.realmId??'')+' · '+esc(row.environment??'')+'</span><span>'+esc(date(row.createdAt))+' · '+esc(row.nativePost?(nativeLabels[row.nativePost.status]??row.nativePost.status):row.status??'DRAFT')+'</span></button>').join('')||'<p class="hint">No retained plans match this search.</p>';
   $('qbo-plan-more').hidden=plans.length<=planLimit;$('qbo-state-version').textContent='Saved workspace revision '+revision+' · '+(metadata?.plans?.length??0)+' journal plans';
 }
 function saveDraft(){if(sourceChoice)sourceDrafts.set(sourceChoice,{rows:draftRows,selected:draftSelected});}
@@ -181,7 +187,7 @@ function renderPlan(){
   $('qbo-selected').hidden=!detail;$('qbo-empty').hidden=Boolean(detail);if(!detail){controls();return;}
   const p=detail.plan,r=detail.record;
   $('qbo-title').textContent=p.name;$('qbo-subtitle').textContent='Prepared by '+p.actor+' · '+date(p.createdAt);
-  $('qbo-plan-status').textContent=cancelled()?'Plan cancelled':r.status==='BOOKED'?'Accountant return saved':approved()?'Journal approved':'Awaiting journal review';
+  $('qbo-plan-status').textContent=cancelled()?'Plan cancelled':r.status==='BOOKED'?'Accountant return saved':r.nativePost?(nativeLabels[r.nativePost.status]??r.nativePost.status):approved()?'Journal approved':'Awaiting journal review';
   $('qbo-metrics').innerHTML=metrics(summaryMetrics(p));
   $('qbo-company-summary').innerHTML='<p><strong>'+esc(p.companyName)+'</strong> · Company '+esc(p.realmId)+' · '+esc(p.baseCurrency)+' · '+esc(p.environment)+'</p><p class="hint">Journal date '+esc(p.txnDate)+(p.docNumber?' · Document '+esc(p.docNumber):'')+'</p>';
   $('qbo-lineage').innerHTML=definitions({handoffId:p.handoffId,handoffSha256:p.handoffSha256,accountantVersion:p.accountantRevisionId??'Original handoff',planId:p.id,planSha256:p.integrity.sha256,companyId:p.realmId,homeCurrency:p.baseCurrency,environment:p.environment});
@@ -192,11 +198,12 @@ function renderPlan(){
   if(r.status==='BOOKED')$('qbo-file-status').textContent='This journal is booked. Reopen its retained response and original accountant return below.';
   else if(cancelled())$('qbo-file-status').textContent='This journal is cancelled. Its saved source and history remain available.';
   else if(r.status==='DRAFT')$('qbo-file-status').textContent='Approve this retained journal in Journal review before choosing its received response.';
+  else if(nativeOwnsReturn())$('qbo-file-status').textContent='Continue the retained native posting in Journal review. Its provider response and original accountant return stay with that operation.';
   else if(!loadedFile)$('qbo-file-status').textContent='Choose the complete received JSON file.';
   $('qbo-cancel-form').hidden=!cancellable();
-  $('qbo-cancel-status').textContent=cancelled()?'This plan is cancelled. Create a new journal plan to use these source events.':r.status==='BOOKED'?'The journal is linked to a saved accountant return. Its retained history remains available.':responses().some(item=>responseRecord(item).status==='PENDING')?'Complete the pending accountant return before changing this plan.':'Cancel this retained plan when it will not be used. Its source events become available for a new journal plan.';
-  $('qbo-review-status').textContent=cancelled()?'Cancelled plans retain their saved source and history.':r.review?'Approved by '+r.review.actor+' · '+date(r.review.createdAt):'Approve the retained source, amounts and accounts to enable the journal request download.';
-  renderLines();renderResponses();renderFiles();controls();
+  $('qbo-cancel-status').textContent=cancelled()?'This plan is cancelled. Create a new journal plan to use these source events.':r.status==='BOOKED'?'The journal is linked to a saved accountant return. Its retained history remains available.':responses().some(item=>responseRecord(item).status==='PENDING')?'Complete the pending accountant return before changing this plan.':!nativeAllowsCancellation()?'Continue the original native posting and reconcile its retained provider result before retiring this journal.':'Cancel this retained plan when it has no saved QuickBooks posting and will not be used. Its source events become available for a new journal plan.';
+  $('qbo-review-status').textContent=cancelled()?'Cancelled plans retain their saved source and history.':r.review?'Approved by '+r.review.actor+' · '+date(r.review.createdAt):'Approve the retained source, amounts and accounts to enable its native posting review and exact request download.';
+  renderLines();renderResponses();renderFiles();renderNative();controls();
 }
 function renderLines(){
   const search=$('qbo-line-search').value.trim().toLowerCase(),rows=lines().map((line,index)=>({line,index,source:planRows()[Math.floor(index/2)]})).filter(row=>!search||JSON.stringify(row).toLowerCase().includes(search));
@@ -214,21 +221,22 @@ function renderFiles(){
 }
 async function selectPlan(id,{reset=id!==selected}={}){
   const token=++detailToken;selected=id;
-  if(reset){detail=null;currentAccountant=null;selectedResponse='';responseDetail=null;loadedFile=null;fileLoading=false;++fileToken;invalidateResponse();$('qbo-response-file').value='';$('qbo-response-name').value='';$('qbo-file-status').textContent='Choose the complete received JSON file.';lineOffset=0;lineIndex=-1;comparisonOffset=0;showView('journal');}
+  if(reset){invalidateNative();nativeAttemptOffset=0;detail=null;currentAccountant=null;selectedResponse='';responseDetail=null;loadedFile=null;fileLoading=false;++fileToken;invalidateResponse();$('qbo-response-file').value='';$('qbo-response-name').value='';$('qbo-file-status').textContent='Choose the complete received JSON file.';lineOffset=0;lineIndex=-1;comparisonOffset=0;showView('journal');}
   renderHistory();if(!id){detail=null;renderPlan();remember();return;}
   const value=await api('/api/qbo/plans/'+encode(id));if(token!==detailToken||id!==selected)return;
   detail=value;const accountant=await api('/api/accountant/handoffs/'+encode(value.plan.handoffId));if(token!==detailToken||id!==selected)return;
   currentAccountant=accountant;renderPlan();renderAccountant();$('qbo-prepare-panel').open=false;remember();
 }
 async function refresh(){
-  const token=++refreshToken,value=await api('/api/qbo');if(token!==refreshToken)return;metadata=value;
+  const token=++refreshToken,[value]=await Promise.all([api('/api/qbo'),loadConnection()]);if(token!==refreshToken)return;metadata=value;
   const wanted=sourceChoice||query.get('handoff')||$('qbo-handoff').value;
   options($('qbo-handoff'),value.handoffs?.length?value.handoffs.map(h=>[h.id,h.name+' · '+h.rowCount+' events']):[['','Prepare an accountant handoff first']],wanted);
   renderHistory();if(selected&&value.plans?.some(p=>p.id===selected))await selectPlan(selected,{reset:false});else if(selected){selected='';detail=null;renderPlan();remember();}
   await loadSource({force:true});
   if(planPreview&&planPreview.request.revision!==revision){invalidatePlan();notify('Saved state changed. Your mappings are retained; preview them against the current state.');}
-  if(responsePreview&&(responsePreview.request.revision!==revision||responsePreview.request.expectedParentId!==(detail?.expectedParentId??null))){invalidateResponse();notify('The saved accountant state changed. Preview the retained response again to compare its current version.');}
-  controls();
+  if(responsePreview&&(responsePreview.request.revision!==revision||responsePreview.request.expectedParentId!==(detail?.expectedParentId??null)||!receivable())){invalidateResponse();notify('The saved accountant state changed. Review the retained response and current posting state.');}
+  if(nativePreview&&!nativePreviewCurrent()){invalidateNative();notify('Saved posting state changed. Review the current company and original journal again.');}
+  renderNative();controls();
 }
 function renderResponses(){
   const items=responses();
@@ -269,6 +277,11 @@ function renderResponse(){
 }
 function renderAccountant(){
   if(!currentAccountant)return;
+  $('qbo-return-empty').hidden=Boolean(responsePreview)||detail?.record?.status==='BOOKED';
+  const empty=$('qbo-return-empty'),nativePending=nativeOwnsReturn();
+  empty.querySelector('h2').textContent=nativePending?'Continue the original native posting':'Preview a saved QuickBooks response';
+  empty.querySelector('p').textContent=nativePending?nativeStatusDescription(detail.record.nativePost):'The preview compares the journal to its retained request and shows the bookkeeping changes for the current accountant handoff.';
+  const next=empty.querySelector('[data-qbo-open]');next.dataset.qboOpen=nativePending?'journal':'response';next.textContent=nativePending?'Open retained posting':'Choose a QuickBooks response';
   const r=currentAccountant.record,current=currentAccountant.selectedRevision,s=current?.summary??{};
   $('qbo-accountant-current').textContent=r.name+' · '+(current?'Current return: '+current.name:'Original handoff')+' · '+r.rowCount+' original events';
   $('qbo-accountant-metrics').innerHTML=metrics([['Original events',r.rowCount],['Reviewed',s.reviewedRows??0],['Bookkeeper posted',s.bookedRows??0],['Returned versions',r.revisions?.length??0]]);
@@ -307,19 +320,19 @@ function renderCompany(){
   const company=loadedCompany,accounts=company?.accounts??[];
   $('qbo-account-options').innerHTML=accounts.filter(a=>a.selectable===true).map(a=>'<option value="'+esc(a.value)+'" label="'+esc((a.name??a.value)+' · '+a.value+' · '+(a.AccountType??''))+'"></option>').join('');
   if(!company){$('qbo-company-source-status').textContent='Company and account fields are entered manually.';return;}
-  const usable=accounts.filter(a=>a.selectable===true).length,unavailable=accounts.filter(a=>a.selectable!==true);
-  $('qbo-company-source-status').innerHTML='<p><strong>Loaded '+esc(company.companyName)+'</strong> · Company '+esc(company.realmId)+' · Home currency '+esc(company.baseCurrency)+' · '+usable+' selectable accounts</p><p class="hint">Choose an exported account ID in each mapping field. Existing account entries remain as entered.</p><details><summary>Company source and unavailable accounts</summary><dl class="record-values">'+definitions({sourceDigests:company.sourceDigests,companySha256:company.integrity?.sha256,multiCurrencyEnabled:company.multiCurrencyEnabled})+'</dl>'+ (unavailable.length?'<p class="hint">'+unavailable.length+' unavailable accounts</p><ul>'+unavailable.map(a=>'<li>'+esc((a.name??a.value)+' · '+a.value+' · '+(Array.isArray(a.reasons)?a.reasons.join('; '):exact(a.reasons??'Unavailable')) )+'</li>').join('')+'</ul>':'<p>All supplied accounts are selectable.</p>')+'</details>';
+  const usable=accounts.filter(a=>a.selectable===true).length,unavailable=accounts.filter(a=>a.selectable!==true),origin=loadedCompanyOrigin;
+  $('qbo-company-source-status').innerHTML='<p><strong>Loaded '+esc(company.companyName)+'</strong> · Company '+esc(company.realmId)+' · Home currency '+esc(company.baseCurrency)+' · '+usable+' selectable accounts</p><p class="hint">'+(origin?.kind==='native'?'Native '+esc(origin.environment)+' capture · '+esc(date(origin.capturedAt))+' · '+esc(origin.sourceRequests.length)+' source requests.':'Loaded from saved company exports.')+' Choose an account ID from this company in each mapping field. Review the entered values with the selected company.</p><details><summary>Company source and unavailable accounts</summary><dl class="record-values">'+definitions({sourceDigests:company.sourceDigests,companySha256:company.integrity?.sha256,multiCurrencyEnabled:company.multiCurrencyEnabled})+'</dl>'+ (unavailable.length?'<p class="hint">'+unavailable.length+' unavailable accounts</p><ul>'+unavailable.map(a=>'<li>'+esc((a.name??a.value)+' · '+a.value+' · '+(Array.isArray(a.reasons)?a.reasons.join('; '):exact(a.reasons??'Unavailable')) )+'</li>').join('')+'</ul>':'<p>All supplied accounts are selectable.</p>')+'</details>';
 }
 function useManualCompany({message=true}={}){
-  loadedCompany=null;renderCompany();invalidatePlan();if(message)notify('Company and account fields remain available for manual entry.');
+  loadedCompany=null;loadedCompanyOrigin=null;renderCompany();invalidatePlan();if(message)notify('Company and account fields remain available for manual entry.');
 }
 function accountName(value){return loadedCompany?.accounts?.find(a=>a.value===value&&a.selectable===true)?.name??'';}
-async function readJsonFile(file,label){
+async function readJsonFile(file,label,{allowArray=false}={}){
   if(!file)throw new Error('Choose the '+label+' JSON file.');
   if(file.size===0||file.size>MAX_RESPONSE_BYTES)throw new Error(label+' must contain a JSON object and be no larger than 8 MiB.');
   const content=await file.text();let value;
   try{value=JSON.parse(content);}catch{throw new Error(label+' is not valid JSON. Choose the complete original export.');}
-  if(!value||typeof value!=='object'||Array.isArray(value))throw new Error(label+' must contain a JSON object.');
+  if(!value||typeof value!=='object'||(!allowArray&&Array.isArray(value)))throw new Error(label+' must contain '+(allowArray?'a JSON object or native account-page array.':'a JSON object.'));
   return content;
 }
 async function loadCompany(){
@@ -327,10 +340,11 @@ async function loadCompany(){
     const realmId=$('qbo-company-realm').value.trim();
     if(!realmId)throw new Error('Enter the company ID for these saved exports.');
     const files=[$('qbo-company-info-file').files[0],$('qbo-company-preferences-file').files[0],$('qbo-company-accounts-file').files[0]];
-    const [companyInfo,preferences,accounts]=await Promise.all(files.map((file,index)=>readJsonFile(file,['CompanyInfo','Preferences','Account'][index])));
+    if(files.reduce((total,file)=>total+(file?.size??0),0)>MAX_RESPONSE_BYTES)throw new Error('The complete original company sources must be no larger than 8 MiB.');
+    const [companyInfo,preferences,accounts]=await Promise.all(files.map((file,index)=>readJsonFile(file,['CompanyInfo','Preferences','Account'][index],{allowArray:index===2})));
     const value=await api('/api/qbo/company/preview',{realmId,companyInfo,preferences,accounts});
     if(!value.company)throw new Error('The workspace did not return a company setup.');
-    loadedCompany=value.company;$('qbo-realm').value=loadedCompany.realmId;$('qbo-company-name').value=loadedCompany.companyName;$('qbo-currency').value=loadedCompany.baseCurrency;
+    loadedCompany=value.company;loadedCompanyOrigin={kind:'files'};$('qbo-realm').value=loadedCompany.realmId;$('qbo-company-name').value=loadedCompany.companyName;$('qbo-currency').value=loadedCompany.baseCurrency;
     renderCompany();invalidatePlan();renderDraftRows();notify('Loaded the company home currency and exported account choices.');
   });
 }
@@ -340,9 +354,197 @@ async function resumeResponse(id){
   return perform({path:base()+'/responses/'+encode(id)+'/resume',body:{revision,actor:operator()},description:'saved accountant return',message:'The saved response has been reconciled with its original accountant return.',success:async()=>{selectedResponse=id;invalidateResponse();showView('return');}});
 }
 
+
+// Native requests stay in the original retained plan and accountant workspace.
+function connectionSignature(value=connection){
+  return JSON.stringify([value?.realmId??null,value?.environment??null,value?.minorVersion??null,Boolean(value?.available)]);
+}
+function connectionMatches(plan=detail?.plan){
+  return Boolean(connection?.available&&plan&&connection.realmId===plan.realmId&&connection.environment===plan.environment);
+}
+function nativeOwnsReturn(){
+  const value=detail?.record?.nativePost;
+  return Boolean(value&&!['FAULT','BOOKED'].includes(value.status));
+}
+function nativeAllowsCancellation(){
+  const value=detail?.record?.nativePost;
+  return !value||(value.status!=='RUNNING'&&!value.observedJournalId&&!value.sourceAttemptId&&(!value.dispatched||(value.status==='FAULT'&&value.writeAttempts===1)));
+}
+function nativeCanStart(){
+  return detail?.record?.status==='REVIEWED'&&!detail.record.nativePost&&connectionMatches()&&!responses().some(item=>['PENDING','SAVED'].includes(responseRecord(item).status));
+}
+function nativeConnectionMatches(operation=detail?.record?.nativePost){
+  if(!operation||!connectionMatches())return false;
+  try{
+    const url=new URL(operation.requestUrl);
+    return (url.searchParams.get('minorversion')??null)===(connection.minorVersion===null||connection.minorVersion===undefined?null:String(connection.minorVersion));
+  }catch{return false;}
+}
+function nativeCanResume(){
+  const value=detail?.record?.nativePost;
+  if(!value||cancelled()||!['PREPARED','RETRYABLE','UNCERTAIN','RECEIVED','FAULT','CONFLICT'].includes(value.status))return false;
+  if(value.retryAt&&Date.now()<Date.parse(value.retryAt))return false;
+  return value.status==='RECEIVED'||nativeConnectionMatches(value);
+}
+function nativePreviewCurrent(){
+  return Boolean(nativePreview&&nativeCanStart()&&nativePreview.planId===selected&&nativePreview.request.revision===revision&&nativePreview.request.expectedParentId===(detail?.expectedParentId??null)&&nativePreview.request.actor===$('qbo-operator').value.trim()&&nativePreview.connection===connectionSignature()&&nativePreview.value.preview.planSha256===detail?.plan?.integrity?.sha256);
+}
+function invalidateNative(){
+  nativePreview=null;++nativeToken;$('qbo-native-preview-panel').hidden=true;$('qbo-native-confirm').checked=false;controls();
+}
+function setConnection(value){
+  const prior=connectionSignature();connection=value;connectionIssue='';
+  if(prior!==connectionSignature()&&nativePreview)invalidateNative();
+  renderConnection();renderNative();
+}
+function renderConnection(){
+  const available=Boolean(connection?.available);
+  $('qbo-connection-status').textContent=connectionIssue?'Unavailable':available?'Configured':connection?'Setup required':'Loading';
+  $('qbo-connection-description').textContent=connectionIssue?connectionIssue:available?'The accounting server is configured for '+connection.environment+' company '+connection.realmId+'. Load its current company setup to review the native account choices.':connection?'Configure the QuickBooks company connection in the accounting server, then refresh it here.':'Reading the accounting server connection…';
+  $('qbo-connection-details').innerHTML=connection?definitions({companyId:connection.realmId??'Not configured',environment:connection.environment,minorVersion:connection.minorVersion??'Provider default',
+    ...(connection.authorization?.kind==='oauth-connection'?{company:connection.authorization.companyName??'Load current company setup',connection:connection.authorization.alias,reviewedGrant:connection.authorization.grantId}: {})}):'';
+  $('qbo-connection-config').textContent=connection?.authorization?.kind==='oauth-connection'?
+    'Authorization uses the reviewed '+connection.authorization.alias+' connection. The connection workspace manages its grant, renewal and disconnect. Use its saved company selection when reopening this accounting workspace.'+
+      (connection.authorization.lastError?' Last authorization result: '+connection.authorization.lastError+'.':''):
+    'The server reads '+(connection?.tokenEnv??'STARFORGE_QBO_ACCESS_TOKEN')+' through its existing authorized account, or a configured OAuth token provider. STARFORGE_QBO_REALM_ID selects the company and STARFORGE_QBO_ENVIRONMENT selects sandbox or production. Set these in the accounting server process, then refresh this connection.';
+  controls();
+}
+async function loadConnection(){
+  try{setConnection(await api('/api/qbo/connection'));}
+  catch(error){connection=null;connectionIssue=error.message||'The accounting server connection could not be read.';invalidateNative();renderConnection();renderNative();}
+}
+async function loadNativeCompany(){
+  await reading(async()=>{
+    await loadConnection();
+    if(!connection?.available)throw new Error(connectionIssue||'Configure the company connection in the accounting server before loading its source.');
+    const target={realmId:connection.realmId,environment:connection.environment};
+    $('qbo-connection-description').textContent='Loading CompanyInfo, Preferences and every page of the native chart of accounts…';
+    try{
+      const value=await api('/api/qbo/company/fetch',target),company=value.company;
+      if(!company||company.realmId!==target.realmId||value.connection?.realmId!==target.realmId||value.connection?.environment!==target.environment)throw new Error('The loaded company does not match the selected server connection. Refresh its configuration.');
+      setConnection(value.connection);loadedCompany=company;loadedCompanyOrigin={kind:'native',capturedAt:value.capturedAt,environment:target.environment,sourceRequests:value.sourceRequests??[]};
+      $('qbo-realm').value=company.realmId;$('qbo-company-realm').value=company.realmId;$('qbo-company-name').value=company.companyName;$('qbo-currency').value=company.baseCurrency;$('qbo-environment').value=target.environment;
+      renderCompany();invalidatePlan();renderDraftRows();$('qbo-prepare-panel').open=true;
+      $('qbo-company-source-status').scrollIntoView({block:'nearest',behavior:'smooth'});
+      notify('Loaded '+company.companyName+' from '+target.environment+' company '+target.realmId+'. Review the retained mapping values and home-currency amounts with this company.');
+    }finally{renderConnection();}
+  });
+}
+const nativeLabels={PREPARED:'Prepared',RUNNING:'In progress',RETRYABLE:'Ready to resume',UNCERTAIN:'Response uncertain',RECEIVED:'Response received',BOOKED:'Accountant return saved',FAULT:'Provider fault',CONFLICT:'Journal reconciliation'};
+function nativeStatusDescription(value){
+  if(!value)return '';
+  const descriptions={
+    PREPARED:'The exact reviewed request and posting identity are retained. Continue this operation to receive the native result.',
+    RUNNING:'The accounting server is finding or posting the original journal. Refresh saved state to read its result.',
+    RETRYABLE:'The original operation can continue with its retained company, request ID and journal body.',
+    UNCERTAIN:'A complete posting outcome is still being reconciled. Resume this operation to find the original journal and continue with the same request ID.',
+    RECEIVED:'The native journal response is retained. Resume to complete its original accountant return from those saved bytes.',
+    BOOKED:'The native journal is matched to the reviewed plan and linked to its saved original accountant return.',
+    FAULT:'QuickBooks returned a retained fault. Read its response, resolve the reported company or journal issue, then continue the original operation or cancel a confirmed unused plan.',
+    CONFLICT:'The retained native journal requires reconciliation with this reviewed source. Inspect its exact response and original accounting history, then recheck this operation.'
+  };
+  return descriptions[value.status]??'Read the retained operation and its provider response files.';
+}
+function nativeFileLinks(files,prefix,allowed){
+  return (files??[]).filter(file=>allowed.includes(file.name)).map(file=>'<div><a class="button" download href="'+prefix+'/'+encode(file.name)+'">'+esc(file.name)+'</a><p class="hint">'+esc(file.bytes)+' bytes · <span class="mono">'+esc(file.sha256)+'</span></p></div>').join('');
+}
+function renderNativeAttempts(){
+  const operation=detail?.record?.nativePost,items=[...(operation?.attempts??[])].reverse();
+  $('qbo-native-attempts-panel').hidden=!operation;
+  $('qbo-native-attempts-summary').textContent='Native request and response history · '+items.length+' retained attempts';
+  nativeAttemptOffset=Math.min(nativeAttemptOffset,Math.max(0,Math.floor((items.length-1)/NATIVE_PAGE)*NATIVE_PAGE));
+  const page=items.slice(nativeAttemptOffset,nativeAttemptOffset+NATIVE_PAGE);
+  $('qbo-native-attempts').innerHTML=page.map(item=>{
+    const request=item.request??{},headers=item.headers??{},prefix=base()+'/post/attempts/'+encode(item.id)+'/download';
+    return '<tr><td><strong>'+esc(item.kind)+'</strong><span class="subtle">'+esc(date(item.receivedAt))+'</span><span class="subtle exact">'+esc(item.id)+'</span></td><td>'+badge('HTTP '+item.status)+'<span class="subtle">'+esc(item.responseBytes)+' response bytes</span>'+(headers.intuit_tid?'<span class="subtle">Intuit trace '+esc(headers.intuit_tid)+'</span>':'')+(headers['retry-after']?'<span class="subtle">Retry-After '+esc(headers['retry-after'])+'</span>':'')+'</td><td><strong>'+esc(request.method)+'</strong><span class="subtle">'+esc(request.environment)+' · Company '+esc(request.realmId)+'</span><span class="subtle exact">'+esc(request.requestId??'Read request')+'</span><details><summary>Exact request URL and response digest</summary><p class="exact">'+esc(request.url)+'</p><p class="mono">'+esc(item.responseSha256)+'</p></details></td><td><div class="qbo-file-list">'+nativeFileLinks(item.files,prefix,['response.json','receipt.json'])+'</div></td></tr>';
+  }).join('')||'<tr><td colspan="4" class="qbo-empty-row">The operation has no complete provider response yet.</td></tr>';
+  pageLabel('qbo-native-attempt',nativeAttemptOffset,page.length,items.length);
+}
+function renderNative(){
+  if(!detail)return;
+  const record=detail.record,plan=detail.plan,value=record.nativePost,target=plan.environment+' company '+plan.realmId;
+  $('qbo-native-status').textContent=value?(nativeLabels[value.status]??value.status):record.status==='REVIEWED'?'Ready for review':record.status==='BOOKED'?'Accountant return saved':cancelled()?'Cancelled':'Review required';
+  let message;
+  if(value)message=nativeStatusDescription(value);
+  else if(cancelled())message='This journal is cancelled. Its retained source and history remain available.';
+  else if(record.status==='BOOKED')message='The original accountant return for this journal is already saved. Open its retained response and return.';
+  else if(record.status!=='REVIEWED')message='Approve the retained journal before reviewing its posting to '+target+'.';
+  else if(responses().some(item=>['PENDING','SAVED'].includes(responseRecord(item).status)))message='Continue the retained QuickBooks response and original accountant return for this journal.';
+  else if(!connection?.available)message='Configure the accounting server connection for '+target+', then refresh it to review this posting.';
+  else if(!connectionMatches())message='This retained journal belongs to '+target+'. The server currently selects '+connection.environment+' company '+connection.realmId+'. Select the journal’s original company in the server configuration.';
+  else message='Review the exact request for '+target+'. This posting keeps the native journal and original accountant return together.';
+  $('qbo-native-description').textContent=message;
+  $('qbo-native-preview').hidden=Boolean(value)||['BOOKED','CANCELLED'].includes(record.status);
+  $('qbo-native-operation').hidden=!value;
+  if(nativePreview&&!nativePreviewCurrent())invalidateNative();
+  if(value){
+    $('qbo-native-operation-description').textContent=nativeStatusDescription(value);
+    $('qbo-native-operation-details').innerHTML=definitions({requestId:value.requestId??value.id,companyId:value.realmId,environment:value.environment,documentNumber:value.docNumber,operator:value.actor,preparedAt:value.createdAt,updatedAt:value.updatedAt,journalEntryId:value.journalEntryId??'Awaiting matched journal',observedJournalId:value.observedJournalId??'No journal observed',writeAttempts:value.writeAttempts??0,responseId:value.responseId??'Awaiting accountant return',requestSha256:value.requestSha256,planSha256:value.planSha256});
+    const error=value.lastError;$('qbo-native-error').hidden=!error;$('qbo-native-error').textContent=error?((error.code?error.code+' · ':'')+(error.message??exact(error))):'';
+    const wait=value.retryAt&&Date.now()<Date.parse(value.retryAt);$('qbo-native-retry-status').hidden=!value.retryAt;
+    $('qbo-native-retry-status').textContent=value.retryAt?(wait?'QuickBooks requested a pause until '+date(value.retryAt)+'. Refresh saved state at or after that time to continue the original request.':'The retained retry time has passed. The original operation can be resumed.'):'';
+    $('qbo-native-resume').hidden=value.status==='BOOKED'||cancelled();
+    $('qbo-native-resume').textContent=value.status==='RECEIVED'?'Complete saved accountant return':value.status==='CONFLICT'?'Recheck original journal':value.status==='FAULT'?'Recheck original posting':'Resume original posting';
+    if(!['BOOKED','RUNNING','RECEIVED'].includes(value.status)&&!nativeConnectionMatches(value))$('qbo-native-operation-description').textContent+=' Restore its original company, environment and minor-version configuration to continue.';
+    $('qbo-native-open-response').hidden=!value.responseId;$('qbo-native-open-return').hidden=value.status!=='BOOKED';
+    $('qbo-native-downloads').innerHTML=nativeFileLinks(value.files,base()+'/post/download',['intent.json','request.json']);
+  }
+  renderNativeAttempts();controls();
+}
+async function previewNative(){
+  await reading(async()=>{
+    await loadConnection();
+    if(!nativeCanStart())throw new Error('Choose a reviewed journal for the configured company, with no retained posting or pending response.');
+    invalidateNative();invalidateResponse();
+    const planId=selected,token=nativeToken,request={...identity(),actor:operator(),expectedParentId:detail.expectedParentId??null,revision},signature=connectionSignature();
+    const value=await api(base()+'/post/preview',request);
+    if(token!==nativeToken||planId!==selected||signature!==connectionSignature())return;
+    nativePreview={planId,request:{...request,revision:value.revision,previewSha256:value.previewSha256},connection:signature,value};
+    const p=value.preview;
+    if(!nativePreviewCurrent()){invalidateNative();throw new Error('The saved journal changed during posting review. Refresh its state and review the current request.');}
+    $('qbo-native-preview-panel').hidden=false;$('qbo-native-preview-description').textContent=detail.plan.companyName+' · '+p.environment+' company '+p.realmId+' · '+detail.plan.baseCurrency;
+    $('qbo-native-preview-metrics').innerHTML=metrics(summaryMetrics({summary:p.summary}));
+    $('qbo-native-preview-details').innerHTML=definitions({companyId:p.realmId,environment:p.environment,documentNumber:p.docNumber,journalDate:detail.plan.txnDate,operator:p.actor,requestId:p.requestId,preparedAt:p.createdAt,accountantVersion:p.expectedParentId??'Original handoff',requestUrl:p.requestUrl,requestSha256:p.requestSha256,planSha256:p.planSha256});
+    $('qbo-native-confirm-label').textContent='I reviewed the company, journal date, accounts and amounts for posting to '+p.environment+' company '+p.realmId+'.';
+    $('qbo-native-preview-panel').scrollIntoView({block:'nearest',behavior:'smooth'});controls();notify('The exact company and native journal request are ready for posting review.');
+  });
+}
+function nativeResultMessage(result){
+  const value=result.nativePost??result.record?.nativePost;
+  if(value?.status==='BOOKED')return 'QuickBooks journal '+value.journalEntryId+' is matched and linked to the original saved accountant return.';
+  return (nativeLabels[value?.status]??'Posting state saved')+'. '+nativeStatusDescription(value);
+}
+async function nativeSuccess(result){
+  invalidateNative();invalidateResponse();
+  const value=result.nativePost??result.record?.nativePost;
+  if(value?.responseId)selectedResponse=value.responseId;
+  showView(value?.status==='BOOKED'?'return':'journal');
+}
+async function postNative(){
+  if(!nativePreviewCurrent()||!$('qbo-native-confirm').checked)throw new Error('Review and confirm this exact company and journal before posting.');
+  const intent=nativePreview;
+  return perform({path:'/api/qbo/plans/'+encode(intent.planId)+'/post',body:intent.request,description:'native QuickBooks posting',message:nativeResultMessage,success:nativeSuccess});
+}
+async function resumeNative(){
+  const value=detail?.record?.nativePost;
+  if(!value||!nativeCanResume())throw new Error(value?.retryAt&&Date.now()<Date.parse(value.retryAt)?'QuickBooks requested a pause until '+date(value.retryAt)+'.':'Refresh the retained operation and its original company configuration before resuming.');
+  return perform({path:base()+'/post/resume',body:{id:value.id,revision,actor:operator()},description:'original native QuickBooks posting',message:nativeResultMessage,success:nativeSuccess});
+}
+
 $('qbo-date').value=new Date().toISOString().slice(0,10);
 $('qbo-company-form').addEventListener('submit',event=>{event.preventDefault();attempt(loadCompany);});
 $('qbo-company-manual').addEventListener('click',()=>useManualCompany());
+$('qbo-connection-refresh').addEventListener('click',()=>attempt(()=>reading(loadConnection)));
+$('qbo-company-fetch').addEventListener('click',()=>attempt(loadNativeCompany));
+$('qbo-native-preview').addEventListener('click',()=>attempt(previewNative));
+$('qbo-native-confirm').addEventListener('change',controls);
+$('qbo-native-post').addEventListener('click',()=>attempt(postNative));
+$('qbo-native-resume').addEventListener('click',()=>attempt(resumeNative));
+$('qbo-native-clear-preview').addEventListener('click',invalidateNative);
+$('qbo-native-refresh').addEventListener('click',()=>attempt(async()=>{if(busy)return;busy=true;controls();try{await refresh();}finally{busy=false;controls();}}));
+$('qbo-native-open-response').addEventListener('click',()=>{const id=detail?.record?.nativePost?.responseId;if(id)chooseResponse(id);});
+$('qbo-native-attempt-previous').addEventListener('click',()=>{nativeAttemptOffset=Math.max(0,nativeAttemptOffset-NATIVE_PAGE);renderNativeAttempts();});
+$('qbo-native-attempt-next').addEventListener('click',()=>{nativeAttemptOffset+=NATIVE_PAGE;renderNativeAttempts();});
 $('qbo-create-form').addEventListener('submit',event=>{
   event.preventDefault();attempt(()=>reading(async()=>{
     const request=draftValue(),token=createIdentity.id;
@@ -365,7 +567,7 @@ $('qbo-review-form').addEventListener('submit',event=>{
     if(!detail||approved()||cancelled())return;
     const body={id:crypto.randomUUID(),revision,actor:operator(),note:$('qbo-review-note').value.trim(),planSha256:detail.plan.integrity.sha256};
     if(!body.note)throw new Error('Enter a review note for the retained journal.');
-    await perform({path:base()+'/review',body,description:'journal approval',message:'The reviewed journal request is available to download.'});
+    await perform({path:base()+'/review',body,description:'journal approval',message:'The reviewed journal is ready for native posting review and exact request download.'});
   });
 });
 $('qbo-cancel-form').addEventListener('submit',event=>{
@@ -373,16 +575,16 @@ $('qbo-cancel-form').addEventListener('submit',event=>{
     if(!cancellable())throw new Error('This journal plan cannot be cancelled in its current saved state.');
     const body={id:crypto.randomUUID(),revision,actor:operator(),note:$('qbo-cancel-note').value.trim(),planSha256:detail.plan.integrity.sha256,unusedConfirmed:$('qbo-cancel-unused').checked};
     if(!body.note||!body.unusedConfirmed)throw new Error('Enter a cancellation note and confirm the journal has not been used.');
-    await perform({path:base()+'/cancel',body,description:'unused journal cancellation',message:'The unused journal plan is cancelled. Its source events are available for a new plan.',success:async()=>{invalidateResponse();$('qbo-cancel-unused').checked=false;}});
+    await perform({path:base()+'/cancel',body,description:'unused journal cancellation',message:'The unused journal plan is cancelled. Its source events are available for a new plan.',success:async()=>{invalidateResponse();invalidateNative();$('qbo-cancel-unused').checked=false;}});
   });
 });
 $('qbo-handoff').addEventListener('change',()=>attempt(()=>reading(()=>loadSource())));
-$('qbo-operator').addEventListener('input',()=>{invalidatePlan();invalidateResponse();});
+$('qbo-operator').addEventListener('input',()=>{invalidatePlan();invalidateResponse();invalidateNative();});
 $('qbo-create-form').addEventListener('input',event=>{
   const input=event.target;
   if(input.id==='qbo-draft-search'||input.id.startsWith('qbo-default-')||input.matches('[data-qbo-selected]'))return;
   if(input.id==='qbo-name')input.dataset.dirty='true';
-  if(['qbo-realm','qbo-company-name','qbo-currency'].includes(input.id)&&loadedCompany)useManualCompany({message:false});
+  if(['qbo-realm','qbo-company-name','qbo-currency','qbo-environment'].includes(input.id)&&loadedCompany)useManualCompany({message:false});
   const field=input.dataset.qboField;
   if(field){
     const id=input.closest('[data-qbo-source-row]')?.dataset.qboSourceRow,row=draftRows.get(id);
@@ -474,7 +676,7 @@ $('qbo-apply').addEventListener('click',()=>attempt(async()=>{
 }));
 $('qbo-retry').addEventListener('click',()=>{if(pending)attempt(()=>perform(pending,true));});
 $('qbo-dismiss-retry').addEventListener('click',()=>{
-  pending=null;$('qbo-retry-panel').hidden=true;invalidatePlan();invalidateResponse();notify('The form is retained. Refresh saved state before creating another operation.');controls();
+  pending=null;$('qbo-retry-panel').hidden=true;invalidatePlan();invalidateResponse();invalidateNative();notify('The form is retained. Refresh saved state before creating another operation.');controls();
 });
 window.addEventListener('beforeunload',()=>{if(previewUrl)URL.revokeObjectURL(previewUrl);});
-renderCompany();controls();attempt(()=>reading(refresh));
+renderCompany();renderConnection();controls();attempt(()=>reading(refresh));

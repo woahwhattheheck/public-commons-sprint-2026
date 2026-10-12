@@ -104,6 +104,69 @@ The import calls the original result's `bytes()` method and binds the saved
 length and SHA-256 to the dossier edition. This composes the original completed
 operation. The saved result remains recoverable in its buyer workspace.
 
+## Import a complete saved OpenAlex cohort
+
+Connect the dossier to the original OpenAlex saved workspace when launching it:
+
+```sh
+node stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/server.mjs \
+  --dir /private/research-workspace \
+  --openalex-workspace /private/original-openalex-workspace \
+  --openalex-module /absolute/original-checkout/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research/workspace.mjs
+```
+
+The workspace must already contain its original `queries` and `editions`
+directories. `--openalex-module` selects the installed original workspace module;
+omit it when that module is included beside this dossier in the cumulative
+release. Module and directory choices are made in the local launch command.
+The browser chooses saved edition IDs from that existing workspace.
+
+Choose **Add research → Saved OpenAlex cohort**, select the dossier question,
+and inspect the saved cohort's query, coverage, page count and review revision.
+Importing receives the original workspace's current saved edition. A growing
+collection can be imported again: completed page identities are reused and
+new saved pages are added. A changed source query, page index or review record
+gets a new retained cohort snapshot.
+
+The metadata edition preserves the source coverage exactly: `EMPTY`,
+`PARTIAL`, `COMPLETE` or `INTERRUPTED`. It also retains the original query,
+edition record, review decisions, page/request metadata and native buyer
+records. Each raw response is its own original OpenAlex edition. Source review
+decisions remain provenance; the operator controls dossier selections, notes
+and findings independently.
+
+A retry uses the source-file fingerprint, so export/report timestamps do not
+create duplicates. If a request stops after some pages, the current dossier
+keeps those pages and the next import resumes from its current revision.
+The CLI returns `openAlexImport` progress on interruption; the browser reloads
+the committed dossier before offering the same cohort again.
+
+```sh
+node stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/cli.mjs import-openalex \
+  --store /private/research-workspace --id DOSSIER_ID --question QUESTION_ID \
+  --openalex-workspace /private/original-openalex-workspace \
+  --openalex-module /absolute/original-checkout/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research/workspace.mjs \
+  --edition ORIGINAL_EDITION_ID --revision CURRENT_DOSSIER_REVISION
+```
+
+Applications that already own the original workspace can compose it directly:
+
+```js
+import { receiveOpenAlexEdition } from './research-dossiers/index.mjs';
+
+const current = await dossiers.get(existingProjectId);
+const imported = await receiveOpenAlexEdition(dossiers, current.id, {
+  workspace: originalOpenAlexWorkspace,
+  editionId: existingSavedEditionId,
+  questionId: existingQuestionId,
+  expectedRevision: current.revision,
+});
+```
+
+`startDossierWorkspace({directory, openalexWorkspace})` accepts that same
+existing object. Its caller retains the original workspace lifetime; the
+launch command closes the object it opens when the server stops.
+
 ## Attach the original Valyu research edition
 
 The maintained [Valyu merchant and customer workspace](../../sf30-seller-sdk/valyu/)
@@ -224,3 +287,11 @@ question-specific finding references.
 - [OpenAlex synchronization](https://help.openalex.org/access/sync/)
 - [Valyu acceptable use policy](https://www.valyu.ai/valyu-acceptable-use-policy)
 - [Valyu platform service agreement](https://www.valyu.ai/valyu-platform-service-agreement)
+
+## Runtime Applications launch contract
+
+The `research-workspace` command serves the same private dossier store used by this SDK and CLI. The runtime Applications entry supplies `--dir`, optional `--edition-adapter`, optional `--openalex-workspace` and `--openalex-module`, and the selected local port. An existing directory reopens the retained questions, source editions, selections, findings and history.
+
+Startup writes one JSON line containing `mode: "RESEARCH_DOSSIER_WORKSPACE"`, the exact selected `directory`, the actual private `url`, configured `providers`, and `openalexConfigured`. Managed consumers should accept this URL only from this command and the matching `--dir` input. Use the returned URL; its fragment supplies the original capability. SIGINT or SIGTERM closes the HTTP server and the original configured OpenAlex workspace.
+
+An OpenAlex workspace must already contain its original queries and editions. Without an explicit module override, it is opened by the original `research/workspace.mjs` in the same selected source. The Applications configuration retains the chosen directory and module paths; the research application controls source intake, review and exports.

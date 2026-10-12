@@ -5,6 +5,8 @@ import { resolve } from 'node:path';
 import { pathToFileURL, fileURLToPath } from 'node:url';
 import { readBytes, parseJson, writeBytes, need } from '../node/store.mjs';
 import { openDossierStore } from './dossier.mjs';
+import { receiveOpenAlexEdition } from './openalex.mjs';
+import { openSavedOpenAlexWorkspace } from './openalex-workspace.mjs';
 
 const usage = 'Research dossiers\n\n' +
   '  create --store DIR --title TEXT [--description TEXT]\n' +
@@ -13,6 +15,7 @@ const usage = 'Research dossiers\n\n' +
   '  receive --store DIR --id ID --question ID --file JSON --provider openalex|research --label TEXT --revision N\n' +
   '  attach --store DIR --id ID --question ID --file REFERENCE_JSON --provider valyu --label TEXT --revision N [--edition-adapter MODULE]\n' +
   '  import-buyer --store DIR --id ID --question ID --buyer-state DIR --runtime DIR --intent ID --provider openalex|research --label TEXT --revision N\n' +
+  '  import-openalex --store DIR --id ID --question ID --openalex-workspace DIR --edition ID --revision N [--openalex-module MODULE] [--label TEXT]\n' +
   '  note --store DIR --id ID --source ID --selected true|false --note TEXT --classification supports|contradicts|background|unreviewed --revision N\n' +
   '  finding --store DIR --id ID --file FINDING_JSON --revision N\n' +
   '  compare --store DIR --id ID --before N --after N\n' +
@@ -24,7 +27,8 @@ export async function main(argv = process.argv.slice(2)) {
   if (!command || ['help', '--help', '-h'].includes(command)) { process.stdout.write(usage); return; }
   const keys = ['store', 'id', 'title', 'description', 'text', 'revision', 'question', 'file',
     'provider', 'label', 'source-reference', 'source', 'selected', 'note', 'classification',
-    'before', 'after', 'format', 'out', 'edition-adapter', 'buyer-state', 'runtime', 'intent'];
+    'before', 'after', 'format', 'out', 'edition-adapter', 'buyer-state', 'runtime', 'intent',
+    'openalex-workspace', 'openalex-module', 'edition'];
   const { values } = parseArgs({ args: argv.slice(1), options: Object.fromEntries(keys.map(key => [key, { type: 'string' }])), strict: true });
   need(values.store, 'STORE_REQUIRED');
   let providers = {};
@@ -59,6 +63,19 @@ export async function main(argv = process.argv.slice(2)) {
         sourceReference: values['source-reference'] ?? '', expectedRevision: revision });
       break;
     }
+    case 'import-openalex': {
+      need(values['openalex-workspace'] && values.edition, 'OPENALEX_SAVED_EDITION_REQUIRED');
+      const workspace = await openSavedOpenAlexWorkspace({
+        directory:resolve(values['openalex-workspace']),
+        modulePath:values['openalex-module'] ? resolve(values['openalex-module']) : undefined,
+      });
+      try {
+        const imported = await receiveOpenAlexEdition(store, values.id, {workspace, editionId:values.edition,
+          questionId:values.question, label:values.label, expectedRevision:revision});
+        const {dossier, ...summary} = imported; result = summary;
+      } finally { await workspace.close(); }
+      break;
+    }
     case 'note':
       need(['true', 'false'].includes(values.selected), 'SELECTION_REQUIRED');
       result = await store.selectEvidence(values.id, { sourceId: values.source, selected: values.selected === 'true',
@@ -78,5 +95,5 @@ export async function main(argv = process.argv.slice(2)) {
   process.stdout.write(JSON.stringify(result, null, 2) + '\n');
 }
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  main().catch(error => { process.stderr.write(JSON.stringify({ error: error.code ?? 'DOSSIER_COMMAND_FAILED' }) + '\n'); process.exitCode = 1; });
+  main().catch(error => { process.stderr.write(JSON.stringify({ error: error.code ?? 'DOSSIER_COMMAND_FAILED', ...(error.openAlexImport ? {openAlexImport:error.openAlexImport} : {}) }) + '\n'); process.exitCode = 1; });
 }

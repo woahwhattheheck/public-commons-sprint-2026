@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Delivery notices · Merchant accounting</title>
+  <link rel="stylesheet" href="/delivery-notices/style.css">
+  <script type="module" src="/delivery-notices/app.mjs"></script>
+</head>
+<body>
+  <a class="skip" href="#main">Skip to delivery notices</a>
+  <header class="topbar"><strong>STELLAR FORGE / MERCHANT OPERATIONS</strong><span>Accounting delivery</span></header>
+  <main id="main">
+    <nav class="navigation" aria-label="Merchant workspaces">
+      <a href="/">Settlement workspace</a>
+      <a href="/customer-statements/">Customer statements</a>
+      <span aria-current="page">Delivery notices</span>
+    </nav>
+    <div class="heading">
+      <div><p class="eyebrow">Retained delivery · Original reconciliation</p><h1>Delivery notices</h1>
+        <p>Review accepted merchant deliveries and capture the accounting sources already selected in this workspace.</p></div>
+      <div class="refresh-controls"><button id="refresh" type="button">Refresh saved state</button>
+        <label class="check"><input id="live-refresh" type="checkbox" checked> Refresh while open</label>
+        <span id="updated-at" class="hint"></span></div>
+    </div>
+    <div id="message" class="message" role="status" aria-live="polite" hidden></div>
+    <section class="metrics" aria-label="Notice totals">
+      <div><span>Accepted notices</span><strong id="count-notices">—</strong></div>
+      <div><span>Captured</span><strong id="count-captured">—</strong></div>
+      <div><span>Pending</span><strong id="count-pending">—</strong></div>
+    </section>
+    <details class="configuration" open>
+      <summary>Connected accounting source</summary>
+      <dl class="source-grid"><div><dt>Accounting workspace</dt><dd id="workspace-directory" class="mono">Loading…</dd></div>
+        <div><dt>Original destination outbox</dt><dd id="source-outbox" class="mono">Loading…</dd></div>
+        <div><dt>Incoming notice signing</dt><dd id="signing-state">Loading…</dd></div></dl>
+      <p class="hint">Existing accepted notices remain available for capture when incoming signing is unconfigured. Select merchant terms and verification files in the settlement workspace.</p>
+    </details>
+    <section id="retained-requests" class="panel padded" hidden aria-label="Retained browser requests">
+      <h2>Requests available for recovery</h2><p class="hint">These requests keep the original request ID, operator and name. Open a notice to recover its existing capture.</p>
+      <div id="retained-request-list" class="request-list"></div>
+    </section>
+    <div class="notice-layout">
+      <section class="panel notices">
+        <div class="panel-heading"><div><h2>Accepted deliveries</h2><p>Amounts retain the original atomic unit. Acceptance time and event time are shown separately.</p></div></div>
+        <form id="filter-form" class="filters">
+          <label for="notice-state">Capture state</label>
+          <select id="notice-state"><option value="all">All notices</option><option value="pending">Pending</option><option value="captured">Captured</option></select>
+          <button type="submit">Apply</button>
+        </form>
+        <div class="table-wrap" tabindex="0" aria-label="Scrollable accepted delivery notices">
+          <table><caption class="sr-only">Accepted merchant delivery notices</caption>
+            <thead><tr><th>Event / reference</th><th>Accepted</th><th>Route / network</th><th>Atomic amount</th><th>Latest capture</th></tr></thead>
+            <tbody id="notice-rows"><tr><td colspan="5" class="empty">Loading accepted notices…</td></tr></tbody>
+          </table>
+        </div>
+        <div class="pagination"><span id="notice-page"></span><div class="actions"><button id="previous" type="button" disabled>Previous</button><button id="next" type="button" disabled>Next</button></div></div>
+      </section>
+      <section class="panel detail" aria-label="Selected delivery">
+        <div id="empty-detail" class="empty"><h2>Choose an accepted delivery</h2><p>Inspect its original identity, retained capture requests and reconciliation before continuing.</p></div>
+        <div id="selected-detail" hidden>
+          <div class="panel-heading"><div><h2>Accepted delivery</h2><p id="selected-event" class="mono"></p></div><button id="refresh-notice" type="button">Refresh notice</button></div>
+          <div class="padded">
+            <dl id="notice-identity" class="identity"></dl>
+            <details><summary>Original event and body identity</summary><dl id="notice-hashes" class="identity hashes"></dl></details>
+            <section class="capture-section">
+              <h3>Capture current accounting sources</h3>
+              <p class="hint">The reconciliation captures the configured destination outbox, selected merchant terms, verification files and period. It may include other retained events in that same outbox.</p>
+              <p><a href="/">Review selected accounting sources</a></p>
+              <form id="capture-form">
+                <label for="capture-actor">Operator / reviewer</label><input id="capture-actor" required maxlength="160" autocomplete="name">
+                <label for="capture-name">Capture name</label><input id="capture-name" required maxlength="160" placeholder="Merchant delivery review">
+                <div class="actions"><button id="capture-submit" class="primary" type="submit">Capture selected sources</button></div><p id="capture-availability" class="hint" hidden></p>
+              </form>
+              <div id="pending-capture" class="pending" hidden>
+                <h3 id="pending-title">Recover the original capture</h3>
+                <p id="pending-description"></p><p id="pending-request-id" class="mono"></p>
+                <div class="actions"><button id="recover-capture" class="primary" type="button">Recover same request</button><button id="new-selection" type="button" hidden>Use current selection for a new capture</button></div>
+              </div>
+            </section>
+            <section class="capture-section"><h3>Retained capture history</h3><p class="hint">Prepared requests and their original accounting runs remain in this history.</p><div id="capture-history"></div></section>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+</body>
+</html>

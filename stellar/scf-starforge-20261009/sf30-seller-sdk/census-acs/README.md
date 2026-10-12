@@ -296,3 +296,9 @@ Extraction failure retains its original run and progress. Reopen a completed mat
 - [Census guidance for comparing ACS data](https://www.census.gov/programs-surveys/acs/guidance/comparing-acs-data.html)
 
 MIT.
+
+## Installed command and agent publisher
+
+The maintained distribution exposes `starforge census-publisher` for this same CLI and the `./seller/census-acs`, `./seller/census-acs/publisher`, `./seller/census-acs/publisher/plan` and `./seller/census-acs/release` module exports.
+
+An existing original publisher can also be declared in the merchant MCP publisher connection with `kind: "census-acs"`, its private `directory`, and an optional original `seller`/`resource` pair. The host configuration selects its path; agent calls use the declared alias. All original `merchant_publisher_*` tools then operate the same saved plans, extraction runs, reviews, publication, buyer handoff and recurring schedule. Close the browser/CLI owner before opening that workspace in the merchant process. Reopening uses the original workspace lease and retained operation identities.
