@@ -1,0 +1,124 @@
+{
+  "bindingId": "562b3398440e5003de1a757c06e8395f0916de609e46d63a83dab9994883848e",
+  "comparison": {
+    "after": "258337aef2fdfaf01265947847b25ba69038e52f2c0c7b70be1ddec6fbc96e31",
+    "before": "258337aef2fdfaf01265947847b25ba69038e52f2c0c7b70be1ddec6fbc96e31",
+    "changesSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "counts": {
+      "added": 0,
+      "changed": 0,
+      "removed": 0,
+      "unchanged": 2
+    },
+    "id": "8992e6ce22704ec5425ed6917c8a8c8a20afc5b2200c49dfd11ad05221214e1f",
+    "keys": [
+      "key"
+    ],
+    "plan": "82c962ffa5af59910b85a659034dc6533d7812b0beb1d7f800b9a60857d81b02",
+    "schema": "stellar-forge.xml-comparison.v1",
+    "semantics": "exact projected CSV cells; record order changes are not field changes"
+  },
+  "completed": [
+    "original-public-opml",
+    "partial-acquisition-reopen",
+    "native-selected-edition",
+    "portable-customer-console-cli"
+  ],
+  "completedAt": "2026-10-12T01:53:08Z",
+  "consoleHTTP": 200,
+  "customerCollectionRevision": 3,
+  "distinctAcquiredFeeds": 2,
+  "editionA": "66cd390e18a70212cd3e894d0ce264f55fc28eb02cd126c8481cccd81ffa2e78",
+  "editionB": "a81bd55f31377a2e7f94356cc31c2c35f5f9bd5ac202da9659172894f7c78673",
+  "engineBlob": "7496dd29c59c23b3bc16c7d24a327a30b867625f",
+  "operationId": "SCF-FEED-COLLECTION-NATIVE-8F43-20261012",
+  "originalCLIExit": 0,
+  "originalOPMLSha256": "a52101e6e1051bdd2b841bab879b07a4c8086f3afe273d51a7dd8a7f29cbdf93",
+  "packetBytes": 11567,
+  "packetSha256": "e09ed882a1efdcf48be7bf1014010826877fab2c2e5dca7a67ce6276ba4770c5",
+  "publicOPML": {
+    "bytes": 100070,
+    "gitBlob": "0559a621448206c1b531130a487768aae26ac021",
+    "outlines": 587,
+    "sha256": "b5334857c5f1ff9dbebb8ece2b86a8228d4bec1aeec69d6fdaac8c0d91ace072",
+    "subscriptions": 573,
+    "topFolders": [
+      "Psychohistory",
+      "Business",
+      "Climate",
+      "Culture",
+      "Current Events",
+      "EdTech",
+      "Fiction",
+      "Friends",
+      "Humor",
+      "Indieweb",
+      "Newsletters",
+      "Parenting",
+      "Society",
+      "Tech",
+      "Writing"
+    ]
+  },
+  "receivedEdition": "a81bd55f31377a2e7f94356cc31c2c35f5f9bd5ac202da9659172894f7c78673",
+  "receivedRun": "64834c4f427fc7c083e69ff7e8c7e2774501c12ccb0ff0f6addb69f1bf770b3e",
+  "registrationRecovery": [
+    "feed-a"
+  ],
+  "requests": [
+    {
+      "ifNoneMatch": null,
+      "path": "/atom",
+      "status": 200
+    },
+    {
+      "ifNoneMatch": null,
+      "path": "/rss",
+      "status": 503
+    },
+    {
+      "ifNoneMatch": null,
+      "path": "/rss",
+      "status": 200
+    }
+  ],
+  "restoredDisabledRegistration": "feed-c",
+  "rows": 2,
+  "runId": "7c2f9fd45425547dafe4a52210903de538847d0b5193a6161f7288c595aae99d",
+  "runtime": {
+    "node": "v24.19.0",
+    "platform": "Linux-6.18.44-x86_64-with-glibc2.39",
+    "python": "3.12.14"
+  },
+  "snapshot": "5d6a28b54ffb8e35f1bef7a62ca6eb549b5d5254ef04a6741d28a764bfd9cb77",
+  "sourceCommit": "28b9c88e694e5df5cd23f2c95cc4899745e07a19",
+  "sourceRequests": [
+    {
+      "ifNoneMatch": null,
+      "path": "/atom",
+      "status": 200
+    },
+    {
+      "ifNoneMatch": null,
+      "path": "/rss",
+      "status": 503
+    },
+    {
+      "ifNoneMatch": null,
+      "path": "/rss",
+      "status": 200
+    },
+    {
+      "ifNoneMatch": "\"collection-atom-v1\"",
+      "path": "/atom",
+      "status": 304
+    },
+    {
+      "ifNoneMatch": "\"collection-rss-v1\"",
+      "path": "/rss",
+      "status": 304
+    }
+  ],
+  "startedAt": "2026-10-12T01:53:07Z",
+  "state": "COMPLETED"
+}

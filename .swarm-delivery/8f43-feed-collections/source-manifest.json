@@ -1,0 +1,26 @@
+{
+  "commit": "28b9c88e694e5df5cd23f2c95cc4899745e07a19",
+  "gitBlobs": {
+    "feeds/original.py": "86d37ec489d6dfd7cb9893f53584a454077eeb17",
+    "feeds/feed_source.py": "32159e81a887273048f5394c93bde500442af2d9",
+    "feeds/feed_workspace.py": "64e84dda48ab008e58d667bf4798819e717399cb",
+    "feeds/operations.py": "0c9799c4cbaf1d09fb52072a75858a1e81015070",
+    "feeds/cli.py": "126cbbd2d26bd7a07ab3fdf20765207f385f558c",
+    "feeds/cli.mjs": "31a47d7406c56065369f0b19f09ce85628eeb7c9",
+    "feeds/server.py": "2d3f3dda6887cbbf38892e566f34c0281b01d538",
+    "feeds/public/index.html": "8bed257ed0cc0f5acb3f508b4990aee93b72000a",
+    "feeds/public/style.css": "d5197114c161d52d586ad8991cc8d6787a24c66e",
+    "feeds/public/app.js": "dc76535d2b9b8ee759e46b8064cbda0cbce8323d",
+    "feeds/opml_source.py": "6399ce1a71d80595c89e15f839892d058acf7603",
+    "feeds/subscriptions.py": "e9b2e807060b7d053d1449d2c14ff479387faa52",
+    "feeds/subscriptions_cli.py": "a75ee670ffa4808f01e1955c677694997054ff7f",
+    "feeds/public/subscriptions.html": "de8d55274423e8203ddf66dc087eb9703921607d",
+    "feeds/public/subscriptions.css": "03332eb6be310b5b504d6f42441409ecaac025f1",
+    "feeds/public/subscriptions.js": "386a36052d6c77c52e1fd46534a5c03f3846ef33",
+    "xml/workspace.py": "24c4fb7ccf08f6d350bcfb4eae6accc251a60a4e",
+    "xml/xml_source.py": "8f02d9545ae2959f354cff555ddb0e8595f1b8e0",
+    "xml/native.mjs": "b335d4148f82cc40b3d5bdb08891c0d6b98f67ac",
+    "dataset-handler.mjs": "7496dd29c59c23b3bc16c7d24a327a30b867625f",
+    "inputs/newsblur-subscriptions.opml": "0559a621448206c1b531130a487768aae26ac021"
+  }
+}
