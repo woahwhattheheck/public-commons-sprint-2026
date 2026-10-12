@@ -289,7 +289,7 @@ $('query-kind').addEventListener('change',()=>{const kind=$('query-kind').value;
 $('key-mode').addEventListener('change',()=>{queryVisibility();dirtyForm=true;});
 $('plan-editor').addEventListener('input',()=>{planDirty=true;dirtyForm=true;$('draft-status').textContent='Draft changes';});
 document.querySelectorAll('#query-form input,#query-form textarea,#panel-terms input,#route-editor').forEach(node=>node.addEventListener('input',()=>{dirtyForm=true;$('draft-status').textContent='Draft changes';}));
-$('revision-note').addEventListener('change',()=>guard(retain));
+$('revision-note').addEventListener('change',()=>{void retain().catch(error=>status(error.message,true));});
 on('add-query',async()=>{await flush();let n=1;while(Object.hasOwn(draft.queries,'product_'+n))n++;selectedQuery='product_'+n;
   draft.queries[selectedQuery]={kind:'get',key:'merchant:'+selectedQuery,parameters:{},columns:['value'],maxRows:1,maxBytes:16384,timeoutMs:1500};await retain();productList();queryForm();});
 on('remove-query',async()=>{if(Object.keys(draft.queries).length===1)throw new Error('Keep at least one product.');

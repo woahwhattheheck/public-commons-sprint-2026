@@ -1,0 +1,434 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Xero native settlement accounting",
+    "version": "1.0.0",
+    "description": "Original Xero connected-tenant selection and merchant manual journals. The maintained OAuth owner keeps authorization and renewal; the original accounting workspace retains source, reviewed plans, native responses and accountant returns."
+  },
+  "servers": [
+    {
+      "url": "https://api.xero.com"
+    }
+  ],
+  "paths": {
+    "/connections": {
+      "get": {
+        "operationId": "xeroConnectedTenants",
+        "summary": "Read the organizations authorized by this current grant",
+        "description": "Select the exact connection id and tenantId from the returned original array before using any accounting resource.",
+        "security": [
+          {
+            "xeroAccounting": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Original connected tenant array",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Connection"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api.xro/2.0/Organisation": {
+      "get": {
+        "operationId": "xeroOrganization",
+        "summary": "Read the explicitly selected native organization",
+        "parameters": [
+          {
+            "name": "xero-tenant-id",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "security": [
+          {
+            "xeroAccounting": [
+              "accounting.settings.read"
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Original organization response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "Organisations"
+                  ],
+                  "properties": {
+                    "Organisations": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": true
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api.xro/2.0/Accounts": {
+      "get": {
+        "operationId": "xeroAccounts",
+        "summary": "Read the native organization chart of accounts",
+        "parameters": [
+          {
+            "name": "xero-tenant-id",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "security": [
+          {
+            "xeroAccounting": [
+              "accounting.settings.read"
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Original chart of accounts",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "Accounts"
+                  ],
+                  "properties": {
+                    "Accounts": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": true
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api.xro/2.0/ManualJournals": {
+      "get": {
+        "operationId": "xeroFindManualJournals",
+        "summary": "Read journals by their original exact narration",
+        "parameters": [
+          {
+            "name": "xero-tenant-id",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "where",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          }
+        ],
+        "security": [
+          {
+            "xeroAccounting": [
+              "accounting.transactions"
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Original ManualJournals response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ManualJournals"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "xeroCreateReviewedDrafts",
+        "summary": "Create the exact retained manual journal drafts",
+        "description": "The original accounting controller freezes the draft request and stable Idempotency-Key, retains provider results, and reconciles exact native journals before retrying an uncertain write.",
+        "parameters": [
+          {
+            "name": "xero-tenant-id",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 128
+            }
+          },
+          {
+            "name": "summarizeErrors",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "security": [
+          {
+            "xeroAccounting": [
+              "accounting.transactions"
+            ]
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ManualJournals"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Native created journal response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ManualJournals"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api.xro/2.0/ManualJournals/{ManualJournalID}": {
+      "get": {
+        "operationId": "xeroReadManualJournal",
+        "summary": "Read the original returned manual journal ID",
+        "parameters": [
+          {
+            "name": "xero-tenant-id",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "ManualJournalID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "security": [
+          {
+            "xeroAccounting": [
+              "accounting.transactions"
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Original native journal response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ManualJournals"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "xeroAccounting": {
+        "type": "oauth2",
+        "flows": {
+          "authorizationCode": {
+            "authorizationUrl": "https://login.xero.com/identity/connect/authorize",
+            "tokenUrl": "https://identity.xero.com/connect/token",
+            "refreshUrl": "https://identity.xero.com/connect/token",
+            "scopes": {
+              "accounting.settings.read": "Read the organization and chart of accounts",
+              "accounting.transactions": "Read and create manual journals",
+              "offline_access": "Maintain the original reviewed authorization with serialized refresh"
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "Connection": {
+        "type": "object",
+        "required": [
+          "id",
+          "tenantId",
+          "tenantType",
+          "tenantName"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tenantId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "authEventId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tenantType": {
+            "type": "string",
+            "enum": [
+              "ORGANISATION",
+              "PRACTICE"
+            ]
+          },
+          "tenantName": {
+            "type": "string"
+          },
+          "createdDateUtc": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedDateUtc": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "additionalProperties": true
+      },
+      "ManualJournals": {
+        "type": "object",
+        "required": [
+          "ManualJournals"
+        ],
+        "properties": {
+          "ManualJournals": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "ManualJournalID": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "Narration": {
+                  "type": "string"
+                },
+                "Date": {
+                  "type": "string"
+                },
+                "Status": {
+                  "type": "string"
+                },
+                "LineAmountTypes": {
+                  "type": "string"
+                },
+                "ShowOnCashBasisReports": {
+                  "type": "boolean"
+                },
+                "JournalLines": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "Description": {
+                        "type": "string"
+                      },
+                      "LineAmount": {
+                        "type": "number"
+                      },
+                      "AccountCode": {
+                        "type": "string"
+                      },
+                      "TaxType": {
+                        "type": "string"
+                      }
+                    },
+                    "additionalProperties": true
+                  }
+                }
+              },
+              "additionalProperties": true
+            }
+          }
+        },
+        "additionalProperties": true
+      }
+    }
+  },
+  "externalDocs": {
+    "description": "Official Xero native accounting and connected tenant contracts",
+    "url": "https://github.com/XeroAPI/Xero-OpenAPI"
+  }
+}
