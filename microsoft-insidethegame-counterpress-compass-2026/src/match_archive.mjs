@@ -5,6 +5,7 @@ import {lstat, mkdir, open, readdir, rename, unlink} from 'node:fs/promises';
 import {join, resolve} from 'node:path';
 import {validateFixture} from './engine.mjs';
 import {normalizeRetainedInsights} from './retained_insight.mjs';
+import {normalizeBroadcast} from './broadcast_handover.mjs';
 import {parseCount, parseView} from './live_sessions.mjs';
 import {parseScenario, parseSeed, SCENARIOS} from './scenarios.mjs';
 
@@ -94,7 +95,8 @@ function reviewData(raw, match) {
       note: text(item.note, 1000, 'Moment note')};
   }).sort((a, b) => a.count - b.count);
   return {title, notes, cursor, view, selectedMomentId, filters: normalizedFilters, recap, bookmarks,
-    insights: normalizeRetainedInsights(raw.insights, match)};
+    insights: normalizeRetainedInsights(raw.insights, match),
+    ...(raw.broadcast === undefined ? {} : {broadcast: normalizeBroadcast(raw.broadcast, match)})};
 }
 function storedData(raw) {
   object(raw, 'Saved match');
@@ -233,7 +235,12 @@ export async function createMatchArchiveStore({directory, maxArchives = 256, max
         const document = await read(id);
         if (document.owner !== owner) throw fail(403, 'Save a copy to edit this shared match');
         if (revision !== document.revision) throw fail(409, 'This review changed in another tab; reload it or save a copy');
-        document.review = reviewData(review, document.match);
+        const incoming = {...object(review, 'Review')};
+        // A player writing its own fields retains an independently authored rundown.
+        // Explicit null remains an intentional clear through the original revision.
+        if (!Object.hasOwn(incoming, 'broadcast') && Object.hasOwn(document.review, 'broadcast'))
+          incoming.broadcast = document.review.broadcast;
+        document.review = reviewData(incoming, document.match);
         document.revision++;
         document.updatedAt = new Date().toISOString();
         await write(document);
