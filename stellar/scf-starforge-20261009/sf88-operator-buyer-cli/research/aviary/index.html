@@ -72,7 +72,7 @@ details{border-top:1px solid #ddd;padding-top:12px;margin-top:18px}summary{curso
 <div class="grid"><div><label for="baseUrl">Aviary organization URL</label><input id="baseUrl" type="url" placeholder="https://yourorganization.aviaryplatform.com"></div>
 <div><label for="collectionId">Collection ID</label><input id="collectionId" inputmode="numeric" placeholder="Existing collection ID"></div>
 <div><label for="tokenEnv">API token environment variable</label><input id="tokenEnv" value="AVIARY_TOKEN"></div></div>
-<div class="grid two"><div><label for="operationId">Saved operation ID</label><input id="operationId"></div><div><label for="organizationId">Organization header, if required</label><input id="organizationId"></div></div>
+<div class="grid two"><div><label for="operationId">Saved operation ID</label><input id="operationId"></div><div><label for="organizationId">Organization ID (required)</label><input id="organizationId" inputmode="numeric" pattern="[1-9][0-9]*" placeholder="Organization ID"></div></div>
 <div class="toolbar"><button id="planMigration" class="primary">Save migration plan</button><button id="runMigration">Run / continue original migration</button><button id="refreshTransfer">Refresh progress</button></div>
 <details id="savedConfiguration" hidden><summary>Complete saved target configuration</summary><pre id="selectedConfiguration"></pre></details>
 <div id="runSummary"></div><div class="table-wrap"><table><thead><tr><th>Operation item</th><th>Progress</th><th>Provider ID</th><th>Last update</th><th>Details</th></tr></thead><tbody id="actionRows"></tbody></table></div>

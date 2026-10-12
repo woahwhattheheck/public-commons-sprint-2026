@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Capture the exact public USGS example and retain its original source receipts."""
 from __future__ import annotations
-import argparse,contextlib,csv,datetime as dt,fcntl,hashlib,html.parser,json,os,re,shutil,sys,tempfile,urllib.request
+import argparse,contextlib,csv,datetime as dt,email.utils,fcntl,hashlib,html.parser,http.client,json,os,re,shutil,sys,tempfile,urllib.error,urllib.request,uuid
 from pathlib import Path,PurePosixPath
 from urllib.parse import urlsplit
 ALLOWED={"www.usgs.gov","d9-wret.s3.us-west-2.amazonaws.com","aviaryplatform.com","www.aviaryplatform.com"}
@@ -32,29 +32,49 @@ def publish(path,raw):
   sync_dir(path.parent)
  finally:
   with contextlib.suppress(FileNotFoundError):os.unlink(name)
-def read_capture(root,item):
- folder=safe(root,"captures/"+item["id"])
- if folder.exists():
-  record=json.loads((folder/"response.json").read_text("utf-8"));body=(folder/"body.bin").read_bytes()
-  if record["request_url"]!=item["url"] or len(body)!=record["bytes"] or sha(body)!=record["sha256"]:raise ValueError("Captured source changed: "+item["id"])
-  return record,body
- parts=urlsplit(item["url"])
- if parts.scheme!="https" or parts.hostname not in ALLOWED or parts.username or parts.password:raise ValueError("Only the selected original public URLs are allowed")
- request=urllib.request.Request(item["url"],headers={"User-Agent":"AviaryPublicSourceReceiving/1.0","Accept":"*/*"})
- started=stamp()
- with urllib.request.urlopen(request,timeout=45) as response:
-  if response.status!=200:raise ValueError("Original source did not return 200")
-  final=response.geturl()
-  if urlsplit(final).scheme!="https" or urlsplit(final).hostname not in ALLOWED:raise ValueError("Unexpected source redirect")
-  body=response.read(item["max_bytes"]+1)
-  if len(body)>item["max_bytes"]:raise ValueError("Source exceeds declared maximum: "+item["id"])
-  headers={k:v for k,v in response.headers.items() if k.lower() in {"content-type","content-length","etag","last-modified"}}
-  record={"request_url":item["url"],"final_url":final,"status":response.status,"started_at":started,"completed_at":stamp(),"headers":headers,"bytes":len(body),"sha256":sha(body),"source_page":item.get("source_page",item["url"])}
- if not body:raise ValueError("Empty source: "+item["id"])
- mime=item["media_type"]
- if mime=="image/jpeg" and not body.startswith(b"\xff\xd8\xff"):raise ValueError("Source is not JPEG: "+item["id"])
- if mime=="audio/mpeg" and not (body.startswith(b"ID3") or any(body[i]==255 and body[i+1]&224==224 for i in range(min(4096,len(body)-1)))):raise ValueError("Source has no MP3 header: "+item["id"])
- if mime=="text/html" and b"<html" not in body[:8192].lower():raise ValueError("Source is not HTML: "+item["id"])
+class CaptureFailure(RuntimeError):
+ def __init__(self,message,record=None):super().__init__(message);self.record=record
+
+def allowed_url(value):
+ parts=urlsplit(value)
+ if parts.scheme!="https" or parts.hostname not in ALLOWED or parts.username or parts.password or parts.port not in (None,443):
+  raise ValueError("Unexpected public source URL: "+value)
+ return value
+
+class SourceRedirect(urllib.request.HTTPRedirectHandler):
+ def __init__(self):super().__init__();self.chain=[]
+ def redirect_request(self,request,fp,code,msg,headers,newurl):
+  allowed_url(newurl);self.chain.append({"from":request.full_url,"to":newurl,"status":code})
+  return super().redirect_request(request,fp,code,msg,headers,newurl)
+
+CAPTURE_HEADERS={"content-type","content-length","content-encoding","etag","last-modified","retry-after","date","location"}
+
+def response_headers(headers):
+ return {str(k).lower():str(v) for k,v in headers.items() if str(k).lower() in CAPTURE_HEADERS}
+
+def retry_at(headers):
+ value=headers.get("retry-after","").strip()
+ if not value:return None
+ try:
+  if value.isdigit():when=dt.datetime.now(dt.timezone.utc)+dt.timedelta(seconds=int(value))
+  else:when=email.utils.parsedate_to_datetime(value)
+  if when.tzinfo is None:when=when.replace(tzinfo=dt.timezone.utc)
+  return when.astimezone(dt.timezone.utc).isoformat()
+ except (ValueError,TypeError,OverflowError):return None
+
+def capture_record(item,transport,started):
+ return {"schema":"commons.http.source-capture.v2","request_url":item["url"],"final_url":None,
+  "status":None,"started_at":started,"completed_at":None,"headers":{},
+  "bytes":0,"sha256":sha(b""),"source_page":item.get("source_page",item["url"]),
+  "transport":transport,"body_complete":False,"body_truncated":False,
+  "body_representation":"HTTP response entity bytes; transfer framing removed",
+  "error":None,"retry_at":None}
+
+def finish_record(record,body):
+ record.update(completed_at=stamp(),bytes=len(body),sha256=sha(body),retry_at=retry_at(record["headers"]))
+ return record,body
+
+def store_capture(folder,record,body):
  folder.parent.mkdir(parents=True,exist_ok=True,mode=0o700)
  staged=Path(tempfile.mkdtemp(prefix=".capture-",dir=folder.parent))
  try:
@@ -62,7 +82,164 @@ def read_capture(root,item):
   os.rename(staged,folder);sync_dir(folder.parent)
  except BaseException:
   shutil.rmtree(staged,ignore_errors=True);raise
- print(json.dumps({"captured":item["id"],"bytes":len(body),"sha256":record["sha256"]}),flush=True)
+
+def store_attempt(root,item,record,body):
+ attempt_id=dt.datetime.now(dt.timezone.utc).strftime("%Y%m%dT%H%M%S.%fZ")+"-"+uuid.uuid4().hex[:8]
+ folder=safe(root,"capture-attempts/"+item["id"]+"/"+attempt_id)
+ store_capture(folder,record,body)
+ print(json.dumps({"capture_attempt":item["id"],"status":record["status"],"bytes":record["bytes"],
+  "sha256":record["sha256"],"error":record["error"],"retry_at":record["retry_at"],
+  "response_path":str(folder/"response.json")}),flush=True)
+ return folder
+
+def active_retry(root,item):
+ host=urlsplit(item["url"]).hostname;now=dt.datetime.now(dt.timezone.utc);active=[]
+ for path in (root/"capture-attempts").glob("*/*/response.json"):
+  record=json.loads(path.read_text("utf-8"));value=record.get("retry_at")
+  if value and urlsplit(record["request_url"]).hostname==host:
+   when=dt.datetime.fromisoformat(value)
+   if when>now:active.append((when,record))
+ return max(active,key=lambda x:x[0])[1] if active else None
+
+def validate_capture(item,record,body):
+ if record["status"]!=200:return "Original source returned HTTP "+str(record["status"])
+ if record.get("error"):return record["error"]
+ if not record.get("body_complete",True) or record.get("body_truncated",False):return "Original response body is incomplete"
+ if not body:return "Original source is empty"
+ if len(body)>item["max_bytes"]:return "Original source exceeds its declared maximum"
+ mime=item["media_type"]
+ if mime=="image/jpeg" and not body.startswith(b"\xff\xd8\xff"):return "Original source is not JPEG"
+ if mime=="audio/mpeg" and not (body.startswith(b"ID3") or any(body[i]==255 and body[i+1]&224==224 for i in range(min(4096,len(body)-1)))):
+  return "Original source has no MP3 header"
+ if mime=="text/html":
+  if b"<html" not in body[:8192].lower():return "Original source is not HTML"
+  try:
+   parser=PageText();parser.feed(body.decode("utf-8-sig"))
+  except UnicodeDecodeError:return "Original publisher HTML is not UTF-8"
+  if item["id"].endswith("-page") and not re.search(r"Public\s+Domain",parser.text(),re.I):
+   return "The original publisher public-domain statement is absent"
+ return None
+
+def http_capture(item):
+ allowed_url(item["url"]);record=capture_record(item,"urllib",stamp());body=bytearray()
+ redirect=SourceRedirect();opener=urllib.request.build_opener(redirect)
+ request=urllib.request.Request(item["url"],headers={"User-Agent":"AviaryPublicSourceReceiving/1.1",
+  "Accept":"text/html,application/xhtml+xml" if item["media_type"]=="text/html" else "*/*","Accept-Encoding":"identity"})
+ response=None
+ try:
+  try:response=opener.open(request,timeout=45)
+  except urllib.error.HTTPError as error:response=error
+  with contextlib.closing(response):
+   record.update(status=response.status,final_url=allowed_url(response.geturl()),headers=response_headers(response.headers))
+   while len(body)<=item["max_bytes"]:
+    try:chunk=response.read(min(65536,item["max_bytes"]+1-len(body)))
+    except http.client.IncompleteRead as error:
+     body.extend(error.partial[:item["max_bytes"]+1-len(body)]);record["error"]="IncompleteRead: "+str(error);break
+    if not chunk:record["body_complete"]=True;break
+    body.extend(chunk)
+    if len(body)>item["max_bytes"]:
+     record.update(body_truncated=True,error="Response exceeds declared maximum");break
+   length=record["headers"].get("content-length","")
+   if record["body_complete"] and length.isdigit() and int(length)!=len(body):
+    record.update(body_complete=False,error="Content-Length differs from received response entity")
+ except Exception as error:record["error"]=type(error).__name__+": "+str(error)
+ record["redirects"]=redirect.chain
+ return finish_record(record,bytes(body))
+
+class PublisherBrowser:
+ """Optional ordinary Chromium navigation; preserve network bodies, never generated page text."""
+ def __init__(self,executable=None):
+  self.executable=executable;self.playwright=None;self.browser=None;self.context=None;self.cleanup_errors=[]
+ def close(self):
+  for name,method in (("context","close"),("browser","close"),("playwright","stop")):
+   value=getattr(self,name)
+   try:
+    if value:getattr(value,method)()
+   except Exception as error:self.cleanup_errors.append({"stage":name,"error":type(error).__name__+": "+str(error)})
+   finally:setattr(self,name,None)
+  return self.cleanup_errors
+ def start(self):
+  if self.context:return
+  from playwright.sync_api import sync_playwright
+  self.playwright=sync_playwright().start()
+  options={"headless":True,"args":["--disable-dev-shm-usage"]}
+  if self.executable:options["executable_path"]=self.executable
+  self.browser=self.playwright.chromium.launch(**options)
+  self.context=self.browser.new_context(accept_downloads=False)
+ def capture(self,root,item):
+  started=stamp();seen=[];page=None;navigation_error=None
+  try:
+   self.start();page=self.context.new_page()
+   def observe(response):
+    if response.request.is_navigation_request() and response.frame==page.main_frame:seen.append(response)
+   page.on("response",observe)
+   try:
+    page.goto(allowed_url(item["url"]),wait_until="domcontentloaded",timeout=45000)
+    if item["id"].endswith("-page"):
+     page.get_by_text(re.compile(r"Public\s+Domain",re.I)).first.wait_for(state="attached",timeout=15000)
+   except Exception as error:navigation_error=type(error).__name__+": "+str(error)
+   final=allowed_url(page.url)
+   for response in seen:
+    record=capture_record(item,"playwright-chromium",started);body=b""
+    record["body_representation"]="Browser-decoded HTTP response entity; Content-Length may describe encoded bytes"
+    record["navigation_error"]=navigation_error
+    try:
+     record.update(status=response.status,final_url=allowed_url(response.url),headers=response_headers(response.headers))
+     complete=response.body();body=complete[:item["max_bytes"]+1]
+     record.update(body_complete=len(complete)<=item["max_bytes"],body_truncated=len(complete)>item["max_bytes"])
+     if record["body_truncated"]:record["error"]="Response exceeds declared maximum"
+    except Exception as error:record["error"]=type(error).__name__+": "+str(error)
+    finish_record(record,body);problem=validate_capture(item,record,body)
+    if not problem and urlsplit(record["final_url"])._replace(fragment="")==urlsplit(final)._replace(fragment=""):
+     return record,body
+    record["error"]=problem or "Earlier browser navigation response; final document differs"
+    store_attempt(root,item,record,body)
+   raise CaptureFailure(navigation_error or "Browser did not return the original publisher document")
+  except CaptureFailure:raise
+  except Exception as error:
+   record=capture_record(item,"playwright-chromium",started)
+   record["error"]=type(error).__name__+": "+str(error);finish_record(record,b"")
+   store_attempt(root,item,record,b"");raise CaptureFailure(record["error"],record) from error
+  finally:
+   if page:
+    try:page.close()
+    except Exception as error:self.cleanup_errors.append({"stage":"page","error":type(error).__name__+": "+str(error)})
+
+def publish_captured(path,original,record):
+ """Link immutable captured bytes into the source tree; copy only across filesystems."""
+ path.parent.mkdir(parents=True,exist_ok=True,mode=0o700)
+ if path.exists():
+  raw=path.read_bytes()
+  if len(raw)!=record["bytes"] or sha(raw)!=record["sha256"]:raise ValueError("Existing source member differs: "+str(path))
+  return
+ try:os.link(original,path);sync_dir(path.parent)
+ except FileExistsError:
+  raw=path.read_bytes()
+  if len(raw)!=record["bytes"] or sha(raw)!=record["sha256"]:raise
+ except OSError as error:
+  import errno
+  if error.errno!=errno.EXDEV:raise
+  publish(path,original.read_bytes())
+
+def read_capture(root,item,browser=None):
+ folder=safe(root,"captures/"+item["id"])
+ if folder.exists():
+  record=json.loads((folder/"response.json").read_text("utf-8"));body=(folder/"body.bin").read_bytes()
+  if record["request_url"]!=item["url"] or len(body)!=record["bytes"] or sha(body)!=record["sha256"]:
+   raise ValueError("Captured source changed: "+item["id"])
+  problem=validate_capture(item,record,body)
+  if problem:raise ValueError("Retained capture is invalid: "+item["id"]+": "+problem)
+  return record,body
+ waiting=active_retry(root,item)
+ if waiting:raise CaptureFailure("Original host Retry-After remains active until "+waiting["retry_at"],waiting)
+ record,body=http_capture(item);problem=validate_capture(item,record,body)
+ if problem:
+  record["error"]=problem;store_attempt(root,item,record,body)
+  if browser and item["media_type"]=="text/html" and not active_retry(root,item):
+   record,body=browser.capture(root,item);problem=validate_capture(item,record,body)
+  if problem:raise CaptureFailure(item["id"]+": "+problem,record)
+ store_capture(folder,record,body)
+ print(json.dumps({"captured":item["id"],"bytes":len(body),"sha256":record["sha256"],"transport":record.get("transport","retained-original")}),flush=True)
  return record,body
 class PageText(html.parser.HTMLParser):
  def __init__(self):super().__init__(convert_charrefs=True);self.parts=[];self.skip=0
@@ -85,7 +262,7 @@ def source_transcript(raw):
  if not 100<len(text)<50000:raise ValueError("Unexpected original transcript length")
  return (text+"\n").encode("utf-8")
 def main():
- ap=argparse.ArgumentParser();ap.add_argument("--packet",required=True);ap.add_argument("--directory",required=True);ap.add_argument("--api-documentation",action="store_true");args=ap.parse_args()
+ ap=argparse.ArgumentParser();ap.add_argument("--packet",required=True);ap.add_argument("--directory",required=True);ap.add_argument("--api-documentation",action="store_true");ap.add_argument("--publisher-browser",action="store_true",help="Use installed Playwright/Chromium for publisher pages after a failed direct response");ap.add_argument("--browser-executable",help="Optional existing Chromium executable");args=ap.parse_args()
  packet_raw=Path(args.packet).read_bytes();packet=json.loads(packet_raw)
  if packet["schema"]!="commons.aviary.public-source-example-input.v1":raise ValueError("Unsupported packet")
  root=Path(args.directory).resolve();root.mkdir(parents=True,exist_ok=True,mode=0o700)
@@ -97,10 +274,31 @@ def main():
    raw=item["content"].encode("utf-8")
    if len(raw)!=item["bytes"] or sha(raw)!=item["sha256"]:raise ValueError("Packet member hash differs: "+item["path"])
    publish(safe(source,item["path"]),raw)
-  captures={};capture_bodies={}
-  for item in packet["downloads"]:
-   record,body=read_capture(root,item);captures[item["id"]]=record;capture_bodies[item["id"]]=body
-   publish(safe(source,item["path"]),body)
+  captures={};capture_bodies={};failures=[]
+  browser=PublisherBrowser(args.browser_executable) if args.publisher_browser else None
+  try:
+   for item in packet["downloads"]:
+    try:record,body=read_capture(root,item,browser)
+    except CaptureFailure as error:
+     failures.append({"id":item["id"],"url":item["url"],"error":str(error),"response":error.record})
+     continue
+    captures[item["id"]]=record
+    if item["media_type"]=="text/html":capture_bodies[item["id"]]=body
+    publish_captured(safe(source,item["path"]),safe(root,"captures/"+item["id"]+"/body.bin"),record)
+  finally:
+   if browser:
+    cleanup=browser.close()
+    if cleanup:
+     cleanup_record={"schema":"commons.browser.capture-cleanup.v1","completed_at":stamp(),"errors":cleanup}
+     publish(root/"capture-attempts"/("browser-cleanup-"+uuid.uuid4().hex+".json"),raw_json(cleanup_record))
+     print(json.dumps(cleanup_record),flush=True)
+  if failures:
+   result={"schema":"commons.aviary.public-source-example-progress.v1","operation":packet["operation"],
+    "state":"INCOMPLETE","packet_sha256":sha(packet_raw),"completed_at":stamp(),
+    "captured_ids":list(captures),"failures":failures,"resume_directory":str(root)}
+   progress=root/"capture-attempts"/("run-"+uuid.uuid4().hex+".json")
+   publish(progress,raw_json(result));print(json.dumps(result,ensure_ascii=False,indent=2),flush=True)
+   raise SystemExit(2)
   for item in packet["downloads"]:
    if item["media_type"]=="text/html":
     parsed=PageText();parsed.feed(capture_bodies[item["id"]].decode("utf-8-sig"))
