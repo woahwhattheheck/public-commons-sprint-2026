@@ -3,9 +3,11 @@ import { constants } from 'node:fs';
 import { lstat, open, realpath } from 'node:fs/promises';
 import { basename, dirname, resolve } from 'node:path';
 import { failure, privateSupportDirectory } from './config.mjs';
+import { MAX_RETAINED_IMMUTABLE_FILE_BYTES } from './retained-file-reads.mjs';
 
-export const CKAN_TRANSFER_MAX_BYTES = 8589934592;
-export const CKAN_TRANSFER_MAX_ARCHIVE_BYTES = CKAN_TRANSFER_MAX_BYTES + 67108864;
+// The native reader must accept every archive this MCP interface exports.
+export const CKAN_TRANSFER_MAX_ARCHIVE_BYTES = MAX_RETAINED_IMMUTABLE_FILE_BYTES;
+export const CKAN_TRANSFER_MAX_BYTES = CKAN_TRANSFER_MAX_ARCHIVE_BYTES - 67108864;
 const UUID = /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/;
 const SHA = /^[a-f0-9]{64}$/;
 const ALIAS = /^[a-z0-9][a-z0-9_-]{0,63}$/;

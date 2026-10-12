@@ -55,7 +55,7 @@ const definitions = [
     ...selected, offset, limit: { type: 'integer', minimum: 1, maximum: 100 },
   }, ['workspace'], read],
   ['merchant_ckan_workspace_archive', 'Export the complete retained CKAN project through its original native archive operation. Preserves captured source meanings, publisher history, datasets, merchant packages and seller/buyer records. Follow merchant_ckan_status until this operation completes, then list or inspect its retained archive.', {
-    ...changing, maxBytes: { type: 'integer', minimum: 1, maximum: 8589934592 },
+    ...changing, maxBytes: { type: 'integer', minimum: 1, maximum: 8522825728 },
     maxFiles: { type: 'integer', minimum: 1, maximum: 100000 },
   }, changed, mutation],
   ['merchant_ckan_workspace_inspect', 'Verify every byte of a selected original workspace archive and page its complete file inventory. Select exactly one retained archiveId or host input alias of kind workspace-archive, with expectedSha256. Later pages reuse one checked metadata table and recheck the retained file identity.', {
