@@ -91,14 +91,14 @@ export async function readCensusGeocoderWorkspaceConfiguration(path) {
     const imports = Object.create(null), merchants = Object.create(null), buyerWorkspaces = Object.create(null);
     for (const [key, item] of entries(input.imports, 'imports')) {
       if (!plain(item)) throw failure('CONFIGURATION_ERROR', 'Declare an original address CSV or native captured-response directory.');
-      if (item.kind === 'addresses') {
+      if (['addresses', 'customer-addresses'].includes(item.kind)) {
         exact(item, ['kind', 'label', 'file', 'header'], ['kind', 'file']);
         if (item.header !== undefined && typeof item.header !== 'boolean') throw failure('CONFIGURATION_ERROR', 'CSV header must be Boolean.');
-        imports[key] = { kind: 'addresses', label: line(item.label ?? key), file: await declaredPath(item.file, base, 'file'), header: item.header ?? false };
+        imports[key] = { kind: item.kind, label: line(item.label ?? key), file: await declaredPath(item.file, base, 'file'), header: item.header ?? (item.kind === 'customer-addresses') };
       } else if (item.kind === 'recording') {
         exact(item, ['kind', 'label', 'directory'], ['kind', 'directory']);
         imports[key] = { kind: 'recording', label: line(item.label ?? key), directory: await declaredPath(item.directory, base, 'directory') };
-      } else throw failure('CONFIGURATION_ERROR', 'Import kind is addresses or recording.');
+      } else throw failure('CONFIGURATION_ERROR', 'Import kind is addresses, customer-addresses or recording.');
     }
     for (const [key, item] of entries(input.merchants, 'merchant profiles')) {
       exact(item, ['label', 'origin', 'path', 'payment'], ['origin', 'path', 'payment']);
@@ -121,11 +121,13 @@ function page(rows, offset, limit) {
 }
 function history(state, offset = 0, limit = 50) {
   const result = { ...state, pages: {} };
-  for (const name of ['metadata', 'batches', 'reviews', 'editions', 'imports']) {
+  for (const name of ['metadata', 'batches', 'reviews', 'editions', 'imports', 'customerSources', 'customerMappings', 'customerBindings', 'customerBatchOperations']) {
     const selected = page(state[name] ?? [], offset, limit);
     result[name] = selected.values.map(item => name === 'batches' ? { ...item,
       attempts: item.attempts.slice(-20), attemptsTotal: item.attempts.length,
-      attemptsHistory: 'merchant_census_geocoder_batch history' } : item);
+      attemptsHistory: 'merchant_census_geocoder_batch history' } : name === 'customerSources' ? { ...item,
+        columns: item.columns.slice(0, 8), columnCount: item.columns.length,
+        columnInspection: 'merchant_census_geocoder_customer inspect' } : item);
     const { values, ...info } = selected; result.pages[name] = info;
   }
   return result;
@@ -166,7 +168,7 @@ export class MerchantCensusGeocoderWorkspaces {
     if (name === undefined) return { ...this.summary,
       workspaces: Object.entries(this.#config.censusGeocoderWorkspaces?.workspaces ?? {}).map(([workspace, entry]) => ({
         workspace, label: entry.label, state: this.#handles.has(workspace) ? 'OPEN' : 'CLOSED',
-        imports: Object.entries(entry.imports).map(([sourceImport, item]) => ({ sourceImport, label: item.label, kind: item.kind, ...(item.kind === 'addresses' ? { header: item.header } : {}) })),
+        imports: Object.entries(entry.imports).map(([sourceImport, item]) => ({ sourceImport, label: item.label, kind: item.kind, ...(['addresses', 'customer-addresses'].includes(item.kind) ? { header: item.header } : {}) })),
         merchants: Object.entries(entry.merchants).map(([profile, item]) => ({ profile, ...item })),
         buyerWorkspaces: Object.entries(entry.buyerWorkspaces).map(([buyerWorkspace, item]) => ({ buyerWorkspace, label: item.label }))
       })) };
@@ -230,7 +232,7 @@ export class MerchantCensusGeocoderWorkspaces {
           return { bytes, name: args.filename, type: args.filename.endsWith('.csv') ? 'text/csv; charset=utf-8' : 'application/json; charset=utf-8' };
         }
         const kind = publisherFileKinds.includes(args.kind) ? 'publisher:' + args.kind : args.kind;
-        if (!['input', 'response', 'dataset', 'provenance', 'seller', 'manifest'].includes(args.kind) && !publisherFileKinds.includes(args.kind))
+        if (!['input', 'response', 'dataset', 'provenance', 'seller', 'manifest', 'customer-input', 'customer-mapping', 'customer-submitted', 'customer-results', 'customer-results-json'].includes(args.kind) && !publisherFileKinds.includes(args.kind))
           throw failure('INVALID_PARAMS', 'Choose an original Census or publisher file kind.');
         const file = await handle.operator.download(kind, args.id);
         return { bytes: file.bytes, name: file.filename, type: file.contentType };
@@ -277,6 +279,25 @@ export class MerchantCensusGeocoderWorkspaces {
         }
         throw failure('INVALID_PARAMS', 'Choose create, inspect, history or capture.');
       }
+      case 'merchant_census_geocoder_customer': {
+        if (args.action === 'source') {
+          const value = payload(args.payload, ['sourceImport', 'label']);
+          const source = entry.imports[identifier(value.sourceImport, 'Customer CSV import')];
+          if (source?.kind !== 'customer-addresses') throw failure('CENSUS_GEOCODER_IMPORT_NOT_CONFIGURED', 'Choose a declared original customer CSV.');
+          const bytes = await fileBytes(source.file, 5_000_000);
+          const inputText = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(bytes);
+          return call('customer.source', { label: value.label ?? source.label, inputText, header: source.header });
+        }
+        const fields = {
+          preview: ['sourceId', 'plan', 'offset', 'limit', 'filter'],
+          mapping: ['sourceId', 'plan', 'expectedReviewSha256'],
+          inspect: ['sourceId', 'mappingId', 'offset', 'limit', 'filter'],
+          batch: ['mappingId', 'expectedReviewSha256', 'label', 'discoveryId', 'vintagesId', 'benchmark', 'vintage', 'returnType'],
+          bind: ['mappingId', 'expectedReviewSha256', 'batchId']
+        };
+        if (!Object.hasOwn(fields, args.action)) throw failure('INVALID_PARAMS', 'Choose source, preview, mapping, inspect, batch or bind.');
+        return call('customer.' + args.action, payload(args.payload, fields[args.action]));
+      }
       case 'merchant_census_geocoder_import': {
         const source = entry.imports[identifier(args.sourceImport, 'Capture import')];
         if (source?.kind !== 'recording') throw failure('CENSUS_GEOCODER_IMPORT_NOT_CONFIGURED', 'Choose a declared original capture directory.');
@@ -288,7 +309,7 @@ export class MerchantCensusGeocoderWorkspaces {
         const profile = args.profile === undefined ? null : entry.merchants[identifier(args.profile, 'Merchant profile')];
         if (args.profile !== undefined && !profile) throw failure('CENSUS_GEOCODER_MERCHANT_NOT_CONFIGURED', 'Choose a declared visible merchant profile.');
         const selected = profile ? { origin: profile.origin, path: profile.path, payment: profile.payment } : {};
-        return call('edition.build', { reviewId: args.reviewId, ...selected });
+        return call('edition.build', { reviewId: args.reviewId, ...selected, ...(args.mappingId === undefined ? {} : { mappingId: nativeId(args.mappingId) }) });
       }
       case 'merchant_census_geocoder_query': return call('edition.query', { id: args.id, query: args.query });
       case 'merchant_census_geocoder_export':

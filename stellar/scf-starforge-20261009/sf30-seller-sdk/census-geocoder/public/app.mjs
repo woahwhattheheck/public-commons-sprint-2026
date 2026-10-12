@@ -1,4 +1,5 @@
 // MIT. Industrial operator for the original Census workspace and merchant engines.
+import { createCustomerIntake } from './customer-intake.mjs';
 const $ = id => document.getElementById(id), json = value => JSON.stringify(value, null, 2);
 const short = value => value ? String(value).slice(0, 16) : '—';
 const value = id => $(id).value;
@@ -119,7 +120,8 @@ function renderEditions() {
   options('edition-selection', [...state.editions].reverse(), item => (item.dataset?.name ?? 'Edition') + ' · ' + item.state + ' · ' + short(item.id));
   const edition = state.editions.find(item => item.id === value('edition-selection'));
   facts('edition-facts', [['Edition', edition?.id], ['State', edition?.state], ['Rows', edition?.dataset?.rowCount],
-    ['Snapshot', edition?.dataset?.snapshot], ['Merchant terms', edition ? edition.hasSeller ? 'Included' : 'Not configured' : null]]);
+    ['Snapshot', edition?.dataset?.snapshot], ['Merchant terms', edition ? edition.hasSeller ? 'Included' : 'Not configured' : null],
+    ['Original customer records', edition?.customer?.originalRows], ['Customer mapping', edition?.customer?.mappingId]]);
 }
 const publisher = () => state?.publisher;
 const target = () => publisher()?.target?.versions;
@@ -151,6 +153,11 @@ function renderBuyerReview() {
     item => item.amount + ' atomic · ' + item.network + ' · ' + item.asset + ' → ' + item.payTo,
     { placeholder: 'Select a displayed payment option' });
 }
+const customerIntake = createCustomerIntake({ api, perform, download, options, node, notice, handle, selectPanel,
+  getState: () => state, isBusy: () => busy, refreshControls: renderControls,
+  selection: () => ({ discoveryId: value('discovery'), benchmark: value('benchmark'), returnType: value('return-type'),
+    ...(value('return-type') === 'geographies' ? { vintagesId: value('vintage-discovery'), vintage: value('vintage') } : {}) }),
+  openBatch: async id => { $('batch-selection').value = id; offset = 0; await loadBatch(); selectPanel('review'); } });
 function renderControls() {
   document.body.setAttribute('aria-busy', String(busy));
   for (const control of document.querySelectorAll('main input,main select,main textarea,main button')) control.disabled = busy;
@@ -189,11 +196,12 @@ function renderControls() {
   $('prepare-buyer').disabled = busy || !buyerReview || !value('payment-option');
   $('download-buyer').disabled = busy || !value('buyer-selection');
   $('download-session').disabled = busy || !value('session-selection');
+  customerIntake.controls();
 }
 function render() {
   if (!state) return;
   $('workspace-path').textContent = state.directory;
-  renderDiscovery(); renderBatches(); renderReview(); renderEditions(); renderPublisher(); renderControls();
+  renderDiscovery(); renderBatches(); renderReview(); renderEditions(); renderPublisher(); customerIntake.render(); renderControls();
 }
 async function loadBatch() {
   const id = value('batch-selection'), revision = ++inspectionVersion;
@@ -262,19 +270,19 @@ button('save-review', async () => {
       filters: words('filters'), ranges: words('ranges'), sorts: words('sorts'), defaultLimit: Number(value('default-limit')),
       maxLimit: Number(value('max-limit')), note: value('review-note') } });
   $('review-saved').textContent = result.id + ' · ' + result.selectedRows + ' published / ' + result.omittedRows + ' omitted; original capture retained.';
-  $('review-selection').value = result.id; renderControls(); selectPanel('editions');
+  $('review-selection').value = result.id; customerIntake.render(); renderControls(); selectPanel('editions');
 });
 $('with-merchant').addEventListener('change', renderControls);
-$('review-selection').addEventListener('change', renderControls);
+$('review-selection').addEventListener('change', () => { customerIntake.render(); renderControls(); });
 $('edition-selection').addEventListener('change', () => { renderEditions(); renderControls(); });
 button('build-edition', async () => {
-  const payload = { reviewId: value('review-selection') };
+  const payload = { reviewId: value('review-selection'), ...(customerIntake.mappingId() ? { mappingId: customerIntake.mappingId() } : {}) };
   if ($('with-merchant').checked) Object.assign(payload, { origin: value('origin'), path: value('route'),
     payment: { scheme: 'exact', network: value('network'), asset: value('asset'), amount: value('amount'),
       payTo: value('pay-to'), maxTimeoutSeconds: Number(value('payment-timeout')) } });
   const result = await perform('edition.build', payload); $('edition-selection').value = result.id; renderEditions(); renderControls();
 });
-for (const [id, kind] of [['download-dataset','dataset'],['download-provenance','provenance'],['download-manifest','manifest']])
+for (const [id, kind] of [['download-dataset','dataset'],['download-provenance','provenance'],['download-manifest','manifest'],['download-customer-results','customer-results'],['download-customer-results-json','customer-results-json']])
   button(id, () => download(kind, value('edition-selection')));
 button('query-edition', async () => { const result = await perform('edition.query', { id: value('edition-selection'), query: value('edition-query') }); $('query-result').textContent = json(result); });
 button('export-edition', async () => { const result = await perform('edition.export', { id: value('edition-selection'), directory: value('export-directory') }); $('query-result').textContent = json(result); });

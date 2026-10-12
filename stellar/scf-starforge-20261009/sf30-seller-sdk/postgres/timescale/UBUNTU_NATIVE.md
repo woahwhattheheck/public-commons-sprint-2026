@@ -44,9 +44,10 @@ python3 SOURCE/stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/timescale
 Repeat `--dependency-root` for the existing complete roots needed by this
 checkout. The receiving path is relative to the selected repository. The source
 root, operation directory and each declared donor must already exist. The
-runtime directory must be new. This Ubuntu bootstrap runs as root but starts
-only its own PostgreSQL server as uid65534, on loopback with an ephemeral port,
-SCRAM authentication and a generated private password. It creates no system
+runtime directory must be new. A normal Ubuntu user runs its own PostgreSQL
+server under that same account. When the bootstrap is already running as root,
+it starts PostgreSQL as uid65534 instead. The private server binds loopback with
+an ephemeral port, SCRAM authentication and a generated private password. It creates no system
 service and starts no GitHub Action.
 
 The original `native-demo.mjs` operates its unchanged explicit six-reading
