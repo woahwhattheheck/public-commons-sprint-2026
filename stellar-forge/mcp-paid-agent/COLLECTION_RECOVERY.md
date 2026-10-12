@@ -199,3 +199,26 @@ The control adapter exports `createNativeCollectionRecovery({manifest, registerC
 The receiver exports `openNativeCollectionRecoveryClient`, `inspectNativeCollectionRecovery`, `downloadNativeCollectionRecovery` and `reopenNativeCollectionRecovery`. Their selection fields are `recoveryWorkspace`, `profile`, `profileSha256`, `requestId` and `recordSha256`; downloads/reopen also require `expectedManifestSha256` and `directory`. Online calls accept the existing MCP URL/token-environment or one original client, plus the existing cancellation signal and progress callback.
 
 No archive format, queue, signer, payment decision, restoration policy or managed application is reimplemented here. The added host metadata retains original profile and terminal-result identities so the same original work can be found after a listener restart.
+
+
+## Standalone collection and receiving MCP host
+
+The original SF88 buyer validates its exact directory and config/ledger child paths. A backup's relocated buyer copy is not an independently relocated buyer. The standalone host composes the same original collection and recovery engines without selecting a second buyer, discovery origin, signer or generic purchase broker.
+
+Use a private MCP directory outside every selected restore target. Keep the original receiving listener running through its normal Applications/CLI owner, and retain its exact private launch JSON and recovery profile as described above.
+
+```bash
+starforge mcp-collection-receiver init --dir /private/collection-mcp
+starforge mcp-collection-receiver register --dir /private/collection-mcp --description /private/recovery-registration.json
+starforge mcp-collection-receiver serve --dir /private/collection-mcp --port 0
+```
+
+The host uses the existing MCP_ACCESS_TOKEN or MCP_OAUTH_CONFIG and prints its actual loopback MCP URL. It exposes only the original sf43_discover_review_and_pay tool with collections and collection-recovery actions. The existing encrypted receiving SDK and mcp-collection-recovery-download CLI work unchanged against that URL.
+
+After the original successful restoration, recoveryOperation:"open" can register the profile's afterRestore collection alias. Its sources and buyers are explicit original paths; an omitted buyers map is empty in the standalone host. Register a restored buyer only at its original directory. Subsequent collection authoring, saved results and native execution go through the separately owned original collection listener and its normal approval lifecycle.
+
+Host-only commands also provide inspect, call --input, collections-register --description and opened --name --request-id. They use the same saved registrations and original operation identities as MCP. No model-facing tool accepts a filesystem path or passphrase value.
+
+Closing this MCP host ends its own HTTP requests, authenticators and readers. An incomplete admitted HTTP body is closed before drain. The original collection listener and its retained recovery operations remain with their original owner; shutdown does not restart, repeat or automatically cancel them. After reopening, inspect the same original UUID.
+
+The separate native receiver manifest is stellar-forge.mcp-native-collection-receiver-workspace.v1. Normal native buyer workspaces retain their existing buyer-outside-restore-target rule; the standalone manifest has no buyer binding to substitute or rewrite.

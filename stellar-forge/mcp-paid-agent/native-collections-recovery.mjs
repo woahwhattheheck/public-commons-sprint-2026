@@ -17,6 +17,7 @@ import {nativeCollectionRecoveryOperations} from './native-collections-recovery-
 export {nativeCollectionRecoveryActions,nativeCollectionRecoverySchema} from './native-collections-recovery-schema.mjs';
 
 export const NATIVE_COLLECTION_RECOVERY_SCHEMA='stellar-forge.mcp-native-collection-recovery.v1';
+export const NATIVE_COLLECTION_RECOVERY_RECEIVER='stellar-forge.mcp-native-collection-receiver-workspace.v1';
 export const NATIVE_COLLECTION_RECOVERY_PROFILE='stellar-forge.mcp-native-collection-recovery-profile.v1';
 const SCHEMA=NATIVE_COLLECTION_RECOVERY_SCHEMA;
 const JOURNAL='stellar-forge.sf88.collection-recovery-operation.v1';
@@ -67,7 +68,8 @@ function profileValue(value,manifest,mode,connectionFile){
   need(value.schema===NATIVE_COLLECTION_RECOVERY_PROFILE,'MCP_COLLECTION_RECOVERY_PROFILE_INVALID');
   const stateRoot=absolute(value.stateRoot),bundle=absolute(value.bundle);
   need(!inside(stateRoot,bundle)&&!inside(bundle,stateRoot),'MCP_COLLECTION_RECOVERY_BUNDLE_OVERLAPS_TARGET');
-  need(!inside(stateRoot,manifest.directory)&&!inside(stateRoot,manifest.workspace),
+  need(!inside(stateRoot,manifest.directory)&&
+    (manifest.schema===NATIVE_COLLECTION_RECOVERY_RECEIVER||!inside(stateRoot,manifest.workspace)),
     'MCP_COLLECTION_RECOVERY_NATIVE_BUYER_INSIDE_TARGET');
   need(Array.isArray(value.kinds)&&value.kinds.length>0&&value.kinds.length<=3&&
     new Set(value.kinds).size===value.kinds.length&&value.kinds.every(v=>KINDS.includes(v)),
@@ -151,6 +153,9 @@ function publicOperation(view,profileName,profileSha256,body={},summary=false){
 export function createNativeCollectionRecovery({manifest,registerCollections,isClosed=()=>false}={}){
   need(object(manifest),'MCP_COLLECTION_RECOVERY_NATIVE_WORKSPACE_REQUIRED');
   manifest=structuredClone(manifest);
+  if(manifest.schema===NATIVE_COLLECTION_RECOVERY_RECEIVER)
+    need(manifest.workspace===undefined,'MCP_COLLECTION_RECOVERY_RECEIVER_BINDING_INVALID');
+  else absolute(manifest.workspace);
   const nativeRoot=absolute(manifest.directory),root=join(nativeRoot,'collection-recovery');
   const workspaces=join(root,'workspaces'),operations=join(root,'operations'),connections=join(root,'connections');
   const reader=createSavedFileReader(),shutdown=new AbortController(),pending=new Set();
