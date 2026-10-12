@@ -488,9 +488,13 @@ Create command-diagnostics.dat as a private regular file with 4,194,304 physical
 allocated bytes and control-state.dat with 524,288 physically allocated bytes.
 Use os.posix_fallocate on their open file descriptors and fsync the files and
 their containing directory. The driver checks ownership, permissions, regular
-file type, link count, and actual allocated blocks before using a reserved
+file type, link count, and actual allocated blocks before writing a reserved
 record. Include these shared bytes in the original resource declaration and
-leave each record's file size intact.
+leave each record's file size intact. Reading a committed record retains the
+private-file, slot, sequence, length and checksum checks, while permitting sparse
+backing when an execution transport has preserved its exact logical bytes.
+Unused zero padding does not need allocated blocks for that read; a later write
+still requires the full original allocation.
 
 | Output | Retained behavior |
 | --- | --- |
@@ -621,6 +625,86 @@ A receiver can select an exact cohort produced by the same wheel engine on an eq
 ```
 
 The public producer uses the selected source edition, its original source manifest and the unchanged requested extras. It runs the maintained engine's `resolve`, `inspect --candidate` and `bundle` commands. Retain its real Python descriptor, complete lock, original source descriptor, wheel hashes, wheel bytes, expanded bytes, stdout, stderr and stage logs. A Python patch-version difference is supported only where the engine's original implementation, major/minor, platform, machine and cache-tag comparison matches; installation still enforces that comparison.
+
+The maintained `run-public-cohort.sh` is a complete producer for its pinned
+source, interpreter and extras. Use its matching published `engine.py`; the
+wrapper checks that engine's SHA-256 before starting. Its wheel reader selects
+the wheel's one top-level `*.dist-info/METADATA` file. Metadata retained inside
+vendored packages remains part of the original wheel bytes and does not change
+that wheel's owning package identity.
+
+Run the wrapper inside the selected host's original admitted operation:
+
+```bash
+COHORT_DISK_LIMIT_BYTES=268435456 \
+COHORT_DISK_RESERVE_BYTES=33554432 \
+bash /absolute/run-public-cohort.sh \
+  /absolute/private-public-cohort \
+  /absolute/engine.py \
+  /absolute/selected-source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python \
+  /absolute/python3.12
+```
+
+The two capacity variables are optional as a pair. Set them to the original
+operation's actual disk declaration and reserve. They do not change admission.
+After resolution and inspection, the wrapper measures physical allocation and
+the returned `wheelBytes` before writing the portable bundle. It retains
+`attempt-*/capacity.json` with the measured values, adds one wheel-sized archive
+plus 16 MiB for metadata and diagnostics, and checks both the declared limit and
+the filesystem's available bytes. Exit 75 retains the original candidate and
+capacity report when that publication needs more space. Select an explicit
+continuation with sufficient capacity to publish it; the existing source,
+candidate and lock remain the same. The example values describe this source-only
+producer, and do not replace the full receiving workflow's measured wheel,
+installed-environment, customer and offline expansion requirements.
+
+Each actual engine phase has its own JSON result, stderr and progress record
+under the unique `attempt-*` directory. The original full stage logs stay under
+`runtime/logs`. Successful stdout contains the exact source and candidate,
+resolver Python, package hashes, wheel and expanded bytes, and portable archive
+hash. Retain those actual outputs before a temporary execution mount ends.
+
+### Retain public output from the same temporary foreground
+
+When the host uses an execution-local temporary mount, the optional
+`public-cohort-foreground.py` wrapper keeps resolution, bundling and saved output
+inside that one original admitted workload. Its private plan uses schema
+`stellar-forge.public-cohort-plan.v1` and the following fields:
+
+| Field | Selection |
+| --- | --- |
+| `operation_id` | The exact public producer operation named in the shell wrapper. |
+| `native_operation_id`, `capacity_request` | The original controller operation ID and its retained request JSON. |
+| `directory` | The private temporary output root owned by this foreground. |
+| `control` | A separately retained private directory for compact outcome and save progress. |
+| `engine`, `wrapper`, `python` | Absolute paths to the pinned engine, shell wrapper and selected interpreter. |
+| `source.directory`, `source.id`, `source.files` | The exact original project directory, source identity and complete 40-file inventory. Each file row has `path`, `bytes` and `sha256`. |
+| `limits.disk_bytes`, `limits.reserve_bytes` | The actual original disk declaration and reserve, passed to the shell wrapper. |
+| `library.session`, `library.helpers` | The existing pinned connected-file workflow module and its unchanged helper directory. |
+
+Run `python3.12 public-cohort-foreground.py --plan /absolute/public-plan.json`
+as that controller's workload. The helper validates the original source and
+module hashes before starting. The selected output root, disk bytes and reserve
+must match the retained controller request exactly; the compact result retains
+that request's SHA-256 and original capacity values. It forwards a stop to its own process group,
+waits for that group's exit, and preserves the observed child outcome. It never
+releases or edits another operation's admission.
+
+The compact `producer-result.json` is written to shared control before archive
+creation or transfer. Its stdout and stderr tails identify their full original
+byte counts and hashes and explicitly flag a shortened tail. The full logs,
+phase results and original stderr are retained in
+`public-cohort-diagnostics.zip`. On success, the unchanged portable cohort and
+that diagnostic ZIP are saved as separate files through the existing connected
+workflow. Keep the foreground alive while its correlated requests under
+`control/library-calls/` are completed by that existing connection.
+
+Completion requires one successful saved-file result for each exact selected
+path and its returned file identities. Full response details stay in private
+`custody.json`; terminal stdout contains only the observed producer state,
+custody paths, diagnostic identity and saved file IDs, names and sizes. The
+native operation can then finish without relying on the temporary mount to
+survive another execution session.
 
 The receiver hashes the selected archive before work, checks the exact candidate and lock identities, and measures the pending expansion against its original disk, inode and memory declaration before extraction. It then uses the original `receive` command. Under the same engine lease, it invokes the engine's maintained source-snapshot and candidate validation functions against the actual selected local source project. The whole source descriptor must match: all source file bytes, project metadata, entrypoints, build requirements, optional dependency declarations and edition pins. This prevents an archive's source label from substituting for the actual selected source. The ordinary retained candidate inspection and installation follow; no online resolution occurs on this path.
 
