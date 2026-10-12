@@ -130,9 +130,13 @@ The complete recovery implementation and native API/Dataset receiving are mainta
 
 ## Saved actions, stopping and reopening
 
+The browser retains each workspace’s purchase, connection, request and recovery drafts in IndexedDB. Displayed purchase intents, request IDs, query parameters, text and selected file bytes survive a page reload. **Start a separate purchase intent** and **Start another request ID** create new identities while keeping the prepared inputs available for review. Recovery transaction drafts belong to the exact displayed inspection.
+
 Browser actions retain their complete request and operation ID in IndexedDB before dispatch. **Saved actions** shows their state and supports retrying the same saved action after a connection interruption. A confirmed result remains confirmed if a later refresh fails.
 
 A state-changing action rejected because the workspace changed can be reviewed and explicitly rebased. Completed backend mutations return their retained result when the same operation ID is retried. Reusing that ID with different input is rejected.
+
+Purchase execution and payment recovery send the review or inspection that was displayed. The original model checks that selection again before acting. Saved-request page links retain the current page, and a late page response cannot replace a newly selected pass.
 
 The host keeps a private state lease, serialized state writes, request bodies, results, reviews and task history. On a process restart, previously queued or running tasks become interrupted work for explicit continuation. Their original merchant request IDs and native purchase records remain available.
 

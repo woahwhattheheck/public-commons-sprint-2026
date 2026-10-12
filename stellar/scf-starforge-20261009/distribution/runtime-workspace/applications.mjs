@@ -1,4 +1,5 @@
 // MIT. Application lifecycle over the original READY runtime and managed-command worker.
+import { grpcApplication, prepareGrpcApplication } from './application-grpc.mjs';
 import { readdir, lstat, realpath, access } from 'node:fs/promises';
 import { constants } from 'node:fs';
 import { join, dirname, basename } from 'node:path';
@@ -11,6 +12,7 @@ import { secEdgarApplication, prepareSecEdgarApplication } from './application-s
 import { jobResultReceiverApplication, prepareJobResultReceiverApplication } from './application-job-result-receiver.mjs';
 import { sheetsApplication, prepareSheetsApplication } from './application-sheets.mjs';
 import { atlasApplication, prepareAtlasApplication } from './application-atlas.mjs';
+import { n8nApplication, prepareN8nApplication } from './application-n8n.mjs';
 import { redisApplication, prepareRedisApplication } from './application-redis.mjs';
 import { openApiApplication, prepareOpenApiApplication } from './application-openapi.mjs';
 import { arcgisAgentApplication, prepareArcgisAgentApplication } from './application-arcgis.mjs';
@@ -51,7 +53,9 @@ const common = [
   field('environmentFile', 'Private environment JSON', 'path', false, 'Optional private file containing environment names and string values. Values stay on this host.'),
 ];
 export const APPLICATION_CATALOG = Object.freeze([
+  grpcApplication(common),
   atlasApplication(common),
+  n8nApplication(common),
   ...PYTHON_APPLICATION_CATALOG,
   ...eventFeedApplications(common),
   apiPassWorkspaceApplication(common),
@@ -225,7 +229,11 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
     const value = await inputPath(settings[name], kind, missing, privateOnly); inputs.push(value); return value;
   };
   const option = (name, value) => { if (value !== undefined && value !== '') args.push(name, String(value)); };
-  if (type.id === 'fred') {
+  if (type.id === 'grpc-workspace') {
+    const original = await prepareGrpcApplication(settings, inputPath, runtimeDirectory);
+    args.push(...original.args); inputs.push(...original.inputs);
+    createDirectories.push(...original.createDirectories);
+  } else if (type.id === 'fred') {
     const original = await prepareFredApplication(settings, { inputPath, runtimeDirectory });
     args.push(...original.args); inputs.push(...original.inputs);
   } else if (type.id === 'mpp') {
@@ -293,6 +301,9 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
   } else if (type.id === 'catalog-atlas') {
     const original = await prepareAtlasApplication(settings, inputPath, runtimeDirectory);
     args.push(...original.args); inputs.push(...original.inputs); createDirectories.push(...original.createDirectories);
+  } else if (type.id === 'n8n-merchant') {
+    const original = await prepareN8nApplication(settings, inputPath, runtimeDirectory);
+    args.push(...original.args); inputs.push(...original.inputs);
   } else if (type.id === 'rss-atom') {
     const original = await prepareRssAtomApplication(settings, {
       inputPath, selectedExecutable, runtimeDirectory, applicationEnvironment,

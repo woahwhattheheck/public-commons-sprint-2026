@@ -7,6 +7,7 @@ import { privateDirectory, readJson, readBytes, writeJson, writeBytes, jsonBytes
 import { POLICY_PACKAGE_SCHEMA, normalizeDeploymentPolicy, compileDeploymentPolicy, compareDeploymentPolicies,
   policyDigest, canonicalPolicyJSON, deploymentEnvironmentText, deploymentPolicyMarkdown }
   from './deployment-policy.mjs';
+import { PUBLIC_PROXY_FILENAME, PUBLIC_PROXY_SOURCE } from './public-proxy-runtime.mjs';
 
 const stamp = () => new Date().toISOString();
 const id = prefix => prefix + '-' + randomUUID().replaceAll('-', '').slice(0, 24);
@@ -18,8 +19,9 @@ export function validateDeploymentPolicyPackage(value) {
   need(value && value.schema === POLICY_PACKAGE_SCHEMA && Array.isArray(value.files), 'EOAPI_POLICY_PACKAGE_INVALID');
   const { digest, ...core } = value;
   need(digest === policyDigest(core), 'EOAPI_POLICY_PACKAGE_DIGEST_MISMATCH');
-  need(value.files.length === FILES.length && new Set(value.files.map(file => file.path)).size === FILES.length &&
-    value.files.every(file => FILES.includes(file.path)), 'EOAPI_POLICY_PACKAGE_FILE_SET_INVALID');
+  const allowed = [...FILES, PUBLIC_PROXY_FILENAME];
+  need([FILES.length, allowed.length].includes(value.files.length) && new Set(value.files.map(file => file.path)).size === value.files.length &&
+    FILES.every(path => value.files.some(file => file.path === path)) && value.files.every(file => allowed.includes(file.path)), 'EOAPI_POLICY_PACKAGE_FILE_SET_INVALID');
   let total = 0;
   for (const file of value.files) {
     need(typeof file.text === 'string' && Number.isSafeInteger(file.bytes) && file.bytes >= 0 && file.bytes <= 2 * 1024 ** 2 &&
@@ -29,6 +31,9 @@ export function validateDeploymentPolicyPackage(value) {
   need(total <= 8 * 1024 ** 2, 'EOAPI_POLICY_PACKAGE_SIZE_EXCEEDED');
   const file = path => value.files.find(item => item.path === path).text;
   const policy = normalizeDeploymentPolicy(JSON.parse(file('policy.json'))), compilation = compileDeploymentPolicy(policy);
+  const expectedFiles = policy.identity.mode === 'public' ? [...FILES, PUBLIC_PROXY_FILENAME] : FILES;
+  need(value.files.length === expectedFiles.length && value.files.every(file => expectedFiles.includes(file.path)), 'EOAPI_POLICY_PACKAGE_FILE_SET_INVALID');
+  if (policy.identity.mode === 'public') need(file(PUBLIC_PROXY_FILENAME) === PUBLIC_PROXY_SOURCE, 'EOAPI_POLICY_PACKAGE_RUNTIME_MISMATCH');
   const review = JSON.parse(file('review.json')), approval = JSON.parse(file('approval.json'));
   need(value.policyDigest === compilation.digest && policyDigest(normalizeDeploymentPolicy(review.policy)) === compilation.digest && policyDigest(review.policy) === compilation.digest && review.policyDigest === compilation.digest &&
     approval.policyDigest === compilation.digest && approval.reviewId === review.id && value.approvalId === approval.id &&
@@ -125,7 +130,8 @@ export async function openDeploymentPolicyWorkspace({ directory, create = true, 
       textFile('environment.json', jsonBytes(compilation.environment).toString(), 'application/json'),
       textFile('unset-environment.json', jsonBytes(compilation.unset).toString(), 'application/json'),
       textFile('auth-proxy.docker.env', deploymentEnvironmentText(compilation.environment), 'text/plain'),
-      textFile('OPERATOR.md', deploymentPolicyMarkdown(compilation), 'text/markdown')
+      textFile('OPERATOR.md', deploymentPolicyMarkdown(compilation), 'text/markdown'),
+      ...(compilation.policy.identity.mode === 'public' ? [textFile(PUBLIC_PROXY_FILENAME, PUBLIC_PROXY_SOURCE, 'text/x-python')] : [])
     ].sort((a, b) => a.path.localeCompare(b.path));
     const core = { schema: POLICY_PACKAGE_SCHEMA, sourceWorkspaceId: state.id, policyDigest: compilation.digest,
       approvalId: approval.id, files }, bundle = { ...core, digest: policyDigest(core) };
@@ -139,7 +145,7 @@ export async function openDeploymentPolicyWorkspace({ directory, create = true, 
         else await writeBytes(target, Buffer.from(file.text), { exclusive: true });
       }
       const present = (await readdir(destination)).sort();
-      need(canonicalPolicyJSON(present) === canonicalPolicyJSON([...FILES, 'package.json'].sort()), 'EOAPI_PACKAGE_DESTINATION_EXTRA_FILES');
+      need(canonicalPolicyJSON(present) === canonicalPolicyJSON([...files.map(file => file.path), 'package.json'].sort()), 'EOAPI_PACKAGE_DESTINATION_EXTRA_FILES');
     }
     return { package: bundle, directory: destination ?? null };
   }

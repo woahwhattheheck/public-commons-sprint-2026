@@ -2,7 +2,7 @@
 
 'use strict';
 const $=id=>document.getElementById(id),ACTIVE=new Set(['QUEUED','RUNNING','CANCELLING']);
-const S={session:null,key:null,epoch:0,state:null,route:null,detail:null,call:null,sequence:0,drafts:new Map(),running:new Set(),actions:[],timer:null,refreshing:null,panel:null,panelId:null,panelModule:null,remote:new Map()};
+const S={session:null,key:null,epoch:0,state:null,route:null,detail:null,call:null,sequence:0,drafts:new Map(),draftWrites:new Map(),running:new Set(),actions:[],timer:null,refreshing:null,panel:null,panelId:null,panelModule:null,remote:new Map()};
 const LABELS={'refresh':'Refresh allowance','call':'Send saved request','recover':'Recover original result','prepare-purchase':'Prepare original purchase','review-purchase':'Review original purchase','execute-purchase':'Run reviewed purchase','recover-purchase':'Reopen original purchase','finalize-purchase':'Reconcile purchase','report-purchase':'Export buyer history','inspect-lost-output':'Inspect original lost output','recover-lost-output':'Recover selected payment','read-lost-output':'Authenticate saved recovery','export-lost-output':'Export payment proof'};
 const clean=value=>value===null||value===undefined?'—':typeof value==='object'?JSON.stringify(value):String(value);
 const fail=(code,status)=>Object.assign(new Error(code),{code,status});
@@ -19,7 +19,8 @@ function panel(title,...content){const section=node('section',null,'panel');if(t
 function table(headers,rows){const wrap=node('div',null,'table-scroll'),t=node('table'),head=node('thead'),body=node('tbody');append(head,append(node('tr'),headers.map(x=>node('th',x))));for(const row of rows){const tr=node('tr');for(const value of row){const td=node('td');append(td,value);tr.append(td);}body.append(tr);}append(t,head,body);wrap.append(t);return wrap;}
 function code(value){return node('code',value);}
 const profile=id=>S.state?.profiles.find(row=>row.id===id);
-const draft=key=>{if(!S.drafts.has(key))S.drafts.set(key,{});return S.drafts.get(key);};
+const draftKey=(key,scope=currentScope())=>scope.id+':'+key;
+const draft=key=>{const full=draftKey(key);if(!S.drafts.has(full))S.drafts.set(full,{});return S.drafts.get(full);};
 function currentScope(){if(!S.session||!S.key)throw fail('WORKSPACE_AUTHENTICATION_REQUIRED',401);return {id:S.session.workspaceId,key:S.key,epoch:S.epoch};}
 function checkScope(scope){if(!S.session||S.session.workspaceId!==scope.id||S.key!==scope.key||S.epoch!==scope.epoch)throw fail('SESSION_CHANGED');}
 async function api(path,{method='GET',body,scope=currentScope(),raw=false}={}){
@@ -27,13 +28,42 @@ async function api(path,{method='GET',body,scope=currentScope(),raw=false}={}){
  const response=await fetch(path,{method,credentials:'same-origin',redirect:'error',headers:{Authorization:'Bearer '+scope.key,...(body===undefined?{}:{'Content-Type':'application/json'})},...(body===undefined?{}:{body})});
  checkScope(scope);
  if(!response.ok){let value={};try{value=await response.json();}catch{}const error=fail(value.error??'HTTP_'+response.status,response.status);if(response.status===401&&S.epoch===scope.epoch)lock();throw error;}
- return raw?response:response.json();
+ const value=raw?response:await response.json();checkScope(scope);return value;
 }
 let database;
-function db(){return database??=new Promise((resolve,reject)=>{const q=indexedDB.open('sf101-api-pass-actions-v1',1);q.onupgradeneeded=()=>q.result.createObjectStore('actions',{keyPath:'key'});q.onsuccess=()=>resolve(q.result);q.onerror=()=>reject(fail('BROWSER_ACTION_STORAGE_UNAVAILABLE'));});}
+function db(){return database??=new Promise((resolve,reject)=>{
+ const q=indexedDB.open('sf101-api-pass-actions-v1',2);
+ q.onupgradeneeded=()=>{for(const name of ['actions','drafts']){if(!q.result.objectStoreNames.contains(name))q.result.createObjectStore(name,{keyPath:'key'});const store=q.transaction.objectStore(name);if(!store.indexNames.contains('workspaceId'))store.createIndex('workspaceId','workspaceId');}};
+ q.onsuccess=()=>{const value=q.result;value.onversionchange=()=>{value.close();database=null;};resolve(value);};
+ q.onerror=()=>reject(fail('BROWSER_ACTION_STORAGE_UNAVAILABLE'));
+ q.onblocked=()=>reject(fail('Close another API-pass browser window, then reload to update retained drafts.'));
+});}
 async function saved(action){const database=await db();return new Promise((resolve,reject)=>{const tx=database.transaction('actions','readwrite');tx.objectStore('actions').put(action);tx.oncomplete=()=>resolve(action);tx.onerror=tx.onabort=()=>reject(fail('BROWSER_ACTION_SAVE_FAILED'));});}
-async function actions(){const database=await db();return new Promise((resolve,reject)=>{const q=database.transaction('actions').objectStore('actions').getAll();q.onsuccess=()=>resolve(q.result.filter(a=>a.workspaceId===S.session?.workspaceId).sort((a,b)=>b.createdAt.localeCompare(a.createdAt)));q.onerror=()=>reject(fail('BROWSER_ACTION_STORAGE_UNAVAILABLE'));});}
+async function actions(){const id=currentScope().id,database=await db();return new Promise((resolve,reject)=>{const q=database.transaction('actions').objectStore('actions').index('workspaceId').getAll(id);q.onsuccess=()=>resolve(q.result.sort((a,b)=>b.createdAt.localeCompare(a.createdAt)));q.onerror=()=>reject(fail('BROWSER_ACTION_STORAGE_UNAVAILABLE'));});}
 async function refreshActions(){const scope=currentScope(),rows=await actions();checkScope(scope);S.actions=rows;return rows;}
+function retainDraft(key){
+ const scope=currentScope(),full=draftKey(key,scope),data=structuredClone(S.drafts.get(full)??{});
+ if(new TextEncoder().encode(JSON.stringify(data)).length>8388608)return Promise.reject(fail('BROWSER_DRAFT_TOO_LARGE'));
+ const record={key:full,workspaceId:scope.id,updatedAt:new Date().toISOString(),data};
+ const pending=(S.draftWrites.get(full)??Promise.resolve()).catch(()=>{}).then(async()=>{
+  const database=await db();return new Promise((resolve,reject)=>{
+   const tx=database.transaction('drafts','readwrite');tx.objectStore('drafts').put(record);
+   tx.oncomplete=()=>resolve();tx.onerror=tx.onabort=()=>reject(fail('BROWSER_DRAFT_SAVE_FAILED'));
+  });
+ });
+ S.draftWrites.set(full,pending);
+ pending.then(()=>{if(S.draftWrites.get(full)===pending)S.draftWrites.delete(full);},()=>{if(S.draftWrites.get(full)===pending)S.draftWrites.delete(full);});
+ return pending;
+}
+async function loadDrafts(scope){
+ await Promise.allSettled([...S.draftWrites.values()]);checkScope(scope);
+ const database=await db(),rows=await new Promise((resolve,reject)=>{
+  const q=database.transaction('drafts').objectStore('drafts').index('workspaceId').getAll(scope.id);q.onsuccess=()=>resolve(q.result);q.onerror=()=>reject(fail('BROWSER_DRAFT_STORAGE_UNAVAILABLE'));
+ });
+ checkScope(scope);S.drafts.clear();
+ for(const row of rows)if(row.workspaceId===scope.id&&typeof row.key==='string'&&row.key.startsWith(scope.id+':')&&row.data&&typeof row.data==='object'&&!Array.isArray(row.data))
+  S.drafts.set(row.key,row.data);
+}
 async function sendAction(action){
  const scope=currentScope();if(scope.id!==action.workspaceId)throw fail('SESSION_CHANGED');
  if(S.running.has(action.key))return;S.running.add(action.key);
@@ -55,6 +85,7 @@ async function sendAction(action){
 }
 async function act(path,input,title,{navigate=true}={}){
  const scope=currentScope(),id=crypto.randomUUID();const action={key:scope.id+':'+id,workspaceId:scope.id,id,path,title,navigate,createdAt:new Date().toISOString(),status:'SAVED',error:null,result:null,body:JSON.stringify({...input,operationId:id,expectedRevision:S.state.revision})};
+ await Promise.all([...S.draftWrites].filter(([key])=>key.startsWith(scope.id+':')).map(([,pending])=>pending));checkScope(scope);
  await saved(action);checkScope(scope);return sendAction(action);
 }
 async function queue(id,kind,extra={}){return act('/api/profiles/'+id+'/tasks',{kind,...extra},LABELS[kind]??kind,{navigate:false});}
@@ -70,14 +101,20 @@ async function inspectFile(path,title){const value=await api(path);showDocument(
 function formField(form,key,labelText,{type='text',value='',help,required=false,full=false,choices,rows=5}={}){
  const box=node('div',null,'field'+(full?' full':'')),id='f-'+crypto.randomUUID();const label=node('label',labelText);label.htmlFor=id;let input;
  if(type==='textarea'){input=node('textarea');input.rows=rows;}else if(type==='select'){input=node('select');for(const choice of choices??[]){const [v,t]=Array.isArray(choice)?choice:[choice,choice],o=node('option',t);o.value=v;input.append(o);}}else{input=node('input');input.type=type;}
- input.id=id;input.name=key;input.required=required;if(type!=='file'){input.value=value??'';input.addEventListener('input',()=>form.data[key]=input.value);}
+ input.id=id;input.name=key;input.required=required;if(type!=='file'){input.value=value??'';form.data[key]=input.value;input.addEventListener('input',()=>form.data[key]=input.value);}
  append(box,label,input,help?node('small',help):null);form.grid.append(box);return input;
 }
-function form(key,onSubmit){const out=node('form');out.data=draft(key);out.grid=node('div',null,'form-grid');out.append(out.grid);out.addEventListener('submit',event=>{event.preventDefault();Promise.resolve().then(()=>onSubmit(out)).catch(showError);});return out;}
-function submit(form,labelText,help){const group=node('div',null,'form-actions'),b=node('button',labelText,'primary');b.type='submit';append(group,b,help?node('small',help):null);form.append(group);return b;}
+function form(key,onSubmit){
+ const out=node('form');out.data=draft(key);out.draftKey=key;out.grid=node('div',null,'form-grid');out.append(out.grid);
+ out.addEventListener('input',()=>retainDraft(key).catch(showError));
+ out.addEventListener('submit',event=>{event.preventDefault();const scope=currentScope();Promise.resolve().then(()=>{checkScope(scope);return onSubmit(out);}).catch(showError);});
+ return out;
+}
+function submit(form,labelText,help){const group=node('div',null,'form-actions'),b=node('button',labelText,'primary');b.type='submit';append(group,b,help?node('small',help):null);form.append(group);retainDraft(form.draftKey).catch(showError);return b;}
 function textFile(form,key,input,labelText,max){
- input.addEventListener('change',()=>{const file=input.files?.[0],scope=currentScope();if(!file)return;if(file.size>max){showError(fail('INPUT_FILE_TOO_LARGE'));return;}
- file.text().then(value=>{checkScope(scope);form.data[key]=value;const target=form.elements.namedItem(key);if(target)target.value=value;notice(labelText+' loaded: '+file.name);}).catch(showError);});
+ let selected=0;
+ input.addEventListener('change',()=>{const sequence=++selected,file=input.files?.[0],scope=currentScope();if(!file)return;if(file.size>max){showError(fail('INPUT_FILE_TOO_LARGE'));return;}
+  file.text().then(async value=>{checkScope(scope);if(sequence!==selected)return;form.data[key]=value;const target=form.elements.namedItem(key);if(target)target.value=value;await retainDraft(form.draftKey);checkScope(scope);notice(labelText+' loaded: '+file.name);}).catch(showError);});
 }
 function header(title,description,...controls){const h=node('div',null,'page-head'),left=node('div');append(left,node('h1',title),description?node('p',description):null);append(h,left,append(node('div',null,'actions'),controls));return h;}
 function renderShell(){
@@ -85,7 +122,13 @@ function renderShell(){
  $('pass-list').replaceChildren(...S.state.profiles.filter(p=>!p.archived).map(p=>{const a=link(p.label,'#pass/'+p.id);if(S.route?.id===p.id)a.setAttribute('aria-current','page');return a;}));
  for(const a of document.querySelectorAll('aside nav a')){const selected=a.hash===location.hash||!location.hash&&a.hash==='#home';if(selected)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');}
 }
-function routes(){const parts=location.hash.replace(/^#/,'').split('/');if(parts[0]==='pass'&&parts[1])return {kind:'pass',id:parts[1],tab:parts[2]??'overview'};if(parts[0]==='call'&&parts[1])return {kind:'call',id:parts[1]};return {kind:['connect','purchase','attach','actions'].includes(parts[0])?parts[0]:'home'};}
+function routes(){
+ const parts=location.hash.replace(/^#/,'').split('/');
+ if(parts[0]==='pass'&&parts[1]){const page=Number(parts[3]??0);return {kind:'pass',id:parts[1],tab:parts[2]??'overview',offset:Number.isSafeInteger(page)&&page>=0?page:0};}
+ if(parts[0]==='call'&&parts[1])return {kind:'call',id:parts[1]};
+ return {kind:['connect','purchase','attach','actions'].includes(parts[0])?parts[0]:'home'};
+}
+const profilePath=route=>'/api/profiles/'+route.id+(route.tab==='history'?'?offset='+route.offset:'');
 function disposeApproval(){S.panel?.dispose();S.panel=null;S.panelId=null;}
 async function renderRoute(){
  if(!S.session)return;const seq=++S.sequence;S.route=routes();disposeApproval();$('view').replaceChildren();renderShell();
@@ -94,7 +137,7 @@ async function renderRoute(){
  if(['connect','purchase','attach'].includes(S.route.kind))return renderAdd(S.route.kind);
  const scope=currentScope();
  if(S.route.kind==='call'){const value=await api('/api/calls/'+S.route.id,{scope});if(seq!==S.sequence)return;S.call=value.call;renderCall(value.call);return;}
- const value=await api('/api/profiles/'+S.route.id,{scope});if(seq!==S.sequence)return;S.detail=value;renderPass(value);
+ const value=await api(profilePath(S.route),{scope});if(seq!==S.sequence)return;S.detail=value;renderPass(value);
 }
 function renderHome(){
  const view=$('view');append(view,header('API passes','Purchased allowances, original requests and retained results in one workspace.',button('Connect a pass',()=>{location.hash='connect';},{primary:true})));
@@ -121,6 +164,10 @@ function renderAdd(kind){
   }
  }
  const b=submit(f,kind==='purchase'?'Save purchase preparation':info[0]);if(kind!=='connect'&&!S.state.purchaseEnabled)b.disabled=true;
+ if(kind==='purchase')f.append(button('Start a separate purchase intent',async()=>{
+  const scope=currentScope();d.intentId='api-pass-'+crypto.randomUUID();f.elements.namedItem('intentId').value=d.intentId;
+  await retainDraft(f.draftKey);checkScope(scope);notice('A new purchase intent is saved. Review its handoff before preparing it.');
+ }));
  append($('view'),header(...info),panel(null,f));
  if(kind!=='connect'&&!S.state.purchaseEnabled)$('view').append(panel('Original Buyer setup',node('p','Configure this customer workspace with the original --buyer-workspace before preparing or adopting a purchase.')));
 }
@@ -154,6 +201,7 @@ function renderComposer(p){
  const f=form(key,async form=>{
   const selected=currentScope(),state={...form.data},id=p.id,query=state.query.filter(row=>row[0]!==''||row[1]!=='');
   const input={requestId:form.elements.namedItem('requestId').value,label:form.elements.namedItem('label').value,routeId:form.elements.namedItem('routeId').value,query,contentType:form.elements.namedItem('contentType').value,bodyBase64:null};
+  if(form.loadingBody)throw fail('REQUEST_BODY_FILE_READING');
   const mode=form.elements.namedItem('bodyMode').value;
   if(mode==='text')input.bodyBase64=base64(new TextEncoder().encode(form.elements.namedItem('bodyText').value));
   if(mode==='file'){if(typeof state.fileBase64!=='string')throw fail('SELECT_REQUEST_BODY_FILE');input.bodyBase64=state.fileBase64;}
@@ -165,18 +213,31 @@ function renderComposer(p){
  formField(f,'contentType','Request content type',{value:d.contentType??'application/json',required:true});
  const query=node('div',null,'field full');query.append(node('label','Query parameters'));
  const rows=node('div');query.append(rows);
- const paint=()=>{rows.replaceChildren();d.query.forEach((pair,index)=>{const row=node('div',null,'query-row'),k=node('input'),v=node('input');k.placeholder='Parameter';v.placeholder='Value';k.value=pair[0];v.value=pair[1];k.setAttribute('aria-label','Query parameter '+(index+1));v.setAttribute('aria-label','Query value '+(index+1));k.addEventListener('input',()=>pair[0]=k.value);v.addEventListener('input',()=>pair[1]=v.value);append(row,k,v,button('Remove',()=>{d.query.splice(index,1);paint();}));rows.append(row);});};paint();query.append(button('Add parameter',()=>{d.query.push(['','']);paint();}));f.grid.append(query);
+ const paint=()=>{rows.replaceChildren();d.query.forEach((pair,index)=>{const row=node('div',null,'query-row'),k=node('input'),v=node('input');k.placeholder='Parameter';v.placeholder='Value';k.value=pair[0];v.value=pair[1];k.setAttribute('aria-label','Query parameter '+(index+1));v.setAttribute('aria-label','Query value '+(index+1));k.addEventListener('input',()=>pair[0]=k.value);v.addEventListener('input',()=>pair[1]=v.value);append(row,k,v,button('Remove',()=>{d.query.splice(index,1);paint();return retainDraft(key);}));rows.append(row);});};paint();query.append(button('Add parameter',()=>{d.query.push(['','']);paint();return retainDraft(key);}));f.grid.append(query);
  formField(f,'bodyMode','Request body',{type:'select',value:d.bodyMode,choices:[['none','No body'],['text','Text / JSON'],['file','Exact file bytes']]});
  formField(f,'bodyText','Text / JSON body',{type:'textarea',value:d.bodyText,full:true,rows:9,help:'Saved as UTF-8. JSON is preserved as entered.'});
  const file=formField(f,'bodyFile','Body file',{type:'file',full:true,help:d.filename?'Selected: '+d.filename:'Maximum 1 MiB. Select “Exact file bytes” above.'});
- file.addEventListener('change',()=>{const chosen=file.files?.[0],scope=currentScope();if(!chosen)return;if(chosen.size>1048576){showError(fail('REQUEST_TOO_LARGE'));return;}chosen.arrayBuffer().then(raw=>{checkScope(scope);d.fileBase64=base64(new Uint8Array(raw));d.filename=chosen.name;d.bodyMode='file';f.elements.namedItem('bodyMode').value='file';notice('Body retained in this form: '+chosen.name+' · '+raw.byteLength+' bytes');}).catch(showError);});
- submit(f,'Save exact request','The saved request is dispatched from its own result page.');$('view').append(panel('Prepare a request',f));
+ let bodyRead=0;
+ file.addEventListener('change',()=>{
+  const selected=++bodyRead,chosen=file.files?.[0],scope=currentScope();f.loadingBody=false;if(!chosen)return;
+  if(chosen.size>1048576){showError(fail('REQUEST_TOO_LARGE'));return;}f.loadingBody=true;
+  chosen.arrayBuffer().then(async raw=>{checkScope(scope);if(selected!==bodyRead)return;d.fileBase64=base64(new Uint8Array(raw));d.filename=chosen.name;d.bodyMode='file';f.elements.namedItem('bodyMode').value='file';await retainDraft(key);checkScope(scope);notice('Exact body saved: '+chosen.name+' · '+raw.byteLength+' bytes');}).catch(showError).finally(()=>{if(selected===bodyRead)f.loadingBody=false;});
+ });
+ submit(f,'Save exact request','The saved request is dispatched from its own result page.');
+ f.append(button('Start another request ID',async()=>{
+  const scope=currentScope(),previous=d.requestId;d.requestId='request-'+crypto.randomUUID();f.elements.namedItem('requestId').value=d.requestId;
+  if(d.label===previous){d.label=d.requestId;f.elements.namedItem('label').value=d.label;}
+  await retainDraft(key);checkScope(scope);notice('A new request identity is saved. Review its route and body before saving the request.');
+ }));$('view').append(panel('Prepare a request',f));
 }
 function base64(bytes){let s='';for(let i=0;i<bytes.length;i+=32768)s+=String.fromCharCode(...bytes.subarray(i,i+32768));return btoa(s);}
 function renderHistory(detail){
  const p=detail.profile,rows=detail.calls.map(c=>[link(c.label,'#call/'+c.id),code(c.requestId),c.method+' '+c.path,c.units,status(c.status),c.result?c.result.bytes+' B':'—']);
  $('view').append(panel('Saved requests',rows.length?table(['Request','Original ID','Route','Units','State','Result'],rows):node('p','Prepare a new request or adopt one from merchant history.','empty')));
- const next=detail.callPagination.nextOffset;if(next!==null)$('view').append(button('Next saved request page',async()=>{const value=await api('/api/profiles/'+p.id+'?offset='+next);S.detail=value;$('view').replaceChildren();renderPass(value);}));
+ const page=detail.callPagination,pager=node('nav',null,'actions');pager.setAttribute('aria-label','Saved request pages');
+ if(page.offset>0)append(pager,link('First page','#pass/'+p.id+'/history/0'),link('Previous page','#pass/'+p.id+'/history/'+Math.max(0,page.offset-page.limit)));
+ if(page.nextOffset!==null)pager.append(link('Next page','#pass/'+p.id+'/history/'+page.nextOffset));
+ append($('view'),node('p',detail.calls.length?'Requests '+(page.offset+1)+'–'+(page.offset+detail.calls.length)+' of '+page.total:'No saved requests on this page','muted'),pager);
 }
 async function renderMerchant(id,after){
  const scope=currentScope(),seq=S.sequence,path='/api/profiles/'+id+'/remote-calls?limit=100'+(after?'&after='+encodeURIComponent(after):'');
@@ -213,7 +274,7 @@ function renderPurchase(p){
  const nativeBusy=()=>p.activeTasks.some(t=>t.kind!=='refresh'&&ACTIVE.has(t.status));
  const controls=node('div',null,'actions');
  for(const kind of ['prepare-purchase','review-purchase','execute-purchase','recover-purchase','finalize-purchase','report-purchase'])
-  controls.append(button(LABELS[kind],()=>queue(p.id,kind,kind==='execute-purchase'?{reviewId:profile(p.id).review?.id}:{}),{disabled:nativeBusy()||p.archived||kind==='execute-purchase'&&!p.review}));
+  controls.append(button(LABELS[kind],()=>queue(p.id,kind,kind==='execute-purchase'?{reviewId:p.review?.id}:{}),{disabled:nativeBusy()||p.archived||kind==='execute-purchase'&&!p.review}));
  const info=panel('Original purchase',facts([['Intent',p.intentId],['Original state',p.native?.state],['Payment terms',p.handoff?.payment],['Purchase URL',p.handoff?.purchaseUrl],['Native outcome',p.native?.outcome],['Local preparation',p.purchasePrepared?'Retained':'Waiting for preparation']]),controls);
  if(p.review)info.append(node('hr',null,'divider'),facts([['Saved review',p.review.id],['Review SHA-256',p.review.sha256],['Reviewed at',p.review.reviewedAt]]),button('Download original review',()=>download(p.review.downloadUrl,'api-pass-original-review.json',p.review.sha256)));
  $('view').append(info);
@@ -246,7 +307,7 @@ function renderRecovery(p){
  const file=formField(f,'approvedFile','Load original approved request',{type:'file',full:true});textFile(f,'approvedRequestText',file,'Original approved request',32768);submit(f,'Inspect original paid attempt');section.append(node('hr',null,'divider'),f);
  if(p.lostOutputAttempt){
   section.append(node('hr',null,'divider'),node('h3','Retained original inspection'),facts([['Review',p.lostOutputAttempt.id],['Original request SHA-256',p.lostOutputAttempt.snapshot.expectedRequestSha256],['Attempt',p.lostOutputAttempt.snapshot.attemptId],['Original attempt time',p.lostOutputAttempt.snapshot.attemptStartedAt]]),button('Inspect complete native selection',()=>showDocument('Original lost-output inspection',p.lostOutputAttempt.snapshot)));
-  const r=form('tx:'+p.id,async f=>queue(p.id,'recover-lost-output',{reviewId:profile(p.id).lostOutputAttempt.id,transaction:f.elements.namedItem('transaction').value}));
+  const r=form('tx:'+p.id+':'+p.lostOutputAttempt.id,async f=>queue(p.id,'recover-lost-output',{reviewId:p.lostOutputAttempt.id,transaction:f.elements.namedItem('transaction').value}));
   formField(r,'transaction','Exact original transaction hash',{value:r.data.transaction,required:true,full:true,help:'This selection is bound to the retained request, attempt and configuration above.'});submit(r,'Recover selected original payment');section.append(r);
  }
  $('view').append(section);
@@ -265,9 +326,9 @@ function renderActions(){
 async function refreshCurrent({force=false}={}){
  if(!S.session)return;
  if(S.route?.kind==='pass'){
-  const scope=currentScope(),seq=S.sequence,value=await api('/api/profiles/'+S.route.id,{scope});if(seq!==S.sequence)return;
+  const scope=currentScope(),seq=S.sequence,value=await api(profilePath(S.route),{scope});if(seq!==S.sequence)return;
   const changed=JSON.stringify([S.detail?.profile?.review,S.detail?.profile?.native,S.detail?.profile?.lostOutputAttempt,S.detail?.profile?.activeTasks])!==JSON.stringify([value.profile.review,value.profile.native,value.profile.lostOutputAttempt,value.profile.activeTasks]);
-  S.detail=value;if(S.route.tab==='overview'&&(force||changed)){disposeApproval();$('view').replaceChildren();renderPass(value);return;}
+  S.detail=value;if(S.route.tab==='history'||S.route.tab==='overview'&&(force||changed)){disposeApproval();$('view').replaceChildren();renderPass(value);return;}
   // Preserve editable form controls during an active operation. Status/history
   // updates still use the original latest state; the explicit Refresh rebuilds.
   renderPassLive(value.profile);renderTasks(value.tasks);
@@ -283,7 +344,7 @@ async function refresh({rebuild=false}={}){
 }
 function schedule(){clearTimeout(S.timer);if(S.session&&!document.hidden&&S.state?.tasks.some(t=>ACTIVE.has(t.status)))S.timer=setTimeout(()=>void refresh(),1500);}
 function lock(){
- S.epoch++;S.key=null;S.session=null;S.state=null;S.detail=null;S.call=null;S.sequence++;S.refreshing=null;S.actions=[];clearTimeout(S.timer);disposeApproval();sessionStorage.removeItem('sf101-api-pass-key');
+ S.epoch++;S.key=null;S.session=null;S.state=null;S.detail=null;S.call=null;S.sequence++;S.refreshing=null;S.actions=[];S.drafts.clear();S.remote.clear();clearTimeout(S.timer);disposeApproval();sessionStorage.removeItem('sf101-api-pass-key');if($('document-dialog').open)$('document-dialog').close();$('notice').hidden=true;
  $('workspace').hidden=true;$('login').hidden=false;$('access-key').value='';
 }
 async function login(key){
@@ -292,7 +353,7 @@ async function login(key){
  if(epoch!==S.epoch)return;let value;try{value=await response.json();}catch{throw fail('WORKSPACE_SESSION_INVALID');}
  if(!response.ok){lock();throw fail(value.error??'WORKSPACE_AUTHENTICATION_REQUIRED');}
  if(value.schema!=='stellar-forge.sf101.api-pass-workspace-session.v1'||typeof value.workspaceId!=='string')throw fail('WORKSPACE_SESSION_INVALID');
- S.session=value;sessionStorage.setItem('sf101-api-pass-key',key);S.state=await api('/api/state');await refreshActions();
+ S.session=value;sessionStorage.setItem('sf101-api-pass-key',key);S.state=await api('/api/state');await loadDrafts(currentScope());await refreshActions();
  for(const a of S.actions.filter(a=>a.status==='SENDING')){a.status='ATTENTION';a.error='The previous response was interrupted. Retry the same saved action.';await saved(a);}
  $('login').hidden=true;$('workspace').hidden=false;$('login-error').textContent='';renderShell();await renderRoute();schedule();
 }

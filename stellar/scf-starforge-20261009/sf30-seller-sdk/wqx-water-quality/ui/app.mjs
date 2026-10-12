@@ -1,3 +1,5 @@
+import { mountOpenWaters } from '/openwaters.mjs';
+
 const $ = id => document.getElementById(id);
 const make = (tag, text, attrs = {}) => {
   const element = document.createElement(tag);
@@ -24,7 +26,9 @@ async function api(path, payload) {
 }
 function option(select, value, label) { select.append(make('option', label, { value })); }
 function tab(name) {
-  document.querySelectorAll('[data-tab]').forEach(button => button.setAttribute('aria-current', button.dataset.tab === name ? 'page' : 'false'));
+  const openWaters = mountOpenWaters({ api, notice, refresh });
+
+document.querySelectorAll('[data-tab]').forEach(button => button.setAttribute('aria-current', button.dataset.tab === name ? 'page' : 'false'));
   document.querySelectorAll('.tab-panel').forEach(panel => { panel.hidden = panel.id !== 'tab-' + name; });
 }
 function jsonView(id, value) { $(id).textContent = JSON.stringify(value, null, 2); $(id).hidden = false; }
@@ -134,6 +138,7 @@ async function refresh(reset = false) {
   state = await api('/api/workspace');
   if (reset) applyProjectForm(state.project);
   renderCaptures(); renderReviews(); renderEditions();
+  openWaters.update(state);
   if (state.jobs?.some(x => x.status === 'RUNNING')) schedulePoll();
 }
 async function refreshStatus() {
