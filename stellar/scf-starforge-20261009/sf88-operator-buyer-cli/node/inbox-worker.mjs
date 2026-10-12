@@ -70,8 +70,10 @@ async function main([runtimeDirectory, inputFile, resultFile, ...extra]) {
             need((native.operationTicket?.sha256 ?? null) === input.expectedTicketSha256, 'INBOX_SOURCE_TICKET_CHANGED');
         } else if (input.command === 'report') {
           const { renderQueueReport } = await original('queue-report.mjs');
+          const { readLostOutputQueueViews } = await original('lost-output.mjs');
           native = await saveQueueReport(absolute(input.destination), renderQueueReport({
-            jobs:await queue.list(), queueRoot:queue.root,
+            jobs:await readLostOutputQueueViews({root:queue.root,workspace:input.workspaceDirectory,
+              signal:controller.signal}), queueRoot:queue.root,
             accountingWorkspace:input.workspaceDirectory,
           }));
         } else {

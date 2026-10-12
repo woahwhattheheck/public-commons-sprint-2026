@@ -231,7 +231,8 @@ def main(argv=None):
     sources.add_argument('--record', type=Path, help='Private original SF81 record or SF82 evidence')
     sources.add_argument('--records-dir', type=Path, help='Private existing original evidence directory')
     sources.add_argument('--manual-source', type=Path, help='Private original SF88 missing-receipt selection descriptor')
-    parser.add_argument('--verify-only', action='store_true', help='Authenticate existing manual recovery without provider IO or writes')
+    sources.add_argument('--lost-output-source', type=Path, help='Private original SF88 lost-output selection and exact approved-request preimage')
+    parser.add_argument('--verify-only', action='store_true', help='Authenticate existing selected recovery without provider IO or writes')
     parser.add_argument('--ledger', type=Path, required=True)
     parser.add_argument('--policy', type=Path, required=True)
     parser.add_argument('--payer', required=True, help='Actual account from trusted signer configuration')
@@ -253,12 +254,14 @@ def main(argv=None):
             raise Denied('TRUSTED_ABSOLUTE_NODE_EXECUTABLE_REQUIRED')
         if not re.fullmatch(r'G[A-Z2-7]{55}', args.payer):
             raise Denied('TRUSTED_CLASSIC_PAYER_REQUIRED')
-        if args.expected_request_sha is not None and (not (args.record or args.manual_source) or
+        if args.expected_request_sha is not None and (not (args.record or args.manual_source or args.lost_output_source) or
                 not HASH.fullmatch(args.expected_request_sha)):
             raise Denied('EXPECTED_DIGEST_REQUIRES_ONE_ORIGINAL_RECORD')
-        if args.verify_only and not args.manual_source or args.manual_source and (
+        selected_recovery = args.manual_source or args.lost_output_source
+        if args.verify_only and not selected_recovery or selected_recovery and (
                 not args.expected_request_sha or args.watch_seconds or args.outbox or args.merchant_route):
-            raise Denied('MANUAL_RECOVERY_REQUIRES_ONE_EXPLICIT_SELECTION')
+            raise Denied('LOST_OUTPUT_RECOVERY_REQUIRES_ONE_EXPLICIT_SELECTION' if args.lost_output_source
+                         else 'MANUAL_RECOVERY_REQUIRES_ONE_EXPLICIT_SELECTION')
         if args.watch_seconds and args.watch_seconds < 30:
             raise Denied('WATCH_INTERVAL_MUST_BE_AT_LEAST_30_SECONDS')
         rpc_proxy_url = None
@@ -299,14 +302,21 @@ def main(argv=None):
         signal.signal(signal.SIGINT, lambda *_: stop.set())
         try:
             while not stop.is_set():
-                paths = [args.manual_source or args.record] if args.manual_source or args.record else sorted(args.records_dir.glob('*.json'))
+                selected_source = args.lost_output_source or args.manual_source or args.record
+                paths = [selected_source] if selected_source else sorted(args.records_dir.glob('*.json'))
                 failed = 0
                 for path in paths:
                     if stop.is_set():
                         break
                     try:
                         source = read_source(path)
-                        if args.manual_source:
+                        if args.lost_output_source:
+                            from lost_output_finality import finalize_lost_output
+                            result = finalize_lost_output(governor, path, source, args.payer, node=args.node,
+                                ledger=args.ledger, policy=args.policy, rpc_endpoint=args.rpc_endpoint,
+                                expected_request_sha=args.expected_request_sha, rpc_proxy_url=rpc_proxy_url,
+                                verify_only=args.verify_only, use_system_ca=args.node_use_system_ca)
+                        elif args.manual_source:
                             from manual_finality import finalize_manual
                             result = finalize_manual(governor, path, source, args.payer, node=args.node,
                                 ledger=args.ledger, policy=args.policy, rpc_endpoint=args.rpc_endpoint,
