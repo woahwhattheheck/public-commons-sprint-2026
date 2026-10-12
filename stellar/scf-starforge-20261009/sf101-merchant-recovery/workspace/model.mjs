@@ -5,6 +5,8 @@ import { isAbsolute, resolve, dirname, join, sep } from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
 import { runRemote } from '../remote.mjs';
 import { openS3Store } from '../remote-s3.mjs';
+import { inspectLocalCapture, readCapturedBundle, runLocalCapture, runLocalVerification,
+  RETIRED_CAPTURE_PREFIX } from './local.mjs';
 import { acquireDeliveryLease } from '../../sf98-merchant-delivery/delivery-lock.mjs';
 
 export const HOST_SCHEMA = 'stellar-forge.recovery-workspace.v1';
@@ -20,6 +22,7 @@ const stamp = () => new Date().toISOString();
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 const object = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 const clone = value => JSON.parse(JSON.stringify(value));
+const localCommand = command => command === 'snapshot' || command === 'local-verify';
 const inside = (parent, child) => parent === child || child.startsWith(parent + sep);
 
 function need(ok, code, message = code, status = 400) {
@@ -99,7 +102,7 @@ function compileHost(value) {
     value.profiles.length > 0 && value.profiles.length <= 32, 'WORKSPACE_HOST_CONFIG_INVALID');
   const seen = new Set();
   const profiles = value.profiles.map(input => {
-    exact(input, ['id', 'label', 'storeConfig', 'operations', 'passEnv', 'bundleRoots', 'downloadRoot', 'restoreRoot'], 'profile');
+    exact(input, ['id', 'label', 'storeConfig', 'operations', 'passEnv', 'bundleRoots', 'downloadRoot', 'restoreRoot', 'capturePlans'], 'profile');
     const id = identifier(input.id, 'profile ID');
     need(!seen.has(id), 'WORKSPACE_DUPLICATE_PROFILE'); seen.add(id);
     need(PASS_ENV.test(input.passEnv ?? ''), 'WORKSPACE_PASSPHRASE_NAME_INVALID');
@@ -112,8 +115,20 @@ function compileHost(value) {
       need(!roots.has(rootId), 'WORKSPACE_DUPLICATE_BUNDLE_ROOT'); roots.add(rootId);
       return { id: rootId, label: label(root.label, rootId), directory: absolute(root.directory, 'Bundle root') };
     });
+    const captureIds = new Set();
+    need(input.capturePlans === undefined || Array.isArray(input.capturePlans), 'WORKSPACE_CAPTURE_PLANS_INVALID');
+    const capturePlans = (input.capturePlans ?? []).map(plan => {
+      exact(plan, ['id', 'label', 'planFile', 'bundleRootId'], 'capture plan');
+      const planId = identifier(plan.id, 'capture-plan ID');
+      need(!captureIds.has(planId), 'WORKSPACE_DUPLICATE_CAPTURE_PLAN'); captureIds.add(planId);
+      need(roots.has(plan.bundleRootId), 'WORKSPACE_CAPTURE_ROOT_NOT_FOUND',
+        'A capture plan must select one declared bundle root');
+      return { id: planId, label: label(plan.label, planId),
+        planFile: absolute(plan.planFile, 'Original snapshot plan'), bundleRootId: plan.bundleRootId };
+    });
+    need(capturePlans.length <= 32, 'WORKSPACE_CAPTURE_PLANS_INVALID');
     return { id, label: label(input.label, id), storeConfig: absolute(input.storeConfig, 'S3 configuration'),
-      operations: absolute(input.operations, 'Original operations directory'), passEnv: input.passEnv, bundleRoots,
+      operations: absolute(input.operations, 'Original operations directory'), passEnv: input.passEnv, bundleRoots, capturePlans,
       downloadRoot: absolute(input.downloadRoot, 'Download root'), restoreRoot: absolute(input.restoreRoot, 'Restore root') };
   });
   return { schema: HOST_SCHEMA, title: label(value.title, 'Merchant recovery'), profiles };
@@ -155,6 +170,7 @@ export async function openRecoveryWorkspace({ configFile, directory, readOnly = 
       await privateDirectory(root);
     }
     await privateBytes(profile.storeConfig);
+    for (const plan of profile.capturePlans) await privateBytes(plan.planFile, 256 * 1024);
     if (await exists(profile.operations)) await privateDirectory(profile.operations);
   }
   let lease;
@@ -206,7 +222,7 @@ export async function openRecoveryWorkspace({ configFile, directory, readOnly = 
     await privateDirectory(root.directory); await privateDirectory(path);
     const raw = await privateBytes(join(path, 'manifest.json'), MAX_MANIFEST);
     const manifest = JSON.parse(raw.toString('utf8'));
-    need(manifest.schema === BUNDLE_SCHEMA && Number.isSafeInteger(manifest.fileCount) &&
+    need(object(manifest) && manifest.schema === BUNDLE_SCHEMA && Number.isSafeInteger(manifest.fileCount) &&
       manifest.fileCount >= 0 && Number.isSafeInteger(manifest.totalPlainBytes) &&
       manifest.totalPlainBytes >= 0 && Array.isArray(manifest.roots), 'WORKSPACE_ORIGINAL_BUNDLE_REQUIRED');
     return { bundleId, name, rootId: root.id, rootLabel: root.label, directory: path,
@@ -219,7 +235,7 @@ export async function openRecoveryWorkspace({ configFile, directory, readOnly = 
     for (const root of profile.bundleRoots) {
       const entries = await readdir(root.directory, { withFileTypes: true });
       need(entries.length <= 10000, 'WORKSPACE_BUNDLE_ROOT_TOO_LARGE', 'Select a more specific host bundle root');
-      for (const entry of entries.filter(item => item.isDirectory()).sort((a, b) => a.name.localeCompare(b.name))) {
+      for (const entry of entries.filter(item => item.isDirectory() && !item.name.startsWith(RETIRED_CAPTURE_PREFIX)).sort((a, b) => a.name.localeCompare(b.name))) {
         const bundleId = root.id + '/' + entry.name;
         if (!await exists(join(root.directory, entry.name, 'manifest.json'))) continue;
         try { bundles.push(await bundleAt(profile, bundleId)); }
@@ -255,12 +271,87 @@ export async function openRecoveryWorkspace({ configFile, directory, readOnly = 
     return profile.bundleRoots.some(root => path !== root.directory && inside(root.directory, path)) ||
       path !== profile.downloadRoot && inside(profile.downloadRoot, path);
   }
+  function captureIdentity(profileId, id) {
+    return hash(STATE_SCHEMA + '\n' + workspaceState.id + '\n' + directory + '\n' + profileId + '\n' + id);
+  }
+  function localPathBindings(profile, review) {
+    const options = review.options;
+    need(options.id === review.operationId && options.passEnv === profile.passEnv &&
+      options.command === review.command, 'WORKSPACE_PROFILE_SELECTION_CHANGED');
+    if (review.command === 'snapshot') {
+      const plan = profile.capturePlans.find(item => item.id === review.capturePlan?.id);
+      const root = profile.bundleRoots.find(item => item.id === plan?.bundleRootId);
+      need(plan && root && JSON.stringify(plan) === JSON.stringify(review.capturePlan) &&
+        options.plan === plan.planFile && dirname(options.out) === root.directory &&
+        options.captureId === captureIdentity(profile.id, review.operationId) &&
+        HEX.test(options.expectedPlanSha256 ?? ''), 'WORKSPACE_CAPTURE_SELECTION_CHANGED');
+    } else {
+      need(review.command === 'local-verify' && allowedBundle(profile, options.bundle) &&
+        HEX.test(options.snapshotId ?? '') && options.snapshotId === review.snapshotId,
+        'WORKSPACE_LOCAL_VERIFICATION_SELECTION_CHANGED');
+    }
+    for (const path of [options.bundle, options.out].filter(Boolean))
+      for (const control of [directory, ...host.profiles.map(item => item.operations)])
+        need(!inside(control, path) && !inside(path, control), 'WORKSPACE_OPERATION_PATH_OVERLAP');
+  }
+  function finishReview(review, input) {
+    const selected = { profileId: review.profileId, command: review.command, operationId: review.operationId,
+      store: review.store, snapshotId: review.snapshotId, options: review.options };
+    return { ...review, reviewHash: hash(JSON.stringify(selected)), intent: clone(input) };
+  }
+  async function localSelection(profile, input) {
+    const saved = await readRequest(profile.id, input.id);
+    if (!saved) need(!await exists(join(profile.operations, input.id, 'operation.json')),
+      'WORKSPACE_OPERATION_ID_USED', 'Select a new local operation ID; this ID already belongs to an original transfer');
+    let review;
+    if (input.action === 'snapshot') {
+      need(input.bundleId === undefined && input.snapshotId === undefined && input.quiesced === true,
+        'WORKSPACE_CAPTURE_QUIESCENCE_REQUIRED',
+        'Confirm that every declared source producer is quiesced before reviewing its capture');
+      const capturePlan = profile.capturePlans.find(item => item.id === input.capturePlanId);
+      need(capturePlan, 'WORKSPACE_CAPTURE_PLAN_NOT_FOUND', 'Select a host-declared original snapshot plan', 404);
+      const root = profile.bundleRoots.find(item => item.id === capturePlan.bundleRootId);
+      const name = input.destinationName === undefined || input.destinationName === '' ? input.id :
+        identifier(input.destinationName, 'bundle destination name');
+      need(!name.startsWith(RETIRED_CAPTURE_PREFIX), 'WORKSPACE_CAPTURE_DESTINATION_INVALID');
+      await privateDirectory(root.directory);
+      await privateBytes(capturePlan.planFile, 256 * 1024);
+      const out = join(root.directory, name), captureId = captureIdentity(profile.id, input.id);
+      if (await exists(out)) need(saved?.review.command === 'snapshot' &&
+        saved.review.options.out === out && saved.review.options.plan === capturePlan.planFile &&
+        saved.review.options.captureId === captureId, 'WORKSPACE_CAPTURE_DESTINATION_EXISTS',
+        'Select a new bundle destination; retain this existing directory with its original capture', 409);
+      const plan = await inspectLocalCapture({ plan: capturePlan.planFile, out,
+        forbiddenRoots: [directory, ...host.profiles.map(item => item.operations)] });
+      review = { profileId: profile.id, command: 'snapshot', operationId: input.id,
+        store: null, snapshotId: null, source: capturePlan.planFile, destination: out,
+        originalStatus: saved?.result?.status ?? null, files: plan.files, plainBytes: plan.bytes,
+        capturePlan: clone(capturePlan), plan,
+        options: { command: 'snapshot', id: input.id, plan: capturePlan.planFile, out,
+          passEnv: profile.passEnv, captureId, expectedPlanSha256: plan.planSha256 } };
+    } else {
+      need(input.capturePlanId === undefined && input.quiesced === undefined &&
+        input.snapshotId === undefined && input.destinationName === undefined,
+        'WORKSPACE_LOCAL_VERIFICATION_SELECTION_INVALID');
+      const bundle = await bundleAt(profile, input.bundleId);
+      review = { profileId: profile.id, command: 'local-verify', operationId: input.id,
+        store: null, snapshotId: bundle.snapshotId, source: bundle.directory, destination: null,
+        originalStatus: saved?.result?.status ?? null, files: bundle.files, plainBytes: bundle.plainBytes,
+        options: { command: 'local-verify', id: input.id, bundle: bundle.directory,
+          passEnv: profile.passEnv, snapshotId: bundle.snapshotId } };
+    }
+    localPathBindings(profile, review);
+    return finishReview(review, input);
+  }
   async function selection(input) {
-    exact(input, ['profileId', 'action', 'id', 'bundleId', 'snapshotId', 'destinationName'], 'recovery selection');
+    exact(input, ['profileId', 'action', 'id', 'bundleId', 'snapshotId', 'destinationName',
+      'capturePlanId', 'quiesced'], 'recovery selection');
     const profile = selectedProfile(input.profileId);
     identifier(input.id, 'original operation ID');
-    need(['push', 'pull', 'restore', 'resume'].includes(input.action), 'WORKSPACE_ACTION_INVALID');
+    need(['snapshot', 'verify', 'push', 'pull', 'restore', 'resume'].includes(input.action), 'WORKSPACE_ACTION_INVALID');
     await currentHost();
+    if (input.action === 'snapshot' || input.action === 'verify') return localSelection(profile, input);
+    need(input.capturePlanId === undefined && input.quiesced === undefined, 'WORKSPACE_TRANSFER_SELECTION_INVALID');
     let options = { command: input.action, config: profile.storeConfig, operations: profile.operations,
       id: input.id, passEnv: profile.passEnv };
     let local = null, original = null;
@@ -320,9 +411,7 @@ export async function openRecoveryWorkspace({ configFile, directory, readOnly = 
       destination: options.out ?? null, originalStatus: original?.status ?? null,
       files: local?.files ?? original?.files ?? null, plainBytes: local?.plainBytes ?? original?.plainBytes ?? null,
       options };
-    const selected = { profileId: review.profileId, command: review.command, operationId: review.operationId,
-      store: review.store, snapshotId: review.snapshotId, options: review.options };
-    return { ...review, reviewHash: hash(JSON.stringify(selected)), intent: clone(input) };
+    return finishReview(review, input);
   }
   const requestPath = (profileId, id) => join(requestRoot, hash(profileId + '\n' + id) + '.json');
   async function readRequest(profileId, id) {
@@ -335,15 +424,19 @@ export async function openRecoveryWorkspace({ configFile, directory, readOnly = 
   }
   async function requestView(request) {
     let original = null, error = null;
-    try { original = await operation(request.review.profileId, request.review.operationId); }
-    catch (caught) { if (caught.code !== 'ENOENT') error = publicError(caught); }
+    if (localCommand(request.review.command)) original = request.result ?? null;
+    else {
+      try { original = await operation(request.review.profileId, request.review.operationId); }
+      catch (caught) { if (caught.code !== 'ENOENT') error = publicError(caught); }
+    }
     const running = active?.key === requestPath(request.review.profileId, request.review.operationId);
     return { profileId: request.review.profileId, operationId: request.review.operationId,
       review: clone(request.review), createdAt: request.createdAt, updatedAt: request.updatedAt,
       phase: original?.status === 'COMPLETE' ? 'COMPLETE' : running ? 'RUNNING' :
         request.phase === 'RUNNING' ? 'INTERRUPTED' : request.phase,
       running, cancelRequested: running && active.cancelRequested, attempts: request.attempts,
-      operation: original, error: error ?? request.error ?? null };
+      operation: original, ...(request.local ? { local: clone(request.local) } : {}),
+      error: error ?? request.error ?? null };
   }
   async function requests({ cursor, limit = 50 } = {}) {
     if (!await exists(requestRoot)) return { requests: [], nextCursor: null };
@@ -356,9 +449,12 @@ export async function openRecoveryWorkspace({ configFile, directory, readOnly = 
   async function execute(request, job) {
     let store;
     try {
-      let retained = null;
-      try { retained = await operation(request.review.profileId, request.review.operationId); }
-      catch (error) { if (error.code !== 'ENOENT') throw error; }
+      const local = localCommand(request.review.command);
+      let retained = local ? request.result ?? null : null;
+      if (!local) {
+        try { retained = await operation(request.review.profileId, request.review.operationId); }
+        catch (error) { if (error.code !== 'ENOENT') throw error; }
+      }
       if (retained?.status === 'COMPLETE') {
         request.phase = 'COMPLETE'; request.result = retained; request.updatedAt = stamp(); delete request.error;
         await atomicJSON(job.key, request); return;
@@ -367,14 +463,26 @@ export async function openRecoveryWorkspace({ configFile, directory, readOnly = 
       await atomicJSON(job.key, request);
       await currentHost();
       const profile = selectedProfile(request.review.profileId);
-      if (request.review.command === 'push') need(
-        hash(await privateBytes(join(request.review.options.bundle, 'manifest.json'), MAX_MANIFEST)) === request.review.snapshotId,
-        'WORKSPACE_ORIGINAL_SNAPSHOT_CHANGED', 'The local bundle changed after this operation was reviewed', 409);
-      store = await openS3Store(profile.storeConfig); job.store = store;
-      need(JSON.stringify(store.identity) === JSON.stringify(request.review.store), 'WORKSPACE_REVIEW_STORE_CHANGED',
-        'The selected store changed after review', 409);
-      if (job.cancelRequested) { store.close(); need(false, 'WORKSPACE_CANCELLED', 'Recovery execution was cancelled'); }
-      const result = await runRemote(request.review.options, { store });
+      let result;
+      if (local) {
+        localPathBindings(profile, request.review);
+        request.local ??= {};
+        const localOptions = { options: request.review.options, state: request.local,
+          save: async () => { request.updatedAt = stamp(); await atomicJSON(job.key, request); },
+          cancelled: () => job.cancelRequested };
+        result = request.review.command === 'snapshot' ?
+          await runLocalCapture({ ...localOptions, allowCapture: job.allowCapture === true }) :
+          await runLocalVerification(localOptions);
+      } else {
+        if (request.review.command === 'push') need(
+          hash(await privateBytes(join(request.review.options.bundle, 'manifest.json'), MAX_MANIFEST)) === request.review.snapshotId,
+          'WORKSPACE_ORIGINAL_SNAPSHOT_CHANGED', 'The local bundle changed after this operation was reviewed', 409);
+        store = await openS3Store(profile.storeConfig); job.store = store;
+        need(JSON.stringify(store.identity) === JSON.stringify(request.review.store), 'WORKSPACE_REVIEW_STORE_CHANGED',
+          'The selected store changed after review', 409);
+        if (job.cancelRequested) { store.close(); need(false, 'WORKSPACE_CANCELLED', 'Recovery execution was cancelled'); }
+        result = await runRemote(request.review.options, { store });
+      }
       request.phase = result.status === 'COMPLETE' ? 'COMPLETE' : 'INTERRUPTED';
       request.result = result; request.updatedAt = stamp(); delete request.error;
       await atomicJSON(job.key, request);
@@ -412,7 +520,7 @@ export async function openRecoveryWorkspace({ configFile, directory, readOnly = 
       return requestView(request);
     }
     const job = { key, profileId: reviewed.profileId, operationId: reviewed.operationId,
-      store: null, cancelRequested: false, promise: null };
+      store: null, cancelRequested: false, allowCapture: reviewed.command === 'snapshot', promise: null };
     active = job; job.promise = execute(request, job);
     return requestView(request);
   }
@@ -427,14 +535,23 @@ export async function openRecoveryWorkspace({ configFile, directory, readOnly = 
     }
     await currentHost();
     const profile = selectedProfile(profileId);
-    for (const path of [request.review.options.bundle, request.review.options.bundleOut].filter(Boolean))
-      need(allowedBundle(profile, path), 'WORKSPACE_BUNDLE_OUTSIDE_HOST_ROOTS');
-    const root = request.review.command === 'restore' ? profile.restoreRoot : profile.downloadRoot;
-    if (request.review.options.out) need(request.review.options.out !== root &&
-      inside(root, request.review.options.out), 'WORKSPACE_DESTINATION_OUTSIDE_HOST_ROOT');
-    need(request.review.options.operations === profile.operations && request.review.options.config === profile.storeConfig &&
-      request.review.options.passEnv === profile.passEnv, 'WORKSPACE_PROFILE_SELECTION_CHANGED');
-    const job = { key: requestPath(profileId, id), profileId, operationId: id, store: null, cancelRequested: false, promise: null };
+    if (localCommand(request.review.command)) {
+      localPathBindings(profile, request.review);
+      if (request.result?.status === 'COMPLETE') return requestView(request);
+      if (request.review.command === 'snapshot') need(!request.local?.pendingRetirement &&
+        await readCapturedBundle(request.review.options), 'WORKSPACE_CAPTURE_REVIEW_REQUIRED',
+        'Review the same capture and confirm that its original source producers are quiesced', 409);
+    } else {
+      for (const path of [request.review.options.bundle, request.review.options.bundleOut].filter(Boolean))
+        need(allowedBundle(profile, path), 'WORKSPACE_BUNDLE_OUTSIDE_HOST_ROOTS');
+      const root = request.review.command === 'restore' ? profile.restoreRoot : profile.downloadRoot;
+      if (request.review.options.out) need(request.review.options.out !== root &&
+        inside(root, request.review.options.out), 'WORKSPACE_DESTINATION_OUTSIDE_HOST_ROOT');
+      need(request.review.options.operations === profile.operations && request.review.options.config === profile.storeConfig &&
+        request.review.options.passEnv === profile.passEnv, 'WORKSPACE_PROFILE_SELECTION_CHANGED');
+    }
+    const job = { key: requestPath(profileId, id), profileId, operationId: id,
+      store: null, cancelRequested: false, allowCapture: false, promise: null };
     active = job; job.promise = execute(request, job);
     return requestView(request);
   }
@@ -452,7 +569,8 @@ export async function openRecoveryWorkspace({ configFile, directory, readOnly = 
     const profiles = [];
     for (const profile of host.profiles) profiles.push({ id: profile.id, label: profile.label,
       store: await storeHint(profile), operations: profile.operations,
-      bundleRoots: clone(profile.bundleRoots), downloadRoot: profile.downloadRoot, restoreRoot: profile.restoreRoot,
+      bundleRoots: clone(profile.bundleRoots), capturePlans: clone(profile.capturePlans),
+      downloadRoot: profile.downloadRoot, restoreRoot: profile.restoreRoot,
       passEnv: profile.passEnv, passphraseAvailable: typeof process.env[profile.passEnv] === 'string' && process.env[profile.passEnv].length > 0 });
     const page = await requests();
     if (active && !page.requests.some(row => row.profileId === active.profileId && row.operationId === active.operationId)) {
