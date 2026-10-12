@@ -388,7 +388,7 @@ function createEngine({store,files,sha256Utf8,now,newId,publicContract}) {
         definition_sha256:definition?document_hash:old?old.definition_sha256||null:null,
         definition_by_kind:{...(old&&old.current_revision===revision?old.definition_by_kind||{}:{}),...(definition?{[kind]:document_hash}:{})},
         original_event:clone(document),status:old?old.status:'RECEIVED',last_projection_status:'PROJECTED'};
-      if(['OnEvent','OnDistributeEventStart'].includes(kind))event.status=old&&old.current_revision===revision?old.status:'RECEIVED';
+      if(['OnEvent','OnDistributeEventStart'].includes(kind))event.status=old&&old.status!=='REPROJECTING'&&old.current_revision===revision?old.status:'RECEIVED';
       if(kind==='OnEventStart'||kind==='OnEventIntervalStart')event.status='ACTIVE';
       if(kind==='OnEventStart'){event.last_interval_callback_id=null;event.last_interval_identity=null;}
       if(kind==='OnEventIntervalStart'){event.last_interval_callback_id=callback.callback_id;const iid=binding.interval_id_pointer===undefined?null:pointer(payload,binding.interval_id_pointer,false),effective=binding.interval_start_pointer===undefined?null:pointer(payload,binding.interval_start_pointer,false),signal=binding.signal_pointer===undefined?null:pointer(payload,binding.signal_pointer,false);event.last_interval_identity={interval_id:iid===undefined?null:clone(iid),effective_start_timet:effective===undefined?null:effective,signal_sha256:digest(signal===undefined?null:signal)};}
@@ -397,7 +397,7 @@ function createEngine({store,files,sha256Utf8,now,newId,publicContract}) {
       if(kind==='OnEventArchive')event.status='ARCHIVED';
       if(kind==='OnEventComplete')event.status='COMPLETE';
       put('events',key,event,{scope:instance.instance_id});
-      if(old&&revision!==null&&old.current_revision!==null&&revision>old.current_revision){
+      if(queue_devices&&old&&revision!==null&&old.current_revision!==null&&revision>old.current_revision){
         for(const action of collect('device_actions',{scope:key,tag:'QUEUED'})){action.status='SUPERSEDED';action.superseded_by_event_revision_id=edition_id;action.updated_at=now();put('device_actions',action.device_action_id,action,{scope:key});}
       }
       let device=null;
@@ -420,13 +420,13 @@ function createEngine({store,files,sha256Utf8,now,newId,publicContract}) {
     return {events:projected,issues,status:issues.length?'NEEDS_REVIEW':'PROJECTED'};
   }
 
-  function applyDistributionAbsence(instance_id,distribution_id,event_ids) {
+  function applyDistributionAbsence(instance_id,distribution_id,event_ids,{update_device_actions=true}={}) {
     const present=new Set(event_ids),absent=[];
     for(const event of collect('events',{scope:instance_id})){
-      if(present.has(event.event_id)||['COMPLETE','ARCHIVED'].includes(event.status))continue;
+      if(present.has(event.event_id)||['COMPLETE','ARCHIVED','REPROJECTING'].includes(event.status))continue;
       event.status='ABSENT_FROM_COMPLETE_DISTRIBUTION';event.absent_distribution_id=distribution_id;event.updated_at=now();
       put('events',event.event_key,event,{scope:instance_id});absent.push(event.event_id);
-      for(const action of collect('device_actions',{scope:event.event_key,tag:'QUEUED'})){
+      if(update_device_actions)for(const action of collect('device_actions',{scope:event.event_key,tag:'QUEUED'})){
         if(action.action_kind==='END')continue;action.status='SUPERSEDED';action.superseded_by_distribution_id=distribution_id;action.updated_at=now();
         put('device_actions',action.device_action_id,action,{scope:event.event_key});}
     }
@@ -599,7 +599,7 @@ function createEngine({store,files,sha256Utf8,now,newId,publicContract}) {
     timeline.sort((a,b)=>a.revision-b.revision||(a.created_at<b.created_at?-1:a.created_at>b.created_at?1:0));
     let projected=0,reapplied_reconciliations=0;const issues=[];
     for(const item of timeline) {
-      if(item.kind==='reconciliation'){applyDistributionAbsence(instance.instance_id,item.operation.input.distribution_id,item.operation.input.event_ids);reapplied_reconciliations++;continue;}
+      if(item.kind==='reconciliation'){applyDistributionAbsence(instance.instance_id,item.operation.input.distribution_id,item.operation.input.event_ids,{update_device_actions:false});reapplied_reconciliations++;continue;}
       const callback=item.callback;
       const payload=JSON.parse(readFile(callback.request_file.sha256)),binding=instance.bindings[callback.kind];
       const result=eventProjection(instance,callback.kind,payload,callback,binding,{queue_devices:false,preserve_distributions:true});projected++;
@@ -607,7 +607,24 @@ function createEngine({store,files,sha256Utf8,now,newId,publicContract}) {
       callback.projection_history=[...(callback.projection_history||[]),{projection_id,instance_edition_id:instance.edition_id,created_at,result}];
       put('callbacks',callback.callback_id,callback,{scope:instance.instance_id,tag:callback.processing_status});
     }
+    // Historical callback/reconciliation transitions leave today's device journal intact.
+    // Only the completed projection can supersede a still-queued setting. Native END
+    // intents and every dispatched/uncertain/completed attempt retain their history.
+    const preserved_device_actions=[],superseded_device_actions=[];
+    for(const action of collect('device_actions',{tag:'QUEUED'})){
+      if(action.instance_id!==instance.instance_id)continue;
+      if(action.action_kind==='END'){preserved_device_actions.push(action.device_action_id);continue;}
+      const event=get('events',eventKey(action.instance_id,action.event_id));
+      let reason=null;
+      if(!event||event.current_revision!==action.event_revision||!['ACTIVE','RAMPING'].includes(event.status))reason='EVENT_NO_LONGER_ACTIVE';
+      else if(!event.last_interval_identity||canonical(event.last_interval_identity)!==canonical({interval_id:action.interval_id,effective_start_timet:action.effective_start_timet,signal_sha256:digest(action.signal)}))reason='INTERVAL_NO_LONGER_CURRENT';
+      if(!reason){preserved_device_actions.push(action.device_action_id);continue;}
+      action.status='SUPERSEDED';action.superseded_by_projection_id=projection_id;action.superseded_reason=reason;action.updated_at=now();
+      put('device_actions',action.device_action_id,action,{scope:eventKey(action.instance_id,action.event_id)});
+      superseded_device_actions.push({device_action_id:action.device_action_id,reason});
+    }
     return {projection_id,instance_id:instance.instance_id,instance_edition_id:instance.edition_id,projected_callbacks:projected,reapplied_reconciliations,
+      preserved_device_actions,superseded_device_actions,
       reviewer:input.reviewer,source_evidence:evidence,issue_count:issues.length,issues,status:issues.length?'NEEDS_REVIEW':'PROJECTED'};
   }
   function resumeEventCallback(input) {
