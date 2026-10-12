@@ -226,6 +226,9 @@ try {
   assert.deepEqual(report.browserErrors,[]);
   await fs.cp(casePath,join(supportCustody,'cases'),{recursive:true,force:false,errorOnExist:true});
   await fs.cp(statePath,join(supportCustody,'incidents'),{recursive:true,force:false,errorOnExist:true});
+  await fs.writeFile(join(supportCustody,'source-profiles.json'),await fs.readFile(configPath),{flag:'wx',mode:0o600});
+  await fs.writeFile(join(supportCustody,'environment.json'),await fs.readFile(environmentPath),{flag:'wx',mode:0o600});
+  await fs.writeFile(join(supportCustody,'managed-application.json'),JSON.stringify(await app(),null,2)+'\n',{flag:'wx',mode:0o600});
   report.savedSupportDirectory=supportCustody;
   await note('original handoff, saved case and incident captures retained',{caseId,incidentId:incident.id,handoffPath,handoffSha256:handoffSha});
   await supportPage.close();supportPage=null;
