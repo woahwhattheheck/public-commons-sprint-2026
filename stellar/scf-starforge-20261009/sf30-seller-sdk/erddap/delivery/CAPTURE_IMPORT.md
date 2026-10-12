@@ -6,6 +6,30 @@ connector returns actual provider files. The offline assembly command packages
 those files into the same six-member source archive used by direct HTTP
 acquisition. It does not query NOAA or regenerate numeric responses.
 
+## Complete returned source set
+
+The repository now retains all 16 successful original response bodies, including
+the 8,108-byte MUR DAS in its original encoding, and all five complete source
+archives under delivery/captures/. The complete acquisition-receipts.json retains
+the two failed 2025 station-data requests and the earlier text-reader error. Its
+prior receipt points to the original d4ae3903d86c69f0dc8afa2d92721783fcc6192e
+edition. A fresh checkout can assemble these captures entirely from the recorded
+Git bodies; no new source download or attachment access is required.
+
+| Complete selection | Source rows |
+| --- | ---: |
+| mur-sst-june-2025 | 27 |
+| ndbc-46042-june-2023 | 144 |
+| mur-sst-june-2023 | 27 |
+| mur-46042-nearby-june-2023 | 27 |
+| ndbc-46042-three-days-june-2023 | 432 |
+
+The five editions contain 657 selected rows. The one-day buoy edition is also
+contained in the three-day edition; these are not 657 independent observations.
+Each six-member source archive retains the exact JSON, CSV, metadata, DDS, DAS
+and their manifest. Use fetch_file with encoding base64 for binary Git files;
+the generic text Git reader cannot decode an original binary body.
+
 ## Complete operating sequence
 
 1. Retain the complete acquisition receipt and the exact returned bodies under
@@ -53,7 +77,9 @@ python3 delivery/native-receive.py \
    reads every native cursor page; exports the seller dataset and six-member
    customer packet; reconstructs that packet in an independent workspace; and
    closes and reopens the receiver to read the complete edition again. These are
-   actual product operations. A retained or failed generation is resumed through
+   actual product operations. Source comparison is freshly computed from the same
+   original bytes for each receiving generation, so a parser correction is not
+   confused with an earlier cached acquisition-time inspection. A retained or failed generation is resumed through
    its original directory, with the original input identities.
 
 5. Give the coastal workbook the accepted source/build IDs and the complete
@@ -167,9 +193,13 @@ independent validation experiment.
 JSON is the canonical provider response. Preserve exact numeric tokens and
 explicit provider types through the existing source parser. Ordinary ERDDAP CSV
 includes a units row and uses ISO-8859-1. The source mapper's default
-require-equivalent policy checks it against JSON before publication; an explicit
-canonical-json choice is retained when the provider's two original responses
-differ. No scale/offset, unit conversion, interpolation or quality filtering is
+require-equivalent policy checks it against JSON before publication. Numeric
+fields compare by exact decimal value: JSON 36 and CSV 36.0 represent the same
+provider number, while 36 and 36.0000000000000001 remain different. The comparison
+reports numericEquivalentSpellings without rewriting either source or routing
+through binary floating point. Column order, units, text, missing values and row
+order retain their original checks. An explicit canonical-json choice remains
+available when the provider's two original responses differ in value. No scale/offset, unit conversion, interpolation or quality filtering is
 reapplied by acquisition or assembly.
 
 ## Primary source documentation
