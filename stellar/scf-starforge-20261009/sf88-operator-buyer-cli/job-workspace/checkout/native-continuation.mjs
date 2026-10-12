@@ -627,5 +627,11 @@ if (inputFilesMode) {
   assert.equal(resolution.entryId, completed.checkout.jobEntryId);
   completed.resolution = resolution;
   await writeJson(output, completed);
+  const agentSource = join(fixture, 'agent-checkout-source.json');
+  if (!await exists(agentSource)) await immutable(agentSource, await readBytes(output));
+  const { runPaidJobAgentContinuation } = await import('../../../sf30-seller-sdk/jobs/agent/native-continuation.mjs');
+  completed.agent = await runPaidJobAgentContinuation({ checkoutResult: agentSource });
+  assert.equal(completed.agent.result, 'PASS');
+  await writeJson(output, completed);
 }
 process.stdout.write(JSON.stringify({ operation, result: 'PASS', output }) + '\n');

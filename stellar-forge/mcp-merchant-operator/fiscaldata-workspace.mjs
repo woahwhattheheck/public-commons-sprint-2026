@@ -336,6 +336,7 @@ export class MerchantFiscalDataWorkspaces{
       case'merchant_fiscaldata_query':return call('editions.query',{id:args.id,query:args.query});
       case'merchant_fiscaldata_comparison':if(['create','get'].includes(args.action))return call('comparisons.'+args.action,args.payload);break;
       case'merchant_fiscaldata_export':return call('exports.create',args.payload);
+      case'merchant_fiscaldata_briefing':return call('briefings.create',args.payload);
       case'merchant_fiscaldata_merchant':{
         const selected=handle.entry.merchants[identifier(args.profile,'Merchant profile')];
         if(!selected)throw failure('FISCALDATA_MERCHANT_NOT_CONFIGURED','Choose a host-declared public merchant profile.');
