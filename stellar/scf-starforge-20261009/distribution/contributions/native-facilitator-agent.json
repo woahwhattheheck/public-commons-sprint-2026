@@ -1,19 +1,22 @@
 {
   "schema": "stellar-forge.merchant-distribution-contribution.v1",
   "id": "native-facilitator-agent",
-  "description": "Operate original native Stellar facilitator aliases and retain complete profile/catalog files through the merchant MCP owner and resumable receiver.",
+  "description": "Operate original native Stellar aliases through a reviewed managed agent Application and retain complete profile/catalog files with the original merchant MCP and resumable receiver.",
   "components": [
     "stellar/scf-starforge-20261009/native-facilitator"
   ],
   "supportFiles": [
     "stellar/scf-starforge-20261009/native-facilitator/workspace/merchant-download.d.mts",
-    "stellar/scf-starforge-20261009/native-facilitator/workspace/MERCHANT_AGENT.md"
+    "stellar/scf-starforge-20261009/native-facilitator/workspace/MERCHANT_AGENT.md",
+    "stellar/scf-starforge-20261009/native-facilitator/workspace/merchant-launcher.d.mts"
   ],
   "commands": {
-    "native-facilitator-receive": "stellar/scf-starforge-20261009/native-facilitator/workspace/merchant-download-cli.mjs"
+    "native-facilitator-receive": "stellar/scf-starforge-20261009/native-facilitator/workspace/merchant-download-cli.mjs",
+    "native-facilitator-agent": "stellar/scf-starforge-20261009/native-facilitator/workspace/merchant-launcher.mjs"
   },
   "commandDescriptions": {
-    "native-facilitator-receive": "Inspect, download and resume exact native profile/catalog exports through the original merchant MCP host"
+    "native-facilitator-receive": "Inspect, download and resume exact native profile/catalog exports through the original merchant MCP host",
+    "native-facilitator-agent": "Review and run the original native agent host with an authenticated native browser and retained Applications identity"
   },
   "merchantProviders": {
     "native-facilitator-operators": "stellar/scf-starforge-20261009/native-facilitator/workspace/merchant-provider.mjs"
@@ -27,6 +30,15 @@
     "./facilitator/operator/download": {
       "types": "./source/stellar/scf-starforge-20261009/native-facilitator/workspace/merchant-download.d.mts",
       "import": "./source/stellar/scf-starforge-20261009/native-facilitator/workspace/merchant-download.mjs"
-    }
+    },
+    "./facilitator/operator/agent": {
+      "types": "./source/stellar/scf-starforge-20261009/native-facilitator/workspace/merchant-launcher.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/native-facilitator/workspace/merchant-launcher.mjs"
+    },
+    "./facilitator/operator/agent/binding": "./source/stellar/scf-starforge-20261009/native-facilitator/workspace/merchant-binding.mjs",
+    "./facilitator/operator/agent/application": "./source/stellar/scf-starforge-20261009/native-facilitator/workspace/merchant-application.mjs"
+  },
+  "applicationProviders": {
+    "native-facilitator-agent": "stellar/scf-starforge-20261009/native-facilitator/workspace/merchant-application.mjs"
   }
 }
