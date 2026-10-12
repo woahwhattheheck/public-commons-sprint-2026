@@ -130,11 +130,12 @@ export async function openClinicalTrialsWorkspace({directory,dossiers,inputs=nul
   const selected=await plan(id);need(selected.sha256===expectedPlanSha256,'CLINICALTRIALS_PLAN_CHANGED');
   if(active.has(id))return inspect(id);
   if(['READY','IMPORTED'].includes((await state(id)).phase))return inspect(id);
+  if(active.has(id))return inspect(id);
   need(!closed,'CLINICALTRIALS_WORKSPACE_CLOSED');
   const controller=new AbortController();let resolve,reject;
   const readiness=new Promise((yes,no)=>{resolve=yes;reject=no;}),ready={resolve,reject};
-  const promise=collect(id,selected,controller,ready);active.set(id,{controller,promise});
-  promise.catch(reject).finally(()=>active.delete(id)).catch(()=>{});
+  const promise=collect(id,selected,controller,ready),job={controller,promise};active.set(id,job);
+  promise.catch(reject).finally(()=>{if(active.get(id)===job)active.delete(id);}).catch(()=>{});
   await readiness;return inspect(id,{probe:false});
  }
  async function wait(id){await active.get(id)?.promise.catch(()=>{});return review(id);}
@@ -199,7 +200,8 @@ export async function openClinicalTrialsWorkspace({directory,dossiers,inputs=nul
  async function compare(id,otherId){
   const [left,right]=await Promise.all([plan(otherId),plan(id)]);
   need(left.payload.dossierId===right.payload.dossierId&&left.payload.request.questionId===right.payload.request.questionId,'CLINICALTRIALS_COMPARISON_QUESTION_MISMATCH');
-  return compareEditions((await edition(otherId)).value,(await edition(id)).value);
+  const [before,after]=await Promise.all([edition(otherId),edition(id)]);
+  return {...compareEditions(before.value,after.value),beforeSha256:before.sha256,afterSha256:after.sha256};
  }
 
  function pageOptions({offset=0,limit=50}={}){
@@ -240,7 +242,7 @@ export async function openClinicalTrialsWorkspace({directory,dossiers,inputs=nul
  async function compareRetained(dossierId,beforeId,afterId){
   const [left,right]=await Promise.all([retainedEdition(dossierId,beforeId),retainedEdition(dossierId,afterId)]);
   need(left.edition.questionId===right.edition.questionId,'CLINICALTRIALS_COMPARISON_QUESTION_MISMATCH');
-  return {...compareEditions(left.value,right.value),beforeEditionId:beforeId,afterEditionId:afterId,
+  return {...compareEditions(left.value,right.value),beforeSha256:left.sha256,afterSha256:right.sha256,beforeEditionId:beforeId,afterEditionId:afterId,
    authority:'ORIGINAL_RETAINED_DOSSIER_EDITIONS'};
  }
 

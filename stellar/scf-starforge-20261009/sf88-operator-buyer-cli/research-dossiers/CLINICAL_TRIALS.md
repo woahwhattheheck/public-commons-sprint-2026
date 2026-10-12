@@ -128,3 +128,7 @@ Current first-party contracts:
 - [NLM: API use in place of screen scraping](https://www.nlm.nih.gov/pubs/techbull/ja25/ja25_clinical_trials_screen-scraping.html)
 
 The source packet limit is 128 MiB compressed, with the original 2 GiB declared source-member limit. A prepared Research envelope must fit the original 64 MiB retained-edition limit. The real full portfolio is received from its existing source packet; native acquisition, merchant, projection and PRS capabilities remain in their original maintained modules.
+
+## Complete original-source example
+
+`examples/clinical-trials-dossier.mjs` is a reusable whole workflow on a previously exported source packet. Its configuration selects the existing packet SHA, capture, question, study and private sending/receiving directories. It uses the original Store for question, evidence, finding, report and streamed portable history, then downloads the unchanged provider packet from the reopened dossier. The same configuration resumes its saved operation and completed result; it performs no registry acquisition. Run `node examples/clinical-trials-dossier.mjs /absolute/private/example.json`. Required fields are `sourcePacket`, `packetSha256`, `captureId`, `question`, `title`, `workspaceDirectory`, `receivingDirectory`, `outputDirectory`, `requestId` and `selectNctId`; optional original `expectedRows` and `expectedStudySha256` bind an already captured cohort. `findingTitle`, `findingText` and `evidenceNote` retain the operator's source-linked review.
