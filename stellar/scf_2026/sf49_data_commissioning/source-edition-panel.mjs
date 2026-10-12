@@ -42,7 +42,7 @@ export function mountSourceBundlePanel({root,api=defaultApi,getCase,onAttached=a
   root.classList.add('sfb-panel');
   const storageKey='sf49.source-bundle.command:'+location.pathname;
   const state={case:null,rows:[],total:0,offset:0,selected:null,chosen:[],archive:null,label:'',
-    busy:false,pending:null,message:'',error:'',progress:null,mode:'source'};
+    busy:false,pending:null,pendingResult:null,message:'',error:'',progress:null,mode:'source'};
   let closed=false,xhr=null,pollTimer=null,pollReject=null,viewEpoch=0;
   try {const saved=JSON.parse(sessionStorage.getItem(storageKey)||'null');
     if(saved&&ID.test(saved.id)&&ID.test(saved.requestId)&&saved.input?.id===saved.id)state.pending=saved;
@@ -50,9 +50,9 @@ export function mountSourceBundlePanel({root,api=defaultApi,getCase,onAttached=a
   function retainCommand(value) {
     // Retain before dispatch. If local storage is unavailable, do not start a
     // mutation whose exact request the browser cannot recover.
-    sessionStorage.setItem(storageKey,JSON.stringify(value));state.pending=value;
+    sessionStorage.setItem(storageKey,JSON.stringify(value));state.pending=value;state.pendingResult=null;
   }
-  function finishCommand() {sessionStorage.removeItem(storageKey);state.pending=null;}
+  function finishCommand() {sessionStorage.removeItem(storageKey);state.pending=null;state.pendingResult=null;}
   function selected() {return state.rows.find(value=>value.id===state.selected)||null;}
   function sleep() {
     return new Promise((done,reject)=>{pollReject=reject;pollTimer=setTimeout(()=>{pollTimer=null;pollReject=null;done();},1000);});
@@ -86,9 +86,11 @@ export function mountSourceBundlePanel({root,api=defaultApi,getCase,onAttached=a
     for(;;) {
       if(closed)throw fail('The panel closed. The original command remains retained.');
       const result=await api(BASE+'/command?'+new URLSearchParams({id:command.id,requestId:command.requestId}));
+      state.pendingResult=result;
       if(result.state==='COMPLETE') {
         finishCommand();
-        const value=await getTransfer(command.id);
+        let value=await getTransfer(command.id);
+        while(value.active&&!closed) {await sleep();value=await getTransfer(command.id);}
         state.message='Original '+command.action+' completed. Request '+command.requestId+'.';
         if(command.action==='attach'&&result.result?.attachment)
           await onAttached(result.result.attachment);
@@ -185,7 +187,8 @@ export function mountSourceBundlePanel({root,api=defaultApi,getCase,onAttached=a
       (state.pending?'<section class="sfb-pending"><h4>Retained command</h4><p><strong>'+escape(state.pending.action)+'</strong> · <code>'+
         escape(state.pending.requestId)+'</code></p><p>The request is saved before dispatch. Check its result before continuing the same identity.</p>'+
         '<div class="sfb-actions"><button type="button" data-action="check">Check retained result</button>'+
-        '<button type="button" data-action="continue">Continue same command</button></div></section>':'')+
+        '<button type="button" data-action="continue">Continue same command</button>'+
+        (state.pendingResult?.state==='FAILED'&&state.pending.action!=='attach'?'<button type="button" data-action="leave-failed">Keep failed command in history</button>':'')+'</div></section>':'')+
       (!state.case?'<p class="sfb-empty">Open a saved merchant case to retain or receive its exact-source bundle.</p>':
       '<section class="sfb-intake"><div class="sfb-case"><span>Saved case <code>'+escape(state.case.id)+'</code></span><span>Revision <code>'+
       escape(short(state.case.revision))+'</code></span></div>'+
@@ -269,6 +272,10 @@ export function mountSourceBundlePanel({root,api=defaultApi,getCase,onAttached=a
       await refresh();
     }));
     root.querySelector('[data-action="check"]')?.addEventListener('click',()=>run(()=>watch(state.pending)));
+    root.querySelector('[data-action="leave-failed"]')?.addEventListener('click',()=>{
+      state.message='Failed command '+state.pending.requestId+' remains retained. Its original source files are unchanged.';
+      finishCommand();render();
+    });
     root.querySelector('[data-action="continue"]')?.addEventListener('click',()=>run(async()=>{
       const original=state.pending;
       await api(BASE+'/command',{...original,continue:true});await watch(original);

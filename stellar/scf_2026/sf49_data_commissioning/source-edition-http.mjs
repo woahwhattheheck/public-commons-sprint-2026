@@ -132,6 +132,12 @@ export function createSourceEditionDeliveryRoutes({service}) {
     }
   }
   return {
+    configure(server) {
+      // Node's whole-request deadline would reject a valid large File body.
+      // Preserve the host's header deadline and enforce upload inactivity below.
+      server.requestTimeout=0;
+      return server;
+    },
     async handle(req,res,{origin}) {
       const route=new URL(req.url,origin);
       if(!ASSETS.has(route.pathname)&&route.pathname!==BASE&&!route.pathname.startsWith(BASE+'/'))return false;
@@ -178,10 +184,11 @@ export function createSourceEditionDeliveryRoutes({service}) {
           assert(length===undefined||length===selected.bytes,'SF49_HTTP_UPLOAD_LENGTH_MISMATCH',undefined,413);
           // Browser File is streamed directly. The original writer enforces the
           // declared byte ceiling even when this request uses chunked transport.
-          const controller=new AbortController(),stop=()=>controller.abort();
-          req.once('aborted',stop);
+          const controller=new AbortController(),stop=()=>controller.abort(),socket=req.socket,oldTimeout=socket.timeout||0;
+          const idle=()=>req.destroy(fault('SF49_HTTP_UPLOAD_IDLE','The original upload stopped sending bytes.',408));
+          socket.setTimeout(120000,idle);req.once('aborted',stop);
           try {send(res,200,await service.upload({id,fileId:file,stream:req,signal:controller.signal}));}
-          finally {req.removeListener('aborted',stop);}
+          finally {req.removeListener('aborted',stop);socket.removeListener('timeout',idle);if(!socket.destroyed)socket.setTimeout(oldTimeout);}
           return true;
         }
         if(['GET','HEAD'].includes(req.method)&&action==='/download') {

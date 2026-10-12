@@ -129,7 +129,7 @@ export async function openSourceEditionDelivery({
       inspection=await result(id,'inspection'),last=await result(id,'status');
     return {id:req.id,kind:req.kind,label:req.label,actor:req.actor,createdAt:req.createdAt,
       caseId:req.caseId,caseRevision:req.caseRevision,files:await uploadState(req),
-      source:req.source??null,state:completion?'READY':last?.state??'UPLOADING',
+      source:req.source??null,state:completion?'READY':last?.state??'UPLOADING',lastRequestId:last?.requestId??null,
       active:active.has(id),lastOperation:last?.operation??null,error:last?.error??null,
       descriptor:completion?.descriptor??null,inspection:inspection?.value??null,
       exported:exported?{archive:exported.value.archive,filename:exported.value.filename,
@@ -386,7 +386,7 @@ export async function openSourceEditionDelivery({
       const command=await optionalJson(join(folder,'request.json'));
       ensure(command?.id===id&&command.requestId===requestId,'SF49_DELIVERY_COMMAND_NOT_FOUND');
       const saved=await optionalJson(join(folder,'result.json'),8*MAX_JSON),last=await optionalJson(join(folder,'status.json'));
-      return {request:command,state:saved?'COMPLETE':active.get(id)?.requestId===requestId?'RUNNING':'NEEDS_CONTINUATION',
+      return {request:command,state:saved?'COMPLETE':active.get(id)?.requestId===requestId?'RUNNING':last?.state==='NEEDS_CONTINUATION'&&last.error?'FAILED':'NEEDS_CONTINUATION',
         attempts:last?.attempts??0,error:last?.error??null,result:saved?.result??null,
         completedAt:saved?.completedAt??null};
     },
@@ -439,6 +439,8 @@ export async function openSourceEditionDelivery({
       }
       ensure(kind==='file','SF49_DELIVERY_ARTIFACT_KIND_INVALID');
       const saved=await ready(id),file=await sourceEditionWorkorderFile({directory:saved.directory,name});
+      ensure(file.bundleId===saved.record.descriptor.bundleId&&file.manifestSha256===saved.record.descriptor.manifestSha256,
+        'SF49_DELIVERY_ORIGINAL_CHANGED');
       return {path:file.path,bytes:file.bytes,sha256:file.sha256,filename:basename(file.name),
         type:file.name.endsWith('.json')?'application/json':file.name.endsWith('.html')?'text/html':
           file.name.endsWith('.md')?'text/markdown':'application/octet-stream'};
