@@ -15,6 +15,7 @@ const literal = value => value === null || value === undefined ? '—' : typeof 
 const quoted = value => "'" + value.replaceAll("'", "'\\''") + "'";
 function stageCommand(release) {
   const command = 'node release-cli.mjs stage --store ' + quoted(snapshot.root) + ' --id release-name';
+  if (release?.source?.kind === 'VERSIONED_DATASET_PACKAGE') return command + ' --dataset-package prepared-dataset-package';
   if (release?.clickhouse) return command + ' --clickhouse-package prepared-clickhouse-package';
   if (release?.postgres) return command + ' --postgres-package prepared-postgres-package';
   if (release?.sqlite) return command + ' --sqlite-package sqlite-workbench-export';
