@@ -1,0 +1,108 @@
+{
+  "schema": "starforge.application-field-map.v1",
+  "title": "SCF #46 application sections",
+  "note": "Manuscript section map. Replace destination labels and add actual issuer field limits when the invitation form is available.",
+  "fields": [
+    {
+      "id": "project-identity",
+      "label": "Project identity",
+      "selectors": [
+        {
+          "heading": "Reviewer application",
+          "scope": "lead"
+        }
+      ],
+      "limits": {}
+    },
+    {
+      "id": "project-outcome",
+      "label": "Project and requested outcome",
+      "selectors": [
+        {
+          "heading": "Project and requested outcome"
+        }
+      ],
+      "limits": {}
+    },
+    {
+      "id": "customer-need",
+      "label": "Customer problem, need and adoption",
+      "selectors": [
+        {
+          "heading": "Customer problem, need and adoption"
+        }
+      ],
+      "limits": {}
+    },
+    {
+      "id": "stellar-value",
+      "label": "Why Stellar and what we contribute",
+      "selectors": [
+        {
+          "heading": "Why Stellar and what we contribute"
+        }
+      ],
+      "limits": {}
+    },
+    {
+      "id": "architecture",
+      "label": "Defined architecture and operating behavior",
+      "selectors": [
+        {
+          "heading": "Defined architecture and operating behavior"
+        }
+      ],
+      "limits": {}
+    },
+    {
+      "id": "working-product",
+      "label": "Working product and demonstrated results",
+      "selectors": [
+        {
+          "heading": "Working product and demonstrated results"
+        }
+      ],
+      "limits": {}
+    },
+    {
+      "id": "funded-deliverables",
+      "label": "Three funded tranches and six priced deliverables",
+      "selectors": [
+        {
+          "heading": "Three funded tranches and six priced deliverables"
+        }
+      ],
+      "limits": {}
+    },
+    {
+      "id": "threats-outcomes",
+      "label": "Threat response and outcome measurement",
+      "selectors": [
+        {
+          "heading": "Threat response and outcome measurement"
+        }
+      ],
+      "limits": {}
+    },
+    {
+      "id": "capacity-sustainability",
+      "label": "Delivery capacity, payment timing and sustainability",
+      "selectors": [
+        {
+          "heading": "Delivery capacity, payment timing and sustainability"
+        }
+      ],
+      "limits": {}
+    },
+    {
+      "id": "applicant-submission",
+      "label": "Applicant, experience and submission",
+      "selectors": [
+        {
+          "heading": "Applicant, experience and submission"
+        }
+      ],
+      "limits": {}
+    }
+  ]
+}
