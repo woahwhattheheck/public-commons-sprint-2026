@@ -108,3 +108,20 @@ Back up or relocate the **complete closed workspace**, including native JSON, ob
 - `openCoopsClient`, `downloadCoopsFiles`, `reopenCoopsFiles` — original calls and complete file receiving.
 
 The additive contribution registers commands, browser assets, source exports and the Applications/merchant providers. It does not replace shared runtime or peer-product code.
+
+## Coastal residual workbook
+
+Open a retained edition and choose **Build coastal workbook**, or open the
+workbook form below **Compare retained editions**. Select original GMT
+water-level observations and six-minute predictions. The same edition can
+supply both products. Retain analyst options and notes, then download the
+complete offline HTML or editable workbook. Full paired data, episode/unplaced
+CSVs, original source responses and a delivery manifest remain in Handoff files.
+
+The original journal reconciles the same `analysis.export` request and creation
+time across interrupted publication. The CLI exposes `analyse --operation-id
+ID --request ORIGINAL_SELECTION_JSON`; Merchant exposes the same action and
+retained-file reads. The installed `coops-analysis` command reproduces a complete
+directory from an original input or portable workbook.
+
+See [the full analyst workflow and source contracts](analysis/README.md).

@@ -187,7 +187,7 @@ function renderEditions(){
  body+='<h2>Source review</h2>';const d=draft('review:'+e.id,{subject:'Source, datum and coverage review',note:'',status:'open'});
  body+='<form id="review-form"><div class="form-grid">'+field('review:'+e.id,'subject','Review subject',d.subject,'text','required')+select('review:'+e.id,'status','Review decision',A.schema.annotationStatuses,d.status)+area('review:'+e.id,'note','Review note and responsible reviewer',d.note,'class="wide"')+'</div><button type="submit" class="primary">Save source review</button></form>'+details('Retained review history',A.view.annotations.filter(a=>a.editionId===e.id));
  body+='<h2>Original response register</h2>'+table(['Resource','Recorded outcome','Bytes / SHA-256',''],e.pages.map((p,i)=>[esc(p.resource??p.product),esc(p.unavailable?p.reason:'HTTP '+(p.statusObserved??'unrecorded')+' · '+p.records+' records'),esc(p.bytes)+'<br><span class="pin">'+esc(p.sha256)+'</span>',button('source-detail','Receipt',String(i))+button('source-download','Original bytes',String(i))]));
- body+='<div class="actions">'+button('export-edition','Prepare edition export',e.id)+button('new-dataset','Prepare native dataset',e.id)+'</div>';return body;
+ body+='<div class="actions">'+button('export-edition','Prepare edition export',e.id)+button('coastal-analysis','Build coastal workbook',e.id)+button('new-dataset','Prepare native dataset',e.id)+'</div>';return body;
 }
 function renderRows(){
  if(!A.rows)return'<p>Open one of the source tables.</p>';const value=A.rows,fields=value.table==='metadata'?['metadataKind','metadataPath','value','valueType']:value.table==='coverage'?['product','field','value','valueType']:['product','timestamp','value','unit','valueType','quality','inferred','excludedSamples'];
@@ -198,7 +198,43 @@ function renderCompare(){
  const d=draft('compare',{leftId:'',rightId:'',table:'observations'});
  return heading('Compare retained editions','A comparison preserves source changes, window changes and duplicate keys separately. Different station, datum, units or time basis must be reconciled explicitly.')+
  '<form id="compare-form"><div class="form-grid"><label>Earlier edition<select data-form="compare" data-field="leftId"><option value="">Choose</option>'+editionOptions(d.leftId)+'</select></label><label>Later edition<select data-form="compare" data-field="rightId"><option value="">Choose</option>'+editionOptions(d.rightId)+'</select></label>'+select('compare','table','Original table',A.schema.tables.map(t=>({value:t.id,label:t.label})),d.table)+'</div><button type="submit">Compare selected editions</button></form>'+
- (A.lastResult?.schema==='stellar-forge.coops-comparison.v1'?details('Native comparison and complete export identity',A.lastResult):'');
+ (A.lastResult?.schema==='stellar-forge.coops-comparison.v1'?details('Native comparison and complete export identity',A.lastResult):'')+renderAnalysis();
+}
+function renderAnalysis(){
+ const d=draft('analysis',{observationsEditionId:'',predictionsEditionId:'',quality:'all',begin:'',end:'',excludeInferred:false,excludeToleranceFlags:false,maxSigma:'',upperThreshold:'',lowerThreshold:'',name:'',project:'',question:'',interpretation:'',followUp:''});
+ const eligible=product=>A.allEditions.filter(e=>e.query.timeZone==='gmt'&&e.query.products.includes(product)&&(product!=='predictions'||e.query.predictionInterval==='6'))
+  .map(e=>({value:e.id,label:e.profile.label+' · '+e.query.stationId+' · '+e.query.beginDate+' → '+e.query.endDate+' · '+e.query.datum+' / '+e.query.units+' · '+e.id.slice(0,10)}));
+ return '<section class="card"><h2>Coastal residual workbook</h2><p>Select the retained six-minute GMT observation and prediction editions. A capture containing both products can supply both selections. The workbook carries every original response, source outcome, analysis row and analyst note.</p>'+
+ '<form id="analysis-form"><div class="form-grid">'+
+ select('analysis','observationsEditionId','Original water-level edition',[{value:'',label:'Choose an observation edition'},...eligible('water_level')],d.observationsEditionId,'required')+
+ select('analysis','predictionsEditionId','Original tide-prediction edition',[{value:'',label:'Choose a prediction edition'},...eligible('predictions')],d.predictionsEditionId,'required')+
+ select('analysis','quality','Observation quality',['all','verified','preliminary'],d.quality)+
+ field('analysis','begin','Optional analysis start (GMT)',d.begin,'datetime-local','step="360"')+
+ field('analysis','end','Optional analysis end (GMT)',d.end,'datetime-local','step="360"')+
+ select('analysis','excludeInferred','Exclude inferred verified observations',[{value:'false',label:'Keep original inferred observations'},{value:'true',label:'Exclude inferred observations'}],String(d.excludeInferred))+
+ select('analysis','excludeToleranceFlags','Exclude flat/rate/height flags',[{value:'false',label:'Keep original flagged observations'},{value:'true',label:'Exclude tolerance-flagged observations'}],String(d.excludeToleranceFlags))+
+ field('analysis','maxSigma','Optional maximum sigma (source unit)',d.maxSigma,'number','step="any" min="0"')+
+ field('analysis','upperThreshold','Optional upper residual threshold (source unit)',d.upperThreshold,'number','step="any"')+
+ field('analysis','lowerThreshold','Optional lower residual threshold (source unit)',d.lowerThreshold,'number','step="any"')+
+ field('analysis','name','Analyst',d.name)+field('analysis','project','Project',d.project)+
+ area('analysis','question','Engineering question',d.question)+area('analysis','interpretation','Interpretation',d.interpretation)+area('analysis','followUp','Follow-up',d.followUp)+
+ '</div><p>Blank date fields use the full overlapping source window. Thresholds use the selected source unit. Missing and ambiguous observations remain explicit in the complete workbook.</p>'+
+ '<button type="submit" class="primary">Build and retain complete workbook</button></form></section>';
+}
+function analysisPayload(){
+ const d=clone(A.drafts.analysis);
+ if(!d.observationsEditionId||!d.predictionsEditionId)throw new Error('Select both original coastal editions.');
+ const options={quality:d.quality,excludeInferred:d.excludeInferred===true||d.excludeInferred==='true',excludeToleranceFlags:d.excludeToleranceFlags===true||d.excludeToleranceFlags==='true'};
+ for(const key of ['begin','end'])if(d[key])options[key]=/Z$/.test(d[key])?d[key]:d[key]+(/T\d\d:\d\d$/.test(d[key])?':00Z':'Z');
+ for(const key of ['maxSigma','upperThreshold','lowerThreshold'])if(d[key]!==''&&d[key]!==undefined)options[key]=d[key];
+ const analyst=Object.fromEntries(['name','project','question','interpretation','followUp'].map(key=>[key,d[key]??'']));
+ return{observationsEditionId:d.observationsEditionId,predictionsEditionId:d.predictionsEditionId,options,analyst};
+}
+function analysisCompletion(result){
+ modal('Complete coastal workbook','<p>Station '+esc(result.context.station)+' · '+esc(result.context.datum)+' · '+esc(result.context.unitLabel)+' · GMT</p>'+
+ '<p>'+esc(result.coverage.included)+' included pairs across '+esc(result.coverage.expectedSlots)+' original six-minute slots. '+esc(result.files.length)+' complete files are retained in Handoff files.</p>'+
+ '<div class="actions">'+button('download-export','Download complete offline workbook',result.workbookExportId)+button('download-export','Download editable portable workbook',result.portableExportId)+'</div>'+
+ details('Coverage, original source and analysis',result));
 }
 function defaultColumns(){return ['editionId','recordId','sourcePageSha256','stationId','timestamp','value','valueType','unit','datum','timeZone','quality','flags'].map(source=>({source,heading:source}));}
 function renderMappings(){
@@ -225,7 +261,7 @@ function renderCustomers(){
 }
 function renderExports(){
  return heading('Retained handoff files','Each export pins the original selected source editions, review notes and mapping revision. Downloads stream the retained bytes directly to the browser.')+
- table(['Original file','Source selection','Identity',''],[...A.view.exports].reverse().map(x=>[esc(x.name)+'<br>'+esc(x.format),esc(x.backfillId??x.editionId??'Comparison')+'<br>'+esc(x.mapping?.name??''),esc(x.bytes)+' bytes<br><span class="pin">'+esc(x.sha256)+'</span>',button('download-export','Download retained file',x.id)+button('export-details','Receipt / source mapping',x.id)]));
+ table(['Original file','Source selection','Identity',''],[...A.view.exports].reverse().map(x=>[esc(x.name)+'<br>'+esc(x.format),esc(x.analysisId??x.backfillId??x.editionId??'Comparison')+'<br>'+esc(x.mapping?.name??''),esc(x.bytes)+' bytes<br><span class="pin">'+esc(x.sha256)+'</span>',button('download-export','Download retained file',x.id)+button('export-details','Receipt / source mapping',x.id)]));
 }
 function renderOperations(){
  return heading('Native operations and request recovery','The original workspace journal reconciles a stable operation ID before checking the current revision. Browser drafts and unresolved requests remain separate from saved source editions.')+
@@ -296,6 +332,11 @@ document.addEventListener('submit',event=>{
   }
   if(form.id==='review-form'){const key='review:'+A.edition.id;await perform('annotation.save',{editionId:A.edition.id,...clone(draft(key,{}))},{draftKey:key});renderPage();return;}
   if(form.id==='compare-form'){await perform('edition.compare',clone(A.drafts.compare));renderPage();return;}
+  if(form.id==='analysis-form'){
+   const saved=await perform('analysis.export',analysisPayload());
+   if(saved?.result?.schema==='stellar-forge.coops-retained-analysis.v1')analysisCompletion(saved.result);
+   return;
+  }
   if(form.id==='mapping-form'){const d=clone(draft('mapping',{}));if(!d.mappingId)delete d.mappingId;await perform('mapping.save',d,{draftKey:'mapping'});renderPage();return;}
   if(form.id==='dataset-form'){
    const p=clone(A.drafts.dataset);for(const k of ['beginDate','endDate'])if(!p[k])delete p[k];if(p.products.trim())p.products=p.products.split(',').map(x=>x.trim());else delete p.products;
@@ -354,6 +395,15 @@ document.addEventListener('click',event=>{
   if(cmd==='row-detail'){const row=A.rows.rows[Number(id)];modal('Original projected record',details('Value, datum, native flags and exact source locator',row));return;}
   if(cmd==='source-detail'){modal('Original response receipt',details('Native capture receipt',A.edition.pages[Number(id)]));return;}
   if(cmd==='source-download')return download({kind:'source',id:A.edition.id,page:Number(id)});
+  if(cmd==='coastal-analysis'){
+   const e=A.allEditions.find(e=>e.id===id)??A.edition;
+   if(!A.drafts.analysis)renderAnalysis();
+   if(e?.query.timeZone==='gmt'){
+    if(e.query.products.includes('water_level'))A.drafts.analysis.observationsEditionId=e.id;
+    if(e.query.products.includes('predictions')&&e.query.predictionInterval==='6')A.drafts.analysis.predictionsEditionId=e.id;
+   }
+   await persist();return navigate('compare');
+  }
   if(cmd==='export-edition'){exportDialog('edition',id);return;}
   if(cmd==='new-dataset'){A.drafts.dataset={editionId:id,table:A.table,name:A.edition.profile.label+' · '+A.table,beginDate:'',endDate:'',products:''};return navigate('datasets');}
   if(cmd==='new-mapping'){clearDraft('mapping');renderPage();await persist();return;}

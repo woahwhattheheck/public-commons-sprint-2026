@@ -12,6 +12,7 @@ const HELP=[
  '',
  'schema | view | stations',
  'action --request ORIGINAL_ACTION_JSON',
+ 'analyse --operation-id ORIGINAL_ID --request COASTAL_ANALYSIS_SELECTION_JSON',
  'collect | backfill --profile-id ID --operation-id ID --begin YYYY-MM-DD --end YYYY-MM-DD --products water_level[,predictions] --units metric|english --time-zone gmt|lst|lst_ldt --datum MLLW [--prediction-interval 6|h|hilo] [--label NAME]',
  'import-source --profile-id ID --operation-id ID --file ORIGINAL_SOURCE_PACKAGE',
  'rows --edition-id ID --table observations|predictions|metadata|coverage [--offset 0] [--limit 100] [--begin YYYY-MM-DD] [--end YYYY-MM-DD]',
@@ -20,6 +21,9 @@ const HELP=[
  'download --export-id ID --output NEW_FILE',
  'receive-file --receipt-id ID --name NAME --output NEW_FILE',
  '',
+ 'Analysis selection: observationsEditionId, predictionsEditionId, optional options and analyst objects.',
+ 'Analyse retains the complete offline HTML, editable workbook, every analysis/source file and manifest.',
+ 'Its original request is reusable. Download any returned files[].id with the existing download command.',
  'Private runtime: --inbox ORIGINAL_PRIVATE_INBOX --release-runtime PRIVATE_JSON --user-agent IDENTIFIER.',
  'A running console owns the original workspace. Use its startup JSON with --session.',
  'Collect/import/backfill wait for the original capture or backfill; a stopped source remains explicitly partial.',
@@ -77,7 +81,7 @@ async function waitOriginal(app,result){
 export async function main(args=process.argv.slice(2)){
  const parsed=argumentsOf(args);if(parsed.help){console.log(HELP);return;}
  const {values:v,command}=parsed;
- if(!['schema','view','stations','action','collect','backfill','import-source','rows','source','capture-source','download','receive-file'].includes(command))throw new TypeError('Choose a listed command; see --help.');
+ if(!['schema','view','stations','action','analyse','collect','backfill','import-source','rows','source','capture-source','download','receive-file'].includes(command))throw new TypeError('Choose a listed command; see --help.');
  const app=v['--session']?await sessionClient(v['--session']):await openCoopsWorkspace({directory:resolve(v['--workspace']),inboxDirectory:v['--inbox']?resolve(v['--inbox']):undefined,userAgent:v['--user-agent'],releaseRuntime:v['--release-runtime']?await readReleaseRuntime(v['--release-runtime']):undefined});
  try{
   let result;
@@ -88,6 +92,10 @@ export async function main(args=process.argv.slice(2)){
    if(!v['--request'])throw new TypeError('--request is required.');const request=await json(v['--request']);
    if(request.action==='release.start'&&!app.remote)throw new TypeError('Start a retained publisher through --session so its original process remains alive.');
    result=await app.action(request);if(['capture.start','capture.resume','capture.import','backfill.start','backfill.resume'].includes(request.action))result=await waitOriginal(app,result);
+  }else if(command==='analyse'){
+   if(!v['--request']||!v['--operation-id'])throw new TypeError('--request and the original --operation-id are required.');
+   const payload=await json(v['--request']),current=await app.view();
+   result=await app.action({action:'analysis.export',payload,operationId:v['--operation-id'],expectedRevision:current.revision});
   }else if(['collect','backfill','import-source'].includes(command)){
    if(!v['--profile-id']||!v['--operation-id'])throw new TypeError('--profile-id and a stable --operation-id are required.');
    const current=await app.view(),payload={profileId:v['--profile-id']};
