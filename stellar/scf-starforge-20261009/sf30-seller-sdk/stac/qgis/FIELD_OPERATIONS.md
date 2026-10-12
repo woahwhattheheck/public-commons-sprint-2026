@@ -63,7 +63,7 @@ The derived layer also retains an explicit read-only original provider feature I
 
 Choose allowed values from the actual agreed field protocol. Choice values use visible labels and separately typed stored JSON scalar values. Numeric ranges use explicit minimum, maximum and step. New record addition requires a text identity that can receive a native UUID default.
 
-Attachment and image fields use native External Resource widgets with relative storage under \`attachments/\`. The native QField naming settings produce distinct file names. Existing referenced source attachments are copied only from the original workspace's retained file inventory. Their original location and byte identity stay in the commissioning lineage.
+Attachment and image fields use native External Resource widgets with relative storage under `attachments/`. The native QField naming settings produce distinct file names. Existing referenced source attachments are copied only from the original workspace's retained file inventory. Their original location and byte identity stay in the commissioning lineage.
 
 ### Devices
 
@@ -78,9 +78,9 @@ Confirm **Commission selected project**. The operation creates a complete first 
 ## Export and collect
 
 1. Select the commissioned field project and the next device profile.
-2. Choose **Create next native export**. The original libqfieldsync \`OfflineConverter\` and \`QgisCoreOffliner\` create the native QField project and logging GeoPackage.
+2. Choose **Create next native export**. The original libqfieldsync `OfflineConverter` and `QgisCoreOffliner` create the native QField project and logging GeoPackage.
 3. Select that round and choose **Copy package to device folder**. Select a new directory outside the retained office workspace.
-4. Transfer the entire resulting directory to QField. Open its \`field.qgz\`, use the configured forms and save actual collection changes.
+4. Transfer the entire resulting directory to QField. Open its `field.qgz`, use the configured forms and save actual collection changes.
 5. Close QField before copying the complete saved folder back. Include the offline data, project, original binding file, references and attachments.
 
 The package binds workspace, campaign, round, device profile, office base edition and field configuration. An old completed export cannot be attached to a newer office edition after an interrupted save.
@@ -101,7 +101,7 @@ Receiving retains the actual device files, then inspects them in an owned native
 - Original references and export metadata must retain their byte identities.
 - The real native records are compared with the exact office base edition.
 - Attribute, addition, deletion, geometry, required-value, choice and range rules are checked.
-- Attachment paths must remain relative to \`attachments/\`; the actual file bytes are retained.
+- Attachment paths must remain relative to `attachments/`; the actual file bytes are retained.
 - A replacement image or document at the same path is a visible attachment change.
 
 Open **Review selected return**. Filter by native layer, change kind or **Problems**. Read pages of actual changes; open a row to compare office and returned attributes, inspect its complete geometry/source record, or open its retained attachment. The global summary includes added, changed and deleted records, attachment changes and edit/file problems.
@@ -112,7 +112,7 @@ Enter the office receiving decision and choose **Accept this return into office*
 
 ## Native office synchronization
 
-Acceptance makes a fresh owned copy of the original office edition. It opens the trusted original export with the selected returned logging data, points the native remote layer URIs only to that new office copy and invokes the original \`QgsOfflineEditing.synchronize(True)\` once in that staged attempt.
+Acceptance makes a fresh owned copy of the original office edition. It opens the trusted original export with the selected returned logging data, points the native remote layer URIs only to that new office copy and invokes the original `QgsOfflineEditing.synchronize(True)` once in that staged attempt.
 
 The native engine's completion, warnings and actual offline state are observed. The resulting complete office feature snapshot must match the reviewed returned snapshot. Reviewed attachments are copied, the native import checksum is retained, and the full project is saved as a new office edition.
 
@@ -125,7 +125,7 @@ Only after that result is complete does the existing workspace transaction:
 - Retain the synchronized data, attachments, source bindings and native result.
 - Commit the original request, new revision and history event.
 
-Open **Open accepted office map** to receive that actual map in QGIS. The original \`reopen_project\` interface continues returning \`(QgsProject, readback)\`; field editions use its specific native delegate while normal saved maps keep their existing source verification.
+Open **Open accepted office map** to receive that actual map in QGIS. The original `reopen_project` interface continues returning `(QgsProject, readback)`; field editions use its specific native delegate while normal saved maps keep their existing source verification.
 
 Select the next device profile and create a **new** export for round two. This is the normal continued collection workflow. Closing an unused export requires a recorded reason; it keeps the original package and any returns while allowing the next fresh round.
 
@@ -154,7 +154,7 @@ An unrelated workspace revision may advance during a completed native action. Re
 
 The current native field workflow keeps one logging GeoPackage per export and one open round per campaign. Split independent simultaneous field work into explicitly commissioned campaigns with separate selected office ownership; do not merge two sets of offline logs by copying files over one another.
 
-After an actual interrupted attempt is inspected, its owned incomplete working directory may be retired to reclaim space. Keep the original source, completed \`product\`, saved request, selected return and accepted edition. Completed temporary analysis/synchronization copies are retired by their own operation after their native files have closed and the complete result has been read.
+After an actual interrupted attempt is inspected, its owned incomplete working directory may be retired to reclaim space. Keep the original source, completed `product`, saved request, selected return and accepted edition. Completed temporary analysis/synchronization copies are retired by their own operation after their native files have closed and the complete result has been read.
 
 ## Complete project handover and independent receiving
 
@@ -174,7 +174,7 @@ Office/control logs may contain selected filesystem locations and operator-enter
 
 ## Existing CLI integration
 
-The original Python CLI adds a single \`field\` entry:
+The original Python CLI adds a single `field` entry:
 
 ~~~sh
 PYTHONPATH=/path/to/installed/plugin-parent \
@@ -188,14 +188,14 @@ Read operations use the same actual source and state:
 
 | Action | Payload |
 | --- | --- |
-| \`field.state\` | Empty object; returns workspace ID, revision and campaigns. |
-| \`field.inventory\` | \`directory\` for the complete saved device copy. |
-| \`field.copy\` | \`roundId\`, new \`destination\` directory. |
-| \`field.review\` | \`roundId\`, \`returnId\`, optional \`offset\`, \`limit\`, \`layerId\`, \`kind\`. |
-| \`field.inspect\` | \`projectId\`; requires the selected native runtime. |
-| \`field.reopen\` | Accepted field \`projectId\`; requires the selected native runtime. |
+| `field.state` | Empty object; returns workspace ID, revision and campaigns. |
+| `field.inventory` | `directory` for the complete saved device copy. |
+| `field.copy` | `roundId`, new `destination` directory. |
+| `field.review` | `roundId`, `returnId`, optional `offset`, `limit`, `layerId`, `kind`. |
+| `field.inspect` | `projectId`; requires the selected native runtime. |
+| `field.reopen` | Accepted field `projectId`; requires the selected native runtime. |
 
-Mutations use \`action\`, \`payload\`, current \`revision\`, stable \`requestId\` and \`actor\`. The native actions also carry \`nativeRuntime\`:
+Mutations use `action`, `payload`, current `revision`, stable `requestId` and `actor`. The native actions also carry `nativeRuntime`:
 
 ~~~json
 {
@@ -217,22 +217,24 @@ Mutations use \`action\`, \`payload\`, current \`revision\`, stable \`requestId\
 
 The example identifiers are placeholders for the actual retained workspace records. Keep the original action file for retry. Changing its actor or selected payload creates a different input; do not reuse the old request ID.
 
+`field.inventory` may resolve a path in the caller's working directory and returns its absolute `directory` with the saved inventory. Copy that exact absolute directory into `field.receive`; native receive rejects relative paths before freezing the worker request. The native child has its own workspace working directory, so this prevents the same action from selecting a different returned folder. The field UI already supplies the selected absolute directory. Retained workspace descendants, including paths through an ancestor alias, are not valid device-return or device-copy destinations.
+
 | Mutation | Required payload |
 | --- | --- |
-| \`field.commission\` | \`configuration\`, following the schema below. |
-| \`field.export\` | \`campaignId\`, \`profileId\`. |
-| \`field.receive\` | \`roundId\`, saved \`directory\`, \`expectedFilesSha256\` from the original inventory. |
-| \`field.accept\` | \`roundId\`, \`returnId\`, exact \`reviewSha256\`, actual receiving \`note\`. |
-| \`field.close\` | \`roundId\`, actual closure \`note\`. |
-| \`field.note\` | \`campaignId\`, project \`note\`. |
+| `field.commission` | `configuration`, following the schema below. |
+| `field.export` | `campaignId`, `profileId`. |
+| `field.receive` | `roundId`, saved `directory`, `expectedFilesSha256` from the original inventory. |
+| `field.accept` | `roundId`, `returnId`, exact `reviewSha256`, actual receiving `note`. |
+| `field.close` | `roundId`, actual closure `note`. |
+| `field.note` | `campaignId`, project `note`. |
 
 ### Commissioning configuration
 
-The UI writes schema \`starforge.qfield.commissioning.v1\`. It contains the selected \`projectId\`, title/instructions, profiles, editable layer rules, reference layer IDs and relation definitions.
+The UI writes schema `starforge.qfield.commissioning.v1`. It contains the selected `projectId`, title/instructions, profiles, editable layer rules, reference layer IDs and relation definitions.
 
-Each editable layer retains its original \`layerId\`, \`identityField\`, \`editableFields\`, addition/deletion/geometry booleans, \`formTitle\` and ordered \`fields\`. Each form field specifies name, label, group, widget and required flag; new fields also specify \`addType\`. Choice widgets carry label/value pairs; ranges carry minimum, maximum and step.
+Each editable layer retains its original `layerId`, `identityField`, `editableFields`, addition/deletion/geometry booleans, `formTitle` and ordered `fields`. Each form field specifies name, label, group, widget and required flag; new fields also specify `addType`. Choice widgets carry label/value pairs; ranges carry minimum, maximum and step.
 
-Each relation retains its ID/name, explicit association/composition strength, original parent and child layer IDs and the complete \`fieldPairs\` array of \`parentField\`/\`childField\`. This preserves native composite keys without flattening them into unrelated one-key relations.
+Each relation retains its ID/name, explicit association/composition strength, original parent and child layer IDs and the complete `fieldPairs` array of `parentField`/`childField`. This preserves native composite keys without flattening them into unrelated one-key relations.
 
 The canonical configuration is frozen for the commissioned campaign. A changed collection schema is a new explicit commissioning decision from the actual selected saved map. Existing collected rounds keep their original reviewed configuration.
 
@@ -240,12 +242,12 @@ The canonical configuration is frozen for the commissioned campaign. A changed c
 
 | Module | Responsibility |
 | --- | --- |
-| \`field.py\` | Original workspace mutations, exact selected inputs, retained native products, file closure, review paging and transfer. |
-| \`field_native.py\` | Native source/form commissioning, QFieldSync conversion, actual return snapshots, native synchronization and accepted project reopening. |
-| \`field_bridge.py\` | One original request-bound QGIS child, progress, exit and recovery. |
-| \`field_ui.py\` | Full Qt field/operator workflow inside the existing receiving dock. |
+| `field.py` | Original workspace mutations, exact selected inputs, retained native products, file closure, review paging and transfer. |
+| `field_native.py` | Native source/form commissioning, QFieldSync conversion, actual return snapshots, native synchronization and accepted project reopening. |
+| `field_bridge.py` | One original request-bound QGIS child, progress, exit and recovery. |
+| `field_ui.py` | Full Qt field/operator workflow inside the existing receiving dock. |
 
-The common joins are deliberately small: \`project_files\` includes retained field descriptors; \`reopen_project\` delegates field maps; the existing saved-action dispatcher routes \`field.*\`; the original CLI and packager include the complete field entry and source. Existing vector, source, project and receiving behavior remains the shared implementation.
+The common joins are deliberately small: `project_files` includes retained field descriptors; `reopen_project` delegates field maps; the existing saved-action dispatcher routes `field.*`; the original CLI and packager include the complete field entry and source. Existing vector, source, project and receiving behavior remains the shared implementation.
 
 ## Primary native sources
 
