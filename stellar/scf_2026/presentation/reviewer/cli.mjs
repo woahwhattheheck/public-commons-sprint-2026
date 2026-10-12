@@ -6,12 +6,16 @@ import {inspectGrantDemo, receiveGrantDemo, inspectGrantDemoWorkspace, exportGra
 
 export const help = `Stellar Forge · original grant demonstration
 
+  starforge grant-demo workbench --dir ABSOLUTE_DIRECTORY [--packet FILE --sha256 SHA256] [--port 0]
   starforge grant-demo inspect [--packet FILE] [--sha256 SHA256]
   starforge grant-demo receive --dir ABSOLUTE_DIRECTORY [--packet FILE --sha256 SHA256]
   starforge grant-demo inspect-workspace --dir ABSOLUTE_DIRECTORY
   starforge grant-demo open --dir ABSOLUTE_DIRECTORY [--port 0] [--token-env NAME]
   starforge grant-demo export --dir ABSOLUTE_DIRECTORY --out ABSOLUTE_FILE
 
+Workbench provides packet review, original Buyer result reads, controlled export
+and receiving-copy handoff in the browser. Open it from Applications to receive
+its private local connection, or use workbench-connection.json on this host.
 Receive defaults to the complete public MySQL purchase included in this release.
 Selected export packets require their exact SHA-256 from inspect/export.
 Open starts the original private Buyer console without a signing or observation
@@ -38,6 +42,7 @@ export async function main(argv = process.argv.slice(2), environment = process.e
     seen.add(flag); options[key] = value;
   }
   const allowed = {
+    workbench:['directory','packetFile','expectedSha256','sourceRoot','port'],
     inspect:['packetFile','expectedSha256','sourceRoot'],
     receive:['directory','packetFile','expectedSha256','sourceRoot'],
     'inspect-workspace':['directory','sourceRoot'],
@@ -47,6 +52,24 @@ export async function main(argv = process.argv.slice(2), environment = process.e
   if (!allowed[command] || Object.keys(options).some(key => !allowed[command].includes(key)))
     throw Object.assign(new Error('Unknown command or option for this command.'), {code:'REVIEWER_ARGUMENTS'});
   for (const key of ['directory','packetFile','sourceRoot','output']) if (options[key]) options[key] = resolve(options[key]);
+  if (command === 'workbench') {
+    if (options.port !== undefined) options.port = Number(options.port);
+    const {startReviewerWorkbench} = await import('./workbench.mjs');
+    let application, stopping = false;
+    const stop = async () => {
+      if (stopping) return; stopping = true;
+      try { await application?.close(); }
+      catch (error) { process.stderr.write((error.code ?? 'REVIEWER_CLOSE_FAILED') + ': ' + error.message + '\n'); process.exitCode = 2; }
+    };
+    process.once('SIGINT', stop); process.once('SIGTERM', stop);
+    try {
+      application = await startReviewerWorkbench(options);
+      if (stopping) { await application.close(); return; }
+      process.stdout.write(JSON.stringify(application.startup) + '\n');
+      if (process.stdout.isTTY) process.stdout.write('Workbench access code: ' + application.accessToken + '\n');
+      return application;
+    } catch (error) { process.removeListener('SIGINT', stop); process.removeListener('SIGTERM', stop); throw error; }
+  }
   if (command === 'open') {
     if (options.port !== undefined) options.port = Number(options.port);
     if (options.tokenEnv !== undefined) {
