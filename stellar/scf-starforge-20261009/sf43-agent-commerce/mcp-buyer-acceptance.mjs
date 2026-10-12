@@ -6,6 +6,7 @@ import {bindDiscoveryQuote, reviewPaymentRequired} from '../../../stellar-forge/
 import {decodeX402Header,checkStellarTestnetTransaction,createOfficialEventDecoder} from './verify.mjs';
 import {nativeAnalysisActions,nativeAnalysisSchema} from '../../../stellar-forge/mcp-paid-agent/native-analysis-schema.mjs';
 import {nativeCollectionActions,nativeCollectionsSchema} from '../../../stellar-forge/mcp-paid-agent/native-collections-schema.mjs';
+import {nativeDuckDBActions,nativeDuckDBSchema} from '../../../stellar-forge/mcp-paid-agent/native-duckdb-schema.mjs';
 
 const REPORT=(reason,other={})=>({decision:'NOT_AUTHORIZED',reason,...other});
 /**
@@ -90,15 +91,15 @@ export async function executeDiscoveredHttpPayment({
 // owns streamable HTTP initialize/tools/list/tools/call JSON-RPC and consent state.
 export const mcpAgentCommerceTool = Object.freeze({
   name:'sf43_discover_review_and_pay',
-  description:'Use an independently approved native Stellar buyer for a discovered HTTP API. Native SF88 supports ordinary requests, complete object-* acquisition from an operator-registered S3 description, and dataset-* acquisition from an original SF30 dataset description. Dataset customers select an exact snapshot/query and whole-query limits, run/recover original per-page purchases, deliver through SF100, read typed rows or exact files, and inspect/finalize original accounting. The analysis action uses a host-registered original analytical workspace to import completed data, review editions, run SQL, publish reports and reopen verified exports. The collections action operates an existing host-registered collection browser: exact source review, original queue/run/pause/recovery, retained approvals, complete exports and saved customer files. All purchase types share the original operator approval gate and ledger. Legacy callbacks retain their original interface; a tool call cannot replace approval.',
+  description:'Use an independently approved native Stellar buyer for a discovered HTTP API. Native SF88 supports ordinary requests, complete object-* acquisition from an operator-registered S3 description, and dataset-* acquisition from an original SF30 dataset description. Dataset customers select an exact snapshot/query and whole-query limits, run/recover original per-page purchases, deliver through SF100, read typed rows, original semantic dictionaries or exact files, and inspect/finalize original accounting. Host-received finalized rooms remain read-only, with their original SF100 or SF88 format. The analysis action uses a host-registered original analytical workspace to import completed data, review editions, run SQL, publish reports and reopen verified exports. The duckdb action uses the original separately owned DuckDB customer service for exact source mapping, immutable editions, saved SQL, complete Parquet/CSV exports and portable warehouse handoffs. The collections action operates an existing host-registered collection browser: exact source review, original queue/run/pause/recovery, retained approvals, complete exports and saved customer files. All purchase types share the original operator approval gate and ledger. Legacy callbacks retain their original interface; a tool call cannot replace approval.',
   inputSchema:{type:'object',additionalProperties:false,
     properties:{
       action:{type:'string',enum:['prepare','execute','status','history','cancel','recover','read',
         'object-sources','object-list','object-prepare','object-history','object-status','object-run',
         'object-cancel','object-recover','object-assemble','object-read','object-accounting','object-finalize',
         'dataset-sources','dataset-describe','dataset-prepare','dataset-history','dataset-status','dataset-run',
-        'dataset-cancel','dataset-recover','dataset-deliver','dataset-rows','dataset-read','dataset-accounting','dataset-finalize',
-        ...nativeAnalysisActions,...nativeCollectionActions],
+        'dataset-cancel','dataset-recover','dataset-deliver','dataset-rows','dataset-read','dataset-semantics','dataset-accounting','dataset-finalize',
+        ...nativeAnalysisActions,...nativeCollectionActions,...nativeDuckDBActions],
         description:'Native workspace action; omitted means execute. object-* and dataset-* use operator-registered original descriptions and native acquisition sessions. Non-native callbacks may support only the original execute arguments.'},
       intentId:{type:'string',pattern:'^[A-Za-z0-9._:-]{1,128}$',description:'Required by the native workspace. Keep this same ID to inspect or recover an existing operation.'},
       search:{type:'string',minLength:1,maxLength:256},targetResourceURL:{type:'string'},
@@ -110,19 +111,22 @@ export const mcpAgentCommerceTool = Object.freeze({
       limit:{type:'integer',minimum:1,maximum:100},cursor:{type:'string'},
       sourceId:{type:'string',pattern:'^[a-f0-9]{64}$',description:'Exact registered descriptor ID returned by object-sources or dataset-sources. Tool arguments cannot import a local file.'},
       objectId:{type:'string',pattern:'^[A-Za-z0-9_-]{1,64}$',description:'Original merchant object ID from object-list.'},
-      acquisitionId:{type:'string',pattern:'^[A-Za-z0-9._:-]{1,128}$',description:'Stable complete acquisition identity. Reuse it for run, recovery, accounting and file reads.'},
+      acquisitionId:{type:'string',pattern:'^[A-Za-z0-9._:-]{1,128}$',description:'Stable acquisition or host-received finalized dataset ID. Received IDs permit original rows, meaning, file and analysis reads; they cannot operate another owner’s purchase.'},
       chunkBytes:{type:'integer',minimum:1,maximum:1048576,description:'Optional native descriptor-bounded chunk length. Whole products keep their exact fixed length.'},
       maxTotalAtomic:{type:'string',pattern:'^[1-9][0-9]*$',description:'Explicit maximum for the complete object or dataset query. The original per-request cap and configured cumulative ledger still apply.'},
       offset:{type:'integer',minimum:0,description:'Zero-based list/status/accounting offset, or row offset for dataset-rows.'},
       query:{type:'object',additionalProperties:{type:'string',maxLength:8192},maxProperties:32,
-        description:'Original dataset query parameters as strings: fields, limit, where_COLUMN, gt/gte/lt/lte_COLUMN and sort. Only descriptor-enabled typed capabilities are accepted. The registered snapshot is pinned; initial cursors are not accepted.'},
+        description:'Original dataset query parameters as strings: fields, limit, where_COLUMN, gt/gte/lt/lte_COLUMN, sort and the original semantics SHA256 pin. Only descriptor-enabled typed capabilities are accepted. The registered snapshot is pinned; initial cursors are not accepted.'},
       maxPages:{type:'integer',minimum:1,maximum:4096},
       maxRows:{type:'integer',minimum:1,maximum:1000000},
       maxPageBytes:{type:'integer',minimum:1024,maximum:2097152},
-      filename:{type:'string',enum:['dataset.jsonl','dataset.csv','review.html','manifest.json'],
+      dictionarySection:{type:'string',enum:['columns','virtual-columns','issues','table'],
+        description:'Original published dictionary section for dataset-semantics. Its selected query fields and optional SQL mapping remain explicit.'},
+      filename:{type:'string',enum:['dataset.jsonl','dataset.csv','review.html','manifest.json','semantics.json'],
         description:'Exact original SF100 delivered file for dataset-read; return its bytes without reformatting.'},
       ...nativeAnalysisSchema.properties,
-      ...nativeCollectionsSchema.properties
+      ...nativeCollectionsSchema.properties,
+      ...nativeDuckDBSchema.properties
     },
     anyOf:[
       {required:['search','targetResourceURL','maxAtomic'],properties:{action:{enum:['prepare','execute']}}},
@@ -136,9 +140,11 @@ export const mcpAgentCommerceTool = Object.freeze({
       {required:['action','sourceId','acquisitionId','query','maxPages','maxTotalAtomic','maxRows','maxPageBytes'],
         properties:{action:{const:'dataset-prepare'}}},
       {required:['action','acquisitionId'],properties:{action:{enum:['dataset-status','dataset-run','dataset-cancel',
-        'dataset-recover','dataset-deliver','dataset-rows','dataset-accounting','dataset-finalize']}}},
+        'dataset-recover','dataset-deliver','dataset-rows','dataset-semantics','dataset-accounting','dataset-finalize']}}},
       {required:['action','acquisitionId','filename'],properties:{action:{const:'dataset-read'}}},
       ...nativeAnalysisSchema.anyOf,
-      ...nativeCollectionsSchema.anyOf
+      ...nativeCollectionsSchema.anyOf,
+      ...nativeDuckDBSchema.anyOf
     ]}
 });
+

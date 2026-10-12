@@ -12,7 +12,9 @@ def register_static(static):
     static.update({"/operations.mjs": ("operations.mjs", "text/javascript; charset=utf-8"),
                    "/operations.css": ("operations.css", "text/css; charset=utf-8"),
                    "/forecast.mjs": ("forecast.mjs", "text/javascript; charset=utf-8"),
-                   "/forecast.css": ("forecast.css", "text/css; charset=utf-8")})
+                   "/forecast.css": ("forecast.css", "text/css; charset=utf-8"),
+                   "/portfolio.mjs": ("portfolio.mjs", "text/javascript; charset=utf-8"),
+                   "/portfolio.css": ("portfolio.css", "text/css; charset=utf-8")})
 
 
 def store(handler):
@@ -30,7 +32,7 @@ def read(handler, parsed):
     if path == "/api/operations":
         handler.send(200, {"cases": ops.list(query.get("planId", [None])[0])})
         return True
-    match = re.fullmatch(r"/api/operations/(operation-[a-f0-9]{32})(?:/(report|history|export.zip|sources/source-[a-f0-9]{32}|reviews/review-[a-f0-9]{32}|forecasts(?:/forecast-[a-f0-9]{32}(?:/export.zip)?)?))?", path)
+    match = re.fullmatch(r"/api/operations/(operation-[a-f0-9]{32})(?:/(report|history|export.zip|sources/source-[a-f0-9]{32}|reviews/review-[a-f0-9]{32}|forecasts(?:/forecast-[a-f0-9]{32}(?:/export.zip)?)?|portfolios(?:/portfolio-[a-f0-9]{32}(?:/export.zip)?)?))?", path)
     if not match:
         raise Problem("Operations page not found.", 404, "NOT_FOUND")
     ident, action = match.groups()
@@ -50,6 +52,14 @@ def read(handler, parsed):
             handler.send(200, ops.export_forecast(ident, fid), "application/zip", fid + ".zip")
         else:
             handler.send(200, ops.forecast(ident, fid))
+    elif action == "portfolios":
+        handler.send(200, {"portfolios": ops.list_portfolios(ident)})
+    elif action.startswith("portfolios/"):
+        pid = action.split("/")[1]
+        if action.endswith("/export.zip"):
+            handler.send(200, ops.export_portfolio(ident, pid), "application/zip", pid + ".zip")
+        else:
+            handler.send(200, ops.portfolio(ident, pid))
     elif action.startswith("sources/"):
         metadata, raw = ops.source(ident, action.split("/")[1])
         # All original documents are downloads, never executable inline content.
@@ -76,10 +86,13 @@ def write(handler, parsed):
     elif path == "/api/operations":
         result = ops.create(handler.json_body())
     else:
-        match = re.fullmatch(r"/api/operations/(operation-[a-f0-9]{32})/(command|forecast-preview)", path)
+        match = re.fullmatch(r"/api/operations/(operation-[a-f0-9]{32})/(command|forecast-preview|portfolio-preview|portfolio-seed|portfolio-selection)", path)
         if not match:
             raise Problem("Operations command not found.", 404, "NOT_FOUND")
         body = handler.json_body()
-        result = ops.preview_forecast(match.group(1), body) if match.group(2) == "forecast-preview" else ops.command(match.group(1), body)
+        methods = {"command": ops.command, "forecast-preview": ops.preview_forecast,
+                   "portfolio-preview": ops.preview_portfolio, "portfolio-seed": ops.seed_portfolio,
+                   "portfolio-selection": ops.select_portfolio}
+        result = methods[match.group(2)](match.group(1), body)
     handler.send(200, result)
     return True

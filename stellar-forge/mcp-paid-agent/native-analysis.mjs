@@ -11,6 +11,7 @@ import {createSavedFileReader} from './native-file.mjs';
 import {createNativeWorkbookActions} from './native-analysis-workbooks.mjs';
 import {createNativeSourceActions} from './native-analysis-sources.mjs';
 import {createNativeArchiveActions} from './native-analysis-archives.mjs';
+import {createNativeSemanticActions} from './native-analysis-semantics.mjs';
 
 const SCHEMA='stellar-forge.mcp-native-analysis.v1';
 const CUSTOMER='stellar-forge.customer-analysis.v1';
@@ -119,6 +120,7 @@ export function createNativeAnalysis({manifest,completedDataset,completedObject,
   const workbooks=createNativeWorkbookActions({reads,parse});
   const sources=createNativeSourceActions({manifest,completedObject,completedResponse});
   const archives=createNativeArchiveActions({reads,parse});
+  const meanings=createNativeSemanticActions();
   let closed=false;
   const available=()=>need(!closed&&!isClosed(),'MCP_NATIVE_WORKSPACE_CLOSING');
   async function roots(create=false){
@@ -128,7 +130,7 @@ export function createNativeAnalysis({manifest,completedDataset,completedObject,
     need((await json(join(root,'format.json'))).schema===SCHEMA,'MCP_ANALYSIS_FORMAT_CHANGED');
     return true;
   }
-  async function request(connection,route,body,signal){
+  async function request(connection,route,body,signal,{raw:asBytes=false,maximum=MAX_JSON}={}){
     available();
     const options={method:body===undefined?'GET':'POST',redirect:'error',cache:'no-store',
       headers:{'X-Analysis-Capability':connection.capability,'Origin':connection.url.origin},
@@ -140,7 +142,7 @@ export function createNativeAnalysis({manifest,completedDataset,completedObject,
       if(shutdown.signal.aborted||signal?.aborted)fail('MCP_ANALYSIS_CALL_INTERRUPTED_REOPEN_ORIGINAL_JOB');
       fail(body===undefined?'MCP_ANALYSIS_SERVICE_UNAVAILABLE':'MCP_ANALYSIS_REPLY_UNCERTAIN_REOPEN_ORIGINAL_JOB');
     }
-    const raw=await readResponse(response,MAX_JSON),value=parse(raw);
+    const raw=await readResponse(response,maximum),value=asBytes&&response.ok?raw:parse(raw);
     if(!response.ok){
       const code=/^[A-Z0-9_]{1,180}$/.test(value?.error??'')?value.error:'MCP_ANALYSIS_HTTP_'+response.status;
       fail(code);
@@ -261,11 +263,22 @@ export function createNativeAnalysis({manifest,completedDataset,completedObject,
       name(body.name);positive(body.expected_revision,true);
       need(typeof body.acquisition_id==='string'&&/^[A-Za-z0-9._:-]{1,128}$/.test(body.acquisition_id),'MCP_ANALYSIS_ACQUISITION_ID_REQUIRED');
       const original=await completedDataset(body.acquisition_id);
-      need(original.acquisitionId===body.acquisition_id&&HASH.test(original.configurationSha256??'')&&
-        HASH.test(original.sourceBindingSha256??'')&&typeof original.sessionId==='string','MCP_ANALYSIS_COMPLETED_DATASET_REQUIRED');
-      value=publicSource(await post('/api/native-dataset-source',{name:body.name,expected_revision:body.expected_revision,
-        session:original.session,room:original.room,expected_native:{sessionId:original.sessionId,
-          configurationSha256:original.configurationSha256,sourceBindingSha256:original.sourceBindingSha256}}));
+      need(original.acquisitionId===body.acquisition_id&&HASH.test(original.sourceBindingSha256??''),
+        'MCP_ANALYSIS_COMPLETED_DATASET_REQUIRED');
+      if(original.sourceFormat==='SF100_SCAN'){
+        need(original.session===null&&HASH.test(original.manifestSha256??''),
+          'MCP_ANALYSIS_FINALIZED_DATASET_REQUIRED');
+        value=publicSource(await post('/api/native-finalized-dataset-source',{
+          name:body.name,expected_revision:body.expected_revision,session:null,room:original.room,
+          expected_native:{sourceFormat:'SF100_SCAN',sourceBindingSha256:original.sourceBindingSha256,
+            manifestSha256:original.manifestSha256}}));
+      }else{
+        need(HASH.test(original.configurationSha256??'')&&typeof original.sessionId==='string',
+          'MCP_ANALYSIS_COMPLETED_DATASET_REQUIRED');
+        value=publicSource(await post('/api/native-dataset-source',{name:body.name,expected_revision:body.expected_revision,
+          session:original.session,room:original.room,expected_native:{sessionId:original.sessionId,
+            configurationSha256:original.configurationSha256,sourceBindingSha256:original.sourceBindingSha256}}));
+      }
     }else if(op==='response-source'){
       name(body.name);positive(body.revision);
       value=await get('/api/response-source/'+encodeURIComponent(body.name)+queryString({revision:body.revision,collection:body.collection,sse_data:body.sse_data}));
@@ -292,6 +305,9 @@ export function createNativeAnalysis({manifest,completedDataset,completedObject,
     else if(op==='cancel-query-export')value=publicJob(await post('/api/query-exports/'+id(body.id)+'/cancel',{}));
     else if(op==='query-export-file')value=await queryExportFile(record,connection,body,context.signal);
     else if(op==='file')value=await file(record,connection,body,context.signal);
+    else if(meanings.handles(op))value=await meanings.call({operation:op,body,get,
+      cacheScope:record.workspaceId+':'+connection.url.href+':'+connection.capability,
+      getBytes:(route,maximum)=>request(connection,route,undefined,context.signal,{raw:true,maximum})});
     else if(sources.handles(op))value=await sources.call({operation:op,body,post});
     else if(workbooks.handles(op))value=await workbooks.call({operation:op,body,record,state:connection.state,get,post});
     else if(archives.handles(op))value=await archives.call({operation:op,body,record,state:connection.state,get,post});
@@ -304,6 +320,7 @@ export function createNativeAnalysis({manifest,completedDataset,completedObject,
     if(closed)return;closed=true;shutdown.abort();await Promise.allSettled([...pending]);
     workbooks.close();
     archives.close();
+    meanings.close();
     // The original analysis service belongs to its host/browser. It keeps its own jobs and lease.
   }};
 }

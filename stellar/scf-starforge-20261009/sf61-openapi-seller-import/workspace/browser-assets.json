@@ -162,6 +162,20 @@
         "../har/review.css",
         "text/css; charset=utf-8"
       ]
+    ],
+    [
+      "/route-sheet-model.mjs",
+      [
+        "route-sheet-model.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/route-sheet-browser.mjs",
+      [
+        "route-sheet-browser.mjs",
+        "text/javascript; charset=utf-8"
+      ]
     ]
   ]
 }

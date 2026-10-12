@@ -20,6 +20,7 @@ files through the [native workspace](NATIVE_WORKSPACE.md).
 | Expose an existing merchant function as a paid MCP tool | [Native paid tool server](PAID_TOOLS.md) |
 | Use the existing SF88 native HTTP purchase and returned-file workflow | [Native workspace](NATIVE_WORKSPACE.md) |
 | Acquire, resume, assemble and read a complete original S3 object | [Native MCP object acquisition](OBJECTS.md) |
+| Use the existing customer warehouse for source review, saved SQL, comparisons and complete exports through an agent | [DuckDB customer and agent workspace](DUCKDB.md) |
 | Preserve and inspect quote history across restart | [Durable workspace](DURABILITY.md) |
 | Read, export and recover complete remote MCP results | [Result inbox and native Node API](RESULTS.md) |
 | Inspect an original Stellar transaction and retain failed-settlement details | [Payment inspection and recovery](PAYMENT_RECOVERY.md) |
