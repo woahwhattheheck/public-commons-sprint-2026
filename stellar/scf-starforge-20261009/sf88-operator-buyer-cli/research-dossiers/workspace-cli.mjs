@@ -30,6 +30,14 @@ Write an original reviewed request from JSON:
   openalex-editions
   receive-openalex --id DOSSIER --input REQUEST.json
 
+Review and receive an original source bundle:
+  bundle-preview --id DOSSIER --question QUESTION --file BUNDLE.json [--sha256 SHA256]
+  import-bundle --id DOSSIER --question QUESTION --file BUNDLE.json --revision N [--sha256 SHA256]
+
+Preview returns the exact bundle hash, current revision, source terms and findings.
+Import binds those original bytes to that question in one saved revision.
+Repeat the same file and question after a lost reply to recover the saved result.
+
 Receive a completed original Object Buyer file:
   object-inputs --id DOSSIER [--after-session NAME --snapshot SHA256 --limit N]
   object-reviews --id DOSSIER [--after-review ID --limit N]
@@ -75,6 +83,8 @@ const commandOptions=Object.freeze({
   compare:['id','before','after','section','offset','limit'],
   receive:['id','input','source-file','sha256'],reference:['id','input','source-file','sha256'],
   'openalex-editions':[],'receive-openalex':['id','input'],
+  'bundle-preview':['id','question','file','sha256'],
+  'import-bundle':['id','question','file','sha256','revision'],
   'object-inputs':['id','after-session','snapshot','limit'],
   'object-reviews':['id','after-review','limit'],'object-review':['id','input'],'object-prepare':['id','input'],
   'pipeline-list':['id','after-operation','limit'],'pipeline-review':['id','operation'],
@@ -136,6 +146,19 @@ export async function main(argv=process.argv.slice(2),{output=process.stdout}={}
       }
       case 'openalex-editions':result=await client.openAlexEditions();break;
       case 'receive-openalex':result=await client.receiveOpenAlex(required('id'),await input());break;
+      case 'bundle-preview':{
+        result=await client.previewSourceBundleFile(required('id'),{
+          questionId:required('question'),file:resolve(required('file')),
+          ...selected({sha256:values.sha256===undefined?undefined:digest('sha256')})});break;
+      }
+      case 'import-bundle':{
+        required('revision');const expectedRevision=number('revision');
+        need(expectedRevision>=1,'INTEGER_ARGUMENT_REQUIRED');
+        const sha256=values.sha256===undefined?undefined:digest('sha256');
+        result=await client.receiveSourceBundleFile(required('id'),{
+          questionId:required('question'),file:resolve(required('file')),expectedRevision,
+          ...selected({sha256,expectedBundleSha256:sha256})});break;
+      }
       case 'object-inputs':result=await client.objectInputs(required('id'),selected({
         after:values['after-session'],snapshot:values.snapshot,limit:number('limit')}));break;
       case 'object-reviews':result=await client.objectReviews(required('id'),selected({
