@@ -149,6 +149,216 @@ A full field operation carries its source connection and project/form identities
 
 Applications, CLI, SDK and MCP share that same workspace. Customer-specific commissioning can select several forms and two reporting periods while retaining each original source boundary and customer-owned indicator definition. Record the agreed selection and acceptance in the existing customer Workshare; use the native dataset/review/source results for its actual receiving.
 
+## Commission the same native field workspace
+
+The managed Application also opens the original commissioning operator at
+/commissioning/. Startup returns commissioningUrl beside the field-workspace URL.
+Both use the same private token, workspace identity, original Store and lifetime
+lease.
+
+The source binding is selected when that host starts. Use the actual host-owned
+connection JSON and, when needed, its private environment JSON:
+
+~~~sh
+starforge odk-central-workspace --workspace /private/field-workspace \
+  --operator "Field reporting operator" \
+  --commissioning-connection /private/source/central-connection.json \
+  --commissioning-environment /private/source/central-environment.json
+~~~
+
+The connection records url, authEnv, optional id/name/allowLoopback and source
+references. Its authEnv names the variable containing the complete Authorization
+header; the value remains in the private host environment. Configure any required
+CA trust in the original launcher environment. Do not put environment values in an
+agreement, a host handover, a tool request or a delivered source packet.
+
+Applications exposes the corresponding existing connection/environment inputs.
+A trusted programmatic launcher may supply commissioningConnection directly.
+Omitting the binding permits retained inspection and handover; provider operations
+still require the original selected connection. Changing source is an explicit
+host selection followed by a new appropriate inspection/definition, while prior
+source records remain intact.
+
+The complete agreement is the original
+stellar-forge.central-source-agreement.v1 JSON. It retains the accountable owner,
+technical receiver, actual origin/project/forms, reporting timezone, two exact
+period boundaries, late-edit and review-state interpretation, measure definitions,
+cross-form identity rules, approved output fields and media decisions. Incomplete
+drafts can be saved; readiness reports the missing decisions.
+
+Use the exact SDK actions in the original workflow:
+
+~~~js
+const observation = await client.commissioningInspect({
+  id: retainedInspectionId,
+  projectId: actualProjectId,
+});
+const draft = await client.commissioningSaveDraft({
+  id: originalDraftId,
+  requestId: retainedDraftSaveId,
+  expectedRevision: currentDraftRevision,
+  agreement: completeSourceAgreement,
+});
+const readiness = await client.commissioningReadiness(draft.agreement);
+if (!readiness.ready) {
+  throw new Error(JSON.stringify(readiness.issues)); // Correct/save the draft before preparation.
+}
+const prepared = await client.commissioningPrepare({
+  id: retainedCommissionId,
+  draftId: draft.id,
+  draftRevision: draft.revision,
+  inspectionId: observation.id,
+  // existingPlanIds: [firstOriginalPlanId, secondOriginalPlanId],
+});
+await client.commissioningInstall({id: prepared.id});
+const first = await client.commissioningCapturePeriod({
+  id: prepared.id,
+  period: 0,
+  requestId: retainedFirstPeriodRequestId,
+});
+~~~
+
+Every ID in this example is retained by the calling operation before dispatch.
+The first inspection can omit projectId to list accessible projects. Selecting a
+particular project or acquiring a fresh observation uses a separate original
+inspection ID; an exact completed repeat returns the first retained source.
+
+SaveDraft binds its original requestId to the complete draft body and expected
+draft revision. Prepare freezes that exact draft revision, inspection and native
+mapping. ExistingPlanIds must identify the two original matching period plans.
+CapturePeriod binds its requestId to one period and returns the original native
+capture. Inspect/wait/review that capture through the existing field methods, then
+use commissioningResumeCapture only to resume that same capture when required.
+
+After both captures are complete and their current original reviews are accepted:
+
+~~~js
+const handover = await client.commissioningDeliver({
+  id: prepared.id,
+  requestId: retainedHandoverRequestId,
+  captures: [
+    {period: 0, captureId: firstCaptureId, reviewId: firstAcceptedReviewId},
+    {period: 1, captureId: secondCaptureId, reviewId: secondAcceptedReviewId},
+  ],
+});
+~~~
+
+Deliver preserves that complete source/review pair and original generated output
+IDs. An uncertain response is recovered with the same request. Later changed
+source or reviews use a new capture/review and handover request; completed earlier
+outputs remain available. Commissioning state contains the retained definitions,
+host receipts, observations, captures and delivery records.
+
+The source/report agreement explicitly records reviewStates=all,
+lateEdits=current-state-at-capture and portableSource=complete-selected-capture.
+The native reader preserves available versions as observed during acquisition.
+It does not reconstruct a historical source state merely from a reporting-period
+label.
+
+**Output projection and complete source have different purposes.** Each delivered
+CSV uses the approved field list, including explicitly approved native row and
+parent keys. The native dataset's rows.jsonl and source pages, retained XML/media,
+and complete archive carry the selected capture's full original source. An
+approved CSV field list does not remove those other retained bytes. A receiving
+operator chooses the agreed projection or complete source for the intended
+recipient and keeps the original source rights and interpretation attached.
+
+The original commissioning handover includes datasets and reports with their
+native IDs/file receipts, the complete source/report agreement, readable handover
+and original archive. Use sourceFile for its retained document hashes and
+exportFile for dataset/report/archive members. The same retained-file tools
+stream these exact native files. After restoring its original archive, the
+commissioner can report RECEIVED_PORTABLE using the actual receivedArchive
+receipt without reacquiring provider data or inventing a producer archive row.
+
+The kickoff record is proposed or source-referenced agreed. The explicit working
+calendar retains weekdays, excluded dates and agreement/input/capacity references.
+Preparing it does not book staff, send a customer message, accept commercial
+terms or establish a paid start date.
+
+## Commissioning SDK and typed operator mapping
+
+| SDK method | Original typed tool |
+| --- | --- |
+| commissioningState | merchant_odk_commissioning_state |
+| Authenticated commissioning URL | merchant_odk_commissioning_browser |
+| commissioningRecordHost | merchant_odk_commissioning_record_host |
+| commissioningInspect | merchant_odk_commissioning_inspect |
+| commissioningSaveDraft | merchant_odk_commissioning_draft_save |
+| commissioningReadiness | merchant_odk_commissioning_readiness |
+| commissioningPrepare | merchant_odk_commissioning_prepare |
+| commissioningInstall | merchant_odk_commissioning_install |
+| commissioningCapturePeriod | merchant_odk_commissioning_capture_period |
+| commissioningResumeCapture | merchant_odk_commissioning_capture_resume |
+| commissioningDeliver | merchant_odk_commissioning_deliver |
+
+The state tools page their original outer collections and retain explicit totals
+and continuation offsets. Individual agreements and retained definitions remain
+complete. All commissioning actions use /api/commissioning on the same listener,
+while field and publisher actions use /api/actions. The shared action helper
+validates those native namespaces and preserves original result/error envelopes.
+Readiness sends the complete agreement itself to the original method.
+
+An actual DCE4 central-host handover can be retained through RecordHost. This is
+the source/status handover with version, operation, observed containers and
+connection alias. It is separate from the private environment file and the
+upstream Central backup. RecordHost verifies the connection against the one
+selected by this running commissioner.
+
+The SDK exports the original createCentralCommissioning,
+openCentralCommissioning, serveCentralCommissioning and
+createCommissioningExtension for trusted host composition, plus the unchanged
+agreementReadiness and deliverySchedule helpers. Managed callers compose on
+their existing workspace/server; they do not start the direct service a second
+time.
+
+## Carry original publisher versions and releases
+
+The full workspace archive now retains its original publisher source graph:
+dataset generations, prepared packages, release history and interrupted native
+preparations. The backup operation captures publisher source before its original
+SQLite snapshot. This source is distinct from automatically activating a release
+on a receiving host.
+
+~~~js
+const source = await client.capturePublisher({
+  id: retainedPublisherSnapshotId,
+  expectedGeneration: reviewedPublisherGeneration,
+});
+const received = await client.receivePublisher({
+  id: retainedPublisherReceivingId,
+  snapshotId: source.id,
+});
+const transfers = await client.publisherTransfers();
+~~~
+
+Retain both IDs and the reviewed generation before calling. Exact repeats recover
+the original selected source. The receiver uses the existing native
+dataset-version and SF82 package/release APIs, records original-to-local IDs and
+digests, and retains the receiving host's actual paths. It preserves all selected
+original generations. The full original transfer state is available through
+publisherTransfers as snapshots and receiving; ordinary workspace state supplies
+their summary collections.
+
+| SDK method | Original typed tool |
+| --- | --- |
+| capturePublisher | merchant_odk_publisher_capture |
+| receivePublisher | merchant_odk_publisher_receive |
+| publisherTransfers | merchant_odk_publisher_transfers |
+
+A completed receiver may return COMPLETE_WITH_PENDING. Incomplete or invalid
+native preparation is retained explicitly with its diagnostics and exact
+historical source; only complete original components become usable native stores
+or staged releases. ResumePreparations preserves each original prepareRelease
+request for its receiving-host continuation. Its state does not claim a missing
+active release is available locally.
+
+Activation remains the existing release action, with the currently reviewed
+local generation, mapped local release ID and reason. An imported original active
+ID is useful provenance; it does not authorize changing the receiving publisher.
+Use the current native release status and the mapped output before an intended
+activation or rollback.
+
 ## Source and implementation references
 
 - ODK Central API and OData documentation: https://docs.getodk.org/central-api/ and https://docs.getodk.org/central-api-odata/
