@@ -147,3 +147,7 @@ The repository includes the completed original native run and an exportable cust
 The example uses seven real public flight records retained from OpenSearch 3.9.0. Its saved engineering criterion grades flights priced at or below the retained cohort’s lower median, 253.21006490337038. Native precision at three returned results was 1.0 for lowest-price-first and 0.0 for highest-price-first. Both variant/case pairs completed on the same snapshot, with all six returned hits judged.
 
 The receiving workflow retained the original native result hash, saved set, criterion and original documents; replayed the same request; exported customer artifacts; promoted the selected variant; prepared the original merchant and generated client; and reopened the same records after closing the workspace. The sample’s source and judgment criterion remain in the saved run so operators can replace it with their own actual customer judgments.
+
+## Maintained MCP receiving
+
+The [complete MCP receiving record](../../stellar/scf-starforge-20261009/sf30-seller-sdk/opensearch/receiving/mcp-native-run.json) joins the original retained-workspace flow with the maintained host and transport checks. It covers exact native request recovery, full journal and immutable-history pagination, judgment revision updates and replay, original package/client recovery, pinned byte exports and workspace reopen. The initialized merchant subprocess advertised 389 tools including all 26 OpenSearch tools. Both default and configured HTTP/stdio limits were exercised, including oversized input recovery.
