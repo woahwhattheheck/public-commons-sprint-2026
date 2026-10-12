@@ -26,6 +26,9 @@ STATIC = {"/": ("index.html", "text/html; charset=utf-8"),
           "/style.css": ("style.css", "text/css; charset=utf-8")}
 VERSION = "1.0.0"
 
+import operations_http
+operations_http.register_static(STATIC)
+
 
 def atomic_private(path, data):
     path = Path(path)
@@ -149,6 +152,8 @@ class Handler(BaseHTTPRequestHandler):
         if path in STATIC:
             filename, mime = STATIC[path]
             return self.send(200, (HERE / filename).read_bytes(), mime)
+        if operations_http.read(self, parsed):
+            return
         workspace = self.server.workspace
         if path == "/api/access":
             return self.send(200, {"available": True, "version": VERSION, "sourceUrl": SOURCE_URL})
@@ -184,6 +189,8 @@ class Handler(BaseHTTPRequestHandler):
     def write(self):
         path = urlsplit(self.path).path
         self.guard(api=True)
+        if operations_http.write(self, urlsplit(self.path)):
+            return
         workspace = self.server.workspace
         if path == "/api/import-bundle":
             raw = self.raw_body()

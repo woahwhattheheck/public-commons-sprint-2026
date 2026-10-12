@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>Fiscal Data · Stellar Forge</title>
+  <link rel="stylesheet" href="./style.css">
+  <script src="./app.js" type="module"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to workspace</a>
+  <header class="topbar">
+    <div class="brand"><span class="brand-mark" aria-hidden="true">SF</span><div><p class="eyebrow">Stellar Forge / Data operations</p><h1>Fiscal Data</h1></div></div>
+    <div class="topbar-actions"><span id="connection" class="status" role="status">Opening workspace…</span><button id="refresh-state" class="quiet" type="button">Refresh</button></div>
+  </header>
+  <div class="workspace">
+    <aside class="sidebar">
+      <nav aria-label="Workspace sections">
+        <a href="#capture" data-view="capture" aria-current="page"><span class="nav-number">01</span>Sources &amp; captures<span id="nav-captures" class="nav-count">0</span></a>
+        <a href="#editions" data-view="editions"><span class="nav-number">02</span>Review editions<span id="nav-editions" class="nav-count">0</span></a>
+        <a href="#compare" data-view="compare"><span class="nav-number">03</span>Compare &amp; export<span id="nav-comparisons" class="nav-count">0</span></a>
+        <a href="#publish" data-view="publish"><span class="nav-number">04</span>Publish &amp; deliver</a>
+      </nav>
+      <div class="sidebar-note"><p class="eyebrow">Source authority</p><p>U.S. Department of the Treasury</p><a href="https://fiscaldata.treasury.gov/" target="_blank" rel="noopener noreferrer">Fiscal Data website ↗</a><a href="https://fiscaldata.treasury.gov/api-documentation/" target="_blank" rel="noopener noreferrer">API documentation ↗</a></div>
+      <div class="worker-card"><p class="eyebrow">Capture worker</p><p id="worker-status">Opening…</p><p id="worker-detail" class="muted small">Progress is retained after each source page.</p></div>
+    </aside>
+    <main id="main" tabindex="-1">
+      <div id="notice" class="notice" aria-live="polite" hidden></div>
+      <div id="warnings" class="warnings" hidden></div>
+      <section id="view-capture" class="view" aria-labelledby="capture-heading">
+        <div class="page-heading"><div><p class="eyebrow">01 / Source acquisition</p><h2 id="capture-heading">Sources &amp; captures</h2><p>Choose a Treasury endpoint, inspect its fields, and retain every page of the selected source query.</p></div></div>
+        <div class="split">
+          <section class="panel source-picker" aria-labelledby="saved-sources-heading">
+            <div class="panel-heading"><h3 id="saved-sources-heading">Saved sources</h3><button id="new-source" type="button" class="quiet">New</button></div>
+            <div id="sources-list" class="select-list"><p class="empty">Your saved source queries will appear here.</p></div>
+            <div class="panel-footer"><button id="refresh-catalog" type="button" class="secondary full">Refresh Treasury catalogue</button><p id="catalog-status" class="muted small">Discover endpoints from Treasury’s current metadata feed.</p></div>
+          </section>
+          <section class="panel" aria-labelledby="source-heading">
+            <div class="panel-heading"><h3 id="source-heading">Source query</h3><span id="source-revision" class="muted small">New source</span></div>
+            <form id="source-form" class="form-grid">
+              <label class="span-2">Source name<input id="source-name" name="name" required maxlength="160" placeholder="Daily federal debt"></label>
+              <label class="span-2">Treasury endpoint<input id="source-endpoint" name="endpoint" required list="endpoints" spellcheck="false" placeholder="/v2/accounting/od/debt_to_penny"><datalist id="endpoints"></datalist><span class="help">Start with /v1/ or /v2/. Select from the catalogue or enter an official endpoint.</span></label>
+              <label class="span-2">Source filter<input id="source-filter" name="filter" spellcheck="false" placeholder="record_date:gte:2026-09-01"><span class="help">Use Treasury’s filter expression. Leave empty to acquire the full endpoint.</span></label>
+              <label>Sort order<input id="source-sort" name="sort" spellcheck="false" placeholder="-record_date"></label>
+              <label>Rows per page<input id="source-page-size" name="pageSize" type="number" min="1" max="10000" step="1" value="1000" required></label>
+              <label class="span-2">Source notes<textarea id="source-notes" name="notes" rows="2" placeholder="Purpose, reporting period, and interpretation notes"></textarea></label>
+              <div class="form-actions span-2"><button type="submit">Save source</button><button id="probe-source" type="button" class="secondary" disabled>Inspect live metadata</button></div>
+            </form>
+            <div id="source-probe" class="inset" hidden></div>
+          </section>
+        </div>
+        <section class="panel section-gap" aria-labelledby="capture-queue-heading">
+          <div class="panel-heading"><div><h3 id="capture-queue-heading">Capture queue</h3><p class="muted small">Each capture pins the saved query revision and retains all source columns.</p></div></div>
+          <form id="capture-form" class="inline-form">
+            <label>Saved source<select id="capture-source" required><option value="">Save a source first</option></select></label>
+            <label>Capture name<input id="capture-name" maxlength="160" placeholder="Optional edition or reporting period"></label>
+            <button type="submit">Start capture</button>
+          </form>
+          <div id="captures-list" class="table-wrap"><p class="empty">Start a capture to retain its source pages and progress.</p></div>
+        </section>
+        <section id="capture-detail-panel" class="panel section-gap" hidden aria-labelledby="capture-detail-heading">
+          <div class="panel-heading"><div><h3 id="capture-detail-heading">Capture detail</h3><p id="capture-detail-meta" class="muted small"></p></div><div class="button-row"><button id="capture-create-edition" type="button" class="secondary">Create edition</button><button id="capture-export" type="button">Export complete capture</button></div></div>
+          <div id="capture-detail-summary" class="metrics"></div>
+          <div id="capture-row-table" class="table-wrap"></div>
+          <div id="capture-row-pagination" class="pagination"></div>
+          <details class="details"><summary>Source query, page identities, and acquisition observations</summary><pre id="capture-original"></pre></details>
+        </section>
+      </section>
+      <section id="view-editions" class="view" hidden aria-labelledby="editions-heading">
+        <div class="page-heading"><div><p class="eyebrow">02 / Dataset preparation</p><h2 id="editions-heading">Review editions</h2><p>Review field meaning, units, and row identity before building an immutable dataset edition.</p></div></div>
+        <section class="panel">
+          <form id="edition-create-form" class="inline-form">
+            <label>Complete capture<select id="edition-capture" required><option value="">Complete a capture first</option></select></label>
+            <label>Edition name<input id="edition-name" required maxlength="160" placeholder="Treasury debt · reviewed edition"></label>
+            <button type="submit">Create review edition</button>
+          </form>
+          <div id="editions-list" class="table-wrap"><p class="empty">Create an edition from a complete capture.</p></div>
+        </section>
+        <section id="edition-detail-panel" class="panel section-gap" hidden aria-labelledby="edition-detail-heading">
+          <div class="panel-heading"><div><h3 id="edition-detail-heading">Field review</h3><p id="edition-detail-meta" class="muted small"></p></div><span id="edition-status" class="status"></span></div>
+          <p class="inset muted small">Values retain Treasury’s exact reported representation. Unit and scale describe the source; scale does not change the captured value. Select enough key fields to identify each row.</p>
+          <form id="edition-review-form">
+            <div id="edition-fields" class="table-wrap review-table"></div>
+            <div class="form-grid inset">
+              <label class="span-2">Edition notes<textarea id="edition-review-notes" rows="3" placeholder="Reporting context, limitations, and how a buyer should interpret this edition"></textarea></label>
+              <label>Default page size<input id="edition-default-limit" type="number" min="1" step="1" value="50"></label>
+              <label>Maximum page size<input id="edition-max-limit" type="number" min="1" step="1" value="1000"></label>
+              <label>Equality filter fields<input id="edition-filters" spellcheck="false" placeholder="record_date"></label>
+              <label>Range filter fields<input id="edition-ranges" spellcheck="false" placeholder="record_date"></label>
+              <label class="span-2">Sortable fields<input id="edition-sorts" spellcheck="false" placeholder="record_date"><span class="help">Comma-separated published field names. Choose fields whose reported string order fits the intended query.</span></label>
+              <div class="form-actions span-2"><button id="save-review" type="submit">Save field review</button><button id="build-edition" type="button" class="secondary">Build reviewed edition</button><button id="edition-export" type="button" class="quiet">Export complete edition</button></div>
+            </div>
+          </form>
+          <div id="edition-files" class="downloads inset" hidden></div>
+          <div class="panel-subheading"><h4>Retained rows</h4></div>
+          <div id="edition-row-table" class="table-wrap"></div>
+          <div id="edition-row-pagination" class="pagination"></div>
+          <form id="edition-query-form" class="inline-form">
+            <label class="grow">Native dataset query<input id="edition-query" spellcheck="false" value="limit=50" placeholder="limit=50"></label><button type="submit" class="secondary">Run query</button>
+          </form>
+          <div id="edition-query-result" class="inset" hidden></div>
+        </section>
+      </section>
+      <section id="view-compare" class="view" hidden aria-labelledby="compare-heading">
+        <div class="page-heading"><div><p class="eyebrow">03 / Analysis &amp; handover</p><h2 id="compare-heading">Compare &amp; export</h2><p>Join reviewed editions by their row keys and inspect exact changes in compatible financial measures.</p></div></div>
+        <section class="panel">
+          <div class="panel-heading"><h3>Edition comparison</h3></div>
+          <form id="comparison-form" class="form-grid">
+            <label>Earlier / left edition<select id="compare-left" required><option value="">Build an edition first</option></select></label>
+            <label>Later / right edition<select id="compare-right" required><option value="">Build an edition first</option></select></label>
+            <label class="span-2">Comparison name<input id="comparison-name" required maxlength="160" placeholder="September to October reporting comparison"></label>
+            <fieldset class="span-2"><legend>Row identity</legend><div id="comparison-key-fields" class="checks"><p class="muted small">Choose two editions to see their shared fields.</p></div></fieldset>
+            <fieldset class="span-2"><legend>Financial measures</legend><div id="comparison-measure-fields" class="checks"><p class="muted small">Select measures with the same reviewed unit and scale.</p></div></fieldset>
+            <div class="form-actions span-2"><button type="submit">Compare editions</button><p class="muted small">Duplicate keys stay visible and must be resolved before comparison.</p></div>
+          </form>
+          <div id="comparisons-list" class="table-wrap"></div>
+        </section>
+        <section id="comparison-detail-panel" class="panel section-gap" hidden aria-labelledby="comparison-detail-heading">
+          <div class="panel-heading"><div><h3 id="comparison-detail-heading">Comparison result</h3><p id="comparison-detail-meta" class="muted small"></p></div><button id="comparison-export" type="button">Export complete comparison</button></div>
+          <div id="comparison-metrics" class="metrics"></div>
+          <div class="panel-subheading"><h4>Exact row aggregates and series observations</h4><p class="muted small">Aggregates sum the selected rows. Use the retained source notes to interpret stocks, flows, rates, and ratios; date-keyed first and last observations retain their exact change.</p></div>
+          <div id="comparison-measures" class="table-wrap"></div>
+          <div class="panel-subheading"><h4>Row changes</h4><label class="check"><input id="changes-only" type="checkbox">Show changed rows only</label></div>
+          <div id="comparison-rows" class="table-wrap"></div>
+          <div id="comparison-pagination" class="pagination"></div>
+          <div id="comparison-files" class="downloads inset"></div>
+        </section>
+        <section class="panel section-gap">
+          <div class="panel-heading"><div><h3>Complete exports</h3><p class="muted small">Delivery archives include their original data, review context, and file manifest.</p></div></div>
+          <div id="exports-list"><p class="empty">Capture, edition, comparison, and merchant exports appear here.</p></div>
+        </section>
+      </section>
+      <section id="view-publish" class="view" hidden aria-labelledby="publish-heading">
+        <div class="page-heading"><div><p class="eyebrow">04 / Merchant operations</p><h2 id="publish-heading">Publish &amp; deliver</h2><p>Prepare a dataset seller, operate its release, and acquire a selected edition through the configured buyer workspace.</p></div></div>
+        <section class="panel">
+          <div class="panel-heading"><h3>Merchant package</h3></div>
+          <form id="merchant-form" class="form-grid">
+            <label class="span-2">Ready edition<select id="merchant-edition" required><option value="">Build a reviewed edition first</option></select></label>
+            <label>Public HTTPS origin<input id="merchant-origin" type="url" required placeholder="https://data.example.com"></label>
+            <label>Dataset route<input id="merchant-path" required spellcheck="false" value="/treasury/data"></label>
+            <label>Payment scheme<input id="payment-scheme" required value="exact"></label>
+            <label>Network<input id="payment-network" required spellcheck="false" placeholder="stellar:testnet"></label>
+            <label class="span-2">Asset<input id="payment-asset" required spellcheck="false" placeholder="Accepted network asset"></label>
+            <label>Price per request · atomic units<input id="payment-amount" required inputmode="numeric" pattern="[0-9]+" placeholder="10000"></label>
+            <label>Payment timeout · seconds<input id="payment-timeout" type="number" required min="1" step="1" value="300"></label>
+            <label class="span-2">Merchant payment address<input id="payment-address" required spellcheck="false" placeholder="Merchant’s network address"></label>
+            <div class="form-actions span-2"><button type="submit">Build merchant package</button></div>
+          </form>
+          <div id="merchant-exports" class="inset"></div>
+        </section>
+        <section class="panel section-gap">
+          <div class="panel-heading"><h3>Dataset publication</h3><button id="publisher-refresh" type="button" class="quiet">Refresh publisher</button></div>
+          <div id="publisher-summary" class="inset"><p class="empty">Prepare a merchant package to open its existing publisher.</p></div>
+          <div id="publisher-controls" class="inset"></div>
+        </section>
+        <section id="release-panel" class="panel section-gap" hidden>
+          <div class="panel-heading"><h3>Merchant releases</h3><span id="release-running" class="status"></span></div>
+          <div id="release-controls" class="inset"></div>
+        </section>
+        <section id="buyer-panel" class="panel section-gap" hidden>
+          <div class="panel-heading"><h3>Buyer acquisition</h3></div>
+          <div id="buyer-controls" class="inset"></div>
+          <div id="buyer-result" class="inset" hidden></div>
+        </section>
+      </section>
+      <footer class="workspace-footer"><span>Exact source values · Retained editions · Original seller and buyer</span><span id="workspace-revision"></span></footer>
+    </main>
+  </div>
+  <noscript><p class="notice">Enable JavaScript to operate this local workspace. Source captures and editions remain in the workspace directory.</p></noscript>
+</body>
+</html>

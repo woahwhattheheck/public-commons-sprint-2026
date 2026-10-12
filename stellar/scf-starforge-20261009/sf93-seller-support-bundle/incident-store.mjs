@@ -7,6 +7,7 @@ import {acquireStateLease} from '../merchant-fleet-gateway/state-lease.mjs';
 import {compileConfig,configHash,hash,activeIncident,kinds} from './incident-config.mjs';
 import {freshMerchant,pruneRecords} from './incident-model.mjs';
 import {checkPayload} from './notifications.mjs';
+import {slackTimestamp,validSlackReceipt,validSlackRequest} from './notifications-slack.mjs';
 
 export const STATE_SCHEMA='stellar-forge.seller-incidents.v1';
 const CAPTURE_SCHEMA='stellar-forge.seller-incident-capture.v1';
@@ -54,10 +55,18 @@ function validateState(state) {
   const config=compileConfig(state.config);
   if(configHash(config)!==state.configHash)fail('CONFIGURATION_DIGEST_MISMATCH');
   const incidents=new Set();
+  if (state.slackCooldowns != null && (typeof state.slackCooldowns !== 'object' || Array.isArray(state.slackCooldowns) ||
+      Object.keys(state.slackCooldowns).length > 128 || Object.entries(state.slackCooldowns).some(([key,value]) =>
+        !/^[a-f0-9]{64}$/.test(key) || typeof value !== 'string' || !Number.isFinite(Date.parse(value)))))
+    fail('SLACK_COOLDOWN_INVALID');
   for(const item of state.incidents) {
     if(!UUID.test(item.id??'')||incidents.has(item.id)||!kinds.includes(item.kind)||
         !['OPEN','ACKNOWLEDGED','RECOVERED','RETIRED'].includes(item.status)||
         !Number.isSafeInteger(item.revision)||item.revision<1)fail('INCIDENT_STATE_INVALID');
+    const thread = item.notificationThread;
+    if (thread != null && (!/^[a-f0-9]{64}$/.test(thread.notificationConfigHash ?? '') ||
+        !/^[a-f0-9]{64}$/.test(thread.endpointHash ?? '') || !validSlackReceipt(thread.receipt)))
+      fail('SLACK_THREAD_STATE_INVALID');
     incidents.add(item.id);
   }
   const events=new Set();
@@ -68,6 +77,14 @@ function validateState(state) {
         !Number.isSafeInteger(event.attempts)||event.attempts<0||event.attempts>100_000||
         !Number.isSafeInteger(event.attemptLimit)||event.attemptLimit<1||event.attemptLimit>100_000)fail('NOTIFICATION_STATE_INVALID');
     checkPayload(event);events.add(event.id);
+    if (Object.hasOwn(event,'slackThreadTs') && (event.binding?.transport !== 'slack' ||
+        event.slackThreadTs !== null && !slackTimestamp.test(event.slackThreadTs))) fail('SLACK_EVENT_THREAD_INVALID');
+    if (event.providerReceipt != null && !validSlackReceipt(event.providerReceipt,event)) fail('SLACK_RECEIPT_INVALID');
+    if ((Object.hasOwn(event,'slackRequestBody') || Object.hasOwn(event,'slackRequestHash') ||
+        event.binding?.transport === 'slack' && event.attempts > 0) && !validSlackRequest(event))
+      fail('SLACK_REQUEST_INVALID');
+    if (event.binding?.transport === 'slack' && event.status === 'DELIVERED' && !event.providerReceipt)
+      fail('SLACK_RECEIPT_REQUIRED');
   }
   for(const merchant of config.merchants) {
     const row=state.merchants[merchant.id];
@@ -211,12 +228,17 @@ export async function initializeIncidentStore({directory,config}) {
 export function statusView(state,{details=false}={}) {
   return {schema:STATE_SCHEMA,directoryRevision:state.revision,configRevision:state.configRevision,
     configHash:state.configHash,worker:state.worker,
+    notificationDestination:state.config.notification ? {
+      transport:state.config.notification.transport ?? 'webhook',id:state.config.notification.id,
+      ...(state.config.notification.transport === 'slack' ? {
+        teamId:state.config.notification.teamId,channelId:state.config.notification.channelId} : {})} : null,
     merchants:state.config.merchants.map(m=>({id:m.id,label:m.label,...state.merchants[m.id]})),
     incidents:state.incidents.map(item=>details?item:{id:item.id,merchantId:item.merchantId,kind:item.kind,status:item.status,
       revision:item.revision,openedAt:item.openedAt,closedAt:item.closedAt,lastObservedAt:item.lastObservedAt,
       acknowledgedBy:item.acknowledgment?.by ?? null,beforeCapture:Boolean(item.beforeCapture),afterCapture:Boolean(item.afterCapture),
       notificationState:item.notificationState,notificationIssue:item.notificationIssue ?? null}),
-    notifications:state.notifications.map(({body,binding,...event})=>({...event,destinationId:binding?.id ?? null})),
+    notifications:state.notifications.map(({body,binding,slackRequestBody,...event})=>({...event,destinationId:binding?.id ?? null})),
     active:state.incidents.filter(activeIncident).length,captureStorage:state.captureStorage,
     notificationCapacityEvents:state.notificationCapacityEvents};
 }
+
