@@ -35,7 +35,7 @@ python3 -B launch-opencage-accounting.py \
 
 The input supplies canonical `project`, `node`, `example`, `runtimeDirectory`, `stateDirectory`, `sourceManifest`, `sourceManifestSha256`, `intentId` and `original` selections. The manifest's `files` inventory supplies relative `path`, `sourcePath`, `sourceCommit`, `gitBlob`, `bytes` and `sha256`. The original inventory identifies `operation`, `configuration`, `attempt`, `evidence` and `response`, with a private output filename for each.
 
-The launcher retains one operation ID, `scf-node-operation-accounting-free-a39c-20261012`, and the exact inline JavaScript command in the original native request. It declares 256 MiB memory plus 64 MiB reserve, 2 MiB of project growth, 2 MiB of original-state growth and 1 MiB reserve. The existing native runtime owns admission, lifecycle, artifacts and finalization.
+The launcher retains one operation ID, `scf-node-operation-accounting-free-a39c-20261012`, and the exact inline JavaScript command in the original native request. The explicitly linked continuation uses `scf-node-operation-accounting-free-02-a39c-20261012`, a separate `run-02` output and the complete `financial-source-02` selection. It declares 256 MiB memory plus 64 MiB reserve, 2 MiB of project growth, 2 MiB of original-state growth and 1 MiB reserve. The existing native runtime owns admission, lifecycle, artifacts and finalization.
 
 ## Receiving behavior and recovery
 
@@ -53,3 +53,15 @@ The receiving output contains:
 A native transport interruption is resolved through the same original record's status, supported handoff and foreground resume. After a command begins, retain its accounting command ID and inspect its saved view before any continuation. The receiver independently checks that all five original files remain unchanged after export.
 
 The receiving source is reviewable independently of its eventual native completion. A successful run is established by the original terminal native result, artifact manifest and `Accounting_Receiving.json` together.
+
+## Retained missing-asset continuation
+
+The first native receiving record, `048feb905cca77f447fa3f877708d2d036f38bf4d2d68847b721c33f9bb5300b`, ended with exit 1 after the original accounting command `finalize-Hoj0mD` returned an `ENOENT` error. Its source installation omitted the original `sf86-rpc-transfer-reconcile/networks.json` file, which `terms.mjs` reads at module evaluation. The selected original asset is Git blob `2f92b8e3f8498fd07136c7f9b741c9e8fe3c3aa8` at the same b52 financial source revision.
+
+The linked continuation retains the first native request, result, artifacts, input and source manifest, plus all eight accounting command files. It requires the original completed failure and closed accounting child, empty original stdout, the exact error, unchanged original attempt/evidence and a complete source comparison. All 69 previous source files remain unchanged; the new financial directory adds that one original JSON asset. The producing operation and original financial installation are preserved.
+
+The private input's optional `previousReceiving` selection contains the exact original operation and command IDs, paths, byte counts and hashes. Its `native` selection identifies `request`, `result` and `artifacts`; `commandFiles` identifies `context.json`, `completion.json`, `invocation.json`, `process.json`, `attempt-source.json`, `evidence-source.json`, `stdout.json` and `stderr.log`. The original input and manifest are separately pinned. `receiverSha256` binds the earlier native inline command, and the sole accepted reason is `SELECTED_FINANCIAL_NETWORKS_ASSET_MISSING`.
+
+Before a new accounting command, this receiving path exports its verified lineage to `Receiving_Continuation.json`. It creates that command only when the original view still selects the exact closed failed command and has no complete result. If a later complete accounting result already exists, the original recovery API reopens it. A different unfinished command remains selected for explicit reconciliation. No Buyer execution, signer, payment, workspace initialization or Governor policy edit occurs in this receiving example.
+
+`financialSourceDirectory` and `outputDirectory` select the explicit successor directories. Both native requests keep their own immutable inline receiver and source hashes. A final completion is reported only after the original accounting result, fresh-process reopen, complete export and all unchanged original source checks succeed.
