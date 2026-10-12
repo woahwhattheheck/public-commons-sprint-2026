@@ -5,6 +5,7 @@ import { createSourceBearerAuth } from '../../../sf31-buyer-client/source-auth.m
 import { privateDirectory, readBytes, readJson, writeBytes, writeJson, exists, need, intent }
   from '../../../sf88-operator-buyer-cli/node/store.mjs';
 import { canonicalJson, sha256, publicURL } from '../provider.mjs';
+import { isCirrus, readCirrusContract, nextCirrusRequest } from './cirrus.mjs';
 
 export const PROCESSING_CONTRACT = 'scf-filmdrop-contract/v1';
 const MAX_BODY = 64 * 1024 * 1024;
@@ -23,6 +24,14 @@ export function normalizeDeployment(input) {
     pageSize: input.pageSize ?? 100, maxPages: input.maxPages ?? 100000,
     timeoutMs: input.timeoutMs ?? 120000, maxResponseBytes: input.maxResponseBytes ?? MAX_BODY,
     credential: null };
+  if (input.dialect !== undefined) {
+    need(['filmdrop', 'cirrus-state'].includes(input.dialect), 'PROCESSING_DIALECT_INVALID');
+    result.dialect = input.dialect;
+  }
+  if (input.metricsUrl !== undefined && input.metricsUrl !== null) {
+    need(isCirrus(result), 'PROCESSING_CIRRUS_METRICS_DIALECT_REQUIRED');
+    result.metricsUrl = processingUrl(input.metricsUrl, result.baseUrl);
+  }
   need(Number.isSafeInteger(result.pageSize) && result.pageSize >= 1 && result.pageSize <= 1000, 'PROCESSING_PAGE_SIZE_INVALID');
   need(Number.isSafeInteger(result.maxPages) && result.maxPages > 0 && result.maxPages <= 100000, 'PROCESSING_PAGE_LIMIT_INVALID');
   need(Number.isSafeInteger(result.timeoutMs) && result.timeoutMs >= 1000 && result.timeoutMs <= 300000, 'PROCESSING_TIMEOUT_INVALID');
@@ -58,6 +67,7 @@ export function readProcessingContract(body, deployment, metadata = {}) {
   need(Buffer.isBuffer(body) && body.length > 0 && body.length <= MAX_BODY, 'PROCESSING_OPENAPI_BYTES_REQUIRED');
   need(metadata.status === undefined || metadata.status === null || Number.isSafeInteger(metadata.status) && metadata.status >= 100 && metadata.status <= 599, 'PROCESSING_SOURCE_HTTP_STATUS_INVALID');
   if (metadata.sha256 !== undefined) need(hashPattern.test(metadata.sha256) && sha256(body) === metadata.sha256, 'PROCESSING_SOURCE_HASH_MISMATCH');
+  if (isCirrus(deployment)) return readCirrusContract(body, deployment, metadata);
   let doc; try { doc = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(body)); }
   catch { need(false, 'PROCESSING_OPENAPI_JSON_INVALID'); }
   need(object(doc) && /^3\./.test(doc.openapi || '') && object(doc.paths), 'PROCESSING_OPENAPI_REQUIRED');
@@ -103,6 +113,7 @@ export function routeRequest(contract, name, query = {}) {
 }
 
 export function nextProcessingRequest(document, current, contract, { immutableQuery = {}, rowsKey = null } = {}) {
+  if (isCirrus(contract)) return nextCirrusRequest(document, current, rowsKey, contract);
   const links = (document.links ?? []).filter(v => v && v.rel === 'next');
   need(links.length <= 1, 'PROCESSING_MULTIPLE_NEXT_LINKS');
   if (!links.length) return null;
@@ -153,6 +164,12 @@ export async function readProcessingCapture(directory, expectedRequestHash) {
   try { document = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(raw)); }
   catch { parseError = 'PROCESSING_RESPONSE_JSON_INVALID'; }
   return { request: request.request, requestHash: request.requestHash, record, raw, document, parseError };
+}
+
+export function processingCaptureUsable(captured) {
+  return captured?.record?.status === 200 || captured?.record?.status === null &&
+    captured.record.imported === true && captured.record.bodyOrigin === 'connector-document' &&
+    captured.record.provenance?.kind === 'connector-document';
 }
 
 export function createProcessingProvider({ deployment: input, transport, environment = process.env, credentialsAuthorized = true } = {}) {
@@ -214,9 +231,22 @@ export function createProcessingProvider({ deployment: input, transport, environ
     if (metadata.method !== undefined) need(metadata.method === 'GET', 'PROCESSING_IMPORTED_METHOD_MISMATCH');
     if (metadata.sha256 !== undefined) need(sha256(body) === metadata.sha256, 'PROCESSING_IMPORTED_HASH_MISMATCH');
     await privateDirectory(directory);
+    let origin = {};
+    if (metadata.bodyOrigin === 'connector-document') {
+      const p = metadata.provenance;
+      need(object(p) && p.kind === 'connector-document' && typeof p.connector === 'string' &&
+        p.connector.length > 0 && p.connector.length <= 160 &&
+        hashPattern.test(p.packageSha256 ?? '') && hashPattern.test(p.carrierSha256 ?? '') &&
+        Number.isSafeInteger(p.recordIndex) && p.recordIndex >= 0 &&
+        ['document-json','html-pre-json'].includes(p.extraction) &&
+        processingUrl(p.sourceUrl, deployment.baseUrl) === request.url &&
+        processingUrl(p.finalUrl, deployment.baseUrl) === request.url,
+        'PROCESSING_CONNECTOR_DOCUMENT_PROVENANCE_REQUIRED');
+      origin = {bodyOrigin:'connector-document', provenance:structuredClone(p)};
+    }
     const requestHash = digest(request), record = { requestHash, status: metadata.status, ...retainedHeaders(metadata.headers),
       capturedAt: metadata.capturedAt ?? null, importedAt: stamp(), imported: true, retryAt: retryAt(retainedHeaders(metadata.headers).headers['retry-after']),
-      bytes: body.length, sha256: sha256(body) };
+      bytes: body.length, sha256: sha256(body), ...origin };
     if (await exists(join(directory, 'response.json'))) {
       const prior = await readProcessingCapture(directory, requestHash);
       need(prior.record.sha256 === record.sha256 && prior.record.status === record.status, 'PROCESSING_IMPORT_IDENTITY_CONFLICT'); return prior;

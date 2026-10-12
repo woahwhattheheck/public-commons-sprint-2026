@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="same-origin">
+  <meta name="workspace-token" content="__SESSION_TOKEN__">
+  <title>Repository Workspace</title>
+  <link rel="stylesheet" href="/style.css">
+  <script type="module" src="/app.mjs"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to workspace</a>
+  <header class="app-header">
+    <div class="brand"><span class="eyebrow">DSPACE · REPOSITORY OPERATIONS</span><h1>Repository Workspace</h1></div>
+    <div class="header-actions"><span id="connection-status" class="status-label">Opening workspace</span><button id="refresh-all" type="button">Refresh</button></div>
+  </header>
+  <div class="workspace-strip">
+    <div><span class="muted">Repository</span> <strong id="repository-name">—</strong></div>
+    <div><span class="muted">Account</span> <span id="principal-name">—</span></div>
+    <div><span class="muted">Saved state</span> <code id="workspace-id">—</code></div>
+  </div>
+  <nav class="tabs" aria-label="Workspace sections">
+    <button type="button" data-view="discover" aria-current="page">Discover</button>
+    <button type="button" data-view="records">Records <span id="records-count" class="count">0</span></button>
+    <button type="button" data-view="changes">Changes <span id="changes-count" class="count">0</span></button>
+    <button type="button" data-view="submissions">Submissions</button>
+    <button type="button" data-view="activity">Activity</button>
+    <button type="button" data-view="handover">Handover</button>
+  </nav>
+  <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
+  <main id="main" tabindex="-1">
+    <section id="view-discover" class="view" aria-labelledby="discover-heading">
+      <div class="section-title"><div><h2 id="discover-heading">Find repository material</h2><p>Browse the repository, retain complete records, and select the material you want to work on.</p></div></div>
+      <section class="panel" aria-labelledby="profile-heading">
+        <div class="panel-heading"><h3 id="profile-heading">Repository and operator</h3><span id="profile-description" class="muted"></span></div>
+        <div class="form-grid">
+          <label>Saved repository<select id="profile-select"><option value="">Add a repository</option></select></label>
+          <label>Operator attribution<input id="operator-name" type="text" autocomplete="name" placeholder="Your name or team" maxlength="160" required></label>
+        </div>
+        <div class="action-row"><button id="connect-profile" type="button">Connect account</button><button id="new-profile" type="button">Add repository</button><button id="edit-profile" type="button">Revise configuration</button></div>
+        <form id="profile-form" hidden>
+          <hr><input id="previous-profile-id" type="hidden">
+          <div class="form-grid"><label>Repository name<input id="profile-name" required maxlength="160" placeholder="Research repository"></label><label>DSpace REST base URL<input id="profile-url" type="url" required placeholder="https://repository.example.edu/server"></label><label>Connection mode<select id="profile-mode"><option value="anonymous">Public, anonymous reads</option><option value="environment">Configured account</option></select></label></div>
+          <div id="environment-fields" class="form-grid" hidden><label>Token variable name<input id="profile-token-env" value="DSPACE_TOKEN" autocomplete="off" spellcheck="false"></label><label>User variable name<input id="profile-user-env" value="DSPACE_USER" autocomplete="off" spellcheck="false"></label><label>Password variable name<input id="profile-password-env" value="DSPACE_PASSWORD" autocomplete="off" spellcheck="false"></label></div>
+          <p class="small muted">Enter environment variable names here. The server reads their configured values when it connects. Attribution names the operator responsible for a saved action; the original DSpace account is recorded separately.</p>
+          <div class="action-row"><button class="primary" type="submit">Save repository</button><button id="cancel-profile" type="button">Cancel</button></div>
+        </form>
+      </section>
+      <form id="search-form" class="panel">
+        <div class="form-grid search-fields">
+          <label class="wide">Search terms<input id="search-query" name="query" type="search" placeholder="Title, author, subject or identifier"></label>
+          <label>Community<select id="search-community" name="community"><option value="">All communities</option></select></label>
+          <label>Collection<select id="search-collection" name="collection"><option value="">All collections</option></select></label>
+          <label>Result type<select id="search-type" name="type"><option value="item">Items</option><option value="">All types</option><option value="collection">Collections</option><option value="community">Communities</option></select></label>
+          <label>Results per page<select id="search-size" name="size"><option>20</option><option>50</option><option>100</option></select></label>
+        </div>
+        <div class="action-row"><button class="primary" id="search-submit" type="submit">Search repository</button><button id="browse-refresh" type="button">Read communities and collections</button><span class="muted" id="browse-summary"></span></div>
+      </form>
+      <div class="split-grid">
+        <section class="panel grow" aria-labelledby="search-results-heading">
+          <div class="panel-heading"><div><h3 id="search-results-heading">Search results</h3><p id="search-summary">Run a search to read the original repository results.</p></div><button id="capture-search" type="button" disabled>Save selection</button></div>
+          <div id="search-results" class="record-list"><p class="empty">No search has been opened.</p></div>
+          <div class="pagination"><button id="search-prev" type="button" disabled>Previous page</button><span id="search-page">—</span><button id="search-next" type="button" disabled>Next page</button></div>
+        </section>
+        <aside class="panel narrow" aria-labelledby="open-record-heading">
+          <h3 id="open-record-heading">Open an item directly</h3><p>Use its repository UUID to read the full metadata and files.</p>
+          <form id="open-item-form"><label>Item UUID<input id="open-item-id" name="itemId" type="text" required autocomplete="off" spellcheck="false"></label><button type="submit">Read item</button></form>
+          <hr><h3>Retained work</h3><div id="work-summary" class="summary-grid"></div>
+          <p class="small muted">Search pages and item records keep their original repository response and capture time.</p>
+        </aside>
+      </div>
+    </section>
+
+    <section id="view-records" class="view" aria-labelledby="records-heading" hidden>
+      <div class="section-title"><div><h2 id="records-heading">Retained records</h2><p>Read full metadata, inspect files, and prepare an explicit change from the selected record.</p></div></div>
+      <div class="split-grid records-layout">
+        <aside class="panel record-sidebar"><label>Filter retained records<input id="record-filter" type="search" placeholder="Title or UUID"></label><label>Captured collection scope<select id="record-scope"><option value="">All retained material</option></select></label><button id="select-filtered-records" type="button">Select filtered items</button><div id="record-index" class="record-list"><p class="empty">Retain an item from Discover.</p></div></aside>
+        <section class="panel grow" id="record-detail"><p class="empty">Select a retained record.</p></section>
+      </div>
+    </section>
+
+    <section id="view-changes" class="view" aria-labelledby="changes-heading" hidden>
+      <div class="section-title"><div><h2 id="changes-heading">Review and apply changes</h2><p>Inspect the original record, proposed values, account and repository before applying the saved operation.</p></div><button id="refresh-changes" type="button">Refresh changes</button></div>
+      <div class="split-grid records-layout">
+        <aside class="panel record-sidebar"><label>Show<select id="plan-filter"><option value="">All operations</option><option value="pending">Needs review or recovery</option><option value="complete">Completed</option></select></label><div id="plan-index" class="record-list"></div></aside>
+        <section id="plan-detail" class="panel grow"><p class="empty">Prepare a metadata change from a retained record, or open an existing operation.</p></section>
+      </div>
+    </section>
+
+    <section id="view-submissions" class="view" aria-labelledby="submissions-heading" hidden>
+      <div class="section-title"><div><h2 id="submissions-heading">Submission workspace</h2><p>Start in the repository’s ordinary submission workspace and continue from its returned sections and metadata.</p></div><button id="read-submissions" type="button">Read my submissions</button></div>
+      <div class="split-grid">
+        <section class="panel narrow"><h3>Start a submission</h3><form id="submission-form">
+          <label>Destination collection<select id="submission-collection" required><option value="">Read collections first</option></select></label>
+          <label>Working title<input id="submission-title" type="text" required maxlength="500"></label>
+          <p class="small muted">The title becomes the initial dc.title through the original submission tool. Review the prepared operation before it creates the draft.</p>
+          <button class="primary" type="submit">Prepare submission</button>
+        </form><hr><details><summary>Create an archived item</summary><p class="small">This administrative action creates an item directly in the selected collection. Use the ordinary submission form above when the deposit should enter a submission workflow.</p><form id="archive-item-form"><label>Destination collection<select id="archive-item-collection" required><option value="">Read collections first</option></select></label><label>Metadata, JSON key/value pairs<textarea id="archive-item-metadata" rows="7" required spellcheck="false" placeholder='{"dc.title":"Research title","dc.contributor.author":["Author name"]}'></textarea></label><label class="check-row"><input id="archive-item-discoverable" type="checkbox" checked>Discoverable</label><button type="submit">Prepare archived item</button></form></details></section>
+        <section class="panel grow"><div class="panel-heading"><h3>My workspace items</h3><span id="submission-summary" class="muted"></span></div><div id="submission-index" class="record-list"><p class="empty">Read the submissions available to the configured account.</p></div><div id="submission-detail"></div></section>
+      </div>
+    </section>
+
+    <section id="view-activity" class="view" aria-labelledby="activity-heading" hidden>
+      <div class="section-title"><div><h2 id="activity-heading">Original requests and results</h2><p>Reopen a retained operation or inspect the complete source response behind a record.</p></div><button id="refresh-activity" type="button">Refresh activity</button></div>
+      <section id="pending-requests" class="panel" hidden><h3>Requests awaiting a returned result</h3><p>Read current state, then retry the saved request with its original identifier and input.</p><div id="pending-request-list" class="record-list"></div></section>
+      <div class="panel"><div class="form-grid"><label>Filter activity<input id="activity-filter" type="search" placeholder="Operation, record or tool"></label></div><div id="activity-table" class="table-scroll"></div></div>
+      <section id="activity-detail" class="panel" hidden></section>
+    </section>
+
+    <section id="view-handover" class="view" aria-labelledby="handover-heading" hidden>
+      <div class="section-title"><div><h2 id="handover-heading">Deliver and reopen the workspace</h2><p>Carry the original captures, selected records, reviewed changes, operation results and retained files into a receiving workspace.</p></div></div>
+      <div class="split-grid">
+        <section class="panel grow"><h3>Complete workspace export</h3><div id="handover-summary" class="summary-grid"></div><p>Download the complete saved workspace, including original responses, metadata, reviewed plans, execution history and retained file bytes.</p><div class="action-row"><button id="export-workspace" type="button" class="primary">Download complete handover</button><button id="export-backup" type="button">Download backup</button></div><div id="selection-list" class="record-list"></div><h3>Retained files</h3><div id="asset-list" class="record-list"></div><details><summary>Receive a supporting file</summary><form id="supporting-file-form"><label>Original file<input id="supporting-file" type="file" required></label><p class="small muted">Retain the complete original bytes for a later upload plan or workspace handover.</p><button type="submit">Retain supporting file</button></form></details></section>
+        <section class="panel grow"><h3>Receive an existing handover</h3><p>Inspect the selected archive and its repository binding. Complete handovers restore into an empty workspace.</p><form id="import-form"><label>Workspace archive<input id="import-file" type="file" accept=".sqlite,.db,.gz,application/vnd.sqlite3,application/gzip,application/octet-stream" required></label><button id="preview-import" type="submit">Inspect archive</button></form><div id="import-review" hidden></div><hr><h3>Receive original source captures</h3><p>Import a collector’s complete native response bundle into this workspace.</p><form id="source-import-form"><label>Source capture JSON<input id="source-import-file" type="file" accept=".json,application/json" required></label><button type="submit">Import source capture</button></form></section>
+      </div>
+      <section class="panel"><h3>Configured repository</h3><dl id="connection-details" class="details-grid"></dl><p class="small muted">This workspace uses the configured original DSpace MCP server. Account credentials stay with that server’s transport configuration.</p></section>
+    </section>
+  </main>
+  <footer><span>Repository Workspace · TokenJunkieLabs</span><a href="/workflow" target="_blank" rel="noopener">Operating guide</a><a href="/source" target="_blank" rel="noopener">Source and license</a></footer>
+  <dialog id="source-dialog"><div class="panel-heading"><h2 id="source-title">Original source</h2><button id="source-close" type="button">Close</button></div><p id="source-description" class="muted"></p><pre id="source-body" tabindex="0"></pre><div class="action-row"><button id="source-download" type="button">Download complete source</button></div></dialog>
+  <template id="empty-template"><p class="empty"></p></template>
+</body>
+</html>

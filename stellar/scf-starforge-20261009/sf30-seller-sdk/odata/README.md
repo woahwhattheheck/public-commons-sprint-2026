@@ -255,6 +255,25 @@ that record and checks `/api/application`. See
 [live/APPLICATIONS.md](live/APPLICATIONS.md) for the existing installed-runtime
 registration and complete launch, receive, stop and reopen operation.
 
+## Agent operation through MCP
+
+The maintained merchant operator exposes this same workspace through twenty
+`merchant_odata_` tools. An agent can inspect and review the source, capture and
+compare complete editions, query original exports, operate SF82 dataset releases
+and live services, prepare SF88 customer handoffs, receive original response
+files, and transfer the complete workspace to a receiving alias.
+
+The host declares private workspace directories and named source services,
+merchant profiles, transfer files and response files. Tool calls select those
+aliases and retained record IDs. The browser, CLI and MCP adapter preserve the
+same application state and original source and purchase identities.
+
+See the [OData MCP workspace guide](../../../../stellar-forge/mcp-merchant-operator/ODATA_WORKSPACES.md)
+for the connection JSON, `init-odata-workspaces` command, transport setup and the
+complete source-to-customer workflow. A browser opened by the agent shares the
+same live operations object; closing that browser leaves the enclosing agent
+workspace available.
+
 ## Transfer and reopen
 
 ```sh
@@ -298,10 +317,18 @@ execution state retain their original host lifecycles.
 declarative input. `raw(sha256)` returns a retained source's original bytes.
 `state().liveProducts` lists prepared products. `restore()` returns connection,
 edition, export and live-product counts after checking the complete transfer.
+The committed state retains `restoredFrom` with that transfer's canonical hash
+and counts; retrying the same completed restore returns those original counts.
+`startCapture({id,planId,label})` accepts an optional stable edition ID so a
+repeated agent call reopens its original matching capture.
 
-`startODataServer({workspace,port,liveServiceId})` exposes the same commands at
-`/api/` and returns `{url,server,liveRuntime,close}`. Its optional live service
-starts before the server is returned; `close()` is idempotent.
+`startODataServer({workspace,port,liveServiceId,liveOperations,closeWorkspace})`
+exposes the same commands at `/api/` and returns
+`{url,server,liveRuntime,close}`. Its optional live service starts before the
+server is returned. An embedding operator can supply its existing live
+operations object and set `closeWorkspace:false`; the browser then closes only
+its listener. The standalone defaults close the owned live operations and
+workspace, and `close()` is idempotent.
 Capture and resume return202 while the original workspace imports. `GET
 /api/state` exposes currently running editions; `GET /api/edition?id=ID` and
 `/api/source?hash=SHA256` expose their page detail and original downloads.

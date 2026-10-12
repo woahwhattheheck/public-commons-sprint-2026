@@ -56,7 +56,8 @@ export function mergeHarMerchantPlan({currentSource,currentPlan,prepared}) {
 }
 
 export function createHarPanel({container,api,act,notice,token,onSource}) {
-  let busy=false, selected=null, active=null, cursor='', history=[], next=null, reviewNext=null;
+  let busy=false, selected=null, selectedInfo=null, active=null, cursor='', history=[], next=null, reviewNext=null;
+  let reviewDesk=null,libraryRoot='';
   const details=make('details');
   details.append(make('summary','Captured API sources'),
     make('p','Retain an original HAR capture, review the operations and use the approved source in this merchant. Later captures keep the selected review and its authored route decisions.','hint'));
@@ -80,20 +81,24 @@ export function createHarPanel({container,api,act,notice,token,onSource}) {
   const selectionArea=make('div');selectionArea.hidden=true;
   const heading=make('h3'), sourceSummary=make('p','','small wrap'), reviewChoice=select('Saved decisions',[['','New draft']]);
   const moreReviews=button('More saved reviews'), revisionSummary=make('p','','hint'), comparisons=make('div');
-  const reviewTools=make('div',undefined,'inline'), review=button('Download review page'), sourceDownload=button('Download approved OpenAPI');
-  reviewTools.append(review,sourceDownload);
+  const reviewTools=make('div',undefined,'inline'), editReview=button('Review operations here'),
+    review=button('Download review page'), sourceDownload=button('Download approved OpenAPI');
+  reviewTools.append(editReview,review,sourceDownload);
   const decisions=field('Completed reviewed decisions JSON','file');decisions.input.accept='.json,application/json';
   const save=button('Retain reviewed decisions'), use=button('Use approved source');
-  const decisionTools=make('div',undefined,'inline');decisionTools.append(decisions.label,save,use);
-  const receiving=make('details'), destination=field('New receiving directory on this host'), copy=button('Copy retained source');
+  reviewTools.append(use);
+  const decisionTools=make('details');decisionTools.append(make('summary','Import reviewed decisions file'),
+    make('p','Import the complete reviewed decisions JSON from the original offline reviewer or another retained edition of this same source.','hint'),decisions.label,save);
+  const editorArea=make('div');editorArea.hidden=true;
+  const receiving=make('details'), destination=field('Receiving directory on this host'), copy=button('Copy retained source');
   destination.input.placeholder='/private/receiving/provider-capture';destination.label.className='wide';
   const receivingResult=make('pre','','wrap');receivingResult.hidden=true;
   receiving.append(make('summary','Copy to a receiving workspace'),
-    make('p','Choose a new child of an existing private directory. A refresh copy includes its previous and candidate captures, original comparison and all saved reviews.','hint'),
+    make('p','Choose a directory beneath an existing private parent. Reuse the same original receiving copy to retain later reviews. A refresh copy includes both source editions, its original comparison and all saved reviews.','hint'),
     destination.label,copy,receivingResult);
   selectionArea.append(heading,sourceSummary,reviewChoice.label,moreReviews,revisionSummary,comparisons,reviewTools,
-    make('p','Open the downloaded HTML file, complete its source and route decisions, then download reviewed decisions. Return that JSON file here to save its immutable revision.','hint'),
-    decisionTools,receiving);
+    make('p','Review source operations here, save their immutable decisions and continue directly into merchant pricing and transport settings. The downloadable review uses the same editor and model.','hint'),
+    editorArea,decisionTools,receiving);
   details.append(selectionArea);
 
   const adoption=make('details'), kind=select('Original workspace type',[['capture','HAR capture workspace'],['refresh','HAR refresh packet']]),
@@ -111,7 +116,8 @@ export function createHarPanel({container,api,act,notice,token,onSource}) {
     earlier.disabled=busy||!history.length;more.disabled=busy||!next;
     upload.disabled=busy||!original.input.files.length||edition.input.checked&&!selected?.revision;
     upload.textContent=edition.input.checked?'Prepare next capture edition':'Retain capture';
-    review.disabled=busy||!selected;
+    review.disabled=editReview.disabled=busy||!selected;
+    reviewDesk?.setBusy(busy);
     save.disabled=busy||!selected||!decisions.input.files.length;
     use.disabled=busy||!selected?.revision;
     sourceDownload.disabled=busy||!selected?.revision;
@@ -177,11 +183,12 @@ export function createHarPanel({container,api,act,notice,token,onSource}) {
         body.append(tr);
       }
       const wrap=make('div',undefined,'table-wrap');wrap.tabIndex=0;wrap.setAttribute('aria-label','Capture edition comparison');wrap.append(table);comparisons.append(wrap);
-      if(rows.length>100)comparisons.append(make('p','Showing the first 100 retained operations. The downloaded review contains the full comparison.','hint'));
+      if(rows.length>100)comparisons.append(make('p','Showing the first 100 retained operations. Open the operation review here or download it for the full comparison.','hint'));
     }
     if(info.ambiguousGroups)comparisons.append(make('p',info.ambiguousGroups+' groups need explicit operation selection in the review.','hint'));
   }
   function present(info,chosen=info.selection) {
+    reviewDesk?.close();reviewDesk=null;editorArea.hidden=true;selectedInfo=info;
     selected={kind:chosen.kind,id:chosen.id,...(chosen.revision?{revision:chosen.revision}:{})};
     selectionArea.hidden=false;details.open=true;
     heading.textContent=info.label;
@@ -195,7 +202,7 @@ export function createHarPanel({container,api,act,notice,token,onSource}) {
   }
   async function list() {
     const result=await api('har/library?'+new URLSearchParams({after:cursor,limit:'25'}));
-    next=result.next;library.replaceChildren();
+    next=result.next;libraryRoot=result.root;library.replaceChildren();
     count.textContent=result.total+' retained capture'+(result.total===1?'':'s')+' and refresh packets';
     libraryPath.textContent='Private capture library: '+result.root;
     for(const row of result.items) {
@@ -206,6 +213,48 @@ export function createHarPanel({container,api,act,notice,token,onSource}) {
     }
     if(!result.items.length)library.append(make('p','Retain a capture or adopt an existing original workspace.','small'));
     available();
+  }
+
+
+  async function runEditor(work) {
+    let started=false,result,error;
+    await act(async()=>{
+      started=true;
+      try{result=await work();}catch(caught){error=caught;throw caught;}
+    });
+    if(!started)throw new Error('Wait for the current merchant operation, then resume this review save.');
+    if(error)throw error;
+    return result;
+  }
+  async function saveEditor(target,reviewed,{useSource}) {
+    const saved=await fileUpload('decisions?'+query(target),
+      new Blob([JSON.stringify(reviewed)],{type:'application/json'}),4*1024*1024);
+    await open(saved.selection);
+    if(useSource) {
+      const prepared=await api('har/source?'+query(saved.selection));
+      if(prepared.operations.length>64)throw new Error('Save a capture review with at most 64 operations for the original merchant package');
+      const result=await onSource(prepared);
+      notice('Saved review '+saved.selection.revision+'. Approved source loaded: '+
+        (result?.preserved??0)+' unchanged route settings retained; '+
+        (result?.needsPrice??prepared.operations.length)+' routes need a price. Review the merchant terms, validate and save.');
+    }else notice('Retained immutable review '+saved.selection.revision+'. Use this source or compare its next capture edition.');
+    return saved;
+  }
+  async function openReviewDesk() {
+    if(!selected||!selectedInfo)throw new Error('Select a retained capture or refresh packet first');
+    const target={...selected},sourceSha256=selectedInfo.sourceSha256;
+    const response=await fetch('/api/har/reviewer',{method:'POST',
+      headers:{'x-workspace-token':token,'content-type':'application/json'},body:JSON.stringify({selection:target})});
+    if(!response.ok){await responseValue(response);return;}
+    const originalPage=await response.blob();
+    if(originalPage.size>32*1024*1024)throw new Error('The original review exceeds its source limit');
+    if(!libraryRoot)libraryRoot=(await api('har/library?limit=1')).root;
+    const {createHarReviewDesk}=await import('/har/review-browser.mjs');
+    reviewDesk?.close();reviewDesk=null;editorArea.hidden=false;
+    reviewDesk=await createHarReviewDesk({container:editorArea,page:await originalPage.text(),selection:target,
+      sourceSha256,workspace:libraryRoot,run:runEditor,save:saveEditor,notice});
+    reviewDesk.setBusy(busy);
+    editorArea.scrollIntoView({block:'start',behavior:'smooth'});
   }
 
   original.input.addEventListener('change',()=>{
@@ -223,7 +272,8 @@ export function createHarPanel({container,api,act,notice,token,onSource}) {
     }
     const result=await fileUpload('upload?'+parameters,file,128*1024*1024);
     present(result);original.input.value='';edition.input.checked=false;await list();
-    notice(result.reused?'Reopened the same retained source edition.':'Capture retained. Download its review page to select and review the source operations.');
+    await openReviewDesk();
+    notice(result.reused?'Reopened the same retained source edition. Continue its operation review here.':'Capture retained. Review its source operations here, then save and use them in the merchant.');
   }));
   reload.addEventListener('click',()=>act(list));
   earlier.addEventListener('click',()=>act(async()=>{cursor=history.pop()??'';await list();}));
@@ -231,7 +281,8 @@ export function createHarPanel({container,api,act,notice,token,onSource}) {
   reviewChoice.input.addEventListener('change',()=>{
     if(!selected)return;
     selected={kind:selected.kind,id:selected.id,...(reviewChoice.input.value?{revision:reviewChoice.input.value}:{})};
-    revisionSummary.textContent=selected.revision?'Selected immutable review: '+selected.revision:'The next download opens the original draft for this source.';
+    reviewDesk?.close();reviewDesk=null;editorArea.hidden=true;
+    revisionSummary.textContent=selected.revision?'Selected immutable review: '+selected.revision:'The operation review opens the original draft for this source.';
     available();
   });
   moreReviews.addEventListener('click',()=>act(async()=>{
@@ -239,6 +290,7 @@ export function createHarPanel({container,api,act,notice,token,onSource}) {
     const result=await api('har/inspect?'+query(selected)+'&after='+reviewNext);
     addReviews(result);available();
   }));
+  editReview.addEventListener('click',()=>act(openReviewDesk));
   review.addEventListener('click',()=>act(async()=>{
     await download('reviewer',{selection:selected},32*1024*1024,'har-review.html');
     notice('Review page downloaded. Open it locally, complete the decisions, then return its reviewed JSON here.');

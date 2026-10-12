@@ -27,6 +27,8 @@ function checkContext(context,edition,members) {
   checkReview(source,'starforge.stac-eoapi-source-review.v1');
   checkReview(review,'starforge.stac-eoapi-delivery-review.v1');
   const policy=validateDeploymentPolicyPackage(source.policyPackage);
+  if(source.policyPackageText!==undefined)need(typeof source.policyPackageText==='string'&&
+    same(JSON.parse(source.policyPackageText),source.policyPackage),'EOAPI_RECEIVED_POLICY_BYTES_CHANGED');
   need(source.ready&&source.source.ready&&source.approvalId===policy.approval.id&&
     source.policyDigest===policy.compilation.digest&&source.policyPackageDigest===policy.digest,'EOAPI_RECEIVED_SOURCE_POLICY_CHANGED');
   need(review.sourceReviewId===source.id&&review.sourceReviewSha256===source.sha256&&
@@ -96,7 +98,7 @@ export async function exportEoapiDelivery({onboarding,deliveryApprovalId,deliver
     'eoapi/source-review.json':jsonBytes(context.source),
     'eoapi/delivery-review.json':jsonBytes(context.review),
     'eoapi/delivery-approval.json':jsonBytes(context.approval),
-    'eoapi/policy/package.json':jsonBytes(context.source.policyPackage),
+    'eoapi/policy/package.json':context.source.policyPackageText===undefined?jsonBytes(context.source.policyPackage):Buffer.from(context.source.policyPackageText),
     'eoapi/OPERATOR.md':Buffer.from(operatorGuide(context,portable))
   };
   for(const file of context.source.policyPackage.files)small['eoapi/policy/'+file.path]=Buffer.from(file.text);
@@ -147,6 +149,10 @@ export async function openEoapiDelivery(directory,{expectedManifestSha256,signal
   const portable=await openPortableStacDelivery(directory,{expectedManifestSha256:manifest.portableManifestSha256,signal,progress});
   const policy=checkContext(context,portable.delivery.edition,portable.delivery.members());
   need(same(await read('eoapi/policy/package.json'),context.source.policyPackage),'EOAPI_RECEIVED_POLICY_PACKAGE_CHANGED');
+  if(context.source.policyPackageText!==undefined){
+    const expectedBytes=Buffer.from(context.source.policyPackageText),record=files.get('eoapi/policy/package.json').record;
+    need(record.bytes===expectedBytes.length&&record.sha256===sha256(expectedBytes),'EOAPI_RECEIVED_POLICY_BYTES_CHANGED');
+  }
   const expected=new Set([...fixed,...context.source.policyPackage.files.map(file=>'eoapi/policy/'+file.path)]);
   need(expected.size===files.size&&[...expected].every(path=>files.has(path)),'EOAPI_DELIVERY_FILE_SET_CHANGED');
   for(const file of context.source.policyPackage.files) {
@@ -166,7 +172,8 @@ export async function openEoapiDelivery(directory,{expectedManifestSha256,signal
     file(path){need(files.has(path),'EOAPI_DELIVERY_FILE_NOT_FOUND');return files.get(path);},
     async importPolicy(workspace) {
       need(workspace&&typeof workspace.importPackage==='function','EOAPI_RECEIVING_POLICY_WORKSPACE_REQUIRED');
-      return workspace.importPackage({package:context.source.policyPackage});
+      return workspace.importPackage({package:context.source.policyPackage,
+        ...(context.source.policyPackageText===undefined?{}:{packageText:context.source.policyPackageText})});
     }
   });
 }

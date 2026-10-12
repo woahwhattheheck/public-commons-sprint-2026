@@ -1,9 +1,10 @@
 // MIT. Source-faithful STAC acquisition over the maintained SF31 transport.
 import { createHash } from 'node:crypto';
+import { constants } from 'node:fs';
 import { open, rename, unlink } from 'node:fs/promises';
 import { join } from 'node:path';
 import { createPublicHttpsFetch, normalizeBuyerTransport } from '../../sf31-buyer-client/public-transport.mjs';
-import { privateDirectory, writeJson, writeBytes, jsonBytes, need } from '../../sf88-operator-buyer-cli/node/store.mjs';
+import { privateDirectory, readBytes, writeJson, writeBytes, jsonBytes, need } from '../../sf88-operator-buyer-cli/node/store.mjs';
 
 export const DEFAULT_ENDPOINT = 'https://earth-search.aws.element84.com/v1';
 export const sha256 = value => createHash('sha256').update(value).digest('hex');
@@ -114,7 +115,7 @@ export function nextRequest(document, previous, original, endpoint) {
   const headers = { accept: 'application/geo+json, application/json',
     ...(link.merge ? original.headers : {}), ...(link.headers ?? {}) };
   for (const [name, value] of Object.entries(headers)) need(typeof value === 'string' &&
-    !/^(authorization|cookie|host|proxy-|connection|content-length|transfer-encoding|accept-encoding)/i.test(name),
+    !/^(authorization|api-key|cookie|host|proxy-|connection|content-length|transfer-encoding|accept-encoding)/i.test(name),
     'STAC_PAGINATION_HEADER_UNSUPPORTED');
   const request = { url, method, headers };
   if (method === 'POST') {
@@ -146,11 +147,13 @@ export function assetDescriptor(item, key, collection) {
       missingSchemes.length ? 'STORAGE_SCHEME_UNRESOLVED' : 'PUBLIC_HTTPS',
     source: structuredClone(source) };
 }
-export function createStacProvider({ endpoint = DEFAULT_ENDPOINT, transport, sourceAuth, timeoutMs = 120000,
+export function createStacProvider({ endpoint = DEFAULT_ENDPOINT, transport, sourceAuth, assetAccess, timeoutMs = 120000,
   maxMetadataBytes = 64 * 1024 * 1024 } = {}) {
   endpoint = normalizeEndpoint(endpoint);
   need(sourceAuth === undefined || sourceAuth === null || typeof sourceAuth.requestHeaders === 'function' &&
     typeof sourceAuth.authorizationForOrigin === 'function', 'STAC_SOURCE_AUTH_RUNTIME_INVALID');
+  need(assetAccess === undefined || assetAccess === null || typeof assetAccess.reviewAsset === 'function' &&
+    typeof assetAccess.downloadAsset === 'function', 'STAC_ASSET_ACCESS_RUNTIME_INVALID');
   const profiles = (transport ? Array.isArray(transport) ? transport : [transport] : []).map(normalizeBuyerTransport);
   const fetches = new Map(), pending = new Set(), lifetime = new AbortController();
   let closing = null;
@@ -173,18 +176,22 @@ export function createStacProvider({ endpoint = DEFAULT_ENDPOINT, transport, sou
     return fetches.get(origin);
   }
   async function request(request, signal) {
-    // The original request.json already exists. Resolve the private bearer only
-    // for this dispatch; retained request identity never contains this header.
+    // The original request.json already exists. Resolve the private source header
+    // only for this exact-origin dispatch; retained request identity stays public.
     signal = signal ? AbortSignal.any([signal, lifetime.signal]) : lifetime.signal;
     need(!signal.aborted, 'STAC_PROVIDER_CLOSED');
     const method = request.method ?? 'GET';
     const headers = new Headers(request.headers ?? { accept: 'application/json' });
-    need(!headers.has('authorization') && !headers.has('cookie') && !headers.has('proxy-authorization'),
+    need(!headers.has('authorization') && !headers.has('api-key') && !headers.has('cookie') && !headers.has('proxy-authorization'),
       'STAC_RETAINED_REQUEST_CREDENTIAL_FORBIDDEN');
     const dispatch = fetchFor(request.url);
+    const origin = new URL(publicURL(request.url)).origin;
+    const capability = sourceAuth?.authorizationForOrigin(origin) ?? null;
     const privateHeaders = new Headers(await sourceAuth?.requestHeaders({ url: request.url, method, signal }) ?? {});
     for (const [name, value] of privateHeaders) {
-      need(name === 'authorization', 'STAC_SOURCE_AUTH_HEADER_UNSUPPORTED');
+      need(capability?.origin === origin &&
+        (name === 'authorization' && capability.scheme === 'Bearer' || name === 'api-key' && capability.scheme === 'ApiKey'),
+        'STAC_SOURCE_AUTH_HEADER_UNSUPPORTED');
       headers.set(name, value);
     }
     const response = await dispatch(request.url, { method, redirect: 'manual', headers, signal,
@@ -196,6 +203,9 @@ export function createStacProvider({ endpoint = DEFAULT_ENDPOINT, transport, sou
     return response;
   }
   async function captureJson(selected, { directory, signal } = {}) {
+    const retainedHeaders = new Headers(selected?.headers ?? {});
+    need(!['authorization','api-key','cookie','proxy-authorization'].some(name => retainedHeaders.has(name)),
+      'STAC_RETAINED_REQUEST_CREDENTIAL_FORBIDDEN');
     await privateDirectory(directory);
     const startedAt = new Date().toISOString(), requestHash = sha256(canonicalJson(selected));
     await writeJson(join(directory, 'request.json'), { request: selected, requestHash, startedAt }, { exclusive: true });
@@ -219,13 +229,86 @@ export function createStacProvider({ endpoint = DEFAULT_ENDPOINT, transport, sou
       throw error;
     }
   }
-  async function downloadAsset(descriptor, { directory, maxBytes, signal } = {}) {
+  function accessIdentity(value) {
+    if (value === undefined || value === null) return 'null';
+    need(typeof value === 'object' && !Array.isArray(value), 'STAC_ASSET_ACCESS_IDENTITY_INVALID');
+    const encoded = canonicalJson(value);
+    need(Buffer.byteLength(encoded) <= 64 * 1024, 'STAC_ASSET_ACCESS_IDENTITY_TOO_LARGE');
+    return encoded;
+  }
+  async function reviewAsset(descriptor, { workspaceId, signal } = {}) {
+    signal = signal ? AbortSignal.any([signal, lifetime.signal]) : lifetime.signal;
+    need(!signal.aborted, 'STAC_PROVIDER_CLOSED');
+    const { access: previousAccess, ...original } = structuredClone(descriptor);
+    if (!assetAccess) return original;
+    const reviewed = await assetAccess.reviewAsset({ descriptor: structuredClone(descriptor), workspaceId, signal });
+    need(!signal.aborted, 'STAC_PROVIDER_CLOSED');
+    if (reviewed === null || reviewed === undefined) return original;
+    need(reviewed && typeof reviewed === 'object' && !Array.isArray(reviewed) &&
+      typeof reviewed.eligible === 'boolean' && typeof reviewed.eligibilityReason === 'string' &&
+      reviewed.eligibilityReason.length > 0 && reviewed.eligibilityReason.length <= 256 &&
+      reviewed.access !== undefined && reviewed.access !== null, 'STAC_ASSET_ACCESS_REVIEW_INVALID');
+    accessIdentity(reviewed.access);
+    return { ...original, eligible: reviewed.eligible, eligibilityReason: reviewed.eligibilityReason,
+      access: structuredClone(reviewed.access) };
+  }
+  async function verifiedAdapterRecord(result, directory, maxBytes, signal) {
+    need(result && result.status === 200 && Number.isSafeInteger(result.bytes) && result.bytes >= 0 &&
+      result.bytes <= maxBytes && /^[a-f0-9]{64}$/.test(result.sha256 ?? '') &&
+      typeof result.mime === 'string' && typeof result.completedAt === 'string' &&
+      Number.isFinite(Date.parse(result.completedAt)), 'STAC_ASSET_ACCESS_RESULT_INVALID');
+    const file = await open(join(directory, 'asset.bin'), constants.O_RDONLY | constants.O_NOFOLLOW);
+    let bytes = 0; const hash = createHash('sha256');
+    try {
+      const before = await file.stat({ bigint: true });
+      need(before.isFile() && before.size === BigInt(result.bytes), 'STAC_ASSET_ACCESS_FILE_MISMATCH');
+      for await (const chunk of file.createReadStream({ autoClose: false })) {
+        need(!signal.aborted, 'STAC_PROVIDER_CLOSED');
+        bytes += chunk.length; need(bytes <= maxBytes, 'STAC_ASSET_SIZE_LIMIT'); hash.update(chunk);
+      }
+      const after = await file.stat({ bigint: true });
+      need(before.dev === after.dev && before.ino === after.ino && before.size === after.size &&
+        before.mtimeNs === after.mtimeNs && before.ctimeNs === after.ctimeNs &&
+        bytes === result.bytes && hash.digest('hex') === result.sha256, 'STAC_ASSET_ACCESS_FILE_MISMATCH');
+    } finally { await file.close(); }
+    const headers = new Headers(result.headers ?? {});
+    need(!['authorization','api-key','cookie','proxy-authorization'].some(name => headers.has(name)),
+      'STAC_ASSET_ACCESS_RESULT_CREDENTIAL_FORBIDDEN');
+    const record = { status: result.status, headers: Object.fromEntries(headers), bytes,
+      sha256: result.sha256, mime: result.mime, completedAt: result.completedAt };
+    if (result.prescient !== undefined) {
+      const receiptBytes = await readBytes(join(directory, 'prescient-receipt.json'), 16 * 1024 * 1024);
+      let receipt; try { receipt = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(receiptBytes)); }
+      catch { need(false, 'STAC_ASSET_ACCESS_RECEIPT_INVALID'); }
+      need(canonicalJson(receipt) === canonicalJson(result.prescient) && receipt.bytes === bytes &&
+        receipt.sha256 === result.sha256, 'STAC_ASSET_ACCESS_RECEIPT_MISMATCH');
+      record.prescient = structuredClone(receipt);
+      record.receipts = [{ path: 'prescient-receipt.json', bytes: receiptBytes.length, sha256: sha256(receiptBytes) }];
+    }
+    return record;
+  }
+  async function downloadAsset(descriptor, { directory, maxBytes, selection, signal } = {}) {
     need(descriptor.eligible && Number.isSafeInteger(maxBytes) && maxBytes > 0 && maxBytes <= 2 * 1024 ** 3, 'STAC_ASSET_REVIEW_REQUIRED');
-    await privateDirectory(directory);
+    signal = signal ? AbortSignal.any([signal, lifetime.signal]) : lifetime.signal;
+    need(!signal.aborted, 'STAC_PROVIDER_CLOSED');
+    directory = await privateDirectory(directory);
     const selected = { url: descriptor.href, method: 'GET', headers: { accept: descriptor.type ?? 'application/octet-stream' } };
-    await writeJson(join(directory, 'request.json'), { request: selected, maxBytes, startedAt: new Date().toISOString() }, { exclusive: true });
+    await writeJson(join(directory, 'request.json'), { request: selected, maxBytes, startedAt: new Date().toISOString(),
+      ...(descriptor.access === undefined ? {} : { access: descriptor.access, selection }) }, { exclusive: true });
     let file, count = 0, response;
     try {
+      const current = await reviewAsset(descriptor, { workspaceId: selection?.workspaceId, signal });
+      need(current.eligible && accessIdentity(current.access) === accessIdentity(descriptor.access), 'STAC_ASSET_ACCESS_REVIEW_CHANGED');
+      if (descriptor.access !== undefined && descriptor.access !== null) {
+        need(assetAccess && selection && typeof selection.workspaceId === 'string' && selection.workspaceId.length > 0 &&
+          selection.reviewId === descriptor.id && selection.itemDigest === descriptor.itemDigest &&
+          /^[A-Za-z0-9._:-]{1,128}$/.test(selection.operationId ?? ''), 'STAC_ASSET_ACCESS_SELECTION_REQUIRED');
+        const result = await assetAccess.downloadAsset({ descriptor: structuredClone(descriptor), directory, maxBytes,
+          selection: structuredClone(selection), signal });
+        const record = await verifiedAdapterRecord(result, directory, maxBytes, signal); count = record.bytes;
+        await writeJson(join(directory, 'response.json'), record, { exclusive: true });
+        return record;
+      }
       response = await request(selected, signal);
       need(response.status === 200, 'STAC_ASSET_HTTP_' + response.status);
       const declared = response.headers.get('content-length');
@@ -254,7 +337,7 @@ export function createStacProvider({ endpoint = DEFAULT_ENDPOINT, transport, sou
       throw error;
     }
   }
-  return Object.freeze({ endpoint, captureJson: owned(captureJson), downloadAsset: owned(downloadAsset),
+  return Object.freeze({ endpoint, captureJson: owned(captureJson), reviewAsset: owned(reviewAsset), downloadAsset: owned(downloadAsset),
     close() {
       if (!closing) { lifetime.abort(); closing = (async () => { await Promise.allSettled([...pending]); })(); }
       return closing;

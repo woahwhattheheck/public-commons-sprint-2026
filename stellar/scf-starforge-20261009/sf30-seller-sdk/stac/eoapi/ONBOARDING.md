@@ -157,3 +157,21 @@ try {
   await runtime.close();
 }
 ~~~
+
+## Complete deployment editor
+
+Customer operations includes the original Deployment policy workspace: deployment and identity fields, ordered route editing, record filters, CORS and collection rights; review and changes against the selected approval; retained approval, portable export, package inspection and receiving; and paginated history. The same authenticated local host dispatches the native policy controller. The policy editor and its unsaved input remain mounted when the surrounding workspace refreshes. The operator's existing policy revision and approval continue into source review and commissioning.
+
+## Source SDK asset access
+
+A host may pass `assetAccess` to `openStacWorkspace`, `createStacProvider` or `openEoapiRuntime`. Its `reviewAsset({descriptor,workspaceId,signal})` returns `null` for unchanged HTTPS acquisition, or `{eligible,eligibilityReason,access}` for its configured SDK route. The `access` value is a small JSON object containing the nonsecret configuration and source identity. It is retained on the original asset review and is compared with a fresh review before acquisition.
+
+The adapter's `downloadAsset({descriptor,directory,maxBytes,selection,signal})` receives the unchanged saved `workspaceId`, `reviewId`, `itemDigest` and `operationId`. It writes `asset.bin` into the original capture directory and returns `{status,headers,bytes,sha256,mime,completedAt}`. The original provider reads the completed regular file and verifies its byte count and SHA-256 before the workspace marks that same operation complete. The Prescient adapter also writes `prescient-receipt.json` and returns that JSON as `prescient`; the provider compares the retained receipt, and the ordinary STAC edition and handover include it. The host owns the SDK runtime lifetime; workspace/provider close cancels and drains their admitted calls.
+
+Private source API keys use the literal `api-key` header only through an exact-origin `ApiKey` capability. Bearer authorization uses its original `Bearer` capability. Both are resolved after the public request capture, and pagination cannot add either private header. The original SDK, its saved session and receiving spool remain the credential and retry owners.
+
+## Browser delivery
+
+`stac/browser-assets.json` is shared by the loopback server and source distribution. It includes the analyst interface, customer onboarding, full deployment policy editor, commissioning and processing modules. Relative browser imports are resolved against these actual served URLs when the source package is built.
+
+The original received policy package text is retained alongside its checked JSON in the source review, then carried byte for byte into customer delivery and independent policy import. The CLI reads the current policy revision when `--expected-revision` is omitted, reports native policy errors as failed commands, and writes policy exports through the original policy workspace. `--expected-revision` remains available to require an explicitly reviewed revision.

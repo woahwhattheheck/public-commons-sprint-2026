@@ -9,8 +9,14 @@ const PERCENT = /\d+(?:[.,]\d+)?\s*%/;
 const numericValues = (text) =>
   [...String(text).matchAll(NUMERIC)].map((m) => Number(m[0].replace(',', '.')));
 
-export function validateDraftGrounding(draft, overlay) {
-  if (typeof draft !== 'string' || !draft.trim() || draft.length > 135 ||
+// extraQuantities: optional caller-supplied canonical numbers (e.g. seconds of
+// the cited evidence events, the recorded event count, displayed stats) that
+// are observed product data but not repeated inside the overlay text/metrics.
+// Existing caption callers retain their 135-character shape. The insight
+// bridge selects the original full-insight limit of 700 characters.
+// Callers that pass nothing keep the strictest behaviour.
+export function validateDraftGrounding(draft, overlay, extraQuantities = [], maxChars = 135) {
+  if (![135, 700].includes(maxChars) || typeof draft !== 'string' || !draft.trim() || draft.length > maxChars ||
       /[\x00-\x1f<>]|https?:\/\/|www\.|\[[^\]]+\]\(/i.test(draft)) {
     return {ok: false, reason: 'invalid_draft_shape'};
   }
@@ -30,6 +36,7 @@ export function validateDraftGrounding(draft, overlay) {
   const allowed = [
     ...numericValues(overlay.text),
     ...Object.values(overlay.metrics).filter(Number.isFinite),
+    ...extraQuantities.filter(Number.isFinite),
   ];
   if (numericValues(draft).some((num) => !allowed.some((v) => Math.abs(v - num) < 1e-9))) {
     return {ok: false, reason: 'unobserved_quantity'};

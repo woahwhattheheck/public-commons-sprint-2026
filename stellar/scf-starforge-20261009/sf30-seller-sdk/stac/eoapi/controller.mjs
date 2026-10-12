@@ -1,6 +1,7 @@
 // MIT. Routes mounted inside the original authenticated STAC operator session.
 import {StacDelivery} from '../customer.mjs';
 import {exportEoapiDelivery,openEoapiDelivery} from './delivery.mjs';
+import {createDeploymentPolicyController} from './policy-controller.mjs';
 
 const fault=(code,message)=>Object.assign(new Error(message),{code,status:400});
 const missing=()=>{throw fault('EOAPI_ROUTE_NOT_FOUND','This customer onboarding action was not found.');};
@@ -8,12 +9,8 @@ const required=(value,label)=>{if(typeof value!=='string'||!value.trim())throw f
 export function createEoapiController({runtime,commissioning=runtime?.commissioningController}={}) {
   if(!runtime?.onboarding||!runtime?.policies)throw new TypeError('The original eoAPI runtime is required.');
   const {policies,onboarding}=runtime;
+  const policyController=createDeploymentPolicyController({workspace:policies});
   const actions=new Map([
-    ['/policy/draft',body=>policies.saveDraft(body)],
-    ['/policy/review',body=>policies.review(body)],
-    ['/policy/approve',body=>policies.approve(body)],
-    ['/policy/import',body=>policies.importPackage(body)],
-    ['/policy/export',body=>policies.exportPackage(body)],
     ['/source/discover',body=>onboarding.discover(body)],
     ['/source/review',body=>onboarding.reviewSource(body)],
     ['/editions/bind',body=>onboarding.bindEdition(body)],
@@ -41,6 +38,8 @@ export function createEoapiController({runtime,commissioning=runtime?.commission
         commissioning:Boolean(commissioning)};
     },
     async dispatch({method='GET',path,body={},signal}={}) {
+      if(path.startsWith('/policy/'))return policyController.dispatch({method,
+        path:path.slice('/policy'.length)==='/import'?'/receive':path.slice('/policy'.length),body,signal});
       if(path.startsWith('/commissioning/')&&commissioning)
         return commissioning.dispatch({method,path:path.slice('/commissioning'.length),body,signal});
       if(method==='GET'&&path==='/state')return this.state();

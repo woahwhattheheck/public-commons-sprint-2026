@@ -1,5 +1,6 @@
 // MIT. Customer operations in the original industrial STAC analyst interface.
 import {mountCommissioning} from './commissioning/view.mjs';
+import {mountDeploymentPolicy} from './policy-view.mjs';
 const sessions=new Map();
 const routes={DISCOVER:'/source/discover',BIND_EDITION:'/editions/bind',CAPTURE:'/editions/capture',
   ACQUIRE_SELECTED:'/assets/acquire',PREPARE_DELIVERY:'/delivery/review',STAGE_MERCHANT:'/merchant/stage'};
@@ -26,7 +27,7 @@ export function mountEoapi(element,{api,workspace,editionId}={}) {
   const key=workspace.id;
   if(!sessions.has(key))sessions.set(key,{reviewer:'',editionId:editionId??'',sourceReviewId:'',deliveryReviewId:'',
     deliveryApprovalId:'',target:'upstream',maxBytes:'16777216',origin:'',payment:'',customerDirectory:'',outputDirectory:'',view:'onboarding'});
-  const form=sessions.get(key);let state=null,native=workspace,closed=false,commissioningMount=null,busy=false;
+  const form=sessions.get(key);let state=null,native=workspace,closed=false,commissioningMount=null,policyMount=null,busy=false;
   const note=el('p',{class:'eoapi-message',role:'status'}),body=el('div',{class:'eoapi-body'});
   element.classList.add('eoapi-panel');element.replaceChildren(note,body);
   const input=(name,props={})=>el('input',{value:form[name]??'',...props,oninput:event=>{form[name]=event.target.value;}});
@@ -42,7 +43,7 @@ export function mountEoapi(element,{api,workspace,editionId}={}) {
     return call(path,{...data,operationId:row.operationId});
   }
   async function action(run,label) {
-    if(busy)return;busy=true;note.textContent=label+'…';body.querySelectorAll('button').forEach(button=>button.disabled=true);
+    if(busy)return;busy=true;note.setAttribute('role','status');note.textContent=label+'…';body.querySelectorAll('button[data-eoapi-action]').forEach(button=>button.disabled=true);
     try {
       const result=await run();
       if(closed)return;
@@ -54,36 +55,30 @@ export function mountEoapi(element,{api,workspace,editionId}={}) {
       form.lastResult=result;
       await reload();
     }catch(error){if(!closed){note.textContent=error.message||String(error);note.setAttribute('role','alert');await reload().catch(()=>{});}}
-    finally{busy=false;if(!closed)body.querySelectorAll('button').forEach(button=>button.disabled=false);}
+    finally{busy=false;if(!closed)body.querySelectorAll('button[data-eoapi-action]').forEach(button=>button.disabled=false);}
   }
-  const button=(label,run,title=label)=>el('button',{type:'button',onclick:()=>void action(run,title)},label);
+  const button=(label,run,title=label)=>el('button',{type:'button','data-eoapi-action':'',disabled:busy,onclick:()=>void action(run,title)},label);
   function policyView() {
-    const p=state.policies,draft=p.draft?.policy,latest=p.reviews.at(-1),approved=p.approvals.find(item=>item.id===p.currentApprovalId);
-    const file=el('input',{type:'file',accept:'.json,application/json'});
-    const panel=el('section',{class:'panel'},el('h3',{},'1. Deployment configuration'),
-      el('p',{},'Review the authored catalog, identity, access rules and collection rights before associating a source edition.'));
-    if(draft) {
-      panel.append(el('dl',{class:'summary-list'},el('dt',{},'Configuration'),el('dd',{},draft.title),
+    const p=state.policies,approved=p.approvals.find(item=>item.id===p.currentApprovalId);
+    const draft=p.draft?.policy;
+    return el('section',{class:'panel'},el('h3',{},'1. Deployment configuration'),
+      el('p',{},'Edit the deployment, identity, ordered access rules and collection rights in the complete policy workspace.'),
+      draft?el('dl',{class:'summary-list'},el('dt',{},'Configuration'),el('dd',{},draft.title),
         el('dt',{},'Customer endpoint'),el('dd',{},draft.deployment.publicUrl),
         el('dt',{},'Upstream catalog'),el('dd',{},draft.upstream.url),
-        el('dt',{},'Current approval'),el('dd',{},approved?.id??'Review and approve this configuration')),
-        details('Configuration and ordered access rules',draft),
-        details('Latest saved configuration review',latest??{}));
-      const rights=el('table',{},el('thead',{},el('tr',{},['Collection','License','Source access'].map(text=>el('th',{},text)))),
-        el('tbody',{},draft.collectionRights.map(row=>el('tr',{},el('td',{},row.id),el('td',{},row.license),el('td',{},row.assetAccess)))));
-      panel.append(el('div',{class:'table-wrap'},rights));
-    }
-    panel.append(field('Configuration file',file,'Choose the authored policy JSON or a complete approved policy package.'),
-      el('div',{class:'actions'},
-        button('Load configuration',async()=>{const selected=file.files?.[0];if(!selected)throw new Error('Choose a configuration file.');
-          if(selected.size>8*1024*1024)throw new Error('Choose a configuration file smaller than 8 MiB.');
-          const value=JSON.parse(await selected.text());
-          return value.schema==='scf-eoapi-policy-package/v1'?call('/policy/import',{package:value,expectedRevision:p.revision}):
-            call('/policy/draft',{policy:value,expectedRevision:p.revision});}),
-        draft?button('Review configuration',()=>call('/policy/review',{expectedRevision:p.revision})):null,
-        latest?button('Approve reviewed configuration',()=>call('/policy/approve',{reviewId:latest.id,reviewer:required(form.reviewer,'Reviewer'),expectedRevision:p.revision})):null,
-        approved?button('Download approved package',async()=>{const result=await call('/policy/export',{approvalId:approved.id});download(result.package,'eoapi-approved-policy.json');return {approvalId:approved.id};}):null));
-    return panel;
+        el('dt',{},'Current approval'),el('dd',{},approved?.id??'Review and approve this configuration')):null,
+      button('Open deployment policy',async()=>{form.view='policy';return {view:form.view};}));
+  }
+  async function componentDispatch(prefix,{method,path,body,signal}) {
+    try{return {status:200,body:await api('/api/eoapi'+prefix+path,{method,body,signal})};}
+    catch(error){return {status:error.status??500,body:{error:error.code??'EOAPI_POLICY_REQUEST_FAILED',
+      ...(error.field?{field:error.field}:{})}};}
+  }
+  async function policySaved(value) {
+    if(closed)return;
+    form.reviewer=value.approval?.reviewer??form.reviewer;
+    state=await api('/api/eoapi/state');
+    note.textContent='Deployment approval '+value.approval.id+' is available for source review and commissioning.';
   }
   function sourceView() {
     const value=state.onboarding,p=state.policies;
@@ -165,16 +160,21 @@ export function mountEoapi(element,{api,workspace,editionId}={}) {
   }
   function render() {
     if(closed)return;
-    commissioningMount?.destroy?.();commissioningMount=null;
+    commissioningMount?.destroy?.();commissioningMount=null;policyMount?.destroy?.();policyMount=null;
     const navigation=el('nav',{class:'actions'},
       button('Customer onboarding',async()=>{form.view='onboarding';return {view:form.view};}),
+      button('Deployment policy',async()=>{form.view='policy';return {view:form.view};}),
       state.commissioning?button('Deployment commissioning',async()=>{form.view='commissioning';return {view:form.view};}):null,
       button('Refresh saved workspace',()=>Promise.resolve({refreshed:true})));
     body.replaceChildren(el('h2',{},'Customer imagery operations'),navigation);
-    if(form.view==='commissioning'&&state.commissioning) {
+    if(form.view==='policy') {
       const panel=el('div');body.append(panel);
-      commissioningMount=mountCommissioning(panel,{principals:state.source.principals.map(row=>row.id),
-        dispatch:({method,path,body})=>api('/api/eoapi/commissioning'+path,{method,body})});
+      policyMount=mountDeploymentPolicy(panel,{reviewer:form.reviewer,
+        dispatch:request=>componentDispatch('/policy',request),onApproval:policySaved,onReceived:policySaved});
+    }else if(form.view==='commissioning'&&state.commissioning) {
+      const panel=el('div');body.append(panel);
+      commissioningMount=mountCommissioning(panel,{principals:['anonymous',...state.source.principals.filter(row=>row.authenticated).map(row=>row.id)],
+        dispatch:request=>componentDispatch('/commissioning',request)});
     }else{
       body.append(policyView(),sourceView(),deliveryView(),operationsView());
       if(form.lastResult)body.append(details('Last saved operation result',form.lastResult));
@@ -182,8 +182,11 @@ export function mountEoapi(element,{api,workspace,editionId}={}) {
   }
   async function reload() {
     const [fresh,original]=await Promise.all([api('/api/eoapi/state'),api('/api/state')]);
-    if(closed)return;state=fresh;native=original.workspace;render();
+    if(closed)return;state=fresh;native=original.workspace;
+    if(form.view==='policy'&&policyMount)await policyMount.refresh();
+    else if(form.view==='commissioning'&&commissioningMount)await commissioningMount.refresh();
+    else render();
   }
   void reload().catch(error=>{note.textContent=error.message;note.setAttribute('role','alert');});
-  return {refresh:reload,destroy(){closed=true;commissioningMount?.destroy?.();}};
+  return {refresh:reload,destroy(){closed=true;commissioningMount?.destroy?.();policyMount?.destroy?.();}};
 }

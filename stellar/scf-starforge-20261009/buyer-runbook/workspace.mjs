@@ -36,7 +36,15 @@ const messages = {
   CLIENT_RECEIVE_PATH_VALUES_REQUIRED:'Fill every declared path parameter using its original name.',
   CLIENT_RECEIVE_QUERY_VALUES_REQUIRED:'Supply query parameters as a JSON object of strings or arrays of strings.',
   OPERATION_HANDOFF_RETAINED_INPUT_CHANGED:'The retained request input changed. Reopen its original source before resuming setup.',
-  REQUEST_OPERATOR_PRESET_REQUIRED:'Start this workspace with its local operator settings file to prepare received requests.',
+  REQUEST_OPERATOR_PRESET_REQUIRED:'Open Local buyer setup and save this host’s settings before preparing a received request.',
+  OPERATOR_SETTINGS_CHANGED_REVIEW_AGAIN:'The selected host settings changed. Review your draft against the current version again.',
+  OPERATOR_REVIEW_CHANGED:'The host fields no longer match the saved review. Review the current draft before saving.',
+  OPERATOR_REVISION_INPUT_CHANGED:'This draft differs from the selected saved version. Edit the fields and review it as a new version.',
+  OPERATOR_REVISION_SETTINGS_CHANGED:'The retained settings file changed. Select an intact saved version or review a new host draft.',
+  OPERATOR_SELECTION_SETTINGS_CHANGED:'The selected settings no longer match their saved version. Open Local buyer setup to review a repair.',
+  OPERATOR_RETAINED_SETTINGS_REQUIRED:'This older preparation needs its original preset bytes. Restore its matching saved host version or original declared preset, then resume the same buyer.',
+  REQUEST_ATTEMPT_SETTINGS_CHANGED:'The settings retained for this original preparation changed. Restore that attempt’s original preset file to resume its same buyer.',
+  OPERATOR_SETTINGS_FIELDS_INVALID:'Complete the original host fields and review the current draft.',
   REQUEST_OPERATOR_SETTINGS_CHANGED:'The local operator settings changed. Review this request again before preparing it.',
   REQUEST_REVIEW_CHANGED:'The selected request review changed. Reopen it and review the current payment option and budget.',
   REQUEST_ALREADY_PREPARED:'This request already has a local buyer configuration. Open the prepared request to continue.',
@@ -67,6 +75,7 @@ export async function startRunbookWorkspace({port = 8460, ...options} = {}) {
     ['/paid-files.mjs','paid-files.mjs','text/javascript; charset=utf-8'],
     ['/accounting.mjs','accounting.mjs','text/javascript; charset=utf-8'],
     ['/recovery.mjs','recovery.mjs','text/javascript; charset=utf-8'],
+    ['/operator.mjs','operator.mjs','text/javascript; charset=utf-8'],
     ['/style.css','style.css','text/css; charset=utf-8'],
   ].map(async ([path,name,type]) => [path,{type,bytes:await readFile(new URL('workspace-ui/' + name,import.meta.url))}])));
   let hosts = new Set(), origins = new Set(), closing = false;
@@ -113,6 +122,12 @@ export async function startRunbookWorkspace({port = 8460, ...options} = {}) {
         const asset = assets.get(url.pathname);
         if (asset) return reply(200,asset.type,asset.bytes);
         if (url.pathname === '/api/state') return json(200,{...await model.state(),token});
+        if (url.pathname === '/api/operator') return json(200,await model.operatorState());
+        const operatorRevision=/^\/api\/operator\/(preset-[a-f0-9]{64})$/.exec(url.pathname);
+        if(operatorRevision)return json(200,await model.operatorRevision(operatorRevision[1]));
+        const operatorFile=/^\/files\/operator\/(preset-[a-f0-9]{64})\/settings\.json$/.exec(url.pathname);
+        if(operatorFile){const item=await model.operatorAttachment(operatorFile[1]);
+          return reply(200,'application/json',item.bytes,{'content-disposition':'attachment; filename="'+item.name+'"'});}
         let match=/^\/api\/clients\/(client-[a-f0-9]{64})$/.exec(url.pathname);
         if(match)return json(200,await model.client(match[1]));
         match=/^\/files\/clients\/(client-[a-f0-9]{64})\/(client-export\.json|seller-client\.mjs|seller-client\.d\.mts|seller-openapi\.json|package\.json|README\.md)$/.exec(url.pathname);
@@ -180,6 +195,8 @@ export async function startRunbookWorkspace({port = 8460, ...options} = {}) {
         url.pathname==='/api/clients/request'?CLIENT_REQUEST_UPLOAD_MAX_BYTES:
         url.pathname==='/api/requests/upload'?4*Math.ceil(OPERATION_HANDOFF_MAX_BYTES/3)+1024:1024*1024;
       const input=await body(limit);
+      if(url.pathname==='/api/operator/review')return json(200,await model.reviewOperatorSettings(input));
+      if(url.pathname==='/api/operator/save')return json(200,await model.saveOperatorSettings(input));
       if(url.pathname==='/api/clients/upload')return json(200,await model.receiveClient(input));
       if(url.pathname==='/api/clients/file')return json(200,await model.uploadClientFile(input));
       if(url.pathname==='/api/clients/request')return json(200,await model.composeClientRequest(input));

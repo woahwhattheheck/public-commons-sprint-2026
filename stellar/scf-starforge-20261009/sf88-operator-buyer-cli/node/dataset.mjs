@@ -3,6 +3,8 @@ import { mkdtemp, readdir, rm, rename } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { VerifiedFile } from './result.mjs';
+import {runLostOutput,recoverLostOutputCommand,resumeLostOutputCommand,listLostOutputCommands,
+ recoveryProofFile,exportLostOutputReport} from './dataset-recovery.mjs';
 import { accountingOptions, runAccounting, recoverAccounting, accountingPages,
   exportAccounting } from './session-accounting.mjs';
 import { absolute, privateDirectory, digest, now, intent, object, need, BuyerError,
@@ -10,7 +12,7 @@ import { absolute, privateDirectory, digest, now, intent, object, need, BuyerErr
 
 const SCHEMA = 'stellar-forge.node-dataset.v1';
 const WORKER = fileURLToPath(new URL('./dataset-worker.mjs', import.meta.url));
-const OUTPUTS = new Set(['dataset.jsonl','dataset.csv','review.html','manifest.json']);
+const OUTPUTS = new Set(['dataset.jsonl','dataset.csv','review.html','manifest.json','semantics.json']);
 const MAX_OUTPUT = 256 * 1024 * 1024;
 const clone = value => JSON.parse(jsonBytes(value));
 const freeze = value => {
@@ -63,7 +65,31 @@ export class Dataset {
     const metadata = await this._metadata();
     return this._command(metadata.source.kind === 'attached' ? 'attach' : 'initialize', {}, options);
   }
+  /** Bind an attached original definition while its returned paid page is being recovered. */
+  async initializeRecovery(options) {
+    need((await this._metadata()).source.kind==='attached','DATASET_RECOVERY_ATTACHMENT_REQUIRED');
+    return this._command('attach-recovery',{},options);
+  }
   inspect(options) { return this._command('inspect', {}, options); }
+  inspectLostOutput(options) { return runLostOutput(this,'inspect-lost-output',options); }
+  recoverLostOutput(options) { return runLostOutput(this,'recover-lost-output',options); }
+  /** Authenticates the original sealed completion and ledger without provider IO. */
+  readLostOutputRecovery(options) { return runLostOutput(this,'read-lost-output',options); }
+  async exportLostOutputProof(destination,options={}) {
+    const result=await runLostOutput(this,'export-lost-output',
+      {...options,...(destination===undefined?{}:{destination:absolute(destination)})});
+    return {...result,file:recoveryProofFile(result)};
+  }
+  lostOutputProofFile(result) {
+    need(/^lost-output-[a-f0-9]{64}$/.test(result?.commandId??'')&&
+      result.commandDirectory===join(this.directory,'commands',result.commandId),
+    'DATASET_RECOVERY_APPLICATION_BINDING_CHANGED');
+    return recoveryProofFile(result);
+  }
+  recoverLostOutputCommand(options) { return recoverLostOutputCommand(this,options); }
+  resumeLostOutputCommand(options) { return resumeLostOutputCommand(this,options); }
+  listLostOutputCommands(options) { return listLostOutputCommands(this,options); }
+  exportLostOutputReport(destination,options) { return exportLostOutputReport(this,destination,options); }
   /** Original recovery only reads native files and removes a proven-dead native lock. */
   recover(options) { return this._command('recover', {}, options); }
   /** Only this method can acquire new pages. Completed/marked pages are never replayed. */
@@ -142,8 +168,10 @@ export async function createDataset(buyer, options, attached = false) {
   need(object(options), 'DATASET_OPTIONS_REQUIRED');
   const {id, config, workspaceDirectory, directory, operatorProfile,
     maxPages, maxTotalAtomic, maxRows = 1000000, maxPageBytes = 1048576, expectedSnapshot = null,
-    accountingOnly = false} = options;
+    accountingOnly = false, recoveryOnly = false} = options;
   need(typeof accountingOnly === 'boolean' && (attached || !accountingOnly), 'DATASET_ACCOUNTING_ATTACHMENT_REQUIRED');
+  need(typeof recoveryOnly==='boolean'&&(attached||!recoveryOnly)&&!(recoveryOnly&&accountingOnly),
+    'DATASET_RECOVERY_ATTACHMENT_REQUIRED');
   const dataset = new Dataset(buyer, id);
   await buyer.ready();
   await privateDirectory(join(buyer.stateDirectory, 'datasets'));
@@ -178,7 +206,8 @@ export async function createDataset(buyer, options, attached = false) {
     throw error;
   }
   await syncDirectory(parent);
-  if (accountingOnly) await dataset.initializeAccounting();
+  if (recoveryOnly) await dataset.initializeRecovery();
+  else if (accountingOnly) await dataset.initializeAccounting();
   else await dataset.initialize();
   return dataset;
 }
@@ -228,7 +257,17 @@ export class DatasetDelivery {
       manifest.dataset?.snapshot === report.nativeStatus.snapshot &&
       manifest.dataset.rows === report.nativeStatus.rows && Array.isArray(manifest.dataset.projectedFields) &&
       object(manifest.outputs), 'DATASET_NATIVE_MANIFEST_INVALID');
-    for (const name of ['dataset.jsonl','dataset.csv','review.html'])
+    const semantics = manifest.semantics;
+    need((semantics !== undefined) === (report.semantics !== undefined),
+      'DATASET_SEMANTIC_OUTPUT_METADATA_INVALID');
+    if (semantics !== undefined) need(object(semantics) && semantics.file === 'semantics.json' &&
+      semantics.scope === 'PUBLISHED_DATASET' && semantics.typedRowsFile === 'dataset.jsonl' &&
+      ['schema','sha256','definitionSha256','captureManifestSha256'].every(key =>
+        semantics[key] === report.semantics[key] && semantics[key] === report.nativeStatus.semantics?.[key]) &&
+      JSON.stringify(semantics.selectedFields) === JSON.stringify(manifest.dataset.projectedFields),
+      'DATASET_SEMANTIC_OUTPUT_METADATA_INVALID');
+    for (const name of ['dataset.jsonl','dataset.csv','review.html',
+      ...(semantics !== undefined ? ['semantics.json'] : [])])
       need(manifest.outputs[name]?.sha256 === report.outputs[name]?.sha256 &&
         manifest.outputs[name]?.bytes === report.outputs[name]?.bytes, 'DATASET_OUTPUT_METADATA_INVALID');
     return new DatasetDelivery(report, manifest);
@@ -236,6 +275,17 @@ export class DatasetDelivery {
   file(name) {
     need(OUTPUTS.has(name), 'DATASET_OUTPUT_NAME_INVALID');
     return new DatasetFile({name, ...this.report.outputs[name]}, this.report.directory);
+  }
+  /** The retained published dictionary; selectedFields remain in the delivery manifest. */
+  async readSemantics({limit = 2097152, signal} = {}) {
+    if (this.manifest.semantics === undefined) return null;
+    const value = await this.file('semantics.json').json({limit, signal});
+    const binding = this.manifest.semantics;
+    need(value?.schema === binding.schema && value.sha256 === binding.sha256 &&
+      value.definitionSha256 === binding.definitionSha256 &&
+      value.source?.captureManifestSha256 === binding.captureManifestSha256,
+      'DATASET_SEMANTIC_DICTIONARY_CHANGED');
+    return value;
   }
   _row(text) {
     let value;

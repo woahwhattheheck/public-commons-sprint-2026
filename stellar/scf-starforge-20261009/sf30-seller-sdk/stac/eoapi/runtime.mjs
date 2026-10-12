@@ -99,14 +99,14 @@ export function createEoapiSourceRuntime({configuration={},transport,environment
 }
 
 export async function openEoapiRuntime({directory,policyDirectory,onboardingDirectory,outputDirectory,
-  title='Customer satellite imagery',endpoint,transport,sourceConfiguration,environment=process.env,
+  title='Customer satellite imagery',endpoint,transport,assetAccess,sourceConfiguration,environment=process.env,
   lookup=systemLookup,resolveCredential,create=true}={}) {
   need(typeof directory==='string'&&directory.length,'EOAPI_WORKSPACE_DIRECTORY_REQUIRED');
   directory=resolve(directory);
   const source=createEoapiSourceRuntime({configuration:sourceConfiguration??{},transport,environment,lookup,resolveCredential});
   let workspace,policies,onboarding,commissioning,closing=null;
   try {
-    workspace=await openStacWorkspace({directory,title,endpoint,transport,sourceAuth:source.sourceAuth,create});
+    workspace=await openStacWorkspace({directory,title,endpoint,transport,sourceAuth:source.sourceAuth,assetAccess,create});
     policies=await openDeploymentPolicyWorkspace({directory:policyDirectory??join(directory,'eoapi','policy'),create,title});
     onboarding=await openEoapiOnboarding({workspace,policies,directory:onboardingDirectory,outputDirectory,create});
     commissioning=await openCommissioningWorkspace({directory:join(directory,'eoapi','commissioning'),policyWorkspace:policies,

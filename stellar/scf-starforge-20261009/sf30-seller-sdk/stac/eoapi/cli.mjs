@@ -2,7 +2,7 @@
 import {resolve} from 'node:path';
 import {open} from 'node:fs/promises';
 import {constants} from 'node:fs';
-import {readJson,need} from '../../../sf88-operator-buyer-cli/node/store.mjs';
+import {readJson,readBytes,need} from '../../../sf88-operator-buyer-cli/node/store.mjs';
 import {openEoapiRuntime} from './runtime.mjs';
 import {createEoapiController} from './controller.mjs';
 import {startStacServer} from '../server.mjs';
@@ -35,6 +35,7 @@ const required=(flags,name)=>{need(typeof flags[name]==='string'&&flags[name].tr
 const optional=(flags,name)=>flags[name]===undefined?undefined:required(flags,name);
 const numeric=(flags,name,fallback)=>{if(flags[name]===undefined)return fallback;const value=Number(flags[name]);need(Number.isSafeInteger(value)&&value>=0,'EOAPI_NUMERIC_FLAG_INVALID');return value;};
 const jsonFlag=(flags,name)=>readJson(resolve(required(flags,name)),16*1024*1024);
+const textFlag=async(flags,name)=>new TextDecoder('utf-8',{fatal:true}).decode(await readBytes(resolve(required(flags,name)),16*1024*1024));
 async function sourceConfiguration(path) {
   const file=await open(resolve(path),constants.O_RDONLY|(constants.O_NOFOLLOW??0)|(constants.O_NONBLOCK??0));
   try {
@@ -81,14 +82,17 @@ export async function runEoapiCommand({command,flags={}}={}) {
     if(command==='eoapi-init'||command==='eoapi-state')return {result:await runtime.getState()};
     if(command==='eoapi-operation')return {result:await runtime.onboarding.getOperation(required(flags,'operation-id'))};
     let path,body={};
-    const expectedRevision=numeric(flags,'expected-revision',undefined);
+    const expectedRevision=numeric(flags,'expected-revision',command.startsWith('eoapi-policy-')?
+      (await runtime.policies.getState()).revision:undefined);
     const reviewer=()=>required(flags,'reviewer');
     switch(command) {
       case 'eoapi-policy-save':path='/policy/draft';body={policy:await jsonFlag(flags,'input'),expectedRevision};break;
       case 'eoapi-policy-review':path='/policy/review';body={expectedRevision};break;
       case 'eoapi-policy-approve':path='/policy/approve';body={reviewId:required(flags,'review'),reviewer:reviewer(),expectedRevision};break;
-      case 'eoapi-policy-import':path='/policy/import';body={package:await jsonFlag(flags,'input'),expectedRevision};break;
-      case 'eoapi-policy-export':path='/policy/export';body={approvalId:optional(flags,'approval'),directory:flags.out?resolve(required(flags,'out')):undefined};break;
+      case 'eoapi-policy-import':{const packageText=await textFlag(flags,'input');path='/policy/import';
+        body={package:JSON.parse(packageText),packageText,expectedRevision};break;}
+      case 'eoapi-policy-export':return {result:await runtime.policies.exportPackage({approvalId:optional(flags,'approval'),
+        ...(flags.out?{directory:resolve(required(flags,'out'))}:{})})};
       case 'eoapi-source-discover':path='/source/discover';body={approvalId:optional(flags,'approval'),operationId:required(flags,'operation-id'),target:optional(flags,'target')??'deployment'};break;
       case 'eoapi-source-review':path='/source/review';body={approvalId:optional(flags,'approval'),editionId:optional(flags,'edition'),reviewer:reviewer(),expectedRevision,target:optional(flags,'target')??'deployment'};break;
       case 'eoapi-bind':path='/editions/bind';body={sourceReviewId:required(flags,'source-review'),editionId:required(flags,'edition'),operationId:required(flags,'operation-id')};break;
@@ -105,7 +109,13 @@ export async function runEoapiCommand({command,flags={}}={}) {
       }
       default:need(false,'EOAPI_COMMAND_UNKNOWN');
     }
-    const result=await controller.dispatch({method:'POST',path,body});
+    const response=await controller.dispatch({method:'POST',path,body});
+    let result=response;
+    if(Number.isInteger(response?.status)&&Object.hasOwn(response,'body')) {
+      if(response.status>=400){const code=typeof response.body?.error==='string'?response.body.error:
+        response.body?.error?.code??'EOAPI_COMMAND_FAILED';throw Object.assign(new Error(code),{code,status:response.status});}
+      result=response.body;
+    }
     return {result,exitCode:['PARTIAL','INTERRUPTED'].includes(result?.status)?2:0};
   }finally{if(!keep){await processing?.close?.();await runtime.close();}}
 }
