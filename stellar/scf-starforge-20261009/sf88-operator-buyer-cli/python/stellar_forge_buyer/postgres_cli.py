@@ -11,7 +11,7 @@ import sys
 
 from .datasets import DatasetAcquisition, DatasetDelivery
 from .errors import BuyerError
-from .postgres_delivery import DatasetMapping, PostgresWarehouse, WarehouseError, review_delivery
+from .postgres_delivery import DatasetMapping, PostgresWarehouse, WarehouseError, load_delivery_report, review_delivery
 from .storage import digest, parse, private_directory, read, write
 
 
@@ -27,16 +27,9 @@ def _encode(value):
 
 def _delivery(args):
     if args.report:
-        raw = parse(read(Path(args.report), 8 * 1024 * 1024))
-        report = raw.get("report") if isinstance(raw, dict) and isinstance(raw.get("report"), dict) else raw
-        if not isinstance(report, dict) or not isinstance(report.get("directory"), str):
-            raise WarehouseError("DATASET_PG_ORIGINAL_DELIVERY_REPORT_REQUIRED")
-        directory = Path(report["directory"])
-        if not directory.is_absolute() or str(directory) != report["directory"]:
-            raise WarehouseError("DATASET_PG_ORIGINAL_DELIVERY_DIRECTORY_INVALID")
         if args.checkout or args.delivery:
             raise WarehouseError("DATASET_PG_ONE_DELIVERY_SOURCE_REQUIRED")
-        return DatasetDelivery(native=report, directory=directory)
+        return load_delivery_report(args.report)
     if not args.checkout or not args.delivery:
         raise WarehouseError("DATASET_PG_CHECKOUT_AND_DELIVERY_REQUIRED_FOR_SESSION")
     return DatasetAcquisition(checkout=args.checkout, session=args.session, node=args.node).deliver(args.delivery)
@@ -62,6 +55,11 @@ def _parser():
     commands = parser.add_subparsers(dest="command", required=True)
     commands.add_parser("init", help="create an empty dedicated receiving schema or reopen its original identity")
     commands.add_parser("status", help="read retained editions, views and PostgreSQL version")
+    browser = commands.add_parser("serve", help="create/reopen the dedicated receiving schema and local operator workspace")
+    browser.add_argument("--workspace", required=True, help="private review and operation directory")
+    browser.add_argument("--port", type=int, default=0)
+    browser.add_argument("--open", action="store_true", help="open the private local browser URL")
+
     for name in ("review", "import"):
         command = commands.add_parser(name, help="review complete verified rows offline" if name == "review" else "commit complete original rows as one retained edition")
         source = command.add_mutually_exclusive_group(required=True)
@@ -107,6 +105,37 @@ def _parser():
 def main(argv=None):
     args = _parser().parse_args(argv)
     try:
+        if args.command == "serve":
+            if args.out:
+                raise WarehouseError("DATASET_PG_SERVE_SINGLE_OUTPUT_UNAVAILABLE")
+            from .postgres_http import serve
+            directory = private_directory(Path(args.workspace))
+            identity_path = directory / "postgres-workspace.json"
+            expected = args.expect_warehouse
+            if identity_path.exists():
+                identity = parse(read(identity_path, 65536))
+                if (identity.get("schema") != "stellar-forge.postgres-operator.v1"
+                        or identity.get("warehouse_schema") != args.schema
+                        or expected is not None and expected != identity.get("warehouse_id")):
+                    raise WarehouseError("DATASET_PG_OPERATOR_WAREHOUSE_CHANGED")
+                expected = identity["warehouse_id"]
+            warehouse = PostgresWarehouse.from_environment(
+                args.connection_env, schema=args.schema, create=True, expected_warehouse=expected,
+                statement_timeout_ms=args.statement_timeout_ms, lock_timeout_ms=args.lock_timeout_ms)
+            server, control, url = serve(warehouse, directory, port=args.port)
+            try:
+                print(json.dumps({"status": "LISTENING", "address": url.split("#")[0],
+                                  "private_launch": str(control),
+                                  "warehouse_id": warehouse.warehouse_id}), flush=True)
+                if args.open:
+                    import webbrowser
+                    webbrowser.open(url)
+                server.serve_forever(poll_interval=0.2)
+            except KeyboardInterrupt:
+                pass
+            finally:
+                server.server_close()
+            return 0
         if args.command in {"review", "import"}:
             mapping = DatasetMapping.from_record(parse(read(Path(args.mapping), 1024 * 1024)))
             delivery = _delivery(args)
