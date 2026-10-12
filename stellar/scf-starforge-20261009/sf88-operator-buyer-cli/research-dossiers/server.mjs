@@ -13,6 +13,7 @@ const TYPES = Object.freeze({
   'index.html': 'text/html; charset=utf-8',
   'app.js': 'text/javascript; charset=utf-8',
   'style.css': 'text/css; charset=utf-8',
+  'crossref.js': 'text/javascript; charset=utf-8',
 });
 const MAX_RESEARCH_BODY = 96 * 1024 * 1024 + 65536; // 16 MiB raw UTF-8, worst-case JSON escaping plus envelope.
 const MAX_PORTABLE_BODY = 256 * 1024 * 1024 + 65536; // Engine caps the serialized portable record at 256 MiB.
@@ -88,7 +89,8 @@ export async function loadEditionAdapters(modulePath) {
 }
 
 /** Reuses the existing SF88 loopback / fragment-token operator convention. */
-export async function startDossierWorkspace({directory, port = 0, providers = {}, openalexWorkspace = null} = {}) {
+export async function startDossierWorkspace({directory, port = 0, providers = {}, openalexWorkspace = null,
+  crossrefSource = null, crossrefIdentity = null} = {}) {
   requireValue(typeof directory === 'string' && isAbsolute(directory) && resolve(directory) === directory,
     'WORKSPACE_ABSOLUTE_PATH_REQUIRED');
   requireValue(Number.isInteger(port) && port >= 0 && port <= 65535, 'WORKSPACE_PORT_INVALID');
@@ -97,6 +99,12 @@ export async function startDossierWorkspace({directory, port = 0, providers = {}
     typeof openalexWorkspace?.exportFiles === 'function', 'OPENALEX_WORKSPACE_API_REQUIRED');
   const store = await openDossierStore(directory, {providers});
   await store.list();
+  let crossref = null;
+  if (crossrefSource !== null) {
+    const {openCrossrefWorkspace} = await import('./crossref-workspace.mjs');
+    crossref = await openCrossrefWorkspace({directory:join(directory,'crossref'),dossiers:store,
+      source:crossrefSource,identity:crossrefIdentity});
+  }
   const token = randomBytes(32).toString('hex');
   const expectedAuthorization = Buffer.from('Bearer ' + token);
   let origin;
@@ -131,7 +139,8 @@ export async function startDossierWorkspace({directory, port = 0, providers = {}
         'AUTH_REQUIRED');
       if (req.method === 'GET' && path === '/api/state') {
         send(200, {dossiers: await store.list(), providers: Object.keys(providers),
-          openalex: {configured:openalexWorkspace !== null}}); return;
+          openalex: {configured:openalexWorkspace !== null},
+          crossref: {configured:crossref !== null,identity:crossrefIdentity}}); return;
       }
       if (req.method === 'GET' && path === '/api/openalex/editions') {
         requireValue(openalexWorkspace !== null, 'OPENALEX_WORKSPACE_NOT_CONFIGURED');
@@ -155,6 +164,22 @@ export async function startDossierWorkspace({directory, port = 0, providers = {}
         const options = url.searchParams.has('revision') ? {revision: revisionQuery(url.searchParams.get('revision'))} : {};
         send(200, await store.get(id, options)); return;
       }
+      if (req.method === 'GET' && action === 'crossref/operations') {
+        requireValue(crossref !== null, 'CROSSREF_WORKSPACE_NOT_CONFIGURED');
+        send(200, await crossref.list(id, {after:url.searchParams.get('after')??'',
+          limit:url.searchParams.has('limit')?revisionQuery(url.searchParams.get('limit')):30})); return;
+      }
+      const crossrefMatch = action.match(/^crossref\/operations\/(cr_[a-f0-9]{64})(?:\/(start|stop|receive|edition))?$/);
+      if (crossrefMatch) {
+        requireValue(crossref !== null, 'CROSSREF_WORKSPACE_NOT_CONFIGURED');
+        const selected = await crossref.inspect(crossrefMatch[1], {probe:false});
+        requireValue(selected.plan.request.dossierId === id, 'CROSSREF_OPERATION_DOSSIER_MISMATCH');
+        if (req.method === 'GET' && !crossrefMatch[2]) {send(200, await crossref.review(crossrefMatch[1])); return;}
+        if (req.method === 'GET' && crossrefMatch[2] === 'edition') {
+          const retained = await crossref.edition(crossrefMatch[1]);
+          send(200, retained.bytes, 'application/json; charset=utf-8', crossrefMatch[1]+'.crossref.json'); return;
+        }
+      }
       if (req.method === 'GET' && action === 'compare') {
         send(200, await store.compare(id, {before: revisionQuery(url.searchParams.get('before')),
           after: revisionQuery(url.searchParams.get('after'))})); return;
@@ -170,6 +195,17 @@ export async function startDossierWorkspace({directory, port = 0, providers = {}
       }
       if (req.method !== 'POST') {send(405, {error: 'METHOD_NOT_ALLOWED'}); return;}
       const data = await readJson(req, ['receive', 'reference'].includes(action) ? MAX_RESEARCH_BODY : MAX_CONTROL_BODY);
+      if (action === 'crossref/prepare') {
+        requireValue(crossref !== null, 'CROSSREF_WORKSPACE_NOT_CONFIGURED');
+        send(201, await crossref.prepare(id, data)); return;
+      }
+      if (crossrefMatch && ['start','stop','receive'].includes(crossrefMatch[2])) {
+        const operationId = crossrefMatch[1], operation = crossrefMatch[2];
+        if (operation === 'start') {send(202, await crossref.start(operationId, selectedFields(data, ['expectedPlanSha256']))); return;}
+        if (operation === 'stop') {send(200, await crossref.stop(operationId)); return;}
+        send(200, await crossref.receive(operationId, selectedFields(data,
+          ['expectedRevision','expectedPlanSha256','expectedEditionSha256']))); return;
+      }
       const expectedRevision = revision(data.expectedRevision);
       if (action === '') {
         send(200, await store.update(id, {...selectedFields(data, ['title', 'description']), expectedRevision})); return;
@@ -228,7 +264,7 @@ export async function startDossierWorkspace({directory, port = 0, providers = {}
       if (res.headersSent) {res.destroy(); return;}
       const code = safeCode(error);
       const status = code === 'AUTH_REQUIRED' ? 401 : ['HOST_REFUSED', 'ORIGIN_REFUSED'].includes(code) ? 403 :
-        code === 'REVISION_CONFLICT' ? 409 : code === 'ENOENT' || code === 'DOSSIER_NOT_FOUND' ? 404 :
+        ['REVISION_CONFLICT','ROUTESCAN_RECORD_BUSY','CROSSREF_OPERATION_RUNNING_ELSEWHERE'].includes(code) ? 409 : code === 'ENOENT' || code === 'DOSSIER_NOT_FOUND' ? 404 :
           code === 'UPLOAD_SIZE_LIMIT' ? 413 : 400;
       send(status, {error: code, ...(error.openAlexImport ? {openAlexImport:error.openAlexImport} : {})});
     }
@@ -236,15 +272,21 @@ export async function startDossierWorkspace({directory, port = 0, providers = {}
   server.requestTimeout = 60000;
   server.headersTimeout = 15000;
   server.keepAliveTimeout = 5000;
-  await new Promise((accept, reject) => {
-    server.once('error', reject);
-    server.listen(port, '127.0.0.1', accept);
-  });
+  try {
+    await new Promise((accept, reject) => {
+      server.once('error', reject);
+      server.listen(port, '127.0.0.1', accept);
+    });
+  } catch (error) {await crossref?.close(); throw error;}
   origin = 'http://127.0.0.1:' + server.address().port;
-  return {server, origin, url: origin + '/#token=' + token, token,
-    close: () => new Promise((accept, reject) => {
-      server.close(error => error ? reject(error) : accept()); server.closeIdleConnections();
-    })};
+  let closing;
+  return {server, origin, url: origin + '/#token=' + token, token, crossref,
+    close: () => closing ??= (async () => {
+      await crossref?.close();
+      await new Promise((accept, reject) => {
+        server.close(error => error ? reject(error) : accept()); server.closeIdleConnections();
+      });
+    })()};
 }
 
 function parseOptions(args) {
@@ -252,19 +294,21 @@ function parseOptions(args) {
   const options = {};
   for (let index = 0; index < args.length; index += 2) {
     const key = args[index];
-    requireValue(['--dir', '--port', '--edition-adapter', '--openalex-workspace', '--openalex-module'].includes(key) && !Object.hasOwn(options, key) &&
+    requireValue(['--dir', '--port', '--edition-adapter', '--openalex-workspace', '--openalex-module', '--crossref-config', '--crossref-state'].includes(key) && !Object.hasOwn(options, key) &&
       typeof args[index + 1] === 'string' && args[index + 1].length > 0, 'ARGUMENT_INVALID_OR_REPEATED');
     options[key] = args[index + 1];
   }
   const rawPort = options['--port'] ?? '0';
   requireValue(/^[0-9]{1,5}$/.test(rawPort), 'WORKSPACE_PORT_INVALID');
   requireValue(!options['--openalex-module'] || options['--openalex-workspace'], 'OPENALEX_WORKSPACE_REQUIRED');
+  requireValue(!options['--crossref-config'] || options['--crossref-state'], 'CROSSREF_SOURCE_STATE_REQUIRED');
   return {directory: options['--dir'], port: Number(rawPort), adapter: options['--edition-adapter'],
-    openalexDirectory:options['--openalex-workspace'], openalexModule:options['--openalex-module']};
+    openalexDirectory:options['--openalex-workspace'], openalexModule:options['--openalex-module'],
+    crossrefConfig:options['--crossref-config'],crossrefDirectory:options['--crossref-state']};
 }
 async function main(args) {
   if (args.length === 0 || args.length === 1 && ['--help', '-h'].includes(args[0])) {
-    process.stdout.write('Usage: node server.mjs --dir /absolute/private/workspace [--port 8846] [--edition-adapter /absolute/provider-adapters.mjs] [--openalex-workspace /absolute/original/workspace] [--openalex-module /absolute/original/research/workspace.mjs]\n');
+    process.stdout.write('Usage: node server.mjs --dir /absolute/private/workspace [--port 8846] [--edition-adapter /absolute/provider-adapters.mjs] [--openalex-workspace /absolute/original/workspace] [--openalex-module /absolute/original/research/workspace.mjs] [--crossref-state /absolute/private/crossref-source] [--crossref-config /absolute/crossref-merchant.json]\n');
     return;
   }
   const options = parseOptions(args);
@@ -272,14 +316,37 @@ async function main(args) {
   const openalexWorkspace = options.openalexDirectory ? await openSavedOpenAlexWorkspace({
     directory:options.openalexDirectory, modulePath:options.openalexModule,
   }) : null;
-  let app;
-  try {app = await startDossierWorkspace({...options, providers, openalexWorkspace});}
-  catch (error) {await openalexWorkspace?.close(); throw error;}
+  let app, crossrefSource = null, crossrefIdentity = null;
+  try {
+    if (options.crossrefDirectory) {
+      requireValue(isAbsolute(options.crossrefDirectory) && (!options.crossrefConfig || isAbsolute(options.crossrefConfig)), 'CROSSREF_ABSOLUTE_PATHS_REQUIRED');
+      const [{createCrossrefSource},{sha256,json}] = await Promise.all([
+        import('../../sf30-seller-sdk/crossref/source.mjs'),import('../../sf30-seller-sdk/crossref/metadata.mjs')]);
+      let sourceOptions = {directory:options.crossrefDirectory,account:'crossref-public',cacheSeconds:86400,
+        timeoutMs:30000,maxResponseBytes:16*1024*1024};
+      let configSha256 = sha256(json({account:sourceOptions.account,cacheSeconds:sourceOptions.cacheSeconds,
+        timeoutMs:sourceOptions.timeoutMs,maxResponseBytes:sourceOptions.maxResponseBytes,mode:'public'}));
+      if (options.crossrefConfig) {
+        const [{readCrossrefConfig},{crossrefSourceOptions}] = await Promise.all([
+          import('../../sf30-seller-sdk/crossref/config.mjs'),import('../../sf30-seller-sdk/crossref/merchant.mjs')]);
+        const compiled = await readCrossrefConfig(options.crossrefConfig);
+        sourceOptions = crossrefSourceOptions(compiled,{sourceDirectory:options.crossrefDirectory});
+        configSha256 = compiled.inputSha256;
+      }
+      crossrefSource = await createCrossrefSource(sourceOptions);
+      const snapshot = await crossrefSource.snapshot();
+      crossrefIdentity = {configSha256,account:snapshot.account,mode:snapshot.mode};
+    }
+    app = await startDossierWorkspace({...options, providers, openalexWorkspace,crossrefSource,crossrefIdentity});
+  } catch (error) {await crossrefSource?.close();await openalexWorkspace?.close();throw error;}
   process.stdout.write(JSON.stringify({mode: 'RESEARCH_DOSSIER_WORKSPACE', directory: options.directory,
-    url: app.url, providers: Object.keys(providers), openalexConfigured:openalexWorkspace !== null}) + '\n');
+    url: app.url, providers: Object.keys(providers), openalexConfigured:openalexWorkspace !== null,
+    crossrefConfigured:crossrefSource !== null}) + '\n');
   let closing;
   const stop = () => closing ??= (async () => {
-    try {await app.close();} finally {await openalexWorkspace?.close(); process.exitCode = 0;}
+    try {await app.close();} finally {
+      try {await crossrefSource?.close();} finally {await openalexWorkspace?.close();process.exitCode = 0;}
+    }
   })();
   process.once('SIGINT', stop); process.once('SIGTERM', stop);
 }

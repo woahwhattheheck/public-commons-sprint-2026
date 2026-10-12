@@ -430,7 +430,12 @@ async function boot() {
     running=true;
     try {await watch(current);} finally {running=false;}
   }
+  const route=new URLSearchParams(location.search);
+  if(route.has('feed')) selection.feed=route.get('feed');
   await loadState();
+  if(route.has('collection')) $('subscriptions-link').href='/subscriptions?'+new URLSearchParams({collection:route.get('collection'),run:route.get('run')||''});
+  if(route.has('capture')) await selectCapture(route.get('capture'));
+  if(route.has('edition') && state.editions.some(e=>e.id===route.get('edition'))) await chooseEdition(route.get('edition'));
   info(state.feeds.length+' registered feeds · '+state.editions.length+' saved editions');
 }
 void boot().catch(error=>info(error.message,true));

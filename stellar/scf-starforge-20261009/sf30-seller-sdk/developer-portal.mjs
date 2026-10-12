@@ -75,6 +75,7 @@ export function compileSellerOpenApi(compiled, { mode = 'CHALLENGE_ONLY' } = {})
       }
     }
     const output = bazaar.info.output;
+    const outputShape = bazaar.schema.properties?.output?.properties;
     const operation = {
       operationId: id, summary: offer.resource.description,
       ...(offer.resource.tags?.length ? { tags: [...offer.resource.tags] } : {}),
@@ -85,6 +86,8 @@ export function compileSellerOpenApi(compiled, { mode = 'CHALLENGE_ONLY' } = {})
       responses: {
         '2XX': { description: 'Application success only after native payment success; exact status and output are application-defined.',
           ...(method !== 'HEAD' ? { content: { [offer.resource.mimeType ?? 'application/json']: {
+            ...(projected && outputShape && own(outputShape, 'example')
+              ? { schema: { $ref: rootRef + '/properties/output/properties/example' } } : {}),
             ...(output && own(output, 'example') ? { example: structuredClone(output.example) } : {}),
           } } } : {}) },
         '402': { description: 'Payment requirements. This is not a payment or a settlement receipt.',

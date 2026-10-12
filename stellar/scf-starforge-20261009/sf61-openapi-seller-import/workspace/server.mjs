@@ -5,8 +5,9 @@ import { randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
 import { readFile, readdir } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { inspectOpenApi, prepareMerchant, savePackage, readPackage, privateParent, packageName } from './model.mjs';
+import { inspectOpenApi, prepareMerchant, savePackage, readPackage, privateParent, packageName, readMerchantTransportConfiguration } from './model.mjs';
 import { prepareMerchantOperationDirectories } from './operation-plan.mjs';
+import { merchantTransportSummary } from './transport-plan.mjs';
 import { createMerchantTicketIssuer, saveMerchantTicket, readMerchantTicket, readMerchantOperationHandoff } from './operation-ticket.mjs';
 import { stageMerchantFileRequest, loadMerchantFileRequest, listMerchantFileRequests } from './file-requests.mjs';
 import { MAX_REQUEST_BODY_BYTES } from '../../sf31-buyer-client/request-body.mjs';
@@ -21,21 +22,17 @@ import { startCommerceConsole } from '../../sf66-demo-launcher/commerce-console.
 import { inspectPostman, preparePostmanSource } from '../postman/collection.mjs';
 import { openOAuthConnectionRegistry, readOAuthHostConnections } from '../../sf30-seller-sdk/oauth-connections/host.mjs';
 import { createOAuthWorkspaceAdapter } from './oauth-http.mjs';
+import { startManagedOpenApiWorkspace } from './managed-launch.mjs';
 import { openCacheWorkspace } from '../../sf30-seller-sdk/response-cache/workspace/model.mjs';
 import { cacheWorkspaceApi, serveCacheWorkspaceAsset, sendCacheWorkspaceResponse } from '../../sf30-seller-sdk/response-cache/workspace/http.mjs';
 import { createMigrationRoutes } from '../blockworks/routes.mjs';
+import { readBrowserAssets } from '../../distribution/browser-assets.mjs';
+import { cachePackageBinding, cachePolicyRevisionApi } from './cache-policy-revisions.mjs';
+import { createHarConsoleRoutes } from '../har/workspace-http.mjs';
 
 const here = fileURLToPath(new URL('.', import.meta.url));
-const STATIC = new Map([['/','index.html'],['/browser.mjs','browser.mjs'],['/stream-browser.mjs','stream-browser.mjs'],['/stream-customer-browser.mjs','stream-customer-browser.mjs'],['/authentication-browser.mjs','authentication-browser.mjs'],['/oauth-browser.mjs','oauth-browser.mjs'],['/oauth.css','oauth.css'],['/operation-panel.mjs','operation-panel.mjs'],['/file-input-browser.mjs','file-input-browser.mjs'],['/style.css','style.css']]);
-STATIC.set('/revision-browser.mjs','revision-browser.mjs');
-STATIC.set('/postman-browser.mjs','../postman/browser.mjs');
-STATIC.set('/migrations','../blockworks/index.html');
-STATIC.set('/migrations/','../blockworks/index.html');
-STATIC.set('/migrations/browser.mjs','../blockworks/browser.mjs');
-STATIC.set('/migrations/style.css','../blockworks/style.css');
-STATIC.set('/migrations/comparison-view.mjs','../blockworks/comparison-view.mjs');
+const STATIC = await readBrowserAssets(new URL('./browser-assets.json',import.meta.url));
 
-const MIME = {'.html':'text/html; charset=utf-8','.mjs':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8'};
 const HELP = 'node workspace/server.mjs --out-parent PRIVATE_DIRECTORY [--port 0] [--oauth-connections HOST_JSON] [--allow-loopback-oauth]\nCreate a private directory first (mkdir -m 700 /path/to/merchant-projects).\nOAuth host JSON carries approved aliases and directory environment references only. Explicit loopback OAuth is for local development.\nNode 22+; the console prints the local browser URL. Ctrl-C closes its managed seller.';
 const limited = async req => {
   const chunks = []; let size = 0;
@@ -80,6 +77,8 @@ export async function startWorkspace({ parent, port=0, noSignals=false, oauthCon
   if(typeof allowLoopbackOAuth!=='boolean')throw new TypeError('Loopback OAuth must be an explicit host option');
   const registry=await openOAuthConnectionRegistry({connections:oauthConnections,env:runtimeEnv,allowLoopback:allowLoopbackOAuth,lookup:oauthLookup});
   const oauth=createOAuthWorkspaceAdapter({registry,origin:()=>origin,allowLoopback:allowLoopbackOAuth});
+  let harPromise;
+  const har = () => harPromise ??= createHarConsoleRoutes({parent:output}).catch(error=>{harPromise=null;throw error;});
   let migrationPromise, migrationInstance;
   const migrations = () => migrationPromise ??= createMigrationRoutes({parent:output,origin:()=>origin,parentRuntime:view,
     env:runtimeEnv,oauthConnections,allowLoopbackOAuth,oauthLookup,validatePlan:oauth.validatePlan})
@@ -93,11 +92,12 @@ export async function startWorkspace({ parent, port=0, noSignals=false, oauthCon
         const project=await readPackage(output,name);
         if(shuttingDown)throw Object.assign(new Error('Workspace is stopping'),{status:503});
         return openCacheWorkspace({directory:join(project.folder,'cache-operations'),
-          sources:[{id:'merchant',label:project.name}],request:(_source,command)=>{
+          sources:[{id:'merchant',label:project.name}],request:async(_source,command)=>{
             const management=active?.name===project.name?active.session.session?.cacheManagement:null;
             if(!management)throw Object.assign(new Error('Start this saved API package to operate its response cache.'),
               {code:'CACHE_WORKSPACE_SOURCE_OFFLINE',status:409});
-            return management.dispatch(command);
+            const result=await management.dispatch(command);
+            return command.op==='inspect'?{...result,package:cachePackageBinding(project)}:result;
           }});
       })();
       cacheWorkspaces.set(name,opening);
@@ -107,9 +107,12 @@ export async function startWorkspace({ parent, port=0, noSignals=false, oauthCon
   }
   function cacheOperation(req,res,url,body) {
     const operation=(async()=>{
-      const workspace=await operatingWorkspace(url.searchParams.get('name'));
-      return sendCacheWorkspaceResponse(res,await cacheWorkspaceApi(workspace,{
-        operation:url.pathname.slice('/api/cache-operations/'.length),method:req.method,query:url.searchParams,body}));
+      const baseName=url.searchParams.get('name'),workspace=await operatingWorkspace(baseName);
+      const operation=url.pathname.slice('/api/cache-operations/'.length);
+      const request={operation,method:req.method,query:url.searchParams,body};
+      return sendCacheWorkspaceResponse(res,operation.startsWith('policy-')
+        ?await cachePolicyRevisionApi({...request,parent:output,baseName,workspace,validatePlan:oauth.validatePlan})
+        :await cacheWorkspaceApi(workspace,request));
     })();
     cacheRequests.add(operation);operation.finally(()=>cacheRequests.delete(operation)).catch(()=>{});
     return operation;
@@ -134,6 +137,7 @@ export async function startWorkspace({ parent, port=0, noSignals=false, oauthCon
     directory:customerActive.directory,seller:customerActive.session.seller.url} : null;
   const view = () => ({...(active ? {name:active.name, mode:active.session.mode, seller:active.session.seller,
     operations:active.session.operationsDashboard, state:'RUNNING',runtimeId:active.runtimeId,caches:cacheView(),credentials:credentialView(),
+    transports:merchantTransportSummary(active.upstreams),
     operationBindings:active.tickets.bindings,
     ...(active.tickets.bindings.length ? {operationConsole:active.session.operations.operationControlUrl ?? active.session.operations.merchantOperationsUrl} : {}),
     ...(active.acceptance?{acceptance:active.acceptance}:{})} : {state:'STOPPED'}),customer:customerView()});
@@ -167,12 +171,13 @@ export async function startWorkspace({ parent, port=0, noSignals=false, oauthCon
       if(await oauth.callback(req,res,url))return;
       if(await serveCacheWorkspaceAsset(req,res,pathname))return;
       if (req.method==='GET' && STATIC.has(pathname)) {
-        const file=STATIC.get(pathname), extension=file.slice(file.lastIndexOf('.'));
-        res.writeHead(200,{'Content-Type':MIME[extension]});res.end(await readFile(join(here,file)));return;
+        const asset=STATIC.get(pathname);
+        res.writeHead(200,{'Content-Type':asset.type});res.end(await readFile(asset.url));return;
       }
       if (!pathname.startsWith('/api/')) return send(404,{error:'Not found'});
       if (!constantEqual(req.headers['x-workspace-token'],token)) return send(401,{error:'Open the complete workspace URL printed by the launcher'});
       if (req.method==='GET') {
+        if (pathname.startsWith('/api/har/')) return await (await har()).get(pathname,url,send,res);
         if(pathname.startsWith('/api/cache-operations/'))return await cacheOperation(req,res,url);
         if(pathname==='/api/oauth/connections')return send(200,await oauth.list());
         if(pathname==='/api/oauth/connection')return send(200,await oauth.status(url.searchParams.get('alias'),url.searchParams.get('flowId')));
@@ -188,6 +193,7 @@ export async function startWorkspace({ parent, port=0, noSignals=false, oauthCon
           plan:JSON.parse(await readFile(new URL('./examples/streaming-plan.json',import.meta.url),'utf8'))});
         if (pathname==='/api/packages') return send(200,{packages:await list(),runtime:view(),output});
         if (pathname==='/api/status') return send(200,view());
+        if (pathname==='/api/transports/export') return send(200,await readMerchantTransportConfiguration(output,url.searchParams.get('name')));
         if (pathname==='/api/revisions/drafts') return send(200,{drafts:await listMerchantRevisionDrafts(output)});
         if (pathname==='/api/revisions/load') return send(200,await readMerchantRevisionDraft(output,url.searchParams.get('name'),{validatePlan:oauth.validatePlan}));
         if (pathname==='/api/customer/options') {
@@ -214,6 +220,13 @@ export async function startWorkspace({ parent, port=0, noSignals=false, oauthCon
         return send(404,{error:'Not found'});
       }
       if (req.method!=='POST') return send(405,{error:'Use GET or POST'});
+      if (pathname==='/api/har/upload'||pathname==='/api/har/decisions') {
+        if (busy) return send(409,{error:'A workspace operation is in progress'});
+        busy=true; let finishMutation;
+        mutationDone=new Promise(yes=>{finishMutation=yes;});
+        try {return await (await har()).upload(req,url,send);}
+        finally {busy=false;finishMutation();}
+      }
       if (pathname==='/api/migrations/handover/import-file') {
         if (busy) return send(409,{error:'A workspace operation is in progress'});
         busy=true; let finishMutation;
@@ -244,17 +257,21 @@ export async function startWorkspace({ parent, port=0, noSignals=false, oauthCon
       if (pathname==='/api/postman/inspect') return send(200,inspectPostman(body));
       if (pathname==='/api/postman/prepare') return send(200,preparePostmanSource(body));
       if (pathname==='/api/inspect') return send(200,inspectOpenApi(body.specText));
-      if (pathname==='/api/preview') {await oauth.validatePlan(body.specText,body.plan);return send(200,prepareMerchant(body.specText,body.plan).preview);}
+      if (pathname==='/api/preview') {
+        if (body.capturedSource!==undefined) await (await har()).app.checkSource(body.capturedSource,body.specText,body.plan);
+        await oauth.validatePlan(body.specText,body.plan);return send(200,prepareMerchant(body.specText,body.plan).preview);
+      }
       if (pathname==='/api/oauth/binding')return send(200,await oauth.binding(body));
       if (pathname==='/api/revisions/review')return send(200,await reviewMerchantRevision({...body,parent:output,validatePlan:oauth.validatePlan}));
       if (!['/api/save','/api/start','/api/stop','/api/accept','/api/cache/invalidate','/api/operations/issue','/api/operations/download','/api/operations/load','/api/operations/handoff',
         '/api/customer/create','/api/customer/prepare','/api/customer/open','/api/customer/close','/api/oauth/command',
-        '/api/revisions/draft','/api/revisions/save','/api/revisions/stage'].includes(pathname) && !pathname.startsWith('/api/migrations/')) return send(404,{error:'Not found'});
+        '/api/revisions/draft','/api/revisions/save','/api/revisions/stage'].includes(pathname) && !pathname.startsWith('/api/migrations/') && !pathname.startsWith('/api/har/')) return send(404,{error:'Not found'});
       if (busy) return send(409,{error:'A workspace operation is in progress'});
       busy=true;
       let finishMutation;
       mutationDone=new Promise(yes=>{finishMutation=yes;});
       try {
+        if (pathname.startsWith('/api/har/')) return await (await har()).post(pathname,body,send,res);
         if (pathname.startsWith('/api/migrations/')) return await (await migrations()).post(pathname,body,send);
         if ((pathname==='/api/start'||pathname==='/api/customer/open') && migrationInstance?.app.releases.owned().length)
           return send(409,{error:'This workspace owns a running migration seller. Stop it in Data migrations before starting another merchant session.'});
@@ -264,7 +281,9 @@ export async function startWorkspace({ parent, port=0, noSignals=false, oauthCon
         if(pathname==='/api/revisions/stage')return send(201,await stageMerchantRevision({...body,parent:output,validatePlan:oauth.validatePlan}));
         if (pathname==='/api/save') {
           await oauth.validatePlan(body.specText,body.plan);
-          const result=await savePackage({specText:body.specText,plan:body.plan,parent:output,name:body.name});
+          const result=body.capturedSource!==undefined
+            ? await (await har()).app.saveMerchant({capturedSource:body.capturedSource,specText:body.specText,plan:body.plan,name:body.name})
+            : await savePackage({specText:body.specText,plan:body.plan,parent:output,name:body.name});
           return send(201,{name:result.name,folder:result.folder,command:result.command,preview:result.preview});
         }
         if(pathname.startsWith('/api/customer/')) {
@@ -426,9 +445,10 @@ export async function startWorkspace({ parent, port=0, noSignals=false, oauthCon
     if (errors.length>1) throw new AggregateError(errors,'Workspace sessions did not finish stopping.');
   })();
   if (!noSignals) for (const signal of ['SIGINT','SIGTERM']) process.once(signal,()=>close().catch(()=>{process.exitCode=1;}));
-  return {url:origin+'/#'+token,origin,token,close,output};
+  return {url:origin+'/#'+token,origin,token,close,output,connectionStatus:()=>registry.list()};
 }
 export async function main(args=process.argv.slice(2)) {
+  if(args.includes('--managed-launch-sha256'))return startManagedOpenApiWorkspace(args,{startWorkspace});
   if (args.length===1 && args[0]==='--help') {console.log(HELP);return;}
   const options=new Map();
   for(let i=0;i<args.length;) {

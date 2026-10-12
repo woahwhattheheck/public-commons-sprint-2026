@@ -40,6 +40,38 @@ review survives reopen and is checked at native startup. See
 [Retained facilitator workflow](../../stellar/scf-starforge-20261009/sf82-seller-pilot/FACILITATORS.md)
 for the three MCP tools, console and CLI commands.
 
+## Operate native OpenSearch queries and relevance
+
+Use the same operator for the original OpenSearch workspace: save query revisions,
+inspect the native source, capture result editions, maintain judged query sets,
+evaluate and compare native rankings, and prepare the selected query as a merchant.
+Original request IDs, revisions, captures and customer files remain available after
+the MCP process restarts. The browser and MCP operate the same retained workspace.
+
+The host declares each workspace alias in a private connection file with its
+original directory, source file and optional merchant plan. Initialize its operator:
+
+```sh
+node stellar/scf-starforge-20261009/distribution/cli.mjs merchant-mcp init-opensearch-workspaces \
+  --dir /private/search/mcp --connection /private/search/mcp-workspaces.json
+node stellar/scf-starforge-20261009/distribution/cli.mjs merchant-mcp-stdio \
+  --config /private/search/mcp/merchant-mcp.json
+```
+
+An existing managed deployment can pass `--release-store ORIGINAL_SF82_STORE`
+to initialization. An existing merchant configuration can attach the same
+private connection file through `opensearchWorkspaceConnection`.
+Configured OpenSearch operators accept up to 2 MiB per HTTP request or stdio frame
+so complete original query definitions and judgment sets fit; each original
+workspace validator still enforces its own document and case limits.
+Saved results, reports and customer packages use the existing SHA-pinned,
+resumable file reads.
+
+See [OPENSEARCH_WORKSPACE.md](OPENSEARCH_WORKSPACE.md) for the connection schema,
+26 operations, original capture and relevance workflow, customer delivery and
+recovery. The existing original release controls own deployment selection,
+startup, drain, upgrade and rollback.
+
 ## Operate a saved Redis merchant
 
 Connect an existing Redis workspace with `init-redis-workspaces --dir NEW_HOST
@@ -49,6 +81,10 @@ The same merchant release controls use that workspace's existing release store.
 Large original records and public customer files have complete resumable downloads.
 See [REDIS.md](REDIS.md) for the host connection, authoring-to-release workflow,
 source continuation and retained operation recovery.
+
+## Customer statements through accounting
+
+Manage original customer profiles and order assignments, import native service/API usage, review and retain statements or corrections, reconcile interrupted replies and deliver all five original statement files through the existing accounting MCP connection. The customer SDK, durable CLI and original file reader share the native statement IDs, revisions and lifecycle. See [ACCOUNTING_STATEMENTS.md](ACCOUNTING_STATEMENTS.md) for configuration, operation recovery and delivery.
 
 ## Operate existing WooCommerce stores
 
@@ -602,3 +638,31 @@ or attach `--source-workspaces` during ordinary merchant initialization. The
 startup, source-file handles, mapping, merchant preparation, resumable delivery
 and reconstruction. `starforge dataset ndjson` opens the source application;
 its browser remains the same workspace used by the agent.
+
+## Geocodio address review and customer workspaces
+
+[GEOCODIO_WORKSPACES.md](./GEOCODIO_WORKSPACES.md) connects this merchant host to
+the original Geocodio address application. Exact source intake, prepared provider
+requests, retained responses, candidate and coordinate review, native datasets,
+portable source closure, managed publication and customer delivery share the
+same original operator object.
+
+Use `init-geocodio-workspaces --dir NEW_DIRECTORY --connection CONNECTION_JSON`,
+or add `geocodioWorkspaceConnection` to the existing merchant configuration.
+The 16 `merchant_geocodio_*` tools retain the original address revision, provider
+request body and customer session. Browser listeners borrow that same instance;
+source, prepared-request and customer files use the maintained chunk reader.
+
+
+
+## Captured API workspaces
+
+Attach the original SF61 HAR console with
+`init-har-workspaces --dir NEW_DIRECTORY --connection CONNECTION_JSON`
+or ordinary `init --har-workspaces CONNECTION_JSON`. The existing merchant
+host supplies 24 `merchant_har_*` tools for complete retained capture
+intake, observations and immutable review, later capture editions, native
+merchant plan carry/preview/save, whole receiving copy/adoption and resumable
+original files. Browser and agent share the original source library and merchant
+compiler. `inspect-har` and `download-har` use the maintained checkpointed
+file transport. See the [complete HAR operating guide](HAR_WORKSPACE.md).
