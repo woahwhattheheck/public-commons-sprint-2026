@@ -2,8 +2,10 @@
 import { Worker } from 'node:worker_threads';
 import { jobError } from './config.mjs';
 
-export function executeJob(source, row, attempt, { env = process.env, signal } = {}) {
+export function executeJob(source, row, attempt, { env = process.env, signal, inputDirectory } = {}) {
   const definition = source.compiled.functions[row.functionId];
+  if (definition.inputFiles && typeof inputDirectory !== 'string')
+    return Promise.reject(jobError('JOB_INPUT_STORE_REQUIRED', 503));
   const environment = Object.create(null);
   for (const name of source.compiled.environment) {
     if (typeof env[name] !== 'string') return Promise.reject(jobError('JOB_ENVIRONMENT_MISSING', 503));
@@ -29,7 +31,9 @@ export function executeJob(source, row, attempt, { env = process.env, signal } =
       worker = new Worker(new URL('./runner.mjs', import.meta.url), {
         workerData: { application: source.applicationPath ?? source.identity.application, applicationSha256: source.identity.applicationSha256,
           functionId: row.functionId, input: row.input, jobId: row.id, attemptId: attempt.id,
-          output: definition.output, maxOutputBytes: definition.maxOutputBytes },
+          output: definition.output, maxOutputBytes: definition.maxOutputBytes, inputSha256: row.inputSha256,
+          inputFiles: definition.inputFiles ? { directory: inputDirectory, origin: source.compiled.publicOrigin,
+            policy: definition.inputFiles } : null },
         env: environment, execArgv: [], stdout: true, stderr: true,
         resourceLimits: { maxOldGenerationSizeMb: source.compiled.memoryLimitMb },
       });

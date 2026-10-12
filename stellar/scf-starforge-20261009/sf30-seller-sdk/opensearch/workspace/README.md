@@ -107,3 +107,9 @@ The **Deployment** view stages a saved merchant package into this workspace's or
 The private deployment and deployment.clients directories stay beside workspace.sqlite3. Complete client archives, deployment handovers, selection history and saved requests reopen with the workspace. Copied packages resolve beneath the current workspace directory and retain their original file manifests; historical request and package records keep their source identities.
 
 See [OpenSearch managed deployments](../../../sf82-seller-pilot/OPENSEARCH_RELEASES.md) for the complete browser, CLI, MCP, upgrade, rollback and receiving workflow.
+
+## Material catalogs and customer matching
+
+Open **Material catalogs** to retain original CSV, TSV, JSONL or JSON sources; map material identifiers, text, references and quantity units; review full or delta editions; and select the intended catalog revision. Customer decisions bind the exact selected material, with changed matches returned for review after later editions. The same view exports native OpenSearch index, bulk, delta and query files and opens an original merchant query draft.
+
+The complete [material catalog operating guide](../catalog/GUIDE.md) covers real SAP source examples, declared text and unit lookups, exact quantity conversion, source upload recovery, portable customer catalog receiving and the installed batch CLI. This view uses the existing workspace directory, operation IDs, SQLite store and local session.

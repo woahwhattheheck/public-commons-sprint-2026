@@ -12,6 +12,17 @@ final class Starforge_SF104_Basket {
 
     static function boot() {
         add_action('admin_post_sf104_basket_catalog', [__CLASS__, 'download_catalog']);
+        add_filter('render_block_woocommerce/order-confirmation-downloads', [__CLASS__, 'render_downloads']);
+    }
+    // Keep Woo's original permission-checked download table reachable on a narrow receipt.
+    static function render_downloads($content) {
+        if ($content === '') return $content;
+        $order = wc_get_order(absint(get_query_var('order-received')));
+        if (!$order || $order->get_payment_method() !== Starforge_SF104_Checkout::ID) return $content;
+        $record = $order->get_meta(Starforge_SF104_Checkout::SNAPSHOT_META, true);
+        if (!is_array($record) || ($record['handoff']['schema'] ?? '') !== self::SCHEMA) return $content;
+        return '<div class="sf104-basket-downloads" role="region" aria-label="Purchased downloads" tabindex="0" style="min-width:0;max-width:100%;overflow-x:auto">' .
+            $content . '</div>';
     }
     static function fields() {
         $url = wp_nonce_url(add_query_arg(['action' => 'sf104_basket_catalog'], admin_url('admin-post.php')), 'sf104_basket_catalog');
