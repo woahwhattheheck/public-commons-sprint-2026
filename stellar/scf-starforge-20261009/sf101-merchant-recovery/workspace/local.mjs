@@ -8,6 +8,13 @@ import { CAPTURE_MARKER, inspectSnapshotPlan, run as recover } from '../recover.
 const CAPTURE_SCHEMA = 'stellar-forge.merchant-recovery-capture.v1';
 const BUNDLE_SCHEMA = 'stellar-forge.merchant-recovery.v1';
 const PAID_JOBS_SCHEMA = 'stellar-forge.paid-job-recovery-profile.v1';
+const PUBLISHER_SCHEMA = 'stellar-forge.dataset-publisher-recovery-profile.v1';
+const TYPED_CAPTURES = {
+  'paid-jobs': { member: 'paidJobs', schema: PAID_JOBS_SCHEMA,
+    planKey: 'paidJobsPlan', errorPrefix: 'WORKSPACE_PAID' },
+  'dataset-publisher': { member: 'datasetPublisher', schema: PUBLISHER_SCHEMA,
+    planKey: 'datasetPublisherPlan', errorPrefix: 'WORKSPACE_PUBLISHER' },
+};
 const MAX_PLAN = 256 * 1024;
 export const RETIRED_CAPTURE_PREFIX = '.sf101-interrupted-capture-';
 const HEX = /^[a-f0-9]{64}$/;
@@ -67,24 +74,25 @@ async function capturePlanSelection(plan, expectedPlanSha256) {
   try { selected = JSON.parse(raw.toString('utf8')); }
   catch { throw fail('WORKSPACE_CAPTURE_PLAN_INVALID', 'Select the original valid snapshot plan'); }
   need(object(selected), 'WORKSPACE_CAPTURE_PLAN_INVALID');
-  let kind = 'generic';
-  if (Object.hasOwn(selected, 'paidJobs')) {
-    need(object(selected.paidJobs) && selected.paidJobs.schema === PAID_JOBS_SCHEMA,
-      'WORKSPACE_CAPTURE_PROFILE_UNSUPPORTED', 'Select the original supported paid-job recovery plan');
-    kind = 'paid-jobs';
-  }
+  const typed = Object.entries(TYPED_CAPTURES).filter(([, profile]) => Object.hasOwn(selected, profile.member));
+  need(typed.length <= 1, 'WORKSPACE_CAPTURE_PROFILE_AMBIGUOUS',
+    'Select one original typed recovery profile per capture plan');
+  if (!typed.length) return { raw, kind: 'generic' };
+  const [kind, profile] = typed[0], value = selected[profile.member];
+  need(object(value) && value.schema === profile.schema, 'WORKSPACE_CAPTURE_PROFILE_UNSUPPORTED',
+    'Select the original supported ' + kind + ' recovery plan');
   return { raw, kind };
 }
-function retainedPaidJobPlan(state, options) {
-  const selected = state.paidJobsPlan;
-  need(object(selected) && selected.schema === PAID_JOBS_SCHEMA &&
+function retainedTypedPlan(state, options, kind) {
+  const profile = TYPED_CAPTURES[kind], selected = state[profile.planKey];
+  need(object(selected) && selected.schema === profile.schema &&
     selected.planSha256 === options.expectedPlanSha256 && typeof selected.base64 === 'string' &&
     selected.base64.length <= Math.ceil(MAX_PLAN / 3) * 4,
-    'WORKSPACE_PAID_CAPTURE_PLAN_MISSING', 'Keep this capture with its original retained paid-job plan');
+    profile.errorPrefix + '_CAPTURE_PLAN_MISSING', 'Keep this capture with its original retained ' + kind + ' plan');
   const raw = Buffer.from(selected.base64, 'base64');
   need(raw.length === selected.bytes && raw.length <= MAX_PLAN &&
     raw.toString('base64') === selected.base64 && hash(raw) === options.expectedPlanSha256,
-    'WORKSPACE_PAID_CAPTURE_PLAN_CHANGED', 'The retained original paid-job plan bytes changed');
+    profile.errorPrefix + '_CAPTURE_PLAN_CHANGED', 'The retained original ' + kind + ' plan bytes changed');
   return raw;
 }
 
@@ -178,7 +186,8 @@ function captureResult(options, found, state, verification) {
     capture: { ...found.manifest.capture }, verified: Boolean(verification),
     original: { snapshot: state.originalSnapshot ?? null, verification: verification ?? null },
     retainedCaptures: [...(state.retainedCaptures ?? [])],
-    ...(state.paidJobsVerification ? { paidJobs: { ...state.paidJobsVerification } } : {}) };
+    ...(state.paidJobsVerification ? { paidJobs: { ...state.paidJobsVerification } } : {}),
+    ...(state.datasetPublisherVerification ? { datasetPublisher: { ...state.datasetPublisherVerification } } : {}) };
 }
 
 export async function runLocalCapture({ options, state, save, cancelled = () => false,
@@ -186,7 +195,8 @@ export async function runLocalCapture({ options, state, save, cancelled = () => 
   need(object(options) && object(state) && typeof save === 'function', 'WORKSPACE_CAPTURE_REQUEST_INVALID');
   absolute(options.plan, 'Original snapshot plan'); absolute(options.out, 'Bundle destination');
   const expected = binding(options), declaredKind = options.captureKind ?? 'generic';
-  need(['generic', 'paid-jobs'].includes(declaredKind), 'WORKSPACE_CAPTURE_PROFILE_UNSUPPORTED');
+  need(declaredKind === 'generic' || Object.hasOwn(TYPED_CAPTURES, declaredKind),
+    'WORKSPACE_CAPTURE_PROFILE_UNSUPPORTED');
   await privateDirectory(dirname(options.out));
   if (state.pendingRetirement) {
     need(allowCapture, 'WORKSPACE_CAPTURE_REVIEW_REQUIRED',
@@ -211,7 +221,7 @@ export async function runLocalCapture({ options, state, save, cancelled = () => 
       verified.status === 'SNAPSHOT_VERIFIED' && verified.files === found.manifest.fileCount &&
       verified.bytes === found.manifest.totalPlainBytes, 'WORKSPACE_CAPTURE_VERIFICATION_CHANGED');
     if (declaredKind === 'paid-jobs') {
-      const planBytes = retainedPaidJobPlan(state, options);
+      const planBytes = retainedTypedPlan(state, options, declaredKind);
       const { inspectCapturedPaidJobManifest } = await import('../paid-jobs.mjs');
       const matched = await inspectCapturedPaidJobManifest({ planBytes, manifest: current.manifest });
       need(matched?.status === 'PAID_JOB_RECOVERY_CAPTURE_MATCHED' &&
@@ -220,6 +230,17 @@ export async function runLocalCapture({ options, state, save, cancelled = () => 
       state.paidJobsVerification = { schema: PAID_JOBS_SCHEMA,
         planSha256: options.expectedPlanSha256, manifestSha256: current.snapshotId,
         ...(HEX.test(matched?.profileSha256 ?? '') ? { profileSha256: matched.profileSha256 } : {}) };
+    }
+    if (declaredKind === 'dataset-publisher') {
+      const planBytes = retainedTypedPlan(state, options, declaredKind);
+      const { inspectCapturedPublisherManifest } = await import('../dataset-publisher.mjs');
+      const matched = await inspectCapturedPublisherManifest({ planBytes, manifest: current.manifest });
+      need(matched?.status === 'DATASET_PUBLISHER_CAPTURE_MATCHED' &&
+        matched.planSha256 === options.expectedPlanSha256 && matched.captureId === expected.id &&
+        HEX.test(matched.profileSha256 ?? ''), 'WORKSPACE_PUBLISHER_CAPTURE_VERIFICATION_CHANGED');
+      state.datasetPublisherVerification = { schema: PUBLISHER_SCHEMA,
+        planSha256: options.expectedPlanSha256, manifestSha256: current.snapshotId,
+        profileSha256: matched.profileSha256 };
     }
     state.progress = 'VERIFIED'; state.snapshotId = found.snapshotId; state.verifiedAt = stamp();
     await save();
@@ -231,8 +252,9 @@ export async function runLocalCapture({ options, state, save, cancelled = () => 
   const selected = await capturePlanSelection(options.plan, expected.planSha256);
   need(selected.kind === declaredKind, 'WORKSPACE_CAPTURE_PROFILE_CHANGED',
     'Keep the original reviewed capture profile');
-  if (selected.kind === 'paid-jobs') {
-    state.paidJobsPlan = { schema: PAID_JOBS_SCHEMA, planSha256: expected.planSha256,
+  if (Object.hasOwn(TYPED_CAPTURES, selected.kind)) {
+    const profile = TYPED_CAPTURES[selected.kind];
+    state[profile.planKey] = { schema: profile.schema, planSha256: expected.planSha256,
       bytes: selected.raw.length, base64: selected.raw.toString('base64') };
   }
   state.captureKind = selected.kind;
@@ -254,6 +276,11 @@ export async function runLocalCapture({ options, state, save, cancelled = () => 
     return withPaidJobRecoveryCapture({ planFile: options.plan,
       expectedPlanSha256: expected.planSha256 }, captureAndVerify);
   }
+  if (selected.kind === 'dataset-publisher') {
+    const { withPublisherRecoveryCapture } = await import('../dataset-publisher.mjs');
+    return withPublisherRecoveryCapture({ planFile: options.plan,
+      expectedPlanSha256: expected.planSha256 }, captureAndVerify);
+  }
   return captureAndVerify();
 }
 
@@ -273,4 +300,82 @@ export async function runLocalVerification({ options, state, save, cancelled = (
   return { status: 'COMPLETE', command: 'local-verify', snapshotId: options.snapshotId,
     bundle: options.bundle, files: verified.files, plainBytes: verified.bytes,
     verified: true, original: { verification: verified } };
+}
+
+function publisherInput(options) {
+  need(object(options) && HEX.test(options.snapshotId ?? ''),
+    'WORKSPACE_PUBLISHER_RESTORE_SELECTION_INVALID');
+  absolute(options.bundle, 'Original encrypted bundle');
+  absolute(options.out, 'Completed original cold restore');
+  need(!inside(options.bundle, options.out) && !inside(options.out, options.bundle),
+    'WORKSPACE_PUBLISHER_RESTORE_OVERLAP');
+  return { bundleDirectory: options.bundle, restoreDirectory: options.out,
+    passphraseEnv: options.passEnv, expectedManifestSha256: options.snapshotId };
+}
+
+// Read-only typed review delegates authentication and original-tree checks.
+export async function inspectLocalPublisherRestore(options) {
+  const input = publisherInput(options);
+  const { inspectRestoredPublisher } = await import('../dataset-publisher.mjs');
+  const reviewed = await inspectRestoredPublisher(input);
+  need(object(reviewed) && HEX.test(reviewed.reviewSha256 ?? '') &&
+    HEX.test(reviewed.operationId ?? '') && reviewed.manifestSha256 === options.snapshotId &&
+    reviewed.bundleDirectory === options.bundle && reviewed.restoreDirectory === options.out &&
+    ['RESTORED_PUBLISHER_REVIEW', 'RESTORED_PUBLISHER_PREPARATION_IN_PROGRESS',
+      'RESTORED_PUBLISHER_PREPARED'].includes(reviewed.status),
+    'WORKSPACE_PUBLISHER_RESTORE_REVIEW_CHANGED');
+  need(object(reviewed.originalPaths) && object(reviewed.paths),
+    'WORKSPACE_PUBLISHER_RESTORE_BINDINGS_REQUIRED',
+    'Use the native publisher release that returns the original and restored bindings');
+  for (const value of [reviewed.originalPaths.datasetDirectory, reviewed.originalPaths.publisherDirectory,
+    reviewed.paths.datasetDirectory, reviewed.paths.publisherDirectory])
+    absolute(value, 'Reviewed publisher binding');
+  for (const value of [reviewed.paths.datasetDirectory, reviewed.paths.publisherDirectory,
+    reviewed.paths.sellerConfigFile].filter(Boolean)) {
+    absolute(value, 'Reviewed restored publisher path');
+    need(value !== options.out && inside(options.out, value),
+      'WORKSPACE_PUBLISHER_RESTORE_PATH_CHANGED');
+  }
+  return reviewed;
+}
+
+export async function runLocalPublisherPreparation({ options, state, save,
+  cancelled = () => false } = {}) {
+  need(object(state) && typeof save === 'function' &&
+    HEX.test(options?.expectedReviewSha256 ?? '') && HEX.test(options?.publisherOperationId ?? ''),
+    'WORKSPACE_PUBLISHER_PREPARATION_INVALID');
+  const input = publisherInput(options);
+  const interrupted = () => ({ status: 'INTERRUPTED', command: 'publisher-prepare',
+    snapshotId: options.snapshotId, bundle: options.bundle, destination: options.out,
+    sourceRestoreId: options.sourceRestoreId, publisherOperationId: options.publisherOperationId });
+  if (cancelled()) return interrupted();
+  state.progress = 'VERIFYING_RESTORED_PUBLISHER'; await save();
+  const reviewed = await inspectLocalPublisherRestore(options);
+  need(reviewed.reviewSha256 === options.expectedReviewSha256 &&
+    reviewed.operationId === options.publisherOperationId,
+    'WORKSPACE_PUBLISHER_PREPARATION_REVIEW_CHANGED');
+  state.publisherPreparation = { operationId: reviewed.operationId,
+    reviewSha256: reviewed.reviewSha256, manifestSha256: reviewed.manifestSha256,
+    originalPaths: reviewed.originalPaths, paths: reviewed.paths,
+    phase: reviewed.preparation?.phase ?? 'REVIEWED' };
+  await save();
+  let prepared;
+  if (reviewed.status === 'RESTORED_PUBLISHER_PREPARED') prepared = reviewed.result;
+  else {
+    if (cancelled()) return interrupted();
+    state.progress = 'PREPARING_RESTORED_PUBLISHER'; await save();
+    const { prepareRestoredPublisher } = await import('../dataset-publisher.mjs');
+    prepared = await prepareRestoredPublisher({ ...input, expectedReviewSha256: options.expectedReviewSha256 });
+  }
+  need(prepared?.status === 'RESTORED_PUBLISHER_PREPARED' &&
+    prepared.operationId === options.publisherOperationId &&
+    prepared.reviewSha256 === options.expectedReviewSha256 &&
+    prepared.manifestSha256 === options.snapshotId &&
+    prepared.bundleDirectory === options.bundle && prepared.restoreDirectory === options.out,
+    'WORKSPACE_PUBLISHER_PREPARATION_RESULT_CHANGED');
+  state.progress = 'PUBLISHER_PREPARED'; state.publisherPreparation.phase = 'COMPLETE';
+  state.publisherPreparation.preparedAt = prepared.preparedAt; await save();
+  return { status: 'COMPLETE', command: 'publisher-prepare', snapshotId: options.snapshotId,
+    bundle: options.bundle, destination: options.out, sourceRestoreId: options.sourceRestoreId,
+    publisherOperationId: options.publisherOperationId, prepared };
 }
