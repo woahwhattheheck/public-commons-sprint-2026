@@ -1,5 +1,7 @@
 import type { Server } from 'node:http';
 import type { Library, Resource, Scan } from '../resource-library/library.mjs';
+import type { JobIntake, IntakeStatus } from './intake/index.mjs';
+export * from './intake/index.mjs';
 
 export type JobState = 'PREPARED' | 'AWAITING_SETTLEMENT' | 'QUEUED' | 'RUNNING' |
   'CANCELLING' | 'COMPLETED' | 'FAILED' | 'INTERRUPTED' | 'CANCELLED';
@@ -42,13 +44,14 @@ export interface WorkspaceStatus {
   schema: 'stellar-forge.sf88.job-workspace.v1'; directory: string; revision: number;
   buyerRoots: string[]; fileRoots: string[]; entries: number;
   counts: Partial<Record<JobState, number>>; capacity: number;
-  active: Array<CustomerTask & {entryId: string}>; library: ReturnType<Library['status']>; checkout: CheckoutStatus; closing: boolean;
+  active: Array<CustomerTask & {entryId: string}>; library: ReturnType<Library['status']>; checkout: CheckoutStatus;
+  intake: IntakeStatus; closing: boolean;
 }
 export interface WorkspaceList {
   q?: string; state?: '' | JobState; view?: 'active' | 'archived' | 'all'; offset?: number; limit?: number;
 }
 export interface JobWorkspace {
-  readonly directory: string; readonly library: Library; readonly checkout: JobCheckout;
+  readonly directory: string; readonly library: Library; readonly checkout: JobCheckout; readonly intake: JobIntake;
   register(options: {buyerDirectory: string; label?: string}): Promise<{entry: JobEntry; reused: boolean}>;
   retain(options: {acceptanceBytes: Buffer; label?: string} & (
     {claimToken: string; handoff?: never} |
@@ -73,7 +76,7 @@ export interface WorkspaceOptions {
 }
 export function openJobWorkspace(options: WorkspaceOptions): Promise<JobWorkspace>;
 export function startJobCustomerWorkspace(options: {model: JobWorkspace; port?: number; browserApproval?: boolean}): Promise<{
-  origin: string; url: string; libraryUrl: string; collectionsUrl: string; checkoutUrl: string;
+  origin: string; url: string; libraryUrl: string; collectionsUrl: string; checkoutUrl: string; intakeUrl: string;
   token: string; server: Server; launch: JobWorkspaceLaunch; privateLaunch: string; close(): Promise<void>;
 }>;
 export function runJobWorkspaceCommand(args?: string[], options?: {print?: (value: unknown) => void}): Promise<void>;
@@ -181,7 +184,7 @@ export interface JobWorkspaceLaunch {
   schema: 'stellar-forge.sf88.job-workspace-launch.v1'; state: 'LISTENING' | 'CLOSED';
   directory: string; runtimeDirectory: string; operatorSelection: CheckoutSelection | null;
   pid: number; instanceId: string; startedAt: string; endedAt?: string;
-  url: string; checkoutUrl: string; libraryUrl: string; collectionsUrl: string; privateLaunch: string;
+  url: string; checkoutUrl: string; libraryUrl: string; collectionsUrl: string; intakeUrl?: string; privateLaunch: string;
 }
 export const JOB_WORKSPACE_LAUNCH_SCHEMA: 'stellar-forge.sf88.job-workspace-launch.v1';
 export function jobWorkspaceLaunchPath(directory: string): string;

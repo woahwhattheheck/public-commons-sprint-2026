@@ -284,6 +284,23 @@ export async function openJobMerchant({ configPath, directory, env = process.env
       const row = await store.renewClaim(id, expectedRevision, digest(token), why);
       return handoff(row, token);
     },
+    async withdrawPrepared({ id, token, expectedRevision, reason: why } = {}) {
+      assertOpen(); revision(expectedRevision); reason(why);
+      if (typeof id !== 'string' || !JOB_ID.test(id)) fail('JOB_NOT_FOUND', 404);
+      const row = await store.update(id, undefined, current => {
+        // Capability and phase are checked in the same original store operation
+        // as cancellation. A concurrently staged purchase wins or loses atomically.
+        if (!tokenMatches(current, token)) fail('JOB_NOT_FOUND', 404);
+        if (current.state === 'CANCELLED' && current.submittedAt === null && current.settlement === null)
+          return null;
+        if (current.revision !== expectedRevision) fail('JOB_REVISION_CHANGED', 409);
+        if (current.state !== 'PREPARED' || current.submittedAt !== null || current.settlement !== null)
+          fail('JOB_WITHDRAWAL_NOT_AVAILABLE', 409);
+        current.state = 'CANCELLED';
+        return history(current, 'customer-withdrawn', { reason: why });
+      });
+      return customerView(row);
+    },
     async admitJob(functionId, context) {
       try {
         assertOpen();

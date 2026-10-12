@@ -1,7 +1,7 @@
 // MIT. Private checkout state composes the original SF88 operation and original paid-job buyer.
 import { lstat, readdir, rename } from 'node:fs/promises';
 import { join, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { randomUUID } from 'node:crypto';
 import { absolute, privateDirectory, readBytes, readJson, writeBytes, writeJson,
   parseJson, jsonBytes, digest, exists, object, syncDirectory } from '../../node/store.mjs';
@@ -120,6 +120,21 @@ export async function openJobCheckout({ directory, lease, adopt, operatorWorkspa
     return new Buyer({ runtimeDirectory: value.runtimeDirectory, stateDirectory: nativeRoot,
       ...(profile === undefined ? {} : { operatorProfile: profile }),
       environment: approvals ? { ...environment, ...approvals.environment } : environment, timeoutMs });
+  }
+  async function checkBrowserRuntime(value, operation, signal) {
+    if (!approvals) return;
+    // Import the bridge beside this record's retained SF88 runtime. A current
+    // host must not probe or execute a different saved accounting implementation.
+    const bridgePath = join(value.runtimeDirectory, '../sf81-buyer-operator-bridge/bridge.mjs');
+    const bridge = await import(pathToFileURL(bridgePath).href);
+    requireValue(typeof bridge.probeOperatorApprovalCapabilities === 'function',
+      'JOB_CHECKOUT_BROWSER_RUNTIME_UNSUPPORTED', 409);
+    const configuration = await readJson(operation.configPath, 65536);
+    const capability = await bridge.probeOperatorApprovalCapabilities(
+      { python: configuration.operator?.python }, { timeoutMs: 3000, signal });
+    requireValue(capability.supported === true,
+      capability.code === 'OPERATOR_CAPABILITIES_UNSUPPORTED'
+        ? 'JOB_CHECKOUT_BROWSER_RUNTIME_UNSUPPORTED' : capability.code ?? 'OPERATOR_CAPABILITIES_INVALID', 409);
   }
   async function original(value, ticket, { partial = false } = {}) {
     const buyer = await buyerFor(value), operation = buyer.operation(value.intentId);
@@ -387,6 +402,8 @@ export async function openJobCheckout({ directory, lease, adopt, operatorWorkspa
         const review = await readJson(join(native.operation.directory, 'review.json'));
         requireValue(digest(jsonBytes(review)) === value.reviewSha256,
           'JOB_CHECKOUT_REVIEW_CHANGED', 409);
+        signal.throwIfAborted();
+        await checkBrowserRuntime(value, native.operation, signal);
         signal.throwIfAborted();
         const result = await native.operation.execute({ review, signal });
         await setStage(task, 'RETAINING_RESULT');
