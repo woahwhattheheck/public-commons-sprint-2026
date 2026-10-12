@@ -66,6 +66,17 @@ export const APPLICATION_CATALOG = Object.freeze([
       field('referenceFile', 'Original observation manifest'),
       field('terminalPython', 'Terminal Python executable', 'path', false,
         'Defaults to /usr/bin/python3; uses the existing managed PTY.'), ...common] },
+  { id: 'research-dossiers', command: 'research-workspace', requiredSource: 'stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/server.mjs',
+    title: 'Research dossiers', terminal: false,
+    description: 'Reopen research questions, original source editions, selections, findings, revision comparison and portable reports.',
+    fields: [field('workspaceDirectory', 'Private research dossiers directory', 'path', true,
+      'An existing directory or one new directory in an existing private parent.'),
+      field('openalexWorkspaceDirectory', 'Existing OpenAlex research workspace', 'path', false,
+        'Optional saved collection with its original queries, editions, pages and review decisions.'),
+      field('openalexModule', 'Original OpenAlex workspace module', 'path', false,
+        'Optional explicit workspace.mjs from the original provider source; otherwise use this selected runtime.'),
+      field('editionAdapter', 'Original provider edition adapter', 'path', false,
+        'Optional local adapter module for retained provider references such as Valyu.'), ...common] },
   { id: 'commerce', command: 'commerce-console', title: 'Commerce session', terminal: true,
     description: 'Reopen an initialized original commerce session. Its buyer approval remains in the connected original terminal.',
     fields: [field('directory', 'Initialized commerce session', 'path', true), field('finalityNode', 'Finality Node executable'),
@@ -140,6 +151,8 @@ function normalizeSettings(type, input) {
     need(!settings.create || settings.sourceFile && settings.stateDirectory, 'APPLICATION_PUBLISHER_SOURCE_REQUIRED');
     need(Boolean(settings.seller) === Boolean(settings.resource), 'APPLICATION_BUYER_ENDPOINT_PAIR_REQUIRED');
   }
+  if (type.id === 'research-dossiers') need(!settings.openalexModule || settings.openalexWorkspaceDirectory,
+    'APPLICATION_OPENALEX_WORKSPACE_REQUIRED', 'Choose the original saved OpenAlex workspace with its module');
   return settings;
 }
 async function applicationCommand(type, settings) {
@@ -217,6 +230,20 @@ async function applicationCommand(type, settings) {
     if (reference) inputs.push(await inputPath(reference, 'file'));
     args.push('workbench', '--state', settings.stateDirectory);
     option('--reference-file', settings.referenceFile);
+  } else if (type.id === 'research-dossiers') {
+    const workspace = await path('workspaceDirectory', 'directory', true, true);
+    if (!workspace.exists) createDirectories.push(workspace.path);
+    await path('editionAdapter', 'file');
+    await path('openalexModule', 'file');
+    if (settings.openalexWorkspaceDirectory) {
+      await path('openalexWorkspaceDirectory', 'directory', false, true);
+      for (const part of ['queries', 'editions'])
+        inputs.push(await inputPath(join(settings.openalexWorkspaceDirectory, part), 'directory'));
+    }
+    option('--dir', settings.workspaceDirectory);
+    option('--edition-adapter', settings.editionAdapter);
+    option('--openalex-workspace', settings.openalexWorkspaceDirectory);
+    option('--openalex-module', settings.openalexModule);
   } else if (type.id === 'commerce') {
     await path('directory', 'directory', false, true); await path('recoveryConfig', 'file');
     const finalityNode = settings.finalityNode ? await realpath(settings.finalityNode) : null;
@@ -331,6 +358,11 @@ export async function reviewApplication(root, { runtimeId, runtimeDirectory, kin
     'This selected runtime does not include ' + type.command + '. Choose a runtime containing that original command.');
   if (type.requiredSource) await regular(join(runtime.sourceRoot, type.requiredSource), 4 * 1024 * 1024).catch(() =>
     need(false, 'APPLICATION_NOT_IN_RUNTIME', 'Choose a runtime containing the original ' + type.title + ' source'));
+  if (type.id === 'research-dossiers' && settings.openalexWorkspaceDirectory && !settings.openalexModule)
+    await regular(join(runtime.sourceRoot,
+      'stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research/workspace.mjs'), 4 * 1024 * 1024).catch(() =>
+      need(false, 'APPLICATION_NOT_IN_RUNTIME',
+        'Choose a runtime containing the original OpenAlex workspace or select its explicit original module'));
   const command = await applicationCommand(type, settings);
   const homes = (await managedState(root)).homes;
   let home = homeId ? homes.find(item => item.id === recordId(homeId)) : homes.find(item => item.releases.some(release =>
