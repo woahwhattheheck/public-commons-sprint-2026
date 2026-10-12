@@ -178,3 +178,177 @@ https://github.com/woahwhattheheck/public-commons-sprint-2026/tree/f8db4d8cff51a
 
 The completed receiving results and selected raw-source identities are in `native` and `reference` in the delivered kit.
 
+
+## Governed remote MCP tools in this application
+
+The optional remote backend adds selected paid MCP tools to the existing request
+list, browser, authenticated HTTP API and MCP endpoint. The retained HTTP handoff
+and its original buyer continue to use their existing request IDs and operator
+profile. Each remote request has a distinct application intent ID and an original
+native quote UUID.
+
+Add one absolute path to the receiving application's existing configuration:
+
+```json
+{
+  "remoteMcp": "/private/receiving/remote-mcp.json"
+}
+```
+
+Keep the other application configuration fields. The runtime must include the
+governed native MCP source and its existing SDK dependencies. A complete installed
+launch and configuration procedure is provided in INSTALLED.md.
+
+The selected remote configuration uses
+`stellar-forge.application-remote-mcp.v1`:
+
+| Field | Receiving-host value |
+| --- | --- |
+| discoveryUrl | The original HTTPS Bazaar discovery base URL. |
+| allowedResourceOrigins | Exact HTTPS origins permitted for the selected provider endpoints. |
+| operatorModule | Absolute path to the private module created by the original native spending setup. |
+| timeoutMs | Optional transport timeout from 1,000 to 300,000 ms; default 30,000. |
+| requests | One to 24 explicitly selected requests with distinct application intent IDs. |
+
+Each request contains the following fields:
+
+| Field | Meaning |
+| --- | --- |
+| intentId | A stable application identifier, distinct from every existing HTTP request. |
+| label | Optional operator-facing name. |
+| query | Discovery search text used to find this original advertised tool. |
+| endpoint | The exact advertised, normalized HTTPS MCP endpoint. |
+| toolName | The exact MCP tool name. |
+| transport | `streamable-http` or `sse`. |
+| paymentResourceUrl | The exact resource that the tool's original payment challenge uses. |
+| arguments | The complete selected JSON arguments object. |
+| acceptedTerms | One complete original accepted payment option, including scheme, network, asset, amount, payTo, maxTimeoutSeconds, and any additional fields. The governed native path uses the exact scheme. |
+| inputSchemaSha256 | Optional SHA-256 pin for the advertised tool input schema. The original broker also compares the retained advertised schema with the live tool schema before dispatch. |
+
+Copy the selected endpoint, tool name, transport and complete payment option from
+the original merchant's discovery result. The receiving application checks the
+complete selected terms against the original discovery offer; a similar price,
+recipient or URL is insufficient. The host selects this configuration and the
+operator module. Application tools accept the selected intent ID and action
+options.
+
+### Operator setup
+
+The original spending host configuration selects the existing public payer,
+signer environment-variable name, native per-payment limits, and the original
+SF36 policy, ledger, actor and service. It also selects the original Stellar RPC
+endpoints. Create the private operator module using the original product command:
+
+```sh
+node /source/stellar-forge/mcp-paid-agent/native-spend-workspace.mjs \
+  setup /private/native-spending.json /private/receiving/native-operator.mjs
+```
+
+Set the remote configuration's operatorModule to that generated file. Its
+approve, signPayment, spendingStatus, reconcilePayment and close exports are
+required. Newly generated modules also export an openOperator factory and their original readiness metadata.
+The embedded application uses a factory instance with its own approval state and
+lifetime, so it can close and reopen within one process. Regenerate older modules
+to obtain this factory; a legacy module's singleton is scoped to one application
+lifetime in its process.
+The application displays that metadata when present; the host's selected
+callbacks remain authoritative for approval, signing and spending.
+
+The application creates its own private remote-mcp state directory beneath the
+existing application state. It retains the selected configuration hash, each
+subject/intent/quote binding, and the original quote and result databases.
+The spending policy and ledger stay at the host-configured original paths, so
+concurrent buyers share the same aggregate budget.
+
+### Review, execute and receive
+
+Open the application normally. HTTP requests keep their RPC and POST labels.
+Remote entries show the actual tool, MCP transport, endpoint, payment resource,
+complete arguments, argument hash, input schema hash and selected terms.
+
+1. **Run original review.** The application searches the selected discovery
+   service, finds the exact tool and complete payment option, and creates an
+   original durable native quote. It then shows the aggregate spending estimate.
+   The merchant tool is invoked when execution begins.
+2. **Execute or recover.** The original operator reviews the complete native
+   quote and budget. The application's host authorization callback is consulted
+   for execution, after the operator's review, and immediately before the
+   governed signer reserves funds and signs a live payment challenge.
+3. **Read or download the result.** The original result store verifies retained
+   bytes before the application returns JSON, text, base64 or file metadata.
+   Remote results support the original full 2 MiB limit, including downloads and
+   exclusive local exports. HTTP responses retain their original 1 MiB limit.
+4. **Inspect spending and reconcile payment.** The Operation tab exposes the
+   original budget estimate or reservation, transaction reference, original
+   transfer observation and final spending outcome.
+
+A repeat execution operates on the same original quote UUID. The native broker
+does not dispatch it twice. Closing and reopening the process preserves that
+same identity. Review can replace an expired, completely unattempted quote only
+after the original spending host confirms it has no reservation; the previous
+quote IDs remain in the application's retained request record. An attempted or
+cancelled quote keeps its original identity.
+
+Current status, cancellation and spending inspection remain available while a
+remote execution is waiting. Cancellation uses the original broker's cancellation
+path, including its terminal-approval abort. Existing reservations and received
+results remain attached to their original quote.
+
+### Additional commands and authenticated endpoints
+
+```sh
+node cli.mjs verify-source --config /private/application.json
+node cli.mjs review --config /private/application.json --intent SELECTED_REMOTE_INTENT
+node cli.mjs execute --config /private/application.json --intent SELECTED_REMOTE_INTENT
+node cli.mjs spending --config /private/application.json --intent SELECTED_REMOTE_INTENT
+node cli.mjs reconcile --config /private/application.json --intent SELECTED_REMOTE_INTENT
+node cli.mjs read --config /private/application.json --intent SELECTED_REMOTE_INTENT \
+  --format json --limit-bytes 2097152
+node cli.mjs export --config /private/application.json --intent SELECTED_REMOTE_INTENT \
+  --out /private/received/original-tool-result.json
+node cli.mjs cancel --config /private/application.json --intent SELECTED_REMOTE_INTENT
+```
+
+Source verification includes both the retained HTTP handoff and selected remote
+definitions. The three additional MCP tools are stellar_request_cancel,
+stellar_request_spending and stellar_request_reconcile. They are advertised when
+the remote backend is configured. The existing read tool advertises the larger
+remote result ceiling in that configuration.
+
+| HTTP endpoint | Body |
+| --- | --- |
+| POST /api/requests/{intentId}/cancel | {} |
+| POST /api/requests/{intentId}/spending | {} |
+| POST /api/requests/{intentId}/reconcile | {}, or {"transaction":"ORIGINAL_64_HEX_HASH"} for a retained attempt whose receipt omitted its transaction |
+| POST /api/requests/{intentId}/read | {"format":"json","limitBytes":2097152} for a remote result |
+| GET /api/requests/{intentId}/download | Complete retained bytes; the response includes X-Response-SHA256. |
+
+Reconciliation reads the retained transaction, runs the original SF86 transfer
+verification, and passes its matching facts to the original SF36 finalization
+path. A supplied transaction must match an existing retained receipt. The result
+shows the original observation and spending outcome even when the original
+purchase status was indeterminate.
+
+### Embed with current host authority
+
+loadApplication keeps the existing authorizationModule integration. Embedded
+hosts may also call attachRemoteMcpApplication directly with an existing
+openApplication instance, configurationFile, sourceRoot, stateDirectory and the
+same authorize callback. The base application exposes selectedIntentIds to
+the trusted composition layer so it rejects HTTP/MCP ID collisions before routing.
+
+Authorization receives the same applicationId, authenticated context, action and
+selected request view used by the existing HTTP flow. Remote request views add
+requestKind "mcp", toolName, transport, paymentResourceUrl and responseByteLimit.
+The retained request binds its first authorized subject to the original quote.
+Hosts can revoke grants in their own current authorization lookup; the application
+checks that lookup again after a human approval wait and before original signing.
+
+The common operation result keeps phase, source, binding, operation and result
+fields for existing browser consumers. Remote outcomes additionally contain the
+original quote, with local result paths reduced to verified metadata. A spending
+action adds the original spending report; reconciliation appears in the original
+quote and returned result. read and export return the complete retained MCP
+CallToolResult representation, including its original content, structuredContent
+and payment response metadata.
+
