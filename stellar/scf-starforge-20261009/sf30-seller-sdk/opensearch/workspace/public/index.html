@@ -8,7 +8,7 @@
 <aside aria-label="Saved query drafts"><h2>Query drafts</h2><label for="source-query">Original source query</label><select id="source-query"></select>
 <button id="new-draft" type="button">New draft</button><label for="draft-filter">Find a saved draft</label><input id="draft-filter" type="search" placeholder="Title or query name"><div id="draft-list"></div></aside>
 <main>
-<nav aria-label="Workspace views"><button data-view="draft" aria-selected="true">Draft</button><button data-view="editions">Result editions</button><button data-view="packages">Merchant packages</button><button data-view="operations">Requests</button></nav>
+<nav aria-label="Workspace views"><button data-view="draft" aria-selected="true">Draft</button><button data-view="editions">Result editions</button><button data-view="relevance">Search relevance</button><button data-view="packages">Merchant packages</button><button data-view="operations">Requests</button></nav>
 <section id="view-draft">
 <div class="section-heading"><div><h2 id="editor-heading">New query draft</h2><p id="saved-state" class="muted">Save your current choices to retain a revision.</p></div><button id="open-history" type="button">Revision history</button></div>
 <div class="two-column"><label>Draft title<input id="draft-title" maxlength="120" autocomplete="off"></label><label>Named query<input id="query-name" maxlength="96" autocomplete="off"></label></div>
@@ -32,6 +32,7 @@
 <details id="document-detail"><summary>Complete original document</summary><pre id="document-json"></pre></details>
 <details><summary>Edition metadata and source identity</summary><pre id="edition-meta"></pre></details></article>
 </section>
+<section id="view-relevance" hidden></section>
 <section id="view-packages" hidden><div class="section-heading"><div><h2>Merchant packages</h2><p class="muted">Prepared source, seller configuration and generated client files reopen from the same workspace.</p></div><button id="refresh-packages">Refresh saved list</button></div>
 <div id="package-list"></div><article id="package-detail" hidden><h3 id="package-title"></h3><p id="package-location" class="code"></p><div id="package-files"></div><h3>Original launcher and customer handoff</h3><pre id="package-handoff"></pre></article></section>
 <section id="view-operations" hidden><div class="section-heading"><div><h2>Retained requests</h2><p class="muted">A lost reply keeps its original request ID and saved input.</p></div><button id="refresh-operations">Refresh saved list</button></div>
