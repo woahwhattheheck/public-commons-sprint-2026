@@ -213,6 +213,7 @@ const FREEZE_OP={editions:"edition.freeze",language_reviews:"language.record",ba
 function fieldCell(name,value,collection="",truncate=true){
  const kind=catalog?.collections?.[collection]?.[name]?.kind;
  if(kind==="date"||DATE_FIELDS.has(name)||name.endsWith("_at")||name.endsWith("_on"))return dateCell(value);
+ if(value===null||value===undefined||value==="")return '<span class="muted">Not recorded</span>';
  if(REFS[name])return esc(refName(REFS[name],value));
  if(name.endsWith("_cad"))return '<span class="money">'+esc(money(value))+'</span>';
  if(typeof value==="boolean")return esc(value?"Yes":"No");
@@ -230,7 +231,7 @@ function renderCollection(collection,rows){
  finance:"CAD amounts exclude HST until an invoice records it separately. Estimated costs, accepted reports, invoices and cleared payments are distinct.",
  procedure:"Use real participants, source-bound profiles, recorded appointments and disclosures. Authored example people are labeled."};
  const newButton=FREEZE_OP[collection]?actionButton("workflow",WORKFLOW_TITLES[FREEZE_OP[collection]]||"Record "+recordName(collection),'data-operation="'+FREEZE_OP[collection]+'"',true):
- actionButton("new-record","Add "+recordName(collection),'data-collection="'+collection+'"',true);
+ actionButton("new-record",(["scope","funding"].includes(collection)&&project[collection]?.length?"Edit ":"Add ")+recordName(collection),'data-collection="'+collection+'"',true);
  let html=projectHeading(COLLECTION_TITLES[collection],descriptions[section]||"",newButton);
  if(section==="delivery")html+=phaseCards();
  if(section==="finance")html+=stats([[money(project.analysis.collected_cad),project.mode==="authored_example"?"Authored example receipts":"Collected payments"],
