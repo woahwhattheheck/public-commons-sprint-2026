@@ -27,9 +27,17 @@ def exact(path, pin=None):
                 "public_source_identity","The selected complete original public file differs.",{"path":str(path)})
     return path,value
 
-def selected_json(path):
-    path,_=exact(path)
-    return json.loads(path.read_text(encoding="utf-8-sig"))
+def selected_json(path, pin=None):
+    path=Path(path)
+    require(path.is_file() and not path.is_symlink(),"public_json_file","Select a regular retained JSON file.")
+    with path.open("rb") as file:
+        raw=file.read(MAX_FILE+1)
+    require(len(raw)<=MAX_FILE,"public_file_limit","Retain the complete bounded selected JSON file.")
+    measured={"bytes":len(raw),"sha256":hashlib.sha256(raw).hexdigest()}
+    if pin:
+        require(measured=={key:pin[key] for key in ("bytes","sha256")},
+                "public_json_identity","The decoded JSON differs from its original selected bytes.",{"path":str(path)},409)
+    return json.loads(raw.decode("utf-8-sig"))
 
 def decimal_text(value):
     if value is None or value=="": return value
@@ -50,7 +58,7 @@ def project(table, original):
 def complete_capture(source_root, packet):
     """Verify the original collector's sealed files before deriving any input."""
     seal_path,seal_pin=exact(source_root/"capture-complete.json")
-    seal=selected_json(seal_path)
+    seal=selected_json(seal_path,seal_pin)
     require(seal.get("schema")=="tjlabs.public-source.completed-capture.v1"
             and seal.get("operation_id")==SOURCE_OPERATION,
             "capture_complete","Retain the original completed source capture before commissioning.")
@@ -81,7 +89,7 @@ def complete_capture(source_root, packet):
         if path.is_file():actual.append(relative.as_posix())
     require(actual==list(declared),"capture_members","The complete captured source inventory differs.",status=409)
     require("capture-manifest.json" in declared,"capture_manifest","The complete capture has no manifest.")
-    return {"path":str(seal_path),**seal_pin},{"path":str(archive_path),**{key:archive[key] for key in ("bytes","sha256")}}
+    return {"path":str(seal_path),**seal_pin},{"path":str(archive_path),**{key:archive[key] for key in ("bytes","sha256")}},declared
 
 def invocation_selection(args, packet_path, packet_pin, workshare_path, workshare_pin):
     browser_values=(args.node,args.playwright_module,args.browser_executable)
@@ -107,16 +115,20 @@ def build_selection(args):
     require(source_root.is_dir() and source_root!=output and not output.is_relative_to(source_root),
             "public_directory","Keep the operating output separate from its complete original source directory.")
     packet_path,packet_pin=exact(args.source_packet,{"bytes":args.source_packet_bytes,"sha256":args.source_packet_sha256})
-    packet=selected_json(packet_path)
+    packet=selected_json(packet_path,packet_pin)
     require(packet.get("schema")=="tjlabs.fea-lake-county.public-input.v1"
             and packet.get("case_id")==CASE and packet.get("operation_id")==SOURCE_OPERATION,
             "public_packet","Select the original case's complete prepared public-source packet.")
     workshare_path,workshare_pin=exact(args.workshare_source,{"bytes":args.workshare_bytes,"sha256":args.workshare_sha256})
     request=invocation_selection(args,packet_path,packet_pin,workshare_path,workshare_pin)
-    source_seal,source_archive=complete_capture(source_root,packet)
+    source_seal,source_archive,sealed_members=complete_capture(source_root,packet)
     selected=output/"public-operating-selection.json"
-    if selected.exists():
-        config=selected_json(selected)
+    selection_receipt=output/"public-operating-selection-receipt.json"
+    if selected.exists() and selection_receipt.exists():
+        receipt=selected_json(selection_receipt)
+        require(receipt.get("schema")=="lake-county.public-intake-selection-receipt/v1"
+                and receipt.get("operation_id")==args.operation,"public_selection_receipt","Retain the original intake selection receipt.",status=409)
+        config=selected_json(selected,receipt["selection"])
         require(config.get("schema")=="lake-county.operating-selection/v1"
                 and config.get("public_intake_request")==request,
                 "public_intake_replay","Retain this operation's original source, actor, runtime and directory selection.",status=409)
@@ -126,8 +138,9 @@ def build_selection(args):
         exact(config["workshare_source"]["path"],config["workshare_source"])
         for item in config["files"]:exact(item["path"],item)
         return selected,config
-    capture_path,capture_pin=exact(source_root/"capture-manifest.json")
-    capture=selected_json(capture_path)
+    capture_path=source_root/"capture-manifest.json"
+    capture_pin=sealed_members["capture-manifest.json"]
+    capture=selected_json(capture_path,capture_pin)
     require(capture.get("schema")=="tjlabs.public-source.capture.v1"
             and capture.get("operation_id")==SOURCE_OPERATION,
             "capture_selection","Retain the same original public-source capture operation.")
@@ -142,6 +155,7 @@ def build_selection(args):
             exact(path,row)
         originals[key]=row
     prepared_sources={row["source_id"]:row for row in packet["sources"]}
+    collections={}
     preparation=output/"public-intake"
     preparation.mkdir(parents=True,exist_ok=True,mode=0o700)
     def with_source(row,prepared=False):
@@ -166,7 +180,10 @@ def build_selection(args):
             relative=str(safe_relative(collection_path))
             path=(source_root/relative).resolve()
             require(path.is_relative_to(source_root),"gis_source_path","The original GIS manifest leaves its selected capture.")
-            collection=selected_json(path)
+            require(relative in sealed_members,"gis_source_pin","The selected GIS manifest is absent from the original sealed capture.")
+            if relative not in collections:
+                collections[relative]=selected_json(path,sealed_members[relative])
+            collection=collections[relative]
             value["source_note"]=(value.get("source_note") or "")+" Identifier coverage: "+str(
                 collection.get("identifier_coverage_complete"))+"; value consistency: "+str(
                 collection.get("value_consistency"))+". Complete raw geometry/attribute responses remain in the manifest's original page sources."
@@ -208,16 +225,16 @@ def build_selection(args):
               "financial_observations":[financial(row,True) for row in prepared_finance],
               "capital_rollforward":[capital(row,True) for row in packet.get("capital_rollforward",[])],
               "funding":proposed_funding(prepared_finance,True)}
-    acquired_assets=selected_json(source_root/"observations"/"asset_observations.json")
-    acquired_finance=selected_json(source_root/"observations"/"financial_observations.json")
-    acquired_capital=selected_json(source_root/"observations"/"capital_rollforward_2024.json")
+    acquired_assets=selected_json(source_root/"observations"/"asset_observations.json",sealed_members["observations/asset_observations.json"])
+    acquired_finance=selected_json(source_root/"observations"/"financial_observations.json",sealed_members["observations/financial_observations.json"])
+    acquired_capital=selected_json(source_root/"observations"/"capital_rollforward_2024.json",sealed_members["observations/capital_rollforward_2024.json"])
     candidate={"asset_observations":[asset(row) for row in acquired_assets],
                "financial_observations":[financial(row) for row in acquired_finance],
                "capital_rollforward":[capital(row) for row in acquired_capital],
                "funding":proposed_funding(acquired_finance)}
     account_path=source_root/"observations"/"budget_2025_original_account_rows.json"
     if account_path.exists():
-        accounts=selected_json(account_path)
+        accounts=selected_json(account_path,sealed_members["observations/budget_2025_original_account_rows.json"])
         candidate["budgets"]=[]
         for original in accounts:
             source=with_source(original)
@@ -231,8 +248,12 @@ def build_selection(args):
                 "_source_observation":source}))
     baseline_path=preparation/"prepared-public-registers.json"
     candidate_path=preparation/"captured-public-registers.json"
-    atomic(baseline_path,(stable(baseline)+"\n").encode())
-    atomic(candidate_path,(stable(candidate)+"\n").encode())
+    def authored_json(path,value):
+        data=(stable(value)+"\n").encode()
+        atomic(path,data)
+        return {"bytes":len(data),"sha256":hashlib.sha256(data).hexdigest()}
+    baseline_pin=authored_json(baseline_path,baseline)
+    candidate_pin=authored_json(candidate_path,candidate)
     projection={"schema":"lake-county.public-intake-projection/v1","case_id":CASE,"source_operation":SOURCE_OPERATION,
                 "source_packet":{"path":str(packet_path),**packet_pin},
                 "capture_manifest":{"path":str(capture_path),**capture_pin},
@@ -250,10 +271,10 @@ def build_selection(args):
                 "client_inputs_missing":["Original FEA/County asset register","Professional assessment and valuation inputs",
                     "Selected existing financial model/export and actual calculation environment",
                     "Confirmed model-period, currency and price basis","Actual owner review and approved commissioning dates"]}
-    atomic(preparation/"projection.json",(stable(projection)+"\n").encode())
+    projection_pin=authored_json(preparation/"projection.json",projection)
     files=[];keys=set();documents=[];selected_paths={}
-    def add(path,metadata,mime=None):
-        path,pin=exact(path)
+    def add(path,metadata,mime=None,expected=None):
+        path,pin=exact(path,expected)
         if str(path) in selected_paths:
             previous=selected_paths[str(path)]
             require({name:previous[name] for name in ("bytes","sha256")}==pin,
@@ -271,7 +292,7 @@ def build_selection(args):
         documents.append({"file_key":key,"table":"document","format":"document"})
         return key
     add(packet_path,{"source_kind":"prepared_public_source_packet","authority":"Original FEA public-source preparation",
-                     "source_operation":SOURCE_OPERATION,"client_acceptance":False})
+                     "source_operation":SOURCE_OPERATION,"client_acceptance":False},expected=packet_pin)
     for path in sorted(source_root.rglob("*")):
         if not path.is_file():continue
         relative=path.relative_to(source_root)
@@ -285,12 +306,14 @@ def build_selection(args):
             metadata.update(source_url=record.get("final_url") or record.get("requested_url"),
                 acquired_at_utc=record.get("acquired_at_utc"),source_date=record.get("source_date"),
                 source_date_precision=record.get("source_date_precision"),source_id=record["source_id"])
-        add(path,metadata,record.get("content_type") if record else None)
+        expected=source_seal if relative.as_posix()=="capture-complete.json" else sealed_members.get(relative.as_posix())
+        require(expected is not None,"public_source_pin","Every imported captured source must belong to the original seal.")
+        add(path,metadata,record.get("content_type") if record else None,expected=expected)
     first_key=add(baseline_path,{"source_kind":"prepared_public_observations","authority":"Explicit source-packet projection",
-                               "projection":"public-intake/projection.json"})
+                               "projection":"public-intake/projection.json"},expected=baseline_pin)
     second_key=add(candidate_path,{"source_kind":"derived_public_observations","authority":"Explicit verified-capture projection",
-                                  "projection":"public-intake/projection.json"})
-    add(preparation/"projection.json",{"source_kind":"public_input_mapping","authority":"Original FEA operating selection"})
+                                  "projection":"public-intake/projection.json"},expected=candidate_pin)
+    add(preparation/"projection.json",{"source_kind":"public_input_mapping","authority":"Original FEA operating selection"},expected=projection_pin)
     def register_selections(key,records):
         return [{"file_key":key,"table":table,"format":"json",
                  "mapping":{"columns":{field:field for field in TABLES[table]["fields"]},"json_pointer":"/"+table}}
@@ -316,7 +339,9 @@ def build_selection(args):
                            "edition_key":"captured-public","kind":"internal_working","scenario_keys":[]}}
     if request["browser"]:
         config["browser"]=request["browser"]
-    atomic(selected,(stable(config)+"\n").encode())
+    selected_pin=authored_json(selected,config)
+    atomic(selection_receipt,(stable({"schema":"lake-county.public-intake-selection-receipt/v1",
+        "operation_id":args.operation,"selection":{"path":str(selected),**selected_pin}})+"\n").encode())
     return selected,config
 
 def main():
