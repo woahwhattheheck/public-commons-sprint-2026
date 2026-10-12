@@ -6,6 +6,7 @@
   <title>Job checkout</title>
   <link rel="stylesheet" href="/jobs/style.css">
   <link rel="stylesheet" href="/jobs/checkout/style.css">
+  <link rel="stylesheet" href="/jobs/checkout/approval.css">
   <script type="module" src="/jobs/checkout/app.mjs"></script>
 </head>
 <body>
@@ -29,7 +30,7 @@
     <section class="setup" aria-labelledby="setupHeading">
       <h2 id="setupHeading">Operator connection</h2>
       <p id="operator" class="mono">Loading the saved selection.</p>
-      <p id="operatorHint" class="hint">Purchase approval uses the original terminal connected to this workspace.</p>
+      <p id="operatorHint" class="hint">Purchase approval uses this private workspace and its original operator.</p>
     </section>
     <details class="intake" id="intake" open>
       <summary>Import a merchant purchase ticket</summary>
@@ -62,8 +63,8 @@
           <div class="actions checkout-actions">
             <button type="button" id="reviewButton">Review request</button>
             <button type="button" id="executeButton" class="primary">Start checkout</button>
-            <button type="button" id="recoverButton">Recover original operation</button>
-            <button type="button" id="stopButton" hidden>Stop local operation</button>
+            <button type="button" id="recoverButton">Recover checkout</button>
+            <button type="button" id="stopButton" hidden>Stop checkout</button>
             <a href="/jobs/" id="openJob" hidden>Open accepted job</a>
           </div>
           <dl class="facts checkout-facts">
@@ -78,13 +79,18 @@
             <dt>Merchant revision</dt><dd id="merchantRevision"></dd>
           </dl>
           <section class="review">
-            <div class="section-heading"><h3>Original buyer review</h3><span id="reviewedAt"></span></div>
-            <p class="hint" id="reviewHint">Review prepares the exact request through your existing operator configuration.</p>
+            <div class="section-heading"><h3>Request review</h3><span id="reviewedAt"></span></div>
+            <p class="hint" id="reviewHint">Review the request with your selected operator configuration.</p>
             <dl class="facts checkout-facts"><dt>Operator</dt><dd id="reviewOperator">—</dd><dt>Service</dt><dd id="reviewService">—</dd><dt>Body SHA-256</dt><dd id="bodyHash" class="mono"></dd><dt>Input SHA-256</dt><dd id="inputHash" class="mono"></dd></dl>
+          </section>
+          <section class="approval" id="approvalSection" aria-labelledby="approvalHeading" hidden>
+            <div class="section-heading"><h3 id="approvalHeading">Payment approval</h3></div>
+            <p class="hint" id="approvalHint">The merchant’s current payment request will appear here.</p>
+            <div id="approvalPanel"></div>
           </section>
           <section class="outcome">
             <div class="section-heading"><h3>Purchase outcome</h3><span id="outcomeState"></span></div>
-            <p id="outcome" class="hint">The original buyer result will appear here.</p>
+            <p id="outcome" class="hint">The purchase result will appear here.</p>
           </section>
           <details class="metadata"><summary>Request and recovery location</summary><pre id="requestDetails"></pre></details>
           <details class="metadata" id="replacement">

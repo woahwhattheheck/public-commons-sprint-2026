@@ -54,6 +54,7 @@ export async function openJobCheckout({ directory, lease, adopt, operatorWorkspa
   for (const name of ['records', 'native']) await privateDirectory(join(directory, name));
   const nativeRoot = join(directory, 'native'), rows = new Map();
   let tail = Promise.resolve(), activeTask = null, closing = false, closePromise = null;
+  let approvals = null;
   const serial = action => {
     const promise = tail.then(() => { lease.assertHeld(); return action(); });
     tail = promise.catch(() => {}); return promise;
@@ -117,7 +118,8 @@ export async function openJobCheckout({ directory, lease, adopt, operatorWorkspa
     }
     const { Buyer } = await import('../../node/client.mjs');
     return new Buyer({ runtimeDirectory: value.runtimeDirectory, stateDirectory: nativeRoot,
-      ...(profile === undefined ? {} : { operatorProfile: profile }), environment, timeoutMs });
+      ...(profile === undefined ? {} : { operatorProfile: profile }),
+      environment: approvals ? { ...environment, ...approvals.environment } : environment, timeoutMs });
   }
   async function original(value, ticket, { partial = false } = {}) {
     const buyer = await buyerFor(value), operation = buyer.operation(value.intentId);
@@ -174,6 +176,44 @@ export async function openJobCheckout({ directory, lease, adopt, operatorWorkspa
         stop: activeTask?.id === value.id && activeTask.public.state === 'RUNNING',
       } };
   }
+
+  // The owning private HTTP host enables this before listening. A browser body
+  // cannot select a socket, token, operator profile or broker directory.
+  async function enableBrowserApproval() {
+    return serial(async () => {
+      open();
+      if (approvals) return { mode: 'BROWSER' };
+      requireValue(!activeTask, 'JOB_CHECKOUT_OPERATION_ACTIVE', 409);
+      const { createBrowserApprovalBroker } = await import('../../../sf81-buyer-operator-bridge/browser-approval.mjs');
+      // The original broker creates its own private, short-lived socket directory.
+      // Retained checkout paths can exceed the platform's Unix socket path limit.
+      approvals = await createBrowserApprovalBroker();
+      return { mode: 'BROWSER' };
+    });
+  }
+  function approval(id) {
+    const value = row(id), task = activeTask?.id === id ? activeTask.public : null;
+    return { checkoutId: id, intentId: value.intentId, mode: approvals ? 'BROWSER' : 'TERMINAL',
+      taskId: task?.id ?? null, executing: task?.kind === 'execute' && task.state === 'RUNNING',
+      snapshot: approvals ? approvals.snapshot(value.intentId) : null };
+  }
+  async function decideApproval(id, { intent, approvalId, requestSha256, decision, taskId } = {}) {
+    return serial(async () => {
+      open(); const value = row(id), task = activeTask?.id === id ? activeTask : null;
+      requireValue(approvals, 'JOB_CHECKOUT_BROWSER_APPROVAL_REQUIRED', 409);
+      requireValue(intent === value.intentId, 'JOB_CHECKOUT_APPROVAL_INTENT_CHANGED', 409);
+      requireValue(task && taskId === task.public.id && task.public.kind === 'execute' &&
+        task.public.state === 'RUNNING', 'JOB_CHECKOUT_APPROVAL_TASK_CHANGED', 409);
+      requireValue(typeof approvalId === 'string' && approvalId.length > 0 && approvalId.length <= 256 &&
+        HASH.test(requestSha256 ?? '') && ['approve', 'reject'].includes(decision),
+        'JOB_CHECKOUT_APPROVAL_DECISION_INVALID');
+      await approvals.decide({ intent: value.intentId, approvalId, requestSha256, decision });
+      await save(row(id), {}, 'browser-approval-decided',
+        { taskId, approvalId, requestSha256, decision });
+      return { checkout: item(row(id)), approval: approval(id) };
+    });
+  }
+
   async function archivePreparation(value, ticket, archiveId, { incompleteOnly = false } = {}) {
     const current = await original(value, ticket, { partial: true });
     if (!current.present) return null;
@@ -382,6 +422,10 @@ export async function openJobCheckout({ directory, lease, adopt, operatorWorkspa
         }
       } catch { /* Original files and the action error remain available for explicit recovery. */ }
     } finally {
+      if (approvals && task.public.kind === 'execute') {
+        try { await approvals.revoke(row(task.id).intentId); }
+        catch (caught) { error ??= failure(caught); }
+      }
       const accepted = row(task.id).phase === 'ACCEPTED';
       const completed = { ...task.public, state: error && !accepted
         ? task.controller.signal.aborted ? 'CANCELLED' : 'FAILED' : 'COMPLETE',
@@ -421,9 +465,18 @@ export async function openJobCheckout({ directory, lease, adopt, operatorWorkspa
       if (!task) return item(value);
       requireValue(taskId === undefined || taskId === task.public.id, 'JOB_CHECKOUT_TASK_CHANGED', 409);
       task.public = { ...task.public, state: 'CANCELLING' };
-      await save(value, { lastTask: task.public }, 'checkout-stop-requested', { taskId: task.public.id });
-      task.controller.abort(Object.assign(new Error('JOB_CHECKOUT_OPERATION_CANCELLED'),
-        { code: 'JOB_CHECKOUT_OPERATION_CANCELLED' }));
+      const failures = [];
+      try {
+        await save(value, { lastTask: task.public }, 'checkout-stop-requested', { taskId: task.public.id });
+      } catch (error) { failures.push(error); }
+      try { if (approvals) await approvals.revoke(value.intentId); }
+      catch (error) { failures.push(error); }
+      finally {
+        task.controller.abort(Object.assign(new Error('JOB_CHECKOUT_OPERATION_CANCELLED'),
+          { code: 'JOB_CHECKOUT_OPERATION_CANCELLED' }));
+      }
+      if (failures.length === 1) throw failures[0];
+      if (failures.length) throw new AggregateError(failures, 'JOB_CHECKOUT_STOP_FAILED');
       return item(row(id));
     });
   }
@@ -442,6 +495,7 @@ export async function openJobCheckout({ directory, lease, adopt, operatorWorkspa
     const counts = {};
     for (const value of rows.values()) counts[value.phase] = (counts[value.phase] ?? 0) + 1;
     return { schema: SCHEMA, directory, runtimeDirectory, entries: rows.size, counts, capacity: 1, closing,
+      approvalMode: approvals ? 'BROWSER' : 'TERMINAL',
       selection: selected ? structuredClone(selected) : null,
       active: activeTask ? { checkoutId: activeTask.id, ...activeTask.public } : null };
   }
@@ -469,6 +523,7 @@ export async function openJobCheckout({ directory, lease, adopt, operatorWorkspa
   }
   return Object.freeze({
     directory, import: importTicket, replace: replaceTicket, start, cancel, list, status,
+    enableBrowserApproval, approval, decideApproval,
     get(id) { return item(row(id)); },
     async wait(id) {
       row(id); const task = activeTask?.id === id ? activeTask : null;
@@ -479,12 +534,18 @@ export async function openJobCheckout({ directory, lease, adopt, operatorWorkspa
       if (closePromise) return closePromise;
       closing = true;
       closePromise = (async () => {
+        const failures = [];
         await tail;
         if (activeTask) {
-          activeTask.controller.abort(new Error('JOB_CHECKOUT_CLOSED'));
-          await activeTask.promise;
+          const task = activeTask;
+          try { if (approvals) await approvals.revoke(row(task.id).intentId); }
+          catch (error) { failures.push(error); }
+          task.controller.abort(new Error('JOB_CHECKOUT_CLOSED'));
+          try { await task.promise; } catch (error) { failures.push(error); }
         }
         await tail;
+        try { if (approvals) await approvals.close(); } catch (error) { failures.push(error); }
+        if (failures.length) throw new AggregateError(failures, 'JOB_CHECKOUT_CLOSE_FAILED');
       })();
       return closePromise;
     },

@@ -8,15 +8,15 @@ import { collectionExtension } from '../resource-library/collection-ui.mjs';
 import { requireValue } from './state.mjs';
 import { jobCheckoutExtension } from './checkout/server.mjs';
 
-export async function startJobCustomerWorkspace({ model, port = 0 } = {}) {
+export async function startJobCustomerWorkspace({ model, port = 0, browserApproval = true } = {}) {
   requireValue(model?.library && typeof model.retain === 'function', 'JOB_WORKSPACE_MODEL_REQUIRED');
-  const collections = await collectionExtension(model.library);
-  const checkout = await jobCheckoutExtension(model.checkout);
-  const assets = await Promise.all([
-    ['/jobs/','public/index.html','text/html'],
-    ['/jobs/app.mjs','public/app.mjs','text/javascript'],
-    ['/jobs/style.css','public/style.css','text/css'],
-  ].map(async ([route, file, type]) => ({ route, type, bytes: await readFile(new URL(file, import.meta.url)) })));
+  const closeCheckout = async () => {
+    const failures = [];
+    try { await model.intake?.close(); } catch (error) { failures.push(error); }
+    try { await model.checkout.close(); } catch (error) { failures.push(error); }
+    if (failures.length === 1) throw failures[0];
+    if (failures.length) throw new AggregateError(failures, 'JOB_WORKSPACE_CHECKOUT_CLOSE_FAILED');
+  };
   const route = async ({ request, url, send, body }) => {
     if (!url.pathname.startsWith('/api/job-workspace/')) return false;
     try {
@@ -60,33 +60,56 @@ export async function startJobCustomerWorkspace({ model, port = 0 } = {}) {
       throw error;
     }
   };
-  const host = await serveLibrary(model.library, { port,
-    additionalAssets: [...collections.additionalAssets, ...assets, ...checkout.additionalAssets],
-    authenticatedRoute: [collections.authenticatedRoute, route, checkout.authenticatedRoute] });
-  const opened = { ...host, url: host.origin + '/jobs/#' + host.token,
-    libraryUrl: host.origin + '/#' + host.token,
-    collectionsUrl: host.origin + '/collections#' + host.token,
-    checkoutUrl: host.origin + '/jobs/checkout/#' + host.token };
-  const checkoutState = model.checkout.status(), privateLaunch = jobWorkspaceLaunchPath(model.directory);
-  const launch = { schema: JOB_WORKSPACE_LAUNCH_SCHEMA, state: 'LISTENING', directory: model.directory,
-    runtimeDirectory: checkoutState.runtimeDirectory, operatorSelection: checkoutState.selection,
-    pid: process.pid, instanceId: randomUUID(), startedAt: new Date().toISOString(),
-    url: opened.url, checkoutUrl: opened.checkoutUrl, libraryUrl: opened.libraryUrl,
-    collectionsUrl: opened.collectionsUrl, privateLaunch };
-  try { await writeJson(privateLaunch, launch); }
-  catch (error) { await host.close(); throw error; }
-  let closing;
-  return { ...opened, launch, privateLaunch,
-    close() {
-      if (!closing) closing = (async () => {
-        try { await host.close(); }
-        finally {
-          const current = await exists(privateLaunch) ? await readJson(privateLaunch) : null;
-          if (current?.instanceId === launch.instanceId)
-            await writeJson(privateLaunch, { ...launch, state: 'CLOSED', endedAt: new Date().toISOString() });
-        }
-      })();
-      return closing;
-    },
+  let host, launch, privateLaunch;
+  const release = async () => {
+    const results = await Promise.allSettled([closeCheckout(), host?.close()]);
+    const failures = results.filter(value => value.status === 'rejected').map(value => value.reason);
+    if (launch && results[1].status === 'fulfilled') {
+      try {
+        const current = await exists(privateLaunch) ? await readJson(privateLaunch) : null;
+        if (current?.instanceId === launch.instanceId)
+          await writeJson(privateLaunch, { ...launch, state: 'CLOSED', endedAt: new Date().toISOString() });
+      } catch (error) { failures.push(error); }
+    }
+    return failures;
   };
+  try {
+    const collections = await collectionExtension(model.library);
+    const assets = await Promise.all([
+      ['/jobs/','public/index.html','text/html'],
+      ['/jobs/app.mjs','public/app.mjs','text/javascript'],
+      ['/jobs/style.css','public/style.css','text/css'],
+    ].map(async ([route, file, type]) => ({ route, type, bytes: await readFile(new URL(file, import.meta.url)) })));
+    const checkout = await jobCheckoutExtension(model.checkout, { browserApproval });
+    host = await serveLibrary(model.library, { port,
+      additionalAssets: [...collections.additionalAssets, ...assets, ...checkout.additionalAssets],
+      authenticatedRoute: [collections.authenticatedRoute, route, checkout.authenticatedRoute] });
+    const opened = { ...host, url: host.origin + '/jobs/#' + host.token,
+      libraryUrl: host.origin + '/#' + host.token,
+      collectionsUrl: host.origin + '/collections#' + host.token,
+      checkoutUrl: host.origin + '/jobs/checkout/#' + host.token };
+    const checkoutState = model.checkout.status();
+    privateLaunch = jobWorkspaceLaunchPath(model.directory);
+    launch = { schema: JOB_WORKSPACE_LAUNCH_SCHEMA, state: 'LISTENING', directory: model.directory,
+      runtimeDirectory: checkoutState.runtimeDirectory, operatorSelection: checkoutState.selection,
+      pid: process.pid, instanceId: randomUUID(), startedAt: new Date().toISOString(),
+      url: opened.url, checkoutUrl: opened.checkoutUrl, libraryUrl: opened.libraryUrl,
+      collectionsUrl: opened.collectionsUrl, privateLaunch };
+    await writeJson(privateLaunch, launch);
+    let closing;
+    return { ...opened, launch, privateLaunch,
+      close() {
+        if (!closing) closing = (async () => {
+          const failures = await release();
+          if (failures.length) throw new AggregateError(failures, 'JOB_WORKSPACE_HOST_CLOSE_FAILED');
+        })();
+        return closing;
+      },
+    };
+  } catch (error) {
+    const failures = await release();
+    if (failures.length)
+      throw new AggregateError([error, ...failures], 'JOB_WORKSPACE_HOST_START_FAILED', { cause: error });
+    throw error;
+  }
 }

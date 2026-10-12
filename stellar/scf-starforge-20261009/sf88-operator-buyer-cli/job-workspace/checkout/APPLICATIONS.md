@@ -23,7 +23,7 @@ Add one entry to the existing APPLICATION_CATALOG:
     field('operatorWorkspace', 'Original initialized operator workspace'),
     field('operatorProfile', 'Original private Node buyer profile'),
     field('terminalPython', 'Terminal Python executable', 'path', false,
-      'Defaults to /usr/bin/python3; the existing managed PTY carries original approval.'),
+      'Defaults to /usr/bin/python3; the existing managed PTY owns the application process.'),
     ...common,
   ],
 },
@@ -89,7 +89,7 @@ The resulting original command is:
 starforge job-workspace serve --state ABS_PRIVATE_CUSTOMER --operator-workspace ABS_ORIGINAL_OPERATOR --runtime ABS_SELECTED_SOURCE_SF88 --port PORT
 ~~~
 
-The profile variant replaces --operator-workspace with --operator-profile. The customer server owns one lease and one active native checkout. The original managed PTY owns terminal input, process-group stop and same-run recovery.
+The profile variant replaces --operator-workspace with --operator-profile. The customer server owns one lease and one active native checkout. The original managed PTY owns process-group stop and same-run recovery. The private checkout host initializes the shared original browser approval broker and displays the native payment decision in its Checkout view; standalone commands retain terminal approval.
 
 ## Ready output and original private launch
 
@@ -137,6 +137,6 @@ The exact observer branch fits inside the current line function before its commo
 
 A new launch opens the same state directory and its original checkout/buyer/library records. Existing checkouts retain their originally selected runtime and operator source. An installed upgrade supplies the new source for future imports while older operations continue to reference their retained source.
 
-Native creation, offline review and purchase execution receive the existing AbortSignal. Shutdown waits for the original child and accepted-result intake, then closes the library and releases the customer lease. An interrupted original attempt remains recoverable through the same checkout, even when its response arrives after a client disconnect.
+Native creation, offline review and purchase execution receive the existing AbortSignal. Shutdown drains input preparation, revokes the selected pending browser review, waits for the original child and accepted-result intake, closes the shared approval broker, then closes the library and releases the customer lease. An interrupted original attempt remains recoverable through the same checkout, even when its response arrives after a client disconnect.
 
 The Applications runtime/source checks and the customer’s saved input and permanent attempt are complementary. Keep the original operation identity when reopening or recovering this application.
