@@ -273,7 +273,9 @@ class Journey:
                     "--lease-fd", str(self.fd), "--progress-file",
                     str(directory / "engine-progress.json"), command, *arguments]
             return self.command(directory, attempt, argv)
-        return self.step(name, intent, apply, recovered=recover, refresh=(command == "inspect"))
+        return self.step(name, intent, apply,
+                         recovered=None if command == "inspect" else recover,
+                         refresh=(command == "inspect"))
 
 
 # This calls the maintained source installer directly. It does not unpack source,
@@ -837,6 +839,179 @@ def use_customer(journey, name, installed, selection, customer, *, build=False, 
     return journey.step(name, intent, apply)
 
 
+def allocated_tree(directory):
+    root = absolute(directory)
+    need(root.is_dir() and not root.is_symlink(), "RECEIVING_ALLOCATION_ROOT_REQUIRED")
+    pending, seen = [root], set()
+    total, logical, regular, links, special, entries = 0, 0, 0, 0, 0, 0
+    while pending:
+        path = pending.pop()
+        info = path.lstat()
+        identity = (info.st_dev, info.st_ino)
+        if identity in seen:
+            continue
+        seen.add(identity)
+        entries += 1
+        need(entries <= 200000, "RECEIVING_ALLOCATION_INVENTORY_LIMIT")
+        total += info.st_blocks * 512
+        if stat.S_ISDIR(info.st_mode):
+            with os.scandir(path) as rows:
+                pending.extend(Path(row.path) for row in rows)
+        elif stat.S_ISREG(info.st_mode):
+            logical += info.st_size
+            regular += 1
+        elif stat.S_ISLNK(info.st_mode):
+            links += 1
+        else:
+            special += 1  # Native controller sockets/FIFOs are counted without opening them.
+    return {"allocated_bytes": total, "logical_bytes": logical,
+            "inodes": entries, "files": regular, "symlinks": links, "special_files": special}
+
+
+def receiving_capacity(journey, name, candidate, selection, *, installed=None):
+    capacity = journey.plan.get("capacity")
+    if capacity is None:
+        return None
+    intent = {"request": capacity["request"], "directory": capacity["directory"],
+              "candidate": candidate_id(candidate), "source": selection["sourceCommit"],
+              "installed": installation_id(installed) if installed else None}
+
+    def apply(directory, attempt):
+        import zipfile
+        request_path = absolute(capacity["request"], file=True)
+        request = read(request_path)
+        native_intent = request["intent"]
+        need(native_intent["operation_id"] == journey.plan["operation_id"],
+             "ORIGINAL_CAPACITY_OPERATION_CHANGED")
+        workspace = absolute(capacity["directory"])
+        need(journey.root.is_relative_to(workspace), "RECEIVING_ALLOCATION_SCOPE_CHANGED")
+        requirements = [row for row in native_intent["disk"]["paths"]
+                        if Path(row["path"]).resolve() == workspace.resolve()]
+        need(len(requirements) == 1, "ORIGINAL_DISK_DECLARATION_REQUIRED")
+        requirement = requirements[0]
+        memory_bytes = native_intent["memory"]["peak_bytes"]
+        process_bytes = capacity["process_peak_bytes"]
+        need(type(process_bytes) is int and 0 < process_bytes <= memory_bytes,
+             "ORIGINAL_PROCESS_DECLARATION_REQUIRED")
+        current = allocated_tree(workspace)
+        source = allocated_tree(Path(selection["sourceRoot"]))
+        wheel_blocks, python_blocks, wheel_files, python_files = 0, 0, 0, 0
+        parents = set()
+        block = os.statvfs(workspace).f_frsize
+        for package in candidate["packages"]:
+            wheel = Path(candidate["directory"]) / "wheels" / package["filename"]
+            with zipfile.ZipFile(wheel) as archive:
+                for item in archive.infolist():
+                    if item.is_dir():
+                        continue
+                    wheel_files += 1
+                    need(wheel_files <= 100000, "PYTHON_COHORT_MEMBER_LIMIT")
+                    blocks = ((item.file_size + block - 1) // block) * block
+                    wheel_blocks += blocks
+                    if item.filename.endswith(".py"):
+                        python_blocks += blocks
+                        python_files += 1
+                    member_path = PurePosixPath(item.filename)
+                    need(not member_path.is_absolute() and ".." not in member_path.parts,
+                         "PYTHON_COHORT_MEMBER_PATH_INVALID")
+                    path = member_path.parent
+                    while str(path) != ".":
+                        parents.add(str(path))
+                        path = path.parent
+        # Original wheel entries are measured. The extra bound covers compiled
+        # Python files, venv/pip bootstrap, scripts and temporary installation data.
+        install_bound = wheel_blocks + 2 * python_blocks + len(parents) * block + 64 * 1024 ** 2
+        install_inodes = wheel_files + python_files + len(parents) + 1024
+        source_archive = Path(selection["directory"]) / "source.tgz"
+        need(source_archive.is_file(), "ORIGINAL_SOURCE_ARCHIVE_REQUIRED_FOR_OFFLINE")
+        source_bound = source["allocated_bytes"] + source_archive.stat().st_size + 8 * 1024 ** 2
+        source_inodes = source["inodes"] + 512
+        observed_installation = allocated_tree(installed["directory"]) if installed else None
+        if observed_installation:
+            remaining_install_bytes = observed_installation["allocated_bytes"] + 64 * 1024 ** 2
+            remaining_install_inodes = observed_installation["inodes"] + 1024
+        else:
+            remaining_install_bytes = 2 * install_bound
+            remaining_install_inodes = 2 * install_inodes
+        # The primary cohort already exists. Still to come: the transfer ZIP,
+        # its received wheel copy, the offline source runtime and workbook outputs.
+        remaining = (remaining_install_bytes + source_bound
+                     + 2 * candidate["wheelBytes"] + 16 * 1024 ** 2)
+        remaining_inodes = (remaining_install_inodes + source_inodes
+                            + 2 * len(candidate["packages"]) + 512)
+        projected = current["allocated_bytes"] + remaining
+        projected_inodes = current["inodes"] + remaining_inodes
+        resources = os.statvfs(workspace)
+        reserve_bytes = native_intent["disk"]["reserve_bytes"]
+        reserve_inodes = native_intent["disk"]["reserve_inodes"]
+        observation = {"schema": "stellar-forge.python-receiving-capacity.v1",
+            "observed_at": stamp(), "phase": name, "request": str(request_path),
+            "request_sha256": digest(request_path), "workspace": str(workspace),
+            "current": current, "source": source,
+            "cohort": {"wheel_bytes": candidate["wheelBytes"],
+                       "unpacked_bytes": candidate["unpackedBytes"],
+                       "allocated_wheel_entry_bytes": wheel_blocks,
+                       "files": wheel_files, "python_files": python_files},
+            "installation_allocation_bound": install_bound,
+            "observed_primary_installation": observed_installation,
+            "remaining_allocation_bound": remaining,
+            "projected_allocated_bytes": projected, "projected_inodes": projected_inodes,
+            "declared": {"disk_bytes": requirement["bytes"], "disk_inodes": requirement["inodes"],
+                         "memory_bytes": memory_bytes, "process_peak_bytes": process_bytes,
+                         "memory_backed": capacity["memory_backed"]},
+            "filesystem_available_bytes": resources.f_bavail * resources.f_frsize,
+            "filesystem_available_inodes": resources.f_favail}
+        write(directory / "capacity-observation.json", observation)
+        fits = (projected <= requirement["bytes"] and projected_inodes <= requirement["inodes"]
+                and remaining + reserve_bytes <= resources.f_bavail * resources.f_frsize
+                and remaining_inodes + reserve_inodes <= resources.f_favail)
+        if capacity["memory_backed"]:
+            fits = fits and projected + process_bytes <= memory_bytes
+        need(fits, "RECEIVING_CAPACITY_ADJUSTMENT_REQUIRED", observation)
+        return observation
+
+    return journey.step(name, intent, apply)
+
+
+def use_managed_application(journey, name, installed, selection, customer):
+    specification = journey.plan.get("applications")
+    if specification is None:
+        return None
+    directory = private(journey.root / "customer" / name)
+    helper = absolute(specification["helper"], file=True)
+    need(digest(helper) == specification["helper_sha256"],
+         "MANAGED_APPLICATION_HELPER_CHANGED")
+    request = {"schema": SCHEMA, "operation_id": journey.plan["operation_id"],
+               "directory": str(directory), "source": selection,
+               "installation": installed, "customer": customer, "node": journey.plan["node"],
+               "lease_fd": journey.fd,
+               "applications": {key: specification[key]
+                                for key in ("sourceRoot", "sourceCommit", "files")}}
+    intent = {key: value for key, value in request.items() if key != "lease_fd"}
+    intent["helper_sha256"] = specification["helper_sha256"]
+
+    def apply(step_directory, attempt):
+        path = step_directory / ("applications-request-" + str(attempt) + ".json")
+        write(path, request, create=True)
+        result = journey.command(step_directory, attempt,
+                                 [journey.plan["node"], str(helper), "--request", str(path)],
+                                 timeout=600)
+        need(result.get("status") == "COMPLETE"
+             and result["workspaceId"] == customer["workspace_id"]
+             and result["installation"]["installationId"] == installation_id(installed)
+             and result["installation"]["python"] == installed["python"]
+             and result["customerSource"]["sourceCommit"] == selection["sourceCommit"]
+             and result["customerSource"]["sourceManifestSha256"] == selection["sourceManifestSha256"]
+             and result["controller"]["sourceCommit"] == specification["sourceCommit"]
+             and len(result["runs"]) == 2
+             and all(row["operatorReopened"] and row["stopped"]["state"] == "STOPPED"
+                     and row["stopped"]["exitCode"] == 0 for row in result["runs"]),
+             "MANAGED_APPLICATION_RESULT_CHANGED")
+        return result
+
+    return journey.step(name, intent, apply)
+
+
 def literal_cell(cell):
     value = cell.value
     if isinstance(value, (datetime, date, time_value)):
@@ -1101,6 +1276,47 @@ def validate_plan(plan):
     need(isinstance(extras, list) and extras and "workbooks" in extras
          and all(isinstance(x, str) and re.fullmatch(r"[a-z][a-z0-9_-]{0,63}", x) for x in extras)
          and len(extras) == len(set(extras)), "DECLARED_PYTHON_EXTRAS_REQUIRED")
+    source, offline = plan["source"], plan["offline_source"]
+    need(isinstance(source, dict) and isinstance(offline, dict)
+         and source["commit"] == offline["commit"]
+         and source["manifest_sha256"] == offline["manifest_sha256"]
+         and absolute(source["installation_directory"]) != absolute(offline["installation_directory"]),
+         "EXACT_OFFLINE_SOURCE_SELECTION_REQUIRED")
+    for selected in (source, offline):
+        absolute(selected["installation_directory"])
+        module = absolute(selected["installer_module"], file=True)
+        need(HEX.fullmatch(selected["installer_sha256"])
+             and digest(module) == selected["installer_sha256"], "INSTALLER_SOURCE_CHANGED")
+    applications = plan.get("applications")
+    if applications is not None:
+        helper = absolute(applications["helper"], file=True)
+        controller = absolute(applications["sourceRoot"])
+        need(COMMIT.fullmatch(applications["sourceCommit"])
+             and HEX.fullmatch(applications["helper_sha256"])
+             and digest(helper) == applications["helper_sha256"],
+             "MANAGED_APPLICATION_SOURCE_PIN_REQUIRED")
+        files = applications["files"]
+        need(isinstance(files, list) and files, "MANAGED_APPLICATION_CLOSURE_REQUIRED")
+        names = set()
+        for item in files:
+            path = PurePosixPath(item["path"])
+            need(not path.is_absolute() and ".." not in path.parts and str(path) not in names
+                 and HEX.fullmatch(item["sha256"]), "MANAGED_APPLICATION_FILE_PIN_INVALID")
+            names.add(str(path))
+            target = controller.joinpath(*path.parts)
+            need(target.resolve().is_relative_to(controller.resolve())
+                 and target.is_file() and digest(target) == item["sha256"],
+                 "MANAGED_APPLICATION_SOURCE_CHANGED", str(path))
+    capacity = plan.get("capacity")
+    if capacity is not None:
+        need(isinstance(capacity, dict) and type(capacity["process_peak_bytes"]) is int
+             and capacity["process_peak_bytes"] > 0 and type(capacity["memory_backed"]) is bool,
+             "ORIGINAL_RECEIVING_CAPACITY_REQUIRED")
+        absolute(capacity["request"])
+        allocation = absolute(capacity["directory"])
+        for selected in (source, offline):
+            need(absolute(selected["installation_directory"]).is_relative_to(allocation),
+                 "RECEIVED_RUNTIME_OUTSIDE_ALLOCATION")
     customer = plan["customer"]
     absolute(customer["database"])
     absolute(customer["archive"], file=customer.get("directory_transfer") is None)
@@ -1127,6 +1343,9 @@ def validate_plan(plan):
         transfer_path = absolute(transfer["archive"], file=True)
         need(digest(transfer_path) == transfer["sha256"], "CUSTOMER_TRANSFER_ARCHIVE_CHANGED")
         destination = Path(customer["database"]).parent
+        if capacity is not None:
+            need(destination.is_relative_to(absolute(capacity["directory"])),
+                 "CUSTOMER_HYDRATION_OUTSIDE_ALLOCATION")
         need(destination != transfer_path.parent and not transfer_path.is_relative_to(destination),
              "CUSTOMER_TRANSFER_DESTINATION_OVERLAP")
         with zipfile.ZipFile(transfer_path) as archive:
@@ -1149,8 +1368,9 @@ def run_plan(plan):
     with operation_lease(root) as fd:
         journey = Journey(plan, root, fd)
         source = select_source(journey, "original-source", plan["source"])
-        primary_root, offline_root = root / "python-primary", root / "python-offline"
+        primary_root = Path(source["directory"]) / "python-runtime"
         candidate = cohort(journey, "primary", primary_root, source)
+        first_capacity = receiving_capacity(journey, "primary-capacity", candidate, source)
         primary = install_cohort(journey, "primary", primary_root, candidate, source)
         activated = journey.engine("primary-activate", primary_root, "activate",
                        ["--installation", installation_id(primary), "--expected-installation", ""])
@@ -1162,23 +1382,32 @@ def run_plan(plan):
         copied = receive_customer_copy(journey, primary)
         customer = {**plan["customer"], "database": copied["database"]}
         first = use_customer(journey, "primary-customer", primary, source, customer, build=True)
+        managed_primary = use_managed_application(journey, "primary-applications", primary, source, customer)
+        offline_capacity = receiving_capacity(journey, "offline-capacity", candidate, source, installed=primary)
         bundle_path = root / "python-workbooks.bundle.zip"
         bundled = journey.engine("offline-bundle", primary_root, "bundle",
                                  ["--candidate", candidate_id(candidate), "--output", str(bundle_path)])
         need(bundle_path.is_file(), "PYTHON_COHORT_ARCHIVE_ABSENT")
         bundle_sha256 = digest(bundle_path)
+        offline_source = select_source(journey, "offline-original-source", plan["offline_source"])
+        need(offline_source["sourceCommit"] == source["sourceCommit"]
+             and offline_source["sourceManifestSha256"] == source["sourceManifestSha256"]
+             and offline_source["profileId"] == source["profileId"], "OFFLINE_SOURCE_SELECTION_CHANGED")
+        need(offline_source["directory"] != source["directory"], "FRESH_SOURCE_RUNTIME_REQUIRED")
+        offline_root = Path(offline_source["directory"]) / "python-runtime"
         received = journey.engine("offline-receive", offline_root, "receive",
                                   ["--archive", str(bundle_path)])
         need(candidate_id(received) == candidate_id(candidate)
              and received["source"] == candidate["source"], "OFFLINE_COHORT_CHANGED")
-        offline = install_cohort(journey, "offline", offline_root, received, source)
+        offline = install_cohort(journey, "offline", offline_root, received, offline_source)
         need(offline["python"] != primary["python"], "FRESH_PRIVATE_INTERPRETER_REQUIRED")
         journey.engine("offline-activate", offline_root, "activate",
                        ["--installation", installation_id(offline), "--expected-installation", ""])
         destination = root / "customer" / "offline-delivery"
         receive_cli(journey, offline, Path(first["original_archive"]), destination, plan["customer"])
-        reopened = use_customer(journey, "offline-customer", offline, source, customer,
+        reopened = use_customer(journey, "offline-customer", offline, offline_source, customer,
                                 expected_build_id=first["built"]["id"])
+        managed_offline = use_managed_application(journey, "offline-applications", offline, offline_source, customer)
         need(reopened["customer"] == first["customer"]
              and reopened["preview_sha256"] == first["preview_sha256"],
              "OFFLINE_CUSTOMER_REOPEN_CHANGED")
@@ -1211,7 +1440,12 @@ def run_plan(plan):
                   "offline_installation": installation_id(offline),
                   "bundle": {"path": str(bundle_path), "bytes": bundle_path.stat().st_size,
                              "sha256": bundle_sha256, "engine_result": bundled},
-                  "primary": first, "offline": reopened}
+                  "primary": first, "offline": reopened, "offline_source": offline_source}
+        if first_capacity is not None:
+            result["capacity"] = {"primary": first_capacity, "offline": offline_capacity,
+                                  "completed_allocation": allocated_tree(plan["capacity"]["directory"])}
+        if managed_primary is not None:
+            result["applications"] = {"primary": managed_primary, "offline": managed_offline}
         if transferred is not None:
             result["customer_transfer"] = transferred
         if upgrade is not None:

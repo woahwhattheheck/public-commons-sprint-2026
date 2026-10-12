@@ -27,7 +27,9 @@ selected source row, column mapping, precision choice and source history comes
 from the original application. The saved workbook revision stays the same; the
 one new job and its output are written only in the receiving copy.
 
-The second environment receives the exact wheel bundle offline, installs the
+The second original source runtime receives the same full source archive and
+selection through the maintained installer. Its Python environment receives the
+exact wheel bundle offline, installs the
 same cohort in another private directory, receives the original workbook through
 the installed workbook command, and reopens that same private receiving database.
 It checks the completed first-environment build through the original API. The
@@ -148,18 +150,26 @@ manifest-declared payload files plus manifest.json, making 18 ZIP members.
 
     {
       "schema": "stellar-forge.python-native-receiving.v1",
-      "operation_id": "scf-python-workbooks-7de2-r2",
+      "operation_id": "scf-python-workbooks-review-r2",
       "engine": "/srv/starforge/toolkit/stellar/scf-starforge-20261009/distribution/python-runtime/engine.py",
       "engine_sha256": "ENGINE_SHA256",
       "python": "/absolute/selected/python3",
       "node": "/absolute/selected/node",
-      "output": "/srv/starforge/private/python-receiving-r2",
+      "output": "/srv/starforge/receiving/journey",
       "extras": ["workbooks", "agents"],
       "source": {
         "installer_module": "/absolute/toolkit/stellar/scf-starforge-20261009/distribution/runtime-install.mjs",
         "installer_sha256": "INSTALLER_SHA256",
-        "installation_directory": "/srv/starforge/source-runtime",
-        "root": "/srv/starforge/source-runtime/package/source",
+        "installation_directory": "/srv/starforge/receiving/source-primary",
+        "root": "/srv/starforge/receiving/source-primary/package/source",
+        "commit": "SOURCE_COMMIT",
+        "manifest_sha256": "SOURCE_MANIFEST_SHA256"
+      },
+      "offline_source": {
+        "installer_module": "/absolute/toolkit/stellar/scf-starforge-20261009/distribution/runtime-install.mjs",
+        "installer_sha256": "INSTALLER_SHA256",
+        "installation_directory": "/srv/starforge/receiving/source-offline",
+        "root": "/srv/starforge/receiving/source-offline/package/source",
         "commit": "SOURCE_COMMIT",
         "manifest_sha256": "SOURCE_MANIFEST_SHA256"
       },
@@ -187,7 +197,8 @@ bytes, manifest is 5,909 bytes and XLSX is 10,046 bytes. The driver checks
 the complete manifest and all retained file hashes through WorkbookDelivery.
 
 To prepare a new source installation through the original source installer,
-add these fields inside source:
+add these fields inside both source and offline_source. Keep their
+installation_directory values distinct and select the same archive and profile:
 
     "prepare": {
       "archive": "/srv/starforge/downloads/original-selected-runtime.tgz",
@@ -200,10 +211,94 @@ add these fields inside source:
     "install_zero_dependencies": true,
     "npm": "/absolute/selected/npm"
 
+Each original received runtime owns its Python engine at
+`installation_directory/python-runtime`. The primary and offline source
+selections must have the same source commit, source manifest and profile identity;
+the receiving directories and installed Python environments remain distinct.
 Use a new installation_directory when preparing another original source
 archive. The full source release and Python cohort remain separate retained
 objects with their own identities.
 
+
+## Use the managed Applications lifecycle
+
+The optional applications selection exercises the original managed application
+operator after each direct Analysis child has closed. It identifies the newer
+controller source separately from the customer runtime's selected source. This
+supports an original e287 Python cohort with a newer, explicitly pinned
+Applications controller.
+
+Add the actual complete controller closure and helper to the private plan:
+
+    "applications": {
+      "helper": "/absolute/toolkit/distribution/python-runtime/managed-application-receiving.mjs",
+      "helper_sha256": "EXACT_HELPER_SHA256",
+      "sourceRoot": "/absolute/newer-controller/full-source",
+      "sourceCommit": "EXACT_CONTROLLER_COMMIT",
+      "files": [
+        {"path": "stellar/scf-starforge-20261009/distribution/runtime-workspace/model.mjs",
+         "sha256": "EXACT_ORIGINAL_FILE_SHA256"}
+      ]
+    }
+
+The files array must include the complete required original controller closure
+supplied with the helper. The single row above illustrates its shape. Every
+selected file is verified before the native source operation starts.
+
+The helper attaches the actual received runtime through openRuntimeWorkspace,
+inspects the installed Python environment through the original python-inspect
+operation, and reviews, saves and connects Analysis. It starts retained
+application run IDs, checks the original authenticated state, closes and reopens
+the operator facade around the same live child, then stops that run. A reviewed
+fresh start reopens the same private database and is stopped before the helper
+returns. The original application's FD3 lifecycle owns those children.
+
+The primary and offline helper calls have separate private checkpoints. The
+result records both controller and customer source identities, original
+workspace/application/run IDs, the installed Python binding, authenticated state
+hash and terminal stop outcomes. Private ready URLs remain in their native files.
+
+## Match expansion to the original admission
+
+When the selected host uses the maintained shared admission controller, add its
+actual retained request path and the declared receiving allocation:
+
+    "capacity": {
+      "request": "/absolute/original-native-record/request.json",
+      "directory": "/srv/starforge/receiving",
+      "process_peak_bytes": 402653184,
+      "memory_backed": true
+    }
+
+Set memory_backed from the actual filesystem. On tmpfs, all newly allocated
+workspace bytes count alongside process memory. Place both received runtimes,
+the journey output and any newly hydrated customer directory under this
+allocation. Existing closed customer inputs can stay at their original paths.
+
+The selected local full-run envelope is 1,024 MiB total memory with a 256 MiB
+reserve, and 640 MiB storage with a 64 MiB reserve. The original shared controller
+admits it using its supported clean-cache mode and live ledgers; that mode reads
+the kernel's reclaimable-cache estimate while preserving shmem, mapped, dirty
+and writeback accounting. The 384 MiB process allowance is part of the 1,024 MiB
+peak, alongside all memory-backed files. The original storage declaration also
+includes 30,000 inodes plus a 128-inode reserve.
+
+After the real resolver completes, the driver records exact wheel bytes,
+expanded bytes, archive member allocation, source allocation and current
+workspace allocation before installing. It forecasts the remaining two source
+and environment copies, compilation/bootstrap space, offline wheel copies and
+workbook output. Before offline expansion, the first installed environment's
+actual allocation replaces its initial bound.
+
+Both checks read the current limits from the same original request. A larger
+actual cohort raises RECEIVING_CAPACITY_ADJUSTMENT_REQUIRED and retains the
+candidate plus capacity-observation.json with the needed allocation. Keep those
+retained outputs when using the original host's supported command continuation.
+The selected host supports memory amendments while a command is still
+undispatched; a larger declaration after a receiving command has run requires
+its explicit completed-command continuation support. The private plan keeps
+its original request path so a supported continuation can reread the current
+limits. All measured counters and forecasting bounds are retained separately.
 
 ## Receive the complete closed customer package
 
@@ -217,7 +312,7 @@ To receive that package on another host within this same run, add the following
 selection inside customer:
 
     "directory_transfer": {
-      "archive": "/srv/starforge/incoming/scf-7de2-customer-revision-2.zip",
+      "archive": "/srv/starforge/incoming/scf-customer-revision-2.zip",
       "sha256": "4273340eec891df156f24d9174bb63fd394c62137d5d0c985219183930791f51",
       "manifest_sha256": "7ba52acb792e8a5f7c954d9b5c5a9b6e1033e806428324516218eafb825397b8"
     }
@@ -305,14 +400,17 @@ The output directory contains:
 
 - operation.json and plan.json: original selection, step state and result hashes.
 - steps/: complete engine/installer/application command results and private logs.
-- python-primary/: the original resolved cohort and private installation.
-- python-offline/: the independently received cohort and private installation.
 - python-workbooks.bundle.zip: the exact portable wheel cohort.
 - customer/database/: the private complete customer directory used by both
   installed interpreters.
 - customer/: authenticated original downloads, original received workbook, and
   the single newly rendered workbook from the saved definition.
 - result.json: the complete joined receiving outcome.
+
+The original resolved cohort and installation live under the primary received
+runtime's python-runtime/; the independently received cohort and installation
+live under the offline runtime's python-runtime/. Both locations come from their
+original installer receipts.
 
 The result names both candidate/installation IDs, source identity, exact wheel
 packages, wheel/expanded bytes, bundle digest, installed module locations and
@@ -339,15 +437,15 @@ bridge closure travel through their existing distribution archive. On an equippe
 receiving host, use the original source runtime and the selected interpreter:
 
     /absolute/selected/python3 engine.py \
-      --root /srv/starforge/python-offline \
+      --root /srv/starforge/receiving/source-offline/python-runtime \
       receive --archive /srv/starforge/python-workbooks.bundle.zip
 
     /absolute/selected/python3 engine.py \
-      --root /srv/starforge/python-offline \
+      --root /srv/starforge/receiving/source-offline/python-runtime \
       install --candidate CANDIDATE_ID --python /absolute/selected/python3
 
     /absolute/selected/python3 engine.py \
-      --root /srv/starforge/python-offline \
+      --root /srv/starforge/receiving/source-offline/python-runtime \
       activate --installation INSTALLATION_ID
 
 Use the returned lexical installation.python path for the customer application.
@@ -367,13 +465,13 @@ To reopen the full SQL/Analysis application, select the private received
 customer database and the received full original source:
 
     /absolute/private/venv/bin/python -m stellar_forge_buyer.analysis_workspace \
-      --database /srv/starforge/private/python-receiving-r2/customer/database \
+      --database /srv/starforge/receiving/journey/customer/database \
       --checkout /srv/starforge/source-runtime/package/source \
       --node /absolute/selected/node \
       status
 
     /absolute/private/venv/bin/python -m stellar_forge_buyer.analysis_workspace \
-      --database /srv/starforge/private/python-receiving-r2/customer/database \
+      --database /srv/starforge/receiving/journey/customer/database \
       --checkout /srv/starforge/source-runtime/package/source \
       --node /absolute/selected/node \
       serve --port 0
