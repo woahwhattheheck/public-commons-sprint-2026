@@ -1,0 +1,11 @@
+{
+  "operationId": "SCF-CLIENT-CLOSE-RUNBOOKS-DD7A-20261012",
+  "sourceCommit": "8ac7de1d9d7ba43561ba84abae9a43759dafd9b3",
+  "sourceRoot": "/ABS/original-product-8ac7",
+  "directory": "/ABS/private/runbook-receiving",
+  "dependencyPackageJson": "/ABS/existing-stellar-runtime/package.json",
+  "playwrightModule": "/ABS/existing-playwright/index.js",
+  "chromiumPath": "/ABS/existing-chromium",
+  "originalBuilder": "/ABS/receiving-source/original-merchant-operation.mjs",
+  "nativeRecord": "/ABS/original-native-record"
+}
