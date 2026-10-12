@@ -35,6 +35,7 @@
     <button type="button" data-tab="customers" aria-current="page">Customers</button>
     <button type="button" data-tab="environments">Environments</button>
     <button type="button" data-tab="applications">Applications</button>
+    <button type="button" data-tab="editions">Data editions</button>
     <button type="button" data-tab="operations">Operations</button>
     <button type="button" data-tab="receive">Receive</button>
   </nav>
@@ -139,6 +140,70 @@
         <h4>Complete saved source and result files</h4><div id="customer-files" class="actions"></div>
         <details><summary>Original executable entry and complete arguments</summary><pre id="customer-argv"></pre></details>
         <details><summary>Complete customer, source, operation and application records</summary><pre id="customer-record"></pre></details>
+      </section>
+    </section>
+
+
+    <section id="panel-editions" class="panel" hidden>
+      <div class="section-heading"><div><h2>Application data editions</h2><p>Receive a completed data packet, review every change against the working application, and commit the selected revision to its existing stream.</p></div><button id="edition-refresh" type="button">Refresh</button></div>
+      <div id="edition-notice" role="status" aria-live="polite"></div>
+      <section id="edition-pending-panel" class="card" hidden>
+        <h3>Retained edition action</h3>
+        <label>Original action <select id="edition-pending-choice"></select></label>
+        <p id="edition-pending-description"></p>
+        <div class="actions"><button id="edition-pending-read" type="button">Read original operation</button><button id="edition-pending-retry" type="button">Continue the same action</button><button id="edition-pending-dismiss" type="button">Remove browser reminder</button></div>
+        <details><summary>Complete saved request</summary><pre id="edition-pending-record"></pre></details>
+      </section>
+      <section class="card">
+        <label>Managed application <select id="edition-application"><option value="">Choose an application</option></select></label>
+        <dl id="edition-application-facts" class="facts"></dl>
+        <div class="actions"><a id="edition-open-application" target="_blank" rel="noopener" hidden>Open Rails operator</a><button id="edition-stop-application" type="button" disabled>Stop application</button><button id="edition-application-controls" type="button" disabled>Application launch, verification and export</button></div>
+        <p>Stage, prepare and commit use a stopped application. Its Rails operator provides complete row-level previews, receipt history and attachment receiving when launched.</p>
+      </section>
+      <details id="edition-stage-panel" class="card">
+        <summary>Receive the next data packet</summary>
+        <form id="edition-source-form" method="post" action="#">
+          <div class="form-grid">
+            <label>Completed packet <select name="format"><option value="native">Native or session Ruby dataset</option><option value="baserow">Baserow Ruby customer delivery</option></select></label>
+            <label class="wide">Packet directory on the runtime host <input name="directory" required spellcheck="false" placeholder="/absolute/private/completed-dataset"></label>
+            <label class="wide">Original manifest SHA-256, when supplied <input name="expectedManifestSha256" pattern="[a-f0-9]{64}" minlength="64" maxlength="64" spellcheck="false"></label>
+          </div>
+          <button type="submit">Read selected source</button>
+        </form>
+        <p id="edition-source-state">Choose an existing completed Ruby packet from the original customer receiving workflow.</p>
+        <dl id="edition-source-facts" class="facts"></dl>
+        <details id="edition-source-details" hidden><summary>Complete selected source metadata</summary><pre id="edition-source-record"></pre></details>
+        <form id="edition-stage-form" method="post" action="#">
+          <div class="form-grid">
+            <label>Edition ID <input name="editionId" required pattern="[A-Za-z0-9][A-Za-z0-9._\-]{0,79}" maxlength="80" placeholder="october-update"></label>
+            <label>Edition title <input name="title" required maxlength="160"></label>
+            <label class="wide">Operator identity <input name="actor" required maxlength="512" placeholder="Your application operator name"></label>
+          </div>
+          <p>The original packet, mapping, tenant and stream are retained with this edition. A new review compares its complete rows with the current committed application. Existing removed rows follow the application’s original retention or archive policy.</p>
+          <button id="edition-stage" type="submit" disabled>Receive packet and prepare complete preview</button>
+        </form>
+      </details>
+      <div class="section-heading"><h3>Received editions</h3><p id="edition-page"></p></div>
+      <div class="table-wrap"><table><thead><tr><th>Edition</th><th>Source rows</th><th>State</th><th>Latest committed revision</th><th>Original manifest</th></tr></thead><tbody id="edition-list"></tbody></table></div>
+      <div class="actions"><button id="edition-previous" type="button" disabled>Previous editions</button><button id="edition-next" type="button" disabled>Next editions</button></div>
+      <section id="edition-detail" class="card" hidden>
+        <div class="section-heading"><div><h3 id="edition-title"></h3><p id="edition-phase"></p></div><button id="edition-read" type="button">Read edition</button></div>
+        <dl id="edition-facts" class="facts"></dl>
+        <label>Original review <select id="edition-review"></select></label>
+        <dl id="edition-review-facts" class="facts"></dl>
+        <div class="table-wrap"><table><thead><tr><th>Change</th><th>Complete count</th></tr></thead><tbody id="edition-counts"></tbody></table></div>
+        <label>Operator identity for the next action <input id="edition-actor" required maxlength="512"></label>
+        <div class="actions"><button id="edition-prepare" type="button" disabled>Prepare a fresh complete preview</button><button id="edition-commit" type="button" disabled>Commit this exact preview</button></div>
+        <p id="edition-commit-state"></p>
+        <details><summary>Complete review and committed receipt</summary><pre id="edition-review-record"></pre></details>
+        <h4>Original operations</h4>
+        <label>Operation <select id="edition-operation"></select></label><dl id="edition-operation-facts" class="facts"></dl>
+        <div class="actions"><button id="edition-operation-read" type="button">Read operation</button><button id="edition-resume" type="button" disabled>Resume original operation</button><button id="edition-cancel" type="button" disabled>Cancel original operation</button></div>
+        <details id="edition-log-panel"><summary>Complete operation log</summary><p id="edition-log-page"></p><pre id="edition-log"></pre><div class="actions"><button id="edition-log-previous" type="button" disabled>Previous log bytes</button><button id="edition-log-next" type="button" disabled>Next log bytes</button></div></details>
+        <h4>Complete retained files</h4><p id="edition-file-page"></p>
+        <div class="table-wrap"><table><thead><tr><th>Original file</th><th>Review</th><th>Bytes</th><th>SHA-256</th></tr></thead><tbody id="edition-files"></tbody></table></div>
+        <div class="actions"><button id="edition-files-previous" type="button" disabled>Previous files</button><button id="edition-files-next" type="button" disabled>Next files</button></div>
+        <details><summary>Complete edition and source records</summary><pre id="edition-record"></pre></details>
       </section>
     </section>
 

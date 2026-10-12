@@ -216,3 +216,7 @@ node stellar/scf-starforge-20261009/distribution/ruby-runtime/customer/examples/
 It reuses the actual producer environment, original customer operation UUID, original application registration UUID and customer output. It adopts that existing customer, opens the real loopback desk, authenticates its private session, reads all six browser assets, reviews the original source input, finalizes the joined receipt through HTTP, receives every complete customer source/result file, closes the listener, and reopens the original customer.
 
 The original `customer-workspace/customer-workspace-result.json` retains actual row/field identities, original operation/application IDs, complete received files and hashes, HTTP results and reopen outcome. Repeating the same command reads that completed result and verifies all original files without creating another customer operation.
+
+## Continue the application with later data editions
+
+The **Data editions** tab receives the next completed native or Baserow Ruby packet into the application's existing tenant and stream. It prepares the complete original Rails preview, commits the exact selected digest, retains every source/review/receipt, and verifies and exports the revised working application. The original Rails operator provides complete row changes, history and attachment receiving. See [Application data editions](../editions/README.md) for the full browser and CLI workflow, runtime support adoption, changed-target recovery and portable receiving.
