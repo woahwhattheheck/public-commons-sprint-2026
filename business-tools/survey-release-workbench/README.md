@@ -15,7 +15,7 @@ node cli.cjs serve
 
 Open the local URL printed by the command and choose **Open NYC source**. The server listens on 127.0.0.1 and serves only the application and the listed public input files. Use `--port 0` to choose an available local port. Stop with Ctrl+C.
 
-The browser remembers the active case in IndexedDB. **Save case** downloads a portable JSON file containing the original files and the full review history. Open that file on another machine to continue. If browser storage is unavailable, use Save case; the application retains its unsaved-change warning until browser storage succeeds. Download preparation alone does not claim that the file has been saved.
+The browser remembers the active case in IndexedDB. **Save case** downloads a portable JSON file containing the original files and the full review history. Open that file on another machine to continue. If browser storage is unavailable, use Save case; the application retains its unsaved-change warning until browser storage succeeds. Download preparation alone does not claim that the file has been saved. Switching sources or cases while changes remain unsaved requires an explicit discard choice; Cancel keeps the current case available for download.
 
 ## Produce a full delivery
 

@@ -115,6 +115,10 @@
   }
   function activate(next, restored, key) {
     const nextModel=C.buildModel(next,true); C.validateReview(next,nextModel);
+    if(savedCase && unsaved && !window.confirm("The current case has changes that have not been saved in this browser. Cancel to keep this case and use Save case, or OK to discard those unsaved changes and open the selected case.")){
+      notice("Current case kept. Use Save case to retain a portable copy before switching.");
+      return false;
+    }
     clearTimeout(pendingSave); pendingSave=0; saveRevision++; unsaved=false; storageKey=key || "active";
     savedCase=next; model=nextModel;
     $("workspace").hidden=false; $("overview").hidden=false; $("empty").hidden=true;
