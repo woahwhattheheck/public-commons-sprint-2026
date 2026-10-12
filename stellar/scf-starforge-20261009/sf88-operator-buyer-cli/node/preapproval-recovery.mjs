@@ -7,9 +7,11 @@ import { open, lstat, mkdtemp, rm, rename } from 'node:fs/promises';
 import { dirname, basename, join } from 'node:path';
 import { pathToFileURL, fileURLToPath } from 'node:url';
 import { absolute, privateDirectory, readJson, readBytes, parseJson, writeJson, writeBytes,
-  syncDirectory, jsonBytes, digest, now, object, need, BuyerError, exists } from './store.mjs';
+  syncDirectory, jsonBytes, digest, now, object, need, BuyerError, exists, prepareWriteReservations } from './store.mjs';
 import { checkWorkspace, workspaceCommand } from './workspace.mjs';
-import { unstartedAttempt } from './runtime.mjs';
+import { unstartedAttempt, resultRecordLimit, attemptRecordLimit } from './runtime.mjs';
+import { inspectPreapprovalWireCheckpoint, readPreapprovalWireHistory,
+  withPreapprovalWireHistory } from '../attempt-wire.mjs';
 
 const SCHEMA = 'stellar-forge.node-preapproval-recovery.v1';
 const NODE_SCHEMA = 'stellar-forge.node-buyer.v1';
@@ -24,6 +26,19 @@ const checkSignal = signal => {
   need(!signal?.aborted, 'OPERATION_ABORTED_BEFORE_START');
 };
 const details = ({ raw, ...value }) => value;
+
+
+async function wireInput(operation,current) {
+  const body=current.config.operation.bodyFile===undefined?undefined:
+    await (await operation.buyer._requestFiles()).readRequestFile(current.config.operation.bodyFile);
+  need(digest(body??Buffer.alloc(0))===current.meta.bodySha256,'PREAPPROVAL_CONFIGURATION_CHANGED');
+  return {cfg:current.config,body};
+}
+async function selectedWireHistory(operation,current,entry) {
+  return readPreapprovalWireHistory({...await wireInput(operation,current),
+    historyDirectory:entry.directory,planSha256:entry.planSha256,
+    sourceAttemptSha256:entry.sourceAttemptSha256,expectedCheckpoint:entry.plan.wireCheckpoint});
+}
 
 async function snapshot(name, path, { limit = LIMIT, optional = false } = {}) {
   path = absolute(path);
@@ -54,6 +69,9 @@ function validPlan(plan, operation, directory) {
     HASH.test(plan.sourceAttemptSha256 ?? '') && HASH.test(plan.configSha256 ?? '') &&
     HASH.test(plan.reviewSha256 ?? '') && Array.isArray(plan.sources) &&
     plan.sources.length >= 7 && plan.sources.length <= 12 &&
+    (plan.wireCheckpoint===undefined || object(plan.wireCheckpoint) &&
+      plan.wireCheckpoint.schema==='stellar-forge.sf88.preapproval-wire.v1.checkpoint' &&
+      HASH.test(plan.wireCheckpoint.sha256??'')) &&
     plan.directory === join(operation.directory, 'preapproval-history', plan.sourceAttemptSha256) &&
     (plan.sourceDirectory === operation.directory ||
       dirname(plan.sourceDirectory) === join(operation.directory, 'preapproval-history') &&
@@ -74,7 +92,7 @@ async function chain(operation) {
   const history = [], seen = new Set();
   for (let depth = 0; depth < 64; depth++) {
     const attemptPath = join(directory, 'attempt.json');
-    const attempt = await exists(attemptPath) ? await readJson(attemptPath, 16384) : null;
+    const attempt = await exists(attemptPath) ? await readJson(attemptPath, attemptRecordLimit) : null;
     if (attempt) {
       need(attempt.schema === NODE_SCHEMA && attempt.intentId === operation.intentId &&
         attempt.configSha256 === meta.configSha256 && attempt.bodySha256 === meta.bodySha256,
@@ -89,7 +107,7 @@ async function chain(operation) {
     need(attempt && attempt.intentId === operation.intentId &&
       attempt.configSha256 === meta.configSha256, 'PREAPPROVAL_ATTEMPT_BINDING_CHANGED');
     const link = await readJson(linkPath, 16384);
-    const raw = await readBytes(attemptPath, 16384);
+    const raw = await readBytes(attemptPath, attemptRecordLimit);
     need(link.schema === SCHEMA && link.intentId === operation.intentId &&
       link.sourceAttemptSha256 === digest(raw) && HASH.test(link.planSha256 ?? '') &&
       link.directory === join(operation.directory, 'preapproval-history', link.sourceAttemptSha256) &&
@@ -103,7 +121,10 @@ async function chain(operation) {
       (plan.ticketSha256 ?? null) === (meta.ticketSha256 ?? null),
     'PREAPPROVAL_CONFIGURATION_CHANGED');
     await verifyArchive(plan);
-    history.push({ ...link, plan });
+    const wireHistory=await selectedWireHistory(operation,{meta,config},{...link,plan});
+    if(await exists(join(link.directory,'attempt.json')) && plan.wireCheckpoint!==undefined)
+      need(wireHistory?.status==='RETAINED','PREAPPROVAL_WIRE_RETIREMENT_REQUIRED');
+    history.push({ ...link, plan, wireHistory });
     directory = link.directory;
     await privateDirectory(directory, { create: false });
   }
@@ -131,7 +152,7 @@ async function readSources(operation, current, retainedPlan = null) {
     snapshot('operation.json', join(operation.directory, 'operation.json'), { limit: 65536 }),
     snapshot('config.json', operation.configPath, { limit: 65536 }),
     snapshot('review.json', reviewPath, { limit: 262144 }),
-    snapshot('attempt.json', join(directory, 'attempt.json'), { limit: 16384 }),
+    snapshot('attempt.json', join(directory, 'attempt.json'), { limit: attemptRecordLimit }),
     snapshot('stdout.json', join(directory, 'stdout.json'), { optional: true }),
     snapshot('stderr.log', join(directory, 'stderr.log'), { optional: true }),
     snapshot('download-reservation.json', originalReservation, { optional: true, limit: 16384 }),
@@ -274,7 +295,9 @@ function preparedView(entry) {
   return { schema: SCHEMA, intentId: plan.intentId, status: 'PREPARED',
     directory: plan.directory, attemptSha256: plan.sourceAttemptSha256,
     planSha256: entry.planSha256, review: copy(plan.review),
-    originalLedgerCheck: copy(plan.originalLedgerCheck), processProof: copy(plan.processProof) };
+    originalLedgerCheck: copy(plan.originalLedgerCheck), processProof: copy(plan.processProof),
+    ...(entry.wireHistory?{wireHistory:copy(entry.wireHistory)}:{}),
+    ...(plan.wireCheckpoint?{originalWire:copy(plan.wireCheckpoint)}:{}) };
 }
 
 export async function readPreapprovalRecovery(operation) {
@@ -284,6 +307,7 @@ export async function readPreapprovalRecovery(operation) {
     directory: current.directory, history: current.history.map(entry => ({
       directory: entry.directory, planSha256: entry.planSha256,
       attemptSha256: entry.sourceAttemptSha256, reason: entry.plan.reason, createdAt: entry.plan.createdAt,
+      ...(entry.wireHistory?{wireHistory:copy(entry.wireHistory)}:{}),
     })), pending: current.pending ? preparedView(current.pending) : null };
 }
 
@@ -301,12 +325,13 @@ export async function inspectPreapprovalRecovery(operation, { nativeRecord, sign
   const sources = await readSources(operation, current);
   const checked = await processProof(operation, current, sources, nativeRecord, signal);
   const originalLedgerCheck = await ledgerProof(operation, current, signal);
+  const originalWire=await inspectPreapprovalWireCheckpoint(await wireInput(operation,current));
   const provisional = { sources: sources.map(details) };
   await verifySources(provisional);
   return { schema: SCHEMA, intentId: operation.intentId, status: 'AVAILABLE',
     attemptSha256: sources.find(value => value.name === 'attempt.json').sha256,
     configSha256: current.meta.configSha256, directory: current.directory,
-    sources: provisional.sources, processProof: checked.proof, originalLedgerCheck };
+    sources: provisional.sources, processProof: checked.proof, originalLedgerCheck, originalWire };
 }
 
 export async function preparePreapprovalRecovery(operation,
@@ -336,6 +361,7 @@ export async function preparePreapprovalRecovery(operation,
     bodySha256: meta.bodySha256, ticketSha256: meta.ticketSha256 ?? null,
     ...(meta.nativeWorkspace ? { nativeWorkspace: meta.nativeWorkspace } : {}),
     native, reviewedAt: now() };
+  const wireCheckpoint=await inspectPreapprovalWireCheckpoint(await wireInput(operation,current));
   const directory = join(operation.directory, 'preapproval-history', expectedAttemptSha256);
   const plan = {
     schema: SCHEMA, intentId: operation.intentId, operationDirectory: operation.directory, directory,
@@ -343,7 +369,7 @@ export async function preparePreapprovalRecovery(operation,
     configSha256: meta.configSha256, bodySha256: meta.bodySha256, ticketSha256: meta.ticketSha256 ?? null,
     nativeWorkspace: meta.nativeWorkspace ?? null, reason: reason.normalize('NFC').trim(), createdAt: now(),
     sources: sources.map(details), processProof: checked.proof, processRequest: checked.request,
-    originalLedgerCheck, review, reviewSha256: digest(jsonBytes(review)),
+    originalLedgerCheck, review, reviewSha256: digest(jsonBytes(review)), wireCheckpoint,
   };
   await verifySources(plan);
   checkSignal(signal);
@@ -404,30 +430,42 @@ export async function executePreapprovalRecovery(operation,
   { expectedPlanSha256, review, signal } = {}) {
   checkSignal(signal);
   need(HASH.test(expectedPlanSha256 ?? ''), 'PREAPPROVAL_PLAN_REVIEW_REQUIRED');
-  const current = await chain(operation), selected = current.pending;
-  need(selected && selected.planSha256 === expectedPlanSha256, 'PREAPPROVAL_PREPARED_PLAN_REQUIRED');
-  const plan = selected.plan;
-  need(object(review) && digest(jsonBytes(review)) === plan.reviewSha256, 'MATCHING_REVIEW_REQUIRED');
-  await verifySources(plan);
-  const sourceAttempt = parseJson(await readBytes(join(plan.sourceDirectory, 'attempt.json'), 16384));
-  const originalCurrent = { ...current, directory: plan.sourceDirectory, attempt: sourceAttempt };
-  const sources = await readSources(operation, originalCurrent, plan);
-  const checked = await processProof(operation, originalCurrent, sources, plan.processRequest.nativeRecord, signal);
-  const originalLedgerCheck = await ledgerProof(operation, current, signal);
-  await verifySources(plan);
-  checkSignal(signal);
-  const { meta, config } = current;
-  let command = { args: ['--execute', '--config', operation.configPath], entryFile: operation.buyer.runtime.cli };
-  if (meta.nativeWorkspace) command = workspaceCommand(operation.buyer, {
-    directory: meta.nativeWorkspace, configPath: operation.configPath, ticketSha256: meta.ticketSha256 ?? null });
-  const executionCheck = {
-    schema: SCHEMA, intentId: operation.intentId, planSha256: expectedPlanSha256, checkedAt: now(),
-    processProof: checked.proof, originalLedgerCheck,
-  };
-  const checkSha256 = digest(jsonBytes(executionCheck));
-  const checksDirectory = join(current.directory, 'checks');
-  await privateDirectory(checksDirectory);
-  await writeJson(join(checksDirectory, checkSha256 + '.json'), executionCheck, { exclusive: true });
+  const initial=await chain(operation),selected=initial.pending;
+  need(selected && selected.planSha256===expectedPlanSha256,'PREAPPROVAL_PREPARED_PLAN_REQUIRED');
+  const plan=selected.plan;
+  need(object(review) && digest(jsonBytes(review))===plan.reviewSha256,'MATCHING_REVIEW_REQUIRED');
+  const reserveFile=await operation.buyer.runtime.fileReservation();
+  return withPreapprovalWireHistory({...await wireInput(operation,initial),
+    historyDirectory:plan.directory,planSha256:expectedPlanSha256,
+    sourceAttemptSha256:plan.sourceAttemptSha256,expectedCheckpoint:plan.wireCheckpoint,
+    reserveFile,signal,
+    verifyOriginal:async()=>{
+      const current=await chain(operation);
+      need(current.pending?.planSha256===expectedPlanSha256,'PREAPPROVAL_PREPARED_PLAN_REQUIRED');
+      await verifySources(plan);
+      const sourceAttempt=parseJson(await readBytes(join(plan.sourceDirectory,'attempt.json'),attemptRecordLimit));
+      const originalCurrent={...current,directory:plan.sourceDirectory,attempt:sourceAttempt};
+      const sources=await readSources(operation,originalCurrent,plan);
+      const checked=await processProof(operation,originalCurrent,sources,plan.processRequest.nativeRecord,signal);
+      const originalLedgerCheck=await ledgerProof(operation,current,signal);
+      await verifySources(plan);
+      checkSignal(signal);
+      const executionCheck={schema:SCHEMA,intentId:operation.intentId,planSha256:expectedPlanSha256,
+        checkedAt:now(),processProof:checked.proof,originalLedgerCheck};
+      const checksDirectory=join(current.directory,'checks');
+      await privateDirectory(checksDirectory);
+      await writeJson(join(checksDirectory,digest(jsonBytes(executionCheck))+'.json'),executionCheck,{exclusive:true});
+      return executionCheck;
+    },
+  },async({history,originalVerification})=>{
+    const current=await chain(operation);
+    need(current.pending?.planSha256===expectedPlanSha256 && history.status==='RETAINED',
+      'PREAPPROVAL_PREPARED_PLAN_REQUIRED');
+    const {meta,config}=current;
+    let command={args:['--execute','--config',operation.configPath],entryFile:operation.buyer.runtime.cli};
+    if(meta.nativeWorkspace)command=workspaceCommand(operation.buyer,{
+      directory:meta.nativeWorkspace,configPath:operation.configPath,ticketSha256:meta.ticketSha256??null});
+    const checkSha256=digest(jsonBytes(originalVerification));
   const reservation = plan.sources.find(value => value.name === 'download-reservation.json');
   if (reservation?.exists) {
     const released = join(current.directory, 'released-download-reservation.json');
@@ -456,56 +494,74 @@ export async function executePreapprovalRecovery(operation,
   let attempt = { schema: NODE_SCHEMA, intentId: operation.intentId, state: 'STARTING',
     createdAt, startedAt: createdAt, executionCheckSha256: checkSha256,
     configSha256: meta.configSha256, bodySha256: meta.bodySha256, retry: 'NO_AUTOMATIC_RETRY',
-    preapprovalRecovery: { planSha256: expectedPlanSha256, sourceAttemptSha256: plan.sourceAttemptSha256 },
+    preapprovalRecovery: { planSha256: expectedPlanSha256, sourceAttemptSha256: plan.sourceAttemptSha256,
+      wireSelectionSha256:history.selectionSha256,wireRetirementSha256:history.retirementSha256 },
   };
   const attemptPath = join(current.directory, 'attempt.json');
-  try { await writeJson(attemptPath, attempt, { exclusive: true }); }
-  catch (error) {
-    if (error.code === 'EEXIST') throw new BuyerError('ATTEMPT_ALREADY_RECORDED_USE_RECOVER', { operation });
-    throw error;
-  }
-  let run;
-  try {
-    run = await operation.buyer.runtime.run(command.args, {
-      directory: current.directory, signal, entryFile: command.entryFile,
-      beforeSpawn: async nativeCommand => {
-        await verifySources(plan);
-        attempt = { ...attempt, nativeCommand };
-        await writeJson(attemptPath, attempt);
-      },
-      started: async (pid, processIdentity) => {
-        attempt = { ...attempt, state: 'STARTED', pid, startedAt: now(),
-          ...(processIdentity ? { processIdentity } : {}) };
-        await writeJson(attemptPath, attempt);
-      },
-    });
-  } catch (error) {
-    await writeJson(attemptPath, unstartedAttempt(attempt, error) ??
-      { ...attempt, state: 'INTERRUPTED_OR_START_FAILED', endedAt: now() });
-    throw error;
-  }
-  if (run.output?.mode !== NATIVE_RESULT || run.output.intentId !== operation.intentId) {
-    await writeJson(attemptPath, unstartedAttempt(attempt, run) ??
-      { ...attempt, state: 'NATIVE_RESULT_UNAVAILABLE', endedAt: now(),
-        exitCode: run.exitCode, errorCode: run.errorCode ?? 'NATIVE_RESULT_INVALID' });
-    throw new BuyerError(run.errorCode ?? 'NATIVE_RESULT_INVALID', { operation, exitCode: run.exitCode });
-  }
-  const record = { schema: NODE_SCHEMA, intentId: operation.intentId, configSha256: meta.configSha256,
-    native: run.output, exitCode: run.exitCode, exitSignal: run.exitSignal,
-    runtimeError: run.errorCode, recovered: false, recordedAt: now(),
-    preapprovalRecovery: { directory: current.directory, planSha256: expectedPlanSha256,
-      sourceAttemptSha256: plan.sourceAttemptSha256 },
+  const reservations = await prepareWriteReservations([
+    { path: attemptPath, bytes: attemptRecordLimit, exclusive: true },
+    { path: attemptPath, bytes: attemptRecordLimit },
+    { path: attemptPath, bytes: attemptRecordLimit },
+    { path: attemptPath, bytes: attemptRecordLimit },
+    { path: join(current.directory, 'result.json'),
+      bytes: resultRecordLimit(operation.buyer.runtime), exclusive: true },
+  ], { reserveFile, signal });
+  const recordAttempt = async () => {
+    try { await writeJson(attemptPath, attempt, { exclusive: true }); }
+    catch (error) {
+      if (error.code === 'EEXIST') throw new BuyerError('ATTEMPT_ALREADY_RECORDED_USE_RECOVER', { operation });
+      throw error;
+    }
+    let run;
+    try {
+      run = await operation.buyer.runtime.run(command.args, {
+        directory: current.directory, signal, entryFile: command.entryFile,
+        beforeSpawn: async nativeCommand => {
+          await verifySources(plan);
+          const retainedWire=await selectedWireHistory(operation,current,selected);
+          need(retainedWire?.retirementSha256===history.retirementSha256,
+            'PREAPPROVAL_WIRE_RETIREMENT_CHANGED');
+          attempt = { ...attempt, nativeCommand };
+          await writeJson(attemptPath, attempt);
+        },
+        started: async (pid, processIdentity) => {
+          attempt = { ...attempt, state: 'STARTED', pid, startedAt: now(),
+            ...(processIdentity ? { processIdentity } : {}) };
+          await writeJson(attemptPath, attempt);
+        },
+      });
+    } catch (error) {
+      await writeJson(attemptPath, unstartedAttempt(attempt, error) ??
+        { ...attempt, state: 'INTERRUPTED_OR_START_FAILED', endedAt: now() });
+      throw error;
+    }
+    if (run.output?.mode !== NATIVE_RESULT || run.output.intentId !== operation.intentId) {
+      await writeJson(attemptPath, unstartedAttempt(attempt, run) ??
+        { ...attempt, state: 'NATIVE_RESULT_UNAVAILABLE', endedAt: now(),
+          exitCode: run.exitCode, errorCode: run.errorCode ?? 'NATIVE_RESULT_INVALID' });
+      throw new BuyerError(run.errorCode ?? 'NATIVE_RESULT_INVALID', { operation, exitCode: run.exitCode });
+    }
+    const record = { schema: NODE_SCHEMA, intentId: operation.intentId, configSha256: meta.configSha256,
+      native: run.output, exitCode: run.exitCode, exitSignal: run.exitSignal,
+      runtimeError: run.errorCode, recovered: false, recordedAt: now(),
+      preapprovalRecovery: { directory: current.directory, planSha256: expectedPlanSha256,
+        sourceAttemptSha256: plan.sourceAttemptSha256 },
+    };
+    await writeJson(join(current.directory, 'result.json'), record, { exclusive: true });
+    await writeJson(attemptPath, { ...attempt, state: 'RECORDED', exitCode: run.exitCode, endedAt: now() });
+    return operation._result(record);
   };
-  await writeJson(join(current.directory, 'result.json'), record, { exclusive: true });
-  await writeJson(attemptPath, { ...attempt, state: 'RECORDED', exitCode: run.exitCode, endedAt: now() });
-  return operation._result(record);
+  try { return reservations ? await reservations.run(recordAttempt) : await recordAttempt(); }
+  finally { await reservations?.close(); }
+
+  });
 }
 
 export async function recoverPreapprovalResult(operation) {
   const current = await chain(operation);
   if (!current.history.length || !current.attempt) return null;
   if (await exists(join(current.directory, 'result.json')))
-    return operation._result(await readJson(join(current.directory, 'result.json'), operation.buyer.runtime.outputLimit));
+    return operation._result(await readJson(join(current.directory, 'result.json'), resultRecordLimit(operation.buyer.runtime)));
   let native;
   try { native = await readJson(join(current.directory, 'stdout.json'), operation.buyer.runtime.outputLimit); }
   catch (error) { if (['ENOENT', 'JSON_INVALID'].includes(error.code)) return null; throw error; }

@@ -9,6 +9,7 @@ import { selectStellarEvidenceEndpoint } from '../sf43-agent-commerce/verify.mjs
 import { execution, bytes, need } from './config.mjs';
 import { readRequestBody } from './request-body.mjs';
 import { createAttemptWireRecorder } from './attempt-wire.mjs';
+import { currentFileReservation } from './node/store.mjs';
 import { loadOperationTicket, operationTicketHeaders, requireOperationTicketFingerprint,
   requireCurrentOperationTicket } from './operation-ticket.mjs';
 
@@ -58,11 +59,13 @@ export async function execute(cfg, { signal, emitSummary = true, environment = p
   let cleanupError, setupError, setupFailed = false, wire;
   try {
     // Refuse an existing/unusable destination before a buyer can run or sign.
-    if (responseFile) output = await prepareBuyerResponseFile(responseFile);
+    if (responseFile) output = await prepareBuyerResponseFile({ ...responseFile,
+      reserveFile: currentFileReservation()?.reserveFile, signal });
     const signer = await import(pathToFileURL(cfg.signerModule).href);
     const sign = signer.sign ?? signer.default?.sign;
     need(typeof sign === 'function', 'TRUSTED_SIGN_FUNCTION_REQUIRED');
-    wire = await createAttemptWireRecorder({cfg,body,fetchImpl:createPublicHttpsFetch({
+    wire = await createAttemptWireRecorder({cfg,body,signal,
+      reserveFile:currentFileReservation()?.reserveFile,fetchImpl:createPublicHttpsFetch({
       trustedProxy:transport, timeoutMs:requestTimeoutMs,
     })});
     const buyer = new OperatorApprovedBuyer({
