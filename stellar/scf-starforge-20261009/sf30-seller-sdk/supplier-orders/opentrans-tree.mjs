@@ -1,4 +1,6 @@
 // MIT. Original openTRANS 1.0 tree projection and emission; no binary-number coercion.
+import { defaultSupplierOrderProfile, normalizeSupplierOrderProfile, supplierOrderProfileFields } from './profiles.mjs';
+
 const own=(v,k)=>Object.prototype.hasOwnProperty.call(v??{},k);
 const object=v=>v&&typeof v==='object'&&!Array.isArray(v);
 const clone=v=>structuredClone(v);
@@ -58,11 +60,13 @@ export function semanticXmlTree(node){
 function extensions(node,known){return xmlChildren(node).filter(v=>!known.has(v.name)).map(semanticXmlTree);}
 function rawParties(node){const found=collect(node,ROLE_NAMES);return Object.fromEntries(Object.entries(ROLES).map(([role,name])=>[role,role==='transport'?found.filter(v=>v.name===name):found.find(v=>v.name===name)??null]));}
 function partyProjection(node){const original=rawParties(node);return Object.fromEntries(Object.entries(original).map(([role,value])=>[role,Array.isArray(value)?value.map(semanticXmlTree):semanticXmlTree(value)]));}
-function identity(node,findings,path){
+function identity(node,findings,path,profile){
   if(!node)return{supplierId:null,supplierIdentity:null};
   const candidates=[];
   walk(node,current=>{if(current.name==='PARTY_ID'){const value=xmlText(current);if(value!=null&&value!=='')candidates.push({type:xmlAttribute(current,'type'),value,sourcePath:current.sourcePath??path});}});
-  const selected=candidates.some(v=>v.type==='buyer_specific')?candidates.filter(v=>v.type==='buyer_specific'):candidates;
+  const chosen=profile.supplierIdentity.partyIdTypes.find(type=>candidates.some(value=>value.type===type));
+  const selected=chosen?candidates.filter(value=>value.type===chosen):profile.supplierIdentity.allowUniqueFallback?candidates:[];
+  if(candidates.length&&!selected.length)findings.push(issue('PROFILE_SUPPLIER_ID_NOT_DECLARED',path,'The original supplier party has no account identifier permitted by the selected profile.',{profileId:profile.id,candidates}));
   const values=[...new Set(selected.map(v=>v.value))];
   if(values.length===1){const choice=selected.find(v=>v.value===values[0]);return{supplierId:choice.value,supplierIdentity:choice};}
   if(values.length>1)findings.push(issue('OPENTRANS_SUPPLIER_ID_AMBIGUOUS',path,'The original supplier party contains more than one possible account identity. Select the explicit recipient account in the source party.',{identities:selected}));
@@ -70,7 +74,8 @@ function identity(node,findings,path){
 }
 function period(node){return node?{type:xmlAttribute(node,'type'),start:scalar(node,'DELIVERY_START_DATE'),end:scalar(node,'DELIVERY_END_DATE'),extensions:extensions(node,new Set(['DELIVERY_START_DATE','DELIVERY_END_DATE']))}:null;}
 function remarks(node){return xmlChildren(node,'REMARK').map(v=>({type:xmlAttribute(v,'type'),text:xmlText(v),sourcePath:v.sourcePath??null}));}
-export function openTransSerials(remarksValue){
+export function openTransSerials(remarksValue,profile=defaultSupplierOrderProfile()){
+  if(profile.serials.remarks==='opaque')return[];
   return (remarksValue??[]).flatMap(v=>{const match=typeof v?.text==='string'?SERIAL.exec(v.text):null;return match?[match[1]]:[];});
 }
 function packages(node){
@@ -91,7 +96,7 @@ function article(node){
 function issue(code,path,message,extra){
   return{severity:'error',code,path,message,rule:{url:SPEC,section:'Original 1.0 source and scalar fields'},...(extra?{details:extra}:{})};
 }
-function nativeFindings(raw,layout){
+function nativeFindings(raw,layout,profile){
   const findings=[];
   walk(raw.root,node=>{
     const name=node.name,value=xmlText(node),path=details(node),elements=xmlChildren(node);
@@ -103,31 +108,32 @@ function nativeFindings(raw,layout){
     if(COUNTS.has(name)&&value!==null&&!COUNT.test(value))findings.push(issue('OPENTRANS_COUNT',path,'The original COUNT field requires a nonnegative integral value.'));
     if(INTEGERS.has(name)&&value!==null&&!INTEGER.test(value))findings.push(issue('OPENTRANS_INTEGER',path,'The original INTEGER field requires its complete signed or unsigned integral string.'));
     if(BOOLEANS.has(name)&&value!==null&&!/^(?:true|false)$/i.test(value))findings.push(issue('OPENTRANS_BOOLEAN',path,'The original Boolean is true or false; numeric substitutes are not part of this profile.'));
-    if(name==='ORDER_ID'&&value!==null&&[...value].length>21)findings.push({...issue('UNITE_ORDER_ID_LENGTH',path,'The complete original Unite order reference can contain at most 21 characters.'),rule:{url:VENDOR+'edi-interfaces-for-order-processing',section:'Order number'}});
-    if(name==='REMARK'&&value?.startsWith('NUMBER:')&&!SERIAL.test(value))findings.push({...issue('UNITE_SERIAL_REMARK',path,'Use one complete original NUMBER:[Number] serial record in each REMARK.'),rule:{url:VENDOR+'submit-serial-numbers',section:'openTRANS 1.0'}});
-    if(name==='REMARK'&&SERIAL.test(value??'')&&SERIAL.exec(value)[1]==='')findings.push(issue('UNITE_SERIAL_EMPTY',path,'The original serial value is empty.'));
+    if(name==='ORDER_ID'&&value!==null&&[...value].length>profile.orderIdMaximum)findings.push(profile.id==='unite-opentrans-1.0'?{...issue('UNITE_ORDER_ID_LENGTH',path,'The complete original Unite order reference can contain at most 21 characters.'),rule:{url:VENDOR+'edi-interfaces-for-order-processing',section:'Order number'}}:{...issue('PROFILE_ORDER_ID_LENGTH',path,'The original order reference exceeds the selected '+profile.orderIdMaximum+'-character limit.'),rule:{url:profile.declaration.url,reference:profile.declaration.reference,profileId:profile.id}});
+    if(profile.serials.remarks==='unite-number'&&name==='REMARK'&&value?.startsWith('NUMBER:')&&!SERIAL.test(value))findings.push({...issue('UNITE_SERIAL_REMARK',path,'Use one complete original NUMBER:[Number] serial record in each REMARK.'),rule:{url:VENDOR+'submit-serial-numbers',section:'openTRANS 1.0'}});
+    if(profile.serials.remarks==='unite-number'&&name==='REMARK'&&SERIAL.test(value??'')&&SERIAL.exec(value)[1]==='')findings.push(issue('UNITE_SERIAL_EMPTY',path,'The original serial value is empty.'));
   });
   return findings;
 }
-export function projectOpenTransTree(native,{name,provenance}={}){
+export function projectOpenTransTree(native,{name,provenance,profile:profileValue}={}){
+  const profile=normalizeSupplierOrderProfile(profileValue);
   const raw=native.raw,root=raw?.root,kind=root?.name;
   need(OPEN_TRANS_KINDS.includes(kind),'OPENTRANS_DOCUMENT_KIND','Choose an original supported openTRANS 1.0 document.');
   const metadata=DOC[kind],headerNode=xmlChild(root,kind+'_HEADER'),info=xmlChild(headerNode,kind+'_INFO');
-  const sourceFindings=[...(native.findings??[]),...nativeFindings(raw,native.layout)];
+  const sourceFindings=[...(native.findings??[]),...nativeFindings(raw,native.layout,profile)];
   if(!info)sourceFindings.push(issue('OPENTRANS_HEADER_REQUIRED','/'+kind,'The original document header/info is missing.'));
-  const ids=identity(rawParties(info).supplier,sourceFindings,'/header/supplierId');
+  const ids=identity(rawParties(info).supplier,sourceFindings,'/header/supplierId',profile);
   const rows=xmlChildren(xmlChild(root,kind+'_ITEM_LIST'),kind+'_ITEM');
   const items=rows.map((node,index)=>{
-    const ref=xmlChild(node,'ORDER_REFERENCE'),parties=partyProjection(node),supplier=identity(rawParties(node).supplier,sourceFindings,'/items/'+index+'/supplierId'),remarkRows=remarks(node);
+    const ref=xmlChild(node,'ORDER_REFERENCE'),parties=partyProjection(node),supplier=identity(rawParties(node).supplier,sourceFindings,'/items/'+index+'/supplierId',profile),remarkRows=remarks(node);
     return{lineId:scalar(node,'LINE_ITEM_ID'),article:article(xmlChild(node,'ARTICLE_ID')),quantity:scalar(node,'QUANTITY'),unit:scalar(node,'ORDER_UNIT'),
       price:price(xmlChild(node,'ARTICLE_PRICE')),deliveryDate:period(xmlChild(node,'DELIVERY_DATE')),
       orderReference:ref?{orderId:scalar(ref,'ORDER_ID'),lineId:scalar(ref,'LINE_ITEM_ID'),date:scalar(ref,'ORDER_DATE'),extensions:extensions(ref,new Set(['ORDER_ID','LINE_ITEM_ID','ORDER_DATE']))}:null,
       deliveryReferences:xmlChildren(node,'DELIVERY_REFERENCE').map(v=>({documentId:scalar(v,'DELIVERY_NOTE_ID'),lineId:scalar(v,'LINE_ITEM_ID'),date:period(xmlChild(v,'DELIVERY_DATE')),extensions:extensions(v,new Set(['DELIVERY_NOTE_ID','LINE_ITEM_ID','DELIVERY_DATE']))})),
-      parties,...supplier,packages:packages(node),remarks:remarkRows,serials:openTransSerials(remarkRows),extensions:extensions(node,ITEM_MAPPED),sourcePath:node.sourcePath??null};
+      parties,...supplier,packages:packages(node),remarks:remarkRows,serials:openTransSerials(remarkRows,profile),extensions:extensions(node,ITEM_MAPPED),sourcePath:node.sourcePath??null};
   });
   const summaryNode=xmlChild(root,kind+'_SUMMARY'),version=xmlAttribute(root,'version')??native.validation?.attributeDefaults?.[kind]?.version??null;
   if(version!=='1.0')sourceFindings.push(issue('OPENTRANS_VERSION','/version','This recipient profile uses the original openTRANS 1.0 version.',{actual:version}));
-  return{schema:'stellar-forge.supplier-order-document.v1',profileId:'unite-opentrans-1.0',kind,version,documentId:scalar(info,metadata.id),orderId:kind==='ORDER'||kind==='ORDERRESPONSE'?scalar(info,'ORDER_ID'):null,
+  return{schema:'stellar-forge.supplier-order-document.v1',...supplierOrderProfileFields(profile),kind,version,documentId:scalar(info,metadata.id),orderId:kind==='ORDER'||kind==='ORDERRESPONSE'?scalar(info,'ORDER_ID'):null,
     header:{date:scalar(info,metadata.date),orderDate:scalar(info,'ORDER_DATE'),currency:scalar(info,'PRICE_CURRENCY'),supplierOrderId:scalar(info,'SUPPLIER_ORDER_ID'),deliveryDate:period(xmlChild(info,'DELIVERY_DATE')),
       parties:partyProjection(info),...ids,packages:packages(info),remarks:remarks(info),extensions:extensions(info,HEADER_MAPPED)},
     items,summary:{totalItems:scalar(summaryNode,'TOTAL_ITEM_NUM'),totalAmount:scalar(summaryNode,'TOTAL_AMOUNT'),totalTaxAmount:scalar(summaryNode,'TOTAL_TAX_AMOUNT'),

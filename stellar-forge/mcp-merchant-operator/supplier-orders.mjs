@@ -28,7 +28,7 @@ function fullReply(value,label){
 function sourceView(value){return value?omit(value,['path','sourcePath']):value;}
 function reviewSummary(value){
   if(!value)return value;
-  return{...pick(value,['schema','errors','warnings','valid','net','tax','gross']),findingsCount:value.findings?.length??0,
+  return{...pick(value,['schema','profileId','profileSha256','errors','warnings','valid','net','tax','gross']),findingsCount:value.findings?.length??0,
     ...(value.findings?.length?{fullFindingsRetained:true}:{})};
 }
 function documentSummary(value){
@@ -190,10 +190,14 @@ export class MerchantSupplierOrders {
         const view={...omit(value,['drafts','operations']),drafts:(value.drafts??[]).map(draftSummary),
           operations:(value.operations??[]).map(operation=>projectSupplierOrderOperation(operation))};
         if(size(view)<=SUPPLIER_ORDER_REPLY_BYTES)return view;
-        return fullReply({...pick(value,['schema','workspaceId','profileId','supplierIdentity','counts']),summary:true,
+        return fullReply({...pick(value,['schema','workspaceId','profileId','profile','supplierIdentity','counts']),summary:true,
           originalCollectionsRetained:true,collections:{orders:'merchant_supplier_order_orders',drafts:'merchant_supplier_order_drafts',documents:'merchant_supplier_order_documents',transmissions:'merchant_supplier_order_transmissions'},
           operations:(value.operations??[]).map(operation=>pick(operation,['id','kind','state','requestSha256','createdAt','updatedAt']))},'workspace summary');
       }
+      case 'profile':return fullReply(await model.profile(),'retained profile selection');
+      case 'profile_template':return fullReply(await model.profileTemplate(selected),'complete declared profile template');
+      case 'profile_history':{const value=await model.profileHistory(selected);return boundedPage(value,selected,item=>projectSupplierOrderOperation(item,{includeRequest:true}),{profileSha256:value.profileSha256,revision:value.revision});}
+      case 'select_profile':return projectSupplierOrderOperation(await model.selectProfile(selected));
       case 'orders':return boundedPage(await model.orders(selected),selected,orderSummary);
       case 'order':return fullReply(await model.order(selected),'original order');
       case 'order_items':{

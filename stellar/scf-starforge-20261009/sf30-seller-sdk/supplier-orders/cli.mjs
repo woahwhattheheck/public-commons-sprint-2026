@@ -10,11 +10,16 @@ import { serveSupplierOrderWorkspace } from './server.mjs';
 import { serveSupplierOrderHttpsIntake } from './https-intake.mjs';
 import { parseOpenTransDocument, renderOpenTransDocument } from './opentrans.mjs';
 import { reviewDocument, data, fail } from './core.mjs';
+import { supplierOrderProfileTemplate, normalizeSupplierOrderProfile, DEFAULT_SUPPLIER_ORDER_PROFILE_ID } from './profiles.mjs';
 
 export const help=String.raw`Starforge supplier orders
 
   starforge supplier-orders serve --workspace DIR [--port 0] [--transport-config CHANNELS.json] [--https-intake]
   starforge supplier-orders intake --workspace DIR --transport-config CHANNELS.json
+  starforge supplier-orders profile-template [--base standard|unite]
+  starforge supplier-orders profile --workspace DIR
+  starforge supplier-orders profile-history --workspace DIR [--offset 0] [--limit 50]
+  starforge supplier-orders select-profile --workspace DIR --request COMPLETE_PROFILE_SELECTION.json
   starforge supplier-orders state --workspace DIR
   starforge supplier-orders orders --workspace DIR [--query TEXT] [--status STATUS] [--offset 0] [--limit 50]
   starforge supplier-orders order --workspace DIR --order ORIGINAL_ORDER_ID
@@ -31,7 +36,7 @@ export const help=String.raw`Starforge supplier orders
   starforge supplier-orders select --workspace DIR --request SELECTION_REQUEST.json
   starforge supplier-orders export-document --workspace DIR --id DOCUMENT_RECORD_ID --out ORIGINAL.xml
   starforge supplier-orders export --workspace DIR --request-id ID [--out COMPLETE.zip]
-  starforge supplier-orders receive --workspace DIR --input COMPLETE.zip --request-id ID [--mode merge|inspect]
+  starforge supplier-orders receive --workspace DIR --input COMPLETE.zip --request-id ID [--mode merge|inspect] [--request PROFILE_ADOPTION.json]
 
   starforge supplier-orders transport-channels --workspace DIR --transport-config CHANNELS.json
   starforge supplier-orders transmissions --workspace DIR [--direction incoming|outgoing] [--status STATE] [--order ID]
@@ -43,8 +48,15 @@ export const help=String.raw`Starforge supplier orders
   starforge supplier-orders resolve-transmission --workspace DIR --request PROVIDER_READBACK.json
   starforge supplier-orders cancel-transmission --workspace DIR --request CANCEL.json
 
-  starforge supplier-orders validate --input ORIGINAL.xml
+  starforge supplier-orders validate --input ORIGINAL.xml [--profile DECLARED_PROFILE.json]
   starforge supplier-orders render --input NORMALIZED_DOCUMENT.json --out COMPLETE.xml
+
+Select a customer profile before business intake. Existing workspaces retain the
+original Unite default. A profile becomes immutable after intake; another declared
+interface uses an empty workspace. Profile selection retains the full declaration,
+expectedProfileSha256, expectedSelectionRevision, requestId and reason. A complete
+customer package carries that profile; inspect it before an explicit empty-workspace
+adoption with adoptProfile:true and the inspected current profile pins.
 
 Every source keeps its original complete XML and all saved revisions. Request JSON
 retains requestId, the exact source order revisions and state hashes, and the operator
@@ -63,7 +75,7 @@ An unknown outcome requires actual provider readback before a deliberate retry.
 
 function parse(argv){
   const [command='help',...rest]=argv,options={order:[]};
-  const valid=new Set(['workspace','port','query','status','offset','limit','order','kind','id','request-id','request','input','out','mode','help','transport-config','https-intake','direction']);
+  const valid=new Set(['workspace','port','query','status','offset','limit','order','kind','id','request-id','request','input','out','mode','help','transport-config','https-intake','direction','profile','base']);
   for(let i=0;i<rest.length;i++){
     if(!rest[i].startsWith('--'))fail('ORDER_CLI_ARGUMENT_INVALID','Unexpected argument '+rest[i]);
     const key=rest[i].slice(2);if(!valid.has(key))fail('ORDER_CLI_OPTION_INVALID','Unknown option --'+key);
@@ -98,15 +110,16 @@ export async function runSupplierOrdersCli(argv=process.argv.slice(2),{stdout=pr
   const {command,options}=parse(argv);
   const print=value=>stdout.write(JSON.stringify(value,null,2)+'\n');
   if(command==='help'||options.help){stdout.write(help);return{help:true};}
+  if(command==='profile-template'){const value=supplierOrderProfileTemplate({base:options.base??'standard'});print(value);return value;}
   if(command==='validate'){
-    const input=required(options,'input'),document=await parseOpenTransDocument(await inputXml(input),{name:basename(input),provenance:{path:resolve(input)}});
+    const input=required(options,'input'),document=await parseOpenTransDocument(await inputXml(input),{name:basename(input),provenance:{path:resolve(input)},profile:options.profile?normalizeSupplierOrderProfile(await inputJson(options.profile)):undefined});
     const review=reviewDocument(document);const result={document,review:{...review,findings:[...(document.findings??[]),...review.findings]}};
     print(result);return result;
   }
   if(command==='render'){
-    const result=await renderOpenTransDocument(await inputJson(required(options,'input'))),errors=(result.findings??[]).filter(f=>f.severity==='error');
+    const result=await renderOpenTransDocument(await inputJson(required(options,'input'))),review=result.document.profileId===DEFAULT_SUPPLIER_ORDER_PROFILE_ID?null:reviewDocument(result.document,{forOutput:true}),findings=[...(result.findings??[]),...(review?.findings??[])],errors=findings.filter(f=>f.severity==='error');
     if(errors.length)fail('ORDER_OUTPUT_REVIEW_REQUIRED','Correct the complete original document fields before emitting its XML.',422,{findings:errors});
-    const file=await writeOriginal([result.bytes],required(options,'out')),summary={file,document:result.document,findings:result.findings??[]};print(summary);return summary;
+    const file=await writeOriginal([result.bytes],required(options,'out')),summary={file,document:result.document,findings,...(review?{review}:{})};print(summary);return summary;
   }
   const workspace=await openSupplierOrderWorkspace({directory:resolve(required(options,'workspace')),transportConfigPath:options['transport-config']});
   let serving=false,result;
@@ -120,7 +133,10 @@ export async function runSupplierOrdersCli(argv=process.argv.slice(2),{stdout=pr
     }
     const page={...(options.offset?{offset:Number(options.offset)}:{}),...(options.limit?{limit:Number(options.limit)}:{})};
     const order=options.order[0],request=options.request?await inputJson(options.request):null;
-    if(command==='state')result=workspace.state();
+    if(command==='profile')result=workspace.profile();
+    else if(command==='profile-history')result=workspace.profileHistory(page);
+    else if(command==='select-profile'){if(!request)required(options,'request');result=workspace.selectProfile(request);}
+    else if(command==='state')result=workspace.state();
     else if(command==='orders')result=workspace.orders({...page,...(options.query?{query:options.query}:{}),...(options.status?{status:options.status}:{})});
     else if(command==='order')result=workspace.order({orderId:order??required(options,'order')});
     else if(command==='documents')result=workspace.documents({...page,...(order?{orderId:order}:{}),...(options.kind?{kind:options.kind}:{})});
@@ -140,7 +156,7 @@ export async function runSupplierOrdersCli(argv=process.argv.slice(2),{stdout=pr
     else if(command==='select'){if(!request)required(options,'request');result=workspace.selectDocument(request);}
     else if(command==='export-document'){const selected=await workspace.exportFile({id:required(options,'id')});result={file:await writeOriginal(createReadStream(selected.path,{flags:constants.O_RDONLY|constants.O_NOFOLLOW}),required(options,'out'),selected),documentId:options.id};}
     else if(command==='export')result=await workspace.exportWorkspace({requestId:required(options,'request-id'),...(options.out?{path:resolve(options.out)}:{})});
-    else if(command==='receive')result=await workspace.importWorkspace({requestId:required(options,'request-id'),path:resolve(required(options,'input')),mode:options.mode??'merge',...(request?.expectedBytes!==undefined?{expectedBytes:request.expectedBytes}:{}),...(request?.expectedSha256?{expectedSha256:request.expectedSha256}:{})});
+    else if(command==='receive')result=await workspace.importWorkspace({requestId:required(options,'request-id'),path:resolve(required(options,'input')),mode:options.mode??request?.mode??'merge',...(request?.adoptProfile?{adoptProfile:true,expectedProfileSha256:request.expectedProfileSha256,expectedSelectionRevision:request.expectedSelectionRevision}:{}),...(request?.expectedBytes!==undefined?{expectedBytes:request.expectedBytes}:{}),...(request?.expectedSha256?{expectedSha256:request.expectedSha256}:{})});
     else fail('ORDER_CLI_COMMAND_INVALID','Unknown supplier-order command '+command+'. Use --help.');
     }finally{if(!serving)await workspace.close();}
   print(result);if(result?.state==='FAILED'||result?.state==='INTERRUPTED')process.exitCode=1;return result;

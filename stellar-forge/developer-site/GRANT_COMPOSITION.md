@@ -1,46 +1,76 @@
-# Compose the maintained SCF application
+# Compose the existing SCF application
 
-The reviewer page, application download, product and finance companion, and source index are one edition. The composer refreshes that edition from the complete maintained manuscript and the installed product sources.
+The original composer turns the selected application Markdown and detailed companion into the existing reviewer page and source index. It retains the original grant amount, budget, milestones, capacity and cash fields supplied by the manuscript owner. The same command receives the selected economic, coastal and Datasette installation sections.
 
-Run from this developer-site directory with Node.js:
+## Select the current source
 
-```bash
-node grant-compose.mjs \
-  --manuscript /path/to/current-canonical-application.md \
-  --fred-commit be44be564e35b63af23246bad531a95374bbb4c0 \
-  --coops-commit 92eb1c73a3cab9781ef7dbabdc12067344fb6aa2 \
-  --datasette-commit b1a6ad827c02cdf95c613b23ef07ce1996400fd6 \
-  --datasette-publisher-commit ab876f6dc2ad24b7938f6b928202d78fbdeef777 \
-  --source-pins-output /path/to/current-grant-source-pins.json
-```
+Use the complete current developer-site checkout. Keep the accepted nine-answer application, detailed product and finance companion, page shell and source index together under `dist/`. Select the full current canonical manuscript when receiving new text; a subsection or earlier donor page is not a replacement for the cumulative edition.
 
-The example selects the installed economic, coastal and Datasette sources received on October 12, 2026. For a later product edition, select its actual source commit. An omitted product option retains the corresponding current source-index selection. Both Datasette source commits travel together.
+The original customer projection receives the accepted complete Webhook, referral-implementation and recurring-subscription sections and both OpenFn commissioning paragraphs. Each selected H2 carries all its more detailed headings, and repeated composition updates it in place while retaining the companion’s other chapters and six-package allocation. Meaningful correspondence labels remain in the public reader. Its source-index projection retains the selected public source identities and measured file metadata. Use that same maintained projection when receiving the current manuscript.
 
-## Receive the complete manuscript
+The economic and coastal selections each use one actual merged product commit. Datasette uses two: its original source/publisher commit and its customer Analysis commit. Those commits belong to separate maintained contributions. After the first selection, the source index retains them for subsequent composition.
 
-The manuscript has one “Reviewer application” heading followed by the nine answers in their original order, then “Detailed application and source material.” The command extracts those answers and replaces the corresponding prose in the original reviewer shell. The existing tenth section, installed examples, film, budget, and other static assets remain in the same site.
+## Receive a manuscript edition
 
-The economic, coastal and Datasette modules receive their selected complete customer installations. The customer module also receives the complete accepted Webhook, referral-implementation and recurring-subscription sections and both OpenFn paragraphs, preserving the companion's other chapters and its six-package allocation table. An H2 section ends before the next H1 or H2; its more detailed headings remain part of that section. Repeated composition updates those sections in place.
+An installed product exposes the same composer as `starforge grant-compose`. Run the source command from the repository root:
 
-The Markdown download retains sibling links to the companion. The HTML reader resolves those same links through grant-data. Public correspondence labels retain their substance while private Slack and mailbox destinations are removed from the public edition. The complete original manuscript remains the editorial source.
+~~~sh
+node stellar-forge/developer-site/grant-compose.mjs \
+  --directory /absolute/path/to/current/developer-site/dist \
+  --manuscript /absolute/path/to/current-scf-application.md \
+  --fred-commit <economic-product-commit> \
+  --coops-commit <coastal-product-commit> \
+  --datasette-commit <datasette-customer-commit> \
+  --datasette-publisher-commit <datasette-publisher-commit> \
+  --source-pins-output /absolute/path/to/current-grant-source-pins.json
+~~~
 
-The source register follows the public customer source URLs. A changed source URL invalidates its former file-blob identity until that file is explicitly received. Public index generation removes private correspondence links and computes file sizes and hashes after projecting the complete text.
+Omit `--manuscript` when rendering edits already saved in the application and companion downloads. Omit a product's commit flags to retain its selection from the source index. The two Datasette commits are required together for a new selection.
 
-## Publish the complete edition
+Composition preserves all nine original answer headings and every unrelated companion section. Selected installation subsections are replaced once, and the existing tenth section receives the product entry. Source identifiers and hashes are refreshed from the complete result. The command reads its installed composer and customer module to refresh their source identities; when a manuscript is supplied, it also records the selected nine-answer front’s current size and hash. The guided product opening and submission navigation are then composed into the same edition. Repeating the same composition produces identical files.
 
-Composition writes these existing files:
+## Receive the four reader files
 
-- dist/grant.html
-- dist/grant-data/application.md
-- dist/grant-data/product-and-finance.md
-- dist/grant-data/source-index.json
+The original receiving callback accepts the four Git blob overrides emitted by `--source-pins-output`:
 
-The emitted source-pins JSON contains exactly those four routes and their resulting Git blob identities. Supply it as sourcePins to the existing grant receiving operation. Its original default pins remain available for the original edition. The browser asset manifest separately selects the complete installed UI and its dependencies.
+| Route | Selected content |
+|---|---|
+| `/grant.html` | Complete application in the existing reader |
+| `/grant-data/application.md` | Complete nine-answer Markdown |
+| `/grant-data/product-and-finance.md` | Cumulative detailed companion |
+| `/grant-data/source-index.json` | Current source selections and original financial fields |
 
-Publish the same complete dist directory through the established Site project. Keep the application and source index together when transferring the edition: the submission editor receives the original application size and hashes from that index.
+Pass that object as `sourcePins` to the original `inspectGrantApplication` callback, along with its selected source commit and receiving directory. Its other declared original routes stay selected. Additional product assets have their own file selection; they do not change this four-reader override contract.
 
-## Continue editorial work
+The result also reports `reviewerEntry` and `submissionWorkspace`. These describe the selected opening anchors and submission route; the submission descriptor binds the same application SHA-256 and Git blob that the editor reads. They do not add routes to `sourcePins`.
 
-The submission workspace reads this same application and source index. Receiving a newer original edition updates untouched answers while preserving manually edited answers and their earlier baselines. The operator can compare those changes, explicitly receive an answer, retain a saved version, or export the complete working draft.
+The declared browser manifest includes the original routes and six complete component assets:
 
-The funded amount, hours, duration and nine-answer ordering are retained by the composer. Product and customer updates belong in the complete source manuscript and companion; the source join carries them into the existing application.
+| Route | Use |
+|---|---|
+| `/grant-entry-browser.mjs` | Prepare the original installed/source command and opening guide |
+| `/grant-entry.css` | Responsive product opening |
+| `/grant-submission.html` | Full answer and issuer-field workspace |
+| `/grant-submission.css` | Original workspace layout |
+| `/grant-submission-core.mjs` | Complete source, answer, form and version model |
+| `/grant-submission-workspace.mjs` | Original draft-store editing and receiving controls |
+
+The workspace uses the existing `/drafts.mjs` and the same application/source-index files. Its complete source travels under the original developer-site component in the grant-reviewer product.
+
+The HTML reader and downloadable Markdown have different relative locations. The composer adjusts companion and source-index links only in the rendered HTML. Markdown sibling links remain relative to `grant-data/`.
+
+## Use the existing local command and Site
+
+The selected source checkout opens through:
+
+~~~sh
+node stellar-forge/developer-site/grant.mjs --port 8787
+~~~
+
+The installed product opens through `starforge grant-application --port 8787`. Use the actual origin returned by that listener; its result also supplies the submission-workspace URL. An already-running original source server can serve the same declared routes; no second listener is needed.
+
+Start with **Explore the working product**. The [reviewer-opening guide](GRANT_ENTRY.md) covers the original film/report, Applications, quoted host command and complete purchase handover. Then choose **Prepare submission** to edit the nine answers, map the actual issuer fields and limits, save complete versions and receive a later source edition. The [submission guide](GRANT_SUBMISSION.md) covers exact copy counts, complete draft export/reopen, source comparisons and preservation of manual edits.
+
+The source publisher applies the complete selected files to the existing Site project and keeps its current audience. The manuscript owner supplies accepted content, the cumulative writer supplies the current public source projection, and the same-account publisher supplies the actual saved version and deployment result.
+
+The existing reviewer callback and any selected product continuation receive that actual source edition through the original page. Their outputs record what was actually opened, downloaded and retained. Source composition by itself does not replace the publisher's saved version or a completed operating result.
