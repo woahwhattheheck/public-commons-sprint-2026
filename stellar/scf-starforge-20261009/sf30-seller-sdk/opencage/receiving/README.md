@@ -126,3 +126,70 @@ The common Applications catalog and its saved Review/Start/Open operation are
 composed by the existing distribution provider registration. See
 [`../APPLICATIONS.md`](../APPLICATIONS.md) for the original launcher selection,
 live identity and operating recovery contract.
+
+## Receive the saved managed Application in the installed runtime
+
+`receive-application.mjs` exports `receiveOpenCageApplication(input)` and also
+accepts `--input RECEIVING.json`. It composes the original Applications model
+from an existing READY runtime containing the merged OpenCage merchant, MCP and
+managed-launch product. The existing cumulative installation supplies that
+runtime and, when available, its already-adopted managed home.
+
+The receiving input has this shape. Use the actual final hashes from the native
+release continuation above:
+
+```json
+{
+  "schema": "commons.scf-opencage-application-receiving/v1",
+  "operationId": "opencage-original-application-receiving",
+  "runtimeDirectory": "/absolute/original-ready-runtime",
+  "workspaceDirectory": "/absolute/original-geocoding-workspace",
+  "outputDirectory": "/absolute/original-application-receiving",
+  "managedHomeDirectory": "/absolute/existing-managed-home",
+  "label": "OpenCage source review and customer delivery",
+  "completedNative": {
+    "record": "/absolute/original-completed-release-record",
+    "requestSha256": "ACTUAL_REQUEST_SHA256",
+    "resultSha256": "ACTUAL_RESULT_SHA256",
+    "artifactsSha256": "ACTUAL_ARTIFACTS_SHA256"
+  },
+  "browser": {
+    "playwright": "/absolute/existing/playwright/index.mjs",
+    "chromium": "/absolute/existing/chrome-headless-shell"
+  }
+}
+```
+
+`managedHomeDirectory` and `browser` are optional. The original Applications
+Save operation adopts the selected installed runtime when it has no matching
+release in the chosen home. The browser option opens the existing Applications,
+OpenCage operator and customer interfaces through that same installed operation.
+
+The callback validates the completed release result and follows its original
+Buyer/customer record to the exact received customer manifest. It imports the
+existing installed model and source binding, attaches that actual runtime,
+reviews and saves an `opencage-workspace` application, and preserves the
+original application ID, save request, start reviews and operation IDs in its
+receiving report. Interrupted adoption and saved starts use the model's own
+Connect and Recover operations.
+
+After Start, the original serialized Applications observer must contain the
+same authenticated native identity as the running OpenCage listener. The
+callback reads the original selected request and customer delivery, receives
+every declared customer file through the native application's export route,
+and reopens those exact bytes with `GeocodeDelivery`. It then stops the saved
+application, reopens the same controller and application, verifies the same
+source decision and customer export, and stops the second native instance.
+
+The output retains `input.json`, `source-selection.json`, the full original
+`applications/` controller and operation histories, the received `customer/`
+bundle, optional screenshots, and `result.json`. A completed result includes
+the original native chain, actual runtime/profile/source manifest, saved
+application and managed release, both process instances, and original complete
+customer identity. Repeating the callback with that same saved input reopens its
+recorded result; it preserves any actual in-progress operation for the original
+model's recovery.
+
+The existing native producer should select this complete receiving directory
+in its normal terminal artifact manifest and return that actual READY/source
+identity through the cumulative distribution handoff.
