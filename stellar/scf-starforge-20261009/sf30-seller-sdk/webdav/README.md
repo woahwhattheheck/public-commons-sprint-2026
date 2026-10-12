@@ -79,6 +79,15 @@ Editing controls are suspended while a state-replacing operation is pending.
 Local drafts remain available after revision conflicts, response loss and
 unreadable completion responses.
 
+### Managed start, stop and reopening
+
+The maintained Applications entry selects this same original private workspace
+and its matching source. Review the saved workspace/source binding, Start and
+Open the existing seven-view product, then Stop and reopen through its original
+managed operation. Normal source edits retain the saved launch identity.
+[APPLICATIONS.md](APPLICATIONS.md) covers the complete host selection, native
+startup, recovery, MCP ownership and fresh receiving workflow.
+
 ## Declare one original collection
 
 A source declaration uses schema stellar-forge.webdav-source.v1. The following is

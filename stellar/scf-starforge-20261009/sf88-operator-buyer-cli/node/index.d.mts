@@ -117,8 +117,58 @@ export interface TransportCheckpointStatus {
   records?: Record<string, {path:string; sha256:string; bytes:number; recordedAt:string}>;
   response?: {status:number; headersSha256:string} | null;
 }
+/** Exact Linux process birth and procfs scope, captured at the original native launch. */
+export type NodeProcessIdentity = {
+  schema: 'stellar-forge.node-process-identity.v1'; status: 'RECORDED';
+  pid: number; procPid: number; startTicks: string; namespace: string; bootId: string;
+  procfsDevice: string;
+  parent: { procPid: number; startTicks: string; namespace: string };
+  capturedAt: string;
+} | {
+  schema: 'stellar-forge.node-process-identity.v1'; status: 'UNAVAILABLE';
+  pid: number; reason: string;
+};
+/** Authoritative original native worker selection for attempts predating identity capture. */
+export interface PreapprovalNativeRecord {
+  directory: string; hostRoot: string; operationId: string;
+  requestSha256: string; processSha256: string; outputSha256: string;
+  command: string[]; driverPath: string; driverSha256: string;
+}
+export interface PreapprovalProcessProof extends JsonObject {
+  schema: 'stellar-forge.node-preapproval-process-proof.v1';
+  outcome: 'ORIGINAL_ATTEMPT_PROCESS_ABSENT';
+  intentId: string; configSha256: string; attemptSha256: string;
+}
+export interface PreapprovalLedgerCheck extends JsonObject {
+  schema: 'stellar-forge.sf88.unpaid-ledger-check.v1';
+  outcome: 'ABSENT_FROM_AUTHENTICATED_ORIGINAL_LEDGER';
+  intentId: string; reservationsForIntent: 0;
+}
+export interface PreapprovalRecoveryPrepared {
+  schema: 'stellar-forge.node-preapproval-recovery.v1'; intentId: string;
+  status: 'PREPARED'; directory: string; attemptSha256: string;
+  planSha256: string; review: Review;
+  originalLedgerCheck: PreapprovalLedgerCheck; processProof: PreapprovalProcessProof;
+}
+export interface PreapprovalRecoveryAvailable {
+  schema: 'stellar-forge.node-preapproval-recovery.v1'; intentId: string;
+  status: 'AVAILABLE'; directory: string; attemptSha256: string; configSha256: string;
+  sources: Array<{ name: string; path: string; exists: boolean;
+    bytes?: number; sha256?: string; device?: number; inode?: number }>;
+  originalLedgerCheck: PreapprovalLedgerCheck; processProof: PreapprovalProcessProof;
+}
+export interface PreapprovalRecoveryHistory {
+  schema: 'stellar-forge.node-preapproval-recovery.v1'; intentId: string;
+  state: string; directory: string;
+  history: Array<{ directory: string; planSha256: string; attemptSha256: string;
+    reason: string; createdAt: string }>;
+  pending: PreapprovalRecoveryPrepared | null;
+}
+
 export interface OperationStatus {
   intentId: string; directory: string; state: string;
+  originalAttemptState?: string | null;
+  preapprovalRecovery?: PreapprovalRecoveryHistory;
   resultRecoverable: boolean; nativeStatus: unknown; deliveryStatus: string | null;
   /** Read-only checkpoint projection; null for operations created before this feature. */
   transportCheckpoint: TransportCheckpointStatus | null;
@@ -212,6 +262,20 @@ export class Operation {
   /** Stops the original offline review child; the prepared operation remains available. */
   review(options?: { signal?: AbortSignal }): Promise<Review>;
   execute(options: { review: Review; signal?: AbortSignal }): Promise<BuyerResult>;
+  /** Read-only original process proof plus the authenticated zero-reservation audit. */
+  inspectPreapprovalRecovery(options?: {
+    nativeRecord?: PreapprovalNativeRecord; signal?: AbortSignal;
+  }): Promise<PreapprovalRecoveryAvailable | PreapprovalRecoveryPrepared>;
+  /** Retain one linked same-intent plan and a fresh offline review, without executing. */
+  preparePreapprovalRecovery(options: {
+    expectedAttemptSha256: string; nativeRecord?: PreapprovalNativeRecord;
+    reason: string; signal?: AbortSignal;
+  }): Promise<PreapprovalRecoveryPrepared>;
+  /** One explicit native attempt after exact plan/review comparison and fresh SF81 approval. */
+  executePreapprovalRecovery(options: {
+    expectedPlanSha256: string; review: Review; signal?: AbortSignal;
+  }): Promise<BuyerResult>;
+  readPreapprovalRecovery(): Promise<PreapprovalRecoveryHistory>;
   /** Reads saved output only. This method never launches a native buyer. */
   recover(): Promise<BuyerResult | null>;
   inspect(): Promise<OperationStatus>;
@@ -1396,11 +1460,11 @@ export interface ExpiredContinuationStatus {
 /** Exact original authorization has no durable signed-dispatch record. */
 export interface UndispatchedContinuationOptions extends Omit<ExpiredContinuationOptions,'expiryEvidence'> {}
 export interface UndispatchedAuthorizationEvidence {
-  schema: string;
+  schema: 'stellar-forge.sf88.undispatched-authorization-evidence.v1';
   kind: 'ORIGINAL_AUTHORIZATION_NOT_DISPATCHED';
   binding: Record<string, unknown> & {intentId: string; requestSha256: string; attemptId: string; configSha256: string};
   wire: Record<string, unknown> & {writerActive: false; signedDispatchRecorded: false};
-  signerSources: Array<{role: string; path: string; bytes: number; sha256: string}>;
+  signerSources: Record<string, {path: string; bytes: number; sha256: string}>;
   scope: Record<string, unknown>;
   sha256: string;
 }

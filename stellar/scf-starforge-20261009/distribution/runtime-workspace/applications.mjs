@@ -1,7 +1,14 @@
 // MIT. Application lifecycle over the original READY runtime and managed-command worker.
 import { readDistributionSpecification } from '../specification.mjs';
+import { wqxWaterQualityApplication, prepareWqxWaterQualityApplication } from './application-wqx-water-quality.mjs';
 import { grpcApplication, prepareGrpcApplication } from './application-grpc.mjs';
 import { coingeckoApplication, prepareCoingeckoApplication } from './application-coingecko.mjs';
+import { oaiApplication, prepareOaiApplication } from './application-oai.mjs';
+import { fiscalDataApplication, prepareFiscalDataApplication } from './application-fiscaldata.mjs';
+import { databentoApplication, prepareDatabentoApplication } from './application-databento.mjs';
+import { opencageApplication, prepareOpenCageApplication } from './application-opencage.mjs';
+import { webdavApplication, prepareWebDavApplication } from './application-webdav.mjs';
+import { merchantSupportApplication, prepareMerchantSupportApplication } from './application-merchant-support.mjs';
 import { readdir, lstat, realpath, access } from 'node:fs/promises';
 import { constants } from 'node:fs';
 import { join, dirname, basename } from 'node:path';
@@ -9,18 +16,21 @@ import { pathToFileURL } from 'node:url';
 import { blockscoutApplication, prepareBlockscoutApplication } from './application-blockscout.mjs';
 import { mppApplication, prepareMppApplication } from './application-mpp.mjs';
 import { ndjsonApplication, prepareNdjsonApplication } from './application-ndjson.mjs';
+import { kafkaApplication, prepareKafkaApplication } from './application-kafka.mjs';
 import { cheesecakeApplication, prepareCheesecakeApplication } from './application-cheesecake.mjs';
 import { odataApplication, prepareODataApplication } from '../../sf30-seller-sdk/odata/live/applications.mjs';
 import { secEdgarApplication, prepareSecEdgarApplication } from './application-sec-edgar.mjs';
 import { jobResultReceiverApplication, prepareJobResultReceiverApplication } from './application-job-result-receiver.mjs';
 import { sheetsApplication, prepareSheetsApplication } from './application-sheets.mjs';
 import { nocodbApplication, prepareNocoDBApplication } from './application-nocodb.mjs';
+import { cocartApplication, prepareCocartApplication } from './application-cocart.mjs';
 import { stellarExpertApplication, prepareStellarExpertApplication } from './application-stellar-expert.mjs';
 import { atlasApplication, prepareAtlasApplication } from './application-atlas.mjs';
 import { n8nApplication, prepareN8nApplication } from './application-n8n.mjs';
 import { redisApplication, prepareRedisApplication } from './application-redis.mjs';
 import { openApiApplication, prepareOpenApiApplication } from './application-openapi.mjs';
 import { arcgisAgentApplication, prepareArcgisAgentApplication } from './application-arcgis.mjs';
+import { duckdbAgentApplication, prepareDuckDBAgentApplication } from './application-duckdb-agent.mjs';
 import { s3MerchantApplication, prepareS3MerchantApplication } from './application-s3-merchant.mjs';
 import { jobCheckoutApplication, validateJobCheckoutSelection, prepareJobCheckoutApplication } from './application-job-checkout.mjs';
 import { datasetBuyerApplication, prepareDatasetBuyerApplication } from './application-dataset-buyer.mjs';
@@ -28,7 +38,10 @@ import { pricingApplication, validatePricingSelection, preparePricingApplication
 import { collectionsApplication, prepareCollectionsApplication } from './application-collections.mjs';
 import { baserowApplication, prepareBaserowApplication } from './application-baserow.mjs';
 import { grantApplication, prepareGrantApplication } from './application-grant.mjs';
+import { buyerRunbookApplication, prepareBuyerRunbookApplication } from './application-buyer-runbook.mjs';
+import { grantsgovApplication, prepareGrantsgovApplication } from './application-grantsgov.mjs';
 import { fredApplication, prepareFredApplication } from './application-fred.mjs';
+import { worldbankAgentApplication, prepareWorldBankAgentApplication } from './application-worldbank.mjs';
 import { apiPassWorkspaceApplication, prepareApiPassWorkspaceApplication } from '../../sf101-merchant-receiver/api-access/workspace/application.mjs';
 import { eventFeedApplications, prepareEventFeedApplication } from './application-event-feed.mjs';
 import { tenderlyApplication, prepareTenderlyApplication } from './application-tenderly.mjs';
@@ -61,7 +74,14 @@ const common = [
   field('environmentFile', 'Private environment JSON', 'path', false, 'Optional private file containing environment names and string values. Values stay on this host.'),
 ];
 export const APPLICATION_CATALOG = Object.freeze([
+  wqxWaterQualityApplication(common),
   coingeckoApplication(common),
+  oaiApplication(common),
+  fiscalDataApplication(common),
+  databentoApplication(common),
+  opencageApplication(common),
+  webdavApplication(common),
+  merchantSupportApplication(common),
   grpcApplication(common),
   atlasApplication(common),
   n8nApplication(common),
@@ -71,15 +91,18 @@ export const APPLICATION_CATALOG = Object.freeze([
   blockscoutApplication(common),
   mppApplication(common),
   ndjsonApplication(common),
+  kafkaApplication(common),
   cheesecakeApplication(common),
   odataApplication(common),
   secEdgarApplication(common),
   jobResultReceiverApplication(common),
   sheetsApplication(common),
   nocodbApplication(common),
+  cocartApplication(common),
   stellarExpertApplication(common),
   redisApplication(common),
   arcgisAgentApplication(common),
+  duckdbAgentApplication(common),
   s3MerchantApplication(common),
   jobCheckoutApplication(common),
   datasetBuyerApplication(common),
@@ -87,7 +110,10 @@ export const APPLICATION_CATALOG = Object.freeze([
   collectionsApplication(common),
   baserowApplication(common),
   grantApplication(common),
+  buyerRunbookApplication(common),
+  grantsgovApplication(common),
   fredApplication(common),
+  worldbankAgentApplication(common),
   tenderlyApplication(common),
   browserWalletApplication(common),
   rssAtomApplication(common),
@@ -152,7 +178,7 @@ export const APPLICATION_CATALOG = Object.freeze([
   { id: 'merchant-recovery', command: 'merchant-recovery-remote',
     requiredSource: 'stellar/scf-starforge-20261009/sf101-merchant-recovery/workspace/cli.mjs',
     title: 'Merchant recovery', terminal: false,
-    description: 'Review retained snapshots, off-host inventory, original transfers and cold restore in the original recovery workspace. Select a runtime with its S3 feature.',
+    description: 'Capture and verify local snapshots, prepare original restored publishers, and use a configured S3 store for off-host transfer and cold restore.',
     fields: [field('hostConfig', 'Original private recovery host configuration', 'path', true),
       field('workspaceDirectory', 'Private recovery workspace directory', 'path', true,
         'An existing directory or one new directory in an existing private parent. Original transfer journals remain at the host-selected paths.'), ...common] },
@@ -245,13 +271,29 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
     ...context, runtimeDirectory, inputPath, selectedExecutable, applicationEnvironment,
   });
   const inputs = [], createDirectories = [], args = [];
-  let terminalPython, eventFeed, apiPassWorkspace, mppBinding, selectedResourceKey, jobResultReceiver, stellarApplication, openapi;
+  let terminalPython, eventFeed, apiPassWorkspace, mppBinding, selectedResourceKey, jobResultReceiver, stellarApplication, openapi, buyerRunbook;
   const path = async (name, kind = 'directory', missing = false, privateOnly = false) => {
     if (!settings[name]) return;
     const value = await inputPath(settings[name], kind, missing, privateOnly); inputs.push(value); return value;
   };
   const option = (name, value) => { if (value !== undefined && value !== '') args.push(name, String(value)); };
-  if (type.id === 'coingecko') {
+  if (type.id === 'wqx-water-quality') {
+    const original = await prepareWqxWaterQualityApplication(settings, { inputPath, runtimeDirectory });
+    args.push(...original.args); inputs.push(...original.inputs);
+    createDirectories.push(...original.createDirectories); selectedResourceKey = original.resourceKey;
+  } else if (type.id === 'webdav') {
+    const original = await prepareWebDavApplication(settings, { inputPath, runtimeDirectory });
+    args.push(...original.args); inputs.push(...original.inputs);
+    createDirectories.push(...original.createDirectories);
+  } else if (type.id === 'merchant-support') {
+    const original = await prepareMerchantSupportApplication(settings, { inputPath, runtimeDirectory });
+    args.push(...original.args); inputs.push(...original.inputs);
+    createDirectories.push(...original.createDirectories);
+  } else if (type.id === 'opencage-workspace') {
+    const original = await prepareOpenCageApplication(settings, { inputPath, runtimeDirectory });
+    args.push(...original.args); inputs.push(...original.inputs);
+    createDirectories.push(...original.createDirectories);
+  } else if (type.id === 'coingecko') {
     const original = await prepareCoingeckoApplication(settings, { inputPath, runtimeDirectory });
     args.push(...original.args); inputs.push(...original.inputs);
     createDirectories.push(...original.createDirectories);
@@ -259,6 +301,17 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
     const original = await prepareGrpcApplication(settings, inputPath, runtimeDirectory);
     args.push(...original.args); inputs.push(...original.inputs);
     createDirectories.push(...original.createDirectories);
+  } else if (type.id === 'databento-migration') {
+    const original = await prepareDatabentoApplication(settings, { inputPath, runtimeDirectory });
+    args.push(...original.args); inputs.push(...original.inputs);
+    createDirectories.push(...original.createDirectories); selectedResourceKey = original.resourceKey;
+  } else if (type.id === 'fiscaldata') {
+    const original = await prepareFiscalDataApplication(settings, { inputPath, runtimeDirectory });
+    args.push(...original.args); inputs.push(...original.inputs);
+    createDirectories.push(...original.createDirectories); selectedResourceKey = original.resourceKey;
+  } else if (type.id === 'worldbank-agent') {
+    const original = await prepareWorldBankAgentApplication(settings, { inputPath, runtimeDirectory });
+    args.push(...original.args); inputs.push(...original.inputs);
   } else if (type.id === 'fred') {
     const original = await prepareFredApplication(settings, { inputPath, runtimeDirectory });
     args.push(...original.args); inputs.push(...original.inputs);
@@ -280,6 +333,10 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
       inputPath, runtimeDirectory, applicationEnvironment,
     });
     args.push(...original.args); inputs.push(...original.inputs); jobResultReceiver = original.identity;
+  } else if (type.id === 'cocart-workspace') {
+    const original = await prepareCocartApplication(settings, { inputPath, runtimeDirectory });
+    args.push(...original.args); inputs.push(...original.inputs); createDirectories.push(...original.createDirectories);
+    selectedResourceKey = original.resourceKey;
   } else if (type.id === 'nocodb-authoring') {
     const original = await prepareNocoDBApplication(settings, { inputPath, runtimeDirectory });
     args.push(...original.args); inputs.push(...original.inputs); createDirectories.push(...original.createDirectories);
@@ -311,6 +368,9 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
   } else if (type.id === 'arcgis-agent') {
     const original = await prepareArcgisAgentApplication(settings, inputPath, runtimeDirectory);
     args.push(...original.args); inputs.push(...original.inputs);
+  } else if (type.id === 'duckdb-agent') {
+    const original = await prepareDuckDBAgentApplication(settings, inputPath, runtimeDirectory);
+    args.push(...original.args); inputs.push(...original.inputs);
   } else if (type.id === 'job-checkout') {
     const original = await prepareJobCheckoutApplication(settings, runtimeDirectory, inputPath);
     args.push(...original.args); inputs.push(...original.inputs); createDirectories.push(...original.createDirectories);
@@ -322,6 +382,14 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
     const prepared = await prepareCollectionsApplication(settings, { inputPath, runtimeDirectory });
     args.push(...prepared.args); inputs.push(...prepared.inputs);
     createDirectories.push(...prepared.createDirectories);
+  } else if (type.id === 'grantsgov') {
+    const prepared = await prepareGrantsgovApplication(settings, { inputPath, runtimeDirectory });
+    args.push(...prepared.args); inputs.push(...prepared.inputs);
+    createDirectories.push(...prepared.createDirectories);
+  } else if (type.id === 'buyer-runbook') {
+    const prepared = await prepareBuyerRunbookApplication(settings, { inputPath, runtimeDirectory });
+    args.push(...prepared.args); inputs.push(...prepared.inputs);
+    createDirectories.push(...prepared.createDirectories); buyerRunbook = prepared.identity;
   } else if (type.id === 'grant-workspace') {
     const prepared = await prepareGrantApplication(settings, { inputPath, selectedExecutable, runtimeDirectory });
     args.push(...prepared.args); inputs.push(...prepared.inputs);
@@ -344,11 +412,21 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
   } else if (type.id === 'n8n-merchant') {
     const original = await prepareN8nApplication(settings, inputPath, runtimeDirectory);
     args.push(...original.args); inputs.push(...original.inputs);
+  } else if (type.id === 'oai-repository') {
+    const original = await prepareOaiApplication(settings, {
+      inputPath, selectedExecutable, runtimeDirectory, applicationEnvironment,
+    });
+    args.push(...original.args); inputs.push(...original.inputs);
   } else if (type.id === 'rss-atom') {
     const original = await prepareRssAtomApplication(settings, {
       inputPath, selectedExecutable, runtimeDirectory, applicationEnvironment,
     });
     args.push(...original.args); inputs.push(...original.inputs);
+  } else if (type.id === 'kafka') {
+    const prepared = await prepareKafkaApplication(settings, {
+      inputPath, selectedExecutable, runtimeDirectory, applicationEnvironment,
+    });
+    args.push(...prepared.args); inputs.push(...prepared.inputs);
   } else if (type.id === 'ndjson') {
     const prepared = await prepareNdjsonApplication(settings, {
       inputPath, selectedExecutable, runtimeDirectory, applicationEnvironment,
@@ -467,10 +545,14 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
       }
     };
     for (const profile of original.host.profiles) {
-      await retain(profile.storeConfig, 'file');
+      if (profile.storeConfig != null) await retain(profile.storeConfig, 'file');
       await retain(profile.operations, 'directory', true);
       for (const root of profile.bundleRoots) await retain(root.directory);
       for (const plan of profile.capturePlans ?? []) await retain(plan.planFile, 'file', true);
+      for (const restored of profile.publisherRestores ?? []) {
+        await retain(restored.bundleDirectory, 'directory', true);
+        await retain(restored.restoreDirectory, 'directory', true);
+      }
       await retain(profile.downloadRoot);
       await retain(profile.restoreRoot);
     }
@@ -497,17 +579,20 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
     ...(openapi ? { openapi } : {}),
     ...(stellarApplication ? { stellarApplication } : {}),
     ...(jobResultReceiver ? { jobResultReceiver } : {}),
+    ...(buyerRunbook ? { buyerRunbook } : {}),
     ...(selectedResourceKey ? { resourceKey: selectedResourceKey } : {}),
     ...(type.terminal ? { terminalPython } : {}),
     ...(settings.environmentFile ? { environmentFile: settings.environmentFile, environmentSha256: environment.sha256 } : {}) };
 }
 function resourceKey(type, settings) {
   if (type.python) return pythonApplicationResource(type, settings);
-  if (type.id === 'arcgis-agent') return hash({ family: 'merchant-mcp', directory: settings.configurationFile });
+  if (['arcgis-agent', 'worldbank-agent'].includes(type.id)) return hash({ family: 'merchant-mcp', directory: settings.configurationFile });
+  if (type.id === 'duckdb-agent') return hash({ family: 'native-mcp', directory: settings.nativeDirectory });
   const value = settings.outputParent ?? settings.workspaceDirectory ?? settings.directory ??
     settings.outputDirectory ?? settings.stateDirectory ?? settings.datasetFile;
-  // Feeds and XML retain the same original SQLite workspace and writer.
-  const family = type.id === 'rss-atom' ? 'xml' : type.id.endsWith('-publisher') ? 'publisher' : type.id;
+  // Source applications share the original SQLite workspace and its sole writer.
+  const family = ['rss-atom', 'oai-repository'].includes(type.id) ? 'xml' : type.id === 'kafka' ? 'ndjson' :
+    type.id.endsWith('-publisher') ? 'publisher' : type.id;
   return hash({ family, directory: value });
 }
 async function application(root, id) {
@@ -747,6 +832,7 @@ export async function prepareApplicationStart(root, { applicationId, requestId, 
       terminal: current.terminal, ...(current.terminalPython ? { terminalPython: current.terminalPython } : {}),
       ...(current.pythonCommand ? { pythonCommand: current.pythonCommand } : {}),
       ...(current.jobResultReceiver ? { jobResultReceiver: current.jobResultReceiver } : {}),
+      ...(current.buyerRunbook ? { buyerRunbook: current.buyerRunbook } : {}),
       ...(current.stellarApplication ? { stellarApplication: current.stellarApplication } : {}),
       ...(current.environmentFile ? { environmentFile: current.environmentFile, environmentSha256: current.environmentSha256 } : {}) };
     const value = { schema: 'stellar-forge.application-run.v1', id: requestId, applicationId: id,

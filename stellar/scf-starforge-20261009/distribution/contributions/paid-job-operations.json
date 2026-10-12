@@ -1,0 +1,37 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "paid-job-operations",
+  "description": "Operate merchant input receiving and resolve retained paid jobs across the original merchant and customer workspaces.",
+  "commands": {
+    "jobs-resolution": "stellar/scf-starforge-20261009/sf30-seller-sdk/jobs/resolution/cli.mjs",
+    "jobs-buyer-resolution": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/job-workspace/resolution/cli.mjs"
+  },
+  "commandDescriptions": {
+    "jobs-resolution": "Triage paid-job issues, recover delivery, record adjustments and export resolution records",
+    "jobs-buyer-resolution": "Inspect, refresh, receive and export support for the original retained customer job"
+  },
+  "exports": {
+    "./seller/jobs/inputs": {
+      "types": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/jobs/inputs/index.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/jobs/inputs/index.mjs"
+    },
+    "./seller/jobs/inputs/workspace": {
+      "types": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/jobs/inputs/workspace/index.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/jobs/inputs/workspace/index.mjs"
+    },
+    "./seller/jobs/resolution": {
+      "types": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/jobs/resolution/index.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/jobs/resolution/index.mjs"
+    },
+    "./buyer/job-workspace/resolution": {
+      "types": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/job-workspace/resolution/index.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/job-workspace/resolution/index.mjs"
+    }
+  },
+  "browserAssets": [
+    {
+      "server": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/job-workspace/resolution/server.mjs",
+      "manifest": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/job-workspace/resolution/browser-assets.json"
+    }
+  ]
+}
