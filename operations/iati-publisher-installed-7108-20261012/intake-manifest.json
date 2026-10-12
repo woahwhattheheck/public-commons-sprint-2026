@@ -1,0 +1,35 @@
+{
+  "schema": "commons.iati-native-intake-receipt/v1",
+  "operationId": "IATI-PUBLISHER-7108-20261012",
+  "sourceCommit": "c5348b13834012b41c5b40573bc0c390c4226efc",
+  "sourceTree": "7644ec2938680bb4725ecc1825757c5d5f31bb6d",
+  "sourceManifest": {
+    "gitBlob": "3cffeefb956c3af1070a0d34ec516a81e3468ca0",
+    "bytes": 81024,
+    "sha256": "52bb99597fa66eecb4f1c19d9ea25209262dd0e41055406f8fd73a228be1575a",
+    "files": 277,
+    "sourceBytes": 4083509
+  },
+  "intake": {
+    "bytes": 1482218,
+    "sha256": "810e97048e505e0ac593ab6b44267208b3a1a709a7934f20a7a2f2ff511d93b5",
+    "gitBlob": "6be65a54689cdac97e03efafe21c5157e296909c",
+    "rawBytes": 7317457,
+    "rawSha256": "5de2b6bd64974d82fd652b45bd0853907b35a9e605dccc12b54bb5bd44b2af7a"
+  },
+  "textCarrier": {
+    "path": "source-intake.json.gz.base64",
+    "bytes": 1976293,
+    "sha256": "2709a8d5c1ce71c95e38e9ee043e54b3c2fecd656f5ba2babea795473c88179a",
+    "gitBlob": "72b72c9b57a255a3481fc01b10e33d9d9c96c048"
+  },
+  "foreground": {
+    "bytes": 45698,
+    "sha256": "8c445437841532a0902f56b4505f722bcbc342f7144ca6f7f4405e4d27921fb9",
+    "gitBlob": "b4dad00c0381ce67572d1d609bad256442ecc295"
+  },
+  "publishers": [
+    "IATI-PUBLISHER-7108-20261012",
+    "IATI-PUBLISHER-7108-20261012-TI"
+  ]
+}
