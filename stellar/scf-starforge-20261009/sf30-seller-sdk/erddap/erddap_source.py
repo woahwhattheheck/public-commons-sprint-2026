@@ -228,7 +228,7 @@ def _decode_sv(s):
 def csv_comparison(raw,t):
     try:reader=csv.reader(io.StringIO(raw.decode("iso-8859-1"),newline=""),strict=True)
     except (UnicodeError,csv.Error) as e:raise InputError("Invalid original ERDDAP CSV") from e
-    differences=[];count=0;numeric_missing=0
+    differences=[];count=0;numeric_missing=0;numeric_equivalent_spellings=0
     try:
         names=next(reader);units=next(reader)
         names=[_decode_sv(x) for x in names];units=[_decode_sv(x) for x in units]
@@ -247,13 +247,20 @@ def csv_comparison(raw,t):
                     equal=actual=="" if kind in {"String","char"} else actual in {"","NaN"}
                     numeric_missing+=kind not in {"String","char"} and equal
                 elif kind in {"String","char"}:equal=_decode_sv(actual)==expected
-                else:equal=actual==expected
+                else:
+                    equal=actual==expected
+                    if not equal and NUMBER.fullmatch(actual):
+                        # Compare exact decimal values while keeping both original spellings.
+                        # JSON 36 and CSV 36.0 are the same provider value, without float rounding.
+                        try:equal=Decimal(actual)==Decimal(expected)
+                        except InvalidOperation:equal=False
+                        numeric_equivalent_spellings+=int(equal)
                 if not equal and len(differences)<20:
                     differences.append({"row":count,"column":names[i],"json":expected,"csv":actual})
         if count!=len(t["rows"]) and len(differences)<20:differences.append({"reason":"row counts differ"})
     except (StopIteration,csv.Error) as e:raise InputError("Incomplete original ERDDAP CSV") from e
     return {"status":"equivalent" if not differences else "different","jsonRows":len(t["rows"]),"csvRows":count,
-            "numericMissingRepresentations":numeric_missing,"differences":differences}
+            "numericMissingRepresentations":numeric_missing,"numericEquivalentSpellings":numeric_equivalent_spellings,"differences":differences}
 
 def validate_response_receipt(record,name,raw,expected_url,server):
     """Bind complete source bytes to the original request and observed transport."""
