@@ -55,6 +55,7 @@ async function renderCoverage(){
   ].map(([a,b])=>'<dt>'+esc(a)+'</dt><dd>'+esc(b)+'</dd>').join('')+'</dl>'+warnings.map(w=>'<p class="meta">'+esc(w)+'</p>').join('');
 }
 function go(view){
+  if(view==='transactions'){location.assign('/transactions.html'+(state.edition?'?edition='+encodeURIComponent(state.edition):''));return Promise.resolve();}
   state.view=view;document.querySelectorAll('main>section').forEach(s=>s.hidden=s.id!=='view-'+view);document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('active',b.dataset.view===view));
   if(view==='awards')return loadAwards();if(view==='overview')return renderCoverage();if(view==='history')return renderHistory();if(view==='delivery')return renderReceiving();return Promise.resolve();
 }
@@ -111,6 +112,7 @@ async function openAward(key,edition=state.edition){
   if(edition!==state.edition){state.edition=edition;renderOptions();}
   state.award=await api('/api/award?edition='+encodeURIComponent(activeEdition())+'&key='+encodeURIComponent(key));
   const a=state.award,r=state.data.reviews.find(r=>r.award_key===key),v=r?.data??{};
+  $('award-transactions').href='/transactions.html?edition='+encodeURIComponent(activeEdition())+'&award='+encodeURIComponent(a.award_key);
   $('award-title').textContent=fmt(a.recipient_name);$('award-subtitle').textContent=fmt(a.piid)+' · '+a.award_key;
   const fields=[['Recipient UEI',a.recipient_uei],['Recipient identity',a.recipient_id],['Parent recipient',a.parent_recipient_name],['Parent UEI',a.parent_recipient_uei],['Parent award',a.parent_piid],['Awarding agency',a.awarding_agency],['Sub-agency',a.awarding_subagency],['Funding agency',a.funding_agency],['Signed',a.signed_date],['Performance start',a.performance_start],['Performance end',a.performance_end],['Potential end',a.potential_end],['Award amount',money(a.award_amount_usd)],['Total obligations',money(a.total_obligation_usd)],['Exercised value',money(a.exercised_usd)],['All-options value',money(a.potential_usd)],['Outlays',money(a.outlays_usd)],['NAICS',a.naics],['PSC',a.psc],['Set aside',a.set_aside],['Subcontracting plan',a.subcontracting_plan],['Observed',time(a.source_observed_at)]];
   $('award-detail').innerHTML='<dl class="source-grid">'+fields.map(([k,v])=>'<dt>'+esc(k)+'</dt><dd>'+esc(fmt(v))+'</dd>').join('')+'</dl><p class="source-description">'+esc(a.description)+'</p><a href="'+esc(a.source_url)+'" target="_blank" rel="noreferrer">Open original public award ↗</a>';

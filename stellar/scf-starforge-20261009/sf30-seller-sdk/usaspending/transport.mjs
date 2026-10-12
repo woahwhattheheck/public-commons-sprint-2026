@@ -19,7 +19,7 @@ export class USAspendingClient {
     const running=this.tail.then(invoke,invoke);this.tail=running.catch(()=>{});return running;
   }
   async _request(path,{body,signal}){
-    requireThat(path===SEARCH_PATH||path===COUNT_PATH||path==='/api/v2/awards/last_updated/'||/^\/api\/v2\/awards\/[^/]+\/$/.test(path),'PROVIDER_PATH_UNSUPPORTED');
+    requireThat(path===SEARCH_PATH||path===COUNT_PATH||path==='/api/v2/transactions/'||path==='/api/v2/awards/last_updated/'||/^\/api\/v2\/awards\/[^/]+\/$/.test(path),'PROVIDER_PATH_UNSUPPORTED');
     if(this.nextAllowedAt&&Date.parse(this.nextAllowedAt)>Date.now())throw new ProviderError('Provider retry time has not arrived',{retryAt:this.nextAllowedAt,providerStatus:429});
     const wait=Math.max(0,this.lastRequest+this.intervalMs-Date.now());
     if(wait)await new Promise((resolve,reject)=>{const finish=()=>{signal?.removeEventListener('abort',abort);resolve();},abort=()=>{clearTimeout(timer);reject(signal.reason??new Error('Cancelled'));},timer=setTimeout(finish,wait);signal?.addEventListener('abort',abort,{once:true});if(signal?.aborted)abort();});
@@ -53,4 +53,6 @@ export class USAspendingClient {
   count(filters,options={}){return this.request(COUNT_PATH,{...options,body:{filters,subawards:false,spending_level:'awards'}});}
   detail(key,options={}){return this.request('/api/v2/awards/'+encodeURIComponent(awardKey(key))+'/',options);}
   updated(options={}){return this.request('/api/v2/awards/last_updated/',options);}
+  transactions(body,options={}) {return this.request('/api/v2/transactions/',{...options,body});}
+
 }

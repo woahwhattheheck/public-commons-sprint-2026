@@ -1,5 +1,6 @@
 import { usaSpendingWorkspaceTools, read, selected, UUID, page, nativeId, expectedRevision, query, alias, shortText, inEdition, awardKey, strings, inDossier, exportKind, digest, offset, pageSize, RESEARCH_ID, EXPORTS, DIGEST } from './catalog/usaspending-workspace.mjs';
 export { usaSpendingWorkspaceTools } from './catalog/usaspending-workspace.mjs';
+import { USASPENDING_TRANSACTION_SOURCE_KINDS, isUSASpendingTransactionTool, executeUSASpendingTransactionTool, importUSASpendingTransactionSource, exportUSASpendingTransactions } from './usaspending-transactions.mjs';
 // MIT. Agent operation of the original USAspending research, delivery and dossier applications.
 import { realpath, mkdir, open, link, unlink } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
@@ -79,8 +80,8 @@ export async function readUSASpendingWorkspaceConfiguration(path) {
     for (const [source, item] of Object.entries(input.sources ?? {})) {
       identifier(source, 'Retained source alias');
       exact(item, ['kind', 'file', 'receipt', 'sha256'], ['kind', 'file']);
-      if (!['collection', 'capture', 'detail', 'workspace', 'dossier'].includes(item.kind))
-        throw failure('CONFIGURATION_ERROR', 'Choose collection, capture, detail, workspace or dossier for the retained source.');
+      if (!['collection', 'capture', 'detail', 'workspace', 'dossier', ...USASPENDING_TRANSACTION_SOURCE_KINDS].includes(item.kind))
+        throw failure('CONFIGURATION_ERROR', 'Choose collection, capture, detail, workspace, dossier, transaction-pages or transactions for the retained source.');
       if ((item.kind === 'detail') !== (item.receipt !== undefined))
         throw failure('CONFIGURATION_ERROR', 'Declare an original receipt only for a detail source.');
       sources[source] = { kind: item.kind, file: await sourceFile(item.file, base),
@@ -209,6 +210,8 @@ export class MerchantUSASpendingWorkspaces {
       schema: native.schema, operationCount: native.operationCount, columns: native.columns, reviewStatuses: native.reviewStatuses,
       counts: Object.fromEntries(['queries', 'captures', 'editions', 'reviews', 'publications'].map(key => [key, native[key].length])),
       active: native.active, captures: native.captures.filter(item => ['capturing', 'paused', 'error'].includes(item.status)).map(captureView),
+      transactions: { counts: { captures: native.transactions?.captures?.length ?? 0, reviews: native.transactions?.reviews?.length ?? 0 },
+        captures: (native.transactions?.captures ?? []).filter(item => ['capturing','paused','error'].includes(item.status)).map(captureView) },
       jobs: native.jobs.map(({ result, error, ...job }) => ({ ...job, error, resultAvailable: result !== null })),
       dossiers: await entry.dossiers.list(), fileReads: this.#reads.status(this.#scope(entry.alias)) };
   }
@@ -287,6 +290,9 @@ export class MerchantUSASpendingWorkspaces {
       const bytes = await readBytes(selected.file, { max: 256000000 });
       if (sha(bytes) !== selected.sha256) throw failure('USASPENDING_SOURCE_CHANGED', 'Retained source bytes differ from the host-selected SHA256.');
     }
+    if (USASPENDING_TRANSACTION_SOURCE_KINDS.includes(selected.kind)) return importUSASpendingTransactionSource(entry, selected, input);
+    if (['editionId','awardKey','includeReview'].some(key => input[key] !== undefined))
+      throw failure('INVALID_PARAMS', 'Edition, award and transaction review selection apply only to declared transaction sources.');
     const options = { name: input.name, maxRows: input.maxRows };
     if (selected.kind === 'collection') return entry.imports.importSourceCollection(entry.model, selected.file, options);
     if (selected.kind === 'capture') return entry.imports.importRetainedCapture(entry.model, selected.file, options);
@@ -323,6 +329,7 @@ export class MerchantUSASpendingWorkspaces {
     } else if (kind === 'edition-json') body = entry.model.exportEdition(input.editionId, { includeSourceBytes: true, includeReviews: input.includeReviews ?? false });
     else if (kind === 'edition-csv') body = csv(entry.model.rows(input.editionId).map(publicRow), COLUMNS, { spreadsheet: true });
     else if (kind === 'workspace') body = entry.model.exportPacket();
+    else if (kind.startsWith('transaction-')) body = exportUSASpendingTransactions(entry, input);
     else if (kind === 'source-page') body = entry.model.sourcePage(input.captureId, input.page).response;
     else if (kind === 'brief') body = entry.brief.workshareBrief(entry.model, input.editionId, input.awardKey);
     else if (kind === 'comparison') body = entry.model.compare(input.before, input.after);
@@ -364,6 +371,9 @@ export class MerchantUSASpendingWorkspaces {
   async #execute(entry, name, args) {
     const { workspace, ...input } = args, original = entry.model;
     const result = native => ({ workspace, native: this.#visible(entry, native) });
+    if (isUSASpendingTransactionTool(name)) return result(await executeUSASpendingTransactionTool(entry, name, input, {
+      http: (path, body) => this.#http(entry, path, body), paged, captureView,
+    }));
     switch (name) {
       case 'merchant_usaspending_status': return this.#visible(entry, await this.#state(entry));
       case 'merchant_usaspending_inventory': {
