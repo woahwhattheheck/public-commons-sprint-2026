@@ -1,6 +1,10 @@
 /** Guidance from the original merchant host, selected by advertised tool prefixes. */
 const sections = [
   {
+    "prefix": "merchant_nocodb_",
+    "text": "For NocoDB authoring, list merchant_nocodb_workspaces and open the declared original model and browser. Inspect host input hashes or discover the actual table through its existing connection, then capture complete original pages with exact field IDs/types and native identity order. Save the draft with its current revision, preview all retained rows and review the source version against the current selection. Open its original publisher and use merchant_nocodb_publisher_* against the SAME publisher and scheduler; original run UUIDs, candidate/review hashes, target revisions and buyer handoffs remain authoritative. Deployment tools use that source model's original SF82 store and console, exact generation/digest/instance and uncertain-command observation. Receive private source packets with original version/capture/hash/offset and reopen the same request after lost replies. Close drains the original model, borrowed publisher calls and owned services."
+  },
+  {
     "prefix": null,
     "text": "For Stellar asset workspaces, discover the host-declared alias and original workspaceId, then read schema/view before actions. Every original action requires operationId and expectedRevision; repeat the identical action identity after an unknown response, and preserve actual errors and revisions. Use retained file reads or stellar-expert-mcp to receive complete original sources, exports and customer receipts with their hashes. The original browser remains the workspace writer."
   },
