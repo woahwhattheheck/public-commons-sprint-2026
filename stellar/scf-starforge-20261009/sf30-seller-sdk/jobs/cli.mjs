@@ -8,13 +8,15 @@ import { openJobMerchant } from './model.mjs';
 import { startJobSeller } from './merchant.mjs';
 import { startCustomerServer } from './customer.mjs';
 import { startJobsWorkspace } from './workspace/server.mjs';
+import { readDeliveryConfig } from './result-delivery/config.mjs';
+import { openResultDelivery } from './result-delivery/dispatcher.mjs';
 
 const help = [
   'Starforge paid jobs', '',
   'All operations use the same private merchant state and original settlement outbox.', '',
   '  jobs serve --config FILE --state DIR [--seller-port N] [--customer-port N]',
   '       [--operator-port N] [--operations-port N] [--native-factory MODULE]',
-  '       [--start-worker]',
+  '       [--start-worker] [--delivery-config FILE] [--start-delivery]',
   '  jobs status --config FILE --state DIR',
   '  jobs show --config FILE --state DIR --id JOB',
   '  jobs create --config FILE --state DIR --function ID --input FILE',
@@ -25,10 +27,14 @@ const help = [
   '  jobs work --config FILE --state DIR [--once]',
   '  jobs retry --config FILE --state DIR --id JOB --revision N --reason TEXT',
   '  jobs cancel --config FILE --state DIR --id JOB --revision N --reason TEXT',
-  '  jobs result --config FILE --state DIR --id JOB --out NEW_RESULT_FILE', '',
+  '  jobs result --config FILE --state DIR --id JOB --out NEW_RESULT_FILE',
+  '  jobs delivery --help',
+  '  jobs receiver --help', '',
   'The foreground serve command owns the original merchant, customer listener and',
   'private operator workspace. It prints the complete local operator address.',
   'Use that workspace while the service holds its original state lease.',
+  '--delivery-config adds the private completed-result delivery workspace.',
+  '--start-delivery starts its signed result dispatcher with the same merchant.',
   'The default service advertises the configured challenge. For native payments,',
   '--native-factory supplies the merchant’s existing compiled => SDK factory as',
   'the module’s default or nativeFactory export.', '',
@@ -43,7 +49,7 @@ const problem = message => Object.assign(new Error(message), { code: 'JOBS_COMMA
 const object = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 const delay = milliseconds => new Promise(done => setTimeout(done, milliseconds));
 const allowed = {
-  serve: ['--seller-port', '--customer-port', '--operator-port', '--operations-port', '--native-factory', '--start-worker'],
+  serve: ['--seller-port', '--customer-port', '--operator-port', '--operations-port', '--native-factory', '--start-worker', '--delivery-config', '--start-delivery'],
   status: [], show: ['--id'], create: ['--function', '--input', '--label', '--reference', '--out'],
   reconcile: [], work: ['--once'], retry: ['--id', '--revision', '--reason'],
   cancel: ['--id', '--revision', '--reason'], result: ['--id', '--out'],
@@ -56,7 +62,7 @@ function options(argv) {
   for (let index = 1; index < argv.length; index++) {
     const flag = argv[index];
     if (!keys.has(flag) || out.has(flag)) throw problem('Unknown or repeated option: ' + flag);
-    if (['--once', '--start-worker'].includes(flag)) { out.set(flag, true); continue; }
+    if (['--once', '--start-worker', '--start-delivery'].includes(flag)) { out.set(flag, true); continue; }
     const value = argv[++index];
     if (!value || value.startsWith('--')) throw problem('Supply a value for ' + flag + '.');
     out.set(flag, value);
@@ -95,12 +101,24 @@ async function publishNew(destination, bytes) {
 /** Maintained distribution entrypoint. */
 export async function runJobCommand(argv = process.argv.slice(2), { print = value => console.log(value) } = {}) {
   if (!argv.length || argv.length === 1 && ['--help', '-h', 'help'].includes(argv[0])) { print(help); return; }
+  if (argv[0] === 'delivery') {
+    const { runDeliveryCommand } = await import('./result-delivery/cli.mjs');
+    return runDeliveryCommand(argv.slice(1), { print });
+  }
+  if (argv[0] === 'receiver') {
+    const { main } = await import('./result-receiver/cli.mjs');
+    return main(argv.slice(1), { stdout: { write(value) {
+      print(String(value).replace(/\n$/, '')); return true;
+    } } });
+  }
   const { command, out } = options(argv);
+  if (out.has('--start-delivery') && !out.has('--delivery-config')) throw problem('--start-delivery requires --delivery-config.');
   if (['retry', 'cancel', 'renew-claim'].includes(command)) required(out, '--revision');
   const model = await openJobMerchant({ configPath: resolve(out.get('--config')), directory: resolve(out.get('--state')) });
-  const sessions = []; let stopped = false, shutdownPromise;
+  const sessions = []; let stopped = false, shutdownPromise, delivery;
   const close = () => shutdownPromise ??= (async () => {
     stopped = true; const errors = [];
+    try { await delivery?.close(); } catch (error) { errors.push(error); }
     for (const session of [...sessions].reverse()) {
       try { await session.close(); } catch (error) { errors.push(error); }
     }
@@ -128,13 +146,17 @@ export async function runJobCommand(argv = process.argv.slice(2), { print = valu
       sessions.push(seller);
       const customer = await startCustomerServer({ model, port: integer(out, '--customer-port', 0, 65535) });
       sessions.push(customer);
-      const workspace = await startJobsWorkspace({ model, port: integer(out, '--operator-port', 0, 65535) });
+      if (out.has('--delivery-config')) delivery = await openResultDelivery({
+        model, config: await readDeliveryConfig(out.get('--delivery-config')) });
+      const workspace = await startJobsWorkspace({ model, delivery, port: integer(out, '--operator-port', 0, 65535) });
       sessions.push(workspace);
       if (out.has('--start-worker')) await model.startWorker();
+      if (out.has('--start-delivery')) delivery.start();
       process.once('SIGINT', onSignal); process.once('SIGTERM', onSignal);
       emit({ service: 'starforge-paid-jobs', seller: seller.url ?? seller.seller?.url,
         customer: customer.url ?? customer.origin, operator: workspace.url,
-        operations: seller.operations?.url, mode: (await model.snapshot()).mode });
+        operations: seller.operations?.url, mode: (await model.snapshot()).mode,
+        ...(delivery ? { deliveries: workspace.origin + '/deliveries#' + workspace.token } : {}) });
       await hold(); return;
     }
     if (command === 'status') return emit(await model.snapshot());
