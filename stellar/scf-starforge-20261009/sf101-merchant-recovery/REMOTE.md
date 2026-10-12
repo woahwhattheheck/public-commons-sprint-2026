@@ -103,6 +103,113 @@ Configure the existing proxy URL and bypass hosts in the deployment environment,
 
 See [Node's built-in proxy support](https://nodejs.org/api/http.html#built-in-proxy-support) for supported environment variables and bypass patterns.
 
+## Operate through the private recovery workspace
+
+The recovery workspace provides a browser for the same original encrypted
+bundles, remote snapshots, transfer journals, and cold restores described in
+this guide. Its host configuration selects the permitted stores and local
+directories. An operator chooses a configured profile, reviews the exact
+snapshot and destination, and starts the original transfer from that review.
+
+Start the maintained workspace on the recovery host:
+
+```sh
+starforge merchant-recovery-remote workspace serve \
+  --config /private/merchant-recovery/workspace.json \
+  --directory /private/merchant-recovery/operator \
+  --port 8481
+```
+
+The server binds to `127.0.0.1` and prints a capability URL containing a random
+token in its fragment. Open that full URL through the host's existing browser
+access. The browser sends the token in `X-Recovery-Token`; it stays out of the
+request path and query string. The page retains the token in session storage
+for reload and clears the fragment from the displayed address. Reopening the
+server produces its current access URL.
+
+The same entry is available from the source CLI as
+`node "$SF101_REMOTE" workspace serve` with those arguments.
+For an installed customer runtime, use its original launcher:
+
+```sh
+starforge runtime-install run --dir /private/starforge-runtime -- \
+  merchant-recovery-remote workspace serve \
+  --config /private/merchant-recovery/workspace.json \
+  --directory /private/merchant-recovery/operator \
+  --port 8481
+```
+
+The installed runtime needs the original `s3` feature. Its selected AWS SDK is
+resolved from that runtime's own dependency directory. Invoke the launcher with
+the supported Node version for the configured transport, including the proxy
+requirements above.
+
+A private workspace host configuration has this shape:
+
+```json
+{
+  "schema": "stellar-forge.recovery-workspace.v1",
+  "title": "Merchant recovery",
+  "profiles": [
+    {
+      "id": "merchant-a",
+      "label": "Merchant A",
+      "storeConfig": "/private/merchant-recovery/remote.json",
+      "operations": "/private/merchant-recovery/operations",
+      "passEnv": "SF101_RECOVERY_PASSPHRASE",
+      "bundleRoots": [
+        {
+          "id": "accepted-backups",
+          "label": "Accepted merchant backups",
+          "directory": "/private/backups"
+        }
+      ],
+      "downloadRoot": "/private/downloads",
+      "restoreRoot": "/private/restored"
+    }
+  ]
+}
+```
+
+Use the actual existing store configuration and private parent directories.
+`passEnv` is the name of the already provisioned environment variable. Each
+profile binds its own original transfer directory and allowed backup, download,
+and restore locations. The browser selects within that host configuration.
+
+The operating sequence is:
+
+1. Choose the intended merchant profile and inspect an existing original
+   snapshot under its configured backup collection.
+2. Review the snapshot identity and configured remote destination before
+   starting an upload. The original engine authenticates the bundle and the
+   transfer publishes its completion descriptor last.
+3. Fetch the real remote inventory and follow its page cursor until the desired
+   recovery point is visible. Select its exact snapshot ID.
+4. Review an encrypted download, or a cold restore with both its encrypted
+   download and separate new plaintext destination. Start the reviewed
+   operation and follow the original saved phase and progress.
+5. Use **Continue operation** to resume its same original ID and binding after
+   an interruption. **Stop transfer** closes the workspace's owned S3 client
+   and retains the journal. A local verification or restore already in progress
+   may finish; read **Refresh progress** for its resulting saved phase.
+6. Use the retained completed restore result with the original merchant's
+   restored-host and startup procedure.
+
+Read the saved workspace alongside a running server with:
+
+```sh
+starforge merchant-recovery-remote workspace show \
+  --config /private/merchant-recovery/workspace.json \
+  --directory /private/merchant-recovery/operator
+```
+
+The workspace and headless CLI share the transfer journal at
+`OPERATIONS/ID/operation.json`. The headless `status` command remains available
+for that same operation. See the [complete workspace operating
+guide](workspace/GUIDE.md) for host preparation, review and resume behavior,
+and the receiving-host handoff.
+
+
 ## 1. Obtain the original consistent snapshot
 
 For a running SF99 merchant, use the original maintenance command so the
@@ -378,4 +485,3 @@ Source integration uses `runRemote(options, { store })` from `remote.mjs`.
 The same facade performs CLI transfers and native operator integrations, and
 the original `recover.mjs` continues to own snapshot authentication and
 restore.
-

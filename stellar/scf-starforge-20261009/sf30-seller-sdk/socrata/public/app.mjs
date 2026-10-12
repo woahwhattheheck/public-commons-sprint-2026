@@ -126,7 +126,12 @@ function bindForm(id, operation) {
 }
 function selectSection(name) {
   document.querySelectorAll('[data-panel]').forEach(panel => { panel.hidden = panel.dataset.panel !== name; });
-  async function downloadPublisher(kind, id) {
+  document.querySelectorAll('[data-section]').forEach(button => {
+    if (button.dataset.section === name) button.setAttribute('aria-current', 'page');
+    else button.removeAttribute('aria-current');
+  });
+}
+async function downloadPublisher(kind, id) {
   let response;
   try {
     response = await fetch('/api/publisher/exports/' + encodeURIComponent(kind) + '/' + encodeURIComponent(id),
@@ -147,11 +152,6 @@ function selectSection(name) {
 }
 publisherPanel = createPublisherPanel({getState:() => state,perform,download:downloadPublisher,handle,notice,selectSection});
 
-document.querySelectorAll('[data-section]').forEach(button => {
-    if (button.dataset.section === name) button.setAttribute('aria-current', 'page');
-    else button.removeAttribute('aria-current');
-  });
-}
 function factList(entries) {
   const list = node('dl');
   for (const [label, value] of entries) list.append(node('dt', label), node('dd', value));
