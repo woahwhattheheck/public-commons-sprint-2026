@@ -33,6 +33,16 @@ table with 200 records. Actual selected field IDs, aliases, types and source
 order come from those retained declarations. The driver does not create
 provider records or acquire the tables again.
 
+Raw provider page files may precede the original source-native capture. Keep
+that history and inspect its actual manifest. If it lacks the original reader's
+opening/closing schema and count observations, use the original NocoDB
+`discover`, `capture` and `freeze` commands from [PROVIDER_INPUT.md](PROVIDER_INPUT.md)
+and [README.md](README.md) against the same existing service. Obtain any required
+real observations there before constructing the private receiving template.
+The selected capture must preserve the actual table/view/filter, field IDs,
+types and unique source order. An earlier raw capture is not a restriction on
+the source reads needed to complete this same operation.
+
 The original distribution supplies the correct source and manifest layout:
 
 | Input | Original maintained location |
@@ -87,7 +97,7 @@ node /source/stellar/scf-starforge-20261009/distribution/runtime-install-cli.mjs
   --dir /srv/nocodb-receiving/runtime \
   --archive /srv/nocodb-receiving/starforge-merchant.tgz \
   --sha256 ACTUAL_ARCHIVE_SHA256 \
-  --native --operator \
+  --native --feature mcp --operator \
   --pins /srv/nocodb-receiving/native-pins.json
 
 node /source/stellar/scf-starforge-20261009/distribution/runtime-install-cli.mjs install \
@@ -100,6 +110,11 @@ node /source/stellar/scf-starforge-20261009/distribution/runtime-install-cli.mjs
 Use the original retained installer recovery if installation was interrupted.
 It preserves the same archive, profile, lockfile and installation intent.
 NocoDB's REST/capture source needs no separate NocoDB native feature group.
+The complete receiving command also exercises the original MCP operator.
+Include `--feature mcp` with `--native --operator` when preparing its runtime,
+so the original profile resolves the MCP packages declared by the selected
+distribution. The four explicit payment pins above stay the same; the maintained
+profile owns the remaining MCP dependency selection and lock.
 
 The exact payment pins above correspond to the original SF88 lockfile.
 A distribution advertising optional peers does not establish that they are
