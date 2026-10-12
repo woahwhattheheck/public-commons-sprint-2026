@@ -20,11 +20,14 @@ if _TYPE_CHECKING:
     from .result import AccountingResult, BuyerResult, FileDelivery, FileTransfer, SessionAccountingResult
     from .research_workspace import ResearchWorkspace, ResearchError
     from .research_extraction import ResearchExtraction
+    from .research_customer_updates import ResearchCustomerUpdates, ResearchCustomerDelivery
+    from .research_customer_receiving import ResearchCustomerCancelled, run_research_customer_delivery
     from .research_documents import ResearchDocuments, ResearchPipelines, ResearchSelection, ResearchInputFile, ResearchDocumentSource
     from .requests import MultipartRequest, UploadFile
     from .streams import SSEEvent, NDJSONRecord, StreamDelivery, read_retained_response, export_saved_stream
 
 __all__ = [
+    "ResearchCustomerUpdates", "ResearchCustomerDelivery", "ResearchCustomerCancelled", "run_research_customer_delivery",
     "ResearchWorkspace", "ResearchError", "ResearchExtraction", "ResearchDocuments", "ResearchPipelines",
     "ResearchSelection", "ResearchInputFile", "ResearchDocumentSource",
     "AcquisitionWorkspace", "AcquisitionResult", "AcquisitionProcess", "AcquisitionError",
@@ -39,6 +42,10 @@ __all__ = [
 ]
 
 _EXPORTS = {
+    "ResearchCustomerUpdates": ".research_customer_updates",
+    "ResearchCustomerDelivery": ".research_customer_updates",
+    "ResearchCustomerCancelled": ".research_customer_receiving",
+    "run_research_customer_delivery": ".research_customer_receiving",
     "ResearchWorkspace": ".research_workspace",
     "ResearchError": ".research_workspace",
     "ResearchExtraction": ".research_extraction",
