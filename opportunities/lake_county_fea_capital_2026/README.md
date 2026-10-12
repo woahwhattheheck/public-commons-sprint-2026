@@ -92,6 +92,14 @@ python3 -B application/cli.py operation --root workspace --id original-source-re
 
 Keep the same prepared request on resume. Do not edit its original revision, payload or operation ID to force a replay.
 
+## Browser draft backups and saving recovery
+
+Use **Download draft backup** to retain the current open drafts, pending request and acknowledged operation references for this workspace. **Open draft backup** accepts only this same workspace. Before opening the selected backup, the browser downloads the current drafts so later work stays available. A different current pending request must be reconciled before the backup can replace the open request.
+
+If browser storage fails, keep the page open and use **Download unsaved drafts** before closing or reloading. **Try saving again** reconnects to the original browser store and saves the current drafts. A failed initial read leaves the saved state unopened; it does not replace it with new empty drafts.
+
+The complete pending file upload remains saved before dispatch. Once the native workspace acknowledges the exact file request, the browser retains its operation ID, request hash and complete file reference. The native workspace still keeps the full original request and original bytes. Typing into a later draft therefore does not copy that PDF's base64 into every browser autosave.
+
 ## Receive into another selected directory
 
 Use the exact delivered ZIP identity:
@@ -118,6 +126,10 @@ python3 -B application/operate.py --selection actual-operating-selection.json
 ```
 
 A selection includes the original case ID and workshare-source hash, actual local source paths and hashes, explicit mappings, actual operator and original operation ID. Every step persists its request before invocation. Complete result replay reopens the original result/archive; it does not create another publication or receiving workspace.
+
+When the actual browser programme is selected, it visits all seven sections at desktop and phone widths and retains fourteen viewport images. It downloads and verifies the original frozen report and complete workspace before performing the receiving actions. The same received application then downloads/reopens its draft backup, demonstrates one explicitly labelled internal IndexedDB transaction abort and original save retry, reloads that saved draft, and retains the exact already captured public PDF through the normal upload control.
+
+That last action creates an explicitly recorded later receiving revision. Its compact browser backup is checked against the full native original request; it does not create a client asset, source edition or approval. Completed replay preserves that later revision. If an interrupted browser attempt changed the received workspace but left no complete review, the operator stops with the original native request and files retained instead of repeating the upload in a new attempt.
 
 Public source acquisition is handled by the separately selected source collector in the same native execution session when applicable. The application itself consumes the retained originals. It does not fetch substitute data during a replay.
 

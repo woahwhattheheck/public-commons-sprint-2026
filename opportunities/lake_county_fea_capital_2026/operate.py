@@ -277,6 +277,14 @@ class Programme:
                     self.verify_browser(candidate, selected, report)
                     atomic(completed_path, (stable(candidate)+"\n").encode())
                     return candidate
+        receiver = Workspace(receiving_root / "workspace")
+        try:
+            require(receiver.revision() == selected["workspace_revision"],
+                    "browser_later_receiving",
+                    "The earlier browser attempt changed the received workspace. Preserve that native request and its draft/download files; reconcile the existing receiving result before starting another browser attempt.",
+                    status=409)
+        finally:
+            receiver.close()
         attempt = self.output / "browser" / ("attempt-" + str(len(attempts)+1).zfill(3))
         require(not attempt.exists(), "browser_attempt", "Retain the original interrupted browser directory.")
         attempts.append({"directory":str(attempt),"state":"prepared","application":selected["application"]})
@@ -333,6 +341,17 @@ class Programme:
                 and review["publication_id"] == selected["publication"]["id"],
                 "browser_review", "Review the retained actual browser findings before delivery.", {"review":review})
         require(len(review["screens"]) == 14, "browser_screens", "Review all seven sections at desktop and phone widths.")
+        journey = review.get("operator_journey", {})
+        recovery = journey.get("storage_failure_recovery", {})
+        require(journey.get("schema") == "lake-county.browser-operator-receiving/v1"
+                and journey.get("complete") is True
+                and journey.get("draft_backup_restore", {}).get("complete") is True
+                and recovery.get("complete") is True and recovery.get("actual_aborted_transactions") == 1
+                and recovery.get("reloaded") is True and recovery.get("native_revision_unchanged") is True
+                and journey.get("acknowledged_upload", {}).get("complete") is True
+                and journey.get("original_received_revision") == selected["workspace_revision"]
+                and journey.get("later_received_revision") != selected["workspace_revision"],
+                "browser_operator", "Retain the actual draft backup, storage retry and original-file upload receiving evidence.")
         for entry in review["screens"]+review["downloads"]:
             require(file_identity(entry["path"]) == {k:entry[k] for k in ("bytes","sha256")},
                     "browser_file", "A retained actual browser file differs.")
