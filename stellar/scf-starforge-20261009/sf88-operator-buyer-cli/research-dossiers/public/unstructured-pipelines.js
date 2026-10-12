@@ -372,10 +372,8 @@ export function createUnstructuredPipelinesPanel({root,tab,api,task,notify,getDo
     state.operations=more?[...state.operations,...value.operations.filter(row=>!state.operations.some(old=>old.plan.id===row.plan.id))]:value.operations;
     state.editions=value.editions;state.next=value.nextAfter;state.configured=value.configured;state.source=value.source;
     state.uploadLimitBytes=value.uploadLimitBytes??33554432;
-    objectPanel=createObjectInputsPanel({root:$('object-intake'),api,task,notify,getDossier,isBusy:()=>!!isBusy()||state.busy>0,
-    onPrepared:async(value,dossierId)=>{if(state.id!==dossierId)return;await loadList();
-      if(state.id===dossierId){await openOperation(value.plan.id);$('operation').scrollIntoView({block:'nearest'});}}});
-  renderConfiguration();renderList();renderOperation();renderReview();updateBusy();
+    objectPanel.configure(value);
+    renderConfiguration();renderList();renderOperation();renderReview();updateBusy();
   }
   async function loadList(more=false){
     if(!state.id)return;const ctx=context(),token=++state.listEpoch,cursor=more?state.next:null;
@@ -634,6 +632,9 @@ export function createUnstructuredPipelinesPanel({root,tab,api,task,notify,getDo
   window.addEventListener('storage',event=>{
     if(state.id&&event.key===key(context())){state.journal=readJournal({...context(),journal:null});renderConfiguration();renderRecovery();renderActionHistory();renderReview();updateBusy();}
   });
+  objectPanel=createObjectInputsPanel({root:$('object-intake'),api,task,notify,getDossier,isBusy:()=>!!isBusy()||state.busy>0,
+    onPrepared:async(value,dossierId)=>{if(state.id!==dossierId)return;await loadList();
+      if(state.id===dossierId){await openOperation(value.plan.id);$('operation').scrollIntoView({block:'nearest'});}}});
   renderConfiguration();renderList();renderOperation();renderReview();updateBusy();
   return {
     configure(value){
