@@ -167,8 +167,9 @@ export async function startManagedWoo(review, {env = process.env, port = 0, sell
   if (operationsNavigationOrigin !== null) {
     const navigation = new URL(operationsNavigationOrigin);
     need(navigation.protocol==='http:' && navigation.hostname==='127.0.0.1' &&
-      navigation.origin===operationsNavigationOrigin && navigation.port &&
-      Number(navigation.port)<=65535 && navigation.pathname==='/' && !navigation.search && !navigation.hash,
+      navigation.origin===operationsNavigationOrigin && !navigation.username && !navigation.password &&
+      Number(navigation.port || 80)>0 && Number(navigation.port || 80)<=65535 &&
+      navigation.pathname==='/' && !navigation.search && !navigation.hash,
       'WOO_MANAGED_NAVIGATION_INVALID');
   }
   const secret = env[compiled.secretEnv];

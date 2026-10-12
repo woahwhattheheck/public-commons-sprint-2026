@@ -275,7 +275,8 @@ export async function startRuntimeWorkspace({ directory, port = 8465, openApiSet
   server.requestTimeout = 120000; server.headersTimeout = 10000; server.keepAliveTimeout = 5000;
   server.maxRequestsPerSocket = 100;
   await new Promise((done, reject) => { server.once('error', reject); server.listen(port, HOST, done); });
-  host = HOST + ':' + server.address().port; origin = 'http://' + host;
+  origin = new URL('http://' + HOST + ':' + server.address().port).origin;
+  host = new URL(origin).host;
   return { origin, url: origin + '/#' + token, directory: model.directory,
     async close() {
       if (closing) return;
