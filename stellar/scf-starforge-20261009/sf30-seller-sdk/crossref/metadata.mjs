@@ -5,7 +5,8 @@ export const EDITION_SCHEMA='sf88-research-results-v1';
 export const CAPTURE_SCHEMA='stellar-forge.crossref-capture.v1';
 export const SOURCE_TERMS='Crossref metadata from https://api.crossref.org. Crossref permits metadata reuse; individual abstracts may retain copyright. Source terms: https://www.crossref.org/documentation/retrieve-metadata/rest-api/.';
 export const DOCUMENTATION='https://www.crossref.org/documentation/retrieve-metadata/rest-api/';
-export const RATE_DOCUMENTATION='https://www.crossref.org/blog/announcing-changes-to-rest-api-rate-limits/';
+export const CURSOR_DOCUMENTATION='https://community.crossref.org/t/changes-to-cursors-filtering-and-sorting-in-the-rest-api/16246';
+export const RATE_DOCUMENTATION='https://community.crossref.org/t/refining-rest-api-limits-for-improved-stability-and-reliability/16137';
 export const object=v=>v!==null&&typeof v==='object'&&!Array.isArray(v);
 export const sha256=v=>createHash('sha256').update(v).digest('hex');
 export const json=v=>JSON.stringify(v,null,2)+'\n';
@@ -45,7 +46,7 @@ export function requestFor(kind,input={}){
   need(Buffer.byteLength(url.href)<=16000,'CROSSREF_UPDATE_QUERY_TOO_LONG');
   return {kind,dois,rows,cursor,pool:'list',url:url.href};
 }
-const publicHeaders=new Set(['content-type','content-length','content-encoding','date','etag','last-modified','cache-control','expires','vary','retry-after','x-rate-limit-limit','x-rate-limit-interval','x-concurrency-limit','x-api-pool']);
+const publicHeaders=new Set(['content-type','content-length','content-encoding','date','etag','last-modified','cache-control','expires','vary','retry-after','x-rate-limit-limit','x-rate-limit-interval','x-rate-limit-type','x-concurrency-limit','x-api-pool']);
 export function retainedHeaders(headers={}){
   const result={};
   for(const [name,value] of Object.entries(headers)){
@@ -83,7 +84,7 @@ export function parseCapture(capture,{validateResponse=true}={}){
       need(returned===req.doi,'CROSSREF_RESPONSE_DOI_MISMATCH',502);
     }
     else need(Array.isArray(value.message.items)&&Number.isSafeInteger(value.message['total-results'])&&value.message['total-results']>=0&&
-      value.message.items.every(row=>object(row)&&typeof row.DOI==='string'),'CROSSREF_RESPONSE_LIST_INVALID',502);
+      value.message.items.every(row=>{try{return object(row)&&Boolean(normalizeDoi(row.DOI));}catch{return false;}}),'CROSSREF_RESPONSE_LIST_INVALID',502);
   }
   const record={schema:CAPTURE_SCHEMA,request:req,url:req.url,finalUrl:capture.finalUrl??req.url,status:capture.status,
     ...(capture.startedAt?{startedAt:capture.startedAt}:{}),retrievedAt:capture.retrievedAt,
@@ -140,18 +141,42 @@ function workResult(work,occurrences){
       citationCount:count(work['is-referenced-by-count']),cited_by_count:count(work['is-referenced-by-count']),referenceCount:count(work['reference-count']),
       depositedReferences:list(work.reference).length}};
 }
-export function buildCrossrefEdition({captures,dois,query,label='Crossref DOI metadata'}){
+function acquisitionPlan(input,requestedDois,parsed){
+  const inferred={schema:'stellar-forge.crossref-acquisition.v1',
+    metadata:parsed.some(({record})=>record.request.kind==='work'),
+    updates:parsed.some(({record})=>record.request.kind==='updates'),failures:[]};
+  if(input===undefined)return inferred;
+  need(object(input)&&Object.keys(input).every(key=>['schema','metadata','updates','failures'].includes(key))&&
+    input.schema===inferred.schema&&typeof input.metadata==='boolean'&&typeof input.updates==='boolean'&&
+    Array.isArray(input.failures)&&input.failures.length<=2001,'CROSSREF_ACQUISITION_PLAN_INVALID');
+  need((input.metadata||!inferred.metadata)&&(input.updates||!inferred.updates),'CROSSREF_ACQUISITION_PLAN_CONFLICT');
+  const failures=input.failures.map(failure=>{
+    need(object(failure)&&['transport','pagination','capacity'].includes(failure.phase)&&
+      typeof failure.code==='string'&&/^[A-Z][A-Z0-9_]{0,100}$/.test(failure.code)&&object(failure.request),
+      'CROSSREF_ACQUISITION_FAILURE_INVALID');
+    const value=failure.request,request=requestFor(value.kind,value.kind==='work'?{doi:value.doi}:
+      {dois:value.dois??[value.doi],rows:value.rows,cursor:value.cursor});
+    need((request.kind==='work'?input.metadata:input.updates)&&
+      (request.kind==='work'?[request.doi]:request.dois).every(doi=>requestedDois.includes(doi)),
+      'CROSSREF_ACQUISITION_FAILURE_SCOPE_INVALID');
+    return {phase:failure.phase,code:failure.code,request};
+  });
+  return {schema:inferred.schema,metadata:input.metadata,updates:input.updates,failures};
+}
+export function buildCrossrefEdition({captures,dois,query,label='Crossref DOI metadata',acquisition}){
   const requestedDois=doiList(dois);
   need(typeof query==='string'&&query.trim().length>0&&query.length<=12000,'CROSSREF_RESEARCH_QUESTION_REQUIRED');
   need(typeof label==='string'&&label.trim().length>0&&label.length<=200,'CROSSREF_LABEL_INVALID');
-  need(Array.isArray(captures)&&captures.length>0&&captures.length<=2000,'CROSSREF_CAPTURES_REQUIRED');
+  need(Array.isArray(captures)&&captures.length<=2000&&(captures.length>0||acquisition!==undefined),'CROSSREF_CAPTURES_REQUIRED');
   const parsed=captures.map(capture=>{
     try{return parseCapture(capture);}
     catch(error){
       if(!/^CROSSREF_RESPONSE_/.test(error.code??''))throw error;
       return {...parseCapture(capture,{validateResponse:false}),successful:false,contractError:error.code};
     }
-  }),records=parsed.map(x=>x.record),found=new Set(),works=new Map(),warnings=[],updateCollections=new Map();
+  }),records=parsed.map(x=>x.record),plan=acquisitionPlan(acquisition,requestedDois,parsed);
+  need(captures.length>0||plan.failures.length>0,'CROSSREF_ACQUISITION_EMPTY');
+  const found=new Set(),works=new Map(),warnings=plan.failures.map(failure=>({code:'CROSSREF_ACQUISITION_FAILURE',phase:failure.phase,request:failure.request,error:failure.code})),updateCollections=new Map();
   for(const {record,value,successful,contractError} of parsed){
     const request=record.request;
     need((request.kind==='work'?[request.doi]:request.dois).every(doi=>requestedDois.includes(doi)),'CROSSREF_CAPTURE_OUTSIDE_SELECTED_DOIS');
@@ -172,30 +197,54 @@ export function buildCrossrefEdition({captures,dois,query,label='Crossref DOI me
       else works.set(doi,{work,occurrences:[occurrence]});
     }
   }
-  const updates=[];
+  const updates=[],updateCovered=new Set();
   for(const pages of updateCollections.values()){
-    let expected=pages[0].record.request.cursor,finished=false,received=0,complete=true;
-    const fromBeginning=expected==='*';
+    const first=pages[0],initialTotal=first.message['total-results'],fromBeginning=first.record.request.cursor==='*';
+    let expected=first.record.request.cursor,finished=false,received=0,nextCursor=null,duplicates=0;
+    const seenCursors=new Set(),seenDois=new Set(),issues=new Set(),reportedTotals=new Set();
     for(const {record,message} of pages){
-      need(!finished&&record.request.cursor===expected,'CROSSREF_UPDATE_PAGE_CHAIN_INVALID');
+      const request=record.request;
+      if(finished)issues.add('CROSSREF_UPDATE_AFTER_FINAL_PAGE');
+      if(request.cursor!==expected||seenCursors.has(request.cursor))issues.add('CROSSREF_UPDATE_PAGE_CHAIN_INVALID');
+      if(request.rows!==first.record.request.rows||JSON.stringify(request.dois)!==JSON.stringify(first.record.request.dois))
+        issues.add('CROSSREF_UPDATE_REQUEST_CHANGED');
+      seenCursors.add(request.cursor);reportedTotals.add(message['total-results']);
       received+=message.items.length;
-      finished=message.items.length<record.request.rows;
-      if(!finished){need(typeof message['next-cursor']==='string'&&message['next-cursor'],'CROSSREF_NEXT_CURSOR_MISSING',502);expected=message['next-cursor'];}
+      for(const item of message.items){const doi=normalizeDoi(item.DOI);if(seenDois.has(doi))duplicates++;else seenDois.add(doi);}
+      finished=message.items.length<request.rows;
+      nextCursor=null;
+      if(!finished){
+        const next=message['next-cursor'];
+        if(typeof next!=='string'||!next)issues.add('CROSSREF_NEXT_CURSOR_MISSING');
+        else if(next===request.cursor||seenCursors.has(next))issues.add('CROSSREF_CURSOR_NOT_ADVANCING');
+        else nextCursor=next;
+      }
+      expected=nextCursor;
     }
-    complete=fromBeginning&&finished;
-    updates.push({dois:pages[0].record.request.dois,status:complete?'COMPLETE':'PARTIAL',pages:pages.length,
-      records:received,totalResults:pages.at(-1).message['total-results'],fromBeginning,finalPage:finished,nextCursor:finished?null:expected,
-      retrievedAt:pages.at(-1).record.retrievedAt});
-    if(!complete)warnings.push({code:'CROSSREF_UPDATE_COLLECTION_PARTIAL',dois:pages[0].record.request.dois,nextCursor:finished?null:expected});
+    if(reportedTotals.size!==1)issues.add('CROSSREF_UPDATE_TOTAL_CHANGED');
+    if(duplicates)issues.add('CROSSREF_UPDATE_DUPLICATE_RECORDS');
+    if(finished&&(received!==initialTotal||seenDois.size!==initialTotal))issues.add('CROSSREF_UPDATE_COUNT_MISMATCH');
+    const complete=fromBeginning&&finished&&issues.size===0;
+    const result={dois:first.record.request.dois,status:complete?'COMPLETE':'PARTIAL',pages:pages.length,
+      records:received,uniqueRecords:seenDois.size,duplicateRecords:duplicates,totalResults:initialTotal,
+      lastTotalResults:pages.at(-1).message['total-results'],fromBeginning,finalPage:finished,nextCursor,
+      issues:[...issues],retrievedAt:pages.at(-1).record.retrievedAt};
+    updates.push(result);
+    if(complete)for(const doi of result.dois)updateCovered.add(doi);
+    else warnings.push({code:'CROSSREF_UPDATE_COLLECTION_PARTIAL',dois:result.dois,nextCursor,issues:result.issues});
   }
-  const lookupsRequested=parsed.some(({record})=>record.request.kind==='work');
-  const missingDois=lookupsRequested?requestedDois.filter(doi=>!found.has(doi)):[];
+  const missingDois=plan.metadata?requestedDois.filter(doi=>!found.has(doi)):[];
+  const missingUpdates=plan.updates?requestedDois.filter(doi=>!updateCovered.has(doi)):[];
+  if(missingDois.length)warnings.push({code:'CROSSREF_METADATA_INCOMPLETE',dois:missingDois});
+  if(missingUpdates.length)warnings.push({code:'CROSSREF_UPDATES_INCOMPLETE',dois:missingUpdates});
   const results=[...works].sort(([a],[b])=>a.localeCompare(b)).map(([,v])=>workResult(v.work,v.occurrences));
-  const coverage=missingDois.length===0&&warnings.length===0?'COMPLETE':results.length?'PARTIAL':'UNAVAILABLE';
+  const available=parsed.some(row=>row.successful);
+  const coverage=warnings.length===0?'COMPLETE':available?'PARTIAL':'UNAVAILABLE';
   return {schema:EDITION_SCHEMA,provider:'crossref',query,label,sourceTerms:SOURCE_TERMS,
-    success:results.length>0||coverage==='COMPLETE',results,
-    usage:{schema:'stellar-forge.crossref-edition.v1',coverage,requestedDois,receivedDois:[...found].sort(),missingDois,
-      sourceResponses:records.map(({bodyBase64,...r})=>r),updates,metadataLookup:lookupsRequested?'REQUESTED':'NOT_REQUESTED',
+    success:available,status:coverage==='COMPLETE'?'AVAILABLE':coverage==='PARTIAL'?'PARTIAL':'PROVIDER_ERROR',results,
+    usage:{schema:'stellar-forge.crossref-edition.v1',coverage,requestedDois,receivedDois:[...found].sort(),missingDois,missingUpdates,
+      acquisition:plan,sourceResponses:records.map(({bodyBase64,...r})=>r),updates,
+      metadataLookup:plan.metadata?'REQUESTED':'NOT_REQUESTED',updatesLookup:plan.updates?'REQUESTED':'NOT_REQUESTED',
       sourceRecordsReceived:results.length,sourcePages:records.length,sourceCoverage:coverage},
     warnings,originalResponses:records};
 }

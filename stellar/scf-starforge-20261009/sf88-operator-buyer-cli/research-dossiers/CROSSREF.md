@@ -74,9 +74,12 @@ code can instead pass a **Uint8Array** as **body**.
 
 For registered updates, the request contains **kind: updates**, the actual
 **dois** array, **rows**, and **cursor**. Start with **cursor: "*"**, then retain
-each returned next-cursor verbatim. A repeated cursor may be valid in Crossref's
-stateful iterator. The next page is acquired through the original source
-adapter, not inferred from the cursor's text.
+each returned next-cursor verbatim and keep the same DOI filter and rows.
+[Crossref changed cursor behavior in August 2026](https://community.crossref.org/t/changes-to-cursors-filtering-and-sorting-in-the-rest-api/16246):
+a new cursor advances the collection; repeating one returns the same page.
+The receiving adapter retains incomplete pages and marks nonadvancing cursors,
+duplicated DOI rows, changed totals, or a final count that differs from the
+first page as PARTIAL. A complete empty first page has an original total of zero.
 
 Complete collection requires a chain beginning at "*" and ending with fewer
 items than requested rows. A retained page from the middle of a collection
@@ -116,3 +119,13 @@ or reference counts remain null; an explicit source zero remains zero.
 Native source capture caching is separate from dossier revision history. Preserve
 the merchant's original source directory to reuse a capture during acquisition;
 preserve the portable dossier for the selected research and authored analysis.
+
+### Acquisition coverage
+
+An enriched edition retains its intended metadata and update requests together with
+transport, pagination and request-capacity failures in `usage.acquisition`. The
+receiver rebuilds coverage from those intentions and the complete original captures.
+A successful empty updates response cannot hide a failed metadata lookup; failed
+update requests cannot make a metadata-only result appear fully enriched. Useful
+records remain available under PARTIAL; an entirely failed acquisition remains an
+original retained provider-error edition that can be reopened and retried.

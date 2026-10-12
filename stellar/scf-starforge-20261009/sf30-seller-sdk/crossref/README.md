@@ -77,7 +77,7 @@ processes drawing from the same Crossref pool.
 
 ## Shared source account and caching
 
-The maintained Crossref limits effective December 1, 2025 are:
+The current Crossref request-rate limits implemented July 21, 2026 are:
 
 | Pool | Requests per second | Maximum concurrent requests |
 | --- | ---: | ---: |
@@ -87,7 +87,7 @@ The maintained Crossref limits effective December 1, 2025 are:
 | Polite list | 3 | 3 |
 
 The source starts with these ceilings. It reads the returned
-**x-rate-limit-limit**, **x-rate-limit-interval**, **x-concurrency-limit** and
+**x-rate-limit-limit**, **x-rate-limit-interval**, **x-rate-limit-type**, **x-concurrency-limit** and
 **x-api-pool** headers, adopts more restrictive observed limits, and retains
 HTTP 429 Retry-After cooldowns. Its account and pool identity, timing and public
 header observations survive a process restart.
@@ -187,10 +187,25 @@ See **research-dossiers/CROSSREF.md** for the retained capture-pack interface.
 ## Provider contracts
 
 - [Crossref REST API](https://www.crossref.org/documentation/retrieve-metadata/rest-api/)
-- [Current public and polite rate limits](https://www.crossref.org/blog/announcing-changes-to-rest-api-rate-limits/)
+- [Current public and polite rate limits](https://community.crossref.org/t/refining-rest-api-limits-for-improved-stability-and-reliability/16137)
 - [Pagination, finite date windows and caching](https://www.crossref.org/documentation/retrieve-metadata/rest-api/tips-for-using-the-crossref-rest-api/)
 - [Original filter and record schemas](https://github.com/CrossRef/rest-api-doc)
 
 Crossref metadata is reusable under its published metadata terms. Individual
 abstracts may retain copyright. The complete response and its source terms
 travel with each retained edition.
+
+### Current pagination and complete coverage
+
+The [August 2026 Crossref cursor change](https://community.crossref.org/t/changes-to-cursors-filtering-and-sorting-in-the-rest-api/16246)
+requires every subsequent request to retain its original filter and rows and use
+the newly returned cursor. Exact request URLs remain cache identities. Repeated
+cursors recollect the same page. A multi-page collection is complete only after
+an advancing chain from `*` reaches a short final page and its unique DOI count
+matches the first page's `total-results`, without duplicates or changed totals.
+Original pages remain retained when those conditions differ.
+
+`usage.acquisition` records the intended metadata/update scope and any transport,
+pagination or capacity failures. `usage.coverage` and the explicit envelope status
+keep usable partial records available in the original research dossier, including
+when one requested operation fails and another returns an empty successful result.
