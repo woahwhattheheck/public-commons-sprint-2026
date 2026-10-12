@@ -1,13 +1,14 @@
 // MIT. SF54: actual SF25 catalog outcome -> x402 v2 HTTP extension sidechannel.
 // Caller must supply trusted facilitator settlement facts; no settlement is performed here.
+import { HEADER_NAME, MAX_HEADER_BYTES } from './header.mjs';
+export { validatedExtensionResponsesHeader } from './header.mjs';
 import { PaymentAutoCatalog } from '../../../stellar-forge/payment-auto-catalog/auto-catalog.mjs';
 
 const plain = value => value !== null && typeof value === 'object' &&
   !Array.isArray(value) && (Object.getPrototypeOf(value) === Object.prototype ||
     Object.getPrototypeOf(value) === null);
 const STATUS_KEY = /^[a-z][a-z0-9_-]{0,63}$/;
-const HEADER_NAME = 'EXTENSION-RESPONSES';
-const MAX_HEADER_BYTES = 16_384;
+
 
 // Existing outcomes must be from the trusted facilitator, not an HTTP caller.
 function otherOutcomes(value) {
@@ -56,6 +57,25 @@ export function encodeCatalogSidechannel({ paymentPayload, catalogDecision, othe
     extensionResponses: fields, bazaar };
 }
 
+function preflight(paymentPayload, otherExtensionResponses) {
+  // The catalog mutation is permanent, so all sibling/transport constraints
+  // must pass BEFORE the original SF25 ingest can commit a seller listing.
+  // Retain one cloned sibling snapshot: caller getters cannot change it
+  // between preflight and the final facilitator->resource-server encoding.
+  const validatedSiblings = otherOutcomes(otherExtensionResponses);
+  if (hasBazaar(paymentPayload)) {
+    // Max possible sanitized rejection code (96 chars + ':' + 80 chars).
+    // This reserves the worst wire header, not just the shorter success
+    // outcome. A near-limit sibling can otherwise throw AFTER commit.
+    const worst = { ...validatedSiblings, bazaar: {
+      status: 'rejected', rejectedReason: 'A'.repeat(96) + ':' + 'a'.repeat(80),
+    } };
+    if (Buffer.byteLength(JSON.stringify(worst), 'utf8') > MAX_HEADER_BYTES)
+      throw new RangeError('EXTENSION_RESPONSES_TOO_LARGE');
+  }
+  return validatedSiblings;
+}
+
 export class BazaarSettlementSidechannel {
   #catalog;
   constructor({ catalog = new PaymentAutoCatalog() } = {}) {
@@ -65,23 +85,18 @@ export class BazaarSettlementSidechannel {
     this.#catalog = catalog;
   }
   processSettled({ paymentPayload, settlement, sequence, otherExtensionResponses } = {}) {
-    // The catalog mutation is permanent, so all sibling/transport constraints
-    // must pass BEFORE the original SF25 ingest can commit a seller listing.
-    // Retain one cloned sibling snapshot: caller getters cannot change it
-    // between preflight and the final facilitator->resource-server encoding.
-    const validatedSiblings = otherOutcomes(otherExtensionResponses);
-    if (hasBazaar(paymentPayload)) {
-      // Max possible sanitized rejection code (96 chars + ':' + 80 chars).
-      // This reserves the worst wire header, not just the shorter success
-      // outcome. A near-limit sibling can otherwise throw AFTER commit.
-      const worst = { ...validatedSiblings, bazaar: {
-        status: 'rejected', rejectedReason: 'A'.repeat(96) + ':' + 'a'.repeat(80),
-      } };
-      if (Buffer.byteLength(JSON.stringify(worst), 'utf8') > MAX_HEADER_BYTES)
-        throw new RangeError('EXTENSION_RESPONSES_TOO_LARGE');
-    }
+    const validatedSiblings = preflight(paymentPayload, otherExtensionResponses);
     // SF25 enforces the verified-settlement and original seller/canonical terms gate.
     const result = this.#catalog.ingest({ paymentPayload, settlement, sequence });
+    const wire = encodeCatalogSidechannel({ paymentPayload,
+      catalogDecision: result, otherExtensionResponses: validatedSiblings });
+    return { catalogDecision: result, ...wire,
+      catalogSize: this.#catalog.size, catalogVersion: this.#catalog.version };
+  }
+  /** Same SF25 validation and preflight, awaiting the original durable commit. */
+  async processSettledAsync({ paymentPayload, settlement, sequence, otherExtensionResponses } = {}) {
+    const validatedSiblings = preflight(paymentPayload, otherExtensionResponses);
+    const result = await this.#catalog.ingest({ paymentPayload, settlement, sequence });
     const wire = encodeCatalogSidechannel({ paymentPayload,
       catalogDecision: result, otherExtensionResponses: validatedSiblings });
     return { catalogDecision: result, ...wire,

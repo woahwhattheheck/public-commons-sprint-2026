@@ -338,6 +338,29 @@ export class DurableCatalogTransaction {
       lookup: key => this.lookupCatalogKey(key),
       revision: (id, sequence) => this.#state.lifecycle.revision(id, sequence) });
   }
+  /** Trusted owner lookup of the original committed source, including older revisions. */
+  lookupProvenance({authority,sourceURL}={}) {
+    this.#assert();
+    if (!['signed_export','settlement_hook'].includes(authority) || typeof sourceURL !== 'string')
+      fail('PROVENANCE_LOOKUP_INVALID');
+    const operation = this.#operations.find(row => row.kind === 'upsert' &&
+      row.provenance.authority === authority && row.provenance.sourceURL === sourceURL);
+    return operation ? clone(operation) : null;
+  }
+  /** Continue the original seller's sequence across restarts, imports and retirements. */
+  nextSellerSequence(sellerId) {
+    this.#assert();
+    if (!idText(sellerId)) fail('SELLER_ID_INVALID');
+    let latest = 0;
+    for (const row of this.#operations) {
+      const candidate = row.kind === 'upsert' ? row.candidate : row;
+      if (candidate.sellerId === sellerId) latest = Math.max(latest,candidate.sequence);
+    }
+    if (!Number.isSafeInteger(latest + 1)) fail('SELLER_SEQUENCE_EXHAUSTED');
+    return latest + 1;
+  }
+  get size() {this.#assert();return this.#state.catalog.size;}
+  get version() {this.#assert();return this.#state.catalog.version;}
   get head() {this.#assert();return this.#head;}
   get count() {this.#assert();return this.#operations.length;}
   async close() {
