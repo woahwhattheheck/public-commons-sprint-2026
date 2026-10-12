@@ -1,6 +1,6 @@
 # Paid job customer workspace
 
-The customer workspace turns an accepted paid application job into a retained working resource. Import the original acceptance, follow execution, retrieve the result, and use the same file in the resource library and collections. The job list keeps labels, status, settlement identity, local activity, and delivery together across restarts.
+The customer workspace takes a merchant purchase ticket through original checkout, accepted application execution and a retained working resource. Import the original acceptance, follow execution, retrieve the result, and use the same file in the resource library and collections. The job list keeps labels, status, settlement identity, local activity, and delivery together across restarts.
 
 The merchant runs the application through the [durable jobs service](../../sf30-seller-sdk/jobs/README.md). Its [buyer interface](../../sf30-seller-sdk/jobs/BUYER.md) owns acceptance and download records. This workspace uses those records directly and adds a customer browser, a searchable library, research notes, and portable result collections.
 
@@ -16,7 +16,7 @@ Choose an absolute directory owned by the account that runs the workspace:
 starforge job-workspace serve --state /srv/starforge/customer-jobs
 ```
 
-Open the printed `url` exactly as supplied. The local server uses a private token in the URL fragment. Its three views are **Jobs**, **Resource library**, and **Collections**; each opens with the same local authorization.
+Open the printed `url` exactly as supplied. The local server uses a private token in the URL fragment. Its four views are **Checkout**, **Jobs**, **Resource library**, and **Collections**; each opens with the same local authorization.
 
 To include buyer directories and delivered files that already exist outside the workspace, configure their parent roots on the first open:
 
@@ -27,6 +27,24 @@ starforge job-workspace serve --state /srv/starforge/customer-jobs --buyer-root 
 The workspace creates its own `buyers/` and `artifacts/` directories automatically. Reopen with the original state path and omit the root options. Supplying roots again requires the same canonical set saved on the first open.
 
 The running server owns the workspace lease. Use its browser while it is running. Press Ctrl-C to finish local work and close before using standalone commands against that same state.
+
+## Purchase a prepared application job
+
+Open the same customer workspace with an existing original SF88 operator:
+
+~~~sh
+starforge job-workspace serve --state /srv/starforge/customer-jobs --operator-workspace /srv/starforge/operator
+~~~
+
+Alternatively, use --operator-profile with the absolute path of an existing private Node buyer profile. The installed source supplies the original native runtime. Each imported checkout retains its selected operator and runtime.
+
+In **Checkout**, import the merchant’s private job handoff, inspect the merchant, function and exact atomic payment terms, then select **Review request**. The original buyer prepares the request and returns its offline review. **Start checkout** uses that exact review and the existing terminal approval. Keep the foreground command or original Applications terminal connected while approving.
+
+A settled HTTP 202 response is verified and retained by the original job buyer. **Open accepted job** selects its entry in Jobs, where status monitoring, result retrieval and library use continue.
+
+The checkout preserves its original request, stable intent, permanent attempt and native result. **Recover original operation** reopens that same purchase after an interruption. A renewed merchant ticket can replace an unattempted preparation while preserving the job, input, terms and intent.
+
+[The complete checkout guide](checkout/README.md) covers installation, operator/profile selection, browser actions, original terminal approval, cancellation, recovery, renewed tickets, CLI commands and the typed application interface.
 
 ## Add an accepted job
 
