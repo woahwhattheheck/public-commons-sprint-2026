@@ -172,6 +172,8 @@ async function snapshot({application,context,selected,environment,signal,id}) {
     }
     temporary=await mkdtemp(join(profile.exportsDirectory,'.project-capture-'));
     const payload=join(temporary,'payload');await privateDirectory(payload,{create:true});
+    if(selected.config.remoteMcp)need(application.spendingConfigurationFile===profile.nativeMcpHost,
+      'APPLICATION_PROJECT_ACTUAL_NATIVE_HOST_REQUIRED');
     const view=await capturedView(application,context,payload,signal);
     const components=[];
     await privateDirectory(join(payload,'components'),{create:true});
@@ -187,6 +189,20 @@ async function snapshot({application,context,selected,environment,signal,id}) {
         const native=await originalModule(selected.sourceRoot,NATIVE+'native-spend-recovery.mjs');
         result=await native.snapshotNativeMcpSpendingRecovery({configFile:profile.nativeMcpHost,output,
           passphraseEnv:profile.passphraseEnv,quiesced:true,operationId:id,environment,signal});
+      }
+      if(item.kind==='mcp'){
+        need(result.configSha256===item.inspected.configSha256&&result.policySha256===item.inspected.policySha256&&
+          isDeepStrictEqual(result.owner,item.owner)&&Array.isArray(result.boundRequestReferences),
+          'APPLICATION_PROJECT_ACTUAL_NATIVE_OWNER_CHANGED');
+        for(const observation of view.spending){
+          const reviewed=view.reviews.find(row=>row.intentId===observation.intentId),quoteId=reviewed?.value.binding?.quoteId;
+          if(!observation.value?.reservation)continue;
+          const reference=result.boundRequestReferences.find(row=>row.request_id===quoteId);
+          need(reference&&reference.request_sha256===observation.value.request_sha256&&
+            reference.actor===item.owner.actor&&reference.service===item.owner.service&&
+            (observation.value.reservation.state!=='settled'||reference.reservationState==='settled'),
+            'APPLICATION_PROJECT_NATIVE_RESERVATION_MISSING');
+        }
       }
       const manifest=await digest(join(output,'manifest.json'),{privateOnly:true,signal});
       components.push({kind:item.kind,member,manifestSha256:manifest.sha256,recordSha256:result.recordSha256,
@@ -219,6 +235,7 @@ async function snapshot({application,context,selected,environment,signal,id}) {
     const manifestSha256=(await digest(join(encryptedOutput,'manifest.json'),{privateOnly:true})).sha256;
     checkSignal(signal);
     need(!(await exists(bundle)),'APPLICATION_PROJECT_PATH_COLLISION');
+    await mkdir(bundle,{mode:0o700});
     await rename(encryptedOutput,bundle);await syncDirectory(profile.exportsDirectory);
     const result=summary(record,recordSha256,manifestSha256,bundle);
     await publishBytes(join(profile.exportsDirectory,id+'.receipt.json'),json(result),{allowExact:true});
@@ -232,7 +249,7 @@ async function snapshot({application,context,selected,environment,signal,id}) {
 export async function attachApplicationProject({application,configFile,configurationSha256,config,sourceRoot,
   authorize,environment=process.env}={}) {
   need(typeof authorize==='function','APPLICATION_HOST_AUTHORIZATION_REQUIRED');
-  let closed=false,frozen=false,closing,exporting;const active=new Set();
+  let closed=false,phase='open',closing,exporting;const active=new Set();
   const selected=()=>inspectApplicationProject({configFile,config,sourceRoot,environment});
   async function permitted(context,action){
     need(object(context)&&typeof context.subject==='string'&&context.subject.length>0,
@@ -240,18 +257,20 @@ export async function attachApplicationProject({application,configFile,configura
     need(await authorize({context:structuredClone(context),action:'project-'+action,
       applicationId:config.applicationId,request:null})===true,'APPLICATION_AUTHORIZATION_DENIED');
   }
-  async function tracked(operation){
-    need(!closed,'APPLICATION_PROJECT_CLOSED');need(!frozen,'APPLICATION_PROJECT_CAPTURE_RUNNING');
+  async function tracked(operation,action){
+    need(!closed,'APPLICATION_PROJECT_CLOSED');
+    need(phase==='open'||phase==='draining'&&['cancel','status','list'].includes(action),'APPLICATION_PROJECT_CAPTURE_RUNNING');
     const running=Promise.resolve().then(operation);active.add(running);
     try{return await running;}finally{active.delete(running);}
   }
   return {...application,
     projectCapabilities:{mode:'LIVE',actions:['inspect','snapshot','archives']},
-    requests(context){return tracked(()=>application.requests(context));},
-    call(context,action,intentId,options){return tracked(()=>application.call(context,action,intentId,options));},
+    requests(context){return tracked(()=>application.requests(context),'list');},
+    call(context,action,intentId,options){return tracked(()=>application.call(context,action,intentId,options),action);},
     async project(context,action,options={}){
       need(['inspect','snapshot','archives'].includes(action),'APPLICATION_PROJECT_ACTION_INVALID');
-      need(object(options)&&Object.keys(options).every(key=>['operationId','signal'].includes(key)),
+      need(object(options)&&Object.keys(options).every(key=>(action==='inspect'?['mode','signal']:
+        action==='snapshot'?['operationId','signal']:['signal']).includes(key)),
         'APPLICATION_OPTIONS_INVALID');
       need(!closed,'APPLICATION_PROJECT_CLOSED');await permitted(context,action);
       const current=await selected();
@@ -266,12 +285,20 @@ export async function attachApplicationProject({application,configFile,configura
         }
         return {schema:PROJECT,archives:rows};
       }
-      need(!frozen,'APPLICATION_PROJECT_CAPTURE_RUNNING');frozen=true;
+      need(phase==='open','APPLICATION_PROJECT_CAPTURE_RUNNING');phase='draining';
       exporting=(async()=>{
-        await Promise.allSettled([...active]);checkSignal(options.signal);await permitted(context,action);
+        while(active.size){
+          checkSignal(options.signal);let abort;
+          const interrupted=new Promise((_,reject)=>{abort=()=>reject(Object.assign(new Error('APPLICATION_PROJECT_INTERRUPTED'),
+            {code:'APPLICATION_PROJECT_INTERRUPTED'}));options.signal?.addEventListener('abort',abort,{once:true});
+            if(options.signal?.aborted)abort();});
+          try{await Promise.race([Promise.allSettled([...active]),interrupted]);}
+          finally{options.signal?.removeEventListener('abort',abort);}
+        }
+        phase='capturing';checkSignal(options.signal);await permitted(context,action);
         return snapshot({application,context,selected:current,environment,signal:options.signal,id:operationId(options.operationId??randomUUID())});
       })();
-      try{return await exporting;}finally{exporting=null;frozen=false;}
+      try{return await exporting;}finally{exporting=null;phase='open';}
     },
     close(){
       if(closing)return closing;closed=true;
