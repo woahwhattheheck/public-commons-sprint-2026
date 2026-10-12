@@ -3,7 +3,7 @@ const pretty = value => JSON.stringify(value, null, 2);
 const split = text => text.split(',').map(value => value.trim()).filter(Boolean);
 const el = (tag, text, className) => { const n = document.createElement(tag); if (text !== undefined) n.textContent = text; if (className) n.className = className; return n; };
 const state = { saved: null, source: { schema: 'stellar-forge.questdb-source.v1', endpointEnv: 'QUESTDB_ENDPOINT', queries: {} },
-  merchant: null, payments: [], dirty: false, reportDirty: false, selectedReport: '', reportWindow: { start: 'from', end: 'to' }, rawReport: false, catalogue: null, captures: null, offset: 0, product: null, offer: null };
+  merchant: null, payments: [], dirty: false, reportDirty: false, selectedReport: '', reportWindow: { start: 'from', end: 'to' }, windowParameters: {}, rawReport: false, catalogue: null, captures: null, offset: 0, product: null, offer: null };
 const token = location.hash.slice(1);
 function notice(text, error = false) { $('notice').textContent = text; $('notice').classList.toggle('error', error); }
 async function api(path, body) {
@@ -157,12 +157,13 @@ function reportSpec() {
   const kind = $('report-kind').value, timestampType = $('timestamp-type').value;
   if (!$('run-from').value.trim() || !$('run-to').value.trim()) throw new Error('Enter the From and To timestamps in Report parameter values before saving this report.');
   const report = { kind, table: $('report-table').value.trim(), timestamp: $('report-timestamp').value.trim(), timestampType,
-    window: { ...state.reportWindow }, probe: runInput(), parameters: { ...json($('report-parameters').value), [state.reportWindow.start]: { type: timestampType }, [state.reportWindow.end]: { type: timestampType } },
+    window: { ...state.reportWindow }, probe: runInput(), parameters: { ...json($('report-parameters').value), [state.reportWindow.start]: { ...state.windowParameters[state.reportWindow.start], type: timestampType }, [state.reportWindow.end]: { ...state.windowParameters[state.reportWindow.end], type: timestampType } },
     columns: split($('report-columns').value).map(value => {
       const parts = value.split('='), path = (parts[1] ?? parts[0]).trim(), side = path.startsWith('right.') ? 'right' : 'left';
       const column = path.replace(/^(left|right)\./, ''); return { name: (parts[1] ? parts[0] : column).trim(), column, side };
     }), filters: json($('report-filters').value, 'array'),
     maxRows: Number($('report-max-rows').value), maxBytes: Number($('report-max-bytes').value), timeoutMs: Number($('report-timeout').value) };
+  if (kind === 'sample') report.timestampAlias = $('sample-timestamp-alias').value.trim();
   if (kind === 'sample') report.sample = { interval: $('sample-interval').value.trim(), keys: split($('sample-keys').value),
     fill: $('sample-fill').value, alignment: $('sample-alignment').value,
     aggregates: $('sample-aggregates').value.split(/\r?\n/).map(value => value.trim()).filter(Boolean).map(value => {
@@ -171,7 +172,8 @@ function reportSpec() {
       return { name: match[1], fn: match[2], ...(match[3].trim() ? { column: match[3].trim() } : {}) };
     }) };
   if (kind === 'asof') report.asof = { table: $('asof-table').value.trim(), timestamp: $('asof-timestamp').value.trim(),
-    tolerance: $('asof-tolerance').value.trim(), filters: json($('asof-filters').value, 'array'), keys: split($('asof-keys').value).map(value => {
+    ...($('asof-timestamp-type').value ? { timestampType: $('asof-timestamp-type').value } : {}),
+    ...($('asof-tolerance').value.trim() ? { tolerance: $('asof-tolerance').value.trim() } : {}), filters: json($('asof-filters').value, 'array'), keys: split($('asof-keys').value).map(value => {
       const [left,right] = value.split('=').map(item => item.trim()); return { left, right: right ?? left };
     }) };
   return report;
@@ -180,6 +182,7 @@ function loadSelectedReport(fresh = false) {
   const name = fresh ? '' : $('report-select').value, declaration = state.source.queries?.[name], report = declaration?.report;
   state.selectedReport = name; state.rawReport = Boolean(declaration && !report);
   state.reportWindow = report?.window ? { ...report.window } : { start: 'from', end: 'to' };
+  state.windowParameters = Object.fromEntries(Object.values(state.reportWindow).filter(key => declaration?.parameters?.[key]).map(key => [key, structuredClone(declaration.parameters[key])]));
   if (fresh) $('report-select').value = '';
   $('report-name').value = name || 'trades_window'; $('report-kind').value = state.rawReport ? 'raw' : report?.kind ?? 'window';
   $('report-table').value = report?.table ?? 'trades'; $('report-timestamp').value = report?.timestamp ?? 'timestamp';
@@ -189,12 +192,14 @@ function loadSelectedReport(fresh = false) {
   const parameters = structuredClone(report?.parameters ?? declaration?.parameters ?? {});
   if (!state.rawReport) { delete parameters[state.reportWindow.start]; delete parameters[state.reportWindow.end]; }
   $('report-parameters').value = pretty(parameters); $('report-filters').value = pretty(report?.filters ?? []);
+  $('sample-timestamp-alias').value = report?.timestampAlias ?? 'timestamp';
   $('sample-interval').value = report?.sample?.interval ?? '1m'; $('sample-keys').value = report?.sample?.keys?.join(', ') ?? 'symbol';
   $('sample-fill').value = report?.sample?.fill ?? 'none'; $('sample-alignment').value = report?.sample?.alignment ?? 'calendar';
   $('sample-aggregates').value = report?.sample?.aggregates?.map(item => item.name + '=' + item.fn + '(' + (item.column ?? '') + ')').join('\n') ?? 'trade_count=count()\nmean_price=avg(price)';
   $('asof-table').value = report?.asof?.table ?? 'trades'; $('asof-timestamp').value = report?.asof?.timestamp ?? 'timestamp';
+  $('asof-timestamp-type').value = report?.asof?.timestampType ?? '';
   $('asof-keys').value = report?.asof?.keys?.map(item => item.left + '=' + item.right).join(', ') ?? 'symbol=symbol';
-  $('asof-tolerance').value = report?.asof?.tolerance ?? '1s'; $('asof-filters').value = pretty(report?.asof?.filters ?? []);
+  $('asof-tolerance').value = report?.asof ? report.asof.tolerance ?? '' : '1s'; $('asof-filters').value = pretty(report?.asof?.filters ?? []);
   $('report-max-rows').value = report?.maxRows ?? declaration?.maxRows ?? 100;
   $('report-max-bytes').value = report?.maxBytes ?? declaration?.maxBytes ?? 1048576;
   $('report-timeout').value = report?.timeoutMs ?? declaration?.timeoutMs ?? 30000;

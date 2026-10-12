@@ -91,12 +91,12 @@ Choose a time window, sample/aggregate, or keyed ASOF report.
 
 - A window selects its inclusive start and exclusive end and keeps the declared
   timestamp precision. Existing custom start/end parameter names survive the
-  form's save/reopen cycle.
-- Sampling uses the native interval, keys, aggregates, fill and alignment.
+  form's save/reopen cycle, together with their original parameter constraints.
+- Sampling uses the native interval, timestamp output name, keys, aggregates, fill and alignment.
   Each aggregate is entered as alias=function(column), one per line; count()
   accepts an empty argument.
 - ASOF reports retain explicit left and right timestamp columns, join keys,
-  right-side filters and native tolerance. Use alias=right.column for projected
+  right-side filters, right-side timestamp precision and optional native tolerance. Use alias=right.column for projected
   right-side fields. Top-level filters select the left side.
 
 Additional parameters and filters use the declaration shapes in the source
