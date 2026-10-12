@@ -159,3 +159,13 @@ The command exits successfully only when the original receiving reports
 and partial outcomes retain their own actual status. B710's managed Applications
 build/READY operation and the Prescient and customer-delivery receivers keep
 their existing separate ownership.
+
+## Retain the original import result and continue the saved receiving workspace
+
+The next original native lifetime constructed the host and reached `input-import`. Its CLI returned code 2, while its receiving wrapper retained only the exit-code comparison. The receiving driver now keeps the complete native CLI result in `progress.error.nativeResult`, including the original operation identity and native outcome.
+
+Every subsequent result archive includes the two original local imagery/processing workspace trees together with the progress, reports, full native record and selected predecessor archive. A continuation restores these exact bytes into its selected receiving directory before opening the original hosts. The CLI connection and one-process bootstrap URL are created afresh. Existing receiving IDs and native import/export receipts remain in the retained workspace; provider data are unchanged.
+
+The same originating process saves the complete result through the installed current Library upload helper. It supplies `state_parent` explicitly on the selected private filesystem and records the returned identity. A save with an uncertain result is inspected before any additional write. This original command expects the maintained helper at `/workspace/scratch/c79fd06aedf2/cocart-commissioning/library-final-20261012`.
+
+Select the most recent complete retained result with both `--completed-result-archive` and `--completed-result-sha256`. The manifest must name this original business operation, the frozen source and a known receiving driver. Every member is verified before restoration; the original native request/result and exact registered record path are preserved. Native terminal-result placement remains responsible for the ended-process and released-resource checks.
