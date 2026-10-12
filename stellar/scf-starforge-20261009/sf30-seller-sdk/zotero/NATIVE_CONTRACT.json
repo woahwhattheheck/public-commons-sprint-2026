@@ -96,7 +96,7 @@
         "expectedDossierRevision": 2
       }
     },
-    "lifecycle": "Every public operation is admitted and drained. Close prevents later starts, cancels active reads, and preserves original source pages. Old control UUIDs cannot affect a successor capture attempt."
+    "lifecycle": "Every public operation is admitted and drained. Close prevents later starts, cancels active reads, and preserves original source pages. Old control UUIDs cannot affect a successor capture attempt. Failed close retains the original database writer or child controller for a retry of the same close call. Completed children are retired individually, and the inactive connection receipt is written only after the full owned workspace closes."
   },
   "files": {
     "download": "await workspace.download({kind,id,revision?,role?,name?})",
