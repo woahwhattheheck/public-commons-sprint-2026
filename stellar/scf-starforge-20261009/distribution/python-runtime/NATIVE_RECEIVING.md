@@ -691,8 +691,11 @@ waits for that group's exit, and preserves the observed child outcome. It never
 releases or edits another operation's admission.
 
 The compact `producer-result.json` is written to shared control before archive
-creation or transfer. Its stdout and stderr tails identify their full original
-byte counts and hashes and explicitly flag a shortened tail. The full logs,
+creation or transfer. It includes the wrapper's stdout and stderr and, when an
+engine phase fails, the original attempt's stdout, stderr, progress and selected
+stage log. Each retained tail identifies the full original byte count and hash
+and explicitly flags a shortened tail. The engine error is therefore readable
+from shared control before the complete archive transfer. The full logs,
 phase results and original stderr are retained in
 `public-cohort-diagnostics.zip`. On success, the unchanged portable cohort and
 that diagnostic ZIP are saved as separate files through the existing connected
