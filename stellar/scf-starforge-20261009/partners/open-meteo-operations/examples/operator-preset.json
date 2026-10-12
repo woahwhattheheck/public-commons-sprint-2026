@@ -1,0 +1,10 @@
+{
+  "schema": "stellar-forge.buyer-runbook-operator.v1",
+  "actor": "weather-operator",
+  "service": "weather-operations",
+  "payer": "REPLACE_WITH_ORIGINAL_OPERATOR_PUBLIC_PAYER",
+  "python": "/usr/bin/python3",
+  "maxTotalAtomic": "30000",
+  "maxDailyAtomic": "30000",
+  "secretEnv": "STELLAR_SECRET"
+}

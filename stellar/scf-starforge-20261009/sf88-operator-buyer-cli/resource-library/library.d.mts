@@ -1,28 +1,32 @@
 import type { FileHandle } from 'node:fs/promises';
 export interface LibraryConfig {
-  schema: 'stellar-forge.sf88.resource-library.v1'; kind: 'inbox' | 'snapshot' | 'collection';
+  schema: 'stellar-forge.sf88.resource-library.v1'; kind: 'inbox' | 'snapshot' | 'collection' | 'paid-jobs';
   source: string; roots: string[]; maxFileBytes: number; indexBytes: number;
 }
 export interface Annotation {
   id: string; revision: number; note: string; tags: string[]; starred: boolean; updatedAt: string | null;
   inheritedRevision?: number;
-  source?: {intentId: string; sha256: string | null; configSha256: string; path: string | null;
-    source: {kind: 'inbox' | 'snapshot' | 'collection'; path: string}};
+  source?: {intentId: string | null; sha256: string | null; configSha256: string | null; path: string | null;
+    source: {kind: 'inbox' | 'snapshot' | 'collection' | 'paid-jobs'; path: string}};
 }
 export interface Verification {
   verifiedAt: string; bytes: number; sha256: string; indexedBytes: number;
   coverage: 'COMPLETE' | 'PREFIX' | 'BINARY';
 }
 export interface Resource {
-  id: string; intentId: string; inboxId: string; configSha256: string; createdAt: string | null;
+  id: string; intentId: string | null; inboxId: string | null; configSha256: string | null; createdAt: string | null;
   name: string; path: string | null; bytes: number | null; sha256: string | null;
   contentType: string | null; deliveryStatus: string | null; buyerStatus: string | null;
   httpStatus: number | null; queueState: string | null; method: string | null; url: string;
   paymentTerms: {scheme: string | null; network: string | null; asset: string | null;
     payTo: string | null; maxAtomic: string | null};
-  source: {kind: 'inbox' | 'snapshot' | 'collection'; path: string};
+  source: {kind: 'inbox' | 'snapshot' | 'collection' | 'paid-jobs'; path: string};
   status: 'VERIFIED' | 'UNAVAILABLE' | 'INCOMPLETE'; error?: string; verification?: Verification;
   annotation: Annotation; snippet?: string; inheritedAnnotation?: Annotation;
+  job?: {workspaceEntryId: string; jobId: string; functionId: string; label: string;
+    inputSha256: string; acceptanceSha256: string; completedRevision: number;
+    nativeSettlement: {id: string; at: string}; purchaseKind: string;
+    statusUrl: string; resultUrl: string; deliveredAt: string};
   origin?: {manifestSha256: string; collectionId: string; collectionRevision: number;
     resource: Omit<Resource,'annotation'>; annotation: Annotation};
 }
@@ -52,7 +56,7 @@ export interface Library {
   cancelScan(): ReturnType<Library['status']>;
   close(): Promise<void>;
 }
-export function openLibrary(options: {state: string; kind?: 'inbox' | 'snapshot' | 'collection'; source?: string;
+export function openLibrary(options: {state: string; kind?: 'inbox' | 'snapshot' | 'collection' | 'paid-jobs'; source?: string;
   roots?: string[]; maxFileBytes?: number; indexBytes?: number}): Promise<Library>;
 
 export interface ResourceCollection {

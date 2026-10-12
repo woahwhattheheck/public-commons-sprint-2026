@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Buyer resource library · Stellar Forge</title><link rel="stylesheet" href="/style.css"><script type="module" src="/app.js"></script></head>
 <body>
-<header><div><p class="eyebrow">STELLAR FORGE / BUYER OPERATIONS</p><h1>Resource library</h1><p>Search delivered files. Review their source. Retain your findings.</p></div><div class="actions"><a href="/collections">Research collections</a><button id="scan">Refresh source</button><button id="cancel" hidden>Cancel refresh</button><button id="export">Export review</button></div></header>
+<header><div><p class="eyebrow">STELLAR FORGE / BUYER OPERATIONS</p><h1>Resource library</h1><p>Search delivered files. Review their source. Retain your findings.</p></div><div class="actions"><a id="collections-link" href="/collections" hidden>Research collections</a><button id="scan">Refresh source</button><button id="cancel" hidden>Cancel refresh</button><button id="export">Export review</button></div></header>
 <div id="message" role="status" aria-live="polite">Opening private workspace…</div>
 <section class="summary" aria-label="Library status"><div><span>ORIGINAL SOURCE</span><strong id="source">—</strong></div><div><span>LAST COMPLETED REFRESH</span><strong id="refreshed">—</strong></div><div><span>DELIVERIES</span><strong id="counts">—</strong></div></section>
 <main>

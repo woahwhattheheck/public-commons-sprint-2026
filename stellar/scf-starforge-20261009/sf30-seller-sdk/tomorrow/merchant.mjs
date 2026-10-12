@@ -5,7 +5,7 @@ import { inspectResponseAsset } from '../response-asset.mjs';
 import { createAssetBundle, exportAssetCatalog, verifyAssetBundle } from '../asset-cli.mjs';
 import { readSellerConfig, startSellerService } from '../serve.mjs';
 import { readBytes, readJson, writeJson, jsonBytes, exists } from '../../sf88-operator-buyer-cli/node/store.mjs';
-import { compileWeatherPlan, normalizeWork, requestsFor, object, need, id, ATTRIBUTION } from './config.mjs';
+import { compileWeatherPlan, normalizeWork, requestsFor, matchesWeatherRequests, object, need, id, ATTRIBUTION } from './config.mjs';
 import { digest } from './source.mjs';
 import { HANDOVER_SCHEMA } from './workspace.mjs';
 
@@ -25,7 +25,7 @@ export function readWeatherProduct(input) {
   need(Array.isArray(editions) && editions.length === 1 && Array.isArray(p.items) &&
     /^[a-f0-9]{64}$/.test(p.catalogSha256), 'WEATHER_PRODUCT_RESOURCES_INVALID');
   const edition = editions[0]; id(edition.id); normalizeWork(edition.work, plan);
-  need(edition.state === 'COMPLETE' && same(requestsFor(edition.work), edition.requests) &&
+  need(edition.state === 'COMPLETE' && matchesWeatherRequests(edition.work, edition.requests) &&
     edition.usage.mode === 'licensed-service' && edition.usage.exportRaw &&
     Number.isFinite(Date.parse(edition.rawExpiresAt)), 'WEATHER_PRODUCT_EDITION_INVALID');
   const kinds = new Set();

@@ -50,7 +50,9 @@ to it. Previously registered runs remain available after later restarts. One
 The same workspace can receive the complete private buyer request exported by
 the original merchant API workspace. The file carries the exact operation ticket,
 body bytes, ordinary request headers, stable intent, public URL and discovery
-document. It contains no receiver operator, signer or filesystem settings.
+document. A ticket is included when the original operation uses one. It contains
+no receiver operator, signer or filesystem settings. A received customer SDK can
+also prepare the exact request through the [customer SDK workflow](CLIENT_SDK.md).
 
 Declare this machine's operator once in an existing private `0600` JSON file:
 
@@ -115,9 +117,10 @@ live terms and terminal approval when the acquisition executes. Each received
 stable intent is bound to one local prepared request. The workspace publishes
 the ordinary source config only after native setup is complete, and records the
 ready reference last. Repeating preparation after an interrupted final publication
-adopts that same completed operator and ledger. Incomplete native attempts retain
-their owned input paths; a retry uses a new setup generation. It never rewrites an
-existing operator, request body, ticket or spending ledger.
+adopts that same completed operator and ledger. An incomplete native attempt whose
+saved review still matches resumes its original setup generation, including the
+original private inputs, keys and spending ledger. Changed retained inputs report
+their native mismatch before setup continues. A new review has its own generation.
 
 Received source configs reference the private intake and native operator files
 under this workspace. Keep that workspace and the original source directory at
@@ -304,9 +307,9 @@ The browser entrypoint is `startRunbookWorkspace({directory,configsDirectory,
 operatorSettings,runs,port})` from `workspace.mjs`. It returns `{url,server,model,close}`. The
 existing `buyer-runbook` package alias continues to target `cli.mjs`; the new
 `workspace` subcommand is available through that alias. Include the complete
-buyer-runbook component so `handoff-intake.mjs`, `workspace-ui/index.html`,
-`app.mjs`, `intake.mjs` and `style.css`
-travel with the model and server. Its original sibling dependencies remain the
+buyer-runbook component so `handoff-intake.mjs`, `client-intake.mjs`, the
+`workspace-ui` modules and [CLIENT_SDK.md](CLIENT_SDK.md) travel with the model
+and server. Its original sibling dependencies remain the
 same native buyer and runbook components. There is no new package dependency.
 
 The loopback server checks Host, Origin and browser fetch context. Mutations use

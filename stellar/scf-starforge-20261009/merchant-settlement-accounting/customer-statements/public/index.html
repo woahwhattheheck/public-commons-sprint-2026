@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Customer statements · Merchant operations</title>
+<link rel="stylesheet" href="/customer-statements/style.css">
+<script type="module" src="/customer-statements/app.mjs"></script>
+</head>
+<body>
+<header class="topbar">
+  <div><p class="eyebrow">Merchant operations</p><h1>Customer statements</h1></div>
+  <div class="operator"><label for="operator">Operator</label><input id="operator" maxlength="1000" autocomplete="name" placeholder="Name or team reference"><button id="refresh" type="button">Refresh workspace</button></div>
+</header>
+<main>
+  <section class="intro"><p>Prepare purchase and service usage statements from original merchant records. Assign customers, choose a completed accounting run, review the statement, and retain the files for delivery.</p><p id="revision" class="muted">Opening original workspace…</p></section>
+  <div id="status" class="status" role="status" aria-live="polite"></div>
+  <div id="metrics" class="metrics" aria-label="Workspace totals"></div>
+  <nav class="section-nav" aria-label="Statement workflow"><a href="#customers">Customers and orders</a><a href="#usage">Service usage</a><a href="#prepare">Prepare statement</a><a href="#register">Document register</a></nav>
+  <div class="workspace-grid">
+    <section id="customers" class="panel">
+      <div class="panel-heading"><div><p class="eyebrow">01 · Customer records</p><h2>Customers and original orders</h2></div><button id="new-customer" type="button">New customer</button></div>
+      <label for="customer-picker">Customer account</label><select id="customer-picker"><option value="">New customer</option></select>
+      <form id="customer-form">
+        <div class="form-grid"><label>Customer reference<input name="reference" maxlength="80" required placeholder="acme-ops"></label><label>Customer name<input name="name" maxlength="200" required autocomplete="organization"></label></div>
+        <label>Email<input name="email" type="email" maxlength="320" autocomplete="email"></label>
+        <label>Address<textarea name="address" rows="2" maxlength="2000" autocomplete="street-address"></textarea></label>
+        <label>Internal account note<textarea name="note" rows="2" maxlength="2000"></textarea></label>
+        <div class="form-footer"><small>Names, email and address appear on customer documents.</small><button type="submit">Save customer</button></div>
+      </form>
+      <div class="subsection">
+        <h3>Assign purchased orders</h3><p class="muted">Use each original checkout order reference. Add a tab followed by a customer-facing description when useful.</p>
+        <form id="assignment-form">
+          <label>Original orders<textarea name="orders" rows="5" required spellcheck="false" placeholder="order-reference&#9;API service plan"></textarea></label>
+          <label class="check"><input name="reassign" type="checkbox">Correct orders currently assigned to another customer</label>
+          <label>Assignment or correction reason<input name="reason" maxlength="2000"></label>
+          <button type="submit" id="assign-button">Assign to selected customer</button>
+        </form>
+      </div>
+      <div class="subsection"><div class="panel-heading"><h3>Assigned orders</h3><span id="binding-count" class="muted"></span></div>
+        <div class="table-wrap"><table><thead><tr><th>Original order</th><th>Description</th><th>Version</th></tr></thead><tbody id="binding-rows"></tbody></table></div>
+        <div class="pager"><button id="bindings-prev" type="button">Previous</button><span id="bindings-page"></span><button id="bindings-next" type="button">Next</button></div>
+      </div>
+    </section>
+    <div class="right-column">
+      <section id="usage" class="panel">
+        <p class="eyebrow">02 · Original service records</p><h2>Import service usage</h2>
+        <p>Import the service usage export from the merchant receiver. A capture preserves purchased, used, reserved and remaining units at its recorded time.</p>
+        <form id="usage-form">
+          <label>Capture name<input name="name" maxlength="200" placeholder="Merchant service usage"></label>
+          <label>Original usage JSON<input name="file" type="file" accept=".json,application/json" required></label>
+          <button type="submit">Retain usage capture</button>
+        </form>
+        <div id="usage-summary" class="inset"></div>
+      </section>
+      <section id="prepare" class="panel">
+        <p class="eyebrow">03 · Statement preparation</p><h2>Choose original records</h2>
+        <form id="preview-form">
+          <label>Customer<select name="customerId" id="statement-customer" required></select></label>
+          <label>Completed accounting run<select name="runId" id="statement-run" required></select></label>
+          <label>Service usage capture<select name="usageId" id="statement-usage"><option value="">Purchases only</option></select></label>
+          <div class="form-grid"><label>Recorded purchases from (UTC)<input name="from" type="datetime-local" step="1"></label><label>Until, exclusive (UTC)<input name="until" type="datetime-local" step="1"></label></div>
+          <small>Leave both dates empty to use all purchases in the selected report. Service units always use the capture’s cumulative totals.</small>
+          <label>Correction of retained statement<select name="replacesId" id="statement-replaces"><option value="">New statement</option></select></label>
+          <button type="submit">Prepare statement</button>
+        </form>
+      </section>
+    </div>
+  </div>
+  <section id="preview-panel" class="panel" hidden>
+    <div class="panel-heading"><div><p class="eyebrow">Prepared statement</p><h2 id="preview-title"></h2></div><button id="retain" type="button">Retain statement</button></div>
+    <div id="preview-content"></div>
+    <p id="retention-note" class="muted">Review the original purchases, usage and adjustments before retaining this document.</p>
+  </section>
+  <section id="register" class="panel">
+    <div class="panel-heading"><div><p class="eyebrow">04 · Document register</p><h2>Retained customer statements</h2></div><div class="filter-row"><label>Customer<select id="register-customer"><option value="">All customers</option></select></label><label>Status<select id="register-status"><option value="">All statuses</option><option value="RETAINED">Retained</option><option value="SUPERSEDED">Superseded</option><option value="WITHDRAWN">Withdrawn</option></select></label></div></div>
+    <div class="table-wrap"><table><thead><tr><th>Statement</th><th>Customer</th><th>Created</th><th>Orders</th><th>Status</th><th>Open</th></tr></thead><tbody id="register-rows"></tbody></table></div>
+    <div class="pager"><button id="register-prev" type="button">Previous</button><span id="register-page"></span><button id="register-next" type="button">Next</button></div>
+  </section>
+  <section id="document-panel" class="panel" hidden>
+    <div class="panel-heading"><div><p class="eyebrow">Retained original document</p><h2 id="document-title"></h2></div><button id="correct-document" type="button">Prepare correction</button></div>
+    <div id="document-status"></div><div id="document-downloads" class="download-row"></div><div id="document-content"></div>
+    <details id="document-history"><summary>Document history</summary><ol></ol></details>
+    <form id="withdraw-form" class="withdrawal"><label>Withdrawal reason<input name="reason" maxlength="2000" required></label><button type="submit">Withdraw document from current register</button></form>
+  </section>
+</main>
+<footer class="page-footer">Merchant customer records · Original accounting workspace</footer>
+</body>
+</html>
