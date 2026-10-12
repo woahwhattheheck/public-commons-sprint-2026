@@ -3,6 +3,7 @@
 from __future__ import annotations
 import argparse
 import json
+import signal
 from pathlib import Path
 import sys
 
@@ -72,12 +73,21 @@ def main(argv=None):
                 raise InputError("Port must be from 0 to 65535")
             server = OperatorServer(ws, args.port)
             print(json.dumps({"console": server.url, "workspace": str(ws.root)}), flush=True)
+            def terminate(_signal, _frame):
+                raise KeyboardInterrupt
+            previous = signal.signal(signal.SIGTERM, terminate)
             try:
                 server.serve_forever(poll_interval=0.2)
             except KeyboardInterrupt:
                 pass
             finally:
-                server.server_close()
+                # A second stop must not interrupt draining original HTTP/native work.
+                signal.signal(signal.SIGTERM, signal.SIG_IGN)
+                signal.signal(signal.SIGINT, signal.SIG_IGN)
+                try:
+                    server.server_close()
+                finally:
+                    signal.signal(signal.SIGTERM, previous)
             return
         print(json.dumps(result, indent=2, ensure_ascii=False, allow_nan=False))
 

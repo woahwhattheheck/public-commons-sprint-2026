@@ -153,6 +153,53 @@ It reads this workspace's saved state. Use **Refresh inventory** in the browser
 for a current provider inventory and **Refresh progress** for the original
 selected operation's latest saved phase.
 
+## Open through Applications
+
+The installed runtime workspace offers **Merchant recovery** as an application.
+Choose a runtime containing this workspace and its `s3` feature. Select the
+original private host configuration and the same private recovery workspace
+directory. For a new workspace directory, its private parent must already exist.
+Use the optional private environment JSON for the original AWS, proxy and
+passphrase environment values.
+
+The Applications review retains the exact host configuration digest, its
+referenced S3 configurations, bundle roots, original journal directory, and
+download and restore parents. Saving and starting use the maintained
+Applications path review and resource lock. Reopen the saved application with
+those original paths to keep its recovery work available.
+
+After the server opens, its startup output includes one JSON line with status
+`MERCHANT_RECOVERY_WORKSPACE_READY`, the original `configFile`, `directory`
+and private `url`. The launcher checks both selected paths before presenting
+that URL. The existing human-readable URL remains available to direct CLI
+operators.
+
+Applications **Stop** sends the original graceful shutdown to this server.
+The server stops accepting new changes, requests cancellation of its owned
+transfer, reads back the original result, and releases its workspace lease.
+An original local verification or restore may finish during this shutdown.
+Open the same saved application again, inspect that retained result, and use
+**Continue operation** for unfinished transfers.
+
+## Embed the maintained workspace
+
+The installed package exposes the original model and loopback server through
+`@tokenjunkielabs/starforge-merchant/merchant/remote-recovery/workspace` and
+`@tokenjunkielabs/starforge-merchant/merchant/remote-recovery/workspace/server`.
+
+`readRecoveryConfiguration(configFile)` reads and validates the exact private
+host configuration and returns `{configFile, sha256, host}`. It opens neither
+a provider connection nor a workspace lease. Launchers can use the returned
+path selection to retain original file and directory bindings.
+
+`openRecoveryWorkspace({configFile, directory, readOnly})` owns the original
+workspace controller. Call `close({cancelActive: true})` when shutting down a
+writable instance. The HTTP entry
+`serveRecoveryWorkspace({configFile, directory, port})` returns its original
+`url`, `close` method and `closed` promise. Its adjacent
+`browser-assets.json` supplies the same three route and MIME declarations to
+the maintained HTTP handler and distribution collector.
+
 ## Publish an existing merchant backup
 
 Begin with a completed original snapshot. For a running SF99 merchant, use its

@@ -1,0 +1,48 @@
+{
+  "title": "Toronto library branches",
+  "projection": {
+    "record_id": {
+      "field": "_id",
+      "type": "integer",
+      "nullable": false,
+      "encoding": "native"
+    },
+    "branch_code": {
+      "field": "BranchCode",
+      "type": "string",
+      "nullable": false,
+      "encoding": "native"
+    },
+    "branch": {
+      "field": "BranchName",
+      "type": "string",
+      "nullable": false,
+      "encoding": "native"
+    },
+    "physical_branch": {
+      "field": "PhysicalBranch",
+      "type": "integer",
+      "nullable": false,
+      "encoding": "native"
+    },
+    "service_tier": {
+      "field": "Service Tier",
+      "type": "string",
+      "nullable": false,
+      "encoding": "native"
+    },
+    "address": {
+      "field": "Address",
+      "type": "string",
+      "nullable": true,
+      "encoding": "native"
+    },
+    "ward": {
+      "field": "WardName",
+      "type": "string",
+      "nullable": true,
+      "encoding": "native"
+    }
+  }
+}
+
