@@ -18,7 +18,7 @@ import zipfile
 
 SCF = Path("stellar/scf-starforge-20261009")
 PREFIX = SCF / "sf30-seller-sdk/odata/live/examples"
-NODE_HELPER_BLOB = "793fc1add5517728b16e6376e0cc827c5638d1e9"
+NODE_HELPER_BLOB = "b6eb8b8697e6082a67ab94ce88573259ef690a50"
 CRITICAL = {
     "sf30-seller-sdk/odata/live/collection.mjs": "cff025465f887fdfffe6d4f501a42ea767a6a712",
     "sf30-seller-sdk/odata/live/collection-store.mjs": "59d9fa4904bc54bdfa692656047029d2a1e5a9a1",
@@ -27,6 +27,7 @@ CRITICAL = {
     "sf30-seller-sdk/odata/source.mjs": "9fbe8ad327deaa14b1912ff3fe2cf97336202efc",
     "sf30-seller-sdk/odata/schema.mjs": "e39cf9c829c9af7e7edff8775ee9a6d05c9dec3a",
     "sf30-seller-sdk/odata/state.mjs": "b9907fde2d99357495f25ed0fcb1e70d261295ab",
+    "sf30-seller-sdk/odata/live/startup.mjs": "253d7e79421fe32fbabeb15f75e5989f7a193bf0",
     "sf30-seller-sdk/odata/workspace.mjs": "8fb026cbe99e38f1473dd8555e147c557c1dd27a",
     "sf30-seller-sdk/odata/live-operations.mjs": "376238ba32a9a3d5764550b9ed216b9813197a8b",
     "sf30-seller-sdk/odata/server.mjs": "a8d6be60e79b3c1d817bc100e623e86db19a6bbf",
@@ -45,6 +46,7 @@ CRITICAL = {
     "sf88-operator-buyer-cli/python/stellar_forge_buyer/analysis_exports.py": "fff696d7d9ad3a97bf8d7c20de260bc47c786a57",
     "sf88-operator-buyer-cli/python/stellar_forge_buyer/storage.py": "3b3426436f036718a560b9b70049fd065cc8a0a1"
 }
+EXPECTED_WORKSPACE = {"bytes": 123591, "sha256": "7b1b2b38bc9b574c53200f9f2708c64e980b73f92fb88625aae652cada653ea9"}
 EXPECTED_RESPONSES = [
     (47571, "10065438cad897db2daf2a8d35ba5b89ddaf2ade7d7b17ae28a8732bd5034309"),
     (47561, "91022bac4f3f2b56cd89c4e18f6463a4394acda96aa31109f255f3b80ef1679b"),
@@ -138,11 +140,15 @@ def options():
     parser.add_argument("--node", default="node")
     parser.add_argument("--source-ref", required=True, help="Immutable public product commit selected by the operator")
     parser.add_argument("--resume", action="store_true", help="Reconcile and continue this exact existing operation")
+    parser.add_argument("--resume-source-from", help="Exact prior selection SHA for the original workspace-identity preflight correction")
     return parser.parse_args()
 
 
 def main():
     args = options()
+    if args.resume_source_from is not None:
+        need(args.resume and re.fullmatch(r"[a-f0-9]{64}", args.resume_source_from),
+             "Use --resume and the exact prior selected operation SHA.")
     checkout, packet = Path(args.checkout).resolve(), Path(args.packet).resolve()
     need(re.fullmatch(r"[a-f0-9]{40}", args.source_ref), "Select the immutable source commit.")
     sys.path.insert(0, str(checkout / SCF / "sf88-operator-buyer-cli/python"))
@@ -223,6 +229,8 @@ def main():
             need(observed == expected, "The selected original source differs: " + path)
             source_files.append({"path": str(SCF / path), "git_blob": observed, "bytes": len(raw_value), "sha256": sha(raw_value)})
         packet_raw = (packet / "packet.json").read_bytes()
+        workspace_file = identity(packet / "workspace/workspace.json")
+        need(workspace_file == EXPECTED_WORKSPACE, "The retained original workspace file changed.")
         response_files = []
         original = []
         for index, (size, checksum) in enumerate(EXPECTED_RESPONSES, 1):
@@ -231,14 +239,46 @@ def main():
             original.extend(parse(path.read_bytes())["items"])
             response_files.append({"path": str(path), "bytes": size, "sha256": checksum})
         need(len(original) == 830, "Select all 830 original Northwind records.")
-        selection = {"schema": SCHEMA, "packet_sha256": sha(packet_raw), "source_ref": args.source_ref,
+        selection = {"schema": SCHEMA, "packet_sha256": sha(packet_raw), "workspace_file": workspace_file, "source_ref": args.source_ref,
                      "source_files": source_files, "responses": [{"bytes": v["bytes"], "sha256": v["sha256"]} for v in response_files],
                      "sourceBinding": SOURCE_BINDING, "queryFingerprint": QUERY}
         selection_sha = sha(canonical(selection).encode())
         if journal_path.exists():
             need(args.resume, "Use --resume for this original retained operation.")
             journal = parse(read(journal_path, 16 * 1024 * 1024))
-            need(journal["schema"] == SCHEMA and journal["selection_sha256"] == selection_sha, "The retained operation selects another source.")
+            need(journal["schema"] == SCHEMA, "Select the original customer operation.")
+            if journal["selection_sha256"] != selection_sha:
+                previous = journal["selection"]
+                need(args.resume_source_from == journal["selection_sha256"] == sha(canonical(previous).encode()),
+                     "Select this original preflight with --resume-source-from and its exact prior selection SHA.")
+                need(journal["state"] == "NEEDS_ATTENTION" and journal["steps"] == {},
+                     "The existing customer work must continue with its originally selected source.")
+                allowed = {"customer-input.json", "customer-operation.json", "customer-operation.lock",
+                           "runtime-source-selection.json"}
+                need(all(path.name in allowed for path in out.iterdir()),
+                     "The original customer preparation has output to reconcile before a source correction.")
+                old_inputs = {key: value for key, value in previous.items() if key not in {"source_files", "workspace_file"}}
+                new_inputs = {key: value for key, value in selection.items() if key not in {"source_files", "workspace_file"}}
+                need(old_inputs == new_inputs and previous.get("workspace_file", workspace_file) == workspace_file,
+                     "The original receiving input or product selection changed.")
+                old_sources = {value["path"]: value for value in previous["source_files"]}
+                new_sources = {value["path"]: value for value in selection["source_files"]}
+                helper_name = str(PREFIX / "collection-customer.mjs")
+                identity_name = str(SCF / "sf30-seller-sdk/odata/live/startup.mjs")
+                need(len(old_sources) == len(previous["source_files"]) and
+                     set(new_sources) == set(old_sources) | {identity_name} and identity_name not in old_sources and
+                     old_sources.get(helper_name, {}).get("git_blob") == "793fc1add5517728b16e6376e0cc827c5638d1e9" and
+                     all(value == new_sources.get(path) for path, value in old_sources.items() if path != helper_name),
+                     "Only the original workspace-identity preflight correction can be adopted here.")
+                journal.setdefault("source_upgrades", []).append({
+                    "selection": previous, "selection_sha256": journal["selection_sha256"],
+                    "state": journal["state"], "error": journal.get("error"),
+                    "reason": "Use original workspace creation identity and exact retained file bytes",
+                    "adopted_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())})
+                journal.update(selection=selection, selection_sha256=selection_sha, state="RUNNING")
+                journal.pop("error", None)
+                save()
+                progress("original-preflight-source-adopted", selection_sha256=selection_sha)
         else:
             journal = {"schema": SCHEMA, "selection": selection, "selection_sha256": selection_sha,
                        "created_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "state": "RUNNING", "steps": {}}
@@ -253,7 +293,7 @@ def main():
         descriptor = {"schema": "stellar-forge.odata-collection-customer-input.v1",
                       "packetDirectory": str(packet), "outputDirectory": str(out),
                       "expectedRows": 830, "sourceBinding": SOURCE_BINDING, "queryFingerprint": QUERY,
-                      "responseFiles": response_files, "collectionId": "northwind-orders-complete",
+                      "responseFiles": response_files, "workspaceFile": workspace_file, "collectionId": "northwind-orders-complete",
                       "title": "Northwind original live Orders collection", "analysisSource": "northwind_orders_live"}
         dump(out / "customer-input.json", descriptor)
         helper = checkout / PREFIX / "collection-customer.mjs"
