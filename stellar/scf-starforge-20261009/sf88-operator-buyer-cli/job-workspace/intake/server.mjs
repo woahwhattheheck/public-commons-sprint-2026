@@ -10,6 +10,7 @@ export async function jobIntakeExtension(intake) {
   const sources = await readBrowserAssets(new URL('./browser-assets.json', import.meta.url));
   const additionalAssets = await Promise.all([...sources].map(async ([route, { url, type }]) =>
     ({ route, type, bytes: await readFile(url) })));
+  additionalAssets.push(...inputs.additionalAssets.filter(asset => !sources.has(asset.route)));
   const authenticatedRoute = async context => {
     if (await inputs.authenticatedRoute(context)) return true;
     const { request, url, send, body, signal } = context;

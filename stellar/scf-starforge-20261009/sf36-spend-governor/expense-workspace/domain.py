@@ -127,7 +127,7 @@ def group_amounts(lines, dimensions=()):
 def period_view(period, items, sources, centers, dispositions, closed_transfers=None):
     """Dates are operator recognition dates; native days never become settlement dates."""
     start, through = period["from_day"], period["through_day"]
-    source_views = [{k: s.get(k) for k in ("id", "name", "kind", "path", "current_capture", "capture_time", "projection_sha256", "journal_events", "last_sequence", "record_kind", "source_basis", "date_basis")}
+    source_views = [{k: s.get(k) for k in ("id", "name", "kind", "path", "current_capture", "capture_time", "projection_sha256", "journal_events", "last_sequence", "record_kind", "source_basis", "date_basis", "data_context", "immutable_intake")}
                     for s in sources]
     issues, candidates, exposures, native_outcomes = [], [], [], []
     disposition_by_key = {(d["item_id"], d["code"]): d for d in dispositions}
@@ -197,7 +197,9 @@ def period_view(period, items, sources, centers, dispositions, closed_transfers=
                 "result_file_bytes":(detail.get("result_file") or {}).get("bytes"),
                 "result_preview_sha256":(detail.get("result_preview") or {}).get("bodySha256"),
                 "result_preview_bytes":(detail.get("result_preview") or {}).get("bodyBytes"),
-                "missing":item["missing"]})
+                "missing":item["missing"], "source_kind":row.get("source_kind", "sf36_ledger"),
+                "data_context":detail.get("data_context", "operational"),
+                "store_currency":detail.get("store_currency"), "store_amount":detail.get("store_amount")})
         if row["state"] == "reserved":
             exposures.append({"item_id": item["id"], "request_id": row["request_id"], "source_name": item["source_name"],
                               "network": row["network"], "asset": row["asset"], "amount": row["reserved_base_units"],
@@ -248,12 +250,12 @@ def period_view(period, items, sources, centers, dispositions, closed_transfers=
                 raise Problem("COST_CENTER_MISSING", "A retained allocation references a missing cost center", 409)
             selected_lines.append({"item_id": item["id"], "source_id": item["source_id"], "source_name": item["source_name"],
                                    "request_id": row["request_id"], "request_digest": row["request_digest"],
-                                   "native_reservation_day": row["day"] if row.get("source_kind") != "mcp_quote" else None,
+                                   "native_reservation_day": row["day"] if row.get("source_kind", "sf36_ledger") == "sf36_ledger" else None,
                                    "native_source_day":row["day"], "native_date_basis":row.get("native_date_basis", "SF36 reservation day"),
                                    "source_kind":row.get("source_kind", "sf36_ledger"), "recognition_date": coding["recognition_date"],
                                    "network": row["network"], "asset": row["asset"], "scheme": row["scheme"],
                                    "settled_actual": row["settled_base_units"],
-                                   "reserved_maximum":row["amount"] if row.get("source_kind") != "mcp_quote" else None,
+                                   "reserved_maximum":row["amount"] if row.get("source_kind", "sf36_ledger") == "sf36_ledger" else None,
                                    "quoted_amount":row["amount"] if row.get("source_kind") == "mcp_quote" else None,
                                    "receipt_ref": row["receipt_ref"], "proof_sha256": row["proof_sha256"],
                                    "center_id": center["id"], "center_code": center["code"], "center_name": center["name"],
@@ -297,6 +299,6 @@ def period_view(period, items, sources, centers, dispositions, closed_transfers=
             "by_cost_center": group_amounts(candidates, ("center_code", "center_name")),
             "by_project": group_amounts(candidates, ("project",)), "outstanding_reservations": exposures,
             "outstanding_totals": group_amounts(exposures), "native_payment_outcomes":native_outcomes,
-            "basis": "Original SF36 ledger projections and retained MCP quote/payment observations; source finalization remains with each original buyer",
+            "basis": "Original SF36 ledger projections, retained MCP quote/payment observations and original customer refund packets; each native operation retains its original provenance",
             "date_basis": "Operator-assigned recognition dates; original reservation or quote-creation days retain their own source meaning",
             "unit_basis": "Exact native base-unit strings, grouped by network and asset; no fiat conversion"}

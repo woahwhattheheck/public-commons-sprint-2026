@@ -8,7 +8,7 @@ import { spawn } from 'node:child_process';
 import { exact, failure, identifier, privateSupportDirectory, writePrivate } from './config.mjs';
 import { RetainedFileReads, MAX_RETAINED_CHUNK_BYTES } from './retained-file-reads.mjs';
 import { BUYER_EXPENSE_ACTIONS, validateBuyerExpenseArguments } from './buyer-expense-protocol.mjs';
-export { buyerExpenseTools } from './buyer-expense-protocol.mjs';
+export { buyerExpenseTools } from './catalog/buyer-expenses.mjs';
 import { acquireStateLease } from '../../stellar/scf-starforge-20261009/merchant-fleet-gateway/state-lease.mjs';
 
 export const BUYER_EXPENSE_CONNECTION_SCHEMA = 'stellar-forge.buyer-expense-connection.v1';
