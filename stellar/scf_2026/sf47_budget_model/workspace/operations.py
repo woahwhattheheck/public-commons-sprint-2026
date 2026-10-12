@@ -621,6 +621,10 @@ class Operations:
         source_ids = {row["id"] for row in document["sources"]}
         expected = {"planning.zip", "operations.json", "summary.json", "recorded-cash.csv", "invoice-balances.csv",
                     "recorded-work.csv", "plan-versus-actual.csv", "README.txt"} | {"sources/" + ident for ident in source_ids}
+        # This derived view was added with Completion; older complete cases omit it.
+        # Original completion plans and source records retain their native validation below.
+        if "completion-calendar.json" in files:
+            expected.add("completion-calendar.json")
         if set(files) != expected or len(source_ids) != len(document["sources"]):
             domain.fail("The operations source set is not exact.")
         for item in document["sources"]:
