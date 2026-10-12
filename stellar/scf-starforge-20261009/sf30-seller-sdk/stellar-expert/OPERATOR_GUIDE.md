@@ -206,3 +206,37 @@ For the first staff session, walk through one asset investigation from source se
 - `provider.mjs` and `exact-json.mjs`: provider requests, retained responses and exact numeric parsing.
 - `core.mjs`, `store.mjs` and `domain.mjs`: workspace operations, editions, comparisons and exports.
 - `dataset.mjs`: composition with the original SF30 dataset, SF82 release and SF88/SF100 receiving services.
+
+## Use the same workspace from an agent
+
+The installed merchant MCP can attach to this running workspace and expose its
+capture, review, dataset, original publication and customer-receiving operations.
+The browser and agent share the same saved workspace, revision and operation
+journal. A host declares the original workspace UUID and a private reference to
+its session URL; the agent chooses that declared alias.
+
+Create a private connection file using
+`stellar-forge.stellar-expert-workspace-connection.v1`, then run:
+
+```sh
+starforge merchant-mcp init-stellar-expert-workspaces \
+  --dir /absolute/private/stellar-mcp \
+  --connection /absolute/private/stellar-expert-connection.json
+starforge merchant-mcp serve \
+  --config /absolute/private/stellar-mcp/merchant-mcp.json \
+  --token-env MCP_ACCESS_TOKEN
+```
+
+The complete connection examples, 27 tools and action-recovery workflow are in
+[the StellarExpert MCP guide](../../../../stellar-forge/mcp-merchant-operator/STELLAR_EXPERT.md).
+Read the live schema and view before an action. Keep the same operation ID and
+payload if its reply is interrupted; the original journal returns the saved
+outcome. After a revision conflict, refresh the view and preserve the intended
+edit for a deliberate new action.
+
+`starforge stellar-expert-mcp inspect` shows exact original response, export or
+customer-file metadata. `download` receives every selected file into one private
+directory with verified partial-file checkpoints, and `reopen` verifies those
+bytes offline. The five customer files retain their original names and hashes.
+The local `stellar-transfer.json` records receiving names, original workspace
+identity and selections; it accompanies the original customer manifest.

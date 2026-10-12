@@ -903,6 +903,10 @@ class Workspace(RetainedWorkspace):
             selected = next((row for row in capture["ranges"] if row["partition"] == message["partition_id"]), None)
             if selected is None or message["offset_value"] < int(selected["start"]) or (raw["role"] == "record" and message["offset_value"] >= int(selected["end"])) or (raw["role"] == "boundary" and message["offset_value"] < int(selected["end"])):
                 raise InputError("Kafka retained message falls outside its original selected range or boundary")
+            existing = self._kdb.execute("SELECT role,added_revision FROM kafka_capture_messages WHERE capture_id=? AND message_id=?",
+                (raw["capture"], raw["message"])).fetchone()
+            if existing is not None and tuple(existing) != (raw["role"], raw["addedRevision"]):
+                raise InputError("The receiver already retains different original capture membership")
             try:
                 staged.execute("INSERT INTO members VALUES(?,?,?,?)", (raw["capture"], raw["message"], raw["role"], raw["addedRevision"]))
             except sqlite3.IntegrityError as error:
@@ -1020,10 +1024,32 @@ class Workspace(RetainedWorkspace):
             try:
                 metadata = self._validate_import(temporary, manifest, staged)
                 projection = metadata["projection"]
-                # The original engine receives and reconstructs its exact six-file
-                # project. Its own source/plan/build journal makes interruption here
+                native_path = temporary / "ndjson-project.zip"
+                # Check the edition join before the original engine writes source,
+                # mapping or build state. The original receiver still owns complete
+                # six-file verification and native reconstruction.
+                with zipfile.ZipFile(native_path) as nested:
+                    selected = [item for item in nested.infolist() if item.filename == "manifest.json"]
+                    if len(selected) != 1:
+                        raise InputError("The native Kafka edition requires one original manifest")
+                    info = selected[0]
+                    if (info.flag_bits & 1 or info.compress_type not in {zipfile.ZIP_STORED, zipfile.ZIP_DEFLATED}
+                            or stat.S_ISLNK(info.external_attr >> 16) or info.is_dir() or info.file_size > 16384):
+                        raise InputError("Invalid original native Kafka manifest")
+                    with nested.open(info) as stream:
+                        data = stream.read(16385)
+                    if len(data) != info.file_size or len(data) > 16384:
+                        raise InputError("The original native Kafka manifest exceeds its declared size")
+                    native_manifest = load_json(data)
+                files = native_manifest.get("files") if isinstance(native_manifest, dict) else None
+                source = files.get(self.source_name) if isinstance(files, dict) else None
+                if (not isinstance(native_manifest, dict) or native_manifest.get("schema") != self.packet_schema
+                        or native_manifest.get("build") != manifest["build"] or not isinstance(source, dict)
+                        or source.get("sha256") != projection["source"]):
+                    raise InputError("The original native dataset and retained Kafka edition differ")
+                # Original source/plan/build journaling makes interruption here
                 # reopenable before Kafka's complete history is committed below.
-                native = super().import_packet(temporary / "ndjson-project.zip")
+                native = super().import_packet(native_path)
                 if native["source"] != projection["source"] or native["build"]["id"] != manifest["build"]:
                     raise InputError("The original native dataset and retained Kafka edition differ")
                 import_id = digest(json_bytes({"schema": "stellar-forge.kafka-receiving.v1",

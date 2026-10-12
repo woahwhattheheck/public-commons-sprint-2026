@@ -2,7 +2,7 @@
 // MIT. Complete original SF88 object download, recovery and assembly commands.
 import {constants} from 'node:fs';
 import {open, lstat, realpath, unlink} from 'node:fs/promises';
-import {dirname, isAbsolute, resolve} from 'node:path';
+import {dirname, isAbsolute, resolve, join} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {randomUUID} from 'node:crypto';
 import {createObjectSession, inspectObjectSession, runObjectSession,
@@ -38,6 +38,13 @@ analysis-review --state ABS --session SAVED_NAME --name SOURCE --format json|csv
 analysis-open --state ABS [--session SAVED_NAME --name SOURCE --format json|csv --review SHA256]
               [--analysis-python ABS]
 analysis-status --state ABS [--analysis-python ABS]
+operator status --state ABS [--operator-settings ABS]
+operator review --state ABS [--file PRIVATE_DRAFT | --from-revision PRESET_ID]
+                [--note REASON] [--expect STATE_SHA256]
+operator save --state ABS [--file PRIVATE_DRAFT | --from-revision PRESET_ID]
+              [--note REASON] --expect STATE_SHA256 --review REVIEW_SHA256
+operator revision --state ABS --id PRESET_ID
+operator export --state ABS --id PRESET_ID
 
 init selects one ORIGINAL SF30 S3 objects.json row, or explicit reviewed object facts.
 Whole products use one GET without a query, including an empty file; chunks use exact ranges.
@@ -56,6 +63,12 @@ Review binds its existing recorded file and target source revision. analysis-ope
 registers that reviewed source, or reopens saved analysis without a source file.
 Keep the analysis-open terminal running; Ctrl+C stops its owned original Python
 application and preserves saved tables, queries and exports in STATE/analysis.
+operator uses the same private host setup as the Object Buyer browser. Review
+compares the current selected state; save requires both original hashes. Without
+--file/--from-revision it adopts the selected launcher preset. Earlier settings
+can be reviewed and restored with --from-revision. export writes exact private
+preset bytes to stdout. Prepared buyers and interrupted native generations keep
+their original identity, budgets, keys and ledger across later host changes.
 `;
 const common = ['session'];
 function parse(tokens) {
@@ -114,10 +127,49 @@ async function saveNew(destination, content) {
   }
 }
 
+async function operatorCommand(tokens) {
+  const [,command,...args]=tokens;
+  if(!command||['help','--help'].includes(command)){process.stdout.write(HELP);return;}
+  need(['status','review','save','revision','export'].includes(command),'UNKNOWN_OPERATOR_COMMAND');
+  const names=['--state','--operator-settings',...(command==='review'||command==='save'?
+    ['--file','--from-revision','--note','--expect',...(command==='save'?['--review']:[])]:
+    command==='revision'||command==='export'?['--id']:[])],flags={};
+  need(args.length%2===0,'OBJECT_FLAG_VALUE_REQUIRED');
+  for(let i=0;i<args.length;i+=2) {
+    need(names.includes(args[i])&&!Object.hasOwn(flags,args[i])&&args[i+1]&&!args[i+1].startsWith('--'),
+      'OBJECT_FLAG_INVALID_OR_REPEATED');flags[args[i]]=args[i+1];
+  }
+  need(flags['--state'],'OBJECT_WORKSPACE_STATE_REQUIRED');
+  need(!(flags['--file']&&flags['--from-revision']),'OPERATOR_ONE_DRAFT_SOURCE_REQUIRED');
+  if(command==='save')need(flags['--expect']&&flags['--review'],'OPERATOR_EXACT_REVIEW_REQUIRED');
+  if(command==='revision'||command==='export')need(flags['--id'],'OPERATOR_REVISION_REQUIRED');
+  const {openObjectWorkspace}=await import('./object-workspace/model.mjs');
+  const model=await openObjectWorkspace({stateDirectory:flags['--state'],operatorSettings:flags['--operator-settings']});
+  const print=value=>process.stdout.write(JSON.stringify(value,null,2)+'\n');
+  try {
+    if(command==='status')print(await model.operatorState());
+    else if(command==='revision')print(await model.operatorRevision(flags['--id']));
+    else if(command==='export')process.stdout.write((await model.operatorAttachment(flags['--id'])).bytes);
+    else {
+      const current=await model.operatorState();let settings=current.settings;
+      if(flags['--file']) {
+        const {readBuyerOperatorPreset}=await import('../buyer-runbook/handoff-intake.mjs');
+        settings=(await readBuyerOperatorPreset(flags['--file'],{directory:join(flags['--state'],'received')})).value;
+      } else if(flags['--from-revision'])settings=(await model.operatorRevision(flags['--from-revision'])).settings;
+      need(settings,'REQUEST_OPERATOR_PRESET_REQUIRED');
+      const input={settings,expectedStateSha256:flags['--expect']??current.stateSha256,note:flags['--note']??'',
+        ...(flags['--from-revision']?{sourceRevision:flags['--from-revision']}:{})};
+      print(command==='review'?await model.reviewOperatorSettings(input):
+        await model.saveOperatorSettings({...input,expectedReviewSha256:flags['--review']}));
+    }
+  } finally {await model.close();}
+}
+
 export async function main(tokens = process.argv.slice(2)) {
   if (tokens.length === 0 || tokens.length === 1 && ['help','--help'].includes(tokens[0])) {
     process.stdout.write(HELP); return;
   }
+  if (tokens[0] === 'operator') { await operatorCommand(tokens); return; }
   if (['backup-review','backup','backup-verify','backup-restore'].includes(tokens[0])) {
     await recoveryCommand(tokens); return;
   }
@@ -283,3 +335,4 @@ if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1]
     process.stderr.write(JSON.stringify({error:code})+'\n');
     process.exitCode ||= 1;
   });
+

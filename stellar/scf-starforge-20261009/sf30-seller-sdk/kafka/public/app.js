@@ -304,6 +304,8 @@ function renderMessage() {
   ]);
   if (record.valueBase64 === null) $("kafka-message-value").textContent = "null — Kafka tombstone";
   else if ($("kafka-value-view").value === "base64") $("kafka-message-value").textContent = record.valueBase64 || "(empty byte string)";
+  else if ($("kafka-value-view").value === "json") $("kafka-message-value").textContent =
+    typeof record.valueJson === "string" ? record.valueJson : record.parseError || "This value has no decoded JSON view. Select its original text or bytes.";
   else {
     try { $("kafka-message-value").textContent = new TextDecoder("utf-8", { fatal: true }).decode(decodeBase64(record.valueBase64)) || "(empty byte string)"; }
     catch { $("kafka-message-value").textContent = "The original value is binary. Select the base64 view to inspect every byte."; }

@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 // SPDX-License-Identifier: MIT
 import { readFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { createHash } from 'node:crypto';
+import { join, isAbsolute, resolve } from 'node:path';
 import { initializeNativeWorkspace, openNativeWorkspace } from './native-workspace.mjs';
 import { startMcpWorkspace } from './serve.mjs';
 import { openQueue, saveQueueReport } from '../../stellar/scf-starforge-20261009/sf88-operator-buyer-cli/queue.mjs';
@@ -10,11 +11,11 @@ import { renderQueueReport } from '../../stellar/scf-starforge-20261009/sf88-ope
 const print = value => process.stdout.write(JSON.stringify(value, null, 2) + '\n');
 const fail = code => { throw Object.assign(new Error(code), {code}); };
 const commands = {init:['--workspace','--catalog','--max-response-bytes','--response-timeout-ms'],
-  call:['--input'], serve:['--port'], report:['--out'], inspect:[],
+  call:['--input'], serve:['--port','--duckdb-description','--duckdb-description-sha256','--duckdb-workspace-id'], report:['--out'], inspect:[],
   'objects-register':['--description'], 'datasets-register':['--description'],
   'datasets-receive':['--id','--room','--session'],
   'analysis-register':['--name','--database'], 'analysis-inbox-register':['--name','--inbox'],
-  'collections-register':['--description']};
+  'collections-register':['--description'], 'duckdb-register':['--description']};
 function parse(args) {
   const [command, ...rest] = args;
   if (!Object.hasOwn(commands, command) || rest.length % 2) fail('MCP_NATIVE_CLI_ARGUMENTS_INVALID');
@@ -27,10 +28,13 @@ function parse(args) {
   if (!values['--dir']) fail('MCP_NATIVE_DIRECTORY_REQUIRED');
   return {command, values};
 }
-async function input(path, maximum) {
+async function input(path, maximum, expectedSha256) {
   if (!path) fail('MCP_NATIVE_INPUT_FILE_REQUIRED');
   const bytes = await readFile(path);
   if (bytes.length > maximum) fail('MCP_NATIVE_INPUT_TOO_LARGE');
+  if (expectedSha256 !== undefined && (!/^[a-f0-9]{64}$/.test(expectedSha256) ||
+      createHash('sha256').update(bytes).digest('hex') !== expectedSha256))
+    fail('MCP_NATIVE_INPUT_CHANGED');
   try { return JSON.parse(new TextDecoder('utf-8', {fatal:true}).decode(bytes)); }
   catch { fail('MCP_NATIVE_INPUT_JSON_INVALID'); }
 }
@@ -44,7 +48,9 @@ async function main(args) {
     process.stdout.write(
       'Native MCP buyer using the original SF88 workspace and inbox.\n' +
       'init --dir ABS --workspace EXISTING_SF88 [--catalog JSON] [--max-response-bytes N] [--response-timeout-ms N]\n' +
-      'serve --dir ABS [--port N] (requires existing MCP_ACCESS_TOKEN)\n' +
+      'serve --dir ABS [--port N] [--duckdb-description PRIVATE_JSON] (requires existing MCP_ACCESS_TOKEN)\n' +
+      '  [--duckdb-description-sha256 SHA256 --duckdb-workspace-id ORIGINAL_32_HEX_ID]\n' +
+      'duckdb-register --dir ABS --description PRIVATE_ORIGINAL_DUCKDB_REGISTRATION_JSON\n' +
       'call --dir ABS --input REQUEST_JSON\n' +
       'objects-register --dir ABS --description ORIGINAL_S3_OBJECTS_JSON\n' +
       'datasets-register --dir ABS --description ORIGINAL_SF30_DATASET_DESCRIPTION_JSON\n' +
@@ -71,6 +77,10 @@ async function main(args) {
     } finally { await native.close(); }
   }
   const native = await openNativeWorkspace(directory);
+  if (command === 'duckdb-register') {
+    try { return print(await native.registerDuckDB(await input(v['--description'], 256 * 1024))); }
+    finally { await native.close(); }
+  }
   if (command === 'collections-register') {
     try { return print(await native.registerCollections(await input(v['--description'], 256 * 1024))); }
     finally { await native.close(); }
@@ -109,7 +119,8 @@ async function main(args) {
       objectSources:await native.call({action:'object-sources',limit:25}),
       objectAcquisitions:await native.call({action:'object-history',limit:25}),
       datasetSources:await native.call({action:'dataset-sources',limit:25}),
-      datasetAcquisitions:await native.call({action:'dataset-history',limit:25})}); }
+      datasetAcquisitions:await native.call({action:'dataset-history',limit:25}),
+      duckdbWorkspaces:await native.call({action:'duckdb',duckdbOperation:'workspaces'})}); }
     finally { await native.close(); }
   }
   if (command === 'call') {
@@ -123,16 +134,57 @@ async function main(args) {
     }
   }
   const manifest = native.manifest;
-  await native.close();
-  const port = v['--port'] === undefined ? '3210' : v['--port'];
-  if (!/^(0|[1-9][0-9]*)$/.test(port) || Number(port) > 65535) fail('MCP_NATIVE_PORT_INVALID');
-  const server = await startMcpWorkspace({environment:{...process.env,
-    BAZAAR_DISCOVERY_URL:manifest.catalog.origin,
-    PAID_RESOURCE_ORIGINS:manifest.route.origin,
-    MCP_STATE_DIR:join(manifest.directory, 'quotes'),
-    MCP_OPERATOR_MODULE:join(manifest.directory, 'operator.mjs'), MCP_PORT:port}});
-  print({status:'NATIVE_MCP_LISTENING', url:server.address + '/mcp',
-    tool:'sf43_discover_review_and_pay', originalWorkspace:manifest.workspace});
+  let nativeClosing, server;
+  const closeNative = () => nativeClosing ??= native.close();
+  try {
+    const port = v['--port'] === undefined ? '3210' : v['--port'];
+    if (!/^(0|[1-9][0-9]*)$/.test(port) || Number(port) > 65535) fail('MCP_NATIVE_PORT_INVALID');
+    const descriptionFile = v['--duckdb-description'];
+    const expectedWorkspaceId = v['--duckdb-workspace-id'];
+    if ((expectedWorkspaceId !== undefined || v['--duckdb-description-sha256'] !== undefined) && !descriptionFile)
+      fail('MCP_NATIVE_DUCKDB_DESCRIPTION_REQUIRED');
+    if (expectedWorkspaceId !== undefined && !/^[a-f0-9]{32}$/.test(expectedWorkspaceId))
+      fail('MCP_NATIVE_DUCKDB_WORKSPACE_ID_INVALID');
+    let duckdb;
+    if (descriptionFile) {
+      if (!isAbsolute(descriptionFile) || resolve(descriptionFile) !== descriptionFile)
+        fail('MCP_NATIVE_DUCKDB_DESCRIPTION_ABSOLUTE_REQUIRED');
+      const description = await input(descriptionFile, 256 * 1024, v['--duckdb-description-sha256']);
+      duckdb = await native.registerDuckDB(description, {expectedWorkspaceId});
+    }
+    // Serve this installed native owner. A retained generated operator.mjs may
+    // still import an older source directory; it must not replace this instance.
+    server = await startMcpWorkspace({environment:{...process.env,
+      BAZAAR_DISCOVERY_URL:manifest.catalog.origin,
+      PAID_RESOURCE_ORIGINS:manifest.route.origin,
+      MCP_STATE_DIR:join(manifest.directory, 'quotes'),
+      MCP_OPERATOR_MODULE:undefined, MCP_PORT:port},
+      operatorAdapter:{
+        agentCommerce:(args, context) => native.call(args, context),
+        approve:async () => false,
+        signPayment:async () => { fail('MCP_NATIVE_TOOL_REQUIRED'); },
+        close:closeNative,
+      }});
+    const startup = {status:'NATIVE_MCP_LISTENING', url:server.address + '/mcp',
+      tool:'sf43_discover_review_and_pay', originalWorkspace:manifest.workspace};
+    if (duckdb) {
+      // This private host announcement carries the original browser capability.
+      // Model-facing DuckDB tool results never include this URL or host paths.
+      process.stdout.write(JSON.stringify({
+        schema:'stellar-forge.duckdb-agent-workspace-startup.v1', ...startup,
+        directory:manifest.directory, descriptionFile,
+        ...(v['--duckdb-description-sha256'] ? {descriptionSha256:v['--duckdb-description-sha256']} : {}),
+        consoleUrl:server.consoleUrl,
+        duckdb:{schema:duckdb.schema,status:duckdb.status,name:duckdb.name,
+          workspaceId:duckdb.workspaceId,database:duckdb.database,browserUrl:duckdb.browserUrl,
+          sourceCount:duckdb.sources.length},
+      }) + '\n');
+    } else print(startup);
+  } catch (error) {
+    try { if (server) await server.close(); else await closeNative(); }
+    catch { /* preserve the original startup failure */ }
+    throw error;
+  }
   let closing;
   const stop = () => {
     closing ??= server.close().catch(error => { process.stderr.write((error.code ?? 'MCP_NATIVE_CLOSE_FAILED') + '\n'); process.exitCode = 2; });
