@@ -61,6 +61,15 @@ const PROTECTED_SOURCE_PROFILE = Object.freeze({
   processIdentity:'8b5d942d8b80f90e9197e12a9280689285e4c0ee0376d31f601c77726900921c',
 });
 
+const PROTECTED_SOURCE_PROFILES = Object.freeze([
+  PROTECTED_SOURCE_PROFILE,
+  Object.freeze({
+    ...PROTECTED_SOURCE_PROFILE,
+    id:'ORIGINAL_AUTHORIZATION_WITH_HELD_FILE_RESERVATIONS_AND_TEMPORARY_INVENTORY_V1',
+    store:'dbaac9e39164422318839eb8b6e0de6e362f8d0c687c5d6e2b555c93fc72be04',
+  }),
+]);
+
 async function protectedEntrySource({runtime, directory, operation, bound, reader, signerSources, signal}) {
   const paths = [
     ['reservationRuntime',join(runtime,'node/runtime.mjs'),'runtime'],
@@ -358,8 +367,9 @@ export async function readUndispatchedAuthorizationEvidence(operation, options =
     signerSources[name] = source.descriptor;
   }
   const historical = ['execute','wire','store'].every(name => nativeSources[name] === PINS[name]);
-  const protectedSource = ['execute','wire','store'].every(name =>
-    nativeSources[name] === PROTECTED_SOURCE_PROFILE[name]);
+  const protectedProfile = PROTECTED_SOURCE_PROFILES.find(profile =>
+    ['execute','wire','store'].every(name => nativeSources[name] === profile[name]));
+  const protectedSource = protectedProfile !== undefined;
   need(historical || protectedSource,'UNDISPATCHED_REVIEWED_SOURCE_CHANGED');
   need(protectedSource || attemptFile.descriptor.bytes <= 16384, 'UNDISPATCHED_SOURCE_FILE_INVALID');
   await pin('config',join(runtime,'config.mjs'));
@@ -485,7 +495,7 @@ export async function readUndispatchedAuthorizationEvidence(operation, options =
     scope:{
       basis:'RETAINED_ORIGINAL_WIRE_AND_REVIEWED_AUTHORIZATION_SOURCE',
       ...(protectedSource ? {
-        reviewedNativeSourceProfile:PROTECTED_SOURCE_PROFILE.id,
+        reviewedNativeSourceProfile:protectedProfile.id,
         allocationEntry:reservedEntry ?? {kind:'REVIEWED_DIRECT_NATIVE_ENTRY'},
       } : {}),
       signer:'ORIGINAL_GENERATED_ENVIRONMENT_ED25519',

@@ -1,0 +1,8 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "merchant-provider-facilitators",
+  "description": "Original facilitators MCP provider",
+  "merchantProviders": {
+    "facilitators": "stellar-forge/mcp-merchant-operator/providers/facilitators.mjs"
+  }
+}

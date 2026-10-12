@@ -1,0 +1,98 @@
+{
+  "request_id": "SCF-NDJSON-FILE-JOBS-3AD791-20261012",
+  "call_id": "ndjson-file-jobs-original-native-handoff-3ad791-01",
+  "name": "e2b_request",
+  "arguments": {
+    "business_operation": "SCF-DURABLE-PAID-JOBS-0B8D-20261011",
+    "credential_ref": "e2b/api-key",
+    "credential_encoding": "plain",
+    "timeout": 40,
+    "payload": {
+      "kind": "e2b.sdk",
+      "action": "native.handoff",
+      "sandbox_id": "i7uwmcqmeoxkb7g74x51o",
+      "worker_id": "SCF-DURABLE-PAID-JOBS-0B8D-20261011-e2b-01",
+      "native_operation_id": "SCF-NDJSON-FILE-JOBS-3AD791-20261012",
+      "directory": "/root/scf-ndjson-file-jobs-3ad791-20261012",
+      "native_record": "/root/scf-ndjson-file-jobs-3ad791-20261012/control/records/69acb214809d3cc1702f1ae6b4b98ccf17fc70f0b2ef84b53af1d9c70e3860c7",
+      "controller_host": "/root/scf-ndjson-file-jobs-3ad791-20261012/controller/host",
+      "resume_timeout": 1800,
+      "files": [
+        {
+          "name": "native-controller.tar.gz",
+          "source": {
+            "github_blob": {
+              "repository": "woahwhattheheck/commons",
+              "sha": "cfb52f3944389d63452caab2384accc75bf5a6c7"
+            }
+          },
+          "bytes": 196139,
+          "sha256": "9ab83b543b260efc13ebabb7e0a6c1474373e3af79ef00a194d6da84d41a55cb"
+        },
+        {
+          "name": "NDJSON_File_Jobs_Original_Source_20261012.zip",
+          "source": {
+            "github_blob": {
+              "repository": "woahwhattheheck/public-commons-sprint-2026",
+              "sha": "05a520ac1cec1844e7147cb919038ce55e84d068"
+            }
+          },
+          "bytes": 3301268,
+          "sha256": "91659e8eaae0ed734041c7264bc48f675ec224fd2d8a5d4b0e447da38d04a74c"
+        },
+        {
+          "name": "prepare-ndjson.py",
+          "source": {
+            "github_blob": {
+              "repository": "woahwhattheheck/public-commons-sprint-2026",
+              "sha": "8697503cb4e2c5176db1d007adff1954bccd0aef"
+            }
+          },
+          "bytes": 11308,
+          "sha256": "99ecce4f92c7765556fea971b6e54677a3097049baa7d524edd5ab40efcb6fa9"
+        },
+        {
+          "name": "launch-ndjson.py",
+          "source": {
+            "github_blob": {
+              "repository": "woahwhattheheck/public-commons-sprint-2026",
+              "sha": "25cc3061de7322d29a355a557b107d691a242f97"
+            }
+          },
+          "bytes": 2759,
+          "sha256": "bd71a33105b55b8156bf24259b6cdc53191ac8e6cc850df87a1c54f0d62a3dc9"
+        },
+        {
+          "name": "execute-ndjson.py",
+          "source": {
+            "github_blob": {
+              "repository": "woahwhattheheck/public-commons-sprint-2026",
+              "sha": "e9089bc133f4323aea281b97417c1bc0c4fcca81"
+            }
+          },
+          "bytes": 4009,
+          "sha256": "114dd574d584f62d23e7c4ea03c9cb5596c7fe4a3361f07080f1dc41aa6bb2f8"
+        }
+      ],
+      "setup": {
+        "argv": [
+          "python3",
+          "-B",
+          "/root/scf-ndjson-file-jobs-3ad791-20261012/inbox/prepare-ndjson.py",
+          "--shared-state-root",
+          "/root/commons-scf-0b8d-20261012/control"
+        ],
+        "cwd": "/root/scf-ndjson-file-jobs-3ad791-20261012",
+        "timeout": 40
+      },
+      "launch": {
+        "argv": [
+          "python3",
+          "-B",
+          "/root/scf-ndjson-file-jobs-3ad791-20261012/inbox/launch-ndjson.py"
+        ],
+        "cwd": "/root/scf-ndjson-file-jobs-3ad791-20261012"
+      }
+    }
+  }
+}

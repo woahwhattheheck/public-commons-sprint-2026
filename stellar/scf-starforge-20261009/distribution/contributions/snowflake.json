@@ -19,12 +19,21 @@
     "./seller/snowflake/server": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/snowflake/server.mjs",
     "./seller/snowflake/publisher": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/snowflake/publisher.mjs",
     "./seller/snowflake/transfer": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/snowflake/transfer.mjs",
-    "./seller/snowflake/cloud-delivery": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/snowflake/cloud-delivery.mjs"
+    "./seller/snowflake/cloud-delivery": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/snowflake/cloud-delivery.mjs",
+    "./seller/snowflake/managed": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/snowflake/managed.mjs",
+    "./seller/snowflake/application": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/snowflake/application.mjs",
+    "./seller/snowflake/receiving": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/snowflake/receiving/managed.mjs"
   },
   "browserAssets": [
     {
       "server": "stellar/scf-starforge-20261009/sf30-seller-sdk/snowflake/server.mjs",
       "manifest": "stellar/scf-starforge-20261009/sf30-seller-sdk/snowflake/browser-assets.json"
     }
+  ],
+  "applicationProviders": {
+    "snowflake": "stellar/scf-starforge-20261009/sf30-seller-sdk/snowflake/application-provider.mjs"
+  },
+  "supportFiles": [
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/snowflake/MANAGED.md"
   ]
 }

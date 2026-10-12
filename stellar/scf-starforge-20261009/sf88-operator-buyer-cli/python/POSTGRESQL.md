@@ -2,7 +2,7 @@
 
 Use an original completed SF88 acquisition and its SF100 delivery in a customer
 application's PostgreSQL database. The receiver loads all rows as one retained
-edition, keeps the original manifest and source-row JSON, and lets the customer
+edition, keeps the original dictionary, manifest and source-row JSON, and lets the customer
 select which edition a stable SQL view exposes. Customer code can join that
 view with its existing application tables.
 
@@ -158,10 +158,11 @@ the typed database values. Exact decimal values and integers outside
 JavaScript's safe integer range are displayed as text. The retained mapping
 identifies their database types.
 
-The selected edition provides three downloads:
+The selected edition provides these complete downloads:
 
 | Download | Complete retained content |
 | --- | --- |
+| **Original dictionary** | Exact original semantics.json bytes, when the delivery includes field meanings |
 | **Original manifest** | The exact original source manifest bytes, checked against the edition digest |
 | **Column mapping** | Every source field, database column, selected type, null setting and business key |
 | **Receiving record** | The original warehouse and edition metadata, mapping, row count and source identity |
@@ -220,7 +221,114 @@ coordinated backup, retain the complete PostgreSQL schema through the database
 owner's backup procedure, then reopen the restored schema and operator
 directory together. The original source report and its data room remain
 necessary for a reviewed import that has not committed. A committed edition
-retains its rows, manifest and metadata inside PostgreSQL.
+retains its rows, dictionary, manifest and metadata inside PostgreSQL.
+
+## Keep field meanings with the imported data
+
+When the original delivery includes `semantics.json`, **Source review** shows
+its delivered field names, original source fields, descriptions, datatypes,
+units when declared, and your chosen database aliases. Expand a field to read
+its full definition. The dictionary's issues, virtual columns, source capture,
+primary key and original templates remain available. Changing a database alias
+updates the displayed receiving mapping; it leaves the original source
+definition intact.
+
+The receiver uses the common [semantic dictionary reader](SEMANTICS.md) for
+CKAN and OData deliveries. It verifies the original dictionary file against the
+native delivery and source manifest before accepting a mapping review. The
+immutable edition identity remains the original manifest, acquisition binding
+and complete mapping; the manifest already binds the dictionary. Every new
+import stores its exact bytes in the same PostgreSQL transaction as the rows.
+Reopened editions verify the dictionary against that retained manifest and
+reviewed mapping. PostgreSQL uses exact, quoted SQL aliases, including distinct
+names such as `Reading` and `reading`; the original mapping remains usable when
+receiving a missing dictionary into an earlier edition.
+
+Three independent identities describe the source: its complete semantic
+identity, its field-definition identity, and its source-capture identity.
+The retained file also has its own exact byte digest. A new capture can
+preserve all definitions; a reviewed SQL alias can change while the source
+dictionary stays byte-for-byte identical. **Compare source meanings** reports
+these differences independently and exports the complete comparison.
+
+### Primary keys and editable aliases
+
+The source dictionary's primary key is metadata from the original supplier.
+The receiving mapping selects which source fields PostgreSQL will enforce as
+the imported table's primary key. Source review shows that enforcement is
+pending until import completes. A retained edition reports the source key as
+enforced only when the complete declared source key is exactly the key that
+PostgreSQL enforced. A different receiving key, or the original row ordinal,
+does not enforce the supplier's declared key.
+
+Database aliases accompanying a dictionary must be distinct even when
+capitalization differs. The inspection form suggests distinct aliases and
+still lets the operator choose each one. The dictionary's original URLs and
+templates keep their original field names; the explicit source-to-SQL mapping
+provides the receiving aliases.
+
+### Compare and reopen meanings
+
+**Retained editions** shows the complete original dictionary beside the typed
+rows. **Original dictionary** downloads its exact source bytes. The same
+meanings appear when reviewing an **Application views** selection, along with
+the definition, capture and mapping changes from the currently selected
+edition.
+
+**Compare source meanings** works across different mappings and editions
+without business keys. It lists added, removed or changed field definitions and
+aliases, includes both complete dictionaries, and supports a named JSON
+download. **Compare all rows** also opens that meaning comparison and then
+uses the existing PostgreSQL keyed-row comparison. Row comparison continues
+to require matching mappings and receiving keys.
+
+The native API exposes the same original data:
+
+```python
+context = warehouse.semantics(version_id)
+original_bytes = warehouse.semantics_bytes(version_id)
+meaning_changes = warehouse.compare_semantics(previous_id, following_id)
+```
+
+A dictionary context contains the reviewed SQL aliases and original document.
+The byte export is the original file, including its formatting. A genuine
+legacy delivery returns `None` from the two dictionary methods. The CLI exposes
+each operation:
+
+```sh
+stellar-forge-postgres semantics VERSION_ID
+stellar-forge-postgres semantics-file VERSION_ID \
+  --destination /srv/private/customer/semantics.json
+stellar-forge-postgres --out /srv/private/customer/meaning-comparison.json \
+  compare-semantics PREVIOUS_VERSION FOLLOWING_VERSION
+```
+
+The existing authenticated browser API adds
+`GET /api/semantics?version_id=...`,
+`GET /api/semantics-file?version_id=...` and
+`GET /api/semantic-compare?previous=...&current=...`.
+The file response includes its complete byte length and SHA256 header.
+
+### Receive dictionaries for earlier imports
+
+An earlier warehouse may already contain an edition whose original manifest
+declares a dictionary. If its exact dictionary bytes have not yet been stored,
+edition inspection reports `semantics_status: SOURCE_REQUIRED`.
+**Open original receiving review** finds that edition's original saved review.
+Import it again to attach its bound dictionary through the original import
+transaction. If the review belongs to another operator directory, reopen the
+original report and save its same complete mapping before importing.
+
+The result keeps the original edition ID, table, row count and application
+view revisions. It returns `import_status: UNCHANGED` with
+`semantics_received: true` when the missing dictionary is received. A following
+retry returns the already retained edition. The original source must still
+supply the dictionary matching the committed manifest.
+
+An original delivery with no dictionary is shown as `NONE`; all legacy
+receiving operations continue. Earlier imports whose dictionaries still need
+receiving can continue to serve rows and application views. Their dictionary
+export and meaning comparison identify the missing original input.
 
 ## Review the full delivery and its mapping
 
@@ -327,8 +435,8 @@ stellar-forge-postgres --schema sf_received import \
 
 A new edition receives a private-to-the-transaction table. COPY streams the
 original verified rows into that table using Psycopg's native adapters. The
-same transaction commits the complete rows, key constraints, source manifest
-bytes and edition metadata. Type, key, I/O, cancellation or digest failures
+same transaction commits the complete rows, key constraints, original dictionary,
+source manifest bytes and edition metadata. Type, key, I/O, cancellation or digest failures
 roll back that transaction. Previously committed editions and views remain
 usable.
 
@@ -478,7 +586,7 @@ stellar-forge-postgres manifest VERSION_ID \
 
 The receiving schema is ordinary PostgreSQL state. The customer's existing
 database backup/restore process can retain the edition tables, full original
-manifest bytes, view selection and history together. Reopen the restored schema
+dictionary and manifest bytes, view selection and history together. Reopen the restored schema
 with its same `warehouse_id`. Application readers should use SELECT privileges;
 the receiver's API preserves retained editions and does not offer row editing.
 
@@ -497,6 +605,53 @@ transaction is rejected without being closed. Statement and lock deadlines
 default to 300000 and 30000 milliseconds and can be configured on the instance
 or through the command's corresponding top-level flags.
 
+### Run the complete original-dictionary receiving example
+
+The two source files in `examples/postgres_semantic_receiving.py` and
+`examples/postgres_semantic_browser.mjs` provide an executable customer
+receiving journey for an existing semantic delivery and PostgreSQL connection.
+Use the original finalized scan or completed delivery report. The example
+retains every original row and receives the same input using two explicit SQL
+mappings, with one changed alias. It compares those mappings while verifying
+that the source definitions and capture remain unchanged.
+
+Select the receiving host's existing Playwright installation and Chromium:
+
+```sh
+python examples/postgres_semantic_receiving.py \
+  --report /srv/private/customer/finalized-scan.json \
+  --directory /srv/private/customer/postgres-meanings \
+  --schema sf_semantic_receiving \
+  --node-modules /opt/customer-tools/node_modules \
+  --chromium /opt/customer-tools/chrome-headless-shell
+```
+
+The program operates the original HTTP review/import journal, streams both
+complete imports, follows every original row page, selects the first edition,
+downloads both complete dictionaries/manifests/mappings/receiving records, runs
+the dictionary CLI and opens source, edition, application-view, comparison and
+recovery screens at desktop and 390-pixel width. Browser downloads and
+screenshots remain in the selected directory. The original source bytes and
+supplier definitions are unchanged.
+
+The receiving record ends in `RECEIVED` after that first phase. Use the
+selected isolated runtime's existing restart operation, then reopen the same
+database and operation:
+
+```sh
+python examples/postgres_semantic_receiving.py \
+  --report /srv/private/customer/finalized-scan.json \
+  --directory /srv/private/customer/postgres-meanings \
+  --schema sf_semantic_receiving --phase reopen
+```
+
+Reopen verifies both dictionaries, every original row, the saved import
+requests, original warehouse identity and selected view revision before
+recording `COMPLETE`. The same private operation directory retains the
+original reviews and request IDs across retries. Use the [original runtime
+launchers](../runtime/postgres/README.md) for an isolated PostgreSQL or PGlite
+database with the matching Psycopg installation.
+
 ### Native interfaces
 
 | Operation | Useful result |
@@ -509,6 +664,8 @@ or through the command's corresponding top-level flags.
 | `rows(id, after=..., limit=..., include_original=True)` | Rows in retained original order |
 | `compare(previous, current, offset=..., limit=...)` | Complete key-join totals and paged changes |
 | `manifest_bytes(id)` | Exact original manifest verified against the edition identity |
+| `semantics(id)`, `semantics_bytes(id)` | Verified original meaning document and exact dictionary bytes |
+| `compare_semantics(previous, current)` | Complete source-definition, capture and SQL-mapping comparison |
 
 Primary implementation contracts: [Psycopg COPY](https://www.psycopg.org/psycopg3/docs/basic/copy.html),
 [Psycopg transactions](https://www.psycopg.org/psycopg3/docs/basic/transactions.html),

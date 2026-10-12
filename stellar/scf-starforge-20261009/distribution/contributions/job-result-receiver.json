@@ -1,0 +1,8 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "job-result-receiver",
+  "description": "job result receiver original Applications",
+  "applicationProviders": {
+    "job-result-receiver": "stellar/scf-starforge-20261009/distribution/runtime-workspace/providers/job-result-receiver.mjs"
+  }
+}

@@ -128,8 +128,9 @@ class Handler(BaseHTTPRequestHandler):
                 length = int(self.headers.get("Content-Length", "-1"))
             except ValueError as exc:
                 raise Problem("INVALID_BODY_LENGTH", "Invalid JSON body length") from exc
-            if not 0 <= length <= 2_000_000:
-                raise Problem("BODY_TOO_LARGE", "Use a JSON body no larger than 2 MB", 413)
+            maximum = 90_000_000 if len(parts) == 4 and parts[:2] == ["api", "closes"] and parts[3] in ("accountant-preview", "accountant-return") else 2_000_000
+            if not 0 <= length <= maximum:
+                raise Problem("BODY_TOO_LARGE", "The JSON body exceeds this operation's supported size", 413)
             raw = self.rfile.read(length)
             if len(raw) != length:
                 raise Problem("INCOMPLETE_BODY", "The JSON body did not arrive completely")
@@ -171,6 +172,10 @@ class Handler(BaseHTTPRequestHandler):
             return self.send(store.refund_packet(parts[2]))
         if len(parts) == 4 and parts[:2] == ["api", "refund-packets"] and parts[3] == "original":
             return self.send(store.refund_original(parts[2]), content_type="application/zip", filename="original-buyer-refund-packet.zip")
+        if len(parts) == 3 and parts[:2] == ["api", "accountant-returns"]:
+            return self.send(store.accountant_return(parts[2]))
+        if len(parts) == 4 and parts[:2] == ["api", "accountant-returns"] and parts[3] == "original":
+            return self.send(store.accountant_original(parts[2]), filename="original-buyer-accountant-return.json")
         if path == "/api/expenses":
             return self.send(store.expenses(query=query.get("q", [""])[0], source=query.get("source", [""])[0],
                                             status=query.get("status", [""])[0], **self.paging(query)))
@@ -206,6 +211,17 @@ class Handler(BaseHTTPRequestHandler):
             saved = store.issued(parts[2])
             if len(parts) == 3:
                 return self.send(saved)
+            if parts[3] == "accountant-source":
+                return self.send(store.accountant_source(parts[2]), filename="issued-buyer-accountant-source.json")
+            if parts[3] == "bookkeeping-packet":
+                requested = query.get("expected_revision", [None])[0]
+                try:
+                    expected = int(requested) if requested is not None else None
+                except ValueError as exc:
+                    raise Problem("INVALID_REVISION", "Use the reviewed whole workspace revision") from exc
+                return self.send(store.accountant_delivery(parts[2], expected), content_type="application/zip", filename="buyer-bookkeeping-complete-period.zip")
+            if parts[3] == "accountant-returns":
+                return self.send(store.accountant_returns(parts[2], **self.paging(query)))
             if parts[3] == "html":
                 return self.send(render_issued(saved), content_type="text/html; charset=utf-8",
                                  csp="default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'")
@@ -221,6 +237,10 @@ class Handler(BaseHTTPRequestHandler):
             return (fixed[path](payload, expected))
         if len(parts) == 4 and parts[0] == "api":
             group, ident, action = parts[1:]
+            if group == "closes" and action == "accountant-preview":
+                return store.preview_accountant_return(ident, payload)
+            if group == "closes" and action == "accountant-return":
+                return store.save_accountant_return(ident, payload, expected)
             if group == "refund-packets" and action == "decision":
                 return store.decide_refund(ident, payload, expected)
             if group == "credits" and action == "coding":

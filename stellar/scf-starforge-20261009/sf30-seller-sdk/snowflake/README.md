@@ -279,3 +279,7 @@ starforge snowflake resume-publication --directory /private/snowflake --publicat
 ```
 
 Continuation keeps the original accepted review binding and resumes the original SQLite workbench and SF82 release. The edition's current review must still be accepted. Saving another accepted review of the same immutable edition does not create a new publication. A running publication rejects a different request under the same identity.
+
+## Managed application and complete receiving
+
+[Snowflake in Applications](MANAGED.md) explains initialization, Review/Save/Start/Open/Stop, original workspace and source identity, and complete installed receiving through the native SQLite merchant and SF82 release. The source-owned provider is declared by the existing Snowflake contribution. The receiving program retains the same application, edition and publication through restart.

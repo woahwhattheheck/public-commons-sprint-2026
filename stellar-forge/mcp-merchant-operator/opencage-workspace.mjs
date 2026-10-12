@@ -3,7 +3,7 @@ export { opencageWorkspaceTools } from './catalog/opencage-workspace.mjs';
 // MIT. Complete agent operation of the original OpenCage merchant/customer workspace.
 import { realpath } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
-import { dirname, isAbsolute, join, resolve } from 'node:path';
+import { basename, dirname, isAbsolute, join, resolve } from 'node:path';
 import { exact, failure, identifier, line, plain } from './config.mjs';
 import { RetainedFileReads, MAX_RETAINED_CHUNK_BYTES } from './retained-file-reads.mjs';
 import { readBytes as hostBytes, privateDirectory, parse } from '../../stellar/scf-starforge-20261009/sf102-cube-paid-query-adapter/onboarding/files.mjs';
@@ -15,6 +15,7 @@ export const OPENCAGE_WORKSPACE_CONNECTION_SCHEMA = 'stellar-forge.opencage-work
 const WORKSPACE_SCHEMA = 'stellar-forge.opencage-workspace.v1';
 const CAPTURE_SCHEMA = 'stellar-forge.opencage-capture.v1';
 const DELIVERY_SCHEMA = 'stellar-forge.opencage-delivery.v1';
+const MAX_CSV_BYTES=2097152;
 
 
 
@@ -72,7 +73,7 @@ export async function readOpenCageWorkspaceConfiguration(path) {
   const base = dirname(path), roots = new Set(), workspaces = Object.create(null);
   for (const [name, input] of Object.entries(raw.workspaces)) {
     identifier(name, 'OpenCage workspace alias');
-    exact(input, ['label', 'directory', 'plan', 'terms', 'facilitator', 'imports', 'packages', 'buyers'], ['directory']);
+    exact(input, ['label', 'directory', 'plan', 'terms', 'facilitator', 'imports', 'packages', 'buyers', 'csvSources'], ['directory']);
     const directory = hostPath(input.directory, base);
     await privateDirectory(directory);
     if (await realpath(directory) !== directory || roots.has(directory))
@@ -103,7 +104,8 @@ export async function readOpenCageWorkspaceConfiguration(path) {
         throw failure('CONFIGURATION_ERROR', 'Select the original HTTPS payment facilitator.');
       facilitator = url.href.replace(/\/$/, '');
     }
-    const imports = Object.create(null), packages = Object.create(null), buyers = Object.create(null);
+    const imports = Object.create(null), packages = Object.create(null), buyers = Object.create(null), csvSources=Object.create(null);
+    for(const [alias,value] of aliases(input.csvSources,'CSV source'))csvSources[alias]=await selectedFile(value,base,MAX_CSV_BYTES);
     for (const [alias, value] of aliases(input.imports, 'HTTP observation')) {
       exact(value, ['observation', 'response'], ['observation', 'response']);
       imports[alias] = { observation: await selectedFile(value.observation, base, 262144),
@@ -128,7 +130,7 @@ export async function readOpenCageWorkspaceConfiguration(path) {
       buyers[alias] = { file, configuration: selected };
     }
     workspaces[name] = { label: line(input.label ?? name, 'OpenCage workspace label'),
-      directory, configuration, facilitator, imports, packages, buyers };
+      directory, configuration, facilitator, imports, packages, buyers, csvSources };
   }
   return { schema: OPENCAGE_WORKSPACE_CONNECTION_SCHEMA, workspaces };
 }
@@ -199,9 +201,10 @@ export class MerchantOpenCageWorkspaces {
           imports: Object.entries(definition.imports).map(([source, value]) => ({ source,
             observationSha256: value.observation.sha256, responseSha256: value.response.sha256, responseBytes: value.response.bytes })),
           packages: Object.entries(definition.packages).map(([source, value]) => ({ source, identity: value.identity })),
-          buyers: Object.keys(definition.buyers), facilitatorConfigured: Boolean(definition.facilitator),
+          buyers: Object.keys(definition.buyers),
+          csvSources:Object.entries(definition.csvSources??{}).map(([source,file])=>({source,sha256:file.sha256,bytes:file.bytes})), facilitatorConfigured: Boolean(definition.facilitator),
           customers: [...(entry?.customers.values() ?? [])].map(customer => ({
-            exportId: customer.exportId, instanceId: customer.instanceId, identity: customer.identity, browserUrl: customer.service.url })) };
+            exportId: customer.exportId, kind:customer.kind, instanceId: customer.instanceId, identity: customer.identity, browserUrl: customer.service.url })) };
       }) };
   }
   #definition(alias) {
@@ -219,10 +222,10 @@ export class MerchantOpenCageWorkspaces {
   }
   #scope(alias) { return 'opencage:' + alias + ':' + this.#definition(alias).directory; }
   async #state(entry) {
-    const { requests, ...native } = await entry.model.overview();
+    const { requests, ...native } = await entry.model.overview({offset:0,limit:1});
     return { workspace: entry.alias, instanceId: entry.instanceId, browserUrl: entry.service.url,
       native, fileReads: this.#reads.status(this.#scope(entry.alias)),
-      customers: [...entry.customers.values()].map(value => ({ exportId: value.exportId,
+      customers: [...entry.customers.values()].map(value => ({ exportId: value.exportId, kind:value.kind,
         identity: value.identity, instanceId: value.instanceId, browserUrl: value.service.url })) };
   }
   async #open(alias) {
@@ -283,7 +286,14 @@ export class MerchantOpenCageWorkspaces {
     if (!hasPages && Object.keys(paging).length) throw failure('INVALID_PARAMS', 'Only collection views accept paging.');
     const original = entry.model;
     if (view === 'status') return this.#state(entry);
-    if (view === 'requests') return page((await original.overview()).requests, paging);
+    if (view === 'requests') {
+      const {offset=0,limit=20,expectedIndexSha256}=paging;
+      const value=await original.overview({offset,limit}),indexSha256=value.pagination.indexSha256;
+      if(offset>value.pagination.total||offset>0&&expectedIndexSha256===undefined||
+          expectedIndexSha256!==undefined&&expectedIndexSha256!==indexSha256)
+        throw failure('OPENCAGE_INDEX_CHANGED','Read the first current request page and retain its inventory SHA256 while continuing.');
+      return {indexSha256,total:value.pagination.total,offset,rows:value.requests,nextOffset:value.pagination.nextOffset};
+    }
     if (['request', 'candidates', 'decisions'].includes(view)) {
       const value = await original.get(id), base = requestView(value);
       if (view === 'request') return base;
@@ -303,36 +313,40 @@ export class MerchantOpenCageWorkspaces {
     return original.releaseDiff(before, after);
   }
   async #customer(entry, input) {
-    const exportId = geocodeId(input.exportId);
+    const exportId = geocodeId(input.exportId),kind=input.kind??'delivery';
+    if(!['delivery','batch-delivery'].includes(kind))throw failure('INVALID_PARAMS','Choose delivery or batch-delivery.');
+    const customerKey=kind+':'+exportId;
     if (input.action === 'close') {
-      const customer = entry.customers.get(exportId);
+      const customer = entry.customers.get(customerKey);
       if (!customer || customer.instanceId !== checked(input.instanceId, UUID, 'customer instance'))
         throw failure('OPENCAGE_CUSTOMER_INSTANCE_CONFLICT', 'Close the exact current customer instance owned by this process.');
-      await customer.service.close(); entry.customers.delete(exportId);
-      return { exportId, instanceId: customer.instanceId, state: 'CLOSED' };
+      await customer.service.close(); entry.customers.delete(customerKey);
+      return { exportId, kind, instanceId: customer.instanceId, state: 'CLOSED' };
     }
     if (input.action !== 'open' || input.instanceId !== undefined)
       throw failure('INVALID_PARAMS', 'Choose open without an instanceId, or close with the current instanceId.');
-    if (entry.customers.has(exportId)) {
-      const customer = entry.customers.get(exportId);
-      return { exportId, instanceId: customer.instanceId, identity: customer.identity, browserUrl: customer.service.url };
+    if (entry.customers.has(customerKey)) {
+      const customer = entry.customers.get(customerKey);
+      return { exportId, kind, instanceId: customer.instanceId, identity: customer.identity, browserUrl: customer.service.url };
     }
-    if (entry.customerOpening.has(exportId)) return entry.customerOpening.get(exportId);
+    if (entry.customerOpening.has(customerKey)) return entry.customerOpening.get(customerKey);
     const opening = (async () => {
-      const { delivery } = await entry.model.openExport(exportId);
+      const target=kind==='batch-delivery'?{batchDelivery:await (await entry.model.batches()).openDelivery(exportId)}:
+        {delivery:(await entry.model.openExport(exportId)).delivery};
+      const identity=target.batchDelivery?.manifest.identity??target.delivery.identity;
       const { createGeocodeServer } = await import('../../stellar/scf-starforge-20261009/sf30-seller-sdk/opencage/server.mjs');
-      const service = await createGeocodeServer({ delivery, port: 0 });
-      const customer = { exportId, service, identity: delivery.identity, instanceId: randomUUID() };
-      entry.customers.set(exportId, customer);
-      return { exportId, instanceId: customer.instanceId, identity: customer.identity, browserUrl: service.url };
+      const service = await createGeocodeServer({ ...target, port: 0 });
+      const customer = { exportId, kind, service, identity, instanceId: randomUUID() };
+      entry.customers.set(customerKey, customer);
+      return { exportId, kind, instanceId: customer.instanceId, identity: customer.identity, browserUrl: service.url };
     })();
-    entry.customerOpening.set(exportId, opening);
-    try { return await opening; } finally { entry.customerOpening.delete(exportId); }
+    entry.customerOpening.set(customerKey, opening);
+    try { return await opening; } finally { entry.customerOpening.delete(customerKey); }
   }
   async #file(entry, input) {
     geocodeId(input.id);
     const file = relativeFile(input.file);
-    if (!['capture', 'delivery', 'package'].includes(input.kind))
+    if (!['capture', 'delivery', 'package', 'batch-delivery'].includes(input.kind))
       throw failure('INVALID_PARAMS', 'Choose an original capture, delivery or package.');
     if (input.readId !== undefined) checked(input.readId, UUID, 'file read');
     const key = JSON.stringify([input.kind, input.id, file]);
@@ -340,6 +354,11 @@ export class MerchantOpenCageWorkspaces {
       kind: 'opencage-' + input.kind, directory: entry.model.directory,
       readId: input.readId, expectedSha256: input.expectedSha256, offset: input.offset, limit: input.limit,
       load: async () => {
+        if(input.kind==='batch-delivery'){
+          const delivery=await (await entry.model.batches()).openDelivery(input.id);
+          const {handle,file:selected}=await delivery.openFile(file);
+          return {readonlyFileHandle:handle,bytes:selected.bytes,sha256:selected.sha256,name:file,type:contentType(file)};
+        }
         let bundle;
         if (input.kind === 'capture') {
           const value = await entry.model.get(input.id);
@@ -360,10 +379,59 @@ export class MerchantOpenCageWorkspaces {
       } });
     return { workspace: entry.alias, kind: input.kind, id: input.id, file, ...result };
   }
+  async #batchInput(definition,input){
+    const source=definition.csvSources?.[identifier(input.source,'CSV source alias')];
+    if(!source)throw failure('OPENCAGE_CSV_SOURCE_NOT_CONFIGURED','Choose a host-declared CSV source alias.');
+    const {source:alias,expectedReviewSha256,...values}=input;
+    return {...values,bytes:await loadFile(source,'CSV source'),fileName:basename(source.path),
+      ...(expectedReviewSha256===undefined?{}:{expectedReviewSha256})};
+  }
+  async #batchInspect(entry,input){
+    const {view,...values}=input,manager=await entry.model.batches();
+    const rules={
+      batches:[['offset','limit'],[]],rows:[['batchId','offset','limit','status'],['batchId']],
+      row:[['batchId','ordinal'],['batchId','ordinal']],deliveries:[['batchId','offset','limit'],[]],
+      delivery:[['exportId','offset','limit'],['exportId']], 'delivery-row':[['exportId','ordinal'],['exportId','ordinal']],
+    };
+    if(!Object.hasOwn(rules,view))throw failure('INVALID_PARAMS','Choose a declared CSV batch view.');
+    exact(values,...rules[view]);
+    if(view==='rows'){const {batchId,...selection}=values;return manager.status(batchId,selection);}
+    if(view==='row')return manager.row(values.batchId,values.ordinal);
+    if(view==='delivery'||view==='delivery-row'){
+      const delivery=await manager.openDelivery(values.exportId);
+      return view==='delivery-row'?delivery.row(values.ordinal):delivery.inspect({offset:values.offset??0,limit:values.limit??20});
+    }
+    const rows=view==='batches'?await manager.list():await manager.deliveries(values.batchId?{batchId:values.batchId}:{});
+    const offset=values.offset??0,limit=values.limit??20;
+    if(!Number.isSafeInteger(offset)||offset<0||offset>rows.length||!Number.isSafeInteger(limit)||limit<1||limit>100)
+      throw failure('INVALID_PARAMS','Use an in-range offset and 1–100 rows.');
+    return {total:rows.length,offset,rows:rows.slice(offset,offset+limit),nextOffset:offset+limit<rows.length?offset+limit:null};
+  }
   async #execute(entry, name, args) {
     const { workspace, ...input } = args, original = entry.model, definition = this.#definition(workspace);
     const result = native => ({ workspace, native });
     switch (name) {
+      case 'merchant_opencage_batch_source': {
+        const selected=definition.csvSources?.[identifier(input.source,'CSV source alias')];
+        if(!selected)throw failure('OPENCAGE_CSV_SOURCE_NOT_CONFIGURED','Choose a host-declared CSV source alias.');
+        const {inspectCsvSource}=await import('../../stellar/scf-starforge-20261009/sf30-seller-sdk/opencage/batch.mjs');
+        return result({source:input.source,...inspectCsvSource(await loadFile(selected,'CSV source'))});
+      }
+      case 'merchant_opencage_batch_review':
+      case 'merchant_opencage_batch_prepare': {
+        const manager=await original.batches(),selection=await this.#batchInput(definition,input);
+        return result(await manager[name.endsWith('_review')?'review':'prepare'](selection));
+      }
+      case 'merchant_opencage_batch_inspect':return result(await this.#batchInspect(entry,input));
+      case 'merchant_opencage_batch_run':{
+        const {action,...values}=input;
+        if(!['start','stop','reconcile'].includes(action))throw failure('INVALID_PARAMS','Choose start, stop or reconcile.');
+        exact(values,action==='reconcile'?['batchId']:['batchId','runId'],action==='reconcile'?['batchId']:['batchId','runId']);
+        return result(await (await original.batches())[action](values));
+      }
+      case 'merchant_opencage_batch_select':return result(await (await original.batches()).select(input));
+      case 'merchant_opencage_batch_retry':return result(await (await original.batches()).retry(input));
+      case 'merchant_opencage_batch_export':return result(withoutDirectory(await (await original.batches()).export(input)));
       case 'merchant_opencage_inspect': return result(await this.#inspect(entry, input));
       case 'merchant_opencage_query_review': return result(reviewQuery(original, input.productId, input.input));
       case 'merchant_opencage_capture': {

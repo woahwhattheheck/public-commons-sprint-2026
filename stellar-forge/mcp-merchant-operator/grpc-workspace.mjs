@@ -1,18 +1,17 @@
 import { grpcWorkspaceTools, read, selection, page, revision, alias, baseRevision, digest, methodName, uuid, generation, reason, instance, ALIAS, SHA, UUID } from './catalog/grpc-workspace.mjs';
 export { grpcWorkspaceTools } from './catalog/grpc-workspace.mjs';
+import { executeGrpcUpgrade } from './grpc-upgrades.mjs';
+import { GRPC_UPGRADE_MAX_BYTES } from '../../stellar/scf-starforge-20261009/sf30-seller-sdk/grpc/upgrade-receiving.mjs';
 // MIT. Agent operation and complete delivery over the original private gRPC workspace.
 import { constants } from 'node:fs';
 import { open, lstat, mkdir, readdir, link, unlink, rm } from 'node:fs/promises';
 import { createHash, randomUUID } from 'node:crypto';
 import { dirname, join, resolve } from 'node:path';
 import { RetainedFileReads, MAX_RETAINED_CHUNK_BYTES } from './retained-file-reads.mjs';
-import { GRPC_CUSTOMER_FILES, GRPC_EXPORT_SCHEMA, GRPC_EXPORT_MANIFEST, GRPC_EXPORT_MAX_BYTES,
+import { GRPC_CUSTOMER_FILES, GRPC_EXPORT_SCHEMA, GRPC_EXPORT_MANIFEST, GRPC_EXPORT_MAX_BYTES, GRPC_STREAM_EXPORT_MAX_BYTES,
   grpcHash, grpcCanonical, grpcExportIdentity, parseGrpcExportManifest } from './grpc-workspace-export.mjs';
 
 export const GRPC_WORKSPACE_CONNECTION_SCHEMA = 'stellar-forge.grpc-workspace-connection.v1';
-
-
-
 const MAX_JSON = 40 * 1024 * 1024, MAX_NATIVE_REQUEST = 17825792, INLINE = 96 * 1024;
 const plain = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 const fail = (code, message) => Object.assign(new Error(message), { code });
@@ -87,13 +86,13 @@ export async function readGrpcWorkspaceConfiguration(path) {
   const workspaces = Object.create(null);
   for (const [alias, input] of Object.entries(raw.workspaces)) {
     checked(alias, ALIAS, 'workspace alias');
-    exact(input, ['label', 'consoleUrlEnv', 'consoleUrlFile', 'captures', 'files']);
+    exact(input, ['label', 'consoleUrlEnv', 'consoleUrlFile', 'captures', 'files', 'reflections']);
     if ((input.consoleUrlEnv === undefined) === (input.consoleUrlFile === undefined))
       throw fail('CONFIGURATION_ERROR', 'Declare exactly one original console URL environment name or private file.');
-    const captures = Object.create(null), files = Object.create(null);
-    for (const name of ['captures', 'files']) if (input[name] !== undefined &&
+    const captures = Object.create(null), files = Object.create(null), reflections = Object.create(null);
+    for (const name of ['captures', 'files', 'reflections']) if (input[name] !== undefined &&
       (!plain(input[name]) || Object.keys(input[name]).length > 128))
-      throw fail('CONFIGURATION_ERROR', 'Declare up to 128 original capture or receiving file handles.');
+      throw fail('CONFIGURATION_ERROR', 'Declare up to 128 original capture, reflection or receiving file handles.');
     for (const [handle, source] of Object.entries(input.captures ?? {})) {
       checked(handle, ALIAS, 'capture handle');
       exact(source, ['label', 'directory', 'entrypoints', 'sourceFile', 'planFile'], ['directory', 'entrypoints', 'sourceFile', 'planFile']);
@@ -103,6 +102,14 @@ export async function readGrpcWorkspaceConfiguration(path) {
       captures[handle] = { label: printable(source.label ?? handle, 'capture label', 120), directory: hostPath(source.directory, base),
         entrypoints: [...source.entrypoints], sourceFile: hostPath(source.sourceFile, base), planFile: hostPath(source.planFile, base) };
     }
+    for (const [handle, profile] of Object.entries(input.reflections ?? {})) {
+      checked(handle, ALIAS, 'reflection profile');
+      exact(profile, ['label', 'sourceFile', 'protocol'], ['sourceFile']);
+      if (profile.protocol !== undefined && !['auto', 'v1', 'v1alpha'].includes(profile.protocol))
+        throw fail('CONFIGURATION_ERROR', 'Select auto, v1 or v1alpha reflection.');
+      reflections[handle] = { label: printable(profile.label ?? handle, 'reflection label', 120),
+        sourceFile: hostPath(profile.sourceFile, base), protocol: profile.protocol ?? 'auto' };
+    }
     for (const [handle, source] of Object.entries(input.files ?? {})) {
       checked(handle, ALIAS, 'receiving file handle');
       exact(source, ['label', 'path', 'kind', 'sha256'], ['path', 'kind']);
@@ -110,23 +117,13 @@ export async function readGrpcWorkspaceConfiguration(path) {
       files[handle] = { label: printable(source.label ?? handle, 'file label'), path: hostPath(source.path, base), kind: source.kind,
         ...(source.sha256 === undefined ? {} : { sha256: checked(source.sha256, SHA, 'file SHA256') }) };
     }
-    workspaces[alias] = { label: printable(input.label ?? alias, 'workspace label'), captures, files,
+    workspaces[alias] = { label: printable(input.label ?? alias, 'workspace label'), captures, files, reflections,
       ...(input.consoleUrlFile === undefined
         ? { consoleUrlEnv: checked(input.consoleUrlEnv, /^[A-Za-z_][A-Za-z0-9_]*$/, 'console URL environment name') }
         : { consoleUrlFile: hostPath(input.consoleUrlFile, base) }) };
   }
   return { schema: GRPC_WORKSPACE_CONNECTION_SCHEMA, workspaces };
 }
-
-
-
-
-
-
-
-
-
-
 
 const definitions = new Map(grpcWorkspaceTools((name, description, properties, required) => ({ name, properties, required })).map(value => [value.name, value]));
 function paged(items, input) {
@@ -169,6 +166,7 @@ export class MerchantGrpcWorkspaces {
       workspaces: Object.entries(this.#config.grpcWorkspaces?.workspaces ?? {}).map(([workspace, entry]) => ({
         workspace, label: entry.label, ownership: 'ORIGINAL_GRPC_WORKSPACE',
         captures: Object.entries(entry.captures).map(([capture, source]) => ({ capture, label: source.label, entrypoints: source.entrypoints })),
+        reflections: Object.entries(entry.reflections ?? {}).map(([profile, source]) => ({ profile, label: source.label, protocol: source.protocol })),
         files: Object.entries(entry.files).map(([file, source]) => ({ file, label: source.label, kind: source.kind, sha256: source.sha256 ?? null })),
       })) };
   }
@@ -258,6 +256,8 @@ export class MerchantGrpcWorkspaces {
   }
   async #retain(workspace, kind, original, sources) {
     const root = await this.#root(), temporary = await privateDirectory(join(root, '.collect-' + randomUUID()));
+    const maximum = kind === 'upgrade' ? GRPC_UPGRADE_MAX_BYTES
+      : sources.some(source => source.path === 'grpc-stream.ndjson') ? GRPC_EXPORT_MAX_BYTES : 64 * 1024 * 1024;
     const files = []; let total = 0;
     try {
       for (const source of sources) {
@@ -275,7 +275,7 @@ export class MerchantGrpcWorkspaces {
         };
         const append = async chunk => {
           length += chunk.length; total += chunk.length;
-          if (length > source.maximum || total > GRPC_EXPORT_MAX_BYTES) throw fail('GRPC_EXPORT_TOO_LARGE', 'The complete native export exceeds its declared size limit.');
+          if (length > source.maximum || total > maximum) throw fail('GRPC_EXPORT_TOO_LARGE', 'The complete native export exceeds its declared size limit.');
           digest.update(chunk); await handle.writeFile(chunk);
         };
         try {
@@ -336,14 +336,41 @@ export class MerchantGrpcWorkspaces {
       const value = await this.#revision(definition, input.revision);
       return this.#jsonExport(workspace, 'revision', { revision: value.id }, value);
     }
-    if (input.kind === 'attempt') {
+    if (input.kind === 'stream' || input.kind === 'attempt') {
       checked(input.operationId, UUID, 'original operation ID');
-      if (input.revision !== undefined || input.preparation !== undefined) throw fail('INVALID_PARAMS', 'Select only the operationId for a complete retained call.');
+      if (input.revision !== undefined || input.preparation !== undefined) throw fail('INVALID_PARAMS', 'Select only the operationId for its complete native stream export.');
       const value = await this.#json(definition, '/api/attempt', { id: input.operationId });
-      if (!value) throw fail('GRPC_ATTEMPT_NOT_FOUND', 'The original workspace has no retained call with this operationId.');
-      return this.#jsonExport(workspace, 'attempt', { operationId: value.id, revision: value.revision }, value);
+      if (!value || value.id !== input.operationId)
+        throw fail('GRPC_ATTEMPT_NOT_FOUND', 'The original workspace has no retained call with this operationId.');
+      if (value.responseFormat !== 'ndjson' || !value.stream) {
+        if (input.kind === 'stream') throw fail('GRPC_STREAM_NOT_FOUND', 'Choose an original retained native stream with its exact received file.');
+        return this.#jsonExport(workspace, 'attempt', { operationId: value.id, revision: value.revision }, value);
+      }
+      const capture = value.stream;
+      checked(value.revision, SHA, 'original stream revision'); checked(capture.sha256, SHA, 'retained stream SHA256');
+      integer(capture.bytes, 0, GRPC_STREAM_EXPORT_MAX_BYTES);
+      if (typeof capture.complete !== 'boolean') throw fail('GRPC_STREAM_CHANGED', 'Retain the original stream completeness outcome.');
+      return this.#retain(workspace, input.kind, { operationId: value.id, revision: value.revision }, [
+        { path: 'grpc-attempt.json', maximum: MAX_JSON, contentType: 'application/json', bytes: Buffer.from(JSON.stringify(value) + '\n') },
+        { path: 'grpc-stream.ndjson', maximum: GRPC_STREAM_EXPORT_MAX_BYTES, contentType: 'application/x-ndjson; charset=utf-8',
+          receive: async consume => {
+            const connection = await this.#connection(definition);
+            const grant = await this.#request(connection, '/api/stream-download', { id: value.id }, async response =>
+              JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(await responseBytes(response, 65536))));
+            if (!/^\/api\/stream-files\/[a-f0-9]{64}$/.test(grant.url ?? '') || grant.sha256 !== capture.sha256 ||
+                grant.bytes !== capture.bytes || grant.complete !== capture.complete)
+              throw fail('GRPC_STREAM_CHANGED', 'The original stream download differs from its retained attempt.');
+            return this.#request(connection, grant.url, undefined, async response => {
+              if (response.headers.get('x-content-sha256') !== capture.sha256 ||
+                  response.headers.get('content-length') !== String(capture.bytes) ||
+                  response.headers.get('x-grpc-stream-complete') !== String(capture.complete))
+                throw fail('GRPC_STREAM_CHANGED', 'The original stream byte headers differ from its retained attempt.');
+              return consume(response);
+            });
+          } },
+      ]);
     }
-    throw fail('INVALID_PARAMS', 'Choose a complete customer, revision or attempt export.');
+    throw fail('INVALID_PARAMS', 'Choose a complete customer, revision, attempt or stream export.');
   }
   async #execute(name, args) {
     if (name === 'merchant_grpc_workspaces') return this.summary;
@@ -361,17 +388,32 @@ export class MerchantGrpcWorkspaces {
       const result = await this.#reads.read({ scope: args.exportId, key: file.name, kind: 'grpc-export',
         directory: retained.directory, expectedSha256: file.sha256, readId: args.readId, offset: args.offset ?? 0, limit: args.limit ?? 65536,
         load: async () => {
-          const bytes = file.name === GRPC_EXPORT_MANIFEST ? retained.bytes : await readBytes(join(retained.directory, file.name), file.bytes);
-          if (bytes.length !== file.bytes || grpcHash(bytes) !== file.sha256) throw fail('GRPC_EXPORT_CHANGED', 'The original retained file differs from its manifest.');
-          return { bytes, name: file.name, type: file.contentType };
+          if (file.name === GRPC_EXPORT_MANIFEST) return { bytes: retained.bytes, name: file.name, type: file.contentType };
+          const handle = await open(join(retained.directory, file.name), constants.O_RDONLY |
+            (constants.O_NOFOLLOW ?? 0) | (constants.O_NONBLOCK ?? 0));
+          try {
+            const stat = await handle.stat();
+            if (!stat.isFile() || stat.size !== file.bytes || process.platform !== 'win32' && stat.mode & 0o077 ||
+                typeof process.getuid === 'function' && stat.uid !== process.getuid())
+              throw fail('GRPC_EXPORT_CHANGED', 'Use the original owned private export file.');
+            // The original reader owns this read-only descriptor after return. It
+            // hashes it with bounded memory and verifies identity around ranges.
+            return { readonlyFileHandle: handle, bytes: file.bytes, sha256: file.sha256, name: file.name, type: file.contentType };
+          } catch (error) { await handle.close(); throw error; }
         } });
       return { exportId: args.exportId, manifestSha256: retained.sha256, ...result };
     }
     const workspace = args.workspace, definition = this.#definition(workspace);
+    if (name.startsWith('merchant_grpc_upgrade_')) return executeGrpcUpgrade(name, args, {
+      request: (route, body) => this.#json(definition, route, body), state: () => this.#state(definition),
+      revision: id => this.#revision(definition, id), paged, revisionSummary,
+      bounded: (value, original) => this.#bounded(workspace, value, original),
+      retain: (kind, original, sources) => this.#retain(workspace, kind, original, sources),
+    });
     if (name === 'merchant_grpc_status') {
       const state = await this.#state(definition);
       return { schema: state.schema, workspace, currentRevision: state.currentRevision, generation: state.generation,
-        counts: { revisions: state.revisions.length, prepared: state.prepared.length, intents: state.intents.length, attempts: state.attemptCount },
+        counts: { revisions: state.revisions.length, prepared: state.prepared.length, intents: state.intents.length, attempts: state.attemptCount, reflections: state.reflections?.length ?? 0, upgrades: state.upgrades?.length ?? 0 },
         runtime: state.runtime };
     }
     if (name === 'merchant_grpc_inventory') {
@@ -382,7 +424,7 @@ export class MerchantGrpcWorkspaces {
         if (result.schema !== 'stellar-forge.grpc-workspace-attempt-page.v1') throw fail('GRPC_ATTEMPTS_PAGE_INVALID', 'Use the original complete retained-attempt page route.');
         return { workspace, kind: args.kind, ...result };
       }
-      if (!['revisions', 'prepared', 'intents'].includes(args.kind)) throw fail('INVALID_PARAMS', 'Choose a declared complete inventory.');
+      if (!['revisions', 'prepared', 'intents', 'reflections'].includes(args.kind)) throw fail('INVALID_PARAMS', 'Choose a declared complete inventory.');
       return { workspace, kind: args.kind, ...paged((await this.#state(definition))[args.kind], args) };
     }
     if (name === 'merchant_grpc_revision') {
@@ -398,6 +440,32 @@ export class MerchantGrpcWorkspaces {
       const source = await jsonFile(capture.sourceFile, 65536), plan = await jsonFile(capture.planFile, 262144);
       return revisionSummary(await this.#json(definition, '/api/capture', { directory: capture.directory, entrypoints: capture.entrypoints,
         source, plan, baseRevision: args.baseRevision, title: args.title ?? capture.label }));
+    }
+    if (name === 'merchant_grpc_reflection_inventory' || name === 'merchant_grpc_reflection_capture') {
+      if ((args.profile === undefined) === (args.revision === undefined))
+        throw fail('INVALID_PARAMS', 'Choose exactly one host reflection profile or original saved source revision.');
+      let source, protocol = args.protocol;
+      if (args.profile !== undefined) {
+        const profile = definition.reflections?.[checked(args.profile, ALIAS, 'reflection profile')];
+        if (!profile) throw fail('GRPC_REFLECTION_NOT_CONFIGURED', 'Choose an original host reflection profile.');
+        source = await jsonFile(profile.sourceFile, 65536); protocol ??= profile.protocol;
+      } else source = (await this.#revision(definition, args.revision)).source;
+      const capture = name === 'merchant_grpc_reflection_capture';
+      const body = { source, protocol: protocol ?? 'auto', ...(capture ? { id: args.operationId,
+        services: args.services, expectedInventorySha256: args.expectedInventorySha256, baseRevision: args.baseRevision } : {}) };
+      const value = await this.#json(definition, capture ? '/api/reflection-capture' : '/api/reflection-inventory', body);
+      return this.#bounded(workspace, value, { topic: capture ? 'reflection-capture' : 'reflection-inventory',
+        ...(capture ? { operationId: value.id } : {}) });
+    }
+    if (name === 'merchant_grpc_reflection_open') {
+      const value = await this.#json(definition, '/api/reflection-open', { id: args.captureId,
+        ...(args.baseRevision === undefined ? {} : { baseRevision: args.baseRevision }) });
+      return this.#bounded(workspace, value, { operationId: value.id, topic: 'reflection-capture' });
+    }
+    if (name === 'merchant_grpc_reflection_save') {
+      return revisionSummary(await this.#json(definition, '/api/reflection-save', { id: args.captureId,
+        expectedCaptureSha256: args.expectedCaptureSha256, baseRevision: args.baseRevision, plan: args.plan,
+        title: args.title ?? 'Reflected gRPC merchant' }));
     }
     if (name === 'merchant_grpc_save') {
       const value = await this.#revision(definition, args.revision);
@@ -431,6 +499,7 @@ export class MerchantGrpcWorkspaces {
       const value = await this.#json(definition, '/api/call', { revision: args.revision, id: args.operationId, method: args.method, input });
       return this.#bounded(workspace, value, { revision: args.revision, operationId: args.operationId, topic: 'call' });
     }
+    if (name === 'merchant_grpc_cancel_call') return this.#json(definition, '/api/cancel-call', { id: args.operationId });
     if (name === 'merchant_grpc_attempt') {
       const value = await this.#json(definition, '/api/attempt', { id: args.operationId });
       if (!value) return { operationId: args.operationId, state: 'NOT_FOUND' };
@@ -472,7 +541,8 @@ export class MerchantGrpcWorkspaces {
     if (this.#close) return this.#close;
     this.#closing = true;
     for (const controller of this.#controllers) controller.abort();
-    this.#close = (async () => { await Promise.allSettled([...this.#pending]); await this.#reads.close(); })();
+    this.#close = (async () => { await Promise.allSettled([...this.#pending]); await this.#reads.close(); })()
+      .catch(error => { this.#close = null; throw error; });
     return this.#close;
   }
 }

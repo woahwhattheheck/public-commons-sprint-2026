@@ -1,0 +1,46 @@
+{
+  "schema": "stellar-forge.supplier-source-mapping-clarification.v1",
+  "id": "sonepar-country-branch-product-supplier-roles",
+  "sourceContractGitBlob": "2daf49eac0706f8ef4584da00fc814698875f19d",
+  "sources": [
+    {
+      "id": "sonepar-product-data-guidelines",
+      "url": "https://www.sonepar.com/resource/blob/85322/d6950a910363f19c4fdc060017186082/sonepar-product-data-guidelines-data.pdf",
+      "sha256": "63dd77f1ac6688d54db171fd8f2fe4852207fede1bfa6978fe7a2ea5d524e65d",
+      "sections": [
+        {
+          "section": "2.1.4",
+          "printedPage": 10,
+          "observation": "Branch Number is described as a country/sector product identifier, with Finland STK E-number and Norway EFO El number examples. The parenthesized XML field is COUNTRY_BRANCH_SUPPLIER_ID."
+        },
+        {
+          "section": "2.2",
+          "printedPage": 11,
+          "observation": "The guideline requires Branch Number for Finland, Norway and Sweden."
+        }
+      ]
+    },
+    {
+      "id": "etim-bmecat-5.0",
+      "url": "https://etim.ch/de/downloads/downloads/2-bmecat?download=12:etim-bmecat-guideline-v5-0-en",
+      "section": "10.p Norway",
+      "printedPage": 119,
+      "observation": "The original Norway mapping uses COUNTRY_BRANCH_NUMBER for Elnummer / NRF number and COUNTRY_BRANCH_SUPPLIER_ID for Supplier number."
+    }
+  ],
+  "interpretation": {
+    "productBranchField": "branchNumbers",
+    "productXmlField": "UDX.EDXF.COUNTRY_BRANCH_NUMBER",
+    "supplierBranchField": "branchSupplierIds",
+    "supplierXmlField": "UDX.EDXF.COUNTRY_BRANCH_SUPPLIER_ID",
+    "requiredSoneparProductCountries": [
+      "FI",
+      "NO",
+      "SE"
+    ],
+    "rule": "Require an explicitly identified product branch number for each applicable selected country. Preserve the supplier branch identifier separately. A supplier number does not substitute for the country product identifier.",
+    "sourceLabelNote": "The Sonepar narrative and its product examples conflict with its literal parenthesized XML field. Retain this informational mapping note and use the original ETIM fields for the explicitly identified semantic roles.",
+    "implicitSupplierRoleRequirement": false,
+    "valuesTransformed": false
+  }
+}

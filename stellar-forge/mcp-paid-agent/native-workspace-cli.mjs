@@ -15,7 +15,8 @@ const commands = {init:['--workspace','--catalog','--max-response-bytes','--resp
   'objects-register':['--description'], 'datasets-register':['--description'],
   'datasets-receive':['--id','--room','--session'],
   'analysis-register':['--name','--database'], 'analysis-inbox-register':['--name','--inbox'],
-  'collections-register':['--description'], 'duckdb-register':['--description']};
+  'collections-register':['--description'], 'duckdb-register':['--description'],
+  'collections-recovery-register':['--description'], 'collections-recovery-opened':['--name','--request-id']};
 function parse(args) {
   const [command, ...rest] = args;
   if (!Object.hasOwn(commands, command) || rest.length % 2) fail('MCP_NATIVE_CLI_ARGUMENTS_INVALID');
@@ -58,6 +59,8 @@ async function main(args) {
       'analysis-register --dir ABS --name ALIAS --database RUNNING_ORIGINAL_ANALYSIS_DIRECTORY\n' +
       'analysis-inbox-register --dir ABS --name ALIAS --inbox EXISTING_ORIGINAL_SF88_INBOX\n' +
       'collections-register --dir ABS --description PRIVATE_ORIGINAL_COLLECTION_REGISTRATION_JSON\n' +
+      'collections-recovery-register --dir ABS --description PRIVATE_ORIGINAL_RECOVERY_REGISTRATION_JSON\n' +
+      'collections-recovery-opened --dir ABS --name RECOVERY_ALIAS --request-id ORIGINAL_RESTORE_UUID\n' +
       'inspect --dir ABS\nreport --dir ABS --out NEW_HTML\n');
     return;
   }
@@ -79,6 +82,14 @@ async function main(args) {
   const native = await openNativeWorkspace(directory);
   if (command === 'duckdb-register') {
     try { return print(await native.registerDuckDB(await input(v['--description'], 256 * 1024))); }
+    finally { await native.close(); }
+  }
+  if (command === 'collections-recovery-register') {
+    try { return print(await native.registerCollectionRecovery(await input(v['--description'], 256 * 1024))); }
+    finally { await native.close(); }
+  }
+  if (command === 'collections-recovery-opened') {
+    try { return print(await native.collectionRecoveryOpenedConnection(v['--name'], v['--request-id'])); }
     finally { await native.close(); }
   }
   if (command === 'collections-register') {
