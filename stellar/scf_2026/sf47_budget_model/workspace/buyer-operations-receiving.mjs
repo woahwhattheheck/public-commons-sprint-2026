@@ -26,7 +26,7 @@ need((await lstat(work)).isDirectory()&&((await lstat(work)).mode&0o077)===0,'Th
 const sourceHead=config.sourceHead??null,sf88=join(repo,'stellar/scf-starforge-20261009/sf88-operator-buyer-cli');
 const grant=join(repo,'stellar/scf_2026/sf47_budget_model/workspace');
 const node=config.nodeExecutable||process.execPath,python=config.pythonExecutable||'python3';
-let cohortModule=null;
+let cohortModule=null,implementationModule=null;
 const workspace=join(work,'grant-workspace'),restored=join(work,'received-workspace');
 const handoff=join(work,'original-buyer-operations.json'),statePath=join(work,'continuation.json');
 await mkdir(join(work,'requests'),{recursive:true,mode:0o700});
@@ -125,10 +125,13 @@ async function checkOriginalCase(current,withHistory=false){
     need(canonical(current[key])===canonical(baseline[key]),'The original '+key+' changed.');
   const cohortRequest=config.cohortReceiving?await requestForPhase('cohort-freeze'):null;
   const allowedReviewId=cohortRequest?.body?.action==='cohort.prepare'?cohortRequest.result?.recordId:null;
+  const implementationRequest=config.implementationReceiving?await requestForPhase('implementation-freeze'):null;
+  const implementationReviewId=implementationRequest?.body?.action==='implementation.prepare'?implementationRequest.result?.recordId:null;
   for(const prior of baseline.reviews)
     need(canonical(current.reviews.find(row=>row.id===prior.id))===canonical(prior),'An original frozen review changed.');
   need(current.reviews.every(row=>baseline.reviews.some(prior=>prior.id===row.id)||
-    row.id===allowedReviewId&&row.purpose==='COHORT_EVALUATION'),'An unselected original review was added or lost.');
+    row.id===allowedReviewId&&row.purpose==='COHORT_EVALUATION'||
+    row.id===implementationReviewId&&row.purpose==='IMPLEMENTATION_EVIDENCE'),'An unselected original review was added or lost.');
   for(const prior of baseline.sources)
     need(canonical(current.sources.find(row=>row.id===prior.id))===canonical(prior),'An original source metadata record changed.');
   for(const key of ['mode','state','calendarStart','planRevision','createdAt'])
@@ -494,7 +497,7 @@ try{
   if(config.cohortReceiving) {
     need(config.originalCase,'The cohort continuation requires the supplied complete original operating case.');
     const helper=join(grant,'cohort-operations-receiving.mjs'),raw=await readFile(helper);
-    need(createHash('sha1').update('blob '+raw.length+'\0').update(raw).digest('hex')==='6e6b008dc603ea8affe376eb28000d35ef5ab923',
+    need(createHash('sha1').update('blob '+raw.length+'\0').update(raw).digest('hex')==='72c80bb8de5358e327d5e331da71599dd7722791',
       'Use the exact complete cohort continuation source.');
     cohortModule=await import(pathToFileURL(helper).href);
     await cohortModule.receiveCohortWithOperations({page,api,phaseRequest,requestForPhase,screenshot,atomic,state,save,
@@ -504,25 +507,38 @@ try{
     await stage('original-cohort-review-frozen',{reviewId:state.cohortReceiving.reviewId,version:current.program.version,
       independentCompletions:0,awardClockEstablished:false});
   }
+  if(config.implementationReceiving) {
+    need(config.originalCase,'Implementation evidence continues the supplied complete original operating case.');
+    const helper=join(grant,'implementation-operations-receiving.mjs'),raw=await readFile(helper);
+    need(createHash('sha1').update('blob '+raw.length+'\0').update(raw).digest('hex')==='ef3c4be3d06f9369fafb30fb92a62551c80f4251',
+      'Use the exact complete implementation continuation source.');
+    implementationModule=await import(pathToFileURL(helper).href);
+    await implementationModule.receiveImplementationWithOperations({page,api,phaseRequest,requestForPhase,screenshot,atomic,state,save,
+      workDirectory:work,caseId:state.caseId,actor:config.actor,selection:config.implementationReceiving});
+    current=await api('/api/operations/'+state.caseId);
+    await stage('original-implementation-review-frozen',{reviewId:state.implementationReceiving.reviewId,
+      sourceId:state.implementationReceiving.sourceId,version:current.program.version});
+  }
   const originalCasePreservation=await checkOriginalCase(current,true);
   if(config.agentReceiving){
     need(config.intentIds.length===1,'The joined agent phase requires one explicitly selected original purchase.');
     const helperPath=join(grant,'buyer-agent-receiving.mjs'),helperBytes=await readFile(helperPath);
     const helperGitBlob=createHash('sha1').update('blob '+helperBytes.length+'\0').update(helperBytes).digest('hex');
-    need(helperGitBlob==='0f1fdf851383f328538beddf353393c983228e03','Use the exact original agent receiving phase.');
+    need(helperGitBlob==='17a8798d44ca92505708f8427e79371442a36e91','Use the exact original agent receiving phase.');
     need(isAbsolute(python)&&isAbsolute(node),'The original managed agent requires absolute Python and Node executable paths.');
     const purchase=selectedPurchase(current,config.intentIds[0]),deployment=selectedDeployment(current);
     const phaseInput={schema:'sf47.native-buyer-agent-phase.v1',operationId:config.agentReceiving.operationId,
       sourceRoot:repo,sourceHead,workspaceDirectory:workspace,outputDirectory:join(work,'agent-receiving'),
       caseId:state.caseId,originalHandoffPath:handoff,sourceSha256:state.nativeReport.source.sha256,
       purchaseId:purchase.id,deploymentId:deployment.id,actor:config.actor,nodeExecutable:node,pythonExecutable:python,
-      ...(state.cohortReceiving?{cohort:state.cohortReceiving.agent}:{})};
+      ...(state.cohortReceiving?{cohort:state.cohortReceiving.agent}:{}),
+      ...(state.implementationReceiving?{implementation:state.implementationReceiving.agent}:{})};
     await context.storageState({path:join(work,'browser-state.json')});
     await page.goto('about:blank');
     await stopServer();
     const {receiveBuyerWithAgent}=await import(pathToFileURL(helperPath).href);
     const result=await receiveBuyerWithAgent(phaseInput);
-    need(result.complete===true&&result.allOwnedServicesClosed===true&&result.toolCount===58&&
+    need(result.complete===true&&result.allOwnedServicesClosed===true&&result.toolCount===67&&
       result.caseId===state.caseId&&result.purchaseId===purchase.id&&result.deploymentId===deployment.id&&
       result.originalSourceSha256===state.nativeReport.source.sha256,
       'Complete the same original agent receiving phase and drain its managed service before continuing.');
@@ -551,6 +567,9 @@ try{
     state.cohortCLI=await cohortModule.inspectCohortWithCLI({grantCLI,workspaceDirectory:workspace,state,save,atomic,workDirectory:work});
     await save();
   }
+  if(implementationModule){
+    state.implementationCLI=await implementationModule.inspectImplementationWithCLI({grantCLI,workspaceDirectory:workspace,state,save,atomic,workDirectory:work});await save();
+  }
   if(!state.importRequestId){state.importRequestId='buyer-operations-receive-'+randomUUID();await save();}
   await grantCLI(restored,['init']);
   const imported=await grantCLI(restored,['operations','import','--file',state.export.path,'--name',config.caseName+' / received',
@@ -574,11 +593,15 @@ try{
     state.reopenedCohort=await cohortModule.reopenCohortWithOperations({page,api,screenshot,restoredCaseId:imported.id,state,save,atomic,workDirectory:work});
     await save();
   }
+  if(implementationModule){
+    state.reopenedImplementation=await implementationModule.reopenImplementationWithOperations({page,api,screenshot,restoredCaseId:imported.id,state,save,atomic,workDirectory:work});await save();
+  }
   const preserved=await preserveCheck();
   need(browserErrors.length===0,'The original browser returned a page error: '+browserErrors.join('; '));
   state.completedAt=new Date().toISOString();state.result={schema:'sf47.native-buyer-receiving-result.v1',completedAt:state.completedAt,
     sourceHead,sourceSha256:state.nativeReport.source.sha256,sourceBytes:state.nativeReport.source.bytes,
     agentReceiving:state.agentReceiving??null,cohortReceiving:state.cohortReceiving??null,cohortCLI:state.cohortCLI??null,reopenedCohort:state.reopenedCohort??null,
+    implementationReceiving:state.implementationReceiving??null,implementationCLI:state.implementationCLI??null,reopenedImplementation:state.reopenedImplementation??null,
     nodeExport:state.nodeExport??null,sdkInspection:joined,caseId:state.caseId,caseVersion:current.program.version,
     importedCaseId:imported.id,purchaseIds:current.records.purchases.map(p=>p.id),
     originalPurchaseFields:current.records.purchases.map(({id,intentId,network,asset,transactionHash,ledger,amountStroops,
