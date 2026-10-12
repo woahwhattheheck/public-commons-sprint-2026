@@ -3,7 +3,7 @@
   "retrieved_date": "2026-10-12",
   "greenbutton": [
     {
-      "path": "fixtures/test_usage_data.xml",
+      "path": "examples/test_usage_data.xml",
       "repository": "GreenButtonAlliance/OpenESPI-GreenButton-Java",
       "commit": "06666dc82396b53ed14e7a5c45266ed54015c1ce",
       "original_path": "openespi-common/src/test/resources/fixtures/test_usage_data.xml",
@@ -11,7 +11,7 @@
       "url": "https://github.com/GreenButtonAlliance/OpenESPI-GreenButton-Java/blob/06666dc82396b53ed14e7a5c45266ed54015c1ce/openespi-common/src/test/resources/fixtures/test_usage_data.xml"
     },
     {
-      "path": "fixtures/test_usage_data_01.xml",
+      "path": "examples/test_usage_data_01.xml",
       "repository": "GreenButtonAlliance/OpenESPI-GreenButton-Java",
       "commit": "06666dc82396b53ed14e7a5c45266ed54015c1ce",
       "original_path": "openespi-common/src/test/resources/fixtures/test_usage_data_01.xml",
@@ -35,7 +35,7 @@
       "url": "https://github.com/GreenButtonAlliance/OpenESPI-GreenButton-Java/blob/06666dc82396b53ed14e7a5c45266ed54015c1ce/openespi-common/src/main/resources/schema/ESPI_4.1/atom.xsd"
     },
     {
-      "path": "contracts/GreenButtonAlliance-LICENSE",
+      "path": "contracts/GreenButtonAlliance-LICENSE.txt",
       "repository": "GreenButtonAlliance/OpenESPI-GreenButton-Java",
       "commit": "06666dc82396b53ed14e7a5c45266ed54015c1ce",
       "original_path": "openespi-common/LICENSE",

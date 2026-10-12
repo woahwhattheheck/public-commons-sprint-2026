@@ -4,6 +4,20 @@
 // No browser network request, payment operation or credential handling occurs here.
 
 export const ROLES = Object.freeze({
+  "fred": {
+    "meta": "FRED / ECONOMIC BRIEFING",
+    "title": "Read a complete economic briefing.",
+    "description": "Open the saved unemployment, prices and GDP report, then reuse its original source and reviewed comparisons in the maintained economic workspace.",
+    "checklist": [
+      "Open the report: inspect Summary, Measures and Sources & method.",
+      "Download the full report, original source, saved review and native reopening guide.",
+      "Import the retained capture into the original FRED project; review and publish through your existing merchant when ready."
+    ],
+    "docs": "https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/8f1d879cb1ba2947a05af770091568720ce31f65/stellar/scf-starforge-20261009/sf30-seller-sdk/fred/BRIEFINGS.md",
+    "label": "TERMINAL / ORIGINAL ECONOMIC WORKSPACE",
+    "command": "# Download and extract the complete example below.\n# Requires the maintained Stellar Forge installation with FRED briefings.\n# Replace absolute paths; these revision values are for a new private project.\nFRED_ROOT=/absolute/extracted-package/stellar/scf-starforge-20261009/sf30-seller-sdk/fred\nFRED_PROJECT=/absolute/private/economic-briefing\n\nstarforge fred init --project \"$FRED_PROJECT\" \\\n  --title \"U.S. economic briefing\" \\\n  --selection \"$FRED_ROOT/examples/macro-selection.json\"\n\nstarforge fred import --project \"$FRED_PROJECT\" \\\n  --id macro-original --expected-revision 1 \\\n  --source \"$FRED_ROOT/examples/briefing-20261012/macro-source.capture.json\"\n\nstarforge fred briefing-preview --project \"$FRED_PROJECT\" \\\n  --capture 4c7fc88552da69b9448054334bad10b72afee056ed93bcd2fb741d698dde042c \\\n  --briefing-file \"$FRED_ROOT/examples/macro-briefing.json\"\n\nstarforge fred review --project \"$FRED_PROJECT\" \\\n  --id macro-briefing-review --expected-revision 2 \\\n  --capture 4c7fc88552da69b9448054334bad10b72afee056ed93bcd2fb741d698dde042c \\\n  --note \"$FRED_ROOT/examples/briefing-20261012/review-note.txt\" \\\n  --briefing-file \"$FRED_ROOT/examples/macro-briefing.json\"\n\nstarforge fred briefing --project \"$FRED_PROJECT\" \\\n  --review af00af636c9397ac146966fed06588ef531594c65bc1ec289eada76b4af97802\n\nstarforge fred briefing-file --project \"$FRED_PROJECT\" \\\n  --review af00af636c9397ac146966fed06588ef531594c65bc1ec289eada76b4af97802 \\\n  --format html --out /absolute/delivery/economic-briefing.html\n\n# Reopen the same project in the original private operator:\nstarforge fred serve --project \"$FRED_PROJECT\" \\\n  --connection-file /absolute/private/economic-startup.json",
+    "result": "The original project retains all 2,219 source observations and the saved 75-observation report. The same native workspace can review a changed edition, publish complete files, receive them through its configured buyer and reopen the exported project."
+  },
   "seller": {
     "meta": "NATIVE MERCHANT WORKSPACE",
     "title": "Run the workspace you prepared.",

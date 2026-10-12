@@ -283,3 +283,9 @@ Continuation keeps the original accepted review binding and resumes the original
 ## Managed application and complete receiving
 
 [Snowflake in Applications](MANAGED.md) explains initialization, Review/Save/Start/Open/Stop, original workspace and source identity, and complete installed receiving through the native SQLite merchant and SF82 release. The source-owned provider is declared by the existing Snowflake contribution. The receiving program retains the same application, edition and publication through restart.
+
+## Merchant agent operations and complete receiving
+
+The source-owned [Snowflake merchant provider](merchant/README.md) connects this original browser and native writer to the shared authenticated Merchant MCP host. Its typed client and CLI operate source/capture/review/publication histories, resume original partition uploads, and download every selected original merchant file plus the native SQLite snapshot. The complete receiving command reopens the delivered edition through the original customer workspace and SF82 console.
+
+Use `starforge merchant-snowflake --help` for operator commands, or `starforge merchant providers inspect snowflake-workspaces` for the original installed provider declaration. The existing workspace UUID and publication IDs remain the durable identities throughout managed and merchant operation.

@@ -9,6 +9,12 @@ from delivery import archive_package, export_package, import_package, verify_pac
 def call(workspace, operation, arguments):
     if not isinstance(arguments, dict):
         fail("ARGUMENT_OBJECT_REQUIRED")
+    if isinstance(operation, str) and operation.startswith("property."):
+        from property_research import handlers as property_handlers
+        selected = property_handlers(workspace)
+        if operation not in selected:
+            fail("OPERATION_NOT_FOUND")
+        return selected[operation](**arguments)
     handlers = {
         "status": workspace.overview,
         "catalog": workspace.catalog,

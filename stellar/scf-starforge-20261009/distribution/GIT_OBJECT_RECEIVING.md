@@ -122,10 +122,11 @@ names do not affect matching. Archive paths and link targets are never
 extracted or executed.
 
 Compressed archives retain a 64 MiB limit. The expanded stream, including tar
-headers and skipped members, has a 128 MiB limit; an individual accepted source
-file retains the existing 2 MiB limit and the selected source retains its
-64 MiB aggregate limit. The receiver consumes gzip checksums and verifies that
-the opened archive stayed unchanged during the read.
+headers, padding and skipped members, has a 256 MiB limit. This framing allowance
+is separate from the 128 MiB aggregate selected-source limit and the original
+2 MiB limit for an individual accepted source file. Metadata remains bounded to
+8 MiB. The receiver consumes gzip checksums and verifies that the opened archive
+stayed unchanged during the read.
 
 The existing `donors` result adds an `original-release-archive` entry with its
 archive path, checked SHA-256, compressed and expanded sizes, regular member
@@ -148,13 +149,17 @@ const release = await buildDistribution({
 });
 ```
 
-Use the maintained producer's current implementation for the selected source.
-For cumulative sources above 32 MiB, commit
-`320668ac24e8c9868620546c76950d489654a50e` aligns source acquisition and final
-unpacked package checks with the original 64 MiB installer. Its
-`MAX_SOURCE_BYTES` and `MAX_SOURCE_FILE_BYTES` are shared by
-`build.mjs` and `git-source.mjs`. The receiver retains that 64 MiB aggregate
-budget and 2 MiB individual source limit.
+Use the maintained object receiver, builder and runtime installer from the same
+source edition. The current `MAX_SOURCE_BYTES` shared by `build.mjs` and
+`git-source.mjs` permits 128 MiB of aggregate source; this receiver uses the same
+budget. `MAX_SOURCE_FILE_BYTES` retains the 2 MiB individual source limit. The
+builder also checks that the complete unpacked package, including its generated
+manifest and package metadata, fits the installer's 128 MiB limit. Compressed
+archives remain bounded to 64 MiB, and each installed member remains bounded to
+4 MiB. A toolkit retaining the earlier 64 MiB unpacked limit cannot receive a
+larger cumulative package; use the current maintained installer for that package.
+The selected source commit, cache identity and previous READY runtime remain
+unchanged when receiving an earlier original archive.
 
 The builder resolves its original declared commands, exports, browser assets,
 and static imports. If it requests an additional original source path outside
