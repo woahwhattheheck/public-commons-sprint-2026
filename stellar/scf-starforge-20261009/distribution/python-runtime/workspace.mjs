@@ -33,7 +33,7 @@ export const pythonOperationFields = Object.freeze({
   'python-activate':['runtimeId','installationId','expectedInstallationId','python'],
 });
 export async function initializePythonWorkspace(root) {
-  for (const name of ['python-reviews','python-incoming']) {
+  for (const name of ['python-reviews','python-incoming','python-engines']) {
     try { await makePrivate(join(root,name)); }
     catch(error) { if(error.code!=='EEXIST')throw error; await privateDirectory(join(root,name)); }
   }
@@ -191,7 +191,11 @@ export async function normalizePythonOperation(root,request,id) {
   operationId(id);
   const binding=await pythonRuntimeBinding(request.runtimeDirectory,request.runtimeId);
   request.pythonBinding=binding;request.pythonRoot=join(binding.directory,'python-runtime');
-  request.pythonEngineSha256=digest(await regular(ENGINE,2*1024*1024));
+  const engine=await regular(ENGINE,2*1024*1024);
+  request.pythonEngineSha256=digest(engine);
+  await initializePythonWorkspace(root);
+  await retainedBytes(join(root,'python-engines',request.pythonEngineSha256+'.py'),engine,request.pythonEngineSha256);
+  await syncDirectory(root);
   if(request.reviewId){
     const review=await readJSON(reviewPath(root,request.reviewId));
     need(review.reviewId===request.reviewId && hashValue(review.binding)===hashValue(binding) &&
@@ -309,7 +313,14 @@ export async function executePythonOperation({root,request,operationDirectory,le
   await bindingRoot(current);
   const script=join(operationDirectory,'python-engine.py');
   try{await regular(script);}
-  catch(error){if(error.code!=='ENOENT')throw error;await retainedBytes(script,await regular(ENGINE,2*1024*1024),request.pythonEngineSha256);}
+  catch(error){
+    if(error.code!=='ENOENT')throw error;
+    const retained=join(root,'python-engines',request.pythonEngineSha256+'.py');
+    let engine;
+    try{engine=await regular(retained,2*1024*1024);}
+    catch(issue){if(issue.code!=='ENOENT')throw issue;engine=await regular(ENGINE,2*1024*1024);}
+    await retainedBytes(script,engine,request.pythonEngineSha256);
+  }
   need(digest(await regular(script,2*1024*1024))===request.pythonEngineSha256,'PYTHON_ENGINE_CHANGED');
   if(request.operation==='python-resolve')await verifyProject(current);
   if(['python-install','python-bundle','python-activate'].includes(request.operation)){
