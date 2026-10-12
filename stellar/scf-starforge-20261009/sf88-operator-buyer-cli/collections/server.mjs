@@ -3,10 +3,12 @@
 import { createServer } from 'node:http';
 import { randomBytes, timingSafeEqual, createHash } from 'node:crypto';
 import { readFile, realpath } from 'node:fs/promises';
-import { basename, isAbsolute, resolve } from 'node:path';
+import { basename, isAbsolute, resolve, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { readBrowserAssets } from '../../distribution/browser-assets.mjs';
 import { openCollections } from './model.mjs';
+import { openCollectionRecovery } from './recovery-jobs.mjs';
+import { collectionBundleFiles } from './recovery.mjs';
 import { createCollectionBrowserRunner } from './browser-run.mjs';
 import { sendCollectionFile } from './download.mjs';
 import { collectionsWorkspaceLaunch } from './launch.mjs';
@@ -18,6 +20,8 @@ const HELP = [
   '',
   '  starforge buyer-collections-workspace --directory ABS_DIRECTORY',
   '    [--queue-root ABS_EXISTING_INBOX] [--port 0] [--approval-mode browser|terminal]',
+  '    [--startup-format text|json]',
+  '  starforge buyer-collections-workspace --receiving-directory ABS_PRIVATE_DIRECTORY [--port 0]',
   '    [--startup-format text|json]',
   '',
   'Open the printed private URL in a browser on this host.',
@@ -91,17 +95,24 @@ function snapshotPin(snapshot, expected) {
   need(snapshot.manifestSha256 === pinned(expected), 'COLLECTION_MANIFEST_CHANGED', 409);
 }
 export async function serveCollections(collections, {
-  port = 0, approvalMode = 'BROWSER', environment = process.env,
+  port = 0, approvalMode = 'BROWSER', environment = process.env, receivingDirectory,
 } = {}) {
   need(collections && typeof collections.inspect === 'function'
-    && typeof collections.preview === 'function', 'COLLECTION_CONTROLLER_REQUIRED');
+    && typeof collections.preview === 'function' || !collections && typeof receivingDirectory === 'string',
+  'COLLECTION_CONTROLLER_REQUIRED');
   need(Number.isInteger(port) && port >= 0 && port <= 65535, 'PORT_INVALID');
   need(['BROWSER', 'TERMINAL'].includes(approvalMode), 'APPROVAL_MODE_INVALID');
   const assets = await readBrowserAssets(new URL('./browser-assets.json', import.meta.url));
-  const approvals = approvalMode === 'BROWSER' ? await createBrowserApprovalBroker() : null;
+  let approvals = collections && approvalMode === 'BROWSER' ? await createBrowserApprovalBroker() : null;
   let runner;
   try { runner = approvals ? await createCollectionBrowserRunner({ collections, approvals, environment }) : null; }
   catch (error) { await approvals?.close(); throw error; }
+  const adopted = new Set();
+  let recovery;
+  try { recovery = await openCollectionRecovery({
+    directory: receivingDirectory ?? join(collections.directory, 'recovery'),
+    getCollections: () => collections, environment,
+  }); } catch (error) { await runner?.close(); await approvals?.close(); throw error; }
   const token = randomBytes(32).toString('hex');
   const reviews = new Map(), exports = new Map(), work = new Set(), transfers = new Set();
   let origin, closing = false, mutation = false;
@@ -111,7 +122,7 @@ export async function serveCollections(collections, {
     for (const [key, value] of exports) if (value.expiresAt <= now) exports.delete(key);
   }
   async function mutate(fn, continuingRun = false) {
-    need(!mutation && (continuingRun || !runner?.busy), 'COLLECTION_WORKSPACE_BUSY', 409);
+    need(!mutation && !recovery.busy && (continuingRun || !runner?.busy), 'COLLECTION_WORKSPACE_BUSY', 409);
     mutation = true;
     try { return await fn(); } finally { mutation = false; }
   }
@@ -182,10 +193,11 @@ export async function serveCollections(collections, {
       prune();
       if (request.method === 'GET' && url.pathname === '/api/status')
         return send({ schema: 'stellar-forge.sf88.collections-workspace.v1',
-          directory: collections.directory, queueRoot: collections.queueRoot,
-          busy: mutation || Boolean(runner?.busy), paymentApproval:
+          directory: collections?.directory ?? null, queueRoot: collections?.queueRoot ?? null,
+          mode: collections ? 'COLLECTIONS' : 'RECEIVING', recoveryDirectory: recovery.directory,
+          recoveryBusy: recovery.busy, busy: mutation || recovery.busy || Boolean(runner?.busy), paymentApproval:
             approvals ? 'original-browser' : 'original-terminal',
-          command: 'buyer-collections', exportRoot: resolve(collections.directory, 'exports'), agentApi: 1 });
+          command: 'buyer-collections', exportRoot: collections ? resolve(collections.directory, 'exports') : null, agentApi: 1 });
       if (request.method === 'GET' && url.pathname === '/api/run')
         return send({ run: runner ? await runner.inspect() : null });
       const originalRun = /^\/api\/runs\/([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})$/.exec(url.pathname);
@@ -218,8 +230,62 @@ export async function serveCollections(collections, {
         return send(await approvalSnapshot(launchId, input.intent));
       }
       if (request.method === 'GET' && url.pathname === '/api/collections')
-        return send(await collections.list());
+        return send(collections ? await collections.list() : { directory: null, queueRoot: null, collections: [] });
+      if (request.method === 'GET' && url.pathname === '/api/recovery')
+        return send(await recovery.list());
+      if (request.method === 'POST' && url.pathname === '/api/recovery/history') {
+        const input = fields(await jsonBody(request), ['offset', 'limit']);
+        return send(await recovery.list(input));
+      }
+      if (request.method === 'POST' && url.pathname === '/api/recovery/review') {
+        const input = fields(await jsonBody(request), ['stateRoot']);
+        need(collections, 'COLLECTION_RECOVERY_SOURCE_NOT_OPEN', 409);
+        return send(await mutate(() => recovery.review(input)));
+      }
+      if (request.method === 'POST' && url.pathname === '/api/recovery/start') {
+        const input = fields(await jsonBody(request), ['requestId', 'kind', 'options']);
+        return send(await mutate(() => recovery.start(input)), 202);
+      }
+      const recoveryRoute = /^\/api\/recovery\/([a-f0-9-]{36})(?:\/(cancel|resume|open|files))?$/.exec(url.pathname);
+      if (recoveryRoute) {
+        const requestId = recoveryRoute[1], action = recoveryRoute[2];
+        if (!action && request.method === 'GET') return send(await recovery.inspect(requestId));
+        need(request.method === 'POST' && action, 'METHOD_NOT_ALLOWED', 405);
+        fields(await jsonBody(request), []);
+        if (action === 'cancel') return send(await recovery.cancel(requestId), 202);
+        if (action === 'resume') return send(await mutate(() => recovery.resume(requestId)), 202);
+        if (action === 'files') {
+          const record = await recovery.inspect(requestId);
+          need(record.state === 'COMPLETED' && record.result?.bundle,
+            'COLLECTION_RECOVERY_VERIFIED_BACKUP_REQUIRED', 409);
+          const native = await collectionBundleFiles(record.result.bundle, {
+            expectedRecordSha256: record.result.recordSha256, expectedFiles: record.result.encryptedFiles });
+          const key = randomBytes(16).toString('hex');
+          const files = native.map(file => ({ ...file, relativePath: file.name, name: basename(file.name) }));
+          while (exports.size >= 32) exports.delete(exports.keys().next().value);
+          exports.set(key, { kind: 'recoveries', directory: record.result.bundle, files,
+            expiresAt: Date.now() + 60 * 60 * 1000 });
+          return send({ requestId, bundle: record.result.bundle, recordSha256: record.result.recordSha256,
+            files: files.map(file => ({ ...file, downloadUrl: '/api/recoveries/' + key + '/' + file.name })) });
+        }
+        return send(await mutate(async () => {
+          need(!collections, 'COLLECTION_RECOVERY_SOURCE_ALREADY_OPEN', 409);
+          const selected = await recovery.openResult(requestId);
+          let model, broker, child;
+          try {
+            model = await openCollections(selected);
+            const original = await model.inspectRecoverySource();
+            need(original.headerSha256 === selected.headerSha256, 'COLLECTION_RECOVERY_STORE_BINDING_CHANGED', 409);
+            broker = approvalMode === 'BROWSER' ? await createBrowserApprovalBroker() : null;
+            child = broker ? await createCollectionBrowserRunner({ collections: model, approvals: broker, environment }) : null;
+            collections = model; approvals = broker; runner = child; adopted.add(model);
+            return { directory: model.directory, queueRoot: model.queueRoot,
+              collections: original.collections.length, executionStarted: false };
+          } catch (error) { await child?.close(); await broker?.close(); await model?.close(); throw error; }
+        }));
+      }
       if (request.method === 'POST' && url.pathname === '/api/preview') {
+        need(collections, 'COLLECTION_RECOVERY_SOURCE_NOT_OPEN', 409);
         const input = fields(await jsonBody(request), ['configFiles']);
         need(Array.isArray(input.configFiles) && input.configFiles.length > 0
           && input.configFiles.every(file => typeof file === 'string'
@@ -232,6 +298,7 @@ export async function serveCollections(collections, {
         return send({ ...preview, reviewId });
       }
       if (request.method === 'POST' && url.pathname === '/api/collections') {
+        need(collections, 'COLLECTION_RECOVERY_SOURCE_NOT_OPEN', 409);
         const input = fields(await jsonBody(request),
           ['id', 'name', 'reviewId', 'expectedPreviewSha256']);
         const review = reviews.get(input.reviewId);
@@ -245,7 +312,7 @@ export async function serveCollections(collections, {
         reviews.delete(input.reviewId);
         return send(result, 201);
       }
-      const download = /^\/api\/(exports|deliveries)\/([a-f0-9]{32})\/([A-Za-z0-9._-]{1,150})$/
+      const download = /^\/api\/(exports|deliveries|recoveries)\/([a-f0-9]{32})\/([A-Za-z0-9._-]{1,150})$/
         .exec(url.pathname);
       if (request.method === 'GET' && download) {
         const saved = exports.get(download[2]);
@@ -259,11 +326,12 @@ export async function serveCollections(collections, {
           need(current.path === file.path && current.bytes === file.bytes,
             'COLLECTION_RESPONSE_CHANGED', 409);
         }
-        else need(file.bytes <= EXPORT_LIMIT, 'COLLECTION_EXPORT_CHANGED', 409);
+        else if (saved.kind !== 'recoveries') need(file.bytes <= EXPORT_LIMIT, 'COLLECTION_EXPORT_CHANGED', 409);
         await downloadFile(response, { ...file,
-          path: saved.original ? file.path : resolve(saved.directory, file.name) });
+          path: saved.original || saved.kind === 'recoveries' ? file.path : resolve(saved.directory, file.name) });
         return;
       }
+      need(collections, 'COLLECTION_RECOVERY_SOURCE_NOT_OPEN', 409);
       const route = /^\/api\/collections\/([^/]+)(?:\/(enqueue|cancel|recover|export|command|run|response))?$/
         .exec(url.pathname);
       need(route, 'ROUTE_NOT_FOUND', 404);
@@ -318,7 +386,7 @@ export async function serveCollections(collections, {
         const result = await mutate(async () => {
           const snapshot = await collections.inspect(id);
           snapshotPin(snapshot, expectedManifestSha256);
-          // A receiving agent can recover the SAME original export after a lost reply or browser restart.
+          // Preserve the original MCP customer's stable export identity.
           need(input.exportId === undefined || typeof input.exportId === 'string'
             && /^[a-f0-9]{32}$/.test(input.exportId), 'COLLECTION_EXPORT_ID_INVALID');
           const key = input.exportId ?? randomBytes(16).toString('hex');
@@ -371,10 +439,11 @@ export async function serveCollections(collections, {
     });
   });
   } catch (error) {
-    await runner?.close(); await approvals?.close(); throw error;
+    await runner?.close(); await recovery.close(); await approvals?.close(); throw error;
   }
   let closePromise;
   return { server, origin, token, url: origin + '/#' + token,
+    get collections() { return collections; }, recovery,
     close() {
       if (closePromise) return closePromise;
       closing = true;
@@ -382,12 +451,14 @@ export async function serveCollections(collections, {
       closePromise = (async () => {
         server.closeIdleConnections?.();
         await runner?.close();
+        await recovery.close();
         await Promise.allSettled([...work]);
         await approvals?.close();
         await new Promise(done => {
           server.close(done);
           server.closeAllConnections?.();
         });
+        for (const model of adopted) await model.close();
         reviews.clear(); exports.clear();
       })();
       return closePromise;
@@ -395,19 +466,21 @@ export async function serveCollections(collections, {
   };
 }
 export async function startCollectionsWorkspace(options = {}) {
-  const collections = await openCollections({
+  need(!(options.receivingDirectory && (options.directory || options.queueRoot)), 'COLLECTION_ONE_WORKSPACE_SOURCE_REQUIRED');
+  const collections = options.receivingDirectory ? null : await openCollections({
     directory: options.directory, queueRoot: options.queueRoot,
   });
   let workspace;
   try { workspace = await serveCollections(collections, { port: options.port ?? 0,
-    approvalMode: options.approvalMode ?? 'BROWSER', environment: options.environment ?? process.env }); }
-  catch (error) { await collections.close(); throw error; }
+    approvalMode: options.approvalMode ?? 'BROWSER', environment: options.environment ?? process.env,
+    receivingDirectory: options.receivingDirectory }); }
+  catch (error) { await collections?.close(); throw error; }
   const closeServer = workspace.close;
   let closing;
   workspace.close = () => closing ??= (async () => {
-    try { await closeServer(); } finally { await collections.close(); }
+    try { await closeServer(); } finally { await collections?.close(); }
   })();
-  return { ...workspace, collections };
+  return workspace;
 }
 export async function main(args = process.argv.slice(2)) {
   if (args.length === 0 || args.length === 1 && ['--help', '-h', 'help'].includes(args[0])) {
@@ -416,22 +489,26 @@ export async function main(args = process.argv.slice(2)) {
   const input = {};
   for (let index = 0; index < args.length; index += 2) {
     const key = args[index], value = args[index + 1];
-    need(['--directory', '--queue-root', '--port', '--approval-mode', '--startup-format'].includes(key)
+    need(['--directory', '--queue-root', '--receiving-directory', '--port', '--approval-mode', '--startup-format'].includes(key)
       && value !== undefined && !Object.hasOwn(input, key), 'COLLECTION_CLI_ARGUMENT');
     input[key] = value;
   }
-  need(input['--directory'] && isAbsolute(input['--directory']), 'COLLECTION_DIRECTORY_REQUIRED');
+  need(Boolean(input['--directory']) !== Boolean(input['--receiving-directory'])
+    && isAbsolute(input['--directory'] ?? input['--receiving-directory']), 'COLLECTION_DIRECTORY_REQUIRED');
+  need(!input['--receiving-directory'] || !input['--queue-root'], 'COLLECTION_ONE_WORKSPACE_SOURCE_REQUIRED');
   const port = input['--port'] ?? '0';
   need(/^\d{1,5}$/.test(port) && Number(port) <= 65535, 'PORT_INVALID');
   const startupFormat = input['--startup-format'] ?? 'text';
   need(['text', 'json'].includes(startupFormat), 'COLLECTION_STARTUP_FORMAT_INVALID');
   const approvalMode = (input['--approval-mode'] ?? 'browser').toUpperCase();
   const workspace = await startCollectionsWorkspace({
-    directory: input['--directory'], queueRoot: input['--queue-root'], port: Number(port), approvalMode,
+    directory: input['--directory'], queueRoot: input['--queue-root'],
+    receivingDirectory: input['--receiving-directory'], port: Number(port), approvalMode,
   });
-  if (startupFormat === 'json') console.log(JSON.stringify(collectionsWorkspaceLaunch({
+  if (startupFormat === 'json') console.log(JSON.stringify(workspace.collections ? collectionsWorkspaceLaunch({
     directory: workspace.collections.directory, queueRoot: workspace.collections.queueRoot, approvalMode,
-  }, workspace.url)));
+  }, workspace.url) : { schema: 'stellar-forge.sf88.collection-recovery-workspace-launch.v1',
+    state: 'LISTENING', receivingDirectory: workspace.recovery.directory, pid: process.pid, url: workspace.url }));
   else {
     console.log('Request collections: ' + workspace.url);
     console.log('Keep this terminal open while requests run. Use Pause in the workspace to stop remaining work.');

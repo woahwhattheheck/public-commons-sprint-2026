@@ -16,6 +16,9 @@ const USAGE = `Usage:
   starforge buyer-collections recover --directory ABS --id ID --manifest-sha256 SHA --intent ID [--intent ID ...]
   starforge buyer-collections export --directory ABS --id ID --manifest-sha256 SHA --out ABS
   starforge buyer-collections serve --directory ABS [--queue-root ABS] [--port PORT]
+  starforge buyer-collections backup-review --directory ABS --state-root ABS
+  starforge buyer-collections backup-create --help
+  starforge buyer-collections serve --receiving-directory ABS [--port PORT]
 
 --queue-root is required when opening a new collection store. The inbox must
 already exist; use the original "starforge inbox init --root ABS" command.
@@ -57,6 +60,7 @@ export async function main(args = process.argv.slice(2)) {
   }
   const [command, ...rest] = args;
   if (command === 'serve') return (await import('./server.mjs')).main(rest);
+  if (command.startsWith('backup-')) return (await import('./recovery-cli.mjs')).main(args);
   const allowed = {
     preview: ['--config'],
     create: ['--directory', '--queue-root', '--id', '--name', '--preview-sha256', '--config'],

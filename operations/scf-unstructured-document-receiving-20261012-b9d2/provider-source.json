@@ -1,0 +1,492 @@
+{
+  "schema": "stellar-forge.unstructured-api-source.v1",
+  "repository": "Unstructured-IO/unstructured-api",
+  "commit": "448352104eefd2e5b8fa2dc32282fc1cd3db31ae",
+  "files": [
+    {
+      "path": ".github/ISSUE_TEMPLATE/bug_report.md",
+      "gitBlob": "8d74c30884a176113f0f9dab3b4bab962810f27b",
+      "bytes": 473
+    },
+    {
+      "path": ".github/dependabot.yml",
+      "gitBlob": "8de3c9e4bb8faed696d403318defcaf8021e6cb4",
+      "bytes": 405
+    },
+    {
+      "path": ".github/workflows/bump_libraries.yaml",
+      "gitBlob": "555a052cd700c0e45afbcb8d3e61c3a749fe8948",
+      "bytes": 1415
+    },
+    {
+      "path": ".github/workflows/ci.yml",
+      "gitBlob": "a51d69a8a574c907520e66821d65b32545090745",
+      "bytes": 4282
+    },
+    {
+      "path": ".github/workflows/claude.yml",
+      "gitBlob": "f7799ac834d87f1d94ad457d07cb1fdeb21020c0",
+      "bytes": 1192
+    },
+    {
+      "path": ".github/workflows/docker-publish.yml",
+      "gitBlob": "07beba439857383d615c799e43a64b3c2996632c",
+      "bytes": 4571
+    },
+    {
+      "path": ".github/workflows/version-bump.yml",
+      "gitBlob": "c5549b8762653b837be9a09156c6cd27ca8c7bd1",
+      "bytes": 685
+    },
+    {
+      "path": ".gitignore",
+      "gitBlob": "3ba83d54cd87e21f10a552052b58cc0deaa1a89c",
+      "bytes": 2024
+    },
+    {
+      "path": ".python-version",
+      "gitBlob": "e4fba2183587225f216eeada4c78dfab6b2e65f5",
+      "bytes": 5
+    },
+    {
+      "path": "CHANGELOG.md",
+      "gitBlob": "59c33c2667c278e626b7c08807b9ef1a69bc12d7",
+      "bytes": 18549
+    },
+    {
+      "path": "Dockerfile",
+      "gitBlob": "40ed4cbccc4b215d92b36da3c468d5ce132d8a90",
+      "bytes": 6873
+    },
+    {
+      "path": "LICENSE.md",
+      "gitBlob": "b807bcb4281598fdb402807621127fad312b3f74",
+      "bytes": 11360
+    },
+    {
+      "path": "Makefile",
+      "gitBlob": "00247084318935b5787962bb13ba0e6dfe76cd89",
+      "bytes": 4658
+    },
+    {
+      "path": "README.md",
+      "gitBlob": "6ef1c2ab7a6fd4e36fbc8ea7a0499b1d51763e72",
+      "bytes": 6770
+    },
+    {
+      "path": "exploration-notebooks/exploration-email.ipynb",
+      "gitBlob": "e3cb603d94ebfcf45244a88eb63142c042bf55c2",
+      "bytes": 22715
+    },
+    {
+      "path": "exploration-notebooks/exploration-html.ipynb",
+      "gitBlob": "62c3b83e8ba446e287db456e1d9eb5eee8203269",
+      "bytes": 10732
+    },
+    {
+      "path": "exploration-notebooks/exploration-powerpoint.ipynb",
+      "gitBlob": "30f2ea71c9726102d01b2b219d071749cabbdfd7",
+      "bytes": 12136
+    },
+    {
+      "path": "img/unstructured_logo.svg",
+      "gitBlob": "709901a630073a5b19bed28c2e70fdab995d6e93",
+      "bytes": 7058
+    },
+    {
+      "path": "logger_config.yaml",
+      "gitBlob": "96dff44e0474a33a178d4599f92f7284daabd12d",
+      "bytes": 1230
+    },
+    {
+      "path": "prepline_general/__init__.py",
+      "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "bytes": 0
+    },
+    {
+      "path": "prepline_general/api/__init__.py",
+      "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "bytes": 0
+    },
+    {
+      "path": "prepline_general/api/__version__.py",
+      "gitBlob": "9ada8c84659aff56d08f28f858a7dff9081c1a71",
+      "bytes": 43
+    },
+    {
+      "path": "prepline_general/api/app.py",
+      "gitBlob": "6765804ba4abe6a6054a4c168f840ebeb1d6989d",
+      "bytes": 4170
+    },
+    {
+      "path": "prepline_general/api/filetypes.py",
+      "gitBlob": "c010afaa641452cd8cbb67734c525ee9e42f07ee",
+      "bytes": 1915
+    },
+    {
+      "path": "prepline_general/api/general.py",
+      "gitBlob": "04142dcc0d291021c82206d67fa526dc07f6b94d",
+      "bytes": 28933
+    },
+    {
+      "path": "prepline_general/api/models/__init__.py",
+      "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "bytes": 0
+    },
+    {
+      "path": "prepline_general/api/models/form_params.py",
+      "gitBlob": "081175ddea4b74d5a00389f85d4bfad273eaaef0",
+      "bytes": 12708
+    },
+    {
+      "path": "prepline_general/api/openapi.py",
+      "gitBlob": "68717a21c030df5f423d28ec2f0d761d33de37a4",
+      "bytes": 3999
+    },
+    {
+      "path": "prepline_general/api/utils.py",
+      "gitBlob": "f6a909072d6065b80fc08e5507ade797879907ba",
+      "bytes": 5058
+    },
+    {
+      "path": "pyproject.toml",
+      "gitBlob": "70220775a2a73450a345e31d7a33cc29a85793be",
+      "bytes": 3353
+    },
+    {
+      "path": "renovate.json",
+      "gitBlob": "4bac255b3aac474e98a2b698423e30c59b06a6fe",
+      "bytes": 136
+    },
+    {
+      "path": "sample-docs/.gitkeep",
+      "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "bytes": 0
+    },
+    {
+      "path": "sample-docs/DA-1p-with-duplicate-pages.pdf",
+      "gitBlob": "931a4a9e184313e06fd4bd5e1add7168ce979bfc",
+      "bytes": 62164
+    },
+    {
+      "path": "sample-docs/DA-1p.bmp",
+      "gitBlob": "b018300f93ccbdd82c0a7fe6a59ee88322828e26",
+      "bytes": 1505634
+    },
+    {
+      "path": "sample-docs/DA-1p.heic",
+      "gitBlob": "908c9a6e474f0739af3472ca26d7cd9d67fc06d9",
+      "bytes": 96443
+    },
+    {
+      "path": "sample-docs/README.md",
+      "gitBlob": "47639003186f6ded451a0e1253a9b2ac6d334884",
+      "bytes": 859
+    },
+    {
+      "path": "sample-docs/README.rst",
+      "gitBlob": "45630d0385df32d271c33324e2583819f649f56e",
+      "bytes": 903
+    },
+    {
+      "path": "sample-docs/alert.eml",
+      "gitBlob": "6c7c4fc18ce3fc7f7444929fd0fd9b2279626f75",
+      "bytes": 1932
+    },
+    {
+      "path": "sample-docs/announcement.eml",
+      "gitBlob": "50990fbcf666b2d55611f1eb046ba8630d6e6443",
+      "bytes": 1592
+    },
+    {
+      "path": "sample-docs/embedded-images-tables.jpg",
+      "gitBlob": "0445e73585cfc8a3259384111bc4167672064862",
+      "bytes": 257339
+    },
+    {
+      "path": "sample-docs/embedded-images-tables.pdf",
+      "gitBlob": "fcf1c483d1179b74745cc46b876d3f8ce6ae3226",
+      "bytes": 109798
+    },
+    {
+      "path": "sample-docs/english-and-korean.png",
+      "gitBlob": "4a54d93ff41d739c34b436a215931fa34086bea9",
+      "bytes": 305401
+    },
+    {
+      "path": "sample-docs/failing-encrypted.pdf",
+      "gitBlob": "f207fbaa22ee6787379dad655bd9cb5e67541b67",
+      "bytes": 936
+    },
+    {
+      "path": "sample-docs/failing-invalid.pdf",
+      "gitBlob": "a8ca9eae865d739f06c073d00a7e5fce6ab1cec3",
+      "bytes": 70
+    },
+    {
+      "path": "sample-docs/failing-missing-pages.pdf",
+      "gitBlob": "b36599d1025da79b2f25508a2c8b4c4d4a33e614",
+      "bytes": 160
+    },
+    {
+      "path": "sample-docs/failing-missing-root.pdf",
+      "gitBlob": "1cdf801c7d19a5584669d514c5f6423c7f34b1ee",
+      "bytes": 4858
+    },
+    {
+      "path": "sample-docs/fake-doc.rtf",
+      "gitBlob": "4a9e9e49d2a999ee586a4de9f69df97775632407",
+      "bytes": 135
+    },
+    {
+      "path": "sample-docs/fake-email-attachment.eml",
+      "gitBlob": "86654c0cb15b56485ce0c3e920bacc0dbf53a92f",
+      "bytes": 1703
+    },
+    {
+      "path": "sample-docs/fake-email-image-embedded.eml",
+      "gitBlob": "00e9eea0ef1c15b2df34859b0d51f40bf27be17a",
+      "bytes": 297125
+    },
+    {
+      "path": "sample-docs/fake-email.eml",
+      "gitBlob": "702a408521b3021b8dc79c17d94c3d5cd9231301",
+      "bytes": 830
+    },
+    {
+      "path": "sample-docs/fake-email.msg",
+      "gitBlob": "61ec3c4bbeb6c504a8ee4992ec28adf26e2dd1c3",
+      "bytes": 11776
+    },
+    {
+      "path": "sample-docs/fake-html.html",
+      "gitBlob": "9ad19d308e9658d3ffabfeb5c2d7b7e0fccdaa99",
+      "bytes": 101
+    },
+    {
+      "path": "sample-docs/fake-power-point.ppt",
+      "gitBlob": "a6bf72662487b37465c894394aa587bfb0047a2f",
+      "bytes": 607744
+    },
+    {
+      "path": "sample-docs/fake-power-point.pptx",
+      "gitBlob": "13457b2177922e9b4427051a715bb16a36e1b98c",
+      "bytes": 28329
+    },
+    {
+      "path": "sample-docs/fake-text-utf-32.txt",
+      "gitBlob": "1dfc0f51a49a0556f46f5d2a3200741bc16a94d8",
+      "bytes": 756
+    },
+    {
+      "path": "sample-docs/fake-text.txt",
+      "gitBlob": "d59e431182520b9645e2ead7fe0e20d9a9f37f70",
+      "bytes": 146
+    },
+    {
+      "path": "sample-docs/fake-xml.xml",
+      "gitBlob": "4e17594ec9a85dcccfc9877589ef6f261fbd52bb",
+      "bytes": 841
+    },
+    {
+      "path": "sample-docs/fake.doc",
+      "gitBlob": "ff6663d09766841776ba0da3441a1b879dae0bf7",
+      "bytes": 18432
+    },
+    {
+      "path": "sample-docs/fake.docx",
+      "gitBlob": "566aa645710f1e937d09b5cbce2cb1c6eb61547a",
+      "bytes": 36602
+    },
+    {
+      "path": "sample-docs/fake.odt",
+      "gitBlob": "9050499723817a5d4514fe683bd29d7b8c73e3e5",
+      "bytes": 8950
+    },
+    {
+      "path": "sample-docs/family-day.eml",
+      "gitBlob": "4171cadd3d7110751d4e743842b2a632ec2a58db",
+      "bytes": 1329
+    },
+    {
+      "path": "sample-docs/layout-parser-paper-fast.jpg",
+      "gitBlob": "8190c2661cec1a6350d11b00574c9997893115c4",
+      "bytes": 95241
+    },
+    {
+      "path": "sample-docs/layout-parser-paper-fast.pdf",
+      "gitBlob": "6a3180631d9caaf14a732b8c4d2a47e173184d76",
+      "bytes": 172270
+    },
+    {
+      "path": "sample-docs/layout-parser-paper-fast.tiff",
+      "gitBlob": "b4b21a24ae6d0391fc9614c6c8a45229c31dd052",
+      "bytes": 1939760
+    },
+    {
+      "path": "sample-docs/layout-parser-paper-with-table.jpg",
+      "gitBlob": "0091806090b75147bfd19cd5b7043ee8206d4b6e",
+      "bytes": 165505
+    },
+    {
+      "path": "sample-docs/layout-parser-paper.pdf",
+      "gitBlob": "c4b6c2ef889b48a8c90267a4838c893fdf02b852",
+      "bytes": 4686220
+    },
+    {
+      "path": "sample-docs/list-item-example.pdf",
+      "gitBlob": "c540662d490042fcb811ec9f5f3f96e2f6bc95d4",
+      "bytes": 48981
+    },
+    {
+      "path": "sample-docs/notes.ppt",
+      "gitBlob": "f2a6189497baa6a4ec40856ac4a945da7f985cc9",
+      "bytes": 607744
+    },
+    {
+      "path": "sample-docs/notes.pptx",
+      "gitBlob": "a71cdd269ef1aee54556688a694966d9f4b0209d",
+      "bytes": 12596
+    },
+    {
+      "path": "sample-docs/spring-weather.html.json",
+      "gitBlob": "25664232ee010b585e82079b95db9ca4fdf7ad89",
+      "bytes": 13151
+    },
+    {
+      "path": "sample-docs/stanley-cups.csv",
+      "gitBlob": "4414023f005dc0e24ad327d3451e03991b0057b4",
+      "bytes": 89
+    },
+    {
+      "path": "sample-docs/stanley-cups.tsv",
+      "gitBlob": "36402ac9b58bc0c6255c1a7d71fc6473f441ea90",
+      "bytes": 91
+    },
+    {
+      "path": "sample-docs/stanley-cups.xlsx",
+      "gitBlob": "ebc66599b2ace3435646bc31f5ae7ca4d7313e69",
+      "bytes": 6339
+    },
+    {
+      "path": "sample-docs/winter-sports.epub",
+      "gitBlob": "a434863a8c91fdc722a88c6b2dcb54fe8e40760d",
+      "bytes": 210376
+    },
+    {
+      "path": "scripts/app-start.sh",
+      "gitBlob": "2e9cc6a2892fdc1b1457115418197f5dadf20140",
+      "bytes": 1331
+    },
+    {
+      "path": "scripts/docker-build.sh",
+      "gitBlob": "6a4b0a59939b8a1d931dd213b1a452bb9a67c2f0",
+      "bytes": 655
+    },
+    {
+      "path": "scripts/docker-smoke-test.sh",
+      "gitBlob": "534535b2fb335053e04dbe08436d884cf8d4e9d8",
+      "bytes": 2833
+    },
+    {
+      "path": "scripts/initialize-libreoffice.sh",
+      "gitBlob": "6bb0a2e831ddd466279400ad486eb09eb7833231",
+      "bytes": 68
+    },
+    {
+      "path": "scripts/parallel-mode-test.sh",
+      "gitBlob": "1a4a7c125b7fd754d8704747b72b890c59afbff2",
+      "bytes": 1390
+    },
+    {
+      "path": "scripts/shellcheck.sh",
+      "gitBlob": "dab96f679d2e81d4bc9f84632fd2fd2c4b182202",
+      "bytes": 70
+    },
+    {
+      "path": "scripts/smoketest.py",
+      "gitBlob": "659e0179dd42d0ce487db3b7a035c90e41e46c61",
+      "bytes": 10507
+    },
+    {
+      "path": "scripts/version-increment.sh",
+      "gitBlob": "9a546bfbc2ba13b841ae06f9a059892d72998587",
+      "bytes": 1891
+    },
+    {
+      "path": "scripts/version-sync.sh",
+      "gitBlob": "4a62d26e39742cfbe6b6a298ae085ca98265cd3f",
+      "bytes": 5923
+    },
+    {
+      "path": "test_general/__init__.py",
+      "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "bytes": 0
+    },
+    {
+      "path": "test_general/api/.gitkeep",
+      "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "bytes": 0
+    },
+    {
+      "path": "test_general/api/__init__.py",
+      "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "bytes": 0
+    },
+    {
+      "path": "test_general/api/test_app.py",
+      "gitBlob": "ac9cb6fb4f5d8bf0ab91ffe9ea0e6ccee2f22c04",
+      "bytes": 44217
+    },
+    {
+      "path": "test_general/api/test_deprecated_api.py",
+      "gitBlob": "a61372c8ebd7609e2caf488f90e7c19ce269f2e2",
+      "bytes": 2467
+    },
+    {
+      "path": "test_general/api/test_form_lists.py",
+      "gitBlob": "6aadfe3a7a9ca3c8f403ce716f762a8c3dd1c2f2",
+      "bytes": 1041
+    },
+    {
+      "path": "test_general/api/test_general.py",
+      "gitBlob": "834048ab3fbf8d2296fa79c371746280897f4fa8",
+      "bytes": 1594
+    },
+    {
+      "path": "test_general/api/test_gzip.py",
+      "gitBlob": "24940a51615790a17b0045065fdb78b6794926a9",
+      "bytes": 5995
+    },
+    {
+      "path": "test_general/api/test_multipart_response.py",
+      "gitBlob": "903f5b3c39c35e5d09837eb545cc876b75c14261",
+      "bytes": 2100
+    },
+    {
+      "path": "test_general/api/test_parallel_chunk_options.py",
+      "gitBlob": "6eaf07b5bb44b0b4f7b9caab6871e71423f4101e",
+      "bytes": 3254
+    },
+    {
+      "path": "test_general/api/test_utils.py",
+      "gitBlob": "05ba74b20f1ff862ac0ba2df8025fee958f67037",
+      "bytes": 1614
+    },
+    {
+      "path": "test_general/api/test_worker_errors.py",
+      "gitBlob": "36b55c5be60a144e3deba089dff3c977c7559c4f",
+      "bytes": 2507
+    },
+    {
+      "path": "test_general/test_parallel_mode_script.py",
+      "gitBlob": "628b5e4548755eac7e55beeac8dcb8edf7eb3921",
+      "bytes": 3040
+    },
+    {
+      "path": "uv.lock",
+      "gitBlob": "2f97851c0a68ca1640fdc8af0e5b7e7fd3f3af24",
+      "bytes": 679652
+    }
+  ]
+}
