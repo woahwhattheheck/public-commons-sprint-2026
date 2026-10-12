@@ -1,0 +1,41 @@
+/* MIT. Neutral operations editing within the existing native merchant layout. */
+.grpc-operations{color:#222;min-width:0;font:14px/1.5 system-ui,sans-serif}
+.grpc-operations h2,.grpc-operations h3,.grpc-operations h4{color:#202124;line-height:1.25}
+.grpc-operations h2{font-size:24px;margin:16px 0 10px}.grpc-operations h3{font-size:18px;margin:0 0 14px}.grpc-operations h4{font-size:15px;margin:20px 0 10px}
+.grpc-operations .ops-panel{display:block;background:#fff;border:1px solid #c6c8cb;border-radius:3px;padding:18px;margin:16px 0;min-width:0}
+.grpc-operations .ops-panel .ops-panel{padding:12px;margin:0}
+.grpc-operations .ops-columns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;align-items:start}
+.grpc-operations .ops-actions{display:flex;align-items:end;flex-wrap:wrap;gap:10px;margin:12px 0}
+.grpc-operations .ops-actions>label{flex:1 1 170px}.grpc-operations .ops-actions>span{align-self:center}
+.grpc-operations label{display:flex;flex-direction:column;gap:5px;margin:10px 0;font-size:13px;font-weight:600;min-width:0}
+.grpc-operations input,.grpc-operations select,.grpc-operations textarea{box-sizing:border-box;width:100%;min-width:0;padding:9px 10px;color:#202124;background:#fff;border:1px solid #aeb2b7;border-radius:3px;font:14px/1.4 system-ui,sans-serif}
+.grpc-operations textarea{resize:vertical;min-height:68px}
+.grpc-operations .ops-check{display:flex;flex-direction:row;align-items:center;gap:9px;font-weight:400}
+.grpc-operations .ops-check input{width:18px;height:18px;flex:none}
+.grpc-operations button{border:1px solid #91969c;border-radius:3px;background:#f5f5f6;color:#202124;padding:8px 12px;font:600 13px/1.4 system-ui,sans-serif;cursor:pointer;white-space:normal;max-width:100%}
+.grpc-operations button:hover{background:#e7e8ea;border-color:#555b62}
+.grpc-operations button:disabled{opacity:.48;cursor:default}
+.grpc-operations button:focus-visible,.grpc-operations input:focus-visible,.grpc-operations select:focus-visible,.grpc-operations textarea:focus-visible{outline:2px solid #373b40;outline-offset:2px}
+.grpc-operations .ops-list{display:flex;flex-direction:column;gap:7px;max-height:330px;overflow:auto}
+.grpc-operations .ops-item{display:block;text-align:left;width:100%;overflow-wrap:anywhere}
+.grpc-operations .ops-identity{font:12px/1.55 ui-monospace,monospace;overflow-wrap:anywhere;color:#50555b}
+.grpc-operations .ops-hint{font-size:13px;color:#555b62;max-width:none}
+.grpc-operations .ops-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+.grpc-operations .ops-summary>div{border:1px solid #d0d3d6;padding:10px}
+.grpc-operations .ops-summary span{font-size:12px;color:#50555b}.grpc-operations .ops-summary strong{display:block;font-size:23px;font-weight:600}
+.grpc-operations .ops-table-wrap{overflow:auto;max-height:600px;border:1px solid #c6c8cb}
+.grpc-operations table{width:100%;border-collapse:collapse;font-size:12px}
+.grpc-operations th,.grpc-operations td{border-bottom:1px solid #d7d9dc;padding:9px;vertical-align:top;text-align:left;overflow-wrap:anywhere;max-width:430px}
+.grpc-operations th{position:sticky;top:0;z-index:1;background:#f0f1f2;color:#34383c;font-weight:600}
+.grpc-operations tr:last-child td{border-bottom:0}
+.grpc-operations details{margin:16px 0;border:1px solid #c6c8cb;border-radius:3px;padding:12px}
+.grpc-operations summary{cursor:pointer;font-weight:600}
+.grpc-operations pre{max-width:100%;max-height:550px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;background:#f5f6f7;color:#26292d;border:1px solid #d5d7da;padding:12px;font:12px/1.6 ui-monospace,monospace}
+.grpc-operations .ops-linked{display:flex;gap:10px;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid #e0e2e4;min-width:0}
+.grpc-operations .ops-linked code{font-size:12px;overflow-wrap:anywhere}.grpc-operations .ops-linked button{flex:none}
+.grpc-operations .ops-action-list{display:grid;gap:12px}
+.grpc-operations fieldset{min-width:0;border:1px solid #c6c8cb;border-radius:3px;padding:12px;margin:0}
+.grpc-operations legend{font:12px/1.5 ui-monospace,monospace;padding:0 6px;color:#50555b}
+.grpc-operations .ops-delivery:empty{display:none}.grpc-operations .ops-delivery{padding-top:12px}
+@media(max-width:900px){.grpc-operations .ops-columns{grid-template-columns:1fr}.grpc-operations .ops-panel{padding:14px}.grpc-operations .ops-list{max-height:240px}}
+@media(max-width:480px){.grpc-operations .ops-panel{padding:11px}.grpc-operations .ops-actions{gap:8px}.grpc-operations .ops-actions>button{flex:1 1 auto}.grpc-operations .ops-linked{align-items:start;flex-direction:column}.grpc-operations .ops-summary{grid-template-columns:repeat(2,minmax(0,1fr))}}
