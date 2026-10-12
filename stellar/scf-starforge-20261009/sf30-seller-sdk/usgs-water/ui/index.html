@@ -31,7 +31,7 @@
 <section class="panel"><div class="section-head"><h2>Saved reviews</h2><span id="review-count" class="count">0</span></div><div id="reviews" class="record-list"><p class="empty">Save a review to retain the selected analysis and decision.</p></div></section>
 </aside>
 <div class="content">
-<nav class="tabs" aria-label="Workspace"><button type="button" data-tab="analysis" aria-current="page">Analysis</button><button type="button" data-tab="source">Original source</button><button type="button" data-tab="merchant">Merchant &amp; customer</button></nav>
+<nav class="tabs" aria-label="Workspace"><button type="button" data-tab="analysis" aria-current="page">Analysis</button><button type="button" data-tab="source">Original source</button><button type="button" data-tab="merchant">Merchant &amp; customer</button><button type="button" data-tab="dss">HEC-DSS handover</button></nav>
 <section class="panel tab-panel" id="tab-analysis">
 <div class="section-head"><h2>Observations and change</h2><span id="analysis-status" class="tag">Select a capture</span></div>
 <form id="analysis-form">
@@ -68,6 +68,38 @@
 <div class="actions"><button id="prepare-purchase" type="submit" disabled>Prepare purchase</button><button id="execute-purchase" type="button" disabled>Execute prepared purchase</button><button id="reopen-purchase" type="button" disabled>Reopen delivered result</button><button id="prepare-next-page" type="button" disabled>Prepare next page</button></div>
 <p id="customer-page-status" class="caption"></p></form>
 <pre id="customer-result" hidden></pre>
+</section>
+<section class="panel tab-panel" id="tab-dss" hidden>
+<div class="section-head"><h2>HEC-DSS handover</h2><button id="dss-runtime" type="button">Check native runtime</button></div>
+<p class="caption">Prepare a native HEC-DSS7 file from an immutable source edition. Review the receiving units, period meaning and source time zone before creating the file.</p>
+<p id="dss-runtime-status" class="caption" role="status"></p>
+<div class="two"><label>Original source edition<select id="dss-edition"><option value="">Choose a saved edition</option></select></label><label>Compare preceding export<select id="dss-previous"><option value="">No preceding export</option></select></label></div>
+<div class="actions"><button id="dss-load" type="button">Load original edition</button></div>
+<p id="dss-source-summary" class="caption">Prepare an edition in Merchant &amp; customer, or receive a complete handover below.</p>
+<div id="dss-mapping-area" hidden>
+<label>Handover title<input id="dss-title" maxlength="200" placeholder="Potomac daily flow · October 2026"></label>
+<details><summary>Load or inspect an existing analyst mapping</summary>
+<label>Mapping file<input id="dss-mapping-file" type="file" accept=".json,application/json"></label>
+<label>Complete receiving mapping (JSON)<textarea id="dss-json" rows="12" spellcheck="false"></textarea></label>
+<button id="dss-apply-json" type="button">Apply mapping for review</button>
+</details>
+<div id="dss-series"></div>
+<div id="dss-conflicts" role="status" aria-live="polite"></div>
+</div>
+<div class="actions"><button id="dss-preview" type="button" disabled>Review receiving plan</button></div>
+<p id="dss-preview-status" class="caption" role="status">Load an original source edition to prepare a receiving plan.</p>
+<div id="dss-plan"></div>
+<label>Export name<input id="dss-export-id" maxlength="96" pattern="[A-Za-z0-9][A-Za-z0-9_-]*" placeholder="potomac-october-2026"><small>Keep this name to reopen or continue the same handover. Use a new name for a corrected source edition.</small></label>
+<div class="actions"><button id="dss-create" type="button" disabled>Create or reopen native handover</button></div>
+<h3>Saved native handovers</h3>
+<div id="dss-exports" class="record-list"><p class="empty">Completed handovers and interrupted operations will appear here.</p></div>
+<form id="dss-receive-form" class="dss-receive">
+<h3>Receive a complete handover</h3>
+<p class="caption">Receive the native file together with its original source edition, analyst mapping and observation history. Existing work with the same identifiers reopens when its contents match.</p>
+<label>Complete handover ZIP<input id="dss-receive-file" type="file" accept=".zip,application/zip" required></label>
+<button type="submit">Receive and reopen</button>
+<p id="dss-receive-status" class="caption" role="status" aria-live="polite"></p>
+</form>
 </section>
 <section id="saved-review" class="panel" hidden><div class="section-head"><h2>Saved review</h2><span id="saved-review-id" class="tag"></span></div><p id="saved-review-note"></p><div id="review-downloads" class="actions"></div><p class="caption">The review preserves its source capture, selected periods, original quality flags and operator decision.</p></section>
 </div>

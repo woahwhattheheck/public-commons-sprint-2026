@@ -1,0 +1,30 @@
+{
+  "schema": "market.issuer-source.v1",
+  "issuer": "Florida State University",
+  "title": "Salary Market Data for Staff & Peer Data and Survey Management",
+  "solicitation": "ITN6857-6",
+  "event_id": "1453182",
+  "public_portal": "https://bids.sciquest.com/apps/Router/PublicEvent?CustomerOrg=FSU",
+  "public_document_url": "https://solutions-selectsite-documents.s3.amazonaws.com/Sourcingevent/1453182-event.pdf",
+  "opens": "2026-10-02T00:00:00-04:00",
+  "closes": "2026-10-28T15:00:00-04:00",
+  "closes_utc": "2026-10-28T19:00:00Z",
+  "source_document_date": "2026-10-09",
+  "retrieved_at": "2026-10-11T22:29:55.691536Z",
+  "retrieval": {
+    "http_status": 200,
+    "bytes": 154957,
+    "sha256": "fb8bfb874a9a28f1a4c0883daa550af536504bea0104c771a7143939a6263031",
+    "last_modified": "Fri, 09 Oct 2026 13:11:06 GMT",
+    "etag": "839c92f9d9dce5792f3c077274b17d86"
+  },
+  "objective": "Provide HR relevant salary market data for staff, peer data and potentially survey management.",
+  "scope": "This retained two-page issuer notice establishes the event identity, timing and stated objective. The full supplier packet and subsequent addenda/Q&A govern a response.",
+  "method_background": {
+    "url": "https://hr.fsu.edu/sites/default/files/PDF/Staff%20Pay%20Administration%20Guidelines.pdf",
+    "printed_pages": "19-22",
+    "worked_example_printed_page": 22,
+    "role": "Published operating context and original illustration, kept separate from the current solicitation's controlling requirements."
+  }
+}
+

@@ -70,6 +70,7 @@ function defaultDraft(value){
 function currentDraft(){return state.draft||(state.draft=defaultDraft(query()));}
 async function refresh({render=true,detail=true}={}){
   const result=await api('/api/state');state.workspace=result.workspace;state.jobs=result.jobs||[];
+  state.processingCapabilities=result.capabilities?.processing?.enabled?result.capabilities.processing:null;
   if(state.queryId&&!byId(state.workspace.queries,state.queryId)){state.queryId=null;state.editionId=null;state.draft=null;}
   if(!state.queryId&&array(state.workspace.queries).length&&!state.draft){state.queryId=array(state.workspace.queries)[0].id;}
   const editions=queryEditions();
@@ -158,15 +159,80 @@ function paginationControls(total){
 }
 
 function rememberFocus(){
-  const element=document.activeElement;if(!element?.id||!root.contains(element))return null;
-  return {id:element.id,start:element.selectionStart,end:element.selectionEnd};
+  const element=document.activeElement;
+  if(!element||!root.contains(element))return null;
+  const retained=state.processingView?.root.contains(element);
+  if(!element.id&&!retained)return null;
+  return {id:element.id,element:retained?element:null,start:element.selectionStart,end:element.selectionEnd};
 }
 function restoreFocus(saved){
-  if(!saved)return;const element=document.getElementById(saved.id);if(!element)return;
+  if(!saved)return;
+  const element=saved.element?.isConnected?saved.element:saved.id?document.getElementById(saved.id):null;
+  if(!element)return;
   element.focus({preventScroll:true});try{if(saved.start!=null)element.setSelectionRange(saved.start,saved.end);}catch{}
 }
+
+function disposeProcessingView(){
+  const instance=state.processingView;if(!instance)return;
+  state.processingView=null;instance.disposed=true;
+  if(typeof instance.handle?.dispose==='function')Promise.resolve().then(()=>instance.handle.dispose()).catch(error=>toast(error.message||String(error),true));
+}
+function processingContext(){
+  return {workspace:state.workspace,queryId:state.queryId,editionId:state.editionId,query:query(),detail:state.detail,
+    jobs:state.jobs.filter(job=>String(job.kind).startsWith('processing-')),capabilities:state.processingCapabilities};
+}
+async function updateProcessingView(instance){
+  if(instance.updating||instance.disposed||typeof instance.handle?.update!=='function')return;
+  instance.updating=true;
+  try{
+    let context;
+    do{context=instance.context;await instance.handle.update(context);}
+    while(!instance.disposed&&context!==instance.context);
+  }catch(error){if(!instance.disposed)toast(error.message||String(error),true);}
+  finally{instance.updating=false;}
+}
+function processingAPI(){
+  const declared=(kind,name)=>{
+    if(typeof name!=='string'||!array(state.processingCapabilities?.[kind]).includes(name))throw new Error('This processing '+kind.slice(0,-1)+' is not enabled by the configured controller.');
+    return encodeURIComponent(name);
+  };
+  return Object.freeze({
+    getState:()=>api('/api/processing/state'),
+    read:(name,query={})=>{
+      const encoded=declared('reads',name),parameters=new URLSearchParams();
+      for(const [key,value]of Object.entries(query))for(const item of Array.isArray(value)?value:[value])if(item!==undefined&&item!==null)parameters.append(key,String(item));
+      return api('/api/processing/reads/'+encoded+(parameters.size?'?'+parameters.toString():''));
+    },
+    run:(name,input={})=>jobAction('/api/processing/actions/'+declared('actions',name),{input},'Processing '+name.replaceAll('-',' ')),
+    job:id=>api('/api/jobs/'+encodeURIComponent(id))
+  });
+}
+function renderProcessing(){
+  let instance=state.processingView;
+  if(!instance){
+    instance={root:node('div',{class:'processing-host'},node('section',{class:'panel'},node('h3',{},'Processing history'),node('p',{class:'muted'},'Opening the configured processing workspace…'))),context:null,handle:null,disposed:false,updating:false};
+    state.processingView=instance;
+    void import('/processing/view.mjs').then(async module=>{
+      if(instance.disposed)return;
+      if(typeof module.mountProcessingView!=='function')throw new Error('The packaged processing view is missing mountProcessingView.');
+      const initial=instance.context;
+      const handle=await module.mountProcessingView({root:instance.root,context:initial,api:processingAPI()});
+      if(instance.disposed){await handle?.dispose?.();return;}
+      if(!handle||typeof handle.update!=='function'||typeof handle.dispose!=='function')throw new Error('The processing view must return update and dispose functions.');
+      instance.handle=handle;
+      if(instance.context!==initial)await updateProcessingView(instance);
+    }).catch(error=>{
+      if(instance.disposed)return;
+      instance.root.replaceChildren(node('section',{class:'panel'},node('h3',{},'Processing view could not open'),node('p',{role:'alert'},error.message||String(error))));
+    });
+  }
+  instance.context=processingContext();void updateProcessingView(instance);return instance.root;
+}
+
 function renderApp(){
   if(!state.workspace)return;
+  if(state.tab==='processing'&&!state.processingCapabilities)state.tab=state.editionId?'scenes':'search';
+  if(state.tab!=='processing')disposeProcessingView();
   const savedFocus=rememberFocus(),workspace=state.workspace;
   const header=node('header',{class:'app-header'},node('div',{class:'brand'},node('span',{class:'eyebrow'},'Scene selection and delivery'),node('h1',{},'Earth Search operations')),node('div',{class:'header-actions'},button('Refresh saved state',()=>refresh(),{class:'small'}),button('Import handover',openImport,{class:'small'})));
   const bar=node('div',{class:'workspace-bar'},node('span',{},workspace.title||'Satellite imagery workspace'),node('span',{},'Revision '+workspace.revision+' · '+workspace.id));
@@ -180,7 +246,7 @@ function renderApp(){
   const sidebar=node('aside',{class:'sidebar','aria-label':'Saved searches'},node('div',{class:'sidebar-header'},node('h3',{},'Saved queries'),button('New',()=>{state.queryId=null;state.editionId=null;state.detail=null;state.draft=defaultDraft(null);state.tab='search';renderApp();},{class:'small'})),list,node('div',{class:'sidebar-footer'},externalLink('https://element84.com/earth-search/','Earth Search by Element 84'),node('p',{},'Collection rights and source metadata travel with the saved review.')));
   const title=node('div',{class:'workspace-title'},node('div',{},node('h2',{},query()?.name||'Prepare a scene query'),node('p',{class:'muted'},query()?array(query().collections).join(' · '):'Choose a collection, an area and an observation window.')),query()?badge(queryEditions().length+' editions'):null);
   const tabs=node('nav',{class:'tabs','aria-label':'Workspace views'});
-  for(const [key,label]of [['search','Catalog & query'],['scenes','Scenes & assets'],['compare','Compare editions'],['review','Selections & handover']]){
+  for(const [key,label]of [['search','Catalog & query'],['scenes','Scenes & assets'],['compare','Compare editions'],['review','Selections & handover'],...(state.processingCapabilities?[['processing','Processing history']]:[])]){
     tabs.append(button(label,()=>{state.tab=key;renderApp();},{role:'tab','aria-selected':state.tab===key}));
   }
   const main=node('main',{class:'workspace',id:'main'},title,tabs);
@@ -188,6 +254,7 @@ function renderApp(){
   if(state.tab==='scenes')main.append(renderScenes());
   if(state.tab==='compare')main.append(renderCompare());
   if(state.tab==='review')main.append(renderSelections());
+  if(state.tab==='processing')main.append(renderProcessing());
   const jobs=renderJobs();if(jobs)main.append(jobs);
   main.append(node('p',{class:'footer-note'},'Scene footprints use the saved STAC geometry. Asset retrieval and selection decisions remain attached to their original catalog and scene edition.'));
   root.replaceChildren(header,bar,node('div',{class:'app-shell'},sidebar,main));
