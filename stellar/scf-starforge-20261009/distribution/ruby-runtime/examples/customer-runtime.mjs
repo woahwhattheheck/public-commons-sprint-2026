@@ -54,9 +54,9 @@ export async function runCustomerRuntime({directory:root,selectionFile}={}) {
       await rename(parked,producer);await syncParent(producer);
     }
   }
-  await restore();
   const completed=await readJSON(join(root,'runtime-customer-result.json'),true);
   if(completed) {
+    await restore();
     const {sha256,...body}=completed;
     need(completed.schema===SCHEMA&&completed.selectionSha256===digest(selectedRaw)&&hashObject(body)===sha256,'RUBY_CUSTOMER_RESULT_CHANGED');
     const archive=await fingerprint(join(root,completed.archive.name),{privateOnly:true});
@@ -128,7 +128,7 @@ export async function runCustomerRuntime({directory:root,selectionFile}={}) {
       observed=await core.resume({operationId:key});
     observed=await wait(core,key,{ready:true});
     const url=new URL(observed.url), token=new URLSearchParams(url.hash.slice(1)).get('token');
-    sha(token);need(url.hostname==='127.0.0.1'&&url.protocol==='http:'&&Number(url.port)===port,'RUBY_CUSTOMER_URL_CHANGED');
+    sha(token);need(url.hostname==='127.0.0.1'&&url.protocol==='http:'&&Number(url.port || 80)===port,'RUBY_CUSTOMER_URL_CHANGED');
     const opening=await fetch(url.origin+'/managed-ruby/start',{redirect:'error',signal:AbortSignal.timeout(15000)});
     need(opening.status===200,'RUBY_CUSTOMER_OPEN_FAILED');await opening.arrayBuffer();
     const session=await fetch(url.origin+'/managed-ruby/session',{method:'POST',redirect:'error',
@@ -148,24 +148,38 @@ export async function runCustomerRuntime({directory:root,selectionFile}={}) {
     return record(name,{operationId:http.operationId,phase:state.phase,active:state.active});
   }
   try {
+    let registered,sourceHttp,exported,archive;
+    if(await exists(parked)) {
+      // A process loss during receiving keeps the original producer unavailable.
+      // Reuse its completed export and continue the same recipient operation.
+      need(!await exists(producer),'RUBY_CUSTOMER_PRODUCER_CHANGED');
+      registered=await readJSON(phasePath('register'));
+      sourceHttp=await readJSON(phasePath('source-http'));
+      exported=await readJSON(phasePath('export'));
+      const original=exported.result?.files?.find(file=>file.name==='ruby-runtime.tar');
+      const retained=await fingerprint(join(root,'ruby-runtime.tar'),{privateOnly:true});
+      need(original&&original.bytes===retained.bytes&&original.sha256===retained.sha256,'RUBY_CUSTOMER_ARCHIVE_CHANGED');
+      archive={name:'ruby-runtime.tar',bytes:retained.bytes,sha256:retained.sha256};
+    } else {
     sourceCore=await openRubyRuntime({directory:producer,create:true});
     await sourceCore.create({id:selected.environmentId,title:selected.title,ruby:selected.ruby,
       bundlerVersion:selected.bundlerVersion,requestId:keys.create});
     await complete('install',sourceCore,()=>sourceCore.start({id:selected.environmentId,operationId:keys.install,action:'install'}));
     if(selected.customer)await complete('customer',sourceCore,()=>sourceCore.run({id:selected.environmentId,
       operationId:keys.customer,entry:selected.customer.entry,argv:selected.customer.argv}));
-    const registered=await complete('register',sourceCore,async()=>{
+    registered=await complete('register',sourceCore,async()=>{
       await sourceCore.registerApplication({id:selected.applicationId,title:selected.title,
         environmentId:selected.environmentId,directory:selected.applicationDirectory,requestId:keys.register});
       return sourceCore.operation({operationId:keys.register});
     });
-    const sourceHttp=await live('source-http',sourceCore,selected.applicationId,selected.sourcePort);
+    sourceHttp=await live('source-http',sourceCore,selected.applicationId,selected.sourcePort);
     await stopped('source-stop','source-http',sourceCore);
-    const exported=await complete('export',sourceCore,()=>sourceCore.start({id:selected.environmentId,operationId:keys.export,
+    exported=await complete('export',sourceCore,()=>sourceCore.start({id:selected.environmentId,operationId:keys.export,
       action:'export',applicationId:selected.applicationId}));
-    const archive=await streamOutput(sourceCore,keys.export,'ruby-runtime.tar',join(root,'ruby-runtime.tar'));
+    archive=await streamOutput(sourceCore,keys.export,'ruby-runtime.tar',join(root,'ruby-runtime.tar'));
     await sourceCore.close();sourceCore=null;
     await rename(producer,parked);await syncParent(parked);
+    }
     receivingCore=await openRubyRuntime({directory:recipient,create:true});
     const received=await complete('receive',receivingCore,()=>receivingCore.receive({id:'received-customer',title:(selected.title+' received').slice(0,160),
       ruby:selected.ruby,bundlerVersion:selected.bundlerVersion,archive:join(root,archive.name),
@@ -192,6 +206,10 @@ export async function runCustomerRuntime({directory:root,selectionFile}={}) {
     await once(join(root,'runtime-customer-result.json'),JSON.stringify(result,null,2)+'\n');
     return result;
   } finally {
+    // An interrupted earlier process may still own a detached recipient worker.
+    // Adopt its existing runtime before restoring the producer or releasing this journey.
+    if(!receivingCore&&await exists(parked)&&await exists(join(recipient,'ruby-runtime.json')))
+      receivingCore=await openRubyRuntime({directory:recipient});
     if(active)await active.core.cancel({operationId:active.key}).catch(()=>{});
     for(const [core,phase]of [[sourceCore,'source-http'],[receivingCore,'recipient-http']])if(core){
       const saved=await readJSON(phasePath(phase),true).catch(()=>null);
