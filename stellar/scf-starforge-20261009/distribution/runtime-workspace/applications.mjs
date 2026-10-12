@@ -4,6 +4,7 @@ import { constants } from 'node:fs';
 import { join, dirname, basename } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { blockscoutApplication, prepareBlockscoutApplication } from './application-blockscout.mjs';
+import { jobCheckoutApplication, validateJobCheckoutSelection, prepareJobCheckoutApplication } from './application-job-checkout.mjs';
 import { inspectMerchantRuntime } from '../../sf46-release/runtime-package.mjs';
 import { managedState, openManagedHome, reviewManagedAdoption } from './managed-workspace.mjs';
 import { applicationEnvironment, readApplicationTerminal, sendApplicationTerminal } from './application-command.mjs';
@@ -30,6 +31,7 @@ const common = [
 ];
 export const APPLICATION_CATALOG = Object.freeze([
   blockscoutApplication(common),
+  jobCheckoutApplication(common),
   { id: 'xml', command: 'dataset', requiredSource: 'stellar/scf-starforge-20261009/sf30-seller-sdk/xml/cli.mjs',
     title: 'XML dataset onboarding', terminal: false,
     description: 'Reopen an initialized XML workspace with its original sources, mappings, native datasets, comparison and portable editions.',
@@ -163,6 +165,7 @@ function normalizeSettings(type, input) {
   }
   if (type.id === 'dataset') need(Boolean(settings.datasetFile) !== Boolean(settings.stateDirectory),
     'APPLICATION_DATASET_SELECTION_REQUIRED', 'Choose exactly one original dataset file or retained state');
+  if (type.id === 'job-checkout') validateJobCheckoutSelection(settings);
   if (type.id.endsWith('-publisher')) {
     need(!settings.create || settings.sourceFile && settings.stateDirectory, 'APPLICATION_PUBLISHER_SOURCE_REQUIRED');
     need(Boolean(settings.seller) === Boolean(settings.resource), 'APPLICATION_BUYER_ENDPOINT_PAIR_REQUIRED');
@@ -182,6 +185,9 @@ async function applicationCommand(type, settings, runtimeDirectory) {
   if (type.id === 'blockscout') {
     const original = await prepareBlockscoutApplication(settings, inputPath);
     args.push(...original.args); inputs.push(...original.inputs);
+  } else if (type.id === 'job-checkout') {
+    const original = await prepareJobCheckoutApplication(settings, runtimeDirectory, inputPath);
+    args.push(...original.args); inputs.push(...original.inputs); createDirectories.push(...original.createDirectories);
   } else if (type.id === 'xml') {
     await path('workspaceDirectory', 'directory', false, true);
     args.push('xml', '--workspace', settings.workspaceDirectory, 'serve');
