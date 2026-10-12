@@ -13,6 +13,20 @@ function ownedConnection(native, topology) {
   // A failed Cluster/Sentinel seed emits an error before the driver tries the
   // next seed. The awaited connect/command result decides whether a read failed.
   native.on('error', () => {});
+  async function destroyNative() {
+    // 6.2.1 Cluster.destroy() can stop at an already-closed node because the
+    // underlying RedisClient.destroy() throws. Snapshot public existing nodes;
+    // never call nodeClient(), which could open a connection during shutdown.
+    const nodes = topology === 'cluster'
+      ? new Set([...native.nodeByAddress.values()].flatMap(node => [node.client, node.pubSub?.client])
+        .concat(native.pubSubNode?.client).filter(Boolean)) : undefined;
+    try { await native.destroy(); } catch { /* Native socket already closed. */ }
+    if (nodes) for (const client of nodes) {
+      if (client.isOpen) {
+        try { await client.destroy(); } catch { /* Another native close won. */ }
+      }
+    }
+  }
   const connection = {
     get isOpen() { return !disposed && native.isOpen; },
     get isReady() { return !disposed && native.isReady; },
@@ -45,7 +59,7 @@ function ownedConnection(native, topology) {
     destroy() {
       disposed = true;
       if (!destruction) destruction = (async () => {
-        try { await native.destroy(); } catch { /* Native socket already closed. */ }
+        await destroyNative();
         // Cluster discovery and Sentinel destruction can finish asynchronously.
         // Do not make connect() await this promise: that would form a cycle.
         if (opening) await opening.catch(() => {});
@@ -53,7 +67,7 @@ function ownedConnection(native, topology) {
         // Sentinel reset after opening finished. Join it before the final sweep.
         while (commands.size) await Promise.allSettled([...commands]);
         // Discovery may populate node records even after isOpen became false.
-        try { await native.destroy(); } catch { /* Native socket already closed. */ }
+        await destroyNative();
       })();
       return destruction;
     },
