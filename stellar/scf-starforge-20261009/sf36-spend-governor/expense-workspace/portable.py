@@ -9,7 +9,7 @@ import zipfile
 from domain import Problem
 
 APP_FILES = ("native.py", "domain.py", "store.py", "exports.py", "portable.py", "server.py",
-             "public/index.html", "public/app.mjs", "public/style.css", "README.md", "cli.mjs")
+             "public/index.html", "public/app.mjs", "public/style.css", "README.md", "cli.mjs", "receive.py")
 PREPARE = '''from pathlib import Path,PurePosixPath
 import hashlib,json,os
 root=Path(__file__).resolve().parent
@@ -46,7 +46,7 @@ All source captures, original native row identities, allocation editions, except
 
 The original buyer ledger, signer and wallet keys are outside this expense project. Its retained statement snapshots and accountant editions open independently. New captures use the original SF36 read-only statement API. Native reservations, settled actual and unused capacity retain their original meanings. The operator supplies recognition dates and expense allocations; units remain separate by network and asset.
 
-Use Period review to inspect current source/coding decisions, name the reviewer and save a review. Issue a ready edition for a frozen accountant packet. Reopening requires a recorded reason and preserves all previously issued editions. The Complete project download retains runnable source and a consistent SQLite backup for subsequent receiving.
+Use Period review to inspect current source/coding decisions, name the reviewer and save a review. Issue a ready edition for a frozen accountant packet. Reopening requires a recorded reason and preserves all previously issued editions. The Complete project download retains runnable source and a consistent SQLite backup for subsequent receiving. Successful optional customer requests are retained in that same database. The trusted installed receive.py can verify and receive the complete ZIP with --archive, --directory and --expected-sha256; it executes no archive code or SQL and can continue only the same exact incomplete receive.
 """
 
 
@@ -76,6 +76,8 @@ def _complete_project(store, state):
     entries["prepare_private.py"] = PREPARE.encode()
     entries["manifest.json"] = (json.dumps({"schema": "stellar-forge.buyer-expense-private-project.v1",
         "workspace": state["id"], "revision": state["revision"],
+        "request_recovery": "sqlite-transaction-v1",
+        "request_count": store.connection.execute("SELECT COUNT(*) FROM api_requests").fetchone()[0],
         "files": [{"path": name, "bytes": len(value), "sha256": hashlib.sha256(value).hexdigest()} for name, value in sorted(entries.items())]}, indent=2) + "\n").encode()
     output = io.BytesIO()
     with zipfile.ZipFile(output, "w", compression=zipfile.ZIP_DEFLATED) as archive:

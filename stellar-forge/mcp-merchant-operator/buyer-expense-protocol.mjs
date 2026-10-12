@@ -1,9 +1,6 @@
 // MIT. Shared customer tool contract; original SF36 methods retain all financial semantics.
 import { MAX_RETAINED_CHUNK_BYTES } from './retained-file-reads.mjs';
 export const PREFIX = 'merchant_buyer_expense_';
-const hash = value => createHash('sha256').update(value).digest('hex');
-const json = value => Buffer.from(JSON.stringify(value, null, 2) + '\n');
-const own = (value, key) => Object.hasOwn(value, key);
 const alias = { type: 'string', pattern: '^[a-z0-9][a-z0-9_-]{0,63}$' };
 const record = { type: 'string', pattern: '^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$' };
 const request = { type: 'string', pattern: '^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$' };

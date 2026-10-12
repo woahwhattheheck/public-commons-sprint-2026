@@ -58,6 +58,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   jobs-buyer                                Receive accepted jobs, follow execution and retrieve saved results
   job-workspace                             Receive paid jobs, retrieve results and organize research collections
   supplier-quotas                            Review supplier account configuration and inspect retained call allowances
+  cache-operations                          Review cache activity, change retention and recover saved operations
   openapi     OpenAPI seller import            pilot       OpenAPI pilot + operations
   buyer       Discover, review, approved call  capture     One HTTP 402 capture
   import-headers  Import original operator HTTP headers
@@ -85,6 +86,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   buyer-n8n-workflows Generate six original customer workflows for the selected n8n credential
   buyer-agent Operate the original buyer through LangGraph checkpoints and LangChain tools
   tomorrow                                  Plan weather work, review forecasts, recover resources and deliver licensed files
+  coingecko                                 Operate CoinGecko sources, market research and original purchases
   tenderly / tenderly-workspace              Prepare and operate the Tenderly simulation merchant
   tenderly-customer                          Receive, recover and export the original simulation purchase
   tenderly-analysis                          Receive, compare and review completed Tenderly simulations

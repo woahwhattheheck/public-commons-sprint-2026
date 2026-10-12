@@ -12,7 +12,7 @@ const safeCode = error => /^OAUTH_[A-Z0-9_]{1,100}$/.test(error?.code ?? '')
 /** Construction reads only the named directory setting. No private file or
  * network is opened until the original paid handler asks for credentials. */
 export function createOAuthConnectionProvider(raw, {
-  resourceOrigin, allowLoopback=false, env=process.env, lookup=systemLookup,
+  resourceOrigin, allowLoopback=false, env=process.env, lookup=systemLookup, agent,
 }={}) {
   if (env === null || typeof env !== 'object' || Array.isArray(env) || typeof lookup !== 'function')
     throw new TypeError('Invalid OAuth connection runtime');
@@ -38,7 +38,7 @@ export function createOAuthConnectionProvider(raw, {
       const token = await getOAuthAccessToken(directory,{
         expectedProfileSha256:binding.profileSha256,expectedGrantId:binding.grantId,
         requiredScopes:binding.requiredScopes,resourceOrigin,clientSecretEnv:binding.clientSecretEnv,
-        env,allowLoopback,lookup,signal:lifetime.signal,
+        env,allowLoopback,lookup,agent,signal:lifetime.signal,
         force:rejectedAccessToken !== null,rejectedAccessToken,
       });
       if (closed) throw issue('OAUTH_CONNECTION_CLOSED');
