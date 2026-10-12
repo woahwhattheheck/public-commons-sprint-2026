@@ -1,6 +1,7 @@
 // MIT. Shared contract for an attachment to the original authenticated Research workspace.
 import {createHash} from 'node:crypto';
 import {need,object} from '../node/store.mjs';
+import {inspectResearchSources,inspectResearchComparison} from './source-inspection.mjs';
 
 import {RESEARCH_WORKSPACE_API,RESEARCH_WORKSPACE_CONNECTION,RESEARCH_SECTIONS,RESEARCH_PAGE_LIMIT,RESEARCH_CONTROL_LIMIT,RESEARCH_COMPARISON_SECTIONS} from './workspace-contracts.mjs';
 export {RESEARCH_WORKSPACE_API,RESEARCH_WORKSPACE_CONNECTION,RESEARCH_SECTIONS,RESEARCH_PAGE_LIMIT,RESEARCH_CONTROL_LIMIT,RESEARCH_COMPARISON_SECTIONS} from './workspace-contracts.mjs';
@@ -52,6 +53,7 @@ export async function researchSection(store,id,{section,revision,offset=0,limit=
   }
   if(query){const text=query.toLocaleLowerCase();values=values.filter(row=>JSON.stringify(row).toLocaleLowerCase().includes(text));}
   const page=researchPage(values,{offset,limit});
+  if(section==='sources')page.items=inspectResearchSources(page.items);
   return {dossier:researchSummary(metadata),section,revision:metadata.revision,...page,
     next:page.nextOffset===null?null:{revision:metadata.revision,offset:page.nextOffset,limit}};
 }
@@ -61,8 +63,12 @@ export function researchComparison(value,{section='overview',offset=0,limit=30}=
     editions:value.editions,availability:value.availability,'findings-added':value.findings.added,
     'findings-removed':value.findings.removed,'findings-changed':value.findings.changed};
   need(section==='overview'||RESEARCH_COMPARISON_SECTIONS.includes(section),'RESEARCH_COMPARISON_SECTION_INVALID');
-  return {before:value.before,after:value.after,counts:Object.fromEntries(Object.entries(sections).map(([key,rows])=>[key,rows.length])),
-    section,...(section==='overview'?{}:{page:researchPage(sections[section],{offset,limit})})};
+  const result={before:value.before,after:value.after,counts:Object.fromEntries(Object.entries(sections).map(([key,rows])=>[key,rows.length])),section};
+  if(section==='overview')return result;
+  const page=researchPage(sections[section],{offset,limit});
+  if(section==='added'||section==='removed')page.items=inspectResearchSources(page.items);
+  if(section==='changed')page.items=inspectResearchComparison({added:[],removed:[],changed:page.items}).changed;
+  return {...result,page};
 }
 export function researchCrossrefReview(value,{section='overview',offset=0,limit=30}={}){
   need(['overview','dois','records','added','removed','changed','warnings'].includes(section),'RESEARCH_CROSSREF_SECTION_INVALID');

@@ -18,6 +18,14 @@ node stellar/scf-starforge-20261009/distribution/build.mjs \
 node stellar/scf-starforge-20261009/distribution/build.mjs \
   --repo /absolute/checkout --ref ORIGINAL_COMMIT \
   --selection woo-merchant --out /absolute/woo-release
+
+node stellar/scf-starforge-20261009/distribution/build.mjs \
+  --repo /absolute/checkout --ref ORIGINAL_COMMIT \
+  --selection openapi-merchant --out /absolute/openapi-release
+
+node stellar/scf-starforge-20261009/distribution/build.mjs \
+  --repo /absolute/checkout --ref ORIGINAL_COMMIT \
+  --selection grant-reviewer --out /absolute/grant-reviewer-release
 ```
 
 Replace `ORIGINAL_COMMIT` with the full original commit SHA. Each output directory
@@ -35,7 +43,13 @@ the original `0.1.0-source.g0123456789ab` version form.
 | --- | --- | --- |
 | `water-operations` | USGS observations, editions, Water workspace, merchant and customer file receiving | Water, Buyer, merchant console |
 | `woo-merchant` | Existing WooCommerce orders, native checkout, Operations, purchased files and refunds | WooCommerce, Buyer, merchant console |
+| `openapi-merchant` | OpenAPI/Postman/HAR authoring, exact route worksheets, reusable policy editions, seller releases and complete receiving | API merchant authoring, Buyer, merchant console |
+| `grant-reviewer` | Retained purchase/source review, complete native Buyer results and closed receiving handover | Grant purchase reviewer |
 | `all` or no flag on a new build | Complete maintained toolkit | All registered applications |
+
+The [API merchant installation and handover guide](selections/OPENAPI_MERCHANT.md)
+continues from its selected archive through managed authoring, source-bound policies,
+MCP/CLI files, complete package receiving, SF82 releases and customer reopening.
 
 Use the product's installed `starforge --help` and `starforge registrations`
 for its included commands. Selected packages expose their explicit named package
@@ -66,7 +80,10 @@ travel in the selected archive.
 
 ## Install and operate the original product
 
-Use the returned archive path and SHA-256 with the original installer:
+Use the returned archive path and SHA-256 with the original installer. The Water,
+Woo and API merchant examples below select their `schema`, `openapi` and `mcp` features.
+The Grant reviewer selects `--native --feature mcp --operator`; its complete
+installed workflow is in [GRANT_REVIEWER.md](selections/GRANT_REVIEWER.md).
 
 ```sh
 node stellar/scf-starforge-20261009/distribution/runtime-install-cli.mjs prepare \
@@ -132,7 +149,7 @@ unselected registration file inside an existing selected package.
 
 ## Receiving and measurements
 
-Build both selected products from the same original commit as a full release.
+Build the selected products from the same original commit as a full release.
 Compare the receipt's `sourceFiles`, `sourceBytes`, `archiveBytes`,
 `installedBytes` and acquisition metrics. Report actual measured results with
 that commit; the command/provider counts alone are not a size or memory measure.

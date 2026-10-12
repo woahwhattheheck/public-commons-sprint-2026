@@ -104,6 +104,14 @@ The [Python analysis and workbook commissioning guide](PYTHON_ANALYSIS.md) carri
 
 This is the downstream use of the source and purchase selected above. The customer chooses the decision, precision policy and reason to return; the original AnalysisWorkspace, workbook client, native agent tools and managed runtime retain its work. The [self-contained application insertion](PYTHON_APPLICATION_TEXT.md) gives the current manuscript editors the customer outcome and remaining host-integration work.
 
+## Commission source editions and complete report receiving
+
+The [source-edition commissioning guide](SOURCE_EDITION_COMMISSIONING.md) carries Matomo report hierarchy and Coin Metrics Cloud/API source meaning into the original merchant, buyer application and second-operator handover. The completed foundations are the original 89-row hierarchical Matomo source/customer delivery and 168 actual hourly Community reference-rate observations with a lossless API/CSV comparison. Their original remaining browser/release stages keep their recorded status.
+
+Use the native [Matomo comparison request](matomo-edition-comparison.example.json), [reference-rate comparison request](reference-rate-comparison.example.json) and [existing SF77 delivery fields](source-edition-delivery-fields.example.json) with the customer's actual source/edition IDs and original terms. The guide preserves whole-population coverage, exact values and time units, daily catalog versions, deliberate omissions, source/terms change and complete receiving. It maps actual customer-host adaptations to the same six packages and retains the original Talos $9,800 / 15-business-day workshare as a separate commissioning route. Its [application contribution](SOURCE_EDITION_APPLICATION_TEXT.md) joins the same canonical manuscript.
+
+The original support case and owner terms can travel with those source files through [SF49's native workorder carrier](source-edition-workorder.mjs). `prepare`, `receive` and `replay` call the maintained SF74/SF77 APIs, preserve complete original input bytes and coverage, and verify the same packet after transfer. Use the [attachment inventory](source-edition-attachments.example.json) for separately retained provider handovers and receiving records. Approved price remains independent of an unrecorded cost; the original model and terms editor preserve null cost and display a known adverse margin without repricing.
+
 ## The remaining engineering in the grant cohort
 
 Apply these designs to the canonical two-merchant/two-buyer deployment. They make the first tranche a concrete customer-host integration rather than another architecture exercise. Keep the current six cost packages, 400 prospective hours, $38,000 request and award-relative 150-day schedule in the original model.

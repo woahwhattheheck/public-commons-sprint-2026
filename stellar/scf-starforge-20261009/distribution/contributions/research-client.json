@@ -1,18 +1,20 @@
 {
   "schema": "stellar-forge.merchant-distribution-contribution.v1",
   "id": "research-client",
-  "description": "Operate the original authenticated Research workspace, saved Crossref reviews and complete original exports through client, CLI and merchant tools.",
+  "description": "Operate the original authenticated Research workspace, source bundles, saved Crossref reviews and complete original source and dossier exports through client, CLI and merchant tools.",
   "commands": {
     "research-client": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/workspace-cli.mjs"
   },
   "commandDescriptions": {
-    "research-client": "Operate the existing Research listener, reviewed Crossref acquisitions and complete dossier exports"
+    "research-client": "Operate the existing Research listener, inspect original source occurrences and retain complete reviewed files and dossier exports"
   },
   "exports": {
     "./buyer/research-dossiers/client": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/workspace-client.mjs",
     "./buyer/research-dossiers/files": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/workspace-files.mjs",
     "./buyer/research-dossiers/protocol": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/workspace-protocol.mjs",
     "./merchant/mcp/research": "./source/stellar-forge/mcp-merchant-operator/research-workspace.mjs",
-    "./buyer/research-dossiers/contracts": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/workspace-contracts.mjs"
+    "./buyer/research-dossiers/contracts": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/workspace-contracts.mjs",
+    "./buyer/research-dossiers/source-bundles": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/source-bundles.mjs",
+    "./buyer/research-dossiers/source-inspection": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/source-inspection.mjs"
   }
 }

@@ -36,8 +36,13 @@ function csktm_eng_verification_mail($entry,$form) {
     return $mail;
 }
 function csktm_eng_schedule_mail($mail_id) {
+    $row=csktm_eng_row('mail',$mail_id,false);
+    if (!$row || $row['data']['state']!=='pending' || !$row['data']['automatic'] || $row['data']['dispatchDisabled']) { return; }
     if (!wp_next_scheduled('csktm_engagement_deliver',array($mail_id))) {
-        wp_schedule_single_event(time()+1,'csktm_engagement_deliver',array($mail_id),true);
+        $scheduled=wp_schedule_single_event(time()+1,'csktm_engagement_deliver',array($mail_id),true);
+        if (($scheduled===false || is_wp_error($scheduled)) && !wp_next_scheduled('csktm_engagement_deliver',array($mail_id))) {
+            csktm_fail('engagement_mail_schedule','The message is saved. Resume this exact action to finish scheduling its pending mail.',503);
+        }
     }
 }
 add_action('csktm_engagement_deliver',function($mail_id) {
@@ -115,7 +120,10 @@ function csktm_eng_mail_decision($mail_id,$input) {
         $row=csktm_eng_row('mail',$mail_id); $mail=$row['data'];
         $action=$input['action']??''; $op=$input['operationId']??null;
         $old=csktm_eng_operation($mail,$op,$action,$input);
-        if ($old) { return array('record'=>$row,'replayed'=>true); }
+        if ($old) {
+            $copy_id=$old['result']['copyId']??null;
+            return array('record'=>$row,'copy'=>$copy_id?csktm_eng_row('mail',$copy_id)['data']:null,'replayed'=>true);
+        }
         csktm_eng_expected($mail,$input['expectedRevision']??null);
         if ($action==='save_draft') {
             if (!in_array($mail['state'],array('draft','failed'),true) || $mail['kind']!=='staff_reply' || $mail['dispatchDisabled']) {
@@ -146,7 +154,7 @@ function csktm_eng_mail_decision($mail_id,$input) {
             $mail['copies'][]=$copy['id'];
         } else { csktm_fail('engagement_action','Choose a supported correspondence action.'); }
         csktm_eng_event($mail,$action,array('state'=>$mail['state']));
-        csktm_eng_remember($mail,$op,$action,$input);
+        csktm_eng_remember($mail,$op,$action,$input,array('copyId'=>$copy['id']??null));
         return array('record'=>csktm_eng_put('mail',$mail),'copy'=>$copy??null,'replayed'=>false);
     });
 }
@@ -229,7 +237,10 @@ function csktm_eng_public_decision($id,$input) {
         $form=csktm_eng_row('form',$entry['formId'])['data'];
         $action=$input['action']??''; $op=$input['operationId']??null;
         $previous=csktm_eng_operation($entry,$op,$action,$input);
-        if ($previous) { return array('entry'=>$entry,'replayed'=>true); }
+        if ($previous) {
+            $mail_ids=$previous['result']['scheduledMailIds']??array();
+            return array('entry'=>$entry,'replayed'=>true);
+        }
         if ($action==='unsubscribe' && $entry['mode']==='newsletter') {
             $email=$entry['submission']['email'];
             // A withdrawal applies to every subscription to this form for this address.
@@ -256,9 +267,13 @@ function csktm_eng_public_decision($id,$input) {
             $mail=csktm_eng_verification_mail($entry,$form); $mail_ids[]=$mail['id'];
         } else { csktm_fail('engagement_public_action','Choose an action available for this receipt.'); }
         csktm_eng_event($entry,$action,array(),0);
-        csktm_eng_remember($entry,$op,$action,$input);
+        if ($action==='cancel_registration') {
+            // Promotion reads the released seats inside this same transaction.
+            csktm_eng_put('entry',$entry);
+            $mail_ids=array_merge($mail_ids,csktm_eng_promote($form));
+        }
+        csktm_eng_remember($entry,$op,$action,$input,array('scheduledMailIds'=>$mail_ids));
         csktm_eng_put('entry',$entry);
-        if ($action==='cancel_registration') { $mail_ids=array_merge($mail_ids,csktm_eng_promote($form)); }
         return array('entry'=>$entry,'replayed'=>false);
     });
     foreach ($mail_ids as $mail_id) { csktm_eng_schedule_mail($mail_id); }
@@ -271,7 +286,11 @@ function csktm_eng_entry_decision($id,$input) {
         $form=csktm_eng_row('form',$entry['formId'])['data'];
         $action=$input['action']??''; $op=$input['operationId']??null;
         $previous=csktm_eng_operation($entry,$op,$action,$input);
-        if ($previous) { return array('record'=>$row,'replayed'=>true); }
+        if ($previous) {
+            $mail_ids=$previous['result']['scheduledMailIds']??array();
+            $mail_id=$previous['result']['mailId']??null;
+            return array('record'=>$row,'mail'=>$mail_id?csktm_eng_row('mail',$mail_id)['data']:null,'replayed'=>true);
+        }
         csktm_eng_expected($entry,$input['expectedRevision']??null);
         if ($action==='review') {
             $state=$input['state']??'in_review';
@@ -327,12 +346,12 @@ function csktm_eng_entry_decision($id,$input) {
             $mail=csktm_eng_verification_mail($entry,$form); $mail_ids[]=$mail['id'];
         } else { csktm_fail('engagement_staff_action','Choose a supported staff action.'); }
         csktm_eng_event($entry,$action,array('state'=>$entry['state'],'rsvp'=>$entry['rsvp'],'subscription'=>$entry['subscription']));
-        csktm_eng_remember($entry,$op,$action,$input);
-        csktm_eng_put('entry',$entry);
         if ($entry['mode']==='rsvp' && ($action==='cancel_registration' || in_array($entry['state'],array('spam','archived'),true))) {
+            csktm_eng_put('entry',$entry);
             $mail_ids=array_merge($mail_ids,csktm_eng_promote($form));
         }
-        return array('record'=>csktm_eng_row('entry',$id),'mail'=>$mail??null,'replayed'=>false);
+        csktm_eng_remember($entry,$op,$action,$input,array('mailId'=>$mail['id']??null,'scheduledMailIds'=>$mail_ids));
+        return array('record'=>csktm_eng_put('entry',$entry),'mail'=>$mail??null,'replayed'=>false);
     });
     foreach ($mail_ids as $mail_id) { csktm_eng_schedule_mail($mail_id); }
     return $result;

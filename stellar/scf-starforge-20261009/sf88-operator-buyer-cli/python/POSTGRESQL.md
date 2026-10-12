@@ -615,7 +615,9 @@ retains every original row and receives the same input using two explicit SQL
 mappings, with one changed alias. It compares those mappings while verifying
 that the source definitions and capture remain unchanged.
 
-Select the receiving host's existing Playwright installation and Chromium:
+Select the Linux receiving host's existing Playwright installation and Chromium.
+The installed buyer package includes the standard-library command supervisor,
+which uses the host kernel's child adoption and pidfd support:
 
 ```sh
 python examples/postgres_semantic_receiving.py \
@@ -644,6 +646,13 @@ python examples/postgres_semantic_receiving.py \
   --directory /srv/private/customer/postgres-meanings \
   --schema sf_semantic_receiving --phase reopen
 ```
+
+The browser and CLI run under owned child supervisors. Timeout and termination
+close their full descendant trees before the receiving command returns; a
+terminated caller's lifetime pipe starts the same cleanup. Browser completion
+requires its actual close. Original stdout and stderr are kept in browser.log
+and cli.log, including timeout output. Run the same command to continue its
+retained reviews, requests, editions and downloads after an interruption.
 
 Reopen verifies both dictionaries, every original row, the saved import
 requests, original warehouse identity and selected view revision before
