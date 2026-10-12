@@ -11,6 +11,7 @@ import {ELIGIBILITY_COMMANDS,main as eligibilityMain} from './eligibility-cli.mj
 import {RISK_OF_BIAS_COMMANDS,main as riskOfBiasMain} from './risk-of-bias/cli.mjs';
 import {CUSTOMER_UPDATE_COMMANDS,main as customerUpdateMain} from './customer-updates/cli.mjs';
 import {RESEARCH_COMMERCE_COMMANDS,main as researchCommerceMain} from './customer-commerce/cli.mjs';
+import {RESEARCH_QUOTES_COMMANDS,main as researchQuotesMain} from './customer-quotes/cli.mjs';
 import {STUDY_EXTRACTION_COMMANDS,main as extractionMain} from './study-extraction-cli.mjs';
 import {TEMPLATE_EXCHANGE_COMMANDS,main as templateMain} from './template-exchange/template-workspace-cli.mjs';
 import {parseJson,need,safeCode} from '../node/store.mjs';
@@ -82,6 +83,12 @@ Commission and deliver complete recurring customer work in the same dossier:
   customer-updates|customer-updates-record|customer-updates-preview|customer-updates-save
   customer-updates-work|customer-updates-export|customer-updates-source-plan
   customer-updates-handover|customer-updates-inspect|customer-updates-receive|customer-updates-operation
+
+Quote and deliver a complete customer evidence programme:
+  quotes-help
+
+Run quotes-help for the original commercial case/pricing workflow, reviewed brief,
+customer response, native paid publication, realized report and complete file export.
 
 Publish and receive a paid original customer delivery:
   commerce-help
@@ -192,6 +199,9 @@ const compact=value=>value?.dossier?{...value,dossier:researchSummary(value.doss
 const selected=value=>Object.fromEntries(Object.entries(value).filter(([,item])=>item!==undefined));
 export async function main(argv=process.argv.slice(2),{output=process.stdout}={}){
   if(RIS_COMMANDS.includes(argv[0]))return risMain(argv,{output});
+  if(RESEARCH_QUOTES_COMMANDS.includes(argv[0])){
+    const code=await researchQuotesMain(argv,{stdout:output});if(code)process.exitCode=code;return code;
+  }
   if(RESEARCH_COMMERCE_COMMANDS.includes(argv[0])){
     const code=await researchCommerceMain(argv,{stdout:output});if(code)process.exitCode=code;return code;
   }
