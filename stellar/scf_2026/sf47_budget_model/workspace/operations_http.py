@@ -9,7 +9,9 @@ from operations import Operations, decoded
 
 
 def register_static(static):
-    static.update({"/operations_cohort.mjs": ("operations_cohort.mjs", "text/javascript; charset=utf-8"),
+    static.update({"/operations_implementation.mjs": ("operations_implementation.mjs", "text/javascript; charset=utf-8"),
+                   "/operations_implementation.css": ("operations_implementation.css", "text/css; charset=utf-8"),
+                   "/operations_cohort.mjs": ("operations_cohort.mjs", "text/javascript; charset=utf-8"),
                    "/operations_cohort.css": ("operations_cohort.css", "text/css; charset=utf-8"),
                    "/operations_installations.mjs": ("operations_installations.mjs", "text/javascript; charset=utf-8"),
                    "/operations_installations.css": ("operations_installations.css", "text/css; charset=utf-8"),
@@ -41,7 +43,7 @@ def read(handler, parsed):
     if path == "/api/operations":
         handler.send(200, {"cases": ops.list(query.get("planId", [None])[0])})
         return True
-    match = re.fullmatch(r"/api/operations/(operation-[a-f0-9]{32})(?:/(report|history|export.zip|installations(?:/installation-[a-f0-9]{32}(?:/history|/export.zip)?)?|completion|completion-reviews/review-[a-f0-9]{32}/export.zip|cohort-reviews/review-[a-f0-9]{32}/export.zip|sources/source-[a-f0-9]{32}|reviews/review-[a-f0-9]{32}|forecasts(?:/forecast-[a-f0-9]{32}(?:/export.zip)?)?|portfolios(?:/portfolio-[a-f0-9]{32}(?:/export.zip)?)?))?", path)
+    match = re.fullmatch(r"/api/operations/(operation-[a-f0-9]{32})(?:/(report|history|export.zip|installations(?:/installation-[a-f0-9]{32}(?:/history|/export.zip)?)?|completion|completion-reviews/review-[a-f0-9]{32}/export.zip|cohort-reviews/review-[a-f0-9]{32}/export.zip|implementation-reviews/review-[a-f0-9]{32}/export.zip|implementation-originals/source-[a-f0-9]{32}/[a-f0-9]{64}|sources/source-[a-f0-9]{32}|reviews/review-[a-f0-9]{32}|forecasts(?:/forecast-[a-f0-9]{32}(?:/export.zip)?)?|portfolios(?:/portfolio-[a-f0-9]{32}(?:/export.zip)?)?))?", path)
     if not match:
         raise Problem("Operations page not found.", 404, "NOT_FOUND")
     ident, action = match.groups()
@@ -72,6 +74,14 @@ def read(handler, parsed):
             handler.send(200, ops.installation(ident, installation_id, revision))
     elif action == "completion":
         handler.send(200, ops.completion_calendar(ident, query.get("asOfDate", [None])[0]))
+    elif action.startswith("implementation-reviews/"):
+        review_id = action.split("/")[1]
+        handler.send(200, ops.export_implementation(ident, review_id), "application/zip", review_id + "-implementation.zip")
+    elif action.startswith("implementation-originals/"):
+        _, source_id, sha256 = action.split("/")
+        metadata, raw = ops.implementation_original(ident, source_id, sha256)
+        safe_name = re.sub(r'[^A-Za-z0-9._ -]', "_", metadata["filename"])
+        handler.send(200, raw, "application/octet-stream", safe_name)
     elif action.startswith("cohort-reviews/"):
         review_id = action.split("/")[1]
         handler.send(200, ops.export_cohort(ident, review_id), "application/zip", review_id + "-cohort.zip")
@@ -120,11 +130,12 @@ def write(handler, parsed):
     elif path == "/api/operations":
         result = ops.create(handler.json_body())
     else:
-        match = re.fullmatch(r"/api/operations/(operation-[a-f0-9]{32})/(command|cohort-seed|cohort-preview|installation-seed|installation-preview|completion-seed|completion-preview|support-preview|buyer-preview|forecast-preview|portfolio-preview|portfolio-seed|portfolio-selection)", path)
+        match = re.fullmatch(r"/api/operations/(operation-[a-f0-9]{32})/(command|implementation-source|implementation-preview|cohort-seed|cohort-preview|installation-seed|installation-preview|completion-seed|completion-preview|support-preview|buyer-preview|forecast-preview|portfolio-preview|portfolio-seed|portfolio-selection)", path)
         if not match:
             raise Problem("Operations command not found.", 404, "NOT_FOUND")
         body = handler.json_body()
-        methods = {"command": ops.command, "cohort-seed": ops.seed_cohort, "cohort-preview": ops.preview_cohort, "installation-seed": ops.seed_installation,
+        methods = {"command": ops.command, "implementation-source": ops.seed_implementation,
+                   "implementation-preview": ops.preview_implementation, "cohort-seed": ops.seed_cohort, "cohort-preview": ops.preview_cohort, "installation-seed": ops.seed_installation,
                    "installation-preview": ops.preview_installation, "completion-seed": ops.seed_completion, "completion-preview": ops.preview_completion,
                    "support-preview": ops.preview_support, "buyer-preview": ops.preview_buyer,
                    "forecast-preview": ops.preview_forecast,
