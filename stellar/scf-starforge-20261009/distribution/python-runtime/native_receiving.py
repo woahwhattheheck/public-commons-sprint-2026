@@ -602,6 +602,203 @@ def copy_closed_customer(request):
         os.close(lock_fd)
 
 
+def customer_transfer_inventory(customer, archive):
+    transfer = customer['directory_transfer']
+    destination = absolute(str(Path(customer['database']).parent))
+    def relative(value):
+        need(isinstance(value, str) and value and "\\" not in value and "\0" not in value
+             and not value.startswith("/") and all(p not in ("", ".", "..") for p in value.split("/")),
+             "CUSTOMER_TRANSFER_PATH_INVALID")
+        return value
+
+    members = archive.infolist()
+    names = [x.filename for x in members]
+    need(len(names) <= 100000 and len(names) == len(set(names))
+         and "transfer-manifest.json" in names, "CUSTOMER_TRANSFER_INVENTORY_INVALID")
+    manifest_info = archive.getinfo("transfer-manifest.json")
+    need(manifest_info.file_size <= MAX_JSON, "CUSTOMER_TRANSFER_MANIFEST_TOO_LARGE")
+    manifest_bytes = archive.read(manifest_info)
+    need(hashlib.sha256(manifest_bytes).hexdigest() == transfer["manifest_sha256"],
+         "CUSTOMER_TRANSFER_MANIFEST_CHANGED")
+    manifest = json.loads(manifest_bytes)
+    need(manifest.get("schema") == "stellar-forge.customer-directory-transfer.v1"
+         and manifest.get("database_root") == "customer-database"
+         and manifest.get("workspace_id") == customer["workspace_id"]
+         and manifest.get("source_preserved_during_capture") is True,
+         "CUSTOMER_TRANSFER_IDENTITY_CHANGED")
+    workbook = manifest.get("workbook", {})
+    need(workbook.get("name") == customer["workbook_name"]
+         and workbook.get("revision") == customer["revision"]
+         and workbook.get("build_id") == customer["delivery_id"]
+         and workbook.get("row_count") == customer["row_count"],
+         "CUSTOMER_TRANSFER_WORKBOOK_CHANGED")
+    need(isinstance(manifest.get("files"), list)
+         and isinstance(manifest.get("directories"), list),
+         "CUSTOMER_TRANSFER_INVENTORY_INVALID")
+    files = {}
+    for row in manifest["files"]:
+        name = relative(row.get("path"))
+        need(name not in files and name != "transfer-manifest.json"
+             and type(row.get("bytes")) is int and row["bytes"] >= 0
+             and isinstance(row.get("sha256"), str) and HEX.fullmatch(row["sha256"]),
+             "CUSTOMER_TRANSFER_INVENTORY_INVALID")
+        files[name] = {"path": name, "bytes": row["bytes"], "sha256": row["sha256"]}
+    directories = sorted(relative(x) for x in manifest["directories"])
+    need(len(directories) == len(set(directories))
+         and not set(directories) & set(files)
+         and sum(x["bytes"] for x in files.values()) <= 8 * 1024**3,
+         "CUSTOMER_TRANSFER_INVENTORY_INVALID")
+    files["transfer-manifest.json"] = {
+        "path": "transfer-manifest.json", "bytes": len(manifest_bytes),
+        "sha256": transfer["manifest_sha256"]}
+    expected_names = set(files) | {x + "/" for x in directories}
+    need(set(names) == expected_names, "CUSTOMER_TRANSFER_MEMBERS_CHANGED")
+    for member in members:
+        mode = (member.external_attr >> 16) & 0o170000
+        need(not member.flag_bits & 1 and not stat.S_ISLNK(mode),
+             "CUSTOMER_TRANSFER_MEMBER_INVALID")
+        if member.is_dir():
+            need(mode in (0, stat.S_IFDIR) and member.file_size == 0,
+                 "CUSTOMER_TRANSFER_MEMBER_INVALID")
+        else:
+            need(mode in (0, stat.S_IFREG)
+                 and member.file_size == files[member.filename]["bytes"],
+                 "CUSTOMER_TRANSFER_MEMBER_INVALID")
+    original_inventory = {
+        "directories": [x[len("customer-database/"):] for x in directories
+                        if x.startswith("customer-database/")],
+        "files": [{**row, "path": name[len("customer-database/"):]}
+                  for name, row in sorted(files.items())
+                  if name.startswith("customer-database/")]}
+    need(hashlib.sha256(encoded(original_inventory)).hexdigest()
+         == manifest.get("database_inventory_sha256")
+         and len(original_inventory["files"]) == manifest.get("database_files")
+         and sum(x["bytes"] for x in original_inventory["files"])
+         == manifest.get("database_bytes"),
+         "CUSTOMER_TRANSFER_DATABASE_INVENTORY_CHANGED")
+    need("customer-database/analysis.lock" in files
+         and "customer-database/datasets.sqlite3" in files
+         and str(destination / "customer-database") == customer["database"]
+         and str(destination / "edition-operation/handoff.zip") == customer["archive"]
+         and files.get("edition-operation/handoff.zip", {}).get("sha256")
+         == customer["archive_sha256"]
+         and files.get("edition-operation/manifest.json", {}).get("sha256")
+         == customer["manifest_sha256"], "CUSTOMER_TRANSFER_PATH_OR_HANDOFF_CHANGED")
+    expected_tree = {"directories": directories,
+                     "files": [row for _, row in sorted(files.items())]}
+    return manifest, files, directories, expected_tree
+
+
+def receive_customer_archive(request):
+    """Hydrate the original locked directory transfer with the installed publisher."""
+    from stellar_forge_buyer.analysis_workbooks import _publish_received_directory
+    import zipfile
+
+    os.fstat(request["lease_fd"])
+    customer = request["customer"]
+    transfer = customer["directory_transfer"]
+    archive_path = absolute(transfer["archive"], file=True)
+    destination = absolute(str(Path(customer["database"]).parent))
+    control = private(request["directory"])
+    private(destination.parent)
+    need(destination != archive_path.parent and not archive_path.is_relative_to(destination),
+         "CUSTOMER_TRANSFER_DESTINATION_OVERLAP")
+    expected = {"schema": "stellar-forge.python-customer-receive.v1",
+                "operation_id": request["operation_id"], "destination": str(destination),
+                "archive_sha256": transfer["sha256"], "manifest_sha256": transfer["manifest_sha256"]}
+    intent_path = control / "receive-intent.json"
+    if intent_path.exists():
+        need(read(intent_path) == expected, "CUSTOMER_TRANSFER_INTENT_CHANGED")
+    else:
+        write(intent_path, expected, create=True)
+    stage = destination.parent / ("." + destination.name + "-receiving-" +
+                                  hashlib.sha256(encoded(expected)).hexdigest()[:20])
+
+    fd = os.open(archive_path, os.O_RDONLY | os.O_NOFOLLOW)
+    with os.fdopen(fd, "rb") as archive_stream:
+        opened = os.fstat(archive_stream.fileno())
+        need(stat.S_ISREG(opened.st_mode)
+             and file_identity(opened) == file_identity(archive_path.lstat()),
+             "CUSTOMER_TRANSFER_ARCHIVE_CHANGED")
+        need(hashlib.file_digest(archive_stream, "sha256").hexdigest() == transfer["sha256"],
+             "CUSTOMER_TRANSFER_ARCHIVE_CHANGED")
+        archive_stream.seek(0)
+        with zipfile.ZipFile(archive_stream) as archive:
+            manifest, files, directories, expected_tree = customer_transfer_inventory(customer, archive)
+            if destination.exists():
+                need(customer_tree(destination) == expected_tree, "CUSTOMER_TRANSFER_DESTINATION_EXISTS")
+            else:
+                private(stage)
+                for directory in sorted(directories, key=lambda x: (x.count("/"), x)):
+                    private(stage / directory)
+                for name, row in sorted(files.items()):
+                    output = stage / name
+                    private(output.parent)
+                    temporary = output.parent / (".transfer-part-" +
+                                                  hashlib.sha256(name.encode()).hexdigest())
+                    need(temporary.relative_to(stage).as_posix() not in
+                         (set(files) | {x + "/" for x in directories}),
+                         "CUSTOMER_TRANSFER_TEMPORARY_CONFLICT")
+                    if output.exists():
+                        need(output.is_file() and not output.is_symlink()
+                             and output.stat().st_size == row["bytes"] and digest(output) == row["sha256"],
+                             "CUSTOMER_TRANSFER_STAGED_FILE_CHANGED", name)
+                        if temporary.exists():
+                            info = temporary.lstat()
+                            need(stat.S_ISREG(info.st_mode) and info.st_uid == os.getuid(),
+                                 "CUSTOMER_TRANSFER_TEMPORARY_CHANGED")
+                            temporary.unlink(); sync(output.parent)
+                        continue
+                    if temporary.exists():
+                        info = temporary.lstat()
+                        need(stat.S_ISREG(info.st_mode) and info.st_uid == os.getuid()
+                             and info.st_nlink == 1, "CUSTOMER_TRANSFER_TEMPORARY_CHANGED")
+                    count, sha = 0, hashlib.sha256()
+                    target_fd = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_TRUNC |
+                                        os.O_NOFOLLOW, 0o600)
+                    with os.fdopen(target_fd, "wb") as sink, archive.open(name) as source:
+                        while data := source.read(1024 * 1024):
+                            count += len(data)
+                            need(count <= row["bytes"], "CUSTOMER_TRANSFER_FILE_SIZE_CHANGED", name)
+                            sink.write(data); sha.update(data)
+                        sink.flush(); os.fsync(sink.fileno())
+                    need(count == row["bytes"] and sha.hexdigest() == row["sha256"],
+                         "CUSTOMER_TRANSFER_FILE_CHANGED", name)
+                    os.link(temporary, output); sync(output.parent); temporary.unlink()
+                need(customer_tree(stage) == expected_tree, "CUSTOMER_TRANSFER_STAGED_TREE_CHANGED")
+                for directory in sorted(directories, key=lambda x: x.count("/"), reverse=True):
+                    sync(stage / directory)
+                sync(stage)
+                _publish_received_directory(stage, destination)
+            need(file_identity(os.fstat(archive_stream.fileno())) == file_identity(opened)
+                 and file_identity(archive_path.lstat()) == file_identity(opened),
+                 "CUSTOMER_TRANSFER_ARCHIVE_CHANGED")
+    result = {**expected, "state": "COMPLETED", "database": customer["database"],
+              "database_files": manifest["database_files"],
+              "database_bytes": manifest["database_bytes"],
+              "database_inventory_sha256": manifest["database_inventory_sha256"],
+              "source_request": manifest.get("source_request")}
+    write(control / "receive-result.json", result)
+    return result
+
+
+def hydrate_customer_transfer(journey, installed):
+    customer = journey.plan["customer"]
+    if not customer.get("directory_transfer"):
+        return None
+    intent = {"installation": installation_id(installed), "customer": customer}
+
+    def apply(directory, attempt):
+        request = {**intent, "operation_id": journey.plan["operation_id"],
+                   "directory": str(directory), "lease_fd": journey.fd}
+        request_path = directory / ("customer-receive-request-" + str(attempt) + ".json")
+        write(request_path, request, create=True)
+        return journey.command(directory, attempt,
+            [installed["python"], str(Path(__file__).absolute()), "_customer-receive",
+             "--request", str(request_path)], timeout=600)
+    return journey.step("customer-directory-receive", intent, apply)
+
+
 def receive_customer_copy(journey, installed):
     target = private(journey.root / "customer") / "database"
     intent = {"customer": journey.plan["customer"], "target": str(target),
@@ -906,10 +1103,9 @@ def validate_plan(plan):
          and len(extras) == len(set(extras)), "DECLARED_PYTHON_EXTRAS_REQUIRED")
     customer = plan["customer"]
     absolute(customer["database"])
-    absolute(customer["archive"], file=True)
+    absolute(customer["archive"], file=customer.get("directory_transfer") is None)
     for key in ("archive_sha256", "manifest_sha256", "xlsx_sha256"):
         need(HEX.fullmatch(customer[key]), "CUSTOMER_PIN_REQUIRED", key)
-    need(digest(customer["archive"]) == customer["archive_sha256"], "CUSTOMER_ARCHIVE_CHANGED")
     need(re.fullmatch(r"[a-f0-9]{32}", customer["workspace_id"])
          and re.fullmatch(r"[a-f0-9]{32}", customer["delivery_id"])
          and re.fullmatch(r"[A-Za-z][A-Za-z0-9_-]{0,63}", customer["workbook_name"])
@@ -921,6 +1117,27 @@ def validate_plan(plan):
          and all(isinstance(x, dict) and isinstance(x.get("sheet"), str)
                  and isinstance(x.get("value"), str) for x in customer["exact_text_cells"]),
          "CUSTOMER_TEXT_EXPECTATION_INVALID")
+    transfer = customer.get("directory_transfer")
+    if transfer is not None:
+        import zipfile
+        need(isinstance(transfer, dict)
+             and all(isinstance(transfer.get(key), str) and HEX.fullmatch(transfer[key])
+                     for key in ("sha256", "manifest_sha256")),
+             "CUSTOMER_TRANSFER_PIN_REQUIRED")
+        transfer_path = absolute(transfer["archive"], file=True)
+        need(digest(transfer_path) == transfer["sha256"], "CUSTOMER_TRANSFER_ARCHIVE_CHANGED")
+        destination = Path(customer["database"]).parent
+        need(destination != transfer_path.parent and not transfer_path.is_relative_to(destination),
+             "CUSTOMER_TRANSFER_DESTINATION_OVERLAP")
+        with zipfile.ZipFile(transfer_path) as archive:
+            customer_transfer_inventory(customer, archive)
+    else:
+        validate_customer_handoff(customer)
+
+
+def validate_customer_handoff(customer):
+    absolute(customer["archive"], file=True)
+    need(digest(customer["archive"]) == customer["archive_sha256"], "CUSTOMER_ARCHIVE_CHANGED")
 
 
 def run_plan(plan):
@@ -940,6 +1157,8 @@ def run_plan(plan):
         activation_replay = journey.engine("primary-activate-replay", primary_root, "activate",
                        ["--installation", installation_id(primary), "--expected-installation", ""])
         need(activation_replay == activated, "ACTIVATION_REPLAY_CHANGED")
+        transferred = hydrate_customer_transfer(journey, primary)
+        validate_customer_handoff(plan["customer"])
         copied = receive_customer_copy(journey, primary)
         customer = {**plan["customer"], "database": copied["database"]}
         first = use_customer(journey, "primary-customer", primary, source, customer, build=True)
@@ -993,6 +1212,8 @@ def run_plan(plan):
                   "bundle": {"path": str(bundle_path), "bytes": bundle_path.stat().st_size,
                              "sha256": bundle_sha256, "engine_result": bundled},
                   "primary": first, "offline": reopened}
+        if transferred is not None:
+            result["customer_transfer"] = transferred
         if upgrade is not None:
             result["upgrade"] = upgrade
         write(root / "result.json", result)
@@ -1012,6 +1233,8 @@ def main():
     internal.add_argument("--request", required=True)
     copy_command = commands.add_parser("_customer-copy", help=argparse.SUPPRESS)
     copy_command.add_argument("--request", required=True)
+    receive_command = commands.add_parser("_customer-receive", help=argparse.SUPPRESS)
+    receive_command.add_argument("--request", required=True)
     args = parser.parse_args()
     os.umask(0o077)
     signal.signal(signal.SIGTERM, interrupted)
@@ -1021,6 +1244,8 @@ def main():
             result = customer_use(read(args.request))
         elif args.command == "_customer-copy":
             result = copy_closed_customer(read(args.request))
+        elif args.command == "_customer-receive":
+            result = receive_customer_archive(read(args.request))
         else:
             result = run_plan(read(args.plan))
         print(json.dumps(result, ensure_ascii=False, allow_nan=False, separators=(",", ":")), flush=True)

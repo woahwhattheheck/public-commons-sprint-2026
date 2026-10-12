@@ -204,6 +204,62 @@ Use a new installation_directory when preparing another original source
 archive. The full source release and Python cohort remain separate retained
 objects with their own identities.
 
+
+## Receive the complete closed customer package
+
+The actual revision-2 transfer preserves the customer's complete directory under
+its existing Analysis lock. Its private transfer archive contains all 51 database
+and application files (751,347 bytes), plus the unchanged original workbook
+handoff and handoff manifest. It preserves the three typed query cohorts, report
+sources, both workbook revisions and every saved producer path.
+
+To receive that package on another host within this same run, add the following
+selection inside customer:
+
+    "directory_transfer": {
+      "archive": "/srv/starforge/incoming/scf-7de2-customer-revision-2.zip",
+      "sha256": "4273340eec891df156f24d9174bb63fd394c62137d5d0c985219183930791f51",
+      "manifest_sha256": "7ba52acb792e8a5f7c954d9b5c5a9b6e1033e806428324516218eafb825397b8"
+    }
+
+Keep customer.database and customer.archive pointed at their intended received
+members:
+
+    "database": "/srv/starforge/customer/customer-database",
+    "archive": "/srv/starforge/customer/edition-operation/handoff.zip"
+
+The containing /srv/starforge/customer directory is created from the verified
+package. Its parent must be a private directory owned by the receiving account.
+The transfer archive stays outside that destination. An existing destination is
+reused only when its complete file and directory inventory matches the original
+package.
+
+Initial plan validation verifies the complete transfer archive SHA, exact
+manifest, member names and sizes, original workspace/workbook identity and
+intended receiving paths. The original handoff file becomes available after
+hydration. The driver checks its original SHA before copying or opening the
+customer application.
+
+Hydration runs after the first actual Python installation, using that interpreter
+and the original AnalysisWorkbooks directory publisher. All member hashes are
+verified while streaming into a private retained staging directory. Complete
+files and directory entries are synced before atomic publication. A replay
+continues its own staged files or verifies the already-published exact directory.
+The subsequent customer-copy step opens the restored original analysis.lock and
+produces the separate application working copy described above.
+
+The input contract is stellar-forge.customer-directory-transfer.v1. The transfer
+contains 53 payload files, transfer-manifest.json and 22 directory entries: 76
+ZIP members in total, 210,667 compressed bytes. Its database inventory identity is
+225ac564e486b4a58a623fb7a554b534a7b37e34121ddf535c115903317c554e.
+The receiving driver rejects archives above 100,000 members, manifests above
+16 MiB, and payloads above 8 GiB as whole operations. Actual host admission must
+cover the selected package, retained input, working copy and runtime cohort.
+
+Existing plans with an already-present closed customer directory continue to
+use that directory directly as the copy source. Both routes preserve the same
+original customer and workbook identities.
+
 ## Run and continue the same operation
 
 After the original host admission selects its source, input and capacity:

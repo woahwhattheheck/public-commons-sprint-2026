@@ -7,7 +7,7 @@ const idText=value=>value?value.slice(0,12)+'…':'—';
 const size=value=>Number.isFinite(value)?new Intl.NumberFormat().format(value)+' bytes':'—';
 function facts(rows){const node=make('dl',undefined,'paths');for(const[key,value]of rows){const row=make('div');row.append(make('dt',key),make('dd',String(value??'—')));node.append(row);}return node;}
 function table(headers,rows){const wrap=make('div',undefined,'table-wrap'),table=make('table'),head=make('thead'),body=make('tbody'),tr=make('tr');headers.forEach(item=>tr.append(make('th',item)));head.append(tr);for(const cells of rows){const row=make('tr');for(const item of cells){const cell=make('td');cell.append(item instanceof Node?item:document.createTextNode(String(item??'—')));row.append(cell);}body.append(row);}table.append(head,body);wrap.append(table);return wrap;}
-export function createPythonWorkspaceView({api,getState,operation,refreshWorkspace,openLog,switchView,message,error,upload}) {
+export function createPythonWorkspaceView({api,getState,operation,refreshWorkspace,openLog,switchView,message,error,upload,openApplication}) {
   const root=document.getElementById('python-workspace');
   let current=null,review=null,runtimeId=null,loading=false,again=false,working=false,signature=null,commandInstallation=null;
   const state=()=>getState(), selected=()=>state()?.selected;
@@ -50,6 +50,8 @@ export function createPythonWorkspaceView({api,getState,operation,refreshWorkspa
       details('Complete retained command descriptor',result));
     const copy=button('Copy command descriptor',()=>navigator.clipboard.writeText(JSON.stringify(result,null,2)));
     commandDisplay.append(copy);
+    if(openApplication && ['analysis','workbooks','workbookDelivery'].includes(result.command))
+      commandDisplay.append(button('Configure in Applications',()=>openApplication(result)));
   });
   commandPanel.append(commandTitle,commandInfo,label('Original tool',commandKind),label('Original arguments (JSON array)',commandArgs),commandReview,commandDisplay);
   commandKind.addEventListener('change',()=>{commandDisplay.hidden=true;setCommandExample();});
@@ -72,7 +74,7 @@ export function createPythonWorkspaceView({api,getState,operation,refreshWorkspa
     await submit({operation:'python-receive',archive,sha256,python:python.value.trim()});
   });
   receivePanel.append(label('Original bundle file',archiveFile),label('Or an existing file on this host',archivePath),
-    label('Original bundle SHA-256',archiveSha),make('p','The receiver retains exact Python source and wheel bytes, then installs the candidate into this runtime using the selected interpreter. The original merchant source release and profile stay bound to that candidate.','note'),receive);
+    label('Original bundle SHA-256',archiveSha),make('p','The receiver retains exact Python source and wheel bytes, then installs the candidate into this runtime using the selected interpreter. This receiving operation retains the merchant source release and selected runtime profile.','note'),receive);
   const operationPanel=make('section',undefined,'panel'),operationsBody=make('div');
   operationPanel.append(make('h3','Python operations and recovery'),operationsBody);
   root.replaceChildren(title,intro,sourceFacts,selectionPanel,candidatesPanel,installsPanel,commandPanel,receivePanel,operationPanel);
