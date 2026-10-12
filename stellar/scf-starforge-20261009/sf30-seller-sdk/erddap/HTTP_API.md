@@ -2,13 +2,19 @@
 
 This is the complete ERDDAP source/edition/native dataset workflow. The domain uses the original XML SourceFormat/Workspace and original SF30 NativeEngine; merchant publication uses the original SF30 versioned dataset store, and customer receiving uses the original SF88 Dataset buyer. One private local server owns one saved workspace.
 
-## Ownership and files
+## Maintained runtime and files
 
-F1CB owns erddap_source.py, erddap_workspace.py, merchant.mjs, customer.mjs, cli.py/cli.mjs and the final source/runtime composition. A complementary owner can take the complete erddap_server.py + public/{index.html,app.js,style.css} + same-owner browser receiving. Preserve the existing SDMX server's host/origin/capability/CSP/streaming-upload/shutdown pattern; no additional service or workspace controller.
+Root source: stellar/scf-starforge-20261009/sf30-seller-sdk/erddap/.
+The source/domain uses the unchanged original XML workspace and SF30 dataset engine.
+erddap_server.py owns one existing Workspace; public/ contains its operator.
+Source-owned application-provider.mjs and merchant-provider.mjs join the original
+Applications and MCP hosts through distribution/contributions/erddap.json.
 
-Root source: stellar/scf-starforge-20261009/sf30-seller-sdk/erddap/
-Original server pattern: ../sdmx/sdmx_server.py (blob88be07645da87fe3676f8fe8565a215c70a4d032).
-New Python module exports Workspace, InputError; constructor Workspace(root, create=False), context-manager and close().
+Python exports Workspace and InputError; constructor Workspace(root, create=False),
+context-manager and close(). OperatorServer.startup() returns
+{schema:"stellar-forge.erddap-workspace-startup.v1",state:"LISTENING",instanceId,workspace,url,startedAt}.
+The URL is the original loopback origin plus its 43-character URL-safe capability
+fragment. Authenticated GET /api/launch returns the same identity without URL/token.
 
 ## Complete Python ABI
 
@@ -19,7 +25,7 @@ New Python module exports Workspace, InputError; constructor Workspace(root, cre
 - save_query({metadataId, selection, label}): validates exact original variable/dimension order and fixed bounds; returns {id, query, decodedQuery, urls}.
 - query_plan(id): reopen same saved query.
 - acquire(query_id, operation_id, label=None): complete original metadata/DDS/DAS/JSON/CSV acquisition with preserved partial responses and same-operation recovery; returns {operationId, source, metadataChanged}. Reusing an operationId with another query rejects.
-- operation(id): original acquisition status/result, source ID, query ID, request hash, last actual error; retained source requests remain exact on retry.
+- operation(id): original acquisition status/result, source ID, query ID, request hash, last actual error and validated request:{queryId,label}. Reads the retained request and latest original operation record even when an interrupted SQLite index write has not completed. Resume that exact request and label.
 - source(id): inherited full source inventory including metadata, selected fields, missing/empty counts, original number tokens, quality attributes and JSON/CSV comparison.
 - source_rows(id, offset=0, limit=100): exact source row page with original types/units, rowCount and nextOffset.
 - source_member(id, name): returns original source response bytes for metadata.json, dataset.dds, dataset.das, data.json, data.csv or manifest.json.
@@ -42,7 +48,8 @@ Every mutation uses one exact user-selected input. Save query/mapping/build are 
 
 All /api routes use the original private capability and same-origin protection.
 
-GET /api/state
+GET /api/state (also workspace:{id,name} for original draft scoping)
+GET /api/launch (live original owner identity, capability omitted)
 POST /api/search {server,text,page,limit}
 POST /api/metadata {server,datasetId,protocol}
 GET /api/metadata/{id}
@@ -50,7 +57,7 @@ POST /api/queries {metadataId,selection,label}
 GET /api/queries/{id}
 POST /api/queries/{id}/acquire {operationId,label}
 GET /api/operations/{operationId}
-POST /api/sources (raw application/zip, X-Source-Name, X-Source-Label)
+POST /api/sources (raw application/zip, X-Source-Name and X-Source-Label encoded with encodeURIComponent and decoded once)
 GET /api/sources/{id}
 GET /api/sources/{id}/rows?offset=0&limit=100
 GET /api/sources/{id}/files/{name} (exact original bytes)
@@ -61,7 +68,7 @@ POST /api/builds {sourceId,planId}
 GET /api/builds/{id}
 GET /api/builds/{id}/query?native_scalar_parameters
 GET /api/builds/{id}/packet (exact complete original customer ZIP)
-GET /api/builds/{id}/dataset (ZIP containing data.csv/dataset.json/erddap-lineage.json)
+GET /api/builds/{id}/dataset (deterministic streamed ZIP containing data.csv/dataset.json/erddap-lineage.json)
 POST /api/packets (raw application/zip -> inherited import)
 POST /api/comparisons {beforeId,afterId}
 GET /api/comparisons/{id}/changes?offset=0&limit=100
@@ -95,4 +102,4 @@ csvPolicy is require-equivalent by default. A deliberate canonical-json mapping 
 6. Export native seller dataset/publication input or the full portable project; import/rebuild in a fresh customer workspace.
 7. Original CLI merchant terms, seller start/publication/reopen, then original SF88 fixed-edition offer review/customer preparation.
 
-Look: clean industrial software, neutral surfaces, precise field labels, readable tables, native errors, real busy/navigation handling. Do not show implementation hashes as the main product flow; source/history detail can expose them on request.
+The browser uses the original request and saved-operation IDs across interruption. Large source, dataset and customer file downloads carry complete byte counts and SHA256 identities through the original typed client/RetainedFileReads interfaces.

@@ -484,14 +484,14 @@ const actions = {
   'load-metadata':async () => {
     captureInputs(); const d=S.drafts.catalog;
     S.meta=await api('metadata',{body:{server:d.server,datasetId:d.datasetId,protocol:d.protocol}});
-    S.selected.meta=S.meta.id; S.cache.set('metadata/'+path(S.meta.id),S.meta); await refresh(); status('Original metadata, DDS and DAS retained.');
+    S.selected.meta=S.meta.id; S.query=null; delete S.selected.query; S.cache.set('metadata/'+path(S.meta.id),S.meta); await refresh(); status('Original metadata, DDS and DAS retained.');
   },
   'catalog-open':async el => {
     S.drafts.catalog={...(S.drafts.catalog || {}),server:S.catalog.server,datasetId:el.dataset.id,protocol:el.dataset.protocol};
     S.meta=await api('metadata',{body:{server:S.catalog.server,datasetId:el.dataset.id,protocol:el.dataset.protocol}});
     S.selected.meta=S.meta.id; S.cache.set('metadata/'+path(S.meta.id),S.meta); await refresh();
   },
-  'open-metadata':async () => { S.selected.meta=$('#retained-metadata').value; S.meta=await cached('metadata/'+path(S.selected.meta)); saveDrafts(); render(); },
+  'open-metadata':async () => { S.selected.meta=$('#retained-metadata').value; S.meta=await cached('metadata/'+path(S.selected.meta)); S.query=null; delete S.selected.query; saveDrafts(); render(); },
   'open-query':async () => { S.selected.query=$('#retained-query').value; S.query=await cached('queries/'+path(S.selected.query)); saveDrafts(); render(); },
   'add-constraint':async () => { collectSelection(); const d=selectedDraft(); d.constraints.push({variable:S.meta.metadata.variables[0].name,operator:'=',kind:'string',value:''}); saveDrafts(); render(); },
   'remove-constraint':async el => { collectSelection(); selectedDraft().constraints.splice(Number(el.dataset.index),1); saveDrafts(); render(); },
