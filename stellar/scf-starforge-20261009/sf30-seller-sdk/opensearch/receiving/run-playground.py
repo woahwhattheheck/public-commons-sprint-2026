@@ -39,10 +39,12 @@ def main():
     parser.add_argument("--directory", required=True, type=Path,
                         help="Private retained receiving directory; reuse it for the same operation.")
     parser.add_argument("--node", default="node", help="Existing Node.js24+ executable.")
+    parser.add_argument("--journey", choices=("merchant", "relevance"), default="merchant",
+                        help="Original merchant handover or retained native relevance operator journey.")
     args = parser.parse_args()
     here = Path(__file__).resolve().parent
     directory = args.directory.expanduser().resolve()
-    driver = here / "merchant-journey.mjs"
+    driver = here / (args.journey + "-journey.mjs")
     bridge_source = here / "playground-bridge.py"
     node = shutil.which(args.node)
     if not node or not driver.is_file() or not bridge_source.is_file():
@@ -69,7 +71,7 @@ def main():
                 "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
             }
     state = {"schema": "stellar-forge.opensearch-receiving-attempt.v1",
-             "phase": "STARTING", "node": version, "nodeExecutable": node,
+             "phase": "STARTING", "journey": args.journey, "node": version, "nodeExecutable": node,
              "python": sys.version.split()[0], "directory": str(directory),
              "metadata": str(metadata), "sources": sources}
     state_path = metadata / "receiver-state.json"
@@ -107,14 +109,14 @@ def main():
         environment["OPENSEARCH_NATIVE_METADATA"] = str(metadata)
         environment["OPENSEARCH_RECEIVING_DIRECTORY"] = str(directory)
         save("BRIDGE_READY", engineVersion=ready["version"], index=ready["index"], bridgePid=bridge.pid)
-        emit({"phase": "native_receiver_ready", "directory": str(directory),
+        emit({"phase": "native_receiver_ready", "journey": args.journey, "directory": str(directory),
               "metadata": str(metadata), "engineVersion": ready["version"],
               "sourceFiles": len(sources)})
         child = subprocess.Popen([node, "--max-old-space-size=192", str(driver)], env=environment)
         save("RUNNING", driverPid=child.pid)
         status = child.wait()
         save("COMPLETE" if status == 0 else "FAILED", driverExitCode=status)
-        emit({"phase": "native_receiver_finished", "driverExitCode": status,
+        emit({"phase": "native_receiver_finished", "journey": args.journey, "driverExitCode": status,
               "directory": str(directory), "metadata": str(metadata)})
         return status
     except KeyboardInterrupt:

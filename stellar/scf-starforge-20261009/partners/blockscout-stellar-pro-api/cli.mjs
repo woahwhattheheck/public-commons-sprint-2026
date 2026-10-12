@@ -20,6 +20,7 @@ export const HELP = [
   '  serve --package PACKAGE --state PRIVATE_MERCHANT_ROOT --facilitator HTTPS_URL',
   '        [--port 8423] [--operations-port 8424] [--desk-port 8425]',
   '        [--drain-grace-ms 60000] [--allow-local-facilitator]',
+  '        [--expected-plan-sha256 SHA256] [--expected-package-sha256 SHA256]',
   '  buyer --package PACKAGE --chain CHAIN_ID --address 0xADDRESS --intent STABLE_ID',
   '        --out NEW_REVIEW.json --response-out NEW_RESPONSE.json',
   '  status --url PRIVATE_DESK_URL [--token-env VARIABLE]',
@@ -46,7 +47,7 @@ export const HELP = [
 ].join('\n');
 const commands = {
   inspect: { required: ['plan'] }, prepare: { required: ['plan', 'out'] },
-  serve: { required: ['package', 'state', 'facilitator'], optional: ['port', 'operations-port', 'desk-port', 'drain-grace-ms'], switches: ['allow-local-facilitator'] },
+  serve: { required: ['package', 'state', 'facilitator'], optional: ['port', 'operations-port', 'desk-port', 'drain-grace-ms', 'expected-plan-sha256', 'expected-package-sha256'], switches: ['allow-local-facilitator'] },
   buyer: { required: ['package', 'chain', 'address', 'intent', 'out', 'response-out'] },
   status: { required: ['url'], optional: ['token-env'] },
   attempts: { required: ['url'], optional: ['token-env', 'after', 'chain', 'address'] },
@@ -71,14 +72,15 @@ function options(args) {
   if (spec.required.some(key => !own(result, key))) throw error('BLOCKSCOUT_COMMAND_OPTIONS_REQUIRED');
   return { command, options: result };
 }
-export async function readJSON(path, max = 131072) {
+async function readJSONDocument(path, max = 131072) {
   const file = await open(path, constants.O_RDONLY | constants.O_NOFOLLOW);
   try {
     const info = await file.stat(); if (!info.isFile() || info.size > max) throw error('BLOCKSCOUT_JSON_FILE_INVALID');
     const bytes = await file.readFile(); if (bytes.length > max) throw error('BLOCKSCOUT_JSON_FILE_INVALID');
-    return JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes));
+    return { value: JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes)), sha256: hash(bytes) };
   } finally { await file.close(); }
 }
+export async function readJSON(path, max = 131072) { return (await readJSONDocument(path, max)).value; }
 async function save(path, bytes) {
   if (!isAbsolute(path) || resolve(path) !== path) throw error('BLOCKSCOUT_ABSOLUTE_OUTPUT_REQUIRED');
   await privateDirectory(dirname(path), false);
@@ -120,9 +122,13 @@ export async function preparePackage(input, directory) {
   return { status: 'PREPARED', directory, planSha256: prepared.planSha256, routes: prepared.plan.chains.length,
     paymentNetwork: prepared.plan.payment.network, requiredEnvironment: prepared.plan.apiKeyEnv, manifest };
 }
-export async function readPackage(directory) {
+export async function readPackage(directory, { expectedPlanSha256, expectedManifestSha256 } = {}) {
+  for (const expected of [expectedPlanSha256, expectedManifestSha256])
+    if (expected !== undefined && !/^[a-f0-9]{64}$/.test(expected)) throw error('BLOCKSCOUT_PACKAGE_DIGEST_INVALID');
   await privateDirectory(directory, false);
-  const manifest = await readJSON(join(directory, 'package.json'));
+  const { value: manifest, sha256: packageManifestSha256 } = await readJSONDocument(join(directory, 'package.json'));
+  if (expectedManifestSha256 !== undefined && packageManifestSha256 !== expectedManifestSha256)
+    throw error('BLOCKSCOUT_PACKAGE_CHANGED');
   if (manifest.schema !== 'stellar-forge.blockscout-package.v1' || !manifest.files ||
       Object.keys(manifest.files).length !== FILES.length || FILES.some(name => !own(manifest.files, name)))
     throw error('BLOCKSCOUT_PACKAGE_MANIFEST_INVALID');
@@ -134,8 +140,10 @@ export async function readPackage(directory) {
     if (bytes.length !== record.bytes || hash(bytes) !== record.sha256) throw error('BLOCKSCOUT_PACKAGE_CHANGED');
   }
   const prepared = prepareProduct(await readJSON(join(directory, 'plan.json')));
-  if (prepared.planSha256 !== manifest.planSha256) throw error('BLOCKSCOUT_PACKAGE_PLAN_CHANGED');
-  return prepared;
+  if (prepared.planSha256 !== manifest.planSha256 ||
+      expectedPlanSha256 !== undefined && prepared.planSha256 !== expectedPlanSha256)
+    throw error('BLOCKSCOUT_PACKAGE_PLAN_CHANGED');
+  return { ...prepared, packageManifestSha256 };
 }
 export function operatorTarget(value, tokenEnvironment, env = process.env) {
   let url; try { url = new URL(value); } catch { throw error('BLOCKSCOUT_DESK_URL_INVALID'); }
@@ -248,7 +256,9 @@ export async function main(args = process.argv.slice(2)) {
       configSha256: review.configSha256, planSha256: review.planSha256, token: review.token };
   } else if (command === 'restore') result = await restoreProviderBackup({ source: o.source, sha256: o.sha256, directory: o.out });
   else if (command === 'serve') {
-    const prepared = await readPackage(o.package), { startBlockscoutMerchant } = await import('./launch.mjs');
+    const prepared = await readPackage(o.package, { expectedPlanSha256: o['expected-plan-sha256'],
+      expectedManifestSha256: o['expected-package-sha256'] });
+    const { startBlockscoutMerchant } = await import('./launch.mjs');
     const value = (name, fallback) => {
       if (!own(o, name)) return fallback;
       if (!/^(?:0|[1-9]\d*)$/.test(o[name])) throw error('BLOCKSCOUT_COMMAND_NUMBER_INVALID'); return Number(o[name]);
@@ -257,7 +267,10 @@ export async function main(args = process.argv.slice(2)) {
       port: value('port', 8423), operationsPort: value('operations-port', 8424), deskPort: value('desk-port', 8425),
       drainGraceMs: value('drain-grace-ms', 60000), allowLocalFacilitator: o['allow-local-facilitator'] ?? false });
     for (const signal of ['SIGINT', 'SIGTERM']) process.once(signal, () => runtime.close().catch(() => { process.exitCode = 1; }));
-    process.stdout.write(json({ status: 'BLOCKSCOUT_MERCHANT_RUNNING', planSha256: prepared.planSha256, ...runtime.endpoints })); return runtime;
+    process.stdout.write(JSON.stringify({ schema: 'stellar-forge.blockscout-startup.v1',
+      status: 'BLOCKSCOUT_MERCHANT_RUNNING', packageDirectory: resolve(o.package), stateDirectory: resolve(o.state),
+      planSha256: prepared.planSha256, packageManifestSha256: prepared.packageManifestSha256,
+      ...runtime.endpoints }) + '\n'); return runtime;
   } else {
     const target = operatorTarget(o.url, o['token-env']);
     if (command === 'status') result = await control(target, '/api/status');
