@@ -41,6 +41,7 @@ ORIGINAL = {
 SOURCE_FILES = (
     "islandora.py", "islandora_cli.py", "islandora_io.py",
     "server.py", "browser.mjs", "islandora.mjs", "islandora.css",
+    "cli.mjs", "islandora_cli.mjs", "managed.py",
     "ISLANDORA_OPERATOR_GUIDE.md", "examples/islandora_ciim.py",
 )
 
@@ -262,16 +263,24 @@ State: {human_state}
 Target configuration: {job['target']['host']}
 Records: {len(expected_rows)}
 
-From the installed oai-pmh application directory, restore the included backup
-into a new private directory and open the same migration:
+Extract this complete archive into a private directory. From the installed
+oai-pmh application directory, open that same saved case:
 
-    python3 cli.py --workspace /absolute/new-workspace restore --archive /absolute/path/islandora-workspace.zip
-    python3 cli.py --workspace /absolute/new-workspace serve
+    python3 examples/islandora_ciim.py --case /absolute/extracted-case --open-only --serve
+
+The command restores the included workspace backup and opens the retained
+migration. The archive keeps the original input and snapshot paths referenced
+by operation.json, so the same case can also continue through this producer.
 
 Select Islandora in the console. The complete crosswalk, records, native inputs,
 review, original responses, and current receiving state reopen together.
 Use Save target settings to configure the actual installation before native
 writes. The operator guide explains Workbench operation and target receiving.
+
+To restore the backup directly into another private workspace, use:
+
+    python3 cli.py --workspace /absolute/new-workspace restore --archive /absolute/extracted-case/{metadata['workspaceBackup']['file']}
+    python3 cli.py --workspace /absolute/new-workspace serve
 """
     put_file(edition / "README.md", readme.encode())
     put_file(edition / "operation.json", jbytes(metadata))
@@ -285,8 +294,10 @@ writes. The operator guide explains Workbench operation and target receiving.
     temporary = Path(temporary_name)
     try:
         with zipfile.ZipFile(temporary, "w", zipfile.ZIP_DEFLATED, compresslevel=6) as archive:
-            archive.write(original, "original/" + ORIGINAL["name"])
-            for path in (migration_zip, backup_zip, edition / "README.md", edition / "operation.json"):
+            # Keep the same paths used by the saved operation and --open-only.
+            for path in (original, migration_zip, backup_zip):
+                archive.write(path, path.relative_to(case).as_posix())
+            for path in (edition / "README.md", edition / "operation.json"):
                 archive.write(path, path.name)
             archive.write(guide, guide.name)
         os.chmod(temporary, 0o600)
