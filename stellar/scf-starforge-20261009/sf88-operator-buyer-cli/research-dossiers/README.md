@@ -23,6 +23,11 @@ source selections and linked findings into an existing question in one revision.
 Use the browser, local command, original-workspace client or merchant tools.
 The complete retained files remain readable and downloadable after portable reopen.
 
+Source lists and revision comparisons use compact inspection. Open an original
+occurrence to download its complete content or a file selected by edition, name
+and SHA-256. The [client guide](RESEARCH_CLIENT.md#inspect-and-download-large-original-sources)
+covers the browser, SDK, CLI and merchant workflow.
+
 ## Open the operator
 
 Use the complete sprint source checkout and its existing Node 22+ runtime.

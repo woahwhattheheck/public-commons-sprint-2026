@@ -199,20 +199,33 @@ export class MerchantResearchWorkspaces{
       if(args.kind.startsWith('clinicaltrials-')){
         ({result,selection}=await exportResearchClinicalTrials(entry.client,args,{file:temporary}));
       }else if(spec.format){
-        exact(args,['workspace','dossierId','kind'],['workspace','dossierId','kind']);
-        result=await entry.client.exportDossier(args.dossierId,{format:spec.format,file:temporary});
+        exact(args,['workspace','dossierId','kind','expectedSha256'],['workspace','dossierId','kind']);
+        result=await entry.client.exportDossier(args.dossierId,{format:spec.format,file:temporary,expectedSha256:args.expectedSha256});
         selection={dossierId:args.dossierId,revision:result.revision??null};
       }else if(args.kind==='crossref-edition'){
-        exact(args,['workspace','dossierId','kind','operationId'],['workspace','dossierId','kind','operationId']);
-        result=await entry.client.exportCrossrefEdition(args.dossierId,args.operationId,{file:temporary});
+        exact(args,['workspace','dossierId','kind','operationId','expectedSha256'],['workspace','dossierId','kind','operationId']);
+        result=await entry.client.exportCrossrefEdition(args.dossierId,args.operationId,{file:temporary,expectedSha256:args.expectedSha256});
         selection={dossierId:args.dossierId,operationId:args.operationId};
       }else if(args.kind==='retained-edition'){
-        exact(args,['workspace','dossierId','kind','editionId'],['workspace','dossierId','kind','editionId']);
-        result=await entry.client.exportRetainedEdition(args.dossierId,args.editionId,{file:temporary});
-        selection={dossierId:args.dossierId,editionId:args.editionId};
+        exact(args,['workspace','dossierId','kind','editionId','revision','expectedSha256'],['workspace','dossierId','kind','editionId']);
+        result=await entry.client.exportRetainedEdition(args.dossierId,args.editionId,{file:temporary,
+          revision:args.revision,expectedSha256:args.expectedSha256});
+        selection={dossierId:args.dossierId,editionId:args.editionId,revision:result.revision??null};
+      }else if(['source-content','source-record','source-file'].includes(args.kind)){
+        const fields=['workspace','dossierId','kind','editionId','key','revision','expectedSha256'];
+        const required=['workspace','dossierId','kind','editionId','key'];
+        if(args.kind==='source-file'){fields.push('fileName');required.push('fileName','expectedSha256');}
+        exact(args,fields,required);
+        const options={editionId:args.editionId,key:args.key,revision:args.revision,file:temporary,
+          expectedSha256:args.expectedSha256};
+        result=args.kind==='source-file'?await entry.client.exportSourceFile(args.dossierId,{...options,name:args.fileName}):
+          await entry.client.exportSource(args.dossierId,{...options,part:args.kind==='source-record'?'record':'content'});
+        selection={dossierId:args.dossierId,editionId:args.editionId,key:args.key,
+          revision:result.revision,occurrenceId:result.occurrenceId,
+          ...(args.kind==='source-file'?{fileName:args.fileName}:{})};
       }else{
-        exact(args,['workspace','dossierId','kind','before','after'],['workspace','dossierId','kind','before','after']);
-        result=await entry.client.exportComparison(args.dossierId,{before:args.before,after:args.after,file:temporary});
+        exact(args,['workspace','dossierId','kind','before','after','expectedSha256'],['workspace','dossierId','kind','before','after']);
+        result=await entry.client.exportComparison(args.dossierId,{before:args.before,after:args.after,file:temporary,expectedSha256:args.expectedSha256});
         selection={dossierId:args.dossierId,before:args.before,after:args.after};
       }
       const retained=this.#file(entry,args.kind,result.sha256);
@@ -289,6 +302,7 @@ export class MerchantResearchWorkspaces{
         case 'merchant_research_list':return c.list(input);
         case 'merchant_research_dossier':return c.metadata(id,input);
         case 'merchant_research_section':return c.section(id,input);
+        case 'merchant_research_source':return c.source(id,input);
         case 'merchant_research_create':return researchSummary(await c.createDossier(input));
         case 'merchant_research_update':return researchSummary(await c.updateDossier(id,input));
         case 'merchant_research_question':{

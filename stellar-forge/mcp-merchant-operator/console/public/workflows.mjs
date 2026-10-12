@@ -1,6 +1,7 @@
 // MIT. Saved native workflows in the original merchant operator interface.
+import { createWorkflowRecipes } from './workflow-recipes.mjs';
 export function createWorkflowPage({state,$,node,text,pretty,when,tag,properties,selectionList,action,busy,api,notice,uid,requireProfile,loadProfile,openCall,chooseTool,download,schedulePoll}){
-  const own={profileId:null,definitions:[],runs:[],definition:null,steps:[],editorId:null,dirty:false,run:null,pendingRun:null,pendingHandover:null,editorVersion:0,definitionOpenSeq:0,runOpenSeq:0,refreshSeq:0,intentReady:false,mutating:false,sessionEpoch:null};
+  const own={profileId:null,definitions:[],runs:[],definition:null,steps:[],editorId:null,dirty:false,run:null,pendingRun:null,pendingHandover:null,editorVersion:0,inputsVersion:0,definitionOpenSeq:0,runOpenSeq:0,refreshSeq:0,intentReady:false,mutating:false,sessionEpoch:null};
   const unchanged=(a,b)=>JSON.stringify(order(a))===JSON.stringify(order(b));
   function order(value){if(Array.isArray(value))return value.map(order);if(value&&typeof value==='object')return Object.fromEntries(Object.keys(value).sort().map(key=>[key,order(value[key])]));return value;}
   const owned=run=>run?.ownerWorkspaceId===state.host?.console.workspaceId;
@@ -8,7 +9,7 @@ export function createWorkflowPage({state,$,node,text,pretty,when,tag,properties
   const context=()=>({session:state.sessionEpoch,selection:state.profileEpoch,profileId:state.profile?.id,workspaceId:state.host?.console.workspaceId});
   const current=ctx=>ctx.session===state.sessionEpoch&&ctx.selection===state.profileEpoch&&ctx.profileId===state.profile?.id&&ctx.workspaceId===state.host?.console.workspaceId;
   const invoke=async(path,body,ctx=context())=>api(path,{method:'POST',body,epoch:ctx.session});
-  let intentDatabase;
+  let intentDatabase,recipes=null;
   function database(){
     if(!intentDatabase)intentDatabase=new Promise((resolve,reject)=>{
       const request=indexedDB.open('starforge-merchant-operator-actions',1);
@@ -46,7 +47,7 @@ export function createWorkflowPage({state,$,node,text,pretty,when,tag,properties
   async function markAttempt(ctx,kind,body){
     let attempt=null;
     await intentRecord(ctx,kind,old=>{
-      if(!old||intentId(kind,old.body)!==intentId(kind,body))return old;
+      if(!old||intentId(kind,old.body)!==intentId(kind,body)||!unchanged(old.body,body))return old;
       const number=(old.attempts??1)+1;attempt={number,prior:old.attempts!==0};
       return {...old,attempts:number,lastAttemptAt:new Date().toISOString()};
     });
@@ -60,7 +61,7 @@ export function createWorkflowPage({state,$,node,text,pretty,when,tag,properties
     return intentRecord(ctx,kind,old=>{
       if(!old)return null;
       if(attempt&&old.attempts!==attempt.number)return old;
-      return intentId(kind,old.body)===intentId(kind,body)?null:old;
+      return intentId(kind,old.body)===intentId(kind,body)&&unchanged(old.body,body)?null:old;
     });
   }
   async function restoreIntents(ctx){
@@ -78,6 +79,17 @@ export function createWorkflowPage({state,$,node,text,pretty,when,tag,properties
     if(own.mutating)throw new Error('Let the current workflow action return.');
     own.mutating=true;sync();try{return await fn();}finally{own.mutating=false;sync();}
   }
+  function getSelection(){
+    return {...context(),id:own.definition?.id??null,editorId:own.editorId,revision:own.definition?.revision??null,
+      contentSha256:own.definition?.contentSha256??null,name:$('workflow-name').value,dirty:own.dirty,
+      editorVersion:own.editorVersion,definitionOpenSeq:own.definitionOpenSeq,inputsVersion:own.inputsVersion,
+      inputsText:$('workflow-inputs').value};
+  }
+  const selectionCurrent=selection=>current(selection)&&unchanged(selection,getSelection());
+  function prefillInputs(inputs,selection){
+    if(!selectionCurrent(selection))return false;
+    $('workflow-inputs').value=pretty(inputs);own.inputsVersion++;sync();return true;
+  }
   function parsed(value,label,kind='array'){
     let result;try{result=JSON.parse(value);}catch(error){throw new Error(label+' must be complete JSON: '+error.message);}
     if(kind==='array'?!Array.isArray(result):!result||typeof result!=='object'||Array.isArray(result))throw new Error(label+' must be a JSON '+kind+'.');
@@ -93,15 +105,15 @@ export function createWorkflowPage({state,$,node,text,pretty,when,tag,properties
     });
   }
   function reset(){
-    own.profileId=state.profile?.id??null;own.sessionEpoch=state.sessionEpoch;own.editorVersion++;own.definitionOpenSeq++;own.runOpenSeq++;own.refreshSeq++;own.intentReady=false;own.definitions=[];own.runs=[];own.definition=null;own.steps=[];own.editorId=null;
+    own.profileId=state.profile?.id??null;own.sessionEpoch=state.sessionEpoch;own.editorVersion++;own.inputsVersion++;own.definitionOpenSeq++;own.runOpenSeq++;own.refreshSeq++;own.intentReady=false;own.definitions=[];own.runs=[];own.definition=null;own.steps=[];own.editorId=null;
     own.dirty=false;own.run=null;own.pendingRun=null;own.pendingHandover=null;
     $('workflow-editor').hidden=true;$('workflow-run-detail').hidden=true;
     $('workflow-name').value='';$('workflow-inputs').value='{}';$('workflow-steps').replaceChildren();
     for(const id of ['workflow-run-json','workflow-run-events','workflow-run-inputs'])text($(id),'');
     for(const id of ['workflow-recipient-workspace','workflow-recipient-host','workflow-handover-note','workflow-recovery-note'])$(id).value='';
-    renderLists();renderPending();sync();
+    recipes?.reset();renderLists();renderPending();sync();
   }
-  function profileChanged(){if(own.profileId!==(state.profile?.id??null)||own.sessionEpoch!==state.sessionEpoch)reset();refreshDraftPicker();sync();}
+  function profileChanged(){if(own.profileId!==(state.profile?.id??null)||own.sessionEpoch!==state.sessionEpoch)reset();refreshDraftPicker();recipes?.profileChanged();sync();}
   function refreshDraftPicker(){
     const selected=$('workflow-add-draft').value;
     const drafts=(state.details?.drafts??[]).filter(draft=>!draft.id.startsWith('workflow-draft-'));
@@ -155,6 +167,7 @@ export function createWorkflowPage({state,$,node,text,pretty,when,tag,properties
     const packet=await api('workflow/'+encodeURIComponent(id)+(revision?'?revision='+revision:''),{epoch:ctx.session});
     if(!current(ctx)||sequence!==own.definitionOpenSeq||editVersion!==own.editorVersion)return;
     editor(packet.definition);renderLists();
+    await recipes?.prefillDefinition(packet.definition,getSelection());
   }
   async function save(copy=false){
     const profile=requireProfile(),ctx=context(),steps=readSteps(),version=own.editorVersion,selection=own.definitionOpenSeq;
@@ -264,7 +277,7 @@ export function createWorkflowPage({state,$,node,text,pretty,when,tag,properties
       if(selected&&(selected.revision!==own.run.revision||selected.active!==own.run.active||own.run.state==='WAITING'||own.run.state==='PAUSED'))
         await openRun(selected.id,{background:true});
     }
-    if(current(ctx)){renderLists();sync();}
+    if(current(ctx)){renderLists();sync();await recipes?.refresh();}
   }
   async function control(kind){
     const run=own.run,ctx=context(),selection=own.runOpenSeq;if(!run)throw new Error('Open a saved run.');
@@ -336,12 +349,17 @@ export function createWorkflowPage({state,$,node,text,pretty,when,tag,properties
     $('workflow-open-edition').disabled=!run;$('workflow-export').disabled=!run;
     $('workflow-open-original').disabled=!run?.steps.find(step=>!finished(step)&&step.draftRevision!==null);
     if(own.mutating)for(const id of ['workflow-save','workflow-copy','workflow-start','workflow-continue','workflow-pause','workflow-resolve','workflow-handover-submit','workflow-retry-start','workflow-retry-handover'])$(id).disabled=true;
+    recipes?.sync();
   }
+  recipes=createWorkflowRecipes({state,$,node,text,pretty,when,tag,properties,selectionList,action,busy,api,notice,
+    uid,requireProfile,loadProfile,context,current,intentRecord,markAttempt,releaseIntent,mutate,
+    mutationActive:()=>own.mutating,openDefinition,getSelection,selectionCurrent,prefillInputs});
   action($('new-workflow'),()=>editor());
   action($('refresh-workflows'),async()=>{await loadProfile();if(own.run)await openRun(own.run.id);});
   action($('workflow-add-step'),addStep);action($('workflow-copy'),()=>mutate(()=>save(true)));action($('workflow-start'),()=>mutate(()=>start()));
   $('workflow-form').addEventListener('submit',event=>{event.preventDefault();busy(event.submitter,()=>mutate(()=>save()));});
   $('workflow-name').addEventListener('input',changed);
+  $('workflow-inputs').addEventListener('input',()=>{own.inputsVersion++;sync();});
   action($('workflow-continue'),()=>mutate(()=>control('resume')));action($('workflow-pause'),()=>mutate(()=>control('pause')));
   action($('workflow-open-edition'),()=>openDefinition(own.run.workflowId,own.run.workflowRevision));
   action($('workflow-export'),()=>download('export/'+encodeURIComponent(own.run.profileId),own.run.profileId+'-operator-profile.json'));

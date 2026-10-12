@@ -4,6 +4,8 @@ Use **Workflows** in the original merchant operator console to turn saved native
 
 Open the console through [Applications](APPLICATIONS.md) or the existing [merchant host](README.md). Select an operator profile bound to the displayed host, save the native requests in **Tools**, then arrange those saved revisions in **Workflows**. Each run keeps its original inputs and native call IDs across browser reconnects, host restarts and an explicit handover to another console workspace.
 
+[Workflow recipes](WORKFLOW_RECIPES.md) carry a saved operating procedure between profiles, including full native tool contracts and declared inputs. Review the target host and save the complete recipe as a new workflow, then use the same execution, recovery and receiving controls below.
+
 ## Complete a merchant delivery
 
 The maintained merchant workflow has seven steps:

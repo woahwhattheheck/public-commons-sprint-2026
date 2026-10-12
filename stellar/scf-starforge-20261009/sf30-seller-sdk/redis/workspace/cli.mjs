@@ -14,6 +14,7 @@ const HELP = [
   '  create     --directory NEW --source SOURCE_JSON --plan PLAN_JSON [--label NAME]',
   '  open       --directory WORKSPACE [--port 8438] [--expected-workspace-id ID] [--expected-profile-sha256 SHA256]',
   '  inspect    --directory WORKSPACE',
+  '  commissioning <template|review|save|receive|continue|history|inspect|rows|handover|export> --directory WORKSPACE ...',
   '  revisions  --directory WORKSPACE [--after REVISION] [--limit 30]',
   '  operations --directory WORKSPACE [--after REQUEST_ID] [--limit 30]',
   '  revision   --directory WORKSPACE --id REVISION',
@@ -53,6 +54,7 @@ function integer(value,label,fallback){
   return Number(value);
 }
 export async function main(args=process.argv.slice(2)){
+  if(args[0]==='commissioning')return (await import('./commission-operator-cli.mjs')).redisCommissioningOperatorCli(args.slice(1));
   if(!args.length||args.length===1&&['--help','help'].includes(args[0])){process.stdout.write(HELP+'\n');return;}
   const [command,...tail]=args,options=new Map(),allowed={
     setup:['directory','input','port','setup-operation','expected-input-sha256'],create:['directory','source','plan','label'],open:['directory','port','expected-workspace-id','expected-profile-sha256'],inspect:['directory'],
