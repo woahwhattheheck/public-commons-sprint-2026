@@ -50,7 +50,7 @@ export function createMatomoMerchant(store,editions,{environment=process.env}={}
     return {current,value,directory:join(root,id)};
   }
   async function workbench(id,fn) {
-    const item=await selected(id),api=await openWorkbench({database:item.value.database,workspace:join(item.directory,'workbench')});
+    const item=await selected(id);await privateDirectory(item.directory,true);const api=await openWorkbench({database:item.value.database,workspace:join(item.directory,'workbench')});
     try{return await fn(api,item);}finally{await api.close();}
   }
   async function state(id){return {merchant:merchant(id),workbench:await workbench(id,api=>api.state())};}
@@ -121,7 +121,7 @@ export function createMatomoMerchant(store,editions,{environment=process.env}={}
     only(input,['operationId','expectedRevision','packageId']);packageRecord(input.packageId);
     return store.perform('recover-merchant-package',input,()=>finishExport(input.packageId));
   }
-  async function ensureReleases(){if(!await exists(releaseRoot))await initReleaseStore(releaseRoot);return readReleaseState(releaseRoot);}
+  async function ensureReleases(){await privateDirectory(root,true);if(!await exists(releaseRoot))await initReleaseStore(releaseRoot);return readReleaseState(releaseRoot);}
   async function releases(){if(!await exists(releaseRoot))return {state:null,releases:[],runtime:{state:'STOPPED'}};return releaseStatus(releaseRoot);}
   async function stage(input) {
     only(input,['operationId','expectedRevision','packageId','releaseId','label','runtime']);

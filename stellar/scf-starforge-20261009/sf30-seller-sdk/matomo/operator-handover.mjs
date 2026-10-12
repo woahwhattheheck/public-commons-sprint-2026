@@ -77,6 +77,10 @@ export function createMatomoHandover(store,merchant,editions,{environment=proces
         }
         const value=JSON.parse(page);
         if(value.schema!=='stellar-forge.dataset-page.v1'||value.page?.total!==edition.value.sourceFiles.rows)throw fault('MATOMO_HANDOVER_POPULATION_CHANGED');
+        const receiptFile=join(folder,'source-pages',prefix+'.receipt.json');
+        if(!await exists(receiptFile))await writeNew(receiptFile,bytes({schema:'stellar-forge.matomo-operator-response.v1',requestId:intent,status:200,
+          statusBasis:'ORIGINAL_DATASET_PAGE_RESPONSE_CONTRACT',bodyBytes:page.length,bodySha256:digest(page),
+          source:'ORIGINAL_SF30_LOCAL_DATASET_HANDLER',providerRequest:false,paymentRequest:false,reconciledFromRetainedResponse:true}));
         await append(room,{page:pageFile,intent,cursor:index?native.nextCursor:undefined,evidence:requestFile});
         native=await scan(room,{retainPayload:false});
         change('handovers',id,{state:'PAGING',native:{pages:native.pages.length,rows:native.count,total:native.total,nextCursor:native.nextCursor,chain:native.chain}},'OPERATOR_PAGE_RETAINED');
@@ -88,7 +92,7 @@ export function createMatomoHandover(store,merchant,editions,{environment=proces
     const scanFile=join(folder,'native-scan.json');await writeNew(scanFile,bytes(native));
     change('handovers',id,{state:'FINALIZED',native:{pages:native.pages.length,rows:native.count,total:native.total,snapshot:native.snapshot,
       chain:native.chain,finalized:true},room,scanFile},'NATIVE_HANDOVER_FINALIZED');
-    const archive=await customer('pack',['--scan',scanFile,'--out',join(folder,'handover.zip')],signal);
+    const archive=await customer('pack',['--scan',scanFile,'--operator-evidence',join(folder,'source-pages'),'--out',join(folder,'handover.zip')],signal);
     change('handovers',id,{state:'COMPLETE',archive,error:null},'NATIVE_HANDOVER_PACKAGED');
     return {handover:handover(id)};
   }
