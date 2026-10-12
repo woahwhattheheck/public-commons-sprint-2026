@@ -42,6 +42,7 @@ Imagery receiving: [STAC, eoAPI and Prescient setup, agent connection, Stop and 
 | Google Sheets source authoring | sheets-source workspace serve | Retained workbook observations, typed source projections, original dataset publisher and merchant receiving |
 | NocoDB source authoring | nocodb-source workspace serve | Original database observations, complete captures, public projections, dataset publisher and retained workspace recovery |
 | Stellar asset investigation | dataset-workspace --stellar-expert | Original asset observations, exact editions, reviewed findings, native dataset and merchant releases, purchased page receiving |
+| Census address operations | census-geocoder-agent serve | One original browser and MCP owner for official address capture, match review, typed editions, native publishing and approved customer receiving |
 | ArcGIS merchant workspace | arcgis-agent serve | One original browser and MCP service for source capture, field mapping, publication, staged deployments and complete customer files |
 | World Bank economic data | worldbank-agent serve | Original indicator captures, exact editions and comparisons, reviewed merchant publication, browser and agent operations, complete customer receiving |
 | S3 object merchant | s3 workspace | Object source and complete prices, retained HEAD reviews and packages, original release controls, customer files and saved-workspace reopening |
@@ -159,6 +160,12 @@ commercial exports, reviewed price changes and managed stop/reopen.
 ## Catalog Atlas
 
 The complete [managed Atlas workflow](../../sf61-bazaar-explorer/APPLICATIONS.md) covers new and retained directories, reviewed installed source, original private launch, stop/reopen, native buyer continuation and whole-workspace receiving.
+
+## Census address operations
+
+Select the original merchant configuration and its initialized Census geocoder workspace alias. Review pins the merchant and connection files, stable native workspace UUID and installed launcher. Start opens one original MCP owner and its borrowed browser; the saved operation records their actual private listeners. The standard terminal carries the original SF88 approval, and Stop drains publication/customer work and cancels source HTTP through the original workspace. A later start reopens the same capture, edition and buyer records.
+
+Follow [Census agent and browser operations](../../../../stellar-forge/mcp-merchant-operator/CENSUS_GEOCODER_WORKSPACE.md) for complete configuration, exact source review, merchant publication, customer file receiving and lifecycle commands.
 
 ## ArcGIS merchant workspace
 
@@ -655,6 +662,11 @@ The retained workspace provides source captures, exact decimal editions, compari
 Choose **Databento migration** with the initialized or received workbench directory containing its original `operation.json` and `workspace/` directory. Review and Save retain that operation marker, stable native workspace identity and selected source; Review Start and Start bind the same source in the adopted release. The application uses the original authenticated Python workspace server with the Databento operator assets, and Open selects the migration workspace after its live identity matches.
 
 Complete historical source editions, inspect field mappings, perform the named review, preserve results and export the customer handover from the original workbench. Stop closes its native server and model; reopen retains the same work and history. The complete [Databento Applications guide](DATABENTO_APPLICATIONS.md) covers initial setup or receiving, source/runtime selection, original producer and review actions, customer export, Stop and recovery.
+
+
+## WooCommerce merchant
+
+**WooCommerce merchant** starts the original SF104 native seller and the original SF98 notice worker together over the selected merchant configuration and same private outbox. Review retains the actual store, notice endpoint, source/configuration identities and named secret environment binding. First start binds the outbox to its original store under the existing exclusive delivery lease; subsequent launches reuse that binding and journal. Open uses the original Operations dashboard, and the WordPress order-console link keeps order, frozen-term, release and refund work in the actual configured store. Stop drains the original seller before awaiting delivery termination; a delivery failure also drains the seller. See the [complete managed Woo operating guide](../../sf104-woocommerce-merchant-bridge/MANAGED.md) for setup, original CLI, same-request recovery and same-outbox receiving. The installed command is `woo-managed`; no independent process manager or payment engine is added.
 
 ## World Bank economic data
 

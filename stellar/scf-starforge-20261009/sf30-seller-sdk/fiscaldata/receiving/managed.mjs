@@ -1,6 +1,6 @@
 // MIT. Complete the original installed Fiscal application and its retained analyst workflow.
 import { constants } from 'node:fs';
-import { mkdir, open, readFile, rename, lstat, realpath } from 'node:fs/promises';
+import { mkdir, open, readFile, rename, unlink, lstat, realpath } from 'node:fs/promises';
 import { dirname, join, resolve, relative } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { randomUUID, createHash } from 'node:crypto';
@@ -31,6 +31,24 @@ function actor(value){
   typeof value.label==='string'&&value.label.trim()&&value.label.length<=200&&!/[\x00-\x1f\x7f]/.test(value.label),
   'Declare the original named receiving operator.');
  return {id:value.id,label:value.label};
+}
+function briefingContext(value){
+ if(value===undefined)return null;
+ need(value&&typeof value==='object'&&!Array.isArray(value)&&
+  Object.keys(value).every(key=>['title','audience','notes'].includes(key)),
+  'Use authored title, audience and notes for the optional customer briefing.');
+ const title=value.title,audience=value.audience??'',notes=value.notes??'';
+ need(typeof title==='string'&&title.trim()&&title.length<=240&&!/[\x00-\x1f\x7f]/.test(title)&&
+  typeof audience==='string'&&audience.length<=400&&!/[\x00-\x1f\x7f]/.test(audience)&&
+  typeof notes==='string'&&notes.length<=64000&&!notes.includes('\0'),
+  'Keep the original customer briefing text within its supported limits.');
+ return {title:title.trim(),audience:audience.trim(),notes};
+}
+function actionResult(value){
+ need(value&&typeof value==='object'&&Object.hasOwn(value,'result')&&
+  value.state?.schema==='stellar-forge.fiscaldata-workspace.v1',
+  'The original Fiscal action did not return its result and workspace state.');
+ return value.result;
 }
 async function optional(path){
  try{return JSON.parse(await readFile(path,'utf8'));}catch(error){if(error.code==='ENOENT')return null;throw error;}
@@ -109,10 +127,7 @@ async function fiscalSession(address){
   },
   async action(action,payload){
    const value=(await this.request('api/action',{action,payload})).value;
-   need(value&&typeof value==='object'&&Object.hasOwn(value,'result')&&
-    value.state?.schema==='stellar-forge.fiscaldata-workspace.v1',
-    'The original Fiscal action did not return its result and workspace state.');
-   return value.result;
+   return actionResult(value);
   }
  };
 }
@@ -126,7 +141,8 @@ export async function receiveFiscalApplication(input){
  need(Number(process.versions.node.split('.')[0])>=24,'Use the installed Node24 runtime.');
  need(input?.schema===INPUT&&/^[A-Za-z0-9][A-Za-z0-9_.:-]{0,151}$/.test(input.operationId??''),'Select a stable original receiving input with room for its receiving suffix.');
  const runtimeDirectory=absolute(input.runtimeDirectory),workspaceDirectory=absolute(input.workspaceDirectory);
- const outputDirectory=absolute(input.outputDirectory),packagePath=absolute(input.packagePath),operator=actor(input.operator);
+ const outputDirectory=absolute(input.outputDirectory),packagePath=absolute(input.packagePath),operator=actor(input.operator),
+  briefing=briefingContext(input.briefing);
  need(HASH.test(input.packageSha256??'')&&UUID.test(input.workspaceId??'')&&UUID.test(input.editionId??'')&&
   UUID.test(input.comparisonId??'')&&UUID.test(input.exportId??'')&&HASH.test(input.exportSha256??''),'Pin the complete original package, dataset and comparison delivery.');
  const outputRelative=relative(workspaceDirectory,outputDirectory);
@@ -278,6 +294,124 @@ export async function receiveFiscalApplication(input){
    captures:first.state.captures.length,editions:first.state.editions.length,exports:first.state.exports.length});
   const downloads=join(outputDirectory,'downloads');await privateDirectory(downloads,{create:true});
   const downloadPath=join(downloads,'comparison-delivery.tar.gz');
+  let briefingReceived=false;
+  async function customerBriefing(session,browserPage=null){
+   if(!briefing)return null;
+   const definition={comparisonId:comparison.id,expectedComparisonSha256:comparison.sha256,
+    exportId:input.exportId,...briefing};
+   if(report.briefing)need(identity(report.briefing.definition)===identity(definition),
+    'The retained customer briefing belongs to a different source or authored context.');
+   else{report.briefing={definition};await save();}
+   let selected;
+   if(report.briefing.payload){
+    const {requestId,...retained}=report.briefing.payload;
+    need(typeof requestId==='string'&&requestId.length<=160&&identity(retained)===identity(definition),
+     'Continue the exact original customer briefing request.');
+    selected=await session.action('briefings.create',report.briefing.payload);
+   }else if(browserPage){
+    await browserPage.waitForSelector('#briefing-form:not([hidden])');
+    await browserPage.locator('#briefing-source').selectOption(input.exportId);
+    await browserPage.locator('#briefing-title').fill(briefing.title);
+    await browserPage.locator('#briefing-audience').fill(briefing.audience);
+    await browserPage.locator('#briefing-notes').fill(briefing.notes);
+    const routePattern='**/api/action';let captureError=null;
+    const retainRequest=async route=>{
+     const request=route.request();
+     if(request.method()!=='POST')return route.continue();
+     const body=request.postDataJSON();
+     if(body?.action!=='briefings.create')return route.continue();
+     try{
+      const {requestId,...authored}=body.payload??{};
+      need(typeof requestId==='string'&&requestId.length<=160&&identity(authored)===identity(definition),
+       'The visible briefing form selected different source or authored values.');
+      // Retain the browser's own request ID before its original POST can reach the model.
+      // A restart uses this same payload through the original action, without another form intent.
+      report.briefing.payload=body.payload;await save();await route.continue();
+     }catch(error){captureError=error;await route.abort('failed');}
+    };
+    await browserPage.route(routePattern,retainRequest);
+    try{
+     const [response]=await Promise.all([
+      browserPage.waitForResponse(response=>new URL(response.url()).pathname==='/api/action'&&
+       response.request().method()==='POST'&&response.request().postDataJSON()?.action==='briefings.create',
+       {timeout:120000}),
+      browserPage.locator('#briefing-create').click()]);
+     const value=await response.json();
+     need(response.ok(),'The original customer briefing could not finish: '+json(value),value?.code);
+     selected=actionResult(value);
+     need(report.briefing.payload,'The original browser request was not retained before submission.');
+    }catch(error){throw captureError??error;}
+    finally{await browserPage.unroute(routePattern,retainRequest);}
+   }else{
+    const requestId='fiscal-application-briefing-'+identity({operationId:input.operationId,inputSha256}).slice(0,40);
+    report.briefing.payload={...definition,requestId};await save();
+    selected=await session.action('briefings.create',report.briefing.payload);
+   }
+   need(UUID.test(selected?.id??'')&&HASH.test(selected?.sha256??'')&&
+    selected.kind==='briefing'&&selected.status==='READY'&&selected.sourceId===comparison.id&&
+    selected.sourceSha256===comparison.sha256&&selected.briefing?.sourceExportId===input.exportId&&
+    selected.briefing.sourceExportSha256===selectedExport.sha256&&
+    selected.briefing.title===briefing.title&&selected.briefing.audience===briefing.audience&&
+    selected.briefing.notes===briefing.notes,'The complete briefing differs from its original selection.');
+   if(report.briefing.exportId)need(selected.id===report.briefing.exportId&&selected.sha256===report.briefing.sha256,
+    'The original briefing retry selected another retained export.');
+   report.briefing.exportId=selected.id;report.briefing.sha256=selected.sha256;await save();
+   const directory=join(downloads,'briefing');await privateDirectory(directory,{create:true});
+   const files=[],contents=new Map();
+   for(const name of ['briefing.tar.gz','briefing-manifest.json','briefing.json','briefing.md','dated-measures.csv']){
+    const descriptor=selected.files?.find(file=>file.name===name);
+    need(descriptor&&HASH.test(descriptor.sha256??'')&&Number.isSafeInteger(descriptor.size)&&descriptor.size>=0,
+     'The original briefing delivery is missing '+name+'.');
+    const target=join(directory,name);let bytes;
+    if(browserPage&&name==='briefing.tar.gz'){
+     const link=browserPage.locator('#briefing-results a[href*="/api/files/export/'+selected.id+'/briefing.tar.gz"]').first();
+     await link.waitFor({state:'visible',timeout:30000});
+     const downloading=browserPage.waitForEvent('download');
+     await link.click();
+     const temporary=join(directory,'.browser-'+randomUUID()+'.partial');
+     await (await downloading).saveAs(temporary);
+     bytes=await readFile(temporary);
+     need(bytes.length===descriptor.size&&digest(bytes)===descriptor.sha256,
+      'The full browser briefing download differs from its original sealed bytes.');
+     await publish(target,bytes,{immutable:true});await unlink(temporary);
+    }else{
+     const response=await session.request('api/files/export/'+selected.id+'/'+name,undefined,{raw:true});
+     need(response.sha256===descriptor.sha256,'The original briefing download header changed.');
+     bytes=response.bytes;
+     need(bytes.length===descriptor.size&&digest(bytes)===descriptor.sha256,
+      'The briefing file differs from its original sealed bytes: '+name);
+     await publish(target,bytes,{immutable:true});
+    }
+    files.push({name,path:target,size:bytes.length,sha256:descriptor.sha256});
+    if(name.endsWith('.json'))contents.set(name,JSON.parse(bytes.toString('utf8')));
+   }
+   const document=contents.get('briefing.json'),manifest=contents.get('briefing-manifest.json');
+   need(document?.workspace?.id===input.workspaceId&&document.comparison?.id===comparison.id&&
+    document.comparison.sha256===comparison.sha256&&document.exportId===input.exportId&&
+    document.title===briefing.title&&document.audience===briefing.audience&&document.notes===briefing.notes&&
+    identity(document.comparison.summary)===identity(comparison.summary)&&
+    document.sourceArchive?.sha256===input.exportSha256,
+    'The downloaded customer report lost its source, exact comparison or authored context.');
+   need(manifest?.workspace?.id===input.workspaceId&&manifest.comparison?.id===comparison.id&&
+    manifest.comparison.sha256===comparison.sha256&&manifest.exportId===input.exportId&&
+    manifest.sourceArchive?.sha256===input.exportSha256&&Array.isArray(manifest.files),
+    'The original full report manifest does not match this source delivery.');
+   const members=new Map(manifest.files.map(file=>[file.path,file]));
+   const pages=Object.values(document.pages??{}).flat();
+   for(const name of ['index.html','briefing.json','dated-measures.csv','rows.jsonl','changes.csv',
+    'source-delivery.tar.gz','left-source.json','left-review.json','right-source.json','right-review.json',...pages])
+    need(members.has(name),'The full report does not retain its original member '+name+'.');
+   need(members.get('source-delivery.tar.gz').sha256===input.exportSha256,
+    'The original comparison archive identity changed inside the briefing.');
+   report.briefing.files=files;report.briefing.report={createdAt:document.createdAt,
+    workspace:document.workspace,comparison:manifest.comparison,sourceArchive:document.sourceArchive,
+    manifestSha256:files.find(file=>file.name==='briefing-manifest.json').sha256,
+    datedMeasures:document.datedMeasures,rows:comparison.summary,rowPages:pages.length,members:manifest.files.length};
+   briefingReceived=true;await save();
+   await mark('complete-customer-briefing',{exportId:selected.id,sha256:selected.sha256,
+    title:briefing.title,sourceExportId:input.exportId,files,report:report.briefing.report});
+   return selected;
+  }
   if(input.browser&&!report.stages.some(item=>item.name==='browser-operator')){
    const require=createRequire(import.meta.url),{chromium}=require(require.resolve('playwright',{paths:[input.browser.playwright]}));
    browser=await chromium.launch({headless:true,executablePath:input.browser.chromium,args:['--no-sandbox','--disable-dev-shm-usage']});
@@ -306,6 +440,7 @@ export async function receiveFiscalApplication(input){
    await page.waitForFunction(()=>document.querySelectorAll('#edition-query-result tbody tr').length>0);
    await page.goto(first.address+'#compare/'+input.comparisonId,{waitUntil:'domcontentloaded'});
    await page.waitForFunction(()=>document.querySelectorAll('#comparison-measures .measure-card').length>0);
+   if(briefing)await customerBriefing(first.session,page);
    const views=[];
    const screenshots=join(outputDirectory,'screenshots');await privateDirectory(screenshots,{create:true});
    for(const width of [1360,390]){
@@ -334,6 +469,7 @@ export async function receiveFiscalApplication(input){
    need(response.sha256===archive.sha256,'The original download header changed.');
    await publish(downloadPath,response.bytes,{immutable:true});
   }
+  if(briefing&&!briefingReceived)await customerBriefing(first.session);
   const delivered=await readFile(downloadPath);
   need(delivered.length===archive.size&&digest(delivered)===archive.sha256,'The complete source delivery differs from its original retained bytes.');
   await mark('complete-delivery',{exportId:input.exportId,sha256:archive.sha256,bytes:delivered.length,path:downloadPath});
@@ -356,6 +492,20 @@ export async function receiveFiscalApplication(input){
   const again=await reopened.session.action('editions.query',{id:input.editionId,query:input.query??'limit=2'});
   const againPage=again.response?.body??again.body??again;
   need(identity(againPage)===identity(page),'The reopened original dataset query changed.');
+  if(briefing){
+   const repeated=await reopened.session.action('briefings.create',report.briefing.payload);
+   need(repeated?.status==='READY'&&repeated.kind==='briefing'&&repeated.id===report.briefing.exportId&&
+    repeated.sha256===report.briefing.sha256,'The reopened application replaced the original completed briefing.');
+   const afterRepeat=(await reopened.session.request('api/state')).value;
+   need(identity(afterRepeat.exports.map(item=>({id:item.id,sha256:item.sha256})))===
+    identity(report.expectedReopen.exports),'The same briefing request created another export after reopening.');
+   const original=report.briefing.files.find(file=>file.name==='briefing.tar.gz');
+   const response=await reopened.session.request('api/files/export/'+repeated.id+'/briefing.tar.gz',undefined,{raw:true});
+   need(response.sha256===original.sha256&&response.bytes.length===original.size&&digest(response.bytes)===original.sha256,
+    'The full customer briefing changed after the original application stopped and reopened.');
+   await mark('customer-briefing-reopened',{exportId:repeated.id,sha256:repeated.sha256,
+    archiveSha256:original.sha256,bytes:original.size,exports:afterRepeat.exports.length});
+  }
   await mark('application-stopped-and-reopened',{workspaceId:input.workspaceId,firstInstance:first.run.instanceId,
    reopenedInstance:reopened.run.instanceId,preserved});
   await stop(reopened.run);

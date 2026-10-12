@@ -28,7 +28,8 @@ function tarFiles(bytes){
   }
   return files;
 }
-export async function receiveConsole({directory,chromiumPath,playwrightModule,sourceCommit}={}){
+export async function receiveConsole({directory,chromiumPath,playwrightModule,sourceCommit,openSession=startMerchantMcp}={}){
+  if(typeof openSession!=='function')throw new TypeError('Use the original merchant session factory.');
   directory=resolve(required(directory,'--directory'));
   await mkdir(directory,{recursive:true,mode:0o700});
   const completed=join(directory,'console-native-run.json');
@@ -50,7 +51,7 @@ export async function receiveConsole({directory,chromiumPath,playwrightModule,so
     process.stdout.write(JSON.stringify({stage,...extra})+'\n');
   };
   const open=async(configPath,selectedConsole=consoleDirectory)=>{
-    const opened=await startMerchantMcp({configPath,port:0,environment:{...process.env,MCP_ACCESS_TOKEN:token},consoleDirectory:selectedConsole});
+    const opened=await openSession({configPath,port:0,environment:{...process.env,MCP_ACCESS_TOKEN:token},consoleDirectory:selectedConsole});
     assert.ok(opened.consoleUrl.endsWith('/operator/'));
     return opened;
   };

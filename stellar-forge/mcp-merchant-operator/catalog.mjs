@@ -1,5 +1,6 @@
 import { merchantProviderConfigured } from './providers.mjs';
 import { stacWorkspaceTools } from './catalog/stac-workspace.mjs';
+import { fredWorkspaceTools } from './catalog/fred-workspace.mjs';
 import { apiPassWorkspaceTools } from './api-pass-protocol.mjs';
 // MIT. Original tool metadata; provider runtimes load only when selected.
 import { CLIENT_EXPORT_MANIFEST, CLIENT_EXPORT_FILES } from '../../stellar/scf-starforge-20261009/sf30-seller-sdk/developer/client-export-contracts.mjs';
@@ -15,10 +16,12 @@ import { graphqlWorkspaceTools } from './catalog/graphql-workspace.mjs';
 import { s3WorkspaceTools } from './catalog/s3-workspace.mjs';
 import { openSearchWorkspaceTools } from './catalog/opensearch-workspace.mjs';
 import { socrataWorkspaceTools } from './catalog/socrata-workspace.mjs';
+import { opendatasoftWorkspaceTools } from './catalog/opendatasoft-workspace.mjs';
 import { odataWorkspaceTools } from './catalog/odata-workspace.mjs';
 import { worldbankWorkspaceTools } from './catalog/worldbank-workspace.mjs';
 import { fiscalDataWorkspaceTools } from './catalog/fiscaldata-workspace.mjs';
 import { geocodioWorkspaceTools } from './catalog/geocodio-workspace.mjs';
+import { censusGeocoderWorkspaceTools } from './catalog/census-geocoder-workspace.mjs';
 import { webDavWorkspaceTools } from './catalog/webdav-tools.mjs';
 import { edgarWorkspaceTools } from './catalog/sec-edgar-tools.mjs';
 import { sheetsWorkspaceTools } from './catalog/sheets-workspace.mjs';
@@ -70,6 +73,7 @@ function tool(name, description, properties = {}, required = [], { readOnly = fa
 }
 
 const familyTools = {
+  fredWorkspaces: fredWorkspaceTools(tool),
   stacWorkspaces: stacWorkspaceTools(tool),
   apiPassWorkspaces: apiPassWorkspaceTools(tool),
   discovery: discoveryTools(tool),
@@ -83,10 +87,12 @@ const familyTools = {
   s3Workspaces: s3WorkspaceTools(tool),
   opensearchWorkspaces: openSearchWorkspaceTools(tool),
   socrataWorkspaces: socrataWorkspaceTools(tool),
+  opendatasoftWorkspaces: opendatasoftWorkspaceTools(tool),
   odataWorkspaces: odataWorkspaceTools(tool),
   worldbankWorkspaces: worldbankWorkspaceTools(tool),
   fiscalDataWorkspaces: fiscalDataWorkspaceTools(tool),
   geocodioWorkspaces: geocodioWorkspaceTools(tool),
+  censusGeocoderWorkspaces: censusGeocoderWorkspaceTools(tool),
   webdavWorkspaces: webDavWorkspaceTools(tool),
   edgarWorkspaces: edgarWorkspaceTools(tool),
   sheetsWorkspaces: sheetsWorkspaceTools(tool),
@@ -168,6 +174,7 @@ const MERCHANT_TOOLS = [
   tool('merchant_operations', 'Open the original merchant operations, retained history and private availability controls for this process-owned running instance. The control link grants availability changes; keep it in the operator session.',
     { instanceId: instanceSchema }, ['instanceId'], { readOnly: true, idempotent: true }),
   ...familyTools.stacWorkspaces,
+  ...familyTools.fredWorkspaces,
   ...familyTools.apiPassWorkspaces,
   ...familyTools.discovery,
   ...familyTools.cache,
@@ -180,10 +187,12 @@ const MERCHANT_TOOLS = [
   ...familyTools.s3Workspaces,
   ...familyTools.opensearchWorkspaces,
   ...familyTools.socrataWorkspaces,
+  ...familyTools.opendatasoftWorkspaces,
   ...familyTools.odataWorkspaces,
   ...familyTools.worldbankWorkspaces,
   ...familyTools.fiscalDataWorkspaces,
   ...familyTools.geocodioWorkspaces,
+  ...familyTools.censusGeocoderWorkspaces,
   ...familyTools.webdavWorkspaces,
   ...familyTools.edgarWorkspaces,
   ...familyTools.sheetsWorkspaces,

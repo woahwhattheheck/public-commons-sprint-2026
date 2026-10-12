@@ -9,7 +9,8 @@ export default {
     return prepareCryptoworthApplication(settings, context.inputPath, context.runtimeDirectory);
   },
   matchRequest(request) {
-    return !request.pythonCommand && request.command === 'merchant-accounting-workspace';
+    return !request.pythonCommand && request.command === 'merchant-accounting-workspace' &&
+      !(Array.isArray(request.args) && request.args.includes('--managed-launch-sha256'));
   },
   createObserver(request, directory, context) {
     return observeApplicationStartup(request, directory, text => {

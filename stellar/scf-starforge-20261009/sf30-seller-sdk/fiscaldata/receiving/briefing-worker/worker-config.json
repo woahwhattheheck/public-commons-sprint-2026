@@ -1,0 +1,13 @@
+{
+  "schema": "fiscal-briefing-worker.v1",
+  "operationId": "fiscal-treasury-briefing-7108-20261012",
+  "sandboxId": "i7uwmcqmeoxkb7g74x51o",
+  "workerId": "SCF-DURABLE-PAID-JOBS-0B8D-20261011-e2b-01",
+  "directory": "/root/commons-fiscal-briefing-7108-20261012",
+  "controllerHost": "/root/commons-fiscal-briefing-7108-20261012/controller/host",
+  "sharedStateRoot": "/root/commons-scf-0b8d-20261012/control",
+  "memoryReservationsRoot": "/root/commons-scf-0b8d-20261012/control/capacity/memory",
+  "diskReservationsRoot": "/root/commons-scf-0b8d-20261012/control/capacity/disk",
+  "runtimeConsumersRoot": "/root/commons-scf-0b8d-20261012/control/jobs/runtime-consumers",
+  "runtimeSelection": "existing-installed"
+}
