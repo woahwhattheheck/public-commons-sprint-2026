@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import csv
 from datetime import date, datetime
-from decimal import Decimal, InvalidOperation, localcontext
+from decimal import Decimal, InvalidOperation, ROUND_HALF_EVEN, localcontext
 import io
 import json
 from pathlib import Path
@@ -15,6 +15,11 @@ from .store import digest, encoded, identifier
 MAX_ROWS = 100000
 MAX_CELLS = 2000000
 MAX_BYTES = 64 * 1024 * 1024
+DECIMAL_DIGITS = 60
+DECIMAL_SCALE = 60
+EXACT_PRECISION = 128
+RATIO_PRECISION = 40
+MAX_FORMATTED_DECIMAL = 2048
 SIGNALS = ("forecast", "actual", "weather_normalized", "adjustment")
 STATUSES = ("annual_forecast", "informational_update", "observed_data", "adjustment_detail", "reference")
 METRICS = ("peak_demand", "energy")
@@ -49,8 +54,8 @@ def integer(value, low, high, label):
 
 
 def decimal(value, label="Value"):
-    if isinstance(value, bool):
-        raise ValueError(label + " must be a decimal number.")
+    if isinstance(value, (bool, float)):
+        raise ValueError(label + " must be exact decimal text or a JSON decimal number.")
     raw = str(value).strip().replace(",", "")
     if len(raw) > 100:
         raise ValueError(label + " is too long.")
@@ -58,14 +63,28 @@ def decimal(value, label="Value"):
         result = Decimal(raw)
     except (InvalidOperation, ValueError):
         raise ValueError(label + " must be a finite decimal number.") from None
-    if not result.is_finite() or abs(result) > Decimal("1e18"):
-        raise ValueError(label + " must be finite and within the supported range.")
+    if not result.is_finite():
+        raise ValueError(label + " must be finite.")
+    parts = result.as_tuple()
+    if (len(parts.digits) > DECIMAL_DIGITS or not -DECIMAL_SCALE <= parts.exponent <= 18 or
+            result.copy_abs() > Decimal("1e18")):
+        raise ValueError(label + " supports at most 60 coefficient digits, 60 fractional places and magnitude 1e18.")
     return result
 
 
 def number(value):
     value = Decimal(value)
-    return format(value, "f") if value else "0"
+    if not value.is_finite():
+        raise ValueError("A calculated load value is not finite.")
+    if not value:
+        return "0"
+    # Bound the fixed-point allocation before formatting either source or computed values.
+    parts = value.as_tuple()
+    integer_places = max(value.adjusted() + 1, 1)
+    fraction_places = max(-parts.exponent, 0)
+    if integer_places + fraction_places + 2 > MAX_FORMATTED_DECIMAL:
+        raise ValueError("The calculated decimal exceeds the supported report width.")
+    return format(value, "f")
 
 
 def strict_json(data):
@@ -76,7 +95,7 @@ def strict_json(data):
                 raise ValueError("Repeated JSON key: " + str(key))
             result[key] = value
         return result
-    return json.loads(data, object_pairs_hook=pairs,
+    return json.loads(data, object_pairs_hook=pairs, parse_float=Decimal,
                       parse_constant=lambda value: (_ for _ in ()).throw(ValueError("Nonfinite JSON number.")))
 
 
@@ -336,7 +355,9 @@ def normalise(raw):
     if amount < 0 and result["signal"] != "adjustment":
         raise ValueError("Published loads must be nonnegative; signed changes use the adjustment signal.")
     with localcontext() as context:
-        context.prec = 60
+        context.prec = EXACT_PRECISION
+        context.rounding = ROUND_HALF_EVEN
+        context.Emax, context.Emin = 9999, -9999
         normalized = amount * factor
     result.update({"period_label": label, "period_start": start, "period_end": end, "year": year,
         "value": number(amount), "canonical_unit": canonical, "canonical_value": number(normalized),

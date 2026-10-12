@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import base64
 import copy
-from decimal import Decimal, localcontext
+from decimal import Decimal, ROUND_HALF_EVEN, localcontext
 import io
 from pathlib import Path
 import zipfile
@@ -11,6 +11,7 @@ import zipfile
 from .store import Conflict, digest, encoded, identifier, now
 from .load_forecast_sources import (
     KEY_FIELDS, MAX_ROWS, STATUSES, SIGNALS, METRICS, SEASONS, UNITS,
+    EXACT_PRECISION, RATIO_PRECISION,
     inspect_file, map_source, sheet_rows, cell_name, text, integer, decimal, number, strict_json,
 )
 
@@ -38,6 +39,15 @@ def source_pin(record):
 
 
 def compare_rows(plan, baseline, current, explanations):
+    # Source bounds, unit powers and at most 100,000 observations fit exactly in this context.
+    with localcontext() as context:
+        context.prec = EXACT_PRECISION
+        context.rounding = ROUND_HALF_EVEN
+        context.Emax, context.Emin = 9999, -9999
+        return _compare_rows(plan, baseline, current, explanations)
+
+
+def _compare_rows(plan, baseline, current, explanations):
     left = {r["key"]: r for r in baseline if r["signal"] == plan["baseline_signal"] and selected(r, plan["selection"])}
     right = {r["key"]: r for r in current if r["signal"] == plan["current_signal"] and selected(r, plan["selection"])}
     if not left or not right:
@@ -53,8 +63,8 @@ def compare_rows(plan, baseline, current, explanations):
         bv = Decimal(b["canonical_value"]) if b else None
         difference = bv - av if av is not None and bv is not None else None
         with localcontext() as context:
-            context.prec = 40
-            change = difference / abs(av) * 100 if av not in (None, 0) and difference is not None else None
+            context.prec = RATIO_PRECISION
+            change = difference / av.copy_abs() * 100 if av not in (None, 0) and difference is not None else None
         row = {"key": key, **{k: base[k] for k in KEY_FIELDS}, "year": base["year"],
                "period_label": base["period_label"],
                "state": "MATCHED" if a and b else "BASELINE_ONLY" if a else "CURRENT_ONLY",
@@ -104,27 +114,34 @@ def compare_rows(plan, baseline, current, explanations):
         first, last = values[0], values[-1]
         if first["period_basis"] == "calendar_month":
             months = lambda r: int(r["period_label"][:4]) * 12 + int(r["period_label"][5:7])
-            intervals = Decimal(months(last) - months(first)) / 12
-            expected_periods = months(last) - months(first) + 1
+            period_count, periods_per_year = months(last) - months(first), 12
         else:
-            intervals = Decimal(last["year"] - first["year"])
-            expected_periods = last["year"] - first["year"] + 1
+            period_count, periods_per_year = last["year"] - first["year"], 1
+        expected_periods = period_count + 1
+        with localcontext() as context:
+            context.prec = RATIO_PRECISION
+            intervals = Decimal(period_count) / periods_per_year
         item = {k: first[k] for k in KEY_FIELDS if k not in ("period_start", "period_end")}
         item.update({"first_period": first["period_label"], "last_period": last["period_label"],
                      "interval_years": number(intervals), "matched_observations": len(values),
                      "missing_periods_between_endpoints": max(0, expected_periods - len(values))})
-        with localcontext() as context:
-            context.prec = 40
-            for side in ("baseline", "current"):
-                a, b = Decimal(first[side + "_value"]), Decimal(last[side + "_value"])
-                cagr = ((b / a) ** (Decimal(1) / intervals) - 1) * 100 if a > 0 and b >= 0 and intervals > 0 else None
-                item[side + "_first"] = number(a)
-                item[side + "_last"] = number(b)
-                item[side + "_growth"] = number(b - a)
+        for side in ("baseline", "current"):
+            a, b = Decimal(first[side + "_value"]), Decimal(last[side + "_value"])
+            item[side + "_first"] = number(a)
+            item[side + "_last"] = number(b)
+            item[side + "_growth"] = number(b - a)
+            with localcontext() as context:
+                context.prec = RATIO_PRECISION
+                # Form the year exponent from the exact integer period count, avoiding a rounded 1/12 reciprocal.
+                cagr = ((b / a) ** (Decimal(periods_per_year) / period_count) - 1) * 100 \
+                    if a > 0 and b >= 0 and period_count > 0 else None
                 item[side + "_cagr_percent"] = number(cagr) if cagr is not None else None
-            denom = sum(abs(Decimal(r["current_value"])) for r in values)
-            item["accuracy_wape"] = number(sum(abs(Decimal(r["difference"])) for r in values) / denom) \
-                if plan["mode"] == "forecast_accuracy" and denom else None
+        denominator = sum(Decimal(r["current_value"]).copy_abs() for r in values)
+        numerator = sum(Decimal(r["difference"]).copy_abs() for r in values)
+        with localcontext() as context:
+            context.prec = RATIO_PRECISION
+            item["accuracy_wape"] = number(numerator / denominator) \
+                if plan["mode"] == "forecast_accuracy" and denominator else None
         growth.append(item)
     summary = {"baseline_observations": len(left), "current_observations": len(right),
         "matched": sum(r["state"] == "MATCHED" for r in rows), "baseline_only": missing_right,
@@ -158,7 +175,7 @@ def assemble_review(plan_record, sources, source_rows):
     return {"schema": "commons.load-forecast-review.v1", "plan": plan_record, "sources": sources, **result,
         "interpretation": {
             "difference": "Current minus baseline in the displayed canonical power or energy unit.",
-            "percentage": "Difference divided by the absolute baseline; undefined for a zero baseline.",
+            "percentage": "Difference divided by the absolute baseline; undefined for a zero baseline. Ratios and CAGR use 40 significant decimal digits with half-even rounding.",
             "growth": "Endpoint compound annual growth uses the actual elapsed year or month interval. Missing intermediate periods remain visible.",
             "aggregation": "Geographic peaks and overlapping planning areas are kept separate; this review computes no total across areas.",
             "periods": "Season and delivery-year spans retain their source labels; year spans do not imply unstated month boundaries.",
@@ -215,7 +232,7 @@ class LoadForecast:
             "application/pdf" if filename.endswith(".pdf") else "application/json" if filename.endswith(".json") else "text/csv")
         payload = {"label": text(request.get("label", filename), 300, True), "state": "UPLOADED",
             "publisher": text(request.get("publisher"), 300, True), "source_url": text(request.get("source_url"), 3000, True),
-            "vintage": text(request.get("vintage"), 200, True), "published": published, "status": status,
+            "vintage": text(request.get("vintage"), 300, True), "published": published, "status": status,
             "original": original, "inspection": inspection, "parent": self.ref(parent) if parent else None,
             "change_note": text(request.get("change_note")), "created": now()}
         if parent and not payload["change_note"]:
@@ -403,6 +420,8 @@ class LoadForecast:
             "report_sha256": record["payload"]["report"]["digest"], "files": [
                 {"name": name, "bytes": len(data), "sha256": digest(data)} for name, data in sorted(files.items())]}
         files["manifest.json"] = (encoded(manifest) + "\n").encode()
+        from .load_forecast_receive import validate_delivery_members
+        validate_delivery_members([(name, len(content)) for name, content in files.items()])
         from .service import package_files
         package = self.store.blob(package_files(files), "Load_Forecast_Review_Complete.zip", "application/zip")
         return self.write("load_export", {"label": record["payload"]["label"] + " — finalized r" + str(record["revision"]),

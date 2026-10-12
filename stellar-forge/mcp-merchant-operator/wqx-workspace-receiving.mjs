@@ -6,11 +6,13 @@ import { mkdir, open, readFile, lstat, realpath } from 'node:fs/promises';
 import { basename, dirname, isAbsolute, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash, randomBytes } from 'node:crypto';
+import { spawn } from 'node:child_process';
 import { acquireStateLease } from '../../stellar/scf-starforge-20261009/merchant-fleet-gateway/state-lease.mjs';
 import { atomicJson } from '../../stellar/scf-starforge-20261009/sf30-seller-sdk/routescan/quota.mjs';
 import { reviewWaterQualityManaged, startManagedWaterQuality } from '../../stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/managed.mjs';
 import { openWatersHash, openWatersCanonical } from '../../stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/openwaters.mjs';
 import { normalizeReviewSheetDocument } from '../../stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/review-sheet/model.mjs';
+import { concentrationReportForDocument, concentrationReportCsv } from '../../stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/review-sheet/concentrations.mjs';
 import { initializeMerchantProvider } from './providers.mjs';
 import { startMerchantMcp } from './serve.mjs';
 import { wqxPrivateDirectory, wqxReadPrivate, wqxJson } from './wqx-workspace-connection.mjs';
@@ -31,7 +33,7 @@ function configuration(input) {
     'documentFile', 'expectedDocumentFileSha256', 'expectedDocumentSha256', 'sourcePlanId',
     'expectedSourcePlanSha256', 'expectedReviewSha256', 'expectedCaptureSha256', 'expectedManagedSourceSha256',
     'newPlanId', 'reviewId', 'expectedNewPlanSha256', 'expectedPreviewSha256', 'expectedResults',
-    'expectedReadyResults', 'expectedReviewResults', 'expectedLimits', 'expectedCensoredResults'];
+    'expectedReadyResults', 'expectedReviewResults', 'expectedLimits', 'expectedCensoredResults', 'concentrations'];
   for (const key of Object.keys(input)) assert(allowed.includes(key), 'Unknown receiving option: ' + key);
   assert(input.schema === WQX_OPERATOR_RECEIVING_SCHEMA, 'Select the current whole-operation schema.');
   for (const key of ['operationId', 'sourcePlanId', 'newPlanId', 'reviewId'])
@@ -48,6 +50,38 @@ function configuration(input) {
     assert(Number.isSafeInteger(input[key]) && input[key] >= 0, 'Specify the exact original ' + key + '.');
   assert(input.expectedResults > 1000, 'This complete receiving operation must cross the native 1,000-row page boundary.');
   assert.equal(input.expectedReadyResults + input.expectedReviewResults, input.expectedResults);
+  if (input.concentrations !== undefined) {
+    const value = input.concentrations;
+    assert(value && typeof value === 'object' && !Array.isArray(value), 'Choose the complete concentration receiving selection.');
+    const keys = ['initialDocumentFile', 'expectedInitialDocumentFileSha256', 'expectedInitialDocumentSha256',
+      'targetUnit', 'reason', 'selections', 'expectedSelectedResults', 'expectedLimitOnlyResults',
+      'expectedLimitOnlySourceResults', 'expectedReportedLimits', 'expectedReportSha256',
+      'expectedPreparedDocumentSha256', 'finalTableFile', 'expectedFinalTableFileSha256'];
+    for (const key of Object.keys(value)) assert(keys.includes(key), 'Unknown concentration receiving option: ' + key);
+    assert(typeof value.initialDocumentFile === 'string' && isAbsolute(value.initialDocumentFile) &&
+      resolve(value.initialDocumentFile) === value.initialDocumentFile && !value.initialDocumentFile.includes('\0'),
+      'Choose the original complete initial decision file.');
+    assert(typeof value.finalTableFile === 'string' && isAbsolute(value.finalTableFile) &&
+      resolve(value.finalTableFile) === value.finalTableFile && !value.finalTableFile.includes('\0'));
+    for (const key of ['expectedInitialDocumentFileSha256', 'expectedInitialDocumentSha256', 'expectedReportSha256',
+      'expectedPreparedDocumentSha256', 'expectedFinalTableFileSha256'])
+      assert(SHA.test(value[key] ?? ''), 'Bind the complete original concentration ' + key + '.');
+    assert(typeof value.targetUnit === 'string' && value.targetUnit.trim() && value.targetUnit.length <= 64);
+    assert(typeof value.reason === 'string' && value.reason.trim() && value.reason.length <= 600);
+    assert(Array.isArray(value.selections) && value.selections.length > 0, 'Select the complete original conversion groups.');
+    const seen = new Set();
+    for (const selection of value.selections) {
+      assert(selection && Object.keys(selection).every(key => ['fromUnit', 'reportedLimitsOnly', 'expectedResults'].includes(key)));
+      assert(Number.isSafeInteger(selection.expectedResults) && selection.expectedResults > 0);
+      assert((Object.hasOwn(selection, 'fromUnit') ? 1 : 0) + (Object.hasOwn(selection, 'reportedLimitsOnly') ? 1 : 0) === 1);
+      assert(selection.reportedLimitsOnly === true || typeof selection.fromUnit === 'string');
+      const key = selection.reportedLimitsOnly ? 'limits-only' : 'unit:' + selection.fromUnit;
+      assert(!seen.has(key), 'Choose each original concentration cohort once.'); seen.add(key);
+    }
+    for (const key of ['expectedSelectedResults', 'expectedLimitOnlyResults', 'expectedLimitOnlySourceResults', 'expectedReportedLimits'])
+      assert(Number.isSafeInteger(value[key]) && value[key] >= 0, 'Specify the exact original ' + key + '.');
+    assert.equal(value.selections.reduce((sum, row) => sum + row.expectedResults, 0), value.expectedSelectedResults);
+  }
   return structuredClone(input);
 }
 async function folder(path) {
@@ -98,24 +132,47 @@ function originalProjection(plan) {
     })),
   };
 }
-function science(before, after, selected) {
+function science(before, after, selected, document) {
   assert.equal(before.results.length, selected.expectedResults);
   assert.equal(after.results.length, selected.expectedResults);
   equal(originalProjection(after), originalProjection(before), 'Every original result, source pointer, location, activity and limit must survive receiving.');
+  let concentration = null;
+  if (selected.concentrations) {
+    const expected = selected.concentrations;
+    const report = concentrationReportForDocument(before, document, { resultPlan: after });
+    assert.equal(report.proposalSha256, expected.expectedReportSha256, 'Retain the exact complete native conversion report.');
+    assert.equal(report.issues.length, 0);
+    assert.equal(report.summary.selectedResults, expected.expectedSelectedResults);
+    assert.equal(report.summary.reportedLimits, expected.expectedReportedLimits);
+    const blank = report.rows.filter(row => !row.before.RESULT_MSR && !row.before.RESULT_MSR_UNIT);
+    assert.equal(blank.length, expected.expectedLimitOnlyResults);
+    assert(blank.every(row => row.after.RESULT_MSR === '' && row.after.RESULT_MSR_UNIT === ''),
+      'Keep every blank measured value and unspecified result unit while converting its independent limits.');
+    concentration = { reportSha256: report.proposalSha256, selectedResults: report.summary.selectedResults,
+      reportedLimits: report.summary.reportedLimits, nativeLimits: report.summary.nativeLimits,
+      unchangedBlankResults: blank.length };
+  }
   let limits = 0, censored = 0;
   const original = new Map(before.results.map(row => [row.sourceRecordId, row]));
   assert.equal(original.size, selected.expectedResults, 'Original result identities are unique.');
   for (const row of after.results) {
     limits += row.limits.length;
     const source = original.get(row.sourceRecordId);
+    for (const field of ['RESULT_MSR_QUAL', 'RESULT_DETECT_CONDITION', 'RESULT_VALUE_TYPE', 'RESULT_STATUS'])
+      assert.equal(row.fields[field] ?? '', source.fields[field] ?? '', 'Keep the original scientific qualifier and detection context.');
     if (source.fields.RESULT_DETECT_CONDITION === 'Not Detected') {
       const limit = source.limits.find(value => value.type === 'Censoring Level');
       if (!limit) continue;
       censored++;
       assert.equal(row.fields.RESULT_DETECT_CONDITION, source.fields.RESULT_DETECT_CONDITION);
       assert.equal(row.fields.RESULT_MSR ?? '', '', 'A censored observation keeps its blank measured value.');
-      assert.equal(row.fields.LAB_REPORTING_LEVEL, limit.value, 'Use this exact source censoring level.');
-      assert.equal(row.fields.DETECTION_LIMIT_UNIT, limit.unit, 'Use this exact source censoring unit.');
+      if (!selected.concentrations) {
+        assert.equal(row.fields.LAB_REPORTING_LEVEL, limit.value, 'Use this exact source censoring level.');
+        assert.equal(row.fields.DETECTION_LIMIT_UNIT, limit.unit, 'Use this exact source censoring unit.');
+      } else {
+        assert.equal(row.fields.RESULT_MSR_UNIT ?? '', source.fields.RESULT_MSR_UNIT ?? '',
+          'A blank non-detect result keeps its original result unit.');
+      }
     }
   }
   assert.equal(limits, selected.expectedLimits); assert.equal(censored, selected.expectedCensoredResults);
@@ -123,7 +180,7 @@ function science(before, after, selected) {
   assert.equal(after.summary.reviewResults, selected.expectedReviewResults);
   return { results: after.results.length, limits, censoredResults: censored,
     originalProjectionSha256: openWatersHash(originalProjection(before)),
-    before: before.summary, after: after.summary };
+    before: before.summary, after: after.summary, ...(concentration ? { concentration } : {}) };
 }
 
 /** One real MCP listener, two original managed projects, full files and durable restarts. */
@@ -137,7 +194,7 @@ export async function receiveWqxOperator(input, { onProgress } = {}) {
   const lease = await acquireStateLease(root);
   const startedAt = new Date().toISOString(), started = performance.now();
   let sourceHost, receiverHost, mcp, source, receiver, requests = 0, configurationPath, listenerPort = 0;
-  const nativeFiles = [], stages = [], restarts = [];
+  const nativeFiles = [], stages = [], restarts = [], concentrationProposals = [], concentrationReports = [];
   const environment = { ...process.env, WQX_RECEIVING_TOKEN: randomBytes(32).toString('hex'),
     MCP_OAUTH_CONFIG: undefined, MCP_CLIENT_ORIGINS: '' };
   const progress = async (phase, details = {}) => {
@@ -232,7 +289,74 @@ export async function receiveWqxOperator(input, { onProgress } = {}) {
     await source.receive({ kind: 'plan', inputRef: uploaded.inputRef });
     const uploadedDocument = await uploadWqxInput(source, { inputId: 'receiving-document', path: documentFile.path,
       name: 'receiving-document.json', contentType: 'application/json', expectedSha256: documentFile.sha256 });
-    const documentRef = uploadedDocument.inputRef;
+    let documentRef = uploadedDocument.inputRef;
+    if (selected.concentrations) {
+      const expected = selected.concentrations;
+      const initialFile = await retainPinned(expected.initialDocumentFile, join(root, 'inputs', 'initial-concentration-document.json'),
+        expected.expectedInitialDocumentFileSha256);
+      const initial = normalizeReviewSheetDocument(JSON.parse(await readFile(initialFile.path, 'utf8')));
+      assert.equal(openWatersHash(initial), expected.expectedInitialDocumentSha256);
+      assert.equal(initial.sourcePlanId, selected.sourcePlanId); assert.equal(initial.sourcePlanSha256, selected.expectedSourcePlanSha256);
+      const units = await fullJson(source, await source.concentrationUnits({
+        planId: selected.sourcePlanId, expectedPlanSha256: selected.expectedSourcePlanSha256 }), 'complete-concentration-units');
+      assert.equal(units.sourceResults, selected.expectedResults);
+      assert.equal(units.sourcePlanSha256, selected.expectedSourcePlanSha256);
+      assert.equal(units.limitOnly.count, expected.expectedLimitOnlySourceResults);
+      assert.equal(units.limitOnly.supportedCount, expected.expectedLimitOnlyResults);
+      const uploadedInitial = await uploadWqxInput(source, { inputId: 'initial-concentration-document', path: initialFile.path,
+        name: 'initial-concentration-document.json', contentType: 'application/json', expectedSha256: initialFile.sha256 });
+      documentRef = uploadedInitial.inputRef;
+      let precedingSha256 = expected.expectedInitialDocumentSha256;
+      const seen = new Set();
+      for (const [index, selection] of expected.selections.entries()) {
+        const ids = selection.reportedLimitsOnly ? units.limitOnly.supportedResultIds :
+          units.groups.find(group => group.unit === selection.fromUnit)?.resultIds;
+        assert(Array.isArray(ids)); assert.equal(ids.length, selection.expectedResults);
+        for (const id of ids) { assert(!seen.has(id), 'An original conversion record was selected twice.'); seen.add(id); }
+        const choice = selection.reportedLimitsOnly ? { reportedLimitsOnly: true } : { fromUnit: selection.fromUnit };
+        const response = await source.concentrationPrepare({ documentRef, ...choice, targetUnit: expected.targetUnit,
+          reason: expected.reason, expectedPlanSha256: selected.expectedSourcePlanSha256 });
+        assert.equal(response.httpStatus, 200); assert(!response.error);
+        assert(response.documentRef && response.documentFile && response.reportCsvFile);
+        const report = await fullJson(source, response, 'concentration-proposal-' + index);
+        assert.equal(report.state, 'PREPARED'); assert.equal(report.issues.length, 0);
+        assert.equal(report.source.sourcePlanSha256, selected.expectedSourcePlanSha256);
+        assert.equal(report.inputDocumentSha256, precedingSha256);
+        assert.equal(report.summary.selectedResults, selection.expectedResults);
+        assert.equal(report.targetUnit, expected.targetUnit); assert.equal(report.reason, expected.reason);
+        const { proposalSha256, ...content } = report; assert.equal(openWatersHash(content), proposalSha256);
+        const actualDocument = normalizeReviewSheetDocument(report.document);
+        const retainedDocument = await fullJson(source, { file: response.documentFile }, 'concentration-document-' + index);
+        equal(normalizeReviewSheetDocument(retainedDocument), actualDocument, 'The returned documentRef retains every prepared choice.');
+        const csv = await download(source, response.reportCsvFile, 'concentration-proposal-csv-' + index);
+        assert.equal(hash(Buffer.from(concentrationReportCsv(report))), csv.sha256);
+        precedingSha256 = openWatersHash(actualDocument); documentRef = response.documentRef;
+        concentrationProposals.push({ selection, proposalSha256, documentSha256: precedingSha256,
+          documentRef, documentFile: response.documentFile, reportFile: response.file, reportCsvFile: response.reportCsvFile });
+        collect();
+      }
+      assert.equal(seen.size, expected.expectedSelectedResults);
+      assert.equal(precedingSha256, expected.expectedPreparedDocumentSha256,
+        'Each complete MCP proposal must follow the exact original native CLI draft chain.');
+      const kept = document.decisions.filter(row => row.action === 'keep');
+      assert.equal(kept.length, 1); assert(kept[0].reason.includes('NTRU'));
+      assert.equal(openWatersHash(normalizeReviewSheetDocument({ ...document,
+        decisions: document.decisions.filter(row => row.action !== 'keep') })), precedingSha256,
+        'The final original review may add only its exact optical Keep decision to these complete proposals.');
+      const finalTable = await retainPinned(expected.finalTableFile, join(root, 'inputs', 'reviewed-concentrations.csv'),
+        expected.expectedFinalTableFileSha256);
+      const tableInput = await uploadWqxInput(source, { inputId: 'reviewed-concentrations',
+        path: finalTable.path, name: 'reviewed-concentrations.csv', contentType: 'text/csv',
+        expectedSha256: finalTable.sha256 });
+      const importedResponse = await source.tableImport({ inputRef: tableInput.inputRef, format: 'csv' });
+      const importedDocument = await fullJson(source, importedResponse, 'reviewed-concentration-document');
+      assert.equal(openWatersHash(normalizeReviewSheetDocument(importedDocument)), selected.expectedDocumentSha256,
+        'The original complete reviewed table must preserve every paired concentration choice and Keep reason.');
+      documentRef = 'file:' + importedResponse.file.fileId;
+      await progress('complete-concentration-proposals', { selectedResults: seen.size,
+        originalResults: units.sourceResults, supportedLimitOnlyResults: units.limitOnly.supportedCount,
+        preservedLimitOnlyResults: units.limitOnly.preserved.length, proposals: concentrationProposals.length });
+    }
     await progress('complete-source-cohort-and-resumed-input', { results: targets.length, pages: targetPages,
       inputBytes: uploaded.bytes, resumedBytes: uploaded.resumedBytes });
 
@@ -251,7 +375,7 @@ export async function receiveWqxOperator(input, { onProgress } = {}) {
     assert.equal(preview.previewSha256, selected.expectedPreviewSha256);
     assert.equal(preview.newPlanSha256, selected.expectedNewPlanSha256);
     assert.equal(preview.documentSha256, selected.expectedDocumentSha256);
-    const scientific = science(originalPlan, preview.plan, selected);
+    const scientific = science(originalPlan, preview.plan, selected, document);
     const saveRequest = { documentRef, newPlanId: selected.newPlanId, reviewId: selected.reviewId,
       expectedPreviewSha256: preview.previewSha256 };
     const saved = await fullJson(source, await source.decisionsSave(saveRequest), 'saved-decision-review');
@@ -304,7 +428,7 @@ export async function receiveWqxOperator(input, { onProgress } = {}) {
       receiverExports[format] = file; await download(receiver, file, 'receiver-' + format);
     }
     const receiverPlan = await fullJson(receiver, await receiver.record({ family: 'plan', id: selected.newPlanId }), 'independent-native-plan');
-    science(originalPlan, receiverPlan, selected);
+    science(originalPlan, receiverPlan, selected, document);
     assert.equal(receiverPlan.planSha256, selected.expectedNewPlanSha256);
     const priorReceiverLaunch = receiverHost.launch;
     await receiverHost.close(); receiverHost = null;
@@ -320,6 +444,42 @@ export async function receiveWqxOperator(input, { onProgress } = {}) {
       oldLaunchId: priorReceiverLaunch.launchId, launchId: receiverHost.launch.launchId });
     await progress('independent-complete-project-reopened', { planSha256: receiverPlan.planSha256,
       decisionReviewSha256: saved.reviewSha256, results: receiverPlan.results.length });
+    if (selected.concentrations) {
+      const native = concentrationReportForDocument(originalPlan, document, { resultPlan: receiverPlan });
+      const expectedCsvSha256 = hash(Buffer.from(concentrationReportCsv(native)));
+      for (const client of [source, receiver]) {
+        const report = await fullJson(client, await client.concentrationReport({ reviewId: selected.reviewId }),
+          client.workspace + '-saved-concentration-report');
+        assert.equal(report.proposalSha256, selected.concentrations.expectedReportSha256);
+        const csvResponse = await client.concentrationReport({ reviewId: selected.reviewId, format: 'csv' });
+        assert(!csvResponse.error); assert.equal(csvResponse.file.sha256, expectedCsvSha256);
+        await download(client, csvResponse.file, client.workspace + '-saved-concentration-csv');
+        for (const format of ['json', 'csv']) {
+          const cliPath = join(root, client.workspace + '-cli-concentration-' + format + '.json');
+          let cliResult = await maybeJson(cliPath);
+          if (!cliResult) {
+            await new Promise((yes, no) => {
+              const child = spawn(process.execPath, ['--max-old-space-size=192',
+                fileURLToPath(new URL('./wqx-workspace-cli.mjs', import.meta.url)),
+                'concentration-report', '--url', mcp.url, '--workspace', client.workspace,
+                '--token-env', 'WQX_RECEIVING_TOKEN', '--timeout-ms', '600000',
+                '--review-id', selected.reviewId, '--format', format, '--save-json', cliPath],
+                { env: environment, stdio: ['ignore', 'ignore', 'inherit'] });
+              child.once('error', no); child.once('exit', (code, signal) => code === 0 ? yes() :
+                no(new Error('The original concentration CLI ended: ' + (signal ?? code))));
+            });
+            cliResult = await maybeJson(cliPath);
+          }
+          assert(cliResult?.file && !cliResult.error, 'The original CLI retained its full native report descriptor.');
+          assert.equal(cliResult.file.sha256, format === 'csv' ? expectedCsvSha256 : csvResponse.reportFile.sha256);
+          const retained = await download(client, cliResult.file, client.workspace + '-cli-report-' + format);
+          concentrationReports.push({ workspace: client.workspace, format, file: cliResult.file,
+            bytes: retained.bytes, sha256: retained.sha256, nativeReportSha256: report.proposalSha256 });
+        }
+      }
+      await progress('complete-concentration-reports-and-cli-reopen', { reports: concentrationReports.length,
+        reportSha256: selected.concentrations.expectedReportSha256 });
+    }
 
     source.close(); receiver.close(); await mcp.close(); mcp = null;
     await sourceHost.close(); sourceHost = null; await receiverHost.close(); receiverHost = null;
@@ -330,6 +490,7 @@ export async function receiveWqxOperator(input, { onProgress } = {}) {
       newPlanSha256: selected.expectedNewPlanSha256, previewSha256: selected.expectedPreviewSha256,
       decisionReviewSha256: saved.reviewSha256, scientific, targetPages, tables, restarts,
       mcpRequests: requests, files: nativeFiles, stages,
+      ...(selected.concentrations ? { concentrationProposals, concentrationReports } : {}),
       exportedBytes: nativeFiles.reduce((sum, file) => sum + file.bytes, 0) };
     lease.assertHeld(); await atomicJson(root, 'receiving-result.json', result);
     return result;

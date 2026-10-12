@@ -165,7 +165,7 @@ export async function odkRequest(connection, path, {
     odkNeed(typeof serialized === 'string' && Buffer.byteLength(serialized) <= ODK_MAX_INPUT_BYTES,
       'ODK_REQUEST_TOO_LARGE', 'The original control request exceeds 64 MiB.', 413);
   }
-  const operationId = body?.reportId ?? body?.exportId ?? body?.id ?? null;
+  const operationId = centralOperationId(body);
   const timeout = AbortSignal.timeout(timeoutMs), controller = new AbortController();
   const relay = selected => { if (!controller.signal.aborted) controller.abort(selected.reason); };
   const onTimeout = () => relay(timeout), onAbort = () => relay(signal);
@@ -205,9 +205,13 @@ export async function odkRequest(connection, path, {
         native.details===undefined?{}:{nativeDetails:native.details}),
         originalResponse:true,operationId:native.operationId??operationId,
         originalStatus:native.status??response.status,
+        ...(native.providerStatus===undefined?{}:{providerStatus:native.providerStatus}),
+        ...(native.retryAfter===undefined?{}:{retryAfter:native.retryAfter}),
         ...(response.headers.get('retry-after')?{retryAfter:response.headers.get('retry-after')}:{})};
       throw Object.assign(odkFailure(typeof native.code==='string'&&native.code.length<=100?
-        native.code:'ODK_REQUEST_FAILED',message,Number.isInteger(native.status)&&native.status>=400&&native.status<=599?native.status:response.status>=400?response.status:502,details),{operationId:details.operationId});
+        native.code:'ODK_REQUEST_FAILED',message,Number.isInteger(native.status)&&native.status>=400&&native.status<=599?native.status:response.status>=400?response.status:502,details),{operationId:details.operationId,
+          ...(details.providerStatus===undefined?{}:{providerStatus:details.providerStatus}),
+          ...(details.retryAfter===undefined?{}:{retryAfter:details.retryAfter})});
     }
     return value;
   }catch(error){
@@ -236,6 +240,37 @@ export async function inspectCentralListener(connection, options) {
   'ODK_LISTENER_CHANGED','The authenticated listener differs from the selected original Central workspace.',409);
   return state;
 }
+/** Keep the original native mutation identity on every post-dispatch failure. */
+export function centralOperationId(input) {
+  return input?.requestId ?? input?.reportId ?? input?.exportId ?? input?.captureId ?? input?.id ?? null;
+}
+export function centralActionRoute(namespace,method) {
+  const actions=namespace==='actions'?CENTRAL_ACTIONS:
+    namespace==='commissioning'?CENTRAL_COMMISSIONING_ACTIONS:null;
+  odkNeed(actions?.has(method),'ODK_ACTION_INVALID','Choose a declared original Central namespace and action.');
+  const readOnly=(namespace==='commissioning'?CENTRAL_COMMISSIONING_READ_ACTIONS:CENTRAL_READ_ACTIONS).has(method);
+  return {path:'/api/'+namespace+'/'+method,readOnly};
+}
+/** SDK and MCP use the same authenticated original response/recovery boundary. */
+export async function requestCentralAction(connection,namespace,method,input={},options={}) {
+  const route=centralActionRoute(namespace,method);
+  const value=await odkRequest(connection,route.path,{
+    ...options,method:'POST',body:input,readOnly:route.readOnly,maximum:64*1024*1024});
+  if(value?.ok!==true||!Object.hasOwn(value,'result')) {
+    const operationId=centralOperationId(input);
+    throw Object.assign(odkFailure('ODK_ACTION_RESPONSE_INVALID',
+      'The original Central action did not return its complete result.',502,
+      {operationId,dispatch:route.readOnly?'read':'unknown'}),{operationId});
+  }
+  return value.result;
+}
+export async function inspectCentralCommissioning(connection,options={}) {
+  const state=await odkRequest(connection,'/api/commissioning/state',{...options,maximum:64*1024*1024});
+  odkNeed(state?.schema==='stellar-forge.central-commissioning.v1'&&
+    state.workspaceId===connection.value.workspaceId&&Number.isSafeInteger(state.revision)&&state.revision>=0,
+    'ODK_COMMISSIONING_CHANGED','The authenticated commissioner differs from the selected original workspace.',409);
+  return state;
+}
 /** A remote client borrows the Applications listener; close never stops that application. */
 export class CentralWorkspaceClient {
   #connection; #fetch; #closed=false;
@@ -251,18 +286,13 @@ export class CentralWorkspaceClient {
     return current;
   }
   async state(options={}){return inspectCentralListener(await this.#current(),{...options,fetchImpl:this.#fetch});}
-  async action(method,input={},options={}){
-    odkNeed(CENTRAL_ACTIONS.has(method),'ODK_ACTION_INVALID','Choose a declared original Central action.');
-    const value=await odkRequest(await this.#current(),'/api/actions/'+method,{
-      ...options,method:'POST',body:input,readOnly:CENTRAL_READ_ACTIONS.has(method),
-      maximum:64*1024*1024,fetchImpl:this.#fetch});
-    if(value?.ok!==true||!Object.hasOwn(value,'result')){
-      const operationId=input.reportId??input.exportId??input.id??null;
-      throw Object.assign(odkFailure('ODK_ACTION_RESPONSE_INVALID',
-        'The original Central action did not return its complete result.',502,
-        {operationId,dispatch:CENTRAL_READ_ACTIONS.has(method)?'read':'unknown'}),{operationId});
-    }
-    return value.result;
+  async namespaceAction(namespace,method,input={},options={}){
+    return requestCentralAction(await this.#current(),namespace,method,input,{...options,fetchImpl:this.#fetch});
+  }
+  action(method,input={},options={}){return this.namespaceAction('actions',method,input,options);}
+  commissioningAction(method,input={},options={}){return this.namespaceAction('commissioning',method,input,options);}
+  async commissioningState(options={}){
+    return inspectCentralCommissioning(await this.#current(),{...options,fetchImpl:this.#fetch});
   }
   connect(input,options){return this.action('connect',{...input,id:input.id??randomUUID()},options);}
   projects(input,options){return this.action('projects',input,options);}
@@ -288,15 +318,32 @@ export class CentralWorkspaceClient {
   releaseStatus(input={},options){return this.action('releaseStatus',input,options);}
   activateRelease(input,options){return this.action('activateRelease',input,options);}
   rollbackRelease(input,options){return this.action('rollbackRelease',input,options);}
+  capturePublisher(input,options){return this.action('capturePublisher',input,options);}
+  receivePublisher(input,options){return this.action('receivePublisher',input,options);}
+  publisherTransfers(input={},options){return this.action('publisherTransfers',input,options);}
+  commissioningRecordHost(input,options){return this.commissioningAction('recordHost',input,options);}
+  commissioningInspect(input,options){return this.commissioningAction('inspect',input,options);}
+  commissioningSaveDraft(input,options){return this.commissioningAction('saveDraft',input,options);}
+  commissioningReadiness(agreement,options){return this.commissioningAction('readiness',agreement,options);}
+  commissioningPrepare(input,options){return this.commissioningAction('prepare',input,options);}
+  commissioningInstall(input,options){return this.commissioningAction('install',input,options);}
+  commissioningCapturePeriod(input,options){return this.commissioningAction('capturePeriod',input,options);}
+  commissioningResumeCapture(input,options){return this.commissioningAction('resumeCapture',input,options);}
+  commissioningDeliver(input,options){return this.commissioningAction('deliver',input,options);}
   async captureStatus(id,options={}){
+
     return odkRequest(await this.#current(),'/api/captures/'+encodeURIComponent(id),
       {...options,maximum:64*1024*1024,fetchImpl:this.#fetch});
   }
   close(){this.#closed=true;}
 }
-export const CENTRAL_READ_ACTIONS=new Set(['projects','forms','wait','sourceFile','exportFile','edition','rows','row','resources','quality','compare','releaseStatus']);
+export const CENTRAL_READ_ACTIONS=new Set(['projects','forms','wait','sourceFile','exportFile','edition','rows','row','resources','quality','compare','releaseStatus','publisherTransfers']);
 export const CENTRAL_ACTIONS=new Set(['connect','createPlan','capture','resume','pause','review',
-  'exportDataset','report','backup','prepareRelease','activateRelease','rollbackRelease',...CENTRAL_READ_ACTIONS]);
+  'exportDataset','report','backup','prepareRelease','activateRelease','rollbackRelease',
+  'capturePublisher','receivePublisher',...CENTRAL_READ_ACTIONS]);
+export const CENTRAL_COMMISSIONING_READ_ACTIONS=new Set(['readiness']);
+export const CENTRAL_COMMISSIONING_ACTIONS=new Set(['recordHost','inspect','saveDraft','prepare','install',
+  'capturePeriod','resumeCapture','deliver',...CENTRAL_COMMISSIONING_READ_ACTIONS]);
 export async function connectCentralWorkspace({connectionFile,directory,fetchImpl=fetch}){
   const connection=await readCentralConnection(connectionFile,{directory});
   await inspectCentralListener(connection,{fetchImpl});

@@ -1,0 +1,17 @@
+{
+  "operation_id": "scf-oecd-cli-briefing-20261012",
+  "capture_id": "REPLACE_WITH_THE_ORIGINAL_SEED_RESULT_ID",
+  "countries": [
+    "CAN",
+    "DEU",
+    "FRA",
+    "GBR",
+    "ITA",
+    "JPN",
+    "USA"
+  ],
+  "start_period": "2024-01",
+  "end_period": null,
+  "title": "OECD leading-indicator briefing · October 2026",
+  "notes": "Selected original monthly amplitude-adjusted CLI observations, with full source metadata and native customer edition."
+}

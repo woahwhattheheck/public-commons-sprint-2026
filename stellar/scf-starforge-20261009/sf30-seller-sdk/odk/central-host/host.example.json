@@ -21,5 +21,6 @@
   "environment": {
     "SERVICE_NODE_OPTIONS": "--max-old-space-size=512"
   },
-  "secret_environment": {}
+  "secret_environment": {},
+  "restore_settings": "preserve"
 }

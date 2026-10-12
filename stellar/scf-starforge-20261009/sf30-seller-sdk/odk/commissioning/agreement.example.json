@@ -1,0 +1,59 @@
+{
+  "schema": "stellar-forge.central-source-agreement.v1",
+  "opportunity_id": "",
+  "name": "",
+  "commercial_scope": {
+    "max_existing_forms": 3,
+    "delivery_business_days": 10
+  },
+  "customer_decisions": {
+    "accountable_project_owner": "",
+    "technical_receiver": "",
+    "authorized_central_origin": "",
+    "project_id": null,
+    "selected_forms": [],
+    "reporting_timezone": "",
+    "periods": [
+      {
+        "label": "",
+        "submitted_from": "",
+        "submitted_before_exclusive": "",
+        "updated_since": null,
+        "page_size": 1000
+      },
+      {
+        "label": "",
+        "submitted_from": "",
+        "submitted_before_exclusive": "",
+        "updated_since": null,
+        "page_size": 1000
+      }
+    ],
+    "late_edit_policy": "",
+    "review_state_inclusion": "",
+    "metric_definitions": [],
+    "cross_form_identity_rules": [],
+    "approved_output_fields": [],
+    "media_retention_selection": ""
+  },
+  "processing": {
+    "reviewStates": "all",
+    "lateEdits": "current-state-at-capture",
+    "portableSource": "complete-selected-capture"
+  },
+  "kickoff": {
+    "status": "proposed",
+    "start": null,
+    "weekdays": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "excludedDates": [],
+    "agreementReference": null,
+    "inputsReadyReference": null,
+    "capacityReference": null
+  }
+}

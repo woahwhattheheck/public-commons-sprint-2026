@@ -28,7 +28,7 @@ See [MANAGED.md](MANAGED.md) for Applications and [MCP.md](MCP.md) for the exist
 2. **Preview the source request.** Choose observations, verified hourly heights and/or separate predictions, inclusive dates, metric/English units, GMT/local standard/local daylight time and datum. Preview shows the exact initial NOAA URLs and chunk plan. It records no source response.
 3. **Start the selected capture.** The application retains the actual station response, then follows the supported resource URLs NOAA advertised in that response. It records accepted, unavailable and failed requests. Pause/resume continues the original capture and keeps its completed responses.
 4. **Inspect the retained edition.** Review source completion, actual timestamp/value coverage, original quality fields, station datums and epochs. Page normalized rows or download the exact response bytes. Leave a dated, source-bound review or follow-up note.
-5. **Prepare a receiving mapping and dataset.** A model-input mapping selects original columns and explicit receiving headings. In dataset preparation, select that saved mapping or keep the original source columns. The native dataset pins the selected mapping revision alongside one immutable edition, table, dates and products for the existing SF30 query engine. Neither action transforms a datum or fills a missing measurement.
+5. **Prepare a receiving mapping and dataset.** A model-input mapping selects original columns and explicit receiving headings. In dataset preparation, select that saved mapping or keep the original source columns. Source-dataset preparation pins one immutable edition, table, dates, products and mapping revision. A reviewed study instead uses **Studies → Use complete delivery in native queries**, preserving its exact released CSV, recorded review, mapping and all source windows for the same SF30 engine. Neither action transforms a datum or fills a missing measurement.
 6. **Inspect and release.** Enter actual authorized payment terms and original publisher settings. Prepare, inspect and explicitly activate/start through the native release control. Enter the generation returned by inspection for a generation-bound change. Customer receipt inspection and receiving use the existing buyer inbox and its original intent IDs.
 7. **Export and reopen.** Export a complete selected table, all originals in a source package, a readable source report, a comparison or the five original customer files. Retain receipts and hashes. Stop/reopen through the same owner; paused requests and uncertain operations require explicit original-request recovery.
 
@@ -45,7 +45,7 @@ A capture covers one to 366 inclusive days. A historical study covers up to five
 - Table projection reads one retained response at a time. Browser/API pages contain at most 500 rows.
 - Combined backfill CSV/JSON/JSONL exports stream completed and explicitly partial editions, each identified in the receipt. A missing part remains declared in the backfill metadata.
 - Comparison processing holds one metadata resource or seven-day product partition at a time. Counts cover the whole comparison; the console retains up to 200 examples per change kind. The JSON export streams every change.
-- Native SF30 dataset preparation has explicit 250,000-row and 256 MiB selected-snapshot limits. For a large historical study, select the annual/windowed dataset needed by the consumer. The five-year archive is not implicitly loaded into one query snapshot.
+- Native SF30 dataset preparation has explicit 250,000-row and 256 MiB selected-snapshot limits. An explicitly selected reviewed study release may enter that native snapshot if its complete CSV fits. A larger release requires a separately reviewed narrower selection; the five-year archive is never implicitly truncated or loaded into one unbounded query.
 
 Exports are written incrementally into private immutable files and finalized with byte counts and SHA-256. The stream limit is 1 GiB. Browser downloads use short-lived, single-use tickets for the same retained file; large exports do not first become an application-side browser Blob. The merchant adapter passes a verified read-only file descriptor to the existing bounded retained-file reader.
 
@@ -118,7 +118,8 @@ Back up or relocate the **complete closed workspace**, including native JSON, ob
 - `iterateEditionRows`, `editionRows` — streamed/bounded projections.
 - `iterateComparisonChanges` — complete bounded comparison.
 - `writeTableExport`, `writeSourcePackage` — immutable streamed exports.
-- `prepareCoastalDataset` — original SF30 dataset preparation.
+- `prepareCoastalDataset` — original SF30 source-edition dataset preparation.
+- `prepareStudyDataset` — the exact immutable reviewed study CSV and its complete native source provenance, using the same SF30 parser and SF82 package.
 - `coopsWorkspaceTools`, `MerchantCoopsWorkspaces` — existing merchant attachment.
 - `openCoopsClient`, `downloadCoopsFiles`, `reopenCoopsFiles` — original calls and complete file receiving.
 
@@ -172,3 +173,5 @@ See [the full analyst workflow and source contracts](analysis/README.md).
 ## Multi-station studies and returned model input
 
 The existing **Studies & receiving** page selects exact edition windows across up to five stations and five years, pins the receiving mapping and actual review, streams complete model-input/source deliveries, and retains bounded returned-file intake plus a complete comparison and receiving decision. See [STUDIES.md](STUDIES.md) for staff, CLI, original operation recovery and Merchant access. The public-reference mapping is [examples/study-input-columns.json](examples/study-input-columns.json); no private buyer model is supplied.
+
+See [Use a reviewed delivery in native queries and publication](STUDIES.md#use-a-reviewed-delivery-in-native-queries-and-publication) for the staff controls, immutable review/source identities, native capacity and same-request recovery contract. The existing publisher generation and payment decisions remain in the original merchant controls.

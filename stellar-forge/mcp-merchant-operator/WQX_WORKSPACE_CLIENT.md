@@ -2,7 +2,7 @@
 
 The maintained WQX client calls the original merchant MCP operator. It uses `openMerchantFileClient` from `retained-download.mjs` for authentication, MCP initialization, request identity and structured tool responses. An existing MCP host can instead supply its native `call()` and stable `endpoint` adapter. The original managed WQX application, provider, buyer and retained file store remain the owners of the work.
 
-`wqx-workspace-client.mjs` exposes typed methods for all 34 published WQX tools. `wqx-workspace-cli.mjs` provides the same complete operations, plus local upload, download and offline reopening. The declarations are `wqx-workspace-client.d.mts` and `wqx-workspace-cli.d.mts`.
+`wqx-workspace-client.mjs` exposes typed methods for all 37 published WQX tools. `wqx-workspace-cli.mjs` provides the same complete operations, plus local upload, download and offline reopening. The declarations are `wqx-workspace-client.d.mts` and `wqx-workspace-cli.d.mts`.
 
 ## Initialize the original WQX host
 
@@ -191,7 +191,7 @@ try {
 
 For an existing native MCP consumer, construct `new WqxWorkspaceClient({client: originalAdapter, workspace: 'water'})`. Its `call(name, args, options)` returns the original structured tool payload and identifies the existing endpoint. `openMerchantFileClient` already implements that contract. Closing this WQX client cancels its own pending reads/waits; native workspace operations preserve their original state.
 
-All 34 tools have named methods. The complete project/capture/analysis/review/plan/edition/merchant/customer methods take `{request: ORIGINAL_REQUEST}` or `{inputRef: COMPLETE_INPUT_REFERENCE}`. Their exact keys come from `WQX_NATIVE_OPERATIONS` in `catalog/wqx-workspace.mjs`. For example:
+All 37 tools have named methods. The complete project/capture/analysis/review/plan/edition/merchant/customer methods take `{request: ORIGINAL_REQUEST}` or `{inputRef: COMPLETE_INPUT_REFERENCE}`. Their exact keys come from `WQX_NATIVE_OPERATIONS` in `catalog/wqx-workspace.mjs`. For example:
 
 ```js
 const analysis = await client.analyze({
@@ -219,3 +219,9 @@ const original = await client.downloadFile({
 | Local `--save-json` write fails after a native response | The complete native response is printed on stdout even if its reserved local output cannot be completed; retain those original IDs and inspect them. |
 
 The client does not automatically replay changing native operations after arbitrary errors. Named-input append replay is supported by the original byte-for-byte contract. Download retries reopen immutable retained bytes. Native customer execution continues to use the original configured buyer, intent and purchase journal.
+
+## Concentration documents and complete reports
+
+`concentrationUnits` reads one immutable plan's exact source groups. `concentrationPrepare` takes a complete document or input reference and one of `fromUnit`, `resultIds`, or `reportedLimitsOnly: true`. Its PREPARED result includes the directly reusable `documentRef`, complete `documentFile`, original JSON proposal `file` and native `reportCsvFile`. The existing input and download methods transfer every byte. `concentrationReport` reopens a saved review's complete JSON or CSV after a project restart or independent receiving.
+
+The corresponding CLI commands are `concentration-units`, `concentration-prepare` and `concentration-report`. The [complete concentration guide](WQX_CONCENTRATIONS.md) provides exact commands and the full source-cohort receiving operation, including blank results, independent limit units and native source/choice binding.

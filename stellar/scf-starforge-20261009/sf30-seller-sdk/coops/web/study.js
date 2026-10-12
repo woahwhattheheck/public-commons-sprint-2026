@@ -40,10 +40,39 @@ globalThis.createCoopsStudyView=function(H){
  function applyEffect(pending,response){
   const effect=pending.studyEffect;if(!effect)return;
   const d=A.drafts[effect.key];if(!d||A.draftTokens[effect.key]!==effect.token){effect.outcome='different_draft_preserved';return;}
+  if(effect.kind==='dataset-prepare'){
+   const r=response.result;
+   if(r?.sourceKind!=='reviewed-study'||r.studyReleaseId!==effect.releaseId||r.studySha256!==effect.studySha256||r.csvSha256!==effect.csvSha256||r.name!==effect.name)
+    throw Object.assign(new Error('The prepared dataset reply differs from its exact original study delivery.'),{uncertain:true});
+   d.preparedDatasetId=r.id;d.preparedName=effect.name;effect.savedId=r.id;effect.outcome='original_study_dataset_applied';
+  }
   if(effect.kind==='upload-start'){
    const r=response.result;if(!r?.id||r.releaseId!==effect.releaseId||r.filename!==effect.filename||r.bytes!==effect.bytes||r.format!==effect.format)throw Object.assign(new Error('The returned-file intake reply differs from its original selection.'),{uncertain:true});
    d.uploadId=r.id;d.original={filename:r.filename,bytes:r.bytes,format:r.format,releaseId:r.releaseId};effect.savedId=r.id;effect.outcome='original_intake_applied';
   }
+ }
+ function datasetReason(release){
+  const file=release.files.find(f=>f.format==='csv'),limits=A.schema.studyDataset??{maximumRows:250000,maximumBytes:268435456};
+  if(!file)return'The original complete CSV is unavailable.';
+  if(release.counts.rows>limits.maximumRows||file.bytes>limits.maximumBytes)return'This complete CSV exceeds the native '+limits.maximumRows.toLocaleString()+'-row / 256 MiB query limit. Save and review a narrower study selection; this delivery remains complete.';
+  const columns=release.manifest.columns,invalid=columns.filter(c=>!(/^[A-Za-z][A-Za-z0-9_]{0,47}$/).test(c)||['constructor','prototype','__proto__'].includes(c));
+  if(invalid.length)return'The delivered headings need an explicitly revised mapping/study before native querying: '+invalid.join(', ')+'. This original CSV will retain its headings.';
+  return'';
+ }
+ function openStudyDataset(release){
+  const key='study-dataset:'+release.id,d=draft(key,{name:release.study.selection.name.slice(0,128),preparedDatasetId:'',preparedName:''}),
+   file=release.files.find(f=>f.format==='csv'),reason=datasetReason(release),prepared=d.preparedDatasetId?(A.view.datasets??[]).find(x=>x.id===d.preparedDatasetId):null;
+  modal('Use the reviewed delivery in native queries',
+   '<p>'+esc(release.study.selection.name)+' · revision '+release.studyRevision+'</p><p class="pin">'+esc(release.id)+'<br>'+esc(release.studySha256)+'</p>'+
+   '<p>The complete released CSV contains '+release.counts.rows.toLocaleString()+' rows and '+(file?.bytes??0).toLocaleString()+' bytes. The original SF30 query and SF82 publisher keep its exact stored review, mapping and source identities.</p>'+
+   '<p>Recorded review: '+esc(release.review.actor)+' · '+esc(release.review.createdAt)+'. Later study or review decisions remain separate; this is the frozen decision attached to this delivery.</p>'+
+   (reason?'<p role="alert">'+esc(reason)+'</p>':'')+
+   '<form id="study-dataset-form" data-release-id="'+esc(release.id)+'" data-key="'+esc(key)+'">'+
+   field(key,'name','Name for the native dataset',d.name,'text','required maxlength="128"')+
+   '<button id="study-dataset-prepare" type="submit" '+(reason?'disabled':'')+'>Prepare or open this named dataset</button></form>'+
+   (prepared?'<p>Original prepared dataset: <span class="pin">'+esc(prepared.id)+'</span> · '+esc(prepared.name)+'. The same name reopens that receipt. Entering another name explicitly prepares a separate dataset from the same frozen delivery.</p>'+button('study-dataset-open','Open saved dataset',prepared.id):'')+
+   details('Released mapping and native basis warnings',{mapping:release.manifest.mapping,warnings:release.study.selection.warnings})+
+   details('Exact released CSV / manifest',{file,manifestSha256:release.manifestSha256}));
  }
  function member(e,tableName='observations'){return{editionId:e?.id??'',beginDate:e?.query.beginDate??'',endDate:e?.query.endDate??'',products:(e?.query.products.filter(p=>tableName==='predictions'?p==='predictions':p!=='predictions')??[]).join(',')};}
  function defaults(){return{studyId:'',expectedStudyRevision:null,name:'',project:'',question:'',owner:'',table:'observations',mappingId:'',basisPolicy:'uniform_requests',members:A.allEditions.length?[member(A.allEditions[0])]:[],note:''};}
@@ -92,7 +121,7 @@ globalThis.createCoopsStudyView=function(H){
    editor()+(shown?savedMarkup(shown):'')+
    '<section class="card"><h2>Immutable deliveries</h2>'+table(['Study / revision','Original review / delivered rows','Files and receiving'],releases().slice().reverse().map(r=>[
     esc(r.study.selection.name)+' · '+r.studyRevision,esc(r.review.actor)+' · '+esc(r.review.createdAt)+'<br>'+r.counts.rows.toLocaleString()+' rows',
-    fileButtons(r.files)+button('study-return-open','Retain a returned CSV or JSONL',r.id)+button('study-release-detail','Exact delivery manifest',r.id)]))+'</section>'+
+    fileButtons(r.files)+button('study-return-open','Retain a returned CSV or JSONL',r.id)+button('study-release-detail','Exact delivery manifest',r.id)+button('study-dataset','Use complete delivery in native queries',r.id)]))+'</section>'+
    returnMarkup()+
    '<section class="card"><h2>Returned files and decisions</h2>'+table(['Original file / study','Comparison',''],returns().slice().reverse().map(r=>{
     const decision=receivings().filter(d=>d.returnId===r.id).at(-1);return[esc(r.filename)+'<br>'+esc(r.studyId)+' · '+r.studyRevision,
@@ -195,6 +224,19 @@ globalThis.createCoopsStudyView=function(H){
    await perform('study.review',{studyId:s.id,studyRevision:s.revision,studySha256:s.sha256,expectedReviewId:base?.id??'',actor:d.actor,status:d.status,note:d.note,acknowledgedWarnings:clone(d.acknowledgedWarnings)},{draftKey:key});
    close();renderPage();return;
   }
+  if(form.id==='study-dataset-form'){
+   const release=selected(releases(),form.dataset.releaseId),key=form.dataset.key,d=draft(key,{});
+   if(key!=='study-dataset:'+release.id)throw new Error('Keep the original released study selection.');
+   if(d.preparedDatasetId&&d.preparedName===d.name){
+    const saved=(A.view.datasets??[]).find(x=>x.id===d.preparedDatasetId);
+    if(saved?.studyReleaseId!==release.id||saved.name!==d.name)throw new Error('Inspect the retained original preparation before issuing another dataset.');
+    close();await navigate('datasets');return;
+   }
+   const reason=datasetReason(release);if(reason)throw new Error(reason);
+   await perform('study.dataset.prepare',{releaseId:release.id,name:d.name},{studyEffect:{kind:'dataset-prepare',key,token:A.draftTokens[key],
+    releaseId:release.id,studySha256:release.studySha256,csvSha256:release.files.find(f=>f.format==='csv').sha256,name:d.name}});
+   close();await navigate('datasets');return;
+  }
   if(form.id==='study-upload-form')return upload(form);
   if(form.id==='study-receiving-form'){
    const r=selected(returns(),form.dataset.returnId),key=form.dataset.key,d=draft(key,{}),base=A.draftBases[key]?.record;
@@ -230,6 +272,8 @@ globalThis.createCoopsStudyView=function(H){
    if(latest?.status!=='reviewed')throw new Error('Review this exact study revision before preparing its delivery.');
    await perform('study.export',{studyId:s.id,studyRevision:s.revision,studySha256:s.sha256,reviewId:latest.id});renderPage();return;
   }else if(cmd==='study-file')return download({kind:'export',id});
+  else if(cmd==='study-dataset'){openStudyDataset(selected(releases(),id));return;}
+  else if(cmd==='study-dataset-open'){selected(A.view.datasets,id);close();await navigate('datasets');return;}
   else if(cmd==='study-release-detail'){modal('Exact retained delivery manifest',details('Original complete manifest',selected(releases(),id).manifest));return;}
   else if(cmd==='study-return-open'){uploading=false;selectedFile=null;setDraft('studyReturn',{releaseId:id,format:'csv',note:'',uploadId:'',original:null});await persist();renderPage();return;}
   else if(cmd==='study-upload-open'){
@@ -265,7 +309,7 @@ globalThis.createCoopsStudyView=function(H){
   if(!pending.request.action.startsWith('study.'))return null;
   const request=clone(pending.request),native=response.view.operations.find(o=>o.operationId===request.operationId);
   if(request.action==='study.return.chunk'){delete request.payload.base64;request.payloadStorage='Original bytes retained by the native upload chunk digest; this completed history entry is a receipt, not a replay request.';}
-  const r=response.result,result=Object.fromEntries(['id','state','studyId','studyRevision','studySha256','releaseId','returnId','comparisonSha256','receivedBytes','bytes','sha256','status'].filter(k=>r?.[k]!==undefined).map(k=>[k,r[k]]));
+  const r=response.result,result=Object.fromEntries(['id','state','sourceKind','studyId','studyRevision','studySha256','studyReleaseId','snapshot','csvSha256','rows','sourceManifestSha256','releaseId','returnId','comparisonSha256','receivedBytes','bytes','sha256','status'].filter(k=>r?.[k]!==undefined).map(k=>[k,r[k]]));
   return{request,originalRequestSha256:native?.requestSha256??null,response:{operationId:response.operationId,reused:response.reused,result},draftEffect:pending.draftEffect??null,studyEffect:pending.studyEffect??null,originalResultStorage:'Read the original native operation for the complete immutable result.',completedAt:new Date().toISOString()};
  }
  return{render,binding,savedSubject,nativeDraft,applyDraft,applyEffect,completedHistory,submit,click};

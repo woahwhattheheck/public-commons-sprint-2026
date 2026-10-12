@@ -79,12 +79,13 @@ async function lfSourcesView(context){
  lfButtons([lfButton("original","Download original"),'<button data-action="versions" '+lfData("load_source",r)+'>Source history</button>'])+
  '<small class="lf-wrap">'+h(p.original.name)+" · "+h(p.original.bytes)+" bytes · "+h(p.original.digest)+'</small>';
  if(editable)out+=lfDraftNotice("load_source",r,"reload-source")+'<details><summary>Source description</summary>'+lfSourceMetadata("lf-meta-",lfSourceDraft(r),'data-lf-source-meta="1"')+lfButton("describe","Save source description")+'</details>';
- if(p.inspection.sheets.length){
-  const sheet=p.inspection.sheets.find(s=>s.name===lfSelection.sheet)||p.inspection.sheets[0];context.sheet=sheet.name;
-  const mode=lfSelection.sourceTable==="sheet"||p.normalised?lfSelection.sourceTable:"sheet";
-  const page=await lfPreview("load_source",r.id,{revision:r.revision,table:mode,sheet:sheet.name,offset:lfSelection.offset,limit:25,column_offset:lfSelection.columnOffset});
+ if(p.inspection.sheets.length||p.normalised){
+  const sheet=p.inspection.sheets.find(s=>s.name===lfSelection.sheet)||p.inspection.sheets[0];context.sheet=sheet?.name||"";
+  const choices=[...(sheet?[["sheet","Original cells"]]:[]),...(p.normalised?[["observations","Mapped observations"],["missing","Missing original cells"]]:[])];
+  const mode=choices.some(([value])=>value===lfSelection.sourceTable)?lfSelection.sourceTable:choices[0][0];
+  const page=await lfPreview("load_source",r.id,{revision:r.revision,table:mode,...(sheet?{sheet:sheet.name}:{}),offset:lfSelection.offset,limit:25,column_offset:lfSelection.columnOffset});
   context.sourcePage=page;
-  out+='<div class="lf-grid">'+lfChoice("Source view","lf-source-table",[["sheet","Original cells"],...(p.normalised?[["observations","Mapped observations"],["missing","Missing original cells"]]:[])],mode)+lfChoice("Original sheet","lf-sheet",p.inspection.sheets.map(s=>[s.name,s.name+" ("+s.rows+" × "+s.columns+")"]),sheet.name)+'</div>';
+  out+='<div class="lf-grid">'+lfChoice("Source view","lf-source-table",choices,mode)+(sheet?lfChoice("Original sheet","lf-sheet",p.inspection.sheets.map(s=>[s.name,s.name+" ("+s.rows+" × "+s.columns+")"]),sheet.name):"")+'</div>';
   if(mode==="sheet"){
    out+=lfTable(["Row",...page.columns],page.rows.map(row=>[h(row.row),...row.cells.map((v,i)=>'<span title="'+h(sheet.name+"!"+page.columns[i]+row.row)+'">'+h(v??"")+'</span>')]));
    out+=lfButtons([lfButton("columns-prev","Earlier columns",lfSelection.columnOffset===0?"disabled":""),lfButton("columns-next","Later columns",page.column_offset+page.columns.length>=page.total_columns?"disabled":"")]);
@@ -98,7 +99,7 @@ async function lfSourcesView(context){
   out+=lfButton("map","Map and inspect observations");
  }
  if(editable&&(p.state==="MAPPED"||p.inspection.format==="reference")){
-  out+='<h3>Accept this source edition</h3><p>'+h(p.row_count||0)+' mapped observations · '+h(p.missing_cells||0)+' selected missing cells.</p>'+lfArea("Source review","lf-source-note","",'rows="3"')+(p.missing_cells?'<label class="lf-check"><input id="lf-missing-ack" type="checkbox">I reviewed the selected missing cells.</label>':"")+lfButton("accept","Accept original source and mapping");
+  out+='<h3>Accept this source edition</h3><p>'+h(p.row_count||0)+' mapped observations · '+h(p.missing_cells||0)+' selected missing cells.</p>'+lfArea("Source review","lf-source-note","",'rows="3"')+(p.missing_cells?'<label class="lf-check"><input id="lf-missing-ack" type="checkbox">I reviewed the selected missing cells.</label>':"")+lfButton("accept","Accept original source and mapping")+'<p id="lf-source-unsaved" class="lf-meta" hidden>Save the source description and map the edited tables before accepting this edition.</p>';
  }
  if(!editable)out+='<h3>Prepare a revised edition</h3>'+lfArea("What needs to change?","lf-source-revision-note","",'rows="2"')+lfButton("revise-source","Create revised source edition");
  return out+'</section>';
@@ -188,7 +189,7 @@ async function lfReviewsView(context){
   out+='<h3>Review this exact comparison</h3>'+context.report.issues.map(issue=>'<label class="lf-check"><input type="checkbox" data-lf-issue="'+h(issue.id)+'"'+lfChecked(draft.acknowledged.includes(issue.id))+'><span><strong>'+h(issue.title)+'</strong> — '+h(issue.detail)+'</span></label>').join("")+
    lfArea("Review conclusion","lf-review-note",draft.note,'data-lf-review-note="1" rows="4"')+
    '<p>'+draft.decisions.length+' retained row decisions. A follow-up or exclusion remains visible in the final report.</p>'+
-   lfButtons([lfButton("decide","Save reviewer decisions"),...(p.state==="REVIEWED"?[lfButton("finalize","Finalize this reviewed edition")]:[])]);
+   lfButtons([lfButton("decide","Save reviewer decisions"),...(p.state==="REVIEWED"?[lfButton("finalize","Finalize this reviewed edition")]:[])])+'<p id="lf-review-unsaved" class="lf-meta" hidden>Save the edited conclusion and row decisions before finalizing this edition.</p>';
  }else out+='<h3>Finalized conclusion</h3><p>'+h(p.review.note)+'</p>'+lfButtons([lfButton("export","Build complete analyst delivery")])+lfArea("Reason for a new review","lf-reopen-note","",'rows="2"')+lfButton("reopen","Reopen as a new review edition");
  const exports=lfRecords("load_export").filter(e=>e.payload.review.id===r.id);
  if(exports.length)out+='<h3>Complete retained deliveries</h3>'+lfTable(["Finalized edition","Contents","Downloads"],exports.map(e=>[h("r"+e.payload.review.revision+" · "+e.created),h(e.payload.summary.comparison_rows+" observations · "+e.payload.summary.workbook_sheets+" workbook sheets"),
@@ -218,17 +219,18 @@ async function loadForecastView(){
  const body=await builder(context);
  return {html:'<div class="lf-workspace"><div class="lf-nav">'+lfPanes.map(p=>lfButton("pane",({sources:"Sources",plans:"Review plans",reviews:"Analyst reviews",receiving:"Receiving"})[p],'data-pane="'+p+'" '+(p===lfSelection.pane?'class="active"':""))).join("")+'</div>'+body+'</div>',context};
 }
-function loadForecastCommitView(view){lfCurrent=view.context;lfSaveSelection();}
+function loadForecastCommitView(view){lfCurrent=view.context;lfSaveSelection();lfUpdateTerminalButtons();}
 function loadForecastOperationSaved(action,record){
  lfDraftRevisions.delete(record.kind+":"+record.id);
- if(record.kind==="load_source"){lfSelection.source=record.id;lfSelection.pane="sources";lfMappingDrafts.delete(record.id);lfSourceDrafts.delete(record.id);if(action==="load.source.upload"||action==="load.source.revise"){lfSelection.offset=0;lfSelection.columnOffset=0;lfSelection.sheet="";lfSelection.sourceTable="sheet";}}
+ if(record.kind==="load_source"){lfSelection.source=record.id;lfSelection.pane="sources";if(action!=="load.source.describe")lfMappingDrafts.delete(record.id);lfSourceDrafts.delete(record.id);if(action==="load.source.describe")lfDraftRevisions.set("load_source:"+record.id,record.revision);if(action==="load.source.upload"||action==="load.source.revise"){lfSelection.offset=0;lfSelection.columnOffset=0;lfSelection.sheet="";lfSelection.sourceTable="sheet";}}
  if(record.kind==="load_plan"){lfSelection.plan=record.id;lfPlanDrafts.delete(record.id);lfPlanDrafts.delete("new");}
  if(record.kind==="load_review"){lfSelection.review=record.id;lfSelection.pane="reviews";lfReviewDrafts.delete(record.id);if(action==="load.review.prepare"){lfSelection.offset=0;lfSelection.search="";lfSelection.table="comparison";}}
  if(record.kind==="load_received"){lfSelection.received=record.id;lfSelection.pane="receiving";if(record.payload.editable_plan){lfSelection.plan=record.payload.editable_plan.id;lfSelection.pane="plans";}}
  lfSaveSelection();
 }
-function lfCleanMappings(record){
- return lfMappingDraft(record).map(original=>{
+function lfCleanMappings(record){return lfCleanMappingValues(lfMappingDraft(record));}
+function lfCleanMappingValues(values){
+ return values.map(original=>{
   const m=lfClone(original);m.aliases={};
   const aliases=m._aliases??Object.entries(original.aliases||{}).map(([a,b])=>a+" = "+b).join("\n");
   for(const line of aliases.split("\n").map(l=>l.trim()).filter(Boolean)){const at=line.indexOf("=");if(at<1||!line.slice(at+1).trim())throw new Error("Each alias needs original = reviewed label.");const key=line.slice(0,at).trim();if(Object.hasOwn(m.aliases,key))throw new Error("The same original label has two aliases.");m.aliases[key]=line.slice(at+1).trim();}
@@ -237,6 +239,18 @@ function lfCleanMappings(record){
   for(const k of ["first_row","last_row","period_row"])if(m[k]!==undefined)m[k]=Number(m[k]);
   return m;
  });
+}
+function lfCanonical(value){if(Array.isArray(value))return "["+value.map(lfCanonical).join(",")+"]";if(value&&typeof value==="object")return "{"+Object.keys(value).sort().map(k=>JSON.stringify(k)+":"+lfCanonical(value[k])).join(",")+"}";return JSON.stringify(value);}
+function lfSourceMetadataChanged(record){const draft=lfSourceDraft(record);return ["label","publisher","vintage","published","status","source_url"].some(k=>String(draft[k]??"")!==String(record.payload[k]??""));}
+function lfSourceChanged(record){if(lfSourceMetadataChanged(record))return true;try{return lfCanonical(lfCleanMappings(record))!==lfCanonical(lfCleanMappingValues(record.payload.mappings||[]));}catch(_){return true;}}
+function lfReviewChanged(record){
+ const fields=value=>({note:value?.note||"",acknowledged:[...(value?.acknowledged||[])].sort(),decisions:[...(value?.decisions||[])].map(d=>({key:d.key,decision:d.decision,note:d.note})).sort((a,b)=>a.key.localeCompare(b.key))});
+ return lfCanonical(fields(lfReviewDraft(record)))!==lfCanonical(fields(record.payload.review));
+}
+function lfUpdateTerminalButtons(){
+ const source=lfCurrent.source,review=lfCurrent.review,accept=document.querySelector('[data-action="lf-accept"]'),finalize=document.querySelector('[data-action="lf-finalize"]');
+ if(accept&&source){const changed=lfSourceChanged(source),stale=lfStaleDraft("load_source",source);accept.disabled=changed||stale;const note=$("lf-source-unsaved");if(note)note.hidden=!changed;}
+ if(finalize&&review){const changed=lfReviewChanged(review),stale=lfStaleDraft("load_review",review);finalize.disabled=changed||stale;const note=$("lf-review-unsaved");if(note)note.hidden=!changed;}
 }
 function lfPlanBody(){
  const r=lfCurrent.plan,p=lfClone(lfPlanDraft(r));delete p._operation_id;
@@ -258,8 +272,8 @@ async function loadForecastAction(action,button){
  if(action==="original")return download("/api/object/"+r.payload.original.digest,r.payload.original.name);
  if(action==="add-mapping"){lfMappingDraft(r).push(lfNewMapping(r));return render();}
  if(action==="remove-mapping"){lfMappingDraft(r).splice(index,1);return render();}
- if(action==="map")return act("load.source.map",{id:r.id,expected:lfDraftRevision("load_source",r),mappings:lfCleanMappings(r)});
- if(action==="accept")return act("load.source.accept",{id:r.id,expected:r.revision,note:value("lf-source-note"),acknowledge_missing:!!$("lf-missing-ack")?.checked});
+ if(action==="map"){if(lfSourceMetadataChanged(r))throw new Error("Save the source description before mapping. Your table edits are retained.");return act("load.source.map",{id:r.id,expected:lfDraftRevision("load_source",r),mappings:lfCleanMappings(r)});}
+ if(action==="accept"){if(lfSourceChanged(r)||lfStaleDraft("load_source",r))throw new Error("Save the source description and mapping, or reload the changed source, before accepting this edition.");return act("load.source.accept",{id:r.id,expected:lfDraftRevision("load_source",r),note:value("lf-source-note"),acknowledge_missing:!!$("lf-missing-ack")?.checked});}
  if(action==="revise-source")return act("load.source.revise",{source:ref(r),note:value("lf-source-revision-note")});
  if(action==="source-prev"||action==="source-next"){lfSelection.offset=Math.max(0,lfSelection.offset+(action.endsWith("next")?25:-25));return render();}
  if(action==="columns-prev"||action==="columns-next"){lfSelection.columnOffset=Math.max(0,lfSelection.columnOffset+(action.endsWith("next")?20:-20));return render();}
@@ -285,7 +299,7 @@ async function loadForecastAction(action,button){
   lfSelection.plan=plan.id;lfSelection.pane="plans";return render();
  }
  if(action==="decide"){const draft=lfReviewDraft(review);return act("load.review.decide",{id:review.id,expected:lfDraftRevision("load_review",review),note:draft.note,acknowledged:draft.acknowledged,decisions:draft.decisions});}
- if(action==="finalize")return act("load.review.finalize",{id:review.id,expected:review.revision,expected_report_digest:review.payload.report.digest});
+ if(action==="finalize"){if(lfReviewChanged(review)||lfStaleDraft("load_review",review))throw new Error("Save the edited conclusion and row decisions, or reload the changed review, before finalizing this edition.");return act("load.review.finalize",{id:review.id,expected:lfDraftRevision("load_review",review),expected_report_digest:review.payload.report.digest});}
  if(action==="reopen")return act("load.review.reopen",{id:review.id,expected:review.revision,note:value("lf-reopen-note")});
  if(action==="export")return act("load.review.export",{review:ref(review)});
  if(action==="download-export"){const e=lfRecords("load_export").find(e=>e.id===button.dataset.id),file=e.payload[button.dataset.file];return download("/api/object/"+file.digest,file.name);}
@@ -315,6 +329,7 @@ function lfCaptureInput(target){
  }
  if(target.dataset.lfReviewNote!==undefined&&lfCurrent.review)lfReviewDraft(lfCurrent.review).note=target.value;
  if(target.dataset.lfIssue!==undefined&&lfCurrent.review){const d=lfReviewDraft(lfCurrent.review),id=target.dataset.lfIssue;d.acknowledged=d.acknowledged.filter(v=>v!==id);if(target.checked)d.acknowledged.push(id);}
+ lfUpdateTerminalButtons();
 }
 document.addEventListener("input",event=>{if(typeof tab!=="undefined"&&tab==="load")lfCaptureInput(event.target);});
 document.addEventListener("change",event=>{
