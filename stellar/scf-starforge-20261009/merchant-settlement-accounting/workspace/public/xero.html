@@ -12,6 +12,7 @@
     <aside class="xero-sidebar">
       <label>Operator <input id="actor" autocomplete="name" maxlength="120" placeholder="Name for the accounting record"></label>
       <p id="connection" class="muted"></p>
+      <details id="managed-connection" hidden><summary>Selected connection</summary><div id="managed-connection-content"></div></details>
       <button id="refresh" type="button">Refresh workspace</button>
       <nav aria-label="Xero workflow"><a href="#organization">Organization</a><a href="#prepare">Prepare journals</a><a href="#saved">Saved journals</a></nav>
       <p class="muted">Payments and verified refunds keep their original source. Enter each accounting value in the selected organization's base currency.</p>
@@ -21,7 +22,7 @@
       <div id="notice" role="status" aria-live="polite" hidden></div>
       <section id="organization" class="panel">
         <h2>1. Select the Xero organization and accounts</h2>
-        <p>Capture the native organization and chart of accounts with the configured connection, or import the original JSON responses exported from Xero.</p>
+        <p>Read the current organization and chart of accounts through the selected connection, or import the original JSON responses exported from Xero. The managed connection keeps the reviewed tenant selected.</p>
         <form id="context-form">
           <div class="xero-grid"><label>Organization name <input name="name" maxlength="160" required></label><label>Xero tenant ID <input name="tenantId" required placeholder="Organization UUID" spellcheck="false"></label></div>
           <div class="xero-grid"><label>Organization response <input name="organizationFile" type="file" accept=".json,application/json"></label><label>Accounts response <input name="accountsFile" type="file" accept=".json,application/json"></label></div>

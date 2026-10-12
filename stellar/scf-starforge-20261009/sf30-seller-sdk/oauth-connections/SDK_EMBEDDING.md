@@ -296,3 +296,9 @@ address policy; endpoint, TLS, response-size, timeout and credential-state
 rules remain in the maintained OAuth transport. The original SF30 upstream
 launcher selects configured egress through trusted host configuration; neither
 this example nor an operator request body chooses a proxy.
+
+## Native Xero tenant and accounting owner
+
+The typed `@tokenjunkielabs/starforge-merchant/seller/oauth-connections/xero` export uses this maintained registry and provider to discover the actual native connection array and retain an explicit connection ID / tenant ID choice. `previewXeroSelection` captures the selected original Organisation and Accounts responses; `saveXeroSelection` seals their review under the original lock with an expected prior selection identity.
+
+`openXeroOAuthClient({registry,selection,...runtime})` returns the existing native Xero client for `startAccountingWorkspace({...,xeroClient:client})`. It forwards the optional borrowed `agent` to the original OAuth owner and accepts the trusted native resource `fetchImpl` separately. Close accounting first, then the native client owner; the shared registry and borrowed Agent remain with the host that created them. `startXeroAccountingWorkspace` owns and closes its registry as well. See the [complete Xero guide](./XERO.md) for discovery, review, saved tenant recovery, native operations and CLI examples.
