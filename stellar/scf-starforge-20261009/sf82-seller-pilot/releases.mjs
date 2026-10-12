@@ -1,5 +1,5 @@
 // MIT. Version original SF61 exports and SF30 native merchant sources through SF82.
-import { open, readFile, lstat, mkdir, readdir, rename, rm, rmdir, unlink, copyFile, realpath } from 'node:fs/promises';
+import { open, readFile, lstat, mkdir, readdir, rename, rm, rmdir, unlink, copyFile, realpath, link } from 'node:fs/promises';
 import { constants as fsConstants } from 'node:fs';
 import { createHash, randomUUID } from 'node:crypto';
 import { join, resolve, dirname, relative, isAbsolute, sep } from 'node:path';
@@ -243,10 +243,27 @@ export async function initReleaseStore(root, { resume = false } = {}) {
         throw new TypeError('Preserve releases whose original state is missing.');
       const state = { schema: STORE, createdAt: new Date().toISOString(), generation: 0,
         active: null, previous: null, history: [] };
-      await lifetime.assert();
-      // The original complete temporary+rename writer never exposes short state.
-      await atomic(join(root, 'state.json'), state);
-      return { root, ...state };
+      const temporary = join(root, 'state.json.' + randomUUID() + '.tmp');
+      let ownedTemporary = false;
+      try {
+        const handle = await open(temporary, 'wx', 0o600);
+        ownedTemporary = true;
+        try { await handle.writeFile(JSON.stringify(state, null, 2) + '\n'); await handle.sync(); }
+        finally { await handle.close(); }
+        await lifetime.assert();
+        let published = true;
+        try { await link(temporary, join(root, 'state.json')); }
+        catch (error) { if (error.code !== 'EEXIST') throw error; published = false; }
+        // Exclusive publication also preserves a concurrent legacy initializer,
+        // whose default path predates the original kernel state lease.
+        await syncDirectory(root);
+        return { root, ...(published ? state : await readReleaseState(root)) };
+      } finally {
+        if (ownedTemporary) {
+          await unlink(temporary).catch(error => { if (error.code !== 'ENOENT') throw error; });
+          await syncDirectory(root);
+        }
+      }
     } finally { await lifetime.close(); }
   }
   await mkdir(root, { mode: 0o700 });
