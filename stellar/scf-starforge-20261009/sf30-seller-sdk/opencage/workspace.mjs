@@ -17,7 +17,7 @@ const initialDecision=()=>({revision:0,current:null,history:[]});
 const safeError=error=>typeof error?.code==='string' && /^[A-Z][A-Z0-9_]{0,100}$/.test(error.code) ? error.code : 'GEOCODE_OPERATION_FAILED';
 const same=(a,b)=>digest(jsonBytes(a))===digest(jsonBytes(b));
 const now=()=>new Date().toISOString();
-function requestFor(configuration,id,productId,input) {
+export function requestFor(configuration,id,productId,input) {
   identifier(id);
   const product=productFor(configuration.plan,productId),query=bindGeocodeQuery(product,input);
   const url=new URL(product.path,configuration.terms.publicOrigin);url.search=queryParameters(query).toString();
@@ -49,6 +49,36 @@ function validateObservation(observation,request,bytes) {
   const parsed=readGeocodeResponse(bytes,{httpStatus:observation.response.status,mode:request.mode,query:request.query});
   return {parsed,headers:safeHeaders};
 }
+export function decodeGeocodeCapture(request,capture,decision=initialDecision()) {
+  const report=JSON.parse(capture.files.get('capture.json')??'null'),body=capture.files.get('response.json');
+  if(!object(report) || !body || !capture.files.has('request.json') ||
+      !same(JSON.parse(capture.files.get('request.json')),request) ||
+      report.requestSha256!==digest(jsonBytes(request)) || report.responseSha256!==digest(body) ||
+      report.responseBytes!==body.length || report.complete!==true)fail('GEOCODE_CAPTURE_IDENTITY_CHANGED');
+  const identity=digest(jsonBytes({requestSha256:report.requestSha256,responseSha256:report.responseSha256,
+    captureSha256:digest(capture.files.get('capture.json')),
+    files:[...capture.files].map(([name,value])=>({name,sha256:digest(value)}))}));
+  if(identity!==capture.manifest.identity)fail('GEOCODE_CAPTURE_IDENTITY_CHANGED');
+  let parsed=null;
+  if(report.bodyOrigin==='OPENCAGE_NATIVE_JSON' || report.bodyOrigin==='IMPORTED_OPENCAGE_HTTP' ||
+      report.bodyOrigin==='ORIGINAL_SF88_BUYER_RESULT') {
+    parsed=readGeocodeResponse(body,{httpStatus:report.providerStatus,mode:request.mode,query:request.query});
+  }
+  decisionOf(decision,digest(body),parsed?.candidates.length??0);
+  return {request,state:{state:'COMPLETE',...report},capture,decision,parsed};
+}
+
+export function deliveryForCapture(value) {
+  if(!value.parsed || value.state.providerStatus!==200)fail('GEOCODE_RESULT_NOT_DELIVERABLE');
+  return new GeocodeDelivery({bytes:value.capture.files.get('response.json'),request:value.request,
+    provenance:{kind:value.state.bodyOrigin,captureIdentity:value.capture.manifest.identity,
+      captureManifestSha256:value.capture.manifestSha256,
+      ...(value.state.observation?.reusedCapture?{reusedCapture:value.state.observation.reusedCapture}:{}),
+      ...(value.state.observation?.merchantSelection ? {merchantSelection:value.state.observation.merchantSelection,
+        originalBuyerRequest:value.state.observation.originalRequest} : {})},decision:value.decision,
+    attachments:new Map([...value.capture.files].filter(([name])=>name!=='response.json'))});
+}
+
 export class GeocodeWorkspace {
   static async open(directory,{plan,terms,env=process.env,lookup,clock,readOnly=false}={}) {
     directory=await privateDirectory(resolve(directory),{create:!readOnly});
@@ -113,23 +143,8 @@ export class GeocodeWorkspace {
       return {directory,request,state,capture:null,decision:initialDecision()};
     }
     const capture=await readBundle(join(directory,'capture'),{schema:CAPTURE});
-    const report=JSON.parse(capture.files.get('capture.json')??'null'),body=capture.files.get('response.json');
-    if(!object(report) || !body || !capture.files.has('request.json') ||
-        !same(JSON.parse(capture.files.get('request.json')),request) ||
-        report.requestSha256!==digest(jsonBytes(request)) || report.responseSha256!==digest(body) ||
-        report.responseBytes!==body.length || report.complete!==true)fail('GEOCODE_CAPTURE_IDENTITY_CHANGED');
-    const identity=digest(jsonBytes({requestSha256:report.requestSha256,responseSha256:report.responseSha256,
-      captureSha256:digest(capture.files.get('capture.json')),
-      files:[...capture.files].map(([name,value])=>({name,sha256:digest(value)}))}));
-    if(identity!==capture.manifest.identity)fail('GEOCODE_CAPTURE_IDENTITY_CHANGED');
-    let parsed=null;
-    if(report.bodyOrigin==='OPENCAGE_NATIVE_JSON' || report.bodyOrigin==='IMPORTED_OPENCAGE_HTTP' ||
-        report.bodyOrigin==='ORIGINAL_SF88_BUYER_RESULT') {
-      parsed=readGeocodeResponse(body,{httpStatus:report.providerStatus,mode:request.mode,query:request.query});
-    }
     const decision=await exists(join(directory,'decision.json')) ? await readJson(join(directory,'decision.json'),1048576) : initialDecision();
-    decisionOf(decision,digest(body),parsed?.candidates.length??0);
-    return {directory,request,state:{state:'COMPLETE',...report},capture,decision,parsed};
+    return {directory,...decodeGeocodeCapture(request,capture,decision)};
   }
   async _complete(directory,request,response,observation,extra=[]) {
     const body=response.body instanceof Uint8Array ? Buffer.from(response.body) : jsonBytes(response.body);
@@ -144,7 +159,7 @@ export class GeocodeWorkspace {
       captureSha256:digest(jsonBytes(report)),files:entries.map(([name,value])=>({name,sha256:digest(value)}))}));
     await publishBundle(join(directory,'capture'),CAPTURE,identity,entries,{requestId:request.id,
       requestSha256:report.requestSha256,responseSha256:report.responseSha256});
-    return this.get(request.id);
+    const result=await this.get(request.id);await this._observeBatch(result);return result;
   }
   async get(id) {
     const value=await this._read(id),body=value.capture?.files.get('response.json');
@@ -156,10 +171,11 @@ export class GeocodeWorkspace {
       captureIdentity:value.capture?.manifest.identity??null,
       files:value.capture?.manifest.files??[]};
   }
-  async overview() {
-    const requests=[];
-    for(const id of (await readdir(join(this.directory,'requests'))).sort()) {
-      if(!/^[a-z][a-z0-9-]{0,47}$/.test(id))continue;
+  async overview({offset=0,limit=null}={}) {
+    if(!Number.isSafeInteger(offset)||offset<0||limit!==null&&(!Number.isSafeInteger(limit)||limit<1||limit>1000))fail('GEOCODE_REQUEST_PAGE_INVALID');
+    const ids=(await readdir(join(this.directory,'requests'))).filter(id=>/^[a-z][a-z0-9-]{0,47}$/.test(id)).sort();
+    const selected=limit===null?ids:ids.slice(offset,offset+limit),requests=[];
+    for(const id of selected) {
       try {
         const value=await this.get(id);requests.push({id,productId:value.request.productId,query:value.request.query,
           state:value.state.state,outcome:value.state.outcome??null,dispatched:value.state.dispatched,
@@ -172,9 +188,51 @@ export class GeocodeWorkspace {
     if(await exists(join(this.releaseRoot,'state.json')))merchant=await releaseStatus(this.releaseRoot);
     return {schema:WORKSPACE,identity:this.configuration.identity,configuration:structuredClone(this.configuration),
       source:this.source.inspect(),requests,merchant,ownsRunningRelease:Boolean(this.runtime),
-      totals:{requests:requests.length,completed:requests.filter(r=>r.state==='COMPLETE').length,
-        selected:requests.filter(r=>r.selectedIndex!==null && r.selectedIndex!==undefined).length}};
+      ...(limit!==null?{pagination:{offset,limit,total:ids.length,nextOffset:offset+limit<ids.length?offset+limit:null}}:{}),
+      totals:{requests:ids.length,completed:limit===null?requests.filter(r=>r.state==='COMPLETE').length:null,
+        selected:limit===null?requests.filter(r=>r.selectedIndex!==null && r.selectedIndex!==undefined).length:null}};
   }
+  async batches() {
+    if(!this._batchOpening)this._batchOpening=import('./batch.mjs').then(({GeocodeBatches})=>
+      this._batches=new GeocodeBatches(this)).catch(error=>{this._batchOpening=null;throw error;});
+    return this._batchOpening;
+  }
+  async _observeBatch(value) {
+    const match=/^gb-([a-f0-9]{20})-/.exec(value.request.id);
+    if(match&&await exists(join(this.directory,'batches','csv-'+match[1],'intake','manifest.json')))
+      await (await this.batches()).observe(value);
+  }
+  reuseCapture({id,productId,input,sourceId,sourceCaptureIdentity}) {
+    return this._serial(async()=>{
+      if(identifier(id)===identifier(sourceId))fail('GEOCODE_REUSE_REQUEST_CONFLICT');
+      const source=await this._read(sourceId);
+      const product=productFor(this.configuration.plan,productId),query=bindGeocodeQuery(product,input);
+      if(!source.capture||source.state.providerStatus!==200||source.capture.manifest.identity!==sourceCaptureIdentity||
+          source.request.productId!==productId||!same(source.request.query,query))
+        fail('GEOCODE_REUSE_SOURCE_CHANGED');
+      const reusedCapture={schema:'stellar-forge.opencage-reused-capture.v1',requestId:sourceId,
+        requestSha256:source.state.requestSha256,captureIdentity:source.capture.manifest.identity,
+        captureManifestSha256:source.capture.manifestSha256,responseSha256:source.state.responseSha256,
+        bodyOrigin:source.state.bodyOrigin};
+      const {request,directory}=await this._request(id,productId,input);
+      if(await exists(join(directory,'capture','manifest.json'))){
+        const prior=await this._read(id);
+        if(!same(prior.state.observation?.reusedCapture,reusedCapture))fail('GEOCODE_CAPTURE_ALREADY_COMPLETED');
+        return this.get(id);
+      }
+      if(await exists(join(directory,'state.json')))fail('GEOCODE_PREVIOUS_DISPATCH_REQUIRES_RECONCILIATION');
+      const originalManifest=await readBytes(join(source.directory,'capture','manifest.json'),1048576);
+      if(digest(originalManifest)!==source.capture.manifestSha256)fail('GEOCODE_REUSE_SOURCE_CHANGED');
+      return this._complete(directory,request,{status:source.state.applicationStatus,headers:source.state.headers,
+        body:source.capture.files.get('response.json')},{
+        ...structuredClone(source.state.observation),providerStatus:source.state.providerStatus,
+        state:source.state.outcome,bodyOrigin:source.state.bodyOrigin,dispatched:false,
+        startedAt:source.state.startedAt,finishedAt:source.state.finishedAt,reusedCapture,
+      },[['reused-source/manifest.json',originalManifest],
+        ...[...source.capture.files].map(([name,bytes])=>['reused-source/'+name,bytes])]);
+    });
+  }
+
   capture({id,productId,input}) {
     return this._serial(async()=>{
       const {request,directory}=await this._request(id,productId,input);
@@ -243,8 +301,8 @@ export class GeocodeWorkspace {
           semantics:delivery.parsed.semantics,finishedAt:now()},attachments);
     });
   }
-  select({id,responseSha256,index,expectedRevision,note=''}) {
-    return this._serial(async()=>{
+  select(input) {return this._serial(()=>this._select(input));}
+  async _select({id,responseSha256,index,expectedRevision,note=''}) {
       const value=await this._read(id);
       if(!value.parsed || value.state.providerStatus!==200)fail('GEOCODE_RESULT_NOT_SELECTABLE');
       if(value.state.responseSha256!==responseSha256)fail('GEOCODE_SELECTION_RESPONSE_CHANGED');
@@ -256,19 +314,10 @@ export class GeocodeWorkspace {
       const current={revision:expectedRevision+1,responseSha256,index,note,at:now()};
       const decision={revision:current.revision,current,history:[...value.decision.history,current]};
       await writeJson(join(value.directory,'decision.json'),decision);
-      return this.get(id);
-    });
+      const result=await this.get(id);await this._observeBatch(result);return result;
   }
-  async delivery(id) {
-    const value=await this._read(id);
-    if(!value.parsed || value.state.providerStatus!==200)fail('GEOCODE_RESULT_NOT_DELIVERABLE');
-    return new GeocodeDelivery({bytes:value.capture.files.get('response.json'),request:value.request,
-      provenance:{kind:value.state.bodyOrigin,captureIdentity:value.capture.manifest.identity,
-        captureManifestSha256:value.capture.manifestSha256,
-        ...(value.state.observation?.merchantSelection ? {merchantSelection:value.state.observation.merchantSelection,
-          originalBuyerRequest:value.state.observation.originalRequest} : {})},decision:value.decision,
-      attachments:new Map([...value.capture.files].filter(([name])=>name!=='response.json'))});
-  }
+  async delivery(id) {return deliveryForCapture(await this._read(id));}
+
   export({id,responseSha256,expectedRevision}) {
     return this._serial(async()=>{
       const delivery=await this.delivery(id);
@@ -364,9 +413,12 @@ export class GeocodeWorkspace {
     if(this._closing)return this._closing;
     this.closing=true;
     return this._closing=(async()=>{
-      await this.queue;
-      try {await this.runtime?.close();}
-      finally {try {await this.source.close();} finally {await this.lease.close();}}
+      try {await this._batchOpening;await this._batches?.close();}
+      finally {
+        await this.queue;
+        try {await this.runtime?.close();}
+        finally {try {await this.source.close();} finally {await this.lease.close();}}
+      }
     })();
   }
 }

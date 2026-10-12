@@ -3,7 +3,7 @@ import { lstat, readdir, realpath } from 'node:fs/promises';
 import { join } from 'node:path';
 import { createCsvRecordParser } from '../dataset-handler.mjs';
 import { fields, object, identifier, productFor, bindGeocodeQuery, fail, text } from './config.mjs';
-import { privateDirectory, readBytes, writeBytes, jsonBytes, digest, exists, readBundle, publishBundle } from '../twelvedata/files.mjs';
+import { privateDirectory, readBytes, readJson, writeBytes, putOnce, jsonBytes, digest, exists, readBundle, publishBundle } from '../twelvedata/files.mjs';
 
 export const BATCH = 'stellar-forge.opencage-csv-batch.v1';
 export const BATCH_REVIEW = 'stellar-forge.opencage-csv-review.v1';
@@ -17,17 +17,17 @@ const now = () => new Date().toISOString();
 const same = (a,b) => digest(jsonBytes(a)) === digest(jsonBytes(b));
 const checkedBatch = id => { if(!BATCH_ID.test(id ?? '')) fail('GEOCODE_BATCH_ID_INVALID'); return id; };
 const rowNumber = value => { if(!Number.isSafeInteger(value)||value<1||value>MAX_CSV_ROWS)fail('GEOCODE_BATCH_ROW_INVALID');return value; };
-const scalar = value => value === null || ['string','number','boolean'].includes(typeof value);
 const statusFor = value => !value.captureIdentity ? (value.state.state === 'PREPARED' ? 'READY' : 'NEEDS_RECONCILIATION')
   : value.state.providerStatus === 200 ? (value.candidates.length ? 'CANDIDATES' : 'NO_RESULTS') : 'EXCEPTION';
 const requestId = (batchId,ordinal,attempt) => 'gb-'+batchId.slice(4)+'-'+ordinal.toString(36)+'-a'+attempt;
-const compact = value => ({
+export const captureSummary = value => ({
   requestId:value.request.id,status:statusFor(value),outcome:value.state.outcome??value.state.state,
-  responseSha256:value.responseSha256,captureIdentity:value.captureIdentity,candidateCount:value.candidates.length,
-  decisionRevision:value.decision.revision,selectedIndex:value.decision.current?.index??null,
+  responseSha256:value.responseSha256,responseBytes:value.state.responseBytes??null,captureIdentity:value.captureIdentity,candidateCount:value.candidates.length,
+  decisionRevision:value.decision.revision,decisionSha256:digest(jsonBytes(value.decision)),selectedIndex:value.decision.current?.index??null,
   dispatched:value.state.dispatched===true,providerStatus:value.state.providerStatus??null,
   applicationStatus:value.state.applicationStatus??null,finishedAt:value.state.finishedAt??null,
 });
+const compact=captureSummary;
 function csvSource(bytes) {
   bytes=Buffer.from(bytes);
   if(!bytes.length||bytes.length>MAX_CSV_BYTES)fail('GEOCODE_CSV_SIZE_INVALID','Choose a nonempty CSV file no larger than 2 MiB.');
@@ -128,6 +128,17 @@ function reviewBody(configuration,source,product,mapping,{label,fileName,reuse,s
   const reviewSha256=digest(jsonBytes(body));
   return {review:{...body,reviewSha256,batchId:'csv-'+reviewSha256.slice(0,20)},rows};
 }
+export function decodeBatchIntake(configuration,files,expectedId) {
+  const review=JSON.parse(files.get('review.json')??'null'),rows=JSON.parse(files.get('rows.json')??'null');
+  const source=csvSource(files.get('source.csv')??[]);
+  if(!object(review)||!BATCH_ID.test(review.batchId??'')||expectedId&&review.batchId!==expectedId||
+      review.workspaceIdentity!==configuration.identity||review.planSha256!==configuration.planSha256||
+      review.termsSha256!==configuration.termsSha256)fail('GEOCODE_CSV_WORKSPACE_CHANGED');
+  const product=productFor(configuration.plan,review.productId);
+  const rebuilt=reviewBody(configuration,source,product,mappingFor(product,source.headers,review.mapping),review);
+  if(!same(rebuilt.review,review)||!same(rebuilt.rows,rows))fail('GEOCODE_CSV_INTAKE_CHANGED');
+  return {review,rows};
+}
 function page(options={}) {
   const {offset=0,limit=50,status}=options;
   if(!Number.isSafeInteger(offset)||offset<0||!Number.isSafeInteger(limit)||limit<1||limit>100)
@@ -188,18 +199,11 @@ export class GeocodeBatches {
     if(this.entries.has(id))return this.entries.get(id);
     const root=join(this.workspace.directory,'batches',id);
     const intake=await readBundle(join(root,'intake'),{schema:BATCH});
-    const review=JSON.parse(intake.files.get('review.json')??'null');
-    const rows=JSON.parse(intake.files.get('rows.json')??'null'),source=csvSource(intake.files.get('source.csv')??[]);
-    if(!object(review)||review.batchId!==id||review.workspaceIdentity!==this.workspace.configuration.identity||
-        review.planSha256!==this.workspace.configuration.planSha256||review.termsSha256!==this.workspace.configuration.termsSha256)
-      fail('GEOCODE_CSV_WORKSPACE_CHANGED');
-    const product=productFor(this.workspace.configuration.plan,review.productId);
-    const rebuilt=reviewBody(this.workspace.configuration,source,product,mappingFor(product,source.headers,review.mapping),review);
-    if(!same(rebuilt.review,review)||!same(rebuilt.rows,rows)||intake.manifest.identity!==review.reviewSha256)
-      fail('GEOCODE_CSV_INTAKE_CHANGED');
+    const {review,rows}=decodeBatchIntake(this.workspace.configuration,intake.files,id);
+    if(intake.manifest.identity!==review.reviewSha256)fail('GEOCODE_CSV_INTAKE_CHANGED');
     const path=join(root,'progress.sqlite');
     if(!await exists(path)){
-      if(!initialize||this.workspace.readOnly)fail('GEOCODE_CSV_PREPARATION_INCOMPLETE','Prepare this same reviewed source again to finish its progress index.');
+      if(this.workspace.readOnly)fail('GEOCODE_CSV_PREPARATION_INCOMPLETE','Reopen the original writable workspace and reconcile this retained CSV intake.');
       await writeBytes(path,Buffer.alloc(0),{exclusive:true});
     }
     const stat=await lstat(path);
@@ -274,6 +278,79 @@ export class GeocodeBatches {
     await this.observe(value);
     return {row,native:this._row(entry,ordinal).native,value};
   }
+  async reconcile({batchId}) {
+    return this.workspace._serial(async()=>{
+      if(this.active)fail('GEOCODE_BATCH_RUN_ALREADY_ACTIVE');
+      return this._reconcile(await this._load(checkedBatch(batchId),{initialize:true}));
+    });
+  }
+  async _reconcile(entry) {
+    this.workspace.lease.assertHeld();
+    const retained=new Map(),receipts=new Map(),prefix='gb-'+entry.id.slice(4)+'-';
+    const inspectId=id=>{
+      const match=CAPTURE_ID.exec(id);
+      if(!match||'csv-'+match[1]!==entry.id)return null;
+      const ordinal=parseInt(match[2],36),attempt=Number(match[3]),row=entry.rows[ordinal-1];
+      if(!row||row.error||attempt>100||requestId(entry.id,ordinal,attempt)!==id)fail('GEOCODE_CSV_RECONCILIATION_ID_CHANGED');
+      return {ordinal,attempt,row};
+    };
+    const requests=join(this.workspace.directory,'requests');
+    for(const id of (await readdir(requests)).filter(name=>name.startsWith(prefix)).sort()){
+      const selected=inspectId(id);if(!selected)fail('GEOCODE_CSV_RECONCILIATION_ID_CHANGED');
+      if(!await exists(join(requests,id,'request.json')))continue;
+      const value=await this.workspace.get(id);
+      if(value.request.productId!==entry.review.productId||!same(value.request.query,selected.row.query))
+        fail('GEOCODE_CSV_CAPTURE_QUERY_CHANGED');
+      retained.set(id,{...selected,value});
+    }
+    const attemptsRoot=join(entry.root,'attempts');
+    if(await exists(attemptsRoot))for(const name of (await readdir(attemptsRoot)).sort()){
+      if(!name.endsWith('.json'))continue;
+      const id=name.slice(0,-5),selected=inspectId(id),receipt=await readJson(join(attemptsRoot,name),65536);
+      if(!selected||receipt.schema!=='stellar-forge.opencage-csv-attempt.v1'||receipt.batchId!==entry.id||
+          receipt.reviewSha256!==entry.review.reviewSha256||receipt.ordinal!==selected.ordinal||
+          receipt.attempt!==selected.attempt||receipt.requestId!==id||selected.attempt<2||
+          receipt.previousRequestId!==requestId(entry.id,selected.ordinal,selected.attempt-1)||
+          typeof receipt.reason!=='string'||!receipt.reason||typeof receipt.acknowledgeUncertain!=='boolean'||
+          !Number.isFinite(Date.parse(receipt.createdAt)))fail('GEOCODE_CSV_ATTEMPT_RECEIPT_CHANGED');
+      const previous=retained.get(receipt.previousRequestId)?.value;
+      if(!previous||previous.responseSha256!==(receipt.expectedResponseSha256??null)||
+          !['EXCEPTION','NEEDS_RECONCILIATION'].includes(statusFor(previous))||
+          !previous.captureIdentity&&previous.state.state!=='PREPARED'&&!receipt.acknowledgeUncertain)
+        fail('GEOCODE_CSV_ATTEMPT_RECEIPT_CHANGED');
+      receipts.set(id,{...selected,receipt});
+    }
+    let changed=0;
+    transaction(entry.db,()=>{
+      entry.db.exec('DELETE FROM attempts; DELETE FROM cache');
+      const cache=entry.db.prepare('INSERT INTO cache VALUES(?,?) ON CONFLICT(query_sha256) DO NOTHING');
+      for(const value of entry.review.reuse)cache.run(value.querySha256,JSON.stringify(value));
+      const attemptRow=entry.db.prepare('INSERT INTO attempts VALUES(?,?,?,?,?,?)');
+      const all=new Set([...retained.keys(),...receipts.keys()]);
+      for(const id of all){
+        const item=retained.get(id)??receipts.get(id),receipt=receipts.get(id)?.receipt;
+        attemptRow.run(item.ordinal,item.attempt,id,receipt?.previousRequestId??null,
+          receipt?.reason??'Reconciled original request',receipt?.createdAt??retained.get(id)?.value.state.startedAt??'');
+        const value=retained.get(id)?.value;
+        if(value?.captureIdentity&&value.state.providerStatus===200)
+          cache.run(item.row.querySha256,JSON.stringify(sourceIdentity(value)));
+      }
+      const attempts=new Map();
+      for(const id of all){const item=retained.get(id)??receipts.get(id);attempts.set(item.ordinal,Math.max(attempts.get(item.ordinal)??1,item.attempt));}
+      const update=entry.db.prepare('UPDATE rows SET request_id=?,status=?,attempt=?,summary=?,updated_at=? WHERE ordinal=?');
+      for(const row of entry.rows){
+        const attempt=attempts.get(row.ordinal)??1,id=row.error?null:requestId(entry.id,row.ordinal,attempt);
+        const value=id?retained.get(id)?.value:null,summary=value?JSON.stringify(compact(value)):null;
+        const status=row.error?'INVALID':value?statusFor(value):'READY',prior=entry.db.prepare('SELECT * FROM rows WHERE ordinal=?').get(row.ordinal);
+        if(prior.request_id!==id||prior.status!==status||prior.attempt!==attempt||prior.summary!==summary){
+          update.run(id,status,attempt,summary,now(),row.ordinal);changed++;
+        }
+      }
+      if(changed)this._changed(entry);
+    });
+    return {batchId:entry.id,revision:getMeta(entry.db,'revision'),changedRows:changed,
+      originalRequests:retained.size,reviewedRetries:receipts.size,sourceSha256:entry.review.sourceSha256};
+  }
   async list() {
     const root=join(this.workspace.directory,'batches');
     if(!await exists(root))return [];
@@ -315,11 +392,13 @@ export class GeocodeBatches {
     let active;
     const initial=await this.workspace._serial(async()=>{
       if(this.closing)fail('GEOCODE_BATCH_CLOSING');
-      const entry=await this._load(batchId),prior=entry.db.prepare('SELECT * FROM runs WHERE id=?').get(runId);
+      const entry=await this._load(batchId);
       if(this.active){
         if(this.active.batchId===batchId&&this.active.runId===runId)return {batchId,runId,reused:true};
         fail('GEOCODE_BATCH_RUN_ALREADY_ACTIVE');
       }
+      await this._reconcile(entry);
+      const prior=entry.db.prepare('SELECT * FROM runs WHERE id=?').get(runId);
       if(prior&&!['RUNNING','STOP_REQUESTED'].includes(prior.state))return {batchId,runId,state:prior.state,reused:true};
       transaction(entry.db,()=>{
         entry.db.prepare("UPDATE runs SET state='INTERRUPTED',finished_at=? WHERE state IN ('RUNNING','STOP_REQUESTED') AND id<>?").run(now(),runId);
@@ -417,8 +496,16 @@ export class GeocodeBatches {
       reason=text(reason,'new attempt reason',500);
       if(native.attempt>=100)fail('GEOCODE_CSV_ATTEMPT_LIMIT');
       const attempt=native.attempt+1,id=requestId(batchId,ordinal,attempt);
+      const receiptPath=join(await privateDirectory(join(entry.root,'attempts')),id+'.json');
+      const body={schema:'stellar-forge.opencage-csv-attempt.v1',batchId,reviewSha256:entry.review.reviewSha256,
+        ordinal,attempt,requestId:id,previousRequestId:native.request_id,expectedResponseSha256:expectedResponseSha256??null,
+        reason,acknowledgeUncertain:acknowledgeUncertain===true};
+      const priorReceipt=await exists(receiptPath)?await readJson(receiptPath,65536):null;
+      if(priorReceipt){const {createdAt,...saved}=priorReceipt;if(!same(saved,body))fail('GEOCODE_CSV_ATTEMPT_RECEIPT_CHANGED');}
+      const receipt={...body,createdAt:priorReceipt?.createdAt??now()};
+      await putOnce(receiptPath,jsonBytes(receipt));
       transaction(entry.db,()=>{
-        entry.db.prepare('INSERT INTO attempts VALUES(?,?,?,?,?,?)').run(ordinal,attempt,id,native.request_id,reason,now());
+        entry.db.prepare('INSERT INTO attempts VALUES(?,?,?,?,?,?)').run(ordinal,attempt,id,native.request_id,reason,receipt.createdAt);
         entry.db.prepare("UPDATE rows SET request_id=?,attempt=?,status='READY',summary=NULL,updated_at=? WHERE ordinal=?")
           .run(id,attempt,now(),ordinal);this._changed(entry);
       });
@@ -426,10 +513,12 @@ export class GeocodeBatches {
     });
   }
   async select({batchId,ordinal,expectedRequestId,responseSha256,expectedRevision,index,note=''}) {
-    const entry=await this._load(batchId),{native}=this._row(entry,rowNumber(ordinal));
-    if(native.request_id!==expectedRequestId)fail('GEOCODE_CSV_ATTEMPT_REVIEW_CHANGED');
-    const result=await this.workspace.select({id:expectedRequestId,responseSha256,expectedRevision,index,note});
-    await this.observe(result);return this.row(batchId,ordinal);
+    return this.workspace._serial(async()=>{
+      const entry=await this._load(batchId),{native}=this._row(entry,rowNumber(ordinal));
+      if(native.request_id!==expectedRequestId)fail('GEOCODE_CSV_ATTEMPT_REVIEW_CHANGED');
+      const result=await this.workspace._select({id:expectedRequestId,responseSha256,expectedRevision,index,note});
+      await this.observe(result);return this.row(batchId,ordinal);
+    });
   }
   async export(input) {
     const {exportGeocodeBatch}=await import('./batch-delivery.mjs');
