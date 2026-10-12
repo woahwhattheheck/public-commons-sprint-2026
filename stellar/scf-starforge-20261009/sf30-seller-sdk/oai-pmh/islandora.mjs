@@ -421,9 +421,13 @@ export function createIslandoraDesk({get,action,onState=async()=>{}}){
   if(!reviewed)body.append(p('Complete the record decisions and staff review in Handover to run target-changing batches. Target exports and native checks remain available for receiving and preparation.'));
   root.append(body);
   const runs=job.runs||[];
-  const history=card('Native execution history',table(['Started','Batch','Mode','Status','Process / exit','Log'],[...runs].reverse().map(run=>[
+  const history=card('Native execution history',table(['Started','Batch','Mode','Status','Process / exit','Saved inputs','Log'],[...runs].reverse().map(run=>[
    date(run.startedAt),run.batch,run.check?'Input check':'Native task',label(run.status),
    run.exitCode===undefined?(run.pid?'Process '+run.pid:'Starting'):'Exit '+run.exitCode,
+   run.inputs?el('div',{class:'actions'},
+    download('/download/islandora-run-input',{job:jobId,run:run.id,kind:'csv'},'CSV'),
+    download('/download/islandora-run-input',{job:jobId,run:run.id,kind:'config'},'Configuration'),
+    download('/download/islandora-run-input',{job:jobId,run:run.id,kind:'preparedConfig'},'Prepared configuration')):'Earlier run',
    btn('Open log',async()=>{draft.logRun=run.id;},{refresh:false})
   ])));
   root.append(history);

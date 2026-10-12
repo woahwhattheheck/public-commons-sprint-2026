@@ -196,6 +196,21 @@ def serve(root,port=0,*,expected_binding=None,startup_format=None):
                     run,path=selected_log(console.islandora,q["job"],q["run"])
                     if not path.is_file():raise InputError("This native run has not written its log yet")
                     return self.file(path,"islandora-native-"+run["id"][:12]+".log","text/plain; charset=utf-8")
+                if url.path=="/download/islandora-run-input":
+                    job=console.islandora.job(q["job"])
+                    run=next((r for r in job.get("runs",[]) if r["id"]==q["run"]),None)
+                    if run is None:raise InputError("Select a saved native run")
+                    kind=q.get("kind","csv")
+                    if kind not in {"csv","config","preparedConfig"}:
+                        raise InputError("Select this run's CSV or configuration")
+                    item=run.get("inputs",{}).get(kind)
+                    if item is None:raise InputError("This earlier run has no saved input copy")
+                    path=path_under(console.islandora.directory(job["id"]),item["path"])
+                    from bridge import storage
+                    if storage.file_digest(path)!=item["sha256"]:
+                        raise InputError("The retained native input changed")
+                    return self.file(path,"islandora-"+run["id"][:12]+"-"+path.name,
+                        "text/csv; charset=utf-8" if kind=="csv" else "application/yaml")
                 if url.path=="/download/islandora-input":
                     job=console.islandora.job(q["job"])
                     batch=next((b for b in job.get("batches",[]) if b["name"]==q["batch"]),None)
