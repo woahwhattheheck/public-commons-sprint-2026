@@ -225,6 +225,11 @@ class Store(CreditStore, AccountantStore):
                             rows=report["source"].get("records", report["source"].get("reservations", 0)), portfolio=report["portfolio"],
                             record_kind=report["source"].get("record_kind", "reservations"),
                             source_basis=report.get("basis"), date_basis=report.get("date_basis"))
+                if view["kind"] == "governed_mcp":
+                    view["spending_owner"] = report["source"].get("spending_owner")
+                    view["ledger_state"] = report["source"].get("ledger_state")
+                    view["source_issues"] = report["source"].get("integrity_issues", [])
+                    view["source_notes"] = report["source"].get("source_notes", [])
             result.append(view)
         return result
 
@@ -241,7 +246,7 @@ class Store(CreditStore, AccountantStore):
             item["coding"] = heads.get(item["id"])
             nonexpense = {"reserved":"RESERVED", "unresolved":"PAYMENT_UNRESOLVED",
                           "failed":"FAILED_TRANSACTION", "not_dispatched":"NO_SIGNED_DISPATCH",
-                          "observation_review":"OBSERVATION_REVIEW"}
+                          "observation_review":"OBSERVATION_REVIEW", "spending_review":"SPENDING_SOURCE_REVIEW"}
             item["status"] = ("ABSENT" if item["missing"] else nonexpense[row["state"]] if row["state"] in nonexpense else
                               "UNCODED" if not item["coding"] else "STALE" if item["coding"]["basis"] != item["basis"] else "CODED")
             items.append(item)
@@ -288,8 +293,8 @@ class Store(CreditStore, AccountantStore):
         name = text(payload.get("name"), "Source name", maximum=160)
         path = text(payload.get("path"), "Original source location", maximum=4096)
         kind = payload.get("kind", "sf36_ledger")
-        if kind not in ("sf36_ledger", "mcp_quote"):
-            raise Problem("SOURCE_KIND", "Choose an original SF36 ledger or native MCP quote workspace")
+        if kind not in ("sf36_ledger", "mcp_quote", "governed_mcp"):
+            raise Problem("SOURCE_KIND", "Choose an original SF36 ledger, MCP quote workspace or governed MCP descriptor")
         provenance = text(payload.get("provenance", ""), "Source provenance", maximum=6000, optional=True)
         native = capture_source(path, kind, self.node_executable)
         def operation():
