@@ -168,10 +168,11 @@ export async function openDatasetteWorkspace({
       }
       return items.sort((a, b) => a.id.localeCompare(b.id));
     }
-    async function withPublisher(action) {
+    async function withPublisher(action, { idleRead = false } = {}) {
       ensureOpen();
       const execute = async () => {
         ensureOpen();
+        if (idleRead && active) return null;
         if (!await selected()) throw fault('DATASETTE_EDITION_SELECTION_REQUIRED', 'Select a saved source edition first.', 409);
         const { openDatasettePublisher } = await import('./model.mjs');
         const current = await openDatasettePublisher({
@@ -194,8 +195,8 @@ export async function openDatasetteWorkspace({
       const [captures, editions, selection] = await Promise.all([listCaptures(), listEditions(), selected()]);
       let publication = null;
       if (publisher) publication = publisher.status();
-      else if (!active && selection && await exists(join(publisherDirectory, 'workspace.json')))
-        publication = await withPublisher(value => value.status());
+      else if (!active && selection && await exists(join(publisherDirectory, 'workspace.json')) && !active)
+        publication = await withPublisher(value => value.status(), { idleRead: true });
       return {
         schema: DATASETTE_WORKSPACE_SCHEMA, directory, workspaceId: settings.workspaceId,
         createdAt: settings.createdAt, buyer: settings.buyer ?? null,
@@ -224,7 +225,12 @@ export async function openDatasetteWorkspace({
         const id = identifier(input.operationId, 'saved operation');
         const sourceDirectory = join(directory, 'captures', id);
         if (await exists(join(sourceDirectory, 'operation.json'))) return inspectDatasetteOperation(sourceDirectory);
-        if (UUID.test(id)) return publisher ? { run: publisher.run(id) } : withPublisher(value => ({ run: value.run(id) }));
+        if (UUID.test(id)) {
+          if (publisher) return { run: publisher.run(id) };
+          const result = await withPublisher(value => ({ run: value.run(id) }), { idleRead: true });
+          if (!result) throw fault('DATASETTE_WORKSPACE_BUSY', 'Read workspace status while its current operation completes.', 409);
+          return result;
+        }
         throw fault('DATASETTE_OPERATION_NOT_FOUND', 'Choose a saved source operation or extraction.', 404);
       }
       if (operation === 'source.capture' || operation === 'source.adopt') {
@@ -380,7 +386,13 @@ export async function openDatasetteWorkspace({
       const selectedOperation = { operation, operationId: input.operationId ?? input.runId ?? randomUUID(),
         startedAt: stamp(), controller, cancel: null, promise: null };
       active = selectedOperation;
-      selectedOperation.promise = Promise.resolve().then(() => execute(operation, input, controller));
+      selectedOperation.promise = Promise.resolve().then(async () => {
+        // A status read may already own the native publisher. Drain that exact
+        // queue before an archive or source mutation uses the same workspace.
+        await publisherTail;
+        controller.signal.throwIfAborted();
+        return execute(operation, input, controller);
+      });
       try { return await selectedOperation.promise; }
       finally { if (active === selectedOperation) active = null; }
     }
