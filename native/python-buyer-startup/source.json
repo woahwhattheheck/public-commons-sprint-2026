@@ -1,0 +1,452 @@
+{
+  "schema": "stellar-forge.python-buyer-import-native.v1",
+  "operation": "SF88-PYTHON-STARTUP-4BF5-20261012",
+  "repository": "woahwhattheheck/public-commons-sprint-2026",
+  "commit": "728b14bd0bfbacee5578ad91ed02dfca2f2411c5",
+  "parent": "01c0c20c9861c4eb41867214935c4e9f1e9493ba",
+  "packagePath": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/",
+  "files": [
+    {
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/__init__.py",
+      "sha": "1deb13d5ecd4bf3551339ce243cb668bb883fa36",
+      "bytes": 5152
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/__main__.py",
+      "sha": "91ae10f39fdc1836524bf1bc441a4fee6259958a",
+      "bytes": 9525
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/_analysis_archive_ui.py",
+      "sha": "e18070fa7113d5434cacde3f88a55bc4bab9a156",
+      "bytes": 15250
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/_analysis_export_http.py",
+      "sha": "d7410ee860a65575629ab5c861c58e5b6c7a0d1a",
+      "bytes": 4642
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/_analysis_export_ui.py",
+      "sha": "ea41a275806097bb00ab98b91a7385b707f65a8e",
+      "bytes": 23160
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/_analysis_profiles_ui.py",
+      "sha": "199c493a302bb37d6f2ae2710eb11f4f188658b6",
+      "bytes": 28514
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/_analysis_reports_ui.py",
+      "sha": "0192daa9439cae36fc2b47a1fd8d849a82095657",
+      "bytes": 30801
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/_analysis_response_ui.py",
+      "sha": "c09827e7a46334106d9d214354a16e85adea2097",
+      "bytes": 18350
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/_analysis_ui.py",
+      "sha": "d02ee3c216f9e27a005855b33e2d3eab9b8f5a9f",
+      "bytes": 57986
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/_analysis_workbook_refresh_ui.py",
+      "sha": "4804b5b559503f1fced7391b73d60a6a2f122c67",
+      "bytes": 13062
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/_analysis_workbooks_ui.py",
+      "sha": "950d269257217d28a8eb2f56fb7db08c60b2b2bb",
+      "bytes": 25238
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/_duckdb_ui.py",
+      "sha": "b532623b7b31a0954f993031a1a465972581535e",
+      "bytes": 57065
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/_postgres_ui.py",
+      "sha": "90d5238665b9ddc4d020ecf9f2b1b0a1ee66374b",
+      "bytes": 53299
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/_spatial_ui.py",
+      "sha": "b00f4504c980425ef539fe537a52f2d131623325",
+      "bytes": 20911
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/acquisitions.py",
+      "sha": "22f482eaacfc9b03cf66812a9cb45b495900130d",
+      "bytes": 17307
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/agent_tools.py",
+      "sha": "9199c92ff03167f5d2a932ed19cd704f7971a168",
+      "bytes": 8983
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/agent_workflow.py",
+      "sha": "76202d8759d27ec68e64f7429c9235646b8a6a67",
+      "bytes": 41480
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/analysis_export_delivery.py",
+      "sha": "68fa8271cad6852c89cb87c02940b65e255136a1",
+      "bytes": 17847
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/analysis_exports.py",
+      "sha": "fff696d7d9ad3a97bf8d7c20de260bc47c786a57",
+      "bytes": 14395
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/analysis_native.py",
+      "sha": "c9b717cb593b53ede00084ac85784864824f6e2c",
+      "bytes": 4681
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/analysis_native_delivery.py",
+      "sha": "9035d4c74efdb3f62b27e105b61c09da6656ff22",
+      "bytes": 9946
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/analysis_native_sources.py",
+      "sha": "6c8b938361ab8690240c22c285472f188c1e50a0",
+      "bytes": 12709
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/analysis_reports.py",
+      "sha": "1352e505c52139e21962adeaa11f13090e9f81d5",
+      "bytes": 41758
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/analysis_workbooks.py",
+      "sha": "07da37b07c5a3c5790f9181f0ee1933df02472bc",
+      "bytes": 58296
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/analysis_workspace.py",
+      "sha": "ae96dcbf1d6b6886d22148072a2cede1589b800a",
+      "bytes": 55830
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/client.py",
+      "sha": "4db0ed33339e3ae93aad4b2226aafd8e8d3deeaa",
+      "bytes": 45100
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/dataset_changes.py",
+      "sha": "23329087fec83bd3c58e5c0da8930ff41aa8a24a",
+      "bytes": 25843
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/dataset_profiles.py",
+      "sha": "47ca3ff7ef5554ed250accbad57a2afea693e5eb",
+      "bytes": 26354
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/dataset_semantics.py",
+      "sha": "431b1e31427f38ec5f73ab0a3ca40ffd29f1207b",
+      "bytes": 13369
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/datasets.py",
+      "sha": "1f6764007081fb41ef2c9f04150456c23663d937",
+      "bytes": 24307
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/duckdb_agent.py",
+      "sha": "7016fcb75660950e7f87ae2215413870b92b8150",
+      "bytes": 5728
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/duckdb_cli.py",
+      "sha": "83331cfa9e2e0b8a1107f266bccef156abb3ac95",
+      "bytes": 10840
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/duckdb_dataset.py",
+      "sha": "d6b3f0fd9252cba3bf7ca44934b5414bcf2e6d59",
+      "bytes": 59785
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/duckdb_http.py",
+      "sha": "f7dcc22bb2fb788dfcf34dad772243a4410f17d7",
+      "bytes": 27784
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/duckdb_semantics.py",
+      "sha": "7a86d0a3bba016986bd3619e0b2d2ffb8bbf740c",
+      "bytes": 10731
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/duckdb_spatial.py",
+      "sha": "9fef1bb636011543cab1c895d476a14cd7de4ba0",
+      "bytes": 43205
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/errors.py",
+      "sha": "3f7de049b94188454e4882ccb53b150286f78f09",
+      "bytes": 965
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/inbox.py",
+      "sha": "96f6e3fefd6fa8025497f7287c2dee7d2975a512",
+      "bytes": 6652
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/objects.py",
+      "sha": "9d70506185d8b94f49ea2fff93a0630cce2de6f3",
+      "bytes": 16158
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/postgres_cli.py",
+      "sha": "b865454952c0b519cb2d9bdf894562f01a8677b0",
+      "bytes": 11824
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/postgres_delivery.py",
+      "sha": "c525698e6ea96b8315091eff74e45534804534ab",
+      "bytes": 49889
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/postgres_http.py",
+      "sha": "58746830830061c5eda19bdbd893c2dcf17e9210",
+      "bytes": 12164
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/postgres_operator.py",
+      "sha": "ccfb3aafeaa95189e15392319bc25e0b7dbb8bc2",
+      "bytes": 18511
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/processes.py",
+      "sha": "9a2dbfa8c35f4a428b358ec074c7c012815bdc16",
+      "bytes": 16450
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/profile_cli.py",
+      "sha": "8d4b1bf1ad9296a4c7d35fd5f0d9dd3ca5315af4",
+      "bytes": 8981
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/query_export.py",
+      "sha": "4fef52bba4b933a7e584048b723185f85147e2a8",
+      "bytes": 22980
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/query_stream.py",
+      "sha": "9ca4912887d8761be2161f9d13f16e11370ea646",
+      "bytes": 6332
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/recovery.py",
+      "sha": "856376273384b363c5073a09de7c23d4ca6182a1",
+      "bytes": 8803
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/requests.py",
+      "sha": "ebc389dc8212ab58313f66c4373c20075094077e",
+      "bytes": 2723
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/research_cli.py",
+      "sha": "e4c2509073fa2b92aadc45cf5ddfac01024928fb",
+      "bytes": 7306
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/research_documents.py",
+      "sha": "d36ba8b9ad5eb3a3e5bf247a80ea6a23b9f1911d",
+      "bytes": 18097
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/research_workspace.py",
+      "sha": "6ea5e8840de6550f530f5d824288519af4755988",
+      "bytes": 20121
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/response_documents.py",
+      "sha": "65c8c9c8b347994e9d82e6834d56ace1ce19eaf6",
+      "bytes": 17213
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/response_tables.py",
+      "sha": "0eeddd3c723eb2b7a6816fff46c8c71da81a8eb3",
+      "bytes": 38725
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/result.py",
+      "sha": "236cc8bc61ea07ecfb1f38ec9e0fde769a3ce652",
+      "bytes": 12628
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/runtime.py",
+      "sha": "6cc242705be8c8c565dfa3479f460ed3c5f38f70",
+      "bytes": 7393
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/spatial_cli.py",
+      "sha": "9b76d952970f246a94bfcd38d05380d62325758a",
+      "bytes": 5127
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/spatial_http.py",
+      "sha": "6fce61712895059b3249d58bbee0da8337fb538d",
+      "bytes": 3275
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/sqlite_dataset.py",
+      "sha": "9d03674168ae866775abd02d89877c9e687f7444",
+      "bytes": 28578
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/storage.py",
+      "sha": "3b3426436f036718a560b9b70049fd065cc8a0a1",
+      "bytes": 3230
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/streams.py",
+      "sha": "79d0ece2aea7b3725acd6467b9fba0fff572ea25",
+      "bytes": 10820
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/workbook_client.py",
+      "sha": "ab298b2592da4e3d7b370276cba38d555ee7341f",
+      "bytes": 11954
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/workbook_refresh.py",
+      "sha": "c786dc772ca8b1fd912bc01aff2f239a937606cc",
+      "bytes": 17488
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/workspace_archive.py",
+      "sha": "0c13c4355a56398905944c49186e39687f254250",
+      "bytes": 31214
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/workspace_archive_receive.py",
+      "sha": "19a34f857eb9de8600aac24e003d073a081f8f45",
+      "bytes": 19605
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/worldbank_analysis.py",
+      "sha": "4c25f304b0f1ab84f8a73119aef2209f0c4101df",
+      "bytes": 41564
+    }
+  ],
+  "baselineInit": {
+    "sha": "a3ea957cb4c366e10f3e80ed91a57482347771d5",
+    "content": "\"\"\"Installable Python interface to the original Stellar Forge buyer runtime.\"\"\"\nfrom .client import Buyer, Operation, Review\nfrom .inbox import Inbox, InboxResult, InboxError\nfrom .acquisitions import AcquisitionWorkspace, AcquisitionResult, AcquisitionProcess, AcquisitionError\nfrom .datasets import DatasetAcquisition, DatasetDelivery, DatasetError\nfrom .duckdb_dataset import DuckDBWorkspace\nfrom .duckdb_spatial import DuckDBSpatial\nfrom .errors import BuyerError, DeliveryError, NativeError, StateError\nfrom .postgres_delivery import Column, DatasetMapping, PostgresWarehouse, WarehouseError, review_delivery\nfrom .objects import ObjectBuyer, ObjectSession, ObjectReport, ObjectDelivery, ObjectDownloadError\nfrom .recovery import WorkspaceRecovery, WorkspaceRecoveryResult, WorkspaceRecoveryProcess, WorkspaceRecoveryError\nfrom .result import AccountingResult, BuyerResult, FileDelivery, FileTransfer, SessionAccountingResult\nfrom .research_workspace import ResearchWorkspace, ResearchError\nfrom .research_documents import ResearchDocuments, ResearchPipelines, ResearchSelection, ResearchInputFile, ResearchDocumentSource\nfrom .requests import MultipartRequest, UploadFile\nfrom .streams import SSEEvent, NDJSONRecord, StreamDelivery, read_retained_response, export_saved_stream\n\n__all__ = [\n    \"ResearchWorkspace\", \"ResearchError\", \"ResearchDocuments\", \"ResearchPipelines\",\n    \"ResearchSelection\", \"ResearchInputFile\", \"ResearchDocumentSource\",\n    \"AcquisitionWorkspace\", \"AcquisitionResult\", \"AcquisitionProcess\", \"AcquisitionError\",\n    \"WorkspaceRecovery\", \"WorkspaceRecoveryResult\", \"WorkspaceRecoveryProcess\", \"WorkspaceRecoveryError\",\n    \"Inbox\", \"InboxResult\", \"InboxError\",\n    \"Buyer\", \"Operation\", \"Review\", \"BuyerResult\", \"FileDelivery\", \"FileTransfer\", \"AccountingResult\", \"SessionAccountingResult\",\n    \"DatasetAcquisition\", \"DatasetDelivery\", \"DatasetError\", \"DuckDBWorkspace\", \"DuckDBSpatial\",\n    \"Column\", \"DatasetMapping\", \"PostgresWarehouse\", \"WarehouseError\", \"review_delivery\",\n    \"ObjectBuyer\", \"ObjectSession\", \"ObjectReport\", \"ObjectDelivery\", \"ObjectDownloadError\",\n    \"BuyerError\", \"DeliveryError\", \"NativeError\", \"StateError\",\n    \"MultipartRequest\", \"UploadFile\", \"SSEEvent\", \"NDJSONRecord\", \"StreamDelivery\", \"read_retained_response\", \"export_saved_stream\",\n]\n\n"
+  },
+  "names": [
+    "ResearchWorkspace",
+    "ResearchError",
+    "ResearchDocuments",
+    "ResearchPipelines",
+    "ResearchSelection",
+    "ResearchInputFile",
+    "ResearchDocumentSource",
+    "AcquisitionWorkspace",
+    "AcquisitionResult",
+    "AcquisitionProcess",
+    "AcquisitionError",
+    "WorkspaceRecovery",
+    "WorkspaceRecoveryResult",
+    "WorkspaceRecoveryProcess",
+    "WorkspaceRecoveryError",
+    "Inbox",
+    "InboxResult",
+    "InboxError",
+    "Buyer",
+    "Operation",
+    "Review",
+    "BuyerResult",
+    "FileDelivery",
+    "FileTransfer",
+    "AccountingResult",
+    "SessionAccountingResult",
+    "DatasetAcquisition",
+    "DatasetDelivery",
+    "DatasetError",
+    "DuckDBWorkspace",
+    "DuckDBSpatial",
+    "Column",
+    "DatasetMapping",
+    "PostgresWarehouse",
+    "WarehouseError",
+    "review_delivery",
+    "ObjectBuyer",
+    "ObjectSession",
+    "ObjectReport",
+    "ObjectDelivery",
+    "ObjectDownloadError",
+    "BuyerError",
+    "DeliveryError",
+    "NativeError",
+    "StateError",
+    "MultipartRequest",
+    "UploadFile",
+    "SSEEvent",
+    "NDJSONRecord",
+    "StreamDelivery",
+    "read_retained_response",
+    "export_saved_stream"
+  ],
+  "mapping": {
+    "Buyer": ".client",
+    "Operation": ".client",
+    "Review": ".client",
+    "Inbox": ".inbox",
+    "InboxResult": ".inbox",
+    "InboxError": ".inbox",
+    "AcquisitionWorkspace": ".acquisitions",
+    "AcquisitionResult": ".acquisitions",
+    "AcquisitionProcess": ".acquisitions",
+    "AcquisitionError": ".acquisitions",
+    "DatasetAcquisition": ".datasets",
+    "DatasetDelivery": ".datasets",
+    "DatasetError": ".datasets",
+    "DuckDBWorkspace": ".duckdb_dataset",
+    "DuckDBSpatial": ".duckdb_spatial",
+    "BuyerError": ".errors",
+    "DeliveryError": ".errors",
+    "NativeError": ".errors",
+    "StateError": ".errors",
+    "Column": ".postgres_delivery",
+    "DatasetMapping": ".postgres_delivery",
+    "PostgresWarehouse": ".postgres_delivery",
+    "WarehouseError": ".postgres_delivery",
+    "review_delivery": ".postgres_delivery",
+    "ObjectBuyer": ".objects",
+    "ObjectSession": ".objects",
+    "ObjectReport": ".objects",
+    "ObjectDelivery": ".objects",
+    "ObjectDownloadError": ".objects",
+    "WorkspaceRecovery": ".recovery",
+    "WorkspaceRecoveryResult": ".recovery",
+    "WorkspaceRecoveryProcess": ".recovery",
+    "WorkspaceRecoveryError": ".recovery",
+    "AccountingResult": ".result",
+    "BuyerResult": ".result",
+    "FileDelivery": ".result",
+    "FileTransfer": ".result",
+    "SessionAccountingResult": ".result",
+    "ResearchWorkspace": ".research_workspace",
+    "ResearchError": ".research_workspace",
+    "ResearchDocuments": ".research_documents",
+    "ResearchPipelines": ".research_documents",
+    "ResearchSelection": ".research_documents",
+    "ResearchInputFile": ".research_documents",
+    "ResearchDocumentSource": ".research_documents",
+    "MultipartRequest": ".requests",
+    "UploadFile": ".requests",
+    "SSEEvent": ".streams",
+    "NDJSONRecord": ".streams",
+    "StreamDelivery": ".streams",
+    "read_retained_response": ".streams",
+    "export_saved_stream": ".streams"
+  }
+}
