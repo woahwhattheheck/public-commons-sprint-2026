@@ -71,6 +71,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   commerce    Merchant + buyer session        inbox       Durable selected requests
   merchant-mcp                               Operate native merchant releases from an MCP client
   mcp-native                                Prepare and operate the original native buyer MCP workspace
+  mcp-analysis-archive                      Download and reopen original portable Analysis archives
   mcp-buyer                                 Run the existing private HTTP buyer and operator console
   mcp-results                               Read, export and recover original saved MCP results
   mcp-data                                  Serve prepared SQLite/PostgreSQL/DuckDB/ClickHouse queries over MCP
@@ -152,6 +153,8 @@ Native commands (arguments pass unchanged to the maintained implementation):
   catalog-serve / catalog                     Host and operate live seller discovery
   catalog-withdrawal                         Prepare, sign and apply seller withdrawals
   catalog-workspace                          Review signed declarations and retained catalog operations
+  atlas                                     Browse retained catalog offers and prepare buyer requests
+  atlas-workspace                           Export, inspect and receive retained Atlas workspaces
   checkout / purchase                        Enroll, purchase and retrieve a merchant file
   buyer-object                               Acquire, resume and assemble an existing object
   buyer-runbook                              Plan, run and recover multi-resource acquisitions
