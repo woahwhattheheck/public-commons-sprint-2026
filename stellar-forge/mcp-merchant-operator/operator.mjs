@@ -16,8 +16,8 @@ import { datasetReleaseView } from './catalog/dataset-lifecycle.mjs';
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 
 
-// SEC owns per-workspace mutation serialization so source cancellation and close
-// can reach a running acquisition while unrelated original workspaces keep operating.
+// Research delegates mutations to the original authenticated workspace and its
+// revision/operation guards, keeping source cancellation reachable during acquisition.
 
 
 // The original release return values contain local handler/store paths. The MCP
@@ -88,7 +88,7 @@ export class MerchantReleaseOperator {
     this.#options = { stellarExpert, woocommerce, mpp, opensearch, grpc, openapi, accounting, arcgis, opencage };
     this.#tools = structuredClone(merchantToolCatalog(config));
     this.#definitions = new Map(this.#tools.map(value => [value.name, value]));
-    this.#mutations = new Set(this.#tools.filter(value => !value.annotations.readOnlyHint).map(value => value.name));
+    this.#mutations = new Set(this.#tools.filter(value => !value.annotations.readOnlyHint && merchantToolFamily(value.name) !== 'researchWorkspaces').map(value => value.name));
   }
   get tools() { return structuredClone(this.#tools); }
   get maxRequestBytes() {
@@ -97,7 +97,9 @@ export class MerchantReleaseOperator {
       return this.#config.mpp ? 3 * 1024 * 1024 : (this.#config.opensearchWorkspaces || this.#config.grpcWorkspaces || this.#config.usgsWorkspaces) ? 2 * 1024 * 1024 : this.#config.grantsWorkspaces ? 512 * 1024 : 128 * 1024;
     })();
     return Math.max(configuredMaximum, this.#config.feedsWorkspaces ? 16 * 1024 * 1024 + 65536 : 0,
-      this.#config.n8nWorkspaces ? 2 * 1024 * 1024 : 0);
+      this.#config.n8nWorkspaces ? 2 * 1024 * 1024 : 0,
+      this.#config.researchWorkspaces ? 2 * 1024 * 1024 : 0,
+      this.#config.nocodbWorkspaces ? 1024 * 1024 : 0);
   }
   async #status() {
     const result = await (await import('../../stellar/scf-starforge-20261009/sf82-seller-pilot/releases.mjs')).releaseStatus(this.#config.releaseStore);
