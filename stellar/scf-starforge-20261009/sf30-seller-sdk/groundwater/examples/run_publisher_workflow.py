@@ -32,6 +32,16 @@ def checkpoint():
 def require(condition,message,**detail):
     if not condition:
         raise Problem("native_acceptance",message,**detail)
+def handover_file(value):
+    """Project the original native file descriptor into the JSON handover ABI."""
+    path=value["path"]
+    require(isinstance(path,(str,Path)) and Path(path).is_absolute(),
+            "The native handover file must retain its original absolute path.")
+    require(isinstance(value.get("filename"),str) and value["filename"]==Path(path).name,
+            "The native handover filename differs from its original path.")
+    verify_file(path,value)
+    return {"path":str(path),"filename":value["filename"],"bytes":value["bytes"],"sha256":value["sha256"]}
+
 def identifier(phase,operation):
     return "gw-journey-"+hashlib.sha256((operation+":"+phase).encode()).hexdigest()[:32]
 
@@ -289,12 +299,12 @@ class Journey:
             reopened.report_detail(browser["report_id"])
             require(all(row["status"]=="external_archive" for row in restored_state["backups"]),"Restored backup history points to unavailable local archives.")
             require(not any(row["worker_active"] for row in restored_state["runs"]),"Restore unexpectedly started a solver.")
-        full_handoff={**handoff,"restored_workspace":restored["workspace"],"report_id":browser["report_id"],"scenario_run_id":browser["scenario_run_id"],"backup":{**{k:backup[k] for k in ("path","filename","bytes","sha256")}}}
+        full_handoff={**handoff,"restored_workspace":str(restored["workspace"]),"report_id":browser["report_id"],"scenario_run_id":browser["scenario_run_id"],"backup":handover_file(backup)}
         if browser.get("reference_inspection_id"):
             full_handoff.update({key:browser[key] for key in ("imported_source_id","imported_source_sha256","reference_inspection_id","reference_basis_sha256")})
         write_json(self.root/"restored-browser-handoff.json",full_handoff,create_only=True)
         restored_browser=self.browser(full_handoff,"restored")
-        result={"schema":"starforge.groundwater-publisher-native.v1","state":"complete","operation_id":self.operation,"workspace_id":handoff["workspace_id"],"source_head":self.source_head,"browser_handoff_source_head":handoff.get("source_head"),"application_sha256":self.application_sha256,"initial_application_sha256":self.initial_application_sha256,"source_revision":self.source_revision,"runs":[{"id":r["run_id"],"edition_id":r["edition_id"],"result_sha256":digest(r),"runtime_sha256":r["runtime_sha256"],"units":{k:v["units"] for k,v in r["engines"].items()},"native_executions":r["native_executions"]} for r in results],"browser":browser,"restored_browser":restored_browser,"report":{"id":browser["report_id"],"archive":{k:archive[k] for k in ("path","filename","bytes","sha256")},"manifest_sha256":package["manifest_sha256"],"files":package["files"]},"independent_receiving":received["receipt"],"delivery_id":browser["delivery_id"],"backup":full_handoff["backup"],"restore":restored,"all_owned_services_closed":True,"completed_at":now()}
+        result={"schema":"starforge.groundwater-publisher-native.v1","state":"complete","operation_id":self.operation,"workspace_id":handoff["workspace_id"],"source_head":self.source_head,"browser_handoff_source_head":handoff.get("source_head"),"application_sha256":self.application_sha256,"initial_application_sha256":self.initial_application_sha256,"source_revision":self.source_revision,"runs":[{"id":r["run_id"],"edition_id":r["edition_id"],"result_sha256":digest(r),"runtime_sha256":r["runtime_sha256"],"units":{k:v["units"] for k,v in r["engines"].items()},"native_executions":r["native_executions"]} for r in results],"browser":browser,"restored_browser":restored_browser,"report":{"id":browser["report_id"],"archive":handover_file(archive),"manifest_sha256":package["manifest_sha256"],"files":package["files"]},"independent_receiving":received["receipt"],"delivery_id":browser["delivery_id"],"backup":full_handoff["backup"],"restore":restored,"all_owned_services_closed":True,"completed_at":now()}
         result_path=self.output/"native-result.json"
         if result_path.exists():
             prior=read_json(result_path)
