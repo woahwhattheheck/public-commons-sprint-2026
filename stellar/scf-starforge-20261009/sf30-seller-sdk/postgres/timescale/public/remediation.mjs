@@ -193,6 +193,7 @@ function availability(){
   const selected=Boolean(state.detail),resolved=state.detail?.item.status==='RESOLVED';
   const blocked=state.busy||Boolean(state.pending),nativeBusy=timescaleHost.hasPending();
   for(const control of root.querySelectorAll('button,input,textarea,select'))control.disabled=state.busy;
+  for(const control of root.querySelectorAll('input,textarea,select'))control.disabled=blocked;
   for(const name of ['save','rebase-save','bind-plan','observe','resolve'])controls[name].disabled=blocked||nativeBusy||resolved||(!selected&&!state.createSource);
   for(const name of ['rebase-save','bind-plan','observe','resolve'])controls[name].disabled||=!selected;
   controls.reopen.disabled=blocked||nativeBusy||!resolved;
@@ -208,7 +209,7 @@ function availability(){
   controls['open-plan'].disabled=state.busy||!controls.plan.value;
   controls['open-operation'].disabled=state.busy||!controls.operation.value;
   controls['compare-resolution'].disabled=state.busy||!selected||!controls['resolution-edition'].value;
-  controls['discard-draft'].disabled=state.busy||!selected;
+  controls['discard-draft'].disabled=blocked||!selected;
   controls['reconcile-draft'].disabled=blocked||!selected||!state.dirty;
   if(resolved)for(const name of ['title','owner','due','priority','intent','acceptance'])controls[name].disabled=true;
   recoveryLabel.textContent=state.pending?'Original '+state.pending.input.action+' request '+state.pending.input.requestId+

@@ -95,7 +95,7 @@ The browser clears an unsent command only for the original API's explicit, ident
 
 A completed journal entry returns its original result on replay. A changed payload cannot reuse that UUID. A failed/interrupted desk action may continue through the existing original read-style operation semantics; the desk never retries a native database mutation for it. Preserve original native OUTCOME_UNKNOWN handling in the original operation controls.
 
-Drafts remain available after a rejected save. If the current saved item revision changes while an older browser draft exists, Review saved revision against draft displays both versions before allowing that draft to use the current revision. The application does not silently overwrite the newer saved record.
+While a request remains pending, draft fields stay locked and the original-request recovery controls remain available. Drafts remain available after a rejected save. If the current saved item revision changes while an older browser draft exists, Review saved revision against draft displays both versions before allowing that draft to use the current revision. The application does not silently overwrite the newer saved record.
 
 If browser storage is unavailable, the application does not dispatch an unretained command. Save or download the complete request and use the original CLI, or restore browser storage and reopen the same workspace. Session storage is a local convenience; the completed original operation journal is the durable project record.
 
