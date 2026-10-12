@@ -60,9 +60,10 @@ node stellar/scf-starforge-20261009/sf41-real-source-replay/run.mjs \
 ```
 
 `CATALOG_GIT_BLOB` is the complete lowercase 40-character Git blob SHA for
-`scf46-stellar-bazaar/src/catalog.mjs`. The built-in historical pin is
-`7b4390f9a119399bdb8e27db5796697f1314da8b`; the explicit override supports newer
-maintained checkouts. Both expected and observed hashes appear in the report.
+`scf46-stellar-bazaar/src/catalog.mjs`. The default matches this checkout:
+`03582e141a414b9f5c239deb65a9614de2d9a340`. The `--catalog-blob` argument may be
+omitted when using that source. Select an explicit pin when evaluating a different
+maintained catalog revision. Both expected and observed hashes appear in the report.
 
 Ingestion uses the original provider field mapping: a resource URL string becomes a
 resource object, and top-level description, service name, tags and icon URL fill
