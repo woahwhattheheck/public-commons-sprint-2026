@@ -5,8 +5,13 @@ import { privateDirectory, atomicJson, readPrivateJson, withPrivateLock } from '
 import { canonical, clone, need, operationId, normalizeSelection, projectionPolicy, compareCaptures, MAX_CAPTURE_BYTES, PUBLIC_CAPTURE, PUBLIC_SET_CAPTURE } from './model.mjs';
 import { hash, digest, jsonBytes, optionalJson, validateCapture, captureFred, storeFredCapture, sealFredPublicTable, sealFredPublicTables } from './source.mjs';
 
+import { fredReviewIdentity, validateFredReview } from './review.mjs';
+import { normalizeFredBriefing, buildFredBriefingModel, pageFredBriefing } from './briefing/model.mjs';
+import { prepareFredBriefingFiles, readFredBriefingFiles, readFredBriefingMember, exportFredBriefingFiles, receiveFredBriefingFiles } from './briefing/files.mjs';
+
 const SCHEMA = 'stellar-forge.fred-project.v1';
 const BUNDLE = 'stellar-forge.fred-project-bundle.v1';
+const BRIEFING_BUNDLE = 'stellar-forge.fred-project-bundle.v2';
 const STATE_LIMIT = 8 * 1024 * 1024;
 function projectState(state) {
   need(state?.schema === SCHEMA && typeof state.id === 'string' && /^[a-f0-9-]{36}$/.test(state.id) &&
@@ -166,24 +171,56 @@ export async function selectFredCapture({ directory, id, expectedRevision, captu
     state.selectedCapture = captureId; return { captureId };
   });
 }
-export async function reviewFredCapture({ directory, id, expectedRevision, captureId, policy = {}, note = '' } = {}) {
+export async function reviewFredCapture({ directory, id, expectedRevision, captureId, policy = {}, note = '', briefing = null } = {}) {
   policy = projectionPolicy(policy);
   need(typeof note === 'string' && note.length <= 8000, 'Review note exceeds 8000 characters.');
-  return transact(directory, { id, expectedRevision, kind: 'review', payload: { captureId, policy, note } }, async (state, root) => {
+  if (briefing !== null) briefing = normalizeFredBriefing(briefing, validateCapture(await getFredCapture(directory, captureId)));
+  // A review without an analyst selection keeps its original v1 identity and operation fingerprint.
+  const identity = fredReviewIdentity({ captureId, policy, note, briefing });
+  return transact(directory, { id, expectedRevision, kind: 'review', payload: identity }, async (state, root) => {
     need(state.captures.some(item => item.id === captureId), 'Review an original retained capture.');
-    const reviewId = digest({ captureId, policy, note });
-    const previous = state.reviews.find(item => item.id === reviewId);
-    if (!previous) {
+    const reviewId = digest(identity);
+    let review = state.reviews.find(item => item.id === reviewId);
+    if (!review) {
       await privateDirectory(join(root, 'reviews'));
       const retained = await optionalJson(join(root, 'reviews', reviewId + '.json'));
-      const review = retained ?? { id: reviewId, captureId, policy, note, reviewedAt: new Date().toISOString() };
-      need(review.id === reviewId && review.captureId === captureId && canonical(review.policy) === canonical(policy) &&
-        review.note === note, 'The retained review belongs to different source or settings.');
+      review = retained ?? { id: reviewId, ...identity, reviewedAt: new Date().toISOString() };
+      need(review.id === reviewId && canonical(fredReviewIdentity(review)) === canonical(identity),
+        'The retained review belongs to different source or settings.');
       if (!retained) await atomicJson(join(root, 'reviews'), reviewId + '.json', review, { exclusive: true });
-      state.reviews.push(review);
     }
-    return { reviewId, captureId };
+    let report = null;
+    if (review.briefing) {
+      const retained = await prepareFredBriefingFiles({ directory: fredBriefingDirectory(root, reviewId),
+        capture: await getFredCapture(root, captureId), review });
+      report = { reportId: retained.manifest.reportId, manifestSha256: retained.manifest.manifestSha256, files: retained.manifest.files };
+    }
+    if (!state.reviews.some(item => item.id === reviewId)) state.reviews.push(review);
+    return { reviewId, captureId, ...(report ? { briefing: report } : {}) };
   });
+}
+export function fredBriefingDirectory(directory, reviewId) {
+  need(/^[a-f0-9]{64}$/.test(reviewId ?? ''), 'Select an original briefing review.');
+  return join(resolve(directory), 'briefings', reviewId);
+}
+export async function previewFredBriefing({ directory, captureId, briefing, offset = 0, limit = 100 } = {}) {
+  const capture = await getFredCapture(directory, captureId), model = validateCapture(capture);
+  const report = buildFredBriefingModel({ model, captureId, selection: normalizeFredBriefing(briefing, model) });
+  return { previewId: digest(report), ...pageFredBriefing(report, { offset, limit }) };
+}
+async function savedBriefingReview(directory, reviewId) {
+  const state = await readFredProject(directory), review = state.reviews.find(item => item.id === reviewId);
+  need(review?.briefing, 'Select a saved analyst briefing from this project.');
+  validateFredReview(review, validateCapture(await getFredCapture(directory, review.captureId)));
+  return review;
+}
+export async function getFredBriefing(directory, reviewId, { includeFiles = false } = {}) {
+  const review = await savedBriefingReview(directory, reviewId);
+  return readFredBriefingFiles(fredBriefingDirectory(directory, reviewId), { captureId: review.captureId, reviewId, includeFiles });
+}
+export async function downloadFredBriefing({ directory, reviewId, format } = {}) {
+  const review = await savedBriefingReview(directory, reviewId);
+  return readFredBriefingMember(fredBriefingDirectory(directory, reviewId), { captureId: review.captureId, reviewId, format });
 }
 export async function compareFredCaptures({ directory, before, after } = {}) {
   const [first, second] = await Promise.all([getFredCapture(directory, before), getFredCapture(directory, after)]);
@@ -203,10 +240,12 @@ export async function publishFredReview({ directory, id, expectedRevision, revie
       const { prepareFredEdition, stageFredMerchant } = await import('./merchant.mjs');
       const publicationDirectory = join(root, 'publications', publicationId);
       const edition = await prepareFredEdition({ directory: publicationDirectory,
-        capture: await getFredCapture(root, review.captureId), review });
+        capture: await getFredCapture(root, review.captureId), review,
+        ...(review.briefing ? { briefing: await getFredBriefing(root, review.id, { includeFiles: true }) } : {}) });
       const merchant = await stageFredMerchant({ directory: publicationDirectory, origin, path, payment });
       const result = { publicationId, reviewId, captureId: review.captureId, snapshot: edition.snapshot,
-        editionId: edition.editionId, resource: merchant.resource, publicOrigin: merchant.origin };
+        editionId: edition.editionId, resource: merchant.resource, publicOrigin: merchant.origin,
+        ...(edition.briefing ? { briefing: edition.briefing } : {}) };
       if (!state.publications.some(item => item.id === publicationId)) state.publications.push({ id: publicationId, ...result });
       return result;
     });
@@ -232,19 +271,34 @@ export async function exportFredProject({ directory } = {}) {
       const plan = await readPrivateJson(join(fredPublicationDirectory(directory, publication.id), 'merchant-plan.json'));
       publicationPlans.push({ id: publication.id, origin: plan.origin, path: plan.path, payment: plan.payment });
     }
-    const bundle = { schema: BUNDLE, state, captures, publicationPlans };
-    bundle.bundleSha256 = digest({ schema: BUNDLE, state, captures, publicationPlans });
+    const analystReviews = state.reviews.filter(review => review.briefing), briefings = [];
+    for (const review of analystReviews) briefings.push(exportFredBriefingFiles(await getFredBriefing(directory, review.id, { includeFiles: true })));
+    const bundle = { schema: briefings.length ? BRIEFING_BUNDLE : BUNDLE, state, captures, publicationPlans,
+      ...(briefings.length ? { briefings } : {}) };
+    bundle.bundleSha256 = digest(bundle);
     need(jsonBytes(bundle).length <= 256 * 1024 * 1024, 'Project bundle exceeds 256 MiB; export captures separately.');
     return bundle;
   });
 }
 export async function receiveFredProject({ directory, bundle } = {}) {
   directory = await privateDirectory(resolve(directory));
-  need(bundle?.schema === BUNDLE && Array.isArray(bundle.captures) &&
+  need([BUNDLE, BRIEFING_BUNDLE].includes(bundle?.schema) && Array.isArray(bundle.captures) &&
     Array.isArray(bundle.publicationPlans) &&
-    bundle.bundleSha256 === digest({ schema: BUNDLE, state: bundle.state, captures: bundle.captures, publicationPlans: bundle.publicationPlans }), 'Project bundle identity changed.');
+    (bundle.schema === BUNDLE ? bundle.briefings === undefined : Array.isArray(bundle.briefings) && bundle.briefings.length > 0),
+    'Receive the complete original versioned project bundle.');
+  const identity = { schema: bundle.schema, state: bundle.state, captures: bundle.captures, publicationPlans: bundle.publicationPlans,
+    ...(bundle.schema === BRIEFING_BUNDLE ? { briefings: bundle.briefings } : {}) };
+  need(bundle.bundleSha256 === digest(identity), 'Project bundle identity changed.');
   const original = projectState(clone(bundle.state));
   need(!original.pending, 'A receiving bundle must contain a completed project state.');
+  const analystReviews = original.reviews.filter(review => review.briefing);
+  need((bundle.briefings ?? []).length === analystReviews.length &&
+    new Set((bundle.briefings ?? []).map(item => item.manifest?.reviewId)).size === analystReviews.length &&
+    (bundle.briefings ?? []).every(item => analystReviews.some(review => review.id === item.manifest?.reviewId)),
+    'The complete project bundle must retain every original analyst briefing.');
+  need(bundle.publicationPlans.length === original.publications.length &&
+    new Set(bundle.publicationPlans.map(item => item.id)).size === original.publications.length,
+    'The complete original publication plan inventory differs.');
   need(bundle.captures.length === original.captures.length &&
     new Set(bundle.captures.map(item => item.captureSha256)).size === bundle.captures.length, 'Bundle source inventory differs.');
   return withPrivateLock(directory, 'project.lock', async () => {
@@ -264,13 +318,19 @@ export async function receiveFredProject({ directory, bundle } = {}) {
     }
     await privateDirectory(join(directory, 'reviews'));
     for (const review of original.reviews) {
-      need(review.id === digest({ captureId: review.captureId, policy: projectionPolicy(review.policy), note: review.note }) &&
-        original.captures.some(item => item.id === review.captureId), 'Saved review changed.');
+      const capture = bundle.captures.find(item => item.captureSha256 === review.captureId);
+      need(capture, 'The saved review lost its original source.');
+      validateFredReview(review, validateCapture(capture));
       const existing = await optionalJson(join(directory, 'reviews', review.id + '.json'));
       if (existing) need(canonical(existing) === canonical(review), 'Receiving review conflicts.');
       else await atomicJson(join(directory, 'reviews'), review.id + '.json', review, { exclusive: true });
     }
-    // Reconstruct immutable merchant files from the original saved review and operation inputs.
+    for (const review of analystReviews) {
+      const capture = bundle.captures.find(item => item.captureSha256 === review.captureId);
+      const transfer = bundle.briefings.find(item => item.manifest.reviewId === review.id);
+      await receiveFredBriefingFiles({ directory: fredBriefingDirectory(directory, review.id), transfer, capture, review });
+    }
+    // Reconstruct native merchant files with the original retained analyst bytes, source and payment inputs.
     const { prepareFredEdition, stageFredMerchant } = await import('./merchant.mjs');
     for (const publication of original.publications) {
       const operation = original.operations.find(item => item.kind === 'publish' && item.result.publicationId === publication.id);
@@ -282,7 +342,9 @@ export async function receiveFredProject({ directory, bundle } = {}) {
       const review = original.reviews.find(item => item.id === publication.reviewId);
       const capture = bundle.captures.find(item => item.captureSha256 === publication.captureId);
       const root = fredPublicationDirectory(directory, publication.id);
-      const edition = await prepareFredEdition({ directory: root, capture, review });
+      const briefing = review?.briefing ? await readFredBriefingFiles(fredBriefingDirectory(directory, review.id),
+        { captureId: review.captureId, reviewId: review.id, includeFiles: true }) : null;
+      const edition = await prepareFredEdition({ directory: root, capture, review, ...(briefing ? { briefing } : {}) });
       need(edition.snapshot === publication.snapshot && edition.editionId === publication.editionId, 'Receiving edition identity changed.');
       await stageFredMerchant({ directory: root, origin: plan.origin, path: plan.path, payment: plan.payment });
     }
