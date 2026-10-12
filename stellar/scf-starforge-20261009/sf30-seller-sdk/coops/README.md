@@ -28,7 +28,7 @@ See [MANAGED.md](MANAGED.md) for Applications and [MCP.md](MCP.md) for the exist
 2. **Preview the source request.** Choose observations, verified hourly heights and/or separate predictions, inclusive dates, metric/English units, GMT/local standard/local daylight time and datum. Preview shows the exact initial NOAA URLs and chunk plan. It records no source response.
 3. **Start the selected capture.** The application retains the actual station response, then follows the supported resource URLs NOAA advertised in that response. It records accepted, unavailable and failed requests. Pause/resume continues the original capture and keeps its completed responses.
 4. **Inspect the retained edition.** Review source completion, actual timestamp/value coverage, original quality fields, station datums and epochs. Page normalized rows or download the exact response bytes. Leave a dated, source-bound review or follow-up note.
-5. **Prepare a receiving mapping or dataset.** A model-input mapping selects original columns and explicit receiving headings. A native dataset selects one immutable edition, table, dates and products for the existing SF30 query engine. Neither action transforms a datum or fills a missing measurement.
+5. **Prepare a receiving mapping and dataset.** A model-input mapping selects original columns and explicit receiving headings. In dataset preparation, select that saved mapping or keep the original source columns. The native dataset pins the selected mapping revision alongside one immutable edition, table, dates and products for the existing SF30 query engine. Neither action transforms a datum or fills a missing measurement.
 6. **Inspect and release.** Enter actual authorized payment terms and original publisher settings. Prepare, inspect and explicitly activate/start through the native release control. Enter the generation returned by inspection for a generation-bound change. Customer receipt inspection and receiving use the existing buyer inbox and its original intent IDs.
 7. **Export and reopen.** Export a complete selected table, all originals in a source package, a readable source report, a comparison or the five original customer files. Retain receipts and hashes. Stop/reopen through the same owner; paused requests and uncertain operations require explicit original-request recovery.
 
@@ -80,6 +80,19 @@ Mappings perform column selection and renaming only, preserving original strings
 Every table export pins its mapping revision, editions, source hashes, query basis, annotations and backfill snapshot. JSON embeds this metadata. CSV and JSONL carry selected row columns; their native export receipt supplies full mapping and selection metadata. Keep that receipt with the file.
 
 Comparison JSON has `context`, compatibility findings, complete `counts` and a streamed `changes` array. Every change has a `kind` and an original or before/after record. Window/product scope changes are separate from observation edits. Duplicate keys remain ambiguous. Comparison never overwrites either edition or adopts a value.
+
+
+### Carry a receiving convention into the original dataset
+
+In **Datasets**, explicitly choose **Original source columns** or one saved receiving mapping. The mapping must select the same observation or prediction table. Preparation retains its exact revision, ordered source-to-heading map and acquired original JSON file. The dataset receipt records those identities; the original CSV, query schema and source manifest remain immutable after later mapping edits.
+
+The existing SF30 query engine accepts column names beginning with a letter, followed by at most 47 letters, digits or underscores; `constructor`, `prototype` and `__proto__` are reserved. A CSV exchange may use broader headings, but native dataset preparation rejects incompatible names and asks for an explicit revised convention. It never silently changes a receiving heading. Include `valueType` whenever `value` is mapped so absent, null, empty and recorded zero remain distinguishable.
+
+Query capabilities use the selected receiving names. Up to eight exposed identity/product/quality/basis fields are filters, an exposed `timestampUtc` is a range field, and the exposed timestamp/product/field/station fields are sortable. Original values remain strings, so a water-level heading does not become a numerical range column. The dataset's **Query** panel shows its native description and exact capabilities.
+
+The original operation reserves the selected mapping before preparation starts. An interrupted preparation resumes with that same revision even if staff later save another convention. A new dataset requires a new explicit preparation. The original SF82 release stage copies the verified mapping record, acquired mapping file and NOAA source files through its existing source-package mechanism; original customer receiving retains that release's dataset snapshot and headings.
+
+For existing clients, add optional `mappingId` to the ordinary `dataset.prepare` action payload. Omitting it preserves the original source-column workflow. No replacement query engine, release store or buyer transaction is introduced.
 
 ## Recovery and portability
 
