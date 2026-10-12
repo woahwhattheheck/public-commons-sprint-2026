@@ -297,7 +297,8 @@ def _input(delivery, mapping):
     meanings = read_delivery_semantics(delivery, manifest=manifest)
     descriptor = _semantic_descriptor(meanings, mapping) if meanings is not None else None
     if meanings is not None:
-        sql_context(meanings["bytes"], descriptor, digest(_json(identity).encode()))
+        sql_context(meanings["bytes"], descriptor, digest(_json(identity).encode()),
+                    case_sensitive_targets=True)
     return _Input(delivery, manifest_bytes, manifest, mapping, identity,
                   digest(_json(identity).encode()), source, meanings, descriptor)
 
@@ -314,7 +315,7 @@ def _semantic_descriptor(receiving, mapping, *, enforced=False):
 
 
 def _bound_semantics(raw, descriptor, manifest, mapping, version_id):
-    context = sql_context(raw, descriptor, version_id)
+    context = sql_context(raw, descriptor, version_id, case_sensitive_targets=True)
     document = context["document"]
     binding = semantic_identity(document)
     declared = manifest.get("semantics")
@@ -511,6 +512,7 @@ class PostgresWarehouse:
             if not row or row[0] != SCHEMA or self.warehouse_id is not None and row[1] != self.warehouse_id:
                 raise WarehouseError("DATASET_PG_WAREHOUSE_IDENTITY_CHANGED")
             self.warehouse_id = row[1]
+            self._semantics_ready = _SEMANTICS in relations
 
     def _version(self, cursor, version_id, *, include_semantics=False):
         _version_id(version_id)
@@ -569,13 +571,22 @@ class PostgresWarehouse:
         return {**version, "semantics": descriptor,
                 "semantic_dictionary": context["document"], "semantics_status": "RETAINED"}
 
+    def _prepare_semantics(self):
+        if self._semantics_ready:
+            return
+        # The FK's initial DDL needs a referenced-table lock. Prepare it before
+        # any import writes an edition, so different imports cannot form a
+        # version-INSERT/advisory-lock cycle. COPY remains concurrent.
+        with self._transaction() as cursor:
+            self._lock(cursor, "semantics")
+            cursor.execute(f"CREATE TABLE IF NOT EXISTS {self._table(_SEMANTICS)}"
+                           f"(version_id text PRIMARY KEY REFERENCES {self._table(_VERSIONS)}(version_id), "
+                           "record text NOT NULL, document bytea NOT NULL)")
+        self._semantics_ready = True
+
     def _retain_semantics(self, cursor, source):
         if source.semantic_source is None:
             return False
-        self._lock(cursor, "semantics")
-        cursor.execute(f"CREATE TABLE IF NOT EXISTS {self._table(_SEMANTICS)}"
-                       f"(version_id text PRIMARY KEY REFERENCES {self._table(_VERSIONS)}(version_id), "
-                       "record text NOT NULL, document bytea NOT NULL)")
         cursor.execute(f"SELECT record,document FROM {self._table(_SEMANTICS)} WHERE version_id=%s",
                        (source.version_id,))
         row = cursor.fetchone()
@@ -595,6 +606,8 @@ class PostgresWarehouse:
         source = _input(delivery, mapping)
         if expected_version is not None and source.version_id != expected_version:
             raise WarehouseError("DATASET_PG_REVIEWED_INPUT_CHANGED")
+        if source.semantic_source is not None:
+            self._prepare_semantics()
         table = "_sf_data_" + source.version_id[:48]
         observed = [set() for _ in mapping.columns]
         with delivery.file("dataset.jsonl").open() as stream, self._transaction() as cursor:
@@ -686,8 +699,10 @@ class PostgresWarehouse:
         def columns(version):
             document = version.get("semantic_dictionary") or {}
             meanings = {column["name"]: column for column in document.get("columns", [])}
+            keys = set(version["mapping"]["keys"])
             return {column["source"]: {"sql_column": column["column"],
                      "sql_type": column["type"], "nullable": column["nullable"],
+                     "receiving_key": column["source"] in keys,
                      "meaning": meanings.get(column["source"])}
                     for column in version["mapping"]["columns"]}
 
@@ -701,6 +716,7 @@ class PostgresWarehouse:
                 "definition_changed": (first or {}).get("definition_sha256") != (second or {}).get("definition_sha256"),
                 "capture_changed": (first or {}).get("capture_manifest_sha256") != (second or {}).get("capture_manifest_sha256"),
                 "mapping_changed": not same_json(before["mapping"], after["mapping"]),
+                "before_mapping": before["mapping"], "after_mapping": after["mapping"],
                 "columns": changes, "before_document": before.get("semantic_dictionary"),
                 "after_document": after.get("semantic_dictionary")}
 

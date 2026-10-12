@@ -55,7 +55,13 @@ async function download(button,name,expected){
 }
 async function openEdition(id){
   await screen('editions');
-  await page.locator('#edition-list button.item').filter({hasText:id.slice(0,12)}).click();
+  const choice=page.locator('#edition-list button.item').filter({hasText:id.slice(0,12)});
+  while(await choice.count()===0){
+    const more=page.locator('#more-editions');
+    requireValue(await more.isVisible(),'The original retained edition is absent from the complete browser list: '+id);
+    await more.click();await idle();
+  }
+  await choice.click();
   await page.waitForFunction(id=>document.getElementById('edition-json')?.textContent.includes(id),id);
   await idle();
   await page.locator('#edition-meanings').getByRole('heading',{name:'Original field meanings',exact:true}).waitFor();

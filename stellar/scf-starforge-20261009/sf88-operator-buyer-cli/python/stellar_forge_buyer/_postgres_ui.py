@@ -175,12 +175,16 @@ function meanings(record, currentMapping) {
   const aliases = new Map((mapping?.columns || descriptor.columns).map(column => [column.source,column.column]));
   const sourceKeys = document.primaryKey.projected || [];
   const key = descriptor.primary_key;
+  const sourceKeySelected = sourceKeys.length > 0 && document.primaryKey.complete &&
+    !!mapping && mapping.keys.length === sourceKeys.length && sourceKeys.every(name => mapping.keys.includes(name));
   node.append(facts([
     ['Dictionary',record.semantics_status === 'AVAILABLE' ? 'Verified original delivery' : 'Retained original delivery'],
     ['Source primary key',sourceKeys.join(', ') || 'Not declared'],
     ['Key coverage',document.primaryKey.complete && sourceKeys.every(name => aliases.has(name)) ? 'All source key fields are mapped' : 'Source key is incomplete or outside this projection'],
     ['Receiving key',mapping ? mapping.keys.join(', ') || 'Original row order' : key.columns.join(', ') || 'Original row order'],
-    ['Source key enforced',record.semantics_status === 'AVAILABLE' ? 'Checked during PostgreSQL import' : key.enforced ? 'Yes, by this edition’s PostgreSQL primary key' : 'No'],
+    ['Source key enforced',record.semantics_status === 'AVAILABLE'
+      ? sourceKeySelected ? 'Selected for PostgreSQL enforcement on import' : 'The selected receiving key does not enforce the source key'
+      : key.enforced ? 'Yes, by this edition’s PostgreSQL primary key' : 'No'],
   ]));
   const definitions = document.columns.filter(column => aliases.has(column.name));
   node.append(table(['Delivered field','Database column','Meaning','Original definition'], definitions.map(column => [
@@ -205,7 +209,11 @@ function renderMeaningComparison(value) {
     value.columns.map(column => [column.source,
       column.before === null ? null : details('Previous field',column.before),
       column.after === null ? null : details('Following field',column.after)])));
-  else node.append(make('p','The source fields and receiving mappings are unchanged.','hint'));
+  else node.append(make('p',value.mapping_changed
+    ? 'Field definitions, aliases, types and key membership are unchanged. The complete mappings below show the remaining mapping change.'
+    : 'The source fields and receiving mappings are unchanged.','hint'));
+  if (value.mapping_changed) node.append(details('Previous complete receiving mapping',value.before_mapping),
+    details('Following complete receiving mapping',value.after_mapping));
   node.append(button('Download complete meaning comparison', () => download(
     '/api/semantic-compare?previous=' + value.before_version + '&current=' + value.after_version,
     'postgres-meanings-' + value.before_version + '-' + value.after_version + '.json')),

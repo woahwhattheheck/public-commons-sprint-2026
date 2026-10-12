@@ -240,7 +240,9 @@ immutable edition identity remains the original manifest, acquisition binding
 and complete mapping; the manifest already binds the dictionary. Every new
 import stores its exact bytes in the same PostgreSQL transaction as the rows.
 Reopened editions verify the dictionary against that retained manifest and
-reviewed mapping.
+reviewed mapping. PostgreSQL uses exact, quoted SQL aliases, including distinct
+names such as `Reading` and `reading`; the original mapping remains usable when
+receiving a missing dictionary into an earlier edition.
 
 Three independent identities describe the source: its complete semantic
 identity, its field-definition identity, and its source-capture identity.
