@@ -62,14 +62,19 @@ python3 /PRIVATE_SOURCE/run-managed-receiving.py \
   --playwright /EXISTING_PLAYWRIGHT_MODULE \
   --chromium /EXISTING_CHROMIUM \
   --driver /PRIVATE_SOURCE/receive-managed.mjs \
-  --driver-sha256 35f95a4c57af13944ca4968de41ac41e13e3bf85687eec1e442be923c4a74bf9
+  --driver-sha256 927857cc4f2d92a3fee07fcb620fc7dd5c64acebfd5b4610474209e351d38ff4
 ```
 
 Use actual absolute paths supplied by that host. The Python entry verifies the
 driver bytes, owns one OS file lock and one original Node child, and keeps the
 source/runtime/operation selection stable. It forwards cancellation to the
 owned programme and settles its exact child. An OS-released lock can be reused
-after a killed launcher; a live owner is never replaced.
+after a killed launcher; a live owner is never replaced. Private JSON writes use
+unique temporary names, so a reused namespace PID cannot strand a continuation.
+The launcher observes its exact Node session leader with Linux `waitid(WNOWAIT)`
+and keeps that PID reserved until cleanup. A nonzero or signal exit closes that
+original process group before reaping the leader. Managed child ownership stays
+retained until actual closure is observed, including when a first close attempt fails.
 
 The Node entry is intentionally invoked through this launcher. The private
 operation directory is mode 0700. Its startup logs and browser profile remain
