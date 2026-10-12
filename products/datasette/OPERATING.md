@@ -40,7 +40,7 @@ The **Datasette customer Analysis** application is included beside the publisher
 
 Enter the exact JSON endpoint, including the desired filters, page size and source options. Choose Table or Read-only query and retain the original database/table or query name.
 
-The supported response is a JSON object containing rows, with declared columns or an explicitly retained column declaration. The native parser accepts row arrays and row objects. The source's opaque next_url or HTTP Link continuation is followed as supplied, including its real request/response metadata. Additional origins must be deliberately listed in the selection.
+The supported response is a JSON object containing rows, with declared columns or an explicitly retained column declaration. When pages omit their columns field, enter **Ordered original column names** as a JSON array in the exact returned order. **Use WRI geothermal source** supplies its verified 26 positions. Reusing a retained selection keeps its original column order and source options. The native parser accepts row arrays and row objects. The source's opaque next_url or HTTP Link continuation is followed as supplied, including its real request/response metadata. Additional origins must be deliberately listed in the selection.
 
 Use **Capture complete source** to retain a new capture. The original operation UUID is stored before the browser sends the request. A subsequent source refresh creates a distinct capture. **Resume original capture** uses that capture's original UUID and selection.
 
@@ -57,7 +57,16 @@ The full capture is available through the same operation API:
     "database": "global-power-plants",
     "table": "global-power-plants",
     "continuation": "auto",
-    "approvedOrigins": ["https://datasette.io"]
+    "approvedOrigins": ["https://datasette.io"],
+    "columns": ["rowid","country","country_long","name","gppd_idnr","capacity_mw","latitude","longitude","primary_fuel","other_fuel1","other_fuel2","other_fuel3","commissioning_year","owner","source","url","geolocation_source","wepp_id","year_of_capacity_data","generation_gwh_2013","generation_gwh_2014","generation_gwh_2015","generation_gwh_2016","generation_gwh_2017","generation_data_source","estimated_generation_gwh"],
+    "metadata": {
+      "title": "Global Power Plant Database",
+      "source": "World Resources Institute",
+      "source_url": "http://www.wri.org/publication/global-power-plant-database",
+      "license": "CC Attribution 4.0 License",
+      "license_url": "https://creativecommons.org/licenses/by/4.0/",
+      "about_url": "https://github.com/simonw/global-power-plants-datasette"
+    }
   }
 }
 ~~~
@@ -74,7 +83,7 @@ Read a completed capture with source.inspect and its operationId. Rows use expli
 
 ## Review fields and source identity
 
-Open a completed capture. **Original source rows** shows the retained values and source types with paged navigation. **Original HTTP pages and retained files** exposes response metadata and exact original body downloads.
+Open a completed capture. **Original source rows** shows the retained values and source types with paged navigation. **Original HTTP pages and retained files** exposes response metadata and exact original body downloads. The source observation window uses the retained retrieval bounds when exact request start/end times are unavailable. Each page displays its known HTTP status or original file-import provider receipt.
 
 Each published field has an original column, safe published name, type, representation and nullability:
 
@@ -108,7 +117,7 @@ Enter a plan title and query name. The default query is data. Source input, data
 
 Open the run, inspect its exact candidate and query preview, and **Read current dataset target**. For a first publication, select initialization of the empty target. For a refresh, start the original dataset seller against that same target and read its actual snapshot and revision.
 
-Record the reviewer and substantive publication note. The native review binds the exact candidate and current target. **Publish reviewed candidate** uses that saved review identifier. The original version store returns the published snapshot and revision.
+Record the reviewer and substantive publication note. The native review binds the exact candidate and current target. **Publish reviewed candidate** uses that saved review identifier. The original version store returns the published snapshot and revision. The browser follows the saved run state: PUBLISHED identifies a completed publication; READY after a publication attempt displays its recorded refusal, and PUBLICATION_UNKNOWN remains available for reconciliation.
 
 If a response ends during extraction or publication, **Reconcile original run** reopens that same run. The retained plan, candidate, publication review and native dataset store determine its outcome.
 
@@ -234,6 +243,6 @@ Direct application clients import ./seller/datasette/client from the selected pa
 
 Source selection, plan, candidate review and buyer preparation retain requestId values. Capture, extraction, edition, export, archive and upload operations also retain their original domain identifiers. The browser does not silently replay a failed write.
 
-For an interrupted upload, select the same original archive. The browser reopens its upload UUID and verified received prefix, then continues original byte ranges. The native completed archive's SHA and path feed the maintained source or workspace receiver. See [Installation and receiving](RECEIVING.md).
+For an interrupted upload, **Read current outcome** reopens its original upload UUID and verified prefix. Select the same archive when bytes remain to upload. Once all bytes are retained, **Continue original input** completes or reopens receiving from that saved archive without requiring the file to be selected again. The archive SHA, path and receiving destination remain in one browser operation until receiving completes. The source edition receiver reopens the reviewed edition; the source/publisher workspace receiver restores its own ZIP and original directory. Customer Analysis archives continue through the separate original Analysis receiver. See [Installation and receiving](RECEIVING.md).
 
 Stop through Applications or the foreground command's normal signal handling. Reopen the same original directory and private connection file to continue retained work.
