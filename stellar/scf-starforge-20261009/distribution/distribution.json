@@ -458,6 +458,7 @@
     "baserow-workspace": "stellar/scf-starforge-20261009/sf30-seller-sdk/baserow/workspace/cli.mjs",
     "stac": "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/cli.mjs",
     "grant-demo": "stellar/scf_2026/presentation/reviewer/cli.mjs",
+    "opensearch-catalog": "stellar/scf-starforge-20261009/sf30-seller-sdk/opensearch/catalog/cli.mjs",
     "merchant-usgs": "stellar-forge/mcp-merchant-operator/usgs-workspace-download.mjs"
   },
   "exports": {
@@ -886,6 +887,7 @@
     "./seller/ckan": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/ckan/source.mjs",
     "./seller/ckan/capture": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/ckan/capture.mjs",
     "./seller/ckan/declaration": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/ckan/declaration.mjs",
+    "./seller/ckan/semantics": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/ckan/semantics.mjs",
     "./seller/ckan/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/ckan/server.mjs",
     "./seller/ckan/workspace/model": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/ckan/model.mjs",
     "./seller/ckan/publisher": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/ckan/publisher/model.mjs",
@@ -1142,6 +1144,12 @@
       "types": "./source/stellar/scf_2026/presentation/reviewer/workspace.d.mts",
       "import": "./source/stellar/scf_2026/presentation/reviewer/workspace.mjs"
     },
+    "./seller/opensearch/catalog/cli": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opensearch/catalog/cli.mjs",
+    "./seller/opensearch/catalog/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opensearch/catalog/workspace.mjs",
+    "./seller/opensearch/catalog/mapping": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opensearch/catalog/mapping.mjs",
+    "./seller/opensearch/catalog/input": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opensearch/catalog/input.mjs",
+    "./seller/opensearch/catalog/exports": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opensearch/catalog/exports.mjs",
+    "./seller/opensearch/catalog/transfer": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opensearch/catalog/transfer.mjs",
     "./merchant/mcp/usgs-workspaces": "./source/stellar-forge/mcp-merchant-operator/usgs-workspace.mjs",
     "./merchant/mcp/usgs-delivery": "./source/stellar-forge/mcp-merchant-operator/usgs-delivery.mjs",
     "./merchant/mcp/usgs-download": "./source/stellar-forge/mcp-merchant-operator/usgs-workspace-download.mjs",

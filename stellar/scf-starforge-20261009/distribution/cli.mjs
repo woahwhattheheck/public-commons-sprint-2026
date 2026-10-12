@@ -153,6 +153,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   opensearch                                 Preflight and run a native OpenSearch merchant
   opensearch-prepare                         Prepare named search routes and the original customer client
   opensearch-workspace                       Save drafts, capture and compare search editions, and prepare merchants
+  opensearch-catalog                         Retain material catalogs, review customer matches and reopen complete handovers
   cube-workspace / cube-onboard              Author, review and export paid Cube reports
   openapi-workspace                          Import an API contract or Postman collection and operate its merchant
   oauth-connection                           Authorize, renew and select QuickBooks companies, Xero tenants or API grants

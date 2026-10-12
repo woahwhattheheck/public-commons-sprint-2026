@@ -6,6 +6,7 @@ Applications opens the original merchant and buyer tools from a selected READY r
 
 | Application | Maintained command | Original workflow |
 | --- | --- | --- |
+| CoinGecko market research | coingecko serve | Original market sources, request collections, comparisons, notes, provider plans, native buyer recovery and complete handover |
 | Catalog Atlas | atlas | Retained catalog intake, offer comparison, exact native buyer preparation and complete workspace receiving |
 | n8n automation merchant | n8n-merchant serve | Configuration review, original preparation, paid jobs, retained workflow executions, customer results and stop/reopen |
 | API-pass customer | api-pass-workspace serve | Original API access, saved requests, exact response recovery, private buyer history and customer statements |
@@ -562,3 +563,7 @@ Review and save the application, then review its start and select **Start → Op
 Inside the original workspace, discover the selected fields, retain the complete original rows and files, create a typed projection, preview it and save a reviewed version. Open the original publisher for that selected version; its merchant controls prepare and stage the original release and customer handoff. The source workspace also exports the complete retained packet for another operator. The [source workspace guide](../../sf30-seller-sdk/baserow/workspace/README.md) covers discovery, original file receiving, versions, packet import and merchant operation. The [provider guide](../../sf30-seller-sdk/baserow/README.md) covers the Baserow source and publication contract.
 
 **Stop** drains the owned source and publisher operations before releasing the workspace. **Reopen** returns to its retained captures, request history, versions and deployment state. A closed runtime browser can reopen the existing managed operation. If the selected source installation or connections file changes, review that current input before the next start. Normal source edits and publication versions stay within the retained workspace and preserve its managed identity.
+
+## CoinGecko market research
+
+Choose the original private CoinGecko workspace and optional saved project and buyer profile configuration. The same browser, model and native jobs run through Review/Save, managed connection, Start/Open, Stop and reopen. The startup observer binds the reviewed source to the actual installed release and original project; shutdown drains the original worker and database. Full operating instructions: [CoinGecko in Applications](COINGECKO_APPLICATIONS.md).
