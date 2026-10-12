@@ -199,3 +199,7 @@ continuation can also be invoked directly with
 Its `browser/browser-result.json` retains each completed screen action,
 complete file hashes and actual close/reopen result. The original workspace
 and native GIS result remain selected throughout the continuation.
+
+## Continue the original native customer
+
+For the complete original four-feature ArcGIS operation, its exact source and customer inputs, the signed runtime acquisition, and the maintained worker invocation, use [Native GIS receiving](examples/NATIVE_GIS_RECEIVING.md).
