@@ -59,7 +59,16 @@ export function allocatePortfolioCalendar({staff,rows,startDate,endDate,booked=[
     need(preparerId!==backupId,'Choose a backup person who can take over from the preparer.');
     const closeDate=portfolioDate(row.closeDate),reviewDate=portfolioDate(row.reviewDate??row.closeDate);
     need(startDate<=closeDate&&closeDate<=reviewDate&&reviewDate<=endDate,'Keep close and review dates inside the calendar horizon.');
-    return {id,clientId,preparerId,backupId,reviewerId,closeDate,reviewDate,
+    const selected={};
+    if(row.profileId!==undefined&&row.profileId!==null){
+      selected.profileId=key(row.profileId,'procedure set');
+      if(row.profileName!==undefined)selected.profileName=text(row.profileName,'procedure set name',240);
+      if(row.selectedStepCount!==undefined){
+        need(Number.isSafeInteger(row.selectedStepCount)&&row.selectedStepCount>0&&row.selectedStepCount<=100,'Use the actual number of selected procedures.');
+        selected.selectedStepCount=row.selectedStepCount;
+      }
+    }
+    return {id,clientId,preparerId,backupId,reviewerId,closeDate,reviewDate,...selected,
       preparationMinutes:minutes(row.preparationMinutes,'preparation'),
       reviewMinutes:minutes(row.reviewMinutes,'review'),backupMinutes:minutes(row.backupMinutes??0,'backup reserve')};
   });
