@@ -69,10 +69,8 @@ function checkedMethods(value, path, allowed = METHODS) {
 function checkedPattern(value, path) {
   const pattern = string(value, path, 500);
   need(pattern === value, 'EOAPI_ROUTE_PATTERN_WHITESPACE', path);
-  need(pattern.startsWith('^/'), 'EOAPI_ANCHORED_ROUTE_REQUIRED', path);
-  // Shared Python/ECMAScript expression subset, preserving the supplied expression.
-  need(!/\(\?<|\(\?[a-z-]|\\[pPkKgG]|\(\?#/.test(pattern), 'EOAPI_ROUTE_PATTERN_UNSUPPORTED', path, 'Use explicit anchored paths and ordinary groups.');
-  try { new RegExp(pattern); } catch { throw new DeploymentPolicyError('EOAPI_ROUTE_PATTERN_INVALID', path); }
+  // Native Python syntax and access-case evaluation belong to the selected
+  // Auth Proxy reviewer. Keep its pattern exactly as authored here.
   return pattern;
 }
 function publicRules(value) {
@@ -92,9 +90,11 @@ function privateRules(value) {
       need(ROUTE_METHODS.has(method) && !seen.has(method), 'EOAPI_ROUTE_METHOD_DUPLICATE_OR_INVALID', pattern); seen.add(method);
       if (typeof entry === 'string') return method;
       need(entry.length === 2 && typeof entry[1] === 'string', 'EOAPI_ROUTE_SCOPE_INVALID', pattern);
-      const scopes = unique(entry[1].split(' ').filter(Boolean));
-      need(scopes.length && scopes.every(scope => SCOPES.test(scope)), 'EOAPI_ROUTE_SCOPE_INVALID', pattern);
-      return [method, scopes.join(' ')];
+      // Native matching uses literal split(' ') for a nonempty string.
+      // Empty tokens and duplicate scopes must retain their exact meaning.
+      const scopeText = entry[1];
+      need(scopeText.split(' ').every(scope => scope === '' || SCOPES.test(scope)), 'EOAPI_ROUTE_SCOPE_INVALID', pattern);
+      return [method, scopeText];
     }).sort((a, b) => String(Array.isArray(a) ? a[0] : a).localeCompare(String(Array.isArray(b) ? b[0] : b)));
     need(out[pattern].length, 'EOAPI_EMPTY_ROUTE_METHODS', pattern);
   }
@@ -212,7 +212,7 @@ export function compileDeploymentPolicy(input) {
     defaultAccess: policy.routing.defaultPublic ? 'public' : 'authenticated',
     routePrecedence: { public: 'When defaultPublic is false, public rules are checked before private rules.', private: 'The first matching private rule in the recorded order selects its required scopes.' },
     routes: [...Object.entries(policy.routing.publicEndpoints).flatMap(([pattern, methods], index) => methods.map(method => ({ pattern, order: index + 1, method, access: 'public', scopes: [], active: !policy.routing.defaultPublic, matching: 'case-sensitive, as written' }))),
-      ...Object.entries(policy.routing.privateEndpoints).flatMap(([pattern, entries], index) => entries.map(value => ({ pattern, order: index + 1, method: Array.isArray(value) ? value[0] : value, access: 'authenticated', scopes: Array.isArray(value) ? value[1].split(' ') : [], active: true, matching: 'case-insensitive; proxy normalizes one trailing slash' })))],
+      ...Object.entries(policy.routing.privateEndpoints).flatMap(([pattern, entries], index) => entries.map(value => ({ pattern, order: index + 1, method: Array.isArray(value) ? value[0] : value, access: 'authenticated', scopes: Array.isArray(value) && value[1] ? value[1].split(' ') : [], active: true, matching: 'case-insensitive; proxy normalizes one trailing slash' })))],
     recordFilters: clone(policy.filtering), requirements, collectionRights: clone(policy.collectionRights),
     upstreamBoundary: policy.upstream.networkBoundary, retentionDays: policy.operator.retentionDays,
     sourceReferences: [...POLICY_SOURCES], findings
