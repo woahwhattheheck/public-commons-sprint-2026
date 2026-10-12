@@ -1,8 +1,8 @@
 # Run and receive the complete governed application
 
-This launcher prepares the original SCF application receiving operation on a Linux machine with Node24 and Python3. It fetches the exact 110 source files at `0d58eaa67daef611146944ebc35613d78d206cb5`, checks their lengths and SHA256 hashes, prepares MCP SDK 1.32.1, and invokes the existing `governed_receiving.mjs` once.
+This launcher prepares the original SCF application receiving operation on a Linux machine with Node24 and Python3. It fetches the exact 110 source files selected by the manifest, checks their immutable refs, lengths and SHA256 hashes, prepares MCP SDK 1.32.1, and invokes the existing `governed_receiving.mjs` once. The original runtime remains pinned at `0d58eaa67daef611146944ebc35613d78d206cb5`; three explicit source entries select the retained-schema receiving correction.
 
-The source closure includes the application and its browser, HTTP and MCP surfaces, SF36 spending state, encrypted project capture and receiving, and the native spending recovery operation. It also includes the original SF36 `expired_resume.py` module imported by the approval console, using the same pinned source revision. All 110 selected files total 1,346,963 bytes. The launcher preserves the original receiving workflow. Its provider and payment responses remain the local integration fixtures defined in that source.
+The source closure includes the application and its browser, HTTP and MCP surfaces, SF36 spending state, encrypted project capture and receiving, and the native spending recovery operation. It also includes the original SF36 `expired_resume.py` module imported by the approval console, using the same pinned source revision. All 110 selected files total 1,354,972 bytes. The launcher preserves the original receiving workflow. Its provider and payment responses remain the local integration fixtures defined in that source.
 
 ## Inputs and one command
 
@@ -59,3 +59,21 @@ On completion or an observed process failure, the launcher creates a sibling ZIP
 Each invocation requires a new destination. Use the retained original process and directory to inspect a running or interrupted case. If another receiving attempt is deliberately started after that inspection, its new destination keeps the earlier case and results available.
 
 The case can contain private native state and scoped keys. The launcher uses private directories and files, and writes its archive with owner-only permissions. Deliver the archive through the original authorized customer or operator route.
+
+## Retained tool schemas and a saved project continuation
+
+The source closure keeps the original 0d58eaa67daef611146944ebc35613d78d206cb5 application and native engines, with the three request-receiving postimages selected explicitly at a73286127ffdf712a187c7b552c97a809a3433d5. Each changed entry carries its own immutable `ref`, byte length and SHA-256. The launcher fetches that exact ref and verifies every selected byte; a supplied local source root must match the same complete manifest.
+
+An unpinned remote tool schema is learned during original discovery. The encrypted project verifier now checks that learned hash against the captured native request, quote UUID, original ticket digest, complete invocation and accepted payment terms. It then checks the full retained request and review. A configured schema hash remains an exact selection constraint.
+
+To continue a saved case that completed the original purchase and wrote `project-archives/original-application-recovery.receipt.json`, retain its original canonical application, handoff, source-reference paths and private fixture environment. Preserve those bytes and the original complete archive. Run the corrected operation at the original fixture module path, with the corrected receiver source in a separate directory:
+
+```sh
+node /ORIGINAL_SOURCE/stellar/scf-starforge-20261009/partners/cheesecake-stellar-agent/operations/governed_receiving.mjs \\
+  --handoff /ORIGINAL_HANDOFF \\
+  --work /ORIGINAL_CASE \\
+  --python /ABSOLUTE_PYTHON \\
+  --resume-with /CORRECTED_RECEIVER_SOURCE
+```
+
+The same operation reads the retained quote and complete result, replays the same snapshot operation ID, receives the encrypted project, reads and exports all captured bytes, reattaches the original owner, and restores the canonical owner with its scoped original keys. Its continuation report carries the prior quote, archive and result identities; signing and signed-call counters describe this continuation and must remain zero. The existing original native-spending recovery case then completes the full handover. Keep the prior runtime entrypoint alongside its corrected postimage in the delivery record; changing the receiver does not rewrite the encrypted project’s source references.
