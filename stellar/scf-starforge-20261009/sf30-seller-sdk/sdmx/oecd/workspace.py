@@ -252,7 +252,7 @@ class OecdWorkspace:
             self.source._source_path(source["id"])
         return result
 
-    def preview(self, body):
+    def _preview(self, body, check_revision=True):
         if not isinstance(body, dict) or set(body) - {"operation_id", "capture_id", "countries", "start_period",
                 "end_period", "title", "notes", "project_id", "expected_revision"}:
             raise InputError("Briefing selection must contain only supported fields")
@@ -271,10 +271,11 @@ class OecdWorkspace:
         operation = text(body.get("operation_id"), "Operation identity", 130)
         project_id = body.get("project_id")
         expected = body.get("expected_revision")
+        if expected is not None and (isinstance(expected, bool) or not isinstance(expected, int) or expected < 0):
+            raise InputError("Expected revision must be a nonnegative integer")
         if project_id is not None:
             identity(project_id, re.compile(r"[0-9a-f]{32}\Z"))
-            view = self.source.project(project_id)
-            if expected != view["current_revision"]:
+            if check_revision and expected != self.source.project(project_id)["current_revision"]:
                 raise InputError("Refresh the original project revision before saving")
         elif expected not in {None, 0}:
             raise InputError("A new project starts at revision zero")
@@ -284,6 +285,57 @@ class OecdWorkspace:
         return {"request": normalized, "capture": capture,
                 "selection": {"series_keys": sorted(available[c]["series_key"] for c in countries)},
                 "source_observations": sum(available[c]["observations"] for c in countries)}
+
+    def preview(self, body):
+        return self._preview(body)
+
+    def _project_request(self, request, capture, selection):
+        return {"operation_id": request["operation_id"] + ":source", "title": request["title"],
+                "id": request["project_id"], "expected_revision": request["expected_revision"],
+                "data_source_id": capture["data_source_id"], "metadata_source_ids": capture["metadata_source_ids"],
+                "flow_id": qualified(capture["flow"]), "selection": selection, "notes": request["notes"]}
+
+    def _edition_request(self, request, project, selection):
+        return {"operation_id": request["operation_id"] + ":catalog", "title": request["title"],
+                "notes": request["notes"], "members": [{"project_id": project["project"]["id"],
+                    "revision": project["project"]["revision"], "series_keys": selection["series_keys"]}]}
+
+    def _resume_imported_briefing(self, request, saved):
+        """Restore the exact original operation after native history has been imported."""
+        preview = self._preview(request, check_revision=False)
+        if preview["request"] != request:
+            raise InputError("The packet briefing request is not its original normalized selection")
+        if saved.get("schema") != BRIEFING or saved.get("operation_id") != request["operation_id"] or (
+                saved.get("capture_id") != request["capture_id"] or saved.get("selection") != request):
+            raise InputError("The packet briefing differs from its retained original request")
+        capture, selection = preview["capture"], preview["selection"]
+        source_request = self.source._request(self._project_request(request, capture, selection))
+        source_row = self.db.execute("SELECT * FROM operations WHERE id=?",
+                                     (source_request["operation_id"],)).fetchone()
+        if source_row is None or source_row["request_sha256"] != digest(json_bytes(source_request)) or (
+                load_json(source_row["request"]) != source_request):
+            raise InputError("The imported project has no matching original source operation")
+        original_project = load_json(source_row["result"])
+        project = self.source.project(saved.get("project_id"), saved.get("project_revision"))
+        if original_project["project"] != project["project"] or (
+                original_project["build"]["snapshot"] != project["build"]["snapshot"] or
+                project["build"]["snapshot"] != saved.get("native_snapshot")):
+            raise InputError("The packet briefing does not select its imported original project revision")
+        edition_request = self.catalog._request(self._edition_request(request, original_project, selection))
+        edition_row = self.db.execute("SELECT * FROM macrobond_editions WHERE operation_id=?",
+                                      (edition_request["operation_id"],)).fetchone()
+        if edition_row is None or edition_row["request_sha256"] != digest(json_bytes(edition_request)) or (
+                load_json(edition_row["request"]) != edition_request):
+            raise InputError("The imported catalog has no matching original briefing edition operation")
+        edition = self.catalog.edition(saved.get("catalog_edition_id"))
+        if load_json(edition_row["body"]) != edition or (
+                digest(json_bytes({"request": request, "edition_id": edition["edition"]["id"]})) != saved.get("id")):
+            raise InputError("The packet briefing differs from its source-bound original catalog edition")
+        # This is recovery of an imported completed native operation. The live
+        # project may already be at this or a later revision; its original CAS
+        # was evaluated when that retained source operation was first saved.
+        self._operation(request["operation_id"], request)
+        return self.save_briefing(request)
 
     def save_briefing(self, body):
         with self.mutex:
@@ -312,15 +364,10 @@ class OecdWorkspace:
                 preview = self.preview(body)
                 request, capture, selection = preview["request"], preview["capture"], preview["selection"]
                 self._operation(operation, request)
-            project_request = {"operation_id": operation + ":source", "title": request["title"],
-                "id": request["project_id"], "expected_revision": request["expected_revision"],
-                "data_source_id": capture["data_source_id"], "metadata_source_ids": capture["metadata_source_ids"],
-                "flow_id": qualified(capture["flow"]), "selection": selection, "notes": request["notes"]}
+            project_request = self._project_request(request, capture, selection)
             with self.catalog._native_environment():
                 project = self.source.save_project(project_request)
-            edition = self.catalog.save_edition({"operation_id": operation + ":catalog", "title": request["title"],
-                "notes": request["notes"], "members": [{"project_id": project["project"]["id"],
-                    "revision": project["project"]["revision"], "series_keys": selection["series_keys"]}]})
+            edition = self.catalog.save_edition(self._edition_request(request, project, selection))
             report = build_briefing(self.catalog, edition, capture, request)
             ident = digest(json_bytes({"request": request, "edition_id": edition["edition"]["id"]}))
             report["id"] = ident
@@ -491,8 +538,10 @@ class OecdWorkspace:
                     raise InputError("Existing capture identity has different retained metadata")
                 self.db.execute("INSERT OR IGNORE INTO oecd_captures VALUES(?,?)",
                                 (capture["id"], json_bytes(capture).decode()))
-            generated = self.save_briefing(request)
-            if generated["id"] != saved["id"] or generated["report"]["files"] != saved["report"]["files"]:
+            generated = self._resume_imported_briefing(request, saved)
+            portable = lambda value: {**{k: v for k, v in value.items() if k not in {"document", "report"}},
+                                      "report": {"files": value["report"]["files"]}}
+            if portable(generated) != portable(saved):
                 raise InputError("Reopened report differs from the original customer edition")
             for name, raw in verified.items():
                 if name.startswith("reports/") and self.report_file(generated["id"], name.split("/", 1)[1]).read_bytes() != raw:

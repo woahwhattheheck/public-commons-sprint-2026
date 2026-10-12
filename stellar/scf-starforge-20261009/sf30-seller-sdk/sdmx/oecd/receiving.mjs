@@ -203,13 +203,68 @@ export async function receiveOecd({ projectDirectory, config, pythonCommand = 'p
         const rows = await delivery.readRows({ limit: 256 * 1024 * 1024, maxRows: 1000000, signal });
         return { ...compareSourceRows(rows, sourceRows.rows), snapshot: delivery.manifest.dataset.snapshot };
       });
-      await step('projectReopen', async () => {
-        const packet = await readPrivate(join(folder, 'buyer-delivery', 'oecd-original-project.zip'), 128 * 1024 * 1024);
-        const restored = await client.importProject(packet);
-        need(restored.id === briefing.id && restored.catalog_edition_id === briefing.catalog_edition_id &&
-          identity(restored.report.files) === identity(briefing.report.files), 'OECD_ORIGINAL_PROJECT_REOPEN_CHANGED');
-        return { briefingId: restored.id, catalogEdition: restored.catalog_edition_id,
-          projectId: restored.project_id, revision: restored.project_revision, files: restored.report.files };
+      const revised = await step('revisedBriefing', async () => {
+        const result = await client.save({ ...briefing.selection,
+          operation_id: config.id + ':customer-handover', project_id: briefing.project_id,
+          expected_revision: briefing.project_revision,
+          notes: [briefing.selection.notes,
+            'Customer handover: the complete source responses, original monthly series and report files are retained together for reopening.']
+            .filter(Boolean).join('\n\n') });
+        need(result.project_id === briefing.project_id && result.project_revision === briefing.project_revision + 1,
+          'OECD_ORIGINAL_EDITORIAL_REVISION_CHANGED');
+        return result;
+      });
+      const revisedArtifacts = await step('revisedReportArtifacts', async () => {
+        const target = join(folder, 'buyer-delivery', 'revised-briefing'); await privateDirectory(target, true);
+        const files = [];
+        for (const name of ['briefing.html', 'briefing.json', 'observations.csv']) {
+          files.push(await exactFile(target, name, (await client.reportFile(revised.id, name)).body));
+        }
+        const rows = await client.sourceRows(revised.id);
+        need(identity(rows.rows) === identity(sourceRows.rows) && rows.snapshot === sourceRows.snapshot,
+          'OECD_EDITORIAL_REVISION_SOURCE_CHANGED');
+        const packet = await exactFile(target, 'oecd-revised-original-project.zip',
+          (await client.exportProject(revised.id)).body);
+        return { briefingId: revised.id, directory: target, files, packet,
+          projectRevision: revised.project_revision, sourceRows: rows.row_count,
+          revisionKind: 'Editorial customer handover; original source observations unchanged.' };
+      });
+      await step('freshProjectReopen', async () => {
+        const packet = await readPrivate(revisedArtifacts.packet.path, 128 * 1024 * 1024);
+        need(digest(packet) === revisedArtifacts.packet.sha256, 'OECD_ORIGINAL_REVISED_PACKET_CHANGED');
+        const reopenedDirectory = join(folder, 'reopened-customer-project');
+        let create = false;
+        try { await lstat(join(reopenedDirectory, 'oecd-project.json')); }
+        catch (error) { if (error.code !== 'ENOENT') throw error; create = true; }
+        const reopened = await launchOecd({ projectDirectory: reopenedDirectory, create, pythonCommand,
+          env: { ...process.env, SF30_XML_NODE: process.execPath },
+          providerUsernameEnv: config.providerUsernameEnv, providerPasswordEnv: config.providerPasswordEnv });
+        try {
+          const origin = await client.state(), destination = await reopened.client.state();
+          need(destination.project.id !== origin.project.id &&
+            resolve(destination.project.directory) === resolve(reopenedDirectory),
+            'OECD_CUSTOMER_REOPEN_WORKSPACE_REQUIRED');
+          const restored = await reopened.client.importProject(packet);
+          need(restored.id === revised.id && restored.catalog_edition_id === revised.catalog_edition_id &&
+            restored.project_id === revised.project_id && restored.project_revision === revised.project_revision &&
+            identity(restored.report.files) === identity(revised.report.files),
+            'OECD_ORIGINAL_PROJECT_REOPEN_CHANGED');
+          const rows = await reopened.client.sourceRows(restored.id);
+          need(identity(rows.rows) === identity(sourceRows.rows) && rows.snapshot === sourceRows.snapshot,
+            'OECD_REOPENED_ORIGINAL_SOURCE_CHANGED');
+          for (const name of ['briefing.html', 'briefing.json', 'observations.csv']) {
+            const actual = (await reopened.client.reportFile(restored.id, name)).body;
+            const expected = await readPrivate(join(revisedArtifacts.directory, name), 32 * 1024 * 1024);
+            need(actual.equals(expected), 'OECD_REOPENED_ORIGINAL_REPORT_CHANGED');
+          }
+          return { directory: reopenedDirectory, workspaceId: destination.project.id,
+            briefingId: restored.id, catalogEdition: restored.catalog_edition_id,
+            projectId: restored.project_id, revision: restored.project_revision,
+            files: restored.report.files, sourceRows: rows.row_count,
+            packet: revisedArtifacts.packet, createdFresh: create,
+            browser: { command: process.execPath,
+              arguments: [new URL('./cli.mjs', import.meta.url).pathname, 'serve', '--project', reopenedDirectory] } };
+        } finally { await reopened.close(); }
       });
       await step('provider', async () => {
         const capabilities = await client.provider('getcapabilities');
@@ -221,7 +276,8 @@ export async function receiveOecd({ projectDirectory, config, pythonCommand = 'p
       state.state = 'COMPLETE'; state.phase = 'complete'; delete state.error;
       await save();
       print({ operation: state.id, state: state.state, checkpoint: join(folder, 'receiving.json'),
-        report: state.steps.reportArtifacts, delivery: state.steps.delivery, reopen: state.steps.projectReopen });
+        report: state.steps.reportArtifacts, delivery: state.steps.delivery,
+        revisedReport: state.steps.revisedReportArtifacts, reopen: state.steps.freshProjectReopen });
       return state;
     } catch (error) {
       state.state = 'CONTINUE_ORIGINAL_OPERATION';

@@ -13,7 +13,7 @@ node stellar/scf-starforge-20261009/sf30-seller-sdk/sdmx/oecd/examples/create-br
   --project /ABSOLUTE/PRIVATE/OECD_PROJECT
 ~~~
 
-That command imports every original source file, builds the native selected-country dataset, saves the customer catalog edition, writes the HTML/JSON/CSV report, exports the complete project packet and reopens that packet through the original catalog. It prints the actual saved artifact paths and identities. The project directory may be absent or an empty private directory. Rerunning the same operation adopts its original result.
+That command imports every original source file, builds the native selected-country dataset, saves the first customer edition and an editorial handover revision, writes the HTML/JSON/CSV report, exports the complete revised project packet and reopens it in a separate customer workspace. The second revision records the handover notes while preserving every original observation. Both native project revisions and customer editions travel in the packet. It prints the actual saved artifact paths and identities. The project directory may be absent or an empty private directory. Rerunning the same operation adopts its original result.
 
 Open the same project in its browser:
 
@@ -101,12 +101,16 @@ The receiver performs the complete operation:
 4. Start the configured native merchant, inspect its actual offer and prepare the original SF88 buyer selection.
 5. Run or continue the same buyer dataset, drain original accounting through **Dataset.finalizeAll**, and deliver the complete native dataset.
 6. Compare every delivered original series, month, value, presence, action, attribute and dimension against the original catalog observations.
-7. Include the complete original project packet and report files in that native delivery; reopen both the original DatasetDelivery and project packet.
-8. Read the same published Macrobond provider and retain its actual outputs.
+7. Include the complete original project packet and report files in that native delivery and reopen the original DatasetDelivery.
+8. Save an editorial handover revision on the same source project, retaining the original observations, and add its report files and complete revised packet to the delivery.
+9. Import that revised packet directly into a separate named customer workspace, compare every report byte and original source row, and retain the actual workspace and browser command.
+10. Read the same published Macrobond provider and retain its actual outputs.
 
 The checkpoint is **PROJECT/receiving/OPERATION/receiving.json**. The operation binds its actual configuration, public payment-file SHA, original buyer configuration SHA, release, snapshot, dataset session, native process results and accounting pages. Repeating the command continues those retained steps. A running native buyer attempt stays with that actual session. The receiver never creates another signer or writes accounting records outside the maintained buyer.
 
-The complete standalone report is in **PROJECT/reports/BRIEFING_ID/** and is copied into the buyer delivery. Open **briefing.html** directly for an offline report, or run **serve** on the same project for the interactive application. The saved project ZIP includes the original customer catalog/source packet, the report files and their identities. Import reconstructs the report through the maintained engine and requires exact matching bytes.
+The complete standalone report is in **PROJECT/reports/BRIEFING_ID/** and is copied into the buyer delivery. Open **briefing.html** directly for an offline report, or run **serve** on the same project for the interactive application. The saved project ZIP includes the original customer catalog/source packet, the report files and their identities. Import reconstructs the report through the maintained engine and requires exact matching bytes. It verifies the original imported source operation and customer-edition request before restoring the corresponding OECD operation. A revised packet therefore reopens in a new workspace even though its native imported project history has already advanced beyond the original pre-save revision. New analyst writes still require the current native revision.
+
+The receiver's separate customer workspace is **PROJECT/receiving/OPERATION/reopened-customer-project/**. Its complete editorial report and packet are retained under **buyer-delivery/revised-briefing/**. The source-only example creates **PROJECT/reopened-customer-project/**. The returned browser command opens that actual retained customer project.
 
 ## Operator CLI and typed client
 
