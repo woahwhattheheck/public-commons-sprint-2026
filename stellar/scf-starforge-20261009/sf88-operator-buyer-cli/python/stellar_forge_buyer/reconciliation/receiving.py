@@ -203,10 +203,20 @@ def run(args):
                 with open(root / "agent-stdout.txt", "ab", buffering=0) as stdout, open(root / "agent-stderr.txt", "ab", buffering=0) as stderr:
                     child = subprocess.Popen(argv, stdout=stdout, stderr=stderr, env=os.environ.copy())
                     state["child"] = {"state": "RUNNING", "pid": child.pid, "argv": argv}
-                    save()
+                    launch_checkpoint_error = None
+                    try:
+                        save()
+                    except OSError as error:
+                        # PREPARED is already durable. A journal-full condition
+                        # must not terminate the launched original browser/MCP
+                        # owner before its own finally blocks drain resources.
+                        launch_checkpoint_error = error
+                        state["child"]["checkpoint_error"] = {"code": type(error).__name__, "errno": error.errno}
                     code = child.wait()
                     state["child"].update(state="EXITED", returncode=code)
                     save()
+                    if launch_checkpoint_error is not None:
+                        raise launch_checkpoint_error
                     if code != 0:
                         fail("ORIGINAL_AGENT_RECEIVING_INCOMPLETE")
                 node_record = parse(read(root / "agent" / "result.json", 32 * 1024 * 1024))
