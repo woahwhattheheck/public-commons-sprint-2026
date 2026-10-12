@@ -5,6 +5,7 @@ import { pathToFileURL } from 'node:url';
 import { loadDatasetConfig } from './dataset-handler.mjs';
 
 const USAGE = `Usage:
+  node dataset-cli.mjs feeds --help   Retained RSS/Atom capture, editions, merchant and buyer
   node dataset-cli.mjs odata --help   OData source, retained editions and merchant workspace
   node dataset-cli.mjs xml --workspace DIRECTORY init|serve|source|plan|build|query|compare|export|import
   node dataset-cli.mjs --dataset FILE
@@ -66,6 +67,7 @@ export async function buildDatasetSellerConfig(dataset, { payment, origin, path 
 }
 
 export async function main(args = process.argv.slice(2)) {
+  if (args[0] === 'feeds') return (await import('./feeds/cli.mjs')).main(args.slice(1));
   if (args[0] === 'odata') return (await import('./odata/cli.mjs')).main(args.slice(1));
   if (args[0] === 'xml') return (await import('./xml/cli.mjs')).main(args.slice(1));
   if (args[0] === 'ogc') return (await import('./ogc/cli.mjs')).main(args.slice(1));
