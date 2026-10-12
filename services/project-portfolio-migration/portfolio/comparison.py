@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 from collections import Counter, defaultdict
-from decimal import Decimal, InvalidOperation
 
 from .native import SINGULAR
 from .storage import digest, require
@@ -12,6 +11,26 @@ from .storage import digest, require
 CONTENT_KEYS = ("uid", "guid", "parent_uid", "task_uid", "resource_uid",
                 "predecessor_uid", "successor_uid", "type", "lag", "notes", "driving",
                 "fields", "native_details", "native")
+
+# These exact JsonWriter collections are represented by the complete typed
+# entity comparison above. Every other original collection remains independently
+# reviewable: definitions, lookups, codes, currencies, units, contours and layout.
+JSON_ENTITY_KEYS = {"property_values", "tasks", "resources", "assignments", "calendars"}
+
+
+def definition_content(model):
+    original = model.get("native_json", {})
+    require(isinstance(original, dict), "comparison_native_json",
+            "Keep the original native JSON object with its captured edition.")
+    return {"field_catalogue": model.get("field_catalogue", {}),
+            "native_collections": {key: value for key, value in original.items()
+                                   if key not in JSON_ENTITY_KEYS}}
+
+
+def definition_source(model, content):
+    return {"field_catalogue_sha256": digest(content["field_catalogue"]),
+            "native_json_identity": model.get("native_json_identity"),
+            "retained_collections_sha256": digest(content["native_collections"])}
 
 
 def rows(model, family):
@@ -124,15 +143,25 @@ def compare_models(left, right, identity_map=None, strict_identity=False):
         per_family[family] = {name: family_count[name] for name in
                               ("matched", "added", "removed", "changed_rows", "unchanged_rows", "changed_fields")}
         counts.update(family_count)
+    left_definitions, right_definitions = definition_content(left), definition_content(right)
+    definition_changes = []
+    for scope, prefix in (("field_catalogue", "/field_catalogue"),
+                          ("native_collections", "/native_json")):
+        definition_changes.extend({"scope": scope, **change} for change in difference(
+            left_definitions[scope], right_definitions[scope], prefix))
+    definition_sources = {"left": definition_source(left, left_definitions),
+                          "right": definition_source(right, right_definitions)}
     # Companion editions are portable business artifacts too. The native project
     # file cannot contain arbitrary PWA exports, lookup tables or attachment bytes.
     companion_changes = list(difference(left.get("companions", []), right.get("companions", []), "/companions"))
     return {"schema": "project-portfolio-comparison.v1", "identity_map": identity_map,
             "strict_identity": strict_identity, "matches": matches, "changes": changes,
-            "companion_changes": companion_changes, "findings": findings,
+            "companion_changes": companion_changes, "definition_changes": definition_changes,
+            "definition_sources": definition_sources, "findings": findings,
             "summary": {**{name: counts[name] for name in
                            ("matched", "added", "removed", "changed_rows", "unchanged_rows", "changed_fields")},
                         "families": per_family, "companion_changes": len(companion_changes),
+                        "definition_changes": len(definition_changes),
                         "findings": len(findings)}}
 
 

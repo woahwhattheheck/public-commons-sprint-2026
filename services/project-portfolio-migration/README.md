@@ -306,9 +306,18 @@ and coincident row positions never stand in for original entity identity.
 Project properties are compared as the single project property collection.
 
 Comparison retains all changed typed values, calendar/rate/timephased
-structures and added/removed entity rows. Full getter caches and original JSON
-remain in the source models for inspection. Companion changes are retained
-separately from changes to the native project file.
+structures and added/removed entity rows. It also compares the complete field
+catalogue and every retained native definition, lookup, code, currency, unit,
+contour and layout collection. These appear in `definition_changes` with their
+original JSON Pointer paths and full before/after values. `definition_sources`
+identifies each field catalogue, native JSON and selected collection content.
+The original JSON entity arrays already covered by typed entity comparisons
+are excluded from this separate definition section.
+
+Full getter caches and original JSON remain in the source models for inspection.
+Companion changes are retained separately from changes to the native project
+file. A field alias, type, lookup or layout change therefore stays visible even
+when the existing task and resource values are unchanged.
 
 ### Native target capture
 

@@ -78,13 +78,13 @@
     },
     {
       "path": "portfolio_target/web/app.js",
-      "bytes": 38638,
-      "sha256": "843056d9075d3800961d320ed48aae28536d22232dac4ec3af9543ffb3b34c3d"
+      "bytes": 40603,
+      "sha256": "509cdf9502f6c5d32c15c589d55b18152c6d1aaa21f4fc289d869640c19af001"
     },
     {
       "path": "portfolio_target/web/index.html",
-      "bytes": 11161,
-      "sha256": "6c6e8fce058f53810569e935518639ac3308b502e4fa8751449bab2f2b4e92a1"
+      "bytes": 11679,
+      "sha256": "48ecdea9af1275248d5f7f96a55e8dddebf581bcd03afa5a4b4882fcf315f042"
     },
     {
       "path": "portfolio_target/web/style.css",
@@ -93,13 +93,13 @@
     },
     {
       "path": "portfolio_target/workspace.py",
-      "bytes": 64436,
-      "sha256": "a5b15d78b5490eaa4bf08890d3b1e7efc844df08c8528a82d5c920423b07b6cd"
+      "bytes": 65671,
+      "sha256": "196ca384807d4b8d500a118fe35f5ef33cc563f05e7213794a233eeba056776c"
     },
     {
       "path": "README.md",
-      "bytes": 21149,
-      "sha256": "c934db57cbb1dc0741e487c1eb55b767daacb1239e93f3d2b2d04b6a9cf196cd"
+      "bytes": 21602,
+      "sha256": "f7239c10b5aefe90bcf2be0573875ec6b52c37cc2f32856b6da0a77436db2b3d"
     },
     {
       "path": "serve.py",

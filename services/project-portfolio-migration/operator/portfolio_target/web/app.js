@@ -2,7 +2,7 @@ const $ = id => document.getElementById(id);
 const terminal = new Set(["COMPLETE", "FAILED"]);
 const S = {token: "", workspace: "", state: null, sourceId: "", source: null, rows: [], selectedRow: null,
   family: "tasks", offset: 0, profile: "mspdi", probes: {}, deployId: "", deployment: null,
-  comparison: null, comparisonLimit: 50, pending: null, posting: false, polling: false, timer: null,
+  comparison: null, comparisonLimit: 50, definitionLimit: 50, pending: null, posting: false, polling: false, timer: null,
   corrections: [], sourceReview: null, sourceArtifacts: [], handoverArtifacts: [], editions: [], deployments: [],
   requests: [], requestCursor: "", editionCursor: "", deploymentCursor: "", draftVersion: 0, mappings: null};
 const defaults = [
@@ -220,7 +220,7 @@ async function loadDeployment(selected=S.deployId) {
   if (value.comparison_sha256) {
     const comparison=await api("/api/objects/" + value.comparison_sha256);
     if (S.deployId!==selected || S.deployment.comparison_sha256!==value.comparison_sha256) return;
-    S.comparison=comparison;S.comparisonLimit=50;renderComparison();
+    S.comparison=comparison;S.comparisonLimit=50;S.definitionLimit=50;renderComparison();
   } else {S.comparison=null;renderComparison();}
   if (value.export_result_sha256) {
     const exported=await api("/api/objects/" + value.export_result_sha256);
@@ -283,8 +283,11 @@ function renderDeployment() {
   lock();
 }
 function renderComparison() {
-  const c=S.comparison; const body=$("comparison-table").tBodies[0];body.replaceChildren();
+  const c=S.comparison, body=$("comparison-table").tBodies[0], definitions=$("definition-table").tBodies[0];
+  body.replaceChildren();definitions.replaceChildren();
   $("comparison-summary").replaceChildren();$("identity-findings").replaceChildren();
+  $("definition-summary").replaceChildren();$("definition-sources").replaceChildren();
+  $("definition-section").hidden=!c;$("definition-more").hidden=true;
   if (!c) { $("comparison-summary").append(el("p","Receive the actual target to compare original typed fields.","empty"));$("comparison-more").hidden=true;return; }
   details($("comparison-summary"),{"Comparison":c.id,"Summary":c.summary,"Original":c.left_id,"Received":c.right_id,
     "Strict native identities":c.strict_identity ?? false,"Findings":c.findings || []});
@@ -294,6 +297,29 @@ function renderComparison() {
       el("td",pretty(change.before)),el("td",pretty(change.after)));body.append(tr);
   }
   $("comparison-more").hidden=(c.changes || []).length<=S.comparisonLimit;
+  if (!Array.isArray(c.definition_changes) || !c.definition_sources) {
+    $("definition-summary").append(el("p","This saved comparison has no native definition coverage.","empty"));return;
+  }
+  const changes=c.definition_changes;
+  $("definition-summary").append(el("p","Showing " + Math.min(S.definitionLimit,changes.length) + " of " + changes.length +
+    " native definition changes. Paths identify the original field catalogue or native JSON collection."));
+  const sourceTable=el("table"),head=el("thead"),headRow=el("tr"),sourceBody=el("tbody");
+  for (const heading of ["Compared edition","Field catalogue SHA-256","Native JSON identity","Retained collections SHA-256"]) headRow.append(el("th",heading));
+  head.append(headRow);sourceTable.append(head,sourceBody);
+  for (const [side,label] of [["left","Original / intended"],["right","Received"]]) {
+    const source=c.definition_sources[side] || {},tr=el("tr");tr.append(el("td",label));
+    for (const field of ["field_catalogue_sha256","native_json_identity","retained_collections_sha256"]) {
+      const cell=el("td");cell.append(el("pre",pretty(source[field])));tr.append(cell);
+    }
+    sourceBody.append(tr);
+  }
+  $("definition-sources").append(sourceTable);
+  for (const change of changes.slice(0,S.definitionLimit)) {
+    const tr=el("tr");tr.append(el("td",change.scope),el("td",change.path),el("td",change.kind));
+    for (const value of [change.before,change.after]) {const cell=el("td");cell.append(el("pre",pretty(value)));tr.append(cell);}
+    definitions.append(tr);
+  }
+  $("definition-more").hidden=changes.length<=S.definitionLimit;
 }
 function renderHistory() {
   const node=$("history-table");node.replaceChildren();
@@ -422,6 +448,7 @@ $("abandon-native").onclick=()=>safe(()=>{const d=requireDeployment();return act
 $("capture-target").onclick=()=>safe(()=>action("capture_target",{deployment_id:requireDeployment().id,expected_revision:requireDeployment().revision}));
 $("receive-file-form").onsubmit=event=>{event.preventDefault();safe(async()=>{const d=requireDeployment();if(S.pending||S.posting)throw new Error("Finish the saved request first.");S.posting=true;lock();let source;try{source=await upload($("target-file").files[0]);}finally{S.posting=false;lock();}return action("receive_target_file",{deployment_id:d.id,expected_revision:d.revision,source,label:$("target-file-label").value.trim()||source.filename,identity_map:object("receive-identity-map")});});};
 $("comparison-more").onclick=()=>{S.comparisonLimit+=100;renderComparison();};
+$("definition-more").onclick=()=>{S.definitionLimit+=100;renderComparison();};
 $("accept-target").onclick=()=>safe(()=>{const d=requireDeployment();return action("accept",{deployment_id:d.id,expected_revision:d.revision,comparison_sha256:d.comparison_sha256,reviewer:$("accept-reviewer").value.trim(),note:$("accept-note").value.trim(),exceptions:$("accept-exceptions").value.split("\n").map(x=>x.trim()).filter(Boolean)});});
 $("build-handover").onclick=()=>safe(()=>action("handover",{deployment_id:requireDeployment().id}));
 $("export-workspace").onclick=()=>safe(()=>action("archive",{}));

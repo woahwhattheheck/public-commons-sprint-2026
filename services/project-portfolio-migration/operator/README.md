@@ -4,6 +4,8 @@ This operator completes the receiving side of the original portfolio migration w
 
 It uses the sibling `portfolio` package for every MPXJ read, typed source edition, correction, comparison, Microsoft Project XML export and workspace archive. Source files, native JSON and their original identity remain available throughout the operation.
 
+The receiving comparison retains both entity changes and the original `definition_changes` from the field catalogue and native JSON collections. The browser pages through every definition change and shows both source identities; the HTML and JSON handover include the full original values, paths and hashes. Building or reopening that handover preserves the accepted comparison and acceptance SHA-256.
+
 ## Open the complete product
 
 Run these commands from `services/project-portfolio-migration` after installing the original MPXJ runtime described in the product README:
@@ -20,7 +22,7 @@ Open the private URL in the entry file. The browser provides:
 1. **Source:** original file and companion intake, saved editions, complete paginated native row families, typed field inspection, reviewed source corrections and native Project XML export.
 2. **Target & mappings:** locally selected receiving profile, actual user/environment and native capability read, editable task field conversions, dependency choices, resource-to-team selections and a complete saved target plan.
 3. **Review & execution:** actual transaction boundaries, retained-source decisions, named review, native operation continuation, pause before the next call, exact original reply recovery and abandonment of one unexecuted native set.
-4. **Receiving & handover:** actual native target capture or returned project-file intake, original source/target comparison, named acceptance, complete HTML/JSON handover and portable workspace.
+4. **Receiving & handover:** actual native target capture or returned project-file intake, original source/target comparison including native field and collection definitions, named acceptance, complete HTML/JSON handover and portable workspace.
 5. **Activity:** every saved local action and its original input, result and same-request resume.
 
 The default receiving profile is **Microsoft Project XML**. Cloud scheduling is available when an operator supplies a current private Project Operations profile. A file handover and a native cloud migration remain distinct saved operations.
