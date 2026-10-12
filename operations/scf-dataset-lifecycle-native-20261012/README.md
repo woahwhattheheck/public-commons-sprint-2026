@@ -14,8 +14,21 @@ both finalized data rooms, reconstructs their source and mapping, performs the
 native exact-number query and keyed comparison, and reopens the exported
 original project.
 
-Run from a complete source checkout with Node 22+ and Python 3. Use an absent
-output directory under an existing private parent:
+Run from a complete source checkout with Node 22+ and Python 3. The versioned
+snapshot query uses the original schema pattern engine, `re2js@2.8.6`, pinned in
+`stellar-forge/payment-auto-catalog/package.json` and its original npm lockfile.
+Reuse the worker's existing matching dependency installation. On a fresh worker,
+install that component's exact lock before launching the operation:
+
+~~~sh
+npm ci --ignore-scripts --prefix /absolute/original/checkout/stellar-forge/payment-auto-catalog
+~~~
+
+Keep the package beside its original source so normal Node dependency resolution
+loads it. This prerequisite is also documented in the maintained distribution's
+[Schema pattern support](../../stellar/scf-starforge-20261009/distribution/README.md#schema-pattern-support).
+
+Use an absent output directory under an existing private parent:
 
 ~~~sh
 python3 -B operations/scf-dataset-lifecycle-native-20261012/ndjson.py \
