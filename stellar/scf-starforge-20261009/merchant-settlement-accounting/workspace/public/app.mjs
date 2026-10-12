@@ -196,6 +196,7 @@ function renderRun() {
   $('run-review-summary').textContent = run.exceptionCount + ' exceptions · ' + reviews.open + ' open · ' + reviews.investigating + ' investigating · ' + reviews.reviewed + ' reviewed. ' + total.publicNetworkPending + ' public-network events awaiting verification; ' + total.exhaustedDelivery + ' exhausted deliveries.';
 }
 async function loadRun(id, {reset = false} = {}) {
+  if (state?.sourceMode === 'buyer') return;
   const request = ++runRequest;
   selectedRun = id;
   remember('selected-run', id);
@@ -210,8 +211,7 @@ async function loadRun(id, {reset = false} = {}) {
 async function refreshState() {
   if (maintenanceMode !== 'RUNNING') return;
   const result = await api('/api/state'); adopt(result);
-  await loadRun(selectedRun);
-  if(state.sourceMode!=='buyer')await collectionUI?.refresh();
+  if(state.sourceMode!=='buyer'){await loadRun(selectedRun);await collectionUI?.refresh();}
 }
 function schedulePoll() {
   clearTimeout(pollTimer);
@@ -613,6 +613,6 @@ attempt(async () => {
   $('area-collection').innerHTML = await fragment.text();
   collectionUI = mountCollection({root:$('area-collection'),api,perform,operator,adopt,getState:() => state,notify,
     openRun:async id => { await loadRun(id,{reset:true}); openArea('reconcile'); }});
-  if (maintenanceMode === 'RUNNING') { adopt(await api('/api/state')); await loadRun(selectedRun); if(state.sourceMode!=='buyer')await collectionUI.refresh(); }
+  if (maintenanceMode === 'RUNNING') { adopt(await api('/api/state')); if(state.sourceMode!=='buyer'){await loadRun(selectedRun);await collectionUI.refresh();} }
   else { updateButtons(); openArea('maintenance'); }
 });

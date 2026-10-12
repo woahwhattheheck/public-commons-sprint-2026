@@ -81,7 +81,7 @@ export async function openCatalogReadSnapshot(original) {
       catalog[name] = (...args) => { assertOpen(); return Reflect.apply(method, catalog, args); };
     }
     const supplier = { db, store, catalog };
-    for (const name of ['plan','planHistory','correction','review','reviewRow','rows','export']) {
+    for (const name of ['plan','planHistory','correction','review','reviewRow','rows','recipientRows','export']) {
       const method = SupplierWorkspace.prototype[name];
       supplier[name] = (...args) => { assertOpen(); return Reflect.apply(method, supplier, args); };
     }
@@ -121,6 +121,8 @@ export function fingerprintCatalogExportSnapshot(catalog,{kind,request,selection
     identifier(request.reviewId,'supplier review ID');
     scan('supplier-review','SELECT id,plan_id,created_at,record_json FROM catalog_supplier_reviews WHERE id=?',[request.reviewId]);
     scan('supplier-products','SELECT review_id,material_key,supplier_id,errors,warnings,record_json FROM catalog_supplier_products WHERE review_id=? ORDER BY material_key',[request.reviewId]);
+    if(catalog.db.prepare('SELECT 1 FROM catalog_supplier_recipient WHERE review_id=? LIMIT 1').get(request.reviewId))
+      scan('supplier-recipient','SELECT review_id,kind,record_key,supplier_key,identifier,action,record_json FROM catalog_supplier_recipient WHERE review_id=? ORDER BY kind,record_key',[request.reviewId]);
   } else if(kind==='material') {
     const catalogId=identifier(request.catalogId,'catalog ID');
     const bundle=request.formats.includes('catalog-bundle.jsonl'),sourceIds=new Set();
@@ -147,6 +149,8 @@ export function fingerprintCatalogExportSnapshot(catalog,{kind,request,selection
       scan('supplier-correction-history','SELECT h.correction_id,h.revision,h.record_json FROM catalog_supplier_correction_history h JOIN catalog_supplier_corrections c ON c.id=h.correction_id JOIN catalog_supplier_plans p ON p.id=c.plan_id WHERE p.catalog_id=? AND h.revision<=c.revision ORDER BY h.correction_id,h.revision',[catalogId]);
       scan('supplier-reviews','SELECT r.id,r.plan_id,r.created_at,r.record_json FROM catalog_supplier_reviews r JOIN catalog_supplier_plans p ON p.id=r.plan_id WHERE p.catalog_id=? ORDER BY r.created_at,r.id',[catalogId]);
       scan('supplier-products','SELECT r.review_id,r.material_key,r.supplier_id,r.errors,r.warnings,r.record_json FROM catalog_supplier_products r JOIN catalog_supplier_reviews v ON v.id=r.review_id JOIN catalog_supplier_plans p ON p.id=v.plan_id WHERE p.catalog_id=? ORDER BY r.review_id,r.material_key',[catalogId]);
+      if(catalog.db.prepare('SELECT 1 FROM catalog_supplier_recipient r JOIN catalog_supplier_reviews v ON v.id=r.review_id JOIN catalog_supplier_plans p ON p.id=v.plan_id WHERE p.catalog_id=? LIMIT 1').get(catalogId))
+        scan('supplier-recipient','SELECT r.review_id,r.kind,r.record_key,r.supplier_key,r.identifier,r.action,r.record_json FROM catalog_supplier_recipient r JOIN catalog_supplier_reviews v ON v.id=r.review_id JOIN catalog_supplier_plans p ON p.id=v.plan_id WHERE p.catalog_id=? ORDER BY r.review_id,r.kind,r.record_key',[catalogId]);
       section('sources',(function*(){for(const id of [...sourceIds].sort())yield catalog.source(id);})());
     } else {
       const editionIds=new Set(selection.editionId?[selection.editionId]:[]);
