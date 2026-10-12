@@ -233,15 +233,15 @@ controller and its child throughout the archive exchange and reopen.
 `ORIGINAL_NATIVE_OUTPUT_READY` reports the exact bundle size, SHA-256, native
 exit code and archive restoration phase. The readable
 `merchant-native-customer-delivery.md` is produced on every receiving host.
-The foreground receiver remains available for complete output transfer. Each
+The held receiver remains available for complete output transfer. Each
 newline-delimited command
 `{"op":"read-bundle","offset":0,"length":8192}` returns a base64 chunk at the
 requested byte offset; advance by the returned byte count until the complete
 bundle is preserved and its reported digest matches. Send
 `{"op":"close"}` after transfer.
-The standalone command returns the native exit status after saving and transferring
-its outputs. A held receiver stays available for the next command in the original
-operation.
+The standalone command saves its outputs and returns the native exit status.
+The held receiver continues accepting file-transfer and close commands for the
+original operation.
 
 A managed receiving session can include the complete current Library upload helper
 and its two companion modules as `payload.libraryHelpers`, or pass their existing
@@ -249,5 +249,5 @@ directory through `--library-helpers`. The receiver writes
 those original helper bodies together in a private directory and submits one
 closed-stdin batch for the customer archive and a readable native delivery
 summary. It retains each returned file identity for the original operation.
-The complete original output-transfer interface remains available until the
-receiving owner finishes preserving the produced customer files.
+The held receiver keeps the complete original output-transfer interface available
+until the receiving owner finishes preserving the produced customer files.

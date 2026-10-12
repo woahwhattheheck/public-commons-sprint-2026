@@ -671,23 +671,24 @@ if set(helpers) == {"library_upload.py", "library_hosted_apps.py", "library_file
                 "file_id", "path", "current_version_number", "local_metadata_applied", "error_code") if key in item}
                 for item in returned.get("results", [])]})
 
-# Retain this foreground host while its complete produced outputs are transferred.
+# Retain a held foreground host while its complete produced outputs are transferred.
 # Each response is short enough for a normal tool output window; source and token files stay outside this archive.
-for line in sys.stdin:
-    command = json.loads(line)
-    if command.get("op") == "read-bundle":
-        offset, length = command["offset"], min(command.get("length", 8192), 8192)
-        if not isinstance(offset, int) or offset < 0 or offset > bundle_bytes:
-            raise ValueError("Select a valid complete-output byte offset.")
-        with bundle.open("rb") as stream:
-            stream.seek(offset)
-            chunk = stream.read(length)
-        emit({"event": "ORIGINAL_NATIVE_OUTPUT_CHUNK", "offset": offset, "bytes": len(chunk),
-              "data": base64.b64encode(chunk).decode(), "done": offset + len(chunk) == bundle_bytes})
-    elif command.get("op") == "close":
-        emit({"event": "ORIGINAL_NATIVE_RECEIVER_CLOSED", "exitCode": code}); break
-    else:
-        emit({"event": "ORIGINAL_NATIVE_OUTPUT_READY", "bytes": bundle_bytes, "sha256": bundle_sha256})
+if not globals().get("_merchant_standalone", False):
+    for line in sys.stdin:
+        command = json.loads(line)
+        if command.get("op") == "read-bundle":
+            offset, length = command["offset"], min(command.get("length", 8192), 8192)
+            if not isinstance(offset, int) or offset < 0 or offset > bundle_bytes:
+                raise ValueError("Select a valid complete-output byte offset.")
+            with bundle.open("rb") as stream:
+                stream.seek(offset)
+                chunk = stream.read(length)
+            emit({"event": "ORIGINAL_NATIVE_OUTPUT_CHUNK", "offset": offset, "bytes": len(chunk),
+                  "data": base64.b64encode(chunk).decode(), "done": offset + len(chunk) == bundle_bytes})
+        elif command.get("op") == "close":
+            emit({"event": "ORIGINAL_NATIVE_RECEIVER_CLOSED", "exitCode": code}); break
+        else:
+            emit({"event": "ORIGINAL_NATIVE_OUTPUT_READY", "bytes": bundle_bytes, "sha256": bundle_sha256})
 
 # A normal command returns the native result after preserving its complete outputs.
 # The held receiver remains available for the next original-operation command.
