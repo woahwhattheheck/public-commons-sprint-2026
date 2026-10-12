@@ -241,3 +241,9 @@ The original Central archive includes its full SQLite snapshot, every referenced
 - OData dictionary: odata/semantics.mjs, blob9a183079cf02483d537b0be37361d74875f47fdb.
 
 The full component joins the original Central composition and PostgreSQL source. Native receiving consumes the existing commissioning outputs and delivers the complete original operation/customer handover.
+
+## Complete approved-period receiving
+
+The [complete receiving guide](RECEIVING.md) carries the original commissioning delivery through all approved dataset imports, complete period-report downloads, the original full Central archive and an independent receiving-workspace reopen. Its native caller accepts the commissioner’s existing warehouse-selections.json and retains those original approval, review, import and report request IDs. It uses the same configured PostgreSQL profile and original accepted source exports throughout.
+
+Use [receiving.mjs](receiving.mjs) from the existing equipped host. The general receiving request also supports every approved root or repeat table in a complete two-period delivery. Full action records, original CSV/dictionary/source downloads, report ZIPs and the reopened result stay together in the selected private receiving directory.
