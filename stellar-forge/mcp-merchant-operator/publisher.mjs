@@ -3,7 +3,7 @@ export { publisherTools } from './catalog/publisher.mjs';
 // MIT. Agent authoring and maintenance through the original retained publisher.
 import { createHash, randomUUID } from 'node:crypto';
 import { basename, join } from 'node:path';
-import { failure, identifier, fileBytes } from './config.mjs';
+import { failure, identifier, fileBytes } from './host-files.mjs';
 
 
 
