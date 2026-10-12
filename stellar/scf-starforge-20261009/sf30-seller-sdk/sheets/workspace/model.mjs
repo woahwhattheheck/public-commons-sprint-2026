@@ -10,6 +10,7 @@ import { retainSheetsCapture, readSheetsCapture, bindSheetsCapture, fetchSheetsR
 import { openSheetsSourceFile, inspectSheetsSource } from '../source.mjs';
 import { openSheetsPublisher } from '../publisher/model.mjs';
 import { startPostgresPublisherServer } from '../../postgres/publisher/server.mjs';
+import { reviewSheetsDeployment, prepareSheetsDeployment, inspectSheetsDeployment, stageSheetsDeployment, readSheetsDeploymentFile } from '../deployment.mjs';
 import { normalizeConnections, selectConnection, connectionViews, workbookId, metadataView,
   fetchWorkbookMetadata } from './provider.mjs';
 
@@ -58,8 +59,10 @@ export async function openSheetsAuthoring({ directory, create = false, connectio
   if (create && !await absent(directory)) throw fault('SHEETS_AUTHORING_EXISTS', 'Reopen this source workspace without --create.');
   await privateDirectory(directory, create);
   const release = await acquireWorkspace(directory);
-  let db, publisherService = null, pending = null, closed = false, closing;
+  let db, publisherService = null, deploymentService = null, pending = null, closed = false, closing;
+  const deploymentDirectory = join(directory, 'deployments'), releaseDirectory = join(deploymentDirectory, 'releases');
   const lifetime = new AbortController();
+  let publisherAccess = Promise.resolve();
   try {
     const database = join(directory, 'sources.sqlite');
     if (!create && await absent(database)) throw fault('SHEETS_AUTHORING_MISSING');
@@ -417,7 +420,7 @@ export async function openSheetsAuthoring({ directory, create = false, connectio
     }
 
     async function openPublisher({ expectedSelectedVersion, requestId }) {
-      return run('PUBLISHER', { expectedSelectedVersion }, requestId, async () => {
+      return run('PUBLISHER', { expectedSelectedVersion }, requestId, () => serializePublisherAccess(async () => {
         const state = current();
         if (state.selectedVersion === null || state.selectedVersion !== expectedSelectedVersion)
           throw fault('SHEETS_SELECTION_CHANGED', 'Select the reviewed source before opening its publisher.', 409);
@@ -432,7 +435,229 @@ export async function openSheetsAuthoring({ directory, create = false, connectio
         }
         return { url: publisherService.url, sourceVersion: selected.id, sourceSha256: selected.sourceSha256,
           publisherDirectory: settings.publisherDirectory, targetDirectory: settings.targetDirectory };
+      }));
+    }
+
+
+    const deploymentPackagePath = request => join(deploymentDirectory, 'packages', id(request));
+    const hashValue = value => {
+      if (typeof value !== 'string' || !/^[a-f0-9]{64}$/.test(value))
+        throw fault('SHEETS_DEPLOYMENT_HASH_REQUIRED', 'Use the inspected original SHA256.', 400);
+      return value;
+    };
+    function serializePublisherAccess(action) {
+      const result = publisherAccess.then(action);
+      publisherAccess = result.catch(() => {});
+      return result;
+    }
+    async function withPublisher(action) {
+      assertOpen();
+      return serializePublisherAccess(async () => {
+        assertOpen();
+        if (publisherService) return action(publisherService.publisher);
+        if (await absent(settings.publisherDirectory))
+          throw fault('SHEETS_DEPLOYMENT_PUBLISHER_MISSING', 'Publish the reviewed source through its original publisher first.', 409);
+        const original = await openSheetsPublisher({ directory: settings.publisherDirectory, environment, seller, resource });
+        try { return await action(original); } finally { await original.close(); }
       });
+    }
+    function savedDeploymentOperation(request, kind) {
+      const row = db.prepare('SELECT * FROM operations WHERE id=?').get(id(request));
+      if (!row || row.kind !== kind || row.status !== 'complete')
+        throw fault('SHEETS_DEPLOYMENT_RECEIPT_REQUIRED', 'Select the completed original review or package request.', 409);
+      return { input: JSON.parse(row.input), result: JSON.parse(row.result) };
+    }
+    async function consoleRequest(method, path, input) {
+      const service = deploymentService;
+      if (!service) throw fault('SHEETS_DEPLOYMENT_CONSOLE_REQUIRED', 'Open the original deployment controls first.', 409);
+      let response;
+      try {
+        response = await fetch(service.native.url + path, { method, redirect: 'error',
+          headers: { 'x-release-token': service.native.token, origin: service.native.url,
+            ...(method === 'POST' ? { 'content-type': 'application/json' } : {}) },
+          ...(method === 'POST' ? { body: JSON.stringify(input) } : {}),
+          signal: AbortSignal.any([lifetime.signal, AbortSignal.timeout(175000)]) });
+        const blocks = []; let size = 0;
+        for await (const block of response.body) {
+          size += block.length;
+          if (size > 16 * 1024 * 1024) throw new Error('Original console reply exceeds 16 MiB.');
+          blocks.push(block);
+        }
+        const result = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(Buffer.concat(blocks)));
+        if (!response.ok) {
+          const issue = fault('SHEETS_DEPLOYMENT_COMMAND_REJECTED',
+            (result.error ?? 'OPERATOR_ERROR') + ': ' + (result.message ?? 'Inspect the original release state.'),
+            [400, 403, 404, 409, 413, 422, 502].includes(response.status) ? response.status : 422);
+          issue.nativeReply = true; throw issue;
+        }
+        return result;
+      } catch (issue) {
+        if (issue.nativeReply) throw issue;
+        // No second POST after an uncertain local response. The source request
+        // remains recoverable and resume reads only the original current state.
+        throw fault('DEPLOYMENT_CONSOLE_RESPONSE_UNCERTAIN',
+          'Read or resume this original request. Its deployment command is not automatically replayed.', 502);
+      }
+    }
+    function deploymentOwnership() {
+      return { running: Boolean(deploymentService), instanceId: deploymentService?.id ?? null,
+        url: deploymentService?.native.operatorUrl ?? null, releaseDirectory };
+    }
+    async function nativeDeploymentState() {
+      if (deploymentService) return consoleRequest('GET', '/api/status');
+      if (await absent(releaseDirectory)) return null;
+      const { releaseStatus } = await import('../../../sf82-seller-pilot/releases.mjs');
+      return releaseStatus(releaseDirectory);
+    }
+    async function deploymentStatus({ runsOffset = 0, operationsOffset = 0, limit = 25 } = {}) {
+      assertOpen();
+      for (const offset of [runsOffset, operationsOffset]) integer(offset, 'Use a nonnegative result offset.');
+      if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100) throw fault('SHEETS_PAGE_LIMIT_INVALID');
+      const sourceVersions = db.prepare('SELECT * FROM versions ORDER BY id DESC').all().map(row => {
+        const data = JSON.parse(row.data);
+        return { id: row.id, title: data.title, sourceSha256: data.sourceSha256, mode: data.mode };
+      });
+      let publisher = null;
+      if (!await absent(settings.publisherDirectory)) publisher = await withPublisher(original => {
+        const saved = original.status({ limit, runsOffset });
+        return { pages: saved.pages.runs, active: saved.active, runs: saved.runs.map(row => {
+          const plan = original.plan(row.plan), sourceSha256 = plan.data.sourceHash;
+          return { id: row.id, planId: row.plan, state: row.state, createdAt: row.created, sourceSha256,
+            sourceVersions: sourceVersions.filter(version => version.sourceSha256 === sourceSha256),
+            candidateDigest: row.data.candidate?.candidateDigest ?? null,
+            dataset: row.data.candidate?.dataset ?? null, publication: row.data.publication
+              ? { snapshot: row.data.publication.snapshot, revision: row.data.publication.revision,
+                  mode: row.data.publication.mode } : null };
+        }) };
+      });
+      const total = db.prepare("SELECT count(*) AS count FROM operations WHERE kind LIKE 'DEPLOYMENT_%'").get().count;
+      const operations = db.prepare("SELECT * FROM operations WHERE kind LIKE 'DEPLOYMENT_%' ORDER BY rowid DESC LIMIT ? OFFSET ?")
+        .all(limit, operationsOffset).map(row => ({ ...operation(row.id), input: JSON.parse(row.input) }));
+      return { schema: 'stellar-forge.sheets-deployment-status.v1', directory: deploymentDirectory,
+        releaseDirectory, sourceVersions, publisher, operations,
+        pages: { limit, runsOffset, operationsOffset, operationsTotal: total },
+        console: deploymentOwnership(), native: await nativeDeploymentState() };
+    }
+    async function performDeploymentReview(input, request) {
+      const result = await withPublisher(publisher => reviewSheetsDeployment({ publisher,
+        runId: input.runId, version: version(input.versionId), terms: input.terms }));
+      return { ...result, reviewRequestId: request };
+    }
+    async function reviewDeployment({ versionId, runId, terms, requestId, ...extra }) {
+      if (Object.keys(extra).length) throw fault('SHEETS_DEPLOYMENT_INPUT_INVALID');
+      version(versionId); id(runId);
+      const input = { versionId, runId, terms };
+      return run('DEPLOYMENT_REVIEW', input, requestId, () => performDeploymentReview(input, requestId));
+    }
+    async function performDeploymentPrepare(input, request) {
+      const reviewed = savedDeploymentOperation(input.reviewRequestId, 'DEPLOYMENT_REVIEW');
+      if (reviewed.result.reviewSha256 !== input.expectedReviewSha256)
+        throw fault('SHEETS_DEPLOYMENT_REVIEW_CHANGED', 'Select the exact reviewed merchant configuration.', 409);
+      await privateDirectory(deploymentDirectory, true);
+      await privateDirectory(join(deploymentDirectory, 'packages'), true);
+      const result = await withPublisher(publisher => prepareSheetsDeployment({ publisher,
+        runId: reviewed.input.runId, version: version(reviewed.input.versionId), terms: reviewed.input.terms,
+        expectedReviewSha256: input.expectedReviewSha256, directory: deploymentPackagePath(request) }));
+      return { ...result, packageRequestId: request, reviewRequestId: input.reviewRequestId };
+    }
+    async function prepareDeployment({ reviewRequestId, expectedReviewSha256, requestId, ...extra }) {
+      if (Object.keys(extra).length) throw fault('SHEETS_DEPLOYMENT_INPUT_INVALID');
+      const input = { reviewRequestId: id(reviewRequestId), expectedReviewSha256: hashValue(expectedReviewSha256) };
+      return run('DEPLOYMENT_PREPARE', input, requestId, () => performDeploymentPrepare(input, requestId));
+    }
+    async function inspectDeploymentPackage(packageRequestId) {
+      const saved = savedDeploymentOperation(packageRequestId, 'DEPLOYMENT_PREPARE');
+      const inspected = await inspectSheetsDeployment(deploymentPackagePath(packageRequestId));
+      if (inspected.sourceSha256 !== saved.result.sourceSha256 || inspected.candidateDigest !== saved.result.candidateDigest)
+        throw fault('SHEETS_DEPLOYMENT_PACKAGE_CHANGED');
+      return { ...inspected, packageRequestId };
+    }
+    async function performDeploymentStage(input) {
+      const prepared = await inspectDeploymentPackage(input.packageRequestId);
+      if (prepared.sourceSha256 !== input.expectedSourceSha256) throw fault('SHEETS_DEPLOYMENT_PACKAGE_CHANGED');
+      return { ...await stageSheetsDeployment({ packageDirectory: deploymentPackagePath(input.packageRequestId),
+        releaseDirectory, id: input.id, label: input.label, runtime: input.runtime,
+        expectedSourceSha256: input.expectedSourceSha256 }), packageRequestId: input.packageRequestId };
+    }
+    async function stageDeployment({ packageRequestId, expectedSourceSha256, id: releaseId, label, runtime = { port: 0 }, requestId, ...extra }) {
+      if (Object.keys(extra).length) throw fault('SHEETS_DEPLOYMENT_INPUT_INVALID');
+      const input = { packageRequestId: id(packageRequestId), expectedSourceSha256: hashValue(expectedSourceSha256),
+        id: releaseId, label: label ?? releaseId, runtime };
+      return run('DEPLOYMENT_STAGE', input, requestId, () => performDeploymentStage(input));
+    }
+    async function openDeploymentConsole({ requestId, ...extra }) {
+      if (Object.keys(extra).length) throw fault('SHEETS_DEPLOYMENT_INPUT_INVALID');
+      return run('DEPLOYMENT_CONSOLE_OPEN', {}, requestId, async () => {
+        if (!deploymentService) {
+          await privateDirectory(deploymentDirectory, true);
+          const { initReleaseStore } = await import('../../../sf82-seller-pilot/releases.mjs');
+          const { startReleaseConsole } = await import('../../../sf82-seller-pilot/release-console.mjs');
+          await initReleaseStore(releaseDirectory);
+          deploymentService = { id: randomUUID(), native: await startReleaseConsole(releaseDirectory, { port: 0, env: environment }) };
+        }
+        return deploymentOwnership();
+      });
+    }
+    async function closeDeploymentConsole({ instanceId, requestId, ...extra }) {
+      if (Object.keys(extra).length) throw fault('SHEETS_DEPLOYMENT_INPUT_INVALID');
+      const input = { instanceId: id(instanceId) };
+      return run('DEPLOYMENT_CONSOLE_CLOSE', input, requestId, async () => {
+        if (deploymentService && deploymentService.id !== input.instanceId)
+          throw fault('SHEETS_DEPLOYMENT_CONSOLE_CHANGED', 'Close only the current deployment console instance.', 409);
+        if (deploymentService) {
+          const selected = deploymentService; await selected.native.close();
+          if (deploymentService === selected) deploymentService = null;
+        }
+        return { running: false, instanceId: input.instanceId };
+      });
+    }
+    async function compareDeployment({ from = null, to, ...extra }) {
+      if (Object.keys(extra).length) throw fault('SHEETS_DEPLOYMENT_INPUT_INVALID');
+      assertOpen();
+      const { compareReleases, readReleaseState } = await import('../../../sf82-seller-pilot/releases.mjs');
+      const state = await readReleaseState(releaseDirectory);
+      return { generation: state.generation, ...await compareReleases(releaseDirectory, from ?? state.active, to) };
+    }
+    async function commandDeployment({ action, consoleInstanceId, expectedGeneration, expectedDigest, instanceId,
+      id: releaseId, to, reason, receiving, requestId, ...extra }) {
+      if (Object.keys(extra).length || !['activate', 'rollback', 'run', 'stop', 'restart'].includes(action))
+        throw fault('SHEETS_DEPLOYMENT_ACTION_INVALID');
+      id(consoleInstanceId); integer(expectedGeneration, 'Use the current original selection generation.');
+      if (['stop', 'restart'].includes(action)) id(instanceId);
+      if (action !== 'stop') hashValue(expectedDigest);
+      const input = { action, consoleInstanceId, expectedGeneration,
+        ...(expectedDigest === undefined ? {} : { expectedDigest }),
+        ...(instanceId === undefined ? {} : { instanceId }), ...(releaseId === undefined ? {} : { id: releaseId }),
+        ...(to === undefined ? {} : { to }), ...(reason === undefined ? {} : { reason }),
+        ...(receiving === undefined ? {} : { receiving }) };
+      return run('DEPLOYMENT_COMMAND', input, requestId, async () => {
+        if (!deploymentService || deploymentService.id !== input.consoleInstanceId)
+          throw fault('SHEETS_DEPLOYMENT_CONSOLE_CHANGED', 'Use the current original deployment console instance.', 409);
+        const current = await consoleRequest('GET', '/api/status');
+        if (current.console.busy) throw fault('SHEETS_DEPLOYMENT_BUSY', 'The original deployment action is still running.', 409);
+        if (current.state.generation !== expectedGeneration) throw fault('SHEETS_DEPLOYMENT_SELECTION_CHANGED', 'Refresh and compare the current release selection.', 409);
+        if (action !== 'stop') {
+          const selectedId = action === 'activate' ? releaseId : action === 'rollback' ? to ?? current.state.previous : current.state.active;
+          const { inspectRelease } = await import('../../../sf82-seller-pilot/releases.mjs');
+          const selected = await inspectRelease(releaseDirectory, selectedId);
+          if (selected.digest !== expectedDigest) throw fault('SHEETS_DEPLOYMENT_RELEASE_CHANGED', 'Use the exact inspected release digest.', 409);
+        }
+        const { action: _, consoleInstanceId: __, expectedDigest: ___, ...native } = input;
+        const result = await consoleRequest('POST', '/api/' + action, native);
+        return { mode: 'ORIGINAL_CONSOLE_REPLY', action, requestId, consoleInstanceId, native: result };
+      });
+    }
+    async function recoverDeploymentCommand(row, input) {
+      const native = await nativeDeploymentState();
+      if (native?.console?.busy) throw fault('DEPLOYMENT_COMMAND_STILL_RUNNING', 'The original console is still completing its action. Check this same request again.', 409);
+      return { mode: 'OBSERVED_ORIGINAL_STATE', action: input.action, requestId: row.id,
+        originalConsoleInstanceId: input.consoleInstanceId, currentConsole: deploymentOwnership(),
+        commandReplayed: false, native,
+        observation: 'The current original release state is retained here. This recovery did not repeat the uncertain command or infer a historical result.' };
+    }
+    async function deploymentFile(packageRequestId, filename) {
+      await inspectDeploymentPackage(packageRequestId);
+      return readSheetsDeploymentFile(deploymentPackagePath(packageRequestId), filename);
     }
 
     async function resume(request) {
@@ -483,6 +708,18 @@ export async function openSheetsAuthoring({ directory, create = false, connectio
           if (saved) return JSON.parse(saved.data);
           throw fault('SHEETS_PREVIEW_NOT_RETAINED', 'The validation result was not retained. Preview the same saved draft again; no new Google read is required.', 409);
         }
+        if (row.kind === 'DEPLOYMENT_REVIEW') return performDeploymentReview(input, request);
+        if (row.kind === 'DEPLOYMENT_PREPARE') return performDeploymentPrepare(input, request);
+        if (row.kind === 'DEPLOYMENT_STAGE') return performDeploymentStage(input);
+        if (row.kind === 'DEPLOYMENT_COMMAND') return recoverDeploymentCommand(row, input);
+        if (row.kind === 'DEPLOYMENT_CONSOLE_OPEN') return { ...deploymentOwnership(), observedOwnership: true };
+        if (row.kind === 'DEPLOYMENT_CONSOLE_CLOSE') {
+          if (deploymentService?.id === input.instanceId) {
+            const selected = deploymentService; await selected.native.close();
+            if (deploymentService === selected) deploymentService = null;
+          }
+          return { ...deploymentOwnership(), originalInstanceId: input.instanceId, observedOwnership: true };
+        }
         if (row.kind === 'STOP_PUBLISHER' && !publisherService) return { running: false };
         throw fault('SHEETS_OPERATION_INTERRUPTED', 'The saved source remains available. Review the current state before requesting this operation again.', 409);
       }, true);
@@ -499,6 +736,8 @@ export async function openSheetsAuthoring({ directory, create = false, connectio
     return {
       directory, settings, importObservation, importPacket, readLive, inspectCapture, saveDraft, preview, saveVersion,
       selectVersion, exportVersion, openPublisher, resume, operation, version, compareVersions,
+      deploymentStatus, reviewDeployment, prepareDeployment, inspectDeploymentPackage, stageDeployment,
+      openDeploymentConsole, closeDeploymentConsole, compareDeployment, commandDeployment, deploymentFile,
       async workbook({ connectionAlias, spreadsheet }) {
         assertOpen(); return fetchWorkbookMetadata(workbookId(spreadsheet), selectConnection(connections, connectionAlias),
           { environment, signal: lifetime.signal });
@@ -519,19 +758,24 @@ export async function openSheetsAuthoring({ directory, create = false, connectio
           operations: db.prepare('SELECT id FROM operations ORDER BY rowid DESC LIMIT 25').all().map(row => {
             const { result, ...summary } = operation(row.id); return summary;
           }),
+          deployment: deploymentOwnership(),
           publisher: { running: !!publisherService, url: publisherService?.url ?? null, directory: settings.publisherDirectory,
             sourceFile: settings.sourceFile, targetDirectory: settings.targetDirectory },
         };
       },
-      closePublisher({ requestId }) { return run('STOP_PUBLISHER', {}, requestId, async () => {
+      closePublisher({ requestId }) { return run('STOP_PUBLISHER', {}, requestId, () => serializePublisherAccess(async () => {
         if (publisherService) { const service = publisherService; await service.close(); if (publisherService === service) publisherService = null; }
         return { running: false };
-      }); },
+      })); },
       close() {
         closing ??= (async () => {
           lifetime.abort();
-          try { if (pending) await pending.completion.catch(() => {}); if (publisherService) await publisherService.close(); }
-          finally { closed = true; db.close(); await release(); }
+          try {
+            if (pending) await pending.completion.catch(() => {});
+            await publisherAccess;
+            try { if (publisherService) await publisherService.close(); }
+            finally { if (deploymentService) await deploymentService.native.close(); }
+          } finally { closed = true; db.close(); await release(); }
         })();
         return closing;
       },

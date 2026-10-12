@@ -1,4 +1,5 @@
 // MIT. Shared browser/Node request construction. No network I/O or wallet access.
+import { encodeQueryParameters, decodeQueryParameters } from '../query-parameters.mjs';
 const own = (value, key) => Object.prototype.hasOwnProperty.call(value, key);
 const object = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 const quote = text => "'" + String(text).replace(/'/g, "'\\''") + "'";
@@ -27,12 +28,29 @@ export function buildUnpaidRequest(operation, values, browserOrigin) {
     if (parameter.in === 'query' && parameter.required && !own(query, parameter.name))
       throw new TypeError(`Required query parameter missing: ${parameter.name}`);
   }
+  const bazaar = offer.extensions?.bazaar, serialization = bazaar?.querySerialization;
+  const selected = Object.create(null);
   for (const [key, value] of Object.entries(query)) {
     const items = Array.isArray(value) ? value : [value];
     if (!items.length || items.some(item => typeof item !== 'string'))
       throw new TypeError(`Query ${key} must be a string or a nonempty array of strings`);
-    for (const item of items) local.searchParams.append(key, item);
+    if (serialization === undefined) {
+      for (const item of items) local.searchParams.append(key, item);
+      continue;
+    }
+    // Existing callers keep textual values. Arrays are selected items; a string
+    // retains the declared raw form encoding. Parse numeric/boolean text once,
+    // then use the same retained codec as merchant admission and route cases.
+    const schema = bazaar.schema?.properties?.input?.properties?.queryParams;
+    const inputRules = Array.isArray(value) ? {
+      ...serialization,
+      parameters: { ...serialization.parameters, [key]: { style: 'form', explode: true } },
+    } : serialization;
+    selected[key] = decodeQueryParameters({ [key]: value }, schema, inputRules)[key];
   }
+  if (serialization !== undefined)
+    local.search = encodeQueryParameters(selected,
+      bazaar.schema?.properties?.input?.properties?.queryParams, serialization);
   const advertised = new URL(offer.resource.url);
   const publicUrl = new URL(local.pathname + local.search, advertised.origin);
   if (local.href.length > 2048 || publicUrl.href.length > 2048) throw new RangeError('Request URL exceeds the seller 2048-character limit');

@@ -7,6 +7,8 @@ import { WorkspaceRecovery } from './workspace-recovery.mjs';
 import {AcquisitionWorkspace} from './acquisitions.mjs';
 import { readWorkspace, checkWorkspace, workspaceCommand } from './workspace.mjs';
 import { BuyerResult } from './result.mjs';
+import { inspectUnpaidContinuation, prepareUnpaidContinuation, followUnpaidContinuation,
+  assertUnpaidContinuationBinding } from './unpaid-continuation.mjs';
 import { Dataset, createDataset, listDatasets } from './dataset.mjs';
 import { ObjectAcquisition, createObject, listObjects } from './object.mjs';
 import { Inbox, createInbox, inspectOperationHandoff } from './inbox.mjs';
@@ -79,11 +81,13 @@ export class Buyer {
     return { ...config, ...copy(profile) };
   }
 
-  async _create(input, { body, operatorProfile, responseFile, requestTimeoutMs, nativeWorkspace, signal } = {}) {
+  async _create(input, { body, operatorProfile, responseFile, requestTimeoutMs, nativeWorkspace, signal, unpaidContinuation } = {}) {
     checkSignal(signal);
     await this.ready();
     // Explicit workspace adoption uses its native operator, never a global profile override.
-    const config = nativeWorkspace === undefined ? await this._profile(copy(input), operatorProfile) : copy(input);
+    const config = nativeWorkspace === undefined && unpaidContinuation === undefined
+      ? await this._profile(copy(input), operatorProfile) : copy(input);
+    const continuation = unpaidContinuation === undefined ? {} : { unpaidContinuation: copy(unpaidContinuation) };
     const workspace = nativeWorkspace === undefined ? {} : { nativeWorkspace: absolute(nativeWorkspace) };
     need(object(config.operation), 'OPERATION_REQUIRED');
     const op = this.operation(config.operation.intentId);
@@ -97,7 +101,7 @@ export class Buyer {
     try {
       checkSignal(signal);
       await writeJson(join(op.directory, 'operation.json'), { schema: SCHEMA,
-        intentId: op.intentId, state: 'PREPARING', createdAt: now(), ...workspace }, { exclusive: true });
+        intentId: op.intentId, state: 'PREPARING', createdAt: now(), ...workspace, ...continuation }, { exclusive: true });
       const bodyFiles = body !== undefined || config.operation.bodyFile !== undefined
         ? await this._requestFiles() : null;
       if (body === undefined && config.operation.bodyFile !== undefined)
@@ -150,7 +154,7 @@ export class Buyer {
       need(native.intentId === op.intentId && native.bodySha256 === hashes.bodySha256, 'NATIVE_REVIEW_MISMATCH');
       await writeJson(join(op.directory, 'operation.json'), { schema: SCHEMA,
         intentId: op.intentId, state: 'PREPARED', createdAt: now(),
-        runtimeDirectory: this.runtime.directory, ...workspace, ...hashes });
+        runtimeDirectory: this.runtime.directory, ...workspace, ...hashes, ...continuation });
       await writeJson(join(op.directory, 'review.json'), { intentId: op.intentId,
         ...hashes, ...workspace, native, reviewedAt: now() }, { exclusive: true });
       checkSignal(signal);
@@ -291,8 +295,12 @@ export class Operation {
     const ticketHash = config.operation.ticketFile
       ? digest(await readBytes(config.operation.ticketFile, 16384)) : null;
     need(ticketHash === (meta.ticketSha256 ?? null), 'OPERATION_TICKET_CHANGED');
+    if (meta.unpaidContinuation !== undefined) await assertUnpaidContinuationBinding(this, { meta, config });
     return { meta, config };
   }
+  inspectUnpaidContinuation() { return inspectUnpaidContinuation(this); }
+  prepareUnpaidContinuation(options) { return prepareUnpaidContinuation(this, options); }
+  followUnpaidContinuation() { return followUnpaidContinuation(this); }
   async review({ signal } = {}) {
     checkSignal(signal);
     const { meta } = await this._bound();

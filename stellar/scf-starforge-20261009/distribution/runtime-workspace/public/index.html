@@ -17,7 +17,7 @@
   <button id="retry-request" type="button" hidden>Recover last request</button>
 </aside>
 <main>
-  <nav aria-label="Workspace views"><button data-view="runtime" aria-current="page">Selected runtime</button><button data-view="profile">Source &amp; profile</button><button data-view="operations">Operations</button><button data-view="deployment">Deployment</button><button data-view="managed">Managed releases</button><button data-view="images">Images</button><button type="button" data-view="transfers">Offline transfers</button></nav>
+  <nav aria-label="Workspace views"><button data-view="runtime" aria-current="page">Selected runtime</button><button data-view="profile">Source &amp; profile</button><button data-view="operations">Operations</button><button data-view="deployment">Deployment</button><button data-view="managed">Managed releases</button><button data-view="images">Images</button><button data-view="applications">Applications</button><button type="button" data-view="transfers">Offline transfers</button></nav>
   <section data-pane="runtime">
     <div class="section-title"><div><p class="eyebrow">SELECTED INSTALLATION</p><h2 id="selected-name">Open a runtime to begin</h2></div><span id="selected-phase" class="status">EMPTY</span></div>
     <p id="selected-version" class="muted">Open an existing installation or prepare a source archive.</p>
@@ -68,6 +68,7 @@
   <section data-pane="managed" hidden><div id="managed-workspace"></div></section>
   <section data-pane="transfers" hidden><div id="transfer-workspace"></div></section>
   <section data-pane="images" hidden><div id="image-workspace"></div></section>
+  <section data-pane="applications" hidden><div id="applications-workspace"></div></section>
 </main>
 </div>
 <footer><span id="workspace-location"></span><span>Original source. Retained dependency lock. Existing deployment controls.</span></footer>

@@ -1,5 +1,13 @@
 # Starforge merchant operations through MCP
 
+Federal award research is available through the same merchant interface. Open
+host-declared USAspending workspaces, operate the original provider capture jobs,
+review award and recipient data, prepare the native merchant dataset, receive
+original buyer deliveries, and complete cited research dossiers. Both original
+browsers and exact resumable exports remain available. See
+[USAspending research workspaces](USASPENDING-WORKSPACE.md) for setup and the
+complete research, receiving and dossier workflow.
+
 Operate the existing Starforge merchant release system from an MCP client. This
 interface takes a prepared merchant API through staging, exact price and route
 comparison, activation, original seller startup, customer SDK export, rollback

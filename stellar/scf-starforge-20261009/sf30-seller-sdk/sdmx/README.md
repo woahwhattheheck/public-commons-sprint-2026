@@ -23,6 +23,33 @@ Use Node 22.16 or later and Python 3.11 or later. The source workspace uses Pyth
 
 The workspace directory is private to its operator and has one original writer lease. Close its browser server before invoking a separate workspace CLI process. The seller has its own original version-store lease and control endpoint; it can continue serving already published editions while the source workspace is closed.
 
+## Open the included complete project
+
+The portable [ECB reference-rate project](examples/ecb-reference-rates.sdmx.zip) contains the original source/structural metadata and both saved analyst revisions. Set SDMX_SOURCE to this installed or checked-out SDMX source directory, and choose a new private workspace:
+
+~~~sh
+export SDMX_SOURCE=/path/to/sf30-seller-sdk/sdmx
+export SDMX_WORK=/private/ecb-received
+starforge sdmx --workspace "$SDMX_WORK" init
+starforge sdmx --workspace "$SDMX_WORK" import \
+  --file "$SDMX_SOURCE/examples/ecb-reference-rates.sdmx.zip"
+starforge sdmx --workspace "$SDMX_WORK" serve --port 0
+~~~
+
+The received project is d560804b1f7bc5c59c8cd3f71483247a, revision 2, with eight series and 544 original observations. Its two revisions retain the analyst's source review. The native snapshot is ccd69f17ba77befe3ba5a1f8c6b6460352fb450098469868a17cee0427ee2386. The packet is 59,286 bytes, SHA-256 b867833b5c7db79f4cc95bee1070cb2366b5975e1e470c31c1199800c00613cc. The console can inspect, query, compare, revise and export the received project immediately.
+
+For an equipped receiver continuing the same browser workflow, the existing native owner can initialize its one operation directly from that packet and the shipped provider captures:
+
+~~~sh
+python3 -B "$SDMX_SOURCE/delivery/browser-owner.py" \
+  --source-root "$SDMX_SOURCE" \
+  --capture-root "$SDMX_SOURCE/examples/ecb-2025" \
+  --operation-root /private/ecb-browser-operation \
+  --project-packet "$SDMX_SOURCE/examples/ecb-reference-rates.sdmx.zip"
+~~~
+
+The owner reopens an existing operation when present. It starts the original operator and its browser child together, retains useful receiving results, then drains and closes its owned processes. Use the receiver's installed Playwright/Chromium; SDMX_CHROMIUM_EXECUTABLE selects an existing browser executable.
+
 ## Official ECB input used by this product
 
 The retained source case is the ECB exchange-rate dataflow ECB:EXR, version 1.0, using DSD ECB:ECB_EXR1, version 1.0. Its complete selected response is:
