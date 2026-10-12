@@ -71,6 +71,12 @@ export interface Discovery {
  kind:'providers'|'provider'|'datasets'|'dataset'|'search'|'series';
  provider?:string;dataset?:string;query?:string;limit?:number;offset?:number;dimensions?:Record<string,string[]>;
 }
+export interface AnalysisSelection {captureId:string;captureSha256:string;reportIds:string[];notesRevision:number;title:string}
+export interface AnalysisSource {
+ id:string;directory:string;documentId:string;manifestSha256:string;selection:AnalysisSelection;
+ sourceBundleSha256:string;rowCount:number;counts:{observation:number;calculation:number;series:number;note:number};
+ files:Array<{path:string;bytes:number;sha256:string;contentType:string}>;
+}
 export interface Client {
  readonly origin:string;
  status():Promise<ObjectValue>;
@@ -93,6 +99,8 @@ export interface Client {
  captureFile(id:string):Promise<FileResult>;
  originalResponse(id:string,index?:number):Promise<FileResult>;
  exportSources():Promise<ObjectValue>;
+ analysisSource(input:{id:string;selection:AnalysisSelection}):Promise<AnalysisSource>;
+ analysisSourceFile(id:string):Promise<FileResult>;
  importSources(input:{id:string;bundle:ObjectValue}):Promise<ObjectValue>;
  saveQuery(input:{id:string;name:string;query:SavedQuery;expectedHash:string}):Promise<ObjectValue>;
  planTemplate(name:string):Promise<ObjectValue>;
