@@ -5,6 +5,9 @@ export const SUBMISSION_ROUTES = [
   ['/grant-submission.css',['grant-submission.css','text/css; charset=utf-8']],
   ['/grant-submission-core.mjs',['grant-submission-core.mjs','text/javascript; charset=utf-8']],
   ['/grant-submission-workspace.mjs',['grant-submission-workspace.mjs','text/javascript; charset=utf-8']],
+  ['/grant-plan-core.mjs',['grant-plan-core.mjs','text/javascript; charset=utf-8']],
+  ['/grant-plan-source.mjs',['grant-plan-source.mjs','text/javascript; charset=utf-8']],
+  ['/grant-plan-workspace.mjs',['grant-plan-workspace.mjs','text/javascript; charset=utf-8']],
 ];
 export function attachGrantSubmission({templateHtml,sourceIndex}){
   if(typeof templateHtml!=='string'||!templateHtml.includes('<nav aria-label="Primary">'))throw new Error('Retain the existing application reader and its primary navigation.');
@@ -19,6 +22,7 @@ export function attachGrantSubmission({templateHtml,sourceIndex}){
     application_sha256:index.application.sha256,application_git_blob:index.application.git_blob,
     draft_schema:'stellar-forge.grant-submission-draft.v1',export_schema:'stellar-forge.grant-submission-export.v1',
     form_map_schema:'stellar-forge.grant-form-map.v1',operation:SUBMISSION_OPERATION,
+    planning:{source_schema:'stellar-forge.grant-plan-source.v1',review_schema:'stellar-forge.grant-plan-review.v1',native_schema:'stellar-forge.sf47-planning.v1',formats:['json','zip'],operation:'SCF-PLAN-SUBMISSION-INTEGRATION-7F5A-20261012'},
     guide:'https://github.com/woahwhattheheck/tjlabs-stellar-merchant-workspace/blob/main/stellar-forge/developer-site/GRANT_SUBMISSION.md',
   };
   return {templateHtml:html,sourceIndex:index};

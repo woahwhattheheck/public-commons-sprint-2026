@@ -259,3 +259,7 @@ The product pins MPXJ **16.10.0**, source commit `7ef9e72813d33378c55ec6ceb148cc
 - [Dataverse metadata queries](https://learn.microsoft.com/en-us/power-apps/developer/data-platform/webapi/query-metadata-web-api)
 
 `SOURCE_REFERENCES.json` retains the exact source pins used for the native contract. The actual connected CSDL, status choices and provider responses remain part of each selected target operation.
+
+## Portfolio archive and reporting
+
+The same desk's Portfolio archive tab selects saved native editions, reviews native fields and exact-grain measures, publishes complete relational CSV/SQLite and source archives, runs read-only reporting SQL and receives the original project sources in a fresh workspace. Companion profiles and mappings retain their actual capture selectors. See ../archive/README.md for the complete operator workflow and ../archive/native/README.md for its continuation of the original native receiving operation.
