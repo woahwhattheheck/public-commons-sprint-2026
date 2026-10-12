@@ -277,6 +277,12 @@ def finalize_lost_output(governor, source_path, source, payer, *, node, ledger, 
             return dataset_source_context(
                 path, value, original_governor, original_payer, original_ledger, original_policy,
                 node=node, use_system_ca=use_system_ca)
+    elif context_reader is None and source.get('sourceKind') == 'node-operation':
+        from lost_node_finality import node_source_context
+        def context(path, value, original_governor, original_payer, original_ledger, original_policy):
+            return node_source_context(
+                path, value, original_governor, original_payer, original_ledger, original_policy,
+                node=node, use_system_ca=use_system_ca)
     else:
         context = source_context if context_reader is None else context_reader
     binding, terms, row, directory = context(source_path, source, governor, payer, ledger, policy)

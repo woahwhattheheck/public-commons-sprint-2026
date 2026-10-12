@@ -75,8 +75,11 @@ export interface WorkspaceOptions {
   fetchImpl?: typeof fetch; requestTimeoutMs?: number; maxConcurrent?: number; checkout?: CheckoutOptions;
 }
 export function openJobWorkspace(options: WorkspaceOptions): Promise<JobWorkspace>;
-export function startJobCustomerWorkspace(options: {model: JobWorkspace; port?: number; browserApproval?: boolean}): Promise<{
+export type JobWorkspaceLanding = 'request' | 'checkout' | 'jobs' | 'library' | 'collections';
+export type JobApprovalMode = 'browser' | 'terminal';
+export function startJobCustomerWorkspace(options: {model: JobWorkspace; port?: number; browserApproval?: boolean; landing?: JobWorkspaceLanding}): Promise<{
   origin: string; url: string; libraryUrl: string; collectionsUrl: string; checkoutUrl: string; intakeUrl: string;
+  approvalMode: JobApprovalMode; landing: JobWorkspaceLanding; entryUrl: string;
   token: string; server: Server; launch: JobWorkspaceLaunch; privateLaunch: string; close(): Promise<void>;
 }>;
 export function runJobWorkspaceCommand(args?: string[], options?: {print?: (value: unknown) => void}): Promise<void>;
@@ -185,9 +188,18 @@ export interface JobWorkspaceLaunch {
   directory: string; runtimeDirectory: string; operatorSelection: CheckoutSelection | null;
   pid: number; instanceId: string; startedAt: string; endedAt?: string;
   url: string; checkoutUrl: string; libraryUrl: string; collectionsUrl: string; intakeUrl?: string; privateLaunch: string;
+  approvalMode?: JobApprovalMode; landing?: JobWorkspaceLanding; entryUrl?: string;
 }
 export const JOB_WORKSPACE_LAUNCH_SCHEMA: 'stellar-forge.sf88.job-workspace-launch.v1';
+export const JOB_WORKSPACE_APPLICATIONS: Readonly<{
+  schema: 'stellar-forge.sf88.job-workspace-applications.v1';
+  launchSchema: typeof JOB_WORKSPACE_LAUNCH_SCHEMA;
+  landings: readonly JobWorkspaceLanding[]; approvalModes: readonly JobApprovalMode[];
+}>;
 export function jobWorkspaceLaunchPath(directory: string): string;
+export function jobWorkspaceEntryUrl(value: Pick<JobWorkspaceLaunch,
+  'url' | 'checkoutUrl' | 'intakeUrl' | 'libraryUrl' | 'collectionsUrl'>, landing?: JobWorkspaceLanding): string;
 export function readJobWorkspaceLaunch(options: {
   directory: string; runtimeDirectory: string; operatorWorkspace?: string; operatorProfile?: string; pid?: number;
+  approvalMode?: JobApprovalMode; landing?: JobWorkspaceLanding;
 }): Promise<JobWorkspaceLaunch>;

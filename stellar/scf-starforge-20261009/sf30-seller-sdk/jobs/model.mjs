@@ -1,7 +1,8 @@
 // MIT. Purchased jobs over ORIGINAL SF30/SF98 settlement; application execution has its own durable lifetime.
 import { randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
 import { join } from 'node:path';
-import { readJobMerchant, validateJobInput, digest, JOB_ID, HASH, jobError, plain } from './config.mjs';
+import { validateJobInput, digest, JOB_ID, HASH, jobError, plain } from './config.mjs';
+import { readJobMerchantSource } from './source-binding.mjs';
 import { openJobStore } from './store.mjs';
 import { executeJob } from './execution.mjs';
 import { openOutbox, instrumentNativeSettlement, SCHEMA as NATIVE_EVENT_SCHEMA } from '../../sf98-merchant-delivery/outbox.mjs';
@@ -42,8 +43,9 @@ function summary(row) {
 
 export async function openJobMerchant({ configPath, directory, env = process.env } = {}) {
   if (typeof configPath !== 'string') fail('JOB_CONFIG_PATH_REQUIRED');
-  const source = await readJobMerchant(configPath);
-  const store = await openJobStore(directory, source);
+  // Read the current physical binding while the original store lease is held.
+  const store = await openJobStore(directory, () => readJobMerchantSource({ configPath, directory }));
+  const source = store.source;
   let outbox;
   try { outbox = await openOutbox(join(directory, 'outbox')); }
   catch (error) { await store.close(); throw error; }
