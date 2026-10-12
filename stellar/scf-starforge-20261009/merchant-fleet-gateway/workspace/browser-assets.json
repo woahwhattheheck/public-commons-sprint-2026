@@ -1,0 +1,48 @@
+{
+  "schema": "stellar-forge.browser-assets.v1",
+  "root": "./",
+  "routes": [
+    [
+      "/",
+      [
+        "index.html",
+        "text/html; charset=utf-8"
+      ]
+    ],
+    [
+      "/browser.mjs",
+      [
+        "browser.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/clients.mjs",
+      [
+        "clients.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/discovery.mjs",
+      [
+        "discovery.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/original-client.mjs",
+      [
+        "../../sf82-seller-pilot/release-ui/client.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/style.css",
+      [
+        "style.css",
+        "text/css; charset=utf-8"
+      ]
+    ]
+  ]
+}

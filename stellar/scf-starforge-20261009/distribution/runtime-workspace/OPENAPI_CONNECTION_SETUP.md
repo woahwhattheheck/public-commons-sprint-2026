@@ -129,7 +129,7 @@ The private environment edition and grant/token files are not download choices i
 
 The additive browser module is `public/openapi-connection-setup.mjs`. It mounts outside the Applications configuration form and uses the existing authenticated runtime-workspace API.
 
-The shared host resolves the selected runtime entry and supplies the original workspace root to `openApiConnectionSetupAction`. Default setup and grant roots are private children of that workspace. Optional root and secret-name policies come from host configuration, not browser-supplied write destinations.
+The shared host resolves the selected runtime entry and supplies the original workspace root to `openApiConnectionSetupAction`. Default setup and grant roots are private children of that workspace. Optional root locations and development-provider permissions come from host configuration, not browser-supplied write destinations.
 
 The facade checks the selected installed runtime and original managed OAuth capability before calling the original `sf30-seller-sdk/oauth-connections/setup/` engine. Reviews bind the runtime identity, source selection, original environment file and complete desired registry. The ordinary merchant HTTP capability continues to operate its configured aliases.
 
@@ -148,3 +148,7 @@ All setup endpoints use the existing authenticated POST transport:
 | `download` | Retrieve a complete allowed edition handover file. |
 
 The route prefix is `/api/applications/openapi-setup/`. Requests use `{runtimeId, context, input}`. The setup engine and facade define the full typed source, review, revision, idempotency and recovery contracts; browser changes cannot override the host's selected runtime or private roots.
+
+## Complete native receiving
+
+The original receiving continuation is documented in [Receive connection setup](../receiving/OPENAPI_SETUP_RECEIVING.md). It consumes actual source files and registered-client plans, publishes the reviewed original editions, and enters the existing managed application start, stop and reopen sequence in the same workspace.

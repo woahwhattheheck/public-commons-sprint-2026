@@ -1,0 +1,22 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "opendatasoft",
+  "description": "Opendatasoft and Huwise data products",
+  "commands": {
+    "opendatasoft": "stellar/scf-starforge-20261009/sf30-seller-sdk/opendatasoft/cli.mjs",
+    "huwise": "stellar/scf-starforge-20261009/sf30-seller-sdk/opendatasoft/cli.mjs"
+  },
+  "commandDescriptions": {
+    "opendatasoft": "Discover, retain and publish Huwise data with original buyer handoff",
+    "huwise": "Alias for the same Opendatasoft data workspace"
+  },
+  "exports": {
+    "./seller/opendatasoft": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opendatasoft/source.mjs",
+    "./seller/opendatasoft/capture": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opendatasoft/capture.mjs",
+    "./seller/opendatasoft/declaration": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opendatasoft/declaration.mjs",
+    "./seller/opendatasoft/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opendatasoft/workspace/server.mjs",
+    "./seller/opendatasoft/workspace/model": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opendatasoft/engine.mjs",
+    "./seller/opendatasoft/publisher": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opendatasoft/publisher/model.mjs",
+    "./seller/opendatasoft/publisher/release": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opendatasoft/publisher/release.mjs"
+  }
+}

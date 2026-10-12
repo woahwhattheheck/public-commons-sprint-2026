@@ -22,6 +22,7 @@ def reserve_for_approval(
     governor: Any,
     consent_for_request: Callable[[dict[str, Any]], str],
     intent_mapper: Callable[..., dict[str, Any]] | None = None,
+    resume_authorization_token: str | None = None,
 ) -> bool:
     """Return True ONLY on a new SF36 durable reservation of this SF31 intent.
 
@@ -33,7 +34,9 @@ def reserve_for_approval(
     A reserved duplicate is intentionally rejected: allowing a second SF31
     callback to sign could replay a signed payment attempt. An unsettled
     reservation remains held after any downstream signer/transport failure;
-    only the original trusted finality path can reconcile it.
+    only the original trusted finality or authenticated expiry path can change it.
+    A renewed generation additionally needs its private operator resume permit
+    and fresh consent-key authorization bound to the same audited release.
     """
     if intent_mapper is None:
         # The original SF54 contract, loaded from the same SCF checkout.
@@ -62,7 +65,9 @@ def reserve_for_approval(
 
     # SF36 atomically checks the bound owner permit, the actual caps,
     # durable WAL state and idempotent request ID before returning.
-    result = governor.reserve(request, permit)
+    result = governor.reserve(request, permit, **(
+        {'resume_authorization_token': resume_authorization_token}
+        if resume_authorization_token is not None else {}))
     if not isinstance(result, dict) or result.get('outcome') != 'RESERVED':
         raise ReservationApprovalDenied('NO_FRESH_RESERVATION')
     for expected_field, actual_field in (
