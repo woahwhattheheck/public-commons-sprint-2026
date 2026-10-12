@@ -111,6 +111,8 @@ async function sourceConfig(o, env) {
   } else if(config.routes.some(route=>route.handler) && !o.handlersPath) {
     fail('Merchant handler route requires --handlers or --upstreams');
   }
+  if(o.operationControls && !Object.values(compiled??{}).some(binding=>binding.idempotency))
+    fail('--operation-controls requires an upstream binding with idempotency');
   if(o.handlersPath) {
     const path=resolve(dirname(o.configPath),o.handlersPath);
     const s=await stat(path);
