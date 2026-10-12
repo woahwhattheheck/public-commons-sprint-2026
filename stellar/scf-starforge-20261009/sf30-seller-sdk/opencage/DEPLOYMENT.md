@@ -6,7 +6,7 @@ Use one coherent Starforge source release for the provider, merchant and custome
 
 A cumulative archive contains the source and command map recorded when that archive was built. A later source PR has its own implementation and dependency identity. Use the package manifest and the selected source pin to decide which launch command is available.
 
-The following are immutable October 11, 2026 source snapshots:
+The following are immutable October 11–12, 2026 source snapshots:
 
 | Source selection | Contents relevant to this workbench | Receiving entry point |
 | --- | --- | --- |
@@ -14,6 +14,9 @@ The following are immutable October 11, 2026 source snapshots:
 | Cumulative source `f8db4d8cff51ace62bb7b25655131aaed78bdde8` | 54 components, 127 commands and 208 exports. Its distribution map predates the OpenCage command and exports. | Its [matching installed guide](../../distribution/README.md), interpreted against that archive's own manifest. |
 | OpenCage source `250620d6b262d3a357549879934e17fcb1aac82e` | Complete 14-file workbench plus the exact original configured-egress dependency at `a8c524f35e8288bc6391d912733ff04bae39939f`. Its distribution map includes `opencage-workbench` and seven OpenCage exports. | The source CLI below, or a later cumulative archive that actually includes this source and its command map. |
 | Native receiving installation for that OpenCage pin | 1,304 verified original/composed base files plus all 14 workbench files. The selected shared closure contains 319 files and retains its original manifest. | Direct invocation of `sf30-seller-sdk/opencage/cli.mjs` from the selected source root. |
+| Merchant MCP source `5e323e89a92b8859eb851205d69c6cc420ff7020` | Fifteen OpenCage tools in the existing merchant operator, shared workspace/browser ownership, and complete retained file receiving. | `serve.mjs init-opencage-workspaces` in the [merchant MCP guide](../../../../stellar-forge/mcp-merchant-operator/OPENCAGE_WORKSPACES.md). |
+| Composed product source `f2d1e326f2c7f60db77e5ea264c235590af84daf` | Preserves current-main merchant tools and merged shared transport, adds the complete OpenCage mappings, and fixes the actual release stage/selection handoff. Its map contains 222 commands and 468 exports. | The selected source CLI and merchant MCP operator, or an archive built from that complete command/export map. |
+| Complete receiving source at `f3a7148bb2076864ef56c25ef5f80cc839d9dec3` | Adds original merchant/Buyer and MCP receiving entry points. The actual receiving selection contains 439 verified files from the reviewed `5e323e89` closure, with the single published `f2d1e326` OpenCage UI correction. | [Retained receiving guide](receiving/README.md), with its exact source manifest and separate provider and buyer/release records. |
 
 Sources: [original cumulative map](https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/f8db4d8cff51ace62bb7b25655131aaed78bdde8/stellar/scf-starforge-20261009/distribution/distribution.json), [complete OpenCage source](https://github.com/woahwhattheheck/public-commons-sprint-2026/tree/250620d6b262d3a357549879934e17fcb1aac82e/stellar/scf-starforge-20261009/sf30-seller-sdk/opencage), and [shared transport source](https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/a8c524f35e8288bc6391d912733ff04bae39939f/stellar/scf-starforge-20261009/sf30-seller-sdk/UPSTREAM_TRANSPORT.md).
 
@@ -197,4 +200,10 @@ The browser import transfers the response as bytes; the CLI reads the original f
 
 The native direct-host operation completed on October 11 at 23:02:54 UTC with application `UPSTREAM_UNAVAILABLE`, provider status absent, and the exact 38-byte application response SHA-256 `926460c756f35da08b6805d6f2abd8ed32b10bcbbe02fa9b91af4d658526dbd5`. That retained outcome led to the configured source integration above.
 
-The explicit-profile installation selected the complete original shared transport and retained source manifests. Its original foreground receiving operation, `scf-opencage-profile-workshare-a39c-20261011`, continues through the maintained disk/memory scheduler. Its source, provider, merchant, buyer and customer outcomes are attached to the [same product handoff](https://tokenjunkielabs.slack.com/archives/C0BTB4SUCP9/p1791762521148609?thread_ts=1791730288.879869). The installed cumulative package records retain their own source pins and completed outcomes.
+The original configured primary operation, `scf-opencage-primary-workshare-a39c-20261012`, ran on October 12 from 01:36:01 to 01:36:44 UTC. Its reverse request returned native HTTP 200 with one candidate and 2,785 exact response bytes. The separate empty-result request returned native HTTP 200 with zero candidates. Browser byte-preserving import, explicit candidate selection, complete CSV/GeoJSON/customer download and generated SDK import completed.
+
+The reverse response SHA256 is `94831ba4c34acf608585d242baa998c4ee58a190bf1e4ed3040897800f5797dd`. The [commit-pinned native fixture](https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/f2d1e326f2c7f60db77e5ea264c235590af84daf/stellar/scf-starforge-20261009/sf30-seller-sdk/opencage/fixtures/native-reverse.json) preserves those bytes and returned licenses. This is the provider's documented fixed test-key response.
+
+That operation retained the staged `geocode-v1` before its browser driver reached a stage/refresh selection race. The published correction keeps the complete action busy through refresh and selects the saved release before comparison. The operation's terminal result remains attached to its original source and outputs.
+
+The [retained receiving workflow](receiving/README.md) reopens that saved choice, delivery and staged release, completes the original release lifecycle and Buyer execute/recover, then joins both native records to the same MCP operator. Its source manifest is `be4e5afaf63ca73f8285b439abf3c42be0e81cdafd9a4223b2b6f7122826b290`. Current native outcomes and source delivery are maintained in the [original product thread](https://tokenjunkielabs.slack.com/archives/C0BTB4SUCP9/p1791770129066499?thread_ts=1791730288.879869).
