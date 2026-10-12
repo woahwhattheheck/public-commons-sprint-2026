@@ -73,8 +73,14 @@ export class MerchantSensorThingsWorkspaces{
     try{
       if(definition.applicationUrlFile){
         const saved=await privateJSON(definition.applicationUrlFile,65536);
-        if(saved.original?.schema!==STARTUP_SCHEMA||saved.original.workspaceId!==definition.workspaceId||typeof saved.url!=='string')
-          throw fault('MCP_APPLICATION_CHANGED','The original managed Applications record belongs to another workspace.',409);
+        const original=saved?.original;
+        const workspaceStartup=original?.schema===STARTUP_SCHEMA;
+        const deskStartup=saved?.schema==='stellar-forge.application-url.v1'&&saved.command==='sensorthings-desk'&&
+          original?.schema==='stellar-forge.sensorthings-desk-startup.v1'&&original.status==='SENSORTHINGS_DESK_READY';
+        // The maintained Applications observer keeps url on the outer record
+        // and preserves the actual source-owned startup in original.
+        if(!(workspaceStartup||deskStartup)||original.workspaceId!==definition.workspaceId||typeof saved.url!=='string')
+          throw fault('MCP_APPLICATION_CHANGED','Select the original workspace or Desk startup record for this exact workspace.',409);
         raw=saved.url;
       }else if(definition.consoleUrlFile)raw=new TextDecoder('utf-8',{fatal:true}).decode(await readOwned(definition.consoleUrlFile,4096)).trim();
       else raw=this.#environment[definition.consoleUrlEnv];
