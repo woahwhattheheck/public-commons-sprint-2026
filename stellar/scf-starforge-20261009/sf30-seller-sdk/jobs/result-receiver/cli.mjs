@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // MIT. Customer commands for original paid-job result receiving.
 import { pathToFileURL } from 'node:url';
+import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { initializeReceiver, openResultReceiver } from './store.mjs';
 
@@ -66,7 +67,9 @@ export async function main(args = process.argv.slice(2), { stdout = process.stdo
       operatorPort: integer(options['--operator-port'], 0), maxConcurrent: integer(options['--max-concurrent'], 4),
       ...(tokenEnv ? { operatorToken: env[tokenEnv] } : {}) });
     stdout.write(JSON.stringify({ schema: 'stellar-forge.job-result-receiver-ready.v1',
-      receiverUrl: service.receiverUrl, destination: store.config.destination,
+      root: service.store.root,
+      configSha256: createHash('sha256').update(JSON.stringify(service.store.config)).digest('hex'),
+      pid: process.pid, receiverUrl: service.receiverUrl, destination: service.store.config.destination,
       operatorUrl: service.operatorUrl }) + '\n');
     return await new Promise((resolve, reject) => {
       let stopping = false;

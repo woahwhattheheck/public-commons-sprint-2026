@@ -4,12 +4,6 @@ import { readFile, mkdir, mkdtemp, open, link, rm } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { createHash } from 'node:crypto';
-import { openJobMerchant } from './model.mjs';
-import { startJobSeller } from './merchant.mjs';
-import { startCustomerServer } from './customer.mjs';
-import { startJobsWorkspace } from './workspace/server.mjs';
-import { readDeliveryConfig } from './result-delivery/config.mjs';
-import { openResultDelivery } from './result-delivery/dispatcher.mjs';
 
 const help = [
   'Starforge paid jobs', '',
@@ -114,6 +108,8 @@ export async function runJobCommand(argv = process.argv.slice(2), { print = valu
   const { command, out } = options(argv);
   if (out.has('--start-delivery') && !out.has('--delivery-config')) throw problem('--start-delivery requires --delivery-config.');
   if (['retry', 'cancel', 'renew-claim'].includes(command)) required(out, '--revision');
+  // Customer receiving uses only its selected original source and Node built-ins.
+  const { openJobMerchant } = await import('./model.mjs');
   const model = await openJobMerchant({ configPath: resolve(out.get('--config')), directory: resolve(out.get('--state')) });
   const sessions = []; let stopped = false, shutdownPromise, delivery;
   const close = () => shutdownPromise ??= (async () => {
@@ -135,6 +131,11 @@ export async function runJobCommand(argv = process.argv.slice(2), { print = valu
   const emit = value => print(JSON.stringify(value, null, 2));
   try {
     if (command === 'serve') {
+      const [{ startJobSeller }, { startCustomerServer }, { startJobsWorkspace },
+        { readDeliveryConfig }, { openResultDelivery }] = await Promise.all([
+        import('./merchant.mjs'), import('./customer.mjs'), import('./workspace/server.mjs'),
+        import('./result-delivery/config.mjs'), import('./result-delivery/dispatcher.mjs'),
+      ]);
       let nativeFactory = null;
       if (out.has('--native-factory')) {
         const configured = await import(pathToFileURL(resolve(out.get('--native-factory'))).href);
