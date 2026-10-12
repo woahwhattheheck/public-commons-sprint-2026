@@ -1,0 +1,21 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "lgndx-opportunity-operations",
+  "description": "Original opportunity sources, requirement responses, teaming decisions and complete receiving",
+  "components": [
+    "stellar/scf-starforge-20261009/partners/lgndx-opportunity-operations"
+  ],
+  "commands": {
+    "opportunity": "stellar/scf-starforge-20261009/partners/lgndx-opportunity-operations/cli.mjs"
+  },
+  "commandDescriptions": {
+    "opportunity": "Operate opportunity sources, requirement responses, teaming decisions and complete proposal handoffs"
+  },
+  "exports": {
+    "./partners/lgndx-opportunity-operations": "./source/stellar/scf-starforge-20261009/partners/lgndx-opportunity-operations/model.mjs",
+    "./partners/lgndx-opportunity-operations/package": "./source/stellar/scf-starforge-20261009/partners/lgndx-opportunity-operations/package.mjs",
+    "./partners/lgndx-opportunity-operations/sources": "./source/stellar/scf-starforge-20261009/partners/lgndx-opportunity-operations/sources.mjs",
+    "./partners/lgndx-opportunity-operations/cli": "./source/stellar/scf-starforge-20261009/partners/lgndx-opportunity-operations/cli.mjs",
+    "./partners/lgndx-opportunity-operations/server": "./source/stellar/scf-starforge-20261009/partners/lgndx-opportunity-operations/server.mjs"
+  }
+}

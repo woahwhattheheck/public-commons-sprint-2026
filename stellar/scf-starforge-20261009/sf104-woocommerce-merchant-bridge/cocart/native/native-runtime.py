@@ -273,8 +273,8 @@ class Runtime:
         self.run("database-create",[str(self.mysql),*self.mysql_connection()],input_text=sql)
         self.run("database-application-connect",[str(self.mysql),"--no-defaults","--protocol=TCP","--host=127.0.0.1","--port="+str(self.manifest["databasePort"]),"--user="+self.creds["dbUser"],"--password="+self.creds["dbPassword"],"--database="+self.creds["dbName"],"--execute=SELECT 1"])
         self.make_wp_config()
-        self.run("wordpress-install",self.wp_command("core","install","--url="+self.manifest["storeOrigin"],"--title=Headless checkout receiving","--admin_user="+self.creds["adminUser"],"--admin_password="+self.creds["adminPassword"],"--admin_email=operator@receiving.example","--skip-email"),timeout=180)
         self.install_receiving_controls()
+        self.run("wordpress-install",self.wp_command("core","install","--url="+self.manifest["storeOrigin"],"--title=Headless checkout receiving","--admin_user="+self.creds["adminUser"],"--admin_password="+self.creds["adminPassword"],"--admin_email=operator@receiving.example","--skip-email"),timeout=180)
         self.run("plugins-activate",self.wp_command("plugin","activate","woocommerce","starforge-sf98-woo","cart-rest-api-for-woocommerce"),timeout=240)
         self.run("native-permalink-structure",self.wp_command("rewrite","structure","/%postname%/"),timeout=120)
         profile_plugin=self.wp/"wp-content/mu-plugins/starforge-cocart-profile.php"
@@ -312,13 +312,19 @@ class Runtime:
             text+="define("+phps(key)+","+phps(value)+");\n"
         for key in ["AUTH_KEY","SECURE_AUTH_KEY","LOGGED_IN_KEY","NONCE_KEY","AUTH_SALT","SECURE_AUTH_SALT","LOGGED_IN_SALT","NONCE_SALT"]:
             text+="define("+phps(key)+","+phps(secrets.token_urlsafe(48))+");\n"
-        text+="define('DISABLE_WP_CRON',true);\ndefine('AUTOMATIC_UPDATER_DISABLED',true);\ndefine('DISALLOW_FILE_MODS',true);\ndefine('WP_ENVIRONMENT_TYPE','local');\ndefine('WP_MEMORY_LIMIT','256M');\ndefine('WP_MAX_MEMORY_LIMIT','384M');\n"
+        text+="define('DISABLE_WP_CRON',true);\ndefine('AUTOMATIC_UPDATER_DISABLED',true);\ndefine('DISALLOW_FILE_MODS',true);\ndefine('WP_HTTP_BLOCK_EXTERNAL',true);\ndefine('WP_ACCESSIBLE_HOSTS','127.0.0.1,localhost,[::1]');\ndefine('WP_ENVIRONMENT_TYPE','local');\ndefine('WP_MEMORY_LIMIT','256M');\ndefine('WP_MAX_MEMORY_LIMIT','384M');\n"
         text+="$table_prefix='cocart_';\nif(!defined('ABSPATH'))define('ABSPATH',__DIR__.'/');\nrequire_once ABSPATH.'wp-settings.php';\n"
         (self.wp/"wp-config.php").write_text(text);(self.wp/"wp-config.php").chmod(0o600)
     def install_receiving_controls(self):
         mu=self.wp/"wp-content/mu-plugins";mu.mkdir(exist_ok=True)
         (mu/"tjlabs-cold-receiving.php").write_text("""<?php
-/* Local receiving instance: keep mail inside this owned exercise. */
+/* Owned local receiving: native checkout uses the original loopback store.
+   Optional WordPress/Woo admin services have no role in this operation. */
+add_filter('pre_http_request', static function($pre,$args,$url){
+    $host=strtolower((string)wp_parse_url($url,PHP_URL_HOST));
+    if(in_array($host,['127.0.0.1','localhost','[::1]'],true))return $pre;
+    return new WP_Error('tjlabs_receiving_external_http_disabled','This owned receiving instance uses local HTTP only.');
+},PHP_INT_MAX,3);
 add_filter('pre_wp_mail', static function($return,$attributes){return true;},10,2);
 add_filter('woocommerce_allow_tracking', '__return_false');
 add_filter('woocommerce_admin_disabled', '__return_true');

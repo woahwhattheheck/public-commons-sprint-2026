@@ -4,6 +4,9 @@ import { coingeckoStartup } from './application-coingecko.mjs';
 import { oaiStartup } from './application-oai.mjs';
 import { fiscalDataStartup } from './application-fiscaldata.mjs';
 import { databentoStartup } from './application-databento.mjs';
+import { opencageStartup } from './application-opencage.mjs';
+import { webdavStartup } from './application-webdav.mjs';
+import { merchantSupportStartup } from './application-merchant-support.mjs';
 import { blockscoutStartup } from './application-blockscout.mjs';
 import { mppStartup, MPP_READY_SCHEMA } from './application-mpp.mjs';
 import { ndjsonStartup } from './application-ndjson.mjs';
@@ -19,6 +22,7 @@ import { n8nStartup } from './application-n8n.mjs';
 import { redisStartup } from './application-redis.mjs';
 import { openApiStartup } from './application-openapi.mjs';
 import { arcgisAgentStartup } from './application-arcgis.mjs';
+import { duckdbAgentStartup, DUCKDB_AGENT_STARTUP_SCHEMA } from './application-duckdb-agent.mjs';
 import { s3MerchantStartup } from './application-s3-merchant.mjs';
 import { jobCheckoutStartup } from './application-job-checkout.mjs';
 import { datasetBuyerStartup } from './application-dataset-buyer.mjs';
@@ -29,7 +33,6 @@ import { grantStartup } from './application-grant.mjs';
 import { grantsgovStartup } from './application-grantsgov.mjs';
 import { fredStartup } from './application-fred.mjs';
 import { tenderlyStartup } from './application-tenderly.mjs';
-import { merchantSupportStartup } from './application-merchant-support.mjs';
 import { browserWalletOutputReader, browserWalletStartup, verifyBrowserWalletLaunch } from './application-browser-wallet.mjs';
 import { rssAtomStartup } from './application-rss-atom.mjs';
 import { apiPassWorkspaceStartup, verifyApiPassWorkspaceLaunch } from '../../sf101-merchant-receiver/api-access/workspace/application.mjs';
@@ -107,11 +110,77 @@ export function observeApplicationOutput(request, directory, context = {}) {
   const decoder = new StringDecoder('utf8');
   const eventOutput = eventFeedOutputReader(request);
   const walletOutput = browserWalletOutputReader(request);
+  const lineLimit = request.command === 'mcp-native' && request.args?.includes('--duckdb-description') ? 65536 : 16384;
   function line(text) {
     if (seen || !request.applicationId) return;
     // Read only the maintained CLI's startup announcement. Later user-entered
     // terminal text and provider payloads cannot select a different application.
     text = text.replace(/\x1b\[[0-?]*[ -/]*[@-~]/g, '').trim();
+    if (request.command === 'mcp-native' && request.args?.includes('--duckdb-description')) {
+      if (!text.startsWith('{"schema":"' + DUCKDB_AGENT_STARTUP_SCHEMA + '",')) return;
+      saving = saving.then(async () => {
+        if (seen) return;
+        const startup = duckdbAgentStartup(request, text);
+        const url = startup && privateUrl(startup.url);
+        if (!url) return;
+        seen = true;
+        await saveJSON(join(directory, 'application-url.json'), {
+          schema:'stellar-forge.application-url.v1', applicationId:request.applicationId,
+          operationId:directory.split('/').at(-1), command:request.command,
+          source:'original-command-stdout', observedAt:now(), url,
+          links:startup.links, original:startup.original,
+        });
+      }).catch(error => { if (error.code !== 'EEXIST') saveError = error; });
+      return;
+    }
+    if (request.command === 'webdav') {
+      if (!text.startsWith('{"schema":"stellar-forge.webdav-startup.v1",')) return;
+      saving = saving.then(async () => {
+        if (seen) return;
+        const startup = await webdavStartup(request, text);
+        const url = startup && privateUrl(startup.url);
+        if (!url) return;
+        seen = true;
+        await saveJSON(join(directory, 'application-url.json'), {
+          schema: 'stellar-forge.application-url.v1', applicationId: request.applicationId,
+          operationId: directory.split('/').at(-1), command: request.command,
+          source: 'original-command-stdout', observedAt: now(), url, original: startup.original,
+        });
+      }).catch(error => { if (error.code !== 'EEXIST') saveError = error; });
+      return;
+    }
+    if (request.command === 'support-console') {
+      if (!text.startsWith('{"schema":"stellar-forge.support-console-launch.v1",')) return;
+      saving = saving.then(async () => {
+        if (seen) return;
+        const startup = await merchantSupportStartup(request, text);
+        const url = startup && privateUrl(startup.url);
+        if (!url) return;
+        seen = true;
+        await saveJSON(join(directory, 'application-url.json'), {
+          schema: 'stellar-forge.application-url.v1', applicationId: request.applicationId,
+          operationId: directory.split('/').at(-1), command: request.command,
+          source: 'original-command-stdout', observedAt: now(), url, original: startup.original,
+        });
+      }).catch(error => { if (error.code !== 'EEXIST') saveError = error; });
+      return;
+    }
+    if (request.command === 'opencage-workbench') {
+      if (!text.startsWith('{"schema":"stellar-forge.opencage-application-startup.v1",')) return;
+      saving = saving.then(async () => {
+        if (seen) return;
+        const startup = await opencageStartup(request, text);
+        const url = startup && privateUrl(startup.url);
+        if (!url) return;
+        seen = true;
+        await saveJSON(join(directory, 'application-url.json'), {
+          schema: 'stellar-forge.application-url.v1', applicationId: request.applicationId,
+          operationId: directory.split('/').at(-1), command: request.command,
+          source: 'original-command-stdout', observedAt: now(), url, original: startup.original,
+        });
+      }).catch(error => { if (error.code !== 'EEXIST') saveError = error; });
+      return;
+    }
     if (request.command === 'n8n-merchant') {
       if (!text.startsWith('{"schema":"stellar-forge.n8n-merchant-launch.v1",')) return;
       saving = saving.then(async () => {
@@ -485,22 +554,6 @@ export function observeApplicationOutput(request, directory, context = {}) {
       }).catch(error => { if (error.code !== 'EEXIST') saveError = error; });
       return;
     }
-    if (request.command === 'support-console') {
-      if (!text.startsWith('{"schema":"stellar-forge.support-console-launch.v1",')) return;
-      saving = saving.then(async () => {
-        if (seen) return;
-        const startup = await merchantSupportStartup(request, text);
-        const url = startup && privateUrl(startup.url);
-        if (!url) return;
-        seen = true;
-        await saveJSON(join(directory, 'application-url.json'), {
-          schema: 'stellar-forge.application-url.v1', applicationId: request.applicationId,
-          operationId: directory.split('/').at(-1), command: request.command,
-          source: 'original-command-stdout', observedAt: now(), url, original: startup.original,
-        });
-      }).catch(error => { if (error.code !== 'EEXIST') saveError = error; });
-      return;
-    }
     if (request.command === 'job-workspace') {
       if (!text.startsWith('{"schema":"stellar-forge.sf88.job-workspace-launch.v1",')) return;
       saving = saving.then(async () => {
@@ -682,7 +735,7 @@ export function observeApplicationOutput(request, directory, context = {}) {
       buffer += decoder.write(bytes);
       const lines = buffer.split(/\r?\n/); buffer = lines.pop();
       for (const text of lines) line(text);
-      if (buffer.length > 16384) buffer = buffer.slice(-16384);
+      if (buffer.length > lineLimit) buffer = buffer.slice(-lineLimit);
     },
     async close() {
       if (!closed) { closed = true; buffer += decoder.end(); if (buffer) line(buffer); }

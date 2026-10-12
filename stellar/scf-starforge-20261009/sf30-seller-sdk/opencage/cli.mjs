@@ -8,12 +8,13 @@ import {exampleTerms,packageGeocodeMerchant,inspectGeocodePackage} from './merch
 import {GeocodeWorkspace} from './workspace.mjs';
 import {GeocodeDelivery} from './customer.mjs';
 import {createGeocodeServer} from './server.mjs';
+import {openGeocodeManagedWorkspace} from './launch.mjs';
 import {privateDirectory,readJson,readBytes,writeJson} from '../twelvedata/files.mjs';
 const HELP=`Starforge OpenCage merchant and customer workbench
 
 examples --out NEW_DIRECTORY
 init --workspace DIR --plan PLAN.json --terms TERMS.json
-serve --workspace DIR [--port 0]
+serve --workspace DIR [--port 0] [--managed-selection SAVED_REVIEW_JSON]
 serve --delivery DELIVERY_DIR [--port 0]
 capture --workspace DIR --id ID --product ID --query JSON
 import-response --workspace DIR --id ID --product ID --query JSON --observation FILE --response FILE
@@ -39,7 +40,7 @@ Each capture ID retains one attempted provider dispatch and its complete result.
 The original seller release and original buyer operation own commerce and recovery.
 `;
 const OPTIONS={
-  examples:['out'],init:['workspace','plan','terms'],serve:['workspace','delivery','port'],
+  examples:['out'],init:['workspace','plan','terms'],serve:['workspace','delivery','port','managed-selection'],
   capture:['workspace','id','product','query'],'import-response':['workspace','id','product','query','observation','response'],
   list:['workspace'],inspect:['workspace','id'],select:['workspace','id','response-sha256','index','revision','note'],
   export:['workspace','id','response-sha256','revision'],read:['delivery'],
@@ -98,10 +99,14 @@ export async function main(argv=process.argv.slice(2)){
       publicOrigin:required(options,'origin')});
     result=await delivery.export(resolve(required(options,'out')));
   }else if(command==='serve'&&options.delivery){
-    if(options.workspace)fail('GEOCODE_SERVE_TARGET_CONFLICT');
+    if(options.workspace||options['managed-selection'])fail('GEOCODE_SERVE_TARGET_CONFLICT');
     const delivery=await GeocodeDelivery.open(resolve(options.delivery));
     const server=await createGeocodeServer({delivery,port:number(options,'port',0,65535,0)});
     print({url:server.url,mode:'CUSTOMER_DELIVERY',identity:delivery.identity});signals(server.close);return {server,delivery};
+  }else if(command==='serve'&&options['managed-selection']){
+    const opened=await openGeocodeManagedWorkspace({directory:resolve(required(options,'workspace')),
+      selection:options['managed-selection'],port:number(options,'port',0,65535,0)});
+    process.stdout.write(JSON.stringify(opened.startup)+'\n');signals(opened.server.close);return opened;
   }else{
     const readOnly=['list','inspect','release-status','release-diff'].includes(command);
     const workspace=await GeocodeWorkspace.open(resolve(required(options,'workspace')),{
