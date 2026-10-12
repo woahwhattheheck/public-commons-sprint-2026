@@ -99,6 +99,8 @@ def main(argv=None):
     command = sub.add_parser("serve")
     command.add_argument("--port", type=int, default=0)
     command.add_argument("--open", action="store_true", dest="open_browser")
+    command.add_argument("--source-directory", help="Original reviewed installed source for a managed release")
+    command.add_argument("--expected-selection-sha256", help="Exact reviewed workspace and source selection")
     args = vars(parser.parse_args(argv))
     name = args.pop("command")
     directory = args.pop("workspace")

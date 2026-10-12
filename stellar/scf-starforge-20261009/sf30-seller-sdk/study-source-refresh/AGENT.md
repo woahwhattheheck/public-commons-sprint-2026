@@ -19,6 +19,38 @@ starforge study-source-refresh --python /usr/bin/python3 --workspace /private/st
 
 See README.md for source intake, portfolio/mapping schemas, edition comparison and original receiving. PROPERTY_RESEARCH.md defines complete property-survey documents, study/PMA identity, comparable decisions, unit cohorts and source-correction review.
 
+## Open through the existing Applications console
+
+The installed runtime contributes `study-source-refresh` to the original
+Applications registry. Select **Study source refresh and property research**,
+then choose the private workspace directory and its Python executable. Use an
+existing Study directory to reopen the same sources, acquisitions, portfolios,
+reviews, property surveys and packages. A new directory is created in the
+selected private parent. The optional port and private environment file use the
+normal Applications controls.
+
+Review and save that selection in Applications, then start its retained
+operation. The normal application page opens the original Study operator. Its
+source-refresh and property-research sections share the same SQLite workspace,
+files, transaction lock and event history. The existing Applications stop and
+reopen operations own that process lifetime.
+
+The saved selection binds the exact installed application files and Python
+executable. At startup, the original Study lease compares the complete executed
+application with those selected files before it opens the workspace. Its
+announcement supplies the actual PID, instance, source hash and connection
+filename. The original Applications observer reads the private connection,
+authenticates `/api/access`, and verifies the managed release and announced
+instance before exposing the browser link. The bearer remains in the original
+private connection and private application URL.
+
+A Merchant alias for the same directory and installed source can attach with
+`allowStart:false`. It borrows that exact Applications instance. Closing the
+Merchant connection leaves the original Applications process running; use the
+existing Applications controls to stop its owned operator. The HTTP lifetime
+lease also prevents two entry points from starting separate listeners against
+the same workspace.
+
 ## Declare the actual host workspaces and inputs
 
 Create a private connection JSON with the existing workspace directories and exact original input locations. The paths below are illustrative; choose actual host paths. Parent and workspace directories are owned and mode 0700. Connection files are regular, owned and mode 0600. Executable paths are host configuration, rather than tool arguments. An omitted allowStart defaults to borrowing an already-running original operator.
