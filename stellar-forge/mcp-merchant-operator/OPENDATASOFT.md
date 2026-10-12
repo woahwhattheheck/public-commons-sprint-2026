@@ -1,6 +1,6 @@
 # Huwise / Opendatasoft merchant agent
 
-This interface operates the maintained Huwise workbench through the shared merchant MCP host. Agents use the same saved source editions, notes, field projections, publisher candidates, merchant packages and buyer requests as the original browser and CLI. The typed client and command line receiver deliver complete original files and reopen them locally.
+This interface operates the maintained Huwise workbench through the shared merchant MCP host. Agents use the same saved source editions, notes, field projections, publisher candidates, merchant packages and buyer requests as the original browser and CLI. The typed client and command line receiver deliver complete original files and reopen them locally. Installed JavaScript and TypeScript applications import the client from `@tokenjunkielabs/starforge-merchant/merchant/mcp/opendatasoft/client`.
 
 ## Connect an existing project
 
@@ -35,6 +35,8 @@ node stellar-forge/mcp-merchant-operator/serve.mjs serve \
   --config /srv/starforge/huwise-merchant/merchant-mcp.json \
   --port 3211
 ~~~
+
+The installable package exposes the same commands through `starforge merchant-mcp init-opendatasoft-workspaces` and `starforge merchant-mcp serve`. The original native application remains available as `starforge huwise` or `starforge opendatasoft`; the complete agent file receiver is `starforge merchant-huwise` or `starforge merchant-opendatasoft`.
 
 Supply the existing merchant bearer token through MCP_ACCESS_TOKEN using the maintained host setup. The same host supports its existing OAuth and stdio configuration.
 
