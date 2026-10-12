@@ -21,6 +21,7 @@ import subprocess
 import sys
 import tempfile
 import threading
+import time
 
 HERE = Path(__file__).resolve().parent
 CHECKOUT = HERE.parents[3]
@@ -31,9 +32,9 @@ if str(PYTHON) not in sys.path:
 from stellar_forge_buyer.analysis_workspace import AnalysisWorkspace
 from stellar_forge_buyer.storage import private_directory, sync_directory
 from stellar_forge_buyer.workspace_archive_receive import restore_archive
-from operator_client import DatasetteOperatorClient
+from operator_client import DatasetteOperatorClient, DatasetteClientError
 from operator_server import create_operator
-from source import read_retained
+from source import handover as read_handover, read_native_edition, read_retained
 
 SCHEMA = "stellar-forge.datasette-native-receiving.v1"
 DEFAULT_OPERATION = "SCF-DATASETTE-SOURCE-EDITIONS-07476-20261012"
@@ -103,7 +104,8 @@ def source_identity(checkout, source_ref, node):
     """Retain the actual executable module identities alongside the selected ref."""
     paths = [
         HERE / "source.py", HERE / "model.py", HERE / "recipes.py",
-        HERE / "operator_server.py", HERE / "operator_client.py", Path(__file__),
+        HERE / "operator_server.py", HERE / "operator_client.py",
+        HERE / "edition_bridge.mjs", Path(__file__),
         PYTHON / "stellar_forge_buyer" / "analysis_workspace.py",
         PYTHON / "stellar_forge_buyer" / "workspace_archive.py",
         PYTHON / "stellar_forge_buyer" / "workspace_archive_receive.py",
@@ -152,8 +154,8 @@ def operator(workspace_path, *, checkout, node, operation_id):
         analysis.close()
 
 
-def request(client, action, body, *, operation_id, resume, timeout):
-    request_id = identify(operation_id, "HTTP:" + action)
+def request(client, action, body, *, operation_id, resume, timeout, phase=None):
+    request_id = identify(operation_id, "HTTP:" + (phase or action))
     emit({"phase": action.upper(), "request_id": request_id})
     result = client.submit(action, body, request_id=request_id)["request"]
     if result["status"] in {"FAILED", "INTERRUPTED"}:
@@ -215,12 +217,59 @@ def download(client, descriptor, directory, *, edition_id=None):
             "DATASETTE_RECEIVING_FILENAME_INVALID")
     target = directory / descriptor["filename"]
     result = client.download(descriptor["name"], target, edition_id=edition_id,
+                             export_id=descriptor.get("export_id"),
                              expected_sha256=descriptor["sha256"])
     require(result["bytes"] == descriptor["bytes"]
             and result["sha256"] == descriptor["sha256"],
             "DATASETTE_RECEIVING_DOWNLOAD_CHANGED", descriptor["name"])
     return {"name": descriptor["name"], "filename": descriptor["filename"],
             "path": str(target), "bytes": result["bytes"], "sha256": result["sha256"]}
+
+
+
+def customer_selection(client, edition, original, country, operation_id, timeout):
+    """Save and run a useful country selection in the original Analysis API."""
+    mapping = edition["source"].get("column_mapping", {})
+    country_column = mapping.get("country", "country")
+    columns = edition["collections"]["plants"]["columns"]
+    require(country_column in columns, "DATASETTE_CUSTOMER_COUNTRY_COLUMN_REQUIRED")
+    expected_count = sum(row.get(country_column) == country for row in original["rows"])
+    require(expected_count > 0, "DATASETTE_CUSTOMER_COUNTRY_NOT_IN_SOURCE", country)
+    projection = [mapping.get(name, name) for name in
+                  ("country", "name", "gppd_idnr", "capacity_mw", "year_of_capacity_data")]
+    projection = [name for name in projection if name in columns]
+    quote = lambda value: '"' + value.replace('"', '""') + '"'
+    sql = ("SELECT " + ",".join(quote(name) for name in projection)
+           + " FROM " + quote(edition["collections"]["plants"]["name"])
+           + " WHERE " + quote(country_column) + " = ? ORDER BY "
+           + quote(mapping.get("name", "name") if mapping.get("name", "name") in columns
+                   else country_column))
+    fields = {"sql": sql, "parameters_text": json.dumps([country]), "max_rows": 100000}
+    name = "datasette_customer_" + operation_id[:12]
+    try:
+        saved = client._json("/api/queries/" + name)
+    except DatasetteClientError as error:
+        if error.code != "ANALYSIS_QUERY_NOT_FOUND":
+            raise
+        saved = client._json("/api/queries/" + name, body={**fields, "expected_revision": 0})
+    require(all(saved.get(key) == value for key, value in fields.items()),
+            "DATASETTE_CUSTOMER_QUERY_CHANGED", name)
+    state = client._json("/api/state")
+    job_id = identify(operation_id, "CUSTOMER_COUNTRY_QUERY")
+    job = client._json("/api/start/query", body={
+        "id": job_id, **fields, "expected_views": state["views"]})
+    deadline = time.monotonic() + timeout
+    while job["status"] == "RUNNING":
+        require(time.monotonic() < deadline, "DATASETTE_CUSTOMER_QUERY_STILL_RUNNING", job_id)
+        time.sleep(0.05)
+        job = client._json("/api/jobs/" + job_id)
+    require(job["status"] == "COMPLETE" and not job["result"]["truncated"]
+            and job["result"]["total_rows"] == expected_count,
+            "DATASETTE_CUSTOMER_QUERY_INCOMPLETE")
+    return {"country": country, "rows": expected_count,
+            "saved_query": {key: saved[key] for key in
+                            ("name", "revision", "sql", "parameters_text", "max_rows")},
+            "job_id": job_id, "result_sha256": job["result"]["result_sha256"]}
 
 
 def main(argv=None):
@@ -240,6 +289,7 @@ def main(argv=None):
     parser.add_argument("--handover-sha256")
     parser.add_argument("--expected-rows", type=int)
     parser.add_argument("--expected-capacity-mw")
+    parser.add_argument("--customer-country", help="Save a country selection, export current work and receive it again")
     parser.add_argument("--resume", action="store_true",
                         help="Resume original failed/interrupted HTTP requests")
     parser.add_argument("--wait-seconds", type=float, default=3600)
@@ -274,7 +324,8 @@ def main(argv=None):
               "destination": str(destination), "source_ref": args.source_ref,
               "source_files": sources["files"], "prefix": args.prefix,
               "expected_rows": args.expected_rows,
-              "expected_capacity_mw": args.expected_capacity_mw}
+              "expected_capacity_mw": args.expected_capacity_mw,
+              "customer_country": args.customer_country}
     if receipt_path.exists():
         receipt = load_record(receipt_path)
         require(receipt.get("schema") == SCHEMA and receipt.get("intent") == intent,
@@ -293,7 +344,13 @@ def main(argv=None):
     try:
         # The original parser verifies every retained page, its continuation
         # chain and exact byte identity; preparation uses that same parser.
-        expected = read_retained(str(handover))
+        selected_source = read_handover(str(handover))
+        source_kind = selected_source["record"]["delivery"]["kind"]
+        if source_kind == "native-edition":
+            expected = read_native_edition(str(handover), node=args.node)
+        else:
+            require(source_kind == "retained-source", "DATASETTE_RECEIVING_SOURCE_KIND")
+            expected = read_retained(str(handover))
         edition_id = expected["id"]
         expected_rows = expected["rows"]
         expected_columns = expected["columns"]
@@ -367,15 +424,51 @@ def main(argv=None):
                     == [{key: item[key] for key in ("name", "filename", "bytes", "sha256")}
                         for item in saved_products],
                     "DATASETTE_RECEIVING_REOPENED_PRODUCTS_CHANGED")
-            save("COMPLETE", reopened={"workspace_id": restored_workspace_id,
+            save("REOPENED" if args.customer_country is not None else "COMPLETE",
+                 reopened={"workspace_id": restored_workspace_id,
                  "operation_id": status["operation_id"], "edition_id": edition_id,
                  "rows": restored_rows, "summary": reopened["summary"],
                  "products": reopened_products}, completed_at=now())
+            if args.customer_country is not None:
+                customer = customer_selection(client, reopened, expected, args.customer_country,
+                                              operation_id, args.wait_seconds)
+                refreshed = request(client, "export", {}, operation_id=operation_id,
+                                    resume=args.resume, timeout=args.wait_seconds,
+                                    phase="CUSTOMER_EXPORT")
+                customer_outputs = private_directory(destination / "customer-products", create=True)
+                refreshed_files = [download(client, item, customer_outputs)
+                                   for item in refreshed["result"]["files"]]
+                customer_archive = next(item for item in refreshed_files if item["name"] == "workspace")
+                require(customer_archive["sha256"] != archive["sha256"],
+                        "DATASETTE_CUSTOMER_EXPORT_REUSED_OLDER_WORKSPACE")
+                save("CUSTOMER_EXPORTED", customer=customer, customer_archive=customer_archive,
+                     customer_export_request_id=refreshed["id"])
+        if args.customer_country is not None:
+            customer_workspace = destination / "customer-workspace"
+            restored_customer = restore_archive(
+                customer_archive["path"], customer_workspace,
+                operation=identify(operation_id, "CUSTOMER_ARCHIVE_RECEIVE:" + edition_id),
+                expected_sha256=customer_archive["sha256"])
+            with operator(customer_workspace, checkout=checkout, node=args.node,
+                          operation_id=operation_id) as (client, customer_workspace_id):
+                saved = client._json("/api/queries/" + customer["saved_query"]["name"])
+                require(customer_workspace_id == workspace_id
+                        and all(saved.get(key) == value
+                                for key, value in customer["saved_query"].items()),
+                        "DATASETTE_CUSTOMER_EDIT_NOT_RETAINED")
+                result = client._json("/api/jobs/" + customer["job_id"])
+                require(result["status"] == "COMPLETE"
+                        and result["result"]["total_rows"] == customer["rows"]
+                        and result["result"]["result_sha256"] == customer["result_sha256"],
+                        "DATASETTE_CUSTOMER_QUERY_RESULT_NOT_RETAINED")
+                save("COMPLETE", customer_reopened={
+                    "workspace_id": customer_workspace_id, "workspace": str(customer_workspace),
+                    "receiving": restored_customer, **customer}, completed_at=now())
         emit({"schema": SCHEMA, "status": "COMPLETE", "operation_id": operation_id,
               "edition_id": edition_id, "workspace_id": workspace_id,
               "rows": len(expected_rows), "summary": edition["summary"],
               "archive": archive, "received_workspace": str(receiving_path),
-              "receipt": str(receipt_path)})
+              "receipt": str(receipt_path), "customer": receipt.get("customer_reopened")})
         return 0
     except BaseException as error:
         receipt.update(phase="INTERRUPTED" if isinstance(error, KeyboardInterrupt) else "FAILED",

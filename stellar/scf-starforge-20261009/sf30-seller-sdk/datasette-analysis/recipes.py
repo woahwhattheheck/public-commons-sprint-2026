@@ -72,7 +72,7 @@ def _state(row, field):
 
 def _hints(row, columns, source):
     type_column = source.get("type_column", "_datasette_types")
-    mapping = source.get("column_mapping") or {}
+    mapping = source.get("type_mapping", source.get("column_mapping")) or {}
     value = row.get(type_column)
     if isinstance(value, str):
         try:

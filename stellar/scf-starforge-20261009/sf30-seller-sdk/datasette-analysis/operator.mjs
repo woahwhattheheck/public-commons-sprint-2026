@@ -82,10 +82,12 @@ async function api(path, {method = 'GET', body, headers = {}, raw = false} = {})
   return value;
 }
 function pending(value) {
+  if (!state.snapshot?.workspace_id || !state.snapshot?.operation_id) return null;
+  const key = storageKey + ':' + state.snapshot.workspace_id + ':' + state.snapshot.operation_id;
   try {
-    if (value === undefined) return JSON.parse(sessionStorage.getItem(storageKey) || 'null');
-    if (value === null) sessionStorage.removeItem(storageKey);
-    else sessionStorage.setItem(storageKey, JSON.stringify(value));
+    if (value === undefined) return JSON.parse(sessionStorage.getItem(key) || 'null');
+    if (value === null) sessionStorage.removeItem(key);
+    else sessionStorage.setItem(key, JSON.stringify(value));
   } catch {}
   return null;
 }
@@ -222,19 +224,20 @@ function allFiles() {
   const append = (items, defaultEdition) => {
     for (const file of Array.isArray(items) ? items : []) {
       const item = {...file, edition_id: file.edition_id || defaultEdition};
-      const key = (item.edition_id || '') + ':' + (item.name || item.filename);
+      const key = (item.edition_id || '') + ':' + (item.export_id || '') + ':' + (item.name || item.filename);
       if (!seen.has(key)) {seen.add(key); result.push(item);}
     }
   };
   append(nativeState().files);
   for (const edition of editions()) append(edition.files, editionId(edition));
-  const exported = (state.snapshot?.requests || []).find(request => request.action === 'export' && request.status === 'COMPLETE');
-  append(exported?.result?.files);
+  for (const exported of nativeState().exports || [])
+    if (exported.availability?.can_download === true) append(exported.files);
   return result;
 }
 async function download(file) {
   const params = new URLSearchParams({name: file.name || file.filename});
   if (file.edition_id) params.set('edition_id', file.edition_id);
+  if (file.export_id) params.set('export_id', file.export_id);
   const response = await api('/api/datasette/download?' + params, {raw: true});
   const content = await response.arrayBuffer();
   const expectedHash = file.sha256 || response.headers.get('X-Content-SHA256');
@@ -261,7 +264,8 @@ function renderFiles() {
     const row = el('tr'), digest = el('td', file.sha256 ? file.sha256.slice(0, 12) + '…' : '—');
     if (file.sha256) digest.title = file.sha256;
     row.append(el('td', file.filename || file.name),
-      el('td', file.edition_id ? String(file.edition_id).slice(0, 12) : 'Workspace'), el('td', bytes(file.bytes)), digest);
+      el('td', file.edition_id ? String(file.edition_id).slice(0, 12)
+        : file.export_id ? 'Export ' + file.export_id.slice(0, 12) : 'Workspace'), el('td', bytes(file.bytes)), digest);
     const cell = el('td'), button = el('button', 'Download'); button.type = 'button';
     button.addEventListener('click', async () => {
       button.disabled = true;
@@ -435,6 +439,7 @@ async function submitEnvelope(envelope) {
   }
 }
 async function startAction(action, body) {
+  if (!state.snapshot) await refresh();
   if (state.busy) throw new Error('Wait for the current Datasette action to finish.');
   return submitEnvelope({request_id: crypto.randomUUID().replaceAll('-', ''), action, body});
 }

@@ -1,7 +1,7 @@
 """Read complete Datasette editions for the maintained customer Analysis engine.
 
-This reader consumes retained source bytes or the original finalized merchant
-room. It does not fetch a provider or create a buyer request.
+This reader consumes retained source bytes, the original reviewed native edition,
+or the original finalized merchant room. It does not fetch a provider or create a buyer request.
 """
 from __future__ import annotations
 
@@ -226,9 +226,9 @@ def handover(value):
     require(record.get("schema") == HANDOVER_SCHEMA and isinstance(record.get("delivery"), dict),
             "DATASETTE_HANDOVER_SCHEMA_INVALID")
     delivery = dict(record["delivery"])
-    require(delivery.get("kind") in {"retained-source", "finalized"},
+    require(delivery.get("kind") in {"retained-source", "finalized", "native-edition"},
             "DATASETTE_HANDOVER_KIND_INVALID")
-    for key in ("manifest", "room", "session"):
+    for key in ("manifest", "room", "session", "edition"):
         selected = delivery.get(key)
         if selected is not None:
             require(isinstance(selected, str) and selected and "\0" not in selected,
@@ -422,7 +422,11 @@ def source_document(directory, *, collections, edition):
     description = ("All original source fields and numeric spellings are retained. "
         "The separate native-kind column distinguishes JSON numbers, strings, nulls and structured cells. "
         "Capacity and year fields describe the source's historical observations. "
-        "Capture time describes retrieval. Source license and attribution: " + license_text)
+        + ("Capture time records the original native capture commit; "
+           "page receipts retain the observed retrieval times. "
+           if source.get("capture_time_basis") == "native-capture-commit"
+           else "Capture time describes retrieval. ")
+        + "Source license and attribution: " + license_text)
     manifest = {"schema": "stellar-forge.analysis-source-document.v1",
                 "title": source["title"], "format": "json", "complete": True,
                 "document": content(projection, "json", "application/json"),
@@ -440,3 +444,247 @@ def source_document(directory, *, collections, edition):
     else:
         write(target, raw, exclusive=True)
     return target
+
+
+# The original edition bridge uses the maintained
+# handover, reviewed_columns, regular, checked_member, parse, encoded and require
+# helpers. It does not replace those helpers or open another Analysis engine.
+
+def read_native_edition(value, *, node):
+    """Consume the sibling publisher's complete, hash-bound reviewed edition."""
+    import subprocess
+
+    selected = handover(value)
+    record, delivery = selected["record"], selected["record"]["delivery"]
+    require(delivery.get("kind") == "native-edition",
+            "DATASETTE_NATIVE_EDITION_REQUIRED")
+    require(isinstance(delivery.get("edition"), str) and Path(delivery["edition"]).is_absolute(),
+            "DATASETTE_NATIVE_EDITION_PATH_REQUIRED")
+    edition_path = Path(delivery["edition"])
+    expected_sha = delivery.get("sha256")
+    require(isinstance(expected_sha, str) and HASH.fullmatch(expected_sha),
+            "DATASETTE_NATIVE_EDITION_SHA256_REQUIRED")
+    original_edition_raw = regular(edition_path)
+    require(sha(original_edition_raw) == expected_sha,
+            "DATASETTE_NATIVE_EDITION_CHANGED")
+    bridge_path = Path(__file__).with_name("edition_bridge.mjs")
+    regular(bridge_path)
+    require(isinstance(node, (str, os.PathLike)), "DATASETTE_NATIVE_NODE_REQUIRED")
+    node_command = os.fspath(node)
+    require(isinstance(node_command, str) and node_command and "\0" not in node_command,
+            "DATASETTE_NATIVE_NODE_REQUIRED")
+    try:
+        process = subprocess.run(
+            [node_command, str(bridge_path)],
+            input=encoded({"edition": str(edition_path), "sha256": expected_sha}),
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            shell=False, check=False, timeout=180,
+        )
+    except subprocess.TimeoutExpired:
+        raise SourceError("DATASETTE_NATIVE_EDITION_READ_TIMEOUT") from None
+    except OSError as error:
+        raise SourceError("DATASETTE_NATIVE_EDITION_READER_UNAVAILABLE", str(error)) from None
+    if process.returncode:
+        detail = process.stderr[:8192].decode("utf-8", errors="replace")
+        try:
+            issue = json.loads(detail)
+        except (ValueError, TypeError):
+            issue = {}
+        code = issue.get("error") if isinstance(issue, dict) else None
+        if not isinstance(code, str) or not re.fullmatch(r"[A-Z][A-Z0-9_]{1,127}", code):
+            code = "DATASETTE_NATIVE_EDITION_READER_FAILED"
+        raise SourceError(code, str(issue.get("message") if isinstance(issue, dict)
+                                   and issue.get("message") else detail)[:2000])
+    require(len(process.stdout) <= MAX_FILE,
+            "DATASETTE_NATIVE_EDITION_BRIDGE_CAPACITY")
+    bridge = parse(process.stdout)
+    require(isinstance(bridge, dict)
+            and bridge.get("schema") == "stellar-forge.datasette-analysis-native-edition.v1"
+            and bridge.get("edition_file") == str(edition_path)
+            and bridge.get("edition_root") == str(edition_path.parent)
+            and bridge.get("edition_sha256") == expected_sha
+            and bridge.get("projection_mode") == "reviewed",
+            "DATASETTE_NATIVE_EDITION_BRIDGE_BINDING_CHANGED")
+
+    # Read every original from its declared relative member path through the
+    # maintained regular-file and SHA checks. The bridge returns descriptors,
+    # so it does not base64-copy complete source files through a subprocess pipe.
+    native_edition = parse(original_edition_raw)
+    require(isinstance(native_edition, dict)
+            and native_edition == bridge.get("edition")
+            and isinstance(native_edition.get("files"), list),
+            "DATASETTE_NATIVE_EDITION_DECLARATION_CHANGED")
+    declared = {"edition.json": {"file": "edition.json",
+                                "bytes": len(original_edition_raw), "sha256": expected_sha}}
+    for descriptor in native_edition["files"]:
+        require(isinstance(descriptor, dict) and isinstance(descriptor.get("file"), str)
+                and descriptor["file"] not in declared,
+                "DATASETTE_NATIVE_EDITION_MEMBER_DUPLICATE")
+        declared[descriptor["file"]] = descriptor
+    files = bridge.get("files")
+    require(isinstance(files, list) and len(files) == len(declared),
+            "DATASETTE_NATIVE_EDITION_SOURCE_CLOSURE_CHANGED")
+    originals, retained, seen = [], {}, set()
+    for descriptor in files:
+        require(isinstance(descriptor, dict), "DATASETTE_SOURCE_DESCRIPTOR_REQUIRED")
+        name = descriptor.get("file")
+        require(isinstance(name, str) and name in declared and name not in seen,
+                "DATASETTE_NATIVE_EDITION_SOURCE_CLOSURE_CHANGED")
+        seen.add(name)
+        expected = declared[name]
+        require(descriptor.get("bytes") == expected.get("bytes")
+                and descriptor.get("sha256") == expected.get("sha256")
+                and descriptor.get("absolute_path") == str(member(edition_path.parent, name)),
+                "DATASETTE_NATIVE_EDITION_MEMBER_BINDING_CHANGED", name)
+        name, raw = checked_member(edition_path.parent, expected)
+        retained[name] = raw
+        content_type = descriptor.get("content_type")
+        role = descriptor.get("role")
+        require(content_type in {"application/json", "application/octet-stream"}
+                and isinstance(role, str) and role.startswith("original-native-"),
+                "DATASETTE_NATIVE_EDITION_MEMBER_DESCRIPTION_INVALID", name)
+        originals.append({"name": "native-edition/" + name, "raw": raw,
+                          "content_type": content_type, "role": role})
+    require(seen == set(declared) and retained["edition.json"] == original_edition_raw
+            and regular(edition_path) == original_edition_raw,
+            "DATASETTE_NATIVE_EDITION_SOURCE_CHANGED")
+    capture_name, review_name = native_edition.get("captureFile"), native_edition.get("reviewFile")
+    require(capture_name in retained and review_name in retained
+            and sha(retained[capture_name]) == bridge.get("capture_sha256")
+            == native_edition.get("captureSha256")
+            and sha(retained[review_name]) == bridge.get("review_sha256")
+            == native_edition.get("reviewSha256"),
+            "DATASETTE_NATIVE_EDITION_CAPTURE_OR_REVIEW_CHANGED")
+    native_capture, native_review = parse(retained[capture_name]), parse(retained[review_name])
+    require(native_capture == bridge.get("capture") and native_review == bridge.get("review")
+            and native_review.get("approved") is True
+            and native_review.get("projection") == bridge.get("projection"),
+            "DATASETTE_NATIVE_EDITION_REVIEW_CHANGED")
+    columns = bridge.get("columns")
+    require(isinstance(columns, list) and columns == list(native_review["projection"]),
+            "DATASETTE_NATIVE_EDITION_PROJECTION_COLUMNS_CHANGED")
+    # A handover mapping names the reviewed aliases. The maintained helper owns
+    # Analysis/SQLite-safe storage names, including case-insensitive collisions.
+    mapping, type_column = reviewed_columns(columns, record.get("column_mapping"))
+    projected_rows, kinds = bridge.get("rows"), bridge.get("kinds")
+    source_columns, source_kinds = bridge.get("source_columns"), bridge.get("source_kinds")
+    require(isinstance(projected_rows, list) and isinstance(kinds, list)
+            and len(projected_rows) == len(kinds) == native_edition.get("rowCount")
+            and source_columns == native_capture.get("columns")
+            and isinstance(source_kinds, list) and len(source_kinds) == len(projected_rows),
+            "DATASETTE_NATIVE_EDITION_COMPLETE_ROWS_REQUIRED")
+    allowed_kinds = {"integer", "number", "string", "boolean", "null", "array", "object"}
+    rows, observed = [], {name: set() for name in columns}
+    original_observed = {name: set() for name in source_columns}
+    for projected, native_types, original_types in zip(projected_rows, kinds, source_kinds):
+        require(isinstance(projected, dict) and set(projected) == set(columns)
+                and isinstance(native_types, dict) and set(native_types) == set(columns)
+                and isinstance(original_types, list) and len(original_types) == len(source_columns),
+                "DATASETTE_NATIVE_EDITION_ROW_WIDTH_CHANGED")
+        projected_types = {}
+        for original, kind in zip(source_columns, original_types):
+            require(isinstance(kind, str) and kind in allowed_kinds,
+                    "DATASETTE_NATIVE_EDITION_SOURCE_KIND_INVALID")
+            original_observed[original].add(kind)
+        for alias in columns:
+            cell, kind = projected[alias], native_types[alias]
+            require((cell is None or isinstance(cell, str)) and isinstance(kind, str) and kind in allowed_kinds,
+                    "DATASETTE_NATIVE_EDITION_PROJECTED_CELL_INVALID", alias)
+            require((kind == "null") == (cell is None),
+                    "DATASETTE_NATIVE_EDITION_NULL_PROJECTION_CHANGED", alias)
+            if kind in {"integer", "number"}:
+                require(re.fullmatch(r"-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?", cell),
+                        "DATASETTE_NATIVE_EDITION_NUMBER_TOKEN_INVALID", alias)
+            if kind == "boolean":
+                require(cell in {"true", "false"}, "DATASETTE_NATIVE_EDITION_BOOLEAN_CHANGED", alias)
+            projected_types[mapping[alias]] = kind
+            observed[alias].add(kind)
+        row = {mapping[alias]: projected[alias] for alias in columns}
+        row[type_column] = json.dumps(projected_types, ensure_ascii=False, separators=(",", ":"))
+        rows.append(row)
+
+    source = normalize_source(bridge.get("source"), native_capture["selection"]["url"])
+    source_aliases = bridge.get("source_column_aliases")
+    semantic_aliases = bridge.get("semantic_aliases")
+    require(isinstance(source_aliases, dict) and set(source_aliases) == set(source_columns)
+            and isinstance(semantic_aliases, dict), "DATASETTE_NATIVE_EDITION_ALIAS_MAPPING_INVALID")
+    mapped_source_aliases = {}
+    for original, aliases in source_aliases.items():
+        require(isinstance(aliases, list) and len(aliases) == len(set(aliases))
+                and all(alias in mapping and native_review["projection"][alias]["column"] == original
+                        for alias in aliases),
+                "DATASETTE_NATIVE_EDITION_ALIAS_MAPPING_INVALID", original)
+        mapped_source_aliases[original] = [mapping[alias] for alias in aliases]
+    require(all(original in source_aliases and alias in source_aliases[original]
+                for original, alias in semantic_aliases.items()),
+            "DATASETTE_NATIVE_EDITION_SEMANTIC_MAPPING_INVALID")
+    semantic_mapping = {original: mapping[alias] for original, alias in semantic_aliases.items()}
+    key = bridge.get("reviewed_key")
+    require(isinstance(key, dict) and key.get("review") == native_review.get("key"),
+            "DATASETTE_NATIVE_EDITION_KEY_REVIEW_CHANGED")
+    recommended = key.get("recommended_source_columns", [])
+    require(isinstance(recommended, list) and (not recommended or
+            key.get("business_key_eligible") is True
+            and recommended == native_review["key"]["columns"]
+            and all(column in semantic_mapping for column in recommended)),
+            "DATASETTE_NATIVE_EDITION_KEY_MAPPING_CHANGED")
+    local_aliases = key.get("local_locator_aliases")
+    require(isinstance(local_aliases, list) and all(alias in mapping for alias in local_aliases),
+            "DATASETTE_NATIVE_EDITION_LOCAL_LOCATOR_CHANGED")
+    storage_key = {**key,
+                   "storage_aliases": [mapping[alias] for alias in key.get("projected_aliases", [])],
+                   "recommended_storage_aliases": [mapping[alias] for alias in
+                                                   key.get("recommended_projected_aliases", [])],
+                   "local_locator_columns": [mapping[alias] for alias in local_aliases]}
+    source.update(
+        source_mode="native-edition", edition_sha256=expected_sha,
+        capture_sha256=bridge["capture_sha256"], review_sha256=bridge["review_sha256"],
+        handover_sha256=selected["sha256"], source_columns=source_columns,
+        projected_columns=columns, projected_source_columns=[
+            native_review["projection"][alias]["column"] for alias in columns],
+        column_mapping=semantic_mapping, source_column_aliases=mapped_source_aliases,
+        reviewed_alias_mapping=bridge["alias_mapping"], storage_alias_mapping=mapping,
+        semantic_alias_rule=bridge["semantic_alias_rule"],
+        ambiguous_source_columns=bridge["ambiguous_source_columns"],
+        projection_mode="reviewed", reviewed_projection=native_review["projection"],
+        type_column=type_column, type_mapping={},
+        native_types={name: sorted(values) for name, values in original_observed.items()},
+        projected_native_types={mapping[name]: sorted(values) for name, values in observed.items()},
+        native_reviewed_key=storage_key, local_locator_columns=storage_key["local_locator_columns"],
+        original_source_files=[{key: descriptor[key] for key in
+                               ("file", "bytes", "sha256", "content_type", "role")}
+                              for descriptor in files],
+    )
+    require(source.get("captured_at"), "DATASETTE_NATIVE_EDITION_TIME_REQUIRED")
+    receiver_description = record.get("source", {})
+    require(isinstance(receiver_description, dict), "DATASETTE_SOURCE_DESCRIPTION_REQUIRED")
+    if receiver_description:
+        source["receiver_description"] = receiver_description
+        for field in ("title", "description"):
+            if field in receiver_description:
+                require(isinstance(receiver_description[field], str),
+                        "DATASETTE_SOURCE_DESCRIPTION_INVALID", field)
+                source[field] = receiver_description[field]
+    # The original key declaration is kept separately from the analysis candidate
+    # review. Recommendations use source column names, so the existing recipes
+    # and comparison path apply the explicit semantic map exactly once.
+    review = {"native_review": native_review, "native_reviewed_key": storage_key,
+              "handover_review": record.get("review", {})}
+    if recommended:
+        review["keys"] = recommended
+        source["reviewed_keys"] = recommended
+    originals.extend([
+        {"name": "native-edition-bridge.json", "raw": process.stdout,
+         "content_type": "application/json", "role": "original-native-edition-analysis-handover"},
+        {"name": "handover.json", "raw": selected["raw"],
+         "content_type": "application/json", "role": "original-handover"},
+    ])
+    identity = sha(encoded({
+        "edition_sha256": expected_sha, "capture_sha256": bridge["capture_sha256"],
+        "review_sha256": bridge["review_sha256"], "projection": native_review["projection"],
+        "mapping": mapping, "semantic_mapping": semantic_mapping,
+        "receiver_description": receiver_description,
+        "projection_mode": "native-reviewed-exact-number-text-and-kind.v1",
+    }))
+    return {"id": identity, "source": source, "columns": [*mapping.values(), type_column],
+            "rows": rows, "originals": originals, "handover": record, "review": review}
