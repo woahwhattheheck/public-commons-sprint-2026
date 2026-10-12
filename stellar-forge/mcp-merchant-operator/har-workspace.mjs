@@ -9,6 +9,7 @@ import { canonical } from '../../stellar/scf-starforge-20261009/sf61-openapi-sel
 import { mergeHarMerchantPlan } from '../../stellar/scf-starforge-20261009/sf61-openapi-seller-import/har/browser.mjs';
 import { readPackage, packageName } from '../../stellar/scf-starforge-20261009/sf61-openapi-seller-import/workspace/model.mjs';
 import { RetainedFileReads, MAX_RETAINED_CHUNK_BYTES } from './retained-file-reads.mjs';
+import { Sf61WorkspaceClient, readSf61Response } from './sf61-connection.mjs';
 import { HAR_EXPORT_SCHEMA, HAR_EXPORT_MANIFEST, HAR_EXPORT_MAX_BYTES, HAR_EXPORT_FILES,
   harExportIdentity, parseHarExport } from './har-export.mjs';
 
@@ -149,7 +150,7 @@ export function harWorkspaceTools(tool) {
     tool('merchant_har_save','Save the reviewed source and complete merchant plan through the original HAR merchant compiler. Repeated completed identical package names reopen their original output.',{...pick,...requestPlan,name:{type:'string',pattern:'^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$'}},['workspace','selection','name'],{idempotent:true}),
     tool('merchant_har_packages','Page saved original merchant packages, including results recovered after an interrupted save reply.',{...scope,...page},['workspace'],read),
     tool('merchant_har_load','Reopen a saved original merchant package and reconnect its exact retained capture/review binding.',{...scope,name:{type:'string',pattern:'^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$'}},['workspace','name'],read),
-    tool('merchant_har_copy','Copy the complete original source and every saved review to one declared receiving directory. A completed equal copy can be reopened after an interrupted reply.',{...pick,destination:alias},['workspace','selection','destination'],{idempotent:true}),
+    tool('merchant_har_copy','Copy the complete original source and every saved review to one declared receiving directory. A completed equal copy accepts later immutable reviews and reopens after an interrupted reply.',{...pick,destination:alias},['workspace','selection','destination'],{idempotent:true}),
     tool('merchant_har_receive','Adopt the complete original source selected in another declared workspace into this receiving console. Native copy includes both refresh editions and all immutable reviews.',{...scope,fromWorkspace:alias,selection,label:{type:'string',minLength:1,maxLength:160}},['workspace','fromWorkspace','selection'],{idempotent:true}),
     tool('merchant_har_export','Retain an original reviewer, inventory, decisions, draft, comparison or approved OpenAPI file once for resumable verified delivery.',{...pick,kind:{type:'string',enum:Object.keys(HAR_EXPORT_FILES)}},['workspace','selection','kind'],{idempotent:true}),
     tool('merchant_har_exports','Page complete retained HAR exports after console or MCP restart.',{...scope,...page},['workspace'],read),
@@ -160,14 +161,6 @@ export function harWorkspaceTools(tool) {
 }
 const definitions=new Map(harWorkspaceTools((name,description,properties,required)=>({name,properties,required})).map(v=>[v.name,v]));
 
-async function responseBytes(response,maximum) {
-  const chunks=[];let size=0;
-  for await(const chunk of response.body??[]){
-    size+=chunk.length;if(size>maximum)throw fail('HAR_RESPONSE_TOO_LARGE','Retain the complete original file and read its byte chunks.');
-    chunks.push(chunk);
-  }
-  return Buffer.concat(chunks,size);
-}
 async function inspectHandle(file,expected,maximum) {
   const fd=await open(file.path,C.O_RDONLY|C.O_NOFOLLOW|C.O_NONBLOCK);
   try {
@@ -219,43 +212,24 @@ export class MerchantHarWorkspaces {
     return value;
   }
   async #connection(def){
-    let raw;
-    try{raw=def.consoleUrlFile?new TextDecoder('utf-8',{fatal:true}).decode(await readRegular(def.consoleUrlFile,4096,true)).trim():process.env[def.consoleUrlEnv];}
-    catch{throw fail('HAR_CONSOLE_UNAVAILABLE','Reconnect the original SF61 console through its declared private URL reference.');}
-    let url;try{url=new URL(raw);}catch{}
-    const port=url?.port?Number(url.port):80;
-    if(!url||url.protocol!=='http:'||url.hostname!=='127.0.0.1'||!Number.isInteger(port)||port<1||port>65535||
-        url.username||url.password||url.pathname!=='/'||url.search||!/^#[A-Za-z0-9_-]{32,256}$/.test(url.hash))
-      throw fail('HAR_CONSOLE_CONNECTION_INVALID','Use the exact private URL printed by the original SF61 workspace.');
-    const connection={origin:url.origin,token:url.hash.slice(1)};
-    // Identity uses the native one-entry library page. Reopening and compiling
-    // every saved merchant package belongs only to actual package operations.
-    const library=await this.#json(connection,'/api/har/library?limit=1');
+    // Read the original managed URL record once for this whole operation. Pin
+    // that selected console through identity checking and its dependent writes.
+    const original=await new Sf61WorkspaceClient(def).connection();
+    const connection=new Sf61WorkspaceClient({consoleUrlEnv:'HAR_SELECTED_CONSOLE_URL'},
+      {environment:{HAR_SELECTED_CONSOLE_URL:original.origin+'/#'+original.token}});
+    // The native one-entry library page identifies this source workspace.
+    // Complete package inspection belongs to status and package operations.
+    const library=await connection.json('/api/har/library?limit=1');
     if(library.root!==join(def.projectsDirectory,'.har-captures'))throw fail('HAR_CONSOLE_IDENTITY_CHANGED','The running console belongs to another projects directory. Reconnect the declared original workspace.');
     return {connection,library};
   }
   async #request(connection,route,{body,raw,maximum=MAX_REPLY}={}){
-    try{
-      const response=await fetch(connection.origin+route,{method:body===undefined&&raw===undefined?'GET':'POST',redirect:'error',
-        signal:AbortSignal.timeout(240000),headers:{'x-workspace-token':connection.token,origin:connection.origin,
-          ...(raw!==undefined?{'content-type':'application/octet-stream'}:body!==undefined?{'content-type':'application/json'}:{})},
-        ...(raw!==undefined?{body:raw,...(Buffer.isBuffer(raw)?{}:{duplex:'half'})}:body!==undefined?{body:JSON.stringify(body)}:{})});
-      if(!response.ok){
-        let detail={};try{detail=json(await responseBytes(response,65536));}catch{}
-        const error=fail('HAR_CONSOLE_REJECTED',typeof detail.error==='string'?detail.error.slice(0,2000):'Original console returned HTTP '+response.status+'.');
-        error.status=response.status;throw error;
-      }
-      return await responseBytes(response,maximum);
-    }catch(error){
-      if(error.code?.startsWith('HAR_')||error.code==='INVALID_PARAMS')throw error;
-      throw fail('HAR_CONSOLE_OPERATION_INTERRUPTED','The original console operation was interrupted. Read its retained library, reviews or saved packages before continuing.');
-    }
+    const payload=raw!==undefined?raw:body===undefined?undefined:JSON.stringify(body);
+    return connection.request(route,{body:payload,
+      headers:raw!==undefined?{'Content-Type':'application/octet-stream'}:body!==undefined?{'Content-Type':'application/json'}:{}},
+      response=>readSf61Response(response,maximum));
   }
-  async #json(connection,route,body){
-    if(body!==undefined&&Buffer.byteLength(JSON.stringify(body))>10*1024*1024)
-      throw fail('INVALID_PARAMS','The request exceeds the original merchant console JSON limit.');
-    return json(await this.#request(connection,route,{body}));
-  }
+  async #json(connection,route,body){return connection.json(route,body);}
   async #nativeDirectory(kind,directory){
     await privateDirectory(directory);
     if(kind==='refresh'){const packet=await openRefresh(directory);return {packet,native:packet.candidate,directory};}
@@ -516,11 +490,10 @@ export class MerchantHarWorkspaces {
         const current=await this.#native(def,input.selection),target=def.destinations[checked(input.destination,ALIAS,'receiving directory alias')];
         if(!target)throw fail('INVALID_PARAMS','Choose a declared receiving directory.');
         await privateDirectory(dirname(target.directory));
-        let exists=false;try{await lstat(target.directory);exists=true;}catch(error){if(error.code!=='ENOENT')throw error;}
-        if(exists){await this.#copyMatches(current,target.directory);return {workspace,selection:current.selection,destination:input.destination,state:'COMPLETE',reused:true};}
-        await this.#json(connection,'/api/har/copy',{selection:current.selection,destination:target.directory});
+        const copied=await this.#json(connection,'/api/har/copy',{selection:current.selection,destination:target.directory});
         await this.#copyMatches(current,target.directory);
-        return {workspace,selection:current.selection,destination:input.destination,state:'COMPLETE',reused:false};
+        return {workspace,selection:current.selection,destination:input.destination,state:'COMPLETE',
+          reused:copied.reused===true,recovered:copied.recovered===true};
       }
       case 'merchant_har_receive':{
         const owner=this.#definition(input.fromWorkspace),current=await this.#native(owner,input.selection);
