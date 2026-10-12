@@ -144,19 +144,23 @@ The stages share the same durable journal and workspace:
 14. Produce the complete application handover under one explicit stable handover ID. Include complete source editions/drafts and reusable native content while keeping operator-private observations private by default.
 15. Drain/close the original browser, HTTP service and workspace. Reopen the same workspace and confirm original editions, source hashes, review and native operation identities.
 16. Reopen the completed original query without a new query POST. Reopen the exact same complete handover archive, download it through the actual application route and compare every byte by length/SHA256.
-17. Save the complete receiving result only after native stages, original reopening, handover byte comparison and closure succeed.
+17. Verify the original whole archive through the application's own package verifier and extract every declared member into one create-only receiving directory. Keep its exact extraction receipt before opening the included application and detached SQLite copy.
+18. Open that included application and confirm all original editions, complete draft overlays, reviews, terminal native IDs and reusable content. Reopen the completed query and inspect its historical result without private journals or a provider request; the terminal result remains intact. Retain an actual browser view of this receiving copy.
+19. Save the complete receiving result only after native stages, both original and portable reopening, handover byte comparison and closure succeed.
 
 The native engine retains exact accepted project/job/query identities. The receiver never treats a source edition ID or an operation-storage folder ID as a native provider UUID.
 
 ## Interrupted work and original result reopening
 
-The whole Python host takes a permanent `control/receiving.lock`. It records the input identity before launching the original Node receiver, and the same descriptor is inherited by native CLI/dbt descendants and the packager. If that lock is still owned, a second call reports the existing run instead of acquiring a second writer.
+The whole Python host takes a permanent `control/receiving.lock`. It records the input identity before launching the original Node receiver, and the same descriptor is inherited by native CLI/dbt descendants and the packager. If that lock is still owned, a second call reports the existing run instead of acquiring a second writer. A process-receipt write or fsync failure after child creation still drains that acquired child before the host releases its original descriptors.
 
 Use the exact original selection and preparation/launch stanza again after an interruption. The create-only prepared input, same workspace, stable stage UUIDs and native operation receipts are reused. Do not rename the output directory, edit its input hash, choose a new operation ID, remove a lock inode or reinitialize a partly completed workspace.
 
 The receiver saves each stage selection before dispatch. On reopen it checks the original workspace and native receipts. It recovers an already-saved edition or review from its exact source basis. It reconciles an accepted native operation before any continuation. Uncertain or failed provider mutations remain visible as that original operation's recovery state; they are not silently rerun.
 
 Completed-result replay reopens the retained handover and original result. It does not repeat a provider command merely to update a receipt timestamp. A later user-selected draft or changed source/runtime/input is not overwritten to match the receiving program.
+
+The portable leg uses `receiving/handover.py` to call the included original `read_request` and `check_archive` functions. It accepts exactly the manifest's regular files and their byte/hash/executable identities, never replaces a completed member, and resumes only matching partial bytes. Its original `open-intent.json` is durable before SQLite opens. Later receiving retries preserve the copied database's local inspection history while rechecking the immutable application, editions and content; they do not extract over an opened database. The copied workspace stays connection-detached, and historical Inspect records `ORIGINAL_NATIVE_JOURNAL_UNAVAILABLE` separately from the preserved successful native result.
 
 The controlled lost execute response is limited to the local application HTTP reply. The actual original command, operation UUID and provider behavior remain unchanged. Its observed accepted/dropped/recovered state is retained in `lostExecute`, allowing an actual result to distinguish the exercised failure from a source-only intention.
 
@@ -174,9 +178,10 @@ The persistent output root contains:
 | `receiving-state.json` | Saved stage intents, stable UUIDs, completed results and precise incomplete state. |
 | `receiving-result.json` | Actual final or interrupted result, native identities, complete handover and claims. |
 | `workspace/` | Original SQLite workspace, complete source editions, draft/history, reviews, native operations and content artifacts. |
-| `source-review-desktop.png`, `source-review-mobile.png`, `reopened-handover-desktop.png` | Actual source-review and reopened handover views at the receiving output root. |
+| `received-handover/` | Create-only extraction selection/receipt, opening intent, included application and detached receiving SQLite workspace. |
+| `source-review-desktop.png`, `source-review-mobile.png`, `reopened-handover-desktop.png`, `received-handover-desktop.png` | Actual source-review, original reopen and portable receiving views. |
 
-A successful result includes the actual baseline/candidate/review identities, complete original source basis, native source/preview/restore project UUIDs, original operation IDs and accepted query results, all expected groups compared against native data, stopped-preview outcomes, exact reopened workspace identities, whole handover identity and actual screenshot paths.
+A successful result includes the actual baseline/candidate/review identities, complete original source basis, native source/preview/restore project UUIDs, original operation IDs and accepted query results, all expected groups compared against native data, stopped-preview outcomes, exact reopened workspace identities, whole handover identity, the detached recipient's preserved native results and actual screenshot paths.
 
 The handover result is `{id, state: "SUCCEEDED", archive: {path, bytes, sha256}, memberCount, ...}`. The native module's content manifests use `scope: "native-content"` for reusable core chart/dashboard/space files; operator logs, private paths, original API diagnostics and query evidence remain in the operator workspace unless the operator explicitly asks for the private handover edition.
 
@@ -184,6 +189,6 @@ This program verifies the original native application and data workflow. It does
 
 ## Source and verification status
 
-The original source selection, complete candidate, preparation program, host, fixture comparator and receiver are fully authored. Actual Node module syntax and Python AST checks passed for the native/receiving code. Those checks do not import the selected CLI on the prepared host, create a Lightdash project, query PostgreSQL or exercise the browser. The sole complete receiving result remains the authoritative native outcome.
+The original source selection, complete candidate, preparation program, host, fixture comparator and receiver are fully authored. The first complete source cohort passed actual Node module syntax and Python AST checks. The later lifecycle and portable-receiving corrections require the current source's syntax result before that validation claim is extended to them. Those checks do not import the selected CLI on the prepared host, create a Lightdash project, query PostgreSQL or exercise the browser. The sole complete receiving result remains the authoritative native outcome.
 
 Read the actual original application source manifest and final receiving result before promoting native completion into a customer or grant claim. A source package remains useful before that result, but it must be described as source delivery with native receiving in progress.

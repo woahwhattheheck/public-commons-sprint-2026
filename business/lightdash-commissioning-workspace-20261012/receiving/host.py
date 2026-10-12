@@ -16,6 +16,17 @@ def save(p,value):
     finally:
         try:os.unlink(tmp)
         except FileNotFoundError:pass
+def drain_owned_child(child,timeout):
+    """Keep inherited leases until this acquired process group has drained."""
+    if child is None:return None
+    if child.poll() is not None:return child.returncode
+    try:os.killpg(child.pid,signal.SIGTERM)
+    except ProcessLookupError:pass
+    try:return child.wait(timeout=timeout)
+    except subprocess.TimeoutExpired:
+        try:os.killpg(child.pid,signal.SIGKILL)
+        except ProcessLookupError:pass
+        return child.wait()
 def main():
     parser=argparse.ArgumentParser()
     parser.add_argument("--input",required=True);parser.add_argument("--input-sha256",required=True)
@@ -47,25 +58,27 @@ def main():
         node=selection["connection"]["runtime"]["node"]
         command=[node,str(root/"receiving"/"receive.mjs"),"--input",str(input_file.resolve()),"--input-sha256",sha]
         with open(control/"receiving.stdout.log","ab",buffering=0) as stdout,open(control/"receiving.stderr.log","ab",buffering=0) as stderr:
-            child=subprocess.Popen(command,stdin=subprocess.DEVNULL,stdout=stdout,stderr=stderr,env=env,pass_fds=(fd,),start_new_session=True)
-            save(control/"process.json",{**request,"pid":child.pid,"hostPid":os.getpid(),"startedAt":time.time(),"command":command,"leaseDevice":selected.st_dev,"leaseInode":selected.st_ino})
-            stopping=[False]
-            def stop(sig,frame):
-                if stopping[0]:return
-                stopping[0]=True
-                try:os.killpg(child.pid,signal.SIGTERM)
-                except ProcessLookupError:pass
-            signal.signal(signal.SIGTERM,stop);signal.signal(signal.SIGINT,stop)
-            while True:
-                try:code=child.wait(timeout=2);break
-                except subprocess.TimeoutExpired:
-                    if stopping[0]:
-                        try:code=child.wait(timeout=120);break
-                        except subprocess.TimeoutExpired:
-                            try:os.killpg(child.pid,signal.SIGKILL)
-                            except ProcessLookupError:pass
-                            code=child.wait();break
-            for h in (stdout,stderr):h.flush();os.fsync(h.fileno())
+            child=None
+            try:
+                child=subprocess.Popen(command,stdin=subprocess.DEVNULL,stdout=stdout,stderr=stderr,env=env,pass_fds=(fd,),start_new_session=True)
+                stopping=[False]
+                def stop(sig,frame):
+                    if stopping[0]:return
+                    stopping[0]=True
+                    try:os.killpg(child.pid,signal.SIGTERM)
+                    except ProcessLookupError:pass
+                signal.signal(signal.SIGTERM,stop);signal.signal(signal.SIGINT,stop)
+                save(control/"process.json",{**request,"pid":child.pid,"hostPid":os.getpid(),"startedAt":time.time(),"command":command,"leaseDevice":selected.st_dev,"leaseInode":selected.st_ino})
+                while True:
+                    try:code=child.wait(timeout=2);break
+                    except subprocess.TimeoutExpired:
+                        if stopping[0]:
+                            code=drain_owned_child(child,120);break
+            finally:
+                # Persisting process.json may fail after a real child starts.
+                # Drain it while the same whole-receiving lease is still owned.
+                drain_owned_child(child,120)
+                for h in (stdout,stderr):h.flush();os.fsync(h.fileno())
         result_file=output/"receiving-result.json"
         result=json.loads(read(result_file)) if result_file.exists() else {"state":"INTERRUPTED","operationId":selection["operationId"],"inputSha256":sha}
         print(json.dumps({"operationId":selection["operationId"],"state":result["state"],"processExit":code,"resultFile":str(result_file) if result_file.exists() else None,"outputDirectory":str(output),"handover":result.get("handover")}))
