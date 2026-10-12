@@ -7,7 +7,8 @@ function el(tag,attrs={},...children){const n=document.createElement(tag);for(co
 const paragraph=text=>el('p',{},text), pre=value=>el('pre',{},typeof value==='string'?value:JSON.stringify(value,null,2));
 const button=(label,fn,primary=false)=>el('button',{class:primary?'primary':'',onclick:()=>work(fn)},label);
 const option=(value,label)=>el('option',{value},label);
-function field(label,control){return el('div',{},el('label',{},label,control));}
+let fieldSequence=0;
+function field(label,control){control.id ||= 'oai-field-'+(++fieldSequence);return el('div',{},el('label',{htmlFor:control.id},label),control);}
 function select(items,id,change,placeholder='Choose…'){const n=el('select',{onchange:e=>change?.(e.target.value)},option('',placeholder),...items.map(([key,label])=>option(key,label)));n.value=id;return n;}
 function table(headers,rows){return el('div',{class:'table'},el('table',{},el('thead',{},el('tr',{},...headers.map(x=>el('th',{},x)))),el('tbody',{},...rows.map(row=>el('tr',{},...row.map(x=>el('td',{},x)))))));}
 const panel=(title,...body)=>el('section',{},el('h2',{},title),...body);

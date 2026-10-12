@@ -182,3 +182,13 @@ The launcher uses the original feed implementation in `sf88-operator-buyer-cli/r
 For this feed's actual provenance namespace, the editable Dublin Core preset adds ten typed source columns to the three OAI fields and fifteen repeated Dublin Core fields: source edition, query/manifest/page/request/record hashes, page number, source URL, retrieval time and metadata licence. Original work rights remain in `dc_rights`. Other Dublin Core repositories continue to use their existing preset.
 
 The completed case keeps both original stores, the withdrawal and restored publisher sources, the feed backup and the complete receiving backup. Reopen the same directory with `--open-only --serve`; when opening a delivered case containing the saved backups, the launcher restores the original feed and receiving databases before serving them. A fresh full native case received 169 records, retained one explicit withdrawal, restored all 169, and compared all 28 projected columns against the original source.
+
+## Managed operator application
+
+The source includes a Node launcher (`cli.mjs`) that forwards to the selected Python environment without a shell. Use `node cli.mjs --python /absolute/path/to/python --workspace /absolute/private/workspace serve`. It preserves the original Python exit status and graceful stop signals.
+
+The `binding` command reads the original workspace marker and database identity without opening the recovering Workspace constructor. Managed Applications reviews the selected workspace, Python and complete local source through this command, then passes its returned digest to `serve --expected-binding DIGEST --startup-format json`. The live console returns the same launch identity at `/api/launch` with its original session token. Stop cancels and joins the current harvest before closing the database. A subsequent start reopens that same workspace.
+
+`distribution/runtime-workspace/application-oai.mjs` provides the maintained Applications entry, preparation and authenticated startup observer. Its application identifier is `oai-repository`; the operator command is `oai`. The publisher uses the separate `oai-publisher` entry. Both operate on the original source and receiving packages described above.
+
+The worked Zenodo case completed all six operator sections, exact original XML and full source/backup downloads, phone-width layout, saved mapping queries, and stop/reopen. Its managed launch additionally reopened the original four operations, one reviewed edition and one build unchanged through two full launch/stop cycles.

@@ -13,8 +13,9 @@ def main():
     p=argparse.ArgumentParser(description="Starforge repository metadata workspace")
     p.add_argument("--workspace",required=True,help="Private original XML/OAI workspace directory")
     sub=p.add_subparsers(dest="command",required=True)
-    sub.add_parser("init");sub.add_parser("state")
+    sub.add_parser("init");sub.add_parser("state");sub.add_parser("binding")
     a=sub.add_parser("serve");a.add_argument("--port",type=int,default=0)
+    a.add_argument("--expected-binding");a.add_argument("--startup-format",choices=("json",))
     a=sub.add_parser("repository");a.add_argument("--url",required=True);a.add_argument("--label");a.add_argument("--interval",type=float,default=2.1)
     a=sub.add_parser("start");a.add_argument("--repository",required=True);a.add_argument("--verb",required=True)
     a.add_argument("--arguments",required=True,help="JSON request arguments file, or - for stdin")
@@ -38,9 +39,12 @@ def main():
         a=sub.add_parser(name);a.add_argument("--id",required=True);a.add_argument("--offset",type=int,default=0)
         a.add_argument("--limit",type=int,default=100)
     args=p.parse_args()
+    if args.command=="binding":
+        from managed import inspect_binding
+        print(json.dumps(inspect_binding(args.workspace),ensure_ascii=False,indent=2));return
     if args.command=="serve":
         from server import serve
-        serve(args.workspace,args.port);return
+        serve(args.workspace,args.port,expected_binding=args.expected_binding,startup_format=args.startup_format);return
     if args.command=="restore":
         result=Workspace.restore(args.archive,args.workspace)
     else:
