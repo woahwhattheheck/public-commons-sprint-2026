@@ -10,7 +10,7 @@ import tempfile
 
 REPOSITORY = "woahwhattheheck/public-commons-sprint-2026"
 COMMIT = "986bc2379e892ee721de30a0b88701461a0dffd6"
-INDEX_SHA256 = "84834fec49e5f40f1bea1b5770745263a81e528a0e4153f49efef8c2721b706c"
+INDEX_SHA256 = "2e8b1db7664eb8064dca547c7e091decee7f985794c4538fa76317c343783010"
 
 def require(value, message):
     if not value:
@@ -69,12 +69,12 @@ def main():
     require(not source.is_relative_to(package) and not package.is_relative_to(source),
             "Materialize the original source beside the package")
     raw = (package / "source-index.json").read_bytes()
-    require(len(raw) == 699722 and sha(raw) == INDEX_SHA256, "Use the published complete source index")
+    require(len(raw) == 704184 and sha(raw) == INDEX_SHA256, "Use the published complete source index")
     index = json.loads(raw)
     manifest = index["manifest"]
     require(manifest["repository"] == REPOSITORY and manifest["commit"] == COMMIT, "Keep the original application edition")
     rows = {safe_name(row["path"]): row for row in manifest["files"]}
-    require(len(rows) == len(manifest["files"]) == 1682, "Keep the complete original file set")
+    require(len(rows) == len(manifest["files"]) == 1685, "Keep the complete original file set")
     files = {}
     for ordinal, part in enumerate(index["parts"], 1):
         body = checked(package / "parts" / ("%03d.json" % ordinal), part)
