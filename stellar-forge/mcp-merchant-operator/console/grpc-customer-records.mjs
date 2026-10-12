@@ -58,7 +58,7 @@ export function validateGrpcCustomerRecord(record) {
   if (!plain(manifest) || Object.keys(manifest).some(key => !['schema', 'workspace', 'kind', 'original', 'files', 'exportId'].includes(key)) ||
       manifest.schema !== 'stellar-forge.grpc-workspace-export.v1' ||
       manifest.exportId !== selected.exportId || manifest.workspace !== selected.workspace ||
-      !['customer', 'revision', 'attempt', 'stream', 'result', 'upgrade', 'health'].includes(manifest.kind) ||
+      !['customer', 'revision', 'attempt', 'stream', 'result', 'upgrade', 'health', 'operations'].includes(manifest.kind) ||
       !plain(manifest.original) || !Array.isArray(manifest.files) || manifest.files.length < 1 || manifest.files.length > 7)
     invalid();
   const { exportId, ...source } = manifest;

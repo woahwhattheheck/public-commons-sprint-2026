@@ -2,6 +2,9 @@ import { grpcWorkspaceTools, read, selection, page, revision, alias, baseRevisio
 export { grpcWorkspaceTools } from './catalog/grpc-workspace.mjs';
 import { executeGrpcUpgrade } from './grpc-upgrades.mjs';
 import { executeGrpcHealth } from './grpc-health.mjs';
+import { executeGrpcOperations } from './grpc-operations.mjs';
+import { OPERATIONS_MAX_BYTES, validateOperationsExport } from '../../stellar/scf-starforge-20261009/sf30-seller-sdk/grpc/operations/domain.mjs';
+import { OPERATIONS_EXPORT_MAX_BYTES } from '../../stellar/scf-starforge-20261009/sf30-seller-sdk/grpc/operations/report.mjs';
 import { GRPC_UPGRADE_MAX_BYTES } from '../../stellar/scf-starforge-20261009/sf30-seller-sdk/grpc/upgrade-receiving.mjs';
 // MIT. Agent operation and complete delivery over the original private gRPC workspace.
 import { constants } from 'node:fs';
@@ -114,7 +117,7 @@ export async function readGrpcWorkspaceConfiguration(path) {
     for (const [handle, source] of Object.entries(input.files ?? {})) {
       checked(handle, ALIAS, 'receiving file handle');
       exact(source, ['label', 'path', 'kind', 'sha256'], ['path', 'kind']);
-      if (!['revision', 'request'].includes(source.kind)) throw fail('CONFIGURATION_ERROR', 'Declare an original revision or request JSON file.');
+      if (!['revision', 'request', 'operations'].includes(source.kind)) throw fail('CONFIGURATION_ERROR', 'Declare an original revision, request or operations JSON file.');
       files[handle] = { label: printable(source.label ?? handle, 'file label'), path: hostPath(source.path, base), kind: source.kind,
         ...(source.sha256 === undefined ? {} : { sha256: checked(source.sha256, SHA, 'file SHA256') }) };
     }
@@ -186,7 +189,7 @@ export class MerchantGrpcWorkspaces {
   async #request(connection, route, body, consume, release = false) {
     if (this.#closing) throw fail('GRPC_OPERATOR_CLOSING', 'The merchant connection is closing.');
     const payload = body === undefined ? undefined : JSON.stringify(body);
-    if (payload !== undefined && Buffer.byteLength(payload) > (release ? 32768 : MAX_NATIVE_REQUEST))
+    if (payload !== undefined && Buffer.byteLength(payload) > (release ? 32768 : route === '/api/operations-receive' ? OPERATIONS_MAX_BYTES + 1048576 : MAX_NATIVE_REQUEST))
       throw fail('INVALID_PARAMS', 'The complete request exceeds the original operator body limit.');
     const controller = new AbortController(); this.#controllers.add(controller);
     try {
@@ -258,7 +261,8 @@ export class MerchantGrpcWorkspaces {
   }
   async #retain(workspace, kind, original, sources) {
     const root = await this.#root(), temporary = await privateDirectory(join(root, '.collect-' + randomUUID()));
-    const maximum = kind === 'upgrade' ? GRPC_UPGRADE_MAX_BYTES
+    const maximum = kind === 'result' && original.topic === 'operations-incident' ? OPERATIONS_MAX_BYTES
+      : kind === 'operations' ? OPERATIONS_EXPORT_MAX_BYTES : kind === 'upgrade' ? GRPC_UPGRADE_MAX_BYTES
       : sources.some(source => source.path === 'grpc-stream.ndjson') ? GRPC_EXPORT_MAX_BYTES : 64 * 1024 * 1024;
     const files = []; let total = 0;
     try {
@@ -308,7 +312,7 @@ export class MerchantGrpcWorkspaces {
   }
   async #jsonExport(workspace, kind, original, value) {
     const path = kind === 'revision' ? 'grpc-revision.json' : kind === 'attempt' ? 'grpc-attempt.json' : 'grpc-result.json';
-    return this.#retain(workspace, kind, original, [{ path, maximum: MAX_JSON, contentType: 'application/json', bytes: Buffer.from(JSON.stringify(value) + '\n') }]);
+    return this.#retain(workspace, kind, original, [{ path, maximum: kind === 'result' && original.topic === 'operations-incident' ? OPERATIONS_MAX_BYTES : MAX_JSON, contentType: 'application/json', bytes: Buffer.from(JSON.stringify(value) + '\n') }]);
   }
   async #bounded(workspace, value, original) {
     if (Buffer.byteLength(JSON.stringify(value)) <= INLINE) return value;
@@ -319,9 +323,25 @@ export class MerchantGrpcWorkspaces {
     checked(name, ALIAS, 'receiving file handle');
     const source = definition.files[name];
     if (!source || source.kind !== kind) throw fail('GRPC_FILE_NOT_CONFIGURED', 'Choose a host-declared ' + kind + ' file.');
-    const bytes = await readBytes(source.path, MAX_NATIVE_REQUEST);
+    const bytes = await readBytes(source.path, kind === 'operations' ? OPERATIONS_MAX_BYTES : MAX_NATIVE_REQUEST);
     if (source.sha256 && grpcHash(bytes) !== source.sha256) throw fail('GRPC_FILE_CHANGED', 'The host-declared file differs from its pinned SHA256.');
     return JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes));
+  }
+  async #operationsBundle(definition, args) {
+    if ((args.file === undefined) === (args.exportId === undefined))
+      throw fail('INVALID_PARAMS', 'Choose exactly one declared operations file or original export ID.');
+    if (args.file !== undefined) return validateOperationsExport(await this.#hostJson(definition, args.file, 'operations'));
+    const retained = await this.#manifest(args.exportId);
+    if (retained.manifest.kind !== 'operations') throw fail('GRPC_OPERATIONS_EXPORT_REQUIRED', 'Choose a complete original incident export.');
+    const file = retained.manifest.files.find(file => file.path === 'grpc-operations.json');
+    await verifyFile(join(retained.directory, file.name), file);
+    const value = validateOperationsExport(await jsonFile(join(retained.directory, file.name), OPERATIONS_MAX_BYTES));
+    if (retained.manifest.original.operationId !== value.history.at(-1).id ||
+      retained.manifest.original.reviewSha256 !== value.history.at(-1).sha256 ||
+      retained.manifest.original.snapshotSha256 !== value.capture.captureSha256 ||
+      retained.manifest.original.topic !== 'operations:' + value.exportSha256)
+      throw fail('GRPC_OPERATIONS_EXPORT_CHANGED', 'The complete incident differs from its original file manifest.');
+    return value;
   }
   async #export(workspace, definition, input) {
     if (input.kind === 'customer') {
@@ -406,6 +426,13 @@ export class MerchantGrpcWorkspaces {
       return { exportId: args.exportId, manifestSha256: retained.sha256, ...result };
     }
     const workspace = args.workspace, definition = this.#definition(workspace);
+    if (name.startsWith('merchant_grpc_operations_')) return executeGrpcOperations(name, args, {
+      request: (route, body) => this.#json(definition, route, body),
+      bounded: (value, original) => this.#bounded(workspace, value, original),
+      retain: (kind, original, sources) => this.#retain(workspace, kind, original, sources),
+      receiveBundle: input => this.#operationsBundle(definition, input),
+      download: async (body, consume) => this.#request(await this.#connection(definition), '/api/operations-download', body, consume),
+    });
     if (name.startsWith('merchant_grpc_health_')) return executeGrpcHealth(name, args, {
       request: (route, body) => this.#json(definition, route, body),
       bounded: (value, original) => this.#bounded(workspace, value, original),

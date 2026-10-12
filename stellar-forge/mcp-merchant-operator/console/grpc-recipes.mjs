@@ -9,8 +9,8 @@ const binding=(target,pointer)=>({target,from:'inputs',pointer});
 const earlier=(target,stepId,pointer)=>({target,from:'step',stepId,pointer});
 const workspace=binding('/workspace','/workspace');
 export function buildGrpcCustomerRecipe({definitions,mode='customer'}={}){
-  if(!['customer','upgrade','health','attempt'].includes(mode))
-    throw fail('CONSOLE_GRPC_RECIPE','Choose customer, upgrade, health or retained call delivery.',400);
+  if(!['customer','upgrade','health','attempt','operations'].includes(mode))
+    throw fail('CONSOLE_GRPC_RECIPE','Choose customer, upgrade, health, retained call or incident delivery.',400);
   const steps=[],inputs=[input('/workspace','Original gRPC workspace','string','The configured original workspace retaining this selection.')];
   function step(id,name,action,args,bindings=[],pauseAfter=false,expect=[]){
     const definition=definitions.get(prefix+action);
@@ -39,6 +39,19 @@ export function buildGrpcCustomerRecipe({definitions,mode='customer'}={}){
     step('revision-export','Retain the complete captured protobuf closure and plan','export',
       {workspace:'grpc',kind:'revision',revision:sha},[workspace,revision]);
     manifest('revision-manifest','revision-export','Review the complete source revision for receiving');
+  }else if(mode==='operations'){
+    inputs.push(input('/caseId','Original incident case','string','The original saved incident UUID.'),
+      input('/version','Reviewed incident revision','integer','The exact saved incident version selected for complete receiving.'),
+      input('/captureId','Original operations capture','string','The immutable capture UUID bound to this incident.'));
+    step('incident-revision','Open the selected incident revision and its complete history','operations_case',
+      {workspace:'grpc',caseId:uuid,version:1},[workspace,binding('/caseId','/caseId'),binding('/version','/version')],true);
+    for(const section of ['summary','methods','revisions','calls','health','timeline'])
+      step('incident-'+section,'Inspect original captured '+section,'operations_read',
+        {workspace:'grpc',captureId:uuid,section,...(section==='summary'?{}:{offset:0,limit:250})},
+        [workspace,binding('/captureId','/captureId')],section==='timeline');
+    step('incident-export','Retain the complete incident, all revisions and original captured records','operations_export',
+      {workspace:'grpc',caseId:uuid,version:1},[workspace,binding('/caseId','/caseId'),binding('/version','/version')]);
+    manifest('incident-manifest','incident-export','Receive the complete JSON, CSV and HTML incident package');
   }else if(mode==='upgrade'){
     inputs.push(input('/operationId','Original contract review','string','The UUID of the existing immutable contract-upgrade review.'),
       input('/expectedReviewSha256','Reviewed contract comparison','string','The exact review SHA-256 selected before starting this procedure.'));
@@ -78,7 +91,7 @@ export function buildGrpcCustomerRecipe({definitions,mode='customer'}={}){
   status('workspace-after');
   return sealWorkflowRecipe({schema:'stellar-forge.merchant-workflow-recipe.v1',source:null,
     name:({customer:'gRPC customer and source delivery',upgrade:'gRPC contract-upgrade delivery',
-      health:'gRPC service-health delivery',attempt:'gRPC retained-call delivery'})[mode],
+      health:'gRPC service-health delivery',attempt:'gRPC retained-call delivery',operations:'gRPC operations incident delivery'})[mode],
     description:'Continue the original configured gRPC workspace and its existing immutable selection. At each manifest pause, use Customer files to receive the full verified export and download its archive with the original nested client paths. The saved workflow retains all inputs, original tool definitions and returns. Large source values point to complete retained files; paged previews retain their snapshot. Keep this workflow and the native operation IDs when returning after an interruption.',
     inputs,steps});
 }
