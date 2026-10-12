@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { randomBytes, timingSafeEqual } from 'node:crypto';
 import { spawn } from 'node:child_process';
 import { readPrivate, fault } from '../../postgres/publisher/files.mjs';
+import { parseOpendatasoftJson } from '../capture.mjs';
 
 const staticRoot = fileURLToPath(new URL('./static/', import.meta.url));
 const receivingGuideFile = new URL('../publisher/RECEIVING.md', import.meta.url);
@@ -24,7 +25,7 @@ function json(response, value, status = 200) {
   response.writeHead(status, { 'content-type': 'application/json; charset=utf-8', 'content-length': bytes.length });
   response.end(bytes);
 }
-async function readBody(request, limit = 131072) {
+async function readBody(request, limit = 131072, nativeNumbers = false) {
   if (!/^application\/json(?:\s*;|$)/i.test(String(request.headers['content-type'] ?? '')))
     throw fault('ODS_JSON_REQUIRED', 'Send a JSON object.', 415);
   let size = 0; const chunks = [];
@@ -34,7 +35,7 @@ async function readBody(request, limit = 131072) {
     chunks.push(chunk);
   }
   let value;
-  try { value = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(Buffer.concat(chunks))); }
+  try { const raw = Buffer.concat(chunks); value = nativeNumbers ? parseOpendatasoftJson(raw):JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(raw)); }
   catch { throw fault('ODS_INVALID_JSON', 'Enter valid UTF-8 JSON.'); }
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw fault('ODS_JSON_OBJECT_REQUIRED', 'Send a JSON object.');
   return value;
@@ -215,14 +216,19 @@ export async function startOpendatasoftServer({
           return archive(response, item(workbench, 'exports', parts[1]), children);
       }
       if (request.method === 'POST') {
-        const input = await readBody(request, parts[0] === 'tenant-plans' ? 8388608 : parts[0] === 'editions' && parts[2] === 'notes' && parts.length === 3 ? 4194304 : 131072);
+        const input = await readBody(request, parts[0] === 'tenant-plans' ? 8388608 : parts[0] === 'editions' && parts[2] === 'notes' && parts.length === 3 ? 4194304 : 131072, parts[0] === 'tenant-plans');
         if (parts[0] === 'datasets' && parts[2] === 'preview' && parts.length === 3)
           return json(response, await workbench.previewRecords(parts[1], input));
         if (parts[0] === 'exports' && parts[2] === 'offer' && parts.length === 3)
           return json(response, await workbench.buyerOffer(parts[1], input));
         if (parts[0] === 'cancel' && parts.length === 1) return json(response, await workbench.cancel());
         let started;
-        if (parts[0] === 'tenant-plans' && parts.length === 1) started = await workbench.prepareTenantPlan(input);
+        if (parts[0] === 'tenant-plans' && parts.length === 1) {
+          if (Object.hasOwn(input,'planJson')) {
+            if (Object.keys(input).length !== 1 || typeof input.planJson !== 'string') throw fault('ODS_TENANT_INPUT_INVALID','Send the complete planJson string or the plan object.');
+            started = await workbench.prepareTenantPlan(input.planJson);
+          } else started = await workbench.prepareTenantPlan(input);
+        }
         else if (parts[0] === 'tenant-plans' && parts.length === 3) {
           const actions = {
             inspect: () => workbench.inspectTenantPlan(parts[1]),

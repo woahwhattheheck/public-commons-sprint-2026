@@ -5,7 +5,7 @@ import { readFile, writeFile, realpath } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
 import { openOpendatasoftWorkbench } from './engine.mjs';
 import { captureOpendatasoftDataset, readOpendatasoftCapture,
-  importOpendatasoftResponses, searchOpendatasoft } from './capture.mjs';
+  importOpendatasoftResponses, searchOpendatasoft, parseOpendatasoftJson } from './capture.mjs';
 import { startOpendatasoftServer } from './workspace/server.mjs';
 
 export const usage = [
@@ -144,7 +144,8 @@ export async function main(argv = process.argv.slice(2)) {
   };
   const input = async (name = 'input', optional = false) => {
     if (optional && options[name] === undefined) return {};
-    const value = JSON.parse(await readFile(resolve(required(name)), 'utf8'));
+    const raw = await readFile(resolve(required(name)));
+    const value = command.startsWith('tenant-') ? parseOpendatasoftJson(raw):JSON.parse(raw.toString('utf8'));
     if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('--' + name + ' must contain a JSON object');
     return value;
   };

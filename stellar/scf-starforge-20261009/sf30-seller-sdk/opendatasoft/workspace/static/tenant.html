@@ -9,13 +9,14 @@
 <header><div><div class="eyebrow">STELLAR FORGE / HUWISE</div><h1>Tenant ingestion</h1><p>Receive a retained edition into a Huwise tenant and compare the published result.</p></div><a class="button" href="/">Back to workbench</a></header>
 <main id="main">
 <div id="notice" role="status" aria-live="polite"></div><section id="operation" aria-live="polite"></section>
-<div class="layout"><section class="panel"><h2>Prepare an ingestion</h2><form id="prepare-form">
+<div class="layout"><section class="panel"><h2>Prepare an ingestion</h2><form id="prepare-form" novalidate>
 <label>Retained source edition<select name="edition" required></select></label>
 <p id="edition-summary" class="muted"></p>
 <label>Tenant connection<select name="target" required></select></label><p id="target-summary" class="muted"></p>
 <label>Target dataset ID<input name="datasetId" required maxlength="256" autocomplete="off"></label>
 <label>Existing dataset UID <span class="muted">Optional; leave empty to create a dataset.</span><input name="datasetUid" maxlength="256" autocomplete="off"></label>
 <div class="row"><button type="button" id="find-dataset">Find this dataset</button></div><div id="dataset-search"></div>
+<label>Metadata template<input name="metadataTemplate" value="default" required maxlength="256" autocomplete="off"></label><p class="muted">Use the actual tenant template name, such as default or asset. Additional templates can be supplied below.</p>
 <label>Dataset title<input name="title" required maxlength="256"></label>
 <div class="row"><label>Language<select name="language"><option value="en">English</option><option value="fr">French</option><option value="de">German</option><option value="es">Spanish</option><option value="nl">Dutch</option><option value="pt">Portuguese</option><option value="it">Italian</option><option value="ar">Arabic</option><option value="ca">Catalan</option><option value="eu">Basque</option><option value="sv">Swedish</option></select></label>
 <label>Access<select name="visibility"><option value="restricted">Restricted</option><option value="public">Public</option></select></label></div>
@@ -38,6 +39,10 @@
 <p class="muted">Each change has a complete native "body" and an optional original "id" to update. A field rename uses type, label, from_name, to_name and field_label.</p>
 <label>Receiving criteria<textarea name="acceptance" spellcheck="false" rows="8"></textarea></label>
 <p class="muted">source-match compares every mapped source row, including duplicates. reviewed-output checks the explicit row count and fields for a deliberately transformed dataset.</p>
+</details>
+<details><summary>Complete native plan JSON</summary>
+<p class="muted">Paste a complete plan to preserve exact numeric literals and use any tenant metadata template. When supplied, this JSON provides the full plan.</p>
+<label>Complete plan<textarea name="planJson" spellcheck="false" rows="16" placeholder='{"editionId":"…","captureSha256":"…","notesRevision":0,"target":{},"dataset":{},"resource":{},"publish":true}'></textarea></label>
 </details>
 <button type="submit" class="primary">Save ingestion plan</button>
 </form></section>

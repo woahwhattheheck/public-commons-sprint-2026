@@ -1,4 +1,4 @@
-// MIT. Huwise / Opendatasoft Automation v1.0; all actions use the pinned native contract.
+// MIT. Huwise / Opendatasoft Automation v1.0; retained SDK plus current official contract.
 import { createHash, randomBytes } from 'node:crypto';
 import { constants } from 'node:fs';
 import { open, lstat } from 'node:fs/promises';
@@ -40,6 +40,15 @@ function own(value, names, code = 'ODS_AUTOMATION_INPUT_INVALID') {
     fail(code, 'Use the named inputs in the native Automation contract.');
   return value;
 }
+function exactInteger(value) {
+  if (!(value instanceof ExactOpendatasoftNumber)) return Number.isSafeInteger(value);
+  const match = /^-?(0|[1-9]\d*)(?:\.(\d+))?(?:[eE]([+-]?\d+))?$/.exec(value.source);
+  if (!match) return false;
+  const fraction = match[2] ?? '', digits = match[1] + fraction;
+  if (!/[1-9]/.test(digits)) return true;
+  const trailing = /0*$/.exec(digits)[0].length;
+  return BigInt(match[3] ?? '0') - BigInt(fraction.length) + BigInt(trailing) >= 0n;
+}
 function integer(value, low, high, code) {
   if (!Number.isSafeInteger(value) || value < low || value > high) fail(code, 'Use an integer within the configured range.');
   return value;
@@ -77,7 +86,7 @@ function resolveSchema(schema) {
   return { ...base, ...Object.fromEntries(Object.entries(schema).filter(([key]) => key !== '$ref')) };
 }
 // Structural native-body validation leaves optional, provider-specific and future fields intact.
-// The original OpenAPI remains the complete reference; this is not a schema rewrite.
+// Current documented corrections are retained with the original OpenAPI source in current-reference.json.
 function checkBody(value, schema, at = 'body', refs = new Set(), depth = 0) {
   if (depth > 96) fail('ODS_AUTOMATION_BODY_DEPTH', 'The request structure is too deeply nested.');
   if (schema?.$ref) {
@@ -104,7 +113,7 @@ function checkBody(value, schema, at = 'body', refs = new Set(), depth = 0) {
     const matches = types.some(type => type === 'null' ? value === null :
       type === 'object' ? object(value) && !(value instanceof ExactOpendatasoftNumber) :
       type === 'array' ? Array.isArray(value) : type === 'number' ? numeric :
-      type === 'integer' ? Number.isSafeInteger(value) : typeof value === type);
+      type === 'integer' ? exactInteger(value) : typeof value === type);
     if (!matches) fail('ODS_AUTOMATION_BODY_INVALID', 'The native type does not match ' + at + '.');
   }
   if (schema.enum && !schema.enum.some(item => JSON.stringify(item) === JSON.stringify(value)))
@@ -142,6 +151,8 @@ export function validateOpendatasoftAutomationBody(operationId, body) {
   const op = automationOperation(operationId);
   if (op.body !== 'json') fail('ODS_AUTOMATION_JSON_BODY_UNSUPPORTED', 'This native operation does not accept a JSON body.');
   if (!object(body)) fail('ODS_AUTOMATION_BODY_INVALID', 'Use a complete native JSON object.');
+  for (const [field, message] of Object.entries(op.forbiddenBodyFields ?? {}))
+    if (Object.hasOwn(body, field)) fail('ODS_AUTOMATION_BODY_ENDPOINT_MISMATCH', message);
   checkBody(body, op.bodySchema);
   return body;
 }

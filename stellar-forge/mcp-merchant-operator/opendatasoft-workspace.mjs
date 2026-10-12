@@ -65,7 +65,7 @@ export async function readOpendatasoftWorkspaceConfiguration(path) {
   const { catalogOrigin } = await import(NATIVE + 'capture.mjs');
   const workspaces = Object.create(null), used = new Set(), base = dirname(path);
   for (const [name, item] of named(input.workspaces, 'workspaces')) {
-    exact(item, ['label','directory','origin','create','authTokenEnv','imports','merchants','sellers','runtime'], ['directory','origin']);
+    exact(item, ['label','directory','origin','create','authTokenEnv','automationConnection','imports','merchants','sellers','runtime'], ['directory','origin']);
     const directory = await realpath(hostPath(item.directory, base));
     await privateSupportDirectory(directory);
     if (used.has(directory)) throw failure('CONFIGURATION_ERROR', 'Give each original Huwise project one alias.');
@@ -93,7 +93,9 @@ export async function readOpendatasoftWorkspaceConfiguration(path) {
       sellers[key] = { label: line(entry.label ?? key), url: endpoint(entry.url, entry.allowLoopback === true) };
     }
     workspaces[name] = { label: line(item.label ?? name), directory, origin: catalogOrigin(item.origin), create: item.create === true,
-      authTokenEnv: item.authTokenEnv, imports, merchants, sellers, runtime: runtime(item.runtime) };
+      authTokenEnv: item.authTokenEnv,
+      ...(item.automationConnection ? { automationConnection:await realpath(hostPath(item.automationConnection,base)) }: {}),
+      imports, merchants, sellers, runtime: runtime(item.runtime) };
   }
   return { workspaces };
 }
@@ -147,7 +149,7 @@ export class MerchantOpendatasoftWorkspaces {
           throw fail('TOKEN_UNAVAILABLE', 'The original host-declared portal token is unavailable.');
         const { openOpendatasoftWorkbench } = await import(NATIVE + 'engine.mjs');
         const workbench = await openOpendatasoftWorkbench({ directory: definition.directory, create: !exists,
-          origin: definition.origin, authTokenEnv: definition.authTokenEnv, environment: this.#environment });
+          origin: definition.origin, authTokenEnv: definition.authTokenEnv, automationConnection:definition.automationConnection, environment: this.#environment });
         return { definition, workbench, instanceId: randomUUID(), browser: null, browserPending: null, stopping: null, tail: Promise.resolve(), closing: false };
       })();
       this.#handles.set(name, pending);
@@ -182,7 +184,7 @@ export class MerchantOpendatasoftWorkspaces {
     const definition = this.#declared(name), pending = this.#handles.get(name);
     if (!pending) return { workspace: name, label: definition.label, origin: definition.origin, state: 'CLOSED' };
     const handle = await pending, state = handle.workbench.status(), history = {}, pages = {};
-    for (const key of ['editions','sources','publications','exports','buyerRequests']) {
+    for (const key of ['editions','sources','publications','exports','buyerRequests','tenantPlans','tenantExports']) {
       const result = page(state[key] ?? [], offset, limit); history[key] = nativeView(result.rows); pages[key] = result.page;
     }
     return { workspace: name, instanceId: handle.instanceId, state: handle.closing ? 'CLOSING' : 'OPEN',
@@ -215,7 +217,7 @@ export class MerchantOpendatasoftWorkspaces {
   async #retain(name, handle, args) {
     digest(args.expectedCaptureSha256); count(args.expectedNotesRevision);
     const editionId = originalId(args.editionId);
-    const selection = Object.fromEntries(['geometryField','sourceId','merchantExportId','buyerRequestId'].filter(key => args[key] !== undefined).map(key => [key, args[key]]));
+    const selection = Object.fromEntries(['geometryField','sourceId','merchantExportId','buyerRequestId','tenantExportId'].filter(key => args[key] !== undefined).map(key => [key, args[key]]));
     if (args.geometryField !== undefined && (typeof args.geometryField !== 'string' || !args.geometryField)) throw failure('INVALID_PARAMS', 'Choose an original geographic field.');
     let completed;
     try { completed = await this.#files.manifest(args.exportId); }
@@ -248,6 +250,14 @@ export class MerchantOpendatasoftWorkspaces {
         throw fail('EXPORT_SELECTION_CHANGED', 'The merchant package belongs to another original edition.');
       source.merchantManifestSha256 = exported.manifestSha256;
     }
+    if (args.tenantExportId) {
+      const tenant = await handle.workbench.tenantExport(originalId(args.tenantExportId));
+      const plan = await handle.workbench.tenantPlan(tenant.planId);
+      if (plan.source.editionId !== editionId || plan.source.captureSha256 !== source.captureSha256 ||
+          plan.source.notesRevision !== source.notesRevision)
+        throw fail('EXPORT_SELECTION_CHANGED','The tenant delivery belongs to another original source edition or notes revision.');
+      source.tenantManifestSha256 = tenant.manifestSha256;
+    }
     if (args.buyerRequestId) {
       const buyer = item(state, 'buyerRequests', args.buyerRequestId);
       if (!args.merchantExportId || buyer.exportId !== args.merchantExportId)
@@ -272,6 +282,9 @@ export class MerchantOpendatasoftWorkspaces {
       { name: 'merchant.tar.gz', route: '/api/exports/' + args.merchantExportId + '/download', contentType: 'application/gzip' },
       { name: 'MERCHANT-RECEIVING.md', route: '/api/exports/' + args.merchantExportId + '/guide', contentType: 'text/markdown' });
     if (args.buyerRequestId) files.push({ name: 'buyer-request.json', route: '/api/buyer-requests/' + args.buyerRequestId + '/download', contentType: 'application/json' });
+    if (args.tenantExportId) files.push(
+      { name:'tenant.tar.gz',route:'/api/tenant-deliveries/' + args.tenantExportId + '/download',contentType:'application/gzip' },
+      { name:'TENANT-INGESTION.md',route:'/api/tenant-deliveries/' + args.tenantExportId + '/guide',contentType:'text/markdown' });
     const browser = await this.#browser(handle);
     return this.#files.retain({ exportId: args.exportId, workspace: name, source, selection, files, validate: current,
       receive: async file => {
@@ -337,6 +350,23 @@ export class MerchantOpendatasoftWorkspaces {
         return launched(native.prepareBuyer(originalId(args.merchantExportId), { ...input, intentId: args.intentId,
           acceptIndex: count(args.acceptIndex), offerSha256: digest(args.offerSha256) }));
       }
+      case 'tenant_targets': return native.tenantTargets();
+      case 'tenant_datasets': return native.tenantDatasets(identifier(args.target,'Tenant alias'),args.query ?? {});
+      case 'tenant_prepare': {
+        if (Object.hasOwn(args,'plan') === Object.hasOwn(args,'planJson') || (Object.hasOwn(args,'planJson') && typeof args.planJson !== 'string'))
+          throw fail('PLAN_INPUT','Supply exactly one complete plan object or planJson string.');
+        return launched(native.prepareTenantPlan(args.planJson ?? args.plan));
+      }
+      case 'tenant_plan': return nativeView(await native.tenantPlan(originalId(args.planId)));
+      case 'tenant_inspect': return launched(native.inspectTenantPlan(originalId(args.planId)));
+      case 'tenant_review': return launched(native.reviewTenantPlan(originalId(args.planId),{
+        planSha256:digest(args.planSha256),configurationSha256:digest(args.configurationSha256),...(args.note ? { note:args.note }: {}) }));
+      case 'tenant_apply': return launched(native.applyTenantPlan(originalId(args.planId),{ reviewId:originalId(args.reviewId) }));
+      case 'tenant_recover': return launched(native.recoverTenantPlan(originalId(args.planId),args.recovery ?? {}));
+      case 'tenant_status': return launched(native.refreshTenantStatus(originalId(args.planId)));
+      case 'tenant_receive': return launched(native.receiveTenantPlan(originalId(args.planId),args.limits ?? {}));
+      case 'tenant_export': return launched(native.exportTenantPlan(originalId(args.planId)));
+      case 'tenant_delivery': return nativeView(await native.tenantExport(originalId(args.tenantExportId)));
       case 'export': return this.#retain(args.workspace, handle, args);
       default: throw failure('TOOL_NOT_FOUND', 'Choose an advertised original Huwise operation.');
     }
