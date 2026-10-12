@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """MIT. Retained Frictionless table packages for the original SF30 publisher.
 
-Python standard library only. Retains original descriptors, data, schema,
-dialect and rights; explicit projections preserve physical scalar text.
+CSV, TSV and JSON use the Python standard library. Parquet uses the existing
+Wherobots typed reader and its declared PyArrow dependency. Original descriptors,
+data, schema, dialect and rights remain retained with every reviewed projection.
 """
 from __future__ import annotations
 import argparse
@@ -300,7 +301,8 @@ def read_capture(filename, expected=None):
         if declared_paths != expected_paths:
             fail("PACKAGE_RESOURCE_PATH_BINDING_CHANGED")
         for item in resource.get("members", []):
-            if item.get("file") not in files or item.get("sha256") != verified[item["file"]]["sha256"]:
+            if (item.get("file") not in files or item.get("sha256") != verified[item["file"]]["sha256"]
+                    or item.get("bytes") != verified[item["file"]]["bytes"]):
                 fail("PACKAGE_RESOURCE_MEMBER_INVALID")
     return {"manifest": manifest, "sha256": sha(raw), "files": files, "filename": filename}
 
@@ -348,10 +350,30 @@ def raw_json(value):
         return "[" + ",".join(raw_json(v) for v in value) + "]"
     return json.dumps(value, ensure_ascii=False, allow_nan=False, separators=(",", ":"))
 
+def resource_format(resource):
+    declared = resource["descriptor"].get("format")
+    if declared is not None:
+        if not isinstance(declared, str) or not declared:
+            fail("PACKAGE_TABLE_FORMAT_INVALID", resource["name"])
+        return declared.lower()
+    # Data Resource format is optional. Recognize an original Parquet path;
+    # retained content-addressed filenames deliberately have no format suffix.
+    paths = [item.get("path") for item in resource["members"]]
+    if paths and all(isinstance(path, str) and
+                     urllib.parse.urlsplit(path).path.lower().endswith(".parquet")
+                     for path in paths):
+        return "parquet"
+    return "csv"
+
+
 def resource_rows(capture, resource):
     fields = fields_for(resource)
     descriptor, dialect = resource["descriptor"], resource["dialect"]
-    fmt = descriptor.get("format", "csv").lower()
+    fmt = resource_format(resource)
+    if fmt == "parquet":
+        from parquet import iter_resource_rows
+        yield from iter_resource_rows(capture, resource, fields, field_mapping, fail)
+        return
     if fmt not in ("csv", "tsv", "json"):
         fail("PACKAGE_TABLE_FORMAT_UNSUPPORTED", fmt)
     for item in resource["members"]:
@@ -571,6 +593,10 @@ def key_groups(resource):
 
 def review_notes(resource):
     notes = []
+    if resource_format(resource) == "parquet":
+        notes.append({"kind": "physicalRepresentation", "format": "parquet",
+                      "reader": "wherobots_operator.editions",
+                      "review": "Original Parquet bytes and typed metadata are retained. Scalar dates/times use exact ISO text; integers and decimals use exact text. Binary and nested values retain the original reader's typed JSON representation."})
     if resource["schema"].get("foreignKeys"):
         notes.append({"kind": "foreignKeys", "declaration": resource["schema"]["foreignKeys"],
                       "review": "Retained references. This table projection does not join another resource."})
@@ -637,8 +663,11 @@ def inspect_resources(capture, selections):
         db, temporary = database(capture["filename"].parent.parent)
         fields = {f["name"]: {"declared": f, "missingValues": missing_for(f, resource["schema"]),
                              "missing": 0, "empty": 0, "maxChars": 0} for f in fields_for(resource)}
-        count, error = 0, None
+        count, error, physical = 0, None, None
         try:
+            if resource_format(resource) == "parquet":
+                from parquet import inspect_physical
+                physical = inspect_physical(capture, resource, fields_for(resource), field_mapping, fail)
             for count, raw, values in stream_review(capture, resource, db):
                 for name, info in fields.items():
                     info["missing"] += values[name] is None
@@ -655,6 +684,7 @@ def inspect_resources(capture, selections):
                           "state": "COMPLETE" if error is None else "SOURCE_REVIEW_REQUIRED",
                           "rows": count if error is None else None, "rowsRead": count, "error": error, "fields": fields,
                           "keys": [{"name": n, "fields": v, "required": r} for n, v, r in key_groups(resource)],
+                          "format": resource_format(resource), "physical": physical,
                           "dialect": resource["dialect"], "review": review_notes(resource),
                           "licenses": resource["descriptor"].get("licenses", capture["manifest"]["package"].get("licenses", []))})
     return {"schema": "stellar-forge.frictionless-inspection.v1", "captureSha256": capture["sha256"],
@@ -710,6 +740,8 @@ def read_source(filename):
         allowed_dialect = {"header", "headerRows", "headerJoin", "commentRows", "commentChar", "delimiter", "lineTerminator", "quoteChar", "doubleQuote", "escapeChar", "nullSequence", "skipInitialSpace"}
         if set(override) - allowed_dialect:
             fail("PACKAGE_DIALECT_OVERRIDE_INVALID")
+        if resource_format(resource) == "parquet" and override:
+            fail("PACKAGE_PARQUET_DIALECT_OVERRIDE", "CSV dialect overrides do not apply to native Parquet values.")
         fields = {f["name"]: f for f in fields_for(resource)}
         projection = obj(query["projection"], "PACKAGE_PROJECTION_REQUIRED")
         if not projection or len(projection) > 64:
@@ -726,7 +758,8 @@ def read_source(filename):
                 fail("PACKAGE_NATIVE_TYPE_REQUIRES_DECLARATION", alias)
         descriptions[name] = {"sql": "RETAIN FRICTIONLESS RESOURCE " + json.dumps(query["resource"]),
                               "columns": list(projection), "parameters": {}, "parameterOrder": [],
-                              "resource": query["resource"], "projection": projection, "fields": list(fields.values()),
+                              "resource": query["resource"], "format": resource_format(resource),
+                              "projection": projection, "fields": list(fields.values()),
                               "dialect": {**resource["dialect"], **override}, "dialectOverride": override,
                               "schema": resource["schema"], "originalSchema": original_resource["schema"],
                               "schemaReview": query.get("schemaReview"),
@@ -816,7 +849,8 @@ def export_rows(filename, query_name, options):
                     "captureSha256": capture["sha256"], "descriptorSha256": sha(read(capture["files"][capture["manifest"]["descriptorFile"]])),
                     "valueEncoding": "frictionless-reviewed-projection", "nullEncoding": "json-null", "order": order,
                     "tieBreak": "original-member-and-record-order", "reviewedDialect": resource["dialect"], "reviewedSchema": resource["schema"],
-                    "schemaReview": query.get("schemaReview"), "review": review_notes(resource)}
+                    "schemaReview": query.get("schemaReview"), "format": resource_format(resource),
+                    "review": review_notes(resource)}
         print(json.dumps({"kind": "complete", "extraction": manifest}), flush=True)
     finally:
         db.close()
