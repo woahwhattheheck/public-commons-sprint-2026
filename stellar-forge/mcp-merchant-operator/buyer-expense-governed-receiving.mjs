@@ -360,10 +360,12 @@ export async function runGovernedBuyerExpenseReceiving({work,python='/usr/bin/py
     assert.equal(returned.length,2);assert.ok(returned.every(row=>row.externalStatus==='BOOKED'));
     const accountantArchive=await exportFile('accountant','original-accountant-edition',finalClose.result.id);
     const bookkeeping=await exportFile('bookkeeping','original-bookkeeping',finalClose.result.id);
+    await call('open',{workspace:'copied'});
+    const copiedProject=await exportFile('project','copied-source-recovery-project',null,'copied');
     const project=await exportFile('project','complete-private-project');
     await phase('original-accountant-return-and-complete-exports',{returnId:savedReturn.result.id,
       accountantRows:2,projectSha256:hash(project.bytes),projectBytes:project.bytes.length,
-      accountantArchiveSha256:hash(accountantArchive.bytes),bookkeepingSha256:hash(bookkeeping.bytes)});
+      accountantArchiveSha256:hash(accountantArchive.bytes),bookkeepingSha256:hash(bookkeeping.bytes),copiedRecoveryProjectSha256:hash(copiedProject.bytes)});
 
     await provider.close();provider=null;
     const destination=join(work,'received');
