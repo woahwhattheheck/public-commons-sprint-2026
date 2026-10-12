@@ -31,8 +31,11 @@ import { MerchantTenderlyWorkspaces, tenderlyWorkspaceTools } from './tenderly-w
 import { MerchantOpenCageWorkspaces, opencageWorkspaceTools } from './opencage-workspace.mjs';
 import { MerchantRedisWorkspaces, redisWorkspaceTools } from './redis-workspace.mjs';
 import { MerchantUSASpendingWorkspaces, usaSpendingWorkspaceTools } from './usaspending-workspace.mjs';
+import { MerchantGrantsWorkspaces, grantsWorkspaceTools } from './grantsgov-workspace.mjs';
 import { datasetLifecycleTools, merchantDatasetOperation, datasetReleaseView } from './dataset-lifecycle.mjs';
 import { MerchantSourceWorkspaces, sourceWorkspaceTools } from './source-workspace.mjs';
+import { MerchantBaserowWorkspaces, baserowWorkspaceTools } from './baserow-workspace.mjs';
+import { MerchantUSGSWorkspaces, usgsWorkspaceTools } from './usgs-workspace.mjs';
 import { MerchantFeedWorkspaces, feedsWorkspaceTools } from './feeds-workspace.mjs';
 import { MerchantGrpcWorkspaces, grpcWorkspaceTools } from './grpc-workspace.mjs';
 import { MerchantOpenApiWorkspaces, openapiWorkspaceTools } from './openapi-workspace.mjs';
@@ -42,6 +45,7 @@ import { MerchantArcgisWorkspaces, arcgisWorkspaceTools } from './arcgis-workspa
 import { createReleaseFacilitatorControl } from '../../stellar/scf-starforge-20261009/sf82-seller-pilot/release-facilitator.mjs';
 import { MerchantPricing, pricingTools } from './pricing.mjs';
 import { MerchantWooCommerce, woocommerceTools } from './woocommerce.mjs';
+import { MerchantCocartWorkspaces, cocartWorkspaceTools } from './cocart-workspace.mjs';
 import { MerchantMppConsole, mppTools } from './mpp-console.mjs';
 import { MerchantBuyerExpenses, buyerExpenseTools } from './buyer-expenses.mjs';
 
@@ -125,7 +129,10 @@ export const MERCHANT_TOOLS = [
   ...coingeckoWorkspaceTools(tool),
   ...redisWorkspaceTools(tool),
   ...usaSpendingWorkspaceTools(tool),
+  ...grantsWorkspaceTools(tool),
   ...sourceWorkspaceTools(tool),
+  ...baserowWorkspaceTools(tool),
+  ...usgsWorkspaceTools(tool),
   ...feedsWorkspaceTools(tool),
   ...grpcWorkspaceTools(tool),
   ...datasetLifecycleTools(tool),
@@ -135,6 +142,7 @@ export const MERCHANT_TOOLS = [
   ...arcgisWorkspaceTools(tool),
   ...pricingTools(tool),
   ...woocommerceTools(tool),
+  ...cocartWorkspaceTools(tool),
   ...mppTools(tool),
   ...buyerExpenseTools(tool),
 ];
@@ -172,15 +180,15 @@ function expectedDigest(value) {
 }
 
 export class MerchantReleaseOperator {
-  #config; #managed = null; #busy = false; #closing = false; #active = Promise.resolve(); #close; #lastFailure = null; #discovery; #fleet; #accounting; #support; #receiving; #pythonWorkspaces; #graphqlWorkspaces; #s3Workspaces; #opensearchWorkspaces; #socrataWorkspaces; #odataWorkspaces; #fiscalDataWorkspaces; #geocodioWorkspaces; #worldbankWorkspaces; #webdavWorkspaces; #edgarWorkspaces; #sheetsWorkspaces; #ckanWorkspaces; #tenderlyWorkspaces; #coingeckoWorkspaces; #redisWorkspaces; #usaSpendingWorkspaces; #sourceWorkspaces; #feedsWorkspaces; #grpcWorkspaces; #openapiWorkspaces; #harWorkspaces; #publishers; #arcgisWorkspaces; #pricing;
-  #clientExports; #facilitators; #woocommerce; #mpp; #buyerExpenses;
+  #config; #managed = null; #busy = false; #closing = false; #active = Promise.resolve(); #close; #lastFailure = null; #discovery; #fleet; #accounting; #support; #receiving; #pythonWorkspaces; #graphqlWorkspaces; #s3Workspaces; #opensearchWorkspaces; #socrataWorkspaces; #odataWorkspaces; #fiscalDataWorkspaces; #geocodioWorkspaces; #worldbankWorkspaces; #webdavWorkspaces; #edgarWorkspaces; #sheetsWorkspaces; #ckanWorkspaces; #tenderlyWorkspaces; #coingeckoWorkspaces; #redisWorkspaces; #usaSpendingWorkspaces; #grantsWorkspaces; #sourceWorkspaces; #baserowWorkspaces; #usgsWorkspaces; #feedsWorkspaces; #grpcWorkspaces; #openapiWorkspaces; #harWorkspaces; #publishers; #arcgisWorkspaces; #pricing;
+  #clientExports; #facilitators; #woocommerce; #cocartWorkspaces; #mpp; #buyerExpenses;
   #opencageWorkspaces;
-  constructor(config, { woocommerce, mpp, opensearch, grpc, openapi, accounting, arcgis, opencage } = {}) { this.#config = config; this.#clientExports = new MerchantClientExports({ directory: config.exportsDirectory }); this.#discovery = new MerchantDiscovery(config); this.#fleet = new MerchantFleet(config.fleet); this.#accounting = new MerchantAccounting(config, accounting); this.#support = new MerchantSupport(config); this.#receiving = new MerchantReceiving(config); this.#pythonWorkspaces = new MerchantPythonWorkspaces(config); this.#graphqlWorkspaces = new MerchantGraphqlWorkspaces(config); this.#s3Workspaces = new MerchantS3Workspaces(config); this.#opensearchWorkspaces = new MerchantOpenSearchWorkspaces(config, opensearch); this.#socrataWorkspaces = new MerchantSocrataWorkspaces(config); this.#odataWorkspaces = new MerchantODataWorkspaces(config); this.#fiscalDataWorkspaces = new MerchantFiscalDataWorkspaces(config); this.#geocodioWorkspaces = new MerchantGeocodioWorkspaces(config); this.#worldbankWorkspaces = new MerchantWorldBankWorkspaces(config); this.#webdavWorkspaces = new MerchantWebDavWorkspaces(config); this.#edgarWorkspaces = new MerchantEdgarWorkspaces(config); this.#sheetsWorkspaces = new MerchantSheetsWorkspaces(config); this.#ckanWorkspaces = new MerchantCkanWorkspaces(config); this.#tenderlyWorkspaces = new MerchantTenderlyWorkspaces(config); this.#opencageWorkspaces = new MerchantOpenCageWorkspaces(config, opencage); this.#coingeckoWorkspaces = new MerchantCoinGeckoWorkspaces(config); this.#redisWorkspaces = new MerchantRedisWorkspaces(config); this.#usaSpendingWorkspaces = new MerchantUSASpendingWorkspaces(config); this.#sourceWorkspaces = new MerchantSourceWorkspaces(config); this.#feedsWorkspaces = new MerchantFeedWorkspaces(config); this.#grpcWorkspaces = new MerchantGrpcWorkspaces(config, grpc); this.#openapiWorkspaces = new MerchantOpenApiWorkspaces(config, openapi); this.#harWorkspaces = new MerchantHarWorkspaces(config); this.#publishers = new MerchantPublisher(config); this.#arcgisWorkspaces = new MerchantArcgisWorkspaces(config, this.#publishers, arcgis); this.#facilitators = createReleaseFacilitatorControl(config.releaseStore, config.facilitators); this.#pricing = new MerchantPricing(config); this.#woocommerce = new MerchantWooCommerce(config, woocommerce); this.#mpp = new MerchantMppConsole(config, mpp); this.#buyerExpenses = new MerchantBuyerExpenses(config); }
+  constructor(config, { woocommerce, mpp, opensearch, grpc, openapi, accounting, arcgis, opencage } = {}) { this.#config = config; this.#clientExports = new MerchantClientExports({ directory: config.exportsDirectory }); this.#discovery = new MerchantDiscovery(config); this.#fleet = new MerchantFleet(config.fleet); this.#accounting = new MerchantAccounting(config, accounting); this.#support = new MerchantSupport(config); this.#receiving = new MerchantReceiving(config); this.#pythonWorkspaces = new MerchantPythonWorkspaces(config); this.#graphqlWorkspaces = new MerchantGraphqlWorkspaces(config); this.#s3Workspaces = new MerchantS3Workspaces(config); this.#opensearchWorkspaces = new MerchantOpenSearchWorkspaces(config, opensearch); this.#socrataWorkspaces = new MerchantSocrataWorkspaces(config); this.#odataWorkspaces = new MerchantODataWorkspaces(config); this.#fiscalDataWorkspaces = new MerchantFiscalDataWorkspaces(config); this.#geocodioWorkspaces = new MerchantGeocodioWorkspaces(config); this.#worldbankWorkspaces = new MerchantWorldBankWorkspaces(config); this.#webdavWorkspaces = new MerchantWebDavWorkspaces(config); this.#edgarWorkspaces = new MerchantEdgarWorkspaces(config); this.#sheetsWorkspaces = new MerchantSheetsWorkspaces(config); this.#ckanWorkspaces = new MerchantCkanWorkspaces(config); this.#tenderlyWorkspaces = new MerchantTenderlyWorkspaces(config); this.#opencageWorkspaces = new MerchantOpenCageWorkspaces(config, opencage); this.#coingeckoWorkspaces = new MerchantCoinGeckoWorkspaces(config); this.#redisWorkspaces = new MerchantRedisWorkspaces(config); this.#usaSpendingWorkspaces = new MerchantUSASpendingWorkspaces(config); this.#grantsWorkspaces = new MerchantGrantsWorkspaces(config); this.#sourceWorkspaces = new MerchantSourceWorkspaces(config); this.#baserowWorkspaces = new MerchantBaserowWorkspaces(config); this.#usgsWorkspaces = new MerchantUSGSWorkspaces(config); this.#feedsWorkspaces = new MerchantFeedWorkspaces(config); this.#grpcWorkspaces = new MerchantGrpcWorkspaces(config, grpc); this.#openapiWorkspaces = new MerchantOpenApiWorkspaces(config, openapi); this.#harWorkspaces = new MerchantHarWorkspaces(config); this.#publishers = new MerchantPublisher(config); this.#arcgisWorkspaces = new MerchantArcgisWorkspaces(config, this.#publishers, arcgis); this.#facilitators = createReleaseFacilitatorControl(config.releaseStore, config.facilitators); this.#pricing = new MerchantPricing(config); this.#woocommerce = new MerchantWooCommerce(config, woocommerce); this.#cocartWorkspaces = new MerchantCocartWorkspaces(config); this.#mpp = new MerchantMppConsole(config, mpp); this.#buyerExpenses = new MerchantBuyerExpenses(config); }
   get tools() { return structuredClone(MERCHANT_TOOLS); }
   get maxRequestBytes() {
     const configuredMaximum = (() => {
       if (this.#config.graphqlWorkspaces) return 8 * 1024 * 1024;
-      return this.#config.mpp ? 3 * 1024 * 1024 : this.#config.opensearchWorkspaces || this.#config.grpcWorkspaces ? 2 * 1024 * 1024 : 128 * 1024;
+      return this.#config.mpp ? 3 * 1024 * 1024 : (this.#config.opensearchWorkspaces || this.#config.grpcWorkspaces || this.#config.usgsWorkspaces) ? 2 * 1024 * 1024 : this.#config.grantsWorkspaces ? 512 * 1024 : 128 * 1024;
     })();
     return Math.max(configuredMaximum, this.#config.feedsWorkspaces ? 16 * 1024 * 1024 + 65536 : 0);
   }
@@ -190,7 +198,7 @@ export class MerchantReleaseOperator {
       state: result.state, releases: result.releases.map(releaseView), errors: result.errors,
       runtime: runtimeView(result.runtime), operator: { managesRunningSeller: Boolean(this.#managed),
         instanceId: this.#managed?.observation.instanceId ?? null, busy: this.#busy,
-        closing: this.#closing, lastFailure: this.#lastFailure, discovery: this.#discovery.summary, fleet: this.#fleet.summary, accounting: this.#accounting.summary, support: this.#support.summary, receiving: this.#receiving.summary, pythonWorkspaces: this.#pythonWorkspaces.summary, graphqlWorkspaces: this.#graphqlWorkspaces.summary, s3Workspaces: this.#s3Workspaces.summary, opensearchWorkspaces: this.#opensearchWorkspaces.summary, socrataWorkspaces: this.#socrataWorkspaces.summary, odataWorkspaces: this.#odataWorkspaces.summary, fiscalDataWorkspaces: this.#fiscalDataWorkspaces.summary, geocodioWorkspaces: this.#geocodioWorkspaces.summary, worldbankWorkspaces: this.#worldbankWorkspaces.summary, webdavWorkspaces: this.#webdavWorkspaces.summary, edgarWorkspaces: this.#edgarWorkspaces.summary, sheetsWorkspaces: this.#sheetsWorkspaces.summary, ckanWorkspaces: this.#ckanWorkspaces.summary, tenderlyWorkspaces: this.#tenderlyWorkspaces.summary, opencageWorkspaces: this.#opencageWorkspaces.summary, coingeckoWorkspaces: this.#coingeckoWorkspaces.summary, redisWorkspaces: this.#redisWorkspaces.summary, usaSpendingWorkspaces: this.#usaSpendingWorkspaces.summary, sourceWorkspaces: this.#sourceWorkspaces.summary, feedsWorkspaces: this.#feedsWorkspaces.summary, grpcWorkspaces: this.#grpcWorkspaces.summary, openapiWorkspaces: this.#openapiWorkspaces.summary, harWorkspaces: this.#harWorkspaces.summary, publishers: this.#publishers.summary, arcgisWorkspaces: this.#arcgisWorkspaces.summary, pricing: this.#pricing.summary, woocommerce: this.#woocommerce.summary, mpp: this.#mpp.summary, buyerExpenses: this.#buyerExpenses.summary, clientExports: this.#clientExports.summary } };
+        closing: this.#closing, lastFailure: this.#lastFailure, discovery: this.#discovery.summary, fleet: this.#fleet.summary, accounting: this.#accounting.summary, support: this.#support.summary, receiving: this.#receiving.summary, pythonWorkspaces: this.#pythonWorkspaces.summary, graphqlWorkspaces: this.#graphqlWorkspaces.summary, s3Workspaces: this.#s3Workspaces.summary, opensearchWorkspaces: this.#opensearchWorkspaces.summary, socrataWorkspaces: this.#socrataWorkspaces.summary, odataWorkspaces: this.#odataWorkspaces.summary, fiscalDataWorkspaces: this.#fiscalDataWorkspaces.summary, geocodioWorkspaces: this.#geocodioWorkspaces.summary, worldbankWorkspaces: this.#worldbankWorkspaces.summary, webdavWorkspaces: this.#webdavWorkspaces.summary, edgarWorkspaces: this.#edgarWorkspaces.summary, sheetsWorkspaces: this.#sheetsWorkspaces.summary, ckanWorkspaces: this.#ckanWorkspaces.summary, tenderlyWorkspaces: this.#tenderlyWorkspaces.summary, opencageWorkspaces: this.#opencageWorkspaces.summary, coingeckoWorkspaces: this.#coingeckoWorkspaces.summary, redisWorkspaces: this.#redisWorkspaces.summary, usaSpendingWorkspaces: this.#usaSpendingWorkspaces.summary, grantsWorkspaces: this.#grantsWorkspaces.summary, sourceWorkspaces: this.#sourceWorkspaces.summary, baserowWorkspaces: this.#baserowWorkspaces.summary, usgsWorkspaces: this.#usgsWorkspaces.summary, feedsWorkspaces: this.#feedsWorkspaces.summary, grpcWorkspaces: this.#grpcWorkspaces.summary, openapiWorkspaces: this.#openapiWorkspaces.summary, harWorkspaces: this.#harWorkspaces.summary, publishers: this.#publishers.summary, arcgisWorkspaces: this.#arcgisWorkspaces.summary, pricing: this.#pricing.summary, woocommerce: this.#woocommerce.summary, cocartWorkspaces: this.#cocartWorkspaces.summary, mpp: this.#mpp.summary, buyerExpenses: this.#buyerExpenses.summary, clientExports: this.#clientExports.summary } };
   }
   #owned(instanceId) {
     if (typeof instanceId !== 'string' || !this.#managed || instanceId !== this.#managed.observation.instanceId)
@@ -238,6 +246,7 @@ export class MerchantReleaseOperator {
     if (name.startsWith('merchant_buyer_expense_')) return this.#buyerExpenses.call(name, args);
     if (name.startsWith('merchant_accounting_')) return this.#accounting.call(name, args);
     if (name.startsWith('merchant_woo_')) return this.#woocommerce.call(name, args);
+    if (name.startsWith('merchant_cocart_')) return this.#cocartWorkspaces.call(name, args);
     if (name.startsWith('merchant_mpp_')) return this.#mpp.call(name, args);
     if (name.startsWith('merchant_pricing_')) return this.#pricing.call(name, args);
     if (name.startsWith('merchant_receiving_')) return this.#receiving.call(name, args);
@@ -259,7 +268,10 @@ export class MerchantReleaseOperator {
     if (name.startsWith('merchant_opencage_')) return this.#opencageWorkspaces.call(name, args);
     if (name.startsWith('merchant_redis_')) return this.#redisWorkspaces.call(name, args);
     if (name.startsWith('merchant_usaspending_')) return this.#usaSpendingWorkspaces.call(name, args);
+    if (name.startsWith('merchant_grants_')) return this.#grantsWorkspaces.call(name, args);
     if (name.startsWith('merchant_source_')) return this.#sourceWorkspaces.call(name, args);
+    if (name.startsWith('merchant_baserow_')) return this.#baserowWorkspaces.call(name, args);
+    if (name.startsWith('merchant_usgs_')) return this.#usgsWorkspaces.call(name, args);
     if (name.startsWith('merchant_feeds_')) return this.#feedsWorkspaces.call(name, args);
     if (name.startsWith('merchant_grpc_')) return this.#grpcWorkspaces.call(name, args);
     if (name.startsWith('merchant_openapi_')) return this.#openapiWorkspaces.call(name, args);
@@ -346,7 +358,9 @@ export class MerchantReleaseOperator {
     if (!definition) throw failure('TOOL_NOT_FOUND', 'Unknown merchant operation.');
     exact(args, Object.keys(definition.inputSchema.properties), definition.inputSchema.required);
     const interruptOData = name === 'merchant_odata_close' || (name === 'merchant_odata_capture' && args.action === 'pause');
-    if (!mutations.has(name) || interruptOData) return this.#execute(name, args);
+    // Cancellation must reach the original Water job even during an admitted receive.
+    const interruptUsgs = name === 'merchant_usgs_close' || name === 'merchant_usgs_capture_cancel';
+    if (!mutations.has(name) || interruptOData || interruptUsgs) return this.#execute(name, args);
     if (this.#busy) throw failure('OPERATOR_BUSY', 'Another merchant change is running. Read merchant_status before continuing.');
     this.#busy = true; this.#lastFailure = null;
     let done; this.#active = new Promise(resolve => { done = resolve; });
@@ -365,11 +379,13 @@ export class MerchantReleaseOperator {
     this.#closing = true;
     this.#graphqlWorkspaces.beginClose();
     this.#fleet.cancelStaging();
+    const usgsClosing = this.#usgsWorkspaces.close();
+    usgsClosing.catch(() => {});
     this.#fleet.cancelClientTransfers();
     this.#close = (async () => {
       await this.#odataWorkspaces.cancelCaptures();
       await this.#active;
-      const outcomes = await Promise.allSettled([this.#fleet.close(), this.#accounting.close(), this.#support.close(), this.#receiving.close(), this.#pythonWorkspaces.close(), this.#graphqlWorkspaces.close(), this.#s3Workspaces.close(), this.#opensearchWorkspaces.close(), this.#socrataWorkspaces.close(), this.#odataWorkspaces.close(), this.#fiscalDataWorkspaces.close(), this.#geocodioWorkspaces.close(), this.#worldbankWorkspaces.close(), this.#webdavWorkspaces.close(), this.#edgarWorkspaces.close(), this.#sheetsWorkspaces.close(), this.#ckanWorkspaces.close(), this.#tenderlyWorkspaces.close(), this.#opencageWorkspaces.close(), this.#coingeckoWorkspaces.close(), this.#redisWorkspaces.close(), this.#usaSpendingWorkspaces.close(), this.#sourceWorkspaces.close(), this.#feedsWorkspaces.close(), this.#grpcWorkspaces.close(), this.#openapiWorkspaces.close(), this.#harWorkspaces.close(), this.#arcgisWorkspaces.close(), this.#publishers.close(), this.#facilitators.close(), this.#pricing.close(), this.#woocommerce.close(), this.#mpp.close(), this.#buyerExpenses.close(), this.#clientExports.close(),
+      const outcomes = await Promise.allSettled([usgsClosing, this.#fleet.close(), this.#accounting.close(), this.#support.close(), this.#receiving.close(), this.#pythonWorkspaces.close(), this.#graphqlWorkspaces.close(), this.#s3Workspaces.close(), this.#opensearchWorkspaces.close(), this.#socrataWorkspaces.close(), this.#odataWorkspaces.close(), this.#fiscalDataWorkspaces.close(), this.#geocodioWorkspaces.close(), this.#worldbankWorkspaces.close(), this.#webdavWorkspaces.close(), this.#edgarWorkspaces.close(), this.#sheetsWorkspaces.close(), this.#ckanWorkspaces.close(), this.#tenderlyWorkspaces.close(), this.#opencageWorkspaces.close(), this.#coingeckoWorkspaces.close(), this.#redisWorkspaces.close(), this.#usaSpendingWorkspaces.close(), this.#grantsWorkspaces.close(), this.#sourceWorkspaces.close(), this.#baserowWorkspaces.close(), this.#feedsWorkspaces.close(), this.#grpcWorkspaces.close(), this.#openapiWorkspaces.close(), this.#harWorkspaces.close(), this.#arcgisWorkspaces.close(), this.#publishers.close(), this.#facilitators.close(), this.#pricing.close(), this.#woocommerce.close(), this.#cocartWorkspaces.close(), this.#mpp.close(), this.#buyerExpenses.close(), this.#clientExports.close(),
         this.#managed ? this.#stop(this.#managed.observation.instanceId) : Promise.resolve()]);
       if (outcomes.some(result => result.status === 'rejected'))
         throw failure('OPERATOR_SHUTDOWN_INCOMPLETE', 'One or more original owned runtimes reported an incomplete shutdown.');

@@ -1,0 +1,43 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "odata",
+  "description": "OData products",
+  "commands": {
+    "odata": "stellar/scf-starforge-20261009/sf30-seller-sdk/odata/cli.mjs",
+    "odata-live": "stellar/scf-starforge-20261009/sf30-seller-sdk/odata/live/cli.mjs"
+  },
+  "commandDescriptions": {
+    "odata": "Operate OData source editions, merchants and customer receiving",
+    "odata-live": "Prepare, run and receive the original live OData paid-page merchant"
+  },
+  "exports": {
+    "./seller/odata": {
+      "types": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/odata/index.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/odata/index.mjs"
+    },
+    "./seller/odata/source": {
+      "types": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/odata/source.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/odata/source.mjs"
+    },
+    "./seller/odata/workspace": {
+      "types": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/odata/workspace.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/odata/workspace.mjs"
+    },
+    "./seller/odata/server": {
+      "types": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/odata/server.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/odata/server.mjs"
+    },
+    "./seller/odata/publisher": {
+      "types": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/odata/publisher.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/odata/publisher.mjs"
+    },
+    "./seller/odata/live": {
+      "types": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/odata/live-sdk.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/odata/live-sdk.mjs"
+    },
+    "./seller/odata/live-operations": {
+      "types": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/odata/live-operations.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/odata/live-operations.mjs"
+    }
+  }
+}
