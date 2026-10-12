@@ -32,6 +32,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   weather-operations                        Operate weather sources, decisions, frozen reports and original recovery
   usgs-water                                Acquire USGS observations, review hydrology and operate paid editions
   water-quality                             Review WQX samples, detection limits and complete paid data editions
+  fred                                      Acquire, review and operate retained economic data editions
   webhook-feed                              Receive signed webhooks and sell reviewed event feeds
   buyer-event-feed                          Collect, recover and export original paid event pages
   mercury-feed                              Operate original Mercury events, paid feeds and joined recovery
@@ -73,6 +74,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   merchant-mcp                               Operate native merchant releases from an MCP client
   mcp-native                                Prepare and operate the original native buyer MCP workspace
   mcp-analysis-archive                      Download and reopen original portable Analysis archives
+  mcp-oauth                                 Configure, discover and receive the original OAuth MCP resource
   mcp-buyer                                 Run the existing private HTTP buyer and operator console
   mcp-results                               Read, export and recover original saved MCP results
   mcp-data                                  Serve prepared SQLite/PostgreSQL/DuckDB/ClickHouse queries over MCP
