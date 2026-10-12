@@ -28,6 +28,7 @@ import { pricingApplication, validatePricingSelection, preparePricingApplication
 import { collectionsApplication, prepareCollectionsApplication } from './application-collections.mjs';
 import { baserowApplication, prepareBaserowApplication } from './application-baserow.mjs';
 import { grantApplication, prepareGrantApplication } from './application-grant.mjs';
+import { buyerRunbookApplication, prepareBuyerRunbookApplication } from './application-buyer-runbook.mjs';
 import { grantsgovApplication, prepareGrantsgovApplication } from './application-grantsgov.mjs';
 import { fredApplication, prepareFredApplication } from './application-fred.mjs';
 import { apiPassWorkspaceApplication, prepareApiPassWorkspaceApplication } from '../../sf101-merchant-receiver/api-access/workspace/application.mjs';
@@ -88,6 +89,7 @@ export const APPLICATION_CATALOG = Object.freeze([
   collectionsApplication(common),
   baserowApplication(common),
   grantApplication(common),
+  buyerRunbookApplication(common),
   grantsgovApplication(common),
   fredApplication(common),
   tenderlyApplication(common),
@@ -247,7 +249,7 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
     ...context, runtimeDirectory, inputPath, selectedExecutable, applicationEnvironment,
   });
   const inputs = [], createDirectories = [], args = [];
-  let terminalPython, eventFeed, apiPassWorkspace, mppBinding, selectedResourceKey, jobResultReceiver, stellarApplication, openapi;
+  let terminalPython, eventFeed, apiPassWorkspace, mppBinding, selectedResourceKey, jobResultReceiver, stellarApplication, openapi, buyerRunbook;
   const path = async (name, kind = 'directory', missing = false, privateOnly = false) => {
     if (!settings[name]) return;
     const value = await inputPath(settings[name], kind, missing, privateOnly); inputs.push(value); return value;
@@ -328,6 +330,10 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
     const prepared = await prepareGrantsgovApplication(settings, { inputPath, runtimeDirectory });
     args.push(...prepared.args); inputs.push(...prepared.inputs);
     createDirectories.push(...prepared.createDirectories);
+  } else if (type.id === 'buyer-runbook') {
+    const prepared = await prepareBuyerRunbookApplication(settings, { inputPath, runtimeDirectory });
+    args.push(...prepared.args); inputs.push(...prepared.inputs);
+    createDirectories.push(...prepared.createDirectories); buyerRunbook = prepared.identity;
   } else if (type.id === 'grant-workspace') {
     const prepared = await prepareGrantApplication(settings, { inputPath, selectedExecutable, runtimeDirectory });
     args.push(...prepared.args); inputs.push(...prepared.inputs);
@@ -503,6 +509,7 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
     ...(openapi ? { openapi } : {}),
     ...(stellarApplication ? { stellarApplication } : {}),
     ...(jobResultReceiver ? { jobResultReceiver } : {}),
+    ...(buyerRunbook ? { buyerRunbook } : {}),
     ...(selectedResourceKey ? { resourceKey: selectedResourceKey } : {}),
     ...(type.terminal ? { terminalPython } : {}),
     ...(settings.environmentFile ? { environmentFile: settings.environmentFile, environmentSha256: environment.sha256 } : {}) };
@@ -753,6 +760,7 @@ export async function prepareApplicationStart(root, { applicationId, requestId, 
       terminal: current.terminal, ...(current.terminalPython ? { terminalPython: current.terminalPython } : {}),
       ...(current.pythonCommand ? { pythonCommand: current.pythonCommand } : {}),
       ...(current.jobResultReceiver ? { jobResultReceiver: current.jobResultReceiver } : {}),
+      ...(current.buyerRunbook ? { buyerRunbook: current.buyerRunbook } : {}),
       ...(current.stellarApplication ? { stellarApplication: current.stellarApplication } : {}),
       ...(current.environmentFile ? { environmentFile: current.environmentFile, environmentSha256: current.environmentSha256 } : {}) };
     const value = { schema: 'stellar-forge.application-run.v1', id: requestId, applicationId: id,
