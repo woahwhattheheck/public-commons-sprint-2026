@@ -93,8 +93,42 @@ python run_phase.py export --run-dir /absolute/output/hessian-development --arch
 
 The archive retains every original console, attempt, completion, native report, runtime context, source-pinned intent and comparison with file hashes. Compilation caches are excluded. Retain this output alongside the exact source revision used for execution.
 
+## Coordinate-map comparison
+
+The optional `coordinate-map-development` phase consumes the corrected ROOT110-R source supplied in the original team frontier. Both arms retain submission SHA-256 `0c0ffd4da1a9a55406c29dd3d0de0cac05a481dd853ff2a256b420325f46c9d0` and companion SHA-256 `19e0117794f92debec27a7ea1c93f6ceb01b6cfb5cb08872bed68895d774d031`:
+
+| Arm | Exact optimize options | Required original diagnostic |
+| --- | --- | --- |
+| `110-identity` | `coordinate_map="identity"` | `coordinate_map.status == "identity"` |
+| `110-property-v1` | `coordinate_map="l2d_property_v1", coordinate_map_problem_size=3` | `coordinate_map.status == "mapped"` |
+
+The six-cell phase interleaves the two arms on public topologies 7, 8 and 9, algorithm seed 42 and 180 seconds of original Objective time. It uses the original size-3, 50-frequency problem and Hessian batch size 1. The same invocation adapter, native runner, runtime capture and per-cell cache policy apply to both arms.
+
+```bash
+python run_phase.py plan --phase coordinate-map-development
+python run_phase.py run --phase coordinate-map-development --mode gpu --python /absolute/equipped/bin/python --run-dir /absolute/output/coordinate-map-development
+```
+
+Place that entire serial command within an existing available compute allocation. Source integration creates no numerical job. The existing `l2d-exact-hessian6966-t7-s42-180-cpu-20261011` operation retains its original source, request and resources; this release does not mutate or replay it.
+
+`runner/invocation.py` verifies the selected submission, requirements and named companion hashes. After the CPU configuration is applied, it executes the verified companion bytes and calls the unchanged native runner. The runner still constructs its original Objective and owns warmup, logging, budget checks, histories and metrics. A derived algorithm class supplies only the explicitly selected optimize options; the native topology, seed, population and Objective cannot be overridden through the arm options.
+
+The candidate's original `last_run_diagnostics.coordinate_map.status` determines whether the requested map actually ran. If the mapped request returns an identity fallback, the native report retains the original histories and an `InvocationMismatch` error. It does not enter a mapped numerical win. Algorithm exceptions, missing diagnostics, changed helper bytes and interrupted runs retain their actual outcome.
+
+Each runtime sidecar now retains the canonical source/companion/options identity, exact manifest and adapter hashes, loaded companion paths, forwarded options and observed diagnostic checks. Comparison indexes that identity instead of collapsing two arms with the same submission hash. Hardware, runtime settings, native physics and budgets remain comparison conditions; the selected map is the treatment being compared. Older reports without this invocation record cannot establish which of the two shared-source arms ran.
+
+A single source-bound cell is also available:
+
+```bash
+python runner/run_recorded.py --source-manifest SOURCES.json --source-id 110-property-v1 -- --candidate coordinate-map-110/submission.py --topology-seed 7 --algorithm-seed 42 --seconds 180 --out mapped-t7-s42-180.json
+```
+
+For the CPU launcher, set `L2D_SOURCE_MANIFEST` to the absolute manifest path and `L2D_SOURCE_ID` to the chosen arm, alongside the original granted affinity, Python and private-cache variables. The phase operator supplies these values automatically.
+
+The original corrected source and its prior focused real-JAX result were supplied as Slack file `F0C8J5U6FC4`, archive SHA-256 `3a8a6fdd31cf7898cf064d6034b1430e2132ed46af46e381efdba0e686dfb691`, in frontier message `1791751928.248939`. The retained author note is `coordinate-map-110/SOURCE.md`. Its prior focused result is separate from a physical UIFO comparison. This release contains no new numerical result or competition submission.
+
 ## Validation status
 
-The three source-pinned plans produce twelve development cells, twenty broader cells and twenty full-budget cells. The four supplied archives contain exactly `submission.py` and `requirements.txt` and passed the retained organizer's static validator. Source review checked original native return/logging semantics, interrupted-process handling, source identity, effective-runtime condition separation and per-cell cache isolation. No new test suite or hosted workflow is introduced.
+The retained plans produce twelve original development cells, six optional coordinate-map cells, twenty broader cells and twenty full-budget cells. The four supplied archives contain exactly `submission.py` and `requirements.txt` and passed the retained organizer's static validator. Source review checked original native return/logging semantics, interrupted-process handling, source identity, effective-runtime condition separation and per-cell cache isolation. No new test suite or hosted workflow is introduced.
 
 This source release contains no completed numerical comparison. Physical performance, feasibility across the public cohort and any final method selection must come from the retained native results.

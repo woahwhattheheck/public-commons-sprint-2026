@@ -53,6 +53,71 @@
       "requirements_sha256": "c843ba901b252dad6fe3ce2d7d2888e31e35e90157ee2cbeba68b852d071abc8",
       "archive": "submission-zips/107-measured6966.zip",
       "archive_sha256": "c87263b9c4f0ecd8d2829dd47830e133937a5d1807bd78c0581bafea8dd4b352"
+    },
+    {
+      "class": "ExactHessianTR104",
+      "submission": "coordinate-map-110/submission.py",
+      "submission_bytes": 42436,
+      "submission_sha256": "0c0ffd4da1a9a55406c29dd3d0de0cac05a481dd853ff2a256b420325f46c9d0",
+      "requirements": "coordinate-map-110/requirements.txt",
+      "requirements_sha256": "c3cc7885d8cda069a6801ef2c10a02199acaf1996f4521fbbe54e1ee0734cb68",
+      "source_owner": "ROOT110-R corrected source; original frontier1791751928.248939, retained ZIP F0C8J5U6FC4",
+      "based_on_submission_sha256": "474e9191fbaa2a058257d0f616608bd207a757ec58481a1a838c2315f155ba17",
+      "id": "110-identity",
+      "invocation": {
+        "companions": [
+          {
+            "module": "l2d_coordmap",
+            "path": "coordinate-map-110/l2d_coordmap.py",
+            "sha256": "19e0117794f92debec27a7ea1c93f6ceb01b6cfb5cb08872bed68895d774d031"
+          }
+        ],
+        "optimize_kwargs": {
+          "coordinate_map": "identity"
+        },
+        "diagnostic_expectations": [
+          {
+            "path": [
+              "coordinate_map",
+              "status"
+            ],
+            "equals": "identity"
+          }
+        ]
+      }
+    },
+    {
+      "class": "ExactHessianTR104",
+      "submission": "coordinate-map-110/submission.py",
+      "submission_bytes": 42436,
+      "submission_sha256": "0c0ffd4da1a9a55406c29dd3d0de0cac05a481dd853ff2a256b420325f46c9d0",
+      "requirements": "coordinate-map-110/requirements.txt",
+      "requirements_sha256": "c3cc7885d8cda069a6801ef2c10a02199acaf1996f4521fbbe54e1ee0734cb68",
+      "source_owner": "ROOT110-R corrected source; original frontier1791751928.248939, retained ZIP F0C8J5U6FC4",
+      "based_on_submission_sha256": "474e9191fbaa2a058257d0f616608bd207a757ec58481a1a838c2315f155ba17",
+      "id": "110-property-v1",
+      "invocation": {
+        "companions": [
+          {
+            "module": "l2d_coordmap",
+            "path": "coordinate-map-110/l2d_coordmap.py",
+            "sha256": "19e0117794f92debec27a7ea1c93f6ceb01b6cfb5cb08872bed68895d774d031"
+          }
+        ],
+        "optimize_kwargs": {
+          "coordinate_map": "l2d_property_v1",
+          "coordinate_map_problem_size": 3
+        },
+        "diagnostic_expectations": [
+          {
+            "path": [
+              "coordinate_map",
+              "status"
+            ],
+            "equals": "mapped"
+          }
+        ]
+      }
     }
   ],
   "native_runner": {
@@ -106,14 +171,16 @@
   ],
   "runtime_capture": {
     "path": "runner/run_recorded.py",
-    "sha256": "d8be45aa9f371bccc8a36b971072eda0ebe2391796aa8b92d3af7081bc614d66",
+    "sha256": "b2a294bf78f9593799ed25c0c5f5c3ef5d76fe00f1e18fc792066fa66e9d6b00",
     "cpu_launcher": "runner/run_recorded_cpu.sh",
-    "cpu_launcher_sha256": "91a8c98bc46066b737fc2dc121642960f68d6ead7c17fa64c71ded4cd77806f5",
-    "semantics": "Same-process effective affinity, JAX dispatch/config, selected thread/XLA/allocator environment and original native module hashes; native report bytes remain unchanged."
+    "cpu_launcher_sha256": "97c55ae3559befea87db90a3ae902e903042579ab81ca50320a452813ad76356",
+    "semantics": "Same-process effective runtime plus exact source/companion/options invocation; original native Objective, runner and report remain authoritative. Coordinate-map diagnostics must identify the requested actual map.",
+    "invocation_adapter": "runner/invocation.py",
+    "invocation_adapter_sha256": "42d5a782d377d8a2400eae283f2f379a04103061d5017363f7d50534176bfda6"
   },
   "phase_operator": {
     "path": "run_phase.py",
-    "sha256": "e7c524e4e169c2fe445e99bb83e145dc7479c944f9f624330926331ef2fdf1e8",
+    "sha256": "ede516fd8d9e13cdc715cc092236e5a49199a11d2add8345f8073d357fbdb6ed",
     "semantics": "One source-pinned serial phase inside an existing allocation; original native runner/context; isolated empty per-cell bounded caches; retain every native outcome and interrupted attempt; raw results export."
   },
   "source_carrier": {
@@ -121,5 +188,13 @@
     "base_commit": "d67fa156c6553a9b0c7e367810b5a9564709f13d",
     "existing_experiment": "competitions/learn2design-2026/experiments/sol-budgeted-restarts-20261011",
     "cpu_correction": "https://github.com/woahwhattheheck/public-commons-sprint-2026/pull/1048"
+  },
+  "source_uptake": {
+    "version": "r4-coordinate-map",
+    "original_release_commit": "0f0a62337e6af6af477672c58b98ce8c50097e55",
+    "source_artifact": "F0C8J5U6FC4",
+    "source_archive_sha256": "3a8a6fdd31cf7898cf064d6034b1430e2132ed46af46e381efdba0e686dfb691",
+    "changed_algorithm_bytes": false,
+    "existing_native_operation_unchanged": "l2d-exact-hessian6966-t7-s42-180-cpu-20261011"
   }
 }
