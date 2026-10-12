@@ -1,4 +1,5 @@
 // MIT. Complete declared customer profile editor on the original request journal.
+import { label, dateText, properties, technicalDetails, historyCard } from '/presentation.mjs';
 export function createSupplierOrderProfileDesk({api,mutate,guard,message,getWorkspace,refreshWorkspace}){
   const $=id=>document.getElementById(id),clone=value=>JSON.parse(JSON.stringify(value)),json=value=>JSON.stringify(value,null,2);
   let selection=null,working=null,dirty=false,historyOffset=0,historyPage=null,sequence=0,historySequence=0,editorGeneration=0,conflictingRequest=null;
@@ -18,7 +19,7 @@ export function createSupplierOrderProfileDesk({api,mutate,guard,message,getWork
   function requireShape(p){
     if(!p||typeof p!=='object'||Array.isArray(p))throw new Error('Select a complete profile JSON object.');
     for(const name of ['declaration','supplierIdentity','confirmation','serials','validation'])if(!p[name]||typeof p[name]!=='object'||Array.isArray(p[name]))throw new Error('The complete declaration needs its '+name+' object.');
-    for(const [id,path]of Object.entries(textFields)){const value=nested(p,path);if(typeof value!=='string'&&!(value===null&&['profile-url','profile-source-sha'].includes(id)))throw new Error('Keep an explicit string or supported null for '+id+'.');}
+    for(const [id,path]of Object.entries(textFields)){const value=nested(p,path);if(typeof value!=='string'&&!(value===null&&['profile-url','profile-source-sha'].includes(id)))throw new Error('Keep the complete '+($(id).closest('label')?.firstChild?.textContent?.trim()??label(path.at(-1)))+' value.');}
     for(const path of Object.values(flags))if(typeof nested(p,path)!=='boolean')throw new Error('Keep explicit Boolean profile settings.');
     for(const [name,value]of Object.entries({identity:p.supplierIdentity.partyIdTypes,currencies:p.validation.currencies,units:p.validation.units,parties:p.validation.invoiceParties}))if(!Array.isArray(value)||value.some(item=>typeof item!=='string'||!item.trim()))throw new Error('Keep the complete '+name+' array of exact strings.');
     if(!Array.isArray(p.validation.requiredFields)||!Number.isSafeInteger(p.revision)||!Number.isSafeInteger(p.orderIdMaximum))throw new Error('Keep complete required-field rules and integer profile revision/limit values.');
@@ -41,7 +42,7 @@ export function createSupplierOrderProfileDesk({api,mutate,guard,message,getWork
     for(const [id,path]of Object.entries(textFields))assign(value,path,['profile-url','profile-source-sha'].includes(id)?($(id).value||null):$(id).value);
     for(const [id,path]of Object.entries(flags))assign(value,path,$(id).checked);
     for(const [id,key]of [['profile-revision','revision'],['profile-order-limit','orderIdMaximum']]){
-      if(!/^[1-9][0-9]*$/.test($(id).value)||!Number.isSafeInteger(Number($(id).value)))throw new Error('Use a positive exact integer for '+key+'.');value[key]=Number($(id).value);
+      if(!/^[1-9][0-9]*$/.test($(id).value)||!Number.isSafeInteger(Number($(id).value)))throw new Error('Use a positive whole number for '+(key==='revision'?'the declared revision':'the order ID character limit')+'.');value[key]=Number($(id).value);
     }
     value.supplierIdentity.partyIdTypes=lines($('profile-identity-types').value);
     value.confirmation.negativeQuantity=$('profile-negative').value;value.confirmation.omittedLines=$('profile-omitted').value;value.serials.remarks=$('profile-serials').value;
@@ -54,16 +55,25 @@ export function createSupplierOrderProfileDesk({api,mutate,guard,message,getWork
   function render(){
     if(!selection)return;
     const summary=$('profile-current');summary.replaceChildren();
-    summary.append(text('h3',selection.profile.title),text('p',selection.profile.id+' · declaration revision '+selection.profile.revision+' · selection '+selection.revision),
-      text('p',selection.profile.declaration.reference),text('code',selection.profileSha256),
-      text('p',selection.canSelect?'An empty workspace may select the reviewed declaration before its first business intake.':'This selection is retained with original business intake. A different interface uses a separate empty workspace.'));
+    summary.append(text('h3',selection.profile.title),text('p','Declaration revision '+selection.profile.revision+(selection.selectedAt?' · selected '+dateText(selection.selectedAt):'')),
+      text('p',selection.profile.declaration.reference));
+    const rules=document.createElement('div');properties(rules,[
+      ['Negative confirmation quantities',selection.profile.confirmation.negativeQuantity==='cancel'?'Cancel that many ordered units':'Require review before changing quantities'],
+      ['Omitted confirmation lines',selection.profile.confirmation.omittedLines==='retain'?'Keep the current line state':'Require every original order line'],
+      ['Currencies',selection.profile.validation.currencies.length?selection.profile.validation.currencies:'Original document currencies'],
+      ['Units',selection.profile.validation.units.length?selection.profile.validation.units:'Original document units']
+    ]);summary.append(rules,technicalDetails('Profile identity and complete selection',selection),
+      text('p',selection.canSelect?'Select the agreed declaration before receiving the first business document.':'This workspace uses the declaration selected with its business documents. Start an empty workspace to use a different interface.'));
+    const configuration=$('profile-configuration');
+    if(configuration.dataset.editable!==String(selection.canSelect)){configuration.open=selection.canSelect||dirty;configuration.dataset.editable=String(selection.canSelect);}
+    if(dirty)configuration.open=true;
     $('profile-fields').disabled=!selection.canSelect;
     $('transport-order-id').maxLength=selection.profile.orderIdMaximum;
     for(const id of ['profile-from-standard','profile-from-unite','profile-load-file'])$(id).disabled=!selection.canSelect;
     $('profile-save').disabled=!selection.canSelect||!working;
     $('profile-editor-state').textContent=dirty?'Unsaved declaration edits are retained in this open editor.':'The displayed fields reflect the retained declaration.';
-    $('profile-inline').textContent='Profile: '+selection.profile.title+' · '+selection.profile.id+' / '+selection.profile.revision;
-    $('source-profile').textContent='Selected profile: '+selection.profile.title+' · '+selection.profileSha256;
+    $('profile-inline').textContent='Profile: '+selection.profile.title+' · revision '+selection.profile.revision;
+    $('source-profile').textContent='Selected profile: '+selection.profile.title+' · revision '+selection.profile.revision;
   }
   function setWorkspace(workspace){
     if(!workspace?.profile)return;selection=clone(workspace.profile);if(!dirty)fill(selection.profile);render();
@@ -79,9 +89,11 @@ export function createSupplierOrderProfileDesk({api,mutate,guard,message,getWork
   async function history(){
     const expected=++historySequence,page=await api('/profile/history?offset='+historyOffset+'&limit=20');if(expected!==historySequence)return;
     historyPage=page;const list=$('profile-history');list.replaceChildren();
-    if(!page.items.length)list.append(text('p','The original Unite profile is implicit until an explicit declaration or customer adoption is saved.'));
-    for(const operation of page.items){const detail=document.createElement('details'),item=operation.result?.profileSelection??operation.result?.profile?.sourceSelection;
-      detail.append(text('summary',(item?.profile?.title??'Customer package profile adoption')+' · '+operation.id+' · '+operation.state),text('pre',json(operation)));list.append(detail);}
+    if(!page.items.length)list.append(text('p','The default Unite profile is active. Selecting a customer declaration or receiving a customer profile adds its history here.'));
+    for(const operation of page.items){const item=operation.result?.profileSelection??operation.result?.profile?.sourceSelection;
+      list.append(historyCard({title:(item?.profile?.title??'Customer profile received')+' · '+label(operation.state),
+        at:item?.selectedAt??operation.updatedAt??operation.createdAt,reason:item?.reason??operation.request?.reason,
+        rows:[['Declaration revision',item?.profile?.revision],['Interface reference',item?.profile?.declaration?.reference]],record:operation}));}
     $('profile-history-page').textContent=page.total?(page.offset+1)+'–'+(page.offset+page.items.length)+' of '+page.total:'0 explicit selections';
     $('profile-history-previous').disabled=page.offset===0;$('profile-history-next').disabled=page.offset+page.items.length>=page.total;
   }
