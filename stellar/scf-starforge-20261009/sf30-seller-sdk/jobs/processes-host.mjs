@@ -30,10 +30,10 @@ async function supervise(directory, env) {
   } catch { throw jobError('JOB_NATIVE_START_FAILED', 503); }
   child.stdin.end(); child.stdout.resume(); child.stderr.resume();
   child.once('error', () => { failure ??= jobError('JOB_NATIVE_START_FAILED', 503); });
-  child.once('close', () => {
+  child.once('close', (code, signal) => {
     stopped = true;
     const error = failure ?? jobError('JOB_NATIVE_PROCESS_INTERRUPTED', 503);
-    readyReject(error); pending?.reject(error); pending = null; closeResolve();
+    readyReject(error); pending?.reject(error); pending = null; closeResolve({ code, signal });
   });
   child.on('message', message => {
     if (message?.type === 'ready') { readyResolve(); return; }
@@ -67,7 +67,11 @@ async function supervise(directory, env) {
   await ready;
   return {
     retired,
-    close() { if (child.connected) child.disconnect(); return retired; },
+    async close() {
+      if (child.connected) child.disconnect();
+      const result = await retired;
+      requireValue(result.code === 0 && result.signal === null, 'JOB_NATIVE_RETIRE_FAILED');
+    },
     run(id, args, limits) {
       requireValue(!stopped && child.connected, 'JOB_NATIVE_CLOSED');
       requireValue(!pending, 'JOB_NATIVE_PROCESS_ALREADY_RUNNING');
