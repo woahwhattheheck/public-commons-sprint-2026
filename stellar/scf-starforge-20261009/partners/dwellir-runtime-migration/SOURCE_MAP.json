@@ -1,0 +1,87 @@
+{
+  "schema": "dwellir.migration-source-map.v1",
+  "originalCli": {
+    "repository": "dwellir-public/cli",
+    "version": "0.2.1",
+    "commit": "f49ef22ffa38f611c46e700c7b618ef98d648d04",
+    "files": [
+      {
+        "path": "internal/cli/project.go",
+        "blob": "c34f7c02c14a8684db1ae89bc59c9be3075981b4",
+        "use": "Existing named-key project setup; native DWELLIR_RPC_URL"
+      },
+      {
+        "path": "internal/config/project.go",
+        "blob": "fe404f0499164d10d68ce7326dae188abe237457",
+        "use": "Native private .env/.env.local generation and ignore rule"
+      },
+      {
+        "path": "internal/cli/endpoints.go",
+        "blob": "e97110f8102facec48e06ae3f36c88fdb7041b3e",
+        "use": "Native endpoints get and --json behavior"
+      },
+      {
+        "path": "internal/api/endpoints.go",
+        "blob": "0219ca86c7b20934a1507dcbc43c40eb9c28e552",
+        "use": "Original chain/network/node HTTPS schema"
+      },
+      {
+        "path": "internal/auth/resolve.go",
+        "blob": "739e7213a5c203b758f54e95e1da90bf2c59f907",
+        "use": "Original environment/profile authentication precedence"
+      }
+    ]
+  },
+  "publicCatalog": {
+    "url": "https://www.dwellir.com/public-rpc-endpoints.json",
+    "observedBytes": 38497,
+    "observedSha256": "4b3638176f4dd7fe4525f65dfe0f480472da29ce8ea4a79d08ddb6e43fca4bf5",
+    "selection": {
+      "chain": "Polkadot",
+      "network": "mainnet",
+      "access": "public",
+      "https": "https://polkadot-rpc.n.dwellir.com",
+      "archive": false
+    }
+  },
+  "genesis": {
+    "repository": "polkadot-js/common",
+    "path": "packages/networks/src/defaults/genesis.ts",
+    "blob": "27342c2d74e1c0ccac82817b886733d316112213",
+    "polkadot": "0x91b171bb158e2d3848fa23a9f1c25182fb8e20313b2c1eb49219da7a70ce90c3"
+  },
+  "primaryPages": [
+    {
+      "url": "https://www.dwellir.com/agents",
+      "use": "Current native Toolkit and support@dwellir.com routing"
+    },
+    {
+      "url": "https://www.dwellir.com/docs/agents",
+      "use": "Original application migration workflow"
+    },
+    {
+      "url": "https://www.dwellir.com/docs/agents/mcp",
+      "use": "Existing hosted MCP/CLI project setup seam"
+    },
+    {
+      "url": "https://www.dwellir.com/docs/cli/endpoints",
+      "use": "Native endpoint selection"
+    },
+    {
+      "url": "https://www.dwellir.com/public-rpc-endpoints",
+      "use": "Exact published keyless endpoint and production plan distinction"
+    },
+    {
+      "url": "https://www.dwellir.com/docs/polkadot",
+      "use": "Actual Substrate RPC method contract"
+    },
+    {
+      "url": "https://polkadot.js.org/docs/api/start/create/",
+      "use": "Original rpc.polkadot.io application endpoint"
+    },
+    {
+      "url": "https://nodejs.org/download/release/v24.20.0/docs/api/cli.html",
+      "use": "Original --use-env-proxy option"
+    }
+  ]
+}

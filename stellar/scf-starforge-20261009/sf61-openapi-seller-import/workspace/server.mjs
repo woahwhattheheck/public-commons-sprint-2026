@@ -21,11 +21,18 @@ import { startCommerceConsole } from '../../sf66-demo-launcher/commerce-console.
 import { inspectPostman, preparePostmanSource } from '../postman/collection.mjs';
 import { openOAuthConnectionRegistry, readOAuthHostConnections } from '../../sf30-seller-sdk/oauth-connections/host.mjs';
 import { createOAuthWorkspaceAdapter } from './oauth-http.mjs';
+import { createMigrationRoutes } from '../blockworks/routes.mjs';
 
 const here = fileURLToPath(new URL('.', import.meta.url));
 const STATIC = new Map([['/','index.html'],['/browser.mjs','browser.mjs'],['/stream-browser.mjs','stream-browser.mjs'],['/stream-customer-browser.mjs','stream-customer-browser.mjs'],['/authentication-browser.mjs','authentication-browser.mjs'],['/oauth-browser.mjs','oauth-browser.mjs'],['/oauth.css','oauth.css'],['/operation-panel.mjs','operation-panel.mjs'],['/file-input-browser.mjs','file-input-browser.mjs'],['/style.css','style.css']]);
 STATIC.set('/revision-browser.mjs','revision-browser.mjs');
 STATIC.set('/postman-browser.mjs','../postman/browser.mjs');
+STATIC.set('/migrations','../blockworks/index.html');
+STATIC.set('/migrations/','../blockworks/index.html');
+STATIC.set('/migrations/browser.mjs','../blockworks/browser.mjs');
+STATIC.set('/migrations/style.css','../blockworks/style.css');
+STATIC.set('/migrations/comparison-view.mjs','../blockworks/comparison-view.mjs');
+
 const MIME = {'.html':'text/html; charset=utf-8','.mjs':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8'};
 const HELP = 'node workspace/server.mjs --out-parent PRIVATE_DIRECTORY [--port 0] [--oauth-connections HOST_JSON] [--allow-loopback-oauth]\nCreate a private directory first (mkdir -m 700 /path/to/merchant-projects).\nOAuth host JSON carries approved aliases and directory environment references only. Explicit loopback OAuth is for local development.\nNode 22+; the console prints the local browser URL. Ctrl-C closes its managed seller.';
 const limited = async req => {
@@ -71,6 +78,11 @@ export async function startWorkspace({ parent, port=0, noSignals=false, oauthCon
   if(typeof allowLoopbackOAuth!=='boolean')throw new TypeError('Loopback OAuth must be an explicit host option');
   const registry=await openOAuthConnectionRegistry({connections:oauthConnections,env:runtimeEnv,allowLoopback:allowLoopbackOAuth,lookup:oauthLookup});
   const oauth=createOAuthWorkspaceAdapter({registry,origin:()=>origin,allowLoopback:allowLoopbackOAuth});
+  let migrationPromise, migrationInstance;
+  const migrations = () => migrationPromise ??= createMigrationRoutes({parent:output,origin:()=>origin,parentRuntime:view,
+    env:runtimeEnv,oauthConnections,allowLoopbackOAuth,oauthLookup,validatePlan:oauth.validatePlan})
+    .then(value=>(migrationInstance=value)).catch(error=>{migrationPromise=null;throw error;});
+
   const cacheView = () => {
     const rows = active?.session.session?.upstreamSnapshot?.().bindings ?? [];
     return rows.filter(row=>row.cachePolicy).map(row=>({binding:row.name,method:row.method,routes:row.routes,
@@ -131,6 +143,7 @@ export async function startWorkspace({ parent, port=0, noSignals=false, oauthCon
       if (req.method==='GET') {
         if(pathname==='/api/oauth/connections')return send(200,await oauth.list());
         if(pathname==='/api/oauth/connection')return send(200,await oauth.status(url.searchParams.get('alias'),url.searchParams.get('flowId')));
+        if (pathname.startsWith('/api/migrations/')) return await (await migrations()).get(pathname,url,send,res);
         if (pathname==='/api/example') {
           const specText=await readFile(new URL('../../sf82-seller-pilot/examples/upstream-openapi.json',import.meta.url),'utf8');
           return send(200,{specText,plan:{schema:'stellar-forge.api-merchant-plan.v1',sellerServer:'https://merchant.example/api',
@@ -168,6 +181,14 @@ export async function startWorkspace({ parent, port=0, noSignals=false, oauthCon
         return send(404,{error:'Not found'});
       }
       if (req.method!=='POST') return send(405,{error:'Use GET or POST'});
+      if (pathname==='/api/migrations/handover/import-file') {
+        if (busy) return send(409,{error:'A workspace operation is in progress'});
+        busy=true; let finishMutation;
+        mutationDone=new Promise(yes=>{finishMutation=yes;});
+        try { return await (await migrations()).upload(req,url,send); }
+        finally {busy=false;finishMutation();}
+      }
+
       if (pathname==='/api/operations/stage') {
         if (busy) return send(409,{error:'A workspace operation is in progress'});
         busy=true; let finishMutation;
@@ -189,12 +210,15 @@ export async function startWorkspace({ parent, port=0, noSignals=false, oauthCon
       if (pathname==='/api/revisions/review')return send(200,await reviewMerchantRevision({...body,parent:output,validatePlan:oauth.validatePlan}));
       if (!['/api/save','/api/start','/api/stop','/api/accept','/api/cache/invalidate','/api/operations/issue','/api/operations/download','/api/operations/load','/api/operations/handoff',
         '/api/customer/create','/api/customer/prepare','/api/customer/open','/api/customer/close','/api/oauth/command',
-        '/api/revisions/draft','/api/revisions/save','/api/revisions/stage'].includes(pathname)) return send(404,{error:'Not found'});
+        '/api/revisions/draft','/api/revisions/save','/api/revisions/stage'].includes(pathname) && !pathname.startsWith('/api/migrations/')) return send(404,{error:'Not found'});
       if (busy) return send(409,{error:'A workspace operation is in progress'});
       busy=true;
       let finishMutation;
       mutationDone=new Promise(yes=>{finishMutation=yes;});
       try {
+        if (pathname.startsWith('/api/migrations/')) return await (await migrations()).post(pathname,body,send);
+        if ((pathname==='/api/start'||pathname==='/api/customer/open') && migrationInstance?.app.releases.owned().length)
+          return send(409,{error:'This workspace owns a running migration seller. Stop it in Data migrations before starting another merchant session.'});
         if(pathname==='/api/oauth/command')return send(200,await oauth.command(body));
         if(pathname==='/api/revisions/draft')return send(201,await saveMerchantRevisionDraft({...body,parent:output,validatePlan:oauth.validatePlan}));
         if(pathname==='/api/revisions/save')return send(201,await saveMerchantRevision({...body,parent:output,validatePlan:oauth.validatePlan}));
@@ -342,12 +366,20 @@ export async function startWorkspace({ parent, port=0, noSignals=false, oauthCon
   let closing;
   const close=()=>closing??=(async()=>{
     shuttingDown=true;
-    const closed=new Promise((yes,no)=>server.close(e=>e?no(e):yes()));
+    const errors=[];
+    const attempt=async action=>{try{await action();}catch(error){errors.push(error);}};
+    // Observe server closure immediately while preserving each original owner's
+    // drain order. One failed optional application must not skip the others.
+    const closed=new Promise((yes,no)=>server.close(e=>e?no(e):yes())).catch(error=>{errors.push(error);});
     await mutationDone;
-    await closeCustomer();
-    if (active) {await active.session.close();active=null;}
-    await oauth.close();
+    const migration=migrationPromise;
+    if (migration) await attempt(async()=>{await (await migration).close();});
+    await attempt(closeCustomer);
+    await attempt(async()=>{if (active) {await active.session.close();active=null;}});
+    await attempt(()=>oauth.close());
     await closed;
+    if (errors.length===1) throw errors[0];
+    if (errors.length>1) throw new AggregateError(errors,'Workspace sessions did not finish stopping.');
   })();
   if (!noSignals) for (const signal of ['SIGINT','SIGTERM']) process.once(signal,()=>close().catch(()=>{process.exitCode=1;}));
   return {url:origin+'/#'+token,origin,token,close,output};
