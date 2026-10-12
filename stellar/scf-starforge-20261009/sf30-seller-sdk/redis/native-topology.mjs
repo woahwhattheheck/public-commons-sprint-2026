@@ -120,8 +120,8 @@ async function seedTransport(target, { fallback = true } = {}) {
     await new Promise((resolve, reject) => { server.once('error', reject); server.listen(0, HOST, resolve); });
     listeners.push(server); return { host: HOST, port: server.address().port };
   };
-  const roots = [await start()];
-  if (fallback) roots.push(await start());
+  const roots = [];
+  for (let index = 0; index < (fallback ? 2 : 3); index++) roots.push(await start());
   return { roots, status: () => ({ accepted, silentBytes, silentClosed, openSockets: sockets.size }),
     async close() {
       if (closing) return; closing = true;
@@ -327,13 +327,15 @@ export async function startNativeRedisTopology({ topology, directory, password, 
       try {
         const start = Date.now();
         await assert.rejects(createRedisQuerySource({ connection: withRoots(terminal.roots), queries,
-          maxConnections: 1, maxPending: 1, connectTimeoutMs: 300, startupTimeoutMs: 100 }),
+          maxConnections: 1, maxPending: 1, connectTimeoutMs: 5000, startupTimeoutMs: 100 }),
           issue => issue.code === 'SOURCE_START_TIMEOUT');
         await until(() => terminal.status().openSockets === 0, 'REDIS_STARTUP_SOCKET_RETAINED', 5000);
         assert.ok(terminal.status().accepted >= 1);
         assert.ok(terminal.status().silentBytes > 0);
-        const elapsedMs = Date.now() - start; assert.ok(elapsedMs < 5000, 'Startup cleanup exceeded its finite socket/discovery deadline');
-        stages.push({ stage: 'silent-startup-terminal-cleanup', elapsedMs, ...terminal.status() });
+        const elapsedMs = Date.now() - start;
+        assert.ok(elapsedMs < 4000, 'Startup cleanup waited for a silent seed socket deadline');
+        stages.push({ stage: 'silent-startup-terminal-cleanup', elapsedMs, startupTimeoutMs: 100,
+          configuredConnectTimeoutMs: 5000, configuredSilentSeeds: terminal.roots.length, ...terminal.status() });
       } finally { await terminal.close(); transports.delete(terminal); }
     }
     async function userClients(node, user) {
