@@ -15,6 +15,7 @@ import { openRolloutState } from './rollout-state.mjs';
 import { describeFleetOperations, readFleetOperations, validateFleetNavigationOrigin } from './release-operations.mjs';
 import { createFleetClientDesk } from './release-clients.mjs';
 import { createFleetDiscoveryDesk } from './release-discovery.mjs';
+import { createFleetDeliveryDesk } from './release-delivery.mjs';
 
 const SCHEMA = 'stellar-forge.fleet-release-plan.v1';
 const JOURNAL = 'stellar-forge.fleet-release-links.v1';
@@ -220,7 +221,7 @@ export async function openFleetReleaseOperator({ planFile, directory, gatewaySta
   if (directory === stateDirectory) throw fail('FLEET_RELEASE_SEPARATE_STATE_REQUIRED', 400);
   const lease = await acquireStateLease(directory), journalPath = join(directory, 'links.json');
   const manifestPath = join(directory, 'prepared-fleet.json');
-  let journal, gateway, operation = null, stagingController, closing = false, closed = false, closingPromise, clientClosePromise;
+  let journal, gateway, operation = null, stagingController, closing = false, closed = false, closingPromise, clientClosePromise, deliveryClosePromise, deliveryCloseFailed = false;
   const owned = new Map(), reviews = new Map(), tenants = new Map(plan.tenants.map(row => [row.id, row]));
   function locate(tenantId, slotName) {
     const tenant = tenants.get(tenantId), slot = tenant?.slots[slotName];
@@ -315,6 +316,12 @@ export async function openFleetReleaseOperator({ planFile, directory, gatewaySta
     }
     const session = await runActiveRelease(slot.store, { expectedGeneration: selected.generation, handleSignals: false,
       ...(operationsNavigationOrigin ? { operationsNavigationOrigin } : {}) });
+    // One native source journal belongs to one release store in this fleet.
+    // Preserve an existing family outbox without allowing two stores to share it.
+    if ([...owned.entries()].some(([otherKey, other]) => otherKey !== key && !other.ended &&
+        other.session.settlementDelivery?.sourceDirectory === session.settlementDelivery?.sourceDirectory)) {
+      await session.close(); throw fail('FLEET_DELIVERY_SOURCE_SHARED_BETWEEN_SLOTS');
+    }
     const runtime = { descriptor: structuredClone(row), session, selectionGeneration: selected.generation, ended: false };
     owned.set(key, runtime);
     void session.completion.then(() => { runtime.ended = true; }, () => { runtime.ended = true; });
@@ -402,8 +409,8 @@ export async function openFleetReleaseOperator({ planFile, directory, gatewaySta
       view.push({ id: tenant.id, host: tenant.host, slots, packages: Object.keys(tenant.packages),
         packageSources: describeFleetPackages(tenant.packages), limits: tenant.limits });
     }
-    return { schema: 'stellar-forge.fleet-release-status.v1', closing, closed, busy: operation?.action ?? null,
-      relationship, native, tenants: view, clientExports: clients.summary, pending: journal.pending ? {
+    return { schema: 'stellar-forge.fleet-release-status.v1', planDigest: plan.digest, closing, closed, busy: operation?.action ?? null,
+      relationship, native, tenants: view, clientExports: clients.summary, delivery: delivery.summary, pending: journal.pending ? {
         phase: journal.pending.phase, baseRevision: journal.pending.baseRevision,
         candidateId: journal.pending.candidateId ?? null, targetRevision: journal.pending.targetRevision ?? null,
       } : null, retained: journal.revisions.map(row => ({ revision: row.revision, digest: row.digest,
@@ -445,6 +452,13 @@ export async function openFleetReleaseOperator({ planFile, directory, gatewaySta
       lease.assertHeld(); const runtime = owned.get(slotKey(tenant, slot));
       return runtime && !runtime.ended ? runtime.session : null;
     } });
+  const delivery = createFleetDeliveryDesk({ planDigest: plan.digest,
+    locate: (tenant, slot) => { assertOpen(); return locate(tenant, slot); },
+    getManaged(tenant, slot) {
+      if (closing || closed) return null;
+      lease.assertHeld(); const runtime = owned.get(slotKey(tenant, slot));
+      return runtime && !runtime.ended ? runtime.session : null;
+    } });
   const api = {
     planDigest: plan.digest, stateDirectory, gatewayStateDirectory: stateDirectory, get publicURL() { return gateway?.publicURL; }, status,
     operations(input) {
@@ -469,6 +483,17 @@ export async function openFleetReleaseOperator({ planFile, directory, gatewaySta
     discoveryStop(input) { return exclusive('discovery-stop', () => discovery.stop(input)); },
     discoveryReview(input) { return exclusive('discovery-review', () => discovery.reviewPublication(input)); },
     discoveryApply(input) { return exclusive('discovery-apply', () => discovery.applyPublication(input)); },
+    deliveryStatus(input) { assertOpen(); return delivery.status(input); },
+    deliveryControl(input) { assertOpen(); return delivery.control(input); },
+    deliveryEvents(input) { assertOpen(); return delivery.events(input); },
+    deliveryHandoff(input) { assertOpen(); return delivery.handoff(input); },
+    deliveryTransfers(input) { assertOpen(); return delivery.transfers(input); },
+    deliveryTransfer(input) { assertOpen(); return delivery.transfer(input); },
+    deliveryTransferManifest(input) { assertOpen(); return delivery.transferManifest(input); },
+    deliveryFile(input) { assertOpen(); return delivery.file(input); },
+    deliveryFileRelease(input) { assertOpen(); return delivery.releaseFile(input); },
+    mountDelivery(req, res, input) { assertOpen(); return delivery.mount(req, res, input); },
+    sendDeliveryTransfer(req, res, input) { assertOpen(); return delivery.sendTransfer(req, res, input); },
     clientList(input) { assertOpen(); return clients.list(input); },
     clientInspect(input) { assertOpen(); return clients.inspect(input); },
     clientGenerate(input) { return exclusive('client-generate', () => clients.generate(input)); },
@@ -606,12 +631,20 @@ export async function openFleetReleaseOperator({ planFile, directory, gatewaySta
       if (clientClosePromise) return false;
       clientClosePromise = clients.close(); clientClosePromise.catch(() => {}); return true;
     },
+    cancelDeliveryOperations() {
+      if (deliveryClosePromise && !deliveryCloseFailed) return false;
+      deliveryCloseFailed = false;
+      deliveryClosePromise = delivery.close();
+      deliveryClosePromise.catch(() => { deliveryCloseFailed = true; });
+      return true;
+    },
     close() {
       if (closingPromise) return closingPromise;
       closing = true;
       api.cancelStaging();
       api.cancelClientTransfers();
-      closingPromise = (async () => {
+      api.cancelDeliveryOperations();
+      const attempt = (async () => {
         await operation?.promise.catch(() => {});
         const errors = [];
         // Observe original listener completion before invoking native close: its
@@ -624,12 +657,15 @@ export async function openFleetReleaseOperator({ planFile, directory, gatewaySta
         const results = await Promise.allSettled([...owned.values()].map(row => row.session.close()));
         errors.push(...results.filter(row => row.status === 'rejected').map(row => row.reason));
         try { await clientClosePromise; } catch (error) { errors.push(error); }
-        try { await lease.close(); } catch (error) { errors.push(error); }
-        closed = true;
+        try { await deliveryClosePromise; } catch (error) { errors.push(error); }
         if (errors.length) throw Object.assign(fail('FLEET_RELEASE_SHUTDOWN_INCOMPLETE', 500),
           { cause: new AggregateError(errors, 'Original owned shutdown reported errors') });
+        await lease.close();
+        closed = true;
       })();
-      return closingPromise;
+      closingPromise = attempt;
+      attempt.catch(() => { if (closingPromise === attempt) closingPromise = undefined; });
+      return attempt;
     },
   };
   try {

@@ -131,6 +131,7 @@ async function responseFor(page,path,method,trigger,action){
     if(action){try{return JSON.parse(request.postData()).action===action;}catch{return false;}}
     return true;
   },{timeout:180000});
+  waiting.catch(()=>{});
   await trigger();const response=await waiting,body=await response.json();
   requireResult(response.ok(),'Original browser request failed: '+path+' '+JSON.stringify(body));
   await ready(page);return body;
@@ -142,7 +143,7 @@ async function uiAct(page,action,trigger){
   return response.result;
 }
 async function download(page,trigger,name,expected){
-  const waiting=page.waitForEvent('download',{timeout:180000});await trigger();
+  const waiting=page.waitForEvent('download',{timeout:180000});waiting.catch(()=>{});await trigger();
   const received=await waiting,target=join(out,'downloads',name);
   await received.saveAs(target);await chmod(target,0o600);
   const actual=await identity(target);

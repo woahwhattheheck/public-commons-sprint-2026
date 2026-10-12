@@ -1,5 +1,6 @@
 // MIT. Node HTTP integration for original SF30 offers and the native x402 server.
 // This adapter implements no payment scheme, signature verifier or chain client.
+import { applyNativeSettlementDelivery } from './native-delivery.mjs';
 import { compileHttpSellerOffer, paymentRequiredResponse, MAX_PAYMENT_OPTIONS } from './seller.mjs';
 import { validateHeaderName, validateHeaderValue } from 'node:http';
 import { isDeepStrictEqual } from 'node:util';
@@ -236,6 +237,7 @@ export function createSellerResourceHandler({ compiled, nativeServer = null,
   }
   if (nativeServer !== null && ['processHTTPRequest', 'processSettlement', 'createFailurePathSettlementHeaders']
       .some(key => typeof nativeServer[key] !== 'function')) throw new TypeError('Native x402 HTTP server required');
+  nativeServer = applyNativeSettlementDelivery(compiled, nativeServer);
   let activeWork = 0;
   const counters = { deadlineExceeded: 0, clientDisconnects: 0, lateVerifiedResults: 0,
     cancellationRequests: 0, cancellationErrors: 0, interruptedSettlements: 0,

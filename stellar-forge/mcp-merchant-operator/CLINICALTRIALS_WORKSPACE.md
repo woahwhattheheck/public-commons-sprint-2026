@@ -358,3 +358,9 @@ Named helpers and client.call use the same exact tool definitions. Source helper
 Limits are 32 configured consoles, 128 declared input handles per console, 128 KiB native JSON requests, 16 MiB native JSON responses, and 256 MB original file/verified snapshot budgets. Use paginated source views and complete-file transfer for large captures. Listing configuration or tools performs no provider acquisition or buyer mutation.
 
 The local console transport consumes the original HTTP response stream directly with a total request deadline. It preserves the native bearer/Origin gate and validates complete retained file length and SHA256 before publishing a delivery manifest. An interrupted write still requires inspection of its original request UUID before continuation.
+
+### Complete batch context in the programmatic client
+
+The Clinical client receives each original batch entry, PRS candidate and preview as one complete native JSON value. Its source-owned response allowance is 50,397,184 bytes: three times the existing 16 MiB native JSON limit plus 64 KiB for the MCP envelope. The original MCP response carries both structured content and its JSON-escaped text representation, so the allowance covers those representations without shortening the clinical source.
+
+The shared `openMerchantFileClient` retains its 2 MiB default. Its existing `maximumResponseBytes` option selects an explicit limit from 1,024 bytes to 64 MiB; the Clinical client supplies its native-context budget. Ordinary retained file downloads still use their original chunk, manifest, complete-file SHA256, byte-count, timeout and receiving-lock checks. After a response-size failure, reopen the same saved batch entry and continue the original immutable exports; source review and batch mutations remain attached to their existing IDs.
