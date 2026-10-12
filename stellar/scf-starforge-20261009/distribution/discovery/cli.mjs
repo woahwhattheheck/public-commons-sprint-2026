@@ -1,12 +1,13 @@
 #!/usr/bin/env node
 // MIT. Search and export original registrations, or open the same browser catalog.
-import { randomUUID } from 'node:crypto';
-import { link, open, realpath, unlink } from 'node:fs/promises';
-import { basename, dirname, join, resolve } from 'node:path';
+import { realpath } from 'node:fs/promises';
+import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { exportCommandCatalog, findCatalogItem, renderCatalogText, searchCommandCatalog } from './catalog.mjs';
 import { loadCommandCatalog } from './load.mjs';
 import { startDiscoveryServer } from './server.mjs';
+import { mainRequirements, REQUIREMENT_ACTIONS } from './product-requirements-cli.mjs';
+import { saveExport } from './write-json.mjs';
 
 const HELP = [
   'Starforge command finder', '',
@@ -16,6 +17,8 @@ const HELP = [
   '  starforge discover export [WORDS] [--kind KIND] [--source ID] [--feature GROUP]',
   '                     [--out NEW_FILE]',
   '  starforge discover serve [--port NUMBER] [--host 127.0.0.1|localhost|::1]', '',
+  '  starforge discover requirements --repository /absolute/git-repository --help',
+  '  starforge discover review-request PRODUCT_ID --repository /absolute/git-repository --help', '',
   'Kinds: command, source, feature, export, application, merchant; default all.',
   'Search terms are ANDed. Put exact phrases in double quotes inside your argument.',
   'Export includes every match. An output file is created exclusively.',
@@ -50,22 +53,8 @@ export function parseDiscoveryArguments(args) {
   return { action, options, query: words.join(' '), original };
 }
 
-async function saveExport(filename, result) {
-  const destination = resolve(filename);
-  const temporary = join(dirname(destination), '.' + basename(destination) + '.' + randomUUID() + '.tmp');
-  let file;
-  try {
-    file = await open(temporary, 'wx', 0o600);
-    await file.writeFile(JSON.stringify(result, null, 2) + '\n', 'utf8');
-    await file.sync(); await file.close(); file = undefined;
-    await link(temporary, destination);
-  } finally {
-    await file?.close();
-    await unlink(temporary).catch(error => { if (error.code !== 'ENOENT') throw error; });
-  }
-}
-
 export async function main(args = process.argv.slice(2)) {
+  if (REQUIREMENT_ACTIONS.includes(args[0])) return mainRequirements(args);
   const { action, options = {}, query = '' } = parseDiscoveryArguments([...args]);
   if (action === 'help') { console.log(HELP); return; }
   if (action === 'serve') {
