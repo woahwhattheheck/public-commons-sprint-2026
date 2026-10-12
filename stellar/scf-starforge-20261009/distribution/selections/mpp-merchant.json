@@ -2,7 +2,7 @@
   "schema": "stellar-forge.distribution-source-selection.v1",
   "id": "mpp-merchant",
   "title": "Native MPP merchant and customer workspace",
-  "description": "Complete original native MPP merchant/customer console, terminal approval, managed Applications, merchant MCP, customer source export and retained receiving",
+  "description": "Complete native MPP Charge and recurring Channel product, original merchant/customer console, funding and open-channel collection, typed clients, managed Applications, merchant MCP and full operating receiving",
   "base": {
     "commands": [
       "installation",
@@ -48,7 +48,8 @@
   },
   "contributions": [
     "mpp",
-    "merchant-provider-mpp"
+    "merchant-provider-mpp",
+    "mpp-product"
   ],
   "components": [
     "stellar/scf-starforge-20261009/mpp-charge",
@@ -60,7 +61,9 @@
     "stellar/scf-starforge-20261009/sf46-release",
     "stellar/scf-starforge-20261009/distribution/runtime-workspace/public",
     "stellar/scf-starforge-20261009/distribution/python-runtime",
-    "stellar/scf-starforge-20261009/sf82-seller-pilot"
+    "stellar/scf-starforge-20261009/sf82-seller-pilot",
+    "products/mpp-workspace",
+    "stellar/scf-starforge-20261009/mpp-channel"
   ],
   "supportFiles": [
     "stellar/scf-starforge-20261009/distribution/cli.mjs",
@@ -91,7 +94,7 @@
   ],
   "product": {
     "schema": "stellar-forge.merchant-product-package.v1",
-    "description": "Native MPP merchant and customer operations with managed Applications and complete original client receiving",
+    "description": "Native MPP Charge and recurring Channel work with funding, open-channel merchant collection, managed Applications and complete customer receiving",
     "readme": "stellar/scf-starforge-20261009/distribution/selections/MPP_MERCHANT.md"
   }
 }

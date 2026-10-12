@@ -1,0 +1,26 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "mpp-product",
+  "description": "Native MPP product setup, original merchant/customer console, governed agent purchases, managed application and complete receiving. Recurring paid channel tasks, cumulative commitments, original response recovery and operating handover.",
+  "components": [
+    "products/mpp-workspace",
+    "stellar/scf-starforge-20261009/mpp-channel"
+  ],
+  "commands": {
+    "mpp-workspace": "products/mpp-workspace/cli.mjs",
+    "mpp-channel": "stellar/scf-starforge-20261009/mpp-channel/cli.mjs"
+  },
+  "commandDescriptions": {
+    "mpp-workspace": "Initialize and operate the native MPP merchant and customer through the original console, merchant agent, managed terminal and retained receiving.",
+    "mpp-channel": "Operate original recurring channel tasks, merchant deliveries, close and complete receiving."
+  },
+  "exports": {
+    "./products/mpp-workspace": "./source/products/mpp-workspace/workspace.mjs",
+    "./products/mpp-workspace/client": "./source/products/mpp-workspace/client.mjs",
+    "./products/mpp-workspace/managed": "./source/products/mpp-workspace/managed.mjs",
+    "./products/mpp-workspace/channel": "./source/stellar/scf-starforge-20261009/mpp-channel/client.mjs"
+  },
+  "applicationProviders": {
+    "mpp-product": "products/mpp-workspace/application-provider.mjs"
+  }
+}
