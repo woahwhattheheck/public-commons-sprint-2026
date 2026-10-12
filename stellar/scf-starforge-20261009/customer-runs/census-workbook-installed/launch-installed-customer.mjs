@@ -3,7 +3,7 @@
 import { constants } from 'node:fs';
 import * as fs from 'node:fs/promises';
 import { createHash, randomUUID } from 'node:crypto';
-import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
+import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -57,8 +57,27 @@ async function readRegular(path) {
   }
 }
 
+async function canonicalTarget(path) {
+  const remaining = [];
+  for (let current = path; ; current = dirname(current)) {
+    try { return resolve(await fs.realpath(current), ...remaining); }
+    catch (error) {
+      if (error.code !== 'ENOENT' || dirname(current) === current) throw error;
+      remaining.unshift(basename(current));
+    }
+  }
+}
+
 async function prepare(workspace) {
-  const insideSource = relative(here, workspace);
+  let originalEntry;
+  try { originalEntry = await fs.lstat(workspace); }
+  catch (error) { if (error.code !== 'ENOENT') throw error; }
+  if (originalEntry && (!originalEntry.isDirectory() || originalEntry.isSymbolicLink())) {
+    fail('CUSTOMER_WORKSPACE_NOT_DIRECTORY', 'The customer workspace must be a real directory.');
+  }
+  workspace = await canonicalTarget(workspace);
+  const canonicalSource = await fs.realpath(here);
+  const insideSource = relative(canonicalSource, workspace);
   if (!insideSource || (!insideSource.startsWith('..' + sep) && insideSource !== '..' && !isAbsolute(insideSource))) {
     fail('CUSTOMER_WORKSPACE_IN_SOURCE', 'Choose a customer workspace outside the installed source directory.');
   }
@@ -127,12 +146,12 @@ async function main() {
     }
   }
   const result = await prepare(workspace);
-  process.env.SCF_CENSUS_WORKSPACE = workspace;
+  process.env.SCF_CENSUS_WORKSPACE = result.workspace;
   if (mode === 'prepare') {
     process.stdout.write(JSON.stringify(result, null, 2) + '\n');
     return;
   }
-  await import(pathToFileURL(join(workspace, 'run-installed-customer.mjs')).href);
+  await import(pathToFileURL(join(result.workspace, 'run-installed-customer.mjs')).href);
 }
 
 try { await main(); }
