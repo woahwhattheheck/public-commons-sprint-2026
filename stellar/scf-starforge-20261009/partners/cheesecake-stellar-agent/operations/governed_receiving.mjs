@@ -20,6 +20,7 @@ import {initializeInstalledApplication,inspectInstalledApplication,startInstalle
 import {receiveApplicationProject,openReceivedApplicationProject,withRestoredApplicationProject} from '../project-receive.mjs';
 import {createApplicationServer} from '../server.mjs';
 
+const progress=stage=>process.stderr.write(JSON.stringify({receivingStage:stage})+'\n');
 const hash=bytes=>createHash('sha256').update(bytes).digest('hex');
 const endpoint='https://merchant.example/mcp';
 const payer='GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF';
@@ -156,6 +157,7 @@ export async function main(args=process.argv.slice(2)) {
     {mode:0o600,flag:'wx'});
   let loaded,server;
   try {
+    progress('original-application');
     const prepared=await initializeInstalledApplication({directory:join(work,'application'),
       applicationId:'cheesecake-governed-receiving',subject:'receiving:operator',handoffDirectory:handoff,
       authorizationModule:operatorModule,remoteMcp:remoteFile,projectProfile});
@@ -239,10 +241,12 @@ export async function main(args=process.argv.slice(2)) {
     assert.equal(result.result.structuredContent.result.file.sha256,saved.result.file.sha256);
     await server.close();server=null;
     loaded=await loadApplication(prepared.configFile,{environment});
+    progress('project-inspection');
     const sourceRoot=loaded.sourceRoot,projectId='original-application-recovery';
     const inspection=await loaded.application.project(loaded.context,'inspect');
     assert.equal(inspection.applicationId,'cheesecake-governed-receiving');
     assert.equal(inspection.financialOwners.length,1);
+    progress('encrypted-project-snapshot');
     const snapshot=await loaded.application.project(loaded.context,'snapshot',{operationId:projectId});
     assert.equal(snapshot.status,'APPLICATION_PROJECT_CREATED');
     assert.equal(snapshot.requests,httpIds.length+4);
@@ -251,10 +255,12 @@ export async function main(args=process.argv.slice(2)) {
     assert.equal(repeated.manifestSha256,snapshot.manifestSha256);
     await loaded.close();loaded=null;
     const receiverDirectory=join(work,'received-project');
+    progress('receive-project');
     const received=await receiveApplicationProject({bundle:snapshot.bundle,directory:receiverDirectory,sourceRoot,
       passphraseEnv,expectedManifestSha256:snapshot.manifestSha256,environment});
     assert.equal(received.status,'APPLICATION_PROJECT_RECEIVED');
     assert.equal(received.recordSha256,snapshot.recordSha256);
+    progress('offline-complete-results');
     const offline=await openReceivedApplicationProject({directory:receiverDirectory,sourceRoot,
       subject:context.subject,authorize:authorizeFixture,environment,passphraseEnv});
     try{
@@ -268,6 +274,7 @@ export async function main(args=process.argv.slice(2)) {
       assert.equal(hash(await readFile(offlineExport)),saved.result.file.sha256);
       assert.equal((await offline.call(context,'recover','remote-paid')).binding.quoteId,paid.binding.quoteId);
     }finally{await offline.close();}
+    progress('received-http-and-mcp');
     const receivingOpens=control.opens;
     server=await createApplicationServer({receivedDirectory:receiverDirectory,sourceRoot,
       subject:context.subject,environment,passphraseEnv,bearerToken:token,port:0});
@@ -299,6 +306,7 @@ export async function main(args=process.argv.slice(2)) {
       assert.equal(control.signing,1);assert.equal(control.signed,1);
       return {status:reopened.recovery.status,quoteId:replay.binding.quoteId,resultSha256:saved.result.file.sha256};
     };
+    progress('original-owner-reattach');
     const reattached=await withRestoredApplicationProject({...settings,mode:'reattach'},verifyOriginal);
     assert.equal(reattached.status,'APPLICATION_PROJECT_CURRENT_HOST_VERIFIED');
     const originalState=join(work,'before-original-restore');await mkdir(originalState,{mode:0o700});
@@ -308,6 +316,7 @@ export async function main(args=process.argv.slice(2)) {
     const restoreEnvironment={...environment};
     for(const key of Object.keys(control.keys))delete restoreEnvironment[key];
     control.keys=null;
+    progress('original-owner-restore');
     const restored=await withRestoredApplicationProject({...settings,mode:'restore',environment:restoreEnvironment},verifyOriginal);
     assert.equal(restored.status,'APPLICATION_PROJECT_RESTORED');
     assert.equal((await stat(prepared.configFile)).mode&0o077,0);
@@ -315,6 +324,7 @@ export async function main(args=process.argv.slice(2)) {
       archivedRequests:snapshot.requests,archivedResultBytes:snapshot.resultBytes,
       receiving:true,offlineCompleteResult:true,receivingHttpAndMcp:true,sameOperationReplay:true,reattached,restored,scopedOriginalKeys:true,
       installedSourceReuse:true};
+    progress('native-spending-recovery');
     const nativeRecovery=await runNativeMcpSpendingRecoveryReceiving({sourceRoot,
       work:join(work,'native-spending-recovery'),python:control.python});
     assert.equal(nativeRecovery.status,'PASSED');
