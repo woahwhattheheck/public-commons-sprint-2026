@@ -41,7 +41,7 @@ The launcher checks the selected workspace identity, original application source
 The installed command is:
 
 ~~~sh
-usaspending-application serve \
+starforge usaspending-application serve \
   --workspace /PRIVATE_PARENT/award-research \
   --operator "Research desk" \
   --receiving-root /PRIVATE_PARENT/customer-deliveries \
