@@ -76,6 +76,10 @@
     {
       "server": "stellar/scf-starforge-20261009/sf101-merchant-recovery/workspace/server.mjs",
       "manifest": "stellar/scf-starforge-20261009/sf101-merchant-recovery/workspace/browser-assets.json"
+    },
+    {
+      "server": "stellar/scf-starforge-20261009/sf61-openapi-seller-import/workspace/server.mjs",
+      "manifest": "stellar/scf-starforge-20261009/sf61-openapi-seller-import/workspace/browser-assets.json"
     }
   ],
   "supportFiles": [

@@ -40,7 +40,7 @@ try{
   const specText=json(spec),plan={schema:'stellar-forge.api-merchant-plan.v1',sellerServer:'https://merchant.example/api',
     serviceName:'Transport example',payment:{network:'stellar:testnet',asset:'DEMO_NONPAYABLE_ASSET',payTo:'DEMO_NONPAYABLE_RECIPIENT',maxTimeoutSeconds:60},
     transports:{provider_proxy:{mode:'environment-proxy',proxyEnv:'MERCHANT_HTTPS_PROXY'},direct_status:{mode:'direct'}},
-    operations:[{method:'GET',path:'/dataset',amountAtomic:'20000',responseValidation:'declared',transport:'provider_proxy'},
+    operations:[{method:'GET',path:'/dataset',amountAtomic:'20000',responseValidation:'none',transport:'provider_proxy'},
       {method:'GET',path:'/status',amountAtomic:'1000',responseValidation:'declared',transport:'direct_status'}],
     allowLoopbackUpstream:false};
   await retain('source/original-example.json',original);await retain('source/receiving-openapi.json',specText);await retain('source/merchant-plan.json',plan);
@@ -80,7 +80,7 @@ try{
   same(Object.keys(pending.transportProfiles),Object.keys(plan.transports));
   const decisions=first.preview.routes.map(row=>row.path==='/dataset'
     ?{routeId:row.id,action:'remap',method:'GET',path:'/dataset/v2',
-      settings:{amountAtomic:'20000',responseValidation:'declared',transport:'provider_proxy'}}
+      settings:{amountAtomic:'20000',responseValidation:'none',transport:'provider_proxy'}}
     :{routeId:row.id,action:'drop'});
   const input={baseName:'transport-v1',specText:replacementText,decisions,additions:[]};
   const review=await api('revisions/review',input);assert.equal(review.ready,true);
