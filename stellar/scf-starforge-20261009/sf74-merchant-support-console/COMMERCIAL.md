@@ -48,6 +48,66 @@ In Quotations, choose **Receive original pricing source**, select that file and 
 
 If a pricing receive reply is interrupted, keep its original UUID and reselect the same file. The page checks its complete byte hash before continuing the original request.
 
+## Retain and reopen the complete pricing workspace
+
+Open the saved case's **Pricing workspace** tab to work with the original SF97 source and full backup. The installed page uses the same case revision as the quotation editor.
+
+1. Select the existing private pricing workspace, original seller configuration, saved snapshot or history, plan UUID, optional saved scenario, and a separate receiving-source destination. **Capture selected plan and complete backup** creates one original backup request and retains the four native receiving files.
+2. **Inspect original source and full backup** verifies the exact receiving-source SHA, selected plan, original pricing files, complete archive, any applied cost edition, and every bound supplier original. The page displays the native pricing review and complete file descriptors.
+3. Record why that source belongs with this merchant. **Attach reviewed pricing and complete backup** uses two original request UUIDs: pricing receive and archive attachment. Both requests and the original reviewed case revision are saved before the request leaves the page.
+4. Select **Use this pricing source in the quote** after attachment. Review the original route list and enter the intended monthly volumes in the quote editor. Existing implementation, service scope, customer terms, earlier quotations and actual responses remain in the same case.
+5. Choose a saved quotation and its exact archive SHA when several backups are retained. **Review this quote and its original workspace** checks that selected edition and its original source lineage.
+6. Supply a private retained archive filename outside a separate restore destination. **Restore selected original pricing workspace** calls the original archive restore and reopens the same plan, pricing version, cost edition and original supplier sources. Its returned normal SF97 configuration paths are displayed in the result.
+
+A capture, attachment or restoration that loses its response keeps its exact request and paths in the same browser tab's case-scoped recovery state. Reopen the case and retry that original selection. A known rejected operation retains its complete previous request and returned error in the panel, so the original IDs remain inspectable while the next selection is prepared. Switching cases preserves each case's own draft and recovery inputs; a changed workspace identity clears the previous private state. The listener and MCP owner wait for their active receiving promises when closing.
+
+The capture creates an original workspace export. It does not change the selected scenario or quote edition. Attachments and restored workspaces continue to use the original case, commissioning and cost archive engines.
+
+### Installed receiving commands
+
+The same installed entry forwards every original receiving action:
+
+```sh
+starforge merchant-commercial receiving --help
+
+starforge merchant-commercial receiving capture \
+  --pricing-directory "$PRICING_WORKSPACE" \
+  --pricing-config "$SAVED_SELLER" \
+  --pricing-snapshot "$SAVED_OBSERVATION" \
+  --plan-id "$PLAN_ID" \
+  --backup-request "$BACKUP_REQUEST" \
+  --out "$RECEIVING_SOURCE"
+
+starforge merchant-commercial receiving attach \
+  --cases-dir "$SENDER_CASES" \
+  --case "$SENDER_CASE_ID" \
+  --revision "$REVIEWED_CASE_REVISION" \
+  --from "$RECEIVING_SOURCE" \
+  --source-sha "$SOURCE_SHA" \
+  --pricing-request "$PRICING_RECEIVE_REQUEST" \
+  --attachment-request "$BACKUP_ATTACH_REQUEST" \
+  --actor "$OPERATOR" \
+  --binding-reason-file "$BINDING_REASON_FILE"
+```
+
+Use `--pricing-history` instead of `--pricing-snapshot` for the original saved history representation. The [complete receiving guide](commercial/RECEIVING.md) supplies inspection, whole case/source export, independent receiving, original workspace restoration and exact replay commands. It explains the original material and case limits and the existing source-bundle route for larger complete backups.
+
+The original full source-package flags remain available through `merchant-commercial export`, `inspect-package` and `receive-package`, including the actual source directory, original selected Python and manifest SHA. The pricing-specific `receiving export` and `receiving receive` additionally bind the selected quote and original backup before calling that same complete package engine.
+
+### Receiving through the configured MCP Support owner
+
+| Original tool | Operating purpose |
+| --- | --- |
+| `merchant_case_commercial_receiving_status` | Read the selected case and actual active receiving requests |
+| `merchant_case_commercial_receiving_capture` | Capture the saved plan and full native backup with its original backup UUID |
+| `merchant_case_commercial_receiving_inspect` | Verify the retained pricing source, archive and supplier originals |
+| `merchant_case_commercial_receiving_attach` | Attach the reviewed source and archive under the two retained native request UUIDs |
+| `merchant_case_commercial_receiving_case` | Inspect the exact saved quote and selected original workspace |
+| `merchant_case_commercial_receiving_restore` | Restore and reopen the original editable pricing workspace |
+
+The configured Support owner supplies the existing case directory and environment. Inputs keep their original host paths, quote hashes, source hashes and native UUIDs; no second case or backup journal is created. Complete case delivery uses the same original package/receiving tools and retains all earlier source editions and customer responses.
+
+
 ## Review and save a quote edition
 
 Choose **Review quote**. The review shows implementation, monthly service, monthly route usage and the total recurring amount. It also shows the human-readable proposal and the selected source bindings.
@@ -84,12 +144,34 @@ starforge merchant-commercial export \
   --case ORIGINAL_CASE_UUID \
   --revision ORIGINAL_CASE_REVISION_SHA256 \
   --export-id customer-quotation-edition \
+  --source-dir /absolute/private/merchant-cases/source-bundles \
   --out /absolute/private/customer-delivery
 ~~~
 
 This delegates to **merchant-implementation export**. The original case metadata, complete workspace, support material, implementation history, service history and every commercial source/draft/edition/response material travel together. Original source bundles retain their own complete inventories through the maintained case-source package.
 
-Receive that package through the existing case import or Handoffs workflow. The receiving case can have its own UUID and editing owner; the imported quote keeps its origin case identity and original bytes. Subsequent edits belong to the receiving case. Earlier quote documents remain immutable.
+The original source directory is the one configured for this merchant's source delivery. Include **--source-dir** when the case references source bundles. The complete package retains each source edition's entire inventory, including files that are not attached to an implementation task. **--generated-at** can select the original export timestamp before its first publication; the original retained export keeps that same timestamp on retry.
+
+Inspect and receive the complete directory with the existing package engine:
+
+~~~sh
+starforge merchant-commercial inspect-package \
+  --from /absolute/private/customer-delivery \
+  --sha256 ORIGINAL_CASE_SOURCE_PACKAGE_SHA256
+
+starforge merchant-commercial receive-package \
+  --from /absolute/private/customer-delivery \
+  --sha256 ORIGINAL_CASE_SOURCE_PACKAGE_SHA256 \
+  --out /absolute/private/customer-receiving \
+  --cases-dir /absolute/private/customer-cases \
+  --source-dir /absolute/private/customer-cases/source-bundles \
+  --request-id ORIGINAL_RECEIVING_UUID \
+  --actor "Customer receiving operator"
+~~~
+
+Use the exact SHA-256 of **case-source-package.json** returned by the original exporter. Keep the same receiving UUID and output directory when continuing an interrupted receive. The original package, Handoffs, native source archive and case-store receivers retain their own progress and original-file identity.
+
+The receiving case has its own UUID and editing owner; the imported quote keeps its origin case identity and original bytes. Reopen that receiving case with **merchant-commercial read**, then review the retained quote and its original pricing materials. Subsequent edits belong to the receiving case. Earlier quote documents remain immutable.
 
 ## CLI operation
 
@@ -108,7 +190,9 @@ Use **starforge merchant-commercial --help** for exact flags. Commands return st
 | compare | Compare two immutable quote editions |
 | quote | Save customer Markdown or complete quote JSON |
 | handoff | Save the complete original workspace/support handoff |
-| export | Run the original complete case directory export |
+| export | Run the original complete case and source-inventory export |
+| inspect-package | Verify the entire retained directory through the original package engine |
+| receive-package | Continue the original package, source and case receiving operation |
 
 Case commands use **--cases-dir** and **--case**. Changes also require **--revision**, **--request-id** and **--actor**. Use **--draft FILE** for preview, draft save and publish; publishing requires the returned **--review-sha**. Revisions retain **--parent** or the draft's original parent.
 

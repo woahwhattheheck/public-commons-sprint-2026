@@ -97,7 +97,7 @@ export async function startOpenSearchWorkspace({ workspace, port = 8447 } = {}) 
   const assets = new Map(await Promise.all([...ASSETS].map(async ([route, [file, type]]) =>
     [route, { type, body: await readFile(new URL(file.startsWith('../') ? file : './public/' + file, import.meta.url)) }])));
   const token = randomBytes(24).toString('hex');
-  let origin, closing;
+  let origin, closing, stopped;
   const requests = new Set();
   const server = createServer((req, res) => {
     let operationId;
@@ -147,6 +147,8 @@ export async function startOpenSearchWorkspace({ workspace, port = 8447 } = {}) 
             const method = { catalogs: 'catalog', sources: 'source', editions: 'edition' }[parts[0]];
             return send(res, 200, await workspace.catalog[method](id));
           }
+          if (path === '/api/catalog/import-storage')
+            return send(res, 200, await workspace.catalog.importStorage(catalogQuery(url, ['importRequestId', 'offset', 'limit'])));
           if (path === '/api/catalog/materials')
             return send(res, 200, await workspace.catalog.materials(catalogQuery(url, ['editionId', 'offset', 'limit', 'search'])));
           if (path === '/api/catalog/changes')
@@ -240,7 +242,7 @@ export async function startOpenSearchWorkspace({ workspace, port = 8447 } = {}) 
           : await workspace.catalog.upload(metadata, req);
         return send(res, result.state === 'RUNNING' ? 202 : 200, result);
       }
-      if (req.method === 'POST' && ['/api/catalog', '/api/catalog/suggest', '/api/drafts', '/api/validate', '/api/inspect', '/api/capture', '/api/prepare',
+      if (req.method === 'POST' && ['/api/catalog', '/api/catalog/suggest', '/api/catalog/import-storage/retire', '/api/drafts', '/api/validate', '/api/inspect', '/api/capture', '/api/prepare',
         '/api/relevance-save', '/api/relevance-run', '/api/relevance-promote', '/api/relevance/validate', '/api/relevance/normalize', '/api/deployment'].includes(path) && !url.search) {
         const supplied = req.headers['x-workspace-token'];
         if (req.headers.origin !== origin || typeof supplied !== 'string' || Buffer.byteLength(supplied) !== Buffer.byteLength(token) ||
@@ -249,6 +251,10 @@ export async function startOpenSearchWorkspace({ workspace, port = 8447 } = {}) 
         const input = await body(req);
         if (!['/api/validate', '/api/relevance/validate', '/api/relevance/normalize', '/api/catalog/suggest'].includes(path)) operationId = input.requestId;
         if (path === '/api/catalog/suggest') return send(res, 200, await workspace.catalog.suggest(input));
+        if (path === '/api/catalog/import-storage/retire') {
+          operationId = input.importRequestId;
+          return send(res, 200, await workspace.catalog.retireImportStage(input));
+        }
         if (path === '/api/catalog') {
           const { action, ...values } = input;
           const actions = { save: 'save', preview: 'preview', select: 'select', decision: 'saveDecision', 'create-draft': 'createDraft',
@@ -291,9 +297,9 @@ export async function startOpenSearchWorkspace({ workspace, port = 8447 } = {}) 
   origin = 'http://127.0.0.1:' + server.address().port;
   return { url: origin, server, workspace, async close() {
     if (!closing) closing = (async () => {
-      const stopped = new Promise(resolveClose => { server.close(resolveClose); server.closeIdleConnections(); });
+      stopped ??= new Promise(resolveClose => { server.close(resolveClose); server.closeIdleConnections(); });
       await Promise.allSettled([...requests]); await stopped; await workspace.close();
-    })();
+    })().catch(error => { closing = null; throw error; });
     return closing;
   } };
 }

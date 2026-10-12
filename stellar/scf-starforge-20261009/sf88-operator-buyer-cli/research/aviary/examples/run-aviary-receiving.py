@@ -24,12 +24,15 @@ import json
 import os
 from pathlib import Path
 import re
+import selectors
+import signal
 import socket
 import sqlite3
 import subprocess
 import sys
 import tempfile
 import threading
+import time
 import traceback
 from urllib.parse import parse_qs, urlsplit
 import wave
@@ -892,79 +895,135 @@ def retained_handoff_export(a, workspace, output):
 
 
 def retained_handoff_receive(a, source, output):
-    """Resume only exact members (or exact interrupted prefixes) of the saved ZIP."""
-    source, output = Path(source), Path(output)
-    if not output.exists():
-        return a.receive(source, output)
-    require(output.is_dir() and not output.is_symlink(),
-            "RETAINED_RECEIVING_DIRECTORY", str(output))
-    manifest, declared = handoff_document(a, source)
-    expected = {item["path"]: item for item in declared}
-    for path in output.rglob("*"):
-        require(not path.is_symlink(), "RETAINED_RECEIVING_SYMLINK", str(path))
-        if path.is_file():
-            require(path.relative_to(output).as_posix() in expected,
-                    "RETAINED_RECEIVING_EXTRA_MEMBER", str(path))
-        else:
-            require(path.is_dir(), "RETAINED_RECEIVING_FILE_TYPE", str(path))
-    recovered = []
-    with zipfile.ZipFile(source) as archive:
-        for item in declared:
-            destination = a.within(output, item["path"])
-            before = destination.stat() if destination.exists() else None
-            original = fingerprint(destination) if before is not None else None
-            wanted = {key: item[key] for key in ("bytes", "sha256")}
-            if original == wanted:
-                continue
-            if before is not None:
-                require(destination.is_file() and original["bytes"] < item["bytes"],
-                        "RETAINED_RECEIVING_MEMBER_CHANGED", item["path"])
-                prefix = hashlib.sha256()
-                remaining = original["bytes"]
-                with archive.open(item["path"]) as incoming:
-                    while remaining:
-                        block = incoming.read(min(CHUNK, remaining))
-                        require(bool(block), "RETAINED_RECEIVING_PREFIX_SHORT", item["path"])
-                        prefix.update(block)
-                        remaining -= len(block)
-                require(prefix.hexdigest() == original["sha256"],
-                        "RETAINED_RECEIVING_PREFIX_CHANGED", item["path"])
-            destination.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
-            flags = os.O_WRONLY | os.O_APPEND | os.O_NOFOLLOW
-            if before is None:
-                flags |= os.O_CREAT | os.O_EXCL
-            fd = os.open(destination, flags, 0o600)
-            with os.fdopen(fd, "ab") as outgoing, archive.open(item["path"]) as incoming:
-                opened = os.fstat(outgoing.fileno())
-                require((before is None and opened.st_size == 0) or
-                        (before is not None and
-                         (opened.st_dev, opened.st_ino, opened.st_size, opened.st_mtime_ns) ==
-                         (before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns)),
-                        "RETAINED_RECEIVING_CONCURRENT_CHANGE", item["path"])
-                # The receiving directory is private until every member is verified.
-                # Append only after the exact retained prefix; a killed append remains
-                # the same recognizable prefix on the next receiving invocation.
-                if original is not None:
-                    incoming.seek(original["bytes"])
-                while block := incoming.read(CHUNK):
-                    outgoing.write(block)
-                outgoing.flush()
-                os.fsync(outgoing.fileno())
-            require(fingerprint(destination) == wanted,
-                    "RETAINED_RECEIVING_ARCHIVE_MEMBER", item["path"])
-            sync_dir(destination.parent)
-            recovered.append({"path": item["path"], "retainedPrefix": original})
-    for item in declared:
-        require(fingerprint(a.within(output, item["path"])) ==
-                {key: item[key] for key in ("bytes", "sha256")},
-                "RETAINED_RECEIVING_MEMBER_BYTES", item["path"])
-    a.verify_source(output / "workspace")
-    status = a.show(output / "workspace")
-    require(status["workspace"]["id"] == manifest["workspaceId"],
-            "RETAINED_RECEIVING_WORKSPACE_ID")
-    return {"output": str(output), "workspace": str(output / "workspace"),
-            "application": str(output / "application"), "status": status,
-            "reused": True, "recoveredMembers": recovered}
+    """The maintained application owns complete, partial and repeated receiving."""
+    return a.receive(source, output)
+
+
+def interrupted_archive_child(args):
+    """Stop a real application copy after its original media prefix is durable."""
+    a, _ = load_application(args.application)
+    original_fdopen = a.os.fdopen
+
+    class BoundaryWriter:
+        def __init__(self, stream):
+            self.stream = stream
+        def __getattr__(self, name):
+            return getattr(self.stream, name)
+        def __enter__(self):
+            self.stream.__enter__()
+            return self
+        def __exit__(self, *values):
+            return self.stream.__exit__(*values)
+        def write(self, block):
+            written = self.stream.write(block)
+            member = os.readlink("/proc/self/fd/" + str(self.stream.fileno()))
+            if member.endswith("/workspace/source/assets/held-multipart.wav"):
+                self.stream.flush()
+                os.fsync(self.stream.fileno())
+                st = os.fstat(self.stream.fileno())
+                print(json.dumps({"phase": "ORIGINAL_RECEIVE_PREFIX_DURABLE", "pid": os.getpid(),
+                                  "path": member, "device": st.st_dev, "inode": st.st_ino,
+                                  "prefix": fingerprint(member)}), flush=True)
+                signal.pause()
+            return written
+
+    def observed_fdopen(fd, mode="r", *values, **options):
+        stream = original_fdopen(fd, mode, *values, **options)
+        return BoundaryWriter(stream) if mode == "ab" else stream
+
+    a.os.fdopen = observed_fdopen
+    a.receive(args.archive, args.receive_output)
+    raise RuntimeError("Original media copy completed without its selected interruption boundary.")
+
+
+def receive_with_process_continuation(a, source, output, root, application):
+    """Carry one actual process interruption through the original whole handoff."""
+    source, output, root = Path(source), Path(output), Path(root)
+    boundary_path = stage_path(root, "05a-archive-copy-interruption")
+    member = "workspace/source/assets/held-multipart.wav"
+    if not boundary_path.exists() and not output.exists():
+        argv = [sys.executable, "-B", str(Path(__file__).resolve()), "--interrupt-receive",
+                "--application", str(application), "--archive", str(source),
+                "--receive-output", str(output), "--out", str(root)]
+        marker, captured, child = None, [], None
+        with open(root / "archive-interruption.stderr.log", "wb") as error:
+            try:
+                child = subprocess.Popen(argv, stdout=subprocess.PIPE, stderr=error,
+                                         start_new_session=True, bufsize=0)
+                selector = selectors.DefaultSelector()
+                selector.register(child.stdout, selectors.EVENT_READ)
+                deadline = time.monotonic() + 120
+                try:
+                    while time.monotonic() < deadline:
+                        if not selector.select(max(0, deadline - time.monotonic())):
+                            break
+                        line = child.stdout.readline()
+                        if not line:
+                            break
+                        captured.append(line)
+                        value = json.loads(line)
+                        if value.get("phase") == "ORIGINAL_RECEIVE_PREFIX_DURABLE":
+                            marker = value
+                            break
+                finally:
+                    selector.close()
+                require(marker and marker["pid"] == child.pid and child.poll() is None,
+                        "ORIGINAL_RECEIVING_INTERRUPTION_NOT_OBSERVED", marker)
+                require(not output.exists(), "INCOMPLETE_RECEIVING_PUBLISHED")
+                partial = Path(marker["path"])
+                require(partial.is_relative_to(output.parent) and
+                        fingerprint(partial) == marker["prefix"] and
+                        0 < marker["prefix"]["bytes"] < PCM_BYTES,
+                        "ORIGINAL_RECEIVING_PREFIX_NOT_RETAINED", marker)
+                os.killpg(child.pid, signal.SIGKILL)
+                code = child.wait(timeout=10)
+                require(code == -signal.SIGKILL, "ORIGINAL_RECEIVING_CHILD_NOT_DRAINED", code)
+                captured.append(child.stdout.read())
+                write_bytes(root / "archive-interruption.stdout.jsonl", b"".join(captured), immutable=True)
+                write_json(boundary_path, {"at": now(), "argv": argv, "childPid": child.pid,
+                                          "returncode": code, "originalPrefix": marker,
+                                          "outputVisibleBeforeCompletion": False}, immutable=True)
+            finally:
+                if child is not None:
+                    if child.poll() is None:
+                        os.killpg(child.pid, signal.SIGKILL)
+                        child.wait(timeout=10)
+                    if child.stdout is not None:
+                        child.stdout.close()
+    received = retained_handoff_receive(a, source, output)
+    require(boundary_path.exists(), "ORIGINAL_RECEIVING_INTERRUPTION_RECORD_MISSING")
+    boundary = read_json(boundary_path)
+    original = boundary["originalPrefix"]
+    actual = output / member
+    st = actual.stat()
+    require((st.st_dev, st.st_ino) == (original["device"], original["inode"]),
+            "ORIGINAL_RECEIVING_PREFIX_INODE_REPLACED")
+    continued = received["receiving"].get("recoveredMembers", [])
+    require(any(item["path"] == member and item["retainedBytes"] == original["prefix"]["bytes"]
+                for item in continued), "ORIGINAL_RECEIVING_PREFIX_NOT_CONTINUED")
+    # A repeated original receive must preserve later local review and API history.
+    before = a.show(output / "workspace")
+    note = "Original archive receiving continued after the media-copy process was stopped."
+    document = copy.deepcopy(before["mapping"]["document"])
+    if document["note"] != note:
+        document["note"] = note
+        a.save_mapping(output / "workspace", document, before["mapping"]["revision"])
+    advanced = a.show(output / "workspace")
+    reopened = a.receive(source, output)
+    require(reopened.get("reused") and
+            reopened["status"]["mapping"] == advanced["mapping"] and
+            operation_projection(reopened["status"]) == operation_projection(advanced),
+            "REPEATED_RECEIVING_REPLACED_LATER_WORK")
+    completed = {"at": now(), "interruption": fingerprint(boundary_path),
+                 "originalPrefix": original["prefix"], "continuedMember": fingerprint(actual),
+                 "sameOriginalInode": True, "laterMappingRevision": advanced["mapping"]["revision"],
+                 "laterMappingSha256": a.digest(advanced["mapping"]["document"]),
+                 "workspaceId": advanced["workspace"]["id"], "originalProviderActionsRetained": True}
+    completion_path = stage_path(root, "05b-archive-receiving-continued")
+    if not completion_path.exists():
+        write_json(completion_path, completed, immutable=True)
+    return reopened
+
 
 def initial_workspace(a, c, root, config):
     workspace = root / "workspace"
@@ -1224,7 +1283,7 @@ def receiving(args):
                     {"bytes": len(VTT), "sha256": hashlib.sha256(VTT).hexdigest()},
                     "TRANSCRIPT_EXPORT_BYTES")
             portable = retained_handoff_export(a, workspace, root / "portable-workspace.zip")
-            received = retained_handoff_receive(a, root / "portable-workspace.zip", root / "received")
+            received = receive_with_process_continuation(a, root / "portable-workspace.zip", root / "received", root, application)
             require(received["status"]["workspace"]["id"] == prepared["workspaceId"],
                     "PORTABLE_WORKSPACE_ID")
             # The native portable projection removes only the ephemeral capability URLs.
@@ -1295,7 +1354,10 @@ def receiving(args):
                       "effectiveParentKeysAllocatedBeforePlanning": True,
                       "coldPortableRunDoesNotUseRedactedUploadUrls": True,
                       "transcriptRedirectKeepsTokenAtApiOrigin": True,
-                      "coldTranscriptExportReusesOriginalBytes": True}}
+                      "coldTranscriptExportReusesOriginalBytes": True,
+                      "killedArchiveCopyResumesOriginalPrefixInode": True,
+                      "completeArchivePublishedAfterValidation": True,
+                      "repeatedReceiveRetainsLaterMappingAndProviderIds": True}}
     result["serversDrainedAt"] = now()
     result["artifacts"] = [{"path": path.relative_to(root).as_posix(), **fingerprint(path)}
         for path in sorted(root.rglob("*")) if path.is_file()
@@ -1305,7 +1367,8 @@ def receiving(args):
             "client-config.json", "cold-expected.json", "original-example-inventory.json",
             "original-native-package.zip", "original-native-package.zip.manifest.json",
             "portable-workspace.zip", "completed-workspace.zip", "cold-reopen-result.json",
-            "cold-reopen.stdout.json", "cold-reopen.stderr.log"))]
+            "cold-reopen.stdout.json", "cold-reopen.stderr.log",
+            "archive-interruption.stdout.jsonl", "archive-interruption.stderr.log"))]
     write_json(final, result, immutable=True)
     print(json.dumps({"state": result["state"], "receipt": str(final),
                       "completeWorkspace": str(root / "completed-workspace.zip"),
@@ -1320,8 +1383,13 @@ def main():
     parser.add_argument("--out", required=True)
     parser.add_argument("--workspace")
     parser.add_argument("--cold-reopen", action="store_true")
+    parser.add_argument("--interrupt-receive", action="store_true")
+    parser.add_argument("--archive")
+    parser.add_argument("--receive-output")
     args = parser.parse_args()
     try:
+        if args.interrupt_receive:
+            return interrupted_archive_child(args)
         return cold_reopen(args) if args.cold_reopen else receiving(args)
     except BaseException as error:
         root = Path(args.out).resolve()

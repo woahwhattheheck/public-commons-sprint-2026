@@ -19,9 +19,10 @@ from .sql_server import SqlServer, SQL_KINDS
 from .billback import Billing, KINDS as BILLING_KINDS
 from .azure_exports import AzureExports, KINDS as AZURE_KINDS
 from .tourism import Tourism, KINDS as TOURISM_KINDS
+from .load_forecast import LoadForecast, KINDS as LOAD_KINDS
 from .store import Store, Conflict, digest, encoded, identifier, now
 
-KINDS = ("source", "dataset", "plan", "artifact", "capture", "comparison", "rollout", "support", "usage", "delivery", "backup", "server_report", "server_bundle", "server_job", "server_result") + BILLING_KINDS + AZURE_KINDS + TOURISM_KINDS
+KINDS = ("source", "dataset", "plan", "artifact", "capture", "comparison", "rollout", "support", "usage", "delivery", "backup", "server_report", "server_bundle", "server_job", "server_result") + BILLING_KINDS + AZURE_KINDS + TOURISM_KINDS + LOAD_KINDS
 
 
 def decoded_file(request):
@@ -61,6 +62,7 @@ class Service:
         self.billing = Billing(self)
         self.azure = AzureExports(self)
         self.tourism = Tourism(self)
+        self.load = LoadForecast(self)
         self.actions = {
             "source.import": self.source_import, "source.assign": self.source_assign,
             "dataset.import": self.dataset_import, "dataset.correct": self.dataset_correct,
@@ -83,6 +85,7 @@ class Service:
         self.actions.update(self.billing.actions)
         self.actions.update(self.azure.actions)
         self.actions.update(self.tourism.actions)
+        self.actions.update(self.load.actions)
 
     def close(self):
         self.sql.close()
@@ -96,7 +99,9 @@ class Service:
         value = {**payload, "_operation_id": self.operation_id}
         return self.store.put(kind, value, entity_id or self.operation_id, expected, self.actor)
 
-    def dispatch(self, action, request):
+    def dispatch(self, action, request, *, resume_local=False):
+        if resume_local and action not in self.load.local_receiving_actions:
+            raise ValueError("Only the original local receiving children can resume an uncommitted operation.")
         if action not in self.actions:
             raise ValueError("Unknown workspace action.")
         if not isinstance(request, dict):
@@ -105,7 +110,8 @@ class Service:
         operation_id = identifier(request.pop("operation_id", None) or secrets.token_hex(16))
         with self.lock:
             previous = self.store.begin_operation(operation_id, action,
-                {**request, "password": "(provided)"} if "password" in request else request)
+                {**request, "password": "(provided)"} if "password" in request else request,
+                resume_uncommitted=resume_local or action == "load.delivery.adopt")
             if previous is not None:
                 return {"record": previous, "operation_id": operation_id, "replayed": True}
             prior_operation, prior_actor = self.operation_id, self.actor
@@ -147,6 +153,8 @@ class Service:
                     payload["volume_count"] = len(payload.get("groups", []))
                     for field in ("groups", "segments"):
                         payload.pop(field, None)
+                if kind == "load_received":
+                    payload.pop("retained", None)
                 if kind == "comparison":
                     payload["result"].pop("differences", None)
                 if kind == "artifact":

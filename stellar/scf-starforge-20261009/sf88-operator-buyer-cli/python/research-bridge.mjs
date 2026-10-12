@@ -7,6 +7,8 @@ import {need,object,parseJson} from '../node/store.mjs';
 import {createResearchDocumentSource} from './research-document-source.mjs';
 import {citationReviewInput,citationDigest} from '../research-dossiers/citation-updates.mjs';
 import {exportCitationFile,receiveCitationFile} from './research-citation-delivery.mjs';
+import {eligibilityConsumerInput,readEligibility,submitEligibility,exportEligibility} from '../research-dossiers/eligibility-consumer.mjs';
+import {exportEligibilityDeliveryFile,receiveEligibilityFile} from './research-eligibility-delivery.mjs';
 
 const MODE='RESEARCH_WORKSPACE_BRIDGE',SCHEMA='stellar-forge.research-python-call.v1';
 const safeCode=value=>typeof value==='string'&&/^[A-Z0-9_]{1,120}$/.test(value)?value:'RESEARCH_NATIVE_CALL_FAILED';
@@ -34,6 +36,10 @@ async function dispatch(client,action,input,signal){
     case 'select-evidence':return client.selectEvidence(dossierId,body);
     case 'update-selection':return client.updateSelection(dossierId,body);
     case 'compare':return client.compare(dossierId,options);
+    case 'eligibility':return readEligibility(client,dossierId,options);
+    case 'eligibility-review':return submitEligibility(client,dossierId,body);
+    case 'eligibility-export':return exportEligibility(client,dossierId,requestOptions);
+    case 'eligibility-delivery-export':return exportEligibilityDeliveryFile(client,input);
     case 'citation-updates':return client.citationUpdates(dossierId,options);
     case 'citation-review':return client.reviewCitationUpdate(dossierId,body);
     case 'citation-export':return exportCitationFile(client,input);
@@ -68,6 +74,10 @@ async function dispatch(client,action,input,signal){
 export async function runResearchCall(request,{signal}={}){
   need(object(request)&&request.schema===SCHEMA&&typeof request.action==='string'&&object(request.input),
     'RESEARCH_PYTHON_REQUEST_INVALID');
+  if(request.action==='eligibility-input')
+    return {mode:MODE,ok:true,workspaceId:null,result:eligibilityConsumerInput(request.input.request)};
+  if(request.action==='eligibility-receive')
+    return {mode:MODE,ok:true,workspaceId:null,result:await receiveEligibilityFile(request.input)};
   if(request.action==='citation-review-input'){
     need(Buffer.byteLength(JSON.stringify(request.input.request))<=16*1024*1024,'CITATION_REVIEW_INPUT_TOO_LARGE');
     const value=citationReviewInput(request.input.request);
