@@ -324,7 +324,7 @@ export async function startMerchantFleet(fleet, { port = 8400, adminPort = 8401,
       return closePromise;
     };
     return { publicServer, adminServer, close, status: rollout.status,
-      withRetiredPort: rollout.withRetiredPort,
+      withRetiredPort: rollout.withRetiredPort, withServingMerchant: rollout.withServingMerchant,
       publicURL: 'http://' + HOST + ':' + publicServer.address().port, adminURL,
       controlPath: store?.controlPath ?? null };
   } catch (error) {
