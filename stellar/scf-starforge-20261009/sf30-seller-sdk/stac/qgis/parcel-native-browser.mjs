@@ -3,6 +3,7 @@
 // Original analyst UI receiving, with exact request bodies retained before sends.
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import os from 'node:os';
 import crypto from 'node:crypto';
 import {pathToFileURL} from 'node:url';
 
@@ -17,20 +18,35 @@ const token = opened.hash.slice(1);
 const origin = opened.origin;
 const auth = {'X-Starforge-Qgis-Workspace':token, Origin:origin};
 const sha = bytes => crypto.createHash('sha256').update(bytes).digest('hex');
-const equal = (a,b) => JSON.stringify(a) === JSON.stringify(b);
+const canonical = value => Array.isArray(value) ? value.map(canonical) :
+  value !== null && typeof value === 'object' ? Object.fromEntries(Object.keys(value).sort().map(key=>[key,canonical(value[key])])) : value;
+const equal = (a,b) => JSON.stringify(canonical(a)) === JSON.stringify(canonical(b));
 const ensure = (condition,message) => {if (!condition) throw new Error(message);};
 const pause = ms => new Promise(resolve => setTimeout(resolve,ms));
 const bytes = value => Buffer.from(JSON.stringify(value,null,2)+'\n');
 async function exists(file) {try {await fs.access(file);return true;} catch(error) {if(error.code==='ENOENT')return false;throw error;}}
 async function write(file,body,immutable=false) {
   await fs.mkdir(path.dirname(file),{recursive:true,mode:0o700});
-  if (immutable) {
-    try {await fs.writeFile(file,body,{flag:'wx',mode:0o600});}
-    catch(error) {if(error.code!=='EEXIST')throw error;ensure((await fs.readFile(file)).equals(body),'A retained original browser file differs: '+file);}
-  } else {
-    const temporary=file+'.pending-'+crypto.randomUUID();
-    try {await fs.writeFile(temporary,body,{flag:'wx',mode:0o600});await fs.rename(temporary,file);}
-    finally {await fs.rm(temporary,{force:true});}
+  const temporary=file+'.pending-'+crypto.randomUUID();
+  let handle;
+  try {
+    handle=await fs.open(temporary,'wx',0o600);
+    await handle.writeFile(body);
+    await handle.sync();
+    await handle.close();
+    handle=null;
+    if (immutable) {
+      try {await fs.link(temporary,file);}
+      catch(error) {
+        if(error.code!=='EEXIST')throw error;
+        ensure((await fs.readFile(file)).equals(body),'A retained original browser file differs: '+file);
+      }
+    } else {
+      await fs.rename(temporary,file);
+    }
+  } finally {
+    if(handle)await handle.close();
+    await fs.rm(temporary,{force:true});
   }
 }
 async function measured(file) {const body=await fs.readFile(file);return{path:file,bytes:body.length,sha256:sha(body)};}
@@ -48,10 +64,17 @@ if (await exists(finalPath)) {
   }
 }
 const {chromium}=await import(pathToFileURL(config.playwrightModule).href);
-const context=await chromium.launchPersistentContext(path.join(output,'private-profile'),{
-  executablePath:config.chromium,headless:true,viewport:{width:1440,height:1050},
-  args:['--no-sandbox','--disable-dev-shm-usage']
-});
+const profile=await fs.mkdtemp(path.join(os.tmpdir(),'starforge-parcel-browser-'));
+let context;
+try {
+  context=await chromium.launchPersistentContext(profile,{
+    executablePath:config.chromium,headless:true,viewport:{width:1440,height:1050},
+    args:['--no-sandbox','--disable-dev-shm-usage']
+  });
+} catch(error) {
+  await fs.rm(profile,{recursive:true,force:true});
+  throw error;
+}
 const errors=[],files=[],results={};
 const page=await context.newPage();
 page.setDefaultTimeout(30000);
@@ -301,5 +324,6 @@ try {
     workspaceId:original.workspaceId,message:error.message,errors}));
   throw error;
 } finally {
-  await context.close();
+  try {await context.close();}
+  finally {await fs.rm(profile,{recursive:true,force:true});}
 }
