@@ -181,6 +181,20 @@ export async function receiveManagedSnowflake(input, { onProgress = value => con
     record.runtimeId = attached.runtimeId; await save();
 
     const current = async () => (await model.applicationsState()).applications.find(item => item.id === record.applicationId);
+    async function retainedRun(id, application) {
+      const app = application ?? await current();
+      assert.ok(app, 'The saved application must remain available.');
+      let found = app.runs.find(item => item.id === id), cursor = app.history?.nextCursor;
+      const seen = new Set();
+      while (!found && cursor) {
+        assert.ok(!seen.has(cursor), 'The original Applications history cursor must advance.');
+        seen.add(cursor);
+        const page = await model.applicationsHistory({ applicationId: record.applicationId,
+          limit: app.history.limit, cursor });
+        found = page.runs.find(item => item.id === id); cursor = page.nextCursor;
+      }
+      return found ?? null;
+    }
     async function waitFor(label, read) {
       let last = '';
       for (;;) {
@@ -218,7 +232,12 @@ export async function receiveManagedSnowflake(input, { onProgress = value => con
 
     async function start(name) {
       let run = record.runs[name], existing = run &&
-        (await current()).runs.find(item => item.id === run.requestId);
+        await retainedRun(run.requestId);
+      if (existing && !existing.active && existing.phase === 'INTERRUPTED') {
+        const recovered = await model.applicationsRecover({ applicationId: record.applicationId, operationId: run.requestId });
+        if (recovered.commandActive) await stop(name);
+        existing = await retainedRun(run.requestId);
+      }
       // A later invocation may continue a confirmed closed process. The application,
       // edition and publication remain the same; every foreground lifetime is retained.
       if (!run || existing && !existing.active && ['SUCCEEDED', 'FAILED', 'CANCELLED'].includes(existing.phase)) {
@@ -233,7 +252,7 @@ export async function receiveManagedSnowflake(input, { onProgress = value => con
       await model.applicationsStart({ applicationId: record.applicationId, requestId: run.requestId, reviewId: run.reviewId });
       let recovered = false, quietPolls = 0;
       const app = await waitFor(name + '-STARTING', async () => {
-        const value = await current(), active = value.runs.find(item => item.id === run.requestId);
+        const value = await current(), active = await retainedRun(run.requestId, value);
         assert.ok(active, 'The original saved application run must remain in its history.');
         if (!active.active && ['PENDING', 'QUEUED', 'INTERRUPTED'].includes(active.phase)) {
           quietPolls++;
@@ -253,7 +272,7 @@ export async function receiveManagedSnowflake(input, { onProgress = value => con
         return { done: active.active && !active.stop && !!active.privateUrl, value,
           progress: { phase: value.phase, applicationId: record.applicationId, operationId: run.requestId } };
       });
-      const active = app.runs.find(item => item.id === run.requestId);
+      const active = await retainedRun(run.requestId, app);
       const url = privateUrl(active.privateUrl);
       const state = await request(url, '/api/state'); assert.equal(state.id, record.workspaceId);
       assert.match(state.instanceId ?? '', /^[a-f0-9-]{36}$/i);
@@ -263,15 +282,17 @@ export async function receiveManagedSnowflake(input, { onProgress = value => con
     async function stop(name) {
       const run = record.runs[name];
       if (!run || run.stopped) return;
-      const original = (await current()).runs.find(item => item.id === run.requestId);
+      const original = await retainedRun(run.requestId);
       assert.ok(original, 'The original run must remain available when closing its owned process.');
       if (original.active || ['PENDING', 'QUEUED', 'RUNNING', 'INTERRUPTED'].includes(original.phase)) {
         run.stoppingAt ??= new Date().toISOString(); await save();
         await model.applicationsStop({ applicationId: record.applicationId, operationId: run.requestId });
         await waitFor(name + '-STOPPING', async () => {
-          const value = await current(), active = value.runs.find(item => item.id === run.requestId);
+          const value = await current(), active = await retainedRun(run.requestId, value);
+          if (active && !active.active && active.phase === 'INTERRUPTED')
+            await model.applicationsRecover({ applicationId: record.applicationId, operationId: run.requestId });
           return { done: !!active && !active.active &&
-              !['PENDING', 'QUEUED', 'RUNNING'].includes(active.phase), value,
+              ['SUCCEEDED', 'FAILED', 'CANCELLED'].includes(active.phase), value,
             progress: { phase: value.phase, operationId: run.requestId } };
         });
       }

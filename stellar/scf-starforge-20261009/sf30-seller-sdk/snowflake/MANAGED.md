@@ -150,7 +150,8 @@ and publication. An unexpected process closure is recorded with its original
 operation ID.
 
 Use the original Applications history and output to inspect that run, or stop it
-there. Keep the same selected source and input files until the receiving case is
+there. The receiver follows the original history pages when an earlier saved run
+has moved beyond the current page. Keep the same selected source and input files until the receiving case is
 complete. A changed receiving input requires its own explicit operation record.
 
 ## Source layout
