@@ -15,6 +15,17 @@ removed its temporary merchant directory. The CKQrif state supplies the
 retained application needed for the customer and checkout continuation.
 Keep the earlier accepted result attached to its original run.
 
+## Adopt an already completed core
+
+When the original receiving owner has completed the merchant journey, use the
+[completed-core capture and continuation](COMPLETED_CORE.md). The runner accepts
+--input-mode completed-core, restores the captured actual application paths and
+adopts the exact earlier result before customer/checkout. Select --approval browser
+to exercise Request through the original browser approval and result workflow.
+
+The remaining instructions describe the original prepared-capsule mode. Preserve
+its existing operation when using that mode.
+
 ## Worker input
 
 Use a private project directory owned by the worker. The output directory must
