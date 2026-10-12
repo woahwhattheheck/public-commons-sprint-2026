@@ -1080,6 +1080,8 @@
     },
     "./seller/ndjson/release": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/release.mjs",
     "./merchant/mcp/dataset-lifecycle": "./source/stellar-forge/mcp-merchant-operator/dataset-lifecycle.mjs",
+    "./merchant/mcp/worldbank-workspaces": "./source/stellar-forge/mcp-merchant-operator/worldbank-workspace.mjs",
+    "./merchant/mcp/worldbank-download": "./source/stellar-forge/mcp-merchant-operator/worldbank-workspace-download.mjs",
     "./merchant/api-pass-workspace": "./source/stellar/scf-starforge-20261009/sf101-merchant-receiver/api-access/workspace/model.mjs",
     "./merchant/api-pass-workspace/config": "./source/stellar/scf-starforge-20261009/sf101-merchant-receiver/api-access/workspace/configuration.mjs",
     "./merchant/api-pass-workspace/server": "./source/stellar/scf-starforge-20261009/sf101-merchant-receiver/api-access/workspace/server.mjs",
