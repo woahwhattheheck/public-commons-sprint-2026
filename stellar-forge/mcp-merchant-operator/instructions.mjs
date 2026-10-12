@@ -1,6 +1,10 @@
 /** Guidance from the original merchant host, selected by advertised tool prefixes. */
 const sections = [
   {
+    "prefix": "merchant_n8n_",
+    "text": "For n8n merchants, use the configured workspace alias and inspect merchant_n8n_status for the original automation definitions and current worker. Prepare with a retained request UUID and the complete input; the exact retry recovers the same private claim handoff. Review the full job and dispatch before changing their selected revisions. Renew claims with the original UUID, reason and revision; inspect the same job after uncertain cancel, retry or execution recovery. Reconcile an uncertain dispatch against its actual configured workflow and job input before explicitly authorizing a rerun. Export at both current job and dispatch revisions with a stable request UUID; retain exportId and manifestFile.sha256. Use inspect-n8n, download-n8n and reopen-n8n to receive all original files with the same alias, endpoint, manifest digest and private directory across interruption. The original merchant remains the sole job and dispatch owner shared with Applications and its browser."
+  },
+  {
     "prefix": "merchant_clinicaltrials_",
     "text": "For ClinicalTrials, attach the declared existing console and use its original capture, NCT, source SHA and integer revision. Read the original complete study and official PRS reports before retaining a review or modernization decision. Save the exact action UUID and payload before mutation; inspect that same operation after an interrupted reply. Portable receiving preserves original studies, reviews and source editions in a new receiver; inspect its actual operation/export inventory before continuation. Prepare declared native files and receive their complete SHA-pinned bytes through retained downloads. Closing this attachment drains its own reads and leaves the original Python console owner open."
   },

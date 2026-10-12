@@ -11,7 +11,8 @@ import { readPrivate, writePrivate, privateDirectory } from './store.mjs';
 
 export const N8N_LAUNCH_SCHEMA = 'stellar-forge.n8n-merchant-launch.v1';
 const SOURCE_DIRECTORY = dirname(fileURLToPath(import.meta.url));
-const commandSources = ['cli.mjs', 'launch.mjs', 'prepare.mjs', 'merchant.mjs', 'workspace/server.mjs'];
+const commandSources = ['cli.mjs', 'launch.mjs', 'prepare.mjs', 'merchant.mjs', 'workspace/server.mjs',
+  'agent-operations.mjs', 'transfer-format.mjs', '../../../../stellar-forge/mcp-merchant-operator/retained-file-reads.mjs'];
 
 async function sourceSelection(sourceDirectory, launchSourceDirectory) {
   sourceDirectory = resolve(sourceDirectory ?? SOURCE_DIRECTORY);
