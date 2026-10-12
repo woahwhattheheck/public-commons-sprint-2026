@@ -83,7 +83,9 @@ export async function main(args=process.argv.slice(2)){
     'quota-dir':{type:'string'},'history-file':{type:'string'},'requests-per-second':{type:'string'},'calls-per-day':{type:'string'},
     product:{type:'string'},query:{type:'string'},out:{type:'string'},port:{type:'string'},'operations-port':{type:'string'},
     facilitator:{type:'string'},'allow-local-facilitator':{type:'boolean'},workspace:{type:'string'},
-    'availability-dir':{type:'string'},'history-dir':{type:'string'},help:{type:'boolean'}
+    'availability-dir':{type:'string'},'history-dir':{type:'string'},
+    'expected-workspace-identity':{type:'string'},'expected-store-identity':{type:'string'},'expected-source-review':{type:'string'},
+    help:{type:'boolean'}
   }});
   const command=positionals[0];
   if(v.help||!command){process.stdout.write(HELP);return;}
@@ -92,9 +94,14 @@ export async function main(args=process.argv.slice(2)){
   if(!v.store)fail('Use --store DIR for the selected original editions.');
   if(command==='workspace'){
     if(!v.workspace)fail('Use --workspace DIR for the retained operator drafts.');
-    const {startEdgarWorkspace}=await import('./server.mjs');
-    const service=await startEdgarWorkspace({directory:resolve(v.workspace),storeDirectory:resolve(v.store),port:numeric(v.port,0)});
-    process.stdout.write(json({url:service.url,workspace:resolve(v.workspace)}));handleSignals(service);return service;
+    const [{startEdgarWorkspace},{prepareSecEdgarLaunch,announceSecEdgarWorkspace}]=await Promise.all([
+      import('./server.mjs'),import('./managed-launch.mjs')]);
+    const launch=await prepareSecEdgarLaunch({directory:resolve(v.workspace),storeDirectory:resolve(v.store),
+      expectedWorkspace:v['expected-workspace-identity'],expectedStore:v['expected-store-identity'],expectedReview:v['expected-source-review']});
+    const service=await startEdgarWorkspace({directory:launch.directory,storeDirectory:launch.storeDirectory,port:numeric(v.port,0)});
+    try{process.stdout.write(JSON.stringify(await announceSecEdgarWorkspace(service,launch))+'\n');}
+    catch(error){await service.close();throw error;}
+    handleSignals(service);return service;
   }
   if(['export','serve','query'].includes(command)){
     if(!v.config)fail('Use --config FILE.');
