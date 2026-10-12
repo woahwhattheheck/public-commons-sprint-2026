@@ -326,3 +326,7 @@ original inbox, request collection, exported files and
 `lifecycle-result.json` there. Its three clearly named example profiles use a
 preparation-only signer. Use your actual private operator configurations with
 **Run selected here** or the terminal run command above for a customer purchase.
+
+## Complete operating recovery
+
+Use **Backup and receiving** to retain the original collection, inbox, operator state and saved files as one native encrypted backup. The complete [recovery guide](RECOVERY.md) covers reviewed capture, progress, cancellation, exact-root receiving, retained operation recovery, CLI and browser reopen.

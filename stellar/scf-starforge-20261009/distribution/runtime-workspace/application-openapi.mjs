@@ -21,7 +21,7 @@ export function openApiApplication(common) {
       field('outputParent', 'Private merchant projects directory', 'path', true,
         'An existing private folder, or a new folder in an existing private parent. Private OAuth stores stay separate.'),
       field('oauthConnectionsFile', 'Original OAuth host configuration', 'path', false,
-        'Optional original host-connections JSON with trusted aliases and private directory environment references. Initialize each original connection before selecting it.'),
+        'Optional original host-connections JSON with trusted aliases and private directory environment references. Use Set up provider connections below to create a reviewed edition, or select an existing initialized registry.'),
       field('allowLoopbackOAuth', 'Use a local development OAuth provider', 'boolean', false,
         'Only for an explicitly local provider. Normal registered providers retain public HTTPS.'),
       ...common.map(item => item.name === 'port' ? { ...item,

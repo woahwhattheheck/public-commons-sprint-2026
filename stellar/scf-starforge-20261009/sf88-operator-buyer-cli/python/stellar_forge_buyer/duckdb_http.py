@@ -17,6 +17,7 @@ import threading
 from urllib.parse import parse_qs, unquote, urlsplit
 
 from . import _duckdb_ui
+from .duckdb_agent import identity as agent_identity, catalog as agent_catalog, request_record, check_report
 from ._analysis_export_http import send_export
 from .errors import BuyerError, StateError
 from .storage import dump, parse, private_directory, read
@@ -136,6 +137,7 @@ class DuckDBOperator:
         with self.mutex:
             editions = self.workspace.editions(limit=100)
             return {
+                **self.workspace.identity(),
                 "directory": str(self.directory),
                 "engine": "DuckDB",
                 "editions": _rows(editions, "editions"),
@@ -382,6 +384,10 @@ def serve(workspace, *, port=0, export_root=None, handoff_root=None):
             capabilities = self.headers.get_all("X-DuckDB-Capability", [])
             if len(capabilities) != 1 or not secrets.compare_digest(capabilities[0], token):
                 return self._reply(403, {"error": "DUCKDB_OPERATOR_CAPABILITY_REQUIRED"})
+            workspace_ids = self.headers.get_all("X-DuckDB-Workspace-ID", [])
+            if workspace_ids and (len(workspace_ids) != 1 or not secrets.compare_digest(
+                    workspace_ids[0], workspace.identity()["workspace_id"])):
+                return self._reply(409, {"error": "DUCKDB_OPERATOR_WORKSPACE_ID_CHANGED"})
             parameters = parse_qs(url.query, strict_parsing=True)
             if any(len(values) != 1 for values in parameters.values()):
                 raise StateError("DUCKDB_OPERATOR_PARAMETERS_INVALID")
@@ -400,8 +406,18 @@ def serve(workspace, *, port=0, export_root=None, handoff_root=None):
                     limit = _integer(int(parameters.get("limit", ["100"])[0]), "limit", 1, 100)
                     with operator.mutex:
                         return self._reply(200, workspace.editions(limit=limit, before=before))
+                if len(parts) == 3 and parts[:2] == ["api", "catalog"]:
+                    if set(parameters) - {"offset", "limit"}:
+                        raise StateError("DUCKDB_OPERATOR_PARAMETERS_INVALID")
+                    return self._reply(200, agent_catalog(operator, parts[2],
+                        offset=int(parameters.get("offset", ["0"])[0]),
+                        limit=int(parameters.get("limit", ["25"])[0])))
                 if parameters:
                     raise StateError("DUCKDB_OPERATOR_PARAMETERS_INVALID")
+                if url.path == "/api/identity":
+                    return self._reply(200, agent_identity(operator))
+                if len(parts) == 3 and parts[:2] == ["api", "requests"]:
+                    return self._reply(200, request_record(operator, parts[2]))
                 if url.path == "/api/state":
                     return self._reply(200, operator.state())
                 if len(parts) == 3 and parts[:2] == ["api", "editions"]:
@@ -429,6 +445,15 @@ def serve(workspace, *, port=0, export_root=None, handoff_root=None):
                 if len(parts) == 4 and parts[:2] == ["api", "requests"] and parts[3] == "resume":
                     _fields(body)
                     return self._reply(200, operator.resume(parts[2]))
+                source_hashes = self.headers.get_all("X-DuckDB-Source-Sha256", [])
+                if source_hashes:
+                    if len(source_hashes) != 1 or url.path not in {"/api/inspect-delivery", "/api/reviews"}:
+                        raise StateError("DUCKDB_OPERATOR_SOURCE_HEADER_INVALID")
+                    with operator.mutex:
+                        check_report(body, source_hashes[0])
+                        result = operator.perform(url.path, body)
+                        check_report(body, source_hashes[0])
+                    return self._reply(200, result)
                 return self._reply(200, operator.perform(url.path, body))
             return self._reply(404, {"error": "DUCKDB_OPERATOR_NOT_FOUND"})
 
@@ -466,6 +491,7 @@ def serve(workspace, *, port=0, export_root=None, handoff_root=None):
         url = "http://127.0.0.1:" + str(server.server_port) + "/#" + token
         control = operator.directory / "duckdb-launch.json"
         dump(control, {"schema": "stellar-forge.duckdb-operator-launch.v1",
+                       "workspace_id": workspace.identity()["workspace_id"],
                        "directory": str(operator.directory), "pid": os.getpid(), "url": url})
         return server, control, url
     except BaseException:
@@ -474,3 +500,4 @@ def serve(workspace, *, port=0, export_root=None, handoff_root=None):
         else:
             operator.close()
         raise
+
