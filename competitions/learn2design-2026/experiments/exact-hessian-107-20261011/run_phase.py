@@ -107,9 +107,24 @@ def freeze(args):
     for name, expected in pinned.items():
         if sha(ROOT / name) != expected:
             raise ValueError("Frozen source differs: " + name)
+    topologies = list(phase["public_topology_seeds"])
+    partition = None
+    count, index = args.partition_count, args.partition_index
+    if count is not None or index is not None:
+        if (type(count) is not int or type(index) is not int or
+                not 1 <= count <= len(topologies) or not 0 <= index < count):
+            raise ValueError("Use --partition-count N and --partition-index I with "
+                             "1 <= N <= topology count and 0 <= I < N")
+        selected_topologies = topologies[index::count]
+        partition = {"index": index, "count": count,
+                     "full_public_topology_seeds": topologies,
+                     "selected_public_topology_seeds": selected_topologies,
+                     "full_panel_cells": len(topologies) * len(phase["algorithm_seeds"]) * len(selected)}
+    else:
+        selected_topologies = topologies
     cells = []
-    # Interleave methods within each topology, retaining the original order.
-    for topology in phase["public_topology_seeds"]:
+    # Keep every method/algorithm-seed comparison for one topology on one worker.
+    for topology in selected_topologies:
         for seed in phase["algorithm_seeds"]:
             for key in selected:
                 cells.append({"id": f"{key}-t{topology}-s{seed}-{phase['max_time_seconds']}",
@@ -118,10 +133,13 @@ def freeze(args):
                               "invocation_selection": selection_for(candidates[key]),
                               "topology_seed": topology, "algorithm_seed": seed,
                               "max_time_seconds": phase["max_time_seconds"]})
-    return sources, {"schema": SCHEMA, "phase": args.phase, "baseline": baseline,
-                     "candidates": selected, "cells": cells, "source_sha256": pinned,
-                     "container_cap_seconds": phase.get("container_cap_seconds", 16200),
-                     "physics": plan["common_objective"]}
+    intent = {"schema": SCHEMA, "phase": args.phase, "baseline": baseline,
+              "candidates": selected, "cells": cells, "source_sha256": pinned,
+              "container_cap_seconds": phase.get("container_cap_seconds", 16200),
+              "physics": plan["common_objective"]}
+    if partition is not None:
+        intent["topology_partition"] = partition
+    return sources, intent
 
 
 def executable(value):
@@ -279,6 +297,8 @@ def summarize(directory, intent, sources, *, publish=True):
               "all_cells_ended": all((directory / "cells" / c["id"] / "completion.json").exists()
                                      for c in intent["cells"]),
               "cells": rows, "comparison": comparison}
+    if "topology_partition" in intent:
+        result["topology_partition"] = intent["topology_partition"]
     if publish:
         atomic_json(directory / "result.json", result)
     return result
@@ -325,6 +345,10 @@ def main():
     parser.add_argument("--cache-dir", type=Path)
     parser.add_argument("--run-dir", type=Path)
     parser.add_argument("--archive", type=Path)
+    parser.add_argument("--partition-count", type=int,
+                        help="Divide complete topology groups across this many existing allocations")
+    parser.add_argument("--partition-index", type=int,
+                        help="Zero-based topology partition assigned to this allocation")
     args = parser.parse_args()
     sources = read(ROOT / "SOURCES.json")
     template = None
@@ -394,6 +418,8 @@ def main():
                   "planned_cells": result["planned_cells"],
                   "retained_native_reports": result["retained_native_reports"],
                   "all_cells_ended": result["all_cells_ended"]}
+        if "topology_partition" in intent:
+            output["topology_partition"] = intent["topology_partition"]
         if args.archive or args.action == "export":
             if args.archive is None:
                 parser.error("export requires a new --archive path")
