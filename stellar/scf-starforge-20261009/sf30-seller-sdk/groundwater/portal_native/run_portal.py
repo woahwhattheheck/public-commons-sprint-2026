@@ -21,7 +21,7 @@ from common import (Children, PortalRunError, digest, git_sha, info, inventory, 
                     publish, publish_bytes, read, require, sync_dir, verify, verify_archive)
 
 HERE=Path(__file__).resolve().parent
-CAPSULE_SHA="c0570f6172a46c09b8577fb0bef4d33f06f942f7"
+CAPSULE_SHA="6b128ef61baf7011292099e4945acf6903238d59"
 
 def absolute(value,label):
     require(isinstance(value,str) and Path(value).is_absolute() and "\0" not in value,label+" must be an absolute path.")
