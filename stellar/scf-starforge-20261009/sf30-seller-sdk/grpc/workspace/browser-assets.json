@@ -50,6 +50,20 @@
         "request-series.css",
         "text/css; charset=utf-8"
       ]
+    ],
+    [
+      "/health.mjs",
+      [
+        "health.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/health.css",
+      [
+        "health.css",
+        "text/css; charset=utf-8"
+      ]
     ]
   ]
 }
