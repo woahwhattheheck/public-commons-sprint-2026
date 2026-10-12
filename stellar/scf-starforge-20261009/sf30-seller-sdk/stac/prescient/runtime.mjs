@@ -52,6 +52,25 @@ async function checkDelivery(delivery,profile){
     assetBytes:assets.reduce((total,member)=>total+member.bytes,0)};
 }
 
+// Older operators retained the complete review in their original operation even
+// when the secondary delivery-review index was absent. Reuse that exact result.
+function retainedDeliveryReviews(state){
+  const reviews=[],byId=new Map();
+  const retain=review=>{
+    need(plain(review)&&typeof review.id==='string','PRESCIENT_DELIVERY_REVIEW_CHANGED');
+    const {id,sha256,...core}=review;
+    need(sha256===configurationDigest(core),'PRESCIENT_DELIVERY_REVIEW_CHANGED');
+    const previous=byId.get(id);
+    need(!previous||configurationDigest(previous)===configurationDigest(review),'PRESCIENT_DELIVERY_REVIEW_CHANGED');
+    if(!previous){const saved=clone(review);byId.set(id,saved);reviews.push(saved);}
+  };
+  need(state.deliveryReviews===undefined||Array.isArray(state.deliveryReviews),'PRESCIENT_DELIVERY_REVIEW_CHANGED');
+  for(const review of state.deliveryReviews??[])retain(review);
+  for(const operation of Object.values(state.operations))
+    if(operation.kind==='DELIVERY_REVIEW'&&operation.status==='COMPLETE')retain(operation.result);
+  return reviews;
+}
+
 /** Initialize only a nonsecret profile. Approval and native connection remain explicit operator actions. */
 export async function initializePrescientOperator({directory,profile,actor:reviewer,operationId='initial-profile'}={}){
   directory=await privateDirectory(directory);
@@ -190,6 +209,7 @@ async function openOwned({directory,deployment,profileSha256,create,env,sdkFacto
             const existing=reviews.find(value=>value.id===result.id);
             need(!existing||configurationDigest(existing)===configurationDigest(result),'PRESCIENT_DELIVERY_REVIEW_CHANGED');
             if(!existing)reviews.push(clone(result));
+            state.deliveryReviews=reviews;
           }
           if(['PORTABLE_EXPORT','PORTABLE_OPEN'].includes(kind)&&!state.deliveries.some(value=>value.id===result.id))
             state.deliveries.push(clone(result));
@@ -209,6 +229,7 @@ async function openOwned({directory,deployment,profileSha256,create,env,sdkFacto
   }
   async function state(){
     const current=await configuration.getState(),same=current.approvedProfileSha256===selectedSha256;
+    current.deliveryReviews=retainedDeliveryReviews(current);
     return {schema:'starforge.prescient-operator-view/v1',configuration:current,
       selectedProfileSha256:selectedSha256,selectedProfile:profile,
       bindingChoices:Object.entries(deployment.bindings).map(([id,value])=>({id,label:value.label})),
@@ -229,7 +250,7 @@ async function openOwned({directory,deployment,profileSha256,create,env,sdkFacto
   }
   async function exportDelivery(body){
     expectBody(body,['reviewId','reviewSha256','actor','operationId','expectedRevision']);const reviewer=actor(body.actor);
-    await requireApproved();const current=await configuration.getState(),review=(current.deliveryReviews??[]).find(row=>row.id===body.reviewId);
+    await requireApproved();const current=await configuration.getState(),review=retainedDeliveryReviews(current).find(row=>row.id===body.reviewId);
     need(review&&review.sha256===body.reviewSha256&&review.profileSha256===selectedSha256,'PRESCIENT_EXACT_DELIVERY_REVIEW_REQUIRED');
     return recordOperation('PORTABLE_EXPORT',{reviewId:review.id,reviewSha256:review.sha256,actor:reviewer},body,async operationId=>{
       const source=await existingSelectedPath(review.sourceDirectory,deliveryRoots);
