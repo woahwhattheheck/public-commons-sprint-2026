@@ -35,6 +35,10 @@ export async function receiveCoinGeckoApplication({ manifest, output }) {
     input.originalSources.every(item =>
       plain(item) && typeof item.fileId === 'string' && HASH.test(item.sha256)),
   'ORIGINAL_RECEIVING_SELECTION_REQUIRED');
+  need(input.browserArgs === undefined || Array.isArray(input.browserArgs) &&
+    input.browserArgs.length <= 32 &&
+    input.browserArgs.every(value => typeof value === 'string' && value.length <= 4096),
+  'BROWSER_ARGUMENTS_INVALID');
   await mkdir(output, { recursive: true, mode: 0o700 });
   const checkpointPath = join(output, 'application-checkpoint.json');
   let state = await exists(checkpointPath) ? await json(checkpointPath) : {
@@ -150,30 +154,71 @@ export async function receiveCoinGeckoApplication({ manifest, output }) {
     need(original.path === path, 'ORIGINAL_WRITE_TARGET_CHANGED');
     return api(url, original.path, { method: 'POST', body: JSON.stringify(original.body) });
   }
+  const unfinished = run => Boolean(run && (run.active ||
+    ['PENDING', 'QUEUED', 'RUNNING', 'INTERRUPTED'].includes(run.phase)));
+  const originalRun = (current, id) => current?.current?.id === id ? current.current :
+    current?.runs?.find(item => item.id === id);
+  async function recoverRun(run) {
+    let current = await application(), retained = originalRun(current, run.requestId);
+    if (!unfinished(retained) || retained.active) return current;
+    let recovery;
+    try {
+      recovery = await model.applicationsRecover({ applicationId: state.applicationId,
+        operationId: run.requestId });
+    } catch (error) {
+      if (error.code !== 'RUNTIME_WORKSPACE_OPERATION_RUNNING') throw error;
+      return application();
+    }
+    (run.recoveries ??= []).push({ observedAt: new Date().toISOString(), result: recovery });
+    await persist();
+    current = await application();
+    if (recovery.commandActive && !originalRun(current, run.requestId)?.active) {
+      // The native lifecycle recognizes a surviving command with a lost worker.
+      // Stop that same recorded command before giving a later start a new ID.
+      await stopRun(run);
+      return application();
+    }
+    return current;
+  }
+  async function running(run, name) {
+    activeRun = run.requestId;
+    const current = await waitFor(name, application, value => {
+      need(value?.current?.id === run.requestId, 'ORIGINAL_APPLICATION_RUN_CHANGED');
+      need(unfinished(value.current) && !value.current.stop, 'ORIGINAL_APPLICATION_RUN_ENDED');
+      return Boolean(value.current.privateUrl);
+    });
+    run.url = current.current.privateUrl;
+    run.launch = await api(run.url, '/api/managed-launch');
+    need(new URL(run.url).searchParams.get('project') === projectId &&
+      run.launch.directory === market && run.launch.workspace.project.id === projectId,
+    'ORIGINAL_PROJECT_DEEP_LINK_CHANGED');
+    await persist();
+    return current;
+  }
   async function start(name) {
-    let run = state.runs[name] ??= { requestId: uuidFor(input.operationPrefix + ':' + name), previous: [] };
+    let run = state.runs[name] ??= {
+      requestId: uuidFor(input.operationPrefix + ':' + name), previous: [],
+    };
     await persist();
     let current = await application();
-    if (current?.current?.id === run.requestId && current.current.active) {
-      activeRun = run.requestId;
-      current = await waitFor(name, application, value => Boolean(value?.current?.privateUrl));
-      run.url = current.current.privateUrl;
-      run.launch = await api(run.url, '/api/managed-launch');
-      need(new URL(run.url).searchParams.get('project') === projectId &&
-        run.launch.directory === market && run.launch.workspace.project.id === projectId,
-      'ORIGINAL_PROJECT_DEEP_LINK_CHANGED');
-      await persist();
-      return current;
+    need(!unfinished(current?.current) || current.current.id === run.requestId,
+      'ANOTHER_ORIGINAL_APPLICATION_RUN_IS_UNFINISHED');
+    let retained = originalRun(current, run.requestId);
+    if (unfinished(retained)) {
+      if (retained.stop) await stopRun(run);
+      else current = await recoverRun(run);
+      current = await application();
+      retained = originalRun(current, run.requestId);
+      if (unfinished(retained)) return running(run, name);
     }
-    const retained = current?.runs?.find(item => item.id === run.requestId);
-    if (retained && !retained.active && !['PENDING','QUEUED'].includes(retained.phase)) {
-      if (retained.phase === 'INTERRUPTED') {
-        await model.applicationsRecover({ applicationId: state.applicationId, operationId: run.requestId });
-        current = await application();
-        need(!current.current.active, 'ORIGINAL_OPERATION_STILL_RECOVERING');
-      }
-      const previous = [...(run.previous ?? []), Object.fromEntries(Object.entries(run).filter(([key]) => key !== 'previous'))];
-      run = state.runs[name] = { requestId: uuidFor(input.operationPrefix + ':' + name + ':' + previous.length), previous };
+    if (retained) {
+      run.terminal = { phase: retained.phase, result: retained.result ?? null,
+        observedAt: new Date().toISOString() };
+      const previous = [...(run.previous ?? []),
+        Object.fromEntries(Object.entries(run).filter(([key]) => key !== 'previous'))];
+      run = state.runs[name] = {
+        requestId: uuidFor(input.operationPrefix + ':' + name + ':' + previous.length), previous,
+      };
       await persist();
     }
     if (!run.reviewId) {
@@ -181,28 +226,49 @@ export async function receiveCoinGeckoApplication({ manifest, output }) {
       run.reviewId = review.id; run.selection = review.command.args;
       await persist();
     }
-    await model.applicationsStart({ applicationId: state.applicationId,
+    const started = await model.applicationsStart({ applicationId: state.applicationId,
       requestId: run.requestId, reviewId: run.reviewId });
-    activeRun = run.requestId;
-    current = await waitFor(name, application, value => Boolean(value?.current?.privateUrl));
-    need(current.current.id === run.requestId, 'ORIGINAL_APPLICATION_RUN_CHANGED');
-    run.url = current.current.privateUrl;
-    run.launch = await api(run.url, '/api/managed-launch');
-    await persist();
-    need(new URL(run.url).searchParams.get('project') === projectId &&
-      run.launch.directory === market && run.launch.workspace.project.id === projectId,
-    'ORIGINAL_PROJECT_DEEP_LINK_CHANGED');
-    return current;
+    need(started.operationId === run.requestId, 'ORIGINAL_APPLICATION_RUN_CHANGED');
+    return running(run, name);
+  }
+  async function stopRun(run) {
+    let current = await application(), retained = originalRun(current, run.requestId);
+    if (unfinished(retained)) {
+      await model.applicationsStop({ applicationId: state.applicationId, operationId: run.requestId });
+      const deadline = Date.now() + 120000;
+      for (;;) {
+        current = await application(); retained = originalRun(current, run.requestId);
+        if (!unfinished(retained)) break;
+        if (retained.phase === 'INTERRUPTED' && !retained.active) {
+          // A dead worker cannot consume its retained stop marker. The original
+          // recovery records its observed end without relaunching that command.
+          try {
+            const result = await model.applicationsRecover({
+              applicationId: state.applicationId, operationId: run.requestId,
+            });
+            (run.recoveries ??= []).push({ observedAt: new Date().toISOString(), result });
+            await persist();
+          } catch (error) {
+            if (error.code !== 'RUNTIME_WORKSPACE_OPERATION_RUNNING') throw error;
+          }
+        }
+        if (Date.now() >= deadline) throw Object.assign(
+          new Error('Original application shutdown remains retained at ' + retained.phase),
+          { code: 'ORIGINAL_OPERATION_RETAINED', current: retained });
+        await delay(750);
+      }
+    }
+    if (retained) {
+      run.terminal = { phase: retained.phase, result: retained.result ?? null,
+        observedAt: new Date().toISOString() };
+      await persist();
+    }
+    if (activeRun === run.requestId) activeRun = null;
   }
   async function stop(name) {
     const run = state.runs[name];
     if (!run) return;
-    const current = await application();
-    if (current?.current?.id === run.requestId && current.current.active) {
-      await model.applicationsStop({ applicationId: state.applicationId, operationId: run.requestId });
-      await waitFor('ended', application, value => !value?.current?.active, 120000);
-    }
-    if (activeRun === run.requestId) activeRun = null;
+    await stopRun(run);
     if (run.launch) {
       const record = await native.readMarketLaunch(join(market, 'managed-launches', run.launch.instanceId + '.json'));
       need(record.status === 'CLOSED', 'ORIGINAL_LAUNCH_NOT_CLOSED');
@@ -225,8 +291,18 @@ export async function receiveCoinGeckoApplication({ manifest, output }) {
       const saved = await model.applicationsSave({ requestId: uuidFor(input.operationPrefix + ':save'),
         reviewId: state.reviewId });
       state.applicationId = saved.applicationId; await persist();
-      if (saved.connectionError) throw Object.assign(new Error(saved.connectionError.message), saved.connectionError);
+      if (saved.connectionError) {
+        (state.connectionErrors ??= []).push({
+          observedAt: new Date().toISOString(), error: saved.connectionError,
+        });
+        await persist();
+      }
+      // Saving is idempotent; the native connect operation also resumes a
+      // retained queued or interrupted adoption of this exact installation.
+      state.connection = await model.applicationsConnect({ applicationId: state.applicationId });
+      await persist();
       const ready = await waitFor('connection', application, value => Boolean(value?.release), 300000);
+      need(ready.release.sourceCommit === selected.sourceCommit, 'ORIGINAL_APPLICATION_SOURCE_CHANGED');
       return { runtimeId: attached.runtimeId, applicationId: state.applicationId,
         releaseId: ready.release.id, sourceCommit: selected.sourceCommit, originalProjectId: projectId };
     });
@@ -260,7 +336,10 @@ export async function receiveCoinGeckoApplication({ manifest, output }) {
           const imported = await import(pathToFileURL(resolve(input.playwrightModule)).href);
           const chromium = imported.chromium ?? imported.default?.chromium;
           need(chromium, 'ORIGINAL_BROWSER_RUNTIME_REQUIRED');
-          const browser = await chromium.launch({ headless: true,
+          const browserArgs = input.browserArgs ??
+            (process.platform === 'linux' && process.getuid?.() === 0 ?
+              ['--no-sandbox', '--disable-dev-shm-usage'] : []);
+          const browser = await chromium.launch({ headless: true, args: browserArgs,
             ...(input.browserExecutable ? { executablePath: resolve(input.browserExecutable) } : {}) });
           try {
             const errors = [], context = await browser.newContext({ viewport: { width: 1440, height: 960 } });
@@ -313,11 +392,9 @@ export async function receiveCoinGeckoApplication({ manifest, output }) {
       }
       await waitFor('ended', application, value => !value?.current?.active, 120000);
       activeRun = null;
-      current = await application();
-      if (current.phase === 'INTERRUPTED')
-        await model.applicationsRecover({ applicationId: state.applicationId, operationId: run.requestId });
-      const ended = await application();
-      need(!ended.current.privateUrl, 'INTERRUPTED_URL_REUSED');
+      current = await recoverRun(run);
+      const ended = originalRun(current, run.requestId);
+      need(!unfinished(ended) && !ended?.privateUrl, 'INTERRUPTED_RUN_NOT_RECONCILED');
       current = await start('recovered');
       const originalSources = await sources(current.current.privateUrl);
       return { originalRunId: run.requestId, originalInstance: run.interrupted,
@@ -380,8 +457,8 @@ export async function receiveCoinGeckoApplication({ manifest, output }) {
     if (activeRun) {
       const current = await application().catch(() => null);
       if (current?.current?.id === activeRun && current.current.active) {
-        await model.applicationsStop({ applicationId: state.applicationId, operationId: activeRun }).catch(() => {});
-        await waitFor('ended', application, value => !value?.current?.active, 120000).catch(() => {});
+        const owned = Object.values(state.runs).find(run => run.requestId === activeRun);
+        if (owned) await stopRun(owned).catch(() => {});
       }
     }
     await model.close();
