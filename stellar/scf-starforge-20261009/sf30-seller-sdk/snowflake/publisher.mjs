@@ -18,6 +18,7 @@ async function privateDirectory(path) {
 export async function prepareSnowflakeMerchant(store, { editionId, draft, publicationId = randomUUID(),
   runtime = { port: 0 }, label } = {}) {
   const edition = store.edition(editionId), review = store.latestReview(editionId);
+  let operation = store.getPublication(publicationId);
   if (review?.decision !== 'ACCEPTED')
     throw fault('SNOWFLAKE_EDITION_REVIEW_REQUIRED', 'Accept this exact retained edition before publishing it.');
   const [{ openWorkbench, compileDraft }, { prepareSqliteRelease }, releases] = await Promise.all([
@@ -30,8 +31,7 @@ export async function prepareSnowflakeMerchant(store, { editionId, draft, public
     throw fault('SNOWFLAKE_RELEASE_RUNTIME_INVALID', 'The original SQLite merchant owns its query handlers.');
   compileDraft(draft, database);
   const request = { editionId, draft, runtime: normalizedRuntime, label: label ?? edition.queryName + ' · ' + edition.createdAt,
-    reviewSequence: review.sequence }, requestSha256 = sha256(canonical(request));
-  let operation = store.getPublication(publicationId);
+    reviewSequence: operation?.request.reviewSequence ?? review.sequence }, requestSha256 = sha256(canonical(request));
   if (operation && (operation.editionId !== editionId || operation.requestSha256 !== requestSha256))
     throw fault('SNOWFLAKE_PUBLICATION_CHANGED', 'This publication ID already belongs to its saved edition, review and merchant terms.', 409);
   if (!operation) operation = store.publication(editionId, { request, requestSha256, status: 'PREPARING' }, publicationId);
@@ -61,7 +61,7 @@ export async function prepareSnowflakeMerchant(store, { editionId, draft, public
     // The original inspector traverses and hashes the retained native snapshot,
     // query configuration, service, offers and workbench files.
     const verified = await releases.inspectRelease(releaseRoot, releaseId);
-    return store.updatePublication(publicationId, { status: 'PREPARED', directory: prepared.directory,
+    return store.updatePublication(publicationId, { status: 'PREPARED', lastError: null, directory: prepared.directory,
       releaseRoot, releaseId, release: verified, dataset: { editionId, rowCount: edition.rowCount,
         statementHandle: edition.statementHandle, nativePartitions: edition.partitionCount },
       links: { releaseCommand: ['starforge', 'releases', 'status', '--store', releaseRoot],

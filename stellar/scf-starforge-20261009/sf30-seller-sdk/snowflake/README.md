@@ -257,3 +257,16 @@ import/intake owns native inspection, selection, publication and recovery.
 - [Native chunk size behavior](https://docs.snowflake.com/en/release-notes/bcr-bundles/2026_04/bcr-2319)
 
 MIT; included in the original Stellar Forge distribution.
+
+## Continue a saved merchant publication
+
+The Merchant release page lists retained publications after restart. **Open publication** restores the exact edition, merchant terms, runtime and publication identity. The form shows saved values and offers **Resume saved publication** or **Reopen prepared release**. **New publication from these terms** creates an editable draft with a new identity while preserving the original publication.
+
+The command line uses the same retained request:
+
+```sh
+starforge snowflake publication --directory /private/snowflake --publication-id SAVED_UUID
+starforge snowflake resume-publication --directory /private/snowflake --publication-id SAVED_UUID
+```
+
+Continuation keeps the original accepted review binding and resumes the original SQLite workbench and SF82 release. The edition's current review must still be accepted. Saving another accepted review of the same immutable edition does not create a new publication. A running publication rejects a different request under the same identity.

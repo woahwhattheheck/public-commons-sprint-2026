@@ -18,7 +18,7 @@ try {
 } catch {}
 if (location.hash) history.replaceState(null, '', location.pathname);
 let state, draft, editingQuery = '', dirty = false, selectedEdition = null, lastComparison = null, activeTab = 'source';
-let rowsOffset = 0, rowsNext = null, refreshBusy = false;
+let rowsOffset = 0, rowsNext = null, refreshBusy = false, retainedPublication = null;
 const pages = Object.fromEntries(['operations', 'editions', 'publications'].map(kind => [kind, { offset: 0, next: null, items: [] }]));
 function notify(text, error = false) { $('notice').textContent = text; $('notice').className = error ? 'error' : ''; }
 async function api(path, { method = 'GET', value, raw } = {}) {
@@ -271,7 +271,12 @@ async function loadList(kind) {
     table($('publications-table'), [when, { label: 'Edition', value: item => short(item.editionId) },
       { label: 'Status', value: item => item.status },
       { label: 'Release', value: item => item.releaseId ?? 'Preparing' },
-      { label: 'Actions', value: item => button('View publication', async () => dialog('Original merchant publication', await api('/api/publications/' + item.id))) }], result.items);
+      { label: 'Actions', value: item => {
+        const group = node('div', undefined, 'actions');
+        group.append(button('Open publication', () => openPublication(item.id)),
+          button('Inspect', async () => dialog('Original merchant publication', await api('/api/publications/' + item.id))));
+        return group;
+      } }], result.items);
   }
 }
 for (const kind of Object.keys(pages)) {
@@ -376,7 +381,40 @@ form('export-form', async () => {
     destination: $('export-destination').value, ...(cloudDelivery ? { cloudDelivery } : {}) } });
   $('export-result').textContent = json(result); notify('Complete original result exported to ' + result.directory + '.');
 });
+function publicationMode(publication) {
+  retainedPublication = publication;
+  for (const field of $('merchant-form').querySelectorAll('input, textarea')) {
+    if (field.id !== 'publication-id') field.readOnly = Boolean(publication);
+  }
+  $('prepare-merchant').textContent = publication ?
+    (publication.status === 'PREPARED' ? 'Reopen prepared release' : 'Resume saved publication') : 'Prepare original merchant release';
+  $('new-publication').hidden = !publication;
+  $('publication-status').textContent = publication ?
+    'Saved publication ' + short(publication.id) + ' · ' + publication.status + '. Its edition and merchant terms are retained.' :
+    'New publication using the selected edition.';
+}
+async function openPublication(id) {
+  const publication = await api('/api/publications/' + id), request = publication.request;
+  await openEdition(publication.editionId);
+  const merchant = request.draft.merchant;
+  for (const [field, key] of [['name', 'name'], ['origin', 'origin'], ['network', 'network'],
+    ['asset', 'asset'], ['payto', 'payTo'], ['timeout', 'maxTimeoutSeconds']])
+    $('merchant-' + field).value = merchant[key];
+  $('merchant-queries').value = json(request.draft.queries);
+  $('merchant-runtime').value = json(request.runtime);
+  $('publication-id').value = publication.id;
+  publicationMode(publication);
+  $('merchant-result').textContent = json(publication);
+  selectTab('merchant');
+  notify('Saved publication opened. Continue it or start a new publication from these terms.');
+}
+$('new-publication').addEventListener('click', () => {
+  publicationMode(null); $('publication-id').value = crypto.randomUUID();
+  $('merchant-result').textContent = ''; $('merchant-name').focus();
+  notify('New publication draft opened with the copied merchant terms.');
+});
 function merchantTemplate() {
+  publicationMode(null);
   const columns = selectedEdition.columns;
   const quote = name => '"' + name.replaceAll('"', '""') + '"';
   $('merchant-queries').value = json([{ name: selectedEdition.queryName, method: 'GET', path: '/data/' + selectedEdition.queryName,
@@ -390,13 +428,18 @@ function merchantTemplate() {
 $('publication-id').value = crypto.randomUUID();
 form('merchant-form', async () => {
   if (!selectedEdition || selectedEdition.review?.decision !== 'ACCEPTED') throw new Error('Select and accept the exact edition before preparing its merchant.');
-  const draft = { merchant: { name: $('merchant-name').value, origin: $('merchant-origin').value,
-    network: $('merchant-network').value, asset: $('merchant-asset').value, payTo: $('merchant-payto').value,
-    maxTimeoutSeconds: Number($('merchant-timeout').value) }, queries: JSON.parse($('merchant-queries').value) };
+  const original = retainedPublication;
   notify('Preparing the original SQLite merchant and retaining its release…');
-  const result = await api('/api/prepare', { method: 'POST', value: { editionId: selectedEdition.id, draft,
-    publicationId: $('publication-id').value, runtime: JSON.parse($('merchant-runtime').value) } });
-  $('merchant-result').textContent = json(result); $('publication-id').value = crypto.randomUUID();
+  let result;
+  if (original) result = await api('/api/publications/' + original.id + '/resume', { method: 'POST', value: {} });
+  else {
+    const draft = { merchant: { name: $('merchant-name').value, origin: $('merchant-origin').value,
+      network: $('merchant-network').value, asset: $('merchant-asset').value, payTo: $('merchant-payto').value,
+      maxTimeoutSeconds: Number($('merchant-timeout').value) }, queries: JSON.parse($('merchant-queries').value) };
+    result = await api('/api/prepare', { method: 'POST', value: { editionId: selectedEdition.id, draft,
+      publicationId: $('publication-id').value, runtime: JSON.parse($('merchant-runtime').value) } });
+  }
+  $('merchant-result').textContent = json(result); publicationMode(result);
   notify('Merchant release prepared. Open the original release console to operate it.');
   await loadList('publications'); await refresh();
 });
