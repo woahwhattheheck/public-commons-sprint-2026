@@ -19,12 +19,13 @@ if _TYPE_CHECKING:
     from .recovery import WorkspaceRecovery, WorkspaceRecoveryResult, WorkspaceRecoveryProcess, WorkspaceRecoveryError
     from .result import AccountingResult, BuyerResult, FileDelivery, FileTransfer, SessionAccountingResult
     from .research_workspace import ResearchWorkspace, ResearchError
+    from .research_extraction import ResearchExtraction
     from .research_documents import ResearchDocuments, ResearchPipelines, ResearchSelection, ResearchInputFile, ResearchDocumentSource
     from .requests import MultipartRequest, UploadFile
     from .streams import SSEEvent, NDJSONRecord, StreamDelivery, read_retained_response, export_saved_stream
 
 __all__ = [
-    "ResearchWorkspace", "ResearchError", "ResearchDocuments", "ResearchPipelines",
+    "ResearchWorkspace", "ResearchError", "ResearchExtraction", "ResearchDocuments", "ResearchPipelines",
     "ResearchSelection", "ResearchInputFile", "ResearchDocumentSource",
     "AcquisitionWorkspace", "AcquisitionResult", "AcquisitionProcess", "AcquisitionError",
     "WorkspaceRecovery", "WorkspaceRecoveryResult", "WorkspaceRecoveryProcess", "WorkspaceRecoveryError",
@@ -40,6 +41,7 @@ __all__ = [
 _EXPORTS = {
     "ResearchWorkspace": ".research_workspace",
     "ResearchError": ".research_workspace",
+    "ResearchExtraction": ".research_extraction",
     "ResearchDocuments": ".research_documents",
     "ResearchPipelines": ".research_documents",
     "ResearchSelection": ".research_documents",

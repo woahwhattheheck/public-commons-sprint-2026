@@ -1,6 +1,7 @@
 // MIT. Research tool metadata; the selected provider loads its runtime on demand.
 import {MAX_RETAINED_CHUNK_BYTES} from '../retained-file-contracts.mjs';
 import {researchCitationReviewTools} from './research-citation-updates.mjs';
+import {researchExtractionTools,RESEARCH_EXTRACTION_EXPORTS,RESEARCH_EXTRACTION_EXPORT_FIELDS} from './research-extraction.mjs';
 import {researchEligibilityTools,RESEARCH_ELIGIBILITY_EXPORTS,RESEARCH_ELIGIBILITY_EXPORT_FIELDS} from './research-eligibility.mjs';
 import {researchEuropePmcTools,RESEARCH_EUROPE_PMC_EXPORTS,RESEARCH_EUROPE_PMC_EXPORT_FIELDS} from './research-europe-pmc.mjs';
 import {researchDocumentTools,RESEARCH_DOCUMENT_EXPORTS,RESEARCH_DOCUMENT_EXPORT_FIELDS} from './research-documents.mjs';
@@ -28,6 +29,7 @@ export const RESEARCH_EXPORTS=Object.freeze({
   ...RESEARCH_CLINICALTRIALS_EXPORTS,
   ...RESEARCH_DOCUMENT_EXPORTS,
   ...RESEARCH_EUROPE_PMC_EXPORTS,
+  ...RESEARCH_EXTRACTION_EXPORTS,
 });
 const exportKind={type:'string',enum:Object.keys(RESEARCH_EXPORTS)};
 export function researchWorkspaceTools(tool){
@@ -97,7 +99,7 @@ export function researchWorkspaceTools(tool){
       ['workspace','dossierId','operationId','expectedRevision','expectedPlanSha256','expectedEditionSha256'],{idempotent:true}),
     tool('merchant_research_export','Stream and retain a complete portable dossier, report, edition, comparison, original occurrence content/record or selected bundle file. Select revision for exact previous/reviewed/current HTML, Markdown or portable history. Source kinds bind editionId/key; source-file also requires original fileName and expectedSha256. Europe PMC exports require library and their native operationId or workspace requestId; omit dossierId for those library-wide exports. Eligibility exports require dossierId, reviewId and a retained revision; workSetId and section select the original review report. Returns the same content-addressed export ID for reads and restart recovery.',{
       ...dossier,kind:exportKind,operationId:nativeId,editionId:nativeId,before:revision,after:revision,
-      ...RESEARCH_DOCUMENT_EXPORT_FIELDS,...RESEARCH_EUROPE_PMC_EXPORT_FIELDS,...RESEARCH_ELIGIBILITY_EXPORT_FIELDS,revision,
+      ...RESEARCH_DOCUMENT_EXPORT_FIELDS,...RESEARCH_EUROPE_PMC_EXPORT_FIELDS,...RESEARCH_ELIGIBILITY_EXPORT_FIELDS,...RESEARCH_EXTRACTION_EXPORT_FIELDS,revision,
       key:{type:'string',pattern:'^(0|[1-9][0-9]{0,8})$'},fileName:{type:'string',minLength:1,maxLength:1024},
       sourceId:{type:'string',pattern:'^ctsrc_[a-f0-9]{64}$'},criteria:RESEARCH_CLINICALTRIALS_CRITERIA,expectedSha256:digest},
       ['workspace','kind'],{}),
@@ -116,6 +118,7 @@ export function researchWorkspaceTools(tool){
     ...researchDocumentTools(tool),
     ...researchCitationReviewTools(tool),
     ...researchEligibilityTools(tool),
-    ...researchEuropePmcTools(tool)
+    ...researchEuropePmcTools(tool),
+    ...researchExtractionTools(tool)
   ];
 }

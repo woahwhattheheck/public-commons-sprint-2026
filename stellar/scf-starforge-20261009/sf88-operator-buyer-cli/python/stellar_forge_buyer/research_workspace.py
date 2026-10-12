@@ -344,6 +344,10 @@ class ResearchWorkspace:
         from .research_citations import ResearchCitations
         return ResearchCitations(self, dossier_id)
 
+    def extraction(self, dossier_id):
+        from .research_extraction import ResearchExtraction
+        return ResearchExtraction(self, dossier_id)
+
     def documents(self, dossier_id):
         from .research_documents import ResearchDocuments
         return ResearchDocuments(self, dossier_id)

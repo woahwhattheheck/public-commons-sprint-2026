@@ -8,6 +8,7 @@ import {researchWorkspaceTools,RESEARCH_EXPORTS} from './catalog/research-worksp
 import {callResearchClinicalTrials,exportResearchClinicalTrials,RESEARCH_CLINICALTRIALS_PREFIX} from './research-clinicaltrials.mjs';
 import {callResearchDocuments,exportResearchDocuments,RESEARCH_DOCUMENT_PREFIXES} from './research-documents.mjs';
 import {callResearchCitationUpdates,RESEARCH_CITATION_REVIEW_PREFIX} from './research-citation-updates.mjs';
+import {callResearchExtraction,exportResearchExtraction,RESEARCH_EXTRACTION_PREFIX} from './research-extraction.mjs';
 import {callResearchEligibility,exportResearchEligibility,RESEARCH_ELIGIBILITY_PREFIX} from './research-eligibility.mjs';
 import {callResearchEuropePmc,exportResearchEuropePmc,RESEARCH_EUROPE_PMC_PREFIX} from './research-europe-pmc.mjs';
 export {researchWorkspaceTools} from './catalog/research-workspace.mjs';
@@ -82,7 +83,8 @@ function checkValue(value,schema){
       if(Object.hasOwn(properties,key))checkValue(item,properties[key]);
   }
   if(schema.type==='array'){
-    if(!Array.isArray(value)||schema.maxItems!==undefined&&value.length>schema.maxItems||
+    if(!Array.isArray(value)||schema.minItems!==undefined&&value.length<schema.minItems||
+      schema.maxItems!==undefined&&value.length>schema.maxItems||
       schema.uniqueItems&&new Set(value).size!==value.length)
       throw failure('INVALID_PARAMS','Use the original unique source identifiers within the declared limit.');
     for(const item of value)checkValue(item,schema.items);
@@ -242,6 +244,8 @@ export class MerchantResearchWorkspaces{
         ({result,selection}=await exportResearchEuropePmc(entry.client,args,{file:temporary,download}));
       }else if(args.kind.startsWith('eligibility-')){
         ({result,selection}=await exportResearchEligibility(entry.client,args,{file:temporary,download}));
+      }else if(args.kind.startsWith('extraction-')){
+        ({result,selection}=await exportResearchExtraction(entry.client,args,{file:temporary,download}));
       }else if(spec.format){
         exact(args,['workspace','dossierId','kind','revision','expectedSha256'],['workspace','dossierId','kind']);
         result=await download(()=>entry.client.exportDossier(args.dossierId,{format:spec.format,file:temporary,revision:args.revision,expectedSha256:args.expectedSha256}));
@@ -340,6 +344,7 @@ export class MerchantResearchWorkspaces{
       const c=entry.client,id=args.dossierId,input=nativeFields(args,['workspace','dossierId']);
       if(name.startsWith(RESEARCH_ELIGIBILITY_PREFIX))return callResearchEligibility(c,name,args);
       if(name.startsWith(RESEARCH_CITATION_REVIEW_PREFIX))return callResearchCitationUpdates(c,name,args);
+      if(name.startsWith(RESEARCH_EXTRACTION_PREFIX))return callResearchExtraction(c,name,args);
       if(name.startsWith(RESEARCH_EUROPE_PMC_PREFIX))return callResearchEuropePmc(c,name,args,{
         source:(name,accepted)=>this.#source(entry,name,accepted)});
       if(RESEARCH_DOCUMENT_PREFIXES.some(prefix=>name.startsWith(prefix))){
