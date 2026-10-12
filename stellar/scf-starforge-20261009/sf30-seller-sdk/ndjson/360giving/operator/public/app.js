@@ -9,13 +9,26 @@
     if (className) node.className = className;
     return node;
   };
-  let token = location.hash.slice(1);
+  const fragment = location.hash.slice(1);
+  const fragmentToken = /^[A-Za-z0-9_-]{43}$/.test(fragment) ? fragment : "";
+  let token = fragmentToken;
   try {
-    if (token) sessionStorage.setItem("sf360-console-token", token);
+    if (fragmentToken) sessionStorage.setItem("sf360-console-token", fragmentToken);
     else token = sessionStorage.getItem("sf360-console-token") || "";
   } catch {}
-  if (location.hash) history.replaceState(null, "", location.pathname + location.search);
+  if (fragmentToken) history.replaceState(null, "", location.pathname + location.search);
   let state = null, native = null, nextCursor = null, lastQuery = null, changesOffset = null;
+  let queryGeneration = 0, changesGeneration = 0, nativeGeneration = 0, refreshGeneration = 0;
+  let nativeDataset = null;
+  function clearQuery() {
+    queryGeneration++; nextCursor = null; lastQuery = null;
+    $("query-next").disabled = true;
+    $("query-table").replaceChildren(); $("query-result").textContent = ""; $("query-summary").textContent = "";
+  }
+  function clearChanges() {
+    changesGeneration++; changesOffset = null; $("changes-next").disabled = true;
+    $("changes-table").replaceChildren(); $("comparison-summary").textContent = "";
+  }
   const watches = new Map();
   const pendingPrefix = "sf360-request:";
   function status(message) { $("status").textContent = message || ""; }
@@ -185,14 +198,20 @@
     }
   }
   async function refresh(preferredEdition) {
+    const generation = ++refreshGeneration, refreshed = await api("/api/state");
+    if (generation !== refreshGeneration) return;
     const previousDataset = $("dataset").value;
-    state = await api("/api/state");
+    state = refreshed;
     const params = new URLSearchParams(location.search);
     const requested = state.editions.find(item => item.id === preferredEdition) ||
       state.editions.find(item => item.id === params.get("edition"));
     const key = requested?.dataset || previousDataset || params.get("dataset") || state.datasets[0]?.key;
     fill($("dataset"), state.datasets.map(item => ({ value: item.key, label: item.label })),
       "Choose a dataset", key);
+    if ($("dataset").value !== previousDataset) {
+      clearQuery(); clearChanges(); native = null; nativeDataset = null;
+      $("native-panel").hidden = true; $("comparison-panel").hidden = true;
+    }
     $("dataset-keys").replaceChildren();
     for (const dataset of state.datasets) {
       const option = el("option"); option.value = dataset.key; option.label = dataset.label;
@@ -205,15 +224,17 @@
     await refreshNative();
   }
   async function refreshNative() {
-    const key = $("dataset").value;
+    const key = $("dataset").value, generation = ++nativeGeneration;
     if (!key) {
-      native = null; $("native-panel").hidden = true; $("comparison-panel").hidden = true; return;
+      native = null; nativeDataset = null; clearQuery(); clearChanges();
+      $("native-panel").hidden = true; $("comparison-panel").hidden = true; return;
     }
     const previousBuild = $("build").value, previousBefore = $("before").value;
     const previousAfter = $("after").value, previousComparison = $("comparison").value;
     const result = await api("/api/native-state?dataset=" + encodeURIComponent(key));
-    if ($("dataset").value !== key) return;
-    native = result;
+    if ($("dataset").value !== key || generation !== nativeGeneration) return;
+    if (nativeDataset !== key) { clearQuery(); clearChanges(); }
+    native = result; nativeDataset = key;
     const builds = native.builds.map(item => ({ value: item.id,
       label: short(item.id) + " · " + item.rowCount + " grants · source " + short(item.source) }));
     $("native-panel").hidden = builds.length === 0; $("comparison-panel").hidden = builds.length === 0;
@@ -222,6 +243,8 @@
     fill($("after"), builds, null, previousAfter);
     fill($("comparison"), native.comparisons.map(item => ({ value: item.id,
       label: short(item.before) + " → " + short(item.after) })), "Choose a comparison", previousComparison);
+    if ($("build").value !== previousBuild) clearQuery();
+    if ($("comparison").value !== previousComparison) clearChanges();
     updateButtons();
   }
   async function watch(id) {
@@ -237,8 +260,12 @@
           await refresh(edition);
           if (record.action === "decisions") { $("decision").value = record.result.id; renderCandidates(); }
           if (record.action === "candidate") { $("candidate").value = record.result.id; updateButtons(); }
-          if (record.action === "build") $("build").value = record.result.build.id;
-          if (record.action === "compare") {
+          if (record.action === "build" && $("dataset").value === record.result.dataset) {
+            if ($("build").value !== record.result.build.id) clearQuery();
+            $("build").value = record.result.build.id;
+          }
+          if (record.action === "compare" && $("dataset").value === record.result.dataset) {
+            if ($("comparison").value !== record.result.comparison.id) clearChanges();
             $("comparison").value = record.result.comparison.id;
             await showChanges(0);
           }
@@ -295,7 +322,13 @@
         throw Error("Use a JSON object with string values for native query options.");
       lastQuery = { dataset, build, params };
     }
-    const result = await post("/api/query", { dataset, build, query: params });
+    const generation = ++queryGeneration;
+    const current = () => generation === queryGeneration &&
+      $("dataset").value === dataset && $("build").value === build;
+    let result;
+    try { result = await post("/api/query", { dataset, build, query: params }); }
+    catch (error) { if (!current()) return; throw error; }
+    if (!current()) return;
     $("query-result").textContent = show(result);
     const body = result.response?.body;
     if (result.response?.status !== 200 || !Array.isArray(body?.rows)) {
@@ -307,16 +340,20 @@
     $("query-summary").textContent = body.page.returned + " rows on this page · " + body.page.total + " matching grants";
   }
   async function showChanges(offset) {
-    const comparison = $("comparison").value;
-    if (!comparison) {
-      $("changes-table").replaceChildren(); $("comparison-summary").textContent = "";
-      $("changes-next").disabled = true; updateButtons(); return;
-    }
-    const summary = native.comparisons.find(item => item.id === comparison);
+    const dataset = $("dataset").value, comparison = $("comparison").value;
+    if (!comparison) { clearChanges(); updateButtons(); return; }
+    const generation = ++changesGeneration;
+    const current = () => generation === changesGeneration &&
+      $("dataset").value === dataset && $("comparison").value === comparison;
+    const summary = native?.comparisons.find(item => item.id === comparison);
+    let result;
+    try {
+      result = await api("/api/changes?" + new URLSearchParams({
+        dataset, comparison, offset: String(offset), limit: "50"
+      }));
+    } catch (error) { if (!current()) return; throw error; }
+    if (!current()) return;
     $("comparison-summary").textContent = summary ? Object.entries(summary.counts).map(([key, value]) => value + " " + key).join(" · ") : "";
-    const result = await api("/api/changes?" + new URLSearchParams({
-      dataset: $("dataset").value, comparison, offset: String(offset), limit: "50"
-    }));
     table($("changes-table"), ["kind", "key", "fields", "before", "after"], result.rows);
     changesOffset = result.nextOffset; $("changes-next").disabled = changesOffset === null;
     updateButtons();
@@ -370,10 +407,10 @@
     dataset: $("dataset").value, comparison: $("comparison").value
   }), "360giving-" + $("dataset").value + "-changes.jsonl"));
   $("dataset").addEventListener("change", async () => {
-    renderEditions(); nextCursor = null; changesOffset = null; $("query-next").disabled = true;
-    $("query-table").replaceChildren(); $("query-result").textContent = ""; $("query-summary").textContent = "";
-    $("changes-table").replaceChildren(); $("comparison-summary").textContent = "";
-    try { await refreshNative(); } catch (error) { status(error.message); }
+    clearQuery(); clearChanges(); renderEditions();
+    native = null; nativeDataset = null; $("native-panel").hidden = true; $("comparison-panel").hidden = true;
+    const dataset = $("dataset").value;
+    try { await refreshNative(); } catch (error) { if ($("dataset").value === dataset) status(error.message); }
   });
   $("edition").addEventListener("change", renderEdition);
   $("decision").addEventListener("change", renderCandidates);
@@ -382,11 +419,10 @@
     if (candidate) $("decision").value = candidate.decisionId;
     updateButtons();
   });
-  $("build").addEventListener("change", () => {
-    nextCursor = null; $("query-next").disabled = true;
-    $("query-table").replaceChildren(); $("query-result").textContent = ""; $("query-summary").textContent = "";
+  $("build").addEventListener("change", clearQuery);
+  $("comparison").addEventListener("change", () => {
+    clearChanges(); showChanges(0).catch(error => status(error.message));
   });
-  $("comparison").addEventListener("change", () => showChanges(0).catch(error => status(error.message)));
   $("intake-dataset").addEventListener("change", () => {
     const dataset = state?.datasets.find(item => item.key === $("intake-dataset").value);
     if (dataset) $("intake-label").value = dataset.label;
