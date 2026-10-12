@@ -173,14 +173,12 @@ class PropertyResearch:
             text(note, "revision note", maximum=16000)
         study_body = {"schema": "stellar-forge.property-study.v1", **value["study"], "document_ids": clone(document_ids)}
         study_id = identity(study_body)
-        review_issues = {p["key"]: m.issues(p) for p in value["properties"] if m.issues(p)}
+        details = m.edition_details(value["properties"])
         body = {"schema": "stellar-forge.property-edition.v1", "study_id": study_id, "study_key": value["study"]["key"],
                 "document_ids": clone(document_ids), "operator": operator, "label": label, "note": note,
                 "previous_id": previous_id, "properties": value["properties"], "source_comparables": value["source_comparables"],
                 "original_packet": {"bytes": len(raw), "sha256": hashlib.sha256(raw).hexdigest()},
-                "issues": review_issues,
-                "counts": {"properties": len(value["properties"]), "unit_schedules": sum(len(p["units"]) for p in value["properties"]),
-                           "properties_with_review_notes": len(review_issues)}}
+                **details}
         eid = identity(body)
         parent = private_directory(self.w.directory / "property-intakes")
         stage = Path(tempfile.mkdtemp(prefix=".intake-", dir=parent))
@@ -233,27 +231,12 @@ class PropertyResearch:
         baseline = self._record("property_editions", baseline_id) if baseline_id else None
         if baseline and baseline["study_key"] != candidate["study_key"]:
             fail("PROPERTY_STUDY_LINEAGE_MISMATCH")
-        before = {p["key"]: p for p in baseline["properties"]} if baseline else {}
-        after = {p["key"]: p for p in candidate["properties"]}
-        rows = []
-        for key in sorted(set(before) | set(after)):
-            a, b = before.get(key), after.get(key)
-            kind = "added" if a is None else "removed" if b is None else "unchanged" if a == b else "changed"
-            rows.append({"key": key, "kind": kind, "name": (b or a)["name"], "changed_paths": m.changed_paths(a, b),
-                         "before_sha256": identity(a) if a else None, "after_sha256": identity(b) if b else None,
-                         "issues": candidate["issues"].get(key, [])})
-        if baseline and (baseline["study_id"] != candidate["study_id"] or baseline["document_ids"] != candidate["document_ids"]):
-            rows.insert(0, {"key": "@study", "kind": "changed", "name": "Study area and retained source editions",
-                           "changed_paths": m.changed_paths({k: baseline[k] for k in ("study_id", "document_ids")},
-                                                            {k: candidate[k] for k in ("study_id", "document_ids")}), "issues": []})
-        if baseline and baseline["source_comparables"] != candidate["source_comparables"]:
-            rows.insert(0, {"key": "@comparables", "kind": "changed", "name": "Published comparable selections by purpose",
-                           "changed_paths": m.changed_paths(baseline["source_comparables"], candidate["source_comparables"]), "issues": []})
+        rows = m.comparison_rows(candidate, baseline)
         request = {"baseline_id": baseline_id, "candidate_id": candidate_id, "operator": operator,
                    "label": label, "note": note, "unchanged": unchanged}
         rid = identity(request)
         decisions = {r["key"]: {"action": "accept", "automatic": True, "operator": operator,
-                      "note": "Frozen unchanged-record policy"} for r in rows if r["kind"] == "unchanged" and unchanged == "accept" and not r["issues"]}
+                      "note": "Frozen unchanged-record policy"} for r in rows if r["kind"] == "unchanged" and unchanged == "accept"}
         body = {"schema": "stellar-forge.property-review.v1", **request, "version": 0, "rows": rows, "decisions": decisions}
         with self.w.mutation():
             if self.w.connection.execute("SELECT 1 FROM property_reviews WHERE id=?", (rid,)).fetchone():

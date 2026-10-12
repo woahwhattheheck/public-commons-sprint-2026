@@ -166,6 +166,12 @@ def property_value(value, documents):
     value["name"] = text(value.get("name"), "name", maximum=1000)
     for field in ("address", "city", "state", "postal_code", "target_population", "status", "market_area_membership", "quality", "neighborhood"):
         value[field] = optional_text(value.get(field), field)
+    status_kind = value.get("status_kind")
+    if status_kind is None:
+        status_kind = "operating" if value.get("status") in ("operating", "operating at original survey date") else "unknown"
+    if status_kind not in ("operating", "under_construction", "planned", "proposed", "unknown"):
+        fail("PROPERTY_SUPPLY_STATUS_INVALID")
+    value["status_kind"] = status_kind
     for field in ("programs", "amenities"):
         value[field] = texts(value.get(field), field)
     for field in ("year_built", "year_renovated"):
@@ -238,3 +244,34 @@ def changed_paths(before, after, prefix=""):
     if isinstance(before, list) and isinstance(after, list) and all(isinstance(x, dict) and "key" in x for x in before + after):
         return changed_paths({x["key"]: x for x in before}, {x["key"]: x for x in after}, prefix)
     return [prefix or "/"]
+
+
+def edition_details(properties):
+    notes = {}
+    for prop in properties:
+        found = issues(prop)
+        if found:
+            notes[prop["key"]] = found
+    return {"issues": notes, "counts": {"properties": len(properties),
+            "unit_schedules": sum(len(p["units"]) for p in properties),
+            "properties_with_review_notes": len(notes)}}
+
+
+def comparison_rows(candidate, baseline=None):
+    before = {p["key"]: p for p in baseline["properties"]} if baseline else {}
+    after = {p["key"]: p for p in candidate["properties"]}
+    rows = []
+    for key in sorted(set(before) | set(after)):
+        a, b = before.get(key), after.get(key)
+        kind = "added" if a is None else "removed" if b is None else "unchanged" if a == b else "changed"
+        rows.append({"key": key, "kind": kind, "name": (b or a)["name"], "changed_paths": changed_paths(a, b),
+                     "before_sha256": identity(a) if a else None, "after_sha256": identity(b) if b else None,
+                     "issues": candidate["issues"].get(key, [])})
+    if baseline and (baseline["study_id"] != candidate["study_id"] or baseline["document_ids"] != candidate["document_ids"]):
+        rows.insert(0, {"key": "@study", "kind": "changed", "name": "Study area and retained source editions",
+                       "changed_paths": changed_paths({k: baseline[k] for k in ("study_id", "document_ids")},
+                                                      {k: candidate[k] for k in ("study_id", "document_ids")}), "issues": []})
+    if baseline and baseline["source_comparables"] != candidate["source_comparables"]:
+        rows.insert(0, {"key": "@comparables", "kind": "changed", "name": "Published comparable selections by purpose",
+                       "changed_paths": changed_paths(baseline["source_comparables"], candidate["source_comparables"]), "issues": []})
+    return rows

@@ -232,10 +232,22 @@ def verify_payload(directory, manifest):
             value = m.intake(parse(read(path, 64 * 1024 * 1024)), docs)
             if value["properties"] != edition["properties"] or value["source_comparables"] != edition["source_comparables"]:
                 fail("PROPERTY_DELIVERY_SURVEY_CHANGED")
+            derived = m.edition_details(value["properties"])
+            if edition["issues"] != derived["issues"] or edition["counts"] != derived["counts"]:
+                fail("PROPERTY_DELIVERY_DERIVED_SURVEY_CHANGED")
             expected_study = {"schema": "stellar-forge.property-study.v1", **value["study"], "document_ids": edition["document_ids"]}
             if data["property_studies"][edition["study_id"]] != expected_study:
                 fail("PROPERTY_DELIVERY_STUDY_CHANGED")
         candidate = data["property_editions"][manifest["candidate_id"]]
+        baseline = data["property_editions"].get(manifest["baseline_id"])
+        if review["rows"] != m.comparison_rows(candidate, baseline):
+            fail("PROPERTY_DELIVERY_COMPARISON_CHANGED")
+        row_keys = {row["key"] for row in review["rows"]}
+        if set(review["decisions"]) != row_keys:
+            fail("PROPERTY_DELIVERY_REVIEW_INVALID")
+        for key, decision in review["decisions"].items():
+            if decision["action"] not in ("accept", "exclude") or key.startswith("@") and decision["action"] != "accept":
+                fail("PROPERTY_DELIVERY_REVIEW_INVALID")
         if selection["study_id"] != candidate["study_id"]:
             fail("PROPERTY_DELIVERY_SELECTION_CHANGED")
         properties = {p["key"]: p for p in candidate["properties"]}
@@ -298,6 +310,7 @@ def import_payload(workspace, source, manifest):
         packed.close()
 
 
+
 def receive_payload(source, destination, manifest):
     out = Path(destination).expanduser().absolute()
     parent = private_directory(out.parent)
@@ -308,12 +321,33 @@ def receive_payload(source, destination, manifest):
         saved = parse(read(out / "received-property-package.json", 16384))
         if saved != receipt:
             fail("RECEIVE_WORKSPACE_CONFLICT")
-    else:
-        private_directory(out)
-        dump(out / "received-property-package.json", receipt, exclusive=True)
-    workspace = Workspace(out)
+        workspace = Workspace(out)
+        try:
+            return {**import_payload(workspace, Path(source), manifest), "workspace": str(out)}
+        finally:
+            workspace.close()
+    stage = Path(tempfile.mkdtemp(prefix=".receive-property-", dir=parent))
     try:
-        result = import_payload(workspace, Path(source), manifest)
-        return {**result, "workspace": str(out)}
+        dump(stage / "received-property-package.json", receipt, exclusive=True)
+        workspace = Workspace(stage)
+        try:
+            result = import_payload(workspace, Path(source), manifest)
+            # The complete package and database become visible together. Bind the
+            # retained package record to its final directory before that rename.
+            with workspace.mutation():
+                for row in workspace.connection.execute("SELECT id,body FROM exports").fetchall():
+                    body = unpack(row["body"])
+                    local = Path(body["directory"])
+                    relative = local.relative_to(stage)
+                    body["directory"] = str(out / relative)
+                    workspace.connection.execute("UPDATE exports SET body=? WHERE id=?", (encoded(body).decode(), row["id"]))
+            relative_package = Path(result["directory"]).relative_to(stage)
+        finally:
+            workspace.close()
+        os.rename(stage, out)
+        stage = None
+        sync_directory(parent)
+        return {**result, "directory": str(out / relative_package), "workspace": str(out)}
     finally:
-        workspace.close()
+        if stage is not None:
+            shutil.rmtree(stage)
