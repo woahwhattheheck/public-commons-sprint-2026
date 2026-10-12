@@ -419,30 +419,55 @@ async function relocate(root, archive, history, signal) {
   for (const refresh of state.refreshes ?? []) {
     abort(signal);
     const before = state.sources.find(item => item.id === refresh.sourceId);
+    const beforeEdition = state.editions.find(item => item.id === refresh.beforeEditionId);
     const after = state.editions.find(item => item.id === refresh.afterEditionId);
-    if (!before || !after || before.sha256 !== refresh.sourceSha256 ||
-        before.editionId !== refresh.beforeEditionId || after.manifestSha256 !== refresh.afterCaptureSha256)
+    if (refresh.schema !== 'stellar-forge.ckan-reviewed-refresh.v1' || !before || !beforeEdition || !after ||
+        before.sha256 !== refresh.sourceSha256 || before.editionId !== refresh.beforeEditionId ||
+        beforeEdition.manifestSha256 !== refresh.beforeCaptureSha256 || after.manifestSha256 !== refresh.afterCaptureSha256)
       throw fault('CKAN_RECEIVE_REFRESH_BINDING_CHANGED');
-    if (!refresh.comparisonSha256) continue;
+    const member = 'refreshes/' + refresh.id + '/decision.json';
+    if (!refresh.comparisonSha256) {
+      if (originals.has(member) || refresh.decisionSha256) throw fault('CKAN_RECEIVE_REFRESH_DECISION_CHANGED');
+      continue;
+    }
     const comparison = await readCkanRefreshComparison({ directory: join(root, 'refreshes', refresh.id),
       expectedSha256: refresh.comparisonSha256 });
     if (comparison.comparison.before.manifestSha256 !== refresh.beforeCaptureSha256 ||
         comparison.comparison.after.manifestSha256 !== refresh.afterCaptureSha256 ||
         identity(comparison.comparison.keys) !== identity(refresh.keys))
       throw fault('CKAN_RECEIVE_REFRESH_BINDING_CHANGED');
-    if (!refresh.decisionSha256) continue;
-    const member = 'refreshes/' + refresh.id + '/decision.json';
+    const outcome = { ACCEPTED: 'accept', KEPT_CURRENT: 'keep-current', SOURCE_WITHDRAWN: 'withdraw-source' }[refresh.state];
+    if (!originals.has(member)) {
+      if (refresh.decisionSha256 || outcome) throw fault('CKAN_RECEIVE_REFRESH_DECISION_CHANGED');
+      continue;
+    }
+    // A saved decision can precede its workbench projection. Preserve and
+    // validate that exact pending file so the original resume can finish it.
     const raw = await readPrivate(join(root, member), 1048576);
-    const decision = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(raw));
-    if (digest(raw) !== refresh.decisionSha256 || decision.intent?.refreshId !== refresh.id ||
-        decision.intent?.comparisonSha256 !== refresh.comparisonSha256 ||
-        decision.intent?.sourceId !== refresh.sourceId || decision.intent?.sourceSha256 !== refresh.sourceSha256)
+    const decisionSha256 = digest(raw), decision = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(raw));
+    if (decision.schema !== 'stellar-forge.ckan-refresh-decision.v1' ||
+        refresh.decisionSha256 && decisionSha256 !== refresh.decisionSha256 ||
+        outcome && (!refresh.decisionSha256 || decision.intent?.decision !== outcome) ||
+        !['accept', 'keep-current', 'withdraw-source'].includes(decision.intent?.decision) ||
+        decision.intent?.refreshId !== refresh.id || decision.intent?.comparisonSha256 !== refresh.comparisonSha256 ||
+        decision.intent?.sourceId !== refresh.sourceId || decision.intent?.sourceSha256 !== refresh.sourceSha256 ||
+        decision.intent?.afterEditionId !== refresh.afterEditionId || decision.intent?.afterCaptureSha256 !== refresh.afterCaptureSha256 ||
+        decision.intent.decision === 'accept' && decision.intent.acceptedSourceId !== refresh.nextSourceId)
       throw fault('CKAN_RECEIVE_REFRESH_DECISION_CHANGED');
+    if (refresh.state === 'SOURCE_WITHDRAWN') {
+      const withdrawal = before.withdrawal;
+      // A later explicit withdrawal can supersede an earlier one on the same
+      // source. Its current pointer must still name an exact retained decision.
+      if (!withdrawal || !(state.refreshes ?? []).some(item => item.id === withdrawal.refreshId &&
+          item.sourceId === before.id && item.state === 'SOURCE_WITHDRAWN' &&
+          item.decisionSha256 === withdrawal.decisionSha256))
+        throw fault('CKAN_RECEIVE_REFRESH_DECISION_CHANGED');
+    }
     if (refresh.state === 'ACCEPTED') {
       const accepted = state.sources.find(item => item.id === refresh.acceptedSourceId);
       const config = accepted && sourceConfigs.get(accepted.id);
       const query = config && compileQueries(config.queries)[accepted.query];
-      if (decision.intent.decision !== 'accept' || !accepted || !query ||
+      if (!accepted || !query ||
           accepted.refreshId !== refresh.id || accepted.refreshDecisionSha256 !== refresh.decisionSha256 ||
           accepted.editionId !== refresh.afterEditionId || decision.intent.acceptedSourceId !== accepted.id ||
           identity({ query: accepted.query, projection: query.projection }) !== decision.intent.selection?.projectionSha256 ||
