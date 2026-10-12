@@ -18,6 +18,8 @@ Applications opens the original merchant and buyer tools from a selected READY r
 | OData source and live merchant | dataset odata | Saved source metadata, typed queries, retained editions, live paid pages, buyer handoffs and received records |
 | SEC EDGAR source operator | sec-edgar workspace | Original company facts and filings, retained source editions, merchant drafts and complete customer exports |
 | Google Sheets source authoring | sheets-source workspace serve | Retained workbook observations, typed source projections, original dataset publisher and merchant receiving |
+| NocoDB source authoring | nocodb-source workspace serve | Original database observations, complete captures, public projections, dataset publisher and retained workspace recovery |
+| Stellar asset investigation | dataset-workspace --stellar-expert | Original asset observations, exact editions, reviewed findings, native dataset and merchant releases, purchased page receiving |
 | ArcGIS merchant workspace | arcgis-agent serve | One original browser and MCP service for source capture, field mapping, publication, staged deployments and complete customer files |
 | Dataset preview | dataset-workspace | A dataset configuration file or retained dataset state, native query and preview |
 | Dataset buyer | buyer-dataset-workspace | Original acquisitions, received rows and files, private customer history and Python analysis |
@@ -504,3 +506,15 @@ In the customer workspace, select a connection and adopt an existing pass or pre
 Use the ordinary Applications **Stop**, **Review start** and **Start reviewed application** controls to reopen the same customer directory. Each start reviews the current state, and the existing application resource lease serializes managed use of that directory.
 
 The complete [API-pass customer guide](../../sf101-merchant-receiver/api-access/workspace/README.md) covers configuration, connection setup, purchase approval, exact request recovery, customer reports, browser operations and installed package imports.
+
+## NocoDB source authoring
+
+Choose the original initialized private **NocoDB workspace** and, when live database access is needed, its optional **Private NocoDB connections file**. The connection stores the original server and credential environment references. Use the existing **Local port** and **Private environment JSON** fields for the original native listener and host environment.
+
+Review retains the workspace's original SQLite identity and immutable settings, the complete nine-file native source selection and the exact optional connection file. Start launches the maintained source authoring command with those selections. The original structured startup opens that same workspace and original dataset publisher; captures, projections and draft revisions can continue normally. Stop drains the original process, and a later start reopens its saved work. The complete [NocoDB Applications guide](../../sf30-seller-sdk/nocodb/APPLICATIONS.md) covers initialization, live and retained source intake, publisher/customer delivery and managed recovery.
+
+## Stellar asset investigation
+
+Choose **Stellar asset investigation** with its private **StellarExpert workspace**, optional **Original buyer inbox** and optional **Private merchant runtime JSON**. The workspace may be retained or one new directory in an existing private parent. Use the common **Local port** and **Private environment JSON** settings for the original source command.
+
+The selection carries the stable workspace UUID, source files, original inbox and exact merchant runtime configuration into the existing review and launch. Applications opens the original authenticated workspace from its structured startup record. Capture original asset observations, compare retained editions, review findings, prepare datasets, operate the original merchant releases and receive purchased dataset pages through the existing customer inbox. Captures, editions, notes and receipts remain normal mutable workspace progress across Stop and reopen. The complete [StellarExpert operator guide](../../sf30-seller-sdk/stellar-expert/OPERATOR_GUIDE.md) covers the source, merchant and customer workflow.
