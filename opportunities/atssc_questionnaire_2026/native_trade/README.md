@@ -11,6 +11,11 @@ report alongside the protected report.
 
 Requirements: Python 3.10 or newer and a browser. The core application uses the
 Python standard library and serves on the local loopback interface.
+PDF and Word downloads use the pinned document runtime described in
+`DOCUMENT_DOWNLOADS.md`. Start the server with that runtime's Python after
+installing its dependencies. Native workbook recalculation uses an installed
+LibreOffice executable; its original and calculated workbook editions remain
+separate.
 
 ```sh
 python3 server.py --workspace ./customer-workspace --port 0
@@ -31,16 +36,30 @@ the retained workspace.
 3. Publish the saved definition and create respondent invitations in
    **Respondents**. An invitation retains its access code in a private native
    file. Each respondent entry opens only that respondent's published edition,
-   answers, revisions and review notes.
+   current answers and review notes. The operator retains the complete history;
+   a respondent receives only the current saved draft and latest submitted
+   revision.
 4. Submit native answers or the complete original/revised workbook. The native
    record retains each revision and validation outcome. The analyst sees all
    changed answers and the complete changed workbook cell/structure catalogue.
-   Accept a valid latest revision or return it for correction.
+   Use **Save progress** to retain an incomplete response, close the session,
+   and resume from the same entry. Submission seals a numbered immutable
+   edition. Accept a valid latest revision or return it for correction. An
+   accepted response is closed to respondent changes until the operator
+   requests a correction. Respondent downloads contain the current retained
+   draft or latest submitted edition as Word and PDF.
 5. Create a frozen report in **Reports**. The protected edition includes the
    complete accepted values, respondent identities and accepted revision
-   references. The public edition projects only explicitly public questions
-   and table columns. A recorded public disclosure review releases that exact
-   public report. Both editions download as JSON, CSV and HTML.
+   references. The public edition withholds protected answers and table cells,
+   with separately supplied public alternative text. Respondents may mark an
+   answer to a public question as protected. A protected definition stays
+   protected. Public calculations derived from protected inputs also stay
+   protected. Submission records the respondent's confirmation of the public
+   portion. A recorded public disclosure review releases that exact public
+   report. Both editions download as JSON, CSV, HTML, PDF and editable Word.
+   A new report includes only the latest currently accepted revisions. Saved
+   reports retain their original accepted references when later responses
+   change.
 
 Questionnaire calculations and cross-answer validation rules use a declarative
 expression tree in the editable definition. Numeric operations use Decimal.
@@ -63,8 +82,8 @@ The retained process accepts one JSON object per line:
 Responses are `{id,result}` or `{id,error:{code,message,detail}}`. Native operation
 names are `status`, `import_workbook`, `inspect_workbook`, `compare_workbooks`,
 `create_questionnaire`, `save_definition`, `get_definition`, `publish`, `invite`,
-`get_respondent`, `workbook_answers`, `submit_revision`, `review_revision`,
-`create_report`, `get_report`, `release_report`, `export_report`, `backup` and
+`get_respondent`, `save_progress`, `workbook_answers`, `submit_revision`, `review_revision`,
+`create_report`, `get_report`, `release_report`, `export_report`, `export_response`, `backup` and
 `export_project`. Definitions and respondent writes require their current
 `expected_version`; conflicting writes preserve the current edition.
 
@@ -73,6 +92,41 @@ optional `expected_sha256`. The returned SHA256 identifies the whole retained
 workbook. `inspect_workbook` receives that `sha256`, optionally `sheet` and a
 list of original `cells`. `compare_workbooks` receives `before_sha256` and
 `after_sha256` and returns every changed cell and changed sheet definition.
+
+Every mutating operation accepts an optional stable `request_id`. Replaying
+the same identifier and complete inputs returns the retained result; using
+it for different inputs fails without changing the workspace. An exact saved
+request remains replayable after its original expected version advances.
+The journal records the native operation, actor, timestamp and saved outcome.
+
+`save_progress` receives `respondent_id`, `expected_version`,
+`expected_draft_version` (zero before the first draft), `answers`, optional
+`disclosures` and `public_confirmed`. It preserves incomplete answers and
+validation messages without sealing a response. `submit_revision` receives
+the current sealed `expected_version` and either `answers` or
+`workbook_sha256`. It also receives the current disclosure choices and the
+public confirmation. A sealed revision clears the saved draft.
+
+Disclosure choices use the published stable question identifiers:
+
+```json
+{"public_question":{"classification":"protected","public_alternative":"Public description supplied by the respondent"}}
+```
+
+For a table, `cells` is a list following its answer rows. Each row maps the
+stable column identifier to the same classification/alternative shape.
+Public alternatives are text and remain separate from numerical values and
+statistics. Protected fields cannot be promoted to public. The respondent
+confirms the actual public answers and alternatives with
+`public_confirmed:true`; missing confirmation remains a validation issue.
+
+`create_report` receives `publication_id`, optional ordered `question_ids`,
+and optional `respondent_ids` selecting accepted respondents in that edition.
+The report freezes those references. `export_report` receives `report_id` and
+a new `directory`; it exports both disclosure editions in all five formats
+with member hashes. `export_response` receives `respondent_id` and a new
+`directory`; it exports the current retained response in both PDF and Word
+disclosure editions.
 
 ## Preserve and receive the whole project
 
@@ -85,7 +139,8 @@ python3 cli.py --workspace ./customer-workspace invoke export_project \
 
 The archive contains the original source application, complete SQLite backup,
 original workbook bytes inside the database, all definitions/publications,
-respondent revisions/reviews, report editions and the native access-code files.
+respondent drafts/revisions/reviews, report editions, the journal, retained
+request results, document export code/fonts and the native access-code files.
 Keep this whole customer archive private.
 
 Receive it into a new destination, preserving all original identifiers:
@@ -98,7 +153,8 @@ python3 independently-received-project/application/server.py \
 ```
 
 The receiving command verifies the archive inventory, every member's length and
-SHA256, SQLite integrity and every original workbook BLOB. An existing
+SHA256, SQLite integrity/relationships, the original workspace identity,
+operator access-code consistency and every original workbook BLOB. An existing
 destination is preserved. Use `--expected-sha256` to pin the whole archive.
 The operator access code is in the received native workspace. The same project
 can be reopened, edited, reviewed and exported again.
