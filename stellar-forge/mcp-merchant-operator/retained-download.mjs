@@ -64,7 +64,12 @@ export async function openMerchantFileClient({ url, tokenEnv = 'MCP_ACCESS_TOKEN
 /** Owner adapters supply the original manifest parser, names and identity schema. */
 export function createRetainedDownload({ manifestName, parseManifest, maximumBytes, stateSchema,
   resultSchema, toolPrefix, errorPrefix, clientName, describe = () => ({}), connect: openClient = openMerchantFileClient, nestedFiles = false, readLease = true,
-  validateExportId = value => identifier(value, 'Export ID') }) {
+  validateExportId = value => identifier(value, 'Export ID'),
+  maximumManifestBytes = 65000, maximumCheckpointBytes = 65000 }) {
+  if (!Number.isSafeInteger(maximumManifestBytes) || maximumManifestBytes < 1 || maximumManifestBytes > 64 * 1024 * 1024 ||
+      !Number.isSafeInteger(maximumCheckpointBytes) || maximumCheckpointBytes < 1 || maximumCheckpointBytes > 128 * 1024 * 1024)
+    throw failure(errorPrefix + '_DOWNLOAD_CONFIGURATION', 'Choose explicit original manifest and checkpoint byte limits.');
+
   async function connect(provided, options) {
     if (provided === undefined) return openClient({ ...options, errorPrefix, clientName });
     if (!provided || typeof provided !== 'object' || Array.isArray(provided) ||
@@ -116,9 +121,12 @@ export function createRetainedDownload({ manifestName, parseManifest, maximumByt
   }
   async function checkpoint(context) {
     context.lease.assertHeld();
+    const stateBytes = Buffer.from(JSON.stringify(context.state, null, 2) + '\n');
+    if (stateBytes.length > maximumCheckpointBytes)
+      throw failure(errorPrefix + '_DOWNLOAD_CHECKPOINT_TOO_LARGE', 'The original checkpoint exceeds this source\'s declared byte limit.');
     const temporary = join(context.stateDirectory, 'checkpoint.next');
     try { await unlink(temporary); } catch (error) { if (error.code !== 'ENOENT') throw error; }
-    await writePrivate(temporary, context.state); context.lease.assertHeld();
+    await writePrivate(temporary, stateBytes); context.lease.assertHeld();
     await rename(temporary, join(context.stateDirectory, 'checkpoint.json')); await syncDirectory(context.stateDirectory);
   }
   async function publishManifest(context, destination, bytes) {
@@ -130,7 +138,7 @@ export function createRetainedDownload({ manifestName, parseManifest, maximumByt
       try { await link(temporary, destination); }
       catch (error) {
         if (error.code !== 'EEXIST') throw error;
-        if (!(await bytesAt(destination, 65000)).equals(bytes))
+        if (!(await bytesAt(destination, maximumManifestBytes)).equals(bytes))
           throw failure(errorPrefix + '_DOWNLOAD_EXPORT_CHANGED', 'The existing local completion manifest differs.');
       }
     } finally { await unlink(temporary).catch(error => { if (error.code !== 'ENOENT') throw error; }); }
@@ -162,16 +170,30 @@ export function createRetainedDownload({ manifestName, parseManifest, maximumByt
   const partialName = file => nestedFiles ? 'part-' + sha(Buffer.from(file.name)) + '.part' : file.name + '.part';
   async function validateNestedRoot(context, manifest) {
     const files = new Set([manifestName, ...manifest.files.map(file => file.name)]), directories = new Set();
-    for (const name of files) {
+    const declared = manifest.directories === undefined ? [] : manifest.directories;
+    if (!Array.isArray(declared))
+      throw failure(errorPrefix + '_DOWNLOAD_MANIFEST_INVALID', 'Declare original workspace directories as an array of canonical relative paths.');
+    function canonicalPath(name) {
       if (typeof name !== 'string' || !name || name.startsWith('/') || /[\\:\u0000-\u001f\u007f]/.test(name)
           || name.split('/').some(part => !part || part === '.' || part === '..') || name.split('/').length > 32
           || name === 'download-state' || name.startsWith('download-state/'))
-        throw failure(errorPrefix + '_DOWNLOAD_MANIFEST_INVALID', 'Use canonical original relative file paths outside download-state.');
-      const parts = name.split('/');
+        throw failure(errorPrefix + '_DOWNLOAD_MANIFEST_INVALID', 'Use canonical original relative paths outside download-state.');
+      return name.split('/');
+    }
+    for (const name of files) {
+      const parts = canonicalPath(name);
       for (let index = 1; index < parts.length; index++) directories.add(parts.slice(0, index).join('/'));
     }
+    const explicit = new Set();
+    for (const name of declared) {
+      const parts = canonicalPath(name);
+      if (explicit.has(name))
+        throw failure(errorPrefix + '_DOWNLOAD_MANIFEST_INVALID', 'An original workspace directory is declared more than once.');
+      explicit.add(name);
+      for (let index = 1; index <= parts.length; index++) directories.add(parts.slice(0, index).join('/'));
+    }
     if ([...directories].some(name => files.has(name)))
-      throw failure(errorPrefix + '_DOWNLOAD_MANIFEST_INVALID', 'A retained file conflicts with another file’s directory.');
+      throw failure(errorPrefix + '_DOWNLOAD_MANIFEST_INVALID', 'A retained file conflicts with an original workspace directory.');
     async function visit(path, relative = '') {
       for (const entry of await readdir(path, { withFileTypes: true })) {
         if (!relative && entry.name === 'download-state') continue;
@@ -186,41 +208,53 @@ export function createRetainedDownload({ manifestName, parseManifest, maximumByt
       }
     }
     await visit(context.root);
+    return [...explicit];
   }
-  async function ensureNativeParents(context, name) {
-    if (!nestedFiles) return;
+  async function ensureNativeDirectory(context, name) {
+    if (!nestedFiles || !name) return;
     let parent = context.root;
-    for (const part of name.split('/').slice(0, -1)) {
-      const child = join(parent, part); let created = false;
-      try { await mkdir(child, { mode: 0o700 }); created = true; }
+    for (const part of name.split('/')) {
+      context.lease.assertHeld();
+      const child = join(parent, part);
+      try { await mkdir(child, { mode: 0o700 }); }
       catch (error) { if (error.code !== 'EEXIST') throw error; }
       await privateSupportDirectory(child);
-      if (await realpath(child) !== child) throw failure(errorPrefix + '_DOWNLOAD_DIRECTORY_IN_USE', 'An original file parent changed identity.');
-      if (created) await syncDirectory(parent);
+      if (await realpath(child) !== child) throw failure(errorPrefix + '_DOWNLOAD_DIRECTORY_IN_USE', 'An original workspace directory changed identity.');
+      const synced = context.syncedNativeDirectories ??= new Set();
+      if (!synced.has(child)) {
+        // An interrupted mkdir may already exist without its directory entry
+        // having been synced. Complete that same publication on this reopen.
+        await syncDirectory(child); await syncDirectory(parent);
+        synced.add(child);
+      }
       parent = child;
     }
+    context.lease.assertHeld();
+  }
+  async function ensureNativeParents(context, name) {
+    return ensureNativeDirectory(context, name.split('/').slice(0, -1).join('/'));
   }
   async function loadContext(context, manifestBytes, exportId, endpoint) {
     const manifest = parseManifest(manifestBytes, exportId), manifestSha256 = sha(manifestBytes);
     const rootNames = new Set(['download-state', manifestName, ...manifest.files.map(file => file.name)]);
     const stateNames = new Set(['lease.lock', 'checkpoint.json', 'checkpoint.next', manifestName, manifestName + '.next', ...manifest.files.map(partialName)]);
-    if (nestedFiles) await validateNestedRoot(context, manifest);
+    const nativeDirectories = nestedFiles ? await validateNestedRoot(context, manifest) : [];
     if ((!nestedFiles && (await readdir(context.root)).some(name => !rootNames.has(name))) || (await readdir(context.stateDirectory)).some(name => !stateNames.has(name)))
       throw failure(errorPrefix + '_DOWNLOAD_DIRECTORY_IN_USE', 'This directory contains files outside the selected original retained download.');
     let savedBytes;
-    try { savedBytes = await bytesAt(join(context.stateDirectory, manifestName), 65000); }
+    try { savedBytes = await bytesAt(join(context.stateDirectory, manifestName), maximumManifestBytes); }
     catch (error) { if (error.code !== 'ENOENT') throw error; }
     if (savedBytes && !savedBytes.equals(manifestBytes)) throw failure(errorPrefix + '_DOWNLOAD_EXPORT_CHANGED', 'This directory belongs to a different completion manifest. Keep its original files and select the intended export.');
     if (!savedBytes) await publishManifest(context, join(context.stateDirectory, manifestName), manifestBytes);
     let state;
-    try { state = JSON.parse(decode(await bytesAt(join(context.stateDirectory, 'checkpoint.json'), 65000))); }
+    try { state = JSON.parse(decode(await bytesAt(join(context.stateDirectory, 'checkpoint.json'), maximumCheckpointBytes))); }
     catch (error) { if (error.code !== 'ENOENT') throw error; }
     if (state && (state.schema !== stateSchema || state.exportId !== exportId || state.manifestSha256 !== manifestSha256 ||
         endpoint !== undefined && state.endpoint !== endpoint || !plain(state.files) || Object.keys(state.files).some(name => !manifest.files.some(file => file.name === name))))
       throw failure(errorPrefix + '_DOWNLOAD_CHECKPOINT_CONFLICT', 'The retained download identity does not match this export and endpoint.');
     const resumed = Boolean(state);
     state ??= { schema: stateSchema, exportId, endpoint, manifestSha256, createdAt: new Date().toISOString(), files: {} };
-    Object.assign(context, { exportId, manifest, manifestBytes, manifestSha256, state, resumed });
+    Object.assign(context, { exportId, manifest, manifestBytes, manifestSha256, state, resumed, nativeDirectories });
     await checkpoint(context); return context;
   }
   function chunkBytes(result, file, offset, limit, exportId, manifestSha256, readId) {
@@ -239,14 +273,28 @@ export function createRetainedDownload({ manifestName, parseManifest, maximumByt
   async function retainedManifest(client, exportId) {
     const info = await client.call(toolPrefix + '_manifest', { exportId }), file = info.manifestFile;
     if (info.state !== 'MANIFEST_RETAINED' || info.exportId !== exportId || file?.name !== manifestName ||
-        !Number.isSafeInteger(file.bytes) || file.bytes < 1 || file.bytes > 65000 || !validSha(file.sha256))
+        !Number.isSafeInteger(file.bytes) || file.bytes < 1 || file.bytes > maximumManifestBytes || !validSha(file.sha256))
       throw failure(errorPrefix + '_DOWNLOAD_MANIFEST_INVALID', 'Inspect a retained original completion manifest.');
-    const result = await client.call(toolPrefix + '_file', { exportId, file: file.name,
-      expectedManifestSha256: file.sha256, expectedSha256: file.sha256, limit: MAX_RETAINED_CHUNK_BYTES });
-    const bytes = chunkBytes(result, file, 0, MAX_RETAINED_CHUNK_BYTES, exportId, file.sha256);
+    const chunks = []; let offset = 0, readId = null;
+    try {
+      while (offset < file.bytes) {
+        const limit = Math.min(MAX_RETAINED_CHUNK_BYTES, 65536, file.bytes - offset);
+        const result = await client.call(toolPrefix + '_file', { exportId, file: file.name,
+          expectedManifestSha256: file.sha256, expectedSha256: file.sha256, offset, limit,
+          ...(readId ? { readId } : {}) });
+        const bytes = chunkBytes(result, file, offset, limit, exportId, file.sha256, readId);
+        chunks.push(bytes); offset += bytes.length;
+        readId = result.nextOffset === null ? null : result.readId;
+      }
+    } finally {
+      if (readId) await client.call(toolPrefix + '_file_release', { exportId, readId },
+        { requestSignal: null, timeoutMs: 2000 }).catch(() => {});
+    }
+    const bytes = Buffer.concat(chunks, offset);
     if (sha(bytes) !== file.sha256) throw failure(errorPrefix + '_DOWNLOAD_MANIFEST_INVALID', 'The original completion manifest digest differs.');
     parseManifest(bytes, exportId); return bytes;
   }
+
   async function persistFile(context, client, file, { chunkSize, signal, onProgress }) {
     await ensureNativeParents(context, file.name);
     const destination = join(context.root, file.name), partial = join(context.stateDirectory, partialName(file));
@@ -318,6 +366,10 @@ export function createRetainedDownload({ manifestName, parseManifest, maximumByt
       throw failure(errorPrefix + '_DOWNLOAD_EXPORT_CHANGED', 'The retained completion manifest differs from the reviewed original export.');
     return lockedDownload(directory, async context => {
       await loadContext(context, manifestBytes, exportId, client.endpoint);
+      for (const name of context.nativeDirectories) {
+        signal?.throwIfAborted();
+        await ensureNativeDirectory(context, name);
+      }
       const resumedBytes = Object.values(context.state.files).reduce((sum, value) => sum + (Number.isSafeInteger(value.bytes) ? value.bytes : 0), 0);
       for (const file of context.manifest.files) await persistFile(context, client, file, { chunkSize, signal, onProgress });
       const final = join(context.root, manifestName);
