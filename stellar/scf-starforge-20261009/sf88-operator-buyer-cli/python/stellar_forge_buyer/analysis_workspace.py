@@ -390,6 +390,9 @@ class AnalysisWorkspace:
                 result = self.archives.run(job_id, spec)
             elif kind in {"response-preview", "response-import"}:
                 result = self.responses.execute(kind, spec)
+            elif kind == "import" and spec["source"].get("kind") == "finalized-dataset":
+                from .analysis_native_delivery import import_finalized_source
+                result = import_finalized_source(self, spec["source"], spec["columns"])
             elif kind == "import":
                 source = spec["source"]
                 path = Path(source["session"]) / "session.json"
@@ -760,6 +763,9 @@ def serve(workspace, *, port=0):
                 body = parse(raw)
                 if not isinstance(body, dict):
                     raise StateError("ANALYSIS_REQUEST_OBJECT_REQUIRED")
+                if url.path == "/api/native-finalized-dataset-source":
+                    from .analysis_native_delivery import register_finalized_source
+                    return self._reply(200, register_finalized_source(workspace, body))
                 if url.path == "/api/native-dataset-source":
                     from .analysis_native import attach_dataset
                     return self._reply(200, attach_dataset(workspace, body))

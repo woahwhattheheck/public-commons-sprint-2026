@@ -51,6 +51,65 @@ This receiver uses the original manifest and all retained native page archives. 
 
 The original file reader verifies the full expected digest and size on its opened descriptor. It also preserves the private-file requirements. The semantic document is limited to 2 MiB, matching the original delivery reader.
 
+## Register a finalized room in the existing analysis workspace
+
+A host can also attach an already finalized room to the original analysis source selector. The same source alias, revision check and persistent import job serve both a completed SF88 session and a direct SF100 delivery.
+
+The host-only `native-dataset-receive.py --room ABSOLUTE_ROOM --node ABSOLUTE_NODE` entry point uses the original SF100 scanner and this Python receiver. An optional `--session ABSOLUTE_SESSION` selects an already complete SF88 session. Its result names the source format, original source binding, exact manifest digest, original file descriptors and selected physical columns. Direct SF100 input uses `session: null`.
+
+The authenticated owner route is `POST /api/native-finalized-dataset-source`. Its exact body is:
+
+```json
+{
+  "name": "observations",
+  "expected_revision": 0,
+  "room": "/absolute/private/original-data-room",
+  "session": null,
+  "expected_native": {
+    "sourceFormat": "SF100_SCAN",
+    "sourceBindingSha256": "ORIGINAL_RECEIVING_SOURCE_BINDING",
+    "manifestSha256": "ORIGINAL_MANIFEST_SHA256"
+  }
+}
+```
+
+Use the actual 64-character lowercase hexadecimal digests from the original receiving result. The existing owner capability and origin checks apply to this route. Host setup selects filesystem paths; subsequent client work uses the registered source name and revision.
+
+A native caller can use the same functions on its already open `AnalysisWorkspace`:
+
+```python
+from stellar_forge_buyer.analysis_native_delivery import (
+    open_finalized,
+    register_finalized_source,
+)
+
+delivery, native = open_finalized(
+    workspace.checkout,
+    workspace.node,
+    "/absolute/private/original-data-room",
+)
+source = register_finalized_source(workspace, {
+    "name": "observations",
+    "expected_revision": 0,
+    "room": native["room"],
+    "session": native["session"],
+    "expected_native": {
+        key: native[key]
+        for key in ("sourceFormat", "sourceBindingSha256", "manifestSha256")
+    },
+})
+job = workspace.start("import", {
+    "id": original_request_id,  # The client's retained 32-character hex request ID.
+    "source": source["name"],
+    "source_revision": source["revision"],
+    "columns_text": '{"observation_id":"observation_key"}',
+})
+```
+
+Continue that same job with `workspace.job(job["id"])`, or use the existing authenticated `POST /api/start/import` and job routes. Reusing the original request ID recovers the original job. The completed result contains the original immutable SQL version, source name and revision, source format, original native status, and zero appended pages.
+
+Registration verifies the complete native room before committing to `sf_analysis_sources`. Import reopens it through the original scanner and checks the saved source identity again before using `DatasetDatabase.import_delivery`. The semantic dictionary then follows the same database, UI, SQL, report and workbook paths below. The source selector and saved alias remain part of the existing workspace backup.
+
 ## Import an immutable SQL edition
 
 The same DatasetDatabase accepts the original SF88 delivery and a verified direct SF100 delivery. Supply the reviewed field-to-SQL mapping through its existing columns argument.
