@@ -91,6 +91,7 @@ export async function runRunbookReceiving(config){
   input.runtime={node:process.version,nodePath:process.execPath,stellarModule:sdkModule,
     chromiumSha256:await fileHash(input.chromiumPath)};
   input.source=sourceRows;
+  input.receivingSource={driverSha256:await fileHash(fileURLToPath(import.meta.url)),builderSha256:BUILDER_SHA};
   await exact(join(directory,'input.json'),json(input));
   let state=await maybeJson(statePath);
   if(state){assert.equal(state.schema,schema);assert.equal(state.inputSha256,hash(json(input)));}
@@ -135,7 +136,9 @@ export async function runRunbookReceiving(config){
     terms:hash(await readFile(join(originalRoot,'terms.json')))
   }));
   const {startAccountingWorkspace}=await import(pathToFileURL(join(sourceRoot,PREFIX,'server.mjs')).href);
-  const {chromium}=await import(pathToFileURL(input.playwrightModule).href);
+  const browserModule=await import(pathToFileURL(input.playwrightModule).href);
+  const chromium=browserModule.chromium??browserModule.default?.chromium;
+  assert.equal(typeof chromium?.launchPersistentContext,'function','Use the actual installed Playwright Chromium API');
   let app,context,page,workspaceName,activeMutation=null;
   const responseJson=async response=>{
     const bytes=Buffer.from(await response.arrayBuffer());let value;try{value=JSON.parse(bytes);}catch{throw new Error('Native response is not complete JSON, HTTP '+response.status);}
