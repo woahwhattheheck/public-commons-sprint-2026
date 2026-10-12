@@ -15,7 +15,7 @@
 </header>
 <div class="workspace-bar">
   <div><span class="muted">Current workspace</span> <code id="workspace-id">Connecting…</code><span id="revision" class="muted"></span></div>
-  <label class="actor-label" for="operator-name">Recorded by <input id="operator-name" autocomplete="name" maxlength="200" placeholder="Your name"></label>
+  <label class="actor-label" for="operator-name">Recorded by <input id="operator-name" autocomplete="name" maxlength="160" placeholder="Your name"></label>
   <button id="refresh" type="button">Refresh</button>
 </div>
 <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
@@ -70,7 +70,7 @@
       </form>
     </section>
     <section id="view-schedule" data-view="schedule" hidden>
-      <div class="view-heading"><div><p class="eyebrow">Period setup</p><h1>Start a period</h1><p class="lead">Choose the procedure edition and the local accountant source for this period.</p></div></div>
+      <div class="view-heading"><div><p class="eyebrow">Period setup</p><h1>Start a period</h1><p class="lead">Choose the procedure edition and either an original accountant handoff or the client close files for this period.</p></div></div>
       <div id="schedule-context" class="panel" hidden></div>
       <form id="schedule-form" class="panel">
         <div class="form-grid">
@@ -78,14 +78,28 @@
           <label>Procedure edition<select id="schedule-edition" required><option value="">Choose an edition</option></select></label>
           <label>Period label<input id="schedule-label" maxlength="240" placeholder="For example, October close" required></label>
           <label>Due date<input id="schedule-due" type="date" required></label>
-          <label>Preparer<input id="schedule-preparer" maxlength="200" autocomplete="off" required></label>
-          <label>Reviewer<input id="schedule-reviewer" maxlength="200" autocomplete="off" required></label>
-          <label class="full">Accountant handoff<select id="schedule-handoff" required><option value="">Choose a local handoff</option></select></label>
-          <label>Accountant revision<select id="schedule-accountant-revision" required><option value="">Choose a handoff first</option></select></label>
-          <label>Closed period, when applicable<select id="schedule-close"><option value="">No closed-period selection</option></select></label>
+          <label>Preparer<input id="schedule-preparer" maxlength="160" autocomplete="off" required></label>
+          <label>Reviewer<input id="schedule-reviewer" maxlength="160" autocomplete="off" required></label>
+          <label class="full">Source for this close<select id="schedule-source-kind"><option value="accountant">Retained accountant handoff</option><option value="files">Original client close files</option></select></label>
+          <label class="full" data-source-mode="accountant">Accountant handoff<select id="schedule-handoff" required><option value="">Choose a local handoff</option></select></label>
+          <label data-source-mode="accountant">Accountant revision<select id="schedule-accountant-revision" required><option value="">Choose a handoff first</option></select></label>
+          <label data-source-mode="accountant">Closed period, when applicable<select id="schedule-close"><option value="">No closed-period selection</option></select></label>
+          <section id="schedule-files-source" class="full" data-source-mode="files" hidden>
+            <div class="form-grid">
+              <label class="full">Source label<input id="schedule-source-label" maxlength="240" placeholder="For example, October client close inputs" required></label>
+              <label class="full">Source notes<textarea id="schedule-source-note" maxlength="16000" rows="4" placeholder="Describe the selected period and what these original files cover."></textarea></label>
+            </div>
+            <h3>Original retained files</h3>
+            <p class="small muted">Select 1–100 original files for this period. Their names, exact bytes and source notes remain in the complete handover.</p>
+            <div id="schedule-source-files" class="check-list"></div>
+            <div class="resource-inline">
+              <label>Add an original close file<input id="schedule-source-upload" type="file"><span class="small muted">Up to 8 MiB per file.</span></label>
+              <button id="schedule-source-upload-button" type="button">Upload and select</button>
+            </div>
+          </section>
         </div>
         <div id="schedule-source-summary" class="source-summary"></div>
-        <div class="form-footer"><p class="small muted">The selected procedure, handoff and revision remain fixed in this worked period.</p><div class="actions"><button id="schedule-discard" type="button">Discard this draft</button><button class="primary" type="submit">Create period</button></div></div>
+        <div class="form-footer"><p class="small muted">The selected procedure and original source remain fixed in this worked period.</p><div class="actions"><button id="schedule-discard" type="button">Discard this draft</button><button class="primary" type="submit">Create period</button></div></div>
       </form>
     </section>
     <section id="view-cycle" data-view="cycle" hidden><div id="cycle-detail"></div></section>
@@ -95,7 +109,7 @@
         <label>Runbook handover packet<input id="receive-file" type="file" required></label>
         <p class="small muted">Up to 64 MiB. The original source and worked history stay attached to the received packet.</p>
         <div id="receive-selection" class="file-summary"></div>
-        <div class="form-footer"><p class="small muted">Received periods open for viewing and downloading. A following local period chooses its own accountant handoff.</p><button class="primary" type="submit">Receive handover</button></div>
+        <div class="form-footer"><p class="small muted">Received periods open for viewing and downloading. A following local period chooses its own original source.</p><button class="primary" type="submit">Receive handover</button></div>
       </form>
     </section>
   </main>

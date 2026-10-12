@@ -38,7 +38,7 @@ function button(text,fn,options = {}) {
   return node;
 }
 function safeHref(value) {
-  try { const url = new URL(value); return ['https:','http:'].includes(url.protocol) ? url.href : null; } catch { return null; }
+  try { const url = new URL(value); return url.protocol==='https:'&&!url.username&&!url.password ? url.href : null; } catch { return null; }
 }
 function link(text,url,{download=false,external=false} = {}) {
   const node = el('a',{href:url,className:download?'download':''},text);
@@ -61,7 +61,7 @@ function setBusy(value,label='Saving…') { S.busy=value; $('busy-status').hidde
 function paintLocks() {
   const locked=S.busy||!!S.pending||!S.connected||!!S.storageError;
   for (const form of document.querySelectorAll('#author-form,#schedule-form,#receive-form,.mutation-form')) {
-    for (const control of form.querySelectorAll('input,select,textarea,button')) control.disabled=locked||form.dataset.readonly==='true'||control.dataset.permanentDisabled==='true';
+    for (const control of form.querySelectorAll('input,select,textarea,button')) control.disabled=locked||form.dataset.readonly==='true'||control.dataset.permanentDisabled==='true'||control.closest('[data-source-mode]')?.hidden===true;
   }
   for (const control of document.querySelectorAll('[data-mutation],#new-runbook,#new-cycle,#overview-new-cycle')) control.disabled=locked||control.dataset.permanentDisabled==='true';
   for(const control of document.querySelectorAll('#recovery button'))control.disabled=S.busy||control.dataset.permanentDisabled==='true';
@@ -138,7 +138,7 @@ async function api(path,{body,signal}={}) {
   catch(error) { if(error.name==='AbortError')throw error; throw Object.assign(new Error('The accounting workspace did not answer. Any pending save remains available for exact recovery.'),{code:'CONNECTION_LOST',cause:error}); }
   let value;
   try { value=await response.json(); } catch { throw Object.assign(new Error('The accounting workspace returned an unreadable response. Check the saved operation before retrying.'),{code:'RESPONSE_UNREADABLE',status:response.status}); }
-  if (!response.ok) { const source=value.error||{}; throw Object.assign(new Error(source.message||'The accounting request could not finish.'),{code:source.code||'REQUEST_FAILED',status:response.status,applied:source.applied,details:source}); }
+  if (!response.ok) { const nested=value.error&&typeof value.error==='object'?value.error:null; throw Object.assign(new Error(nested?.message||value.message||'The accounting request could not finish.'),{code:nested?.code||(typeof value.error==='string'?value.error:'REQUEST_FAILED'),status:response.status,applied:nested?.applied??value.applied,details:value}); }
   return value;
 }
 function sameWorkspace(value) {
@@ -174,8 +174,8 @@ async function go(name) { await flush(); if(name==='author')return resumeAuthor(
 function clearSelection() {
   S.epoch++;S.book=null;S.bookId=null;S.editionId=null;S.cycle=null;S.cycleId=null;S.stepId=null;S.author=null;S.schedule=null;S.sources=null;S.scheduleBook=null;S.workDrafts.clear();S.pending=null;
   put('book-detail',empty('Choose a runbook.'));put('cycle-detail',empty('Choose a period.'));put('author-resources');put('author-steps');
-  for(const id of ['author-name','author-client','author-description','schedule-label','schedule-due','schedule-preparer','schedule-reviewer','receive-file'])$(id).value='';
-  for(const id of ['author-reference','schedule-context','schedule-source-summary','receive-selection'])put(id);
+  for(const id of ['author-name','author-client','author-description','schedule-label','schedule-due','schedule-preparer','schedule-reviewer','schedule-source-label','schedule-source-note','schedule-source-upload','receive-file'])$(id).value='';
+  for(const id of ['author-reference','schedule-context','schedule-source-summary','schedule-source-files','receive-selection'])put(id);
   for(const id of ['schedule-book','schedule-edition','schedule-handoff','schedule-accountant-revision','schedule-close'])put(id,el('option',{value:''},'Choose a current workspace source'));
 }
 async function refreshRoot({restore=false}={}) {
@@ -324,7 +324,7 @@ function renderAuthorResources() {
       resource.kind=event.target.value;saveAuthorPart('resource',resource);renderAuthorResources();renderAuthorSteps();paintLocks();
     }});
     let body;
-    if(resource.kind==='link')body=field('Link address',input(resource.url||'',{type:'url',maxlength:8000,placeholder:'https://',required:true,oninput:event=>{resource.url=event.target.value;saveAuthorPart('resource',resource);}}),{full:true});
+    if(resource.kind==='link')body=field('Link address',input(resource.url||'',{type:'url',maxlength:4096,placeholder:'https://',required:true,oninput:event=>{resource.url=event.target.value;saveAuthorPart('resource',resource);}}),{full:true});
     else if(resource.kind==='note')body=field('Working note',area(resource.text||'',{maxlength:32000,rows:5,required:true,oninput:event=>{resource.text=event.target.value;saveAuthorPart('resource',resource);}}),{full:true});
     else{
       const files=(S.data.files||[]),options=[{value:'',label:'Choose a retained document'},...files.map(item=>({value:item.id,label:item.name+' · '+bytes(item.bytes)}))];
@@ -387,7 +387,7 @@ async function discardAuthor() {
 function normalizedResources() {
   return S.author.resources.map(item=>{
     const output={id:item.id,title:item.title,kind:item.kind};
-    if(item.kind==='link'){if(!safeHref(item.url))throw new Error('Resource “'+item.title+'” needs an http or https address.');output.url=item.url;}
+    if(item.kind==='link'){if(!safeHref(item.url))throw new Error('Resource “'+item.title+'” needs an HTTPS address without embedded credentials.');output.url=item.url;}
     else if(item.kind==='file'){if(!item.fileId)throw new Error('Choose the retained document for “'+item.title+'”.');output.fileId=item.fileId;}
     else output.text=item.text||'';
     return output;
@@ -409,13 +409,13 @@ async function uploadFile(file,context) {
 }
 async function startSchedule(options={}) {
   await flush();const old=await readKey(key('schedule'));
-  if(old){S.schedule=old;showView('schedule');await renderSchedule({reload:true});notice('Your saved period draft is open. Create or discard it before starting another period.');return;}
+  if(old){S.schedule={sourceKind:'accountant',sourceLabel:'',sourceNote:'',sourceFileIds:[],...old};showView('schedule');await renderSchedule({reload:true});notice('Your saved period draft is open. Create or discard it before starting another period.');return;}
   const previous=options.previousCycle||null;
-  const draft={draftId:uid(),baseRevision:S.data.revision,runbookId:options.runbookId||previous?.runbookId||'',editionId:options.editionId||previous?.editionId||'',label:'',preparer:previous?.preparer||'',reviewer:previous?.reviewer||'',dueDate:'',handoffId:'',accountantRevisionId:'',periodCloseId:'',previousCycleId:previous?.id||'',previousLabel:previous?.label||'',createdAt:new Date().toISOString()};
+  const draft={draftId:uid(),baseRevision:S.data.revision,sourceKind:previous?.source?.kind==='files'?'files':'accountant',sourceLabel:'',sourceNote:'',sourceFileIds:[],runbookId:options.runbookId||previous?.runbookId||'',editionId:options.editionId||previous?.editionId||'',label:'',preparer:previous?.preparer||'',reviewer:previous?.reviewer||'',dueDate:'',handoffId:'',accountantRevisionId:'',periodCloseId:'',previousCycleId:previous?.id||'',previousLabel:previous?.label||'',createdAt:new Date().toISOString()};
   S.schedule=draft;await writeBatch([[key('schedule'),draft]]);showView('schedule');await renderSchedule({reload:true});notice('');
 }
 async function resumeSchedule() {
-  await flush();S.schedule=await readKey(key('schedule'));if(!S.schedule)return startSchedule();
+  await flush();S.schedule=await readKey(key('schedule'));if(!S.schedule)return startSchedule();S.schedule={sourceKind:'accountant',sourceLabel:'',sourceNote:'',sourceFileIds:[],...S.schedule};
   showView('schedule');await renderSchedule({reload:true});
 }
 function saveScheduleDraft() { if(S.schedule)persist(key('schedule'),S.schedule).catch(()=>{}); }
@@ -440,30 +440,49 @@ async function renderSchedule({reload=false}={}) {
   }else if(!bookId)S.scheduleBook=null;
   fillOptions($('schedule-book'),[{value:'',label:'Choose a runbook'},...(S.data.runbooks||[]).map(item=>({value:item.id,label:item.name+' · '+item.client}))],draft.runbookId);
   fillOptions($('schedule-edition'),[{value:'',label:'Choose an edition'},...(S.scheduleBook?.editions||[]).map(item=>({value:item.id,label:'Edition '+item.number+' · '+when(item.createdAt)+(item.id===S.scheduleBook.latestEditionId?' · latest':'')}))],draft.editionId);
-  for(const [id,name] of [['schedule-label','label'],['schedule-preparer','preparer'],['schedule-reviewer','reviewer'],['schedule-due','dueDate']])$(id).value=draft[name]||'';
+  for(const [id,name] of [['schedule-label','label'],['schedule-preparer','preparer'],['schedule-reviewer','reviewer'],['schedule-due','dueDate'],['schedule-source-label','sourceLabel'],['schedule-source-note','sourceNote']])$(id).value=draft[name]||'';
+  $('schedule-source-kind').value=draft.sourceKind||'accountant';
   const context=$('schedule-context');context.hidden=!draft.previousCycleId;
-  if(draft.previousCycleId)put(context,el('h2',{},'Following period'),el('p',{},'Continue the procedure after “'+draft.previousLabel+'”. Choose the new local accountant source below. Earlier worked tasks and reviews stay in the prior period.'),button('Open prior worked period',()=>openCycle(draft.previousCycleId)));
+  if(draft.previousCycleId)put(context,el('h2',{},'Following period'),el('p',{},'Continue the procedure after “'+draft.previousLabel+'”. Choose the original source for the new local period below. Earlier worked tasks and reviews stay in the prior period.'),button('Open prior worked period',()=>openCycle(draft.previousCycleId)));
   else put(context);
   renderScheduleSources();paintLocks();
 }
 function renderScheduleSources() {
   const draft=S.schedule;if(!draft||!S.sources)return;
+  const mode=draft.sourceKind||'accountant';for(const group of document.querySelectorAll('[data-source-mode]'))group.hidden=group.dataset.sourceMode!==mode;
+  if(mode==='files'){
+    const selection={fileIds:draft.sourceFileIds||[]};
+    put('schedule-source-files',attachmentPicker(selection,{onChange:()=>{draft.sourceFileIds=selection.fileIds;saveScheduleDraft();renderFilesSourceSummary();}}));
+    renderFilesSourceSummary();paintLocks();return;
+  }
   const handoffs=S.sources.handoffs||[];
   fillOptions($('schedule-handoff'),[{value:'',label:'Choose a local accountant handoff'},...handoffs.map(item=>({value:item.id,label:'Handoff '+short(item.id)+' · run '+short(item.runId)+' · '+when(item.createdAt)}))],draft.handoffId);
   const selected=handoffs.find(item=>item.id===draft.handoffId);
   let revisions=selected?.revisions||[];
   if(selected&&!revisions.some(item=>item.id==='initial'))revisions=[{id:'initial',label:'Initial accountant handoff'},...revisions];
   fillOptions($('schedule-accountant-revision'),[{value:'',label:selected?'Choose the accountant revision':'Choose a handoff first'},...revisions.map(item=>({value:item.id,label:item.label||short(item.id)}))],draft.accountantRevisionId);
-  const closes=(S.sources.closes||[]).filter(item=>selected&&item.runId===selected.runId);
+  const closes=(S.sources.closes||[]).filter(item=>selected&&item.id===selected.closeId);
   fillOptions($('schedule-close'),[{value:'',label:'No closed-period selection'},...closes.map(item=>({value:item.id,label:item.label||short(item.id)}))],draft.periodCloseId);
-  put('schedule-source-summary',selected?facts([['Selected source run',selected.runId],['Accountant handoff',selected.id],['Accountant revision',draft.accountantRevisionId||'Choose a revision'],['Closed period',closes.find(item=>item.id===draft.periodCloseId)?.label||'No closed-period selection']]):empty('Choose an existing local accountant handoff. Receiving a foreign period does not substitute a local source.'));
+  put('schedule-source-summary',selected?facts([['Selected source run',selected.runId],['Accountant handoff',selected.id],['Accountant revision',draft.accountantRevisionId||'Choose a revision'],['Frozen period close',selected.closeId?(closes.find(item=>item.id===selected.closeId)?.label||selected.closeId):'The selected handoff has no frozen close']]):empty('Choose an existing local accountant handoff. Receiving a foreign period does not substitute a local source.'));
+}
+function renderFilesSourceSummary(){
+  const draft=S.schedule;if(!draft)return;
+  put('schedule-source-summary',facts([['Source mode','Original client close files'],['Source label',draft.sourceLabel||'Enter a source label'],['Selected files',(draft.sourceFileIds||[]).length]]));
 }
 async function saveCycle() {
   if(!$('schedule-form').reportValidity())return;
   await flush();const draft=S.schedule;
-  if(!S.sources?.handoffs?.some(item=>item.id===draft.handoffId))throw new Error('Choose a currently available local accountant handoff.');
-  const fields={runbookId:draft.runbookId,editionId:draft.editionId,label:draft.label,preparer:draft.preparer,reviewer:draft.reviewer,dueDate:draft.dueDate,handoffId:draft.handoffId,accountantRevisionId:draft.accountantRevisionId};
-  if(draft.periodCloseId)fields.periodCloseId=draft.periodCloseId;if(draft.previousCycleId)fields.previousCycleId=draft.previousCycleId;
+  const fields={runbookId:draft.runbookId,editionId:draft.editionId,label:draft.label,preparer:draft.preparer,reviewer:draft.reviewer,dueDate:draft.dueDate,sourceKind:draft.sourceKind||'accountant'};
+  if(fields.sourceKind==='files'){
+    const selected=draft.sourceFileIds||[];
+    if(selected.length<1||selected.length>100||!selected.every(id=>(S.data.files||[]).some(file=>file.id===id)))throw new Error('Select 1–100 existing original files for this client close.');
+    Object.assign(fields,{sourceLabel:draft.sourceLabel,sourceNote:draft.sourceNote,sourceFileIds:clone(selected)});
+  }else{
+    if(!S.sources?.handoffs?.some(item=>item.id===draft.handoffId))throw new Error('Choose a currently available local accountant handoff.');
+    Object.assign(fields,{handoffId:draft.handoffId,accountantRevisionId:draft.accountantRevisionId});
+    if(draft.periodCloseId)fields.periodCloseId=draft.periodCloseId;
+  }
+  if(draft.previousCycleId)fields.previousCycleId=draft.previousCycleId;
   await mutate('cycle',ROOT+'/cycles',null,fields,{draftId:draft.draftId},draft.baseRevision);
 }
 async function discardSchedule() {
@@ -515,11 +534,13 @@ function renderCycle() {
   const source=cycle.source||{};
   const header=el('div',{className:'view-heading'},el('div',{},el('p',{className:'eyebrow'},edition.client+' · '+edition.name),el('h1',{},cycle.label)),tag(PHASE[cycle.phase]||cycle.phase,true));
   const overview=el('section',{className:'panel'},facts([['Due date',cycle.dueDate],['Preparer',cycle.preparer],['Reviewer',cycle.reviewer],['Procedure edition','Edition '+edition.number],['Completed steps',saved+' of '+steps.length],['Work mode',cycle.readOnly?'Received handover':'Local period']]),
-    cycle.readOnly?el('p',{className:'inline-note'},'This received period retains its original preparation, review and accountant source. Start a following local period to perform the procedure with a new local handoff.'):null,
+    cycle.readOnly?el('p',{className:'inline-note'},'This received period retains its original preparation, review and accountant source. Start a following local period to perform the procedure with a new original source.'):null,
     cycle.phase==='CHANGES_REQUESTED'&&latestReturn?el('div',{className:'inline-note'},el('strong',{},'Review returned this preparation'),prose(latestReturn.note)):null,
     el('div',{className:'actions'},link('Download handover packet',cyclePath(cycle.id)+'/packet',{download:true}),link('Printable handover',cyclePath(cycle.id)+'/print',{download:true}),link('Task handover CSV',cyclePath(cycle.id)+'/tasks.csv',{download:true}),
       button('Start following period',()=>startSchedule({previousCycle:cycle}),{mutation:true}),button('Open procedure edition',()=>openBook(cycle.runbookId,cycle.editionId))));
-  const sourceDetails=el('details',{className:'panel'},el('summary',{},'Selected accountant source and period lineage'),facts([['Source run',source.runId],['Accountant handoff',source.handoffId||cycle.handoffId],['Accountant revision',source.accountantRevisionId||cycle.accountantRevisionId],['Closed period',cycle.periodCloseId||source.periodCloseId],['Previous worked period',cycle.previousCycleId],['Origin workspace',cycle.origin?.workspaceId||cycle.originWorkspaceId||source.originWorkspaceId]]));
+  const sourceDetails=source.kind==='files'?
+    el('details',{className:'panel'},el('summary',{},'Original close files · '+source.label),facts([['Source label',source.label],['Selected files',(source.files||[]).length],['Source snapshot',source.sha256],['Previous worked period',cycle.previousCycleId],['Origin workspace',source.originWorkspaceId]]),prose(source.note),fileList((source.files||[]).map(file=>file.id))):
+    el('details',{className:'panel'},el('summary',{},'Selected accountant source and period lineage'),facts([['Source run',source.runId],['Accountant handoff',source.handoffId||cycle.handoffId],['Accountant revision',source.accountantRevisionId||cycle.accountantRevisionId],['Closed period',cycle.periodCloseId||source.periodCloseId],['Previous worked period',cycle.previousCycleId],['Origin workspace',cycle.origin?.workspaceId||cycle.originWorkspaceId||source.originWorkspaceId]]));
   const layout=el('div',{className:'cycle-layout'},el('nav',{id:'cycle-step-nav',className:'step-nav','aria-label':'Procedure steps'}),el('div',{className:'cycle-work'},el('div',{id:'cycle-step'}),el('div',{id:'cycle-preparation'}),el('div',{id:'cycle-review'})));
   put('cycle-detail',header,overview,sourceDetails,layout,el('section',{className:'panel'},el('h2',{},'Preparation and review history'),el('div',{id:'cycle-history',className:'history'})));
   renderStepNav();renderWorkStep();renderCyclePreparation();renderCycleReview();renderCycleHistory();paintLocks();
@@ -570,7 +591,7 @@ function renderCyclePreparation() {
   if(!cycleEditable()){put(node);return;}
   const steps=cycle.edition.steps||[],pending=steps.filter(step=>step.required&&workStatus(cycle,step.id)==='PENDING'),blocked=steps.filter(step=>step.required&&workStatus(cycle,step.id)==='BLOCKED'),dirty=[...S.workDrafts.values()].filter(item=>item.dirty);
   const draft=S.cycleNotes.submit;
-  const note=area(draft.note,{rows:4,maxlength:32000,oninput:event=>{draft.note=event.target.value;persist(key('submit/'+cycle.id),draft).catch(()=>{});}});
+  const note=area(draft.note,{rows:4,maxlength:16000,oninput:event=>{draft.note=event.target.value;persist(key('submit/'+cycle.id),draft).catch(()=>{});}});
   const submit=el('button',{type:'submit',className:'primary'},'Submit preparation for review');
   if(pending.length||dirty.length)submit.dataset.permanentDisabled='true';
   const form=el('form',{className:'panel mutation-form',onsubmit:act(()=>submitCycle())},el('h2',{},'Send preparation to review'),
@@ -593,7 +614,7 @@ function renderCycleReview() {
   const draft=S.cycleNotes.review,exceptions=cycle.edition.steps.filter(step=>step.required&&workStatus(cycle,step.id)==='BLOCKED');
   draft.acceptedExceptions=draft.acceptedExceptions.filter(id=>exceptions.some(item=>item.id===id));
   const decision=select([{value:'',label:'Choose the review decision'},{value:'APPROVE',label:'Approve preparation'},{value:'RETURN',label:'Return for changes'}],draft.decision,{required:true,onchange:event=>{draft.decision=event.target.value;persist(key('review/'+cycle.id),draft).catch(()=>{});renderCycleReview();paintLocks();}});
-  const note=area(draft.note,{rows:5,maxlength:32000,required:draft.decision==='RETURN'||(draft.decision==='APPROVE'&&exceptions.length>0),oninput:event=>{draft.note=event.target.value;persist(key('review/'+cycle.id),draft).catch(()=>{});}});
+  const note=area(draft.note,{rows:5,maxlength:16000,required:draft.decision==='RETURN'||(draft.decision==='APPROVE'&&exceptions.length>0),oninput:event=>{draft.note=event.target.value;persist(key('review/'+cycle.id),draft).catch(()=>{});}});
   const exceptionList=el('div',{className:'check-list'},exceptions.map(step=>el('label',{className:'check-row'},input('',{type:'checkbox',checked:draft.acceptedExceptions.includes(step.id),onchange:event=>{
     draft.acceptedExceptions=event.target.checked?[...new Set([...draft.acceptedExceptions,step.id])]:draft.acceptedExceptions.filter(id=>id!==step.id);persist(key('review/'+cycle.id),draft).catch(()=>{});
   }}),el('span',{},'Accept exception: '+step.title,el('small',{},cycle.work?.[step.id]?.note||'No saved explanation')))));
@@ -717,7 +738,7 @@ async function checkSaved() {
       throw error;
     }
     sameWorkspace(value);const operation=value.operation;
-    if(operation?.id!==pending.input.requestId||operation.kind!==pending.kind||operation.requestSha256!==pending.requestSha256)throw new Error('The saved operation does not match this exact request. Keep the retained request and resolve the identity mismatch before continuing.');
+    if(operation?.id!==pending.input.requestId||operation.kind!==pending.kind||operation.target!==pending.target||operation.requestSha256!==pending.requestSha256)throw new Error('The saved operation does not match this exact request. Keep the retained request and resolve the identity mismatch before continuing.');
     if(operation.result?.requestId!==pending.input.requestId||operation.result?.workspaceId!==S.workspaceId)throw new Error('The operation receipt does not identify this workspace and request.');
     await statusPending(pending,{stage:'COMMITTED',result:operation.result});await finishCommitted(pending);
   }finally{S.saving=false;setBusy(false);}
@@ -742,7 +763,11 @@ async function finishCommitted(pending) {
     const projected=resources.every(Boolean)?resources.map(item=>({id:item.id,title:item.title,kind:item.kind,...(item.kind==='file'?{fileId:item.fileId}:item.kind==='link'?{url:item.url}:{text:item.text||''})})):null;
     if(canonical({name:meta.name,client:meta.client,description:meta.description,steps,resources:projected})===canonical({name:pending.input.name,client:pending.input.client,description:pending.input.description,steps:pending.input.steps,resources:pending.input.resources}))for(const [name]of draftEntries)if(name.startsWith(key('author/')))remove.add(name);
   }
-  if(action==='cycle'&&schedule?.draftId===context.draftId&&['runbookId','editionId','label','preparer','reviewer','dueDate','handoffId','accountantRevisionId','periodCloseId','previousCycleId'].every(name=>(schedule[name]||'')===(pending.input[name]||'')))remove.add(key('schedule'));
+  if(action==='cycle'&&schedule?.draftId===context.draftId){
+    const common=['runbookId','editionId','label','preparer','reviewer','dueDate','previousCycleId'];
+    const names=(pending.input.sourceKind||'accountant')==='files'?[...common,'sourceKind','sourceLabel','sourceNote']:[...common,'handoffId','accountantRevisionId','periodCloseId'];
+    if(names.every(name=>(schedule[name]||'')===(pending.input[name]||''))&&((pending.input.sourceKind||'accountant')!=='files'||canonical(schedule.sourceFileIds)===canonical(pending.input.sourceFileIds)))remove.add(key('schedule'));
+  }
   if(action==='work'){
     const name=workKey(context.cycleId,context.stepId),draft=values.get(name);
     if(draft?.draftId===context.draftId&&canonical({status:draft.status,note:draft.note,fileIds:draft.fileIds})===canonical({status:pending.input.status,note:pending.input.note,fileIds:pending.input.fileIds}))remove.add(name);
@@ -753,6 +778,7 @@ async function finishCommitted(pending) {
     if(!draft||canonical({decision:draft.decision,note:draft.note,acceptedExceptions:draft.decision==='APPROVE'?draft.acceptedExceptions:[]})===canonical({decision:pending.input.decision,note:pending.input.note,acceptedExceptions:pending.input.acceptedExceptions}))remove.add(key('review/'+context.cycleId));
   }
   if(action==='file'&&result.file){
+    if(context.scheduleDraftId&&schedule?.draftId===context.scheduleDraftId){const draft=updates.get(key('schedule'))||schedule;updates.set(key('schedule'),{...clone(draft),sourceFileIds:[...new Set([...(draft.sourceFileIds||[]),result.file.id])]});}
     if(context.resourceId){
       const meta=values.get(key('author/meta')),name=key('author/resource/'+context.resourceId),resource=values.get(name);
       if(meta?.draftId===context.draftId&&resource?.kind==='file')updates.set(name,{...clone(resource),fileId:result.file.id});
@@ -774,6 +800,7 @@ async function finishCommitted(pending) {
     else if(action==='cycle'||action==='receive'){S.schedule=null;if(action==='receive'){$('receive-file').value='';put('receive-selection');}await openCycle(result.cycleId);}
     else if(['work','submit','review'].includes(action))await openCycle(result.cycleId||context.cycleId,context.stepId||S.stepId);
     else if(action==='file'){
+      if(context.scheduleDraftId){S.schedule=await readKey(key('schedule'));if(S.view==='schedule')await renderSchedule({reload:true});}
       if(context.resourceId){S.author=await loadAuthor();if(S.view==='author')renderAuthor();}
       if(context.cycleId&&S.view==='cycle'&&S.cycleId===context.cycleId)await openCycle(context.cycleId,context.stepId);
     }
@@ -835,6 +862,7 @@ async function returnToDraft(pending,current,source) {
   else if(action==='cycle')await resumeSchedule();
   else if(['work','submit','review'].includes(action))await openCycle(context.cycleId,context.stepId);
   else if(action==='receive')showView('receive');
+  else if(context.scheduleDraftId)await resumeSchedule();
   else if(context.resourceId)await resumeAuthor();
   else if(context.cycleId)await openCycle(context.cycleId,context.stepId);
   paintLocks();notice('The rejected request was returned to its draft. Review the content and save a new request when ready.');
@@ -852,6 +880,9 @@ function bindEvents() {
   $('add-resource').addEventListener('click',act(addResource));$('add-step').addEventListener('click',act(addStep));
   $('author-discard').addEventListener('click',act(discardAuthor));$('author-form').addEventListener('submit',act(saveEdition));
   $('schedule-book').addEventListener('change',act(async event=>{if(!S.schedule)return;S.schedule.runbookId=event.target.value;S.schedule.editionId='';saveScheduleDraft();await renderSchedule();}));
+  $('schedule-source-kind').addEventListener('change',event=>{if(S.schedule){S.schedule.sourceKind=event.target.value;saveScheduleDraft();renderScheduleSources();paintLocks();}});
+  for(const [id,name]of [['schedule-source-label','sourceLabel'],['schedule-source-note','sourceNote']])$(id).addEventListener('input',event=>{if(S.schedule){S.schedule[name]=event.target.value;saveScheduleDraft();renderFilesSourceSummary();}});
+  $('schedule-source-upload-button').addEventListener('click',act(()=>uploadFile($('schedule-source-upload').files[0],{scheduleDraftId:S.schedule.draftId})));
   $('schedule-edition').addEventListener('change',event=>{if(S.schedule){S.schedule.editionId=event.target.value;saveScheduleDraft();}});
   for(const [id,name]of [['schedule-label','label'],['schedule-due','dueDate'],['schedule-preparer','preparer'],['schedule-reviewer','reviewer']])$(id).addEventListener('input',event=>{if(S.schedule){S.schedule[name]=event.target.value;saveScheduleDraft();}});
   $('schedule-handoff').addEventListener('change',event=>{if(S.schedule){S.epoch++;S.schedule.handoffId=event.target.value;S.schedule.accountantRevisionId='';S.schedule.periodCloseId='';saveScheduleDraft();renderScheduleSources();}});

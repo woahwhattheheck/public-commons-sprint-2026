@@ -50,7 +50,7 @@ function date(value){
   return value;
 }
 function instant(value,label){
-  need(typeof value==='string'&&value.length<=40&&Number.isFinite(Date.parse(value)),'RUNBOOK_INVALID_DATE','Choose a valid '+label+'.');return value;
+  need(typeof value==='string'&&/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(value)&&Number.isFinite(Date.parse(value))&&new Date(value).toISOString()===value,'RUNBOOK_INVALID_DATE','Choose a valid '+label+'.');return value;
 }
 function base64(value,max,label){
   need(typeof value==='string'&&value.length<=Math.ceil(max/3)*4&&/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(value),'RUNBOOK_INVALID_FILE','Choose '+label+' within its supported size.');
@@ -208,20 +208,30 @@ export class RunbookWorkspace{
     const book=this.book(input.runbookId),edition=book.editions.find(row=>row.id===input.editionId);
     need(edition,'RUNBOOK_EDITION_NOT_FOUND','Choose a saved procedure edition.',404);
     need(state.cycles.length<2000,'RUNBOOK_CYCLE_LIMIT','Use retained period handovers before creating another period.');
-    uuid(input.handoffId,'accountant handoff');
-    const revisionId=input.accountantRevisionId;
-    need(revisionId==='initial'||(typeof revisionId==='string'&&UUID.test(revisionId)),'RUNBOOK_ACCOUNTANT_REVISION_REQUIRED','Select the original handoff or an exact accountant return.');
-    const record=this.accountant.row(input.handoffId),detail=await this.accountant.detail(input.handoffId,{revisionId}),selected=this.accountant.revisionRow(record,revisionId);
-    if(input.periodCloseId){uuid(input.periodCloseId,'period close');need(detail.source.periodClose?.id===input.periodCloseId,'RUNBOOK_CLOSE_MISMATCH','Select the period close already frozen into this accountant handoff.');}
+    const kind=input.sourceKind??'accountant';need(['accountant','files'].includes(kind),'RUNBOOK_INVALID_SOURCE_KIND','Choose an accountant handoff or original client close files.');
+    let source;
+    if(kind==='files'){
+      need(!input.handoffId&&!input.accountantRevisionId&&!input.periodCloseId,'RUNBOOK_AMBIGUOUS_SOURCE','Choose original client close files without an accountant handoff selection.');
+      const ids=uniqueList(input.sourceFileIds,'client close files',{max:100,pattern:UUID});need(ids.length>0,'RUNBOOK_CLOSE_FILES_REQUIRED','Select at least one original client close file.');
+      const files=ids.map(id=>clone(this.fileRow(id)));
+      const value={kind,originWorkspaceId:this.workspaceId,label:text(input.sourceLabel,'close source label',240),note:text(input.sourceNote??'','close source note',16_000,{empty:true,trim:false}),files};
+      source={...value,sha256:hash(value)};
+    }else{
+      need(!input.sourceFileIds?.length,'RUNBOOK_AMBIGUOUS_SOURCE','Use the selected accountant handoff as this period’s close source.');
+      uuid(input.handoffId,'accountant handoff');const revisionId=input.accountantRevisionId;
+      need(revisionId==='initial'||(typeof revisionId==='string'&&UUID.test(revisionId)),'RUNBOOK_ACCOUNTANT_REVISION_REQUIRED','Select the original handoff or an exact accountant return.');
+      const record=this.accountant.row(input.handoffId),detail=await this.accountant.detail(input.handoffId,{revisionId}),selected=this.accountant.revisionRow(record,revisionId);
+      if(input.periodCloseId){uuid(input.periodCloseId,'period close');need(detail.source.periodClose?.id===input.periodCloseId,'RUNBOOK_CLOSE_MISMATCH','Select the period close already frozen into this accountant handoff.');}
+      const files=clone((selected?.files??record.files).filter(file=>!['accountant-handoff.tar','packet-manifest.json'].includes(file.name)));
+      source={kind,originWorkspaceId:this.workspaceId,handoffId:record.id,handoffName:record.name,accountantRevisionId:revisionId,accountantRevisionName:selected?.name??'Original handoff',runId:record.source.runId,periodCloseId:record.source.periodClose?.id??null,source:clone(detail.source),summary:clone(detail.summary),files};
+    }
     if(input.previousCycleId){const previous=this.cycle(input.previousCycleId);need(previous.runbookId===book.id,'RUNBOOK_PREVIOUS_PERIOD_MISMATCH','Choose a previous period for this client runbook.');}
-    const files=clone((selected?.files??record.files).filter(file=>!['accountant-handoff.tar','packet-manifest.json'].includes(file.name)));
-    const source={originWorkspaceId:this.workspaceId,handoffId:record.id,handoffName:record.name,accountantRevisionId:revisionId,accountantRevisionName:selected?.name??'Original handoff',runId:record.source.runId,periodCloseId:record.source.periodClose?.id??null,source:clone(detail.source),summary:clone(detail.summary),files};
     const work={};for(const step of edition.steps)work[step.id]={status:'PENDING',note:'',fileIds:[],actor:'',updatedAt:null};
     const createdAt=now(),cycle={id:input.requestId,runbookId:book.id,editionId:edition.id,label:text(input.label,'period label',240),preparer:text(input.preparer,'preparer',160),reviewer:text(input.reviewer,'reviewer',160),dueDate:date(input.dueDate),previousCycleId:input.previousCycleId??null,phase:'DRAFT',readOnly:false,edition:clone(edition),source,work,submissions:[],reviews:[],history:[{at:createdAt,actor,action:'created'}],createdAt,updatedAt:createdAt,originWorkspaceId:this.workspaceId};
     state.cycles.unshift(cycle);return {runbookId:cycle.runbookId,editionId:cycle.editionId,cycleId:cycle.id};
   });}
   writable(cycle,phases){
-    need(cycle.readOnly!==true,'RUNBOOK_RECEIVED_READ_ONLY','This is a received period. Start a new local period from its procedures and select the local accountant handoff.',409);
+    need(cycle.readOnly!==true,'RUNBOOK_RECEIVED_READ_ONLY','This is a received period. Start a new local period from its procedures and select the local close source.',409);
     need(phases.includes(cycle.phase),'RUNBOOK_PHASE_CHANGED','Reopen the period at its current preparation or review stage.',409);
   }
   workFiles(cycle,fileIds){
@@ -243,6 +253,7 @@ export class RunbookWorkspace{
     const cycle=this.cycle(id);this.writable(cycle,['DRAFT','CHANGES_REQUESTED']);
     const pending=cycle.edition.steps.filter(step=>step.required&&cycle.work[step.id].status==='PENDING');
     need(!pending.length,'RUNBOOK_PREPARATION_INCOMPLETE','Complete required procedures or document their open items before handing this period to the reviewer.',409);
+    need(cycle.submissions.length<2000,'RUNBOOK_PREPARATION_LIMIT','This period retains 2000 preparation rounds.');
     const at=now(),note=text(input.note??'','preparer handover note',16_000,{empty:true,trim:false}),work=clone(cycle.work);
     const submission={id:input.requestId,at,actor,note,work,workSha256:hash(work)};
     cycle.submissions.push(submission);cycle.phase='IN_REVIEW';cycle.updatedAt=at;cycle.history.push({at,actor,action:'submitted',submissionId:submission.id,workSha256:submission.workSha256});
@@ -260,14 +271,18 @@ export class RunbookWorkspace{
       need(!accepted.length||note.trim(),'RUNBOOK_REVIEW_NOTE_REQUIRED','Explain the accepted open items and responsibility for follow-up.');
     }else need(!accepted.length,'RUNBOOK_REVIEW_SELECTION_INVALID','Return corrections without accepting open items.');
     const submission=cycle.submissions.at(-1);need(submission&&submission.workSha256===hash(cycle.work),'RUNBOOK_SUBMISSION_CHANGED','Review the unchanged submitted preparation.',409);
+    need(cycle.reviews.length<2000,'RUNBOOK_REVIEW_LIMIT','This period retains 2000 review decisions.');
     const at=now(),review={id:input.requestId,at,actor,decision:input.decision,note,acceptedExceptions:accepted,submissionId:submission.id,workSha256:submission.workSha256};
     cycle.reviews.push(review);cycle.phase=input.decision==='APPROVE'?'APPROVED':'CHANGES_REQUESTED';cycle.updatedAt=at;cycle.history.push({at,actor,action:'reviewed',reviewId:review.id,decision:review.decision});
     return {runbookId:cycle.runbookId,editionId:cycle.editionId,cycleId:cycle.id};
   },id);}
-  async retainedSourceFiles(cycle){
+  async retainedSourceFiles(cycle,budget=RUNBOOK_PACKET_BYTES){
     if(cycle.receivedPacket){const packet=await this.readReceivedPacket(cycle.receivedPacket);return packet.sourceFiles;}
-    const result=[];
+    if(cycle.source.kind==='files')return [];
+    const result=[];let used=0;
     for(const row of cycle.source.files){
+      used+=Math.ceil(row.bytes/3)*4+Buffer.byteLength(JSON.stringify(row))+512;
+      need(used<=budget,'RUNBOOK_PACKET_TOO_LARGE','This complete period exceeds the 64 MiB portable packet limit.');
       const file=await this.accountant.file(cycle.source.handoffId,row.name,{revisionId:cycle.source.accountantRevisionId});
       need(file.bytes.length===row.bytes&&digest(file.bytes)===row.sha256,'RUNBOOK_SOURCE_CHANGED','The original accountant file changed.',409);
       result.push({name:row.name,type:file.type,bytes:row.bytes,sha256:row.sha256,content:file.bytes.toString('base64')});
@@ -284,9 +299,15 @@ export class RunbookWorkspace{
     const selected=new Set(cycle.edition.resources.filter(row=>row.kind==='file').map(row=>row.fileId));
     for(const item of Object.values(cycle.work))for(const id of item.fileIds)selected.add(id);
     for(const submission of cycle.submissions)for(const item of Object.values(submission.work))for(const id of item.fileIds)selected.add(id);
-    const attachments=[];
-    for(const id of selected){const row=clone(this.fileRow(id)),bytes=await readExact(join(this.workspace.directory,'runbooks','files',row.sha256+'.bin'),row,RUNBOOK_FILE_BYTES);attachments.push({...row,content:bytes.toString('base64')});}
-    const sourceFiles=await this.retainedSourceFiles(cycle);
+    if(cycle.source.kind==='files')for(const file of cycle.source.files)selected.add(file.id);
+    for(const item of cycle.history)for(const id of item.work?.fileIds??[])selected.add(id);
+    const attachments=[];let used=Buffer.byteLength(JSON.stringify(stripCycle(cycle)))+Buffer.byteLength(JSON.stringify(cycle.edition))+4096;
+    for(const id of selected){
+      const row=clone(this.fileRow(id));used+=Math.ceil(row.bytes/3)*4+Buffer.byteLength(JSON.stringify(row))+512;
+      need(used<=RUNBOOK_PACKET_BYTES,'RUNBOOK_PACKET_TOO_LARGE','This complete period exceeds the 64 MiB portable packet limit.');
+      const bytes=await readExact(join(this.workspace.directory,'runbooks','files',row.sha256+'.bin'),row,RUNBOOK_FILE_BYTES);attachments.push({...row,content:bytes.toString('base64')});
+    }
+    const sourceFiles=await this.retainedSourceFiles(cycle,RUNBOOK_PACKET_BYTES-used);
     const payload={schema:RUNBOOK_PACKET_SCHEMA,originWorkspaceId:this.workspaceId,asOfWorkspaceRevision:revision,runbookId:cycle.runbookId,edition:clone(cycle.edition),cycle:stripCycle(cycle),attachments,sourceFiles};
     const packet={...payload,sha256:hash(payload)},bytes=json(packet);
     need(bytes.length<=RUNBOOK_PACKET_BYTES,'RUNBOOK_PACKET_TOO_LARGE','This complete period exceeds the 64 MiB portable packet limit.');
@@ -315,9 +336,8 @@ export class RunbookWorkspace{
     instant(cycle.createdAt,'period creation date');instant(cycle.updatedAt,'period update date');
     if(cycle.previousCycleId!==null&&cycle.previousCycleId!==undefined)uuid(cycle.previousCycleId,'previous period');
     need(plain(cycle.source)&&Array.isArray(cycle.source.files)&&cycle.source.files.length<=100&&plain(cycle.work)&&Array.isArray(cycle.submissions)&&cycle.submissions.length<=2000&&Array.isArray(cycle.reviews)&&cycle.reviews.length<=2000&&Array.isArray(cycle.history)&&cycle.history.length<=20_000,'RUNBOOK_INVALID_PACKET','The period is missing its source or preparation history.');
-    uuid(cycle.source.handoffId,'original handoff');uuid(cycle.source.runId,'original reconciliation');
+    need(['accountant','files'].includes(cycle.source.kind),'RUNBOOK_INVALID_SOURCE_KIND','Choose a packet with an original accountant handoff or client close files.');
     need(cycle.source.originWorkspaceId===packet.originWorkspaceId,'RUNBOOK_SOURCE_CHANGED','The accountant source belongs to another workspace.',409);
-    need(cycle.source.accountantRevisionId==='initial'||UUID.test(cycle.source.accountantRevisionId??''),'RUNBOOK_INVALID_PACKET','The packet needs its exact accountant revision.');
     const validateWork=work=>{
       need(plain(work)&&Object.keys(work).length===edition.steps.length,'RUNBOOK_INVALID_PACKET','The preparation must include every procedure.');
       for(const step of edition.steps){
@@ -363,6 +383,21 @@ export class RunbookWorkspace{
       need(lastSubmission&&lastReview?.submissionId===lastSubmission.id&&lastReview.decision===(cycle.phase==='APPROVED'?'APPROVE':'RETURN'),'RUNBOOK_PHASE_CHANGED','The retained review must explain the current period stage.',409);
       if(cycle.phase==='APPROVED')need(lastSubmission.workSha256===hash(cycle.work),'RUNBOOK_PHASE_CHANGED','Approved preparation must retain the reviewed work.',409);
     }
+    if(cycle.source.kind==='files'){
+      text(cycle.source.label,'close source label',240);text(cycle.source.note,'close source note',16_000,{empty:true,trim:false});
+      need(cycle.source.files.length>0&&packet.sourceFiles.length===0,'RUNBOOK_SOURCE_CHANGED','A client-file close must retain its selected original files.',409);
+      const {sha256:sourceSha256,...source}=cycle.source;
+      need(SHA.test(sourceSha256??'')&&hash(source)===sourceSha256,'RUNBOOK_SOURCE_CHANGED','The original client close file selection changed.',409);
+      need(new Set(source.files.map(row=>row?.id)).size===source.files.length,'RUNBOOK_SOURCE_CHANGED','The close source repeats a file identity.',409);
+      for(const file of source.files){
+        need(plain(file),'RUNBOOK_INVALID_PACKET','Describe each original client close file.');const selected=attachments.find(item=>item.row.id===file.id);
+        const metadata=selected?Object.fromEntries(Object.entries(selected.row).filter(([key])=>key!=='content')):null;
+        need(metadata&&hash(metadata)===hash(file),'RUNBOOK_SOURCE_CHANGED','The complete original client close file is missing or changed.',409);
+      }
+      return attachments;
+    }
+    uuid(cycle.source.handoffId,'original handoff');uuid(cycle.source.runId,'original reconciliation');
+    need(cycle.source.accountantRevisionId==='initial'||UUID.test(cycle.source.accountantRevisionId??''),'RUNBOOK_INVALID_PACKET','The packet needs its exact accountant revision.');
     need(new Set(packet.sourceFiles.map(row=>row?.name)).size===packet.sourceFiles.length&&packet.sourceFiles.length===cycle.source.files.length,'RUNBOOK_SOURCE_CHANGED','The original source inventory changed.',409);
     const sourceBytes=new Map();
     for(const row of packet.sourceFiles){
@@ -394,7 +429,7 @@ export class RunbookWorkspace{
     const fileFolder=await this.storage('files');
     for(const {row,bytes} of attachments){
       const priorFile=state.files.find(item=>item.id===row.id);
-      if(priorFile)need(priorFile.sha256===row.sha256&&priorFile.bytes===row.bytes&&priorFile.name===row.name&&priorFile.type===row.type,'RUNBOOK_FILE_CONFLICT','An existing file ID belongs to different retained bytes.',409);
+      if(priorFile)need(priorFile.sha256===row.sha256&&priorFile.bytes===row.bytes&&priorFile.name===row.name&&priorFile.type===row.type&&priorFile.actor===row.actor&&priorFile.createdAt===row.createdAt,'RUNBOOK_FILE_CONFLICT','An existing file ID belongs to different retained bytes.',409);
       await publishBlob(fileFolder,row.sha256+'.bin',bytes);
       if(!priorFile){const {content,...metadata}=row;state.files.push(clone(metadata));}
     }
@@ -420,10 +455,10 @@ export class RunbookWorkspace{
   }
   async print(id){
     await this.workspace.tail;const cycle=clone(this.cycle(id)),edition=cycle.edition;
-    const html='<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>'+escape(edition.client+' — '+cycle.label)+'</title><style>body{font:15px/1.55 system-ui,sans-serif;color:#202020;max-width:1000px;margin:40px auto;padding:0 24px}h1{font-size:28px}h2{font-size:21px;margin-top:34px}h3{font-size:17px}table{width:100%;border-collapse:collapse}th,td{text-align:left;vertical-align:top;padding:9px;border-bottom:1px solid #ccc}th{width:180px}section{break-inside:avoid;border-top:1px solid #aaa;padding-top:12px;margin-top:20px}.meta{color:#555}.text{white-space:pre-wrap;overflow-wrap:anywhere}a{color:#222;text-decoration:underline}@media print{body{margin:0;max-width:none}a{color:#000}}</style></head><body><p class="meta">Client close handover</p><h1>'+escape(edition.client+' — '+cycle.label)+'</h1><p>'+escape(edition.name)+' · Edition '+escape(edition.number)+'</p><p class="text">'+escape(edition.description)+'</p><table><tr><th>Preparer</th><td>'+escape(cycle.preparer)+'</td></tr><tr><th>Reviewer</th><td>'+escape(cycle.reviewer)+'</td></tr><tr><th>Due</th><td>'+escape(cycle.dueDate)+'</td></tr><tr><th>Stage</th><td>'+escape(cycle.phase)+'</td></tr><tr><th>Accountant source</th><td>'+escape(cycle.source.handoffName)+' · '+escape(cycle.source.accountantRevisionName)+'</td></tr></table><h2>Procedures and completed work</h2>'+
+    const html='<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>'+escape(edition.client+' — '+cycle.label)+'</title><style>body{font:15px/1.55 system-ui,sans-serif;color:#202020;max-width:1000px;margin:40px auto;padding:0 24px}h1{font-size:28px}h2{font-size:21px;margin-top:34px}h3{font-size:17px}table{width:100%;border-collapse:collapse}th,td{text-align:left;vertical-align:top;padding:9px;border-bottom:1px solid #ccc}th{width:180px}section{break-inside:avoid;border-top:1px solid #aaa;padding-top:12px;margin-top:20px}.meta{color:#555}.text{white-space:pre-wrap;overflow-wrap:anywhere}a{color:#222;text-decoration:underline}@media print{body{margin:0;max-width:none}a{color:#000}}</style></head><body><p class="meta">Client close handover</p><h1>'+escape(edition.client+' — '+cycle.label)+'</h1><p>'+escape(edition.name)+' · Edition '+escape(edition.number)+'</p><p class="text">'+escape(edition.description)+'</p><table><tr><th>Preparer</th><td>'+escape(cycle.preparer)+'</td></tr><tr><th>Reviewer</th><td>'+escape(cycle.reviewer)+'</td></tr><tr><th>Due</th><td>'+escape(cycle.dueDate)+'</td></tr><tr><th>Stage</th><td>'+escape(cycle.phase)+'</td></tr><tr><th>Close source</th><td>'+escape(cycle.source.kind==='files'?cycle.source.label:cycle.source.handoffName)+' · '+escape(cycle.source.kind==='files'?cycle.source.note:cycle.source.accountantRevisionName)+'</td></tr></table><h2>Procedures and completed work</h2>'+
       edition.steps.map(step=>{const work=cycle.work[step.id];return '<section><h3>'+escape(step.title)+'</h3><p class="meta">'+escape(work.status)+' · '+(step.required?'Required procedure':'Supporting procedure')+'</p><div class="text">'+escape(step.instructions)+'</div><h4>Preparation</h4><div class="text">'+escape(work.note||'No work note retained.')+'</div><p class="meta">'+escape(work.actor)+(work.updatedAt?' · '+escape(work.updatedAt):'')+'</p>'+step.resourceIds.map(id=>{const row=edition.resources.find(item=>item.id===id);return row.kind==='link'?'<p><a rel="noreferrer noopener" href="'+escape(row.url)+'">'+escape(row.title)+'</a></p>':row.kind==='note'?'<p><strong>'+escape(row.title)+'</strong></p><div class="text">'+escape(row.text)+'</div>':'<p>Supporting file: '+escape(row.title)+' (included in the portable packet)</p>';}).join('')+'</section>';}).join('')+
       '<h2>Preparation and review history</h2>'+cycle.submissions.map(sub=>'<section><h3>Preparation handed over</h3><p class="meta">'+escape(sub.actor)+' · '+escape(sub.at)+'</p><div class="text">'+escape(sub.note)+'</div>'+cycle.reviews.filter(review=>review.submissionId===sub.id).map(review=>'<h4>'+escape(review.decision==='APPROVE'?'Approved':'Corrections returned')+'</h4><p class="meta">'+escape(review.actor)+' · '+escape(review.at)+'</p><div class="text">'+escape(review.note)+'</div>'+(review.acceptedExceptions.length?'<p>Accepted open items: '+review.acceptedExceptions.map(id=>escape(edition.steps.find(step=>step.id===id)?.title??id)).join(', ')+'</p>':'')).join('')+'</section>').join('')+
-      '<h2>Original source files</h2><p>The portable JSON handover carries these original accountant files and selected supporting files with their retained content.</p><ul>'+cycle.source.files.map(file=>'<li>'+escape(file.name)+' · '+escape(file.bytes)+' bytes</li>').join('')+'</ul><p class="meta">Period '+escape(cycle.id)+' · Original workspace '+escape(cycle.originWorkspaceId)+'</p></body></html>';
+      '<h2>Original source files</h2><p>The portable JSON handover carries these original close files and selected supporting files with their retained content.</p><ul>'+cycle.source.files.map(file=>'<li>'+escape(file.name)+' · '+escape(file.bytes)+' bytes</li>').join('')+'</ul><p class="meta">Period '+escape(cycle.id)+' · Original workspace '+escape(cycle.originWorkspaceId)+'</p></body></html>';
     return {bytes:Buffer.from(html),name:'client-close-'+cycle.id+'.html',type:'text/html; charset=utf-8'};
   }
 }
