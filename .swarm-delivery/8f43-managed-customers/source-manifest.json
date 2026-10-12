@@ -65,5 +65,13 @@
     "record": "/workspace/scratch/8f4370a17e6f/managed-native-records/91085fe875e06cee234286a2ff0851383a84d2845b60f46baca4db20fe1f2bab",
     "operationId": "SCF-MANAGED-CUSTOMERS-INSTALL-8F43-DB4D-20261012-C287-CONTINUATION",
     "completion": "Original inspect_interrupted and selection-bound release_interrupted before the new full resource lease"
+  },
+  "sourceTransport": {
+    "path": "source-bootstrap-command.sh",
+    "gitBlob": "bfa815c7f908e63207fcac510b6d2a97f79a79e6",
+    "bytes": 73677,
+    "originalGitBlob": "9adadbb5a8ac4bf7cf94a686c2b4f871caec1d57",
+    "originalBytes": 227072,
+    "format": "D76C original literal/distance source packet; original Git blob validated before execution"
   }
 }

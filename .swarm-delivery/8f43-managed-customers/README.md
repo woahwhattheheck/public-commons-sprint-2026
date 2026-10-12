@@ -79,3 +79,17 @@ The original command declares 896 MiB memory plus 128 MiB reserve with the maint
 ## Original operation lineage
 
 The original `d3634ff5` operation retains its completed Geocodio browser-asset packaging failure. The corrected `91085fe8` operation retains its actual successful source build and subsequent PREPARE interruption when its carrier disappeared. This checkpoint continuation carries both identities in its immutable intent, the same selected source correction, the original customer workspaces, and the original two receiver operation IDs.
+
+## One-command source transport
+
+`source-bootstrap-command.sh` carries the complete unchanged `source-bootstrap.py` through the original D76C source-packet format. The command is 73,677 ASCII bytes. It reconstructs all 227,072 original UTF-8 bytes, verifies Git blob `9adadbb5a8ac4bf7cf94a686c2b4f871caec1d57`, then executes those same bootstrap bytes in its current Python process. The native foreground, source selection, old-lifetime release, declarations and customer operations remain the ones above.
+
+Run the complete command directly in the retained foreground, or invoke its saved file with Bash:
+
+```sh
+bash source-bootstrap-command.sh
+```
+
+An original queued, undispatched continuation can use `bash source-bootstrap-command.sh --resume`; that passes the argument to the maintained original foreground recovery. Keep the current original record and reconcile any dispatched operation through its existing native lifecycle before selecting another command.
+
+This transport avoids a separate large source-file write before the bootstrap starts. The full readable Python source and every original input remain beside it for inspection.
