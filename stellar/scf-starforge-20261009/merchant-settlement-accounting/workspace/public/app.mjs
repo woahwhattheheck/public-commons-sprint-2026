@@ -20,6 +20,7 @@ const badge = (value, label = friendly(value)) => '<span class="badge" title="' 
 const endpoint = value => encodeURIComponent(value);
 const LIMIT = 50;
 let state = null, selectedRun = '', selectedReport = null, view = 'ledger', collectionUI = null;
+let sourceModeOpened=null;
 let records = {items:[], total:0, offset:0, limit:LIMIT}, selectedKey = null, recordRequest = 0, runRequest = 0;
 let comparison = null, compareRequest = 0, busy = false, pollTimer = null, pendingIntent = null, runLimit = 30;
 let recoveryOffset = 0, recoverySelection = '', recoveryJobLimit = 20, recoverySearch = '';
@@ -142,11 +143,31 @@ function renderExports() {
     return '<tr><td>' + esc(date(at)) + '</td><td>' + esc(actor) + '</td><td>' + esc(friendly(action)) + '</td><td><details class="history-detail"><summary>View saved details</summary><pre>' + esc(JSON.stringify(details,null,2)) + '</pre></details></td></tr>';
   }).join('') || '<tr><td colspan="4" class="empty">Operator actions will appear here.</td></tr>';
 }
+function renderBuyerWorkspace() {
+  const buyer=state.sourceMode==='buyer';document.body.dataset.sourceMode=buyer?'buyer':'merchant';
+  $('buyer-sidebar').hidden=!buyer;
+  if(!buyer)return;
+  for(const id of ['run-search','run-list','run-more','period-current'])$(id).hidden=buyer;
+  document.querySelector('label[for="run-search"]').hidden=buyer;
+  for(const button of document.querySelectorAll('.tabs [data-area]'))button.hidden=buyer&&!['accountant','maintenance'].includes(button.dataset.area);
+  for(const link of document.querySelectorAll('.tabs a'))link.hidden=buyer&&!['/connections.html','/xero.html'].includes(link.getAttribute('href'));
+  const original=state.buyerStartup;
+  document.title='Buyer accounting workspace';
+  document.querySelector('.topbar strong').textContent='STELLAR FORGE / BUYER ACCOUNTING';
+  document.querySelector('.topbar > span').textContent='Issued period review';
+  document.querySelector('.heading .eyebrow').textContent='Buyer operations · Accountant handoff';
+  document.querySelector('.heading h1').textContent='Buyer accounting workspace';
+  document.querySelector('.heading p').textContent='Review issued expense periods, prepare accountant handoffs, and reconcile returned bookkeeping references.';
+  $('buyer-sidebar').innerHTML='<h2>Retained issued source</h2><p>'+esc(original.name)+'</p><p>'+esc(original.source.buyer.dataContext)+' · edition '+esc(original.source.buyer.sequence)+'</p><dl><dt>Expense allocations</dt><dd>'+esc(original.summary.expenseRows)+'</dd><dt>Credit allocations</dt><dd>'+esc(original.summary.creditRows)+'</dd><dt>Outstanding reservations</dt><dd>'+esc(original.summary.outstandingReservations)+'</dd></dl><a download href="/api/accountant/startup/source">Original buyer source</a>';
+  $('state-version').textContent='Saved revision '+state.revision+' · '+(state.accountantHandoffs?.length??0)+' retained handoffs';
+}
 function adopt(next) {
   if (state && next.revision < state.revision) return;
   state = next;
   if (!state.runs.some(run => run.id === selectedRun)) selectedRun = state.runs[0]?.id || '';
-  renderRuns(); renderSources(); renderSelectors(); renderExports(); renderRecovery(); pricingPane?.render(state); periodPane?.render(state); accountantPane?.render(state); adjustmentsPane?.render(state); updateButtons();
+  if(state.sourceMode!=='buyer'){renderRuns();renderSources();renderSelectors();renderExports();renderRecovery();pricingPane?.render(state);periodPane?.render(state);adjustmentsPane?.render(state);}
+  renderBuyerWorkspace();accountantPane?.render(state);updateButtons();
+  if(sourceModeOpened!==state.sourceMode){sourceModeOpened=state.sourceMode;if(state.sourceMode==='buyer')openArea('accountant');}
   schedulePoll();
 }
 function renderRun() {
@@ -190,7 +211,7 @@ async function refreshState() {
   if (maintenanceMode !== 'RUNNING') return;
   const result = await api('/api/state'); adopt(result);
   await loadRun(selectedRun);
-  await collectionUI?.refresh();
+  if(state.sourceMode!=='buyer')await collectionUI?.refresh();
 }
 function schedulePoll() {
   clearTimeout(pollTimer);
@@ -204,6 +225,7 @@ function schedulePoll() {
   }), 1000);
 }
 function openArea(area) {
+  if(state?.sourceMode==='buyer'&&!['accountant','maintenance'].includes(area))area='accountant';
   if (maintenanceMode !== 'RUNNING' && area !== 'maintenance') area = 'maintenance';
   maintenancePane?.setVisible(area === 'maintenance');
   adjustmentsPane?.setVisible(area === 'adjustments');
@@ -591,6 +613,6 @@ attempt(async () => {
   $('area-collection').innerHTML = await fragment.text();
   collectionUI = mountCollection({root:$('area-collection'),api,perform,operator,adopt,getState:() => state,notify,
     openRun:async id => { await loadRun(id,{reset:true}); openArea('reconcile'); }});
-  if (maintenanceMode === 'RUNNING') { adopt(await api('/api/state')); await loadRun(selectedRun); await collectionUI.refresh(); }
+  if (maintenanceMode === 'RUNNING') { adopt(await api('/api/state')); await loadRun(selectedRun); if(state.sourceMode!=='buyer')await collectionUI.refresh(); }
   else { updateButtons(); openArea('maintenance'); }
 });
