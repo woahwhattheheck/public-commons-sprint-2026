@@ -35,7 +35,8 @@ let workspace;
 try{
   const original=await readFile(join(source,'sf82-seller-pilot/examples/upstream-openapi.json'),'utf8');
   const spec=JSON.parse(original);spec.info={...spec.info,title:'Retained transport workspace receiving example'};
-  spec.paths['/status']={get:{operationId:'status',summary:'Read the example status',responses:{'200':{description:'Status'}}}};
+  spec.paths['/status']={get:{operationId:'status',summary:'Read the example status',responses:{'200':{description:'Status',
+    content:{'application/json':{schema:{type:'object',properties:{status:{type:'string'}},required:['status'],additionalProperties:false}}}}}}};
   const specText=json(spec),plan={schema:'stellar-forge.api-merchant-plan.v1',sellerServer:'https://merchant.example/api',
     serviceName:'Transport example',payment:{network:'stellar:testnet',asset:'DEMO_NONPAYABLE_ASSET',payTo:'DEMO_NONPAYABLE_RECIPIENT',maxTimeoutSeconds:60},
     transports:{provider_proxy:{mode:'environment-proxy',proxyEnv:'MERCHANT_HTTPS_PROXY'},direct_status:{mode:'direct'}},
