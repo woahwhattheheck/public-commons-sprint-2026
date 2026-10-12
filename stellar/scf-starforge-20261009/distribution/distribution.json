@@ -453,7 +453,8 @@
     "baserow-source": "stellar/scf-starforge-20261009/sf30-seller-sdk/baserow/cli.mjs",
     "baserow-publisher": "stellar/scf-starforge-20261009/sf30-seller-sdk/baserow/publisher/cli.mjs",
     "baserow-deployment": "stellar/scf-starforge-20261009/sf30-seller-sdk/baserow/deployment-cli.mjs",
-    "baserow-workspace": "stellar/scf-starforge-20261009/sf30-seller-sdk/baserow/workspace/cli.mjs"
+    "baserow-workspace": "stellar/scf-starforge-20261009/sf30-seller-sdk/baserow/workspace/cli.mjs",
+    "stac": "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/cli.mjs"
   },
   "exports": {
     "./seller/openalex": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/openalex/merchant.mjs",
@@ -1113,7 +1114,18 @@
     "./seller/baserow/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/baserow/workspace/model.mjs",
     "./seller/baserow/workspace/server": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/baserow/workspace/server.mjs",
     "./seller/baserow/workspace/launch": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/baserow/workspace/launch.mjs",
-    "./seller/baserow/workspace/packet": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/baserow/workspace/packet.mjs"
+    "./seller/baserow/workspace/packet": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/baserow/workspace/packet.mjs",
+    "./seller/stac": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/stac/merchant.mjs",
+    "./seller/stac/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/stac/workspace.mjs",
+    "./seller/stac/provider": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/stac/provider.mjs",
+    "./seller/stac/customer": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/stac/customer.mjs",
+    "./seller/stac/server": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/stac/server.mjs",
+    "./buyer/stac": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/stac/customer.mjs",
+    "./buyer/stac/receiving": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/stac/receiving/delivery.mjs",
+    "./seller/stac/processing": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/stac/processing/workspace.mjs",
+    "./seller/stac/processing/provider": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/stac/processing/provider.mjs",
+    "./buyer/stac/processing": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/stac/processing/portable.mjs",
+    "./seller/stac/processing/cirrus": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/stac/processing/cirrus.mjs"
   },
   "nativePeers": {
     "@x402/core": {
