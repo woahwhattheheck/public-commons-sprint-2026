@@ -24,11 +24,11 @@ async function identity(directory){
   return checked(id.workspaceId,UUID,'native workspace ID');
 }
 /** All filesystem paths and launch permissions are private host configuration. */
-export async function readEltssConfiguration(filename){
+export async function readEltssConfiguration(filename,{schema=CONNECTION_SCHEMA}={}){
   filename=resolve(filename);
   const raw=decode(await readSourceFile(filename,{privateFile:true,maxBytes:1024*1024})),base=dirname(filename);
   exact(raw,['schema','workspaces'],['schema','workspaces']);
-  need(raw.schema===CONNECTION_SCHEMA && plain(raw.workspaces) &&
+  need(raw.schema===schema && plain(raw.workspaces) &&
     Object.keys(raw.workspaces).length>=1 && Object.keys(raw.workspaces).length<=32,'ELTSS_CONFIGURATION_INVALID');
   const workspaces=Object.create(null),seen=new Set();
   for(const [alias,item] of Object.entries(raw.workspaces)){
@@ -54,17 +54,22 @@ export async function readEltssConfiguration(filename){
       ...(credentialsFile?{credentialsFile}:{})};
     workspaces[alias]={...selected,selectionSha256:digest(Buffer.from(JSON.stringify(canonical(selected))))};
   }
-  return {schema:CONNECTION_SCHEMA,workspaces};
+  return {schema,workspaces};
 }
 const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 export class EltssConnection {
-  #binding;#knownId;#owned=null;#opening=null;#closing=false;#closed=false;#pendingImport=null;
-  constructor(binding){this.#binding=binding;this.#knownId=binding.workspaceId;}
+  #binding;#knownId;#owned=null;#opening=null;#closing=false;#closed=false;#pendingImport=null;#options;
+  constructor(binding,options={}){
+    this.#binding=binding;this.#knownId=binding.workspaceId;
+    this.#options={operatorSchema:OPERATOR_SCHEMA,connectionDirectory:'eltss',cli:CLI,
+      pythonEnvironment:'SF30_ELTSS_PYTHON',nodeEnvironment:'SF30_ELTSS_NODE',
+      receivingRecords:state=>state.receives,...options};
+  }
   get summary(){return {workspaceId:this.#knownId,allowStart:this.#binding.allowStart,owned:Boolean(this.#owned),closed:this.#closed};}
   async #live({adoptIdentity=false}={}){
-    let saved=await optional(join(this.#binding.directory,'eltss','operator-connection.json'));
+    let saved=await optional(join(this.#binding.directory,this.#options.connectionDirectory,'operator-connection.json'));
     if(!saved || saved.active!==true)return null;
-    need(saved.schema===OPERATOR_SCHEMA && saved.workspace===this.#binding.directory &&
+    need(saved.schema===this.#options.operatorSchema && saved.workspace===this.#binding.directory &&
       typeof saved.accessToken==='string' && /^[A-Za-z0-9_-]{43}$/.test(saved.accessToken),
       'ELTSS_CONNECTION_CHANGED','Use the original private eLTSS operator connection file.');
     checked(saved.instanceId,UUID,'operator instance');checked(saved.workspaceId,UUID,'workspace ID');
@@ -82,12 +87,13 @@ export class EltssConnection {
       const observed=await fetch(new URL('/api/state',url),{redirect:'error',signal:AbortSignal.timeout(600000),
         headers:{authorization:'Bearer '+saved.accessToken,accept:'application/json'}});
       const state=decode(await responseBytes(observed,MAX_RESPONSE_BYTES));
-      need(observed.ok && Array.isArray(state.receives),'ELTSS_IMPORT_RECONCILIATION_REQUIRED');
-      const receiving=state.receives.find(item=>item.archiveSha256===pending.archiveSha256 || item.id===pending.archiveSha256);
+      const receives=this.#options.receivingRecords(state);
+      need(observed.ok && Array.isArray(receives),'ELTSS_IMPORT_RECONCILIATION_REQUIRED');
+      const receiving=receives.find(item=>item.archiveSha256===pending.archiveSha256 || item.id===pending.archiveSha256);
       need(receiving?(receiving.workspaceId===state.workspaceId || receiving.state!=='complete' && state.workspaceId===pending.workspaceId):state.workspaceId===pending.workspaceId,
         'ELTSS_IMPORT_SELECTION_CHANGED','The native receiving record belongs to another complete archive or workspace.');
-      saved=await optional(join(this.#binding.directory,'eltss','operator-connection.json'));
-      need(saved?.active===true && saved.schema===OPERATOR_SCHEMA && saved.workspace===this.#binding.directory &&
+      saved=await optional(join(this.#binding.directory,this.#options.connectionDirectory,'operator-connection.json'));
+      need(saved?.active===true && saved.schema===this.#options.operatorSchema && saved.workspace===this.#binding.directory &&
         saved.instanceId===pending.instanceId && saved.workspaceId===state.workspaceId && saved.url===url.href &&
         typeof saved.accessToken==='string' && /^[A-Za-z0-9_-]{43}$/.test(saved.accessToken),
         'ELTSS_IMPORT_RECONCILIATION_REQUIRED');
@@ -101,7 +107,7 @@ export class EltssConnection {
       headers:{authorization:'Bearer '+saved.accessToken,accept:'application/json'}});}
     catch{return null;}
     const actual=decode(await responseBytes(response,65536));
-    need(response.ok && actual.schema===OPERATOR_SCHEMA && actual.active===true &&
+    need(response.ok && actual.schema===this.#options.operatorSchema && actual.active===true &&
       actual.workspace===saved.workspace && actual.workspaceId===saved.workspaceId &&
       actual.instanceId===saved.instanceId && actual.processId===saved.processId &&
       actual.url===saved.url,'ELTSS_CONNECTION_CHANGED','The live native owner differs from its private descriptor.');
@@ -115,11 +121,11 @@ export class EltssConnection {
       need(start && this.#binding.allowStart,'ELTSS_NOT_RUNNING',
         'Open this workspace in Applications or use operator_open with allowStart in its private host configuration.');
       if(this.#owned)await this.#stopOwned();
-      const python=process.env.SF30_ELTSS_PYTHON??process.env.SF30_XML_PYTHON??process.env.CODEX_PRIMARY_RUNTIME_PYTHON??'python3',
-        args=['-B',CLI,'serve','--workspace',this.#binding.directory,'--expected-workspace-id',this.#knownId,'--port','0',
+      const python=process.env[this.#options.pythonEnvironment]??process.env.SF30_XML_PYTHON??process.env.CODEX_PRIMARY_RUNTIME_PYTHON??'python3',
+        args=['-B',this.#options.cli,'serve','--workspace',this.#binding.directory,'--expected-workspace-id',this.#knownId,'--port','0',
           ...(this.#binding.credentialsFile?['--credentials-file',this.#binding.credentialsFile]:[])];
       const child=spawn(python,args,{stdio:['ignore','pipe','pipe'],env:{...process.env,
-        SF30_ELTSS_NODE:process.execPath,SF30_XML_NODE:process.execPath}});
+        [this.#options.nodeEnvironment]:process.execPath,SF30_XML_NODE:process.execPath}});
       const owned={child,exited:false,exit:null,stderr:'',stdout:''};this.#owned=owned;
       owned.done=new Promise(resolve=>{
         child.once('error',error=>{owned.exited=true;owned.exit={error:error.code??error.name};resolve();});

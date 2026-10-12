@@ -14,6 +14,12 @@ function query(target,values){
   const params=new URLSearchParams(Object.entries(values).filter(([,v])=>v!==undefined).map(([k,v])=>[k,String(v)]));
   return target+(params.size?'?'+params:'');
 }
+function originalFilename(member,fallback){
+  const name=typeof member==='string'?member.split('/').at(-1):'';
+  return /^[A-Za-z0-9][A-Za-z0-9._-]{0,239}$/.test(name)&&
+    !['original-request.json','original-response.json','original-input.json','original-artifact.json','eltss-manifest.json','gravity-referral-manifest.json'].includes(name)
+    ?name:fallback;
+}
 function preview(value){
   if(Buffer.byteLength(JSON.stringify(value))<=20000)return {value,completeValue:true};
   const summary=plain(value)?Object.fromEntries(Object.entries(value).map(([key,item])=>[key,
@@ -23,7 +29,7 @@ function preview(value){
     {kind:Array.isArray(value)?'array':typeof value,...(Array.isArray(value)?{items:value.length}:{})};
   return {preview:summary,completeValue:false};
 }
-function nativeRoute(action,args){
+export function eltssNativeRoute(action,args){
   const get=target=>({method:'GET',target}),post=(target,input)=>({method:'POST',target,input});
   const direct={operator:'operator',state:'state',catalogue:'catalogue',auth_profiles:'auth-profiles'};
   if(direct[action])return get(path(direct[action]));
@@ -56,8 +62,8 @@ function nativeRoute(action,args){
     {resourceType:args.resourceType,offset:args.offset,limit:args.limit,query:args.query}));
   if(action==='source_row')return get(path('sources',args.sourceId,'rows',args.recordId));
   if(action==='source_file')return {...get(path('sources',args.sourceId,'files',args.member)),
-    kind:'source-file',filename:args.member.endsWith('.json')?'eltss-original-source-member.json':
-      args.member.endsWith('.zip')?'eltss-original-source-member.zip':'eltss-original-source-member.bin'};
+    kind:'source-file',filename:originalFilename(args.member,args.member.endsWith('.json')?'eltss-original-source-member.json':
+      args.member.endsWith('.zip')?'eltss-original-source-member.zip':'eltss-original-source-member.bin')};
   // The native source can be a genuine raw Bundle JSON or a complete source ZIP.
   // Retain its actual media type and bytes; do not infer a ZIP from this filename.
   if(action==='source_packet')return {...get(path('sources',args.sourceId,'packet')),
@@ -95,29 +101,52 @@ function nativeRoute(action,args){
   if(action==='workspace_packet')return {...get(path('workspace','packet')),kind:'workspace-packet',filename:'eltss-editable-workspace.zip'};
   return null;
 }
-export class MerchantEltss {
+/** Native upload selection shared by source-owned workspace providers. */
+export function eltssUploadRoute(kind,args,upload,{contentType}={}){
+  const target=kind==='workspace'?path('workspace','packet'):kind==='packet'?path('packets'):
+    kind==='handoff'?path('handoffs','receive'):kind==='artifact'?path('artifacts'):path('sources'),
+    prefix=kind==='artifact'?'x-artifact-':'x-source-',
+    headers=['source','artifact'].includes(kind)?{
+      [prefix+'name']:encodeURIComponent(upload.name),
+      [prefix+'label']:encodeURIComponent(args.label??upload.label),
+      ...(kind==='artifact'?{'x-artifact-content-type':contentType??'application/octet-stream'}:{})}:{};
+  return {target,headers,adoptWorkspace:kind==='workspace'};
+}
+/** Additive composition. The exported MerchantEltss below retains every original default. */
+export function createMerchantWorkspaceRuntime({
+  Connection=EltssConnection,tools=eltssMerchantTools,validateArguments=validateEltssArguments,
+  inputActions=nativeInputActions,routeFor=eltssNativeRoute,configKey='eltssCareplans',
+  exportNamespace='eltss',exportSchema=EXPORT_SCHEMA,resultSchema=RESULT_SCHEMA,manifestName=MANIFEST_NAME,
+  parseExport=parseEltssExport,errorPrefix='ELTSS',apiSchema='stellar-forge.eltss-merchant-api.v1',
+  schemaMetadata={},uploadRoute=eltssUploadRoute,
+  importActions={source_import:'source',packet_import:'packet',workspace_import:'workspace',
+    handoff_import:'handoff',artifact_import:'artifact'},
+  receivingKinds={source:'source-packet',packet:'dataset-packet',workspace:'workspace-packet',
+    handoff:'handoff-packet',artifact:'artifact-file'}
+}={}){
+return class MerchantWorkspace {
   #config;#clients=new Map();#pending=new Set();#queues=new Map();
-  #readers=new RetainedFileReads({errorPrefix:'ELTSS'});#closing=false;#close=null;
+  #readers=new RetainedFileReads({errorPrefix});#closing=false;#close=null;
   constructor(config){this.#config=config;}
   get summary(){
-    return {configured:Boolean(this.#config.eltssCareplans),workspaces:Object.entries(this.#config.eltssCareplans?.workspaces??{}).map(([workspace,b])=>({
+    return {configured:Boolean(this.#config[configKey]),workspaces:Object.entries(this.#config[configKey]?.workspaces??{}).map(([workspace,b])=>({
       workspace,label:b.label,workspaceId:this.#clients.get(workspace)?.summary.workspaceId??b.workspaceId,
       allowStart:b.allowStart,selectionSha256:b.selectionSha256,
       inputs:Object.entries(b.inputs).map(([input,v])=>({input,label:v.label,sha256:v.sha256,bytes:v.bytes}))})),
       clients:[...this.#clients].map(([workspace,c])=>({workspace,...c.summary})),...this.#readers.summary};
   }
   #binding(alias){
-    checked(alias,ALIAS,'workspace alias');const selected=this.#config.eltssCareplans?.workspaces?.[alias];
+    checked(alias,ALIAS,'workspace alias');const selected=this.#config[configKey]?.workspaces?.[alias];
     need(selected,'ELTSS_NOT_CONFIGURED','Choose an original host-declared eLTSS workspace.');return selected;
   }
   #client(alias){
     const selected=this.#binding(alias);
-    if(!this.#clients.has(alias))this.#clients.set(alias,new EltssConnection(selected));
+    if(!this.#clients.has(alias))this.#clients.set(alias,new Connection(selected));
     return this.#clients.get(alias);
   }
   async #root(alias){
     this.#binding(alias);
-    return directory(join(await directory(join(this.#config.exportsDirectory,'eltss')),alias));
+    return directory(join(await directory(join(this.#config.exportsDirectory,exportNamespace)),alias));
   }
   async #capture(alias,original,args,route){
     const binary=Boolean(original.file),kind=binary?route.kind:'native-response',
@@ -132,15 +161,15 @@ export class MerchantEltss {
         ...(route.artifact?{artifact:route.artifact}:{}),...(args.operationId?{operationId:args.operationId}:{}),
         ...(args.requestId?{requestId:args.requestId}:{}),
         ...(original.previousWorkspaceId?{previousWorkspaceId:original.previousWorkspaceId}:{})},
-      manifest={schema:EXPORT_SCHEMA,workspace:alias,workspaceId:original.workspaceId,instanceId:original.instanceId,
+      manifest={schema:exportSchema,workspace:alias,workspaceId:original.workspaceId,instanceId:original.instanceId,
         kind,source,files:bodies.map(body=>({name:body.name,bytes:body.file?.bytes??body.bytes.length,
           sha256:body.file?.sha256??digest(body.bytes),contentType:body.contentType}))};
     manifest.exportId=manifestIdentity(manifest);
-    const manifestBytes=encode(manifest);parseEltssExport(manifestBytes,manifest.exportId);
-    const descriptor={schema:RESULT_SCHEMA,state:original.ok?'COMPLETED':'REJECTED',workspace:alias,
+    const manifestBytes=encode(manifest);parseExport(manifestBytes,manifest.exportId);
+    const descriptor={schema:resultSchema,state:original.ok?'COMPLETED':'REJECTED',workspace:alias,
       workspaceId:original.workspaceId,instanceId:original.instanceId,kind,source,exportId:manifest.exportId,
       native:{ok:original.ok,status:original.status,headers:original.headers},manifestSha256:digest(manifestBytes),
-      manifestFile:{name:MANIFEST_NAME,bytes:manifestBytes.length,sha256:digest(manifestBytes)},
+      manifestFile:{name:manifestName,bytes:manifestBytes.length,sha256:digest(manifestBytes)},
       files:manifest.files,...(original.value===undefined?{}:preview(original.value))};
     try{
       const root=await this.#root(alias),files=await directory(join(root,'files')),exports=await directory(join(root,'exports'));
@@ -163,7 +192,7 @@ export class MerchantEltss {
   async #manifest(alias,id,expected){
     this.#binding(alias);checked(id,SHA,'retained export ID');
     const root=await this.#root(alias),bytes=await readSourceFile(join(root,'exports',id+'.json'),{privateFile:true,maxBytes:65000}),
-      sha256=digest(bytes),manifest=parseEltssExport(bytes,id);
+      sha256=digest(bytes),manifest=parseExport(bytes,id);
     need(manifest.workspace===alias && (expected===undefined || checked(expected,SHA,'manifest SHA256')===sha256),
       'ELTSS_EXPORT_CHANGED','Select the original export and exact manifest identity.');
     return {root,bytes,sha256,manifest};
@@ -197,28 +226,28 @@ export class MerchantEltss {
   }
   async #do(action,args){
     if(action==='workspaces')return this.summary;
-    if(action==='schema')return {schema:'stellar-forge.eltss-merchant-api.v1',tools:eltssMerchantTools,
+    if(action==='schema')return {schema:apiSchema,tools,
       nativeWorkspace:'stellar-forge.eltss-workspace.v1',nativeSource:'stellar-forge.eltss-source.v1',
-      nativeFieldProfile:'stellar-forge.eltss-field-profile.v1',maximumNativeJsonBytes:MAX_JSON_INPUT,nativeInputActions,
+      nativeFieldProfile:'stellar-forge.eltss-field-profile.v1',maximumNativeJsonBytes:MAX_JSON_INPUT,nativeInputActions:inputActions,
       nativeMapping:'stellar-forge.eltss-mapping.v1',maximumPacketBytes:MAX_PACKET_BYTES,
       recovery:'Read the same saved acquisition operation after an uncertain reply. The native request, pause, resume, correction preview hash, receiving UUID and whole-archive hash keep their original identities.',
-      files:'Every completed read or mutation retains its complete native response and original request. Full JSON input also retains unchanged original-input.json. Binary routes retain every original byte through the maintained merchant range and resumable receiving protocol.'};
+      files:'Every completed read or mutation retains its complete native response and original request. Full JSON input also retains unchanged original-input.json. Binary routes retain every original byte through the maintained merchant range and resumable receiving protocol.',...schemaMetadata};
     const alias=args.workspace;
     if(action==='manifest'){
       const saved=await this.#manifest(alias,args.exportId);
       return {state:'MANIFEST_RETAINED',workspace:alias,exportId:args.exportId,
-        manifestFile:{name:MANIFEST_NAME,bytes:saved.bytes.length,sha256:saved.sha256},manifest:saved.manifest};
+        manifestFile:{name:manifestName,bytes:saved.bytes.length,sha256:saved.sha256},manifest:saved.manifest};
     }
     if(action==='file_release'){
       this.#binding(alias);await this.#readers.release(alias+':'+args.exportId,args.readId);
       return {state:'RELEASED',workspace:alias,exportId:args.exportId,readId:args.readId};
     }
     if(action==='file'){
-      const saved=await this.#manifest(alias,args.exportId,args.expectedManifestSha256),isManifest=args.file===MANIFEST_NAME;
-      const file=isManifest?{name:MANIFEST_NAME,bytes:saved.bytes.length,sha256:saved.sha256,contentType:'application/json'}:
+      const saved=await this.#manifest(alias,args.exportId,args.expectedManifestSha256),isManifest=args.file===manifestName;
+      const file=isManifest?{name:manifestName,bytes:saved.bytes.length,sha256:saved.sha256,contentType:'application/json'}:
         await this.#selectedFile(saved,args.file);
       need(file.sha256===args.expectedSha256,'ELTSS_FILE_CHANGED');
-      const result=await this.#readers.read({scope:alias+':'+args.exportId,key:args.file,kind:'eltss',
+      const result=await this.#readers.read({scope:alias+':'+args.exportId,key:args.file,kind:exportNamespace,
         directory:saved.root,expectedSha256:file.sha256,offset:args.offset??0,limit:args.limit??65536,readId:args.readId,
         load:async()=>{
           if(isManifest)return {name:file.name,type:file.contentType,bytes:saved.bytes};
@@ -239,11 +268,11 @@ export class MerchantEltss {
       const upload=await client.hostInput(args.input,spool,args.expectedSha256);
       try{
         const bytes=await readSourceFile(upload.path,{privateFile:true,maxBytes:MAX_JSON_INPUT}),
-          body=decode(bytes),key=nativeInputActions[args.action];
+          body=decode(bytes),key=inputActions[args.action];
         need(key && plain(body),'ELTSS_INPUT_INVALID','The complete selected native input must be a JSON object.');
         // This parse validates only the envelope. The original UTF-8 bytes are
         // sent unchanged, including numeric tokens and whitespace.
-        const route=nativeRoute(args.action,{[key]:body});
+        const route=routeFor(args.action,{[key]:body});
         need(route?.method==='POST','ELTSS_INPUT_INVALID');
         const original=await client.request('POST',route.target,{upload,jsonUpload:true});
         return await this.#capture(alias,original,{...args,received:{input:args.input,
@@ -255,13 +284,12 @@ export class MerchantEltss {
         throw error;
       }finally{await unlink(upload.path).catch(error=>{if(error.code!=='ENOENT')throw error;});}
     }
-    if(['source_import','packet_import','workspace_import','handoff_import','artifact_import','receive_export'].includes(action)){
+    if(Object.hasOwn(importActions,action) || action==='receive_export'){
       const root=await this.#root(alias),spool=await directory(join(root,'pending'));
       let upload,kind,sourceIdentity,contentType=args.contentType;
       if(action==='receive_export'){
         const saved=await this.#manifest(args.sourceWorkspace,args.exportId,args.expectedManifestSha256);
-        const allowed={source:'source-packet',packet:'dataset-packet',workspace:'workspace-packet',
-          handoff:'handoff-packet',artifact:'artifact-file'};
+        const allowed=receivingKinds;
         need(saved.manifest.kind===allowed[args.kind],'ELTSS_RECEIVING_KIND_CHANGED');
         const payloads=saved.manifest.files.filter(file=>file.name===saved.manifest.source.payloadFile);
         need(payloads.length===1,'ELTSS_RECEIVING_FILE_NOT_FOUND','Select the one complete original binary/source payload.');
@@ -274,23 +302,16 @@ export class MerchantEltss {
           ...(saved.manifest.source.artifact?{artifactId:saved.manifest.source.artifact.id}:{})};
       }else{
         upload=await client.hostInput(args.input,spool,args.expectedSha256);
-        kind={source_import:'source',packet_import:'packet',workspace_import:'workspace',
-          handoff_import:'handoff',artifact_import:'artifact'}[action];
+        kind=importActions[action];
         sourceIdentity={input:args.input,sha256:upload.sha256,bytes:upload.bytes};
       }
-      const target=kind==='workspace'?path('workspace','packet'):kind==='packet'?path('packets'):
-        kind==='handoff'?path('handoffs','receive'):kind==='artifact'?path('artifacts'):path('sources'),
-        prefix=kind==='artifact'?'x-artifact-':'x-source-',
-        headers=['source','artifact'].includes(kind)?{
-          [prefix+'name']:encodeURIComponent(upload.name),
-          [prefix+'label']:encodeURIComponent(args.label??upload.label),
-          ...(kind==='artifact'?{'x-artifact-content-type':contentType??'application/octet-stream'}:{})}:{};
       try{
-        const original=await client.request('POST',target,{upload,adoptWorkspace:kind==='workspace',headers});
+        const {target,headers={},adoptWorkspace=false}=uploadRoute(kind,args,upload,{contentType});
+        const original=await client.request('POST',target,{upload,adoptWorkspace,headers});
         return await this.#capture(alias,original,{...args,received:sourceIdentity},{action,method:'POST',target});
       }finally{await unlink(upload.path).catch(error=>{if(error.code!=='ENOENT')throw error;});}
     }
-    const route=nativeRoute(action,args);need(route,'ELTSS_TOOL_UNKNOWN');
+    const route=routeFor(action,args);need(route,'ELTSS_TOOL_UNKNOWN');
     const root=route.filename?await this.#root(alias):null;
     let expected;
     if(action==='source_file'){
@@ -322,7 +343,7 @@ export class MerchantEltss {
   }
   call(name,args={}){
     need(!this.#closing,'ELTSS_CLOSING');
-    const action=validateEltssArguments(name,args),independent=['workspaces','schema','manifest','file','file_release','json'].includes(action);
+    const action=validateArguments(name,args),independent=['workspaces','schema','manifest','file','file_release','json'].includes(action);
     const previous=independent?Promise.resolve():(this.#queues.get(args.workspace)??Promise.resolve());
     const promise=previous.catch(()=>{}).then(()=>this.#do(action,args));this.#pending.add(promise);
     if(!independent)this.#queues.set(args.workspace,promise);
@@ -336,7 +357,10 @@ export class MerchantEltss {
       const results=await Promise.allSettled([this.#readers.close(),...[...this.#clients.values()].map(client=>client.close())]),
         failures=results.filter(result=>result.status==='rejected').map(result=>result.reason);
       if(failures.length)throw failures.length===1?failures[0]:Object.assign(new AggregateError(failures,
-        'Original eLTSS connection cleanup is incomplete.'),{code:'ELTSS_CLOSE_INCOMPLETE'});
+        'Original eLTSS connection cleanup is incomplete.'),{code:errorPrefix+'_CLOSE_INCOMPLETE'});
     })().catch(error=>{this.#close=null;throw error;});return this.#close;
   }
 }
+
+}
+export const MerchantEltss=createMerchantWorkspaceRuntime();
