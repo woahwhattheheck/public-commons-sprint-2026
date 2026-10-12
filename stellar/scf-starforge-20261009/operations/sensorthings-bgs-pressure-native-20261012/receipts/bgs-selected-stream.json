@@ -1,0 +1,42 @@
+{
+  "schema": "stellar-forge.sensorthings-connector-source-receipt.v1",
+  "operationId": "SCF_SENSORTHINGS_BGS_PRESSURE_1B40_20261012",
+  "role": "bgs-selected-stream",
+  "sourceUrl": "https://sensors.bgs.ac.uk/FROST-Server/v1.1/Datastreams(1)",
+  "receivedAt": "2026-10-12T12:01:20Z",
+  "timestampBasis": "Clock read after complete connector download returned; provider HTTP request times are not exposed.",
+  "body": {
+    "filename": "bgs-datastream-1-opening.json",
+    "bytes": 1316,
+    "sha256": "3acc2e72a1d71d4b8f5b1653429b58a6e13c184bb1d6612263d120256b87baed"
+  },
+  "representation": "COMPLETE_CONNECTOR_UTF8_TEXT",
+  "sourceHttpStatus": null,
+  "sourceHttpHeaders": null,
+  "method": "Notion create_attachment(source_url), then download_attachment(file_upload_id)",
+  "request": {
+    "source_url": "https://sensors.bgs.ac.uk/FROST-Server/v1.1/Datastreams(1)",
+    "filename": "bgs-datastream-1-opening.json",
+    "content_type": "application/json"
+  },
+  "connector": {
+    "attachment": {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"file_upload_id\":\"3f7dd772-3100-81d2-81cd-00b27f51023c\",\"filename\":\"bgs-datastream-1-opening.json\",\"content_type\":\"application/json; charset=utf-8\",\"content_length\":1316,\"status\":\"uploaded\",\"markdown_source\":\"file-upload://3f7dd772-3100-81d2-81cd-00b27f51023c\",\"suggested_markdown\":\"<file src=\\\"file-upload://3f7dd772-3100-81d2-81cd-00b27f51023c\\\"></file>\"}"
+        }
+      ],
+      "isError": false
+    },
+    "download": {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"file_upload_id\":\"3f7dd772-3100-81d2-81cd-00b27f51023c\",\"filename\":\"bgs-datastream-1-opening.json\",\"content_type\":\"application/json; charset=utf-8\",\"content_length\":1316,\"content\":\"{\\\"@iot.selfLink\\\":\\\"https://sensors.bgs.ac.uk/FROST-Server/v1.1/Datastreams(1)\\\",\\\"@iot.id\\\":1,\\\"name\\\":\\\"GGERFS_01 Barometric Pressure\\\",\\\"description\\\":\\\"Barometric Pressure from BGS GGERFS Barometer - Measured (mbar)\\\",\\\"observationType\\\":\\\"http://www.opengis.net/def/observationType/OGC-OM/2.0/OM_Measurement\\\",\\\"unitOfMeasurement\\\":{\\\"name\\\":\\\"Millibar\\\",\\\"symbol\\\":\\\"mbar\\\",\\\"definition\\\":\\\"http://vocab.nerc.ac.uk/collection/P06/current/UPBB\\\"},\\\"observedArea\\\":{\\\"type\\\":\\\"Point\\\",\\\"coordinates\\\":[-4.201199802,55.838255175]},\\\"phenomenonTime\\\":\\\"2020-03-16T14:02:18Z/2026-07-01T07:15:00Z\\\",\\\"properties\\\":{\\\"access_restriction\\\":\\\"Unrestricted\\\",\\\"data_type\\\":\\\"Measured\\\",\\\"data_usage\\\":\\\"Available under the Open Government Licence subject to the following acknowledgement accompanying the reproduced UKRI materials \\\\\\\"Contains UKRI materials ©UKRI [year]\\\\\\\"\\\",\\\"publish_yn\\\":\\\"Y\\\",\\\"sen_id\\\":828},\\\"resultTime\\\":\\\"2020-03-16T14:02:18Z/2026-07-01T07:15:00Z\\\",\\\"ObservedProperty@iot.navigationLink\\\":\\\"https://sensors.bgs.ac.uk/FROST-Server/v1.1/Datastreams(1)/ObservedProperty\\\",\\\"Sensor@iot.navigationLink\\\":\\\"https://sensors.bgs.ac.uk/FROST-Server/v1.1/Datastreams(1)/Sensor\\\",\\\"Thing@iot.navigationLink\\\":\\\"https://sensors.bgs.ac.uk/FROST-Server/v1.1/Datastreams(1)/Thing\\\",\\\"Observations@iot.navigationLink\\\":\\\"https://sensors.bgs.ac.uk/FROST-Server/v1.1/Datastreams(1)/Observations\\\"}\"}"
+        }
+      ],
+      "isError": false
+    }
+  }
+}

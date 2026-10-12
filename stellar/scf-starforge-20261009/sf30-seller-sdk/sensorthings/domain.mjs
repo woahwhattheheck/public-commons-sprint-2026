@@ -54,9 +54,9 @@ export async function graphIndex(store,edition){
   }
   function relation(item,name){
     const inline=item?.record?.[name];
-    if(Array.isArray(inline))return inline.map((record,i)=>({record,kind:relationshipKinds[name],
+    if(Array.isArray(inline))return inline.map((record,i)=>({record,kind:relationshipKinds[name],page:item.page,
       sourceRef:{...item.sourceRef,jsonPointer:item.sourceRef.jsonPointer+'/'+escapePointer(name)+'/'+i}}));
-    if(plain(inline))return [{record:inline,kind:relationshipKinds[name],sourceRef:{...item.sourceRef,jsonPointer:item.sourceRef.jsonPointer+'/'+escapePointer(name)}}];
+    if(plain(inline))return [{record:inline,kind:relationshipKinds[name],page:item.page,sourceRef:{...item.sourceRef,jsonPointer:item.sourceRef.jsonPointer+'/'+escapePointer(name)}}];
     const link=item?.record?.[name+'@iot.navigationLink'];
     if(typeof link!=='string')return [];
     try{return urls.get(sourceURL(link,edition.source,typeof item.record['@iot.selfLink']==='string'?sourceURL(item.record['@iot.selfLink'],edition.source,item.page.url):item.page.url))??[];}catch{return [];}
