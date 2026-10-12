@@ -177,3 +177,9 @@ payment operation is replayed.
 Receiving rejects an archive before creating a workspace if this minimum already exceeds the 16 GiB expanded or 20,000-member export policy, or if the retained ZIP exceeds the 8 GiB per-file export limit. The input archive remains available for inspection and its original customer/source-file receiving path. This means the maximum acceptable editable intake depends on its actual complete custody footprint; an archive being valid alone does not establish that an additional complete editable copy fits.
 
 The reported remaining bytes exclude the new workspace database, recovery metadata, archive-engine files and later edits. Final export measures every actual file again. Keep enough space and export budget for those additions. The same checks apply when passing an edited workspace to another operator, including all earlier retained history.
+
+## Reopening a receiving created by the earlier directory layout
+
+The receiver creates every new intermediate source/archive directory as private (mode `0700`). It also reconciles selected directories beneath the original owned extraction root after validating the same archive, manifest and receiving request. It does not change ancestors outside that root.
+
+If an earlier completed receiving opens but reports `PRIVATE_DIRECTORY_REQUIRED` when reading archived files, repeat its exact `matomo-product receive` command with the same archive, destination and operation ID. The original receiver verifies and reuses the existing bytes, corrects only its owned directory layout, and returns the same workspace ID. Source rows, captured responses, the first receiving receipt, and original commercial history remain unchanged. Then continue original-file review or full re-export in that same workspace.
