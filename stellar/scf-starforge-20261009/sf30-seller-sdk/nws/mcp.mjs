@@ -20,7 +20,7 @@ const EXPORT_ID = /^(?:export|comparison)-[0-9a-f]{24}$/;
 const RECEIPT_ID = /^buyer-[0-9a-f]{24}$/;
 const RECEIPT_FILES = ['dataset.csv','dataset.jsonl','review.html','delivery.json','manifest.json'];
 const MAX_JSON = 16 * 1024 * 1024;
-const MAX_FILE = 256000000;
+const MAX_FILE = 256 * 1024 * 1024;
 const hash = value => createHash('sha256').update(value).digest('hex');
 const fail = (code, message) => Object.assign(new Error(message), { code });
 const plain = value => value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -359,8 +359,8 @@ export class MerchantNwsWorkspaces {
       if(hash(bytes)!==selected.sha256)throw fail('NWS_MCP_SOURCE_PACKAGE_CHANGED','The original source package changed. Have its host review and update the selected package hash.');
       let bundle;try{bundle=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(bytes));}
       catch{throw fail('NWS_MCP_SOURCE_PACKAGE_INVALID','The original selected source package is not valid UTF-8 JSON.');}
-      if(!plain(bundle)||bundle.schema!=='stellar-forge.nws-capture-package.v1')
-        throw fail('NWS_MCP_SOURCE_PACKAGE_INVALID','Choose an original portable NWS capture package.');
+      if(!plain(bundle)||!['commons.nws-source-capture.v1','stellar-forge.nws-capture-package.v1'].includes(bundle.schema))
+        throw fail('NWS_MCP_SOURCE_PACKAGE_INVALID','Choose an original NWS source capture or portable capture package.');
       const {sourcePackage,...nativePayload}=payload;
       body={...request,payload:{...nativePayload,bundle}};
       selectedSource={alias:sourcePackage,label:selected.label,sha256:selected.sha256,bytes:bytes.length};
@@ -387,7 +387,11 @@ export class MerchantNwsWorkspaces {
     try{return await task;}finally{this.#pending.delete(task);}
   }
   close(){
-    if(!this.#close){this.#closing=true;this.#close=(async()=>{await Promise.allSettled([...this.#pending]);await this.#reads.close();})();}
+    if(!this.#close){
+      this.#closing=true;
+      this.#close=(async()=>{await Promise.allSettled([...this.#pending]);await this.#reads.close();})()
+        .catch(error=>{this.#close=undefined;throw error;});
+    }
     return this.#close;
   }
 }
