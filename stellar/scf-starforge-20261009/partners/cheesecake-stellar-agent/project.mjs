@@ -249,13 +249,15 @@ async function snapshot({application,context,selected,environment,signal,id}) {
 export async function attachApplicationProject({application,configFile,configurationSha256,config,sourceRoot,
   authorize,environment=process.env}={}) {
   need(typeof authorize==='function','APPLICATION_HOST_AUTHORIZATION_REQUIRED');
-  let closed=false,phase='open',closing,exporting;const active=new Set();
+  let closed=false,phase='open',closing,exporting;const active=new Set(),projectTasks=new Set();
   const selected=()=>inspectApplicationProject({configFile,config,sourceRoot,environment});
   async function permitted(context,action){
+    need(!closed,'APPLICATION_PROJECT_CLOSED');
     need(object(context)&&typeof context.subject==='string'&&context.subject.length>0,
       'APPLICATION_AUTHENTICATED_SUBJECT_REQUIRED');
     need(await authorize({context:structuredClone(context),action:'project-'+action,
       applicationId:config.applicationId,request:null})===true,'APPLICATION_AUTHORIZATION_DENIED');
+    need(!closed,'APPLICATION_PROJECT_CLOSED');
   }
   async function tracked(operation,action){
     need(!closed,'APPLICATION_PROJECT_CLOSED');
@@ -272,8 +274,11 @@ export async function attachApplicationProject({application,configFile,configura
       need(object(options)&&Object.keys(options).every(key=>(action==='inspect'?['mode','signal']:
         action==='snapshot'?['operationId','signal']:['signal']).includes(key)),
         'APPLICATION_OPTIONS_INVALID');
-      need(!closed,'APPLICATION_PROJECT_CLOSED');await permitted(context,action);
+      need(!closed,'APPLICATION_PROJECT_CLOSED');
+      const task=(async()=>{
+      await permitted(context,action);
       const current=await selected();
+      need(!closed,'APPLICATION_PROJECT_CLOSED');
       need(current.configurationSha256===configurationSha256,'APPLICATION_CONFIGURATION_CHANGED');
       if(action==='inspect')return publicInspection(current);
       if(action==='archives'){
@@ -299,11 +304,22 @@ export async function attachApplicationProject({application,configFile,configura
         return snapshot({application,context,selected:current,environment,signal:options.signal,id:operationId(options.operationId??randomUUID())});
       })();
       try{return await exporting;}finally{exporting=null;phase='open';}
+      })();
+      projectTasks.add(task);
+      try{return await task;}finally{projectTasks.delete(task);}
     },
     close(){
       if(closing)return closing;closed=true;
-      closing=(async()=>{await Promise.allSettled([...active,...(exporting?[exporting]:[])]);
-        await application.close();})();
+      closing=(async()=>{
+        // A capture has already drained ordinary work and owns the original keys and
+        // file handles until its private temporary state has been cleaned up.
+        if(phase==='capturing')await exporting?.catch(()=>{});
+        // The native broker closes before waiting for requests: that aborts pending
+        // terminal approval and lets both a request drain and a waiting snapshot finish.
+        const originalClose=Promise.resolve().then(()=>application.close());
+        const results=await Promise.allSettled([originalClose,...active,...projectTasks]);
+        if(results[0].status==='rejected')throw results[0].reason;
+      })();
       return closing;
     },
   };
