@@ -922,17 +922,60 @@ async function collectEvents(ctx,health,query={}) {
     if(requestedEnd>latest+1)issue(ctx,'RPC_EVENT_FUTURE_RANGE','The selected source range ends after the observed latest ledger.',
       {requestedEnd:String(requestedEnd),latestLedger:String(latest)});
   }
-  const start=Number(progress.start),end=Number(progress.end);
+  let start=Number(progress.start);
+  const end=Number(progress.end),coverage=ctx.source.metadata.coverage[queryKey];
+  const advanceWindow=(minimum,maximum,rawRefs=[])=>{
+    const nextStart=Math.max(start,Math.min(end,minimum));
+    if(nextStart===start)return false;
+    const unavailable={fromLedger:String(start),beforeLedger:String(nextStart),rawRefs:[...new Set(rawRefs)]};
+    coverage.unavailableRanges ||= [];
+    coverage.unavailableRanges.push(unavailable);
+    progress.retentionChanges ||= [];
+    progress.retentionChanges.push({...unavailable,availableOldest:String(minimum),availableLatest:String(maximum),observedAt:now()});
+    coverage.capturedStart=String(nextStart);
+    coverage.availableOldest=String(minimum);coverage.availableLatest=String(maximum);
+    coverage.status='available-range-with-original-hash-archive-recovery';
+    issue(ctx,'RPC_EVENT_RETENTION_ADVANCED',
+      'The RPC event index no longer exposes this earlier interval. Original account and archive acquisition continues for identified payments.',
+      {query:queryKey,...unavailable,availableOldest:String(minimum),availableLatest:String(maximum)});
+    start=nextStart;progress.start=String(start);
+    if(start>=end){progress.complete=true;coverage.traversal='retention-expired';progress.rangeUnavailableRawRefs=unavailable.rawRefs;}
+    return true;
+  };
+  // A checkpoint keeps its requested interval, while the provider's retained
+  // lower bound can advance before the first request or while the run is paused.
+  if(!progress.complete&&!progress.cursor&&start<oldest){
+    advanceWindow(oldest,latest,[ctx.source.metadata.networkObservations.health.rawRef]);
+    await ctx.progress('event-retention',{query:queryKey,start:progress.start,end:progress.end});
+  }
   if(progress.complete||start>=end){progress.complete=true;return;}
   const contracts=query.contractIds||[...ctx.contracts];
   need(contracts.length<=5,'LEDGER_CONTRACT_FILTERS','One native capture edition supports up to five selected CFCE contracts.');
   ctx.source.metadata.nativeEvents ||= [];
   const seen=new Set(ctx.source.metadata.nativeEvents.map(row=>row.id));
+  let rangeRecoveries=0;
   while(!progress.complete){
     const params={filters:[{type:'contract',contractIds:contracts,...(query.topics?{topics:query.topics}:{})}],pagination:{limit:1000},xdrFormat:'base64'};
     if(progress.cursor)params.pagination.cursor=progress.cursor;
     else{params.startLedger=start;params.endLedger=end;}
-    const result=await ctx.rpc('getEvents',params),rows=result.data.events;
+    let result;
+    try{result=await ctx.rpc('getEvents',params);}
+    catch(error){
+      // Retention may advance again between getHealth and getEvents. Recover
+      // only the provider's precise range response before an opaque cursor;
+      // other RPC errors retain the original interruption/checkpoint behavior.
+      const range=/^startLedger must be within the ledger range: ([0-9]+) - ([0-9]+)$/.exec(error.message);
+      if(!progress.cursor&&error.code==='LEDGER_RPC_ERROR'&&String(error.rpcCode)==='-32600'&&range&&rangeRecoveries<4){
+        const minimum=integer(range[1],'oldest retained ledger'),maximum=integer(range[2],'latest retained ledger');
+        if(minimum>start&&maximum>=minimum&&advanceWindow(minimum,maximum,error.rawRefs||[])){
+          rangeRecoveries++;
+          await ctx.progress('event-retention',{query:queryKey,start:progress.start,end:progress.end});
+          continue;
+        }
+      }
+      throw error;
+    }
+    const rows=result.data.events;
     need(Array.isArray(rows),'LEDGER_EVENTS_RESPONSE','Keep the original native event list.');
     let beyond=false;
     for(const row of rows){
@@ -950,7 +993,7 @@ async function collectEvents(ctx,health,query={}) {
     }
     await ctx.progress('events',{events:String(ctx.source.metadata.nativeEvents.length)});
   }
-  ctx.source.metadata.coverage[queryKey].traversal='terminal';
+  if(coverage.traversal!=='retention-expired')coverage.traversal='terminal';
 }
 function providerTokenQueries(ctx) {
   const providers=new Set(ctx.source.tables.donationEvents.map(row=>row.provider));
