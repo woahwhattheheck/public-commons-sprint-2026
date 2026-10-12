@@ -37,6 +37,8 @@ The installed command runs with the lexical virtual-environment Python path. Its
 
 The [Python runtime guide](../../stellar/scf-starforge-20261009/distribution/python-runtime/README.md) documents exact resolve/install/activate and complete environment transfer commands.
 
+The included [installed receiving program](RECEIVING.md#run-the-retained-installed-journey) can commission this same package directly from an actual `--python` executable through those original operations. It also accepts an already retained `--installation` ID. The program keeps the review, resolution, installation and activation requests alongside the original customer project, then completes its full Applications opening and following handover.
+
 ## Open through Applications
 
 Add **Open Analysis project** with these selections:
