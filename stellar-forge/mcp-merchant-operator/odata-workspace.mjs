@@ -158,8 +158,11 @@ export function odataWorkspaceTools(tool) {
       scoped({ editionId: recordId, ...paging }), ['workspace', 'editionId'], read),
     tool('merchant_odata_compare', 'Compute the original keyed difference between two complete editions, retain that whole comparison once, and page added/removed/changed records. Its comparisonId downloads the complete unchanged comparison.',
       scoped({ beforeId: recordId, afterId: recordId, ...paging }), ['workspace', 'beforeId', 'afterId'], { idempotent: true }),
-    tool('merchant_odata_export', 'Export an accepted edition through the original typed dataset projection. An optional declared merchant profile adds its public payment terms. Returns the original immutable exportId and CSV/JSON/source/seller filenames.',
-      scoped({ editionId: recordId, name: text, fields: { type: 'array', minItems: 1, maxItems: 32, items: text }, profile: alias,
+    tool('merchant_odata_semantics', 'Preview the original CSDL source dictionary for a complete retained edition and selected value/state columns. Returns the exact semantic digest for the existing export binding.',
+      scoped({ editionId: recordId, fields: { type: 'array', minItems: 1, maxItems: 32, items: text } }),
+      ['workspace', 'editionId'], read),
+    tool('merchant_odata_export', 'Export an accepted edition through the original typed dataset projection. An optional declared merchant profile adds its public payment terms. Returns the original immutable exportId, reviewed dictionary and complete CSV/JSON/CSDL/source/seller file list.',
+      scoped({ editionId: recordId, name: text, fields: { type: 'array', minItems: 1, maxItems: 32, items: text }, profile: alias, expectedSemanticSha256: hash,
         defaultLimit: { type: 'integer', minimum: 1, maximum: 10000 }, maxLimit: { type: 'integer', minimum: 1, maximum: 10000 } }),
       ['workspace', 'editionId'], { idempotent: true }),
     tool('merchant_odata_query', 'Query an original dataset export using its native query string, projection, sorting and cursor. The dataset engine returns the original status and body.',
@@ -549,9 +552,12 @@ export class MerchantODataWorkspaces {
         }
         return result;
       }
+      case 'merchant_odata_semantics':
+        return original.semantics({ id: nativeId(args.editionId), fields: args.fields });
       case 'merchant_odata_export': {
         const terms = args.profile === undefined ? null : this.#profile(entry, args.profile);
         const result = await original.exportEdition({ id: nativeId(args.editionId), name: args.name, fields: args.fields,
+          expectedSemanticSha256: args.expectedSemanticSha256,
           ...(terms ? { origin: terms.origin, path: terms.path, payment: { scheme: 'exact', ...terms.payment, amount: terms.amount } } : {}),
           ...(args.defaultLimit === undefined ? {} : { defaultLimit: count(args.defaultLimit, 'Default dataset rows', 1, 10000) }),
           ...(args.maxLimit === undefined ? {} : { maxLimit: count(args.maxLimit, 'Maximum dataset rows', 1, 10000) }) });

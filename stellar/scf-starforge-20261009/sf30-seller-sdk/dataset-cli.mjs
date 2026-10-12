@@ -33,6 +33,8 @@ export function datasetQueryParameters(description) {
     { name: 'limit', type: 'integer', description: `Rows per page, from 1 to ${description.maxLimit}.`,
       example: description.defaultLimit },
     { name: 'cursor', type: 'string', description: 'Use page.nextCursor unchanged with the same filters, fields and sort; omit for the first page.', example: '' },
+    ...(description.semanticSchema ? [{ name: 'semantics', type: 'string',
+      description: 'Optional reviewed semantic SHA256; retained snapshot and cursor also bind the source meaning.', example: '' }] : []),
     ...description.columns.filter(c => c.filterable).map(c => ({ name: `where_${c.name}`, type: 'string',
       description: `Exact ${c.type} equality on ${c.name}.${c.nullable ? ' Empty value matches null.' : ''}`,
       example: c.type === 'boolean' ? 'true' : ['integer', 'number'].includes(c.type) ? '0' : 'VALUE' })),
