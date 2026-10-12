@@ -1,0 +1,14 @@
+.market-structure{min-width:0;max-width:100%}
+.market-structure .ms-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+.market-structure .ms-tabs{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 18px}
+.market-structure .ms-tabs [aria-selected=true]{background:#24272b;color:#fff}
+.market-structure .ms-identity{font:12px/1.5 ui-monospace,monospace;overflow-wrap:anywhere}
+.market-structure .ms-source{border-top:1px solid #d3d7dc;padding-top:14px;margin-top:14px}
+.market-structure .ms-json{white-space:pre-wrap;overflow-wrap:anywhere;max-height:600px;overflow:auto;font:12px/1.5 ui-monospace,monospace}
+.market-structure details{margin:14px 0}.market-structure summary{cursor:pointer;font-weight:600}
+.market-structure .scroll{max-width:100%;overflow:auto}.market-structure table{min-width:700px}
+.market-structure td{vertical-align:top;max-width:350px;overflow-wrap:anywhere}
+.market-structure input,.market-structure select,.market-structure textarea{min-width:0;width:100%;box-sizing:border-box}
+.market-structure textarea{min-height:95px}.market-structure .actions{flex-wrap:wrap}
+.market-structure a{color:inherit;text-decoration:underline}
+@media(max-width:680px){.market-structure .ms-grid{grid-template-columns:1fr}.market-structure .panel{padding:12px}}
