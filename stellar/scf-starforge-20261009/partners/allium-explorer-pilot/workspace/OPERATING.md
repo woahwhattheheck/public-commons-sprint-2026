@@ -116,3 +116,9 @@ Import verifies every file identity and the original typed dataset snapshots bef
 The authoritative provider contract is documented at [Run saved query](https://docs.allium.so/api/explorer/run-query), [Read run status](https://docs.allium.so/api/explorer/fetch-query-run-status), and [Fetch completed results](https://docs.allium.so/api/explorer/fetch-query-run-results). Saved queries use `X-API-KEY`; customer payment and delivery use the original Stellar merchant after acquisition. Availability of Stellar indexed data does not establish that Allium itself accepts Stellar payments.
 
 Original implementation entry points are `../explorer.mjs`, `sf30-seller-sdk/dataset-handler.mjs`, `sf30-seller-sdk/dataset-refresh/{versions.mjs,service.mjs,workspace.mjs,workspace-state.mjs,buyer-handoff.mjs}` and the original SF88 buyer. This component has no dependency installation or CI workflow. Its complete source belongs to the maintained merchant distribution's same cumulative build.
+
+## Preserve retained history during portable delivery
+
+Portable export takes the original dataset writer lock and validates its saved generations without collecting expired versions. An export therefore retains every still-stored acquisition, dataset generation, original publisher candidate and buyer artifact. It does not change version state or extend a snapshot's expiry. The existing live merchant start, refresh and explicit collection operations continue to enforce their original retention settings.
+
+Portable import retains the exact data files and version state. It records the import in the workspace and rebases the original publisher directory to the receiving location. Export metadata consequently has a new identity and source directory; the retained source and customer files keep their original bytes. This also allows a stopped workspace to be archived after a retention deadline without silently deleting its inactive saved dataset first.
