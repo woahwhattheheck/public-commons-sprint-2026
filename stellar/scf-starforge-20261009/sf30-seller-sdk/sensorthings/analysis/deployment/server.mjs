@@ -172,7 +172,7 @@ export function createAnalysisDeployment({workspace,origin}){
       try{
         if(derivedComponent){
           const choice=selected.version.selection.componentSelections.find(c=>c.streamKey===stream.sourceStreamKey&&c.index===stream.componentIndex&&c.bindingId===stream.componentBindingId);
-          if(choice&&HASH.test(stream.key))compatibility=nativeEntityCompatibility('component-stream-'+stream.key);
+          if(choice&&typeof stream.key==='string'&&/^component-[a-f0-9]{40}$/.test(stream.key))compatibility=nativeEntityCompatibility('component-stream-'+stream.key);
         }else compatibility=nativeEntityCompatibility(sourceDocument(Buffer.from(stream.sourceJson))['@iot.id']);
       }catch{}
       if(!compatibility?.compatible||typeof compatibility.clientId!=='string'||compatibility.clientId.includes('!!')){
