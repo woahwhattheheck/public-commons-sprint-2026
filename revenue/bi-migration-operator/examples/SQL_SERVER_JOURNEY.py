@@ -99,6 +99,7 @@ def main():
         state = json.loads(journal_path.read_text()) if journal_path.exists() else {
             "schema":"commons-bi-sql-complete-journey/1","operation_id":"sqljourney-"+secrets.token_hex(10),
             "phase":0,"records":{},"events":[],"started_at":now()}
+        if not journal_path.exists():save(journal_path,state)
         if state.get("status") == "complete":
             print((root / "RESULT.json").read_text())
             return

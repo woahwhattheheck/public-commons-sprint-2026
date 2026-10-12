@@ -76,6 +76,22 @@ async function bindExistingDriver(){
   return{runtime:{node:process.versions.node,driver_version:manifest.version,driver_manifest_sha256:sha(raw),
     mode:selected?'existing-profile-runtime':'original-worker-runtime'},release:()=>hook?.deregister()};
 }
+export function cursorParameter(value,column,spec){
+  check(typeof value==='string','NONNULL_EXACT_CURSOR_REQUIRED');
+  const type=spec?.type,native=String(column?.type??'').toLowerCase().split('(')[0];
+  if(type==='string')return value;
+  if(type==='integer'){check(['tinyint','smallint','int','bigint'].includes(native),'EXACT_CURSOR_PARAMETER_REQUIRED');return value;}
+  if(type==='decimal'){check(['decimal','numeric','money','smallmoney'].includes(native),'EXACT_CURSOR_PARAMETER_REQUIRED');return value;}
+  if(type==='boolean'){
+    check(native==='bit'&&(value==='1'||value==='0'),'BOOLEAN_CURSOR_BINDING_DIFFERS');
+    return value==='1';
+  }
+  if(type==='number'){
+    check(['float','real'].includes(native),'EXACT_CURSOR_PARAMETER_REQUIRED');
+    const number=Number(value);check(Number.isFinite(number),'FINITE_NATIVE_FLOAT_CURSOR_REQUIRED');return number;
+  }
+  throw new Error('CURSOR_PARAMETER_TYPE_UNSUPPORTED');
+}
 function cellKey(row,keys){
   const result=keys.map(k=>row[k.column]);
   check(result.every(x=>typeof x==='string'),'NONNULL_EXACT_CURSOR_REQUIRED');
@@ -167,6 +183,8 @@ export async function executeJob({jobPath,operationRoot,mode='execute',adapter=n
     if(paging.mode==='keyset'){
       check(keys.length>0&&keys.length<=4&&new Set(keys.map(k=>k.column)).size===keys.length,'REVIEWED_CURSOR_KEYS_REQUIRED');
       check(paging.review_reference&&named.test(paging.start_parameter??''),'REVIEWED_CURSOR_CONTRACT_REQUIRED');
+      check(config.queries[name].parameters[paging.start_parameter]?.type==='boolean','BOOLEAN_PAGE_START_PARAMETER_REQUIRED');
+      check(new Set(keys.map(k=>k.parameter)).size===keys.length&&!keys.some(k=>k.parameter===paging.start_parameter),'DISTINCT_CURSOR_PARAMETERS_REQUIRED');
       for(const key of keys){
         check(named.test(key.parameter??'')&&state.columns.includes(key.column),'CURSOR_FIELD_NOT_PROJECTED');
         const column=metadata.find(x=>x.name===key.column);
@@ -191,7 +209,9 @@ export async function executeJob({jobPath,operationRoot,mode='execute',adapter=n
       const input=structuredClone(job.parameters??{});
       if(paging.mode==='keyset'){
         input[paging.start_parameter]=Boolean(state.cursor);
-        for(const key of keys)input[key.parameter]=state.cursor?state.cursor[key.column]:null;
+        for(const key of keys)input[key.parameter]=state.cursor
+          ?cursorParameter(state.cursor[key.column],metadata.find(c=>c.name===key.column),config.queries[name].parameters[key.parameter])
+          :null;
       }
       source.validate(name,input);
       const dispatch={id:crypto.randomUUID(),page:state.pages.length+1,input,started_at:stamp(),generation:state.generation};

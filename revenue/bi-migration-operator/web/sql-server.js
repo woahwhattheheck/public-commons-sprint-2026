@@ -21,7 +21,9 @@ function sqlSelect(title,id,items,chosen){return '<label>'+h(title)+'<select id=
 function sqlNotes(p){return '<div class="source-note">'+h((p.origin||(workspace.sql_profile||[]).find(r=>r.id===p.profile?.id)?.payload.origin)==="protocol-example"?"Explicit local protocol example. No SQL Server connection is asserted.":"Original SQL Server read operation.")+'<br>One observed statement per page under the database’s configured isolation. Individual pages and capture times are retained; there is no shared snapshot claim for the collection.</div>';}
 function sqlProfileLabel(id){return label((workspace.sql_profile||[]).find(r=>r.id===id)||{id,payload:{}});}
 async function sqlConnections(){
+  const generation=renderNumber;
   const pRecord=sqlSelection.profile?await entity("sql_profile",sqlSelection.profile):null;
+  if(generation!==renderNumber||tab!=="sql")return "";
   const p=pRecord?.payload||{},c=p.connection||{},runtime=workspace.sql_runtime||{};
   sqlVisibleRecord=pRecord;sqlDraftKey="connection:"+(pRecord?.id||"new")+":"+(pRecord?.revision||0);
   const completed=(workspace.sql_job||[]).filter(r=>r.payload.document.action==="catalog"&&r.payload.status==="complete");
@@ -46,14 +48,16 @@ async function sqlConnections(){
     +'<details><summary>Native runtime and portable host setup</summary><p>Node22.16+ · mssql12.7.4 · pinned source '+h(runtime.driver_ref||"")+'</p><p>Node detected: '+h(runtime.node_available?"yes":"no")+'; driver in this portable profile: '+h(runtime.driver_present_in_portable_profile?"yes":"not observed")+'. An existing external worker can run the downloaded job and return its exact result ZIP.</p><pre>npm install --prefix tools/sql-server/core/mssql\npython tools/sql-server/SQL_SERVER_WORKER.py --job /private/job/job.json --operation /private/job/operation --mode execute</pre><p class="muted">Use a Node executable through BI_SQL_NODE if it is not on PATH. The job ZIP carries its original worker under worker/. Its worker/core/mssql folder has the same dependency manifest.</p></details>';
 }
 async function sqlQueries(){
+  const generation=renderNumber;
   const query=sqlSelection.query?await entity("sql_query",sqlSelection.query):null;
+  if(generation!==renderNumber||tab!=="sql")return "";
   sqlVisibleRecord=query;const p=query?.payload||{},def=p.definition||{sql:"SELECT [Id] AS [Id], [Amount] AS [Amount] FROM [dbo].[ReviewedSource]",parameters:{},parameterOrder:[],columns:["Id","Amount"],orderBy:[{column:"Id",direction:"ASC"}],maxRows:1000,maxBytes:917504,timeoutMs:10000};
   sqlDraftKey="query:"+(query?.id||"new")+":"+(query?.revision||0);
   const catalogJobs=(workspace.sql_job||[]).filter(r=>r.payload.document.action==="catalog"&&r.payload.document.table&&r.payload.status==="complete");
   const chosen=sqlSelection.catalog||catalogJobs[0]?.id;
   let tableForm="";
   sqlBuilderCatalog=null;
-  if(chosen){const job=await entity("sql_job",chosen);const catalog=job.payload.catalog;if(catalog?.columns){sqlBuilderCatalog={job,catalog};
+  if(chosen){const job=await entity("sql_job",chosen);if(generation!==renderNumber||tab!=="sql")return "";const catalog=job.payload.catalog;if(catalog?.columns){sqlBuilderCatalog={job,catalog};
     tableForm=rowsTable(["Include","Source / native type","Projected alias","Cursor key"],catalog.columns.map((c,i)=>'<tr><td><input type="checkbox" class="sql-column-use" data-index="'+i+'" checked aria-label="Include '+h(c.name)+'"></td><td><strong>'+h(c.name)+'</strong><div class="muted">'+h(c.columnType)+' · '+h(c.nullable==="NO"?"NOT NULL":"nullable")+' · '+h(c.collation||"")+'</div></td><td><input class="sql-column-alias" data-index="'+i+'" value="'+h(/^[A-Za-z_]/.test(c.name)?c.name.replace(/[^A-Za-z0-9_]/g,"_"):"field_"+i)+'" aria-label="Alias '+h(c.name)+'"></td><td><input class="sql-column-key" type="checkbox" data-index="'+i+'"'+(c.keyKind==="PRI"?" checked":"")+' aria-label="Cursor '+h(c.name)+'"></td></tr>'));
     tableForm+='<div class="grid">'+input("Generated query label","sql-builder-label",catalog.table+" complete capture")+input("Page rows (1–1000)","sql-page-rows",1000,"number",'min="1" max="1000"')+'</div>'+input("Unique-key source, if the full observed primary key is not used","sql-unique-reference","")
       +sqlArea("Typed filters, optional","sql-builder-filters",[],3)+'<p class="muted">Filter example: [{"column":"Status","operator":"=","parameter":"status","value":"Open"}]. Values remain typed parameters. Choose a complete unique, nonnull cursor; native database ordering and collation determine page boundaries.</p><button data-action="sql-build-query" class="primary">Create full cursor query</button>';
@@ -76,8 +80,9 @@ async function sqlQueries(){
       +(p.review?'<div class="help"><h3>Capture the reviewed selection</h3>'+input("Capture label","sql-capture-label",p.label+" — capture")+'<label><input type="checkbox" id="sql-capture-start">Start on this host</label><button class="primary" data-action="sql-prepare-capture" data-id="'+query.id+'">Prepare complete capture job</button><p class="muted">The job pins these exact query, schema, connection and typed parameter values. Paging continues automatically until the original driver returns an untruncated final page or the declared total limit is reached.</p></div>':"")+'</div>':"");
 }
 async function sqlJobs(){
+  const generation=renderNumber;
   const jobs=workspace.sql_job||[],chosen=sqlSelection.job||jobs[0]?.id;
-  const job=chosen?await entity("sql_job",chosen):null;sqlVisibleRecord=job;
+  const job=chosen?await entity("sql_job",chosen):null;if(generation!==renderNumber||tab!=="sql")return "";sqlVisibleRecord=job;
   const p=job?.payload||{};sqlSelection.job=job?.id||null;sqlDraftKey="job:"+(job?.id||"none");
   let detail="";
   if(job){
@@ -106,10 +111,14 @@ async function sqlJobs(){
     +formSelect("Job","sql-job-select",jobs,chosen)+(jobs.length?rowsTable(["Job","Action","State","Rows / pages",""],jobs.map(r=>'<tr><td>'+h(label(r))+'</td><td>'+h(r.payload.document.action)+'</td><td>'+badge(r.payload.status)+'</td><td>'+h(r.payload.progress?.rows||0)+' / '+h(r.payload.progress?.pages||0)+'</td><td><button data-action="sql-open-job" data-id="'+r.id+'">Open</button></td></tr>')):empty("No prepared job","Inspect a connection catalog or save and review a query."))+'</div>'+detail;
 }
 async function sqlMappings(){
+  const generation=renderNumber;
   const captures=(workspace.sql_capture||[]).filter(r=>r.payload.complete);
   const captureId=sqlSelection.capture||captures[0]?.id,planId=sqlSelection.plan||workspace.plan[0]?.id;
-  sqlMappingCapture=captureId?await entity("sql_capture",captureId):null;
-  sqlMappingPlan=planId?await entity("plan",planId):null;
+  const selectedCapture=captureId?await entity("sql_capture",captureId):null;
+  if(generation!==renderNumber||tab!=="sql")return "";
+  const selectedPlan=planId?await entity("plan",planId):null;
+  if(generation!==renderNumber||tab!=="sql")return "";
+  sqlMappingCapture=selectedCapture;sqlMappingPlan=selectedPlan;
   const tables=sqlMappingPlan?.payload.project.tables||[],tableName=sqlSelection.table||tables[0]?.name;
   const table=tables.find(t=>t.name===tableName);sqlSelection.table=table?.name||null;
   sqlDraftKey="mapping:"+captureId+":"+planId+":"+(sqlMappingPlan?.revision||0)+":"+tableName;
@@ -117,7 +126,8 @@ async function sqlMappings(){
   if(table&&sqlMappingCapture){
     const types=Object.fromEntries(sqlMappingCapture.payload.column_types.map(c=>[c.name,c]));
     fields=rowsTable(["Model field / type","Original captured SQL alias","Native information"],table.columns.map((c,i)=>{
-      const match=sqlMappingCapture.payload.columns.find(n=>n===c.name)||"";
+      const prior=(workspace.sql_mapping||[]).find(m=>m.payload.capture.id===captureId&&m.payload.plan.id===planId&&m.payload.table===tableName)?.payload.fields.find(f=>f.target===c.name)?.source;
+      const match=[prior,c.source_column,c.name].find(n=>sqlMappingCapture.payload.columns.includes(n))||"";
       return '<tr><td><strong>'+h(c.name)+'</strong><div class="muted">'+h(c.data_type||c.dataType||c.type||"")+'</div></td><td><select class="sql-binding-field" data-target="'+h(c.name)+'"><option value="">Choose…</option>'+sqlMappingCapture.payload.columns.map(n=>'<option value="'+h(n)+'"'+(n===match?" selected":"")+'>'+h(n)+'</option>').join("")+'</select></td><td>'+h(match?types[match]?.type:"Review the complete native type list below")+'</td></tr>';
     }));
   }
@@ -128,8 +138,9 @@ async function sqlMappings(){
     +'<div class="panel"><h2>Reviewed mappings</h2>'+(mappings.length?rowsTable(["Mapping","Review","Original plan",""],mappings.map(r=>'<tr><td>'+h(label(r))+'</td><td>'+h(r.payload.review_note)+'</td><td>'+h(r.payload.plan.id)+' · r'+h(r.payload.plan.revision)+'</td><td><button data-action="sql-apply-mapping" data-id="'+r.id+'">Apply as plan revision</button> '+inspectButton(r)+'</td></tr>')):empty("No reviewed mapping","Save the complete source-to-model mapping above."))+'</div>';
 }
 async function sqlReceiving(){
+  const generation=renderNumber;
   const receipts=workspace.sql_receipt||[],chosen=sqlSelection.receipt||receipts[0]?.id;
-  const receipt=chosen?await entity("sql_receipt",chosen):null;sqlVisibleRecord=receipt;
+  const receipt=chosen?await entity("sql_receipt",chosen):null;if(generation!==renderNumber||tab!=="sql")return "";sqlVisibleRecord=receipt;
   sqlDraftKey="receiving:"+(receipt?.id||"new")+":"+(receipt?.revision||0);
   let receiving="";
   if(receipt){const p=receipt.payload;
