@@ -22,8 +22,9 @@ The maintained source archive can contain up to 128 MiB of unpacked file content
 including all source files, the complete source manifest, package metadata, README
 and license. The compressed archive remains limited to 64 MiB; every installed
 member remains limited to 4 MiB, and the original archive inventory must contain
-at most 10,000 entries. The builder separately limits each source file to
-2 MiB and checks the complete package before materialization.
+at most 10,000 entries. The builder applies the same 4 MiB limit to each
+original source file and checks the complete package before materialization.
+A rejected source member reports its original path, byte count and applicable limit.
 
 Use this edition's maintained installer and `runtime-unpack.py` when the selected
 cumulative archive exceeds an earlier toolkit's 64 MiB unpacked limit. The
