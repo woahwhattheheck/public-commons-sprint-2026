@@ -21,8 +21,8 @@
     },
     {
       "path": "CONSULTATION.md",
-      "git_blob_sha": "a63b8f52f16ef96379e512a2aaf902e668cfee1b",
-      "bytes": 16489
+      "git_blob_sha": "685e86fa54f3b47f3ecc8c80e3f44b4405d3b441",
+      "bytes": 16548
     },
     {
       "path": "consultation.py",
@@ -41,8 +41,8 @@
     },
     {
       "path": "delivery/consultation-receiving.mjs",
-      "git_blob_sha": "960ad723b56cc5dc09113902f82e434ce49f4508",
-      "bytes": 31793
+      "git_blob_sha": "3312897b012c018e9b2f173c65f10b6a50e22acb",
+      "bytes": 32298
     },
     {
       "path": "demo.py",
@@ -166,8 +166,8 @@
     },
     {
       "path": "README.md",
-      "git_blob_sha": "3d45fe78506009388f733c5a75c00f5aee9e1239",
-      "bytes": 20682
+      "git_blob_sha": "23d9aec834fccf3fdc7dfc07760eed487276244c",
+      "bytes": 20728
     },
     {
       "path": "server.py",
@@ -206,8 +206,8 @@
     },
     {
       "path": "web/reviewer-guide.txt",
-      "git_blob_sha": "02ca525a6cdf2de247b7e0c9df4c4fd1072d3ded",
-      "bytes": 10105
+      "git_blob_sha": "7c531b4c0823275b9202eefdcd73363efc5f994d",
+      "bytes": 10117
     },
     {
       "path": "web/reviewer.css",
@@ -221,8 +221,8 @@
     },
     {
       "path": "web/reviewer.js",
-      "git_blob_sha": "c1334d025688891bbcce80b4b44a7b6b83845df6",
-      "bytes": 47955
+      "git_blob_sha": "1d80bcdd399ca5bbd938e0fb5d0ee77cd95f21f7",
+      "bytes": 48189
     },
     {
       "path": "web/style.css",

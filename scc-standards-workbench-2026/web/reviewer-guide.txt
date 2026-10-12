@@ -64,7 +64,7 @@ and all proposed wording together, your supplied reviewer details and the
 packet's return instructions. You can go back to edit comments or reviewer
 details before exporting.
 
-Export response downloads consultation-response-<response-id>.json. If an
+Export response downloads a JSON file named for the reviewed packet. If an
 unfinished comment contains complete wording, it is saved into the response
 before export. An unfinished observation with proposed wording still needs its
 comment text.
@@ -162,7 +162,8 @@ tous les commentaires enregistrés et les textes proposés, vos renseignements e
 les instructions de retour du dossier. Vous pouvez revenir modifier les
 commentaires ou vos renseignements avant l'exportation.
 
-Exporter la réponse télécharge consultation-response-<identifiant>.json. Si un
+Exporter la réponse télécharge un fichier JSON nommé d'après le dossier examiné.
+Si un
 commentaire inachevé contient une observation complète, il est conservé dans la
 réponse avant l'exportation. Un texte proposé dont l'observation reste vide exige
 que vous rédigiez le commentaire.

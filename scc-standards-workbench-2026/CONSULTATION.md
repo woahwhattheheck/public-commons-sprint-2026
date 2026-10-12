@@ -31,11 +31,11 @@ The recipient page contains the selected edition's public citations and explicit
 
 ## Work in the offline reviewer page
 
-Open `reviewer.html` from the downloaded packet. The **Instructions**, **Document**, **Worked cases**, **Your comments** and **Review & return** views share the same saved response. The language selector changes the page to English, French or paired text.
+Open `reviewer.html` from the downloaded packet. The **Instructions & reviewer**, **Read clauses**, **Worked cases**, **My comments** and **Review & return** views share the same saved response. The language selector changes the page to English, French or paired text.
 
-In **Document**, search titles and clause wording, open a clause, and use **Previous clause** and **Next clause** to continue reading. **Mark as read** records personal reading progress. The clause index can show all clauses, unread clauses or clauses with comments; it collapses on a phone to leave room for the document. Reading marks remain in the private draft. The original ordered cells in **Worked cases** appear as a labelled table that preserves blank values and real zero.
+In **Read clauses**, search titles and clause wording, open a clause, and use **Previous clause** and **Next clause** to continue reading. **Mark this clause read** records personal reading progress. The clause index can show all clauses, unread clauses or clauses with comments; it collapses on a phone to leave room for the document. Reading marks remain in the private draft. The original ordered cells in **Worked cases** appear as a labelled table that preserves blank values and real zero.
 
-Choose a clause or **General comment** to describe an observation and any proposed English or French wording. A saved comment keeps its entry identity when edited. **Your comments** searches the saved comments and pages longer responses. The complete return preview includes every saved comment.
+Choose a clause or **General comment** to describe an observation and any proposed English or French wording. A saved comment keeps its entry identity when edited. **My comments** searches the saved comments and pages longer responses. The complete return preview includes every saved comment.
 
 Use **Save draft** before closing. The page also tries local browser storage, which a browser may restrict for files opened from disk. A saved draft file is portable and retains reading progress. **Open draft / response** checks the original packet before opening it. Keep each packet with its own draft.
 
@@ -45,7 +45,7 @@ Names, organization and return contact are optional reviewer declarations. The a
 
 ## Receive original returned comments
 
-The operator's **Packets**, **Returns** and **Comments** queues follow the same review exchange. Search the queues, move between their pages, and filter comments by decision or language. A corrected return links to its retained predecessor. The comment panel presents the original wording, current clause, proposed paired text and recorded decision together; **Next undecided comment** continues the review without losing the selected return. On a phone, return to the queue to choose the next item.
+The operator's **Reviewer packets**, **Returned comments** and **Amendments & dispositions** queues follow the same review exchange. Search the queues, move between their pages, and filter comments by decision or language. A corrected return links to its retained predecessor. The comment panel presents the original wording, current clause, proposed paired text and recorded decision together; **Next needing decision** continues the review without losing the selected return. On a phone, return to the queue to choose the next item.
 
 In **Consultation receiving**, select the retained packet and choose the original returned JSON file. **Preview return** reads the file without saving project changes. It shows:
 

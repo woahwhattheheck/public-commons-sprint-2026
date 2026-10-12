@@ -103,13 +103,13 @@ function responseValue(){
 }
 function exportResponse(){
  try{
-  const value=responseValue(),filename="consultation-response-"+response.response_id+".json";
+  const value=responseValue(),filename=responseFilename("response","json");
   download(filename,value);lastExport={filename,at:value.exported_at};persist();changed=false;
   view="return";render();$("#saved").textContent=t("exported");mainFocus();
  }catch(x){error(x.message);}
 }
 function saveReadableCopy(){
- try{const value=responseValue();downloadFile("consultation-response-"+response.response_id+".html",responseDocument(value,value.exported_at),"text/html;charset=utf-8");persist();render();$("#saved").textContent=t("summarySaved");}
+ try{const value=responseValue();downloadFile(responseFilename("response","html"),responseDocument(value,value.exported_at),"text/html;charset=utf-8");persist();render();$("#saved").textContent=t("summarySaved");}
  catch(x){error(x.message);}
 }
 function renderReturn(){
@@ -121,6 +121,7 @@ function renderReturn(){
  $("#main").innerHTML=body;
 }
 
+function responseFilename(kind,extension){const title=String(packet.title||"review-packet").normalize("NFKD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"").slice(0,72)||"review-packet";return "consultation-"+kind+"-"+title+"."+extension;}
 function fresh(){return{schema:"standards-consultation-response/v1",packet_id:packet.packet_id,packet_sha256:envelope.packet_sha256,edition_id:packet.edition.id,source_edition_sha256:packet.source_edition_sha256,projection_sha256:packet.projection_sha256,response_id:uid("response"),prepared_at:new Date().toISOString(),reviewer:{name:"",organization:"",email:"",language:"en"},authored_example:false,comments:[]};}
 let response=fresh(),pendingEditor=null;
 function bound(value){return value&&value.schema==="standards-consultation-response/v1"&&value.packet_id===packet.packet_id&&value.packet_sha256===envelope.packet_sha256&&value.edition_id===packet.edition.id&&value.source_edition_sha256===packet.source_edition_sha256&&value.projection_sha256===packet.projection_sha256;}
@@ -309,7 +310,7 @@ document.addEventListener("change",e=>{if(e.target.closest("#reviewer-fields")||
 $("#search").addEventListener("input",renderOutline);
 $("#clause-filter").addEventListener("change",e=>{outlineFilter=e.target.value;persist(false);renderOutline();});
 $("#language").addEventListener("change",e=>{readReviewer();language=e.target.value;persist(false);render();});
-$("#save-draft").addEventListener("click",()=>{download("consultation-draft-"+response.response_id+".json",draftValue());changed=false;$("#saved").textContent=t("savedFile");});
+$("#save-draft").addEventListener("click",()=>{download(responseFilename("draft","json"),draftValue());changed=false;$("#saved").textContent=t("savedFile");});
 $("#load-draft").addEventListener("click",()=>$("#open-file").click());
 $("#preview-response").addEventListener("click",()=>goView("return"));
 $("#open-file").addEventListener("change",async e=>{

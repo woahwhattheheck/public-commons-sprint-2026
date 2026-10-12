@@ -27,7 +27,7 @@ Run `standards-workbench --workspace ./review-workspace --review-demo` to prepar
 
 The recipient can track unread clauses, search the paired document, save portable drafts and read every comment in **Review & return**. A readable HTML copy accompanies the packet-bound JSON return. The complete English/French guide travels with the downloaded packet.
 
-The operator's packet, return and comment queues provide search, paging, decision and language filters, predecessor links and a next-undecided action. Paired wording and the recorded decision remain together while the operator works through a return.
+The operator's Reviewer packets, Returned comments and Amendments & dispositions queues provide search, paging, decision and language filters, predecessor links and a Next needing decision action. Paired wording and the recorded decision remain together while the operator works through a return.
 
 The operator previews and retains the original return bytes. Exact duplicate content preserves existing comments and dispositions. A corrected return retains its actual predecessor and earlier unresolved comments. Proposed wording can become an explicit amendment to the working clause, with the exact current clause identity, before/after text and rationale.
 
