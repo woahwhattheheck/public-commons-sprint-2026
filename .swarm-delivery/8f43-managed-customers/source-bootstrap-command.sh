@@ -1,3 +1,4 @@
+export TMPDIR=/dev
 /opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3 -B - "$@" <<'SCF_ORIGINAL_8F43_SOURCE'
 # Transport the unchanged original bootstrap using D76C's existing source-packet format.
 # Original source identity is checked before the existing bootstrap executes.

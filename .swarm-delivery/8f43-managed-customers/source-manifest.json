@@ -68,10 +68,12 @@
   },
   "sourceTransport": {
     "path": "source-bootstrap-command.sh",
-    "gitBlob": "bfa815c7f908e63207fcac510b6d2a97f79a79e6",
-    "bytes": 73677,
+    "gitBlob": "755b20b360d1c14a47b7d9467c8690434d00e0fb",
+    "bytes": 73696,
     "originalGitBlob": "9adadbb5a8ac4bf7cf94a686c2b4f871caec1d57",
     "originalBytes": 227072,
-    "format": "D76C original literal/distance source packet; original Git blob validated before execution"
+    "format": "D76C original literal/distance source packet; original Git blob validated before execution",
+    "temporaryDirectory": "/dev",
+    "temporaryDirectoryScope": "Invoking shell and its original retained foreground"
   }
 }

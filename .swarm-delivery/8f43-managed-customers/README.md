@@ -82,7 +82,7 @@ The original `d3634ff5` operation retains its completed Geocodio browser-asset p
 
 ## One-command source transport
 
-`source-bootstrap-command.sh` carries the complete unchanged `source-bootstrap.py` through the original D76C source-packet format. The command is 73,677 ASCII bytes. It reconstructs all 227,072 original UTF-8 bytes, verifies Git blob `9adadbb5a8ac4bf7cf94a686c2b4f871caec1d57`, then executes those same bootstrap bytes in its current Python process. The native foreground, source selection, old-lifetime release, declarations and customer operations remain the ones above.
+`source-bootstrap-command.sh` carries the complete unchanged `source-bootstrap.py` through the original D76C source-packet format. The command is 73,696 ASCII bytes and exports `TMPDIR=/dev` before Bash prepares its large here-document. It reconstructs all 227,072 original UTF-8 bytes, verifies Git blob `9adadbb5a8ac4bf7cf94a686c2b4f871caec1d57`, then executes those same bootstrap bytes in its current Python process. The native foreground, source selection, old-lifetime release, declarations and customer operations remain the ones above.
 
 Run the complete command directly in the retained foreground, or invoke its saved file with Bash:
 
@@ -93,3 +93,5 @@ bash source-bootstrap-command.sh
 An original queued, undispatched continuation can use `bash source-bootstrap-command.sh --resume`; that passes the argument to the maintained original foreground recovery. Keep the current original record and reconcile any dispatched operation through its existing native lifecycle before selecting another command.
 
 This transport avoids a separate large source-file write before the bootstrap starts. The full readable Python source and every original input remain beside it for inspection.
+
+The original local foreground demonstrated why the temporary-directory selection matters: the full default filesystem rejected Bash's here-document before Python ran. The private `/dev` selection let the exact bootstrap verify its source and enter the original native admission. This is an invocation-specific temporary directory; keep the complete foreground alive through its original checkpoint and exit sequence.
