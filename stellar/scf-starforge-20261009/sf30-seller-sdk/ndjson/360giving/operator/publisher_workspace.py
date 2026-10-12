@@ -487,7 +487,7 @@ class PublisherWorkspace:
                                decisions=str(decisions / "decisions.json"), out=str(path))
         entry = {"schema": SCHEMA + ".candidate", "id": candidate_id, "editionId": edition_id,
                  "decisionId": decision["id"], "dataset": edition["dataset"],
-                 "candidateSha256": result["candidateSha256"], "grantCount": result["grantCount"],
+                 "programSha256": record["programSha256"], "candidateSha256": result["candidateSha256"], "grantCount": result["grantCount"],
                  "grantCorrections": result["grantCorrections"], "metadataFields": result["metadataFields"]}
         immutable(path / "operator-candidate.json", encoded(entry))
         return entry
@@ -679,6 +679,7 @@ class PublisherWorkspace:
                     sync_dir(destination.parent)
                 finally:
                     Path(tmp).unlink(missing_ok=True)
+            immutable(target / "source" / "manifest.json", archive.read("manifest.json"))
         original = target / "source"
         descriptor = read(original / "handoff.json")
         if (descriptor.get("schema") != HANDOFF or descriptor.get("workspaceId") != manifest["workspaceId"]
@@ -701,6 +702,8 @@ class PublisherWorkspace:
         if not edition["inputs"]["registry"] or edition["inputs"]["source"] != edition["sourceSha256"]:
             raise InputError("The original source and registry selection is incomplete")
         received_domain = target / "publisher"
+        with zipfile.ZipFile(original / "publisher.zip") as inner:
+            safe_members(inner, publisher.MAX_BYTES)
         domain = call_publisher("receive", file=str(original / "publisher.zip"), out=str(received_domain))
         if (domain["sourceSha256"] != edition["sourceSha256"]
                 or domain["grantCount"] != edition["grantCount"]

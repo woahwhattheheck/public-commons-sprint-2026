@@ -1,12 +1,14 @@
 "use strict";
 (async () => {
   const query = new URLSearchParams(location.search), editionId = query.get("edition");
-  let token = location.hash.slice(1);
+  const fragment = location.hash.slice(1);
+  const fragmentToken = /^[A-Za-z0-9_-]{43}$/.test(fragment) ? fragment : "";
+  let token = fragmentToken;
   try {
-    if (token) sessionStorage.setItem("sf360-console-token", token);
+    if (fragmentToken) sessionStorage.setItem("sf360-console-token", fragmentToken);
     else token = sessionStorage.getItem("sf360-console-token") || "";
   } catch {}
-  if (location.hash) history.replaceState(null, "", location.pathname + location.search);
+  if (fragmentToken) history.replaceState(null, "", location.pathname + location.search);
   const feedback = message => { document.getElementById("action-state").textContent = message; };
   async function api(path, options = {}) {
     const response = await fetch(path, {
