@@ -2,7 +2,7 @@
 import { createHash } from 'node:crypto';
 import { join, resolve } from 'node:path';
 import { privateDirectory, atomicJson, readPrivateJson, withPrivateLock } from '../routescan/quota.mjs';
-import { CAPTURE, MAX_CAPTURE_BYTES, MAX_PAGE_BYTES, canonical, clone, need, normalizeSelection,
+import { CAPTURE, PUBLIC_CAPTURE, readPublicTable, MAX_CAPTURE_BYTES, MAX_PAGE_BYTES, canonical, clone, need, normalizeSelection,
   fredRequest, readSeriesMetadata, readObservationPage, inspectCapture } from './model.mjs';
 
 export const hash = bytes => createHash('sha256').update(bytes).digest('hex');
@@ -12,10 +12,14 @@ export async function optionalJson(path, limit = MAX_CAPTURE_BYTES * 2) {
   try { return await readPrivateJson(path, limit); } catch (error) { if (error.code === 'ENOENT') return null; throw error; }
 }
 export function captureIdentity(capture) {
-  return { schema: CAPTURE, selection: capture.selection, records: capture.records };
+  return capture.schema === PUBLIC_CAPTURE
+    ? { schema: PUBLIC_CAPTURE, selection: capture.selection, source: capture.source }
+    : { schema: CAPTURE, selection: capture.selection, records: capture.records };
 }
 export function validateCapture(capture) {
   need(capture?.captureSha256 === digest(captureIdentity(capture)), 'The retained FRED capture identity changed.');
+  if (capture.schema === PUBLIC_CAPTURE)
+    need(hash(Buffer.from(capture.source?.table_text ?? '', 'utf8')) === capture.source?.sha256, 'The original public-table bytes changed.');
   for (const record of capture.records ?? [])
     need(hash(Buffer.from(record.body ?? '', 'utf8')) === record.sha256, 'An original FRED response changed.');
   return inspectCapture(capture);
@@ -41,6 +45,16 @@ export function sealFredCapture(selection, records) {
   validateCapture(capture);
   return capture;
 }
+
+export function sealFredPublicTable(input) {
+  const source = clone(input), model = readPublicTable(source);
+  need(hash(Buffer.from(source.table_text, 'utf8')) === source.sha256, 'The original public-table digest changed.');
+  const capture = { schema: PUBLIC_CAPTURE, selection: model.selection, source };
+  capture.captureSha256 = digest(captureIdentity(capture));
+  validateCapture(capture);
+  return capture;
+}
+
 async function responseBody(response, signal) {
   const length = response.headers.get('content-length');
   need(length === null || /^\d+$/.test(length) && Number(length) <= MAX_PAGE_BYTES,

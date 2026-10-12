@@ -1,5 +1,6 @@
 // MIT. One native Redis merchant, original buyer and retained-release journey.
-// Requires an installed redis-server 7+; uses the existing local x402 facilitator fixture.
+// Native TCP mode requires redis-server 7+. Optional upstash-rest uses an owned ephemeral database.
+// Both modes use the existing local x402 facilitator fixture.
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import { createServer as tcpServer } from 'node:net';
@@ -10,7 +11,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { randomBytes, createHash } from 'node:crypto';
-import { createClient } from '@redis/client';
+import { validateUpstashEndpoint } from './upstash-rest.mjs';
 import { createRedisQuerySource } from './source.mjs';
 import { compileRedisQueries } from './declaration.mjs';
 import { prepareRedisSeller, verifyPreparedRedisSeller } from './prepare.mjs';
@@ -19,6 +20,38 @@ import { X402BuyerClient } from '../../sf31-buyer-client/buyer.mjs';
 import { prepareBuyerResponseFile } from '../../sf31-buyer-client/response-file.mjs';
 import { initReleaseStore, stageRelease, inspectRelease, compareReleases } from '../../sf82-seller-pilot/releases.mjs';
 import { startReleaseConsole } from '../../sf82-seller-pilot/release-console.mjs';
+
+const http = process.env.SF30_REDIS_JOURNEY_PROVIDER === 'upstash-rest';
+if (process.env.SF30_REDIS_JOURNEY_PROVIDER && !http) throw new Error('REDIS_JOURNEY_PROVIDER_INVALID');
+const { createClient } = http ? {} : await import('@redis/client');
+const endpoint = http ? validateUpstashEndpoint(process.env.UPSTASH_REDIS_REST_URL) : null;
+const seedToken = process.env.UPSTASH_REDIS_REST_TOKEN;
+if (http && (!seedToken || process.env.SF30_UPSTASH_JOURNEY_ALLOW_SEED !== 'owned-ephemeral-database'))
+  throw new Error('UPSTASH_JOURNEY_REQUIRES_OWNED_EPHEMERAL_DATABASE');
+const prefix = http ? 'sf30-journey:' + randomBytes(12).toString('hex') + ':' : '';
+const key = value => prefix + value;
+async function createRestSeed() {
+  const seeded = new Set(); let opened = true;
+  async function send(command, binary) {
+    const headers = { authorization: 'Bearer ' + seedToken, 'user-agent': 'starforge-merchant/native-journey',
+      'content-type': binary ? 'application/octet-stream' : 'application/json' };
+    const url = binary ? endpoint + '/set/' + encodeURIComponent(command[1]) : endpoint;
+    const response = await fetch(url, { method: 'POST', redirect: 'error', headers,
+      signal: AbortSignal.timeout(15000), body: binary ?? JSON.stringify(command) });
+    const value = await response.json();
+    if (response.status !== 200 || value.error) throw new Error('UPSTASH_SEED:' + String(value.error ?? response.status).slice(0,512));
+    if (['SET','HSET','ZADD','XADD'].includes(command[0])) seeded.add(command[1]);
+    return value.result;
+  }
+  return {
+    get isOpen() { return opened; }, destroy() { opened = false; },
+    info: section => send(['INFO', section]), sendCommand: command => send(command),
+    set: (name, value) => Buffer.isBuffer(value) ? send(['SET',name],value) : send(['SET',name,value]),
+    hSet: (name, fields) => send(['HSET',name,...Object.entries(fields).flat()]),
+    zAdd: (name, rows) => send(['ZADD',name,...rows.flatMap(row => [String(row.score),row.value])]),
+    cleanup: async () => { const count = seeded.size; if (count) await send(['DEL',...seeded]); seeded.clear(); return count; },
+  };
+}
 
 const work = await mkdtemp(join(tmpdir(), 'sf30-redis-journey-'));
 const output = process.env.SF30_REDIS_JOURNEY_OUTPUT;
@@ -29,12 +62,13 @@ const portProbe = tcpServer(); await listen(portProbe);
 const port = portProbe.address().port; await shutdown(portProbe);
 const binary = process.env.REDIS_SERVER ?? 'redis-server';
 let nativeLog = '', operator, database, source, verified = 0, settled = 0;
-const password = randomBytes(24).toString('hex'), envName = 'SF30_REDIS_JOURNEY_PASSWORD';
+const password = http ? (process.env.UPSTASH_REDIS_REST_READ_TOKEN ?? seedToken) : randomBytes(24).toString('hex');
+const envName = 'SF30_REDIS_JOURNEY_PASSWORD';
 const priorEnv = process.env[envName]; process.env[envName] = password;
-const engine = spawn(binary, ['--bind', '127.0.0.1', '--port', String(port), '--save', '',
+const engine = http ? null : spawn(binary, ['--bind', '127.0.0.1', '--port', String(port), '--save', '',
   '--appendonly', 'no', '--dir', work], { stdio: ['ignore', 'pipe', 'pipe'] });
-engine.stdout.on('data', value => { nativeLog = (nativeLog + value).slice(-8192); });
-engine.stderr.on('data', value => { nativeLog = (nativeLog + value).slice(-8192); });
+engine?.stdout.on('data', value => { nativeLog = (nativeLog + value).slice(-8192); });
+engine?.stderr.on('data', value => { nativeLog = (nativeLog + value).slice(-8192); });
 const facilitator = createServer(async (req, res) => {
   for await (const chunk of req) { /* Original native SDK request body. */ }
   const result = req.url === '/supported' ? { kinds: [{ x402Version: 2, scheme: 'exact', network: 'stellar:testnet' }], extensions: ['bazaar'], signers: {} }
@@ -44,6 +78,7 @@ const facilitator = createServer(async (req, res) => {
   res.writeHead(result ? 200 : 404, { 'content-type': 'application/json' }); res.end(JSON.stringify(result));
 });
 try {
+  if (!http) {
   await Promise.race([
     new Promise((resolve, reject) => {
       const onData = () => { if (nativeLog.includes('Ready to accept connections')) { engine.stdout.off('data', onData); resolve(); } };
@@ -54,32 +89,39 @@ try {
   ]);
   database = createClient({ socket: { host: '127.0.0.1', port, reconnectStrategy: false }, database: 2 });
   database.on('error', () => {}); await database.connect();
-  const version = (await database.info('server')).match(/^redis_version:(.+)$/m)?.[1].trim();
-  await database.sendCommand(['ACL', 'SETUSER', 'merchant', 'reset', 'on', '>' + password,
+  } else database = await createRestSeed();
+  const serverInfo = await database.info('server');
+  const version = typeof serverInfo === 'string' ? serverInfo.match(/^redis_version:(.+)$/m)?.[1]?.trim() : undefined;
+  if (!version) throw new Error('REDIS_SERVER_VERSION_UNAVAILABLE');
+  if (!http) await database.sendCommand(['ACL', 'SETUSER', 'merchant', 'reset', 'on', '>' + password,
     '~merchant:*', '+ping', '+eval_ro', '+strlen', '+get', '+hstrlen', '+hmget', '+zrange', '+xrange', '+select']);
   const binaryValue = Buffer.from([255, 0, 239, 187, 191]);
-  await database.set('merchant:availability:catalog', binaryValue);
-  await database.hSet('merchant:catalog:north', { product_id: 'SKU-001', name: 'Bearing', price_atomic: '9007199254740993' });
-  await database.zAdd('merchant:rankings:daily', [{ score: 1.25, value: 'first' }, { score: 2.5, value: 'second' }, { score: 3.75, value: 'third' }]);
-  await database.sendCommand(['XADD', 'merchant:events', '1-0', 'event_type', 'created', 'event_type', 'updated', 'product_id', 'SKU-001', 'quantity', '3']);
-  await database.sendCommand(['XADD', 'merchant:events', '2-0', 'event_type', 'sold', 'product_id', 'SKU-002']);
-  await database.sendCommand(['XADD', 'merchant:events', '3-0', 'event_type', 'restocked', 'product_id', 'SKU-003', 'quantity', '7']);
-  await database.set('merchant:large', 'x'.repeat(1025));
-  await database.set('merchant:binary-large', Buffer.alloc(800, 255));
+  await database.set(key('merchant:availability:catalog'), binaryValue);
+  await database.hSet(key('merchant:catalog:north'), { product_id: 'SKU-001', name: 'Bearing', price_atomic: '9007199254740993' });
+  await database.zAdd(key('merchant:rankings:daily'), [{ score: 1.25, value: 'first' }, { score: 2.5, value: 'second' }, { score: 3.75, value: 'third' }]);
+  await database.sendCommand(['XADD', key('merchant:events'), '1-0', 'event_type', 'created', 'event_type', 'updated', 'product_id', 'SKU-001', 'quantity', '3']);
+  await database.sendCommand(['XADD', key('merchant:events'), '2-0', 'event_type', 'sold', 'product_id', 'SKU-002']);
+  await database.sendCommand(['XADD', key('merchant:events'), '3-0', 'event_type', 'restocked', 'product_id', 'SKU-003', 'quantity', '7']);
+  await database.set(key('merchant:large'), 'x'.repeat(1025));
+  await database.set(key('merchant:binary-large'), Buffer.alloc(800, 255));
   const declaration = JSON.parse(await readFile(new URL('./example-source.json', import.meta.url)));
-  declaration.connection = { host: '127.0.0.1', port, database: 2, username: 'merchant', passwordEnv: envName, tls: 'local-plaintext' };
+  declaration.connection = http ? { transport: 'upstash-rest', endpoint, tokenEnv: envName }
+    : { host: '127.0.0.1', port, database: 2, username: 'merchant', passwordEnv: envName, tls: 'local-plaintext' };
+  if (http) for (const query of Object.values(declaration.queries))
+    query.key = typeof query.key === 'string' ? key(query.key) : { ...query.key, prefix: key(query.key.prefix) };
   declaration.queries.catalog.fields.missing = 'missing_field';
   declaration.queries.leaderboard.maxRows = 2; declaration.queries.leaderboard.parameters.offset.maximum = '2';
   declaration.queries.events.maxRows = 2;
   const queries = { ...declaration.queries,
-    oversized: { kind: 'get', key: 'merchant:large', maxBytes: 1024 },
-    encodedOversized: { kind: 'get', key: 'merchant:binary-large', maxBytes: 1024 },
+    oversized: { kind: 'get', key: key('merchant:large'), maxBytes: 1024 },
+    encodedOversized: { kind: 'get', key: key('merchant:binary-large'), maxBytes: 1024 },
     offsetBoundary: { ...declaration.queries.leaderboard, maxRows: 1,
       parameters: { offset: { type: 'integer', minimum: '0', maximum: '2', enum: ['0', '2'], default: '0' } } },
     afterBoundary: { ...declaration.queries.events, parameters: { after: { type: 'string', maxLength: 41, enum: ['-'], default: '-' } } },
   };
-  const connection = { socket: { host: '127.0.0.1', port }, database: 2, username: 'merchant', password };
-  await assert.rejects(createRedisQuerySource({ connection: { ...connection, password: 'wrong' }, queries }), error =>
+  const connection = http ? { transport: 'upstash-rest', endpoint, token: password }
+    : { socket: { host: '127.0.0.1', port }, database: 2, username: 'merchant', password };
+  await assert.rejects(createRedisQuerySource({ connection: { ...connection, ...(http ? { token: 'wrong' } : { password: 'wrong' }) }, queries }), error =>
     ['SOURCE_ACCESS_DENIED', 'QUERY_UNAVAILABLE'].includes(error.code));
   source = await createRedisQuerySource({ connection, queries, maxConnections: 2, maxPending: 8 });
   assert.deepEqual((await source.query('availability', {})).rows[0].availability, { base64: binaryValue.toString('base64') });
@@ -97,10 +139,12 @@ try {
     parameters: { after: { type: 'string', maxLength: 41, enum: ['bad'] } } } }));
   const nativeStatus = source.status(); await source.close(); source = null;
   // The merchant ACL independently rejects mutation and undeclared key access.
+  if (!http) {
   const reader = createClient({ ...connection, disableClientInfo: true }); reader.on('error', () => {});
   await reader.connect();
-  try { await assert.rejects(reader.set('merchant:forbidden', 'x'), /NOPERM/); await assert.rejects(reader.get('other:key'), /NOPERM/); }
+  try { await assert.rejects(reader.set(key('merchant:forbidden'), 'x'), /NOPERM/); await assert.rejects(reader.get('other:key'), /NOPERM/); }
   finally { reader.destroy(); }
+  } else await assert.rejects(database.sendCommand(['EVAL_RO', "return redis.call('SET', KEYS[1], 'x')", '1', key('merchant:forbidden')]), /read.?only|write commands/i);
 
   await listen(facilitator);
   const authoring = join(work, 'authoring'); await mkdir(authoring);
@@ -108,8 +152,15 @@ try {
   const plan = JSON.parse(await readFile(new URL('./example-merchant-plan.json', import.meta.url)));
   plan.routes[1].parameterDescriptions = { region: 'Reviewed region' };
   await write(sourceFile, declaration); await write(planFile, plan);
+  const workspaceJourney = process.env.SF30_REDIS_JOURNEY_WORKSPACE === '1'
+    ? await (await import('./workspace/native-journey.mjs')).runRedisWorkspaceJourney({
+      sourceFile, planFile, root: join(work, 'authoring-workspace'),
+      runtime: { port: 0, allowLocalFacilitator: true, facilitator: 'http://127.0.0.1:' + facilitator.address().port },
+    }) : undefined;
   const firstPackage = await prepareRedisSeller({ sourceFile, planFile, directory: join(authoring, 'first') });
-  await verifyPreparedRedisSeller(firstPackage.directory);
+  const verifiedFirst = await verifyPreparedRedisSeller(firstPackage.directory);
+  assert.deepEqual(firstPackage.requiredEnvironment, [envName]);
+  assert.deepEqual(verifiedFirst.requiredEnvironment, [envName]);
   const root = join(work, 'releases'); await initReleaseStore(root);
   const runtime = { port: 0, allowLocalFacilitator: true, facilitator: `http://127.0.0.1:${facilitator.address().port}` };
   await stageRelease(root, { id: 'first', redisPackage: firstPackage.directory, runtime });
@@ -121,6 +172,7 @@ try {
   assert.ok(comparison.runtimeChanges.some(change => change.field === 'redis'));
   await rm(authoring, { recursive: true });
   const retained = await inspectRelease(root, 'first'); assert.equal(retained.redis.queries.leaderboard.maxRows, 2);
+  assert.deepEqual(retained.redis.credentialReferences, [envName]);
   const clientDirectory = join(root, 'releases', 'first', 'redis', 'package', 'client');
   assert.equal((await inspectSellerClientExport({ directory: clientDirectory })).state, 'COMPLETE');
   const generated = await import(pathToFileURL(join(clientDirectory, 'seller-client.mjs')));
@@ -163,16 +215,18 @@ try {
   state = await call('/api/restart', { expectedGeneration: 3, instanceId: state.console.instanceId });
   assert.equal((await buy('leaderboard', { offset: '0' }, '10000', 'rank-restored')).rowCount, 2);
   await call('/api/stop', { instanceId: state.console.instanceId });
-  const result = { result: 'PASS', redisVersion: version, nativeClient: '@redis/client@6.2.1', database: 2,
+  const removedSeedKeys = http ? await database.cleanup() : undefined;
+  const result = { result: 'PASS', redisVersion: version, nativeClient: http ? 'Upstash REST (HTTPS RESP2)' : '@redis/client@6.2.1', database: http ? 0 : 2,
+    ...(http ? { provider: 'upstash-rest', removedSeedKeys, credentialMode: process.env.UPSTASH_REDIS_REST_READ_TOKEN ? 'DEDICATED_READ_TOKEN' : 'OWNED_EPHEMERAL_DATABASE' } : {}),
     nativeStatus, nativeVerifies: verified, nativeSettlements: settled, facilitator: 'LOCAL_PROTOCOL_FIXTURE',
-    journeys: ['ACL and authenticated database selection', 'binary and exact scalar preservation', 'native rank and stream pagination',
+    journeys: [http ? 'native Upstash HTTPS, authentication and read-only Lua' : 'ACL and authenticated database selection', 'binary and exact scalar preservation', 'native rank and stream pagination',
       'original generated client and buyer response files', 'retained source after authoring removal', 'native child upgrade and rollback'],
-    deliveries };
+    deliveries, ...(workspaceJourney ? { workspace: workspaceJourney } : {}) };
   if (output) await write(output, result); console.log(JSON.stringify(result));
 } finally {
   await operator?.close(); await source?.close(); if (database?.isOpen) database.destroy();
   if (facilitator.listening) await shutdown(facilitator);
-  if (engine.exitCode === null) { const exited = once(engine, 'exit'); engine.kill('SIGTERM'); await exited; }
+  if (engine?.exitCode === null) { const exited = once(engine, 'exit'); engine.kill('SIGTERM'); await exited; }
   if (priorEnv === undefined) delete process.env[envName]; else process.env[envName] = priorEnv;
   await rm(work, { recursive: true, force: true });
 }

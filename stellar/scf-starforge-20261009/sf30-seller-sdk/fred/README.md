@@ -25,6 +25,30 @@ Source acquisition uses the operator’s existing FRED API key through the `FRED
 
 FRED’s API documentation specifies an API key for requests and a user’s own key for an application. See the original [API key contract](https://fred.stlouisfed.org/docs/api/api_key.html). Existing configured environments can supply the key without a new account or application setup.
 
+
+## Use the retained UNRATE source
+
+The repository includes the complete [official UNRATE public-table source](sources/unrate-20261012.public-table.json), retrieved from [FRED's published table](https://fred.stlouisfed.org/data/UNRATE) on 2026-10-12 at 01:08:43.499 UTC. Its 945 observations cover January 1948 through September 2026. The original publisher is the U.S. Bureau of Labor Statistics; values are monthly, seasonally adjusted percentages. The source's update label is retained verbatim. Its original missing marker at 2025-10-01 remains a missing observation.
+
+The retained table text contains 17,369 UTF-8 bytes with SHA-256 `185b90004b852d00bbeef97cbafaae553ec6f1c8513b5a07ad56ca00d7218588`. The source file includes every original row and metadata line. Its wrapper records the actual retrieval timestamp, source URL, count, byte count and table digest.
+
+Start this concrete economic project from the source directory:
+
+```sh
+node cli.mjs init --project /absolute/private/unrate-project \
+  --title "UNRATE economic edition" --selection examples/unrate-selection.json
+node cli.mjs import --project /absolute/private/unrate-project \
+  --id unrate-source-20261012 --expected-revision 1 \
+  --source sources/unrate-20261012.public-table.json
+node cli.mjs serve --project /absolute/private/unrate-project --port 0
+```
+
+The import returns the original capture ID and revision 2. Open **Editions & review** to inspect all 945 rows, retain the review and publish it with your configured merchant payment terms. This source can immediately supply the native customer operation, project export and receiving flow below.
+
+A public-table import uses `commons.retained-public-table.v1`; `source.mjs` exports `sealFredPublicTable` to convert that complete original transport into `stellar-forge.fred-public-table-capture.v1`. The parser verifies the exact official source URL, original metadata, full date range, complete row count, date order, original strings and source digest. Both source formats enter the same retained project and merchant workflow.
+
+The public table's `as_of` column records the UTC retrieval date, with `time_basis=PUBLIC_TABLE_RETRIEVAL_DATE`. API editions use `time_basis=FRED_REALTIME_DATE` and retain their original real-time interval fields. Public-table real-time interval cells are empty because the page publishes a current snapshot. The edition manifest and browser series detail carry this distinction, the complete retrieval timestamp and original publisher metadata. A comparison of successive complete public tables includes newly published observation dates; API comparisons retain their explicitly selected interval.
+
 ## Select the source and vintage
 
 The source selection has this format:
@@ -88,7 +112,8 @@ The customer projection always retains these columns together:
 | `date` | Original observation date |
 | `value` | Original numeric string or missing marker |
 | `missing` | Whether the original value is `.` |
-| `as_of` | Selected information vintage |
+| `as_of` | API information vintage or UTC public-table retrieval date, identified by `time_basis` |
+| `time_basis` | `FRED_REALTIME_DATE` for the API, `PUBLIC_TABLE_RETRIEVAL_DATE` for the published table |
 | `units` | Source units |
 | `frequency` | Original source frequency |
 | `seasonal_adjustment` | Original source adjustment |
@@ -105,7 +130,7 @@ starforge fred review --project /absolute/private/economic-project \
 
 ## Compare retained vintages
 
-Select two captures with the same series and observation interval. The comparison identifies added dates, removed dates, revised values, changes to missing values and changes to the series’ meaning. Titles, units, frequency, seasonal adjustment, coverage, update time and notes have their own metadata comparison.
+Select two captures with the same series and source mode. API captures also retain the same observation interval. The comparison identifies added dates, removed dates, revised values, changes to missing values and changes to the series’ meaning. Titles, units, frequency, seasonal adjustment, coverage, update time and notes have their own metadata comparison.
 
 An exact decimal difference is available when both original values are numeric and their units, frequency and adjustment match. It uses integer decimal arithmetic, preserving precision. A meaning change carries its original field differences and keeps its values directly inspectable. Each row remains attached to its original series and observation date.
 
@@ -200,7 +225,7 @@ Every project mutation supplies the revision the operator reviewed. A concurrent
 | Export | Main interfaces |
 | --- | --- |
 | `./seller/fred/model` | `normalizeSelection`, `inspectCapture`, `projectionPolicy`, `compareCaptures`, `exactDifference` |
-| `./seller/fred/source` | `captureFred`, `sealFredCapture`, `validateCapture`, `readFredCapture` |
+| `./seller/fred/source` | `captureFred`, `sealFredCapture`, `sealFredPublicTable`, `validateCapture`, `readFredCapture` |
 | `./seller/fred/project` | Project initialization, source capture/import, review, publication, export and receiving |
 | `./seller/fred` | Immutable editions, original merchant, customer preparation, execution, recovery and delivery export |
 | `./seller/fred/workspace` | `startFredWorkspace` |

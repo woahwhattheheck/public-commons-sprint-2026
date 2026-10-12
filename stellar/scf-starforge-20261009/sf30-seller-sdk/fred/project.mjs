@@ -3,7 +3,7 @@ import { join, resolve } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { privateDirectory, atomicJson, readPrivateJson, withPrivateLock } from '../routescan/quota.mjs';
 import { canonical, clone, need, operationId, normalizeSelection, projectionPolicy, compareCaptures, MAX_CAPTURE_BYTES } from './model.mjs';
-import { hash, digest, jsonBytes, optionalJson, validateCapture, captureFred, storeFredCapture } from './source.mjs';
+import { hash, digest, jsonBytes, optionalJson, validateCapture, captureFred, storeFredCapture, sealFredPublicTable } from './source.mjs';
 
 const SCHEMA = 'stellar-forge.fred-project.v1';
 const BUNDLE = 'stellar-forge.fred-project-bundle.v1';
@@ -115,7 +115,7 @@ async function adoptCapture(state, directory, capture) {
   const model = validateCapture(capture), captureId = capture.captureSha256;
   await storeFredCapture(fredCaptureDirectory(directory, captureId), capture);
   if (!state.captures.some(item => item.id === captureId))
-    state.captures.push({ id: captureId, selection: model.selection, rowCount: model.rowCount, missing: model.missing,
+    state.captures.push({ id: captureId, selection: model.selection, sourceMode: model.sourceMode, timeBasis: model.timeBasis, rowCount: model.rowCount, missing: model.missing,
       series: model.series, responses: model.sourceResponses, importedAt: new Date().toISOString() });
   state.selectedCapture = captureId;
   return { captureId, rowCount: model.rowCount, missing: model.missing };
@@ -127,6 +127,7 @@ export async function configureFredProject({ directory, id, expectedRevision, se
   });
 }
 export async function importFredCapture({ directory, id, expectedRevision, capture } = {}) {
+  if (capture?.version === 'commons.retained-public-table.v1') capture = sealFredPublicTable(capture);
   validateCapture(capture);
   return transact(directory, { id, expectedRevision, kind: 'import', payload: { captureId: capture.captureSha256 } },
     (state, root) => adoptCapture(state, root, capture));

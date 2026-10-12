@@ -6,7 +6,7 @@ else token = sessionStorage.getItem('fred-session') ?? '';
 let state, publication, customerPublication, currentPage, comparisonPage, delivery, previous = null;
 let rowOffset = 0, comparisonOffset = 0, selectionDirty = false;
 const freshId = prefix => prefix + '-' + crypto.randomUUID().replaceAll('-', '');
-const defaults = { fields: ['series','date','value','missing','as_of','realtime_start','realtime_end','units','frequency','seasonal_adjustment'],
+const defaults = { fields: ['series','date','value','missing','as_of','time_basis','realtime_start','realtime_end','units','frequency','seasonal_adjustment'],
   filters: ['series','missing'], ranges: ['date'], sorts: ['date','series'], defaultLimit: 25, maxLimit: 100 };
 $('policy').value = JSON.stringify(defaults, null, 2);
 $('intent').value = freshId('fred');
@@ -57,7 +57,7 @@ function select(id, choices, wanted) {
   for (const [value, label] of choices) { const option = document.createElement('option'); option.value = value; option.textContent = label; control.append(option); }
   if (choices.some(([value]) => value === selected)) control.value = selected;
 }
-const labelCapture = item => item.selection.asOf + ' · ' + item.selection.series.join(', ') + ' · ' + item.rowCount + ' rows · ' + item.id.slice(0, 10);
+const labelCapture = item => (item.sourceMode === 'PUBLIC_TABLE' ? 'Captured ' : 'Vintage ') + item.selection.asOf + ' · ' + item.selection.series.join(', ') + ' · ' + item.rowCount + ' rows · ' + item.id.slice(0, 10);
 function renderState(value) {
   state = value.project; $('project-title').textContent = state.title + ' · revision ' + state.revision;
   $('summary').replaceChildren();
@@ -97,7 +97,7 @@ async function showRows() {
   currentPage = await api('/api/observations?' + query);
   select('row-series', [['','All original series'], ...currentPage.series.map(item => [item.id,item.id + ' · ' + item.title])]);
   table('observations', currentPage.rows);
-  table('series-detail', currentPage.series, ['id','title','asOf','frequency','units','seasonalAdjustment','count','missing','lastUpdated','notes','sourceUrl']);
+  table('series-detail', currentPage.series, ['id','title','publisher','asOf','timeBasis','frequency','units','seasonalAdjustment','count','missing','lastUpdated','notes','sourceUrl']);
   $('row-count').textContent = currentPage.total + ' observations · ' + (currentPage.total ? rowOffset + 1 : 0) + '–' + Math.min(rowOffset + 100, currentPage.total);
   $('rows-previous').disabled = rowOffset === 0; $('rows-next').disabled = rowOffset + 100 >= currentPage.total;
 }
@@ -120,7 +120,7 @@ async function showPublication(customer = false) {
       payment: value.plan.payment, resource: value.plan.resource, sourceFiles: value.plan.downloads }, null, 2);
   } else {
     publication = value;
-    table('publication-detail', [{ edition: value.edition.editionId, vintage: value.edition.selection.asOf,
+    table('publication-detail', [{ edition: value.edition.editionId, sourceMode: value.edition.sourceMode, asOf: value.edition.selection.asOf, timeBasis: value.edition.timeBasis,
       rows: value.edition.rowCount, snapshot: value.edition.snapshot, resource: value.plan.resource, payment: value.plan.payment }]);
   }
   return value;

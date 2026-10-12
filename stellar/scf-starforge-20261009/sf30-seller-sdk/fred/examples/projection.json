@@ -5,6 +5,7 @@
     "value",
     "missing",
     "as_of",
+    "time_basis",
     "realtime_start",
     "realtime_end",
     "units",
