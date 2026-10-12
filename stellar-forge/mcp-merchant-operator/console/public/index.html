@@ -24,7 +24,7 @@
     <div id="connected" hidden>
       <section class="profile-bar" aria-label="Operator profile">
         <div class="profile-picker"><label for="profiles">Saved profile</label><select id="profiles"><option value="">Choose a profile</option></select></div>
-        <div class="actions"><button id="new-profile">New profile</button><button id="rename-profile">Rename</button><button id="export-profile">Export profile</button><button id="import-profile">Import profile</button></div>
+        <div class="actions"><button id="new-profile">New profile</button><button id="rename-profile">Rename</button><button id="review-host">Review host</button><button id="export-profile">Export profile</button><button id="import-profile">Import profile</button></div>
         <input id="profile-file" type="file" accept="application/json,.json" hidden>
       </section>
       <form id="profile-form" class="panel compact" hidden>
@@ -47,6 +47,21 @@
           <section class="panel"><h3>Configured providers</h3><p class="hint">A provider opens when its original operation needs it.</p><div class="table-wrap"><table><thead><tr><th>Provider</th><th>State</th><th>Load time</th><th>Dependencies</th></tr></thead><tbody id="providers"></tbody></table></div></section>
           <section class="panel"><h3>Accepted native work</h3><div id="host-activity"></div><details><summary>Provider shutdown state</summary><pre id="host-shutdown"></pre></details><h3>Host identity</h3><dl id="host-details" class="properties"></dl><h3>Configured release sources</h3><div id="host-sources"></div><details><summary>Complete host snapshot</summary><pre id="host-json"></pre></details></section>
         </div>
+        <section id="host-review-panel" class="panel host-review" hidden aria-labelledby="host-review-title">
+          <div class="section-heading"><div><p class="eyebrow">Saved host comparison</p><h3 id="host-review-title">Review a host change</h3></div><span id="host-review-state" class="tag"></span></div>
+          <p>Compare this host with the profile’s saved tool definitions and provider declarations. Save a new binding to retain the current host alongside the earlier versions.</p>
+          <div class="review-selection"><div><label for="review-binding">Saved binding</label><select id="review-binding"><option value="">Current saved binding</option></select></div><div class="actions"><button id="compare-host">Compare with current host</button><button id="export-host-review" disabled>Export comparison</button><button id="adopt-host-snapshot">Save this host binding</button></div></div>
+          <div id="host-review-empty" class="empty">Choose a saved binding and compare it with this host.</div>
+          <div id="host-review-content" hidden>
+            <p id="host-review-scope" class="hint"></p><div id="review-metrics" class="metrics"></div>
+            <div class="columns"><section><h4>Saved host</h4><dl id="review-before" class="properties"></dl></section><section><h4>Current host</h4><dl id="review-after" class="properties"></dl></section></div>
+            <form id="review-filter" class="review-filter"><div><label for="review-search">Find a change</label><input id="review-search" type="search" placeholder="Tool, provider or source"></div><div><label for="review-category">Category</label><select id="review-category"><option value="">All changes</option><option>Configuration</option><option>Capacity</option><option>Tools</option><option>Providers</option><option>Sources</option></select></div><button type="submit">Apply filters</button></form>
+            <div class="table-wrap"><table><thead><tr><th>Category</th><th>Change</th><th>Name</th><th>Details</th></tr></thead><tbody id="review-changes"></tbody></table></div><p id="review-no-changes" class="empty"></p>
+            <div class="pager"><button id="previous-review">Previous</button><span id="review-page" class="hint"></span><button id="next-review">Next</button></div>
+            <details><summary>Complete comparison</summary><pre id="host-review-json"></pre></details>
+          </div>
+          <details><summary id="binding-history-count">Retained host bindings</summary><div class="table-wrap"><table><thead><tr><th>Revision</th><th>Retained at</th><th>Origin</th><th>Tools</th><th>Configuration</th><th>Review</th></tr></thead><tbody id="binding-history"></tbody></table></div></details>
+        </section>
       </section>
 
       <section id="page-tools" class="page" hidden>
@@ -153,11 +168,12 @@
       </section>
 
       <section id="page-customers" class="page" hidden>
-        <div class="section-heading"><div><p class="eyebrow">Original seller-generated clients</p><h2>Customer receiving</h2></div><button id="refresh-customers">Refresh receiving</button></div>
+        <div class="section-heading"><div><p class="eyebrow">Original clients and API packages</p><h2>Customer receiving</h2></div><button id="refresh-customers">Refresh receiving</button></div>
         <div class="columns">
           <section class="panel"><h3>Receive or resume a customer</h3><p>Use the export identity returned by the merchant. Receiving keeps the original manifest, verified files and resumable transfer.</p>
             <form id="customer-form">
-              <label for="customer-family">Original customer authority</label><select id="customer-family"><option value="core">Merchant release store</option><option value="opensearch">OpenSearch workspace deployment</option></select>
+              <p id="customer-form-hint" class="hint"></p>
+              <label for="customer-family">Original customer authority</label><select id="customer-family"><option value="core">Merchant release store</option><option value="opensearch">OpenSearch workspace deployment</option><option value="openapi">API workspace package</option></select>
               <div id="customer-workspace-field" hidden><label for="customer-workspace">Configured workspace alias</label><input id="customer-workspace" pattern="[a-z0-9][a-z0-9_-]{0,63}" autocomplete="off"></div>
               <label for="customer-export">Original export ID</label><input id="customer-export" pattern="[a-z0-9][a-z0-9_-]{0,63}" required autocomplete="off">
               <label for="customer-sha">Manifest SHA-256</label><input id="customer-sha" pattern="[a-f0-9]{64}" class="mono" required autocomplete="off">
@@ -168,6 +184,7 @@
         </div>
         <section id="customer-detail" class="panel" hidden><div class="section-heading"><div><p class="eyebrow">Retained customer export</p><h3 id="customer-title" class="break"></h3></div><span id="customer-state" class="tag"></span></div>
           <dl id="customer-details" class="properties"></dl><p id="customer-progress" class="hint"></p>
+          <p id="customer-openapi-guidance" class="hint" hidden>The API archive retains its complete export manifest, original source, route worksheet, merchant configuration and any saved policy application. Import the package in the destination API workspace to continue its seller release.</p>
           <div class="actions"><button id="resume-customer">Resume same export</button><button id="pause-customer">Pause receiving</button><button id="download-customer">Download original customer archive</button></div>
           <div class="table-wrap"><table><thead><tr><th>Original file</th><th>Bytes</th><th>SHA-256</th><th>Download</th></tr></thead><tbody id="customer-files"></tbody></table></div>
           <details><summary>Complete receiving record</summary><pre id="customer-json"></pre></details>

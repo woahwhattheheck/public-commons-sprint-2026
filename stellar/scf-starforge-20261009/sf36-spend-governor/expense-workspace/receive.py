@@ -51,6 +51,7 @@ ADJUSTMENT_READER_FILES = {
 OPTIONAL_CREDIT_READER_FILES = {
     "stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/merchant-erp-client.mjs",
     "stellar/scf-starforge-20261009/merchant-settlement-accounting/recovery.mjs",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/dataset-location.mjs",
 }
 CREDIT_REQUIRED.update("app/" + n for n in CREDIT_READER_FILES
                        if n not in ADJUSTMENT_READER_FILES | OPTIONAL_CREDIT_READER_FILES)

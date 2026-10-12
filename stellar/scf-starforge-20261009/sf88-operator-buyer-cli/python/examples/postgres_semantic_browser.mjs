@@ -11,8 +11,24 @@ await fs.mkdir(config.directory,{recursive:true,mode:0o700});
 const sha=raw=>crypto.createHash('sha256').update(raw).digest('hex');
 const result={schema:'stellar-forge.postgres-semantic-browser.v1',state:'RUNNING',
   started_at:new Date().toISOString(),version_ids:config.version_ids,views:[],downloads:[],screenshots:[],errors:[]};
-let browser, page;
-const saved=async()=>fs.writeFile(path.join(config.directory,'receiving.json'),JSON.stringify(result,null,2)+'\n',{mode:0o600});
+let browser, page, closePromise, interruption;
+const saved=async()=>{
+  const temporary=path.join(config.directory,'.receiving-'+process.pid+'.json');
+  await fs.writeFile(temporary,JSON.stringify(result,null,2)+'\n',{mode:0o600});
+  await fs.rename(temporary,path.join(config.directory,'receiving.json'));
+};
+async function closeBrowser(){
+  if(!browser)return;
+  closePromise??=browser.close();
+  await closePromise;
+  result.browser_closed=true;
+}
+const handlers=new Map(['SIGTERM','SIGINT','SIGHUP'].map(name=>[name,()=>{
+  interruption??=name;
+  result.state='INTERRUPTED';result.error='Receiving interrupted by '+interruption;
+  if(browser)void closeBrowser().catch(error=>{result.close_error=error.message;});
+}]));
+for(const [name,handler] of handlers)process.on(name,handler);
 const requireValue=(value,message)=>{if(!value)throw new Error(message);};
 async function ready(){
   await page.waitForFunction(()=>document.getElementById('database-label')?.textContent.startsWith('PostgreSQL '));
@@ -68,7 +84,9 @@ async function openEdition(id){
 }
 try{
   browser=await chromium.launch({executablePath:config.chromium,headless:true,
+    handleSIGTERM:false,handleSIGINT:false,handleSIGHUP:false,
     args:['--no-sandbox','--disable-dev-shm-usage','--disable-gpu','--renderer-process-limit=1']});
+  requireValue(!interruption,'Receiving interrupted by '+interruption);
   page=await browser.newPage({viewport:{width:1440,height:1000},acceptDownloads:true});
   page.setDefaultTimeout(25000);
   page.on('pageerror',error=>result.errors.push(error.message));
@@ -121,11 +139,18 @@ try{
   result.reopened={warehouse_id:reopened.warehouse_id,version_id:reopened.version_id,
     semantic_sha256:reopened.semantics.semantic_sha256,selected_revision:current.revision};
   requireValue(result.errors.length===0,'The original browser reported an application error.');
+  requireValue(!interruption,'Receiving interrupted by '+interruption);
   result.state='COMPLETE';result.completed_at=new Date().toISOString();
-}catch(error){result.state='FAILED';result.error=error.message;result.stack=error.stack?.split('\n').slice(0,6);}
-finally{
-  if(browser)await browser.close();
-  result.browser_closed=true;await saved();
+}catch(error){
+  result.state=interruption?'INTERRUPTED':'FAILED';
+  result.error=interruption?'Receiving interrupted by '+interruption:error.message;
+  result.stack=error.stack?.split('\n').slice(0,6);
+}finally{
+  try{await closeBrowser();}
+  catch(error){result.state='FAILED';result.close_error=error.message;result.browser_closed=false;}
+  if(!browser)result.browser_closed=false;
+  await saved();
+  for(const [name,handler] of handlers)process.off(name,handler);
   process.stdout.write(JSON.stringify({state:result.state,result:path.join(config.directory,'receiving.json'),error:result.error})+'\n');
   process.exitCode=result.state==='COMPLETE'?0:1;
 }

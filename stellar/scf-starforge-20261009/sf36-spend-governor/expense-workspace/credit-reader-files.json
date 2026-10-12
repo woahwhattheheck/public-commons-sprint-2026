@@ -41,6 +41,7 @@
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/catalog-view.mjs",
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/cli.mjs",
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/config.mjs",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/dataset-location.mjs",
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/discovery.mjs",
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/execute.mjs",
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/initialization.mjs",

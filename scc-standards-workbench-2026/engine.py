@@ -24,7 +24,9 @@ MAX_MONTHS = {"TS": 12, "PAS": 9, "WA": 6, "CSG": None}
 ROADMAP_ISSUES = [1, 2, 4, 6, 13, 14, 18, 19, 20, 21, 22, 23, 24, 25, 28, 29, 31]
 IMMUTABLE = {"editions", "ballots", "ballot_closures", "technical_decisions", "procedural_reviews", "phase_reports",
              "report_responses", "invoices", "invoice_responses", "payments", "language_reviews", "delivery_registers"}
-OPTIONAL_COLLECTIONS = {"communications", "delivery_registers"}
+REVIEW_COLLECTIONS = {"review_packets", "review_responses", "review_amendments", "review_resolutions"}
+IMMUTABLE.update(REVIEW_COLLECTIONS)
+OPTIONAL_COLLECTIONS = {"communications", "delivery_registers"} | REVIEW_COLLECTIONS
 SOURCE_FIELDS = ("source_ids", "evidence_ids", "substantiation_ids", "acceptance_source_ids")
 F = lambda kind="text", default=None, **kw: {"kind": kind, "default": default, **kw}
 T = lambda required=False, **kw: F("text", "", required=required, **kw)
@@ -100,6 +102,22 @@ FIELDS = {
   "disposition": E(["open", "accepted", "rejected", "deferred"]), "rationale": T(),
   "resolution_edition_id": R("editions"), "resolution_clause_id": T(), "notification_at": T(),
   "notification_evidence": T(), "carried_from_id": R("comments"), "notes": T()},
+ "review_packets": {
+  "title": T(True), "consultation_id": R("consultations", True), "edition_id": R("editions", True),
+  "prepared_at": T(True), "source_edition_sha256": T(True), "projection_sha256": T(True),
+  "packet_sha256": T(True), "snapshot": J()},
+ "review_responses": {
+  "packet_id": R("review_packets", True), "consultation_id": R("consultations", True), "edition_id": R("editions", True),
+  "packet_sha256": T(True), "source_id": R("sources", True), "source_sha256": T(True),
+  "response_sha256": T(True), "received_at": T(True), "reviewer_exported_at": T(),
+  "supersedes_id": R("review_responses"), "receipt_note": T(), "response": J(), "comment_bindings": J([])},
+ "review_amendments": {
+  "comment_id": R("comments", True), "clause_id": T(True), "applied_at": T(True),
+  "rationale": T(True), "before_sha256": T(True), "after_sha256": T(True), "snapshot": J(), "snapshot_sha256": T(True)},
+ "review_resolutions": {
+  "comment_id": R("comments", True), "recorded_at": T(True), "disposition": E(["open", "accepted", "rejected", "deferred"]),
+  "rationale": T(), "resolution_edition_id": R("editions"), "resolution_clause_id": T(),
+  "response_visibility": E(["recipient_only", "public"]), "publication_basis": T(), "snapshot": J(), "snapshot_sha256": T(True)},
  "ballots": {
   "title": T(True), "edition_id": R("editions", True), "opens": D(), "closes": D(),
   "method": E(["letter_ballot", "recorded_meeting", "online_poll"]), "consultation_ids": L(),
@@ -351,7 +369,7 @@ def validate_record(collection, value, state=None):
         if field in result and state is not None:
             for source_id in result[field]:
                 record(state, "sources", source_id)
-    for field in ("recorded_at", "cast_at", "frozen_at", "prepared_at", "submitted_at", "accepted_at", "notification_at"):
+    for field in ("recorded_at", "cast_at", "frozen_at", "prepared_at", "submitted_at", "accepted_at", "notification_at", "received_at", "applied_at", "reviewer_exported_at"):
         if field in result:
             instant(result[field], collection + "." + field, FIELDS[collection][field].get("required", False))
     for lo, hi in (("opens", "closes"), ("begins", "ends"), ("planned_start", "planned_finish"), ("start", "finish"), ("starts", "due"), ("period_start", "period_end")):
@@ -976,6 +994,10 @@ def validate_state(state):
     for row in payment_balances(state):
         if Decimal(row["collected_cad"])<0 or Decimal(row["remaining_cad"])<0:
             raise ValueError("Receipts/refunds exceed this invoice's actual outstanding or collected amount.")
+    if any(state.get(name) for name in REVIEW_COLLECTIONS):
+        if __package__:from . import consultation
+        else:import consultation
+        consultation.validate_state(state)
     return state
 
 def analyze(state):

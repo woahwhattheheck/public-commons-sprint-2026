@@ -56,7 +56,7 @@ A committed operation whose full result exceeds the one MiB tool budget retains 
 
 Material formats: `catalog.csv`, `catalog.jsonl`, `approved-matches.csv`, `index.json`, `bulk.ndjson`, `delta.ndjson`, `facets.json`, `search-client.ts`, `source.json`, `catalog-bundle.jsonl`.
 
-Supplier formats: `review.json`, `issues.csv`, `products.jsonl`, `bmecat.xml`, `xchange.json`, `recipient.jsonl`, `impact.csv`. BMEcat belongs to the original BMEcat profile; the three native xChange formats belong to a native xChange review.
+Supplier formats: `review.json`, `issues.csv`, `products.jsonl`, `bmecat.xml`, `xchange.json`, `recipient.jsonl`, `impact.csv`, `parameters.xml`, `2ba.zip`. BMEcat belongs to the original BMEcat profile. Native xChange reviews add xChange JSON, recipient state and impact CSV; a 2BA profile with reviewed processing settings also provides its parameters XML and complete upload ZIP.
 
 Supply a nonempty selection without repeated formats. The request order is preserved. Match a format to the same index in `manifest.selection.formats` and `manifest.files`: the original descriptor controls the filename, such as `ETIM_XCHANGE_<review>_FULL.json` or `material-catalog-<id>-r<revision>.jsonl`. Each completed export has an original `exportId`, `manifestSha256`, manifest-file identity and manifest with the exact selection and every delivered filename, media type, byte count and SHA-256. Format-order prefixes keep filenames distinct. The manifest identifies the original workspace, request hash and immutable review/edition pins.
 
@@ -204,13 +204,21 @@ for await (const page of rows) {
 }
 ~~~
 
-A recipient page returns the original review ID/hash, complete recipient summary, total and continuation. Its kinds are all/product/tradeItem; actions are all/added/changed/unchanged/expired/deleted. Search uses original identifier, supplier key or supplier name.
+A recipient page returns the original review ID/hash, complete recipient summary, total and continuation. Its kinds are all/product/tradeItem; actions are all/added/changed/unchanged/expired/deleted/skipped. Search uses original identifier, supplier key or supplier name.
 
 A native profile retains whole catalogue-header and supplier-header overrides with reasons. Product patches address original `/xChange/product/...` paths. Actual numeric JSON fields retain string lexemes with their JSON Pointer map in `/xChange/numberTokens`; decimal strings already defined as strings in the ETIM schema stay ordinary strings. The typed definitions distinguish the profile, header overrides, exact token map and full recipient records.
 
 CHANGE selects a previous review in the same catalog, tenant and target, with the exact original reference version. Supplied product and trade-item bodies are complete records; unlisted CHANGE records remain in the recipient state. FULL marks missing products expired and removes absent trade items. The native message, complete recipient JSONL and impact CSV describe those distinct outputs. The original source-bound 2BA status mapping and modelling-class selections travel with its explicit profile.
 
 Read the [full operator and source-rule guide](../../stellar/scf-starforge-20261009/sf30-seller-sdk/opensearch/catalog/supplier/xchange/GUIDE.md) for original fields and the current recipient requirements. The full bundle carries the source bytes and every prior review; import rederives complete recipient state and findings before adopting it.
+
+## 2BA processing and complete upload
+
+Select `supplier_templates` with `target:"2ba-xchange-2.0"`. The complete profile's optional `processing` object retains the selected native parameter values and reason. Save and review the plan before exporting its processing files. The review retains native message type, effective processing type, skipped records and the complete recipient state.
+
+Use `supplier_export` with the original review ID, expected review SHA-256 and selected formats, for example `["parameters.xml","xchange.json","2ba.zip"]`. The complete ZIP pairs the reviewed native JSON with `parameters.xml`; its manifest joins both source and processing selections. Read the same original manifest and use the existing complete download helper after an interrupted transfer.
+
+The [2BA upload guide](../../stellar/scf-starforge-20261009/sf30-seller-sdk/opensearch/catalog/supplier/xchange/2BA_UPLOAD.md) covers all original parameters, case-sensitive XML envelope, attachment decisions and processing effects. The supplier bundle retains every review and rederives those effects when the receiver reopens it. The installed `./clients/opensearch-material/receiving/twoba` operation continues the original complete xChange and MCP receiving workspaces through the generated ZIP, private download recovery and customer history.
 
 ## Full native receiving
 

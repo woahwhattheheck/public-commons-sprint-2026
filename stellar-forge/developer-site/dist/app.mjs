@@ -308,6 +308,14 @@ const components = [
     "kind": "operations",
     "description": "Retain five families of market requests and original responses, compare observations, recover native purchases and transfer complete research projects.",
     "path": "partners/coingecko-stellar-market/README.md"
+  },
+  {
+    "id": "16",
+    "title": "CoCart customer receiving",
+    "code": "CART / CHECKOUT / HANDOVER",
+    "kind": "buyer",
+    "description": "Prepare a native customer workspace from its original profile or receiving file; keep cart, checkout, handoff, complete export and managed reopening together.",
+    "url": "/cocart.html"
   }
 ];
 let filter='all';

@@ -141,7 +141,7 @@ export async function saveMerchantRevision(options) {
   // JSON workspace requests cannot supply this trusted callback.
   if(typeof options.operatingDecision==='function')
     sourceRevision.operatingDecision=await options.operatingDecision(review);
-  const saved=await savePackage({parent:options.parent,name:options.name,specText:options.specText,plan:review.plan,sourceRevision});
+  const saved=await savePackage({parent:options.parent,name:options.name,specText:options.specText,plan:review.plan,sourceRevision,operationPolicy:options.operationPolicy});
   return {...saved,sourceRevision,release:releaseCommands(saved.folder,saved.name)};
 }
 export function releaseCommands(folder,name,store=resolve(folder,'..','merchant-releases')) {

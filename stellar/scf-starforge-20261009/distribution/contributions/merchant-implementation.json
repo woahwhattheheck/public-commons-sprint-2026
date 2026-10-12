@@ -1,0 +1,19 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "merchant-implementation",
+  "description": "Original merchant workorder implementation, assigned work and complete customer receiving",
+  "components": [
+    "stellar/scf-starforge-20261009/sf74-merchant-support-console"
+  ],
+  "supportFiles": [],
+  "commands": {
+    "merchant-implementation": "stellar/scf-starforge-20261009/sf74-merchant-support-console/commissioning-cli.mjs"
+  },
+  "commandDescriptions": {
+    "merchant-implementation": "Prepare assigned work, retain original deliverables and receive a complete merchant implementation"
+  },
+  "exports": {
+    "./merchant/implementation": "./source/stellar/scf-starforge-20261009/sf74-merchant-support-console/commissioning.mjs",
+    "./merchant/case-implementation": "./source/stellar/scf-starforge-20261009/sf74-merchant-support-console/case-commissioning.mjs"
+  }
+}

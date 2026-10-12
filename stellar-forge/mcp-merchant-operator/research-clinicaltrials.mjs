@@ -56,7 +56,7 @@ export async function callResearchClinicalTrials(client,name,args,{source}={}){
   }
 }
 /** Streams native bytes through the existing Research exporter and retainer. */
-export async function exportResearchClinicalTrials(client,args,{file}={}){
+export async function exportResearchClinicalTrials(client,args,{file,download=work=>work()}={}){
   const trials=facade(client),spec=RESEARCH_CLINICALTRIALS_EXPORTS[args.kind];
   if(!spec)throw failure('INVALID_PARAMS','Select an original ClinicalTrials Research export kind.');
   const common=['workspace','dossierId','kind'],base={dossierId:args.dossierId};
@@ -67,22 +67,22 @@ export async function exportResearchClinicalTrials(client,args,{file}={}){
     if((args.operationId!==undefined)===(args.editionId!==undefined))
       throw failure('INVALID_PARAMS','Select exactly one original operation ID or retained dossier edition for this report.');
     const selectionCriteria=criteria(args.criteria),options={...fileOptions,format:spec.clinicalFormat,criteria:selectionCriteria};
-    result=args.operationId!==undefined?await trials.exportAnalysis(args.dossierId,args.operationId,options):
-      await trials.exportRetainedAnalysis(args.dossierId,args.editionId,options);
+    result=await download(()=>args.operationId!==undefined?trials.exportAnalysis(args.dossierId,args.operationId,options):
+      trials.exportRetainedAnalysis(args.dossierId,args.editionId,options));
     selection={...base,...selected(args,['operationId','editionId']),format:spec.clinicalFormat,criteria:selectionCriteria};
   }else if(args.kind==='clinicaltrials-input-packet'){
     exact(args,[...common,'sourceId','expectedSha256'],[...common,'sourceId']);
-    result=await trials.exportInputPacket(args.dossierId,args.sourceId,fileOptions);
+    result=await download(()=>trials.exportInputPacket(args.dossierId,args.sourceId,fileOptions));
     selection={...base,sourceId:args.sourceId};
   }else if(args.kind==='clinicaltrials-edition'){
     exact(args,[...common,'operationId','expectedSha256'],[...common,'operationId']);
-    result=await trials.exportEdition(args.dossierId,args.operationId,fileOptions);
+    result=await download(()=>trials.exportEdition(args.dossierId,args.operationId,fileOptions));
     selection={...base,operationId:args.operationId};
   }else{
     exact(args,[...common,'editionId','expectedSha256'],[...common,'editionId']);
-    result=args.kind==='clinicaltrials-retained-packet'?
-      await trials.exportRetainedPacket(args.dossierId,args.editionId,fileOptions):
-      await trials.exportRetainedEdition(args.dossierId,args.editionId,fileOptions);
+    result=await download(()=>args.kind==='clinicaltrials-retained-packet'?
+      trials.exportRetainedPacket(args.dossierId,args.editionId,fileOptions):
+      trials.exportRetainedEdition(args.dossierId,args.editionId,fileOptions));
     selection={...base,editionId:args.editionId};
   }
   return {result,selection};

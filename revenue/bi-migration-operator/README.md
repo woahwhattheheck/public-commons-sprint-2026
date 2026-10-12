@@ -137,3 +137,31 @@ Start with [the complete SQL Server operating guide](tools/sql-server/GUIDE.md).
 The **Azure exports** workspace completes native export discovery, an existing export's monthly execution and original run history, manifest selection, resumable ETag-pinned partition transfer, staff header review, original Agency billing import and portable receiving. It retains original CSV/Gzip/Parquet files and freezes the selected source/review/partition identities into finalized statement downloads. Ordinary file imports retain their existing identities. See [AZURE_EXPORTS_GUIDE.md](AZURE_EXPORTS_GUIDE.md) for the complete operator flow, connection fields, structured operations, receiving and recovery.
 
 Run `python examples/AZURE_EXPORTS_JOURNEY.py --output ./azure-example` for the complete authored operating journey over the original 12-agency billing inputs, then reopen `./azure-example/workspace` with the ordinary launcher. CSV/Gzip uses the existing runtime; native Parquet additionally uses `requirements-azure.txt`.
+
+
+## Tourism funding and reporting
+
+The **Tourism reporting** section uses the same original workspace records,
+operation journal, file store and encrypted recovery as the migration and
+agency billing application. Import mapped CSV sources or the original tourism
+source packet, accept their exact editions, and prepare monthly, quarterly and
+annual transient guest tax schedules. Collections, published distributions,
+budget columns and operator cash retain their own source meaning.
+
+The included Overland Park example contains 26 actual monthly KDOR observations,
+ten published distribution controls, and the four original VisitOP budget
+columns. It opens a prepared report for review:
+
+```sh
+python BI_OPERATOR.py --workspace ./tourism-workspace tourism-example
+python BI_OPERATOR.py --workspace ./tourism-workspace serve
+```
+
+Staff review retains original arithmetic differences, then finalizes an exact
+report edition. The complete export includes an eleven-sheet workbook,
+individual CSV schedules, a printable HTML report, the annual plan, all selected
+original source files and a file manifest. Use original encrypted workspace
+recovery to continue editing on another computer.
+
+See [TOURISM_GUIDE.md](TOURISM_GUIDE.md) for the full operating sequence, source
+definitions, forecast assumptions, cash returns and receiving instructions.

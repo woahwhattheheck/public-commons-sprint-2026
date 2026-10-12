@@ -158,9 +158,9 @@ function csktm_eng_operation($data, $operation_id, $action, $input) {
     }
     return $previous;
 }
-function csktm_eng_remember(&$data, $operation_id, $action, $input) {
+function csktm_eng_remember(&$data, $operation_id, $action, $input, $result=array()) {
     $data['operations'][$operation_id]=array('action'=>$action,'sha256'=>csktm_eng_digest($input),
-        'at'=>csktm_now(),'revision'=>$data['revision'],'actor'=>get_current_user_id());
+        'at'=>csktm_now(),'revision'=>$data['revision'],'actor'=>get_current_user_id(),'result'=>$result);
 }
 function csktm_eng_expected($data, $revision) {
     if (!is_int($revision) || $revision!==$data['revision']) {
@@ -311,7 +311,7 @@ function csktm_eng_submit($form_id,$input) {
         $hash=csktm_eng_digest($intent);
         if ($old) {
             if (!hash_equals($old['data']['submissionSha256'],$hash)) { csktm_fail('engagement_request_conflict','This request ID already identifies different submitted information.',409); }
-            return array('entry'=>$old['data'],'replayed'=>true,'mailIds'=>array());
+            return array('entry'=>$old['data'],'replayed'=>true,'mailIds'=>$old['data']['submissionMailIds']??array());
         }
         if (!csktm_eng_available($form)) { csktm_fail('engagement_closed','This form is not accepting submissions at this time.',409); }
         csktm_eng_expected($form,$input['formRevision']??null);
@@ -335,13 +335,14 @@ function csktm_eng_submit($form_id,$input) {
             $mail=csktm_eng_verification_mail($entry,$form);
             $mail_ids[]=$mail['id'];
         }
-        csktm_eng_event($entry,'submitted',array('formRevision'=>$form['revision'],'parent'=>$form['parent']),0);
-        csktm_eng_put('entry',$entry);
         if ($form['notifyEmail']!=='') {
             $mail=csktm_eng_new_mail($entry,'staff_notification',$form['notifyEmail'],'New submission: '.$form['title'],
                 'A new '.$form['mode'].' submission is ready for staff review.'."\n\n".admin_url('admin.php?page=cskt-engagement#entry='.$entry_id));
             $mail_ids[]=$mail['id'];
         }
+        $entry['submissionMailIds']=$mail_ids;
+        csktm_eng_event($entry,'submitted',array('formRevision'=>$form['revision'],'parent'=>$form['parent']),0);
+        csktm_eng_put('entry',$entry);
         return array('entry'=>$entry,'replayed'=>false,'mailIds'=>$mail_ids);
     });
     foreach ($result['mailIds'] as $mail_id) { csktm_eng_schedule_mail($mail_id); }

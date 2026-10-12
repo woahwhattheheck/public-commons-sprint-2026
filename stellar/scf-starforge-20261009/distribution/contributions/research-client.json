@@ -1,18 +1,27 @@
 {
   "schema": "stellar-forge.merchant-distribution-contribution.v1",
   "id": "research-client",
-  "description": "Operate the original authenticated Research workspace, saved Crossref reviews and complete original exports through client, CLI and merchant tools.",
+  "description": "Operate the original authenticated Research workspace, Documents, managed Pipelines, citation update review, exact original source inspection and complete dossier exports through client, CLI and merchant tools.",
   "commands": {
-    "research-client": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/workspace-cli.mjs"
+    "research-client": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/workspace-cli.mjs",
+    "research-crossref-documents": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/crossref-document-cli.mjs",
+    "research-citation-workflow": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/citation-review-workflow.mjs"
   },
   "commandDescriptions": {
-    "research-client": "Operate the existing Research listener, reviewed Crossref acquisitions and complete dossier exports"
+    "research-client": "Operate the original Research listener, Documents/Pipelines, citation review and complete original dossier exports",
+    "research-crossref-documents": "Import original Crossref metadata files with exact documentary provenance into a Research edition",
+    "research-citation-workflow": "Run original citation review, browser draft recovery, revision reports and complete portable reopening"
   },
   "exports": {
     "./buyer/research-dossiers/client": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/workspace-client.mjs",
     "./buyer/research-dossiers/files": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/workspace-files.mjs",
     "./buyer/research-dossiers/protocol": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/workspace-protocol.mjs",
     "./merchant/mcp/research": "./source/stellar-forge/mcp-merchant-operator/research-workspace.mjs",
-    "./buyer/research-dossiers/contracts": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/workspace-contracts.mjs"
+    "./buyer/research-dossiers/contracts": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/workspace-contracts.mjs",
+    "./buyer/research-dossiers/source-bundles": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/source-bundles.mjs",
+    "./buyer/research-dossiers/source-inspection": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/source-inspection.mjs",
+    "./buyer/research-dossiers/documents": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/document-workspace-client.mjs",
+    "./buyer/research-dossiers/citation-review": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/citation-updates.mjs",
+    "./buyer/research-dossiers/crossref-documents": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/crossref-documents.mjs"
   }
 }
