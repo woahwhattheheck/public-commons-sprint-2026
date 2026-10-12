@@ -1,18 +1,21 @@
 {
   "schema": "stellar-forge.merchant-distribution-contribution.v1",
   "id": "native-facilitator-catalog",
-  "description": "Operate native Stellar settlement, durable Bazaar publication and network-bound facilitator discovery.",
+  "description": "Operate native Stellar settlement, durable Bazaar publication and the complete local catalog operator.",
   "components": [
+    "stellar/scf-starforge-20261009/native-facilitator",
     "stellar/scf-starforge-20261009/sf54-cataloging-sidechannel",
     "stellar/scf-starforge-20261009/sf58-dual-network-frontdoor"
   ],
   "commands": {
     "native-facilitator": "stellar/scf-starforge-20261009/native-facilitator/cli.mjs",
-    "stellar-facilitator-gateway": "stellar/scf-starforge-20261009/sf58-dual-network-frontdoor/server.mjs"
+    "stellar-facilitator-gateway": "stellar/scf-starforge-20261009/sf58-dual-network-frontdoor/server.mjs",
+    "native-facilitator-operator": "stellar/scf-starforge-20261009/native-facilitator/workspace/server.mjs"
   },
   "commandDescriptions": {
     "native-facilitator": "Review and run the original native Stellar facilitator with optional durable Bazaar cataloging",
-    "stellar-facilitator-gateway": "Run the original dual-network gateway for native payments and committed Bazaar discovery"
+    "stellar-facilitator-gateway": "Run the original dual-network gateway for native payments and committed Bazaar discovery",
+    "native-facilitator-operator": "Review, retain and run native profiles with durable catalog policy, discovery and complete catalog exports"
   },
   "exports": {
     "./facilitator/native": "./source/stellar/scf-starforge-20261009/native-facilitator/runtime.mjs",

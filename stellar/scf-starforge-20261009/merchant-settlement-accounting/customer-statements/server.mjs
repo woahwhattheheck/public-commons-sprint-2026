@@ -33,6 +33,7 @@ export async function handleCustomerStatementRequest(statements,{method,path,que
       if(action==='customers')return {value:await statements.saveCustomer(value)};
       if(action==='bindings')return {value:await statements.assign(value)};
       if(action==='usage')return {value:await statements.importUsage(value)};
+      if(action==='usage-period')return {value:await statements.previewUsagePeriod(value)};
       if(action==='preview')return {value:await statements.preview(value)};
       if(action==='retain')return {value:await statements.retain(value)};
     }

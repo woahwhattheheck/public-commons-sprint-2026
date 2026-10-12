@@ -19,3 +19,25 @@ a{color:#30373f;text-decoration:underline;text-underline-offset:3px}button{backg
 .field-inspection{padding-bottom:16px;margin-bottom:16px;border-bottom:1px solid var(--line)}
 .field-inspection>.table-scroll td:first-child{min-width:160px;max-width:260px}
 @media(max-width:740px){.comparison-rule>.fields{grid-template-columns:minmax(220px,1fr)}.comparison-rule>.fields>label:last-child{grid-column:auto}.comparison-summary .value{min-width:115px}}
+
+.normalization-rule{padding:10px 0;border-bottom:1px solid var(--line);margin-bottom:12px}
+.normalization-rule>summary{font-weight:650;cursor:pointer;margin-bottom:12px}
+.normalization-rule>label{max-width:760px}
+.normalization-sides{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin:18px 0}
+.normalization-side{border:1px solid var(--line);background:var(--panel);padding:14px;min-width:0}
+.normalization-side>.type-label{margin:0 0 12px;overflow-wrap:anywhere}
+.normalization-side>.fields{grid-template-columns:1fr}
+.normalization-preview{margin-top:18px;padding-top:16px;border-top:1px solid var(--line);min-width:0}
+.normalization-preview:empty{display:none}
+.normalization-preview>.table-scroll{max-height:520px}
+.normalization-inspection{margin-top:16px;padding:16px;background:var(--soft);border:1px solid var(--line);min-width:0}
+.normalization-inspection>.facts{margin-bottom:14px}
+.normalization-inspection>.table-scroll{background:var(--panel)}
+.normalization-inspection>.table-scroll td:first-child{min-width:150px;max-width:240px}
+.normalization-summary,.normalization-accounting{margin-top:18px;padding-top:16px;border-top:1px solid var(--line)}
+.normalization-record{padding:10px 0;border-bottom:1px solid var(--line)}
+.normalization-record:last-of-type{border-bottom:0}
+.normalization-record>summary{cursor:pointer;font-weight:600;margin-bottom:10px;overflow-wrap:anywhere}
+.normalization-record>.facts,.normalization-record>.table-scroll{margin-bottom:12px}
+.normalization-accounting>.table-scroll+.table-scroll{margin-top:12px}
+@media(max-width:740px){.normalization-sides{grid-template-columns:minmax(0,1fr);gap:12px}.normalization-rule>.fields{grid-template-columns:minmax(220px,1fr)}.normalization-inspection{padding:12px}.normalization-preview>.table-scroll{max-height:440px}}

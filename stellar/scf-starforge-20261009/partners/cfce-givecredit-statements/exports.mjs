@@ -105,9 +105,19 @@ export function statementFiles(report){
 export function comparisonCSV(comparison){
   const rows=[];
   for(const [table,changes] of Object.entries(comparison.tables)){
+    if(changes.comparisonStatus==='unavailable'){
+      rows.push({table,change:'unavailable',key:null,before:changes.counts.before,after:changes.counts.after,
+        beforeAvailable:changes.coverage.before.available,afterAvailable:changes.coverage.after.available,note:changes.note});
+      continue;
+    }
     for(const row of changes.added)rows.push({table,change:'added',key:row.key,before:null,after:row.row});
     for(const row of changes.removed)rows.push({table,change:'removed',key:row.key,before:row.row,after:null});
-    for(const row of changes.changed)rows.push({table,change:'changed',key:row.key,before:row.before,after:row.after});
+    for(const row of changes.changed)rows.push({table,change:'changed',key:row.key,before:row.before,after:row.after,note:row.fields?.map(field=>field.note).filter(Boolean).join(' ')||''});
+    for(const row of changes.sourceDifferences||[]){
+      for(const field of row.representationChanges)rows.push({table,key:row.key,change:'representation',field:field.name,before:field.before,after:field.after,note:'Equivalent typed value; original source formatting differs.'});
+      for(const field of row.fieldAvailabilityChanges)rows.push({table,key:row.key,change:'field-availability',field:field.name,before:field.before,after:field.after,
+        beforeAvailable:field.beforeAvailable,afterAvailable:field.afterAvailable,note:'The field is reported by only one source edition.'});
+    }
   }
-  return csv(['table','change','key','before','after'],rows);
+  return csv(['table','change','key','field','before','after','beforeAvailable','afterAvailable','note'],rows.map(row=>({beforeAvailable:comparison.tables[row.table].coverage?.before.available??true,afterAvailable:comparison.tables[row.table].coverage?.after.available??true,...row})));
 }

@@ -59,6 +59,29 @@ remain selected. The complete operating contract travels at
 `source/stellar-forge/developer-site/GRANT_COMPOSITION.md`, with the Datasette
 workflow at `source/stellar-forge/developer-site/GRANT_DATASETTE.md`.
 
+## Prepare the saved draft from the command line
+
+The installed exporter opens the original saved submission and retains its full
+source, manual answers, issuer fields, planning, reviews and handover history:
+
+~~~sh
+starforge grant-export \
+  --draft /private/scf/saved-submission.json \
+  --out /private/scf/prepared-submission
+~~~
+
+Open the resulting `review.html` to copy or print the complete selected values.
+The same output includes exact field text, native counts and recorded limits,
+the original form map, all nine current answers and a checksummed `draft.json`
+that the existing **Prepare submission** workspace can reopen. A recorded limit
+exceeded returns exit 2 after preserving the complete values. The output must
+be a new private directory.
+
+The [export guide](../../../../stellar-forge/developer-site/GRANT_EXPORT.md)
+covers complete four-file source receiving, saved issuer maps and native output
+selection. The command and `./grant/application-exporter` package export both
+select the same maintained source included by this original product.
+
 ## Build or receive the selected source
 
 Use the archive and SHA-256 returned by the original distribution builder. To

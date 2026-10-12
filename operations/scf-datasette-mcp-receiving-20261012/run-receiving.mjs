@@ -94,6 +94,20 @@ async function identity(path) {
 function fileMatches(actual,expected) {
   return actual?.path===expected.path&&actual.sha256===expected.sha256&&String(actual.bytes)===String(expected.bytes);
 }
+function contentInventory(value) {
+  return {workspaceId:value.workspaceId,files:value.files.map(file=>{
+    const {modifiedAt,...retained}=file;return retained;
+  }).sort((left,right)=>left.path<right.path?-1:left.path>right.path?1:0)};
+}
+function inventoryDifference(before,after) {
+  const original=new Map(contentInventory(before).files.map(file=>[file.path,file]));
+  const current=new Map(contentInventory(after).files.map(file=>[file.path,file]));
+  const removed=[...original.keys()].filter(path=>!current.has(path));
+  const added=[...current.keys()].filter(path=>!original.has(path));
+  const changed=[...original.keys()].filter(path=>current.has(path)&&!same(original.get(path),current.get(path)));
+  return {removed:removed.slice(0,40),added:added.slice(0,40),changed:changed.slice(0,40),
+    counts:{removed:removed.length,added:added.length,changed:changed.length}};
+}
 function ownerIdentity(health) {
   return {workspaceId:health.workspaceId,
     ...(health.instanceId===undefined?{}:{instanceId:health.instanceId}),
@@ -201,6 +215,8 @@ export async function runDatasetteMcpReceiving({
   };
   const openOwner=async()=>{
     const connection=await nativeProvider.readDatasetteWorkspaceConfiguration(join(outputDirectory,'connection.json'));
+    // The provider retains complete exports in an existing private directory.
+    await privateDirectory(join(outputDirectory,'merchant-exports'));
     const provider=descriptor.create(loaded,{datasetteWorkspaces:connection,exportsDirectory:join(outputDirectory,'merchant-exports')},{});
     need(provider instanceof leaf.MerchantDatasetteWorkspaces,'DATASETTE_RECEIVING_PROVIDER_JOIN');
     const record={id:randomUUID(),startedAt:new Date().toISOString(),closed:false};
@@ -379,8 +395,39 @@ export async function runDatasetteMcpReceiving({
       const name=relative(resolve(current.directory),resolve(path));relativePath(name);
       need(files.files.some(file=>file.path===name&&file.sha256===pin),'DATASETTE_RECEIVING_REQUIRED_SOURCE',name);
     }
-    if(journal.originalFilesSha256)need(sha(bytes(files))===journal.originalFilesSha256,'DATASETTE_RECEIVING_FILES_CHANGED');
-    else{journal.originalFilesSha256=sha(bytes(files));await save();}
+    const currentInventorySha256=sha(bytes(files));
+    let originalInventory=files;
+    if(journal.originalFilesSha256) {
+      if(journal.originalFilesEvidence||journal.originalFilesSha256!==currentInventorySha256) {
+        const originalName=journal.originalFilesEvidence??'complete-original-file-inventory.json';
+        const originalBytes=await readPrivate(join(outputDirectory,'observed',relativePath(originalName)));
+        const originalPin=journal.evidence[originalName];
+        need(originalPin&&originalPin.bytes===originalBytes.length&&originalPin.sha256===sha(originalBytes),
+          'DATASETTE_RECEIVING_EVIDENCE_CHANGED');
+        originalInventory=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(originalBytes));
+        need(sha(bytes(originalInventory))===journal.originalFilesSha256,'DATASETTE_RECEIVING_EVIDENCE_CHANGED');
+      }
+      // Restoring the same complete source files gives them receiving-host mtimes.
+      // Keep every native file identity and the original full observation; compare
+      // content across restores, then compare the full fresh snapshot during this run.
+      if(!same(contentInventory(originalInventory),contentInventory(files))) {
+        await evidence('changed-native-file-inventory.json',files);
+        throw Object.assign(new Error('The original retained native file content or membership changed.'),
+          {code:'DATASETTE_RECEIVING_FILES_CHANGED',details:inventoryDifference(originalInventory,files)});
+      }
+    } else journal.originalFilesSha256=currentInventorySha256;
+    if(!journal.originalFilesEvidence) {
+      await evidence('complete-initial-file-inventory.json',originalInventory);
+      journal.originalFilesEvidence='complete-initial-file-inventory.json';
+    }
+    const originalContentSha256=sha(bytes(contentInventory(originalInventory)));
+    if(journal.originalContentFilesSha256)
+      need(journal.originalContentFilesSha256===originalContentSha256,'DATASETTE_RECEIVING_EVIDENCE_CHANGED');
+    journal.originalContentFilesSha256=originalContentSha256;
+    const originalModifiedAt=new Map(originalInventory.files.map(file=>[file.path,file.modifiedAt]));
+    journal.currentFilesObservation={sha256:currentInventorySha256,files:files.files.length,
+      restoredModificationTimes:files.files.filter(file=>originalModifiedAt.get(file.path)!==file.modifiedAt).length};
+    await save();
     await evidence('complete-original-file-inventory.json',files);
     const sample=[...files.files].sort((a,b)=>Number(b.bytes)-Number(a.bytes))[0];
     need(sample&&Number(sample.bytes)>1,'DATASETTE_RECEIVING_COMPLETE_FILE_REQUIRED');
@@ -463,7 +510,7 @@ export async function runDatasetteMcpReceiving({
       journal.resumedDownload.resumedBytes===journal.download.bytes,'DATASETTE_RECEIVING_DOWNLOAD_RESUME');
     await evidence('same-manifest-download-resume.json',journal.resumedDownload);
     files=await inventory(client);
-    need(sha(bytes(files))===journal.originalFilesSha256,'DATASETTE_RECEIVING_FILES_CHANGED');
+    need(sha(bytes(files))===currentInventorySha256,'DATASETTE_RECEIVING_FILES_CHANGED');
     const after=(await client.status({})).native,healthAfter=(await client.health({})).native;
     need(same(after,current)&&same(ownerIdentity(healthAfter),ownerAtStart),'DATASETTE_RECEIVING_OWNER_CHANGED');
     await evidence('native-status-after.json',after);

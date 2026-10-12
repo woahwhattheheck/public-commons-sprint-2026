@@ -1,3 +1,4 @@
+import {validatePlanningUpdateState,selectPlanningRevision} from './grant-plan-update-core.mjs';
 import {validateHandover,handoverSelectionOf,restoreHandoverSelection} from './grant-handover-core.mjs';
 import {validatePlanSources, validatePlanningState, newPlanReview} from './grant-plan-core.mjs';
 // MIT. Portable model for the existing SCF application and its local submission draft.
@@ -106,6 +107,7 @@ function validateFields(fields){
 }
 function validateState(state,sources,planSources=[]){
   validatePlanningState(state.planningReview,planSources);
+  validatePlanningUpdateState(state,planSources);
   need(sources.some(x=>x.sha256===state.currentSource),'Retain the selected source edition.');
   list(state.answers,'Answers');need(JSON.stringify(state.answers.map(x=>x.id))===JSON.stringify(ids),'Retain all nine answer identities.');
   for(const answer of state.answers){
@@ -136,7 +138,7 @@ export function validateDraft(input){
   return input;
 }
 function stateOf(draft){
-  return clone({title:draft.title,currentSource:draft.currentSource,answers:draft.answers,form:draft.form,fields:draft.fields,reviews:draft.reviews,planningReview:draft.planningReview??null,handoverSelection:handoverSelectionOf(draft)});
+  return clone({title:draft.title,currentSource:draft.currentSource,answers:draft.answers,form:draft.form,fields:draft.fields,reviews:draft.reviews,planningReview:draft.planningReview??null,planningTargets:draft.planningTargets||[],planningUpdate:draft.planningUpdate??null,handoverSelection:handoverSelectionOf(draft)});
 }
 export function retainVersion(draft,label='Saved version',now=new Date().toISOString()){
   const result=clone(validateDraft(draft));result.updatedAt=now;
@@ -148,7 +150,7 @@ export function retainVersion(draft,label='Saved version',now=new Date().toISOSt
 export function restoreVersion(draft,id,now=new Date().toISOString()){
   const version=draft.versions.find(x=>x.id===id);need(version,'Select an existing saved version.');
   const result=retainVersion(draft,'Before restoring '+version.label,now);
-  Object.assign(result,clone({title:version.title,currentSource:version.currentSource,answers:version.answers,form:version.form,fields:version.fields,reviews:version.reviews,planningReview:version.planningReview??null}));
+  Object.assign(result,clone({title:version.title,currentSource:version.currentSource,answers:version.answers,form:version.form,fields:version.fields,reviews:version.reviews,planningReview:version.planningReview??null,planningTargets:version.planningTargets||[],planningUpdate:version.planningUpdate??null}));
   restoreHandoverSelection(result,version);
   result.folder='SCF submission — '+result.title;return validateDraft(result);
 }
@@ -240,6 +242,6 @@ export function receivePlanningSource(draft,source,now=new Date().toISOString())
     need(retained.base64===source.base64&&JSON.stringify(retained.document)===JSON.stringify(source.document),
       'Retain the original complete planning edition.');
   }else result.planSources.push(clone(source));
-  result.planningReview=newPlanReview(retained||source);
+  selectPlanningRevision(result,(retained||source).sha256,(retained||source).document.currentRevision,{now});
   return validateDraft(result);
 }

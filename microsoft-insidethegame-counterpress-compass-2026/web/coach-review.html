@@ -24,6 +24,8 @@
 <label><span data-word="period">Period</span><select id="period"><option value="all" data-word="whole">Whole observed match</option><option value="first" data-word="first">First half</option><option value="second" data-word="second">Second half</option></select></label>
 <label><span data-word="audience">View</span><select id="audience"><option value="analyst" data-word="analyst">Coach / analyst</option><option value="casual" data-word="casual">Fan</option></select></label>
 <label><span data-word="language">Language</span><select id="locale"><option value="en">English</option><option value="es">Español</option></select></label>
+<label><span data-word="focusPlayer">Follow a player</span><select id="focusPlayer"><option value="" data-word="wholeTeam">Whole team</option></select></label>
+<label><span data-word="focusOutcome">Playlist outcome</span><select id="focusOutcome"><option value="all" data-word="focusAll">All outcomes</option><option value="success" data-word="focusSuccess">Successful team sequence</option><option value="expired" data-word="expired">Expired window</option><option value="interrupted" data-word="interrupted">Interrupted observation</option><option value="not_attempted" data-word="notAttempted">Without a qualifying press</option><option value="pending" data-word="pending">Open window</option></select></label>
 </fieldset>
 <button id="compare" class="primary" type="button" data-word="compare">Compare selected matches</button>
 <section class="saved-sets">
@@ -37,6 +39,7 @@
 <section class="portable">
 <h3 data-word="portable">Portable review</h3>
 <button id="export" type="button" data-word="export">Download complete review</button>
+<button id="downloadBrief" type="button" data-word="downloadBrief">Save and download coaching brief</button>
 <label><span data-word="importLabel">Counterpress review or match package</span><input id="importFile" type="file" accept=".json,application/json"></label>
 <button id="import" type="button" data-word="import">Import selected file</button>
 <p id="importProgress" class="muted" aria-live="polite"></p>

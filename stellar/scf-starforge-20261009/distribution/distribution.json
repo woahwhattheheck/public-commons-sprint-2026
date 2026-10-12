@@ -100,6 +100,26 @@
     {
       "server": "stellar/scf-starforge-20261009/distribution/runtime-workspace/server.mjs",
       "manifest": "stellar/scf-starforge-20261009/distribution/runtime-workspace/browser-assets.json"
+    },
+    {
+      "server": "stellar-forge/mcp-merchant-operator/console/service.mjs",
+      "manifest": "stellar-forge/mcp-merchant-operator/console/browser-assets.json"
+    },
+    {
+      "server": "stellar/scf-starforge-20261009/sf61-openapi-seller-import/postman/examples/usgs-facility-events/workspace/server.mjs",
+      "manifest": "stellar/scf-starforge-20261009/sf61-openapi-seller-import/postman/examples/usgs-facility-events/workspace/browser-assets.json"
+    },
+    {
+      "server": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/job-workspace/intake/server.mjs",
+      "manifest": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/job-workspace/intake/browser-assets.json"
+    },
+    {
+      "server": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/job-workspace/resolution/server.mjs",
+      "manifest": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/job-workspace/resolution/browser-assets.json"
+    },
+    {
+      "server": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/customer-quotes/routes.mjs",
+      "manifest": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/customer-quotes/browser-assets.json"
     }
   ],
   "supportFiles": [

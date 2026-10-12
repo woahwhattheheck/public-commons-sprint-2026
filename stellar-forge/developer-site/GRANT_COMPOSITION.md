@@ -147,3 +147,8 @@ downloads, selected or complete printing, and a self-contained offline export.
 Its four assets are declared by the existing browser manifest and travel with
 the complete developer-site source. Composition refreshes its source descriptor
 while retaining the original four-reader sourcePins contract.
+
+## Prepare a saved draft from the command line
+
+The complete developer-site component includes [the native draft exporter](GRANT_EXPORT.md). Run `node stellar-forge/developer-site/grant-export.mjs --draft /private/scf/saved-submission.json --out /private/scf/new-export` to prepare the existing saved draft without opening another browser. It uses the same submission, planning and handover models, retains manual edits and complete history, and produces exact field text, counts, full printing and a native draft that the original workspace can reopen. Application-only receiving requires its matching source index and original URL.
+

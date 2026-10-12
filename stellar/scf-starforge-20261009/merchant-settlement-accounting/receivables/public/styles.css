@@ -125,3 +125,22 @@ dialog::backdrop{background:#0006}
 
 .button-link{display:inline-flex;align-items:center;min-height:35px;padding:7px 12px;border:1px solid #bdbdbd;border-radius:3px;background:#fff;color:#242424;text-decoration:none;font-size:14px}
 .button-link:hover{background:#ededed;border-color:#797979}
+
+.payment-wrap { overflow-wrap: anywhere; word-break: break-word; }
+.payment-uri { width: 100%; resize: vertical; overflow-wrap: anywhere; }
+.payment-wallet { display: inline-block; padding: .6rem .9rem; border: 1px solid #555; border-radius: 3px; color: #171717; background: #f5f5f5; font-weight: 600; }
+
+
+.bank-detail,.bank-selection{margin-top:20px}
+.bank-search{display:flex;align-items:flex-end;gap:8px;min-width:0}
+.bank-search label{flex:1;min-width:0}
+.bank-row-filters,.bank-original{margin-top:14px}
+.bank-json{white-space:pre-wrap;overflow-wrap:anywhere;max-height:440px;overflow:auto;font-size:12px}
+.bank-record{margin:14px 0}
+.bank-split,.bank-balance{padding-top:16px;margin-top:16px;border-top:1px solid #ddd}
+.bank-split:first-child,.bank-balance:first-child{padding-top:0;margin-top:0;border-top:0}
+.bank-split input,.bank-split select{min-width:120px}
+.bank-split td:first-child{min-width:280px}
+@media(max-width:700px){.bank-workbench .panel-head,.bank-detail .panel-head,.bank-selection .panel-head{align-items:flex-start;flex-direction:column}.bank-search{align-items:flex-end}.bank-split td:first-child{min-width:210px}}
+
+.filters[hidden]{display:none}
