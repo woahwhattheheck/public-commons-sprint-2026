@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 from contextlib import ExitStack
 import copy
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -396,9 +397,38 @@ def whole_delivery(root, raw, inventory, report, context):
                 with zipfile.ZipFile(stream, "w", compression=zipfile.ZIP_DEFLATED, allowZip64=True) as archive:
                     archive.writestr("customer-delivery.json", body)
                     for name, expected in sorted(prepared["selected"].items()):
-                        measure(expected["path"], expected, context.checkpoint)
-                        archive.write(expected["path"], arcname=name)
-                        measure(expected["path"], expected, context.checkpoint)
+                        context.checkpoint()
+                        fd = os.open(expected["path"], os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
+                        with os.fdopen(fd, "rb") as source:
+                            before = os.fstat(source.fileno())
+                            need(stat.S_ISREG(before.st_mode) and before.st_size == expected["bytes"],
+                                 "DELIVERY_SOURCE_CHANGED", "Keep the original ordinary delivery member.", path=name)
+                            info = zipfile.ZipInfo(name, date_time=(1980, 1, 1, 0, 0, 0))
+                            info.compress_type = (zipfile.ZIP_STORED if Path(name).suffix.lower() in
+                                                  (".zip", ".png", ".pdf") else zipfile.ZIP_DEFLATED)
+                            info.external_attr = (stat.S_IFREG | 0o600) << 16
+                            info.file_size = expected["bytes"]
+                            hasher, total = hashlib.sha256(), 0
+                            with archive.open(info, "w", force_zip64=True) as destination:
+                                while True:
+                                    context.checkpoint()
+                                    block = source.read(1024 * 1024)
+                                    if not block:
+                                        break
+                                    total += len(block)
+                                    need(total <= expected["bytes"], "DELIVERY_SOURCE_GREW",
+                                         "The original delivery member grew during copying.", path=name)
+                                    hasher.update(block)
+                                    destination.write(block)
+                                    context.checkpoint()
+                            after = os.fstat(source.fileno())
+                            visible = os.stat(expected["path"], follow_symlinks=False)
+                            identity = lambda row: (row.st_dev, row.st_ino, row.st_size, row.st_mtime_ns)
+                            need(stat.S_ISREG(visible.st_mode) and identity(before) == identity(after) ==
+                                 identity(visible) and total == expected["bytes"] and
+                                 hasher.hexdigest() == expected["sha256"],
+                                 "DELIVERY_SOURCE_CHANGED", "An original delivery member changed while copying.", path=name)
+                        context.checkpoint()
                 stream.flush()
                 os.fsync(stream.fileno())
             try:
