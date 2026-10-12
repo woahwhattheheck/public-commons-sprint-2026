@@ -17,12 +17,15 @@ import webbrowser
 
 from application import call
 from delivery import extract_package, import_package
-from model import ROOT, StudyError, dump, fail, member, parse, private_directory, read
+from model import ROOT, StudyError, dump, fail, hash_id, member, parse, private_directory, read
 from workspace import Workspace, close_active_intakes, file_identity
+from operator_runtime import operator_lease
 
 ASSETS = {"/": ("index.html", "text/html; charset=utf-8"),
           "/app.js": ("app.js", "text/javascript; charset=utf-8"),
-          "/style.css": ("style.css", "text/css; charset=utf-8")}
+          "/style.css": ("style.css", "text/css; charset=utf-8"),
+          "/properties.js": ("properties.js", "text/javascript; charset=utf-8"),
+          "/properties.css": ("properties.css", "text/css; charset=utf-8")}
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -50,6 +53,8 @@ class Handler(BaseHTTPRequestHandler):
 
     def local(self):
         allowed = {f"127.0.0.1:{self.server.server_port}", f"localhost:{self.server.server_port}"}
+        if self.server.server_port == 80:
+            allowed.update({"127.0.0.1", "localhost"})
         if self.client_address[0] != "127.0.0.1" or self.headers.get("Host") not in allowed:
             fail("LOCAL_OPERATOR_ORIGIN_REQUIRED")
         origin = self.headers.get("Origin")
@@ -90,6 +95,8 @@ class Handler(BaseHTTPRequestHandler):
                 self.wfile.write(raw)
                 return
             self.authenticated()
+            if path == "/api/access":
+                return self.result({"ok": True, "result": self.server.operator_identity})
             if path != "/download":
                 fail("ROUTE_NOT_FOUND")
             self.download(parse_qs(urlsplit(self.path).query, keep_blank_values=True))
@@ -105,7 +112,13 @@ class Handler(BaseHTTPRequestHandler):
         workspace = Workspace(self.server.directory)
         try:
             kind = params.get("kind")
-            if kind == "source" and set(params) == {"kind", "id", "path"}:
+            if kind == "property_document" and set(params) == {"kind", "id", "path"}:
+                from property_research.service import PropertyResearch
+                source = PropertyResearch(workspace).document(params["id"])
+                name = member(params["path"])
+                expected = next((item for item in source["files"] if item["path"] == name), None)
+                path = workspace.directory / "property-documents" / params["id"] / name
+            elif kind == "source" and set(params) == {"kind", "id", "path"}:
                 source = workspace.record("sources", params["id"])
                 name = member(params["path"])
                 expected = next((item for item in source["descriptor"]["files"] if item["path"] == name), None)
@@ -150,6 +163,9 @@ class Handler(BaseHTTPRequestHandler):
             if self.server.stopping:
                 fail("WORKSPACE_CLOSING")
             path = urlsplit(self.path).path
+            if path == "/property-source":
+                from property_research.http import upload_document
+                return upload_document(self)
             if path == "/upload":
                 return self.upload()
             if path != "/api" or self.headers.get_content_type() != "application/json":
@@ -176,6 +192,11 @@ class Handler(BaseHTTPRequestHandler):
         if self.headers.get_content_type() != "application/zip":
             fail("ZIP_PACKAGE_REQUIRED")
         size = self.body_length(512 * 1024 * 1024)
+        selected_hashes = self.headers.get_all("X-Content-SHA256") or []
+        if len(selected_hashes) > 1:
+            fail("PACKAGE_INPUT_HASH_REQUIRED")
+        expected_hash = hash_id(selected_hashes[0]) if selected_hashes else None
+        digest = hashlib.sha256()
         directory = Path(tempfile.mkdtemp(prefix=".upload-", dir=self.server.directory))
         try:
             path = directory / "packet.zip"
@@ -187,7 +208,10 @@ class Handler(BaseHTTPRequestHandler):
                     if not raw:
                         fail("REQUEST_INCOMPLETE")
                     output.write(raw)
+                    digest.update(raw)
                     remaining -= len(raw)
+            if expected_hash is not None and digest.hexdigest() != expected_hash:
+                fail("PACKAGE_INPUT_CHANGED", expected_sha256=expected_hash, actual_sha256=digest.hexdigest())
             unpacked = directory / "packet"
             extract_package(path, unpacked)
             workspace = Workspace(self.server.directory)
@@ -200,7 +224,12 @@ class Handler(BaseHTTPRequestHandler):
             shutil.rmtree(directory)
 
 
-def serve(directory, port=0, open_browser=False):
+def serve(directory, port=0, open_browser=False, source_directory=None, expected_selection_sha256=None):
+    with operator_lease(directory, source_directory, expected_selection_sha256) as identity:
+        return _serve(directory, port, open_browser, identity)
+
+
+def _serve(directory, port, open_browser, identity):
     if type(port) is not int or not 0 <= port <= 65535:
         fail("PORT_INVALID")
     directory = private_directory(directory)
@@ -208,28 +237,43 @@ def serve(directory, port=0, open_browser=False):
     workspace.close()
     connection_file = directory / "connection.json"
     if connection_file.exists():
-        token = parse(read(connection_file, 16384)).get("token")
+        token = parse(read(connection_file, 131072)).get("token")
         if not isinstance(token, str) or len(token) < 40:
             fail("OPERATOR_TOKEN_INVALID")
     else:
         token = secrets.token_urlsafe(40)
     server = ThreadingHTTPServer(("127.0.0.1", port), Handler)
-    server.directory, server.token, server.stopping = directory, token, False
-    base = "http://127.0.0.1:" + str(server.server_port)
-    dump(connection_file, {"schema": "stellar-forge.study-operator-connection.v1",
-                          "base_url": base, "token": token, "pid": os.getpid()})
-    print(json.dumps({"base_url": base, "connection_file": str(connection_file)}), flush=True)
-    if open_browser:
-        webbrowser.open(base + "/#" + token)
     previous = None
-    if threading.current_thread() is threading.main_thread():
-        previous = signal.getsignal(signal.SIGTERM)
-        signal.signal(signal.SIGTERM, lambda *_: threading.Thread(target=server.shutdown, daemon=True).start())
     try:
+        server.directory, server.token, server.stopping = directory, token, False
+        base = "http://127.0.0.1:" + str(server.server_port)
+        server.operator_identity = dict(identity, base_url=base)
+        dump(connection_file, {"schema": "stellar-forge.study-operator-connection.v1",
+                              "base_url": base, "token": token, "pid": os.getpid(),
+                              "operator": server.operator_identity})
+        print(json.dumps({"schema": "stellar-forge.study-operator-startup.v1", "state": "LISTENING",
+                          "base_url": base, "connection_file": str(connection_file),
+                          "pid": identity["pid"], "instance_id": identity["instance_id"],
+                          "selection_sha256": identity["selection_sha256"],
+                          "source_sha256": identity["source_sha256"],
+                          "execution_source_directory": identity["execution"]["source_directory"]}),
+              flush=True)
+        if open_browser:
+            webbrowser.open(base + "/#" + token)
+        if threading.current_thread() is threading.main_thread():
+            previous = signal.getsignal(signal.SIGTERM)
+
+            def request_stop(*_):
+                server.stopping = True
+                threading.Thread(target=server.shutdown, daemon=True).start()
+
+            signal.signal(signal.SIGTERM, request_stop)
         server.serve_forever(poll_interval=0.2)
     finally:
         server.stopping = True
-        close_active_intakes()
-        server.server_close()
-        if previous is not None:
-            signal.signal(signal.SIGTERM, previous)
+        try:
+            close_active_intakes()
+        finally:
+            server.server_close()
+            if previous is not None:
+                signal.signal(signal.SIGTERM, previous)
