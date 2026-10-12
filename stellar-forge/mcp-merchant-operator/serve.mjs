@@ -238,11 +238,14 @@ function portNumber(value, fallback) {
   return Number(value);
 }
 export async function startMerchantMcp({ configPath, port = 3211, tokenEnv = 'MCP_ACCESS_TOKEN',
-  environment = process.env, stellarExpertFetchImpl, woocommerceFetchImpl, mppFetchImpl, oauthConfigPath, oauthFetchImpl, accounting, consoleDirectory, consoleBinding } = {}) {
+  environment = process.env, stellarExpertFetchImpl, woocommerceFetchImpl, mppFetchImpl, oauthConfigPath, oauthFetchImpl, accounting, consoleDirectory, consoleBinding, providerOptions = {} } = {}) {
   if (!configPath || !/^[A-Za-z_][A-Za-z0-9_]*$/.test(tokenEnv)) throw failure('CONFIGURATION_ERROR', 'Supply a merchant configuration and token environment-variable name.');
+  const providerPrototype = providerOptions && typeof providerOptions === 'object' ? Object.getPrototypeOf(providerOptions) : undefined;
+  if (providerPrototype !== Object.prototype && providerPrototype !== null)
+    throw failure('CONFIGURATION_ERROR', 'Supply a plain providerOptions object for trusted native startup.');
   port = portNumber(port, 3211);
   const operator = await openMerchantOperator(configPath,
-    { environment, stellarExpert: { environment, fetchImpl: stellarExpertFetchImpl }, woocommerce: { environment, fetchImpl: woocommerceFetchImpl }, mpp: { environment, fetchImpl: mppFetchImpl }, opensearch: { environment }, opencage: { env: environment }, grpc: { environment }, openapi: { environment }, arcgis: { environment }, opendatasoft: { environment }, accounting: { ...accounting, environment } });
+    { environment, stellarExpert: { environment, fetchImpl: stellarExpertFetchImpl }, woocommerce: { environment, fetchImpl: woocommerceFetchImpl }, mpp: { environment, fetchImpl: mppFetchImpl }, opensearch: { environment }, opencage: { env: environment }, grpc: { environment }, openapi: { environment }, arcgis: { environment }, opendatasoft: { environment }, accounting: { ...accounting, environment }, ...providerOptions });
   let server, access, operatorConsole, draining=false;
   try {
     access = await loadOAuthResourceHost({configPath:oauthConfigPath ?? environment.MCP_OAUTH_CONFIG,
