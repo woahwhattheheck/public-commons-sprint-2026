@@ -18,6 +18,9 @@ import { assertGrpcWorkspaceBinding } from './binding.mjs';
 import { createGrpcUpgradeWorkspace } from './upgrade.mjs';
 import { createGrpcHealthWorkspace } from './health.mjs';
 import { createGrpcOperationsWorkspace } from '../operations/workspace.mjs';
+import { createGrpcTransferWorkspace } from '../transfer/workspace.mjs';
+import { validateGrpcTransferManifest } from '../transfer/manifest.mjs';
+import { transferCounts } from '../transfer/snapshot.mjs';
 import { selectedCall, selectedHealth, OPERATIONS_MAX_BYTES } from '../operations/domain.mjs';
 import { fields, text, canonical, sha256, jsonBytes, readJson, readBytes, writeNew,
   syncDirectory, privateDirectory, fail, assertProtoArchiveFits, writeJsonSnapshot } from '../common.mjs';
@@ -83,7 +86,7 @@ export async function createGrpcWorkspace({ stateDirectory, sourceFile, protoDir
   const root = await privateDirectory(stateDirectory, true), lease = await acquireStateLease(root);
   const environment = { ...env };
   const retainedRuntime = releaseRuntime === undefined ? (nativeFactory ? null : { port: sellerPort }) : structuredClone(releaseRuntime);
-  const folders = Object.fromEntries(['revisions', 'prepared', 'intents', 'attempts', 'temporary', 'reflections', 'upgrades', 'health', 'operations'].map(name => [name, join(root, name)]));
+  const folders = Object.fromEntries(['revisions', 'prepared', 'intents', 'attempts', 'temporary', 'reflections', 'upgrades', 'health', 'operations', 'transfers'].map(name => [name, join(root, name)]));
   let current = null, revisionIndex = [], reflectionIndex = [], busy = null, closing = false, closePromise, active = null, previousRun = null;
   let navigationOrigin = null, releaseConsole = null, activeCall = null;
   const cached = new Map(), reflectionControllers = new Set();
@@ -104,6 +107,63 @@ export async function createGrpcWorkspace({ stateDirectory, sourceFile, protoDir
 
   const operations = createGrpcOperationsWorkspace({ directory: folders.operations,
     assertHeld: () => lease.assertHeld(), collect: collectOperations });
+  const transfers = createGrpcTransferWorkspace({ root, directory: folders.transfers,
+    assertHeld: () => lease.assertHeld(), visitHealthPrefixes: health.visitTransferPrefixes, env: environment,
+    openOptions: { nativeFactory, releaseRuntime: retainedRuntime, sellerPort, operationsPort, maxInFlight, drainGraceMs } });
+  const transferCapture = (body, options) => execute(() => transfers.capture(body, options));
+  const transferRead = body => transfers.read(body), transferList = body => transfers.list(body);
+  const transferFiles = body => transfers.files(body), transferDownload = body => transfers.download(body);
+  const transferManifestFile = body => transfers.manifestFile(body);
+  const transferChunk = body => transfers.chunk(body), transferReceipt = body => transfers.receipt(body);
+  const transferUpload = (body, options) => execute(() => transfers.upload(body, options));
+  const transferUploadStatus = body => transfers.uploadStatus(body);
+  const transferInspect = (body, options) => execute(() => transfers.inspect(body, options));
+  const transferReceive = (body, options) => execute(() => transfers.receive(body, options));
+  const transferOpen = body => execute(() => transfers.openReceived(body));
+  const transferClose = body => execute(() => transfers.closeReceived(body));
+  const transferCancel = body => transfers.cancel(body);
+  const transferAudit = manifest => execute(async () => {
+    validateGrpcTransferManifest(manifest);
+    if (canonical(transferCounts(manifest.files, manifest.health)) !== canonical(manifest.counts))
+      fail('GRPC_TRANSFER_COUNTS_CHANGED', 409);
+    const patterns = {
+      revision: /^workspace\/revisions\/([a-f0-9]{64})\.json$/,
+      reflection: /^workspace\/reflections\/([a-f0-9-]{36})\.json$/,
+      attempt: /^workspace\/attempts\/([a-f0-9-]{36})\.json$/,
+      upgrade: /^workspace\/upgrades\/([a-f0-9-]{36})\.json$/,
+      prepared: /^workspace\/prepared\/([a-f0-9-]{36})\/workspace-release\.json$/,
+      capture: /^workspace\/operations\/captures\/([a-f0-9-]{36})\.json$/,
+      incident: /^workspace\/operations\/cases\/([a-f0-9-]{36})\/([0-9]{10})\.json$/,
+      release: /^workspace\/merchant-releases\/releases\/([a-z0-9][a-z0-9_-]{0,63})\//,
+    };
+    const incidentVersions = new Map(), releaseIds = new Set();
+    let operationCaptures = 0;
+    for (const file of manifest.files) {
+      lease.assertHeld();
+      let selected;
+      if ((selected = patterns.revision.exec(file.path))) await revision(selected[1]);
+      else if ((selected = patterns.reflection.exec(file.path))) await readReflection(selected[1]);
+      else if ((selected = patterns.attempt.exec(file.path))) {
+        if (!await attemptResult(selected[1], true)) fail('GRPC_TRANSFER_ORIGINAL_ATTEMPT_MISSING', 409);
+      } else if ((selected = patterns.upgrade.exec(file.path))) await upgrades.open({ id: selected[1] });
+      else if ((selected = patterns.prepared.exec(file.path))) await preparation(selected[1]);
+      else if ((selected = patterns.capture.exec(file.path))) {
+        await operations.captureRead({ id: selected[1] }); operationCaptures++;
+      } else if ((selected = patterns.incident.exec(file.path)))
+        incidentVersions.set(selected[1], Math.max(incidentVersions.get(selected[1]) ?? 0, Number(selected[2])));
+      else if ((selected = patterns.release.exec(file.path))) releaseIds.add(selected[1]);
+    }
+    for (const [id, version] of incidentVersions) await operations.caseRead({ id, version });
+    const observedHealth = await health.verifyTransferPrefixes(manifest.health);
+    if (releaseIds.size) {
+      const { inspectRelease } = await import('../../../sf82-seller-pilot/releases.mjs');
+      for (const id of releaseIds) await inspectRelease(join(root, 'merchant-releases'), id);
+    }
+    return { schema: 'stellar-forge.grpc-workspace-native-receiving.v1', transferId: manifest.id,
+      manifestSha256: manifest.sha256, checkedAt: stamp(), directory: root,
+      originalCounts: manifest.counts, currentRevision: currentId(), generation: current?.generation ?? 0,
+      operationCaptures, health: observedHealth, environmentNames: manifest.environmentNames };
+  });
   const operationsCapture = body => execute(() => operations.captureCreate(body));
   const operationsRead = body => execute(() => operations.captureRead(body));
   const operationsCaptures = body => execute(() => operations.captureList(body));
@@ -216,7 +276,7 @@ export async function createGrpcWorkspace({ stateDirectory, sourceFile, protoDir
         prepared.manifest.planSha256 !== sha256(canonical(saved.plan))) fail('GRPC_WORKSPACE_RELEASE_CHANGED', 409);
     return { record, prepared };
   }
-  const runtime = () => ({ busy: Boolean(busy), closing, healthOperations: health.runtime(),
+  const runtime = () => ({ busy: Boolean(busy), closing, healthOperations: health.runtime(), transfers: transfers.runtime(),
     active: active ? { id: active.id, releaseId: active.releaseId, revision: active.revision, phase: active.phase,
       startedAt: active.startedAt, url: active.session?.url, mode: active.session?.mode,
       docs: active.session ? active.session.url + '/_seller/docs' : null,
@@ -675,6 +735,7 @@ export async function createGrpcWorkspace({ stateDirectory, sourceFile, protoDir
     if (closePromise) return closePromise;
     closing = true;
     const healthClosing = health.close(); healthClosing.catch(() => {});
+    const transfersClosing = transfers.close(); transfersClosing.catch(() => {});
     activeCall?.controller.abort();
     for (const controller of reflectionControllers) controller.abort();
     closePromise = (async () => {
@@ -682,6 +743,7 @@ export async function createGrpcWorkspace({ stateDirectory, sourceFile, protoDir
       try { await busy; } catch {}
       const issues = [];
       try { await healthClosing; } catch (issue) { issues.push(issue); }
+      try { await transfersClosing; } catch (issue) { issues.push(issue); }
       try { await releaseConsole?.close(); releaseConsole = null; } catch (issue) { issues.push(issue); }
       try { await stopInside(); } catch (issue) { issues.push(issue); }
       try { await lease.close(); } catch (issue) { issues.push(issue); }
@@ -707,6 +769,7 @@ export async function createGrpcWorkspace({ stateDirectory, sourceFile, protoDir
     await upgrades.initialize();
     await health.initialize();
     await operations.initialize();
+    await transfers.initialize();
     previousRun = await optional(join(root, 'run.json'), 65536);
     if (previousRun && !['STOPPED', 'START_FAILED'].includes(previousRun.phase))
       previousRun = { ...previousRun, phase: 'PREVIOUS_OWNER_ENDED', note: 'The prior workspace process ended before recording its final stop. Select a retained merchant to run again.' };
@@ -718,7 +781,7 @@ export async function createGrpcWorkspace({ stateDirectory, sourceFile, protoDir
       await saveInside({ source, protoSource, plan, baseRevision: null, title: 'gRPC merchant' });
     }
   } catch (issue) { await lease.close(); throw issue; }
-  return { stateDirectory: root, state, attemptsPage, runtime, operationsCapture, operationsRead, operationsCaptures, operationsSave, operationsCase, operationsCases, operationsExport, operationsDownload, operationsReceive, healthStart, healthRead, healthList, healthResume, healthCancel, healthExport, save, capture, reflectionInventory, reflectionCapture, reflectionOpen, reflectionSave, upgradeReview, upgradeOpen, upgradeAdopt, upgradeMethod, open, checkout, method, validateInput, review,
+  return { stateDirectory: root, state, attemptsPage, runtime, transferCapture, transferRead, transferList, transferFiles, transferDownload, transferManifestFile, transferChunk, transferUpload, transferUploadStatus, transferInspect, transferReceive, transferReceipt, transferOpen, transferClose, transferCancel, transferAudit, operationsCapture, operationsRead, operationsCaptures, operationsSave, operationsCase, operationsCases, operationsExport, operationsDownload, operationsReceive, healthStart, healthRead, healthList, healthResume, healthCancel, healthExport, save, capture, reflectionInventory, reflectionCapture, reflectionOpen, reflectionSave, upgradeReview, upgradeOpen, upgradeAdopt, upgradeMethod, open, checkout, method, validateInput, review,
     call, readAttempt, cancelCall, streamDownload, prepare, run, stop, download, archive, stage, openReleaseConsole, closeReleaseConsole, close,
     bindOperationsNavigationOrigin(origin) {
       const url = new URL(origin);
