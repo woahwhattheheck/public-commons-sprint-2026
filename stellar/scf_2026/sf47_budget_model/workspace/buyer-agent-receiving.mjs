@@ -12,10 +12,10 @@ const canonical = value => Array.isArray(value) ? '['+value.map(canonical).join(
   value && typeof value==='object' ? '{'+Object.keys(value).sort().map(key=>JSON.stringify(key)+':'+canonical(value[key])).join(',')+'}' : JSON.stringify(value);
 const need = (test,message) => {if(!test)throw Object.assign(new Error(message),{code:'BUYER_AGENT_RECEIVING_CONFLICT'});};
 const PINNED = {
-  'stellar/scf_2026/sf47_budget_model/workspace/agent-contracts.mjs':'9bed2f1855649c5dc07d205a704e1932edb55467',
-  'stellar/scf_2026/sf47_budget_model/workspace/agent-client.mjs':'a6fe73a2e59adfd95c13edd3b68264d50b7aae1c',
-  'stellar-forge/mcp-merchant-operator/grant-workspace.mjs':'6eb6a763f8886894f6ed8a0f7d36958ef6acfc76',
-  'stellar-forge/mcp-merchant-operator/catalog/grant-workspace.mjs':'ae644bd15fa7c72c5ced90ceaac47d974484a1cc'
+  'stellar/scf_2026/sf47_budget_model/workspace/agent-contracts.mjs':'23048278cdb0a16f2333be709ee585a284da781c',
+  'stellar/scf_2026/sf47_budget_model/workspace/agent-client.mjs':'e19692e4c6bda4dd08a768f7a858744ae8c700d9',
+  'stellar-forge/mcp-merchant-operator/grant-workspace.mjs':'adc2259b35d619acfa6da2816a8fe2de974b524d',
+  'stellar-forge/mcp-merchant-operator/catalog/grant-workspace.mjs':'a4acaf72fd694a76971143f616fd3a9ffb6dbc3c'
 };
 async function regular(file) {
   const before=await lstat(file,{bigint:true});
@@ -108,7 +108,7 @@ async function history(client,caseId) {
 export async function receiveBuyerWithAgent(input) {
   need(input&&typeof input==='object'&&!Array.isArray(input),'Use the original receiving configuration.');
   const allowed=['schema','operationId','sourceRoot','sourceHead','workspaceDirectory','outputDirectory','caseId',
-    'originalHandoffPath','sourceSha256','purchaseId','deploymentId','actor','nodeExecutable','pythonExecutable','cohort'];
+    'originalHandoffPath','sourceSha256','purchaseId','deploymentId','actor','nodeExecutable','pythonExecutable','cohort','implementation'];
   need(Object.keys(input).every(key=>allowed.includes(key)),'The receiving configuration contains an unknown field.');
   need(input.schema==='sf47.native-buyer-agent-phase.v1','Use the original buyer agent phase schema.');
   for(const key of ['sourceRoot','workspaceDirectory','outputDirectory','originalHandoffPath','nodeExecutable','pythonExecutable'])
@@ -144,8 +144,8 @@ export async function receiveBuyerWithAgent(input) {
   }
   const runtime=await import(pathToFileURL(join(input.sourceRoot,'stellar-forge/mcp-merchant-operator/grant-workspace.mjs')).href);
   const clientModule=await import(pathToFileURL(join(input.sourceRoot,'stellar/scf_2026/sf47_budget_model/workspace/agent-client.mjs')).href);
-  need(runtime.grantWorkspaceTools.length===58&&['merchant_grant_cohort_seed','merchant_grant_cohort_preview','merchant_grant_cohort_prepare'].every(name=>runtime.grantWorkspaceTools.some(tool=>tool.name===name)),
-    'Use the complete original 58-tool buyer/cohort catalogue.');
+  need(runtime.grantWorkspaceTools.length===67&&['merchant_grant_cohort_seed','merchant_grant_cohort_preview','merchant_grant_cohort_prepare','merchant_grant_implementation_source','merchant_grant_implementation_preview','merchant_grant_implementation_prepare'].every(name=>runtime.grantWorkspaceTools.some(tool=>tool.name===name)),
+    'Use the complete original 67-tool buyer/cohort/implementation catalogue.');
   const alias='original',exportsDirectory=await privateDirectory(join(output,'retained'));
   const connectionFile=join(output,'connection.json');
   await retain(connectionFile,{schema:runtime.GRANT_WORKSPACE_CONNECTION_SCHEMA,workspaces:{[alias]:{
@@ -154,7 +154,7 @@ export async function receiveBuyerWithAgent(input) {
   }}},{immutable:true});
   const originalNode=process.env.SF47_BUYER_NODE;
   process.env.SF47_BUYER_NODE=input.nodeExecutable;
-  let provider=null,client=null,result=null,phaseError=null,cohortResult=null;const shutdownErrors=[],artifacts=[];
+  let provider=null,client=null,result=null,phaseError=null,cohortResult=null,implementationResult=null;const shutdownErrors=[],artifacts=[];
   const saveArtifact=async(name,bytes,immutable=true)=>{
     const row=await retain(join(output,name),bytes,{immutable});artifacts.push(row);return row;
   };
@@ -273,6 +273,45 @@ export async function receiveBuyerWithAgent(input) {
         observations:observedRows.count,observationPages:observedRows.pages,completeExportPages:cohortBundle.pages,
         bundle:cohortBundle.file,originalPrepareReplayed:true};
     }
+    if(input.implementation){
+      const selected=input.implementation;
+      need(selected.request?.action==='implementation.prepare'&&selected.receipt?.recordId===selected.reviewId,
+        'Use the browser implementation request and its original committed review.');
+      const review=(await client.read('review',{caseId:input.caseId,reviewId:selected.reviewId})).value;
+      need(review.purpose==='IMPLEMENTATION_EVIDENCE'&&review.implementation.previewSha256===selected.request.data.expectedPreviewSha256,
+        'The frozen implementation differs from the original request.');
+      const inputs=review.implementation.inputs;
+      const seedSnapshot=await provider.call('merchant_grant_implementation_source',{workspace:alias,caseId:input.caseId,
+        expectedVersion:after.program.version,sourceId:inputs.sourceId,asOfAt:inputs.asOfAt});
+      const seedFile=await receiveFile(provider,alias,seedSnapshot,join(output,'original-implementation-agent-source.json'));
+      artifacts.push(seedFile.file);
+      need(canonical(JSON.parse(seedFile.bytes).native)===canonical(review.implementation.native),'The provider changed the original implementation projection.');
+      const previewSnapshot=await provider.call('merchant_grant_implementation_preview',{workspace:alias,caseId:input.caseId,
+        expectedVersion:after.program.version,inputs});
+      const previewFile=await receiveFile(provider,alias,previewSnapshot,join(output,'original-implementation-agent-preview.json'));
+      artifacts.push(previewFile.file);const preview=JSON.parse(previewFile.bytes);
+      const typedPreview=await client.implementationPreview(input.caseId,after.program.version,inputs);
+      need(canonical(typedPreview.value)===canonical(preview)&&canonical(preview.native)===canonical(review.implementation.native),
+        'The typed and MCP implementation readers disagree about the original source.');
+      const {action,data,...envelope}=selected.request,body={...envelope,inputs:data.inputs,expectedPreviewSha256:data.expectedPreviewSha256};
+      const replaySnapshot=await provider.call('merchant_grant_implementation_prepare',{workspace:alias,caseId:input.caseId,...body});
+      const replayFile=await receiveFile(provider,alias,replaySnapshot,join(output,'original-implementation-agent-replay.json'));
+      artifacts.push(replayFile.file);const typedReplay=await client.implementationPrepare(input.caseId,body);
+      need(canonical(JSON.parse(replayFile.bytes))===canonical(selected.receipt)&&canonical(typedReplay.value)===canonical(selected.receipt),
+        'Recover the same original implementation request without another review.');
+      const selectedRows=await rows(provider,alias,previewSnapshot,'/selected');
+      need(canonical(selectedRows.rows)===canonical(preview.selected),'The implementation selection was truncated.');
+      const exported=await provider.call('merchant_grant_export',{workspace:alias,kind:'implementation',caseId:input.caseId,reviewId:selected.reviewId});
+      const bundle=await receiveFile(provider,alias,exported,join(output,'Original_Implementation_Agent_Evidence.zip'));artifacts.push(bundle.file);
+      const typedBundle=await client.download('implementation',{caseId:input.caseId,reviewId:selected.reviewId});
+      need(typedBundle.bytes.equals(bundle.bytes)&&bundle.file.sha256===selected.bundle.sha256,'The original implementation exports disagree.');
+      const latest=(await client.read('case',{caseId:input.caseId})).value;
+      need(canonical(selection(latest))===canonical(selection(after))&&canonical(await history(client,input.caseId))===canonical(originalHistory),
+        'Original implementation replay changed the operating case or history.');
+      implementationResult={reviewId:selected.reviewId,requestId:selected.request.requestId,sourceSha256:inputs.sourceSha256,
+        asOfAt:inputs.asOfAt,selectionPages:selectedRows.pages,selectedObservations:selectedRows.count,
+        bundle:bundle.file,completeExportPages:bundle.pages,originalPrepareReplayed:true};
+    }
     const source=after.sources.find(row=>row.buyerHandoff?.sourceSha256===input.sourceSha256);
     need(source,'The original received source association is missing.');
     const sourceSnapshot=await provider.call('merchant_grant_export',{workspace:alias,kind:'source',caseId:input.caseId,sourceId:source.id});
@@ -304,7 +343,7 @@ export async function receiveBuyerWithAgent(input) {
       operationId:input.operationId,inputSha256:digest(json(input)),sourceHead:input.sourceHead,sourceFiles,
       caseId:input.caseId,caseVersion:after.program.version,purchaseId:input.purchaseId,deploymentId:input.deploymentId,
       originalSourceId:source.id,originalSourceSha256:input.sourceSha256,originalSourceBytes:handoff.length,
-      requestId:request.body.requestId,receipt,cohort:cohortResult,toolCount:runtime.grantWorkspaceTools.length,
+      requestId:request.body.requestId,receipt,cohort:cohortResult,implementation:implementationResult,toolCount:runtime.grantWorkspaceTools.length,
       previewFilePages:previewReceipt.previewFilePages,previewRowPages:previewReceipt.previewRowPages,
       purchaseRowPages:purchases.pages,purchaseCount:purchases.count,completeExportPages:bundle.pages,
       managedServices:[firstService,reopenedService],bundle:bundle.file,artifacts:retainedArtifacts,

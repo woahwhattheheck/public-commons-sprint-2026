@@ -110,3 +110,55 @@ The original Research operation is `SCF-RESEARCH-CLIENT-NCC-D9B53-20261012`. Its
 Its existing command 26032 used the 13,264-byte hosted owner with SHA256 `0507320ebf0fbba555f3dd18ba53ff8fbe008ff0fc54c75f13bd5b94d13c324a`, preserved at [PR2156 merge 0e0217f8](https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/0e0217f8ab35062191c5bd67290f3f4c22d56a90/.swarm-delivery/d9b53-research-client-native/hosted-original-owner.py). The new retention source is a maintained continuation for sealed output and following use; it does not rewrite the actual run's provenance.
 
 Recover an uncertain run through that original record and actual owner output. An initial `queued_disk` acknowledgement belongs to the original foreground handoff and does not establish a terminal application result. If its original archive is already present, select its observed byte/hash identity and use this keeper on that file. Preserve the current dossier and all original operation records when continuing the existing native controller.
+
+
+## Reconcile a completed normal host upload
+
+When the normal host upload of this same sealed path succeeds, send its complete
+unchanged provider result to the existing keeper. The result must be a succeeded
+`create_library_file` operation with the exact basename and byte length.
+Select the original path and SHA256, the current prepared session, and one stable
+reconciliation ID:
+
+```json
+{
+  "schema": "commons.hosted-artifact-receipt/v1",
+  "action": "reconcile",
+  "operationId": "<the existing operation>",
+  "artifactSha256": "<the sealed archive SHA256>",
+  "sourcePath": "<the original absolute sealed path>",
+  "expectedUploadSessionId": "<the keeper's current session, or null>",
+  "reconciliationId": "normal-host-save-01",
+  "providerResult": "<replace this placeholder with the complete actual result object>"
+}
+```
+
+Retain the actual create result from the tool; do not turn a search/read response
+or a manually written success flag into a create result. The caller's upload must
+have selected the exact original path whose fingerprint is recorded by the keeper.
+
+If the original prepared upload already started finalization, only a result for
+that prepared file ID can reconcile it. If finalization never started, the
+observed normal host upload may have a different file ID from the unused
+preparation. The first observed successful file identity remains fixed.
+
+The keeper writes the complete provider observation before applying local
+metadata through the unchanged Library helper's result handler. This command
+performs no prepare, byte transfer or finalize call. A repeated identical
+reconciliation ID can finish interrupted local metadata; another payload under
+that ID is rejected. A metadata failure keeps the file and original observation
+available. Once a successful external receipt has been observed, provider retry
+commands cannot prepare, transfer or finalize another file; repeat that exact
+receipt reconciliation to finish local metadata. A fully applied receipt returns normally from the same keeper.
+
+For a caller that already owns the original process and needs direct integration,
+hold the same lock and initialize the existing state before calling
+`Retention.reconcile_receipt(request)`. Do not run two keepers over the
+same state directory. Keep an older keeper's accepted source as its run provenance
+when upgrading the recovery caller.
+
+The concrete receiving case for this path was a normal host upload of a sealed
+2,018,725-byte archive after the original helper's block-list commit returned
+HTTP502. The successful host result included `operation`, `status`, `file_id`,
+`library_file_id`, `file_name`, `file_size_bytes`, version0 and the original
+`xattrs` array. The failed preparation had not started finalization.

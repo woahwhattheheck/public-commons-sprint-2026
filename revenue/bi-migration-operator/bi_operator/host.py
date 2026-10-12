@@ -116,6 +116,8 @@ class Handler(BaseHTTPRequestHandler):
     def allowed(self, authenticate=True):
         port = self.server.server_address[1]
         allowed = {f"127.0.0.1:{port}", f"localhost:{port}"}
+        if port == 80:
+            allowed.update(("127.0.0.1", "localhost"))
         if self.headers.get("Host") not in allowed:
             self.send(403, {"error": "Open the local operator address."})
             return False
@@ -231,7 +233,8 @@ def serve(workspace, port=0):
         for sig in (signal.SIGINT, signal.SIGTERM):
             with contextlib.suppress(ValueError):
                 previous[sig] = signal.signal(sig, stop)
-        url = f"http://127.0.0.1:{server.server_address[1]}/#token={service.store.setting('access_token')}"
+        port_part = "" if server.server_address[1] == 80 else f":{server.server_address[1]}"
+        url = f"http://127.0.0.1{port_part}/#token={service.store.setting('access_token')}"
         print(encoded({"service": "Commons BI Operator", "workspace_id": service.store.setting("workspace_id"), "url": url}), flush=True)
         try:
             server.serve_forever(poll_interval=0.2)

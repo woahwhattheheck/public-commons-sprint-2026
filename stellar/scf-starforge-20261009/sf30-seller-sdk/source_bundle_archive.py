@@ -95,11 +95,60 @@ def _directory(value, policy, *, create=False):
     if not root.is_absolute() or root.resolve() != root:
         policy.fail("HANDOVER_PATH_INVALID")
     if create:
-        root.mkdir(mode=0o700, parents=True, exist_ok=True)
+        missing, parent = [], root
+        while not parent.exists():
+            missing.append(parent)
+            parent = parent.parent
+        for directory in reversed(missing):
+            try:
+                directory.mkdir(mode=0o700)
+            except FileExistsError:
+                pass
+            info = directory.lstat()
+            if not stat.S_ISDIR(info.st_mode) or stat.S_ISLNK(info.st_mode):
+                policy.fail("HANDOVER_PATH_INVALID")
     info = root.lstat()
     if not stat.S_ISDIR(info.st_mode) or stat.S_ISLNK(info.st_mode):
         policy.fail("HANDOVER_PATH_INVALID")
     return root
+
+
+
+def private_directories(root, target, *, policy):
+    """Create or reconcile only directories beneath the caller's owned root.
+
+    Archive extraction calls this after its exact request is retained under the
+    original lease. Other callers must establish that same ownership themselves.
+    Existing ancestors outside root are never changed.
+    """
+    root = _directory(root, policy)
+    target = Path(target)
+    if not target.is_absolute() or target.resolve() != target or not target.is_relative_to(root):
+        policy.fail("HANDOVER_PATH_INVALID")
+    current = root
+    for part in target.relative_to(root).parts:
+        parent = current
+        current = current / part
+        created = False
+        try:
+            current.mkdir(mode=0o700)
+            created = True
+        except FileExistsError:
+            pass
+        fd = os.open(current, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) |
+                     getattr(os, "O_NOFOLLOW", 0))
+        try:
+            info = os.fstat(fd)
+            if not stat.S_ISDIR(info.st_mode):
+                policy.fail("HANDOVER_PATH_INVALID")
+            if stat.S_IMODE(info.st_mode) != 0o700:
+                os.fchmod(fd, 0o700)
+                os.fsync(fd)
+            if created:
+                _sync(parent)
+        finally:
+            os.close(fd)
+    return target
 
 
 def _sync(root):
@@ -411,7 +460,7 @@ def extract(input, *, policy):
                     policy.fail("HANDOVER_SNAPSHOT_CONFLICT")
             for file in files:
                 target = _path(destination, file["path"], policy)
-                target.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+                private_directories(destination, target.parent, policy=policy)
                 _path(destination, file["path"], policy)
                 expected = _pin(file, policy)
                 temporary = _stage(target, file["sha256"], root=destination)

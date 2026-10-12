@@ -99,7 +99,9 @@ class Service:
         value = {**payload, "_operation_id": self.operation_id}
         return self.store.put(kind, value, entity_id or self.operation_id, expected, self.actor)
 
-    def dispatch(self, action, request):
+    def dispatch(self, action, request, *, resume_local=False):
+        if resume_local and action not in self.load.local_receiving_actions:
+            raise ValueError("Only the original local receiving children can resume an uncommitted operation.")
         if action not in self.actions:
             raise ValueError("Unknown workspace action.")
         if not isinstance(request, dict):
@@ -108,7 +110,8 @@ class Service:
         operation_id = identifier(request.pop("operation_id", None) or secrets.token_hex(16))
         with self.lock:
             previous = self.store.begin_operation(operation_id, action,
-                {**request, "password": "(provided)"} if "password" in request else request)
+                {**request, "password": "(provided)"} if "password" in request else request,
+                resume_uncommitted=resume_local or action == "load.delivery.adopt")
             if previous is not None:
                 return {"record": previous, "operation_id": operation_id, "replayed": True}
             prior_operation, prior_actor = self.operation_id, self.actor

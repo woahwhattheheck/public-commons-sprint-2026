@@ -41,7 +41,7 @@ for file in payload["helpers"]:
     write(root/"inbox"/name,raw)
 keeper_source=root/"inbox/hosted-artifact-retention.py"
 if (not keeper_source.is_file()
-        or file_sha(keeper_source)!="ea73242334dd408f1399a5090f32b3a761ff66196d62f8c9d4b711511fc869d1"):
+        or file_sha(keeper_source)!="f8f57631eb579b4f887b2762203ca7c63c3ddd44bc3fb83e7b62aadf3d20e758"):
     raise RuntimeError("Select the complete pinned hosted artifact keeper before native work")
 keeper_namespace={"__name__":"hosted_artifact_retention","__file__":str(keeper_source)}
 exec(compile(keeper_source.read_bytes(),str(keeper_source),"exec"),keeper_namespace)
