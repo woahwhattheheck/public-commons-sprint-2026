@@ -1,4 +1,4 @@
-// MIT. Huwise / Opendatasoft Automation v1.0; all actions use the pinned native contract.
+// MIT. Huwise / Opendatasoft Automation v1.0; retained SDK plus current official contract.
 import { createHash, randomBytes } from 'node:crypto';
 import { constants } from 'node:fs';
 import { open, lstat } from 'node:fs/promises';
@@ -86,7 +86,7 @@ function resolveSchema(schema) {
   return { ...base, ...Object.fromEntries(Object.entries(schema).filter(([key]) => key !== '$ref')) };
 }
 // Structural native-body validation leaves optional, provider-specific and future fields intact.
-// The original OpenAPI remains the complete reference; this is not a schema rewrite.
+// Current documented corrections are retained with the original OpenAPI source in current-reference.json.
 function checkBody(value, schema, at = 'body', refs = new Set(), depth = 0) {
   if (depth > 96) fail('ODS_AUTOMATION_BODY_DEPTH', 'The request structure is too deeply nested.');
   if (schema?.$ref) {
@@ -151,6 +151,8 @@ export function validateOpendatasoftAutomationBody(operationId, body) {
   const op = automationOperation(operationId);
   if (op.body !== 'json') fail('ODS_AUTOMATION_JSON_BODY_UNSUPPORTED', 'This native operation does not accept a JSON body.');
   if (!object(body)) fail('ODS_AUTOMATION_BODY_INVALID', 'Use a complete native JSON object.');
+  for (const [field, message] of Object.entries(op.forbiddenBodyFields ?? {}))
+    if (Object.hasOwn(body, field)) fail('ODS_AUTOMATION_BODY_ENDPOINT_MISMATCH', message);
   checkBody(body, op.bodySchema);
   return body;
 }

@@ -1,0 +1,267 @@
+{
+  "schema": "stellar-forge.opendatasoft-automation-current-reference.v1",
+  "reviewedAt": "2026-10-12",
+  "currentDocumentation": {
+    "url": "https://developer.huwise.com/apis/automation/v1.0/index.html",
+    "title": "Huwise's Automation API Documentation (1.0)",
+    "representation": "Reviewed rendered official reference; schema changes below are transcribed API structure."
+  },
+  "baselineSpecification": {
+    "repository": "opendatasoft/opendatasoft-automation-sdk",
+    "commit": "d8111887796815a7a2cf0755033a809b0f3f757e",
+    "path": "generators/python/openapi/openapi_3.1.0_original.json",
+    "blob": "568f4b4b3b9414dc404ea8fac83f35bfabf6bfcd",
+    "bytes": 461135,
+    "sha256": "27065299b52ec6c8e71272981f912107ff6931d1276fab7bb15a5a0de1de7d3b",
+    "localFile": "upstream-openapi.json"
+  },
+  "precedence": "Current documented fields and routes below override the older retained SDK contract. Unchanged registry entries retain their original SDK operation identifiers and schemas.",
+  "operationUpdates": {
+    "create-dataset": {
+      "method": "POST",
+      "path": "/datasets/",
+      "heading": "Create Dataset",
+      "bodySchema": "#/components/schemas/Dataset",
+      "required": [
+        "metadata"
+      ],
+      "metadataSchema": "#/components/schemas/DatasetMetadata",
+      "success": [
+        201
+      ]
+    },
+    "update-dataset": {
+      "method": "PUT",
+      "path": "/datasets/{dataset_uid}/",
+      "heading": "Update Dataset",
+      "bodySchema": {
+        "title": "Dataset configuration update",
+        "type": "object",
+        "properties": {
+          "dataset_id": {
+            "type": "string"
+          },
+          "is_restricted": {
+            "type": "boolean"
+          },
+          "default_security": {
+            "$ref": "#/components/schemas/DatasetSecurity"
+          }
+        }
+      },
+      "metadataOperation": "update-all-dataset-metadata",
+      "success": [
+        200
+      ],
+      "responseSchema": "Dataset"
+    },
+    "update-all-dataset-metadata": {
+      "method": "PUT",
+      "path": "/datasets/{dataset_uid}/metadata/",
+      "heading": "Update all dataset metadata",
+      "bodySchema": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "success": [
+        200
+      ],
+      "responseSchema": "DatasetMetadata",
+      "replacement": "Full metadata dictionary. Omitted fields are removed."
+    },
+    "update-template-dataset-metadata": {
+      "method": "PUT",
+      "path": "/datasets/{dataset_uid}/metadata/{template_name}/",
+      "heading": "Update a template's dataset metadata",
+      "bodySchema": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "success": [
+        200
+      ],
+      "responseSchema": "DatasetMetadataTemplate",
+      "replacement": "Selected template. Omitted fields in that template are removed."
+    },
+    "update-template-field-dataset-metadata": {
+      "method": "PUT",
+      "path": "/datasets/{dataset_uid}/metadata/{template_name}/{template_field_name}/",
+      "heading": "Update a metadata",
+      "bodySchema": "#/components/schemas/DatasetMetadataValue",
+      "success": [
+        200
+      ],
+      "responseSchema": "DatasetMetadataValue"
+    },
+    "create-dataset-resource": {
+      "method": "POST",
+      "path": "/datasets/{dataset_uid}/resources/",
+      "heading": "Create dataset resource",
+      "required": [
+        "type",
+        "title"
+      ],
+      "optional": [
+        "params",
+        "url",
+        "datasource"
+      ],
+      "success": [
+        201
+      ]
+    },
+    "update-dataset-resource": {
+      "method": "PUT",
+      "path": "/datasets/{dataset_uid}/resources/{resource_uid}/",
+      "heading": "Update dataset resource",
+      "required": [
+        "type",
+        "title"
+      ],
+      "optional": [
+        "params",
+        "url",
+        "datasource"
+      ],
+      "success": [
+        200
+      ]
+    },
+    "upload-resource-file": {
+      "method": "POST",
+      "path": "/datasets/{dataset_uid}/resources/files/",
+      "heading": "Upload resource file",
+      "contentType": "multipart/form-data",
+      "filePart": "file",
+      "success": [
+        201
+      ],
+      "responseFields": [
+        "uid",
+        "filename",
+        "mimetype",
+        "created_at"
+      ],
+      "legacyCompatibility": {
+        "success": [
+          200
+        ],
+        "source": "baselineSpecification"
+      }
+    }
+  },
+  "metadata": {
+    "shape": "template name → field name → MetadataValue",
+    "currentAliases": [
+      "Metadata",
+      "DatasetMetadata"
+    ],
+    "standardTemplates": [
+      "default",
+      "visualization",
+      "internal",
+      "asset_content_configuration"
+    ],
+    "valueRequired": [
+      "value"
+    ],
+    "valueOptional": [
+      "override_remote_value"
+    ],
+    "valueReadOnly": [
+      "remote_value"
+    ],
+    "fullAndTemplatePutSchema": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "discovery": [
+      "list-metadata-templates",
+      "get-metadata-fields-list"
+    ],
+    "currentDocumentationOperationAlias": {
+      "list-metadata-template-fields": "get-metadata-fields-list"
+    }
+  },
+  "additionalReads": [
+    {
+      "operationId": "list-metadata-templates",
+      "method": "GET",
+      "path": "/metadata/templates/",
+      "heading": "List metadata templates",
+      "operationIdAuthority": "retained-official-sdk",
+      "success": [
+        200
+      ]
+    },
+    {
+      "operationId": "retrieve-metadata-templates",
+      "method": "GET",
+      "path": "/metadata/templates/{template_name}/",
+      "heading": "Retrieve a metadata template",
+      "operationIdAuthority": "retained-official-sdk",
+      "success": [
+        200
+      ]
+    },
+    {
+      "operationId": "get-metadata-fields-list",
+      "method": "GET",
+      "path": "/metadata/templates/{template_name}/fields/",
+      "heading": "List template's fields",
+      "operationIdAuthority": "retained-official-sdk",
+      "success": [
+        200
+      ]
+    },
+    {
+      "operationId": "get-metadata-fields-retrieve",
+      "method": "GET",
+      "path": "/metadata/templates/{template_name}/fields/{template_field_name}/",
+      "heading": "Retrieve metadata template field",
+      "operationIdAuthority": "retained-official-sdk",
+      "success": [
+        200
+      ]
+    }
+  ],
+  "currentTranslations": [
+    {
+      "operationId": "get-dataset-translations",
+      "method": "GET",
+      "path": "/datasets/{dataset_uid}/i18n/translations/",
+      "heading": "Get dataset translations",
+      "operationIdAuthority": "client-key-for-current-documented-route",
+      "nativeOperationId": null,
+      "success": [
+        200
+      ]
+    },
+    {
+      "operationId": "update-dataset-translations",
+      "method": "POST",
+      "path": "/datasets/{dataset_uid}/i18n/translations/",
+      "heading": "Update dataset translations",
+      "operationIdAuthority": "client-key-for-current-documented-route",
+      "nativeOperationId": null,
+      "success": [
+        200
+      ],
+      "bodySchema": {
+        "type": "object",
+        "additionalProperties": {
+          "type": "object"
+        }
+      }
+    }
+  ],
+  "requestPolicy": {
+    "datasetMetadataOnConfigurationPut": "Rejected locally before dispatch; use the dedicated metadata operation.",
+    "schemasWithSourceReadOnlyFields": [
+      "Dataset",
+      "DatasetMetadataValue",
+      "Resource"
+    ],
+    "providerResponses": "Retained complete. Reference responseSchema properties are descriptive and do not project received bodies."
+  }
+}

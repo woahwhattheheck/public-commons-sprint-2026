@@ -1,4 +1,4 @@
-// MIT. Native Automation API contract; source authority is retained alongside this module.
+// MIT. Original SDK contract plus the current official-reference corrections in current-reference.json.
 function freeze(value) { if (value && typeof value === 'object') { for (const child of Object.values(value)) freeze(child); Object.freeze(value); } return value; }
 export const AUTOMATION_SOURCE = freeze({
   "schema": "stellar-forge.opendatasoft-automation-source.v1",
@@ -8,11 +8,19 @@ export const AUTOMATION_SOURCE = freeze({
   "specBlob": "568f4b4b3b9414dc404ea8fac83f35bfabf6bfcd",
   "specBytes": 461135,
   "specSha256": "27065299b52ec6c8e71272981f912107ff6931d1276fab7bb15a5a0de1de7d3b",
-  "liveDocumentation": "https://help.opendatasoft.com/apis/ods-automation-v1/",
+  "liveDocumentation": "https://developer.huwise.com/apis/automation/v1.0/index.html",
   "reviewedAt": "2026-10-12",
   "apiVersion": "1.0",
   "apiPrefix": "/api/automation/v1.0",
-  "operationCount": 86
+  "operationCount": 92,
+  "legacyDocumentation": "https://help.opendatasoft.com/apis/ods-automation-v1/",
+  "currentReference": {
+    "path": "current-reference.json",
+    "bytes": 7598,
+    "sha256": "d9f084bfdf358093776bca18df95186c2e9c8badd865ee80641387fd356821da"
+  },
+  "contractBasis": "retained-official-sdk-with-current-official-reference",
+  "operationAliasCount": 1
 });
 export const AUTOMATION_API_PREFIX = '/api/automation/v1.0';
 export const AUTOMATION_OPERATIONS = freeze({
@@ -23,14 +31,14 @@ export const AUTOMATION_OPERATIONS = freeze({
     "params": {},
     "query": {
       "limit": {
-        "type": "number",
+        "type": "integer",
         "maximum": 1000,
         "minimum": 0,
         "default": 20,
         "description": "The maximum number of results returned by the API when the response is paginated. Tip: You can make a request with the parameter \"limit\" set to 0 to get only the metadata (\"results\" property will contain an empty array)."
       },
       "offset": {
-        "type": "number",
+        "type": "integer",
         "description": "The number of results to skip before beginning the listing in case of a paginated response"
       },
       "dataset_id": {
@@ -62,7 +70,10 @@ export const AUTOMATION_OPERATIONS = freeze({
     ],
     "response": "json",
     "effect": "write",
-    "paginated": false
+    "paginated": false,
+    "responseSchema": {
+      "$ref": "#/components/schemas/Dataset"
+    }
   },
   "retrieve-dataset": {
     "method": "GET",
@@ -79,7 +90,10 @@ export const AUTOMATION_OPERATIONS = freeze({
     ],
     "response": "json",
     "effect": "read",
-    "paginated": false
+    "paginated": false,
+    "responseSchema": {
+      "$ref": "#/components/schemas/Dataset"
+    }
   },
   "update-dataset": {
     "method": "PUT",
@@ -91,14 +105,20 @@ export const AUTOMATION_OPERATIONS = freeze({
     "query": {},
     "body": "json",
     "bodySchema": {
-      "$ref": "#/components/schemas/Dataset"
+      "$ref": "#/components/schemas/DatasetUpdate"
     },
     "success": [
       200
     ],
     "response": "json",
     "effect": "write",
-    "paginated": false
+    "paginated": false,
+    "forbiddenBodyFields": {
+      "metadata": "Use update-all-dataset-metadata to replace the complete reviewed metadata dictionary."
+    },
+    "responseSchema": {
+      "$ref": "#/components/schemas/Dataset"
+    }
   },
   "delete-dataset": {
     "method": "DELETE",
@@ -498,14 +518,14 @@ export const AUTOMATION_OPERATIONS = freeze({
     },
     "query": {
       "limit": {
-        "type": "number",
+        "type": "integer",
         "maximum": 1000,
         "minimum": 0,
         "default": 20,
         "description": "The maximum number of results returned by the API when the response is paginated. Tip: You can make a request with the parameter \"limit\" set to 0 to get only the metadata (\"results\" property will contain an empty array)."
       },
       "offset": {
-        "type": "number",
+        "type": "integer",
         "description": "The number of results to skip before beginning the listing in case of a paginated response"
       },
       "expand": {
@@ -896,11 +916,19 @@ export const AUTOMATION_OPERATIONS = freeze({
       ]
     },
     "success": [
+      201,
       200
     ],
     "response": "json",
     "effect": "write",
-    "paginated": false
+    "paginated": false,
+    "successAuthority": {
+      "200": "retained-official-sdk",
+      "201": "current-official-documentation"
+    },
+    "responseSchema": {
+      "$ref": "#/components/schemas/DatasetFile"
+    }
   },
   "retrieve-dataset-resource-file": {
     "method": "GET",
@@ -947,14 +975,14 @@ export const AUTOMATION_OPERATIONS = freeze({
     },
     "query": {
       "limit": {
-        "type": "number",
+        "type": "integer",
         "maximum": 1000,
         "minimum": 0,
         "default": 20,
         "description": "The maximum number of results returned by the API when the response is paginated. Tip: You can make a request with the parameter \"limit\" set to 0 to get only the metadata (\"results\" property will contain an empty array)."
       },
       "offset": {
-        "type": "number",
+        "type": "integer",
         "description": "The number of results to skip before beginning the listing in case of a paginated response"
       }
     },
@@ -1058,14 +1086,14 @@ export const AUTOMATION_OPERATIONS = freeze({
     },
     "query": {
       "limit": {
-        "type": "number",
+        "type": "integer",
         "maximum": 1000,
         "minimum": 0,
         "default": 20,
         "description": "The maximum number of results returned by the API when the response is paginated. Tip: You can make a request with the parameter \"limit\" set to 0 to get only the metadata (\"results\" property will contain an empty array)."
       },
       "offset": {
-        "type": "number",
+        "type": "integer",
         "description": "The number of results to skip before beginning the listing in case of a paginated response"
       }
     },
@@ -1224,14 +1252,14 @@ export const AUTOMATION_OPERATIONS = freeze({
     },
     "query": {
       "limit": {
-        "type": "number",
+        "type": "integer",
         "maximum": 1000,
         "minimum": 0,
         "default": 20,
         "description": "The maximum number of results returned by the API when the response is paginated. Tip: You can make a request with the parameter \"limit\" set to 0 to get only the metadata (\"results\" property will contain an empty array)."
       },
       "offset": {
-        "type": "number",
+        "type": "integer",
         "description": "The number of results to skip before beginning the listing in case of a paginated response"
       }
     },
@@ -1328,14 +1356,14 @@ export const AUTOMATION_OPERATIONS = freeze({
     },
     "query": {
       "limit": {
-        "type": "number",
+        "type": "integer",
         "maximum": 1000,
         "minimum": 0,
         "default": 20,
         "description": "The maximum number of results returned by the API when the response is paginated. Tip: You can make a request with the parameter \"limit\" set to 0 to get only the metadata (\"results\" property will contain an empty array)."
       },
       "offset": {
-        "type": "number",
+        "type": "integer",
         "description": "The number of results to skip before beginning the listing in case of a paginated response"
       }
     },
@@ -1432,14 +1460,14 @@ export const AUTOMATION_OPERATIONS = freeze({
     },
     "query": {
       "limit": {
-        "type": "number",
+        "type": "integer",
         "maximum": 1000,
         "minimum": 0,
         "default": 20,
         "description": "The maximum number of results returned by the API when the response is paginated. Tip: You can make a request with the parameter \"limit\" set to 0 to get only the metadata (\"results\" property will contain an empty array)."
       },
       "offset": {
-        "type": "number",
+        "type": "integer",
         "description": "The number of results to skip before beginning the listing in case of a paginated response"
       }
     },
@@ -1497,14 +1525,14 @@ export const AUTOMATION_OPERATIONS = freeze({
     },
     "query": {
       "limit": {
-        "type": "number",
+        "type": "integer",
         "maximum": 1000,
         "minimum": 0,
         "default": 20,
         "description": "The maximum number of results returned by the API when the response is paginated. Tip: You can make a request with the parameter \"limit\" set to 0 to get only the metadata (\"results\" property will contain an empty array)."
       },
       "offset": {
-        "type": "number",
+        "type": "integer",
         "description": "The number of results to skip before beginning the listing in case of a paginated response"
       }
     },
@@ -1607,7 +1635,10 @@ export const AUTOMATION_OPERATIONS = freeze({
     ],
     "response": "json",
     "effect": "read",
-    "paginated": false
+    "paginated": false,
+    "responseSchema": {
+      "$ref": "#/components/schemas/DatasetMetadata"
+    }
   },
   "update-all-dataset-metadata": {
     "method": "PUT",
@@ -1619,14 +1650,19 @@ export const AUTOMATION_OPERATIONS = freeze({
     "query": {},
     "body": "json",
     "bodySchema": {
-      "$ref": "#/components/schemas/DatasetMetadata"
+      "type": "object",
+      "additionalProperties": true
     },
     "success": [
       200
     ],
     "response": "json",
     "effect": "write",
-    "paginated": false
+    "paginated": false,
+    "responseSchema": {
+      "$ref": "#/components/schemas/DatasetMetadata"
+    },
+    "replacementScope": "all-metadata"
   },
   "list-template-dataset-metadata": {
     "method": "GET",
@@ -1644,7 +1680,10 @@ export const AUTOMATION_OPERATIONS = freeze({
     ],
     "response": "json",
     "effect": "read",
-    "paginated": false
+    "paginated": false,
+    "responseSchema": {
+      "$ref": "#/components/schemas/DatasetMetadataTemplate"
+    }
   },
   "update-template-dataset-metadata": {
     "method": "PUT",
@@ -1657,14 +1696,19 @@ export const AUTOMATION_OPERATIONS = freeze({
     "query": {},
     "body": "json",
     "bodySchema": {
-      "$ref": "#/components/schemas/DatasetMetadataTemplate"
+      "type": "object",
+      "additionalProperties": true
     },
     "success": [
       200
     ],
     "response": "json",
     "effect": "write",
-    "paginated": false
+    "paginated": false,
+    "replacementScope": "one-metadata-template",
+    "responseSchema": {
+      "$ref": "#/components/schemas/DatasetMetadataTemplate"
+    }
   },
   "retrieve-template-field-dataset-metadata": {
     "method": "GET",
@@ -1683,7 +1727,10 @@ export const AUTOMATION_OPERATIONS = freeze({
     ],
     "response": "json",
     "effect": "read",
-    "paginated": false
+    "paginated": false,
+    "responseSchema": {
+      "$ref": "#/components/schemas/DatasetMetadataValue"
+    }
   },
   "update-template-field-dataset-metadata": {
     "method": "PUT",
@@ -1704,7 +1751,10 @@ export const AUTOMATION_OPERATIONS = freeze({
     ],
     "response": "json",
     "effect": "write",
-    "paginated": false
+    "paginated": false,
+    "responseSchema": {
+      "$ref": "#/components/schemas/DatasetMetadataValue"
+    }
   },
   "delete-template-field-dataset-metadata": {
     "method": "DELETE",
@@ -1732,14 +1782,14 @@ export const AUTOMATION_OPERATIONS = freeze({
     "params": {},
     "query": {
       "limit": {
-        "type": "number",
+        "type": "integer",
         "maximum": 1000,
         "minimum": 0,
         "default": 20,
         "description": "The maximum number of results returned by the API when the response is paginated. Tip: You can make a request with the parameter \"limit\" set to 0 to get only the metadata (\"results\" property will contain an empty array)."
       },
       "offset": {
-        "type": "number",
+        "type": "integer",
         "description": "The number of results to skip before beginning the listing in case of a paginated response"
       },
       "sort": {
@@ -1832,6 +1882,150 @@ export const AUTOMATION_OPERATIONS = freeze({
     "response": "json",
     "effect": "write",
     "paginated": false
+  },
+  "list-metadata-templates": {
+    "method": "GET",
+    "path": "/metadata/templates/",
+    "name": "listMetadataTemplates",
+    "params": {},
+    "query": {
+      "limit": {
+        "type": "integer",
+        "maximum": 1000,
+        "minimum": 0,
+        "default": 20
+      },
+      "offset": {
+        "type": "integer"
+      },
+      "is_active": {
+        "type": "boolean"
+      },
+      "type": {
+        "type": "string",
+        "enum": [
+          "interop",
+          "admin",
+          "basic",
+          "extra"
+        ],
+        "description": "Filter by type of Metadata Template."
+      }
+    },
+    "body": null,
+    "bodySchema": null,
+    "success": [
+      200
+    ],
+    "response": "json",
+    "effect": "read",
+    "paginated": true
+  },
+  "retrieve-metadata-templates": {
+    "method": "GET",
+    "path": "/metadata/templates/{template_name}/",
+    "name": "getDomainMetadataTemplate",
+    "params": {
+      "template_name": "templateName"
+    },
+    "query": {},
+    "body": null,
+    "bodySchema": null,
+    "success": [
+      200
+    ],
+    "response": "json",
+    "effect": "read",
+    "paginated": false
+  },
+  "get-metadata-fields-list": {
+    "method": "GET",
+    "path": "/metadata/templates/{template_name}/fields/",
+    "name": "listMetadataTemplateFields",
+    "params": {
+      "template_name": "templateName"
+    },
+    "query": {
+      "limit": {
+        "type": "integer",
+        "maximum": 1000,
+        "minimum": 0,
+        "default": 20
+      },
+      "offset": {
+        "type": "integer"
+      }
+    },
+    "body": null,
+    "bodySchema": null,
+    "success": [
+      200
+    ],
+    "response": "json",
+    "effect": "read",
+    "paginated": true
+  },
+  "get-metadata-fields-retrieve": {
+    "method": "GET",
+    "path": "/metadata/templates/{template_name}/fields/{template_field_name}/",
+    "name": "getMetadataTemplateField",
+    "params": {
+      "template_name": "templateName",
+      "template_field_name": "templateFieldName"
+    },
+    "query": {},
+    "body": null,
+    "bodySchema": null,
+    "success": [
+      200
+    ],
+    "response": "json",
+    "effect": "read",
+    "paginated": false
+  },
+  "get-dataset-translations": {
+    "method": "GET",
+    "path": "/datasets/{dataset_uid}/i18n/translations/",
+    "name": "getDatasetTranslations",
+    "params": {
+      "dataset_uid": "datasetUid"
+    },
+    "query": {},
+    "body": null,
+    "bodySchema": null,
+    "success": [
+      200
+    ],
+    "response": "json",
+    "responseSchema": {
+      "$ref": "#/components/schemas/DatasetTranslations"
+    },
+    "effect": "read",
+    "paginated": false,
+    "operationIdAuthority": "client-key-for-current-documented-route"
+  },
+  "update-dataset-translations": {
+    "method": "POST",
+    "path": "/datasets/{dataset_uid}/i18n/translations/",
+    "name": "updateDatasetTranslations",
+    "params": {
+      "dataset_uid": "datasetUid"
+    },
+    "query": {},
+    "body": "json",
+    "bodySchema": {
+      "$ref": "#/components/schemas/DatasetTranslations"
+    },
+    "success": [
+      200
+    ],
+    "response": "json",
+    "responseSchema": {
+      "$ref": "#/components/schemas/DatasetTranslations"
+    },
+    "effect": "write",
+    "paginated": false,
+    "operationIdAuthority": "client-key-for-current-documented-route"
   }
 });
 export const AUTOMATION_SCHEMAS = freeze({
@@ -2384,6 +2578,28 @@ export const AUTOMATION_SCHEMAS = freeze({
       "default_security": {
         "$ref": "#/components/schemas/DatasetSecurity",
         "description": "The dataset default security ruleset when the dataset is restricted. This ruleset applies to all users who do not  have any ruleset declared for them"
+      },
+      "created_by": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/RelatedUserReadOnly"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "readOnly": true
+      },
+      "updated_by": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/RelatedUserReadOnly"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "readOnly": true
       }
     },
     "required": [
@@ -2515,32 +2731,11 @@ export const AUTOMATION_SCHEMAS = freeze({
     ]
   },
   "DatasetMetadata": {
-    "title": "Dataset metadata schema",
-    "description": "The data describing the dataset itself.",
+    "title": "Dataset metadata",
     "type": "object",
-    "properties": {
-      "default": {
-        "$ref": "#/components/schemas/DatasetMetadataDefault"
-      },
-      "visualization": {
-        "$ref": "#/components/schemas/DatasetMetadataVisualization"
-      },
-      "internal": {
-        "$ref": "#/components/schemas/DatasetMetadataInternal"
-      },
-      "asset_content_configuration": {
-        "$ref": "#/components/schemas/DatasetMetadataAssetContentConfiguration"
-      },
-      "custom_template_name": {
-        "$ref": "#/components/schemas/DatasetMetadataCustom"
-      }
-    },
-    "required": [
-      "default"
-    ],
-    "x-tags": [
-      "Dataset metadata"
-    ]
+    "additionalProperties": {
+      "$ref": "#/components/schemas/DatasetMetadataTemplate"
+    }
   },
   "DatasetMetadataAssetContentConfiguration": {
     "title": "Asset Content Configuration",
@@ -3161,48 +3356,27 @@ export const AUTOMATION_SCHEMAS = freeze({
     }
   },
   "DatasetMetadataTemplate": {
-    "description": "Values for one of any available template on the portal",
-    "oneOf": [
-      {
-        "$ref": "#/components/schemas/DatasetMetadataDefault"
-      },
-      {
-        "$ref": "#/components/schemas/DatasetMetadataInternal"
-      },
-      {
-        "$ref": "#/components/schemas/DatasetMetadataVisualization"
-      },
-      {
-        "$ref": "#/components/schemas/DatasetMetadataAssetContentConfiguration"
-      },
-      {
-        "$ref": "#/components/schemas/DatasetMetadataCustom"
-      }
-    ]
+    "title": "Metadata template values",
+    "type": "object",
+    "additionalProperties": {
+      "$ref": "#/components/schemas/DatasetMetadataValue"
+    }
   },
   "DatasetMetadataValue": {
+    "title": "Metadata value",
     "type": "object",
     "properties": {
-      "value": {
-        "description": "The effective metadata value. If the dataset is linked to a remote dataset and `override_remote_value`  is `false`, this value will be the same as `remote_value`."
-      },
+      "value": {},
       "remote_value": {
-        "readOnly": true,
-        "description": "The metadata value on the remote dataset. This property is present only if the dataset is linked to a remote  dataset (a federated dataset for example)."
+        "readOnly": true
       },
       "override_remote_value": {
-        "type": "boolean",
-        "description": "Defines if the remote value is overridden (`true`), or if it is kept in sync with the value on the remote  dataset. This property is present only if the dataset is linked to a remote  dataset (a federated dataset for example)."
+        "type": "boolean"
       }
     },
     "required": [
       "value"
-    ],
-    "example": {
-      "value": "Metadata value",
-      "remote_value": "Metadata value on the remote dataset, if there is one",
-      "override_remote_value": true
-    }
+    ]
   },
   "DatasetMetadataVisualization": {
     "title": "Visualization template",
@@ -4792,12 +4966,15 @@ export const AUTOMATION_SCHEMAS = freeze({
       },
       "datasource": {
         "$ref": "#/components/schemas/Datasource"
+      },
+      "url": {
+        "type": "string",
+        "minLength": 1
       }
     },
     "required": [
       "type",
-      "title",
-      "datasource"
+      "title"
     ],
     "example": {
       "uid": "re_qf2hyt",
@@ -5012,6 +5189,52 @@ export const AUTOMATION_SCHEMAS = freeze({
       }
     ],
     "title": "UploadedFileDatasource"
+  },
+  "MetadataValue": {
+    "title": "Metadata value",
+    "type": "object",
+    "properties": {
+      "value": {},
+      "remote_value": {
+        "readOnly": true
+      },
+      "override_remote_value": {
+        "type": "boolean"
+      }
+    },
+    "required": [
+      "value"
+    ]
+  },
+  "Metadata": {
+    "title": "Dataset metadata",
+    "type": "object",
+    "additionalProperties": {
+      "$ref": "#/components/schemas/DatasetMetadataTemplate"
+    }
+  },
+  "DatasetUpdate": {
+    "title": "Dataset configuration update",
+    "type": "object",
+    "properties": {
+      "dataset_id": {
+        "type": "string"
+      },
+      "is_restricted": {
+        "type": "boolean"
+      },
+      "default_security": {
+        "$ref": "#/components/schemas/DatasetSecurity"
+      }
+    }
+  },
+  "DatasetTranslations": {
+    "title": "Dataset translation dictionary",
+    "type": "object",
+    "additionalProperties": {
+      "type": "object",
+      "additionalProperties": true
+    }
   }
 });
 export const AUTOMATION_DATASET_STATUS_SCHEMA = freeze({
@@ -5126,4 +5349,13 @@ export const AUTOMATION_DATASET_STATUS_SCHEMA = freeze({
   }
 });
 export const AUTOMATION_DATASET_STATES = Object.freeze(["idle","error","limit_reached","queued","aborting_processing","processing","deleting","saving_version"]);
-export function automationOperation(operationId) { const value = typeof operationId === 'string' && Object.hasOwn(AUTOMATION_OPERATIONS, operationId) ? AUTOMATION_OPERATIONS[operationId] : null; if (!value) { const error = new Error('Unknown native Automation API operation.'); error.code = 'ODS_AUTOMATION_OPERATION_INVALID'; throw error; } return value; }
+export const AUTOMATION_OPERATION_ALIASES = freeze({
+  "list-metadata-template-fields": "get-metadata-fields-list"
+});
+export function automationOperation(operationId) {
+  const requested = typeof operationId === 'string' ? operationId : '';
+  const canonical = Object.hasOwn(AUTOMATION_OPERATION_ALIASES, requested) ? AUTOMATION_OPERATION_ALIASES[requested] : requested;
+  const value = Object.hasOwn(AUTOMATION_OPERATIONS, canonical) ? AUTOMATION_OPERATIONS[canonical] : null;
+  if (!value) { const error = new Error('Unknown native Automation API operation.'); error.code = 'ODS_AUTOMATION_OPERATION_INVALID'; throw error; }
+  return value;
+}
